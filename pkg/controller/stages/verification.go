@@ -65,10 +65,10 @@ func (r *RegularStageReconciler) verifyStageFreight(
 		})
 		return newStatus, nil
 	}
-
+	curPromotion := getCurrentPromoObject(stage)
 	// If we are currently promoting Freight, then we are not in a stable state
 	// and should wait until the promotion is complete.
-	if curPromotion := stage.Status.CurrentPromotion; curPromotion != nil {
+	if curPromotion != nil {
 		logger.Debug("Stage is currently promoting Freight: skipping verification")
 		return newStatus, nil
 	}
@@ -511,9 +511,10 @@ func (r *RegularStageReconciler) startVerification(
 		})
 	}
 	if curVI == nil || (req.ForID(curVI.ID) && req.ControlPlane && req.Actor != "") {
-		if stage.Status.LastPromotion != nil {
+		lastPromo := getLastPromoObject(stage)
+		if lastPromo != nil {
 			builderOpts = append(builderOpts, rollouts.WithExtraAnnotations{
-				kargoapi.AnnotationKeyPromotion: stage.Status.LastPromotion.Name,
+				kargoapi.AnnotationKeyPromotion: lastPromo.GetName(),
 			})
 		}
 	}

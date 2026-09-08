@@ -4,36 +4,32 @@ import (
 	"context"
 	"fmt"
 	"slices"
-	"strconv"
 	"strings"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/fields"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/api"
 	kargoEvent "github.com/akuity/kargo/pkg/event"
-	"github.com/akuity/kargo/pkg/indexer"
 	"github.com/akuity/kargo/pkg/logging"
 )
 
 // newAutoPromotionHold builds an AutoPromotionHold for origin from the
 // hold-intent Promotion promo.
 func newAutoPromotionHold(
-	promo *kargoapi.Promotion,
+	promo PromotionObject,
 	origin kargoapi.FreightOrigin,
 ) kargoapi.AutoPromotionHold {
 	hold := kargoapi.AutoPromotionHold{
-		FreightName:   promo.Spec.Freight,
+		FreightName:   promo.GetFreightName(),
 		Origin:        origin,
-		PromotionName: promo.Name,
+		PromotionName: promo.GetName(),
 	}
-	if actor := promo.Annotations[kargoapi.AnnotationKeyCreateActor]; actor != "" {
+	if actor := promo.GetAnnotations()[kargoapi.AnnotationKeyCreateActor]; actor != "" {
 		hold.Actor = actor
 	}
-	if !promo.CreationTimestamp.IsZero() {
-		t := promo.CreationTimestamp
+	if !promo.GetCreationTimestamp().Time.IsZero() {
+		t := promo.GetCreationTimestamp()
 		hold.CreatedAt = &t
 	}
 	return hold
@@ -61,35 +57,38 @@ func (r *RegularStageReconciler) computeEffectiveAutoPromotionHolds(
 		effective[key] = hold
 	}
 
-	promotions, err := r.getPromotions(ctx, *stage)
+	promotions, err := r.getPromotionObjectsByStage(ctx, stage)
 	if err != nil {
 		return nil, err
 	}
+	fmt.Printf("PROMOS: %v\n", promotions)
 
-	promotions = withoutTargetPromotions(promotions)
-
-	lastPromo := stage.Status.LastPromotion
+	lastPromo := getLastPromoObject(stage)
 	for _, req := range stage.Spec.RequestedFreight {
 		originKey := req.Origin.String()
-		var newest *kargoapi.Promotion
+		var newest PromotionObject
 		var newestIsHold bool
 		for i := range promotions {
-			promo := &promotions[i]
-			if promo.Status.Phase == kargoapi.PromotionPhaseAborted {
+			promo := promotions[i]
+			if promo.GetPhase().IsAborted() {
+				fmt.Printf("PROMO ABORTED: %v\n", promo)
 				continue
 			}
 			// Only Promotions newer than the last one syncPromotions recorded can
 			// change the durable state. Older ones are already reflected in it, and
 			// the Promotion that superseded them may since have been deleted.
-			if lastPromo != nil && strings.Compare(promo.Name, lastPromo.Name) <= 0 {
+			if lastPromo != nil && strings.Compare(promo.GetName(), lastPromo.GetName()) <= 0 {
+				fmt.Printf("LASTPROMO NOT NIL: %v\n",lastPromo)
 				continue
 			}
-			isHold := promo.Annotations[kargoapi.AnnotationKeyAutoPromotionHold] == originKey
-			isRelease := promo.Annotations[kargoapi.AnnotationKeyAutoPromotionResume] == originKey
+			annotations := promo.GetAnnotations()
+			fmt.Printf("ANNOTATIONS: %v\n PROMO %v\n", annotations, promo)
+			isHold := promo.GetAnnotations()[kargoapi.AnnotationKeyAutoPromotionHold] == originKey
+			isRelease := promo.GetAnnotations()[kargoapi.AnnotationKeyAutoPromotionResume] == originKey
 			if !isHold && !isRelease {
 				continue
 			}
-			if newest == nil || strings.Compare(promo.Name, newest.Name) > 0 {
+			if newest == nil || strings.Compare(promo.GetName(), newest.GetName()) > 0 {
 				newest = promo
 				newestIsHold = isHold
 			}
@@ -171,57 +170,74 @@ func (r *RegularStageReconciler) autoPromoteFreight(
 			continue
 		}
 
-		if api.IsTargetAware(stage) {
-			if err = r.createAutoPromotionRequest(ctx, stage, &candidate, origin); err != nil {
-				return newStatus, err
-			}
-		} else {
-			if err = r.createAutoPromotion(ctx, stage, &candidate, origin); err != nil {
-				return newStatus, err
-			}
+		if err := r.maybeCreateAutoPromotionObject(ctx, stage, &candidate, origin); err != nil {
+			return newStatus, err
 		}
 	}
 
 	return newStatus, nil
 }
 
-func (r *RegularStageReconciler) createAutoPromotion(
+func (r *RegularStageReconciler) unprocessedPromotionObjectExists(
+	stage *kargoapi.Stage,
+	promotions []PromotionObject,
+) bool {
+	lastPromo := getLastPromoObject(stage)
+	for i := range promotions {
+		promo := promotions[i]
+		promoPhase := promo.GetPhase()
+		if !promoPhase.IsTerminal() ||
+			(promoPhase.IsSucceeded() &&
+				(lastPromo == nil || strings.Compare(promo.GetName(), lastPromo.GetName()) > 0)) {
+			return true
+		}
+	}
+	return false
+}
+
+func (r *RegularStageReconciler) newestTerminalPromotionObject(
+	promotions []PromotionObject,
+) PromotionObject {
+	if len(promotions) == 0 {
+		return nil
+	}
+	return slices.MaxFunc(promotions, func(lhs, rhs PromotionObject) int {
+		if result := lhs.GetCreationTimestamp().Compare(rhs.GetCreationTimestamp().Time); result != 0 {
+			return result
+		}
+		return strings.Compare(lhs.GetName(), rhs.GetName())
+	})
+}
+
+func (r *RegularStageReconciler) maybeCreateAutoPromotionObject(
 	ctx context.Context,
 	stage *kargoapi.Stage,
 	candidate *kargoapi.Freight,
-	origin string) error {
+	origin string,
+) error {
 	logger := logging.LoggerFromContext(ctx).WithValues(
 		"origin", origin,
 		"freight", candidate.Name,
 	)
-	// Do not create duplicate work: stand down while any Promotion for
-	// this candidate is either still in flight or succeeded with an
-	// outcome not yet recorded in Stage status.
-	var unprocessedPromotionExists bool
-	unprocessedPromotionExists, err := r.unprocessedPromotionExistsForStageFreight(
-		ctx,
-		stage,
-		candidate.Name,
-	)
+	existingPromotionsForFreight, err := r.getPromotionObjectsByStageAndFreight(ctx, stage, candidate.Name)
 	if err != nil {
 		return fmt.Errorf(
-			"error listing existing Promotions for Freight %q in namespace "+
+			"error listing existing Promotion Objects for Freight %q in namespace "+
 				"%q: %w",
 			candidate.Name, stage.Namespace, err,
 		)
 	}
-	if unprocessedPromotionExists {
+	// Do not create duplicate work: stand down while any Promotion for
+	// this candidate is either still in flight or succeeded with an
+	// outcome not yet recorded in Stage status.
+	if r.unprocessedPromotionObjectExists(stage, existingPromotionsForFreight) {
 		logger.Debug("an unprocessed Promotion already exists for " +
 			"Stage and Freight")
 		return nil
 	}
 
-	var newestPromotion *kargoapi.Promotion
-	newestPromotion, err = r.newestTerminalPromotionForStageFreight(
-		ctx,
-		stage,
-		candidate.Name,
-	)
+	newestPromotion := r.newestTerminalPromotionObject(existingPromotionsForFreight)
+
 	if err != nil {
 		return fmt.Errorf(
 			"error listing existing terminal Promotions for Freight %q in "+
@@ -229,16 +245,39 @@ func (r *RegularStageReconciler) createAutoPromotion(
 			candidate.Name, stage.Namespace, err,
 		)
 	}
+
 	if newestPromotion != nil &&
-		newestPromotion.Status.Phase != kargoapi.PromotionPhaseSucceeded {
+		!newestPromotion.GetPhase().IsSucceeded() {
 		logger.Debug(
 			"most recent terminal Promotion for Stage and Freight was not "+
 				"successful; skipping auto-promotion to avoid an infinite loop",
-			"lastPromotion", newestPromotion.Name,
-			"lastPromotionPhase", newestPromotion.Status.Phase,
+			"lastPromotion", newestPromotion.GetName(),
+			"lastPromotionPhase", newestPromotion.GetPhase(),
 		)
 		return nil
 	}
+
+	if !api.IsTargetAware(stage) {
+		return r.createAutoPromotion(ctx, stage, candidate, origin)
+	}
+	// FIXME: cleanup this change after verifying that it's not necessary
+	if len(existingPromotionsForFreight) > 0 {
+		logger.Debug("a PromotionRequest already exists for Stage and Freight")
+		return nil
+	}
+	return r.createAutoPromotionRequest(ctx, stage, candidate, origin)
+}
+
+func (r *RegularStageReconciler) createAutoPromotion(
+	ctx context.Context,
+	stage *kargoapi.Stage,
+	candidate *kargoapi.Freight,
+	origin string,
+) error {
+	logger := logging.LoggerFromContext(ctx).WithValues(
+		"origin", origin,
+		"freight", candidate.Name,
+	)
 
 	// Auto-promote the candidate Freight and record an event. Create a minimal
 	// Promotion. The defaulting webhook fills in the rest from the Stage's
@@ -285,7 +324,6 @@ func (r *RegularStageReconciler) createAutoPromotion(
 		"promotion", promotion.Name,
 	)
 	return nil
-
 }
 
 // createAutoPromotionRequest creates a PromotionRequest expressing the intent
@@ -317,18 +355,6 @@ func (r *RegularStageReconciler) createAutoPromotionRequest(
 		"freight", candidate.Name,
 	)
 
-	exists, err := r.promotionRequestExistsForStageFreight(ctx, stage, candidate.Name)
-	if err != nil {
-		return fmt.Errorf(
-			"error listing existing PromotionRequests for Freight %q in namespace %q: %w",
-			candidate.Name, stage.Namespace, err,
-		)
-	}
-	if exists {
-		logger.Debug("a PromotionRequest already exists for Stage and Freight")
-		return nil
-	}
-
 	promotionRequest, err := api.NewPromotionRequest(ctx, r.client, stage, candidate.Name)
 	if err != nil {
 		return fmt.Errorf(
@@ -354,6 +380,8 @@ func (r *RegularStageReconciler) createAutoPromotionRequest(
 		)
 	}
 
+	// FIXME: add event here
+
 	// No event is recorded. Kargo's promotion events carry a Promotion, and a
 	// PromotionRequest has none of its own; the events belong to the child
 	// Promotions that its reconciler creates.
@@ -362,30 +390,6 @@ func (r *RegularStageReconciler) createAutoPromotionRequest(
 		"promotionRequest", promotionRequest.Name,
 	)
 	return nil
-}
-
-// promotionRequestExistsForStageFreight reports whether any PromotionRequest exists for
-// the given Stage and Freight, in any phase.
-func (r *RegularStageReconciler) promotionRequestExistsForStageFreight(
-	ctx context.Context,
-	stage *kargoapi.Stage,
-	freightName string,
-) (bool, error) {
-	promotionRequests := &kargoapi.PromotionRequestList{}
-	if err := r.client.List(
-		ctx,
-		promotionRequests,
-		client.InNamespace(stage.Namespace),
-		client.MatchingFieldsSelector{
-			Selector: fields.OneTermEqualSelector(
-				indexer.PromotionRequestsByStageAndFreightField,
-				indexer.StageAndFreightKey(stage.Name, freightName),
-			),
-		},
-	); err != nil {
-		return false, err
-	}
-	return len(promotionRequests.Items) > 0, nil
 }
 
 // stageAwaitingFreightForOrigin reports whether this reconcile pass has already
@@ -397,101 +401,14 @@ func stageAwaitingFreightForOrigin(
 	origin string,
 	name string,
 ) bool {
-	if stage.Status.CurrentPromotion == nil ||
-		stage.Status.CurrentPromotion.Freight == nil {
+	currentPromo := getCurrentPromoObject(stage)
+	if currentPromo == nil || currentPromo.GetFreightReference() == nil {
 		return false
 	}
+	freightRef := currentPromo.GetFreightReference()
 	// Reconcile patches stage.Status back onto the in-memory Stage after each
 	// sub-reconciler, so this sees Promotions observed earlier in this pass.
-	return stage.Status.CurrentPromotion.Freight.Name == name &&
-		stage.Status.CurrentPromotion.Freight.Origin.String() == origin
-}
-
-// unprocessedPromotionExistsForStageFreight reports whether a Promotion for
-// this Stage and Freight exists whose outcome syncPromotions has not yet
-// recorded: one that is still non-terminal, or one that SUCCEEDED after this
-// reconciliation's view of the Stage was computed (i.e., is newer than
-// status.lastPromotion). autoPromoteFreight uses it to avoid creating
-// duplicate work for the same candidate. The second case matters because a
-// fast Promotion can go from pending to succeeded in the interval between
-// syncPromotions observing it and autoPromoteFreight acting; a
-// non-terminal-only check misses it, and a succeeded Promotion for the
-// candidate is deliberately not otherwise disqualifying. Once the next
-// reconciliation records the success, the candidate-is-already-current check
-// takes over. Promotions that reached any other terminal phase are handled
-// by the newest-terminal-not-successful check regardless of whether they
-// have been recorded, so they never block here.
-func (r *RegularStageReconciler) unprocessedPromotionExistsForStageFreight(
-	ctx context.Context,
-	stage *kargoapi.Stage,
-	freightName string,
-) (bool, error) {
-	promotions := &kargoapi.PromotionList{}
-	if err := r.client.List(
-		ctx,
-		promotions,
-		client.InNamespace(stage.Namespace),
-		client.MatchingFieldsSelector{
-			Selector: fields.OneTermEqualSelector(
-				indexer.PromotionsByStageAndFreightField,
-				indexer.StageAndFreightKey(stage.Name, freightName),
-			),
-		},
-	); err != nil {
-		return false, err
-	}
-	promotions.Items = withoutTargetPromotions(promotions.Items)
-	lastPromo := stage.Status.LastPromotion
-	for i := range promotions.Items {
-		promo := &promotions.Items[i]
-		if !promo.Status.Phase.IsTerminal() ||
-			(promo.Status.Phase == kargoapi.PromotionPhaseSucceeded &&
-				(lastPromo == nil || strings.Compare(promo.Name, lastPromo.Name) > 0)) {
-			return true, nil
-		}
-	}
-	return false, nil
-}
-
-// newestTerminalPromotionForStageFreight returns the newest completed Promotion
-// for this Stage and Freight. autoPromoteFreight uses it to avoid retrying
-// terminal failures in a loop.
-func (r *RegularStageReconciler) newestTerminalPromotionForStageFreight(
-	ctx context.Context,
-	stage *kargoapi.Stage,
-	freightName string,
-) (*kargoapi.Promotion, error) {
-	promotions := &kargoapi.PromotionList{}
-	if err := r.client.List(
-		ctx,
-		promotions,
-		client.InNamespace(stage.Namespace),
-		client.MatchingFieldsSelector{
-			Selector: fields.AndSelectors(
-				fields.OneTermEqualSelector(
-					indexer.PromotionsByStageAndFreightField,
-					indexer.StageAndFreightKey(stage.Name, freightName),
-				),
-				fields.OneTermEqualSelector(
-					indexer.PromotionsByTerminalField,
-					strconv.FormatBool(true),
-				),
-			),
-		},
-	); err != nil {
-		return nil, err
-	}
-	promotions.Items = withoutTargetPromotions(promotions.Items)
-	if len(promotions.Items) == 0 {
-		return nil, nil
-	}
-	slices.SortFunc(promotions.Items, func(lhs, rhs kargoapi.Promotion) int {
-		if result := rhs.CreationTimestamp.Compare(lhs.CreationTimestamp.Time); result != 0 {
-			return result
-		}
-		return strings.Compare(rhs.Name, lhs.Name)
-	})
-	return &promotions.Items[0], nil
+	return freightRef.Name == name && freightRef.Origin.String() == origin
 }
 
 // freightCollectionHasFreight checks a single origin in a FreightCollection.
@@ -505,4 +422,33 @@ func freightCollectionHasFreight(
 	}
 	freightRef, ok := collection.Freight[origin]
 	return ok && freightRef.Name == name
+}
+
+func refreshAutoPromotionHolds(
+	newStatus kargoapi.StageStatus,
+	promo PromotionObject,
+	requestedOrigins map[string]struct{},
+) kargoapi.StageStatus {
+	// A Promotion's hold/resume intent is fixed at creation and is not
+	// changed by an involuntary failure, so any terminal Promotion
+	// applies its intent. The exception is an Aborted Promotion: the
+	// user deliberately canceled it, withdrawing the intent along with
+	// it. (newPromos contains only terminal Promotions.) Holds are only
+	// maintained while auto-promotion is enabled; when disabled they are
+	// cleared above and not re-established here.
+	if !promo.GetPhase().IsAborted() {
+		if originKey := promo.GetAnnotations()[kargoapi.AnnotationKeyAutoPromotionHold]; originKey != "" {
+			if _, requested := requestedOrigins[originKey]; requested {
+				if origin, err := kargoapi.ParseFreightOrigin(originKey); err == nil {
+					if newStatus.AutoPromotionHolds == nil {
+						newStatus.AutoPromotionHolds = make(map[string]kargoapi.AutoPromotionHold)
+					}
+					newStatus.AutoPromotionHolds[originKey] = newAutoPromotionHold(promo, origin)
+				}
+			}
+		} else if originKey := promo.GetAnnotations()[kargoapi.AnnotationKeyAutoPromotionResume]; originKey != "" {
+			delete(newStatus.AutoPromotionHolds, originKey)
+		}
+	}
+	return newStatus
 }
