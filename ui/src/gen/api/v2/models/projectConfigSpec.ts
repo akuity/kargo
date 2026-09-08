@@ -8,6 +8,7 @@
 import type { DeepLink } from './deepLink';
 import type { PromotionPolicy } from './promotionPolicy';
 import type { PromotionWindow } from './promotionWindow';
+import type { ReleaseContextConfig } from './releaseContextConfig';
 import type { WebhookReceiverConfig } from './webhookReceiverConfig';
 
 export interface ProjectConfigSpec {
@@ -30,6 +31,11 @@ Kargo Enterprise only: This field is ignored in Kargo OSS.
 +listType=map
 +listMapKey=name */
   promotionWindows?: PromotionWindow[];
+  /** ReleaseContext replaces the cluster-level release context configuration.
+Omit it to inherit cluster defaults. Set it to {} to disable custom image
+annotation interpretation in this project without hiding raw annotations.
++optional */
+  releaseContext?: ReleaseContextConfig;
   /** StageLinks defines deep links shown when viewing Stage resources within
 this project. These are shown in addition to any cluster-level
 StageLinks defined in ClusterConfig.

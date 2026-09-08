@@ -35,6 +35,11 @@ type ProjectConfigSpec struct {
 	// WebhookReceivers describes Project-specific webhook receivers used for
 	// processing events from various external platforms
 	WebhookReceivers []WebhookReceiverConfig `json:"webhookReceivers,omitempty"`
+	// ReleaseContext replaces the cluster-level release context configuration.
+	// Omit it to inherit cluster defaults. Set it to {} to disable custom image
+	// annotation interpretation in this project without hiding raw annotations.
+	// +optional
+	ReleaseContext *ReleaseContextConfig `json:"releaseContext,omitempty"`
 	// FreightLinks defines deep links shown when viewing Freight resources
 	// within this project. These are shown in addition to any cluster-level
 	// FreightLinks defined in ClusterConfig.

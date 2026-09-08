@@ -1201,6 +1201,49 @@
         ]
       }
     },
+    "/v1beta1/projects/{project}/freight/{freight-name-or-alias}/release-context-config": {
+      "get": {
+        "description": "Returns project annotation mappings when configured, otherwise cluster defaults.\nAuthorizes read access to the requested Freight before reading configuration internally.\nOnly annotation-key mappings are returned; Freight readers need not access full configuration resources.",
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "Core",
+          "Project-Level"
+        ],
+        "summary": "Retrieve effective release context configuration for Freight",
+        "operationId": "GetFreightReleaseContextConfig",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "Project name",
+            "name": "project",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "description": "Freight name or alias",
+            "name": "freight-name-or-alias",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/ReleaseContextConfig"
+            }
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      }
+    },
     "/v1beta1/projects/{project}/generic-credentials": {
       "get": {
         "description": "List project-level generic credentials. Returns a Kubernetes\nSecretList resource containing heavily redacted Secrets.",
@@ -6674,6 +6717,14 @@
             "$ref": "#/definitions/PromotionWindow"
           }
         },
+        "releaseContext": {
+          "description": "ReleaseContext defines default image annotation mappings for the dashboard.\nA ProjectConfig may replace this configuration for its project.\n+optional",
+          "allOf": [
+            {
+              "$ref": "#/definitions/ReleaseContextConfig"
+            }
+          ]
+        },
         "stageLinks": {
           "description": "StageLinks defines deep links shown when viewing any Stage resource\nacross all projects in the cluster. Project-level StageLinks defined in\nProjectConfig are shown in addition to these.\n\n+optional",
           "type": "array",
@@ -7520,6 +7571,27 @@
         }
       }
     },
+    "ImageAnnotationMappings": {
+      "type": "object",
+      "properties": {
+        "commitAuthor": {
+          "description": "CommitAuthor is the annotation containing the source commit's author.\n+optional",
+          "type": "string"
+        },
+        "commitCommitter": {
+          "description": "CommitCommitter is the annotation containing the source commit's committer.\n+optional",
+          "type": "string"
+        },
+        "commitCreatedAt": {
+          "description": "CommitCreatedAt is the annotation containing the source commit timestamp\nin RFC 3339 format. It is separate from the OCI image creation timestamp.\n+optional",
+          "type": "string"
+        },
+        "commitSubject": {
+          "description": "CommitSubject is the annotation containing the source commit's subject.\n+optional",
+          "type": "string"
+        }
+      }
+    },
     "ImageDiscoveryResult": {
       "type": "object",
       "properties": {
@@ -7652,6 +7724,14 @@
           "items": {
             "$ref": "#/definitions/PromotionWindow"
           }
+        },
+        "releaseContext": {
+          "description": "ReleaseContext replaces the cluster-level release context configuration.\nOmit it to inherit cluster defaults. Set it to {} to disable custom image\nannotation interpretation in this project without hiding raw annotations.\n+optional",
+          "allOf": [
+            {
+              "$ref": "#/definitions/ReleaseContextConfig"
+            }
+          ]
         },
         "stageLinks": {
           "description": "StageLinks defines deep links shown when viewing Stage resources within\nthis project. These are shown in addition to any cluster-level\nStageLinks defined in ClusterConfig.\n\n+optional",
@@ -8507,6 +8587,19 @@
       "required": [
         "secretRef"
       ]
+    },
+    "ReleaseContextConfig": {
+      "type": "object",
+      "properties": {
+        "imageAnnotations": {
+          "description": "ImageAnnotations maps optional commit details to exact custom annotation\nkeys. Unconfigured or absent values are not interpreted.\n+optional",
+          "allOf": [
+            {
+              "$ref": "#/definitions/ImageAnnotationMappings"
+            }
+          ]
+        }
+      }
     },
     "Stage": {
       "type": "object",

@@ -8,6 +8,7 @@
 import type { DeepLink } from './deepLink';
 import type { GitClientConfig } from './gitClientConfig';
 import type { PromotionWindow } from './promotionWindow';
+import type { ReleaseContextConfig } from './releaseContextConfig';
 import type { WebhookReceiverConfig } from './webhookReceiverConfig';
 
 export interface ClusterConfigSpec {
@@ -34,6 +35,10 @@ Kargo Enterprise only: This field is ignored in Kargo OSS.
 +listType=map
 +listMapKey=name */
   promotionWindows?: PromotionWindow[];
+  /** ReleaseContext defines default image annotation mappings for the dashboard.
+A ProjectConfig may replace this configuration for its project.
++optional */
+  releaseContext?: ReleaseContextConfig;
   /** StageLinks defines deep links shown when viewing any Stage resource
 across all projects in the cluster. Project-level StageLinks defined in
 ProjectConfig are shown in addition to these.

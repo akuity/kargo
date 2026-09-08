@@ -87,6 +87,7 @@ Class | Method | HTTP request | Description
 *CoreAPI* | [**GetClusterPromotionTask**](docs/CoreAPI.md#getclusterpromotiontask) | **Get** /v1beta1/shared/cluster-promotion-tasks/{cluster-promotion-task} | Retrieve a ClusterPromotionTask
 *CoreAPI* | [**GetFreight**](docs/CoreAPI.md#getfreight) | **Get** /v1beta1/projects/{project}/freight/{freight-name-or-alias} | Retrieve a Freight resource
 *CoreAPI* | [**GetFreightLinks**](docs/CoreAPI.md#getfreightlinks) | **Get** /v1beta1/projects/{project}/freight/{freight-name-or-alias}/links | Retrieve deep links for a Freight resource
+*CoreAPI* | [**GetFreightReleaseContextConfig**](docs/CoreAPI.md#getfreightreleasecontextconfig) | **Get** /v1beta1/projects/{project}/freight/{freight-name-or-alias}/release-context-config | Retrieve effective release context configuration for Freight
 *CoreAPI* | [**GetProject**](docs/CoreAPI.md#getproject) | **Get** /v1beta1/projects/{project} | Retrieve a Project resource
 *CoreAPI* | [**GetProjectConfig**](docs/CoreAPI.md#getprojectconfig) | **Get** /v1beta1/projects/{project}/config | Retrieve ProjectConfig
 *CoreAPI* | [**GetProjectConfigMap**](docs/CoreAPI.md#getprojectconfigmap) | **Get** /v1beta1/projects/{project}/configmaps/{configmap} | Retrieve a project-level ConfigMap
@@ -267,6 +268,7 @@ Class | Method | HTTP request | Description
  - [Heartbeat](docs/Heartbeat.md)
  - [HeartbeatStatus](docs/HeartbeatStatus.md)
  - [Image](docs/Image.md)
+ - [ImageAnnotationMappings](docs/ImageAnnotationMappings.md)
  - [ImageDiscoveryResult](docs/ImageDiscoveryResult.md)
  - [ImageStageMap](docs/ImageStageMap.md)
  - [IndexSelector](docs/IndexSelector.md)
@@ -317,6 +319,7 @@ Class | Method | HTTP request | Description
  - [PublicConfig](docs/PublicConfig.md)
  - [QuayWebhookReceiverConfig](docs/QuayWebhookReceiverConfig.md)
  - [RbacRole](docs/RbacRole.md)
+ - [ReleaseContextConfig](docs/ReleaseContextConfig.md)
  - [ResolvedLink](docs/ResolvedLink.md)
  - [ResourceDetails](docs/ResourceDetails.md)
  - [ResourceErrorResponse](docs/ResourceErrorResponse.md)

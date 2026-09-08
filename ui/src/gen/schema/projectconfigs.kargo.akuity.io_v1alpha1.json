@@ -319,6 +319,66 @@
           ],
           "x-kubernetes-list-type": "map"
         },
+        "releaseContext": {
+          "description": "ReleaseContext replaces the cluster-level release context configuration.\nOmit it to inherit cluster defaults. Set it to {} to disable custom image\nannotation interpretation in this project without hiding raw annotations.",
+          "properties": {
+            "imageAnnotations": {
+              "description": "ImageAnnotations maps optional commit details to exact custom annotation\nkeys. Unconfigured or absent values are not interpreted.",
+              "properties": {
+                "commitAuthor": {
+                  "description": "CommitAuthor is the annotation containing the source commit's author.",
+                  "minLength": 1,
+                  "pattern": "^\\S+$",
+                  "type": "string",
+                  "x-kubernetes-validations": [
+                    {
+                      "message": "must be a custom annotation key",
+                      "rule": "!self.startsWith('org.opencontainers.')"
+                    }
+                  ]
+                },
+                "commitCommitter": {
+                  "description": "CommitCommitter is the annotation containing the source commit's committer.",
+                  "minLength": 1,
+                  "pattern": "^\\S+$",
+                  "type": "string",
+                  "x-kubernetes-validations": [
+                    {
+                      "message": "must be a custom annotation key",
+                      "rule": "!self.startsWith('org.opencontainers.')"
+                    }
+                  ]
+                },
+                "commitCreatedAt": {
+                  "description": "CommitCreatedAt is the annotation containing the source commit timestamp\nin RFC 3339 format. It is separate from the OCI image creation timestamp.",
+                  "minLength": 1,
+                  "pattern": "^\\S+$",
+                  "type": "string",
+                  "x-kubernetes-validations": [
+                    {
+                      "message": "must be a custom annotation key",
+                      "rule": "!self.startsWith('org.opencontainers.')"
+                    }
+                  ]
+                },
+                "commitSubject": {
+                  "description": "CommitSubject is the annotation containing the source commit's subject.",
+                  "minLength": 1,
+                  "pattern": "^\\S+$",
+                  "type": "string",
+                  "x-kubernetes-validations": [
+                    {
+                      "message": "must be a custom annotation key",
+                      "rule": "!self.startsWith('org.opencontainers.')"
+                    }
+                  ]
+                }
+              },
+              "type": "object"
+            }
+          },
+          "type": "object"
+        },
         "stageLinks": {
           "description": "StageLinks defines deep links shown when viewing Stage resources within\nthis project. These are shown in addition to any cluster-level\nStageLinks defined in ClusterConfig.",
           "items": {
