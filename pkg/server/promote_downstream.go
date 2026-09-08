@@ -250,6 +250,7 @@ func (s *server) createPromotionRequest(
 	if err = s.client.InternalClient().Create(ctx, newPromoReq); err != nil {
 		return nil, err
 	}
+	// FIXME: add event here
 	// No event is recorded: Kargo's promotion events carry a Promotion,
 	// and a PromotionRequest has none of its own.
 	return newPromoReq, nil
