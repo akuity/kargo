@@ -135,7 +135,7 @@ expression by utilizing the
 [`secret()`](../../50-user-guide/60-reference-docs/40-expressions.md#secretname)
 expression function.
 
-::info
+:::info
 
 This is in contrast to _shared_ repository credentials from the shared resources
 namespace, which by design, _cannot_ be referenced directly. This limitation
