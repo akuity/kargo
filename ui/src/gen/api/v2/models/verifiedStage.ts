@@ -7,11 +7,13 @@
  */
 
 export interface VerifiedStage {
-  /** LongestCompletedSoak represents the longest definite time interval wherein
-the Freight was in CONTINUOUS use by the Stage. This value is updated as
-Freight EXITS the Stage. If the Freight is currently in use by the Stage,
-the time elapsed since the Freight ENTERED the Stage is its current soak
-time, which may exceed the value of this field. */
+  /**
+   * LongestCompletedSoak represents the longest definite time interval wherein
+   * the Freight was in CONTINUOUS use by the Stage. This value is updated as
+   * Freight EXITS the Stage. If the Freight is currently in use by the Stage,
+   * the time elapsed since the Freight ENTERED the Stage is its current soak
+   * time, which may exceed the value of this field.
+   */
   longestSoak?: string;
   /** VerifiedAt is the time at which the Freight was verified in the Stage. */
   verifiedAt?: string;

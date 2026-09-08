@@ -9,28 +9,40 @@ import type { V1HTTPHeader } from './v1HTTPHeader';
 import type { V1HTTPProtocol } from './v1HTTPProtocol';
 
 export interface V1HTTPGetAction {
-  /** Host name to connect to, defaults to the pod IP. You probably want to set
-"Host" in httpHeaders instead.
-+optional */
+  /**
+   * Host name to connect to, defaults to the pod IP. You probably want to set
+   * "Host" in httpHeaders instead.
+   * +optional
+   */
   host?: string;
-  /** Custom headers to set in the request. HTTP allows repeated headers.
-+optional
-+listType=atomic */
+  /**
+   * Custom headers to set in the request. HTTP allows repeated headers.
+   * +optional
+   * +listType=atomic
+   */
   httpHeaders?: V1HTTPHeader[];
-  /** Path to access on the HTTP server.
-+optional */
+  /**
+   * Path to access on the HTTP server.
+   * +optional
+   */
   path?: string;
-  /** Name or number of the port to access on the container.
-Number must be in the range 1 to 65535.
-Name must be an IANA_SVC_NAME. */
+  /**
+   * Name or number of the port to access on the container.
+   * Number must be in the range 1 to 65535.
+   * Name must be an IANA_SVC_NAME.
+   */
   port?: unknown;
-  /** Protocol selects the wire protocol for the probe connection.
-Nil defaults to HTTP/1.1.
-+optional
-+featureGate=H2CContainerProbe */
+  /**
+   * Protocol selects the wire protocol for the probe connection.
+   * Nil defaults to HTTP/1.1.
+   * +optional
+   * +featureGate=H2CContainerProbe
+   */
   protocol?: V1HTTPProtocol;
-  /** Scheme to use for connecting to the host.
-Defaults to HTTP.
-+optional */
+  /**
+   * Scheme to use for connecting to the host.
+   * Defaults to HTTP.
+   * +optional
+   */
   scheme?: string;
 }

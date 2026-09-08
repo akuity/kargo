@@ -5,8 +5,8 @@
  * REST API for Kargo
  * OpenAPI spec version: v1alpha1
  */
-import type { RolloutsRunSummary } from './rolloutsRunSummary';
 import type { RolloutsMetricResult } from './rolloutsMetricResult';
+import type { RolloutsRunSummary } from './rolloutsRunSummary';
 
 export interface RolloutsAnalysisRunStatus {
   completedAt?: string;

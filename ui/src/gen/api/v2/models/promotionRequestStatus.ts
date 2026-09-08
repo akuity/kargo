@@ -5,48 +5,60 @@
  * REST API for Kargo
  * OpenAPI spec version: v1alpha1
  */
-import type { V1Condition } from './v1Condition';
 import type { PromotionRequestPhase } from './promotionRequestPhase';
 import type { PromotionRequestSummary } from './promotionRequestSummary';
 import type { PromotionRequestTargetStatus } from './promotionRequestTargetStatus';
+import type { V1Condition } from './v1Condition';
 
 export interface PromotionRequestStatus {
-  /** Conditions contains the last observations of the PromotionRequest's current
-state.
-
-+patchMergeKey=type
-+patchStrategy=merge
-+listType=map
-+listMapKey=type */
+  /**
+   * Conditions contains the last observations of the PromotionRequest's current
+   * state.
+   *
+   * +patchMergeKey=type
+   * +patchStrategy=merge
+   * +listType=map
+   * +listMapKey=type
+   */
   conditions?: V1Condition[];
   /** FinishedAt is the time at which the PromotionRequest completed. */
   finishedAt?: string;
-  /** ObservedGeneration is the generation of the spec last reconciled.
-
-+kubebuilder:validation:Optional */
+  /**
+   * ObservedGeneration is the generation of the spec last reconciled.
+   *
+   * +kubebuilder:validation:Optional
+   */
   observedGeneration?: number;
-  /** Phase is a high-level summary of the PromotionRequest's lifecycle.
-
-+kubebuilder:validation:Optional */
+  /**
+   * Phase is a high-level summary of the PromotionRequest's lifecycle.
+   *
+   * +kubebuilder:validation:Optional
+   */
   phase?: PromotionRequestPhase;
-  /** StartedAt is the time at which the PromotionRequest started.
-
-+kubebuilder:validation:Optional */
+  /**
+   * StartedAt is the time at which the PromotionRequest started.
+   *
+   * +kubebuilder:validation:Optional
+   */
   startedAt?: string;
-  /** Summary aggregates the phases of this PromotionRequest's child Promotions.
-
-+kubebuilder:validation:Optional */
+  /**
+   * Summary aggregates the phases of this PromotionRequest's child Promotions.
+   *
+   * +kubebuilder:validation:Optional
+   */
   summary?: PromotionRequestSummary;
-  /** Targets records progress against spec.targets: one entry per Target, with
-the child Promotion promoting to it and that Promotion's phase. Entries
-appear as the reconciler acts on each Target in spec.targets.
-
-The list is atomic rather than a map keyed by name: the reconciler is its
-only writer, so per-item ownership tracking in managedFields would only
-inflate the object -- roughly doubling the storage cost of each entry --
-without ever being used to merge.
-
-+kubebuilder:validation:Optional
-+listType=atomic */
+  /**
+   * Targets records progress against spec.targets: one entry per Target, with
+   * the child Promotion promoting to it and that Promotion's phase. Entries
+   * appear as the reconciler acts on each Target in spec.targets.
+   *
+   * The list is atomic rather than a map keyed by name: the reconciler is its
+   * only writer, so per-item ownership tracking in managedFields would only
+   * inflate the object -- roughly doubling the storage cost of each entry --
+   * without ever being used to merge.
+   *
+   * +kubebuilder:validation:Optional
+   * +listType=atomic
+   */
   targets?: PromotionRequestTargetStatus[];
 }

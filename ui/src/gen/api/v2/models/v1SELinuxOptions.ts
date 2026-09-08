@@ -7,16 +7,24 @@
  */
 
 export interface V1SELinuxOptions {
-  /** Level is SELinux level label that applies to the container.
-+optional */
+  /**
+   * Level is SELinux level label that applies to the container.
+   * +optional
+   */
   level?: string;
-  /** Role is a SELinux role label that applies to the container.
-+optional */
+  /**
+   * Role is a SELinux role label that applies to the container.
+   * +optional
+   */
   role?: string;
-  /** Type is a SELinux type label that applies to the container.
-+optional */
+  /**
+   * Type is a SELinux type label that applies to the container.
+   * +optional
+   */
   type?: string;
-  /** User is a SELinux user label that applies to the container.
-+optional */
+  /**
+   * User is a SELinux user label that applies to the container.
+   * +optional
+   */
   user?: string;
 }

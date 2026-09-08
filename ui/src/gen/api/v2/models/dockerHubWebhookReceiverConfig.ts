@@ -8,17 +8,19 @@
 import type { V1LocalObjectReference } from './v1LocalObjectReference';
 
 export interface DockerHubWebhookReceiverConfig {
-  /** SecretRef contains a reference to a Secret. For Project-scoped webhook
-receivers, the referenced Secret must be in the same namespace as the
-ProjectConfig.
-
-The Secret's data map is expected to contain a `secret` key whose value
-does NOT need to be shared directly with Docker Hub when registering a
-webhook. It is used only by Kargo to create a complex, hard-to-guess URL,
-which implicitly serves as a shared secret. For more information about
-Docker Hub webhooks, please refer to the Docker documentation:
-  https://docs.docker.com/docker-hub/webhooks/
-
-+kubebuilder:validation:Required */
+  /**
+   * SecretRef contains a reference to a Secret. For Project-scoped webhook
+   * receivers, the referenced Secret must be in the same namespace as the
+   * ProjectConfig.
+   *
+   * The Secret's data map is expected to contain a `secret` key whose value
+   * does NOT need to be shared directly with Docker Hub when registering a
+   * webhook. It is used only by Kargo to create a complex, hard-to-guess URL,
+   * which implicitly serves as a shared secret. For more information about
+   * Docker Hub webhooks, please refer to the Docker documentation:
+   *   https://docs.docker.com/docker-hub/webhooks/
+   *
+   * +kubebuilder:validation:Required
+   */
   secretRef: V1LocalObjectReference;
 }

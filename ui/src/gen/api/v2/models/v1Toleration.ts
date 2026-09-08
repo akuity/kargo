@@ -7,31 +7,41 @@
  */
 
 export interface V1Toleration {
-  /** Effect indicates the taint effect to match. Empty means match all taint effects.
-When specified, allowed values are NoSchedule, PreferNoSchedule and NoExecute.
-+optional */
+  /**
+   * Effect indicates the taint effect to match. Empty means match all taint effects.
+   * When specified, allowed values are NoSchedule, PreferNoSchedule and NoExecute.
+   * +optional
+   */
   effect?: string;
-  /** Key is the taint key that the toleration applies to. Empty means match all taint keys.
-If the key is empty, operator must be Exists; this combination means to match all values and all keys.
-+optional
-+k8s:alpha(since: "1.37")=+k8s:optional
-+k8s:alpha(since: "1.37")=+k8s:format=k8s-label-key */
+  /**
+   * Key is the taint key that the toleration applies to. Empty means match all taint keys.
+   * If the key is empty, operator must be Exists; this combination means to match all values and all keys.
+   * +optional
+   * +k8s:alpha(since: "1.37")=+k8s:optional
+   * +k8s:alpha(since: "1.37")=+k8s:format=k8s-label-key
+   */
   key?: string;
-  /** Operator represents a key's relationship to the value.
-Valid operators are Exists, Equal, Lt, and Gt. Defaults to Equal.
-Exists is equivalent to wildcard for value, so that a pod can
-tolerate all taints of a particular category.
-Lt and Gt perform numeric comparisons (requires feature gate TaintTolerationComparisonOperators).
-+optional */
+  /**
+   * Operator represents a key's relationship to the value.
+   * Valid operators are Exists, Equal, Lt, and Gt. Defaults to Equal.
+   * Exists is equivalent to wildcard for value, so that a pod can
+   * tolerate all taints of a particular category.
+   * Lt and Gt perform numeric comparisons (requires feature gate TaintTolerationComparisonOperators).
+   * +optional
+   */
   operator?: string;
-  /** TolerationSeconds represents the period of time the toleration (which must be
-of effect NoExecute, otherwise this field is ignored) tolerates the taint. By default,
-it is not set, which means tolerate the taint forever (do not evict). Zero and
-negative values will be treated as 0 (evict immediately) by the system.
-+optional */
+  /**
+   * TolerationSeconds represents the period of time the toleration (which must be
+   * of effect NoExecute, otherwise this field is ignored) tolerates the taint. By default,
+   * it is not set, which means tolerate the taint forever (do not evict). Zero and
+   * negative values will be treated as 0 (evict immediately) by the system.
+   * +optional
+   */
   tolerationSeconds?: number;
-  /** Value is the taint value the toleration matches to.
-If the operator is Exists, the value should be empty, otherwise just a regular string.
-+optional */
+  /**
+   * Value is the taint value the toleration matches to.
+   * If the operator is Exists, the value should be empty, otherwise just a regular string.
+   * +optional
+   */
   value?: string;
 }

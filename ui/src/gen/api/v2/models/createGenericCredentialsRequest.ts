@@ -12,8 +12,10 @@ export interface CreateGenericCredentialsRequest {
   description?: string;
   name?: string;
   replicate?: boolean;
-  /** Type is the Kubernetes Secret type (e.g. "Opaque" or
-"kubernetes.io/dockerconfigjson"). It is immutable, so it may only be set
-at creation time. When empty, Kubernetes defaults it to "Opaque". */
+  /**
+   * Type is the Kubernetes Secret type (e.g. "Opaque" or
+   * "kubernetes.io/dockerconfigjson"). It is immutable, so it may only be set
+   * at creation time. When empty, Kubernetes defaults it to "Opaque".
+   */
   type?: string;
 }

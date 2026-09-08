@@ -8,8 +8,8 @@
 
 /**
  * Parameters contains additional, action-specific parameters. Values may be
-static or extracted from the request using expressions.
-
-+optional
+ * static or extracted from the request using expressions.
+ *
+ * +optional
  */
 export type GenericWebhookActionParameters = { [key: string]: string };

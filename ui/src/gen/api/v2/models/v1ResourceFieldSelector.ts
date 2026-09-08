@@ -7,11 +7,15 @@
  */
 
 export interface V1ResourceFieldSelector {
-  /** Container name: required for volumes, optional for env vars
-+optional */
+  /**
+   * Container name: required for volumes, optional for env vars
+   * +optional
+   */
   containerName?: string;
-  /** Specifies the output format of the exposed resources, defaults to "1"
-+optional */
+  /**
+   * Specifies the output format of the exposed resources, defaults to "1"
+   * +optional
+   */
   divisor?: string;
   /** Required: resource to select */
   resource?: string;

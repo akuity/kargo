@@ -8,34 +8,44 @@
 import type { V1LabelSelector } from './v1LabelSelector';
 
 export interface V1ClusterTrustBundleProjection {
-  /** Select all ClusterTrustBundles that match this label selector.  Only has
-effect if signerName is set.  Mutually-exclusive with name.  If unset,
-interpreted as "match nothing".  If set but empty, interpreted as "match
-everything".
-+optional */
+  /**
+   * Select all ClusterTrustBundles that match this label selector.  Only has
+   * effect if signerName is set.  Mutually-exclusive with name.  If unset,
+   * interpreted as "match nothing".  If set but empty, interpreted as "match
+   * everything".
+   * +optional
+   */
   labelSelector?: V1LabelSelector;
-  /** Select a single ClusterTrustBundle by object name.  Mutually-exclusive
-with signerName and labelSelector.
-+optional */
+  /**
+   * Select a single ClusterTrustBundle by object name.  Mutually-exclusive
+   * with signerName and labelSelector.
+   * +optional
+   */
   name?: string;
-  /** If true, don't block pod startup if the referenced ClusterTrustBundle(s)
-aren't available.  If using name, then the named ClusterTrustBundle is
-allowed not to exist.  If using signerName, then the combination of
-signerName and labelSelector is allowed to match zero
-ClusterTrustBundles.
-+optional */
+  /**
+   * If true, don't block pod startup if the referenced ClusterTrustBundle(s)
+   * aren't available.  If using name, then the named ClusterTrustBundle is
+   * allowed not to exist.  If using signerName, then the combination of
+   * signerName and labelSelector is allowed to match zero
+   * ClusterTrustBundles.
+   * +optional
+   */
   optional?: boolean;
   /** Relative path from the volume root to write the bundle. */
   path?: string;
-  /** Select all ClusterTrustBundles that match this signer name.
-Mutually-exclusive with name.  The contents of all selected
-ClusterTrustBundles will be unified and deduplicated.
-+optional */
+  /**
+   * Select all ClusterTrustBundles that match this signer name.
+   * Mutually-exclusive with name.  The contents of all selected
+   * ClusterTrustBundles will be unified and deduplicated.
+   * +optional
+   */
   signerName?: string;
-  /** user is Optional: The owner UID of the created file.
-If specified, the item-level user field takes precedence over defaultUser.
-(Alpha) This field requires the AtomicWriteVolumeUserFields feature gate to be enabled.
-+featureGate=AtomicWriteVolumeUserFields
-+optional */
+  /**
+   * user is Optional: The owner UID of the created file.
+   * If specified, the item-level user field takes precedence over defaultUser.
+   * (Alpha) This field requires the AtomicWriteVolumeUserFields feature gate to be enabled.
+   * +featureGate=AtomicWriteVolumeUserFields
+   * +optional
+   */
   user?: number;
 }

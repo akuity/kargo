@@ -9,16 +9,20 @@ import type { V1alpha3WorkloadPodGroupAllDisruptionMode } from './v1alpha3Worklo
 import type { V1alpha3WorkloadPodGroupSingleDisruptionMode } from './v1alpha3WorkloadPodGroupSingleDisruptionMode';
 
 export interface V1alpha3WorkloadPodGroupDisruptionMode {
-  /** all specifies that all pods in the group must be disrupted together.
-
-+optional
-+k8s:optional
-+k8s:unionMember */
+  /**
+   * all specifies that all pods in the group must be disrupted together.
+   *
+   * +optional
+   * +k8s:optional
+   * +k8s:unionMember
+   */
   all?: V1alpha3WorkloadPodGroupAllDisruptionMode;
-  /** single specifies that pods can be disrupted independently from each other.
-
-+optional
-+k8s:optional
-+k8s:unionMember */
+  /**
+   * single specifies that pods can be disrupted independently from each other.
+   *
+   * +optional
+   * +k8s:optional
+   * +k8s:unionMember
+   */
   single?: V1alpha3WorkloadPodGroupSingleDisruptionMode;
 }

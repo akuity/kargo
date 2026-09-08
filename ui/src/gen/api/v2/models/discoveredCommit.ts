@@ -9,23 +9,33 @@
 export interface DiscoveredCommit {
   /** Author is the author of the commit. */
   author?: string;
-  /** Branch is the branch in which the commit was found. This field is
-optional, and populated based on the CommitSelectionStrategy of the
-GitSubscription. */
+  /**
+   * Branch is the branch in which the commit was found. This field is
+   * optional, and populated based on the CommitSelectionStrategy of the
+   * GitSubscription.
+   */
   branch?: string;
   /** Committer is the person who committed the commit. */
   committer?: string;
-  /** CreatorDate is the commit creation date as specified by the commit, or
-the tagger date if the commit belongs to an annotated tag. */
+  /**
+   * CreatorDate is the commit creation date as specified by the commit, or
+   * the tagger date if the commit belongs to an annotated tag.
+   */
   creatorDate?: string;
-  /** ID is the identifier of the commit. This typically is a SHA-1 hash.
-
-+kubebuilder:validation:MinLength=1 */
+  /**
+   * ID is the identifier of the commit. This typically is a SHA-1 hash.
+   *
+   * +kubebuilder:validation:MinLength=1
+   */
   id?: string;
-  /** Subject is the subject of the commit (i.e. the first line of the commit
-message). */
+  /**
+   * Subject is the subject of the commit (i.e. the first line of the commit
+   * message).
+   */
   subject?: string;
-  /** Tag is the tag that resolved to this commit. This field is optional, and
-populated based on the CommitSelectionStrategy of the GitSubscription. */
+  /**
+   * Tag is the tag that resolved to this commit. This field is optional, and
+   * populated based on the CommitSelectionStrategy of the GitSubscription.
+   */
   tag?: string;
 }

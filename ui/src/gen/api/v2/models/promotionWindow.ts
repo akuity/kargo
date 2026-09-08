@@ -5,69 +5,87 @@
  * REST API for Kargo
  * OpenAPI spec version: v1alpha1
  */
-import type { PromotionWindowKind } from './promotionWindowKind';
 import type { PromotionPolicySelector } from './promotionPolicySelector';
+import type { PromotionWindowKind } from './promotionWindowKind';
 
 export interface PromotionWindow {
-  /** Description is a human-readable description of the window.
-May contain reason, author or any clarification for the window.
-
-+optional
-+kubebuilder:validation:MaxLength=1024 */
+  /**
+   * Description is a human-readable description of the window.
+   * May contain reason, author or any clarification for the window.
+   *
+   * +optional
+   * +kubebuilder:validation:MaxLength=1024
+   */
   description?: string;
-  /** Disabled controls whether configured windows should be skipped when calculating the stage window status.
-Optional. Default is `false`. Unless set to `true` the window will impact the stages it's configured for.
-
-+optional */
+  /**
+   * Disabled controls whether configured windows should be skipped when calculating the stage window status.
+   * Optional. Default is `false`. Unless set to `true` the window will impact the stages it's configured for.
+   *
+   * +optional
+   */
   disabled?: boolean;
-  /** DTEnd is the window's end in the same format as DTStart. When combined with
-RRule, DTEnd - DTStart defines the duration of each occurrence. The value
-is parsed and validated by Kargo Enterprise.
-
-+optional */
+  /**
+   * DTEnd is the window's end in the same format as DTStart. When combined with
+   * RRule, DTEnd - DTStart defines the duration of each occurrence. The value
+   * is parsed and validated by Kargo Enterprise.
+   *
+   * +optional
+   */
   dtend?: string;
-  /** DTStart is the window's start as an iCal date-time, with an optional
-"TZID=" prefix carrying the time zone (e.g.
-"TZID=America/New_York:20260101T090000"). The value is parsed and validated
-by Kargo Enterprise.
-
-+optional */
+  /**
+   * DTStart is the window's start as an iCal date-time, with an optional
+   * "TZID=" prefix carrying the time zone (e.g.
+   * "TZID=America/New_York:20260101T090000"). The value is parsed and validated
+   * by Kargo Enterprise.
+   *
+   * +optional
+   */
   dtstart?: string;
-  /** Kind indicates whether this window allows or denies promotions while it is
-active.
-
-+kubebuilder:validation:Required */
+  /**
+   * Kind indicates whether this window allows or denies promotions while it is
+   * active.
+   *
+   * +kubebuilder:validation:Required
+   */
   kind: PromotionWindowKind;
-  /** Name is a symbolic name for the window, unique within its list. It is used
-to identify the window in denial messages and events.
-
-+kubebuilder:validation:Required
-+kubebuilder:validation:MinLength=1
-+kubebuilder:validation:MaxLength=253
-+kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`
-+akuity:test-kubebuilder-pattern=KubernetesName */
+  /**
+   * Name is a symbolic name for the window, unique within its list. It is used
+   * to identify the window in denial messages and events.
+   *
+   * +kubebuilder:validation:Required
+   * +kubebuilder:validation:MinLength=1
+   * +kubebuilder:validation:MaxLength=253
+   * +kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`
+   * +akuity:test-kubebuilder-pattern=KubernetesName
+   */
   name: string;
-  /** ProjectSelector selects the Projects this window applies to. It is only
-meaningful on ClusterConfig windows; on ProjectConfig windows the Project
-is implicit and this field is rejected. When omitted on a ClusterConfig
-window, the window applies to all Projects. It reuses
-PromotionPolicySelector, matching Projects by exact name, glob/regex
-pattern, or label selector.
-
-+optional */
+  /**
+   * ProjectSelector selects the Projects this window applies to. It is only
+   * meaningful on ClusterConfig windows; on ProjectConfig windows the Project
+   * is implicit and this field is rejected. When omitted on a ClusterConfig
+   * window, the window applies to all Projects. It reuses
+   * PromotionPolicySelector, matching Projects by exact name, glob/regex
+   * pattern, or label selector.
+   *
+   * +optional
+   */
   projectSelector?: PromotionPolicySelector;
-  /** RRule is an optional RFC 5545 recurrence rule (e.g. "FREQ=DAILY") that
-makes the window recurring. When omitted, the window is a one-shot interval
-defined by DTStart and DTEnd. The full value is parsed and validated by
-Kargo Enterprise.
-
-+optional */
+  /**
+   * RRule is an optional RFC 5545 recurrence rule (e.g. "FREQ=DAILY") that
+   * makes the window recurring. When omitted, the window is a one-shot interval
+   * defined by DTStart and DTEnd. The full value is parsed and validated by
+   * Kargo Enterprise.
+   *
+   * +optional
+   */
   rrule?: string;
-  /** StageSelector selects the Stages this window applies to. When omitted, the
-window applies to all Stages in scope (project-wide on ProjectConfig,
-cluster-wide on ClusterConfig). It reuses PromotionPolicySelector, so it
-can match by exact name, glob/regex pattern, or label selector.
-
-+optional */
+  /**
+   * StageSelector selects the Stages this window applies to. When omitted, the
+   * window applies to all Stages in scope (project-wide on ProjectConfig,
+   * cluster-wide on ClusterConfig). It reuses PromotionPolicySelector, so it
+   * can match by exact name, glob/regex pattern, or label selector.
+   *
+   * +optional
+   */
   stageSelector?: PromotionPolicySelector;
 }

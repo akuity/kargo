@@ -8,14 +8,18 @@
 import type { ArtifactReference } from './artifactReference';
 
 export interface DiscoveryResult {
-  /** ArtifactReferences is a list of references to specific versions of an
-artifact.
-
-+optional */
+  /**
+   * ArtifactReferences is a list of references to specific versions of an
+   * artifact.
+   *
+   * +optional
+   */
   artifactReferences?: ArtifactReference[];
-  /** SubscriptionName is the name of the Subscription that discovered these
-results.
-
-+kubebuilder:validation:MinLength=1 */
+  /**
+   * SubscriptionName is the name of the Subscription that discovered these
+   * results.
+   *
+   * +kubebuilder:validation:MinLength=1
+   */
   name?: string;
 }

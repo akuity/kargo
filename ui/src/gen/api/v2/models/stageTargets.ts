@@ -8,16 +8,18 @@
 import type { V1LabelSelector } from './v1LabelSelector';
 
 export interface StageTargets {
-  /** Selectors select the Targets that the Stage governs, matching Targets by
-their labels within the Stage's own Project. A Target is selected when it
-matches any selector in the list, so several selectors describe a union.
-A Target matching more than one of them is still governed once.
-
-An empty selector selects every Target in the Project. An empty list
-selects none: the Stage still governs Targets, it just governs none at the
-moment.
-
-+listType=atomic
-+kubebuilder:validation:Required */
+  /**
+   * Selectors select the Targets that the Stage governs, matching Targets by
+   * their labels within the Stage's own Project. A Target is selected when it
+   * matches any selector in the list, so several selectors describe a union.
+   * A Target matching more than one of them is still governed once.
+   *
+   * An empty selector selects every Target in the Project. An empty list
+   * selects none: the Stage still governs Targets, it just governs none at the
+   * moment.
+   *
+   * +listType=atomic
+   * +kubebuilder:validation:Required
+   */
   selectors: V1LabelSelector[];
 }

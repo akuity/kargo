@@ -20,7 +20,7 @@ export const WarehouseDeleteButton = () => {
         navigate(generatePath(paths.project, { name: projectName }));
 
         queryClient.invalidateQueries({
-          queryKey: getListWarehousesQueryKey(projectName)
+          queryKey: getListWarehousesQueryKey(projectName || '')
         });
       }
     }

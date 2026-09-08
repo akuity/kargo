@@ -9,7 +9,6 @@
 export type PromotionRequestPhase =
   (typeof PromotionRequestPhase)[keyof typeof PromotionRequestPhase];
 
-// eslint-disable-next-line @typescript-eslint/no-redeclare
 export const PromotionRequestPhase = {
   PromotionRequestPhasePending: 'Pending',
   PromotionRequestPhaseRunning: 'Running',

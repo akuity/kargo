@@ -11,18 +11,26 @@ import type { V1SleepAction } from './v1SleepAction';
 import type { V1TCPSocketAction } from './v1TCPSocketAction';
 
 export interface V1LifecycleHandler {
-  /** Exec specifies a command to execute in the container.
-+optional */
+  /**
+   * Exec specifies a command to execute in the container.
+   * +optional
+   */
   exec?: V1ExecAction;
-  /** HTTPGet specifies an HTTP GET request to perform.
-+optional */
+  /**
+   * HTTPGet specifies an HTTP GET request to perform.
+   * +optional
+   */
   httpGet?: V1HTTPGetAction;
-  /** Sleep represents a duration that the container should sleep.
-+optional */
+  /**
+   * Sleep represents a duration that the container should sleep.
+   * +optional
+   */
   sleep?: V1SleepAction;
-  /** Deprecated. TCPSocket is NOT supported as a LifecycleHandler and kept
-for backward compatibility. There is no validation of this field and
-lifecycle hooks will fail at runtime when it is specified.
-+optional */
+  /**
+   * Deprecated. TCPSocket is NOT supported as a LifecycleHandler and kept
+   * for backward compatibility. There is no validation of this field and
+   * lifecycle hooks will fail at runtime when it is specified.
+   * +optional
+   */
   tcpSocket?: V1TCPSocketAction;
 }

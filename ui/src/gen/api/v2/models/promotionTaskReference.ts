@@ -7,18 +7,22 @@
  */
 
 export interface PromotionTaskReference {
-  /** Kind is the type of the PromotionTask. Can be either PromotionTask or
-ClusterPromotionTask, default is PromotionTask.
-
-+kubebuilder:validation:Optional
-+kubebuilder:validation:Enum=PromotionTask;ClusterPromotionTask */
+  /**
+   * Kind is the type of the PromotionTask. Can be either PromotionTask or
+   * ClusterPromotionTask, default is PromotionTask.
+   *
+   * +kubebuilder:validation:Optional
+   * +kubebuilder:validation:Enum=PromotionTask;ClusterPromotionTask
+   */
   kind?: string;
-  /** Name is the name of the (Cluster)PromotionTask.
-
-+kubebuilder:validation:Required
-+kubebuilder:validation:MinLength=1
-+kubebuilder:validation:MaxLength=253
-+kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`
-+akuity:test-kubebuilder-pattern=KubernetesName */
+  /**
+   * Name is the name of the (Cluster)PromotionTask.
+   *
+   * +kubebuilder:validation:Required
+   * +kubebuilder:validation:MinLength=1
+   * +kubebuilder:validation:MaxLength=253
+   * +kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`
+   * +akuity:test-kubebuilder-pattern=KubernetesName
+   */
   name: string;
 }

@@ -9,13 +9,19 @@ import type { FreightCollectionItems } from './freightCollectionItems';
 import type { VerificationInfo } from './verificationInfo';
 
 export interface FreightCollection {
-  /** ID is a unique and deterministically calculated identifier for the
-FreightCollection. It is updated on each use of the UpdateOrPush method. */
+  /**
+   * ID is a unique and deterministically calculated identifier for the
+   * FreightCollection. It is updated on each use of the UpdateOrPush method.
+   */
   id?: string;
-  /** Freight is a map of FreightReference objects, indexed by their Warehouse
-origin. */
+  /**
+   * Freight is a map of FreightReference objects, indexed by their Warehouse
+   * origin.
+   */
   items?: FreightCollectionItems;
-  /** VerificationHistory is a stack of recent VerificationInfo. By default,
-the last ten VerificationInfo are stored. */
+  /**
+   * VerificationHistory is a stack of recent VerificationInfo. By default,
+   * the last ten VerificationInfo are stored.
+   */
   verificationHistory?: VerificationInfo[];
 }

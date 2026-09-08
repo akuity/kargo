@@ -7,10 +7,14 @@
  */
 
 export interface V1EventSource {
-  /** Component from which the event is generated.
-+optional */
+  /**
+   * Component from which the event is generated.
+   * +optional
+   */
   component?: string;
-  /** Node name on which the event is generated.
-+optional */
+  /**
+   * Node name on which the event is generated.
+   * +optional
+   */
   host?: string;
 }

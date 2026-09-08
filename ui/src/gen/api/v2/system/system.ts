@@ -28,17 +28,29 @@ import type {
   GetControllerHeartbeatsResponse,
   PublicConfig,
   VersionInfo
-} from '.././models';
+} from '../models';
 
 import { customFetch } from '../../../../lib/api/custom-fetch';
 import type { ErrorType } from '../../../../lib/api/custom-fetch';
+import { serializeParams } from '../../../../lib/api/params-serializer';
 
 type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
 
-/**
- * Authenticate as the admin user if enabled.
- * @summary Admin login
- */
+const withQueryKey = <T extends object, K>(query: T, queryKey: K): T & { queryKey: K } => {
+  const result = { queryKey } as T & { queryKey: K };
+  for (const key of Object.keys(query)) {
+    // The explicit queryKey always wins, matching the previous
+    // `{ ...query, queryKey }` spread where it was set last.
+    if (key === 'queryKey') continue;
+    Object.defineProperty(result, key, {
+      enumerable: true,
+      configurable: true,
+      get: () => (query as Record<string, unknown>)[key]
+    });
+  }
+  return result;
+};
+
 export type adminLoginResponse200 = {
   data: AdminLoginResponse;
   status: 200;
@@ -53,12 +65,20 @@ export const getAdminLoginUrl = () => {
   return `/v1beta1/login`;
 };
 
-export const adminLogin = async (options?: RequestInit): Promise<adminLoginResponse> => {
+/**
+ * Authenticate as the admin user if enabled.
+ * @summary Admin login
+ */
+export const adminLogin = async (
+  options?: Parameters<typeof customFetch>[1]
+): Promise<adminLoginResponse> => {
   return customFetch<adminLoginResponse>(getAdminLoginUrl(), {
     ...options,
     method: 'POST'
   });
 };
+
+export const getAdminLoginMutationKey = () => ['adminLogin'] as const;
 
 export const getAdminLoginMutationOptions = <
   TError = ErrorType<unknown>,
@@ -67,7 +87,7 @@ export const getAdminLoginMutationOptions = <
   mutation?: UseMutationOptions<Awaited<ReturnType<typeof adminLogin>>, TError, void, TContext>;
   request?: SecondParameter<typeof customFetch>;
 }): UseMutationOptions<Awaited<ReturnType<typeof adminLogin>>, TError, void, TContext> => {
-  const mutationKey = ['adminLogin'];
+  const mutationKey = getAdminLoginMutationKey();
   const { mutation: mutationOptions, request: requestOptions } = options
     ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
       ? options
@@ -95,14 +115,8 @@ export const useAdminLogin = <TError = ErrorType<unknown>, TContext = unknown>(
   },
   queryClient?: QueryClient
 ): UseMutationResult<Awaited<ReturnType<typeof adminLogin>>, TError, void, TContext> => {
-  const mutationOptions = getAdminLoginMutationOptions(options);
-
-  return useMutation(mutationOptions, queryClient);
+  return useMutation(getAdminLoginMutationOptions(options), queryClient);
 };
-/**
- * Retrieve the single ClusterConfig resource.
- * @summary Retrieve the ClusterConfig
- */
 export type getClusterConfigResponse200 = {
   data: ClusterConfig;
   status: 200;
@@ -117,8 +131,12 @@ export const getGetClusterConfigUrl = () => {
   return `/v1beta1/system/cluster-config`;
 };
 
+/**
+ * Retrieve the single ClusterConfig resource.
+ * @summary Retrieve the ClusterConfig
+ */
 export const getClusterConfig = async (
-  options?: RequestInit
+  options?: Parameters<typeof customFetch>[1]
 ): Promise<getClusterConfigResponse> => {
   return customFetch<getClusterConfigResponse>(getGetClusterConfigUrl(), {
     ...options,
@@ -220,15 +238,9 @@ export function useGetClusterConfig<
     queryKey: DataTag<QueryKey, TData, TError>;
   };
 
-  query.queryKey = queryOptions.queryKey;
-
-  return query;
+  return withQueryKey(query, queryOptions.queryKey);
 }
 
-/**
- * Deletes the single ClusterConfig resource.
- * @summary Delete the ClusterConfig
- */
 export type deleteClusterConfigResponse204 = {
   data: void;
   status: 204;
@@ -243,14 +255,20 @@ export const getDeleteClusterConfigUrl = () => {
   return `/v1beta1/system/cluster-config`;
 };
 
+/**
+ * Deletes the single ClusterConfig resource.
+ * @summary Delete the ClusterConfig
+ */
 export const deleteClusterConfig = async (
-  options?: RequestInit
+  options?: Parameters<typeof customFetch>[1]
 ): Promise<deleteClusterConfigResponse> => {
   return customFetch<deleteClusterConfigResponse>(getDeleteClusterConfigUrl(), {
     ...options,
     method: 'DELETE'
   });
 };
+
+export const getDeleteClusterConfigMutationKey = () => ['deleteClusterConfig'] as const;
 
 export const getDeleteClusterConfigMutationOptions = <
   TError = ErrorType<unknown>,
@@ -264,7 +282,7 @@ export const getDeleteClusterConfigMutationOptions = <
   >;
   request?: SecondParameter<typeof customFetch>;
 }): UseMutationOptions<Awaited<ReturnType<typeof deleteClusterConfig>>, TError, void, TContext> => {
-  const mutationKey = ['deleteClusterConfig'];
+  const mutationKey = getDeleteClusterConfigMutationKey();
   const { mutation: mutationOptions, request: requestOptions } = options
     ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
       ? options
@@ -302,15 +320,8 @@ export const useDeleteClusterConfig = <TError = ErrorType<unknown>, TContext = u
   },
   queryClient?: QueryClient
 ): UseMutationResult<Awaited<ReturnType<typeof deleteClusterConfig>>, TError, void, TContext> => {
-  const mutationOptions = getDeleteClusterConfigMutationOptions(options);
-
-  return useMutation(mutationOptions, queryClient);
+  return useMutation(getDeleteClusterConfigMutationOptions(options), queryClient);
 };
-/**
- * Refresh the single ClusterConfig resource. Refreshing enqueues
-the resource for reconciliation by its corresponding controller.
- * @summary Refresh the ClusterConfig
- */
 export type refreshClusterConfigResponse200 = {
   data: void;
   status: 200;
@@ -325,14 +336,21 @@ export const getRefreshClusterConfigUrl = () => {
   return `/v1beta1/system/cluster-config/refresh`;
 };
 
+/**
+ * Refresh the single ClusterConfig resource. Refreshing enqueues
+ * the resource for reconciliation by its corresponding controller.
+ * @summary Refresh the ClusterConfig
+ */
 export const refreshClusterConfig = async (
-  options?: RequestInit
+  options?: Parameters<typeof customFetch>[1]
 ): Promise<refreshClusterConfigResponse> => {
   return customFetch<refreshClusterConfigResponse>(getRefreshClusterConfigUrl(), {
     ...options,
     method: 'POST'
   });
 };
+
+export const getRefreshClusterConfigMutationKey = () => ['refreshClusterConfig'] as const;
 
 export const getRefreshClusterConfigMutationOptions = <
   TError = ErrorType<unknown>,
@@ -351,7 +369,7 @@ export const getRefreshClusterConfigMutationOptions = <
   void,
   TContext
 > => {
-  const mutationKey = ['refreshClusterConfig'];
+  const mutationKey = getRefreshClusterConfigMutationKey();
   const { mutation: mutationOptions, request: requestOptions } = options
     ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
       ? options
@@ -389,17 +407,8 @@ export const useRefreshClusterConfig = <TError = ErrorType<unknown>, TContext = 
   },
   queryClient?: QueryClient
 ): UseMutationResult<Awaited<ReturnType<typeof refreshClusterConfig>>, TError, void, TContext> => {
-  const mutationOptions = getRefreshClusterConfigMutationOptions(options);
-
-  return useMutation(mutationOptions, queryClient);
+  return useMutation(getRefreshClusterConfigMutationOptions(options), queryClient);
 };
-/**
- * Get the most recent heartbeat from every controller that has
-reported in. Any controller not represented in the response has
-never reported a heartbeat and can therefore be assumed by the
-caller to be dead or nonexistent.
- * @summary Get controller heartbeats
- */
 export type getControllerHeartbeatsResponse200 = {
   data: GetControllerHeartbeatsResponse;
   status: 200;
@@ -414,8 +423,15 @@ export const getGetControllerHeartbeatsUrl = () => {
   return `/v1beta1/system/controller-heartbeats`;
 };
 
+/**
+ * Get the most recent heartbeat from every controller that has
+ * reported in. Any controller not represented in the response has
+ * never reported a heartbeat and can therefore be assumed by the
+ * caller to be dead or nonexistent.
+ * @summary Get controller heartbeats
+ */
 export const getControllerHeartbeats = async (
-  options?: RequestInit
+  options?: Parameters<typeof customFetch>[1]
 ): Promise<getControllerHeartbeatsResponse> => {
   return customFetch<getControllerHeartbeatsResponse>(getGetControllerHeartbeatsUrl(), {
     ...options,
@@ -529,17 +545,9 @@ export function useGetControllerHeartbeats<
     queryKey: DataTag<QueryKey, TData, TError>;
   };
 
-  query.queryKey = queryOptions.queryKey;
-
-  return query;
+  return withQueryKey(query, queryOptions.queryKey);
 }
 
-/**
- * Retrieve information a client may need to know about how the
-Kargo API server is configured in order to proceed with
-authentication.
- * @summary Retrieve public server configuration
- */
 export type getPublicConfigResponse200 = {
   data: PublicConfig;
   status: 200;
@@ -554,7 +562,15 @@ export const getGetPublicConfigUrl = () => {
   return `/v1beta1/system/public-server-config`;
 };
 
-export const getPublicConfig = async (options?: RequestInit): Promise<getPublicConfigResponse> => {
+/**
+ * Retrieve information a client may need to know about how the
+ * Kargo API server is configured in order to proceed with
+ * authentication.
+ * @summary Retrieve public server configuration
+ */
+export const getPublicConfig = async (
+  options?: Parameters<typeof customFetch>[1]
+): Promise<getPublicConfigResponse> => {
   return customFetch<getPublicConfigResponse>(getGetPublicConfigUrl(), {
     ...options,
     method: 'GET'
@@ -655,16 +671,9 @@ export function useGetPublicConfig<
     queryKey: DataTag<QueryKey, TData, TError>;
   };
 
-  query.queryKey = queryOptions.queryKey;
-
-  return query;
+  return withQueryKey(query, queryOptions.queryKey);
 }
 
-/**
- * Retrieve information a client may need to know about how the
-Kargo API server is configured.
- * @summary Retrieve server configuration
- */
 export type getConfigResponse200 = {
   data: GetConfigResponse;
   status: 200;
@@ -679,7 +688,14 @@ export const getGetConfigUrl = () => {
   return `/v1beta1/system/server-config`;
 };
 
-export const getConfig = async (options?: RequestInit): Promise<getConfigResponse> => {
+/**
+ * Retrieve information a client may need to know about how the
+ * Kargo API server is configured.
+ * @summary Retrieve server configuration
+ */
+export const getConfig = async (
+  options?: Parameters<typeof customFetch>[1]
+): Promise<getConfigResponse> => {
   return customFetch<getConfigResponse>(getGetConfigUrl(), {
     ...options,
     method: 'GET'
@@ -780,15 +796,9 @@ export function useGetConfig<
     queryKey: DataTag<QueryKey, TData, TError>;
   };
 
-  query.queryKey = queryOptions.queryKey;
-
-  return query;
+  return withQueryKey(query, queryOptions.queryKey);
 }
 
-/**
- * Retrieve API Server version information.
- * @summary Retrieve API Server version information
- */
 export type getVersionInfoResponse200 = {
   data: VersionInfo;
   status: 200;
@@ -803,7 +813,13 @@ export const getGetVersionInfoUrl = () => {
   return `/v1beta1/system/server-version`;
 };
 
-export const getVersionInfo = async (options?: RequestInit): Promise<getVersionInfoResponse> => {
+/**
+ * Retrieve API Server version information.
+ * @summary Retrieve API Server version information
+ */
+export const getVersionInfo = async (
+  options?: Parameters<typeof customFetch>[1]
+): Promise<getVersionInfoResponse> => {
   return customFetch<getVersionInfoResponse>(getGetVersionInfoUrl(), {
     ...options,
     method: 'GET'
@@ -904,7 +920,5 @@ export function useGetVersionInfo<
     queryKey: DataTag<QueryKey, TData, TError>;
   };
 
-  query.queryKey = queryOptions.queryKey;
-
-  return query;
+  return withQueryKey(query, queryOptions.queryKey);
 }

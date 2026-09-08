@@ -7,15 +7,19 @@
  */
 
 export interface AnalysisTemplateReference {
-  /** Kind is the type of the AnalysisTemplate. Can be either AnalysisTemplate or
-ClusterAnalysisTemplate, default is AnalysisTemplate.
-
-+kubebuilder:validation:Optional
-+kubebuilder:validation:Enum=AnalysisTemplate;ClusterAnalysisTemplate */
+  /**
+   * Kind is the type of the AnalysisTemplate. Can be either AnalysisTemplate or
+   * ClusterAnalysisTemplate, default is AnalysisTemplate.
+   *
+   * +kubebuilder:validation:Optional
+   * +kubebuilder:validation:Enum=AnalysisTemplate;ClusterAnalysisTemplate
+   */
   kind?: string;
-  /** Name is the name of the AnalysisTemplate in the same project/namespace as
-the Stage.
-
-+kubebuilder:validation:Required */
+  /**
+   * Name is the name of the AnalysisTemplate in the same project/namespace as
+   * the Stage.
+   *
+   * +kubebuilder:validation:Required
+   */
   name: string;
 }

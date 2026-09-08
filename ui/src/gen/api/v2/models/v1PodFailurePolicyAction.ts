@@ -9,7 +9,6 @@
 export type V1PodFailurePolicyAction =
   (typeof V1PodFailurePolicyAction)[keyof typeof V1PodFailurePolicyAction];
 
-// eslint-disable-next-line @typescript-eslint/no-redeclare
 export const V1PodFailurePolicyAction = {
   PodFailurePolicyActionFailJob: 'FailJob',
   PodFailurePolicyActionFailIndex: 'FailIndex',

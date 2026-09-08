@@ -8,12 +8,16 @@
 import type { V1NodeSelectorRequirement } from './v1NodeSelectorRequirement';
 
 export interface V1NodeSelectorTerm {
-  /** A list of node selector requirements by node's labels.
-+optional
-+listType=atomic */
+  /**
+   * A list of node selector requirements by node's labels.
+   * +optional
+   * +listType=atomic
+   */
   matchExpressions?: V1NodeSelectorRequirement[];
-  /** A list of node selector requirements by node's fields.
-+optional
-+listType=atomic */
+  /**
+   * A list of node selector requirements by node's fields.
+   * +optional
+   * +listType=atomic
+   */
   matchFields?: V1NodeSelectorRequirement[];
 }

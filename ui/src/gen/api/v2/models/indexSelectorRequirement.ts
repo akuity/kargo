@@ -7,17 +7,23 @@
  */
 
 export interface IndexSelectorRequirement {
-  /** Key is the key of the index.
-
-+kubebuilder:validation:Enum=subscribedURLs;receiverPaths */
+  /**
+   * Key is the key of the index.
+   *
+   * +kubebuilder:validation:Enum=subscribedURLs;receiverPaths
+   */
   key?: string;
-  /** Operator indicates the operation that should be used to evaluate
-whether the selection requirement is satisfied.
-
-kubebuilder:validation:Enum=Equal;NotEqual; */
+  /**
+   * Operator indicates the operation that should be used to evaluate
+   * whether the selection requirement is satisfied.
+   *
+   * kubebuilder:validation:Enum=Equal;NotEqual;
+   */
   operator?: string;
-  /** Value can be a static string or an expression that will be evaluated.
-
-kubebuilder:validation:Required */
+  /**
+   * Value can be a static string or an expression that will be evaluated.
+   *
+   * kubebuilder:validation:Required
+   */
   value?: string;
 }

@@ -5,8 +5,8 @@
  * REST API for Kargo
  * OpenAPI spec version: v1alpha1
  */
-import type { V1ObjectMeta } from './v1ObjectMeta';
 import type { V1JobSpec } from './v1JobSpec';
+import type { V1ObjectMeta } from './v1ObjectMeta';
 
 export interface RolloutsJobMetric {
   metadata?: V1ObjectMeta;
