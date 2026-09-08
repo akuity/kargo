@@ -338,23 +338,21 @@ func (r *RegularStageReconciler) getPromotionsSummary(
 			pending = append(pending, promo)
 		}
 	}
-	slices.SortFunc(running, func(a, b kargoapi.Promotion) int {
-		return strings.Compare(b.Name, a.Name)
-	})
-	slices.SortFunc(pending, func(a, b kargoapi.Promotion) int {
-		return strings.Compare(b.Name, a.Name)
-	})
 
 	// nextPromotion is either first one running or first one pending
 	// If it's running, it should match currentPromotion, but we don't validate that
 	if len(running) > 0 {
-		summary.nextPromotion = &running[0]
+		summary.nextPromotion = new(slices.MinFunc(running, func(a, b kargoapi.Promotion) int {
+			return strings.Compare(a.Name, b.Name)
+		}))
 	} else if len(pending) > 0 {
-		summary.nextPromotion = &pending[0]
+		summary.nextPromotion = new(slices.MinFunc(pending, func(a, b kargoapi.Promotion) int {
+			return strings.Compare(a.Name, b.Name)
+		}))
 	}
 
 	slices.SortFunc(summary.terminal, func(a, b kargoapi.Promotion) int {
-		return strings.Compare(a.Name, b.Name)
+		return strings.Compare(b.Name, a.Name)
 	})
 	return summary
 }
