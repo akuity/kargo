@@ -7,9 +7,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	"github.com/akuity/kargo/pkg/api"
 	"github.com/akuity/kargo/pkg/conditions"
-	"github.com/akuity/kargo/pkg/health"
 	"github.com/akuity/kargo/pkg/logging"
 )
 
@@ -19,7 +17,10 @@ func (r *RegularStageReconciler) assessHealth(ctx context.Context, stage *kargoa
 	logger := logging.LoggerFromContext(ctx)
 	newStatus := *stage.Status.DeepCopy()
 
-	if currentPromo := stage.Status.CurrentPromotion; currentPromo != nil {
+	currentPromo := getCurrentPromoObject(stage)
+	lastPromo := getLastPromoObject(stage)
+
+	if currentPromo != nil {
 		logger.Debug("Promotion is in progress: no health checks to perform")
 		conditions.Set(&newStatus, &metav1.Condition{
 			Type:               kargoapi.ConditionTypeHealthy,
@@ -37,25 +38,10 @@ func (r *RegularStageReconciler) assessHealth(ctx context.Context, stage *kargoa
 		return newStatus
 	}
 
-	lastPromo := stage.Status.LastPromotion
+	// FIXME: we might want to extract healthchecks from targets or report specifically
+	// that targets will do healthchecking
+
 	if lastPromo == nil {
-		// A Stage that promotes through PromotionRequests never records a last
-		// Promotion: its Promotions are children of a request, and health is a
-		// property of each Target they promote to, not of the Stage. Say so,
-		// rather than claiming the Stage has no Freight when its history may
-		// well record some.
-		if api.IsTargetAware(stage) {
-			logger.Debug("Stage promotes to Targets: no Stage-level health checks to perform")
-			conditions.Set(&newStatus, &metav1.Condition{
-				Type:               kargoapi.ConditionTypeHealthy,
-				Status:             metav1.ConditionUnknown,
-				Reason:             "TargetAwareStage",
-				Message:            "Health is assessed per Target, not for the Stage",
-				ObservedGeneration: stage.Generation,
-			})
-			newStatus.Health = nil
-			return newStatus
-		}
 		logger.Debug("Stage has no current Freight: no health checks to perform")
 		conditions.Set(&newStatus, &metav1.Condition{
 			Type:               kargoapi.ConditionTypeHealthy,
@@ -76,12 +62,12 @@ func (r *RegularStageReconciler) assessHealth(ctx context.Context, stage *kargoa
 	//  continue to run health checks from the last successful Promotion,
 	//  even if the current Promotion did not succeed (e.g. because it was
 	//  aborted).
-	if lastPromo.Status.Phase != kargoapi.PromotionPhaseSucceeded {
+	if !lastPromo.GetPhase().IsSucceeded() {
 		logger.Debug("Last promotion did not succeed: defaulting Stage health to Unknown")
 		conditions.Set(&newStatus, &metav1.Condition{
 			Type:               kargoapi.ConditionTypeHealthy,
 			Status:             metav1.ConditionUnknown,
-			Reason:             fmt.Sprintf("LastPromotion%s", lastPromo.Status.Phase),
+			Reason:             fmt.Sprintf("LastPromotion%s", lastPromo.GetPhase()),
 			Message:            "Cannot assess health because last Promotion did not succeed",
 			ObservedGeneration: stage.Generation,
 		})
@@ -93,14 +79,7 @@ func (r *RegularStageReconciler) assessHealth(ctx context.Context, stage *kargoa
 	}
 
 	// Compose the health check criteria.
-	healthChecks := lastPromo.Status.HealthChecks
-	var criteria []health.Criteria
-	for _, check := range healthChecks {
-		criteria = append(criteria, health.Criteria{
-			Kind:  check.Uses,
-			Input: check.GetConfig(),
-		})
-	}
+	criteria := lastPromo.GetHealthChecks()
 
 	// Run the hlth checks.
 	hlth := r.healthChecker.Check(ctx, stage.Namespace, stage.Name, criteria)
@@ -113,7 +92,7 @@ func (r *RegularStageReconciler) assessHealth(ctx context.Context, stage *kargoa
 			Type:               kargoapi.ConditionTypeHealthy,
 			Status:             metav1.ConditionTrue,
 			Reason:             string(hlth.Status),
-			Message:            fmt.Sprintf("Stage is healthy (performed %d health checks)", len(healthChecks)),
+			Message:            fmt.Sprintf("Stage is healthy (performed %d health checks)", len(criteria)),
 			ObservedGeneration: stage.Generation,
 		})
 	case kargoapi.HealthStateUnhealthy:
@@ -123,7 +102,7 @@ func (r *RegularStageReconciler) assessHealth(ctx context.Context, stage *kargoa
 			Reason: string(hlth.Status),
 			Message: fmt.Sprintf(
 				"Stage is unhealthy (%d issues in %d health checks)",
-				len(hlth.Issues), len(healthChecks),
+				len(hlth.Issues), len(criteria),
 			),
 			ObservedGeneration: stage.Generation,
 		})
@@ -138,3 +117,12 @@ func (r *RegularStageReconciler) assessHealth(ctx context.Context, stage *kargoa
 
 	return newStatus
 }
+
+// FIXME HealthCheck to criteria for Promotion
+// var criteria []health.Criteria
+// for _, check := range healthChecks {
+// 	criteria = append(criteria, health.Criteria{
+// 		Kind:  check.Uses,
+// 		Input: check.GetConfig(),
+// 	})
+// }

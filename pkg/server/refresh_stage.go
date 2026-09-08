@@ -46,7 +46,7 @@ func (s *server) refreshStage(c *gin.Context) {
 		_ = c.Error(err)
 		return
 	}
-
+	// FIXME: refresh promotion request here??
 	// If there is a current Promotion then refresh it, too
 	if stage.Status.CurrentPromotion != nil {
 		promoKey := client.ObjectKey{Name: stage.Status.CurrentPromotion.Name, Namespace: project}
