@@ -20,6 +20,7 @@ import { Description } from '@ui/features/common/description';
 import { HealthStatusIcon } from '@ui/features/common/health-status/health-status-icon';
 import { useStageControllerStatus } from '@ui/features/common/stage-status/use-stage-controller-status';
 import { getCurrentFreightByWarehouse } from '@ui/features/common/utils';
+import { getLastPromotionRef } from '@ui/features/project/pipelines/nodes/stage-meta-utils';
 import { getAutoPromotionHoldEntries } from '@ui/features/project/pipelines/promotion/auto-promotion';
 import { ResumeAutoPromotionDrawer } from '@ui/features/project/pipelines/promotion/resume-auto-promotion-drawer';
 import { useGetStage } from '@ui/gen/api/v2/core/core';
@@ -193,7 +194,7 @@ export const StageDetails = ({ stage }: { stage: Stage }) => {
                     <FreightHistory
                       requestedFreights={stage?.spec?.requestedFreight || []}
                       freightHistory={stage?.status?.freightHistory}
-                      currentActiveFreight={stage?.status?.lastPromotion?.freight?.name}
+                      currentActiveFreight={getLastPromotionRef(stage)?.freightName}
                       projectName={projectName || ''}
                       stageName={stageName || ''}
                     />

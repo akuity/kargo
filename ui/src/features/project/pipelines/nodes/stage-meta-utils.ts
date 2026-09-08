@@ -1,9 +1,11 @@
 import { CSSProperties, useContext, useMemo } from 'react';
+import { generatePath } from 'react-router-dom';
 
+import { paths } from '@ui/config/paths';
 import { ColorContext } from '@ui/context/colors';
 import { ColorMapHex, parseColorAnnotation } from '@ui/features/stage/utils';
 import { useGetPromotion } from '@ui/gen/api/v2/core/core';
-import { Stage } from '@ui/gen/api/v2/models';
+import { PromotionReference, PromotionRequestReference, Stage } from '@ui/gen/api/v2/models';
 import { getContrastTextColor } from '@ui/utils/get-contrast-text-color';
 
 import { IAction, useActionContext } from '../context/action-context';
@@ -29,12 +31,97 @@ export const useIsColorsUsed = () => {
   return freightTimelineControllerContext?.preferredFilter?.showColors;
 };
 
-export const getLastPromotionDate = (stage: Stage) =>
-  stage?.status?.lastPromotion?.finishedAt
-    ? new Date(stage?.status?.lastPromotion?.finishedAt)
-    : null;
+// StagePromotionRef is a Stage's account of what it is promoting now, or what
+// it last promoted, in one shape regardless of how the Stage promotes.
+//
+// A classic Stage promotes through a Promotion and records it in
+// status.currentPromotion and status.lastPromotion. A target-aware Stage
+// promotes through a PromotionRequest, which fans out one child Promotion per
+// Target, and records the request in status.currentPromotionRequest and
+// status.lastPromotionRequest instead. For such a Stage the Promotion fields
+// name at most one of the children, so they never stand for the round.
+export type StagePromotionRef = {
+  kind: 'Promotion' | 'PromotionRequest';
+  name?: string;
+  phase?: string;
+  message?: string;
+  finishedAt?: string;
+  freightName?: string;
+  // path is where the UI shows the referenced promotion activity. A Promotion
+  // has a page of its own. A PromotionRequest does not: it is listed on the
+  // Stage page, whose Promotions tab leads with the Stage's PromotionRequests
+  // and expands the one currently fanning out.
+  path?: string;
+};
 
-export const getCurrentPromotion = (stage: Stage) => stage?.status?.currentPromotion?.name;
+const promotionPath = (stage?: Stage, promotion?: string) =>
+  promotion
+    ? generatePath(paths.promotion, {
+        name: stage?.metadata?.namespace || '',
+        promotionId: promotion
+      })
+    : undefined;
+
+const stagePath = (stage?: Stage) =>
+  stage?.metadata?.namespace && stage?.metadata?.name
+    ? generatePath(paths.stage, {
+        name: stage.metadata.namespace,
+        stageName: stage.metadata.name
+      })
+    : undefined;
+
+const promotionRef = (stage?: Stage, ref?: PromotionReference): StagePromotionRef | undefined =>
+  ref && {
+    kind: 'Promotion',
+    name: ref.name,
+    phase: ref.status?.phase,
+    message: ref.status?.message,
+    finishedAt: ref.finishedAt,
+    freightName: ref.freight?.name,
+    path: promotionPath(stage, ref.name)
+  };
+
+const promotionRequestRef = (
+  stage?: Stage,
+  ref?: PromotionRequestReference
+): StagePromotionRef | undefined =>
+  ref && {
+    kind: 'PromotionRequest',
+    name: ref.name,
+    phase: ref.phase,
+    finishedAt: ref.finishedAt,
+    freightName: ref.freight?.name,
+    path: stagePath(stage)
+  };
+
+// getCurrentPromotionRef describes what the Stage is promoting right now, if
+// anything.
+export const getCurrentPromotionRef = (stage?: Stage): StagePromotionRef | undefined =>
+  isStageTargetAware(stage)
+    ? promotionRequestRef(stage, stage?.status?.currentPromotionRequest)
+    : promotionRef(stage, stage?.status?.currentPromotion);
+
+// getLastPromotionRef describes the last promotion the Stage saw through to a
+// terminal phase, if any.
+export const getLastPromotionRef = (stage?: Stage): StagePromotionRef | undefined =>
+  isStageTargetAware(stage)
+    ? promotionRequestRef(stage, stage?.status?.lastPromotionRequest)
+    : promotionRef(stage, stage?.status?.lastPromotion);
+
+export const getLastPromotionDate = (stage: Stage) => {
+  const finishedAt = getLastPromotionRef(stage)?.finishedAt;
+  return finishedAt ? new Date(finishedAt) : null;
+};
+
+// getCurrentPromotion names the Promotion a Stage is currently promoting
+// through, for callers that need to read the Promotion itself. A target-aware
+// Stage promotes through a PromotionRequest, whose child Promotions target
+// distinct Targets and run in parallel, so no single Promotion describes what
+// it is doing: for such a Stage this is always undefined.
+export const getCurrentPromotion = (stage: Stage) => {
+  const current = getCurrentPromotionRef(stage);
+  return current?.kind === 'Promotion' ? current.name : undefined;
+};
 
 export const useCurrentPromotion = (stage: Stage) => {
   const currentPromotion = getCurrentPromotion(stage);
