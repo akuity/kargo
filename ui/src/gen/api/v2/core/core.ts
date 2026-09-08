@@ -35,6 +35,7 @@ import type {
   ListPromotionRequestsParams,
   ListPromotionsParams,
   ListStagesParams,
+  ListTargetsParams,
   PatchConfigMapRequest,
   PatchFreightAliasParams,
   PkgServerQueryFreightsResponse,
@@ -51,6 +52,8 @@ import type {
   QueryFreightsRestParams,
   Stage,
   StageList,
+  Target,
+  TargetList,
   UpdateConfigMapRequest,
   V1ConfigMap,
   V1ConfigMapList,
@@ -4346,6 +4349,294 @@ export const useRefreshStage = <TError = ErrorType<unknown>, TContext = unknown>
 > => {
   return useMutation(getRefreshStageMutationOptions(options), queryClient);
 };
+export type listTargetsResponse200 = {
+  data: TargetList;
+  status: 200;
+};
+
+export type listTargetsResponseSuccess = listTargetsResponse200 & {
+  headers: Headers;
+};
+export type listTargetsResponse = listTargetsResponseSuccess;
+
+export const getListTargetsUrl = (project: string, params?: ListTargetsParams) => {
+  const stringifiedParams = serializeParams(params);
+
+  return stringifiedParams.length > 0
+    ? `/v1beta1/projects/${project}/targets?${stringifiedParams}`
+    : `/v1beta1/projects/${project}/targets`;
+};
+
+/**
+ * List Target resources from a project's namespace, optionally
+ * narrowed to those a particular Stage governs or those matching a
+ * label selector. Returns a TargetList resource.
+ * @summary List Targets
+ */
+export const listTargets = async (
+  project: string,
+  params?: ListTargetsParams,
+  options?: Parameters<typeof customFetch>[1]
+): Promise<listTargetsResponse> => {
+  return customFetch<listTargetsResponse>(getListTargetsUrl(project, params), {
+    ...options,
+    method: 'GET'
+  });
+};
+
+export const getListTargetsQueryKey = (project: string, params?: ListTargetsParams) => {
+  return [`/v1beta1/projects/${project}/targets`, ...(params ? [params] : [])] as const;
+};
+
+export const getListTargetsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listTargets>>,
+  TError = ErrorType<unknown>
+>(
+  project: string,
+  params?: ListTargetsParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listTargets>>, TError, TData>>;
+    request?: SecondParameter<typeof customFetch>;
+  }
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListTargetsQueryKey(project, params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listTargets>>> = () =>
+    listTargets(project, params, requestOptions);
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: project !== null && project !== undefined,
+    ...queryOptions
+  } as UseQueryOptions<Awaited<ReturnType<typeof listTargets>>, TError, TData> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+};
+
+export type ListTargetsQueryResult = NonNullable<Awaited<ReturnType<typeof listTargets>>>;
+export type ListTargetsQueryError = ErrorType<unknown>;
+
+export function useListTargets<
+  TData = Awaited<ReturnType<typeof listTargets>>,
+  TError = ErrorType<unknown>
+>(
+  project: string,
+  params: undefined | ListTargetsParams,
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof listTargets>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listTargets>>,
+          TError,
+          Awaited<ReturnType<typeof listTargets>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListTargets<
+  TData = Awaited<ReturnType<typeof listTargets>>,
+  TError = ErrorType<unknown>
+>(
+  project: string,
+  params?: ListTargetsParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listTargets>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listTargets>>,
+          TError,
+          Awaited<ReturnType<typeof listTargets>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListTargets<
+  TData = Awaited<ReturnType<typeof listTargets>>,
+  TError = ErrorType<unknown>
+>(
+  project: string,
+  params?: ListTargetsParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listTargets>>, TError, TData>>;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary List Targets
+ */
+
+export function useListTargets<
+  TData = Awaited<ReturnType<typeof listTargets>>,
+  TError = ErrorType<unknown>
+>(
+  project: string,
+  params?: ListTargetsParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listTargets>>, TError, TData>>;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getListTargetsQueryOptions(project, params, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export type getTargetResponse200 = {
+  data: Target;
+  status: 200;
+};
+
+export type getTargetResponseSuccess = getTargetResponse200 & {
+  headers: Headers;
+};
+export type getTargetResponse = getTargetResponseSuccess;
+
+export const getGetTargetUrl = (project: string, target: string) => {
+  return `/v1beta1/projects/${project}/targets/${target}`;
+};
+
+/**
+ * Retrieve a Target resource from a project's namespace.
+ * @summary Retrieve a Target
+ */
+export const getTarget = async (
+  project: string,
+  target: string,
+  options?: Parameters<typeof customFetch>[1]
+): Promise<getTargetResponse> => {
+  return customFetch<getTargetResponse>(getGetTargetUrl(project, target), {
+    ...options,
+    method: 'GET'
+  });
+};
+
+export const getGetTargetQueryKey = (project: string, target: string) => {
+  return [`/v1beta1/projects/${project}/targets/${target}`] as const;
+};
+
+export const getGetTargetQueryOptions = <
+  TData = Awaited<ReturnType<typeof getTarget>>,
+  TError = ErrorType<unknown>
+>(
+  project: string,
+  target: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getTarget>>, TError, TData>>;
+    request?: SecondParameter<typeof customFetch>;
+  }
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetTargetQueryKey(project, target);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getTarget>>> = () =>
+    getTarget(project, target, requestOptions);
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: project !== null && project !== undefined && target !== null && target !== undefined,
+    ...queryOptions
+  } as UseQueryOptions<Awaited<ReturnType<typeof getTarget>>, TError, TData> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+};
+
+export type GetTargetQueryResult = NonNullable<Awaited<ReturnType<typeof getTarget>>>;
+export type GetTargetQueryError = ErrorType<unknown>;
+
+export function useGetTarget<
+  TData = Awaited<ReturnType<typeof getTarget>>,
+  TError = ErrorType<unknown>
+>(
+  project: string,
+  target: string,
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof getTarget>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getTarget>>,
+          TError,
+          Awaited<ReturnType<typeof getTarget>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetTarget<
+  TData = Awaited<ReturnType<typeof getTarget>>,
+  TError = ErrorType<unknown>
+>(
+  project: string,
+  target: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getTarget>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getTarget>>,
+          TError,
+          Awaited<ReturnType<typeof getTarget>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetTarget<
+  TData = Awaited<ReturnType<typeof getTarget>>,
+  TError = ErrorType<unknown>
+>(
+  project: string,
+  target: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getTarget>>, TError, TData>>;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Retrieve a Target
+ */
+
+export function useGetTarget<
+  TData = Awaited<ReturnType<typeof getTarget>>,
+  TError = ErrorType<unknown>
+>(
+  project: string,
+  target: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getTarget>>, TError, TData>>;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getGetTargetQueryOptions(project, target, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
 export type listWarehousesResponse200 = {
   data: WarehouseList;
   status: 200;
