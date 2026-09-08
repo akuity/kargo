@@ -52,7 +52,7 @@
     "typescript": "5.9.3",
     "vite": "8.1.0",
     "vite-plugin-compression": "0.5.1",
-    "vitest": "4.1.9",
+    "vitest": "4.1.11",
     "zx": "8.8.5"
   },
   "packageManager": "pnpm@11.13.0",
