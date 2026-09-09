@@ -282,6 +282,7 @@ codegen-controller:
 .PHONY: codegen-bitbucket-client
 codegen-bitbucket-client:
 	cd pkg/gitprovider/bitbucket/cloud && go tool oapi-codegen --config spec/oapi-codegen.yaml spec/bitbucket.gen.json
+	cd pkg/gitprovider/bitbucket/datacenter && go tool oapi-codegen --config spec/oapi-codegen.yaml spec/bitbucket-datacenter.gen.json
 
 .PHONY: codegen-schema-to-go
 codegen-schema-to-go:
