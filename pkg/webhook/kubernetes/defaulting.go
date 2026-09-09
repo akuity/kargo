@@ -36,7 +36,7 @@ func RegisterDefaultingWebhook[T runtime.Object](
 ) error {
 	gvk, err := apiutil.GVKForObject(obj, mgr.GetScheme())
 	if err != nil {
-		return fmt.Errorf("get GroupVersionKind for %T: %w", obj, err)
+		return fmt.Errorf("error getting GroupVersionKind for %T: %w", obj, err)
 	}
 	wh, err := NewDefaultingWebhook(mgr.GetScheme(), obj, defaulter)
 	if err != nil {
@@ -67,7 +67,7 @@ func NewDefaultingWebhook[T runtime.Object](
 ) (*admission.Webhook, error) {
 	gvk, err := apiutil.GVKForObject(obj, scheme)
 	if err != nil {
-		return nil, fmt.Errorf("get GroupVersionKind for %T: %w", obj, err)
+		return nil, fmt.Errorf("error getting GroupVersionKind for %T: %w", obj, err)
 	}
 	return &admission.Webhook{
 		Handler: &defaultingHandler[T]{
