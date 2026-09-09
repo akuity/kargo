@@ -61,7 +61,6 @@ func (r *RegularStageReconciler) computeEffectiveAutoPromotionHolds(
 	if err != nil {
 		return nil, err
 	}
-	fmt.Printf("PROMOS: %v\n", promotions)
 
 	lastPromo := getLastPromoObject(stage)
 	for _, req := range stage.Spec.RequestedFreight {
@@ -71,18 +70,14 @@ func (r *RegularStageReconciler) computeEffectiveAutoPromotionHolds(
 		for i := range promotions {
 			promo := promotions[i]
 			if promo.GetPhase().IsAborted() {
-				fmt.Printf("PROMO ABORTED: %v\n", promo)
 				continue
 			}
 			// Only Promotions newer than the last one syncPromotions recorded can
 			// change the durable state. Older ones are already reflected in it, and
 			// the Promotion that superseded them may since have been deleted.
 			if lastPromo != nil && strings.Compare(promo.GetName(), lastPromo.GetName()) <= 0 {
-				fmt.Printf("LASTPROMO NOT NIL: %v\n",lastPromo)
 				continue
 			}
-			annotations := promo.GetAnnotations()
-			fmt.Printf("ANNOTATIONS: %v\n PROMO %v\n", annotations, promo)
 			isHold := promo.GetAnnotations()[kargoapi.AnnotationKeyAutoPromotionHold] == originKey
 			isRelease := promo.GetAnnotations()[kargoapi.AnnotationKeyAutoPromotionResume] == originKey
 			if !isHold && !isRelease {

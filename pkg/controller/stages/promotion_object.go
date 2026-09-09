@@ -465,7 +465,6 @@ func (r *RegularStageReconciler) getPromotionObjectsByStageAndFreight(
 	freightName string,
 ) ([]PromotionObject, error) {
 	if api.IsTargetAware(stage) {
-		fmt.Printf("TARGET AWARE %v\n", stage.Name)
 		requests, err := r.getPromotionRequests(ctx, stage.Name, stage.Namespace, freightName)
 		if err != nil {
 			return nil, err
