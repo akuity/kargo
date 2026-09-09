@@ -250,7 +250,7 @@
           "type": "string"
         },
         "targets": {
-          "description": "Targets describes the Targets that this Stage governs and promotes Freight\nto. Its presence is what makes a Stage target-aware.\n\nWhen this field is nil (the default), the Stage operates in classic mode:\nit governs a single implicit \"stage-self\" Target that the controller\ncreates and maintains on the Stage's behalf. This preserves the behavior\nof Stages authored before Targets existed.",
+          "description": "Targets describes the Targets that this Stage governs and promotes Freight\nto. Its presence is what makes a Stage target-aware.\n\nWhen this field is nil (the default), the Stage operates in classic mode:\nit governs no Targets and promotes Freight by way of Promotions alone.\nThis preserves the behavior of Stages authored before Targets existed.",
           "properties": {
             "selectors": {
               "description": "Selectors select the Targets that the Stage governs, matching Targets by\ntheir labels within the Stage's own Project. A Target is selected when it\nmatches any selector in the list, so several selectors describe a union.\nA Target matching more than one of them is still governed once.\n\nAn empty selector selects every Target in the Project. An empty list\nselects none: the Stage still governs Targets, it just governs none at the\nmoment.",
