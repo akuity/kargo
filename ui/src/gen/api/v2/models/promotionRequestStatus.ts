@@ -5,6 +5,8 @@
  * REST API for Kargo
  * OpenAPI spec version: v1alpha1
  */
+import type { FreightCollection } from './freightCollection';
+import type { FreightReference } from './freightReference';
 import type { PromotionRequestPhase } from './promotionRequestPhase';
 import type { PromotionRequestSummary } from './promotionRequestSummary';
 import type { PromotionRequestTargetStatus } from './promotionRequestTargetStatus';
@@ -23,6 +25,17 @@ export interface PromotionRequestStatus {
   conditions?: V1Condition[];
   /** FinishedAt is the time at which the PromotionRequest completed. */
   finishedAt?: string;
+  /**
+   * FIXME: populate Freight and Freight collection in the promotion request reconciler
+   * Freight is the detail of the piece of freight that was referenced by this promotion.
+   */
+  freight?: FreightReference;
+  /**
+   * FreightCollection contains the details of the piece of Freight referenced
+   * by this Promotion as well as any additional Freight that is carried over
+   * from the target Stage's current state.
+   */
+  freightCollection?: FreightCollection;
   /**
    * Message is a display message explaining the current Phase: what the
    * PromotionRequest is waiting on, how far its fan-out has progressed, or
