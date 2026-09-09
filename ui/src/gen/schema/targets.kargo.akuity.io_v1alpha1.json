@@ -275,7 +275,7 @@
                 "type": "object"
               },
               "health": {
-                "description": "Health is the Target's health with respect to this Stage's Freight, as\nlast assessed by executing HealthChecks. It is absent until the first\nassessment. Health is an ongoing observation rather than a Promotion\noutcome: it is reassessed periodically and whenever the systems the\nhealth checks observe change, so it may become Unhealthy long after the\nPromotion that produced CurrentFreight succeeded.",
+                "description": "Health is the Target's health with respect to this Stage's Freight, as\nlast assessed by executing HealthChecks. It is absent until the first\nassessment. Health is an ongoing observation rather than a Promotion\noutcome: it is reassessed periodically and whenever the systems the\nhealth checks observe change, so it may become Unhealthy long after the\nPromotion that produced CurrentFreight succeeded.\n\nA target-aware Stage does not assess health itself. Its own health is\nan aggregate of this field across every Target it governs: Healthy only\nwhen each is Healthy and on the Stage's current Freight, Unhealthy when\nany is not, Unknown while any has yet to be assessed.",
                 "properties": {
                   "config": {
                     "description": "Config is the opaque configuration of all health checks performed on this\nStage.",

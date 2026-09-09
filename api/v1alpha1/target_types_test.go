@@ -12,7 +12,7 @@ func TestTarget_GetStatus(t *testing.T) {
 	require.Same(t, &target.Status, target.GetStatus())
 }
 
-func TestTargetStatus_SetStageStatus(t *testing.T) {
+func TestTargetStatus_SetStatusForStage(t *testing.T) {
 	t.Parallel()
 	testCases := []struct {
 		name   string
@@ -68,13 +68,13 @@ func TestTargetStatus_SetStageStatus(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 			status := testCase.status
-			status.SetStageStatus(testCase.stage, testCase.set)
+			status.SetStatusForStage(testCase.stage, testCase.set)
 			testCase.assert(t, status)
 		})
 	}
 }
 
-func TestTargetStatus_RemoveStageStatus(t *testing.T) {
+func TestTargetStatus_RemoveStatusForStage(t *testing.T) {
 	t.Parallel()
 	testCases := []struct {
 		name   string
@@ -120,7 +120,7 @@ func TestTargetStatus_RemoveStageStatus(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 			status := testCase.status
-			status.RemoveStageStatus(testCase.stage)
+			status.RemoveStatusForStage(testCase.stage)
 			testCase.assert(t, status)
 		})
 	}

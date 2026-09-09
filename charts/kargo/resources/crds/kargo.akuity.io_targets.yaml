@@ -358,6 +358,11 @@ spec:
                         outcome: it is reassessed periodically and whenever the systems the
                         health checks observe change, so it may become Unhealthy long after the
                         Promotion that produced CurrentFreight succeeded.
+
+                        A target-aware Stage does not assess health itself. Its own health is
+                        an aggregate of this field across every Target it governs: Healthy only
+                        when each is Healthy and on the Stage's current Freight, Unhealthy when
+                        any is not, Unknown while any has yet to be assessed.
                       properties:
                         config:
                           description: |-

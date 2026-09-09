@@ -91,6 +91,11 @@ type TargetStageStatus struct {
 	// health checks observe change, so it may become Unhealthy long after the
 	// Promotion that produced CurrentFreight succeeded.
 	//
+	// A target-aware Stage does not assess health itself. Its own health is
+	// an aggregate of this field across every Target it governs: Healthy only
+	// when each is Healthy and on the Stage's current Freight, Unhealthy when
+	// any is not, Unknown while any has yet to be assessed.
+	//
 	// +optional
 	Health *Health `json:"health,omitempty"`
 	// HealthChecks are the health check directives produced by the steps of
@@ -106,18 +111,18 @@ type TargetStageStatus struct {
 	HealthChecks []HealthCheckStep `json:"healthChecks,omitempty"`
 }
 
-// SetStageStatus records the Target's status with respect to the specified
+// SetStatusForStage records the Target's status with respect to the specified
 // Stage, replacing any existing record for that Stage.
-func (s *TargetStatus) SetStageStatus(stage string, status TargetStageStatus) {
+func (s *TargetStatus) SetStatusForStage(stage string, status TargetStageStatus) {
 	if s.Stages == nil {
 		s.Stages = make(map[string]TargetStageStatus)
 	}
 	s.Stages[stage] = status
 }
 
-// RemoveStageStatus removes the Target's status with respect to the specified
-// Stage, if any. It is a no-op when no such record exists.
-func (s *TargetStatus) RemoveStageStatus(stage string) {
+// RemoveStatusForStage removes the Target's status with respect to the
+// specified Stage, if any. It is a no-op when no such record exists.
+func (s *TargetStatus) RemoveStatusForStage(stage string) {
 	delete(s.Stages, stage)
 }
 
