@@ -1502,7 +1502,8 @@ func Test_webhook_Handle_PreservesUnrelatedDurationFormatting(t *testing.T) {
 		kubeClient,
 		admission.NewDecoder(scheme),
 	)
-	wh := libWebhook.NewDefaultingWebhook(scheme, &kargoapi.Stage{}, w)
+	wh, err := libWebhook.NewDefaultingWebhook(scheme, &kargoapi.Stage{}, w)
+	require.NoError(t, err)
 
 	// spec.shard is set so Default() makes a real mutation (the shard
 	// label), verified below as a sanity check.

@@ -165,13 +165,34 @@ func TestNewDefaultingWebhook(t *testing.T) {
 
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			wh := NewDefaultingWebhook(
+			wh, err := NewDefaultingWebhook(
 				scheme,
 				&kargoapi.Stage{},
 				fakeStageDefaulter{defaultFn: testCase.defaultFn},
 			)
+			require.NoError(t, err)
 			ctx := admission.NewContextWithRequest(context.Background(), testCase.req)
 			testCase.assertions(t, wh.Handle(ctx, testCase.req))
+		})
+	}
+}
+
+// TestMutatePath pins mutatePath's output to the paths hand-configured for
+// these webhooks in charts/kargo/templates/kubernetes-webhooks-server/webhooks.yaml.
+func TestMutatePath(t *testing.T) {
+	testCases := []struct {
+		kind string
+		want string
+	}{
+		{kind: "Freight", want: "/mutate-kargo-akuity-io-v1alpha1-freight"},
+		{kind: "Promotion", want: "/mutate-kargo-akuity-io-v1alpha1-promotion"},
+		{kind: "Stage", want: "/mutate-kargo-akuity-io-v1alpha1-stage"},
+		{kind: "Warehouse", want: "/mutate-kargo-akuity-io-v1alpha1-warehouse"},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.kind, func(t *testing.T) {
+			gvk := kargoapi.GroupVersion.WithKind(testCase.kind)
+			require.Equal(t, testCase.want, mutatePath(gvk))
 		})
 	}
 }

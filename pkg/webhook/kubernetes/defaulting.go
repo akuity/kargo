@@ -6,12 +6,53 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"reflect"
+	"strings"
 
+	"github.com/go-logr/logr"
 	admissionv1 "k8s.io/api/admission/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/klog/v2"
+	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
+
+// RegisterDefaultingWebhook registers a mutating admission webhook for obj's
+// type on mgr's webhook server, running defaulter's Default() method the way
+// ctrl.NewWebhookManagedBy(mgr, obj).WithDefaulter(defaulter) would, except
+// for how the resulting JSON patch is computed. See NewDefaultingWebhook.
+//
+// Like controller-runtime's own webhook registration, this panics if called
+// twice for the same path against the same manager, so a given obj type must
+// only be registered once per manager.
+func RegisterDefaultingWebhook[T runtime.Object](
+	mgr ctrl.Manager,
+	obj T,
+	defaulter admission.Defaulter[T],
+) error {
+	gvk, err := apiutil.GVKForObject(obj, mgr.GetScheme())
+	if err != nil {
+		return fmt.Errorf("get GroupVersionKind for %T: %w", obj, err)
+	}
+	wh, err := NewDefaultingWebhook(mgr.GetScheme(), obj, defaulter)
+	if err != nil {
+		return err
+	}
+	mgr.GetWebhookServer().Register(mutatePath(gvk), wh)
+	return nil
+}
+
+// mutatePath reproduces controller-runtime's own formula for generating a
+// defaulting webhook's path from its GVK, so it can't drift from the paths
+// hand-configured in the Helm chart.
+func mutatePath(gvk schema.GroupVersionKind) string {
+	return "/mutate-" + strings.ReplaceAll(gvk.Group, ".", "-") + "-" +
+		gvk.Version + "-" + strings.ToLower(gvk.Kind)
+}
 
 // NewDefaultingWebhook is like admission.WithDefaulter, except its patch
 // diffs obj as marshaled before and after Default() runs, rather than the
@@ -23,7 +64,11 @@ func NewDefaultingWebhook[T runtime.Object](
 	scheme *runtime.Scheme,
 	obj T,
 	defaulter admission.Defaulter[T],
-) *admission.Webhook {
+) (*admission.Webhook, error) {
+	gvk, err := apiutil.GVKForObject(obj, scheme)
+	if err != nil {
+		return nil, fmt.Errorf("get GroupVersionKind for %T: %w", obj, err)
+	}
 	return &admission.Webhook{
 		Handler: &defaultingHandler[T]{
 			defaulter: defaulter,
@@ -36,6 +81,24 @@ func NewDefaultingWebhook[T runtime.Object](
 				return copied
 			},
 		},
+		LogConstructor: defaultingLogConstructor(gvk),
+	}, nil
+}
+
+// defaultingLogConstructor adds the same fields to the logger that
+// controller-runtime's own webhook builder would.
+func defaultingLogConstructor(gvk schema.GroupVersionKind) func(logr.Logger, *admission.Request) logr.Logger {
+	return func(base logr.Logger, req *admission.Request) logr.Logger {
+		log := base.WithValues("webhookGroup", gvk.Group, "webhookKind", gvk.Kind)
+		if req == nil {
+			return log
+		}
+		return log.WithValues(
+			gvk.Kind, klog.KRef(req.Namespace, req.Name),
+			"namespace", req.Namespace, "name", req.Name,
+			"resource", req.Resource, "user", req.UserInfo.Username,
+			"requestID", req.UID,
+		)
 	}
 }
 
@@ -48,7 +111,10 @@ type defaultingHandler[T runtime.Object] struct {
 func (h *defaultingHandler[T]) Handle(ctx context.Context, req admission.Request) admission.Response {
 	if req.Operation == admissionv1.Delete {
 		return admission.Response{
-			AdmissionResponse: admissionv1.AdmissionResponse{Allowed: true},
+			AdmissionResponse: admissionv1.AdmissionResponse{
+				Allowed: true,
+				Result:  &metav1.Status{Code: http.StatusOK},
+			},
 		}
 	}
 
@@ -58,11 +124,7 @@ func (h *defaultingHandler[T]) Handle(ctx context.Context, req admission.Request
 	if err := h.decoder.Decode(req, obj); err != nil {
 		return admission.Errored(http.StatusBadRequest, err)
 	}
-
-	before, err := json.Marshal(obj)
-	if err != nil {
-		return admission.Errored(http.StatusInternalServerError, err)
-	}
+	orig := obj.DeepCopyObject()
 
 	if defaultErr := h.defaulter.Default(ctx, obj); defaultErr != nil {
 		var apiStatus apierrors.APIStatus
@@ -78,6 +140,18 @@ func (h *defaultingHandler[T]) Handle(ctx context.Context, req admission.Request
 		return admission.Denied(defaultErr.Error())
 	}
 
+	// Default() left the object unchanged: skip the marshal/diff below, just
+	// like controller-runtime's own no-op short-circuit.
+	if reflect.DeepEqual(orig, obj) {
+		return admission.Response{
+			AdmissionResponse: admissionv1.AdmissionResponse{Allowed: true},
+		}
+	}
+
+	before, err := json.Marshal(orig)
+	if err != nil {
+		return admission.Errored(http.StatusInternalServerError, err)
+	}
 	after, err := json.Marshal(obj)
 	if err != nil {
 		return admission.Errored(http.StatusInternalServerError, err)

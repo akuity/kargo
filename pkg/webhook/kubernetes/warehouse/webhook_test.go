@@ -626,7 +626,8 @@ func Test_webhook_Handle_PreservesUnrelatedDurationFormatting(t *testing.T) {
 
 	kubeClient := fake.NewClientBuilder().WithScheme(scheme).Build()
 	w := newWebhook(kubeClient, subscription.DefaultSubscriberRegistry)
-	wh := libWebhook.NewDefaultingWebhook(scheme, &kargoapi.Warehouse{}, w)
+	wh, err := libWebhook.NewDefaultingWebhook(scheme, &kargoapi.Warehouse{}, w)
+	require.NoError(t, err)
 
 	rawWarehouse := []byte(`{
 		"apiVersion": "kargo.akuity.io/v1alpha1",
