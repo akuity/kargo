@@ -25,6 +25,10 @@ var (
 	}
 )
 
+// mutateWebhookPath must match the path configured for this webhook in the
+// Helm chart.
+const mutateWebhookPath = "/mutate-kargo-akuity-io-v1alpha1-stage"
+
 type webhook struct {
 	client  client.Client
 	decoder admission.Decoder
@@ -57,10 +61,16 @@ func SetupWebhookWithManager(
 		mgr.GetClient(),
 		admission.NewDecoder(mgr.GetScheme()),
 	)
-	return ctrl.NewWebhookManagedBy(mgr, &kargoapi.Stage{}).
-		WithDefaulter(w).
+	if err := ctrl.NewWebhookManagedBy(mgr, &kargoapi.Stage{}).
 		WithValidator(w).
-		Complete()
+		Complete(); err != nil {
+		return err
+	}
+	mgr.GetWebhookServer().Register(
+		mutateWebhookPath,
+		libWebhook.NewDefaultingWebhook(mgr.GetScheme(), &kargoapi.Stage{}, w),
+	)
+	return nil
 }
 
 func newWebhook(

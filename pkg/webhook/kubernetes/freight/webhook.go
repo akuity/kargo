@@ -40,6 +40,10 @@ var (
 	}
 )
 
+// mutateWebhookPath must match the path configured for this webhook in the
+// Helm chart.
+const mutateWebhookPath = "/mutate-kargo-akuity-io-v1alpha1-freight"
+
 type webhook struct {
 	client                client.Client
 	freightAliasGenerator moniker.Namer
@@ -86,10 +90,16 @@ func SetupWebhookWithManager(
 		mgr.GetClient(),
 		k8sevent.NewEventSender(libEvent.NewRecorder(ctx, mgr.GetScheme(), mgr.GetClient(), "freight-webhook")),
 	)
-	return ctrl.NewWebhookManagedBy(mgr, &kargoapi.Freight{}).
+	if err := ctrl.NewWebhookManagedBy(mgr, &kargoapi.Freight{}).
 		WithValidator(w).
-		WithDefaulter(w).
-		Complete()
+		Complete(); err != nil {
+		return err
+	}
+	mgr.GetWebhookServer().Register(
+		mutateWebhookPath,
+		libWebhook.NewDefaultingWebhook(mgr.GetScheme(), &kargoapi.Freight{}, w),
+	)
+	return nil
 }
 
 func newWebhook(

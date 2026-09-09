@@ -26,6 +26,10 @@ var warehouseGroupKind = schema.GroupKind{
 	Kind:  "Warehouse",
 }
 
+// mutateWebhookPath must match the path configured for this webhook in the
+// Helm chart.
+const mutateWebhookPath = "/mutate-kargo-akuity-io-v1alpha1-warehouse"
+
 type webhook struct {
 	client             client.Client
 	subscriberRegistry subscription.SubscriberRegistry
@@ -36,10 +40,16 @@ func SetupWebhookWithManager(mgr ctrl.Manager) error {
 		mgr.GetClient(),
 		subscription.DefaultSubscriberRegistry,
 	)
-	return ctrl.NewWebhookManagedBy(mgr, &kargoapi.Warehouse{}).
-		WithDefaulter(w).
+	if err := ctrl.NewWebhookManagedBy(mgr, &kargoapi.Warehouse{}).
 		WithValidator(w).
-		Complete()
+		Complete(); err != nil {
+		return err
+	}
+	mgr.GetWebhookServer().Register(
+		mutateWebhookPath,
+		libWebhook.NewDefaultingWebhook(mgr.GetScheme(), &kargoapi.Warehouse{}, w),
+	)
+	return nil
 }
 
 func newWebhook(
