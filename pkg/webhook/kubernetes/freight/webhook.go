@@ -86,10 +86,7 @@ func SetupWebhookWithManager(
 		mgr.GetClient(),
 		k8sevent.NewEventSender(libEvent.NewRecorder(ctx, mgr.GetScheme(), mgr.GetClient(), "freight-webhook")),
 	)
-	return ctrl.NewWebhookManagedBy(mgr, &kargoapi.Freight{}).
-		WithValidator(w).
-		WithDefaulter(w).
-		Complete()
+	return libWebhook.SetupValidatingAndDefaultingWebhook(mgr, &kargoapi.Freight{}, w)
 }
 
 func newWebhook(

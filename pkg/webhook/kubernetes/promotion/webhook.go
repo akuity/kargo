@@ -114,10 +114,7 @@ func SetupWebhookWithManager(
 		admission.NewDecoder(mgr.GetScheme()),
 		k8sevent.NewEventSender(libEvent.NewRecorder(ctx, mgr.GetScheme(), mgr.GetClient(), "promotion-webhook")),
 	)
-	return ctrl.NewWebhookManagedBy(mgr, &kargoapi.Promotion{}).
-		WithDefaulter(w).
-		WithValidator(w).
-		Complete()
+	return libWebhook.SetupValidatingAndDefaultingWebhook(mgr, &kargoapi.Promotion{}, w)
 }
 
 func newWebhook(

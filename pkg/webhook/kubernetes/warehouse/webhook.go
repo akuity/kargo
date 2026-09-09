@@ -36,10 +36,7 @@ func SetupWebhookWithManager(mgr ctrl.Manager) error {
 		mgr.GetClient(),
 		subscription.DefaultSubscriberRegistry,
 	)
-	return ctrl.NewWebhookManagedBy(mgr, &kargoapi.Warehouse{}).
-		WithDefaulter(w).
-		WithValidator(w).
-		Complete()
+	return libWebhook.SetupValidatingAndDefaultingWebhook(mgr, &kargoapi.Warehouse{}, w)
 }
 
 func newWebhook(
