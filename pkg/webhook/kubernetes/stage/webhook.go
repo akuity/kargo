@@ -57,12 +57,7 @@ func SetupWebhookWithManager(
 		mgr.GetClient(),
 		admission.NewDecoder(mgr.GetScheme()),
 	)
-	if err := ctrl.NewWebhookManagedBy(mgr, &kargoapi.Stage{}).
-		WithValidator(w).
-		Complete(); err != nil {
-		return err
-	}
-	return libWebhook.RegisterDefaultingWebhook(mgr, &kargoapi.Stage{}, w)
+	return libWebhook.SetupValidatingAndDefaultingWebhook(mgr, &kargoapi.Stage{}, w)
 }
 
 func newWebhook(

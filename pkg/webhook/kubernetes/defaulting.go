@@ -21,6 +21,25 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
+// SetupValidatingAndDefaultingWebhook registers both a validating webhook and
+// a defaulting webhook (see RegisterDefaultingWebhook) for obj's type on mgr,
+// using h for both.
+func SetupValidatingAndDefaultingWebhook[T runtime.Object](
+	mgr ctrl.Manager,
+	obj T,
+	h interface {
+		admission.Validator[T]
+		admission.Defaulter[T]
+	},
+) error {
+	if err := ctrl.NewWebhookManagedBy(mgr, obj).
+		WithValidator(h).
+		Complete(); err != nil {
+		return fmt.Errorf("error creating validating webhook for %T: %w", obj, err)
+	}
+	return RegisterDefaultingWebhook(mgr, obj, h)
+}
+
 // RegisterDefaultingWebhook registers a mutating admission webhook for obj's
 // type on mgr's webhook server, running defaulter's Default() method the way
 // ctrl.NewWebhookManagedBy(mgr, obj).WithDefaulter(defaulter) would, except
