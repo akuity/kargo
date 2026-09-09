@@ -143,7 +143,6 @@ export * from './promotionPolicySelector';
 export * from './promotionPolicySelectorMatchLabels';
 export * from './promotionReference';
 export * from './promotionRequest';
-export * from './promotionRequestFreightReference';
 export * from './promotionRequestList';
 export * from './promotionRequestPhase';
 export * from './promotionRequestReference';

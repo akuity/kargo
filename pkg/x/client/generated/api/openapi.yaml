@@ -13353,12 +13353,6 @@ components:
       required:
       - spec
       type: object
-    PromotionRequestFreightReference:
-      properties:
-        name:
-          description: Name is the name of the Freight.
-          type: string
-      type: object
     PromotionRequestList:
       example:
         apiVersion: apiVersion
@@ -13516,8 +13510,19 @@ components:
           type: string
         freight:
           allOf:
-          - $ref: "#/components/schemas/PromotionRequestFreightReference"
-          description: Freight identifies the Freight being promoted.
+          - $ref: "#/components/schemas/FreightReference"
+          description: |-
+            FIXME: we need promotion request to resolve freight reference
+            FIXME: we need promotions to pick freight reference from promotion request
+            Freight identifies the Freight being promoted.
+          type: object
+        freightCollection:
+          allOf:
+          - $ref: "#/components/schemas/FreightCollection"
+          description: |-
+            FreightCollection contains the details of the piece of Freight referenced
+            by this Promotion as well as any additional Freight that is carried over
+            from the target Stage's current state.
           type: object
         name:
           description: Name is the name of the PromotionRequest.
@@ -13602,6 +13607,21 @@ components:
         finishedAt:
           description: FinishedAt is the time at which the PromotionRequest completed.
           type: string
+        freight:
+          allOf:
+          - $ref: "#/components/schemas/FreightReference"
+          description: |-
+            FIXME: populate Freight and Freight collection in the promotion request reconciler
+            Freight is the detail of the piece of freight that was referenced by this promotion.
+          type: object
+        freightCollection:
+          allOf:
+          - $ref: "#/components/schemas/FreightCollection"
+          description: |-
+            FreightCollection contains the details of the piece of Freight referenced
+            by this Promotion as well as any additional Freight that is carried over
+            from the target Stage's current state.
+          type: object
         observedGeneration:
           description: |-
             ObservedGeneration is the generation of the spec last reconciled.

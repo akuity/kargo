@@ -21,8 +21,10 @@ var _ MappedNullable = &PromotionRequestReference{}
 type PromotionRequestReference struct {
 	// FinishedAt is the time at which the PromotionRequest completed.
 	FinishedAt *string `json:"finishedAt,omitempty"`
-	// Freight identifies the Freight being promoted.
-	Freight *PromotionRequestFreightReference `json:"freight,omitempty"`
+	// FIXME: we need promotion request to resolve freight reference FIXME: we need promotions to pick freight reference from promotion request Freight identifies the Freight being promoted.
+	Freight *FreightReference `json:"freight,omitempty"`
+	// FreightCollection contains the details of the piece of Freight referenced by this Promotion as well as any additional Freight that is carried over from the target Stage's current state.
+	FreightCollection *FreightCollection `json:"freightCollection,omitempty"`
 	// Name is the name of the PromotionRequest.
 	Name *string `json:"name,omitempty"`
 	// Phase is a high-level summary of the PromotionRequest's lifecycle.
@@ -79,9 +81,9 @@ func (o *PromotionRequestReference) SetFinishedAt(v string) {
 }
 
 // GetFreight returns the Freight field value if set, zero value otherwise.
-func (o *PromotionRequestReference) GetFreight() PromotionRequestFreightReference {
+func (o *PromotionRequestReference) GetFreight() FreightReference {
 	if o == nil || IsNil(o.Freight) {
-		var ret PromotionRequestFreightReference
+		var ret FreightReference
 		return ret
 	}
 	return *o.Freight
@@ -89,7 +91,7 @@ func (o *PromotionRequestReference) GetFreight() PromotionRequestFreightReferenc
 
 // GetFreightOk returns a tuple with the Freight field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *PromotionRequestReference) GetFreightOk() (*PromotionRequestFreightReference, bool) {
+func (o *PromotionRequestReference) GetFreightOk() (*FreightReference, bool) {
 	if o == nil || IsNil(o.Freight) {
 		return nil, false
 	}
@@ -105,9 +107,41 @@ func (o *PromotionRequestReference) HasFreight() bool {
 	return false
 }
 
-// SetFreight gets a reference to the given PromotionRequestFreightReference and assigns it to the Freight field.
-func (o *PromotionRequestReference) SetFreight(v PromotionRequestFreightReference) {
+// SetFreight gets a reference to the given FreightReference and assigns it to the Freight field.
+func (o *PromotionRequestReference) SetFreight(v FreightReference) {
 	o.Freight = &v
+}
+
+// GetFreightCollection returns the FreightCollection field value if set, zero value otherwise.
+func (o *PromotionRequestReference) GetFreightCollection() FreightCollection {
+	if o == nil || IsNil(o.FreightCollection) {
+		var ret FreightCollection
+		return ret
+	}
+	return *o.FreightCollection
+}
+
+// GetFreightCollectionOk returns a tuple with the FreightCollection field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *PromotionRequestReference) GetFreightCollectionOk() (*FreightCollection, bool) {
+	if o == nil || IsNil(o.FreightCollection) {
+		return nil, false
+	}
+	return o.FreightCollection, true
+}
+
+// HasFreightCollection returns a boolean if a field has been set.
+func (o *PromotionRequestReference) HasFreightCollection() bool {
+	if o != nil && !IsNil(o.FreightCollection) {
+		return true
+	}
+
+	return false
+}
+
+// SetFreightCollection gets a reference to the given FreightCollection and assigns it to the FreightCollection field.
+func (o *PromotionRequestReference) SetFreightCollection(v FreightCollection) {
+	o.FreightCollection = &v
 }
 
 // GetName returns the Name field value if set, zero value otherwise.
@@ -189,6 +223,9 @@ func (o PromotionRequestReference) ToMap() (map[string]interface{}, error) {
 	}
 	if !IsNil(o.Freight) {
 		toSerialize["freight"] = o.Freight
+	}
+	if !IsNil(o.FreightCollection) {
+		toSerialize["freightCollection"] = o.FreightCollection
 	}
 	if !IsNil(o.Name) {
 		toSerialize["name"] = o.Name

@@ -23,6 +23,10 @@ type PromotionRequestStatus struct {
 	Conditions []V1Condition `json:"conditions,omitempty"`
 	// FinishedAt is the time at which the PromotionRequest completed.
 	FinishedAt *string `json:"finishedAt,omitempty"`
+	// FIXME: populate Freight and Freight collection in the promotion request reconciler Freight is the detail of the piece of freight that was referenced by this promotion.
+	Freight *FreightReference `json:"freight,omitempty"`
+	// FreightCollection contains the details of the piece of Freight referenced by this Promotion as well as any additional Freight that is carried over from the target Stage's current state.
+	FreightCollection *FreightCollection `json:"freightCollection,omitempty"`
 	// ObservedGeneration is the generation of the spec last reconciled.  +kubebuilder:validation:Optional
 	ObservedGeneration *int32 `json:"observedGeneration,omitempty"`
 	// Phase is a high-level summary of the PromotionRequest's lifecycle.  +kubebuilder:validation:Optional
@@ -114,6 +118,70 @@ func (o *PromotionRequestStatus) HasFinishedAt() bool {
 // SetFinishedAt gets a reference to the given string and assigns it to the FinishedAt field.
 func (o *PromotionRequestStatus) SetFinishedAt(v string) {
 	o.FinishedAt = &v
+}
+
+// GetFreight returns the Freight field value if set, zero value otherwise.
+func (o *PromotionRequestStatus) GetFreight() FreightReference {
+	if o == nil || IsNil(o.Freight) {
+		var ret FreightReference
+		return ret
+	}
+	return *o.Freight
+}
+
+// GetFreightOk returns a tuple with the Freight field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *PromotionRequestStatus) GetFreightOk() (*FreightReference, bool) {
+	if o == nil || IsNil(o.Freight) {
+		return nil, false
+	}
+	return o.Freight, true
+}
+
+// HasFreight returns a boolean if a field has been set.
+func (o *PromotionRequestStatus) HasFreight() bool {
+	if o != nil && !IsNil(o.Freight) {
+		return true
+	}
+
+	return false
+}
+
+// SetFreight gets a reference to the given FreightReference and assigns it to the Freight field.
+func (o *PromotionRequestStatus) SetFreight(v FreightReference) {
+	o.Freight = &v
+}
+
+// GetFreightCollection returns the FreightCollection field value if set, zero value otherwise.
+func (o *PromotionRequestStatus) GetFreightCollection() FreightCollection {
+	if o == nil || IsNil(o.FreightCollection) {
+		var ret FreightCollection
+		return ret
+	}
+	return *o.FreightCollection
+}
+
+// GetFreightCollectionOk returns a tuple with the FreightCollection field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *PromotionRequestStatus) GetFreightCollectionOk() (*FreightCollection, bool) {
+	if o == nil || IsNil(o.FreightCollection) {
+		return nil, false
+	}
+	return o.FreightCollection, true
+}
+
+// HasFreightCollection returns a boolean if a field has been set.
+func (o *PromotionRequestStatus) HasFreightCollection() bool {
+	if o != nil && !IsNil(o.FreightCollection) {
+		return true
+	}
+
+	return false
+}
+
+// SetFreightCollection gets a reference to the given FreightCollection and assigns it to the FreightCollection field.
+func (o *PromotionRequestStatus) SetFreightCollection(v FreightCollection) {
+	o.FreightCollection = &v
 }
 
 // GetObservedGeneration returns the ObservedGeneration field value if set, zero value otherwise.
@@ -291,6 +359,12 @@ func (o PromotionRequestStatus) ToMap() (map[string]interface{}, error) {
 	}
 	if !IsNil(o.FinishedAt) {
 		toSerialize["finishedAt"] = o.FinishedAt
+	}
+	if !IsNil(o.Freight) {
+		toSerialize["freight"] = o.Freight
+	}
+	if !IsNil(o.FreightCollection) {
+		toSerialize["freightCollection"] = o.FreightCollection
 	}
 	if !IsNil(o.ObservedGeneration) {
 		toSerialize["observedGeneration"] = o.ObservedGeneration
