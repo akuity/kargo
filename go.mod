@@ -43,7 +43,7 @@ require (
 	github.com/go-logr/logr v1.4.4
 	github.com/go-logr/zapr v1.3.0
 	github.com/go-openapi/runtime v0.33.2
-	github.com/go-openapi/strfmt v0.27.1
+	github.com/go-openapi/strfmt v0.27.2
 	github.com/goccy/go-yaml v1.19.2
 	github.com/gogo/protobuf v1.3.2
 	github.com/golang-jwt/jwt/v5 v5.3.1
