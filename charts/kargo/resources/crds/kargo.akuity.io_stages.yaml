@@ -384,9 +384,8 @@ spec:
                   to. Its presence is what makes a Stage target-aware.
 
                   When this field is nil (the default), the Stage operates in classic mode:
-                  it governs a single implicit "stage-self" Target that the controller
-                  creates and maintains on the Stage's behalf. This preserves the behavior
-                  of Stages authored before Targets existed.
+                  it governs no Targets and promotes Freight by way of Promotions alone.
+                  This preserves the behavior of Stages authored before Targets existed.
                 properties:
                   selectors:
                     description: |-
