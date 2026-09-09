@@ -87,11 +87,26 @@ const defaultView = settingsViews.clusterConfig;
 export const Settings = () => {
   useDocumentTitle(['Settings']);
   const location = useLocation();
-  const { settingsExtensions } = useExtensionsContext();
+  const { settingsExtensions, clusterConfigSubpages } = useExtensionsContext();
+
+  const configSubpages = React.useMemo(
+    () =>
+      clusterConfigSubpages.map((subpage) => ({
+        ...subpage,
+        path: `${settingsViews.clusterConfig.path}/${subpage.path}`
+      })),
+    [clusterConfigSubpages]
+  );
 
   const views = React.useMemo(
     () => [...Object.values(settingsViews), ...settingsExtensions],
     [settingsExtensions]
+  );
+
+  const routableViews = React.useMemo(() => [...views, ...configSubpages], [views, configSubpages]);
+
+  const wide = configSubpages.some(
+    (subpage) => subpage.wide && location.pathname.endsWith(subpage.path)
   );
 
   const menuItems = React.useMemo(
@@ -100,21 +115,38 @@ export const Settings = () => {
         const group = ('group' in view ? view.group : DEFAULT_GROUP) as string;
         const groupIndex = acc.findIndex((g) => g?.key === group);
 
-        const children = {
-          label: <NavLink to={`../${view.path}`}>{view.label}</NavLink>,
+        const subpages = view.path === settingsViews.clusterConfig.path ? configSubpages : [];
+
+        const item = {
+          label: (
+            <NavLink to={`../${view.path}`} style={{ color: 'inherit' }}>
+              {view.label}
+            </NavLink>
+          ),
           icon: <FontAwesomeIcon icon={view.icon} />,
           key: view.path
         };
 
+        const itemWithSubpages = subpages.length
+          ? {
+              ...item,
+              children: subpages.map((subpage) => ({
+                label: <NavLink to={`../${subpage.path}`}>{subpage.label}</NavLink>,
+                icon: <FontAwesomeIcon icon={subpage.icon} />,
+                key: subpage.path
+              }))
+            }
+          : item;
+
         if (groupIndex === -1) {
-          acc.push({ key: group, label: group, type: 'group', children: [children] });
+          acc.push({ key: group, label: group, type: 'group', children: [itemWithSubpages] });
         } else if (acc[groupIndex] && 'children' in acc[groupIndex]) {
-          acc[groupIndex].children?.push(children);
+          acc[groupIndex].children?.push(itemWithSubpages);
         }
 
         return acc;
       }, [] as ItemType<MenuItemType>[]),
-    [views]
+    [views, configSubpages]
   );
 
   return (
@@ -127,15 +159,23 @@ export const Settings = () => {
           <div style={{ width: 240 }}>
             <Menu
               className='-ml-2 -mt-1 mb-4'
+              mode='inline'
               style={{ border: 0, background: 'transparent' }}
-              selectedKeys={views.map((i) => i.path).filter((i) => location.pathname.endsWith(i))}
+              selectedKeys={routableViews
+                .map((i) => i.path)
+                .filter((i) => location.pathname.endsWith(i))}
+              openKeys={[settingsViews.clusterConfig.path]}
+              expandIcon={null}
               items={menuItems}
             />
           </div>
-          <div className='flex-1 overflow-hidden' style={{ maxWidth: '920px', minHeight: '700px' }}>
+          <div
+            className='flex-1 overflow-hidden'
+            style={{ maxWidth: wide ? '1440px' : '920px', minHeight: wide ? undefined : '700px' }}
+          >
             <Routes>
               <Route index element={<Navigate to={defaultView.path} replace={true} />} />
-              {views.map((t) => (
+              {routableViews.map((t) => (
                 <Route key={t.path} path={t.path} element={<t.component />} />
               ))}
               <Route path='*' element={<Navigate to='../' replace={true} />} />

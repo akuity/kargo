@@ -33,7 +33,7 @@ export const ProjectSettings = () => {
   const getConfigQuery = useGetConfig();
   const config = getConfigQuery.data?.data;
 
-  const { projectSettingsExtensions } = useExtensionsContext();
+  const { projectSettingsExtensions, projectConfigSubpages } = useExtensionsContext();
 
   const settingsViews = React.useMemo(() => {
     return {
@@ -86,9 +86,24 @@ export const ProjectSettings = () => {
     };
   }, [config]);
 
+  const configSubpages = React.useMemo(
+    () =>
+      projectConfigSubpages.map((subpage) => ({
+        ...subpage,
+        path: `${settingsViews.projectConfig.path}/${subpage.path}`
+      })),
+    [projectConfigSubpages, settingsViews]
+  );
+
   const views = React.useMemo(
     () => [...Object.values(settingsViews), ...projectSettingsExtensions],
     [projectSettingsExtensions, settingsViews]
+  );
+
+  const routableViews = React.useMemo(() => [...views, ...configSubpages], [views, configSubpages]);
+
+  const wide = configSubpages.some(
+    (subpage) => subpage.wide && location.pathname.endsWith(subpage.path)
   );
 
   const projectBreadcrumbs = useProjectBreadcrumbs();
@@ -115,24 +130,44 @@ export const ProjectSettings = () => {
             <Skeleton loading={getConfigQuery.isFetching} active paragraph={{ rows: 6 }}>
               <Menu
                 className='-ml-2 -mt-1'
+                mode='inline'
                 style={{ border: 0, background: 'transparent' }}
-                selectedKeys={views.map((i) => i.path).filter((i) => location.pathname.endsWith(i))}
+                selectedKeys={routableViews
+                  .map((i) => i.path)
+                  .filter((i) => location.pathname.endsWith(i))}
+                openKeys={[settingsViews.projectConfig.path]}
+                expandIcon={null}
                 items={views.map((i) => ({
-                  label: <NavLink to={`../${i.path}`}>{i.label}</NavLink>,
+                  label: (
+                    <NavLink to={`../${i.path}`} style={{ color: 'inherit' }}>
+                      {i.label}
+                    </NavLink>
+                  ),
                   icon: <FontAwesomeIcon icon={i.icon} />,
-                  key: i.path
+                  key: i.path,
+                  children:
+                    i.path === settingsViews.projectConfig.path && configSubpages.length
+                      ? configSubpages.map((subpage) => ({
+                          label: <NavLink to={`../${subpage.path}`}>{subpage.label}</NavLink>,
+                          icon: <FontAwesomeIcon icon={subpage.icon} />,
+                          key: subpage.path
+                        }))
+                      : undefined
                 }))}
               />
             </Skeleton>
           </div>
-          <div className='flex-1 overflow-hidden' style={{ maxWidth: '920px', minHeight: '700px' }}>
+          <div
+            className='flex-1 overflow-hidden'
+            style={{ maxWidth: wide ? '1440px' : '920px', minHeight: wide ? undefined : '700px' }}
+          >
             <Skeleton loading={getConfigQuery.isFetching} active paragraph={{ rows: 16 }}>
               <Routes>
                 <Route
                   index
                   element={<Navigate to={settingsViews.general.path} replace={true} />}
                 />
-                {views.map((t) => (
+                {routableViews.map((t) => (
                   <Route key={t.path} path={t.path} element={<t.component />} />
                 ))}
                 <Route path='*' element={<Navigate to='../' replace={true} />} />

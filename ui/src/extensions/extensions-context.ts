@@ -23,6 +23,10 @@ export const useExtensionsContext = () => {
     settingsExtensions: ctx?.extensions.filter((extension) => extension.type === 'settings') || [],
     projectSettingsExtensions:
       ctx?.extensions.filter((extension) => extension.type === 'projectSettings') || [],
+    projectConfigSubpages:
+      ctx?.extensions.filter((extension) => extension.type === 'projectConfigSubpage') || [],
+    clusterConfigSubpages:
+      ctx?.extensions.filter((extension) => extension.type === 'clusterConfigSubpage') || [],
     argoCDExtension:
       ctx?.extensions.filter((extension) => extension.type === 'argocdExtension')[0] || null,
     promotionStepExtensions:
