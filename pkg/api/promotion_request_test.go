@@ -335,7 +335,10 @@ func TestNewPromotionRequest(t *testing.T) {
 		require.Equal(t, project, promoReq.Namespace)
 		require.Equal(t, stage, promoReq.Spec.Stage)
 		require.Equal(t, freight, promoReq.Spec.Freight)
-		require.True(t, strings.HasPrefix(promoReq.Name, stage+"."))
+		// The name is left to the defaulting webhook; generateName only gives
+		// the API server something to work with before admission runs.
+		require.Empty(t, promoReq.Name)
+		require.NotEmpty(t, promoReq.GenerateName)
 		// Only Targets matching the selector, sorted by name so that repeated
 		// calls agree.
 		require.Equal(
@@ -488,6 +491,72 @@ func TestNewPromotionRequest(t *testing.T) {
 		_, err := NewPromotionRequest(t.Context(), newClient(), bad, freight)
 		require.ErrorContains(t, err, "error resolving Targets governed by Stage")
 	})
+}
+
+func TestNewPromotionRequestForOrigin(t *testing.T) {
+	t.Parallel()
+
+	const (
+		project = "fake-project"
+		stage   = "fake-stage"
+	)
+
+	scheme := runtime.NewScheme()
+	require.NoError(t, kargoapi.AddToScheme(scheme))
+
+	testStage := &kargoapi.Stage{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: project,
+			Name:      stage,
+			UID:       "fake-uid",
+		},
+		Spec: kargoapi.StageSpec{
+			Shard: "my-shard",
+			Targets: &kargoapi.StageTargets{
+				Selectors: []metav1.LabelSelector{{
+					MatchLabels: map[string]string{"region": "us"},
+				}},
+			},
+		},
+	}
+	origin := kargoapi.FreightOrigin{
+		Kind: kargoapi.FreightOriginKindWarehouse,
+		Name: "fake-warehouse",
+	}
+
+	c := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(&kargoapi.Target{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: project,
+				Name:      "us-east",
+				Labels:    map[string]string{"region": "us"},
+			},
+		}).
+		Build()
+
+	promoReq, err := NewPromotionRequestForOrigin(t.Context(), c, testStage, origin)
+	require.NoError(t, err)
+
+	require.Equal(t, project, promoReq.Namespace)
+	require.Equal(t, stage, promoReq.Spec.Stage)
+	require.Empty(t, promoReq.Spec.Freight)
+	require.Equal(t, &origin, promoReq.Spec.Origin)
+	// The name is left to the defaulting webhook, which resolves the origin to
+	// Freight and names the request for it; generateName only gives the API
+	// server something to work with before admission runs.
+	require.Empty(t, promoReq.Name)
+	require.NotEmpty(t, promoReq.GenerateName)
+	// Everything else matches what NewPromotionRequest constructs.
+	require.Equal(
+		t,
+		[]kargoapi.PromotionRequestTarget{{Name: "us-east"}},
+		promoReq.Spec.Targets,
+	)
+	require.Equal(t, stage, promoReq.Labels[kargoapi.LabelKeyStage])
+	require.Equal(t, "my-shard", promoReq.Labels[kargoapi.LabelKeyShard])
+	require.Len(t, promoReq.OwnerReferences, 1)
+	require.Equal(t, "Stage", promoReq.OwnerReferences[0].Kind)
 }
 
 // Two separate properties, and only the first one holds.

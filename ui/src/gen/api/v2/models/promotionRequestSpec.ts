@@ -5,21 +5,35 @@
  * REST API for Kargo
  * OpenAPI spec version: v1alpha1
  */
+import type { FreightOrigin } from './freightOrigin';
 import type { PromotionRequestTarget } from './promotionRequestTarget';
 
 export interface PromotionRequestSpec {
   /**
    * Freight specifies the piece of Freight promoted by the Stage.
    * The Freight MUST be in the same namespace as the PromotionRequest.
+   * Exactly one of Freight or Origin must be set. Once set, Freight is
+   * immutable -- this is enforced by a transition rule on the spec rather
+   * than on this field, since a rule here would not be evaluated on an
+   * update that omits the field entirely.
    *
-   * +kubebuilder:validation:Required
+   * +kubebuilder:validation:Optional
    * +kubebuilder:validation:MinLength=1
    * +kubebuilder:validation:MaxLength=253
    * +kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`
    * +akuity:test-kubebuilder-pattern=KubernetesName
-   * +kubebuilder:validation:XValidation:rule="self == oldSelf"
    */
-  freight: string;
+  freight?: string;
+  /**
+   * Origin, when set, identifies the FreightOrigin whose auto-promotion
+   * candidate should be promoted. The PromotionRequest defaulting webhook
+   * resolves this to the candidate Freight for that origin and fills Freight
+   * before the PromotionRequest is persisted. Exactly one of Freight or
+   * Origin must be set.
+   *
+   * +kubebuilder:validation:Optional
+   */
+  origin?: FreightOrigin;
   /**
    * Stage specifies the name of the Stage that promotes the Freight.
    * The Stage MUST be in the same namespace as the PromotionRequest.

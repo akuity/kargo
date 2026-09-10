@@ -487,6 +487,67 @@ func TestSelectAutoPromotionCandidates(t *testing.T) {
 	}
 }
 
+func TestSelectAutoPromotionCandidateForOrigin(t *testing.T) {
+	t.Parallel()
+
+	now := time.Now()
+	warehouseOrigin := kargoapi.FreightOrigin{
+		Kind: kargoapi.FreightOriginKindWarehouse,
+		Name: "fake-warehouse",
+	}
+	stage := &kargoapi.Stage{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "fake-stage",
+			Namespace: "fake-project",
+		},
+		Spec: kargoapi.StageSpec{
+			RequestedFreight: []kargoapi.FreightRequest{{
+				Origin:  warehouseOrigin,
+				Sources: kargoapi.FreightSources{Direct: true},
+			}},
+		},
+	}
+	availableFreight := []kargoapi.Freight{
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:              "older-freight",
+				CreationTimestamp: metav1.Time{Time: now.Add(-time.Hour)},
+			},
+			Origin: warehouseOrigin,
+		},
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:              "newer-freight",
+				CreationTimestamp: metav1.Time{Time: now},
+			},
+			Origin: warehouseOrigin,
+		},
+	}
+
+	t.Run("returns the origin's candidate", func(t *testing.T) {
+		t.Parallel()
+		candidate := SelectAutoPromotionCandidateForOrigin(
+			t.Context(), stage, availableFreight, warehouseOrigin,
+		)
+		require.NotNil(t, candidate)
+		require.Equal(t, "newer-freight", candidate.Name)
+	})
+
+	t.Run("returns nil for an origin with no candidate", func(t *testing.T) {
+		t.Parallel()
+		candidate := SelectAutoPromotionCandidateForOrigin(
+			t.Context(),
+			stage,
+			availableFreight,
+			kargoapi.FreightOrigin{
+				Kind: kargoapi.FreightOriginKindWarehouse,
+				Name: "unrequested-warehouse",
+			},
+		)
+		require.Nil(t, candidate)
+	})
+}
+
 func TestSetAutoPromotionHoldAnnotation(t *testing.T) {
 	origin := kargoapi.FreightOrigin{Kind: kargoapi.FreightOriginKindWarehouse, Name: "fake-warehouse"}
 	promo := &kargoapi.Promotion{

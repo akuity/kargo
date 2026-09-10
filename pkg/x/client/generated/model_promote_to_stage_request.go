@@ -21,7 +21,7 @@ var _ MappedNullable = &PromoteToStageRequest{}
 type PromoteToStageRequest struct {
 	Freight *string `json:"freight,omitempty"`
 	FreightAlias *string `json:"freightAlias,omitempty"`
-	// Origin is the canonical Freight origin key (e.g. \"Warehouse/foo\"). When set, the promotion webhook resolves it to the current auto-promotion candidate. Exactly one of Freight, FreightAlias, or Origin must be set.
+	// Origin is the canonical Freight origin key (e.g. \"Warehouse/foo\"). When set, admission resolves it to the current auto-promotion candidate -- via the Promotion defaulting webhook, or the PromotionRequest defaulting webhook for a Stage that selects Targets. Exactly one of Freight, FreightAlias, or Origin must be set.
 	Origin *string `json:"origin,omitempty"`
 }
 

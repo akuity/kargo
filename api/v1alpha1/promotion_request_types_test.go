@@ -107,7 +107,17 @@ func TestPromotionRequestSpec_Immutability(t *testing.T) {
 	require.NoError(t, err)
 
 	immutable := map[string]bool{}
+	var specDoc string
 	ast.Inspect(f, func(n ast.Node) bool {
+		if genDecl, isGenDecl := n.(*ast.GenDecl); isGenDecl && genDecl.Doc != nil {
+			for _, spec := range genDecl.Specs {
+				if typeSpec, isTypeSpec := spec.(*ast.TypeSpec); isTypeSpec &&
+					typeSpec.Name.Name == "PromotionRequestSpec" {
+					specDoc = genDecl.Doc.Text()
+				}
+			}
+			return true
+		}
 		typeSpec, ok := n.(*ast.TypeSpec)
 		if !ok || typeSpec.Name.Name != "PromotionRequestSpec" {
 			return true
@@ -128,14 +138,29 @@ func TestPromotionRequestSpec_Immutability(t *testing.T) {
 	require.Equal(
 		t,
 		map[string]bool{
-			"Stage":   true,
-			"Freight": true,
+			"Stage": true,
+			// Freight is immutable too, but by a rule on the spec (asserted
+			// below) rather than on the field: the field is optional, and a
+			// field-level transition rule is not evaluated on an update that
+			// omits the field entirely.
+			"Freight": false,
+			// Origin never persists: the defaulting webhook resolves it to
+			// Freight at creation, and the validating webhook rejects it on
+			// updates.
+			"Origin": false,
 			// The one mutable field. The governing Stage owns it and may add
 			// Targets to a PromotionRequest that is still in flight.
 			"Targets": false,
 		},
 		immutable,
 	)
+
+	require.Contains(
+		t,
+		specDoc,
+		`rule="!has(oldSelf.freight) || (has(self.freight) && self.freight == oldSelf.freight)"`,
+	)
+	require.Contains(t, specDoc, `rule="has(self.freight) != has(self.origin)"`)
 }
 
 func TestPromotionRequest_DeepCopy(t *testing.T) {
