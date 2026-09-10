@@ -5,14 +5,21 @@
  * REST API for Kargo
  * OpenAPI spec version: v1alpha1
  */
-import type { PromotionRequestFreightReference } from './promotionRequestFreightReference';
+import type { FreightReference } from './freightReference';
+import type { FreightCollection } from './freightCollection';
 import type { PromotionRequestPhase } from './promotionRequestPhase';
 
 export interface PromotionRequestReference {
   /** FinishedAt is the time at which the PromotionRequest completed. */
   finishedAt?: string;
-  /** Freight identifies the Freight being promoted. */
-  freight?: PromotionRequestFreightReference;
+  /** FIXME: we need promotion request to resolve freight reference
+FIXME: we need promotions to pick freight reference from promotion request
+Freight identifies the Freight being promoted. */
+  freight?: FreightReference;
+  /** FreightCollection contains the details of the piece of Freight referenced
+by this Promotion as well as any additional Freight that is carried over
+from the target Stage's current state. */
+  freightCollection?: FreightCollection;
   /** Name is the name of the PromotionRequest. */
   name?: string;
   /** Phase is a high-level summary of the PromotionRequest's lifecycle. */

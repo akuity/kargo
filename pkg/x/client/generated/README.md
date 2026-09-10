@@ -292,7 +292,6 @@ Class | Method | HTTP request | Description
  - [PromotionPolicySelector](docs/PromotionPolicySelector.md)
  - [PromotionReference](docs/PromotionReference.md)
  - [PromotionRequest](docs/PromotionRequest.md)
- - [PromotionRequestFreightReference](docs/PromotionRequestFreightReference.md)
  - [PromotionRequestList](docs/PromotionRequestList.md)
  - [PromotionRequestPhase](docs/PromotionRequestPhase.md)
  - [PromotionRequestReference](docs/PromotionRequestReference.md)

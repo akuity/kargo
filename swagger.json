@@ -7910,15 +7910,6 @@
         "spec"
       ]
     },
-    "PromotionRequestFreightReference": {
-      "type": "object",
-      "properties": {
-        "name": {
-          "description": "Name is the name of the Freight.",
-          "type": "string"
-        }
-      }
-    },
     "PromotionRequestList": {
       "type": "object",
       "properties": {
@@ -7966,10 +7957,18 @@
           "type": "string"
         },
         "freight": {
-          "description": "Freight identifies the Freight being promoted.",
+          "description": "FIXME: we need promotion request to resolve freight reference\nFIXME: we need promotions to pick freight reference from promotion request\nFreight identifies the Freight being promoted.",
           "allOf": [
             {
-              "$ref": "#/definitions/PromotionRequestFreightReference"
+              "$ref": "#/definitions/FreightReference"
+            }
+          ]
+        },
+        "freightCollection": {
+          "description": "FreightCollection contains the details of the piece of Freight referenced\nby this Promotion as well as any additional Freight that is carried over\nfrom the target Stage's current state.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/FreightCollection"
             }
           ]
         },
@@ -8025,6 +8024,22 @@
         "finishedAt": {
           "description": "FinishedAt is the time at which the PromotionRequest completed.",
           "type": "string"
+        },
+        "freight": {
+          "description": "FIXME: populate Freight and Freight collection in the promotion request reconciler\nFreight is the detail of the piece of freight that was referenced by this promotion.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/FreightReference"
+            }
+          ]
+        },
+        "freightCollection": {
+          "description": "FreightCollection contains the details of the piece of Freight referenced\nby this Promotion as well as any additional Freight that is carried over\nfrom the target Stage's current state.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/FreightCollection"
+            }
+          ]
         },
         "observedGeneration": {
           "description": "ObservedGeneration is the generation of the spec last reconciled.\n\n+kubebuilder:validation:Optional",

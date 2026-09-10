@@ -6,6 +6,8 @@
  * OpenAPI spec version: v1alpha1
  */
 import type { V1Condition } from './v1Condition';
+import type { FreightReference } from './freightReference';
+import type { FreightCollection } from './freightCollection';
 import type { PromotionRequestPhase } from './promotionRequestPhase';
 import type { PromotionRequestSummary } from './promotionRequestSummary';
 import type { PromotionRequestTargetStatus } from './promotionRequestTargetStatus';
@@ -21,6 +23,13 @@ state.
   conditions?: V1Condition[];
   /** FinishedAt is the time at which the PromotionRequest completed. */
   finishedAt?: string;
+  /** FIXME: populate Freight and Freight collection in the promotion request reconciler
+Freight is the detail of the piece of freight that was referenced by this promotion. */
+  freight?: FreightReference;
+  /** FreightCollection contains the details of the piece of Freight referenced
+by this Promotion as well as any additional Freight that is carried over
+from the target Stage's current state. */
+  freightCollection?: FreightCollection;
   /** ObservedGeneration is the generation of the spec last reconciled.
 
 +kubebuilder:validation:Optional */

@@ -859,21 +859,18 @@ func (r *PromotionReference) GetHealthChecks() []HealthCheckStep {
 type PromotionRequestReference struct {
 	// Name is the name of the PromotionRequest.
 	Name string `json:"name"`
+	// FIXME: we need promotion request to resolve freight reference
+	// FIXME: we need promotions to pick freight reference from promotion request
 	// Freight identifies the Freight being promoted.
-	Freight *PromotionRequestFreightReference `json:"freight,omitempty"`
+	Freight *FreightReference `json:"freight,omitempty"`
 	// Phase is a high-level summary of the PromotionRequest's lifecycle.
 	Phase PromotionRequestPhase `json:"phase,omitempty"`
+	// FreightCollection contains the details of the piece of Freight referenced
+	// by this Promotion as well as any additional Freight that is carried over
+	// from the target Stage's current state.
+	FreightCollection *FreightCollection `json:"freightCollection,omitempty"`
 	// FinishedAt is the time at which the PromotionRequest completed.
 	FinishedAt *metav1.Time `json:"finishedAt,omitempty"`
-}
-
-// PromotionRequestFreightReference identifies the Freight promoted by a
-// PromotionRequest. It intentionally carries only the Freight's name --
-// details about the Freight's contents can be looked up from the Freight
-// itself. Fields will be added here as they are needed.
-type PromotionRequestFreightReference struct {
-	// Name is the name of the Freight.
-	Name string `json:"name"`
 }
 
 // Verification describes how to verify that a Promotion has been successful

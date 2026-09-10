@@ -3,8 +3,6 @@ package stages
 import (
 	"context"
 	"fmt"
-	"slices"
-	"strings"
 	"time"
 
 	"github.com/kelseyhightower/envconfig"
@@ -499,18 +497,8 @@ func (r *RegularStageReconciler) reconcile(
 				// If we have no current Promotion and there are pending Promotions,
 				// then we should request an immediate requeue to ensure that we
 				// process the next Promotion as soon as possible.
-				if status.CurrentPromotion == nil && hasNonTerminalPromotions {
+				if getCurrentPromoObjectFromStatus(stage, status) == nil && hasNonTerminalPromotions {
 					requestRequeue = true
-				}
-				return status, err
-			},
-		},
-		{
-			name: "syncing PromotionRequests",
-			reconcile: func() (kargoapi.StageStatus, error) {
-				status, err := r.syncPromotionRequests(ctx, working)
-				if err != nil {
-					err = fmt.Errorf("failed to sync PromotionRequests: %w", err)
 				}
 				return status, err
 			},
@@ -634,286 +622,6 @@ func (r *RegularStageReconciler) reconcile(
 	}
 
 	return newStatus, requestRequeue, nil
-}
-
-// withoutTargetPromotions removes Promotions to one of the Stage's Targets (the
-// children of a PromotionRequest) from a list of the Stage's Promotions, and
-// returns what remains. Children take no part in the Stage's own promotion
-// flow: their admission is decided by the Stage's current PromotionRequest --
-// see api.StageAwaitsPromotion -- and their outcomes are the business of
-// whatever governs the Target, so the Stage records nothing about them.
-// Every place the Stage reconciler lists its own Promotions filters through
-// this, so that the invariant holds structurally rather than by accident of
-// which annotations or code paths children happen to reach.
-//
-// spec.target is a sound discriminator because admission enforces it: the
-// Promotion webhook rejects a Promotion that names a Target but is not owned
-// by a PromotionRequest.
-func withoutTargetPromotions(promos []kargoapi.Promotion) []kargoapi.Promotion {
-	return slices.DeleteFunc(promos, func(promo kargoapi.Promotion) bool {
-		return promo.Spec.Target != ""
-	})
-}
-
-func (r *RegularStageReconciler) getPromotions(
-	ctx context.Context,
-	stage kargoapi.Stage,
-) ([]kargoapi.Promotion, error) {
-	// List all Promotions for the Stage.
-	promotions := &kargoapi.PromotionList{}
-	if err := r.client.List(
-		ctx,
-		promotions,
-		client.InNamespace(stage.Namespace),
-		client.MatchingFieldsSelector{
-			Selector: fields.OneTermEqualSelector(indexer.PromotionsByStageField, stage.Name),
-		},
-	); err != nil {
-		return nil, fmt.Errorf(
-			"failed to list Promotions for Stage %q in namespace %q: %w",
-			stage.Name, stage.Namespace, err,
-		)
-	}
-	return promotions.Items, nil
-}
-
-// syncPromotionRequests records in the Stage's status which PromotionRequest is
-// currently fanning Freight out to the Stage's Targets, and which was the last
-// to reach a terminal phase.
-//
-// The current reference is the mutex that serializes rounds of fan-out: the
-// Promotion reconciler runs a Promotion to one of the Stage's Targets only
-// while the PromotionRequest that owns it is the Stage's current one -- see
-// api.StageAwaitsPromotion. All of one request's children (at most one per
-// Target) are admitted at once, so Promotions to distinct Targets run in
-// parallel, while the children of a queued request wait for the current
-// round to end. The last reference remains a mirror, kept so that a reader
-// of the Stage can see how the previous round ended without listing
-// PromotionRequests.
-//
-// A Stage can have more than one PromotionRequest in flight, exactly as it can
-// have more than one Promotion in flight: auto-promotion creates a request only
-// when none exists in any phase, but the promote endpoints create one per call,
-// so consecutive promotions queue up. Which one the Stage records as current is
-// therefore decided by the same ordering syncPromotions applies to Promotions.
-//
-// The references mirror the requests that exist, not the Stage's spec: a
-// request in flight for a Stage whose selectors currently govern no Targets
-// -- or one left behind by a Stage that no longer governs any -- is recorded
-// all the same. Only for a Stage with no PromotionRequests at all is this a
-// no-op beyond clearing a stale current reference.
-func (r *RegularStageReconciler) syncPromotionRequests(
-	ctx context.Context,
-	stage *kargoapi.Stage,
-) (kargoapi.StageStatus, error) {
-	newStatus := *stage.Status.DeepCopy()
-
-	promotionRequests := &kargoapi.PromotionRequestList{}
-	if err := r.client.List(
-		ctx,
-		promotionRequests,
-		client.InNamespace(stage.Namespace),
-		client.MatchingFieldsSelector{
-			Selector: fields.OneTermEqualSelector(
-				indexer.PromotionRequestsByStageField,
-				stage.Name,
-			),
-		},
-	); err != nil {
-		return newStatus, fmt.Errorf(
-			"failed to list PromotionRequests for Stage %q in namespace %q: %w",
-			stage.Name, stage.Namespace, err,
-		)
-	}
-
-	// If there are no PromotionRequests, the Stage is fanning nothing out. Clear
-	// any current reference it was left with.
-	if len(promotionRequests.Items) == 0 {
-		newStatus.CurrentPromotionRequest = nil
-		return newStatus, nil
-	}
-
-	// Sort the PromotionRequests exactly as syncPromotions sorts a Stage's
-	// Promotions -- Running first, then non-terminal by ULID ascending, then
-	// terminal by ULID descending -- so that the request a Stage records as
-	// current is chosen the same way its current Promotion is.
-	slices.SortFunc(
-		promotionRequests.Items,
-		api.ComparePromotionRequestByPhaseAndCreationTime,
-	)
-
-	// The PromotionRequest with the highest priority is the one the Stage is
-	// promoting through, unless it has finished -- in which case the Stage is
-	// promoting through none, and a finished request must not be left looking
-	// like an active one.
-	newStatus.CurrentPromotionRequest = nil
-	if highestPrioRequest := &promotionRequests.Items[0]; !highestPrioRequest.Status.Phase.IsTerminal() {
-		newStatus.CurrentPromotionRequest = newPromotionRequestReference(highestPrioRequest)
-	}
-
-	// Gather the terminal PromotionRequests newer than the one already recorded
-	// as last. A request is recorded only when it is newer: a Stage's account of
-	// how its last round of fan-out ended should outlive the request that
-	// produced it, so garbage collection of the newest request must not let an
-	// older one take its place.
-	//
-	// Every such request is gathered, not just the newest. More than one round
-	// can end between two reconciles -- a queued request failing while the round
-	// ahead of it succeeds, or several rounds ending while the controller was
-	// down -- and each succeeded round's Freight belongs in the Stage's history.
-	// Recording only the newest would drop the others for good, since the gate
-	// only moves forward by name.
-	//
-	// NB: As in syncPromotions, this makes use of the fact that PromotionRequest
-	// names are generated with an embedded ULID, so among one Stage's requests
-	// lex order over names is creation order.
-	var newRequests []*kargoapi.PromotionRequest
-	for i := range promotionRequests.Items {
-		promotionRequest := &promotionRequests.Items[i]
-		if !promotionRequest.Status.Phase.IsTerminal() {
-			continue
-		}
-		if last := newStatus.LastPromotionRequest; last != nil &&
-			strings.Compare(promotionRequest.Name, last.Name) <= 0 {
-			// Terminal PromotionRequests sort newest-first, so nothing after this
-			// one is newer than the last recorded either.
-			break
-		}
-		newRequests = append(newRequests, promotionRequest)
-	}
-
-	// Replay them oldest-first, exactly as syncPromotions replays Promotions, so
-	// that the last reference lands on the newest and Freight history is
-	// recorded in the order the rounds ended. Each record builds on the status
-	// the one before it produced, which is what lets a multi-origin Stage's
-	// collection carry one round's Freight into the next.
-	slices.SortFunc(newRequests, func(a, b *kargoapi.PromotionRequest) int {
-		return strings.Compare(a.Name, b.Name)
-	})
-	//
-	// A request is recorded before it becomes the last: the status is persisted
-	// even when this returns an error, and a request that had already moved the
-	// gate forward when fetching its Freight failed would never be considered
-	// again, leaving its Freight out of the history for good. Recording first
-	// leaves the gate on the previous request, so the next reconcile retries.
-	for _, promotionRequest := range newRequests {
-		if err := r.recordSucceededPromotionRequest(
-			ctx,
-			stage,
-			&newStatus,
-			promotionRequest,
-		); err != nil {
-			return newStatus, err
-		}
-		newStatus.LastPromotionRequest = newPromotionRequestReference(promotionRequest)
-	}
-
-	return newStatus, nil
-}
-
-// recordSucceededPromotionRequest records the Freight a succeeded
-// PromotionRequest promoted as the Stage's current Freight, exactly as
-// syncPromotions records a succeeded Promotion's. A Stage that promotes through
-// PromotionRequests has no other writer of its freight history: its Promotions
-// are children of a request and take no part in its own flow.
-//
-// Only a request that succeeded -- every Target's child Promotion succeeded --
-// is recorded; a partial round leaves the Stage's account of what it is running
-// unchanged, as a failed Promotion does. The caller invokes this once per
-// request, at the moment the request is first recorded as the Stage's last,
-// which is what keeps a request from being recorded again on every reconcile:
-// freight history is prepend-only, and recording also resets health and
-// verification.
-//
-// The collection is built here, at the moment of recording, from the Freight
-// the request names and whatever the Stage is running now. Building it any
-// earlier -- when the request is created, say -- would snapshot the Stage's
-// other origins before a queued-ahead request had finished changing them, and
-// recording that snapshot later would quietly roll those origins back. This is
-// the same guarantee a Promotion gets from having its collection built only
-// once it is admitted to run.
-func (r *RegularStageReconciler) recordSucceededPromotionRequest(
-	ctx context.Context,
-	stage *kargoapi.Stage,
-	newStatus *kargoapi.StageStatus,
-	promotionRequest *kargoapi.PromotionRequest,
-) error {
-	if promotionRequest.Status.Phase != kargoapi.PromotionRequestPhaseSucceeded {
-		return nil
-	}
-	logger := logging.LoggerFromContext(ctx).WithValues(
-		"promotionRequest", promotionRequest.Name,
-		"freight", promotionRequest.Spec.Freight,
-	)
-
-	freight, err := api.GetFreight(ctx, r.client, types.NamespacedName{
-		Namespace: stage.Namespace,
-		Name:      promotionRequest.Spec.Freight,
-	})
-	if err != nil {
-		return fmt.Errorf(
-			"error getting Freight %q promoted by PromotionRequest %q: %w",
-			promotionRequest.Spec.Freight, promotionRequest.Name, err,
-		)
-	}
-	if freight == nil {
-		// Gone before the Stage could record it. Nothing is invented; the
-		// Stage's account of what it is running is simply left as it was.
-		logger.Debug("Freight promoted by succeeded PromotionRequest no longer exists: not recording it")
-		return nil
-	}
-
-	// Inherit from the status being built, not the one the Stage was read with:
-	// they hold the same history, but the former is what the Stage is about to
-	// declare it is running.
-	working := *stage
-	working.Status = *newStatus
-	newStatus.FreightHistory.Record(
-		api.NewFreightCollectionForStage(&working, kargoapi.FreightReference{
-			Name:      freight.Name,
-			Commits:   freight.Commits,
-			Images:    freight.Images,
-			Charts:    freight.Charts,
-			Artifacts: freight.Artifacts,
-			Origin:    freight.Origin,
-		}),
-	)
-
-	// The Stage is running new Freight: what was known about the health and
-	// verification of the old is no longer relevant.
-	newStatus.Health = nil
-	conditions.Set(newStatus, &metav1.Condition{
-		Type:               kargoapi.ConditionTypeHealthy,
-		Status:             metav1.ConditionUnknown,
-		Reason:             "WaitingForHealthCheck",
-		Message:            "Waiting for health check to be performed after successful promotion",
-		ObservedGeneration: stage.Generation,
-	})
-	conditions.Set(newStatus, &metav1.Condition{
-		Type:               kargoapi.ConditionTypeVerified,
-		Status:             metav1.ConditionUnknown,
-		Reason:             "WaitingForVerification",
-		Message:            "Waiting for verification to be performed after successful promotion",
-		ObservedGeneration: stage.Generation,
-	})
-	return nil
-}
-
-// newPromotionRequestReference builds the reference a Stage records for one of
-// its PromotionRequests. The reference names the PromotionRequest's Freight
-// rather than describing it; a reader that needs the Freight's contents can
-// look them up from the Freight itself.
-func newPromotionRequestReference(
-	promotionRequest *kargoapi.PromotionRequest,
-) *kargoapi.PromotionRequestReference {
-	return &kargoapi.PromotionRequestReference{
-		Name:       promotionRequest.Name,
-		Phase:      promotionRequest.Status.Phase,
-		FinishedAt: promotionRequest.Status.FinishedAt,
-		Freight: &kargoapi.PromotionRequestFreightReference{
-			Name: promotionRequest.Spec.Freight,
-		},
-	}
 }
 
 // syncFreight ensures that all Freight statuses accurately reflect whether they
@@ -1179,15 +887,16 @@ func summarizeConditions(stage *kargoapi.Stage, newStatus *kargoapi.StageStatus,
 		return
 	}
 
+	// NOTE: this is the only place in the code where we get LastPromotion from newStatus and not original stage
+	lastPromo := getLastPromoObjectFromStatus(stage, *newStatus)
 	// If we are not currently Promoting but the last promotion failed,
 	// then we are not Ready.
-	if lastPromo := newStatus.LastPromotion; lastPromo != nil && lastPromo.Status != nil &&
-		lastPromo.Status.Phase.IsTerminal() && lastPromo.Status.Phase != kargoapi.PromotionPhaseSucceeded {
+	if lastPromo != nil && lastPromo.GetPhase().IsTerminal() && !lastPromo.GetPhase().IsSucceeded() {
 		conditions.Set(newStatus, &metav1.Condition{
 			Type:               kargoapi.ConditionTypeReady,
 			Status:             metav1.ConditionFalse,
-			Reason:             fmt.Sprintf("LastPromotion%s", string(lastPromo.Status.Phase)),
-			Message:            lastPromo.Status.Message,
+			Reason:             fmt.Sprintf("LastPromotion%s", lastPromo.GetPhase().String()),
+			Message:            lastPromo.GetMessage(),
 			ObservedGeneration: stage.Generation,
 		})
 		return

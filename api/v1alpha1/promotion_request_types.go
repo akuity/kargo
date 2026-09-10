@@ -151,6 +151,15 @@ type PromotionRequestStatus struct {
 	// +kubebuilder:validation:Optional
 	Phase PromotionRequestPhase `json:"phase,omitempty"`
 
+	// FIXME: populate Freight and Freight collection in the promotion request reconciler
+	// Freight is the detail of the piece of freight that was referenced by this promotion.
+	Freight *FreightReference `json:"freight,omitempty"`
+
+	// FreightCollection contains the details of the piece of Freight referenced
+	// by this Promotion as well as any additional Freight that is carried over
+	// from the target Stage's current state.
+	FreightCollection *FreightCollection `json:"freightCollection,omitempty"`
+
 	// Targets records progress against spec.targets: one entry per Target, with
 	// the child Promotion promoting to it and that Promotion's phase. Entries
 	// appear as the reconciler acts on each Target in spec.targets.

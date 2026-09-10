@@ -26,7 +26,7 @@ func (r *RegularStageReconciler) syncPromotions(
 	logger := logging.LoggerFromContext(ctx)
 	newStatus := *stage.Status.DeepCopy()
 
-	promotions, err := r.getPromotions(ctx, *stage)
+	promotions, err := r.getPromotionObjectsByStage(ctx, stage)
 	if err != nil {
 		conditions.Set(&newStatus, &metav1.Condition{
 			Type:               kargoapi.ConditionTypePromoting,
@@ -38,12 +38,6 @@ func (r *RegularStageReconciler) syncPromotions(
 
 		return newStatus, false, err
 	}
-
-	// Without this, a child would occupy the Stage's own single Promotion
-	// slot, serializing the very Promotions the request fanned out to run in
-	// parallel -- and its terminal phases would replay into the Stage's
-	// Freight history.
-	promotions = withoutTargetPromotions(promotions)
 
 	// Build a map of origin keys that are currently requested by this Stage,
 	// used both to filter new holds and to evict stale ones.
@@ -81,13 +75,13 @@ func (r *RegularStageReconciler) syncPromotions(
 		// Ensure we delete any existing "current" Promotion related information
 		// from the Stage status.
 		conditions.Delete(&newStatus, kargoapi.ConditionTypePromoting)
-		newStatus.CurrentPromotion = nil
+		newStatus = cleanCurrentPromotionObject(newStatus, stage)
 
 		return newStatus, false, nil
 	}
 
 	// The Promotion which is currently running on the Stage.
-	currentPromo := stage.Status.CurrentPromotion
+	currentPromo := getCurrentPromoObject(stage)
 
 	summary := r.getPromotionsSummary(promotions, currentPromo)
 
@@ -101,21 +95,21 @@ func (r *RegularStageReconciler) syncPromotions(
 	if currentPromo != nil {
 		// If current promotion exists and either terminal or not found in promotions,
 		// we need to finalize that promotion
-		if summary.currentPromotion == nil || summary.currentPromotion.Status.Phase.IsTerminal() {
+		if summary.currentPromotion == nil || summary.currentPromotion.GetPhase().IsTerminal() {
 			newStatus = r.finalizePromotion(
 				ctx, stage, requestedOrigins, autoPromotionEnabled, newStatus, summary.terminal)
 			return newStatus, hasNonTerminalPromotions, nil
 		}
 
 		// CurrentPromotion is still executing, track progress
-		newStatus = r.trackPromotion(stage, newStatus, *summary.currentPromotion)
+		newStatus = r.trackPromotion(stage, newStatus, summary.currentPromotion)
 		return newStatus, hasNonTerminalPromotions, nil
 	}
 
 	// There is a new promotion in the queue not blocked by freight verification
 	if summary.nextPromotion != nil && !r.verificationBlocksPromotion(ctx, stage) {
 		// Allow next promotion
-		newStatus = r.trackPromotion(stage, newStatus, *summary.nextPromotion)
+		newStatus = r.trackPromotion(stage, newStatus, summary.nextPromotion)
 		return newStatus, hasNonTerminalPromotions, nil
 	}
 
@@ -156,7 +150,7 @@ func (r *RegularStageReconciler) verificationBlocksPromotion(ctx context.Context
 func (r *RegularStageReconciler) trackPromotion(
 	stage *kargoapi.Stage,
 	newStatus kargoapi.StageStatus,
-	promotion kargoapi.Promotion,
+	promotion PromotionObject,
 ) kargoapi.StageStatus {
 	conditions.Set(&newStatus, &metav1.Condition{
 		Type:   kargoapi.ConditionTypePromoting,
@@ -164,19 +158,15 @@ func (r *RegularStageReconciler) trackPromotion(
 		Reason: "ActivePromotion",
 		Message: fmt.Sprintf(
 			"Promotion %q is currently %s",
-			promotion.Name, promotion.Status.Phase,
+			promotion.GetName(), promotion.GetPhase(),
 		),
 		ObservedGeneration: stage.Generation,
 	})
 
-	newStatus.CurrentPromotion = &kargoapi.PromotionReference{
-		Name: promotion.Name,
-	}
-	if freight := promotion.Status.Freight; freight != nil {
-		newStatus.CurrentPromotion.Freight = freight.DeepCopy()
-	}
-	return newStatus
+	return promotion.updateCurrentPromotion(newStatus)
 }
+
+// FIXME: updateCurrentPromotion should set name freight
 
 func (r *RegularStageReconciler) finalizePromotion(
 	ctx context.Context,
@@ -184,39 +174,39 @@ func (r *RegularStageReconciler) finalizePromotion(
 	requestedOrigins map[string]struct{},
 	autoPromotionEnabled bool,
 	newStatus kargoapi.StageStatus,
-	terminalPromotions []kargoapi.Promotion,
+	terminalPromotions []PromotionObject,
 ) kargoapi.StageStatus {
 	logger := logging.LoggerFromContext(ctx)
 	// Update the conditions to reflect that we are no longer promoting.
 	conditions.Delete(&newStatus, kargoapi.ConditionTypePromoting)
-	newStatus.CurrentPromotion = nil
+	newStatus = cleanCurrentPromotionObject(newStatus, stage)
 
 	// The last Promotion which ran on the Stage.
-	lastPromo := stage.Status.LastPromotion
+	lastPromo := getLastPromoObject(stage)
 
 	// Gather terminal Promotions newer than the last processed one, sorted
 	// oldest-to-newest so holds are applied in chronological order and
 	// Freight history entries are appended oldest-first (GC removes oldest
 	// first).
-	var newPromos []*kargoapi.Promotion
+	var newPromos []PromotionObject
 	for i := range terminalPromotions {
-		promo := &terminalPromotions[i]
+		promo := terminalPromotions[i]
 		if lastPromo != nil {
 			// We can break here since we know that all subsequent Promotions
 			// will be older than the last Promotion we saw.
 			// NB: This makes use of the fact that Promotion names are
 			// generated, and contain a timestamp component which will ensure
 			// that they can be sorted in a consistent order.
-			if strings.Compare(promo.Name, lastPromo.Name) <= 0 {
+			if strings.Compare(promo.GetName(), lastPromo.GetName()) <= 0 {
 				break
 			}
 		}
-		if promo.Status.Phase.IsTerminal() {
+		if promo.GetPhase().IsTerminal() {
 			newPromos = append(newPromos, promo)
 		}
 	}
-	slices.SortFunc(newPromos, func(a, b *kargoapi.Promotion) int {
-		return strings.Compare(a.Name, b.Name)
+	slices.SortFunc(newPromos, func(a, b PromotionObject) int {
+		return strings.Compare(a.GetName(), b.GetName())
 	})
 
 	// Replay new Promotions in chronological order to update hold state and
@@ -224,49 +214,33 @@ func (r *RegularStageReconciler) finalizePromotion(
 	// release correctly supersedes an earlier hold and vice versa. Holds
 	// persist in status even after their establishing Promotion is GC'd.
 	for _, promo := range newPromos {
-		// A Promotion's hold/resume intent is fixed at creation and is not
-		// changed by an involuntary failure, so any terminal Promotion
-		// applies its intent. The exception is an Aborted Promotion: the
-		// user deliberately canceled it, withdrawing the intent along with
-		// it. (newPromos contains only terminal Promotions.) Holds are only
-		// maintained while auto-promotion is enabled; when disabled they are
-		// cleared above and not re-established here.
-		if autoPromotionEnabled && promo.Status.Phase != kargoapi.PromotionPhaseAborted {
-			if originKey := promo.Annotations[kargoapi.AnnotationKeyAutoPromotionHold]; originKey != "" {
-				if _, requested := requestedOrigins[originKey]; requested {
-					if origin, err := kargoapi.ParseFreightOrigin(originKey); err == nil {
-						if newStatus.AutoPromotionHolds == nil {
-							newStatus.AutoPromotionHolds = make(map[string]kargoapi.AutoPromotionHold)
-						}
-						newStatus.AutoPromotionHolds[originKey] = newAutoPromotionHold(promo, origin)
-					}
-				}
-			} else if originKey := promo.Annotations[kargoapi.AnnotationKeyAutoPromotionResume]; originKey != "" {
-				delete(newStatus.AutoPromotionHolds, originKey)
-			}
+		if autoPromotionEnabled {
+			newStatus = refreshAutoPromotionHolds(newStatus, promo, requestedOrigins)
 		}
-		ref := kargoapi.PromotionReference{
-			Name:       promo.Name,
-			Status:     promo.Status.DeepCopy(),
-			FinishedAt: promo.Status.FinishedAt,
-		}
-		if promo.Status.Freight != nil {
-			ref.Freight = promo.Status.Freight.DeepCopy()
-		}
+
+		ref := promo.ToLastPromotionReference()
+
 		// A Promotion that was aborted before it ever reached Running never
 		// had the chance to build a FreightCollection. Recording it as-is
 		// would make the Stage forget Freight origins the previous
 		// lastPromotion had already collected, permanently breaking any
 		// subsequent Promotion's ability to inherit them.
-		if promo.Status.StartedAt == nil && ref.Status.FreightCollection == nil &&
-			newStatus.LastPromotion != nil && newStatus.LastPromotion.Status != nil {
-			ref.Status.FreightCollection = newStatus.LastPromotion.Status.FreightCollection
+		// NOTE: here we assume that if StartedAt is nil it's aborted, but don't check the aborted Phase
+		var lastPromoFreightCollection *kargoapi.FreightCollection
+		if lastPromo != nil {
+			lastPromoFreightCollection = lastPromo.GetFreightCollection()
 		}
-		newStatus.LastPromotion = &ref
-		if promo.Status.Phase == kargoapi.PromotionPhaseSucceeded {
+		if promo.GetStartedAt() == nil && ref.GetFreightCollection() == nil &&
+			lastPromoFreightCollection != nil {
+			ref.SetFreightCollection(lastPromoFreightCollection)
+		}
+
+		newStatus = ref.updateLastPromotion(newStatus)
+
+		if promo.GetPhase().IsSucceeded() {
 			// If the Promotion was successful, then we should add the Freight
 			// to the history of successfully promoted Freight.
-			newStatus.FreightHistory.Record(ref.Status.FreightCollection)
+			newStatus.FreightHistory.Record(ref.GetFreightCollection())
 
 			// Erase any health checks that were performed for the previous
 			// Freight, as they are no longer relevant.
@@ -295,10 +269,12 @@ func (r *RegularStageReconciler) finalizePromotion(
 			//
 			// NB: If the Promotion did not involve any ArgoCD Applications,
 			// then the annotation will be removed.
-			if err := api.AnnotateStageWithArgoCDContext(
+			// FIXME: cover that in control flow stages
+			argocdAppRefs := promo.GetArgoCDRefs()
+			if err := api.AnnotateStageWithArgoCDAppRefs(
 				ctx,
 				r.client,
-				promo,
+				argocdAppRefs,
 				client.ObjectKeyFromObject(stage),
 			); err != nil {
 				// Let the error be logged, but do not return it as it is not
@@ -310,49 +286,48 @@ func (r *RegularStageReconciler) finalizePromotion(
 	return newStatus
 }
 
-type promotionsSummary struct {
-	terminal                 []kargoapi.Promotion
-	currentPromotion         *kargoapi.Promotion
+type promotionObjectsSummary struct {
+	terminal                 []PromotionObject
+	currentPromotion         PromotionObject
 	hasNonTerminalPromotions bool
-	nextPromotion            *kargoapi.Promotion
+	nextPromotion            PromotionObject
 }
 
 func (r *RegularStageReconciler) getPromotionsSummary(
-	promotions []kargoapi.Promotion,
-	currentPromoRef *kargoapi.PromotionReference,
-) promotionsSummary {
-	summary := promotionsSummary{}
-	running := []kargoapi.Promotion{}
-	pending := []kargoapi.Promotion{}
+	promotions []PromotionObject,
+	currentPromoRef PromotionObjectReference,
+) promotionObjectsSummary {
+	summary := promotionObjectsSummary{}
+	running := []PromotionObject{}
+	pending := []PromotionObject{}
 	for _, promo := range promotions {
-		if currentPromoRef != nil && promo.Name == currentPromoRef.Name {
-			summary.currentPromotion = &promo
+		if currentPromoRef != nil && promo.GetName() == currentPromoRef.GetName() {
+			summary.currentPromotion = promo
 		}
-		if promo.Status.Phase == kargoapi.PromotionPhaseRunning {
+		if promo.GetPhase().IsRunning() {
 			summary.hasNonTerminalPromotions = true
 			running = append(running, promo)
-		} else if promo.Status.Phase.IsTerminal() {
+		} else if promo.GetPhase().IsTerminal() {
 			summary.terminal = append(summary.terminal, promo)
 		} else {
 			summary.hasNonTerminalPromotions = true
 			pending = append(pending, promo)
 		}
 	}
-
 	// nextPromotion is either first one running or first one pending
 	// If it's running, it should match currentPromotion, but we don't validate that
 	if len(running) > 0 {
-		summary.nextPromotion = new(slices.MinFunc(running, func(a, b kargoapi.Promotion) int {
-			return strings.Compare(a.Name, b.Name)
-		}))
+		summary.nextPromotion = slices.MinFunc(running, func(a, b PromotionObject) int {
+			return strings.Compare(a.GetName(), b.GetName())
+		})
 	} else if len(pending) > 0 {
-		summary.nextPromotion = new(slices.MinFunc(pending, func(a, b kargoapi.Promotion) int {
-			return strings.Compare(a.Name, b.Name)
-		}))
+		summary.nextPromotion = slices.MinFunc(pending, func(a, b PromotionObject) int {
+			return strings.Compare(a.GetName(), b.GetName())
+		})
 	}
 
-	slices.SortFunc(summary.terminal, func(a, b kargoapi.Promotion) int {
-		return strings.Compare(b.Name, a.Name)
+	slices.SortFunc(summary.terminal, func(a, b PromotionObject) int {
+		return strings.Compare(b.GetName(), a.GetName())
 	})
 	return summary
 }

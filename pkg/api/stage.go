@@ -230,6 +230,50 @@ func RefreshStage(
 	return stage, nil
 }
 
+// FIXME: this is a replacement for AnnotateStageWithArgoCDContext
+// FIXME: adapt AnnotateStageWithArgoCDContext tests
+func AnnotateStageWithArgoCDAppRefs(
+	ctx context.Context,
+	c client.Client,
+	argoCDApps []ArgoCDAppRef,
+	stage types.NamespacedName,
+) error {
+	target := &kargoapi.Stage{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: stage.Namespace,
+			Name:      stage.Name,
+		},
+	}
+
+	// If we did not find any ArgoCD apps, we should remove the annotation.
+	if len(argoCDApps) == 0 {
+		return deleteAnnotation(ctx, c, target, kargoapi.AnnotationKeyArgoCDContext)
+	}
+
+	// Marshal the ArgoCD context to JSON and set the annotation on the Stage.
+	argoCDAppsJSON, err := json.Marshal(argoCDApps)
+	if err != nil {
+		return fmt.Errorf("failed to marshal ArgoCD context: %w", err)
+	}
+	return patchAnnotation(ctx, c, target, kargoapi.AnnotationKeyArgoCDContext, string(argoCDAppsJSON))
+}
+
+func ArgoCDAppRefsFromPromo(promo *kargoapi.Promotion) []ArgoCDAppRef {
+	var argoCDApps []ArgoCDAppRef
+	if promo != nil {
+		argoCDApps = append(
+			argoCDApps,
+			argoCDAppRefsFromStepOutputs(promo.Spec.Steps, promo.Status.GetState())...,
+		)
+		argoCDApps = append(
+			argoCDApps,
+			argoCDAppRefsFromHealthChecks(promo.Status.HealthChecks)...,
+		)
+		argoCDApps = dedupeArgoCDAppRefs(argoCDApps)
+	}
+	return argoCDApps
+}
+
 // AnnotateStageWithArgoCDContext annotates a Stage with the ArgoCD context
 // necessary for the frontend to display ArgoCD information for the Stage.
 //
