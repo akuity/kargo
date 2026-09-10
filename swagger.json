@@ -7707,6 +7707,14 @@
             }
           ]
         },
+        "targets": {
+          "description": "Targets contains a summary of the Project's Targets and of how the latest\nround of promotion to them fared. It is absent for a Project with no\nTargets and no target-aware Stages.\n\n+optional",
+          "allOf": [
+            {
+              "$ref": "#/definitions/TargetStats"
+            }
+          ]
+        },
         "warehouses": {
           "description": "Warehouses contains a summary of the collective state of the Project's\nWarehouses.",
           "allOf": [
@@ -8776,6 +8784,27 @@
         "status": {
           "description": "Status is the high-level outcome of the step.",
           "type": "string"
+        }
+      }
+    },
+    "TargetStats": {
+      "type": "object",
+      "properties": {
+        "count": {
+          "description": "Count contains the number of distinct Targets in the Project.",
+          "type": "integer"
+        },
+        "promotion": {
+          "description": "Promotion sums, across every target-aware Stage in the Project, the\nper-Target outcome of that Stage's latest PromotionRequest -- the one it\nreports as current, else as last. A request that has not yet fanned out\ncontributes all its Targets as Pending while it runs, or all of them under\nits own phase if it ended before creating any child Promotion.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/PromotionRequestSummary"
+            }
+          ]
+        },
+        "unknown": {
+          "description": "Unknown contains the number of target-aware Stages whose latest\nPromotionRequest no longer exists, typically because it was garbage\ncollected. Their outcome cannot be determined and is not reflected in\nPromotion.",
+          "type": "integer"
         }
       }
     },

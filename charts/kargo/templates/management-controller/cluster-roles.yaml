@@ -65,7 +65,9 @@ rules:
   - kargo.akuity.io
   resources:
   - clusterconfigs
+  - promotionrequests
   - stages
+  - targets
   - warehouses
   - projectconfigs
   verbs:
