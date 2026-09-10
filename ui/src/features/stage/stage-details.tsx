@@ -34,22 +34,15 @@ import { StageConditionIcon } from '../common/stage-status/stage-condition-icon'
 import { Promotions } from './promotions';
 import { RequestedFreight } from './requested-freight';
 import { StageActions } from './stage-actions';
+import { StageTab, extensionTabKey, resolveStageTab } from './stage-tabs';
 import { FreightHistory } from './tabs/freight-history/freight-history';
 import { useGetFreightMap } from './tabs/freight-history/use-get-freight-map';
 import { StageSettings } from './tabs/settings/stage-settings';
 import { useImages } from './use-images';
 import { Verifications } from './verifications';
 
-enum TabsTypes {
-  PROMOTION = 'Promotion',
-  VERIFICATIONS = 'Verification',
-  LIVE_MANIFEST = 'Live Manifest',
-  FREIGHT_HISTORY = 'Freight History',
-  SETTINGS = 'Settings'
-}
-
 export const StageDetails = ({ stage }: { stage: Stage }) => {
-  const { name: projectName, stageName } = useParams();
+  const { name: projectName, stageName, tab } = useParams();
   const navigate = useNavigate();
 
   const images = useImages([stage]);
@@ -83,10 +76,29 @@ export const StageDetails = ({ stage }: { stage: Stage }) => {
 
   const stageQuery = useGetStage(projectName || '', stage?.metadata?.name || '');
 
-  const [activeTab, setActiveTab] = useState(TabsTypes.PROMOTION);
+  const { stageTabs } = useExtensionsContext();
+
+  // Extension tabs are keyed by a slug of their label so they, too, can be
+  // addressed by URL. Keys are assigned in order so a duplicate label gets a
+  // distinct key.
+  const extensionTabKeys = useMemo(() => {
+    const taken = new Set<string>(Object.values(StageTab));
+    return stageTabs.map((data) => {
+      const key = extensionTabKey(data.label, taken);
+      taken.add(key);
+      return key;
+    });
+  }, [stageTabs]);
+
+  // The active tab lives in the URL (the optional :tab segment of the Stage
+  // route), so a tab can be linked to directly. Unknown segments show the
+  // default tab.
+  const activeTab = resolveStageTab(tab, extensionTabKeys);
+  const setActiveTab = (newTab: string) =>
+    navigate(generatePath(paths.stage, { name: projectName, stageName, tab: newTab }));
 
   useEffect(() => {
-    if (activeTab === TabsTypes.LIVE_MANIFEST) {
+    if (activeTab === StageTab.LIVE_MANIFEST) {
       stageQuery.refetch();
     }
   }, [stage, activeTab]);
@@ -98,8 +110,6 @@ export const StageDetails = ({ stage }: { stage: Stage }) => {
 
   const shardKey = stage?.metadata?.labels?.[SHARD_LABEL_KEY] || '';
   const argocdShard = config?.argocdShards?.[shardKey];
-
-  const { stageTabs } = useExtensionsContext();
 
   const stageConditions = useMemo(() => stage.status?.conditions || [], [stage.status?.conditions]);
 
@@ -153,19 +163,18 @@ export const StageDetails = ({ stage }: { stage: Stage }) => {
             <AutoPromotionHolds stage={stage} />
             <Tabs
               className='flex-1'
-              defaultActiveKey='1'
               style={{ minHeight: 'fit-content' }}
               activeKey={activeTab}
-              onChange={(newActiveTab) => setActiveTab(newActiveTab as TabsTypes)}
+              onChange={setActiveTab}
               items={[
                 {
-                  key: TabsTypes.PROMOTION,
+                  key: StageTab.PROMOTIONS,
                   label: 'Promotions',
                   icon: <FontAwesomeIcon icon={faCircleUp} />,
                   children: <Promotions stage={stage} argocdShard={argocdShard} />
                 },
                 {
-                  key: TabsTypes.VERIFICATIONS,
+                  key: StageTab.VERIFICATIONS,
                   label: 'Verifications',
                   icon: <FontAwesomeIcon icon={faCircleCheck} />,
                   children: (
@@ -176,7 +185,7 @@ export const StageDetails = ({ stage }: { stage: Stage }) => {
                   )
                 },
                 {
-                  key: TabsTypes.LIVE_MANIFEST,
+                  key: StageTab.LIVE_MANIFEST,
                   label: 'Live Manifest',
                   icon: <FontAwesomeIcon icon={faBarsStaggered} />,
                   className: 'h-full pb-2',
@@ -187,7 +196,7 @@ export const StageDetails = ({ stage }: { stage: Stage }) => {
                   )
                 },
                 {
-                  key: TabsTypes.FREIGHT_HISTORY,
+                  key: StageTab.FREIGHT_HISTORY,
                   label: 'Freight History',
                   icon: <FontAwesomeIcon icon={faHistory} />,
                   children: (
@@ -202,12 +211,12 @@ export const StageDetails = ({ stage }: { stage: Stage }) => {
                 },
                 ...stageTabs.map((data, index) => ({
                   children: <data.component stage={stage} />,
-                  key: String(data.label + index),
+                  key: extensionTabKeys[index],
                   label: data.label,
                   icon: data.icon
                 })),
                 {
-                  key: TabsTypes.SETTINGS,
+                  key: StageTab.SETTINGS,
                   label: 'Settings',
                   icon: <FontAwesomeIcon icon={faGear} />,
                   children: <StageSettings />
