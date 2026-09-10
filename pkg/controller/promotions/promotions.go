@@ -79,6 +79,12 @@ type reconciler struct {
 		types.NamespacedName,
 	) (*kargoapi.Stage, error)
 
+	getPromotionRequestFn func(
+		context.Context,
+		client.Client,
+		types.NamespacedName,
+	) (*kargoapi.PromotionRequest, error)
+
 	promoteFn func(
 		context.Context,
 		kargoapi.Promotion,
@@ -263,6 +269,7 @@ func newReconciler(
 		},
 	}
 	r.getStageFn = api.GetStage
+	r.getPromotionRequestFn = api.GetPromotionRequest
 	r.promoteFn = r.promote
 	r.terminatePromotionFn = r.terminatePromotion
 	r.cleanupWorkDirFn = r.cleanupWorkDir
@@ -573,8 +580,6 @@ func (r *reconciler) promote(
 	targetFreight *kargoapi.Freight,
 ) (*kargoapi.PromotionStatus, *time.Duration, error) {
 	logger := logging.LoggerFromContext(ctx)
-	stageName := stage.Name
-	stageNamespace := promo.Namespace
 
 	if targetFreight == nil {
 		// nolint:staticcheck
@@ -584,32 +589,18 @@ func (r *reconciler) promote(
 		)
 	}
 
-	if !stage.IsFreightAvailable(targetFreight) {
-		// nolint:staticcheck
-		return nil, nil, fmt.Errorf(
-			"Freight %q is not available to Stage %q in namespace %q",
-			promo.Spec.Freight,
-			stageName,
-			stageNamespace,
-		)
-	}
-
 	logger = logger.WithValues("targetFreight", targetFreight.Name)
 
-	targetFreightRef := kargoapi.FreightReference{
-		Name:      targetFreight.Name,
-		Commits:   targetFreight.Commits,
-		Images:    targetFreight.Images,
-		Charts:    targetFreight.Charts,
-		Artifacts: targetFreight.Artifacts,
-		Origin:    targetFreight.Origin,
+	targetFreightRef, freightCollection, freightErr := r.getFreightRefs(ctx, promo, stage, targetFreight)
+	if freightErr != nil {
+		return nil, nil, freightErr
 	}
 
 	// Make a deep copy of the Promotion to pass to the promotion steps execution
 	// engine, which may modify its status.
 	workingPromo := promo.DeepCopy()
-	workingPromo.Status.Freight = &targetFreightRef
-	workingPromo.Status.FreightCollection = api.NewFreightCollectionForStage(stage, targetFreightRef)
+	workingPromo.Status.Freight = targetFreightRef
+	workingPromo.Status.FreightCollection = freightCollection
 
 	// Resolve the Target, if any, that this Promotion promotes Freight to. Its
 	// params and labels are exposed to step expressions, which is what allows a
@@ -665,27 +656,11 @@ func (r *reconciler) promote(
 	logger.Debug("promotion", "phase", workingPromo.Status.Phase)
 
 	if workingPromo.Status.Phase == kargoapi.PromotionPhaseSucceeded {
-		// Trigger re-verification of the Stage if the promotion succeeded and
-		// this is a re-promotion of the same Freight.
-		current := stage.Status.FreightHistory.Current()
-		if current != nil && current.VerificationHistory.Current() != nil {
-			for _, f := range current.Freight {
-				if f.Name == targetFreight.Name {
-					if err := api.ReverifyStageFreight(
-						ctx,
-						r.kargoClient,
-						types.NamespacedName{
-							Namespace: stageNamespace,
-							Name:      stageName,
-						},
-					); err != nil {
-						// Log the error, but don't let failure to initiate re-verification
-						// prevent the promotion from succeeding.
-						logger.Error(err, "error triggering re-verification")
-					}
-					break
-				}
-			}
+		// If the stage runs a PromotionRequest, do not trigger reverification for each promotion
+		if !api.IsTargetAware(stage) {
+			// Trigger re-verification of the Stage if the promotion succeeded and
+			// this is a re-promotion of the same Freight.
+			r.maybeTriggerStageReverification(ctx, logger, stage, targetFreight)
 		}
 	}
 
@@ -694,6 +669,106 @@ func (r *reconciler) promote(
 	}
 
 	return &workingPromo.Status, nil, nil
+}
+
+func (r *reconciler) maybeTriggerStageReverification(
+	ctx context.Context,
+	logger *logging.Logger,
+	stage *kargoapi.Stage,
+	targetFreight *kargoapi.Freight,
+) {
+	current := stage.Status.FreightHistory.Current()
+	if current != nil && current.VerificationHistory.Current() != nil {
+		for _, f := range current.Freight {
+			if f.Name == targetFreight.Name {
+				if err := api.ReverifyStageFreight(
+					ctx,
+					r.kargoClient,
+					types.NamespacedName{
+						Namespace: stage.Namespace,
+						Name:      stage.Name,
+					},
+				); err != nil {
+					// Log the error, but don't let failure to initiate re-verification
+					// prevent the promotion from succeeding.
+					logger.Error(err, "error triggering re-verification")
+				}
+				break
+			}
+		}
+	}
+}
+
+func (r *reconciler) getFreightRefs(
+	ctx context.Context,
+	promo kargoapi.Promotion,
+	stage *kargoapi.Stage,
+	targetFreight *kargoapi.Freight,
+) (*kargoapi.FreightReference, *kargoapi.FreightCollection, error) {
+	if api.IsTargetAware(stage) {
+		targetFreightRef, freightCollection, err := r.getPromotionRequestRefs(ctx, promo)
+		if err != nil {
+			return nil, nil, err
+		}
+		// PromotionRequest supposed to set their freight values by now,
+		// but it may not propagated though the caches.
+		// Since promotion is already running, the reconciler will restart
+		// and hopefully pick up the PromotionRequest changes.
+		if targetFreight == nil || freightCollection == nil {
+			return nil,
+				nil,
+				fmt.Errorf("missing freight reference in PromotionRequest for Promotion %q in namespace %q",
+					promo.Name, promo.Namespace)
+		}
+		if targetFreightRef.Name != targetFreight.Name {
+			return nil,
+				nil,
+				fmt.Errorf("freight mismatch between PromotionRequest and Promotion %q in namespace %q",
+					promo.Name, promo.Namespace)
+		}
+		return targetFreightRef, freightCollection, nil
+	}
+	if !stage.IsFreightAvailable(targetFreight) {
+		// nolint:staticcheck
+		return nil, nil, fmt.Errorf(
+			"Freight %q is not available to Stage %q in namespace %q",
+			promo.Spec.Freight,
+			stage.Name,
+			stage.Namespace,
+		)
+	}
+	targetFreightRef := kargoapi.FreightReference{
+		Name:      targetFreight.Name,
+		Commits:   targetFreight.Commits,
+		Images:    targetFreight.Images,
+		Charts:    targetFreight.Charts,
+		Artifacts: targetFreight.Artifacts,
+		Origin:    targetFreight.Origin,
+	}
+	freightCollection := api.NewFreightCollectionForStage(stage, targetFreightRef)
+	return &targetFreightRef, freightCollection, nil
+}
+
+func (r *reconciler) getPromotionRequestRefs(
+	ctx context.Context,
+	promo kargoapi.Promotion,
+) (*kargoapi.FreightReference, *kargoapi.FreightCollection, error) {
+	owner := api.PromotionRequestOwner(&promo)
+	request, err := r.getPromotionRequestFn(
+		ctx,
+		r.kargoClient,
+		types.NamespacedName{
+			Namespace: promo.Namespace,
+			Name:      owner,
+		},
+	)
+	if err != nil {
+		return nil, nil, err
+	}
+	if request == nil {
+		return nil, nil, fmt.Errorf("cannot find PromotionRequest %q for Promotion %q", owner, promo.Name)
+	}
+	return request.Status.Freight, request.Status.FreightCollection, nil
 }
 
 // terminatePromotion terminates the given Promotion with a message indicating
