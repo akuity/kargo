@@ -222,50 +222,29 @@ func (s *server) promoteToStage(c *gin.Context) {
 		return
 	}
 
+	actor := ""
+	if u, ok := user.InfoFromContext(ctx); ok {
+		actor = api.FormatEventUserActor(u)
+	}
+
 	// A Stage that selects Targets fans Freight out to them via a PromotionRequest
 	// rather than promoting to itself with a single Promotion.
 	if api.IsTargetAware(stage) {
-		// Both the Target lookup and the create go through the internal client.
-		// PromotionRequests are system-owned, and the promote-verb check above
-		// IS the authorization decision for this request; which Targets the
-		// Stage governs is a detail of carrying it out. Resolving as the user
-		// would also break the kargo-promoter role, which holds the promote
-		// verb but no permission to list Targets.
-		promotionRequest, prErr := api.NewPromotionRequest(
-			ctx, s.client.InternalClient(), stage, freight.Name,
-		)
-		if prErr != nil {
-			_ = c.Error(prErr)
-			return
-		}
-		if u, ok := user.InfoFromContext(ctx); ok {
-			api.SetCreateActorAnnotation(promotionRequest, api.FormatEventUserActor(u))
-		}
-		if err = s.client.InternalClient().Create(ctx, promotionRequest); err != nil {
+		promotionRequest, err := s.createPromotionRequest(ctx, *stage, *freight, actor)
+		if err != nil {
 			_ = c.Error(err)
 			return
 		}
 		// No event is recorded: Kargo's promotion events carry a Promotion, and
 		// a PromotionRequest has none of its own.
 		c.JSON(http.StatusCreated, promotionRequest)
-		return
-	}
 
-	// Create the Promotion. The defaulting webhook fills in the rest from
-	// the Stage's PromotionTemplate.
-	promotion := api.NewMinimalPromotion(stage, freight.Name)
-	if u, ok := user.InfoFromContext(ctx); ok {
-		api.SetCreateActorAnnotation(promotion, api.FormatEventUserActor(u))
+	} else {
+		promotion, err := s.createPromotion(ctx, *stage, freight, actor)
+		if err != nil {
+			_ = c.Error(err)
+			return
+		}
+		c.JSON(http.StatusCreated, promotion)
 	}
-
-	if err := s.createPromotionFn(ctx, promotion); err != nil {
-		_ = c.Error(err)
-		return
-	}
-
-	if s.sender != nil {
-		s.recordPromotionCreatedEvent(ctx, promotion, freight)
-	}
-
-	c.JSON(http.StatusCreated, promotion)
 }

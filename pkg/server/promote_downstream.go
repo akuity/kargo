@@ -198,44 +198,21 @@ func (s *server) promoteDownstream(c *gin.Context) {
 		// A downstream Stage that selects Targets fans Freight out to them via
 		// a PromotionRequest rather than promoting to itself with a Promotion.
 		if api.IsTargetAware(&downstream) {
-			// Both the Target lookup and the create go through the internal
-			// client. PromotionRequests are system-owned, and the promote-verb
-			// check above IS the authorization decision for this downstream
-			// Stage; which Targets it governs is a detail of carrying it out.
-			newPromoReq, err := api.NewPromotionRequest(
-				ctx, s.client.InternalClient(), &downstream, freight.Name,
-			)
+			req, err := s.createPromotionRequest(ctx, downstream, *freight, actor)
 			if err != nil {
 				promoteErrs = append(promoteErrs, err)
 				continue
 			}
-			if actor != "" {
-				api.SetCreateActorAnnotation(newPromoReq, actor)
-			}
-			if err = s.client.InternalClient().Create(ctx, newPromoReq); err != nil {
+			createdPromoReqs = append(createdPromoReqs, req)
+		} else {
+			promo, err := s.createPromotion(ctx, downstream, freight, actor)
+			if err != nil {
 				promoteErrs = append(promoteErrs, err)
 				continue
 			}
-			// No event is recorded: Kargo's promotion events carry a Promotion,
-			// and a PromotionRequest has none of its own.
-			createdPromoReqs = append(createdPromoReqs, newPromoReq)
-			continue
+			createdPromos = append(createdPromos, promo)
 		}
 
-		newPromo := api.NewMinimalPromotion(&downstream, freight.Name)
-		if actor != "" {
-			api.SetCreateActorAnnotation(newPromo, actor)
-		}
-
-		if err := s.client.Create(ctx, newPromo); err != nil {
-			promoteErrs = append(promoteErrs, err)
-			continue
-		}
-
-		if s.sender != nil {
-			s.recordPromotionCreatedEvent(ctx, newPromo, freight)
-		}
-		createdPromos = append(createdPromos, newPromo)
 	}
 
 	response := gin.H{"promotions": createdPromos}
@@ -249,4 +226,52 @@ func (s *server) promoteDownstream(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusCreated, response)
+}
+
+func (s *server) createPromotionRequest(
+	ctx context.Context,
+	downstream kargoapi.Stage,
+	freight kargoapi.Freight,
+	actor string,
+) (*kargoapi.PromotionRequest, error) {
+	// Both the Target lookup and the create go through the internal
+	// client. PromotionRequests are system-owned, and the promote-verb
+	// check above IS the authorization decision for this downstream
+	// Stage; which Targets it governs is a detail of carrying it out.
+	newPromoReq, err := api.NewPromotionRequest(
+		ctx, s.client.InternalClient(), &downstream, freight.Name,
+	)
+	if err != nil {
+		return nil, err
+	}
+	if actor != "" {
+		api.SetCreateActorAnnotation(newPromoReq, actor)
+	}
+	if err = s.client.InternalClient().Create(ctx, newPromoReq); err != nil {
+		return nil, err
+	}
+	// No event is recorded: Kargo's promotion events carry a Promotion,
+	// and a PromotionRequest has none of its own.
+	return newPromoReq, nil
+}
+
+func (s *server) createPromotion(
+	ctx context.Context,
+	downstream kargoapi.Stage,
+	freight *kargoapi.Freight,
+	actor string,
+) (*kargoapi.Promotion, error) {
+	newPromo := api.NewMinimalPromotion(&downstream, freight.Name)
+	if actor != "" {
+		api.SetCreateActorAnnotation(newPromo, actor)
+	}
+
+	if err := s.createPromotionFn(ctx, newPromo); err != nil {
+		return nil, err
+	}
+
+	if s.sender != nil {
+		s.recordPromotionCreatedEvent(ctx, newPromo, freight)
+	}
+	return newPromo, nil
 }
