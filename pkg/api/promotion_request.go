@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
@@ -177,4 +178,27 @@ func NewPromotionRequest(
 			Targets: specTargets,
 		},
 	}, nil
+}
+
+// GetStage returns a pointer to the PromotionRequest resource specified by the
+// namespacedName argument. If no such resource is found, nil is returned
+// instead.
+func GetPromotionRequest(
+	ctx context.Context,
+	c client.Client,
+	namespacedName types.NamespacedName,
+) (*kargoapi.PromotionRequest, error) {
+	request := kargoapi.PromotionRequest{}
+	if err := c.Get(ctx, namespacedName, &request); err != nil {
+		if err = client.IgnoreNotFound(err); err == nil {
+			return nil, nil
+		}
+		return nil, fmt.Errorf(
+			"error getting PromotionRequest %q in namespace %q: %w",
+			namespacedName.Name,
+			namespacedName.Namespace,
+			err,
+		)
+	}
+	return &request, nil
 }
