@@ -6,11 +6,20 @@
  * OpenAPI spec version: v1alpha1
  */
 import type { StageStats } from './stageStats';
+import type { TargetStats } from './targetStats';
 import type { WarehouseStats } from './warehouseStats';
 
 export interface ProjectStats {
   /** Stages contains a summary of the collective state of the Project's Stages. */
   stages?: StageStats;
+  /**
+   * Targets contains a summary of the Project's Targets and of how the latest
+   * round of promotion to them fared. It is absent for a Project with no
+   * Targets and no target-aware Stages.
+   *
+   * +optional
+   */
+  targets?: TargetStats;
   /**
    * Warehouses contains a summary of the collective state of the Project's
    * Warehouses.

@@ -191,6 +191,7 @@ model_stage_status.go
 model_stage_targets.go
 model_step_execution_metadata.go
 model_tag_map.go
+model_target_stats.go
 model_update_config_map_request.go
 model_update_generic_credentials_request.go
 model_update_repo_credentials_request.go

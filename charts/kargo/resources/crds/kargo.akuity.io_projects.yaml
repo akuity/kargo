@@ -138,6 +138,65 @@ spec:
                             type: integer
                         type: object
                     type: object
+                  targets:
+                    description: |-
+                      Targets contains a summary of the Project's Targets and of how the latest
+                      round of promotion to them fared. It is absent for a Project with no
+                      Targets and no target-aware Stages.
+                    properties:
+                      count:
+                        description: Count contains the number of distinct Targets
+                          in the Project.
+                        format: int64
+                        type: integer
+                      promotion:
+                        description: |-
+                          Promotion sums, across every target-aware Stage in the Project, the
+                          per-Target outcome of that Stage's latest PromotionRequest -- the one it
+                          reports as current, else as last. A request that has not yet fanned out
+                          contributes all its Targets as Pending while it runs, or all of them under
+                          its own phase if it ended before creating any child Promotion.
+                        properties:
+                          aborted:
+                            description: Aborted is the number of child Promotions
+                              in the Aborted phase.
+                            format: int32
+                            type: integer
+                          errored:
+                            description: Errored is the number of child Promotions
+                              in the Errored phase.
+                            format: int32
+                            type: integer
+                          failed:
+                            description: Failed is the number of child Promotions
+                              in the Failed phase.
+                            format: int32
+                            type: integer
+                          pending:
+                            description: Pending is the number of child Promotions
+                              in the Pending phase.
+                            format: int32
+                            type: integer
+                          running:
+                            description: Running is the number of child Promotions
+                              in the Running phase.
+                            format: int32
+                            type: integer
+                          succeeded:
+                            description: Succeeded is the number of child Promotions
+                              in the Succeeded phase.
+                            format: int32
+                            type: integer
+                        type: object
+                      unknown:
+                        description: |-
+                          Unknown contains the number of target-aware Stages whose latest
+                          PromotionRequest no longer exists, typically because it was garbage
+                          collected. Their outcome cannot be determined and is not reflected in
+                          Promotion.
+                        format: int64
+                        type: integer
+                    type: object
                   warehouses:
                     description: |-
                       Warehouses contains a summary of the collective state of the Project's
