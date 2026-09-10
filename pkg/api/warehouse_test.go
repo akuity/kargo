@@ -453,6 +453,62 @@ func TestListFreightFromWarehouse(t *testing.T) {
 			},
 		},
 		{
+			name: "soak in unrelated Stage does not satisfy soak gate",
+			opts: &ListWarehouseFreightOptions{
+				VerifiedIn:       []string{testUpstreamStage},
+				RequiredSoakTime: &metav1.Duration{Duration: time.Hour},
+			},
+			objects: []client.Object{
+				&kargoapi.Freight{
+					// Verified in the configured upstream Stage but has not
+					// soaked there long enough. It HAS soaked > 1h in an
+					// unrelated Stage, which must not count.
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: testProject,
+						Name:      "fake-freight-1",
+					},
+					Origin: kargoapi.FreightOrigin{
+						Kind: kargoapi.FreightOriginKindWarehouse,
+						Name: testWarehouse,
+					},
+					Status: kargoapi.FreightStatus{
+						VerifiedIn: map[string]kargoapi.VerifiedStage{
+							testUpstreamStage: {
+								LongestCompletedSoak: &metav1.Duration{Duration: 30 * time.Minute},
+							},
+							"unrelated-stage": {
+								LongestCompletedSoak: &metav1.Duration{Duration: 2 * time.Hour},
+							},
+						},
+					},
+				},
+				&kargoapi.Freight{
+					// Verified in the configured upstream Stage with sufficient
+					// soak time -- should be returned.
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: testProject,
+						Name:      "fake-freight-2",
+					},
+					Origin: kargoapi.FreightOrigin{
+						Kind: kargoapi.FreightOriginKindWarehouse,
+						Name: testWarehouse,
+					},
+					Status: kargoapi.FreightStatus{
+						VerifiedIn: map[string]kargoapi.VerifiedStage{
+							testUpstreamStage: {
+								LongestCompletedSoak: &metav1.Duration{Duration: 2 * time.Hour},
+							},
+						},
+					},
+				},
+			},
+			assertions: func(t *testing.T, freight []kargoapi.Freight, err error) {
+				require.NoError(t, err)
+				require.Len(t, freight, 1)
+				require.Equal(t, "fake-freight-2", freight[0].Name)
+			},
+		},
+		{
 			name: "failure with invalid AvailabilityStrategy",
 			opts: &ListWarehouseFreightOptions{
 				AvailabilityStrategy: "Invalid",
