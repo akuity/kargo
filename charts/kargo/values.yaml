@@ -864,7 +864,7 @@ garbageCollector:
   logFormat: CONSOLE
 
   ## @param garbageCollector.schedule When to run the garbage collector.
-  schedule: "0 * * * *"
+  schedule: "0 0 * * *"
 
   ## @param garbageCollector.suspend Whether to suspend the garbage collector CronJob. When `true`, the CronJob remains in place but stops launching new Jobs.
   suspend: false
