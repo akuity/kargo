@@ -79,12 +79,6 @@ type reconciler struct {
 		types.NamespacedName,
 	) (*kargoapi.Stage, error)
 
-	getPromotionRequestFn func(
-		context.Context,
-		client.Client,
-		types.NamespacedName,
-	) (*kargoapi.PromotionRequest, error)
-
 	promoteFn func(
 		context.Context,
 		kargoapi.Promotion,
@@ -269,7 +263,6 @@ func newReconciler(
 		},
 	}
 	r.getStageFn = api.GetStage
-	r.getPromotionRequestFn = api.GetPromotionRequest
 	r.promoteFn = r.promote
 	r.terminatePromotionFn = r.terminatePromotion
 	r.cleanupWorkDirFn = r.cleanupWorkDir
@@ -402,12 +395,31 @@ func (r *reconciler) Reconcile(
 		return ctrl.Result{}, nil
 	}
 
+	targetFreightRef, freightCollection, freightErr := api.PreparePromotionFreightRefs(
+		ctx,
+		r.kargoClient,
+		*promo,
+		stage,
+		freight)
+
+	if freightErr != nil {
+		// Update the status message for visibility
+		if err = kubeclient.PatchStatus(ctx, r.kargoClient, promo, func(status *kargoapi.PromotionStatus) {
+			status.Message = freightErr.Error()
+		}); err != nil {
+			logger.Error(err, "error updating Promotion status")
+		}
+		return ctrl.Result{}, freightErr
+	}
+
 	// Update promo status as Running to give visibility in UI. Also, a promo which
 	// has already entered Running status will be allowed to continue to reconcile.
 	if promo.Status.Phase != kargoapi.PromotionPhaseRunning {
 		if err = kubeclient.PatchStatus(ctx, r.kargoClient, promo, func(status *kargoapi.PromotionStatus) {
 			status.Phase = kargoapi.PromotionPhaseRunning
 			status.StartedAt = &metav1.Time{Time: time.Now()}
+			status.Freight = targetFreightRef
+			status.FreightCollection = freightCollection
 		}); err != nil {
 			return ctrl.Result{}, err
 		}
@@ -580,27 +592,11 @@ func (r *reconciler) promote(
 	targetFreight *kargoapi.Freight,
 ) (*kargoapi.PromotionStatus, *time.Duration, error) {
 	logger := logging.LoggerFromContext(ctx)
-
-	if targetFreight == nil {
-		// nolint:staticcheck
-		return nil, nil, fmt.Errorf(
-			"Freight %q not found in namespace %q",
-			promo.Spec.Freight, promo.Namespace,
-		)
-	}
-
 	logger = logger.WithValues("targetFreight", targetFreight.Name)
-
-	targetFreightRef, freightCollection, freightErr := r.getFreightRefs(ctx, promo, stage, targetFreight)
-	if freightErr != nil {
-		return nil, nil, freightErr
-	}
 
 	// Make a deep copy of the Promotion to pass to the promotion steps execution
 	// engine, which may modify its status.
 	workingPromo := promo.DeepCopy()
-	workingPromo.Status.Freight = targetFreightRef
-	workingPromo.Status.FreightCollection = freightCollection
 
 	// Resolve the Target, if any, that this Promotion promotes Freight to. Its
 	// params and labels are exposed to step expressions, which is what allows a
@@ -697,78 +693,6 @@ func (r *reconciler) maybeTriggerStageReverification(
 			}
 		}
 	}
-}
-
-func (r *reconciler) getFreightRefs(
-	ctx context.Context,
-	promo kargoapi.Promotion,
-	stage *kargoapi.Stage,
-	targetFreight *kargoapi.Freight,
-) (*kargoapi.FreightReference, *kargoapi.FreightCollection, error) {
-	if api.IsTargetAware(stage) {
-		targetFreightRef, freightCollection, err := r.getPromotionRequestRefs(ctx, promo)
-		if err != nil {
-			return nil, nil, err
-		}
-		// PromotionRequest supposed to set their freight values by now,
-		// but it may not propagated though the caches.
-		// Since promotion is already running, the reconciler will restart
-		// and hopefully pick up the PromotionRequest changes.
-		if targetFreight == nil || freightCollection == nil {
-			return nil,
-				nil,
-				fmt.Errorf("missing freight reference in PromotionRequest for Promotion %q in namespace %q",
-					promo.Name, promo.Namespace)
-		}
-		if targetFreightRef.Name != targetFreight.Name {
-			return nil,
-				nil,
-				fmt.Errorf("freight mismatch between PromotionRequest and Promotion %q in namespace %q",
-					promo.Name, promo.Namespace)
-		}
-		return targetFreightRef, freightCollection, nil
-	}
-	if !stage.IsFreightAvailable(targetFreight) {
-		// nolint:staticcheck
-		return nil, nil, fmt.Errorf(
-			"Freight %q is not available to Stage %q in namespace %q",
-			promo.Spec.Freight,
-			stage.Name,
-			stage.Namespace,
-		)
-	}
-	targetFreightRef := kargoapi.FreightReference{
-		Name:      targetFreight.Name,
-		Commits:   targetFreight.Commits,
-		Images:    targetFreight.Images,
-		Charts:    targetFreight.Charts,
-		Artifacts: targetFreight.Artifacts,
-		Origin:    targetFreight.Origin,
-	}
-	freightCollection := api.NewFreightCollectionForStage(stage, targetFreightRef)
-	return &targetFreightRef, freightCollection, nil
-}
-
-func (r *reconciler) getPromotionRequestRefs(
-	ctx context.Context,
-	promo kargoapi.Promotion,
-) (*kargoapi.FreightReference, *kargoapi.FreightCollection, error) {
-	owner := api.PromotionRequestOwner(&promo)
-	request, err := r.getPromotionRequestFn(
-		ctx,
-		r.kargoClient,
-		types.NamespacedName{
-			Namespace: promo.Namespace,
-			Name:      owner,
-		},
-	)
-	if err != nil {
-		return nil, nil, err
-	}
-	if request == nil {
-		return nil, nil, fmt.Errorf("cannot find PromotionRequest %q for Promotion %q", owner, promo.Name)
-	}
-	return request.Status.Freight, request.Status.FreightCollection, nil
 }
 
 // terminatePromotion terminates the given Promotion with a message indicating
