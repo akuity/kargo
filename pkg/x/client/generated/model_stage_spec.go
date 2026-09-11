@@ -25,7 +25,7 @@ type StageSpec struct {
 	RequestedFreight []FreightRequest `json:"requestedFreight,omitempty"`
 	// Shard is the name of the shard that this Stage belongs to. This is an optional field. If not specified, the Stage will belong to the default shard. A defaulting webhook will sync the value of the kargo.akuity.io/shard label with the value of this field. When this field is empty, the webhook will ensure that label is absent.
 	Shard *string `json:"shard,omitempty"`
-	// Targets describes the Targets that this Stage governs and promotes Freight to. Its presence is what makes a Stage target-aware.  When this field is nil (the default), the Stage operates in classic mode: it governs a single implicit \"stage-self\" Target that the controller creates and maintains on the Stage's behalf. This preserves the behavior of Stages authored before Targets existed.  +optional
+	// Targets describes the Targets that this Stage governs and promotes Freight to. Its presence is what makes a Stage target-aware.  When this field is nil (the default), the Stage operates in classic mode: it governs no Targets and promotes Freight by way of Promotions alone. This preserves the behavior of Stages authored before Targets existed.  +optional
 	Targets *StageTargets `json:"targets,omitempty"`
 	// Vars is a list of variables that can be referenced anywhere in the StageSpec that supports expressions. For example, the PromotionTemplate and arguments of the Verification.
 	Vars []ExpressionVariable `json:"vars,omitempty"`

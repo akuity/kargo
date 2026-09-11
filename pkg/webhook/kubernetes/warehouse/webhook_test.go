@@ -3,20 +3,25 @@ package warehouse
 import (
 	"context"
 	"errors"
+	"slices"
 	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	jsonpatch "gomodules.xyz/jsonpatch/v2"
+	admissionv1 "k8s.io/api/admission/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/credentials"
 	"github.com/akuity/kargo/pkg/subscription"
+	libWebhook "github.com/akuity/kargo/pkg/webhook/kubernetes"
 )
 
 // testRegistry is a subscriber registry for use in tests.
@@ -605,6 +610,70 @@ func TestValidateSpec(t *testing.T) {
 					&testCase.spec,
 				),
 			)
+		})
+	}
+}
+
+// Test_webhook_Handle_PreservesUnrelatedDurationFormatting is a regression
+// test for https://github.com/akuityio/akuity-platform/issues/12384, mirroring
+// the Warehouse repro from that issue: an image subscription with no
+// explicit discoveryLimit prompts a real Default() mutation, and
+// spec.interval must survive untouched even though it never gets read or
+// written by Default().
+func Test_webhook_Handle_PreservesUnrelatedDurationFormatting(t *testing.T) {
+	scheme := runtime.NewScheme()
+	require.NoError(t, kargoapi.AddToScheme(scheme))
+
+	kubeClient := fake.NewClientBuilder().WithScheme(scheme).Build()
+	w := newWebhook(kubeClient, subscription.DefaultSubscriberRegistry)
+	wh, err := libWebhook.NewDefaultingWebhook(scheme, &kargoapi.Warehouse{}, w)
+	require.NoError(t, err)
+
+	rawWarehouse := []byte(`{
+		"apiVersion": "kargo.akuity.io/v1alpha1",
+		"kind": "Warehouse",
+		"metadata": {"name": "drift-wh", "namespace": "dur-drift-repro"},
+		"spec": {
+			"interval": "10m",
+			"subscriptions": [{"image": {"repoURL": "public.ecr.aws/docker/library/nginx"}}]
+		}
+	}`)
+
+	req := admission.Request{
+		AdmissionRequest: admissionv1.AdmissionRequest{
+			Operation: admissionv1.Create,
+			Object:    runtime.RawExtension{Raw: rawWarehouse},
+		},
+	}
+
+	resp := wh.Handle(admission.NewContextWithRequest(context.Background(), req), req)
+	require.True(t, resp.Allowed)
+
+	testCases := []struct {
+		name    string
+		path    string
+		present bool
+	}{
+		{
+			// Sanity check: this mutation must still appear, or the test
+			// below would pass by suppressing every patch, not just the
+			// spurious ones.
+			name:    "image discoveryLimit is defaulted",
+			path:    "/spec/subscriptions/0/image/discoveryLimit",
+			present: true,
+		},
+		{
+			name:    "untouched interval is not rewritten",
+			path:    "/spec/interval",
+			present: false,
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			got := slices.ContainsFunc(resp.Patches, func(p jsonpatch.JsonPatchOperation) bool {
+				return p.Path == testCase.path
+			})
+			require.Equalf(t, testCase.present, got, "patches: %+v", resp.Patches)
 		})
 	}
 }

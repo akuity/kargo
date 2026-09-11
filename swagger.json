@@ -8588,7 +8588,7 @@
           "type": "string"
         },
         "targets": {
-          "description": "Targets describes the Targets that this Stage governs and promotes Freight\nto. Its presence is what makes a Stage target-aware.\n\nWhen this field is nil (the default), the Stage operates in classic mode:\nit governs a single implicit \"stage-self\" Target that the controller\ncreates and maintains on the Stage's behalf. This preserves the behavior\nof Stages authored before Targets existed.\n\n+optional",
+          "description": "Targets describes the Targets that this Stage governs and promotes Freight\nto. Its presence is what makes a Stage target-aware.\n\nWhen this field is nil (the default), the Stage operates in classic mode:\nit governs no Targets and promotes Freight by way of Promotions alone.\nThis preserves the behavior of Stages authored before Targets existed.\n\n+optional",
           "allOf": [
             {
               "$ref": "#/definitions/StageTargets"

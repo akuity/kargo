@@ -57,10 +57,7 @@ func SetupWebhookWithManager(
 		mgr.GetClient(),
 		admission.NewDecoder(mgr.GetScheme()),
 	)
-	return ctrl.NewWebhookManagedBy(mgr, &kargoapi.Stage{}).
-		WithDefaulter(w).
-		WithValidator(w).
-		Complete()
+	return libWebhook.SetupValidatingAndDefaultingWebhook(mgr, &kargoapi.Stage{}, w)
 }
 
 func newWebhook(
