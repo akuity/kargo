@@ -53,3 +53,38 @@ export const describeRound = (progress: RoundProgress): string => {
   const parts = progress.segments.map(({ phase, count }) => `${count} ${phase.toLowerCase()}`);
   return `${parts.join(', ')} of ${progress.total} Target${progress.total === 1 ? '' : 's'}`;
 };
+
+// roundBadgePhase picks the one phase that should color a round's badge: the
+// worst thing that happened, or else whether it is still moving. Anything that
+// did not succeed outranks everything, since one failed Target is the fact a
+// reader needs; movement outranks rest; and a round with no children has no
+// phase to speak of.
+export const roundBadgePhase = (progress: RoundProgress): PromotionPhase | undefined => {
+  if (!progress.total) {
+    return undefined;
+  }
+  const present = new Set(progress.segments.map((segment) => segment.phase));
+  if (present.has('Errored')) {
+    return 'Errored';
+  }
+  if (present.has('Failed')) {
+    return 'Failed';
+  }
+  if (present.has('Running')) {
+    return 'Running';
+  }
+  if (present.has('Pending')) {
+    return 'Pending';
+  }
+  if (present.has('Aborted')) {
+    return 'Aborted';
+  }
+  return 'Succeeded';
+};
+
+// roundBadgeText is the figure a badge shows: how many of the round's Targets
+// have succeeded so far, over how many there are.
+export const roundBadgeText = (progress: RoundProgress): string => {
+  const succeeded = progress.segments.find((s) => s.phase === 'Succeeded')?.count ?? 0;
+  return `${succeeded}/${progress.total}`;
+};

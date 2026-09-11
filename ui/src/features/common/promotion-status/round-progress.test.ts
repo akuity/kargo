@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest';
 
-import { describeRound, roundSegments } from './round-progress';
+import { describeRound, roundBadgePhase, roundBadgeText, roundSegments } from './round-progress';
 
 describe('roundSegments()', () => {
   test('an absent or empty summary has no segments', () => {
@@ -64,5 +64,31 @@ describe('describeRound()', () => {
 
   test('singular Target', () => {
     expect(describeRound(roundSegments({ running: 1 }))).toBe('1 running of 1 Target');
+  });
+});
+
+describe('roundBadgePhase()', () => {
+  test('an empty round has no phase', () => {
+    expect(roundBadgePhase(roundSegments({}))).toBeUndefined();
+  });
+
+  test.each([
+    [{ succeeded: 3 }, 'Succeeded'],
+    [{ succeeded: 3, pending: 1 }, 'Pending'],
+    [{ succeeded: 3, running: 1, pending: 1 }, 'Running'],
+    [{ succeeded: 3, running: 1, failed: 1 }, 'Failed'],
+    [{ succeeded: 3, failed: 1, errored: 1 }, 'Errored'],
+    [{ succeeded: 3, aborted: 1 }, 'Aborted'],
+    [{ aborted: 2, pending: 1 }, 'Pending']
+  ])('%j -> %s', (summary, phase) => {
+    expect(roundBadgePhase(roundSegments(summary))).toBe(phase);
+  });
+});
+
+describe('roundBadgeText()', () => {
+  test('succeeded over total', () => {
+    expect(roundBadgeText(roundSegments({ succeeded: 37, errored: 3 }))).toBe('37/40');
+    expect(roundBadgeText(roundSegments({ pending: 5 }))).toBe('0/5');
+    expect(roundBadgeText(roundSegments({}))).toBe('0/0');
   });
 });
