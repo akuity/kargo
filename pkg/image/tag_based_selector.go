@@ -39,6 +39,7 @@ func compileRegexes(regexStrs []string) ([]*regexp.Regexp, error) {
 
 func newTagBasedSelector(
 	sub kargoapi.ImageSubscription,
+	discoveryLimit int,
 	creds *Credentials,
 ) (*tagBasedSelector, error) {
 	base, err := newBaseSelector(sub, creds, sub.CacheByTag)
@@ -47,7 +48,7 @@ func newTagBasedSelector(
 	}
 	s := &tagBasedSelector{
 		baseSelector:   base,
-		discoveryLimit: int(sub.DiscoveryLimit),
+		discoveryLimit: discoveryLimit,
 	}
 
 	if s.allowTagsRegexes, err = compileRegexes(sub.AllowTagsRegexes); err != nil {

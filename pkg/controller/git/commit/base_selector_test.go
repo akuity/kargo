@@ -11,14 +11,16 @@ import (
 
 func TestNewBaseSelector(t *testing.T) {
 	testCases := []struct {
-		name       string
-		sub        kargoapi.GitSubscription
-		creds      *git.RepoCredentials
-		assertions func(*testing.T, *baseSelector, error)
+		name           string
+		sub            kargoapi.GitSubscription
+		discoveryLimit int
+		creds          *git.RepoCredentials
+		assertions     func(*testing.T, *baseSelector, error)
 	}{
 		{
-			name: "error parsing filter expression",
-			sub:  kargoapi.GitSubscription{ExpressionFilter: "(1 + 2"},
+			name:           "error parsing filter expression",
+			sub:            kargoapi.GitSubscription{ExpressionFilter: "(1 + 2"},
+			discoveryLimit: 20,
 			assertions: func(t *testing.T, _ *baseSelector, err error) {
 				require.ErrorContains(t, err, "error compiling filter expression")
 			},
@@ -28,6 +30,7 @@ func TestNewBaseSelector(t *testing.T) {
 			sub: kargoapi.GitSubscription{
 				IncludePaths: []string{"regex:["}, // Bad regex
 			},
+			discoveryLimit: 20,
 			assertions: func(t *testing.T, _ *baseSelector, err error) {
 				require.ErrorContains(t, err, "error parsing include path selectors")
 			},
@@ -37,6 +40,7 @@ func TestNewBaseSelector(t *testing.T) {
 			sub: kargoapi.GitSubscription{
 				ExcludePaths: []string{"regex:["}, // Bad regex
 			},
+			discoveryLimit: 20,
 			assertions: func(t *testing.T, _ *baseSelector, err error) {
 				require.ErrorContains(t, err, "error parsing exclude path selectors")
 			},
@@ -49,8 +53,8 @@ func TestNewBaseSelector(t *testing.T) {
 				ExpressionFilter:      "false",
 				IncludePaths:          []string{"apps/"},
 				ExcludePaths:          []string{"hack/"},
-				DiscoveryLimit:        5,
 			},
+			discoveryLimit: 5,
 			creds: &git.RepoCredentials{
 				Username: "foo",
 				Password: "bar",
@@ -76,7 +80,7 @@ func TestNewBaseSelector(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			s, err := newBaseSelector(testCase.sub, testCase.creds)
+			s, err := newBaseSelector(testCase.sub, testCase.discoveryLimit, testCase.creds)
 			testCase.assertions(t, s, err)
 		})
 	}

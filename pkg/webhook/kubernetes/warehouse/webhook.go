@@ -49,7 +49,7 @@ func newWebhook(
 	}
 }
 
-const defaultDiscoveryLimit = int32(20)
+const defaultDiscoveryLimit = int64(20)
 
 func (w *webhook) Default(ctx context.Context, warehouse *kargoapi.Warehouse) error {
 	// Sync the shard label to the convenience shard field
@@ -74,12 +74,8 @@ func (w *webhook) Default(ctx context.Context, warehouse *kargoapi.Warehouse) er
 			return fmt.Errorf("error instantiating subscriber: %w", err)
 		}
 
-		// Default common elements of generic subscriptions
-		if sub.Subscription != nil {
-			if sub.Subscription.DiscoveryLimit == 0 {
-				sub.Subscription.DiscoveryLimit = defaultDiscoveryLimit
-			}
-		}
+		// Apply DiscoveryLimit defaults.
+		w.applyDiscoveryLimitDefaults(sub)
 
 		if err := subscriber.ApplySubscriptionDefaults(ctx, sub); err != nil {
 			return fmt.Errorf("error applying defaults to subscriptions: %w", err)
@@ -87,6 +83,29 @@ func (w *webhook) Default(ctx context.Context, warehouse *kargoapi.Warehouse) er
 	}
 
 	return nil
+}
+
+func (w *webhook) applyDiscoveryLimitDefaults(sub *kargoapi.RepoSubscription) {
+	// TODO: clean this up when removing DiscoveryLimits from specific subscriptions
+	subLimit := 0
+	switch {
+	case sub.Chart != nil:
+		subLimit = int(sub.Chart.DiscoveryLimit)
+	case sub.Git != nil:
+		subLimit = int(sub.Git.DiscoveryLimit)
+	case sub.Image != nil:
+		subLimit = int(sub.Image.DiscoveryLimit)
+	case sub.Subscription != nil:
+		subLimit = int(sub.Subscription.DiscoveryLimit)
+	}
+
+	// Subscription lower-level limit is not set, we can set a top-level default
+	// TODO: clean this up when removing DiscoveryLimits from specific subscriptions
+	if subLimit == 0 {
+		if sub.DiscoveryLimit == 0 {
+			sub.DiscoveryLimit = defaultDiscoveryLimit
+		}
+	}
 }
 
 func (w *webhook) ValidateCreate(
@@ -191,28 +210,36 @@ func (w *webhook) validateSubs(
 
 func (w *webhook) validateSub(
 	ctx context.Context,
-	f *field.Path,
+	basePath *field.Path,
 	sub kargoapi.RepoSubscription,
 	seen uniqueSubSet,
 ) field.ErrorList {
+
+	// TODO: clean this up when removing DiscoveryLimits from specific subscriptions
+	innerDiscoveryLimit := 0
+	var subPath *field.Path
 	// A small bit of special-casing is required here because, unlike generic
 	// subscriptions, the original three subscription types do not have a field
 	// that indicates their type.
 	switch {
 	case sub.Chart != nil:
-		f = f.Child("chart")
+		subPath = basePath.Child("chart")
+		innerDiscoveryLimit = int(sub.Chart.DiscoveryLimit)
 	case sub.Git != nil:
-		f = f.Child("git")
+		subPath = basePath.Child("git")
+		innerDiscoveryLimit = int(sub.Git.DiscoveryLimit)
 	case sub.Image != nil:
-		f = f.Child("image")
+		subPath = basePath.Child("image")
+		innerDiscoveryLimit = int(sub.Image.DiscoveryLimit)
 	case sub.Subscription != nil:
-		f = f.Child(sub.Subscription.SubscriptionType)
+		subPath = basePath.Child(sub.Subscription.SubscriptionType)
+		innerDiscoveryLimit = int(sub.Subscription.DiscoveryLimit)
 	}
 
 	subReg, err := w.subscriberRegistry.Get(ctx, sub)
 	if err != nil {
 		return field.ErrorList{field.Invalid(
-			f,
+			subPath,
 			"",
 			fmt.Sprintf("subscriber registry lookup failed: %v", err),
 		)}
@@ -221,7 +248,7 @@ func (w *webhook) validateSub(
 	subscriber, err := subReg.Value(ctx, nil)
 	if err != nil {
 		return field.ErrorList{field.Invalid(
-			f,
+			subPath,
 			"",
 			fmt.Sprintf("subscriber instantiation failed: %v", err),
 		)}
@@ -229,19 +256,58 @@ func (w *webhook) validateSub(
 
 	var errs field.ErrorList
 
+	// Validate base level subscription
+	errs = append(errs, w.validateBaseSub(basePath, subPath, sub, innerDiscoveryLimit)...)
+
 	// Validate the common elements of generic subscriptions
 	if sub.Subscription != nil {
-		errs = append(errs, w.validateGenericSub(f, *sub.Subscription)...)
+		errs = append(errs, w.validateGenericSub(subPath, *sub.Subscription)...)
 	}
 
 	// Subscriber-specific validation
-	errs = append(errs, subscriber.ValidateSubscription(ctx, f, sub)...)
+	errs = append(errs, subscriber.ValidateSubscription(ctx, subPath, sub)...)
 
 	// Validate uniqueness
-	if err := seen.addSub(f, sub); err != nil {
+	if err := seen.addSub(basePath, sub); err != nil {
 		errs = append(errs, err)
 	}
 
+	return errs
+}
+
+func (w *webhook) validateBaseSub(
+	basePath *field.Path,
+	subPath *field.Path,
+	sub kargoapi.RepoSubscription,
+	innerDiscoveryLimit int,
+) field.ErrorList {
+	var errs field.ErrorList
+
+	// Prohibit both limits being set at the same time
+	// TODO: clean this up when removing DiscoveryLimits from specific subscriptions
+	if sub.DiscoveryLimit != 0 && innerDiscoveryLimit != 0 {
+		errs = append(errs, field.Invalid(
+			subPath.Child("discoveryLimit"),
+			innerDiscoveryLimit,
+			"cannot be set at the same time as discoveryLimit at the subscription level",
+		))
+	}
+
+	// Validate top level DiscoveryLimit if inner limit is not set
+	// TODO: clean this up when removing DiscoveryLimits from specific subscriptions
+	if sub.DiscoveryLimit < 1 && innerDiscoveryLimit < 1 {
+		errs = append(errs, field.Invalid(
+			basePath.Child("discoveryLimit"),
+			sub.DiscoveryLimit,
+			"must be >= 1",
+		))
+	} else if sub.DiscoveryLimit > 100 {
+		errs = append(errs, field.Invalid(
+			basePath.Child("discoveryLimit"),
+			sub.DiscoveryLimit,
+			"must be <= 100",
+		))
+	}
 	return errs
 }
 
@@ -260,14 +326,9 @@ func (w *webhook) validateGenericSub(
 		errs = append(errs, err)
 	}
 
-	// Validate DiscoveryLimit: Minimum=1, Maximum=100
-	if sub.DiscoveryLimit < 1 {
-		errs = append(errs, field.Invalid(
-			f.Child("discoveryLimit"),
-			sub.DiscoveryLimit,
-			"must be >= 1",
-		))
-	} else if sub.DiscoveryLimit > 100 {
+	// Lower-bound validation is moved to base subscription validation
+	// TODO: clean this up when removing DiscoveryLimits from specific subscriptions
+	if sub.DiscoveryLimit > 100 {
 		errs = append(errs, field.Invalid(
 			f.Child("discoveryLimit"),
 			sub.DiscoveryLimit,

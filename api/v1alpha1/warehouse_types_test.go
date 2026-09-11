@@ -580,6 +580,17 @@ func TestWarehouseSpecUnmarshalValidation(t *testing.T) {
 			expectError: false,
 		},
 		{
+			name:        "valid Git subscription with discoveryLimit",
+			jsonData:    `{"subscriptions":[{"discoveryLimit":20,"git":{"repoURL":"https://github.com/example/repo.git"}}]}`,
+			expectError: false,
+		},
+		{
+			name: "valid named Git subscription with discoveryLimit",
+			// nolint: lll
+			jsonData:    `{"subscriptions":[{"name":"fake-sub","discoveryLimit":20,"git":{"repoURL":"https://github.com/example/repo.git"}}]}`,
+			expectError: false,
+		},
+		{
 			name:        "valid named generic subscription",
 			jsonData:    `{"subscriptions":[{"name":"fake-sub","s3":{"config":{"bucket":"fake-bucket"}}}]}`,
 			expectError: false,
@@ -593,6 +604,12 @@ func TestWarehouseSpecUnmarshalValidation(t *testing.T) {
 		{
 			name:        "invalid subscription with name only",
 			jsonData:    `{"subscriptions":[{"name":"fake-sub"}]}`,
+			expectError: true,
+			errorMsg:    "must have exactly one top-level field naming its type",
+		},
+		{
+			name:        "invalid subscription with discoveryLimit only",
+			jsonData:    `{"subscriptions":[{"discoveryLimit":20}]}`,
 			expectError: true,
 			errorMsg:    "must have exactly one top-level field naming its type",
 		},

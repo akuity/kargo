@@ -21,10 +21,10 @@
         },
         "discoveryLimit": {
             "type": "integer",
-            "minimum": 1,
+            "minimum": 0,
             "maximum": 100,
             "default": 20,
-            "description": "DiscoveryLimit is an optional limit on the number of chart versions that can be discovered for this subscription. The limit is applied after filtering charts based on the semverConstraint field. The upper limit for this field is 100."
+            "description": "DiscoveryLimit is an optional limit on the number of chart versions that can be discovered for this subscription. The limit is applied after filtering charts based on the semverConstraint field. The upper limit for this field is 100. Deprecated: Set discoveryLimit on the subscription (as a sibling of the chart field) instead."
         },
         "insecureSkipTLSVerify": {
             "type": "boolean",
