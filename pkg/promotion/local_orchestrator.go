@@ -23,6 +23,7 @@ type LocalOrchestrator struct {
 	executor  StepExecutor
 	registry  StepRunnerRegistry
 	client    client.Client
+	credsDB   credentials.Database
 	cacheFunc ExprDataCacheFn
 	metrics   *metrics.StepMetrics
 }
@@ -46,6 +47,7 @@ func NewLocalOrchestrator(
 		),
 		registry:  registry,
 		client:    kargoClient,
+		credsDB:   credsDB,
 		cacheFunc: cacheFunc,
 		metrics:   metrics.NewStepMetrics(),
 	}
@@ -100,7 +102,7 @@ func (o *LocalOrchestrator) ExecuteSteps(
 			// Continue execution if the context is still active.
 		}
 
-		processor := NewStepEvaluator(o.client, o.newCache())
+		processor := NewStepEvaluator(o.client, o.credsDB, o.newCache())
 
 		// Only evaluate the "if" conditio when the step has not yet started.
 		// If the step has already started (on a previous reconciliation), we

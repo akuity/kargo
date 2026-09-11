@@ -21,6 +21,7 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/api"
 	"github.com/akuity/kargo/pkg/controller/freight"
+	"github.com/akuity/kargo/pkg/credentials"
 	"github.com/akuity/kargo/pkg/urls"
 )
 
@@ -76,12 +77,19 @@ func DiscoveredArtifactsOperations(artifacts *kargoapi.DiscoveredArtifacts) []ex
 // ConfigMaps and Secrets to avoid repeated API calls. This can
 // improve performance when the same ConfigMaps and Secrets are accessed
 // multiple times within the same expression evaluation.
-func DataOperations(ctx context.Context, c client.Client, cache *gocache.Cache, project string) []expr.Option {
+func DataOperations(
+	ctx context.Context,
+	c client.Client,
+	credsDB credentials.Database,
+	cache *gocache.Cache,
+	project string,
+) []expr.Option {
 	return []expr.Option{
 		ConfigMap(ctx, c, cache, project),
 		SharedConfigMap(ctx, c, cache),
 		Secret(ctx, c, cache, project),
 		SharedSecret(ctx, c, cache),
+		RepoCredentials(ctx, credsDB, cache, project),
 		FreightMetadata(ctx, c, project),
 		FreightStatus(ctx, c, project),
 		StageMetadata(ctx, c, project),
@@ -522,6 +530,28 @@ func Secret(ctx context.Context, c client.Client, cache *gocache.Cache, project 
 		"secret",
 		getSecret(ctx, c, cache, project, true),
 		new(func(name string) map[string]string),
+	)
+}
+
+// RepoCredentials returns an expr.Option that provides a `repoCredentials()`
+// function for use in expressions.
+//
+// Unlike secret(), which returns the raw contents of a Kubernetes Secret by
+// name, repoCredentials() resolves repository credentials by repository URL and
+// credential type through the same credentials database used by built-in
+// promotion steps. This means it transparently handles credential schemes that
+// yield narrowly-scoped, short-lived credentials, such as GitHub App
+// installation tokens or a cloud provider's ambient (Pod identity) credentials.
+func RepoCredentials(
+	ctx context.Context,
+	credsDB credentials.Database,
+	cache *gocache.Cache,
+	project string,
+) expr.Option {
+	return expr.Function(
+		"repoCredentials",
+		getRepoCredentials(ctx, credsDB, cache, project),
+		new(func(repoURL, credType string) map[string]string),
 	)
 }
 
@@ -1134,6 +1164,105 @@ func isGenericSecretType(secret corev1.Secret) bool {
 	return secret.Labels[kargoapi.LabelKeyCredentialType] == kargoapi.LabelValueCredentialTypeGeneric
 }
 
+// getRepoCredentials returns a function that resolves repository credentials by
+// repository URL and credential type within the specified project namespace. It
+// delegates to the provided credentials database, which is the same component
+// used by built-in promotion steps, so the returned credentials may be
+// narrowly-scoped, short-lived credentials derived from the underlying Secret
+// rather than the Secret's raw contents. The credentials are returned as a
+// credentials.Credentials struct, whose fields are accessed by name (e.g.
+// .Username, .Password). If no credentials are found, nil is returned, so
+// expression authors can detect the absence of credentials using optional
+// chaining and nil-coalescing.
+//
+// If a cache is provided, it will be used to store the resolved credentials to
+// avoid repeated lookups within the same evaluation. The cache key is generated
+// based on a prefix, project name, credential type, and repository URL, so the
+// same cache can be shared with other functions that accept a cache parameter
+// without worrying about key collisions.
+func getRepoCredentials(
+	ctx context.Context,
+	credsDB credentials.Database,
+	cache *gocache.Cache,
+	project string,
+) exprFn {
+	return func(a ...any) (any, error) {
+		if len(a) != 2 {
+			return nil, fmt.Errorf("expected 2 arguments, got %d", len(a))
+		}
+
+		repoURL, ok := a[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("first argument must be string, got %T", a[0])
+		}
+
+		credTypeStr, ok := a[1].(string)
+		if !ok {
+			return nil, fmt.Errorf("second argument must be string, got %T", a[1])
+		}
+
+		credType := credentials.Type(credTypeStr)
+		switch credType {
+		case credentials.TypeGit, credentials.TypeHelm, credentials.TypeImage:
+		default:
+			return nil, fmt.Errorf(
+				"invalid credential type %q; must be one of %q, %q, or %q",
+				credTypeStr,
+				credentials.TypeGit,
+				credentials.TypeHelm,
+				credentials.TypeImage,
+			)
+		}
+
+		// This function is registered wherever secret() is available, but not
+		// every one of those contexts wires a credentials database. Fail
+		// explicitly rather than silently returning no credentials.
+		if credsDB == nil {
+			return nil, fmt.Errorf(
+				"repoCredentials is not available in this context",
+			)
+		}
+
+		cacheKey := getCacheKey(
+			cacheKeyPrefixRepoCredentials,
+			project,
+			fmt.Sprintf("%s/%s", credType, repoURL),
+		)
+		if cache != nil {
+			if cachedData, ok := cache.Get(cacheKey); ok {
+				// A cached nil records a previous lookup that found nothing.
+				if cachedData == nil {
+					return nil, nil
+				}
+				if creds, ok := cachedData.(credentials.Credentials); ok {
+					return creds, nil
+				}
+			}
+		}
+
+		creds, err := credsDB.Get(ctx, project, credType, repoURL)
+		if err != nil {
+			return nil, fmt.Errorf(
+				"error getting %s credentials for %q: %w", credType, repoURL, err,
+			)
+		}
+
+		// When no credentials are found, return nil so that expression authors
+		// can detect their absence using optional chaining and nil-coalescing.
+		if creds == nil {
+			if cache != nil {
+				cache.Set(cacheKey, nil, gocache.NoExpiration)
+			}
+			return nil, nil
+		}
+
+		if cache != nil {
+			cache.Set(cacheKey, *creds, gocache.NoExpiration)
+		}
+		return *creds, nil
+	}
+}
+
 func hasFailure(stepExecMetas kargoapi.StepExecutionMetadataList) exprFn {
 	return func(a ...any) (any, error) {
 		if len(a) != 0 {
@@ -1245,8 +1374,9 @@ func semverParse(a ...any) (any, error) {
 }
 
 const (
-	cacheKeyPrefixConfigMap = "ConfigMap"
-	cacheKeyPrefixSecret    = "Secret"
+	cacheKeyPrefixConfigMap       = "ConfigMap"
+	cacheKeyPrefixSecret          = "Secret"
+	cacheKeyPrefixRepoCredentials = "RepoCredentials"
 )
 
 // getCacheKey generates a cache key for the given prefix, project, and name.
