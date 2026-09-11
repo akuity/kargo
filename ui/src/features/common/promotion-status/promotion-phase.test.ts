@@ -44,6 +44,20 @@ describe('getPromotionPhasePresentation()', () => {
     const spinning = promotionPhases.filter((phase) => getPromotionPhasePresentation(phase).spin);
     expect(spinning).toEqual(['Running']);
   });
+
+  test('each phase names the theme token it is painted with', () => {
+    const tokens = Object.fromEntries(
+      promotionPhases.map((phase) => [phase, getPromotionPhasePresentation(phase).colorToken])
+    );
+    expect(tokens).toEqual({
+      Succeeded: 'colorSuccess',
+      Running: 'colorInfo',
+      Pending: 'colorFillSecondary',
+      Failed: 'colorError',
+      Errored: 'colorError',
+      Aborted: 'colorTextQuaternary'
+    });
+  });
 });
 
 describe('promotionPhases', () => {
