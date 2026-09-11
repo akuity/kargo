@@ -18,6 +18,7 @@ import { paths } from '@ui/config/paths';
 import { useExtensionsContext } from '@ui/extensions/extensions-context';
 import { Description } from '@ui/features/common/description';
 import { HealthStatusIcon } from '@ui/features/common/health-status/health-status-icon';
+import { RoundProgressBar } from '@ui/features/common/promotion-status/round-progress-bar';
 import { useStageControllerStatus } from '@ui/features/common/stage-status/use-stage-controller-status';
 import { getCurrentFreightByWarehouse } from '@ui/features/common/utils';
 import { getLastPromotionRef } from '@ui/features/project/pipelines/nodes/stage-meta-utils';
@@ -37,6 +38,7 @@ import { StageActions } from './stage-actions';
 import { FreightHistory } from './tabs/freight-history/freight-history';
 import { useGetFreightMap } from './tabs/freight-history/use-get-freight-map';
 import { StageSettings } from './tabs/settings/stage-settings';
+import { useCurrentRound } from './use-current-round';
 import { useImages } from './use-images';
 import { Verifications } from './verifications';
 
@@ -105,6 +107,10 @@ export const StageDetails = ({ stage }: { stage: Stage }) => {
 
   const { controllerName, isControllerDead } = useStageControllerStatus(stage);
 
+  // A target-aware Stage promotes to many Targets at once; its header shows
+  // how the current round is going.
+  const currentRound = useCurrentRound(projectName || '', stage);
+
   return (
     <Drawer
       open={!!stageName}
@@ -130,6 +136,19 @@ export const StageDetails = ({ stage }: { stage: Stage }) => {
             <div className='-mt-1'>
               <Typography.Text type='secondary'>{projectName}</Typography.Text>
               <Description item={stage} loading={false} className='mt-2' />
+              {currentRound && (
+                <RoundProgressBar
+                  // A request the controller has not acted on yet has no
+                  // summary; every Target it names is, in effect, pending.
+                  summary={
+                    currentRound.status?.summary ?? {
+                      pending: currentRound.spec?.targets?.length || 0
+                    }
+                  }
+                  size='full'
+                  className='mt-3 w-96'
+                />
+              )}
             </div>
           </div>
           <StageActions
