@@ -107,6 +107,18 @@ export type PromotionStepExtension = {
   };
 };
 
+type ConfigSubpage = Subpage & {
+  wide?: boolean;
+};
+
+export type ProjectConfigSubpage = ConfigSubpage & {
+  type: 'projectConfigSubpage';
+};
+
+export type ClusterConfigSubpage = ConfigSubpage & {
+  type: 'clusterConfigSubpage';
+};
+
 export type Extension =
   | StageTab
   | FreightTab
@@ -116,5 +128,7 @@ export type Extension =
   | PromoteTab
   | SettingsExtension
   | ProjectSettingsExtension
+  | ProjectConfigSubpage
+  | ClusterConfigSubpage
   | ArgoCDExtension
   | PromotionStepExtension;
