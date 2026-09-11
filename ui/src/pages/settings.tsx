@@ -10,6 +10,7 @@ import {
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Breadcrumb, Flex, Menu } from 'antd';
 import { ItemType, MenuItemType } from 'antd/es/menu/interface';
+import classNames from 'classnames';
 import React from 'react';
 import { NavLink, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 
@@ -117,36 +118,48 @@ export const Settings = () => {
 
         const subpages = view.path === settingsViews.clusterConfig.path ? configSubpages : [];
 
-        const item = {
-          label: (
-            <NavLink to={`../${view.path}`} style={{ color: 'inherit' }}>
-              {view.label}
-            </NavLink>
-          ),
-          icon: <FontAwesomeIcon icon={view.icon} />,
-          key: view.path
-        };
+        const onSubpage = subpages.some((subpage) => location.pathname.endsWith(subpage.path));
 
-        const itemWithSubpages = subpages.length
-          ? {
-              ...item,
-              children: subpages.map((subpage) => ({
-                label: <NavLink to={`../${subpage.path}`}>{subpage.label}</NavLink>,
-                icon: <FontAwesomeIcon icon={subpage.icon} />,
-                key: subpage.path
-              }))
-            }
-          : item;
+        const items = [
+          {
+            label: (
+              <NavLink to={`../${view.path}`} style={{ color: 'inherit' }}>
+                {view.label}
+              </NavLink>
+            ),
+            icon: <FontAwesomeIcon icon={view.icon} />,
+            key: view.path,
+            // The `!`s beat AntD's own rules for these properties.
+            className: classNames('!pl-3', {
+              '!text-[var(--kargo-color-text-base)]': onSubpage
+            })
+          },
+          ...subpages.map((subpage) => ({
+            label: (
+              <NavLink to={`../${subpage.path}`} style={{ color: 'inherit' }}>
+                {subpage.label}
+              </NavLink>
+            ),
+            key: subpage.path,
+            // `overflow-visible` keeps AntD from clipping the guide line;
+            // labels still ellipsize via its rule on `.ant-menu-title-content`.
+            className: classNames(
+              'relative !overflow-visible !ms-8 !w-auto !pl-2',
+              "before:absolute before:content-[''] before:-left-[9px] before:-top-1",
+              'before:-bottom-1 before:w-px before:bg-[var(--kargo-color-border)]'
+            )
+          }))
+        ];
 
         if (groupIndex === -1) {
-          acc.push({ key: group, label: group, type: 'group', children: [itemWithSubpages] });
+          acc.push({ key: group, label: group, type: 'group', children: items });
         } else if (acc[groupIndex] && 'children' in acc[groupIndex]) {
-          acc[groupIndex].children?.push(itemWithSubpages);
+          acc[groupIndex].children?.push(...items);
         }
 
         return acc;
       }, [] as ItemType<MenuItemType>[]),
-    [views, configSubpages]
+    [views, configSubpages, location.pathname]
   );
 
   return (
@@ -158,14 +171,12 @@ export const Settings = () => {
         <Flex gap={24} className='mt-2'>
           <div style={{ width: 240 }}>
             <Menu
-              className='-ml-2 -mt-1 mb-4'
+              className='-mt-1 mb-4'
               mode='inline'
               style={{ border: 0, background: 'transparent' }}
               selectedKeys={routableViews
                 .map((i) => i.path)
                 .filter((i) => location.pathname.endsWith(i))}
-              openKeys={[settingsViews.clusterConfig.path]}
-              expandIcon={null}
               items={menuItems}
             />
           </div>
