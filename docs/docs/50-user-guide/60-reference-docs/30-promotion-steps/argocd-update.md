@@ -169,6 +169,15 @@ refresh groups of `Application`s with heterogeneous configurations.
 | `apps[].sources[].helm.images` | `[]object` | Y | Describes how to update  an Argo CD `ApplicationSource`'s Helm parameters to reference specific versions of container images. |
 | `apps[].sources[].helm.images[].key` | `string` | Y | The key to update within the target `ApplicationSource`'s `helm.parameters` map. See Helm documentation on the [format and limitations](https://helm.sh/docs/intro/using_helm/#the-format-and-limitations-of---set) of the notation used in this field. |
 | `apps[].sources[].helm.images[].value` | `string` | Y | Specifies the new value for the key. Typically, a value from [`chartFrom()`](../40-expressions.md#chartfrom) is used here. |
+| `apps[].sources[].jsonnet` | `object` | N | Describes updates to an Argo CD `ApplicationSource`'s Jsonnet-specific properties. |
+| `apps[].sources[].jsonnet.tlas` | `[]object` | N | Describes top-level arguments (TLAs) to set within an Argo CD `ApplicationSource`'s Jsonnet parameters. |
+| `apps[].sources[].jsonnet.tlas[].name` | `string` | Y | The name of the top-level argument. |
+| `apps[].sources[].jsonnet.tlas[].value` | `string` | Y | The value of the top-level argument. |
+| `apps[].sources[].jsonnet.tlas[].code` | `boolean` | N | Specifies whether the value should be evaluated as code rather than a string literal. Default is `false`. |
+| `apps[].sources[].jsonnet.extVars` | `[]object` | N | Describes external variables to set within an Argo CD `ApplicationSource`'s Jsonnet parameters. |
+| `apps[].sources[].jsonnet.extVars[].name` | `string` | Y | The name of the external variable. |
+| `apps[].sources[].jsonnet.extVars[].value` | `string` | Y | The value of the external variable. |
+| `apps[].sources[].jsonnet.extVars[].code` | `boolean` | N | Specifies whether the value should be evaluated as code rather than a string literal. Default is `false`. |
 
 ## Output
 
@@ -328,6 +337,34 @@ steps:
         helm:
           images:
           - key: image.tag
+            value: ${{ imageFrom("my/image").Tag }}
+```
+
+### Updating Parameters with Jsonnet
+
+:::caution
+
+Without making any modifications to a Git repository, this example simply
+updates Jsonnet-specific properties of a "live" Argo CD `Application` resource.
+
+While this can be a useful technique, it should be used with caution. This is
+not "real GitOps" since the state of the `Application` resource is not backed
+up in a Git repository. If the `Application` resource were deleted, there would
+be no remaining record of its desired state.
+
+:::
+
+```yaml
+steps:
+- uses: argocd-update
+  config:
+    apps:
+    - name: my-app
+      sources:
+      - repoURL: https://github.com/example/repo.git
+        jsonnet:
+          tlas:
+          - name: imageTag
             value: ${{ imageFrom("my/image").Tag }}
 ```
 

@@ -1077,6 +1077,26 @@ func (a *argocdUpdater) applyArgoCDSourceUpdate(
 		}
 	}
 
+	if update.Jsonnet != nil && (len(update.Jsonnet.ExtVars) > 0 || len(update.Jsonnet.TLAs) > 0) {
+		if source.Directory == nil {
+			source.Directory = &argocd.ApplicationSourceDirectory{}
+		}
+		for _, extVar := range update.Jsonnet.ExtVars {
+			upsertJsonnetVar(&source.Directory.Jsonnet.ExtVars, argocd.JsonnetVar{
+				Name:  extVar.Name,
+				Value: extVar.Value,
+				Code:  extVar.Code,
+			})
+		}
+		for _, tla := range update.Jsonnet.TLAs {
+			upsertJsonnetVar(&source.Directory.Jsonnet.TLAs, argocd.JsonnetVar{
+				Name:  tla.Name,
+				Value: tla.Value,
+				Code:  tla.Code,
+			})
+		}
+	}
+
 	return source, true
 }
 
@@ -1119,6 +1139,16 @@ func (a *argocdUpdater) buildHelmParamChangesForAppSource(
 		changes[imageUpdate.Key] = imageUpdate.Value
 	}
 	return changes
+}
+
+func upsertJsonnetVar(vars *[]argocd.JsonnetVar, newVar argocd.JsonnetVar) {
+	for i, v := range *vars {
+		if v.Name == newVar.Name {
+			(*vars)[i] = newVar
+			return
+		}
+	}
+	*vars = append(*vars, newVar)
 }
 
 func (a *argocdUpdater) operationPhaseToPromotionStepStatus(
