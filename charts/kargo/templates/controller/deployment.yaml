@@ -29,7 +29,7 @@ spec:
   template:
     metadata:
       labels:
-        {{- include "kargo.labels" . | nindent 8 }}
+        {{- include "kargo.podLabels" . | nindent 8 }}
         {{- include "kargo.controller.labels" . | nindent 8 }}
         {{- include "kargo.controller.idLabel" . | nindent 8 }}
       {{- with (mergeOverwrite (deepCopy .Values.global.podLabels) .Values.controller.podLabels) }}
