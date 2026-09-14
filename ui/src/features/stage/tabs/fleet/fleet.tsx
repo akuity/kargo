@@ -16,7 +16,7 @@ import { Stage } from '@ui/gen/api/v2/models';
 import { parseDate } from '@ui/utils/dates';
 
 import { useCurrentRound } from '../../use-current-round';
-import { blockingMessage } from '../../utils/promotion-request';
+import { blockingMessage, roundBlock } from '../../utils/promotion-request';
 import { useGetFreightMap } from '../freight-history/use-get-freight-map';
 
 import { FleetRow, fleetRows, freightNames, rowsSummary } from './fleet-utils';
@@ -197,9 +197,13 @@ export const Fleet = ({ projectName, stage }: Props) => {
     }
   ];
 
+  // While the round is blocked the drawer explains why above the tabs; a bar
+  // would only restate the same failure per Target.
+  const blocked = !!roundBlock(round);
+
   return (
     <Flex vertical gap={16}>
-      {round ? (
+      {round && !blocked ? (
         <Flex gap={16} align='center' wrap>
           <RoundProgressBar
             // Drawn from the rows' own phases rather than the request's
@@ -214,7 +218,8 @@ export const Fleet = ({ projectName, stage }: Props) => {
         </Flex>
       ) : (
         <Typography.Text type='secondary' className='text-xs'>
-          {rows.length} Target{rows.length === 1 ? '' : 's'}, never promoted
+          {rows.length} Target{rows.length === 1 ? '' : 's'}
+          {round ? '' : ', never promoted'}
         </Typography.Text>
       )}
       {rows.length === 0 ? (

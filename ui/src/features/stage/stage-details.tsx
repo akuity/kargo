@@ -2,6 +2,7 @@ import {
   faBarsStaggered,
   faBullseye,
   faCircleCheck,
+  faCircleExclamation,
   faCircleUp,
   faGear,
   faHistory,
@@ -42,7 +43,9 @@ import { Fleet } from './tabs/fleet/fleet';
 import { FreightHistory } from './tabs/freight-history/freight-history';
 import { useGetFreightMap } from './tabs/freight-history/use-get-freight-map';
 import { StageSettings } from './tabs/settings/stage-settings';
+import { useCurrentRound } from './use-current-round';
 import { useImages } from './use-images';
+import { roundBlock } from './utils/promotion-request';
 import { Verifications } from './verifications';
 
 enum TabsTypes {
@@ -94,6 +97,12 @@ export const StageDetails = ({ stage }: { stage: Stage }) => {
   const [pickedTab, setActiveTab] = useState<TabsTypes>();
   const targetAware = isStageTargetAware(stage);
   const activeTab = pickedTab ?? (targetAware ? TabsTypes.FLEET : TabsTypes.PROMOTION);
+
+  // When a target-aware Stage's latest round cannot progress, say so once,
+  // above the tabs, so the Fleet and Promotions tabs both sit under the
+  // explanation rather than each hinting at it.
+  const round = useCurrentRound(projectName || '', stage);
+  const block = roundBlock(round);
 
   useEffect(() => {
     if (activeTab === TabsTypes.LIVE_MANIFEST) {
@@ -161,6 +170,15 @@ export const StageDetails = ({ stage }: { stage: Stage }) => {
               currentFreight={currentFreight}
             />
             <AutoPromotionHolds stage={stage} />
+            {block && (
+              <Alert
+                type='warning'
+                showIcon
+                icon={<FontAwesomeIcon icon={faCircleExclamation} />}
+                message={block.title}
+                description={block.description}
+              />
+            )}
             <Tabs
               className='flex-1'
               defaultActiveKey='1'

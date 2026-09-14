@@ -1,6 +1,6 @@
-import { faBullseye, faCircleExclamation } from '@fortawesome/free-solid-svg-icons';
+import { faBullseye } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { Alert, Flex, Table, Tag, Tooltip, Typography } from 'antd';
+import { Flex, Table, Tag, Tooltip, Typography } from 'antd';
 import { ColumnsType } from 'antd/es/table';
 import { format } from 'date-fns';
 import { useMemo, useState } from 'react';
@@ -23,7 +23,6 @@ import { useGetFreightMap } from './tabs/freight-history/use-get-freight-map';
 import { useWatchPromotionRequests } from './use-watch-promotion-requests';
 import {
   PromotionRequestTargetRow,
-  blockingMessage,
   isPromotionRequestPhaseTerminal,
   promotionRequestCompareFn,
   targetRows
@@ -171,8 +170,6 @@ export const PromotionRequests = ({ projectName, stageName }: Props) => {
     return null;
   }
 
-  const blocked = blockingMessage(promotionRequests[0]);
-
   const columns: ColumnsType<PromotionRequest> = [
     {
       title: 'Phase',
@@ -230,16 +227,6 @@ export const PromotionRequests = ({ projectName, stageName }: Props) => {
 
   return (
     <div className='mb-6'>
-      {blocked && (
-        <Alert
-          className='mb-3'
-          type='warning'
-          showIcon
-          icon={<FontAwesomeIcon icon={faCircleExclamation} />}
-          message='This Stage promotes to Targets'
-          description={blocked}
-        />
-      )}
       <Typography.Title level={5} className='mb-2'>
         Promotion Requests
       </Typography.Title>
