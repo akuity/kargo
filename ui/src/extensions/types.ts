@@ -107,6 +107,10 @@ export type PromotionStepExtension = {
   };
 };
 
+export type FeatureFlags = {
+  promotionWindows?: boolean;
+};
+
 export type Extension =
   | StageTab
   | FreightTab

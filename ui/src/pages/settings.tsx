@@ -109,11 +109,16 @@ const defaultView = settingsViews.clusterConfig;
 export const Settings = () => {
   useDocumentTitle(['Settings']);
   const location = useLocation();
-  const { settingsExtensions } = useExtensionsContext();
+  const { settingsExtensions, featureFlags } = useExtensionsContext();
 
   const views = React.useMemo<SettingsView[]>(
-    () => [...Object.values(settingsViews), ...settingsExtensions],
-    [settingsExtensions]
+    () => [
+      ...Object.values(settingsViews).map((view) =>
+        featureFlags?.promotionWindows ? view : { ...view, children: undefined }
+      ),
+      ...settingsExtensions
+    ],
+    [settingsExtensions, featureFlags?.promotionWindows]
   );
 
   const routableViews = React.useMemo(

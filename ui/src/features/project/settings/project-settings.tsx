@@ -45,7 +45,7 @@ export const ProjectSettings = () => {
   const getConfigQuery = useGetConfig();
   const config = getConfigQuery.data?.data;
 
-  const { projectSettingsExtensions } = useExtensionsContext();
+  const { projectSettingsExtensions, featureFlags } = useExtensionsContext();
 
   const settingsViews = React.useMemo(() => {
     return {
@@ -60,15 +60,17 @@ export const ProjectSettings = () => {
         icon: faGears,
         path: 'project-config',
         component: ProjectConfig,
-        children: [
-          {
-            label: 'Promotion Windows',
-            icon: faCalendarDays,
-            path: 'project-config/promotion-windows',
-            component: ProjectPromotionWindows,
-            wide: true
-          }
-        ]
+        children: featureFlags?.promotionWindows
+          ? [
+              {
+                label: 'Promotion Windows',
+                icon: faCalendarDays,
+                path: 'project-config/promotion-windows',
+                component: ProjectPromotionWindows,
+                wide: true
+              }
+            ]
+          : undefined
       },
       roles: {
         label: 'Access',
@@ -105,7 +107,7 @@ export const ProjectSettings = () => {
         component: PromotionTasks
       }
     };
-  }, [config]);
+  }, [config, featureFlags?.promotionWindows]);
 
   const views = React.useMemo<ProjectSettingsView[]>(
     () => [...Object.values(settingsViews), ...projectSettingsExtensions],
