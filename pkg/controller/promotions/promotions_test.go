@@ -70,9 +70,39 @@ func newFakeReconciler(
 }
 
 func TestReconcile(t *testing.T) {
+	testNamespace := "fake-namespace"
+	testFreight := &kargoapi.Freight{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "fake-freight",
+			Namespace: testNamespace,
+		},
+		Origin: kargoapi.FreightOrigin{
+			Kind: kargoapi.FreightOriginKindWarehouse,
+			Name: "fake-warehouse",
+		},
+	}
+
+	testStage := &kargoapi.Stage{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "fake-stage",
+			Namespace: testNamespace,
+		},
+		Spec: kargoapi.StageSpec{
+			RequestedFreight: []kargoapi.FreightRequest{{
+				Origin:  testFreight.Origin,
+				Sources: kargoapi.FreightSources{Direct: true},
+			}},
+		},
+		Status: kargoapi.StageStatus{
+			CurrentPromotion: &kargoapi.PromotionReference{
+				Name: "fake-promo",
+			},
+		},
+	}
 	testCases := []struct {
-		name   string
-		promos []client.Object
+		name    string
+		objects []client.Object
+		promos  []client.Object
 		// apiReader, if set, overrides the reconciler's direct API reader. Use
 		// this to simulate cache/API divergence or to assert the reader is not
 		// called (e.g. wrap with an interceptor that calls t.Error on Get).
@@ -98,18 +128,11 @@ func TestReconcile(t *testing.T) {
 			expectedPhase:         kargoapi.PromotionPhaseSucceeded,
 			expectedEventRecorded: true,
 			expectedEventType:     kargoapi.EventTypePromotionSucceeded,
+			objects: []client.Object{
+				testStage,
+				testFreight,
+			},
 			promos: []client.Object{
-				&kargoapi.Stage{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "fake-stage",
-						Namespace: "fake-namespace",
-					},
-					Status: kargoapi.StageStatus{
-						CurrentPromotion: &kargoapi.PromotionReference{
-							Name: "fake-promo",
-						},
-					},
-				},
 				newPromo("fake-namespace", "fake-promo", "fake-stage", kargoapi.PromotionPhasePending, now),
 			},
 			promoToReconcile: &types.NamespacedName{Namespace: "fake-namespace", Name: "fake-promo"},
@@ -158,18 +181,11 @@ func TestReconcile(t *testing.T) {
 			expectedPhase:         kargoapi.PromotionPhaseSucceeded,
 			expectedEventRecorded: true,
 			expectedEventType:     kargoapi.EventTypePromotionSucceeded,
+			objects: []client.Object{
+				testStage,
+				testFreight,
+			},
 			promos: []client.Object{
-				&kargoapi.Stage{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "fake-stage",
-						Namespace: "fake-namespace",
-					},
-					Status: kargoapi.StageStatus{
-						CurrentPromotion: &kargoapi.PromotionReference{
-							Name: "fake-promo",
-						},
-					},
-				},
 				newPromo("fake-namespace", "fake-promo", "fake-stage", kargoapi.PromotionPhaseRunning, now),
 			},
 			promoToReconcile: &types.NamespacedName{Namespace: "fake-namespace", Name: "fake-promo"},
@@ -179,11 +195,17 @@ func TestReconcile(t *testing.T) {
 			expectPromoteFnCalled: false,
 			promoToReconcile:      &types.NamespacedName{Namespace: "fake-namespace", Name: "fake-promo2"},
 			expectedPhase:         kargoapi.PromotionPhasePending,
-			promos: []client.Object{
+			objects: []client.Object{
 				&kargoapi.Stage{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "fake-stage",
-						Namespace: "fake-namespace",
+						Namespace: testNamespace,
+					},
+					Spec: kargoapi.StageSpec{
+						RequestedFreight: []kargoapi.FreightRequest{{
+							Origin:  testFreight.Origin,
+							Sources: kargoapi.FreightSources{Direct: true},
+						}},
 					},
 					Status: kargoapi.StageStatus{
 						CurrentPromotion: &kargoapi.PromotionReference{
@@ -191,6 +213,8 @@ func TestReconcile(t *testing.T) {
 						},
 					},
 				},
+			},
+			promos: []client.Object{
 				newPromo("fake-namespace", "fake-promo1", "fake-stage", kargoapi.PromotionPhasePending, before),
 				newPromo("fake-namespace", "fake-promo2", "fake-stage", "", now), // intentionally empty string phase
 			},
@@ -202,11 +226,18 @@ func TestReconcile(t *testing.T) {
 			expectedPhase:         kargoapi.PromotionPhaseSucceeded,
 			expectedEventRecorded: true,
 			expectedEventType:     kargoapi.EventTypePromotionSucceeded,
-			promos: []client.Object{
+			objects: []client.Object{
+				testFreight,
 				&kargoapi.Stage{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "fake-stage",
-						Namespace: "fake-namespace",
+						Namespace: testNamespace,
+					},
+					Spec: kargoapi.StageSpec{
+						RequestedFreight: []kargoapi.FreightRequest{{
+							Origin:  testFreight.Origin,
+							Sources: kargoapi.FreightSources{Direct: true},
+						}},
 					},
 					Status: kargoapi.StageStatus{
 						CurrentPromotion: &kargoapi.PromotionReference{
@@ -214,6 +245,8 @@ func TestReconcile(t *testing.T) {
 						},
 					},
 				},
+			},
+			promos: []client.Object{
 				newPromo("fake-namespace", "fake-promo1", "fake-stage", kargoapi.PromotionPhasePending, before),
 				newPromo("fake-namespace", "fake-promo2", "fake-stage", kargoapi.PromotionPhasePending, now),
 			},
@@ -224,11 +257,17 @@ func TestReconcile(t *testing.T) {
 			promoToReconcile:      &types.NamespacedName{Namespace: "fake-namespace", Name: "fake-promo"},
 			expectedPhase:         kargoapi.PromotionPhasePending,
 			expectedEventRecorded: false,
-			promos: []client.Object{
+			objects: []client.Object{
 				&kargoapi.Stage{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "fake-stage",
 						Namespace: "fake-namespace",
+					},
+					Spec: kargoapi.StageSpec{
+						RequestedFreight: []kargoapi.FreightRequest{{
+							Origin:  testFreight.Origin,
+							Sources: kargoapi.FreightSources{Direct: true},
+						}},
 					},
 					Status: kargoapi.StageStatus{
 						CurrentPromotion: &kargoapi.PromotionReference{
@@ -236,6 +275,9 @@ func TestReconcile(t *testing.T) {
 						},
 					},
 				},
+				testFreight,
+			},
+			promos: []client.Object{
 				newPromo("fake-namespace", "fake-promo", "fake-stage", kargoapi.PromotionPhasePending, now),
 			},
 		},
@@ -245,18 +287,11 @@ func TestReconcile(t *testing.T) {
 			promoToReconcile:      &types.NamespacedName{Namespace: "fake-namespace", Name: "fake-promo"},
 			expectedErr:           "get stage: expected stage lookup error",
 			expectedPhase:         kargoapi.PromotionPhaseSucceeded,
+			objects: []client.Object{
+				testStage,
+				testFreight,
+			},
 			promos: []client.Object{
-				&kargoapi.Stage{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "fake-stage",
-						Namespace: "fake-namespace",
-					},
-					Status: kargoapi.StageStatus{
-						CurrentPromotion: &kargoapi.PromotionReference{
-							Name: "fake-promo",
-						},
-					},
-				},
 				newPromo("fake-namespace", "fake-promo", "fake-stage", kargoapi.PromotionPhasePending, now),
 			},
 			configure: func(_ *testing.T, r *reconciler) {
@@ -275,6 +310,12 @@ func TestReconcile(t *testing.T) {
 							Name:      "fake-stage",
 							Namespace: "fake-namespace",
 						},
+						Spec: kargoapi.StageSpec{
+							RequestedFreight: []kargoapi.FreightRequest{{
+								Origin:  testFreight.Origin,
+								Sources: kargoapi.FreightSources{Direct: true},
+							}},
+						},
 						Status: kargoapi.StageStatus{
 							CurrentPromotion: &kargoapi.PromotionReference{
 								Name: "fake-promo",
@@ -290,18 +331,11 @@ func TestReconcile(t *testing.T) {
 			expectedPhase:         kargoapi.PromotionPhaseErrored,
 			expectedEventRecorded: true,
 			expectedEventType:     kargoapi.EventTypePromotionErrored,
+			objects: []client.Object{
+				testStage,
+				testFreight,
+			},
 			promos: []client.Object{
-				&kargoapi.Stage{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "fake-stage",
-						Namespace: "fake-namespace",
-					},
-					Status: kargoapi.StageStatus{
-						CurrentPromotion: &kargoapi.PromotionReference{
-							Name: "fake-promo",
-						},
-					},
-				},
 				newPromo("fake-namespace", "fake-promo", "fake-stage", kargoapi.PromotionPhasePending, before),
 			},
 			promoToReconcile: &types.NamespacedName{Namespace: "fake-namespace", Name: "fake-promo"},
@@ -319,18 +353,11 @@ func TestReconcile(t *testing.T) {
 			expectedPhase:         kargoapi.PromotionPhaseErrored,
 			expectedEventRecorded: true,
 			expectedEventType:     kargoapi.EventTypePromotionErrored,
+			objects: []client.Object{
+				testStage,
+				testFreight,
+			},
 			promos: []client.Object{
-				&kargoapi.Stage{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "fake-stage",
-						Namespace: "fake-namespace",
-					},
-					Status: kargoapi.StageStatus{
-						CurrentPromotion: &kargoapi.PromotionReference{
-							Name: "fake-promo",
-						},
-					},
-				},
 				newPromo("fake-namespace", "fake-promo", "fake-stage", kargoapi.PromotionPhasePending, before),
 			},
 			promoToReconcile: &types.NamespacedName{Namespace: "fake-namespace", Name: "fake-promo"},
@@ -353,18 +380,11 @@ func TestReconcile(t *testing.T) {
 			expectedPhase:         kargoapi.PromotionPhaseSucceeded,
 			expectedEventRecorded: true,
 			expectedEventType:     kargoapi.EventTypePromotionSucceeded,
+			objects: []client.Object{
+				testStage,
+				testFreight,
+			},
 			promos: []client.Object{
-				&kargoapi.Stage{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "fake-stage",
-						Namespace: "fake-namespace",
-					},
-					Status: kargoapi.StageStatus{
-						CurrentPromotion: &kargoapi.PromotionReference{
-							Name: "fake-promo",
-						},
-					},
-				},
 				// Stale cached copy: Running but no step metadata.
 				newPromo("fake-namespace", "fake-promo", "fake-stage", kargoapi.PromotionPhaseRunning, now),
 			},
@@ -432,7 +452,8 @@ func TestReconcile(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			ctx := t.Context()
 			recorder := fakeevent.NewEventRecorder(1)
-			r := newFakeReconciler(t, recorder, tc.promos...)
+			tc.objects = append(tc.objects, tc.promos...)
+			r := newFakeReconciler(t, recorder, tc.objects...)
 			if tc.apiReader != nil {
 				r.apiReader = tc.apiReader
 			}
@@ -1151,7 +1172,8 @@ func newPromo(namespace, name, stage string,
 			Namespace:         namespace,
 		},
 		Spec: kargoapi.PromotionSpec{
-			Stage: stage,
+			Stage:   stage,
+			Freight: "fake-freight",
 		},
 		Status: kargoapi.PromotionStatus{
 			Phase: phase,
