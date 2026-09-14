@@ -1,6 +1,8 @@
+import { IconProp } from '@fortawesome/fontawesome-svg-core';
 import {
   faAsterisk,
   faBarChart,
+  faCalendarDays,
   faDisplay,
   faGear,
   faKey,
@@ -16,6 +18,7 @@ import { NavLink, Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { useExtensionsContext } from '@ui/extensions/extensions-context';
 import { useDocumentTitle } from '@ui/features/common/document-title/use-document-title';
 import { BaseHeader } from '@ui/features/common/layout/base-header';
+import { ClusterPromotionWindows } from '@ui/features/promotion-windows/cluster-promotion-windows';
 import { AccessSettings } from '@ui/features/settings/access/accecss';
 import { ClusterAnalysisTemplatesList } from '@ui/features/settings/analysis-templates/analysis-templates';
 import { ClusterConfig } from '@ui/features/settings/cluster-config/cluster-config';
@@ -27,12 +30,31 @@ import { UISettings } from '@ui/features/settings/ui/ui-settings';
 
 const DEFAULT_GROUP = 'General';
 
+type SettingsView = {
+  label: string;
+  icon: IconProp;
+  path: string;
+  component: React.ComponentType;
+  group?: string;
+  wide?: boolean;
+  children?: SettingsView[];
+};
+
 const settingsViews = {
   clusterConfig: {
     label: 'Cluster Config',
     icon: faGear,
     path: 'cluster-config',
-    component: ClusterConfig
+    component: ClusterConfig,
+    children: [
+      {
+        label: 'Promotion Windows',
+        icon: faCalendarDays,
+        path: 'cluster-config/promotion-windows',
+        component: ClusterPromotionWindows,
+        wide: true
+      }
+    ]
   },
   verification: {
     label: 'Verification',
@@ -89,27 +111,43 @@ export const Settings = () => {
   const location = useLocation();
   const { settingsExtensions } = useExtensionsContext();
 
-  const views = React.useMemo(
+  const views = React.useMemo<SettingsView[]>(
     () => [...Object.values(settingsViews), ...settingsExtensions],
     [settingsExtensions]
   );
 
+  const routableViews = React.useMemo(
+    () => views.flatMap((view) => [view, ...(view.children ?? [])]),
+    [views]
+  );
+
+  const wide = routableViews.some((view) => view.wide && location.pathname.endsWith(view.path));
+
   const menuItems = React.useMemo(
     () =>
       views.reduce((acc, view) => {
-        const group = ('group' in view ? view.group : DEFAULT_GROUP) as string;
+        const group = view.group ?? DEFAULT_GROUP;
         const groupIndex = acc.findIndex((g) => g?.key === group);
 
-        const children = {
-          label: <NavLink to={`../${view.path}`}>{view.label}</NavLink>,
+        const item = {
+          label: (
+            <NavLink to={`../${view.path}`} style={{ color: 'inherit' }}>
+              {view.label}
+            </NavLink>
+          ),
           icon: <FontAwesomeIcon icon={view.icon} />,
-          key: view.path
+          key: view.path,
+          children: view.children?.map((child) => ({
+            label: <NavLink to={`../${child.path}`}>{child.label}</NavLink>,
+            icon: <FontAwesomeIcon icon={child.icon} />,
+            key: child.path
+          }))
         };
 
         if (groupIndex === -1) {
-          acc.push({ key: group, label: group, type: 'group', children: [children] });
+          acc.push({ key: group, label: group, type: 'group', children: [item] });
         } else if (acc[groupIndex] && 'children' in acc[groupIndex]) {
-          acc[groupIndex].children?.push(children);
+          acc[groupIndex].children?.push(item);
         }
 
         return acc;
@@ -127,15 +165,23 @@ export const Settings = () => {
           <div style={{ width: 240 }}>
             <Menu
               className='-ml-2 -mt-1 mb-4'
+              mode='inline'
               style={{ border: 0, background: 'transparent' }}
-              selectedKeys={views.map((i) => i.path).filter((i) => location.pathname.endsWith(i))}
+              selectedKeys={routableViews
+                .map((i) => i.path)
+                .filter((i) => location.pathname.endsWith(i))}
+              openKeys={[settingsViews.clusterConfig.path]}
+              expandIcon={null}
               items={menuItems}
             />
           </div>
-          <div className='flex-1 overflow-hidden' style={{ maxWidth: '920px', minHeight: '700px' }}>
+          <div
+            className='flex-1 overflow-hidden'
+            style={{ maxWidth: wide ? '1440px' : '920px', minHeight: wide ? undefined : '700px' }}
+          >
             <Routes>
               <Route index element={<Navigate to={defaultView.path} replace={true} />} />
-              {views.map((t) => (
+              {routableViews.map((t) => (
                 <Route key={t.path} path={t.path} element={<t.component />} />
               ))}
               <Route path='*' element={<Navigate to='../' replace={true} />} />

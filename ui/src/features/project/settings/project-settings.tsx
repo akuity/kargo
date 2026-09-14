@@ -1,5 +1,7 @@
+import { IconProp } from '@fortawesome/fontawesome-svg-core';
 import {
   faAsterisk,
+  faCalendarDays,
   faChartBar,
   faGear,
   faGears,
@@ -15,6 +17,7 @@ import { NavLink, Route, Routes, useLocation, useParams, Navigate } from 'react-
 import { useExtensionsContext } from '@ui/extensions/extensions-context';
 import { useDocumentTitle } from '@ui/features/common/document-title/use-document-title';
 import { BaseHeader } from '@ui/features/common/layout/base-header';
+import { ProjectPromotionWindows } from '@ui/features/promotion-windows/project-promotion-windows';
 import { useGetConfig } from '@ui/gen/api/v2/system/system';
 
 import { useProjectBreadcrumbs } from '../project-utils';
@@ -26,6 +29,15 @@ import { GeneralSettings } from './views/general/general-settings';
 import { ProjectConfig } from './views/project-config/project-config';
 import { PromotionTasks } from './views/promotion-tasks/promotion-tasks';
 import { SecretsSettings } from './views/secrets/secrets-settings';
+
+type ProjectSettingsView = {
+  label: string;
+  icon: IconProp;
+  path: string;
+  component: React.ComponentType;
+  wide?: boolean;
+  children?: ProjectSettingsView[];
+};
 
 export const ProjectSettings = () => {
   const location = useLocation();
@@ -47,7 +59,16 @@ export const ProjectSettings = () => {
         label: 'ProjectConfig',
         icon: faGears,
         path: 'project-config',
-        component: ProjectConfig
+        component: ProjectConfig,
+        children: [
+          {
+            label: 'Promotion Windows',
+            icon: faCalendarDays,
+            path: 'project-config/promotion-windows',
+            component: ProjectPromotionWindows,
+            wide: true
+          }
+        ]
       },
       roles: {
         label: 'Access',
@@ -86,10 +107,17 @@ export const ProjectSettings = () => {
     };
   }, [config]);
 
-  const views = React.useMemo(
+  const views = React.useMemo<ProjectSettingsView[]>(
     () => [...Object.values(settingsViews), ...projectSettingsExtensions],
     [projectSettingsExtensions, settingsViews]
   );
+
+  const routableViews = React.useMemo(
+    () => views.flatMap((view) => [view, ...(view.children ?? [])]),
+    [views]
+  );
+
+  const wide = routableViews.some((view) => view.wide && location.pathname.endsWith(view.path));
 
   const projectBreadcrumbs = useProjectBreadcrumbs();
   const { name } = useParams();
@@ -115,24 +143,41 @@ export const ProjectSettings = () => {
             <Skeleton loading={getConfigQuery.isFetching} active paragraph={{ rows: 6 }}>
               <Menu
                 className='-ml-2 -mt-1'
+                mode='inline'
                 style={{ border: 0, background: 'transparent' }}
-                selectedKeys={views.map((i) => i.path).filter((i) => location.pathname.endsWith(i))}
+                selectedKeys={routableViews
+                  .map((i) => i.path)
+                  .filter((i) => location.pathname.endsWith(i))}
+                openKeys={[settingsViews.projectConfig.path]}
+                expandIcon={null}
                 items={views.map((i) => ({
-                  label: <NavLink to={`../${i.path}`}>{i.label}</NavLink>,
+                  label: (
+                    <NavLink to={`../${i.path}`} style={{ color: 'inherit' }}>
+                      {i.label}
+                    </NavLink>
+                  ),
                   icon: <FontAwesomeIcon icon={i.icon} />,
-                  key: i.path
+                  key: i.path,
+                  children: i.children?.map((child) => ({
+                    label: <NavLink to={`../${child.path}`}>{child.label}</NavLink>,
+                    icon: <FontAwesomeIcon icon={child.icon} />,
+                    key: child.path
+                  }))
                 }))}
               />
             </Skeleton>
           </div>
-          <div className='flex-1 overflow-hidden' style={{ maxWidth: '920px', minHeight: '700px' }}>
+          <div
+            className='flex-1 overflow-hidden'
+            style={{ maxWidth: wide ? '1440px' : '920px', minHeight: wide ? undefined : '700px' }}
+          >
             <Skeleton loading={getConfigQuery.isFetching} active paragraph={{ rows: 16 }}>
               <Routes>
                 <Route
                   index
                   element={<Navigate to={settingsViews.general.path} replace={true} />}
                 />
-                {views.map((t) => (
+                {routableViews.map((t) => (
                   <Route key={t.path} path={t.path} element={<t.component />} />
                 ))}
                 <Route path='*' element={<Navigate to='../' replace={true} />} />

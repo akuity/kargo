@@ -32,6 +32,9 @@ importers:
       '@fortawesome/react-fontawesome':
         specifier: 3.3.1
         version: 3.3.1(@fortawesome/fontawesome-svg-core@7.3.0)(react@19.2.7)
+      '@fullcalendar/react':
+        specifier: 7.1.0
+        version: 7.1.0(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(temporal-polyfill@1.0.5)
       '@hookform/resolvers':
         specifier: 5.4.0
         version: 5.4.0(react-hook-form@7.80.0(react@19.2.7))
@@ -40,7 +43,7 @@ importers:
         version: 4.7.0(monaco-editor@0.55.1)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
       '@rjsf/antd':
         specifier: 6.6.2
-        version: 6.6.2(@ant-design/icons@6.1.1(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(@rjsf/core@6.6.2(@rjsf/utils@6.6.2(react@19.2.7))(react@19.2.7))(@rjsf/utils@6.6.2(react@19.2.7))(antd@5.29.3(date-fns@4.4.0)(moment@2.30.1)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(date-fns@4.4.0)(dayjs@1.11.18)(moment@2.30.1)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
+        version: 6.6.2(@ant-design/icons@6.1.1(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(@rjsf/core@6.6.2(@rjsf/utils@6.6.2(react@19.2.7))(react@19.2.7))(@rjsf/utils@6.6.2(react@19.2.7))(antd@5.29.3(date-fns@4.4.0)(moment@2.30.1)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(date-fns@4.4.0)(dayjs@1.11.23)(moment@2.30.1)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
       '@rjsf/core':
         specifier: 6.6.2
         version: 6.6.2(@rjsf/utils@6.6.2(react@19.2.7))(react@19.2.7)
@@ -83,6 +86,9 @@ importers:
       oauth4webapi:
         specifier: 3.8.6
         version: 3.8.6
+      rc-picker:
+        specifier: 4.11.3
+        version: 4.11.3(date-fns@4.4.0)(dayjs@1.11.23)(moment@2.30.1)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
       react:
         specifier: 19.2.7
         version: 19.2.7
@@ -98,6 +104,9 @@ importers:
       recharts:
         specifier: 3.9.1
         version: 3.9.1(@types/react@19.2.17)(react-dom@19.2.7(react@19.2.7))(react-is@18.3.1)(react@19.2.7)(redux@5.0.1)
+      rrule:
+        specifier: 2.8.1
+        version: 2.8.1
       semver:
         specifier: 7.8.1
         version: 7.8.1
@@ -583,6 +592,24 @@ packages:
     peerDependencies:
       '@fortawesome/fontawesome-svg-core': ~6 || ~7
       react: ^18.0.0 || ^19.0.0
+
+  '@full-ui/headless-calendar@7.1.0':
+    resolution: {integrity: sha512-T54tSUik/ia9Jj4xduFHv1p98eVBgLnE33Q6qhpg+WWkqKCLBCbtVyMcTPPIOP5jjTV2MbtjrRvRt1RLSryGHA==}
+    peerDependencies:
+      temporal-polyfill: ^1.0.1
+
+  '@fullcalendar/core@7.1.0':
+    resolution: {integrity: sha512-a+ABP7zQpPWpwPT8EsOdShpeOVrJyx/XYStqERd8ibld/FLi/dzpd95r7w3RIdFqFm9iUv0gdGvBshSlI/dbPw==}
+    peerDependencies:
+      '@full-ui/headless-calendar': 7.1.0
+      temporal-polyfill: ^1.0.1
+
+  '@fullcalendar/react@7.1.0':
+    resolution: {integrity: sha512-FI5hTnbiVLcW+/ZnPKteBgLpK/ldyTaSDWn9A3ri3vLToAbGt49JqRhQ9CMpH+nhmuNX4ihnCQcVzoqVCsIbBw==}
+    peerDependencies:
+      react: ^17 || ^18 || ^19
+      react-dom: ^17 || ^18 || ^19
+      temporal-polyfill: ^1.0.1
 
   '@gerrit0/mini-shiki@3.23.0':
     resolution: {integrity: sha512-bEMORlG0cqdjVyCEuU0cDQbORWX+kYCeo0kV1lbxF5bt4r7SID2l9bqsxJEM0zndaxpOUT7riCyIVEuqq/Ynxg==}
@@ -1600,8 +1627,8 @@ packages:
   date-fns@4.4.0:
     resolution: {integrity: sha512-+1UMbeh68lH1SegH83CGWwpb6OHHbpSgr3+s5Eww5M4CAgswBpoWS0AjTOfEJ33HiYKz1hdj/KTFprzXHmq/6w==}
 
-  dayjs@1.11.18:
-    resolution: {integrity: sha512-zFBQ7WFRvVRhKcWoUh+ZA1g2HVgUbsZm9sbddh8EC5iv93sui8DVVz1Npvz+r6meo9VKfa8NyLWBsQK1VvIKPA==}
+  dayjs@1.11.23:
+    resolution: {integrity: sha512-QDTCU0M0MxR3hQfnlDJfwekQiaanm1ubOD231u73WBckQ/fsamwRLiE2GBz6D3a/xF1NgfiDLJjXBa1hYOYTtQ==}
 
   debug@3.2.7:
     resolution: {integrity: sha512-CFjzYYAi4ThfiQvizrFQevTTXHtnCqWfe7x1AhgEscTz6ZbLbfoLRLPugTQyBth6f8ZERVUSyWHFD/7Wu4t1XQ==}
@@ -3315,6 +3342,9 @@ packages:
     engines: {node: ^20.19.0 || >=22.12.0}
     hasBin: true
 
+  rrule@2.8.1:
+    resolution: {integrity: sha512-hM3dHSBMeaJ0Ktp7W38BJZ7O1zOgaFEsn41PDk+yHoEtfLV+PoJt9E9xAlZiWgf/iqEqionN0ebHFZIDAp+iGw==}
+
   run-parallel@1.2.0:
     resolution: {integrity: sha512-5l4VyZR86LZ/lDxZTR6jqL8AFE2S0IFLMP26AbjsLVADxHdhB/c0GUsH+y39UfCi3dzz8OlQuPmnaJOMoDHQBA==}
 
@@ -3500,6 +3530,15 @@ packages:
     resolution: {integrity: sha512-3ofp+LL8E+pK/JuPLPggVAIaEuhvIz4qNcf3nA1Xn2o/7fb7s/TYpHhwGDv1ZU3PkBluUVaF8PyCHcm48cKLWQ==}
     engines: {node: '>=14.0.0'}
     hasBin: true
+
+  temporal-polyfill@1.0.5:
+    resolution: {integrity: sha512-+H/mmY74i6wXCMcjIhGuSnODcyZnc4eois2myhOyX0UqRAKNXQY5m9iB1en5jQ/n4SXtjLXo1ElBI5bmn8tZwQ==}
+
+  temporal-spec@1.0.1:
+    resolution: {integrity: sha512-wxVoanmDeavXie1vu2JaQ3WIc3JZnWAOYFBsJyATaVsXsycKYUflGsyBmrRSnoCpZJpwPyr38VpgSUlQ8CbFxg==}
+
+  temporal-utils@1.0.3:
+    resolution: {integrity: sha512-9jbTSX3HvkOWvDpNpFzwX/d1mkCrgQgwLmVTOEiuocZGKHsrQJtttGZFmybJ2zYP5zCSZuU5ZyeS8+eOEPABiQ==}
 
   thenify-all@1.6.0:
     resolution: {integrity: sha512-RNxQH/qI8/t3thXJDwcstUO4zeqo64+Uy/+sNVRBx4Xn2OX+OZ9oP+iJnNFqplFra2ZUVeKCSa2oVWi3T4uVmA==}
@@ -4125,6 +4164,23 @@ snapshots:
       '@fortawesome/fontawesome-svg-core': 7.3.0
       react: 19.2.7
 
+  '@full-ui/headless-calendar@7.1.0(temporal-polyfill@1.0.5)':
+    dependencies:
+      temporal-polyfill: 1.0.5
+
+  '@fullcalendar/core@7.1.0(@full-ui/headless-calendar@7.1.0(temporal-polyfill@1.0.5))(temporal-polyfill@1.0.5)':
+    dependencies:
+      '@full-ui/headless-calendar': 7.1.0(temporal-polyfill@1.0.5)
+      temporal-polyfill: 1.0.5
+
+  '@fullcalendar/react@7.1.0(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(temporal-polyfill@1.0.5)':
+    dependencies:
+      '@full-ui/headless-calendar': 7.1.0(temporal-polyfill@1.0.5)
+      '@fullcalendar/core': 7.1.0(@full-ui/headless-calendar@7.1.0(temporal-polyfill@1.0.5))(temporal-polyfill@1.0.5)
+      react: 19.2.7
+      react-dom: 19.2.7(react@19.2.7)
+      temporal-polyfill: 1.0.5
+
   '@gerrit0/mini-shiki@3.23.0':
     dependencies:
       '@shikijs/engine-oniguruma': 3.23.0
@@ -4413,17 +4469,17 @@ snapshots:
       react: 19.2.7
       react-redux: 9.3.0(@types/react@19.2.17)(react@19.2.7)(redux@5.0.1)
 
-  '@rjsf/antd@6.6.2(@ant-design/icons@6.1.1(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(@rjsf/core@6.6.2(@rjsf/utils@6.6.2(react@19.2.7))(react@19.2.7))(@rjsf/utils@6.6.2(react@19.2.7))(antd@5.29.3(date-fns@4.4.0)(moment@2.30.1)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(date-fns@4.4.0)(dayjs@1.11.18)(moment@2.30.1)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)':
+  '@rjsf/antd@6.6.2(@ant-design/icons@6.1.1(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(@rjsf/core@6.6.2(@rjsf/utils@6.6.2(react@19.2.7))(react@19.2.7))(@rjsf/utils@6.6.2(react@19.2.7))(antd@5.29.3(date-fns@4.4.0)(moment@2.30.1)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(date-fns@4.4.0)(dayjs@1.11.23)(moment@2.30.1)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)':
     dependencies:
       '@ant-design/icons': 6.1.1(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
       '@rjsf/core': 6.6.2(@rjsf/utils@6.6.2(react@19.2.7))(react@19.2.7)
       '@rjsf/utils': 6.6.2(react@19.2.7)
       antd: 5.29.3(date-fns@4.4.0)(moment@2.30.1)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
       classnames: 2.5.1
-      dayjs: 1.11.18
+      dayjs: 1.11.23
       lodash: 4.18.1
       lodash-es: 4.18.1
-      rc-picker: 4.11.3(date-fns@4.4.0)(dayjs@1.11.18)(moment@2.30.1)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
+      rc-picker: 4.11.3(date-fns@4.4.0)(dayjs@1.11.23)(moment@2.30.1)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
       react: 19.2.7
     transitivePeerDependencies:
       - date-fns
@@ -4922,7 +4978,7 @@ snapshots:
       '@rc-component/trigger': 2.3.0(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
       classnames: 2.5.1
       copy-to-clipboard: 3.3.3
-      dayjs: 1.11.18
+      dayjs: 1.11.23
       rc-cascader: 3.34.0(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
       rc-checkbox: 3.5.0(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
       rc-collapse: 3.9.0(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
@@ -4938,7 +4994,7 @@ snapshots:
       rc-motion: 2.9.5(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
       rc-notification: 5.6.4(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
       rc-pagination: 5.1.0(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
-      rc-picker: 4.11.3(date-fns@4.4.0)(dayjs@1.11.18)(moment@2.30.1)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
+      rc-picker: 4.11.3(date-fns@4.4.0)(dayjs@1.11.23)(moment@2.30.1)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
       rc-progress: 4.0.0(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
       rc-rate: 2.13.1(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
       rc-resize-observer: 1.4.3(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
@@ -5344,7 +5400,7 @@ snapshots:
 
   date-fns@4.4.0: {}
 
-  dayjs@1.11.18: {}
+  dayjs@1.11.23: {}
 
   debug@3.2.7:
     dependencies:
@@ -6931,7 +6987,7 @@ snapshots:
       react: 19.2.7
       react-dom: 19.2.7(react@19.2.7)
 
-  rc-picker@4.11.3(date-fns@4.4.0)(dayjs@1.11.18)(moment@2.30.1)(react-dom@19.2.7(react@19.2.7))(react@19.2.7):
+  rc-picker@4.11.3(date-fns@4.4.0)(dayjs@1.11.23)(moment@2.30.1)(react-dom@19.2.7(react@19.2.7))(react@19.2.7):
     dependencies:
       '@babel/runtime': 7.28.4
       '@rc-component/trigger': 2.3.0(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
@@ -6943,7 +6999,7 @@ snapshots:
       react-dom: 19.2.7(react@19.2.7)
     optionalDependencies:
       date-fns: 4.4.0
-      dayjs: 1.11.18
+      dayjs: 1.11.23
       moment: 2.30.1
 
   rc-progress@4.0.0(react-dom@19.2.7(react@19.2.7))(react@19.2.7):
@@ -7245,6 +7301,10 @@ snapshots:
       '@rolldown/binding-win32-arm64-msvc': 1.1.3
       '@rolldown/binding-win32-x64-msvc': 1.1.3
 
+  rrule@2.8.1:
+    dependencies:
+      tslib: 2.8.1
+
   run-parallel@1.2.0:
     dependencies:
       queue-microtask: 1.2.3
@@ -7490,6 +7550,15 @@ snapshots:
     transitivePeerDependencies:
       - tsx
       - yaml
+
+  temporal-polyfill@1.0.5:
+    dependencies:
+      temporal-spec: 1.0.1
+      temporal-utils: 1.0.3
+
+  temporal-spec@1.0.1: {}
+
+  temporal-utils@1.0.3: {}
 
   thenify-all@1.6.0:
     dependencies:
