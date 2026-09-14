@@ -1,4 +1,4 @@
-import { faBullseye } from '@fortawesome/free-solid-svg-icons';
+import { faBullseye, faCircleMinus } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Collapse, Empty, Flex, Input, Skeleton, Table, Tag, Tooltip, Typography } from 'antd';
 import { ColumnsType } from 'antd/es/table';
@@ -39,7 +39,28 @@ type Props = {
 // fold into one line. Below it the rows are few enough to read as they are.
 const FOLD_THRESHOLD = 5;
 
-const PromotionCell = ({ project, row }: { project: string; row: FleetRow }) => {
+const PromotionCell = ({
+  project,
+  row,
+  blocked
+}: {
+  project: string;
+  row: FleetRow;
+  blocked: boolean;
+}) => {
+  // A blocked round never reached any Target. The drawer explains why above
+  // the tabs, so the row says only that nothing was attempted, in grey rather
+  // than the red the request's own phase would paint.
+  if (blocked) {
+    return (
+      <Flex gap={8} align='center'>
+        <FontAwesomeIcon icon={faCircleMinus} className='text-gray-300' />
+        <Typography.Text type='secondary' className='text-xs'>
+          Not attempted
+        </Typography.Text>
+      </Flex>
+    );
+  }
   if (!row.request) {
     return (
       <Typography.Text type='secondary' className='text-xs'>
@@ -113,6 +134,11 @@ export const Fleet = ({ projectName, stage }: Props) => {
 
   const freightLabel = (name: string) => getAlias(freightMap[name]) || name.slice(0, 7);
 
+  // While the round is blocked the drawer explains why above the tabs. The tab
+  // then shows which Targets the Stage governs and nothing that would restate
+  // the failure per Target: no round card, no phase chips, grey rows.
+  const blocked = !!roundBlock(round);
+
   if (targetsQuery.isLoading) {
     return <Skeleton active />;
   }
@@ -175,53 +201,57 @@ export const Fleet = ({ projectName, stage }: Props) => {
         );
       }
     },
-    {
-      title: 'Health',
-      key: 'health',
-      width: 140,
-      render: (_, row) =>
-        row.health?.status ? (
-          <Flex gap={6} align='center'>
-            <HealthStatusIcon health={row.health} className='text-xs' />
-            <Typography.Text className='text-xs'>{row.health.status}</Typography.Text>
-          </Flex>
-        ) : (
-          <Typography.Text type='secondary' className='text-xs'>
-            -
-          </Typography.Text>
-        )
-    },
+    ...(blocked
+      ? []
+      : [
+          {
+            title: 'Health',
+            key: 'health',
+            width: 140,
+            render: (_: unknown, row: FleetRow) =>
+              row.health?.status ? (
+                <Flex gap={6} align='center'>
+                  <HealthStatusIcon health={row.health} className='text-xs' />
+                  <Typography.Text className='text-xs'>{row.health.status}</Typography.Text>
+                </Flex>
+              ) : (
+                <Typography.Text type='secondary' className='text-xs'>
+                  -
+                </Typography.Text>
+              )
+          } satisfies ColumnsType<FleetRow>[number]
+        ]),
     {
       title: 'Promotion',
       key: 'promotion',
       width: 170,
-      render: (_, row) => <PromotionCell project={projectName} row={row} />
+      render: (_, row) => <PromotionCell project={projectName} row={row} blocked={blocked} />
     },
-    {
-      title: 'When',
-      key: 'when',
-      width: 170,
-      render: (_, row) => {
-        const status = row.request?.status;
-        const finished = parseDate(status?.finishedAt);
-        const started = parseDate(status?.startedAt);
-        const text = finished
-          ? `finished ${formatDistanceToNow(finished, { addSuffix: true })}`
-          : started
-            ? `started ${formatDistanceToNow(started, { addSuffix: true })}`
-            : '';
-        return (
-          <Typography.Text type='secondary' className='text-xs'>
-            {text}
-          </Typography.Text>
-        );
-      }
-    }
+    ...(blocked
+      ? []
+      : [
+          {
+            title: 'When',
+            key: 'when',
+            width: 170,
+            render: (_: unknown, row: FleetRow) => {
+              const status = row.request?.status;
+              const finished = parseDate(status?.finishedAt);
+              const started = parseDate(status?.startedAt);
+              const text = finished
+                ? `finished ${formatDistanceToNow(finished, { addSuffix: true })}`
+                : started
+                  ? `started ${formatDistanceToNow(started, { addSuffix: true })}`
+                  : '';
+              return (
+                <Typography.Text type='secondary' className='text-xs'>
+                  {text}
+                </Typography.Text>
+              );
+            }
+          } satisfies ColumnsType<FleetRow>[number]
+        ])
   ];
-
-  // While the round is blocked the drawer explains why above the tabs; a bar
-  // would only restate the same failure per Target.
-  const blocked = !!roundBlock(round);
 
   const summary = rowsSummary(rows);
   // The filter row carries the phase chips for a big round; the card carries
@@ -253,7 +283,7 @@ export const Fleet = ({ projectName, stage }: Props) => {
         />
       ) : (
         <Typography.Text type='secondary' className='text-xs'>
-          {rows.length} Target{rows.length === 1 ? '' : 's'}
+          {rows.length} Target{rows.length === 1 ? '' : 's'} governed by this Stage
           {round ? '' : ', never promoted'}
         </Typography.Text>
       )}
@@ -266,15 +296,17 @@ export const Fleet = ({ projectName, stage }: Props) => {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
-          <Flex gap={6} align='center'>
-            <Typography.Text type='secondary' className='text-xs'>
-              Show
-            </Typography.Text>
-            <Tag.CheckableTag checked={!phaseFilter} onChange={() => setPhaseFilter(undefined)}>
-              all {rows.length}
-            </Tag.CheckableTag>
-            <PhaseChips summary={summary} selected={phaseFilter} onSelect={setPhaseFilter} />
-          </Flex>
+          {!blocked && (
+            <Flex gap={6} align='center'>
+              <Typography.Text type='secondary' className='text-xs'>
+                Show
+              </Typography.Text>
+              <Tag.CheckableTag checked={!phaseFilter} onChange={() => setPhaseFilter(undefined)}>
+                all {rows.length}
+              </Tag.CheckableTag>
+              <PhaseChips summary={summary} selected={phaseFilter} onSelect={setPhaseFilter} />
+            </Flex>
+          )}
         </Flex>
       )}
       {visible.length === 0 ? (
