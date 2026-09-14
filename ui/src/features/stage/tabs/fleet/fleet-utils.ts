@@ -149,3 +149,50 @@ export const rowsSummary = (rows: FleetRow[]): PromotionRequestSummary => {
   }
   return summary;
 };
+
+// filterRows narrows rows by a free-text needle matched against the Target's
+// name and its labels as key=value, and by a Promotion phase. Either may be
+// empty.
+export const filterRows = (rows: FleetRow[], needle: string, phase?: string): FleetRow[] => {
+  const text = needle.trim().toLowerCase();
+  return rows.filter((row) => {
+    if (phase && (row.phase || 'Pending') !== phase) {
+      return false;
+    }
+    if (!text) {
+      return true;
+    }
+    const haystack = [
+      row.target.metadata?.name || '',
+      ...Object.entries(row.target.metadata?.labels || {}).map(([k, v]) => `${k}=${v}`)
+    ]
+      .join(' ')
+      .toLowerCase();
+    return haystack.includes(text);
+  });
+};
+
+// partitionRows splits rows into those that need attention -- anything that
+// did not succeed, plus anything still moving -- and those that succeeded.
+// When a round has trouble, the succeeded rows can collapse into one line so
+// the failures are the table.
+export const partitionRows = (
+  rows: FleetRow[]
+): { attention: FleetRow[]; succeeded: FleetRow[] } => {
+  const attention: FleetRow[] = [];
+  const succeeded: FleetRow[] = [];
+  for (const row of rows) {
+    (row.phase === 'Succeeded' ? succeeded : attention).push(row);
+  }
+  return { attention, succeeded };
+};
+
+// namesPreview lists the first few Target names of a set and how many more
+// there are, for a collapsed group's one-line summary.
+export const namesPreview = (rows: FleetRow[], shown = 3): string => {
+  const names = rows.map((row) => row.target.metadata?.name || '');
+  if (names.length <= shown) {
+    return names.join(', ');
+  }
+  return `${names.slice(0, shown).join(', ')} and ${names.length - shown} more`;
+};
