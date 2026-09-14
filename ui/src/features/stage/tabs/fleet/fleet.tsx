@@ -9,7 +9,6 @@ import { Link, generatePath } from 'react-router-dom';
 import { paths } from '@ui/config/paths';
 import { HealthStatusIcon } from '@ui/features/common/health-status/health-status-icon';
 import { PromotionStatusIcon } from '@ui/features/common/promotion-status/promotion-status-icon';
-import { RoundProgressBar } from '@ui/features/common/promotion-status/round-progress-bar';
 import { getAlias } from '@ui/features/common/utils';
 import { useListTargets } from '@ui/gen/api/v2/core/core';
 import { Stage } from '@ui/gen/api/v2/models';
@@ -20,6 +19,7 @@ import { blockingMessage, roundBlock } from '../../utils/promotion-request';
 import { useGetFreightMap } from '../freight-history/use-get-freight-map';
 
 import { FleetRow, fleetRows, freightNames, rowsSummary } from './fleet-utils';
+import { RoundCard } from './round-card';
 import { useWatchTargets } from './use-watch-targets';
 
 type Props = {
@@ -204,18 +204,14 @@ export const Fleet = ({ projectName, stage }: Props) => {
   return (
     <Flex vertical gap={16}>
       {round && !blocked ? (
-        <Flex gap={16} align='center' wrap>
-          <RoundProgressBar
-            // Drawn from the rows' own phases rather than the request's
-            // summary, so the bar and the table below it always agree.
-            summary={rowsSummary(rows)}
-            size='full'
-            className='w-96'
-          />
-          <Typography.Text type='secondary' className='text-xs'>
-            {rows.length} Target{rows.length === 1 ? '' : 's'}
-          </Typography.Text>
-        </Flex>
+        <RoundCard
+          projectName={projectName}
+          round={round}
+          // Drawn from the rows' own phases rather than the request's
+          // summary, so the card and the table below it always agree.
+          summary={rowsSummary(rows)}
+          freightLabel={freightLabel}
+        />
       ) : (
         <Typography.Text type='secondary' className='text-xs'>
           {rows.length} Target{rows.length === 1 ? '' : 's'}
