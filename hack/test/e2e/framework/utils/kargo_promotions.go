@@ -89,7 +89,7 @@ func StartPromotion(
 
 	timedCtx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
-	ticker := time.NewTicker(200 * time.Millisecond)
+	ticker := time.NewTicker(500 * time.Millisecond)
 	defer ticker.Stop()
 
 	for {
