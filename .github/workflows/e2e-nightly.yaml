@@ -26,6 +26,90 @@ jobs:
     - name: Set up Go
       uses: ./.github/actions/setup-go
 
+    # The test shells out to helm, kind, kargo and argocd; install them all into
+    # hack/bin, which is added to PATH for the subsequent steps.
+    - name: Add hack/bin to PATH
+      run: |
+        mkdir -p "${GITHUB_WORKSPACE}/hack/bin"
+        echo "${GITHUB_WORKSPACE}/hack/bin" >> "${GITHUB_PATH}"
+
+    - parallel:
+      - name: Cache kind
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        id: cache-kind
+        with:
+          path: ./hack/bin/kind
+          key: ${{ runner.os }}-kind
+
+      - name: Cache helm
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        id: cache-helm
+        with:
+          path: ./hack/bin/helm-*
+          key: ${{ runner.os }}-helm
+
+      - name: Cache argocd
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        id: cache-argocd
+        with:
+          path: ./hack/bin/argocd
+          key: ${{ runner.os }}-argocd
+
+    - parallel:
+      - name: Install helm
+        id: install-helm
+        run: make install-helm
+
+      - name: Build kind
+        id: install-kind
+        if: steps.cache-kind.outputs.cache-hit != 'true'
+        run: go build -o hack/bin/kind sigs.k8s.io/kind
+
+      - name: Build kargo CLI
+        run: go build -o hack/bin/kargo ./cmd/cli
+
+      - name: Install argocd CLI
+        id: install-argocd
+        if: steps.cache-argocd.outputs.cache-hit != 'true'
+        run: |
+          curl -fsSL -o hack/bin/argocd \
+            https://github.com/argoproj/argo-cd/releases/latest/download/argocd-linux-amd64
+          chmod +x hack/bin/argocd
+
+      - name: Build kargo image
+        run: |
+          make hack-build
+
+    - parallel:
+      - name: Save cache kind
+        if: steps.cache-kind.outputs.cache-hit != 'true'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ./hack/bin/kind
+          key: ${{ runner.os }}-kind
+
+      - name: Save cache helm
+        if: steps.cache-helm.outputs.cache-hit != 'true'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ./hack/bin/helm-*
+          key: ${{ runner.os }}-helm
+
+      - name: Save cache argocd
+        if: steps.cache-argocd.outputs.cache-hit != 'true'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ./hack/bin/argocd
+          key: ${{ runner.os }}-argocd
+
+    - name: Verify tools
+      run: |
+        go version
+        helm version
+        kind version
+        kargo version --client || true
+        argocd version --client
+
     # nightly_config.yaml ships with an empty `context` section. Populate it from
     # repository secrets so the git- and http-dependent suites can run. Each key
     # is only written when its secret is set; suites whose context is missing
@@ -37,7 +121,6 @@ jobs:
         ## TODO: We need to set up the endpoint to ebable that
         E2E_HTTP_ENDPOINT: ${{ secrets.E2E_HTTP_ENDPOINT }}
       run: |
-        set -x
         source=hack/test/e2e/envs/nightly_config.yaml
         cfg=hack/test/e2e/envs/nightly_config_ready.yaml
         # Drop the existing (last) context section and re-add it from secrets.
@@ -50,41 +133,6 @@ jobs:
           echo ""
         } >> "${cfg}"
 
-    # The test shells out to helm, kind, kargo and argocd; install them all into
-    # hack/bin, which is added to PATH for the subsequent steps.
-    - name: Add hack/bin to PATH
-      run: |
-        mkdir "${GITHUB_WORKSPACE}/hack/bin"
-        echo "${GITHUB_WORKSPACE}/hack/bin" >> "${GITHUB_PATH}"
-
-    - parallel:
-      - name: Install helm
-        run: make install-helm
-
-      - name: Build kind
-        run: go build -o hack/bin/kind sigs.k8s.io/kind
-
-      - name: Build kargo CLI
-        run: go build -o hack/bin/kargo ./cmd/cli
-
-      - name: Install argocd CLI
-        run: |
-          curl -fsSL -o hack/bin/argocd \
-            https://github.com/argoproj/argo-cd/releases/latest/download/argocd-linux-amd64
-          chmod +x hack/bin/argocd
-
-      - name: Build kargo image
-        run: |
-          make hack-build
-
-    - name: Verify tools
-      run: |
-        go version
-        helm version
-        kind version
-        kargo version --client || true
-        argocd version --client
-
     - name: Build e2e tests
       working-directory: hack/test/e2e
       run: |
@@ -93,4 +141,4 @@ jobs:
     - name: Run e2e tests
       working-directory: hack/test/e2e
       run: |
-        go test -tags=e2e,shared ./suites/shared -v -timeout 120m -args -env-file=nightly_config_ready.yaml
+        ./shared.test -test.v -test.timeout 120m -env-file=nightly_config_ready.yaml
