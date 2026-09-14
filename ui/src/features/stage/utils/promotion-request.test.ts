@@ -6,6 +6,7 @@ import {
   blockingMessage,
   isPromotionRequestPhaseTerminal,
   promotionRequestCompareFn,
+  roundBlock,
   targetRows
 } from './promotion-request';
 
@@ -138,5 +139,63 @@ describe('targetRows()', () => {
   test('returns no rows for a request naming no Targets', () => {
     expect(targetRows(request({}))).toEqual([]);
     expect(targetRows(undefined)).toEqual([]);
+  });
+});
+
+describe('roundBlock()', () => {
+  const blocked = (reason: string, message: string) =>
+    request({
+      status: {
+        conditions: [
+          {
+            type: 'Ready',
+            status: 'False',
+            reason,
+            message,
+            lastTransitionTime: '2026-08-13T00:00:00Z'
+          }
+        ]
+      }
+    });
+
+  test('explains the Enterprise-only reason in plain language', () => {
+    const block = roundBlock(
+      blocked('EnterpriseOnlyFeature', 'PromotionRequests are a Kargo Enterprise-only feature')
+    );
+    expect(block?.title).toBe('Fleet management is a Kargo Enterprise feature');
+    expect(block?.description).toContain('does not support');
+  });
+
+  test('passes any other reason through under a general heading', () => {
+    const block = roundBlock(blocked('TargetsMissing', 'Target us-east-1 not found'));
+    expect(block?.title).toBe('Promotion to this Stage cannot progress');
+    expect(block?.description).toBe('Target us-east-1 not found');
+  });
+
+  test('is not a block once the round has fanned out, even with failed children', () => {
+    const failedRound = blocked('PromotionsFailed', '1 of 3 Promotions did not succeed');
+    failedRound.status = {
+      ...failedRound.status,
+      phase: 'Errored',
+      summary: { succeeded: 2, errored: 1 },
+      targets: [{ name: 'eu', promotion: 'p', phase: 'Errored' }]
+    };
+    expect(roundBlock(failedRound)).toBeUndefined();
+  });
+
+  test('is undefined when the request is not blocked', () => {
+    expect(roundBlock(undefined)).toBeUndefined();
+    expect(roundBlock(request({}))).toBeUndefined();
+    expect(
+      roundBlock(
+        request({
+          status: {
+            conditions: [
+              { type: 'Ready', status: 'True', lastTransitionTime: '2026-08-13T00:00:00Z' }
+            ]
+          }
+        })
+      )
+    ).toBeUndefined();
   });
 });

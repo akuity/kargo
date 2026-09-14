@@ -1,6 +1,8 @@
 import {
   faBarsStaggered,
+  faBullseye,
   faCircleCheck,
+  faCircleExclamation,
   faCircleUp,
   faGear,
   faHistory,
@@ -20,7 +22,10 @@ import { Description } from '@ui/features/common/description';
 import { HealthStatusIcon } from '@ui/features/common/health-status/health-status-icon';
 import { useStageControllerStatus } from '@ui/features/common/stage-status/use-stage-controller-status';
 import { getCurrentFreightByWarehouse } from '@ui/features/common/utils';
-import { getLastPromotionRef } from '@ui/features/project/pipelines/nodes/stage-meta-utils';
+import {
+  getLastPromotionRef,
+  isStageTargetAware
+} from '@ui/features/project/pipelines/nodes/stage-meta-utils';
 import { getAutoPromotionHoldEntries } from '@ui/features/project/pipelines/promotion/auto-promotion';
 import { ResumeAutoPromotionDrawer } from '@ui/features/project/pipelines/promotion/resume-auto-promotion-drawer';
 import { useGetStage } from '@ui/gen/api/v2/core/core';
@@ -34,13 +39,17 @@ import { StageConditionIcon } from '../common/stage-status/stage-condition-icon'
 import { Promotions } from './promotions';
 import { RequestedFreight } from './requested-freight';
 import { StageActions } from './stage-actions';
+import { Fleet } from './tabs/fleet/fleet';
 import { FreightHistory } from './tabs/freight-history/freight-history';
 import { useGetFreightMap } from './tabs/freight-history/use-get-freight-map';
 import { StageSettings } from './tabs/settings/stage-settings';
+import { useCurrentRound } from './use-current-round';
 import { useImages } from './use-images';
+import { roundBlock } from './utils/promotion-request';
 import { Verifications } from './verifications';
 
 enum TabsTypes {
+  FLEET = 'Fleet',
   PROMOTION = 'Promotion',
   VERIFICATIONS = 'Verification',
   LIVE_MANIFEST = 'Live Manifest',
@@ -83,7 +92,17 @@ export const StageDetails = ({ stage }: { stage: Stage }) => {
 
   const stageQuery = useGetStage(projectName || '', stage?.metadata?.name || '');
 
-  const [activeTab, setActiveTab] = useState(TabsTypes.PROMOTION);
+  // The tab a user picks sticks; until then a target-aware Stage opens on its
+  // Fleet tab and a classic Stage on Promotions.
+  const [pickedTab, setActiveTab] = useState<TabsTypes>();
+  const targetAware = isStageTargetAware(stage);
+  const activeTab = pickedTab ?? (targetAware ? TabsTypes.FLEET : TabsTypes.PROMOTION);
+
+  // When a target-aware Stage's latest round cannot progress, say so once,
+  // above the tabs, so the Fleet and Promotions tabs both sit under the
+  // explanation rather than each hinting at it.
+  const round = useCurrentRound(projectName || '', stage);
+  const block = roundBlock(round);
 
   useEffect(() => {
     if (activeTab === TabsTypes.LIVE_MANIFEST) {
@@ -151,6 +170,15 @@ export const StageDetails = ({ stage }: { stage: Stage }) => {
               currentFreight={currentFreight}
             />
             <AutoPromotionHolds stage={stage} />
+            {block && (
+              <Alert
+                type='warning'
+                showIcon
+                icon={<FontAwesomeIcon icon={faCircleExclamation} />}
+                message={block.title}
+                description={block.description}
+              />
+            )}
             <Tabs
               className='flex-1'
               defaultActiveKey='1'
@@ -158,6 +186,16 @@ export const StageDetails = ({ stage }: { stage: Stage }) => {
               activeKey={activeTab}
               onChange={(newActiveTab) => setActiveTab(newActiveTab as TabsTypes)}
               items={[
+                ...(targetAware
+                  ? [
+                      {
+                        key: TabsTypes.FLEET,
+                        label: 'Fleet',
+                        icon: <FontAwesomeIcon icon={faBullseye} />,
+                        children: <Fleet projectName={projectName || ''} stage={stage} />
+                      }
+                    ]
+                  : []),
                 {
                   key: TabsTypes.PROMOTION,
                   label: 'Promotions',
