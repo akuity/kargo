@@ -5,28 +5,31 @@ import { runSeededWatch, upsertOrDelete } from '@ui/features/project/pipelines/w
 import { getListTargetsQueryKey, listTargetsResponse } from '@ui/gen/api/v2/core/core';
 import { Target } from '@ui/gen/api/v2/models';
 
-// useWatchTargets keeps the list of Targets a Stage governs current. It
-// updates the query issued with the same `stage` param, since that forms the
-// query key. As with the other collection watches, `enabled` gates it on the
-// initial list having loaded so the watch is always seeded with a
-// resourceVersion.
-export const useWatchTargets = (project: string, stage: string, enabled = true) => {
+// useWatchTargets keeps a Target list current. With a stage, it follows the
+// Targets that Stage governs; without one, every Target in the project. It
+// updates the query issued with the same params, since they form the query
+// key. As with the other collection watches, `enabled` gates it on the initial
+// list having loaded so the watch is always seeded with a resourceVersion.
+export const useWatchTargets = (project: string, stage?: string, enabled = true) => {
   const client = useQueryClient();
 
   useEffect(() => {
-    if (!project || !stage || !enabled) {
+    if (!project || !enabled) {
       return;
     }
 
     const abort = new AbortController();
-    const listKey = getListTargetsQueryKey(project, { stage });
+    const listKey = getListTargetsQueryKey(project, stage ? { stage } : undefined);
 
     const seedResourceVersion = () =>
       (client.getQueryData(listKey) as listTargetsResponse | undefined)?.data?.metadata
         ?.resourceVersion;
 
     const buildUrl = (resourceVersion: string) => {
-      const params = new URLSearchParams({ watch: 'true', stage });
+      const params = new URLSearchParams({ watch: 'true' });
+      if (stage) {
+        params.append('stage', stage);
+      }
       if (resourceVersion) {
         params.append('resourceVersion', resourceVersion);
       }
