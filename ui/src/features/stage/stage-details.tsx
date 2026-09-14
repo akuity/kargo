@@ -1,5 +1,6 @@
 import {
   faBarsStaggered,
+  faBullseye,
   faCircleCheck,
   faCircleUp,
   faGear,
@@ -20,7 +21,10 @@ import { Description } from '@ui/features/common/description';
 import { HealthStatusIcon } from '@ui/features/common/health-status/health-status-icon';
 import { useStageControllerStatus } from '@ui/features/common/stage-status/use-stage-controller-status';
 import { getCurrentFreightByWarehouse } from '@ui/features/common/utils';
-import { getLastPromotionRef } from '@ui/features/project/pipelines/nodes/stage-meta-utils';
+import {
+  getLastPromotionRef,
+  isStageTargetAware
+} from '@ui/features/project/pipelines/nodes/stage-meta-utils';
 import { getAutoPromotionHoldEntries } from '@ui/features/project/pipelines/promotion/auto-promotion';
 import { ResumeAutoPromotionDrawer } from '@ui/features/project/pipelines/promotion/resume-auto-promotion-drawer';
 import { useGetStage } from '@ui/gen/api/v2/core/core';
@@ -34,6 +38,7 @@ import { StageConditionIcon } from '../common/stage-status/stage-condition-icon'
 import { Promotions } from './promotions';
 import { RequestedFreight } from './requested-freight';
 import { StageActions } from './stage-actions';
+import { Fleet } from './tabs/fleet/fleet';
 import { FreightHistory } from './tabs/freight-history/freight-history';
 import { useGetFreightMap } from './tabs/freight-history/use-get-freight-map';
 import { StageSettings } from './tabs/settings/stage-settings';
@@ -41,6 +46,7 @@ import { useImages } from './use-images';
 import { Verifications } from './verifications';
 
 enum TabsTypes {
+  FLEET = 'Fleet',
   PROMOTION = 'Promotion',
   VERIFICATIONS = 'Verification',
   LIVE_MANIFEST = 'Live Manifest',
@@ -83,7 +89,11 @@ export const StageDetails = ({ stage }: { stage: Stage }) => {
 
   const stageQuery = useGetStage(projectName || '', stage?.metadata?.name || '');
 
-  const [activeTab, setActiveTab] = useState(TabsTypes.PROMOTION);
+  // The tab a user picks sticks; until then a target-aware Stage opens on its
+  // Fleet tab and a classic Stage on Promotions.
+  const [pickedTab, setActiveTab] = useState<TabsTypes>();
+  const targetAware = isStageTargetAware(stage);
+  const activeTab = pickedTab ?? (targetAware ? TabsTypes.FLEET : TabsTypes.PROMOTION);
 
   useEffect(() => {
     if (activeTab === TabsTypes.LIVE_MANIFEST) {
@@ -158,6 +168,16 @@ export const StageDetails = ({ stage }: { stage: Stage }) => {
               activeKey={activeTab}
               onChange={(newActiveTab) => setActiveTab(newActiveTab as TabsTypes)}
               items={[
+                ...(targetAware
+                  ? [
+                      {
+                        key: TabsTypes.FLEET,
+                        label: 'Fleet',
+                        icon: <FontAwesomeIcon icon={faBullseye} />,
+                        children: <Fleet projectName={projectName || ''} stage={stage} />
+                      }
+                    ]
+                  : []),
                 {
                   key: TabsTypes.PROMOTION,
                   label: 'Promotions',
