@@ -1,9 +1,9 @@
 import { faBullseye } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { Empty, Flex, Skeleton, Table, Tag, Tooltip, Typography } from 'antd';
+import { Collapse, Empty, Flex, Input, Skeleton, Table, Tag, Tooltip, Typography } from 'antd';
 import { ColumnsType } from 'antd/es/table';
 import { formatDistanceToNow } from 'date-fns';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { Link, generatePath } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
@@ -18,14 +18,26 @@ import { useCurrentRound } from '../../use-current-round';
 import { blockingMessage, roundBlock } from '../../utils/promotion-request';
 import { useGetFreightMap } from '../freight-history/use-get-freight-map';
 
-import { FleetRow, fleetRows, freightNames, rowsSummary } from './fleet-utils';
-import { RoundCard } from './round-card';
+import {
+  FleetRow,
+  filterRows,
+  fleetRows,
+  freightNames,
+  namesPreview,
+  partitionRows,
+  rowsSummary
+} from './fleet-utils';
+import { PhaseChips, RoundCard } from './round-card';
 import { useWatchTargets } from './use-watch-targets';
 
 type Props = {
   projectName: string;
   stage: Stage;
 };
+
+// FOLD_THRESHOLD is how many succeeded rows a troubled round needs before they
+// fold into one line. Below it the rows are few enough to read as they are.
+const FOLD_THRESHOLD = 5;
 
 const PromotionCell = ({ project, row }: { project: string; row: FleetRow }) => {
   if (!row.request) {
@@ -88,6 +100,16 @@ export const Fleet = ({ projectName, stage }: Props) => {
     () => fleetRows(stage, targetsQuery.data?.data?.items || [], round),
     [stage, targetsQuery.data, round]
   );
+
+  const [search, setSearch] = useState('');
+  const [phaseFilter, setPhaseFilter] = useState<string>();
+  const visible = useMemo(() => filterRows(rows, search, phaseFilter), [rows, search, phaseFilter]);
+
+  // When a round has trouble, its succeeded rows fold into one line so the
+  // failures are the table. A handful of rows is not worth folding, and a
+  // phase filter already narrows the table, so neither folds.
+  const { attention, succeeded } = useMemo(() => partitionRows(visible), [visible]);
+  const fold = !phaseFilter && attention.length > 0 && succeeded.length > FOLD_THRESHOLD;
 
   const freightLabel = (name: string) => getAlias(freightMap[name]) || name.slice(0, 7);
 
@@ -201,6 +223,22 @@ export const Fleet = ({ projectName, stage }: Props) => {
   // would only restate the same failure per Target.
   const blocked = !!roundBlock(round);
 
+  const summary = rowsSummary(rows);
+  // The filter row carries the phase chips for a big round; the card carries
+  // them for a small one, so they appear exactly once.
+  const showFilters = rows.length > FOLD_THRESHOLD;
+
+  const table = (data: FleetRow[], showHeader = true) => (
+    <Table
+      dataSource={data}
+      columns={columns}
+      size='small'
+      pagination={false}
+      showHeader={showHeader}
+      rowKey={(row) => row.target.metadata?.name || ''}
+    />
+  );
+
   return (
     <Flex vertical gap={16}>
       {round && !blocked ? (
@@ -209,8 +247,9 @@ export const Fleet = ({ projectName, stage }: Props) => {
           round={round}
           // Drawn from the rows' own phases rather than the request's
           // summary, so the card and the table below it always agree.
-          summary={rowsSummary(rows)}
+          summary={summary}
           freightLabel={freightLabel}
+          showChips={!showFilters}
         />
       ) : (
         <Typography.Text type='secondary' className='text-xs'>
@@ -218,19 +257,58 @@ export const Fleet = ({ projectName, stage }: Props) => {
           {round ? '' : ', never promoted'}
         </Typography.Text>
       )}
-      {rows.length === 0 ? (
+      {showFilters && (
+        <Flex justify='space-between' align='center' gap={16} wrap>
+          <Input.Search
+            allowClear
+            placeholder='Filter Targets by name or label'
+            className='w-80'
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+          <Flex gap={6} align='center'>
+            <Typography.Text type='secondary' className='text-xs'>
+              Show
+            </Typography.Text>
+            <Tag.CheckableTag checked={!phaseFilter} onChange={() => setPhaseFilter(undefined)}>
+              all {rows.length}
+            </Tag.CheckableTag>
+            <PhaseChips summary={summary} selected={phaseFilter} onSelect={setPhaseFilter} />
+          </Flex>
+        </Flex>
+      )}
+      {visible.length === 0 ? (
         <Empty
           image={Empty.PRESENTED_IMAGE_SIMPLE}
-          description="No Targets match this Stage's selectors"
+          description={rows.length ? 'No Targets match' : "No Targets match this Stage's selectors"}
         />
+      ) : fold ? (
+        <Flex vertical>
+          {table(attention)}
+          <Collapse
+            ghost
+            size='small'
+            items={[
+              {
+                key: 'succeeded',
+                label: (
+                  <Flex gap={8} align='center' className='text-xs'>
+                    <PromotionStatusIcon status={{ phase: 'Succeeded' }} />
+                    <Typography.Text className='text-xs font-semibold'>
+                      {succeeded.length} succeeded
+                    </Typography.Text>
+                    <Typography.Text type='secondary' className='text-xs'>
+                      {namesPreview(succeeded)}
+                    </Typography.Text>
+                  </Flex>
+                ),
+                children: table(succeeded, false)
+              }
+            ]}
+          />
+        </Flex>
       ) : (
-        <Table
-          dataSource={rows}
-          columns={columns}
-          size='small'
-          pagination={false}
-          rowKey={(row) => row.target.metadata?.name || ''}
-        />
+        table(visible)
       )}
     </Flex>
   );
