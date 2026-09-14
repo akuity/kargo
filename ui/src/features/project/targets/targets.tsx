@@ -26,6 +26,21 @@ import {
 // the empty string cannot collide with a real key.
 const NO_GROUPING = '';
 
+// A fleet can run to hundreds of Targets, so tables paginate client-side: the
+// whole list is already loaded and kept live, only the rendering is paged. The
+// single ungrouped table offers a choice of page size; a group's table is one
+// of many on the page, so it keeps a short fixed page and hides the pager when
+// it fits.
+const ungroupedPagination = {
+  defaultPageSize: 20,
+  pageSizeOptions: [20, 50, 100],
+  showSizeChanger: true,
+  hideOnSinglePage: true,
+  showTotal: (total: number, range: [number, number]) =>
+    `${range[0]}-${range[1]} of ${total} Targets`
+};
+const groupPagination = { pageSize: 10, hideOnSinglePage: true };
+
 /**
  * Targets lists a project's Targets and, for each, the Stages that govern it.
  * Each Stage is the coloured pill the pipeline paints it with, and opens the
@@ -174,7 +189,7 @@ export const Targets = () => {
             dataSource={group.rows}
             columns={columns}
             size='small'
-            pagination={false}
+            pagination={groupKey ? groupPagination : ungroupedPagination}
             rowKey={(row) => row.target.metadata?.name || ''}
           />
         </Flex>
