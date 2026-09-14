@@ -38,6 +38,7 @@ type chartSubscriber struct {
 	newSelectorFn func(
 		ctx context.Context,
 		sub kargoapi.ChartSubscription,
+		discoveryLimit int,
 		creds *helm.Credentials,
 	) (chart.Selector, error)
 }
@@ -57,14 +58,8 @@ func newChartSubscriber(
 // ApplySubscriptionDefaults implements Subscriber.
 func (c *chartSubscriber) ApplySubscriptionDefaults(
 	_ context.Context,
-	sub *kargoapi.RepoSubscription,
+	_ *kargoapi.RepoSubscription,
 ) error {
-	if sub == nil || sub.Chart == nil {
-		return nil
-	}
-	if sub.Chart != nil && sub.Chart.DiscoveryLimit == 0 {
-		sub.Chart.DiscoveryLimit = 20
-	}
 	return nil
 }
 
@@ -125,10 +120,9 @@ func (c *chartSubscriber) ValidateSubscription(
 		errs = append(errs, err)
 	}
 
-	// Validate DiscoveryLimit: Minimum=1, Maximum=100
-	if sub.DiscoveryLimit < 1 {
-		errs = append(errs, field.Invalid(f.Child("discoveryLimit"), sub.DiscoveryLimit, "must be >= 1"))
-	} else if sub.DiscoveryLimit > 100 {
+	// Lower-bound validation is moved to base subscription validation
+	// TODO: clean this up when removing DiscoveryLimits from specific subscriptions
+	if sub.DiscoveryLimit > 100 {
 		errs = append(errs, field.Invalid(f.Child("discoveryLimit"), sub.DiscoveryLimit, "must be <= 100"))
 	}
 
@@ -177,7 +171,14 @@ func (c *chartSubscriber) DiscoverArtifacts(
 		logger.Debug("found no credentials for chart repo")
 	}
 
-	selector, err := c.newSelectorFn(ctx, *chartSub, helmCreds)
+	// TODO: clean this up when removing DiscoveryLimits from specific subscriptions
+	discoveryLimit := sub.DiscoveryLimit
+	if discoveryLimit == 0 {
+		// Fallback to internal limit
+		discoveryLimit = chartSub.DiscoveryLimit
+	}
+
+	selector, err := c.newSelectorFn(ctx, *chartSub, int(discoveryLimit), helmCreds)
 	if err != nil {
 		return nil, fmt.Errorf(
 			"error obtaining selector for chart versions from helm chart repo %q: %w",
@@ -201,7 +202,7 @@ func (c *chartSubscriber) DiscoverArtifacts(
 		RepoURL:          chartSub.RepoURL,
 		Name:             chartSub.Name,
 		SemverConstraint: chartSub.SemverConstraint,
-		Versions:         trimSlice(versions, int(chartSub.DiscoveryLimit)),
+		Versions:         trimSlice(versions, int(discoveryLimit)),
 		SubscriptionName: sub.Name,
 	}, nil
 }

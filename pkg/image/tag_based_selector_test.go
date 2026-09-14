@@ -83,7 +83,7 @@ func TestNewTagBasedSelector(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			s, err := newTagBasedSelector(testCase.sub, nil)
+			s, err := newTagBasedSelector(testCase.sub, 20, nil)
 			testCase.assertions(t, s, err)
 		})
 	}

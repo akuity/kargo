@@ -58,9 +58,10 @@ func compileRegexes(regexStrs []string) ([]*regexp.Regexp, error) {
 
 func newTagBasedSelector(
 	sub kargoapi.GitSubscription,
+	discoveryLimit int,
 	creds *git.RepoCredentials,
 ) (*tagBasedSelector, error) {
-	base, err := newBaseSelector(sub, creds)
+	base, err := newBaseSelector(sub, discoveryLimit, creds)
 	if err != nil {
 		return nil, fmt.Errorf("error building base selector: %w", err)
 	}
