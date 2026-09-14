@@ -20,6 +20,17 @@
 # them at all. Dependabot can neither tell the roles apart nor move a role's
 # pins in lock-step, so raising Go is a coordinated, whole-branch change made
 # by hand. The comment at each pin says which role it serves.
+#
+# golangci-lint is excluded from the gomod ecosystem on the release branches
+# that still have a hack/tools module. Nothing is built from that module;
+# hack/tools.mk greps it for the version of the prebuilt linter binary to
+# install. Raising the linter on a stable branch changes what CI enforces and
+# can only turn up new findings in code that is already frozen.
+#
+# google.golang.org/api is excluded on the release branches because its own
+# go.mod pins google.golang.org/grpc and google.golang.org/protobuf. Raising it
+# drags both past the versions frozen here, so ignoring those two by name does
+# not hold on its own.
 version: 2
 updates:
   # ----------------------------- main -----------------------------
@@ -212,8 +223,10 @@ updates:
     - dependency-name: "google.golang.org/grpc"
     - dependency-name: "github.com/grpc-ecosystem/*"
     - dependency-name: "*protobuf*"
+    - dependency-name: "google.golang.org/api"
     - dependency-name: "helm.sh/helm/v3"
-    - dependency-name: "connectrpc.com/connect"
+    - dependency-name: "connectrpc.com/*"
+    - dependency-name: "github.com/bufbuild/buf"
     commit-message:
       prefix: "chore(deps):"
     groups:
@@ -239,8 +252,10 @@ updates:
     - dependency-name: "google.golang.org/grpc"
     - dependency-name: "github.com/grpc-ecosystem/*"
     - dependency-name: "*protobuf*"
+    - dependency-name: "google.golang.org/api"
     - dependency-name: "helm.sh/helm/v3"
-    - dependency-name: "connectrpc.com/connect"
+    - dependency-name: "connectrpc.com/*"
+    - dependency-name: "github.com/bufbuild/buf"
     commit-message:
       prefix: "chore(deps/api):"
     groups:
@@ -268,8 +283,10 @@ updates:
     - dependency-name: "google.golang.org/grpc"
     - dependency-name: "github.com/grpc-ecosystem/*"
     - dependency-name: "*protobuf*"
+    - dependency-name: "google.golang.org/api"
     - dependency-name: "helm.sh/helm/v3"
-    - dependency-name: "connectrpc.com/connect"
+    - dependency-name: "connectrpc.com/*"
+    - dependency-name: "github.com/bufbuild/buf"
     commit-message:
       prefix: "chore(deps/client):"
     groups:
@@ -348,9 +365,11 @@ updates:
     - dependency-name: "google.golang.org/grpc"
     - dependency-name: "github.com/grpc-ecosystem/*"
     - dependency-name: "*protobuf*"
+    - dependency-name: "google.golang.org/api"
     - dependency-name: "oras.land/*"
     - dependency-name: "helm.sh/helm/v3"
-    - dependency-name: "connectrpc.com/connect"
+    - dependency-name: "connectrpc.com/*"
+    - dependency-name: "github.com/bufbuild/buf"
     commit-message:
       prefix: "chore(deps):"
     groups:
@@ -376,9 +395,11 @@ updates:
     - dependency-name: "google.golang.org/grpc"
     - dependency-name: "github.com/grpc-ecosystem/*"
     - dependency-name: "*protobuf*"
+    - dependency-name: "google.golang.org/api"
     - dependency-name: "oras.land/*"
     - dependency-name: "helm.sh/helm/v3"
-    - dependency-name: "connectrpc.com/connect"
+    - dependency-name: "connectrpc.com/*"
+    - dependency-name: "github.com/bufbuild/buf"
     commit-message:
       prefix: "chore(deps/api):"
     groups:
@@ -404,9 +425,12 @@ updates:
     - dependency-name: "google.golang.org/grpc"
     - dependency-name: "github.com/grpc-ecosystem/*"
     - dependency-name: "*protobuf*"
+    - dependency-name: "google.golang.org/api"
     - dependency-name: "oras.land/*"
     - dependency-name: "helm.sh/helm/v3"
-    - dependency-name: "connectrpc.com/connect"
+    - dependency-name: "connectrpc.com/*"
+    - dependency-name: "github.com/bufbuild/buf"
+    - dependency-name: "github.com/golangci/golangci-lint*"
     commit-message:
       prefix: "chore(deps/hack):"
     groups:
@@ -432,9 +456,11 @@ updates:
     - dependency-name: "google.golang.org/grpc"
     - dependency-name: "github.com/grpc-ecosystem/*"
     - dependency-name: "*protobuf*"
+    - dependency-name: "google.golang.org/api"
     - dependency-name: "oras.land/*"
     - dependency-name: "helm.sh/helm/v3"
-    - dependency-name: "connectrpc.com/connect"
+    - dependency-name: "connectrpc.com/*"
+    - dependency-name: "github.com/bufbuild/buf"
     commit-message:
       prefix: "chore(deps/client):"
     groups:
@@ -513,9 +539,11 @@ updates:
     - dependency-name: "google.golang.org/grpc"
     - dependency-name: "github.com/grpc-ecosystem/*"
     - dependency-name: "*protobuf*"
+    - dependency-name: "google.golang.org/api"
     - dependency-name: "oras.land/*"
     - dependency-name: "helm.sh/helm/v3"
-    - dependency-name: "connectrpc.com/connect"
+    - dependency-name: "connectrpc.com/*"
+    - dependency-name: "github.com/bufbuild/buf"
     commit-message:
       prefix: "chore(deps):"
     groups:
@@ -541,9 +569,11 @@ updates:
     - dependency-name: "google.golang.org/grpc"
     - dependency-name: "github.com/grpc-ecosystem/*"
     - dependency-name: "*protobuf*"
+    - dependency-name: "google.golang.org/api"
     - dependency-name: "oras.land/*"
     - dependency-name: "helm.sh/helm/v3"
-    - dependency-name: "connectrpc.com/connect"
+    - dependency-name: "connectrpc.com/*"
+    - dependency-name: "github.com/bufbuild/buf"
     commit-message:
       prefix: "chore(deps/api):"
     groups:
@@ -569,9 +599,12 @@ updates:
     - dependency-name: "google.golang.org/grpc"
     - dependency-name: "github.com/grpc-ecosystem/*"
     - dependency-name: "*protobuf*"
+    - dependency-name: "google.golang.org/api"
     - dependency-name: "oras.land/*"
     - dependency-name: "helm.sh/helm/v3"
-    - dependency-name: "connectrpc.com/connect"
+    - dependency-name: "connectrpc.com/*"
+    - dependency-name: "github.com/bufbuild/buf"
+    - dependency-name: "github.com/golangci/golangci-lint*"
     commit-message:
       prefix: "chore(deps/hack):"
     groups:
@@ -650,9 +683,11 @@ updates:
     - dependency-name: "google.golang.org/grpc"
     - dependency-name: "github.com/grpc-ecosystem/*"
     - dependency-name: "*protobuf*"
+    - dependency-name: "google.golang.org/api"
     - dependency-name: "oras.land/*"
     - dependency-name: "helm.sh/helm/v3"
-    - dependency-name: "connectrpc.com/connect"
+    - dependency-name: "connectrpc.com/*"
+    - dependency-name: "github.com/bufbuild/buf"
     commit-message:
       prefix: "chore(deps):"
     groups:
@@ -678,9 +713,11 @@ updates:
     - dependency-name: "google.golang.org/grpc"
     - dependency-name: "github.com/grpc-ecosystem/*"
     - dependency-name: "*protobuf*"
+    - dependency-name: "google.golang.org/api"
     - dependency-name: "oras.land/*"
     - dependency-name: "helm.sh/helm/v3"
-    - dependency-name: "connectrpc.com/connect"
+    - dependency-name: "connectrpc.com/*"
+    - dependency-name: "github.com/bufbuild/buf"
     commit-message:
       prefix: "chore(deps/api):"
     groups:
@@ -706,9 +743,12 @@ updates:
     - dependency-name: "google.golang.org/grpc"
     - dependency-name: "github.com/grpc-ecosystem/*"
     - dependency-name: "*protobuf*"
+    - dependency-name: "google.golang.org/api"
     - dependency-name: "oras.land/*"
     - dependency-name: "helm.sh/helm/v3"
-    - dependency-name: "connectrpc.com/connect"
+    - dependency-name: "connectrpc.com/*"
+    - dependency-name: "github.com/bufbuild/buf"
+    - dependency-name: "github.com/golangci/golangci-lint*"
     commit-message:
       prefix: "chore(deps/hack):"
     groups:
