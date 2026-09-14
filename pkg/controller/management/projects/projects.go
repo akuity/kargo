@@ -206,6 +206,30 @@ func SetupReconcilerWithManager(
 		return fmt.Errorf("unable to watch Stages: %w", err)
 	}
 
+	// Watch for PromotionRequests whose outcome changed, since a Project's
+	// Target stats are summed from them.
+	if err = c.Watch(
+		source.Kind(
+			kargoMgr.GetCache(),
+			&kargoapi.PromotionRequest{},
+			&projectPromotionRequestEnqueuer[*kargoapi.PromotionRequest]{},
+		),
+	); err != nil {
+		return fmt.Errorf("unable to watch PromotionRequests: %w", err)
+	}
+
+	// Watch for Targets appearing or disappearing, since a Project's Target
+	// stats count them.
+	if err = c.Watch(
+		source.Kind(
+			kargoMgr.GetCache(),
+			&kargoapi.Target{},
+			&projectTargetCountEnqueuer[*kargoapi.Target]{},
+		),
+	); err != nil {
+		return fmt.Errorf("unable to watch Targets: %w", err)
+	}
+
 	logging.LoggerFromContext(ctx).Info(
 		"Initialized Project reconciler",
 		"maxConcurrentReconciles", cfg.MaxConcurrentReconciles,

@@ -57,6 +57,36 @@ type ProjectStats struct {
 	Warehouses WarehouseStats `json:"warehouses,omitempty"`
 	// Stages contains a summary of the collective state of the Project's Stages.
 	Stages StageStats `json:"stages,omitempty"`
+	// Targets contains a summary of the Project's Targets and of how the latest
+	// round of promotion to them fared. It is absent for a Project with no
+	// Targets and no target-aware Stages.
+	//
+	// +optional
+	Targets *TargetStats `json:"targets,omitempty"`
+}
+
+// TargetStats contains a summary of a Project's Targets and of the latest
+// round of promotion to them. Every tally in it is over Stage and Target
+// pairs: a Target governed by two Stages is counted once in Count and once per
+// Stage everywhere else, since each Stage promotes to it separately. The total
+// of a tally, not Count, is therefore the denominator for a progress bar.
+//
+// Promotion is the only tally today. Verification and health tallies will join
+// it once Target status records those per Stage.
+type TargetStats struct {
+	// Count contains the number of distinct Targets in the Project.
+	Count int64 `json:"count,omitempty"`
+	// Promotion sums, across every target-aware Stage in the Project, the
+	// per-Target outcome of that Stage's latest PromotionRequest -- the one it
+	// reports as current, else as last. A request that has not yet fanned out
+	// contributes all its Targets as Pending while it runs, or all of them under
+	// its own phase if it ended before creating any child Promotion.
+	Promotion PromotionRequestSummary `json:"promotion,omitempty"`
+	// Unknown contains the number of target-aware Stages whose latest
+	// PromotionRequest no longer exists, typically because it was garbage
+	// collected. Their outcome cannot be determined and is not reflected in
+	// Promotion.
+	Unknown int64 `json:"unknown,omitempty"`
 }
 
 // WarehouseStats contains a summary of the collective state of a Project's
