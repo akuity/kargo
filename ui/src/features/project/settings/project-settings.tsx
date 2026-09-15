@@ -11,6 +11,7 @@ import {
 } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Breadcrumb, Flex, Menu, Skeleton, Typography } from 'antd';
+import classNames from 'classnames';
 import React from 'react';
 import { NavLink, Route, Routes, useLocation, useParams, Navigate } from 'react-router-dom';
 
@@ -121,6 +122,46 @@ export const ProjectSettings = () => {
 
   const wide = routableViews.some((view) => view.wide && location.pathname.endsWith(view.path));
 
+  const menuItems = React.useMemo(
+    () =>
+      views.flatMap((view) => {
+        const children = view.children ?? [];
+        const onSubpage = children.some((child) => location.pathname.endsWith(child.path));
+
+        return [
+          {
+            label: (
+              <NavLink to={`../${view.path}`} style={{ color: 'inherit' }}>
+                {view.label}
+              </NavLink>
+            ),
+            icon: <FontAwesomeIcon icon={view.icon} />,
+            key: view.path,
+            // The `!`s beat AntD's own rules for these properties.
+            className: classNames('!pl-3', {
+              '!text-[var(--kargo-color-text-base)]': onSubpage
+            })
+          },
+          ...children.map((child) => ({
+            label: (
+              <NavLink to={`../${child.path}`} style={{ color: 'inherit' }}>
+                {child.label}
+              </NavLink>
+            ),
+            key: child.path,
+            // `overflow-visible` keeps AntD from clipping the guide line;
+            // labels still ellipsize via its rule on `.ant-menu-title-content`.
+            className: classNames(
+              'relative !overflow-visible !ms-8 !w-auto !pl-2',
+              "before:absolute before:content-[''] before:-left-[9px] before:-top-1",
+              'before:-bottom-1 before:w-px before:bg-[var(--kargo-color-border)]'
+            )
+          }))
+        ];
+      }),
+    [views, location.pathname]
+  );
+
   const projectBreadcrumbs = useProjectBreadcrumbs();
   const { name } = useParams();
   useDocumentTitle(['Settings', name]);
@@ -144,28 +185,13 @@ export const ProjectSettings = () => {
           <div style={{ width: 240 }}>
             <Skeleton loading={getConfigQuery.isFetching} active paragraph={{ rows: 6 }}>
               <Menu
-                className='-ml-2 -mt-1'
+                className='-mt-1'
                 mode='inline'
                 style={{ border: 0, background: 'transparent' }}
                 selectedKeys={routableViews
                   .map((i) => i.path)
                   .filter((i) => location.pathname.endsWith(i))}
-                openKeys={[settingsViews.projectConfig.path]}
-                expandIcon={null}
-                items={views.map((i) => ({
-                  label: (
-                    <NavLink to={`../${i.path}`} style={{ color: 'inherit' }}>
-                      {i.label}
-                    </NavLink>
-                  ),
-                  icon: <FontAwesomeIcon icon={i.icon} />,
-                  key: i.path,
-                  children: i.children?.map((child) => ({
-                    label: <NavLink to={`../${child.path}`}>{child.label}</NavLink>,
-                    icon: <FontAwesomeIcon icon={child.icon} />,
-                    key: child.path
-                  }))
-                }))}
+                items={menuItems}
               />
             </Skeleton>
           </div>
