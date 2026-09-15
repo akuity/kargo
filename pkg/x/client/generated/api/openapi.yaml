@@ -3992,8 +3992,10 @@ components:
         origin:
           description: |-
             Origin is the canonical Freight origin key (e.g. "Warehouse/foo"). When
-            set, the promotion webhook resolves it to the current auto-promotion
-            candidate. Exactly one of Freight, FreightAlias, or Origin must be set.
+            set, admission resolves it to the current auto-promotion candidate --
+            via the Promotion defaulting webhook, or the PromotionRequest defaulting
+            webhook for a Stage that selects Targets. Exactly one of Freight,
+            FreightAlias, or Origin must be set.
           type: string
       type: object
     PublicConfig:
@@ -13534,14 +13536,29 @@ components:
           description: |-
             Freight specifies the piece of Freight promoted by the Stage.
             The Freight MUST be in the same namespace as the PromotionRequest.
+            Exactly one of Freight or Origin must be set. Once set, Freight is
+            immutable -- this is enforced by a transition rule on the spec rather
+            than on this field, since a rule here would not be evaluated on an
+            update that omits the field entirely.
 
-            +kubebuilder:validation:Required
+            +kubebuilder:validation:Optional
             +kubebuilder:validation:MinLength=1
             +kubebuilder:validation:MaxLength=253
             +kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`
             +akuity:test-kubebuilder-pattern=KubernetesName
-            +kubebuilder:validation:XValidation:rule="self == oldSelf"
           type: string
+        origin:
+          allOf:
+          - $ref: "#/components/schemas/FreightOrigin"
+          description: |-
+            Origin, when set, identifies the FreightOrigin whose auto-promotion
+            candidate should be promoted. The PromotionRequest defaulting webhook
+            resolves this to the candidate Freight for that origin and fills Freight
+            before the PromotionRequest is persisted. Exactly one of Freight or
+            Origin must be set.
+
+            +kubebuilder:validation:Optional
+          type: object
         stage:
           description: |-
             Stage specifies the name of the Stage that promotes the Freight.
@@ -13581,7 +13598,6 @@ components:
             $ref: "#/components/schemas/PromotionRequestTarget"
           type: array
       required:
-      - freight
       - stage
       - targets
       type: object

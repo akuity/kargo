@@ -43,13 +43,42 @@ func (s *server) recordPromotionCreatedEvent(
 	}
 }
 
+// createPromotionRequestAndRespond stamps the requesting user on the
+// PromotionRequest, creates it, and writes it to the response.
+//
+// The create goes through the internal client, as does the Target lookup its
+// callers perform to construct the PromotionRequest. PromotionRequests are
+// system-owned, and the promote-verb check the endpoint has already performed
+// IS the authorization decision for the request; which Targets the Stage
+// governs is a detail of carrying it out. Resolving as the user would also
+// break the kargo-promoter role, which holds the promote verb but no
+// permission to list Targets.
+func (s *server) createPromotionRequestAndRespond(
+	c *gin.Context,
+	promotionRequest *kargoapi.PromotionRequest,
+) {
+	ctx := c.Request.Context()
+	if u, ok := user.InfoFromContext(ctx); ok {
+		api.SetCreateActorAnnotation(promotionRequest, api.FormatEventUserActor(u))
+	}
+	if err := s.client.InternalClient().Create(ctx, promotionRequest); err != nil {
+		_ = c.Error(err)
+		return
+	}
+	// No event is recorded: Kargo's promotion events carry a Promotion, and
+	// a PromotionRequest has none of its own.
+	c.JSON(http.StatusCreated, promotionRequest)
+}
+
 // promoteToStageRequest represents the request body for the PromoteToStage REST endpoint.
 type promoteToStageRequest struct {
 	Freight      string `json:"freight,omitempty"`
 	FreightAlias string `json:"freightAlias,omitempty"`
 	// Origin is the canonical Freight origin key (e.g. "Warehouse/foo"). When
-	// set, the promotion webhook resolves it to the current auto-promotion
-	// candidate. Exactly one of Freight, FreightAlias, or Origin must be set.
+	// set, admission resolves it to the current auto-promotion candidate --
+	// via the Promotion defaulting webhook, or the PromotionRequest defaulting
+	// webhook for a Stage that selects Targets. Exactly one of Freight,
+	// FreightAlias, or Origin must be set.
 	Origin string `json:"origin,omitempty"`
 } // @name PromoteToStageRequest
 
@@ -127,21 +156,6 @@ func (s *server) promoteToStage(c *gin.Context) {
 	}
 
 	if req.Origin != "" {
-		if api.IsTargetAware(stage) {
-			// Promotion by origin relies on the Promotion defaulting webhook to
-			// resolve the origin to a candidate Freight at admission time.
-			// PromotionRequests have no such webhook, so there is nothing to resolve
-			// the origin. Refuse rather than silently create a Promotion that
-			// bypasses the Stage's Targets.
-			_ = c.Error(libhttp.ErrorStr(
-				fmt.Sprintf(
-					"promotion by origin is not supported for Stage %q, which selects Targets",
-					stageName,
-				),
-				http.StatusBadRequest,
-			))
-			return
-		}
 		// Let admission resolve the origin to the auto-promotion candidate
 		// Freight. That keeps "promote by origin" race-free for REST clients.
 		origin, parseErr := kargoapi.ParseFreightOrigin(req.Origin)
@@ -150,6 +164,21 @@ func (s *server) promoteToStage(c *gin.Context) {
 				fmt.Sprintf("invalid origin %q: %s", req.Origin, parseErr),
 				http.StatusBadRequest,
 			))
+			return
+		}
+		// A Stage that selects Targets fans Freight out to them via a
+		// PromotionRequest rather than promoting to itself with a single
+		// Promotion. The PromotionRequest defaulting webhook resolves the origin
+		// exactly as the Promotion defaulting webhook does.
+		if api.IsTargetAware(stage) {
+			promotionRequest, prErr := api.NewPromotionRequestForOrigin(
+				ctx, s.client.InternalClient(), stage, origin,
+			)
+			if prErr != nil {
+				_ = c.Error(prErr)
+				return
+			}
+			s.createPromotionRequestAndRespond(c, promotionRequest)
 			return
 		}
 		promotion := api.NewMinimalPromotionForOrigin(stage, origin)
@@ -225,12 +254,6 @@ func (s *server) promoteToStage(c *gin.Context) {
 	// A Stage that selects Targets fans Freight out to them via a PromotionRequest
 	// rather than promoting to itself with a single Promotion.
 	if api.IsTargetAware(stage) {
-		// Both the Target lookup and the create go through the internal client.
-		// PromotionRequests are system-owned, and the promote-verb check above
-		// IS the authorization decision for this request; which Targets the
-		// Stage governs is a detail of carrying it out. Resolving as the user
-		// would also break the kargo-promoter role, which holds the promote
-		// verb but no permission to list Targets.
 		promotionRequest, prErr := api.NewPromotionRequest(
 			ctx, s.client.InternalClient(), stage, freight.Name,
 		)
@@ -238,16 +261,7 @@ func (s *server) promoteToStage(c *gin.Context) {
 			_ = c.Error(prErr)
 			return
 		}
-		if u, ok := user.InfoFromContext(ctx); ok {
-			api.SetCreateActorAnnotation(promotionRequest, api.FormatEventUserActor(u))
-		}
-		if err = s.client.InternalClient().Create(ctx, promotionRequest); err != nil {
-			_ = c.Error(err)
-			return
-		}
-		// No event is recorded: Kargo's promotion events carry a Promotion, and
-		// a PromotionRequest has none of its own.
-		c.JSON(http.StatusCreated, promotionRequest)
+		s.createPromotionRequestAndRespond(c, promotionRequest)
 		return
 	}
 

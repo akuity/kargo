@@ -5273,7 +5273,7 @@
           "type": "string"
         },
         "origin": {
-          "description": "Origin is the canonical Freight origin key (e.g. \"Warehouse/foo\"). When\nset, the promotion webhook resolves it to the current auto-promotion\ncandidate. Exactly one of Freight, FreightAlias, or Origin must be set.",
+          "description": "Origin is the canonical Freight origin key (e.g. \"Warehouse/foo\"). When\nset, admission resolves it to the current auto-promotion candidate --\nvia the Promotion defaulting webhook, or the PromotionRequest defaulting\nwebhook for a Stage that selects Targets. Exactly one of Freight,\nFreightAlias, or Origin must be set.",
           "type": "string"
         }
       }
@@ -7991,8 +7991,16 @@
       "type": "object",
       "properties": {
         "freight": {
-          "description": "Freight specifies the piece of Freight promoted by the Stage.\nThe Freight MUST be in the same namespace as the PromotionRequest.\n\n+kubebuilder:validation:Required\n+kubebuilder:validation:MinLength=1\n+kubebuilder:validation:MaxLength=253\n+kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`\n+akuity:test-kubebuilder-pattern=KubernetesName\n+kubebuilder:validation:XValidation:rule=\"self == oldSelf\"",
+          "description": "Freight specifies the piece of Freight promoted by the Stage.\nThe Freight MUST be in the same namespace as the PromotionRequest.\nExactly one of Freight or Origin must be set. Once set, Freight is\nimmutable -- this is enforced by a transition rule on the spec rather\nthan on this field, since a rule here would not be evaluated on an\nupdate that omits the field entirely.\n\n+kubebuilder:validation:Optional\n+kubebuilder:validation:MinLength=1\n+kubebuilder:validation:MaxLength=253\n+kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`\n+akuity:test-kubebuilder-pattern=KubernetesName",
           "type": "string"
+        },
+        "origin": {
+          "description": "Origin, when set, identifies the FreightOrigin whose auto-promotion\ncandidate should be promoted. The PromotionRequest defaulting webhook\nresolves this to the candidate Freight for that origin and fills Freight\nbefore the PromotionRequest is persisted. Exactly one of Freight or\nOrigin must be set.\n\n+kubebuilder:validation:Optional",
+          "allOf": [
+            {
+              "$ref": "#/definitions/FreightOrigin"
+            }
+          ]
         },
         "stage": {
           "description": "Stage specifies the name of the Stage that promotes the Freight.\nThe Stage MUST be in the same namespace as the PromotionRequest.\n\n+kubebuilder:validation:Required\n+kubebuilder:validation:MinLength=1\n+kubebuilder:validation:MaxLength=253\n+kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`\n+akuity:test-kubebuilder-pattern=KubernetesName\n+kubebuilder:validation:XValidation:rule=\"self == oldSelf\"",
@@ -8007,7 +8015,6 @@
         }
       },
       "required": [
-        "freight",
         "stage",
         "targets"
       ]
