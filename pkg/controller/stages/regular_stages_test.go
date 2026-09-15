@@ -9940,3 +9940,258 @@ func testPromotionRequest(
 		},
 	}
 }
+
+func Test_GetPromotionsSummary(t *testing.T) {
+	scheme := runtime.NewScheme()
+	require.NoError(t, kargoapi.AddToScheme(scheme))
+
+	// newPromo builds a Promotion with the given name and phase. Names embed a
+	// ULID in production, so lexicographic order matches creation order --
+	// "promo-1" is the earliest, "promo-3" the latest.
+	newPromo := func(name string, phase kargoapi.PromotionPhase) kargoapi.Promotion {
+		return kargoapi.Promotion{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      name,
+				Namespace: "default",
+			},
+			Status: kargoapi.PromotionStatus{Phase: phase},
+		}
+	}
+
+	testStage := &kargoapi.Stage{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-stage",
+			Namespace: "default",
+		},
+	}
+
+	tests := []struct {
+		name         string
+		stage        *kargoapi.Stage
+		promotions   []kargoapi.Promotion
+		currentPromo kargoapi.PromotionReference
+		assertions   func(*testing.T, promotionsSummary)
+	}{
+		{
+			name:  "CurrentPromotion doesn't exist",
+			stage: testStage,
+			promotions: []kargoapi.Promotion{
+				newPromo("promo-1", kargoapi.PromotionPhaseRunning),
+				newPromo("promo-2", kargoapi.PromotionPhaseSucceeded),
+			},
+			currentPromo: kargoapi.PromotionReference{Name: "promo-missing"},
+			assertions: func(t *testing.T, summary promotionsSummary) {
+				require.Nil(t, summary.currentPromotion)
+			},
+		},
+		{
+			name:  "CurrentPromotion is running",
+			stage: testStage,
+			promotions: []kargoapi.Promotion{
+				newPromo("promo-1", kargoapi.PromotionPhaseRunning),
+				newPromo("promo-2", kargoapi.PromotionPhaseSucceeded),
+			},
+			currentPromo: kargoapi.PromotionReference{Name: "promo-1"},
+			assertions: func(t *testing.T, summary promotionsSummary) {
+				require.NotNil(t, summary.currentPromotion)
+				require.Equal(t, "promo-1", summary.currentPromotion.Name)
+				require.Equal(
+					t,
+					kargoapi.PromotionPhaseRunning,
+					summary.currentPromotion.Status.Phase,
+				)
+			},
+		},
+		{
+			name:  "CurrentPromotion is pending",
+			stage: testStage,
+			promotions: []kargoapi.Promotion{
+				newPromo("promo-1", kargoapi.PromotionPhasePending),
+				newPromo("promo-2", kargoapi.PromotionPhaseSucceeded),
+			},
+			currentPromo: kargoapi.PromotionReference{Name: "promo-1"},
+			assertions: func(t *testing.T, summary promotionsSummary) {
+				require.NotNil(t, summary.currentPromotion)
+				require.Equal(t, "promo-1", summary.currentPromotion.Name)
+				require.Equal(
+					t,
+					kargoapi.PromotionPhasePending,
+					summary.currentPromotion.Status.Phase,
+				)
+			},
+		},
+		{
+			name:  "CurrentPromotion is terminal",
+			stage: testStage,
+			promotions: []kargoapi.Promotion{
+				newPromo("promo-1", kargoapi.PromotionPhaseSucceeded),
+				newPromo("promo-2", kargoapi.PromotionPhaseRunning),
+			},
+			currentPromo: kargoapi.PromotionReference{Name: "promo-1"},
+			assertions: func(t *testing.T, summary promotionsSummary) {
+				require.NotNil(t, summary.currentPromotion)
+				require.Equal(t, "promo-1", summary.currentPromotion.Name)
+				require.True(t, summary.currentPromotion.Status.Phase.IsTerminal())
+			},
+		},
+
+		{
+			name:  "Terminal promotions ordered latest-first",
+			stage: testStage,
+			promotions: []kargoapi.Promotion{
+				newPromo("promo-1", kargoapi.PromotionPhaseSucceeded),
+				newPromo("promo-3", kargoapi.PromotionPhaseFailed),
+				newPromo("promo-2", kargoapi.PromotionPhaseAborted),
+			},
+			assertions: func(t *testing.T, summary promotionsSummary) {
+				require.Len(t, summary.terminal, 3)
+				names := []string{
+					summary.terminal[0].Name,
+					summary.terminal[1].Name,
+					summary.terminal[2].Name,
+				}
+				require.Equal(t, []string{"promo-3", "promo-2", "promo-1"}, names)
+			},
+		},
+
+		{
+			name:  "NextPromotion is earliest running",
+			stage: testStage,
+			promotions: []kargoapi.Promotion{
+				newPromo("promo-3", kargoapi.PromotionPhaseRunning),
+				newPromo("promo-1", kargoapi.PromotionPhaseRunning),
+				newPromo("promo-2", kargoapi.PromotionPhasePending),
+			},
+			assertions: func(t *testing.T, summary promotionsSummary) {
+				require.NotNil(t, summary.nextPromotion)
+				require.Equal(t, "promo-1", summary.nextPromotion.Name)
+				require.Equal(
+					t,
+					kargoapi.PromotionPhaseRunning,
+					summary.nextPromotion.Status.Phase,
+				)
+			},
+		},
+		{
+			name:  "NextPromotion is earliest pending",
+			stage: testStage,
+			promotions: []kargoapi.Promotion{
+				newPromo("promo-3", kargoapi.PromotionPhasePending),
+				newPromo("promo-1", kargoapi.PromotionPhasePending),
+				newPromo("promo-2", kargoapi.PromotionPhaseSucceeded),
+			},
+			assertions: func(t *testing.T, summary promotionsSummary) {
+				require.NotNil(t, summary.nextPromotion)
+				require.Equal(t, "promo-1", summary.nextPromotion.Name)
+				require.Equal(
+					t,
+					kargoapi.PromotionPhasePending,
+					summary.nextPromotion.Status.Phase,
+				)
+			},
+		},
+		{
+			name:  "NextPromotion is not set if no running or pending",
+			stage: testStage,
+			promotions: []kargoapi.Promotion{
+				newPromo("promo-1", kargoapi.PromotionPhaseSucceeded),
+				newPromo("promo-2", kargoapi.PromotionPhaseFailed),
+			},
+			assertions: func(t *testing.T, summary promotionsSummary) {
+				require.Nil(t, summary.nextPromotion)
+			},
+		},
+
+		{
+			name:  "hasNonTerminalPromotins from running",
+			stage: testStage,
+			promotions: []kargoapi.Promotion{
+				newPromo("promo-1", kargoapi.PromotionPhaseRunning),
+				newPromo("promo-2", kargoapi.PromotionPhaseSucceeded),
+			},
+			assertions: func(t *testing.T, summary promotionsSummary) {
+				require.True(t, summary.hasNonTerminalPromotions)
+			},
+		},
+		{
+			name:  "hasNonTerminalPromotins from pending",
+			stage: testStage,
+			promotions: []kargoapi.Promotion{
+				newPromo("promo-1", kargoapi.PromotionPhasePending),
+				newPromo("promo-2", kargoapi.PromotionPhaseSucceeded),
+			},
+			assertions: func(t *testing.T, summary promotionsSummary) {
+				require.True(t, summary.hasNonTerminalPromotions)
+			},
+		},
+		{
+			name:  "hasNonTerminalPromotins none",
+			stage: testStage,
+			promotions: []kargoapi.Promotion{
+				newPromo("promo-1", kargoapi.PromotionPhaseSucceeded),
+				newPromo("promo-2", kargoapi.PromotionPhaseFailed),
+			},
+			assertions: func(t *testing.T, summary promotionsSummary) {
+				require.False(t, summary.hasNonTerminalPromotions)
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			builder := fake.NewClientBuilder().
+				WithScheme(scheme).
+				WithObjects(tt.stage).
+				WithStatusSubresource(&kargoapi.Stage{}, &kargoapi.Freight{}).
+				WithIndex(
+					&kargoapi.Promotion{},
+					indexer.PromotionsByStageField,
+					indexer.PromotionsByStage,
+				).
+				WithIndex(
+					&kargoapi.Promotion{},
+					indexer.PromotionsByStageAndFreightField,
+					indexer.PromotionsByStageAndFreight,
+				).
+				WithIndex(
+					&kargoapi.Promotion{},
+					indexer.PromotionsByTerminalField,
+					indexer.PromotionsByTerminal,
+				).
+				WithIndex(
+					&kargoapi.Freight{},
+					indexer.FreightByWarehouseField,
+					indexer.FreightByWarehouse,
+				).
+				WithIndex(
+					&kargoapi.Freight{},
+					indexer.FreightByVerifiedStagesField,
+					indexer.FreightByVerifiedStages,
+				).
+				WithIndex(
+					&kargoapi.Freight{},
+					indexer.FreightByCurrentStagesField,
+					indexer.FreightByCurrentStages,
+				).
+				WithIndex(
+					&kargoapi.Freight{},
+					indexer.FreightApprovedForStagesField,
+					indexer.FreightApprovedForStages,
+				).
+				WithIndex(
+					&kargoapi.PromotionRequest{},
+					indexer.PromotionRequestsByStageAndFreightField,
+					indexer.PromotionRequestsByStageAndFreight,
+				)
+
+			c := builder.Build()
+
+			r := &RegularStageReconciler{
+				client: c,
+			}
+
+			summary := r.getPromotionsSummary(tt.promotions, &tt.currentPromo)
+			tt.assertions(t, summary)
+		})
+	}
+}
