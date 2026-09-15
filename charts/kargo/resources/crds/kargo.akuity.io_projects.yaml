@@ -151,46 +151,46 @@ spec:
                         type: integer
                       promotion:
                         description: |-
-                          Promotion tallies, by phase, the outcome of promoting to each Target from
-                          each target-aware Stage that governs it, as of that Stage's latest
-                          PromotionRequest. See TargetPromotionStats for how a request that has not
-                          produced child Promotions is counted.
+                          Promotion tallies, by Promotion phase, every Stage and Target pair in the
+                          Project's latest rounds of promotion. Each target-aware Stage contributes
+                          one entry per Target named by its latest PromotionRequest -- the request
+                          the Stage reports as current, else as last -- in the phase of the child
+                          Promotion promoting to that Target. It is the sum of those requests'
+                          summaries and so shares their type.
+
+                          A request that has not yet produced child Promotions contributes all of
+                          its Targets as Pending. A request that reached a terminal phase without
+                          ever producing children contributes all of its Targets in that phase.
                         properties:
                           aborted:
-                            description: |-
-                              Aborted is the number of Stage and Target pairs whose promotion was
-                              aborted.
-                            format: int64
+                            description: Aborted is the number of child Promotions
+                              in the Aborted phase.
+                            format: int32
                             type: integer
                           errored:
-                            description: |-
-                              Errored is the number of Stage and Target pairs whose promotion
-                              encountered a technical error.
-                            format: int64
+                            description: Errored is the number of child Promotions
+                              in the Errored phase.
+                            format: int32
                             type: integer
                           failed:
-                            description: |-
-                              Failed is the number of Stage and Target pairs whose promotion failed for
-                              non-technical reasons.
-                            format: int64
+                            description: Failed is the number of child Promotions
+                              in the Failed phase.
+                            format: int32
                             type: integer
                           pending:
-                            description: |-
-                              Pending is the number of Stage and Target pairs whose promotion has not
-                              started.
-                            format: int64
+                            description: Pending is the number of child Promotions
+                              in the Pending phase.
+                            format: int32
                             type: integer
                           running:
-                            description: |-
-                              Running is the number of Stage and Target pairs whose promotion is in
-                              progress.
-                            format: int64
+                            description: Running is the number of child Promotions
+                              in the Running phase.
+                            format: int32
                             type: integer
                           succeeded:
-                            description: |-
-                              Succeeded is the number of Stage and Target pairs whose promotion
-                              succeeded.
-                            format: int64
+                            description: Succeeded is the number of child Promotions
+                              in the Succeeded phase.
+                            format: int32
                             type: integer
                         type: object
                       unknown:

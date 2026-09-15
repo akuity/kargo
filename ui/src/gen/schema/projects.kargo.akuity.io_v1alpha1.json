@@ -116,48 +116,48 @@
                   "type": "integer"
                 },
                 "promotion": {
-                  "description": "Promotion tallies, by phase, the outcome of promoting to each Target from\neach target-aware Stage that governs it, as of that Stage's latest\nPromotionRequest. See TargetPromotionStats for how a request that has not\nproduced child Promotions is counted.",
+                  "description": "Promotion tallies, by Promotion phase, every Stage and Target pair in the\nProject's latest rounds of promotion. Each target-aware Stage contributes\none entry per Target named by its latest PromotionRequest -- the request\nthe Stage reports as current, else as last -- in the phase of the child\nPromotion promoting to that Target. It is the sum of those requests'\nsummaries and so shares their type.\n\nA request that has not yet produced child Promotions contributes all of\nits Targets as Pending. A request that reached a terminal phase without\never producing children contributes all of its Targets in that phase.",
                   "properties": {
                     "aborted": {
-                      "description": "Aborted is the number of Stage and Target pairs whose promotion was\naborted.",
-                      "format": "int64",
-                      "maximum": 9223372036854776000,
-                      "minimum": -9223372036854776000,
+                      "description": "Aborted is the number of child Promotions in the Aborted phase.",
+                      "format": "int32",
+                      "maximum": 2147483647,
+                      "minimum": -2147483648,
                       "type": "integer"
                     },
                     "errored": {
-                      "description": "Errored is the number of Stage and Target pairs whose promotion\nencountered a technical error.",
-                      "format": "int64",
-                      "maximum": 9223372036854776000,
-                      "minimum": -9223372036854776000,
+                      "description": "Errored is the number of child Promotions in the Errored phase.",
+                      "format": "int32",
+                      "maximum": 2147483647,
+                      "minimum": -2147483648,
                       "type": "integer"
                     },
                     "failed": {
-                      "description": "Failed is the number of Stage and Target pairs whose promotion failed for\nnon-technical reasons.",
-                      "format": "int64",
-                      "maximum": 9223372036854776000,
-                      "minimum": -9223372036854776000,
+                      "description": "Failed is the number of child Promotions in the Failed phase.",
+                      "format": "int32",
+                      "maximum": 2147483647,
+                      "minimum": -2147483648,
                       "type": "integer"
                     },
                     "pending": {
-                      "description": "Pending is the number of Stage and Target pairs whose promotion has not\nstarted.",
-                      "format": "int64",
-                      "maximum": 9223372036854776000,
-                      "minimum": -9223372036854776000,
+                      "description": "Pending is the number of child Promotions in the Pending phase.",
+                      "format": "int32",
+                      "maximum": 2147483647,
+                      "minimum": -2147483648,
                       "type": "integer"
                     },
                     "running": {
-                      "description": "Running is the number of Stage and Target pairs whose promotion is in\nprogress.",
-                      "format": "int64",
-                      "maximum": 9223372036854776000,
-                      "minimum": -9223372036854776000,
+                      "description": "Running is the number of child Promotions in the Running phase.",
+                      "format": "int32",
+                      "maximum": 2147483647,
+                      "minimum": -2147483648,
                       "type": "integer"
                     },
                     "succeeded": {
-                      "description": "Succeeded is the number of Stage and Target pairs whose promotion\nsucceeded.",
-                      "format": "int64",
-                      "maximum": 9223372036854776000,
-                      "minimum": -9223372036854776000,
+                      "description": "Succeeded is the number of child Promotions in the Succeeded phase.",
+                      "format": "int32",
+                      "maximum": 2147483647,
+                      "minimum": -2147483648,
                       "type": "integer"
                     }
                   },

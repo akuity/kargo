@@ -374,7 +374,6 @@ Class | Method | HTTP request | Description
  - [StageTargets](docs/StageTargets.md)
  - [StepExecutionMetadata](docs/StepExecutionMetadata.md)
  - [TagMap](docs/TagMap.md)
- - [TargetPromotionStats](docs/TargetPromotionStats.md)
  - [TargetStats](docs/TargetStats.md)
  - [UpdateConfigMapRequest](docs/UpdateConfigMapRequest.md)
  - [UpdateGenericCredentialsRequest](docs/UpdateGenericCredentialsRequest.md)

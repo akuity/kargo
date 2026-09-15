@@ -77,51 +77,22 @@ type ProjectStats struct {
 type TargetStats struct {
 	// Count is the number of distinct Targets in the Project.
 	Count int64 `json:"count,omitempty"`
-	// Promotion tallies, by phase, the outcome of promoting to each Target from
-	// each target-aware Stage that governs it, as of that Stage's latest
-	// PromotionRequest. See TargetPromotionStats for how a request that has not
-	// produced child Promotions is counted.
-	Promotion TargetPromotionStats `json:"promotion,omitempty"`
+	// Promotion tallies, by Promotion phase, every Stage and Target pair in the
+	// Project's latest rounds of promotion. Each target-aware Stage contributes
+	// one entry per Target named by its latest PromotionRequest -- the request
+	// the Stage reports as current, else as last -- in the phase of the child
+	// Promotion promoting to that Target. It is the sum of those requests'
+	// summaries and so shares their type.
+	//
+	// A request that has not yet produced child Promotions contributes all of
+	// its Targets as Pending. A request that reached a terminal phase without
+	// ever producing children contributes all of its Targets in that phase.
+	Promotion PromotionRequestSummary `json:"promotion,omitempty"`
 	// Unknown is the number of target-aware Stages whose latest
 	// PromotionRequest no longer exists, typically because it was garbage
 	// collected. Nothing can be said about the outcome of promoting from such a
 	// Stage, so it is left out of Promotion and counted here instead.
 	Unknown int64 `json:"unknown,omitempty"`
-}
-
-// TargetPromotionStats tallies, by Promotion phase, every Stage and Target
-// pair in a Project's latest rounds of promotion. Each target-aware Stage
-// contributes one entry per Target named by its latest PromotionRequest -- the
-// request the Stage reports as current, else as last -- in the phase of the
-// child Promotion promoting to that Target.
-//
-// A request that has not yet produced child Promotions contributes all of its
-// Targets as Pending. A request that reached a terminal phase without ever
-// producing children contributes all of its Targets in that phase.
-//
-// The fields mirror PromotionRequestSummary, but this is deliberately a
-// separate type: a PromotionRequestSummary describes the children of one
-// request, whereas this aggregates across every Stage in a Project, and the
-// two need not evolve together.
-type TargetPromotionStats struct {
-	// Pending is the number of Stage and Target pairs whose promotion has not
-	// started.
-	Pending int64 `json:"pending,omitempty"`
-	// Running is the number of Stage and Target pairs whose promotion is in
-	// progress.
-	Running int64 `json:"running,omitempty"`
-	// Succeeded is the number of Stage and Target pairs whose promotion
-	// succeeded.
-	Succeeded int64 `json:"succeeded,omitempty"`
-	// Failed is the number of Stage and Target pairs whose promotion failed for
-	// non-technical reasons.
-	Failed int64 `json:"failed,omitempty"`
-	// Errored is the number of Stage and Target pairs whose promotion
-	// encountered a technical error.
-	Errored int64 `json:"errored,omitempty"`
-	// Aborted is the number of Stage and Target pairs whose promotion was
-	// aborted.
-	Aborted int64 `json:"aborted,omitempty"`
 }
 
 // WarehouseStats contains a summary of the collective state of a Project's

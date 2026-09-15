@@ -21,8 +21,8 @@ var _ MappedNullable = &TargetStats{}
 type TargetStats struct {
 	// Count is the number of distinct Targets in the Project.
 	Count *int32 `json:"count,omitempty"`
-	// Promotion tallies, by phase, the outcome of promoting to each Target from each target-aware Stage that governs it, as of that Stage's latest PromotionRequest. See TargetPromotionStats for how a request that has not produced child Promotions is counted.
-	Promotion *TargetPromotionStats `json:"promotion,omitempty"`
+	// Promotion tallies, by Promotion phase, every Stage and Target pair in the Project's latest rounds of promotion. Each target-aware Stage contributes one entry per Target named by its latest PromotionRequest -- the request the Stage reports as current, else as last -- in the phase of the child Promotion promoting to that Target. It is the sum of those requests' summaries and so shares their type.  A request that has not yet produced child Promotions contributes all of its Targets as Pending. A request that reached a terminal phase without ever producing children contributes all of its Targets in that phase.
+	Promotion *PromotionRequestSummary `json:"promotion,omitempty"`
 	// Unknown is the number of target-aware Stages whose latest PromotionRequest no longer exists, typically because it was garbage collected. Nothing can be said about the outcome of promoting from such a Stage, so it is left out of Promotion and counted here instead.
 	Unknown *int32 `json:"unknown,omitempty"`
 }
@@ -77,9 +77,9 @@ func (o *TargetStats) SetCount(v int32) {
 }
 
 // GetPromotion returns the Promotion field value if set, zero value otherwise.
-func (o *TargetStats) GetPromotion() TargetPromotionStats {
+func (o *TargetStats) GetPromotion() PromotionRequestSummary {
 	if o == nil || IsNil(o.Promotion) {
-		var ret TargetPromotionStats
+		var ret PromotionRequestSummary
 		return ret
 	}
 	return *o.Promotion
@@ -87,7 +87,7 @@ func (o *TargetStats) GetPromotion() TargetPromotionStats {
 
 // GetPromotionOk returns a tuple with the Promotion field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *TargetStats) GetPromotionOk() (*TargetPromotionStats, bool) {
+func (o *TargetStats) GetPromotionOk() (*PromotionRequestSummary, bool) {
 	if o == nil || IsNil(o.Promotion) {
 		return nil, false
 	}
@@ -103,8 +103,8 @@ func (o *TargetStats) HasPromotion() bool {
 	return false
 }
 
-// SetPromotion gets a reference to the given TargetPromotionStats and assigns it to the Promotion field.
-func (o *TargetStats) SetPromotion(v TargetPromotionStats) {
+// SetPromotion gets a reference to the given PromotionRequestSummary and assigns it to the Promotion field.
+func (o *TargetStats) SetPromotion(v PromotionRequestSummary) {
 	o.Promotion = &v
 }
 

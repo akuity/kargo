@@ -210,16 +210,15 @@ func promotionSummary(request *kargoapi.PromotionRequest) kargoapi.PromotionRequ
 	}
 }
 
-// addPromotionRequestSummary adds every count in a PromotionRequest's summary
-// to a Project's promotion tally.
+// addPromotionRequestSummary adds every count in src to dst.
 func addPromotionRequestSummary(
-	dst *kargoapi.TargetPromotionStats,
+	dst *kargoapi.PromotionRequestSummary,
 	src kargoapi.PromotionRequestSummary,
 ) {
-	dst.Pending += int64(src.Pending)
-	dst.Running += int64(src.Running)
-	dst.Succeeded += int64(src.Succeeded)
-	dst.Failed += int64(src.Failed)
-	dst.Errored += int64(src.Errored)
-	dst.Aborted += int64(src.Aborted)
+	dst.Pending += src.Pending
+	dst.Running += src.Running
+	dst.Succeeded += src.Succeeded
+	dst.Failed += src.Failed
+	dst.Errored += src.Errored
+	dst.Aborted += src.Aborted
 }
