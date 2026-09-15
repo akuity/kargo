@@ -36,7 +36,7 @@ const sharedComponents: ThemeConfig['components'] = {
   Card: { borderRadius: 8 },
   Button: { contentFontSizeSM: 13 },
   Layout: { headerHeight: 50, headerPadding: '0 16px' },
-  Menu: { itemHeight: 36 }
+  Menu: { itemHeight: 36, subMenuItemBg: 'transparent', subMenuItemSelectedColor: 'inherit' }
 };
 
 const lightComponents: ThemeConfig['components'] = {
