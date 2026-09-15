@@ -4,6 +4,7 @@ package utils
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 	"strings"
 	"testing"
@@ -24,7 +25,10 @@ func PromoteAndWaitForPhase(
 	phase kargoapi.PromotionPhase,
 	timeout time.Duration,
 ) (*kargoapi.Promotion, error) {
-	name := StartPromotion(ctx, t, project, stage, freightName, timeout)
+	name, err := StartPromotion(ctx, t, project, stage, freightName, timeout)
+	if err != nil {
+		t.Fatalf("Error promoting: %v", err)
+	}
 	return WaitForPromotionPhase(ctx, t, project, name, phase, timeout)
 }
 
@@ -70,13 +74,13 @@ func PromoteWithPRMerge(
 // A Stage transiently rejects a promotion with 400 Bad Request while the
 // freight is still being qualified in an upstream stage, so the request is
 // retried on 400 until it is accepted or timeout elapses. Any other error is
-// fatal immediately.
+// returned.
 func StartPromotion(
 	ctx context.Context,
 	t *testing.T,
 	project, stage, freightName string,
 	timeout time.Duration,
-) string {
+) (string, error) {
 	kargoClient := ctx.Value(KargoCLIKey).(generated.APIClient)
 
 	_, httpRes, err := kargoClient.CoreAPI.GetStage(ctx, project, stage).Execute()
@@ -84,7 +88,7 @@ func StartPromotion(
 		_ = httpRes.Body.Close()
 	}
 	if err != nil {
-		t.Fatalf("error getting stage: %v", err)
+		return "", fmt.Errorf("error getting stage: %v", err)
 	}
 
 	timedCtx, cancel := context.WithTimeout(ctx, timeout)
@@ -108,21 +112,21 @@ func StartPromotion(
 		if promoteErr == nil {
 			if promoteRes.Metadata.Name == nil {
 				t.Log("Promotion", promoteRes)
-				t.Fatalf("Error promoting: promotion name is missing")
+				return "", fmt.Errorf("promotion name is missing")
 			}
-			return *promoteRes.Metadata.Name
+			return *promoteRes.Metadata.Name, nil
 		}
 
 		// Only the transient "stage not ready for this freight yet" case is
 		// retried; every other failure is reported immediately.
 		if statusCode != http.StatusBadRequest {
-			t.Fatalf("Error promoting: %v (response: %v, http: %v)", promoteErr, promoteRes, httpRes)
+			return "", fmt.Errorf("%v (response: %v, http: %v)", promoteErr, promoteRes, httpRes)
 		}
 
 		t.Logf("Stage %q not ready to accept freight yet (400), retrying promotion", stage)
 		select {
 		case <-timedCtx.Done():
-			t.Fatalf("Error promoting after retrying for %v: %v", timeout, promoteErr)
+			return "", fmt.Errorf("after retrying for %v: %v", timeout, promoteErr)
 		case <-ticker.C:
 		}
 	}
