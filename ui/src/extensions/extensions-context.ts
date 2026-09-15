@@ -1,9 +1,10 @@
 import React from 'react';
 
-import { Extension } from './types';
+import { Extension, FeatureFlags } from './types';
 
 type ExtensionsContextType = {
   extensions: Extension[];
+  featureFlags?: FeatureFlags;
 };
 
 export const ExtensionsContext = React.createContext<ExtensionsContextType | null>(null);
@@ -26,6 +27,7 @@ export const useExtensionsContext = () => {
     argoCDExtension:
       ctx?.extensions.filter((extension) => extension.type === 'argocdExtension')[0] || null,
     promotionStepExtensions:
-      ctx?.extensions.filter((extension) => extension.type === 'promotionStep') || []
+      ctx?.extensions.filter((extension) => extension.type === 'promotionStep') || [],
+    featureFlags: ctx?.featureFlags
   };
 };
