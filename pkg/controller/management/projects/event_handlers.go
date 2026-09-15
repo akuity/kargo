@@ -2,7 +2,6 @@ package projects
 
 import (
 	"context"
-	"reflect"
 
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/util/workqueue"
@@ -87,8 +86,12 @@ func (e *projectWarehouseHealthEnqueuer[T]) Update(
 
 // projectStageHealthEnqueuer enqueues a Project for reconciliation when the
 // health condition of a Stage within that Project changes, or when the
-// PromotionRequest the Stage reports as current or last changes -- the latter
-// because the Project's Target stats are computed from those requests.
+// PromotionRequest the Stage reports as current or last changes. The latter
+// marks a round of promotion to the Stage's Targets starting or ending, which
+// is when the Project's Target stats are recomputed. Those stats are a
+// high-level overview, so they deliberately do not track each child Promotion
+// finishing mid-round, or Targets appearing and disappearing; watching those
+// would multiply Project reconciles for little benefit.
 type projectStageHealthEnqueuer[T any] struct{}
 
 // Create implements TypedEventHandler.
@@ -176,130 +179,4 @@ func promotionRequestRefName(ref *kargoapi.PromotionRequestReference) string {
 		return ""
 	}
 	return ref.Name
-}
-
-// projectPromotionRequestEnqueuer enqueues a Project for reconciliation when a
-// PromotionRequest within it appears, disappears, or changes phase or
-// per-Target summary. The Project's Target stats sum the summaries of each
-// target-aware Stage's latest request, so any of these can change them.
-type projectPromotionRequestEnqueuer[T any] struct{}
-
-// Create implements TypedEventHandler.
-func (e *projectPromotionRequestEnqueuer[T]) Create(
-	_ context.Context,
-	evt event.TypedCreateEvent[T],
-	wq workqueue.TypedRateLimitingInterface[reconcile.Request],
-) {
-	if request, ok := any(evt.Object).(*kargoapi.PromotionRequest); ok && request != nil {
-		wq.Add(reconcile.Request{
-			NamespacedName: types.NamespacedName{Name: request.Namespace},
-		})
-	}
-}
-
-// Delete implements TypedEventHandler.
-func (e *projectPromotionRequestEnqueuer[T]) Delete(
-	_ context.Context,
-	evt event.TypedDeleteEvent[T],
-	wq workqueue.TypedRateLimitingInterface[reconcile.Request],
-) {
-	if request, ok := any(evt.Object).(*kargoapi.PromotionRequest); ok && request != nil {
-		wq.Add(reconcile.Request{
-			NamespacedName: types.NamespacedName{Name: request.Namespace},
-		})
-	}
-}
-
-// Generic implements TypedEventHandler.
-func (e *projectPromotionRequestEnqueuer[T]) Generic(
-	context.Context,
-	event.TypedGenericEvent[T],
-	workqueue.TypedRateLimitingInterface[reconcile.Request],
-) {
-	// No-op
-}
-
-// Update implements TypedEventHandler.
-func (e *projectPromotionRequestEnqueuer[T]) Update(
-	ctx context.Context,
-	evt event.TypedUpdateEvent[T],
-	wq workqueue.TypedRateLimitingInterface[reconcile.Request],
-) {
-	logger := logging.LoggerFromContext(ctx)
-
-	oldRequest, ok := any(evt.ObjectOld).(*kargoapi.PromotionRequest)
-	if !ok {
-		return
-	}
-	newRequest, ok := any(evt.ObjectNew).(*kargoapi.PromotionRequest)
-	if !ok {
-		return
-	}
-
-	if oldRequest == nil || newRequest == nil {
-		logger.Error(
-			nil, "Update event has no old or new object to update",
-			"event", evt,
-		)
-		return
-	}
-
-	if oldRequest.Status.Phase == newRequest.Status.Phase &&
-		reflect.DeepEqual(oldRequest.Status.Summary, newRequest.Status.Summary) {
-		return
-	}
-
-	logger.Info("PromotionRequest outcome changed, enqueueing Project")
-	wq.Add(reconcile.Request{
-		NamespacedName: types.NamespacedName{Name: newRequest.Namespace},
-	})
-}
-
-// projectTargetCountEnqueuer enqueues a Project for reconciliation when a
-// Target within it is created or deleted, since the Project's Target stats
-// count them. Updates to a Target change nothing the stats report.
-type projectTargetCountEnqueuer[T any] struct{}
-
-// Create implements TypedEventHandler.
-func (e *projectTargetCountEnqueuer[T]) Create(
-	_ context.Context,
-	evt event.TypedCreateEvent[T],
-	wq workqueue.TypedRateLimitingInterface[reconcile.Request],
-) {
-	if target, ok := any(evt.Object).(*kargoapi.Target); ok && target != nil {
-		wq.Add(reconcile.Request{
-			NamespacedName: types.NamespacedName{Name: target.Namespace},
-		})
-	}
-}
-
-// Delete implements TypedEventHandler.
-func (e *projectTargetCountEnqueuer[T]) Delete(
-	_ context.Context,
-	evt event.TypedDeleteEvent[T],
-	wq workqueue.TypedRateLimitingInterface[reconcile.Request],
-) {
-	if target, ok := any(evt.Object).(*kargoapi.Target); ok && target != nil {
-		wq.Add(reconcile.Request{
-			NamespacedName: types.NamespacedName{Name: target.Namespace},
-		})
-	}
-}
-
-// Generic implements TypedEventHandler.
-func (e *projectTargetCountEnqueuer[T]) Generic(
-	context.Context,
-	event.TypedGenericEvent[T],
-	workqueue.TypedRateLimitingInterface[reconcile.Request],
-) {
-	// No-op
-}
-
-// Update implements TypedEventHandler.
-func (e *projectTargetCountEnqueuer[T]) Update(
-	context.Context,
-	event.TypedUpdateEvent[T],
-	workqueue.TypedRateLimitingInterface[reconcile.Request],
-) {
-	// No-op
 }
