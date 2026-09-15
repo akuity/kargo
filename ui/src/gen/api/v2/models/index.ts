@@ -226,6 +226,7 @@ export * from './stageTargets';
 export * from './stepExecutionMetadata';
 export * from './tagMap';
 export * from './tagMapTags';
+export * from './targetStats';
 export * from './updateConfigMapRequest';
 export * from './updateConfigMapRequestData';
 export * from './updateGenericCredentialsRequest';

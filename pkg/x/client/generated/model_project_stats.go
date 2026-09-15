@@ -21,6 +21,8 @@ var _ MappedNullable = &ProjectStats{}
 type ProjectStats struct {
 	// Stages contains a summary of the collective state of the Project's Stages.
 	Stages *StageStats `json:"stages,omitempty"`
+	// Targets contains a summary of the Project's Targets and of how the latest round of promotion to them fared. It is absent for a Project with no Targets and no target-aware Stages.  +optional
+	Targets *TargetStats `json:"targets,omitempty"`
 	// Warehouses contains a summary of the collective state of the Project's Warehouses.
 	Warehouses *WarehouseStats `json:"warehouses,omitempty"`
 }
@@ -74,6 +76,38 @@ func (o *ProjectStats) SetStages(v StageStats) {
 	o.Stages = &v
 }
 
+// GetTargets returns the Targets field value if set, zero value otherwise.
+func (o *ProjectStats) GetTargets() TargetStats {
+	if o == nil || IsNil(o.Targets) {
+		var ret TargetStats
+		return ret
+	}
+	return *o.Targets
+}
+
+// GetTargetsOk returns a tuple with the Targets field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *ProjectStats) GetTargetsOk() (*TargetStats, bool) {
+	if o == nil || IsNil(o.Targets) {
+		return nil, false
+	}
+	return o.Targets, true
+}
+
+// HasTargets returns a boolean if a field has been set.
+func (o *ProjectStats) HasTargets() bool {
+	if o != nil && !IsNil(o.Targets) {
+		return true
+	}
+
+	return false
+}
+
+// SetTargets gets a reference to the given TargetStats and assigns it to the Targets field.
+func (o *ProjectStats) SetTargets(v TargetStats) {
+	o.Targets = &v
+}
+
 // GetWarehouses returns the Warehouses field value if set, zero value otherwise.
 func (o *ProjectStats) GetWarehouses() WarehouseStats {
 	if o == nil || IsNil(o.Warehouses) {
@@ -118,6 +152,9 @@ func (o ProjectStats) ToMap() (map[string]interface{}, error) {
 	toSerialize := map[string]interface{}{}
 	if !IsNil(o.Stages) {
 		toSerialize["stages"] = o.Stages
+	}
+	if !IsNil(o.Targets) {
+		toSerialize["targets"] = o.Targets
 	}
 	if !IsNil(o.Warehouses) {
 		toSerialize["warehouses"] = o.Warehouses
