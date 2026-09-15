@@ -65,28 +65,63 @@ type ProjectStats struct {
 	Targets *TargetStats `json:"targets,omitempty"`
 }
 
-// TargetStats contains a summary of a Project's Targets and of the latest
-// round of promotion to them. Every tally in it is over Stage and Target
-// pairs: a Target governed by two Stages is counted once in Count and once per
-// Stage everywhere else, since each Stage promotes to it separately. The total
-// of a tally, not Count, is therefore the denominator for a progress bar.
+// TargetStats summarizes a Project's Targets and how the latest round of
+// promotion to each of them turned out.
 //
-// Promotion is the only tally today. Verification and health tallies will join
-// it once Target status records those per Stage.
+// A Target is governed by every target-aware Stage whose selectors match it,
+// and each such Stage promotes to it separately. Count counts distinct
+// Targets, so a Target governed by two Stages counts once there. Promotion
+// counts Stage and Target pairs, so that same Target counts twice there, once
+// for each Stage that promoted to it. A progress bar should therefore use the
+// total of Promotion as its denominator, not Count.
 type TargetStats struct {
-	// Count contains the number of distinct Targets in the Project.
+	// Count is the number of distinct Targets in the Project.
 	Count int64 `json:"count,omitempty"`
-	// Promotion sums, across every target-aware Stage in the Project, the
-	// per-Target outcome of that Stage's latest PromotionRequest -- the one it
-	// reports as current, else as last. A request that has not yet fanned out
-	// contributes all its Targets as Pending while it runs, or all of them under
-	// its own phase if it ended before creating any child Promotion.
-	Promotion PromotionRequestSummary `json:"promotion,omitempty"`
-	// Unknown contains the number of target-aware Stages whose latest
+	// Promotion tallies, by phase, the outcome of promoting to each Target from
+	// each target-aware Stage that governs it, as of that Stage's latest
+	// PromotionRequest. See TargetPromotionStats for how a request that has not
+	// produced child Promotions is counted.
+	Promotion TargetPromotionStats `json:"promotion,omitempty"`
+	// Unknown is the number of target-aware Stages whose latest
 	// PromotionRequest no longer exists, typically because it was garbage
-	// collected. Their outcome cannot be determined and is not reflected in
-	// Promotion.
+	// collected. Nothing can be said about the outcome of promoting from such a
+	// Stage, so it is left out of Promotion and counted here instead.
 	Unknown int64 `json:"unknown,omitempty"`
+}
+
+// TargetPromotionStats tallies, by Promotion phase, every Stage and Target
+// pair in a Project's latest rounds of promotion. Each target-aware Stage
+// contributes one entry per Target named by its latest PromotionRequest -- the
+// request the Stage reports as current, else as last -- in the phase of the
+// child Promotion promoting to that Target.
+//
+// A request that has not yet produced child Promotions contributes all of its
+// Targets as Pending. A request that reached a terminal phase without ever
+// producing children contributes all of its Targets in that phase.
+//
+// The fields mirror PromotionRequestSummary, but this is deliberately a
+// separate type: a PromotionRequestSummary describes the children of one
+// request, whereas this aggregates across every Stage in a Project, and the
+// two need not evolve together.
+type TargetPromotionStats struct {
+	// Pending is the number of Stage and Target pairs whose promotion has not
+	// started.
+	Pending int64 `json:"pending,omitempty"`
+	// Running is the number of Stage and Target pairs whose promotion is in
+	// progress.
+	Running int64 `json:"running,omitempty"`
+	// Succeeded is the number of Stage and Target pairs whose promotion
+	// succeeded.
+	Succeeded int64 `json:"succeeded,omitempty"`
+	// Failed is the number of Stage and Target pairs whose promotion failed for
+	// non-technical reasons.
+	Failed int64 `json:"failed,omitempty"`
+	// Errored is the number of Stage and Target pairs whose promotion
+	// encountered a technical error.
+	Errored int64 `json:"errored,omitempty"`
+	// Aborted is the number of Stage and Target pairs whose promotion was
+	// aborted.
+	Aborted int64 `json:"aborted,omitempty"`
 }
 
 // WarehouseStats contains a summary of the collective state of a Project's

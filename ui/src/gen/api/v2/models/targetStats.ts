@@ -5,24 +5,23 @@
  * REST API for Kargo
  * OpenAPI spec version: v1alpha1
  */
-import type { PromotionRequestSummary } from './promotionRequestSummary';
+import type { TargetPromotionStats } from './targetPromotionStats';
 
 export interface TargetStats {
-  /** Count contains the number of distinct Targets in the Project. */
+  /** Count is the number of distinct Targets in the Project. */
   count?: number;
   /**
-   * Promotion sums, across every target-aware Stage in the Project, the
-   * per-Target outcome of that Stage's latest PromotionRequest -- the one it
-   * reports as current, else as last. A request that has not yet fanned out
-   * contributes all its Targets as Pending while it runs, or all of them under
-   * its own phase if it ended before creating any child Promotion.
+   * Promotion tallies, by phase, the outcome of promoting to each Target from
+   * each target-aware Stage that governs it, as of that Stage's latest
+   * PromotionRequest. See TargetPromotionStats for how a request that has not
+   * produced child Promotions is counted.
    */
-  promotion?: PromotionRequestSummary;
+  promotion?: TargetPromotionStats;
   /**
-   * Unknown contains the number of target-aware Stages whose latest
+   * Unknown is the number of target-aware Stages whose latest
    * PromotionRequest no longer exists, typically because it was garbage
-   * collected. Their outcome cannot be determined and is not reflected in
-   * Promotion.
+   * collected. Nothing can be said about the outcome of promoting from such a
+   * Stage, so it is left out of Promotion and counted here instead.
    */
   unknown?: number;
 }

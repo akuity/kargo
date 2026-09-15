@@ -370,7 +370,7 @@ func Test_reconciler_collectStats(t *testing.T) {
 					t,
 					&kargoapi.TargetStats{
 						Count:     2,
-						Promotion: kargoapi.PromotionRequestSummary{Succeeded: 1, Errored: 1},
+						Promotion: kargoapi.TargetPromotionStats{Succeeded: 1, Errored: 1},
 					},
 					stats.Targets,
 				)
@@ -477,7 +477,7 @@ func Test_collectTargetStats(t *testing.T) {
 			},
 			expected: &kargoapi.TargetStats{
 				Count:     5,
-				Promotion: kargoapi.PromotionRequestSummary{Succeeded: 4, Errored: 1},
+				Promotion: kargoapi.TargetPromotionStats{Succeeded: 4, Errored: 1},
 			},
 		},
 		{
@@ -492,7 +492,7 @@ func Test_collectTargetStats(t *testing.T) {
 			},
 			expected: &kargoapi.TargetStats{
 				Count:     2,
-				Promotion: kargoapi.PromotionRequestSummary{Running: 1, Succeeded: 1},
+				Promotion: kargoapi.TargetPromotionStats{Running: 1, Succeeded: 1},
 			},
 		},
 		{
@@ -512,7 +512,7 @@ func Test_collectTargetStats(t *testing.T) {
 			},
 			expected: &kargoapi.TargetStats{
 				Count: 4,
-				Promotion: kargoapi.PromotionRequestSummary{
+				Promotion: kargoapi.TargetPromotionStats{
 					Pending: 2, Errored: 3, Failed: 1, Succeeded: 4,
 				},
 			},
@@ -530,7 +530,7 @@ func Test_collectTargetStats(t *testing.T) {
 			},
 			expected: &kargoapi.TargetStats{
 				Count:     1,
-				Promotion: kargoapi.PromotionRequestSummary{Succeeded: 1},
+				Promotion: kargoapi.TargetPromotionStats{Succeeded: 1},
 				Unknown:   1,
 			},
 		},
