@@ -6,11 +6,10 @@ import {
   SEVERITY_ACTIVE,
   SEVERITY_FAILED,
   SEVERITY_SETTLED,
-  filterRows,
   fleetRows,
   freightNames,
-  namesPreview,
-  partitionRows,
+  matchesTarget,
+  rowPhase,
   rowSeverity,
   rowsSummary
 } from './fleet-utils';
@@ -205,63 +204,25 @@ const rowOf = (name: string, phase?: string, labels?: Record<string, string>) =>
   phase
 });
 
-describe('filterRows()', () => {
-  const rows = [
-    rowOf('us-east-1', 'Succeeded', { region: 'us' }),
-    rowOf('eu-north-1', 'Errored', { region: 'eu', flaky: 'true' }),
-    rowOf('ap-south-2', undefined, { region: 'ap' })
-  ];
+describe('matchesTarget()', () => {
+  const row = rowOf('eu-north-1', 'Errored', { region: 'eu', flaky: 'true' });
 
-  test('no needle and no phase keeps everything', () => {
-    expect(filterRows(rows, '')).toHaveLength(3);
+  test('an empty needle matches', () => {
+    expect(matchesTarget(row, '')).toBe(true);
+    expect(matchesTarget(row, '   ')).toBe(true);
   });
 
   test('matches name and label key=value, case-insensitively', () => {
-    expect(filterRows(rows, 'EU-north').map((r) => r.target.metadata?.name)).toEqual([
-      'eu-north-1'
-    ]);
-    expect(filterRows(rows, 'flaky=true').map((r) => r.target.metadata?.name)).toEqual([
-      'eu-north-1'
-    ]);
-    expect(filterRows(rows, 'region=').map((r) => r.target.metadata?.name)).toHaveLength(3);
-  });
-
-  test('filters by phase, treating no phase as Pending', () => {
-    expect(filterRows(rows, '', 'Errored').map((r) => r.target.metadata?.name)).toEqual([
-      'eu-north-1'
-    ]);
-    expect(filterRows(rows, '', 'Pending').map((r) => r.target.metadata?.name)).toEqual([
-      'ap-south-2'
-    ]);
-  });
-
-  test('needle and phase combine', () => {
-    expect(filterRows(rows, 'region=us', 'Errored')).toEqual([]);
+    expect(matchesTarget(row, 'EU-north')).toBe(true);
+    expect(matchesTarget(row, 'flaky=true')).toBe(true);
+    expect(matchesTarget(row, 'region=')).toBe(true);
+    expect(matchesTarget(row, 'us-east')).toBe(false);
   });
 });
 
-describe('partitionRows()', () => {
-  test('separates succeeded rows from everything else, keeping order', () => {
-    const { attention, succeeded } = partitionRows([
-      rowOf('a', 'Errored'),
-      rowOf('b', 'Succeeded'),
-      rowOf('c', 'Running'),
-      rowOf('d', undefined),
-      rowOf('e', 'Succeeded')
-    ]);
-    expect(attention.map((r) => r.target.metadata?.name)).toEqual(['a', 'c', 'd']);
-    expect(succeeded.map((r) => r.target.metadata?.name)).toEqual(['b', 'e']);
-  });
-});
-
-describe('namesPreview()', () => {
-  test('lists all names when few', () => {
-    expect(namesPreview([rowOf('a'), rowOf('b')])).toBe('a, b');
-  });
-
-  test('truncates with a count when many', () => {
-    expect(namesPreview([rowOf('a'), rowOf('b'), rowOf('c'), rowOf('d'), rowOf('e')])).toBe(
-      'a, b, c and 2 more'
-    );
+describe('rowPhase()', () => {
+  test('falls back to Pending', () => {
+    expect(rowPhase(rowOf('t', 'Errored'))).toBe('Errored');
+    expect(rowPhase(rowOf('t'))).toBe('Pending');
   });
 });

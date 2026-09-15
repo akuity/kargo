@@ -18,18 +18,7 @@ import { parseDate } from '@ui/utils/dates';
 // progress bar draws them, so a reader sees every phase's count and not only
 // the succeeded figure. Rounds with trouble keep their failures visible even
 // when they are a sliver of the bar.
-//
-// With onSelect, the chips double as a phase filter: clicking one selects it,
-// clicking it again clears the selection.
-export const PhaseChips = ({
-  summary,
-  selected,
-  onSelect
-}: {
-  summary: PromotionRequestSummary;
-  selected?: string;
-  onSelect?: (phase?: string) => void;
-}) => (
+export const PhaseChips = ({ summary }: { summary: PromotionRequestSummary }) => (
   <Flex gap={4} wrap>
     {promotionPhases.map((phase) => {
       const count = summary[phase.toLowerCase() as keyof PromotionRequestSummary] || 0;
@@ -38,17 +27,13 @@ export const PhaseChips = ({
       }
       const { icon, tagColor, spin } = getPromotionPhasePresentation(phase);
       const description = `${count} ${phase.toLowerCase()} Target${count === 1 ? '' : 's'}`;
-      const active = selected === phase;
       return (
-        <Tooltip key={phase} title={onSelect ? `Show only ${phase.toLowerCase()}` : description}>
+        <Tooltip key={phase} title={description}>
           <Tag
-            className={onSelect ? 'm-0 cursor-pointer' : 'm-0'}
+            className='m-0'
             color={tagColor}
             icon={<FontAwesomeIcon icon={icon} spin={spin} />}
             aria-label={description}
-            aria-pressed={onSelect ? active : undefined}
-            style={onSelect && !active && selected ? { opacity: 0.5 } : undefined}
-            onClick={onSelect ? () => onSelect(active ? undefined : phase) : undefined}
           >
             {count} {phase.toLowerCase()}
           </Tag>
@@ -67,16 +52,12 @@ export const RoundCard = ({
   projectName,
   round,
   summary,
-  freightLabel,
-  showChips = true
+  freightLabel
 }: {
   projectName: string;
   round: PromotionRequest;
   summary: PromotionRequestSummary;
   freightLabel: (name: string) => string;
-  // showChips puts the per-phase chips on the card. Turn it off when the
-  // same chips appear directly beneath the card as a filter.
-  showChips?: boolean;
 }) => {
   const freight = round.spec?.freight || '';
   const phase = round.status?.phase || 'Pending';
@@ -131,11 +112,9 @@ export const RoundCard = ({
             <span className='font-semibold'>{succeeded}</span>
             <Typography.Text type='secondary'> of {total} succeeded</Typography.Text>
           </span>
-          {showChips && (
-            <Flex justify='flex-end' className='mt-2'>
-              <PhaseChips summary={summary} />
-            </Flex>
-          )}
+          <Flex justify='flex-end' className='mt-2'>
+            <PhaseChips summary={summary} />
+          </Flex>
         </div>
       </Flex>
       <RoundProgressBar summary={summary} size='compact' />
