@@ -136,6 +136,8 @@ export const RecurrenceFields = ({ value, onChange, startDate }: RecurrenceField
                 allowClear={false}
                 value={value.until}
                 onChange={(date) => patch({ until: endOfDay(date) })}
+                format='EEEE, MMM d, yyyy'
+                className='flex-1'
               />
             )}
 
