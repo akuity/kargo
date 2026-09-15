@@ -392,9 +392,14 @@ func (b *baseRepo) reconcileGPGState(ctx context.Context) {
 	if _, err := os.Stat(gnupgDir); err != nil {
 		return
 	}
-	// Must run before removing sockets: gpgconf finds the agent via its
-	// sockets and tells it to shut down cleanly.
-	_, _ = libExec.Exec(b.buildCommand(ctx, "gpgconf", "--kill", "gpg-agent"))
+	// Must run before removing sockets: gpgconf finds each running daemon
+	// via its socket and tells it to shut down cleanly. "all" covers every
+	// GnuPG component that may be running (gpg-agent, dirmngr, scdaemon,
+	// and, on modern GnuPG, the separate keyboxd process) - killing only
+	// gpg-agent left keyboxd alive while its own socket was deleted below,
+	// which is exactly the stale-but-still-running state this cleanup is
+	// supposed to prevent.
+	_, _ = libExec.Exec(b.buildCommand(ctx, "gpgconf", "--kill", "all"))
 
 	logger := logging.LoggerFromContext(ctx)
 	remove := func(path string) {
