@@ -73,7 +73,7 @@ func (r *reconciler) collectStats(
 			Type:               kargoapi.ConditionTypeHealthy,
 			Status:             metav1.ConditionFalse,
 			Reason:             "CollectingTargetStatsFailed",
-			Message:            "Failed to collect Target stats: " + err.Error(),
+			Message:            "Failed to list targets: " + err.Error(),
 			ObservedGeneration: project.GetGeneration(),
 		})
 		return status, fmt.Errorf("error listing Targets: %w", err)
@@ -89,7 +89,7 @@ func (r *reconciler) collectStats(
 			Type:               kargoapi.ConditionTypeHealthy,
 			Status:             metav1.ConditionFalse,
 			Reason:             "CollectingTargetStatsFailed",
-			Message:            "Failed to collect Target stats: " + err.Error(),
+			Message:            "Failed to list promotion requests: " + err.Error(),
 			ObservedGeneration: project.GetGeneration(),
 		})
 		return status, fmt.Errorf("error listing PromotionRequests: %w", err)
