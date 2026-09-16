@@ -12,6 +12,23 @@
 #
 # Each branch runs on its own day of the week so that update PRs arrive a
 # branch at a time rather than all at once.
+
+################################################################################
+################################################################################
+#
+# IMPORTANT: There is an exception to the schedule. Every time changes
+# to this file are merged to main, dependabot will re-evaluate dependencies on
+# all affected branches and a flurry of PRs will ensue. It is therefore suggested
+# that changes to this file be batched. Fewer, larger updates will produce less
+# noise than many small, frequent updates would.
+#
+# IMPORTANT: It may seem like we are blocking many dependencies from being
+# updated, but crucially, blocking the ones that cannot succeed improves the
+# changes of clean dependency bumps for those that can.
+#
+################################################################################
+################################################################################
+
 #
 # Go itself is excluded from the docker ecosystem. A branch pins one Go version
 # in several places, and most of them live in the workflows and the setup-go
@@ -27,6 +44,27 @@
 # go.mod pins google.golang.org/grpc and google.golang.org/protobuf. Raising it
 # drags both past the versions frozen here, so ignoring those two by name does
 # not hold on its own.
+#
+# github.com/go-openapi/* is excluded on release-1.8 and release-1.9. Several of
+# these modules jumped straight from 0.x to v1.0.0, which Dependabot classifies
+# as a patch, so the branches' semver-major ignore does not catch them. The
+# wildcard is deliberate: swag has split into a dozen submodules, and naming the
+# affected ones individually goes stale as that continues.
+#
+# github.com/go-swagger/go-swagger is excluded on release-1.8 and release-1.9
+# because it generates pkg/client/generated, and three minor versions of it
+# rewrite every model there -- 542 files, moving from go-openapi/swag to
+# go-openapi/swag/jsonutils. check-codegen fails on the regenerated diff.
+#
+# github.com/ktrysmt/go-bitbucket is excluded on release-1.8 through
+# release-1.10. v0.10.0 changes NewOAuthbearerToken to return two values, which
+# does not compile against the call site in pkg/gitprovider/bitbucket. main and
+# release-1.11 replaced this library with a generated client, so there is no
+# upstream fix to backport.
+#
+# github.com/jferrl/go-githubauth is excluded on release-1.8 alone. v1.7.0 drops
+# WithEnterpriseURLs and stops aliasing go-github's InstallationTokenOptions.
+# release-1.9 and later already carry v1.7.0 and the code that suits it.
 version: 2
 updates:
   # ----------------------------- main -----------------------------
@@ -366,6 +404,7 @@ updates:
     - dependency-name: "helm.sh/helm/v3"
     - dependency-name: "connectrpc.com/*"
     - dependency-name: "github.com/bufbuild/buf"
+    - dependency-name: "github.com/ktrysmt/go-bitbucket"
     commit-message:
       prefix: "chore(deps):"
     groups:
@@ -396,6 +435,7 @@ updates:
     - dependency-name: "helm.sh/helm/v3"
     - dependency-name: "connectrpc.com/*"
     - dependency-name: "github.com/bufbuild/buf"
+    - dependency-name: "github.com/ktrysmt/go-bitbucket"
     commit-message:
       prefix: "chore(deps/api):"
     groups:
@@ -426,6 +466,7 @@ updates:
     - dependency-name: "helm.sh/helm/v3"
     - dependency-name: "connectrpc.com/*"
     - dependency-name: "github.com/bufbuild/buf"
+    - dependency-name: "github.com/ktrysmt/go-bitbucket"
     commit-message:
       prefix: "chore(deps/hack):"
     groups:
@@ -456,6 +497,7 @@ updates:
     - dependency-name: "helm.sh/helm/v3"
     - dependency-name: "connectrpc.com/*"
     - dependency-name: "github.com/bufbuild/buf"
+    - dependency-name: "github.com/ktrysmt/go-bitbucket"
     commit-message:
       prefix: "chore(deps/client):"
     groups:
@@ -539,6 +581,9 @@ updates:
     - dependency-name: "helm.sh/helm/v3"
     - dependency-name: "connectrpc.com/*"
     - dependency-name: "github.com/bufbuild/buf"
+    - dependency-name: "github.com/go-swagger/go-swagger"
+    - dependency-name: "github.com/go-openapi/*"
+    - dependency-name: "github.com/ktrysmt/go-bitbucket"
     commit-message:
       prefix: "chore(deps):"
     groups:
@@ -569,6 +614,9 @@ updates:
     - dependency-name: "helm.sh/helm/v3"
     - dependency-name: "connectrpc.com/*"
     - dependency-name: "github.com/bufbuild/buf"
+    - dependency-name: "github.com/go-swagger/go-swagger"
+    - dependency-name: "github.com/go-openapi/*"
+    - dependency-name: "github.com/ktrysmt/go-bitbucket"
     commit-message:
       prefix: "chore(deps/api):"
     groups:
@@ -599,6 +647,9 @@ updates:
     - dependency-name: "helm.sh/helm/v3"
     - dependency-name: "connectrpc.com/*"
     - dependency-name: "github.com/bufbuild/buf"
+    - dependency-name: "github.com/go-swagger/go-swagger"
+    - dependency-name: "github.com/go-openapi/*"
+    - dependency-name: "github.com/ktrysmt/go-bitbucket"
     commit-message:
       prefix: "chore(deps/hack):"
     groups:
@@ -682,6 +733,10 @@ updates:
     - dependency-name: "helm.sh/helm/v3"
     - dependency-name: "connectrpc.com/*"
     - dependency-name: "github.com/bufbuild/buf"
+    - dependency-name: "github.com/go-swagger/go-swagger"
+    - dependency-name: "github.com/go-openapi/*"
+    - dependency-name: "github.com/ktrysmt/go-bitbucket"
+    - dependency-name: "github.com/jferrl/go-githubauth"
     commit-message:
       prefix: "chore(deps):"
     groups:
@@ -712,6 +767,10 @@ updates:
     - dependency-name: "helm.sh/helm/v3"
     - dependency-name: "connectrpc.com/*"
     - dependency-name: "github.com/bufbuild/buf"
+    - dependency-name: "github.com/go-swagger/go-swagger"
+    - dependency-name: "github.com/go-openapi/*"
+    - dependency-name: "github.com/ktrysmt/go-bitbucket"
+    - dependency-name: "github.com/jferrl/go-githubauth"
     commit-message:
       prefix: "chore(deps/api):"
     groups:
@@ -742,6 +801,10 @@ updates:
     - dependency-name: "helm.sh/helm/v3"
     - dependency-name: "connectrpc.com/*"
     - dependency-name: "github.com/bufbuild/buf"
+    - dependency-name: "github.com/go-swagger/go-swagger"
+    - dependency-name: "github.com/go-openapi/*"
+    - dependency-name: "github.com/ktrysmt/go-bitbucket"
+    - dependency-name: "github.com/jferrl/go-githubauth"
     commit-message:
       prefix: "chore(deps/hack):"
     groups:
