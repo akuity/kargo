@@ -51,6 +51,7 @@ export const PromotionCalendar = ({
       slotDuration='00:30:00'
       slotMinHeight={26}
       slotEventOverlap={false}
+      eventMinHeight={24}
       slotHeaderInterval='01:00:00'
       scrollTime='07:00:00'
       slotHeaderFormat={{ hour: '2-digit', minute: '2-digit', hour12: false }}
@@ -197,16 +198,19 @@ export const PromotionCalendar = ({
             }
           >
             <Flex
-              className='h-full w-full min-w-0 px-1.5 py-0.5'
+              className={classNames(
+                'h-full w-full min-w-0 px-1.5',
+                info.isShort ? 'py-0 leading-tight' : 'py-0.5'
+              )}
               style={occurrence.disabled ? disabledOccurrenceStyle : undefined}
               vertical={!info.isShort}
-              align={info.isShort ? 'baseline' : undefined}
+              align={info.isShort ? 'center' : undefined}
               gap={info.isShort ? 6 : undefined}
             >
-              <Flex className='min-w-0' align='baseline' gap={6}>
+              <Flex className='min-w-0' align='center' gap={6}>
                 <span
                   className={classNames(
-                    'size-1.5 shrink-0 translate-y-[-1px] rounded-full',
+                    'size-1.5 shrink-0 rounded-full',
                     occurrenceColors(occurrence.kind).dot
                   )}
                 />
@@ -218,7 +222,12 @@ export const PromotionCalendar = ({
                   {occurrence.name}
                 </Typography.Text>
               </Flex>
-              <Typography.Text className='shrink-0 truncate text-[10px] tabular-nums opacity-75 !text-inherit'>
+              <Typography.Text
+                className={classNames(
+                  'shrink-0 truncate text-[10px] tabular-nums opacity-75 !text-inherit',
+                  !info.isShort && 'ps-3'
+                )}
+              >
                 {span}
               </Typography.Text>
             </Flex>
