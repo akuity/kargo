@@ -1,7 +1,7 @@
 import { faPlus, faTrash } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { Button, Flex, Input, Segmented, Select, Typography } from 'antd';
-import { useController, useFieldArray, useFormContext, useWatch } from 'react-hook-form';
+import { Button, Flex, Input, Select, Typography } from 'antd';
+import { useController, useFieldArray, useFormContext } from 'react-hook-form';
 
 import { FieldContainer } from '@ui/features/common/form/field-container';
 
@@ -24,7 +24,6 @@ export const SelectorFields = ({ subject }: SelectorFieldsProps) => {
 
   const noun = subjectLabel[subject];
 
-  const mode = useWatch({ control, name: `${subject}.mode` });
   const nameModeField = useController({ control, name: `${subject}.nameMode` }).field;
   const nameMode = nameModeField.value;
 
@@ -32,91 +31,78 @@ export const SelectorFields = ({ subject }: SelectorFieldsProps) => {
 
   return (
     <>
+      <Typography.Text strong>{noun}s this window applies to</Typography.Text>
+      <Typography.Paragraph type='secondary' className='text-xs !mt-1 !mb-4'>
+        Leave both empty to match every {noun}. When both are set, a {noun} must match the name and
+        every label to be covered by this window.
+      </Typography.Paragraph>
+
       <FieldContainer
         control={control}
-        name={`${subject}.mode`}
-        label={`${noun}s this window applies to`}
+        name={`${subject}.name`}
+        label='Name'
+        description={nameModeHelp[nameMode]}
       >
         {({ field }) => (
-          <Segmented
+          <Input
             {...field}
-            options={[
-              { label: `Every ${noun}`, value: 'all' },
-              { label: 'By name', value: 'name' },
-              { label: 'By labels', value: 'labels' }
-            ]}
+            placeholder={nameMode === 'exact' ? 'prod-us' : 'prod-*'}
+            addonBefore={
+              <Select
+                {...nameModeField}
+                style={{ width: 96 }}
+                options={[
+                  { label: 'Exact', value: 'exact' },
+                  { label: 'glob:', value: 'glob' },
+                  { label: 'regex:', value: 'regex' }
+                ]}
+              />
+            }
           />
         )}
       </FieldContainer>
 
-      {mode === 'name' && (
-        <FieldContainer
-          control={control}
-          name={`${subject}.name`}
-          description={nameModeHelp[nameMode]}
-        >
-          {({ field }) => (
-            <Input
-              {...field}
-              placeholder={nameMode === 'exact' ? 'prod-us' : 'prod-*'}
-              addonBefore={
-                <Select
-                  {...nameModeField}
-                  style={{ width: 96 }}
-                  options={[
-                    { label: 'Exact', value: 'exact' },
-                    { label: 'glob:', value: 'glob' },
-                    { label: 'regex:', value: 'regex' }
-                  ]}
-                />
-              }
-            />
-          )}
-        </FieldContainer>
-      )}
-
-      {mode === 'labels' && (
-        <Flex vertical gap={8}>
-          {labels.fields.map((label, index) => (
-            <Flex key={label.id} gap={8} align='center'>
-              <FieldContainer
-                control={control}
-                name={`${subject}.labels.${index}.key`}
-                className='flex-1'
-                formItemClassName='!mb-0'
-              >
-                {({ field }) => <Input {...field} placeholder='key' />}
-              </FieldContainer>
-              <FieldContainer
-                control={control}
-                name={`${subject}.labels.${index}.value`}
-                className='flex-1'
-                formItemClassName='!mb-0'
-              >
-                {({ field }) => <Input {...field} placeholder='value' />}
-              </FieldContainer>
-              <Button
-                icon={<FontAwesomeIcon icon={faTrash} size='sm' />}
-                onClick={() => labels.remove(index)}
-              />
-            </Flex>
-          ))}
-          <Flex align='center' gap={8}>
-            <Button
-              size='small'
-              icon={<FontAwesomeIcon icon={faPlus} size='sm' />}
-              onClick={() => labels.append({ key: '', value: '' })}
+      <Typography.Text className='text-sm'>Labels</Typography.Text>
+      <Flex vertical gap={8} className='mt-2'>
+        {labels.fields.map((label, index) => (
+          <Flex key={label.id} gap={8} align='center'>
+            <FieldContainer
+              control={control}
+              name={`${subject}.labels.${index}.key`}
+              className='flex-1'
+              formItemClassName='!mb-0'
             >
-              Add label
-            </Button>
-            {!labels.fields.length && (
-              <Typography.Text type='secondary' className='text-xs'>
-                An empty selector matches every {noun}.
-              </Typography.Text>
-            )}
+              {({ field }) => <Input {...field} placeholder='key' />}
+            </FieldContainer>
+            <FieldContainer
+              control={control}
+              name={`${subject}.labels.${index}.value`}
+              className='flex-1'
+              formItemClassName='!mb-0'
+            >
+              {({ field }) => <Input {...field} placeholder='value' />}
+            </FieldContainer>
+            <Button
+              icon={<FontAwesomeIcon icon={faTrash} size='sm' />}
+              onClick={() => labels.remove(index)}
+            />
           </Flex>
+        ))}
+        <Flex align='center' gap={8}>
+          <Button
+            size='small'
+            icon={<FontAwesomeIcon icon={faPlus} size='sm' />}
+            onClick={() => labels.append({ key: '', value: '' })}
+          >
+            Add label
+          </Button>
+          {!labels.fields.length && (
+            <Typography.Text type='secondary' className='text-xs'>
+              No label constraint.
+            </Typography.Text>
+          )}
         </Flex>
-      )}
+      </Flex>
     </>
   );
 };

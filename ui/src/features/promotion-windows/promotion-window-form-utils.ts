@@ -6,7 +6,8 @@ import { dnsRegex } from '@ui/features/common/utils';
 import {
   PromotionPolicySelector,
   PromotionWindow,
-  PromotionWindowKind
+  PromotionWindowKind,
+  V1LabelSelectorRequirement
 } from '@ui/gen/api/v2/models';
 import { zodValidators } from '@ui/utils/validators';
 
@@ -16,10 +17,10 @@ import { fromViewerClockDate } from './viewer-clock';
 export const ICAL_FORMAT = "yyyyMMdd'T'HHmmss";
 
 const selectorSchema = z.object({
-  mode: z.enum(['all', 'name', 'labels']),
   nameMode: z.enum(['exact', 'glob', 'regex']),
   name: z.string(),
-  labels: z.array(z.object({ key: z.string(), value: z.string() }))
+  labels: z.array(z.object({ key: z.string(), value: z.string() })),
+  matchExpressions: z.array(z.custom<V1LabelSelectorRequirement>())
 });
 
 export const promotionWindowFormSchema = z
@@ -58,30 +59,28 @@ const selectorValues = (selector?: PromotionPolicySelector): SelectorValues => {
   const [, prefix, pattern] = /^(glob|regex|regexp):(.*)$/.exec(selector?.name ?? '') ?? [];
 
   return {
-    mode: selector?.name ? 'name' : selector?.matchLabels ? 'labels' : 'all',
     nameMode: !prefix ? 'exact' : prefix === 'glob' ? 'glob' : 'regex',
     name: pattern ?? selector?.name ?? '',
-    labels: Object.entries(selector?.matchLabels ?? {}).map(([key, value]) => ({ key, value }))
+    labels: Object.entries(selector?.matchLabels ?? {}).map(([key, value]) => ({ key, value })),
+    matchExpressions: selector?.matchExpressions ?? []
   };
 };
 
 const selectorFromValues = (values: SelectorValues): PromotionPolicySelector | undefined => {
   const name = values.name.trim();
+  const matchLabels = Object.fromEntries(
+    values.labels
+      .filter((label) => label.key.trim())
+      .map((label) => [label.key.trim(), label.value.trim()])
+  );
 
-  if (values.mode === 'name' && name) {
-    return { name: values.nameMode === 'exact' ? name : `${values.nameMode}:${name}` };
-  }
+  const selector: PromotionPolicySelector = {
+    ...(name ? { name: values.nameMode === 'exact' ? name : `${values.nameMode}:${name}` } : {}),
+    ...(Object.keys(matchLabels).length ? { matchLabels } : {}),
+    ...(values.matchExpressions.length ? { matchExpressions: values.matchExpressions } : {})
+  };
 
-  if (values.mode === 'labels') {
-    const matchLabels = Object.fromEntries(
-      values.labels
-        .filter((label) => label.key.trim())
-        .map((label) => [label.key.trim(), label.value.trim()])
-    );
-    return Object.keys(matchLabels).length ? { matchLabels } : undefined;
-  }
-
-  return undefined;
+  return Object.keys(selector).length ? selector : undefined;
 };
 
 export const promotionWindowFromRange = (start: Date, end: Date): PromotionWindow => ({

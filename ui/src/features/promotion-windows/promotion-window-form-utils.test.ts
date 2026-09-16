@@ -9,7 +9,7 @@ import {
   formValuesFromPromotionWindow,
   promotionWindowFromFormValues,
   promotionWindowFromRange
-} from './promotion-window-form';
+} from './promotion-window-form-utils';
 
 describe('ICAL_FORMAT', () => {
   it('renders an iCal local date-time', () => {
@@ -70,6 +70,22 @@ describe('promotion window form round trip', () => {
       dtstart: 'TZID=UTC:20260101T000000',
       dtend: 'TZID=UTC:20260106T000000',
       stageSelector: { name: 'glob:prod-*' }
+    },
+    {
+      name: 'critical-prod-freeze',
+      kind: 'Deny',
+      dtstart: 'TZID=UTC:20260101T000000',
+      dtend: 'TZID=UTC:20260106T000000',
+      stageSelector: { name: 'prod', matchLabels: { tier: 'critical' } }
+    },
+    {
+      name: 'expression-selector',
+      kind: 'Deny',
+      dtstart: 'TZID=UTC:20260101T000000',
+      dtend: 'TZID=UTC:20260106T000000',
+      stageSelector: {
+        matchExpressions: [{ key: 'tier', operator: 'In', values: ['critical', 'high'] }]
+      }
     }
   ];
 
@@ -77,6 +93,41 @@ describe('promotion window form round trip', () => {
     expect(
       promotionWindowFromFormValues(formValuesFromPromotionWindow(promotionWindow), 'project')
     ).toEqual(promotionWindow);
+  });
+
+  it('keeps the label constraint when a name is also set', () => {
+    const stageSelector = { name: 'prod', matchLabels: { tier: 'critical' } };
+    const promotionWindow: PromotionWindow = {
+      name: 'critical-prod-freeze',
+      kind: 'Deny',
+      dtstart: 'TZID=UTC:20260824T090000',
+      dtend: 'TZID=UTC:20260824T170000',
+      stageSelector
+    };
+
+    const saved = promotionWindowFromFormValues(
+      formValuesFromPromotionWindow(promotionWindow),
+      'project'
+    );
+
+    expect(saved.stageSelector).toEqual(stageSelector);
+  });
+
+  it('drops the selector entirely when neither constraint is set', () => {
+    const promotionWindow: PromotionWindow = {
+      name: 'everything',
+      kind: 'Deny',
+      dtstart: 'TZID=UTC:20260824T090000',
+      dtend: 'TZID=UTC:20260824T170000'
+    };
+
+    const saved = promotionWindowFromFormValues(
+      formValuesFromPromotionWindow(promotionWindow),
+      'cluster'
+    );
+
+    expect(saved.stageSelector).toBeUndefined();
+    expect(saved.projectSelector).toBeUndefined();
   });
 
   it('carries the cluster-scoped Project selector only in cluster scope', () => {
