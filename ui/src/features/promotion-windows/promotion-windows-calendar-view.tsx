@@ -1,14 +1,14 @@
 import { faChevronLeft, faChevronRight } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { Button, Flex, Segmented, Typography } from 'antd';
-import { addMonths, addWeeks, endOfWeek, startOfWeek } from 'date-fns';
+import { Button, Flex, Typography } from 'antd';
+import { addHours, addMonths, startOfHour } from 'date-fns';
 import { useState } from 'react';
 
 import { PromotionWindow, PromotionWindowKind } from '@ui/gen/api/v2/models';
 
 import { disabledOccurrenceStyle, occurrenceColors } from './occurrence-colors';
-import { CalendarView, PromotionCalendar } from './promotion-calendar';
-import { promotionWindowFromRange } from './promotion-window-form-utils';
+import { PromotionCalendar } from './promotion-calendar';
+import { combine, promotionWindowFromRange } from './promotion-window-form-utils';
 import { useGetPromotionWindowOccurrences } from './use-get-promotion-window-occurrences';
 
 type PromotionWindowsCalendarViewProps = {
@@ -17,22 +17,25 @@ type PromotionWindowsCalendarViewProps = {
   onEdit: (promotionWindow: PromotionWindow) => void;
 };
 
+/** A one hour draft on `day`, starting at the hour the viewer is currently in. */
+const draftFromDay = (day: Date) => {
+  const start = combine(day, startOfHour(new Date()));
+
+  return promotionWindowFromRange(start, addHours(start, 1));
+};
+
 export const PromotionWindowsCalendarView = ({
   promotionWindows,
   onCreate,
   onEdit
 }: PromotionWindowsCalendarViewProps) => {
-  const [view, setView] = useState<CalendarView>('timeGridWeek');
   const [date, setDate] = useState(() => new Date());
 
-  const occurrences = useGetPromotionWindowOccurrences(promotionWindows, view, date);
+  const occurrences = useGetPromotionWindowOccurrences(promotionWindows, date);
 
   const disabledCount = promotionWindows.filter(
     (promotionWindow) => promotionWindow.disabled
   ).length;
-
-  const shift = (direction: number) =>
-    setDate(view === 'dayGridMonth' ? addMonths(date, direction) : addWeeks(date, direction));
 
   return (
     <>
@@ -44,42 +47,26 @@ export const PromotionWindowsCalendarView = ({
           <Button
             size='small'
             icon={<FontAwesomeIcon icon={faChevronLeft} size='sm' />}
-            onClick={() => shift(-1)}
+            onClick={() => setDate(addMonths(date, -1))}
           />
           <Button
             size='small'
             icon={<FontAwesomeIcon icon={faChevronRight} size='sm' />}
-            onClick={() => shift(1)}
+            onClick={() => setDate(addMonths(date, 1))}
           />
           <Typography.Text strong>
-            {view === 'dayGridMonth'
-              ? date.toLocaleDateString(undefined, { month: 'long', year: 'numeric' })
-              : `${startOfWeek(date).toLocaleDateString(undefined, {
-                  month: 'short',
-                  day: 'numeric'
-                })} - ${endOfWeek(date).toLocaleDateString(undefined, {
-                  month: 'short',
-                  day: 'numeric',
-                  year: 'numeric'
-                })}`}
+            {date.toLocaleDateString(undefined, { month: 'long', year: 'numeric' })}
           </Typography.Text>
         </Flex>
-        <Segmented
-          size='small'
-          value={view}
-          onChange={setView}
-          options={[
-            { label: 'Week', value: 'timeGridWeek' },
-            { label: 'Month', value: 'dayGridMonth' }
-          ]}
-        />
       </Flex>
 
       <PromotionCalendar
-        view={view}
         date={date}
         occurrences={occurrences}
-        onSelectSlot={(range) => onCreate(promotionWindowFromRange(range.start, range.end))}
+        onSelectDay={(day) => {
+          setDate(day);
+          onCreate(draftFromDay(day));
+        }}
         onSelectOccurrence={(occurrence) => {
           const promotionWindow = promotionWindows.find(
             (window) => window.name === occurrence.name
@@ -119,8 +106,8 @@ export const PromotionWindowsCalendarView = ({
         </Flex>
         <Typography.Text type='secondary' className='text-xs'>
           {promotionWindows.length
-            ? `${promotionWindows.length} window${promotionWindows.length === 1 ? '' : 's'} configured${disabledCount ? ` (${disabledCount} disabled)` : ''}. Drag on the grid to draft one.`
-            : 'No windows yet - promotions are unconstrained. Drag on the grid to draft one.'}
+            ? `${promotionWindows.length} window${promotionWindows.length === 1 ? '' : 's'} configured${disabledCount ? ` (${disabledCount} disabled)` : ''}. Click a day to draft one.`
+            : 'No windows yet - promotions are unconstrained. Click a day to draft one.'}
         </Typography.Text>
       </Flex>
     </>

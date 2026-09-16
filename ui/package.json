@@ -65,7 +65,6 @@
     "@fortawesome/free-brands-svg-icons": "7.3.0",
     "@fortawesome/free-solid-svg-icons": "7.3.0",
     "@fortawesome/react-fontawesome": "3.3.1",
-    "@fullcalendar/react": "7.1.0",
     "@hookform/resolvers": "5.4.0",
     "@monaco-editor/react": "4.7.0",
     "@rjsf/antd": "6.6.2",

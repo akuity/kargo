@@ -1,247 +1,190 @@
-import FullCalendar, { CalendarRef } from '@fullcalendar/react';
-import dayGridPlugin from '@fullcalendar/react/daygrid';
-import interactionPlugin from '@fullcalendar/react/interaction';
-import timeGridPlugin from '@fullcalendar/react/timegrid';
 import { Flex, Tooltip, Typography } from 'antd';
 import classNames from 'classnames';
-import { format, isSameDay } from 'date-fns';
-import { useEffect, useRef } from 'react';
+import { endOfDay, format, isSameDay, startOfDay } from 'date-fns';
+import { useMemo } from 'react';
+
+import { Calendar } from '@ui/features/common/calendar';
 
 import { disabledOccurrenceStyle, occurrenceColors } from './occurrence-colors';
+import { selectorLines } from './promotion-window-selector-utils';
 import { PromotionWindowOccurrence } from './types';
 import { fromViewerClockDate } from './viewer-clock';
 
-import '@fullcalendar/react/skeleton.css';
-
-export type CalendarView = 'timeGridWeek' | 'dayGridMonth';
+/**
+ * An occurrence paired with the real instants it renders at. Occurrences carry
+ * viewer-clock dates, which must be converted before they can be compared with
+ * the calendar's own (local) dates.
+ */
+type CalendarOccurrence = {
+  occurrence: PromotionWindowOccurrence;
+  start: Date;
+  end: Date;
+};
 
 type PromotionCalendarProps = {
-  view: CalendarView;
   date: Date;
   occurrences: PromotionWindowOccurrence[];
-  onSelectSlot: (range: { start: Date; end: Date }) => void;
+  onSelectDay: (day: Date) => void;
   onSelectOccurrence: (occurrence: PromotionWindowOccurrence) => void;
 };
 
+const fullSpan = ({ start, end }: CalendarOccurrence) =>
+  isSameDay(start, end)
+    ? `${format(start, 'HH:mm')} - ${format(end, 'HH:mm')}`
+    : `${format(start, 'MMM d, HH:mm')} - ${format(end, 'MMM d, HH:mm')}`;
+
+/** The portion of an occurrence that falls on a single day. */
+const daySpan = ({ start, end }: CalendarOccurrence, day: Date) => {
+  const startsToday = isSameDay(start, day);
+  const endsToday = isSameDay(end, day);
+
+  if (startsToday && endsToday) {
+    return `${format(start, 'HH:mm')} - ${format(end, 'HH:mm')}`;
+  }
+  if (startsToday) {
+    return `${format(start, 'HH:mm')} →`;
+  }
+  if (endsToday) {
+    return `→ ${format(end, 'HH:mm')}`;
+  }
+  return 'All day';
+};
+
 export const PromotionCalendar = ({
-  view,
   date,
   occurrences,
-  onSelectSlot,
+  onSelectDay,
   onSelectOccurrence
 }: PromotionCalendarProps) => {
-  const calendar = useRef<CalendarRef>(null);
-
-  useEffect(() => {
-    calendar.current?.getApi().changeView(view, date);
-  }, [view, date]);
+  const calendarOccurrences = useMemo<CalendarOccurrence[]>(
+    () =>
+      occurrences
+        .map((occurrence) => ({
+          occurrence,
+          start: fromViewerClockDate(occurrence.start),
+          end: fromViewerClockDate(occurrence.end)
+        }))
+        .sort((a, b) => a.start.getTime() - b.start.getTime()),
+    [occurrences]
+  );
 
   return (
-    <FullCalendar
-      ref={calendar}
-      plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
-      initialView={view}
-      initialDate={date}
-      headerToolbar={false}
-      height='clamp(400px, calc(100vh - 300px), 760px)'
-      nowIndicator
-      dayMaxEvents
-      selectable
-      expandRows
-      slotDuration='00:30:00'
-      slotMinHeight={26}
-      slotEventOverlap={false}
-      eventMinHeight={24}
-      slotHeaderInterval='01:00:00'
-      scrollTime='07:00:00'
-      slotHeaderFormat={{ hour: '2-digit', minute: '2-digit', hour12: false }}
-      eventTimeFormat={{ hour: '2-digit', minute: '2-digit', hour12: false }}
-      events={occurrences.map((occurrence) => {
-        const start = fromViewerClockDate(occurrence.start);
-        const end = fromViewerClockDate(occurrence.end);
-
-        return {
-          title: occurrence.name,
-          start,
-          end,
-          allDay: end.getTime() - start.getTime() >= 86_400_000,
-          extendedProps: { occurrence }
-        };
-      })}
-      select={(info) => onSelectSlot({ start: info.start, end: info.end })}
-      eventClick={(info) =>
-        onSelectOccurrence(info.event.extendedProps.occurrence as PromotionWindowOccurrence)
-      }
-      viewClass={classNames(
-        'overflow-hidden rounded-lg',
-        'dark:bg-neutral-900 dark:text-neutral-100',
+    <Calendar
+      value={date}
+      mode='month'
+      headerRender={() => null}
+      onSelect={(day, info) => {
+        if (info.source === 'date') {
+          onSelectDay(day);
+        }
+      }}
+      className={classNames(
+        'overflow-hidden rounded-lg px-3',
         'border border-solid border-gray-200 dark:border-neutral-700'
       )}
-      tableHeaderClass='dark:bg-neutral-900'
-      dayHeaderRowClass='border border-solid border-gray-200 dark:border-neutral-700'
-      dayHeaderClass='justify-center'
-      dayHeaderInnerClass='mx-1 my-1.5'
-      dayHeaderContent={(info) =>
-        view === 'dayGridMonth' ? (
-          <Typography.Text strong type='secondary' className='text-[10px] uppercase tracking-wider'>
-            {format(info.date, 'EEE')}
-          </Typography.Text>
-        ) : (
-          <>
-            <Typography.Text
-              strong
-              type={info.isToday ? undefined : 'secondary'}
-              className={classNames(
-                'text-[10px] uppercase tracking-wider',
-                info.isToday && '!text-blue-600 dark:!text-blue-400'
-              )}
-            >
-              {format(info.date, 'EEE')}
-            </Typography.Text>
-            <Typography.Text
-              strong={info.isToday}
-              className={classNames(
-                'grid h-6 min-w-6 place-items-center rounded-full px-1.5 text-sm tabular-nums',
-                info.isToday ? 'bg-blue-600 !text-white' : 'font-medium'
-              )}
-            >
-              {format(info.date, 'd')}
-            </Typography.Text>
-          </>
-        )
-      }
-      dayRowClass='border border-solid border-gray-200 dark:border-neutral-700'
-      dayCellClass={(info) =>
-        classNames(
-          'border border-solid border-gray-200 dark:border-neutral-700',
-          info.isToday && 'bg-blue-50/70 dark:bg-blue-500/10',
-          info.isOther && 'bg-gray-50/70 dark:bg-neutral-800/40'
-        )
-      }
-      dayCellTopClass='flex flex-row justify-start'
-      dayCellTopInnerClass='mx-2 my-1'
-      dayCellTopContent={(info) => (
-        <Typography.Text
-          type={!info.isToday && info.isOther ? 'secondary' : undefined}
-          className={classNames(
-            'grid h-5 min-w-5 place-items-center rounded-full text-[11px] tabular-nums',
-            info.isToday ? 'bg-blue-600 font-semibold !text-white' : !info.isOther && 'font-medium'
-          )}
-        >
-          {info.text}
-        </Typography.Text>
-      )}
-      dayLaneClass={(info) =>
-        classNames(
-          'border border-solid border-gray-200 dark:border-neutral-700',
-          info.isToday && 'bg-blue-50/60 dark:bg-blue-500/10'
-        )
-      }
-      slotLaneClass={(info) =>
-        classNames(
-          'border border-solid border-gray-100 dark:border-neutral-800',
-          info.isMinor && 'border-dotted'
-        )
-      }
-      slotHeaderInnerClass={classNames(
-        'mx-1 my-0.5 text-[10px] font-medium tabular-nums',
-        'text-gray-400 dark:text-neutral-500'
-      )}
-      slotHeaderDividerClass='border-solid border-0 border-r border-gray-200 dark:border-neutral-700'
-      allDayHeaderContent={() => null}
-      allDayDividerClass='border border-solid border-gray-200 dark:border-neutral-700'
-      nowIndicatorLineClass='-mt-px border-solid border-0 border-t-2 border-red-500'
-      nowIndicatorDotClass='-ms-1 -mt-1 size-2 rounded-full bg-red-500'
-      highlightClass='rounded border border-dashed border-blue-400 bg-blue-500/10'
-      eventClass={(info) => {
-        const occurrence = info.event.extendedProps.occurrence as PromotionWindowOccurrence;
+      cellRender={(day, info) => {
+        if (info.type !== 'date') {
+          return null;
+        }
 
-        return classNames(
-          'cursor-pointer overflow-hidden rounded border text-xs transition-colors',
-          'mb-px shadow-[0_0_0_1px_#fff] dark:shadow-[0_0_0_1px_#171717]',
-          occurrence.disabled ? 'border-dashed' : 'border-solid',
-          occurrenceColors(occurrence.kind).event
+        const dayStart = startOfDay(day);
+        const dayEnd = endOfDay(day);
+        const dayOccurrences = calendarOccurrences.filter(
+          ({ start, end }) => start <= dayEnd && end >= dayStart
         );
-      }}
-      eventContent={(info) => {
-        const { start, end } = info.event;
-        const span =
-          start && end
-            ? isSameDay(start, end)
-              ? `${format(start, 'HH:mm')} - ${format(end, 'HH:mm')}`
-              : `${format(start, 'MMM d, HH:mm')} - ${format(end, 'MMM d, HH:mm')}`
-            : info.timeText;
-        const occurrence = info.event.extendedProps.occurrence as PromotionWindowOccurrence;
+
+        if (!dayOccurrences.length) {
+          return null;
+        }
 
         return (
-          <Tooltip
-            placement='top'
-            title={
-              <Flex vertical gap={2} className='max-w-xs'>
-                <Typography.Text strong className='!text-inherit'>
-                  {occurrence.name} ({occurrence.kind})
-                </Typography.Text>
-                {occurrence.disabled && (
-                  <Typography.Text className='text-xs !text-inherit'>
-                    Disabled - ignored when deciding whether promotions may run.
-                  </Typography.Text>
-                )}
-                <Typography.Text className='text-xs tabular-nums opacity-75 !text-inherit'>
-                  {span}
-                </Typography.Text>
-                {occurrence.description && (
-                  <Typography.Text className='mt-1 text-xs whitespace-normal !text-inherit'>
-                    {occurrence.description}
-                  </Typography.Text>
-                )}
-              </Flex>
-            }
-          >
-            <Flex
-              className={classNames(
-                'h-full w-full min-w-0 px-1.5',
-                info.isShort ? 'py-0 leading-tight' : 'py-0.5'
-              )}
-              style={occurrence.disabled ? disabledOccurrenceStyle : undefined}
-              vertical={!info.isShort}
-              align={info.isShort ? 'center' : undefined}
-              gap={info.isShort ? 6 : undefined}
-            >
-              <Flex className='min-w-0' align='center' gap={6}>
-                <span
-                  className={classNames(
-                    'size-1.5 shrink-0 rounded-full',
-                    occurrenceColors(occurrence.kind).dot
-                  )}
-                />
-                <Typography.Text
-                  strong
-                  delete={occurrence.disabled}
-                  className='truncate !text-inherit'
-                >
-                  {occurrence.name}
-                </Typography.Text>
-              </Flex>
-              <Typography.Text
-                className={classNames(
-                  'shrink-0 truncate text-[10px] tabular-nums opacity-75 !text-inherit',
-                  !info.isShort && 'ps-3'
-                )}
+          <Flex vertical gap={2} className='min-w-0'>
+            {dayOccurrences.map(({ occurrence, start, end }) => (
+              <Tooltip
+                key={`${occurrence.name}-${start.toISOString()}`}
+                placement='top'
+                title={
+                  <Flex vertical gap={2} className='max-w-xs'>
+                    <Typography.Text strong className='line-clamp-2 break-words !text-inherit'>
+                      {occurrence.name} ({occurrence.kind})
+                    </Typography.Text>
+                    {occurrence.disabled && (
+                      <Typography.Text className='text-xs !text-inherit'>
+                        Disabled - ignored when deciding whether promotions may run.
+                      </Typography.Text>
+                    )}
+                    <Typography.Text className='text-xs tabular-nums opacity-75 !text-inherit'>
+                      {fullSpan({ occurrence, start, end })}
+                    </Typography.Text>
+                    {(
+                      [
+                        ['Stages', occurrence.stageSelector],
+                        ['Projects', occurrence.projectSelector]
+                      ] as const
+                    ).map(([label, selector]) => {
+                      const lines = selectorLines(selector);
+
+                      return (
+                        lines.length > 0 && (
+                          <Flex key={label} gap={6} className='min-w-0 text-xs'>
+                            <Typography.Text className='shrink-0 opacity-60 !text-inherit'>
+                              {label}
+                            </Typography.Text>
+                            <Typography.Text className='line-clamp-2 break-words !text-inherit'>
+                              {lines.join(', ')}
+                            </Typography.Text>
+                          </Flex>
+                        )
+                      );
+                    })}
+                    {occurrence.description && (
+                      <Typography.Text
+                        className={classNames(
+                          'mt-1 text-xs whitespace-normal !text-inherit',
+                          'line-clamp-4 break-words'
+                        )}
+                      >
+                        {occurrence.description}
+                      </Typography.Text>
+                    )}
+                  </Flex>
+                }
               >
-                {span}
-              </Typography.Text>
-            </Flex>
-          </Tooltip>
+                <Flex
+                  align='center'
+                  gap={6}
+                  className={classNames(
+                    'min-w-0 cursor-pointer rounded border px-1.5 text-xs transition-colors',
+                    occurrence.disabled ? 'border-dashed' : 'border-solid',
+                    occurrenceColors(occurrence.kind).event
+                  )}
+                  style={occurrence.disabled ? disabledOccurrenceStyle : undefined}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    onSelectOccurrence(occurrence);
+                  }}
+                >
+                  <Typography.Text
+                    strong
+                    delete={occurrence.disabled}
+                    className='min-w-0 truncate !text-inherit'
+                  >
+                    {occurrence.name}
+                  </Typography.Text>
+                  <Typography.Text
+                    className={classNames(
+                      'ms-auto shrink-0 text-[10px] tabular-nums opacity-75',
+                      '!text-inherit'
+                    )}
+                  >
+                    {daySpan({ occurrence, start, end }, day)}
+                  </Typography.Text>
+                </Flex>
+              </Tooltip>
+            ))}
+          </Flex>
         );
       }}
-      moreLinkClass={classNames(
-        'rounded px-1 text-[11px] font-medium hover:bg-gray-100 dark:hover:bg-neutral-800',
-        'text-gray-400 dark:text-neutral-500'
-      )}
-      popoverClass={classNames(
-        'overflow-hidden rounded-lg bg-white shadow-lg dark:bg-neutral-800',
-        'border border-solid border-gray-200 dark:border-neutral-700'
-      )}
     />
   );
 };

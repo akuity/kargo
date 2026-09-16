@@ -35,9 +35,6 @@ importers:
       '@fortawesome/react-fontawesome':
         specifier: 3.3.1
         version: 3.3.1(@fortawesome/fontawesome-svg-core@7.3.0)(react@19.2.7)
-      '@fullcalendar/react':
-        specifier: 7.1.0
-        version: 7.1.0(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(temporal-polyfill@1.0.5)
       '@hookform/resolvers':
         specifier: 5.4.0
         version: 5.4.0(react-hook-form@7.80.0(react@19.2.7))
@@ -598,24 +595,6 @@ packages:
     peerDependencies:
       '@fortawesome/fontawesome-svg-core': ~6 || ~7
       react: ^18.0.0 || ^19.0.0
-
-  '@full-ui/headless-calendar@7.1.0':
-    resolution: {integrity: sha512-T54tSUik/ia9Jj4xduFHv1p98eVBgLnE33Q6qhpg+WWkqKCLBCbtVyMcTPPIOP5jjTV2MbtjrRvRt1RLSryGHA==}
-    peerDependencies:
-      temporal-polyfill: ^1.0.1
-
-  '@fullcalendar/core@7.1.0':
-    resolution: {integrity: sha512-a+ABP7zQpPWpwPT8EsOdShpeOVrJyx/XYStqERd8ibld/FLi/dzpd95r7w3RIdFqFm9iUv0gdGvBshSlI/dbPw==}
-    peerDependencies:
-      '@full-ui/headless-calendar': 7.1.0
-      temporal-polyfill: ^1.0.1
-
-  '@fullcalendar/react@7.1.0':
-    resolution: {integrity: sha512-FI5hTnbiVLcW+/ZnPKteBgLpK/ldyTaSDWn9A3ri3vLToAbGt49JqRhQ9CMpH+nhmuNX4ihnCQcVzoqVCsIbBw==}
-    peerDependencies:
-      react: ^17 || ^18 || ^19
-      react-dom: ^17 || ^18 || ^19
-      temporal-polyfill: ^1.0.1
 
   '@gerrit0/mini-shiki@3.23.0':
     resolution: {integrity: sha512-bEMORlG0cqdjVyCEuU0cDQbORWX+kYCeo0kV1lbxF5bt4r7SID2l9bqsxJEM0zndaxpOUT7riCyIVEuqq/Ynxg==}
@@ -3537,15 +3516,6 @@ packages:
     engines: {node: '>=14.0.0'}
     hasBin: true
 
-  temporal-polyfill@1.0.5:
-    resolution: {integrity: sha512-+H/mmY74i6wXCMcjIhGuSnODcyZnc4eois2myhOyX0UqRAKNXQY5m9iB1en5jQ/n4SXtjLXo1ElBI5bmn8tZwQ==}
-
-  temporal-spec@1.0.1:
-    resolution: {integrity: sha512-wxVoanmDeavXie1vu2JaQ3WIc3JZnWAOYFBsJyATaVsXsycKYUflGsyBmrRSnoCpZJpwPyr38VpgSUlQ8CbFxg==}
-
-  temporal-utils@1.0.3:
-    resolution: {integrity: sha512-9jbTSX3HvkOWvDpNpFzwX/d1mkCrgQgwLmVTOEiuocZGKHsrQJtttGZFmybJ2zYP5zCSZuU5ZyeS8+eOEPABiQ==}
-
   thenify-all@1.6.0:
     resolution: {integrity: sha512-RNxQH/qI8/t3thXJDwcstUO4zeqo64+Uy/+sNVRBx4Xn2OX+OZ9oP+iJnNFqplFra2ZUVeKCSa2oVWi3T4uVmA==}
     engines: {node: '>=0.8'}
@@ -4171,23 +4141,6 @@ snapshots:
     dependencies:
       '@fortawesome/fontawesome-svg-core': 7.3.0
       react: 19.2.7
-
-  '@full-ui/headless-calendar@7.1.0(temporal-polyfill@1.0.5)':
-    dependencies:
-      temporal-polyfill: 1.0.5
-
-  '@fullcalendar/core@7.1.0(@full-ui/headless-calendar@7.1.0(temporal-polyfill@1.0.5))(temporal-polyfill@1.0.5)':
-    dependencies:
-      '@full-ui/headless-calendar': 7.1.0(temporal-polyfill@1.0.5)
-      temporal-polyfill: 1.0.5
-
-  '@fullcalendar/react@7.1.0(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(temporal-polyfill@1.0.5)':
-    dependencies:
-      '@full-ui/headless-calendar': 7.1.0(temporal-polyfill@1.0.5)
-      '@fullcalendar/core': 7.1.0(@full-ui/headless-calendar@7.1.0(temporal-polyfill@1.0.5))(temporal-polyfill@1.0.5)
-      react: 19.2.7
-      react-dom: 19.2.7(react@19.2.7)
-      temporal-polyfill: 1.0.5
 
   '@gerrit0/mini-shiki@3.23.0':
     dependencies:
@@ -7558,15 +7511,6 @@ snapshots:
     transitivePeerDependencies:
       - tsx
       - yaml
-
-  temporal-polyfill@1.0.5:
-    dependencies:
-      temporal-spec: 1.0.1
-      temporal-utils: 1.0.3
-
-  temporal-spec@1.0.1: {}
-
-  temporal-utils@1.0.3: {}
 
   thenify-all@1.6.0:
     dependencies:
