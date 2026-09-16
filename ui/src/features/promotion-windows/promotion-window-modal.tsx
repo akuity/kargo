@@ -30,7 +30,7 @@ import {
   promotionWindowFromRange,
   promotionWindowFormSchema,
   PromotionWindowFormValues
-} from './promotion-window-form';
+} from './promotion-window-form-utils';
 import { RecurrenceFields } from './recurrence-fields';
 import { SelectorFields } from './selector-fields';
 

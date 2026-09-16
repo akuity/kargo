@@ -5,7 +5,7 @@ import { useController, useFieldArray, useFormContext, useWatch } from 'react-ho
 
 import { FieldContainer } from '@ui/features/common/form/field-container';
 
-import { PromotionWindowFormValues } from './promotion-window-form';
+import { PromotionWindowFormValues } from './promotion-window-form-utils';
 
 const nameModeHelp = {
   exact: 'Matches one name, character for character.',

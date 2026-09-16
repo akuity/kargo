@@ -8,7 +8,7 @@ import { PromotionWindow, PromotionWindowKind } from '@ui/gen/api/v2/models';
 
 import { disabledOccurrenceStyle, occurrenceColors } from './occurrence-colors';
 import { CalendarView, PromotionCalendar } from './promotion-calendar';
-import { promotionWindowFromRange } from './promotion-window-form';
+import { promotionWindowFromRange } from './promotion-window-form-utils';
 import { useGetPromotionWindowOccurrences } from './use-get-promotion-window-occurrences';
 
 type PromotionWindowsCalendarViewProps = {
