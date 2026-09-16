@@ -16,6 +16,7 @@ import React from 'react';
 import { NavLink, Route, Routes, useLocation, useParams, Navigate } from 'react-router-dom';
 
 import { useExtensionsContext } from '@ui/extensions/extensions-context';
+import { useIsAnyExtensionLoaded } from '@ui/extensions/utils';
 import { useDocumentTitle } from '@ui/features/common/document-title/use-document-title';
 import { BaseHeader } from '@ui/features/common/layout/base-header';
 import { ProjectPromotionWindows } from '@ui/features/promotion-windows/project-promotion-windows';
@@ -46,7 +47,8 @@ export const ProjectSettings = () => {
   const getConfigQuery = useGetConfig();
   const config = getConfigQuery.data?.data;
 
-  const { projectSettingsExtensions, featureFlags } = useExtensionsContext();
+  const { projectSettingsExtensions } = useExtensionsContext();
+  const isAnyExtensionLoaded = useIsAnyExtensionLoaded();
 
   const settingsViews = React.useMemo(() => {
     return {
@@ -61,7 +63,7 @@ export const ProjectSettings = () => {
         icon: faGears,
         path: 'project-config',
         component: ProjectConfig,
-        children: featureFlags?.promotionWindows
+        children: isAnyExtensionLoaded
           ? [
               {
                 label: 'Promotion Windows',
@@ -108,7 +110,7 @@ export const ProjectSettings = () => {
         component: PromotionTasks
       }
     };
-  }, [config, featureFlags?.promotionWindows]);
+  }, [config, isAnyExtensionLoaded]);
 
   const views = React.useMemo<ProjectSettingsView[]>(
     () => [...Object.values(settingsViews), ...projectSettingsExtensions],

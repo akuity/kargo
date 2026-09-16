@@ -17,6 +17,7 @@ import React from 'react';
 import { NavLink, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 
 import { useExtensionsContext } from '@ui/extensions/extensions-context';
+import { useIsAnyExtensionLoaded } from '@ui/extensions/utils';
 import { useDocumentTitle } from '@ui/features/common/document-title/use-document-title';
 import { BaseHeader } from '@ui/features/common/layout/base-header';
 import { ClusterPromotionWindows } from '@ui/features/promotion-windows/cluster-promotion-windows';
@@ -110,16 +111,17 @@ const defaultView = settingsViews.clusterConfig;
 export const Settings = () => {
   useDocumentTitle(['Settings']);
   const location = useLocation();
-  const { settingsExtensions, featureFlags } = useExtensionsContext();
+  const { settingsExtensions } = useExtensionsContext();
+  const isAnyExtensionLoaded = useIsAnyExtensionLoaded();
 
   const views = React.useMemo<SettingsView[]>(
     () => [
       ...Object.values(settingsViews).map((view) =>
-        featureFlags?.promotionWindows ? view : { ...view, children: undefined }
+        isAnyExtensionLoaded ? view : { ...view, children: undefined }
       ),
       ...settingsExtensions
     ],
-    [settingsExtensions, featureFlags?.promotionWindows]
+    [settingsExtensions, isAnyExtensionLoaded]
   );
 
   const routableViews = React.useMemo(
