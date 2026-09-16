@@ -1,12 +1,18 @@
-import { faPlus, faTrash } from '@fortawesome/free-solid-svg-icons';
+import { faFilter, faPlus, faTrash } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Button, Flex, Input, Select, Typography } from 'antd';
+import { useState } from 'react';
 import { useController, useFieldArray, useFormContext, useWatch } from 'react-hook-form';
 
 import { FieldContainer } from '@ui/features/common/form/field-container';
 
 import { PromotionWindowFormValues } from './promotion-window-form-utils';
-import { expressionOperators, valuelessOperators } from './promotion-window-selector-utils';
+import {
+  expressionOperators,
+  selectorFromValues,
+  selectorValues,
+  valuelessOperators
+} from './promotion-window-selector-utils';
 
 const operatorOptions = expressionOperators.map((operator) => ({
   label: operator,
@@ -26,9 +32,16 @@ type SelectorFieldsProps = {
 };
 
 export const SelectorFields = ({ subject }: SelectorFieldsProps) => {
-  const { control } = useFormContext<PromotionWindowFormValues>();
+  const { control, getValues, setValue } = useFormContext<PromotionWindowFormValues>();
 
   const noun = subjectLabel[subject];
+
+  const [restricting, setRestricting] = useState(() => !!selectorFromValues(getValues(subject)));
+
+  const applyToEvery = () => {
+    setValue(subject, selectorValues(), { shouldDirty: true });
+    setRestricting(false);
+  };
 
   const nameModeField = useController({ control, name: `${subject}.nameMode` }).field;
   const nameMode = nameModeField.value;
@@ -38,12 +51,31 @@ export const SelectorFields = ({ subject }: SelectorFieldsProps) => {
   const expressions = useFieldArray({ control, name: `${subject}.matchExpressions` });
   const expressionValues = useWatch({ control, name: `${subject}.matchExpressions` });
 
+  if (!restricting) {
+    return (
+      <>
+        <Typography.Text strong>{noun}s this window applies to</Typography.Text>
+        <Typography.Paragraph type='secondary' className='text-xs !mt-1 !mb-3'>
+          Every {noun}.
+        </Typography.Paragraph>
+        <Button
+          size='small'
+          type='dashed'
+          icon={<FontAwesomeIcon icon={faFilter} size='sm' />}
+          onClick={() => setRestricting(true)}
+        >
+          Restrict to specific {noun}s
+        </Button>
+      </>
+    );
+  }
+
   return (
     <>
       <Typography.Text strong>{noun}s this window applies to</Typography.Text>
       <Typography.Paragraph type='secondary' className='text-xs !mt-1 !mb-4'>
-        Leave everything empty to match every {noun}. Constraints are ANDed: a {noun} must satisfy
-        the name and every label and expression to be covered by this window.
+        Constraints are ANDed: a {noun} must satisfy the name and every label and expression to be
+        covered by this window.
       </Typography.Paragraph>
 
       <FieldContainer
@@ -177,6 +209,10 @@ export const SelectorFields = ({ subject }: SelectorFieldsProps) => {
           )}
         </Flex>
       </Flex>
+
+      <Button size='small' type='link' className='!px-0 mt-4' onClick={applyToEvery}>
+        Clear and apply to every {noun}
+      </Button>
     </>
   );
 };
