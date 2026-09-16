@@ -1,4 +1,6 @@
-const MINUTE_MS = 60_000;
+export const MINUTE_MS = 60_000;
+
+export const browserTimeZone = () => Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
 
 export const toViewerClockMs = (instantMs: number) =>
   instantMs - new Date(instantMs).getTimezoneOffset() * MINUTE_MS;

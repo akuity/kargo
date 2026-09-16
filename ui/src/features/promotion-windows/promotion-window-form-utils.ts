@@ -12,7 +12,7 @@ import {
   selectorSchema,
   selectorValues
 } from './promotion-window-selector-utils';
-import { fromViewerClockDate } from './viewer-clock';
+import { browserTimeZone, fromViewerClockDate } from './viewer-clock';
 
 export const ICAL_FORMAT = "yyyyMMdd'T'HHmmss";
 
@@ -43,8 +43,6 @@ export type PromotionWindowFormValues = z.infer<typeof promotionWindowFormSchema
 
 export const combine = (date: Date, time: Date) =>
   set(date, { hours: getHours(time), minutes: getMinutes(time), seconds: 0, milliseconds: 0 });
-
-export const browserTimeZone = () => Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
 
 export const promotionWindowFromRange = (start: Date, end: Date): PromotionWindow => ({
   name: '',

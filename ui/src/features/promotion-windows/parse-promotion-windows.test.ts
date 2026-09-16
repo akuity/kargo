@@ -266,7 +266,7 @@ describe('parsePromotionWindows across time zones', () => {
     ]);
   });
 
-  it('keeps two windows authored in different zones on their own wall clocks', () => {
+  it('resolves two windows authored in different zones into the viewer clock', () => {
     expect(
       withTimeZone('Pacific/Kiritimati', () =>
         parseRange(
@@ -283,12 +283,52 @@ describe('parsePromotionWindows across time zones', () => {
             })
           ],
           at('2026-01-01T00:00:00Z'),
-          at('2026-01-02T00:00:00Z')
+          at('2026-01-03T00:00:00Z')
         ).map((o) => [o.name, o.start.toISOString()])
       )
     ).toEqual([
-      ['tokyo', '2026-01-01T09:00:00.000Z'],
-      ['new-york', '2026-01-01T09:00:00.000Z']
+      ['tokyo', '2026-01-01T14:00:00.000Z'],
+      ['new-york', '2026-01-02T04:00:00.000Z']
     ]);
+  });
+
+  it('places a window identically across a DST shift in the viewer zone', () => {
+    const window = {
+      dtstart: 'TZID=Asia/Tokyo:20260308T000000',
+      dtend: 'TZID=Asia/Tokyo:20260308T010000'
+    };
+
+    const parse = (rrule?: string) =>
+      parseRange(
+        [makeWindow(rrule ? { ...window, rrule } : window)],
+        at('2026-03-07T00:00:00Z'),
+        at('2026-03-09T00:00:00Z')
+      );
+
+    expect(withTimeZone('America/New_York', () => spans(parse()))).toEqual([
+      ['2026-03-07T10:00:00.000Z', '2026-03-07T11:00:00.000Z']
+    ]);
+
+    expect(withTimeZone('America/New_York', () => spans(parse()))).toEqual(
+      withTimeZone('America/New_York', () => spans(parse('FREQ=DAILY;COUNT=1')))
+    );
+  });
+
+  it.each(timeZones)('places a window identically with and without an rrule in %s', (tz) => {
+    const window = {
+      dtstart: 'TZID=America/New_York:20260101T090000',
+      dtend: 'TZID=America/New_York:20260101T170000'
+    };
+
+    const parse = (rrule?: string) =>
+      parseRange(
+        [makeWindow(rrule ? { ...window, rrule } : window)],
+        at('2026-01-01T00:00:00Z'),
+        at('2026-01-03T00:00:00Z')
+      );
+
+    expect(withTimeZone(tz, () => spans(parse()))).toEqual(
+      withTimeZone(tz, () => spans(parse('FREQ=DAILY;COUNT=1')))
+    );
   });
 });
