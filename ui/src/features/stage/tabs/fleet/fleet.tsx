@@ -3,7 +3,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Button, Empty, Flex, Input, Skeleton, Space, Table, Tag, Tooltip, Typography } from 'antd';
 import { ColumnsType } from 'antd/es/table';
 import { formatDistanceToNow } from 'date-fns';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { Link, generatePath } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
@@ -118,6 +118,12 @@ export const Fleet = ({ projectName, stage }: Props) => {
   );
 
   const freightLabel = (name: string) => getAlias(freightMap[name]) || name.slice(0, 7);
+
+  // The Promotion column's filter is controlled so the round card's chips can
+  // drive it: a chip selects exactly one phase, while the header menu may
+  // select several. Both write here, and the header reflects either.
+  const [phaseFilter, setPhaseFilter] = useState<string[] | null>(null);
+  const selectedPhase = phaseFilter?.length === 1 ? phaseFilter[0] : undefined;
 
   // While the round is blocked the drawer explains why above the tabs. The tab
   // then shows which Targets the Stage governs and nothing that would restate
@@ -255,6 +261,7 @@ export const Fleet = ({ projectName, stage }: Props) => {
       key: 'promotion',
       width: 170,
       filters: blocked ? undefined : phaseFilters,
+      filteredValue: phaseFilter,
       onFilter: (value, row) => rowPhase(row) === value,
       render: (_, row) => <PromotionCell project={projectName} row={row} blocked={blocked} />
     },
@@ -296,6 +303,8 @@ export const Fleet = ({ projectName, stage }: Props) => {
           // summary, so the card and the table below it always agree.
           summary={summary}
           freightLabel={freightLabel}
+          selectedPhase={selectedPhase}
+          onSelectPhase={(phase) => setPhaseFilter(phase ? [phase] : null)}
         />
       ) : (
         <Typography.Text type='secondary' className='text-xs'>
@@ -315,6 +324,10 @@ export const Fleet = ({ projectName, stage }: Props) => {
           size='small'
           pagination={false}
           rowKey={(row) => row.target.metadata?.name || ''}
+          onChange={(_, filters) => {
+            const phases = filters.promotion as string[] | null | undefined;
+            setPhaseFilter(phases?.length ? phases : null);
+          }}
         />
       )}
     </Flex>

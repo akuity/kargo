@@ -18,7 +18,19 @@ import { parseDate } from '@ui/utils/dates';
 // progress bar draws them, so a reader sees every phase's count and not only
 // the succeeded figure. Rounds with trouble keep their failures visible even
 // when they are a sliver of the bar.
-export const PhaseChips = ({ summary }: { summary: PromotionRequestSummary }) => (
+//
+// With onSelect, a chip is a shortcut for the table's Promotion filter:
+// clicking one shows only that phase, clicking it again shows everything.
+// Chips not selected dim so the active one reads as such.
+export const PhaseChips = ({
+  summary,
+  selected,
+  onSelect
+}: {
+  summary: PromotionRequestSummary;
+  selected?: string;
+  onSelect?: (phase?: string) => void;
+}) => (
   <Flex gap={4} wrap>
     {promotionPhases.map((phase) => {
       const count = summary[phase.toLowerCase() as keyof PromotionRequestSummary] || 0;
@@ -27,13 +39,22 @@ export const PhaseChips = ({ summary }: { summary: PromotionRequestSummary }) =>
       }
       const { icon, tagColor, spin } = getPromotionPhasePresentation(phase);
       const description = `${count} ${phase.toLowerCase()} Target${count === 1 ? '' : 's'}`;
+      const active = selected === phase;
+      const title = !onSelect
+        ? description
+        : active
+          ? 'Show all Targets'
+          : `Show only ${phase.toLowerCase()} Targets`;
       return (
-        <Tooltip key={phase} title={description}>
+        <Tooltip key={phase} title={title}>
           <Tag
-            className='m-0'
+            className={onSelect ? 'm-0 cursor-pointer' : 'm-0'}
             color={tagColor}
             icon={<FontAwesomeIcon icon={icon} spin={spin} />}
             aria-label={description}
+            aria-pressed={onSelect ? active : undefined}
+            style={onSelect && selected && !active ? { opacity: 0.45 } : undefined}
+            onClick={onSelect ? () => onSelect(active ? undefined : phase) : undefined}
           >
             {count} {phase.toLowerCase()}
           </Tag>
@@ -52,12 +73,18 @@ export const RoundCard = ({
   projectName,
   round,
   summary,
-  freightLabel
+  freightLabel,
+  selectedPhase,
+  onSelectPhase
 }: {
   projectName: string;
   round: PromotionRequest;
   summary: PromotionRequestSummary;
   freightLabel: (name: string) => string;
+  // The phase the table is filtered to, if any, and how to change it. The
+  // card's chips act as shortcuts for the table's Promotion column filter.
+  selectedPhase?: string;
+  onSelectPhase?: (phase?: string) => void;
 }) => {
   const freight = round.spec?.freight || '';
   const phase = round.status?.phase || 'Pending';
@@ -113,7 +140,7 @@ export const RoundCard = ({
             <Typography.Text type='secondary'> of {total} succeeded</Typography.Text>
           </span>
           <Flex justify='flex-end' className='mt-2'>
-            <PhaseChips summary={summary} />
+            <PhaseChips summary={summary} selected={selectedPhase} onSelect={onSelectPhase} />
           </Flex>
         </div>
       </Flex>
