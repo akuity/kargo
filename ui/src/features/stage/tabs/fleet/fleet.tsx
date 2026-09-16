@@ -11,10 +11,9 @@ import { HealthStatusIcon } from '@ui/features/common/health-status/health-statu
 import { PromotionStatusIcon } from '@ui/features/common/promotion-status/promotion-status-icon';
 import { getAlias } from '@ui/features/common/utils';
 import { useListTargets } from '@ui/gen/api/v2/core/core';
-import { Stage } from '@ui/gen/api/v2/models';
+import { PromotionRequest, Stage } from '@ui/gen/api/v2/models';
 import { parseDate } from '@ui/utils/dates';
 
-import { useCurrentRound } from '../../use-current-round';
 import { blockingMessage, roundBlock } from '../../utils/promotion-request';
 import { useGetFreightMap } from '../freight-history/use-get-freight-map';
 
@@ -31,7 +30,14 @@ import { useWatchTargets } from './use-watch-targets';
 
 type Props = {
   projectName: string;
+  // The Stage whose Targets are listed. Its name scopes the Target list and
+  // keys each Target's per-Stage status; its current Freight collection is
+  // what a Target is compared against to be called behind.
   stage: Stage;
+  // The Stage's latest round, resolved once by the drawer, which also uses it
+  // to explain a blocked round above the tabs. Passing it in keeps one
+  // PromotionRequest fetch and watch per drawer rather than one per tab.
+  round?: PromotionRequest;
 };
 
 const PromotionCell = ({
@@ -102,14 +108,14 @@ const PromotionCell = ({
  * Governance comes from the API's `stage` filter, which evaluates the Stage's
  * selectors exactly as the controller does. Freight and health per Target come
  * from the Target's own status for this Stage; the round's outcome comes from
- * the Stage's current PromotionRequest, shared with the Promotions tab.
+ * the Stage's current PromotionRequest, which the drawer resolves once and
+ * passes in.
  */
-export const Fleet = ({ projectName, stage }: Props) => {
+export const Fleet = ({ projectName, stage, round }: Props) => {
   const stageName = stage.metadata?.name || '';
 
   const targetsQuery = useListTargets(projectName, { stage: stageName });
   useWatchTargets(projectName, stageName, !!targetsQuery.data);
-  const round = useCurrentRound(projectName, stage);
   const freightMap = useGetFreightMap(projectName);
 
   const rows = useMemo(

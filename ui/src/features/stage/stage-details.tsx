@@ -192,7 +192,9 @@ export const StageDetails = ({ stage }: { stage: Stage }) => {
                         key: TabsTypes.FLEET,
                         label: 'Fleet',
                         icon: <FontAwesomeIcon icon={faBullseye} />,
-                        children: <Fleet projectName={projectName || ''} stage={stage} />
+                        children: (
+                          <Fleet projectName={projectName || ''} stage={stage} round={round} />
+                        )
                       }
                     ]
                   : []),
