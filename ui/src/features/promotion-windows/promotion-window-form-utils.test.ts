@@ -238,3 +238,36 @@ describe('label expression validation', () => {
     ).toBe(true);
   });
 });
+
+describe('formValuesFromPromotionWindow with unusable stored values', () => {
+  const brokenWindow = (overrides: Partial<PromotionWindow>): PromotionWindow => ({
+    name: 'broken',
+    kind: 'Deny',
+    dtstart: 'TZID=UTC:20260824T090000',
+    dtend: 'TZID=UTC:20260824T170000',
+    ...overrides
+  });
+
+  it.each([
+    ['an unparseable dtstart', { dtstart: 'nonsense' }],
+    ['a missing dtend', { dtend: undefined }],
+    ['an empty dtend', { dtend: '' }]
+  ])('falls back to a one hour range for %s', (_label, overrides) => {
+    const values = formValuesFromPromotionWindow(brokenWindow(overrides));
+
+    expect(values.endDate.getTime() - values.startDate.getTime()).toBeGreaterThan(0);
+    expect(values.endDate.getTime() - values.startDate.getTime()).toBeLessThanOrEqual(3_600_000);
+    expect(Math.abs(values.startDate.getTime() - Date.now())).toBeLessThan(60_000);
+  });
+
+  it('keeps the parsed range when both ends are usable', () => {
+    const values = formValuesFromPromotionWindow(brokenWindow({}));
+
+    expect(format(values.startDate, ICAL_FORMAT)).toBe('20260824T090000');
+    expect(format(values.endDate, ICAL_FORMAT)).toBe('20260824T170000');
+  });
+
+  it('drops an rrule that cannot be parsed', () => {
+    expect(formValuesFromPromotionWindow(brokenWindow({ rrule: 'BYNONSENSE=1' })).rrule).toBeNull();
+  });
+});

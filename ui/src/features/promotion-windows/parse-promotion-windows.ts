@@ -20,11 +20,21 @@ export const parsePromotionWindows = (
   for (const promotionWindow of promotionWindows) {
     const { dtstart, dtend, rrule, ...rest } = promotionWindow;
 
+    if (!dtstart || !dtend) {
+      continue;
+    }
+
     /*
      * these dates are 0 offset BUT IN LOCAL TIMEZONE
      */
-    const start = RRule.fromString(dtstartLiteral(dtstart)).options.dtstart;
-    const end = RRule.fromString(dtstartLiteral(dtend)).options.dtstart;
+    let start: Date;
+    let end: Date;
+    try {
+      start = RRule.fromString(dtstartLiteral(dtstart)).options.dtstart;
+      end = RRule.fromString(dtstartLiteral(dtend)).options.dtstart;
+    } catch {
+      continue;
+    }
 
     const duration = end.getTime() - start.getTime();
     let occurrences: Date[] = [];

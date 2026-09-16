@@ -1,4 +1,4 @@
-import { format, getHours, getMinutes, isAfter, set } from 'date-fns';
+import { addHours, format, getHours, getMinutes, isAfter, set, startOfHour } from 'date-fns';
 import { Options, RRule } from 'rrule';
 import { z } from 'zod';
 
@@ -56,18 +56,44 @@ export const promotionWindowFromRange = (start: Date, end: Date): PromotionWindo
 export const formValuesFromPromotionWindow = (
   promotionWindow: PromotionWindow
 ): PromotionWindowFormValues => {
-  const start = RRule.fromString(dtstartLiteral(promotionWindow.dtstart)).options;
-  const end = RRule.fromString(dtstartLiteral(promotionWindow.dtend)).options;
+  const now = new Date();
+
+  let timeZone = browserTimeZone();
+  let startDate = now;
+  let endDate = addHours(startOfHour(now), 1);
+  let rrule: Partial<Options> | null = null;
+
+  if (promotionWindow.dtstart && promotionWindow.dtend) {
+    try {
+      const start = RRule.fromString(dtstartLiteral(promotionWindow.dtstart)).options;
+      const end = RRule.fromString(dtstartLiteral(promotionWindow.dtend)).options;
+
+      timeZone = start.tzid ?? timeZone;
+      startDate = fromViewerClockDate(start.dtstart);
+      endDate = fromViewerClockDate(end.dtstart);
+    } catch {
+      startDate = now;
+      endDate = addHours(startOfHour(now), 1);
+    }
+  }
+
+  if (promotionWindow.rrule) {
+    try {
+      rrule = RRule.parseString(promotionWindow.rrule);
+    } catch {
+      rrule = null;
+    }
+  }
 
   return {
     name: promotionWindow.name,
     description: promotionWindow.description ?? '',
     disabled: promotionWindow.disabled ?? false,
     kind: promotionWindow.kind,
-    timeZone: start.tzid ?? browserTimeZone(),
-    startDate: fromViewerClockDate(start.dtstart),
-    endDate: fromViewerClockDate(end.dtstart),
-    rrule: promotionWindow.rrule ? RRule.parseString(promotionWindow.rrule) : null,
+    timeZone,
+    startDate,
+    endDate,
+    rrule,
     stage: selectorValues(promotionWindow.stageSelector),
     project: selectorValues(promotionWindow.projectSelector)
   };

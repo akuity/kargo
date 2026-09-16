@@ -107,7 +107,12 @@ export const PromotionWindowsListView = ({
                 ['End', promotionWindow.dtend]
               ] as const
             ).map(([label, literal]) => {
-              const options = literal ? RRule.fromString(dtstartLiteral(literal)).options : null;
+              let options: RRule['options'] | null = null;
+              try {
+                options = literal ? RRule.fromString(dtstartLiteral(literal)).options : null;
+              } catch {
+                options = null;
+              }
 
               return (
                 <Flex key={label} gap={8} align='baseline'>
@@ -130,15 +135,21 @@ export const PromotionWindowsListView = ({
       {
         key: 'rrule',
         title: 'Recurrence',
-        render: (_, promotionWindow) => (
-          <Typography.Text className='text-xs'>
-            {promotionWindow.rrule
-              ? RRule.fromString(
-                  `${dtstartLiteral(promotionWindow.dtstart)}\nRRULE:${promotionWindow.rrule}`
-                ).toText()
-              : 'Does not repeat'}
-          </Typography.Text>
-        )
+        render: (_, promotionWindow) => {
+          let recurrence = 'Does not repeat';
+
+          if (promotionWindow.rrule) {
+            try {
+              recurrence = RRule.fromString(
+                `${dtstartLiteral(promotionWindow.dtstart)}\nRRULE:${promotionWindow.rrule}`
+              ).toText();
+            } catch {
+              recurrence = promotionWindow.rrule;
+            }
+          }
+
+          return <Typography.Text className='text-xs'>{recurrence}</Typography.Text>;
+        }
       },
       {
         key: 'stageSelector',

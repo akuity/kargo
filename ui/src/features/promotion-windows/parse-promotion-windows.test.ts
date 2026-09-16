@@ -140,14 +140,24 @@ describe('parsePromotionWindows', () => {
     ).toHaveLength(0);
   });
 
-  it('throws when dtstart cannot be parsed', () => {
-    expect(() =>
+  it.each([
+    ['an unparseable dtstart', { dtstart: 'nonsense' }],
+    ['a missing dtend', { dtend: undefined }],
+    ['an empty dtstart', { dtstart: '' }]
+  ])('yields nothing for a window with %s', (_label, overrides) => {
+    expect(
+      parseRange([makeWindow(overrides)], at('2026-08-01T00:00:00Z'), at('2026-09-01T00:00:00Z'))
+    ).toHaveLength(0);
+  });
+
+  it('keeps the other windows when one cannot be parsed', () => {
+    expect(
       parseRange(
-        [makeWindow({ dtstart: 'nonsense' })],
+        [makeWindow({ name: 'broken', dtstart: 'nonsense' }), makeWindow({ name: 'ok' })],
         at('2026-08-01T00:00:00Z'),
         at('2026-09-01T00:00:00Z')
-      )
-    ).toThrow();
+      ).map((o) => o.name)
+    ).toEqual(['ok']);
   });
 
   it('replaces the iCal fields and keeps everything else', () => {
