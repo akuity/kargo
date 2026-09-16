@@ -25,10 +25,7 @@ export interface PromotionRequestStatus {
   conditions?: V1Condition[];
   /** FinishedAt is the time at which the PromotionRequest completed. */
   finishedAt?: string;
-  /**
-   * FIXME: populate Freight and Freight collection in the promotion request reconciler
-   * Freight is the detail of the piece of freight that was referenced by this promotion.
-   */
+  /** Freight is the detail of the piece of freight that was referenced by this promotion. */
   freight?: FreightReference;
   /**
    * FreightCollection contains the details of the piece of Freight referenced

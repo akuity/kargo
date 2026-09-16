@@ -1064,12 +1064,12 @@ func TestArgoCDAppRefsFromPromo(t *testing.T) {
 			expectedRefs: []ArgoCDAppRef{},
 		},
 		{
-			name:  "no ArgoCD apps",
-			promo: &kargoapi.Promotion{},
+			name:         "no ArgoCD apps",
+			promo:        &kargoapi.Promotion{},
 			expectedRefs: []ArgoCDAppRef{},
 		},
 		{
-			name: "nil Promotion",
+			name:         "nil Promotion",
 			expectedRefs: []ArgoCDAppRef{},
 		},
 	}

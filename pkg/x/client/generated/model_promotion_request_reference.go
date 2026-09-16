@@ -21,7 +21,7 @@ var _ MappedNullable = &PromotionRequestReference{}
 type PromotionRequestReference struct {
 	// FinishedAt is the time at which the PromotionRequest completed.
 	FinishedAt *string `json:"finishedAt,omitempty"`
-	// FIXME: we need promotion request to resolve freight reference FIXME: we need promotions to pick freight reference from promotion request Freight identifies the Freight being promoted.
+	// Freight identifies the Freight being promoted.
 	Freight *FreightReference `json:"freight,omitempty"`
 	// FreightCollection contains the details of the piece of Freight referenced by this Promotion as well as any additional Freight that is carried over from the target Stage's current state.
 	FreightCollection *FreightCollection `json:"freightCollection,omitempty"`

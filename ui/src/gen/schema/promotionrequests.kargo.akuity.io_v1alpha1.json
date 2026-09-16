@@ -138,7 +138,7 @@
           "type": "string"
         },
         "freight": {
-          "description": "FIXME: populate Freight and Freight collection in the promotion request reconciler\nFreight is the detail of the piece of freight that was referenced by this promotion.",
+          "description": "Freight is the detail of the piece of freight that was referenced by this promotion.",
           "properties": {
             "artifacts": {
               "description": "Artifacts describes specific versions of artifacts other\nthan Git repository commits, container images, and Helm charts.",

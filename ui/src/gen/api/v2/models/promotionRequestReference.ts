@@ -12,11 +12,7 @@ import type { PromotionRequestPhase } from './promotionRequestPhase';
 export interface PromotionRequestReference {
   /** FinishedAt is the time at which the PromotionRequest completed. */
   finishedAt?: string;
-  /**
-   * FIXME: we need promotion request to resolve freight reference
-   * FIXME: we need promotions to pick freight reference from promotion request
-   * Freight identifies the Freight being promoted.
-   */
+  /** Freight identifies the Freight being promoted. */
   freight?: FreightReference;
   /**
    * FreightCollection contains the details of the piece of Freight referenced

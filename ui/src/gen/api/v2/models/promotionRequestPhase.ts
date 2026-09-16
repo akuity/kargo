@@ -12,6 +12,7 @@ export type PromotionRequestPhase =
 export const PromotionRequestPhase = {
   PromotionRequestPhasePending: 'Pending',
   PromotionRequestPhaseRunning: 'Running',
+  PromotionRequestPhaseAborted: 'Aborted',
   PromotionRequestPhaseSucceeded: 'Succeeded',
   PromotionRequestPhaseFailed: 'Failed',
   PromotionRequestPhaseErrored: 'Errored'
