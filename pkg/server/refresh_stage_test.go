@@ -69,6 +69,7 @@ func Test_server_refreshStage(t *testing.T) {
 					testProject,
 					testStage,
 					testPromotion,
+					testPromotionRequest,
 				),
 				serverSetup: func(_ *testing.T, s *server) {
 					s.authorizeFn = func(
@@ -105,6 +106,7 @@ func Test_server_refreshStage(t *testing.T) {
 					testProject,
 					testStage,
 					testPromotion,
+					testPromotionRequest,
 				),
 				serverSetup: func(_ *testing.T, s *server) {
 					s.authorizeFn = func(
@@ -154,6 +156,7 @@ func Test_server_refreshStage(t *testing.T) {
 					testProject,
 					testStage,
 					testPromotion,
+					testPromotionRequest,
 				),
 				serverSetup: func(_ *testing.T, s *server) {
 					s.authorizeFn = func(
@@ -203,6 +206,7 @@ func Test_server_refreshStage(t *testing.T) {
 					testProject,
 					testStage,
 					testPromotion,
+					testPromotionRequest,
 				),
 				serverSetup: func(t *testing.T, s *server) {
 					s.authorizeFn = func(

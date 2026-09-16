@@ -14,96 +14,96 @@ import (
 	"github.com/akuity/kargo/pkg/indexer"
 )
 
-type PromotionObject interface {
+type promotionObject interface {
 	// Getters:
 	metav1.Object // Covers Name, CreationTimestamp and Annotations access
-	GetPhase() PromotionObjectPhase
-	GetFinishedAt() *metav1.Time
-	GetFreightName() string
-	GetArgoCDRefs() []api.ArgoCDAppRef
-	GetStartedAt() *metav1.Time
+	getPhase() promotionObjectPhase
+	getFinishedAt() *metav1.Time
+	getFreightName() string
+	getArgoCDRefs() []api.ArgoCDAppRef
+	getStartedAt() *metav1.Time
 
-	ToLastPromotionReference() PromotionObjectReference
+	toLastPromotionReference() promotionObjectReference
 
 	updateCurrentPromotion(kargoapi.StageStatus) kargoapi.StageStatus
 }
 
-type PromotionObjectReference interface {
-	GetName() string
-	GetPhase() PromotionObjectPhase
+type promotionObjectReference interface {
+	getName() string
+	getPhase() promotionObjectPhase
 
-	GetFinishedAt() *metav1.Time
+	getFinishedAt() *metav1.Time
 
 	// For LastPromotion only:
-	GetHealthChecks() []health.Criteria
+	getHealthChecks() []health.Criteria
 	// Maybe Freight reference??
-	GetFreightReference() *kargoapi.FreightReference
-	GetFreightCollection() *kargoapi.FreightCollection
-	SetFreightCollection(*kargoapi.FreightCollection)
+	getFreightReference() *kargoapi.FreightReference
+	getFreightCollection() *kargoapi.FreightCollection
+	setFreightCollection(*kargoapi.FreightCollection)
 
-	GetMessage() string
+	getMessage() string
 
 	updateLastPromotion(kargoapi.StageStatus) kargoapi.StageStatus
 }
 
-type PromotionObjectPhase interface {
-	IsSucceeded() bool
-	IsAborted() bool
-	IsRunning() bool
-	IsTerminal() bool
-	String() string
+type promotionObjectPhase interface {
+	isSucceeded() bool
+	isAborted() bool
+	isRunning() bool
+	isTerminal() bool
+	string() string
 }
 
-// PromotionObjectPhase implementations
+// promotionObjectPhase implementations
 
-type promotionObjectPhasePromotion kargoapi.PromotionPhase
-type promotionObjectPhaseRequest kargoapi.PromotionRequestPhase
-
-func (p promotionObjectPhasePromotion) IsTerminal() bool {
-	phase := kargoapi.PromotionPhase(p)
-	return phase.IsTerminal()
+type promotionObjectPhasePromotion struct {
+	kargoapi.PromotionPhase
+}
+type promotionObjectPhaseRequest struct {
+	kargoapi.PromotionRequestPhase
 }
 
-func (p promotionObjectPhasePromotion) IsSucceeded() bool {
-	return kargoapi.PromotionPhase(p) == kargoapi.PromotionPhaseSucceeded
+func (pphase promotionObjectPhasePromotion) isTerminal() bool {
+	return pphase.IsTerminal()
 }
 
-func (p promotionObjectPhasePromotion) IsAborted() bool {
-	return kargoapi.PromotionPhase(p) == kargoapi.PromotionPhaseAborted
+func (pphase promotionObjectPhasePromotion) isSucceeded() bool {
+	return pphase.PromotionPhase == kargoapi.PromotionPhaseSucceeded
 }
 
-func (p promotionObjectPhasePromotion) IsRunning() bool {
-	return kargoapi.PromotionPhase(p) == kargoapi.PromotionPhaseRunning
+func (pphase promotionObjectPhasePromotion) isAborted() bool {
+	return pphase.PromotionPhase == kargoapi.PromotionPhaseAborted
 }
 
-func (p promotionObjectPhasePromotion) String() string {
-	return string(kargoapi.PromotionPhase(p))
+func (pphase promotionObjectPhasePromotion) isRunning() bool {
+	return pphase.PromotionPhase == kargoapi.PromotionPhaseRunning
 }
 
-func (p promotionObjectPhaseRequest) IsTerminal() bool {
-	phase := kargoapi.PromotionRequestPhase(p)
-	return phase.IsTerminal()
+func (pphase promotionObjectPhasePromotion) string() string {
+	return string(pphase.PromotionPhase)
 }
 
-func (p promotionObjectPhaseRequest) IsSucceeded() bool {
-	return kargoapi.PromotionRequestPhase(p) == kargoapi.PromotionRequestPhaseSucceeded
+func (rphase promotionObjectPhaseRequest) isTerminal() bool {
+	return rphase.IsTerminal()
 }
 
-func (p promotionObjectPhaseRequest) IsAborted() bool {
-	// FIXME: implement abort for promotion requests
-	return false
-	// return kargoapi.PromotionRequestPhase(p) == kargoapi.PromotionRequestPhaseAborted
+func (rphase promotionObjectPhaseRequest) isSucceeded() bool {
+	return rphase.PromotionRequestPhase == kargoapi.PromotionRequestPhaseSucceeded
 }
 
-func (p promotionObjectPhaseRequest) IsRunning() bool {
-	return kargoapi.PromotionRequestPhase(p) == kargoapi.PromotionRequestPhaseRunning
+func (rphase promotionObjectPhaseRequest) isAborted() bool {
+	return rphase.PromotionRequestPhase == kargoapi.PromotionRequestPhaseAborted
 }
 
-func (p promotionObjectPhaseRequest) String() string {
-	return string(kargoapi.PromotionRequestPhase(p))
+func (rphase promotionObjectPhaseRequest) isRunning() bool {
+	return rphase.PromotionRequestPhase == kargoapi.PromotionRequestPhaseRunning
 }
 
-// PromotionObjectReference implementations
+func (rphase promotionObjectPhaseRequest) string() string {
+	return string(rphase.PromotionRequestPhase)
+}
+
+// promotionObjectReference implementations
 
 type promotionObjectReferencePromotion struct {
 	kargoapi.PromotionReference
@@ -112,9 +112,9 @@ type promotionObjectReferenceRequest struct {
 	kargoapi.PromotionRequestReference
 }
 
-// PromotionObjectReference for PromotionReference
+// promotionObjectReference for PromotionReference
 
-func newPromotionObjectReferencePromotion(ref *kargoapi.PromotionReference) PromotionObjectReference {
+func newPromotionObjectReferencePromotion(ref *kargoapi.PromotionReference) promotionObjectReference {
 	if ref == nil {
 		return nil
 	}
@@ -123,57 +123,62 @@ func newPromotionObjectReferencePromotion(ref *kargoapi.PromotionReference) Prom
 	}
 }
 
-func (r *promotionObjectReferencePromotion) GetName() string {
-	return r.Name
+func (pref *promotionObjectReferencePromotion) getName() string {
+	return pref.Name
 }
 
-// FIXME: what to do with nil phase? Check usages
-func (r *promotionObjectReferencePromotion) GetPhase() PromotionObjectPhase {
-	if r.Status == nil {
-		return promotionObjectPhasePromotion("")
+func (pref *promotionObjectReferencePromotion) getPhase() promotionObjectPhase {
+	if pref.Status == nil {
+		return promotionObjectPhasePromotion{
+			PromotionPhase: "",
+		}
 	}
-	return promotionObjectPhasePromotion(r.Status.Phase)
+	return promotionObjectPhasePromotion{
+		PromotionPhase: pref.Status.Phase,
+	}
 }
-func (r *promotionObjectReferencePromotion) GetFinishedAt() *metav1.Time {
-	return r.FinishedAt
+func (pref *promotionObjectReferencePromotion) getFinishedAt() *metav1.Time {
+	return pref.FinishedAt
 }
-func (r *promotionObjectReferencePromotion) GetHealthChecks() []health.Criteria {
-	if r.Status == nil {
+func (pref *promotionObjectReferencePromotion) getHealthChecks() []health.Criteria {
+	if pref.Status == nil {
 		return nil
 	}
-	return healthChecksToCriteria(r.Status.HealthChecks)
+	return healthChecksToCriteria(pref.Status.HealthChecks)
 }
-func (r *promotionObjectReferencePromotion) GetFreightReference() *kargoapi.FreightReference {
-	return r.Freight
+func (pref *promotionObjectReferencePromotion) getFreightReference() *kargoapi.FreightReference {
+	return pref.Freight
 }
-func (r *promotionObjectReferencePromotion) GetFreightCollection() *kargoapi.FreightCollection {
-	if r.Status == nil {
+func (pref *promotionObjectReferencePromotion) getFreightCollection() *kargoapi.FreightCollection {
+	if pref.Status == nil {
 		return nil
 	}
-	return r.Status.FreightCollection
+	return pref.Status.FreightCollection
 }
 
-func (r *promotionObjectReferencePromotion) SetFreightCollection(collection *kargoapi.FreightCollection) {
+func (pref *promotionObjectReferencePromotion) setFreightCollection(collection *kargoapi.FreightCollection) {
 	// We use this method under assumption that status is not nil
-	if r.Status == nil {
+	if pref.Status == nil {
 		return
 	}
-	r.Status.FreightCollection = collection
+	pref.Status.FreightCollection = collection
 }
-func (r *promotionObjectReferencePromotion) GetMessage() string {
-	if r.Status == nil {
+func (pref *promotionObjectReferencePromotion) getMessage() string {
+	if pref.Status == nil {
 		return ""
 	}
-	return r.Status.Message
+	return pref.Status.Message
 }
-func (r *promotionObjectReferencePromotion) updateLastPromotion(stageStatus kargoapi.StageStatus) kargoapi.StageStatus {
-	stageStatus.LastPromotion = &r.PromotionReference
+func (pref *promotionObjectReferencePromotion) updateLastPromotion(
+	stageStatus kargoapi.StageStatus,
+) kargoapi.StageStatus {
+	stageStatus.LastPromotion = &pref.PromotionReference
 	return stageStatus
 }
 
-// PromotionObjectReference for PromotionRequestReference
+// promotionObjectReference for PromotionRequestReference
 
-func newPromotionObjectReferenceRequest(ref *kargoapi.PromotionRequestReference) PromotionObjectReference {
+func newPromotionObjectReferenceRequest(ref *kargoapi.PromotionRequestReference) promotionObjectReference {
 	if ref == nil {
 		return nil
 	}
@@ -182,48 +187,41 @@ func newPromotionObjectReferenceRequest(ref *kargoapi.PromotionRequestReference)
 	}
 }
 
-func (r *promotionObjectReferenceRequest) GetName() string {
-	return r.Name
+func (prref *promotionObjectReferenceRequest) getName() string {
+	return prref.Name
 }
 
-// FIXME: what to do with nil phase? Check usages
-// FIXME: add status to PromotionRequestReference
-func (r *promotionObjectReferenceRequest) GetPhase() PromotionObjectPhase {
-	return promotionObjectPhasePromotion(r.Phase)
+func (prref *promotionObjectReferenceRequest) getPhase() promotionObjectPhase {
+	return promotionObjectPhaseRequest{PromotionRequestPhase: prref.Phase}
 }
-func (r *promotionObjectReferenceRequest) GetFinishedAt() *metav1.Time {
-	return r.FinishedAt
+func (prref *promotionObjectReferenceRequest) getFinishedAt() *metav1.Time {
+	return prref.FinishedAt
 }
-func (r *promotionObjectReferenceRequest) GetHealthChecks() []health.Criteria {
-	// FIXME: propagate healthchecks to promotion request reference??
+func (prref *promotionObjectReferenceRequest) getHealthChecks() []health.Criteria {
+	// FIXME: propagate healthchecks to promotion request reference or resolve them differently?
+	// FIXME: we might want to extract healthchecks from targets or report specifically
+	// that targets will do healthchecking
 	return nil
 }
 
-// FIXME: should we use the full FreightReference??
-func (r *promotionObjectReferenceRequest) GetFreightReference() *kargoapi.FreightReference {
-	freight := r.Freight
-	if freight == nil {
-		return nil
-	}
-	return &kargoapi.FreightReference{
-		Name:   r.Freight.Name,
-		Origin: r.Freight.Origin,
-	}
+func (prref *promotionObjectReferenceRequest) getFreightReference() *kargoapi.FreightReference {
+	return prref.Freight
 }
-func (r *promotionObjectReferenceRequest) GetFreightCollection() *kargoapi.FreightCollection {
-	return r.FreightCollection
+func (prref *promotionObjectReferenceRequest) getFreightCollection() *kargoapi.FreightCollection {
+	return prref.FreightCollection
 }
 
-func (r *promotionObjectReferenceRequest) SetFreightCollection(collection *kargoapi.FreightCollection) {
-	r.FreightCollection = collection
+func (prref *promotionObjectReferenceRequest) setFreightCollection(collection *kargoapi.FreightCollection) {
+	prref.FreightCollection = collection
 }
 
-// FIXME: do we have a message for promotoin request? Do we want to?
-func (r *promotionObjectReferenceRequest) GetMessage() string {
-	return r.GetPhase().String()
+func (prref *promotionObjectReferenceRequest) getMessage() string {
+	return prref.getPhase().string()
 }
-func (r *promotionObjectReferenceRequest) updateLastPromotion(stageStatus kargoapi.StageStatus) kargoapi.StageStatus {
-	stageStatus.LastPromotionRequest = &r.PromotionRequestReference
+func (prref *promotionObjectReferenceRequest) updateLastPromotion(
+	stageStatus kargoapi.StageStatus,
+) kargoapi.StageStatus {
+	stageStatus.LastPromotionRequest = &prref.PromotionRequestReference
 	return stageStatus
 }
 
@@ -238,7 +236,7 @@ func healthChecksToCriteria(healthChecks []kargoapi.HealthCheckStep) []health.Cr
 	return criteria
 }
 
-// PromotionObject implementations
+// promotionObject implementations
 
 type promotionObjectPromotion struct {
 	kargoapi.Promotion
@@ -248,7 +246,7 @@ type promotionObjectRequest struct {
 	kargoapi.PromotionRequest
 }
 
-// PromotionObject implementation for Promotion
+// promotionObject implementation for Promotion
 
 func newPromotionObjectPromotion(promo *kargoapi.Promotion) *promotionObjectPromotion {
 	if promo == nil {
@@ -259,22 +257,22 @@ func newPromotionObjectPromotion(promo *kargoapi.Promotion) *promotionObjectProm
 	}
 }
 
-func (promo promotionObjectPromotion) GetPhase() PromotionObjectPhase {
-	return promotionObjectPhasePromotion(promo.Status.Phase)
+func (promo promotionObjectPromotion) getPhase() promotionObjectPhase {
+	return promotionObjectPhasePromotion{PromotionPhase: promo.Status.Phase}
 }
-func (promo promotionObjectPromotion) GetFinishedAt() *metav1.Time {
+func (promo promotionObjectPromotion) getFinishedAt() *metav1.Time {
 	return promo.Status.FinishedAt
 }
-func (promo promotionObjectPromotion) GetFreightName() string {
+func (promo promotionObjectPromotion) getFreightName() string {
 	return promo.Spec.Freight
 }
-func (promo promotionObjectPromotion) GetArgoCDRefs() []api.ArgoCDAppRef {
+func (promo promotionObjectPromotion) getArgoCDRefs() []api.ArgoCDAppRef {
 	return api.ArgoCDAppRefsFromPromo(&promo.Promotion)
 }
-func (promo promotionObjectPromotion) GetStartedAt() *metav1.Time {
+func (promo promotionObjectPromotion) getStartedAt() *metav1.Time {
 	return promo.Status.StartedAt
 }
-func (promo promotionObjectPromotion) ToLastPromotionReference() PromotionObjectReference {
+func (promo promotionObjectPromotion) toLastPromotionReference() promotionObjectReference {
 	ref := kargoapi.PromotionReference{
 		Name:       promo.Name,
 		Status:     promo.Status.DeepCopy(),
@@ -298,7 +296,7 @@ func (promo promotionObjectPromotion) updateCurrentPromotion(status kargoapi.Sta
 	return status
 }
 
-// PromotionObject implementation for PromotionReference
+// promotionObject implementation for PromotionReference
 
 func newPromotionObjectRequest(promo *kargoapi.PromotionRequest) *promotionObjectRequest {
 	if promo == nil {
@@ -309,44 +307,43 @@ func newPromotionObjectRequest(promo *kargoapi.PromotionRequest) *promotionObjec
 	}
 }
 
-func (promo promotionObjectRequest) GetPhase() PromotionObjectPhase {
-	return promotionObjectPhaseRequest(promo.Status.Phase)
+func (req promotionObjectRequest) getPhase() promotionObjectPhase {
+	return promotionObjectPhaseRequest{PromotionRequestPhase: req.Status.Phase}
 }
-func (promo promotionObjectRequest) GetFinishedAt() *metav1.Time {
-	return promo.Status.FinishedAt
+func (req promotionObjectRequest) getFinishedAt() *metav1.Time {
+	return req.Status.FinishedAt
 }
-func (promo promotionObjectRequest) GetFreightName() string {
-	return promo.Spec.Freight
+func (req promotionObjectRequest) getFreightName() string {
+	return req.Spec.Freight
 }
-func (promo promotionObjectRequest) GetArgoCDRefs() []api.ArgoCDAppRef {
+func (req promotionObjectRequest) getArgoCDRefs() []api.ArgoCDAppRef {
 	// FIXME: extract target-aware argocd refs from promo request status
 	return nil
 }
-func (promo promotionObjectRequest) GetStartedAt() *metav1.Time {
-	return promo.Status.StartedAt
+func (req promotionObjectRequest) getStartedAt() *metav1.Time {
+	return req.Status.StartedAt
 }
-func (promo promotionObjectRequest) ToLastPromotionReference() PromotionObjectReference {
+func (req promotionObjectRequest) toLastPromotionReference() promotionObjectReference {
 	ref := &kargoapi.PromotionRequestReference{
-		Name:       promo.Name,
-		Phase:      promo.Status.Phase,
-		FinishedAt: promo.Status.FinishedAt,
+		Name:       req.Name,
+		Phase:      req.Status.Phase,
+		FinishedAt: req.Status.FinishedAt,
 	}
 
-	// FIXME: we're going to populate a freight reference in promotion request status
-	if promo.Status.Freight != nil {
-		ref.Freight = promo.Status.Freight.DeepCopy()
+	if req.Status.Freight != nil {
+		ref.Freight = req.Status.Freight.DeepCopy()
 	}
-	if promo.Status.FreightCollection != nil {
-		ref.FreightCollection = promo.Status.FreightCollection.DeepCopy()
+	if req.Status.FreightCollection != nil {
+		ref.FreightCollection = req.Status.FreightCollection.DeepCopy()
 	}
 	return newPromotionObjectReferenceRequest(ref)
 }
 
-func (promo promotionObjectRequest) updateCurrentPromotion(status kargoapi.StageStatus) kargoapi.StageStatus {
+func (req promotionObjectRequest) updateCurrentPromotion(status kargoapi.StageStatus) kargoapi.StageStatus {
 	status.CurrentPromotionRequest = &kargoapi.PromotionRequestReference{
-		Name: promo.Name,
+		Name: req.Name,
 	}
-	if freight := promo.Status.Freight; freight != nil {
+	if freight := req.Status.Freight; freight != nil {
 		status.CurrentPromotion.Freight = freight.DeepCopy()
 	}
 	return status
@@ -354,22 +351,22 @@ func (promo promotionObjectRequest) updateCurrentPromotion(status kargoapi.Stage
 
 // Current and Last promotion access functions
 
-func getLastPromoObject(stage *kargoapi.Stage) PromotionObjectReference {
+func getLastPromoObject(stage *kargoapi.Stage) promotionObjectReference {
 	return getLastPromoObjectFromStatus(stage, stage.Status)
 }
 
-func getLastPromoObjectFromStatus(stage *kargoapi.Stage, status kargoapi.StageStatus) PromotionObjectReference {
+func getLastPromoObjectFromStatus(stage *kargoapi.Stage, status kargoapi.StageStatus) promotionObjectReference {
 	if api.IsTargetAware(stage) {
 		return newPromotionObjectReferenceRequest(status.LastPromotionRequest)
 	}
 	return newPromotionObjectReferencePromotion(status.LastPromotion)
 }
 
-func getCurrentPromoObject(stage *kargoapi.Stage) PromotionObjectReference {
+func getCurrentPromoObject(stage *kargoapi.Stage) promotionObjectReference {
 	return getCurrentPromoObjectFromStatus(stage, stage.Status)
 }
 
-func getCurrentPromoObjectFromStatus(stage *kargoapi.Stage, status kargoapi.StageStatus) PromotionObjectReference {
+func getCurrentPromoObjectFromStatus(stage *kargoapi.Stage, status kargoapi.StageStatus) promotionObjectReference {
 	if api.IsTargetAware(stage) {
 		return newPromotionObjectReferenceRequest(status.CurrentPromotionRequest)
 	}
@@ -452,7 +449,7 @@ func (r *RegularStageReconciler) getPromotionRequests(
 func (r *RegularStageReconciler) getPromotionObjectsByStage(
 	ctx context.Context,
 	stage *kargoapi.Stage,
-) ([]PromotionObject, error) {
+) ([]promotionObject, error) {
 	return r.getPromotionObjectsByStageAndFreight(ctx, stage, "")
 }
 
@@ -463,7 +460,7 @@ func (r *RegularStageReconciler) getPromotionObjectsByStageAndFreight(
 	ctx context.Context,
 	stage *kargoapi.Stage,
 	freightName string,
-) ([]PromotionObject, error) {
+) ([]promotionObject, error) {
 	if api.IsTargetAware(stage) {
 		requests, err := r.getPromotionRequests(ctx, stage.Name, stage.Namespace, freightName)
 		if err != nil {
@@ -478,16 +475,16 @@ func (r *RegularStageReconciler) getPromotionObjectsByStageAndFreight(
 	return promotionsToPromotionObjects(promotions), nil
 }
 
-func promotionsToPromotionObjects(promos []kargoapi.Promotion) []PromotionObject {
-	promoObjs := make([]PromotionObject, len(promos))
+func promotionsToPromotionObjects(promos []kargoapi.Promotion) []promotionObject {
+	promoObjs := make([]promotionObject, len(promos))
 	for i, promo := range promos {
 		promoObjs[i] = newPromotionObjectPromotion(&promo)
 	}
 	return promoObjs
 }
 
-func promotionRequestsToPromotionObjects(requests []kargoapi.PromotionRequest) []PromotionObject {
-	requestObjs := make([]PromotionObject, len(requests))
+func promotionRequestsToPromotionObjects(requests []kargoapi.PromotionRequest) []promotionObject {
+	requestObjs := make([]promotionObject, len(requests))
 	for i, req := range requests {
 		requestObjs[i] = newPromotionObjectRequest(&req)
 	}

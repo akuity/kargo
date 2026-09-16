@@ -895,12 +895,12 @@ func summarizeConditions(stage *kargoapi.Stage, newStatus *kargoapi.StageStatus,
 	lastPromo := getLastPromoObjectFromStatus(stage, *newStatus)
 	// If we are not currently Promoting but the last promotion failed,
 	// then we are not Ready.
-	if lastPromo != nil && lastPromo.GetPhase().IsTerminal() && !lastPromo.GetPhase().IsSucceeded() {
+	if lastPromo != nil && lastPromo.getPhase().isTerminal() && !lastPromo.getPhase().isSucceeded() {
 		conditions.Set(newStatus, &metav1.Condition{
 			Type:               kargoapi.ConditionTypeReady,
 			Status:             metav1.ConditionFalse,
-			Reason:             fmt.Sprintf("LastPromotion%s", lastPromo.GetPhase().String()),
-			Message:            lastPromo.GetMessage(),
+			Reason:             fmt.Sprintf("LastPromotion%s", lastPromo.getPhase().string()),
+			Message:            lastPromo.getMessage(),
 			ObservedGeneration: stage.Generation,
 		})
 		return
