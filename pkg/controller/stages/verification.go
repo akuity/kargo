@@ -514,7 +514,7 @@ func (r *RegularStageReconciler) startVerification(
 		lastPromo := getLastPromoObject(stage)
 		if lastPromo != nil {
 			builderOpts = append(builderOpts, rollouts.WithExtraAnnotations{
-				kargoapi.AnnotationKeyPromotion: lastPromo.GetName(),
+				kargoapi.AnnotationKeyPromotion: lastPromo.getName(),
 			})
 		}
 	}

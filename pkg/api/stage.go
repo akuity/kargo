@@ -230,8 +230,18 @@ func RefreshStage(
 	return stage, nil
 }
 
-// FIXME: this is a replacement for AnnotateStageWithArgoCDContext
-// FIXME: adapt AnnotateStageWithArgoCDContext tests
+// AnnotateStageWithArgoCDAppRefs annotates a Stage with the ArgoCD context
+// necessary for the frontend to display ArgoCD information for the Stage.
+//
+// The annotation value is a JSON-encoded list of ArgoCD apps that are
+// associated with the Stage, constructed from argoCDApps.
+//
+// This deliberately takes the Stage's identity rather than a caller's working
+// Stage object. This is to avoid the patchAnnotation() call in this method
+// overwriting pending status changes to the working Stage object with live
+// status, which may be stale in comparison.
+//
+// If argoCDApps are empty, the annotation is removed.
 func AnnotateStageWithArgoCDAppRefs(
 	ctx context.Context,
 	c client.Client,
@@ -245,21 +255,37 @@ func AnnotateStageWithArgoCDAppRefs(
 		},
 	}
 
+	dedupApps := []ArgoCDAppRef{}
+	appMap := map[ArgoCDAppRef]struct{}{}
+	for _, app := range argoCDApps {
+		if _, ok := appMap[app]; !ok {
+			dedupApps = append(dedupApps, app)
+			appMap[app] = struct{}{}
+		}
+	}
+
 	// If we did not find any ArgoCD apps, we should remove the annotation.
-	if len(argoCDApps) == 0 {
+	if len(dedupApps) == 0 {
 		return deleteAnnotation(ctx, c, target, kargoapi.AnnotationKeyArgoCDContext)
 	}
 
 	// Marshal the ArgoCD context to JSON and set the annotation on the Stage.
-	argoCDAppsJSON, err := json.Marshal(argoCDApps)
+	argoCDAppsJSON, err := json.Marshal(dedupApps)
 	if err != nil {
 		return fmt.Errorf("failed to marshal ArgoCD context: %w", err)
 	}
 	return patchAnnotation(ctx, c, target, kargoapi.AnnotationKeyArgoCDContext, string(argoCDAppsJSON))
 }
 
+// ArgoCDAppRefsFromPromo extracts Argo CD application references from promotion.
+// Two sources contribute: the Applications that Argo CD-aware steps reported as step
+// output, and the Applications named by the health check criteria those steps
+// registered. The latter is what Promotions from before Argo CD-aware steps
+// began reporting step output rely on.
+//
+// If the Promotion is nil, or no ArgoCD apps are found, the result is empty.
 func ArgoCDAppRefsFromPromo(promo *kargoapi.Promotion) []ArgoCDAppRef {
-	var argoCDApps []ArgoCDAppRef
+	argoCDApps := []ArgoCDAppRef{}
 	if promo != nil {
 		argoCDApps = append(
 			argoCDApps,

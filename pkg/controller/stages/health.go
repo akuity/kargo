@@ -38,9 +38,6 @@ func (r *RegularStageReconciler) assessHealth(ctx context.Context, stage *kargoa
 		return newStatus
 	}
 
-	// FIXME: we might want to extract healthchecks from targets or report specifically
-	// that targets will do healthchecking
-
 	if lastPromo == nil {
 		logger.Debug("Stage has no current Freight: no health checks to perform")
 		conditions.Set(&newStatus, &metav1.Condition{
@@ -62,12 +59,12 @@ func (r *RegularStageReconciler) assessHealth(ctx context.Context, stage *kargoa
 	//  continue to run health checks from the last successful Promotion,
 	//  even if the current Promotion did not succeed (e.g. because it was
 	//  aborted).
-	if !lastPromo.GetPhase().IsSucceeded() {
+	if !lastPromo.getPhase().isSucceeded() {
 		logger.Debug("Last promotion did not succeed: defaulting Stage health to Unknown")
 		conditions.Set(&newStatus, &metav1.Condition{
 			Type:               kargoapi.ConditionTypeHealthy,
 			Status:             metav1.ConditionUnknown,
-			Reason:             fmt.Sprintf("LastPromotion%s", lastPromo.GetPhase()),
+			Reason:             fmt.Sprintf("LastPromotion%s", lastPromo.getPhase().string()),
 			Message:            "Cannot assess health because last Promotion did not succeed",
 			ObservedGeneration: stage.Generation,
 		})
@@ -79,7 +76,7 @@ func (r *RegularStageReconciler) assessHealth(ctx context.Context, stage *kargoa
 	}
 
 	// Compose the health check criteria.
-	criteria := lastPromo.GetHealthChecks()
+	criteria := lastPromo.getHealthChecks()
 
 	// Run the hlth checks.
 	hlth := r.healthChecker.Check(ctx, stage.Namespace, stage.Name, criteria)

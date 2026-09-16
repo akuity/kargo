@@ -858,8 +858,6 @@ func (r *PromotionReference) GetHealthChecks() []HealthCheckStep {
 type PromotionRequestReference struct {
 	// Name is the name of the PromotionRequest.
 	Name string `json:"name"`
-	// FIXME: we need promotion request to resolve freight reference
-	// FIXME: we need promotions to pick freight reference from promotion request
 	// Freight identifies the Freight being promoted.
 	Freight *FreightReference `json:"freight,omitempty"`
 	// Phase is a high-level summary of the PromotionRequest's lifecycle.

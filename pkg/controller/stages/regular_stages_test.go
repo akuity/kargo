@@ -9813,8 +9813,8 @@ func Test_GetPromotionsSummary(t *testing.T) {
 	tests := []struct {
 		name         string
 		stage        *kargoapi.Stage
-		promotions   []PromotionObject
-		currentPromo PromotionObjectReference
+		promotions   []promotionObject
+		currentPromo promotionObjectReference
 		assertions   func(*testing.T, promotionObjectsSummary)
 	}{
 		{
@@ -9842,7 +9842,7 @@ func Test_GetPromotionsSummary(t *testing.T) {
 				require.Equal(t, "promo-1", summary.currentPromotion.GetName())
 				require.True(
 					t,
-					summary.currentPromotion.GetPhase().IsRunning(),
+					summary.currentPromotion.getPhase().isRunning(),
 				)
 			},
 		},
@@ -9859,11 +9859,11 @@ func Test_GetPromotionsSummary(t *testing.T) {
 				require.Equal(t, "promo-1", summary.currentPromotion.GetName())
 				require.False(
 					t,
-					summary.currentPromotion.GetPhase().IsTerminal(),
+					summary.currentPromotion.getPhase().isTerminal(),
 				)
 				require.False(
 					t,
-					summary.currentPromotion.GetPhase().IsRunning(),
+					summary.currentPromotion.getPhase().isRunning(),
 				)
 			},
 		},
@@ -9878,7 +9878,7 @@ func Test_GetPromotionsSummary(t *testing.T) {
 			assertions: func(t *testing.T, summary promotionObjectsSummary) {
 				require.NotNil(t, summary.currentPromotion)
 				require.Equal(t, "promo-1", summary.currentPromotion.GetName())
-				require.True(t, summary.currentPromotion.GetPhase().IsTerminal())
+				require.True(t, summary.currentPromotion.getPhase().isTerminal())
 			},
 		},
 
@@ -9914,7 +9914,7 @@ func Test_GetPromotionsSummary(t *testing.T) {
 				require.Equal(t, "promo-1", summary.nextPromotion.GetName())
 				require.True(
 					t,
-					summary.nextPromotion.GetPhase().IsRunning(),
+					summary.nextPromotion.getPhase().isRunning(),
 				)
 			},
 		},
@@ -9931,11 +9931,11 @@ func Test_GetPromotionsSummary(t *testing.T) {
 				require.Equal(t, "promo-1", summary.nextPromotion.GetName())
 				require.False(
 					t,
-					summary.nextPromotion.GetPhase().IsTerminal(),
+					summary.nextPromotion.getPhase().isTerminal(),
 				)
 				require.False(
 					t,
-					summary.nextPromotion.GetPhase().IsRunning(),
+					summary.nextPromotion.getPhase().isRunning(),
 				)
 			},
 		},

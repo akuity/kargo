@@ -826,17 +826,17 @@ func TestAbortStageFreightVerification(t *testing.T) {
 	})
 }
 
-func TestAnnotateStageWithArgoCDContext(t *testing.T) {
+func TestAnnotateStageWithArgoCDAppRefs(t *testing.T) {
 	scheme := k8sruntime.NewScheme()
 	require.NoError(t, kargoapi.SchemeBuilder.AddToScheme(scheme))
 
 	t.Run("not found", func(t *testing.T) {
 		c := fake.NewClientBuilder().WithScheme(scheme).Build()
 
-		err := AnnotateStageWithArgoCDContext(
+		err := AnnotateStageWithArgoCDAppRefs(
 			t.Context(),
 			c,
-			&kargoapi.Promotion{},
+			[]ArgoCDAppRef{},
 			types.NamespacedName{
 				Namespace: "fake-namespace",
 				Name:      "fake-stage",
@@ -847,8 +847,85 @@ func TestAnnotateStageWithArgoCDContext(t *testing.T) {
 
 	testCases := []struct {
 		name     string
+		refs     []ArgoCDAppRef
 		promo    *kargoapi.Promotion
 		expected string
+	}{
+		{
+			name: "single ref",
+			refs: []ArgoCDAppRef{
+				{
+					Name:      "fake-argo-app",
+					Namespace: "fake-argo-namespace",
+				},
+			},
+			expected: `[{"name":"fake-argo-app","namespace":"fake-argo-namespace"}]`,
+		},
+		{
+			name: "duplicate refs deduped",
+			refs: []ArgoCDAppRef{
+				{
+					Name:      "fake-argo-app",
+					Namespace: "fake-argo-namespace",
+				},
+				{
+					Name:      "fake-argo-app",
+					Namespace: "fake-argo-namespace",
+				},
+			},
+			expected: `[{"name":"fake-argo-app","namespace":"fake-argo-namespace"}]`,
+		},
+		{
+			name:     "no refs",
+			refs:     []ArgoCDAppRef{},
+			expected: "",
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(
+				&kargoapi.Stage{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "fake-stage",
+						Namespace: "fake-namespace",
+						Annotations: map[string]string{
+							kargoapi.AnnotationKeyArgoCDContext: "fake-annotation",
+						},
+					},
+				},
+			).Build()
+
+			stageKey := types.NamespacedName{
+				Namespace: "fake-namespace",
+				Name:      "fake-stage",
+			}
+			require.NoError(t, AnnotateStageWithArgoCDAppRefs(
+				t.Context(), c, testCase.refs, stageKey,
+			))
+
+			stage, err := GetStage(t.Context(), c, stageKey)
+			require.NoError(t, err)
+			if testCase.expected == "" {
+				require.NotContains(t, stage.Annotations, kargoapi.AnnotationKeyArgoCDContext)
+				return
+			}
+			require.Equal(
+				t,
+				testCase.expected,
+				stage.Annotations[kargoapi.AnnotationKeyArgoCDContext],
+			)
+		})
+	}
+}
+
+func TestArgoCDAppRefsFromPromo(t *testing.T) {
+	scheme := k8sruntime.NewScheme()
+	require.NoError(t, kargoapi.SchemeBuilder.AddToScheme(scheme))
+
+	testCases := []struct {
+		name         string
+		promo        *kargoapi.Promotion
+		expectedRefs []ArgoCDAppRef
 	}{
 		{
 			// Argo CD-aware steps did not always report the Applications they
@@ -865,7 +942,9 @@ func TestAnnotateStageWithArgoCDContext(t *testing.T) {
 					}},
 				},
 			},
-			expected: `[{"name":"fake-argo-app","namespace":"fake-argo-namespace"}]`,
+			expectedRefs: []ArgoCDAppRef{{
+				Name:      "fake-argo-app",
+				Namespace: "fake-argo-namespace"}},
 		},
 		{
 			name: "step output only",
@@ -881,7 +960,9 @@ func TestAnnotateStageWithArgoCDContext(t *testing.T) {
 					},
 				},
 			},
-			expected: `[{"name":"fake-argo-app","namespace":"fake-argo-namespace"}]`,
+			expectedRefs: []ArgoCDAppRef{{
+				Name:      "fake-argo-app",
+				Namespace: "fake-argo-namespace"}},
 		},
 		{
 			name: "step output from a task step",
@@ -897,7 +978,9 @@ func TestAnnotateStageWithArgoCDContext(t *testing.T) {
 					},
 				},
 			},
-			expected: `[{"name":"fake-argo-app","namespace":"fake-argo-namespace"}]`,
+			expectedRefs: []ArgoCDAppRef{{
+				Name:      "fake-argo-app",
+				Namespace: "fake-argo-namespace"}},
 		},
 		{
 			// An argocd-update step reports the same Applications through both
@@ -930,8 +1013,12 @@ func TestAnnotateStageWithArgoCDContext(t *testing.T) {
 					}},
 				},
 			},
-			expected: `[{"name":"fake-argo-app","namespace":"fake-argo-namespace"},` +
-				`{"name":"other-argo-app","namespace":"fake-argo-namespace"}]`,
+			expectedRefs: []ArgoCDAppRef{{
+				Name:      "fake-argo-app",
+				Namespace: "fake-argo-namespace",
+			}, {
+				Name: "other-argo-app", Namespace: "fake-argo-namespace",
+			}},
 		},
 		{
 			name: "output of non-Argo CD steps is ignored",
@@ -945,6 +1032,7 @@ func TestAnnotateStageWithArgoCDContext(t *testing.T) {
 					},
 				},
 			},
+			expectedRefs: []ArgoCDAppRef{},
 		},
 		{
 			name: "malformed output contributes nothing",
@@ -961,6 +1049,7 @@ func TestAnnotateStageWithArgoCDContext(t *testing.T) {
 					},
 				},
 			},
+			expectedRefs: []ArgoCDAppRef{},
 		},
 		{
 			name: "unparsable state",
@@ -972,48 +1061,22 @@ func TestAnnotateStageWithArgoCDContext(t *testing.T) {
 					State: &apiextensionsv1.JSON{Raw: []byte(`{"wait":`)},
 				},
 			},
+			expectedRefs: []ArgoCDAppRef{},
 		},
 		{
 			name:  "no ArgoCD apps",
 			promo: &kargoapi.Promotion{},
+			expectedRefs: []ArgoCDAppRef{},
 		},
 		{
 			name: "nil Promotion",
+			expectedRefs: []ArgoCDAppRef{},
 		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(
-				&kargoapi.Stage{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "fake-stage",
-						Namespace: "fake-namespace",
-						Annotations: map[string]string{
-							kargoapi.AnnotationKeyArgoCDContext: "fake-annotation",
-						},
-					},
-				},
-			).Build()
-
-			stageKey := types.NamespacedName{
-				Namespace: "fake-namespace",
-				Name:      "fake-stage",
-			}
-			require.NoError(t, AnnotateStageWithArgoCDContext(
-				t.Context(), c, testCase.promo, stageKey,
-			))
-
-			stage, err := GetStage(t.Context(), c, stageKey)
-			require.NoError(t, err)
-			if testCase.expected == "" {
-				require.NotContains(t, stage.Annotations, kargoapi.AnnotationKeyArgoCDContext)
-				return
-			}
-			require.Equal(
-				t,
-				testCase.expected,
-				stage.Annotations[kargoapi.AnnotationKeyArgoCDContext],
-			)
+			appRefs := ArgoCDAppRefsFromPromo(testCase.promo)
+			require.Equal(t, testCase.expectedRefs, appRefs)
 		})
 	}
 }

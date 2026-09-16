@@ -11,6 +11,9 @@ const (
 	// PromotionRequestPhaseRunning denotes a PromotionRequest that is creating or
 	// monitoring Promotions.
 	PromotionRequestPhaseRunning PromotionRequestPhase = "Running"
+	// PromotionRequestPhaseRunning denotes a PromotionRequest that is creating or
+	// monitoring Promotions.
+	PromotionRequestPhaseAborted PromotionRequestPhase = "Aborted"
 	// PromotionRequestPhaseSucceeded denotes a PromotionRequest whose Promotions all
 	// completed successfully.
 	PromotionRequestPhaseSucceeded PromotionRequestPhase = "Succeeded"
@@ -30,7 +33,8 @@ func (p *PromotionRequestPhase) IsTerminal() bool {
 	switch *p {
 	case PromotionRequestPhaseSucceeded,
 		PromotionRequestPhaseFailed,
-		PromotionRequestPhaseErrored:
+		PromotionRequestPhaseErrored,
+		PromotionRequestPhaseAborted:
 		return true
 	default:
 		return false
@@ -151,7 +155,6 @@ type PromotionRequestStatus struct {
 	// +kubebuilder:validation:Optional
 	Phase PromotionRequestPhase `json:"phase,omitempty"`
 
-	// FIXME: populate Freight and Freight collection in the promotion request reconciler
 	// Freight is the detail of the piece of freight that was referenced by this promotion.
 	Freight *FreightReference `json:"freight,omitempty"`
 

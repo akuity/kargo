@@ -95,7 +95,7 @@ func (r *RegularStageReconciler) syncPromotions(
 	if currentPromo != nil {
 		// If current promotion exists and either terminal or not found in promotions,
 		// we need to finalize that promotion
-		if summary.currentPromotion == nil || summary.currentPromotion.GetPhase().IsTerminal() {
+		if summary.currentPromotion == nil || summary.currentPromotion.getPhase().isTerminal() {
 			newStatus = r.finalizePromotion(
 				ctx, stage, requestedOrigins, autoPromotionEnabled, newStatus, summary.terminal)
 			return newStatus, hasNonTerminalPromotions, nil
@@ -150,7 +150,7 @@ func (r *RegularStageReconciler) verificationBlocksPromotion(ctx context.Context
 func (r *RegularStageReconciler) trackPromotion(
 	stage *kargoapi.Stage,
 	newStatus kargoapi.StageStatus,
-	promotion PromotionObject,
+	promotion promotionObject,
 ) kargoapi.StageStatus {
 	conditions.Set(&newStatus, &metav1.Condition{
 		Type:   kargoapi.ConditionTypePromoting,
@@ -158,7 +158,7 @@ func (r *RegularStageReconciler) trackPromotion(
 		Reason: "ActivePromotion",
 		Message: fmt.Sprintf(
 			"Promotion %q is currently %s",
-			promotion.GetName(), promotion.GetPhase(),
+			promotion.GetName(), promotion.getPhase().string(),
 		),
 		ObservedGeneration: stage.Generation,
 	})
@@ -166,15 +166,13 @@ func (r *RegularStageReconciler) trackPromotion(
 	return promotion.updateCurrentPromotion(newStatus)
 }
 
-// FIXME: updateCurrentPromotion should set name freight
-
 func (r *RegularStageReconciler) finalizePromotion(
 	ctx context.Context,
 	stage *kargoapi.Stage,
 	requestedOrigins map[string]struct{},
 	autoPromotionEnabled bool,
 	newStatus kargoapi.StageStatus,
-	terminalPromotions []PromotionObject,
+	terminalPromotions []promotionObject,
 ) kargoapi.StageStatus {
 	logger := logging.LoggerFromContext(ctx)
 	// Update the conditions to reflect that we are no longer promoting.
@@ -188,7 +186,7 @@ func (r *RegularStageReconciler) finalizePromotion(
 	// oldest-to-newest so holds are applied in chronological order and
 	// Freight history entries are appended oldest-first (GC removes oldest
 	// first).
-	var newPromos []PromotionObject
+	var newPromos []promotionObject
 	for i := range terminalPromotions {
 		promo := terminalPromotions[i]
 		if lastPromo != nil {
@@ -197,15 +195,15 @@ func (r *RegularStageReconciler) finalizePromotion(
 			// NB: This makes use of the fact that Promotion names are
 			// generated, and contain a timestamp component which will ensure
 			// that they can be sorted in a consistent order.
-			if strings.Compare(promo.GetName(), lastPromo.GetName()) <= 0 {
+			if strings.Compare(promo.GetName(), lastPromo.getName()) <= 0 {
 				break
 			}
 		}
-		if promo.GetPhase().IsTerminal() {
+		if promo.getPhase().isTerminal() {
 			newPromos = append(newPromos, promo)
 		}
 	}
-	slices.SortFunc(newPromos, func(a, b PromotionObject) int {
+	slices.SortFunc(newPromos, func(a, b promotionObject) int {
 		return strings.Compare(a.GetName(), b.GetName())
 	})
 
@@ -218,7 +216,7 @@ func (r *RegularStageReconciler) finalizePromotion(
 			newStatus = refreshAutoPromotionHolds(newStatus, promo, requestedOrigins)
 		}
 
-		ref := promo.ToLastPromotionReference()
+		ref := promo.toLastPromotionReference()
 
 		// A Promotion that was aborted before it ever reached Running never
 		// had the chance to build a FreightCollection. Recording it as-is
@@ -228,19 +226,19 @@ func (r *RegularStageReconciler) finalizePromotion(
 		// NOTE: here we assume that if StartedAt is nil it's aborted, but don't check the aborted Phase
 		var lastPromoFreightCollection *kargoapi.FreightCollection
 		if lastPromo != nil {
-			lastPromoFreightCollection = lastPromo.GetFreightCollection()
+			lastPromoFreightCollection = lastPromo.getFreightCollection()
 		}
-		if promo.GetStartedAt() == nil && ref.GetFreightCollection() == nil &&
+		if promo.getStartedAt() == nil && ref.getFreightCollection() == nil &&
 			lastPromoFreightCollection != nil {
-			ref.SetFreightCollection(lastPromoFreightCollection)
+			ref.setFreightCollection(lastPromoFreightCollection)
 		}
 
 		newStatus = ref.updateLastPromotion(newStatus)
 
-		if promo.GetPhase().IsSucceeded() {
+		if promo.getPhase().isSucceeded() {
 			// If the Promotion was successful, then we should add the Freight
 			// to the history of successfully promoted Freight.
-			newStatus.FreightHistory.Record(ref.GetFreightCollection())
+			newStatus.FreightHistory.Record(ref.getFreightCollection())
 
 			// Erase any health checks that were performed for the previous
 			// Freight, as they are no longer relevant.
@@ -269,8 +267,7 @@ func (r *RegularStageReconciler) finalizePromotion(
 			//
 			// NB: If the Promotion did not involve any ArgoCD Applications,
 			// then the annotation will be removed.
-			// FIXME: cover that in control flow stages
-			argocdAppRefs := promo.GetArgoCDRefs()
+			argocdAppRefs := promo.getArgoCDRefs()
 			if err := api.AnnotateStageWithArgoCDAppRefs(
 				ctx,
 				r.client,
@@ -287,27 +284,27 @@ func (r *RegularStageReconciler) finalizePromotion(
 }
 
 type promotionObjectsSummary struct {
-	terminal                 []PromotionObject
-	currentPromotion         PromotionObject
+	terminal                 []promotionObject
+	currentPromotion         promotionObject
 	hasNonTerminalPromotions bool
-	nextPromotion            PromotionObject
+	nextPromotion            promotionObject
 }
 
 func (r *RegularStageReconciler) getPromotionsSummary(
-	promotions []PromotionObject,
-	currentPromoRef PromotionObjectReference,
+	promotions []promotionObject,
+	currentPromoRef promotionObjectReference,
 ) promotionObjectsSummary {
 	summary := promotionObjectsSummary{}
-	running := []PromotionObject{}
-	pending := []PromotionObject{}
+	running := []promotionObject{}
+	pending := []promotionObject{}
 	for _, promo := range promotions {
-		if currentPromoRef != nil && promo.GetName() == currentPromoRef.GetName() {
+		if currentPromoRef != nil && promo.GetName() == currentPromoRef.getName() {
 			summary.currentPromotion = promo
 		}
-		if promo.GetPhase().IsRunning() {
+		if promo.getPhase().isRunning() {
 			summary.hasNonTerminalPromotions = true
 			running = append(running, promo)
-		} else if promo.GetPhase().IsTerminal() {
+		} else if promo.getPhase().isTerminal() {
 			summary.terminal = append(summary.terminal, promo)
 		} else {
 			summary.hasNonTerminalPromotions = true
@@ -317,16 +314,16 @@ func (r *RegularStageReconciler) getPromotionsSummary(
 	// nextPromotion is either first one running or first one pending
 	// If it's running, it should match currentPromotion, but we don't validate that
 	if len(running) > 0 {
-		summary.nextPromotion = slices.MinFunc(running, func(a, b PromotionObject) int {
+		summary.nextPromotion = slices.MinFunc(running, func(a, b promotionObject) int {
 			return strings.Compare(a.GetName(), b.GetName())
 		})
 	} else if len(pending) > 0 {
-		summary.nextPromotion = slices.MinFunc(pending, func(a, b PromotionObject) int {
+		summary.nextPromotion = slices.MinFunc(pending, func(a, b promotionObject) int {
 			return strings.Compare(a.GetName(), b.GetName())
 		})
 	}
 
-	slices.SortFunc(summary.terminal, func(a, b PromotionObject) int {
+	slices.SortFunc(summary.terminal, func(a, b promotionObject) int {
 		return strings.Compare(b.GetName(), a.GetName())
 	})
 	return summary
