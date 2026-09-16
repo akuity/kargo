@@ -176,17 +176,21 @@ export const PromotionWindowsListView = ({
             <Button
               icon={<FontAwesomeIcon icon={faPencil} size='sm' />}
               onClick={() => onEdit(promotionWindow)}
-              size='small'
               color='default'
               variant='filled'
-            />
+              size='small'
+            >
+              Edit
+            </Button>
             <Button
               icon={<FontAwesomeIcon icon={faTrash} size='sm' />}
               onClick={() => onDelete(promotionWindow)}
-              size='small'
               color='danger'
               variant='filled'
-            />
+              size='small'
+            >
+              Delete
+            </Button>
           </Flex>
         )
       }

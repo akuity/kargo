@@ -79,11 +79,7 @@ export const PromotionWindows = ({ scope, promotionWindows, onUpdate }: Promotio
       type='inner'
       className='min-h-full'
       extra={
-        <Button
-          type='primary'
-          icon={<FontAwesomeIcon icon={faPlus} size='sm' />}
-          onClick={() => createWindow()}
-        >
+        <Button icon={<FontAwesomeIcon icon={faPlus} size='sm' />} onClick={() => createWindow()}>
           New Window
         </Button>
       }
