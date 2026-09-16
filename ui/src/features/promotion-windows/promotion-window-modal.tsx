@@ -92,7 +92,9 @@ export const PromotionWindowModal = ({
         open={visible}
         onCancel={hide}
         width={680}
-        styles={{ body: { maxHeight: 'calc(100vh - 260px)', overflowY: 'auto' } }}
+        styles={{
+          body: { maxHeight: 'calc(100vh - 260px)', overflowY: 'auto', padding: '0 10px' }
+        }}
         title={editing ? 'Edit promotion window' : 'New promotion window'}
         okText={editing ? 'Save changes' : 'Create'}
         onOk={handleSubmit}
