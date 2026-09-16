@@ -194,3 +194,79 @@ func Test_projectStageHealthEnqueuer_Update(t *testing.T) {
 		})
 	}
 }
+
+func Test_projectStageHealthEnqueuer_Update_promotionRequestChanged(t *testing.T) {
+	stageWith := func(current, last string) *kargoapi.Stage {
+		stage := &kargoapi.Stage{
+			ObjectMeta: metav1.ObjectMeta{Namespace: "fake-project"},
+			Status: kargoapi.StageStatus{
+				Conditions: []metav1.Condition{{
+					Type:   kargoapi.ConditionTypeHealthy,
+					Status: metav1.ConditionTrue,
+				}},
+			},
+		}
+		if current != "" {
+			stage.Status.CurrentPromotionRequest = &kargoapi.PromotionRequestReference{Name: current}
+		}
+		if last != "" {
+			stage.Status.LastPromotionRequest = &kargoapi.PromotionRequestReference{Name: last}
+		}
+		return stage
+	}
+	project := []reconcile.Request{{NamespacedName: types.NamespacedName{Name: "fake-project"}}}
+
+	tests := []struct {
+		name             string
+		oldStage         *kargoapi.Stage
+		newStage         *kargoapi.Stage
+		expectedRequests []reconcile.Request
+	}{
+		{
+			name:     "same requests and same health",
+			oldStage: stageWith("cur", "last"),
+			newStage: stageWith("cur", "last"),
+		},
+		{
+			name:             "current request appears",
+			oldStage:         stageWith("", "last"),
+			newStage:         stageWith("cur", "last"),
+			expectedRequests: project,
+		},
+		{
+			name:             "current request clears",
+			oldStage:         stageWith("cur", "last"),
+			newStage:         stageWith("", "last"),
+			expectedRequests: project,
+		},
+		{
+			name:             "last request moves forward",
+			oldStage:         stageWith("", "old"),
+			newStage:         stageWith("", "new"),
+			expectedRequests: project,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			enqueuer := &projectStageHealthEnqueuer[*kargoapi.Stage]{}
+			queue := &controllertest.Queue{TypedInterface: workqueue.NewTyped[reconcile.Request]()}
+			enqueuer.Update(
+				t.Context(),
+				event.TypedUpdateEvent[*kargoapi.Stage]{ObjectOld: tt.oldStage, ObjectNew: tt.newStage},
+				queue,
+			)
+			require.ElementsMatch(t, tt.expectedRequests, drainQueue(queue))
+		})
+	}
+}
+
+// drainQueue returns every request on the queue, marking each done.
+func drainQueue(queue *controllertest.Queue) []reconcile.Request {
+	var reqs []reconcile.Request
+	for queue.Len() > 0 {
+		req, _ := queue.Get()
+		reqs = append(reqs, req)
+		queue.Done(req)
+	}
+	return reqs
+}
