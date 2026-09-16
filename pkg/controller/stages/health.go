@@ -117,12 +117,3 @@ func (r *RegularStageReconciler) assessHealth(ctx context.Context, stage *kargoa
 
 	return newStatus
 }
-
-// FIXME HealthCheck to criteria for Promotion
-// var criteria []health.Criteria
-// for _, check := range healthChecks {
-// 	criteria = append(criteria, health.Criteria{
-// 		Kind:  check.Uses,
-// 		Input: check.GetConfig(),
-// 	})
-// }
