@@ -13567,6 +13567,7 @@ components:
       enum:
       - Pending
       - Running
+      - Aborted
       - Succeeded
       - Failed
       - Errored
@@ -13574,6 +13575,7 @@ components:
       x-enum-varnames:
       - PromotionRequestPhasePending
       - PromotionRequestPhaseRunning
+      - PromotionRequestPhaseAborted
       - PromotionRequestPhaseSucceeded
       - PromotionRequestPhaseFailed
       - PromotionRequestPhaseErrored
@@ -13585,10 +13587,7 @@ components:
         freight:
           allOf:
           - $ref: "#/components/schemas/FreightReference"
-          description: |-
-            FIXME: we need promotion request to resolve freight reference
-            FIXME: we need promotions to pick freight reference from promotion request
-            Freight identifies the Freight being promoted.
+          description: Freight identifies the Freight being promoted.
           type: object
         freightCollection:
           allOf:
@@ -13684,9 +13683,8 @@ components:
         freight:
           allOf:
           - $ref: "#/components/schemas/FreightReference"
-          description: |-
-            FIXME: populate Freight and Freight collection in the promotion request reconciler
-            Freight is the detail of the piece of freight that was referenced by this promotion.
+          description: Freight is the detail of the piece of freight that was referenced
+            by this promotion.
           type: object
         freightCollection:
           allOf:

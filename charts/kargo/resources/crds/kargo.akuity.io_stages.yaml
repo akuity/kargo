@@ -1440,10 +1440,7 @@ spec:
                     format: date-time
                     type: string
                   freight:
-                    description: |-
-                      FIXME: we need promotion request to resolve freight reference
-                      FIXME: we need promotions to pick freight reference from promotion request
-                      Freight identifies the Freight being promoted.
+                    description: Freight identifies the Freight being promoted.
                     properties:
                       artifacts:
                         description: |-
@@ -3015,10 +3012,7 @@ spec:
                     format: date-time
                     type: string
                   freight:
-                    description: |-
-                      FIXME: we need promotion request to resolve freight reference
-                      FIXME: we need promotions to pick freight reference from promotion request
-                      Freight identifies the Freight being promoted.
+                    description: Freight identifies the Freight being promoted.
                     properties:
                       artifacts:
                         description: |-

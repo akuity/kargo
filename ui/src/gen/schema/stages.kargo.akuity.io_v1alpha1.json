@@ -1231,7 +1231,7 @@
               "type": "string"
             },
             "freight": {
-              "description": "FIXME: we need promotion request to resolve freight reference\nFIXME: we need promotions to pick freight reference from promotion request\nFreight identifies the Freight being promoted.",
+              "description": "Freight identifies the Freight being promoted.",
               "properties": {
                 "artifacts": {
                   "description": "Artifacts describes specific versions of artifacts other\nthan Git repository commits, container images, and Helm charts.",
@@ -2682,7 +2682,7 @@
               "type": "string"
             },
             "freight": {
-              "description": "FIXME: we need promotion request to resolve freight reference\nFIXME: we need promotions to pick freight reference from promotion request\nFreight identifies the Freight being promoted.",
+              "description": "Freight identifies the Freight being promoted.",
               "properties": {
                 "artifacts": {
                   "description": "Artifacts describes specific versions of artifacts other\nthan Git repository commits, container images, and Helm charts.",
