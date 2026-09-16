@@ -16,7 +16,6 @@ import {
 import { addHours, isSameDay, startOfHour } from 'date-fns';
 import { useState } from 'react';
 import { FormProvider, useForm } from 'react-hook-form';
-import { RRule } from 'rrule';
 
 import { DatePicker, TimePicker } from '@ui/features/common/date-picker';
 import { FieldContainer } from '@ui/features/common/form/field-container';
@@ -62,7 +61,6 @@ export const PromotionWindowModal = ({
 
   const startDate = form.watch('startDate');
   const endDate = form.watch('endDate');
-  const rrule = form.watch('rrule');
   const name = form.watch('name');
   const timeZone = form.watch('timeZone');
 
@@ -74,13 +72,6 @@ export const PromotionWindowModal = ({
   const setEndTo = (date: Date) =>
     form.setValue('endDate', combine(date, form.getValues('endDate')), { shouldValidate: true });
 
-  let summary = 'Does not repeat';
-  try {
-    summary = rrule ? new RRule(rrule).toText() : summary;
-  } catch {
-    summary = 'Custom recurrence rule';
-  }
-
   const handleSubmit = form.handleSubmit((values) => {
     onSubmit(promotionWindowFromFormValues(values, scope));
     hide();
@@ -91,7 +82,7 @@ export const PromotionWindowModal = ({
       <Modal
         open={visible}
         onCancel={hide}
-        width={680}
+        width={scope === 'cluster' ? 800 : 680}
         styles={{
           body: { maxHeight: 'calc(100vh - 260px)', overflowY: 'auto', padding: '0 10px' }
         }}
@@ -256,7 +247,7 @@ export const PromotionWindowModal = ({
           </Flex>
         </Flex>
 
-        <div className='mb-6'>
+        <div className='-mt-4 mb-6'>
           <Flex align='center' justify='space-between' gap={8} wrap>
             <Checkbox
               checked={spansMultipleDays}
@@ -300,7 +291,7 @@ export const PromotionWindowModal = ({
           )}
         </div>
 
-        <FieldContainer control={form.control} name='rrule' label='Repeats' description={summary}>
+        <FieldContainer control={form.control} name='rrule' label='Repeats'>
           {({ field }) => (
             <RecurrenceFields value={field.value} onChange={field.onChange} startDate={startDate} />
           )}

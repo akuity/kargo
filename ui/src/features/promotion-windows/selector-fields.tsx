@@ -61,6 +61,7 @@ export const SelectorFields = ({ subject }: SelectorFieldsProps) => {
         <Button
           size='small'
           type='dashed'
+          className='!h-auto !py-1'
           icon={<FontAwesomeIcon icon={faFilter} size='sm' />}
           onClick={() => setRestricting(true)}
         >
