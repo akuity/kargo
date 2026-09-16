@@ -1,8 +1,11 @@
 import { Card, Checkbox, Flex, InputNumber, Radio, Select, Typography } from 'antd';
-import { addYears, endOfDay, format, getDate, getDay } from 'date-fns';
+import { addYears, format, getDate, getDay } from 'date-fns';
 import { Frequency, Options, RRule, Weekday } from 'rrule';
 
 import { DatePicker } from '@ui/features/common/date-picker';
+
+const utcEndOfDay = (day: Date) =>
+  new Date(Date.UTC(day.getFullYear(), day.getMonth(), day.getDate(), 23, 59, 59));
 
 const asArray = <T,>(value: T | T[] | null | undefined): T[] =>
   value === null || value === undefined ? [] : Array.isArray(value) ? value : [value];
@@ -48,6 +51,9 @@ export const RecurrenceFields = ({ value, onChange, startDate }: RecurrenceField
       ? 'nthWeekday'
       : 'dayOfMonth';
   const ends = value?.until ? 'until' : value?.count ? 'count' : 'never';
+  const until =
+    value?.until &&
+    new Date(value.until.getUTCFullYear(), value.until.getUTCMonth(), value.until.getUTCDate());
 
   const nth = Math.ceil(getDate(startDate) / 7);
 
@@ -118,7 +124,7 @@ export const RecurrenceFields = ({ value, onChange, startDate }: RecurrenceField
               onChange={(event) =>
                 patch(
                   event.target.value === 'until'
-                    ? { until: endOfDay(addYears(startDate, 1)), count: null }
+                    ? { until: utcEndOfDay(addYears(startDate, 1)), count: null }
                     : event.target.value === 'count'
                       ? { until: null, count: 10 }
                       : { until: null, count: null }
@@ -134,9 +140,9 @@ export const RecurrenceFields = ({ value, onChange, startDate }: RecurrenceField
             {ends === 'until' && (
               <DatePicker
                 allowClear={false}
-                value={value.until}
-                onChange={(date) => patch({ until: endOfDay(date) })}
-                format='EEEE, MMM d, yyyy'
+                value={until}
+                onChange={(date) => patch({ until: utcEndOfDay(date) })}
+                format="EEEE, MMM d, yyyy 'UTC'"
                 className='flex-1'
               />
             )}
