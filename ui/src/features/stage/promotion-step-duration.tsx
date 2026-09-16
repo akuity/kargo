@@ -1,9 +1,6 @@
 import { useEffect, useState } from 'react';
 
-import {
-  getPromotionDirectiveStepStatus,
-  PromotionDirectiveStepStatus
-} from '@ui/features/common/promotion-directive-step-status/utils';
+import { isProgressingStep } from '@ui/features/common/promotion-directive-step-status/utils';
 import { Promotion, StepExecutionMetadata } from '@ui/gen/api/v2/models';
 import { parseDate } from '@ui/utils/dates';
 
@@ -42,10 +39,7 @@ export const StepDuration = ({
 }) => {
   const meta = promotion?.status?.stepExecutionMetadata?.[stepIndex];
 
-  if (
-    getPromotionDirectiveStepStatus(stepIndex, promotion?.status) ===
-    PromotionDirectiveStepStatus.RUNNING
-  ) {
+  if (isProgressingStep(stepIndex, promotion?.status)) {
     return <RunningStepDuration meta={meta} />;
   }
 
