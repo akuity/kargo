@@ -8,7 +8,8 @@ import {
   combine,
   formValuesFromPromotionWindow,
   promotionWindowFromFormValues,
-  promotionWindowFromRange
+  promotionWindowFromRange,
+  promotionWindowFormSchema
 } from './promotion-window-form-utils';
 
 describe('ICAL_FORMAT', () => {
@@ -130,6 +131,55 @@ describe('promotion window form round trip', () => {
     expect(saved.projectSelector).toBeUndefined();
   });
 
+  it('strips values from operators that take none', () => {
+    const values = formValuesFromPromotionWindow({
+      name: 'exists',
+      kind: 'Deny',
+      dtstart: 'TZID=UTC:20260824T090000',
+      dtend: 'TZID=UTC:20260824T170000'
+    });
+    values.stage.matchExpressions = [{ key: 'tier', operator: 'Exists', values: ['ignored'] }];
+
+    expect(promotionWindowFromFormValues(values, 'project').stageSelector).toEqual({
+      matchExpressions: [{ key: 'tier', operator: 'Exists' }]
+    });
+  });
+
+  it('drops expression rows with no key', () => {
+    const values = formValuesFromPromotionWindow({
+      name: 'blank-row',
+      kind: 'Deny',
+      dtstart: 'TZID=UTC:20260824T090000',
+      dtend: 'TZID=UTC:20260824T170000'
+    });
+    values.stage.matchExpressions = [
+      { key: '  ', operator: 'In', values: ['a'] },
+      { key: ' tier ', operator: 'In', values: ['critical'] }
+    ];
+
+    expect(promotionWindowFromFormValues(values, 'project').stageSelector).toEqual({
+      matchExpressions: [{ key: 'tier', operator: 'In', values: ['critical'] }]
+    });
+  });
+
+  it('preserves an operator the form does not offer', () => {
+    const stageSelector = {
+      matchExpressions: [{ key: 'tier', operator: 'Gt', values: ['3'] }]
+    };
+    const promotionWindow: PromotionWindow = {
+      name: 'unknown-operator',
+      kind: 'Deny',
+      dtstart: 'TZID=UTC:20260824T090000',
+      dtend: 'TZID=UTC:20260824T170000',
+      stageSelector
+    };
+
+    expect(
+      promotionWindowFromFormValues(formValuesFromPromotionWindow(promotionWindow), 'project')
+        .stageSelector
+    ).toEqual(stageSelector);
+  });
+
   it('carries the cluster-scoped Project selector only in cluster scope', () => {
     const promotionWindow: PromotionWindow = {
       name: 'prod-guard',
@@ -143,5 +193,48 @@ describe('promotion window form round trip', () => {
 
     expect(promotionWindowFromFormValues(values, 'cluster')).toEqual(promotionWindow);
     expect(promotionWindowFromFormValues(values, 'project').projectSelector).toBeUndefined();
+  });
+});
+
+describe('label expression validation', () => {
+  const valuesWithExpression = (expression: {
+    key: string;
+    operator: string;
+    values: string[];
+  }) => {
+    const values = formValuesFromPromotionWindow({
+      name: 'window',
+      kind: 'Deny',
+      dtstart: 'TZID=UTC:20260824T090000',
+      dtend: 'TZID=UTC:20260824T170000'
+    });
+    values.stage.matchExpressions = [expression];
+    return values;
+  };
+
+  it('rejects In with no values', () => {
+    const result = promotionWindowFormSchema.safeParse(
+      valuesWithExpression({ key: 'tier', operator: 'In', values: [] })
+    );
+
+    expect(result.success).toBe(false);
+    expect(result.error?.issues[0].path).toEqual(['stage', 'matchExpressions', 0, 'values']);
+    expect(result.error?.issues[0].message).toBe('In requires at least one value.');
+  });
+
+  it('accepts Exists with no values', () => {
+    expect(
+      promotionWindowFormSchema.safeParse(
+        valuesWithExpression({ key: 'tier', operator: 'Exists', values: [] })
+      ).success
+    ).toBe(true);
+  });
+
+  it('ignores an incomplete row the user has not filled in yet', () => {
+    expect(
+      promotionWindowFormSchema.safeParse(
+        valuesWithExpression({ key: '', operator: 'In', values: [] })
+      ).success
+    ).toBe(true);
   });
 });

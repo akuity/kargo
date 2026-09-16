@@ -3,25 +3,18 @@ import { Options, RRule } from 'rrule';
 import { z } from 'zod';
 
 import { dnsRegex } from '@ui/features/common/utils';
-import {
-  PromotionPolicySelector,
-  PromotionWindow,
-  PromotionWindowKind,
-  V1LabelSelectorRequirement
-} from '@ui/gen/api/v2/models';
+import { PromotionWindow, PromotionWindowKind } from '@ui/gen/api/v2/models';
 import { zodValidators } from '@ui/utils/validators';
 
 import { dtstartLiteral } from './parse-promotion-windows';
+import {
+  selectorFromValues,
+  selectorSchema,
+  selectorValues
+} from './promotion-window-selector-utils';
 import { fromViewerClockDate } from './viewer-clock';
 
 export const ICAL_FORMAT = "yyyyMMdd'T'HHmmss";
-
-const selectorSchema = z.object({
-  nameMode: z.enum(['exact', 'glob', 'regex']),
-  name: z.string(),
-  labels: z.array(z.object({ key: z.string(), value: z.string() })),
-  matchExpressions: z.array(z.custom<V1LabelSelectorRequirement>())
-});
 
 export const promotionWindowFormSchema = z
   .object({
@@ -48,40 +41,10 @@ export const promotionWindowFormSchema = z
 
 export type PromotionWindowFormValues = z.infer<typeof promotionWindowFormSchema>;
 
-export type SelectorValues = z.infer<typeof selectorSchema>;
-
 export const combine = (date: Date, time: Date) =>
   set(date, { hours: getHours(time), minutes: getMinutes(time), seconds: 0, milliseconds: 0 });
 
 export const browserTimeZone = () => Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
-
-const selectorValues = (selector?: PromotionPolicySelector): SelectorValues => {
-  const [, prefix, pattern] = /^(glob|regex|regexp):(.*)$/.exec(selector?.name ?? '') ?? [];
-
-  return {
-    nameMode: !prefix ? 'exact' : prefix === 'glob' ? 'glob' : 'regex',
-    name: pattern ?? selector?.name ?? '',
-    labels: Object.entries(selector?.matchLabels ?? {}).map(([key, value]) => ({ key, value })),
-    matchExpressions: selector?.matchExpressions ?? []
-  };
-};
-
-const selectorFromValues = (values: SelectorValues): PromotionPolicySelector | undefined => {
-  const name = values.name.trim();
-  const matchLabels = Object.fromEntries(
-    values.labels
-      .filter((label) => label.key.trim())
-      .map((label) => [label.key.trim(), label.value.trim()])
-  );
-
-  const selector: PromotionPolicySelector = {
-    ...(name ? { name: values.nameMode === 'exact' ? name : `${values.nameMode}:${name}` } : {}),
-    ...(Object.keys(matchLabels).length ? { matchLabels } : {}),
-    ...(values.matchExpressions.length ? { matchExpressions: values.matchExpressions } : {})
-  };
-
-  return Object.keys(selector).length ? selector : undefined;
-};
 
 export const promotionWindowFromRange = (start: Date, end: Date): PromotionWindow => ({
   name: '',

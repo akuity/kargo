@@ -5,11 +5,34 @@ import classNames from 'classnames';
 import { format } from 'date-fns';
 import { RRule } from 'rrule';
 
-import { PromotionWindow, PromotionWindowKind } from '@ui/gen/api/v2/models';
+import {
+  PromotionPolicySelector,
+  PromotionWindow,
+  PromotionWindowKind
+} from '@ui/gen/api/v2/models';
 
 import { occurrenceColors } from './occurrence-colors';
 import { dtstartLiteral } from './parse-promotion-windows';
+import { selectorLines } from './promotion-window-selector-utils';
 import { fromViewerClockDate } from './viewer-clock';
+
+const SelectorCell = ({ selector }: { selector?: PromotionPolicySelector }) => {
+  const lines = selectorLines(selector);
+
+  if (!lines.length) {
+    return <Typography.Text type='secondary'>-</Typography.Text>;
+  }
+
+  return (
+    <Flex vertical gap={2}>
+      {lines.map((line, index) => (
+        <Typography.Text key={index} className='text-xs'>
+          {line}
+        </Typography.Text>
+      ))}
+    </Flex>
+  );
+};
 
 type PromotionWindowsListViewProps = {
   scope: 'project' | 'cluster';
@@ -120,52 +143,16 @@ export const PromotionWindowsListView = ({
       {
         key: 'stageSelector',
         title: 'Stage Selector',
-        render: (_, promotionWindow) => {
-          const lines = [
-            promotionWindow.stageSelector?.name,
-            ...Object.entries(promotionWindow.stageSelector?.matchLabels ?? {}).map(
-              ([key, value]) => `${key}=${value}`
-            )
-          ].filter(Boolean);
-
-          return lines.length ? (
-            <Flex vertical gap={2}>
-              {lines.map((line) => (
-                <Typography.Text key={line} className='text-xs'>
-                  {line}
-                </Typography.Text>
-              ))}
-            </Flex>
-          ) : (
-            <Typography.Text type='secondary'>-</Typography.Text>
-          );
-        }
+        render: (_, promotionWindow) => <SelectorCell selector={promotionWindow.stageSelector} />
       },
       ...(scope === 'cluster'
         ? [
             {
               key: 'projectSelector',
               title: 'Project Selector',
-              render: (_: unknown, promotionWindow: PromotionWindow) => {
-                const lines = [
-                  promotionWindow.projectSelector?.name,
-                  ...Object.entries(promotionWindow.projectSelector?.matchLabels ?? {}).map(
-                    ([key, value]) => `${key}=${value}`
-                  )
-                ].filter(Boolean);
-
-                return lines.length ? (
-                  <Flex vertical gap={2}>
-                    {lines.map((line) => (
-                      <Typography.Text key={line} className='text-xs'>
-                        {line}
-                      </Typography.Text>
-                    ))}
-                  </Flex>
-                ) : (
-                  <Typography.Text type='secondary'>-</Typography.Text>
-                );
-              }
+              render: (_: unknown, promotionWindow: PromotionWindow) => (
+                <SelectorCell selector={promotionWindow.projectSelector} />
+              )
             }
           ]
         : []),
