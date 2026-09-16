@@ -93,7 +93,7 @@ FROM --platform=$BUILDPLATFORM golang:1.27.1-trixie AS helm-builder
 ARG TARGETOS
 ARG TARGETARCH
 
-ARG HELM_VERSION=v3.21.4
+ARG HELM_VERSION=v3.22.0
 
 WORKDIR /helm-build
 RUN --mount=type=cache,target=/go/pkg/mod --mount=type=cache,target=/root/.cache/go-build \
