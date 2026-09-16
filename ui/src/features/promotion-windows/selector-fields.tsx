@@ -76,13 +76,14 @@ export const SelectorFields = ({ subject }: SelectorFieldsProps) => {
       )}
 
       {mode === 'labels' && (
-        <>
+        <Flex vertical gap={8}>
           {labels.fields.map((label, index) => (
             <Flex key={label.id} gap={8} align='center'>
               <FieldContainer
                 control={control}
                 name={`${subject}.labels.${index}.key`}
                 className='flex-1'
+                formItemClassName='!mb-0'
               >
                 {({ field }) => <Input {...field} placeholder='key' />}
               </FieldContainer>
@@ -90,6 +91,7 @@ export const SelectorFields = ({ subject }: SelectorFieldsProps) => {
                 control={control}
                 name={`${subject}.labels.${index}.value`}
                 className='flex-1'
+                formItemClassName='!mb-0'
               >
                 {({ field }) => <Input {...field} placeholder='value' />}
               </FieldContainer>
@@ -113,7 +115,7 @@ export const SelectorFields = ({ subject }: SelectorFieldsProps) => {
               </Typography.Text>
             )}
           </Flex>
-        </>
+        </Flex>
       )}
     </>
   );
