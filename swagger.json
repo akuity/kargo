@@ -7708,7 +7708,7 @@
           ]
         },
         "targets": {
-          "description": "Targets contains a summary of the Project's Targets and of how the latest\nround of promotion to them fared. It is absent for a Project with no\nTargets and no target-aware Stages.\n\n+optional",
+          "description": "Targets contains a summary of the collective state of the Project's\nTargets. It is absent for a Project with no Targets.\n\n+optional",
           "allOf": [
             {
               "$ref": "#/definitions/TargetStats"
@@ -8791,20 +8791,16 @@
       "type": "object",
       "properties": {
         "count": {
-          "description": "Count is the number of distinct Targets in the Project.",
+          "description": "Count contains the total number of Targets in the Project.",
           "type": "integer"
         },
-        "promotion": {
-          "description": "Promotion tallies, by Promotion phase, every Stage and Target pair in the\nProject's latest rounds of promotion. Each target-aware Stage contributes\none entry per Target named by its latest PromotionRequest -- the request\nthe Stage reports as current, else as last -- in the phase of the child\nPromotion promoting to that Target. It is the sum of those requests'\nsummaries and so shares their type.\n\nA request that has not yet produced child Promotions contributes all of\nits Targets as Pending. A request that reached a terminal phase without\never producing children contributes all of its Targets in that phase.",
+        "health": {
+          "description": "Health contains a summary of the collective health of a Project's\nTargets.\n\nUntil Target status records health, a Target is counted as healthy when\nat least one Stage has promoted to it and the latest promotion to it from\nevery Stage that did so succeeded. Once Target health is recorded, a\nTarget is counted as healthy when it is healthy with respect to every\nStage that governs it.",
           "allOf": [
             {
-              "$ref": "#/definitions/PromotionRequestSummary"
+              "$ref": "#/definitions/HealthStats"
             }
           ]
-        },
-        "unknown": {
-          "description": "Unknown is the number of target-aware Stages whose latest\nPromotionRequest no longer exists, typically because it was garbage\ncollected. Nothing can be said about the outcome of promoting from such a\nStage, so it is left out of Promotion and counted here instead.",
-          "type": "integer"
         }
       }
     },

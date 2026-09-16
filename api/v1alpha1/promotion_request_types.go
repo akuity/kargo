@@ -207,9 +207,8 @@ type PromotionRequestTargetStatus struct {
 	Phase PromotionPhase `json:"phase,omitempty"`
 }
 
-// PromotionRequestSummary tallies child Promotions by phase. On a
-// PromotionRequest it describes that request's own children; a Project's
-// TargetStats sums it across every target-aware Stage's latest request.
+// PromotionRequestSummary tallies a PromotionRequest's child Promotions by
+// phase.
 type PromotionRequestSummary struct {
 	// Pending is the number of child Promotions in the Pending phase.
 	Pending int32 `json:"pending,omitempty"`

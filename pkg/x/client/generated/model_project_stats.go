@@ -21,7 +21,7 @@ var _ MappedNullable = &ProjectStats{}
 type ProjectStats struct {
 	// Stages contains a summary of the collective state of the Project's Stages.
 	Stages *StageStats `json:"stages,omitempty"`
-	// Targets contains a summary of the Project's Targets and of how the latest round of promotion to them fared. It is absent for a Project with no Targets and no target-aware Stages.  +optional
+	// Targets contains a summary of the collective state of the Project's Targets. It is absent for a Project with no Targets.  +optional
 	Targets *TargetStats `json:"targets,omitempty"`
 	// Warehouses contains a summary of the collective state of the Project's Warehouses.
 	Warehouses *WarehouseStats `json:"warehouses,omitempty"`
