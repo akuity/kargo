@@ -140,67 +140,31 @@ spec:
                     type: object
                   targets:
                     description: |-
-                      Targets contains a summary of the Project's Targets and of how the latest
-                      round of promotion to them fared. It is absent for a Project with no
-                      Targets and no target-aware Stages.
+                      Targets contains a summary of the collective state of the Project's
+                      Targets. It is absent for a Project with no Targets.
                     properties:
                       count:
-                        description: Count is the number of distinct Targets in the
-                          Project.
+                        description: Count contains the total number of Targets in
+                          the Project.
                         format: int64
                         type: integer
-                      promotion:
+                      health:
                         description: |-
-                          Promotion tallies, by Promotion phase, every Stage and Target pair in the
-                          Project's latest rounds of promotion. Each target-aware Stage contributes
-                          one entry per Target named by its latest PromotionRequest -- the request
-                          the Stage reports as current, else as last -- in the phase of the child
-                          Promotion promoting to that Target. It is the sum of those requests'
-                          summaries and so shares their type.
+                          Health contains a summary of the collective health of a Project's
+                          Targets.
 
-                          A request that has not yet produced child Promotions contributes all of
-                          its Targets as Pending. A request that reached a terminal phase without
-                          ever producing children contributes all of its Targets in that phase.
+                          Until Target status records health, a Target is counted as healthy when
+                          at least one Stage has promoted to it and the latest promotion to it from
+                          every Stage that did so succeeded. Once Target health is recorded, a
+                          Target is counted as healthy when it is healthy with respect to every
+                          Stage that governs it.
                         properties:
-                          aborted:
-                            description: Aborted is the number of child Promotions
-                              in the Aborted phase.
-                            format: int32
-                            type: integer
-                          errored:
-                            description: Errored is the number of child Promotions
-                              in the Errored phase.
-                            format: int32
-                            type: integer
-                          failed:
-                            description: Failed is the number of child Promotions
-                              in the Failed phase.
-                            format: int32
-                            type: integer
-                          pending:
-                            description: Pending is the number of child Promotions
-                              in the Pending phase.
-                            format: int32
-                            type: integer
-                          running:
-                            description: Running is the number of child Promotions
-                              in the Running phase.
-                            format: int32
-                            type: integer
-                          succeeded:
-                            description: Succeeded is the number of child Promotions
-                              in the Succeeded phase.
-                            format: int32
+                          healthy:
+                            description: Healthy contains the number of resources
+                              that are explicitly healthy.
+                            format: int64
                             type: integer
                         type: object
-                      unknown:
-                        description: |-
-                          Unknown is the number of target-aware Stages whose latest
-                          PromotionRequest no longer exists, typically because it was garbage
-                          collected. Nothing can be said about the outcome of promoting from such a
-                          Stage, so it is left out of Promotion and counted here instead.
-                        format: int64
-                        type: integer
                     type: object
                   warehouses:
                     description: |-

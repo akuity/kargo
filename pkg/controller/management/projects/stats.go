@@ -141,84 +141,98 @@ func (r *reconciler) collectStats(
 	return status, nil
 }
 
-// collectTargetStats summarizes a Project's Targets and, across its
-// target-aware Stages, the per-Target outcome of each Stage's latest
-// PromotionRequest. It returns nil for a Project with no Targets and no
-// target-aware Stages, so that classic Projects carry no fleet stats at all.
+// collectTargetStats summarizes a Project's Targets: how many there are, and
+// how many are healthy. It returns nil for a Project with no Targets, so that
+// classic Projects carry no Target stats at all.
+//
+// Target status does not yet record health, so a Target is counted as healthy
+// when at least one Stage has promoted to it and the latest promotion to it
+// from every Stage that did so succeeded. The latest promotion from a Stage is
+// the child Promotion for the Target in the PromotionRequest the Stage reports
+// as current, else as last. A Stage whose latest request no longer exists says
+// nothing about its Targets and is skipped.
 func collectTargetStats(
 	targets []kargoapi.Target,
 	stages []kargoapi.Stage,
 	promotionRequests []kargoapi.PromotionRequest,
 ) *kargoapi.TargetStats {
-	byName := make(map[string]*kargoapi.PromotionRequest, len(promotionRequests))
+	if len(targets) == 0 {
+		return nil
+	}
+
+	requestsByName := make(map[string]*kargoapi.PromotionRequest, len(promotionRequests))
 	for i := range promotionRequests {
-		byName[promotionRequests[i].Name] = &promotionRequests[i]
+		requestsByName[promotionRequests[i].Name] = &promotionRequests[i]
+	}
+
+	// succeeded records, for every Target named by some Stage's latest
+	// request, whether every such request's promotion to it succeeded.
+	succeeded := make(map[string]bool, len(targets))
+	for i := range stages {
+		request := latestPromotionRequest(&stages[i], requestsByName)
+		if request == nil {
+			continue
+		}
+		for name, phase := range targetPhases(request) {
+			ok, seen := succeeded[name]
+			succeeded[name] = (!seen || ok) && phase == kargoapi.PromotionPhaseSucceeded
+		}
 	}
 
 	stats := &kargoapi.TargetStats{Count: int64(len(targets))}
-	targetAwareStages := 0
-	for _, stage := range stages {
-		if !api.IsTargetAware(&stage) {
-			continue
+	for _, target := range targets {
+		if succeeded[target.Name] {
+			stats.Health.Healthy++
 		}
-		targetAwareStages++
-		// The latest round is the one the Stage reports as current, else as
-		// last. A Stage that reports neither has never promoted and has no
-		// round to account for.
-		var name string
-		if ref := stage.Status.CurrentPromotionRequest; ref != nil {
-			name = ref.Name
-		} else if ref := stage.Status.LastPromotionRequest; ref != nil {
-			name = ref.Name
-		}
-		if name == "" {
-			continue
-		}
-		request, ok := byName[name]
-		if !ok {
-			stats.Unknown++
-			continue
-		}
-		addPromotionRequestSummary(&stats.Promotion, promotionSummary(request))
-	}
-
-	if stats.Count == 0 && targetAwareStages == 0 {
-		return nil
 	}
 	return stats
 }
 
-// promotionSummary returns the per-Target outcome of a PromotionRequest. The
-// fan-out controller records this in status.summary once it has created child
-// Promotions. Before that, every Target the request names is pending; and a
-// request that reached a terminal phase without ever fanning out -- because
-// fan-out is unavailable, say -- ended every one of its Targets in that phase.
-func promotionSummary(request *kargoapi.PromotionRequest) kargoapi.PromotionRequestSummary {
-	if request.Status.Summary != nil {
-		return *request.Status.Summary
+// latestPromotionRequest returns the PromotionRequest a target-aware Stage
+// reports as current, else as last, or nil when the Stage is classic, has
+// never promoted, or reports a request that no longer exists.
+func latestPromotionRequest(
+	stage *kargoapi.Stage,
+	requestsByName map[string]*kargoapi.PromotionRequest,
+) *kargoapi.PromotionRequest {
+	if !api.IsTargetAware(stage) {
+		return nil
 	}
-	count := int32(len(request.Spec.Targets)) // nolint: gosec
-	switch request.Status.Phase {
-	case kargoapi.PromotionRequestPhaseSucceeded:
-		return kargoapi.PromotionRequestSummary{Succeeded: count}
-	case kargoapi.PromotionRequestPhaseFailed:
-		return kargoapi.PromotionRequestSummary{Failed: count}
-	case kargoapi.PromotionRequestPhaseErrored:
-		return kargoapi.PromotionRequestSummary{Errored: count}
-	default:
-		return kargoapi.PromotionRequestSummary{Pending: count}
+	var name string
+	if ref := stage.Status.CurrentPromotionRequest; ref != nil {
+		name = ref.Name
+	} else if ref := stage.Status.LastPromotionRequest; ref != nil {
+		name = ref.Name
 	}
+	return requestsByName[name]
 }
 
-// addPromotionRequestSummary adds every count in src to dst.
-func addPromotionRequestSummary(
-	dst *kargoapi.PromotionRequestSummary,
-	src kargoapi.PromotionRequestSummary,
-) {
-	dst.Pending += src.Pending
-	dst.Running += src.Running
-	dst.Succeeded += src.Succeeded
-	dst.Failed += src.Failed
-	dst.Errored += src.Errored
-	dst.Aborted += src.Aborted
+// targetPhases returns the phase of the promotion to each Target a
+// PromotionRequest names. The fan-out controller records a phase per Target
+// in status.targets once it has created that Target's child Promotion. A
+// Target without one is pending while the request runs, and shares the
+// request's own phase once it has ended -- a request that ended without ever
+// fanning out ended every one of its Targets that way.
+func targetPhases(request *kargoapi.PromotionRequest) map[string]kargoapi.PromotionPhase {
+	var fallback kargoapi.PromotionPhase
+	switch request.Status.Phase {
+	case kargoapi.PromotionRequestPhaseSucceeded:
+		fallback = kargoapi.PromotionPhaseSucceeded
+	case kargoapi.PromotionRequestPhaseFailed:
+		fallback = kargoapi.PromotionPhaseFailed
+	case kargoapi.PromotionRequestPhaseErrored:
+		fallback = kargoapi.PromotionPhaseErrored
+	default:
+		fallback = kargoapi.PromotionPhasePending
+	}
+	phases := make(map[string]kargoapi.PromotionPhase, len(request.Spec.Targets))
+	for _, target := range request.Spec.Targets {
+		phases[target.Name] = fallback
+	}
+	for _, target := range request.Status.Targets {
+		if target.Phase != "" {
+			phases[target.Name] = target.Phase
+		}
+	}
+	return phases
 }

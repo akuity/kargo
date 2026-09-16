@@ -19,12 +19,10 @@ var _ MappedNullable = &TargetStats{}
 
 // TargetStats struct for TargetStats
 type TargetStats struct {
-	// Count is the number of distinct Targets in the Project.
+	// Count contains the total number of Targets in the Project.
 	Count *int32 `json:"count,omitempty"`
-	// Promotion tallies, by Promotion phase, every Stage and Target pair in the Project's latest rounds of promotion. Each target-aware Stage contributes one entry per Target named by its latest PromotionRequest -- the request the Stage reports as current, else as last -- in the phase of the child Promotion promoting to that Target. It is the sum of those requests' summaries and so shares their type.  A request that has not yet produced child Promotions contributes all of its Targets as Pending. A request that reached a terminal phase without ever producing children contributes all of its Targets in that phase.
-	Promotion *PromotionRequestSummary `json:"promotion,omitempty"`
-	// Unknown is the number of target-aware Stages whose latest PromotionRequest no longer exists, typically because it was garbage collected. Nothing can be said about the outcome of promoting from such a Stage, so it is left out of Promotion and counted here instead.
-	Unknown *int32 `json:"unknown,omitempty"`
+	// Health contains a summary of the collective health of a Project's Targets.  Until Target status records health, a Target is counted as healthy when at least one Stage has promoted to it and the latest promotion to it from every Stage that did so succeeded. Once Target health is recorded, a Target is counted as healthy when it is healthy with respect to every Stage that governs it.
+	Health *HealthStats `json:"health,omitempty"`
 }
 
 // NewTargetStats instantiates a new TargetStats object
@@ -76,68 +74,36 @@ func (o *TargetStats) SetCount(v int32) {
 	o.Count = &v
 }
 
-// GetPromotion returns the Promotion field value if set, zero value otherwise.
-func (o *TargetStats) GetPromotion() PromotionRequestSummary {
-	if o == nil || IsNil(o.Promotion) {
-		var ret PromotionRequestSummary
+// GetHealth returns the Health field value if set, zero value otherwise.
+func (o *TargetStats) GetHealth() HealthStats {
+	if o == nil || IsNil(o.Health) {
+		var ret HealthStats
 		return ret
 	}
-	return *o.Promotion
+	return *o.Health
 }
 
-// GetPromotionOk returns a tuple with the Promotion field value if set, nil otherwise
+// GetHealthOk returns a tuple with the Health field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *TargetStats) GetPromotionOk() (*PromotionRequestSummary, bool) {
-	if o == nil || IsNil(o.Promotion) {
+func (o *TargetStats) GetHealthOk() (*HealthStats, bool) {
+	if o == nil || IsNil(o.Health) {
 		return nil, false
 	}
-	return o.Promotion, true
+	return o.Health, true
 }
 
-// HasPromotion returns a boolean if a field has been set.
-func (o *TargetStats) HasPromotion() bool {
-	if o != nil && !IsNil(o.Promotion) {
+// HasHealth returns a boolean if a field has been set.
+func (o *TargetStats) HasHealth() bool {
+	if o != nil && !IsNil(o.Health) {
 		return true
 	}
 
 	return false
 }
 
-// SetPromotion gets a reference to the given PromotionRequestSummary and assigns it to the Promotion field.
-func (o *TargetStats) SetPromotion(v PromotionRequestSummary) {
-	o.Promotion = &v
-}
-
-// GetUnknown returns the Unknown field value if set, zero value otherwise.
-func (o *TargetStats) GetUnknown() int32 {
-	if o == nil || IsNil(o.Unknown) {
-		var ret int32
-		return ret
-	}
-	return *o.Unknown
-}
-
-// GetUnknownOk returns a tuple with the Unknown field value if set, nil otherwise
-// and a boolean to check if the value has been set.
-func (o *TargetStats) GetUnknownOk() (*int32, bool) {
-	if o == nil || IsNil(o.Unknown) {
-		return nil, false
-	}
-	return o.Unknown, true
-}
-
-// HasUnknown returns a boolean if a field has been set.
-func (o *TargetStats) HasUnknown() bool {
-	if o != nil && !IsNil(o.Unknown) {
-		return true
-	}
-
-	return false
-}
-
-// SetUnknown gets a reference to the given int32 and assigns it to the Unknown field.
-func (o *TargetStats) SetUnknown(v int32) {
-	o.Unknown = &v
+// SetHealth gets a reference to the given HealthStats and assigns it to the Health field.
+func (o *TargetStats) SetHealth(v HealthStats) {
+	o.Health = &v
 }
 
 func (o TargetStats) MarshalJSON() ([]byte, error) {
@@ -153,11 +119,8 @@ func (o TargetStats) ToMap() (map[string]interface{}, error) {
 	if !IsNil(o.Count) {
 		toSerialize["count"] = o.Count
 	}
-	if !IsNil(o.Promotion) {
-		toSerialize["promotion"] = o.Promotion
-	}
-	if !IsNil(o.Unknown) {
-		toSerialize["unknown"] = o.Unknown
+	if !IsNil(o.Health) {
+		toSerialize["health"] = o.Health
 	}
 	return toSerialize, nil
 }

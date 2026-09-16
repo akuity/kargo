@@ -5,29 +5,20 @@
  * REST API for Kargo
  * OpenAPI spec version: v1alpha1
  */
-import type { PromotionRequestSummary } from './promotionRequestSummary';
+import type { HealthStats } from './healthStats';
 
 export interface TargetStats {
-  /** Count is the number of distinct Targets in the Project. */
+  /** Count contains the total number of Targets in the Project. */
   count?: number;
   /**
-   * Promotion tallies, by Promotion phase, every Stage and Target pair in the
-   * Project's latest rounds of promotion. Each target-aware Stage contributes
-   * one entry per Target named by its latest PromotionRequest -- the request
-   * the Stage reports as current, else as last -- in the phase of the child
-   * Promotion promoting to that Target. It is the sum of those requests'
-   * summaries and so shares their type.
+   * Health contains a summary of the collective health of a Project's
+   * Targets.
    *
-   * A request that has not yet produced child Promotions contributes all of
-   * its Targets as Pending. A request that reached a terminal phase without
-   * ever producing children contributes all of its Targets in that phase.
+   * Until Target status records health, a Target is counted as healthy when
+   * at least one Stage has promoted to it and the latest promotion to it from
+   * every Stage that did so succeeded. Once Target health is recorded, a
+   * Target is counted as healthy when it is healthy with respect to every
+   * Stage that governs it.
    */
-  promotion?: PromotionRequestSummary;
-  /**
-   * Unknown is the number of target-aware Stages whose latest
-   * PromotionRequest no longer exists, typically because it was garbage
-   * collected. Nothing can be said about the outcome of promoting from such a
-   * Stage, so it is left out of Promotion and counted here instead.
-   */
-  unknown?: number;
+  health?: HealthStats;
 }

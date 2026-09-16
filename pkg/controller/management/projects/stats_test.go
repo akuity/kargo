@@ -347,8 +347,11 @@ func Test_reconciler_collectStats(t *testing.T) {
 						Targets: []kargoapi.PromotionRequestTarget{{Name: "t1"}, {Name: "t2"}},
 					},
 					Status: kargoapi.PromotionRequestStatus{
-						Phase:   kargoapi.PromotionRequestPhaseErrored,
-						Summary: &kargoapi.PromotionRequestSummary{Succeeded: 1, Errored: 1},
+						Phase: kargoapi.PromotionRequestPhaseErrored,
+						Targets: []kargoapi.PromotionRequestTargetStatus{
+							{Name: "t1", Promotion: "p1", Phase: kargoapi.PromotionPhaseSucceeded},
+							{Name: "t2", Promotion: "p2", Phase: kargoapi.PromotionPhaseErrored},
+						},
 					},
 				},
 				&kargoapi.Target{
@@ -369,8 +372,8 @@ func Test_reconciler_collectStats(t *testing.T) {
 				require.Equal(
 					t,
 					&kargoapi.TargetStats{
-						Count:     2,
-						Promotion: kargoapi.PromotionRequestSummary{Succeeded: 1, Errored: 1},
+						Count:  2,
+						Health: kargoapi.HealthStats{Healthy: 1},
 					},
 					stats.Targets,
 				)
@@ -389,6 +392,7 @@ func Test_reconciler_collectStats(t *testing.T) {
 
 func Test_collectTargetStats(t *testing.T) {
 	const testProject = "fake-project"
+
 	targetAware := func(name string, current, last string) kargoapi.Stage {
 		stage := kargoapi.Stage{
 			ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: testProject},
@@ -408,34 +412,48 @@ func Test_collectTargetStats(t *testing.T) {
 		return kargoapi.Stage{
 			ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: testProject},
 			Status: kargoapi.StageStatus{
-				// A classic Stage never has these, but even if it did, it must
-				// not be counted.
+				// A classic Stage never has this, but even if it did, it must
+				// not be consulted.
 				LastPromotionRequest: &kargoapi.PromotionRequestReference{Name: "ignored"},
 			},
 		}
 	}
-	request := func(
-		name string,
-		targets int,
-		phase kargoapi.PromotionRequestPhase,
-		summary *kargoapi.PromotionRequestSummary,
-	) kargoapi.PromotionRequest {
-		req := kargoapi.PromotionRequest{
-			ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: testProject},
-			Status:     kargoapi.PromotionRequestStatus{Phase: phase, Summary: summary},
-		}
-		for i := 0; i < targets; i++ {
-			req.Spec.Targets = append(req.Spec.Targets, kargoapi.PromotionRequestTarget{Name: "t"})
-		}
-		return req
-	}
-	targets := func(n int) []kargoapi.Target {
-		out := make([]kargoapi.Target, n)
-		for i := range out {
-			out[i].Name = "t"
+	targets := func(names ...string) []kargoapi.Target {
+		out := make([]kargoapi.Target, len(names))
+		for i, name := range names {
+			out[i].Name = name
 		}
 		return out
 	}
+	// request builds a PromotionRequest naming the given Targets, with the
+	// given per-Target phases recorded in status where provided.
+	request := func(
+		name string,
+		phase kargoapi.PromotionRequestPhase,
+		phases map[string]kargoapi.PromotionPhase,
+		names ...string,
+	) kargoapi.PromotionRequest {
+		req := kargoapi.PromotionRequest{
+			ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: testProject},
+			Status:     kargoapi.PromotionRequestStatus{Phase: phase},
+		}
+		for _, n := range names {
+			req.Spec.Targets = append(req.Spec.Targets, kargoapi.PromotionRequestTarget{Name: n})
+			if p, ok := phases[n]; ok {
+				req.Status.Targets = append(req.Status.Targets, kargoapi.PromotionRequestTargetStatus{
+					Name:      n,
+					Promotion: "p",
+					Phase:     p,
+				})
+			}
+		}
+		return req
+	}
+	const (
+		succeeded = kargoapi.PromotionPhaseSucceeded
+		errored   = kargoapi.PromotionPhaseErrored
+		running   = kargoapi.PromotionPhaseRunning
+	)
 
 	testCases := []struct {
 		name     string
@@ -445,94 +463,85 @@ func Test_collectTargetStats(t *testing.T) {
 		expected *kargoapi.TargetStats
 	}{
 		{
-			name:     "no Targets and no target-aware Stages",
-			stages:   []kargoapi.Stage{classic("classic")},
-			requests: []kargoapi.PromotionRequest{request("ignored", 3, kargoapi.PromotionRequestPhaseSucceeded, nil)},
+			name:     "no Targets",
+			stages:   []kargoapi.Stage{targetAware("fleet", "", "f.01")},
+			requests: []kargoapi.PromotionRequest{request("f.01", kargoapi.PromotionRequestPhaseSucceeded, nil, "t1")},
 			expected: nil,
 		},
 		{
-			name:     "Targets but no target-aware Stages",
-			targets:  targets(3),
-			stages:   []kargoapi.Stage{classic("classic")},
-			expected: &kargoapi.TargetStats{Count: 3},
-		},
-		{
-			name:     "target-aware Stage that has never promoted",
-			targets:  targets(2),
-			stages:   []kargoapi.Stage{targetAware("fleet", "", "")},
+			name:     "Targets no Stage has promoted to are not healthy",
+			targets:  targets("t1", "t2"),
+			stages:   []kargoapi.Stage{targetAware("fleet", "", ""), classic("classic")},
 			expected: &kargoapi.TargetStats{Count: 2},
 		},
 		{
-			name:    "sums the recorded summary of each Stage's latest request",
-			targets: targets(5),
+			name:    "healthy when the latest promotion from every Stage succeeded",
+			targets: targets("t1", "t2", "t3"),
 			stages: []kargoapi.Stage{
 				targetAware("a", "", "a.01"),
 				targetAware("b", "", "b.01"),
 			},
 			requests: []kargoapi.PromotionRequest{
-				request("a.01", 3, kargoapi.PromotionRequestPhaseSucceeded,
-					&kargoapi.PromotionRequestSummary{Succeeded: 3}),
-				request("b.01", 2, kargoapi.PromotionRequestPhaseErrored,
-					&kargoapi.PromotionRequestSummary{Succeeded: 1, Errored: 1}),
+				request("a.01", kargoapi.PromotionRequestPhaseSucceeded,
+					map[string]kargoapi.PromotionPhase{"t1": succeeded, "t2": succeeded, "t3": succeeded},
+					"t1", "t2", "t3"),
+				request("b.01", kargoapi.PromotionRequestPhaseErrored,
+					map[string]kargoapi.PromotionPhase{"t1": succeeded, "t2": errored},
+					"t1", "t2"),
 			},
-			expected: &kargoapi.TargetStats{
-				Count:     5,
-				Promotion: kargoapi.PromotionRequestSummary{Succeeded: 4, Errored: 1},
-			},
+			// t1 succeeded from both; t2 errored from b; t3 succeeded from a alone.
+			expected: &kargoapi.TargetStats{Count: 3, Health: kargoapi.HealthStats{Healthy: 2}},
 		},
 		{
 			name:    "prefers the current request over the last",
-			targets: targets(2),
+			targets: targets("t1"),
 			stages:  []kargoapi.Stage{targetAware("a", "a.02", "a.01")},
 			requests: []kargoapi.PromotionRequest{
-				request("a.01", 2, kargoapi.PromotionRequestPhaseSucceeded,
-					&kargoapi.PromotionRequestSummary{Succeeded: 2}),
-				request("a.02", 2, kargoapi.PromotionRequestPhaseRunning,
-					&kargoapi.PromotionRequestSummary{Running: 1, Succeeded: 1}),
+				request("a.01", kargoapi.PromotionRequestPhaseSucceeded,
+					map[string]kargoapi.PromotionPhase{"t1": succeeded}, "t1"),
+				request("a.02", kargoapi.PromotionRequestPhaseRunning,
+					map[string]kargoapi.PromotionPhase{"t1": running}, "t1"),
 			},
-			expected: &kargoapi.TargetStats{
-				Count:     2,
-				Promotion: kargoapi.PromotionRequestSummary{Running: 1, Succeeded: 1},
-			},
+			expected: &kargoapi.TargetStats{Count: 1},
 		},
 		{
-			name:    "a request without a summary counts its Targets by its own phase",
-			targets: targets(4),
+			name:    "a Target without a recorded phase takes the request's own phase once it has ended",
+			targets: targets("t1", "t2", "t3"),
 			stages: []kargoapi.Stage{
-				targetAware("pending", "p.01", ""),
-				targetAware("errored", "", "e.01"),
-				targetAware("failed", "", "f.01"),
-				targetAware("succeeded", "", "s.01"),
+				targetAware("ok", "", "ok.01"),
+				targetAware("bad", "", "bad.01"),
+				targetAware("live", "live.01", ""),
 			},
 			requests: []kargoapi.PromotionRequest{
-				request("p.01", 2, kargoapi.PromotionRequestPhasePending, nil),
-				request("e.01", 3, kargoapi.PromotionRequestPhaseErrored, nil),
-				request("f.01", 1, kargoapi.PromotionRequestPhaseFailed, nil),
-				request("s.01", 4, kargoapi.PromotionRequestPhaseSucceeded, nil),
+				request("ok.01", kargoapi.PromotionRequestPhaseSucceeded, nil, "t1"),
+				request("bad.01", kargoapi.PromotionRequestPhaseErrored, nil, "t2"),
+				request("live.01", kargoapi.PromotionRequestPhaseRunning, nil, "t3"),
 			},
-			expected: &kargoapi.TargetStats{
-				Count: 4,
-				Promotion: kargoapi.PromotionRequestSummary{
-					Pending: 2, Errored: 3, Failed: 1, Succeeded: 4,
-				},
-			},
+			expected: &kargoapi.TargetStats{Count: 3, Health: kargoapi.HealthStats{Healthy: 1}},
 		},
 		{
-			name:    "a latest request that no longer exists is a missing round",
-			targets: targets(1),
+			name:    "a Stage whose latest request no longer exists is skipped",
+			targets: targets("t1"),
 			stages: []kargoapi.Stage{
 				targetAware("gone", "", "gone.01"),
 				targetAware("here", "", "here.01"),
 			},
 			requests: []kargoapi.PromotionRequest{
-				request("here.01", 1, kargoapi.PromotionRequestPhaseSucceeded,
-					&kargoapi.PromotionRequestSummary{Succeeded: 1}),
+				request("here.01", kargoapi.PromotionRequestPhaseSucceeded,
+					map[string]kargoapi.PromotionPhase{"t1": succeeded}, "t1"),
 			},
-			expected: &kargoapi.TargetStats{
-				Count:     1,
-				Promotion: kargoapi.PromotionRequestSummary{Succeeded: 1},
-				Unknown:   1,
+			expected: &kargoapi.TargetStats{Count: 1, Health: kargoapi.HealthStats{Healthy: 1}},
+		},
+		{
+			name:    "a Target named by a request but no longer existing is not counted",
+			targets: targets("t1"),
+			stages:  []kargoapi.Stage{targetAware("a", "", "a.01")},
+			requests: []kargoapi.PromotionRequest{
+				request("a.01", kargoapi.PromotionRequestPhaseSucceeded,
+					map[string]kargoapi.PromotionPhase{"t1": succeeded, "deleted": succeeded},
+					"t1", "deleted"),
 			},
+			expected: &kargoapi.TargetStats{Count: 1, Health: kargoapi.HealthStats{Healthy: 1}},
 		},
 	}
 	for _, testCase := range testCases {

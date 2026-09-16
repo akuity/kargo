@@ -13,9 +13,8 @@ export interface ProjectStats {
   /** Stages contains a summary of the collective state of the Project's Stages. */
   stages?: StageStats;
   /**
-   * Targets contains a summary of the Project's Targets and of how the latest
-   * round of promotion to them fared. It is absent for a Project with no
-   * Targets and no target-aware Stages.
+   * Targets contains a summary of the collective state of the Project's
+   * Targets. It is absent for a Project with no Targets.
    *
    * +optional
    */
