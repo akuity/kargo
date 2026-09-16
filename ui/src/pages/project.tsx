@@ -9,11 +9,9 @@ import { useDocumentTitle } from '@ui/features/common/document-title/use-documen
 import { BaseHeader } from '@ui/features/common/layout/base-header';
 import { Pipelines } from '@ui/features/project/pipelines/pipelines';
 import { useProjectBreadcrumbs } from '@ui/features/project/project-utils';
-import { Targets } from '@ui/features/project/targets/targets';
 import { useListTargets } from '@ui/gen/api/v2/core/core';
 
 export const Project = ({
-  tab,
   creatingStage,
   creatingWarehouse
 }: {
@@ -27,31 +25,22 @@ export const Project = ({
   const { projectSubpages } = useExtensionsContext();
 
   // The Targets page only means something once the project has Targets, so
-  // its button appears only then -- and always while the page itself is open.
+  // its button appears only then.
   const targetsQuery = useListTargets(name || '', undefined);
-  const onTargets = tab === 'targets';
-  const showTargets = onTargets || (targetsQuery.data?.data?.items?.length || 0) > 0;
+  const showTargets = (targetsQuery.data?.data?.items?.length || 0) > 0;
 
   const resourceLabel =
     (stageName && `Stage: ${stageName}`) ||
     (warehouseName && `Warehouse: ${warehouseName}`) ||
     (promotionId && `Promotion: ${promotionId}`) ||
-    (freightName && `Freight: ${freightName}`) ||
-    (onTargets && 'Targets');
+    (freightName && `Freight: ${freightName}`);
   const titleParts = resourceLabel ? [resourceLabel, name] : [name];
   useDocumentTitle(titleParts);
 
   return (
     <div className='h-full flex flex-col'>
       <BaseHeader>
-        <Breadcrumb
-          separator='>'
-          items={
-            onTargets
-              ? [...projectBreadcrumbs, { title: 'Targets' }]
-              : [projectBreadcrumbs[0], { title: name }]
-          }
-        />
+        <Breadcrumb separator='>' items={[projectBreadcrumbs[0], { title: name }]} />
         <Space>
           {projectSubpages.map((page) => (
             <Button
@@ -70,7 +59,6 @@ export const Project = ({
               icon={<FontAwesomeIcon icon={faBullseye} size='sm' />}
               onClick={() => navigate(generatePath(paths.projectTargets, { name }))}
               size='small'
-              type={onTargets ? 'primary' : 'default'}
             >
               Targets
             </Button>
@@ -92,11 +80,7 @@ export const Project = ({
         </Space>
       </BaseHeader>
 
-      {onTargets ? (
-        <Targets />
-      ) : (
-        <Pipelines creatingStage={creatingStage} creatingWarehouse={creatingWarehouse} />
-      )}
+      <Pipelines creatingStage={creatingStage} creatingWarehouse={creatingWarehouse} />
     </div>
   );
 };

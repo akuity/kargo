@@ -1,17 +1,18 @@
 import { faBullseye } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { Empty, Flex, Input, Select, Skeleton, Table, Tag, Typography } from 'antd';
+import { Empty, Flex, Input, Select, Skeleton, Table, Tag, Tooltip, Typography } from 'antd';
 import { ColumnsType } from 'antd/es/table';
 import { useMemo, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { Link, generatePath, useParams } from 'react-router-dom';
 
+import { paths } from '@ui/config/paths';
+import { StageTag } from '@ui/features/common/stage-tag';
 import { useWatchTargets } from '@ui/features/stage/tabs/fleet/use-watch-targets';
 import { getColors } from '@ui/features/stage/utils';
 import { useListStages, useListTargets } from '@ui/gen/api/v2/core/core';
 
 import { useWatchStages } from '../pipelines/use-watch-stages';
 
-import { StagePill } from './stage-pill';
 import {
   TargetRow,
   UNLABELED,
@@ -40,6 +41,10 @@ const ungroupedPagination = {
     `${range[0]}-${range[1]} of ${total} Targets`
 };
 const groupPagination = { pageSize: 10, hideOnSinglePage: true };
+
+// A Target governed by many Stages would otherwise fill its row with tags;
+// past this many, the rest fold into a "+N more" tag that lists them on hover.
+const maxStageTags = 6;
 
 /**
  * Targets lists a project's Targets and, for each, the Stages that govern it.
@@ -114,16 +119,33 @@ export const Targets = () => {
       width: '50%',
       render: (_, row) =>
         row.stages.length ? (
-          <Flex gap={8} wrap>
-            {row.stages.map(({ stage, health }) => (
-              <StagePill
+          <Flex gap={8} wrap align='center'>
+            {row.stages.slice(0, maxStageTags).map(({ stage, health }) => (
+              <Link
                 key={stage.metadata?.name}
-                projectName={project}
-                stage={stage}
-                health={health}
-                stageColorMap={stageColorMap}
-              />
+                to={generatePath(paths.stage, {
+                  name: project,
+                  stageName: stage.metadata?.name || ''
+                })}
+              >
+                <StageTag
+                  stage={stage}
+                  projectName={project}
+                  stageColorMap={stageColorMap}
+                  health={health}
+                />
+              </Link>
             ))}
+            {row.stages.length > maxStageTags && (
+              <Tooltip
+                title={row.stages
+                  .slice(maxStageTags)
+                  .map(({ stage }) => stage.metadata?.name)
+                  .join(', ')}
+              >
+                <Tag className='mb-2 text-xs'>+{row.stages.length - maxStageTags} more</Tag>
+              </Tooltip>
+            )}
           </Flex>
         ) : (
           <Typography.Text type='secondary' className='text-xs'>
