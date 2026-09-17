@@ -2,6 +2,7 @@ package gitlab
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
 	"net/url"
 	"testing"
@@ -574,7 +575,14 @@ func TestDeleteBranch(t *testing.T) {
 		},
 		{
 			name:      "branch not found",
-			deleteErr: glErr(http.StatusNotFound),
+			deleteErr: gitlab.ErrNotFound,
+			assert: func(t *testing.T, err error) {
+				require.NoError(t, err)
+			},
+		},
+		{
+			name:      "wrapped not found",
+			deleteErr: fmt.Errorf("wrapped: %w", gitlab.ErrNotFound),
 			assert: func(t *testing.T, err error) {
 				require.NoError(t, err)
 			},

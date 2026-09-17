@@ -189,6 +189,17 @@ func (m *mockGiteaClient) DeleteRepoBranch(
 	return args.Bool(0), resp, args.Error(2)
 }
 
+func (m *mockGiteaClient) GetRepoBranch(
+	owner string,
+	repo string,
+	branch string,
+) (*gitea.Branch, *gitea.Response, error) {
+	args := m.Called(owner, repo, branch)
+	b, _ := args.Get(0).(*gitea.Branch)
+	resp, _ := args.Get(1).(*gitea.Response)
+	return b, resp, args.Error(2)
+}
+
 func (m *mockGiteaClient) CreatePullRequest(
 	owner string,
 	repo string,
@@ -892,54 +903,85 @@ func TestDeleteBranch(t *testing.T) {
 	}
 
 	testCases := []struct {
-		name    string
-		deleted bool
-		resp    *gitea.Response
-		err     error
-		assert  func(*testing.T, error)
+		name      string
+		setupMock func(*mockGiteaClient)
+		assert    func(*testing.T, error)
 	}{
 		{
-			name:    "branch deleted",
-			deleted: true,
-			resp:    giteaResp(http.StatusNoContent),
+			name: "branch does not exist",
+			setupMock: func(m *mockGiteaClient) {
+				m.On("GetRepoBranch", testRepoOwner, testRepoName, testBranch).
+					Return(nil, giteaResp(http.StatusNotFound), errors.New("not found"))
+				// No delete is attempted.
+			},
 			assert: func(t *testing.T, err error) {
 				require.NoError(t, err)
 			},
 		},
 		{
-			name: "branch not found",
-			resp: giteaResp(http.StatusNotFound),
+			name: "error looking up branch",
+			setupMock: func(m *mockGiteaClient) {
+				m.On("GetRepoBranch", testRepoOwner, testRepoName, testBranch).
+					Return(nil, giteaResp(http.StatusInternalServerError), errors.New("boom"))
+			},
+			assert: func(t *testing.T, err error) {
+				require.ErrorContains(t, err, "error getting branch")
+				require.ErrorContains(t, err, "boom")
+			},
+		},
+		{
+			name: "branch deleted",
+			setupMock: func(m *mockGiteaClient) {
+				m.On("GetRepoBranch", testRepoOwner, testRepoName, testBranch).
+					Return(&gitea.Branch{Name: testBranch}, giteaResp(http.StatusOK), nil)
+				m.On("DeleteRepoBranch", testRepoOwner, testRepoName, testBranch).
+					Return(true, giteaResp(http.StatusNoContent), nil)
+			},
 			assert: func(t *testing.T, err error) {
 				require.NoError(t, err)
+			},
+		},
+		{
+			name: "error deleting branch",
+			setupMock: func(m *mockGiteaClient) {
+				m.On("GetRepoBranch", testRepoOwner, testRepoName, testBranch).
+					Return(&gitea.Branch{Name: testBranch}, giteaResp(http.StatusOK), nil)
+				m.On("DeleteRepoBranch", testRepoOwner, testRepoName, testBranch).
+					Return(false, nil, errors.New("network down"))
+			},
+			assert: func(t *testing.T, err error) {
+				require.ErrorContains(t, err, "network down")
 			},
 		},
 		{
 			name: "not deleted with unexpected status",
-			resp: giteaResp(http.StatusForbidden),
+			setupMock: func(m *mockGiteaClient) {
+				m.On("GetRepoBranch", testRepoOwner, testRepoName, testBranch).
+					Return(&gitea.Branch{Name: testBranch}, giteaResp(http.StatusOK), nil)
+				m.On("DeleteRepoBranch", testRepoOwner, testRepoName, testBranch).
+					Return(false, giteaResp(http.StatusForbidden), nil)
+			},
 			assert: func(t *testing.T, err error) {
 				require.ErrorContains(t, err, "unexpected status 403")
 			},
 		},
 		{
 			name: "not deleted without response",
+			setupMock: func(m *mockGiteaClient) {
+				m.On("GetRepoBranch", testRepoOwner, testRepoName, testBranch).
+					Return(&gitea.Branch{Name: testBranch}, giteaResp(http.StatusOK), nil)
+				m.On("DeleteRepoBranch", testRepoOwner, testRepoName, testBranch).
+					Return(false, nil, nil)
+			},
 			assert: func(t *testing.T, err error) {
 				require.ErrorContains(t, err, "error deleting branch")
-			},
-		},
-		{
-			name: "error",
-			err:  errors.New("network down"),
-			assert: func(t *testing.T, err error) {
-				require.ErrorContains(t, err, "network down")
 			},
 		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			mockClient := &mockGiteaClient{}
-			mockClient.
-				On("DeleteRepoBranch", testRepoOwner, testRepoName, testBranch).
-				Return(testCase.deleted, testCase.resp, testCase.err)
+			testCase.setupMock(mockClient)
 			p := provider{
 				owner:  testRepoOwner,
 				repo:   testRepoName,

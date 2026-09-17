@@ -9,6 +9,20 @@ Each provider has its own `pr_integration_test.go` (build tag
 `integration && <provider>`) backed by the shared helpers in this package
 (`helpers.go`, build tag `integration`).
 
+## What is covered
+
+Each provider has two live tests:
+
+- `TestCreateAndMergePullRequest` opens a PR, merges it with each supported
+  merge method, and checks the merge commit's parent count.
+- `TestDeleteBranchLive` pushes a branch, opens a PR from it, asserts the
+  provider reports that branch as the PR's head, deletes it through
+  `DeleteBranch`, confirms it is gone from the remote, and then deletes it
+  again to check that a missing branch is treated as success. Providers report
+  a missing branch in very different ways (GitHub 422, GitLab a sentinel error,
+  Gitea 500 on delete but 404 on lookup), so this last step is the one most
+  worth running against a real server.
+
 ## Required environment variables
 
 Every test skips (does not fail) when its variables are unset. Point them at a
@@ -81,3 +95,37 @@ docker run --rm -u root \
 
 Swap the tag and variables for other providers (e.g. `-tags "integration gitlab"`
 with the `TEST_GITLAB_*` variables).
+
+## Self-hosted providers (no external account needed)
+
+Gitea and GitLab can both run locally in Docker, which makes them the easiest
+way to get real coverage without credentials for a hosted service. Plain
+`http://` repository URLs are supported by the helpers for exactly this case.
+
+Put the provider and the test container on one Docker network so the test can
+reach the provider by container name. The provider's hostname must satisfy the
+registration predicate (contain `gitea` or `gitlab`), so name the container
+accordingly.
+
+Gitea, for example:
+
+```bash
+docker network create kargo-gp-test
+docker run -d --name gitea-test --network kargo-gp-test -p 3300:3000 \
+  -e GITEA__security__INSTALL_LOCK=true gitea/gitea:1.24
+docker exec -u git gitea-test gitea admin user create --admin \
+  --username kargotest --password 'Kargo-Test-1234' \
+  --email kargotest@example.com --must-change-password=false
+# Then create a token (scopes write:repository, write:user) and a repo through
+# the API at http://localhost:3300/api/v1, and run the tests with
+#   --network kargo-gp-test
+#   TEST_GITEA_REPO_URL=http://gitea-test:3000/kargotest/<repo>
+```
+
+GitLab CE works the same way with `gitlab/gitlab-ce`, but boots slowly and
+wants several GB of memory. Create a root personal access token with
+`gitlab-rails runner` and a project through `/api/v4/projects`, then point
+`TEST_GITLAB_REPO_URL` at `http://gitlab-test/root/<project>`.
+
+Azure DevOps and Bitbucket Cloud have no self-hosted equivalent with the same
+API, so those tests need a real account.

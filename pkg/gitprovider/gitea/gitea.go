@@ -87,6 +87,12 @@ type giteaClient interface {
 		repo string,
 		branch string,
 	) (bool, *gitea.Response, error)
+
+	GetRepoBranch(
+		owner string,
+		repo string,
+		branch string,
+	) (*gitea.Branch, *gitea.Response, error)
 }
 
 // provider is a Gitea implementation of gitprovider.Interface.
@@ -353,13 +359,19 @@ func (p *provider) MergePullRequest(
 
 // DeleteBranch implements gitprovider.Interface.
 func (p *provider) DeleteBranch(_ context.Context, branch string) error {
-	deleted, resp, err := p.client.DeleteRepoBranch(p.owner, p.repo, branch)
-	// A branch that is already gone is not an error. The Gitea SDK does not
-	// surface a 404 from this endpoint as an error, so the status code has to be
-	// inspected directly.
-	if resp != nil && resp.StatusCode == http.StatusNotFound {
-		return nil
+	// Gitea answers a delete for a branch that does not exist with a 500 whose
+	// only distinguishing detail is a message the SDK discards, and a blanket
+	// 500 is far too broad to treat as success. Look the branch up first
+	// instead, and treat its absence as the desired end state. A branch that
+	// disappears between the two calls surfaces as an ordinary error, which the
+	// caller does not fail the step over.
+	if _, resp, err := p.client.GetRepoBranch(p.owner, p.repo, branch); err != nil {
+		if resp != nil && resp.StatusCode == http.StatusNotFound {
+			return nil
+		}
+		return fmt.Errorf("error getting branch %q: %w", branch, err)
 	}
+	deleted, resp, err := p.client.DeleteRepoBranch(p.owner, p.repo, branch)
 	if err != nil {
 		return fmt.Errorf("error deleting branch %q: %w", branch, err)
 	}

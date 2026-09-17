@@ -278,14 +278,16 @@ func (p *provider) MergePullRequest(
 
 // DeleteBranch implements gitprovider.Interface.
 func (p *provider) DeleteBranch(_ context.Context, branch string) error {
-	_, err := p.branches.DeleteBranch(p.projectName, branch)
+	resp, err := p.branches.DeleteBranch(p.projectName, branch)
 	if err == nil {
 		return nil
 	}
-	// A branch that is already gone is not an error.
-	var glErr *gitlab.ErrorResponse
-	if errors.As(err, &glErr) && glErr.Response != nil &&
-		glErr.Response.StatusCode == http.StatusNotFound {
+	// A branch that is already gone is not an error. The client reports a 404
+	// as the sentinel gitlab.ErrNotFound rather than as an *ErrorResponse, so
+	// that is the primary signal; the status code is checked as well in case a
+	// future client version changes that.
+	if errors.Is(err, gitlab.ErrNotFound) ||
+		(resp != nil && resp.StatusCode == http.StatusNotFound) {
 		return nil
 	}
 	return fmt.Errorf("error deleting branch %q: %w", branch, err)
