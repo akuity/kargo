@@ -4,7 +4,7 @@ import {
   getCurrentPromotionRef,
   getLastPromotionRef
 } from '@ui/features/project/pipelines/nodes/stage-meta-utils';
-import { Stage } from '@ui/gen/api/v2/models';
+import { Health, Stage } from '@ui/gen/api/v2/models';
 
 import { StagePopover } from '../project/list/project-item/stage-popover';
 import { ColorMap } from '../stage/utils';
@@ -15,11 +15,15 @@ import { PromotionStatusIcon } from './promotion-status/promotion-status-icon';
 export const StageTag = ({
   stage,
   projectName,
-  stageColorMap
+  stageColorMap,
+  health = stage.status?.health
 }: {
   stage: Stage;
   projectName: string;
   stageColorMap: ColorMap;
+  // health overrides the Stage's own health for surfaces that show one
+  // Target's standing under the Stage rather than the Stage as a whole.
+  health?: Health;
 }) => {
   const currentPromotion = getCurrentPromotionRef(stage);
   const lastPromotion = getLastPromotionRef(stage);
@@ -34,9 +38,9 @@ export const StageTag = ({
         className='flex items-center mb-2 text-white rounded py-1 px-2 font-semibold bg-gray-600'
         style={{ backgroundColor: stageColorMap[stage.metadata?.name || ''] }}
       >
-        {stage.status?.health && (
+        {health && (
           <div className='mr-2'>
-            <HealthStatusIcon health={stage.status?.health} hideColor={true} />
+            <HealthStatusIcon health={health} hideColor={true} />
           </div>
         )}
         {!currentPromotion && lastPromotion && (

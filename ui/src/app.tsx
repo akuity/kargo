@@ -17,6 +17,7 @@ import { MainLayout } from './features/common/layout/main-layout';
 import { ThemeContextProvider } from './features/common/theme/theme-context-provider';
 import { Events } from './features/project/events/events';
 import { ProjectSettings } from './features/project/settings/project-settings';
+import { TargetsPage } from './features/project/targets/targets-page';
 import { ProjectWizard } from './features/project-wizard/project-wizard';
 import { AnalysisRunLogsPage } from './pages/analysis-run-logs';
 import { Downloads } from './pages/downloads/downloads';
@@ -40,6 +41,7 @@ export const App = () => (
                 <Route path={paths.createProjectGuided} element={<ProjectWizard />} />
                 <Route path={paths.project} element={<Project />} />
                 <Route path={paths.projectEvents} element={<Events />} />
+                <Route path={paths.projectTargets} element={<TargetsPage />} />
                 <Route path={paths.stage} element={<Project />} />
                 <Route path={paths.promotion} element={<Project />} />
                 <Route path={paths.promote} element={<Project />} />
