@@ -23,6 +23,8 @@ type PromotionRequestStatus struct {
 	Conditions []V1Condition `json:"conditions,omitempty"`
 	// FinishedAt is the time at which the PromotionRequest completed.
 	FinishedAt *string `json:"finishedAt,omitempty"`
+	// Message is a display message explaining the current Phase: what the PromotionRequest is waiting on, how far its fan-out has progressed, or why it did not succeed. i.e. If the Phase field has a value of Failed or Errored, this field can be expected to explain why.  +kubebuilder:validation:Optional
+	Message *string `json:"message,omitempty"`
 	// ObservedGeneration is the generation of the spec last reconciled.  +kubebuilder:validation:Optional
 	ObservedGeneration *int32 `json:"observedGeneration,omitempty"`
 	// Phase is a high-level summary of the PromotionRequest's lifecycle.  +kubebuilder:validation:Optional
@@ -114,6 +116,38 @@ func (o *PromotionRequestStatus) HasFinishedAt() bool {
 // SetFinishedAt gets a reference to the given string and assigns it to the FinishedAt field.
 func (o *PromotionRequestStatus) SetFinishedAt(v string) {
 	o.FinishedAt = &v
+}
+
+// GetMessage returns the Message field value if set, zero value otherwise.
+func (o *PromotionRequestStatus) GetMessage() string {
+	if o == nil || IsNil(o.Message) {
+		var ret string
+		return ret
+	}
+	return *o.Message
+}
+
+// GetMessageOk returns a tuple with the Message field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *PromotionRequestStatus) GetMessageOk() (*string, bool) {
+	if o == nil || IsNil(o.Message) {
+		return nil, false
+	}
+	return o.Message, true
+}
+
+// HasMessage returns a boolean if a field has been set.
+func (o *PromotionRequestStatus) HasMessage() bool {
+	if o != nil && !IsNil(o.Message) {
+		return true
+	}
+
+	return false
+}
+
+// SetMessage gets a reference to the given string and assigns it to the Message field.
+func (o *PromotionRequestStatus) SetMessage(v string) {
+	o.Message = &v
 }
 
 // GetObservedGeneration returns the ObservedGeneration field value if set, zero value otherwise.
@@ -291,6 +325,9 @@ func (o PromotionRequestStatus) ToMap() (map[string]interface{}, error) {
 	}
 	if !IsNil(o.FinishedAt) {
 		toSerialize["finishedAt"] = o.FinishedAt
+	}
+	if !IsNil(o.Message) {
+		toSerialize["message"] = o.Message
 	}
 	if !IsNil(o.ObservedGeneration) {
 		toSerialize["observedGeneration"] = o.ObservedGeneration

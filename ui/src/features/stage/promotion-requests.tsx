@@ -173,11 +173,19 @@ export const PromotionRequests = ({ projectName, stageName }: Props) => {
   const columns: ColumnsType<PromotionRequest> = [
     {
       title: 'Phase',
-      width: 110,
+      width: 140,
       render: (_, promotionRequest) => {
         const phase = promotionRequest?.status?.phase;
         return (
-          <Tag color={getPromotionPhasePresentation(phase).tagColor}>{phase || 'Pending'}</Tag>
+          <Flex gap={8} align='center'>
+            <PromotionStatusIcon
+              subject='Promotion Request'
+              status={{ phase: phase || 'Pending', message: promotionRequest?.status?.message }}
+            />
+            <Tag className='m-0' color={getPromotionPhasePresentation(phase).tagColor}>
+              {phase || 'Pending'}
+            </Tag>
+          </Flex>
         );
       }
     },

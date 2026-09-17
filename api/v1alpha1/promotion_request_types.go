@@ -151,6 +151,14 @@ type PromotionRequestStatus struct {
 	// +kubebuilder:validation:Optional
 	Phase PromotionRequestPhase `json:"phase,omitempty"`
 
+	// Message is a display message explaining the current Phase: what the
+	// PromotionRequest is waiting on, how far its fan-out has progressed, or
+	// why it did not succeed. i.e. If the Phase field has a value of Failed or
+	// Errored, this field can be expected to explain why.
+	//
+	// +kubebuilder:validation:Optional
+	Message string `json:"message,omitempty"`
+
 	// Targets records progress against spec.targets: one entry per Target, with
 	// the child Promotion promoting to it and that Promotion's phase. Entries
 	// appear as the reconciler acts on each Target in spec.targets.

@@ -144,6 +144,7 @@ func TestReconcile(t *testing.T) {
 		require.NoError(t, c.Get(t.Context(), req.NamespacedName, actual))
 		require.Equal(t, int64(1), actual.Status.ObservedGeneration)
 		require.Equal(t, kargoapi.PromotionRequestPhaseErrored, actual.Status.Phase)
+		require.Equal(t, enterpriseOnlyMessage, actual.Status.Message)
 		require.NotNil(t, actual.Status.FinishedAt)
 		readyCondition := conditions.Get(&actual.Status, kargoapi.ConditionTypeReady)
 		require.NotNil(t, readyCondition)

@@ -110,6 +110,7 @@ func (r *reconciler) Reconcile(
 	if err := kubeclient.PatchStatus(ctx, r.client, promotionRequest, func(status *kargoapi.PromotionRequestStatus) {
 		status.ObservedGeneration = promotionRequest.Generation
 		status.Phase = kargoapi.PromotionRequestPhaseErrored
+		status.Message = enterpriseOnlyMessage
 		if status.FinishedAt == nil {
 			now := metav1.Now()
 			status.FinishedAt = &now
