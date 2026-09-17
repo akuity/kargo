@@ -1,6 +1,6 @@
 module github.com/akuity/kargo/pkg/x/client/fidelity
 
-go 1.26.0
+go 1.27.0
 
 require (
 	github.com/akuity/kargo/api v0.0.0

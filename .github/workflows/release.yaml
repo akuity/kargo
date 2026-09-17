@@ -243,8 +243,6 @@ jobs:
       contents: write
     runs-on: ubuntu-latest
     container:
-      # Always use the latest minor version of Go for anything we ship -- see
-      # the back-end-builder stage in Dockerfile for why.
       image: &golangImage golang:1.27.1-trixie
     strategy:
       matrix:
