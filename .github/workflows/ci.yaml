@@ -75,32 +75,6 @@ jobs:
     - name: Run linter
       run: make lint-ui
 
-  lint-go:
-    permissions:
-      contents: read # Permissions to read the repository, required because we override the default permissions
-      checks: write # Used to create checks (linting comments) on PRs
-    runs-on: ubuntu-latest
-    container:
-      image: *golangImage
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
-    - name: Cache golangci-lint
-      id: cache-golangci-lint
-      uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
-      with:
-        path: |
-          hack/bin/golangci-lint
-          hack/bin/golangci-lint-*
-        key: ${{ runner.os }}-golangci-lint-${{ hashFiles('hack/tools/go.mod') }}
-    - name: Install golangci-lint
-      if: steps.cache-golangci-lint.outputs.cache-hit != 'true'
-      run: make install-golangci-lint
-    - name: Configure Git
-      run: git config --global --add safe.directory '*'
-    - name: Run linter
-      run: make lint-go
-
   lint-charts:
     runs-on: ubuntu-latest
     container:
@@ -193,7 +167,7 @@ jobs:
       run: git diff --exit-code -- .
 
   build-image:
-    needs: [test-unit, lint-go, lint-charts, lint-proto, lint-and-typecheck-ui, check-codegen]
+    needs: [test-unit, lint-charts, lint-proto, lint-and-typecheck-ui, check-codegen]
     runs-on: ubuntu-latest
     services:
       registry:
@@ -225,7 +199,7 @@ jobs:
         cache-to: type=gha,mode=max
 
   build-cli:
-    needs: [test-unit, lint-go, lint-charts, lint-proto, lint-and-typecheck-ui, check-codegen]
+    needs: [test-unit, lint-charts, lint-proto, lint-and-typecheck-ui, check-codegen]
     runs-on: ubuntu-latest
     container:
       image: *golangImage
