@@ -26,10 +26,10 @@ require (
 	github.com/akuity/kargo/pkg/client/generated v0.0.0
 	github.com/aws/aws-lambda-go v1.55.0
 	github.com/aws/aws-sdk-go-v2 v1.47.0
-	github.com/aws/aws-sdk-go-v2/config v1.33.4
-	github.com/aws/aws-sdk-go-v2/credentials v1.20.4
+	github.com/aws/aws-sdk-go-v2/config v1.33.5
+	github.com/aws/aws-sdk-go-v2/credentials v1.20.5
 	github.com/aws/aws-sdk-go-v2/service/ecr v1.65.0
-	github.com/aws/aws-sdk-go-v2/service/sts v1.50.0
+	github.com/aws/aws-sdk-go-v2/service/sts v1.51.0
 	github.com/awslabs/aws-lambda-go-api-proxy v0.16.2
 	github.com/bmatcuk/doublestar/v4 v4.10.0
 	github.com/coreos/go-oidc/v3 v3.21.0
