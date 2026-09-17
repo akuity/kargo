@@ -376,26 +376,12 @@ func (p *provider) MergePullRequest(
 }
 
 // DeleteBranch implements gitprovider.Interface.
-func (p *provider) DeleteBranch(ctx context.Context, branch string) error {
-	resp, err := p.client.DeleteRepositoriesWorkspaceRepoSlugRefsBranchesNameWithResponse(
-		ctx,
-		p.owner,
-		p.repoSlug,
-		branch,
-	)
-	if err != nil {
-		return fmt.Errorf("error deleting branch %q: %w", branch, err)
-	}
-	switch resp.StatusCode() {
-	case http.StatusNoContent:
-		return nil
-	case http.StatusNotFound:
-		// A branch that is already gone is not an error.
-		return nil
-	}
-	return fmt.Errorf(
-		"error deleting branch %q: unexpected response %d", branch, resp.StatusCode(),
-	)
+//
+// Branch deletion is not implemented for Bitbucket Cloud. The trimmed OpenAPI
+// spec the client is generated from does not include the branch endpoints, and
+// the implementation has not been verified against a live server.
+func (p *provider) DeleteBranch(context.Context, string) error {
+	return gitprovider.ErrDeleteBranchNotSupported
 }
 
 // GetCommitURL implements gitprovider.Interface.
