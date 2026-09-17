@@ -7,7 +7,8 @@ import { Promotion } from '@ui/gen/api/v2/models';
 import {
   getPromotionDirectiveStepStatus,
   isFailedStep,
-  PromotionDirectiveStepStatus
+  isProgressingStep,
+  isRetryingStep
 } from '../common/promotion-directive-step-status/utils';
 import {
   getPromotionStatusPhase,
@@ -70,7 +71,7 @@ export const PromotionSteps = (props: PromotionStepsProps) => {
     const result = getPromotionDirectiveStepStatus(i, props.promotion.status);
     const key = step.as || `step-${i}`;
 
-    if (!runningKey && result === PromotionDirectiveStepStatus.RUNNING && hasExtension(step)) {
+    if (!runningKey && isProgressingStep(i, props.promotion.status) && hasExtension(step)) {
       runningKey = key;
     }
 
@@ -85,21 +86,25 @@ export const PromotionSteps = (props: PromotionStepsProps) => {
       key
     };
 
-    if (!isFailedStep(i, props.promotion.status)) {
-      return [item];
+    let alertType: 'error' | 'warning' | undefined;
+
+    if (isFailedStep(i, props.promotion.status)) {
+      alertType = 'error';
+    } else if (isRetryingStep(i, props.promotion.status)) {
+      alertType = 'warning';
     }
 
     const stepMessage = props.promotion.status?.stepExecutionMetadata?.[i]?.message;
 
-    if (!stepMessage) {
+    if (!alertType || !stepMessage) {
       return [item];
     }
 
     return [
       { ...item, className: `${item.className || ''} !border-none` },
       {
-        key: `${key}-error`,
-        label: <Alert message={stepMessage} type='error' />,
+        key: `${key}-${alertType}`,
+        label: <Alert message={stepMessage} type={alertType} />,
         showArrow: false,
         collapsible: 'disabled' as const,
         styles: { header: { paddingTop: 0 } }

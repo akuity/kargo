@@ -4,6 +4,7 @@ import {
   faCircleNotch,
   faCog,
   faLinesLeaning,
+  faRotate,
   faTerminal,
   faTimes
 } from '@fortawesome/free-solid-svg-icons';
@@ -15,7 +16,10 @@ import { useMemo, useState } from 'react';
 
 import { useExtensionsContext } from '@ui/extensions/extensions-context';
 import YamlEditor from '@ui/features/common/code-editor/yaml-editor-lazy';
-import { PromotionDirectiveStepStatus } from '@ui/features/common/promotion-directive-step-status/utils';
+import {
+  getStepErrorCount,
+  PromotionDirectiveStepStatus
+} from '@ui/features/common/promotion-directive-step-status/utils';
 import { usePromotionDirectivesRegistryContext } from '@ui/features/promotion-directives/registry/context/use-registry-context';
 import { Runner } from '@ui/features/promotion-directives/registry/types';
 import { Promotion, PromotionStep } from '@ui/gen/api/v2/models';
@@ -66,10 +70,14 @@ export const Step = ({
     };
   }, [registry, step]);
 
-  const progressing = result === PromotionDirectiveStepStatus.RUNNING;
+  const retrying = result === PromotionDirectiveStepStatus.RETRYING;
+  const running = result === PromotionDirectiveStepStatus.RUNNING;
+  const progressing = running || retrying;
   const success = result === PromotionDirectiveStepStatus.SUCCESS;
   const failed = result === PromotionDirectiveStepStatus.FAILED;
   const skipped = result === PromotionDirectiveStepStatus.SKIPPED;
+
+  const attempt = getStepErrorCount(stepIndex, promotion?.status);
 
   // Console output gets its own panel; the YAML view renders it as an
   // unreadable escaped blob. Output keeps that view alongside.
@@ -133,7 +141,8 @@ export const Step = ({
 
   return {
     className: classNames('', {
-      'border-green-500': progressing,
+      'border-green-500': running,
+      'border-yellow-500': retrying,
       'border-gray-200 dark:border-neutral-700': !progressing
     }),
     label: (
@@ -144,7 +153,8 @@ export const Step = ({
           className='mr-2'
           style={{ width: '20px', height: '20px', marginBottom: '1px' }}
         >
-          {progressing && <FontAwesomeIcon spin icon={faCircleNotch} />}
+          {running && <FontAwesomeIcon spin icon={faCircleNotch} />}
+          {retrying && <FontAwesomeIcon spin icon={faRotate} className='text-yellow-500' />}
           {success && <FontAwesomeIcon icon={faCheck} className='text-green-500' />}
           {failed && <FontAwesomeIcon icon={faTimes} className='text-red-500' />}
           {skipped && <FontAwesomeIcon icon={faBan} />}
@@ -158,6 +168,11 @@ export const Step = ({
             </div>
           )}
           <span className='font-semibold text-sm'>{meta.spec.identifier}</span>
+          {retrying && (
+            <Tag className='text-xs py-0' color='warning' bordered={false}>
+              Retrying &middot; attempt {attempt + 1}
+            </Tag>
+          )}
           {filteredUiPlugins.length > 0 && (
             <UiPluginHoles.DeepLinks.PromotionStep className='ml-2'>
               {filteredUiPlugins.map(
