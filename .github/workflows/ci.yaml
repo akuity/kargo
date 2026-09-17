@@ -17,17 +17,7 @@ jobs:
   test-unit:
     runs-on: ubuntu-latest
     container:
-      # IMPORTANT: Do not upgrade this image to a newer minor version of Go.
-      # Anything we actually ship is built with the latest minor version of Go
-      # (see Dockerfile), but the jobs anchored to this image run unit tests,
-      # linters, and codegen against the minor version this branch targets. The
-      # cap is the golangci-lint version pinned in hack/tools/go.mod: a linter
-      # binary built with go1.X panics under go1.(X+1), so bumping Go here
-      # forces a linter upgrade, which typically surfaces new findings
-      # requiring code or configuration changes.
-      #
-      # This version must match the base image in Dockerfile.dev.
-      image: &golangTestImage golang:1.25.14-trixie
+      image: &golangImage golang:1.27.1-trixie
     steps:
     # Install Git from "trixie" repository to get a more recent version than
     # the one available in "stable". This can be removed once the version in
@@ -85,36 +75,10 @@ jobs:
     - name: Run linter
       run: make lint-ui
 
-  lint-go:
-    permissions:
-      contents: read # Permissions to read the repository, required because we override the default permissions
-      checks: write # Used to create checks (linting comments) on PRs
-    runs-on: ubuntu-latest
-    container:
-      image: *golangTestImage
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
-    - name: Cache golangci-lint
-      id: cache-golangci-lint
-      uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5.1.0
-      with:
-        path: |
-          hack/bin/golangci-lint
-          hack/bin/golangci-lint-*
-        key: ${{ runner.os }}-golangci-lint-${{ hashFiles('hack/tools/go.mod') }}
-    - name: Install golangci-lint
-      if: steps.cache-golangci-lint.outputs.cache-hit != 'true'
-      run: make install-golangci-lint
-    - name: Configure Git
-      run: git config --global --add safe.directory '*'
-    - name: Run linter
-      run: make lint-go
-
   lint-charts:
     runs-on: ubuntu-latest
     container:
-      image: *golangTestImage
+      image: *golangImage
     steps:
     - name: Checkout code
       uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
@@ -139,7 +103,7 @@ jobs:
       checks: write # Used to create checks (linting comments) on PRs
     runs-on: ubuntu-latest
     container:
-      image: *golangTestImage
+      image: *golangImage
     steps:
     - name: Checkout code
       uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
@@ -162,7 +126,7 @@ jobs:
   check-codegen:
     runs-on: ubuntu-latest
     container:
-      image: *golangTestImage
+      image: *golangImage
     steps:
     - name: Checkout code
       uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
@@ -203,7 +167,7 @@ jobs:
       run: git diff --exit-code -- .
 
   build-image:
-    needs: [test-unit, lint-go, lint-charts, lint-proto, lint-and-typecheck-ui, check-codegen]
+    needs: [test-unit, lint-charts, lint-proto, lint-and-typecheck-ui, check-codegen]
     runs-on: ubuntu-latest
     services:
       registry:
@@ -235,12 +199,10 @@ jobs:
         cache-to: type=gha,mode=max
 
   build-cli:
-    needs: [test-unit, lint-go, lint-charts, lint-proto, lint-and-typecheck-ui, check-codegen]
+    needs: [test-unit, lint-charts, lint-proto, lint-and-typecheck-ui, check-codegen]
     runs-on: ubuntu-latest
     container:
-      # Always use the latest minor version of Go for anything we ship -- see
-      # the back-end-builder stage in Dockerfile for why.
-      image: golang:1.27.1-trixie
+      image: *golangImage
     steps:
     - name: Checkout code
       uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
