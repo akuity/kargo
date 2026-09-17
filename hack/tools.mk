@@ -19,7 +19,7 @@ ARCH	:= $(shell uname -m)
 # Tool versions                                                                #
 ################################################################################
 
-GOLANGCI_LINT_VERSION	?= $(shell grep github.com/golangci/golangci-lint $(TOOLS_MOD_FILE) | awk '{print $$2}')
+GOLANGCI_LINT_VERSION	?= v2.13.1
 HELM_VERSION            ?= $(shell grep helm.sh/helm/v3 $(TOOLS_MOD_FILE) | awk '{print $$2}')
 GOIMPORTS_VERSION       ?= $(shell grep golang.org/x/tools $(TOOLS_MOD_FILE) | awk '{print $$2}')
 CODE_GENERATOR_VERSION	?= $(shell grep k8s.io/code-generator $(TOOLS_MOD_FILE) | awk '{print $$2}')
@@ -205,7 +205,8 @@ define go-install-tool
 	}
 endef
 
-# install-golangci-lint installs golangci-lint.
+# install-golangci-lint installs golangci-lint from its official prebuilt
+# binaries.
 #
 # $(1) binary path
 # $(2) version
@@ -215,7 +216,7 @@ define install-golangci-lint
 	TMP_DIR=$$(mktemp -d) ;\
 	cd $$TMP_DIR ;\
 	echo "Installing golangci-lint $(2) to $(1)" ;\
-	curl -fsSL -o install.sh https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh ;\
+	curl -fsSL -o install.sh https://golangci-lint.run/install.sh ;\
 	chmod 0700 install.sh ;\
 	./install.sh -b $$TMP_DIR $(2) ;\
 	mkdir -p $(dir $(1)) ;\
