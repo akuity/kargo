@@ -14,7 +14,7 @@ import { toViewerClockDate } from './viewer-clock';
 const CALENDAR_GRID_DAYS = 42;
 
 /** Every day the calendar renders for the month containing `date`. */
-export const visibleRange = (date: Date) => {
+const visibleRange = (date: Date) => {
   const from = startOfWeek(startOfMonth(date));
   const to = endOfDay(addDays(from, CALENDAR_GRID_DAYS - 1));
 
