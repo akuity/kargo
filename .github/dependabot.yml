@@ -24,7 +24,7 @@
 #
 # IMPORTANT: It may seem like we are blocking many dependencies from being
 # updated, but crucially, blocking the ones that cannot succeed improves the
-# changes of clean dependency bumps for those that can.
+# chances of clean dependency bumps for those that can.
 #
 ################################################################################
 ################################################################################
