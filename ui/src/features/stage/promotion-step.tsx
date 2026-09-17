@@ -170,7 +170,7 @@ export const Step = ({
           <span className='font-semibold text-sm'>{meta.spec.identifier}</span>
           {retrying && (
             <Tag className='text-xs py-0' color='warning' bordered={false}>
-              Retrying &middot; attempt {attempt}
+              Retrying &middot; attempt {attempt + 1}
             </Tag>
           )}
           {filteredUiPlugins.length > 0 && (
