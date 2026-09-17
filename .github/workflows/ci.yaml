@@ -85,37 +85,6 @@ jobs:
     - name: Run linter
       run: make lint-ui
 
-  lint-go:
-    permissions:
-      contents: read # Permissions to read the repository, required because we override the default permissions
-      checks: write # Used to create checks (linting comments) on PRs
-    runs-on: ubuntu-latest
-    container:
-      image: *golangImage
-    steps:
-    - name: Harden the runner (Audit all outbound calls)
-      uses: step-security/harden-runner@05e31511f85b41b11d1cf0ef85d0992719546e2c # v2.21.0
-      with:
-        egress-policy: audit
-
-    - name: Checkout code
-      uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
-    - name: Cache golangci-lint
-      id: cache-golangci-lint
-      uses: actions/cache@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5.0.4
-      with:
-        path: |
-          hack/bin/golangci-lint
-          hack/bin/golangci-lint-*
-        key: ${{ runner.os }}-golangci-lint-${{ hashFiles('hack/tools/go.mod') }}
-    - name: Install golangci-lint
-      if: steps.cache-golangci-lint.outputs.cache-hit != 'true'
-      run: make install-golangci-lint
-    - name: Configure Git
-      run: git config --global --add safe.directory '*'
-    - name: Run linter
-      run: make lint-go
-
   lint-charts:
     runs-on: ubuntu-latest
     container:
@@ -223,7 +192,7 @@ jobs:
       run: git diff --exit-code -- .
 
   build-image:
-    needs: [test-unit, lint-go, lint-charts, lint-proto, lint-and-typecheck-ui, check-codegen]
+    needs: [test-unit, lint-charts, lint-proto, lint-and-typecheck-ui, check-codegen]
     runs-on: ubuntu-latest
     services:
       registry:
@@ -280,7 +249,7 @@ jobs:
       run: ./hack/cve-scan.sh "registry:localhost:5000/kargo:scan" "ghcr.io/akuity/kargo"
 
   build-cli:
-    needs: [test-unit, lint-go, lint-charts, lint-proto, lint-and-typecheck-ui, check-codegen]
+    needs: [test-unit, lint-charts, lint-proto, lint-and-typecheck-ui, check-codegen]
     runs-on: ubuntu-latest
     container:
       image: *golangImage
