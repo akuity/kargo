@@ -1,6 +1,11 @@
-import { faCalendarDays, faList, faPlus } from '@fortawesome/free-solid-svg-icons';
+import {
+  faCalendarDays,
+  faList,
+  faPlus,
+  faQuestionCircle
+} from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { Button, Card, Tabs, Typography } from 'antd';
+import { Button, Card, Flex, Popover, Space, Tabs, Typography } from 'antd';
 import { useMemo, useState } from 'react';
 
 import { useConfirmModal } from '@ui/features/common/confirm-modal/use-confirm-modal';
@@ -75,7 +80,35 @@ export const PromotionWindows = ({ scope, promotionWindows, onUpdate }: Promotio
 
   return (
     <Card
-      title='Promotion Windows'
+      title={
+        <Space size={4}>
+          Promotion Windows
+          <Popover
+            content={
+              <Flex vertical gap={6} className='max-w-xs text-xs'>
+                <Typography.Text>
+                  By default, promotions are always open. Windows restrict <strong>when</strong>{' '}
+                  they may run, and only for the Stages a window&apos;s selector matches.
+                </Typography.Text>
+                <Typography.Text>
+                  A <strong>Deny</strong> window blocks promotions while it is active. An{' '}
+                  <strong>Allow</strong> window works in reverse - promotions to the Stages it
+                  matches run only while an Allow is active, so adding one blocks them for the rest
+                  of the time.
+                </Typography.Text>
+                <Typography.Text>
+                  If both are active, Deny wins. Disabled windows are ignored, and windows apply
+                  equally to automatic, manual and rollback promotions.
+                </Typography.Text>
+              </Flex>
+            }
+          >
+            <Typography.Text type='secondary'>
+              <FontAwesomeIcon icon={faQuestionCircle} size='xs' />
+            </Typography.Text>
+          </Popover>
+        </Space>
+      }
       type='inner'
       className='min-h-full'
       extra={
