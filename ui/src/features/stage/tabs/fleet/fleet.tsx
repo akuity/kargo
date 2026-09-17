@@ -2,6 +2,7 @@ import { faBullseye, faCircleMinus, faX } from '@fortawesome/free-solid-svg-icon
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Button, Empty, Flex, Input, Skeleton, Space, Table, Tag, Tooltip, Typography } from 'antd';
 import { ColumnsType } from 'antd/es/table';
+import { FilterValue } from 'antd/es/table/interface';
 import { formatDistanceToNow } from 'date-fns';
 import { useMemo, useState } from 'react';
 import { Link, generatePath } from 'react-router-dom';
@@ -125,11 +126,15 @@ export const Fleet = ({ projectName, stage, round }: Props) => {
 
   const freightLabel = (name: string) => getAlias(freightMap[name]) || name.slice(0, 7);
 
-  // The Promotion column's filter is controlled so the round card's chips can
-  // drive it: a chip selects exactly one phase, while the header menu may
-  // select several. Both write here, and the header reflects either.
-  const [phaseFilter, setPhaseFilter] = useState<string[] | null>(null);
-  const selectedPhase = phaseFilter?.length === 1 ? phaseFilter[0] : undefined;
+  // Every column's filter is controlled here, keyed by column, because Ant
+  // Design's Table requires that all columns be controlled or none: a lone
+  // controlled column silently disables the others. The Promotion filter has
+  // to be controlled so the round card's chips can drive it -- a chip selects
+  // exactly one phase, while the header menu may select several -- so the
+  // header menus write here too, and each header reflects what is set.
+  const [filters, setFilters] = useState<Record<string, FilterValue | null>>({});
+  const phaseFilter = filters.promotion;
+  const selectedPhase = phaseFilter?.length === 1 ? String(phaseFilter[0]) : undefined;
 
   // While the round is blocked the drawer explains why above the tabs. The tab
   // then shows which Targets the Stage governs and nothing that would restate
@@ -184,6 +189,7 @@ export const Fleet = ({ projectName, stage, round }: Props) => {
           />
         </Space>
       ),
+      filteredValue: filters.target ?? null,
       onFilter: (value, row) => matchesTarget(row, String(value)),
       render: (_, row) => (
         <Flex vertical gap={4}>
@@ -247,6 +253,7 @@ export const Fleet = ({ projectName, stage, round }: Props) => {
             key: 'health',
             width: 140,
             filters: healthFilters,
+            filteredValue: filters.health ?? null,
             onFilter: (value: boolean | React.Key, row: FleetRow) =>
               (row.health?.status || '') === value,
             render: (_: unknown, row: FleetRow) =>
@@ -267,7 +274,7 @@ export const Fleet = ({ projectName, stage, round }: Props) => {
       key: 'promotion',
       width: 170,
       filters: blocked ? undefined : phaseFilters,
-      filteredValue: phaseFilter,
+      filteredValue: phaseFilter ?? null,
       onFilter: (value, row) => rowPhase(row) === value,
       render: (_, row) => <PromotionCell project={projectName} row={row} blocked={blocked} />
     },
@@ -310,7 +317,9 @@ export const Fleet = ({ projectName, stage, round }: Props) => {
           summary={summary}
           freightLabel={freightLabel}
           selectedPhase={selectedPhase}
-          onSelectPhase={(phase) => setPhaseFilter(phase ? [phase] : null)}
+          onSelectPhase={(phase) =>
+            setFilters((current) => ({ ...current, promotion: phase ? [phase] : null }))
+          }
         />
       ) : (
         <Typography.Text type='secondary' className='text-xs'>
@@ -330,10 +339,7 @@ export const Fleet = ({ projectName, stage, round }: Props) => {
           size='small'
           pagination={false}
           rowKey={(row) => row.target.metadata?.name || ''}
-          onChange={(_, filters) => {
-            const phases = filters.promotion as string[] | null | undefined;
-            setPhaseFilter(phases?.length ? phases : null);
-          }}
+          onChange={(_, next) => setFilters(next)}
         />
       )}
     </Flex>
