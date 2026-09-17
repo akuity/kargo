@@ -1,9 +1,11 @@
 package server
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -163,6 +165,155 @@ func Test_server_listTargets(t *testing.T) {
 				),
 				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
 					require.Equal(t, []string{"us-east-1"}, decode(t, w))
+				},
+			},
+		},
+	)
+}
+
+func Test_server_watchTargets(t *testing.T) {
+	const projectName = "fake-project"
+
+	// The watch helper runs cases in parallel and the fake client mutates the
+	// objects it is built with, so every case gets fixtures of its own.
+	newProject := func() *kargoapi.Project {
+		return &kargoapi.Project{ObjectMeta: metav1.ObjectMeta{Name: projectName}}
+	}
+
+	newTarget := func(name string, lbls map[string]string) *kargoapi.Target {
+		return &kargoapi.Target{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: projectName,
+				Name:      name,
+				Labels:    lbls,
+			},
+		}
+	}
+
+	newFleetStage := func() *kargoapi.Stage {
+		return &kargoapi.Stage{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: projectName,
+				Name:      "fleet",
+			},
+			Spec: kargoapi.StageSpec{
+				Targets: &kargoapi.StageTargets{
+					Selectors: []metav1.LabelSelector{
+						{MatchLabels: map[string]string{"region": "us"}},
+						{MatchLabels: map[string]string{"region": "eu"}},
+					},
+				},
+			},
+		}
+	}
+
+	// events decodes every SSE event in the body as type -> Target names, in
+	// the order received.
+	type event struct {
+		Type   string
+		Object kargoapi.Target
+	}
+	events := func(t *testing.T, w *httptest.ResponseRecorder) []string {
+		require.Equal(t, http.StatusOK, w.Code)
+		require.Equal(t, "text/event-stream", w.Header().Get("Content-Type"))
+		var got []string
+		for _, line := range strings.Split(w.Body.String(), "\n") {
+			if !strings.HasPrefix(line, "data: ") {
+				continue
+			}
+			e := event{}
+			require.NoError(t, json.Unmarshal([]byte(line[len("data: "):]), &e))
+			got = append(got, e.Type+" "+e.Object.Name)
+		}
+		return got
+	}
+
+	baseURL := "/v1beta1/projects/" + projectName + "/targets?watch=true"
+
+	testRESTWatchEndpoint(
+		t, &config.ServerConfig{},
+		baseURL,
+		[]restWatchTestCase{
+			{
+				name: "Project does not exist",
+				url:  "/v1beta1/projects/nope/targets?watch=true",
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
+					require.Equal(t, http.StatusNotFound, w.Code)
+				},
+			},
+			{
+				name:          "rejects a malformed label selector before watching",
+				url:           baseURL + "&labelSelector=region%3D%3D%3D",
+				clientBuilder: fake.NewClientBuilder().WithObjects(newProject()),
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
+					require.Equal(t, http.StatusBadRequest, w.Code)
+				},
+			},
+			{
+				name:          "Stage filter names a Stage that does not exist",
+				url:           baseURL + "&stage=missing",
+				clientBuilder: fake.NewClientBuilder().WithObjects(newProject()),
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
+					require.Equal(t, http.StatusNotFound, w.Code)
+				},
+			},
+			{
+				name:          "streams every Target without a filter",
+				clientBuilder: fake.NewClientBuilder().WithObjects(newProject()),
+				operations: func(ctx context.Context, c client.Client) {
+					_ = c.Create(ctx, newTarget("us-east-1", map[string]string{"region": "us"}))
+					_ = c.Create(ctx, newTarget("ap-south-1", map[string]string{"region": "ap"}))
+				},
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
+					require.Equal(
+						t,
+						[]string{"ADDED us-east-1", "ADDED ap-south-1"},
+						events(t, w),
+					)
+				},
+			},
+			{
+				name: "Stage filter streams only governed Targets and turns a departure into a delete",
+				url:  baseURL + "&stage=fleet",
+				clientBuilder: fake.NewClientBuilder().WithObjects(
+					newProject(),
+					newFleetStage(),
+					newTarget("eu-central-1", map[string]string{"region": "eu"}),
+				),
+				operations: func(ctx context.Context, c client.Client) {
+					// Governed: sent as-is.
+					_ = c.Create(ctx, newTarget("us-east-1", map[string]string{"region": "us"}))
+					// Not governed: dropped.
+					_ = c.Create(ctx, newTarget("ap-south-1", map[string]string{"region": "ap"}))
+					// Leaves the fleet: a modification the watcher sees as a delete.
+					departing := &kargoapi.Target{}
+					_ = c.Get(
+						ctx,
+						client.ObjectKey{Namespace: projectName, Name: "eu-central-1"},
+						departing,
+					)
+					departing.Labels = map[string]string{"region": "ap"}
+					_ = c.Update(ctx, departing)
+					// Joins the fleet: a modification sent as such so the watcher adds it.
+					joining := &kargoapi.Target{}
+					_ = c.Get(
+						ctx,
+						client.ObjectKey{Namespace: projectName, Name: "ap-south-1"},
+						joining,
+					)
+					joining.Labels = map[string]string{"region": "us"}
+					_ = c.Update(ctx, joining)
+				},
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
+					require.Equal(
+						t,
+						[]string{
+							"ADDED us-east-1",
+							"DELETED eu-central-1",
+							"MODIFIED ap-south-1",
+						},
+						events(t, w),
+					)
 				},
 			},
 		},
