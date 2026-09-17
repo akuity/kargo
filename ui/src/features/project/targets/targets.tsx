@@ -32,14 +32,7 @@ const NO_GROUPING = '';
 // single ungrouped table offers a choice of page size; a group's table is one
 // of many on the page, so it keeps a short fixed page and hides the pager when
 // it fits.
-const ungroupedPagination = {
-  defaultPageSize: 20,
-  pageSizeOptions: [20, 50, 100],
-  showSizeChanger: true,
-  hideOnSinglePage: true,
-  showTotal: (total: number, range: [number, number]) =>
-    `${range[0]}-${range[1]} of ${total} Targets`
-};
+const pageSizeOptions = [20, 50, 100];
 const groupPagination = { pageSize: 10, hideOnSinglePage: true };
 
 // A Target governed by many Stages would otherwise fill its row with tags;
@@ -63,6 +56,20 @@ export const Targets = () => {
 
   const [groupBy, setGroupBy] = useState<string>();
   const [search, setSearch] = useState('');
+
+  // The ungrouped table's page is controlled so that a new search or grouping
+  // starts the reader at the top: Ant's table would otherwise keep the page
+  // it was on, so clearing a search from page 2 would land back on page 2.
+  const [current, setCurrent] = useState(1);
+  const [pageSize, setPageSize] = useState(pageSizeOptions[0]);
+  const changeSearch = (value: string) => {
+    setSearch(value);
+    setCurrent(1);
+  };
+  const changeGroupBy = (value: string) => {
+    setGroupBy(value);
+    setCurrent(1);
+  };
 
   const stages = useMemo(
     () => targetAwareStages(stagesQuery.data?.data?.items || []),
@@ -174,12 +181,12 @@ export const Targets = () => {
             placeholder='Filter by name, label, or Stage'
             className='w-72'
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => changeSearch(e.target.value)}
           />
           <Select
             className='w-48'
             value={groupKey ?? NO_GROUPING}
-            onChange={(value) => setGroupBy(value)}
+            onChange={changeGroupBy}
             options={[
               { value: NO_GROUPING, label: 'No grouping' },
               ...keys.map((key) => ({ value: key, label: `Group by ${key}` }))
@@ -196,7 +203,7 @@ export const Targets = () => {
       )}
 
       {groups.map((group) => (
-        <Flex key={group.value || 'all'} vertical gap={8}>
+        <Flex key={`${group.value || 'all'}:${search}`} vertical gap={8}>
           {groupKey && (
             <Flex gap={8} align='center'>
               <Tag color={group.value === UNLABELED ? 'default' : 'blue'} className='m-0'>
@@ -211,7 +218,22 @@ export const Targets = () => {
             dataSource={group.rows}
             columns={columns}
             size='small'
-            pagination={groupKey ? groupPagination : ungroupedPagination}
+            pagination={
+              groupKey
+                ? groupPagination
+                : {
+                    current,
+                    pageSize,
+                    pageSizeOptions,
+                    showSizeChanger: true,
+                    hideOnSinglePage: true,
+                    showTotal: (total, range) => `${range[0]}-${range[1]} of ${total} Targets`,
+                    onChange: (page, size) => {
+                      setCurrent(size !== pageSize ? 1 : page);
+                      setPageSize(size);
+                    }
+                  }
+            }
             rowKey={(row) => row.target.metadata?.name || ''}
           />
         </Flex>
