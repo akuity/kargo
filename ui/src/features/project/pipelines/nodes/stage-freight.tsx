@@ -258,7 +258,13 @@ const Artifact = (props: { artifact: string | GitCommit | Chart | Image | Artifa
         color='geekblue'
       >
         <Flex justify='center' align='center' wrap>
-          <div>{props.artifact.id?.slice(0, 7)}</div>
+          <div>
+            {props.artifact.tag
+              ? props.artifact.tag.length > 12
+                ? props.artifact.tag.substring(0, 12) + '...'
+                : props.artifact.tag
+              : props.artifact.id?.slice(0, 7)}
+          </div>
 
           {source}
         </Flex>
