@@ -9,7 +9,6 @@ package tools
 import (
 	_ "github.com/bufbuild/buf/cmd/buf"
 	_ "github.com/go-swagger/go-swagger/cmd/swagger"
-	_ "github.com/golangci/golangci-lint/v2/cmd/golangci-lint"
 	_ "github.com/swaggo/swag/cmd/swag"
 	_ "golang.org/x/tools/cmd/goimports"
 	_ "helm.sh/helm/v3/cmd/helm"
