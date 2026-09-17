@@ -13,19 +13,15 @@
 # Each branch runs on its own day of the week so that update PRs arrive a
 # branch at a time rather than all at once.
 #
-# Go itself is excluded from the docker ecosystem. Its version pins serve two
-# distinct roles -- the toolchain that builds shipped artifacts, and the older,
-# golangci-lint-capped toolchain that runs unit tests, linters, and codegen --
-# and most of them live in the workflows, where the docker ecosystem cannot see
-# them at all. Dependabot can neither tell the roles apart nor move a role's
-# pins in lock-step, so raising Go is a coordinated, whole-branch change made
-# by hand. The comment at each pin says which role it serves.
+# Go itself is excluded from the docker ecosystem. A branch pins one Go version
+# in several places, and most of them live in the workflows and the setup-go
+# composite action, where the docker ecosystem cannot see them at all.
+# Dependabot cannot move them in lock-step, so raising Go is a coordinated,
+# whole-branch change made by hand.
 #
-# golangci-lint is excluded from the gomod ecosystem on the release branches
-# that still have a hack/tools module. Nothing is built from that module;
-# hack/tools.mk greps it for the version of the prebuilt linter binary to
-# install. Raising the linter on a stable branch changes what CI enforces and
-# can only turn up new findings in code that is already frozen.
+# golangci-lint is not tracked on any branch. Its version is pinned directly in
+# hack/tools.mk, which nothing dependabot reads, and the prebuilt binary is
+# installed from there. It is bumped by hand.
 #
 # google.golang.org/api is excluded on the release branches because its own
 # go.mod pins google.golang.org/grpc and google.golang.org/protobuf. Raising it
@@ -430,7 +426,6 @@ updates:
     - dependency-name: "helm.sh/helm/v3"
     - dependency-name: "connectrpc.com/*"
     - dependency-name: "github.com/bufbuild/buf"
-    - dependency-name: "github.com/golangci/golangci-lint*"
     commit-message:
       prefix: "chore(deps/hack):"
     groups:
@@ -604,7 +599,6 @@ updates:
     - dependency-name: "helm.sh/helm/v3"
     - dependency-name: "connectrpc.com/*"
     - dependency-name: "github.com/bufbuild/buf"
-    - dependency-name: "github.com/golangci/golangci-lint*"
     commit-message:
       prefix: "chore(deps/hack):"
     groups:
@@ -748,7 +742,6 @@ updates:
     - dependency-name: "helm.sh/helm/v3"
     - dependency-name: "connectrpc.com/*"
     - dependency-name: "github.com/bufbuild/buf"
-    - dependency-name: "github.com/golangci/golangci-lint*"
     commit-message:
       prefix: "chore(deps/hack):"
     groups:
