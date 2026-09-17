@@ -17,17 +17,7 @@ jobs:
   test-unit:
     runs-on: ubuntu-latest
     container:
-      # IMPORTANT: Do not upgrade this image to a newer minor version of Go.
-      # Anything we actually ship is built with the latest minor version of Go
-      # (see Dockerfile), but the jobs anchored to this image run unit tests,
-      # linters, and codegen against the minor version this branch targets. The
-      # cap is the golangci-lint version pinned in hack/tools/go.mod: a linter
-      # binary built with go1.X panics under go1.(X+1), so bumping Go here
-      # forces a linter upgrade, which typically surfaces new findings
-      # requiring code or configuration changes.
-      #
-      # This version must match the base image in Dockerfile.dev.
-      image: &golangTestImage golang:1.26.8-trixie
+      image: &golangImage golang:1.27.1-trixie
     steps:
     # Install Git from "trixie" repository to get a more recent version than
     # the one available in "stable". This can be removed once the version in
@@ -101,7 +91,7 @@ jobs:
       checks: write # Used to create checks (linting comments) on PRs
     runs-on: ubuntu-latest
     container:
-      image: *golangTestImage
+      image: *golangImage
     steps:
     - name: Harden the runner (Audit all outbound calls)
       uses: step-security/harden-runner@05e31511f85b41b11d1cf0ef85d0992719546e2c # v2.21.0
@@ -129,7 +119,7 @@ jobs:
   lint-charts:
     runs-on: ubuntu-latest
     container:
-      image: *golangTestImage
+      image: *golangImage
     steps:
     - name: Harden the runner (Audit all outbound calls)
       uses: step-security/harden-runner@05e31511f85b41b11d1cf0ef85d0992719546e2c # v2.21.0
@@ -159,7 +149,7 @@ jobs:
       checks: write # Used to create checks (linting comments) on PRs
     runs-on: ubuntu-latest
     container:
-      image: *golangTestImage
+      image: *golangImage
     steps:
     - name: Harden the runner (Audit all outbound calls)
       uses: step-security/harden-runner@05e31511f85b41b11d1cf0ef85d0992719546e2c # v2.21.0
@@ -187,7 +177,7 @@ jobs:
   check-codegen:
     runs-on: ubuntu-latest
     container:
-      image: *golangTestImage
+      image: *golangImage
     steps:
     - name: Harden the runner (Audit all outbound calls)
       uses: step-security/harden-runner@05e31511f85b41b11d1cf0ef85d0992719546e2c # v2.21.0
@@ -293,9 +283,7 @@ jobs:
     needs: [test-unit, lint-go, lint-charts, lint-proto, lint-and-typecheck-ui, check-codegen]
     runs-on: ubuntu-latest
     container:
-      # Always use the latest minor version of Go for anything we ship -- see
-      # the back-end-builder stage in Dockerfile for why.
-      image: golang:1.27.1-trixie
+      image: *golangImage
     steps:
     - name: Harden the runner (Audit all outbound calls)
       uses: step-security/harden-runner@05e31511f85b41b11d1cf0ef85d0992719546e2c # v2.21.0

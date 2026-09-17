@@ -1,6 +1,6 @@
 module github.com/akuity/kargo/pkg/client/generated
 
-go 1.26.0
+go 1.27.0
 
 require (
 	github.com/go-openapi/errors v0.22.8
