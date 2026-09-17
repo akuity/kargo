@@ -117,6 +117,28 @@ export const freightNames = (collection?: FreightCollection): string[] =>
     .filter(Boolean)
     .sort();
 
+// rowFreightNames lists the Freight a row shows: what the Target's own status
+// says it runs for this Stage, when the status says so. Until then, a Target
+// the round is promoting to, or has promoted to, shows the round's Freight.
+// A Target the round never named, or whose Promotion did not succeed, shows
+// nothing: that Freight never reached it.
+export const rowFreightNames = (row: FleetRow): string[] => {
+  if (row.currentFreight) {
+    return freightNames(row.currentFreight);
+  }
+  if (!row.included) {
+    return [];
+  }
+  switch (row.phase) {
+    case 'Pending':
+    case 'Running':
+    case 'Succeeded':
+      return [row.request?.spec?.freight || ''].filter(Boolean);
+    default:
+      return [];
+  }
+};
+
 // rowsSummary tallies the rows' Promotion phases in the shape of a
 // PromotionRequest summary, so the round's progress bar is drawn from the same
 // per-Target phases the table shows and the two cannot disagree. Rows the round

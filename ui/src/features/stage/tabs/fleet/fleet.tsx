@@ -21,8 +21,8 @@ import { useGetFreightMap } from '../freight-history/use-get-freight-map';
 import {
   FleetRow,
   fleetRows,
-  freightNames,
   matchesTarget,
+  rowFreightNames,
   rowPhase,
   rowsSummary
 } from './fleet-utils';
@@ -212,11 +212,7 @@ export const Fleet = ({ projectName, stage, round }: Props) => {
       key: 'freight',
       width: 220,
       render: (_, row) => {
-        // What the Target is running, from its own status; until a Promotion
-        // has succeeded, the Freight the round is promoting.
-        const names = row.currentFreight
-          ? freightNames(row.currentFreight)
-          : [row.request?.spec?.freight || ''].filter(Boolean);
+        const names = rowFreightNames(row);
         if (!names.length) {
           return (
             <Typography.Text type='secondary' className='text-xs'>
@@ -286,6 +282,10 @@ export const Fleet = ({ projectName, stage, round }: Props) => {
             key: 'when',
             width: 170,
             render: (_: unknown, row: FleetRow) => {
+              // The round's timing only means something for a Target it named.
+              if (!row.included) {
+                return null;
+              }
               const status = row.request?.status;
               const finished = parseDate(status?.finishedAt);
               const started = parseDate(status?.startedAt);

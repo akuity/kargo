@@ -3,15 +3,17 @@ import { describe, expect, test } from 'vitest';
 import { PromotionRequest, Stage, Target } from '@ui/gen/api/v2/models';
 
 import {
-  SEVERITY_ACTIVE,
-  SEVERITY_FAILED,
-  SEVERITY_SETTLED,
+  FleetRow,
   fleetRows,
   freightNames,
   matchesTarget,
+  rowFreightNames,
   rowPhase,
   rowSeverity,
-  rowsSummary
+  rowsSummary,
+  SEVERITY_ACTIVE,
+  SEVERITY_FAILED,
+  SEVERITY_SETTLED
 } from './fleet-utils';
 
 const stage = (partial: Partial<Stage> = {}): Stage => ({
@@ -169,6 +171,41 @@ describe('freightNames()', () => {
 
   test('handles an absent collection', () => {
     expect(freightNames(undefined)).toEqual([]);
+  });
+});
+
+describe('rowFreightNames()', () => {
+  const roundRequest: PromotionRequest = { spec: { freight: 'round-freight' } };
+  const row = (overrides: Partial<FleetRow>): FleetRow => ({
+    target: { metadata: { name: 't' } },
+    request: roundRequest,
+    included: true,
+    ...overrides
+  });
+
+  test("prefers what the Target's status says it runs", () => {
+    expect(
+      rowFreightNames(
+        row({
+          phase: 'Failed',
+          currentFreight: { id: 'x', items: { 'Warehouse/w': { name: 'running-freight' } } }
+        })
+      )
+    ).toEqual(['running-freight']);
+  });
+
+  test('shows the round Freight while the round reaches the Target, and once it has', () => {
+    for (const phase of ['Pending', 'Running', 'Succeeded']) {
+      expect(rowFreightNames(row({ phase }))).toEqual(['round-freight']);
+    }
+  });
+
+  test('shows nothing for a Target the round did not reach', () => {
+    for (const phase of ['Failed', 'Errored', 'Aborted']) {
+      expect(rowFreightNames(row({ phase }))).toEqual([]);
+    }
+    expect(rowFreightNames(row({ included: false, phase: undefined }))).toEqual([]);
+    expect(rowFreightNames(row({ request: undefined, included: false }))).toEqual([]);
   });
 });
 
