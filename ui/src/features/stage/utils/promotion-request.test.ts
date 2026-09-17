@@ -45,7 +45,28 @@ describe('promotionRequestCompareFn()', () => {
 });
 
 describe('blockingMessage()', () => {
-  test('returns the Ready=False message', () => {
+  test('prefers status.message', () => {
+    expect(
+      blockingMessage(
+        request({
+          status: {
+            message: 'Waiting on 2 of 3 Promotions to complete',
+            conditions: [
+              {
+                type: 'Ready',
+                status: 'False',
+                message: 'operator-facing detail',
+                lastTransitionTime: '2026-08-13T00:00:00Z',
+                reason: 'Promoting'
+              }
+            ]
+          }
+        })
+      )
+    ).toBe('Waiting on 2 of 3 Promotions to complete');
+  });
+
+  test('falls back to the Ready=False message', () => {
     expect(
       blockingMessage(
         request({

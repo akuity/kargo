@@ -8125,6 +8125,10 @@
           "description": "FinishedAt is the time at which the PromotionRequest completed.",
           "type": "string"
         },
+        "message": {
+          "description": "Message is a display message explaining the current Phase: what the\nPromotionRequest is waiting on, how far its fan-out has progressed, or\nwhy it did not succeed. i.e. If the Phase field has a value of Failed or\nErrored, this field can be expected to explain why.\n\n+kubebuilder:validation:Optional",
+          "type": "string"
+        },
         "observedGeneration": {
           "description": "ObservedGeneration is the generation of the spec last reconciled.\n\n+kubebuilder:validation:Optional",
           "type": "integer"

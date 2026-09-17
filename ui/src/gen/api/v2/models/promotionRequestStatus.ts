@@ -24,6 +24,15 @@ export interface PromotionRequestStatus {
   /** FinishedAt is the time at which the PromotionRequest completed. */
   finishedAt?: string;
   /**
+   * Message is a display message explaining the current Phase: what the
+   * PromotionRequest is waiting on, how far its fan-out has progressed, or
+   * why it did not succeed. i.e. If the Phase field has a value of Failed or
+   * Errored, this field can be expected to explain why.
+   *
+   * +kubebuilder:validation:Optional
+   */
+  message?: string;
+  /**
    * ObservedGeneration is the generation of the spec last reconciled.
    *
    * +kubebuilder:validation:Optional

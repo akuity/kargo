@@ -11,10 +11,14 @@ export const promotionRequestCompareFn = (lhs: PromotionRequest, rhs: PromotionR
   (rhs?.metadata?.name || '').localeCompare(lhs?.metadata?.name || '');
 
 // blockingMessage returns the message a user needs to see when a
-// PromotionRequest is not going to progress. The Ready condition is where the
-// reason is recorded -- most commonly that fanning Freight out to Targets is
-// not available in this installation.
+// PromotionRequest is not going to progress. The reconciler explains the
+// current phase in status.message; a request written before that field
+// existed recorded its reason on the Ready condition only -- most commonly that
+// fanning Freight out to Targets is not available in this installation.
 export const blockingMessage = (promotionRequest?: PromotionRequest) => {
+  if (promotionRequest?.status?.message) {
+    return promotionRequest.status.message;
+  }
   const ready = promotionRequest?.status?.conditions?.find(
     (condition) => condition.type === 'Ready'
   );
