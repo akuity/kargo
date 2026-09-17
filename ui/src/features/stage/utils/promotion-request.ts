@@ -21,6 +21,41 @@ export const blockingMessage = (promotionRequest?: PromotionRequest) => {
   return ready?.status === 'False' && ready?.message ? ready.message : undefined;
 };
 
+// The Ready condition reason the PromotionRequest reconciler in this repository
+// records when it declines to fan a request out, because doing so is a feature
+// of Kargo Enterprise.
+const enterpriseOnlyReason = 'EnterpriseOnlyFeature';
+
+export type RoundBlock = { title: string; description: string };
+
+// roundBlock explains, in words meant for a person, why a PromotionRequest
+// never fanned out. A round that did fan out and then had children fail is
+// not blocked -- its Targets show the outcome -- so a request that recorded
+// any Target or summary yields nothing even if its Ready condition is False.
+// The Ready message is written for operators; the one case a user is likely
+// to meet -- fan-out being an Enterprise feature -- gets plain language, and
+// any other reason is passed through under a general heading.
+export const roundBlock = (promotionRequest?: PromotionRequest): RoundBlock | undefined => {
+  if (promotionRequest?.status?.targets?.length || promotionRequest?.status?.summary) {
+    return undefined;
+  }
+  const ready = promotionRequest?.status?.conditions?.find(
+    (condition) => condition.type === 'Ready'
+  );
+  if (ready?.status !== 'False' || !ready.message) {
+    return undefined;
+  }
+  if (ready.reason === enterpriseOnlyReason) {
+    return {
+      title: 'Fleet management is a Kargo Enterprise feature',
+      description:
+        'This Stage promotes to Targets, which this installation of Kargo does not support. ' +
+        'Freight promoted to this Stage will not reach its Targets.'
+    };
+  }
+  return { title: 'Promotion to this Stage cannot progress', description: ready.message };
+};
+
 export type PromotionRequestTargetRow = {
   name: string;
   promotion?: string;
