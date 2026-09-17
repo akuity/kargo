@@ -38,6 +38,15 @@ const (
 	modernHostSuffix = "dev.azure.com"
 )
 
+const (
+	// branchRefPrefix is the prefix Azure DevOps uses for fully qualified
+	// branch names.
+	branchRefPrefix = "refs/heads/"
+	// zeroObjectID is the object ID that, when supplied as the new object ID of
+	// a ref update, instructs Azure DevOps to delete the ref.
+	zeroObjectID = "0000000000000000000000000000000000000000"
+)
+
 var registration = gitprovider.Registration{
 	Predicate: func(repoURL string) bool {
 		u, err := url.Parse(repoURL)
@@ -80,6 +89,14 @@ type azureGitClient interface {
 		context.Context,
 		adogit.UpdatePullRequestArgs,
 	) (*adogit.GitPullRequest, error)
+	GetRefs(
+		context.Context,
+		adogit.GetRefsArgs,
+	) (*adogit.GetRefsResponseValue, error)
+	UpdateRefs(
+		context.Context,
+		adogit.UpdateRefsArgs,
+	) (*[]adogit.GitRefUpdateResult, error)
 }
 
 type provider struct {
@@ -370,6 +387,70 @@ func (p *provider) MergePullRequest(
 	return pr, true, nil
 }
 
+// DeleteBranch implements gitprovider.Interface.
+func (p *provider) DeleteBranch(ctx context.Context, branch string) error {
+	// Azure DevOps has no dedicated delete-branch endpoint. A ref is deleted by
+	// updating it from its current object ID to the zero object ID, which means
+	// the current object ID must be looked up first.
+	refName := branchRefPrefix + branch
+	refs, err := p.client.GetRefs(
+		ctx,
+		adogit.GetRefsArgs{
+			RepositoryId: &p.repo,
+			Project:      &p.project,
+			// This filter matches on prefix, so results must still be checked for
+			// an exact match below.
+			Filter: ptr.To(strings.TrimPrefix(refName, "refs/")),
+		},
+	)
+	if err != nil {
+		return fmt.Errorf("error getting ref for branch %q: %w", branch, err)
+	}
+	var oldObjectID string
+	if refs != nil {
+		for _, ref := range refs.Value {
+			if ptr.Deref(ref.Name, "") == refName {
+				oldObjectID = ptr.Deref(ref.ObjectId, "")
+				break
+			}
+		}
+	}
+	if oldObjectID == "" {
+		// A branch that is already gone is not an error.
+		return nil
+	}
+	results, err := p.client.UpdateRefs(
+		ctx,
+		adogit.UpdateRefsArgs{
+			RepositoryId: &p.repo,
+			Project:      &p.project,
+			RefUpdates: &[]adogit.GitRefUpdate{{
+				Name:        &refName,
+				OldObjectId: &oldObjectID,
+				NewObjectId: ptr.To(zeroObjectID),
+			}},
+		},
+	)
+	if err != nil {
+		return fmt.Errorf("error deleting branch %q: %w", branch, err)
+	}
+	if results == nil || len(*results) == 0 {
+		return fmt.Errorf("error deleting branch %q: no result returned", branch)
+	}
+	result := (*results)[0]
+	if ptr.Deref(result.Success, false) {
+		return nil
+	}
+	status := ptr.Deref(result.UpdateStatus, adogit.GitRefUpdateStatusValues.Unprocessed)
+	if status == adogit.GitRefUpdateStatusValues.SucceededNonExistentRef {
+		return nil
+	}
+	if msg := ptr.Deref(result.CustomMessage, ""); msg != "" {
+		return fmt.Errorf("error deleting branch %q: %s: %s", branch, status, msg)
+	}
+	return fmt.Errorf("error deleting branch %q: %s", branch, status)
+}
+
 // GetCommitURL implements gitprovider.Interface.
 func (p *provider) GetCommitURL(repoURL string, sha string) (string, error) {
 	normalizedURL := urls.NormalizeGit(repoURL)
@@ -419,6 +500,7 @@ func convertADOPullRequest(pr *adogit.GitPullRequest) (*gitprovider.PullRequest,
 		MergeCommitSHA: ptr.Deref(mergeCommit.CommitId, ""),
 		Object:         pr,
 		HeadSHA:        ptr.Deref(pr.LastMergeSourceCommit.CommitId, ""),
+		HeadBranch:     strings.TrimPrefix(ptr.Deref(pr.SourceRefName, ""), branchRefPrefix),
 	}, nil
 }
 

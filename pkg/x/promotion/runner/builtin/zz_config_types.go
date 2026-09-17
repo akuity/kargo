@@ -271,6 +271,10 @@ type GitCommitConfigAuthor struct {
 }
 
 type GitMergePRConfig struct {
+	// If true, the pull request's source branch is deleted after the pull request has been
+	// merged. Failure to delete the branch does not fail the step; the failure is reported in
+	// the step's message instead. Default is false.
+	DeleteSourceBranch bool `json:"deleteSourceBranch,omitempty"`
 	// Skip TLS verification when interacting with the Git provider. Default is false.
 	InsecureSkipTLSVerify bool `json:"insecureSkipTLSVerify,omitempty"`
 	// The merge method to use when merging the pull request. Options are provider-specific.

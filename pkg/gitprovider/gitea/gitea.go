@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
+	"net/http"
 	"net/url"
 	"strings"
 
@@ -79,6 +80,12 @@ type giteaClient interface {
 		repo string,
 		number int64,
 		opts gitea.MergePullRequestOption,
+	) (bool, *gitea.Response, error)
+
+	DeleteRepoBranch(
+		owner string,
+		repo string,
+		branch string,
 	) (bool, *gitea.Response, error)
 }
 
@@ -344,6 +351,29 @@ func (p *provider) MergePullRequest(
 	return &pr, true, nil
 }
 
+// DeleteBranch implements gitprovider.Interface.
+func (p *provider) DeleteBranch(_ context.Context, branch string) error {
+	deleted, resp, err := p.client.DeleteRepoBranch(p.owner, p.repo, branch)
+	// A branch that is already gone is not an error. The Gitea SDK does not
+	// surface a 404 from this endpoint as an error, so the status code has to be
+	// inspected directly.
+	if resp != nil && resp.StatusCode == http.StatusNotFound {
+		return nil
+	}
+	if err != nil {
+		return fmt.Errorf("error deleting branch %q: %w", branch, err)
+	}
+	if !deleted {
+		if resp != nil {
+			return fmt.Errorf(
+				"error deleting branch %q: unexpected status %d", branch, resp.StatusCode,
+			)
+		}
+		return fmt.Errorf("error deleting branch %q", branch)
+	}
+	return nil
+}
+
 // GetCommitURL implements gitprovider.Interface.
 func (p *provider) GetCommitURL(repoURL string, sha string) (string, error) {
 	normalizedURL := urls.NormalizeGit(repoURL)
@@ -360,12 +390,15 @@ func (p *provider) GetCommitURL(repoURL string, sha string) (string, error) {
 
 func convertGiteaPR(giteaPR gitea.PullRequest) gitprovider.PullRequest {
 	pr := gitprovider.PullRequest{
-		Number:  giteaPR.Index,
-		URL:     giteaPR.HTMLURL,
-		Open:    giteaPR.State == gitea.StateOpen,
-		Merged:  giteaPR.HasMerged,
-		Object:  giteaPR,
-		HeadSHA: giteaPR.Head.Sha,
+		Number: giteaPR.Index,
+		URL:    giteaPR.HTMLURL,
+		Open:   giteaPR.State == gitea.StateOpen,
+		Merged: giteaPR.HasMerged,
+		Object: giteaPR,
+	}
+	if giteaPR.Head != nil {
+		pr.HeadSHA = giteaPR.Head.Sha
+		pr.HeadBranch = giteaPR.Head.Ref
 	}
 	if giteaPR.MergedCommitID != nil {
 		pr.MergeCommitSHA = *giteaPR.MergedCommitID

@@ -51,6 +51,20 @@ type mockClient struct {
 		body PostRepositoriesWorkspaceRepoSlugPullrequestsPullRequestIdMergeJSONRequestBody,
 		reqEditors ...RequestEditorFn,
 	) (*PostRepositoriesWorkspaceRepoSlugPullrequestsPullRequestIdMergeResponse, error)
+
+	deleteBranchFunc func(
+		ctx context.Context,
+		workspace, repoSlug, name string,
+		reqEditors ...RequestEditorFn,
+	) (*DeleteRepositoriesWorkspaceRepoSlugRefsBranchesNameResponse, error)
+}
+
+func (m *mockClient) DeleteRepositoriesWorkspaceRepoSlugRefsBranchesNameWithResponse(
+	ctx context.Context,
+	workspace, repoSlug, name string,
+	reqEditors ...RequestEditorFn,
+) (*DeleteRepositoriesWorkspaceRepoSlugRefsBranchesNameResponse, error) {
+	return m.deleteBranchFunc(ctx, workspace, repoSlug, name, reqEditors...)
 }
 
 func (m *mockClient) GetRepositoriesWorkspaceRepoSlugCommitCommitWithResponse(
@@ -1087,7 +1101,10 @@ func Test_toProviderPR(t *testing.T) {
 			"id": 1,
 			"state": "OPEN",
 			"links": {"html": {"href": "https://bitbucket.org/owner/repo/pull-requests/1"}},
-			"source": {"commit": {"hash": "abcdef1234567890"}},
+			"source": {
+				"commit": {"hash": "abcdef1234567890"},
+				"branch": {"name": "feature"}
+			},
 			"created_on": "2023-01-01T12:00:00Z",
 			"type": "pullrequest"
 		}`)
@@ -1096,6 +1113,7 @@ func Test_toProviderPR(t *testing.T) {
 		assert.Equal(t, int64(1), pr.Number)
 		assert.Equal(t, "https://bitbucket.org/owner/repo/pull-requests/1", pr.URL)
 		assert.Equal(t, "abcdef1234567890", pr.HeadSHA)
+		assert.Equal(t, "feature", pr.HeadBranch)
 		assert.True(t, pr.Open)
 		assert.False(t, pr.Merged)
 		assert.NotNil(t, pr.CreatedAt)
@@ -1162,6 +1180,80 @@ func TestGetCommitURL(t *testing.T) {
 			commitURL, err := p.GetCommitURL(tc.repoURL, tc.sha)
 			require.NoError(t, err)
 			require.Equal(t, tc.expectedCommitURL, commitURL)
+		})
+	}
+}
+
+func TestDeleteBranch(t *testing.T) {
+	const (
+		testWorkspace = "owner"
+		testRepoSlug  = "repo"
+		testBranch    = "kargo/promotion/test"
+	)
+
+	deleteResp := func(status int) *DeleteRepositoriesWorkspaceRepoSlugRefsBranchesNameResponse {
+		return &DeleteRepositoriesWorkspaceRepoSlugRefsBranchesNameResponse{
+			HTTPResponse: &http.Response{StatusCode: status},
+		}
+	}
+
+	testCases := []struct {
+		name   string
+		resp   *DeleteRepositoriesWorkspaceRepoSlugRefsBranchesNameResponse
+		err    error
+		assert func(*testing.T, error)
+	}{
+		{
+			name: "branch deleted",
+			resp: deleteResp(http.StatusNoContent),
+			assert: func(t *testing.T, err error) {
+				require.NoError(t, err)
+			},
+		},
+		{
+			name: "branch not found",
+			resp: deleteResp(http.StatusNotFound),
+			assert: func(t *testing.T, err error) {
+				require.NoError(t, err)
+			},
+		},
+		{
+			name: "forbidden",
+			resp: deleteResp(http.StatusForbidden),
+			assert: func(t *testing.T, err error) {
+				require.ErrorContains(t, err, "unexpected response 403")
+			},
+		},
+		{
+			name: "transport error",
+			err:  errors.New("network down"),
+			assert: func(t *testing.T, err error) {
+				require.ErrorContains(t, err, "error deleting branch")
+				require.ErrorContains(t, err, "network down")
+			},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			mc := &mockClient{
+				deleteBranchFunc: func(
+					_ context.Context,
+					workspace, repoSlug, name string,
+					_ ...RequestEditorFn,
+				) (*DeleteRepositoriesWorkspaceRepoSlugRefsBranchesNameResponse, error) {
+					require.Equal(t, testWorkspace, workspace)
+					require.Equal(t, testRepoSlug, repoSlug)
+					require.Equal(t, testBranch, name)
+					return testCase.resp, testCase.err
+				},
+			}
+			p := &provider{
+				owner:    testWorkspace,
+				repoSlug: testRepoSlug,
+				client:   mc,
+			}
+			err := p.DeleteBranch(t.Context(), testBranch)
+			testCase.assert(t, err)
 		})
 	}
 }

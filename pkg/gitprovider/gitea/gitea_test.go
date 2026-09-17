@@ -2,6 +2,7 @@ package gitea
 
 import (
 	"errors"
+	"net/http"
 	"testing"
 	"time"
 
@@ -174,6 +175,16 @@ func (m *mockGiteaClient) MergePullRequest(
 	opts gitea.MergePullRequestOption,
 ) (bool, *gitea.Response, error) {
 	args := m.Called(owner, repo, number, opts)
+	resp, _ := args.Get(1).(*gitea.Response)
+	return args.Bool(0), resp, args.Error(2)
+}
+
+func (m *mockGiteaClient) DeleteRepoBranch(
+	owner string,
+	repo string,
+	branch string,
+) (bool, *gitea.Response, error) {
+	args := m.Called(owner, repo, branch)
 	resp, _ := args.Get(1).(*gitea.Response)
 	return args.Bool(0), resp, args.Error(2)
 }
@@ -467,6 +478,7 @@ func TestGetPullRequest(t *testing.T) {
 				State: gitea.StateOpen,
 				Head: &gitea.PRBranchInfo{
 					Sha: "HeadSha",
+					Ref: "feature",
 				},
 				Base: &gitea.PRBranchInfo{
 					Sha: "BaseSha",
@@ -499,6 +511,7 @@ func TestGetPullRequest(t *testing.T) {
 	require.Equal(t, mockClient.pr.Base.Sha, pr.MergeCommitSHA)
 	require.Equal(t, mockClient.pr.HTMLURL, pr.URL)
 	require.True(t, pr.Open)
+	require.Equal(t, "feature", pr.HeadBranch)
 }
 
 func TestListPullRequests(t *testing.T) {
@@ -867,6 +880,74 @@ func TestGetCommitURL(t *testing.T) {
 			commitURL, err := prov.GetCommitURL(testCase.repoURL, testCase.sha)
 			require.NoError(t, err)
 			require.Equal(t, testCase.expectedCommitURL, commitURL)
+		})
+	}
+}
+
+func TestDeleteBranch(t *testing.T) {
+	const testBranch = "kargo/promotion/test"
+
+	giteaResp := func(status int) *gitea.Response {
+		return &gitea.Response{Response: &http.Response{StatusCode: status}}
+	}
+
+	testCases := []struct {
+		name    string
+		deleted bool
+		resp    *gitea.Response
+		err     error
+		assert  func(*testing.T, error)
+	}{
+		{
+			name:    "branch deleted",
+			deleted: true,
+			resp:    giteaResp(http.StatusNoContent),
+			assert: func(t *testing.T, err error) {
+				require.NoError(t, err)
+			},
+		},
+		{
+			name: "branch not found",
+			resp: giteaResp(http.StatusNotFound),
+			assert: func(t *testing.T, err error) {
+				require.NoError(t, err)
+			},
+		},
+		{
+			name: "not deleted with unexpected status",
+			resp: giteaResp(http.StatusForbidden),
+			assert: func(t *testing.T, err error) {
+				require.ErrorContains(t, err, "unexpected status 403")
+			},
+		},
+		{
+			name: "not deleted without response",
+			assert: func(t *testing.T, err error) {
+				require.ErrorContains(t, err, "error deleting branch")
+			},
+		},
+		{
+			name: "error",
+			err:  errors.New("network down"),
+			assert: func(t *testing.T, err error) {
+				require.ErrorContains(t, err, "network down")
+			},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			mockClient := &mockGiteaClient{}
+			mockClient.
+				On("DeleteRepoBranch", testRepoOwner, testRepoName, testBranch).
+				Return(testCase.deleted, testCase.resp, testCase.err)
+			p := provider{
+				owner:  testRepoOwner,
+				repo:   testRepoName,
+				client: mockClient,
+			}
+			err := p.DeleteBranch(t.Context(), testBranch)
+			mockClient.AssertExpectations(t)
+			testCase.assert(t, err)
 		})
 	}
 }
