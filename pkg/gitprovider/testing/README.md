@@ -11,8 +11,7 @@ Each provider has its own `pr_integration_test.go` (build tag
 
 ## What is covered
 
-GitHub, GitLab, and Gitea each have two live tests; Azure has only the first,
-since it does not implement `DeleteBranch`:
+Each provider has two live tests:
 
 - `TestCreateAndMergePullRequest` opens a PR, merges it with each supported
   merge method, and checks the merge commit's parent count.
@@ -128,5 +127,5 @@ wants several GB of memory. Create a root personal access token with
 `gitlab-rails runner` and a project through `/api/v4/projects`, then point
 `TEST_GITLAB_REPO_URL` at `http://gitlab-test/root/<project>`.
 
-Azure DevOps has no self-hosted equivalent with the same API, so its test needs
-a real organization and token. Bitbucket Cloud has no live test at all.
+Azure DevOps and Bitbucket Cloud have no self-hosted equivalent with the same
+API, so those tests need a real account.

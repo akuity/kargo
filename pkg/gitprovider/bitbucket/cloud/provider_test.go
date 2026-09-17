@@ -51,6 +51,20 @@ type mockClient struct {
 		body PostRepositoriesWorkspaceRepoSlugPullrequestsPullRequestIdMergeJSONRequestBody,
 		reqEditors ...RequestEditorFn,
 	) (*PostRepositoriesWorkspaceRepoSlugPullrequestsPullRequestIdMergeResponse, error)
+
+	deleteBranchFunc func(
+		ctx context.Context,
+		workspace, repoSlug, name string,
+		reqEditors ...RequestEditorFn,
+	) (*DeleteRepositoriesWorkspaceRepoSlugRefsBranchesNameResponse, error)
+}
+
+func (m *mockClient) DeleteRepositoriesWorkspaceRepoSlugRefsBranchesNameWithResponse(
+	ctx context.Context,
+	workspace, repoSlug, name string,
+	reqEditors ...RequestEditorFn,
+) (*DeleteRepositoriesWorkspaceRepoSlugRefsBranchesNameResponse, error) {
+	return m.deleteBranchFunc(ctx, workspace, repoSlug, name, reqEditors...)
 }
 
 func (m *mockClient) GetRepositoriesWorkspaceRepoSlugCommitCommitWithResponse(
@@ -1171,7 +1185,75 @@ func TestGetCommitURL(t *testing.T) {
 }
 
 func TestDeleteBranch(t *testing.T) {
-	p := &provider{owner: "owner", repoSlug: "repo", client: &mockClient{}}
-	err := p.DeleteBranch(t.Context(), "kargo/promotion/test")
-	require.ErrorIs(t, err, gitprovider.ErrDeleteBranchNotSupported)
+	const (
+		testWorkspace = "owner"
+		testRepoSlug  = "repo"
+		testBranch    = "kargo/promotion/test"
+	)
+
+	deleteResp := func(status int) *DeleteRepositoriesWorkspaceRepoSlugRefsBranchesNameResponse {
+		return &DeleteRepositoriesWorkspaceRepoSlugRefsBranchesNameResponse{
+			HTTPResponse: &http.Response{StatusCode: status},
+		}
+	}
+
+	testCases := []struct {
+		name   string
+		resp   *DeleteRepositoriesWorkspaceRepoSlugRefsBranchesNameResponse
+		err    error
+		assert func(*testing.T, error)
+	}{
+		{
+			name: "branch deleted",
+			resp: deleteResp(http.StatusNoContent),
+			assert: func(t *testing.T, err error) {
+				require.NoError(t, err)
+			},
+		},
+		{
+			name: "branch not found",
+			resp: deleteResp(http.StatusNotFound),
+			assert: func(t *testing.T, err error) {
+				require.NoError(t, err)
+			},
+		},
+		{
+			name: "forbidden",
+			resp: deleteResp(http.StatusForbidden),
+			assert: func(t *testing.T, err error) {
+				require.ErrorContains(t, err, "unexpected response 403")
+			},
+		},
+		{
+			name: "transport error",
+			err:  errors.New("network down"),
+			assert: func(t *testing.T, err error) {
+				require.ErrorContains(t, err, "error deleting branch")
+				require.ErrorContains(t, err, "network down")
+			},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			mc := &mockClient{
+				deleteBranchFunc: func(
+					_ context.Context,
+					workspace, repoSlug, name string,
+					_ ...RequestEditorFn,
+				) (*DeleteRepositoriesWorkspaceRepoSlugRefsBranchesNameResponse, error) {
+					require.Equal(t, testWorkspace, workspace)
+					require.Equal(t, testRepoSlug, repoSlug)
+					require.Equal(t, testBranch, name)
+					return testCase.resp, testCase.err
+				},
+			}
+			p := &provider{
+				owner:    testWorkspace,
+				repoSlug: testRepoSlug,
+				client:   mc,
+			}
+			err := p.DeleteBranch(t.Context(), testBranch)
+			testCase.assert(t, err)
+		})
+	}
 }

@@ -2,14 +2,7 @@ package gitprovider
 
 import (
 	"context"
-	"errors"
 	"time"
-)
-
-// ErrDeleteBranchNotSupported is returned by DeleteBranch for providers that
-// do not implement branch deletion.
-var ErrDeleteBranchNotSupported = errors.New(
-	"branch deletion is not supported for this git provider",
 )
 
 // PullRequestState represents the state of a pull request. e.g. Closed, Open,
@@ -68,8 +61,7 @@ type Interface interface {
 
 	// DeleteBranch deletes the named branch from the repository. Deleting a
 	// branch that does not exist is not an error, so that callers may safely
-	// retry. Providers that do not implement branch deletion return
-	// ErrDeleteBranchNotSupported.
+	// retry.
 	DeleteBranch(context.Context, string) error
 
 	// GetCommitURL returns a commit URL inferred from the provided repository URL
