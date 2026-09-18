@@ -186,8 +186,7 @@ type GitClearConfig struct {
 
 type GitCloneConfig struct {
 	// Default authorship information for any commits made to the cloned repository. If
-	// provided, this overrides any system-level defaults. Note: Configuration of the
-	// `git-commit` and `git-tag` steps can override this information.
+	// provided, this overrides any system-level defaults.
 	Author *Author `json:"author,omitempty"`
 	// Indicates whether to perform a blobless (--filter=blob:none) clone. Default is false.
 	Blobless bool `json:"blobless,omitempty"`
@@ -206,8 +205,7 @@ type GitCloneConfig struct {
 }
 
 // Default authorship information for any commits made to the cloned repository. If
-// provided, this overrides any system-level defaults. Note: Configuration of the
-// `git-commit` and `git-tag` steps can override this information.
+// provided, this overrides any system-level defaults.
 type Author struct {
 	// The email of the author.
 	Email string `json:"email"`
