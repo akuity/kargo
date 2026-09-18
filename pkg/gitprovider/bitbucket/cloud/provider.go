@@ -375,6 +375,29 @@ func (p *provider) MergePullRequest(
 	return toProviderPR(mergedPR), true, nil
 }
 
+// DeleteBranch implements gitprovider.Interface.
+func (p *provider) DeleteBranch(ctx context.Context, branch string) error {
+	resp, err := p.client.DeleteRepositoriesWorkspaceRepoSlugRefsBranchesNameWithResponse(
+		ctx,
+		p.owner,
+		p.repoSlug,
+		branch,
+	)
+	if err != nil {
+		return fmt.Errorf("error deleting branch %q: %w", branch, err)
+	}
+	switch resp.StatusCode() {
+	case http.StatusNoContent:
+		return nil
+	case http.StatusNotFound:
+		// A branch that is already gone is not an error.
+		return nil
+	}
+	return fmt.Errorf(
+		"error deleting branch %q: unexpected response %d", branch, resp.StatusCode(),
+	)
+}
+
 // GetCommitURL implements gitprovider.Interface.
 func (p *provider) GetCommitURL(repoURL string, sha string) (string, error) {
 	normalizedURL := urls.NormalizeGit(repoURL)
@@ -429,9 +452,14 @@ func toProviderPR(pr *Pullrequest) *gitprovider.PullRequest {
 		prURL = *pr.Links.Html.Href
 	}
 
-	var headSHA string
-	if pr.Source != nil && pr.Source.Commit != nil && pr.Source.Commit.Hash != nil {
-		headSHA = *pr.Source.Commit.Hash
+	var headSHA, headBranch string
+	if pr.Source != nil {
+		if pr.Source.Commit != nil && pr.Source.Commit.Hash != nil {
+			headSHA = *pr.Source.Commit.Hash
+		}
+		if pr.Source.Branch != nil && pr.Source.Branch.Name != nil {
+			headBranch = *pr.Source.Branch.Name
+		}
 	}
 
 	var mergeCommitSHA string
@@ -449,6 +477,7 @@ func toProviderPR(pr *Pullrequest) *gitprovider.PullRequest {
 		// commit SHA, we need to fetch the commit details separately.
 		MergeCommitSHA: mergeCommitSHA,
 		HeadSHA:        headSHA,
+		HeadBranch:     headBranch,
 		CreatedAt:      pr.CreatedOn,
 		Object:         pr,
 	}

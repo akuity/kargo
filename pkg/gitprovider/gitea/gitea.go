@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
+	"net/http"
 	"net/url"
 	"strings"
 
@@ -80,6 +81,18 @@ type giteaClient interface {
 		number int64,
 		opts gitea.MergePullRequestOption,
 	) (bool, *gitea.Response, error)
+
+	DeleteRepoBranch(
+		owner string,
+		repo string,
+		branch string,
+	) (bool, *gitea.Response, error)
+
+	GetRepoBranch(
+		owner string,
+		repo string,
+		branch string,
+	) (*gitea.Branch, *gitea.Response, error)
 }
 
 // provider is a Gitea implementation of gitprovider.Interface.
@@ -344,6 +357,35 @@ func (p *provider) MergePullRequest(
 	return &pr, true, nil
 }
 
+// DeleteBranch implements gitprovider.Interface.
+func (p *provider) DeleteBranch(_ context.Context, branch string) error {
+	// Gitea answers a delete for a branch that does not exist with a 500 whose
+	// only distinguishing detail is a message the SDK discards, and a blanket
+	// 500 is far too broad to treat as success. Look the branch up first
+	// instead, and treat its absence as the desired end state. A branch that
+	// disappears between the two calls surfaces as an ordinary error, which the
+	// caller does not fail the step over.
+	if _, resp, err := p.client.GetRepoBranch(p.owner, p.repo, branch); err != nil {
+		if resp != nil && resp.StatusCode == http.StatusNotFound {
+			return nil
+		}
+		return fmt.Errorf("error getting branch %q: %w", branch, err)
+	}
+	deleted, resp, err := p.client.DeleteRepoBranch(p.owner, p.repo, branch)
+	if err != nil {
+		return fmt.Errorf("error deleting branch %q: %w", branch, err)
+	}
+	if !deleted {
+		if resp != nil {
+			return fmt.Errorf(
+				"error deleting branch %q: unexpected status %d", branch, resp.StatusCode,
+			)
+		}
+		return fmt.Errorf("error deleting branch %q", branch)
+	}
+	return nil
+}
+
 // GetCommitURL implements gitprovider.Interface.
 func (p *provider) GetCommitURL(repoURL string, sha string) (string, error) {
 	normalizedURL := urls.NormalizeGit(repoURL)
@@ -360,12 +402,15 @@ func (p *provider) GetCommitURL(repoURL string, sha string) (string, error) {
 
 func convertGiteaPR(giteaPR gitea.PullRequest) gitprovider.PullRequest {
 	pr := gitprovider.PullRequest{
-		Number:  giteaPR.Index,
-		URL:     giteaPR.HTMLURL,
-		Open:    giteaPR.State == gitea.StateOpen,
-		Merged:  giteaPR.HasMerged,
-		Object:  giteaPR,
-		HeadSHA: giteaPR.Head.Sha,
+		Number: giteaPR.Index,
+		URL:    giteaPR.HTMLURL,
+		Open:   giteaPR.State == gitea.StateOpen,
+		Merged: giteaPR.HasMerged,
+		Object: giteaPR,
+	}
+	if giteaPR.Head != nil {
+		pr.HeadSHA = giteaPR.Head.Sha
+		pr.HeadBranch = giteaPR.Head.Ref
 	}
 	if giteaPR.MergedCommitID != nil {
 		pr.MergeCommitSHA = *giteaPR.MergedCommitID

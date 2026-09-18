@@ -244,7 +244,19 @@ func TestCreatePullRequestWithLabels(t *testing.T) {
 		"Expected PR number in returned object to match what was returned by GitHub")
 	require.Equal(t, *mockClient.pr.MergeCommitSHA, pr.MergeCommitSHA)
 	require.Equal(t, *mockClient.pr.URL, pr.URL)
+	require.Equal(t, "feature-branch", pr.HeadBranch)
 	require.True(t, pr.Open)
+}
+
+func (m *mockGithubClient) DeleteRef(
+	ctx context.Context,
+	owner string,
+	repo string,
+	ref string,
+) (*github.Response, error) {
+	args := m.Called(ctx, owner, repo, ref)
+	resp, _ := args.Get(0).(*github.Response)
+	return resp, args.Error(1)
 }
 
 func TestGetPullRequest(t *testing.T) {
@@ -292,6 +304,7 @@ func TestGetPullRequest(t *testing.T) {
 		"Expected PR number in returned object to match what was returned by GitHub")
 	require.Equal(t, *mockClient.pr.MergeCommitSHA, pr.MergeCommitSHA)
 	require.Equal(t, *mockClient.pr.URL, pr.URL)
+	require.Equal(t, "head", pr.HeadBranch)
 	require.True(t, pr.Open)
 }
 
@@ -1127,6 +1140,83 @@ func TestGetCommitURL(t *testing.T) {
 			commitURL, err := prov.GetCommitURL(testCase.repoURL, testCase.sha)
 			require.NoError(t, err)
 			require.Equal(t, testCase.expectedCommitURL, commitURL)
+		})
+	}
+}
+
+func TestDeleteBranch(t *testing.T) {
+	const testBranch = "kargo/promotion/test"
+	const testRef = "heads/" + testBranch
+
+	ghErr := func(status int, msg string) *github.ErrorResponse {
+		return &github.ErrorResponse{
+			Response: &http.Response{StatusCode: status},
+			Message:  msg,
+		}
+	}
+
+	testCases := []struct {
+		name      string
+		deleteErr error
+		assert    func(*testing.T, error)
+	}{
+		{
+			name: "branch deleted",
+			assert: func(t *testing.T, err error) {
+				require.NoError(t, err)
+			},
+		},
+		{
+			name:      "branch not found (404)",
+			deleteErr: ghErr(http.StatusNotFound, "Not Found"),
+			assert: func(t *testing.T, err error) {
+				require.NoError(t, err)
+			},
+		},
+		{
+			name:      "branch not found (422)",
+			deleteErr: ghErr(http.StatusUnprocessableEntity, "Reference does not exist"),
+			assert: func(t *testing.T, err error) {
+				require.NoError(t, err)
+			},
+		},
+		{
+			name:      "other 422",
+			deleteErr: ghErr(http.StatusUnprocessableEntity, "Cannot delete a protected branch"),
+			assert: func(t *testing.T, err error) {
+				require.ErrorContains(t, err, "error deleting branch")
+				require.ErrorContains(t, err, "protected")
+			},
+		},
+		{
+			name:      "forbidden",
+			deleteErr: ghErr(http.StatusForbidden, "Resource not accessible by integration"),
+			assert: func(t *testing.T, err error) {
+				require.ErrorContains(t, err, "error deleting branch")
+			},
+		},
+		{
+			name:      "non-GitHub error",
+			deleteErr: errors.New("network down"),
+			assert: func(t *testing.T, err error) {
+				require.ErrorContains(t, err, "network down")
+			},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			mockClient := &mockGithubClient{}
+			mockClient.
+				On("DeleteRef", t.Context(), testRepoOwner, testRepoName, testRef).
+				Return(nil, testCase.deleteErr)
+			p := provider{
+				owner:  testRepoOwner,
+				repo:   testRepoName,
+				client: mockClient,
+			}
+			err := p.DeleteBranch(t.Context(), testBranch)
+			mockClient.AssertExpectations(t)
+			testCase.assert(t, err)
 		})
 	}
 }
