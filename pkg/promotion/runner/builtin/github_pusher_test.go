@@ -24,6 +24,11 @@ import (
 	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
 )
 
+func Test_githubPusherConfigFromEnv(t *testing.T) {
+	cfg := githubPusherConfigFromEnv()
+	require.Equal(t, git.PushIntegrationPolicyRebaseOrMerge, cfg.PushIntegrationPolicy)
+}
+
 func Test_githubPusher_convert(t *testing.T) {
 	testCases := []validationTestCase{
 		{
