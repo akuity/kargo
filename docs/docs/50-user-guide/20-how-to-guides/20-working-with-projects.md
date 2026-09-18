@@ -53,9 +53,11 @@ A `ProjectConfig` resource defines project-level configuration for an associated
 `Project`. This includes
 [promotion policies](#promotion-policies)
 that describe which `Stage`s are eligible for automatic promotion of newly
-available `Freight`, as well as
+available `Freight`,
 [auto-rollback](#auto-rollback) configuration for automatically reverting a
-`Stage` to a previously verified `Freight` when verification fails.
+`Stage` to a previously verified `Freight` when verification fails, and
+[promotion windows](#promotion-windows) that gate _when_ promotions may be
+created.
 
 The `ProjectConfig` resource must have the same name as its associated `Project`
 and be created in the `Namespace` of the `Project`. This separation of
@@ -415,6 +417,43 @@ whichever comes first.
 - **No stable Freight:** If a `Stage` has never successfully verified any
   `Freight`, there is nothing to roll back to and no rollback `Promotion` is
   created.
+
+### Promotion Windows
+
+<span class="tag professional"></span>
+<span class="tag beta"></span>
+
+A `ProjectConfig` can define `promotionWindows` that gate _when_ `Promotion`s
+may be created for the Project's `Stage`s. A window is either an **allow**
+window (promotions are permitted only while it is active) or a **deny** window,
+i.e. a _freeze_ (promotions are forbidden while it is active). Windows can be
+one-shot or recurring, and can target specific `Stage`s with a `stageSelector`
+using the same exact names, patterns, and label selectors described in
+[Advanced Promotion Policies with Selectors](#advanced-promotion-policies-with-selectors).
+
+```yaml
+apiVersion: kargo.akuity.io/v1alpha1
+kind: ProjectConfig
+metadata:
+  name: my-project
+  namespace: my-project
+spec:
+  promotionWindows:
+  - name: prod-business-hours
+    kind: Allow
+    stageSelector:
+      name: prod
+    rrule: FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR
+    dtstart: "TZID=America/New_York:20260105T090000"
+    dtend: "TZID=America/New_York:20260105T170000"
+```
+
+Windows can also be configured cluster-wide on
+[`ClusterConfig`](../../40-operator-guide/35-cluster-configuration.md#promotion-windows);
+a `Stage`'s effective schedule is the union of all matching windows from both.
+For the full field reference, scheduling syntax, allow/deny precedence, and the
+`Stage` status Kargo publishes for a freeze, see the
+[Promotion Windows](./45-promotion-windows.md) guide.
 
 ### Message Channels
 
