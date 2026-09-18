@@ -437,36 +437,38 @@ resources namespace**. These changes are summarized here.
 
 **Automatic Migration:**
 
-Kargo versions **v1.9.0 through v1.11.x** will automatically and continuously
-perform a one-way sync of `Secret` resources from their old locations to their
-new locations, with a few exceptions:
+Kargo versions **v1.9.0 through v1.11.x** automatically and continuously
+performed a one-way sync of `Secret` resources from their old locations to
+their new locations, with a few exceptions:
 
 * If the old `controller.globalCredentials.namespaces` setting was empty (as it
-  had no default values(s)), there will be no `Secret` resources in need of
+  had no default value(s)), there were no `Secret` resources in need of
   migration to the namespace specified by the new
   `global.sharedResources.namespace`.
 
 * Due to the potential for name conflicts if Kargo were to attempt consolidating
   resources from multiple namespaces into a single namespace, a chart upgrade to
-  v1.9.0 through v1.11.0 will **fail** if the old
+  v1.9.0 through v1.11.0 failed if the old
   `controller.globalCredentials.namespaces` setting specified _multiple
-  namespaces_. In this case (believed to be an outlier), the operator will need
-  to migrate affected resources manually.
+  namespaces_. In this case (believed to be an outlier), the operator needed to
+  migrate affected resources manually.
 
-* If the value of the new `global.sharedResources.namespace` matches the value
+* If the value of the new `global.sharedResources.namespace` matched the value
   of the old `controller.globalCredentials.namespaces[0]` setting, no migration
-  of shared `Secret` resources will be necessary.
+  of shared `Secret` resources was necessary.
 
-* If the value of the new `global.systemResources.namespace` matches the value
+* If the value of the new `global.systemResources.namespace` matched the value
   of the old `global.clusterSecretsNamespace` setting, no migration of system
-  `Secret` resources will be necessary.
+  `Secret` resources was necessary.
 
-Kargo v1.12.0 will remove the automatic migration and upgrades to that version
-or greater will **fail** if values are detected for any of the old settings.
+As of Kargo v1.12.0, the automatic migration has been removed. Upgrading to
+v1.12.0 or later will **fail** if values are detected for either of the old
+settings.
 
 **Sync Behavior:**
 
-The automatic sync from old to new locations works as follows:
+The automatic sync from old to new locations (in Kargo v1.9.0 through v1.11.x)
+worked as follows:
 
 * **Unmodified secrets:** If a `Secret` in the new location has not been
   modified since it was synced, updates from the old location will continue to
@@ -491,30 +493,12 @@ The automatic sync from old to new locations works as follows:
 
 * New installations of Kargo need not be concerned with any of this.
 
-* If you are upgrading:
-
-  * If you manually manage credentials using the Kargo UI, everything will just
-    work. Post upgrade, `Secret`s will automatically sync from their old
-    locations to their new locations. Kargo will use and manage `Secret`s in
-    their new locations. Any modifications you make via the UI to secrets in the
-    new location will be preserved and not overwritten by subsequent syncs. When
-    you are ready, you may delete the old namespaces using `kubectl` -- all
-    secrets in the new locations will be preserved.
-
-  * If you are a more advanced operator who GitOps'es your `Secret`s, you do
-    not need to act with any urgency.
-
-    If you initially do nothing, `Secret`s will continue to be synced from your
-    GitOps repository to their original locations. Kargo will sync those
-    `Secret`s to their new locations. Everything will behave as it should.
-
-    You will have until Kargo v1.12.0 to update Kargo `Secret` manifests in your
-    GitOps repository to reference their new namespaces. Depending on the
-    configuration of the GitOps agent managing Kargo (e.g. Argo CD), `Secret`s
-    may automatically be pruned from their old locations. If not, then with due
-    caution, you may manually delete the old namespaces using `kubectl`.
-
-    Summarizing the above, no matter what you do, things should continue working
-    until upgrading to v1.12.0 and this should afford operators sufficient time
-    to make the very minimal changes required to keep things running smoothly in
-    v1.12.0 and beyond.
+* If you are still running Kargo v1.9.0 through v1.11.x with either
+  `controller.globalCredentials.namespaces` or `global.clusterSecretsNamespace`
+  defined, your `Secret`s have already been automatically synced to their new
+  locations (`global.sharedResources.namespace` and
+  `global.systemResources.namespace`, respectively). Before upgrading to
+  v1.12.0 or later, remove both settings from your values -- the chart will
+  refuse to upgrade otherwise -- and, if you GitOps your `Secret`s, update
+  your manifests to reference the new namespaces. You may then safely delete
+  the old namespaces using `kubectl`.
