@@ -32,6 +32,7 @@ type digestSelector struct {
 
 func newDigestSelector(
 	sub kargoapi.ImageSubscription,
+	_ int,
 	creds *Credentials,
 ) (Selector, error) {
 	base, err := newBaseSelector(
