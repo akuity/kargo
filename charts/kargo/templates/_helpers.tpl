@@ -7,6 +7,24 @@ Expand the name of the chart.
 {{- end -}}
 
 {{/*
+kargo.validateNoLegacySecretNamespaces fails the render if either
+global.clusterSecretsNamespace or controller.globalCredentials.namespaces
+remains set. Both were replaced by global.systemResources.namespace and
+global.sharedResources.namespace, respectively, as of v1.9.0. The automatic
+Secret migration that bridged the old and new settings was removed in
+v1.12.0, so upgrading with either legacy setting still defined is no longer
+safe.
+*/}}
+{{- define "kargo.validateNoLegacySecretNamespaces" -}}
+{{- if dig "clusterSecretsNamespace" "" .Values.global }}
+{{- fail "global.clusterSecretsNamespace is no longer supported as of v1.12.0. Secrets have already been migrated to global.systemResources.namespace; remove this setting from your values." }}
+{{- end }}
+{{- if dig "globalCredentials" "namespaces" list .Values.controller }}
+{{- fail "controller.globalCredentials.namespaces is no longer supported as of v1.12.0. Secrets have already been migrated to global.sharedResources.namespace; remove this setting from your values." }}
+{{- end }}
+{{- end -}}
+
+{{/*
 kargo.controller.suffix returns `-<controller.id>` when controller.id is set,
 empty otherwise.
 */}}
