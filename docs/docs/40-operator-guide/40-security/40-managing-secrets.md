@@ -437,7 +437,7 @@ resources namespace**. These changes are summarized here.
 
 **Automatic Migration:**
 
-Kargo versions **v1.9.0 through v1.11.x** will automatically and continuously
+Kargo versions **v1.9.0 through v1.12.x** will automatically and continuously
 perform a one-way sync of `Secret` resources from their old locations to their
 new locations, with a few exceptions:
 
@@ -448,7 +448,7 @@ new locations, with a few exceptions:
 
 * Due to the potential for name conflicts if Kargo were to attempt consolidating
   resources from multiple namespaces into a single namespace, a chart upgrade to
-  v1.9.0 through v1.11.0 will **fail** if the old
+  v1.9.0 through v1.12.0 will **fail** if the old
   `controller.globalCredentials.namespaces` setting specified _multiple
   namespaces_. In this case (believed to be an outlier), the operator will need
   to migrate affected resources manually.
@@ -461,7 +461,7 @@ new locations, with a few exceptions:
   of the old `global.clusterSecretsNamespace` setting, no migration of system
   `Secret` resources will be necessary.
 
-Kargo v1.12.0 will remove the automatic migration and upgrades to that version
+Kargo v1.13.0 will remove the automatic migration and upgrades to that version
 or greater will **fail** if values are detected for any of the old settings.
 
 **Sync Behavior:**
@@ -508,13 +508,13 @@ The automatic sync from old to new locations works as follows:
     GitOps repository to their original locations. Kargo will sync those
     `Secret`s to their new locations. Everything will behave as it should.
 
-    You will have until Kargo v1.12.0 to update Kargo `Secret` manifests in your
+    You will have until Kargo v1.13.0 to update Kargo `Secret` manifests in your
     GitOps repository to reference their new namespaces. Depending on the
     configuration of the GitOps agent managing Kargo (e.g. Argo CD), `Secret`s
     may automatically be pruned from their old locations. If not, then with due
     caution, you may manually delete the old namespaces using `kubectl`.
 
     Summarizing the above, no matter what you do, things should continue working
-    until upgrading to v1.12.0 and this should afford operators sufficient time
+    until upgrading to v1.13.0 and this should afford operators sufficient time
     to make the very minimal changes required to keep things running smoothly in
-    v1.12.0 and beyond.
+    v1.13.0 and beyond.

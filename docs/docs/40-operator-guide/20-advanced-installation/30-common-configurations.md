@@ -378,7 +378,7 @@ Four options are available, forming a spectrum from least to most conservative:
 
 The current default is `AlwaysRebase`.
 
-Starting with v1.12.0, the default will change to `RebaseOrMerge`. If you rely
+Starting with v1.13.0, the default will change to `RebaseOrMerge`. If you rely
 on the current behavior, set the policy explicitly before upgrading.
 
 :::

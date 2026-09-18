@@ -36,7 +36,7 @@ policies are:
 
 The current default policy is `AlwaysRebase`.
 
-Starting with v1.12.0, the default will change to `RebaseOrMerge`.
+Starting with v1.13.0, the default will change to `RebaseOrMerge`.
 
 :::
 

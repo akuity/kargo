@@ -93,7 +93,7 @@ Prior to `v1.9`, `Secret`s referenced by `ClusterConfig` were contained in the n
 
 Kargo v1.9.0 changed the name of the setting to `global.systemResources.namespace` and its default value to `kargo-system-resources` to better reflect the intent to use the namespace not only for `Secret`s, but for _all_ types of namespaced resources that lack a cluster-scoped analog.
 
-Kargo versions >= v1.9.0 and < v1.12.0 will automatically sync `Secret`s from the namespace specified by `global.clusterSecretsNamespace` to the namespace specified by `global.clusterSecretsNamespace` (if they are different). That migration utility will be removed from v1.12.0, by which time operators who GitOps their `ClusterConfig` will need to have updated their manifests accordingly. Upgrades to v1.12.0 will **fail** if `global.clusterSecretsNamespace` remains defined.
+Kargo versions >= v1.9.0 and < v1.13.0 will automatically sync `Secret`s from the namespace specified by `global.clusterSecretsNamespace` to the namespace specified by `global.systemResources.namespace` (if they are different). That migration utility will be removed from v1.13.0, by which time operators who GitOps their `ClusterConfig` will need to have updated their manifests accordingly. Upgrades to v1.13.0 will **fail** if `global.clusterSecretsNamespace` remains defined.
 
 :::
 

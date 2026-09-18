@@ -35,17 +35,22 @@ The following deprecated features are scheduled for **removal** in v1.12.0:
 
 * The deprecated ConnectRPC (gRPC) API, in favor of the REST API.
 * The `createTargetBranch` option in the `git-open-pr` promotion step.
-* The `author` configuration block on the `git-commit` promotion step. Use
-  `git-clone` instead.
-* The default `git-push` integration policy changes from `AlwaysRebase` to
-  `RebaseOrMerge`. Set the policy explicitly if you rely on unconditional
-  rebase behavior.
 
 ## Upcoming
 
 ### v1.13.0
 
-Details TBA
+The following deprecated features are scheduled for **removal** in v1.13.0:
+
+* The `author` configuration block on the `git-commit` promotion step. Use
+  `git-clone` instead.
+* The default `git-push` integration policy changes from `AlwaysRebase` to
+  `RebaseOrMerge`. Set the policy explicitly if you rely on unconditional
+  rebase behavior.
+* The `global.clusterSecretsNamespace` and `controller.globalCredentials.namespaces`
+  Helm chart settings, along with the automatic `Secret` migration utility
+  that bridges them to their replacements (`global.systemResources.namespace`
+  and `global.sharedResources.namespace`, respectively).
 
 ## Completed
 

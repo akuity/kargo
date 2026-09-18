@@ -54,7 +54,7 @@ policies are:
 For parity with the `git-push` step, for which this step is a drop-in
 replacement, the current default policy is `AlwaysRebase`.
 
-Starting with v1.12.0, the default will change to `RebaseOrMerge` for both
+Starting with v1.13.0, the default will change to `RebaseOrMerge` for both
 steps.
 
 :::
