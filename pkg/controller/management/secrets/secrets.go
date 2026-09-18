@@ -45,7 +45,7 @@ type ReconcilerConfig struct {
 //     "shared resources namespace" with a default value of
 //     "kargo-shared-resources".
 //
-// TODO(krancour): Remove this reconciler in v1.12.0. By that time, affected
+// TODO(krancour): Remove this reconciler in v1.13.0. By that time, affected
 // users are expected to have made any necessary configuration to obviate the
 // need for this reconciler.
 type reconciler struct {
