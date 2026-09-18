@@ -374,6 +374,8 @@ Four options are available, forming a spectrum from least to most conservative:
   changes. This is the most conservative option — it never touches existing
   commits and always preserves original signatures.
 
+:::caution
+
 The default is `RebaseOrMerge`. To rely on unconditional rebase behavior
 instead, set the policy explicitly:
 
@@ -382,6 +384,8 @@ controller:
   gitClient:
     pushIntegrationPolicy: AlwaysRebase
 ```
+
+:::
 
 :::info
 
