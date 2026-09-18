@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/Masterminds/semver/v3"
+	"github.com/expr-lang/expr"
 	"github.com/patrickmn/go-cache"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -1574,7 +1575,7 @@ func Test_getRepoCredentials(t *testing.T) {
 			},
 		},
 		{
-			name: "credentials not found from cache",
+			name: "cached nil result skips database lookup",
 			credsDB: &credentials.FakeDB{
 				GetFn: func(
 					context.Context,
@@ -1582,8 +1583,8 @@ func Test_getRepoCredentials(t *testing.T) {
 					credentials.Type,
 					string,
 				) (*credentials.Credentials, error) {
-					// This should not be used, as the value comes from the cache.
-					return &credentials.Credentials{Username: "should-not-be-used"}, nil
+					assert.Fail(t, "database should not be queried on a cache hit")
+					return nil, nil
 				},
 			},
 			cache: cache.NewFrom(cache.NoExpiration, cache.NoExpiration, map[string]cache.Item{
@@ -1681,7 +1682,7 @@ func Test_getRepoCredentials(t *testing.T) {
 			},
 		},
 		{
-			name: "success from cache",
+			name: "cached credentials skip database lookup",
 			credsDB: &credentials.FakeDB{
 				GetFn: func(
 					context.Context,
@@ -1689,8 +1690,8 @@ func Test_getRepoCredentials(t *testing.T) {
 					credentials.Type,
 					string,
 				) (*credentials.Credentials, error) {
-					// This should not be used, as the value comes from the cache.
-					return &credentials.Credentials{Username: "should-not-be-used"}, nil
+					assert.Fail(t, "database should not be queried on a cache hit")
+					return nil, nil
 				},
 			},
 			cache: cache.NewFrom(cache.NoExpiration, cache.NoExpiration, map[string]cache.Item{
@@ -1711,6 +1712,72 @@ func Test_getRepoCredentials(t *testing.T) {
 			fn := getRepoCredentials(t.Context(), tt.credsDB, tt.cache, testProject)
 			result, err := fn(tt.args...)
 			tt.assertions(t, tt.cache, result, err)
+		})
+	}
+}
+
+func TestRepoCredentials(t *testing.T) {
+	const testProject = "fake-project"
+	const testRepoURL = "https://github.com/example/repo.git"
+
+	credsDB := &credentials.FakeDB{
+		GetFn: func(
+			_ context.Context,
+			_ string,
+			_ credentials.Type,
+			repoURL string,
+		) (*credentials.Credentials, error) {
+			if repoURL != testRepoURL {
+				return nil, nil
+			}
+			return &credentials.Credentials{
+				Username: "user",
+				Password: "token",
+			}, nil
+		},
+	}
+
+	testCases := []struct {
+		name       string
+		expression string
+		expected   any
+	}{
+		{
+			name:       "field access on found credentials",
+			expression: `repoCredentials("https://github.com/example/repo.git", "git").Password`,
+			expected:   "token",
+		},
+		{
+			name:       "optional chaining on found credentials",
+			expression: `repoCredentials("https://github.com/example/repo.git", "git")?.Username ?? "anonymous"`,
+			expected:   "user",
+		},
+		{
+			name:       "nil when credentials not found",
+			expression: `repoCredentials("https://github.com/example/missing.git", "git")`,
+			expected:   nil,
+		},
+		{
+			name:       "nil comparison when credentials not found",
+			expression: `repoCredentials("https://github.com/example/missing.git", "git") == nil`,
+			expected:   true,
+		},
+		{
+			name:       "optional chaining and nil-coalescing when credentials not found",
+			expression: `repoCredentials("https://github.com/example/missing.git", "git")?.Password ?? "anonymous"`,
+			expected:   "anonymous",
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			program, err := expr.Compile(
+				testCase.expression,
+				RepoCredentials(t.Context(), credsDB, nil, testProject),
+			)
+			require.NoError(t, err)
+			result, err := expr.Run(program, nil)
+			require.NoError(t, err)
+			require.Equal(t, testCase.expected, result)
 		})
 	}
 }

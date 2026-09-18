@@ -551,7 +551,7 @@ func RepoCredentials(
 	return expr.Function(
 		"repoCredentials",
 		getRepoCredentials(ctx, credsDB, cache, project),
-		new(func(repoURL, credType string) map[string]string),
+		new(func(repoURL, credType string) credentials.Credentials),
 	)
 }
 
@@ -1230,7 +1230,9 @@ func getRepoCredentials(
 		)
 		if cache != nil {
 			if cachedData, ok := cache.Get(cacheKey); ok {
-				// A cached nil records a previous lookup that found nothing.
+				// A previous lookup that found no credentials is cached as nil
+				// (see below) so that it is not repeated within the same
+				// evaluation. Handle that case before the type assertion.
 				if cachedData == nil {
 					return nil, nil
 				}
