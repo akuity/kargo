@@ -36,7 +36,7 @@ spec:
       template:
         metadata:
           labels:
-            {{- include "kargo.labels" . | nindent 12 }}
+            {{- include "kargo.podLabels" . | nindent 12 }}
             {{- include "kargo.garbageCollector.labels" . | nindent 12 }}
           {{- with (mergeOverwrite (deepCopy .Values.global.podLabels) .Values.garbageCollector.podLabels) }}
             {{- range $key, $value := . }}
