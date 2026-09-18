@@ -1,10 +1,13 @@
 package function
 
 import (
+	"context"
+	"errors"
 	"testing"
 	"time"
 
 	"github.com/Masterminds/semver/v3"
+	"github.com/expr-lang/expr"
 	"github.com/patrickmn/go-cache"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -16,6 +19,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/pkg/credentials"
 )
 
 func Test_warehouse(t *testing.T) {
@@ -1453,6 +1457,327 @@ func Test_getSecret(t *testing.T) {
 
 			result, err := fn(tt.args...)
 			tt.assertions(t, tt.cache, result, err)
+		})
+	}
+}
+
+func Test_getRepoCredentials(t *testing.T) {
+	const testProject = "fake-project"
+	const testRepoURL = "https://github.com/example/repo.git"
+
+	cacheKey := getCacheKey(
+		cacheKeyPrefixRepoCredentials,
+		testProject,
+		string(credentials.TypeGit)+"/"+testRepoURL,
+	)
+
+	tests := []struct {
+		name       string
+		credsDB    credentials.Database
+		cache      *cache.Cache
+		args       []any
+		assertions func(t *testing.T, cache *cache.Cache, result any, err error)
+	}{
+		{
+			name:    "no arguments",
+			credsDB: &credentials.FakeDB{},
+			args:    []any{},
+			assertions: func(t *testing.T, _ *cache.Cache, result any, err error) {
+				assert.ErrorContains(t, err, "expected 2 arguments")
+				assert.Nil(t, result)
+			},
+		},
+		{
+			name:    "too many arguments",
+			credsDB: &credentials.FakeDB{},
+			args:    []any{testRepoURL, "git", "extra"},
+			assertions: func(t *testing.T, _ *cache.Cache, result any, err error) {
+				assert.ErrorContains(t, err, "expected 2 arguments")
+				assert.Nil(t, result)
+			},
+		},
+		{
+			name:    "invalid repo URL argument type",
+			credsDB: &credentials.FakeDB{},
+			args:    []any{123, "git"},
+			assertions: func(t *testing.T, _ *cache.Cache, result any, err error) {
+				assert.ErrorContains(t, err, "first argument must be string")
+				assert.Nil(t, result)
+			},
+		},
+		{
+			name:    "invalid credential type argument type",
+			credsDB: &credentials.FakeDB{},
+			args:    []any{testRepoURL, 123},
+			assertions: func(t *testing.T, _ *cache.Cache, result any, err error) {
+				assert.ErrorContains(t, err, "second argument must be string")
+				assert.Nil(t, result)
+			},
+		},
+		{
+			name:    "invalid credential type value",
+			credsDB: &credentials.FakeDB{},
+			args:    []any{testRepoURL, "bogus"},
+			assertions: func(t *testing.T, _ *cache.Cache, result any, err error) {
+				assert.ErrorContains(t, err, `invalid credential type "bogus"`)
+				assert.Nil(t, result)
+			},
+		},
+		{
+			name:    "nil credentials database",
+			credsDB: nil,
+			args:    []any{testRepoURL, "git"},
+			assertions: func(t *testing.T, _ *cache.Cache, result any, err error) {
+				assert.ErrorContains(t, err, "repoCredentials is not available")
+				assert.Nil(t, result)
+			},
+		},
+		{
+			name: "error from credentials database",
+			credsDB: &credentials.FakeDB{
+				GetFn: func(
+					context.Context,
+					string,
+					credentials.Type,
+					string,
+				) (*credentials.Credentials, error) {
+					return nil, errors.New("something went wrong")
+				},
+			},
+			args: []any{testRepoURL, "git"},
+			assertions: func(t *testing.T, _ *cache.Cache, result any, err error) {
+				assert.ErrorContains(t, err, "error getting git credentials")
+				assert.ErrorContains(t, err, "something went wrong")
+				assert.Nil(t, result)
+			},
+		},
+		{
+			name:    "credentials not found",
+			credsDB: &credentials.FakeDB{},
+			args:    []any{testRepoURL, "git"},
+			assertions: func(t *testing.T, _ *cache.Cache, result any, err error) {
+				assert.NoError(t, err)
+				assert.Nil(t, result)
+			},
+		},
+		{
+			name:    "credentials not found with cache",
+			credsDB: &credentials.FakeDB{},
+			cache:   cache.New(cache.NoExpiration, cache.NoExpiration),
+			args:    []any{testRepoURL, "git"},
+			assertions: func(t *testing.T, cache *cache.Cache, result any, err error) {
+				assert.NoError(t, err)
+				assert.Nil(t, result)
+
+				data, ok := cache.Get(cacheKey)
+				assert.True(t, ok)
+				assert.Nil(t, data)
+			},
+		},
+		{
+			name: "cached nil result skips database lookup",
+			credsDB: &credentials.FakeDB{
+				GetFn: func(
+					context.Context,
+					string,
+					credentials.Type,
+					string,
+				) (*credentials.Credentials, error) {
+					assert.Fail(t, "database should not be queried on a cache hit")
+					return nil, nil
+				},
+			},
+			cache: cache.NewFrom(cache.NoExpiration, cache.NoExpiration, map[string]cache.Item{
+				cacheKey: {Object: nil},
+			}),
+			args: []any{testRepoURL, "git"},
+			assertions: func(t *testing.T, _ *cache.Cache, result any, err error) {
+				assert.NoError(t, err)
+				assert.Nil(t, result)
+			},
+		},
+		{
+			name: "success with username and password",
+			credsDB: &credentials.FakeDB{
+				GetFn: func(
+					_ context.Context,
+					namespace string,
+					credType credentials.Type,
+					repo string,
+				) (*credentials.Credentials, error) {
+					assert.Equal(t, testProject, namespace)
+					assert.Equal(t, credentials.TypeGit, credType)
+					assert.Equal(t, testRepoURL, repo)
+					return &credentials.Credentials{
+						Username: "user",
+						Password: "token",
+					}, nil
+				},
+			},
+			args: []any{testRepoURL, "git"},
+			assertions: func(t *testing.T, _ *cache.Cache, result any, err error) {
+				assert.NoError(t, err)
+				assert.Equal(t, credentials.Credentials{
+					Username: "user",
+					Password: "token",
+				}, result)
+			},
+		},
+		{
+			name: "success includes SSH private key when set",
+			credsDB: &credentials.FakeDB{
+				GetFn: func(
+					context.Context,
+					string,
+					credentials.Type,
+					string,
+				) (*credentials.Credentials, error) {
+					return &credentials.Credentials{
+						Username:      "user",
+						Password:      "token",
+						SSHPrivateKey: "private-key",
+					}, nil
+				},
+			},
+			args: []any{testRepoURL, "git"},
+			assertions: func(t *testing.T, _ *cache.Cache, result any, err error) {
+				assert.NoError(t, err)
+				assert.Equal(t, credentials.Credentials{
+					Username:      "user",
+					Password:      "token",
+					SSHPrivateKey: "private-key",
+				}, result)
+			},
+		},
+		{
+			name: "success with cache",
+			credsDB: &credentials.FakeDB{
+				GetFn: func(
+					context.Context,
+					string,
+					credentials.Type,
+					string,
+				) (*credentials.Credentials, error) {
+					return &credentials.Credentials{
+						Username: "user",
+						Password: "token",
+					}, nil
+				},
+			},
+			cache: cache.New(cache.NoExpiration, cache.NoExpiration),
+			args:  []any{testRepoURL, "git"},
+			assertions: func(t *testing.T, cache *cache.Cache, result any, err error) {
+				assert.NoError(t, err)
+				assert.Equal(t, credentials.Credentials{
+					Username: "user",
+					Password: "token",
+				}, result)
+
+				data, ok := cache.Get(cacheKey)
+				assert.True(t, ok)
+				assert.Equal(t, credentials.Credentials{
+					Username: "user",
+					Password: "token",
+				}, data)
+			},
+		},
+		{
+			name: "cached credentials skip database lookup",
+			credsDB: &credentials.FakeDB{
+				GetFn: func(
+					context.Context,
+					string,
+					credentials.Type,
+					string,
+				) (*credentials.Credentials, error) {
+					assert.Fail(t, "database should not be queried on a cache hit")
+					return nil, nil
+				},
+			},
+			cache: cache.NewFrom(cache.NoExpiration, cache.NoExpiration, map[string]cache.Item{
+				cacheKey: {
+					Object: credentials.Credentials{Username: "cached-user"},
+				},
+			}),
+			args: []any{testRepoURL, "git"},
+			assertions: func(t *testing.T, _ *cache.Cache, result any, err error) {
+				assert.NoError(t, err)
+				assert.Equal(t, credentials.Credentials{Username: "cached-user"}, result)
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			fn := getRepoCredentials(t.Context(), tt.credsDB, tt.cache, testProject)
+			result, err := fn(tt.args...)
+			tt.assertions(t, tt.cache, result, err)
+		})
+	}
+}
+
+func TestRepoCredentials(t *testing.T) {
+	const testProject = "fake-project"
+	const testRepoURL = "https://github.com/example/repo.git"
+
+	credsDB := &credentials.FakeDB{
+		GetFn: func(
+			_ context.Context,
+			_ string,
+			_ credentials.Type,
+			repoURL string,
+		) (*credentials.Credentials, error) {
+			if repoURL != testRepoURL {
+				return nil, nil
+			}
+			return &credentials.Credentials{
+				Username: "user",
+				Password: "token",
+			}, nil
+		},
+	}
+
+	testCases := []struct {
+		name       string
+		expression string
+		expected   any
+	}{
+		{
+			name:       "field access on found credentials",
+			expression: `repoCredentials("https://github.com/example/repo.git", "git").Password`,
+			expected:   "token",
+		},
+		{
+			name:       "optional chaining on found credentials",
+			expression: `repoCredentials("https://github.com/example/repo.git", "git")?.Username ?? "anonymous"`,
+			expected:   "user",
+		},
+		{
+			name:       "nil when credentials not found",
+			expression: `repoCredentials("https://github.com/example/missing.git", "git")`,
+			expected:   nil,
+		},
+		{
+			name:       "nil comparison when credentials not found",
+			expression: `repoCredentials("https://github.com/example/missing.git", "git") == nil`,
+			expected:   true,
+		},
+		{
+			name:       "optional chaining and nil-coalescing when credentials not found",
+			expression: `repoCredentials("https://github.com/example/missing.git", "git")?.Password ?? "anonymous"`,
+			expected:   "anonymous",
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			program, err := expr.Compile(
+				testCase.expression,
+				RepoCredentials(t.Context(), credsDB, nil, testProject),
+			)
+			require.NoError(t, err)
+			result, err := expr.Run(program, nil)
+			require.NoError(t, err)
+			require.Equal(t, testCase.expected, result)
 		})
 	}
 }
