@@ -374,22 +374,16 @@ Four options are available, forming a spectrum from least to most conservative:
   changes. This is the most conservative option — it never touches existing
   commits and always preserves original signatures.
 
-:::caution
-
-The current default is `AlwaysRebase`.
-
-Starting with v1.12.0, the default will change to `RebaseOrMerge`. If you rely
-on the current behavior, set the policy explicitly before upgrading.
-
-:::
+The default is `RebaseOrMerge`. To rely on unconditional rebase behavior
+instead, set the policy explicitly:
 
 ```yaml
 controller:
   gitClient:
-    pushIntegrationPolicy: RebaseOrMerge
+    pushIntegrationPolicy: AlwaysRebase
 ```
 
-:::info
+:::caution
 
 For more information about the security implications of this setting, see
 [Secure Configuration](../40-security/10-secure-configuration.md#push-integration-policy).

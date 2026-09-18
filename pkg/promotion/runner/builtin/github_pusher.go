@@ -105,7 +105,7 @@ type githubPushServiceAdapter struct {
 // githubPusherConfig holds controller-level configuration for the
 // github-push step, populated from environment variables.
 type githubPusherConfig struct {
-	PushIntegrationPolicy  git.PushIntegrationPolicy `envconfig:"GIT_PUSH_INTEGRATION_POLICY" default:"AlwaysRebase"`
+	PushIntegrationPolicy  git.PushIntegrationPolicy `envconfig:"GIT_PUSH_INTEGRATION_POLICY" default:"RebaseOrMerge"`
 	MaxRevisions           int                       `envconfig:"GITHUB_PUSH_MAX_REVISIONS" default:"10"`
 	VerifyUntrustedCommits bool                      `envconfig:"GITHUB_PUSH_VERIFY_UNTRUSTED_COMMITS" default:"false"`
 }
