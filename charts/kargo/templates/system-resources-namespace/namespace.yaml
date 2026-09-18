@@ -1,4 +1,5 @@
 {{- if and .Values.dataPlane.install .Values.global.systemResources.createNamespace }}
+{{- include "kargo.validateNoLegacySecretNamespaces" . }}
 apiVersion: v1
 kind: Namespace
 metadata:
