@@ -12,7 +12,7 @@ replace (
 
 require (
 	cloud.google.com/go/compute/metadata v0.9.0
-	code.gitea.io/sdk/gitea v0.22.1
+	code.gitea.io/sdk/gitea v0.25.1
 	connectrpc.com/connect v1.19.1
 	connectrpc.com/grpchealth v1.4.0
 	github.com/AlecAivazis/survey/v2 v2.3.7
