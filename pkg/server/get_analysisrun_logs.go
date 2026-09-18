@@ -430,6 +430,20 @@ func (s *server) getAnalysisRunLogs(c *gin.Context) {
 
 	jobNamespace, jobName, err := s.getJobNamespaceAndName(analysisRun, jobMetricName)
 	if err != nil {
+		if connect.CodeOf(err) == connect.CodeNotFound &&
+			!analysisRun.Status.Phase.Completed() {
+			SetSSEHeaders(c)
+			if _, err = fmt.Fprintf(
+				c.Writer,
+				"data: Logs for AnalysisRun %q in namespace %q are not available yet "+
+					"because the Job for metric %q has not started. Retry shortly.\n\n",
+				analysisRun.Name, analysisRun.Namespace, jobMetricName,
+			); err != nil {
+				logger.Debug("failed to write log availability notice", "error", err)
+			}
+			c.Writer.Flush()
+			return
+		}
 		_ = c.Error(err)
 		return
 	}
