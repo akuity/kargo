@@ -32,13 +32,7 @@ policies are:
 
 - `AlwaysMerge` — Unconditionally create a merge commit. Most conservative.
 
-:::caution
-
-The current default policy is `AlwaysRebase`.
-
-Starting with v1.12.0, the default will change to `RebaseOrMerge`.
-
-:::
+The default policy is `RebaseOrMerge`.
 
 When the policy evaluates rebase safety (`RebaseOrMerge` and `RebaseOrFail`),
 the decision to use rebase or not is based on the GPG signature status of the
