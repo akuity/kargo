@@ -374,8 +374,6 @@ Four options are available, forming a spectrum from least to most conservative:
   changes. This is the most conservative option — it never touches existing
   commits and always preserves original signatures.
 
-:::caution
-
 The default is `RebaseOrMerge`. To rely on unconditional rebase behavior
 instead, set the policy explicitly:
 
@@ -385,9 +383,7 @@ controller:
     pushIntegrationPolicy: AlwaysRebase
 ```
 
-:::
-
-:::info
+:::caution
 
 For more information about the security implications of this setting, see
 [Secure Configuration](../40-security/10-secure-configuration.md#push-integration-policy).
