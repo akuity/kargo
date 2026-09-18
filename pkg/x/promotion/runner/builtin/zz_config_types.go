@@ -188,7 +188,7 @@ type GitCloneConfig struct {
 	// Default authorship information for any commits made to the cloned repository. If
 	// provided, this overrides any system-level defaults. Note: Configuration of the
 	// `git-commit` and `git-tag` steps can override this information.
-	Author *GitCloneConfigAuthor `json:"author,omitempty"`
+	Author *Author `json:"author,omitempty"`
 	// Indicates whether to perform a blobless (--filter=blob:none) clone. Default is false.
 	Blobless bool `json:"blobless,omitempty"`
 	// The commits, branches, or tags to check out from the repository and the paths where they
@@ -208,7 +208,7 @@ type GitCloneConfig struct {
 // Default authorship information for any commits made to the cloned repository. If
 // provided, this overrides any system-level defaults. Note: Configuration of the
 // `git-commit` and `git-tag` steps can override this information.
-type GitCloneConfigAuthor struct {
+type Author struct {
 	// The email of the author.
 	Email string `json:"email"`
 	// The name of the author.
@@ -242,32 +242,10 @@ type Checkout struct {
 }
 
 type GitCommitConfig struct {
-	// Optional authorship information for the commit. If provided, this takes precedence over
-	// both system-level defaults and any optional, default authorship information configured in
-	// the `git-clone` step. Deprecated: This field is deprecated as of v1.10.0 and will be
-	// removed in v1.12.0. Configure authorship in the `git-clone` step instead.
-	Author *GitCommitConfigAuthor `json:"author,omitempty"`
 	// The commit message.
 	Message string `json:"message"`
 	// The path to a working directory of a local repository.
 	Path string `json:"path"`
-}
-
-// Optional authorship information for the commit. If provided, this takes precedence over
-// both system-level defaults and any optional, default authorship information configured in
-// the `git-clone` step. Deprecated: This field is deprecated as of v1.10.0 and will be
-// removed in v1.12.0. Configure authorship in the `git-clone` step instead.
-type GitCommitConfigAuthor struct {
-	// The email of the author. Deprecated: This field is deprecated as of v1.10.0 and will be
-	// removed in v1.12.0.
-	Email string `json:"email"`
-	// The name of the author. Deprecated: This field is deprecated as of v1.10.0 and will be
-	// removed in v1.12.0.
-	Name string `json:"name"`
-	// The GPG signing key for the author. Deprecated: This field is deprecated as of v1.10.0
-	// and will be removed in v1.12.0. Configure signing keys in the `git-clone` step or via
-	// ClusterConfig instead.
-	SigningKey string `json:"signingKey,omitempty"`
 }
 
 type GitMergePRConfig struct {
