@@ -14,13 +14,19 @@ global.sharedResources.namespace, respectively, as of v1.9.0. The automatic
 Secret migration that bridged the old and new settings was removed in
 v1.12.0, so upgrading with either legacy setting still defined is no longer
 safe.
+
+Call this from the top-level conditional of any template belonging to a
+component that consumes global.systemResources.namespace or
+global.sharedResources.namespace. NOTES.txt is not a reliable place for this
+check: it is never rendered by `helm template`, which is how most GitOps
+tooling (e.g. Argo CD) applies this chart.
 */}}
 {{- define "kargo.validateNoLegacySecretNamespaces" -}}
 {{- if dig "clusterSecretsNamespace" "" .Values.global }}
-{{- fail "global.clusterSecretsNamespace is no longer supported as of v1.12.0. Secrets have already been migrated to global.systemResources.namespace; remove this setting from your values." }}
+{{- fail "global.clusterSecretsNamespace is no longer supported as of v1.12.0 and the automatic Secret migration that used to bridge it to global.systemResources.namespace has been removed. Remove this setting from your values. If you GitOps your Secrets, Kargo will no longer read from, or sync to, the old namespace -- make sure the Secrets it referenced already exist in the namespace specified by global.systemResources.namespace before upgrading." }}
 {{- end }}
 {{- if dig "globalCredentials" "namespaces" list .Values.controller }}
-{{- fail "controller.globalCredentials.namespaces is no longer supported as of v1.12.0. Secrets have already been migrated to global.sharedResources.namespace; remove this setting from your values." }}
+{{- fail "controller.globalCredentials.namespaces is no longer supported as of v1.12.0 and the automatic Secret migration that used to bridge it to global.sharedResources.namespace has been removed. Remove this setting from your values. If you GitOps your Secrets, Kargo will no longer read from, or sync to, the old namespace(s) -- make sure the Secrets they referenced already exist in the namespace specified by global.sharedResources.namespace before upgrading." }}
 {{- end }}
 {{- end -}}
 
