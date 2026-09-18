@@ -1,4 +1,5 @@
 {{- if and .Values.workloads.install .Values.api.enabled }}
+{{- include "kargo.validateNoLegacySecretNamespaces" . }}
 {{- if and .Values.api.oidc.dex.enabled .Values.api.oidc.dex.byo.enabled }}
 {{- fail "api.oidc.dex.enabled and api.oidc.dex.byo.enabled are mutually exclusive: choose either the chart-installed Dex (api.oidc.dex.enabled) or proxy to an externally-managed Dex (api.oidc.dex.byo.enabled), not both." }}
 {{- end }}
