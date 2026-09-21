@@ -17,6 +17,7 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/controller/management/clusterconfigs"
+	"github.com/akuity/kargo/pkg/controller/management/legacysecrets"
 	"github.com/akuity/kargo/pkg/controller/management/namespaces"
 	"github.com/akuity/kargo/pkg/controller/management/projectconfigs"
 	"github.com/akuity/kargo/pkg/controller/management/projects"
@@ -89,6 +90,19 @@ func (o *managementControllerOptions) run(ctx context.Context) error {
 	kargoMgr, err := o.setupManager(ctx)
 	if err != nil {
 		return fmt.Errorf("error initializing Kargo controller manager: %w", err)
+	}
+
+	// One-time cleanup of a hazard left behind by the removal of the
+	// automatic Secret migration reconciler. See the package doc comment
+	// on legacysecrets for details.
+	if err := legacysecrets.RemoveOrphanedFinalizers(
+		ctx,
+		kargoMgr.GetAPIReader(),
+		kargoMgr.GetClient(),
+		os.GetEnv("SYSTEM_RESOURCES_NAMESPACE", "kargo-system-resources"),
+		os.GetEnv("SHARED_RESOURCES_NAMESPACE", "kargo-shared-resources"),
+	); err != nil {
+		return fmt.Errorf("error cleaning up orphaned Secret finalizers: %w", err)
 	}
 
 	if err := clusterconfigs.SetupReconcilerWithManager(
