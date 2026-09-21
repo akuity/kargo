@@ -17,11 +17,11 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/controller/management/clusterconfigs"
+	"github.com/akuity/kargo/pkg/controller/management/legacysecrets"
 	"github.com/akuity/kargo/pkg/controller/management/namespaces"
 	"github.com/akuity/kargo/pkg/controller/management/projectconfigs"
 	"github.com/akuity/kargo/pkg/controller/management/projects"
 	"github.com/akuity/kargo/pkg/controller/management/replication"
-	"github.com/akuity/kargo/pkg/controller/management/secrets"
 	"github.com/akuity/kargo/pkg/controller/management/serviceaccounts"
 	"github.com/akuity/kargo/pkg/logging"
 	"github.com/akuity/kargo/pkg/os"
@@ -87,21 +87,22 @@ func (o *managementControllerOptions) run(ctx context.Context) error {
 		"GOMEMLIMIT", os.GetEnv("GOMEMLIMIT", ""),
 	)
 
-	systemResourcesCfg := secrets.ReconcilerConfig{
-		ControllerName:       "system-resources-migration-controller",
-		SourceNamespace:      os.GetEnv("CLUSTER_SECRETS_NAMESPACE", "kargo-cluster-secrets"),
-		DestinationNamespace: os.GetEnv("SYSTEM_RESOURCES_NAMESPACE", "kargo-system-resources"),
-	}
-
-	sharedResourcesCfg := secrets.ReconcilerConfig{
-		ControllerName:       "shared-resources-migration-controller",
-		SourceNamespace:      os.GetEnv("GLOBAL_CREDENTIALS_NAMESPACE", ""),
-		DestinationNamespace: os.GetEnv("SHARED_RESOURCES_NAMESPACE", "kargo-shared-resources"),
-	}
-
-	kargoMgr, err := o.setupManager(ctx, systemResourcesCfg, sharedResourcesCfg)
+	kargoMgr, err := o.setupManager(ctx)
 	if err != nil {
 		return fmt.Errorf("error initializing Kargo controller manager: %w", err)
+	}
+
+	// One-time cleanup of a hazard left behind by the removal of the
+	// automatic Secret migration reconciler. See the package doc comment
+	// on legacysecrets for details.
+	if err := legacysecrets.RemoveOrphanedFinalizers(
+		ctx,
+		kargoMgr.GetAPIReader(),
+		kargoMgr.GetClient(),
+		os.GetEnv("SYSTEM_RESOURCES_NAMESPACE", "kargo-system-resources"),
+		os.GetEnv("SHARED_RESOURCES_NAMESPACE", "kargo-shared-resources"),
+	); err != nil {
+		return fmt.Errorf("error cleaning up orphaned Secret finalizers: %w", err)
 	}
 
 	if err := clusterconfigs.SetupReconcilerWithManager(
@@ -146,28 +147,6 @@ func (o *managementControllerOptions) run(ctx context.Context) error {
 		}
 	}
 
-	if systemResourcesCfg.SourceNamespace != "" &&
-		systemResourcesCfg.SourceNamespace != systemResourcesCfg.DestinationNamespace {
-		if err := secrets.SetupReconcilerWithManager(
-			ctx,
-			kargoMgr,
-			systemResourcesCfg,
-		); err != nil {
-			return fmt.Errorf("error setting up Secrets reconciler for system resources namespace: %w", err)
-		}
-	}
-
-	if sharedResourcesCfg.SourceNamespace != "" &&
-		sharedResourcesCfg.SourceNamespace != sharedResourcesCfg.DestinationNamespace {
-		if err := secrets.SetupReconcilerWithManager(
-			ctx,
-			kargoMgr,
-			sharedResourcesCfg,
-		); err != nil {
-			return fmt.Errorf("error setting up Secrets reconciler for shared resources namespace: %w", err)
-		}
-	}
-
 	replicationCfg := replication.ReconcilerConfig{
 		SharedResourcesNamespace: os.GetEnv("SHARED_RESOURCES_NAMESPACE", "kargo-shared-resources"),
 		MaxConcurrentReconciles:  4,
@@ -187,8 +166,6 @@ func (o *managementControllerOptions) run(ctx context.Context) error {
 
 func (o *managementControllerOptions) setupManager(
 	ctx context.Context,
-	systemResourcesCfg secrets.ReconcilerConfig,
-	sharedResourcesCfg secrets.ReconcilerConfig,
 ) (manager.Manager, error) {
 	restCfg, err := kubernetes.GetRestConfig(ctx, o.KubeConfig)
 	if err != nil {
@@ -216,19 +193,10 @@ func (o *managementControllerOptions) setupManager(
 			err,
 		)
 	}
-	namespaceCacheConfigs := make(map[string]cache.Config)
-	if systemResourcesCfg.SourceNamespace != "" {
-		namespaceCacheConfigs[systemResourcesCfg.SourceNamespace] = cache.Config{}
-		namespaceCacheConfigs[systemResourcesCfg.DestinationNamespace] = cache.Config{}
+	namespaceCacheConfigs := map[string]cache.Config{
+		os.GetEnv("SYSTEM_RESOURCES_NAMESPACE", "kargo-system-resources"): {},
+		os.GetEnv("SHARED_RESOURCES_NAMESPACE", "kargo-shared-resources"): {},
 	}
-	if sharedResourcesCfg.SourceNamespace != "" {
-		namespaceCacheConfigs[sharedResourcesCfg.SourceNamespace] = cache.Config{}
-		namespaceCacheConfigs[sharedResourcesCfg.DestinationNamespace] = cache.Config{}
-	}
-	// Always cache the shared resources namespace so the shared secret
-	// replication reconciler can watch source secrets even when the legacy
-	// migration controller is disabled (GLOBAL_CREDENTIALS_NAMESPACE unset).
-	namespaceCacheConfigs[os.GetEnv("SHARED_RESOURCES_NAMESPACE", "kargo-shared-resources")] = cache.Config{}
 	return ctrl.NewManager(
 		restCfg,
 		ctrl.Options{
