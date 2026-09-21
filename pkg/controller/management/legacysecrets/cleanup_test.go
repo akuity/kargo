@@ -1,13 +1,17 @@
 package legacysecrets
 
 import (
+	"context"
+	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 )
@@ -71,4 +75,40 @@ func TestRemoveOrphanedFinalizers_noSecrets(t *testing.T) {
 	c := fake.NewClientBuilder().Build()
 	err := RemoveOrphanedFinalizers(t.Context(), c, c, "kargo-system-resources", "kargo-shared-resources")
 	require.NoError(t, err)
+}
+
+func TestRemoveOrphanedFinalizers_listError(t *testing.T) {
+	c := fake.NewClientBuilder().WithInterceptorFuncs(interceptor.Funcs{
+		List: func(
+			context.Context, client.WithWatch, client.ObjectList, ...client.ListOption,
+		) error {
+			return errors.New("something went wrong")
+		},
+	}).Build()
+
+	err := RemoveOrphanedFinalizers(t.Context(), c, c, "kargo-shared-resources")
+	require.ErrorContains(t, err, "error listing Secrets")
+}
+
+func TestRemoveOrphanedFinalizers_patchError(t *testing.T) {
+	orphaned := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:       "orphaned",
+			Namespace:  "kargo-cluster-secrets",
+			Finalizers: []string{kargoapi.FinalizerName},
+		},
+	}
+	c := fake.NewClientBuilder().
+		WithObjects(orphaned).
+		WithInterceptorFuncs(interceptor.Funcs{
+			Patch: func(
+				context.Context, client.WithWatch, client.Object, client.Patch, ...client.PatchOption,
+			) error {
+				return errors.New("something went wrong")
+			},
+		}).
+		Build()
+
+	err := RemoveOrphanedFinalizers(t.Context(), c, c, "kargo-shared-resources")
+	require.ErrorContains(t, err, "error removing orphaned finalizer from Secret")
 }
