@@ -21,6 +21,9 @@ type CalendarOccurrence = {
   end: Date;
 };
 
+const selectedDayBg =
+  "[[data-theme='light']_&_.ant-picker-cell-selected_.ant-picker-calendar-date]:!bg-[#e3ebf7]";
+
 type PromotionCalendarProps = {
   date: Date;
   occurrences: PromotionWindowOccurrence[];
@@ -80,7 +83,8 @@ export const PromotionCalendar = ({
       }}
       className={classNames(
         'overflow-hidden rounded-lg px-3',
-        'border border-solid border-gray-200 dark:border-neutral-700'
+        'border border-solid border-gray-200 dark:border-neutral-700',
+        selectedDayBg
       )}
       cellRender={(day, info) => {
         if (info.type !== 'date') {
