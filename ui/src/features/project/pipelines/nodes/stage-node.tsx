@@ -13,6 +13,7 @@ import { formatDistance } from 'date-fns';
 import { ReactNode, useMemo } from 'react';
 import { generatePath, Link, useNavigate } from 'react-router-dom';
 
+import { withBasePath } from '@ui/config/base-path';
 import { paths } from '@ui/config/paths';
 import { HealthStatusIcon } from '@ui/features/common/health-status/health-status-icon';
 import { IAction, useActionContext } from '@ui/features/project/pipelines/context/action-context';
@@ -153,7 +154,13 @@ export const StageNode = (props: { stage: Stage }) => {
               stage={props.stage}
               buttonProps={{
                 size: 'small',
-                icon: <img src='/argo-logo.svg' alt='ArgoCD' style={{ width: '18px' }} />
+                icon: (
+                  <img
+                    src={withBasePath('/argo-logo.svg')}
+                    alt='ArgoCD'
+                    style={{ width: '18px' }}
+                  />
+                )
               }}
             />
             <Dropdown
