@@ -47,6 +47,8 @@ func FromKubernetesEvent(evt corev1.Event) (event.Meta, error) {
 		parsedEvent, err = event.UnmarshalFreightVerificationUnknownAnnotations(id, evt.Annotations)
 	case kargoapi.EventTypeAPITokenCreated:
 		parsedEvent, err = event.UnmarshalAPITokenCreatedAnnotations(id, evt.Annotations)
+	case kargoapi.EventTypeAPITokenDeleted:
+		parsedEvent, err = event.UnmarshalAPITokenDeletedAnnotations(id, evt.Annotations)
 	default:
 		customEvt := &event.Custom{
 			EventType: kargoapi.EventType(evt.Reason),

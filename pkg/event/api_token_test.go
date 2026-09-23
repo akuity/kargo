@@ -81,3 +81,33 @@ func TestAPITokenCreated_AnnotationsRoundTrip(t *testing.T) {
 	original.ID = "event-id"
 	require.Equal(t, original, decoded)
 }
+
+func TestNewAPITokenDeleted(t *testing.T) {
+	tokenSecret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: "test-project",
+			Name:      "test-token",
+			Annotations: map[string]string{
+				corev1.ServiceAccountNameKey: "test-role",
+			},
+		},
+	}
+
+	evt := NewAPITokenDeleted("API token deleted", "test-actor", tokenSecret, true)
+
+	require.Equal(t, kargoapi.EventTypeAPITokenDeleted, evt.Type())
+	require.Equal(t, "test-project", evt.GetProject())
+	require.Equal(t, "test-token", evt.GetName())
+	require.Equal(t, "Secret", evt.Kind())
+	require.Equal(t, "test-role", evt.RoleName)
+	require.True(t, evt.SystemLevel)
+	require.Equal(t, "API token deleted", evt.GetMessage())
+	require.NotNil(t, evt.Actor)
+	require.Equal(t, "test-actor", *evt.Actor)
+
+	decoded, err := UnmarshalAPITokenDeletedAnnotations("event-id", evt.MarshalAnnotations())
+	require.NoError(t, err)
+	require.Equal(t, evt.APIToken, decoded.APIToken)
+	require.Equal(t, "test-project", decoded.Project)
+	require.Equal(t, "event-id", decoded.ID)
+}

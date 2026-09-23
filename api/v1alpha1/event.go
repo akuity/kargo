@@ -42,6 +42,7 @@ const (
 	EventTypeFreightVerificationInconclusive EventType = "FreightVerificationInconclusive"
 	EventTypeFreightVerificationUnknown      EventType = "FreightVerificationUnknown"
 	EventTypeAPITokenCreated                 EventType = "APITokenCreated"
+	EventTypeAPITokenDeleted                 EventType = "APITokenDeleted"
 )
 
 const (

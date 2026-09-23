@@ -1821,9 +1821,10 @@ func Test_rolesDatabase_DeleteAPIToken(t *testing.T) {
 				},
 			}},
 		).Build()
-		err := NewKubernetesRolesDatabase(c, c, RolesDatabaseConfigFromEnv()).
+		deleted, err := NewKubernetesRolesDatabase(c, c, RolesDatabaseConfigFromEnv()).
 			DeleteAPIToken(t.Context(), false, testProject, "non-existent-token")
 		require.Error(t, err)
+		require.Nil(t, deleted)
 		require.True(t, apierrors.IsNotFound(err))
 	})
 
@@ -1849,9 +1850,10 @@ func Test_rolesDatabase_DeleteAPIToken(t *testing.T) {
 				Type: corev1.SecretTypeServiceAccountToken,
 			},
 		).Build()
-		err := NewKubernetesRolesDatabase(c, c, RolesDatabaseConfigFromEnv()).
+		deleted, err := NewKubernetesRolesDatabase(c, c, RolesDatabaseConfigFromEnv()).
 			DeleteAPIToken(t.Context(), false, testProject, tokenName)
 		require.Error(t, err)
+		require.Nil(t, deleted)
 		require.True(t, apierrors.IsConflict(err))
 		require.Contains(t, err.Error(), "not labeled as a Kargo API token")
 	})
@@ -1880,9 +1882,10 @@ func Test_rolesDatabase_DeleteAPIToken(t *testing.T) {
 				Type: corev1.SecretTypeServiceAccountToken,
 			},
 		).Build()
-		err := NewKubernetesRolesDatabase(c, c, RolesDatabaseConfigFromEnv()).
+		deleted, err := NewKubernetesRolesDatabase(c, c, RolesDatabaseConfigFromEnv()).
 			DeleteAPIToken(t.Context(), false, testProject, tokenName)
 		require.Error(t, err)
+		require.Nil(t, deleted)
 		require.True(t, apierrors.IsConflict(err))
 		require.Contains(t, err.Error(), "not annotated as Kargo-managed")
 	})
@@ -1912,9 +1915,11 @@ func Test_rolesDatabase_DeleteAPIToken(t *testing.T) {
 				Type: corev1.SecretTypeServiceAccountToken,
 			},
 		).Build()
-		err := NewKubernetesRolesDatabase(c, c, RolesDatabaseConfigFromEnv()).
+		deleted, err := NewKubernetesRolesDatabase(c, c, RolesDatabaseConfigFromEnv()).
 			DeleteAPIToken(t.Context(), false, testProject, tokenName)
 		require.NoError(t, err)
+		require.NotNil(t, deleted)
+		require.Equal(t, tokenName, deleted.Name)
 		// Verify the token Secret was deleted
 		secret := &corev1.Secret{}
 		err = c.Get(

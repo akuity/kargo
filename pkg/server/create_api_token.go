@@ -120,17 +120,27 @@ func (s *server) recordAPITokenCreated(
 	if s.sender == nil {
 		return
 	}
-	var actor string
-	msg := fmt.Sprintf(
-		"API token %q created for Role %q",
-		tokenSecret.Name, tokenSecret.Annotations[corev1.ServiceAccountNameKey],
-	)
-	if u, ok := user.InfoFromContext(ctx); ok {
-		actor = api.FormatEventUserActor(u)
-		msg += fmt.Sprintf(" by %q", actor)
-	}
+	msg, actor := apiTokenEventMessage(ctx, tokenSecret, "created for")
 	evt := event.NewAPITokenCreated(msg, actor, tokenSecret, systemLevel)
 	if err := s.sender.Send(ctx, evt); err != nil {
 		logging.LoggerFromContext(ctx).Error(err, "error sending API token created event")
 	}
+}
+
+// apiTokenEventMessage builds the message and actor for an API token event,
+// e.g. `API token "ci" created for Role "promoter" by "email:alice@example.com"`.
+func apiTokenEventMessage(
+	ctx context.Context,
+	tokenSecret *corev1.Secret,
+	verb string,
+) (message, actor string) {
+	message = fmt.Sprintf(
+		"API token %q %s Role %q",
+		tokenSecret.Name, verb, tokenSecret.Annotations[corev1.ServiceAccountNameKey],
+	)
+	if u, ok := user.InfoFromContext(ctx); ok {
+		actor = api.FormatEventUserActor(u)
+		message += fmt.Sprintf(" by %q", actor)
+	}
+	return message, actor
 }

@@ -62,26 +62,12 @@ func NewAPITokenCreated(
 	tokenSecret *corev1.Secret,
 	systemLevel bool,
 ) *APITokenCreated {
-	evt := &APITokenCreated{
-		Common:   Common{Message: message},
-		APIToken: APIToken{SystemLevel: systemLevel},
-	}
-	if actor != "" {
-		evt.Actor = &actor
-	}
-	if tokenSecret != nil {
-		evt.Project = tokenSecret.Namespace
-		evt.Name = tokenSecret.Name
-		evt.RoleName = tokenSecret.Annotations[corev1.ServiceAccountNameKey]
-	}
-	return evt
+	common, token := newAPITokenParts(message, actor, tokenSecret, systemLevel)
+	return &APITokenCreated{Common: common, APIToken: token}
 }
 
 func (a *APITokenCreated) MarshalAnnotations() map[string]string {
-	annotations := map[string]string{}
-	a.Common.MarshalAnnotationsTo(annotations)
-	a.APIToken.MarshalAnnotationsTo(annotations)
-	return annotations
+	return marshalAPITokenAnnotations(&a.Common, &a.APIToken)
 }
 
 // UnmarshalAPITokenCreatedAnnotations populates an APITokenCreated event from
@@ -98,4 +84,70 @@ func UnmarshalAPITokenCreatedAnnotations(
 		Common:   common,
 		APIToken: UnmarshalAPITokenAnnotations(annotations),
 	}, nil
+}
+
+// APITokenDeleted is emitted by the API server when it deletes an API token.
+type APITokenDeleted struct {
+	Common
+	APIToken
+}
+
+func (a *APITokenDeleted) Type() kargoapi.EventType {
+	return kargoapi.EventTypeAPITokenDeleted
+}
+
+// NewAPITokenDeleted creates a new APITokenDeleted event for the given token
+// Secret, as it was before deletion.
+func NewAPITokenDeleted(
+	message, actor string,
+	tokenSecret *corev1.Secret,
+	systemLevel bool,
+) *APITokenDeleted {
+	common, token := newAPITokenParts(message, actor, tokenSecret, systemLevel)
+	return &APITokenDeleted{Common: common, APIToken: token}
+}
+
+func (a *APITokenDeleted) MarshalAnnotations() map[string]string {
+	return marshalAPITokenAnnotations(&a.Common, &a.APIToken)
+}
+
+// UnmarshalAPITokenDeletedAnnotations populates an APITokenDeleted event from
+// the given Kubernetes annotations and event ID.
+func UnmarshalAPITokenDeletedAnnotations(
+	eventID string,
+	annotations map[string]string,
+) (*APITokenDeleted, error) {
+	common, err := UnmarshalCommonAnnotations(eventID, annotations)
+	if err != nil {
+		return nil, err
+	}
+	return &APITokenDeleted{
+		Common:   common,
+		APIToken: UnmarshalAPITokenAnnotations(annotations),
+	}, nil
+}
+
+func newAPITokenParts(
+	message, actor string,
+	tokenSecret *corev1.Secret,
+	systemLevel bool,
+) (Common, APIToken) {
+	common := Common{Message: message}
+	if actor != "" {
+		common.Actor = &actor
+	}
+	token := APIToken{SystemLevel: systemLevel}
+	if tokenSecret != nil {
+		common.Project = tokenSecret.Namespace
+		token.Name = tokenSecret.Name
+		token.RoleName = tokenSecret.Annotations[corev1.ServiceAccountNameKey]
+	}
+	return common, token
+}
+
+func marshalAPITokenAnnotations(common *Common, token *APIToken) map[string]string {
+	annotations := map[string]string{}
+	common.MarshalAnnotationsTo(annotations)
+	token.MarshalAnnotationsTo(annotations)
+	return annotations
 }

@@ -152,6 +152,7 @@ The complete list of built-in Kargo event types is provided below:
 - `FreightVerificationInconclusive`
 - `FreightVerificationUnknown`
 - `APITokenCreated`
+- `APITokenDeleted`
 
 Below are the detailed definitions for each event type.
 
@@ -303,6 +304,17 @@ This event is emitted when freight verification ends in an unknown state.
 This event is emitted by the API server when an API token is created. The `project` field is the
 namespace holding the token: the Project for a project-level token, or Kargo's own namespace for a
 system-level one, which `systemLevel` flags. The `actor` field identifies who created the token.
+
+**Payload Includes**
+
+- [Common event fields](#common-event-fields)
+- [API token fields](#api-token-fields)
+
+### `APITokenDeleted`
+
+This event is emitted by the API server when an API token is deleted through the Kargo API. It
+carries the same payload as `APITokenCreated`, describing the token as it was before deletion.
+Tokens removed by other means, such as `kubectl` or the deletion of their Role, do not emit it.
 
 **Payload Includes**
 

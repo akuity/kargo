@@ -78,6 +78,30 @@ func TestFromKubernetesEvent(t *testing.T) {
 				require.Equal(t, "test-actor", *created.Actor)
 			},
 		},
+		"api token deleted event": {
+			k8sEvent: corev1.Event{
+				ObjectMeta: metav1.ObjectMeta{
+					UID: "test-uid",
+					Annotations: map[string]string{
+						kargoapi.AnnotationKeyEventProject:             "kargo",
+						kargoapi.AnnotationKeyEventAPITokenName:        "test-token",
+						kargoapi.AnnotationKeyEventRoleName:            "kargo-admin",
+						kargoapi.AnnotationKeyEventAPITokenSystemLevel: "true",
+					},
+				},
+				Reason:  string(kargoapi.EventTypeAPITokenDeleted),
+				Message: "API token deleted",
+			},
+			expectedType: kargoapi.EventTypeAPITokenDeleted,
+			extraValidation: func(t *testing.T, evt event.Meta) {
+				deleted, ok := evt.(*event.APITokenDeleted)
+				require.True(t, ok)
+				require.Equal(t, "test-token", deleted.GetName())
+				require.Equal(t, "kargo-admin", deleted.RoleName)
+				require.True(t, deleted.SystemLevel)
+				require.Nil(t, deleted.Actor)
+			},
+		},
 		"promotion failed event": {
 			k8sEvent: corev1.Event{
 				ObjectMeta: metav1.ObjectMeta{
