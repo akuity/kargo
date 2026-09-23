@@ -71,6 +71,24 @@ k8s_resource(
   labels = ['kargo']
 )
 
+k8s_yaml('hack/tilt/postgres.yaml')
+k8s_resource(
+  workload = 'kargo-postgres',
+  new_name = 'postgres',
+  port_forwards = ['15432:5432'],
+  resource_deps = ['namespaces'],
+  labels = ['kargo'],
+  trigger_mode = TRIGGER_MODE_AUTO,
+)
+local_resource(
+  'db-migrate',
+  cmd = 'make db-migrate',
+  deps = ['db/migrations', 'hack/tilt/migrate.sh', 'Makefile', 'go.mod', 'go.sum'],
+  resource_deps = ['postgres'],
+  labels = ['kargo'],
+  trigger_mode = TRIGGER_MODE_AUTO,
+)
+
 kargo_base_path = os.environ.get('KARGO_BASE_PATH', '')
 k8s_yaml(
   helm(

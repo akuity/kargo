@@ -354,12 +354,10 @@ this.
 
     :::info
 
-    Tilt is often configured to watch files and automatically rebuild and replace
-    running components when their source code is changed. This is deliberately
-    disabled for Kargo since the Docker image takes long enough to build that
-    it’s better to conserve system resources by only rebuilding when you choose.
-    The web UI makes it easy to identify components whose source has been
-    altered. They can be rebuilt and replaced with a single click.
+    Tilt compiles the back end automatically when source files change. Updating
+    the running back-end components requires a manual trigger in the Tilt UI.
+    The UI, local PostgreSQL resource, and database migrations update
+    automatically. The web UI shows which components have pending changes.
     :::
 
     :::info
@@ -502,6 +500,99 @@ this.
 
     </TabItem>
     </Tabs>
+
+## Working with PostgreSQL
+
+Tilt starts a PostgreSQL instance for local development and forwards
+`127.0.0.1:15432` to its port `5432`. The database, username, and password are
+all `kargo`. Inside the cluster, the address is `kargo-postgres.kargo.svc:5432`.
+Kargo's application components do not use this database yet.
+
+The `db-migrate` Tilt resource waits for PostgreSQL to accept a connection,
+then runs the pinned Goose tool to apply pending SQL migrations from
+`db/migrations/`. It runs on startup and whenever that directory changes.
+Migration failures appear in Tilt; failed migrations are not automatically
+retried by the migration script. An empty directory is supported while the
+initial schema is being developed.
+
+To run the same migration command manually while Tilt is running:
+
+```shell
+make db-migrate
+```
+
+To inspect the database or run other Goose commands, configure your shell:
+
+```shell
+export GOOSE_DRIVER=postgres
+export GOOSE_DBSTRING='postgres://kargo:kargo@127.0.0.1:15432/kargo?sslmode=disable'
+export GOOSE_MIGRATION_DIR=db/migrations
+
+go tool goose version
+# Requires the PostgreSQL client to be installed locally:
+psql "$GOOSE_DBSTRING"
+```
+
+`make db-migrate` uses these values by default. Set the same environment
+variables before starting Tilt to override them, for example when using a
+separate development database.
+
+### Creating a migration
+
+Create and edit migration drafts outside the watched directory. For example:
+
+```shell
+draft_dir=$(mktemp -d)
+go tool goose -dir "$draft_dir" create create_widgets sql
+```
+
+Replace the generated SQL with:
+
+```sql
+-- +goose Up
+CREATE TABLE widgets (
+    id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    name text NOT NULL
+);
+
+-- +goose Down
+DROP TABLE widgets;
+```
+
+Once the migration is complete, move it into the watched directory:
+
+```shell
+mv "$draft_dir"/*.sql db/migrations/
+```
+
+Tilt applies it automatically. You can then inspect the result:
+
+```shell
+go tool goose status
+psql "$GOOSE_DBSTRING" -c '\d widgets'
+```
+
+:::note
+
+Creating a migration directly in `db/migrations/` can cause Tilt to apply the
+generated template before you finish editing it. Goose tracks migration
+versions; editing an already-applied file does not apply it again. Add a new
+migration for subsequent schema changes.
+
+:::
+
+Rollback and reset are explicit operations. With the environment variables
+above set, `go tool goose down` rolls back the latest migration, and
+`go tool goose reset` rolls back all migrations. Both may delete data, depending
+on the migrations' down statements. Run `make db-migrate` to reapply them.
+
+PostgreSQL uses a persistent volume from the cluster's default StorageClass.
+Data survives pod replacement, stopping/restarting Tilt, and
+`make hack-tilt-down`: Tilt retains namespaces by default, and the StatefulSet
+retains its volume claim when deleted. Deleting the `kargo` namespace or the
+`data-kargo-postgres-0` volume claim removes this persistence; the StorageClass's
+reclaim policy determines whether the backing volume is also deleted. Treat
+this database as disposable development data.
 
 ## Contributing to Documentation
 

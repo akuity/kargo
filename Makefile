@@ -428,6 +428,10 @@ hack-tilt-up: install-tilt install-helm
 hack-tilt-down: install-tilt
 	PATH=$(EXTENDED_PATH) $(TILT) down
 
+.PHONY: db-migrate
+db-migrate:
+	bash hack/tilt/migrate.sh
+
 .PHONY: hack-kind-down
 hack-kind-down:
 	# ctlptl shells out to the `kind` binary, so build it (pinned via go.mod)
