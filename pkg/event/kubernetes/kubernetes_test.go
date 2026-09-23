@@ -48,6 +48,36 @@ func TestFromKubernetesEvent(t *testing.T) {
 			},
 			expectedType: kargoapi.EventTypePromotionSucceeded,
 		},
+		"api token created event": {
+			k8sEvent: corev1.Event{
+				ObjectMeta: metav1.ObjectMeta{
+					UID: "test-uid",
+					Annotations: map[string]string{
+						kargoapi.AnnotationKeyEventProject:      "test-project",
+						kargoapi.AnnotationKeyEventActor:        "test-actor",
+						kargoapi.AnnotationKeyEventAPITokenName: "test-token",
+						kargoapi.AnnotationKeyEventRoleName:     "test-role",
+					},
+				},
+				Reason:  string(kargoapi.EventTypeAPITokenCreated),
+				Message: "API token created",
+				InvolvedObject: corev1.ObjectReference{
+					Kind:      "Secret",
+					Name:      "test-token",
+					Namespace: "test-project",
+				},
+			},
+			expectedType: kargoapi.EventTypeAPITokenCreated,
+			extraValidation: func(t *testing.T, evt event.Meta) {
+				created, ok := evt.(*event.APITokenCreated)
+				require.True(t, ok)
+				require.Equal(t, "test-project", created.GetProject())
+				require.Equal(t, "test-token", created.GetName())
+				require.Equal(t, "test-role", created.RoleName)
+				require.NotNil(t, created.Actor)
+				require.Equal(t, "test-actor", *created.Actor)
+			},
+		},
 		"promotion failed event": {
 			k8sEvent: corev1.Event{
 				ObjectMeta: metav1.ObjectMeta{

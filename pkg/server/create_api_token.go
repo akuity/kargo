@@ -1,13 +1,19 @@
 package server
 
 import (
+	"context"
 	"errors"
+	"fmt"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
 	corev1 "k8s.io/api/core/v1"
 
+	"github.com/akuity/kargo/pkg/api"
+	"github.com/akuity/kargo/pkg/event"
 	libhttp "github.com/akuity/kargo/pkg/http"
+	"github.com/akuity/kargo/pkg/logging"
+	"github.com/akuity/kargo/pkg/server/user"
 )
 
 // createAPITokenRequest is the request body for creating an API token.
@@ -56,6 +62,7 @@ func (s *server) createProjectAPIToken(c *gin.Context) {
 		_ = c.Error(err)
 		return
 	}
+	s.recordAPITokenCreated(ctx, tokenSecret)
 
 	c.JSON(http.StatusCreated, tokenSecret)
 }
@@ -98,6 +105,27 @@ func (s *server) createSystemAPIToken(c *gin.Context) {
 		_ = c.Error(err)
 		return
 	}
+	s.recordAPITokenCreated(ctx, tokenSecret)
 
 	c.JSON(http.StatusCreated, tokenSecret)
+}
+
+// recordAPITokenCreated emits an event attributing the new token to whoever
+// minted it, so that credential creation leaves an audit trail.
+func (s *server) recordAPITokenCreated(ctx context.Context, tokenSecret *corev1.Secret) {
+	if s.sender == nil {
+		return
+	}
+	var actor string
+	msg := fmt.Sprintf(
+		"API token %q created for Role %q",
+		tokenSecret.Name, tokenSecret.Annotations[corev1.ServiceAccountNameKey],
+	)
+	if u, ok := user.InfoFromContext(ctx); ok {
+		actor = api.FormatEventUserActor(u)
+		msg += fmt.Sprintf(" by %q", actor)
+	}
+	if err := s.sender.Send(ctx, event.NewAPITokenCreated(msg, actor, tokenSecret)); err != nil {
+		logging.LoggerFromContext(ctx).Error(err, "error sending API token created event")
+	}
 }

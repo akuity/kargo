@@ -101,6 +101,15 @@ Freight verification metadata accompanies events emitted while verifying freight
 | `analysisRunName`              | String           | Name of the Argo Rollouts AnalysisRun created for the verification, if present. | Yes (is pointer) |
 | `analysisTriggeredByPromotion` | String           | Name of the promotion that triggered the verification analysis run, if present. | Yes (is pointer) |
 
+### API Token Fields
+
+API token payloads describe the token Secret an event is about and the Kargo Role it belongs to.
+
+| Field Name | Type   | Description                              | Optional |
+| ---------- | ------ | ---------------------------------------- | -------- |
+| `name`     | String | Name of the token (and its Secret).      | No       |
+| `roleName` | String | Name of the Role the token is bound to.  | No       |
+
 ### Promotion Fields
 
 Promotion payloads describe a promotion resource and the freight it targets.
@@ -141,6 +150,7 @@ The complete list of built-in Kargo event types is provided below:
 - `FreightVerificationAborted`
 - `FreightVerificationInconclusive`
 - `FreightVerificationUnknown`
+- `APITokenCreated`
 
 Below are the detailed definitions for each event type.
 
@@ -286,3 +296,14 @@ This event is emitted when freight verification ends in an unknown state.
 - [Common event fields](#common-event-fields)
 - [Freight fields](#freight-fields)
 - [Freight verification fields](#freight-verification-fields)
+
+### `APITokenCreated`
+
+This event is emitted by the API server when an API token is created. The `project` field is the
+namespace holding the token: the Project for a project-level token, or Kargo's own namespace for a
+system-level one. The `actor` field identifies who created the token.
+
+**Payload Includes**
+
+- [Common event fields](#common-event-fields)
+- [API token fields](#api-token-fields)
