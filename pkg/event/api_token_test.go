@@ -21,21 +21,35 @@ func TestNewAPITokenCreated(t *testing.T) {
 		},
 	}
 
-	evt := NewAPITokenCreated("API token created", "test-actor", tokenSecret)
+	evt := NewAPITokenCreated("API token created", "test-actor", tokenSecret, false)
 
 	require.Equal(t, kargoapi.EventTypeAPITokenCreated, evt.Type())
 	require.Equal(t, "test-project", evt.GetProject())
 	require.Equal(t, "test-token", evt.GetName())
 	require.Equal(t, "Secret", evt.Kind())
 	require.Equal(t, "test-role", evt.RoleName)
+	require.False(t, evt.SystemLevel)
 	require.Equal(t, "API token created", evt.GetMessage())
 	require.NotNil(t, evt.Actor)
 	require.Equal(t, "test-actor", *evt.Actor)
 }
 
 func TestNewAPITokenCreated_NoActor(t *testing.T) {
-	evt := NewAPITokenCreated("API token created", "", &corev1.Secret{})
+	evt := NewAPITokenCreated("API token created", "", &corev1.Secret{}, false)
 	require.Nil(t, evt.Actor)
+}
+
+func TestNewAPITokenCreated_SystemLevel(t *testing.T) {
+	evt := NewAPITokenCreated("API token created", "admin", &corev1.Secret{}, true)
+	require.True(t, evt.SystemLevel)
+	require.Equal(
+		t,
+		kargoapi.AnnotationValueTrue,
+		evt.MarshalAnnotations()[kargoapi.AnnotationKeyEventAPITokenSystemLevel],
+	)
+	decoded, err := UnmarshalAPITokenCreatedAnnotations("event-id", evt.MarshalAnnotations())
+	require.NoError(t, err)
+	require.True(t, decoded.SystemLevel)
 }
 
 func TestAPITokenCreated_AnnotationsRoundTrip(t *testing.T) {

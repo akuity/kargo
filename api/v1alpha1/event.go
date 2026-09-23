@@ -23,6 +23,7 @@ const (
 	AnnotationKeyEventRollback               = AnnotationKeyEventPrefix + "rollback"
 	AnnotationKeyEventAPITokenName           = AnnotationKeyEventPrefix + "api-token-name"
 	AnnotationKeyEventRoleName               = AnnotationKeyEventPrefix + "role-name"
+	AnnotationKeyEventAPITokenSystemLevel    = AnnotationKeyEventPrefix + "api-token-system-level"
 )
 
 const (

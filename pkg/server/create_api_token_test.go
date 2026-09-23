@@ -173,6 +173,7 @@ func Test_server_createProjectAPIToken(t *testing.T) {
 					require.Equal(t, testProject.Name, evt.GetProject())
 					require.Equal(t, testToken.Name, evt.GetName())
 					require.Equal(t, testSA.Name, evt.RoleName)
+					require.False(t, evt.SystemLevel)
 					require.NotNil(t, evt.Actor)
 					require.Equal(t, kargoapi.EventActorAdmin, *evt.Actor)
 					require.Equal(
@@ -312,6 +313,7 @@ func Test_server_createSystemAPIToken(t *testing.T) {
 					require.Equal(t, testKargoNamespace, evt.GetProject())
 					require.Equal(t, testToken.Name, evt.GetName())
 					require.Equal(t, testSA.Name, evt.RoleName)
+					require.True(t, evt.SystemLevel)
 					require.Nil(t, evt.Actor)
 				},
 			},

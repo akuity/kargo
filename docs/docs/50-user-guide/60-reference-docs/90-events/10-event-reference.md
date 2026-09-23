@@ -105,10 +105,11 @@ Freight verification metadata accompanies events emitted while verifying freight
 
 API token payloads describe the token Secret an event is about and the Kargo Role it belongs to.
 
-| Field Name | Type   | Description                              | Optional |
-| ---------- | ------ | ---------------------------------------- | -------- |
-| `name`     | String | Name of the token (and its Secret).      | No       |
-| `roleName` | String | Name of the Role the token is bound to.  | No       |
+| Field Name    | Type    | Description                                                                   | Optional |
+| ------------- | ------- | ----------------------------------------------------------------------------- | -------- |
+| `name`        | String  | Name of the token (and its Secret).                                           | No       |
+| `roleName`    | String  | Name of the Role the token is bound to.                                       | No       |
+| `systemLevel` | Boolean | `true` when the Role is system-level, in which case `project` is not a Project. | No       |
 
 ### Promotion Fields
 
@@ -301,7 +302,7 @@ This event is emitted when freight verification ends in an unknown state.
 
 This event is emitted by the API server when an API token is created. The `project` field is the
 namespace holding the token: the Project for a project-level token, or Kargo's own namespace for a
-system-level one. The `actor` field identifies who created the token.
+system-level one, which `systemLevel` flags. The `actor` field identifies who created the token.
 
 **Payload Includes**
 

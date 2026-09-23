@@ -62,7 +62,7 @@ func (s *server) createProjectAPIToken(c *gin.Context) {
 		_ = c.Error(err)
 		return
 	}
-	s.recordAPITokenCreated(ctx, tokenSecret)
+	s.recordAPITokenCreated(ctx, tokenSecret, false)
 
 	c.JSON(http.StatusCreated, tokenSecret)
 }
@@ -105,14 +105,18 @@ func (s *server) createSystemAPIToken(c *gin.Context) {
 		_ = c.Error(err)
 		return
 	}
-	s.recordAPITokenCreated(ctx, tokenSecret)
+	s.recordAPITokenCreated(ctx, tokenSecret, true)
 
 	c.JSON(http.StatusCreated, tokenSecret)
 }
 
 // recordAPITokenCreated emits an event attributing the new token to whoever
 // minted it, so that credential creation leaves an audit trail.
-func (s *server) recordAPITokenCreated(ctx context.Context, tokenSecret *corev1.Secret) {
+func (s *server) recordAPITokenCreated(
+	ctx context.Context,
+	tokenSecret *corev1.Secret,
+	systemLevel bool,
+) {
 	if s.sender == nil {
 		return
 	}
@@ -125,7 +129,8 @@ func (s *server) recordAPITokenCreated(ctx context.Context, tokenSecret *corev1.
 		actor = api.FormatEventUserActor(u)
 		msg += fmt.Sprintf(" by %q", actor)
 	}
-	if err := s.sender.Send(ctx, event.NewAPITokenCreated(msg, actor, tokenSecret)); err != nil {
+	evt := event.NewAPITokenCreated(msg, actor, tokenSecret, systemLevel)
+	if err := s.sender.Send(ctx, evt); err != nil {
 		logging.LoggerFromContext(ctx).Error(err, "error sending API token created event")
 	}
 }

@@ -12,6 +12,10 @@ import (
 type APIToken struct {
 	Name     string `json:"name"`
 	RoleName string `json:"roleName"`
+	// SystemLevel is true when the token belongs to a system-level Role. Such
+	// tokens live in Kargo's own namespace, which the event otherwise reports
+	// as its project.
+	SystemLevel bool `json:"systemLevel"`
 }
 
 func (a APIToken) GetName() string {
@@ -25,14 +29,18 @@ func (a APIToken) Kind() string {
 func (a *APIToken) MarshalAnnotationsTo(annotations map[string]string) {
 	annotations[kargoapi.AnnotationKeyEventAPITokenName] = a.Name
 	annotations[kargoapi.AnnotationKeyEventRoleName] = a.RoleName
+	if a.SystemLevel {
+		annotations[kargoapi.AnnotationKeyEventAPITokenSystemLevel] = kargoapi.AnnotationValueTrue
+	}
 }
 
 // UnmarshalAPITokenAnnotations populates the APIToken fields from the given
 // Kubernetes annotations.
 func UnmarshalAPITokenAnnotations(annotations map[string]string) APIToken {
 	return APIToken{
-		Name:     annotations[kargoapi.AnnotationKeyEventAPITokenName],
-		RoleName: annotations[kargoapi.AnnotationKeyEventRoleName],
+		Name:        annotations[kargoapi.AnnotationKeyEventAPITokenName],
+		RoleName:    annotations[kargoapi.AnnotationKeyEventRoleName],
+		SystemLevel: annotations[kargoapi.AnnotationKeyEventAPITokenSystemLevel] == kargoapi.AnnotationValueTrue,
 	}
 }
 
@@ -49,9 +57,14 @@ func (a *APITokenCreated) Type() kargoapi.EventType {
 // NewAPITokenCreated creates a new APITokenCreated event for the given token
 // Secret. The Secret's namespace is the event's project; for a system-level
 // token that is Kargo's own namespace.
-func NewAPITokenCreated(message, actor string, tokenSecret *corev1.Secret) *APITokenCreated {
+func NewAPITokenCreated(
+	message, actor string,
+	tokenSecret *corev1.Secret,
+	systemLevel bool,
+) *APITokenCreated {
 	evt := &APITokenCreated{
-		Common: Common{Message: message},
+		Common:   Common{Message: message},
+		APIToken: APIToken{SystemLevel: systemLevel},
 	}
 	if actor != "" {
 		evt.Actor = &actor
