@@ -80,6 +80,7 @@ spec:
               containerName: api
               divisor: "1"
               resource: {{ include "kargo.selectCpuResourceField" (dict "resources" .Values.api.resources) }}
+        {{- include "kargo.nats.env" . | nindent 8 }}
         {{- with (concat .Values.global.env .Values.api.env) }}
         {{- tpl (toYaml .) $ | nindent 8 }}
         {{- end }}
@@ -134,8 +135,9 @@ spec:
           {{- toYaml . | nindent 10 }}
           {{- end }}
         {{- end }}
-        {{- if or $kc (and .Values.api.oidc.enabled .Values.api.oidc.dex.enabled) .Values.api.tls.enabled .Values.api.cabundle.configMapName .Values.api.cabundle.secretName .Values.api.volumeMounts }}
+        {{- if or $kc (and .Values.api.oidc.enabled .Values.api.oidc.dex.enabled) .Values.api.tls.enabled .Values.api.cabundle.configMapName .Values.api.cabundle.secretName .Values.api.volumeMounts (include "kargo.nats.nkeySeedSecretName" .) }}
         volumeMounts:
+        {{- include "kargo.nats.volumeMount" . | nindent 8 }}
         {{- if or $kc (and .Values.api.oidc.enabled .Values.api.oidc.dex.enabled) .Values.api.tls.enabled }}
         - mountPath: /etc/kargo
           name: config
@@ -166,8 +168,9 @@ spec:
       {{- toYaml . | nindent 6 }}
       {{- end }}
       {{- end }}
-      {{- if or $kc (and .Values.api.oidc.enabled .Values.api.oidc.dex.enabled) .Values.api.tls.enabled .Values.api.cabundle.configMapName .Values.api.cabundle.secretName .Values.api.volumes }}
+      {{- if or $kc (and .Values.api.oidc.enabled .Values.api.oidc.dex.enabled) .Values.api.tls.enabled .Values.api.cabundle.configMapName .Values.api.cabundle.secretName .Values.api.volumes (include "kargo.nats.nkeySeedSecretName" .) }}
       volumes:
+      {{- include "kargo.nats.volume" . | nindent 6 }}
       {{- if or $kc (and .Values.api.oidc.enabled .Values.api.oidc.dex.enabled) .Values.api.tls.enabled }}
       - name: config
         projected:

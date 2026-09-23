@@ -29,6 +29,7 @@ tests/
   dex-server_test.yaml                  # dex-server/*
   users_test.yaml                       # users/*
   argocd_test.yaml                      # argocd/*
+  nats_test.yaml                        # NATS connection settings on workloads that use NATS
 ```
 
 ## Suite naming

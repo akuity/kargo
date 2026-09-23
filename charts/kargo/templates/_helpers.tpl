@@ -374,3 +374,94 @@ Usage:
   emptyDir: {}
 {{- end -}}
 {{- end -}}
+
+{{/*
+kargo.nats.url returns the URL Kargo components use to connect to NATS. When
+the NATS subchart is enabled, the URL of its client Service is derived from the
+subchart's values. Otherwise, externalNats.url is used, and rendering fails if
+it has not been set, since the components that use NATS require it.
+*/}}
+{{- define "kargo.nats.url" -}}
+{{- if .Values.nats.enabled -}}
+{{- $namespace := .Values.nats.namespaceOverride | default .Release.Namespace -}}
+{{- $port := dig "config" "nats" "port" 4222 .Values.nats -}}
+{{- printf "nats://%s.%s.svc.cluster.local:%v" .Values.nats.fullnameOverride $namespace $port -}}
+{{- else if .Values.externalNats.url -}}
+{{- .Values.externalNats.url -}}
+{{- else -}}
+{{- fail "externalNats.url must be set when nats.enabled is false: the API server, controller, and management controller require a NATS server to connect to" -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
+kargo.nats.nkeySeedSecretName returns the name of the Secret containing the
+nkey seed Kargo components use to authenticate with NATS, or an empty string if
+none applies. Authentication is only supported with an external NATS server;
+the NATS installed by this chart does not require it.
+*/}}
+{{- define "kargo.nats.nkeySeedSecretName" -}}
+{{- if not .Values.nats.enabled -}}
+{{- .Values.externalNats.nkeySeedSecret.name -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
+kargo.nats.env renders the environment variables consumed by
+pkg/nats.ConfigFromEnv. NATS_SEED_KEY_FILE must agree with the mount path used
+by kargo.nats.volumeMount. NATS_CLIENT_NAME is the pod name so that
+connections reported by the NATS server identify an exact replica.
+
+Usage:
+  env:
+  {{- include "kargo.nats.env" . | nindent 8 }}
+*/}}
+{{- define "kargo.nats.env" -}}
+- name: NATS_SERVER_URL
+  value: {{ include "kargo.nats.url" . | quote }}
+{{- if include "kargo.nats.nkeySeedSecretName" . }}
+- name: NATS_SEED_KEY_FILE
+  value: /etc/kargo/nats/seed.nk
+{{- end }}
+- name: NATS_CLIENT_NAME
+  valueFrom:
+    fieldRef:
+      fieldPath: metadata.name
+{{- end -}}
+
+{{/*
+kargo.nats.volumeMount renders the volumeMount for the NATS nkey seed, if
+applicable. Empty otherwise. Pair with kargo.nats.volume.
+
+Usage:
+  volumeMounts:
+  ...
+  {{- include "kargo.nats.volumeMount" . | nindent 8 }}
+*/}}
+{{- define "kargo.nats.volumeMount" -}}
+{{- if include "kargo.nats.nkeySeedSecretName" . -}}
+- mountPath: /etc/kargo/nats
+  name: nats-nkey
+  readOnly: true
+{{- end -}}
+{{- end -}}
+
+{{/*
+kargo.nats.volume renders the volume containing the NATS nkey seed, if
+applicable. Empty otherwise. The Secret key holding the seed is projected to
+the fixed filename that kargo.nats.env points NATS_SEED_KEY_FILE at.
+
+Usage:
+  volumes:
+  ...
+  {{- include "kargo.nats.volume" . | nindent 6 }}
+*/}}
+{{- define "kargo.nats.volume" -}}
+{{- with include "kargo.nats.nkeySeedSecretName" . -}}
+- name: nats-nkey
+  secret:
+    secretName: {{ . }}
+    items:
+    - key: {{ $.Values.externalNats.nkeySeedSecret.key }}
+      path: seed.nk
+{{- end -}}
+{{- end -}}

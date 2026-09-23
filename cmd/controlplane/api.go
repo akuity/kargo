@@ -78,6 +78,12 @@ func (o *apiOptions) complete() {
 func (o *apiOptions) run(ctx context.Context) error {
 	serverCfg := config.ServerConfigFromEnv()
 
+	natsConn, err := connectNATS(ctx, o.Logger)
+	if err != nil {
+		return err
+	}
+	defer natsConn.Close()
+
 	restCfg, err := kubernetes.GetRestConfig(ctx, o.KubeConfig)
 	if err != nil {
 		return fmt.Errorf("error getting Kubernetes client REST config: %w", err)

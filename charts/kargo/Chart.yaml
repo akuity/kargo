@@ -11,3 +11,8 @@ maintainers:
   email: kent@akuity.io
 - name: Sunghoon Kang
   email: hoon@akuity.io
+dependencies:
+- name: nats
+  version: 2.14.6
+  repository: https://nats-io.github.io/k8s/helm/charts/
+  condition: nats.enabled

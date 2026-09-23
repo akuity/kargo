@@ -56,3 +56,19 @@ managementController:
   logLevel: DEBUG
 webhooksServer:
   logLevel: DEBUG
+nats:
+  # The NATS chart only sets metadata.namespace on its resources when this is
+  # set. Tilt applies resources lacking a namespace to the default namespace,
+  # which would leave NATS somewhere other than where Kargo expects it.
+  namespaceOverride: kargo
+  config:
+    cluster:
+      # A single server is enough for local development. The replica count
+      # lives under config.cluster in the NATS chart.
+      replicas: 1
+  container:
+    resources:
+      requests:
+        cpu: 500m
+        memory: 500Mi
+      limits: null
