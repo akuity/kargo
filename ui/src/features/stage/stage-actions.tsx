@@ -10,6 +10,7 @@ import { Button, Space } from 'antd';
 import React from 'react';
 import { useParams } from 'react-router-dom';
 
+import { withBasePath } from '@ui/config/base-path';
 import {
   getQueryFreightsRestQueryKey,
   useGetStageLinks,
@@ -80,7 +81,11 @@ export const StageActions = ({
           }}
         >
           <Space size={8}>
-            <img src='/argo-logo.svg' alt='ArgoCD' style={{ width: '28px', marginTop: '-2px' }} />
+            <img
+              src={withBasePath('/argo-logo.svg')}
+              alt='ArgoCD'
+              style={{ width: '28px', marginTop: '-2px' }}
+            />
             ArgoCD
           </Space>
         </ArgoCDLink>
