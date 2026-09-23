@@ -20,6 +20,7 @@ import (
 
 	rbacapi "github.com/akuity/kargo/api/rbac/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/pkg/server/user"
 )
 
 const (
@@ -1716,8 +1717,9 @@ func Test_rolesDatabase_CreateAPIToken(t *testing.T) {
 					return client.Get(ctx, key, obj, opts...)
 				},
 			}).Build()
+		ctx := user.ContextWithInfo(t.Context(), user.Info{IsAdmin: true})
 		tokenSecret, err := NewKubernetesRolesDatabase(c, c, RolesDatabaseConfigFromEnv()).
-			CreateAPIToken(t.Context(), false, testProject, testRoleName, testTokenName)
+			CreateAPIToken(ctx, false, testProject, testRoleName, testTokenName)
 		require.NoError(t, err)
 		require.NotNil(t, tokenSecret)
 		tokenSecret = &corev1.Secret{}
@@ -1735,6 +1737,11 @@ func Test_rolesDatabase_CreateAPIToken(t *testing.T) {
 			t,
 			testRoleName,
 			tokenSecret.Annotations["kubernetes.io/service-account.name"],
+		)
+		require.Equal(
+			t,
+			kargoapi.EventActorAdmin,
+			tokenSecret.Annotations[kargoapi.AnnotationKeyCreateActor],
 		)
 	})
 }

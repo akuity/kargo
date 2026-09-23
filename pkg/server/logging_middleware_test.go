@@ -12,8 +12,10 @@ import (
 	"go.uber.org/zap/zapcore"
 	"go.uber.org/zap/zaptest/observer"
 
+	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	libhttp "github.com/akuity/kargo/pkg/http"
 	"github.com/akuity/kargo/pkg/logging"
+	"github.com/akuity/kargo/pkg/server/user"
 )
 
 func TestLoggingMiddleware(t *testing.T) {
@@ -40,8 +42,26 @@ func TestLoggingMiddleware(t *testing.T) {
 				fields := entries[0].ContextMap()
 				require.Equal(t, http.MethodGet, fields["method"])
 				require.Equal(t, "/", fields["path"])
+				require.Equal(t, kargoapi.EventActorUnknown, fields["actor"])
 				require.EqualValues(t, http.StatusOK, fields["status"])
 				require.Contains(t, fields, "duration")
+			},
+		},
+		{
+			name:  "authenticated request is attributed to its actor",
+			level: zapcore.DebugLevel,
+			handler: func(c *gin.Context) {
+				// Stands in for the authentication middleware, which binds the
+				// actor to the request context in exactly this way.
+				c.Request = c.Request.WithContext(
+					user.ContextWithInfo(c.Request.Context(), user.Info{IsAdmin: true}),
+				)
+				c.Status(http.StatusOK)
+			},
+			expectedStatus: http.StatusOK,
+			assertions: func(t *testing.T, entries []observer.LoggedEntry) {
+				require.Len(t, entries, 1)
+				require.Equal(t, kargoapi.EventActorAdmin, entries[0].ContextMap()["actor"])
 			},
 		},
 		{
@@ -67,6 +87,7 @@ func TestLoggingMiddleware(t *testing.T) {
 				require.Equal(t, zapcore.InfoLevel, entries[0].Level)
 				require.Equal(t, "refused request", entries[0].Message)
 				fields := entries[0].ContextMap()
+				require.Equal(t, kargoapi.EventActorUnknown, fields["actor"])
 				require.EqualValues(t, http.StatusUnauthorized, fields["status"])
 				require.Equal(t, "invalid token", fields["error"])
 			},
@@ -136,7 +157,7 @@ func TestLoggingMiddleware(t *testing.T) {
 				)
 				c.Next()
 			})
-			router.Use(loggingMiddleware())
+			router.Use(LoggingMiddleware())
 			router.Use(s.handleError)
 			router.GET("/", testCase.handler)
 

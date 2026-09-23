@@ -17,7 +17,9 @@ import (
 
 	rbacapi "github.com/akuity/kargo/api/rbac/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/pkg/api"
 	"github.com/akuity/kargo/pkg/server/kubernetes"
+	"github.com/akuity/kargo/pkg/server/user"
 )
 
 type RolesDatabaseConfig struct {
@@ -1193,7 +1195,12 @@ func (c *rolesDatabase) CreateAPIToken(
 		},
 		Type: corev1.SecretTypeServiceAccountToken,
 	}
-	fmt.Println(tokenSecret.OwnerReferences)
+	// Record who minted the token. Requests made with it are attributed to the
+	// role's ServiceAccount, so this is the only link from the credential back
+	// to a person.
+	if u, ok := user.InfoFromContext(ctx); ok {
+		tokenSecret.Annotations[kargoapi.AnnotationKeyCreateActor] = api.FormatEventUserActor(u)
+	}
 	if err = c.client.Create(ctx, tokenSecret); err != nil {
 		return nil, fmt.Errorf(
 			"error creating token Secret %q for ServiceAccount %q in namespace %q: %w",
