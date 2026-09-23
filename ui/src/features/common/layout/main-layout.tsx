@@ -10,7 +10,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Button, Spin, Tooltip } from 'antd';
 import ErrorBoundary from 'antd/es/alert/ErrorBoundary';
 import { Suspense } from 'react';
-import { Outlet } from 'react-router-dom';
+import { Link, Outlet } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
 import { useExtensionsContext } from '@ui/extensions/extensions-context';
@@ -36,7 +36,9 @@ export const MainLayout = () => {
       >
         <div className={styles.wrapper}>
           <aside className={styles.sidebar}>
-            <KargoLogo className='my-4' />
+            <Link to={paths.home} className='my-4' title='Home'>
+              <KargoLogo />
+            </Link>
             <Tooltip className={styles.version} title={__UI_VERSION__} placement='right'>
               {__UI_VERSION__ === 'development' ? 'dev' : __UI_VERSION__}
             </Tooltip>
