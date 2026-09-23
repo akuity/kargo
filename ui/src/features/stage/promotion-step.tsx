@@ -3,6 +3,7 @@ import {
   faCheck,
   faCircleNotch,
   faCog,
+  faHourglassStart,
   faLinesLeaning,
   faRotate,
   faTerminal,
@@ -76,6 +77,7 @@ export const Step = ({
   const success = result === PromotionDirectiveStepStatus.SUCCESS;
   const failed = result === PromotionDirectiveStepStatus.FAILED;
   const skipped = result === PromotionDirectiveStepStatus.SKIPPED;
+  const wontRun = result === PromotionDirectiveStepStatus.WONT_RUN;
 
   const attempt = getStepErrorCount(stepIndex, promotion?.status);
 
@@ -158,6 +160,7 @@ export const Step = ({
           {success && <FontAwesomeIcon icon={faCheck} className='text-green-500' />}
           {failed && <FontAwesomeIcon icon={faTimes} className='text-red-500' />}
           {skipped && <FontAwesomeIcon icon={faBan} />}
+          {wontRun && <FontAwesomeIcon icon={faHourglassStart} />}
         </Flex>
         <Flex className={'w-full'} align='center' gap={8}>
           {!!step?.as && (
