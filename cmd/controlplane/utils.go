@@ -5,6 +5,7 @@ import (
 	"fmt"
 	stdos "os"
 
+	natsgo "github.com/nats-io/nats.go"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/dynamic"
@@ -12,6 +13,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/akuity/kargo/pkg/logging"
+	"github.com/akuity/kargo/pkg/nats"
 	"github.com/akuity/kargo/pkg/os"
 )
 
@@ -77,4 +79,16 @@ func getLogVars() (logging.Level, logging.Format) {
 		logFormat = logging.DefaultFormat
 	}
 	return logLevel, logFormat
+}
+
+// connectNATS connects to the NATS server specified by environment variables.
+// Components that use NATS require it, so failure to connect is returned as an
+// error that callers should treat as fatal.
+func connectNATS(ctx context.Context, logger *logging.Logger) (*natsgo.Conn, error) {
+	conn, err := nats.ConnectFromEnv(logging.ContextWithLogger(ctx, logger))
+	if err != nil {
+		return nil, err
+	}
+	logger.Info("connected to NATS server", "server", conn.ConnectedUrlRedacted())
+	return conn, nil
 }
