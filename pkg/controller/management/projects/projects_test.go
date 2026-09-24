@@ -29,7 +29,7 @@ import (
 
 func TestNewReconciler(t *testing.T) {
 	testCfg := ReconcilerConfig{}
-	r := newReconciler(fake.NewClientBuilder().Build(), testCfg)
+	r := newReconciler(fake.NewClientBuilder().Build(), testCfg, nil)
 	require.Equal(t, testCfg, r.cfg)
 	require.NotNil(t, r.client)
 	require.NotNil(t, r.getProjectFn)
@@ -1995,7 +1995,7 @@ func TestReconciler_ensureControllerPermissions(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			r := newReconciler(testCase.client, cfg)
+			r := newReconciler(testCase.client, cfg, nil)
 			err = r.ensureControllerPermissions(t.Context(), testProject)
 			testCase.assertions(t, testCase.client, err)
 		})

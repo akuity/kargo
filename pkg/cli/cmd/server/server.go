@@ -110,6 +110,10 @@ func (o *serverOptions) run(ctx context.Context) error {
 		client,
 		rbac.NewKubernetesRolesDatabase(client, client, rbac.RolesDatabaseConfigFromEnv()),
 		k8sevent.NewEventSender(&fakeevent.EventRecorder{}),
+		// Local mode runs without a database or NATS; endpoints that need the
+		// database respond 501.
+		nil,
+		nil,
 	)
 	if err := srv.Serve(ctx, l); err != nil {
 		return fmt.Errorf("serve error: %w", err)

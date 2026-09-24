@@ -507,8 +507,10 @@ Tilt starts a PostgreSQL instance for local development and forwards
 `127.0.0.1:15432` to its port `5432`. The database, username, and password are
 all `kargo`. Inside the cluster, the address is `kargo-postgres.kargo.svc:5432`.
 The management controller mirrors Projects, Stages, Warehouses, and Freight into
-this database. Kubernetes remains the source of truth; application API reads
-still use Kubernetes.
+this database. For those resources Kubernetes remains the source of truth, and
+application API reads still use Kubernetes. Targets and PromotionRequests, by
+contrast, live only in the database; see
+[Targets and PromotionRequests](#targets-and-promotionrequests).
 
 The `db-migrate` Tilt resource waits for PostgreSQL to accept a connection,
 then runs the pinned Goose tool to apply pending SQL migrations from
@@ -539,10 +541,11 @@ psql "$GOOSE_DBSTRING"
 variables before starting Tilt to override them, for example when using a
 separate development database.
 
-Tilt also configures the management controller's `DATABASE_URL` environment
-variable using the in-cluster PostgreSQL address and waits for `db-migrate`
-before the controller's initial startup. Configure `DATABASE_URL` separately
-when using another database; the Goose variables only configure migrations.
+Tilt also configures the `DATABASE_URL` environment variable of the management
+controller, the controller and the API server using the in-cluster PostgreSQL
+address, and waits for `db-migrate` before their initial startup. Configure `DATABASE_URL`
+separately when using another database; the Goose variables only configure
+migrations.
 
 ### Generating database code
 
@@ -710,6 +713,70 @@ untouched. They require a database user allowed to create schemas:
 
 ```shell
 TEST_DATABASE_URL="$GOOSE_DBSTRING" make test-db
+```
+
+### Targets and PromotionRequests
+
+Targets and PromotionRequests are authored in the database rather than
+mirrored from Kubernetes. Their tables reference the mirrored `projects`,
+`stages`, and `freight` rows, so a Target or PromotionRequest can only be
+created once the resources it refers to have been mirrored.
+
+There is no write API for Targets yet. Seed one with SQL, naming the Project
+it belongs to. Its `labels` are what a Stage's target selectors match, and its
+`params` are what a Promotion's steps see as `target.params`:
+
+```shell
+psql "$GOOSE_DBSTRING" <<'SQL'
+INSERT INTO targets (project_id, name, labels, params)
+SELECT id, 'us-east', '{"region": "us"}', '{"cluster": "us-east-1"}'
+FROM projects WHERE name = 'kargo-demo';
+SQL
+```
+
+The controller creates a PromotionRequest when a Stage that selects Targets
+auto-promotes Freight, resolving the Stage's selectors against the Project's
+Target rows at that moment. It reads the request back on every reconcile to
+maintain the Stage's `status.currentPromotionRequest` and
+`status.lastPromotionRequest`; since there is no watch on database rows, a
+Stage with a current request polls for it every
+`PROMOTION_REQUEST_POLL_INTERVAL` (default `1m`). Without `DATABASE_URL`, a
+Stage that selects Targets reports a `Stalled` condition instead.
+
+The API server reads Targets and PromotionRequests from the database too, and
+creates a PromotionRequest when a user promotes to a Stage that selects
+Targets. Reads are authorized with the same `get`, `list` and `watch`
+SubjectAccessReviews on `targets` and `promotionrequests` that reads of the
+custom resources were, so existing roles keep working. A watch on either kind
+polls the database every couple of seconds, since the database has no change
+feed. Without `DATABASE_URL`, the endpoints that serve them respond 501.
+
+The PromotionRequest reconciler is a controller built on `pkg/dbreconcile`,
+which gives database-backed resources controllers in controller-runtime's
+shape. Its package documentation describes the model. Changes to
+PromotionRequests are announced as events on NATS subjects under
+`kargo.promotionrequests`: the controller and the API server publish to
+`kargo.promotionrequests.created` when they create a request, and the
+reconciler publishes to `kargo.promotionrequests.updated` when it changes one.
+An event carries the request as the database holds it, before and after the
+change, as JSON whose fields are named after the table's columns; it never
+carries the `PromotionRequest` resource shape the API serves. The reconciler
+watches those subjects and reconciles a request as soon as an event about it
+arrives. Core NATS drops events published while a subscriber is away, so it
+also resyncs every open request every `PROMOTION_REQUEST_RECONCILE_INTERVAL`
+(default `2m`).
+
+Each open request is handed to a `StatusHandler` that decides its new status.
+In Kargo, that handler ends every request with an explanation that fan-out to
+Targets is a Kargo Enterprise feature. Every controller replica runs the
+reconciler, so handlers must be idempotent.
+
+To watch the events while Tilt is running, forward the NATS port and
+subscribe with the [NATS CLI](https://github.com/nats-io/natscli):
+
+```shell
+kubectl -n kargo port-forward svc/kargo-nats 4222:4222
+nats --server nats://127.0.0.1:4222 sub 'kargo.>'
 ```
 
 ### Creating a migration

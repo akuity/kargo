@@ -8,6 +8,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/akuity/kargo/pkg/database"
 	k8sevent "github.com/akuity/kargo/pkg/event/kubernetes"
 	"github.com/akuity/kargo/pkg/kubernetes/event"
 	"github.com/akuity/kargo/pkg/logging"
@@ -27,6 +28,8 @@ type apiOptions struct {
 
 	BindAddress string
 	Port        string
+
+	DatabaseURL string
 
 	Logger *logging.Logger
 }
@@ -69,6 +72,8 @@ func (o *apiOptions) complete() {
 
 	o.BindAddress = os.GetEnv("BIND_ADDRESS", "0.0.0.0")
 	o.Port = os.GetEnv("PORT", "8080")
+
+	o.DatabaseURL = os.GetEnv("DATABASE_URL", "")
 
 	logLevel, logFormat := getLogVars()
 
@@ -148,6 +153,20 @@ func (o *apiOptions) run(ctx context.Context) error {
 	)
 	defer sender.Shutdown()
 
+	// The database holds Targets and PromotionRequests. It is optional: without
+	// it, the endpoints that serve them respond 501.
+	var store database.Store
+	if o.DatabaseURL != "" {
+		pool, poolErr := database.NewPool(ctx, o.DatabaseURL)
+		if poolErr != nil {
+			return fmt.Errorf("error configuring database: %w", poolErr)
+		}
+		defer pool.Close()
+		store = database.NewStore(pool)
+	} else {
+		o.Logger.Info("DATABASE_URL is not set; Targets and PromotionRequests are unavailable")
+	}
+
 	srv := server.NewServer(
 		serverCfg,
 		kubeClient,
@@ -157,6 +176,8 @@ func (o *apiOptions) run(ctx context.Context) error {
 			rbac.RolesDatabaseConfigFromEnv(),
 		),
 		sender,
+		store,
+		natsConn,
 	)
 	l, err := net.Listen("tcp", fmt.Sprintf("%s:%s", o.BindAddress, o.Port))
 	if err != nil {

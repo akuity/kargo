@@ -1,12 +1,13 @@
 package server
 
 import (
+	"errors"
+	"fmt"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/pkg/database"
 )
 
 // @id GetTarget
@@ -24,12 +25,27 @@ func (s *server) getTarget(c *gin.Context) {
 	project := c.Param("project")
 	name := c.Param("target")
 
-	target := &kargoapi.Target{}
-	if err := s.client.Get(
-		ctx,
-		client.ObjectKey{Name: name, Namespace: project},
-		target,
-	); err != nil {
+	if s.store == nil {
+		_ = c.Error(errDatabaseNotConfigured)
+		return
+	}
+
+	if err := s.authorizeStoreRead(ctx, "get", "targets", project, name); err != nil {
+		_ = c.Error(err)
+		return
+	}
+
+	row, err := s.store.GetTarget(ctx, database.GetTargetParams{ProjectName: project, Name: name})
+	if err != nil {
+		if errors.Is(err, database.ErrNotFound) {
+			_ = c.Error(storeNotFound("targets", name))
+			return
+		}
+		_ = c.Error(fmt.Errorf("error getting Target %q in Project %q: %w", name, project, err))
+		return
+	}
+	target, err := database.TargetFromRow(row, project)
+	if err != nil {
 		_ = c.Error(err)
 		return
 	}

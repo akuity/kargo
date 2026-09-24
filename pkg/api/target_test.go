@@ -160,6 +160,125 @@ func TestTargetSelectorsForStage(t *testing.T) {
 	}
 }
 
+func TestFilterTargetsForStage(t *testing.T) {
+	t.Parallel()
+	newTarget := func(name string, lbls map[string]string) kargoapi.Target {
+		return kargoapi.Target{ObjectMeta: metav1.ObjectMeta{Namespace: "demo", Name: name, Labels: lbls}}
+	}
+	usEast := newTarget("us-east", map[string]string{"region": "us"})
+	usWest := newTarget("us-west", map[string]string{"region": "us"})
+	euWest := newTarget("eu-west", map[string]string{"region": "eu"})
+	both := newTarget("us-east", map[string]string{"region": "us", "tier": "prod"})
+	targetAware := func(selectors ...metav1.LabelSelector) *kargoapi.Stage {
+		return &kargoapi.Stage{
+			ObjectMeta: metav1.ObjectMeta{Namespace: "demo", Name: "dev"},
+			Spec:       kargoapi.StageSpec{Targets: &kargoapi.StageTargets{Selectors: selectors}},
+		}
+	}
+	us := metav1.LabelSelector{MatchLabels: map[string]string{"region": "us"}}
+	eu := metav1.LabelSelector{MatchLabels: map[string]string{"region": "eu"}}
+	prod := metav1.LabelSelector{MatchLabels: map[string]string{"tier": "prod"}}
+
+	testCases := []struct {
+		name    string
+		stage   *kargoapi.Stage
+		targets []kargoapi.Target
+		assert  func(*testing.T, []kargoapi.Target, error)
+	}{
+		{
+			name:    "classic Stage governs nothing",
+			stage:   &kargoapi.Stage{},
+			targets: []kargoapi.Target{usEast},
+			assert: func(t *testing.T, targets []kargoapi.Target, err error) {
+				require.NoError(t, err)
+				require.Nil(t, targets)
+			},
+		},
+		{
+			name:    "target-aware Stage with no selectors governs nothing, but not nil",
+			stage:   targetAware(),
+			targets: []kargoapi.Target{usEast},
+			assert: func(t *testing.T, targets []kargoapi.Target, err error) {
+				require.NoError(t, err)
+				require.NotNil(t, targets)
+				require.Empty(t, targets)
+			},
+		},
+		{
+			name: "malformed selector",
+			stage: targetAware(metav1.LabelSelector{
+				MatchExpressions: []metav1.LabelSelectorRequirement{{Key: "region", Operator: "Bogus"}},
+			}),
+			targets: []kargoapi.Target{usEast},
+			assert: func(t *testing.T, _ []kargoapi.Target, err error) {
+				require.ErrorContains(t, err, "error parsing target selector 0")
+			},
+		},
+		{
+			name:    "nothing matches",
+			stage:   targetAware(us),
+			targets: []kargoapi.Target{euWest},
+			assert: func(t *testing.T, targets []kargoapi.Target, err error) {
+				require.NoError(t, err)
+				require.NotNil(t, targets)
+				require.Empty(t, targets)
+			},
+		},
+		{
+			name:    "matches are sorted by name",
+			stage:   targetAware(us),
+			targets: []kargoapi.Target{usWest, euWest, usEast},
+			assert: func(t *testing.T, targets []kargoapi.Target, err error) {
+				require.NoError(t, err)
+				require.Equal(t, []kargoapi.Target{usEast, usWest}, targets)
+			},
+		},
+		{
+			name:    "selectors describe a union",
+			stage:   targetAware(us, eu),
+			targets: []kargoapi.Target{usEast, euWest},
+			assert: func(t *testing.T, targets []kargoapi.Target, err error) {
+				require.NoError(t, err)
+				require.Equal(t, []kargoapi.Target{euWest, usEast}, targets)
+			},
+		},
+		{
+			name:    "a Target matching two selectors appears once",
+			stage:   targetAware(us, prod),
+			targets: []kargoapi.Target{both},
+			assert: func(t *testing.T, targets []kargoapi.Target, err error) {
+				require.NoError(t, err)
+				require.Equal(t, []kargoapi.Target{both}, targets)
+			},
+		},
+		{
+			name:    "a Target listed twice appears once",
+			stage:   targetAware(us),
+			targets: []kargoapi.Target{usEast, usEast},
+			assert: func(t *testing.T, targets []kargoapi.Target, err error) {
+				require.NoError(t, err)
+				require.Equal(t, []kargoapi.Target{usEast}, targets)
+			},
+		},
+		{
+			name:    "an empty selector selects everything",
+			stage:   targetAware(metav1.LabelSelector{}),
+			targets: []kargoapi.Target{usEast, euWest},
+			assert: func(t *testing.T, targets []kargoapi.Target, err error) {
+				require.NoError(t, err)
+				require.Equal(t, []kargoapi.Target{euWest, usEast}, targets)
+			},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+			targets, err := FilterTargetsForStage(testCase.stage, testCase.targets)
+			testCase.assert(t, targets, err)
+		})
+	}
+}
+
 func TestAnySelectorMatches(t *testing.T) {
 	us := labels.SelectorFromSet(labels.Set{"region": "us"})
 	eu := labels.SelectorFromSet(labels.Set{"region": "eu"})

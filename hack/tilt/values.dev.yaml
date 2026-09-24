@@ -1,6 +1,9 @@
 api:
   logLevel: DEBUG
   host: localhost:30081
+  env:
+  - name: DATABASE_URL
+    value: postgres://kargo:kargo@kargo-postgres.kargo.svc:5432/kargo?sslmode=disable
   tls:
     enabled: false
   permissiveCORSPolicyEnabled: true
@@ -33,6 +36,9 @@ api:
         - kilgore@kilgore.trout
 controller:
   logLevel: DEBUG
+  env:
+  - name: DATABASE_URL
+    value: postgres://kargo:kargo@kargo-postgres.kargo.svc:5432/kargo?sslmode=disable
   gitClient:
     name: "Kargo Test Key"
     email: "no-reply@kargo.io"

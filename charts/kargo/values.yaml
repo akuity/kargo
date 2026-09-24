@@ -713,8 +713,10 @@ controller:
       ## @param controller.reconcilers.promotions.maxConcurrentReconciles optionally overrides the maximum number of Promotion resources the controller can reconcile concurrently.
       maxConcurrentReconciles:
     promotionRequests:
-      ## @param controller.reconcilers.promotionRequests.maxConcurrentReconciles optionally overrides the maximum number of PromotionRequest resources the controller can reconcile concurrently.
+      ## @param controller.reconcilers.promotionRequests.maxConcurrentReconciles optionally overrides the maximum number of PromotionRequests the controller can reconcile concurrently.
       maxConcurrentReconciles:
+      ## @param controller.reconcilers.promotionRequests.interval specifies how often the controller resyncs every open PromotionRequest in the database. Accepts duration format (e.g., "2m", "30s"). A PromotionRequest is reconciled as soon as its creation or change is announced over NATS, so this only bounds how long one can wait when an announcement is lost.
+      interval: "2m"
     stages:
       ## @param controller.reconcilers.stages.maxConcurrentReconciles optionally overrides the maximum number of (non-control flow) Stage resources the controller can reconcile concurrently.
       maxConcurrentReconciles:

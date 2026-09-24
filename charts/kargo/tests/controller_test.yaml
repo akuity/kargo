@@ -125,6 +125,20 @@ tests:
           path: data.MAX_CONCURRENT_PROMOTION_REQUEST_RECONCILES
           value: "7"
 
+  - it: configures the PromotionRequest resync interval
+    set:
+      controller.reconcilers.promotionRequests.interval: 45s
+    asserts:
+      - equal:
+          path: data.PROMOTION_REQUEST_RECONCILE_INTERVAL
+          value: "45s"
+
+  - it: resyncs PromotionRequests every two minutes by default
+    asserts:
+      - equal:
+          path: data.PROMOTION_REQUEST_RECONCILE_INTERVAL
+          value: "2m"
+
 ---
 suite: controller/cluster-role-bindings.yaml
 values:

@@ -2,7 +2,9 @@ package server
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -16,9 +18,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/pkg/api"
+	"github.com/akuity/kargo/pkg/database"
 	k8sevent "github.com/akuity/kargo/pkg/event/kubernetes"
 	fakeevent "github.com/akuity/kargo/pkg/kubernetes/event/fake"
 	"github.com/akuity/kargo/pkg/server/config"
+	"github.com/akuity/kargo/pkg/server/user"
 )
 
 func authorizeStagesPromoteFn(t *testing.T) func(
@@ -111,22 +116,22 @@ func Test_server_promoteToStage(t *testing.T) {
 			MatchLabels: map[string]string{"region": "us"},
 		}},
 	}
-	testTarget := &kargoapi.Target{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "us-east",
-			Namespace: testProject.Name,
-			Labels:    map[string]string{"region": "us"},
-		},
+	// Targets live in the database. eu-west is present in the Project but not
+	// matched by the Stage's selector, so it must not appear in the resolved
+	// list.
+	newTargetStore := func() *fakePromotionStore {
+		store := &fakePromotionStore{}
+		store.addTarget(testProject.Name, "us-east", map[string]string{"region": "us"})
+		store.addTarget(testProject.Name, "eu-west", map[string]string{"region": "eu"})
+		return store
 	}
-	// Present in the Project but not matched by the Stage's selector, so it
-	// must not appear in the resolved list.
-	testUnselectedTarget := &kargoapi.Target{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "eu-west",
-			Namespace: testProject.Name,
-			Labels:    map[string]string{"region": "eu"},
-		},
-	}
+	targetStore := newTargetStore()
+	repromoteStore := newTargetStore()
+	repromoteStore.addRequest(
+		testProject.Name, testStage.Name, testStage.Name+".existing.01jexam", testFreight.Name,
+		kargoapi.PromotionRequestPhaseSucceeded, "us-east",
+	)
+	notMirroredStore := &fakePromotionStore{createErr: fmt.Errorf("Freight: %w", database.ErrNotMirrored)}
 
 	testRESTEndpoint(
 		t, &config.ServerConfig{},
@@ -138,10 +143,11 @@ func Test_server_promoteToStage(t *testing.T) {
 					testProject,
 					testTargetAwareStage,
 					testFreight,
-					testTarget,
-					testUnselectedTarget,
 				),
-				serverSetup: authorizeAllStagesPromote,
+				serverSetup: serverSetups(authorizeAllStagesPromote, withStore(targetStore)),
+				ctxSetup: func(ctx context.Context) context.Context {
+					return user.ContextWithInfo(ctx, user.Info{IsAdmin: true})
+				},
 				body: mustJSONBody(promoteToStageRequest{
 					Freight: testFreight.Name,
 				}),
@@ -152,19 +158,54 @@ func Test_server_promoteToStage(t *testing.T) {
 					require.NoError(t, c.List(t.Context(), promos, client.InNamespace(testProject.Name)))
 					require.Empty(t, promos.Items)
 
-					reqs := &kargoapi.PromotionRequestList{}
-					require.NoError(t, c.List(t.Context(), reqs, client.InNamespace(testProject.Name)))
-					require.Len(t, reqs.Items, 1)
-					require.Equal(t, testStage.Name, reqs.Items[0].Spec.Stage)
-					require.Equal(t, testFreight.Name, reqs.Items[0].Spec.Freight)
+					require.Len(t, targetStore.created, 1)
+					created := targetStore.created[0]
+					require.Equal(t, testProject.Name, created.ProjectName)
+					require.Equal(t, testStage.Name, created.Stage)
+					require.Equal(t, testFreight.Name, created.Freight)
 					// The Stage's selectors are resolved to Targets at creation.
-					require.Equal(
-						t,
-						[]kargoapi.PromotionRequestTarget{{Name: "us-east"}},
-						reqs.Items[0].Spec.Targets,
-					)
-					require.Len(t, reqs.Items[0].OwnerReferences, 1)
-					require.Equal(t, testStage.Name, reqs.Items[0].OwnerReferences[0].Name)
+					require.Equal(t, []string{"us-east"}, created.Targets)
+					require.Equal(t, api.FormatEventUserActor(user.Info{IsAdmin: true}), created.CreatedBy)
+
+					// The response is the request as stored.
+					request := &kargoapi.PromotionRequest{}
+					require.NoError(t, json.Unmarshal(w.Body.Bytes(), request))
+					require.Equal(t, created.Name, request.Name)
+					require.Equal(t, testStage.Name, request.Spec.Stage)
+					require.Equal(t, []kargoapi.PromotionRequestTarget{{Name: "us-east"}}, request.Spec.Targets)
+					require.Equal(t, kargoapi.PromotionRequestPhasePending, request.Status.Phase)
+					require.Equal(t, created.CreatedBy, request.Annotations[kargoapi.AnnotationKeyCreateActor])
+				},
+			},
+			{
+				name: "Target-aware Stage without a database",
+				clientBuilder: fake.NewClientBuilder().WithObjects(
+					testProject,
+					testTargetAwareStage,
+					testFreight,
+				),
+				serverSetup: authorizeAllStagesPromote,
+				body: mustJSONBody(promoteToStageRequest{
+					Freight: testFreight.Name,
+				}),
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
+					require.Equal(t, http.StatusNotImplemented, w.Code)
+				},
+			},
+			{
+				name: "Target-aware Stage whose resources have not reached the database yet",
+				clientBuilder: fake.NewClientBuilder().WithObjects(
+					testProject,
+					testTargetAwareStage,
+					testFreight,
+				),
+				serverSetup: serverSetups(authorizeAllStagesPromote, withStore(notMirroredStore)),
+				body: mustJSONBody(promoteToStageRequest{
+					Freight: testFreight.Name,
+				}),
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
+					require.Equal(t, http.StatusConflict, w.Code)
+					require.Contains(t, w.Body.String(), "retry shortly")
 				},
 			},
 			{
@@ -177,38 +218,18 @@ func Test_server_promoteToStage(t *testing.T) {
 					testProject,
 					testTargetAwareStage,
 					testFreight,
-					testTarget,
-					&kargoapi.PromotionRequest{
-						ObjectMeta: metav1.ObjectMeta{
-							Namespace: testProject.Name,
-							Name:      testStage.Name + ".existing.01jexam",
-							Labels: map[string]string{
-								kargoapi.LabelKeyStage: testStage.Name,
-							},
-						},
-						Spec: kargoapi.PromotionRequestSpec{
-							Stage:   testStage.Name,
-							Freight: testFreight.Name,
-							Targets: []kargoapi.PromotionRequestTarget{{Name: "us-east"}},
-						},
-						Status: kargoapi.PromotionRequestStatus{
-							Phase: kargoapi.PromotionRequestPhaseSucceeded,
-						},
-					},
 				),
-				serverSetup: authorizeAllStagesPromote,
+				serverSetup: serverSetups(authorizeAllStagesPromote, withStore(repromoteStore)),
 				body: mustJSONBody(promoteToStageRequest{
 					Freight: testFreight.Name,
 				}),
-				assertions: func(t *testing.T, w *httptest.ResponseRecorder, c client.Client) {
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
 					require.Equal(t, http.StatusCreated, w.Code)
-
-					reqs := &kargoapi.PromotionRequestList{}
-					require.NoError(t, c.List(t.Context(), reqs, client.InNamespace(testProject.Name)))
-					require.Len(t, reqs.Items, 2)
-					// Distinct objects: names embed a ULID, so a repeat
+					require.Len(t, repromoteStore.created, 1)
+					require.Len(t, repromoteStore.requests, 2)
+					// Distinct requests: names embed a ULID, so a repeat
 					// promotion of the same Stage and Freight cannot collide.
-					require.NotEqual(t, reqs.Items[0].Name, reqs.Items[1].Name)
+					require.NotEqual(t, repromoteStore.requests[0].Name, repromoteStore.requests[1].Name)
 				},
 			},
 			{
@@ -231,10 +252,6 @@ func Test_server_promoteToStage(t *testing.T) {
 					promos := &kargoapi.PromotionList{}
 					require.NoError(t, c.List(t.Context(), promos, client.InNamespace(testProject.Name)))
 					require.Empty(t, promos.Items)
-
-					reqs := &kargoapi.PromotionRequestList{}
-					require.NoError(t, c.List(t.Context(), reqs, client.InNamespace(testProject.Name)))
-					require.Empty(t, reqs.Items)
 				},
 			},
 			{

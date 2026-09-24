@@ -72,52 +72,37 @@ func AnySelectorMatches(selectors []labels.Selector, lbls map[string]string) boo
 	return false
 }
 
-// ListTargetsForStage returns the Targets in the Stage's own Project that the
-// Stage governs, i.e. those matching any of its target selectors. Results are
-// sorted by name so that repeated calls agree on ordering.
+// FilterTargetsForStage returns, from the given Targets, those the Stage
+// governs: the ones matching any of its target selectors, each listed once and
+// sorted by name so that repeated calls agree on ordering. Callers pass the
+// Targets of the Stage's own Project.
 //
 // A classic Stage -- one with no targets block -- governs no Targets, and this
-// returns an empty slice for it. An empty selector within the list selects
-// every Target in the Project.
-func ListTargetsForStage(
-	ctx context.Context,
-	c client.Client,
+// returns nil for it. A target-aware Stage yields an empty, non-nil slice when
+// nothing matches. An empty selector within the list selects every Target.
+func FilterTargetsForStage(
 	stage *kargoapi.Stage,
+	targets []kargoapi.Target,
 ) ([]kargoapi.Target, error) {
 	selectors, err := TargetSelectorsForStage(stage)
-	if err != nil || len(selectors) == 0 {
+	if err != nil || selectors == nil {
 		return nil, err
 	}
-
 	// A Target matching more than one selector must still be governed once.
-	seen := make(map[string]struct{})
-	var targets []kargoapi.Target
-
-	for _, selector := range selectors {
-		list := kargoapi.TargetList{}
-		if err = c.List(
-			ctx,
-			&list,
-			client.InNamespace(stage.Namespace),
-			client.MatchingLabelsSelector{Selector: selector},
-		); err != nil {
-			return nil, fmt.Errorf(
-				"error listing Targets in namespace %q: %w",
-				stage.Namespace, err,
-			)
+	seen := make(map[string]struct{}, len(targets))
+	governed := make([]kargoapi.Target, 0, len(targets))
+	for _, target := range targets {
+		if _, ok := seen[target.Name]; ok {
+			continue
 		}
-
-		for _, target := range list.Items {
-			if _, ok := seen[target.Name]; ok {
-				continue
-			}
-			seen[target.Name] = struct{}{}
-			targets = append(targets, target)
+		if !AnySelectorMatches(selectors, target.Labels) {
+			continue
 		}
+		seen[target.Name] = struct{}{}
+		governed = append(governed, target)
 	}
-
-	slices.SortFunc(targets, func(lhs, rhs kargoapi.Target) int {
+	slices.SortFunc(governed, func(lhs, rhs kargoapi.Target) int {
 		return strings.Compare(lhs.Name, rhs.Name)
 	})
-	return targets, nil
+	return governed, nil
 }

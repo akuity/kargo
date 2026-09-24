@@ -14,6 +14,7 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/conditions"
+	"github.com/akuity/kargo/pkg/database"
 )
 
 func Test_reconciler_collectStats(t *testing.T) {
@@ -27,6 +28,7 @@ func Test_reconciler_collectStats(t *testing.T) {
 		name       string
 		project    *kargoapi.Project
 		client     client.Client
+		store      *fakeStatsStore
 		assertions func(*testing.T, kargoapi.ProjectStatus, error)
 	}{
 		{
@@ -110,22 +112,10 @@ func Test_reconciler_collectStats(t *testing.T) {
 					}},
 				},
 			},
-			client: fake.NewClientBuilder().WithScheme(scheme).
-				WithInterceptorFuncs(interceptor.Funcs{
-					List: func(
-						_ context.Context,
-						_ client.WithWatch,
-						list client.ObjectList,
-						_ ...client.ListOption,
-					) error {
-						if _, ok := list.(*kargoapi.TargetList); ok {
-							return fmt.Errorf("something went wrong")
-						}
-						return nil
-					},
-				}).Build(),
+			client: fake.NewClientBuilder().WithScheme(scheme).Build(),
+			store:  &fakeStatsStore{targetsErr: fmt.Errorf("something went wrong")},
 			assertions: func(t *testing.T, status kargoapi.ProjectStatus, err error) {
-				require.Error(t, err)
+				require.ErrorContains(t, err, "error listing Targets: something went wrong")
 				cond := conditions.Get(&status, kargoapi.ConditionTypeHealthy)
 				require.NotNil(t, cond)
 				require.Equal(t, metav1.ConditionFalse, cond.Status)
@@ -143,22 +133,10 @@ func Test_reconciler_collectStats(t *testing.T) {
 					}},
 				},
 			},
-			client: fake.NewClientBuilder().WithScheme(scheme).
-				WithInterceptorFuncs(interceptor.Funcs{
-					List: func(
-						_ context.Context,
-						_ client.WithWatch,
-						list client.ObjectList,
-						_ ...client.ListOption,
-					) error {
-						if _, ok := list.(*kargoapi.PromotionRequestList); ok {
-							return fmt.Errorf("something went wrong")
-						}
-						return nil
-					},
-				}).Build(),
+			client: fake.NewClientBuilder().WithScheme(scheme).Build(),
+			store:  &fakeStatsStore{requestsErr: fmt.Errorf("something went wrong")},
 			assertions: func(t *testing.T, status kargoapi.ProjectStatus, err error) {
-				require.Error(t, err)
+				require.ErrorContains(t, err, "error listing PromotionRequests: something went wrong")
 				cond := conditions.Get(&status, kargoapi.ConditionTypeHealthy)
 				require.NotNil(t, cond)
 				require.Equal(t, metav1.ConditionFalse, cond.Status)
@@ -336,31 +314,26 @@ func Test_reconciler_collectStats(t *testing.T) {
 						},
 					},
 				},
-				&kargoapi.PromotionRequest{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "fleet.01",
-						Namespace: testProject,
-					},
-					Spec: kargoapi.PromotionRequestSpec{
-						Stage:   "fleet",
-						Freight: "f",
-						Targets: []kargoapi.PromotionRequestTarget{{Name: "t1"}, {Name: "t2"}},
-					},
-					Status: kargoapi.PromotionRequestStatus{
-						Phase: kargoapi.PromotionRequestPhaseErrored,
-						Targets: []kargoapi.PromotionRequestTargetStatus{
-							{Name: "t1", Promotion: "p1", Phase: kargoapi.PromotionPhaseSucceeded},
-							{Name: "t2", Promotion: "p2", Phase: kargoapi.PromotionPhaseErrored},
-						},
-					},
-				},
-				&kargoapi.Target{
-					ObjectMeta: metav1.ObjectMeta{Name: "t1", Namespace: testProject},
-				},
-				&kargoapi.Target{
-					ObjectMeta: metav1.ObjectMeta{Name: "t2", Namespace: testProject},
-				},
 			).Build(),
+			store: &fakeStatsStore{
+				targets: []database.Target{
+					{Name: "t1", Labels: []byte(`{}`), Params: []byte(`{}`)},
+					{Name: "t2", Labels: []byte(`{}`), Params: []byte(`{}`)},
+				},
+				requests: []database.PromotionRequestSnapshot{{
+					PromotionRequest: database.PromotionRequest{
+						Name:  "fleet.01",
+						Phase: string(kargoapi.PromotionRequestPhaseErrored),
+					},
+					ProjectName: testProject,
+					Stage:       "fleet",
+					Freight:     "f",
+					Targets: []database.PromotionRequestTargetRow{
+						{Name: "t1", Ordinal: 0, Promotion: "p1", Phase: string(kargoapi.PromotionPhaseSucceeded)},
+						{Name: "t2", Ordinal: 1, Promotion: "p2", Phase: string(kargoapi.PromotionPhaseErrored)},
+					},
+				}},
+			},
 			assertions: func(t *testing.T, status kargoapi.ProjectStatus, err error) {
 				require.NoError(t, err)
 				require.Nil(t, conditions.Get(&status, kargoapi.ConditionTypeHealthy))
@@ -379,15 +352,65 @@ func Test_reconciler_collectStats(t *testing.T) {
 				)
 			},
 		},
+		{
+			name: "without a database there are no Target stats",
+			project: &kargoapi.Project{
+				Status: kargoapi.ProjectStatus{
+					Conditions: []metav1.Condition{{
+						Type:   kargoapi.ConditionTypeReady,
+						Status: metav1.ConditionTrue,
+					}},
+				},
+			},
+			client: fake.NewClientBuilder().WithScheme(scheme).WithObjects(
+				&kargoapi.Stage{
+					ObjectMeta: metav1.ObjectMeta{Name: "fleet", Namespace: testProject},
+					Spec: kargoapi.StageSpec{
+						PromotionTemplate: &kargoapi.PromotionTemplate{
+							Spec: kargoapi.PromotionTemplateSpec{Steps: []kargoapi.PromotionStep{{}}},
+						},
+						Targets: &kargoapi.StageTargets{Selectors: []metav1.LabelSelector{{}}},
+					},
+				},
+			).Build(),
+			assertions: func(t *testing.T, status kargoapi.ProjectStatus, err error) {
+				require.NoError(t, err)
+				require.NotNil(t, status.Stats)
+				require.Equal(t, int64(1), status.Stats.Stages.Count)
+				require.Nil(t, status.Stats.Targets)
+			},
+		},
 	}
 
 	for _, tt := range testCases {
 		t.Run(tt.name, func(t *testing.T) {
 			r := &reconciler{client: tt.client}
+			if tt.store != nil {
+				r.store = tt.store
+			}
 			status, err := r.collectStats(t.Context(), tt.project)
 			tt.assertions(t, status, err)
 		})
 	}
+}
+
+// fakeStatsStore is an in-memory projectStatsStore.
+type fakeStatsStore struct {
+	targets     []database.Target
+	targetsErr  error
+	requests    []database.PromotionRequestSnapshot
+	requestsErr error
+}
+
+func (s *fakeStatsStore) ListTargets(context.Context, string) ([]database.Target, error) {
+	return s.targets, s.targetsErr
+}
+
+func (s *fakeStatsStore) ListPromotionRequests(
+	context.Context,
+	string,
+) ([]database.PromotionRequestSnapshot, error) {
+	return s.requests, s.requestsErr
 }
 
 func Test_collectTargetStats(t *testing.T) {

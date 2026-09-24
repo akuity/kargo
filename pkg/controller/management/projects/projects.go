@@ -28,6 +28,7 @@ import (
 	"github.com/akuity/kargo/pkg/api"
 	"github.com/akuity/kargo/pkg/conditions"
 	"github.com/akuity/kargo/pkg/controller"
+	"github.com/akuity/kargo/pkg/database"
 	"github.com/akuity/kargo/pkg/kubeclient"
 	"github.com/akuity/kargo/pkg/kubernetes"
 	"github.com/akuity/kargo/pkg/logging"
@@ -59,6 +60,9 @@ var errProjectNamespaceExists = errors.New("namespace already exists and is not 
 type reconciler struct {
 	cfg    ReconcilerConfig
 	client client.Client
+	// store holds the Targets and PromotionRequests the Project's stats are
+	// computed from. It is nil when the controller runs without a database.
+	store projectStatsStore
 
 	// The following behaviors are overridable for testing purposes:
 
@@ -167,6 +171,7 @@ func SetupReconcilerWithManager(
 	ctx context.Context,
 	kargoMgr manager.Manager,
 	cfg ReconcilerConfig,
+	store database.Store,
 ) error {
 	c, err := ctrl.NewControllerManagedBy(kargoMgr).
 		For(&kargoapi.Project{}).
@@ -179,7 +184,7 @@ func SetupReconcilerWithManager(
 			},
 		).
 		WithOptions(controller.CommonOptions(cfg.MaxConcurrentReconciles)).
-		Build(newReconciler(kargoMgr.GetClient(), cfg))
+		Build(newReconciler(kargoMgr.GetClient(), cfg, store))
 	if err != nil {
 		return fmt.Errorf("error creating Project reconciler: %w", err)
 	}
@@ -214,10 +219,17 @@ func SetupReconcilerWithManager(
 	return err
 }
 
-func newReconciler(kubeClient client.Client, cfg ReconcilerConfig) *reconciler {
+// newReconciler returns a reconciler. The store may be nil, in which case the
+// Project's Target stats are not computed.
+func newReconciler(kubeClient client.Client, cfg ReconcilerConfig, store database.Store) *reconciler {
 	r := &reconciler{
 		cfg:    cfg,
 		client: kubeClient,
+	}
+	// Assign only a non-nil store: a nil database.Store stored in an interface
+	// field would not compare equal to nil.
+	if store != nil {
+		r.store = store
 	}
 	r.getProjectFn = api.GetProject
 	r.reconcileFn = r.reconcile

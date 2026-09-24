@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/klauspost/compress/gzhttp"
+	"github.com/nats-io/nats.go"
 	"github.com/rs/cors"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
@@ -24,6 +25,7 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/api"
 	rollouts "github.com/akuity/kargo/pkg/api/stubs/rollouts"
+	"github.com/akuity/kargo/pkg/database"
 	"github.com/akuity/kargo/pkg/event"
 	httputil "github.com/akuity/kargo/pkg/http"
 	"github.com/akuity/kargo/pkg/logging"
@@ -37,11 +39,25 @@ import (
 //go:embed all:ui
 var ui embed.FS
 
+// defaultStorePollInterval is how often a watch on database-backed resources
+// polls for changes.
+const defaultStorePollInterval = 2 * time.Second
+
 type server struct {
 	cfg     config.ServerConfig
 	client  kubernetes.Client
 	rolesDB rbac.RolesDatabase
 	sender  event.Sender
+	// store holds the Targets and PromotionRequests. It is nil when the server
+	// runs without a database, in which case the endpoints that need it
+	// respond 501.
+	store promotionStore
+	// storePollInterval is how often a watch on database-backed resources
+	// polls for changes.
+	storePollInterval time.Duration
+	// natsConn, when non-nil, is used to nudge the PromotionRequest reconciler
+	// after a request is created.
+	natsConn *nats.Conn
 
 	// The following behaviors are overridable for testing purposes:
 
@@ -154,17 +170,28 @@ type Server interface {
 	Serve(ctx context.Context, l net.Listener) error
 }
 
+// NewServer returns a Server. The store and the NATS connection may be nil;
+// see the corresponding fields of the server struct.
 func NewServer(
 	cfg config.ServerConfig,
 	kubeClient kubernetes.Client,
 	rolesDB rbac.RolesDatabase,
 	sender event.Sender,
+	store database.Store,
+	natsConn *nats.Conn,
 ) Server {
 	s := &server{
-		cfg:     cfg,
-		client:  kubeClient,
-		rolesDB: rolesDB,
-		sender:  sender,
+		cfg:               cfg,
+		client:            kubeClient,
+		rolesDB:           rolesDB,
+		sender:            sender,
+		storePollInterval: defaultStorePollInterval,
+		natsConn:          natsConn,
+	}
+	// Assign only a non-nil store: a nil database.Store stored in an interface
+	// field would not compare equal to nil.
+	if store != nil {
+		s.store = store
 	}
 
 	s.validateProjectExistsFn = s.validateProjectExists

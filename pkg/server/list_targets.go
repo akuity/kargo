@@ -1,11 +1,9 @@
 package server
 
 import (
+	"context"
 	"fmt"
 	"net/http"
-	"slices"
-	"strings"
-	"time"
 
 	"github.com/gin-gonic/gin"
 	"k8s.io/apimachinery/pkg/labels"
@@ -13,8 +11,8 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/api"
+	"github.com/akuity/kargo/pkg/database"
 	libhttp "github.com/akuity/kargo/pkg/http"
-	"github.com/akuity/kargo/pkg/logging"
 )
 
 // @id ListTargets
@@ -52,30 +50,53 @@ func (s *server) listTargets(c *gin.Context) {
 		}
 	}
 
-	if watchMode := c.Query("watch") == trueStr; watchMode {
-		s.watchTargets(c, project, selector, stageSelectors, c.Query("resourceVersion"))
+	if s.store == nil {
+		_ = c.Error(errDatabaseNotConfigured)
 		return
 	}
 
-	listOpts := []client.ListOption{client.InNamespace(project)}
-	if selector != nil {
-		listOpts = append(listOpts, client.MatchingLabelsSelector{Selector: selector})
+	watchMode := c.Query("watch") == trueStr
+	verb := "list"
+	if watchMode {
+		verb = "watch"
 	}
-
-	list := &kargoapi.TargetList{}
-	if err = s.listForWatchSeed(ctx, "targets", list, listOpts...); err != nil {
+	if err = s.authorizeStoreRead(ctx, verb, "targets", project, ""); err != nil {
 		_ = c.Error(err)
 		return
 	}
-	if stageSelectors != nil {
-		list.Items = filterTargetsBySelectors(list.Items, stageSelectors)
+
+	snapshot := func(ctx context.Context) ([]kargoapi.Target, error) {
+		rows, listErr := s.store.ListTargets(ctx, project)
+		if listErr != nil {
+			return nil, fmt.Errorf("error listing Targets in Project %q: %w", project, listErr)
+		}
+		targets, convertErr := database.TargetsFromRows(rows, project)
+		if convertErr != nil {
+			return nil, convertErr
+		}
+		return filterTargets(targets, selector, stageSelectors), nil
 	}
 
-	list.ResourceVersion = normalizeListResourceVersion(list.ResourceVersion)
+	if watchMode {
+		servePolledWatch(c, s.storePollInterval, c.Query("resourceVersion"), polledWatch[kargoapi.Target]{
+			snapshot: snapshot,
+			name:     func(target kargoapi.Target) string { return target.Name },
+			version:  func(target kargoapi.Target) string { return target.ResourceVersion },
+		})
+		return
+	}
 
-	slices.SortFunc(list.Items, func(lhs, rhs kargoapi.Target) int {
-		return strings.Compare(lhs.Name, rhs.Name)
-	})
+	items, err := snapshot(ctx)
+	if err != nil {
+		_ = c.Error(err)
+		return
+	}
+	list := &kargoapi.TargetList{Items: items}
+	versions := make([]string, len(items))
+	for i, item := range items {
+		versions[i] = item.ResourceVersion
+	}
+	list.ResourceVersion = maxResourceVersion(versions...)
 
 	c.JSON(http.StatusOK, list)
 }
@@ -122,97 +143,26 @@ func (s *server) targetSelectorsForStage(
 	return selectors, nil
 }
 
-// filterTargetsBySelectors returns the Targets matching any of the provided
-// selectors. Filtering happens in-process because a Stage may have several
-// selectors whose union no single label selector can express.
-func filterTargetsBySelectors(
+// filterTargets returns the Targets matching the label selector, if any, and
+// any of the Stage selectors, if there are any. A nil selector applies no
+// label filter; nil Stage selectors apply no Stage filter, whereas an empty
+// list governs nothing. The Stage filter is applied in-process because a Stage
+// may have several selectors whose union no single label selector can
+// express. The result is never nil.
+func filterTargets(
 	targets []kargoapi.Target,
-	selectors []labels.Selector,
+	selector labels.Selector,
+	stageSelectors []labels.Selector,
 ) []kargoapi.Target {
 	filtered := make([]kargoapi.Target, 0, len(targets))
 	for _, target := range targets {
-		if api.AnySelectorMatches(selectors, target.Labels) {
-			filtered = append(filtered, target)
+		if selector != nil && !selector.Matches(labels.Set(target.Labels)) {
+			continue
 		}
+		if stageSelectors != nil && !api.AnySelectorMatches(stageSelectors, target.Labels) {
+			continue
+		}
+		filtered = append(filtered, target)
 	}
 	return filtered
-}
-
-// watchTargets streams Target changes through the REST SSE endpoint. The label
-// selector is applied by the API server; the Stage filter, being a union of
-// selectors, is applied here to each event.
-func (s *server) watchTargets(
-	c *gin.Context,
-	project string,
-	selector labels.Selector,
-	stageSelectors []labels.Selector,
-	resourceVersion string,
-) {
-	ctx := c.Request.Context()
-	logger := logging.LoggerFromContext(ctx)
-
-	watchOpts := buildWatchListOptions(project, resourceVersion)
-	if selector != nil {
-		watchOpts = append(watchOpts, client.MatchingLabelsSelector{Selector: selector})
-	}
-
-	w, err := s.client.Watch(ctx, &kargoapi.TargetList{}, watchOpts...)
-	if err != nil {
-		if SendSSEWatchStartError(c, err) {
-			return
-		}
-		logger.Error(err, "failed to start watch")
-		_ = c.Error(fmt.Errorf("watch targets: %w", err))
-		return
-	}
-	defer w.Stop()
-
-	keepaliveTicker := time.NewTicker(30 * time.Second)
-	defer keepaliveTicker.Stop()
-
-	SetSSEHeaders(c)
-
-	for {
-		select {
-		case <-ctx.Done():
-			logger.Debug("watch context done", "error", ctx.Err())
-			return
-
-		case <-keepaliveTicker.C:
-			if !WriteSSEKeepalive(c) {
-				return
-			}
-
-		case e, ok := <-w.ResultChan():
-			if !ok {
-				logger.Debug("watch channel closed")
-				return
-			}
-			if watchErr := ErrorFromWatchEvent(e); watchErr != nil {
-				SendSSEWatchError(c, watchErr)
-				return
-			}
-
-			target, ok := ConvertWatchEventObject(c, e, (*kargoapi.Target)(nil))
-			if !ok {
-				continue
-			}
-
-			eventType := e.Type
-			if stageSelectors != nil {
-				var send bool
-				eventType, send = FilteredWatchEventType(
-					e.Type,
-					api.AnySelectorMatches(stageSelectors, target.Labels),
-				)
-				if !send {
-					continue
-				}
-			}
-
-			if !SendSSEWatchEvent(c, eventType, target) {
-				return
-			}
-		}
-	}
 }

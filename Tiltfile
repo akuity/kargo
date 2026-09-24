@@ -189,7 +189,7 @@ k8s_resource(
     'kargo-api-rollouts:clusterrole',
     'kargo-api-rollouts:clusterrolebinding'
   ],
-  resource_deps=['back-end-compile', 'dex-server', 'nats']
+  resource_deps=['back-end-compile', 'dex-server', 'nats', 'db-migrate']
 )
 
 k8s_resource(
@@ -213,7 +213,7 @@ k8s_resource(
     'kargo-shared-resources-controller-reader:role',
     'kargo-test-gpg-signing-key:secret'
   ],
-  resource_deps=['back-end-compile', 'credential-helper-compile', 'nats']
+  resource_deps=['back-end-compile', 'credential-helper-compile', 'nats', 'db-migrate']
 )
 
 k8s_resource(

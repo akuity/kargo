@@ -1,7 +1,9 @@
 package stages
 
 import (
+	"cmp"
 	"context"
+	"errors"
 	"fmt"
 	"slices"
 	"strconv"
@@ -10,6 +12,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/kelseyhightower/envconfig"
+	"github.com/nats-io/nats.go"
 	gocache "github.com/patrickmn/go-cache"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -34,7 +37,9 @@ import (
 	"github.com/akuity/kargo/pkg/controller"
 	argocdapi "github.com/akuity/kargo/pkg/controller/argocd/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/controller/metrics"
+	"github.com/akuity/kargo/pkg/controller/promotionrequests"
 	"github.com/akuity/kargo/pkg/credentials"
+	"github.com/akuity/kargo/pkg/database"
 	kargoEvent "github.com/akuity/kargo/pkg/event"
 	k8sevent "github.com/akuity/kargo/pkg/event/kubernetes"
 	exprfn "github.com/akuity/kargo/pkg/expressions/function"
@@ -57,6 +62,10 @@ type ReconcilerConfig struct {
 	RolloutsControllerInstanceID       string `envconfig:"ROLLOUTS_CONTROLLER_INSTANCE_ID"`
 	MaxConcurrentControlFlowReconciles int    `envconfig:"MAX_CONCURRENT_CONTROL_FLOW_RECONCILES" default:"4"`
 	MaxConcurrentReconciles            int    `envconfig:"MAX_CONCURRENT_STAGE_RECONCILES" default:"4"`
+	// PromotionRequestPollInterval is how often a Stage that is promoting
+	// through a PromotionRequest re-reads the request. PromotionRequests live
+	// in the database, so there is no watch to tell the Stage when one ends.
+	PromotionRequestPollInterval time.Duration `envconfig:"PROMOTION_REQUEST_POLL_INTERVAL" default:"1m"`
 }
 
 // Name returns the name of the Stage controller.
@@ -83,20 +92,31 @@ type RegularStageReconciler struct {
 	eventSender    kargoEvent.Sender
 	healthChecker  health.AggregatingChecker
 	shardPredicate controller.ResponsibleFor[kargoapi.Stage]
+	// store holds the PromotionRequests and Targets. It is nil when the
+	// controller runs without a database, in which case a Stage that governs
+	// Targets cannot promote.
+	store promotionRequestStore
+	// natsConn, when non-nil, is used to nudge the PromotionRequest reconciler
+	// after a request is created.
+	natsConn *nats.Conn
 
 	backoffCfg wait.Backoff
 }
 
-// NewRegularStageReconciler creates a new Stages reconciler.
+// NewRegularStageReconciler creates a new Stages reconciler. The store and the
+// NATS connection may be nil; see the corresponding fields.
 func NewRegularStageReconciler(
 	cfg ReconcilerConfig,
 	credentialsDB credentials.Database,
 	healthChecker health.AggregatingChecker,
+	store database.Store,
+	natsConn *nats.Conn,
 ) *RegularStageReconciler {
-	return &RegularStageReconciler{
+	r := &RegularStageReconciler{
 		cfg:           cfg,
 		credentialsDB: credentialsDB,
 		healthChecker: healthChecker,
+		natsConn:      natsConn,
 		shardPredicate: controller.ResponsibleFor[kargoapi.Stage]{
 			IsDefaultController: cfg.IsDefaultController,
 			ShardName:           cfg.ShardName,
@@ -109,6 +129,12 @@ func NewRegularStageReconciler(
 			Jitter:   0.1,
 		},
 	}
+	// Assign only a non-nil store: a nil database.Store stored in an interface
+	// field would not compare equal to nil.
+	if store != nil {
+		r.store = store
+	}
+	return r
 }
 
 // SetupWithManager sets up the Stage reconciler with the given controller
@@ -156,32 +182,6 @@ func (r *RegularStageReconciler) SetupWithManager(
 	); err != nil {
 		return fmt.Errorf(
 			"error setting up index for Promotions by terminal phase: %w", err,
-		)
-	}
-
-	// This index is used to determine if a PromotionRequest already exists for a
-	// Stage and Freight combination.
-	if err := sharedIndexer.IndexField(
-		ctx,
-		&kargoapi.PromotionRequest{},
-		indexer.PromotionRequestsByStageAndFreightField,
-		indexer.PromotionRequestsByStageAndFreight,
-	); err != nil {
-		return fmt.Errorf(
-			"error setting up index for PromotionRequests by Stage and Freight: %w", err,
-		)
-	}
-
-	// This index is used to find all PromotionRequests that promote Freight on
-	// behalf of a specific Stage.
-	if err := sharedIndexer.IndexField(
-		ctx,
-		&kargoapi.PromotionRequest{},
-		indexer.PromotionRequestsByStageField,
-		indexer.PromotionRequestsByStage,
-	); err != nil {
-		return fmt.Errorf(
-			"error setting up index for PromotionRequests by Stage: %w", err,
 		)
 	}
 
@@ -266,24 +266,6 @@ func (r *RegularStageReconciler) SetupWithManager(
 		),
 	); err != nil {
 		return fmt.Errorf("unable to watch Promotions: %w", err)
-	}
-
-	// Watch for PromotionRequests for which the phase changed and enqueue the
-	// related Stage for reconciliation.
-	if err = c.Watch(
-		source.Kind(
-			kargoMgr.GetCache(),
-			&kargoapi.PromotionRequest{},
-			handler.TypedEnqueueRequestForOwner[*kargoapi.PromotionRequest](
-				kargoMgr.GetScheme(),
-				kargoMgr.GetRESTMapper(),
-				&kargoapi.Stage{},
-				handler.OnlyControllerOwner(),
-			),
-			kargo.NewPromotionRequestPhaseChangedPredicate(logger),
-		),
-	); err != nil {
-		return fmt.Errorf("unable to watch PromotionRequests: %w", err)
 	}
 
 	// Watch for Freight that have been newly promoted to a Stage or newly marked
@@ -443,9 +425,23 @@ func (r *RegularStageReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	if needsRequeue {
 		return ctrl.Result{RequeueAfter: 100 * time.Millisecond}, nil
 	}
+	// A Stage promoting through a PromotionRequest has no watch to tell it
+	// when the request ends, so it polls for that.
+	if newStatus.CurrentPromotionRequest != nil {
+		return ctrl.Result{RequeueAfter: r.promotionRequestPollInterval()}, nil
+	}
 	// Otherwise, requeue after a delay.
 	// TODO: Make the requeue delay configurable.
 	return ctrl.Result{RequeueAfter: 5 * time.Minute}, nil
+}
+
+// promotionRequestPollInterval returns the configured poll interval, or a
+// sensible one when the configuration left it unset.
+func (r *RegularStageReconciler) promotionRequestPollInterval() time.Duration {
+	if r.cfg.PromotionRequestPollInterval > 0 {
+		return r.cfg.PromotionRequestPollInterval
+	}
+	return time.Minute
 }
 
 func (r *RegularStageReconciler) reconcile(
@@ -985,24 +981,35 @@ func (r *RegularStageReconciler) syncPromotions(
 // -- or one left behind by a Stage that no longer governs any -- is recorded
 // all the same. Only for a Stage with no PromotionRequests at all is this a
 // no-op beyond clearing a stale current reference.
+//
+// PromotionRequests live in the database. Without one, the references are
+// left exactly as they are.
 func (r *RegularStageReconciler) syncPromotionRequests(
 	ctx context.Context,
 	stage *kargoapi.Stage,
 ) (kargoapi.StageStatus, error) {
 	newStatus := *stage.Status.DeepCopy()
 
-	promotionRequests := &kargoapi.PromotionRequestList{}
-	if err := r.client.List(
+	if r.store == nil {
+		return newStatus, nil
+	}
+	// A classic Stage that has never promoted through a PromotionRequest has
+	// nothing to look for.
+	if !api.IsTargetAware(stage) &&
+		stage.Status.CurrentPromotionRequest == nil &&
+		stage.Status.LastPromotionRequest == nil {
+		return newStatus, nil
+	}
+
+	// Ordered by creation.
+	promotionRequests, err := r.store.ListPromotionRequestsByStage(
 		ctx,
-		promotionRequests,
-		client.InNamespace(stage.Namespace),
-		client.MatchingFieldsSelector{
-			Selector: fields.OneTermEqualSelector(
-				indexer.PromotionRequestsByStageField,
-				stage.Name,
-			),
+		database.ListPromotionRequestsByStageParams{
+			ProjectName: stage.Namespace,
+			Stage:       stage.Name,
 		},
-	); err != nil {
+	)
+	if err != nil {
 		return newStatus, fmt.Errorf(
 			"failed to list PromotionRequests for Stage %q in namespace %q: %w",
 			stage.Name, stage.Namespace, err,
@@ -1011,58 +1018,47 @@ func (r *RegularStageReconciler) syncPromotionRequests(
 
 	// If there are no PromotionRequests, the Stage is fanning nothing out. Clear
 	// any current reference it was left with.
-	if len(promotionRequests.Items) == 0 {
+	if len(promotionRequests) == 0 {
 		newStatus.CurrentPromotionRequest = nil
 		return newStatus, nil
 	}
 
 	// Sort the PromotionRequests exactly as syncPromotions sorts a Stage's
-	// Promotions -- Running first, then non-terminal by ULID ascending, then
-	// terminal by ULID descending -- so that the request a Stage records as
-	// current is chosen the same way its current Promotion is.
-	slices.SortFunc(
-		promotionRequests.Items,
-		api.ComparePromotionRequestByPhaseAndCreationTime,
-	)
+	// Promotions -- Running first, then non-terminal oldest-first, then
+	// terminal newest-first -- so that the request a Stage records as current
+	// is chosen the same way its current Promotion is.
+	prioritized := slices.Clone(promotionRequests)
+	slices.SortFunc(prioritized, comparePromotionRequestByPhaseAndCreation)
 
 	// The PromotionRequest with the highest priority is the one the Stage is
 	// promoting through, unless it has finished -- in which case the Stage is
 	// promoting through none, and a finished request must not be left looking
 	// like an active one.
 	newStatus.CurrentPromotionRequest = nil
-	if highestPrioRequest := &promotionRequests.Items[0]; !highestPrioRequest.Status.Phase.IsTerminal() {
+	if highestPrioRequest := &prioritized[0]; !promotionRequestIsTerminal(highestPrioRequest) {
 		newStatus.CurrentPromotionRequest = newPromotionRequestReference(highestPrioRequest)
 	}
 
 	// Gather the terminal PromotionRequests newer than the one already recorded
 	// as last. A request is recorded only when it is newer: a Stage's account of
 	// how its last round of fan-out ended should outlive the request that
-	// produced it, so garbage collection of the newest request must not let an
-	// older one take its place.
+	// produced it, so the loss of the newest request must not let an older one
+	// take its place.
 	//
 	// Every such request is gathered, not just the newest. More than one round
 	// can end between two reconciles -- a queued request failing while the round
 	// ahead of it succeeds, or several rounds ending while the controller was
 	// down -- and each succeeded round's Freight belongs in the Stage's history.
 	// Recording only the newest would drop the others for good, since the gate
-	// only moves forward by name.
-	//
-	// NB: As in syncPromotions, this makes use of the fact that PromotionRequest
-	// names are generated with an embedded ULID, so among one Stage's requests
-	// lex order over names is creation order.
-	var newRequests []*kargoapi.PromotionRequest
-	for i := range promotionRequests.Items {
-		promotionRequest := &promotionRequests.Items[i]
-		if !promotionRequest.Status.Phase.IsTerminal() {
-			continue
-		}
-		if last := newStatus.LastPromotionRequest; last != nil &&
-			strings.Compare(promotionRequest.Name, last.Name) <= 0 {
-			// Terminal PromotionRequests sort newest-first, so nothing after this
-			// one is newer than the last recorded either.
-			break
-		}
-		newRequests = append(newRequests, promotionRequest)
+	// only moves forward.
+	newRequests, err := r.terminalPromotionRequestsAfterLast(
+		ctx,
+		stage,
+		promotionRequests,
+		newStatus.LastPromotionRequest,
+	)
+	if err != nil {
+		return newStatus, err
 	}
 
 	// Replay them oldest-first, exactly as syncPromotions replays Promotions, so
@@ -1070,9 +1066,6 @@ func (r *RegularStageReconciler) syncPromotionRequests(
 	// recorded in the order the rounds ended. Each record builds on the status
 	// the one before it produced, which is what lets a multi-origin Stage's
 	// collection carry one round's Freight into the next.
-	slices.SortFunc(newRequests, func(a, b *kargoapi.PromotionRequest) int {
-		return strings.Compare(a.Name, b.Name)
-	})
 	//
 	// A request is recorded before it becomes the last: the status is persisted
 	// even when this returns an error, and a request that had already moved the
@@ -1080,7 +1073,7 @@ func (r *RegularStageReconciler) syncPromotionRequests(
 	// again, leaving its Freight out of the history for good. Recording first
 	// leaves the gate on the previous request, so the next reconcile retries.
 	for _, promotionRequest := range newRequests {
-		if err := r.recordSucceededPromotionRequest(
+		if err = r.recordSucceededPromotionRequest(
 			ctx,
 			stage,
 			&newStatus,
@@ -1092,6 +1085,88 @@ func (r *RegularStageReconciler) syncPromotionRequests(
 	}
 
 	return newStatus, nil
+}
+
+// terminalPromotionRequestsAfterLast returns, oldest first, the terminal
+// PromotionRequests among the given ones -- which must be in creation order --
+// that are newer than the one the Stage recorded as its last.
+//
+// Creation order is the request's sequence number in the database. The last
+// recorded request is looked up to learn its sequence number; a request that
+// no longer exists -- its rows are removed with the Stage they belong to, and
+// a Stage recreated under the same name starts over -- has none, and the
+// requests that ended after it did are found by their finish time instead.
+func (r *RegularStageReconciler) terminalPromotionRequestsAfterLast(
+	ctx context.Context,
+	stage *kargoapi.Stage,
+	promotionRequests []database.PromotionRequestSnapshot,
+	last *kargoapi.PromotionRequestReference,
+) ([]*database.PromotionRequestSnapshot, error) {
+	isNewer := func(*database.PromotionRequestSnapshot) bool { return true }
+	if last != nil {
+		lastRequest, err := r.store.GetPromotionRequest(ctx, database.GetPromotionRequestParams{
+			ProjectName: stage.Namespace,
+			Name:        last.Name,
+		})
+		switch {
+		case err == nil:
+			isNewer = func(request *database.PromotionRequestSnapshot) bool {
+				return request.Seq > lastRequest.Seq
+			}
+		case errors.Is(err, database.ErrNotFound):
+			logging.LoggerFromContext(ctx).Debug(
+				"last recorded PromotionRequest no longer exists; comparing by finish time",
+				"promotionRequest", last.Name,
+			)
+			isNewer = func(request *database.PromotionRequestSnapshot) bool {
+				return last.FinishedAt == nil ||
+					(request.FinishedAt.Valid && request.FinishedAt.Time.After(last.FinishedAt.Time))
+			}
+		default:
+			return nil, fmt.Errorf(
+				"failed to get last PromotionRequest %q of Stage %q in namespace %q: %w",
+				last.Name, stage.Name, stage.Namespace, err,
+			)
+		}
+	}
+	var newRequests []*database.PromotionRequestSnapshot
+	for i := range promotionRequests {
+		promotionRequest := &promotionRequests[i]
+		if !promotionRequestIsTerminal(promotionRequest) || !isNewer(promotionRequest) {
+			continue
+		}
+		newRequests = append(newRequests, promotionRequest)
+	}
+	return newRequests, nil
+}
+
+// comparePromotionRequestByPhaseAndCreation orders PromotionRequests as
+// api.ComparePromotionByPhaseAndCreationTime orders Promotions: Running first,
+// then non-terminal oldest-first, then terminal newest-first.
+func comparePromotionRequestByPhaseAndCreation(a, b database.PromotionRequestSnapshot) int {
+	if phaseCompare := api.ComparePromotionRequestPhase(
+		promotionRequestPhase(&a),
+		promotionRequestPhase(&b),
+	); phaseCompare != 0 {
+		return phaseCompare
+	}
+	if !promotionRequestIsTerminal(&a) {
+		// Non-terminal PromotionRequests are ordered oldest-first, so that the
+		// request which was (or will be) worked first is at the top.
+		return cmp.Compare(a.Seq, b.Seq)
+	}
+	// Terminal PromotionRequests are ordered newest-first, so that the most
+	// recent request is at the top.
+	return cmp.Compare(b.Seq, a.Seq)
+}
+
+func promotionRequestPhase(request *database.PromotionRequestSnapshot) kargoapi.PromotionRequestPhase {
+	return kargoapi.PromotionRequestPhase(request.Phase)
+}
+
+func promotionRequestIsTerminal(request *database.PromotionRequestSnapshot) bool {
+	phase := promotionRequestPhase(request)
+	return phase.IsTerminal()
 }
 
 // recordSucceededPromotionRequest records the Freight a succeeded
@@ -1119,24 +1194,24 @@ func (r *RegularStageReconciler) recordSucceededPromotionRequest(
 	ctx context.Context,
 	stage *kargoapi.Stage,
 	newStatus *kargoapi.StageStatus,
-	promotionRequest *kargoapi.PromotionRequest,
+	promotionRequest *database.PromotionRequestSnapshot,
 ) error {
-	if promotionRequest.Status.Phase != kargoapi.PromotionRequestPhaseSucceeded {
+	if promotionRequestPhase(promotionRequest) != kargoapi.PromotionRequestPhaseSucceeded {
 		return nil
 	}
 	logger := logging.LoggerFromContext(ctx).WithValues(
 		"promotionRequest", promotionRequest.Name,
-		"freight", promotionRequest.Spec.Freight,
+		"freight", promotionRequest.Freight,
 	)
 
 	freight, err := api.GetFreight(ctx, r.client, types.NamespacedName{
 		Namespace: stage.Namespace,
-		Name:      promotionRequest.Spec.Freight,
+		Name:      promotionRequest.Freight,
 	})
 	if err != nil {
 		return fmt.Errorf(
 			"error getting Freight %q promoted by PromotionRequest %q: %w",
-			promotionRequest.Spec.Freight, promotionRequest.Name, err,
+			promotionRequest.Freight, promotionRequest.Name, err,
 		)
 	}
 	if freight == nil {
@@ -1187,16 +1262,20 @@ func (r *RegularStageReconciler) recordSucceededPromotionRequest(
 // rather than describing it; a reader that needs the Freight's contents can
 // look them up from the Freight itself.
 func newPromotionRequestReference(
-	promotionRequest *kargoapi.PromotionRequest,
+	promotionRequest *database.PromotionRequestSnapshot,
 ) *kargoapi.PromotionRequestReference {
-	return &kargoapi.PromotionRequestReference{
-		Name:       promotionRequest.Name,
-		Phase:      promotionRequest.Status.Phase,
-		FinishedAt: promotionRequest.Status.FinishedAt,
+	ref := &kargoapi.PromotionRequestReference{
+		Name:  promotionRequest.Name,
+		Phase: promotionRequestPhase(promotionRequest),
 		Freight: &kargoapi.PromotionRequestFreightReference{
-			Name: promotionRequest.Spec.Freight,
+			Name: promotionRequest.Freight,
 		},
 	}
+	if promotionRequest.FinishedAt.Valid {
+		finishedAt := metav1.NewTime(promotionRequest.FinishedAt.Time)
+		ref.FinishedAt = &finishedAt
+	}
+	return ref
 }
 
 // assessHealth assesses the health of a Stage based on the health checks from
@@ -2244,6 +2323,23 @@ func (r *RegularStageReconciler) autoPromoteFreight(
 	newStatus := *stage.Status.DeepCopy()
 	newStatus.AutoPromotionEnabled = autoPromotionEnabled
 
+	// A Stage that governs Targets promotes through PromotionRequests, which
+	// live in the database. Without one it can make no progress at all, and
+	// the Stage should say so rather than silently doing nothing.
+	conditions.Delete(&newStatus, kargoapi.ConditionTypeStalled)
+	if api.IsTargetAware(stage) && r.store == nil {
+		conditions.Set(&newStatus, &metav1.Condition{
+			Type:   kargoapi.ConditionTypeStalled,
+			Status: metav1.ConditionTrue,
+			Reason: "PromotionRequestStoreUnavailable",
+			Message: "Stage governs Targets, but the controller has no database " +
+				"configured (DATABASE_URL); no PromotionRequest can be created",
+			ObservedGeneration: stage.Generation,
+		})
+		logger.Debug("Stage governs Targets but the controller has no database; cannot promote")
+		return newStatus, nil
+	}
+
 	// If the Stage has no requested Freight, then there is nothing to promote.
 	// NB: This should not happen in practice, as a Stage cannot exist without
 	// requested Freight.
@@ -2428,10 +2524,14 @@ func (r *RegularStageReconciler) createAutoPromotionRequest(
 		"freight", candidate.Name,
 	)
 
-	exists, err := r.promotionRequestExistsForStageFreight(ctx, stage, candidate.Name)
+	exists, err := r.store.PromotionRequestExists(ctx, database.PromotionRequestExistsParams{
+		ProjectName: stage.Namespace,
+		Stage:       stage.Name,
+		Freight:     candidate.Name,
+	})
 	if err != nil {
 		return fmt.Errorf(
-			"error listing existing PromotionRequests for Freight %q in namespace %q: %w",
+			"error checking for existing PromotionRequests for Freight %q in namespace %q: %w",
 			candidate.Name, stage.Namespace, err,
 		)
 	}
@@ -2440,24 +2540,26 @@ func (r *RegularStageReconciler) createAutoPromotionRequest(
 		return nil
 	}
 
-	promotionRequest, err := api.NewPromotionRequest(ctx, r.client, stage, candidate.Name)
+	targets, err := r.governedTargets(ctx, stage)
 	if err != nil {
 		return fmt.Errorf(
-			"error building PromotionRequest for Freight %q in namespace %q: %w",
-			candidate.Name, stage.Namespace, err,
+			"error resolving Targets governed by Stage %q in namespace %q: %w",
+			stage.Name, stage.Namespace, err,
 		)
 	}
+	create := database.NewPromotionRequestCreate(api.NewPromotionRequest(stage, candidate.Name, targets))
+	create.CreatedBy = api.FormatEventControllerActor(r.cfg.Name())
 
-	if err = r.client.Create(ctx, promotionRequest); err != nil {
-		// Tolerate an admission denial exactly as the Promotion path does:
-		// nothing is persisted, so a later reconcile re-attempts once the
-		// denying policy no longer applies.
-		if apierrors.IsForbidden(err) {
-			logger.Debug(
-				"auto-promotion was denied by an admission webhook",
-				"error", err.Error(),
+	promotionRequest, err := r.store.CreatePromotionRequest(ctx, create)
+	if err != nil {
+		if errors.Is(err, database.ErrNotMirrored) {
+			// The Project, Stage, Freight or a Target has not reached the database
+			// yet. Returning the error backs off and retries, by which time it
+			// usually has.
+			return fmt.Errorf(
+				"cannot create PromotionRequest for Freight %q in namespace %q yet: %w",
+				candidate.Name, stage.Namespace, err,
 			)
-			return nil
 		}
 		return fmt.Errorf(
 			"error creating PromotionRequest for Freight %q in namespace %q: %w",
@@ -2465,38 +2567,38 @@ func (r *RegularStageReconciler) createAutoPromotionRequest(
 		)
 	}
 
+	// Announce the request so the PromotionRequest reconciler takes it up now
+	// rather than at its next resync. The resync is the safety net, so a
+	// failure to announce is not a failure to promote.
+	if err = promotionrequests.PublishCreated(r.natsConn, promotionRequest); err != nil {
+		logger.Error(err, "error announcing PromotionRequest")
+	}
+
 	// No event is recorded. Kargo's promotion events carry a Promotion, and a
 	// PromotionRequest has none of its own; the events belong to the child
 	// Promotions that its reconciler creates.
 	logger.Debug(
-		"created PromotionRequest resource",
+		"created PromotionRequest",
 		"promotionRequest", promotionRequest.Name,
 	)
 	return nil
 }
 
-// promotionRequestExistsForStageFreight reports whether any PromotionRequest exists for
-// the given Stage and Freight, in any phase.
-func (r *RegularStageReconciler) promotionRequestExistsForStageFreight(
+// governedTargets returns the Targets in the Stage's Project that the Stage
+// governs.
+func (r *RegularStageReconciler) governedTargets(
 	ctx context.Context,
 	stage *kargoapi.Stage,
-	freightName string,
-) (bool, error) {
-	promotionRequests := &kargoapi.PromotionRequestList{}
-	if err := r.client.List(
-		ctx,
-		promotionRequests,
-		client.InNamespace(stage.Namespace),
-		client.MatchingFieldsSelector{
-			Selector: fields.OneTermEqualSelector(
-				indexer.PromotionRequestsByStageAndFreightField,
-				indexer.StageAndFreightKey(stage.Name, freightName),
-			),
-		},
-	); err != nil {
-		return false, err
+) ([]kargoapi.Target, error) {
+	rows, err := r.store.ListTargets(ctx, stage.Namespace)
+	if err != nil {
+		return nil, fmt.Errorf("error listing Targets: %w", err)
 	}
-	return len(promotionRequests.Items) > 0, nil
+	targets, err := database.TargetsFromRows(rows, stage.Namespace)
+	if err != nil {
+		return nil, err
+	}
+	return api.FilterTargetsForStage(stage, targets)
 }
 
 // stageAwaitingFreightForOrigin reports whether this reconcile pass has already

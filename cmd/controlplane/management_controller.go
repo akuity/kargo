@@ -131,10 +131,23 @@ func (o *managementControllerOptions) run(ctx context.Context) error {
 		return fmt.Errorf("error setting up Namespaces reconciler: %w", err)
 	}
 
+	// The database is optional. Without it, nothing is mirrored and Projects
+	// carry no Target stats.
+	var store database.Store
+	if o.DatabaseURL != "" {
+		pool, poolErr := database.NewPool(ctx, o.DatabaseURL)
+		if poolErr != nil {
+			return fmt.Errorf("error configuring database: %w", poolErr)
+		}
+		defer pool.Close()
+		store = database.NewStore(pool)
+	}
+
 	if err := projects.SetupReconcilerWithManager(
 		ctx,
 		kargoMgr,
 		projects.ReconcilerConfigFromEnv(),
+		store,
 	); err != nil {
 		return fmt.Errorf("error setting up Projects reconciler: %w", err)
 	}
@@ -168,13 +181,8 @@ func (o *managementControllerOptions) run(ctx context.Context) error {
 		return fmt.Errorf("error setting up shared ConfigMap replication reconciler: %w", err)
 	}
 
-	if o.DatabaseURL != "" {
-		pool, poolErr := database.NewPool(ctx, o.DatabaseURL)
-		if poolErr != nil {
-			return fmt.Errorf("error configuring database synchronization: %w", poolErr)
-		}
-		defer pool.Close()
-		if err := dbsync.SetupWithManager(ctx, kargoMgr, database.NewStore(pool)); err != nil {
+	if store != nil {
+		if err := dbsync.SetupWithManager(ctx, kargoMgr, store); err != nil {
 			return err
 		}
 	}

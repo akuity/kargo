@@ -48,11 +48,17 @@ func TestNewServer(t *testing.T) {
 			rbac.RolesDatabaseConfigFromEnv(),
 		),
 		testSender,
+		nil,
+		nil,
 	).(*server)
 
 	require.True(t, ok)
 	require.NotNil(t, s)
 	require.Same(t, testClient, s.client)
+	// A nil store must stay a nil interface, so the 501 guards work.
+	require.Nil(t, s.store)
+	require.Nil(t, s.natsConn)
+	require.Equal(t, defaultStorePollInterval, s.storePollInterval)
 	require.NotNil(t, testClient, s.rolesDB)
 	require.Same(t, testSender, s.sender)
 	require.Equal(t, testServerConfig, s.cfg)

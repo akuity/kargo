@@ -1,17 +1,14 @@
 package server
 
 import (
+	"context"
 	"fmt"
 	"net/http"
-	"slices"
-	"strings"
-	"time"
 
 	"github.com/gin-gonic/gin"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	"github.com/akuity/kargo/pkg/logging"
+	"github.com/akuity/kargo/pkg/database"
 )
 
 // @id ListPromotionRequests
@@ -30,116 +27,70 @@ func (s *server) listPromotionRequests(c *gin.Context) {
 	project := c.Param("project")
 	stage := c.Query("stage")
 
-	if watchMode := c.Query("watch") == trueStr; watchMode {
-		s.watchPromotionRequests(c, project, stage, c.Query("resourceVersion"))
+	if s.store == nil {
+		_ = c.Error(errDatabaseNotConfigured)
 		return
 	}
 
-	list := &kargoapi.PromotionRequestList{}
-	if err := s.listForWatchSeed(ctx, "promotionrequests", list, client.InNamespace(project)); err != nil {
+	watchMode := c.Query("watch") == trueStr
+	verb := "list"
+	if watchMode {
+		verb = "watch"
+	}
+	if err := s.authorizeStoreRead(ctx, verb, "promotionrequests", project, ""); err != nil {
 		_ = c.Error(err)
 		return
 	}
-	if stage != "" {
-		list.Items = filterPromotionRequestsByStage(list.Items, stage)
+
+	snapshot := func(ctx context.Context) ([]kargoapi.PromotionRequest, error) {
+		return s.listPromotionRequestsFromStore(ctx, project, stage)
 	}
 
-	list.ResourceVersion = normalizeListResourceVersion(list.ResourceVersion)
+	if watchMode {
+		servePolledWatch(c, s.storePollInterval, c.Query("resourceVersion"), polledWatch[kargoapi.PromotionRequest]{
+			snapshot: snapshot,
+			name:     func(request kargoapi.PromotionRequest) string { return request.Name },
+			version:  func(request kargoapi.PromotionRequest) string { return request.ResourceVersion },
+		})
+		return
+	}
 
-	// Sort ascending by name. Names embed a ULID, so this is also creation
-	// order.
-	slices.SortFunc(list.Items, func(lhs, rhs kargoapi.PromotionRequest) int {
-		return strings.Compare(lhs.Name, rhs.Name)
-	})
+	items, err := snapshot(ctx)
+	if err != nil {
+		_ = c.Error(err)
+		return
+	}
+	list := &kargoapi.PromotionRequestList{Items: items}
+	versions := make([]string, len(items))
+	for i, item := range items {
+		versions[i] = item.ResourceVersion
+	}
+	list.ResourceVersion = maxResourceVersion(versions...)
 
 	c.JSON(http.StatusOK, list)
 }
 
-// filterPromotionRequestsByStage returns PromotionRequests belonging to the
-// specified Stage.
-//
-// Filtering happens in-process for the same reason it does for Promotions: the
-// watch-seed list goes through listForWatchSeed's uncached reader, which cannot
-// serve controller-runtime field indexes.
-func filterPromotionRequestsByStage(
-	promotionRequests []kargoapi.PromotionRequest,
+// listPromotionRequestsFromStore reads a project's PromotionRequests, or only
+// those of one Stage, in creation order. The result is never nil.
+func (s *server) listPromotionRequestsFromStore(
+	ctx context.Context,
+	project string,
 	stage string,
-) []kargoapi.PromotionRequest {
-	filtered := make([]kargoapi.PromotionRequest, 0, len(promotionRequests))
-	for _, promotionRequest := range promotionRequests {
-		if promotionRequest.Spec.Stage == stage {
-			filtered = append(filtered, promotionRequest)
-		}
-	}
-	return filtered
-}
-
-// watchPromotionRequests streams PromotionRequest changes through the REST SSE
-// endpoint.
-func (s *server) watchPromotionRequests(c *gin.Context, project, stage, resourceVersion string) {
-	ctx := c.Request.Context()
-	logger := logging.LoggerFromContext(ctx)
-
-	// As with Promotions, the watch API cannot filter by stage with a field
-	// selector, so events are filtered here.
-	w, err := s.client.Watch(
-		ctx,
-		&kargoapi.PromotionRequestList{},
-		buildWatchListOptions(project, resourceVersion)...,
+) ([]kargoapi.PromotionRequest, error) {
+	var (
+		snapshots []database.PromotionRequestSnapshot
+		err       error
 	)
+	if stage == "" {
+		snapshots, err = s.store.ListPromotionRequests(ctx, project)
+	} else {
+		snapshots, err = s.store.ListPromotionRequestsByStage(ctx, database.ListPromotionRequestsByStageParams{
+			ProjectName: project,
+			Stage:       stage,
+		})
+	}
 	if err != nil {
-		if SendSSEWatchStartError(c, err) {
-			return
-		}
-		logger.Error(err, "failed to start watch")
-		_ = c.Error(fmt.Errorf("watch promotion requests: %w", err))
-		return
+		return nil, fmt.Errorf("error listing PromotionRequests in Project %q: %w", project, err)
 	}
-	defer w.Stop()
-
-	keepaliveTicker := time.NewTicker(30 * time.Second)
-	defer keepaliveTicker.Stop()
-
-	SetSSEHeaders(c)
-
-	for {
-		select {
-		case <-ctx.Done():
-			logger.Debug("watch context done", "error", ctx.Err())
-			return
-
-		case <-keepaliveTicker.C:
-			if !WriteSSEKeepalive(c) {
-				return
-			}
-
-		case e, ok := <-w.ResultChan():
-			if !ok {
-				logger.Debug("watch channel closed")
-				return
-			}
-			if watchErr := ErrorFromWatchEvent(e); watchErr != nil {
-				SendSSEWatchError(c, watchErr)
-				return
-			}
-
-			promotionRequest, ok := ConvertWatchEventObject(c, e, (*kargoapi.PromotionRequest)(nil))
-			if !ok {
-				continue
-			}
-
-			eventType := e.Type
-			if stage != "" {
-				var send bool
-				eventType, send = FilteredWatchEventType(e.Type, promotionRequest.Spec.Stage == stage)
-				if !send {
-					continue
-				}
-			}
-
-			if !SendSSEWatchEvent(c, eventType, promotionRequest) {
-				return
-			}
-		}
-	}
+	return database.PromotionRequestsFromSnapshots(snapshots), nil
 }

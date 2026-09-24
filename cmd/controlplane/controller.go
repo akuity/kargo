@@ -8,6 +8,7 @@ import (
 	"sync"
 	"time"
 
+	natsgo "github.com/nats-io/nats.go"
 	"github.com/spf13/cobra"
 	coordinationv1 "k8s.io/api/coordination/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -31,6 +32,7 @@ import (
 	"github.com/akuity/kargo/pkg/controller/warehouses"
 	"github.com/akuity/kargo/pkg/credentials"
 	credsdb "github.com/akuity/kargo/pkg/credentials/kubernetes"
+	"github.com/akuity/kargo/pkg/database"
 	"github.com/akuity/kargo/pkg/health"
 	healthCheckers "github.com/akuity/kargo/pkg/health/checker/builtin"
 	"github.com/akuity/kargo/pkg/heartbeat"
@@ -66,6 +68,8 @@ type controllerOptions struct {
 
 	MetricsBindAddress string
 	PprofBindAddress   string
+
+	DatabaseURL string
 
 	Logger *logging.Logger
 }
@@ -120,6 +124,8 @@ func (o *controllerOptions) complete() {
 	o.MetricsBindAddress = os.GetEnv("METRICS_BIND_ADDRESS", "0")
 	o.PprofBindAddress = os.GetEnv("PPROF_BIND_ADDRESS", "")
 
+	o.DatabaseURL = os.GetEnv("DATABASE_URL", "")
+
 	logLevel, logFormat := getLogVars()
 
 	o.Logger = logging.NewLoggerOrDie(logLevel, logFormat)
@@ -168,12 +174,28 @@ func (o *controllerOptions) run(ctx context.Context) error {
 		credsdb.DatabaseConfigFromEnv(),
 	)
 
+	// The database holds Targets and PromotionRequests. It is optional: without
+	// it, Stages that govern Targets cannot promote, and say so in their status.
+	var store database.Store
+	if o.DatabaseURL != "" {
+		pool, poolErr := database.NewPool(ctx, o.DatabaseURL)
+		if poolErr != nil {
+			return fmt.Errorf("error configuring database: %w", poolErr)
+		}
+		defer pool.Close()
+		store = database.NewStore(pool)
+	} else {
+		o.Logger.Info("DATABASE_URL is not set; promotion to Targets is disabled")
+	}
+
 	if err := o.setupReconcilers(
 		ctx,
 		kargoMgr,
 		argocdMgr,
 		credentialsDB,
 		stagesReconcilerCfg,
+		store,
+		natsConn,
 	); err != nil {
 		return fmt.Errorf("error setting up reconcilers: %w", err)
 	}
@@ -449,6 +471,8 @@ func (o *controllerOptions) setupReconcilers(
 	kargoMgr, argocdMgr manager.Manager,
 	credentialsDB credentials.Database,
 	stagesReconcilerCfg stages.ReconcilerConfig,
+	store database.Store,
+	natsConn *natsgo.Conn,
 ) error {
 	var argoCDClient client.Client
 	if argocdMgr != nil {
@@ -479,18 +503,26 @@ func (o *controllerOptions) setupReconcilers(
 		return fmt.Errorf("error setting up Promotions reconciler: %w", err)
 	}
 
-	if err := promotionrequests.SetupReconcilerWithManager(
-		ctx,
-		kargoMgr,
-		promotionrequests.ReconcilerConfigFromEnv(),
-	); err != nil {
-		return fmt.Errorf("error setting up PromotionRequests reconciler: %w", err)
+	// PromotionRequests live in the database; without one there are none to
+	// reconcile.
+	if store != nil {
+		if err := promotionrequests.SetupWithManager(
+			kargoMgr,
+			store,
+			promotionrequests.NewEnterpriseOnlyHandler(),
+			natsConn,
+			promotionrequests.ReconcilerConfigFromEnv(),
+		); err != nil {
+			return fmt.Errorf("error setting up PromotionRequests reconciler: %w", err)
+		}
 	}
 
 	if err := stages.NewRegularStageReconciler(
 		stagesReconcilerCfg,
 		credentialsDB,
 		health.NewAggregatingChecker(),
+		store,
+		natsConn,
 	).SetupWithManager(
 		ctx,
 		kargoMgr,

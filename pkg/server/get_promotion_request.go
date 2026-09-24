@@ -1,15 +1,15 @@
 package server
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"net/http"
-	"time"
 
 	"github.com/gin-gonic/gin"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	"github.com/akuity/kargo/pkg/logging"
+	"github.com/akuity/kargo/pkg/database"
 )
 
 // @id GetPromotionRequest
@@ -27,76 +27,67 @@ func (s *server) getPromotionRequest(c *gin.Context) {
 	project := c.Param("project")
 	name := c.Param("promotion-request")
 
-	if watchMode := c.Query("watch") == trueStr; watchMode {
-		s.watchPromotionRequest(c, project, name)
+	if s.store == nil {
+		_ = c.Error(errDatabaseNotConfigured)
 		return
 	}
 
-	promotionRequest := &kargoapi.PromotionRequest{}
-	if err := s.client.Get(
-		ctx,
-		client.ObjectKey{Name: name, Namespace: project},
-		promotionRequest,
-	); err != nil {
+	if err := s.authorizeStoreRead(ctx, "get", "promotionrequests", project, name); err != nil {
 		_ = c.Error(err)
+		return
+	}
+
+	promotionRequest, err := s.getPromotionRequestFromStore(ctx, project, name)
+	if err != nil {
+		_ = c.Error(err)
+		return
+	}
+
+	if watchMode := c.Query("watch") == trueStr; watchMode {
+		if err = s.authorizeStoreRead(ctx, "watch", "promotionrequests", project, name); err != nil {
+			_ = c.Error(err)
+			return
+		}
+		servePolledWatch(c, s.storePollInterval, "", polledWatch[kargoapi.PromotionRequest]{
+			// A request that has been deleted yields an empty snapshot, which
+			// the watch reports as a DELETED event.
+			snapshot: func(ctx context.Context) ([]kargoapi.PromotionRequest, error) {
+				current, snapshotErr := s.getPromotionRequestFromStore(ctx, project, name)
+				if snapshotErr != nil {
+					if errors.Is(snapshotErr, database.ErrNotFound) {
+						return nil, nil
+					}
+					return nil, snapshotErr
+				}
+				return []kargoapi.PromotionRequest{*current}, nil
+			},
+			name:    func(request kargoapi.PromotionRequest) string { return request.Name },
+			version: func(request kargoapi.PromotionRequest) string { return request.ResourceVersion },
+		})
 		return
 	}
 
 	c.JSON(http.StatusOK, promotionRequest)
 }
 
-func (s *server) watchPromotionRequest(c *gin.Context, project, name string) {
-	ctx := c.Request.Context()
-	logger := logging.LoggerFromContext(ctx)
-
-	// Validate that the PromotionRequest exists before starting the watch
-	promotionRequest := &kargoapi.PromotionRequest{}
-	if err := s.client.Get(
-		ctx,
-		client.ObjectKey{Name: name, Namespace: project},
-		promotionRequest,
-	); err != nil {
-		_ = c.Error(err)
-		return
-	}
-
-	w, err := s.client.Watch(
-		ctx,
-		&kargoapi.PromotionRequestList{},
-		client.InNamespace(project),
-		client.MatchingFields{"metadata.name": name},
-	)
+// getPromotionRequestFromStore reads one PromotionRequest. A missing one
+// yields an error that satisfies both errors.Is(err, database.ErrNotFound)
+// and a 404 response.
+func (s *server) getPromotionRequestFromStore(
+	ctx context.Context,
+	project string,
+	name string,
+) (*kargoapi.PromotionRequest, error) {
+	snapshot, err := s.store.GetPromotionRequest(ctx, database.GetPromotionRequestParams{
+		ProjectName: project,
+		Name:        name,
+	})
 	if err != nil {
-		logger.Error(err, "failed to start watch")
-		_ = c.Error(fmt.Errorf("watch promotion request: %w", err))
-		return
-	}
-	defer w.Stop()
-
-	keepaliveTicker := time.NewTicker(30 * time.Second)
-	defer keepaliveTicker.Stop()
-
-	SetSSEHeaders(c)
-
-	for {
-		select {
-		case <-ctx.Done():
-			logger.Debug("watch context done", "error", ctx.Err())
-			return
-
-		case <-keepaliveTicker.C:
-			if !WriteSSEKeepalive(c) {
-				return
-			}
-
-		case e, ok := <-w.ResultChan():
-			if !ok {
-				logger.Debug("watch channel closed")
-				return
-			}
-			if !ConvertAndSendWatchEvent(c, e, (*kargoapi.PromotionRequest)(nil)) {
-				return
-			}
+		if errors.Is(err, database.ErrNotFound) {
+			return nil, errors.Join(storeNotFound("promotionrequests", name), err)
 		}
+		return nil, fmt.Errorf("error getting PromotionRequest %q in Project %q: %w", name, project, err)
 	}
+	promotionRequest := database.PromotionRequestFromSnapshot(snapshot)
+	return &promotionRequest, nil
 }

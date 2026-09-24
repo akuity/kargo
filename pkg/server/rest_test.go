@@ -198,6 +198,9 @@ type restWatchTestCase struct {
 	headers       map[string]string
 	clientBuilder *fake.ClientBuilder
 	serverConfig  *config.ServerConfig
+	// serverSetup is an optional function that can be used to perform additional
+	// case-specific server initialization.
+	serverSetup func(*testing.T, *server)
 	// operations is an optional function that performs operations on the client
 	// asynchronously after the watch has been established. This allows tests to
 	// trigger events (Create, Update, Delete) that the watch will observe.
@@ -263,6 +266,10 @@ func testRESTWatchEndpoint(
 				s.client,
 				rbac.RolesDatabaseConfig{KargoNamespace: testKargoNamespace},
 			)
+
+			if testCase.serverSetup != nil {
+				testCase.serverSetup(t, s)
+			}
 
 			u := url
 			if testCase.url != "" {

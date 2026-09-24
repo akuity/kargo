@@ -10,6 +10,7 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/api"
 	"github.com/akuity/kargo/pkg/conditions"
+	"github.com/akuity/kargo/pkg/database"
 	"github.com/akuity/kargo/pkg/logging"
 )
 
@@ -63,36 +64,35 @@ func (r *reconciler) collectStats(
 		return status, fmt.Errorf("error listing Stages: %w", err)
 	}
 
-	targets := &kargoapi.TargetList{}
-	if err := r.client.List(
-		ctx,
-		targets,
-		client.InNamespace(project.Name),
-	); err != nil {
-		conditions.Set(&status, &metav1.Condition{
-			Type:               kargoapi.ConditionTypeHealthy,
-			Status:             metav1.ConditionFalse,
-			Reason:             "CollectingTargetStatsFailed",
-			Message:            "Failed to list targets: " + err.Error(),
-			ObservedGeneration: project.GetGeneration(),
-		})
-		return status, fmt.Errorf("error listing Targets: %w", err)
-	}
-
-	promotionRequests := &kargoapi.PromotionRequestList{}
-	if err := r.client.List(
-		ctx,
-		promotionRequests,
-		client.InNamespace(project.Name),
-	); err != nil {
-		conditions.Set(&status, &metav1.Condition{
-			Type:               kargoapi.ConditionTypeHealthy,
-			Status:             metav1.ConditionFalse,
-			Reason:             "CollectingTargetStatsFailed",
-			Message:            "Failed to list promotion requests: " + err.Error(),
-			ObservedGeneration: project.GetGeneration(),
-		})
-		return status, fmt.Errorf("error listing PromotionRequests: %w", err)
+	// Targets and PromotionRequests live in the database. Without one, the
+	// Project has no Target stats.
+	var targets []kargoapi.Target
+	var promotionRequests []kargoapi.PromotionRequest
+	if r.store != nil {
+		targetStatsFailed := func(what string, err error) {
+			conditions.Set(&status, &metav1.Condition{
+				Type:               kargoapi.ConditionTypeHealthy,
+				Status:             metav1.ConditionFalse,
+				Reason:             "CollectingTargetStatsFailed",
+				Message:            "Failed to list " + what + ": " + err.Error(),
+				ObservedGeneration: project.GetGeneration(),
+			})
+		}
+		targetRows, err := r.store.ListTargets(ctx, project.Name)
+		if err != nil {
+			targetStatsFailed("targets", err)
+			return status, fmt.Errorf("error listing Targets: %w", err)
+		}
+		if targets, err = database.TargetsFromRows(targetRows, project.Name); err != nil {
+			targetStatsFailed("targets", err)
+			return status, fmt.Errorf("error listing Targets: %w", err)
+		}
+		snapshots, err := r.store.ListPromotionRequests(ctx, project.Name)
+		if err != nil {
+			targetStatsFailed("promotion requests", err)
+			return status, fmt.Errorf("error listing PromotionRequests: %w", err)
+		}
+		promotionRequests = database.PromotionRequestsFromSnapshots(snapshots)
 	}
 
 	controlFlowStages := 0
@@ -129,11 +129,7 @@ func (r *reconciler) collectStats(
 		}
 	}
 
-	stats.Targets = collectTargetStats(
-		targets.Items,
-		stages.Items,
-		promotionRequests.Items,
-	)
+	stats.Targets = collectTargetStats(targets, stages.Items, promotionRequests)
 
 	status.Stats = &stats
 
