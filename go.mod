@@ -28,7 +28,7 @@ require (
 	github.com/aws/aws-sdk-go-v2 v1.47.0
 	github.com/aws/aws-sdk-go-v2/config v1.33.5
 	github.com/aws/aws-sdk-go-v2/credentials v1.20.5
-	github.com/aws/aws-sdk-go-v2/service/ecr v1.65.0
+	github.com/aws/aws-sdk-go-v2/service/ecr v1.66.0
 	github.com/aws/aws-sdk-go-v2/service/sts v1.51.0
 	github.com/awslabs/aws-lambda-go-api-proxy v0.16.2
 	github.com/bmatcuk/doublestar/v4 v4.10.0
@@ -52,7 +52,7 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/hashicorp/go-cleanhttp v0.5.2
 	github.com/hashicorp/golang-lru/v2 v2.0.7
-	github.com/jferrl/go-githubauth v1.7.0
+	github.com/jferrl/go-githubauth v1.8.0
 	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/klauspost/compress v1.20.0
 	github.com/ktrysmt/go-bitbucket v0.9.87
