@@ -181,7 +181,6 @@ spec:
         as: open-pr
         config:
           repoURL: ${{ vars.gitRepo }}
-          createTargetBranch: true
           sourceBranch: ${{ outputs.push.branch }}
           targetBranch: ${{ vars.targetBranch }}
       - uses: git-wait-for-pr
