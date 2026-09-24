@@ -11,8 +11,6 @@ import (
 
 	"github.com/akuity/kargo/pkg/cli/option"
 	"github.com/akuity/kargo/pkg/cli/templates"
-	k8sevent "github.com/akuity/kargo/pkg/event/kubernetes"
-	fakeevent "github.com/akuity/kargo/pkg/kubernetes/event/fake"
 	"github.com/akuity/kargo/pkg/server"
 	apiconfig "github.com/akuity/kargo/pkg/server/config"
 	"github.com/akuity/kargo/pkg/server/kubernetes"
@@ -109,7 +107,8 @@ func (o *serverOptions) run(ctx context.Context) error {
 		},
 		client,
 		rbac.NewKubernetesRolesDatabase(client, client, rbac.RolesDatabaseConfigFromEnv()),
-		k8sevent.NewEventSender(&fakeevent.EventRecorder{}),
+		// Local mode has no event bus to publish to
+		nil,
 	)
 	if err := srv.Serve(ctx, l); err != nil {
 		return fmt.Errorf("serve error: %w", err)

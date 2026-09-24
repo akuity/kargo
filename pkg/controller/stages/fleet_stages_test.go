@@ -25,10 +25,9 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/api"
 	"github.com/akuity/kargo/pkg/conditions"
-	k8sevent "github.com/akuity/kargo/pkg/event/kubernetes"
+	fakeevent "github.com/akuity/kargo/pkg/event/fake"
 	"github.com/akuity/kargo/pkg/health"
 	"github.com/akuity/kargo/pkg/indexer"
-	fakeevent "github.com/akuity/kargo/pkg/kubernetes/event/fake"
 )
 
 func TestFleetStageReconciler_Reconcile(t *testing.T) {
@@ -453,7 +452,7 @@ func TestFleetStageReconciler_Reconcile(t *testing.T) {
 
 			r := &FleetStageReconciler{
 				client:      c,
-				eventSender: k8sevent.NewEventSender(fakeevent.NewEventRecorder(10)),
+				eventSender: &fakeevent.Sender{},
 			}
 
 			result, err := r.Reconcile(t.Context(), tt.req)
@@ -566,7 +565,7 @@ func TestFleetStageReconciler_Reconcile_concurrentStatusMetadata(t *testing.T) {
 
 	r := &FleetStageReconciler{
 		client:      c,
-		eventSender: k8sevent.NewEventSender(fakeevent.NewEventRecorder(10)),
+		eventSender: &fakeevent.Sender{},
 	}
 
 	_, err := r.Reconcile(t.Context(), ctrl.Request{
@@ -802,7 +801,7 @@ func TestFleetStagesReconciler_reconcile(t *testing.T) {
 
 			r := &FleetStageReconciler{
 				client:      c,
-				eventSender: k8sevent.NewEventSender(fakeevent.NewEventRecorder(10)),
+				eventSender: &fakeevent.Sender{},
 			}
 
 			status, requeue, err := r.reconcile(t.Context(), tt.stage, now)
@@ -907,7 +906,7 @@ func TestFleetStageReconciler_partitionsTargetPromotions(t *testing.T) {
 
 			r := &FleetStageReconciler{
 				client:      c,
-				eventSender: k8sevent.NewEventSender(fakeevent.NewEventRecorder(10)),
+				eventSender: &fakeevent.Sender{},
 			}
 
 			status, hasPendingPromotions, err := r.reconcile(t.Context(), tt.stage, time.Now())
@@ -1513,7 +1512,7 @@ func TestFleetStageReconciler_syncPromotionRequests(t *testing.T) {
 
 			r := &FleetStageReconciler{
 				client:      c,
-				eventSender: k8sevent.NewEventSender(fakeevent.NewEventRecorder(10)),
+				eventSender: &fakeevent.Sender{},
 			}
 
 			status, err := r.syncPromotionRequests(t.Context(), tt.stage)
@@ -2157,7 +2156,7 @@ func TestFleetStageReconciler_verifyStageFreight(t *testing.T) {
 		name             string
 		stage            *kargoapi.Stage
 		objects          []client.Object
-		assertions       func(*testing.T, client.Client, *fakeevent.EventRecorder, kargoapi.StageStatus, error)
+		assertions       func(*testing.T, client.Client, *fakeevent.Sender, kargoapi.StageStatus, error)
 		rolloutsDisabled bool
 	}{
 		{
@@ -2174,13 +2173,13 @@ func TestFleetStageReconciler_verifyStageFreight(t *testing.T) {
 			assertions: func(
 				t *testing.T,
 				_ client.Client,
-				recorder *fakeevent.EventRecorder,
+				recorder *fakeevent.Sender,
 				status kargoapi.StageStatus,
 				err error,
 			) {
 				require.NoError(t, err)
 
-				assert.Len(t, recorder.Events, 0)
+				assert.Len(t, recorder.Sent(), 0)
 
 				verifiedCond := conditions.Get(&status, kargoapi.ConditionTypeVerified)
 				require.NotNil(t, verifiedCond)
@@ -2212,13 +2211,13 @@ func TestFleetStageReconciler_verifyStageFreight(t *testing.T) {
 			assertions: func(
 				t *testing.T,
 				_ client.Client,
-				recorder *fakeevent.EventRecorder,
+				recorder *fakeevent.Sender,
 				status kargoapi.StageStatus,
 				err error,
 			) {
 				require.NoError(t, err)
 
-				assert.Len(t, recorder.Events, 0)
+				assert.Len(t, recorder.Sent(), 0)
 
 				verifiedCond := conditions.Get(&status, kargoapi.ConditionTypeVerified)
 				assert.Nil(t, verifiedCond)
@@ -2266,13 +2265,13 @@ func TestFleetStageReconciler_verifyStageFreight(t *testing.T) {
 			assertions: func(
 				t *testing.T,
 				_ client.Client,
-				recorder *fakeevent.EventRecorder,
+				recorder *fakeevent.Sender,
 				status kargoapi.StageStatus,
 				err error,
 			) {
 				require.NoError(t, err)
 
-				require.Len(t, recorder.Events, 2)
+				require.Len(t, recorder.Sent(), 2)
 
 				curFreight := status.FreightHistory.Current()
 				require.NotNil(t, curFreight)
@@ -2315,7 +2314,7 @@ func TestFleetStageReconciler_verifyStageFreight(t *testing.T) {
 			assertions: func(
 				t *testing.T,
 				_ client.Client,
-				_ *fakeevent.EventRecorder,
+				_ *fakeevent.Sender,
 				status kargoapi.StageStatus,
 				err error,
 			) {
@@ -2356,7 +2355,7 @@ func TestFleetStageReconciler_verifyStageFreight(t *testing.T) {
 			assertions: func(
 				t *testing.T,
 				_ client.Client,
-				_ *fakeevent.EventRecorder,
+				_ *fakeevent.Sender,
 				status kargoapi.StageStatus,
 				err error,
 			) {
@@ -2406,13 +2405,13 @@ func TestFleetStageReconciler_verifyStageFreight(t *testing.T) {
 			assertions: func(
 				t *testing.T,
 				_ client.Client,
-				recorder *fakeevent.EventRecorder,
+				recorder *fakeevent.Sender,
 				status kargoapi.StageStatus,
 				err error,
 			) {
 				require.NoError(t, err)
 
-				assert.Len(t, recorder.Events, 1)
+				assert.Len(t, recorder.Sent(), 1)
 
 				curFreight := status.FreightHistory.Current()
 				require.NotNil(t, curFreight)
@@ -2480,13 +2479,13 @@ func TestFleetStageReconciler_verifyStageFreight(t *testing.T) {
 			assertions: func(
 				t *testing.T,
 				c client.Client,
-				recorder *fakeevent.EventRecorder,
+				recorder *fakeevent.Sender,
 				status kargoapi.StageStatus,
 				err error,
 			) {
 				require.NoError(t, err)
 
-				assert.Len(t, recorder.Events, 1)
+				assert.Len(t, recorder.Sent(), 1)
 
 				curFreight := status.FreightHistory.Current()
 				require.NotNil(t, curFreight)
@@ -2558,13 +2557,13 @@ func TestFleetStageReconciler_verifyStageFreight(t *testing.T) {
 			assertions: func(
 				t *testing.T,
 				c client.Client,
-				recorder *fakeevent.EventRecorder,
+				recorder *fakeevent.Sender,
 				status kargoapi.StageStatus,
 				err error,
 			) {
 				require.NoError(t, err)
 
-				assert.Len(t, recorder.Events, 0)
+				assert.Len(t, recorder.Sent(), 0)
 
 				curFreight := status.FreightHistory.Current()
 				require.NotNil(t, curFreight)
@@ -2640,13 +2639,13 @@ func TestFleetStageReconciler_verifyStageFreight(t *testing.T) {
 			assertions: func(
 				t *testing.T,
 				_ client.Client,
-				recorder *fakeevent.EventRecorder,
+				recorder *fakeevent.Sender,
 				status kargoapi.StageStatus,
 				err error,
 			) {
 				require.NoError(t, err)
 
-				assert.Len(t, recorder.Events, 0)
+				assert.Len(t, recorder.Sent(), 0)
 
 				curFreight := status.FreightHistory.Current()
 				require.NotNil(t, curFreight)
@@ -2710,13 +2709,13 @@ func TestFleetStageReconciler_verifyStageFreight(t *testing.T) {
 			assertions: func(
 				t *testing.T,
 				_ client.Client,
-				recorder *fakeevent.EventRecorder,
+				recorder *fakeevent.Sender,
 				status kargoapi.StageStatus,
 				err error,
 			) {
 				require.True(t, apierrors.IsNotFound(err))
 
-				assert.Len(t, recorder.Events, 1)
+				assert.Len(t, recorder.Sent(), 1)
 
 				curFreight := status.FreightHistory.Current()
 				require.NotNil(t, curFreight)
@@ -2782,13 +2781,13 @@ func TestFleetStageReconciler_verifyStageFreight(t *testing.T) {
 			assertions: func(
 				t *testing.T,
 				_ client.Client,
-				recorder *fakeevent.EventRecorder,
+				recorder *fakeevent.Sender,
 				status kargoapi.StageStatus,
 				err error,
 			) {
 				require.NoError(t, err)
 
-				assert.Len(t, recorder.Events, 1)
+				assert.Len(t, recorder.Sent(), 1)
 
 				curFreight := status.FreightHistory.Current()
 				require.NotNil(t, curFreight)
@@ -2855,7 +2854,7 @@ func TestFleetStageReconciler_verifyStageFreight(t *testing.T) {
 			assertions: func(
 				t *testing.T,
 				_ client.Client,
-				_ *fakeevent.EventRecorder,
+				_ *fakeevent.Sender,
 				status kargoapi.StageStatus,
 				err error,
 			) {
@@ -2938,13 +2937,13 @@ func TestFleetStageReconciler_verifyStageFreight(t *testing.T) {
 			assertions: func(
 				t *testing.T,
 				_ client.Client,
-				recorder *fakeevent.EventRecorder,
+				recorder *fakeevent.Sender,
 				status kargoapi.StageStatus,
 				err error,
 			) {
 				require.NoError(t, err)
 
-				require.Len(t, recorder.Events, 1)
+				require.Len(t, recorder.Sent(), 1)
 
 				curFreight := status.FreightHistory.Current()
 				require.NotNil(t, curFreight)
@@ -2973,14 +2972,14 @@ func TestFleetStageReconciler_verifyStageFreight(t *testing.T) {
 				WithStatusSubresource(&kargoapi.Stage{}).
 				Build()
 
-			recorder := fakeevent.NewEventRecorder(10)
+			recorder := &fakeevent.Sender{}
 
 			r := &FleetStageReconciler{
 				client: c,
 				cfg: ReconcilerConfig{
 					RolloutsIntegrationEnabled: !tt.rolloutsDisabled,
 				},
-				eventSender: k8sevent.NewEventSender(recorder),
+				eventSender: recorder,
 				backoffCfg: wait.Backoff{
 					Duration: 1 * time.Second,
 					Factor:   2,
@@ -3436,7 +3435,7 @@ func TestFleetStageReconciler_autoPromoteFreight(t *testing.T) {
 		stage                *kargoapi.Stage
 		objects              []client.Object
 		interceptor          interceptor.Funcs
-		assertions           func(*testing.T, *fakeevent.EventRecorder, client.Client, kargoapi.StageStatus, error)
+		assertions           func(*testing.T, *fakeevent.Sender, client.Client, kargoapi.StageStatus, error)
 	}{
 		{
 			name:                 "no requested freight",
@@ -3452,7 +3451,7 @@ func TestFleetStageReconciler_autoPromoteFreight(t *testing.T) {
 			},
 			assertions: func(
 				t *testing.T,
-				_ *fakeevent.EventRecorder,
+				_ *fakeevent.Sender,
 				c client.Client,
 				_ kargoapi.StageStatus,
 				err error,
@@ -3486,7 +3485,7 @@ func TestFleetStageReconciler_autoPromoteFreight(t *testing.T) {
 			},
 			assertions: func(
 				t *testing.T,
-				_ *fakeevent.EventRecorder,
+				_ *fakeevent.Sender,
 				c client.Client,
 				status kargoapi.StageStatus,
 				err error,
@@ -3564,7 +3563,7 @@ func TestFleetStageReconciler_autoPromoteFreight(t *testing.T) {
 			},
 			assertions: func(
 				t *testing.T,
-				_ *fakeevent.EventRecorder,
+				_ *fakeevent.Sender,
 				c client.Client,
 				status kargoapi.StageStatus,
 				err error,
@@ -3645,7 +3644,7 @@ func TestFleetStageReconciler_autoPromoteFreight(t *testing.T) {
 			},
 			assertions: func(
 				t *testing.T,
-				_ *fakeevent.EventRecorder,
+				_ *fakeevent.Sender,
 				c client.Client,
 				status kargoapi.StageStatus,
 				err error,
@@ -3723,7 +3722,7 @@ func TestFleetStageReconciler_autoPromoteFreight(t *testing.T) {
 			},
 			assertions: func(
 				t *testing.T,
-				_ *fakeevent.EventRecorder,
+				_ *fakeevent.Sender,
 				c client.Client,
 				status kargoapi.StageStatus,
 				err error,
@@ -3792,7 +3791,7 @@ func TestFleetStageReconciler_autoPromoteFreight(t *testing.T) {
 			},
 			assertions: func(
 				t *testing.T,
-				_ *fakeevent.EventRecorder,
+				_ *fakeevent.Sender,
 				c client.Client,
 				status kargoapi.StageStatus,
 				err error,
@@ -3863,7 +3862,7 @@ func TestFleetStageReconciler_autoPromoteFreight(t *testing.T) {
 			},
 			assertions: func(
 				t *testing.T,
-				_ *fakeevent.EventRecorder,
+				_ *fakeevent.Sender,
 				c client.Client,
 				status kargoapi.StageStatus,
 				err error,
@@ -3945,7 +3944,7 @@ func TestFleetStageReconciler_autoPromoteFreight(t *testing.T) {
 			},
 			assertions: func(
 				t *testing.T,
-				_ *fakeevent.EventRecorder,
+				_ *fakeevent.Sender,
 				c client.Client,
 				status kargoapi.StageStatus,
 				err error,
@@ -4020,7 +4019,7 @@ func TestFleetStageReconciler_autoPromoteFreight(t *testing.T) {
 			},
 			assertions: func(
 				t *testing.T,
-				_ *fakeevent.EventRecorder,
+				_ *fakeevent.Sender,
 				c client.Client,
 				status kargoapi.StageStatus,
 				err error,
@@ -4093,7 +4092,7 @@ func TestFleetStageReconciler_autoPromoteFreight(t *testing.T) {
 			},
 			assertions: func(
 				t *testing.T,
-				_ *fakeevent.EventRecorder,
+				_ *fakeevent.Sender,
 				c client.Client,
 				status kargoapi.StageStatus,
 				err error,
@@ -4202,7 +4201,7 @@ func TestFleetStageReconciler_autoPromoteFreight(t *testing.T) {
 			},
 			assertions: func(
 				t *testing.T,
-				_ *fakeevent.EventRecorder,
+				_ *fakeevent.Sender,
 				c client.Client,
 				_ kargoapi.StageStatus,
 				err error,
@@ -4270,7 +4269,7 @@ func TestFleetStageReconciler_autoPromoteFreight(t *testing.T) {
 			},
 			assertions: func(
 				t *testing.T,
-				_ *fakeevent.EventRecorder,
+				_ *fakeevent.Sender,
 				c client.Client,
 				_ kargoapi.StageStatus,
 				err error,
@@ -4364,7 +4363,7 @@ func TestFleetStageReconciler_autoPromoteFreight(t *testing.T) {
 			},
 			assertions: func(
 				t *testing.T,
-				_ *fakeevent.EventRecorder,
+				_ *fakeevent.Sender,
 				c client.Client,
 				_ kargoapi.StageStatus,
 				err error,
@@ -4446,7 +4445,7 @@ func TestFleetStageReconciler_autoPromoteFreight(t *testing.T) {
 			},
 			assertions: func(
 				t *testing.T,
-				_ *fakeevent.EventRecorder,
+				_ *fakeevent.Sender,
 				c client.Client,
 				_ kargoapi.StageStatus,
 				err error,
@@ -4517,7 +4516,7 @@ func TestFleetStageReconciler_autoPromoteFreight(t *testing.T) {
 			},
 			assertions: func(
 				t *testing.T,
-				_ *fakeevent.EventRecorder,
+				_ *fakeevent.Sender,
 				_ client.Client,
 				_ kargoapi.StageStatus,
 				err error,
@@ -4594,7 +4593,7 @@ func TestFleetStageReconciler_autoPromoteFreight(t *testing.T) {
 			},
 			assertions: func(
 				t *testing.T,
-				recorder *fakeevent.EventRecorder,
+				recorder *fakeevent.Sender,
 				c client.Client,
 				_ kargoapi.StageStatus,
 				err error,
@@ -4609,7 +4608,7 @@ func TestFleetStageReconciler_autoPromoteFreight(t *testing.T) {
 				// Nor is anything recorded. A denial is a condition that persists
 				// across reconciles, not an occurrence, so an event per attempt
 				// would report the same thing indefinitely.
-				assert.Empty(t, recorder.Events)
+				assert.Empty(t, recorder.Sent())
 			},
 		},
 	}
@@ -4649,11 +4648,11 @@ func TestFleetStageReconciler_autoPromoteFreight(t *testing.T) {
 				)
 
 			c := builder.Build()
-			recorder := fakeevent.NewEventRecorder(5)
+			recorder := &fakeevent.Sender{}
 
 			r := &FleetStageReconciler{
 				client:      c,
-				eventSender: k8sevent.NewEventSender(recorder),
+				eventSender: recorder,
 			}
 
 			status, err := r.autoPromoteFreight(t.Context(), tt.stage, tt.autoPromotionEnabled)
