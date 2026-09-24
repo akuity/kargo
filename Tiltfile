@@ -80,6 +80,10 @@ k8s_resource(
   labels = ['kargo'],
   trigger_mode = TRIGGER_MODE_AUTO,
 )
+# Tilt holds a local_resource until no other update is in flight unless it is
+# marked parallel-safe. Without this, migrations wait behind the image builds
+# even though the database is already ready. The script only touches the
+# database, so running it alongside other builds is safe.
 local_resource(
   'db-migrate',
   cmd = 'make db-migrate',
@@ -87,6 +91,7 @@ local_resource(
   resource_deps = ['postgres'],
   labels = ['kargo'],
   trigger_mode = TRIGGER_MODE_AUTO,
+  allow_parallel = True,
 )
 
 # The chart's dependencies (e.g. NATS) must be present before it can be
