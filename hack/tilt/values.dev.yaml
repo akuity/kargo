@@ -54,6 +54,9 @@ garbageCollector:
   logLevel: DEBUG
 managementController:
   logLevel: DEBUG
+  env:
+  - name: DATABASE_URL
+    value: postgres://kargo:kargo@kargo-postgres.kargo.svc:5432/kargo?sslmode=disable
 webhooksServer:
   logLevel: DEBUG
 nats:

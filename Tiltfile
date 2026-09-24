@@ -266,7 +266,7 @@ k8s_resource(
     'kargo-management-controller:configmap',
     'kargo-management-controller:serviceaccount'
   ],
-  resource_deps=['back-end-compile', 'nats']
+  resource_deps=['back-end-compile', 'nats', 'db-migrate']
 )
 
 k8s_resource(

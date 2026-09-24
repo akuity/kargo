@@ -537,6 +537,11 @@ psql "$GOOSE_DBSTRING"
 variables before starting Tilt to override them, for example when using a
 separate development database.
 
+Tilt also configures the management controller's `DATABASE_URL` environment
+variable using the in-cluster PostgreSQL address and waits for `db-migrate`
+before the controller's initial startup. Configure `DATABASE_URL` separately
+when using another database; the Goose variables only configure migrations.
+
 ### Creating a migration
 
 Create and edit migration drafts outside the watched directory. For example:
