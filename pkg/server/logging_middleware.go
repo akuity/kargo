@@ -7,12 +7,20 @@ import (
 
 	"github.com/gin-gonic/gin"
 
+	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/pkg/api"
 	"github.com/akuity/kargo/pkg/logging"
+	"github.com/akuity/kargo/pkg/server/user"
 )
 
-// loggingMiddleware returns Gin middleware that records one line per request
+// LoggingMiddleware returns Gin middleware that records one line per request
 // using Kargo's own logger, so that LOG_LEVEL governs the request log as it
 // governs everything else.
+//
+// Each line names the actor the request was authenticated as, in the same
+// form used to attribute Promotions and Events, so that a request log can
+// answer who did something and not only where it came from. A request that
+// never authenticated is attributed to EventActorUnknown.
 //
 // A server error is recorded at error level. A request that was refused is
 // recorded at info level, because a refusal is never routine and is the first
@@ -21,13 +29,19 @@ import (
 //
 // This must be the outermost middleware, so that the status and any reported
 // error it records are the ones the client actually received.
-func loggingMiddleware() gin.HandlerFunc {
+func LoggingMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		start := time.Now()
 
 		c.Next()
 
 		status := c.Writer.Status()
+		// The authentication middleware binds the actor to the request context
+		// on the way in, so it is available here on the way out.
+		actor := kargoapi.EventActorUnknown
+		if u, ok := user.InfoFromContext(c.Request.Context()); ok {
+			actor = api.FormatEventUserActor(u)
+		}
 		// Without stack traces, because this middleware sits above every handler
 		// and every other middleware, so a trace from here describes only the path
 		// through Gin and reveals nothing about what went wrong.
@@ -36,6 +50,7 @@ func loggingMiddleware() gin.HandlerFunc {
 			WithValues(
 				"method", c.Request.Method,
 				"path", c.Request.URL.Path,
+				"actor", actor,
 				"status", status,
 				// Logged as a string because the encoder would otherwise render a
 				// duration as a bare number of seconds.

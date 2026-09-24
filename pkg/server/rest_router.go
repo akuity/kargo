@@ -88,7 +88,7 @@ func (s *server) setupRESTRouter(ctx context.Context) *gin.Engine {
 	// have to write its own response. Authentication is innermost of the four so
 	// that its rejections are answered by the error handling middleware, and so
 	// that a panic within it is recovered too.
-	router.Use(loggingMiddleware())
+	router.Use(LoggingMiddleware())
 	router.Use(s.handleError)
 	router.Use(recoveryMiddleware())
 	if s.cfg.AdminConfig != nil || s.cfg.OIDCConfig != nil {
