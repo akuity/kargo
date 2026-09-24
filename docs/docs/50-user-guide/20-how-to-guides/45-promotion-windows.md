@@ -263,6 +263,108 @@ Then the `Stage` window status will be open between 09:00 and 17:00 only on the 
 ![Example schedule](./img/promotion-window-diagram.png)
 
 
+## Using Promotion Windows in the Kargo UI
+
+Kargo Enterprise adds a <hlt>Promotion Windows</hlt> view to the UI, so windows
+can be managed without hand-writing iCal values. Everything the view does is
+read from and written to the same `promotionWindows` field on `ProjectConfig`
+and `ClusterConfig` described above — the UI is an alternative editor for that
+configuration, not a separate mechanism.
+
+### Where to Find It
+
+There are two views, one per scope:
+
+| Scope | Where |
+|---|---|
+| **Cluster promotion windows** | `/settings/cluster-config/promotion-windows`, or in cluster <hlt>Settings</hlt> under <hlt>Cluster Config</hlt> → <hlt>Promotion Windows</hlt> |
+| **Project promotion windows** | `/project/<project>/settings/project-config/promotion-windows`, or in a Project's <hlt>Settings</hlt> under <hlt>ProjectConfig</hlt> → <hlt>Promotion Windows</hlt> |
+
+The cluster view edits the one `ClusterConfig` named `cluster`; the Project view
+edits that Project's `ProjectConfig`. The only difference between them is that
+the cluster view additionally exposes `projectSelector`.
+
+
+### Calendar and List Views
+
+Each view offers two tabs: <hlt>Calendar</hlt> and <hlt>List</hlt>.
+
+#### Calendar
+
+The <hlt>Calendar</hlt> tab lays the windows out as a month grid. Use
+<hlt>Today</hlt> and the arrows to move between months.
+
+![Promotion windows calendar view](./img/calendar-view-promotion-window.png)
+
+Each entry resolves `dtstart`, `dtend`, `rrule` and the time zone into the
+concrete occurrences that fall in the displayed month, so you see the schedule
+the rule actually produces rather than the rule itself. Green entries are
+`Allow` windows, red are `Deny`, and dashed entries are disabled windows.
+
+Clicking an occurrence opens the window that produced it for editing; clicking
+an empty day starts a new one-hour window drafted on that day.
+
+:::note
+
+The calendar renders each window's own occurrences. It does not compute a
+`Stage`'s net window status, so where an `Allow` and a `Deny` occurrence
+overlap, the [precedence rules](#allow-and-deny-precedence) still decide the
+outcome — `Deny` wins. Consult a `Stage`'s
+[`status.promotionWindowStatus`](#stage-status) for its effective state.
+
+:::
+
+#### List
+
+The <hlt>List</hlt> tab shows the configured windows themselves rather than
+their occurrences.
+
+![Promotion windows list view](./img/promotion-windows-list-view.png)
+
+### Creating and Editing a Window
+
+<hlt>+ New Window</hlt> opens a modal with every window field. The same modal
+opens, titled <hlt>Edit promotion window</hlt>, when you edit an existing
+window.
+
+![Promotion window configuration](./img/promotion-window-config.png)
+
+Saving writes the complete window list back to the `ProjectConfig` or
+`ClusterConfig` immediately — there is no separate save step on the page — and
+the UI confirms with a <hlt>Promotion windows updated</hlt> message. When
+editing, <hlt>Delete</hlt> in the modal's footer removes the window after a
+confirmation prompt.
+
+### Restricting Scope
+
+Both selectors start at "Every `Stage`" (and "Every Project" in the cluster
+view), which leaves the corresponding field unset.
+<hlt>Restrict to specific Stages</hlt> reveals the selector controls:
+
+![Promotion window Stage selection](./img/promotion-window-config-stage-selection.png)
+
+- **<hlt>Name</hlt>** — a name pattern, with the dropdown choosing the matching
+  mode: <hlt>Exact</hlt> for a literal name, <hlt>glob:</hlt> for shell-style
+  wildcards such as `prod-*`, or <hlt>regex:</hlt> for an RE2 expression
+  (unanchored by default).
+- **<hlt>Labels</hlt>** — key/value pairs that become `matchLabels`.
+- **<hlt>Label expressions</hlt>** — key, operator and values, becoming
+  `matchExpressions`. The values field is disabled for operators that take none,
+  such as `Exists`.
+
+Constraints are ANDed: a `Stage` must satisfy the name pattern *and* every label
+*and* every expression to be covered by the window.
+<hlt>Clear and apply to every Stage</hlt> discards the constraints and returns
+the window to covering everything in scope.
+
+:::warning
+
+Pattern and label matching in the UI carries the same security considerations
+described in [Selecting Stages](#selecting-stages). Exact names remain the most
+predictable option.
+
+:::
+
 ## Effect on Promotions
 
 Promotion windows gate all promotions uniformly — automatic, manual, and
