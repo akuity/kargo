@@ -265,6 +265,15 @@ type StageTargets struct {
 	// +listType=atomic
 	// +kubebuilder:validation:Required
 	Selectors []metav1.LabelSelector `json:"selectors"`
+	// UpdateStrategy configures the pace of updating the targets
+	// +optional
+	UpdateStrategy TargetUpdateStrategy `json:"updateStrategy,omitempty"`
+}
+
+type TargetUpdateStrategy struct {
+	// MaxConcurrent specifies a number of targets which can be promoted to at the same time
+	// Zero means there is no limit (default)
+	MaxConcurrent int64 `json:"maxConcurrent,omitempty"`
 }
 
 // FreightRequest expresses a Stage's need for Freight having originated from a

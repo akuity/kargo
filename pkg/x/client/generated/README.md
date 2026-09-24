@@ -381,6 +381,7 @@ Class | Method | HTTP request | Description
  - [TargetStageStatus](docs/TargetStageStatus.md)
  - [TargetStats](docs/TargetStats.md)
  - [TargetStatus](docs/TargetStatus.md)
+ - [TargetUpdateStrategy](docs/TargetUpdateStrategy.md)
  - [UpdateConfigMapRequest](docs/UpdateConfigMapRequest.md)
  - [UpdateGenericCredentialsRequest](docs/UpdateGenericCredentialsRequest.md)
  - [UpdateRepoCredentialsRequest](docs/UpdateRepoCredentialsRequest.md)

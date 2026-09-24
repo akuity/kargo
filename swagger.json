@@ -8104,6 +8104,14 @@
           "items": {
             "$ref": "#/definitions/PromotionRequestTarget"
           }
+        },
+        "updateStrategy": {
+          "description": "UpdateStrategy configures the pace of updating the targets\n+optional",
+          "allOf": [
+            {
+              "$ref": "#/definitions/TargetUpdateStrategy"
+            }
+          ]
         }
       },
       "required": [
@@ -8860,6 +8868,14 @@
           "items": {
             "$ref": "#/definitions/V1LabelSelector"
           }
+        },
+        "updateStrategy": {
+          "description": "UpdateStrategy configures the pace of updating the targets\n+optional",
+          "allOf": [
+            {
+              "$ref": "#/definitions/TargetUpdateStrategy"
+            }
+          ]
         }
       },
       "required": [
@@ -9017,6 +9033,15 @@
           "additionalProperties": {
             "$ref": "#/definitions/TargetStageStatus"
           }
+        }
+      }
+    },
+    "TargetUpdateStrategy": {
+      "type": "object",
+      "properties": {
+        "maxConcurrent": {
+          "description": "MaxConcurrent specifies a number of targets which can be promoted to at the same time\nZero means there is no limit (default)",
+          "type": "integer"
         }
       }
     },

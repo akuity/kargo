@@ -448,6 +448,17 @@ spec:
                       x-kubernetes-map-type: atomic
                     type: array
                     x-kubernetes-list-type: atomic
+                  updateStrategy:
+                    description: UpdateStrategy configures the pace of updating the
+                      targets
+                    properties:
+                      maxConcurrent:
+                        description: |-
+                          MaxConcurrent specifies a number of targets which can be promoted to at the same time
+                          Zero means there is no limit (default)
+                        format: int64
+                        type: integer
+                    type: object
                 required:
                 - selectors
                 type: object

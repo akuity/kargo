@@ -160,6 +160,10 @@ func NewPromotionRequest(
 		labels[kargoapi.LabelKeyShard] = stage.Spec.Shard
 	}
 
+	updateStrategy := kargoapi.TargetUpdateStrategy{}
+	if IsTargetAware(stage) {
+		updateStrategy = stage.Spec.Targets.UpdateStrategy
+	}
 	return &kargoapi.PromotionRequest{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: stage.Namespace,
@@ -176,6 +180,7 @@ func NewPromotionRequest(
 			Stage:   stage.Name,
 			Freight: freightName,
 			Targets: specTargets,
+			UpdateStrategy: updateStrategy,
 		},
 	}, nil
 }

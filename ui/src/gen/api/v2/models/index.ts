@@ -234,6 +234,7 @@ export * from './targetStageStatus';
 export * from './targetStats';
 export * from './targetStatus';
 export * from './targetStatusStages';
+export * from './targetUpdateStrategy';
 export * from './updateConfigMapRequest';
 export * from './updateConfigMapRequestData';
 export * from './updateGenericCredentialsRequest';

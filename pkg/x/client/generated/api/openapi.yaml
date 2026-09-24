@@ -13658,6 +13658,13 @@ components:
           items:
             $ref: "#/components/schemas/PromotionRequestTarget"
           type: array
+        updateStrategy:
+          allOf:
+          - $ref: "#/components/schemas/TargetUpdateStrategy"
+          description: |-
+            UpdateStrategy configures the pace of updating the targets
+            +optional
+          type: object
       required:
       - freight
       - stage
@@ -14968,6 +14975,13 @@ components:
           items:
             $ref: "#/components/schemas/V1LabelSelector"
           type: array
+        updateStrategy:
+          allOf:
+          - $ref: "#/components/schemas/TargetUpdateStrategy"
+          description: |-
+            UpdateStrategy configures the pace of updating the targets
+            +optional
+          type: object
       required:
       - selectors
       type: object
@@ -15336,6 +15350,14 @@ components:
 
             +optional
           type: object
+      type: object
+    TargetUpdateStrategy:
+      properties:
+        maxConcurrent:
+          description: |-
+            MaxConcurrent specifies a number of targets which can be promoted to at the same time
+            Zero means there is no limit (default)
+          type: integer
       type: object
     Verification:
       properties:

@@ -101,6 +101,10 @@ type PromotionRequestSpec struct {
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf"
 	Freight string `json:"freight"`
 
+	// UpdateStrategy configures the pace of updating the targets
+	// +optional
+	UpdateStrategy TargetUpdateStrategy `json:"updateStrategy,omitempty"`
+
 	// Targets names the Targets to which this PromotionRequest promotes Freight.
 	// Each Target MUST be in the same namespace as the PromotionRequest. The
 	// list may be empty, which records that the governing Stage governed no
