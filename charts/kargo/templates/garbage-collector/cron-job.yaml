@@ -16,7 +16,13 @@ metadata:
   {{- include "kargo.annotations" (dict "root" . "annotations" .Values.garbageCollector.annotations) | nindent 2 }}
 spec:
   schedule: {{ quote .Values.garbageCollector.schedule }}
+  {{- with .Values.garbageCollector.timeZone }}
+  timeZone: {{ quote . }}
+  {{- end }}
   concurrencyPolicy: Forbid
+  {{- with .Values.garbageCollector.startingDeadlineSeconds }}
+  startingDeadlineSeconds: {{ . }}
+  {{- end }}
   {{- if .Values.garbageCollector.suspend }}
   suspend: true
   {{- end }}
@@ -30,6 +36,10 @@ spec:
       annotations:
         configmap/checksum: {{ pick ( include (print $.Template.BasePath "/garbage-collector/configmap.yaml") . | fromYaml ) "data" | toYaml | sha256sum }}
     spec:
+      {{- with .Values.garbageCollector.activeDeadlineSeconds }}
+      activeDeadlineSeconds: {{ . }}
+      {{- end }}
+      backoffLimit: {{ .Values.garbageCollector.backoffLimit }}
       {{- with .Values.garbageCollector.ttlSecondsAfterFinished }}
       ttlSecondsAfterFinished: {{ . }}
       {{- end }}
