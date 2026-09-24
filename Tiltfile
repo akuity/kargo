@@ -95,9 +95,13 @@ local_resource(
 )
 
 # The chart's dependencies (e.g. NATS) must be present before it can be
-# rendered. Only fetch them when any are missing or out of date.
+# rendered. Only fetch them when any are missing or out of date. `helm
+# dependency update` resolves repositories from the URLs in Chart.yaml, whereas
+# `helm dependency build` requires each to have been registered with `helm repo
+# add` first. Versions are pinned in Chart.yaml, so the result is the same and
+# Chart.lock is left unchanged.
 local(
-  "helm dependency list charts/kargo | awk 'NR > 1 && NF && $NF != \"ok\" { exit 1 }' || helm dependency build charts/kargo",
+  "helm dependency list charts/kargo | awk 'NR > 1 && NF && $NF != \"ok\" { exit 1 }' || helm dependency update charts/kargo",
   quiet = True,
 )
 
