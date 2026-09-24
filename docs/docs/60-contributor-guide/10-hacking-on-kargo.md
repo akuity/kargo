@@ -542,6 +542,20 @@ variable using the in-cluster PostgreSQL address and waits for `db-migrate`
 before the controller's initial startup. Configure `DATABASE_URL` separately
 when using another database; the Goose variables only configure migrations.
 
+### Generating database code
+
+`sqlc.yaml` configures sqlc to read Goose migrations from `db/migrations` and
+SQL query files from `db/queries`, then generate pgx/v5 Go code in `pkg/database`.
+After adding or changing SQL, regenerate the code:
+
+```shell
+make codegen-db
+```
+
+The existing `make codegen` target includes this step. Generation does nothing
+until `db/queries` contains a `.sql` query file, so database tooling can be set
+up before adding a resource's schema and queries.
+
 ### Creating a migration
 
 Create and edit migration drafts outside the watched directory. For example:

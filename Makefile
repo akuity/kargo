@@ -247,7 +247,13 @@ build-cli-with-ui: build-ui build-cli
 ################################################################################
 
 .PHONY: codegen
-codegen: codegen-openapi codegen-controller codegen-schema-to-go codegen-ui codegen-docs
+codegen: codegen-openapi codegen-controller codegen-schema-to-go codegen-ui codegen-docs codegen-db
+
+.PHONY: codegen-db
+codegen-db:
+ifneq ($(wildcard db/queries/*.sql),)
+	go tool sqlc generate
+endif
 
 .PHONY: codegen-openapi
 codegen-openapi: install-jq install-openapi-generator-cli
