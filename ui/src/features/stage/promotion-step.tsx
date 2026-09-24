@@ -3,7 +3,6 @@ import {
   faCheck,
   faCircleNotch,
   faCog,
-  faHourglassStart,
   faLinesLeaning,
   faRotate,
   faTerminal,
@@ -160,7 +159,7 @@ export const Step = ({
           {success && <FontAwesomeIcon icon={faCheck} className='text-green-500' />}
           {failed && <FontAwesomeIcon icon={faTimes} className='text-red-500' />}
           {skipped && <FontAwesomeIcon icon={faBan} />}
-          {wontRun && <FontAwesomeIcon icon={faHourglassStart} />}
+          {wontRun && <span className='size-3.5 rounded-full border border-dashed' />}
         </Flex>
         <Flex className={'w-full'} align='center' gap={8}>
           {!!step?.as && (
