@@ -69,6 +69,7 @@ type ArgoCDAppSourceUpdate struct {
 	// synced to during a health check.
 	DesiredRevision string                       `json:"desiredRevision,omitempty"`
 	Helm            *ArgoCDHelmParameterUpdates  `json:"helm,omitempty"`
+	Jsonnet         *ArgoCDJsonnetUpdates        `json:"jsonnet,omitempty"`
 	Kustomize       *ArgoCDKustomizeImageUpdates `json:"kustomize,omitempty"`
 	// With possible help from the 'chart' field, identifies which of an Argo CD Application's
 	// sources is to be updated. When the source to be updated references a Helm chart
@@ -95,6 +96,27 @@ type ArgoCDHelmImageUpdate struct {
 	Key string `json:"key"`
 	// Specifies a new value for the setting within an Argo CD Application source's Helm
 	// parameters identified by the 'key' field.
+	Value string `json:"value"`
+}
+
+// Describes updates to an Argo CD Application source's Jsonnet parameters.
+type ArgoCDJsonnetUpdates struct {
+	// Describes external variables to set within an Argo CD Application source's Jsonnet
+	// parameters.
+	ExtVars []ArgoCDJsonnetVarUpdate `json:"extVars,omitempty"`
+	// Describes top-level arguments to set within an Argo CD Application source's Jsonnet
+	// parameters.
+	TLAs []ArgoCDJsonnetVarUpdate `json:"tlas,omitempty"`
+}
+
+// Describes a Jsonnet variable (top-level argument or external variable) to be added or
+// updated.
+type ArgoCDJsonnetVarUpdate struct {
+	// Specifies whether the value should be evaluated as code rather than a string literal.
+	Code bool `json:"code,omitempty"`
+	// Specifies the name of the variable.
+	Name string `json:"name"`
+	// Specifies the value of the variable.
 	Value string `json:"value"`
 }
 
