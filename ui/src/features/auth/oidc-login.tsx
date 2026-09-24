@@ -16,7 +16,8 @@ import {
 import React from 'react';
 import { useLocation } from 'react-router-dom';
 
-import { isSafeRedirectPath } from '@ui/config/auth';
+import { isSafeRedirectPath, redirectToQueryParam } from '@ui/config/auth';
+import { paths } from '@ui/config/paths';
 import { OIDCConfig } from '@ui/gen/api/v2/models';
 
 import { useAuthContext } from './context/use-auth-context';
@@ -149,13 +150,19 @@ export const OIDCLogin = ({ oidcConfig }: Props) => {
 
         onLogin(result.id_token, result.refresh_token);
 
-        if (platformRedirect) {
-          const redirectTo = new URLSearchParams(platformRedirect).get('redirectTo');
+        // Always leave the callback URL. Staying on /login?code=... renders
+        // the login button while a token is already stored, and a reload
+        // replays the authorization code, which the provider refuses and
+        // may answer by revoking the session it just issued (RFC 6749
+        // 4.1.2). Logout lands on a bare /login, so the next sign-in is
+        // exactly the case with no redirectTo: fall back to home.
+        const redirectTo = platformRedirect
+          ? new URLSearchParams(platformRedirect).get(redirectToQueryParam)
+          : null;
 
-          if (isSafeRedirectPath(redirectTo)) {
-            window.location.replace(window.location.origin + redirectTo);
-          }
-        }
+        window.location.replace(
+          window.location.origin + (isSafeRedirectPath(redirectTo) ? redirectTo : paths.home)
+        );
       } catch (err) {
         if (err instanceof AuthorizationResponseError) {
           notification.error({
