@@ -1,0 +1,25 @@
+suite: management-controller/cluster-roles.yaml
+values:
+- ../test/values-unittest.yaml
+templates:
+- templates/management-controller/cluster-roles.yaml
+tests:
+- it: permits the database sync controllers to read Freight and Warehouses
+  asserts:
+  - contains:
+      path: rules
+      content:
+        apiGroups:
+        - kargo.akuity.io
+        resources:
+        - clusterconfigs
+        - freights
+        - promotionrequests
+        - stages
+        - targets
+        - warehouses
+        - projectconfigs
+        verbs:
+        - get
+        - list
+        - watch

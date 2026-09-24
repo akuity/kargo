@@ -506,9 +506,9 @@ this.
 Tilt starts a PostgreSQL instance for local development and forwards
 `127.0.0.1:15432` to its port `5432`. The database, username, and password are
 all `kargo`. Inside the cluster, the address is `kargo-postgres.kargo.svc:5432`.
-The management controller mirrors Project and Stage identities into this
-database. Kubernetes remains the source of truth; application API reads still
-use Kubernetes.
+The management controller mirrors Projects, Stages, Warehouses, and Freight into
+this database. Kubernetes remains the source of truth; application API reads
+still use Kubernetes.
 
 The `db-migrate` Tilt resource waits for PostgreSQL to accept a connection,
 then runs the pinned Goose tool to apply pending SQL migrations from
@@ -558,34 +558,59 @@ The existing `make codegen` target includes this step. Generation does nothing
 until `db/queries` contains a `.sql` query file, so database tooling can be set
 up before adding a resource's schema and queries.
 
-### Synchronizing Projects and Stages
+### Synchronizing Kubernetes resources
 
 Outside Tilt, set `DATABASE_URL` on the management controller to enable
 synchronization; leaving it unset disables database synchronization.
 
-The `projects` and `stages` tables store Kubernetes UIDs unchanged as text primary
-keys, resource names, and two timestamps. `created_at` is the Kubernetes creation
-time; `synced_at` is the database time of the latest successful upsert. A resync
-that finds a matching row leaves this timestamp unchanged. Each Stage's
-`project_id` references its Project's UID. Stage
-names are unique within a Project. No resource spec or status is stored.
+The `projects`, `stages`, `warehouses`, and `freight` tables store Kubernetes UIDs
+unchanged as text primary keys. All four have a non-null `created_at`; sync
+explicitly supplies the Kubernetes creation time. For Warehouses and Freight,
+inserts that omit `created_at` default to the database's current time. `synced_at` is the database time of the
+latest successful upsert. A resync that finds a matching row leaves this timestamp
+unchanged. Each namespaced resource's `project_id` references its Project's UID;
+active names are unique within that Project and resource type.
 
-Each resource has its own sync controller and retry queue. A Stage arriving
-before its Project row retries until that row exists. Actual Kubernetes deletion
-removes the mirrored row; an object waiting on finalizers stays mirrored.
-Recreating a resource under the same name replaces the old row with its new UID.
+Freight also stores its alias, originating Warehouse UID, and `discovered_at`,
+using Kubernetes's discovery time or creation time when discovery is unset.
+Artifacts are separate rows in `freight_commits`, `freight_images`,
+`freight_charts`, and `freight_artifacts`. Each table has a composite primary key
+of `(freight_id, ordinal)`. The zero-based ordinal preserves the order within
+that Kubernetes artifact list, including repeated artifact identities.
+Repository URLs, commit IDs, tags, digests, versions, and subscription names are
+regular columns. Only image annotations and opaque custom artifact
+metadata use JSONB columns; opaque metadata preserves exact numeric values.
+Resync compares JSON values independently of object key order and formatting.
+The Freight row and all its artifact rows are updated in one transaction.
+Warehouse spec and all resource status fields are excluded.
+
+Each resource has its own sync controller and retry queue. Children arriving
+before their parent rows retry until those rows exist. For example, Freight can
+arrive first, then its Project and Warehouse sync, and finally Freight retries
+and inserts its artifact rows. An object waiting on finalizers stays mirrored.
 Database errors retry without stopping other management controllers. The shared
 pool allows up to eight connections, with a five-second timeout per operation.
+
+Deleting a Stage removes its row. Deleting a Warehouse or Freight sets
+`deleted_at`, retaining its identity and artifacts. `deleted_at` is null while
+the resource exists. Recreating the same name with a different UID retires the
+previous row and inserts a new active row. Freight keeps its established
+Warehouse UID even if that Warehouse is deleted or recreated. Deleting a Project
+removes all its mirrored rows, including retained Warehouse and Freight rows.
 
 Controller-runtime queues existing objects when the controllers start. Resync
 runs after the Kubernetes cache initializes and every minute afterward. It
 compares a snapshot of database rows with complete, uncached Kubernetes lists.
 It queues only objects whose rows are missing or whose mirrored fields differ,
-and removes stale rows for objects that no longer exist in Kubernetes. Matching
+and applies each resource's deletion behavior to stale rows. Matching
 rows generate no additional work. A failed or incomplete list prevents cleanup;
 rows inserted after the database snapshot cannot become deletion candidates.
-This also allows a cleared database to rebuild while the controller stays
-running. Use one control-plane cluster per database.
+This also allows live resources to rebuild after the database is cleared while
+the controller stays running. Deleted history cannot be reconstructed from
+Kubernetes. Freight being mirrored for the first time must resolve an existing
+Warehouse; Kubernetes records its origin name, not its historical Warehouse UID.
+If that Warehouse is absent, sync retries. Use one control-plane cluster per
+database.
 
 For example, if Kubernetes contains `dev` and `staging`, while the database
 contains an up-to-date `dev` and a deleted `old-stage`, resync leaves `dev` alone,
@@ -626,6 +651,28 @@ Synchronization is asynchronous, so repeat the query if the row has not arrived.
 Delete the Stage with `kubectl delete stage dev -n db-sync-example`, then apply
 the same Stage manifest again. Its row will have a new UID. Clean up the example
 with `kubectl delete project db-sync-example`.
+
+For an existing Warehouse that has discovered Freight, inspect its image rows
+with a join:
+
+```sql
+SELECT p.name AS project, w.name AS warehouse, f.name AS freight,
+       i.ordinal, i.repo_url, i.tag, i.digest, i.subscription_name
+FROM freight_images i
+JOIN freight f ON f.id = i.freight_id
+JOIN warehouses w ON w.id = f.warehouse_id
+JOIN projects p ON p.id = f.project_id
+WHERE f.deleted_at IS NULL
+ORDER BY f.id, i.ordinal;
+```
+
+For example, Warehouse `demo/images` with UID `w1` produces Freight `f1`.
+Deleting and recreating the Warehouse gives the new Warehouse UID `w2`.
+The `w1` row now has `deleted_at` set, while `f1.warehouse_id` remains `w1`.
+New Freight from the recreated Warehouse references `w2`. Deleting `f1` sets
+its `deleted_at` while preserving its artifact rows. Add
+`AND w.deleted_at IS NULL` to the `WHERE` clause when only active Warehouses
+are wanted.
 
 To add another mirrored resource, add its migration and queries, then run
 `make codegen-db`. Create a package under `pkg/controller/management/dbsync`

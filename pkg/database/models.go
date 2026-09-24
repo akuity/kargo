@@ -6,7 +6,62 @@ package database
 
 import (
 	"time"
+
+	"github.com/jackc/pgx/v5/pgtype"
 )
+
+type Freight struct {
+	ID           string
+	ProjectID    string
+	WarehouseID  string
+	Name         string
+	Alias        string
+	DiscoveredAt time.Time
+	CreatedAt    time.Time
+	SyncedAt     time.Time
+	DeletedAt    pgtype.Timestamptz
+}
+
+type FreightArtifact struct {
+	FreightID        string
+	Ordinal          int64
+	ArtifactType     string
+	SubscriptionName string
+	Version          string
+	Metadata         []byte
+}
+
+type FreightChart struct {
+	FreightID        string
+	Ordinal          int64
+	RepoURL          string
+	Name             string
+	Version          string
+	SubscriptionName string
+}
+
+type FreightCommit struct {
+	FreightID        string
+	Ordinal          int64
+	RepoURL          string
+	CommitID         string
+	Branch           string
+	Tag              string
+	Message          string
+	Author           string
+	Committer        string
+	SubscriptionName string
+}
+
+type FreightImage struct {
+	FreightID        string
+	Ordinal          int64
+	RepoURL          string
+	Tag              string
+	Digest           string
+	SubscriptionName string
+	Annotations      []byte
+}
 
 type Project struct {
 	ID        string
@@ -21,4 +76,13 @@ type Stage struct {
 	Name      string
 	CreatedAt time.Time
 	SyncedAt  time.Time
+}
+
+type Warehouse struct {
+	ID        string
+	ProjectID string
+	Name      string
+	CreatedAt time.Time
+	SyncedAt  time.Time
+	DeletedAt pgtype.Timestamptz
 }

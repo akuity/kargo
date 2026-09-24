@@ -11,6 +11,17 @@ import (
 // Store maintains the database mirror. Upserts replace obsolete identities
 // transactionally; callers never observe a partially replaced resource.
 type Store interface {
+	UpsertWarehouse(context.Context, UpsertWarehouseParams) error
+	UpsertFreight(context.Context, FreightUpsert) error
+	GetFreightWarehouseID(context.Context, string) (string, error)
+	DeleteWarehouseByName(context.Context, DeleteWarehouseByNameParams) error
+	DeleteFreightByName(context.Context, DeleteFreightByNameParams) error
+	// ListWarehouses and ListFreight return only rows not marked deleted.
+	ListWarehouses(context.Context) ([]Warehouse, error)
+	ListFreight(context.Context) ([]FreightSnapshot, error)
+	// Warehouse and Freight deletion retains identities for existing references.
+	DeleteWarehousesByID(context.Context, []string) error
+	DeleteFreightByIDs(context.Context, []string) error
 	UpsertProject(context.Context, UpsertProjectParams) error
 	UpsertStage(context.Context, UpsertStageParams) error
 	DeleteProjectByName(context.Context, string) error

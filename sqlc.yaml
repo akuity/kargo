@@ -8,6 +8,8 @@ sql:
       package: database
       out: pkg/database
       sql_package: pgx/v5
+      rename:
+        repo_url: RepoURL
       overrides:
       - db_type: timestamptz
         go_type:

@@ -217,6 +217,15 @@ func TestMigrationsIntegration(t *testing.T) {
 	runGoose(t, dsn, "up") // Already-applied migrations are harmless.
 	runGoose(t, dsn, "down")
 	var table *string
+	for _, name := range []string{
+		"warehouses", "freight", "freight_commits", "freight_images", "freight_charts", "freight_artifacts",
+	} {
+		require.NoError(t, pool.QueryRow(context.Background(), "SELECT to_regclass($1)::text", name).Scan(&table))
+		require.Nil(t, table)
+	}
+	require.NoError(t, pool.QueryRow(context.Background(), "SELECT to_regclass('projects')::text").Scan(&table))
+	require.NotNil(t, table)
+	runGoose(t, dsn, "down")
 	require.NoError(t, pool.QueryRow(context.Background(), "SELECT to_regclass('projects')::text").Scan(&table))
 	require.Nil(t, table)
 	runGoose(t, dsn, "up")

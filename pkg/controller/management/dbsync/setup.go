@@ -16,9 +16,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	"github.com/akuity/kargo/pkg/controller"
+	"github.com/akuity/kargo/pkg/controller/management/dbsync/freight"
 	"github.com/akuity/kargo/pkg/controller/management/dbsync/internal/syncapi"
 	"github.com/akuity/kargo/pkg/controller/management/dbsync/projects"
 	"github.com/akuity/kargo/pkg/controller/management/dbsync/stages"
+	"github.com/akuity/kargo/pkg/controller/management/dbsync/warehouses"
 	"github.com/akuity/kargo/pkg/database"
 	"github.com/akuity/kargo/pkg/logging"
 )
@@ -29,13 +31,15 @@ const (
 	numWorkers     = 4
 )
 
-// SetupWithManager registers independent Project and Stage controllers and
+// SetupWithManager registers independent resource controllers and
 // periodic resync. The caller owns the database pool and its lifetime.
 func SetupWithManager(ctx context.Context, mgr manager.Manager, store database.Store) error {
 	reader := mgr.GetAPIReader()
 	syncers := []syncapi.Syncer{
 		projects.NewSyncer(reader, store),
 		stages.NewSyncer(reader, store),
+		warehouses.NewSyncer(reader, store),
+		freight.NewSyncer(reader, store),
 	}
 	targets := make([]resyncTarget, 0, len(syncers))
 	for _, syncer := range syncers {
