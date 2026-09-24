@@ -2,14 +2,12 @@ package event
 
 import (
 	"encoding/json"
-	"fmt"
 	"maps"
-	"reflect"
 	"sort"
-	"strconv"
 	"strings"
 	"time"
 
+	cloudevents "github.com/cloudevents/sdk-go/v2/event"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/ptr"
 
@@ -29,23 +27,11 @@ type Promotion struct {
 	Rollback     bool                   `json:"rollback,omitempty"`
 }
 
-func (p Promotion) GetName() string {
-	return p.Name
-}
-
-func (p Promotion) Kind() string {
-	return "Promotion"
-}
-
 // PromotionSucceeded is event data related to a successful promotion.
 type PromotionSucceeded struct {
 	Common
 	Promotion
 	VerificationPending *bool `json:"verificationPending,omitempty"`
-}
-
-func (p *PromotionSucceeded) Type() kargoapi.EventType {
-	return kargoapi.EventTypePromotionSucceeded
 }
 
 // NOTE(thomastaylor312): Most of the promotion events are identical, but that could easily change
@@ -58,28 +44,16 @@ type PromotionFailed struct {
 	Promotion
 }
 
-func (p *PromotionFailed) Type() kargoapi.EventType {
-	return kargoapi.EventTypePromotionFailed
-}
-
 // PromotionErrored is event data related to an errored promotion.
 type PromotionErrored struct {
 	Common
 	Promotion
 }
 
-func (p *PromotionErrored) Type() kargoapi.EventType {
-	return kargoapi.EventTypePromotionErrored
-}
-
 // PromotionAborted is event data related to an aborted promotion.
 type PromotionAborted struct {
 	Common
 	Promotion
-}
-
-func (p *PromotionAborted) Type() kargoapi.EventType {
-	return kargoapi.EventTypePromotionAborted
 }
 
 // PromotionDiscarded is event data recorded when the control plane removes a
@@ -92,27 +66,16 @@ func (p *PromotionAborted) Type() kargoapi.EventType {
 // phase and already reported what happened.
 //
 // Nothing in OSS discards a Promotion today. Kargo Enterprise does, when a
-// promotion window closes while a Promotion is still Pending. The type is
-// registered here because registration is what gives the event an
-// involvedObject apiVersion, without which it never reaches the project event
-// stream or the UI.
+// promotion window closes while a Promotion is still Pending.
 type PromotionDiscarded struct {
 	Common
 	Promotion
-}
-
-func (p *PromotionDiscarded) Type() kargoapi.EventType {
-	return kargoapi.EventTypePromotionDiscarded
 }
 
 // PromotionCreated is event data related to a created promotion.
 type PromotionCreated struct {
 	Common
 	Promotion
-}
-
-func (p *PromotionCreated) Type() kargoapi.EventType {
-	return kargoapi.EventTypePromotionCreated
 }
 
 // NewPromotionCommon creates a new `Promotion` and `Common` event from the given promotion and
@@ -127,56 +90,82 @@ func NewPromotionCommon(message,
 }
 
 // NewPromotionSucceeded creates a new PromotionSucceeded event from the given promotion and freight
-// data. The given actor will be used if it is not empty, but it will be overridden if the promotion
-// has an actor annotation.
+// data. verificationPending records whether the Stage will verify the Freight next. The given
+// actor will be used if it is not empty, but it will be overridden if the promotion has an actor
+// annotation.
 func NewPromotionSucceeded(
-	message, actor string, promotion *kargoapi.Promotion, freight *kargoapi.Freight,
-) *PromotionSucceeded {
+	message, actor string,
+	promotion *kargoapi.Promotion,
+	freight *kargoapi.Freight,
+	verificationPending bool,
+) (cloudevents.Event, error) {
 	common, promo := NewPromotionCommon(message, actor, promotion, freight)
-	return &PromotionSucceeded{
-		Common:              common,
-		Promotion:           promo,
-		VerificationPending: nil,
-	}
+	return newUserEvent(
+		string(kargoapi.EventTypePromotionSucceeded),
+		kindPromotion,
+		&PromotionSucceeded{
+			Common:              common,
+			Promotion:           promo,
+			VerificationPending: &verificationPending,
+		},
+	)
 }
 
 // NewPromotionFailed creates a new PromotionFailed event from the given promotion and freight data.
 // The given actor will be used if it is not empty, but it will be overridden if the promotion has
 // an actor annotation.
 func NewPromotionFailed(
-	message, actor string, promotion *kargoapi.Promotion, freight *kargoapi.Freight,
-) *PromotionFailed {
+	message, actor string,
+	promotion *kargoapi.Promotion,
+	freight *kargoapi.Freight,
+) (cloudevents.Event, error) {
 	common, promo := NewPromotionCommon(message, actor, promotion, freight)
-	return &PromotionFailed{
-		Common:    common,
-		Promotion: promo,
-	}
+	return newUserEvent(
+		string(kargoapi.EventTypePromotionFailed),
+		kindPromotion,
+		&PromotionFailed{
+			Common:    common,
+			Promotion: promo,
+		},
+	)
 }
 
 // NewPromotionErrored creates a new PromotionErrored event from the given promotion and freight data.
 // The given actor will be used if it is not empty, but it will be overridden if the promotion has
 // an actor annotation.
 func NewPromotionErrored(
-	message, actor string, promotion *kargoapi.Promotion, freight *kargoapi.Freight,
-) *PromotionErrored {
+	message, actor string,
+	promotion *kargoapi.Promotion,
+	freight *kargoapi.Freight,
+) (cloudevents.Event, error) {
 	common, promo := NewPromotionCommon(message, actor, promotion, freight)
-	return &PromotionErrored{
-		Common:    common,
-		Promotion: promo,
-	}
+	return newUserEvent(
+		string(kargoapi.EventTypePromotionErrored),
+		kindPromotion,
+		&PromotionErrored{
+			Common:    common,
+			Promotion: promo,
+		},
+	)
 }
 
 // NewPromotionAborted creates a new PromotionAborted event from the given promotion and freight data.
 // The given actor will be used if it is not empty, but it will be overridden if the promotion has
 // an actor annotation.
 func NewPromotionAborted(
-	message, actor string, promotion *kargoapi.Promotion, freight *kargoapi.Freight,
-) *PromotionAborted {
+	message, actor string,
+	promotion *kargoapi.Promotion,
+	freight *kargoapi.Freight,
+) (cloudevents.Event, error) {
 	common, promo := NewPromotionCommon(message, actor, promotion, freight)
-	return &PromotionAborted{
-		Common:    common,
-		Promotion: promo,
-	}
+	return newUserEvent(
+		string(kargoapi.EventTypePromotionAborted),
+		kindPromotion,
+		&PromotionAborted{
+			Common:    common,
+			Promotion: promo,
+		},
+	)
 }
 
 // NewPromotionDiscarded creates a new PromotionDiscarded event from the given promotion and freight
@@ -184,252 +173,38 @@ func NewPromotionAborted(
 // of it. The given actor will be used if it is not empty, but it will be overridden if the
 // promotion has an actor annotation.
 func NewPromotionDiscarded(
-	message, actor string, promotion *kargoapi.Promotion, freight *kargoapi.Freight,
-) *PromotionDiscarded {
+	message, actor string,
+	promotion *kargoapi.Promotion,
+	freight *kargoapi.Freight,
+) (cloudevents.Event, error) {
 	common, promo := NewPromotionCommon(message, actor, promotion, freight)
-	return &PromotionDiscarded{
-		Common:    common,
-		Promotion: promo,
-	}
+	return newUserEvent(
+		string(kargoapi.EventTypePromotionDiscarded),
+		kindPromotion,
+		&PromotionDiscarded{
+			Common:    common,
+			Promotion: promo,
+		},
+	)
 }
 
 // NewPromotionCreated creates a new PromotionCreated event from the given promotion and freight data.
 // The given actor will be used if it is not empty, but it will be overridden if the promotion has
 // an actor annotation.
 func NewPromotionCreated(
-	message, actor string, promotion *kargoapi.Promotion, freight *kargoapi.Freight,
-) *PromotionCreated {
+	message, actor string,
+	promotion *kargoapi.Promotion,
+	freight *kargoapi.Freight,
+) (cloudevents.Event, error) {
 	common, promo := NewPromotionCommon(message, actor, promotion, freight)
-	return &PromotionCreated{
-		Common:    common,
-		Promotion: promo,
-	}
-}
-
-func (p *Promotion) MarshalAnnotationsTo(annotations map[string]string) {
-	annotations[kargoapi.AnnotationKeyEventPromotionName] = p.Name
-	annotations[kargoapi.AnnotationKeyEventStageName] = p.StageName
-	annotations[kargoapi.AnnotationKeyEventPromotionCreateTime] = p.CreateTime.Format(time.RFC3339)
-	if len(p.Applications) > 0 {
-		if data, err := json.Marshal(p.Applications); err == nil {
-			annotations[kargoapi.AnnotationKeyEventApplications] = string(data)
-		}
-	}
-	if p.Freight != nil {
-		p.Freight.MarshalAnnotationsTo(annotations)
-	}
-	if p.Rollback {
-		annotations[kargoapi.AnnotationKeyEventRollback] = kargoapi.AnnotationValueTrue
-	}
-}
-
-func (p *PromotionSucceeded) MarshalAnnotations() map[string]string {
-	// Note that we skip message here, as it is not used in the annotations.
-	annotations := map[string]string{}
-	if p.VerificationPending != nil {
-		annotations[kargoapi.AnnotationKeyEventVerificationPending] = strconv.FormatBool(*p.VerificationPending)
-	}
-	p.Common.MarshalAnnotationsTo(annotations)
-	p.Promotion.MarshalAnnotationsTo(annotations)
-	return annotations
-}
-
-func (p *PromotionFailed) MarshalAnnotations() map[string]string {
-	// Note that we skip message here, as it is not used in the annotations.
-	annotations := map[string]string{}
-	p.Common.MarshalAnnotationsTo(annotations)
-	p.Promotion.MarshalAnnotationsTo(annotations)
-	return annotations
-}
-
-func (p *PromotionErrored) MarshalAnnotations() map[string]string {
-	// Note that we skip message here, as it is not used in the annotations.
-	annotations := map[string]string{}
-	p.Common.MarshalAnnotationsTo(annotations)
-	p.Promotion.MarshalAnnotationsTo(annotations)
-	return annotations
-}
-
-func (p *PromotionAborted) MarshalAnnotations() map[string]string {
-	// Note that we skip message here, as it is not used in the annotations.
-	annotations := map[string]string{}
-	p.Common.MarshalAnnotationsTo(annotations)
-	p.Promotion.MarshalAnnotationsTo(annotations)
-	return annotations
-}
-
-func (p *PromotionDiscarded) MarshalAnnotations() map[string]string {
-	// Note that we skip message here, as it is not used in the annotations.
-	annotations := map[string]string{}
-	p.Common.MarshalAnnotationsTo(annotations)
-	p.Promotion.MarshalAnnotationsTo(annotations)
-	return annotations
-}
-
-func (p *PromotionCreated) MarshalAnnotations() map[string]string {
-	// Note that we skip message here, as it is not used in the annotations.
-	annotations := map[string]string{}
-	p.Common.MarshalAnnotationsTo(annotations)
-	p.Promotion.MarshalAnnotationsTo(annotations)
-	return annotations
-}
-
-// UnmarshalPromotionAnnotations populates the Promotion fields from the given kubernetes annotations.
-func UnmarshalPromotionAnnotations(annotations map[string]string) (Promotion, error) {
-	var freight *Freight
-	f, err := UnmarshalFreightAnnotations(annotations)
-	if err != nil {
-		return Promotion{}, fmt.Errorf("failed to unmarshal freight annotations: %w", err)
-	}
-	// If the returned Freight object is not the zero type (i.e. has data), then we include it
-	if !reflect.ValueOf(f).IsZero() {
-		freight = &f
-	}
-	createTime, err := parseTime(annotations[kargoapi.AnnotationKeyEventPromotionCreateTime])
-	if err != nil {
-		return Promotion{}, fmt.Errorf("failed to parse promotion create time: %w", err)
-	}
-	evt := Promotion{
-		Freight:    freight,
-		Name:       annotations[kargoapi.AnnotationKeyEventPromotionName],
-		StageName:  annotations[kargoapi.AnnotationKeyEventStageName],
-		CreateTime: createTime,
-		Rollback:   annotations[kargoapi.AnnotationKeyEventRollback] == kargoapi.AnnotationValueTrue,
-	}
-
-	if applications, ok := annotations[kargoapi.AnnotationKeyEventApplications]; ok {
-		var apps []types.NamespacedName
-		if err := json.Unmarshal([]byte(applications), &apps); err != nil {
-			return evt, fmt.Errorf("failed to unmarshal applications: %w", err)
-		}
-		evt.Applications = apps
-	}
-	return evt, nil
-}
-
-// UnmarshalPromotionSucceededAnnotations converts the given annotations into a PromotionSucceeded. This is used by the
-// main event handler to convert the data into a normal structured event, but is exposed for convenience.
-func UnmarshalPromotionSucceededAnnotations(
-	eventID string, annotations map[string]string,
-) (*PromotionSucceeded, error) {
-	common, err := UnmarshalCommonAnnotations(eventID, annotations)
-	if err != nil {
-		return nil, err
-	}
-	promotion, err := UnmarshalPromotionAnnotations(annotations)
-	if err != nil {
-		return nil, err
-	}
-	evt := PromotionSucceeded{
-		Common:    common,
-		Promotion: promotion,
-	}
-
-	if verificationPending, ok := annotations[kargoapi.AnnotationKeyEventVerificationPending]; ok {
-		pending := verificationPending == "true"
-		evt.VerificationPending = &pending
-	}
-	return &evt, nil
-}
-
-// UnmarshalPromotionFailedAnnotations converts the given annotations into a PromotionFailed. This is used by the
-// main event handler to convert the data into a normal structured event, but is exposed for convenience.
-func UnmarshalPromotionFailedAnnotations(
-	eventID string, annotations map[string]string,
-) (*PromotionFailed, error) {
-	common, err := UnmarshalCommonAnnotations(eventID, annotations)
-	if err != nil {
-		return nil, err
-	}
-	promotion, err := UnmarshalPromotionAnnotations(annotations)
-	if err != nil {
-		return nil, err
-	}
-	evt := PromotionFailed{
-		Common:    common,
-		Promotion: promotion,
-	}
-	return &evt, nil
-}
-
-// UnmarshalPromotionErroredAnnotations converts the given annotations into a PromotionErrored. This is used by the
-// main event handler to convert the data into a normal structured event, but is exposed for convenience.
-func UnmarshalPromotionErroredAnnotations(
-	eventID string, annotations map[string]string,
-) (*PromotionErrored, error) {
-	common, err := UnmarshalCommonAnnotations(eventID, annotations)
-	if err != nil {
-		return nil, err
-	}
-	promotion, err := UnmarshalPromotionAnnotations(annotations)
-	if err != nil {
-		return nil, err
-	}
-	evt := PromotionErrored{
-		Common:    common,
-		Promotion: promotion,
-	}
-	return &evt, nil
-}
-
-// UnmarshalPromotionAbortedAnnotations converts the given annotations into a PromotionAborted. This is used by the
-// main event handler to convert the data into a normal structured event, but is exposed for convenience.
-func UnmarshalPromotionAbortedAnnotations(
-	eventID string, annotations map[string]string,
-) (*PromotionAborted, error) {
-	common, err := UnmarshalCommonAnnotations(eventID, annotations)
-	if err != nil {
-		return nil, err
-	}
-	promotion, err := UnmarshalPromotionAnnotations(annotations)
-	if err != nil {
-		return nil, err
-	}
-	evt := PromotionAborted{
-		Common:    common,
-		Promotion: promotion,
-	}
-	return &evt, nil
-}
-
-// UnmarshalPromotionDiscardedAnnotations converts the given annotations into a PromotionDiscarded. This is used by the
-// main event handler to convert the data into a normal structured event, but is exposed for convenience.
-func UnmarshalPromotionDiscardedAnnotations(
-	eventID string, annotations map[string]string,
-) (*PromotionDiscarded, error) {
-	common, err := UnmarshalCommonAnnotations(eventID, annotations)
-	if err != nil {
-		return nil, err
-	}
-	promotion, err := UnmarshalPromotionAnnotations(annotations)
-	if err != nil {
-		return nil, err
-	}
-	evt := PromotionDiscarded{
-		Common:    common,
-		Promotion: promotion,
-	}
-	return &evt, nil
-}
-
-// UnmarshalPromotionCreatedAnnotations converts the given annotations into a PromotionCreated. This is used by the
-// main event handler to convert the data into a normal structured event, but is exposed for convenience.
-func UnmarshalPromotionCreatedAnnotations(
-	eventID string, annotations map[string]string,
-) (*PromotionCreated, error) {
-	common, err := UnmarshalCommonAnnotations(eventID, annotations)
-	if err != nil {
-		return nil, err
-	}
-	promotion, err := UnmarshalPromotionAnnotations(annotations)
-	if err != nil {
-		return nil, err
-	}
-	evt := PromotionCreated{
-		Common:    common,
-		Promotion: promotion,
-	}
-	return &evt, nil
+	return newUserEvent(
+		string(kargoapi.EventTypePromotionCreated),
+		kindPromotion,
+		&PromotionCreated{
+			Common:    common,
+			Promotion: promo,
+		},
+	)
 }
 
 func newPromotion(
