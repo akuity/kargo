@@ -107,8 +107,8 @@ controller is running.
 
 ### NATS
 
-The API server, controller, and management controller connect to a NATS
-server at startup. By default, this chart installs a NATS cluster using the
+The API server, controller, management controller, and Kubernetes webhooks
+server connect to a NATS server at startup. By default, this chart installs a NATS cluster using the
 upstream NATS chart. Any setting supported by that chart may be specified
 under `nats`. See
 https://github.com/nats-io/k8s/tree/main/helm/charts/nats for details.

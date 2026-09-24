@@ -460,7 +460,7 @@ it has not been set, since the components that use NATS require it.
 {{- else if .Values.externalNats.url -}}
 {{- .Values.externalNats.url -}}
 {{- else -}}
-{{- fail "externalNats.url must be set when nats.enabled is false: the API server, controller, and management controller require a NATS server to connect to" -}}
+{{- fail "externalNats.url must be set when nats.enabled is false: the API server, controller, management controller, and Kubernetes webhooks server require a NATS server to connect to" -}}
 {{- end -}}
 {{- end -}}
 

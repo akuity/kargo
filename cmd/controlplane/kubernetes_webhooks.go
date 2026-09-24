@@ -108,6 +108,12 @@ func (o *kubernetesWebhooksServerOptions) run(ctx context.Context) error {
 
 	webhookCfg := libWebhook.ConfigFromEnv()
 
+	natsConn, err := connectNATS(ctx, o.Logger)
+	if err != nil {
+		return err
+	}
+	defer natsConn.Close()
+
 	restCfg, err := kubernetes.GetRestConfig(ctx, o.KubeConfig)
 	if err != nil {
 		return fmt.Errorf("error getting REST config: %w", err)
@@ -185,7 +191,7 @@ func (o *kubernetesWebhooksServerOptions) run(ctx context.Context) error {
 	if err = clusterpromotiontask.SetupWebhookWithManager(mgr); err != nil {
 		return fmt.Errorf("setup ClusterPromotionTask webhook: %w", err)
 	}
-	if err = freight.SetupWebhookWithManager(ctx, webhookCfg, mgr); err != nil {
+	if err = freight.SetupWebhookWithManager(webhookCfg, mgr, natsConn); err != nil {
 		return fmt.Errorf("setup Freight webhook: %w", err)
 	}
 	if err = project.SetupWebhookWithManager(mgr, webhookCfg); err != nil {
@@ -194,7 +200,7 @@ func (o *kubernetesWebhooksServerOptions) run(ctx context.Context) error {
 	if err = projectconfig.SetupWebhookWithManager(mgr); err != nil {
 		return fmt.Errorf("setup ProjectConfig webhook: %w", err)
 	}
-	if err = promotion.SetupWebhookWithManager(ctx, webhookCfg, mgr); err != nil {
+	if err = promotion.SetupWebhookWithManager(webhookCfg, mgr, natsConn); err != nil {
 		return fmt.Errorf("setup Promotion webhook: %w", err)
 	}
 	if err = promotionrequest.SetupWebhookWithManager(mgr); err != nil {

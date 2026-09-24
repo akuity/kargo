@@ -25,8 +25,8 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/api"
-	k8sevent "github.com/akuity/kargo/pkg/event/kubernetes"
-	fakeevent "github.com/akuity/kargo/pkg/kubernetes/event/fake"
+	"github.com/akuity/kargo/pkg/event"
+	fakeevent "github.com/akuity/kargo/pkg/event/fake"
 	libWebhook "github.com/akuity/kargo/pkg/webhook/kubernetes"
 )
 
@@ -35,7 +35,7 @@ func TestNewWebhook(t *testing.T) {
 	w, err := newWebhook(
 		libWebhook.Config{},
 		kubeClient,
-		k8sevent.NewEventSender(&fakeevent.EventRecorder{}),
+		&fakeevent.Sender{},
 	)
 	require.NoError(t, err)
 	require.NotNil(t, w.freightAliasGenerator)
@@ -564,7 +564,7 @@ func Test_webhook_ValidateUpdate(t *testing.T) {
 		webhook    *webhook
 		userInfo   *authnv1.UserInfo
 		setup      func() (*kargoapi.Freight, *kargoapi.Freight)
-		assertions func(*testing.T, *fakeevent.EventRecorder, error)
+		assertions func(*testing.T, *fakeevent.Sender, error)
 	}{
 		{
 			name: "error listing freight",
@@ -594,7 +594,7 @@ func Test_webhook_ValidateUpdate(t *testing.T) {
 					return errors.New("something went wrong")
 				},
 			},
-			assertions: func(t *testing.T, _ *fakeevent.EventRecorder, err error) {
+			assertions: func(t *testing.T, _ *fakeevent.Sender, err error) {
 				require.Error(t, err)
 				var statusErr *apierrors.StatusError
 				require.True(t, errors.As(err, &statusErr))
@@ -637,7 +637,7 @@ func Test_webhook_ValidateUpdate(t *testing.T) {
 					return nil
 				},
 			},
-			assertions: func(t *testing.T, _ *fakeevent.EventRecorder, err error) {
+			assertions: func(t *testing.T, _ *fakeevent.Sender, err error) {
 				require.Error(t, err)
 				var statusErr *apierrors.StatusError
 				require.True(t, errors.As(err, &statusErr))
@@ -694,7 +694,7 @@ func Test_webhook_ValidateUpdate(t *testing.T) {
 			userInfo: &authnv1.UserInfo{
 				Username: "fake-user",
 			},
-			assertions: func(t *testing.T, _ *fakeevent.EventRecorder, err error) {
+			assertions: func(t *testing.T, _ *fakeevent.Sender, err error) {
 				require.NoError(t, err)
 			},
 		},
@@ -726,7 +726,7 @@ func Test_webhook_ValidateUpdate(t *testing.T) {
 					return nil
 				},
 			},
-			assertions: func(t *testing.T, _ *fakeevent.EventRecorder, err error) {
+			assertions: func(t *testing.T, _ *fakeevent.Sender, err error) {
 				require.Error(t, err)
 				var statusErr *apierrors.StatusError
 				require.True(t, errors.As(err, &statusErr))
@@ -764,7 +764,7 @@ func Test_webhook_ValidateUpdate(t *testing.T) {
 					return nil
 				},
 			},
-			assertions: func(t *testing.T, _ *fakeevent.EventRecorder, err error) {
+			assertions: func(t *testing.T, _ *fakeevent.Sender, err error) {
 				require.Error(t, err)
 				var statusErr *apierrors.StatusError
 				require.True(t, errors.As(err, &statusErr))
@@ -807,10 +807,10 @@ func Test_webhook_ValidateUpdate(t *testing.T) {
 			userInfo: &authnv1.UserInfo{
 				Username: "fake-user",
 			},
-			assertions: func(t *testing.T, r *fakeevent.EventRecorder, err error) {
+			assertions: func(t *testing.T, r *fakeevent.Sender, err error) {
 				require.NoError(t, err)
-				// Recorder should not record non-freight approval events
-				require.Empty(t, r.Events)
+				// Sender should not send non-freight approval events
+				require.Empty(t, r.Sent())
 			},
 		},
 		{
@@ -852,11 +852,29 @@ func Test_webhook_ValidateUpdate(t *testing.T) {
 			userInfo: &authnv1.UserInfo{
 				Username: "fake-user",
 			},
-			assertions: func(t *testing.T, r *fakeevent.EventRecorder, err error) {
+			assertions: func(t *testing.T, r *fakeevent.Sender, err error) {
 				require.NoError(t, err)
-				require.Len(t, r.Events, 1)
-				event := <-r.Events
-				require.Equal(t, string(kargoapi.EventTypeFreightApproved), event.Reason)
+				sent := r.Sent()
+				require.Len(t, sent, 1)
+				evt := sent[0]
+				require.Equal(t, string(kargoapi.EventTypeFreightApproved), evt.Type())
+				data := &event.FreightApproved{}
+				require.NoError(t, evt.DataAs(data))
+				require.NotEmpty(t, data.Name)
+				require.Equal(t, "Freight", event.KindOf(evt))
+				require.Equal(
+					t,
+					event.NewEventsSubjectPrefix("Freight")+"."+evt.Type(),
+					evt.Subject(),
+				)
+				require.Equal(t, "fake-stage", data.StageName)
+				require.NotNil(t, data.Actor)
+				require.Equal(t, "kubernetes:fake-user", *data.Actor)
+				require.Equal(
+					t,
+					`Freight approved for Stage "fake-stage" by "kubernetes:fake-user"`,
+					data.Message,
+				)
 			},
 		},
 		{
@@ -898,9 +916,9 @@ func Test_webhook_ValidateUpdate(t *testing.T) {
 			userInfo: &authnv1.UserInfo{
 				Username: serviceaccount.ServiceAccountUsernamePrefix + "kargo:kargo-api",
 			},
-			assertions: func(t *testing.T, r *fakeevent.EventRecorder, err error) {
+			assertions: func(t *testing.T, r *fakeevent.Sender, err error) {
 				require.NoError(t, err)
-				require.Empty(t, r.Events)
+				require.Empty(t, r.Sent())
 			},
 		},
 	}
@@ -908,8 +926,8 @@ func Test_webhook_ValidateUpdate(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			oldFreight, newFreight := testCase.setup()
 
-			recorder := fakeevent.NewEventRecorder(1)
-			testCase.webhook.sender = k8sevent.NewEventSender(recorder)
+			sender := &fakeevent.Sender{}
+			testCase.webhook.sender = sender
 
 			var req admission.Request
 			if testCase.userInfo != nil {
@@ -922,7 +940,7 @@ func Test_webhook_ValidateUpdate(t *testing.T) {
 				oldFreight,
 				newFreight,
 			)
-			testCase.assertions(t, recorder, err)
+			testCase.assertions(t, sender, err)
 		})
 	}
 }
@@ -1452,7 +1470,7 @@ func Test_webhook_Handle_PreservesUnrelatedDurationFormatting(t *testing.T) {
 	w, err := newWebhook(
 		libWebhook.Config{},
 		kubeClient,
-		k8sevent.NewEventSender(&fakeevent.EventRecorder{}),
+		&fakeevent.Sender{},
 	)
 	require.NoError(t, err)
 	wh, err := libWebhook.NewDefaultingWebhook(scheme, &kargoapi.Freight{}, w)

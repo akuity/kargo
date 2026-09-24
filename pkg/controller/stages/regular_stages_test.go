@@ -7,9 +7,9 @@ import (
 	"testing"
 	"time"
 
+	cloudevents "github.com/cloudevents/sdk-go/v2/event"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -26,10 +26,10 @@ import (
 	"github.com/akuity/kargo/pkg/api"
 	"github.com/akuity/kargo/pkg/conditions"
 	"github.com/akuity/kargo/pkg/credentials"
-	k8sevent "github.com/akuity/kargo/pkg/event/kubernetes"
+	kargoEvent "github.com/akuity/kargo/pkg/event"
+	fakeevent "github.com/akuity/kargo/pkg/event/fake"
 	"github.com/akuity/kargo/pkg/health"
 	"github.com/akuity/kargo/pkg/indexer"
-	fakeevent "github.com/akuity/kargo/pkg/kubernetes/event/fake"
 )
 
 func TestRegularStageReconciler_Reconcile(t *testing.T) {
@@ -422,7 +422,7 @@ func TestRegularStageReconciler_Reconcile(t *testing.T) {
 
 			r := &RegularStageReconciler{
 				client:      c,
-				eventSender: k8sevent.NewEventSender(fakeevent.NewEventRecorder(10)),
+				eventSender: &fakeevent.Sender{},
 			}
 
 			result, err := r.Reconcile(t.Context(), tt.req)
@@ -635,7 +635,7 @@ func TestRegularStagesReconciler_reconcile(t *testing.T) {
 
 			r := &RegularStageReconciler{
 				client:        c,
-				eventSender:   k8sevent.NewEventSender(fakeevent.NewEventRecorder(10)),
+				eventSender:   &fakeevent.Sender{},
 				healthChecker: &health.MockAggregatingChecker{},
 			}
 
@@ -2270,7 +2270,7 @@ func TestRegularStageReconciler_syncPromotions(t *testing.T) {
 
 			r := &RegularStageReconciler{
 				client:      c,
-				eventSender: k8sevent.NewEventSender(fakeevent.NewEventRecorder(10)),
+				eventSender: &fakeevent.Sender{},
 			}
 
 			status, requeue, err := r.syncPromotions(t.Context(), tt.stage, tt.autoPromotionEnabled)
@@ -2393,7 +2393,7 @@ func TestRegularStageReconciler_syncPromotions_partitionsTargetPromotions(t *tes
 
 			r := &RegularStageReconciler{
 				client:      c,
-				eventSender: k8sevent.NewEventSender(fakeevent.NewEventRecorder(10)),
+				eventSender: &fakeevent.Sender{},
 			}
 
 			status, hasPendingPromotions, err := r.syncPromotions(t.Context(), tt.stage, false)
@@ -3152,7 +3152,7 @@ func TestRegularStageReconciler_verifyStageFreight(t *testing.T) {
 		name             string
 		stage            *kargoapi.Stage
 		objects          []client.Object
-		assertions       func(*testing.T, client.Client, *fakeevent.EventRecorder, kargoapi.StageStatus, error)
+		assertions       func(*testing.T, client.Client, *fakeevent.Sender, kargoapi.StageStatus, error)
 		rolloutsDisabled bool
 	}{
 		{
@@ -3169,13 +3169,13 @@ func TestRegularStageReconciler_verifyStageFreight(t *testing.T) {
 			assertions: func(
 				t *testing.T,
 				_ client.Client,
-				recorder *fakeevent.EventRecorder,
+				recorder *fakeevent.Sender,
 				status kargoapi.StageStatus,
 				err error,
 			) {
 				require.NoError(t, err)
 
-				assert.Len(t, recorder.Events, 0)
+				assert.Len(t, recorder.Sent(), 0)
 
 				verifiedCond := conditions.Get(&status, kargoapi.ConditionTypeVerified)
 				require.NotNil(t, verifiedCond)
@@ -3207,13 +3207,13 @@ func TestRegularStageReconciler_verifyStageFreight(t *testing.T) {
 			assertions: func(
 				t *testing.T,
 				_ client.Client,
-				recorder *fakeevent.EventRecorder,
+				recorder *fakeevent.Sender,
 				status kargoapi.StageStatus,
 				err error,
 			) {
 				require.NoError(t, err)
 
-				assert.Len(t, recorder.Events, 0)
+				assert.Len(t, recorder.Sent(), 0)
 
 				verifiedCond := conditions.Get(&status, kargoapi.ConditionTypeVerified)
 				assert.Nil(t, verifiedCond)
@@ -3261,13 +3261,13 @@ func TestRegularStageReconciler_verifyStageFreight(t *testing.T) {
 			assertions: func(
 				t *testing.T,
 				_ client.Client,
-				recorder *fakeevent.EventRecorder,
+				recorder *fakeevent.Sender,
 				status kargoapi.StageStatus,
 				err error,
 			) {
 				require.NoError(t, err)
 
-				require.Len(t, recorder.Events, 2)
+				require.Len(t, recorder.Sent(), 2)
 
 				curFreight := status.FreightHistory.Current()
 				require.NotNil(t, curFreight)
@@ -3310,7 +3310,7 @@ func TestRegularStageReconciler_verifyStageFreight(t *testing.T) {
 			assertions: func(
 				t *testing.T,
 				_ client.Client,
-				_ *fakeevent.EventRecorder,
+				_ *fakeevent.Sender,
 				status kargoapi.StageStatus,
 				err error,
 			) {
@@ -3351,7 +3351,7 @@ func TestRegularStageReconciler_verifyStageFreight(t *testing.T) {
 			assertions: func(
 				t *testing.T,
 				_ client.Client,
-				_ *fakeevent.EventRecorder,
+				_ *fakeevent.Sender,
 				status kargoapi.StageStatus,
 				err error,
 			) {
@@ -3401,13 +3401,13 @@ func TestRegularStageReconciler_verifyStageFreight(t *testing.T) {
 			assertions: func(
 				t *testing.T,
 				_ client.Client,
-				recorder *fakeevent.EventRecorder,
+				recorder *fakeevent.Sender,
 				status kargoapi.StageStatus,
 				err error,
 			) {
 				require.NoError(t, err)
 
-				assert.Len(t, recorder.Events, 1)
+				assert.Len(t, recorder.Sent(), 1)
 
 				curFreight := status.FreightHistory.Current()
 				require.NotNil(t, curFreight)
@@ -3475,13 +3475,13 @@ func TestRegularStageReconciler_verifyStageFreight(t *testing.T) {
 			assertions: func(
 				t *testing.T,
 				c client.Client,
-				recorder *fakeevent.EventRecorder,
+				recorder *fakeevent.Sender,
 				status kargoapi.StageStatus,
 				err error,
 			) {
 				require.NoError(t, err)
 
-				assert.Len(t, recorder.Events, 1)
+				assert.Len(t, recorder.Sent(), 1)
 
 				curFreight := status.FreightHistory.Current()
 				require.NotNil(t, curFreight)
@@ -3553,13 +3553,13 @@ func TestRegularStageReconciler_verifyStageFreight(t *testing.T) {
 			assertions: func(
 				t *testing.T,
 				c client.Client,
-				recorder *fakeevent.EventRecorder,
+				recorder *fakeevent.Sender,
 				status kargoapi.StageStatus,
 				err error,
 			) {
 				require.NoError(t, err)
 
-				assert.Len(t, recorder.Events, 0)
+				assert.Len(t, recorder.Sent(), 0)
 
 				curFreight := status.FreightHistory.Current()
 				require.NotNil(t, curFreight)
@@ -3635,13 +3635,13 @@ func TestRegularStageReconciler_verifyStageFreight(t *testing.T) {
 			assertions: func(
 				t *testing.T,
 				_ client.Client,
-				recorder *fakeevent.EventRecorder,
+				recorder *fakeevent.Sender,
 				status kargoapi.StageStatus,
 				err error,
 			) {
 				require.NoError(t, err)
 
-				assert.Len(t, recorder.Events, 0)
+				assert.Len(t, recorder.Sent(), 0)
 
 				curFreight := status.FreightHistory.Current()
 				require.NotNil(t, curFreight)
@@ -3705,13 +3705,13 @@ func TestRegularStageReconciler_verifyStageFreight(t *testing.T) {
 			assertions: func(
 				t *testing.T,
 				_ client.Client,
-				recorder *fakeevent.EventRecorder,
+				recorder *fakeevent.Sender,
 				status kargoapi.StageStatus,
 				err error,
 			) {
 				require.True(t, apierrors.IsNotFound(err))
 
-				assert.Len(t, recorder.Events, 1)
+				assert.Len(t, recorder.Sent(), 1)
 
 				curFreight := status.FreightHistory.Current()
 				require.NotNil(t, curFreight)
@@ -3777,13 +3777,13 @@ func TestRegularStageReconciler_verifyStageFreight(t *testing.T) {
 			assertions: func(
 				t *testing.T,
 				_ client.Client,
-				recorder *fakeevent.EventRecorder,
+				recorder *fakeevent.Sender,
 				status kargoapi.StageStatus,
 				err error,
 			) {
 				require.NoError(t, err)
 
-				assert.Len(t, recorder.Events, 1)
+				assert.Len(t, recorder.Sent(), 1)
 
 				curFreight := status.FreightHistory.Current()
 				require.NotNil(t, curFreight)
@@ -3850,7 +3850,7 @@ func TestRegularStageReconciler_verifyStageFreight(t *testing.T) {
 			assertions: func(
 				t *testing.T,
 				_ client.Client,
-				_ *fakeevent.EventRecorder,
+				_ *fakeevent.Sender,
 				status kargoapi.StageStatus,
 				err error,
 			) {
@@ -3933,13 +3933,13 @@ func TestRegularStageReconciler_verifyStageFreight(t *testing.T) {
 			assertions: func(
 				t *testing.T,
 				_ client.Client,
-				recorder *fakeevent.EventRecorder,
+				recorder *fakeevent.Sender,
 				status kargoapi.StageStatus,
 				err error,
 			) {
 				require.NoError(t, err)
 
-				require.Len(t, recorder.Events, 1)
+				require.Len(t, recorder.Sent(), 1)
 
 				curFreight := status.FreightHistory.Current()
 				require.NotNil(t, curFreight)
@@ -3968,14 +3968,14 @@ func TestRegularStageReconciler_verifyStageFreight(t *testing.T) {
 				WithStatusSubresource(&kargoapi.Stage{}).
 				Build()
 
-			recorder := fakeevent.NewEventRecorder(10)
+			recorder := &fakeevent.Sender{}
 
 			r := &RegularStageReconciler{
 				client: c,
 				cfg: ReconcilerConfig{
 					RolloutsIntegrationEnabled: !tt.rolloutsDisabled,
 				},
-				eventSender: k8sevent.NewEventSender(recorder),
+				eventSender: recorder,
 				backoffCfg: wait.Backoff{
 					Duration: 1 * time.Second,
 					Factor:   2,
@@ -4454,7 +4454,7 @@ func TestRegularStageReconciler_recordFreightVerificationEvent(t *testing.T) {
 		freightRef kargoapi.FreightReference
 		vi         *kargoapi.VerificationInfo
 		objects    []client.Object
-		assertions func(*testing.T, *fakeevent.EventRecorder)
+		assertions func(*testing.T, *fakeevent.Sender)
 	}{
 		{
 			name:       "successful verification",
@@ -4466,25 +4466,36 @@ func TestRegularStageReconciler_recordFreightVerificationEvent(t *testing.T) {
 				FinishTime: &finishTime,
 			},
 			objects: []client.Object{baseFreight},
-			assertions: func(t *testing.T, recorder *fakeevent.EventRecorder) {
-				require.Len(t, recorder.Events, 1)
+			assertions: func(t *testing.T, recorder *fakeevent.Sender) {
+				evt := requireOneSentEvent(
+					t,
+					recorder,
+					kargoapi.EventTypeFreightVerificationSucceeded,
+				)
+				assert.Equal(t, "Freight", kargoEvent.KindOf(evt))
+				assert.Equal(
+					t,
+					kargoEvent.NewEventsSubjectPrefix("Freight")+"."+evt.Type(),
+					evt.Subject(),
+				)
 
-				event := <-recorder.Events
-				assert.Equal(t, corev1.EventTypeNormal, event.EventType)
-				assert.Equal(t, string(kargoapi.EventTypeFreightVerificationSucceeded), event.Reason)
-				assert.Equal(t, "Freight verification succeeded", event.Message)
-
-				assert.Equal(t, baseStage.Name, event.Annotations[kargoapi.AnnotationKeyEventStageName])
-				assert.Equal(t, baseFreight.Alias, event.Annotations[kargoapi.AnnotationKeyEventFreightAlias])
+				var data kargoEvent.FreightVerificationSucceeded
+				require.NoError(t, evt.DataAs(&data))
+				assert.Equal(t, "Freight verification succeeded", data.Message)
+				assert.Equal(t, baseStage.Name, data.StageName)
+				require.NotNil(t, data.Alias)
+				assert.Equal(t, baseFreight.Alias, *data.Alias)
+				require.NotNil(t, data.StartTime)
 				assert.Equal(
 					t,
 					startTime.Format(time.RFC3339),
-					event.Annotations[kargoapi.AnnotationKeyEventVerificationStartTime],
+					data.StartTime.Format(time.RFC3339),
 				)
+				require.NotNil(t, data.FinishTime)
 				assert.Equal(
 					t,
 					finishTime.Format(time.RFC3339),
-					event.Annotations[kargoapi.AnnotationKeyEventVerificationFinishTime],
+					data.FinishTime.Format(time.RFC3339),
 				)
 			},
 		},
@@ -4497,12 +4508,16 @@ func TestRegularStageReconciler_recordFreightVerificationEvent(t *testing.T) {
 				Message: "verification failed due to metrics",
 			},
 			objects: []client.Object{baseFreight},
-			assertions: func(t *testing.T, recorder *fakeevent.EventRecorder) {
-				require.Len(t, recorder.Events, 1)
+			assertions: func(t *testing.T, recorder *fakeevent.Sender) {
+				evt := requireOneSentEvent(
+					t,
+					recorder,
+					kargoapi.EventTypeFreightVerificationFailed,
+				)
 
-				event := <-recorder.Events
-				assert.Equal(t, string(kargoapi.EventTypeFreightVerificationFailed), event.Reason)
-				assert.Equal(t, "verification failed due to metrics", event.Message)
+				var data kargoEvent.FreightVerificationFailed
+				require.NoError(t, evt.DataAs(&data))
+				assert.Equal(t, "verification failed due to metrics", data.Message)
 			},
 		},
 		{
@@ -4528,12 +4543,19 @@ func TestRegularStageReconciler_recordFreightVerificationEvent(t *testing.T) {
 					},
 				},
 			},
-			assertions: func(t *testing.T, recorder *fakeevent.EventRecorder) {
-				require.Len(t, recorder.Events, 1)
+			assertions: func(t *testing.T, recorder *fakeevent.Sender) {
+				evt := requireOneSentEvent(
+					t,
+					recorder,
+					kargoapi.EventTypeFreightVerificationSucceeded,
+				)
 
-				event := <-recorder.Events
-				assert.Equal(t, "test-analysis", event.Annotations[kargoapi.AnnotationKeyEventAnalysisRunName])
-				assert.Equal(t, "test-promotion", event.Annotations[kargoapi.AnnotationKeyEventPromotionName])
+				var data kargoEvent.FreightVerificationSucceeded
+				require.NoError(t, evt.DataAs(&data))
+				require.NotNil(t, data.AnalysisRunName)
+				assert.Equal(t, "test-analysis", *data.AnalysisRunName)
+				require.NotNil(t, data.AnalysisTriggeredByPromotion)
+				assert.Equal(t, "test-promotion", *data.AnalysisTriggeredByPromotion)
 			},
 		},
 		{
@@ -4545,11 +4567,17 @@ func TestRegularStageReconciler_recordFreightVerificationEvent(t *testing.T) {
 				Actor: "manual-user",
 			},
 			objects: []client.Object{baseFreight},
-			assertions: func(t *testing.T, recorder *fakeevent.EventRecorder) {
-				require.Len(t, recorder.Events, 1)
+			assertions: func(t *testing.T, recorder *fakeevent.Sender) {
+				evt := requireOneSentEvent(
+					t,
+					recorder,
+					kargoapi.EventTypeFreightVerificationSucceeded,
+				)
 
-				event := <-recorder.Events
-				assert.Equal(t, "manual-user", event.Annotations[kargoapi.AnnotationKeyEventActor])
+				var data kargoEvent.FreightVerificationSucceeded
+				require.NoError(t, evt.DataAs(&data))
+				require.NotNil(t, data.Actor)
+				assert.Equal(t, "manual-user", *data.Actor)
 			},
 		},
 		{
@@ -4562,9 +4590,9 @@ func TestRegularStageReconciler_recordFreightVerificationEvent(t *testing.T) {
 			objects: []client.Object{
 				// Freight does not exist
 			},
-			assertions: func(t *testing.T, recorder *fakeevent.EventRecorder) {
+			assertions: func(t *testing.T, recorder *fakeevent.Sender) {
 				// No events should be recorded
-				assert.Len(t, recorder.Events, 0)
+				assert.Len(t, recorder.Sent(), 0)
 			},
 		},
 		{
@@ -4579,13 +4607,19 @@ func TestRegularStageReconciler_recordFreightVerificationEvent(t *testing.T) {
 				},
 			},
 			objects: []client.Object{baseFreight},
-			assertions: func(t *testing.T, recorder *fakeevent.EventRecorder) {
-				require.Len(t, recorder.Events, 1)
-
-				event := <-recorder.Events
-				assert.Equal(t, "missing-analysis", event.Annotations[kargoapi.AnnotationKeyEventAnalysisRunName])
+			assertions: func(t *testing.T, recorder *fakeevent.Sender) {
 				// Should still record event even though analysis run wasn't found
-				assert.NotContains(t, event.Annotations, kargoapi.AnnotationKeyEventPromotionName)
+				evt := requireOneSentEvent(
+					t,
+					recorder,
+					kargoapi.EventTypeFreightVerificationSucceeded,
+				)
+
+				var data kargoEvent.FreightVerificationSucceeded
+				require.NoError(t, evt.DataAs(&data))
+				require.NotNil(t, data.AnalysisRunName)
+				assert.Equal(t, "missing-analysis", *data.AnalysisRunName)
+				assert.Nil(t, data.AnalysisTriggeredByPromotion)
 			},
 		},
 		{
@@ -4597,12 +4631,16 @@ func TestRegularStageReconciler_recordFreightVerificationEvent(t *testing.T) {
 				Message: "internal error occurred",
 			},
 			objects: []client.Object{baseFreight},
-			assertions: func(t *testing.T, recorder *fakeevent.EventRecorder) {
-				require.Len(t, recorder.Events, 1)
+			assertions: func(t *testing.T, recorder *fakeevent.Sender) {
+				evt := requireOneSentEvent(
+					t,
+					recorder,
+					kargoapi.EventTypeFreightVerificationErrored,
+				)
 
-				event := <-recorder.Events
-				assert.Equal(t, string(kargoapi.EventTypeFreightVerificationErrored), event.Reason)
-				assert.Equal(t, "internal error occurred", event.Message)
+				var data kargoEvent.FreightVerificationErrored
+				require.NoError(t, evt.DataAs(&data))
+				assert.Equal(t, "internal error occurred", data.Message)
 			},
 		},
 		{
@@ -4614,12 +4652,16 @@ func TestRegularStageReconciler_recordFreightVerificationEvent(t *testing.T) {
 				Message: "verification was canceled",
 			},
 			objects: []client.Object{baseFreight},
-			assertions: func(t *testing.T, recorder *fakeevent.EventRecorder) {
-				require.Len(t, recorder.Events, 1)
+			assertions: func(t *testing.T, recorder *fakeevent.Sender) {
+				evt := requireOneSentEvent(
+					t,
+					recorder,
+					kargoapi.EventTypeFreightVerificationAborted,
+				)
 
-				event := <-recorder.Events
-				assert.Equal(t, string(kargoapi.EventTypeFreightVerificationAborted), event.Reason)
-				assert.Equal(t, "verification was canceled", event.Message)
+				var data kargoEvent.FreightVerificationAborted
+				require.NoError(t, evt.DataAs(&data))
+				assert.Equal(t, "verification was canceled", data.Message)
 			},
 		},
 		{
@@ -4631,12 +4673,16 @@ func TestRegularStageReconciler_recordFreightVerificationEvent(t *testing.T) {
 				Message: "results were inconclusive",
 			},
 			objects: []client.Object{baseFreight},
-			assertions: func(t *testing.T, recorder *fakeevent.EventRecorder) {
-				require.Len(t, recorder.Events, 1)
+			assertions: func(t *testing.T, recorder *fakeevent.Sender) {
+				evt := requireOneSentEvent(
+					t,
+					recorder,
+					kargoapi.EventTypeFreightVerificationInconclusive,
+				)
 
-				event := <-recorder.Events
-				assert.Equal(t, string(kargoapi.EventTypeFreightVerificationInconclusive), event.Reason)
-				assert.Equal(t, "results were inconclusive", event.Message)
+				var data kargoEvent.FreightVerificationInconclusive
+				require.NoError(t, evt.DataAs(&data))
+				assert.Equal(t, "results were inconclusive", data.Message)
 			},
 		},
 		{
@@ -4648,12 +4694,16 @@ func TestRegularStageReconciler_recordFreightVerificationEvent(t *testing.T) {
 				Message: "custom message",
 			},
 			objects: []client.Object{baseFreight},
-			assertions: func(t *testing.T, recorder *fakeevent.EventRecorder) {
-				require.Len(t, recorder.Events, 1)
+			assertions: func(t *testing.T, recorder *fakeevent.Sender) {
+				evt := requireOneSentEvent(
+					t,
+					recorder,
+					kargoapi.EventTypeFreightVerificationUnknown,
+				)
 
-				event := <-recorder.Events
-				assert.Equal(t, string(kargoapi.EventTypeFreightVerificationUnknown), event.Reason)
-				assert.Equal(t, "custom message", event.Message)
+				var data kargoEvent.FreightVerificationUnknown
+				require.NoError(t, evt.DataAs(&data))
+				assert.Equal(t, "custom message", data.Message)
 			},
 		},
 	}
@@ -4665,10 +4715,10 @@ func TestRegularStageReconciler_recordFreightVerificationEvent(t *testing.T) {
 				WithObjects(tt.objects...).
 				Build()
 
-			recorder := fakeevent.NewEventRecorder(10)
+			recorder := &fakeevent.Sender{}
 			ver := verifier{
 				client:      c,
-				eventSender: k8sevent.NewEventSender(recorder),
+				eventSender: recorder,
 			}
 
 			ver.recordFreightVerificationEvent(tt.stage, tt.freightRef, tt.vi)
@@ -6383,7 +6433,7 @@ func TestRegularStageReconciler_autoPromoteFreight(t *testing.T) {
 		stage                *kargoapi.Stage
 		objects              []client.Object
 		interceptor          interceptor.Funcs
-		assertions           func(*testing.T, *fakeevent.EventRecorder, client.Client, kargoapi.StageStatus, error)
+		assertions           func(*testing.T, *fakeevent.Sender, client.Client, kargoapi.StageStatus, error)
 	}{
 		{
 			name:                 "no requested freight",
@@ -6399,7 +6449,7 @@ func TestRegularStageReconciler_autoPromoteFreight(t *testing.T) {
 			},
 			assertions: func(
 				t *testing.T,
-				_ *fakeevent.EventRecorder,
+				_ *fakeevent.Sender,
 				c client.Client,
 				_ kargoapi.StageStatus,
 				err error,
@@ -6433,7 +6483,7 @@ func TestRegularStageReconciler_autoPromoteFreight(t *testing.T) {
 			},
 			assertions: func(
 				t *testing.T,
-				_ *fakeevent.EventRecorder,
+				_ *fakeevent.Sender,
 				c client.Client,
 				status kargoapi.StageStatus,
 				err error,
@@ -6511,7 +6561,7 @@ func TestRegularStageReconciler_autoPromoteFreight(t *testing.T) {
 			},
 			assertions: func(
 				t *testing.T,
-				_ *fakeevent.EventRecorder,
+				_ *fakeevent.Sender,
 				c client.Client,
 				status kargoapi.StageStatus,
 				err error,
@@ -6592,7 +6642,7 @@ func TestRegularStageReconciler_autoPromoteFreight(t *testing.T) {
 			},
 			assertions: func(
 				t *testing.T,
-				_ *fakeevent.EventRecorder,
+				_ *fakeevent.Sender,
 				c client.Client,
 				status kargoapi.StageStatus,
 				err error,
@@ -6670,7 +6720,7 @@ func TestRegularStageReconciler_autoPromoteFreight(t *testing.T) {
 			},
 			assertions: func(
 				t *testing.T,
-				_ *fakeevent.EventRecorder,
+				_ *fakeevent.Sender,
 				c client.Client,
 				status kargoapi.StageStatus,
 				err error,
@@ -6739,7 +6789,7 @@ func TestRegularStageReconciler_autoPromoteFreight(t *testing.T) {
 			},
 			assertions: func(
 				t *testing.T,
-				_ *fakeevent.EventRecorder,
+				_ *fakeevent.Sender,
 				c client.Client,
 				status kargoapi.StageStatus,
 				err error,
@@ -6810,7 +6860,7 @@ func TestRegularStageReconciler_autoPromoteFreight(t *testing.T) {
 			},
 			assertions: func(
 				t *testing.T,
-				_ *fakeevent.EventRecorder,
+				_ *fakeevent.Sender,
 				c client.Client,
 				status kargoapi.StageStatus,
 				err error,
@@ -6892,7 +6942,7 @@ func TestRegularStageReconciler_autoPromoteFreight(t *testing.T) {
 			},
 			assertions: func(
 				t *testing.T,
-				_ *fakeevent.EventRecorder,
+				_ *fakeevent.Sender,
 				c client.Client,
 				status kargoapi.StageStatus,
 				err error,
@@ -6978,7 +7028,7 @@ func TestRegularStageReconciler_autoPromoteFreight(t *testing.T) {
 			},
 			assertions: func(
 				t *testing.T,
-				_ *fakeevent.EventRecorder,
+				_ *fakeevent.Sender,
 				c client.Client,
 				status kargoapi.StageStatus,
 				err error,
@@ -7060,7 +7110,7 @@ func TestRegularStageReconciler_autoPromoteFreight(t *testing.T) {
 			},
 			assertions: func(
 				t *testing.T,
-				_ *fakeevent.EventRecorder,
+				_ *fakeevent.Sender,
 				c client.Client,
 				status kargoapi.StageStatus,
 				err error,
@@ -7105,7 +7155,7 @@ func TestRegularStageReconciler_autoPromoteFreight(t *testing.T) {
 			),
 			assertions: func(
 				t *testing.T,
-				_ *fakeevent.EventRecorder,
+				_ *fakeevent.Sender,
 				c client.Client,
 				status kargoapi.StageStatus,
 				err error,
@@ -7157,7 +7207,7 @@ func TestRegularStageReconciler_autoPromoteFreight(t *testing.T) {
 			),
 			assertions: func(
 				t *testing.T,
-				_ *fakeevent.EventRecorder,
+				_ *fakeevent.Sender,
 				c client.Client,
 				status kargoapi.StageStatus,
 				err error,
@@ -7210,7 +7260,7 @@ func TestRegularStageReconciler_autoPromoteFreight(t *testing.T) {
 			),
 			assertions: func(
 				t *testing.T,
-				_ *fakeevent.EventRecorder,
+				_ *fakeevent.Sender,
 				c client.Client,
 				status kargoapi.StageStatus,
 				err error,
@@ -7283,7 +7333,7 @@ func TestRegularStageReconciler_autoPromoteFreight(t *testing.T) {
 			},
 			assertions: func(
 				t *testing.T,
-				_ *fakeevent.EventRecorder,
+				_ *fakeevent.Sender,
 				c client.Client,
 				status kargoapi.StageStatus,
 				err error,
@@ -7380,7 +7430,7 @@ func TestRegularStageReconciler_autoPromoteFreight(t *testing.T) {
 			},
 			assertions: func(
 				t *testing.T,
-				_ *fakeevent.EventRecorder,
+				_ *fakeevent.Sender,
 				c client.Client,
 				status kargoapi.StageStatus,
 				err error,
@@ -7489,7 +7539,7 @@ func TestRegularStageReconciler_autoPromoteFreight(t *testing.T) {
 			},
 			assertions: func(
 				t *testing.T,
-				_ *fakeevent.EventRecorder,
+				_ *fakeevent.Sender,
 				c client.Client,
 				_ kargoapi.StageStatus,
 				err error,
@@ -7557,7 +7607,7 @@ func TestRegularStageReconciler_autoPromoteFreight(t *testing.T) {
 			},
 			assertions: func(
 				t *testing.T,
-				_ *fakeevent.EventRecorder,
+				_ *fakeevent.Sender,
 				c client.Client,
 				_ kargoapi.StageStatus,
 				err error,
@@ -7651,7 +7701,7 @@ func TestRegularStageReconciler_autoPromoteFreight(t *testing.T) {
 			},
 			assertions: func(
 				t *testing.T,
-				_ *fakeevent.EventRecorder,
+				_ *fakeevent.Sender,
 				c client.Client,
 				_ kargoapi.StageStatus,
 				err error,
@@ -7726,7 +7776,7 @@ func TestRegularStageReconciler_autoPromoteFreight(t *testing.T) {
 			},
 			assertions: func(
 				t *testing.T,
-				e *fakeevent.EventRecorder,
+				e *fakeevent.Sender,
 				c client.Client,
 				_ kargoapi.StageStatus,
 				err error,
@@ -7735,13 +7785,25 @@ func TestRegularStageReconciler_autoPromoteFreight(t *testing.T) {
 				promoList := &kargoapi.PromotionList{}
 				require.NoError(t, c.List(t.Context(), promoList, client.InNamespace("fake-project")))
 				require.Len(t, promoList.Items, 1)
-				require.Len(t, e.Events, 1)
+				evt := requireOneSentEvent(
+					t,
+					e,
+					kargoapi.EventTypePromotionCreated,
+				)
+				assert.Equal(t, "Promotion", kargoEvent.KindOf(evt))
+				assert.Equal(
+					t,
+					kargoEvent.NewEventsSubjectPrefix("Promotion")+"."+evt.Type(),
+					evt.Subject(),
+				)
 
-				event := <-e.Events
-				assert.Equal(t, corev1.EventTypeNormal, event.EventType)
-				assert.Equal(t, "PromotionCreated", event.Reason)
-				assert.Contains(t, event.Message, "Automatically promoted Freight")
-				assert.NotEmpty(t, event.Annotations)
+				var data kargoEvent.PromotionCreated
+				require.NoError(t, evt.DataAs(&data))
+				assert.Contains(t, data.Message, "Automatically promoted Freight")
+				assert.Equal(t, "fake-project", data.Project)
+				assert.Equal(t, "test-stage", data.StageName)
+				require.NotNil(t, data.Freight)
+				assert.Equal(t, "test-freight", data.Freight.Name)
 			},
 		},
 		{
@@ -7804,7 +7866,7 @@ func TestRegularStageReconciler_autoPromoteFreight(t *testing.T) {
 			},
 			assertions: func(
 				t *testing.T,
-				_ *fakeevent.EventRecorder,
+				_ *fakeevent.Sender,
 				c client.Client,
 				_ kargoapi.StageStatus,
 				err error,
@@ -7875,7 +7937,7 @@ func TestRegularStageReconciler_autoPromoteFreight(t *testing.T) {
 			},
 			assertions: func(
 				t *testing.T,
-				_ *fakeevent.EventRecorder,
+				_ *fakeevent.Sender,
 				_ client.Client,
 				_ kargoapi.StageStatus,
 				err error,
@@ -7952,7 +8014,7 @@ func TestRegularStageReconciler_autoPromoteFreight(t *testing.T) {
 			},
 			assertions: func(
 				t *testing.T,
-				recorder *fakeevent.EventRecorder,
+				recorder *fakeevent.Sender,
 				c client.Client,
 				_ kargoapi.StageStatus,
 				err error,
@@ -7967,7 +8029,7 @@ func TestRegularStageReconciler_autoPromoteFreight(t *testing.T) {
 				// Nor is anything recorded. A denial is a condition that persists
 				// across reconciles, not an occurrence, so an event per attempt
 				// would report the same thing indefinitely.
-				assert.Empty(t, recorder.Events)
+				assert.Empty(t, recorder.Sent())
 			},
 		},
 		{
@@ -8025,7 +8087,7 @@ func TestRegularStageReconciler_autoPromoteFreight(t *testing.T) {
 			},
 			assertions: func(
 				t *testing.T,
-				_ *fakeevent.EventRecorder,
+				_ *fakeevent.Sender,
 				c client.Client,
 				status kargoapi.StageStatus,
 				err error,
@@ -8101,7 +8163,7 @@ func TestRegularStageReconciler_autoPromoteFreight(t *testing.T) {
 			},
 			assertions: func(
 				t *testing.T,
-				_ *fakeevent.EventRecorder,
+				_ *fakeevent.Sender,
 				c client.Client,
 				_ kargoapi.StageStatus,
 				err error,
@@ -8194,7 +8256,7 @@ func TestRegularStageReconciler_autoPromoteFreight(t *testing.T) {
 			},
 			assertions: func(
 				t *testing.T,
-				_ *fakeevent.EventRecorder,
+				_ *fakeevent.Sender,
 				c client.Client,
 				status kargoapi.StageStatus,
 				err error,
@@ -8294,7 +8356,7 @@ func TestRegularStageReconciler_autoPromoteFreight(t *testing.T) {
 			},
 			assertions: func(
 				t *testing.T,
-				_ *fakeevent.EventRecorder,
+				_ *fakeevent.Sender,
 				c client.Client,
 				status kargoapi.StageStatus,
 				err error,
@@ -8414,7 +8476,7 @@ func TestRegularStageReconciler_autoPromoteFreight(t *testing.T) {
 			},
 			assertions: func(
 				t *testing.T,
-				_ *fakeevent.EventRecorder,
+				_ *fakeevent.Sender,
 				c client.Client,
 				status kargoapi.StageStatus,
 				err error,
@@ -8481,11 +8543,11 @@ func TestRegularStageReconciler_autoPromoteFreight(t *testing.T) {
 					indexer.FreightApprovedForStages,
 				)
 			c := builder.Build()
-			recorder := fakeevent.NewEventRecorder(5)
+			recorder := &fakeevent.Sender{}
 
 			r := &RegularStageReconciler{
 				client:      c,
-				eventSender: k8sevent.NewEventSender(recorder),
+				eventSender: recorder,
 			}
 
 			status, err := r.autoPromoteFreight(t.Context(), tt.stage, tt.autoPromotionEnabled)
@@ -8995,4 +9057,24 @@ func testFreight(name, warehouse string) *kargoapi.Freight {
 		},
 		Origin: testOrigin(warehouse),
 	}
+}
+
+// requireOneSentEvent requires that exactly one event, of the given type, was
+// sent with the given Sender under the Kargo events subject prefix and returns
+// it.
+func requireOneSentEvent(
+	t *testing.T,
+	sender *fakeevent.Sender,
+	eventType kargoapi.EventType,
+) cloudevents.Event {
+	t.Helper()
+	sent := sender.Sent()
+	require.Len(t, sent, 1)
+	require.Equal(t, string(eventType), sent[0].Type())
+	require.Equal(
+		t,
+		kargoEvent.NewEventsSubjectPrefix(kargoEvent.KindOf(sent[0]))+"."+sent[0].Type(),
+		sent[0].Subject(),
+	)
+	return sent[0]
 }

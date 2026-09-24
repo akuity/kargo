@@ -276,3 +276,92 @@ tests:
     asserts:
       - failedTemplate:
           errorPattern: externalNats\.url must be set when nats\.enabled is false
+
+---
+suite: kubernetes-webhooks-server/deployment.yaml (NATS)
+values:
+  - ../test/values-unittest.yaml
+release:
+  namespace: kargo
+templates:
+  - templates/kubernetes-webhooks-server/deployment.yaml
+  - templates/kubernetes-webhooks-server/configmap.yaml
+tests:
+  - it: connects to the NATS installed by the chart by default
+    template: templates/kubernetes-webhooks-server/deployment.yaml
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: NATS_SERVER_URL
+            value: nats://kargo-nats.kargo.svc.cluster.local:4222
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: NATS_CLIENT_NAME
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.name
+      - notContains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: NATS_SEED_KEY_FILE
+            value: /etc/kargo/nats/seed.nk
+
+  - it: ignores the external nkey seed Secret when NATS is installed by the chart
+    template: templates/kubernetes-webhooks-server/deployment.yaml
+    set:
+      externalNats.nkeySeedSecret.name: nats-nkey-seed
+    asserts:
+      - notContains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: NATS_SEED_KEY_FILE
+            value: /etc/kargo/nats/seed.nk
+      - notContains:
+          path: spec.template.spec.volumes
+          content:
+            name: nats-nkey
+          any: true
+
+  - it: connects to an external NATS server with an nkey seed
+    template: templates/kubernetes-webhooks-server/deployment.yaml
+    set:
+      nats.enabled: false
+      externalNats.url: nats://nats.example.com:4222
+      externalNats.nkeySeedSecret.name: nats-nkey-seed
+      externalNats.nkeySeedSecret.key: my-seed
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: NATS_SERVER_URL
+            value: nats://nats.example.com:4222
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: NATS_SEED_KEY_FILE
+            value: /etc/kargo/nats/seed.nk
+      - contains:
+          path: spec.template.spec.containers[0].volumeMounts
+          content:
+            mountPath: /etc/kargo/nats
+            name: nats-nkey
+            readOnly: true
+      - contains:
+          path: spec.template.spec.volumes
+          content:
+            name: nats-nkey
+            secret:
+              secretName: nats-nkey-seed
+              items:
+              - key: my-seed
+                path: seed.nk
+
+  - it: fails when NATS is disabled and no external URL is set
+    template: templates/kubernetes-webhooks-server/deployment.yaml
+    set:
+      nats.enabled: false
+    asserts:
+      - failedTemplate:
+          errorPattern: externalNats\.url must be set when nats\.enabled is false

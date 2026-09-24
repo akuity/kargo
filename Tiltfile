@@ -311,7 +311,7 @@ k8s_resource(
     'kargo-webhooks-server-ns-controller:clusterrole',
     'kargo-webhooks-server-ns-controller:clusterrolebinding'
   ],
-  resource_deps=['back-end-compile', 'ensure-cert-manager']
+  resource_deps=['back-end-compile', 'ensure-cert-manager', 'nats']
 )
 
 k8s_resource(

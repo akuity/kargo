@@ -10,6 +10,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/kelseyhightower/envconfig"
+	"github.com/nats-io/nats.go"
 	gocache "github.com/patrickmn/go-cache"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/trace"
@@ -38,14 +39,13 @@ import (
 	"github.com/akuity/kargo/pkg/controller/metrics"
 	"github.com/akuity/kargo/pkg/credentials"
 	kargoEvent "github.com/akuity/kargo/pkg/event"
-	k8sevent "github.com/akuity/kargo/pkg/event/kubernetes"
+	natsevent "github.com/akuity/kargo/pkg/event/nats"
 	exprfn "github.com/akuity/kargo/pkg/expressions/function"
 	"github.com/akuity/kargo/pkg/health"
 	"github.com/akuity/kargo/pkg/indexer"
 	"github.com/akuity/kargo/pkg/kargo"
 	"github.com/akuity/kargo/pkg/kubeclient"
 	"github.com/akuity/kargo/pkg/kubernetes"
-	libEvent "github.com/akuity/kargo/pkg/kubernetes/event"
 	"github.com/akuity/kargo/pkg/logging"
 	intpredicate "github.com/akuity/kargo/pkg/predicate"
 	"github.com/akuity/kargo/pkg/rollouts"
@@ -130,12 +130,11 @@ func (r *RegularStageReconciler) SetupWithManager(
 	ctx context.Context,
 	kargoMgr, argocdMgr ctrl.Manager,
 	sharedIndexer client.FieldIndexer,
+	natsClient *nats.Conn,
 ) error {
-	// Configure client and event recorder using manager.
+	// Configure client using manager.
 	r.client = kargoMgr.GetClient()
-	r.eventSender = k8sevent.NewEventSender(
-		libEvent.NewRecorder(ctx, kargoMgr.GetScheme(), kargoMgr.GetClient(), r.cfg.Name()),
-	)
+	r.eventSender = natsevent.NewDefaultingEventSender(natsClient, r.cfg.Name())
 
 	// This index is used to find all Promotions that are associated with a
 	// specific Stage.
@@ -1455,28 +1454,21 @@ func (ver verifier) recordFreightVerificationEvent(
 		evtActor = vi.Actor
 	}
 
-	var evt kargoEvent.FreightVerificationEventMeta
-
-	switch vi.Phase {
-	case kargoapi.VerificationPhaseSuccessful:
-		e := kargoEvent.NewFreightVerificationSucceeded(evtActor, stage.Name, freight, vi)
-		e.Message = "Freight verification succeeded"
-		evt = e
-	case kargoapi.VerificationPhaseFailed:
-		evt = kargoEvent.NewFreightVerificationFailed(evtActor, stage.Name, freight, vi)
-	case kargoapi.VerificationPhaseError:
-		evt = kargoEvent.NewFreightVerificationErrored(evtActor, stage.Name, freight, vi)
-	case kargoapi.VerificationPhaseAborted:
-		evt = kargoEvent.NewFreightVerificationAborted(evtActor, stage.Name, freight, vi)
-	case kargoapi.VerificationPhaseInconclusive:
-		evt = kargoEvent.NewFreightVerificationInconclusive(evtActor, stage.Name, freight, vi)
-	default:
-		evt = kargoEvent.NewFreightVerificationUnknown(evtActor, stage.Name, freight, vi)
+	evt, err := kargoEvent.NewFreightVerification(
+		evtActor,
+		stage.Name,
+		freight,
+		vi,
+		analysisTriggeredByPromotion,
+	)
+	if err == nil {
+		err = ver.eventSender.Send(
+			context.Background(),
+			kargoEvent.NewEventsSubjectPrefix(kargoEvent.KindOf(evt)),
+			evt,
+		)
 	}
-
-	evt.SetTriggeredByPromotion(analysisTriggeredByPromotion)
-
-	if err := ver.eventSender.Send(context.Background(), evt); err != nil {
+	if err != nil {
 		logging.LoggerFromContext(context.Background()).Error(
 			err, "failed to send verification event",
 			"freight", freightRef.Name,
@@ -2100,7 +2092,7 @@ func (r *RegularStageReconciler) autoPromoteFreight(
 				candidate.Name, stage.Namespace, err,
 			)
 		}
-		evt := kargoEvent.NewPromotionCreated(
+		evt, err := kargoEvent.NewPromotionCreated(
 			fmt.Sprintf("Automatically promoted Freight from origin %q for Stage %q",
 				origin,
 				promotion.Spec.Stage),
@@ -2108,7 +2100,14 @@ func (r *RegularStageReconciler) autoPromoteFreight(
 			promotion,
 			&candidate,
 		)
-		if err := r.eventSender.Send(ctx, evt); err != nil {
+		if err == nil {
+			err = r.eventSender.Send(
+				ctx,
+				kargoEvent.NewEventsSubjectPrefix(kargoEvent.KindOf(evt)),
+				evt,
+			)
+		}
+		if err != nil {
 			logger.Error(err, "failed to send promotion event")
 		}
 		logger.Debug(

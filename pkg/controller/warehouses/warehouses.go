@@ -10,6 +10,7 @@ import (
 
 	"github.com/expr-lang/expr"
 	"github.com/kelseyhightower/envconfig"
+	"github.com/nats-io/nats.go"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/trace"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -25,11 +26,10 @@ import (
 	"github.com/akuity/kargo/pkg/controller"
 	"github.com/akuity/kargo/pkg/credentials"
 	kargoEvent "github.com/akuity/kargo/pkg/event"
-	k8sevent "github.com/akuity/kargo/pkg/event/kubernetes"
+	natsevent "github.com/akuity/kargo/pkg/event/nats"
 	"github.com/akuity/kargo/pkg/expressions/function"
 	"github.com/akuity/kargo/pkg/kargo"
 	"github.com/akuity/kargo/pkg/kubeclient"
-	libEvent "github.com/akuity/kargo/pkg/kubernetes/event"
 	"github.com/akuity/kargo/pkg/logging"
 	intpredicate "github.com/akuity/kargo/pkg/predicate"
 	"github.com/akuity/kargo/pkg/subscription"
@@ -91,6 +91,8 @@ func SetupReconcilerWithManager(
 	credentialsDB credentials.Database,
 	subscriberRegistry subscription.SubscriberRegistry,
 	cfg ReconcilerConfig,
+	// TODO: Maybe fold this into the reconciler config
+	natsClient *nats.Conn,
 ) error {
 	if err := ctrl.NewControllerManagedBy(mgr).
 		For(&kargoapi.Warehouse{}).
@@ -111,9 +113,7 @@ func SetupReconcilerWithManager(
 			credentialsDB,
 			subscriberRegistry,
 			cfg,
-			k8sevent.NewEventSender(
-				libEvent.NewRecorder(ctx, mgr.GetScheme(), mgr.GetClient(), cfg.Name()),
-			),
+			natsevent.NewDefaultingEventSender(natsClient, cfg.Name()),
 		)); err != nil {
 		return fmt.Errorf("error building Warehouse reconciler: %w", err)
 	}
@@ -525,12 +525,19 @@ func (r *reconciler) syncWarehouse(
 					},
 				)
 				if r.eventSender != nil {
-					evt := kargoEvent.NewFreightCreated(
+					evt, err := kargoEvent.NewFreightCreated(
 						"Freight created from discovered artifacts",
 						api.FormatEventControllerActor(r.cfg.Name()),
 						freight,
 					)
-					if err := r.eventSender.Send(ctx, evt); err != nil {
+					if err == nil {
+						err = r.eventSender.Send(
+							ctx,
+							kargoEvent.NewEventsSubjectPrefix(kargoEvent.KindOf(evt)),
+							evt,
+						)
+					}
+					if err != nil {
 						logger.Error(err, "failed to send FreightCreated event",
 							"freight", freight.Name)
 					}
