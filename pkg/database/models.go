@@ -7,82 +7,117 @@ package database
 import (
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
 type Freight struct {
-	ID           string
-	ProjectID    string
-	WarehouseID  string
-	Name         string
-	Alias        string
-	DiscoveredAt time.Time
-	CreatedAt    time.Time
-	SyncedAt     time.Time
-	DeletedAt    pgtype.Timestamptz
+	ID           string             `json:"id"`
+	ProjectID    string             `json:"project_id"`
+	WarehouseID  string             `json:"warehouse_id"`
+	Name         string             `json:"name"`
+	Alias        string             `json:"alias"`
+	DiscoveredAt time.Time          `json:"discovered_at"`
+	CreatedAt    time.Time          `json:"created_at"`
+	SyncedAt     time.Time          `json:"synced_at"`
+	DeletedAt    pgtype.Timestamptz `json:"deleted_at"`
 }
 
 type FreightArtifact struct {
-	FreightID        string
-	Ordinal          int64
-	ArtifactType     string
-	SubscriptionName string
-	Version          string
-	Metadata         []byte
+	FreightID        string `json:"freight_id"`
+	Ordinal          int64  `json:"ordinal"`
+	ArtifactType     string `json:"artifact_type"`
+	SubscriptionName string `json:"subscription_name"`
+	Version          string `json:"version"`
+	Metadata         []byte `json:"metadata"`
 }
 
 type FreightChart struct {
-	FreightID        string
-	Ordinal          int64
-	RepoURL          string
-	Name             string
-	Version          string
-	SubscriptionName string
+	FreightID        string `json:"freight_id"`
+	Ordinal          int64  `json:"ordinal"`
+	RepoURL          string `json:"repo_url"`
+	Name             string `json:"name"`
+	Version          string `json:"version"`
+	SubscriptionName string `json:"subscription_name"`
 }
 
 type FreightCommit struct {
-	FreightID        string
-	Ordinal          int64
-	RepoURL          string
-	CommitID         string
-	Branch           string
-	Tag              string
-	Message          string
-	Author           string
-	Committer        string
-	SubscriptionName string
+	FreightID        string `json:"freight_id"`
+	Ordinal          int64  `json:"ordinal"`
+	RepoURL          string `json:"repo_url"`
+	CommitID         string `json:"commit_id"`
+	Branch           string `json:"branch"`
+	Tag              string `json:"tag"`
+	Message          string `json:"message"`
+	Author           string `json:"author"`
+	Committer        string `json:"committer"`
+	SubscriptionName string `json:"subscription_name"`
 }
 
 type FreightImage struct {
-	FreightID        string
-	Ordinal          int64
-	RepoURL          string
-	Tag              string
-	Digest           string
-	SubscriptionName string
-	Annotations      []byte
+	FreightID        string `json:"freight_id"`
+	Ordinal          int64  `json:"ordinal"`
+	RepoURL          string `json:"repo_url"`
+	Tag              string `json:"tag"`
+	Digest           string `json:"digest"`
+	SubscriptionName string `json:"subscription_name"`
+	Annotations      []byte `json:"annotations"`
 }
 
 type Project struct {
-	ID        string
-	Name      string
-	CreatedAt time.Time
-	SyncedAt  time.Time
+	ID        string    `json:"id"`
+	Name      string    `json:"name"`
+	CreatedAt time.Time `json:"created_at"`
+	SyncedAt  time.Time `json:"synced_at"`
+}
+
+type PromotionRequest struct {
+	ID         uuid.UUID          `json:"id"`
+	Seq        int64              `json:"seq"`
+	ProjectID  string             `json:"project_id"`
+	StageID    string             `json:"stage_id"`
+	FreightID  string             `json:"freight_id"`
+	Name       string             `json:"name"`
+	CreatedBy  string             `json:"created_by"`
+	Phase      string             `json:"phase"`
+	Message    string             `json:"message"`
+	CreatedAt  time.Time          `json:"created_at"`
+	UpdatedAt  time.Time          `json:"updated_at"`
+	StartedAt  pgtype.Timestamptz `json:"started_at"`
+	FinishedAt pgtype.Timestamptz `json:"finished_at"`
+}
+
+type PromotionRequestTarget struct {
+	PromotionRequestID uuid.UUID `json:"promotion_request_id"`
+	TargetID           uuid.UUID `json:"target_id"`
+	Ordinal            int64     `json:"ordinal"`
+	Promotion          string    `json:"promotion"`
+	Phase              string    `json:"phase"`
 }
 
 type Stage struct {
-	ID        string
-	ProjectID string
-	Name      string
-	CreatedAt time.Time
-	SyncedAt  time.Time
+	ID        string    `json:"id"`
+	ProjectID string    `json:"project_id"`
+	Name      string    `json:"name"`
+	CreatedAt time.Time `json:"created_at"`
+	SyncedAt  time.Time `json:"synced_at"`
+}
+
+type Target struct {
+	ID        uuid.UUID `json:"id"`
+	ProjectID string    `json:"project_id"`
+	Name      string    `json:"name"`
+	Labels    []byte    `json:"labels"`
+	Params    []byte    `json:"params"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
 }
 
 type Warehouse struct {
-	ID        string
-	ProjectID string
-	Name      string
-	CreatedAt time.Time
-	SyncedAt  time.Time
-	DeletedAt pgtype.Timestamptz
+	ID        string             `json:"id"`
+	ProjectID string             `json:"project_id"`
+	Name      string             `json:"name"`
+	CreatedAt time.Time          `json:"created_at"`
+	SyncedAt  time.Time          `json:"synced_at"`
+	DeletedAt pgtype.Timestamptz `json:"deleted_at"`
 }

@@ -215,16 +215,27 @@ func TestMigrationsIntegration(t *testing.T) {
 	t.Parallel()
 	pool, dsn := isolatedDatabase(t)
 	runGoose(t, dsn, "up") // Already-applied migrations are harmless.
-	runGoose(t, dsn, "down")
 	var table *string
-	for _, name := range []string{
-		"warehouses", "freight", "freight_commits", "freight_images", "freight_charts", "freight_artifacts",
-	} {
-		require.NoError(t, pool.QueryRow(context.Background(), "SELECT to_regclass($1)::text", name).Scan(&table))
-		require.Nil(t, table)
+	requireTables := func(present bool, names ...string) {
+		t.Helper()
+		for _, name := range names {
+			require.NoError(t, pool.QueryRow(context.Background(), "SELECT to_regclass($1)::text", name).Scan(&table))
+			if present {
+				require.NotNil(t, table, name)
+			} else {
+				require.Nil(t, table, name)
+			}
+		}
 	}
-	require.NoError(t, pool.QueryRow(context.Background(), "SELECT to_regclass('projects')::text").Scan(&table))
-	require.NotNil(t, table)
+	runGoose(t, dsn, "down")
+	requireTables(false, "targets", "promotion_requests", "promotion_request_targets")
+	requireTables(true, "warehouses", "freight", "projects")
+	runGoose(t, dsn, "down")
+	requireTables(
+		false,
+		"warehouses", "freight", "freight_commits", "freight_images", "freight_charts", "freight_artifacts",
+	)
+	requireTables(true, "projects")
 	runGoose(t, dsn, "down")
 	require.NoError(t, pool.QueryRow(context.Background(), "SELECT to_regclass('projects')::text").Scan(&table))
 	require.Nil(t, table)

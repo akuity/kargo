@@ -29,8 +29,8 @@ WHERE freight.project_id = projects.id
 `
 
 type DeleteFreightByNameParams struct {
-	ProjectName string
-	Name        string
+	ProjectName string `json:"project_name"`
+	Name        string `json:"name"`
 }
 
 func (q *Queries) DeleteFreightByName(ctx context.Context, arg DeleteFreightByNameParams) error {
@@ -45,9 +45,9 @@ WHERE project_id = $1
 `
 
 type DeleteReplacedFreightParams struct {
-	ProjectID string
-	Name      string
-	ID        string
+	ProjectID string `json:"project_id"`
+	Name      string `json:"name"`
+	ID        string `json:"id"`
 }
 
 func (q *Queries) DeleteReplacedFreight(ctx context.Context, arg DeleteReplacedFreightParams) error {
@@ -134,13 +134,13 @@ ON CONFLICT (id) DO UPDATE SET
 `
 
 type UpsertFreightParams struct {
-	ID           string
-	ProjectID    string
-	WarehouseID  string
-	Name         string
-	Alias        string
-	DiscoveredAt time.Time
-	CreatedAt    time.Time
+	ID           string    `json:"id"`
+	ProjectID    string    `json:"project_id"`
+	WarehouseID  string    `json:"warehouse_id"`
+	Name         string    `json:"name"`
+	Alias        string    `json:"alias"`
+	DiscoveredAt time.Time `json:"discovered_at"`
+	CreatedAt    time.Time `json:"created_at"`
 }
 
 func (q *Queries) UpsertFreight(ctx context.Context, arg UpsertFreightParams) error {

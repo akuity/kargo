@@ -17,9 +17,9 @@ WHERE project_id = $1
 `
 
 type DeleteReplacedStageParams struct {
-	ProjectID string
-	Name      string
-	ID        string
+	ProjectID string `json:"project_id"`
+	Name      string `json:"name"`
+	ID        string `json:"id"`
 }
 
 func (q *Queries) DeleteReplacedStage(ctx context.Context, arg DeleteReplacedStageParams) error {
@@ -35,8 +35,8 @@ WHERE stages.project_id = projects.id
 `
 
 type DeleteStageByNameParams struct {
-	ProjectName string
-	Name        string
+	ProjectName string `json:"project_name"`
+	Name        string `json:"name"`
 }
 
 func (q *Queries) DeleteStageByName(ctx context.Context, arg DeleteStageByNameParams) error {
@@ -94,10 +94,10 @@ ON CONFLICT (id) DO UPDATE SET
 `
 
 type UpsertStageParams struct {
-	ID        string
-	ProjectID string
-	Name      string
-	CreatedAt time.Time
+	ID        string    `json:"id"`
+	ProjectID string    `json:"project_id"`
+	Name      string    `json:"name"`
+	CreatedAt time.Time `json:"created_at"`
 }
 
 func (q *Queries) UpsertStage(ctx context.Context, arg UpsertStageParams) error {

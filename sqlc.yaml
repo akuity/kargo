@@ -8,6 +8,10 @@ sql:
       package: database
       out: pkg/database
       sql_package: pgx/v5
+      # Rows travel as JSON in dbreconcile events; tag them with their column
+      # names so the events read like the tables.
+      emit_json_tags: true
+      json_tags_case_style: snake
       rename:
         repo_url: RepoURL
       overrides:
@@ -15,3 +19,7 @@ sql:
         go_type:
           import: time
           type: Time
+      - db_type: uuid
+        go_type:
+          import: github.com/google/uuid
+          type: UUID

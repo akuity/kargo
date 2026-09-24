@@ -4,8 +4,11 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+
+	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 )
 
 // Store maintains the database mirror. Upserts replace obsolete identities
@@ -30,6 +33,28 @@ type Store interface {
 	ListStages(context.Context) ([]Stage, error)
 	DeleteProjectsByID(context.Context, []string) error
 	DeleteStagesByID(context.Context, []string) error
+
+	// Targets and PromotionRequests are authored in the database rather than
+	// mirrored from Kubernetes. Targets are read here and seeded elsewhere;
+	// PromotionRequests are created by the Stage controller and the API server
+	// and have their status written by the PromotionRequest reconciler.
+	ListTargets(context.Context, string) ([]Target, error)
+	GetTarget(context.Context, GetTargetParams) (Target, error)
+	CreatePromotionRequest(context.Context, PromotionRequestCreate) (PromotionRequestSnapshot, error)
+	GetPromotionRequest(context.Context, GetPromotionRequestParams) (PromotionRequestSnapshot, error)
+	GetPromotionRequestByID(context.Context, uuid.UUID) (PromotionRequestSnapshot, error)
+	ListPromotionRequests(context.Context, string) ([]PromotionRequestSnapshot, error)
+	ListPromotionRequestsByStage(
+		context.Context,
+		ListPromotionRequestsByStageParams,
+	) ([]PromotionRequestSnapshot, error)
+	PromotionRequestExists(context.Context, PromotionRequestExistsParams) (bool, error)
+	ListOpenPromotionRequestIDs(ctx context.Context, after uuid.UUID, limit int) ([]uuid.UUID, error)
+	UpdatePromotionRequestStatus(
+		context.Context,
+		uuid.UUID,
+		kargoapi.PromotionRequestStatus,
+	) (before PromotionRequestSnapshot, after PromotionRequestSnapshot, err error)
 }
 
 type store struct {

@@ -34,8 +34,8 @@ WHERE name = $1 AND id <> $2
 `
 
 type DeleteReplacedProjectParams struct {
-	Name string
-	ID   string
+	Name string `json:"name"`
+	ID   string `json:"id"`
 }
 
 func (q *Queries) DeleteReplacedProject(ctx context.Context, arg DeleteReplacedProjectParams) error {
@@ -82,9 +82,9 @@ ON CONFLICT (id) DO UPDATE SET
 `
 
 type UpsertProjectParams struct {
-	ID        string
-	Name      string
-	CreatedAt time.Time
+	ID        string    `json:"id"`
+	Name      string    `json:"name"`
+	CreatedAt time.Time `json:"created_at"`
 }
 
 func (q *Queries) UpsertProject(ctx context.Context, arg UpsertProjectParams) error {

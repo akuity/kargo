@@ -17,9 +17,9 @@ WHERE project_id = $1
 `
 
 type DeleteReplacedWarehouseParams struct {
-	ProjectID string
-	Name      string
-	ID        string
+	ProjectID string `json:"project_id"`
+	Name      string `json:"name"`
+	ID        string `json:"id"`
 }
 
 func (q *Queries) DeleteReplacedWarehouse(ctx context.Context, arg DeleteReplacedWarehouseParams) error {
@@ -36,8 +36,8 @@ WHERE warehouses.project_id = projects.id
 `
 
 type DeleteWarehouseByNameParams struct {
-	ProjectName string
-	Name        string
+	ProjectName string `json:"project_name"`
+	Name        string `json:"name"`
 }
 
 func (q *Queries) DeleteWarehouseByName(ctx context.Context, arg DeleteWarehouseByNameParams) error {
@@ -98,10 +98,10 @@ ON CONFLICT (id) DO UPDATE SET
 `
 
 type UpsertWarehouseParams struct {
-	ID        string
-	ProjectID string
-	Name      string
-	CreatedAt time.Time
+	ID        string    `json:"id"`
+	ProjectID string    `json:"project_id"`
+	Name      string    `json:"name"`
+	CreatedAt time.Time `json:"created_at"`
 }
 
 func (q *Queries) UpsertWarehouse(ctx context.Context, arg UpsertWarehouseParams) error {

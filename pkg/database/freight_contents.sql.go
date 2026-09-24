@@ -197,12 +197,12 @@ ON CONFLICT (freight_id, ordinal) DO UPDATE SET
 `
 
 type UpsertFreightArtifactParams struct {
-	FreightID        string
-	Ordinal          int64
-	ArtifactType     string
-	SubscriptionName string
-	Version          string
-	Metadata         []byte
+	FreightID        string `json:"freight_id"`
+	Ordinal          int64  `json:"ordinal"`
+	ArtifactType     string `json:"artifact_type"`
+	SubscriptionName string `json:"subscription_name"`
+	Version          string `json:"version"`
+	Metadata         []byte `json:"metadata"`
 }
 
 func (q *Queries) UpsertFreightArtifact(ctx context.Context, arg UpsertFreightArtifactParams) error {
@@ -228,12 +228,12 @@ ON CONFLICT (freight_id, ordinal) DO UPDATE SET
 `
 
 type UpsertFreightChartParams struct {
-	FreightID        string
-	Ordinal          int64
-	RepoURL          string
-	Name             string
-	Version          string
-	SubscriptionName string
+	FreightID        string `json:"freight_id"`
+	Ordinal          int64  `json:"ordinal"`
+	RepoURL          string `json:"repo_url"`
+	Name             string `json:"name"`
+	Version          string `json:"version"`
+	SubscriptionName string `json:"subscription_name"`
 }
 
 func (q *Queries) UpsertFreightChart(ctx context.Context, arg UpsertFreightChartParams) error {
@@ -263,16 +263,16 @@ ON CONFLICT (freight_id, ordinal) DO UPDATE SET
 `
 
 type UpsertFreightCommitParams struct {
-	FreightID        string
-	Ordinal          int64
-	RepoURL          string
-	CommitID         string
-	Branch           string
-	Tag              string
-	Message          string
-	Author           string
-	Committer        string
-	SubscriptionName string
+	FreightID        string `json:"freight_id"`
+	Ordinal          int64  `json:"ordinal"`
+	RepoURL          string `json:"repo_url"`
+	CommitID         string `json:"commit_id"`
+	Branch           string `json:"branch"`
+	Tag              string `json:"tag"`
+	Message          string `json:"message"`
+	Author           string `json:"author"`
+	Committer        string `json:"committer"`
+	SubscriptionName string `json:"subscription_name"`
 }
 
 func (q *Queries) UpsertFreightCommit(ctx context.Context, arg UpsertFreightCommitParams) error {
@@ -303,13 +303,13 @@ ON CONFLICT (freight_id, ordinal) DO UPDATE SET
 `
 
 type UpsertFreightImageParams struct {
-	FreightID        string
-	Ordinal          int64
-	RepoURL          string
-	Tag              string
-	Digest           string
-	SubscriptionName string
-	Annotations      []byte
+	FreightID        string `json:"freight_id"`
+	Ordinal          int64  `json:"ordinal"`
+	RepoURL          string `json:"repo_url"`
+	Tag              string `json:"tag"`
+	Digest           string `json:"digest"`
+	SubscriptionName string `json:"subscription_name"`
+	Annotations      []byte `json:"annotations"`
 }
 
 func (q *Queries) UpsertFreightImage(ctx context.Context, arg UpsertFreightImageParams) error {
