@@ -344,7 +344,7 @@ func (req promotionObjectRequest) updateCurrentPromotion(status kargoapi.StageSt
 		Name: req.Name,
 	}
 	if freight := req.Status.Freight; freight != nil {
-		status.CurrentPromotion.Freight = freight.DeepCopy()
+		status.CurrentPromotionRequest.Freight = freight.DeepCopy()
 	}
 	return status
 }
