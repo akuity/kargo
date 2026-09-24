@@ -22,6 +22,7 @@ type PromotionRequestPhase string
 const (
 	PROMOTIONREQUESTPHASE_PromotionRequestPhasePending PromotionRequestPhase = "Pending"
 	PROMOTIONREQUESTPHASE_PromotionRequestPhaseRunning PromotionRequestPhase = "Running"
+	PROMOTIONREQUESTPHASE_PromotionRequestPhaseAborted PromotionRequestPhase = "Aborted"
 	PROMOTIONREQUESTPHASE_PromotionRequestPhaseSucceeded PromotionRequestPhase = "Succeeded"
 	PROMOTIONREQUESTPHASE_PromotionRequestPhaseFailed PromotionRequestPhase = "Failed"
 	PROMOTIONREQUESTPHASE_PromotionRequestPhaseErrored PromotionRequestPhase = "Errored"
@@ -31,6 +32,7 @@ const (
 var AllowedPromotionRequestPhaseEnumValues = []PromotionRequestPhase{
 	"Pending",
 	"Running",
+	"Aborted",
 	"Succeeded",
 	"Failed",
 	"Errored",

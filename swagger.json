@@ -8009,15 +8009,6 @@
         "spec"
       ]
     },
-    "PromotionRequestFreightReference": {
-      "type": "object",
-      "properties": {
-        "name": {
-          "description": "Name is the name of the Freight.",
-          "type": "string"
-        }
-      }
-    },
     "PromotionRequestList": {
       "type": "object",
       "properties": {
@@ -8045,6 +8036,7 @@
       "enum": [
         "Pending",
         "Running",
+        "Aborted",
         "Succeeded",
         "Failed",
         "Errored"
@@ -8052,6 +8044,7 @@
       "x-enum-varnames": [
         "PromotionRequestPhasePending",
         "PromotionRequestPhaseRunning",
+        "PromotionRequestPhaseAborted",
         "PromotionRequestPhaseSucceeded",
         "PromotionRequestPhaseFailed",
         "PromotionRequestPhaseErrored"
@@ -8068,7 +8061,15 @@
           "description": "Freight identifies the Freight being promoted.",
           "allOf": [
             {
-              "$ref": "#/definitions/PromotionRequestFreightReference"
+              "$ref": "#/definitions/FreightReference"
+            }
+          ]
+        },
+        "freightCollection": {
+          "description": "FreightCollection contains the details of the piece of Freight referenced\nby this Promotion as well as any additional Freight that is carried over\nfrom the target Stage's current state.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/FreightCollection"
             }
           ]
         },
@@ -8103,6 +8104,14 @@
           "items": {
             "$ref": "#/definitions/PromotionRequestTarget"
           }
+        },
+        "updateStrategy": {
+          "description": "UpdateStrategy configures the pace of updating the targets\n+optional",
+          "allOf": [
+            {
+              "$ref": "#/definitions/TargetUpdateStrategy"
+            }
+          ]
         }
       },
       "required": [
@@ -8124,6 +8133,22 @@
         "finishedAt": {
           "description": "FinishedAt is the time at which the PromotionRequest completed.",
           "type": "string"
+        },
+        "freight": {
+          "description": "Freight is the detail of the piece of freight that was referenced by this promotion.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/FreightReference"
+            }
+          ]
+        },
+        "freightCollection": {
+          "description": "FreightCollection contains the details of the piece of Freight referenced\nby this Promotion as well as any additional Freight that is carried over\nfrom the target Stage's current state.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/FreightCollection"
+            }
+          ]
         },
         "message": {
           "description": "Message is a display message explaining the current Phase: what the\nPromotionRequest is waiting on, how far its fan-out has progressed, or\nwhy it did not succeed. i.e. If the Phase field has a value of Failed or\nErrored, this field can be expected to explain why.\n\n+kubebuilder:validation:Optional",
@@ -8843,6 +8868,14 @@
           "items": {
             "$ref": "#/definitions/V1LabelSelector"
           }
+        },
+        "updateStrategy": {
+          "description": "UpdateStrategy configures the pace of updating the targets\n+optional",
+          "allOf": [
+            {
+              "$ref": "#/definitions/TargetUpdateStrategy"
+            }
+          ]
         }
       },
       "required": [
@@ -9000,6 +9033,15 @@
           "additionalProperties": {
             "$ref": "#/definitions/TargetStageStatus"
           }
+        }
+      }
+    },
+    "TargetUpdateStrategy": {
+      "type": "object",
+      "properties": {
+        "maxConcurrent": {
+          "description": "MaxConcurrent specifies a number of targets which can be promoted to at the same time\nZero means there is no limit (default)",
+          "type": "integer"
         }
       }
     },

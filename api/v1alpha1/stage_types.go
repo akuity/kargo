@@ -265,6 +265,15 @@ type StageTargets struct {
 	// +listType=atomic
 	// +kubebuilder:validation:Required
 	Selectors []metav1.LabelSelector `json:"selectors"`
+	// UpdateStrategy configures the pace of updating the targets
+	// +optional
+	UpdateStrategy TargetUpdateStrategy `json:"updateStrategy,omitempty"`
+}
+
+type TargetUpdateStrategy struct {
+	// MaxConcurrent specifies a number of targets which can be promoted to at the same time
+	// Zero means there is no limit (default)
+	MaxConcurrent int64 `json:"maxConcurrent,omitempty"`
 }
 
 // FreightRequest expresses a Stage's need for Freight having originated from a
@@ -859,20 +868,15 @@ type PromotionRequestReference struct {
 	// Name is the name of the PromotionRequest.
 	Name string `json:"name"`
 	// Freight identifies the Freight being promoted.
-	Freight *PromotionRequestFreightReference `json:"freight,omitempty"`
+	Freight *FreightReference `json:"freight,omitempty"`
 	// Phase is a high-level summary of the PromotionRequest's lifecycle.
 	Phase PromotionRequestPhase `json:"phase,omitempty"`
+	// FreightCollection contains the details of the piece of Freight referenced
+	// by this Promotion as well as any additional Freight that is carried over
+	// from the target Stage's current state.
+	FreightCollection *FreightCollection `json:"freightCollection,omitempty"`
 	// FinishedAt is the time at which the PromotionRequest completed.
 	FinishedAt *metav1.Time `json:"finishedAt,omitempty"`
-}
-
-// PromotionRequestFreightReference identifies the Freight promoted by a
-// PromotionRequest. It intentionally carries only the Freight's name --
-// details about the Freight's contents can be looked up from the Freight
-// itself. Fields will be added here as they are needed.
-type PromotionRequestFreightReference struct {
-	// Name is the name of the Freight.
-	Name string `json:"name"`
 }
 
 // Verification describes how to verify that a Promotion has been successful
