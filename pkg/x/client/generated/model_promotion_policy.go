@@ -19,7 +19,7 @@ var _ MappedNullable = &PromotionPolicy{}
 
 // PromotionPolicy struct for PromotionPolicy
 type PromotionPolicy struct {
-	// AutoPromotionEnabled indicates whether new Freight can automatically be promoted into the Stage referenced by the Stage field. Note: There are may be other conditions also required for an auto-promotion to occur. This field defaults to false, but is commonly set to true for Stages that subscribe to Warehouses instead of other, upstream Stages. This allows users to define Stages that are automatically updated as soon as new artifacts are detected.
+	// AutoPromotionEnabled indicates whether new Freight can automatically be promoted into the Stage referenced by the Stage field. Note: There may be other conditions also required for an auto-promotion to occur. This field defaults to false, but is commonly set to true for Stages that subscribe to Warehouses instead of other, upstream Stages. This allows users to define Stages that are automatically updated as soon as new artifacts are detected.
 	AutoPromotionEnabled *bool `json:"autoPromotionEnabled,omitempty"`
 	// AutoRollback describes the conditions under which this Stage should automatically roll back to the last known-good (verified) Freight. When nil, auto-rollback is disabled.  Kargo Enterprise only: This field is ignored in Kargo OSS.
 	AutoRollback *AutoRollbackConfig `json:"autoRollback,omitempty"`
