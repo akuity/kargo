@@ -13,7 +13,7 @@ GO_TEST_ARGS ?=
 
 VERSION_PACKAGE := github.com/akuity/kargo/pkg/x/version
 
-# Default to docker, but support alternative container runtimes that are CLI-compatible with Docker
+# Default to docker, but support alternative container runtimes  that are CLI-compatible with Docker
 CONTAINER_RUNTIME ?= docker
 
 IMAGE_REPO 			?= kargo
