@@ -255,6 +255,10 @@ ifneq ($(wildcard db/queries/*.sql),)
 	go tool sqlc generate
 endif
 
+.PHONY: test-db
+test-db:
+	go test -race -tags=integration -count=1 ./pkg/database
+
 .PHONY: codegen-openapi
 codegen-openapi: install-jq install-openapi-generator-cli
 	rm -f swagger.json

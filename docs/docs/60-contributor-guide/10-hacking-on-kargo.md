@@ -506,7 +506,9 @@ this.
 Tilt starts a PostgreSQL instance for local development and forwards
 `127.0.0.1:15432` to its port `5432`. The database, username, and password are
 all `kargo`. Inside the cluster, the address is `kargo-postgres.kargo.svc:5432`.
-Kargo's application components do not use this database yet.
+The management controller mirrors Project and Stage identities into this
+database. Kubernetes remains the source of truth; application API reads still
+use Kubernetes.
 
 The `db-migrate` Tilt resource waits for PostgreSQL to accept a connection,
 then runs the pinned Goose tool to apply pending SQL migrations from
@@ -555,6 +557,113 @@ make codegen-db
 The existing `make codegen` target includes this step. Generation does nothing
 until `db/queries` contains a `.sql` query file, so database tooling can be set
 up before adding a resource's schema and queries.
+
+### Synchronizing Projects and Stages
+
+Outside Tilt, set `DATABASE_URL` on the management controller to enable
+synchronization; leaving it unset disables database synchronization.
+
+The `projects` and `stages` tables store Kubernetes UIDs unchanged as text primary
+keys, resource names, and two timestamps. `created_at` is the Kubernetes creation
+time; `synced_at` is the database time of the latest successful upsert. A resync
+that finds a matching row leaves this timestamp unchanged. Each Stage's
+`project_id` references its Project's UID. Stage
+names are unique within a Project. No resource spec or status is stored.
+
+Each resource has its own sync controller and retry queue. A Stage arriving
+before its Project row retries until that row exists. Actual Kubernetes deletion
+removes the mirrored row; an object waiting on finalizers stays mirrored.
+Recreating a resource under the same name replaces the old row with its new UID.
+Database errors retry without stopping other management controllers. The shared
+pool allows up to eight connections, with a five-second timeout per operation.
+
+Controller-runtime queues existing objects when the controllers start. Resync
+runs after the Kubernetes cache initializes and every minute afterward. It
+compares a snapshot of database rows with complete, uncached Kubernetes lists.
+It queues only objects whose rows are missing or whose mirrored fields differ,
+and removes stale rows for objects that no longer exist in Kubernetes. Matching
+rows generate no additional work. A failed or incomplete list prevents cleanup;
+rows inserted after the database snapshot cannot become deletion candidates.
+This also allows a cleared database to rebuild while the controller stays
+running. Use one control-plane cluster per database.
+
+For example, if Kubernetes contains `dev` and `staging`, while the database
+contains an up-to-date `dev` and a deleted `old-stage`, resync leaves `dev` alone,
+queues `staging`, and deletes the stale `old-stage` row by UID. Queued work reads
+the current Kubernetes object again before writing to the database.
+
+For example, create a disposable Project and Stage:
+
+```shell
+kubectl apply -f - <<'EOF'
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Project
+metadata:
+  name: db-sync-example
+EOF
+kubectl wait --for=create namespace/db-sync-example --timeout=60s
+kubectl apply -f - <<'EOF'
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+metadata:
+  namespace: db-sync-example
+  name: dev
+spec:
+  requestedFreight:
+  - origin:
+      kind: Warehouse
+      name: example
+    sources:
+      direct: true
+EOF
+psql "$GOOSE_DBSTRING" -c "
+SELECT p.name AS project, s.name AS stage, s.id, s.created_at, s.synced_at
+FROM stages s JOIN projects p ON p.id = s.project_id
+WHERE p.name = 'db-sync-example';"
+```
+
+Synchronization is asynchronous, so repeat the query if the row has not arrived.
+Delete the Stage with `kubectl delete stage dev -n db-sync-example`, then apply
+the same Stage manifest again. Its row will have a new UID. Clean up the example
+with `kubectl delete project db-sync-example`.
+
+To add another mirrored resource, add its migration and queries, then run
+`make codegen-db`. Create a package under `pkg/controller/management/dbsync`
+with an unexported implementation of the shared `Syncer` interface:
+
+```go
+type Syncer interface {
+    NewObject() client.Object
+    Sync(context.Context, client.Object) error
+    Delete(context.Context, client.ObjectKey) error
+    Diff(context.Context) (Changes, error)
+    DeleteByIDs(context.Context, []string) error
+}
+
+type Changes struct {
+    ToSync   []client.ObjectKey
+    ToDelete []string
+}
+```
+
+Add its `NewSyncer(reader, store)` constructor to the list in `setup.go`. Setup
+derives the controller name from `NewObject()` and creates an independent watch
+and queue for each syncer. The shared reconciler handles reads and confirmed
+deletions; the shared resync runner handles scheduling and queue delivery.
+
+The resource's `Diff` loads database rows first, then delegates Kubernetes
+listing, matching by UID, and change collection to the shared `syncapi.Diff`
+helper. It supplies a comparison of its own mirrored fields, excluding
+`synced_at`. Stage comparison also resolves current Project UIDs. Reading and
+conversion belong in the resource package; SQL and transactional replacement
+belong in `pkg/database`.
+
+Database integration tests use disposable schemas and leave existing tables
+untouched. They require a database user allowed to create schemas:
+
+```shell
+TEST_DATABASE_URL="$GOOSE_DBSTRING" make test-db
+```
 
 ### Creating a migration
 

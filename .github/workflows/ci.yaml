@@ -14,6 +14,36 @@ permissions:
   contents: read
 
 jobs:
+  test-db:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:18.6
+        env:
+          POSTGRES_USER: kargo
+          POSTGRES_PASSWORD: kargo
+          POSTGRES_DB: kargo
+        ports:
+        - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U kargo -d kargo"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      TEST_DATABASE_URL: postgres://kargo:kargo@127.0.0.1:5432/kargo?sslmode=disable
+    steps:
+    - name: Harden the runner (Audit all outbound calls)
+      uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
+      with:
+        egress-policy: audit
+    - name: Checkout code
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+    - name: Set up Go
+      uses: ./.github/actions/setup-go
+    - name: Test PostgreSQL migrations and storage
+      run: make test-db
+
   test-unit:
     runs-on: ubuntu-latest
     steps:
@@ -208,7 +238,7 @@ jobs:
       run: git diff --exit-code -- .
 
   build-image:
-    needs: [test-unit, lint-go, lint-charts, lint-and-typecheck-ui, check-codegen]
+    needs: [test-unit, test-db, lint-go, lint-charts, lint-and-typecheck-ui, check-codegen]
     runs-on: ubuntu-latest
     services:
       registry:
