@@ -21,6 +21,18 @@ local_resource(
   labels = ['prereqs'],
 )
 
+# Regenerate pgx code from SQL before the back end compiles. sqlc only writes
+# to pkg/database, which back-end-compile watches, so the two chain naturally.
+# It is parallel-safe for the same reason db-migrate is: it does not touch
+# anything an image build reads.
+local_resource(
+  'codegen-db',
+  cmd = 'make codegen-db',
+  deps = ['db/migrations', 'db/queries', 'sqlc.yaml'],
+  labels = ['native-processes'],
+  trigger_mode = TRIGGER_MODE_AUTO,
+  allow_parallel = True,
+)
 local_resource(
   'back-end-compile',
   'CGO_ENABLED=0 GOOS=linux GOARCH=$(go env GOARCH) go build -o bin/controlplane/kargo ./cmd/controlplane',
@@ -32,6 +44,7 @@ local_resource(
     'go.mod',
     'go.sum'
   ],
+  resource_deps = ['codegen-db'],
   labels = ['native-processes'],
   trigger_mode = TRIGGER_MODE_AUTO
 )
