@@ -1,0 +1,76 @@
+# PostgreSQL for local development only.
+apiVersion: v1
+kind: Service
+metadata:
+  name: kargo-postgres
+  namespace: kargo
+spec:
+  clusterIP: None
+  selector:
+    app.kubernetes.io/name: postgres
+    app.kubernetes.io/instance: kargo
+  ports:
+  - name: postgres
+    port: 5432
+    targetPort: postgres
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: kargo-postgres
+  namespace: kargo
+spec:
+  serviceName: kargo-postgres
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: postgres
+      app.kubernetes.io/instance: kargo
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: postgres
+        app.kubernetes.io/instance: kargo
+    spec:
+      containers:
+      - name: postgres
+        image: postgres:18.6
+        env:
+        - name: POSTGRES_DB
+          value: kargo
+        - name: POSTGRES_USER
+          value: kargo
+        - name: POSTGRES_PASSWORD
+          value: kargo
+        ports:
+        - name: postgres
+          containerPort: 5432
+        startupProbe:
+          exec:
+            command: [pg_isready, -h, 127.0.0.1, -U, kargo, -d, kargo]
+          periodSeconds: 2
+          timeoutSeconds: 2
+          failureThreshold: 30
+        readinessProbe:
+          exec:
+            command: [pg_isready, -h, 127.0.0.1, -U, kargo, -d, kargo]
+          periodSeconds: 2
+          timeoutSeconds: 2
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            memory: 512Mi
+        volumeMounts:
+        - name: data
+          mountPath: /var/lib/postgresql
+  volumeClaimTemplates:
+  - metadata:
+      name: data
+    spec:
+      accessModes:
+      - ReadWriteOnce
+      resources:
+        requests:
+          storage: 1Gi
