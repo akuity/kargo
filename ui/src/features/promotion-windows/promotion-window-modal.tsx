@@ -20,6 +20,7 @@ import { FormProvider, useForm } from 'react-hook-form';
 import { DatePicker, TimePicker } from '@ui/features/common/date-picker';
 import { FieldContainer } from '@ui/features/common/form/field-container';
 import { ModalComponentProps } from '@ui/features/common/modal/modal-context';
+import { SelectorFields } from '@ui/features/common/selector/selector-fields';
 import { PromotionWindow, PromotionWindowKind } from '@ui/gen/api/v2/models';
 
 import {
@@ -31,7 +32,6 @@ import {
   PromotionWindowFormValues
 } from './promotion-window-form-utils';
 import { RecurrenceFields } from './recurrence-fields';
-import { SelectorFields } from './selector-fields';
 
 type PromotionWindowModalProps = ModalComponentProps & {
   scope: 'project' | 'cluster';
@@ -300,14 +300,14 @@ export const PromotionWindowModal = ({
         {scope === 'cluster' ? (
           <Flex gap={16} align='start'>
             <Flex vertical flex={1} style={{ minWidth: 0 }}>
-              <SelectorFields subject='project' />
+              <SelectorFields subject='project' owner='window' />
             </Flex>
             <Flex vertical flex={1} style={{ minWidth: 0 }}>
-              <SelectorFields subject='stage' />
+              <SelectorFields subject='stage' owner='window' />
             </Flex>
           </Flex>
         ) : (
-          <SelectorFields subject='stage' />
+          <SelectorFields subject='stage' owner='window' />
         )}
       </Modal>
     </FormProvider>

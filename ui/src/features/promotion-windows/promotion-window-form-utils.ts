@@ -2,16 +2,16 @@ import { addHours, format, getHours, getMinutes, isAfter, set, startOfHour } fro
 import { Options, RRule } from 'rrule';
 import { z } from 'zod';
 
+import {
+  selectorFromValues,
+  selectorSchema,
+  selectorValues
+} from '@ui/features/common/selector/selector-utils';
 import { dnsRegex } from '@ui/features/common/utils';
 import { PromotionWindow, PromotionWindowKind } from '@ui/gen/api/v2/models';
 import { zodValidators } from '@ui/utils/validators';
 
 import { dtstartLiteral } from './parse-promotion-windows';
-import {
-  selectorFromValues,
-  selectorSchema,
-  selectorValues
-} from './promotion-window-selector-utils';
 import { browserTimeZone, fromViewerClockDate } from './viewer-clock';
 
 export const ICAL_FORMAT = "yyyyMMdd'T'HHmmss";
