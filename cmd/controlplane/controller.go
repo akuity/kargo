@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/spf13/cobra"
+	"go.opentelemetry.io/otel/attribute"
 	coordinationv1 "k8s.io/api/coordination/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -40,6 +41,7 @@ import (
 	"github.com/akuity/kargo/pkg/promotion"
 	"github.com/akuity/kargo/pkg/server/kubernetes"
 	"github.com/akuity/kargo/pkg/subscription"
+	"github.com/akuity/kargo/pkg/telemetry"
 	"github.com/akuity/kargo/pkg/types"
 	versionpkg "github.com/akuity/kargo/pkg/x/version"
 
@@ -141,6 +143,16 @@ func (o *controllerOptions) run(ctx context.Context) error {
 			"credential providers are not enabled; set CREDENTIAL_PROVIDERS_ENABLED=true",
 		)
 	}
+
+	var telemetryAttrs []attribute.KeyValue
+	if o.ShardName != "" {
+		telemetryAttrs = append(telemetryAttrs, telemetry.ShardKey.String(o.ShardName))
+	}
+	shutdownTelemetry, err := setupTelemetry(ctx, o.Logger, "controller", telemetryAttrs...)
+	if err != nil {
+		return err
+	}
+	defer shutdownTelemetry()
 
 	kargoMgr, localClusterClient, stagesReconcilerCfg, err := o.setupKargoManager(
 		ctx,

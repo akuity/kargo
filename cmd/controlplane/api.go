@@ -76,6 +76,12 @@ func (o *apiOptions) complete() {
 }
 
 func (o *apiOptions) run(ctx context.Context) error {
+	shutdownTelemetry, err := setupTelemetry(ctx, o.Logger, "api")
+	if err != nil {
+		return err
+	}
+	defer shutdownTelemetry()
+
 	serverCfg := config.ServerConfigFromEnv()
 
 	restCfg, err := kubernetes.GetRestConfig(ctx, o.KubeConfig)

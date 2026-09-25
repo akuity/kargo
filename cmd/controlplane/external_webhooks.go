@@ -77,6 +77,12 @@ func (o *externalWebhooksServerOptions) complete() {
 }
 
 func (o *externalWebhooksServerOptions) run(ctx context.Context) error {
+	shutdownTelemetry, err := setupTelemetry(ctx, o.Logger, "external-webhooks-server")
+	if err != nil {
+		return err
+	}
+	defer shutdownTelemetry()
+
 	serverCfg := external.ServerConfigFromEnv()
 
 	restCfg, err := kubernetes.GetRestConfig(ctx, o.KubeConfig)

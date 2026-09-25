@@ -11,6 +11,8 @@ import (
 	"github.com/google/uuid"
 	"github.com/kelseyhightower/envconfig"
 	gocache "github.com/patrickmn/go-cache"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/trace"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
@@ -47,6 +49,7 @@ import (
 	"github.com/akuity/kargo/pkg/logging"
 	intpredicate "github.com/akuity/kargo/pkg/predicate"
 	"github.com/akuity/kargo/pkg/rollouts"
+	"github.com/akuity/kargo/pkg/telemetry"
 )
 
 // ReconcilerConfig represents configuration for the stage reconciler.
@@ -377,7 +380,21 @@ func (r *RegularStageReconciler) SetupWithManager(
 	return nil
 }
 
+// tracer is the instrumentation scope under which this package's spans are
+// recorded.
+var tracer = otel.Tracer("github.com/akuity/kargo/pkg/controller/stages")
+
 func (r *RegularStageReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+	ctx, span := tracer.Start(
+		ctx,
+		"Reconcile Stage",
+		trace.WithAttributes(
+			telemetry.ProjectKey.String(req.Namespace),
+			telemetry.StageKey.String(req.Name),
+		),
+	)
+	defer span.End()
+
 	logger := logging.LoggerFromContext(ctx).WithValues(
 		"namespace", req.Namespace,
 		"stage", req.Name,

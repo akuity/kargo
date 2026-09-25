@@ -18,6 +18,10 @@ type ServerConfig struct {
 	TLSConfig                *TLSConfig
 	BaseURL                  string
 	SystemResourcesNamespace string
+	// TracingEnabled indicates whether the server should record a span for each
+	// request it handles. It should be true only when the process has set up an
+	// OpenTelemetry tracer provider to export those spans.
+	TracingEnabled bool
 }
 
 func ServerConfigFromEnv() ServerConfig {
@@ -33,6 +37,7 @@ func ServerConfigFromEnv() ServerConfig {
 		tlsCfg := TLSConfigFromEnv()
 		cfg.TLSConfig = &tlsCfg
 	}
+	cfg.TracingEnabled = types.MustParseBool(os.GetEnv("TRACING_ENABLED", "false"))
 	return cfg
 }
 

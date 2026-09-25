@@ -43,6 +43,10 @@ type ServerConfig struct {
 	SharedResourcesNamespace    string
 	SystemResourcesNamespace    string
 	KargoNamespace              string
+	// TracingEnabled indicates whether the server should record a span for each
+	// request it handles. It should be true only when the process has set up an
+	// OpenTelemetry tracer provider to export those spans.
+	TracingEnabled bool
 	// DefaultControllerName is the name of the controller that Stages with no
 	// explicit spec.shard are reconciled by. The API server needs to know this
 	// only to include it in a get controller heartbeats response so callers will
@@ -113,6 +117,7 @@ func ServerConfigFromEnv() ServerConfig {
 	cfg.KargoNamespace = os.GetEnv("KARGO_NAMESPACE", "kargo")
 	cfg.DefaultControllerName = os.GetEnv("DEFAULT_CONTROLLER_NAME", "")
 	cfg.BasePath = NormalizeBasePath(os.GetEnv("API_BASE_PATH", ""))
+	cfg.TracingEnabled = types.MustParseBool(os.GetEnv("TRACING_ENABLED", "false"))
 	return cfg
 }
 

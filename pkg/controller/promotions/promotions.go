@@ -8,6 +8,8 @@ import (
 	"time"
 
 	"github.com/kelseyhightower/envconfig"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/trace"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -34,6 +36,7 @@ import (
 	"github.com/akuity/kargo/pkg/logging"
 	intpredicate "github.com/akuity/kargo/pkg/predicate"
 	"github.com/akuity/kargo/pkg/promotion"
+	"github.com/akuity/kargo/pkg/telemetry"
 )
 
 // ReconcilerConfig represents configuration for the promotion reconciler.
@@ -271,10 +274,24 @@ func newReconciler(
 
 // Reconcile is part of the main Kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
+// tracer is the instrumentation scope under which this package's spans are
+// recorded.
+var tracer = otel.Tracer("github.com/akuity/kargo/pkg/controller/promotions")
+
 func (r *reconciler) Reconcile(
 	ctx context.Context,
 	req ctrl.Request,
 ) (ctrl.Result, error) {
+	ctx, span := tracer.Start(
+		ctx,
+		"Reconcile Promotion",
+		trace.WithAttributes(
+			telemetry.ProjectKey.String(req.Namespace),
+			telemetry.PromotionKey.String(req.Name),
+		),
+	)
+	defer span.End()
+
 	logger := logging.LoggerFromContext(ctx).WithValues(
 		"namespace", req.Namespace,
 		"promotion", req.Name,

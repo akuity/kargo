@@ -87,6 +87,12 @@ func (o *managementControllerOptions) run(ctx context.Context) error {
 		"GOMEMLIMIT", os.GetEnv("GOMEMLIMIT", ""),
 	)
 
+	shutdownTelemetry, err := setupTelemetry(ctx, o.Logger, "management-controller")
+	if err != nil {
+		return err
+	}
+	defer shutdownTelemetry()
+
 	kargoMgr, err := o.setupManager(ctx)
 	if err != nil {
 		return fmt.Errorf("error initializing Kargo controller manager: %w", err)
