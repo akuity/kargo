@@ -1,4 +1,4 @@
-import { Card, Table } from 'antd';
+import { Card, Empty, Table } from 'antd';
 import classNames from 'classnames';
 import { useMemo } from 'react';
 
@@ -63,6 +63,16 @@ export const PipelineListView = (props: PipelineListViewProps) => {
         dataSource={filteredStages}
         rowKey={(stage) => `${stage?.metadata?.name}-${stage?.status?.observedGeneration}`}
         size='small'
+        locale={{
+          emptyText: (
+            <Empty
+              image={Empty.PRESENTED_IMAGE_SIMPLE}
+              description={
+                props.stages.length ? 'No Stages match' : 'This project has no Stages yet'
+              }
+            />
+          )
+        }}
         columns={[
           stageColumn(),
           phaseColumn(),

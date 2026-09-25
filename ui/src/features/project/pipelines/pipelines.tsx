@@ -35,6 +35,7 @@ import { Graph } from './graph/graph';
 import { GraphFilters } from './graph-filters';
 import { Images } from './image-history/images';
 import { PipelineListView } from './list/list-view';
+import { PipelineEmpty } from './pipeline-empty';
 import { DndPromotionContext } from './promotion/drag-and-drop/dnd-promotion-context';
 import { Promote } from './promotion/promote';
 import { Promotion } from './promotion/promotion';
@@ -120,6 +121,16 @@ export const Pipelines = (props: { creatingStage?: boolean; creatingWarehouse?: 
 
   const pipelineView = preferredFilter.view;
 
+  // A failed list is not an empty project: both queries fall back to [], and
+  // without this guard an unauthorized or errored request would claim the
+  // project has no pipeline and offer to create one. The query cache surfaces
+  // the real error as a notification; fall back to the pipeline itself here.
+  const emptyPipeline =
+    warehouses.length === 0 &&
+    stages.length === 0 &&
+    !listWarehousesQuery.error &&
+    !listStagesQuery.error;
+
   const setPipelineView = (nextView: 'graph' | 'list') => {
     setPreferredFilter({ ...preferredFilter, view: nextView });
   };
@@ -197,7 +208,11 @@ export const Pipelines = (props: { creatingStage?: boolean; creatingWarehouse?: 
           <ColorContext.Provider value={{ stageColorMap, warehouseColorMap }}>
             <DndPromotionContext projectName={projectName || ''}>
               <div className='overflow-hidden h-full flex flex-col'>
-                <FreightTimeline freights={freights} project={projectName || ''} />
+                <FreightTimeline
+                  freights={freights}
+                  project={projectName || ''}
+                  hasWarehouses={warehouses.length > 0}
+                />
 
                 <div className='w-full flex-1 relative overflow-auto'>
                   <Flex
@@ -307,22 +322,31 @@ export const Pipelines = (props: { creatingStage?: boolean; creatingWarehouse?: 
                       <LoadingState />
                     </div>
                   )}
-                  {pipelineView === 'graph' && !loading && !listStagesQuery.isLoading && (
-                    <Graph
-                      project={project.metadata?.name || ''}
-                      warehouses={warehouses}
-                      stages={stages}
-                    />
+                  {emptyPipeline && !listStagesQuery.isLoading && (
+                    <PipelineEmpty project={projectName} />
                   )}
-                  {pipelineView === 'list' && !loading && !listStagesQuery.isLoading && (
-                    <PipelineListView
-                      stages={stages}
-                      warehouses={warehouses}
-                      project={projectName || ''}
-                      freights={freights}
-                      className='mt-2'
-                    />
-                  )}
+                  {pipelineView === 'graph' &&
+                    !emptyPipeline &&
+                    !loading &&
+                    !listStagesQuery.isLoading && (
+                      <Graph
+                        project={project.metadata?.name || ''}
+                        warehouses={warehouses}
+                        stages={stages}
+                      />
+                    )}
+                  {pipelineView === 'list' &&
+                    !emptyPipeline &&
+                    !loading &&
+                    !listStagesQuery.isLoading && (
+                      <PipelineListView
+                        stages={stages}
+                        warehouses={warehouses}
+                        project={projectName || ''}
+                        freights={freights}
+                        className='mt-2'
+                      />
+                    )}
                 </div>
               </div>
 
