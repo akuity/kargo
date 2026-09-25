@@ -247,7 +247,7 @@ build-cli-with-ui: build-ui build-cli
 ################################################################################
 
 .PHONY: codegen
-codegen: codegen-openapi codegen-controller codegen-schema-to-go codegen-ui codegen-docs
+codegen: codegen-openapi codegen-controller codegen-schema-to-go codegen-ui codegen-docs codegen-db
 
 .PHONY: codegen-openapi
 codegen-openapi: install-jq install-openapi-generator-cli
@@ -299,6 +299,12 @@ codegen-docs:
 	npm install -g @bitnami/readme-generator-for-helm
 	pnpm install --dir docs
 	bash hack/helm-docs/helm-docs.sh
+
+.PHONY: codegen-db
+codegen-db:
+ifneq ($(wildcard db/queries/*.sql),)
+	go tool sqlc generate
+endif
 
 ################################################################################
 # Hack: Targets to help you hack                                               #
@@ -427,6 +433,10 @@ hack-tilt-up: install-tilt install-helm
 .PHONY: hack-tilt-down
 hack-tilt-down: install-tilt
 	PATH=$(EXTENDED_PATH) $(TILT) down
+
+.PHONY: db-migrate
+db-migrate:
+	bash hack/tilt/migrate.sh
 
 .PHONY: hack-kind-down
 hack-kind-down:
