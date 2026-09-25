@@ -76,10 +76,10 @@
 
 ### Webhooks
 
-| Name                | Description                                                                                      | Value  |
-| ------------------- | ------------------------------------------------------------------------------------------------ | ------ |
-| `webhooks.register` | Whether to create `ValidatingWebhookConfiguration` and `MutatingWebhookConfiguration` resources. | `true` |
-| `webhooks.timeoutSeconds` | Timeout, in seconds, for calls to the admission webhooks. Must be between 1 and 30. When left unset, the Kubernetes API server's own default of 10 applies. | `~` |
+| Name                      | Description                                                                                                                                                 | Value  |
+| ------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- | ------ |
+| `webhooks.register`       | Whether to create `ValidatingWebhookConfiguration` and `MutatingWebhookConfiguration` resources.                                                            | `true` |
+| `webhooks.timeoutSeconds` | Timeout, in seconds, for calls to the admission webhooks. Must be between 1 and 30. When left unset, the Kubernetes API server's own default of 10 applies. | `nil`  |
 
 ### KubeConfigs
 
