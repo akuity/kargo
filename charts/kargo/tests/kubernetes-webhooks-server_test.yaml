@@ -13,7 +13,7 @@ tests:
           value: MutatingWebhookConfiguration
         lengthEqual:
           path: webhooks
-          count: 4
+          count: 5
 
   - it: is not rendered when webhook registration is disabled
     set:
