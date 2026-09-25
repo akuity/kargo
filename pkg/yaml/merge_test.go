@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	yaml "go.yaml.in/yaml/v3"
 )
 
 func TestMergeFiles(t *testing.T) {
@@ -104,6 +105,81 @@ vehicles:
 - Millennium Falcon`,
 					string(fileBytes),
 				)
+			},
+		},
+		{
+			// This reproduces the exact scenario from
+			// https://github.com/akuity/kargo/issues/6740: aliases, the `<<`
+			// merge key, and explicit nulls must all survive a merge.
+			name: "aliases, merge keys, and explicit nulls are preserved",
+			fsFiles: map[string]string{
+				"overlay.yaml": `someFlag: false`,
+				"values.yaml": `
+db:
+  name: &db-name mydb
+pgbouncer:
+  readinessDbName: *db-name
+  nodeSelector:
+defaults: &defaults
+  image: my-image
+other:
+  <<: *defaults`,
+			},
+			inputPaths: []string{
+				"overlay.yaml",
+				"values.yaml",
+			},
+			outputPath: "merged.yaml",
+			assertions: func(t *testing.T, outputPath string, err error) {
+				require.NoError(t, err)
+				fileBytes, err := os.ReadFile(outputPath)
+				require.NoError(t, err)
+
+				var merged map[string]any
+				require.NoError(t, yaml.Unmarshal(fileBytes, &merged))
+
+				require.Equal(t, false, merged["someFlag"])
+
+				pgbouncer, ok := merged["pgbouncer"].(map[string]any)
+				require.True(t, ok, "pgbouncer should be a map, got %#v", merged["pgbouncer"])
+				require.Equal(
+					t, "mydb", pgbouncer["readinessDbName"],
+					"aliased value should have been preserved",
+				)
+				nodeSelector, exists := pgbouncer["nodeSelector"]
+				require.True(t, exists, "explicit null key should not be dropped")
+				require.Nil(t, nodeSelector)
+
+				other, ok := merged["other"].(map[string]any)
+				require.True(t, ok, "other should be a map, got %#v", merged["other"])
+				require.Equal(
+					t, "my-image", other["image"],
+					"merge key (<<) value should have been preserved",
+				)
+			},
+		},
+		{
+			name: "explicit null overrides a prior non-null value without deleting the key",
+			fsFiles: map[string]string{
+				"base.yaml":     `foo: bar`,
+				"override.yaml": `foo:`,
+			},
+			inputPaths: []string{
+				"base.yaml",
+				"override.yaml",
+			},
+			outputPath: "merged.yaml",
+			assertions: func(t *testing.T, outputPath string, err error) {
+				require.NoError(t, err)
+				fileBytes, err := os.ReadFile(outputPath)
+				require.NoError(t, err)
+
+				var merged map[string]any
+				require.NoError(t, yaml.Unmarshal(fileBytes, &merged))
+
+				foo, exists := merged["foo"]
+				require.True(t, exists, "explicit null override should not delete the key")
+				require.Nil(t, foo)
 			},
 		},
 	}
