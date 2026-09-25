@@ -4,6 +4,7 @@ import {
   discoveryRequest,
   processDiscoveryResponse,
   generateRandomCodeVerifier,
+  generateRandomNonce,
   generateRandomState,
   calculatePKCECodeChallenge,
   validateAuthResponse,
@@ -21,14 +22,13 @@ import { OIDCConfig } from '@ui/gen/api/v2/models';
 
 import { useAuthContext } from './context/use-auth-context';
 import {
+  consumeOIDCCallbackArtifacts,
   getOIDCScopes,
   oidcClientAuth,
+  oidcErrorMessage,
+  oidcSessionStorageKeys,
   shouldAllowIdpHttpRequest as shouldAllowHttpRequest
 } from './oidc-utils';
-
-const codeVerifierKey = 'PKCE_code_verifier';
-const stateKey = 'PKCE_state';
-const platformRedirectKey = 'platform_redirect';
 
 type Props = {
   oidcConfig: OIDCConfig;
@@ -83,10 +83,12 @@ export const OIDCLogin = ({ oidcConfig }: Props) => {
     }
 
     const code_verifier = generateRandomCodeVerifier();
-    sessionStorage.setItem(codeVerifierKey, code_verifier);
+    sessionStorage.setItem(oidcSessionStorageKeys.codeVerifier, code_verifier);
     const state = generateRandomState();
-    sessionStorage.setItem(stateKey, state);
-    sessionStorage.setItem(platformRedirectKey, window.location.search);
+    sessionStorage.setItem(oidcSessionStorageKeys.state, state);
+    const nonce = generateRandomNonce();
+    sessionStorage.setItem(oidcSessionStorageKeys.nonce, nonce);
+    sessionStorage.setItem(oidcSessionStorageKeys.platformRedirect, window.location.search);
 
     const code_challenge = await calculatePKCECodeChallenge(code_verifier);
     const url = new URL(as.authorization_endpoint);
@@ -97,6 +99,7 @@ export const OIDCLogin = ({ oidcConfig }: Props) => {
     url.searchParams.set('response_type', 'code');
     url.searchParams.set('scope', getOIDCScopes(oidcConfig, as).join(' '));
     url.searchParams.set('state', state);
+    url.searchParams.set('nonce', nonce);
 
     window.location.replace(url.toString());
   };
@@ -104,18 +107,26 @@ export const OIDCLogin = ({ oidcConfig }: Props) => {
   // Handle callback from OIDC provider
   React.useEffect(() => {
     (async () => {
-      const code_verifier = sessionStorage.getItem(codeVerifierKey);
-      const state = sessionStorage.getItem(stateKey);
-      const platformRedirect = sessionStorage.getItem(platformRedirectKey);
+      const code_verifier = sessionStorage.getItem(oidcSessionStorageKeys.codeVerifier);
+      const state = sessionStorage.getItem(oidcSessionStorageKeys.state);
+      const nonce = sessionStorage.getItem(oidcSessionStorageKeys.nonce);
+      const platformRedirect = sessionStorage.getItem(oidcSessionStorageKeys.platformRedirect);
       const searchParams = new URLSearchParams(location.search);
+      const isOIDCCallback = searchParams.has('code') || searchParams.has('error');
 
-      if (
-        !as ||
-        !code_verifier ||
-        !searchParams.get('code') ||
-        !state ||
-        !searchParams.get('state')
-      ) {
+      if (!as || !isOIDCCallback || !searchParams.get('state')) {
+        return;
+      }
+
+      consumeOIDCCallbackArtifacts(sessionStorage, new URL(window.location.href), (url) =>
+        window.history.replaceState(window.history.state, '', url)
+      );
+
+      if (!code_verifier || !state || !nonce) {
+        notification.error({
+          message: 'OIDC: Login state missing or expired',
+          placement: 'bottomRight'
+        });
         return;
       }
 
@@ -136,7 +147,8 @@ export const OIDCLogin = ({ oidcConfig }: Props) => {
         );
 
         const result = await processAuthorizationCodeResponse(as, client, response, {
-          requireIdToken: true
+          requireIdToken: true,
+          expectedNonce: nonce
         });
 
         if (!result.id_token) {
@@ -174,7 +186,7 @@ export const OIDCLogin = ({ oidcConfig }: Props) => {
         }
 
         notification.error({
-          message: `OIDC: ${JSON.stringify(err)}`,
+          message: `OIDC: ${oidcErrorMessage(err)}`,
           placement: 'bottomRight'
         });
       }
