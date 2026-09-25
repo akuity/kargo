@@ -600,15 +600,17 @@ this database as disposable development data.
 
 Kargo uses [sqlc](https://sqlc.dev) to generate type-safe Go code from SQL.
 `sqlc.yaml` reads the schema from the Goose migrations in `db/migrations/` and
-the queries in `db/queries/`, and writes pgx/v5 code to `pkg/database/`. After
-changing either directory, regenerate the code:
+the queries in `db/queries/`, and writes pgx/v5 code to `pkg/database/`. While
+Tilt is running, the `codegen-db` resource regenerates this code whenever either
+directory changes, and the back end recompiles with the result. To regenerate
+manually:
 
 ```shell
 make codegen-db
 ```
 
-`make codegen` also runs this step. Generation is skipped while `db/queries/`
-contains no `.sql` files.
+`make codegen` also runs this step. Commit the generated code together with the
+SQL that produced it.
 
 ## Contributing to Documentation
 
