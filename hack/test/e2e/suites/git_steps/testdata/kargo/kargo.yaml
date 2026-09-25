@@ -1,0 +1,369 @@
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Project
+metadata:
+  name: kargo-git-steps
+---
+apiVersion: v1
+kind: Secret
+type: Opaque
+metadata:
+  name: manifests
+  namespace: kargo-git-steps
+  labels:
+    kargo.akuity.io/cred-type: git
+stringData:
+  # repoURL, username and password are substituted at runtime from the test env.
+  repoURL: https://github.com/<github-username>/kargo-demo-gitops.git
+  username: <github-username>
+  password: <github-pat>
+---
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Warehouse
+metadata:
+  name: kargo-demo
+  namespace: kargo-git-steps
+spec:
+  subscriptions:
+  - git:
+      repoURL: https://github.com/<github-username>/kargo-demo-gitops.git
+      # Watch this branch instead of main. This is the "trunk" for this example.
+      branch: kustomize
+---
+# Shared task: clone the warehouse commit and produce a commit with the demo
+# manifests on the (per-promotion) target branch. A fixed stages/test overlay is
+# copied because the stages here are named after the git steps they exercise,
+# not after existing overlay directories.
+apiVersion: kargo.akuity.io/v1alpha1
+kind: PromotionTask
+metadata:
+  name: base-promo-process
+  namespace: kargo-git-steps
+spec:
+  vars:
+  - name: gitRepo
+  - name: targetBranch
+  - name: outPath
+  steps:
+  - uses: git-clone
+    config:
+      repoURL: ${{ vars.gitRepo }}
+      checkout:
+      - commit: ${{ commitFrom(vars.gitRepo).ID }}
+        path: ./src
+      - branch: ${{ vars.targetBranch }}
+        create: true
+        path: ${{ vars.outPath }}
+  - uses: git-clear
+    config:
+      path: ${{ vars.outPath }}
+  - uses: copy
+    config:
+      inPath: ./src/base
+      outPath: ${{ vars.outPath }}/base
+  - uses: copy
+    config:
+      inPath: ./src/stages/test
+      outPath: ${{ vars.outPath }}/stages/test
+  - uses: git-commit
+    as: commit
+    config:
+      path: ${{ vars.outPath }}
+      message: updated manifests copied from main
+  - uses: compose-output
+    config:
+      commit: ${{ task.outputs.commit.commit }}
+---
+# Verifies git-merge-pr: open a PR and merge it within the promotion.
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+metadata:
+  name: merge-pr
+  namespace: kargo-git-steps
+spec:
+  requestedFreight:
+  - origin:
+      kind: Warehouse
+      name: kargo-demo
+    sources:
+      direct: true
+  promotionTemplate:
+    spec:
+      vars:
+      - name: gitRepo
+        value: https://github.com/<github-username>/kargo-demo-gitops.git
+      - name: targetBranch
+        value: git-steps/merge-pr/${{ ctx.promotion }}
+      - name: outPath
+        value: ./out
+      steps:
+      - task:
+          name: base-promo-process
+      - uses: git-push
+        as: push
+        config:
+          path: ${{ vars.outPath }}
+          generateTargetBranch: true
+      - uses: git-open-pr
+        as: open-pr
+        config:
+          repoURL: ${{ vars.gitRepo }}
+          createTargetBranch: true
+          sourceBranch: ${{ outputs.push.branch }}
+          targetBranch: ${{ vars.targetBranch }}
+      # git-merge-pr merges the PR itself. wait: true keeps the promotion Running
+      # and retries while the PR is not yet mergeable, instead of failing.
+      - uses: git-merge-pr
+        as: merge-pr
+        config:
+          repoURL: ${{ vars.gitRepo }}
+          prNumber: ${{ outputs['open-pr'].pr.id }}
+          wait: true
+---
+# Verifies git-open-pr's title, description and labels config. The PR is left
+# open; the test fetches it and asserts those fields.
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+metadata:
+  name: open-pr
+  namespace: kargo-git-steps
+spec:
+  requestedFreight:
+  - origin:
+      kind: Warehouse
+      name: kargo-demo
+    sources:
+      direct: true
+  promotionTemplate:
+    spec:
+      vars:
+      - name: gitRepo
+        value: https://github.com/<github-username>/kargo-demo-gitops.git
+      - name: targetBranch
+        value: git-steps/open-pr/${{ ctx.promotion }}
+      - name: outPath
+        value: ./out
+      steps:
+      - task:
+          name: base-promo-process
+      - uses: git-push
+        as: push
+        config:
+          path: ${{ vars.outPath }}
+          generateTargetBranch: true
+      - uses: git-open-pr
+        as: open-pr
+        config:
+          repoURL: ${{ vars.gitRepo }}
+          createTargetBranch: true
+          sourceBranch: ${{ outputs.push.branch }}
+          targetBranch: ${{ vars.targetBranch }}
+          title: git-steps e2e pull request
+          description: Opened by the git-open-pr e2e test.
+          labels:
+          - kargo-e2e
+          - git-steps
+---
+# Verifies git-wait-for-pr: open a PR and block until it is merged (the test
+# merges it via the GitHub API).
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+metadata:
+  name: wait-for-pr
+  namespace: kargo-git-steps
+spec:
+  requestedFreight:
+  - origin:
+      kind: Warehouse
+      name: kargo-demo
+    sources:
+      direct: true
+  promotionTemplate:
+    spec:
+      vars:
+      - name: gitRepo
+        value: https://github.com/<github-username>/kargo-demo-gitops.git
+      - name: targetBranch
+        value: git-steps/wait-for-pr/${{ ctx.promotion }}
+      - name: outPath
+        value: ./out
+      steps:
+      - task:
+          name: base-promo-process
+      - uses: git-push
+        as: push
+        config:
+          path: ${{ vars.outPath }}
+          generateTargetBranch: true
+      - uses: git-open-pr
+        as: open-pr
+        config:
+          repoURL: ${{ vars.gitRepo }}
+          createTargetBranch: true
+          sourceBranch: ${{ outputs.push.branch }}
+          targetBranch: ${{ vars.targetBranch }}
+      - uses: git-wait-for-pr
+        as: wait-for-pr
+        config:
+          repoURL: ${{ vars.gitRepo }}
+          prNumber: ${{ outputs['open-pr'].pr.id }}
+---
+# Verifies git-tag: create an annotated tag and push it.
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+metadata:
+  name: tag
+  namespace: kargo-git-steps
+spec:
+  requestedFreight:
+  - origin:
+      kind: Warehouse
+      name: kargo-demo
+    sources:
+      direct: true
+  promotionTemplate:
+    spec:
+      vars:
+      - name: gitRepo
+        value: https://github.com/<github-username>/kargo-demo-gitops.git
+      - name: targetBranch
+        value: git-steps/tag/${{ ctx.promotion }}
+      - name: outPath
+        value: ./out
+      steps:
+      - task:
+          name: base-promo-process
+      # git-tag only creates the tag locally; git-push with `tag` publishes it.
+      - uses: git-tag
+        as: tag
+        config:
+          path: ${{ vars.outPath }}
+          tag: ${{ ctx.promotion }}
+          message: tagged by git-steps e2e
+      - uses: git-push
+        config:
+          path: ${{ vars.outPath }}
+          tag: ${{ ctx.promotion }}
+---
+# Verifies git-clone checking out multiple individual commits into different
+# paths, each exposed under a key via checkout[].as.
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+metadata:
+  name: checkout-commits
+  namespace: kargo-git-steps
+spec:
+  requestedFreight:
+  - origin:
+      kind: Warehouse
+      name: kargo-demo
+    sources:
+      direct: true
+  promotionTemplate:
+    spec:
+      vars:
+      - name: gitRepo
+        value: https://github.com/<github-username>/kargo-demo-gitops.git
+      - name: targetBranch
+        value: git-steps/checkout/${{ ctx.promotion }}
+      - name: outPath
+        value: ./out
+      steps:
+      # Clone the warehouse commit for content and create a working branch.
+      - uses: git-clone
+        config:
+          repoURL: ${{ vars.gitRepo }}
+          checkout:
+          - commit: ${{ commitFrom(vars.gitRepo).ID }}
+            path: ./src
+          - branch: ${{ vars.targetBranch }}
+            create: true
+            path: ${{ vars.outPath }}
+      - uses: git-clear
+        config:
+          path: ${{ vars.outPath }}
+      # First commit.
+      - uses: copy
+        config:
+          inPath: ./src/base
+          outPath: ${{ vars.outPath }}/base
+      - uses: git-commit
+        as: commit1
+        config:
+          path: ${{ vars.outPath }}
+          message: first commit
+      # Second commit (adds more content, so a distinct commit).
+      - uses: copy
+        config:
+          inPath: ./src/stages/test
+          outPath: ${{ vars.outPath }}/stages/test
+      - uses: git-commit
+        as: commit2
+        config:
+          path: ${{ vars.outPath }}
+          message: second commit
+      # Push both commits so they are fetchable by the clone below.
+      - uses: git-push
+        config:
+          path: ${{ vars.outPath }}
+          targetBranch: ${{ vars.targetBranch }}
+      # The step under test: check out the two individual commits into different
+      # paths, keyed by `as` in the output `commits` map.
+      - uses: git-clone
+        as: checkout
+        config:
+          repoURL: ${{ vars.gitRepo }}
+          checkout:
+          - commit: ${{ outputs.commit1.commit }}
+            path: ./c1
+            as: first
+          - commit: ${{ outputs.commit2.commit }}
+            path: ./c2
+            as: second
+      # Surface the checked-out hashes (from the `as` keys) alongside the
+      # expected commit hashes so the test can compare them.
+      - uses: compose-output
+        as: output
+        config:
+          firstCheckout: ${{ outputs.checkout.commits.first }}
+          secondCheckout: ${{ outputs.checkout.commits.second }}
+          firstExpected: ${{ outputs.commit1.commit }}
+          secondExpected: ${{ outputs.commit2.commit }}
+---
+# Verifies github-push: a drop-in replacement for git-push that pushes via the
+# GitHub API.
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+metadata:
+  name: github-push
+  namespace: kargo-git-steps
+spec:
+  requestedFreight:
+  - origin:
+      kind: Warehouse
+      name: kargo-demo
+    sources:
+      direct: true
+  promotionTemplate:
+    spec:
+      vars:
+      - name: gitRepo
+        value: https://github.com/<github-username>/kargo-demo-gitops.git
+      - name: targetBranch
+        value: github-push/${{ ctx.promotion }}
+      - name: outPath
+        value: ./out
+      steps:
+      - task:
+          name: base-promo-process
+      # Push the commit via the GitHub API to a generated branch.
+      - uses: github-push
+        as: push
+        config:
+          path: ${{ vars.outPath }}
+          generateTargetBranch: true
+      # Surface the branch pushed to and the resulting commit for the test.
+      - uses: compose-output
+        as: output
+        config:
+          branch: ${{ outputs.push.branch }}
+          commit: ${{ outputs.push.commit }}
