@@ -20,6 +20,9 @@ data:
   SHARED_RESOURCES_NAMESPACE: {{ quote .Values.global.sharedResources.namespace }}
   LOG_LEVEL: {{ quote .Values.managementController.logLevel }}
   LOG_FORMAT: {{ quote .Values.managementController.logFormat }}
+  {{- with (include "kargo.tracing.configMapData" .) }}
+  {{- . | nindent 2 }}
+  {{- end }}
   {{- if $kc }}
   KUBECONFIG: /etc/kargo/kubeconfigs/kubeconfig.yaml
   {{- end }}

@@ -10,6 +10,8 @@ import (
 
 	"github.com/expr-lang/expr"
 	"github.com/kelseyhightower/envconfig"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/trace"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -31,6 +33,7 @@ import (
 	"github.com/akuity/kargo/pkg/logging"
 	intpredicate "github.com/akuity/kargo/pkg/predicate"
 	"github.com/akuity/kargo/pkg/subscription"
+	"github.com/akuity/kargo/pkg/telemetry"
 )
 
 type ReconcilerConfig struct {
@@ -150,10 +153,24 @@ func newReconciler(
 
 // Reconcile is part of the main Kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
+// tracer is the instrumentation scope under which this package's spans are
+// recorded.
+var tracer = otel.Tracer("github.com/akuity/kargo/pkg/controller/warehouses")
+
 func (r *reconciler) Reconcile(
 	ctx context.Context,
 	req ctrl.Request,
 ) (ctrl.Result, error) {
+	ctx, span := tracer.Start(
+		ctx,
+		"Reconcile Warehouse",
+		trace.WithAttributes(
+			telemetry.ProjectKey.String(req.Namespace),
+			telemetry.WarehouseKey.String(req.Name),
+		),
+	)
+	defer span.End()
+
 	logger := logging.LoggerFromContext(ctx)
 
 	logger = logger.WithValues(

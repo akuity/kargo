@@ -96,6 +96,12 @@ func (o *kubernetesWebhooksServerOptions) complete() {
 }
 
 func (o *kubernetesWebhooksServerOptions) run(ctx context.Context) error {
+	shutdownTelemetry, err := setupTelemetry(ctx, o.Logger, "kubernetes-webhooks-server")
+	if err != nil {
+		return err
+	}
+	defer shutdownTelemetry()
+
 	webhookCfg := libWebhook.ConfigFromEnv()
 
 	restCfg, err := kubernetes.GetRestConfig(ctx, o.KubeConfig)

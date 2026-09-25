@@ -81,6 +81,12 @@ func (o *garbageCollectorOptions) complete() {
 }
 
 func (o *garbageCollectorOptions) run(ctx context.Context) error {
+	shutdownTelemetry, err := setupTelemetry(ctx, o.Logger, "garbage-collector")
+	if err != nil {
+		return err
+	}
+	defer shutdownTelemetry()
+
 	mgr, err := o.setupManager(ctx)
 	if err != nil {
 		return fmt.Errorf("error setting up controller manager: %w", err)

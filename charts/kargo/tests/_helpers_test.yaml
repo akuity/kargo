@@ -1,3 +1,65 @@
+suite: _helpers.tpl/kargo.tracing.configMapData
+values:
+  - ../test/values-unittest.yaml
+templates:
+  - templates/api/configmap.yaml
+  - templates/controller/configmap.yaml
+  - templates/external-webhooks-server/configmap.yaml
+  - templates/garbage-collector/configmap.yaml
+  - templates/kubernetes-webhooks-server/configmap.yaml
+  - templates/management-controller/configmap.yaml
+tests:
+  - it: emits no tracing settings by default
+    asserts:
+      - notExists:
+          path: data.TRACING_ENABLED
+      - notExists:
+          path: data.OTEL_EXPORTER_OTLP_PROTOCOL
+      - notExists:
+          path: data.OTEL_EXPORTER_OTLP_ENDPOINT
+      - notExists:
+          path: data.OTEL_TRACES_SAMPLER
+
+  - it: enables tracing in every component with defaults when enabled globally
+    set:
+      global.tracing.enabled: true
+    asserts:
+      - equal:
+          path: data.TRACING_ENABLED
+          value: "true"
+      - equal:
+          path: data.OTEL_EXPORTER_OTLP_PROTOCOL
+          value: http/protobuf
+      - notExists:
+          path: data.OTEL_EXPORTER_OTLP_ENDPOINT
+      - equal:
+          path: data.OTEL_TRACES_SAMPLER
+          value: parentbased_always_on
+      - notExists:
+          path: data.OTEL_TRACES_SAMPLER_ARG
+
+  - it: passes the endpoint, protocol, and sampler through when set
+    set:
+      global.tracing.enabled: true
+      global.tracing.otlp.endpoint: http://otel-collector.observability.svc:4317
+      global.tracing.otlp.protocol: grpc
+      global.tracing.sampler: parentbased_traceidratio
+      global.tracing.samplerArg: "0.25"
+    asserts:
+      - equal:
+          path: data.OTEL_EXPORTER_OTLP_ENDPOINT
+          value: http://otel-collector.observability.svc:4317
+      - equal:
+          path: data.OTEL_EXPORTER_OTLP_PROTOCOL
+          value: grpc
+      - equal:
+          path: data.OTEL_TRACES_SAMPLER
+          value: parentbased_traceidratio
+      - equal:
+          path: data.OTEL_TRACES_SAMPLER_ARG
+          value: "0.25"
+
+---
 suite: _helpers.tpl/kargo.image
 values:
   - ../test/values-unittest.yaml
