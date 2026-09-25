@@ -62,6 +62,13 @@ To install:
    </TabItem>
    </Tabs>
 
-1. If you downloaded the binary manually, complete the installation by moving
-   it to a location in your file system that is included in the value of your
-   `PATH` environment variable.
+1. If you downloaded the binary manually, complete the installation.
+
+   On macOS, Linux, or WSL, first make the binary executable:
+
+   ```shell
+   chmod +x kargo
+   ```
+
+   Then move it to a location in your file system that is included in the value
+   of your `PATH` environment variable.
