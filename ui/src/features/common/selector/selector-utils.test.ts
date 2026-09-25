@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { selectorLines } from './promotion-window-selector-utils';
+import { selectorLines } from './selector-utils';
 
 describe('selectorLines', () => {
   it('is empty for an absent selector', () => {

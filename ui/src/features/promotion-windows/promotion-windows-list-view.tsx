@@ -5,6 +5,7 @@ import classNames from 'classnames';
 import { format } from 'date-fns';
 import { RRule } from 'rrule';
 
+import { selectorLines } from '@ui/features/common/selector/selector-utils';
 import {
   PromotionPolicySelector,
   PromotionWindow,
@@ -13,7 +14,6 @@ import {
 
 import { occurrenceColors } from './occurrence-colors';
 import { dtstartLiteral } from './parse-promotion-windows';
-import { selectorLines } from './promotion-window-selector-utils';
 import { fromViewerClockDate } from './viewer-clock';
 
 const SelectorCell = ({ selector }: { selector?: PromotionPolicySelector }) => {

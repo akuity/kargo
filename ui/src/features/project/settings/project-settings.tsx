@@ -29,6 +29,7 @@ import { AnalysisTemplatesSettings } from './views/analysis-templates/analysis-t
 import { ConfigMapsSettings } from './views/config-maps/config-maps-settings';
 import { GeneralSettings } from './views/general/general-settings';
 import { ProjectConfig } from './views/project-config/project-config';
+import { PromotionPolicies } from './views/promotion-policies/promotion-policies';
 import { PromotionTasks } from './views/promotion-tasks/promotion-tasks';
 import { SecretsSettings } from './views/secrets/secrets-settings';
 
@@ -63,17 +64,24 @@ export const ProjectSettings = () => {
         icon: faGears,
         path: 'project-config',
         component: ProjectConfig,
-        children: isAnyExtensionLoaded
-          ? [
-              {
-                label: 'Promotion Windows',
-                icon: faCalendarDays,
-                path: 'project-config/promotion-windows',
-                component: ProjectPromotionWindows,
-                wide: true
-              }
-            ]
-          : undefined
+        children: [
+          {
+            label: 'Promotion Policies',
+            path: 'project-config/promotion-policies',
+            component: PromotionPolicies
+          },
+          ...(isAnyExtensionLoaded
+            ? [
+                {
+                  label: 'Promotion Windows',
+                  icon: faCalendarDays,
+                  path: 'project-config/promotion-windows',
+                  component: ProjectPromotionWindows,
+                  wide: true
+                }
+              ]
+            : [])
+        ]
       },
       roles: {
         label: 'Access',
