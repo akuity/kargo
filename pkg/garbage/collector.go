@@ -32,6 +32,22 @@ type CollectorConfig struct {
 	// MinPromotionDeletionAge specifies the minimum age Promotions must be before
 	// considered eligible for garbage collection.
 	MinPromotionDeletionAge time.Duration `envconfig:"MIN_PROMOTION_DELETION_AGE" default:"336h"` // 2 weeks
+	// MaxRetainedPromotionRequests specifies the ideal maximum number of
+	// PromotionRequests OLDER than the oldest in a non-terminal state (associated
+	// with each Stage) that may be spared by the garbage collector. The ACTUAL
+	// number of PromotionRequests spared may exceed this ideal if some
+	// PromotionRequests that would otherwise be deleted do not meet the minimum
+	// age criterion.
+	//
+	// This is counted separately from MaxRetainedPromotions because a single
+	// PromotionRequest fans out to one Promotion per Target, so a shared budget
+	// would let a wide Stage evict the parent records of Promotions that are
+	// themselves still retained.
+	MaxRetainedPromotionRequests int `envconfig:"MAX_RETAINED_PROMOTION_REQUESTS" default:"20"`
+	// MinPromotionRequestDeletionAge specifies the minimum age PromotionRequests
+	// must be before considered eligible for garbage collection. Defaults to two
+	// weeks.
+	MinPromotionRequestDeletionAge time.Duration `envconfig:"MIN_PROMOTION_REQUEST_DELETION_AGE" default:"336h"`
 	// MaxRetainedFreight specifies the ideal maximum number of Freight OLDER than
 	// the oldest still in use (from each Warehouse) that may be spared by the
 	// garbage collector. The ACTUAL number of older Freight spared may exceed
@@ -100,6 +116,26 @@ type collector struct {
 		...client.DeleteOption,
 	) error
 
+	cleanProjectPromotionRequestsFn func(context.Context, string) error
+
+	cleanStagePromotionRequestsFn func(
+		ctx context.Context,
+		project string,
+		stage string,
+	) error
+
+	listPromotionRequestsFn func(
+		context.Context,
+		client.ObjectList,
+		...client.ListOption,
+	) error
+
+	deletePromotionRequestFn func(
+		context.Context,
+		client.Object,
+		...client.DeleteOption,
+	) error
+
 	cleanProjectFreightFn func(context.Context, string) error
 
 	listWarehousesFn func(
@@ -146,6 +182,10 @@ func NewCollector(kubeClient client.Client, cfg CollectorConfig) Collector {
 	c.listProjectsFn = kubeClient.List
 	c.listPromotionsFn = kubeClient.List
 	c.deletePromotionFn = kubeClient.Delete
+	c.cleanProjectPromotionRequestsFn = c.cleanProjectPromotionRequests
+	c.cleanStagePromotionRequestsFn = c.cleanStagePromotionRequests
+	c.listPromotionRequestsFn = kubeClient.List
+	c.deletePromotionRequestFn = kubeClient.Delete
 	c.cleanProjectFreightFn = c.cleanProjectFreight
 	c.listWarehousesFn = kubeClient.List
 	c.cleanWarehouseFreightFn = c.cleanWarehouseFreight
