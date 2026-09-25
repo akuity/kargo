@@ -306,6 +306,10 @@ ifneq ($(wildcard db/queries/*.sql),)
 	go tool sqlc generate
 endif
 
+.PHONY: test-db
+test-db:
+	go test -race -tags=integration -count=1 ./pkg/database
+
 ################################################################################
 # Hack: Targets to help you hack                                               #
 #                                                                              #

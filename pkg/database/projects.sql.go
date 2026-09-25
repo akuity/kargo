@@ -19,6 +19,24 @@ func (q *Queries) DeleteProject(ctx context.Context, id string) error {
 	return err
 }
 
+const deleteProjectByName = `-- name: DeleteProjectByName :exec
+DELETE FROM projects WHERE name = $1
+`
+
+func (q *Queries) DeleteProjectByName(ctx context.Context, name string) error {
+	_, err := q.db.Exec(ctx, deleteProjectByName, name)
+	return err
+}
+
+const deleteProjectsByID = `-- name: DeleteProjectsByID :exec
+DELETE FROM projects WHERE id = ANY($1::text[])
+`
+
+func (q *Queries) DeleteProjectsByID(ctx context.Context, dollar_1 []string) error {
+	_, err := q.db.Exec(ctx, deleteProjectsByID, dollar_1)
+	return err
+}
+
 const deleteReplacedProject = `-- name: DeleteReplacedProject :exec
 DELETE FROM projects WHERE name = $1 AND id <> $2
 `

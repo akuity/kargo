@@ -508,8 +508,9 @@ this.
 Tilt runs the PostgreSQL bundled with the Helm chart, configured by the
 `database.postgres` values in `hack/tilt/values.dev.yaml`, and forwards
 `127.0.0.1:15432` to its port `5432`. The database, username, and password are all `kargo`. Inside the
-cluster, the address is `kargo-postgres.kargo.svc:5432`. Kargo's application
-components do not use this database yet.
+cluster, the address is `kargo-postgres.kargo.svc:5432`. The management
+controller mirrors Project identities into this database. Kubernetes remains
+the source of truth; application API reads still use Kubernetes.
 
 To open a `psql` session against it:
 
@@ -571,6 +572,11 @@ code: during a rollout, and after a rollback, pods built from the previous
 release run against the migrated schema. Add a column in one release and
 remove its predecessor in the next rather than renaming in place. Keep a
 `Down` section for local development, but do not rely on it in production.
+
+Tilt also configures the management controller's `DATABASE_URL` environment
+variable using the in-cluster PostgreSQL address and waits for `db-migrate`
+before the controller's initial startup. Configure `DATABASE_URL` separately
+when using another database; the Goose variables only configure migrations.
 
 ### Creating a migration
 
@@ -665,6 +671,98 @@ make codegen-db
 
 `make codegen` also runs this step. Commit the generated code together with the
 SQL that produced it.
+
+### Synchronizing Projects
+
+Outside Tilt, set `DATABASE_URL` on the management controller to enable
+synchronization; leaving it unset disables database synchronization.
+
+The `projects` table stores Kubernetes UIDs unchanged as text primary keys,
+resource names, and two timestamps. `created_at` is the Kubernetes creation
+time; `synced_at` is the database time of the latest successful upsert. A resync
+that finds a matching row leaves this timestamp unchanged. No resource spec or
+status is stored.
+
+Each mirrored resource has its own sync controller and retry queue. Actual
+Kubernetes deletion removes the mirrored row; an object waiting on finalizers
+stays mirrored. Recreating a Project under the same name replaces the old row
+with its new UID. Database errors retry without stopping other management
+controllers. Every store operation has a five-second timeout.
+
+Controller-runtime queues existing objects when the controllers start. Resync
+runs after the Kubernetes cache initializes and every minute afterward. It
+compares a snapshot of database rows with a complete, uncached Kubernetes list.
+It queues only objects whose rows are missing or whose mirrored fields differ,
+and removes stale rows for objects that no longer exist in Kubernetes. Matching
+rows generate no additional work. A failed or incomplete list prevents cleanup;
+rows inserted after the database snapshot cannot become deletion candidates.
+This also allows a cleared database to rebuild while the controller stays
+running. Use one control-plane cluster per database.
+
+For example, if Kubernetes contains `dev` and `staging`, while the database
+contains an up-to-date `dev` and a deleted `old-project`, resync leaves `dev`
+alone, queues `staging`, and deletes the stale `old-project` row by UID. Queued
+work reads the current Kubernetes object again before writing to the database.
+
+To try it, create a disposable Project:
+
+```shell
+kubectl apply -f - <<'EOF'
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Project
+metadata:
+  name: db-sync-example
+EOF
+make db-shell
+```
+
+```sql
+SELECT id, name, created_at, synced_at
+FROM projects
+WHERE name = 'db-sync-example';
+```
+
+Synchronization is asynchronous, so repeat the query if the row has not arrived.
+Delete the Project with `kubectl delete project db-sync-example`, then apply
+the same manifest again. Its row will have a new UID. Clean up the example with
+`kubectl delete project db-sync-example`.
+
+To add another mirrored resource, add its migration and queries, then run
+`make codegen-db`. Create a package under `pkg/controller/management/dbsync`
+with an unexported implementation of the shared `Syncer` interface:
+
+```go
+type Syncer interface {
+    NewObject() client.Object
+    Sync(context.Context, client.Object) error
+    Delete(context.Context, client.ObjectKey) error
+    Diff(context.Context) (Changes, error)
+    DeleteByIDs(context.Context, []string) error
+}
+
+type Changes struct {
+    ToSync   []client.ObjectKey
+    ToDelete []string
+}
+```
+
+Add its `NewSyncer(reader, store)` constructor to the list in `setup.go`. Setup
+derives the controller name from `NewObject()` and creates an independent watch
+and queue for each syncer. The shared reconciler handles reads and confirmed
+deletions; the shared resync runner handles scheduling and queue delivery.
+
+The resource's `Diff` loads database rows first, then delegates Kubernetes
+listing, matching by UID, and change collection to the shared `syncapi.Diff`
+helper. It supplies a comparison of its own mirrored fields, excluding
+`synced_at`. Reading and conversion belong in the resource package; SQL and
+transactional replacement belong in `pkg/database`.
+
+Database integration tests use disposable schemas and leave existing tables
+untouched. They require a database user allowed to create schemas:
+
+```shell
+TEST_DATABASE_URL="$GOOSE_DBSTRING" make test-db
+```
 
 ## Contributing to Documentation
 
