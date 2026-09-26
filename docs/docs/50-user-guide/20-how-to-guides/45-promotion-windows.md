@@ -225,10 +225,10 @@ instant, the status is **closed** (promotions prohibited) when:
 1. There is a matching **`Deny`** window currently active (current time inside the window bounds) **OR**
 1. There are matching **`Allow`** windows, none of which are currently active
 
-Inversely, the scedule is **open** (promotions permitted) when:
+Conversely, the status is **open** (promotions permitted) when:
 
 1. There is no matching **`Deny`** window currently active **AND**
-1. There is no matching **`Allow`** windows, or at least one matching **`Allow`** window currently active
+1. There are no matching **`Allow`** windows, or at least one matching **`Allow`** window currently active
 
 In other words:
 
@@ -247,7 +247,7 @@ For example if we have an `Allow` window permitting daily from 09:00 to 17:00, l
   kind: Allow
   rrule: FREQ=DAILY
   dtstart: "TZID=America/New_York:20260101T090000"
-  dtend: "TZID=America/New_York:20260102T170000"
+  dtend: "TZID=America/New_York:20260101T170000"
 ```
 
 And we have a `Deny` window blocking promotions at specific day, like this:
