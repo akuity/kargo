@@ -25,7 +25,7 @@ replace (
 exclude github.com/ugorji/go v1.1.4
 
 require (
-	cloud.google.com/go/compute/metadata v0.9.0
+	cloud.google.com/go/compute/metadata v0.9.1
 	code.gitea.io/sdk/gitea v0.25.1
 	connectrpc.com/connect v1.21.0
 	github.com/AlecAivazis/survey/v2 v2.3.7
@@ -37,15 +37,15 @@ require (
 	github.com/adrg/xdg v0.5.3
 	github.com/akuity/kargo/api v0.0.0
 	github.com/akuity/kargo/pkg/x/client/generated v0.0.0
-	github.com/aws/aws-lambda-go v1.55.0
+	github.com/aws/aws-lambda-go v1.55.1
 	github.com/aws/aws-sdk-go-v2 v1.47.0
-	github.com/aws/aws-sdk-go-v2/config v1.33.4
-	github.com/aws/aws-sdk-go-v2/credentials v1.20.4
+	github.com/aws/aws-sdk-go-v2/config v1.33.5
+	github.com/aws/aws-sdk-go-v2/credentials v1.20.5
 	github.com/aws/aws-sdk-go-v2/service/ecr v1.65.0
-	github.com/aws/aws-sdk-go-v2/service/sts v1.50.0
-	github.com/aws/smithy-go v1.28.1
+	github.com/aws/aws-sdk-go-v2/service/sts v1.51.0
+	github.com/aws/smithy-go v1.28.2
 	github.com/awslabs/aws-lambda-go-api-proxy v0.16.2
-	github.com/bmatcuk/doublestar/v4 v4.10.0
+	github.com/bmatcuk/doublestar/v4 v4.10.2
 	github.com/coreos/go-oidc/v3 v3.21.0
 	github.com/cyphar/filepath-securejoin v0.7.0
 	github.com/evanphx/json-patch/v5 v5.9.11
@@ -95,17 +95,17 @@ require (
 	google.golang.org/api v0.298.0
 	gopkg.in/yaml.v3 v3.0.1
 	helm.sh/helm/v3 v3.22.0
-	k8s.io/api v0.37.0
-	k8s.io/apiextensions-apiserver v0.37.0
-	k8s.io/apimachinery v0.37.0
-	k8s.io/apiserver v0.37.0
-	k8s.io/cli-runtime v0.37.0
-	k8s.io/client-go v0.37.0
+	k8s.io/api v0.37.1
+	k8s.io/apiextensions-apiserver v0.37.1
+	k8s.io/apimachinery v0.37.1
+	k8s.io/apiserver v0.37.1
+	k8s.io/cli-runtime v0.37.1
+	k8s.io/client-go v0.37.1
 	k8s.io/klog/v2 v2.140.0
 	k8s.io/utils v0.0.0-20260707023825-cf1189d6abe3
 	oras.land/oras-go/v2 v2.6.2
 	sigs.k8s.io/cli-utils v0.37.2
-	sigs.k8s.io/controller-runtime v0.25.0
+	sigs.k8s.io/controller-runtime v0.25.1
 	sigs.k8s.io/kustomize/api v0.21.1
 	sigs.k8s.io/kustomize/kyaml v0.21.1
 	sigs.k8s.io/yaml v1.6.0
@@ -329,8 +329,8 @@ require (
 	gopkg.in/natefinch/npipe.v2 v2.0.0-20160621034901-c1b8fa8bdcce // indirect
 	gopkg.in/warnings.v0 v0.1.2 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
-	k8s.io/code-generator v0.37.0 // indirect
-	k8s.io/component-base v0.37.0 // indirect
+	k8s.io/code-generator v0.37.1 // indirect
+	k8s.io/component-base v0.37.1 // indirect
 	k8s.io/gengo/v2 v2.0.0-20260408192533-25e2208e0dc3 // indirect
 	k8s.io/kube-openapi v0.0.0-20260721132016-d427ff9ee9ad // indirect
 	k8s.io/kubectl v0.37.0 // indirect
