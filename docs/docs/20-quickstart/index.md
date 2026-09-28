@@ -494,9 +494,15 @@ the [Kargo Dashboard's Downloads page](http://localhost:31081/downloads):
 
 ![CLI Tab in Kargo UI](./img/cli-installation.png)
 
-Rename the downloaded binary to `kargo` (or `kargo.exe` for Windows) and move it
-to a location in your file system that is included in the value of your `PATH`
-environment variable.
+Rename the downloaded binary to `kargo` (or `kargo.exe` for Windows). On macOS,
+Linux, or WSL, also make it executable:
+
+```shell
+chmod +x kargo
+```
+
+Then move it to a location in your file system that is included in the value of
+your `PATH` environment variable.
 
 Log in:
 
