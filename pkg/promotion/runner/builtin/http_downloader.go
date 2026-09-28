@@ -3,8 +3,10 @@ package builtin
 import (
 	"context"
 	"crypto/tls"
+	"encoding/json"
 	"fmt"
 	"io"
+	"mime"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -12,10 +14,13 @@ import (
 	"time"
 
 	securejoin "github.com/cyphar/filepath-securejoin"
+	"github.com/expr-lang/expr"
 	"github.com/hashicorp/go-cleanhttp"
 	"github.com/xeipuuv/gojsonschema"
+	"sigs.k8s.io/yaml"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	kargoio "github.com/akuity/kargo/pkg/io"
 	"github.com/akuity/kargo/pkg/io/fs"
 	"github.com/akuity/kargo/pkg/logging"
 	kargonet "github.com/akuity/kargo/pkg/net"
@@ -100,7 +105,7 @@ func (d *httpDownloader) run(
 	}
 	defer resp.Body.Close()
 
-	if err = d.validateResponse(resp); err != nil {
+	if err = d.validateResponse(ctx, resp, cfg); err != nil {
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusFailed}, err
 	}
 
@@ -215,9 +220,24 @@ func (d *httpDownloader) buildHTTPClient(cfg builtin.HTTPDownloadConfig) (*http.
 	}, nil
 }
 
-// validateResponse checks the HTTP response status and content length.
-func (d *httpDownloader) validateResponse(resp *http.Response) error {
+// validateResponse checks the HTTP response status and content length. When
+// the server rejects the download with a non-2xx status and an error
+// expression is configured, the response body is evaluated to extract a richer
+// error message. The enriched failure stays retryable, exactly like the plain
+// status failure; only a misconfigured (uncompilable) expression is terminal.
+func (d *httpDownloader) validateResponse(
+	ctx context.Context,
+	resp *http.Response,
+	cfg builtin.HTTPDownloadConfig,
+) error {
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		message, err := d.extractErrorMessageFromResponse(ctx, resp, cfg)
+		if err != nil {
+			return err
+		}
+		if message != "" {
+			return fmt.Errorf("HTTP request failed with status %d: %q", resp.StatusCode, message)
+		}
 		return fmt.Errorf("HTTP request failed with status %d", resp.StatusCode)
 	}
 
@@ -229,6 +249,115 @@ func (d *httpDownloader) validateResponse(resp *http.Response) error {
 	}
 
 	return nil
+}
+
+// extractErrorMessageFromResponse evaluates the configured error expression,
+// if any, against the rejection response, returning the message it extracts.
+// The cases are distinguished as follows:
+//
+//   - No expression defined: returns an empty string and no error.
+//   - Compilation error: returns a TerminalError, since an uncompilable
+//     expression is a misconfiguration the user must fix.
+//   - Evaluation error: best-effort, since the response may not be shaped as
+//     the expression expects. Logs at debug level and returns an empty string
+//     so the caller falls back to the default error message.
+//   - Nil or non-string result: expected (e.g. nil coalescing that finds no
+//     matching field). Returns an empty string so the caller falls back.
+func (d *httpDownloader) extractErrorMessageFromResponse(
+	ctx context.Context,
+	resp *http.Response,
+	cfg builtin.HTTPDownloadConfig,
+) (string, error) {
+	if cfg.ErrorExpression == "" {
+		return "", nil
+	}
+
+	program, err := expr.Compile(cfg.ErrorExpression)
+	if err != nil {
+		return "", &promotion.TerminalError{
+			Err: fmt.Errorf("error compiling error expression %q: %w", cfg.ErrorExpression, err),
+		}
+	}
+
+	env, err := d.buildExprEnv(ctx, resp)
+	if err != nil {
+		// The download already failed; enrichment is best-effort, so fall back
+		// to the default message instead of masking the original failure.
+		logging.LoggerFromContext(ctx).Debug(
+			"error building expression context from HTTP download response",
+			"error", err,
+		)
+		return "", nil
+	}
+
+	errorAny, err := expr.Run(program, env)
+	if err != nil {
+		logging.LoggerFromContext(ctx).Debug(
+			"error evaluating error expression for HTTP download response",
+			"expression", cfg.ErrorExpression,
+			"error", err,
+		)
+		return "", nil
+	}
+
+	errorMessage, _ := errorAny.(string)
+	return errorMessage, nil
+}
+
+// buildExprEnv builds the expression evaluation context from the rejection
+// response, exposing the status code, headers, and parsed body under the
+// "response" key, mirroring the http step.
+func (d *httpDownloader) buildExprEnv(
+	ctx context.Context,
+	resp *http.Response,
+) (map[string]any, error) {
+	// Rejection bodies are expected to be small error payloads; cap what is
+	// read for message extraction well below the download size limit.
+	bodyBytes, err := kargoio.LimitRead(resp.Body, maxResponseBytes)
+	if err != nil {
+		return nil, fmt.Errorf("reading response body: %w", err)
+	}
+
+	response := map[string]any{
+		// TODO(krancour): Casting as an int64 is a short-term fix here because
+		// deep copy of the output map will panic if any value is an int. This is
+		// a near-term fix and a better solution will be PR'ed soon.
+		"status":  int64(resp.StatusCode),
+		"header":  resp.Header.Get,
+		"headers": resp.Header,
+		"body":    map[string]any{},
+	}
+
+	if len(bodyBytes) > 0 {
+		contentType, _, _ := mime.ParseMediaType(resp.Header.Get(contentTypeHeader))
+		switch determineResponseParseMode(contentType) {
+		case httpParseModeJSON:
+			if contentType != contentTypeJSON && !json.Valid(bodyBytes) {
+				logging.LoggerFromContext(ctx).Debug(
+					"unrecognized content type is not valid JSON, ignoring response body",
+					"contentType", contentType,
+				)
+				break
+			}
+			var parsedBody any
+			if err = json.Unmarshal(bodyBytes, &parsedBody); err != nil {
+				return nil, fmt.Errorf("failed to parse JSON response: %w", err)
+			}
+			response["body"] = parsedBody
+		case httpParseModeYAML:
+			var parsedBody any
+			if err = yaml.Unmarshal(bodyBytes, &parsedBody); err != nil {
+				return nil, fmt.Errorf("failed to parse YAML response: %w", err)
+			}
+			response["body"] = parsedBody
+		case httpParseModeText:
+			response["body"] = string(bodyBytes)
+		}
+	}
+
+	return map[string]any{
+		"response": response,
+	}, nil
 }
 
 // downloadToFile downloads the response content to the specified file.

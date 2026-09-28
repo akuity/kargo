@@ -304,6 +304,94 @@ func Test_httpDownloader_run(t *testing.T) {
 			},
 		},
 		{
+			name: "errorExpression extracts message from JSON error response",
+			cfg: builtin.HTTPDownloadConfig{
+				OutPath:         "test-file.txt",
+				ErrorExpression: `response.body.error ?? "unknown error"`,
+			},
+			handler: func(w http.ResponseWriter, _ *http.Request) {
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(http.StatusForbidden)
+				_, err := w.Write([]byte(`{"error": "quota exceeded for this tenant"}`))
+				require.NoError(t, err)
+			},
+			assertions: func(t *testing.T, res promotion.StepResult, err error, workDir string) {
+				require.ErrorContains(t, err, `HTTP request failed with status 403: "quota exceeded for this tenant"`)
+				require.Equal(t, kargoapi.PromotionStepStatusFailed, res.Status)
+
+				_, err = os.Stat(filepath.Join(workDir, "test-file.txt"))
+				require.True(t, os.IsNotExist(err))
+			},
+		},
+		{
+			name: "errorExpression falls back when expression finds no message",
+			cfg: builtin.HTTPDownloadConfig{
+				OutPath:         "test-file.txt",
+				ErrorExpression: `response.body.error ?? nil`,
+			},
+			handler: func(w http.ResponseWriter, _ *http.Request) {
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(http.StatusNotFound)
+				_, err := w.Write([]byte(`{"detail": "no such artifact"}`))
+				require.NoError(t, err)
+			},
+			assertions: func(t *testing.T, res promotion.StepResult, err error, _ string) {
+				require.ErrorContains(t, err, "HTTP request failed with status 404")
+				require.NotContains(t, err.Error(), ": \"")
+				require.Equal(t, kargoapi.PromotionStepStatusFailed, res.Status)
+			},
+		},
+		{
+			name: "errorExpression evaluates against plain text body",
+			cfg: builtin.HTTPDownloadConfig{
+				OutPath:         "test-file.txt",
+				ErrorExpression: `response.body`,
+			},
+			handler: func(w http.ResponseWriter, _ *http.Request) {
+				w.Header().Set("Content-Type", "text/plain")
+				w.WriteHeader(http.StatusBadGateway)
+				_, err := w.Write([]byte("upstream exploded"))
+				require.NoError(t, err)
+			},
+			assertions: func(t *testing.T, res promotion.StepResult, err error, _ string) {
+				require.ErrorContains(t, err, `HTTP request failed with status 502: "upstream exploded"`)
+				require.Equal(t, kargoapi.PromotionStepStatusFailed, res.Status)
+			},
+		},
+		{
+			name: "errorExpression evaluation error falls back to default message",
+			cfg: builtin.HTTPDownloadConfig{
+				OutPath:         "test-file.txt",
+				ErrorExpression: `response.body.error.deep`,
+			},
+			handler: func(w http.ResponseWriter, _ *http.Request) {
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(http.StatusNotFound)
+				_, err := w.Write([]byte(`{"error": "plain string, not a map"}`))
+				require.NoError(t, err)
+			},
+			assertions: func(t *testing.T, res promotion.StepResult, err error, _ string) {
+				require.ErrorContains(t, err, "HTTP request failed with status 404")
+				require.NotContains(t, err.Error(), ": \"")
+				require.Equal(t, kargoapi.PromotionStepStatusFailed, res.Status)
+			},
+		},
+		{
+			name: "errorExpression compile error is terminal",
+			cfg: builtin.HTTPDownloadConfig{
+				OutPath:         "test-file.txt",
+				ErrorExpression: `response..`,
+			},
+			handler: func(w http.ResponseWriter, _ *http.Request) {
+				w.WriteHeader(http.StatusNotFound)
+			},
+			assertions: func(t *testing.T, res promotion.StepResult, err error, _ string) {
+				require.ErrorContains(t, err, "error compiling error expression")
+				require.True(t, promotion.IsTerminal(err))
+				require.Equal(t, kargoapi.PromotionStepStatusFailed, res.Status)
+			},
+		},
+		{
 			name: "download exceeds size limit via Content-Length",
 			cfg: builtin.HTTPDownloadConfig{
 				OutPath: "large-file.txt",

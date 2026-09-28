@@ -422,7 +422,7 @@ func (h *httpRequester) buildExprEnv(
 	}
 
 	if len(bodyBytes) > 0 {
-		parseMode := h.determineResponseParseMode(contentType)
+		parseMode := determineResponseParseMode(contentType)
 
 		switch parseMode {
 		case httpParseModeJSON:
@@ -486,7 +486,7 @@ const (
 
 // determineResponseParseMode determines how to parse the response body based on
 // the provided MIME media type.
-func (h *httpRequester) determineResponseParseMode(contentType string) httpResponseParseMode {
+func determineResponseParseMode(contentType string) httpResponseParseMode {
 	switch {
 	case strings.EqualFold(contentType, contentTypeJSON):
 		return httpParseModeJSON

@@ -528,6 +528,9 @@ type HTTPDownloadConfig struct {
 	// Whether to allow overwriting an existing file at the specified path. If false and the
 	// file exists, the download will fail.
 	AllowOverwrite bool `json:"allowOverwrite,omitempty"`
+	// An expression to evaluate to extract an error message from the HTTP response when the
+	// download is rejected with a non-2xx status.
+	ErrorExpression string `json:"errorExpression,omitempty"`
 	// Headers to include in the HTTP request.
 	Headers []HTTPDownloadConfigHeader `json:"headers,omitempty"`
 	// Whether to skip TLS verification when making the request. (Not recommended.)

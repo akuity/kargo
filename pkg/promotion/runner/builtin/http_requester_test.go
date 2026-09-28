@@ -1622,10 +1622,9 @@ func Test_httpRequester_determineResponseParseMode(t *testing.T) {
 		},
 	}
 
-	h := &httpRequester{}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			result := h.determineResponseParseMode(tc.contentType)
+			result := determineResponseParseMode(tc.contentType)
 			require.Equal(t, tc.expected, result)
 		})
 	}

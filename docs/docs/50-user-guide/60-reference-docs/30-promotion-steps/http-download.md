@@ -22,6 +22,7 @@ Downloads are limited to 100MB to prevent resource exhaustion.
 | `url` | `string` | Y | The URL from which to download the file. |
 | `outPath` | `string` | Y | The path where the downloaded file will be saved, relative to the step's working directory. |
 | `allowOverwrite` | `boolean` | N | Whether to allow overwriting an existing file at the specified path. If `false` and the file exists, the download will fail. Defaults to `false`. |
+| `errorExpression` | `string` | N | An [expr-lang] expression evaluated when the server rejects the download with a non-2xx status, to extract a richer error message from the response. If it is unset, or evaluates to an empty, nil, or non-string value, the default status message is used. If it fails to evaluate (e.g. the response is not shaped as expected), the default message is also used. A malformed expression that fails to compile is a terminal error. Note that this expression should _not_ be offset by `${{` and `}}`. |
 | `headers` | `[]object` | N | A list of headers to include in the request. |
 | `headers[].name` | `string` | Y | The name of the header. |
 | `headers[].value` | `string` | Y | The value of the header. |
@@ -129,3 +130,41 @@ steps:
     inPath: charts/${{ vars.chartName }}.tgz
     outPath: charts/${{ vars.chartName }}
 ```
+
+### Extracting Error Messages
+
+When the server rejects a download, the default failure message only reports
+the HTTP status code. `errorExpression` extracts a richer message from the
+rejection response, which is included in the step failure and displayed in the
+Kargo UI. The response `status`, `header`/`headers`, and parsed `body` are
+available to the expression, just like in the [`http` step](http.md).
+
+Some APIs return errors using different field names. [expr-lang]'s
+[optional chaining](https://expr-lang.org/docs/language-definition#optional-chaining)
+(`?.`) and [nil coalescing](https://expr-lang.org/docs/language-definition#nil-coalescing)
+(`??`) can handle multiple formats in a single expression.
+
+```yaml
+steps:
+# ...
+- uses: http-download
+  as: fetch-artifact
+  config:
+    url: https://artifacts.example.com/builds/app.zip
+    outPath: artifacts/app.zip
+    errorExpression: response.body?.message ?? response.body?.error
+```
+
+If the server returns a `403` response with the following JSON body:
+
+```json
+{
+  "error": "quota exceeded for this tenant"
+}
+```
+
+the step fails with `HTTP request failed with status 403: "quota exceeded for
+this tenant"` instead of the bare status message.
+
+[expr-lang]: https://expr-lang.org/
+

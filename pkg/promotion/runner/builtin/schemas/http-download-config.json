@@ -58,6 +58,10 @@
       "type": "boolean",
       "description": "Whether to allow overwriting an existing file at the specified path. If false and the file exists, the download will fail."
     },
+    "errorExpression": {
+      "type": "string",
+      "description": "An expression to evaluate to extract an error message from the HTTP response when the download is rejected with a non-2xx status."
+    },
     "headers": {
       "type": "array",
       "items": {
