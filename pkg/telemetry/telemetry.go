@@ -8,6 +8,7 @@ package telemetry
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -19,7 +20,12 @@ import (
 	semconv "go.opentelemetry.io/otel/semconv/v1.43.0"
 
 	"github.com/akuity/kargo/pkg/logging"
+	"github.com/akuity/kargo/pkg/x/version"
 )
+
+// shutdownTimeout bounds how long a component waits at shutdown for spans not
+// yet exported to be flushed.
+const shutdownTimeout = 10 * time.Second
 
 // Service describes the component whose telemetry is being set up. Its fields
 // become resource attributes on every span the component exports.
@@ -84,6 +90,49 @@ func Setup(ctx context.Context, cfg Config, svc Service) (ShutdownFunc, error) {
 	)
 
 	return tp.Shutdown, nil
+}
+
+// SetupFromEnv configures tracing for the named Kargo component (for example
+// "controller", which is reported as the service "kargo-controller") according
+// to the environment, and returns a function that flushes and shuts tracing
+// down. That function is meant to be deferred by the component's entry point:
+// it never fails, and a problem flushing at shutdown is logged instead. When
+// tracing is disabled, both this function and the one it returns are no-ops.
+//
+// Any attrs are attached to the component's resource, in addition to its
+// service name and version.
+func SetupFromEnv(
+	ctx context.Context,
+	component string,
+	attrs ...attribute.KeyValue,
+) (func(), error) {
+	cfg := ConfigFromEnv()
+	shutdown, err := Setup(
+		ctx,
+		cfg,
+		Service{
+			Name:       "kargo-" + component,
+			Version:    version.GetVersion().Version,
+			Attributes: attrs,
+		},
+	)
+	if err != nil {
+		return nil, fmt.Errorf("error initializing tracing: %w", err)
+	}
+	logger := logging.LoggerFromContext(ctx)
+	if cfg.Enabled {
+		logger.Info(
+			"tracing is enabled",
+			"protocol", cfg.EffectiveTracesProtocol(),
+		)
+	}
+	return func() {
+		ctx, cancel := context.WithTimeout(context.Background(), shutdownTimeout)
+		defer cancel()
+		if err := shutdown(ctx); err != nil {
+			logger.Error(err, "error shutting down tracing")
+		}
+	}, nil
 }
 
 // newTraceExporter returns a span exporter that speaks the given OTLP

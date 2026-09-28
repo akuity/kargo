@@ -19,6 +19,7 @@ import (
 	"github.com/akuity/kargo/pkg/logging"
 	"github.com/akuity/kargo/pkg/os"
 	"github.com/akuity/kargo/pkg/server/kubernetes"
+	"github.com/akuity/kargo/pkg/telemetry"
 	"github.com/akuity/kargo/pkg/types"
 	versionpkg "github.com/akuity/kargo/pkg/x/version"
 )
@@ -81,7 +82,10 @@ func (o *garbageCollectorOptions) complete() {
 }
 
 func (o *garbageCollectorOptions) run(ctx context.Context) error {
-	shutdownTelemetry, err := setupTelemetry(ctx, o.Logger, "garbage-collector")
+	shutdownTelemetry, err := telemetry.SetupFromEnv(
+		logging.ContextWithLogger(ctx, o.Logger),
+		"garbage-collector",
+	)
 	if err != nil {
 		return err
 	}

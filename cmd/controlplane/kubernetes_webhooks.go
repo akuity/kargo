@@ -20,6 +20,7 @@ import (
 	"github.com/akuity/kargo/pkg/logging"
 	"github.com/akuity/kargo/pkg/os"
 	"github.com/akuity/kargo/pkg/server/kubernetes"
+	"github.com/akuity/kargo/pkg/telemetry"
 	"github.com/akuity/kargo/pkg/types"
 	libWebhook "github.com/akuity/kargo/pkg/webhook/kubernetes"
 	"github.com/akuity/kargo/pkg/webhook/kubernetes/clusterconfig"
@@ -96,7 +97,10 @@ func (o *kubernetesWebhooksServerOptions) complete() {
 }
 
 func (o *kubernetesWebhooksServerOptions) run(ctx context.Context) error {
-	shutdownTelemetry, err := setupTelemetry(ctx, o.Logger, "kubernetes-webhooks-server")
+	shutdownTelemetry, err := telemetry.SetupFromEnv(
+		logging.ContextWithLogger(ctx, o.Logger),
+		"kubernetes-webhooks-server",
+	)
 	if err != nil {
 		return err
 	}

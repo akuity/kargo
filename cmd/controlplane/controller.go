@@ -153,7 +153,11 @@ func (o *controllerOptions) run(ctx context.Context) error {
 	if o.ShardName != "" {
 		telemetryAttrs = append(telemetryAttrs, telemetry.ShardKey.String(o.ShardName))
 	}
-	shutdownTelemetry, err := setupTelemetry(ctx, o.Logger, "controller", telemetryAttrs...)
+	shutdownTelemetry, err := telemetry.SetupFromEnv(
+		logging.ContextWithLogger(ctx, o.Logger),
+		"controller",
+		telemetryAttrs...,
+	)
 	if err != nil {
 		return err
 	}
