@@ -20,14 +20,18 @@ import (
 	"github.com/akuity/kargo/pkg/server/user"
 )
 
+// patchFreightStatus patches Freight status using the given client. The
+// caller chooses the client, and so is responsible for its own authorization
+// decision -- this function enforces none.
 func (s *server) patchFreightStatus(
 	ctx context.Context,
+	cl client.Client,
 	freight *kargoapi.Freight,
 	newStatus kargoapi.FreightStatus,
 ) error {
 	if err := kubeclient.PatchStatus(
 		ctx,
-		s.client,
+		cl,
 		freight,
 		func(status *kargoapi.FreightStatus) {
 			*status = newStatus
@@ -123,13 +127,11 @@ func (s *server) approveFreight(c *gin.Context) {
 	}
 	newStatus.AddApprovedStage(stageName, time.Now())
 
-	if err := kubeclient.PatchStatus(
-		ctx,
-		s.client,
-		freight,
-		func(status *kargoapi.FreightStatus) {
-			*status = newStatus
-		},
+	// The promote check above is the authorization decision for this write,
+	// so it's written with the internal client: the caller need not also hold
+	// Kubernetes RBAC permission to patch freights/status themselves.
+	if err := s.patchFreightStatusFn(
+		ctx, s.client.InternalClient(), freight, newStatus,
 	); err != nil {
 		_ = c.Error(fmt.Errorf("patch freight status: %w", err))
 		return

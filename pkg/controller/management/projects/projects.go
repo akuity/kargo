@@ -927,11 +927,6 @@ func (r *reconciler) ensureDefaultUserRoles(
 					Resources: []string{"promotions"},
 					Verbs:     []string{"create", "delete", "get", "list", "watch", "patch"},
 				},
-				{ // Manual approvals involve patching Freight status
-					APIGroups: []string{kargoapi.GroupVersion.Group},
-					Resources: []string{"freights/status"},
-					Verbs:     []string{"patch"},
-				},
 				{
 					// View and delete AnalysisRuns
 					APIGroups: []string{rolloutsapi.GroupVersion.Group},
@@ -1017,11 +1012,6 @@ func (r *reconciler) ensureDefaultUserRoles(
 					APIGroups: []string{kargoapi.GroupVersion.Group},
 					Resources: []string{"promotions"},
 					Verbs:     []string{"create", "get", "list", "watch"},
-				},
-				{ // Manual approvals involve patching Freight status
-					APIGroups: []string{kargoapi.GroupVersion.Group},
-					Resources: []string{"freights/status"},
-					Verbs:     []string{"patch"},
 				},
 				{ // View AnalysisRuns and AnalysisTemplates
 					APIGroups: []string{rolloutsapi.GroupVersion.Group},
