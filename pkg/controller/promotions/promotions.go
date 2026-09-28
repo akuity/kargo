@@ -644,22 +644,30 @@ func (r *reconciler) promote(
 		return nil, nil, fmt.Errorf("error creating working directory: %w", err)
 	}
 	res, err := r.promoEngine.Promote(ctx, promoCtx, steps)
+	if err != nil {
+		return &workingPromo.Status, nil, err
+	}
 	workingPromo.Status.Phase = res.Status
 	workingPromo.Status.Message = res.Message
 	workingPromo.Status.CurrentStep = res.CurrentStep
 	workingPromo.Status.StepExecutionMetadata = res.StepExecutionMetadata
-	workingPromo.Status.State = &apiextensionsv1.JSON{Raw: res.State.ToJSON()}
+	stateJSON, err := res.State.ToJSON()
+	if err != nil {
+		return &workingPromo.Status, nil, fmt.Errorf("error marshalling state: %w", err)
+	}
+	workingPromo.Status.State = &apiextensionsv1.JSON{Raw: stateJSON}
 	for _, step := range res.HealthChecks {
+		inputJSON, err := step.Input.ToJSON()
+		if err != nil {
+			return &workingPromo.Status, nil, fmt.Errorf("error marshalling health check config: %w", err)
+		}
 		workingPromo.Status.HealthChecks = append(
 			workingPromo.Status.HealthChecks,
 			kargoapi.HealthCheckStep{
 				Uses:   step.Kind,
-				Config: &apiextensionsv1.JSON{Raw: step.Input.ToJSON()},
+				Config: &apiextensionsv1.JSON{Raw: inputJSON},
 			},
 		)
-	}
-	if err != nil {
-		return &workingPromo.Status, nil, err
 	}
 
 	logger.Debug("promotion", "phase", workingPromo.Status.Phase)
