@@ -164,6 +164,7 @@ func testRESTEndpoint(
 			// Mirror the Fn wiring NewServer performs; serverSetup may override.
 			s.createPromotionFn = s.client.Create
 			s.getStageFn = api.GetStage
+			s.patchFreightStatusFn = s.patchFreightStatus
 
 			if testCase.serverSetup != nil {
 				testCase.serverSetup(t, s)

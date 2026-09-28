@@ -66,12 +66,6 @@ rules:
   - list
   - patch
   - watch
-- apiGroups:
-  - kargo.akuity.io
-  resources:
-  - freights/status
-  verbs:
-  - patch # for manual approvals
 {{- if .Values.api.rollouts.integrationEnabled }}
 - apiGroups:
   - argoproj.io

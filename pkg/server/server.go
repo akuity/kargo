@@ -117,6 +117,7 @@ type server struct {
 	// Freight approval:
 	patchFreightStatusFn func(
 		ctx context.Context,
+		cl client.Client,
 		freight *kargoapi.Freight,
 		newStatus kargoapi.FreightStatus,
 	) error

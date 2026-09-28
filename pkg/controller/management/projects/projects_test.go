@@ -2753,6 +2753,20 @@ func TestReconciler_ensureDefaultUserRoles_PromotionRequestPermissions(t *testin
 			require.NotContains(t, rule.Resources, "targets")
 		}
 	})
+	// Regression test for GHSA-rx5g-3338-f2mf: patch on freights/status let a
+	// holder write status.verifiedIn directly, bypassing verification/soak
+	// requirements without ever needing the promote verb. Freight approval now
+	// goes through the API server's internal client, so no user-facing role
+	// should grant this permission.
+	for _, roleName := range []string{"kargo-admin", "kargo-promoter", "kargo-viewer"} {
+		t.Run(roleName+"/no freights-status patch", func(t *testing.T) {
+			role := createdRoles[roleName]
+			require.NotNil(t, role)
+			for _, rule := range role.Rules {
+				require.NotContains(t, rule.Resources, "freights/status")
+			}
+		})
+	}
 }
 
 func TestReconciler_ensureDefaultUserRoles_contributors(t *testing.T) {
