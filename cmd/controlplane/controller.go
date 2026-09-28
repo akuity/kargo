@@ -144,7 +144,12 @@ func (o *controllerOptions) run(ctx context.Context) error {
 		)
 	}
 
-	var telemetryAttrs []attribute.KeyValue
+	// A controller with no shard name is the default controller regardless of
+	// IS_DEFAULT_CONTROLLER; a named controller is the default only when
+	// explicitly designated.
+	telemetryAttrs := []attribute.KeyValue{
+		telemetry.DefaultControllerKey.Bool(o.ShardName == "" || o.IsDefaultController),
+	}
 	if o.ShardName != "" {
 		telemetryAttrs = append(telemetryAttrs, telemetry.ShardKey.String(o.ShardName))
 	}

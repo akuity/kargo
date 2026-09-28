@@ -151,12 +151,12 @@ func newReconciler(
 	return r
 }
 
-// Reconcile is part of the main Kubernetes reconciliation loop which aims to
-// move the current state of the cluster closer to the desired state.
 // tracer is the instrumentation scope under which this package's spans are
 // recorded.
 var tracer = otel.Tracer("github.com/akuity/kargo/pkg/controller/warehouses")
 
+// Reconcile is part of the main Kubernetes reconciliation loop which aims to
+// move the current state of the cluster closer to the desired state.
 func (r *reconciler) Reconcile(
 	ctx context.Context,
 	req ctrl.Request,

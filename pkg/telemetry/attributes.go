@@ -12,6 +12,12 @@ const (
 	// ShardKey is the attribute under which the name of a controller's shard
 	// is recorded.
 	ShardKey = attribute.Key("kargo.shard")
+	// DefaultControllerKey is the attribute under which whether a controller
+	// is the default controller, i.e. the one responsible for resources not
+	// assigned to a specific shard, is recorded. A controller with no shard
+	// name is always the default controller; one with a shard name is the
+	// default controller only if explicitly designated as such.
+	DefaultControllerKey = attribute.Key("kargo.controller.default")
 	// StageKey is the attribute under which the name of a Stage is recorded.
 	StageKey = attribute.Key("kargo.stage")
 	// WarehouseKey is the attribute under which the name of a Warehouse is
