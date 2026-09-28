@@ -351,7 +351,8 @@ func (h *httpRequester) buildRequest(
 }
 
 func (h *httpRequester) getClient(cfg builtin.HTTPConfig) (*http.Client, error) {
-	httpTransport := kargonet.SafeTransport(cleanhttp.DefaultTransport())
+	httpTransport := cleanhttp.DefaultTransport()
+	kargonet.HardenTransport(httpTransport, nil)
 	if cfg.InsecureSkipTLSVerify {
 		httpTransport.TLSClientConfig = &tls.Config{
 			InsecureSkipVerify: true, // nolint: gosec
