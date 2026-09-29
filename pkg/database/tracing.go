@@ -44,6 +44,16 @@ const (
 // costs next to nothing until a component enables tracing.
 type pgxTracer struct{}
 
+// pgx only requires a QueryTracer; it discovers the other tracer interfaces
+// with runtime type assertions and silently skips any it does not find. These
+// assertions turn a drifted method signature into a compile error rather than
+// missing spans.
+var (
+	_ pgx.QueryTracer       = pgxTracer{}
+	_ pgx.BatchTracer       = pgxTracer{}
+	_ pgxpool.AcquireTracer = pgxTracer{}
+)
+
 // TraceQueryStart implements pgx.QueryTracer.
 func (pgxTracer) TraceQueryStart(
 	ctx context.Context,
