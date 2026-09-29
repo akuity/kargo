@@ -48,6 +48,15 @@ func attributesOf(span sdktrace.ReadOnlySpan) map[attribute.Key]attribute.Value 
 	return attrs
 }
 
+// eventAttributesOf returns an event's attributes keyed by name.
+func eventAttributesOf(event sdktrace.Event) map[attribute.Key]attribute.Value {
+	attrs := map[attribute.Key]attribute.Value{}
+	for _, kv := range event.Attributes {
+		attrs[kv.Key] = kv.Value
+	}
+	return attrs
+}
+
 const testSQLCQuery = "-- name: GetProject :one\nSELECT id FROM projects WHERE id = $1\n"
 
 func TestPgxTracer_Query(t *testing.T) {
@@ -73,10 +82,11 @@ func TestPgxTracer_Query(t *testing.T) {
 				require.Equal(t, "GetProject", attrs[semconv.DBQuerySummaryKey].AsString())
 				require.Equal(t, "SELECT", attrs[semconv.DBOperationNameKey].AsString())
 				require.Equal(t, int64(1), attrs[semconv.DBResponseReturnedRowsKey].AsInt64())
+				require.NotContains(t, attrs, affectedRowsKey)
 			},
 		},
 		{
-			name: "hand-written statement is named by its operation",
+			name: "hand-written write is named by its operation and reports affected rows",
 			sql:  "insert into projects (id) values ($1)",
 			end:  pgx.TraceQueryEndData{CommandTag: pgconn.NewCommandTag("INSERT 0 1")},
 			assert: func(t *testing.T, span sdktrace.ReadOnlySpan) {
@@ -84,6 +94,19 @@ func TestPgxTracer_Query(t *testing.T) {
 				attrs := attributesOf(span)
 				require.NotContains(t, attrs, semconv.DBQuerySummaryKey)
 				require.Equal(t, "INSERT", attrs[semconv.DBOperationNameKey].AsString())
+				require.Equal(t, int64(1), attrs[affectedRowsKey].AsInt64())
+				require.NotContains(t, attrs, semconv.DBResponseReturnedRowsKey)
+			},
+		},
+		{
+			name: "statement without a row count reports none",
+			sql:  "BEGIN",
+			end:  pgx.TraceQueryEndData{CommandTag: pgconn.NewCommandTag("BEGIN")},
+			assert: func(t *testing.T, span sdktrace.ReadOnlySpan) {
+				require.Equal(t, "BEGIN", span.Name())
+				attrs := attributesOf(span)
+				require.NotContains(t, attrs, semconv.DBResponseReturnedRowsKey)
+				require.NotContains(t, attrs, affectedRowsKey)
 			},
 		},
 		{
@@ -96,6 +119,7 @@ func TestPgxTracer_Query(t *testing.T) {
 				attrs := attributesOf(span)
 				require.Equal(t, "55P03", attrs[semconv.DBResponseStatusCodeKey].AsString())
 				require.NotContains(t, attrs, semconv.DBResponseReturnedRowsKey)
+				require.NotContains(t, attrs, affectedRowsKey)
 				require.Len(t, span.Events(), 1)
 				require.Equal(t, "exception", span.Events()[0].Name)
 			},
@@ -153,7 +177,9 @@ func TestPgxTracer_Batch(t *testing.T) {
 				events := span.Events()
 				require.Len(t, events, 2)
 				require.Equal(t, "GetProject", events[0].Name)
+				require.Equal(t, int64(1), eventAttributesOf(events[0])[semconv.DBResponseReturnedRowsKey].AsInt64())
 				require.Equal(t, "DELETE", events[1].Name)
+				require.Equal(t, int64(3), eventAttributesOf(events[1])[affectedRowsKey].AsInt64())
 			},
 		},
 		{
@@ -171,13 +197,10 @@ func TestPgxTracer_Batch(t *testing.T) {
 				require.Len(t, span.Events(), 3)
 				require.Equal(t, "exception", span.Events()[0].Name)
 				require.Equal(t, "GetProject", span.Events()[1].Name)
-				var code string
-				for _, kv := range span.Events()[1].Attributes {
-					if kv.Key == semconv.DBResponseStatusCodeKey {
-						code = kv.Value.AsString()
-					}
-				}
-				require.Equal(t, "40P01", code)
+				attrs := eventAttributesOf(span.Events()[1])
+				require.Equal(t, "40P01", attrs[semconv.DBResponseStatusCodeKey].AsString())
+				require.NotContains(t, attrs, semconv.DBResponseReturnedRowsKey)
+				require.NotContains(t, attrs, affectedRowsKey)
 			},
 		},
 	}

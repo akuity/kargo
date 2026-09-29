@@ -33,6 +33,10 @@ const (
 	// batchSizeKey is the attribute under which the number of queries in a
 	// batch is recorded.
 	batchSizeKey = attribute.Key("db.operation.batch.size")
+	// affectedRowsKey is the attribute under which the number of rows an
+	// INSERT, UPDATE, or DELETE touched is recorded. Semantic conventions
+	// define an attribute for rows returned but none for rows written.
+	affectedRowsKey = attribute.Key("db.response.affected_rows")
 )
 
 // pgxTracer records OpenTelemetry spans for the pgx operations it is attached
@@ -81,9 +85,7 @@ func (pgxTracer) TraceQueryEnd(
 		recordError(span, data.Err)
 		return
 	}
-	span.SetAttributes(
-		semconv.DBResponseReturnedRows(int(data.CommandTag.RowsAffected())),
-	)
+	span.SetAttributes(rowCountAttributes(data.CommandTag)...)
 }
 
 // TraceBatchStart implements pgx.BatchTracer.
@@ -116,11 +118,12 @@ func (pgxTracer) TraceBatchQuery(
 	span := trace.SpanFromContext(ctx)
 	attrs := []attribute.KeyValue{
 		semconv.DBQuerySummary(querySpanName(data.SQL)),
-		semconv.DBResponseReturnedRows(int(data.CommandTag.RowsAffected())),
 	}
 	if data.Err != nil {
 		span.RecordError(data.Err)
 		attrs = append(attrs, statusCodeAttributes(data.Err)...)
+	} else {
+		attrs = append(attrs, rowCountAttributes(data.CommandTag)...)
 	}
 	span.AddEvent(querySpanName(data.SQL), trace.WithAttributes(attrs...))
 }
@@ -236,6 +239,23 @@ func connectionAttributes(conn *pgx.Conn) []attribute.KeyValue {
 		semconv.ServerAddress(cfg.Host),
 		semconv.ServerPort(int(cfg.Port)),
 	)
+}
+
+// rowCountAttributes returns the row count a statement's command tag carries,
+// under the attribute that says what the count means. A SELECT reports rows
+// returned; INSERT, UPDATE, and DELETE report rows written. Other statements
+// (BEGIN, SET, DDL, and so on) carry no count, and reporting their zero
+// would be misleading.
+func rowCountAttributes(tag pgconn.CommandTag) []attribute.KeyValue {
+	rows := int(tag.RowsAffected())
+	switch {
+	case tag.Select():
+		return []attribute.KeyValue{semconv.DBResponseReturnedRows(rows)}
+	case tag.Insert(), tag.Update(), tag.Delete():
+		return []attribute.KeyValue{affectedRowsKey.Int(rows)}
+	default:
+		return nil
+	}
 }
 
 // recordError marks the span as failed and records what went wrong.
