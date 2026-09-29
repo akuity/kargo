@@ -619,8 +619,7 @@ that produced them, for example `GetProject`, and carry the query text (never
 its parameters), the operation, the number of rows returned, and the server's
 SQLSTATE code when a query fails. Lock timeouts, deadlocks, and serialization
 failures each have their own code, so they can be told apart from other
-errors. The `db.pool.acquire` span measures time spent waiting for a free
-connection, which is the first sign that the pool is too small.
+errors.
 
 A span cannot distinguish a slow query from one that waited on a lock held by
 another session. The development values set `log_lock_waits` so the

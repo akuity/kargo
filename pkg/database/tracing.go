@@ -7,7 +7,6 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
-	"github.com/jackc/pgx/v5/pgxpool"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
@@ -18,11 +17,6 @@ import (
 var tracer = otel.Tracer("github.com/akuity/kargo/pkg/database")
 
 const (
-	// spanNameAcquire is the name of the span recorded while waiting for a
-	// connection from the pool. Its duration is the time a caller spent
-	// blocked on pool capacity, which is the leading indicator that the pool
-	// is too small for the load.
-	spanNameAcquire = "db.pool.acquire"
 	// spanNameBatch is the name of the span recorded around a pipelined batch
 	// of queries.
 	spanNameBatch = "db.batch"
@@ -36,22 +30,24 @@ const (
 )
 
 // pgxTracer records OpenTelemetry spans for the pgx operations it is attached
-// to. It implements pgx.QueryTracer and pgx.BatchTracer, which cover every
-// query issued through a connection, and pgxpool.AcquireTracer, which covers
-// time spent waiting for a connection. Query parameters are never recorded.
+// to. It implements pgx.QueryTracer and pgx.BatchTracer, which together cover
+// every query issued through a connection. Query parameters are never
+// recorded.
+//
+// Time spent waiting for a connection from the pool is deliberately not a
+// span: it precedes every query, is near zero unless the pool is saturated,
+// and is better observed as a trend through the pool's statistics.
 //
 // The spans use the OpenTelemetry API only, so a pool built with one of these
 // costs next to nothing until a component enables tracing.
 type pgxTracer struct{}
 
-// pgx only requires a QueryTracer; it discovers the other tracer interfaces
-// with runtime type assertions and silently skips any it does not find. These
-// assertions turn a drifted method signature into a compile error rather than
-// missing spans.
+// pgx only requires a QueryTracer; it discovers BatchTracer with a runtime
+// type assertion and silently skips it if not found. These assertions turn a
+// drifted method signature into a compile error rather than missing spans.
 var (
-	_ pgx.QueryTracer       = pgxTracer{}
-	_ pgx.BatchTracer       = pgxTracer{}
-	_ pgxpool.AcquireTracer = pgxTracer{}
+	_ pgx.QueryTracer = pgxTracer{}
+	_ pgx.BatchTracer = pgxTracer{}
 )
 
 // TraceQueryStart implements pgx.QueryTracer.
@@ -129,33 +125,6 @@ func (pgxTracer) TraceBatchEnd(
 	ctx context.Context,
 	_ *pgx.Conn,
 	data pgx.TraceBatchEndData,
-) {
-	span := trace.SpanFromContext(ctx)
-	defer span.End()
-	if data.Err != nil {
-		recordError(span, data.Err)
-	}
-}
-
-// TraceAcquireStart implements pgxpool.AcquireTracer.
-func (pgxTracer) TraceAcquireStart(
-	ctx context.Context,
-	_ *pgxpool.Pool,
-	_ pgxpool.TraceAcquireStartData,
-) context.Context {
-	ctx, _ = tracer.Start(
-		ctx,
-		spanNameAcquire,
-		trace.WithAttributes(semconv.DBSystemNamePostgreSQL),
-	)
-	return ctx
-}
-
-// TraceAcquireEnd implements pgxpool.AcquireTracer.
-func (pgxTracer) TraceAcquireEnd(
-	ctx context.Context,
-	_ *pgxpool.Pool,
-	data pgxpool.TraceAcquireEndData,
 ) {
 	span := trace.SpanFromContext(ctx)
 	defer span.End()

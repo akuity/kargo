@@ -8,7 +8,6 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
-	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -216,45 +215,6 @@ func TestPgxTracer_Batch(t *testing.T) {
 				tr.TraceBatchQuery(ctx, nil, q)
 			}
 			tr.TraceBatchEnd(ctx, nil, testCase.end)
-			spans := recorder.Ended()
-			require.Len(t, spans, 1)
-			testCase.assert(t, spans[0])
-		})
-	}
-}
-
-func TestPgxTracer_Acquire(t *testing.T) {
-	// Not parallel: installs a global tracer provider.
-	testCases := []struct {
-		name   string
-		end    pgxpool.TraceAcquireEndData
-		assert func(*testing.T, sdktrace.ReadOnlySpan)
-	}{
-		{
-			name: "connection acquired",
-			assert: func(t *testing.T, span sdktrace.ReadOnlySpan) {
-				require.Equal(t, spanNameAcquire, span.Name())
-				require.Equal(t, codes.Unset, span.Status().Code)
-			},
-		},
-		{
-			name: "acquire fails",
-			end:  pgxpool.TraceAcquireEndData{Err: context.DeadlineExceeded},
-			assert: func(t *testing.T, span sdktrace.ReadOnlySpan) {
-				require.Equal(t, codes.Error, span.Status().Code)
-			},
-		},
-	}
-	for _, testCase := range testCases {
-		t.Run(testCase.name, func(t *testing.T) {
-			recorder := installSpanRecorder(t)
-			var tr pgxTracer
-			ctx := tr.TraceAcquireStart(
-				context.Background(),
-				nil,
-				pgxpool.TraceAcquireStartData{},
-			)
-			tr.TraceAcquireEnd(ctx, nil, testCase.end)
 			spans := recorder.Ended()
 			require.Len(t, spans, 1)
 			testCase.assert(t, spans[0])
