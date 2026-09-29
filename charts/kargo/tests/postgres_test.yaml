@@ -100,6 +100,8 @@ tests:
     template: templates/postgres/statefulset.yaml
     set:
       database.postgres.enabled: true
+      global.labels:
+        team: platform
       database.postgres.labels:
         tier: db
       global.podLabels:
@@ -123,6 +125,9 @@ tests:
         - name: init
           image: busybox
     asserts:
+      - equal:
+          path: metadata.labels.team
+          value: platform
       - equal:
           path: metadata.labels.tier
           value: db
