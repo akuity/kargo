@@ -36,6 +36,7 @@ import { GraphFilters } from './graph-filters';
 import { Images } from './image-history/images';
 import { PipelineListView } from './list/list-view';
 import { PipelineEmpty } from './pipeline-empty';
+import { PipelineError } from './pipeline-error';
 import { DndPromotionContext } from './promotion/drag-and-drop/dnd-promotion-context';
 import { Promote } from './promotion/promote';
 import { Promotion } from './promotion/promotion';
@@ -121,15 +122,13 @@ export const Pipelines = (props: { creatingStage?: boolean; creatingWarehouse?: 
 
   const pipelineView = preferredFilter.view;
 
-  // A failed list is not an empty project: both queries fall back to [], and
-  // without this guard an unauthorized or errored request would claim the
-  // project has no pipeline and offer to create one. The query cache surfaces
-  // the real error as a notification; fall back to the pipeline itself here.
-  const emptyPipeline =
-    warehouses.length === 0 &&
-    stages.length === 0 &&
-    !listWarehousesQuery.error &&
-    !listStagesQuery.error;
+  // A failed list is not an empty project -- both queries fall back to [] --
+  // so the two get separate conditions and separate views. Without the split,
+  // an unauthorized or errored request would claim the project has no pipeline
+  // and offer to create one.
+  const pipelineError = listWarehousesQuery.error || listStagesQuery.error;
+
+  const emptyPipeline = warehouses.length === 0 && stages.length === 0;
 
   const setPipelineView = (nextView: 'graph' | 'list') => {
     setPreferredFilter({ ...preferredFilter, view: nextView });
@@ -322,10 +321,14 @@ export const Pipelines = (props: { creatingStage?: boolean; creatingWarehouse?: 
                       <LoadingState />
                     </div>
                   )}
-                  {emptyPipeline && !listStagesQuery.isLoading && (
+                  {!!pipelineError && !listStagesQuery.isLoading && (
+                    <PipelineError message={pipelineError.message} />
+                  )}
+                  {!pipelineError && emptyPipeline && !listStagesQuery.isLoading && (
                     <PipelineEmpty project={projectName} />
                   )}
                   {pipelineView === 'graph' &&
+                    !pipelineError &&
                     !emptyPipeline &&
                     !loading &&
                     !listStagesQuery.isLoading && (
@@ -336,6 +339,7 @@ export const Pipelines = (props: { creatingStage?: boolean; creatingWarehouse?: 
                       />
                     )}
                   {pipelineView === 'list' &&
+                    !pipelineError &&
                     !emptyPipeline &&
                     !loading &&
                     !listStagesQuery.isLoading && (

@@ -1,18 +1,17 @@
 /**
- * Height, in pixels, a freight card settles at with the least content it can
- * carry. The empty timeline holds this height so the strip does not jump when
- * the first piece of Freight arrives.
+ * Height, in pixels, the freight timeline holds while it has no cards to show,
+ * so the strip does not jump when the first piece of Freight arrives.
  */
-export const MIN_FREIGHT_CARD_HEIGHT = 96;
+export const MIN_FREIGHT_TIMELINE_HEIGHT = 96;
 
-export type EmptyVariant = 'promotion' | 'filtered' | 'no-warehouses' | 'no-freight';
-
-export const emptyMessages: Record<EmptyVariant, string> = {
+export const emptyMessages = {
   promotion: 'No Freight from the Warehouses this Stage requests is available.',
   filtered: 'No Freight matches the current filters.',
   'no-warehouses': 'No Freight yet. Create a Warehouse to start discovering artifacts.',
   'no-freight': 'No Freight yet. It shows up here as Warehouses discover new artifacts.'
-};
+} as const;
+
+export type EmptyVariant = keyof typeof emptyMessages;
 
 /**
  * Picks the reason the freight timeline is empty, most specific first: an

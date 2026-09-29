@@ -1,6 +1,10 @@
 import { Flex, Typography } from 'antd';
 
-import { MIN_FREIGHT_CARD_HEIGHT, emptyMessages, getVariant } from './freight-timeline-empty-utils';
+import {
+  MIN_FREIGHT_TIMELINE_HEIGHT,
+  emptyMessages,
+  getVariant
+} from './freight-timeline-empty-utils';
 
 type FreightTimelineEmptyProps = {
   /** true when the active filters, rather than the project, explain the absence */
@@ -14,7 +18,7 @@ export const FreightTimelineEmpty = (props: FreightTimelineEmptyProps) => (
     align='center'
     justify='center'
     className='px-4 text-center'
-    style={{ height: MIN_FREIGHT_CARD_HEIGHT }}
+    style={{ height: MIN_FREIGHT_TIMELINE_HEIGHT }}
   >
     <Typography.Text type='secondary' className='text-xs'>
       {emptyMessages[getVariant(props)]}
