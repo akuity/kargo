@@ -1,6 +1,7 @@
 import { IconProp } from '@fortawesome/fontawesome-svg-core';
 import {
   faAsterisk,
+  faBolt,
   faCalendarDays,
   faChartBar,
   faGear,
@@ -32,6 +33,7 @@ import { ProjectConfig } from './views/project-config/project-config';
 import { PromotionPolicies } from './views/promotion-policies/promotion-policies';
 import { PromotionTasks } from './views/promotion-tasks/promotion-tasks';
 import { SecretsSettings } from './views/secrets/secrets-settings';
+import { WebhookReceiversSettings } from './views/webhook-receivers/webhook-receivers-settings';
 
 type ProjectSettingsView = {
   label: string;
@@ -80,7 +82,13 @@ export const ProjectSettings = () => {
                   wide: true
                 }
               ]
-            : [])
+            : []),
+          {
+            label: 'Webhook Receivers',
+            icon: faBolt,
+            path: 'project-config/webhook-receivers',
+            component: WebhookReceiversSettings
+          }
         ]
       },
       roles: {

@@ -2,6 +2,7 @@ import { IconProp } from '@fortawesome/fontawesome-svg-core';
 import {
   faAsterisk,
   faBarChart,
+  faBolt,
   faCalendarDays,
   faDisplay,
   faGear,
@@ -29,6 +30,7 @@ import { ClusterSecret } from '@ui/features/settings/cluster-secret/cluster-secr
 import { ConfigMapsSettings } from '@ui/features/settings/config-maps/config-maps-settings';
 import { SharedSecrets } from '@ui/features/settings/shared-secrets/shared-secrets';
 import { UISettings } from '@ui/features/settings/ui/ui-settings';
+import { WebhookReceiversSettings } from '@ui/features/settings/webhook-receivers/webhook-receivers-settings';
 
 const DEFAULT_GROUP = 'General';
 
@@ -39,6 +41,7 @@ type SettingsView = {
   component: React.ComponentType;
   group?: string;
   wide?: boolean;
+  enterprise?: boolean;
   children?: SettingsView[];
 };
 
@@ -54,7 +57,14 @@ const settingsViews = {
         icon: faCalendarDays,
         path: 'cluster-config/promotion-windows',
         component: ClusterPromotionWindows,
-        wide: true
+        wide: true,
+        enterprise: true
+      },
+      {
+        label: 'Webhook Receivers',
+        icon: faBolt,
+        path: 'cluster-config/webhook-receivers',
+        component: WebhookReceiversSettings
       }
     ]
   },
@@ -104,7 +114,7 @@ const settingsViews = {
     path: 'ui',
     component: UISettings
   }
-};
+} satisfies Record<string, SettingsView>;
 
 const defaultView = settingsViews.clusterConfig;
 
@@ -116,9 +126,11 @@ export const Settings = () => {
 
   const views = React.useMemo<SettingsView[]>(
     () => [
-      ...Object.values(settingsViews).map((view) =>
-        isAnyExtensionLoaded ? view : { ...view, children: undefined }
-      ),
+      // typed on the way out, since only some entries carry children
+      ...Object.values<SettingsView>(settingsViews).map((view) => ({
+        ...view,
+        children: view.children?.filter((child) => isAnyExtensionLoaded || !child.enterprise)
+      })),
       ...settingsExtensions
     ],
     [settingsExtensions, isAnyExtensionLoaded]
