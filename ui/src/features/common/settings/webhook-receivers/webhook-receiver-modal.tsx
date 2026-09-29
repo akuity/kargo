@@ -25,11 +25,7 @@ import {
 /** A Secret to create alongside the receiver that will reference it. */
 export type NewWebhookSecret = { name: string; data: Record<string, string> };
 
-const secretNamespace = (scope: 'project' | 'cluster') =>
-  scope === 'cluster' ? "Kargo's system resources namespace" : "the Project's namespace";
-
 type WebhookReceiverModalProps = ModalComponentProps & {
-  scope: 'project' | 'cluster';
   secrets: WebhookSecrets;
   /** Names already taken by the other receivers on the same config. */
   names: string[];
@@ -44,7 +40,6 @@ type WebhookReceiverModalProps = ModalComponentProps & {
 export const WebhookReceiverModal = ({
   visible,
   hide,
-  scope,
   secrets,
   names,
   editing,
@@ -165,7 +160,6 @@ export const WebhookReceiverModal = ({
         className='mt-2'
         control={form.control}
         name='secretMode'
-        description={`Kargo authenticates inbound requests against a Secret in ${secretNamespace(scope)}, and builds the receiver's URL from it.`}
         formItemClassName='!mb-3'
       >
         {({ field }) => (

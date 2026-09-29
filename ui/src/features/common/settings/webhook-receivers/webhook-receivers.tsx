@@ -13,7 +13,6 @@ import { NewWebhookSecret, WebhookReceiverModal } from './webhook-receiver-modal
 import { WebhookReceiversListView } from './webhook-receivers-list-view';
 
 type WebhookReceiversProps = {
-  scope: 'project' | 'cluster';
   webhookReceivers: WebhookReceiverConfig[];
   receiverDetails: WebhookReceiverDetails[];
   secrets: WebhookSecrets;
@@ -29,7 +28,6 @@ type WebhookReceiversProps = {
 };
 
 export const WebhookReceivers = ({
-  scope,
   webhookReceivers,
   receiverDetails,
   secrets,
@@ -68,7 +66,6 @@ export const WebhookReceivers = ({
     createModal.show((p) => (
       <WebhookReceiverModal
         {...p}
-        scope={scope}
         secrets={secrets}
         names={names}
         onSubmit={(receiver, newSecret) => save([...webhookReceivers, receiver], newSecret)}
@@ -80,7 +77,6 @@ export const WebhookReceivers = ({
       <WebhookReceiverModal
         {...p}
         editing
-        scope={scope}
         secrets={secrets}
         names={names.filter((_, i) => i !== index)}
         webhookReceiver={webhookReceivers[index]}

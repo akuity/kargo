@@ -23,7 +23,6 @@ export const WebhookReceiversSettings = () => {
 
   return (
     <WebhookReceivers
-      scope='cluster'
       webhookReceivers={clusterConfig?.spec?.webhookReceivers ?? []}
       receiverDetails={clusterConfig?.status?.webhookReceivers ?? []}
       secrets={secrets}

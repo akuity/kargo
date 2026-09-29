@@ -27,7 +27,6 @@ export const WebhookReceiversSettings = () => {
 
   return (
     <WebhookReceivers
-      scope='project'
       webhookReceivers={projectConfig?.spec?.webhookReceivers ?? []}
       receiverDetails={projectConfig?.status?.webhookReceivers ?? []}
       secrets={secrets}
