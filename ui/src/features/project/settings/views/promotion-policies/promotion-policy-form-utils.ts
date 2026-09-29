@@ -1,11 +1,13 @@
 import { z } from 'zod';
 
+import { PromotionPhase } from '@ui/features/common/promotion-status/promotion-phase';
 import {
   selectorFromValues,
   selectorLines,
   selectorSchema,
   selectorValues
 } from '@ui/features/common/selector/selector-utils';
+import { VerificationPhase } from '@ui/features/stage/utils/verification-phase';
 import { AutoRollbackConfig, PromotionPolicy } from '@ui/gen/api/v2/models';
 
 /**
@@ -13,17 +15,17 @@ import { AutoRollbackConfig, PromotionPolicy } from '@ui/gen/api/v2/models';
  * deliberate asymmetry with the verification phases below -- "Errored" here,
  * "Error" there. The CRD validates both spellings separately.
  */
-export const promotionPhases = ['Failed', 'Errored'] as const;
+export const promotionPhases = ['Failed', 'Errored'] as const satisfies readonly PromotionPhase[];
 
-export const verificationPhases = ['Failed', 'Error'] as const;
+export const verificationPhases = [VerificationPhase.Failed, VerificationPhase.Error] as const;
+
+type RollbackVerificationPhase = (typeof verificationPhases)[number];
 
 /**
  * What the API falls back to when auto-rollback is configured but no
  * verification phases are listed.
  */
-const defaultOnVerification: VerificationPhase[] = ['Failed'];
-
-type VerificationPhase = (typeof verificationPhases)[number];
+const defaultOnVerification: RollbackVerificationPhase[] = [VerificationPhase.Failed];
 
 export const promotionPolicyFormSchema = z
   .object({
