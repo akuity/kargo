@@ -319,18 +319,40 @@ external database are configured, since only one can be the database.
 {{- if and .Values.database.postgres.enabled .Values.database.external.secretName }}
 {{- fail "database.postgres.enabled and database.external.secretName cannot both be set. Disable the bundled PostgreSQL to use an external database." }}
 {{- end }}
+{{- if and .Values.database.postgres.password .Values.database.postgres.existingSecret }}
+{{- fail "database.postgres.password and database.postgres.existingSecret cannot both be set." }}
+{{- end }}
+{{- end -}}
+
+{{/*
+kargo.postgres.secretName returns the name of the Secret holding the bundled
+PostgreSQL's password: the operator's, when database.postgres.existingSecret
+is set, otherwise the chart's own.
+*/}}
+{{- define "kargo.postgres.secretName" -}}
+{{- .Values.database.postgres.existingSecret | default "kargo-postgres" -}}
 {{- end -}}
 
 {{/*
 kargo.postgres.password returns the password of the bundled PostgreSQL's kargo
-user: database.postgres.password when set, otherwise one derived from the
-release name and namespace. Deriving rather than generating keeps the password
-stable across upgrades and across `helm template` runs, which matters because
-the database initializes itself with whatever password it first sees. The
-derived value is hexadecimal, so it needs no escaping in a connection string.
+user: database.postgres.password when set; otherwise the password already in
+the chart's Secret, so that upgrades keep the one the database was initialized
+with; otherwise a newly generated one. The lookup only sees the cluster during
+a real install or upgrade. Under `helm template` it finds nothing and a new
+password is generated on every render, which is why GitOps installs must set
+database.postgres.existingSecret instead.
 */}}
 {{- define "kargo.postgres.password" -}}
-{{- .Values.database.postgres.password | default (printf "%s/%s" .Release.Namespace .Release.Name | sha256sum | trunc 32) -}}
+{{- if .Values.database.postgres.password -}}
+{{- .Values.database.postgres.password -}}
+{{- else -}}
+{{- $existing := lookup "v1" "Secret" .Release.Namespace "kargo-postgres" -}}
+{{- if and $existing $existing.data $existing.data.password -}}
+{{- $existing.data.password | b64dec -}}
+{{- else -}}
+{{- randAlphaNum 32 -}}
+{{- end -}}
+{{- end -}}
 {{- end -}}
 
 {{/*

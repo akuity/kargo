@@ -27,10 +27,13 @@ spec:
         {{ $key }}: {{ $value | quote }}
         {{- end }}
       {{- end }}
+      {{- $podAnnotations := mergeOverwrite (deepCopy .Values.global.podAnnotations) .Values.database.postgres.podAnnotations }}
+      {{- if or (not .Values.database.postgres.existingSecret) $podAnnotations }}
       annotations:
+        {{- if not .Values.database.postgres.existingSecret }}
         secret/checksum: {{ pick ( include (print $.Template.BasePath "/postgres/secret.yaml") . | fromYaml ) "stringData" | toYaml | sha256sum }}
-      {{- with (mergeOverwrite (deepCopy .Values.global.podAnnotations) .Values.database.postgres.podAnnotations) }}
-        {{- range $key, $value := . }}
+        {{- end }}
+        {{- range $key, $value := $podAnnotations }}
         {{ $key }}: {{ $value | quote }}
         {{- end }}
       {{- end }}
@@ -66,7 +69,7 @@ spec:
         - name: POSTGRES_PASSWORD
           valueFrom:
             secretKeyRef:
-              name: kargo-postgres
+              name: {{ include "kargo.postgres.secretName" . }}
               key: password
         {{- with (concat .Values.global.env .Values.database.postgres.env) }}
         {{- tpl (toYaml .) $ | nindent 8 }}

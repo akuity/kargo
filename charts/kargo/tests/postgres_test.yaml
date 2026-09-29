@@ -160,6 +160,17 @@ tests:
           path: spec.template.spec.initContainers[0].name
           value: init
 
+  - it: reads the password from an existing Secret when configured
+    template: templates/postgres/statefulset.yaml
+    set:
+      database.postgres.existingSecret: my-db-password
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].env[2].valueFrom.secretKeyRef.name
+          value: my-db-password
+      - notExists:
+          path: spec.template.metadata.annotations
+
   - it: falls back to global scheduling settings
     template: templates/postgres/statefulset.yaml
     set:
@@ -267,7 +278,7 @@ tests:
       - hasDocuments:
           count: 0
 
-  - it: derives a stable password and connection string when none is given
+  - it: generates a random password when none is given and none exists
     asserts:
       - hasDocuments:
           count: 1
@@ -276,34 +287,51 @@ tests:
       - equal:
           path: metadata.name
           value: kargo-postgres
-      # sha256("kargo/kargo") truncated to 32 characters: stable across renders.
-      - equal:
-          path: stringData.password
-          value: 65b98fdbc39e5e7dcd0e7cbbbbfa8aac
-      - equal:
-          path: stringData.connectionString
-          value: postgres://kargo:65b98fdbc39e5e7dcd0e7cbbbbfa8aac@kargo-postgres.kargo.svc:5432/kargo?sslmode=disable
-
-  - it: derives a different password for a different release
-    set:
-    release:
-      name: other
-      namespace: kargo
-    asserts:
       - matchRegex:
           path: stringData.password
-          pattern: ^[0-9a-f]{32}$
-      - notEqual:
-          path: stringData.password
-          value: 65b98fdbc39e5e7dcd0e7cbbbbfa8aac
+          pattern: ^[A-Za-z0-9]{32}$
 
-  - it: uses the configured password and escapes it in the connection string
+  - it: reuses the password already in the cluster on upgrade
+    kubernetesProvider:
+      scheme:
+        "v1/Secret":
+          gvr:
+            version: v1
+            resource: secrets
+          namespaced: true
+      objects:
+        - kind: Secret
+          apiVersion: v1
+          metadata:
+            name: kargo-postgres
+            namespace: kargo
+          data:
+            # base64 of "already-initialized"
+            password: YWxyZWFkeS1pbml0aWFsaXplZA==
+    asserts:
+      - equal:
+          path: stringData.password
+          value: already-initialized
+
+  - it: uses the configured password
     set:
       database.postgres.password: "p@ss/word"
     asserts:
       - equal:
           path: stringData.password
           value: p@ss/word
-      - equal:
-          path: stringData.connectionString
-          value: postgres://kargo:p%40ss%2Fword@kargo-postgres.kargo.svc:5432/kargo?sslmode=disable
+
+  - it: is not rendered when an existing Secret is used
+    set:
+      database.postgres.existingSecret: my-db-password
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: fails when both a password and an existing Secret are configured
+    set:
+      database.postgres.password: secret
+      database.postgres.existingSecret: my-db-password
+    asserts:
+      - failedTemplate:
+          errorPattern: cannot both be set

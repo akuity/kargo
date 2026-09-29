@@ -108,6 +108,32 @@ These instructions were tested with:
       --wait
     ```
 
+## Database
+
+The chart installs a minimal PostgreSQL instance alongside Kargo. It is a
+single replica with no replication, backups, or tuning, and is meant for
+evaluation and development. To use your own database instead, set
+`database.postgres.enabled` to `false` and point `database.external.secretName`
+at a Secret holding its connection string.
+
+The bundled instance generates a random password for its `kargo` user on first
+install, stores it in the `kargo-postgres` Secret, and reuses it on upgrades.
+
+:::caution
+
+Reusing the password relies on Helm's `lookup` function, which can only see
+the cluster during a real `helm install` or `helm upgrade`. Tools that render
+the chart with `helm template`, such as Argo CD, cannot reuse it and would
+generate a new password on every sync, locking clients out of a database that
+was initialized with the first one.
+
+When installing with such a tool, create a Secret in Kargo's namespace with the
+password under the key `password` (for example with External Secrets or Sealed
+Secrets) and set `database.postgres.existingSecret` to its name. The chart then
+neither generates nor stores a password.
+
+:::
+
 ## Troubleshooting
 
 ### Kargo installation fails with a `401`
