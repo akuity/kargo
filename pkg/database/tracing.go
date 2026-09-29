@@ -33,10 +33,6 @@ const (
 	// batchSizeKey is the attribute under which the number of queries in a
 	// batch is recorded.
 	batchSizeKey = attribute.Key("db.operation.batch.size")
-	// affectedRowsKey is the attribute under which the number of rows an
-	// INSERT, UPDATE, or DELETE touched is recorded. Semantic conventions
-	// define an attribute for rows returned but none for rows written.
-	affectedRowsKey = attribute.Key("db.response.affected_rows")
 )
 
 // pgxTracer records OpenTelemetry spans for the pgx operations it is attached
@@ -241,20 +237,16 @@ func connectionAttributes(conn *pgx.Conn) []attribute.KeyValue {
 	)
 }
 
-// rowCountAttributes returns the row count a statement's command tag carries,
-// under the attribute that says what the count means. A SELECT reports rows
-// returned; INSERT, UPDATE, and DELETE report rows written. Other statements
-// (BEGIN, SET, DDL, and so on) carry no count, and reporting their zero
-// would be misleading.
+// rowCountAttributes returns the row count a statement's command tag carries.
+// SELECT, INSERT, UPDATE, and DELETE report one; other statements (BEGIN, SET,
+// DDL, and so on) do not, and reporting their zero would be misleading. The
+// span's operation name says whether the count is rows returned or written.
 func rowCountAttributes(tag pgconn.CommandTag) []attribute.KeyValue {
-	rows := int(tag.RowsAffected())
-	switch {
-	case tag.Select():
-		return []attribute.KeyValue{semconv.DBResponseReturnedRows(rows)}
-	case tag.Insert(), tag.Update(), tag.Delete():
-		return []attribute.KeyValue{affectedRowsKey.Int(rows)}
-	default:
+	if !tag.Select() && !tag.Insert() && !tag.Update() && !tag.Delete() {
 		return nil
+	}
+	return []attribute.KeyValue{
+		semconv.DBResponseReturnedRows(int(tag.RowsAffected())),
 	}
 }
 
