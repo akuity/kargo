@@ -12,7 +12,7 @@ replace (
 )
 
 require (
-	cloud.google.com/go/compute/metadata v0.9.1
+	cloud.google.com/go/compute/metadata v0.10.0
 	code.gitea.io/sdk/gitea v0.25.1
 	connectrpc.com/connect v1.20.0
 	connectrpc.com/grpchealth v1.5.0
@@ -52,7 +52,7 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/hashicorp/go-cleanhttp v0.5.2
 	github.com/hashicorp/golang-lru/v2 v2.0.7
-	github.com/jferrl/go-githubauth v1.8.0
+	github.com/jferrl/go-githubauth v1.9.1
 	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/klauspost/compress v1.20.0
 	github.com/ktrysmt/go-bitbucket v0.9.87
