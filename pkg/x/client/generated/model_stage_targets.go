@@ -23,6 +23,8 @@ var _ MappedNullable = &StageTargets{}
 type StageTargets struct {
 	// Selectors select the Targets that the Stage governs, matching Targets by their labels within the Stage's own Project. A Target is selected when it matches any selector in the list, so several selectors describe a union. A Target matching more than one of them is still governed once.  An empty selector selects every Target in the Project. An empty list selects none: the Stage still governs Targets, it just governs none at the moment.  +listType=atomic +kubebuilder:validation:Required
 	Selectors []V1LabelSelector `json:"selectors"`
+	// UpdateStrategy configures the pace of updating the targets +optional
+	UpdateStrategy *TargetUpdateStrategy `json:"updateStrategy,omitempty"`
 }
 
 type _StageTargets StageTargets
@@ -69,6 +71,38 @@ func (o *StageTargets) SetSelectors(v []V1LabelSelector) {
 	o.Selectors = v
 }
 
+// GetUpdateStrategy returns the UpdateStrategy field value if set, zero value otherwise.
+func (o *StageTargets) GetUpdateStrategy() TargetUpdateStrategy {
+	if o == nil || IsNil(o.UpdateStrategy) {
+		var ret TargetUpdateStrategy
+		return ret
+	}
+	return *o.UpdateStrategy
+}
+
+// GetUpdateStrategyOk returns a tuple with the UpdateStrategy field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *StageTargets) GetUpdateStrategyOk() (*TargetUpdateStrategy, bool) {
+	if o == nil || IsNil(o.UpdateStrategy) {
+		return nil, false
+	}
+	return o.UpdateStrategy, true
+}
+
+// HasUpdateStrategy returns a boolean if a field has been set.
+func (o *StageTargets) HasUpdateStrategy() bool {
+	if o != nil && !IsNil(o.UpdateStrategy) {
+		return true
+	}
+
+	return false
+}
+
+// SetUpdateStrategy gets a reference to the given TargetUpdateStrategy and assigns it to the UpdateStrategy field.
+func (o *StageTargets) SetUpdateStrategy(v TargetUpdateStrategy) {
+	o.UpdateStrategy = &v
+}
+
 func (o StageTargets) MarshalJSON() ([]byte, error) {
 	toSerialize,err := o.ToMap()
 	if err != nil {
@@ -80,6 +114,9 @@ func (o StageTargets) MarshalJSON() ([]byte, error) {
 func (o StageTargets) ToMap() (map[string]interface{}, error) {
 	toSerialize := map[string]interface{}{}
 	toSerialize["selectors"] = o.Selectors
+	if !IsNil(o.UpdateStrategy) {
+		toSerialize["updateStrategy"] = o.UpdateStrategy
+	}
 	return toSerialize, nil
 }
 

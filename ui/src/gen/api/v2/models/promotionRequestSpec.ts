@@ -6,6 +6,7 @@
  * OpenAPI spec version: v1alpha1
  */
 import type { PromotionRequestTarget } from './promotionRequestTarget';
+import type { TargetUpdateStrategy } from './targetUpdateStrategy';
 
 export interface PromotionRequestSpec {
   /**
@@ -56,4 +57,9 @@ export interface PromotionRequestSpec {
    * +kubebuilder:validation:Required
    */
   targets: PromotionRequestTarget[];
+  /**
+   * UpdateStrategy configures the pace of updating the targets
+   * +optional
+   */
+  updateStrategy?: TargetUpdateStrategy;
 }
