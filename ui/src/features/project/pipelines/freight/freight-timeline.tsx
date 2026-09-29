@@ -15,6 +15,7 @@ import { Freight } from '@ui/gen/api/v2/models';
 
 import { FreightCard } from './freight-card';
 import { FreightExpandTile } from './freight-expand-tile';
+import { FreightTimelineEmpty } from './freight-timeline-empty';
 import { PromotionModeHeader } from './promotion-mode-header';
 import { useFilteredFreights } from './use-filtered-freights';
 import { useFreightCarousel } from './use-freight-carousel';
@@ -25,7 +26,11 @@ import './freight-timeline.less';
 
 const ARROW_BUTTON_WIDTH = 28;
 
-export const FreightTimeline = (props: { freights: Freight[]; project: string }) => {
+export const FreightTimeline = (props: {
+  freights: Freight[];
+  project: string;
+  hasWarehouses: boolean;
+}) => {
   const navigate = useNavigate();
 
   const colorContext = useContext(ColorContext);
@@ -67,6 +72,14 @@ export const FreightTimeline = (props: { freights: Freight[]; project: string })
   const dndContext = useDndContext();
   const isDragging = !!dndContext.active;
 
+  const isEmpty = filteredFreights.length === 0;
+
+  const filtersActive =
+    preferredFilter.sources.length > 0 ||
+    preferredFilter.warehouses.length > 0 ||
+    preferredFilter.timerange !== 'all-time' ||
+    preferredFilter.hideUnusedFreights;
+
   return (
     <>
       <div
@@ -91,17 +104,19 @@ export const FreightTimeline = (props: { freights: Freight[]; project: string })
         )}
         style={{ borderBottom: '2px solid var(--kargo-color-border-secondary, rgba(0,0,0,.05))' }}
       >
-        <div
-          className='flex items-stretch shrink-0 cursor-pointer select-none text-gray-500 dark:text-neutral-400 hover:text-gray-700 dark:hover:text-neutral-200 mx-1'
-          style={{ width: ARROW_BUTTON_WIDTH, opacity: canSlideLeft ? 1 : 0.4 }}
-          onClick={() => {
-            if (canSlideLeft) slideLeft();
-          }}
-        >
-          <div className='m-auto'>
-            <FontAwesomeIcon icon={faChevronLeft} />
+        {!isEmpty && (
+          <div
+            className='flex items-stretch shrink-0 cursor-pointer select-none text-gray-500 dark:text-neutral-400 hover:text-gray-700 dark:hover:text-neutral-200 mx-1'
+            style={{ width: ARROW_BUTTON_WIDTH, opacity: canSlideLeft ? 1 : 0.4 }}
+            onClick={() => {
+              if (canSlideLeft) slideLeft();
+            }}
+          >
+            <div className='m-auto'>
+              <FontAwesomeIcon icon={faChevronLeft} />
+            </div>
           </div>
-        </div>
+        )}
 
         <div
           ref={viewportRef}
@@ -109,6 +124,14 @@ export const FreightTimeline = (props: { freights: Freight[]; project: string })
             'overflow-hidden': !isDragging
           })}
         >
+          {isEmpty && (
+            <FreightTimelineEmpty
+              filtered={filtersActive}
+              hasWarehouses={props.hasWarehouses}
+              promotionMode={isPromotionMode}
+            />
+          )}
+
           <div
             ref={stripRef}
             className='flex gap-1 transition-transform duration-300 ease-out'
@@ -173,17 +196,19 @@ export const FreightTimeline = (props: { freights: Freight[]; project: string })
           </div>
         </div>
 
-        <div
-          className='flex items-stretch shrink-0 cursor-pointer select-none text-gray-500 dark:text-neutral-400 hover:text-gray-700 dark:hover:text-neutral-200 mx-1'
-          style={{ width: ARROW_BUTTON_WIDTH, opacity: canSlideRight ? 1 : 0.4 }}
-          onClick={() => {
-            if (canSlideRight) slideRight();
-          }}
-        >
-          <div className='m-auto'>
-            <FontAwesomeIcon icon={faChevronRight} />
+        {!isEmpty && (
+          <div
+            className='flex items-stretch shrink-0 cursor-pointer select-none text-gray-500 dark:text-neutral-400 hover:text-gray-700 dark:hover:text-neutral-200 mx-1'
+            style={{ width: ARROW_BUTTON_WIDTH, opacity: canSlideRight ? 1 : 0.4 }}
+            onClick={() => {
+              if (canSlideRight) slideRight();
+            }}
+          >
+            <div className='m-auto'>
+              <FontAwesomeIcon icon={faChevronRight} />
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </>
   );

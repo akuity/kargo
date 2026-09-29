@@ -32,9 +32,12 @@ import { DictionaryContext } from './context/dictionary-context';
 import { FreightTimelineControllerContext } from './context/freight-timeline-controller-context';
 import { FreightTimeline } from './freight/freight-timeline';
 import { Graph } from './graph/graph';
+import { useEventsWatcher } from './graph/use-events-watcher';
 import { GraphFilters } from './graph-filters';
 import { Images } from './image-history/images';
 import { PipelineListView } from './list/list-view';
+import { PipelineEmpty } from './pipeline-empty';
+import { PipelineError } from './pipeline-error';
 import { DndPromotionContext } from './promotion/drag-and-drop/dnd-promotion-context';
 import { Promote } from './promotion/promote';
 import { Promotion } from './promotion/promotion';
@@ -120,6 +123,23 @@ export const Pipelines = (props: { creatingStage?: boolean; creatingWarehouse?: 
 
   const pipelineView = preferredFilter.view;
 
+  const pipelineError = listWarehousesQuery.error || listStagesQuery.error;
+
+  const pipelineContent = ((): 'loading' | 'error' | 'empty' | 'graph' | 'list' => {
+    if (loading || listStagesQuery.isLoading) {
+      return 'loading';
+    }
+    // Data wins over an error: a failed background refetch keeps the last good
+    // data, and an error screen here would unmount the watcher that clears it.
+    if (warehouses.length > 0 || stages.length > 0) {
+      return pipelineView;
+    }
+    if (pipelineError) {
+      return 'error';
+    }
+    return 'empty';
+  })();
+
   const setPipelineView = (nextView: 'graph' | 'list') => {
     setPreferredFilter({ ...preferredFilter, view: nextView });
   };
@@ -149,6 +169,14 @@ export const Pipelines = (props: { creatingStage?: boolean; creatingWarehouse?: 
   usePersistPreferredFilter(projectName || '', preferredFilter);
 
   useWatchFreight(projectName || '', preferredFilter.warehouses, !getFreightQuery.isLoading);
+
+  // Stages and Warehouses are only watched from inside Graph and
+  // PipelineListView, so cover the states that replace them.
+  useEventsWatcher(
+    pipelineContent === 'empty' || pipelineContent === 'error' ? projectName : '',
+    undefined,
+    preferredFilter.warehouses
+  );
 
   if (loading) {
     return <LoadingState />;
@@ -197,7 +225,11 @@ export const Pipelines = (props: { creatingStage?: boolean; creatingWarehouse?: 
           <ColorContext.Provider value={{ stageColorMap, warehouseColorMap }}>
             <DndPromotionContext projectName={projectName || ''}>
               <div className='overflow-hidden h-full flex flex-col'>
-                <FreightTimeline freights={freights} project={projectName || ''} />
+                <FreightTimeline
+                  freights={freights}
+                  project={projectName || ''}
+                  hasWarehouses={warehouses.length > 0}
+                />
 
                 <div className='w-full flex-1 relative overflow-auto'>
                   <Flex
@@ -302,19 +334,23 @@ export const Pipelines = (props: { creatingStage?: boolean; creatingWarehouse?: 
                       />
                     </div>
                   )}
-                  {listStagesQuery.isLoading && (
+                  {pipelineContent === 'loading' && (
                     <div className='mt-20'>
                       <LoadingState />
                     </div>
                   )}
-                  {pipelineView === 'graph' && !loading && !listStagesQuery.isLoading && (
+                  {pipelineContent === 'error' && (
+                    <PipelineError message={pipelineError?.message} />
+                  )}
+                  {pipelineContent === 'empty' && <PipelineEmpty project={projectName} />}
+                  {pipelineContent === 'graph' && (
                     <Graph
                       project={project.metadata?.name || ''}
                       warehouses={warehouses}
                       stages={stages}
                     />
                   )}
-                  {pipelineView === 'list' && !loading && !listStagesQuery.isLoading && (
+                  {pipelineContent === 'list' && (
                     <PipelineListView
                       stages={stages}
                       warehouses={warehouses}
