@@ -24,8 +24,16 @@
 
 package namer
 
-// DefaultDescriptors is the list of adjectives used by NewDefault.
-var DefaultDescriptors = []string{
+import "slices"
+
+// DefaultDescriptors returns a copy of the default descriptor list, for use
+// with New by callers that want to substitute only the nouns.
+func DefaultDescriptors() []string {
+	return slices.Clone(defaultDescriptors)
+}
+
+// defaultDescriptors is the list of adjectives used by NewDefault.
+var defaultDescriptors = []string{
 	"affable",
 	"aged",
 	"agile",
@@ -417,8 +425,8 @@ var DefaultDescriptors = []string{
 	"zooming",
 }
 
-// DefaultNouns is the list of animal names used by NewDefault.
-var DefaultNouns = []string{
+// defaultNouns is the list of animal names used by NewDefault.
+var defaultNouns = []string{
 	"aardvark",
 	"aardwolf",
 	"abalone",

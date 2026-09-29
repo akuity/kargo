@@ -125,7 +125,7 @@ func TestGetAvailableFreightAlias(t *testing.T) {
 // use as label values.
 func TestMayFourthNouns(t *testing.T) {
 	t.Parallel()
-	_, err := namer.New(namer.DefaultDescriptors, mayFourthNouns)
+	_, err := namer.New(namer.DefaultDescriptors(), mayFourthNouns)
 	require.NoError(t, err)
 	wordRegex := regexp.MustCompile(`^[a-z0-9]+$`)
 	seen := make(map[string]struct{}, len(mayFourthNouns))

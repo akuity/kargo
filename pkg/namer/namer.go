@@ -3,6 +3,7 @@ package namer
 import (
 	"errors"
 	"math/rand/v2"
+	"slices"
 )
 
 // Namer generates random, human-friendly names.
@@ -18,18 +19,19 @@ type namer struct {
 	intN        func(int) int
 }
 
-// NewDefault returns a Namer that composes names from DefaultDescriptors and
-// DefaultNouns.
+// NewDefault returns a Namer that composes names from the default descriptor
+// and noun lists.
 func NewDefault() Namer {
 	return &namer{
-		descriptors: DefaultDescriptors,
-		nouns:       DefaultNouns,
+		descriptors: defaultDescriptors,
+		nouns:       defaultNouns,
 		intN:        rand.IntN,
 	}
 }
 
 // New returns a Namer that composes names from the given descriptors and
-// nouns. Both lists must be non-empty.
+// nouns. Both lists must be non-empty. The Namer keeps its own copies, so
+// later changes to the lists passed in do not affect it.
 func New(descriptors, nouns []string) (Namer, error) {
 	if len(descriptors) == 0 {
 		return nil, errors.New("descriptors list must not be empty")
@@ -38,8 +40,8 @@ func New(descriptors, nouns []string) (Namer, error) {
 		return nil, errors.New("nouns list must not be empty")
 	}
 	return &namer{
-		descriptors: descriptors,
-		nouns:       nouns,
+		descriptors: slices.Clone(descriptors),
+		nouns:       slices.Clone(nouns),
 		intN:        rand.IntN,
 	}, nil
 }

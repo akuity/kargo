@@ -102,7 +102,7 @@ func newWebhook(
 	sender event.Sender,
 ) (*webhook, error) {
 	mayFourthAliasGenerator, err := namer.New(
-		namer.DefaultDescriptors,
+		namer.DefaultDescriptors(),
 		mayFourthNouns,
 	)
 	if err != nil {

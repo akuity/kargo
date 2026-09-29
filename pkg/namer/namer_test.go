@@ -13,12 +13,14 @@ func TestNewDefault(t *testing.T) {
 	require.NotNil(t, n)
 	parts := strings.Split(n.Name(), "-")
 	require.Len(t, parts, 2)
-	require.Contains(t, DefaultDescriptors, parts[0])
-	require.Contains(t, DefaultNouns, parts[1])
+	require.Contains(t, defaultDescriptors, parts[0])
+	require.Contains(t, defaultNouns, parts[1])
 }
 
 func TestNew(t *testing.T) {
 	t.Parallel()
+	descriptors := []string{"happy"}
+	nouns := []string{"cat"}
 	testCases := []struct {
 		name        string
 		descriptors []string
@@ -43,10 +45,14 @@ func TestNew(t *testing.T) {
 		},
 		{
 			name:        "success",
-			descriptors: []string{"happy"},
-			nouns:       []string{"cat"},
+			descriptors: descriptors,
+			nouns:       nouns,
 			assert: func(t *testing.T, n Namer, err error) {
 				require.NoError(t, err)
+				require.Equal(t, "happy-cat", n.Name())
+				// The Namer must hold its own copies of the lists.
+				descriptors[0] = "grumpy"
+				nouns[0] = "dog"
 				require.Equal(t, "happy-cat", n.Name())
 			},
 		},
