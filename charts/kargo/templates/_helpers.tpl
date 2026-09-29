@@ -284,6 +284,32 @@ app.kubernetes.io/component: kubernetes-webhooks-server
 app.kubernetes.io/component: management-controller
 {{- end -}}
 
+{{- define "kargo.postgres.labels" -}}
+app.kubernetes.io/component: postgres
+{{- end -}}
+
+{{/*
+kargo.database.validate fails the render if both the bundled PostgreSQL and an
+external database are configured, since only one can be the database.
+*/}}
+{{- define "kargo.database.validate" -}}
+{{- if and .Values.database.postgres.enabled .Values.database.external.secretName }}
+{{- fail "database.postgres.enabled and database.external.secretName cannot both be set. Disable the bundled PostgreSQL to use an external database." }}
+{{- end }}
+{{- end -}}
+
+{{/*
+kargo.postgres.password returns the password of the bundled PostgreSQL's kargo
+user: database.postgres.password when set, otherwise one derived from the
+release name and namespace. Deriving rather than generating keeps the password
+stable across upgrades and across `helm template` runs, which matters because
+the database initializes itself with whatever password it first sees. The
+derived value is hexadecimal, so it needs no escaping in a connection string.
+*/}}
+{{- define "kargo.postgres.password" -}}
+{{- .Values.database.postgres.password | default (printf "%s/%s" .Release.Namespace .Release.Name | sha256sum | trunc 32) -}}
+{{- end -}}
+
 {{/*
 kargo.cabundle.enabled returns the string "true" when the passed cabundle dict
 has either `configMapName` or `secretName` set; empty string otherwise. Useful

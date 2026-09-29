@@ -84,15 +84,6 @@ k8s_resource(
   labels = ['kargo']
 )
 
-k8s_yaml('hack/tilt/postgres.yaml')
-k8s_resource(
-  workload = 'kargo-postgres',
-  new_name = 'postgres',
-  port_forwards = ['15432:5432'],
-  resource_deps = ['namespaces'],
-  labels = ['kargo'],
-  trigger_mode = TRIGGER_MODE_AUTO,
-)
 # Migrations are applied once at startup and then only on a manual trigger, so
 # that a migration being written is never applied before it is finished. Tilt
 # still watches db/migrations and marks the resource as having pending changes.
@@ -133,6 +124,17 @@ k8s_yaml(blob(
   str(read_file('hack/tilt/ui.yaml')).replace('__KARGO_BASE_PATH__', kargo_base_path)
 ))
 k8s_yaml('hack/tilt/gpg-secret.yaml')
+
+# The chart's bundled PostgreSQL, enabled by hack/tilt/values.dev.yaml.
+k8s_resource(
+  workload = 'kargo-postgres',
+  new_name = 'postgres',
+  port_forwards = ['15432:5432'],
+  objects = ['kargo-postgres:secret'],
+  resource_deps = ['namespaces'],
+  labels = ['kargo'],
+  trigger_mode = TRIGGER_MODE_AUTO,
+)
 
 k8s_resource(
   new_name = 'common',

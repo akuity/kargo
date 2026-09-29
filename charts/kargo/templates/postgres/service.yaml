@@ -1,0 +1,22 @@
+{{- include "kargo.database.validate" . }}
+{{- if and .Values.workloads.install .Values.database.postgres.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: kargo-postgres
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "kargo.labels" . | nindent 4 }}
+    {{- include "kargo.postgres.labels" . | nindent 4 }}
+  {{- include "kargo.annotations" (dict "root" . "annotations" .Values.database.postgres.annotations) | nindent 2 }}
+spec:
+  clusterIP: None
+  selector:
+    {{- include "kargo.selectorLabels" . | nindent 4 }}
+    {{- include "kargo.postgres.labels" . | nindent 4 }}
+  ports:
+  - name: postgres
+    port: 5432
+    protocol: TCP
+    targetPort: postgres
+{{- end }}

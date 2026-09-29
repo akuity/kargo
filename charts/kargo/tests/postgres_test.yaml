@@ -1,0 +1,203 @@
+suite: postgres/statefulset.yaml
+values:
+  - ../test/values-unittest.yaml
+templates:
+  - templates/postgres/statefulset.yaml
+tests:
+  - it: is not rendered by default
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: is not rendered when workloads are not installed
+    set:
+      workloads.install: false
+      database.postgres.enabled: true
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: renders a single-replica StatefulSet with a volume claim when enabled
+    set:
+      database.postgres.enabled: true
+    asserts:
+      - hasDocuments:
+          count: 1
+      - isKind:
+          of: StatefulSet
+      - equal:
+          path: metadata.name
+          value: kargo-postgres
+      - equal:
+          path: spec.replicas
+          value: 1
+      - equal:
+          path: spec.serviceName
+          value: kargo-postgres
+      - equal:
+          path: spec.template.spec.containers[0].image
+          value: postgres:18.6
+      - notExists:
+          path: spec.template.spec.containers[0].args
+      - equal:
+          path: spec.template.spec.containers[0].env[2].valueFrom.secretKeyRef.name
+          value: kargo-postgres
+      - equal:
+          path: spec.volumeClaimTemplates[0].spec.resources.requests.storage
+          value: 1Gi
+      - notExists:
+          path: spec.volumeClaimTemplates[0].spec.storageClassName
+      - notExists:
+          path: spec.template.spec.volumes
+
+  - it: uses the configured storage class
+    set:
+      database.postgres.enabled: true
+      database.postgres.persistence.storageClass: fast
+    asserts:
+      - equal:
+          path: spec.volumeClaimTemplates[0].spec.storageClassName
+          value: fast
+
+  - it: uses an emptyDir when persistence is disabled
+    set:
+      database.postgres.enabled: true
+      database.postgres.persistence.enabled: false
+    asserts:
+      - notExists:
+          path: spec.volumeClaimTemplates
+      - equal:
+          path: spec.template.spec.volumes[0].name
+          value: data
+      - exists:
+          path: spec.template.spec.volumes[0].emptyDir
+
+  - it: passes extra server settings as -c flags
+    set:
+      database.postgres.enabled: true
+      database.postgres.extraArgs:
+        - log_lock_waits=on
+        - deadlock_timeout=1s
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].args
+          value:
+            - -c
+            - log_lock_waits=on
+            - -c
+            - deadlock_timeout=1s
+
+  - it: falls back to global scheduling settings
+    set:
+      database.postgres.enabled: true
+      global.nodeSelector:
+        disk: ssd
+      global.priorityClassName: high
+    asserts:
+      - equal:
+          path: spec.template.spec.nodeSelector.disk
+          value: ssd
+      - equal:
+          path: spec.template.spec.priorityClassName
+          value: high
+
+  - it: fails when both the bundled and an external database are configured
+    set:
+      database.postgres.enabled: true
+      database.external.secretName: my-db
+    asserts:
+      - failedTemplate:
+          errorPattern: cannot both be set
+
+---
+suite: postgres/service.yaml
+values:
+  - ../test/values-unittest.yaml
+templates:
+  - templates/postgres/service.yaml
+tests:
+  - it: is not rendered by default
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: renders a headless Service on the PostgreSQL port when enabled
+    set:
+      database.postgres.enabled: true
+    asserts:
+      - hasDocuments:
+          count: 1
+      - isKind:
+          of: Service
+      - equal:
+          path: metadata.name
+          value: kargo-postgres
+      - equal:
+          path: spec.clusterIP
+          value: None
+      - equal:
+          path: spec.ports[0].port
+          value: 5432
+      - equal:
+          path: spec.selector["app.kubernetes.io/component"]
+          value: postgres
+
+---
+suite: postgres/secret.yaml
+values:
+  - ../test/values-unittest.yaml
+release:
+  name: kargo
+  namespace: kargo
+templates:
+  - templates/postgres/secret.yaml
+tests:
+  - it: is not rendered by default
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: derives a stable password and connection string when none is given
+    set:
+      database.postgres.enabled: true
+    asserts:
+      - hasDocuments:
+          count: 1
+      - isKind:
+          of: Secret
+      - equal:
+          path: metadata.name
+          value: kargo-postgres
+      # sha256("kargo/kargo") truncated to 32 characters: stable across renders.
+      - equal:
+          path: stringData.password
+          value: 65b98fdbc39e5e7dcd0e7cbbbbfa8aac
+      - equal:
+          path: stringData.connectionString
+          value: postgres://kargo:65b98fdbc39e5e7dcd0e7cbbbbfa8aac@kargo-postgres.kargo.svc:5432/kargo?sslmode=disable
+
+  - it: derives a different password for a different release
+    set:
+      database.postgres.enabled: true
+    release:
+      name: other
+      namespace: kargo
+    asserts:
+      - matchRegex:
+          path: stringData.password
+          pattern: ^[0-9a-f]{32}$
+      - notEqual:
+          path: stringData.password
+          value: 65b98fdbc39e5e7dcd0e7cbbbbfa8aac
+
+  - it: uses the configured password and escapes it in the connection string
+    set:
+      database.postgres.enabled: true
+      database.postgres.password: "p@ss/word"
+    asserts:
+      - equal:
+          path: stringData.password
+          value: p@ss/word
+      - equal:
+          path: stringData.connectionString
+          value: postgres://kargo:p%40ss%2Fword@kargo-postgres.kargo.svc:5432/kargo?sslmode=disable

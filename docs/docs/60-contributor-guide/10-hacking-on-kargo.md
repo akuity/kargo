@@ -505,10 +505,11 @@ this.
 
 ## Working with PostgreSQL
 
-Tilt starts a PostgreSQL instance for local development and forwards
-`127.0.0.1:15432` to its port `5432`. The database, username, and password are
-all `kargo`. Inside the cluster, the address is `kargo-postgres.kargo.svc:5432`.
-Kargo's application components do not use this database yet.
+Tilt enables the PostgreSQL bundled with the Helm chart (the `database.postgres`
+values in `hack/tilt/values.dev.yaml`) and forwards `127.0.0.1:15432` to its
+port `5432`. The database, username, and password are all `kargo`. Inside the
+cluster, the address is `kargo-postgres.kargo.svc:5432`. Kargo's application
+components do not use this database yet.
 
 To open a `psql` session against it:
 
@@ -622,9 +623,9 @@ errors. The `db.pool.acquire` span measures time spent waiting for a free
 connection, which is the first sign that the pool is too small.
 
 A span cannot distinguish a slow query from one that waited on a lock held by
-another session. The development PostgreSQL instance logs every lock wait
-longer than one second, naming both the waiting and the holding session, so
-the pod's logs answer that question:
+another session. The development values set `log_lock_waits` so the
+PostgreSQL instance logs every lock wait longer than one second, naming both
+the waiting and the holding session, and the pod's logs answer that question:
 
 ```shell
 kubectl logs -n kargo kargo-postgres-0 | grep 'still waiting'
