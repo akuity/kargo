@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"path"
 	"strings"
+	"time"
 
 	admissionv1 "k8s.io/api/admission/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -41,12 +42,15 @@ var (
 )
 
 type webhook struct {
-	client                client.Client
-	freightAliasGenerator namer.Namer
+	client                  client.Client
+	freightAliasGenerator   namer.Namer
+	mayFourthAliasGenerator namer.Namer
 
 	sender event.Sender
 
 	// The following behaviors are overridable for testing purposes:
+
+	nowFn func() time.Time
 
 	admissionRequestFromContextFn func(context.Context) (admission.Request, error)
 
@@ -81,11 +85,14 @@ func SetupWebhookWithManager(
 	cfg libWebhook.Config,
 	mgr ctrl.Manager,
 ) error {
-	w := newWebhook(
+	w, err := newWebhook(
 		cfg,
 		mgr.GetClient(),
 		k8sevent.NewEventSender(libEvent.NewRecorder(ctx, mgr.GetScheme(), mgr.GetClient(), "freight-webhook")),
 	)
+	if err != nil {
+		return err
+	}
 	return libWebhook.SetupValidatingAndDefaultingWebhook(mgr, &kargoapi.Freight{}, w)
 }
 
@@ -93,12 +100,21 @@ func newWebhook(
 	cfg libWebhook.Config,
 	kubeClient client.Client,
 	sender event.Sender,
-) *webhook {
-	w := &webhook{
-		client:                kubeClient,
-		freightAliasGenerator: namer.NewDefault(),
-		sender:                sender,
+) (*webhook, error) {
+	mayFourthAliasGenerator, err := namer.New(
+		namer.DefaultDescriptors,
+		mayFourthNouns,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("error creating May Fourth alias generator: %w", err)
 	}
+	w := &webhook{
+		client:                  kubeClient,
+		freightAliasGenerator:   namer.NewDefault(),
+		mayFourthAliasGenerator: mayFourthAliasGenerator,
+		sender:                  sender,
+	}
+	w.nowFn = time.Now
 	w.admissionRequestFromContextFn = admission.RequestFromContext
 	w.getAvailableFreightAliasFn = w.getAvailableFreightAlias
 	w.validateProjectFn = libWebhook.ValidateProject
@@ -107,7 +123,7 @@ func newWebhook(
 	w.getWarehouseFn = api.GetWarehouse
 	w.validateFreightArtifactsFn = validateFreightArtifacts
 	w.isRequestFromKargoControlplaneFn = libWebhook.IsRequestFromKargoControlplane(cfg.ControlplaneUserRegex)
-	return w
+	return w, nil
 }
 
 func (w *webhook) Default(ctx context.Context, freight *kargoapi.Freight) error {

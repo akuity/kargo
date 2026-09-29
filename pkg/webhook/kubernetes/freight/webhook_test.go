@@ -32,13 +32,16 @@ import (
 
 func TestNewWebhook(t *testing.T) {
 	kubeClient := fake.NewClientBuilder().Build()
-	w := newWebhook(
+	w, err := newWebhook(
 		libWebhook.Config{},
 		kubeClient,
 		k8sevent.NewEventSender(&fakeevent.EventRecorder{}),
 	)
+	require.NoError(t, err)
 	require.NotNil(t, w.freightAliasGenerator)
+	require.NotNil(t, w.mayFourthAliasGenerator)
 	// Assert that all overridable behaviors were initialized to a default:
+	require.NotNil(t, w.nowFn)
 	require.NotNil(t, w.admissionRequestFromContextFn)
 	require.NotNil(t, w.getAvailableFreightAliasFn)
 	require.NotNil(t, w.validateProjectFn)
@@ -1399,11 +1402,12 @@ func Test_webhook_Handle_PreservesUnrelatedDurationFormatting(t *testing.T) {
 	require.NoError(t, kargoapi.AddToScheme(scheme))
 
 	kubeClient := fake.NewClientBuilder().WithScheme(scheme).Build()
-	w := newWebhook(
+	w, err := newWebhook(
 		libWebhook.Config{},
 		kubeClient,
 		k8sevent.NewEventSender(&fakeevent.EventRecorder{}),
 	)
+	require.NoError(t, err)
 	wh, err := libWebhook.NewDefaultingWebhook(scheme, &kargoapi.Freight{}, w)
 	require.NoError(t, err)
 
