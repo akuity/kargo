@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 
 	libhttp "github.com/akuity/kargo/pkg/http"
@@ -69,25 +70,32 @@ func (s *server) setupRESTRouter(ctx context.Context) *gin.Engine {
 	// registered after it. Each of the layers below does its work on the way back
 	// out, so the order determines what each one is able to see:
 	//
-	//	logging            ─┐ request
-	//	  error handling    │
-	//	    panic recovery  │
-	//	      authn         │
-	//	        handler    ─┤
-	//	      authn         │
-	//	    panic recovery  │
-	//	  error handling    │
-	//	logging            ─┘ response
+	//	tracing              ─┐ request
+	//	  logging             │
+	//	    error handling    │
+	//	      panic recovery  │
+	//	        authn         │
+	//	          handler    ─┤
+	//	        authn         │
+	//	      panic recovery  │
+	//	    error handling    │
+	//	  logging             │
+	//	tracing              ─┘ response
 	//
-	// Logging is outermost so that it records the status the client actually
-	// received, which is not settled until everything within has finished
-	// writing. Error handling comes next because it is the only thing that writes
-	// an error response. Panic recovery goes inside it, so that a recovered panic
-	// is reported as an error and answered on the way out like any other; were it
-	// outside, a panic would bypass error handling entirely and recovery would
-	// have to write its own response. Authentication is innermost of the four so
-	// that its rejections are answered by the error handling middleware, and so
-	// that a panic within it is recovered too.
+	// Tracing, when enabled, is outermost so that a request's span covers
+	// everything done on its behalf, including logging. Spans are named after
+	// the request's method and route pattern. Logging is next so that it records the
+	// status the client actually received, which is not settled until everything
+	// within has finished writing. Error handling comes next because it is the
+	// only thing that writes an error response. Panic recovery goes inside it, so
+	// that a recovered panic is reported as an error and answered on the way out
+	// like any other; were it outside, a panic would bypass error handling
+	// entirely and recovery would have to write its own response. Authentication
+	// is innermost of the four so that its rejections are answered by the error
+	// handling middleware, and so that a panic within it is recovered too.
+	if s.cfg.TracingEnabled {
+		router.Use(otelgin.Middleware("kargo-api"))
+	}
 	router.Use(LoggingMiddleware())
 	router.Use(s.handleError)
 	router.Use(recoveryMiddleware())

@@ -26,6 +26,7 @@ import (
 	"github.com/akuity/kargo/pkg/logging"
 	"github.com/akuity/kargo/pkg/os"
 	"github.com/akuity/kargo/pkg/server/kubernetes"
+	"github.com/akuity/kargo/pkg/telemetry"
 	"github.com/akuity/kargo/pkg/types"
 	versionpkg "github.com/akuity/kargo/pkg/x/version"
 )
@@ -86,6 +87,15 @@ func (o *managementControllerOptions) run(ctx context.Context) error {
 		"GOMAXPROCS", stdruntime.GOMAXPROCS(0),
 		"GOMEMLIMIT", os.GetEnv("GOMEMLIMIT", ""),
 	)
+
+	shutdownTelemetry, err := telemetry.SetupFromEnv(
+		logging.ContextWithLogger(ctx, o.Logger),
+		"management-controller",
+	)
+	if err != nil {
+		return err
+	}
+	defer shutdownTelemetry()
 
 	kargoMgr, err := o.setupManager(ctx)
 	if err != nil {

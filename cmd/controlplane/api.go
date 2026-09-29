@@ -16,6 +16,7 @@ import (
 	"github.com/akuity/kargo/pkg/server/config"
 	"github.com/akuity/kargo/pkg/server/kubernetes"
 	"github.com/akuity/kargo/pkg/server/rbac"
+	"github.com/akuity/kargo/pkg/telemetry"
 	"github.com/akuity/kargo/pkg/types"
 	versionpkg "github.com/akuity/kargo/pkg/x/version"
 )
@@ -76,6 +77,15 @@ func (o *apiOptions) complete() {
 }
 
 func (o *apiOptions) run(ctx context.Context) error {
+	shutdownTelemetry, err := telemetry.SetupFromEnv(
+		logging.ContextWithLogger(ctx, o.Logger),
+		"api",
+	)
+	if err != nil {
+		return err
+	}
+	defer shutdownTelemetry()
+
 	serverCfg := config.ServerConfigFromEnv()
 
 	restCfg, err := kubernetes.GetRestConfig(ctx, o.KubeConfig)

@@ -12,6 +12,9 @@ metadata:
 data:
   LOG_LEVEL: {{ quote .Values.garbageCollector.logLevel }}
   LOG_FORMAT: {{ quote .Values.garbageCollector.logFormat }}
+  {{- with (include "kargo.tracing.configMapData" .) }}
+  {{- . | nindent 2 }}
+  {{- end }}
   NUM_WORKERS: {{ quote .Values.garbageCollector.workers }}
   MAX_RETAINED_PROMOTIONS: {{ quote .Values.garbageCollector.maxRetainedPromotions }}
   MIN_PROMOTION_DELETION_AGE: {{ quote .Values.garbageCollector.minPromotionDeletionAge }}
