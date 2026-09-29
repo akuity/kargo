@@ -8,10 +8,16 @@ metadata:
   labels:
     {{- include "kargo.labels" . | nindent 4 }}
     {{- include "kargo.postgres.labels" . | nindent 4 }}
+  {{- with (mergeOverwrite (deepCopy .Values.global.labels) .Values.database.postgres.labels) }}
+    {{- range $key, $value := . }}
+    {{ $key }}: {{ $value | quote }}
+    {{- end }}
+  {{- end }}
   {{- include "kargo.annotations" (dict "root" . "annotations" .Values.database.postgres.annotations) | nindent 2 }}
 spec:
   serviceName: kargo-postgres
   replicas: 1
+  revisionHistoryLimit: {{ .Values.database.postgres.revisionHistoryLimit }}
   selector:
     matchLabels:
       {{- include "kargo.selectorLabels" . | nindent 6 }}
@@ -21,13 +27,20 @@ spec:
       labels:
         {{- include "kargo.labels" . | nindent 8 }}
         {{- include "kargo.postgres.labels" . | nindent 8 }}
-      {{- with (mergeOverwrite (deepCopy .Values.global.podAnnotations) .Values.database.postgres.podAnnotations) }}
+      {{- with (mergeOverwrite (deepCopy .Values.global.podLabels) .Values.database.postgres.podLabels) }}
+        {{- range $key, $value := . }}
+        {{ $key }}: {{ $value | quote }}
+        {{- end }}
+      {{- end }}
       annotations:
+        secret/checksum: {{ pick ( include (print $.Template.BasePath "/postgres/secret.yaml") . | fromYaml ) "stringData" | toYaml | sha256sum }}
+      {{- with (mergeOverwrite (deepCopy .Values.global.podAnnotations) .Values.database.postgres.podAnnotations) }}
         {{- range $key, $value := . }}
         {{ $key }}: {{ $value | quote }}
         {{- end }}
       {{- end }}
     spec:
+      serviceAccountName: kargo-postgres
       {{- with .Values.database.postgres.affinity | default .Values.global.affinity }}
       affinity:
         {{- toYaml . | nindent 8 }}
@@ -60,6 +73,13 @@ spec:
             secretKeyRef:
               name: kargo-postgres
               key: password
+        {{- with (concat .Values.global.env .Values.database.postgres.env) }}
+        {{- tpl (toYaml .) $ | nindent 8 }}
+        {{- end }}
+        {{- with (concat .Values.global.envFrom .Values.database.postgres.envFrom) }}
+        envFrom:
+        {{- tpl (toYaml .) $ | nindent 8 }}
+        {{- end }}
         ports:
         - name: postgres
           containerPort: 5432
@@ -75,19 +95,34 @@ spec:
             command: [pg_isready, -h, 127.0.0.1, -U, kargo, -d, kargo]
           periodSeconds: 2
           timeoutSeconds: 2
+        volumeMounts:
+        - name: data
+          mountPath: /var/lib/postgresql
+        {{- with .Values.database.postgres.volumeMounts }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
         {{- with .Values.database.postgres.securityContext | default .Values.global.securityContext }}
         securityContext:
           {{- toYaml . | nindent 10 }}
         {{- end }}
         resources:
           {{- toYaml .Values.database.postgres.resources | nindent 10 }}
-        volumeMounts:
-        - name: data
-          mountPath: /var/lib/postgresql
-      {{- if not .Values.database.postgres.persistence.enabled }}
+      {{- with .Values.database.postgres.containers }}
+      {{- toYaml . | nindent 6 }}
+      {{- end }}
+      {{- with .Values.database.postgres.initContainers }}
+      initContainers:
+      {{- toYaml . | nindent 6 }}
+      {{- end }}
+      {{- if or (not .Values.database.postgres.persistence.enabled) .Values.database.postgres.volumes }}
       volumes:
+      {{- if not .Values.database.postgres.persistence.enabled }}
       - name: data
         emptyDir: {}
+      {{- end }}
+      {{- with .Values.database.postgres.volumes }}
+      {{- toYaml . | nindent 6 }}
+      {{- end }}
       {{- end }}
       {{- with .Values.database.postgres.nodeSelector | default .Values.global.nodeSelector }}
       nodeSelector:

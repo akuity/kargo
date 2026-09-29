@@ -130,7 +130,7 @@ k8s_resource(
   workload = 'kargo-postgres',
   new_name = 'postgres',
   port_forwards = ['15432:5432'],
-  objects = ['kargo-postgres:secret'],
+  objects = ['kargo-postgres:secret', 'kargo-postgres:serviceaccount'],
   resource_deps = ['namespaces'],
   labels = ['kargo'],
   trigger_mode = TRIGGER_MODE_AUTO,

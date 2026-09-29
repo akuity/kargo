@@ -3,13 +3,18 @@ values:
   - ../test/values-unittest.yaml
 templates:
   - templates/postgres/statefulset.yaml
+  # The StatefulSet's checksum annotation renders the Secret, so it must be
+  # part of the suite.
+  - templates/postgres/secret.yaml
 tests:
   - it: is not rendered by default
+    template: templates/postgres/statefulset.yaml
     asserts:
       - hasDocuments:
           count: 0
 
   - it: is not rendered when workloads are not installed
+    template: templates/postgres/statefulset.yaml
     set:
       workloads.install: false
       database.postgres.enabled: true
@@ -18,6 +23,7 @@ tests:
           count: 0
 
   - it: renders a single-replica StatefulSet with a volume claim when enabled
+    template: templates/postgres/statefulset.yaml
     set:
       database.postgres.enabled: true
     asserts:
@@ -51,6 +57,7 @@ tests:
           path: spec.template.spec.volumes
 
   - it: uses the configured storage class
+    template: templates/postgres/statefulset.yaml
     set:
       database.postgres.enabled: true
       database.postgres.persistence.storageClass: fast
@@ -60,6 +67,7 @@ tests:
           value: fast
 
   - it: uses an emptyDir when persistence is disabled
+    template: templates/postgres/statefulset.yaml
     set:
       database.postgres.enabled: true
       database.postgres.persistence.enabled: false
@@ -73,6 +81,7 @@ tests:
           path: spec.template.spec.volumes[0].emptyDir
 
   - it: passes extra server settings as -c flags
+    template: templates/postgres/statefulset.yaml
     set:
       database.postgres.enabled: true
       database.postgres.extraArgs:
@@ -87,7 +96,72 @@ tests:
             - -c
             - deadlock_timeout=1s
 
+  - it: merges labels, pod labels, env, and extension points like other components
+    template: templates/postgres/statefulset.yaml
+    set:
+      database.postgres.enabled: true
+      database.postgres.labels:
+        tier: db
+      global.podLabels:
+        sidecar: injected
+      global.env:
+        - name: TZ
+          value: UTC
+      database.postgres.env:
+        - name: PGTZ
+          value: UTC
+      database.postgres.envFrom:
+        - secretRef:
+            name: extra
+      database.postgres.volumeMounts:
+        - name: extra
+          mountPath: /extra
+      database.postgres.volumes:
+        - name: extra
+          emptyDir: {}
+      database.postgres.initContainers:
+        - name: init
+          image: busybox
+    asserts:
+      - equal:
+          path: metadata.labels.tier
+          value: db
+      - equal:
+          path: spec.template.metadata.labels.sidecar
+          value: injected
+      - exists:
+          path: spec.template.metadata.annotations["secret/checksum"]
+      - equal:
+          path: spec.template.spec.serviceAccountName
+          value: kargo-postgres
+      - equal:
+          path: spec.revisionHistoryLimit
+          value: 10
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: TZ
+            value: UTC
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: PGTZ
+            value: UTC
+      - equal:
+          path: spec.template.spec.containers[0].envFrom[0].secretRef.name
+          value: extra
+      - equal:
+          path: spec.template.spec.containers[0].volumeMounts[1].mountPath
+          value: /extra
+      - equal:
+          path: spec.template.spec.volumes[0].name
+          value: extra
+      - equal:
+          path: spec.template.spec.initContainers[0].name
+          value: init
+
   - it: falls back to global scheduling settings
+    template: templates/postgres/statefulset.yaml
     set:
       database.postgres.enabled: true
       global.nodeSelector:
@@ -102,12 +176,47 @@ tests:
           value: high
 
   - it: fails when both the bundled and an external database are configured
+    template: templates/postgres/statefulset.yaml
     set:
       database.postgres.enabled: true
       database.external.secretName: my-db
     asserts:
       - failedTemplate:
           errorPattern: cannot both be set
+
+---
+suite: postgres/service-account.yaml
+values:
+  - ../test/values-unittest.yaml
+templates:
+  - templates/postgres/service-account.yaml
+tests:
+  - it: is not rendered by default
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: renders a ServiceAccount with merged labels and annotations when enabled
+    set:
+      database.postgres.enabled: true
+      global.serviceAccount.labels:
+        team: platform
+      database.postgres.serviceAccount.annotations:
+        example.com/role: db
+    asserts:
+      - hasDocuments:
+          count: 1
+      - isKind:
+          of: ServiceAccount
+      - equal:
+          path: metadata.name
+          value: kargo-postgres
+      - equal:
+          path: metadata.labels.team
+          value: platform
+      - equal:
+          path: metadata.annotations["example.com/role"]
+          value: db
 
 ---
 suite: postgres/service.yaml
