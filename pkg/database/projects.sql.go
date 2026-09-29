@@ -19,12 +19,12 @@ func (q *Queries) DeleteProject(ctx context.Context, id string) error {
 	return err
 }
 
-const getProject = `-- name: GetProject :one
-SELECT id, name, created_at, synced_at FROM projects WHERE id = $1
+const getProjectByName = `-- name: GetProjectByName :one
+SELECT id, name, created_at, synced_at FROM projects WHERE name = $1
 `
 
-func (q *Queries) GetProject(ctx context.Context, id string) (Project, error) {
-	row := q.db.QueryRow(ctx, getProject, id)
+func (q *Queries) GetProjectByName(ctx context.Context, name string) (Project, error) {
+	row := q.db.QueryRow(ctx, getProjectByName, name)
 	var i Project
 	err := row.Scan(
 		&i.ID,
