@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	semconv "go.opentelemetry.io/otel/semconv/v1.43.0"
 )
 
 func TestNewPoolConfig(t *testing.T) {
@@ -45,7 +46,11 @@ func TestNewPoolConfig(t *testing.T) {
 			var params map[string]string
 			if cfg != nil {
 				params = cfg.ConnConfig.RuntimeParams
-				require.IsType(t, pgxTracer{}, cfg.ConnConfig.Tracer)
+				tracer, ok := cfg.ConnConfig.Tracer.(pgxTracer)
+				require.True(t, ok)
+				require.Contains(t, tracer.connAttrs, semconv.DBNamespace("kargo"))
+				require.Contains(t, tracer.connAttrs, semconv.ServerAddress("localhost"))
+				require.Contains(t, tracer.connAttrs, semconv.ServerPort(5432))
 			}
 			testCase.assert(t, params, err)
 		})

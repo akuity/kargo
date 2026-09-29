@@ -58,6 +58,15 @@ func eventAttributesOf(event sdktrace.Event) map[attribute.Key]attribute.Value {
 
 const testSQLCQuery = "-- name: GetProject :one\nSELECT id FROM projects WHERE id = $1\n"
 
+// newTestTracer returns a tracer built from a parsed connection string, so
+// tests exercise the connection attributes a real pool would carry.
+func newTestTracer(t *testing.T) pgxTracer {
+	t.Helper()
+	cfg, err := pgx.ParseConfig("postgres://kargo:kargo@db.example:5433/kargo")
+	require.NoError(t, err)
+	return newPgxTracer(cfg)
+}
+
 func TestPgxTracer_Query(t *testing.T) {
 	// Not parallel: installs a global tracer provider.
 	lockErr := &pgconn.PgError{Code: "55P03", Message: "lock not available"}
@@ -77,6 +86,9 @@ func TestPgxTracer_Query(t *testing.T) {
 				require.Equal(t, codes.Unset, span.Status().Code)
 				attrs := attributesOf(span)
 				require.Equal(t, "postgresql", attrs[semconv.DBSystemNameKey].AsString())
+				require.Equal(t, "kargo", attrs[semconv.DBNamespaceKey].AsString())
+				require.Equal(t, "db.example", attrs[semconv.ServerAddressKey].AsString())
+				require.Equal(t, int64(5433), attrs[semconv.ServerPortKey].AsInt64())
 				require.Equal(t, testSQLCQuery, attrs[semconv.DBQueryTextKey].AsString())
 				require.Equal(t, "GetProject", attrs[semconv.DBQuerySummaryKey].AsString())
 				require.Equal(t, "SELECT", attrs[semconv.DBOperationNameKey].AsString())
@@ -132,7 +144,7 @@ func TestPgxTracer_Query(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			recorder := installSpanRecorder(t)
-			var tr pgxTracer
+			tr := newTestTracer(t)
 			ctx := tr.TraceQueryStart(
 				context.Background(),
 				nil,
@@ -201,7 +213,7 @@ func TestPgxTracer_Batch(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			recorder := installSpanRecorder(t)
-			var tr pgxTracer
+			tr := newTestTracer(t)
 			batch := &pgx.Batch{}
 			for _, q := range testCase.queries {
 				batch.Queue(q.SQL)

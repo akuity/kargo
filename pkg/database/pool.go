@@ -47,7 +47,7 @@ func newPoolConfig(
 	if err != nil {
 		return nil, fmt.Errorf("error parsing database connection string: %w", err)
 	}
-	cfg.ConnConfig.Tracer = pgxTracer{}
+	cfg.ConnConfig.Tracer = newPgxTracer(cfg.ConnConfig)
 	if cfg.ConnConfig.RuntimeParams == nil {
 		cfg.ConnConfig.RuntimeParams = map[string]string{}
 	}

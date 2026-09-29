@@ -40,7 +40,24 @@ const (
 //
 // The spans use the OpenTelemetry API only, so a pool built with one of these
 // costs next to nothing until a component enables tracing.
-type pgxTracer struct{}
+type pgxTracer struct {
+	// connAttrs describes the database every span concerns. It is built once
+	// from the pool's configuration; pgx.Conn.Config() returns a deep copy,
+	// which is too expensive to take on every query.
+	connAttrs []attribute.KeyValue
+}
+
+// newPgxTracer returns a tracer for connections made with cfg.
+func newPgxTracer(cfg *pgx.ConnConfig) pgxTracer {
+	return pgxTracer{
+		connAttrs: []attribute.KeyValue{
+			semconv.DBSystemNamePostgreSQL,
+			semconv.DBNamespace(cfg.Database),
+			semconv.ServerAddress(cfg.Host),
+			semconv.ServerPort(int(cfg.Port)),
+		},
+	}
+}
 
 // pgx only requires a QueryTracer; it discovers BatchTracer with a runtime
 // type assertion and silently skips it if not found. These assertions turn a
@@ -51,16 +68,16 @@ var (
 )
 
 // TraceQueryStart implements pgx.QueryTracer.
-func (pgxTracer) TraceQueryStart(
+func (t pgxTracer) TraceQueryStart(
 	ctx context.Context,
-	conn *pgx.Conn,
+	_ *pgx.Conn,
 	data pgx.TraceQueryStartData,
 ) context.Context {
 	ctx, _ = tracer.Start(
 		ctx,
 		querySpanName(data.SQL),
 		trace.WithSpanKind(trace.SpanKindClient),
-		trace.WithAttributes(queryAttributes(conn, data.SQL)...),
+		trace.WithAttributes(t.queryAttributes(data.SQL)...),
 	)
 	return ctx
 }
@@ -81,12 +98,12 @@ func (pgxTracer) TraceQueryEnd(
 }
 
 // TraceBatchStart implements pgx.BatchTracer.
-func (pgxTracer) TraceBatchStart(
+func (t pgxTracer) TraceBatchStart(
 	ctx context.Context,
-	conn *pgx.Conn,
+	_ *pgx.Conn,
 	data pgx.TraceBatchStartData,
 ) context.Context {
-	attrs := connectionAttributes(conn)
+	attrs := t.connectionAttributes()
 	if data.Batch != nil {
 		attrs = append(attrs, batchSizeKey.Int(data.Batch.Len()))
 	}
@@ -177,9 +194,9 @@ func operationName(sql string) string {
 // queryAttributes returns the attributes recorded on a query span. The full
 // query text is included; sqlc queries are parameterized, so it never
 // contains values.
-func queryAttributes(conn *pgx.Conn, sql string) []attribute.KeyValue {
+func (t pgxTracer) queryAttributes(sql string) []attribute.KeyValue {
 	attrs := append(
-		connectionAttributes(conn),
+		t.connectionAttributes(),
 		semconv.DBQueryText(sql),
 	)
 	if name, ok := sqlcQueryName(sql); ok {
@@ -191,19 +208,14 @@ func queryAttributes(conn *pgx.Conn, sql string) []attribute.KeyValue {
 	return attrs
 }
 
-// connectionAttributes describes the database a connection talks to.
-func connectionAttributes(conn *pgx.Conn) []attribute.KeyValue {
-	attrs := []attribute.KeyValue{semconv.DBSystemNamePostgreSQL}
-	if conn == nil {
-		return attrs
+// connectionAttributes returns a fresh slice describing the database, safe
+// for callers to append to. A zero-value tracer, as used in tests, reports
+// only the database system.
+func (t pgxTracer) connectionAttributes() []attribute.KeyValue {
+	if t.connAttrs == nil {
+		return []attribute.KeyValue{semconv.DBSystemNamePostgreSQL}
 	}
-	cfg := conn.Config()
-	return append(
-		attrs,
-		semconv.DBNamespace(cfg.Database),
-		semconv.ServerAddress(cfg.Host),
-		semconv.ServerPort(int(cfg.Port)),
-	)
+	return append(make([]attribute.KeyValue, 0, len(t.connAttrs)+4), t.connAttrs...)
 }
 
 // rowCountAttributes returns the row count a statement's command tag carries.
