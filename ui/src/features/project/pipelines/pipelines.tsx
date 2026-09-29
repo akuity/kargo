@@ -32,6 +32,7 @@ import { DictionaryContext } from './context/dictionary-context';
 import { FreightTimelineControllerContext } from './context/freight-timeline-controller-context';
 import { FreightTimeline } from './freight/freight-timeline';
 import { Graph } from './graph/graph';
+import { useEventsWatcher } from './graph/use-events-watcher';
 import { GraphFilters } from './graph-filters';
 import { Images } from './image-history/images';
 import { PipelineListView } from './list/list-view';
@@ -122,13 +123,22 @@ export const Pipelines = (props: { creatingStage?: boolean; creatingWarehouse?: 
 
   const pipelineView = preferredFilter.view;
 
-  // A failed list is not an empty project -- both queries fall back to [] --
-  // so the two get separate conditions and separate views. Without the split,
-  // an unauthorized or errored request would claim the project has no pipeline
-  // and offer to create one.
   const pipelineError = listWarehousesQuery.error || listStagesQuery.error;
 
-  const emptyPipeline = warehouses.length === 0 && stages.length === 0;
+  const pipelineContent = ((): 'loading' | 'error' | 'empty' | 'graph' | 'list' => {
+    if (loading || listStagesQuery.isLoading) {
+      return 'loading';
+    }
+    // Data wins over an error: a failed background refetch keeps the last good
+    // data, and an error screen here would unmount the watcher that clears it.
+    if (warehouses.length > 0 || stages.length > 0) {
+      return pipelineView;
+    }
+    if (pipelineError) {
+      return 'error';
+    }
+    return 'empty';
+  })();
 
   const setPipelineView = (nextView: 'graph' | 'list') => {
     setPreferredFilter({ ...preferredFilter, view: nextView });
@@ -159,6 +169,14 @@ export const Pipelines = (props: { creatingStage?: boolean; creatingWarehouse?: 
   usePersistPreferredFilter(projectName || '', preferredFilter);
 
   useWatchFreight(projectName || '', preferredFilter.warehouses, !getFreightQuery.isLoading);
+
+  // Stages and Warehouses are only watched from inside Graph and
+  // PipelineListView, so cover the states that replace them.
+  useEventsWatcher(
+    pipelineContent === 'empty' || pipelineContent === 'error' ? projectName : '',
+    undefined,
+    preferredFilter.warehouses
+  );
 
   if (loading) {
     return <LoadingState />;
@@ -316,41 +334,31 @@ export const Pipelines = (props: { creatingStage?: boolean; creatingWarehouse?: 
                       />
                     </div>
                   )}
-                  {listStagesQuery.isLoading && (
+                  {pipelineContent === 'loading' && (
                     <div className='mt-20'>
                       <LoadingState />
                     </div>
                   )}
-                  {!!pipelineError && !listStagesQuery.isLoading && (
-                    <PipelineError message={pipelineError.message} />
+                  {pipelineContent === 'error' && (
+                    <PipelineError message={pipelineError?.message} />
                   )}
-                  {!pipelineError && emptyPipeline && !listStagesQuery.isLoading && (
-                    <PipelineEmpty project={projectName} />
+                  {pipelineContent === 'empty' && <PipelineEmpty project={projectName} />}
+                  {pipelineContent === 'graph' && (
+                    <Graph
+                      project={project.metadata?.name || ''}
+                      warehouses={warehouses}
+                      stages={stages}
+                    />
                   )}
-                  {pipelineView === 'graph' &&
-                    !pipelineError &&
-                    !emptyPipeline &&
-                    !loading &&
-                    !listStagesQuery.isLoading && (
-                      <Graph
-                        project={project.metadata?.name || ''}
-                        warehouses={warehouses}
-                        stages={stages}
-                      />
-                    )}
-                  {pipelineView === 'list' &&
-                    !pipelineError &&
-                    !emptyPipeline &&
-                    !loading &&
-                    !listStagesQuery.isLoading && (
-                      <PipelineListView
-                        stages={stages}
-                        warehouses={warehouses}
-                        project={projectName || ''}
-                        freights={freights}
-                        className='mt-2'
-                      />
-                    )}
+                  {pipelineContent === 'list' && (
+                    <PipelineListView
+                      stages={stages}
+                      warehouses={warehouses}
+                      project={projectName || ''}
+                      freights={freights}
+                      className='mt-2'
+                    />
+                  )}
                 </div>
               </div>
 

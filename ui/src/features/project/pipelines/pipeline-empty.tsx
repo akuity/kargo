@@ -6,13 +6,9 @@ import { generatePath, Link } from 'react-router-dom';
 import { paths } from '@ui/config/paths';
 
 /**
- * Shown in place of the pipeline when a project has neither Warehouses nor
- * Stages -- an otherwise blank canvas that gives no hint of what to do next.
- *
- * Pinned to the top of the (relatively positioned) pipeline container rather
- * than laid out in flow: the toolbar above floats in graph view but takes up
- * space in list view, which would otherwise shift this down when toggling
- * between the two.
+ * Pinned to the top of the pipeline container rather than laid out in flow: the
+ * toolbar above floats in graph view but takes up space in list view, which
+ * would otherwise shift this down when toggling between the two.
  */
 export const PipelineEmpty = (props: { project: string }) => (
   <Flex align='center' justify='center' className='absolute top-32 left-0 right-0 px-4'>
