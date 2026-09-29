@@ -58,7 +58,6 @@ webhooksServer:
   logLevel: DEBUG
 database:
   postgres:
-    enabled: true
     password: kargo
     # Log any lock wait longer than deadlock_timeout, naming the session that
     # holds the lock. A slow query span alone cannot tell a lock wait from a

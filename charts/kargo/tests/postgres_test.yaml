@@ -7,8 +7,10 @@ templates:
   # part of the suite.
   - templates/postgres/secret.yaml
 tests:
-  - it: is not rendered by default
+  - it: is not rendered when the bundled database is disabled
     template: templates/postgres/statefulset.yaml
+    set:
+      database.postgres.enabled: false
     asserts:
       - hasDocuments:
           count: 0
@@ -17,15 +19,12 @@ tests:
     template: templates/postgres/statefulset.yaml
     set:
       workloads.install: false
-      database.postgres.enabled: true
     asserts:
       - hasDocuments:
           count: 0
 
-  - it: renders a single-replica StatefulSet with a volume claim when enabled
+  - it: renders a single-replica StatefulSet with a volume claim by default
     template: templates/postgres/statefulset.yaml
-    set:
-      database.postgres.enabled: true
     asserts:
       - hasDocuments:
           count: 1
@@ -59,7 +58,6 @@ tests:
   - it: uses the configured storage class
     template: templates/postgres/statefulset.yaml
     set:
-      database.postgres.enabled: true
       database.postgres.persistence.storageClass: fast
     asserts:
       - equal:
@@ -69,7 +67,6 @@ tests:
   - it: uses an emptyDir when persistence is disabled
     template: templates/postgres/statefulset.yaml
     set:
-      database.postgres.enabled: true
       database.postgres.persistence.enabled: false
     asserts:
       - notExists:
@@ -83,7 +80,6 @@ tests:
   - it: passes extra server settings as -c flags
     template: templates/postgres/statefulset.yaml
     set:
-      database.postgres.enabled: true
       database.postgres.extraArgs:
         - log_lock_waits=on
         - deadlock_timeout=1s
@@ -99,7 +95,6 @@ tests:
   - it: merges labels, pod labels, env, and extension points like other components
     template: templates/postgres/statefulset.yaml
     set:
-      database.postgres.enabled: true
       global.labels:
         team: platform
       database.postgres.labels:
@@ -168,7 +163,6 @@ tests:
   - it: falls back to global scheduling settings
     template: templates/postgres/statefulset.yaml
     set:
-      database.postgres.enabled: true
       global.nodeSelector:
         disk: ssd
       global.priorityClassName: high
@@ -183,7 +177,6 @@ tests:
   - it: fails when both the bundled and an external database are configured
     template: templates/postgres/statefulset.yaml
     set:
-      database.postgres.enabled: true
       database.external.secretName: my-db
     asserts:
       - failedTemplate:
@@ -196,14 +189,15 @@ values:
 templates:
   - templates/postgres/service-account.yaml
 tests:
-  - it: is not rendered by default
+  - it: is not rendered when the bundled database is disabled
+    set:
+      database.postgres.enabled: false
     asserts:
       - hasDocuments:
           count: 0
 
-  - it: renders a ServiceAccount with merged labels and annotations when enabled
+  - it: renders a ServiceAccount with merged labels and annotations
     set:
-      database.postgres.enabled: true
       global.serviceAccount.labels:
         team: platform
       database.postgres.serviceAccount.annotations:
@@ -230,14 +224,14 @@ values:
 templates:
   - templates/postgres/service.yaml
 tests:
-  - it: is not rendered by default
+  - it: is not rendered when the bundled database is disabled
+    set:
+      database.postgres.enabled: false
     asserts:
       - hasDocuments:
           count: 0
 
-  - it: renders a headless Service on the PostgreSQL port when enabled
-    set:
-      database.postgres.enabled: true
+  - it: renders a headless Service on the PostgreSQL port by default
     asserts:
       - hasDocuments:
           count: 1
@@ -266,14 +260,14 @@ release:
 templates:
   - templates/postgres/secret.yaml
 tests:
-  - it: is not rendered by default
+  - it: is not rendered when the bundled database is disabled
+    set:
+      database.postgres.enabled: false
     asserts:
       - hasDocuments:
           count: 0
 
   - it: derives a stable password and connection string when none is given
-    set:
-      database.postgres.enabled: true
     asserts:
       - hasDocuments:
           count: 1
@@ -292,7 +286,6 @@ tests:
 
   - it: derives a different password for a different release
     set:
-      database.postgres.enabled: true
     release:
       name: other
       namespace: kargo
@@ -306,7 +299,6 @@ tests:
 
   - it: uses the configured password and escapes it in the connection string
     set:
-      database.postgres.enabled: true
       database.postgres.password: "p@ss/word"
     asserts:
       - equal:

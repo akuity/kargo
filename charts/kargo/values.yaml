@@ -1402,8 +1402,8 @@ webhooksServer:
 ## reference to an external one.
 database:
   postgres:
-    ## @param database.postgres.enabled Whether to run the PostgreSQL bundled with the chart: a single, minimally configurable instance meant for evaluation and development. It has no replication, backups, or tuning and is not suitable for production. Cannot be combined with `database.external.secretName`.
-    enabled: false
+    ## @param database.postgres.enabled Whether to run the PostgreSQL bundled with the chart: a single, minimally configurable instance meant for evaluation and development. It has no replication, backups, or tuning and is not suitable for production. Disable it and set `database.external.secretName` to use your own database.
+    enabled: true
     image:
       ## @param database.postgres.image.repository Image repository of the bundled PostgreSQL.
       repository: postgres

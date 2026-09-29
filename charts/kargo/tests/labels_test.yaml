@@ -78,7 +78,6 @@ tests:
   - it: lets a component label override a global label on the postgres StatefulSet
     template: templates/postgres/statefulset.yaml
     set:
-      database.postgres.enabled: true
       global.labels:
         team: platform
       database.postgres.labels:

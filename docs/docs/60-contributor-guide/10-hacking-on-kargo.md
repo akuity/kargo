@@ -505,9 +505,9 @@ this.
 
 ## Working with PostgreSQL
 
-Tilt enables the PostgreSQL bundled with the Helm chart (the `database.postgres`
-values in `hack/tilt/values.dev.yaml`) and forwards `127.0.0.1:15432` to its
-port `5432`. The database, username, and password are all `kargo`. Inside the
+Tilt runs the PostgreSQL bundled with the Helm chart, configured by the
+`database.postgres` values in `hack/tilt/values.dev.yaml`, and forwards
+`127.0.0.1:15432` to its port `5432`. The database, username, and password are all `kargo`. Inside the
 cluster, the address is `kargo-postgres.kargo.svc:5432`. Kargo's application
 components do not use this database yet.
 
