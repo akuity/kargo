@@ -13,7 +13,7 @@ func (w *webhook) getAvailableFreightAlias(
 	ctx context.Context,
 ) (string, error) {
 	for {
-		alias := w.freightAliasGenerator.NameSep("-")
+		alias := w.freightAliasGenerator.Name()
 		freight := kargoapi.FreightList{}
 		if err := w.client.List(
 			ctx,

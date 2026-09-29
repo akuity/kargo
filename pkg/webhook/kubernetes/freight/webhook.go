@@ -7,7 +7,6 @@ import (
 	"path"
 	"strings"
 
-	"github.com/technosophos/moniker"
 	admissionv1 "k8s.io/api/admission/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -25,6 +24,7 @@ import (
 	"github.com/akuity/kargo/pkg/indexer"
 	libEvent "github.com/akuity/kargo/pkg/kubernetes/event"
 	"github.com/akuity/kargo/pkg/logging"
+	"github.com/akuity/kargo/pkg/namer"
 	"github.com/akuity/kargo/pkg/urls"
 	libWebhook "github.com/akuity/kargo/pkg/webhook/kubernetes"
 )
@@ -42,7 +42,7 @@ var (
 
 type webhook struct {
 	client                client.Client
-	freightAliasGenerator moniker.Namer
+	freightAliasGenerator namer.Namer
 
 	sender event.Sender
 
@@ -96,7 +96,7 @@ func newWebhook(
 ) *webhook {
 	w := &webhook{
 		client:                kubeClient,
-		freightAliasGenerator: moniker.New(),
+		freightAliasGenerator: namer.NewDefault(),
 		sender:                sender,
 	}
 	w.admissionRequestFromContextFn = admission.RequestFromContext
