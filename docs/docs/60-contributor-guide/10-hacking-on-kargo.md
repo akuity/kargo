@@ -596,6 +596,30 @@ retains its volume claim when deleted. Deleting the `kargo` namespace or the
 reclaim policy determines whether the backing volume is also deleted. Treat
 this database as disposable development data.
 
+### Tracing database operations
+
+Connection pools created with `database.NewPool` record an OpenTelemetry span
+for every query, batch, and connection acquisition, using the same tracing
+setup as the rest of the control plane. Spans are named after the sqlc query
+that produced them, for example `GetProject`, and carry the query text (never
+its parameters), the operation, the number of rows returned, and the server's
+SQLSTATE code when a query fails. Lock timeouts, deadlocks, and serialization
+failures each have their own code, so they can be told apart from other
+errors. The `db.pool.acquire` span measures time spent waiting for a free
+connection, which is the first sign that the pool is too small.
+
+A span cannot distinguish a slow query from one that waited on a lock held by
+another session. The development PostgreSQL instance logs every lock wait
+longer than one second, naming both the waiting and the holding session, so
+the pod's logs answer that question:
+
+```shell
+kubectl logs -n kargo kargo-postgres-0 | grep 'still waiting'
+```
+
+Every component's sessions carry an `application_name`, so the log lines and
+`pg_stat_activity` show which component held the lock.
+
 ### Generating query code with sqlc
 
 Kargo uses [sqlc](https://sqlc.dev) to generate type-safe Go code from SQL.
