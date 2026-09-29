@@ -438,6 +438,12 @@ hack-tilt-down: install-tilt
 db-migrate:
 	bash hack/tilt/migrate.sh
 
+# Opens psql inside the development PostgreSQL pod, so no client needs to be
+# installed locally and the client always matches the server.
+.PHONY: db-shell
+db-shell:
+	kubectl exec -it -n kargo kargo-postgres-0 -- psql -U kargo -d kargo
+
 .PHONY: hack-kind-down
 hack-kind-down:
 	# ctlptl shells out to the `kind` binary, so build it (pinned via go.mod)

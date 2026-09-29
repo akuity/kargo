@@ -510,29 +510,45 @@ Tilt starts a PostgreSQL instance for local development and forwards
 all `kargo`. Inside the cluster, the address is `kargo-postgres.kargo.svc:5432`.
 Kargo's application components do not use this database yet.
 
+To open a `psql` session against it:
+
+```shell
+make db-shell
+```
+
+This runs `psql` inside the PostgreSQL pod, so nothing needs to be installed
+locally and the client always matches the server.
+
+### Migrations
+
 The `db-migrate` Tilt resource waits for PostgreSQL to accept a connection,
 then runs the pinned Goose tool to apply pending SQL migrations from
-`db/migrations/`. It runs on startup and whenever that directory changes.
-Migration failures appear in Tilt; failed migrations are not automatically
-retried by the migration script. An empty directory is supported while the
-initial schema is being developed.
+`db/migrations/`. It runs once at startup. After that, Tilt watches the
+directory and marks the resource as having pending changes, but applies them
+only when you trigger it, from the Tilt UI or with:
 
-To run the same migration command manually while Tilt is running:
+```shell
+hack/bin/tilt trigger db-migrate
+```
+
+This keeps a migration you are still editing from being applied early.
+Migration failures appear in Tilt and are not retried. An empty directory is
+supported while the initial schema is being developed.
+
+To run the same migration command outside Tilt:
 
 ```shell
 make db-migrate
 ```
 
-To inspect the database or run other Goose commands, configure your shell:
+To run other Goose commands, configure your shell:
 
 ```shell
 export GOOSE_DRIVER=postgres
 export GOOSE_DBSTRING='postgres://kargo:kargo@127.0.0.1:15432/kargo?sslmode=disable'
 export GOOSE_MIGRATION_DIR=db/migrations
 
-go tool goose version
-# Requires the PostgreSQL client to be installed locally:
-psql "$GOOSE_DBSTRING"
+go tool goose status
 ```
 
 `make db-migrate` uses these values by default. Set the same environment
@@ -541,11 +557,10 @@ separate development database.
 
 ### Creating a migration
 
-Create and edit migration drafts outside the watched directory. For example:
+Create the migration in place:
 
 ```shell
-draft_dir=$(mktemp -d)
-go tool goose -dir "$draft_dir" create create_widgets sql
+go tool goose -dir db/migrations create create_widgets sql
 ```
 
 Replace the generated SQL with:
@@ -561,25 +576,23 @@ CREATE TABLE widgets (
 DROP TABLE widgets;
 ```
 
-Once the migration is complete, move it into the watched directory:
+Trigger `db-migrate`, then inspect the result:
 
 ```shell
-mv "$draft_dir"/*.sql db/migrations/
+hack/bin/tilt trigger db-migrate
+make db-shell
 ```
 
-Tilt applies it automatically. You can then inspect the result:
-
-```shell
-go tool goose status
-psql "$GOOSE_DBSTRING" -c '\d widgets'
+```sql
+\d widgets
 ```
 
 :::note
 
-Creating a migration directly in `db/migrations/` can cause Tilt to apply the
-generated template before you finish editing it. Goose tracks migration
-versions; editing an already-applied file does not apply it again. Add a new
-migration for subsequent schema changes.
+Goose tracks migrations by version and never re-applies one it has already
+run. If an applied migration turns out to be wrong, roll it back with
+`go tool goose down` before editing it. Once a migration has merged, add a new
+one instead of changing it.
 
 :::
 

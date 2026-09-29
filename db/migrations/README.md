@@ -1,38 +1,38 @@
 # Database migrations
 
 This directory holds the Goose SQL migrations that define Kargo's database
-schema. Tilt watches it and runs `make db-migrate` on startup and whenever a
-file here changes, so every migration in this directory is applied to the
-local PostgreSQL database as soon as it is saved.
+schema. Tilt applies them to the local PostgreSQL database once at startup.
+After that, changes here are applied only when you trigger the `db-migrate`
+resource, from the Tilt UI or with:
 
-Because of that, do not draft migrations in this directory. A half-written
-file is applied the moment it is saved, and Goose records it as done. Editing
-the file afterward does not run it again, so the database ends up with the
-draft's schema and no clean way back to the intended one.
+```shell
+hack/bin/tilt trigger db-migrate
+```
+
+Tilt still watches the directory and marks `db-migrate` as having pending
+changes, so a saved but unapplied migration is visible without being run.
 
 ## Workflow
 
-1. Create the migration in a scratch directory outside the repository:
+1. Create the migration here:
 
    ```shell
-   draft_dir=$(mktemp -d)
-   go tool goose -dir "$draft_dir" create create_widgets sql
+   go tool goose -dir db/migrations create create_widgets sql
    ```
 
-2. Edit the generated file until the `Up` and `Down` statements are the ones
-   you want to keep.
+2. Edit the generated file until the `Up` and `Down` statements are final.
 
-3. Move it here. Tilt applies it within a few seconds:
+3. Trigger `db-migrate`, then inspect the result:
 
    ```shell
-   mv "$draft_dir"/*.sql db/migrations/
+   hack/bin/tilt trigger db-migrate
+   make db-shell
    ```
 
-4. Verify the result with `go tool goose status` or `psql`.
-
-If a migration that has already been applied locally turns out to be wrong,
-roll it back with `go tool goose down` before editing it, or add a new
-migration. Do not edit an applied migration in place.
+Goose records each applied migration by version and never re-runs it, so an
+applied migration that turns out to be wrong must be rolled back with
+`go tool goose down` before it is edited. Once a migration has merged, add a
+new one instead.
 
 Queries that read from or write to these tables live in `db/queries/`, and
 `sqlc.yaml` reads this directory for the schema. Keep a table's migration, its
