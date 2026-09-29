@@ -16,10 +16,6 @@ export const receiverType = (key: string) => webhookReceivers.find((type) => typ
 /** A receiver type's display name, falling back to its raw API key. */
 export const receiverTypeLabel = (key: string) => receiverType(key)?.label ?? key;
 
-/**
- * The one receiver type carrying configuration beyond a Secret reference, so
- * the only one the form needs to name.
- */
 export const artifactoryKey = 'artifactory';
 
 /**
