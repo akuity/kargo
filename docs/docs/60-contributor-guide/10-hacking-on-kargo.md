@@ -615,9 +615,10 @@ this database as disposable development data.
 Connection pools created with `database.NewPool` record an OpenTelemetry span
 for every query and batch, using the same tracing setup as the rest of the
 control plane. Spans are named after the sqlc query
-that produced them, for example `GetProject`, and carry the query text (never
-its parameters), the operation, the number of rows returned, and the server's
-SQLSTATE code when a query fails. Lock timeouts, deadlocks, and serialization
+that produced them, for example `GetProjectByName`, and carry the operation,
+the number of rows returned, and the server's SQLSTATE code when a query
+fails. For sqlc queries, which are always parameterized, the query text is
+recorded as well; parameters never are. Lock timeouts, deadlocks, and serialization
 failures each have their own code, so they can be told apart from other
 errors.
 

@@ -8,7 +8,7 @@ import (
 	"time"
 )
 
-type Project struct {
+type ProjectRow struct {
 	ID        string
 	Name      string
 	CreatedAt time.Time

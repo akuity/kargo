@@ -19,13 +19,31 @@ func (q *Queries) DeleteProject(ctx context.Context, id string) error {
 	return err
 }
 
+const deleteReplacedProject = `-- name: DeleteReplacedProject :exec
+DELETE FROM projects WHERE name = $1 AND id <> $2
+`
+
+type DeleteReplacedProjectParams struct {
+	Name string
+	ID   string
+}
+
+// Sync is keyed on the Kubernetes UID, so a row carrying the same name as
+// an incoming Project but a different id can only be left over from a
+// Project that was deleted and recreated. Remove it before upserting so the
+// unique index on name is not violated.
+func (q *Queries) DeleteReplacedProject(ctx context.Context, arg DeleteReplacedProjectParams) error {
+	_, err := q.db.Exec(ctx, deleteReplacedProject, arg.Name, arg.ID)
+	return err
+}
+
 const getProjectByName = `-- name: GetProjectByName :one
 SELECT id, name, created_at, synced_at FROM projects WHERE name = $1
 `
 
-func (q *Queries) GetProjectByName(ctx context.Context, name string) (Project, error) {
+func (q *Queries) GetProjectByName(ctx context.Context, name string) (ProjectRow, error) {
 	row := q.db.QueryRow(ctx, getProjectByName, name)
-	var i Project
+	var i ProjectRow
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
@@ -39,15 +57,15 @@ const listProjects = `-- name: ListProjects :many
 SELECT id, name, created_at, synced_at FROM projects ORDER BY name
 `
 
-func (q *Queries) ListProjects(ctx context.Context) ([]Project, error) {
+func (q *Queries) ListProjects(ctx context.Context) ([]ProjectRow, error) {
 	rows, err := q.db.Query(ctx, listProjects)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []Project
+	var items []ProjectRow
 	for rows.Next() {
-		var i Project
+		var i ProjectRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.Name,

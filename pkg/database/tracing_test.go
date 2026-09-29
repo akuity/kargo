@@ -96,13 +96,15 @@ func TestPgxTracer_Query(t *testing.T) {
 			},
 		},
 		{
-			name: "hand-written write is named by its operation and reports its row count",
-			sql:  "insert into projects (id) values ($1)",
-			end:  pgx.TraceQueryEndData{CommandTag: pgconn.NewCommandTag("INSERT 0 1")},
+			name: "hand-written write is named by its operation and its text is not recorded",
+			// A hand-written statement may have interpolated a value.
+			sql: "insert into projects (id) values ('secret')",
+			end: pgx.TraceQueryEndData{CommandTag: pgconn.NewCommandTag("INSERT 0 1")},
 			assert: func(t *testing.T, span sdktrace.ReadOnlySpan) {
 				require.Equal(t, "INSERT", span.Name())
 				attrs := attributesOf(span)
 				require.NotContains(t, attrs, semconv.DBQuerySummaryKey)
+				require.NotContains(t, attrs, semconv.DBQueryTextKey)
 				require.Equal(t, "INSERT", attrs[semconv.DBOperationNameKey].AsString())
 				require.Equal(t, int64(1), attrs[semconv.DBResponseReturnedRowsKey].AsInt64())
 			},
@@ -154,7 +156,8 @@ func TestPgxTracer_Query(t *testing.T) {
 			spans := recorder.Ended()
 			require.Len(t, spans, 1)
 			testCase.assert(t, spans[0])
-			// Query parameters must never leak into a span.
+			// Neither query parameters nor values interpolated into a
+			// hand-written statement may ever reach a span.
 			for _, kv := range spans[0].Attributes() {
 				require.NotContains(t, kv.Value.String(), "secret")
 			}
