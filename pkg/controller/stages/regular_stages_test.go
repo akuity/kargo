@@ -2519,6 +2519,9 @@ func TestRegularStageReconciler_syncPromotionRequests(t *testing.T) {
 					},
 					Status: kargoapi.PromotionRequestStatus{
 						Phase: kargoapi.PromotionRequestPhaseRunning,
+						Freight: &kargoapi.FreightReference{
+							Name: "test-freight",
+						},
 					},
 				},
 			},

@@ -126,6 +126,7 @@ type PromotionRequestSpec struct {
 
 	// UpdateStrategy configures the pace of updating the targets
 	// +optional
+	// +kubebuilder:validation:XValidation:rule="self == oldSelf"
 	UpdateStrategy TargetUpdateStrategy `json:"updateStrategy,omitempty"`
 }
 
