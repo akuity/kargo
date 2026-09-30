@@ -48,7 +48,7 @@ To install:
    ```shell
    arch=$(uname -m)
    [ "$arch" = "x86_64" ] && arch=amd64
-   curl -L -o kargo https://github.com/akuity/kargo/releases/latest/download/kargo-"$(uname -s | tr '[:upper:]' '[:lower:]')-${arch}"
+   curl -L -o kargo https://github.com/akuity/kargo/releases/download/v1.11.6/kargo-"$(uname -s | tr '[:upper:]' '[:lower:]')-${arch}"
    chmod +x kargo
    ```
 
@@ -56,7 +56,7 @@ To install:
    <TabItem value="windows" label="Windows PowerShell">
 
    ```shell
-   Invoke-WebRequest -URI https://github.com/akuity/kargo/releases/latest/download/kargo-windows-amd64.exe -OutFile kargo.exe
+   Invoke-WebRequest -URI https://github.com/akuity/kargo/releases/download/v1.11.6/kargo-windows-amd64.exe -OutFile kargo.exe
    ```
 
    </TabItem>
