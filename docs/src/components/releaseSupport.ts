@@ -15,10 +15,10 @@ export type Release = {
 // outage. It only needs to be accurate enough to be useful in those cases;
 // refresh it with `go run ./hack/best-releases` from the repository root.
 export const fallbackReleases: Release[] = [
-  {minor: '1.11', released: '2026-07-24', latestPatch: 'v1.11.2'},
-  {minor: '1.10', released: '2026-04-17', latestPatch: 'v1.10.10'},
-  {minor: '1.9', released: '2026-01-29', latestPatch: 'v1.9.10'},
-  {minor: '1.8', released: '2025-10-21', latestPatch: 'v1.8.14'},
+  {minor: '1.11', released: '2026-07-24', latestPatch: 'v1.11.5'},
+  {minor: '1.10', released: '2026-04-17', latestPatch: 'v1.10.13'},
+  {minor: '1.9', released: '2026-01-29', latestPatch: 'v1.9.13'},
+  {minor: '1.8', released: '2025-10-21', latestPatch: 'v1.8.17'},
   {minor: '1.7', released: '2025-08-05', latestPatch: 'v1.7.10'},
   {minor: '1.6', released: '2025-06-27', latestPatch: 'v1.6.4'},
   {minor: '1.5', released: '2025-05-15', latestPatch: 'v1.5.3'},
@@ -103,39 +103,73 @@ export function relativePhrase(target: Date, now: Date): string {
   return relativeFormatter.format(Math.round(days / 365), 'year');
 }
 
-const versionPattern = /^v(\d+)\.(\d+)\.\d+$/;
+const versionPattern = /^v(\d+)\.(\d+)\.(\d+)$/;
 const datePattern = /^\d{4}-\d{2}-\d{2}$/;
 
-// parseBestReleases converts a best-releases.json payload into Releases sorted
-// newest first. It is deliberately forgiving: the page has usable data already,
-// so a malformed or unexpected entry is skipped rather than thrown over.
-export function parseBestReleases(payload: unknown): Release[] {
+type Version = {major: number; minorNumber: number; patch: number};
+type ParsedRelease = Release & Version;
+
+function parseVersion(version: string): Version | null {
+  const match = versionPattern.exec(version);
+  if (!match) {
+    return null;
+  }
+  return {
+    major: Number(match[1]),
+    minorNumber: Number(match[2]),
+    patch: Number(match[3]),
+  };
+}
+
+// mergeBestReleases overlays a best-releases.json payload onto the releases
+// already known -- normally the committed snapshot -- and returns the result
+// sorted newest first.
+//
+// It merges rather than replaces because the published file has not always
+// been complete or current: an older copy of the generator truncated it and
+// omitted initialReleaseDate. So a fetched entry can only improve the table.
+// It updates a known line's latest patch if newer, and adds a line not yet
+// known only if it carries the date needed to place it. Lines the payload
+// omits keep their snapshot values, and malformed entries are skipped.
+export function mergeBestReleases(
+  payload: unknown,
+  known: Release[],
+): Release[] {
+  const byMinor = new Map<string, ParsedRelease>();
+  for (const release of known) {
+    const version = parseVersion(release.latestPatch);
+    if (version) {
+      byMinor.set(release.minor, {...version, ...release});
+    }
+  }
+
   const entries = (payload as {releases?: unknown} | null)?.releases;
-  if (!Array.isArray(entries)) {
-    return [];
-  }
-  const parsed: {major: number; minor: number; release: Release}[] = [];
-  for (const entry of entries) {
-    const version = (entry as {version?: unknown})?.version;
-    const released = (entry as {initialReleaseDate?: unknown})
-      ?.initialReleaseDate;
-    if (typeof version !== 'string' || typeof released !== 'string') {
+  for (const entry of Array.isArray(entries) ? entries : []) {
+    const latestPatch = (entry as {version?: unknown})?.version;
+    const date = (entry as {initialReleaseDate?: unknown})?.initialReleaseDate;
+    if (typeof latestPatch !== 'string') {
       continue;
     }
-    const match = versionPattern.exec(version);
-    if (!match || !datePattern.test(released)) {
+    const version = parseVersion(latestPatch);
+    if (!version) {
       continue;
     }
-    parsed.push({
-      major: Number(match[1]),
-      minor: Number(match[2]),
-      release: {
-        minor: `${match[1]}.${match[2]}`,
-        released,
-        latestPatch: version,
-      },
-    });
+    const minor = `${version.major}.${version.minorNumber}`;
+    const existing = byMinor.get(minor);
+    const released =
+      typeof date === 'string' && datePattern.test(date)
+        ? date
+        : existing?.released;
+    if (!released) {
+      continue;
+    }
+    if (existing && existing.patch > version.patch) {
+      continue;
+    }
+    byMinor.set(minor, {...version, minor, released, latestPatch});
   }
-  parsed.sort((a, b) => b.major - a.major || b.minor - a.minor);
-  return parsed.map(({release}) => release);
+
+  return [...byMinor.values()]
+    .sort((a, b) => b.major - a.major || b.minorNumber - a.minorNumber)
+    .map(({minor, released, latestPatch}) => ({minor, released, latestPatch}));
 }
