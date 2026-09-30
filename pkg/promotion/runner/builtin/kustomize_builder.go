@@ -181,8 +181,20 @@ func kustomizeBuild(kusFS filesys.FileSystem, path string, pluginCfg *builtin.Pl
 		PluginConfig:     buildPluginCfg,
 	}
 
+	// Reject remote entries whose Git ref would be interpreted by git as an
+	// option. See kustomizeValidatorFS.
+	validatingFS := newKustomizeValidatorFS(kusFS)
 	k := krusty.MakeKustomizer(buildOptions)
-	return k.Run(kusFS, path)
+	rm, err := k.Run(validatingFS, path)
+	if err != nil {
+		// Kustomize obscures validation errors (see kustomizeValidatorFS), so
+		// report them in preference to whatever error Kustomize returned.
+		if validationErr := validatingFS.Err(); validationErr != nil {
+			return nil, validationErr
+		}
+		return nil, err
+	}
+	return rm, nil
 }
 
 // fileNameFunc generates a filename for a resource.
