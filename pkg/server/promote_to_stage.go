@@ -194,8 +194,8 @@ func (s *server) promoteToStage(c *gin.Context) {
 			return
 		}
 	} else {
-		freight = s.getFreightByAlias(c, project, req.FreightAlias)
-		if freight == nil {
+		if freight, err = s.getFreightByAlias(ctx, project, req.FreightAlias); err != nil {
+			_ = c.Error(err)
 			return
 		}
 	}

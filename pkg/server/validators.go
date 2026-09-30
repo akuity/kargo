@@ -151,18 +151,15 @@ func bindJSONOrError(c *gin.Context, target any) bool {
 	return true
 }
 
-// getFreightByNameOrAlias resolves a Freight resource by name or alias.
-// It first tries to get by name, and if not found, tries to find by alias.
-// Returns the Freight if found, or nil with an error added to the gin context
-// if not found or an error occurred.
+// getFreightByNameOrAlias resolves a Freight resource by name or, when no
+// Freight has that name, by alias. Errors carry an HTTP status: 404 when
+// nothing matches and 409 when the alias matches more than one piece of
+// Freight.
 func (s *server) getFreightByNameOrAlias(
-	c *gin.Context,
+	ctx context.Context,
 	project string,
 	nameOrAlias string,
-) *kargoapi.Freight {
-	ctx := c.Request.Context()
-
-	// Try getting by name first
+) (*kargoapi.Freight, error) {
 	freight := &kargoapi.Freight{}
 	err := s.client.Get(
 		ctx,
@@ -170,60 +167,54 @@ func (s *server) getFreightByNameOrAlias(
 		freight,
 	)
 	if err == nil {
-		return freight
+		return freight, nil
 	}
 	if !apierrors.IsNotFound(err) {
-		_ = c.Error(err)
-		return nil
+		return nil, err
 	}
-
-	// Try getting by alias
-	return s.getFreightByAlias(c, project, nameOrAlias)
+	return s.getFreightByAlias(ctx, project, nameOrAlias)
 }
 
-// getFreightByAlias resolves a Freight resource by alias. Returns the
-// Freight if exactly one matches, or nil with an error added to the gin
-// context if none match, more than one match, or an error occurred.
+// getFreightByAlias resolves a Freight resource by alias. Errors carry an
+// HTTP status: 404 when nothing matches and 409 when the alias matches more
+// than one piece of Freight.
 func (s *server) getFreightByAlias(
-	c *gin.Context,
+	ctx context.Context,
 	project string,
 	alias string,
-) *kargoapi.Freight {
+) (*kargoapi.Freight, error) {
 	list := &kargoapi.FreightList{}
 	if err := s.client.List(
-		c.Request.Context(),
+		ctx,
 		list,
 		client.InNamespace(project),
 		client.MatchingLabels{kargoapi.LabelKeyAlias: alias},
 	); err != nil {
-		_ = c.Error(err)
-		return nil
+		return nil, err
 	}
 	switch len(list.Items) {
 	case 0:
-		_ = c.Error(libhttp.ErrorStr(
+		return nil, libhttp.ErrorStr(
 			fmt.Sprintf(
 				"Freight with name or alias %q not found in project %q",
 				alias, project,
 			),
 			http.StatusNotFound,
-		))
-		return nil
+		)
 	case 1:
-		return &list.Items[0]
+		return &list.Items[0], nil
 	default:
 		names := make([]string, len(list.Items))
 		for i, freight := range list.Items {
 			names[i] = freight.Name
 		}
-		_ = c.Error(libhttp.ErrorStr(
+		return nil, libhttp.ErrorStr(
 			fmt.Sprintf(
 				"alias %q is shared by multiple pieces of Freight in project %q (%s); "+
 					"refer to the Freight by name or give one of them a new alias",
 				alias, project, strings.Join(names, ", "),
 			),
 			http.StatusConflict,
-		))
-		return nil
+		)
 	}
 }

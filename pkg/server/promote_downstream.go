@@ -115,8 +115,9 @@ func (s *server) promoteDownstream(c *gin.Context) {
 			return
 		}
 	} else {
-		freight = s.getFreightByAlias(c, project, req.FreightAlias)
-		if freight == nil {
+		var err error
+		if freight, err = s.getFreightByAlias(ctx, project, req.FreightAlias); err != nil {
+			_ = c.Error(err)
 			return
 		}
 	}

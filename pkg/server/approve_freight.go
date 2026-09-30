@@ -73,8 +73,9 @@ func (s *server) approveFreight(c *gin.Context) {
 		return
 	}
 
-	freight := s.getFreightByNameOrAlias(c, project, freightNameOrAlias)
-	if freight == nil {
+	freight, err := s.getFreightByNameOrAlias(ctx, project, freightNameOrAlias)
+	if err != nil {
+		_ = c.Error(err)
 		return
 	}
 
