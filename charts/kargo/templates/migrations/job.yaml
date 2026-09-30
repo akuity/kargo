@@ -54,6 +54,8 @@ spec:
           value: {{ .Values.database.migrations.logLevel | quote }}
         - name: DATABASE_CONNECT_TIMEOUT
           value: {{ .Values.database.migrations.connectTimeout | quote }}
+        - name: DATABASE_MIGRATION_LOCK_TIMEOUT
+          value: {{ .Values.database.migrations.lockTimeout | quote }}
         {{- if .Values.database.postgres.enabled }}
         # The bundled database: the binary composes the connection string from
         # these parts, escaping the password, which a $(VAR) reference could

@@ -72,10 +72,20 @@ func TestNewMigrator(t *testing.T) {
 				context.Background(),
 				unreachablePool(t),
 				testCase.migrations,
+				time.Minute,
 			)
 			testCase.assert(t, m, err)
 		})
 	}
+}
+
+func TestNewMigrator_lockTimeout(t *testing.T) {
+	t.Parallel()
+	migrations := fstest.MapFS{
+		"00001_first.sql": {Data: []byte("-- +goose Up\nSELECT 1;\n")},
+	}
+	_, err := NewMigrator(context.Background(), unreachablePool(t), migrations, time.Second)
+	require.ErrorContains(t, err, "lock timeout must be at least")
 }
 
 func TestConnectWithRetry(t *testing.T) {

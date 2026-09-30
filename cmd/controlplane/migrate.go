@@ -93,7 +93,12 @@ func (o *migrateOptions) run(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	migrator, err := database.NewMigrator(ctx, pool, migrations)
+	migrator, err := database.NewMigrator(
+		ctx,
+		pool,
+		migrations,
+		cfg.MigrationLockTimeout,
+	)
 	if err != nil {
 		return err
 	}

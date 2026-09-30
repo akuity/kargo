@@ -35,6 +35,11 @@ type Config struct {
 	// The database may still be starting when a component does, so refusing
 	// to connect is retried rather than treated as fatal until this elapses.
 	ConnectTimeout time.Duration `envconfig:"DATABASE_CONNECT_TIMEOUT" default:"5m"`
+	// MigrationLockTimeout bounds how long a migration run waits for another
+	// run to release the database-level lock before giving up. It must be
+	// longer than the slowest migration, since that is exactly what a waiting
+	// runner is waiting on.
+	MigrationLockTimeout time.Duration `envconfig:"DATABASE_MIGRATION_LOCK_TIMEOUT" default:"1h"`
 }
 
 // ConfigFromEnv returns a Config populated from environment variables.
