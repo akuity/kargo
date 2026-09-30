@@ -73,7 +73,7 @@ func (s *server) approveFreight(c *gin.Context) {
 		return
 	}
 
-	freight := s.getFreightByNameOrAliasForGin(c, project, freightNameOrAlias)
+	freight := s.getFreightByNameOrAlias(c, project, freightNameOrAlias)
 	if freight == nil {
 		return
 	}

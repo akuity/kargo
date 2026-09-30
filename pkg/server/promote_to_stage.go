@@ -194,24 +194,10 @@ func (s *server) promoteToStage(c *gin.Context) {
 			return
 		}
 	} else {
-		list := &kargoapi.FreightList{}
-		if err = s.client.List(
-			ctx,
-			list,
-			client.InNamespace(project),
-			client.MatchingLabels{kargoapi.LabelKeyAlias: req.FreightAlias},
-		); err != nil {
-			_ = c.Error(err)
+		freight = s.getFreightByAlias(c, project, req.FreightAlias)
+		if freight == nil {
 			return
 		}
-		if len(list.Items) == 0 {
-			_ = c.Error(libhttp.ErrorStr(
-				fmt.Sprintf("Freight with alias %q not found in project %q", req.FreightAlias, project),
-				http.StatusNotFound,
-			))
-			return
-		}
-		freight = &list.Items[0]
 	}
 
 	if !stage.IsFreightAvailable(freight) {

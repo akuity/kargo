@@ -278,6 +278,25 @@ func Test_server_promoteToStage(t *testing.T) {
 				},
 			},
 			{
+				name: "Freight alias shared by multiple Freight",
+				clientBuilder: fake.NewClientBuilder().WithObjects(
+					testProject,
+					testStage,
+					testFreight,
+					func() *kargoapi.Freight {
+						dup := testFreight.DeepCopy()
+						dup.Name = "fake-freight-2"
+						return dup
+					}(),
+				),
+				body: mustJSONBody(promoteToStageRequest{
+					FreightAlias: "fake-alias",
+				}),
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
+					require.Equal(t, http.StatusConflict, w.Code)
+				},
+			},
+			{
 				name:          "Neither freight nor freightAlias provided",
 				clientBuilder: fake.NewClientBuilder().WithObjects(testProject, testStage),
 				body:          mustJSONBody(promoteToStageRequest{}),

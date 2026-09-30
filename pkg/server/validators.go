@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strings"
 
 	"connectrpc.com/connect"
 	"github.com/gin-gonic/gin"
@@ -150,11 +151,11 @@ func bindJSONOrError(c *gin.Context, target any) bool {
 	return true
 }
 
-// getFreightByNameOrAliasForGin resolves a Freight resource by name or alias.
+// getFreightByNameOrAlias resolves a Freight resource by name or alias.
 // It first tries to get by name, and if not found, tries to find by alias.
 // Returns the Freight if found, or nil with an error added to the gin context
 // if not found or an error occurred.
-func (s *server) getFreightByNameOrAliasForGin(
+func (s *server) getFreightByNameOrAlias(
 	c *gin.Context,
 	project string,
 	nameOrAlias string,
@@ -177,25 +178,52 @@ func (s *server) getFreightByNameOrAliasForGin(
 	}
 
 	// Try getting by alias
+	return s.getFreightByAlias(c, project, nameOrAlias)
+}
+
+// getFreightByAlias resolves a Freight resource by alias. Returns the
+// Freight if exactly one matches, or nil with an error added to the gin
+// context if none match, more than one match, or an error occurred.
+func (s *server) getFreightByAlias(
+	c *gin.Context,
+	project string,
+	alias string,
+) *kargoapi.Freight {
 	list := &kargoapi.FreightList{}
 	if err := s.client.List(
-		ctx,
+		c.Request.Context(),
 		list,
 		client.InNamespace(project),
-		client.MatchingLabels{kargoapi.LabelKeyAlias: nameOrAlias},
+		client.MatchingLabels{kargoapi.LabelKeyAlias: alias},
 	); err != nil {
 		_ = c.Error(err)
 		return nil
 	}
-	if len(list.Items) == 0 {
+	switch len(list.Items) {
+	case 0:
 		_ = c.Error(libhttp.ErrorStr(
 			fmt.Sprintf(
 				"Freight with name or alias %q not found in project %q",
-				nameOrAlias, project,
+				alias, project,
 			),
 			http.StatusNotFound,
 		))
 		return nil
+	case 1:
+		return &list.Items[0]
+	default:
+		names := make([]string, len(list.Items))
+		for i, freight := range list.Items {
+			names[i] = freight.Name
+		}
+		_ = c.Error(libhttp.ErrorStr(
+			fmt.Sprintf(
+				"alias %q is shared by multiple pieces of Freight in project %q (%s); "+
+					"refer to the Freight by name or give one of them a new alias",
+				alias, project, strings.Join(names, ", "),
+			),
+			http.StatusConflict,
+		))
+		return nil
 	}
-	return &list.Items[0]
 }

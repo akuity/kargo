@@ -20,7 +20,7 @@ func (s *server) deleteFreight(c *gin.Context) {
 	project := c.Param("project")
 	nameOrAlias := c.Param("freight-name-or-alias")
 
-	freight := s.getFreightByNameOrAliasForGin(c, project, nameOrAlias)
+	freight := s.getFreightByNameOrAlias(c, project, nameOrAlias)
 	if freight == nil {
 		return
 	}
