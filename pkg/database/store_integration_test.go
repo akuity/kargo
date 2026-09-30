@@ -17,7 +17,10 @@ import (
 	"github.com/jackc/pgx/v5/stdlib"
 	"github.com/pressly/goose/v3"
 	"github.com/stretchr/testify/require"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/db"
 )
 
@@ -160,16 +163,300 @@ func TestMigrationsIntegration(t *testing.T) {
 	applied, err := migrations.Up(ctx) // Already-applied migrations are harmless.
 	require.NoError(t, err)
 	require.Empty(t, applied)
+	// Migrations roll back one at a time, newest first, and all the way down.
 	_, err = migrations.Down(ctx)
 	require.NoError(t, err)
-	var table *string
-	require.NoError(t, pool.QueryRow(ctx, "SELECT to_regclass('projects')::text").Scan(&table))
-	require.Nil(t, table)
+	requireTable(t, pool, "targets", false)
+	requireTable(t, pool, "projects", true)
+	_, err = migrations.DownTo(ctx, 0)
+	require.NoError(t, err)
+	requireTable(t, pool, "projects", false)
 	_, err = migrations.Up(ctx)
 	require.NoError(t, err)
-	require.NoError(t, NewStore(pool).UpsertProject(ctx, UpsertProjectParams{
+	store := NewStore(pool)
+	require.NoError(t, store.UpsertProject(ctx, UpsertProjectParams{
 		ID: "after-rollback", Name: "demo", CreatedAt: time.Now(),
 	}))
+	_, err = store.CreateTarget(ctx, "demo", &kargoapi.Target{
+		ObjectMeta: metav1.ObjectMeta{Name: "us-east"},
+	})
+	require.NoError(t, err)
+}
+
+func TestTargetStoreIntegration(t *testing.T) {
+	t.Parallel()
+	pool, _ := isolatedDatabase(t)
+	store := NewStore(pool)
+	ctx := context.Background()
+	created := time.Date(2020, 1, 2, 3, 4, 5, 0, time.UTC)
+	project := UpsertProjectParams{ID: "opaque-project", Name: "demo", CreatedAt: created}
+	other := UpsertProjectParams{ID: "other-project", Name: "other", CreatedAt: created}
+	newTarget := func(name string) *kargoapi.Target {
+		return &kargoapi.Target{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:   name,
+				Labels: map[string]string{"region": "us"},
+			},
+			Spec: kargoapi.TargetSpec{
+				Params: map[string]apiextensionsv1.JSON{
+					"cluster": {Raw: []byte(`{"replicas": 3, "name": "` + name + `"}`)},
+				},
+			},
+		}
+	}
+	testCases := []struct {
+		name string
+		run  func(*testing.T)
+	}{
+		{
+			name: "create returns the stored Target",
+			run: func(t *testing.T) {
+				target, err := store.CreateTarget(ctx, "demo", newTarget("us-east"))
+				require.NoError(t, err)
+				require.Equal(t, "demo", target.Namespace)
+				require.Equal(t, "us-east", target.Name)
+				_, err = uuid.Parse(string(target.UID))
+				require.NoError(t, err)
+				require.NotEmpty(t, target.ResourceVersion)
+				require.False(t, target.CreationTimestamp.IsZero())
+				require.Equal(t, map[string]string{"region": "us"}, target.Labels)
+				require.JSONEq(t,
+					`{"replicas": 3, "name": "us-east"}`,
+					string(target.Spec.Params["cluster"].Raw),
+				)
+				var createdAt, updatedAt time.Time
+				require.NoError(t, pool.QueryRow(
+					ctx, "SELECT created_at, updated_at FROM targets",
+				).Scan(&createdAt, &updatedAt))
+				require.True(t, createdAt.Equal(updatedAt))
+			},
+		},
+		{
+			name: "empty maps round trip as absent",
+			run: func(t *testing.T) {
+				target, err := store.CreateTarget(ctx, "demo", &kargoapi.Target{
+					ObjectMeta: metav1.ObjectMeta{Name: "bare"},
+				})
+				require.NoError(t, err)
+				require.Nil(t, target.Labels)
+				require.Nil(t, target.Spec.Params)
+				fetched, err := store.GetTarget(ctx, "demo", "bare")
+				require.NoError(t, err)
+				require.Equal(t, target, fetched)
+			},
+		},
+		{
+			name: "a Project that is not mirrored yet",
+			run: func(t *testing.T) {
+				_, err := store.CreateTarget(ctx, "missing", newTarget("us-east"))
+				require.ErrorIs(t, err, ErrProjectNotMirrored)
+			},
+		},
+		{
+			name: "names are unique within a Project only",
+			run: func(t *testing.T) {
+				_, err := store.CreateTarget(ctx, "demo", newTarget("us-east"))
+				require.NoError(t, err)
+				_, err = store.CreateTarget(ctx, "demo", newTarget("us-east"))
+				require.ErrorIs(t, err, ErrAlreadyExists)
+				_, err = store.CreateTarget(ctx, "other", newTarget("us-east"))
+				require.NoError(t, err)
+			},
+		},
+		{
+			name: "the database rejects labels that are not a string map",
+			run: func(t *testing.T) {
+				for _, bad := range []string{`[]`, `{"a": 1}`, `{"a": null}`} {
+					_, err := pool.Exec(ctx,
+						"INSERT INTO targets (project_id, name, labels) VALUES ($1, 'x', $2)",
+						project.ID, bad,
+					)
+					requirePGError(t, err, "23514")
+				}
+				_, err := pool.Exec(ctx,
+					"INSERT INTO targets (project_id, name, params) VALUES ($1, 'x', '[]')",
+					project.ID,
+				)
+				requirePGError(t, err, "23514")
+			},
+		},
+		{
+			name: "a value the database cannot store is invalid",
+			run: func(t *testing.T) {
+				target := newTarget("nul")
+				target.Spec.Params["cluster"] = apiextensionsv1.JSON{Raw: []byte(`"a\u0000b"`)}
+				_, err := store.CreateTarget(ctx, "demo", target)
+				require.ErrorIs(t, err, ErrInvalid)
+			},
+		},
+		{
+			name: "list is per Project and ordered by name",
+			run: func(t *testing.T) {
+				for _, name := range []string{"b", "c", "a"} {
+					_, err := store.CreateTarget(ctx, "demo", newTarget(name))
+					require.NoError(t, err)
+				}
+				_, err := store.CreateTarget(ctx, "other", newTarget("z"))
+				require.NoError(t, err)
+				targets, err := store.ListTargets(ctx, "demo")
+				require.NoError(t, err)
+				require.Equal(t, []string{"a", "b", "c"}, targetNames(targets))
+				targets, err = store.ListTargets(ctx, "missing")
+				require.NoError(t, err)
+				require.Empty(t, targets)
+			},
+		},
+		{
+			name: "get reports a missing Target",
+			run: func(t *testing.T) {
+				_, err := store.GetTarget(ctx, "demo", "absent")
+				require.ErrorIs(t, err, ErrNotFound)
+			},
+		},
+		{
+			name: "updates keep identity and advance the resource version",
+			run: func(t *testing.T) {
+				created, err := store.CreateTarget(ctx, "demo", newTarget("us-east"))
+				require.NoError(t, err)
+				first, err := store.UpdateTarget(ctx, "demo", &kargoapi.Target{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:   "us-east",
+						Labels: map[string]string{"region": "eu"},
+					},
+				})
+				require.NoError(t, err)
+				second, err := store.UpdateTarget(ctx, "demo", &kargoapi.Target{
+					ObjectMeta: metav1.ObjectMeta{Name: "us-east"},
+				})
+				require.NoError(t, err)
+				require.Equal(t, created.UID, second.UID)
+				require.Equal(t, created.CreationTimestamp, second.CreationTimestamp)
+				require.Equal(t, map[string]string{"region": "eu"}, first.Labels)
+				require.Nil(t, second.Labels)
+				require.Nil(t, second.Spec.Params)
+				require.Less(t, created.ResourceVersion, first.ResourceVersion)
+				require.Less(t, first.ResourceVersion, second.ResourceVersion)
+			},
+		},
+		{
+			name: "the resource version advances even when the clock does not",
+			run: func(t *testing.T) {
+				created, err := store.CreateTarget(ctx, "demo", newTarget("us-east"))
+				require.NoError(t, err)
+				_, err = pool.Exec(ctx, "UPDATE targets SET updated_at = '2999-01-01'")
+				require.NoError(t, err)
+				future, err := store.GetTarget(ctx, "demo", "us-east")
+				require.NoError(t, err)
+				updated, err := store.UpdateTarget(ctx, "demo", newTarget("us-east"))
+				require.NoError(t, err)
+				require.Less(t, created.ResourceVersion, future.ResourceVersion)
+				require.Less(t, future.ResourceVersion, updated.ResourceVersion)
+			},
+		},
+		{
+			name: "update preconditions",
+			run: func(t *testing.T) {
+				created, err := store.CreateTarget(ctx, "demo", newTarget("us-east"))
+				require.NoError(t, err)
+				stale := newTarget("us-east")
+				stale.ResourceVersion = "1"
+				_, err = store.UpdateTarget(ctx, "demo", stale)
+				require.ErrorIs(t, err, ErrConflict)
+				recreated := newTarget("us-east")
+				recreated.UID = "00000000-0000-0000-0000-000000000000"
+				_, err = store.UpdateTarget(ctx, "demo", recreated)
+				require.ErrorIs(t, err, ErrConflict)
+				current := newTarget("us-east")
+				current.UID = created.UID
+				current.ResourceVersion = created.ResourceVersion
+				_, err = store.UpdateTarget(ctx, "demo", current)
+				require.NoError(t, err)
+				_, err = store.UpdateTarget(ctx, "demo", newTarget("absent"))
+				require.ErrorIs(t, err, ErrNotFound)
+			},
+		},
+		{
+			name: "delete",
+			run: func(t *testing.T) {
+				_, err := store.CreateTarget(ctx, "demo", newTarget("us-east"))
+				require.NoError(t, err)
+				require.NoError(t, store.DeleteTarget(ctx, "demo", "us-east"))
+				require.ErrorIs(t, store.DeleteTarget(ctx, "demo", "us-east"), ErrNotFound)
+				_, err = store.GetTarget(ctx, "demo", "us-east")
+				require.ErrorIs(t, err, ErrNotFound)
+			},
+		},
+		{
+			name: "Targets go with their Project",
+			run: func(t *testing.T) {
+				_, err := store.CreateTarget(ctx, "demo", newTarget("us-east"))
+				require.NoError(t, err)
+				_, err = store.CreateTarget(ctx, "other", newTarget("us-east"))
+				require.NoError(t, err)
+				require.NoError(t, store.DeleteProjectByName(ctx, "other"))
+				targets, err := store.ListTargets(ctx, "other")
+				require.NoError(t, err)
+				require.Empty(t, targets)
+				// A Project recreated under the same name is a new Project.
+				replacement := project
+				replacement.ID = "new-project"
+				require.NoError(t, store.UpsertProject(ctx, replacement))
+				targets, err = store.ListTargets(ctx, "demo")
+				require.NoError(t, err)
+				require.Empty(t, targets)
+			},
+		},
+		{
+			name: "a locked row respects the caller's deadline",
+			run: func(t *testing.T) {
+				_, err := store.CreateTarget(ctx, "demo", newTarget("us-east"))
+				require.NoError(t, err)
+				tx, err := pool.Begin(ctx)
+				require.NoError(t, err)
+				defer func() { _ = tx.Rollback(ctx) }()
+				_, err = tx.Exec(ctx, "SELECT id FROM targets FOR UPDATE")
+				require.NoError(t, err)
+				deadlineCtx, cancel := context.WithTimeout(ctx, 100*time.Millisecond)
+				defer cancel()
+				_, err = store.UpdateTarget(deadlineCtx, "demo", newTarget("us-east"))
+				require.ErrorIs(t, err, context.DeadlineExceeded)
+				require.NoError(t, tx.Rollback(ctx))
+				_, err = store.UpdateTarget(ctx, "demo", newTarget("us-east"))
+				require.NoError(t, err)
+			},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			_, err := pool.Exec(ctx, "TRUNCATE projects CASCADE")
+			require.NoError(t, err)
+			require.NoError(t, store.UpsertProject(ctx, project))
+			require.NoError(t, store.UpsertProject(ctx, other))
+			testCase.run(t)
+		})
+	}
+}
+
+// requireTable asserts whether a table exists in the test's schema.
+func requireTable(t *testing.T, pool *pgxpool.Pool, name string, present bool) {
+	t.Helper()
+	var table *string
+	require.NoError(t, pool.QueryRow(
+		context.Background(), "SELECT to_regclass($1)::text", name,
+	).Scan(&table))
+	if present {
+		require.NotNil(t, table, "table %q should exist", name)
+	} else {
+		require.Nil(t, table, "table %q should not exist", name)
+	}
+}
+
+func targetNames(targets []kargoapi.Target) []string {
+	names := make([]string, len(targets))
+	for i, target := range targets {
+		names[i] = target.Name
+	}
+	return names
 }
 
 // isolatedDatabase creates a schema of its own for the test, applies the
