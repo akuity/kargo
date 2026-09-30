@@ -11,7 +11,7 @@ replace (
 )
 
 require (
-	cloud.google.com/go/compute/metadata v0.9.1
+	cloud.google.com/go/compute/metadata v0.10.0
 	code.gitea.io/sdk/gitea v0.25.1
 	connectrpc.com/connect v1.19.1
 	connectrpc.com/grpchealth v1.4.0
