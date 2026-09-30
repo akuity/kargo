@@ -45,6 +45,74 @@ tests:
             name: http-metrics
             protocol: TCP
 
+  - it: points at the bundled PostgreSQL by default
+    template: templates/management-controller/deployment.yaml
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: DATABASE_URL
+            value: postgres://kargo@kargo-postgres.NAMESPACE.svc:5432/kargo?sslmode=disable
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: PGPASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: kargo-postgres
+                key: password
+
+  - it: reads the bundled PostgreSQL password from an existing Secret
+    template: templates/management-controller/deployment.yaml
+    set:
+      database.postgres.existingSecret: my-postgres
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: PGPASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: my-postgres
+                key: password
+
+  - it: reads an external database connection string from its Secret
+    template: templates/management-controller/deployment.yaml
+    set:
+      database.postgres.enabled: false
+      database.external.secretName: my-database
+      database.external.secretKey: url
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: DATABASE_URL
+            valueFrom:
+              secretKeyRef:
+                name: my-database
+                key: url
+      - notContains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: PGPASSWORD
+          any: true
+
+  - it: sets no database environment when no database is configured
+    template: templates/management-controller/deployment.yaml
+    set:
+      database.postgres.enabled: false
+    asserts:
+      - notContains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: DATABASE_URL
+          any: true
+      - notContains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: PGPASSWORD
+          any: true
+
 ---
 suite: management-controller/configmap.yaml
 values:
