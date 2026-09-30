@@ -8110,7 +8110,7 @@
           }
         },
         "updateStrategy": {
-          "description": "UpdateStrategy configures the pace of updating the targets\n+optional",
+          "description": "UpdateStrategy configures the pace of updating the targets\n+optional\n+kubebuilder:validation:XValidation:rule=\"self == oldSelf\"",
           "allOf": [
             {
               "$ref": "#/definitions/TargetUpdateStrategy"

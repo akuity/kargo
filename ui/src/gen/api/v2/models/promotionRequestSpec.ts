@@ -60,6 +60,7 @@ export interface PromotionRequestSpec {
   /**
    * UpdateStrategy configures the pace of updating the targets
    * +optional
+   * +kubebuilder:validation:XValidation:rule="self == oldSelf"
    */
   updateStrategy?: TargetUpdateStrategy;
 }

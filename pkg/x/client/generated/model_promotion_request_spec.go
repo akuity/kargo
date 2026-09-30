@@ -27,7 +27,7 @@ type PromotionRequestSpec struct {
 	Stage string `json:"stage"`
 	// Targets names the Targets to which this PromotionRequest promotes Freight. Each Target MUST be in the same namespace as the PromotionRequest. The list may be empty, which records that the governing Stage governed no Targets when the PromotionRequest was created -- distinct from the field being absent, which asks for it to be resolved.  This is a resolved list, not a selector: the Stage's target selectors are evaluated once, at creation, and the result recorded here. The membership of the PromotionRequest is therefore a snapshot of what the Stage governed at that moment, and its threshold and terminal state are computed against it rather than against a selector that could match differently later.  This is the only mutable field in the spec. The governing Stage owns it, and may add Targets to an in-flight PromotionRequest so that Targets discovered after creation can still receive the Freight. Target names MUST be unique; this is enforced by the validating webhook rather than by the schema, since a list-map's per-item ownership tracking would roughly double the storage cost of every entry.  +listType=atomic +kubebuilder:validation:Required
 	Targets []PromotionRequestTarget `json:"targets"`
-	// UpdateStrategy configures the pace of updating the targets +optional
+	// UpdateStrategy configures the pace of updating the targets +optional +kubebuilder:validation:XValidation:rule=\"self == oldSelf\"
 	UpdateStrategy *TargetUpdateStrategy `json:"updateStrategy,omitempty"`
 }
 

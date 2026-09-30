@@ -72,7 +72,12 @@
               "type": "integer"
             }
           },
-          "type": "object"
+          "type": "object",
+          "x-kubernetes-validations": [
+            {
+              "rule": "self == oldSelf"
+            }
+          ]
         }
       },
       "required": [

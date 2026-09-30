@@ -13667,6 +13667,7 @@ components:
           description: |-
             UpdateStrategy configures the pace of updating the targets
             +optional
+            +kubebuilder:validation:XValidation:rule="self == oldSelf"
           type: object
       required:
       - freight
