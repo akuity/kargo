@@ -14,7 +14,7 @@ Closes #<!-- issue number, or delete this line if not applicable -->
 
 <!-- At least one must be true. -->
 
-- [ ] Linked to an existing issue with no blocking labels (`kind/proposal`, `needs discussion`, `needs research`, `maintainer only`, `area/security`, `size/large`, `size/x-large`, `size/xx-large`).
+- [ ] Linked to an existing issue with no blocking labels (`needs/kind`, `kind/proposal`, `needs discussion`, `needs research`, `maintainer only`, `area/security`, `size/large`, `size/x-large`, `size/xx-large`).
 - [ ] Changes documentation only.
 - [ ] Changes ten lines or fewer.
 
