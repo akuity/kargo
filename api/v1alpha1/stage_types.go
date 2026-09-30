@@ -157,6 +157,7 @@ func (s *Stage) IsControlFlow() bool {
 	}
 }
 
+
 // RequestsFreightFromOrigin returns whether any of the Stage's Freight requests
 // name the specified origin.
 func (s *Stage) RequestsFreightFromOrigin(origin FreightOrigin) bool {
@@ -875,6 +876,8 @@ type PromotionRequestReference struct {
 	FreightCollection *FreightCollection `json:"freightCollection,omitempty"`
 	// Phase is a high-level summary of the PromotionRequest's lifecycle.
 	Phase PromotionRequestPhase `json:"phase,omitempty"`
+	// Message is a human-readable description of the promotion status
+	Message string `json:"message,omitempty"`
 	// FinishedAt is the time at which the PromotionRequest completed.
 	FinishedAt *metav1.Time `json:"finishedAt,omitempty"`
 }
