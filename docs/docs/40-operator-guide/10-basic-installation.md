@@ -110,8 +110,8 @@ These instructions were tested with:
 
 ## Database
 
-The chart installs a minimal PostgreSQL instance alongside Kargo. It is a
-single replica with no replication, backups, or tuning, and is meant for
+The chart installs a minimal PostgreSQL instance alongside Kargo. It runs as
+a single, unreplicated instance with no backups or tuning and is meant for
 evaluation and development. To use your own database instead, set
 `database.postgres.enabled` to `false` and point `database.external.secretName`
 at a Secret holding its connection string.
