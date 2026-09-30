@@ -29,7 +29,7 @@ import (
 
 func TestNewReconciler(t *testing.T) {
 	testCfg := ReconcilerConfig{}
-	r := newReconciler(fake.NewClientBuilder().Build(), testCfg)
+	r := newReconciler(fake.NewClientBuilder().Build(), testCfg, nil)
 	require.Equal(t, testCfg, r.cfg)
 	require.NotNil(t, r.client)
 	require.NotNil(t, r.getProjectFn)
@@ -457,6 +457,12 @@ func TestReconciler_reconcile(t *testing.T) {
 				WithObjects(tt.project).
 				WithInterceptorFuncs(tt.interceptor).
 				Build()
+			if tt.reconciler.listTargetsFn == nil {
+				// No database: the Project has no Targets.
+				tt.reconciler.listTargetsFn = func(context.Context, string) ([]kargoapi.Target, error) {
+					return nil, nil
+				}
+			}
 			status, err := tt.reconciler.reconcile(t.Context(), tt.project)
 			tt.assertions(t, status, tt.reconciler.client, err)
 		})
@@ -1995,7 +2001,7 @@ func TestReconciler_ensureControllerPermissions(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			r := newReconciler(testCase.client, cfg)
+			r := newReconciler(testCase.client, cfg, nil)
 			err = r.ensureControllerPermissions(t.Context(), testProject)
 			testCase.assertions(t, testCase.client, err)
 		})

@@ -135,10 +135,31 @@ func (o *managementControllerOptions) run(ctx context.Context) error {
 		return fmt.Errorf("error setting up Namespaces reconciler: %w", err)
 	}
 
+	// The database mirrors Projects and holds Targets. Without it, Projects
+	// are not mirrored and have no Target stats.
+	var store database.Store
+	if o.Database.Configured() {
+		pool, poolErr := openDatabase(ctx, o.Database, "kargo-management-controller")
+		if poolErr != nil {
+			return poolErr
+		}
+		defer pool.Close()
+		store = database.NewStore(pool)
+	} else {
+		o.Logger.Info("no database is configured; Projects are not mirrored and have no Target stats")
+	}
+	// A nil Store must reach the reconciler as a nil interface of its own
+	// type, which is what it tests for.
+	var targetLister projects.TargetLister
+	if store != nil {
+		targetLister = store
+	}
+
 	if err := projects.SetupReconcilerWithManager(
 		ctx,
 		kargoMgr,
 		projects.ReconcilerConfigFromEnv(),
+		targetLister,
 	); err != nil {
 		return fmt.Errorf("error setting up Projects reconciler: %w", err)
 	}
@@ -172,13 +193,8 @@ func (o *managementControllerOptions) run(ctx context.Context) error {
 		return fmt.Errorf("error setting up shared ConfigMap replication reconciler: %w", err)
 	}
 
-	if o.Database.Configured() {
-		pool, err := openDatabase(ctx, o.Database, "kargo-management-controller")
-		if err != nil {
-			return err
-		}
-		defer pool.Close()
-		if err = dbsync.SetupWithManager(ctx, kargoMgr, database.NewStore(pool)); err != nil {
+	if store != nil {
+		if err := dbsync.SetupWithManager(ctx, kargoMgr, store); err != nil {
 			return err
 		}
 	}

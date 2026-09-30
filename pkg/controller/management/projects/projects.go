@@ -56,11 +56,21 @@ func ReconcilerConfigFromEnv() ReconcilerConfig {
 var errProjectNamespaceExists = errors.New("namespace already exists and is not labeled as a Project namespace")
 
 // reconciler reconciles Project resources.
+// TargetLister lists the Targets of a Project. Targets live in the database,
+// so this is the slice of database.Store the Project reconciler uses.
+type TargetLister interface {
+	ListTargets(ctx context.Context, project string) ([]kargoapi.Target, error)
+}
+
 type reconciler struct {
 	cfg    ReconcilerConfig
 	client client.Client
 
 	// The following behaviors are overridable for testing purposes:
+
+	// listTargetsFn lists a Project's Targets for its stats. Without a
+	// database it lists none, and the Project has no Target stats.
+	listTargetsFn func(context.Context, string) ([]kargoapi.Target, error)
 
 	getProjectFn func(
 		context.Context,
@@ -163,10 +173,12 @@ type reconciler struct {
 
 // SetupReconcilerWithManager initializes a reconciler for Project resources and
 // registers it with the provided Manager.
+// The TargetLister may be nil; see the reconciler's listTargetsFn.
 func SetupReconcilerWithManager(
 	ctx context.Context,
 	kargoMgr manager.Manager,
 	cfg ReconcilerConfig,
+	targets TargetLister,
 ) error {
 	c, err := ctrl.NewControllerManagedBy(kargoMgr).
 		For(&kargoapi.Project{}).
@@ -179,7 +191,7 @@ func SetupReconcilerWithManager(
 			},
 		).
 		WithOptions(controller.CommonOptions(cfg.MaxConcurrentReconciles)).
-		Build(newReconciler(kargoMgr.GetClient(), cfg))
+		Build(newReconciler(kargoMgr.GetClient(), cfg, targets))
 	if err != nil {
 		return fmt.Errorf("error creating Project reconciler: %w", err)
 	}
@@ -214,10 +226,20 @@ func SetupReconcilerWithManager(
 	return err
 }
 
-func newReconciler(kubeClient client.Client, cfg ReconcilerConfig) *reconciler {
+func newReconciler(
+	kubeClient client.Client,
+	cfg ReconcilerConfig,
+	targets TargetLister,
+) *reconciler {
 	r := &reconciler{
 		cfg:    cfg,
 		client: kubeClient,
+	}
+	r.listTargetsFn = func(context.Context, string) ([]kargoapi.Target, error) {
+		return nil, nil
+	}
+	if targets != nil {
+		r.listTargetsFn = targets.ListTargets
 	}
 	r.getProjectFn = api.GetProject
 	r.reconcileFn = r.reconcile

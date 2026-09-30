@@ -63,12 +63,10 @@ func (r *reconciler) collectStats(
 		return status, fmt.Errorf("error listing Stages: %w", err)
 	}
 
-	targets := &kargoapi.TargetList{}
-	if err := r.client.List(
-		ctx,
-		targets,
-		client.InNamespace(project.Name),
-	); err != nil {
+	// Targets live in the database. Without one, a Project has none and no
+	// Target stats.
+	targets, err := r.listTargetsFn(ctx, project.Name)
+	if err != nil {
 		conditions.Set(&status, &metav1.Condition{
 			Type:               kargoapi.ConditionTypeHealthy,
 			Status:             metav1.ConditionFalse,
@@ -130,7 +128,7 @@ func (r *reconciler) collectStats(
 	}
 
 	stats.Targets = collectTargetStats(
-		targets.Items,
+		targets,
 		stages.Items,
 		promotionRequests.Items,
 	)

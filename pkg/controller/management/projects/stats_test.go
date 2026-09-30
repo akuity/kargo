@@ -27,6 +27,7 @@ func Test_reconciler_collectStats(t *testing.T) {
 		name       string
 		project    *kargoapi.Project
 		client     client.Client
+		targets    func(context.Context, string) ([]kargoapi.Target, error)
 		assertions func(*testing.T, kargoapi.ProjectStatus, error)
 	}{
 		{
@@ -110,20 +111,10 @@ func Test_reconciler_collectStats(t *testing.T) {
 					}},
 				},
 			},
-			client: fake.NewClientBuilder().WithScheme(scheme).
-				WithInterceptorFuncs(interceptor.Funcs{
-					List: func(
-						_ context.Context,
-						_ client.WithWatch,
-						list client.ObjectList,
-						_ ...client.ListOption,
-					) error {
-						if _, ok := list.(*kargoapi.TargetList); ok {
-							return fmt.Errorf("something went wrong")
-						}
-						return nil
-					},
-				}).Build(),
+			client: fake.NewClientBuilder().WithScheme(scheme).Build(),
+			targets: func(context.Context, string) ([]kargoapi.Target, error) {
+				return nil, fmt.Errorf("something went wrong")
+			},
 			assertions: func(t *testing.T, status kargoapi.ProjectStatus, err error) {
 				require.Error(t, err)
 				cond := conditions.Get(&status, kargoapi.ConditionTypeHealthy)
@@ -354,13 +345,13 @@ func Test_reconciler_collectStats(t *testing.T) {
 						},
 					},
 				},
-				&kargoapi.Target{
-					ObjectMeta: metav1.ObjectMeta{Name: "t1", Namespace: testProject},
-				},
-				&kargoapi.Target{
-					ObjectMeta: metav1.ObjectMeta{Name: "t2", Namespace: testProject},
-				},
 			).Build(),
+			targets: func(context.Context, string) ([]kargoapi.Target, error) {
+				return []kargoapi.Target{
+					{ObjectMeta: metav1.ObjectMeta{Name: "t1", Namespace: testProject}},
+					{ObjectMeta: metav1.ObjectMeta{Name: "t2", Namespace: testProject}},
+				}, nil
+			},
 			assertions: func(t *testing.T, status kargoapi.ProjectStatus, err error) {
 				require.NoError(t, err)
 				require.Nil(t, conditions.Get(&status, kargoapi.ConditionTypeHealthy))
@@ -383,7 +374,15 @@ func Test_reconciler_collectStats(t *testing.T) {
 
 	for _, tt := range testCases {
 		t.Run(tt.name, func(t *testing.T) {
-			r := &reconciler{client: tt.client}
+			r := &reconciler{
+				client: tt.client,
+				listTargetsFn: func(context.Context, string) ([]kargoapi.Target, error) {
+					return nil, nil
+				},
+			}
+			if tt.targets != nil {
+				r.listTargetsFn = tt.targets
+			}
 			status, err := r.collectStats(t.Context(), tt.project)
 			tt.assertions(t, status, err)
 		})
