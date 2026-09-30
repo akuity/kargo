@@ -25,6 +25,8 @@ type PromotionRequestReference struct {
 	Freight *FreightReference `json:"freight,omitempty"`
 	// FreightCollection contains the details of the piece of Freight referenced by this Promotion as well as any additional Freight that is carried over from the target Stage's current state.
 	FreightCollection *FreightCollection `json:"freightCollection,omitempty"`
+	// Message is a human-readable description of the promotion status
+	Message *string `json:"message,omitempty"`
 	// Name is the name of the PromotionRequest.
 	Name *string `json:"name,omitempty"`
 	// Phase is a high-level summary of the PromotionRequest's lifecycle.
@@ -144,6 +146,38 @@ func (o *PromotionRequestReference) SetFreightCollection(v FreightCollection) {
 	o.FreightCollection = &v
 }
 
+// GetMessage returns the Message field value if set, zero value otherwise.
+func (o *PromotionRequestReference) GetMessage() string {
+	if o == nil || IsNil(o.Message) {
+		var ret string
+		return ret
+	}
+	return *o.Message
+}
+
+// GetMessageOk returns a tuple with the Message field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *PromotionRequestReference) GetMessageOk() (*string, bool) {
+	if o == nil || IsNil(o.Message) {
+		return nil, false
+	}
+	return o.Message, true
+}
+
+// HasMessage returns a boolean if a field has been set.
+func (o *PromotionRequestReference) HasMessage() bool {
+	if o != nil && !IsNil(o.Message) {
+		return true
+	}
+
+	return false
+}
+
+// SetMessage gets a reference to the given string and assigns it to the Message field.
+func (o *PromotionRequestReference) SetMessage(v string) {
+	o.Message = &v
+}
+
 // GetName returns the Name field value if set, zero value otherwise.
 func (o *PromotionRequestReference) GetName() string {
 	if o == nil || IsNil(o.Name) {
@@ -226,6 +260,9 @@ func (o PromotionRequestReference) ToMap() (map[string]interface{}, error) {
 	}
 	if !IsNil(o.FreightCollection) {
 		toSerialize["freightCollection"] = o.FreightCollection
+	}
+	if !IsNil(o.Message) {
+		toSerialize["message"] = o.Message
 	}
 	if !IsNil(o.Name) {
 		toSerialize["name"] = o.Name

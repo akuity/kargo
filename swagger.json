@@ -8073,6 +8073,10 @@
             }
           ]
         },
+        "message": {
+          "description": "Message is a human-readable description of the promotion status",
+          "type": "string"
+        },
         "name": {
           "description": "Name is the name of the PromotionRequest.",
           "type": "string"

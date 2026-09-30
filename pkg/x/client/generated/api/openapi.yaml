@@ -13597,6 +13597,9 @@ components:
             by this Promotion as well as any additional Freight that is carried over
             from the target Stage's current state.
           type: object
+        message:
+          description: Message is a human-readable description of the promotion status
+          type: string
         name:
           description: Name is the name of the PromotionRequest.
           type: string

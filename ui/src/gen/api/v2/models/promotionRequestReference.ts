@@ -20,6 +20,8 @@ export interface PromotionRequestReference {
    * from the target Stage's current state.
    */
   freightCollection?: FreightCollection;
+  /** Message is a human-readable description of the promotion status */
+  message?: string;
   /** Name is the name of the PromotionRequest. */
   name?: string;
   /** Phase is a high-level summary of the PromotionRequest's lifecycle. */
