@@ -115,25 +115,11 @@ func (s *server) promoteDownstream(c *gin.Context) {
 			return
 		}
 	} else {
-		// Search by alias
-		list := &kargoapi.FreightList{}
-		if err := s.client.List(
-			ctx,
-			list,
-			client.InNamespace(project),
-			client.MatchingLabels{kargoapi.LabelKeyAlias: req.FreightAlias},
-		); err != nil {
+		var err error
+		if freight, err = s.getFreightByAlias(ctx, project, req.FreightAlias); err != nil {
 			_ = c.Error(err)
 			return
 		}
-		if len(list.Items) == 0 {
-			_ = c.Error(libhttp.ErrorStr(
-				fmt.Sprintf("Freight with alias %q not found in project %q", req.FreightAlias, project),
-				http.StatusNotFound,
-			))
-			return
-		}
-		freight = &list.Items[0]
 	}
 
 	// Find downstream stages

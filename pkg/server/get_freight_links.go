@@ -34,14 +34,15 @@ func (s *server) getFreightLinks(c *gin.Context) {
 	project := c.Param("project")
 	nameOrAlias := c.Param("freight-name-or-alias")
 
-	freight := s.getFreightByNameOrAliasForGin(c, project, nameOrAlias)
-	if freight == nil {
+	freight, err := s.getFreightByNameOrAlias(ctx, project, nameOrAlias)
+	if err != nil {
+		_ = c.Error(err)
 		return
 	}
 
 	var linkDefs []kargoapi.DeepLink
 	clusterCfg := &kargoapi.ClusterConfig{}
-	if err := s.client.InternalClient().Get(ctx,
+	if err = s.client.InternalClient().Get(ctx,
 		client.ObjectKey{Name: api.ClusterConfigName},
 		clusterCfg,
 	); err != nil {
@@ -54,7 +55,7 @@ func (s *server) getFreightLinks(c *gin.Context) {
 	}
 
 	projectCfg := &kargoapi.ProjectConfig{}
-	if err := s.client.InternalClient().Get(
+	if err = s.client.InternalClient().Get(
 		ctx, client.ObjectKey{Name: project, Namespace: project}, projectCfg,
 	); err != nil {
 		if !apierrors.IsNotFound(err) {

@@ -144,6 +144,35 @@ func Test_server_promoteDownstream(t *testing.T) {
 				},
 			},
 			{
+				name:          "Freight not found by alias",
+				clientBuilder: fake.NewClientBuilder().WithObjects(testProject, testStage),
+				body: mustJSONBody(promoteDownstreamRequest{
+					FreightAlias: "nonexistent-alias",
+				}),
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
+					require.Equal(t, http.StatusNotFound, w.Code)
+				},
+			},
+			{
+				name: "Freight alias shared by multiple Freight",
+				clientBuilder: fake.NewClientBuilder().WithObjects(
+					testProject,
+					testStage,
+					testFreight,
+					func() *kargoapi.Freight {
+						dup := testFreight.DeepCopy()
+						dup.Name = "fake-freight-2"
+						return dup
+					}(),
+				),
+				body: mustJSONBody(promoteDownstreamRequest{
+					FreightAlias: "fake-alias",
+				}),
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
+					require.Equal(t, http.StatusConflict, w.Code)
+				},
+			},
+			{
 				name:          "No downstream stages",
 				clientBuilder: fake.NewClientBuilder().WithObjects(testProject, testStage, testFreight),
 				body: mustJSONBody(promoteDownstreamRequest{
