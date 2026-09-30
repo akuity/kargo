@@ -1,0 +1,176 @@
+suite: migrations/job.yaml
+values:
+  - ../test/values-unittest.yaml
+release:
+  name: kargo
+  namespace: kargo
+templates:
+  - templates/migrations/job.yaml
+tests:
+  - it: renders a Job against the bundled database by default
+    asserts:
+      - hasDocuments:
+          count: 1
+      - isKind:
+          of: Job
+      - matchRegex:
+          path: metadata.name
+          pattern: ^kargo-migrate-[0-9a-f]{10}$
+      - equal:
+          path: metadata.labels["app.kubernetes.io/component"]
+          value: migrations
+      - equal:
+          path: spec.backoffLimit
+          value: 3
+      - equal:
+          path: spec.ttlSecondsAfterFinished
+          value: 86400
+      - equal:
+          path: spec.template.spec.restartPolicy
+          value: Never
+      - equal:
+          path: spec.template.spec.serviceAccountName
+          value: kargo-migrate
+      - equal:
+          path: spec.template.spec.containers[0].args
+          value: [migrate]
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: DATABASE_HOST
+            value: kargo-postgres.kargo.svc
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: DATABASE_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: kargo-postgres
+                key: password
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: DATABASE_CONNECT_TIMEOUT
+            value: 5m
+      - notContains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: DATABASE_URL
+          any: true
+
+  - it: reads the bundled database's password from an existing Secret when configured
+    set:
+      database.postgres.password: ""
+      database.postgres.existingSecret: my-db-password
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: DATABASE_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: my-db-password
+                key: password
+
+  - it: reads the connection string from the external database's Secret
+    set:
+      database.postgres.enabled: false
+      database.external.secretName: my-db
+      database.external.secretKey: url
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: DATABASE_URL
+            valueFrom:
+              secretKeyRef:
+                name: my-db
+                key: url
+      - notContains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: DATABASE_HOST
+          any: true
+
+  - it: is not rendered when migrations are disabled
+    set:
+      database.migrations.enabled: false
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: is not rendered when there is no database
+    set:
+      database.postgres.enabled: false
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: is not rendered when workloads are not installed
+    set:
+      workloads.install: false
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: merges labels, env, and falls back to global scheduling settings
+    set:
+      global.labels:
+        team: platform
+      database.migrations.labels:
+        tier: db
+      global.podLabels:
+        sidecar: injected
+      database.migrations.env:
+        - name: PGTZ
+          value: UTC
+      global.nodeSelector:
+        disk: ssd
+      database.migrations.logLevel: DEBUG
+    asserts:
+      - equal:
+          path: metadata.labels.team
+          value: platform
+      - equal:
+          path: metadata.labels.tier
+          value: db
+      - equal:
+          path: spec.template.metadata.labels.sidecar
+          value: injected
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: PGTZ
+            value: UTC
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: LOG_LEVEL
+            value: DEBUG
+      - equal:
+          path: spec.template.spec.nodeSelector.disk
+          value: ssd
+
+---
+suite: migrations/service-account.yaml
+values:
+  - ../test/values-unittest.yaml
+templates:
+  - templates/migrations/service-account.yaml
+tests:
+  - it: renders a ServiceAccount by default
+    asserts:
+      - hasDocuments:
+          count: 1
+      - isKind:
+          of: ServiceAccount
+      - equal:
+          path: metadata.name
+          value: kargo-migrate
+
+  - it: is not rendered when migrations are disabled
+    set:
+      database.migrations.enabled: false
+    asserts:
+      - hasDocuments:
+          count: 0
