@@ -1,5 +1,5 @@
 // read more in stage_types.go
-enum VerificationPhase {
+export enum VerificationPhase {
   Pending = 'Pending',
   Running = 'Running',
   Successful = 'Successful',

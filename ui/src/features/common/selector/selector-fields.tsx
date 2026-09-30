@@ -6,13 +6,13 @@ import { useController, useFieldArray, useFormContext, useWatch } from 'react-ho
 
 import { FieldContainer } from '@ui/features/common/form/field-container';
 
-import { PromotionWindowFormValues } from './promotion-window-form-utils';
 import {
   expressionOperators,
   selectorFromValues,
+  SelectorValues,
   selectorValues,
   valuelessOperators
-} from './promotion-window-selector-utils';
+} from './selector-utils';
 
 const operatorOptions = expressionOperators.map((operator) => ({
   label: operator,
@@ -27,12 +27,21 @@ const nameModeHelp = {
 
 const subjectLabel = { stage: 'Stage', project: 'Project' };
 
+/**
+ * The slice of a form this component drives. Any form embedding SelectorFields
+ * holds its selectors under these keys, so the component stays agnostic of the
+ * rest of the form it is dropped into.
+ */
+type SelectorFormValues = { stage: SelectorValues; project: SelectorValues };
+
 type SelectorFieldsProps = {
   subject: 'stage' | 'project';
+  /** Noun for whatever owns the selector, used in the surrounding copy. */
+  owner: string;
 };
 
-export const SelectorFields = ({ subject }: SelectorFieldsProps) => {
-  const { control, getValues, setValue } = useFormContext<PromotionWindowFormValues>();
+export const SelectorFields = ({ subject, owner }: SelectorFieldsProps) => {
+  const { control, getValues, setValue } = useFormContext<SelectorFormValues>();
 
   const noun = subjectLabel[subject];
 
@@ -54,7 +63,9 @@ export const SelectorFields = ({ subject }: SelectorFieldsProps) => {
   if (!restricting) {
     return (
       <>
-        <Typography.Text strong>{noun}s this window applies to</Typography.Text>
+        <Typography.Text strong>
+          {noun}s this {owner} applies to
+        </Typography.Text>
         <Typography.Paragraph type='secondary' className='text-xs !mt-1 !mb-3'>
           Every {noun}.
         </Typography.Paragraph>
@@ -73,10 +84,12 @@ export const SelectorFields = ({ subject }: SelectorFieldsProps) => {
 
   return (
     <>
-      <Typography.Text strong>{noun}s this window applies to</Typography.Text>
+      <Typography.Text strong>
+        {noun}s this {owner} applies to
+      </Typography.Text>
       <Typography.Paragraph type='secondary' className='text-xs !mt-1 !mb-4'>
         Constraints are ANDed: a {noun} must satisfy the name and every label and expression to be
-        covered by this window.
+        covered by this {owner}.
       </Typography.Paragraph>
 
       <FieldContainer

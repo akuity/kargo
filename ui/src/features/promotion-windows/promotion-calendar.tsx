@@ -4,9 +4,9 @@ import { endOfDay, format, isSameDay, startOfDay } from 'date-fns';
 import { useMemo } from 'react';
 
 import { Calendar } from '@ui/features/common/calendar';
+import { selectorLines } from '@ui/features/common/selector/selector-utils';
 
 import { disabledOccurrenceStyle, occurrenceColors } from './occurrence-colors';
-import { selectorLines } from './promotion-window-selector-utils';
 import { PromotionWindowOccurrence } from './types';
 import { fromViewerClockDate } from './viewer-clock';
 
