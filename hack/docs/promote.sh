@@ -99,17 +99,20 @@ promote_branch() {
     print_status "Promoting branch $new_branch to production"
     local allowed_branches
     allowed_branches=$(get_current_allowed_branches) || return 1
+    # Netlify reports the production branch as build_settings.repo_branch but
+    # accepts it on write only as build_settings.branch. A payload using the
+    # read-side name is silently ignored and answered with a 200.
     local payload
     if [[ -z "$allowed_branches" ]]; then
         print_warning "Site $NETLIFY_SITE_ID has no allowed branches setting; leaving it"
         print_warning "alone. Confirm that $old_branch is configured for branch deploys."
         payload=$(jq -nc --arg branch "$new_branch" \
-          '{build_settings: {repo_branch: $branch}}')
+          '{build_settings: {branch: $branch}}')
     else
         allowed_branches=$(jq -c --arg b "$old_branch" \
           'if index($b) then . else . + [$b] end' <<< "$allowed_branches")
         payload=$(jq -nc --arg branch "$new_branch" --argjson allowed "$allowed_branches" \
-          '{build_settings: {repo_branch: $branch, allowed_branches: $allowed}}')
+          '{build_settings: {branch: $branch, allowed_branches: $allowed}}')
     fi
     api PUT "https://api.netlify.com/api/v1/sites/$NETLIFY_SITE_ID" "$payload" > /dev/null || return 1
     # A write the API accepts is not proof that the setting changed, so read it
