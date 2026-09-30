@@ -5,6 +5,7 @@ package database
 import (
 	"context"
 	"fmt"
+	"net/url"
 	"os"
 	"sync"
 	"testing"
@@ -34,10 +35,12 @@ func freshDatabase(t *testing.T) string {
 	t.Cleanup(func() {
 		_, _ = admin.Exec(ctx, "DROP DATABASE "+name+" WITH (FORCE)")
 	})
-	cfg, err := pgx.ParseConfig(adminURL)
+	// pgx's ConnConfig.ConnString reports the string it was parsed from, not
+	// the fields as modified, so the database is swapped in the URL itself.
+	uri, err := url.Parse(adminURL)
 	require.NoError(t, err)
-	cfg.Database = name
-	return cfg.ConnString()
+	uri.Path = "/" + name
+	return uri.String()
 }
 
 func TestMigrator_integration(t *testing.T) {
@@ -75,9 +78,10 @@ func TestMigrator_integration(t *testing.T) {
 	require.NoError(t, q.UpsertProject(ctx, UpsertProjectParams{
 		ID: "uid", Name: "example", CreatedAt: time.Now(),
 	}))
-	project, err := q.GetProjectByName(ctx, "example")
+	projects, err := q.ListProjects(ctx)
 	require.NoError(t, err)
-	require.Equal(t, "uid", project.ID)
+	require.Len(t, projects, 1)
+	require.Equal(t, "uid", projects[0].ID)
 }
 
 func TestMigrator_integration_concurrent(t *testing.T) {
