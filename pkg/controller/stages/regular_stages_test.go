@@ -2519,6 +2519,9 @@ func TestRegularStageReconciler_syncPromotionRequests(t *testing.T) {
 					},
 					Status: kargoapi.PromotionRequestStatus{
 						Phase: kargoapi.PromotionRequestPhaseRunning,
+						Freight: &kargoapi.FreightReference{
+							Name: "test-freight",
+						},
 					},
 				},
 			},
@@ -2535,7 +2538,7 @@ func TestRegularStageReconciler_syncPromotionRequests(t *testing.T) {
 				// The reference names the Freight; it does not describe it.
 				assert.Equal(
 					t,
-					&kargoapi.PromotionRequestFreightReference{Name: "test-freight"},
+					&kargoapi.FreightReference{Name: "test-freight"},
 					status.CurrentPromotionRequest.Freight,
 				)
 				assert.Nil(t, status.LastPromotionRequest)

@@ -5,6 +5,7 @@
  * REST API for Kargo
  * OpenAPI spec version: v1alpha1
  */
+import type { TargetUpdateStrategy } from './targetUpdateStrategy';
 import type { V1LabelSelector } from './v1LabelSelector';
 
 export interface StageTargets {
@@ -22,4 +23,9 @@ export interface StageTargets {
    * +kubebuilder:validation:Required
    */
   selectors: V1LabelSelector[];
+  /**
+   * UpdateStrategy configures the pace of updating the targets
+   * +optional
+   */
+  updateStrategy?: TargetUpdateStrategy;
 }

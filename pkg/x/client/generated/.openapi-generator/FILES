@@ -109,7 +109,6 @@ model_promotion_policy.go
 model_promotion_policy_selector.go
 model_promotion_reference.go
 model_promotion_request.go
-model_promotion_request_freight_reference.go
 model_promotion_request_list.go
 model_promotion_request_phase.go
 model_promotion_request_reference.go
@@ -197,6 +196,7 @@ model_target_spec.go
 model_target_stage_status.go
 model_target_stats.go
 model_target_status.go
+model_target_update_strategy.go
 model_update_config_map_request.go
 model_update_generic_credentials_request.go
 model_update_repo_credentials_request.go

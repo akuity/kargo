@@ -25,6 +25,7 @@ const (
 	PROMOTIONREQUESTPHASE_PromotionRequestPhaseSucceeded PromotionRequestPhase = "Succeeded"
 	PROMOTIONREQUESTPHASE_PromotionRequestPhaseFailed PromotionRequestPhase = "Failed"
 	PROMOTIONREQUESTPHASE_PromotionRequestPhaseErrored PromotionRequestPhase = "Errored"
+	PROMOTIONREQUESTPHASE_PromotionRequestPhaseAborted PromotionRequestPhase = "Aborted"
 )
 
 // All allowed values of PromotionRequestPhase enum
@@ -34,6 +35,7 @@ var AllowedPromotionRequestPhaseEnumValues = []PromotionRequestPhase{
 	"Succeeded",
 	"Failed",
 	"Errored",
+	"Aborted",
 }
 
 func (v *PromotionRequestPhase) UnmarshalJSON(src []byte) error {

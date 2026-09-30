@@ -1207,12 +1207,11 @@ func newPromotionRequestReference(
 	promotionRequest *kargoapi.PromotionRequest,
 ) *kargoapi.PromotionRequestReference {
 	return &kargoapi.PromotionRequestReference{
-		Name:       promotionRequest.Name,
-		Phase:      promotionRequest.Status.Phase,
-		FinishedAt: promotionRequest.Status.FinishedAt,
-		Freight: &kargoapi.PromotionRequestFreightReference{
-			Name: promotionRequest.Spec.Freight,
-		},
+		Name:              promotionRequest.Name,
+		Phase:             promotionRequest.Status.Phase,
+		FinishedAt:        promotionRequest.Status.FinishedAt,
+		Freight:           promotionRequest.Status.Freight,
+		FreightCollection: promotionRequest.Status.FreightCollection,
 	}
 }
 

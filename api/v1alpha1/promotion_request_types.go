@@ -20,6 +20,9 @@ const (
 	// PromotionRequestPhaseErrored denotes a PromotionRequest with Promotions that
 	// encountered technical errors.
 	PromotionRequestPhaseErrored PromotionRequestPhase = "Errored"
+	// PromotionRequestPhaseRunning denotes a PromotionRequest that is creating or
+	// monitoring Promotions.
+	PromotionRequestPhaseAborted PromotionRequestPhase = "Aborted"
 )
 
 // PromotionRequestPhase is a high-level summary of a PromotionRequest's lifecycle.
@@ -30,7 +33,8 @@ func (p *PromotionRequestPhase) IsTerminal() bool {
 	switch *p {
 	case PromotionRequestPhaseSucceeded,
 		PromotionRequestPhaseFailed,
-		PromotionRequestPhaseErrored:
+		PromotionRequestPhaseErrored,
+		PromotionRequestPhaseAborted:
 		return true
 	default:
 		return false
@@ -119,6 +123,11 @@ type PromotionRequestSpec struct {
 	// +listType=atomic
 	// +kubebuilder:validation:Required
 	Targets []PromotionRequestTarget `json:"targets"`
+
+	// UpdateStrategy configures the pace of updating the targets
+	// +optional
+	// +kubebuilder:validation:XValidation:rule="self == oldSelf"
+	UpdateStrategy TargetUpdateStrategy `json:"updateStrategy,omitempty"`
 }
 
 // PromotionRequestTarget names a Target that a PromotionRequest promotes
@@ -189,6 +198,14 @@ type PromotionRequestStatus struct {
 
 	// FinishedAt is the time at which the PromotionRequest completed.
 	FinishedAt *metav1.Time `json:"finishedAt,omitempty"`
+
+	// Freight is the detail of the piece of freight that was referenced by this promotion.
+	Freight *FreightReference `json:"freight,omitempty"`
+
+	// FreightCollection contains the details of the piece of Freight referenced
+	// by this Promotion as well as any additional Freight that is carried over
+	// from the target Stage's current state.
+	FreightCollection *FreightCollection `json:"freightCollection,omitempty"`
 }
 
 // PromotionRequestTargetStatus records the state of a single Target selected
