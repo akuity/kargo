@@ -511,7 +511,7 @@ apiVersion: v1
 kind: Secret
 metadata:
   name: github
-  namespace: kargo-shared-credentials
+  namespace: kargo-shared-resources
   labels:
     kargo.akuity.io/cred-type: git
     annotations:
