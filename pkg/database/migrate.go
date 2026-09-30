@@ -41,15 +41,32 @@ type migrator struct {
 	provider *goose.Provider
 }
 
+// lockProbeInterval is how often a waiting migration run re-checks whether
+// the database-level lock has been released.
+const lockProbeInterval = 5 * time.Second
+
 // NewMigrator returns a Migrator that applies the given migrations through
 // the pool. Migrations run through pgx's database/sql adapter, so the pool's
-// tracer sees them like any other query.
+// tracer sees them like any other query. lockTimeout bounds how long Up waits
+// for a concurrent run to release the database-level lock; it must exceed the
+// slowest migration, which is what a waiting run is waiting on.
 func NewMigrator(
 	ctx context.Context,
 	pool *pgxpool.Pool,
 	migrations fs.FS,
+	lockTimeout time.Duration,
 ) (Migrator, error) {
-	locker, err := lock.NewPostgresSessionLocker()
+	if lockTimeout < lockProbeInterval {
+		return nil, fmt.Errorf(
+			"migration lock timeout must be at least %s", lockProbeInterval,
+		)
+	}
+	locker, err := lock.NewPostgresSessionLocker(
+		lock.WithLockTimeout(
+			uint64(lockProbeInterval.Seconds()),
+			uint64(lockTimeout/lockProbeInterval),
+		),
+	)
 	if err != nil {
 		return nil, fmt.Errorf("error creating migration lock: %w", err)
 	}

@@ -48,7 +48,7 @@ func TestMigrator_integration(t *testing.T) {
 	defer pool.Close()
 	migrations, err := db.Migrations()
 	require.NoError(t, err)
-	m, err := NewMigrator(ctx, pool, migrations)
+	m, err := NewMigrator(ctx, pool, migrations, time.Minute)
 	require.NoError(t, err)
 
 	// A fresh database is behind.
@@ -102,7 +102,7 @@ func TestMigrator_integration_concurrent(t *testing.T) {
 				return
 			}
 			defer pool.Close()
-			m, err := NewMigrator(ctx, pool, migrations)
+			m, err := NewMigrator(ctx, pool, migrations, time.Minute)
 			if err != nil {
 				results[i] = err
 				return
@@ -117,7 +117,7 @@ func TestMigrator_integration_concurrent(t *testing.T) {
 	pool, err := NewPool(ctx, connString, "kargo-test")
 	require.NoError(t, err)
 	defer pool.Close()
-	m, err := NewMigrator(ctx, pool, migrations)
+	m, err := NewMigrator(ctx, pool, migrations, time.Minute)
 	require.NoError(t, err)
 	require.NoError(t, m.Check(ctx))
 }

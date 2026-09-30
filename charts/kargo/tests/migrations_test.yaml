@@ -52,6 +52,11 @@ tests:
           content:
             name: DATABASE_CONNECT_TIMEOUT
             value: 5m
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: DATABASE_MIGRATION_LOCK_TIMEOUT
+            value: 1h
       - notContains:
           path: spec.template.spec.containers[0].env
           content:

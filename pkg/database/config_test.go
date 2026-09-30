@@ -74,4 +74,5 @@ func TestConfigFromEnv(t *testing.T) {
 	require.Equal(t, "secret", cfg.Password)
 	require.Equal(t, "disable", cfg.SSLMode)
 	require.Equal(t, "30s", cfg.ConnectTimeout.String())
+	require.Equal(t, "1h0m0s", cfg.MigrationLockTimeout.String())
 }
