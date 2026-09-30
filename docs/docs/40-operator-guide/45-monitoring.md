@@ -22,7 +22,7 @@ can enable it, expose the metrics through a `Service`, and -- for users of the
 :::info
 
 For complete parameter documentation, refer to the
-[chart documentation](https://github.com/akuity/kargo/blob/main/charts/kargo/README.md).
+[chart documentation](https://github.com/akuity/kargo/blob/release-1.11/charts/kargo/README.md).
 
 :::
 
@@ -105,7 +105,7 @@ more than one replica.
 Additional `serviceMonitor` fields are available for tuning the scrape, such as
 `scheme`, `tlsConfig`, `relabelings`, `metricRelabelings`, and `namespace`.
 Refer to the
-[chart documentation](https://github.com/akuity/kargo/blob/main/charts/kargo/README.md)
+[chart documentation](https://github.com/akuity/kargo/blob/release-1.11/charts/kargo/README.md)
 for the full list.
 
 ## Scraping Without the Prometheus Operator
