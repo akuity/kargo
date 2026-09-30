@@ -17,6 +17,8 @@ import (
 	"github.com/jackc/pgx/v5/stdlib"
 	"github.com/pressly/goose/v3"
 	"github.com/stretchr/testify/require"
+
+	"github.com/akuity/kargo/db"
 )
 
 func TestStoreIntegration(t *testing.T) {
@@ -175,8 +177,10 @@ func TestMigrationsIntegration(t *testing.T) {
 // together with a migrator for it. The schema is dropped when the test ends.
 func isolatedDatabase(t *testing.T) (*pgxpool.Pool, *goose.Provider) {
 	t.Helper()
-	dsn := os.Getenv("TEST_DATABASE_URL")
-	require.NotEmpty(t, dsn, "set TEST_DATABASE_URL to run database integration tests")
+	dsn := os.Getenv("DATABASE_URL")
+	if dsn == "" {
+		t.Skip("DATABASE_URL is not set")
+	}
 	ctx := context.Background()
 	admin, err := pgxpool.New(ctx, dsn)
 	require.NoError(t, err)
@@ -206,17 +210,19 @@ func isolatedDatabase(t *testing.T) (*pgxpool.Pool, *goose.Provider) {
 	return pool, migrations
 }
 
-// newMigrator runs the migrations in db/migrations against dsn in-process.
+// newMigrator runs the embedded migrations against dsn in-process.
 // Shelling out to `go tool goose` would compile the tool on first use, which
 // on a cold CI runner takes longer than a test should wait.
 func newMigrator(t *testing.T, dsn string) *goose.Provider {
 	t.Helper()
 	cfg, err := pgx.ParseConfig(dsn)
 	require.NoError(t, err)
+	migrations, err := db.Migrations()
+	require.NoError(t, err)
 	provider, err := goose.NewProvider(
 		goose.DialectPostgres,
 		stdlib.OpenDB(*cfg),
-		os.DirFS("../../db/migrations"),
+		migrations,
 	)
 	require.NoError(t, err)
 	t.Cleanup(func() { require.NoError(t, provider.Close()) })

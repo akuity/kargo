@@ -671,10 +671,11 @@ SQL that produced it.
 
 Tests in `pkg/database` that need a real database are tagged `integration` and
 run against a disposable schema that they create and drop, so existing tables
-are left untouched. They require a database user allowed to create schemas:
+are left untouched. They require a database user allowed to create schemas
+and target `DATABASE_URL`, which defaults to the development database:
 
 ```shell
-TEST_DATABASE_URL='postgres://kargo:kargo@127.0.0.1:15432/kargo?sslmode=disable' make test-db
+make test-db
 ```
 
 ## Contributing to Documentation

@@ -31,7 +31,7 @@ jobs:
           --health-timeout 5s
           --health-retries 10
     env:
-      TEST_DATABASE_URL: postgres://kargo:kargo@127.0.0.1:5432/kargo?sslmode=disable
+      DATABASE_URL: postgres://kargo:kargo@127.0.0.1:5432/kargo?sslmode=disable
     steps:
     - name: Harden the runner (Audit all outbound calls)
       uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1

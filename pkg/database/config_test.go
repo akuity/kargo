@@ -60,6 +60,13 @@ func TestConfig_ConnString(t *testing.T) {
 	}
 }
 
+func TestConfig_Configured(t *testing.T) {
+	t.Parallel()
+	require.False(t, Config{}.Configured())
+	require.True(t, Config{URL: "postgres://db/kargo"}.Configured())
+	require.True(t, Config{Host: "db"}.Configured())
+}
+
 func TestConfigFromEnv(t *testing.T) {
 	// Not parallel: sets environment variables.
 	t.Setenv("DATABASE_URL", "")
