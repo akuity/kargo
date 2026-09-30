@@ -79,9 +79,10 @@ func TestMigrator_integration(t *testing.T) {
 	require.NoError(t, q.UpsertProject(ctx, UpsertProjectParams{
 		ID: "uid", Name: "example", CreatedAt: time.Now(),
 	}))
-	project, err := q.GetProjectByName(ctx, "example")
+	projects, err := q.ListProjects(ctx)
 	require.NoError(t, err)
-	require.Equal(t, "uid", project.ID)
+	require.Len(t, projects, 1)
+	require.Equal(t, "uid", projects[0].ID)
 }
 
 func TestMigrator_integration_concurrent(t *testing.T) {

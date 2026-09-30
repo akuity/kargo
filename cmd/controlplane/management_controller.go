@@ -34,10 +34,10 @@ import (
 )
 
 type managementControllerOptions struct {
-	DatabaseURL string
-	KubeConfig  string
-	QPS         float32
-	Burst       int
+	Database   database.Config
+	KubeConfig string
+	QPS        float32
+	Burst      int
 
 	ManageControllerRoleBindings bool
 
@@ -70,7 +70,7 @@ func newManagementControllerCommand() *cobra.Command {
 }
 
 func (o *managementControllerOptions) complete() {
-	o.DatabaseURL = os.GetEnv("DATABASE_URL", "")
+	o.Database = database.ConfigFromEnv()
 	o.KubeConfig = os.GetEnv("KUBECONFIG", "")
 	o.QPS = types.MustParseFloat32(os.GetEnv("KUBE_API_QPS", "50.0"))
 	o.Burst = types.MustParseInt(os.GetEnv("KUBE_API_BURST", "300"))
@@ -172,13 +172,13 @@ func (o *managementControllerOptions) run(ctx context.Context) error {
 		return fmt.Errorf("error setting up shared ConfigMap replication reconciler: %w", err)
 	}
 
-	if o.DatabaseURL != "" {
-		pool, poolErr := database.NewPool(ctx, o.DatabaseURL, "kargo-management-controller")
-		if poolErr != nil {
-			return fmt.Errorf("error configuring database synchronization: %w", poolErr)
+	if o.Database.Configured() {
+		pool, err := openDatabase(ctx, o.Database, "kargo-management-controller")
+		if err != nil {
+			return err
 		}
 		defer pool.Close()
-		if err := dbsync.SetupWithManager(ctx, kargoMgr, database.NewStore(pool)); err != nil {
+		if err = dbsync.SetupWithManager(ctx, kargoMgr, database.NewStore(pool)); err != nil {
 			return err
 		}
 	}
