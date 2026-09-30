@@ -334,28 +334,6 @@ is set, otherwise the chart's own.
 {{- end -}}
 
 {{/*
-kargo.postgres.password returns the password of the bundled PostgreSQL's kargo
-user: database.postgres.password when set; otherwise the password already in
-the chart's Secret, so that upgrades keep the one the database was initialized
-with; otherwise a newly generated one. The lookup only sees the cluster during
-a real install or upgrade. Under `helm template` it finds nothing and a new
-password is generated on every render, which is why GitOps installs must set
-database.postgres.existingSecret instead.
-*/}}
-{{- define "kargo.postgres.password" -}}
-{{- if .Values.database.postgres.password -}}
-{{- .Values.database.postgres.password -}}
-{{- else -}}
-{{- $existing := lookup "v1" "Secret" .Release.Namespace "kargo-postgres" -}}
-{{- if and $existing $existing.data $existing.data.password -}}
-{{- $existing.data.password | b64dec -}}
-{{- else -}}
-{{- randAlphaNum 32 -}}
-{{- end -}}
-{{- end -}}
-{{- end -}}
-
-{{/*
 kargo.cabundle.enabled returns the string "true" when the passed cabundle dict
 has either `configMapName` or `secretName` set; empty string otherwise. Useful
 inside `or` expressions in callers' outer guards.

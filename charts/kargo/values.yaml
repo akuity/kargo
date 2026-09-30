@@ -1413,9 +1413,9 @@ database:
       pullPolicy: IfNotPresent
       ## @param database.postgres.image.pullSecrets List of imagePullSecrets for the bundled PostgreSQL.
       pullSecrets: []
-    ## @param database.postgres.password Password of the bundled PostgreSQL's `kargo` user. When empty, a random password is generated on first install, stored in the `kargo-postgres` Secret, and reused on upgrades. That reuse relies on Helm's `lookup`, which cannot see the cluster under `helm template`, so tools that render the chart that way (Argo CD, for example) would generate a new password on every sync and lock clients out of the database. For those, set this value or, better, `database.postgres.existingSecret`.
+    ## @param database.postgres.password Password of the bundled PostgreSQL's `kargo` user. A value **must** be provided for this field unless `database.postgres.existingSecret` is specified. It is suggested that you generate this using a password manager or a command like: `openssl rand -base64 48 \| tr -d "=+/" \| head -c 32`. Like `api.adminAccount.tokenSigningKey`, this is stored in plaintext; to keep it out of your values, use `database.postgres.existingSecret` instead.
     password: ""
-    ## @param database.postgres.existingSecret Name of an existing Secret in Kargo's namespace holding the bundled PostgreSQL's `kargo` user password under the key `password`. When set, the chart neither generates nor stores a password. This is the recommended way to run the bundled PostgreSQL from a GitOps tool. Cannot be combined with `database.postgres.password`.
+    ## @param database.postgres.existingSecret Name of an existing Secret in Kargo's namespace holding the bundled PostgreSQL's `kargo` user password under the key `password`. When set, the chart stores no password itself. This is the recommended way to run the bundled PostgreSQL from a GitOps tool such as Argo CD. Cannot be combined with `database.postgres.password`.
     existingSecret: ""
     ## @param database.postgres.extraArgs Additional server settings for the bundled PostgreSQL, as `name=value` pairs passed to `postgres` as `-c` flags. For example, `log_lock_waits=on`.
     extraArgs: []

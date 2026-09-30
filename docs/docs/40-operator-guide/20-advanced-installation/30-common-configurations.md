@@ -710,6 +710,51 @@ For more information on how to use this feature, see the
 [Performance Considerations](../../50-user-guide/20-how-to-guides/30-working-with-warehouses.md#caching-image-metadata-by-tag)
 section of the user guide.
 
+## Database Configuration
+
+Kargo's components do not use a database yet. The chart provisions one ahead of
+that, either the minimal PostgreSQL bundled with the chart or a reference to an
+external one.
+
+### Bundled PostgreSQL
+
+By default, the chart runs a single, unreplicated PostgreSQL instance with no
+backups or tuning, meant for evaluation and development. Its `kargo` user's
+password is required:
+
+```yaml
+database:
+  postgres:
+    password: <database password>
+```
+
+To keep the password out of your values, create a Secret in Kargo's namespace
+holding it under the key `password` and reference that instead:
+
+```yaml
+database:
+  postgres:
+    existingSecret: <name of your Secret>
+```
+
+### External PostgreSQL
+
+To use your own PostgreSQL, disable the bundled instance and point the chart at
+a Secret in Kargo's namespace holding the connection string:
+
+```yaml
+database:
+  postgres:
+    enabled: false
+  external:
+    secretName: <name of your Secret>
+    secretKey: connectionString
+```
+
+The connection string is a PostgreSQL URL such as
+`postgres://user:password@host:5432/kargo?sslmode=require`. `secretKey` names
+the key within the Secret that holds it and defaults to `connectionString`.
+
 ## Garbage Collection
 
 Kargo includes a garbage collector that automatically removes old `Freight` and
