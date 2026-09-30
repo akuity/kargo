@@ -94,7 +94,8 @@ installing prerequisites (cert-manager, Argo CD, Argo Rollouts) idempotently.
 - Argo CD: localhost:30080 (admin/admin)
 - Kargo admin password: `admin`
 - PostgreSQL: localhost:15432 (kargo/kargo). `make db-shell` opens `psql` in
-  the pod; `make db-migrate` applies Goose migrations from `db/migrations/`
+  the pod; `make db-migrate` applies the embedded migrations via
+  `kargo migrate`; `make test-db` runs the database integration tests
 - `make hack-tilt-down` to undeploy Kargo (preserves prerequisites)
 - `make hack-kind-down` / `make hack-k3d-down` to destroy the cluster entirely
 

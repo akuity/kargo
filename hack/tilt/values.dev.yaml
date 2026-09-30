@@ -57,6 +57,10 @@ managementController:
 webhooksServer:
   logLevel: DEBUG
 database:
+  migrations:
+    # Tilt's db-migrate resource applies migrations from the working tree
+    # through the same subcommand, without an image build.
+    enabled: false
   postgres:
     password: kargo
     # Log any lock wait longer than deadlock_timeout, naming the session that
