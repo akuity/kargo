@@ -264,26 +264,33 @@ func (w *webhook) ValidateUpdate(
 	oldFreight *kargoapi.Freight,
 	newFreight *kargoapi.Freight,
 ) (admission.Warnings, error) {
-	freightList := kargoapi.FreightList{}
-	if err := w.listFreightFn(
-		ctx,
-		&freightList,
-		client.InNamespace(newFreight.Namespace),
-		client.MatchingLabels{kargoapi.LabelKeyAlias: newFreight.Alias},
-	); err != nil {
-		return nil, apierrors.NewInternalError(err)
-	}
-	if len(freightList.Items) > 1 ||
-		(len(freightList.Items) == 1 && freightList.Items[0].Name != newFreight.Name) {
-		return nil, apierrors.NewConflict(
-			freightGroupResource,
-			newFreight.Name,
-			fmt.Errorf(
-				"alias %q already used by another piece of Freight in namespace %q",
-				newFreight.Alias,
-				newFreight.Namespace,
-			),
-		)
+	// Alias uniqueness is checked only when the alias is changing. Two pieces
+	// of Freight can end up sharing a generated alias if they are created at
+	// nearly the same instant, and rejecting every subsequent update to either
+	// of them (including status updates) cannot undo that. It only prevents
+	// them from ever being used.
+	if newFreight.Alias != oldFreight.Alias {
+		freightList := kargoapi.FreightList{}
+		if err := w.listFreightFn(
+			ctx,
+			&freightList,
+			client.InNamespace(newFreight.Namespace),
+			client.MatchingLabels{kargoapi.LabelKeyAlias: newFreight.Alias},
+		); err != nil {
+			return nil, apierrors.NewInternalError(err)
+		}
+		if len(freightList.Items) > 1 ||
+			(len(freightList.Items) == 1 && freightList.Items[0].Name != newFreight.Name) {
+			return nil, apierrors.NewConflict(
+				freightGroupResource,
+				newFreight.Name,
+				fmt.Errorf(
+					"alias %q already used by another piece of Freight in namespace %q",
+					newFreight.Alias,
+					newFreight.Namespace,
+				),
+			)
+		}
 	}
 
 	// Freight is meant to be immutable.

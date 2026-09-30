@@ -575,6 +575,7 @@ func Test_webhook_ValidateUpdate(t *testing.T) {
 							kargoapi.LabelKeyAlias: "fake-alias",
 						},
 					},
+					Alias: "fake-alias",
 				}
 			},
 			webhook: &webhook{
@@ -614,6 +615,7 @@ func Test_webhook_ValidateUpdate(t *testing.T) {
 							kargoapi.LabelKeyAlias: "fake-alias",
 						},
 					},
+					Alias: "fake-alias",
 				}
 			},
 			webhook: &webhook{
@@ -649,6 +651,51 @@ func Test_webhook_ValidateUpdate(t *testing.T) {
 					statusErr.ErrStatus.Message,
 					"already used by another piece of Freight",
 				)
+			},
+		},
+		{
+			name: "alias unchanged skips uniqueness check",
+			setup: func() (*kargoapi.Freight, *kargoapi.Freight) {
+				oldFreight := &kargoapi.Freight{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "fake-name",
+						Namespace: "fake-namespace",
+						Labels: map[string]string{
+							kargoapi.LabelKeyAlias: "fake-alias",
+						},
+					},
+					Alias: "fake-alias",
+					Commits: []kargoapi.GitCommit{
+						{
+							RepoURL: "fake-repo-url",
+							ID:      "fake-commit-id",
+						},
+					},
+				}
+				oldFreight.Name = api.GenerateFreightID(oldFreight)
+				newFreight := oldFreight.DeepCopy()
+				return oldFreight, newFreight
+			},
+			webhook: &webhook{
+				listFreightFn: func(
+					context.Context,
+					client.ObjectList,
+					...client.ListOption,
+				) error {
+					// Any lookup would report the alias as already in use, so a
+					// success here proves the lookup was skipped.
+					return errors.New("should not have been called")
+				},
+				admissionRequestFromContextFn: admission.RequestFromContext,
+				isRequestFromKargoControlplaneFn: libWebhook.IsRequestFromKargoControlplane(
+					regexp.MustCompile("^system:serviceaccount:kargo:(kargo-api|kargo-controller)$"),
+				),
+			},
+			userInfo: &authnv1.UserInfo{
+				Username: "fake-user",
+			},
+			assertions: func(t *testing.T, _ *fakeevent.EventRecorder, err error) {
+				require.NoError(t, err)
 			},
 		},
 		{
