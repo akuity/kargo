@@ -6,7 +6,6 @@ import (
 	"context"
 	"net/url"
 	"os"
-	"os/exec"
 	"strings"
 	"testing"
 	"time"
@@ -15,6 +14,8 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/jackc/pgx/v5/stdlib"
+	"github.com/pressly/goose/v3"
 	"github.com/stretchr/testify/require"
 )
 
@@ -152,19 +153,27 @@ func TestStoreIntegration(t *testing.T) {
 
 func TestMigrationsIntegration(t *testing.T) {
 	t.Parallel()
-	pool, dsn := isolatedDatabase(t)
-	runGoose(t, dsn, "up") // Already-applied migrations are harmless.
-	runGoose(t, dsn, "down")
+	pool, migrations := isolatedDatabase(t)
+	ctx := context.Background()
+	applied, err := migrations.Up(ctx) // Already-applied migrations are harmless.
+	require.NoError(t, err)
+	require.Empty(t, applied)
+	_, err = migrations.Down(ctx)
+	require.NoError(t, err)
 	var table *string
-	require.NoError(t, pool.QueryRow(context.Background(), "SELECT to_regclass('projects')::text").Scan(&table))
+	require.NoError(t, pool.QueryRow(ctx, "SELECT to_regclass('projects')::text").Scan(&table))
 	require.Nil(t, table)
-	runGoose(t, dsn, "up")
-	require.NoError(t, NewStore(pool).UpsertProject(context.Background(), UpsertProjectParams{
+	_, err = migrations.Up(ctx)
+	require.NoError(t, err)
+	require.NoError(t, NewStore(pool).UpsertProject(ctx, UpsertProjectParams{
 		ID: "after-rollback", Name: "demo", CreatedAt: time.Now(),
 	}))
 }
 
-func isolatedDatabase(t *testing.T) (*pgxpool.Pool, string) {
+// isolatedDatabase creates a schema of its own for the test, applies the
+// repository's migrations to it, and returns a pool scoped to that schema
+// together with a migrator for it. The schema is dropped when the test ends.
+func isolatedDatabase(t *testing.T) (*pgxpool.Pool, *goose.Provider) {
 	t.Helper()
 	dsn := os.Getenv("TEST_DATABASE_URL")
 	require.NotEmpty(t, dsn, "set TEST_DATABASE_URL to run database integration tests")
@@ -188,21 +197,30 @@ func isolatedDatabase(t *testing.T) (*pgxpool.Pool, string) {
 	query.Set("search_path", schema)
 	uri.RawQuery = query.Encode()
 	isolatedDSN := uri.String()
-	runGoose(t, isolatedDSN, "up")
+	migrations := newMigrator(t, isolatedDSN)
+	_, err = migrations.Up(ctx)
+	require.NoError(t, err)
 	pool, err := NewPool(ctx, isolatedDSN, "kargo-test")
 	require.NoError(t, err)
 	t.Cleanup(pool.Close)
-	return pool, isolatedDSN
+	return pool, migrations
 }
 
-func runGoose(t *testing.T, dsn, command string) {
+// newMigrator runs the migrations in db/migrations against dsn in-process.
+// Shelling out to `go tool goose` would compile the tool on first use, which
+// on a cold CI runner takes longer than a test should wait.
+func newMigrator(t *testing.T, dsn string) *goose.Provider {
 	t.Helper()
-	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
-	defer cancel()
-	cmd := exec.CommandContext(ctx, "go", "tool", "goose", "-dir", "../../db/migrations", command)
-	cmd.Env = append(os.Environ(), "GOOSE_DRIVER=postgres", "GOOSE_DBSTRING="+dsn)
-	output, err := cmd.CombinedOutput()
-	require.NoError(t, err, "%s", output)
+	cfg, err := pgx.ParseConfig(dsn)
+	require.NoError(t, err)
+	provider, err := goose.NewProvider(
+		goose.DialectPostgres,
+		stdlib.OpenDB(*cfg),
+		os.DirFS("../../db/migrations"),
+	)
+	require.NoError(t, err)
+	t.Cleanup(func() { require.NoError(t, provider.Close()) })
+	return provider
 }
 
 func requirePGError(t *testing.T, err error, code string) {
