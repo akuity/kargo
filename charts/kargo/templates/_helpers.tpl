@@ -350,6 +350,32 @@ external database are configured, since only one can be the database.
 {{- end -}}
 
 {{/*
+kargo.database.env renders the environment variables that point a component
+at the database: the bundled PostgreSQL when it is enabled, otherwise the
+external database's connection string. The bundled database's password is
+supplied through PGPASSWORD, which pgx reads like libpq does, so the Secret
+never has to hold a full connection string. Renders nothing when no database
+is configured, which leaves database features disabled.
+*/}}
+{{- define "kargo.database.env" -}}
+{{- if .Values.database.postgres.enabled }}
+- name: DATABASE_URL
+  value: postgres://kargo@kargo-postgres.{{ .Release.Namespace }}.svc:5432/kargo?sslmode=disable
+- name: PGPASSWORD
+  valueFrom:
+    secretKeyRef:
+      name: {{ include "kargo.postgres.secretName" . }}
+      key: password
+{{- else if .Values.database.external.secretName }}
+- name: DATABASE_URL
+  valueFrom:
+    secretKeyRef:
+      name: {{ .Values.database.external.secretName }}
+      key: {{ .Values.database.external.secretKey }}
+{{- end }}
+{{- end -}}
+
+{{/*
 kargo.postgres.secretName returns the name of the Secret holding the bundled
 PostgreSQL's password: the operator's, when database.postgres.existingSecret
 is set, otherwise the chart's own.
