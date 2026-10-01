@@ -93,9 +93,9 @@ func (s *server) setupRESTRouter(ctx context.Context) *gin.Engine {
 	if s.cfg.TracingEnabled {
 		router.Use(otelgin.Middleware("kargo-api"))
 	}
-	router.Use(LoggingMiddleware())
+	router.Use(middleware.LogRequests())
 	router.Use(middleware.HandleErrors())
-	router.Use(recoveryMiddleware())
+	router.Use(middleware.Recover())
 	if s.cfg.AdminConfig != nil || s.cfg.OIDCConfig != nil {
 		router.Use(NewAuthMiddleware(ctx, s.cfg, s.client.InternalClient()))
 	}
@@ -108,14 +108,14 @@ func (s *server) setupRESTRouter(ctx context.Context) *gin.Engine {
 		// (4MB). They are registered before the default limit below so that it
 		// does not apply to them as well.
 		// =====================================================================
-		resourceLimit := bodyLimitMiddleware(4 * 1024 * 1024)
+		resourceLimit := middleware.LimitBody(4 * 1024 * 1024)
 		v1beta1.POST("/resources", resourceLimit, s.createResources)
 		v1beta1.PUT("/resources", resourceLimit, s.updateResources)
 		v1beta1.DELETE("/resources", resourceLimit, s.deleteResources)
 
 		// Every route registered from here on, including those of the groups
 		// below, gets a 1MB limit.
-		v1beta1.Use(bodyLimitMiddleware(1 * 1024 * 1024))
+		v1beta1.Use(middleware.LimitBody(1 * 1024 * 1024))
 
 		// =====================================================================
 		// Authentication
@@ -219,7 +219,13 @@ func (s *server) setupRESTRouter(ctx context.Context) *gin.Engine {
 		// =====================================================================
 		v1beta1.GET("/projects", s.listProjects)
 		project := v1beta1.Group("/projects/:project")
-		project.Use(s.projectExistsMiddleware())
+		// The Project is looked up with the API server's own client rather than
+		// the authorizing one on purpose. Through the authorizing client, every
+		// project-scoped request would also require permission to get Projects,
+		// which a user granted access to a Project's Stages or Freight alone
+		// does not have. The lookup discloses nothing but the Project's
+		// existence; the request is then authorized as usual.
+		project.Use(middleware.RequireProject(s.client.InternalClient()))
 		{
 			// Project CRUD
 			project.GET("", s.getProject)

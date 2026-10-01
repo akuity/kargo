@@ -1,4 +1,4 @@
-package server
+package middleware
 
 import (
 	"errors"
@@ -15,11 +15,10 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	libhttp "github.com/akuity/kargo/pkg/http"
 	"github.com/akuity/kargo/pkg/logging"
-	"github.com/akuity/kargo/pkg/server/middleware"
 	"github.com/akuity/kargo/pkg/server/user"
 )
 
-func TestLoggingMiddleware(t *testing.T) {
+func TestLogRequests(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	testCases := []struct {
@@ -157,8 +156,8 @@ func TestLoggingMiddleware(t *testing.T) {
 				)
 				c.Next()
 			})
-			router.Use(LoggingMiddleware())
-			router.Use(middleware.HandleErrors())
+			router.Use(LogRequests())
+			router.Use(HandleErrors())
 			router.GET("/", testCase.handler)
 
 			w := httptest.NewRecorder()

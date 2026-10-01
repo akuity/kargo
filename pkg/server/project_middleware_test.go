@@ -14,7 +14,7 @@ import (
 	"github.com/akuity/kargo/pkg/server/config"
 )
 
-func Test_server_projectExistsMiddleware(t *testing.T) {
+func TestProjectRoutesRequireProject(t *testing.T) {
 	testProject := &kargoapi.Project{
 		ObjectMeta: metav1.ObjectMeta{Name: "existing-project"},
 	}

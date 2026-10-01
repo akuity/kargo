@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -12,8 +13,13 @@ import (
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 	semconv "go.opentelemetry.io/otel/semconv/v1.43.0"
 	"go.opentelemetry.io/otel/trace"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/rest"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	"github.com/akuity/kargo/pkg/server/config"
+	"github.com/akuity/kargo/pkg/server/kubernetes"
 )
 
 func TestSetupRESTRouter_tracing(t *testing.T) {
@@ -63,7 +69,25 @@ func TestSetupRESTRouter_tracing(t *testing.T) {
 				sdktrace.WithSpanProcessor(recorder),
 			))
 
-			s := &server{cfg: testCase.cfg}
+			// The router needs a client to build the Project middleware with,
+			// though no project-scoped route is exercised here.
+			kubeClient, err := kubernetes.NewClient(
+				t.Context(),
+				&rest.Config{},
+				kubernetes.ClientOptions{
+					SkipAuthorization: true,
+					NewInternalClient: func(
+						context.Context,
+						*rest.Config,
+						*runtime.Scheme,
+						string,
+					) (client.WithWatch, error) {
+						return fake.NewClientBuilder().Build(), nil
+					},
+				},
+			)
+			require.NoError(t, err)
+			s := &server{cfg: testCase.cfg, client: kubeClient}
 			router := s.setupRESTRouter(t.Context())
 
 			w := httptest.NewRecorder()
