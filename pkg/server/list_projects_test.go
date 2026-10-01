@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	authnv1 "k8s.io/api/authentication/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -194,6 +195,15 @@ func Test_filterProjectsByAccess(t *testing.T) {
 		{
 			name:     "admin user with no SA mappings",
 			userInfo: user.Admin{},
+			assert: func(t *testing.T, result []kargoapi.Project) {
+				require.Empty(t, result)
+			},
+		},
+		{
+			name: "Kubernetes user",
+			userInfo: user.KubernetesUser{UserInfo: authnv1.UserInfo{
+				Username: "system:serviceaccount:project-a:viewer",
+			}},
 			assert: func(t *testing.T, result []kargoapi.Project) {
 				require.Empty(t, result)
 			},

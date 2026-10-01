@@ -31,6 +31,12 @@ type Identity interface {
 	// Actor names the identity the way events and audit annotations record
 	// it.
 	Actor() string
+	// MemberOf reports whether the identity has a presence in the Project
+	// namespace, such that the Project counts as one of theirs. It implies no
+	// permission in it. Only an OIDCUser, through a mapped ServiceAccount,
+	// ever does; nothing is recorded about which Projects anyone else belongs
+	// to.
+	MemberOf(namespace string) bool
 }
 
 var (
@@ -57,6 +63,10 @@ func (Admin) IsAdmin() bool { return true }
 func (Admin) Subjects(authv1.ResourceAttributes) []Subject { return nil }
 
 func (Admin) Actor() string { return kargoapi.EventActorAdmin }
+
+// MemberOf returns false: an Admin belongs to every Project, so none is
+// singled out as theirs.
+func (Admin) MemberOf(string) bool { return false }
 
 // OIDCUser is a user authenticated by Kargo's OpenID Connect identity
 // provider. Such a user holds no Kubernetes identity of their own; they act
@@ -103,9 +113,9 @@ func (u OIDCUser) Subjects(ra authv1.ResourceAttributes) []Subject {
 	return subjects
 }
 
-// MappedTo reports whether any of the user's ServiceAccounts is in the
-// namespace.
-func (u OIDCUser) MappedTo(namespace string) bool {
+// MemberOf reports whether the user's claims map them to at least one
+// ServiceAccount in the namespace.
+func (u OIDCUser) MemberOf(namespace string) bool {
 	return len(u.ServiceAccountsByNamespace[namespace]) > 0
 }
 
@@ -157,6 +167,10 @@ func (u KubernetesUser) Subjects(authv1.ResourceAttributes) []Subject {
 func (u KubernetesUser) Actor() string {
 	return kargoapi.EventActorKubernetesUserPrefix + u.Username
 }
+
+// MemberOf returns false: Kubernetes vouches for who the user is, not for
+// which Projects are theirs.
+func (KubernetesUser) MemberOf(string) bool { return false }
 
 // ServiceAccountSubject is the subject a ServiceAccount is reviewed as.
 func ServiceAccountSubject(name types.NamespacedName) Subject {

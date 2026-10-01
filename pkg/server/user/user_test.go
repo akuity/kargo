@@ -17,6 +17,7 @@ func TestAdmin(t *testing.T) {
 	require.True(t, Admin{}.IsAdmin())
 	require.Empty(t, Admin{}.Subjects(authv1.ResourceAttributes{Namespace: "demo"}))
 	require.Equal(t, kargoapi.EventActorAdmin, Admin{}.Actor())
+	require.False(t, Admin{}.MemberOf("demo"))
 }
 
 func TestOIDCUser_Subjects(t *testing.T) {
@@ -93,8 +94,8 @@ func TestOIDCUser_Subjects(t *testing.T) {
 		})
 	}
 	require.False(t, u.IsAdmin())
-	require.True(t, u.MappedTo("demo"))
-	require.False(t, u.MappedTo("elsewhere"))
+	require.True(t, u.MemberOf("demo"))
+	require.False(t, u.MemberOf("elsewhere"))
 }
 
 func TestOIDCUser_Actor(t *testing.T) {
@@ -143,6 +144,7 @@ func TestKubernetesUser(t *testing.T) {
 	}}
 	require.False(t, u.IsAdmin())
 	require.Equal(t, kargoapi.EventActorKubernetesUserPrefix+u.Username, u.Actor())
+	require.False(t, u.MemberOf("kargo-demo"))
 	subjects := u.Subjects(authv1.ResourceAttributes{Namespace: "demo"})
 	require.Equal(t, []Subject{{
 		Username: u.Username,

@@ -93,23 +93,19 @@ func (s *server) listProjects(c *gin.Context) {
 	c.JSON(http.StatusOK, listProjectsResponse{Items: list.Items, Total: total})
 }
 
-// filterProjectsByAccess filters the given projects to only those where the
-// authenticated user has been mapped to a ServiceAccount in the project's
-// namespace.
+// filterProjectsByAccess filters the given projects to only those the
+// authenticated user is a member of; see user.Identity.MemberOf.
 func filterProjectsByAccess(
 	ctx context.Context,
 	projects []kargoapi.Project,
 ) []kargoapi.Project {
-	id, _ := user.IdentityFromContext(ctx)
-	oidcUser, ok := id.(user.OIDCUser)
+	id, ok := user.IdentityFromContext(ctx)
 	if !ok {
-		// Only an OpenID Connect user is mapped to ServiceAccounts; nothing
-		// else is filtered this way.
 		return []kargoapi.Project{}
 	}
 	filtered := make([]kargoapi.Project, 0, len(projects))
 	for _, project := range projects {
-		if oidcUser.MappedTo(project.Name) {
+		if id.MemberOf(project.Name) {
 			filtered = append(filtered, project)
 		}
 	}
