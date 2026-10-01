@@ -20,6 +20,7 @@ import (
 	"github.com/akuity/kargo/pkg/event"
 	libhttp "github.com/akuity/kargo/pkg/http"
 	"github.com/akuity/kargo/pkg/logging"
+	"github.com/akuity/kargo/pkg/server/middleware"
 	"github.com/akuity/kargo/pkg/server/user"
 )
 
@@ -34,13 +35,14 @@ type createResourceResult struct {
 	Error                   string         `json:"error,omitempty"`
 } // @name CreateResourceResult
 
-// resourceErrorResponse is the name errorResponse was first published under,
-// and the name the spec has to keep: renaming the schema would rename the
-// corresponding type in every generated client. This operation is the only one
-// that documents an error body, and it refers to this alias rather than to
-// errorResponse, which is what makes swag honor the name below.
+// resourceErrorResponse is the name middleware.ErrorResponse was first
+// published under, and the name the spec has to keep: renaming the schema
+// would rename the corresponding type in every generated client. This
+// operation is the only one that documents an error body, and it refers to
+// this alias rather than to the type itself, which is what makes swag honor
+// the name below.
 // nolint: unused
-type resourceErrorResponse = errorResponse // @name ResourceErrorResponse
+type resourceErrorResponse = middleware.ErrorResponse // @name ResourceErrorResponse
 
 // @id CreateResource
 // @Summary Create resources
