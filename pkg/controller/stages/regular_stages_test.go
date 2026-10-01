@@ -7194,14 +7194,116 @@ func TestRegularStageReconciler_autoPromoteFreight(t *testing.T) {
 	now := time.Now()
 	hourAgo := now.Add(-time.Hour)
 
+	// Targets live in the database, so a target-aware case supplies them
+	// through a lister rather than as objects.
+	usAndEUTargets := fakeTargetLister{
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: "fake-project",
+				Name:      "us-east",
+				Labels:    map[string]string{"region": "us"},
+			},
+		},
+		// Present in the Project but not matched by the Stage's selector, so
+		// it must not appear in the resolved list.
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: "fake-project",
+				Name:      "eu-west",
+				Labels:    map[string]string{"region": "eu"},
+			},
+		},
+	}
+
 	tests := []struct {
 		name                 string
 		autoPromotionEnabled bool
 		stage                *kargoapi.Stage
 		objects              []client.Object
+		targets              TargetLister
 		interceptor          interceptor.Funcs
 		assertions           func(*testing.T, *fakeevent.EventRecorder, client.Client, kargoapi.StageStatus, error)
 	}{
+		{
+			name:                 "target-aware Stage without an API server is stalled",
+			autoPromotionEnabled: true,
+			stage: &kargoapi.Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace:  "fake-project",
+					Name:       "test-stage",
+					Generation: 3,
+				},
+				Spec: kargoapi.StageSpec{
+					RequestedFreight: []kargoapi.FreightRequest{{
+						Origin: kargoapi.FreightOrigin{
+							Kind: kargoapi.FreightOriginKindWarehouse,
+							Name: "test-warehouse",
+						},
+						Sources: kargoapi.FreightSources{Direct: true},
+					}},
+					Targets: &kargoapi.StageTargets{
+						Selectors: []metav1.LabelSelector{{}},
+					},
+				},
+			},
+			assertions: func(
+				t *testing.T,
+				_ *fakeevent.EventRecorder,
+				c client.Client,
+				status kargoapi.StageStatus,
+				err error,
+			) {
+				require.NoError(t, err)
+				stalled := conditions.Get(&status, kargoapi.ConditionTypeStalled)
+				require.NotNil(t, stalled)
+				assert.Equal(t, metav1.ConditionTrue, stalled.Status)
+				assert.Equal(t, "TargetsUnavailable", stalled.Reason)
+				assert.Equal(t, int64(3), stalled.ObservedGeneration)
+
+				reqList := &kargoapi.PromotionRequestList{}
+				require.NoError(t, c.List(t.Context(), reqList, client.InNamespace("fake-project")))
+				assert.Empty(t, reqList.Items)
+			},
+		},
+		{
+			name:                 "a stalled condition is cleared once Targets are available",
+			autoPromotionEnabled: false,
+			stage: &kargoapi.Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "fake-project",
+					Name:      "test-stage",
+				},
+				Spec: kargoapi.StageSpec{
+					RequestedFreight: []kargoapi.FreightRequest{{
+						Origin: kargoapi.FreightOrigin{
+							Kind: kargoapi.FreightOriginKindWarehouse,
+							Name: "test-warehouse",
+						},
+					}},
+					Targets: &kargoapi.StageTargets{
+						Selectors: []metav1.LabelSelector{{}},
+					},
+				},
+				Status: kargoapi.StageStatus{
+					Conditions: []metav1.Condition{{
+						Type:   kargoapi.ConditionTypeStalled,
+						Status: metav1.ConditionTrue,
+						Reason: "TargetsUnavailable",
+					}},
+				},
+			},
+			targets: fakeTargetLister{},
+			assertions: func(
+				t *testing.T,
+				_ *fakeevent.EventRecorder,
+				_ client.Client,
+				status kargoapi.StageStatus,
+				err error,
+			) {
+				require.NoError(t, err)
+				assert.Nil(t, conditions.Get(&status, kargoapi.ConditionTypeStalled))
+			},
+		},
 		{
 			name:                 "no requested freight",
 			autoPromotionEnabled: true,
@@ -7385,23 +7487,8 @@ func TestRegularStageReconciler_autoPromoteFreight(t *testing.T) {
 						Name: "test-warehouse",
 					},
 				},
-				&kargoapi.Target{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "fake-project",
-						Name:      "us-east",
-						Labels:    map[string]string{"region": "us"},
-					},
-				},
-				// Present in the Project but not matched by the Stage's
-				// selector, so it must not appear in the resolved list.
-				&kargoapi.Target{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "fake-project",
-						Name:      "eu-west",
-						Labels:    map[string]string{"region": "eu"},
-					},
-				},
 			},
+			targets: usAndEUTargets,
 			assertions: func(
 				t *testing.T,
 				recorder *fakeevent.EventRecorder,
@@ -7456,6 +7543,7 @@ func TestRegularStageReconciler_autoPromoteFreight(t *testing.T) {
 					},
 				},
 			},
+			targets: fakeTargetLister{},
 			objects: []client.Object{
 				&kargoapi.Warehouse{
 					ObjectMeta: metav1.ObjectMeta{
@@ -9473,6 +9561,7 @@ func TestRegularStageReconciler_autoPromoteFreight(t *testing.T) {
 			r := &RegularStageReconciler{
 				client:      c,
 				eventSender: k8sevent.NewEventSender(recorder),
+				targets:     tt.targets,
 			}
 
 			status, err := r.autoPromoteFreight(t.Context(), tt.stage, tt.autoPromotionEnabled)
@@ -10073,4 +10162,11 @@ func testPromotionRequest(
 			FinishedAt: finishedAt,
 		},
 	}
+}
+
+// fakeTargetLister is a TargetLister over a fixed list of Targets.
+type fakeTargetLister []kargoapi.Target
+
+func (f fakeTargetLister) ListTargets(context.Context, string) ([]kargoapi.Target, error) {
+	return f, nil
 }

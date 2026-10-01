@@ -146,6 +146,10 @@ type server struct {
 		types.NamespacedName,
 	) (*rolloutsapi.AnalysisRun, error)
 
+	// listTargetsFn lists a Project's Targets from the database. It is nil
+	// when the server runs without one.
+	listTargetsFn func(context.Context, string) ([]kargoapi.Target, error)
+
 	// Special authorizations:
 	authorizeFn func(
 		ctx context.Context,
@@ -192,6 +196,9 @@ func NewServer(
 	s.patchFreightAliasFn = s.patchFreightAlias
 	s.patchFreightStatusFn = s.patchFreightStatus
 	s.authorizeFn = kubeClient.Authorize
+	if store != nil {
+		s.listTargetsFn = store.ListTargets
+	}
 	s.getAnalysisTemplateFn = rollouts.GetAnalysisTemplate
 	s.getClusterAnalysisTemplateFn = rollouts.GetClusterAnalysisTemplate
 	s.getAnalysisRunFn = rollouts.GetAnalysisRun

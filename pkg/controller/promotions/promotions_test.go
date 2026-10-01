@@ -42,8 +42,10 @@ func TestNewPromotionReconciler(t *testing.T) {
 		k8sevent.NewEventSender(&fakeevent.EventRecorder{}),
 		&promotion.MockEngine{},
 		ReconcilerConfig{},
+		nil,
 	)
 	require.NotNil(t, r.kargoClient)
+	require.Nil(t, r.targets)
 	require.NotNil(t, r.sender)
 	require.NotNil(t, r.promoEngine)
 	require.NotNil(t, r.getStageFn)
@@ -66,6 +68,7 @@ func newFakeReconciler(
 		k8sevent.NewEventSender(recorder),
 		&promotion.MockEngine{},
 		ReconcilerConfig{},
+		nil,
 	)
 }
 
@@ -1399,7 +1402,10 @@ func Test_reconciler_promote_targetContext(t *testing.T) {
 				kargoClient: fake.NewClientBuilder().WithScheme(scheme).WithObjects(
 					stage,
 					freight,
-					&kargoapi.Target{
+				).Build(),
+				promoEngine: engine,
+				targets: fakeTargetGetter{
+					"fake-target": {
 						ObjectMeta: metav1.ObjectMeta{
 							Name:      "fake-target",
 							Namespace: testNamespace,
@@ -1411,8 +1417,7 @@ func Test_reconciler_promote_targetContext(t *testing.T) {
 							},
 						},
 					},
-				).Build(),
-				promoEngine: engine,
+				},
 			}
 
 			status, _, err := r.promote(
@@ -1426,4 +1431,12 @@ func Test_reconciler_promote_targetContext(t *testing.T) {
 			testCase.assert(t, capturedCtx.Target)
 		})
 	}
+}
+
+// fakeTargetGetter is a promotion.TargetGetter over a fixed set of Targets,
+// keyed by name.
+type fakeTargetGetter map[string]*kargoapi.Target
+
+func (f fakeTargetGetter) GetTarget(_ context.Context, _, name string) (*kargoapi.Target, error) {
+	return f[name], nil
 }

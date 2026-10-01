@@ -29,6 +29,7 @@ import (
 	"github.com/akuity/kargo/pkg/controller/promotionrequests"
 	"github.com/akuity/kargo/pkg/controller/promotions"
 	"github.com/akuity/kargo/pkg/controller/stages"
+	"github.com/akuity/kargo/pkg/controller/targets"
 	"github.com/akuity/kargo/pkg/controller/warehouses"
 	"github.com/akuity/kargo/pkg/credentials"
 	credsdb "github.com/akuity/kargo/pkg/credentials/kubernetes"
@@ -55,6 +56,8 @@ import (
 )
 
 type controllerOptions struct {
+	APIServerBaseURL string
+
 	IsDefaultController bool
 	ShardName           string
 
@@ -108,6 +111,7 @@ func newControllerCommand() *cobra.Command {
 }
 
 func (o *controllerOptions) complete() {
+	o.APIServerBaseURL = os.GetEnv("API_SERVER_BASE_URL", "")
 	o.IsDefaultController = types.MustParseBool(os.GetEnv("IS_DEFAULT_CONTROLLER", "false"))
 	o.ShardName = os.GetEnv("SHARD_NAME", "")
 
@@ -183,12 +187,27 @@ func (o *controllerOptions) run(ctx context.Context) error {
 		credsdb.DatabaseConfigFromEnv(),
 	)
 
+	// Targets live in the control plane's database and are served by the API
+	// server. The controller may run far from both, so it reads Targets
+	// through the API server, authenticating with the credential it already
+	// holds for the control plane. Without an API server, Stages that select
+	// Targets cannot be promoted and Promotions that name a Target fail.
+	var targetClient *targets.Client
+	if o.APIServerBaseURL != "" {
+		if targetClient, err = targets.NewClient(o.APIServerBaseURL, kargoMgr.GetConfig()); err != nil {
+			return fmt.Errorf("error configuring access to Targets: %w", err)
+		}
+	} else {
+		o.Logger.Info("API_SERVER_BASE_URL is not set; promotion to Targets is unavailable")
+	}
+
 	if err := o.setupReconcilers(
 		ctx,
 		kargoMgr,
 		argocdMgr,
 		credentialsDB,
 		stagesReconcilerCfg,
+		targetClient,
 	); err != nil {
 		return fmt.Errorf("error setting up reconcilers: %w", err)
 	}
@@ -464,10 +483,22 @@ func (o *controllerOptions) setupReconcilers(
 	kargoMgr, argocdMgr manager.Manager,
 	credentialsDB credentials.Database,
 	stagesReconcilerCfg stages.ReconcilerConfig,
+	targetClient *targets.Client,
 ) error {
 	var argoCDClient client.Client
 	if argocdMgr != nil {
 		argoCDClient = argocdMgr.GetClient()
+	}
+
+	// A nil client must reach the reconcilers as a nil interface of their own
+	// types, which is what they test for.
+	var (
+		targetLister stages.TargetLister
+		targetGetter promotion.TargetGetter
+	)
+	if targetClient != nil {
+		targetLister = targetClient
+		targetGetter = targetClient
 	}
 
 	healthCheckers.Initialize(argoCDClient)
@@ -490,6 +521,7 @@ func (o *controllerOptions) setupReconcilers(
 			promotion.DefaultExprDataCacheFn,
 		),
 		promotions.ReconcilerConfigFromEnv(),
+		targetGetter,
 	); err != nil {
 		return fmt.Errorf("error setting up Promotions reconciler: %w", err)
 	}
@@ -506,6 +538,7 @@ func (o *controllerOptions) setupReconcilers(
 		stagesReconcilerCfg,
 		credentialsDB,
 		health.NewAggregatingChecker(),
+		targetLister,
 	).SetupWithManager(
 		ctx,
 		kargoMgr,
