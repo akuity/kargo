@@ -11,7 +11,7 @@ import type { PromotionPolicySelector } from './promotionPolicySelector';
 export interface PromotionPolicy {
   /**
    * AutoPromotionEnabled indicates whether new Freight can automatically be
-   * promoted into the Stage referenced by the Stage field. Note: There are may
+   * promoted into the Stage referenced by the Stage field. Note: There may
    * be other conditions also required for an auto-promotion to occur. This
    * field defaults to false, but is commonly set to true for Stages that
    * subscribe to Warehouses instead of other, upstream Stages. This allows
