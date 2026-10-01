@@ -15,6 +15,7 @@ import { ArtifactReference, Chart, GitCommit, Image } from '@ui/gen/api/v2/model
 
 import { ArtifactIcon } from './artifact-icon';
 import { humanComprehendableArtifact } from './artifact-parts-utils';
+import { commitSubject } from './commit-subject-utils';
 import { shortVersion } from './short-version-utils';
 
 type FreightArtifactProps = {
@@ -39,8 +40,11 @@ export const FreightArtifact = (props: FreightArtifactProps) => {
       ? shortVersion(props.artifact.tag)
       : props.artifact.id?.slice(0, 7);
 
+    // commit subject identifies the freight for humans; fall back to repo URL
+    const title = commitSubject(props.artifact.message) || props.artifact.repoURL;
+
     const TagComponent = (
-      <Tag title={props.artifact.repoURL} bordered={false} color='geekblue' key={props.artifact.id}>
+      <Tag title={title} bordered={false} color='geekblue' key={props.artifact.id}>
         <ArtifactIcon artifact={props.artifact} className='mr-1' />
 
         {displayId}
