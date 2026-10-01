@@ -15,6 +15,7 @@ import (
 	"github.com/akuity/kargo/pkg/event"
 	libhttp "github.com/akuity/kargo/pkg/http"
 	"github.com/akuity/kargo/pkg/logging"
+	"github.com/akuity/kargo/pkg/server/auth/can"
 	"github.com/akuity/kargo/pkg/server/user"
 )
 
@@ -112,16 +113,7 @@ func (s *server) promoteToStage(c *gin.Context) {
 		return
 	}
 
-	if err = s.authorizeFn(
-		ctx,
-		"promote",
-		kargoapi.GroupVersion.WithResource("stages"),
-		"",
-		types.NamespacedName{
-			Namespace: project,
-			Name:      stageName,
-		},
-	); err != nil {
+	if err = s.authorize(ctx, can.Promote().Stage(project, stageName)); err != nil {
 		_ = c.Error(err)
 		return
 	}

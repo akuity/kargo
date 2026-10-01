@@ -13,10 +13,10 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/yaml"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	libhttp "github.com/akuity/kargo/pkg/http"
+	"github.com/akuity/kargo/pkg/server/auth/can"
 	"github.com/akuity/kargo/pkg/server/rbac"
 	"github.com/akuity/kargo/pkg/server/user"
 )
@@ -217,13 +217,7 @@ func (s *server) authorizeResourceCreate(
 		// rejection of the malformed resource to normal validation.
 		return nil
 	}
-	return s.authorizeFn(
-		ctx,
-		"promote",
-		kargoapi.GroupVersion.WithResource("stages"),
-		"",
-		client.ObjectKey{Namespace: obj.GetNamespace(), Name: stage},
-	)
+	return s.authorize(ctx, can.Promote().Stage(obj.GetNamespace(), stage))
 }
 
 // verifyNoEscalation blocks a generic resource create or update from conferring

@@ -5,10 +5,10 @@ import (
 
 	"github.com/gin-gonic/gin"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/api"
+	"github.com/akuity/kargo/pkg/server/auth/can"
 )
 
 // @id RefreshClusterConfig
@@ -23,10 +23,7 @@ import (
 func (s *server) refreshClusterConfig(c *gin.Context) {
 	ctx := c.Request.Context()
 
-	key := client.ObjectKey{Name: api.ClusterConfigName}
-	if err := s.authorizeFn(
-		ctx, "get", kargoapi.GroupVersion.WithResource("clusterconfigs"), "", key,
-	); err != nil {
+	if err := s.authorize(ctx, can.Get().ClusterConfig(api.ClusterConfigName)); err != nil {
 		_ = c.Error(err)
 		return
 	}

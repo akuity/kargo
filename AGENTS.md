@@ -490,7 +490,13 @@ any data is read or written.
 Because this is not a standard Kubernetes CRUD verb, the authorizing client
 cannot check it implicitly. Endpoints that require promote permission
 (promote-to-stage, promote-downstream, approve-freight) must test for permission
-using the wrapper's `Authorize()` method explicitly.
+explicitly, describing the operation with `pkg/server/auth/can`:
+
+```go
+if err := s.authorize(ctx, can.Promote().Stage(project, stage)); err != nil {
+    return err
+}
+```
 
 **Internal client bypass:** In rare cases the API server uses its own
 (non-authorizing) internal client to act on behalf of a user. **Any code that

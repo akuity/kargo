@@ -6,10 +6,10 @@ import (
 
 	"github.com/gin-gonic/gin"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/api"
+	"github.com/akuity/kargo/pkg/server/auth/can"
 )
 
 // @id RefreshStage
@@ -30,10 +30,7 @@ func (s *server) refreshStage(c *gin.Context) {
 	project := c.Param("project")
 	stageName := c.Param("stage")
 
-	stageKey := client.ObjectKey{Name: stageName, Namespace: project}
-	if err := s.authorizeFn(
-		ctx, "get", kargoapi.GroupVersion.WithResource("stages"), "", stageKey,
-	); err != nil {
+	if err := s.authorize(ctx, can.Get().Stage(project, stageName)); err != nil {
 		_ = c.Error(err)
 		return
 	}
@@ -49,10 +46,8 @@ func (s *server) refreshStage(c *gin.Context) {
 
 	// If there is a current Promotion then refresh it, too
 	if stage.Status.CurrentPromotion != nil {
-		promoKey := client.ObjectKey{Name: stage.Status.CurrentPromotion.Name, Namespace: project}
-		if err := s.authorizeFn(
-			ctx, "get", kargoapi.GroupVersion.WithResource("promotions"), "", promoKey,
-		); err != nil {
+		promoName := stage.Status.CurrentPromotion.Name
+		if err := s.authorize(ctx, can.Get().Promotion(project, promoName)); err != nil {
 			_ = c.Error(err)
 			return
 		}
@@ -60,7 +55,7 @@ func (s *server) refreshStage(c *gin.Context) {
 		promo := &kargoapi.Promotion{
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace: project,
-				Name:      stage.Status.CurrentPromotion.Name,
+				Name:      promoName,
 			},
 		}
 		if err := api.RefreshObject(ctx, s.client.InternalClient(), promo); err != nil {
