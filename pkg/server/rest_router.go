@@ -10,6 +10,8 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 
 	libhttp "github.com/akuity/kargo/pkg/http"
+	"github.com/akuity/kargo/pkg/server/rest"
+	"github.com/akuity/kargo/pkg/server/targets"
 )
 
 // nolint: lll
@@ -244,8 +246,9 @@ func (s *server) setupRESTRouter(ctx context.Context) *gin.Engine {
 			project.POST("/stages/:stage/verification/abort", s.abortVerification)
 
 			// Targets
-			project.GET("/targets", s.listTargets)
-			project.GET("/targets/:target", s.getTarget)
+			// Targets live in the database; their handlers authorize each
+			// request themselves, since no Kubernetes client does it for them.
+			targets.New(s.store, rest.Func(s.authorizeFn), s.client).Register(project)
 
 			// Warehouses
 			project.GET("/warehouses", s.listWarehouses)

@@ -24,6 +24,7 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/api"
 	rollouts "github.com/akuity/kargo/pkg/api/stubs/rollouts"
+	"github.com/akuity/kargo/pkg/database"
 	"github.com/akuity/kargo/pkg/event"
 	httputil "github.com/akuity/kargo/pkg/http"
 	"github.com/akuity/kargo/pkg/logging"
@@ -42,6 +43,10 @@ type server struct {
 	client  kubernetes.Client
 	rolesDB rbac.RolesDatabase
 	sender  event.Sender
+	// store holds the resources that live in the database rather than in
+	// Kubernetes. It is nil when the server runs without a database, in
+	// which case the endpoints that need it respond 501.
+	store database.Store
 
 	// The following behaviors are overridable for testing purposes:
 
@@ -155,17 +160,22 @@ type Server interface {
 	Serve(ctx context.Context, l net.Listener) error
 }
 
+// NewServer returns a Server. The store may be nil, in which case the
+// resources that live in the database are unavailable; see the server's
+// store field.
 func NewServer(
 	cfg config.ServerConfig,
 	kubeClient kubernetes.Client,
 	rolesDB rbac.RolesDatabase,
 	sender event.Sender,
+	store database.Store,
 ) Server {
 	s := &server{
 		cfg:     cfg,
 		client:  kubeClient,
 		rolesDB: rolesDB,
 		sender:  sender,
+		store:   store,
 	}
 
 	s.validateProjectExistsFn = s.validateProjectExists

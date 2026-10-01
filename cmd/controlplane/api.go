@@ -8,6 +8,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/akuity/kargo/pkg/database"
 	k8sevent "github.com/akuity/kargo/pkg/event/kubernetes"
 	"github.com/akuity/kargo/pkg/kubernetes/event"
 	"github.com/akuity/kargo/pkg/logging"
@@ -22,6 +23,7 @@ import (
 )
 
 type apiOptions struct {
+	Database   database.Config
 	KubeConfig string
 	QPS        float32
 	Burst      int
@@ -64,6 +66,7 @@ func newAPICommand() *cobra.Command {
 }
 
 func (o *apiOptions) complete() {
+	o.Database = database.ConfigFromEnv()
 	o.KubeConfig = os.GetEnv("KUBECONFIG", "")
 	o.QPS = types.MustParseFloat32(os.GetEnv("KUBE_API_QPS", "50.0"))
 	o.Burst = types.MustParseInt(os.GetEnv("KUBE_API_BURST", "300"))
@@ -152,6 +155,20 @@ func (o *apiOptions) run(ctx context.Context) error {
 	)
 	defer sender.Shutdown()
 
+	// The database holds Targets. It is optional: without it, the endpoints
+	// that serve them respond 501.
+	var store database.Store
+	if o.Database.Configured() {
+		pool, poolErr := openDatabase(ctx, o.Database, "kargo-api")
+		if poolErr != nil {
+			return poolErr
+		}
+		defer pool.Close()
+		store = database.NewStore(pool)
+	} else {
+		o.Logger.Info("no database is configured; Targets are unavailable")
+	}
+
 	srv := server.NewServer(
 		serverCfg,
 		kubeClient,
@@ -161,6 +178,7 @@ func (o *apiOptions) run(ctx context.Context) error {
 			rbac.RolesDatabaseConfigFromEnv(),
 		),
 		sender,
+		store,
 	)
 	l, err := net.Listen("tcp", fmt.Sprintf("%s:%s", o.BindAddress, o.Port))
 	if err != nil {

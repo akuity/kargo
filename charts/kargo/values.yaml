@@ -1397,9 +1397,11 @@ webhooksServer:
     #   -----END CERTIFICATE-----
 
 ## @section Database
-## Kargo's components do not use a database yet. These settings provision one
-## ahead of that: either the minimal PostgreSQL bundled with the chart or a
-## reference to an external one.
+## Kargo's API server and management controller use a PostgreSQL database:
+## Targets live in it and Project identities are mirrored into it. These
+## settings provide that database, either the minimal PostgreSQL bundled with
+## the chart or a reference to an external one, and point the components that
+## use it at whichever is configured.
 database:
   migrations:
     ## @param database.migrations.enabled Whether to run a Job that applies pending database schema migrations on every install and upgrade. It runs `kargo migrate` from the Kargo image against whichever database is configured below, waits for the database to accept connections, and serializes with any concurrent runner on a database-level lock. It is an ordinary Job rather than a Helm hook so that it also works when the chart is rendered with `helm template`, for example by Argo CD. Disable it to apply migrations yourself with `kargo migrate`; Kargo's components refuse to serve against a schema that is behind the version they expect.
