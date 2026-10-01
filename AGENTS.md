@@ -410,19 +410,15 @@ collisions:
 
 ```go
 // pkg/server/user/user.go
-type userInfoKey struct{}
+type identityKey struct{}
 
-func ContextWithInfo(ctx context.Context, u Info) context.Context {
-    return context.WithValue(ctx, userInfoKey{}, u)
+func ContextWithIdentity(ctx context.Context, id Identity) context.Context {
+    return context.WithValue(ctx, identityKey{}, id)
 }
 
-func InfoFromContext(ctx context.Context) (Info, bool) {
-    val := ctx.Value(userInfoKey{})
-    if val == nil {
-        return Info{}, false
-    }
-    u, ok := val.(Info)
-    return u, ok
+func IdentityFromContext(ctx context.Context) (Identity, bool) {
+    id, ok := ctx.Value(identityKey{}).(Identity)
+    return id, ok && id != nil
 }
 ```
 
