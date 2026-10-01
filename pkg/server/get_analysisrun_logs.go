@@ -367,11 +367,6 @@ func streamLogs(
 // @Success 200 {string} string "Log stream (SSE)"
 // @Router /v1beta1/projects/{project}/analysis-runs/{analysis-run}/logs [get]
 func (s *server) getAnalysisRunLogs(c *gin.Context) {
-	if !s.cfg.RolloutsIntegrationEnabled {
-		_ = c.Error(errArgoRolloutsIntegrationDisabled)
-		return
-	}
-
 	if s.cfg.AnalysisRunLogURLTemplate == "" {
 		_ = c.Error(libhttp.ErrorStr(
 			"AnalysisRun log streaming is not configured",

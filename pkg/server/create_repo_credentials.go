@@ -51,10 +51,6 @@ type createRepoCredentialsRequest struct {
 // @Success 201 {object} corev1.Secret "Secret resource (k8s.io/api/core/v1.Secret)"
 // @Router /v1beta1/projects/{project}/repo-credentials [post]
 func (s *server) createProjectRepoCredentials(c *gin.Context) {
-	if !s.requireSecretManagement(c) {
-		return
-	}
-
 	ctx := c.Request.Context()
 	project := c.Param("project")
 
@@ -100,10 +96,6 @@ func (s *server) createProjectRepoCredentials(c *gin.Context) {
 // @Success 201 {object} corev1.Secret "Secret resource (k8s.io/api/core/v1.Secret)"
 // @Router /v1beta1/shared/repo-credentials [post]
 func (s *server) createSharedRepoCredentials(c *gin.Context) {
-	if !s.requireSecretManagement(c) {
-		return
-	}
-
 	ctx := c.Request.Context()
 
 	var req createRepoCredentialsRequest

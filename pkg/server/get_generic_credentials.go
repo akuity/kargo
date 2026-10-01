@@ -20,10 +20,6 @@ import (
 // @Success 200 {object} corev1.Secret "Secret resource (k8s.io/api/core/v1.Secret)"
 // @Router /v1beta1/projects/{project}/generic-credentials/{generic-credentials} [get]
 func (s *server) getProjectGenericCredentials(c *gin.Context) {
-	if !s.requireSecretManagement(c) {
-		return
-	}
-
 	ctx := c.Request.Context()
 
 	project := c.Param("project")
@@ -58,10 +54,6 @@ func (s *server) getProjectGenericCredentials(c *gin.Context) {
 // @Success 200 {object} corev1.Secret "Secret resource (k8s.io/api/core/v1.Secret)"
 // @Router /v1beta1/system/generic-credentials/{generic-credentials} [get]
 func (s *server) getSystemGenericCredentials(c *gin.Context) {
-	if !s.requireSecretManagement(c) {
-		return
-	}
-
 	ctx := c.Request.Context()
 
 	name := c.Param("generic-credentials")
@@ -95,10 +87,6 @@ func (s *server) getSystemGenericCredentials(c *gin.Context) {
 // @Success 200 {object} corev1.Secret "Secret resource (k8s.io/api/core/v1.Secret)"
 // @Router /v1beta1/shared/generic-credentials/{generic-credentials} [get]
 func (s *server) getSharedGenericCredentials(c *gin.Context) {
-	if !s.requireSecretManagement(c) {
-		return
-	}
-
 	ctx := c.Request.Context()
 
 	name := c.Param("generic-credentials")

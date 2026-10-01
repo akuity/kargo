@@ -31,10 +31,6 @@ type updateGenericCredentialsRequest struct {
 // @Success 200 {object} corev1.Secret "Secret resource (k8s.io/api/core/v1.Secret)"
 // @Router /v1beta1/projects/{project}/generic-credentials/{generic-credentials} [put]
 func (s *server) updateProjectGenericCredentials(c *gin.Context) {
-	if !s.requireSecretManagement(c) {
-		return
-	}
-
 	ctx := c.Request.Context()
 
 	project := c.Param("project")
@@ -91,10 +87,6 @@ func (s *server) updateProjectGenericCredentials(c *gin.Context) {
 // @Success 200 {object} corev1.Secret "Secret resource (k8s.io/api/core/v1.Secret)"
 // @Router /v1beta1/system/generic-credentials/{generic-credentials} [put]
 func (s *server) updateSystemGenericCredentials(c *gin.Context) {
-	if !s.requireSecretManagement(c) {
-		return
-	}
-
 	ctx := c.Request.Context()
 	name := c.Param("generic-credentials")
 
@@ -152,10 +144,6 @@ func (s *server) updateSystemGenericCredentials(c *gin.Context) {
 // @Success 200 {object} corev1.Secret "Secret resource (k8s.io/api/core/v1.Secret)"
 // @Router /v1beta1/shared/generic-credentials/{generic-credentials} [put]
 func (s *server) updateSharedGenericCredentials(c *gin.Context) {
-	if !s.requireSecretManagement(c) {
-		return
-	}
-
 	ctx := c.Request.Context()
 	name := c.Param("generic-credentials")
 
