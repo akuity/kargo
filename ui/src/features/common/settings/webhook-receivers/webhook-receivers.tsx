@@ -1,4 +1,4 @@
-import { faPlus, faQuestionCircle } from '@fortawesome/free-solid-svg-icons';
+import { faExternalLink, faPlus, faQuestionCircle } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Button, Card, Flex, Popover, Space, Typography } from 'antd';
 import { ReactNode } from 'react';
@@ -133,6 +133,14 @@ export const WebhookReceivers = ({
                   Receivers refresh every Warehouse subscribed to the repository a request came
                   from. What happens next is up to those Warehouses.
                 </Typography.Text>
+                <Typography.Link
+                  href='https://docs.kargo.io/user-guide/reference-docs/webhook-receivers'
+                  target='_blank'
+                  className='text-xs whitespace-nowrap'
+                >
+                  Learn more
+                  <FontAwesomeIcon icon={faExternalLink} className='ml-1' size='xs' />
+                </Typography.Link>
               </Flex>
             }
           >
@@ -146,7 +154,9 @@ export const WebhookReceivers = ({
       className='min-h-full'
       extra={
         <Space>
-          {refresh}
+          {/* refreshing the config re-mints receiver URLs after a Secret
+              rotation -- with no receivers there is nothing to re-mint */}
+          {webhookReceivers.length > 0 && refresh}
           {/* the modal captures the receiver list as it opens -- until the
               config has loaded (or is known not to exist) that list is empty,
               and saving would replace everything already stored */}
