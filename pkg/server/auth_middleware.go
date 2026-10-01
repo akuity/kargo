@@ -11,7 +11,7 @@ import (
 
 	libhttp "github.com/akuity/kargo/pkg/http"
 	"github.com/akuity/kargo/pkg/logging"
-	"github.com/akuity/kargo/pkg/server/authn"
+	"github.com/akuity/kargo/pkg/server/auth/authn"
 	"github.com/akuity/kargo/pkg/server/config"
 	"github.com/akuity/kargo/pkg/server/user"
 )
