@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"testing"
 
-	"connectrpc.com/connect"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -35,13 +34,13 @@ func TestValidateGroupByOrderBy(t *testing.T) {
 			groupBy: "",
 			assertions: func(t *testing.T, err error) {
 				require.Error(t, err)
-				var connErr *connect.Error
-				require.True(t, errors.As(err, &connErr))
-				require.Equal(t, connect.CodeInvalidArgument, connErr.Code())
+				var httpErr *libhttp.HTTPError
+				require.True(t, errors.As(err, &httpErr))
+				require.Equal(t, http.StatusBadRequest, httpErr.Code())
 				require.Equal(
 					t,
 					"cannot filter by group without group by",
-					connErr.Message(),
+					httpErr.Error(),
 				)
 			},
 		},
@@ -50,10 +49,10 @@ func TestValidateGroupByOrderBy(t *testing.T) {
 			groupBy: "bogus-group-by",
 			assertions: func(t *testing.T, err error) {
 				require.Error(t, err)
-				var connErr *connect.Error
-				require.True(t, errors.As(err, &connErr))
-				require.Equal(t, connect.CodeInvalidArgument, connErr.Code())
-				require.Contains(t, connErr.Message(), "invalid group by")
+				var httpErr *libhttp.HTTPError
+				require.True(t, errors.As(err, &httpErr))
+				require.Equal(t, http.StatusBadRequest, httpErr.Code())
+				require.Contains(t, httpErr.Error(), "invalid group by")
 			},
 		},
 		{
@@ -62,12 +61,12 @@ func TestValidateGroupByOrderBy(t *testing.T) {
 			orderBy: OrderByTag,
 			assertions: func(t *testing.T, err error) {
 				require.Error(t, err)
-				var connErr *connect.Error
-				require.True(t, errors.As(err, &connErr))
-				require.Equal(t, connect.CodeInvalidArgument, connErr.Code())
+				var httpErr *libhttp.HTTPError
+				require.True(t, errors.As(err, &httpErr))
+				require.Equal(t, http.StatusBadRequest, httpErr.Code())
 				require.Contains(
 					t,
-					connErr.Message(),
+					httpErr.Error(),
 					"tag ordering only valid when grouping by",
 				)
 			},
@@ -77,10 +76,10 @@ func TestValidateGroupByOrderBy(t *testing.T) {
 			orderBy: "bogus-order-by",
 			assertions: func(t *testing.T, err error) {
 				require.Error(t, err)
-				var connErr *connect.Error
-				require.True(t, errors.As(err, &connErr))
-				require.Equal(t, connect.CodeInvalidArgument, connErr.Code())
-				require.Contains(t, connErr.Message(), "invalid order by")
+				var httpErr *libhttp.HTTPError
+				require.True(t, errors.As(err, &httpErr))
+				require.Equal(t, http.StatusBadRequest, httpErr.Code())
+				require.Contains(t, httpErr.Error(), "invalid order by")
 			},
 		},
 		{
