@@ -7,6 +7,7 @@ import {
   faDisplay,
   faGear,
   faKey,
+  faLink,
   faScrewdriverWrench,
   faTasks
 } from '@fortawesome/free-solid-svg-icons';
@@ -28,6 +29,7 @@ import { ClusterConfig } from '@ui/features/settings/cluster-config/cluster-conf
 import { ClusterPromotionTasks } from '@ui/features/settings/cluster-promotion-tasks/cluster-promotion-tasks';
 import { ClusterSecret } from '@ui/features/settings/cluster-secret/cluster-secret';
 import { ConfigMapsSettings } from '@ui/features/settings/config-maps/config-maps-settings';
+import { DeepLinksSettings } from '@ui/features/settings/deep-links/deep-links-settings';
 import { SharedSecrets } from '@ui/features/settings/shared-secrets/shared-secrets';
 import { UISettings } from '@ui/features/settings/ui/ui-settings';
 import { WebhookReceiversSettings } from '@ui/features/settings/webhook-receivers/webhook-receivers-settings';
@@ -52,6 +54,12 @@ const settingsViews = {
     path: 'cluster-config',
     component: ClusterConfig,
     children: [
+      {
+        label: 'Deep Links',
+        icon: faLink,
+        path: 'cluster-config/deep-links',
+        component: DeepLinksSettings
+      },
       {
         label: 'Promotion Windows',
         icon: faCalendarDays,

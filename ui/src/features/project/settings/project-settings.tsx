@@ -7,6 +7,7 @@ import {
   faGear,
   faGears,
   faKey,
+  faLink,
   faScrewdriverWrench,
   faTasks
 } from '@fortawesome/free-solid-svg-icons';
@@ -28,6 +29,7 @@ import { useProjectBreadcrumbs } from '../project-utils';
 import { AccessSettings } from './views/access/access-settings';
 import { AnalysisTemplatesSettings } from './views/analysis-templates/analysis-templates';
 import { ConfigMapsSettings } from './views/config-maps/config-maps-settings';
+import { DeepLinksSettings } from './views/deep-links/deep-links-settings';
 import { GeneralSettings } from './views/general/general-settings';
 import { ProjectConfig } from './views/project-config/project-config';
 import { PromotionPolicies } from './views/promotion-policies/promotion-policies';
@@ -71,6 +73,12 @@ export const ProjectSettings = () => {
             label: 'Promotion Policies',
             path: 'project-config/promotion-policies',
             component: PromotionPolicies
+          },
+          {
+            label: 'Deep Links',
+            icon: faLink,
+            path: 'project-config/deep-links',
+            component: DeepLinksSettings
           },
           ...(isAnyExtensionLoaded
             ? [
