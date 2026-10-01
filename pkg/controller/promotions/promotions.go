@@ -2,6 +2,7 @@ package promotions
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -67,6 +68,10 @@ type reconciler struct {
 	promoEngine    promotion.Engine
 	apiReader      client.Reader
 	shardPredicate controller.ResponsibleFor[kargoapi.Promotion]
+	// targets resolves the Target a Promotion promotes to, through the API
+	// server. It is nil when the controller has no API server to read from,
+	// in which case such Promotions fail.
+	targets promotion.TargetGetter
 
 	cfg ReconcilerConfig
 
@@ -107,6 +112,7 @@ func SetupReconcilerWithManager(
 	argocdMgr manager.Manager,
 	promoEngine promotion.Engine,
 	cfg ReconcilerConfig,
+	targets promotion.TargetGetter,
 ) error {
 	// Index running Promotions by Argo CD Applications
 	if err := kargoMgr.GetFieldIndexer().IndexField(
@@ -158,6 +164,7 @@ func SetupReconcilerWithManager(
 		),
 		promoEngine,
 		cfg,
+		targets,
 	)
 
 	c, err := ctrl.NewControllerManagedBy(kargoMgr).
@@ -252,6 +259,7 @@ func newReconciler(
 	sender event.Sender,
 	promoEngine promotion.Engine,
 	cfg ReconcilerConfig,
+	targets promotion.TargetGetter,
 ) *reconciler {
 	r := &reconciler{
 		kargoClient:  kargoClient,
@@ -260,6 +268,7 @@ func newReconciler(
 		sender:       sender,
 		promoMetrics: metrics.NewPromotionMetrics(kargoClient),
 		cfg:          cfg,
+		targets:      targets,
 		shardPredicate: controller.ResponsibleFor[kargoapi.Promotion]{
 			IsDefaultController: cfg.IsDefaultController,
 			ShardName:           cfg.ShardName,
@@ -615,9 +624,17 @@ func (r *reconciler) promote(
 	// single Stage's promotion process to behave differently per destination.
 	// Promotions that name no Target promote to the Stage itself and carry no
 	// target context, exactly as they did before Targets existed.
-	targetCtx, targetErr := promotion.ResolveTargetContext(ctx, r.kargoClient, &promo)
+	targetCtx, targetErr := promotion.ResolveTargetContext(ctx, r.targets, &promo)
 	if targetErr != nil {
-		return nil, nil, targetErr
+		if errors.Is(targetErr, promotion.ErrTargetNotFound) {
+			// The Target is not coming back; the Promotion cannot proceed.
+			return nil, nil, targetErr
+		}
+		// Anything else, a database timeout say, is worth retrying: leave the
+		// Promotion Running so that the error backs off instead of ending it.
+		running := promo.Status.DeepCopy()
+		running.Phase = kargoapi.PromotionPhaseRunning
+		return running, nil, targetErr
 	}
 
 	// Prepare promotion steps and vars for the promotion execution engine.

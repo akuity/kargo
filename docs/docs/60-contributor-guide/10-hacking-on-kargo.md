@@ -512,21 +512,42 @@ cluster, the address is `kargo-postgres.kargo.svc:5432`.
 
 Two kinds of data live in it. The management controller mirrors Project
 identities from Kubernetes, which remains their source of truth. Targets, on
-the other hand, exist only in the database: the API server reads them from
-it through `/v1beta1/projects/{project}/targets`, and no Target custom
-resource is read or written anymore, even though the CRD is still installed
-for now. A Target names its Project rather than referencing the mirrored
-row, so writing one never waits for the mirror. Deleting a Project does not
-yet remove its Targets. The schema also holds PromotionRequests, each with
-the Targets it fans out to, keyed by name in the same way; nothing serves
-them yet.
+the other hand, exist only in the database: the API server serves them
+through `/v1beta1/projects/{project}/targets`, and no Target custom resource
+is read or written anymore, even though the CRD is still installed for now.
+A Target names its Project rather than referencing the mirrored row, so
+writing one never waits for the mirror. Deleting a Project does not yet
+remove its Targets. The schema also holds PromotionRequests, each with the
+Targets it fans out to, keyed by name in the same way; nothing serves them
+yet.
+
+Only control plane components open the database. The controller may run far
+from the control plane, on infrastructure where the database is not
+reachable, so it resolves the Targets a Stage governs and the Target a
+Promotion promotes to by calling the API server at `API_SERVER_ADDRESS`,
+authenticating with the credential it already holds for the control plane:
+its ServiceAccount token in-cluster, or the bearer token its control-plane
+kubeconfig carries. The API server verifies that token with a TokenReview and
+authorizes each request against the controller's RBAC, which already grants
+it `list` and `get` on `targets`. A kubeconfig that obtains credentials
+through an exec plugin is not supported for this; give such a shard a
+kubeconfig with a token.
+
+The chart points a controller installed beside the API server at the API
+server's `Service` and, when it generated the API server's certificate, hands
+the controller its CA (`API_SERVER_CA_CERT_PATH`). A controller installed
+elsewhere, such as a shard in another cluster, is given the address at which
+it reaches the API server through `controller.apiServer.address`.
 
 Every component that uses the database finds it through the same settings
 (`DATABASE_URL`, or `DATABASE_HOST` and its companions), which Tilt sets from
 the chart. A component without them runs with the database features off: the
 API server answers Target requests with `501 Not Implemented`. A component
 with them refuses to start until the schema is at the version it expects, so
-run the migrations first.
+run the migrations first. A controller without `API_SERVER_ADDRESS` (the
+chart leaves it unset when the API server is disabled) reports a Stage that
+selects Targets as `Stalled` instead of promoting to it, and a Promotion that
+names a Target fails.
 
 Targets are created, replaced and deleted through `POST`, `PUT` and
 `DELETE` on the same path, with a `Target` resource as the body; the generic

@@ -56,7 +56,7 @@ func ExampleFleetStageReconciler_SetupWithManager() {
 		cfg           ReconcilerConfig
 		credentialsDB credentials.Database
 	)
-	r := NewFleetStageReconciler(cfg, credentialsDB)
+	r := NewFleetStageReconciler(cfg, credentialsDB, nil)
 	r.client = kargoMgr.GetClient()
 	logger := logging.LoggerFromContext(ctx)
 

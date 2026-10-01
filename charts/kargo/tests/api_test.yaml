@@ -398,3 +398,27 @@ tests:
               - get
               - list
               - watch
+
+---
+suite: api/cert.yaml
+values:
+  - ../test/values-unittest.yaml
+templates:
+  - templates/api/cert.yaml
+tests:
+  - it: names the API server's host and its Service
+    asserts:
+      - isKind:
+          of: Certificate
+      - equal:
+          path: spec.dnsNames
+          value:
+          - localhost
+          - kargo-api.NAMESPACE.svc
+
+  - it: is not rendered for a certificate the chart does not generate
+    set:
+      api.tls.selfSignedCert: false
+    asserts:
+      - hasDocuments:
+          count: 0

@@ -99,6 +99,12 @@ spec:
           name: git
           readOnly: true
         {{- end }}
+        {{- if (include "kargo.controller.mountsAPIServerCA" .) }}
+        - mountPath: /etc/kargo/api-ca.crt
+          name: api-ca
+          subPath: ca.crt
+          readOnly: true
+        {{- end }}
         {{- if or .Values.controller.cabundle.configMapName .Values.controller.cabundle.secretName }}
         {{- include "kargo.cabundle.volumeMount" .Values.controller.cabundle | nindent 8 }}
         {{- end }}
@@ -156,6 +162,14 @@ spec:
         secret:
           secretName: {{ .Values.controller.gitClient.signingKeySecret.name }}
           defaultMode: 0644
+      {{- end }}
+      {{- if (include "kargo.controller.mountsAPIServerCA" .) }}
+      - name: api-ca
+        secret:
+          secretName: {{ .Values.api.tls.secretName }}
+          items:
+          - key: ca.crt
+            path: ca.crt
       {{- end }}
       {{- with .Values.controller.volumes }}
         {{- toYaml . | nindent 6 }}
