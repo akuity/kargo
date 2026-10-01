@@ -21,7 +21,7 @@ export type WebhookReceiverT = {
   secrets: WebhookReceiverSecretT[];
 };
 
-// information manually ported from api/v1/project_config_types.go
+// information manually ported from api/v1alpha1/project_config_types.go
 
 const bitbucket: WebhookReceiverT = {
   key: 'bitbucket',
@@ -49,7 +49,7 @@ const bitbucket: WebhookReceiverT = {
 
 export const dockerhub: WebhookReceiverT = {
   key: 'dockerhub',
-  label: 'Dockerhub',
+  label: 'Docker Hub',
   icon: faDocker,
   secrets: [
     {
@@ -71,7 +71,7 @@ export const dockerhub: WebhookReceiverT = {
 
 const github: WebhookReceiverT = {
   key: 'github',
-  label: 'Github / Github Enterprise',
+  label: 'GitHub / GitHub Enterprise',
   icon: faGithub,
   secrets: [
     {
@@ -95,7 +95,7 @@ const github: WebhookReceiverT = {
 
 const gitlab: WebhookReceiverT = {
   key: 'gitlab',
-  label: 'Gitlab',
+  label: 'GitLab',
   icon: faGitlab,
   secrets: [
     {
@@ -126,7 +126,7 @@ const quay: WebhookReceiverT = {
           The Secret's data map is expected to contain a `secret` key whose value does NOT need to
           be shared directly with Quay when registering a webhook. It is used only by Kargo to
           create a complex, hard-to-guess URL, which implicitly serves as a shared secret. For more
-          information about // Quay webhooks, please refer to the{' '}
+          information about Quay webhooks, please refer to the{' '}
           <a href='https://docs.quay.io/guides/notifications.html' target='_blank'>
             Quay documentation
           </a>
@@ -146,7 +146,7 @@ const jfrog: WebhookReceiverT = {
         <>
           The Secret's data map is expected to contain a `secret-token` key whose value is the
           shared secret used to authenticate the webhook requests sent by JFrog Artifactory. For
-          more information please refer to the
+          more information please refer to the{' '}
           <a
             href='https://jfrog.com/help/r/jfrog-platform-administration-documentation/webhooks'
             target='_blank'
