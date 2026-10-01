@@ -508,9 +508,31 @@ this.
 Tilt runs the PostgreSQL bundled with the Helm chart, configured by the
 `database.postgres` values in `hack/tilt/values.dev.yaml`, and forwards
 `127.0.0.1:15432` to its port `5432`. The database, username, and password are all `kargo`. Inside the
-cluster, the address is `kargo-postgres.kargo.svc:5432`. The management
-controller mirrors Project identities into this database. Kubernetes remains
-the source of truth; application API reads still use Kubernetes.
+cluster, the address is `kargo-postgres.kargo.svc:5432`.
+
+Two kinds of data live in it. The management controller mirrors Project
+identities from Kubernetes, which remains their source of truth. Targets, on
+the other hand, exist only in the database: the API server reads them from
+it through `/v1beta1/projects/{project}/targets`, and no Target custom
+resource is read or written anymore, even though the CRD is still installed
+for now. Because a Target belongs to its Project's mirrored row, deleting a
+Project, or recreating one under the same name, removes its Targets.
+
+Every component that uses the database finds it through the same settings
+(`DATABASE_URL`, or `DATABASE_HOST` and its companions), which Tilt sets from
+the chart. A component without them runs with the database features off: the
+API server answers Target requests with `501 Not Implemented`. A component
+with them refuses to start until the schema is at the version it expects, so
+run the migrations first.
+
+Targets are created, replaced and deleted through `POST`, `PUT` and
+`DELETE` on the same path, with a `Target` resource as the body; the generic
+`/v1beta1/resources` endpoints refuse `kind: Target`, so `kargo apply` of a
+Target manifest fails with a pointer to those endpoints. A `PUT` that carries
+the `metadata.resourceVersion` or `metadata.uid` it read is refused with
+`409 Conflict` if the Target changed in between. There is no watch on
+Targets: the database offers no change feed, so the UI polls the list every
+few seconds instead.
 
 To open a `psql` session against it:
 

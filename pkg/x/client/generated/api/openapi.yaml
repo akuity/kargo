@@ -2097,9 +2097,9 @@ paths:
   /v1beta1/projects/{project}/targets:
     get:
       description: |-
-        List Target resources from a project's namespace, optionally
-        narrowed to those a particular Stage governs or those matching a
-        label selector. Returns a TargetList resource.
+        List a project's Targets, optionally narrowed to those a
+        particular Stage governs or those matching a label selector.
+        Returns a TargetList resource.
       operationId: ListTargets
       parameters:
       - description: Project name
@@ -2124,15 +2124,75 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/TargetList"
-          description: TargetList custom resource
+          description: TargetList resource
       security:
       - BearerAuth: []
       summary: List Targets
       tags:
       - Core
-  /v1beta1/projects/{project}/targets/{target}:
+    post:
+      description: |-
+        Create a Target in a project. Targets are managed through
+        this API rather than as Kubernetes resources. The body's
+        metadata.name is required; its metadata.namespace, if given,
+        must be the project. Status and server-managed metadata are
+        ignored.
+      operationId: CreateTarget
+      parameters:
+      - description: Project name
+        in: path
+        name: project
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Target"
+        description: Target resource
+        required: true
+      responses:
+        "201":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Target"
+          description: Target resource
+      security:
+      - BearerAuth: []
+      summary: Create a Target
+      tags:
+      - Core
+      x-codegen-request-body-name: body
+  /v1beta1/projects/{project}/targets/{target-name}:
+    delete:
+      description: Delete one of a project's Targets.
+      operationId: DeleteTarget
+      parameters:
+      - description: Project name
+        in: path
+        name: project
+        required: true
+        schema:
+          type: string
+      - description: Target name
+        in: path
+        name: target-name
+        required: true
+        schema:
+          type: string
+      responses:
+        "204":
+          content: {}
+          description: Deleted successfully
+      security:
+      - BearerAuth: []
+      summary: Delete a Target
+      tags:
+      - Core
     get:
-      description: Retrieve a Target resource from a project's namespace.
+      description: Retrieve one of a project's Targets.
       operationId: GetTarget
       parameters:
       - description: Project name
@@ -2143,7 +2203,7 @@ paths:
           type: string
       - description: Target name
         in: path
-        name: target
+        name: target-name
         required: true
         schema:
           type: string
@@ -2153,12 +2213,52 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Target"
-          description: Target custom resource
+          description: Target resource
       security:
       - BearerAuth: []
       summary: Retrieve a Target
       tags:
       - Core
+    put:
+      description: |-
+        Replace a Target's labels and params. The body's metadata.name,
+        if given, must match the name in the URL. A metadata.uid or
+        metadata.resourceVersion in the body is a precondition: the
+        update is refused if the Target no longer matches it.
+      operationId: UpdateTarget
+      parameters:
+      - description: Project name
+        in: path
+        name: project
+        required: true
+        schema:
+          type: string
+      - description: Target name
+        in: path
+        name: target-name
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Target"
+        description: Target resource
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Target"
+          description: Target resource
+      security:
+      - BearerAuth: []
+      summary: Update a Target
+      tags:
+      - Core
+      x-codegen-request-body-name: body
   /v1beta1/projects/{project}/warehouses:
     get:
       description: |-
