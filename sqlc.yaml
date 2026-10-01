@@ -12,7 +12,20 @@ sql:
       # types of the same name; a store layer converts between the two.
       rename:
         project: ProjectRow
+        target: TargetRow
       overrides:
+      # Labels are a string map and params an object of opaque JSON values,
+      # both enforced by the schema. sqlc cannot name a type from the package
+      # it generates, so the columns map to types from elsewhere; pgx encodes
+      # and decodes JSONB through encoding/json for any Go type.
+      - column: targets.labels
+        go_type:
+          import: k8s.io/apimachinery/pkg/labels
+          type: Set
+      - column: targets.params
+        go_type:
+          import: encoding/json
+          type: RawMessage
       - db_type: timestamptz
         go_type:
           import: time
