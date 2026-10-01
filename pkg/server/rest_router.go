@@ -107,21 +107,24 @@ func (s *server) setupRESTRouter(ctx context.Context) *gin.Engine {
 	v1beta1 := router.Group("/v1beta1")
 	{
 		// =====================================================================
-		// Authentication
-		// =====================================================================
-		v1beta1.POST("/login", bodyLimitMiddleware(1*1024*1024), s.adminLogin)
-
-		// =====================================================================
 		// Generic Resources (CRUD via group/version/kind/namespace/name)
-		// These endpoints accept YAML/JSON manifests and need a larger limit (4MB).
+		// These endpoints accept YAML/JSON manifests and need a larger limit
+		// (4MB). They are registered before the default limit below so that it
+		// does not apply to them as well.
 		// =====================================================================
 		resourceLimit := bodyLimitMiddleware(4 * 1024 * 1024)
 		v1beta1.POST("/resources", resourceLimit, s.createResources)
 		v1beta1.PUT("/resources", resourceLimit, s.updateResources)
 		v1beta1.DELETE("/resources", resourceLimit, s.deleteResources)
 
-		// All other endpoints use a 1MB limit
-		defaultLimit := bodyLimitMiddleware(1 * 1024 * 1024)
+		// Every route registered from here on, including those of the groups
+		// below, gets a 1MB limit.
+		v1beta1.Use(bodyLimitMiddleware(1 * 1024 * 1024))
+
+		// =====================================================================
+		// Authentication
+		// =====================================================================
+		v1beta1.POST("/login", s.adminLogin)
 
 		// Optional features are gated here rather than in their handlers.
 		requireSecrets := middleware.RequireFeature(
@@ -137,7 +140,6 @@ func (s *server) setupRESTRouter(ctx context.Context) *gin.Engine {
 		// System-Level Endpoints (/v1beta1/system/*)
 		// =====================================================================
 		system := v1beta1.Group("/system")
-		system.Use(defaultLimit)
 		{
 			// Configuration
 			system.GET("/server-version", s.getVersionInfo)
@@ -181,7 +183,6 @@ func (s *server) setupRESTRouter(ctx context.Context) *gin.Engine {
 		// Shared Resources (/v1beta1/shared/*)
 		// =====================================================================
 		shared := v1beta1.Group("/shared")
-		shared.Use(defaultLimit)
 		{
 			// Cluster Analysis Templates (Argo Rollouts)
 			shared.GET("/cluster-analysis-templates", requireRollouts, s.listClusterAnalysisTemplates)
@@ -220,9 +221,8 @@ func (s *server) setupRESTRouter(ctx context.Context) *gin.Engine {
 		// =====================================================================
 		// Projects (/v1beta1/projects)
 		// =====================================================================
-		v1beta1.GET("/projects", defaultLimit, s.listProjects)
+		v1beta1.GET("/projects", s.listProjects)
 		project := v1beta1.Group("/projects/:project")
-		project.Use(defaultLimit)
 		project.Use(s.projectExistsMiddleware())
 		{
 			// Project CRUD
