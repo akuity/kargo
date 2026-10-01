@@ -10,7 +10,6 @@ import (
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -20,129 +19,7 @@ import (
 	libhttp "github.com/akuity/kargo/pkg/http"
 	"github.com/akuity/kargo/pkg/server/kubernetes"
 	"github.com/akuity/kargo/pkg/server/user"
-	"github.com/akuity/kargo/pkg/server/validation"
 )
-
-func TestValidateFieldNotEmpty(t *testing.T) {
-	testCases := []struct {
-		name       string
-		fieldName  string
-		fieldValue string
-		assertions func(*testing.T, error)
-	}{
-		{
-			name:       "field is empty",
-			fieldName:  "project",
-			fieldValue: "",
-			assertions: func(t *testing.T, err error) {
-				require.Error(t, err)
-				var connErr *connect.Error
-				require.True(t, errors.As(err, &connErr))
-				require.Equal(t, connect.CodeInvalidArgument, connErr.Code())
-				require.Equal(t, "project should not be empty", connErr.Message())
-			},
-		},
-		{
-			name:       "field is not empty",
-			fieldName:  "project",
-			fieldValue: "fake-project",
-			assertions: func(t *testing.T, err error) {
-				require.NoError(t, err)
-			},
-		},
-	}
-	for _, testCase := range testCases {
-		t.Run(testCase.name, func(t *testing.T) {
-			testCase.assertions(
-				t,
-				validateFieldNotEmpty(testCase.fieldName, testCase.fieldValue),
-			)
-		})
-	}
-}
-
-func TestValidateProjectExists(t *testing.T) {
-	testCases := []struct {
-		name       string
-		server     *server
-		assertions func(*testing.T, error)
-	}{
-		{
-			name: "project not found",
-			server: &server{
-				externalValidateProjectFn: func(
-					context.Context,
-					client.Client,
-					string,
-				) error {
-					return validation.ErrProjectNotFound
-				},
-			},
-			assertions: func(t *testing.T, err error) {
-				require.Error(t, err)
-				var connErr *connect.Error
-				require.True(t, errors.As(err, &connErr))
-				require.Equal(t, connect.CodeNotFound, connErr.Code())
-			},
-		},
-		{
-			name: "field error",
-			server: &server{
-				externalValidateProjectFn: func(
-					context.Context,
-					client.Client,
-					string,
-				) error {
-					return &field.Error{}
-				},
-			},
-			assertions: func(t *testing.T, err error) {
-				require.Error(t, err)
-				var connErr *connect.Error
-				require.True(t, errors.As(err, &connErr))
-				require.Equal(t, connect.CodeInvalidArgument, connErr.Code())
-			},
-		},
-		{
-			name: "other error",
-			server: &server{
-				externalValidateProjectFn: func(
-					context.Context,
-					client.Client,
-					string,
-				) error {
-					return errors.New("something went wrong")
-				},
-			},
-			assertions: func(t *testing.T, err error) {
-				require.Error(t, err)
-			},
-		},
-		{
-			name: "project is valid",
-			server: &server{
-				externalValidateProjectFn: func(
-					context.Context,
-					client.Client,
-					string,
-				) error {
-					return nil
-				},
-			},
-			assertions: func(t *testing.T, err error) {
-				require.NoError(t, err)
-			},
-		},
-	}
-	for _, testCase := range testCases {
-		t.Run(testCase.name, func(t *testing.T) {
-			testCase.assertions(
-				t,
-				testCase.server.validateProjectExists(t.Context(), "fake-project"),
-			)
-		})
-	}
-}
 
 func TestValidateGroupByOrderBy(t *testing.T) {
 	testCases := []struct {

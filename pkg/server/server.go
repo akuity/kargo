@@ -31,7 +31,6 @@ import (
 	"github.com/akuity/kargo/pkg/server/dex"
 	"github.com/akuity/kargo/pkg/server/kubernetes"
 	"github.com/akuity/kargo/pkg/server/rbac"
-	"github.com/akuity/kargo/pkg/server/validation"
 )
 
 //go:embed all:ui
@@ -44,18 +43,6 @@ type server struct {
 	sender  event.Sender
 
 	// The following behaviors are overridable for testing purposes:
-
-	// Common validations:
-	validateProjectExistsFn func(
-		ctx context.Context,
-		project string,
-	) error
-
-	externalValidateProjectFn func(
-		ctx context.Context,
-		client client.Client,
-		project string,
-	) error
 
 	// Common lookups:
 	getStageFn func(
@@ -168,8 +155,6 @@ func NewServer(
 		sender:  sender,
 	}
 
-	s.validateProjectExistsFn = s.validateProjectExists
-	s.externalValidateProjectFn = validation.ValidateProject
 	s.getStageFn = api.GetStage
 	s.getFreightByNameOrAliasFn = api.GetFreightByNameOrAlias
 	s.isFreightAvailableFn = s.isFreightAvailable
