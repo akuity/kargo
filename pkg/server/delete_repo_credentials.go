@@ -18,10 +18,6 @@ import (
 // @Success 204 "Deleted successfully"
 // @Router /v1beta1/projects/{project}/repo-credentials/{repo-credentials} [delete]
 func (s *server) deleteProjectRepoCredentials(c *gin.Context) {
-	if !s.requireSecretManagement(c) {
-		return
-	}
-
 	ctx := c.Request.Context()
 
 	project := c.Param("project")
@@ -62,10 +58,6 @@ func (s *server) deleteProjectRepoCredentials(c *gin.Context) {
 // @Success 204 "Deleted successfully"
 // @Router /v1beta1/shared/repo-credentials/{repo-credentials} [delete]
 func (s *server) deleteSharedRepoCredentials(c *gin.Context) {
-	if !s.requireSecretManagement(c) {
-		return
-	}
-
 	ctx := c.Request.Context()
 	name := c.Param("repo-credentials")
 

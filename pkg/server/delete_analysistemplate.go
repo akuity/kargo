@@ -19,11 +19,6 @@ import (
 // @Success 204 "Deleted successfully"
 // @Router /v1beta1/projects/{project}/analysis-templates/{analysis-template} [delete]
 func (s *server) deleteAnalysisTemplate(c *gin.Context) {
-	if !s.cfg.RolloutsIntegrationEnabled {
-		_ = c.Error(errArgoRolloutsIntegrationDisabled)
-		return
-	}
-
 	ctx := c.Request.Context()
 
 	project := c.Param("project")

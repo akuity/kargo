@@ -83,16 +83,6 @@ func validateRepoCredentialSecret(secret *corev1.Secret) error {
 	return nil
 }
 
-// requireSecretManagement checks if secret management is enabled. Returns true
-// if enabled, or false if an error was added to the gin context.
-func (s *server) requireSecretManagement(c *gin.Context) bool {
-	if !s.cfg.SecretManagementEnabled {
-		_ = c.Error(errSecretManagementDisabled)
-		return false
-	}
-	return true
-}
-
 // validateGenericCredentialSecret validates that a secret is labeled as a
 // generic credential type. Returns an error suitable for gin context if
 // validation fails, or nil if the secret is valid.

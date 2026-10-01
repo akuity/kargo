@@ -10,6 +10,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 
 	libhttp "github.com/akuity/kargo/pkg/http"
+	"github.com/akuity/kargo/pkg/server/middleware"
 )
 
 // nolint: lll
@@ -115,6 +116,16 @@ func (s *server) setupRESTRouter(ctx context.Context) (*gin.Engine, error) {
 		// All other endpoints use a 1MB limit
 		defaultLimit := bodyLimitMiddleware(1 * 1024 * 1024)
 
+		// Optional features are gated here rather than in their handlers.
+		requireSecrets := middleware.RequireFeature(
+			s.cfg.SecretManagementEnabled,
+			errSecretManagementDisabled,
+		)
+		requireRollouts := middleware.RequireFeature(
+			s.cfg.RolloutsIntegrationEnabled,
+			errArgoRolloutsIntegrationDisabled,
+		)
+
 		// =====================================================================
 		// System-Level Endpoints (/v1beta1/system/*)
 		// =====================================================================
@@ -144,11 +155,11 @@ func (s *server) setupRESTRouter(ctx context.Context) (*gin.Engine, error) {
 
 			// Generic Credentials
 			system.GET("/generic-credentials", s.listSystemGenericCredentials)
-			system.POST("/generic-credentials", s.createSystemGenericCredentials)
-			system.GET("/generic-credentials/:generic-credentials", s.getSystemGenericCredentials)
-			system.PUT("/generic-credentials/:generic-credentials", s.updateSystemGenericCredentials)
-			system.PATCH("/generic-credentials/:generic-credentials", s.patchSystemGenericCredentials)
-			system.DELETE("/generic-credentials/:generic-credentials", s.deleteSystemGenericCredentials)
+			system.POST("/generic-credentials", requireSecrets, s.createSystemGenericCredentials)
+			system.GET("/generic-credentials/:generic-credentials", requireSecrets, s.getSystemGenericCredentials)
+			system.PUT("/generic-credentials/:generic-credentials", requireSecrets, s.updateSystemGenericCredentials)
+			system.PATCH("/generic-credentials/:generic-credentials", requireSecrets, s.patchSystemGenericCredentials)
+			system.DELETE("/generic-credentials/:generic-credentials", requireSecrets, s.deleteSystemGenericCredentials)
 
 			// ConfigMaps
 			system.GET("/configmaps", s.listSystemConfigMaps)
@@ -166,9 +177,9 @@ func (s *server) setupRESTRouter(ctx context.Context) (*gin.Engine, error) {
 		shared.Use(defaultLimit)
 		{
 			// Cluster Analysis Templates (Argo Rollouts)
-			shared.GET("/cluster-analysis-templates", s.listClusterAnalysisTemplates)
-			shared.GET("/cluster-analysis-templates/:cluster-analysis-template", s.getClusterAnalysisTemplate)
-			shared.DELETE("/cluster-analysis-templates/:cluster-analysis-template", s.deleteClusterAnalysisTemplate)
+			shared.GET("/cluster-analysis-templates", requireRollouts, s.listClusterAnalysisTemplates)
+			shared.GET("/cluster-analysis-templates/:cluster-analysis-template", requireRollouts, s.getClusterAnalysisTemplate)
+			shared.DELETE("/cluster-analysis-templates/:cluster-analysis-template", requireRollouts, s.deleteClusterAnalysisTemplate)
 
 			// Cluster Promotion Tasks
 			shared.GET("/cluster-promotion-tasks", s.listClusterPromotionTasks)
@@ -176,19 +187,19 @@ func (s *server) setupRESTRouter(ctx context.Context) (*gin.Engine, error) {
 
 			// Repo Credentials
 			shared.GET("/repo-credentials", s.listSharedRepoCredentials)
-			shared.POST("/repo-credentials", s.createSharedRepoCredentials)
+			shared.POST("/repo-credentials", requireSecrets, s.createSharedRepoCredentials)
 			shared.GET("/repo-credentials/:repo-credentials", s.getSharedRepoCredentials)
-			shared.PUT("/repo-credentials/:repo-credentials", s.updateSharedRepoCredentials)
-			shared.PATCH("/repo-credentials/:repo-credentials", s.patchSharedRepoCredentials)
-			shared.DELETE("/repo-credentials/:repo-credentials", s.deleteSharedRepoCredentials)
+			shared.PUT("/repo-credentials/:repo-credentials", requireSecrets, s.updateSharedRepoCredentials)
+			shared.PATCH("/repo-credentials/:repo-credentials", requireSecrets, s.patchSharedRepoCredentials)
+			shared.DELETE("/repo-credentials/:repo-credentials", requireSecrets, s.deleteSharedRepoCredentials)
 
 			// Generic Credentials
 			shared.GET("/generic-credentials", s.listSharedGenericCredentials)
-			shared.POST("/generic-credentials", s.createSharedGenericCredentials)
-			shared.GET("/generic-credentials/:generic-credentials", s.getSharedGenericCredentials)
-			shared.PUT("/generic-credentials/:generic-credentials", s.updateSharedGenericCredentials)
-			shared.PATCH("/generic-credentials/:generic-credentials", s.patchSharedGenericCredentials)
-			shared.DELETE("/generic-credentials/:generic-credentials", s.deleteSharedGenericCredentials)
+			shared.POST("/generic-credentials", requireSecrets, s.createSharedGenericCredentials)
+			shared.GET("/generic-credentials/:generic-credentials", requireSecrets, s.getSharedGenericCredentials)
+			shared.PUT("/generic-credentials/:generic-credentials", requireSecrets, s.updateSharedGenericCredentials)
+			shared.PATCH("/generic-credentials/:generic-credentials", requireSecrets, s.patchSharedGenericCredentials)
+			shared.DELETE("/generic-credentials/:generic-credentials", requireSecrets, s.deleteSharedGenericCredentials)
 
 			// ConfigMaps
 			shared.GET("/configmaps", s.listSharedConfigMaps)
@@ -271,13 +282,13 @@ func (s *server) setupRESTRouter(ctx context.Context) (*gin.Engine, error) {
 			// -----------------------------------------------------------------
 
 			// Analysis Templates
-			project.GET("/analysis-templates", s.listAnalysisTemplates)
-			project.GET("/analysis-templates/:analysis-template", s.getAnalysisTemplate)
-			project.DELETE("/analysis-templates/:analysis-template", s.deleteAnalysisTemplate)
+			project.GET("/analysis-templates", requireRollouts, s.listAnalysisTemplates)
+			project.GET("/analysis-templates/:analysis-template", requireRollouts, s.getAnalysisTemplate)
+			project.DELETE("/analysis-templates/:analysis-template", requireRollouts, s.deleteAnalysisTemplate)
 
 			// Analysis Runs
-			project.GET("/analysis-runs/:analysis-run", s.getAnalysisRun)
-			project.GET("/analysis-runs/:analysis-run/logs", s.getAnalysisRunLogs)
+			project.GET("/analysis-runs/:analysis-run", requireRollouts, s.getAnalysisRun)
+			project.GET("/analysis-runs/:analysis-run/logs", requireRollouts, s.getAnalysisRunLogs)
 
 			// -----------------------------------------------------------------
 			// Generic Config
@@ -300,19 +311,19 @@ func (s *server) setupRESTRouter(ctx context.Context) (*gin.Engine, error) {
 
 			// Repo Credentials
 			project.GET("/repo-credentials", s.listProjectRepoCredentials)
-			project.POST("/repo-credentials", s.createProjectRepoCredentials)
+			project.POST("/repo-credentials", requireSecrets, s.createProjectRepoCredentials)
 			project.GET("/repo-credentials/:repo-credentials", s.getProjectRepoCredentials)
-			project.PUT("/repo-credentials/:repo-credentials", s.updateProjectRepoCredentials)
-			project.PATCH("/repo-credentials/:repo-credentials", s.patchProjectRepoCredentials)
-			project.DELETE("/repo-credentials/:repo-credentials", s.deleteProjectRepoCredentials)
+			project.PUT("/repo-credentials/:repo-credentials", requireSecrets, s.updateProjectRepoCredentials)
+			project.PATCH("/repo-credentials/:repo-credentials", requireSecrets, s.patchProjectRepoCredentials)
+			project.DELETE("/repo-credentials/:repo-credentials", requireSecrets, s.deleteProjectRepoCredentials)
 
 			// Generic Credentials
 			project.GET("/generic-credentials", s.listProjectGenericCredentials)
-			project.POST("/generic-credentials", s.createProjectGenericCredentials)
-			project.GET("/generic-credentials/:generic-credentials", s.getProjectGenericCredentials)
-			project.PUT("/generic-credentials/:generic-credentials", s.updateProjectGenericCredentials)
-			project.PATCH("/generic-credentials/:generic-credentials", s.patchProjectGenericCredentials)
-			project.DELETE("/generic-credentials/:generic-credentials", s.deleteProjectGenericCredentials)
+			project.POST("/generic-credentials", requireSecrets, s.createProjectGenericCredentials)
+			project.GET("/generic-credentials/:generic-credentials", requireSecrets, s.getProjectGenericCredentials)
+			project.PUT("/generic-credentials/:generic-credentials", requireSecrets, s.updateProjectGenericCredentials)
+			project.PATCH("/generic-credentials/:generic-credentials", requireSecrets, s.patchProjectGenericCredentials)
+			project.DELETE("/generic-credentials/:generic-credentials", requireSecrets, s.deleteProjectGenericCredentials)
 
 			// -----------------------------------------------------------------
 			// RBAC
