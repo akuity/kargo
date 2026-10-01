@@ -2,14 +2,10 @@ package server
 
 import (
 	"context"
-	"errors"
-	"net/http"
 
 	"github.com/gin-gonic/gin"
 	"go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 
-	libhttp "github.com/akuity/kargo/pkg/http"
 	"github.com/akuity/kargo/pkg/server/middleware"
 )
 
@@ -98,7 +94,7 @@ func (s *server) setupRESTRouter(ctx context.Context) *gin.Engine {
 		router.Use(otelgin.Middleware("kargo-api"))
 	}
 	router.Use(LoggingMiddleware())
-	router.Use(s.handleError)
+	router.Use(middleware.HandleErrors())
 	router.Use(recoveryMiddleware())
 	if s.cfg.AdminConfig != nil || s.cfg.OIDCConfig != nil {
 		router.Use(NewAuthMiddleware(ctx, s.cfg, s.client.InternalClient()))
@@ -356,52 +352,4 @@ func (s *server) setupRESTRouter(ctx context.Context) *gin.Engine {
 	}
 
 	return router
-}
-
-// errorResponse is the body of every error response the REST API sends.
-type errorResponse struct {
-	Error string `json:"error"`
-}
-
-func (s *server) handleError(c *gin.Context) {
-	c.Next()
-	if len(c.Errors) > 0 {
-		err := c.Errors.Last().Err
-
-		// Check for MaxBytesError (body too large)
-		var maxBytesErr *http.MaxBytesError
-		if errors.As(err, &maxBytesErr) {
-			c.JSON(http.StatusRequestEntityTooLarge, errorResponse{Error: "request body too large"})
-			return
-		}
-
-		var httpErr *libhttp.HTTPError
-		if ok := errors.As(err, &httpErr); ok {
-			if code := httpErr.Code(); code == http.StatusInternalServerError {
-				s.respondInternalServerError(c)
-				return
-			}
-			c.JSON(httpErr.Code(), errorResponse{Error: httpErr.Error()})
-			return
-		}
-		var statusErr *apierrors.StatusError
-		if ok := errors.As(err, &statusErr); ok {
-			c.JSON(int(statusErr.Status().Code), errorResponse{Error: err.Error()})
-			return
-		}
-		// An error of no recognized type is, by definition, one we did not
-		// anticipate. Report it as such rather than leaving the response empty.
-		s.respondInternalServerError(c)
-	}
-}
-
-// respondInternalServerError responds with a 500 whose body discloses nothing
-// about the underlying failure. The error itself is recorded by the request
-// logging middleware, which knows what was requested as well as what went
-// wrong.
-func (s *server) respondInternalServerError(c *gin.Context) {
-	c.JSON(
-		http.StatusInternalServerError,
-		errorResponse{Error: "internal server error"},
-	)
 }

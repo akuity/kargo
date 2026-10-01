@@ -14,6 +14,7 @@ import (
 	libhttp "github.com/akuity/kargo/pkg/http"
 	"github.com/akuity/kargo/pkg/server/auth/authn"
 	"github.com/akuity/kargo/pkg/server/config"
+	"github.com/akuity/kargo/pkg/server/middleware"
 	"github.com/akuity/kargo/pkg/server/user"
 )
 
@@ -43,12 +44,12 @@ func testJWT(t *testing.T) string {
 }
 
 func TestNewAuthMiddleware(t *testing.T) {
-	middleware := NewAuthMiddleware(t.Context(), config.ServerConfig{}, nil)
-	require.NotNil(t, middleware)
+	authenticate := NewAuthMiddleware(t.Context(), config.ServerConfig{}, nil)
+	require.NotNil(t, authenticate)
 	require.NotPanics(t, func() {
 		gin.SetMode(gin.TestMode)
 		router := gin.New()
-		router.Use(middleware)
+		router.Use(authenticate)
 	})
 }
 
@@ -61,7 +62,7 @@ func TestWithExemptPaths(t *testing.T) {
 		protectedPath  = "/v1beta1/protected"
 	)
 
-	middleware := NewAuthMiddleware(
+	authenticate := NewAuthMiddleware(
 		t.Context(),
 		config.ServerConfig{},
 		nil,
@@ -69,9 +70,8 @@ func TestWithExemptPaths(t *testing.T) {
 	)
 
 	router := gin.New()
-	srv := &server{}
-	router.Use(srv.handleError)
-	router.Use(middleware)
+	router.Use(middleware.HandleErrors())
+	router.Use(authenticate)
 	ok := func(c *gin.Context) { c.Status(http.StatusOK) }
 	router.GET(testExemptPath, ok)
 	router.GET(loginPath, ok)
@@ -258,8 +258,7 @@ func TestAuthMiddlewareHandler(t *testing.T) {
 			// The auth middleware delegates status codes and response bodies to
 			// the error-handling middleware, so both are needed to observe what
 			// a client actually receives.
-			srv := &server{}
-			router.Use(srv.handleError)
+			router.Use(middleware.HandleErrors())
 			a := &authMiddleware{authenticator: tc.authenticator, exemptPaths: exemptPaths}
 			router.Use(a.Handler)
 			router.GET("/v1beta1/*path", func(c *gin.Context) {

@@ -15,6 +15,7 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	libhttp "github.com/akuity/kargo/pkg/http"
 	"github.com/akuity/kargo/pkg/logging"
+	"github.com/akuity/kargo/pkg/server/middleware"
 	"github.com/akuity/kargo/pkg/server/user"
 )
 
@@ -149,7 +150,6 @@ func TestLoggingMiddleware(t *testing.T) {
 			core, recorded := observer.New(testCase.level)
 			logger := logging.Wrap(zap.New(core))
 
-			s := &server{}
 			router := gin.New()
 			router.Use(func(c *gin.Context) {
 				c.Request = c.Request.WithContext(
@@ -158,7 +158,7 @@ func TestLoggingMiddleware(t *testing.T) {
 				c.Next()
 			})
 			router.Use(LoggingMiddleware())
-			router.Use(s.handleError)
+			router.Use(middleware.HandleErrors())
 			router.GET("/", testCase.handler)
 
 			w := httptest.NewRecorder()

@@ -7,6 +7,7 @@ import (
 	"syscall"
 	"testing"
 
+	"github.com/akuity/kargo/pkg/server/middleware"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/require"
 )
@@ -60,9 +61,8 @@ func TestRecoveryMiddleware(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			s := &server{}
 			router := gin.New()
-			router.Use(s.handleError)
+			router.Use(middleware.HandleErrors())
 			router.Use(recoveryMiddleware())
 			router.GET("/", testCase.handler)
 
