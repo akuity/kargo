@@ -71,9 +71,9 @@ func Test_server_listProjects(t *testing.T) {
 				name: "mine=true filters to mapped projects",
 				url:  "/v1beta1/projects?mine=true",
 				ctxSetup: func(ctx context.Context) context.Context {
-					return user.ContextWithInfo(
+					return user.ContextWithIdentity(
 						ctx,
-						user.Info{
+						user.OIDCUser{
 							ServiceAccountsByNamespace: map[string]map[types.NamespacedName]struct{}{
 								"project-a": {{Namespace: "project-a", Name: "viewer"}: {}},
 							},
@@ -182,7 +182,7 @@ func Test_filterProjectsByAccess(t *testing.T) {
 	}
 	testCases := []struct {
 		name     string
-		userInfo *user.Info
+		userInfo user.Identity
 		assert   func(*testing.T, []kargoapi.Project)
 	}{
 		{
@@ -193,21 +193,21 @@ func Test_filterProjectsByAccess(t *testing.T) {
 		},
 		{
 			name:     "admin user with no SA mappings",
-			userInfo: &user.Info{IsAdmin: true},
+			userInfo: user.Admin{},
 			assert: func(t *testing.T, result []kargoapi.Project) {
 				require.Empty(t, result)
 			},
 		},
 		{
 			name:     "user with nil SA map",
-			userInfo: &user.Info{},
+			userInfo: user.OIDCUser{},
 			assert: func(t *testing.T, result []kargoapi.Project) {
 				require.Empty(t, result)
 			},
 		},
 		{
 			name: "OIDC user with matching project namespaces",
-			userInfo: &user.Info{
+			userInfo: user.OIDCUser{
 				ServiceAccountsByNamespace: map[string]map[types.NamespacedName]struct{}{
 					"project-a": {
 						{Namespace: "project-a", Name: "viewer"}: {},
@@ -225,7 +225,7 @@ func Test_filterProjectsByAccess(t *testing.T) {
 		},
 		{
 			name: "OIDC user with no matching namespaces",
-			userInfo: &user.Info{
+			userInfo: user.OIDCUser{
 				ServiceAccountsByNamespace: map[string]map[types.NamespacedName]struct{}{
 					"kargo": {
 						{Namespace: "kargo", Name: "viewer"}: {},
@@ -242,7 +242,7 @@ func Test_filterProjectsByAccess(t *testing.T) {
 			t.Parallel()
 			ctx := t.Context()
 			if testCase.userInfo != nil {
-				ctx = user.ContextWithInfo(ctx, *testCase.userInfo)
+				ctx = user.ContextWithIdentity(ctx, testCase.userInfo)
 			}
 			result := filterProjectsByAccess(ctx, testProjects)
 			testCase.assert(t, result)

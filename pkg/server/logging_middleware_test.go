@@ -54,7 +54,7 @@ func TestLoggingMiddleware(t *testing.T) {
 				// Stands in for the authentication middleware, which binds the
 				// actor to the request context in exactly this way.
 				c.Request = c.Request.WithContext(
-					user.ContextWithInfo(c.Request.Context(), user.Info{IsAdmin: true}),
+					user.ContextWithIdentity(c.Request.Context(), user.Admin{}),
 				)
 				c.Status(http.StatusOK)
 			},

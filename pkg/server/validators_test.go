@@ -358,7 +358,7 @@ func TestGetFreightByNameOrAlias(t *testing.T) {
 			s := &server{client: c}
 			// An admin user bypasses the wrapper's access review, which is not
 			// what is under test here.
-			ctx := user.ContextWithInfo(t.Context(), user.Info{IsAdmin: true})
+			ctx := user.ContextWithIdentity(t.Context(), user.Admin{})
 			freight, err := s.getFreightByNameOrAlias(
 				ctx,
 				"fake-project",

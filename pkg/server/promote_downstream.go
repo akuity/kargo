@@ -166,8 +166,8 @@ func (s *server) promoteDownstream(c *gin.Context) {
 
 	// Create promotions for all downstream stages
 	var actor string
-	if u, ok := user.InfoFromContext(ctx); ok {
-		actor = api.FormatEventUserActor(u)
+	if u, ok := user.IdentityFromContext(ctx); ok {
+		actor = u.Actor()
 	}
 
 	promoteErrs := make([]error, 0, len(downstreams))

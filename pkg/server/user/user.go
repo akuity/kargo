@@ -1,57 +1,179 @@
+// Package user describes who a request to the Kargo API server is from.
+//
+// The authentication middleware resolves a bearer token to an Identity and
+// binds it to the request context. Handlers and the authorizing Kubernetes
+// client read it back to decide what the request may do and to record who
+// did it. Each kind of Identity knows how it is authorized, so nothing else
+// in the server has to tell them apart.
 package user
 
 import (
 	"context"
+	"fmt"
 
 	authnv1 "k8s.io/api/authentication/v1"
+	authv1 "k8s.io/api/authorization/v1"
 	"k8s.io/apimachinery/pkg/types"
+
+	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 )
 
-type userInfoKey struct{}
+// Identity is who a request is from.
+type Identity interface {
+	// IsAdmin reports whether this is the Kargo API server's own admin user,
+	// who may do everything the server can do and is never reviewed.
+	IsAdmin() bool
+	// Subjects returns the Kubernetes subjects whose permissions stand in
+	// for this identity when performing the described operation. The
+	// operation is allowed if any one of them is allowed. An identity with
+	// no subjects is allowed nothing.
+	Subjects(ra authv1.ResourceAttributes) []Subject
+	// Actor names the identity the way events and audit annotations record
+	// it.
+	Actor() string
+}
 
-// Info represents information about an API user. This is bound to the context
-// by the server's authentication middleware and later retrieved and used to
-// create an ad-hoc Kubernetes client that has the correct level of permissions
-// for the user.
-type Info struct {
-	// IsAdmin indicates whether the user represented by this struct has been
-	// verified as the Kargo API server's admin user. When this is true, all
-	// other fields should have an empty value.
-	IsAdmin bool
-	// Claims is a map of claims from an identity provider of a
-	// non-admin user whose credentials have
-	// been successfully verified by the server's authentication middleware.
-	Claims map[string]any
-	// ServiceAccountsByNamespace is the mapping of namespace names to sets of
-	// ServiceAccounts that a user has been mapped to.
-	ServiceAccountsByNamespace map[string]map[types.NamespacedName]struct{}
-	// UsernameClaim identifies from which specific claim the user's uniquely
-	// identifying username was extracted from.
-	UsernameClaim string
-	// Username is the username of the user. This is often the email address
-	// of the user, but may be different depending on configuration.
+var (
+	_ Identity = Admin{}
+	_ Identity = OIDCUser{}
+	_ Identity = KubernetesUser{}
+)
+
+// Subject is a Kubernetes identity whose access can be reviewed.
+type Subject struct {
 	Username string
-	// KubernetesUserInfo holds the identity of a bearer token holder as
-	// verified by the Kubernetes API server via a TokenReview. Populated only
-	// when Kubernetes authenticated the token directly (e.g. a Kargo API
-	// token), rather than Kargo's own token issuer or OIDC provider.
-	KubernetesUserInfo *authnv1.UserInfo
+	UID      string
+	Groups   []string
+	Extra    map[string]authv1.ExtraValue
 }
 
-// ContextWithInfo returns a context.Context that has been augmented with
-// the provided Info.
-func ContextWithInfo(ctx context.Context, u Info) context.Context {
-	return context.WithValue(ctx, userInfoKey{}, u)
+// Admin is the Kargo API server's own admin user, authenticated by a token
+// the server itself issued.
+type Admin struct{}
+
+func (Admin) IsAdmin() bool { return true }
+
+// Subjects returns nothing: an Admin is allowed without review.
+func (Admin) Subjects(authv1.ResourceAttributes) []Subject { return nil }
+
+func (Admin) Actor() string { return kargoapi.EventActorAdmin }
+
+// OIDCUser is a user authenticated by Kargo's OpenID Connect identity
+// provider. Such a user holds no Kubernetes identity of their own; they act
+// through the ServiceAccounts their claims map them to.
+type OIDCUser struct {
+	// Claims are the verified claims of the user's token.
+	Claims map[string]any
+	// UsernameClaim names the claim the Username was taken from.
+	UsernameClaim string
+	// Username is the user's name as the configured claim states it. It is
+	// often an email address, but may be anything the identity provider
+	// sends.
+	Username string
+	// ServiceAccountsByNamespace maps namespaces to the ServiceAccounts in
+	// them that the user's claims map to.
+	ServiceAccountsByNamespace map[string]map[types.NamespacedName]struct{}
+	// GlobalServiceAccountNamespaces are the namespaces, besides a Project's
+	// own, in which a mapped ServiceAccount may grant access to the Project.
+	GlobalServiceAccountNamespaces []string
 }
 
-// InfoFromContext extracts a userInfo from the provided context.Context and
-// returns it. If no Info is found, a zero-value Info is returned. A
-// boolean is also returned to indicate the success or failure of the call.
-func InfoFromContext(ctx context.Context) (Info, bool) {
-	val := ctx.Value(userInfoKey{})
-	if val == nil {
-		return Info{}, false
+func (OIDCUser) IsAdmin() bool { return false }
+
+// Subjects returns the user's mapped ServiceAccounts in the namespaces that
+// may grant the operation: the resource's own namespace first, where a
+// ServiceAccount with the required permissions is most likely to be found,
+// then the global ServiceAccount namespaces. A cluster-scoped Project is the
+// one resource whose own namespace is its name.
+func (u OIDCUser) Subjects(ra authv1.ResourceAttributes) []Subject {
+	namespaces := make([]string, 0, len(u.GlobalServiceAccountNamespaces)+1)
+	switch {
+	case ra.Namespace != "":
+		namespaces = append(namespaces, ra.Namespace)
+	case ra.Group == kargoapi.GroupVersion.Group && ra.Resource == "projects":
+		namespaces = append(namespaces, ra.Name)
 	}
-	u, ok := val.(Info)
-	return u, ok
+	namespaces = append(namespaces, u.GlobalServiceAccountNamespaces...)
+	var subjects []Subject
+	for _, namespace := range namespaces {
+		for sa := range u.ServiceAccountsByNamespace[namespace] {
+			subjects = append(subjects, ServiceAccountSubject(sa))
+		}
+	}
+	return subjects
+}
+
+// MappedTo reports whether any of the user's ServiceAccounts is in the
+// namespace.
+func (u OIDCUser) MappedTo(namespace string) bool {
+	return len(u.ServiceAccountsByNamespace[namespace]) > 0
+}
+
+// Actor names the user by the configured username claim when the token
+// carried it, else by email, else by subject. Identity providers are not
+// guaranteed to send every claim tied to a requested scope, but "sub" is
+// always present, so it is the final backstop.
+func (u OIDCUser) Actor() string {
+	if u.Username != "" {
+		return fmt.Sprintf("%s:%s", u.UsernameClaim, u.Username)
+	}
+	if email, ok := u.Claims["email"].(string); ok {
+		return kargoapi.EventActorEmailPrefix + email
+	}
+	if sub, ok := u.Claims["sub"].(string); ok {
+		return kargoapi.EventActorSubjectPrefix + sub
+	}
+	return kargoapi.EventActorUnknown
+}
+
+// KubernetesUser is the holder of a bearer token that Kubernetes itself
+// recognized, through a TokenReview: a ServiceAccount, such as a Kargo API
+// token or a controller, or a user of the cluster's own identity provider.
+type KubernetesUser struct {
+	authnv1.UserInfo
+}
+
+func (KubernetesUser) IsAdmin() bool { return false }
+
+// Subjects returns the user as Kubernetes reported them. Groups, UID and
+// extras are all carried across, because omitting them would ask a different
+// question: whether the user is permitted on the strength of their username
+// alone.
+func (u KubernetesUser) Subjects(authv1.ResourceAttributes) []Subject {
+	subject := Subject{
+		Username: u.Username,
+		UID:      u.UID,
+		Groups:   u.Groups,
+	}
+	if len(u.Extra) > 0 {
+		subject.Extra = make(map[string]authv1.ExtraValue, len(u.Extra))
+		for k, v := range u.Extra {
+			subject.Extra[k] = authv1.ExtraValue(v)
+		}
+	}
+	return []Subject{subject}
+}
+
+func (u KubernetesUser) Actor() string {
+	return kargoapi.EventActorKubernetesUserPrefix + u.Username
+}
+
+// ServiceAccountSubject is the subject a ServiceAccount is reviewed as.
+func ServiceAccountSubject(name types.NamespacedName) Subject {
+	return Subject{
+		Username: fmt.Sprintf("system:serviceaccount:%s:%s", name.Namespace, name.Name),
+	}
+}
+
+type identityKey struct{}
+
+// ContextWithIdentity returns a context carrying the Identity.
+func ContextWithIdentity(ctx context.Context, id Identity) context.Context {
+	return context.WithValue(ctx, identityKey{}, id)
+}
+
+// IdentityFromContext returns the Identity bound to the context, if any.
+func IdentityFromContext(ctx context.Context) (Identity, bool) {
+	id, ok := ctx.Value(identityKey{}).(Identity)
+	return id, ok && id != nil
 }

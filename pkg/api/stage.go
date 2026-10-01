@@ -323,8 +323,8 @@ func ReverifyStageFreight(
 		ID: currentVI.ID,
 	}
 	// Put actor information to track on the controller side
-	if u, ok := user.InfoFromContext(ctx); ok {
-		rr.Actor = FormatEventUserActor(u)
+	if u, ok := user.IdentityFromContext(ctx); ok {
+		rr.Actor = u.Actor()
 	}
 	return patchAnnotation(ctx, c, stage, kargoapi.AnnotationKeyReverify, rr.String())
 }
@@ -371,8 +371,8 @@ func AbortStageFreightVerification(
 		ID: currentVI.ID,
 	}
 	// Put actor information to track on the controller side
-	if u, ok := user.InfoFromContext(ctx); ok {
-		ar.Actor = FormatEventUserActor(u)
+	if u, ok := user.IdentityFromContext(ctx); ok {
+		ar.Actor = u.Actor()
 	}
 	return patchAnnotation(ctx, c, stage, kargoapi.AnnotationKeyAbort, ar.String())
 }

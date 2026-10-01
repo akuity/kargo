@@ -260,11 +260,11 @@ func TestGetAuthorizedClient(t *testing.T) {
     testInternalClient := fake.NewClientBuilder().Build()
     testCases := []struct {
         name     string
-        userInfo *user.Info
+        identity user.Identity
         assert   func(*testing.T, libClient.Client, error)
     }{
         {
-            name: "no context-bound user.Info",
+            name: "no context-bound identity",
             assert: func(t *testing.T, _ libClient.Client, err error) {
                 require.Error(t, err)
                 require.Equal(t, "not allowed", err.Error())
@@ -272,7 +272,7 @@ func TestGetAuthorizedClient(t *testing.T) {
         },
         {
             name: "admin user",
-            userInfo: &user.Info{IsAdmin: true},
+            identity: user.Admin{},
             assert: func(t *testing.T, c libClient.Client, err error) {
                 require.NoError(t, err)
                 require.Same(t, testInternalClient, c)
@@ -282,10 +282,10 @@ func TestGetAuthorizedClient(t *testing.T) {
     for _, testCase := range testCases {
         t.Run(testCase.name, func(t *testing.T) {
             ctx := context.Background()
-            if testCase.userInfo != nil {
-                ctx = user.ContextWithInfo(ctx, *testCase.userInfo)
+            if testCase.identity != nil {
+                ctx = user.ContextWithIdentity(ctx, testCase.identity)
             }
-            client, err := getAuthorizedClient(nil)(
+            client, err := getAuthorizedClient()(
                 ctx, testInternalClient, "",
                 schema.GroupVersionResource{}, "",
                 libClient.ObjectKey{},

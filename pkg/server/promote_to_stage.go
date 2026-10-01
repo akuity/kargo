@@ -32,8 +32,8 @@ func (s *server) recordPromotionCreatedEvent(
 ) {
 	var actor string
 	msg := fmt.Sprintf("Promotion created for Stage %q", p.Spec.Stage)
-	if u, ok := user.InfoFromContext(ctx); ok {
-		actor = api.FormatEventUserActor(u)
+	if u, ok := user.IdentityFromContext(ctx); ok {
+		actor = u.Actor()
 		msg += fmt.Sprintf(" by %q", actor)
 	}
 
@@ -153,8 +153,8 @@ func (s *server) promoteToStage(c *gin.Context) {
 			return
 		}
 		promotion := api.NewMinimalPromotionForOrigin(stage, origin)
-		if u, ok := user.InfoFromContext(ctx); ok {
-			api.SetCreateActorAnnotation(promotion, api.FormatEventUserActor(u))
+		if u, ok := user.IdentityFromContext(ctx); ok {
+			api.SetCreateActorAnnotation(promotion, u.Actor())
 		}
 		if err = s.createPromotionFn(ctx, promotion); err != nil {
 			_ = c.Error(err)
@@ -224,8 +224,8 @@ func (s *server) promoteToStage(c *gin.Context) {
 			_ = c.Error(prErr)
 			return
 		}
-		if u, ok := user.InfoFromContext(ctx); ok {
-			api.SetCreateActorAnnotation(promotionRequest, api.FormatEventUserActor(u))
+		if u, ok := user.IdentityFromContext(ctx); ok {
+			api.SetCreateActorAnnotation(promotionRequest, u.Actor())
 		}
 		if err = s.client.InternalClient().Create(ctx, promotionRequest); err != nil {
 			_ = c.Error(err)
@@ -240,8 +240,8 @@ func (s *server) promoteToStage(c *gin.Context) {
 	// Create the Promotion. The defaulting webhook fills in the rest from
 	// the Stage's PromotionTemplate.
 	promotion := api.NewMinimalPromotion(stage, freight.Name)
-	if u, ok := user.InfoFromContext(ctx); ok {
-		api.SetCreateActorAnnotation(promotion, api.FormatEventUserActor(u))
+	if u, ok := user.IdentityFromContext(ctx); ok {
+		api.SetCreateActorAnnotation(promotion, u.Actor())
 	}
 
 	if err := s.createPromotionFn(ctx, promotion); err != nil {

@@ -100,10 +100,16 @@ func filterProjectsByAccess(
 	ctx context.Context,
 	projects []kargoapi.Project,
 ) []kargoapi.Project {
-	userInfo, _ := user.InfoFromContext(ctx)
+	id, _ := user.IdentityFromContext(ctx)
+	oidcUser, ok := id.(user.OIDCUser)
+	if !ok {
+		// Only an OpenID Connect user is mapped to ServiceAccounts; nothing
+		// else is filtered this way.
+		return []kargoapi.Project{}
+	}
 	filtered := make([]kargoapi.Project, 0, len(projects))
 	for _, project := range projects {
-		if _, has := userInfo.ServiceAccountsByNamespace[project.Name]; has {
+		if oidcUser.MappedTo(project.Name) {
 			filtered = append(filtered, project)
 		}
 	}

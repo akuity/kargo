@@ -97,9 +97,6 @@ func (o *apiOptions) run(ctx context.Context) error {
 	kubeClientOptions := kubernetes.ClientOptions{
 		KargoNamespace: serverCfg.KargoNamespace,
 	}
-	if serverCfg.OIDCConfig != nil {
-		kubeClientOptions.GlobalServiceAccountNamespaces = serverCfg.OIDCConfig.GlobalServiceAccountNamespaces
-	}
 	kubeClient, err := kubernetes.NewClient(ctx, restCfg, kubeClientOptions)
 	if err != nil {
 		return fmt.Errorf("error creating Kubernetes client for Kargo API server: %w", err)
