@@ -44,24 +44,38 @@ import (
 	"github.com/akuity/kargo/pkg/telemetry"
 )
 
+// TargetLister lists the Targets of a Project. Targets live in the control
+// plane's database and are read through the API server; see
+// pkg/controller/targets.
+type TargetLister interface {
+	ListTargets(ctx context.Context, project string) ([]kargoapi.Target, error)
+}
+
 type FleetStageReconciler struct {
 	cfg            ReconcilerConfig
 	client         client.Client
 	credentialsDB  credentials.Database
 	eventSender    kargoEvent.Sender
 	shardPredicate controller.ResponsibleFor[kargoapi.Stage]
+	// targets lists the Targets a Stage may govern. It is nil when the
+	// controller has no API server to read them from, in which case a Stage
+	// that selects Targets is reported Stalled rather than promoted.
+	targets TargetLister
 
 	backoffCfg wait.Backoff
 }
 
-// NewFleetStageReconciler creates a new Stages reconciler.
+// NewFleetStageReconciler creates a new Stages reconciler. The TargetLister
+// may be nil; see the reconciler's targets field.
 func NewFleetStageReconciler(
 	cfg ReconcilerConfig,
 	credentialsDB credentials.Database,
+	targets TargetLister,
 ) *FleetStageReconciler {
 	return &FleetStageReconciler{
 		cfg:           cfg,
 		credentialsDB: credentialsDB,
+		targets:       targets,
 		shardPredicate: controller.ResponsibleFor[kargoapi.Stage]{
 			IsDefaultController: cfg.IsDefaultController,
 			ShardName:           cfg.ShardName,
@@ -850,6 +864,22 @@ func (r *FleetStageReconciler) autoPromoteFreight(
 	newStatus := *stage.Status.DeepCopy()
 	newStatus.AutoPromotionEnabled = autoPromotionEnabled
 
+	// The Stage promotes through PromotionRequests, whose Targets are read
+	// from the API server. Without one there is nothing to resolve them from,
+	// so say so rather than fail every reconcile.
+	conditions.Delete(&newStatus, kargoapi.ConditionTypeStalled)
+	if r.targets == nil {
+		conditions.Set(&newStatus, &metav1.Condition{
+			Type:   kargoapi.ConditionTypeStalled,
+			Status: metav1.ConditionTrue,
+			Reason: "TargetsUnavailable",
+			Message: "Stage selects Targets, but the controller has no API server " +
+				"to resolve them from (API_SERVER_ADDRESS)",
+			ObservedGeneration: stage.Generation,
+		})
+		return newStatus, nil
+	}
+
 	// If the Stage has no requested Freight, then there is nothing to promote.
 	// NB: This should not happen in practice, as a Stage cannot exist without
 	// requested Freight.
@@ -963,13 +993,19 @@ func (r *FleetStageReconciler) createAutoPromotionRequest(
 		"freight", candidate.Name,
 	)
 
-	promotionRequest, err := api.NewPromotionRequest(ctx, r.client, stage, candidate.Name)
+	targets, err := r.targets.ListTargets(ctx, stage.Namespace)
 	if err != nil {
 		return fmt.Errorf(
-			"error building PromotionRequest for Freight %q in namespace %q: %w",
-			candidate.Name, stage.Namespace, err,
+			"error listing Targets in Project %q: %w", stage.Namespace, err,
 		)
 	}
+	if targets, err = api.FilterTargetsForStage(stage, targets); err != nil {
+		return fmt.Errorf(
+			"error resolving Targets governed by Stage %q in namespace %q: %w",
+			stage.Name, stage.Namespace, err,
+		)
+	}
+	promotionRequest := api.NewPromotionRequest(stage, candidate.Name, targets)
 
 	if err = r.client.Create(ctx, promotionRequest); err != nil {
 		// An admission webhook may deny the create. Tolerate this as a

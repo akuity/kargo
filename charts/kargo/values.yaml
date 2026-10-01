@@ -820,6 +820,13 @@ controller:
   ## @param controller.securityContext Security context for controller pods. Defaults to `global.securityContext`.
   securityContext: {}
 
+  ## Settings for how the controller reaches the Kargo API server. Targets live
+  ## in the control plane's database and the controller, which may run far from
+  ## it, reads them through the API server.
+  apiServer:
+    ## @param controller.apiServer.address The URL at which the controller reaches the API server, e.g. `https://kargo.example.com`. When empty and `api.enabled` is `true`, the API server's in-cluster `Service` is used, and a chart-generated API server certificate is trusted automatically. Set this for a controller installed apart from the API server, such as a shard in another cluster; a certificate the controller does not already trust can be added through `controller.cabundle`. Without an API server the controller cannot promote to Targets.
+    address: ""
+
   cabundle:
     ## @param controller.cabundle.configMapName Specifies the name of an optional ConfigMap containing CA certs that is managed "out of band." Values in the ConfigMap named here should each contain a single PEM-encoded CA cert. If secretName is also defined, it will take precedence over this field.
     configMapName: ""

@@ -48,19 +48,10 @@ func (h *Handler) list(c *gin.Context) {
 		}
 	}
 
-	rows, err := h.store.List(ctx, project)
+	targets, err := ListFromStore(ctx, h.store, project)
 	if err != nil {
 		_ = c.Error(err)
 		return
-	}
-	targets := make([]kargoapi.Target, len(rows))
-	for i, row := range rows {
-		target, convErr := targetFromRow(row, project)
-		if convErr != nil {
-			_ = c.Error(convErr)
-			return
-		}
-		targets[i] = *target
 	}
 
 	c.JSON(http.StatusOK, &kargoapi.TargetList{

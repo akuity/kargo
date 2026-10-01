@@ -33,6 +33,7 @@ import (
 	"github.com/akuity/kargo/pkg/server/dex"
 	"github.com/akuity/kargo/pkg/server/kubernetes"
 	"github.com/akuity/kargo/pkg/server/rbac"
+	"github.com/akuity/kargo/pkg/server/targets"
 )
 
 //go:embed all:ui
@@ -135,6 +136,10 @@ type server struct {
 		types.NamespacedName,
 	) (*rolloutsapi.AnalysisRun, error)
 
+	// listTargetsFn lists a Project's Targets from the database. It is nil
+	// when the server runs without one.
+	listTargetsFn func(context.Context, string) ([]kargoapi.Target, error)
+
 	// Special authorizations:
 	authorizeFn func(
 		ctx context.Context,
@@ -178,6 +183,11 @@ func NewServer(
 	s.patchFreightAliasFn = s.patchFreightAlias
 	s.patchFreightStatusFn = s.patchFreightStatus
 	s.authorizeFn = kubeClient.Authorize
+	if store := s.targetStore(); store != nil {
+		s.listTargetsFn = func(ctx context.Context, project string) ([]kargoapi.Target, error) {
+			return targets.ListFromStore(ctx, store, project)
+		}
+	}
 	s.getAnalysisTemplateFn = rollouts.GetAnalysisTemplate
 	s.getClusterAnalysisTemplateFn = rollouts.GetClusterAnalysisTemplate
 	s.getAnalysisRunFn = rollouts.GetAnalysisRun

@@ -1,6 +1,7 @@
 package targets
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"strconv"
@@ -13,7 +14,30 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/database"
+	"github.com/akuity/kargo/pkg/database/targetstore"
 )
+
+// ListFromStore returns every Target of the Project as the resource the API
+// serves, for the server's own use where it needs Targets rather than rows.
+func ListFromStore(
+	ctx context.Context,
+	store targetstore.Store,
+	project string,
+) ([]kargoapi.Target, error) {
+	rows, err := store.List(ctx, project)
+	if err != nil {
+		return nil, err
+	}
+	targets := make([]kargoapi.Target, len(rows))
+	for i, row := range rows {
+		target, convErr := targetFromRow(row, project)
+		if convErr != nil {
+			return nil, convErr
+		}
+		targets[i] = *target
+	}
+	return targets, nil
+}
 
 // targetFromRow presents a row as the Target resource the API serves. The
 // row's id is the UID and its last update, which every write advances, the
