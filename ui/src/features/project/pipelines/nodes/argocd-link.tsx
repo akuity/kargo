@@ -3,7 +3,6 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Dropdown, ButtonProps, Button } from 'antd';
 import React from 'react';
 import { generatePath, useNavigate, useParams } from 'react-router-dom';
-import z from 'zod';
 
 import { withBasePath } from '@ui/config/base-path';
 import { ARGOCD_CONTEXT_KEY, SHARD_LABEL_KEY } from '@ui/config/labels';
@@ -14,6 +13,8 @@ import { useEmbeddedArgoCD } from '@ui/features/common/preferences/use-embedded-
 import { Health, Stage } from '@ui/gen/api/v2/models';
 
 import { useDictionaryContext } from '../context/dictionary-context';
+
+import { ArgoCDContext, argoCDAppKey, parseArgoCDContext } from './argocd-link-utils';
 
 type ArgoCDLinkProps = React.PropsWithChildren<{
   stage: Stage;
@@ -39,10 +40,8 @@ export const ArgoCDLink = ({
   const isExtensionArgoCD = Boolean(argoCDExtension) && !externalLinksOnly && embeddedArgoCD;
 
   const argoCDApps = React.useMemo(() => {
-    const rawValues = stage.metadata?.annotations?.[ARGOCD_CONTEXT_KEY];
-
     try {
-      return rawValues ? argoCDContextSchema.parse(JSON.parse(rawValues)) : [];
+      return parseArgoCDContext(stage.metadata?.annotations?.[ARGOCD_CONTEXT_KEY]);
     } catch (e) {
       // eslint-disable-next-line no-console
       console.error(e);
@@ -112,13 +111,13 @@ export const ArgoCDLink = ({
       trigger={['click']}
       menu={{
         style: { maxHeight: '278px', overflowY: 'auto' },
-        items: argoCDApps.map((app, idx) => {
+        items: argoCDApps.map((app) => {
           const status = stage.status?.health?.output
             ? getStatusFromHealthOutput(stage.status.health.output, app.name)
             : undefined;
 
           return {
-            key: idx,
+            key: argoCDAppKey(app),
             label: (
               <a
                 href={argoCDHref(app)}
@@ -141,15 +140,6 @@ export const ArgoCDLink = ({
     </Dropdown>
   );
 };
-
-const argoCDContextSchema = z.array(
-  z.object({
-    name: z.string(),
-    namespace: z.string()
-  })
-);
-
-type ArgoCDContext = z.infer<typeof argoCDContextSchema>[number];
 
 const getStatusFromHealthOutput = (healthOutput: unknown, app: string): Health | undefined => {
   try {
