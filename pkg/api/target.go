@@ -42,7 +42,7 @@ func GetTarget(
 // which governs no Targets. An empty selector within the list parses to one
 // that matches everything, so it selects every Target in the Project.
 func TargetSelectorsForStage(stage *kargoapi.Stage) ([]labels.Selector, error) {
-	if !IsTargetAware(stage) {
+	if !stage.IsTargetAware() {
 		return nil, nil
 	}
 	selectors := make([]labels.Selector, 0, len(stage.Spec.Targets.Selectors))

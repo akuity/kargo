@@ -69,5 +69,27 @@ func (s *server) refreshStage(c *gin.Context) {
 		}
 	}
 
+	if stage.Status.CurrentPromotionRequest != nil {
+		currentName := stage.Status.CurrentPromotionRequest.Name
+		promoKey := client.ObjectKey{Name: currentName, Namespace: project}
+		if err := s.authorizeFn(
+			ctx, "get", kargoapi.GroupVersion.WithResource("promotionrequests"), "", promoKey,
+		); err != nil {
+			_ = c.Error(err)
+			return
+		}
+
+		promoRequest := &kargoapi.PromotionRequest{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: project,
+				Name:      currentName,
+			},
+		}
+		if err := api.RefreshObject(ctx, s.client.InternalClient(), promoRequest); err != nil {
+			_ = c.Error(fmt.Errorf("failed to refresh current Promotion Request: %w", err))
+			return
+		}
+	}
+
 	c.Status(http.StatusOK)
 }

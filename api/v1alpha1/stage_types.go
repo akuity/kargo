@@ -157,6 +157,32 @@ func (s *Stage) IsControlFlow() bool {
 	}
 }
 
+// IsTargetAware returns true if the Stage has targets in its spec.
+// A target-aware stage is handled by a separate fleet stages reconciler.
+func (s *Stage) IsTargetAware() bool {
+	return s != nil && s.Spec.Targets != nil
+}
+
+// PromotionInProgress returns true if there is a promotion currently in-flight
+// according to the stage status.
+func (s *Stage) PromotionInProgress() bool {
+	return s != nil && (s.Status.CurrentPromotion != nil || s.Status.CurrentPromotionRequest != nil)
+}
+
+// LastPromotionName returns a name of last promotion or promotion request.
+// Empty if stage is nil or there is no last promotion or request.
+func (s *Stage) LastPromotionName() string {
+	if s == nil {
+		return ""
+	}
+	if s.Status.LastPromotion != nil {
+		return s.Status.LastPromotion.Name
+	}
+	if s.Status.LastPromotionRequest != nil {
+		return s.Status.LastPromotionRequest.Name
+	}
+	return ""
+}
 
 // RequestsFreightFromOrigin returns whether any of the Stage's Freight requests
 // name the specified origin.

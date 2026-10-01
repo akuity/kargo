@@ -183,7 +183,7 @@ func (s *server) promoteDownstream(c *gin.Context) {
 
 		// A downstream Stage that selects Targets fans Freight out to them via
 		// a PromotionRequest rather than promoting to itself with a Promotion.
-		if api.IsTargetAware(&downstream) {
+		if downstream.IsTargetAware() {
 			// Both the Target lookup and the create go through the internal
 			// client. PromotionRequests are system-owned, and the promote-verb
 			// check above IS the authorization decision for this downstream

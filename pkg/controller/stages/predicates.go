@@ -43,3 +43,41 @@ func (s IsControlFlowStage) Delete(event.DeleteEvent) bool {
 func (s IsControlFlowStage) Generic(event.GenericEvent) bool {
 	return false
 }
+
+// IsControlFlowStage is a predicate that filters out Stages based on whether
+// they have targets configured (fleet stages).
+type IsTargetAwareStage bool
+
+func (s IsTargetAwareStage) Create(e event.CreateEvent) bool {
+	if e.Object == nil {
+		return false
+	}
+
+	newObj, ok := e.Object.(*kargoapi.Stage)
+	if !ok {
+		return false
+	}
+
+	return newObj.IsTargetAware() == bool(s)
+}
+
+func (s IsTargetAwareStage) Update(e event.UpdateEvent) bool {
+	if e.ObjectNew == nil {
+		return false
+	}
+
+	newObj, ok := e.ObjectNew.(*kargoapi.Stage)
+	if !ok {
+		return false
+	}
+
+	return newObj.IsTargetAware() == bool(s)
+}
+
+func (s IsTargetAwareStage) Delete(event.DeleteEvent) bool {
+	return false
+}
+
+func (s IsTargetAwareStage) Generic(event.GenericEvent) bool {
+	return false
+}
