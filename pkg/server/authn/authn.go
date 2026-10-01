@@ -6,8 +6,8 @@
 // ServiceAccount token, or the cluster's own identity provider). Each kind
 // has an Authenticator of its own, and a Chain tries them in order. An
 // Authenticator recognizes its kind of token by the issuer the token claims,
-// which is read before anything is verified and trusted only as a hint about
-// how to verify it.
+// which it reads before verifying anything and trusts only to decide whether
+// the token is its to verify.
 package authn
 
 import (
@@ -33,23 +33,17 @@ import (
 // not be able to mistake a broken control plane for a rejected token.
 var ErrInvalidToken = libhttp.ErrorStr("invalid token", http.StatusUnauthorized)
 
-// Hint is what a token says about itself before it is verified: the claims
-// that pick which Authenticator should verify it. Nothing in a Hint is
-// trusted.
-type Hint struct {
-	// Issuer is the token's unverified "iss" claim.
-	Issuer string
-}
-
-// HintFrom reads a Hint from a raw JWT without verifying it. It returns false
-// if the token is not a JWT at all.
-func HintFrom(rawToken string) (Hint, bool) {
+// unverifiedIssuer returns the issuer a JWT claims without verifying the
+// token, and false if the token is not a JWT at all. Anyone can write any
+// issuer into a token, so it only says which Authenticator should verify the
+// token, never that the token is valid.
+func unverifiedIssuer(rawToken string) (string, bool) {
 	claims := jwt.RegisteredClaims{}
 	if _, _, err := jwt.NewParser(jwt.WithoutClaimsValidation()).
 		ParseUnverified(rawToken, &claims); err != nil {
-		return Hint{}, false
+		return "", false
 	}
-	return Hint{Issuer: claims.Issuer}, true
+	return claims.Issuer, true
 }
 
 // Authenticator resolves tokens of one kind to the identity behind them.
@@ -58,7 +52,7 @@ type Authenticator interface {
 	// the token is not of a kind it handles, so that the next Authenticator
 	// may be tried. An error means the token is of its kind but was rejected
 	// (ErrInvalidToken) or could not be checked.
-	Authenticate(ctx context.Context, rawToken string, hint Hint) (user.Identity, bool, error)
+	Authenticate(ctx context.Context, rawToken string) (user.Identity, bool, error)
 }
 
 // Chain tries each Authenticator in order and answers with the first that
@@ -71,10 +65,9 @@ var _ Authenticator = Chain(nil)
 func (c Chain) Authenticate(
 	ctx context.Context,
 	rawToken string,
-	hint Hint,
 ) (user.Identity, bool, error) {
 	for _, authenticator := range c {
-		id, ok, err := authenticator.Authenticate(ctx, rawToken, hint)
+		id, ok, err := authenticator.Authenticate(ctx, rawToken)
 		if err != nil || ok {
 			return id, ok, err
 		}

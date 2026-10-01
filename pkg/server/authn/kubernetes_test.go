@@ -19,13 +19,25 @@ import (
 
 func TestKubernetes_Authenticate(t *testing.T) {
 	t.Parallel()
-	const testToken = "test-bearer-token"
+	testToken := tokenFrom(t, "https://kubernetes.default.svc")
 	testCases := []struct {
 		name         string
+		token        string
 		reviewStatus authnv1.TokenReviewStatus
 		createErr    error
 		assert       func(*testing.T, user.Identity, error)
 	}{
+		{
+			// Rejected without a TokenReview, which the interceptor would
+			// fail on because the token is not the one it expects.
+			name:  "not a JWT",
+			token: "test-bearer-token",
+			assert: func(t *testing.T, id user.Identity, err error) {
+				require.ErrorIs(t, err, ErrInvalidToken)
+				requireErrorStatus(t, err, http.StatusUnauthorized)
+				require.Nil(t, id)
+			},
+		},
 		{
 			// The check could not be carried out, which says nothing about the
 			// token, so the error must carry no status code for the
@@ -100,7 +112,11 @@ func TestKubernetes_Authenticate(t *testing.T) {
 					},
 				},
 			).Build()
-			id, ok, err := NewKubernetes(kube).Authenticate(t.Context(), testToken, Hint{})
+			token := testCase.token
+			if token == "" {
+				token = testToken
+			}
+			id, ok, err := NewKubernetes(kube).Authenticate(t.Context(), token)
 			// Every token is of this kind.
 			require.True(t, ok)
 			testCase.assert(t, id, err)

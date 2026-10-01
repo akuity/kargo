@@ -25,29 +25,39 @@ type fakeAuthenticator struct {
 
 func (f *fakeAuthenticator) Authenticate(
 	_ context.Context,
-	_ string,
-	hint Hint,
+	rawToken string,
 ) (user.Identity, bool, error) {
-	if hint.Issuer != f.issuer {
+	if issuer, _ := unverifiedIssuer(rawToken); issuer != f.issuer {
 		return nil, false, nil
 	}
 	f.calls++
 	return f.id, true, f.err
 }
 
-func TestHintFrom(t *testing.T) {
+// tokenFrom returns a JWT claiming the issuer, signed with a key nobody trusts.
+func tokenFrom(t *testing.T, issuer string) string {
+	t.Helper()
+	raw, err := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.RegisteredClaims{
+		Issuer: issuer,
+	}).SignedString([]byte("any key"))
+	require.NoError(t, err)
+	return raw
+}
+
+func TestUnverifiedIssuer(t *testing.T) {
 	t.Parallel()
-	_, ok := HintFrom("not a jwt")
+	_, ok := unverifiedIssuer("not a jwt")
 	require.False(t, ok)
-	// Expired and unsigned: a hint reads the claims without judging them.
+	// Expired and signed with an unknown key: the issuer is read without
+	// judging the token.
 	raw, err := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.RegisteredClaims{
 		Issuer:    "someone",
 		ExpiresAt: jwt.NewNumericDate(time.Now().Add(-time.Hour)),
 	}).SignedString([]byte("any key"))
 	require.NoError(t, err)
-	hint, ok := HintFrom(raw)
+	issuer, ok := unverifiedIssuer(raw)
 	require.True(t, ok)
-	require.Equal(t, Hint{Issuer: "someone"}, hint)
+	require.Equal(t, "someone", issuer)
 }
 
 func TestChain_Authenticate(t *testing.T) {
@@ -56,7 +66,7 @@ func TestChain_Authenticate(t *testing.T) {
 	second := &fakeAuthenticator{issuer: "second", err: errors.New("broken")}
 	chain := Chain{first, second}
 
-	id, ok, err := chain.Authenticate(t.Context(), "", Hint{Issuer: "first"})
+	id, ok, err := chain.Authenticate(t.Context(), tokenFrom(t, "first"))
 	require.NoError(t, err)
 	require.True(t, ok)
 	require.Equal(t, user.Admin{}, id)
@@ -64,12 +74,12 @@ func TestChain_Authenticate(t *testing.T) {
 	require.Zero(t, second.calls)
 
 	// An error from the Authenticator that recognized the token ends the chain.
-	_, ok, err = chain.Authenticate(t.Context(), "", Hint{Issuer: "second"})
+	_, ok, err = chain.Authenticate(t.Context(), tokenFrom(t, "second"))
 	require.True(t, ok)
 	require.ErrorContains(t, err, "broken")
 
 	// A token nobody recognizes.
-	id, ok, err = chain.Authenticate(t.Context(), "", Hint{Issuer: "third"})
+	id, ok, err = chain.Authenticate(t.Context(), tokenFrom(t, "third"))
 	require.NoError(t, err)
 	require.False(t, ok)
 	require.Nil(t, id)

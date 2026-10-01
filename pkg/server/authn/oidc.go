@@ -67,9 +67,8 @@ func NewOIDC(ctx context.Context, cfg config.ServerConfig, kube client.Client) A
 func (a *oidcAuthenticator) Authenticate(
 	ctx context.Context,
 	rawToken string,
-	hint Hint,
 ) (user.Identity, bool, error) {
-	if hint.Issuer != a.cfg.OIDCConfig.IssuerURL {
+	if issuer, ok := unverifiedIssuer(rawToken); !ok || issuer != a.cfg.OIDCConfig.IssuerURL {
 		return nil, false, nil
 	}
 	claims, err := a.verifyToken(ctx, rawToken)

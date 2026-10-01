@@ -191,13 +191,13 @@ func TestOIDC_Authenticate(t *testing.T) {
 	testCases := []struct {
 		name          string
 		authenticator *oidcAuthenticator
-		hint          Hint
+		token         string
 		assert        func(*testing.T, user.Identity, bool, error)
 	}{
 		{
 			name:          "another issuer is not this kind of token",
 			authenticator: &oidcAuthenticator{cfg: cfg},
-			hint:          Hint{Issuer: "someone-else"},
+			token:         tokenFrom(t, "someone-else"),
 			assert: func(t *testing.T, _ user.Identity, ok bool, err error) {
 				require.NoError(t, err)
 				require.False(t, ok)
@@ -208,7 +208,7 @@ func TestOIDC_Authenticate(t *testing.T) {
 			// still cannot be.
 			name:          "verifier unavailable",
 			authenticator: &oidcAuthenticator{cfg: cfg},
-			hint:          Hint{Issuer: issuer},
+			token:         tokenFrom(t, issuer),
 			assert: func(t *testing.T, _ user.Identity, ok bool, err error) {
 				require.True(t, ok)
 				require.ErrorContains(t, err, "could not validate token")
@@ -223,7 +223,7 @@ func TestOIDC_Authenticate(t *testing.T) {
 					return nil, errors.New("bad signature")
 				},
 			},
-			hint: Hint{Issuer: issuer},
+			token: tokenFrom(t, issuer),
 			assert: func(t *testing.T, _ user.Identity, ok bool, err error) {
 				require.True(t, ok)
 				require.ErrorIs(t, err, ErrInvalidToken)
@@ -239,7 +239,7 @@ func TestOIDC_Authenticate(t *testing.T) {
 					return nil, errors.New("something went wrong")
 				},
 			},
-			hint: Hint{Issuer: issuer},
+			token: tokenFrom(t, issuer),
 			assert: func(t *testing.T, _ user.Identity, ok bool, err error) {
 				require.True(t, ok)
 				require.ErrorContains(t, err, "something went wrong")
@@ -256,7 +256,7 @@ func TestOIDC_Authenticate(t *testing.T) {
 					return nil, errors.New("api server down")
 				},
 			},
-			hint: Hint{Issuer: issuer},
+			token: tokenFrom(t, issuer),
 			assert: func(t *testing.T, _ user.Identity, ok bool, err error) {
 				require.True(t, ok)
 				require.ErrorContains(t, err, "list service accounts for user")
@@ -273,7 +273,7 @@ func TestOIDC_Authenticate(t *testing.T) {
 				},
 				listServiceAccountsFn: noAccounts,
 			},
-			hint: Hint{Issuer: issuer},
+			token: tokenFrom(t, issuer),
 			assert: func(t *testing.T, _ user.Identity, ok bool, err error) {
 				require.True(t, ok)
 				require.ErrorContains(t, err, `claim "preferred_username" must be a string`)
@@ -291,7 +291,7 @@ func TestOIDC_Authenticate(t *testing.T) {
 					}, nil
 				},
 			},
-			hint: Hint{Issuer: issuer},
+			token: tokenFrom(t, issuer),
 			assert: func(t *testing.T, id user.Identity, ok bool, err error) {
 				require.NoError(t, err)
 				require.True(t, ok)
@@ -310,7 +310,7 @@ func TestOIDC_Authenticate(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
-			id, ok, err := testCase.authenticator.Authenticate(t.Context(), "some-token", testCase.hint)
+			id, ok, err := testCase.authenticator.Authenticate(t.Context(), testCase.token)
 			testCase.assert(t, id, ok, err)
 		})
 	}

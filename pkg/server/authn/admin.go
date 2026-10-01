@@ -28,9 +28,8 @@ func NewAdmin(cfg *config.AdminConfig) Authenticator {
 func (a *admin) Authenticate(
 	_ context.Context,
 	rawToken string,
-	hint Hint,
 ) (user.Identity, bool, error) {
-	if hint.Issuer != a.cfg.TokenIssuer {
+	if issuer, ok := unverifiedIssuer(rawToken); !ok || issuer != a.cfg.TokenIssuer {
 		return nil, false, nil
 	}
 	if _, err := jwt.NewParser().Parse(

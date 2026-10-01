@@ -27,7 +27,6 @@ type fakeAuthenticator struct {
 func (f fakeAuthenticator) Authenticate(
 	context.Context,
 	string,
-	authn.Hint,
 ) (user.Identity, bool, error) {
 	return f.id, f.ok, f.err
 }
@@ -142,17 +141,6 @@ func TestAuthenticate(t *testing.T) {
 			},
 		},
 		{
-			name:          "non-JWT token",
-			path:          testPath,
-			token:         "this is not a JWT",
-			authenticator: fakeAuthenticator{err: errors.New("must not be called")},
-			assertions: func(t *testing.T, ctx context.Context, err error) {
-				require.ErrorIs(t, err, authn.ErrInvalidToken)
-				_, ok := user.IdentityFromContext(ctx)
-				require.False(t, ok)
-			},
-		},
-		{
 			name:          "token rejected",
 			path:          testPath,
 			token:         validToken,
@@ -239,7 +227,8 @@ func TestAuthMiddlewareHandler(t *testing.T) {
 		{
 			name:           "token rejected",
 			path:           "/v1beta1/projects",
-			token:          "not-a-jwt",
+			token:          validToken,
+			authenticator:  fakeAuthenticator{ok: true, err: authn.ErrInvalidToken},
 			expectedStatus: http.StatusUnauthorized,
 			expectedBody:   `{"error":"invalid token"}`,
 		},

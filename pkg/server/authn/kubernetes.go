@@ -27,12 +27,16 @@ func NewKubernetes(kube client.Client) Authenticator {
 }
 
 // Authenticate implements Authenticator. Every token is of this kind: it is
-// the last resort for a token no other Authenticator recognized.
+// the last resort for a token no other Authenticator recognized. Only JWTs are
+// accepted: any other kind of token Kubernetes might recognize is increasingly
+// unlikely, so it is rejected without spending a TokenReview on it.
 func (k *kubernetes) Authenticate(
 	ctx context.Context,
 	rawToken string,
-	_ Hint,
 ) (user.Identity, bool, error) {
+	if _, ok := unverifiedIssuer(rawToken); !ok {
+		return nil, true, ErrInvalidToken
+	}
 	review := &authnv1.TokenReview{
 		Spec: authnv1.TokenReviewSpec{Token: rawToken},
 	}

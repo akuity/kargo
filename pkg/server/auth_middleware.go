@@ -126,15 +126,7 @@ func (a *authMiddleware) authenticate(
 		return ctx, errNoToken
 	}
 
-	// Only JWTs are accepted. The token's unverified claims say nothing yet
-	// about who holds it; they only pick which Authenticator should verify it.
-	hint, ok := authn.HintFrom(rawToken)
-	if !ok {
-		return ctx, authn.ErrInvalidToken
-	}
-	logger.Debug("found untrusted claims in token", "issuer", hint.Issuer)
-
-	id, ok, err := a.authenticator.Authenticate(ctx, rawToken, hint)
+	id, ok, err := a.authenticator.Authenticate(ctx, rawToken)
 	if err != nil {
 		return ctx, err
 	}
