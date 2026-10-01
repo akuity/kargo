@@ -101,13 +101,12 @@ func Test_server_promoteDownstream(t *testing.T) {
 			MatchLabels: map[string]string{"region": "us"},
 		}},
 	}
-	testDownstreamTarget := &kargoapi.Target{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "us-east",
-			Namespace: testProject.Name,
-			Labels:    map[string]string{"region": "us"},
-		},
-	}
+	// Targets live in the database.
+	downstreamTargets := []kargoapi.Target{{ObjectMeta: metav1.ObjectMeta{
+		Namespace: testProject.Name,
+		Name:      "us-east",
+		Labels:    map[string]string{"region": "us"},
+	}}}
 
 	testRESTEndpoint(
 		t, &config.ServerConfig{},
@@ -253,7 +252,6 @@ func Test_server_promoteDownstream(t *testing.T) {
 					testStage,
 					testTargetAwareDownstreamStage,
 					testFreight,
-					testDownstreamTarget,
 				),
 				serverSetup: func(_ *testing.T, s *server) {
 					s.authorizeFn = func(
@@ -264,6 +262,9 @@ func Test_server_promoteDownstream(t *testing.T) {
 						client.ObjectKey,
 					) error {
 						return nil
+					}
+					s.listTargetsFn = func(context.Context, string) ([]kargoapi.Target, error) {
+						return downstreamTargets, nil
 					}
 				},
 				body: mustJSONBody(promoteDownstreamRequest{
