@@ -712,9 +712,11 @@ section of the user guide.
 
 ## Database Configuration
 
-Kargo's components do not use a database yet. The chart provisions one ahead of
-that, either the minimal PostgreSQL bundled with the chart or a reference to an
-external one.
+Kargo's management controller mirrors Project identities into a PostgreSQL
+database; Kubernetes remains the source of truth. The chart provides that
+database, either the minimal PostgreSQL bundled with the chart or a reference to
+an external one, and points the management controller at whichever is
+configured.
 
 ### Bundled PostgreSQL
 

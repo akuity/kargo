@@ -13,11 +13,11 @@ ON CONFLICT (id) DO UPDATE SET
     created_at = EXCLUDED.created_at,
     synced_at = CURRENT_TIMESTAMP;
 
--- name: GetProjectByName :one
-SELECT id, name, created_at, synced_at FROM projects WHERE name = $1;
-
 -- name: ListProjects :many
 SELECT id, name, created_at, synced_at FROM projects ORDER BY name;
 
--- name: DeleteProject :exec
-DELETE FROM projects WHERE id = $1;
+-- name: DeleteProjectByName :exec
+DELETE FROM projects WHERE name = $1;
+
+-- name: DeleteProjectsByID :exec
+DELETE FROM projects WHERE id = ANY($1::text[]);
