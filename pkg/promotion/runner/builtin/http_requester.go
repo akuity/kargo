@@ -5,12 +5,14 @@ import (
 	"context"
 	"crypto/tls"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"mime"
 	"net/http"
 	"net/url"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -22,6 +24,7 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	kargoio "github.com/akuity/kargo/pkg/io"
+	"github.com/akuity/kargo/pkg/io/fs"
 	"github.com/akuity/kargo/pkg/logging"
 	kargonet "github.com/akuity/kargo/pkg/net"
 	"github.com/akuity/kargo/pkg/promotion"
@@ -33,6 +36,11 @@ const (
 
 	maxResponseBytes      = 2 << 20
 	requestTimeoutDefault = 10 * time.Second
+
+	// downloadModeTimeoutDefault is the default request timeout when outPath
+	// is set. Downloads need longer than the 10s default for plain requests,
+	// but not the 5m the http-download step used.
+	downloadModeTimeoutDefault = 1 * time.Minute
 
 	// httpPollIntervalDefault is the suggested interval at which the http step
 	// re-polls its URL while waiting for its success or failure criteria to be
@@ -95,6 +103,14 @@ func (h *httpRequester) run(
 	stepCtx *promotion.StepContext,
 	cfg builtin.HTTPConfig,
 ) (promotion.StepResult, error) {
+	dl, err := h.prepareDownload(stepCtx, cfg)
+	if err != nil {
+		var termErr *promotion.TerminalError
+		if errors.As(err, &termErr) {
+			return promotion.StepResult{Status: kargoapi.PromotionStepStatusFailed}, err
+		}
+		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, err
+	}
 	req, err := h.buildRequest(ctx, stepCtx, cfg)
 	if err != nil {
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
@@ -113,21 +129,63 @@ func (h *httpRequester) run(
 			fmt.Errorf("error sending HTTP request: %w", err)
 	}
 	defer resp.Body.Close()
+
+	if dl != nil {
+		return h.runDownload(ctx, cfg, resp, dl)
+	}
+
 	env, err := h.buildExprEnv(ctx, resp, cfg.ResponseContentType)
 	if err != nil {
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 			fmt.Errorf("error building expression context from HTTP response: %w", err)
 	}
 
+	return h.evaluateOutcome(ctx, cfg, resp, env, nil)
+}
+
+// runDownload implements the http step's download behavior when outPath is
+// set: the response body is streamed to a temporary file (capped at
+// maxDownloadSize) and moved to outPath only if the step succeeds.
+func (h *httpRequester) runDownload(
+	ctx context.Context,
+	cfg builtin.HTTPConfig,
+	resp *http.Response,
+	dl *httpDownload,
+) (promotion.StepResult, error) {
+	env, err := h.buildDownloadEnv(ctx, resp, cfg.ResponseContentType, dl)
+	if err != nil {
+		var termErr *promotion.TerminalError
+		if errors.As(err, &termErr) {
+			return promotion.StepResult{Status: kargoapi.PromotionStepStatusFailed}, err
+		}
+		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
+			fmt.Errorf("error building expression context from HTTP response: %w", err)
+	}
+	return h.evaluateOutcome(ctx, cfg, resp, env, dl)
+}
+
+// evaluateOutcome evaluates the success and failure criteria against the
+// response env and maps the result to a step result, exactly as the http step
+// always has. When a download is in progress, its temporary file is moved to
+// outPath only on success and discarded otherwise.
+func (h *httpRequester) evaluateOutcome(
+	ctx context.Context,
+	cfg builtin.HTTPConfig,
+	resp *http.Response,
+	env map[string]any,
+	dl *httpDownload,
+) (promotion.StepResult, error) {
 	// Evaluate success and failure criteria
 	successResult, err := h.evaluateSuccessCriteria(cfg, env)
 	if err != nil {
+		dl.discard()
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 			fmt.Errorf("error evaluating success criteria: %w", err)
 	}
 
 	failureResult, err := h.evaluateFailureCriteria(cfg, env)
 	if err != nil {
+		dl.discard()
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 			fmt.Errorf("error evaluating failure criteria: %w", err)
 	}
@@ -135,6 +193,7 @@ func (h *httpRequester) run(
 	// Determine outcome based on criteria evaluation results
 	switch {
 	case failureResult != nil && *failureResult:
+		dl.discard()
 		// Failure criteria met: terminal failure. Optionally enrich the error
 		// with a message extracted from the response.
 		errorMessage, err := h.extractErrorMessageFromResponse(ctx, cfg, env)
@@ -161,8 +220,12 @@ func (h *httpRequester) run(
 		// Success criteria met: success
 		outputs, err := h.buildOutputs(cfg.Outputs, env)
 		if err != nil {
+			dl.discard()
 			return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 				fmt.Errorf("error extracting outputs from HTTP response: %w", err)
+		}
+		if err := dl.complete(); err != nil {
+			return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, err
 		}
 		return promotion.StepResult{
 			Status: kargoapi.PromotionStepStatusSucceeded,
@@ -174,8 +237,12 @@ func (h *httpRequester) run(
 			// 2xx: success
 			outputs, err := h.buildOutputs(cfg.Outputs, env)
 			if err != nil {
+				dl.discard()
 				return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 					fmt.Errorf("error extracting outputs from HTTP response: %w", err)
+			}
+			if err := dl.complete(); err != nil {
+				return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, err
 			}
 			return promotion.StepResult{
 				Status: kargoapi.PromotionStepStatusSucceeded,
@@ -183,6 +250,7 @@ func (h *httpRequester) run(
 			}, nil
 		}
 		// Non-2xx: retried failure (not terminal)
+		dl.discard()
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusFailed}, nil
 	default:
 		// All other cases: running (polled)
@@ -190,6 +258,7 @@ func (h *httpRequester) run(
 		// - Success unmet, failure undefined
 		// - Success undefined, failure unmet
 		// - Success unmet, failure unmet
+		dl.discard()
 		pollInterval, err := resolvePollInterval(cfg.PollInterval, httpPollIntervalDefault)
 		if err != nil {
 			return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, err
@@ -199,6 +268,207 @@ func (h *httpRequester) run(
 			RetryAfter: &pollInterval,
 		}, nil
 	}
+}
+
+// httpDownload tracks the temporary file a response body is streamed to when
+// the http step's outPath is set. The file is moved to its final destination
+// only if the step succeeds; it is discarded on every other outcome.
+type httpDownload struct {
+	tempPath   string
+	absOutPath string
+	moved      bool
+}
+
+// discard removes the temporary file unless it was already moved to its
+// destination. It is safe to call on a nil receiver.
+func (d *httpDownload) discard() {
+	if d == nil || d.moved {
+		return
+	}
+	_ = os.Remove(d.tempPath)
+}
+
+// complete atomically moves the temporary file to its final destination. It
+// is a no-op on a nil receiver.
+func (d *httpDownload) complete() error {
+	if d == nil {
+		return nil
+	}
+	if err := fs.SimpleAtomicMove(d.tempPath, d.absOutPath); err != nil {
+		return fmt.Errorf("failed to move downloaded file to destination: %w", err)
+	}
+	d.moved = true
+	return nil
+}
+
+// prepareDownload validates the download destination when outPath is set. A
+// file that already exists while allowOverwrite is false fails terminally
+// before any request is sent. It returns nil when outPath is unset.
+func (h *httpRequester) prepareDownload(
+	stepCtx *promotion.StepContext,
+	cfg builtin.HTTPConfig,
+) (*httpDownload, error) {
+	if cfg.OutPath == "" {
+		return nil, nil
+	}
+	if stepCtx == nil {
+		return nil, fmt.Errorf("cannot download to outPath %q without a step context", cfg.OutPath)
+	}
+	absOutPath, err := securejoin.SecureJoin(stepCtx.WorkDir, cfg.OutPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to join path %q: %w", cfg.OutPath, err)
+	}
+	if !cfg.AllowOverwrite {
+		if _, err := os.Stat(absOutPath); err == nil || !os.IsNotExist(err) {
+			if err != nil {
+				return nil, fmt.Errorf("error checking destination file: %w", err)
+			}
+			return nil, &promotion.TerminalError{Err: fmt.Errorf(
+				"file already exists at %s and overwrite is not allowed", cfg.OutPath,
+			)}
+		}
+	}
+	if err := os.MkdirAll(filepath.Dir(absOutPath), 0o700); err != nil {
+		return nil, fmt.Errorf("failed to create destination directory: %w", err)
+	}
+	return &httpDownload{absOutPath: absOutPath}, nil
+}
+
+// buildDownloadEnv streams the response body to a temporary file capped at
+// maxDownloadSize and builds the expression env from it. Exceeding the cap is
+// a terminal failure: retrying would download the same oversized body again.
+// Bodies larger than maxResponseBytes are not parsed into response.body;
+// status and headers are always available, so criteria for large downloads
+// should use those.
+func (h *httpRequester) buildDownloadEnv(
+	ctx context.Context,
+	resp *http.Response,
+	contentType string,
+	dl *httpDownload,
+) (map[string]any, error) {
+	// Fail fast on a declared size over the cap, before downloading anything.
+	if resp.ContentLength > maxDownloadSize {
+		return nil, &promotion.TerminalError{Err: fmt.Errorf(
+			"response exceeds download limit of %d bytes", maxDownloadSize,
+		)}
+	}
+
+	tempPath, size, err := streamResponseToTempFile(
+		ctx,
+		resp.Body,
+		filepath.Dir(dl.absOutPath),
+		filepath.Base(dl.absOutPath),
+	)
+	if err != nil {
+		return nil, err
+	}
+	dl.tempPath = tempPath
+
+	response := map[string]any{
+		// TODO(krancour): Casting as an int64 is a short-term fix here because
+		// deep copy of the output map will panic if any value is an int. This is
+		// a near-term fix and a better solution will be PR'ed soon.
+		"status":  int64(resp.StatusCode),
+		"header":  resp.Header.Get,
+		"headers": resp.Header,
+		"body":    map[string]any{},
+	}
+
+	if size > maxResponseBytes {
+		logging.LoggerFromContext(ctx).Debug(
+			"response body exceeds 2 MiB; leaving response.body empty",
+			"size", size,
+		)
+		return map[string]any{"response": response}, nil
+	}
+
+	// The body is small enough to parse: reuse the standard env builder over
+	// the downloaded bytes so the parsing rules stay identical.
+	bodyBytes, err := os.ReadFile(tempPath) //nolint:gosec // temp file we created
+	if err != nil {
+		return nil, fmt.Errorf("reading downloaded response body: %w", err)
+	}
+	synthResp := &http.Response{
+		StatusCode:    resp.StatusCode,
+		Header:        resp.Header,
+		Body:          io.NopCloser(bytes.NewReader(bodyBytes)),
+		ContentLength: int64(len(bodyBytes)),
+	}
+	env, err := h.buildExprEnv(ctx, synthResp, contentType)
+	_ = synthResp.Body.Close()
+	return env, err
+}
+
+// streamResponseToTempFile streams r to a temporary file in dir, capped at
+// maxDownloadSize. Hitting the cap is a terminal failure: retrying would
+// download the same oversized body again. The temp file is removed on any
+// error; on success the caller owns it.
+func streamResponseToTempFile(
+	ctx context.Context,
+	r io.Reader,
+	dir, prefix string,
+) (tempPath string, size int64, err error) {
+	tempFile, err := os.CreateTemp(dir, prefix+".tmp")
+	if err != nil {
+		return "", 0, fmt.Errorf("failed to create temporary file: %w", err)
+	}
+	tempPath = tempFile.Name()
+	defer func() {
+		_ = tempFile.Close()
+		if err != nil {
+			_ = os.Remove(tempPath)
+		}
+	}()
+	if err = tempFile.Chmod(0o600); err != nil {
+		return "", 0, fmt.Errorf("failed to set permissions on temporary file: %w", err)
+	}
+
+	limitedReader := io.LimitReader(r, maxDownloadSize)
+	buf := downloadBufferPool.Get().([]byte) // nolint:forcetypeassert
+	defer func() {
+		clear(buf)
+		downloadBufferPool.Put(buf) // nolint:staticcheck
+	}()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return "", 0, fmt.Errorf("download canceled: %w", ctx.Err())
+		default:
+		}
+		var n int
+		var readErr error
+		if n, readErr = limitedReader.Read(buf); n > 0 {
+			if _, writeErr := tempFile.Write(buf[:n]); writeErr != nil {
+				return "", 0, fmt.Errorf("failed to write to file: %w", writeErr)
+			}
+			size += int64(n)
+		}
+		if readErr == io.EOF {
+			break
+		}
+		if readErr != nil {
+			return "", 0, fmt.Errorf("failed to read response body: %w", readErr)
+		}
+	}
+
+	if err = tempFile.Close(); err != nil {
+		return "", 0, fmt.Errorf("failed to close temporary file: %w", err)
+	}
+
+	if size == maxDownloadSize {
+		// The body might be larger than the cap; probe for one more byte.
+		var probe [1]byte
+		if n, err := r.Read(probe[:]); err != nil && err != io.EOF {
+			return "", 0, fmt.Errorf("failed to check for additional content: %w", err)
+		} else if n > 0 {
+			return "", 0, &promotion.TerminalError{Err: fmt.Errorf(
+				"response exceeds download limit of %d bytes", maxDownloadSize,
+			)}
+		}
+	}
+
+	return tempPath, size, nil
 }
 
 // evaluateSuccessCriteria evaluates the success criteria expression if defined.
@@ -359,6 +629,9 @@ func (h *httpRequester) getClient(cfg builtin.HTTPConfig) (*http.Client, error) 
 		}
 	}
 	timeout := requestTimeoutDefault
+	if cfg.OutPath != "" {
+		timeout = downloadModeTimeoutDefault
+	}
 	if cfg.Timeout != "" {
 		var err error
 		if timeout, err = time.ParseDuration(cfg.Timeout); err != nil {
