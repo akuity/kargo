@@ -28,6 +28,7 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/indexer"
 	"github.com/akuity/kargo/pkg/logging"
+	"github.com/akuity/kargo/pkg/server/auth/authz"
 	"github.com/akuity/kargo/pkg/server/user"
 )
 
@@ -68,6 +69,11 @@ type ClientOptions struct {
 	// function to which this struct is passed will supply a default scheme that
 	// includes all Kubernetes APIs used by the Kargo API server.
 	Scheme *runtime.Scheme
+	// NewAuthorizer may be used to take control of how the client decides
+	// whether the subjects standing in for a user may perform an operation,
+	// e.g. to cache its decisions. It is given the client's internal client.
+	// When nil, authz.NewAuthorizer is used, which asks Kubernetes every time.
+	NewAuthorizer func(libClient.Client) authz.Authorizer
 }
 
 // setOptionsDefaults sets default values for any unspecified fields in the
@@ -232,7 +238,11 @@ func NewClient(
 	} else {
 		// Review the access of the subjects standing in for the context-bound
 		// identity before performing the desired operation.
-		c.getAuthorizedClientFn = getAuthorizedClient()
+		newAuthorizer := opts.NewAuthorizer
+		if newAuthorizer == nil {
+			newAuthorizer = authz.NewAuthorizer
+		}
+		c.getAuthorizedClientFn = getAuthorizedClient(newAuthorizer(internalClient))
 	}
 	return c, nil
 }
@@ -833,7 +843,7 @@ func gvrAndKeyFromObj(
 // it with. An admin is allowed outright. Anyone else is allowed if any of the
 // Kubernetes subjects standing in for them is, as a SubjectAccessReview
 // decides. An unauthorized operation yields an error.
-func getAuthorizedClient() func(
+func getAuthorizedClient(authorizer authz.Authorizer) func(
 	context.Context,
 	libClient.WithWatch,
 	string,
@@ -870,42 +880,18 @@ func getAuthorizedClient() func(
 			Name:        key.Name,
 		}
 		for _, subject := range id.Subjects(ra) {
-			err := reviewSubjectAccess(ctx, internalClient, ra, subject)
-			if err == nil {
-				return internalClient, nil
-			}
-			if !apierrors.IsForbidden(err) {
+			allowed, err := authorizer.Authorize(ctx, subject, ra)
+			// The API server being refused the review itself counts as this
+			// subject being refused, so that the next may still be tried.
+			if err != nil && !apierrors.IsForbidden(err) {
 				return nil, fmt.Errorf("review subject access: %w", err)
+			}
+			if allowed {
+				return internalClient, nil
 			}
 		}
 		return nil, newForbiddenError(ra)
 	}
-}
-
-// reviewSubjectAccess submits a SubjectAccessReview to determine whether the
-// subject is allowed to perform the described operation.
-func reviewSubjectAccess(
-	ctx context.Context,
-	cl libClient.Client,
-	ra authv1.ResourceAttributes,
-	subject user.Subject,
-) error {
-	review := &authv1.SubjectAccessReview{
-		Spec: authv1.SubjectAccessReviewSpec{
-			ResourceAttributes: &ra,
-			User:               subject.Username,
-			UID:                subject.UID,
-			Groups:             subject.Groups,
-			Extra:              subject.Extra,
-		},
-	}
-	if err := cl.Create(ctx, review); err != nil {
-		return fmt.Errorf("submit SubjectAccessReview: %w", err)
-	}
-	if review.Status.Allowed {
-		return nil
-	}
-	return newForbiddenError(ra)
 }
 
 func newForbiddenError(ra authv1.ResourceAttributes) error {
