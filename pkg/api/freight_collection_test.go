@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -8,7 +9,7 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 )
 
-func TestNewFreightCollectionForStage(t *testing.T) {
+func TestBuildPromotionFreightCollection(t *testing.T) {
 	origin := func(name string) kargoapi.FreightOrigin {
 		return kargoapi.FreightOrigin{
 			Kind: kargoapi.FreightOriginKindWarehouse,
@@ -46,25 +47,6 @@ func TestNewFreightCollectionForStage(t *testing.T) {
 		expected map[string]string
 	}{
 		{
-			name: "single requested origin carries nothing over",
-			stage: &kargoapi.Stage{
-				Spec: kargoapi.StageSpec{RequestedFreight: requested("images")},
-				Status: kargoapi.StageStatus{
-					FreightHistory: kargoapi.FreightHistory{
-						collection(ref("old-images", "images"), ref("cfg", "config")),
-					},
-				},
-			},
-			expected: map[string]string{"Warehouse/images": "new-images"},
-		},
-		{
-			name: "nothing to inherit from yields the promoted Freight alone",
-			stage: &kargoapi.Stage{
-				Spec: kargoapi.StageSpec{RequestedFreight: requested("images", "config")},
-			},
-			expected: map[string]string{"Warehouse/images": "new-images"},
-		},
-		{
 			name: "last Promotion without a collection is not inherited from",
 			stage: &kargoapi.Stage{
 				Spec: kargoapi.StageSpec{RequestedFreight: requested("images", "config")},
@@ -95,53 +77,18 @@ func TestNewFreightCollectionForStage(t *testing.T) {
 			},
 		},
 		{
-			// A Stage that promotes through PromotionRequests records no last
-			// Promotion; its history is the source.
-			name: "other origins are carried over from the history when there is no last Promotion",
-			stage: &kargoapi.Stage{
-				Spec: kargoapi.StageSpec{RequestedFreight: requested("images", "config")},
-				Status: kargoapi.StageStatus{
-					FreightHistory: kargoapi.FreightHistory{
-						collection(ref("old-images", "images"), ref("cfg", "config")),
-					},
-				},
-			},
-			expected: map[string]string{
-				"Warehouse/images": "new-images",
-				"Warehouse/config": "cfg",
-			},
-		},
-		{
-			name: "the last Promotion is preferred over the history",
+			name: "origins no longer requested are dropped",
 			stage: &kargoapi.Stage{
 				Spec: kargoapi.StageSpec{RequestedFreight: requested("images", "config")},
 				Status: kargoapi.StageStatus{
 					LastPromotion: &kargoapi.PromotionReference{
 						Status: &kargoapi.PromotionStatus{
-							FreightCollection: collection(ref("cfg-from-promo", "config")),
+							FreightCollection: collection(
+								ref("old-images", "images"),
+								ref("cfg", "config"),
+								ref("stale", "retired"),
+							),
 						},
-					},
-					FreightHistory: kargoapi.FreightHistory{
-						collection(ref("cfg-from-history", "config")),
-					},
-				},
-			},
-			expected: map[string]string{
-				"Warehouse/images": "new-images",
-				"Warehouse/config": "cfg-from-promo",
-			},
-		},
-		{
-			name: "origins no longer requested are dropped",
-			stage: &kargoapi.Stage{
-				Spec: kargoapi.StageSpec{RequestedFreight: requested("images", "config")},
-				Status: kargoapi.StageStatus{
-					FreightHistory: kargoapi.FreightHistory{
-						collection(
-							ref("old-images", "images"),
-							ref("cfg", "config"),
-							ref("stale", "retired"),
-						),
 					},
 				},
 			},
@@ -154,7 +101,7 @@ func TestNewFreightCollectionForStage(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
-			result := NewFreightCollectionForStage(testCase.stage, promoted)
+			result := buildPromotionFreightCollection(context.Background(), promoted, testCase.stage)
 			require.NotNil(t, result)
 			require.Equal(t, testCase.expected, names(result))
 			require.NotEmpty(t, result.ID)
