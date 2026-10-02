@@ -213,7 +213,10 @@ func (a *authMiddleware) authenticate(
 			logger.Debug("admin token verified as issued by Kargo API server")
 			return user.ContextWithInfo(
 				ctx,
-				user.Info{IsAdmin: true},
+				user.Info{
+					IsAdmin:     true,
+					BearerToken: rawToken,
+				},
 			), nil
 		}
 		return ctx, errInvalidToken
@@ -261,6 +264,7 @@ func (a *authMiddleware) authenticate(
 			user.Info{
 				Claims:                     c,
 				ServiceAccountsByNamespace: sa,
+				BearerToken:                rawToken,
 				UsernameClaim:              a.cfg.OIDCConfig.UsernameClaim,
 				Username:                   username,
 			},
@@ -281,7 +285,10 @@ func (a *authMiddleware) authenticate(
 
 	return user.ContextWithInfo(
 		ctx,
-		user.Info{KubernetesUserInfo: k8sUserInfo},
+		user.Info{
+			BearerToken:        rawToken,
+			KubernetesUserInfo: k8sUserInfo,
+		},
 	), nil
 }
 
