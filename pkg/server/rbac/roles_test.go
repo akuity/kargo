@@ -1717,7 +1717,7 @@ func Test_rolesDatabase_CreateAPIToken(t *testing.T) {
 					return client.Get(ctx, key, obj, opts...)
 				},
 			}).Build()
-		ctx := user.ContextWithInfo(t.Context(), user.Info{IsAdmin: true})
+		ctx := user.ContextWithIdentity(t.Context(), user.Admin{})
 		tokenSecret, err := NewKubernetesRolesDatabase(c, c, RolesDatabaseConfigFromEnv()).
 			CreateAPIToken(ctx, false, testProject, testRoleName, testTokenName)
 		require.NoError(t, err)

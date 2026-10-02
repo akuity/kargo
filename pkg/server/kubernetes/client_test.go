@@ -445,31 +445,28 @@ func TestGetAuthorizedClient(t *testing.T) {
 		name string
 		// internalClient, when nil, defaults to testInternalClient.
 		internalClient libClient.WithWatch
-		userInfo       *user.Info
+		identity       user.Identity
 		assert         func(*testing.T, libClient.Client, error)
 	}{
 		{
-			name: "no context-bound user.Info",
+			name: "no context-bound identity",
 			assert: func(t *testing.T, _ libClient.Client, err error) {
 				require.Error(t, err)
 				require.Equal(t, "not allowed", err.Error())
 			},
 		},
 		{
-			name: "admin user",
-			userInfo: &user.Info{
-				IsAdmin: true,
-			},
+			name:     "admin user",
+			identity: user.Admin{},
 			assert: func(t *testing.T, client libClient.Client, err error) {
 				require.NoError(t, err)
 				require.Same(t, testInternalClient, client)
 			},
 		},
 		{
-			name: "sso user",
-			userInfo: &user.Info{
-				Claims: map[string]any{"sub": "test-user"},
-			},
+			// Mapped to no ServiceAccount: there is no subject to review.
+			name:     "sso user without ServiceAccounts",
+			identity: user.OIDCUser{Claims: map[string]any{"sub": "test-user"}},
 			assert: func(t *testing.T, _ libClient.Client, err error) {
 				require.True(t, apierrors.IsForbidden(err))
 			},
@@ -479,7 +476,7 @@ func TestGetAuthorizedClient(t *testing.T) {
 			// authorizes.
 			name:           "Kubernetes-verified user, permitted",
 			internalClient: reviewingClient(t, true),
-			userInfo:       &user.Info{KubernetesUserInfo: &testKubernetesUser},
+			identity:       user.KubernetesUser{UserInfo: testKubernetesUser},
 			assert: func(t *testing.T, client libClient.Client, err error) {
 				require.NoError(t, err)
 				require.NotNil(t, client)
@@ -488,33 +485,23 @@ func TestGetAuthorizedClient(t *testing.T) {
 		{
 			name:           "Kubernetes-verified user, not permitted",
 			internalClient: reviewingClient(t, false),
-			userInfo:       &user.Info{KubernetesUserInfo: &testKubernetesUser},
+			identity:       user.KubernetesUser{UserInfo: testKubernetesUser},
 			assert: func(t *testing.T, _ libClient.Client, err error) {
 				require.True(t, apierrors.IsForbidden(err))
-			},
-		},
-		{
-			// Neither an admin, nor mapped to any ServiceAccount, nor bearing an
-			// identity from Kubernetes. There is no subject to authorize.
-			name:     "user with no identity at all",
-			userInfo: &user.Info{},
-			assert: func(t *testing.T, _ libClient.Client, err error) {
-				require.Error(t, err)
-				require.Equal(t, "not allowed", err.Error())
 			},
 		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			ctx := t.Context()
-			if testCase.userInfo != nil {
-				ctx = user.ContextWithInfo(ctx, *testCase.userInfo)
+			if testCase.identity != nil {
+				ctx = user.ContextWithIdentity(ctx, testCase.identity)
 			}
 			internalClient := testCase.internalClient
 			if internalClient == nil {
 				internalClient = testInternalClient
 			}
-			client, err := getAuthorizedClient(nil)(
+			client, err := getAuthorizedClient()(
 				ctx,
 				internalClient,
 				"", // Verb doesn't matter for these tests

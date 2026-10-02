@@ -117,7 +117,7 @@ func Test_server_createProjectAPIToken(t *testing.T) {
 					s.sender = sender
 				},
 				ctxSetup: func(ctx context.Context) context.Context {
-					return user.ContextWithInfo(ctx, user.Info{IsAdmin: true})
+					return user.ContextWithIdentity(ctx, user.Admin{})
 				},
 				clientBuilder: fake.NewClientBuilder().WithObjects(
 					testProject,

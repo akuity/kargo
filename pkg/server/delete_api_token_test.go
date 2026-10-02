@@ -122,7 +122,7 @@ func Test_server_deleteProjectAPIToken(t *testing.T) {
 					s.sender = sender
 				},
 				ctxSetup: func(ctx context.Context) context.Context {
-					return user.ContextWithInfo(ctx, user.Info{IsAdmin: true})
+					return user.ContextWithIdentity(ctx, user.Admin{})
 				},
 				assertions: func(t *testing.T, w *httptest.ResponseRecorder, c client.Client) {
 					require.Equal(t, http.StatusNoContent, w.Code)

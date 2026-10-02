@@ -280,8 +280,8 @@ func Test_server_approveFreight_noFreightsStatusPatchRequired(t *testing.T) {
 	// promoterUser mirrors the identity a real bearer token resolves to via
 	// TokenReview when it belongs to a ServiceAccount bound only to the
 	// kargo-promoter Role.
-	promoterUser := user.Info{
-		KubernetesUserInfo: &authnv1.UserInfo{
+	promoterUser := user.KubernetesUser{
+		UserInfo: authnv1.UserInfo{
 			Username: "system:serviceaccount:fake-project:promoter",
 		},
 	}
@@ -307,7 +307,7 @@ func Test_server_approveFreight_noFreightsStatusPatchRequired(t *testing.T) {
 					s.patchFreightStatusFn = s.patchFreightStatus
 				},
 				ctxSetup: func(ctx context.Context) context.Context {
-					return user.ContextWithInfo(ctx, promoterUser)
+					return user.ContextWithIdentity(ctx, promoterUser)
 				},
 				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
 					require.Equal(t, http.StatusOK, w.Code)

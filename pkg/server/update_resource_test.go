@@ -502,8 +502,8 @@ func Test_server_updateResources(t *testing.T) {
 func Test_server_updateResources_clusterScopedNamespaceSpoofing(t *testing.T) {
 	const projectName = "ghsa-mmqq-repro"
 
-	projectCreatorUser := user.Info{
-		KubernetesUserInfo: &authnv1.UserInfo{
+	projectCreatorUser := user.KubernetesUser{
+		UserInfo: authnv1.UserInfo{
 			Username: "system:serviceaccount:kargo:kargo-project-creator",
 		},
 	}
@@ -524,7 +524,7 @@ func Test_server_updateResources_clusterScopedNamespaceSpoofing(t *testing.T) {
 					s.authorizeFn = s.client.Authorize
 				},
 				ctxSetup: func(ctx context.Context) context.Context {
-					return user.ContextWithInfo(ctx, projectCreatorUser)
+					return user.ContextWithIdentity(ctx, projectCreatorUser)
 				},
 				body: mustJSONBody(&kargoapi.ClusterPromotionTask{
 					TypeMeta: metav1.TypeMeta{
@@ -547,7 +547,7 @@ func Test_server_updateResources_clusterScopedNamespaceSpoofing(t *testing.T) {
 					s.authorizeFn = s.client.Authorize
 				},
 				ctxSetup: func(ctx context.Context) context.Context {
-					return user.ContextWithInfo(ctx, projectCreatorUser)
+					return user.ContextWithIdentity(ctx, projectCreatorUser)
 				},
 				body: mustJSONArrayBody(
 					&kargoapi.Project{

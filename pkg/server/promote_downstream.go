@@ -8,12 +8,12 @@ import (
 
 	"github.com/gin-gonic/gin"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/api"
 	libhttp "github.com/akuity/kargo/pkg/http"
+	"github.com/akuity/kargo/pkg/server/auth/can"
 	"github.com/akuity/kargo/pkg/server/user"
 )
 
@@ -137,15 +137,9 @@ func (s *server) promoteDownstream(c *gin.Context) {
 	}
 
 	for _, downstream := range downstreams {
-		if err := s.authorizeFn(
+		if err := s.authorize(
 			ctx,
-			"promote",
-			kargoapi.GroupVersion.WithResource("stages"),
-			"",
-			types.NamespacedName{
-				Namespace: downstream.Namespace,
-				Name:      downstream.Name,
-			},
+			can.Promote().Stage(downstream.Namespace, downstream.Name),
 		); err != nil {
 			_ = c.Error(err)
 			return
@@ -165,8 +159,8 @@ func (s *server) promoteDownstream(c *gin.Context) {
 
 	// Create promotions for all downstream stages
 	var actor string
-	if u, ok := user.InfoFromContext(ctx); ok {
-		actor = api.FormatEventUserActor(u)
+	if u, ok := user.IdentityFromContext(ctx); ok {
+		actor = u.Actor()
 	}
 
 	promoteErrs := make([]error, 0, len(downstreams))
