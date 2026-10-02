@@ -39,10 +39,20 @@ type ServerConfig struct {
 	RolloutsIntegrationEnabled  bool
 	AnalysisRunLogURLTemplate   string
 	AnalysisRunLogToken         string
-	AnalysisRunLogHTTPHeaders   map[string]string
-	SharedResourcesNamespace    string
-	SystemResourcesNamespace    string
-	KargoNamespace              string
+	// AnalysisRunLogForwardUserToken indicates whether a user's own bearer token
+	// should be available as a value in an authentication header for requests to
+	// the AnalysisRun log service in cases where AnalysisRunLogToken is not set.
+	// This option MUST only be set to true in environments where there is
+	// absolute trust in the service from which AnalysisRun logs are retrieved.
+	// Setting this to true is so discouraged that Kargo's Helm chart deliberately
+	// doesn't directly expose this as an option. In practical terms, the option
+	// exists only for the sake of Kargo EE, whose AnalysisRun log service is for
+	// all intents and purposes an extension of the Kargo API itself.
+	AnalysisRunLogForwardUserToken bool
+	AnalysisRunLogHTTPHeaders      map[string]string
+	SharedResourcesNamespace       string
+	SystemResourcesNamespace       string
+	KargoNamespace                 string
 	// TracingEnabled indicates whether the server should record a span for each
 	// request it handles. It should be true only when the process has set up an
 	// OpenTelemetry tracer provider to export those spans.
@@ -94,6 +104,14 @@ func ServerConfigFromEnv() ServerConfig {
 	if cfg.RolloutsIntegrationEnabled {
 		cfg.AnalysisRunLogURLTemplate = os.GetEnv("ANALYSIS_RUN_LOG_URL_TEMPLATE", "")
 		cfg.AnalysisRunLogToken = os.GetEnv("ANALYSIS_RUN_LOG_TOKEN", "")
+		// IMPORTANT: ANALYSIS_RUN_LOG_FORWARD_USER_TOKEN MUST only be set to true
+		// in environments where there is absolute trust in the service from which
+		// AnalysisRun logs are retrieved. Setting this to true is so discouraged
+		// that Kargo's Helm chart deliberately doesn't directly expose this as an
+		// option. In practical terms, the option exists only for the sake of Kargo
+		// EE, whose AnalysisRun log service is for all intents and purposes an
+		// extension of the Kargo API itself.
+		cfg.AnalysisRunLogForwardUserToken = types.MustParseBool(os.GetEnv("ANALYSIS_RUN_LOG_FORWARD_USER_TOKEN", "false"))
 		if headersStr := os.GetEnv("ANALYSIS_RUN_LOG_HTTP_HEADERS", ""); headersStr != "" {
 			kvPairs := strings.Split(headersStr, ",")
 			cfg.AnalysisRunLogHTTPHeaders = make(map[string]string, len(kvPairs))
