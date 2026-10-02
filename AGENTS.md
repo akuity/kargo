@@ -285,7 +285,8 @@ func TestGetAuthorizedClient(t *testing.T) {
             if testCase.identity != nil {
                 ctx = user.ContextWithIdentity(ctx, testCase.identity)
             }
-            client, err := getAuthorizedClient()(
+            authorizer := authz.NewAuthorizer(testInternalClient)
+            client, err := getAuthorizedClient(authorizer)(
                 ctx, testInternalClient, "",
                 schema.GroupVersionResource{}, "",
                 libClient.ObjectKey{},
