@@ -11,10 +11,10 @@ import (
 	"github.com/akuity/kargo/pkg/logging"
 )
 
-// buildTargetFreightCollection constructs a FreightCollection that contains all
+// buildPromotionFreightCollection constructs a FreightCollection that contains all
 // FreightReferences from the previous Promotion (excepting those that are no
 // longer requested), plus a FreightReference for the provided targetFreight.
-func buildTargetFreightCollection(
+func buildPromotionFreightCollection(
 	ctx context.Context,
 	targetFreight kargoapi.FreightReference,
 	stage *kargoapi.Stage,
@@ -98,7 +98,7 @@ func GetStageFreightRefs(
 		Artifacts: targetFreight.Artifacts,
 		Origin:    targetFreight.Origin,
 	}
-	freightCollection := buildTargetFreightCollection(ctx, targetFreightRef, stage)
+	freightCollection := buildPromotionFreightCollection(ctx, targetFreightRef, stage)
 	return &targetFreightRef, freightCollection, nil
 }
 

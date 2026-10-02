@@ -9,7 +9,7 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 )
 
-func TestBuildTargetFreightCollection(t *testing.T) {
+func TestBuildPromotionFreightCollection(t *testing.T) {
 	origin := func(name string) kargoapi.FreightOrigin {
 		return kargoapi.FreightOrigin{
 			Kind: kargoapi.FreightOriginKindWarehouse,
@@ -101,7 +101,7 @@ func TestBuildTargetFreightCollection(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
-			result := buildTargetFreightCollection(context.Background(), promoted, testCase.stage)
+			result := buildPromotionFreightCollection(context.Background(), promoted, testCase.stage)
 			require.NotNil(t, result)
 			require.Equal(t, testCase.expected, names(result))
 			require.NotEmpty(t, result.ID)

@@ -143,6 +143,7 @@ func (r *FleetStageReconciler) SetupWithManager(
 	// Build the controller with the reconciler.
 	c, err := ctrl.NewControllerManagedBy(kargoMgr).
 		For(&kargoapi.Stage{}).
+		Named("fleet_stage").
 		WithEventFilter(controller.ResponsibleFor[client.Object]{
 			IsDefaultController: r.cfg.IsDefaultController,
 			ShardName:           r.cfg.ShardName,
