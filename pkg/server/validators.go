@@ -7,73 +7,44 @@ import (
 	"net/http"
 	"strings"
 
-	"connectrpc.com/connect"
 	"github.com/gin-gonic/gin"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/util/validation/field"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	libhttp "github.com/akuity/kargo/pkg/http"
-	"github.com/akuity/kargo/pkg/server/validation"
 )
-
-func validateFieldNotEmpty(fieldName string, fieldValue string) error {
-	if fieldValue == "" {
-		return connect.NewError(
-			connect.CodeInvalidArgument,
-			fmt.Errorf("%s should not be empty", fieldName),
-		)
-	}
-	return nil
-}
-
-func (s *server) validateProjectExists(ctx context.Context, project string) error {
-	var cl client.Client = s.client
-	if s.client != nil && s.client.InternalClient() != nil {
-		cl = s.client.InternalClient()
-	}
-	if err := s.externalValidateProjectFn(ctx, cl, project); err != nil {
-		if errors.Is(err, validation.ErrProjectNotFound) {
-			return connect.NewError(connect.CodeNotFound, err)
-		}
-		var fieldErr *field.Error
-		if ok := errors.As(err, &fieldErr); ok {
-			return connect.NewError(connect.CodeInvalidArgument, err)
-		}
-		return fmt.Errorf("validate project: %w", err)
-	}
-	return nil
-}
 
 func validateGroupByOrderBy(group string, groupBy string, orderBy string) error {
 	if group != "" && groupBy == "" {
-		return connect.NewError(
-			connect.CodeInvalidArgument,
+		return libhttp.Error(
 			errors.New("cannot filter by group without group by"),
+			http.StatusBadRequest,
 		)
 	}
 	switch groupBy {
 	case GroupByImageRepository, GroupByGitRepository, GroupByChartRepository, "":
 	default:
-		return connect.NewError(
-			connect.CodeInvalidArgument,
+		return libhttp.Error(
 			fmt.Errorf("invalid group by: %s", groupBy),
+			http.StatusBadRequest,
 		)
 	}
 	switch orderBy {
 	case OrderByTag:
 		if groupBy != GroupByImageRepository && groupBy != GroupByChartRepository {
-			return connect.NewError(connect.CodeInvalidArgument,
+			return libhttp.Error(
 				fmt.Errorf("tag ordering only valid when grouping by: %s, %s",
-					GroupByImageRepository, GroupByChartRepository))
+					GroupByImageRepository, GroupByChartRepository),
+				http.StatusBadRequest,
+			)
 		}
 	case OrderByFirstSeen, "":
 	default:
-		return connect.NewError(
-			connect.CodeInvalidArgument,
+		return libhttp.Error(
 			fmt.Errorf("invalid order by: %s", orderBy),
+			http.StatusBadRequest,
 		)
 	}
 

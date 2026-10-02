@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"net/http"
 
-	"connectrpc.com/connect"
 	"github.com/gin-gonic/gin"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
@@ -28,7 +27,7 @@ func (s *server) findDownstreamStages(
 ) ([]kargoapi.Stage, error) {
 	var allStages kargoapi.StageList
 	if err := s.client.List(ctx, &allStages, client.InNamespace(stage.Namespace)); err != nil {
-		return nil, connect.NewError(connect.CodeInternal, err)
+		return nil, fmt.Errorf("error listing Stages: %w", err)
 	}
 	var downstreams []kargoapi.Stage
 	for _, s := range allStages.Items {
