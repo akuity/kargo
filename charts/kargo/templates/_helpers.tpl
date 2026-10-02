@@ -272,6 +272,21 @@ Takes a dict with "root" (the root context) and "labels" (the component's).
 {{- end -}}
 
 {{/*
+Pod labels: the common labels without helm.sh/chart. That label is the chart version, and
+including it in a pod template restarts every pod on a chart upgrade that changes nothing else.
+*/}}
+{{- define "kargo.podLabels" -}}
+{{ include "kargo.selectorLabels" . }}
+{{- if .Chart.AppVersion }}
+app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
+{{- end }}
+app.kubernetes.io/managed-by: {{ .Release.Service }}
+{{- with .Values.global.labels }}
+{{ toYaml . }}
+{{- end }}
+{{- end -}}
+
+{{/*
 Selector labels
 */}}
 {{- define "kargo.selectorLabels" -}}
