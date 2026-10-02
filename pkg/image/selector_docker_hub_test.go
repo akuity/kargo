@@ -38,8 +38,8 @@ func TestSelectImageDockerHub(t *testing.T) {
 					RepoURL:                debianRepo,
 					ImageSelectionStrategy: kargoapi.ImageSelectionStrategyDigest,
 					Constraint:             "fake-constraint",
-					DiscoveryLimit:         1,
 				},
+				1,
 				getDockerHubCreds(),
 			)
 			require.NoError(t, err)
@@ -56,8 +56,8 @@ func TestSelectImageDockerHub(t *testing.T) {
 					RepoURL:                debianRepo,
 					ImageSelectionStrategy: kargoapi.ImageSelectionStrategyDigest,
 					Constraint:             "bookworm",
-					DiscoveryLimit:         1,
 				},
+				1,
 				getDockerHubCreds(),
 			)
 			require.NoError(t, err)
@@ -81,8 +81,8 @@ func TestSelectImageDockerHub(t *testing.T) {
 					ImageSelectionStrategy: kargoapi.ImageSelectionStrategyDigest,
 					Constraint:             "bookworm",
 					Platform:               "linux/made-up-arch",
-					DiscoveryLimit:         1,
 				},
+				1,
 				getDockerHubCreds(),
 			)
 			require.NoError(t, err)
@@ -100,8 +100,8 @@ func TestSelectImageDockerHub(t *testing.T) {
 					ImageSelectionStrategy: kargoapi.ImageSelectionStrategyDigest,
 					Constraint:             "bookworm",
 					Platform:               platform,
-					DiscoveryLimit:         1,
 				},
+				1,
 				getDockerHubCreds(),
 			)
 			require.NoError(t, err)
@@ -127,9 +127,9 @@ func TestSelectImageDockerHub(t *testing.T) {
 					RepoURL:                debianRepo,
 					ImageSelectionStrategy: kargoapi.ImageSelectionStrategyLexical,
 					AllowTagsRegexes:       []string{"^nothing-matches-this$"},
-					DiscoveryLimit:         1,
 					CacheByTag:             true,
 				},
+				1,
 				getDockerHubCreds(),
 			)
 			require.NoError(t, err)
@@ -145,7 +145,6 @@ func TestSelectImageDockerHub(t *testing.T) {
 				kargoapi.ImageSubscription{
 					RepoURL:                debianRepo,
 					ImageSelectionStrategy: kargoapi.ImageSelectionStrategyLexical,
-					DiscoveryLimit:         1,
 					// Limit tags to JUST "trixie" and "wheezy" to avoid blowing past
 					// Docker Hub rate limits. We'll expect to get "wheezy" back as the
 					// lexically greatest tag matching that constraint.
@@ -155,6 +154,7 @@ func TestSelectImageDockerHub(t *testing.T) {
 					},
 					CacheByTag: true,
 				},
+				1,
 				getDockerHubCreds(),
 			)
 			require.NoError(t, err)
@@ -181,10 +181,10 @@ func TestSelectImageDockerHub(t *testing.T) {
 						`^trixie$`,
 						`^wheezy$`,
 					},
-					Platform:       "linux/made-up-arch",
-					DiscoveryLimit: 1,
-					CacheByTag:     true,
+					Platform:   "linux/made-up-arch",
+					CacheByTag: true,
 				},
+				1,
 				getDockerHubCreds(),
 			)
 			require.NoError(t, err)
@@ -207,10 +207,10 @@ func TestSelectImageDockerHub(t *testing.T) {
 						`^trixie$`,
 						`^wheezy$`,
 					},
-					Platform:       platform,
-					DiscoveryLimit: 1,
-					CacheByTag:     true,
+					Platform:   platform,
+					CacheByTag: true,
 				},
+				1,
 				getDockerHubCreds(),
 			)
 			require.NoError(t, err)
@@ -236,9 +236,9 @@ func TestSelectImageDockerHub(t *testing.T) {
 					RepoURL:                debianRepo,
 					ImageSelectionStrategy: kargoapi.ImageSelectionStrategyNewestBuild,
 					AllowTagsRegexes:       []string{"nothing-matches-this"},
-					DiscoveryLimit:         1,
 					CacheByTag:             true,
 				},
+				1,
 				getDockerHubCreds(),
 			)
 			require.NoError(t, err)
@@ -255,9 +255,9 @@ func TestSelectImageDockerHub(t *testing.T) {
 					RepoURL:                debianRepo,
 					ImageSelectionStrategy: kargoapi.ImageSelectionStrategyNewestBuild,
 					AllowTagsRegexes:       []string{`^bookworm-202310\d\d$`},
-					DiscoveryLimit:         1,
 					CacheByTag:             true,
 				},
+				1,
 				getDockerHubCreds(),
 			)
 			require.NoError(t, err)
@@ -280,9 +280,9 @@ func TestSelectImageDockerHub(t *testing.T) {
 					ImageSelectionStrategy: kargoapi.ImageSelectionStrategyNewestBuild,
 					AllowTagsRegexes:       []string{`^bookworm-202310\d\d$`},
 					Platform:               "linux/made-up-arch",
-					DiscoveryLimit:         1,
 					CacheByTag:             true,
 				},
+				1,
 				getDockerHubCreds(),
 			)
 			require.NoError(t, err)
@@ -300,9 +300,9 @@ func TestSelectImageDockerHub(t *testing.T) {
 					ImageSelectionStrategy: kargoapi.ImageSelectionStrategyNewestBuild,
 					AllowTagsRegexes:       []string{`^bookworm-202310\d\d$`},
 					Platform:               platform,
-					DiscoveryLimit:         1,
 					CacheByTag:             true,
 				},
+				1,
 				getDockerHubCreds(),
 			)
 			require.NoError(t, err)
@@ -328,9 +328,9 @@ func TestSelectImageDockerHub(t *testing.T) {
 					RepoURL:                debianRepo,
 					ImageSelectionStrategy: kargoapi.ImageSelectionStrategySemVer,
 					Constraint:             "^99.0",
-					DiscoveryLimit:         1,
 					CacheByTag:             true,
 				},
+				1,
 				getDockerHubCreds(),
 			)
 			require.NoError(t, err)
@@ -347,9 +347,9 @@ func TestSelectImageDockerHub(t *testing.T) {
 					RepoURL:                debianRepo,
 					ImageSelectionStrategy: kargoapi.ImageSelectionStrategySemVer,
 					Constraint:             "^12.0",
-					DiscoveryLimit:         1,
 					CacheByTag:             true,
 				},
+				1,
 				getDockerHubCreds(),
 			)
 			require.NoError(t, err)
@@ -376,9 +376,9 @@ func TestSelectImageDockerHub(t *testing.T) {
 					ImageSelectionStrategy: kargoapi.ImageSelectionStrategySemVer,
 					Constraint:             "^12.0",
 					Platform:               "linux/made-up-arch",
-					DiscoveryLimit:         1,
 					CacheByTag:             true,
 				},
+				1,
 				getDockerHubCreds(),
 			)
 			require.NoError(t, err)
@@ -396,9 +396,9 @@ func TestSelectImageDockerHub(t *testing.T) {
 					ImageSelectionStrategy: kargoapi.ImageSelectionStrategySemVer,
 					Constraint:             "^12.0",
 					Platform:               platform,
-					DiscoveryLimit:         1,
 					CacheByTag:             true,
 				},
+				1,
 				getDockerHubCreds(),
 			)
 			require.NoError(t, err)

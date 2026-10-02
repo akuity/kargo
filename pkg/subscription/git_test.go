@@ -59,6 +59,7 @@ func Test_gitSubscriber_DiscoverArtifacts(t *testing.T) {
 				newSelectorFn: func(
 					context.Context,
 					kargoapi.GitSubscription,
+					int,
 					*git.RepoCredentials,
 				) (commit.Selector, error) {
 					return &fakeSelector{
@@ -96,6 +97,7 @@ func Test_gitSubscriber_DiscoverArtifacts(t *testing.T) {
 				newSelectorFn: func(
 					context.Context,
 					kargoapi.GitSubscription,
+					int,
 					*git.RepoCredentials,
 				) (commit.Selector, error) {
 					return &fakeSelector{
@@ -132,6 +134,7 @@ func Test_gitSubscriber_DiscoverArtifacts(t *testing.T) {
 				newSelectorFn: func(
 					context.Context,
 					kargoapi.GitSubscription,
+					int,
 					*git.RepoCredentials,
 				) (commit.Selector, error) {
 					return &fakeSelector{
@@ -165,6 +168,7 @@ func Test_gitSubscriber_DiscoverArtifacts(t *testing.T) {
 				newSelectorFn: func(
 					context.Context,
 					kargoapi.GitSubscription,
+					int,
 					*git.RepoCredentials,
 				) (commit.Selector, error) {
 					return &fakeSelector{
@@ -193,6 +197,7 @@ func Test_gitSubscriber_DiscoverArtifacts(t *testing.T) {
 				newSelectorFn: func(
 					context.Context,
 					kargoapi.GitSubscription,
+					int,
 					*git.RepoCredentials,
 				) (commit.Selector, error) {
 					return &fakeSelector{
@@ -227,6 +232,7 @@ func Test_gitSubscriber_DiscoverArtifacts(t *testing.T) {
 				newSelectorFn: func(
 					context.Context,
 					kargoapi.GitSubscription,
+					int,
 					*git.RepoCredentials,
 				) (commit.Selector, error) {
 					return &fakeSelector{
@@ -349,7 +355,6 @@ func Test_gitSubscriber_ApplySubscriptionDefaults(t *testing.T) {
 		require.Equal(t, kargoapi.CommitSelectionStrategyNewestFromBranch, sub.Git.CommitSelectionStrategy)
 		require.NotNil(t, sub.Git.StrictSemvers)
 		require.True(t, *sub.Git.StrictSemvers)
-		require.Equal(t, int64(20), sub.Git.DiscoveryLimit)
 	})
 
 	t.Run("preserves non-zero values", func(t *testing.T) {
@@ -556,16 +561,13 @@ func Test_gitSubscriber_ValidateSubscription(t *testing.T) {
 			},
 		},
 		{
-			name: "DiscoveryLimit too small",
+			name: "DiscoveryLimit too lower bound is not validated",
 			sub: kargoapi.GitSubscription{
 				RepoURL:        "https://github.com/akuity/kargo.git",
 				DiscoveryLimit: 0,
 			},
 			assertions: func(t *testing.T, errs field.ErrorList) {
-				require.NotNil(t, errs)
-				require.True(t, len(errs) > 0)
-				require.Equal(t, "git.discoveryLimit", errs[0].Field)
-				require.Equal(t, field.ErrorTypeInvalid, errs[0].Type)
+				require.Nil(t, errs)
 			},
 		},
 		{
