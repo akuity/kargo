@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"strings"
 
 	securejoin "github.com/cyphar/filepath-securejoin"
 	"github.com/xeipuuv/gojsonschema"
@@ -97,7 +98,52 @@ func (g *gitCloner) convert(cfg promotion.Config) (builtin.GitCloneConfig, error
 		}
 	}
 
+	// If the clone is limited to specific branches, every branch to be checked
+	// out must also be among them.
+	if typedCfg.Depth != nil || len(typedCfg.Branches) > 0 {
+		for i, checkout := range typedCfg.Checkout {
+			if checkout.Branch == "" {
+				return builtin.GitCloneConfig{}, fmt.Errorf(
+					"checkout[%d] must specify a branch when depth or branches is "+
+						"specified",
+					i,
+				)
+			}
+			if len(typedCfg.Branches) > 0 &&
+				!branchMatchesAny(checkout.Branch, typedCfg.Branches) {
+				return builtin.GitCloneConfig{}, fmt.Errorf(
+					"branch %q at checkout[%d] does not match any of the patterns "+
+						"specified by branches",
+					checkout.Branch, i,
+				)
+			}
+		}
+	}
+
 	return typedCfg, nil
+}
+
+// branchMatchesAny returns true if the provided branch name matches any of the
+// provided patterns. A pattern is a branch name that may contain at most one
+// "*" wildcard, which matches any sequence of characters, including "/".
+//
+// These are the same semantics as Git refspec patterns.
+func branchMatchesAny(branch string, patterns []string) bool {
+	for _, pattern := range patterns {
+		prefix, suffix, hasWildcard := strings.Cut(pattern, "*")
+		if !hasWildcard {
+			if branch == pattern {
+				return true
+			}
+			continue
+		}
+		if len(branch) >= len(prefix)+len(suffix) &&
+			strings.HasPrefix(branch, prefix) &&
+			strings.HasSuffix(branch, suffix) {
+			return true
+		}
+	}
+	return false
 }
 
 func (g *gitCloner) run(
@@ -139,6 +185,11 @@ func (g *gitCloner) run(
 		}
 	}
 
+	var depth uint
+	if cfg.Depth != nil && *cfg.Depth > 0 {
+		depth = uint(*cfg.Depth)
+	}
+
 	repo, err := git.CloneBare(
 		ctx,
 		cfg.RepoURL,
@@ -150,6 +201,8 @@ func (g *gitCloner) run(
 		&git.BareCloneOptions{
 			BaseDir:  stepCtx.WorkDir,
 			Blobless: cfg.Blobless,
+			Depth:    depth,
+			Branches: cfg.Branches,
 		},
 	)
 	if err != nil {

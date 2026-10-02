@@ -16,6 +16,20 @@
    "type": "boolean",
    "description": "Indicates whether to perform a blobless (--filter=blob:none) clone. Default is false."
   },
+  "depth": {
+   "type": "integer",
+   "minimum": 1,
+   "description": "Limits the clone to the specified number of most recent commits for each fetched branch (a shallow clone). If unset, the full history is cloned. If specified, all checkouts must be of branches."
+  },
+  "branches": {
+   "type": "array",
+   "description": "Limits the clone to remote branches matching these patterns. Each pattern is a branch name that may contain at most one '*' wildcard (e.g. 'main' or 'stage/*'). If unset, all branches are cloned. If specified, all checkouts must be of branches matching these patterns.",
+   "items": {
+    "type": "string",
+    "minLength": 1,
+    "pattern": "^([^\\s:+*?\\[\\\\^~-][^\\s:+*?\\[\\\\^~]*)?(\\*[^\\s:+*?\\[\\\\^~]*)?$"
+   }
+  },
   "repoURL": {
    "type": "string",
    "description": "The URL of a remote Git repository to clone. Required. Deprecated: Support for SSH URLs (ssh:// and SCP-style git@host:path) is deprecated as of v1.10.0 and will be removed in v1.13.0. Use HTTPS URLs instead.",

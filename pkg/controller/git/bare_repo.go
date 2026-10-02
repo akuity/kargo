@@ -80,6 +80,15 @@ type BareCloneOptions struct {
 	// large repositories. The server must support partial clones; if it does
 	// not, the clone will fail.
 	Blobless bool
+	// Depth optionally limits the clone to the specified number of commits for
+	// each fetched branch (a shallow clone). A value of 0 (the default)
+	// indicates no depth limit.
+	Depth uint
+	// Branches optionally limits the clone to remote branches matching the
+	// specified patterns. Each pattern is a branch name that may contain at most
+	// one "*" wildcard (e.g. "main" or "stage/*"). If empty, all branches are
+	// cloned. Only branches matching one of these patterns can be checked out.
+	Branches []string
 }
 
 // CloneBare produces a local, bare clone of the remote Git repository at the
@@ -128,15 +137,92 @@ func (b *bareRepo) clone(ctx context.Context, opts *BareCloneOptions) error {
 	if opts == nil {
 		opts = &BareCloneOptions{}
 	}
+	if len(opts.Branches) > 0 {
+		return b.cloneSelectBranches(
+			ctx,
+			opts.Branches,
+			opts.Blobless,
+			opts.Depth,
+		)
+	}
+	return b.cloneAllBranches(ctx, opts.Blobless, opts.Depth)
+}
+
+// cloneAllBranches produces a bare repository containing all of the remote
+// repository's branches using "git clone".
+//
+// Equivalent to:
+//
+//	git clone --bare [--filter=blob:none] [--depth=<depth> --no-single-branch] <url> <dir>
+func (b *bareRepo) cloneAllBranches(
+	ctx context.Context,
+	blobless bool,
+	depth uint,
+) error {
 	args := []string{"clone", "--bare"}
-	if opts.Blobless {
+	if blobless {
 		args = append(args, "--filter", "blob:none")
+	}
+	if depth > 0 {
+		// --depth implies --single-branch, which would fetch only the remote's
+		// default branch, thus --no-single-branch overrides it.
+		args = append(args, "--depth", fmt.Sprint(depth), "--no-single-branch")
 	}
 	args = append(args, b.accessURL, b.dir)
 	cmd := b.buildGitCommand(ctx, args...)
-	cmd.Dir = b.homeDir // Override the cmd.Dir that's set by r.buildGitCommand()
+	cmd.Dir = b.homeDir // Override the cmd.Dir that's set by b.buildGitCommand()
 	if _, err := libExec.Exec(cmd); err != nil {
 		return fmt.Errorf("error cloning repo %q into %q: %w", b.originalURL, b.dir, err)
+	}
+	return nil
+}
+
+// cloneSelectBranches produces a bare repository containing only the remote
+// branches that match the provided patterns with "git fetch".
+//
+// Equivalent to:
+//
+//	git init --bare <dir>
+//	git config remote.origin.url <url>
+//	git fetch [--filter=blob:none] [--depth=<depth>] origin +refs/heads/<branch>:refs/heads/<branch>...
+func (b *bareRepo) cloneSelectBranches(
+	ctx context.Context,
+	branches []string,
+	blobless bool,
+	depth uint,
+) error {
+	cmd := b.buildGitCommand(ctx, "init", "--bare", b.dir)
+	cmd.Dir = b.homeDir // Override the cmd.Dir that's set by b.buildGitCommand()
+	if _, err := libExec.Exec(cmd); err != nil {
+		return fmt.Errorf("error initializing repo in %q: %w", b.dir, err)
+	}
+	if _, err := libExec.Exec(b.buildGitCommand(
+		ctx, "config", "remote.origin.url", b.accessURL,
+	)); err != nil {
+		return fmt.Errorf(
+			"error setting URL of remote \"origin\" for repo %q: %w",
+			b.originalURL, err,
+		)
+	}
+	args := []string{"fetch"}
+	if blobless {
+		args = append(args, "--filter", "blob:none")
+	}
+	if depth > 0 {
+		args = append(args, "--depth", fmt.Sprint(depth))
+	}
+	args = append(args, "origin")
+	for _, branch := range branches {
+		args = append(
+			args,
+			fmt.Sprintf("+refs/heads/%s:refs/heads/%s", branch, branch),
+		)
+	}
+	if _, err := libExec.Exec(b.buildGitCommand(ctx, args...)); err != nil {
+		return fmt.Errorf(
+			"error fetching branches %v of repo %q into %q: %w",
+			branches, b.originalURL, b.dir, err,
+		)
 	}
 	return nil
 }
