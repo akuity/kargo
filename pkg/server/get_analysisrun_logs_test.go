@@ -777,6 +777,130 @@ func Test_server_getAnalysisRunLogs(t *testing.T) {
 	)
 }
 
+func Test_server_getAnalysisRunLogs_jobNotStarted(t *testing.T) {
+	testProject := &kargoapi.Project{
+		ObjectMeta: metav1.ObjectMeta{Name: "fake-project"},
+	}
+	testStage := &kargoapi.Stage{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "fake-stage",
+			Namespace: testProject.Name,
+		},
+	}
+	newTestRun := func(status rolloutsapi.AnalysisRunStatus) *rolloutsapi.AnalysisRun {
+		return &rolloutsapi.AnalysisRun{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: testProject.Name,
+				Name:      "fake-analysisrun",
+				Annotations: map[string]string{
+					kargoapi.AnnotationKeyStage: testStage.Name,
+				},
+			},
+			Spec: rolloutsapi.AnalysisRunSpec{
+				Metrics: []rolloutsapi.Metric{{
+					Name: "test-metric",
+					Provider: rolloutsapi.MetricProvider{
+						Job: &rolloutsapi.JobMetric{
+							Spec: batchv1.JobSpec{
+								Template: corev1.PodTemplateSpec{
+									Spec: corev1.PodSpec{
+										Containers: []corev1.Container{{Name: "test-container"}},
+									},
+								},
+							},
+						},
+					},
+				}},
+			},
+			Status: status,
+		}
+	}
+
+	requireNotYetAvailableEvent := func(t *testing.T, w *httptest.ResponseRecorder) {
+		require.Equal(t, http.StatusOK, w.Code)
+		require.Equal(t, "text/event-stream", w.Header().Get("Content-Type"))
+		body := w.Body.String()
+		require.Contains(t, body, "data:")
+		require.Contains(t, body, "not available yet")
+		require.Contains(t, body, "test-metric")
+	}
+
+	testRESTEndpoint(
+		t, &config.ServerConfig{RolloutsIntegrationEnabled: true},
+		http.MethodGet, "/v1beta1/projects/"+testProject.Name+"/analysis-runs/fake-analysisrun/logs",
+		[]restTestCase{
+			{
+				name: "run pending with no metric results",
+				serverConfig: &config.ServerConfig{
+					RolloutsIntegrationEnabled: true,
+					AnalysisRunLogURLTemplate:  "http://example.com",
+				},
+				clientBuilder: fake.NewClientBuilder().WithObjects(
+					testProject, testStage,
+					newTestRun(rolloutsapi.AnalysisRunStatus{}),
+				),
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
+					requireNotYetAvailableEvent(t, w)
+				},
+			},
+			{
+				name: "run running with no measurements",
+				serverConfig: &config.ServerConfig{
+					RolloutsIntegrationEnabled: true,
+					AnalysisRunLogURLTemplate:  "http://example.com",
+				},
+				clientBuilder: fake.NewClientBuilder().WithObjects(
+					testProject, testStage,
+					newTestRun(rolloutsapi.AnalysisRunStatus{
+						Phase:         rolloutsapi.AnalysisPhaseRunning,
+						MetricResults: []rolloutsapi.MetricResult{{Name: "test-metric"}},
+					}),
+				),
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
+					requireNotYetAvailableEvent(t, w)
+				},
+			},
+			{
+				name: "run running with no job metadata",
+				serverConfig: &config.ServerConfig{
+					RolloutsIntegrationEnabled: true,
+					AnalysisRunLogURLTemplate:  "http://example.com",
+				},
+				clientBuilder: fake.NewClientBuilder().WithObjects(
+					testProject, testStage,
+					newTestRun(rolloutsapi.AnalysisRunStatus{
+						Phase: rolloutsapi.AnalysisPhaseRunning,
+						MetricResults: []rolloutsapi.MetricResult{{
+							Name:         "test-metric",
+							Measurements: []rolloutsapi.Measurement{{}},
+						}},
+					}),
+				),
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
+					requireNotYetAvailableEvent(t, w)
+				},
+			},
+			{
+				name: "completed run with no metric results still errors",
+				serverConfig: &config.ServerConfig{
+					RolloutsIntegrationEnabled: true,
+					AnalysisRunLogURLTemplate:  "http://example.com",
+				},
+				clientBuilder: fake.NewClientBuilder().WithObjects(
+					testProject, testStage,
+					newTestRun(rolloutsapi.AnalysisRunStatus{
+						Phase: rolloutsapi.AnalysisPhaseFailed,
+					}),
+				),
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
+					require.Equal(t, http.StatusInternalServerError, w.Code)
+					require.NotEqual(t, "text/event-stream", w.Header().Get("Content-Type"))
+				},
+			},
+		},
+	)
+}
+
 func Test_server_getAnalysisRunLogs_success(t *testing.T) {
 	// Create a test HTTP server that will serve the log content
 	testLogContent := "log line 1\nlog line 2\nlog line 3\n"
