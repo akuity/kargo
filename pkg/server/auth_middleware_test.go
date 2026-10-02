@@ -360,6 +360,7 @@ func TestAuthenticate(t *testing.T) {
 				require.True(t, u.IsAdmin)
 				require.Empty(t, u.Claims["sub"])
 				require.Empty(t, u.Claims["groups"])
+				require.Equal(t, testToken, u.BearerToken)
 			},
 		},
 		"failure verifying IDP-issued token": {
@@ -443,6 +444,7 @@ func TestAuthenticate(t *testing.T) {
 				require.Equal(t, "ironman", u.Claims["sub"])
 				require.Equal(t, "tony@starkindustries.com", u.Claims["email"])
 				require.Equal(t, []string{"avengers", "shield"}, u.Claims["groups"])
+				require.Equal(t, testToken, u.BearerToken)
 			},
 		},
 		"unrecognized JWT recognized by Kubernetes": {
@@ -467,6 +469,7 @@ func TestAuthenticate(t *testing.T) {
 				require.NoError(t, err)
 				u, ok := user.InfoFromContext(ctx)
 				require.True(t, ok)
+				require.Equal(t, testToken, u.BearerToken)
 				require.NotNil(t, u.KubernetesUserInfo)
 				require.Equal(t, "system:serviceaccount:kargo-demo:ci-bot", u.KubernetesUserInfo.Username)
 			},

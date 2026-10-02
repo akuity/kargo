@@ -22,6 +22,16 @@ type Info struct {
 	// non-admin user whose credentials have
 	// been successfully verified by the server's authentication middleware.
 	Claims map[string]any
+	// BearerToken is the raw bearer token presented in the Authorization header
+	// of any request requiring authentication.
+	//
+	// #nosec G117 -- This struct is an internal, context-bound representation of
+	// a user. This field, if set, contains the token the user presented to
+	// authenticate themselves, which we subsequently determined to be a valid
+	// token for the Kargo control plane's underlying Kubernetes cluster. It is
+	// only ever sent elsewhere as the token for AnalysisRun log requests, and
+	// only when the operator has not configured a dedicated token for those.
+	BearerToken string
 	// ServiceAccountsByNamespace is the mapping of namespace names to sets of
 	// ServiceAccounts that a user has been mapped to.
 	ServiceAccountsByNamespace map[string]map[types.NamespacedName]struct{}
