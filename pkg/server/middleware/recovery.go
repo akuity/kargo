@@ -1,4 +1,4 @@
-package server
+package middleware
 
 import (
 	"errors"
@@ -12,7 +12,7 @@ import (
 	"github.com/akuity/kargo/pkg/logging"
 )
 
-// recoveryMiddleware returns Gin middleware that recovers from a panic in any
+// Recover returns Gin middleware that recovers from a panic in any
 // handler downstream of it and reports it as an error rather than answering the
 // request itself. The error-handling middleware then responds as it does to any
 // other unanticipated error.
@@ -26,7 +26,7 @@ import (
 // This must be registered inside the error-handling middleware, so that the
 // error it reports is still there to be found when that middleware inspects the
 // request on its way back out.
-func recoveryMiddleware() gin.HandlerFunc {
+func Recover() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		defer func() {
 			rec := recover()

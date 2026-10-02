@@ -1,4 +1,4 @@
-package server
+package middleware
 
 import (
 	"errors"
@@ -15,7 +15,7 @@ import (
 	libhttp "github.com/akuity/kargo/pkg/http"
 )
 
-func TestHandleError(t *testing.T) {
+func TestHandleErrors(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	testCases := []struct {
@@ -74,9 +74,8 @@ func TestHandleError(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			s := &server{}
 			router := gin.New()
-			router.Use(s.handleError)
+			router.Use(HandleErrors())
 			router.GET("/", func(c *gin.Context) {
 				if testCase.err != nil {
 					_ = c.Error(testCase.err)

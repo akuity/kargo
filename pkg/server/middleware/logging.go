@@ -1,4 +1,4 @@
-package server
+package middleware
 
 import (
 	"errors"
@@ -12,7 +12,7 @@ import (
 	"github.com/akuity/kargo/pkg/server/user"
 )
 
-// LoggingMiddleware returns Gin middleware that records one line per request
+// LogRequests returns Gin middleware that records one line per request
 // using Kargo's own logger, so that LOG_LEVEL governs the request log as it
 // governs everything else.
 //
@@ -28,7 +28,7 @@ import (
 //
 // This must be the outermost middleware, so that the status and any reported
 // error it records are the ones the client actually received.
-func LoggingMiddleware() gin.HandlerFunc {
+func LogRequests() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		start := time.Now()
 

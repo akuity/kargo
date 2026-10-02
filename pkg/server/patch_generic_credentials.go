@@ -32,10 +32,6 @@ type patchGenericCredentialsRequest struct {
 // @Success 200 {object} corev1.Secret "Secret resource (k8s.io/api/core/v1.Secret)"
 // @Router /v1beta1/projects/{project}/generic-credentials/{generic-credentials} [patch]
 func (s *server) patchProjectGenericCredentials(c *gin.Context) {
-	if !s.requireSecretManagement(c) {
-		return
-	}
-
 	ctx := c.Request.Context()
 
 	project := c.Param("project")
@@ -90,10 +86,6 @@ func (s *server) patchProjectGenericCredentials(c *gin.Context) {
 // @Success 200 {object} corev1.Secret "Secret resource (k8s.io/api/core/v1.Secret)"
 // @Router /v1beta1/system/generic-credentials/{generic-credentials} [patch]
 func (s *server) patchSystemGenericCredentials(c *gin.Context) {
-	if !s.requireSecretManagement(c) {
-		return
-	}
-
 	ctx := c.Request.Context()
 	name := c.Param("generic-credentials")
 
@@ -149,10 +141,6 @@ func (s *server) patchSystemGenericCredentials(c *gin.Context) {
 // @Success 200 {object} corev1.Secret "Secret resource (k8s.io/api/core/v1.Secret)"
 // @Router /v1beta1/shared/generic-credentials/{generic-credentials} [patch]
 func (s *server) patchSharedGenericCredentials(c *gin.Context) {
-	if !s.requireSecretManagement(c) {
-		return
-	}
-
 	ctx := c.Request.Context()
 	name := c.Param("generic-credentials")
 

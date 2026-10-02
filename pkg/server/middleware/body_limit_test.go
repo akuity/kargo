@@ -1,4 +1,4 @@
-package server
+package middleware
 
 import (
 	"bytes"
@@ -12,7 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestBodyLimitMiddleware(t *testing.T) {
+func TestLimitBody(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	tests := []struct {
@@ -117,7 +117,7 @@ func TestBodyLimitMiddleware(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			router := gin.New()
 
-			// Error handling middleware (mimics handleError behavior)
+			// Error handling middleware (mimics HandleErrors)
 			router.Use(func(c *gin.Context) {
 				c.Next()
 				if len(c.Errors) > 0 {
@@ -128,7 +128,7 @@ func TestBodyLimitMiddleware(t *testing.T) {
 				}
 			})
 
-			router.Use(bodyLimitMiddleware(tt.maxBytes))
+			router.Use(LimitBody(tt.maxBytes))
 
 			var bodyReadSuccessfully bool
 			router.Handle(tt.method, "/test", func(c *gin.Context) {

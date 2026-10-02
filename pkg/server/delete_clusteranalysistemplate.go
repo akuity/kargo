@@ -18,11 +18,6 @@ import (
 // @Success 204 "Deleted successfully"
 // @Router /v1beta1/shared/cluster-analysis-templates/{cluster-analysis-template} [delete]
 func (s *server) deleteClusterAnalysisTemplate(c *gin.Context) {
-	if !s.cfg.RolloutsIntegrationEnabled {
-		_ = c.Error(errArgoRolloutsIntegrationDisabled)
-		return
-	}
-
 	ctx := c.Request.Context()
 
 	name := c.Param("cluster-analysis-template")
