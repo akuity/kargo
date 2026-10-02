@@ -237,14 +237,37 @@ OTEL_TRACES_SAMPLER_ARG: {{ quote .samplerArg }}
 Common labels
 */}}
 {{- define "kargo.labels" -}}
+{{ include "kargo.standardLabels" . }}
+{{- with .Values.global.labels }}
+{{ toYaml . }}
+{{- end }}
+{{- end -}}
+
+{{/*
+Standard labels, without global.labels.
+*/}}
+{{- define "kargo.standardLabels" -}}
 helm.sh/chart: {{ include "kargo.chart" . }}
 {{ include "kargo.selectorLabels" . }}
 {{- if .Chart.AppVersion }}
 app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
 {{- end }}
 app.kubernetes.io/managed-by: {{ .Release.Service }}
-{{- with .Values.global.labels }}
-{{ toYaml . }}
+{{- end -}}
+
+{{/*
+Standard labels plus global.labels merged with a component's own labels, the
+component's winning. Use this in place of kargo.labels wherever a component
+has a labels value: emitting global.labels through kargo.labels and again
+through the merge would repeat any key set in both, which YAML forbids.
+Takes a dict with "root" (the root context) and "labels" (the component's).
+*/}}
+{{- define "kargo.componentLabels" -}}
+{{ include "kargo.standardLabels" .root }}
+{{- with (mergeOverwrite (deepCopy .root.Values.global.labels) (.labels | default dict)) }}
+{{- range $key, $value := . }}
+{{ $key }}: {{ $value | quote }}
+{{- end }}
 {{- end }}
 {{- end -}}
 
@@ -282,6 +305,32 @@ app.kubernetes.io/component: kubernetes-webhooks-server
 
 {{- define "kargo.managementController.labels" -}}
 app.kubernetes.io/component: management-controller
+{{- end -}}
+
+{{- define "kargo.postgres.labels" -}}
+app.kubernetes.io/component: postgres
+{{- end -}}
+
+{{/*
+kargo.database.validate fails the render if both the bundled PostgreSQL and an
+external database are configured, since only one can be the database.
+*/}}
+{{- define "kargo.database.validate" -}}
+{{- if and .Values.database.postgres.enabled .Values.database.external.secretName }}
+{{- fail "database.postgres.enabled and database.external.secretName cannot both be set. Disable the bundled PostgreSQL to use an external database." }}
+{{- end }}
+{{- if and .Values.database.postgres.password .Values.database.postgres.existingSecret }}
+{{- fail "database.postgres.password and database.postgres.existingSecret cannot both be set." }}
+{{- end }}
+{{- end -}}
+
+{{/*
+kargo.postgres.secretName returns the name of the Secret holding the bundled
+PostgreSQL's password: the operator's, when database.postgres.existingSecret
+is set, otherwise the chart's own.
+*/}}
+{{- define "kargo.postgres.secretName" -}}
+{{- .Values.database.postgres.existingSecret | default "kargo-postgres" -}}
 {{- end -}}
 
 {{/*

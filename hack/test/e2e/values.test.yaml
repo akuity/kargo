@@ -40,6 +40,9 @@ controller:
       cacheByTagPolicy: Force
 crds:
   install: true
+database:
+  postgres:
+    password: kargo
 externalWebhooksServer:
   logLevel: DEBUG
   host: localhost:30083

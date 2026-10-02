@@ -168,3 +168,17 @@ func TestContext(t *testing.T) {
 	_, ok = IdentityFromContext(ContextWithIdentity(context.Background(), nil))
 	require.False(t, ok)
 }
+
+func TestBearerTokenContext(t *testing.T) {
+	t.Parallel()
+	_, ok := BearerTokenFromContext(context.Background())
+	require.False(t, ok)
+	token, ok := BearerTokenFromContext(
+		ContextWithBearerToken(context.Background(), "some-token"),
+	)
+	require.True(t, ok)
+	require.Equal(t, "some-token", token)
+	// An empty token is no token.
+	_, ok = BearerTokenFromContext(ContextWithBearerToken(context.Background(), ""))
+	require.False(t, ok)
+}

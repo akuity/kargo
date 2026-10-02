@@ -127,6 +127,27 @@ spec:
     - CreateNamespace=true
 ```
 
+## Database Password
+
+The chart installs a minimal PostgreSQL instance alongside Kargo by default,
+and `database.postgres.password` is required in the same way as the admin
+account values above. You can provide it as a parameter or value as shown, but
+because it is stored in plaintext, the recommended approach is to keep it out
+of the `Application` entirely: create a Secret in Kargo's namespace holding the
+password under the key `password`, using whatever your organization uses to
+manage secrets, and reference it instead:
+
+```yaml
+      valuesObject:
+        database:
+          postgres:
+            existingSecret: <name of your Secret>
+```
+
+To use your own PostgreSQL instead of the bundled one, disable it and point the
+chart at a Secret holding its connection string, as described in
+[Common Configurations](./30-common-configurations.md#database-configuration).
+
 ## Multi-Source Argo CD Application
 
 The most advanced method covered here __is nevertheless our recommendation

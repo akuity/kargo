@@ -590,43 +590,25 @@ func (r *reconciler) promote(
 	targetFreight *kargoapi.Freight,
 ) (*kargoapi.PromotionStatus, *time.Duration, error) {
 	logger := logging.LoggerFromContext(ctx)
-	stageName := stage.Name
-	stageNamespace := promo.Namespace
 
-	if targetFreight == nil {
-		// nolint:staticcheck
-		return nil, nil, fmt.Errorf(
-			"Freight %q not found in namespace %q",
-			promo.Spec.Freight, promo.Namespace,
-		)
-	}
+	// Resolve freight references for this promotion.
+	// ResolveFreight returns error if freight doesn't exist or not requested by the stage.
+	targetFreightRef, freightCollection, freightErr := api.ResolveFreightRefs(
+		ctx,
+		r.kargoClient,
+		promo,
+		stage,
+		targetFreight)
 
-	if !stage.IsFreightAvailable(targetFreight) {
-		// nolint:staticcheck
-		return nil, nil, fmt.Errorf(
-			"Freight %q is not available to Stage %q in namespace %q",
-			promo.Spec.Freight,
-			stageName,
-			stageNamespace,
-		)
-	}
-
-	logger = logger.WithValues("targetFreight", targetFreight.Name)
-
-	targetFreightRef := kargoapi.FreightReference{
-		Name:      targetFreight.Name,
-		Commits:   targetFreight.Commits,
-		Images:    targetFreight.Images,
-		Charts:    targetFreight.Charts,
-		Artifacts: targetFreight.Artifacts,
-		Origin:    targetFreight.Origin,
+	if freightErr != nil {
+		return nil, nil, freightErr
 	}
 
 	// Make a deep copy of the Promotion to pass to the promotion steps execution
 	// engine, which may modify its status.
 	workingPromo := promo.DeepCopy()
-	workingPromo.Status.Freight = &targetFreightRef
-	workingPromo.Status.FreightCollection = api.NewFreightCollectionForStage(stage, targetFreightRef)
+	workingPromo.Status.Freight = targetFreightRef
+	workingPromo.Status.FreightCollection = freightCollection
 
 	// Resolve the Target, if any, that this Promotion promotes Freight to. Its
 	// params and labels are exposed to step expressions, which is what allows a
@@ -682,27 +664,11 @@ func (r *reconciler) promote(
 	logger.Debug("promotion", "phase", workingPromo.Status.Phase)
 
 	if workingPromo.Status.Phase == kargoapi.PromotionPhaseSucceeded {
-		// Trigger re-verification of the Stage if the promotion succeeded and
-		// this is a re-promotion of the same Freight.
-		current := stage.Status.FreightHistory.Current()
-		if current != nil && current.VerificationHistory.Current() != nil {
-			for _, f := range current.Freight {
-				if f.Name == targetFreight.Name {
-					if err := api.ReverifyStageFreight(
-						ctx,
-						r.kargoClient,
-						types.NamespacedName{
-							Namespace: stageNamespace,
-							Name:      stageName,
-						},
-					); err != nil {
-						// Log the error, but don't let failure to initiate re-verification
-						// prevent the promotion from succeeding.
-						logger.Error(err, "error triggering re-verification")
-					}
-					break
-				}
-			}
+		// If the stage runs a PromotionRequest, do not trigger reverification for each promotion
+		if !stage.IsTargetAware() {
+			// Trigger re-verification of the Stage if the promotion succeeded and
+			// this is a re-promotion of the same Freight.
+			r.maybeTriggerStageReverification(ctx, logger, stage, targetFreight)
 		}
 	}
 
@@ -711,6 +677,34 @@ func (r *reconciler) promote(
 	}
 
 	return &workingPromo.Status, nil, nil
+}
+
+func (r *reconciler) maybeTriggerStageReverification(
+	ctx context.Context,
+	logger *logging.Logger,
+	stage *kargoapi.Stage,
+	targetFreight *kargoapi.Freight,
+) {
+	current := stage.Status.FreightHistory.Current()
+	if current != nil && current.VerificationHistory.Current() != nil {
+		for _, f := range current.Freight {
+			if f.Name == targetFreight.Name {
+				if err := api.ReverifyStageFreight(
+					ctx,
+					r.kargoClient,
+					types.NamespacedName{
+						Namespace: stage.Namespace,
+						Name:      stage.Name,
+					},
+				); err != nil {
+					// Log the error, but don't let failure to initiate re-verification
+					// prevent the promotion from succeeding.
+					logger.Error(err, "error triggering re-verification")
+				}
+				break
+			}
+		}
+	}
 }
 
 // terminatePromotion terminates the given Promotion with a message indicating

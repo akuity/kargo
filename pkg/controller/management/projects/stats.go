@@ -8,7 +8,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	"github.com/akuity/kargo/pkg/api"
 	"github.com/akuity/kargo/pkg/conditions"
 	"github.com/akuity/kargo/pkg/logging"
 )
@@ -195,7 +194,7 @@ func latestPromotionRequest(
 	stage *kargoapi.Stage,
 	requestsByName map[string]*kargoapi.PromotionRequest,
 ) *kargoapi.PromotionRequest {
-	if !api.IsTargetAware(stage) {
+	if !stage.IsTargetAware() {
 		return nil
 	}
 	var name string

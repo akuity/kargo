@@ -658,7 +658,7 @@ func validateTargetAwareStageIsPromotedByRequest(
 	promo *kargoapi.Promotion,
 	stage *kargoapi.Stage,
 ) *field.Error {
-	if !api.IsTargetAware(stage) || isPromotionRequestChild(promo) {
+	if !stage.IsTargetAware() || isPromotionRequestChild(promo) {
 		return nil
 	}
 	return field.Invalid(

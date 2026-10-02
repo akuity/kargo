@@ -119,7 +119,7 @@ func (s *server) promoteToStage(c *gin.Context) {
 	}
 
 	if req.Origin != "" {
-		if api.IsTargetAware(stage) {
+		if stage.IsTargetAware() {
 			// Promotion by origin relies on the Promotion defaulting webhook to
 			// resolve the origin to a candidate Freight at admission time.
 			// PromotionRequests have no such webhook, so there is nothing to resolve
@@ -202,7 +202,7 @@ func (s *server) promoteToStage(c *gin.Context) {
 
 	// A Stage that selects Targets fans Freight out to them via a PromotionRequest
 	// rather than promoting to itself with a single Promotion.
-	if api.IsTargetAware(stage) {
+	if stage.IsTargetAware() {
 		// Both the Target lookup and the create go through the internal client.
 		// PromotionRequests are system-owned, and the promote-verb check above
 		// IS the authorization decision for this request; which Targets the

@@ -82,6 +82,12 @@ func (v Verb) Promotion(project, name string) Access {
 	return v.kargo("promotions", project, name)
 }
 
+// PromotionRequest returns the Verb on the named PromotionRequest in the
+// Project.
+func (v Verb) PromotionRequest(project, name string) Access {
+	return v.kargo("promotionrequests", project, name)
+}
+
 // Warehouse returns the Verb on the named Warehouse in the Project.
 func (v Verb) Warehouse(project, name string) Access {
 	return v.kargo("warehouses", project, name)

@@ -6,13 +6,8 @@ metadata:
   name: kargo-management-controller
   namespace: {{ .Release.Namespace }}
   labels:
-    {{- include "kargo.labels" . | nindent 4 }}
+    {{- include "kargo.componentLabels" (dict "root" . "labels" .Values.managementController.labels) | nindent 4 }}
     {{- include "kargo.managementController.labels" . | nindent 4 }}
-  {{- with (mergeOverwrite (deepCopy .Values.global.labels) .Values.managementController.labels) }}
-    {{- range $key, $value := . }}
-    {{ $key }}: {{ $value | quote }}
-    {{- end }}
-  {{- end }}
   {{- include "kargo.annotations" (dict "root" . "annotations" .Values.managementController.annotations) | nindent 2 }}
 spec:
   replicas: 1

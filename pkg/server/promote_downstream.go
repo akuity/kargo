@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"net/http"
 
-	"connectrpc.com/connect"
 	"github.com/gin-gonic/gin"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -28,7 +27,7 @@ func (s *server) findDownstreamStages(
 ) ([]kargoapi.Stage, error) {
 	var allStages kargoapi.StageList
 	if err := s.client.List(ctx, &allStages, client.InNamespace(stage.Namespace)); err != nil {
-		return nil, connect.NewError(connect.CodeInternal, err)
+		return nil, fmt.Errorf("error listing Stages: %w", err)
 	}
 	var downstreams []kargoapi.Stage
 	for _, s := range allStages.Items {
@@ -177,7 +176,7 @@ func (s *server) promoteDownstream(c *gin.Context) {
 
 		// A downstream Stage that selects Targets fans Freight out to them via
 		// a PromotionRequest rather than promoting to itself with a Promotion.
-		if api.IsTargetAware(&downstream) {
+		if downstream.IsTargetAware() {
 			// Both the Target lookup and the create go through the internal
 			// client. PromotionRequests are system-owned, and the promote-verb
 			// check above IS the authorization decision for this downstream

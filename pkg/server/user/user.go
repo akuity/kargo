@@ -191,3 +191,24 @@ func IdentityFromContext(ctx context.Context) (Identity, bool) {
 	id, ok := ctx.Value(identityKey{}).(Identity)
 	return id, ok && id != nil
 }
+
+type bearerTokenKey struct{}
+
+// ContextWithBearerToken returns a context carrying the raw bearer token the
+// request authenticated with. It is kept apart from the Identity, which
+// describes who the request is from and may outlive the request, e.g. in a
+// cache; the token is this request's credential and nothing more.
+//
+// The token is only ever sent elsewhere as the token for AnalysisRun log
+// requests, and only when the operator has not configured a dedicated token
+// for those and has explicitly opted into the feature.
+func ContextWithBearerToken(ctx context.Context, token string) context.Context {
+	return context.WithValue(ctx, bearerTokenKey{}, token)
+}
+
+// BearerTokenFromContext returns the raw bearer token bound to the context, if
+// any.
+func BearerTokenFromContext(ctx context.Context) (string, bool) {
+	token, ok := ctx.Value(bearerTokenKey{}).(string)
+	return token, ok && token != ""
+}

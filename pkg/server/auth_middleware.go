@@ -134,5 +134,6 @@ func (a *authMiddleware) authenticate(
 		return ctx, authn.ErrInvalidToken
 	}
 	logger.Debug("token verified", "actor", id.Actor())
+	ctx = user.ContextWithBearerToken(ctx, rawToken)
 	return user.ContextWithIdentity(ctx, id), nil
 }

@@ -28,6 +28,7 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/server/config"
 	"github.com/akuity/kargo/pkg/server/kubernetes"
+	"github.com/akuity/kargo/pkg/server/user"
 )
 
 func TestServer_getJobMetric(t *testing.T) {
@@ -584,10 +585,13 @@ func TestServer_buildRequest(t *testing.T) {
 		testURL         = "https://logs.example.com"
 	)
 	testCases := []struct {
-		name           string
-		urlTemplate    string
-		requestHeaders map[string]string
-		assertions     func(t *testing.T, req *http.Request, err error)
+		name             string
+		urlTemplate      string
+		requestHeaders   map[string]string
+		logToken         string
+		forwardUserToken bool
+		userToken        string
+		assertions       func(t *testing.T, req *http.Request, err error)
 	}{
 		{
 			name:        "evaluated url template is not a string",
@@ -628,16 +632,62 @@ func TestServer_buildRequest(t *testing.T) {
 				require.Equal(t, testAnalysisRun, req.Header.Get("analysis"))
 			},
 		},
+		{
+			name:        "configured token takes precedence over user token",
+			urlTemplate: testURL,
+			requestHeaders: map[string]string{
+				"Authorization": "Bearer ${{ token }}",
+			},
+			logToken:         "log-token",
+			forwardUserToken: true,
+			userToken:        "user-token",
+			assertions: func(t *testing.T, req *http.Request, err error) {
+				require.NoError(t, err)
+				require.Equal(t, "Bearer log-token", req.Header.Get("Authorization"))
+			},
+		},
+		{
+			name:        "user token is not forwarded unless enabled",
+			urlTemplate: testURL,
+			requestHeaders: map[string]string{
+				"Authorization": "Bearer ${{ token }}",
+			},
+			userToken: "user-token",
+			assertions: func(t *testing.T, req *http.Request, err error) {
+				require.NoError(t, err)
+				require.NotContains(t, req.Header.Get("Authorization"), "user-token")
+			},
+		},
+		{
+			name:        "falls back to user token when enabled and no token is configured",
+			urlTemplate: testURL,
+			requestHeaders: map[string]string{
+				"Authorization": "Bearer ${{ token }}",
+			},
+			forwardUserToken: true,
+			userToken:        "user-token",
+			assertions: func(t *testing.T, req *http.Request, err error) {
+				require.NoError(t, err)
+				require.Equal(t, "Bearer user-token", req.Header.Get("Authorization"))
+			},
+		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			s := &server{
 				cfg: config.ServerConfig{
-					AnalysisRunLogURLTemplate: testCase.urlTemplate,
-					AnalysisRunLogHTTPHeaders: testCase.requestHeaders,
+					AnalysisRunLogURLTemplate:      testCase.urlTemplate,
+					AnalysisRunLogHTTPHeaders:      testCase.requestHeaders,
+					AnalysisRunLogToken:            testCase.logToken,
+					AnalysisRunLogForwardUserToken: testCase.forwardUserToken,
 				},
 			}
+			ctx := t.Context()
+			if testCase.userToken != "" {
+				ctx = user.ContextWithBearerToken(ctx, testCase.userToken)
+			}
 			req, err := s.buildRequest(
+				ctx,
 				&kargoapi.Stage{
 					ObjectMeta: metav1.ObjectMeta{Namespace: testNamespace},
 				},

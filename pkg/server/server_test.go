@@ -56,8 +56,6 @@ func TestNewServer(t *testing.T) {
 	require.NotNil(t, testClient, s.rolesDB)
 	require.Same(t, testSender, s.sender)
 	require.Equal(t, testServerConfig, s.cfg)
-	require.NotNil(t, s.validateProjectExistsFn)
-	require.NotNil(t, s.externalValidateProjectFn)
 	require.NotNil(t, s.getStageFn)
 	require.NotNil(t, s.getFreightByNameOrAliasFn)
 	require.NotNil(t, s.isFreightAvailableFn)

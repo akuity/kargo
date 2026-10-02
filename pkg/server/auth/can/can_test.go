@@ -91,6 +91,15 @@ func TestAccess(t *testing.T) {
 			},
 		},
 		{
+			name:   "PromotionRequest",
+			access: Get().PromotionRequest("kargo-demo", "uat.abc123"),
+			expected: Access{
+				Verb:     "get",
+				Resource: kargoResource("promotionrequests"),
+				Key:      types.NamespacedName{Namespace: "kargo-demo", Name: "uat.abc123"},
+			},
+		},
+		{
 			name:   "Warehouse",
 			access: Get().Warehouse("kargo-demo", "images"),
 			expected: Access{

@@ -48,6 +48,7 @@ helm install kargo \
   --set api.tls.enabled=false \
   --set api.adminAccount.passwordHash='$2a$10$Zrhhie4vLz5ygtVSaif6o.qN36jgs6vjtMBdM6yrU1FOeiAAMMxOm' \
   --set api.adminAccount.tokenSigningKey=iwishtowashmyirishwristwatch \
+  --set database.postgres.password=kargo \
   --set externalWebhooksServer.service.type=NodePort \
   --set externalWebhooksServer.service.nodePort=31082 \
   --set externalWebhooksServer.tls.enabled=false \

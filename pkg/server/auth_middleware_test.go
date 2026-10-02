@@ -149,6 +149,8 @@ func TestAuthenticate(t *testing.T) {
 				require.ErrorIs(t, err, authn.ErrInvalidToken)
 				_, ok := user.IdentityFromContext(ctx)
 				require.False(t, ok)
+				_, ok = user.BearerTokenFromContext(ctx)
+				require.False(t, ok)
 			},
 		},
 		{
@@ -184,6 +186,9 @@ func TestAuthenticate(t *testing.T) {
 				id, ok := user.IdentityFromContext(ctx)
 				require.True(t, ok)
 				require.Equal(t, user.Admin{}, id)
+				token, ok := user.BearerTokenFromContext(ctx)
+				require.True(t, ok)
+				require.Equal(t, validToken, token)
 			},
 		},
 	}

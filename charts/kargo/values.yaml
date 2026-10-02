@@ -1396,6 +1396,98 @@ webhooksServer:
     #   ...
     #   -----END CERTIFICATE-----
 
+## @section Database
+## Kargo's components do not use a database yet. These settings provision one
+## ahead of that: either the minimal PostgreSQL bundled with the chart or a
+## reference to an external one.
+database:
+  postgres:
+    ## @param database.postgres.enabled Whether to run the PostgreSQL bundled with the chart: a single, minimally configurable instance meant for evaluation and development. It has no replication, backups, or tuning and is not suitable for production. Disable it and set `database.external.secretName` to use your own database.
+    enabled: true
+    image:
+      ## @param database.postgres.image.repository Image repository of the bundled PostgreSQL.
+      repository: postgres
+      ## @param database.postgres.image.tag Image tag of the bundled PostgreSQL.
+      tag: "18.6"
+      ## @param database.postgres.image.pullPolicy Image pull policy of the bundled PostgreSQL.
+      pullPolicy: IfNotPresent
+      ## @param database.postgres.image.pullSecrets List of imagePullSecrets for the bundled PostgreSQL.
+      pullSecrets: []
+    ## @param database.postgres.password Password of the bundled PostgreSQL's `kargo` user. A value **must** be provided for this field unless `database.postgres.existingSecret` is specified. It is suggested that you generate this using a password manager or a command like: `openssl rand -base64 48 \| tr -d "=+/" \| head -c 32`. Like `api.adminAccount.tokenSigningKey`, this is stored in plaintext; to keep it out of your values, use `database.postgres.existingSecret` instead.
+    password: ""
+    ## @param database.postgres.existingSecret Name of an existing Secret in Kargo's namespace holding the bundled PostgreSQL's `kargo` user password under the key `password`. When set, the chart stores no password itself. This is the recommended way to run the bundled PostgreSQL from a GitOps tool such as Argo CD. Cannot be combined with `database.postgres.password`.
+    existingSecret: ""
+    ## @param database.postgres.extraArgs Additional server settings for the bundled PostgreSQL, as `name=value` pairs passed to `postgres` as `-c` flags. For example, `log_lock_waits=on`.
+    extraArgs: []
+    persistence:
+      ## @param database.postgres.persistence.enabled Whether the bundled PostgreSQL stores its data on a PersistentVolumeClaim. When `false`, data is kept on an emptyDir and lost whenever the Pod is replaced.
+      enabled: true
+      ## @param database.postgres.persistence.size Size of the bundled PostgreSQL's PersistentVolumeClaim.
+      size: 1Gi
+      ## @param database.postgres.persistence.storageClass StorageClass of the bundled PostgreSQL's PersistentVolumeClaim. When empty, the cluster's default StorageClass is used.
+      storageClass: ""
+    resources:
+      requests:
+        ## @param database.postgres.resources.requests.cpu CPU request for the bundled PostgreSQL container.
+        cpu: 100m
+        ## @param database.postgres.resources.requests.memory Memory request for the bundled PostgreSQL container.
+        memory: 128Mi
+      limits:
+        ## @param database.postgres.resources.limits.memory Memory limit for the bundled PostgreSQL container.
+        memory: 512Mi
+    ## @param database.postgres.revisionHistoryLimit Number of old revisions of the bundled PostgreSQL StatefulSet to retain.
+    revisionHistoryLimit: 10
+
+    ## @param database.postgres.labels Labels to add to the bundled PostgreSQL resources. Merges with `global.labels`, allowing you to override or add to the global labels.
+    labels: {}
+    ## @param database.postgres.annotations Annotations to add to the bundled PostgreSQL resources. Merges with `global.annotations`, allowing you to override or add to the global annotations.
+    annotations: {}
+    ## @param database.postgres.podLabels Optional labels to add to the bundled PostgreSQL pod. Merges with `global.podLabels`, allowing you to override or add to the global labels.
+    podLabels: {}
+    ## @param database.postgres.podAnnotations Optional annotations to add to the bundled PostgreSQL pod. Merges with `global.podAnnotations`, allowing you to override or add to the global annotations.
+    podAnnotations: {}
+
+    serviceAccount:
+      ## @param database.postgres.serviceAccount.labels Additional labels to add to the bundled PostgreSQL ServiceAccount.
+      labels: {}
+      ## @param database.postgres.serviceAccount.annotations Additional annotations to add to the bundled PostgreSQL ServiceAccount.
+      annotations: {}
+
+    ## @param database.postgres.env Environment variables to add to the bundled PostgreSQL pod.
+    env: []
+    #  - name: name
+    #    value: value
+    ## @param database.postgres.envFrom Environment variables to add to the bundled PostgreSQL pod from ConfigMaps or Secrets.
+    envFrom: []
+    #  - configMapRef:
+    #      name: config-map-name
+    #  - secretRef:
+    #      name: secret-name
+
+    ## @param database.postgres.containers Additional sidecar containers to add to the bundled PostgreSQL pod. Rendered as literal YAML.
+    containers: []
+    ## @param database.postgres.initContainers Additional init containers to add to the bundled PostgreSQL pod. Rendered as literal YAML.
+    initContainers: []
+    ## @param database.postgres.volumes Additional pod-level volumes for the bundled PostgreSQL pod. Rendered as literal YAML.
+    volumes: []
+    ## @param database.postgres.volumeMounts Additional volume mounts for the bundled PostgreSQL container. Rendered as literal YAML.
+    volumeMounts: []
+
+    ## @param database.postgres.nodeSelector Node selector for the bundled PostgreSQL pod. Defaults to `global.nodeSelector`.
+    nodeSelector: {}
+    ## @param database.postgres.tolerations Tolerations for the bundled PostgreSQL pod. Defaults to `global.tolerations`.
+    tolerations: []
+    ## @param database.postgres.affinity Specifies pod affinity for the bundled PostgreSQL pod. Defaults to `global.affinity`.
+    affinity: {}
+    # priorityClassName:
+    ## @param database.postgres.securityContext Security context for the bundled PostgreSQL container. Defaults to `global.securityContext`.
+    securityContext: {}
+  external:
+    ## @param database.external.secretName Name of an existing Secret in Kargo's namespace that holds the connection string of an external PostgreSQL database under the key named by `database.external.secretKey`. Cannot be combined with `database.postgres.enabled`.
+    secretName: ""
+    ## @param database.external.secretKey Key within the Secret named by `database.external.secretName` that holds the connection string.
+    secretKey: connectionString
+
 ## @param extraObjects An array describing additional, arbitrary Kubernetes resources to include when rendering this chart. Items in the array may be YAML objects or strings. Either may be templated. Templates will be evaluated against the same set of values as the rest of the chart.
 extraObjects: []
 # - apiVersion: v1
