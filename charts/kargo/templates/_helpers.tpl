@@ -311,6 +311,31 @@ app.kubernetes.io/component: management-controller
 app.kubernetes.io/component: postgres
 {{- end -}}
 
+{{- define "kargo.migrations.labels" -}}
+app.kubernetes.io/component: migrations
+{{- end -}}
+
+{{/*
+kargo.migrations.enabled returns "true" when the migration Job should be
+rendered: migrations are enabled and there is a database to migrate.
+*/}}
+{{- define "kargo.migrations.enabled" -}}
+{{- if and .Values.workloads.install .Values.database.migrations.enabled (or .Values.database.postgres.enabled .Values.database.external.secretName) -}}
+true
+{{- end -}}
+{{- end -}}
+
+{{/*
+kargo.migrations.jobName returns a name for the migration Job that changes
+whenever anything that shapes its pod does. A Job's pod template is immutable,
+so an upgrade that would change it must create a new Job rather than patch
+the old one. Re-running against an already-migrated database is a no-op.
+*/}}
+{{- define "kargo.migrations.jobName" -}}
+{{- $fingerprint := printf "%s|%s|%s" (include "kargo.image" .) (toYaml .Values.database.migrations) (toYaml .Values.database) | sha256sum | trunc 10 -}}
+kargo-migrate-{{ $fingerprint }}
+{{- end -}}
+
 {{/*
 kargo.database.validate fails the render if both the bundled PostgreSQL and an
 external database are configured, since only one can be the database.

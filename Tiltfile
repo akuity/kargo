@@ -87,15 +87,25 @@ k8s_resource(
 # Migrations are applied once at startup and then only on a manual trigger, so
 # that a migration being written is never applied before it is finished. Tilt
 # still watches db/migrations and marks the resource as having pending changes.
+# This runs the same `kargo migrate` subcommand as the chart's migration Job,
+# which values.dev.yaml disables in favor of this resource.
 #
 # Tilt holds a local_resource until no other update is in flight unless it is
 # marked parallel-safe. Without this, migrations wait behind the image builds
-# even though the database is already ready. The script only touches the
+# even though the database is already ready. The command only touches the
 # database, so running it alongside other builds is safe.
 local_resource(
   'db-migrate',
   cmd = 'make db-migrate',
-  deps = ['db/migrations', 'hack/tilt/migrate.sh', 'Makefile', 'go.mod', 'go.sum'],
+  deps = [
+    'db/',
+    'cmd/controlplane/migrate.go',
+    'pkg/database/migrate.go',
+    'pkg/database/config.go',
+    'Makefile',
+    'go.mod',
+    'go.sum',
+  ],
   resource_deps = ['postgres'],
   labels = ['kargo'],
   trigger_mode = TRIGGER_MODE_MANUAL,
