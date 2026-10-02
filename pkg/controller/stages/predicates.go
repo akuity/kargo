@@ -44,7 +44,7 @@ func (s IsControlFlowStage) Generic(event.GenericEvent) bool {
 	return false
 }
 
-// IsControlFlowStage is a predicate that filters out Stages based on whether
+// IsTargetAwareStage is a predicate that filters out Stages based on whether
 // they have targets configured (fleet stages).
 type IsTargetAwareStage bool
 
