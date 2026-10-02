@@ -34,10 +34,9 @@ func (s *State) DeepCopy() State {
 }
 
 // ToJSON marshals the State to JSON.
-func (s State) ToJSON() []byte {
+func (s State) ToJSON() ([]byte, error) {
 	if len(s) == 0 {
-		return nil
+		return nil, nil
 	}
-	b, _ := json.Marshal(s)
-	return b
+	return json.Marshal(s)
 }
