@@ -1,11 +1,18 @@
 package chart
 
 import (
+	"bytes"
+	"fmt"
+	"math/rand"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v3"
+	"helm.sh/helm/v3/pkg/chart"
+	"helm.sh/helm/v3/pkg/repo"
 )
 
 // unmarshalWholeIndex is the reference behavior that versionsFromIndex must
@@ -15,7 +22,7 @@ func unmarshalWholeIndex(t *testing.T, index, chartName string) []string {
 	parsed := struct {
 		Entries map[string][]indexEntry `yaml:"entries"`
 	}{}
-	require.NoError(t, yaml.Unmarshal([]byte(index), &parsed))
+	require.NoError(t, yaml.Unmarshal([]byte(index), &parsed), index)
 	entries, ok := parsed.Entries[chartName]
 	if !ok {
 		return nil
@@ -294,5 +301,91 @@ func Test_versionsFromIndex_errors(t *testing.T) {
 			_, err := versionsFromIndex(strings.NewReader(testCase.index), "fake-chart")
 			require.ErrorContains(t, err, testCase.errContains)
 		})
+	}
+}
+
+func Test_versionsFromIndex_decodesOnlyTheNamedChart(t *testing.T) {
+	// Entries for other charts are skipped without being parsed, so malformed
+	// entries elsewhere in the index do not prevent reading the named chart.
+	const index = `entries:
+  alpha:
+  - version: [9.9.9
+  fake-chart:
+  - version: 1.0.0
+  zulu:
+  - version: [8.8.8
+`
+	versions, err := versionsFromIndex(strings.NewReader(index), "fake-chart")
+	require.NoError(t, err)
+	require.Equal(t, []string{"1.0.0"}, versions)
+
+	const jsonIndex = `{"entries":{"alpha":[{"version":9}],"fake-chart":[{"version":"1.0.0"}],` +
+		`"zulu":[{"version":8}]}}`
+	versions, err = versionsFromIndex(strings.NewReader(jsonIndex), "fake-chart")
+	require.NoError(t, err)
+	require.Equal(t, []string{"1.0.0"}, versions)
+}
+
+func Test_versionsFromIndex_helmWrittenIndices(t *testing.T) {
+	// Metadata that a line-oriented scanner could mistake for index structure.
+	trickyText := []string{
+		"plain", "", " leading space", "trailing space ", "multi\nline\ntext",
+		"entries:", "  other-chart:", "- version: 6.6.6", "\n  fake:\n  - version: 6.6.6\n",
+		"key: value", "# not a comment", "'single'", `"double"`, "tab\there", "ünïcødé",
+		"{flow: map}", "[a, b]", "---", "...", "&anchor *alias", "!!str tagged", "| block",
+		"> folded", "with\n\n\nblank lines", "\r\nwindows\r\n", ":", "a:b", "x # y",
+	}
+	r := rand.New(rand.NewSource(1)) // #nosec G404 -- deterministic test data
+	tricky := func() string { return trickyText[r.Intn(len(trickyText))] + trickyText[r.Intn(len(trickyText))] }
+	dir := t.TempDir()
+	for i := range 40 {
+		index := repo.NewIndexFile()
+		var names []string
+		for range r.Intn(12) + 1 {
+			name := fmt.Sprintf("chart-%d", r.Intn(15))
+			if r.Intn(4) == 0 {
+				name = "fake"
+			}
+			for range r.Intn(6) + 1 {
+				md := &chart.Metadata{
+					APIVersion:  "v2",
+					Name:        name,
+					Version:     fmt.Sprintf("%d.%d.%d", r.Intn(3), r.Intn(10), r.Intn(10)),
+					Description: tricky(),
+					Home:        tricky(),
+					Keywords:    []string{tricky(), tricky()},
+					Annotations: map[string]string{tricky() + "k": tricky()},
+					AppVersion:  tricky(),
+				}
+				if index.MustAdd(md, name+".tgz", "https://example.com", "digest") == nil {
+					names = append(names, name)
+				}
+			}
+		}
+		index.SortEntries()
+		yamlPath := filepath.Join(dir, fmt.Sprintf("%d.yaml", i))
+		require.NoError(t, index.WriteFile(yamlPath, 0o600))
+		jsonPath := filepath.Join(dir, fmt.Sprintf("%d.json", i))
+		require.NoError(t, index.WriteJSONFile(jsonPath, 0o600))
+		for _, path := range []string{yamlPath, jsonPath} {
+			data, err := os.ReadFile(path)
+			require.NoError(t, err)
+			whole := struct {
+				Entries map[string][]indexEntry `yaml:"entries"`
+			}{}
+			require.NoError(t, yaml.Unmarshal(data, &whole))
+			for _, name := range append(names, "chart-99", "fak") {
+				var expected []string
+				if entries, ok := whole.Entries[name]; ok {
+					expected = make([]string, len(entries))
+					for j, entry := range entries {
+						expected[j] = entry.Version
+					}
+				}
+				versions, err := versionsFromIndex(bytes.NewReader(data), name)
+				require.NoError(t, err, "chart %q in\n%s", name, data)
+				require.Equal(t, expected, versions, "chart %q in\n%s", name, data)
+			}
+		}
 	}
 }
