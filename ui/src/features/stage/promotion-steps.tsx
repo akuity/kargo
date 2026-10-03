@@ -124,6 +124,9 @@ export const PromotionSteps = (props: PromotionStepsProps) => {
       <Collapse
         expandIconPosition='end'
         bordered={false}
+        // antd sizes the header text `flex: auto` with no min-width, so a long
+        // step description can't truncate unless the wrapper may shrink.
+        className='[&_.ant-collapse-header-text]:min-w-0'
         items={items}
         activeKey={activeKeys}
         onChange={(keys) => setActiveKeys(typeof keys === 'string' ? [keys] : keys)}
