@@ -163,6 +163,12 @@ func (o *controllerOptions) run(ctx context.Context) error {
 	}
 	defer shutdownTelemetry()
 
+	natsConn, err := connectNATS(ctx, o.Logger)
+	if err != nil {
+		return err
+	}
+	defer natsConn.Close()
+
 	kargoMgr, localClusterClient, stagesReconcilerCfg, err := o.setupKargoManager(
 		ctx,
 		stages.ReconcilerConfigFromEnv(),
