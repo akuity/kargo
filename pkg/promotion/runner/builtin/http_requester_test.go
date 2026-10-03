@@ -137,6 +137,15 @@ func Test_httpRequester_convert(t *testing.T) {
 			},
 		},
 		{
+			name: "outPath is empty string",
+			config: promotion.Config{
+				"outPath": "",
+			},
+			expectedProblems: []string{
+				"outPath: String length must be greater than or equal to 1",
+			},
+		},
+		{
 			name: "invalid pollInterval",
 			config: promotion.Config{
 				"pollInterval": "invalid",
@@ -229,6 +238,8 @@ func Test_httpRequester_convert(t *testing.T) {
 				"insecureSkipTLSVerify": true,
 				"timeout":               "30s",
 				"pollInterval":          "20s",
+				"outPath":               "downloads/report.json",
+				"allowOverwrite":        true,
 				"successExpression":     "response.status == 200",
 				"failureExpression":     "response.status == 404",
 				"proxy":                 "https://proxy.example.com:3000",
@@ -1704,5 +1715,242 @@ func Test_httpRequester_proxy(t *testing.T) {
 		h := &httpRequester{}
 		result, err := h.run(t.Context(), nil, tc.cfg)
 		tc.assertions(t, result, err)
+	}
+}
+
+func Test_httpRequester_run_download(t *testing.T) {
+	testCases := []struct {
+		name    string
+		cfg     builtin.HTTPConfig
+		setup   func(*testing.T, string)
+		handler http.HandlerFunc
+		assert  func(*testing.T, string, promotion.StepResult, error)
+	}{
+		{
+			name: "small download succeeds, file moved, body parsed",
+			cfg: builtin.HTTPConfig{
+				OutPath:           "downloads/answer.json",
+				SuccessExpression: "true",
+				Outputs: []builtin.HTTPOutput{{
+					Name:           "meaning",
+					FromExpression: "response.body.theMeaningOfLife",
+				}},
+			},
+			handler: func(w http.ResponseWriter, _ *http.Request) {
+				w.Header().Set(contentTypeHeader, contentTypeJSON)
+				_, err := w.Write([]byte(`{"theMeaningOfLife": 42}`))
+				require.NoError(t, err)
+			},
+			assert: func(t *testing.T, workDir string, res promotion.StepResult, err error) {
+				require.NoError(t, err)
+				require.Equal(t, kargoapi.PromotionStepStatusSucceeded, res.Status)
+				content, err := os.ReadFile(filepath.Join(workDir, "downloads", "answer.json"))
+				require.NoError(t, err)
+				require.JSONEq(t, `{"theMeaningOfLife": 42}`, string(content))
+				require.Equal(t, float64(42), res.Output["meaning"])
+				// No temp files left behind.
+				entries, err := os.ReadDir(filepath.Join(workDir, "downloads"))
+				require.NoError(t, err)
+				for _, e := range entries {
+					require.NotContains(t, e.Name(), ".tmp")
+				}
+			},
+		},
+		{
+			name: "existing file without allowOverwrite fails terminally before request",
+			cfg: builtin.HTTPConfig{
+				OutPath: "existing.txt",
+			},
+			setup: func(t *testing.T, workDir string) {
+				require.NoError(t, os.WriteFile(
+					filepath.Join(workDir, "existing.txt"), []byte("old"), 0o600,
+				))
+			},
+			handler: func(_ http.ResponseWriter, _ *http.Request) {
+				t.Error("request must not be sent when the file exists and overwrite is disallowed")
+			},
+			assert: func(t *testing.T, _ string, res promotion.StepResult, err error) {
+				require.Error(t, err)
+				var termErr *promotion.TerminalError
+				require.ErrorAs(t, err, &termErr)
+				require.Equal(t, kargoapi.PromotionStepStatusFailed, res.Status)
+			},
+		},
+		{
+			name: "existing file with allowOverwrite is replaced",
+			cfg: builtin.HTTPConfig{
+				OutPath:           "f.txt",
+				AllowOverwrite:    true,
+				SuccessExpression: "true",
+			},
+			setup: func(t *testing.T, workDir string) {
+				require.NoError(t, os.WriteFile(
+					filepath.Join(workDir, "f.txt"), []byte("old"), 0o600,
+				))
+			},
+			handler: func(w http.ResponseWriter, _ *http.Request) {
+				_, err := w.Write([]byte("new"))
+				require.NoError(t, err)
+			},
+			assert: func(t *testing.T, workDir string, res promotion.StepResult, err error) {
+				require.NoError(t, err)
+				require.Equal(t, kargoapi.PromotionStepStatusSucceeded, res.Status)
+				content, err := os.ReadFile(filepath.Join(workDir, "f.txt"))
+				require.NoError(t, err)
+				require.Equal(t, "new", string(content))
+			},
+		},
+		{
+			name: "large body is downloaded but not parsed into response.body",
+			cfg: builtin.HTTPConfig{
+				OutPath:           "big.bin",
+				SuccessExpression: `response.body == {}`,
+				Outputs: []builtin.HTTPOutput{{
+					Name:           "body",
+					FromExpression: "response.body",
+				}},
+			},
+			handler: func(w http.ResponseWriter, _ *http.Request) {
+				w.Header().Set(contentTypeHeader, contentTypeTextPlain)
+				_, err := w.Write(bytes.Repeat([]byte("x"), 3<<20))
+				require.NoError(t, err)
+			},
+			assert: func(t *testing.T, workDir string, res promotion.StepResult, err error) {
+				require.NoError(t, err)
+				require.Equal(t, kargoapi.PromotionStepStatusSucceeded, res.Status)
+				info, err := os.Stat(filepath.Join(workDir, "big.bin"))
+				require.NoError(t, err)
+				require.Equal(t, int64(3<<20), info.Size())
+				require.Equal(t, map[string]any{}, res.Output["body"])
+			},
+		},
+		{
+			name: "oversized response fails terminally",
+			cfg: builtin.HTTPConfig{
+				OutPath: "huge.bin",
+			},
+			handler: func(w http.ResponseWriter, _ *http.Request) {
+				w.Header().Set("Content-Length", "104857601")
+				w.WriteHeader(http.StatusOK)
+			},
+			assert: func(t *testing.T, workDir string, res promotion.StepResult, err error) {
+				require.Error(t, err)
+				var termErr *promotion.TerminalError
+				require.ErrorAs(t, err, &termErr)
+				require.Equal(t, kargoapi.PromotionStepStatusFailed, res.Status)
+				_, statErr := os.Stat(filepath.Join(workDir, "huge.bin"))
+				require.True(t, os.IsNotExist(statErr))
+			},
+		},
+		{
+			name: "failure criteria discards the file",
+			cfg: builtin.HTTPConfig{
+				OutPath:           "f.json",
+				FailureExpression: "true",
+				ErrorExpression:   `"boom"`,
+			},
+			handler: func(w http.ResponseWriter, _ *http.Request) {
+				w.Header().Set(contentTypeHeader, contentTypeJSON)
+				_, err := w.Write([]byte(`{}`))
+				require.NoError(t, err)
+			},
+			assert: func(t *testing.T, workDir string, res promotion.StepResult, err error) {
+				require.Error(t, err)
+				var termErr *promotion.TerminalError
+				require.ErrorAs(t, err, &termErr)
+				require.ErrorContains(t, err, "boom")
+				require.Equal(t, kargoapi.PromotionStepStatusFailed, res.Status)
+				_, statErr := os.Stat(filepath.Join(workDir, "f.json"))
+				require.True(t, os.IsNotExist(statErr))
+			},
+		},
+		{
+			name: "non-2xx without criteria fails retried and discards the file",
+			cfg: builtin.HTTPConfig{
+				OutPath: "f.json",
+			},
+			handler: func(w http.ResponseWriter, _ *http.Request) {
+				w.WriteHeader(http.StatusInternalServerError)
+			},
+			assert: func(t *testing.T, workDir string, res promotion.StepResult, err error) {
+				require.NoError(t, err)
+				require.Equal(t, kargoapi.PromotionStepStatusFailed, res.Status)
+				_, statErr := os.Stat(filepath.Join(workDir, "f.json"))
+				require.True(t, os.IsNotExist(statErr))
+			},
+		},
+		{
+			name: "outputs evaluation failure errors and discards the file",
+			cfg: builtin.HTTPConfig{
+				OutPath:           "f.json",
+				SuccessExpression: "true",
+				Outputs: []builtin.HTTPOutput{{
+					Name:           "bad",
+					FromExpression: "this is not valid expr [",
+				}},
+			},
+			handler: func(w http.ResponseWriter, _ *http.Request) {
+				_, err := w.Write([]byte("ok"))
+				require.NoError(t, err)
+			},
+			assert: func(t *testing.T, workDir string, res promotion.StepResult, err error) {
+				require.Error(t, err)
+				require.Equal(t, kargoapi.PromotionStepStatusErrored, res.Status)
+				_, statErr := os.Stat(filepath.Join(workDir, "f.json"))
+				require.True(t, os.IsNotExist(statErr))
+			},
+		},
+	}
+
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			workDir := t.TempDir()
+			if testCase.setup != nil {
+				testCase.setup(t, workDir)
+			}
+			srv := httptest.NewServer(testCase.handler)
+			t.Cleanup(srv.Close)
+			testCase.cfg.URL = srv.URL
+			stepCtx := &promotion.StepContext{WorkDir: workDir}
+			h := &httpRequester{}
+			res, err := h.run(t.Context(), stepCtx, testCase.cfg)
+			testCase.assert(t, workDir, res, err)
+		})
+	}
+}
+
+func Test_httpRequester_getClient_downloadTimeout(t *testing.T) {
+	testCases := []struct {
+		name        string
+		cfg         builtin.HTTPConfig
+		wantTimeout time.Duration
+	}{
+		{
+			name:        "default timeout without outPath",
+			wantTimeout: 10 * time.Second,
+		},
+		{
+			name: "default timeout with outPath",
+			cfg: builtin.HTTPConfig{
+				OutPath: "f.bin",
+			},
+			wantTimeout: time.Minute,
+		},
+		{
+			name: "explicit timeout wins over download default",
+			cfg: builtin.HTTPConfig{
+				OutPath: "f.bin",
+				Timeout: "5s",
+			},
+			wantTimeout: 5 * time.Second,
+		},
+	}
+	h := &httpRequester{}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			client, err := h.getClient(testCase.cfg)
+			require.NoError(t, err)
+			require.Equal(t, testCase.wantTimeout, client.Timeout)
+		})
 	}
 }
