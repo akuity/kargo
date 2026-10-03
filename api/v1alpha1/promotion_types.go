@@ -303,6 +303,12 @@ type PromotionStep struct {
 	Task *PromotionTaskReference `json:"task,omitempty"`
 	// As is the alias this step can be referred to as.
 	As string `json:"as,omitempty"`
+	// Description is a detail of the step's purpose.
+	//
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:XValidation:message="description must be 256 characters or fewer",rule="self.size() <= 256"
+	Description string `json:"description,omitempty"`
 	// If is an optional expression that, if present, must evaluate to a boolean
 	// value. If the expression evaluates to false, the step will be skipped.
 	// If the expression does not evaluate to a boolean value, the step will be
