@@ -455,6 +455,53 @@ For the full field reference, scheduling syntax, allow/deny precedence, and the
 `Stage` status Kargo publishes for a freeze, see the
 [Promotion Windows](./45-promotion-windows.md) guide.
 
+### Deep Links
+
+A `ProjectConfig` can define links that the UI shows when viewing a `Freight`
+or `Stage` in the `Project`, such as a link to release notes or to a
+monitoring dashboard. `freightLinks` are shown on `Freight` and `stageLinks`
+on `Stage`s.
+
+Each link has the following fields:
+
+| Name | Required | Description |
+|------|----------|-------------|
+| `title` | Y | The label displayed for the link. |
+| `url` | Y | The link's URL. This is a Go [template](https://pkg.go.dev/text/template), with [Sprig](https://masterminds.github.io/sprig/) functions available, that is rendered against the resource being viewed as `.freight` or `.stage`. |
+| `description` | N | A short description displayed alongside the link. |
+| `if` | N | An [expr-lang](https://expr-lang.org/) condition evaluated against the same resource as `freight` or `stage`. The link is shown only when it evaluates to `true`. |
+
+:::note
+
+Unlike most expressions in Kargo, these are not wrapped in `${{ }}`. `url` uses
+Go template syntax (`{{ .stage.metadata.name }}`), and `if` is a bare
+expression (`stage.metadata.name == "prod"`).
+
+:::
+
+```yaml
+apiVersion: kargo.akuity.io/v1alpha1
+kind: ProjectConfig
+metadata:
+  name: kargo-demo
+  namespace: kargo-demo
+spec:
+  freightLinks:
+  - title: Release notes
+    url: https://github.com/example/app/releases/tag/{{ (index .freight.images 0).tag }}
+  stageLinks:
+  - title: Dashboard
+    description: Grafana dashboard for this environment
+    url: https://grafana.example.com/d/app?var-env={{ .stage.metadata.name }}
+  - title: Production runbook
+    url: https://wiki.example.com/runbooks/app
+    if: stage.metadata.name == "prod"
+```
+
+Links can also be defined for every `Project` on
+[`ClusterConfig`](../../40-operator-guide/35-cluster-configuration.md#deep-links).
+Those are shown first, followed by the `Project`'s own links.
+
 ### Message Channels
 
 <span class="tag professional"></span>
