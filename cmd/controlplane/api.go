@@ -8,8 +8,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	k8sevent "github.com/akuity/kargo/pkg/event/kubernetes"
-	"github.com/akuity/kargo/pkg/kubernetes/event"
+	natsevent "github.com/akuity/kargo/pkg/event/nats"
 	"github.com/akuity/kargo/pkg/logging"
 	"github.com/akuity/kargo/pkg/os"
 	"github.com/akuity/kargo/pkg/server"
@@ -88,6 +87,12 @@ func (o *apiOptions) run(ctx context.Context) error {
 
 	serverCfg := config.ServerConfigFromEnv()
 
+	natsConn, err := connectNATS(ctx, o.Logger)
+	if err != nil {
+		return err
+	}
+	defer natsConn.Close()
+
 	restCfg, err := kubernetes.GetRestConfig(ctx, o.KubeConfig)
 	if err != nil {
 		return fmt.Errorf("error getting Kubernetes client REST config: %w", err)
@@ -141,15 +146,7 @@ func (o *apiOptions) run(ctx context.Context) error {
 		)
 	}
 
-	recorder, shutdown := event.NewRecorderWithShutdown(
-		ctx,
-		kubeClient.InternalClient().Scheme(),
-		kubeClient.InternalClient(),
-		"api",
-	)
-	sender := k8sevent.NewEventSenderWithShutdown(
-		recorder, shutdown,
-	)
+	sender := natsevent.NewDefaultingEventSender(natsConn, "api")
 	defer sender.Shutdown()
 
 	srv := server.NewServer(

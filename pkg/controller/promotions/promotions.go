@@ -7,7 +7,9 @@ import (
 	"path/filepath"
 	"time"
 
+	cloudevents "github.com/cloudevents/sdk-go/v2/event"
 	"github.com/kelseyhightower/envconfig"
+	"github.com/nats-io/nats.go"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/trace"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
@@ -15,7 +17,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	toolscache "k8s.io/client-go/tools/cache"
-	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -28,11 +29,10 @@ import (
 	argocd "github.com/akuity/kargo/pkg/controller/argocd/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/controller/metrics"
 	"github.com/akuity/kargo/pkg/event"
-	k8sevent "github.com/akuity/kargo/pkg/event/kubernetes"
+	natsevent "github.com/akuity/kargo/pkg/event/nats"
 	"github.com/akuity/kargo/pkg/indexer"
 	"github.com/akuity/kargo/pkg/kargo"
 	"github.com/akuity/kargo/pkg/kubeclient"
-	libEvent "github.com/akuity/kargo/pkg/kubernetes/event"
 	"github.com/akuity/kargo/pkg/logging"
 	intpredicate "github.com/akuity/kargo/pkg/predicate"
 	"github.com/akuity/kargo/pkg/promotion"
@@ -107,6 +107,7 @@ func SetupReconcilerWithManager(
 	argocdMgr manager.Manager,
 	promoEngine promotion.Engine,
 	cfg ReconcilerConfig,
+	natsClient *nats.Conn,
 ) error {
 	// Index running Promotions by Argo CD Applications
 	if err := kargoMgr.GetFieldIndexer().IndexField(
@@ -153,9 +154,7 @@ func SetupReconcilerWithManager(
 	reconciler := newReconciler(
 		kargoMgr.GetClient(),
 		kargoMgr.GetAPIReader(),
-		k8sevent.NewEventSender(
-			libEvent.NewRecorder(ctx, kargoMgr.GetScheme(), kargoMgr.GetClient(), cfg.Name()),
-		),
+		natsevent.NewDefaultingEventSender(natsClient, cfg.Name()),
 		promoEngine,
 		cfg,
 	)
@@ -529,20 +528,20 @@ func (r *reconciler) Reconcile(
 			msg += fmt.Sprintf(": %s", newStatus.Message)
 		}
 
-		var evt event.Meta
+		var evt cloudevents.Event
+		var sendErr error
 		actor := api.FormatEventControllerActor(r.cfg.Name())
 		switch newStatus.Phase {
 		case kargoapi.PromotionPhaseSucceeded:
-			e := event.NewPromotionSucceeded(
+			evt, sendErr = event.NewPromotionSucceeded(
 				msg,
 				actor,
 				promo,
 				freight,
+				stage.Spec.Verification != nil,
 			)
-			e.VerificationPending = ptr.To(stage.Spec.Verification != nil)
-			evt = e
 		case kargoapi.PromotionPhaseFailed:
-			evt = event.NewPromotionFailed(
+			evt, sendErr = event.NewPromotionFailed(
 				msg,
 				actor,
 				promo,
@@ -550,7 +549,7 @@ func (r *reconciler) Reconcile(
 			)
 
 		case kargoapi.PromotionPhaseErrored:
-			evt = event.NewPromotionErrored(
+			evt, sendErr = event.NewPromotionErrored(
 				msg,
 				actor,
 				promo,
@@ -558,7 +557,10 @@ func (r *reconciler) Reconcile(
 			)
 		}
 
-		if sendErr := r.sender.Send(ctx, evt); sendErr != nil {
+		if sendErr == nil {
+			sendErr = r.sender.Send(ctx, event.NewEventsSubjectPrefix(event.KindOf(evt)), evt)
+		}
+		if sendErr != nil {
 			logger.Error(sendErr, "error sending promotion event")
 		}
 	}
@@ -763,9 +765,15 @@ func (r *reconciler) terminatePromotion(
 	// Best-effort cleanup of working directory.
 	r.cleanupWorkDirFn(ctx, promo.UID)
 
-	evt := event.NewPromotionAborted(newStatus.Message, actor, promo, freight)
-
-	if err := r.sender.Send(ctx, evt); err != nil {
+	evt, err := event.NewPromotionAborted(newStatus.Message, actor, promo, freight)
+	if err == nil {
+		err = r.sender.Send(
+			ctx,
+			event.NewEventsSubjectPrefix(event.KindOf(evt)),
+			evt,
+		)
+	}
+	if err != nil {
 		logger.Error(err, "error sending Promotion aborted event")
 	}
 

@@ -97,6 +97,12 @@ func (o *managementControllerOptions) run(ctx context.Context) error {
 	}
 	defer shutdownTelemetry()
 
+	natsConn, err := connectNATS(ctx, o.Logger)
+	if err != nil {
+		return err
+	}
+	defer natsConn.Close()
+
 	kargoMgr, err := o.setupManager(ctx)
 	if err != nil {
 		return fmt.Errorf("error initializing Kargo controller manager: %w", err)

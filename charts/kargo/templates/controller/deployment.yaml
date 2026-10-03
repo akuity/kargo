@@ -71,6 +71,7 @@ spec:
               containerName: controller
               divisor: "1"
               resource: {{ include "kargo.selectCpuResourceField" (dict "resources" .Values.controller.resources) }}
+        {{- include "kargo.nats.env" . | nindent 8 }}
         {{- with (concat .Values.global.env .Values.controller.env) }}
         {{- tpl (toYaml .) $ | nindent 8 }}
         {{- end }}
@@ -87,6 +88,7 @@ spec:
           protocol: TCP
         {{- end }}
         volumeMounts:
+        {{- include "kargo.nats.volumeMount" . | nindent 8 }}
         - mountPath: /tmp
           name: tmp-data
         {{- if or $kc $argocdKc }}
@@ -125,6 +127,7 @@ spec:
       {{- end }}
       {{- end }}
       volumes:
+      {{- include "kargo.nats.volume" . | nindent 6 }}
       - name: tmp-data
         emptyDir: {}
       {{- if or $kc $argocdKc }}

@@ -12,7 +12,6 @@ import (
 	"github.com/stretchr/testify/require"
 	authnv1 "k8s.io/api/authentication/v1"
 	authv1 "k8s.io/api/authorization/v1"
-	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -24,8 +23,7 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/event"
-	k8sevent "github.com/akuity/kargo/pkg/event/kubernetes"
-	fakeevent "github.com/akuity/kargo/pkg/kubernetes/event/fake"
+	fakeevent "github.com/akuity/kargo/pkg/event/fake"
 	"github.com/akuity/kargo/pkg/server/kubernetes"
 	"github.com/akuity/kargo/pkg/server/user"
 )
@@ -293,11 +291,6 @@ func Test_server_createResources(t *testing.T) {
 	)
 }
 
-type errSender struct{ err error }
-
-func (s *errSender) Send(_ context.Context, _ event.Meta) error { return s.err }
-func (s *errSender) Shutdown()                                  {}
-
 func Test_server_createResources_freightEvent(t *testing.T) {
 	testFreight := &kargoapi.Freight{
 		TypeMeta: metav1.TypeMeta{
@@ -310,9 +303,9 @@ func Test_server_createResources_freightEvent(t *testing.T) {
 		},
 	}
 
-	// recorder is reassigned by each serverSetup before assertions reads it.
+	// sender is reassigned by each serverSetup before assertions reads it.
 	// Test cases are run sequentially so this is safe.
-	var recorder *fakeevent.EventRecorder
+	var sender *fakeevent.Sender
 
 	testRESTEndpoint(
 		t, nil,
@@ -321,8 +314,8 @@ func Test_server_createResources_freightEvent(t *testing.T) {
 			{
 				name: "non-Freight resource does not send event",
 				serverSetup: func(_ *testing.T, s *server) {
-					recorder = fakeevent.NewEventRecorder(1)
-					s.sender = k8sevent.NewEventSender(recorder)
+					sender = &fakeevent.Sender{}
+					s.sender = sender
 				},
 				body: mustJSONBody(&kargoapi.Warehouse{
 					TypeMeta: metav1.TypeMeta{
@@ -336,7 +329,7 @@ func Test_server_createResources_freightEvent(t *testing.T) {
 				}),
 				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
 					require.Equal(t, http.StatusCreated, w.Code)
-					require.Empty(t, recorder.Events)
+					require.Empty(t, sender.Sent())
 				},
 			},
 			{
@@ -349,23 +342,28 @@ func Test_server_createResources_freightEvent(t *testing.T) {
 			{
 				name: "Freight with sender sends FreightCreated event",
 				serverSetup: func(_ *testing.T, s *server) {
-					recorder = fakeevent.NewEventRecorder(1)
-					s.sender = k8sevent.NewEventSender(recorder)
+					sender = &fakeevent.Sender{}
+					s.sender = sender
 				},
 				body: mustJSONBody(testFreight),
 				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
 					require.Equal(t, http.StatusCreated, w.Code)
-					require.Len(t, recorder.Events, 1)
-					evt := <-recorder.Events
-					require.Equal(t, corev1.EventTypeNormal, evt.EventType)
-					require.Equal(t, string(kargoapi.EventTypeFreightCreated), evt.Reason)
+					evt := &event.FreightCreated{}
+					requireSingleEvent(
+						t,
+						sender,
+						kargoapi.EventTypeFreightCreated,
+						"Freight",
+						evt,
+					)
 					require.Equal(t, "Freight created", evt.Message)
+					require.Equal(t, testFreight.Name, evt.Name)
 				},
 			},
 			{
 				name: "Freight with sender error still succeeds",
 				serverSetup: func(_ *testing.T, s *server) {
-					s.sender = &errSender{err: errors.New("send failed")}
+					s.sender = &fakeevent.Sender{SendErr: errors.New("send failed")}
 				},
 				body: mustJSONBody(testFreight),
 				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
@@ -375,8 +373,8 @@ func Test_server_createResources_freightEvent(t *testing.T) {
 			{
 				name: "Freight with user context includes actor in event message",
 				serverSetup: func(_ *testing.T, s *server) {
-					recorder = fakeevent.NewEventRecorder(1)
-					s.sender = k8sevent.NewEventSender(recorder)
+					sender = &fakeevent.Sender{}
+					s.sender = sender
 				},
 				ctxSetup: func(ctx context.Context) context.Context {
 					return user.ContextWithInfo(ctx, user.Info{IsAdmin: true})
@@ -384,10 +382,17 @@ func Test_server_createResources_freightEvent(t *testing.T) {
 				body: mustJSONBody(testFreight),
 				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
 					require.Equal(t, http.StatusCreated, w.Code)
-					require.Len(t, recorder.Events, 1)
-					evt := <-recorder.Events
-					require.Equal(t, string(kargoapi.EventTypeFreightCreated), evt.Reason)
+					evt := &event.FreightCreated{}
+					requireSingleEvent(
+						t,
+						sender,
+						kargoapi.EventTypeFreightCreated,
+						"Freight",
+						evt,
+					)
 					require.Contains(t, evt.Message, kargoapi.EventActorAdmin)
+					require.NotNil(t, evt.Actor)
+					require.Equal(t, kargoapi.EventActorAdmin, *evt.Actor)
 				},
 			},
 		},

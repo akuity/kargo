@@ -9,7 +9,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -24,9 +23,9 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/conditions"
 	"github.com/akuity/kargo/pkg/controller"
-	k8sevent "github.com/akuity/kargo/pkg/event/kubernetes"
+	kargoEvent "github.com/akuity/kargo/pkg/event"
+	fakeevent "github.com/akuity/kargo/pkg/event/fake"
 	"github.com/akuity/kargo/pkg/indexer"
-	fakeevent "github.com/akuity/kargo/pkg/kubernetes/event/fake"
 )
 
 func TestControlFlowStageReconciler_Reconcile(t *testing.T) {
@@ -342,7 +341,7 @@ func TestControlFlowStageReconciler_Reconcile(t *testing.T) {
 
 			r := &ControlFlowStageReconciler{
 				client:      c,
-				eventSender: k8sevent.NewEventSender(fakeevent.NewEventRecorder(10)),
+				eventSender: &fakeevent.Sender{},
 				shardPredicate: controller.ResponsibleFor[kargoapi.Stage]{
 					IsDefaultController: false,
 					ShardName:           "test-shard",
@@ -668,7 +667,7 @@ func TestControlFlowStageReconciler_reconcile(t *testing.T) {
 
 			r := &ControlFlowStageReconciler{
 				client:      c,
-				eventSender: k8sevent.NewEventSender(fakeevent.NewEventRecorder(10)),
+				eventSender: &fakeevent.Sender{},
 				shardPredicate: controller.ResponsibleFor[kargoapi.Stage]{
 					IsDefaultController: false,
 					ShardName:           "test-shard",
@@ -795,7 +794,7 @@ func TestControlFlowStageReconciler_markFreightVerifiedForStage(t *testing.T) {
 		startTime   time.Time
 		finishTime  time.Time
 		interceptor interceptor.Funcs
-		assertions  func(*testing.T, client.Client, *fakeevent.EventRecorder, error)
+		assertions  func(*testing.T, client.Client, *fakeevent.Sender, error)
 	}{
 		{
 			name: "no freight to verify",
@@ -806,9 +805,9 @@ func TestControlFlowStageReconciler_markFreightVerifiedForStage(t *testing.T) {
 				},
 			},
 			freight: nil,
-			assertions: func(t *testing.T, _ client.Client, recorder *fakeevent.EventRecorder, err error) {
+			assertions: func(t *testing.T, _ client.Client, recorder *fakeevent.Sender, err error) {
 				require.NoError(t, err)
-				assert.Len(t, recorder.Events, 0)
+				assert.Len(t, recorder.Sent(), 0)
 			},
 		},
 		{
@@ -832,9 +831,9 @@ func TestControlFlowStageReconciler_markFreightVerifiedForStage(t *testing.T) {
 					},
 				},
 			},
-			assertions: func(t *testing.T, _ client.Client, recorder *fakeevent.EventRecorder, err error) {
+			assertions: func(t *testing.T, _ client.Client, recorder *fakeevent.Sender, err error) {
 				require.NoError(t, err)
-				assert.Len(t, recorder.Events, 0)
+				assert.Len(t, recorder.Sent(), 0)
 			},
 		},
 		{
@@ -860,9 +859,9 @@ func TestControlFlowStageReconciler_markFreightVerifiedForStage(t *testing.T) {
 				},
 			},
 			finishTime: justNow,
-			assertions: func(t *testing.T, c client.Client, recorder *fakeevent.EventRecorder, err error) {
+			assertions: func(t *testing.T, c client.Client, recorder *fakeevent.Sender, err error) {
 				require.NoError(t, err)
-				assert.Len(t, recorder.Events, 2)
+				assert.Len(t, recorder.Sent(), 2)
 
 				freight1 := &kargoapi.Freight{}
 				require.NoError(t, c.Get(t.Context(), types.NamespacedName{
@@ -911,26 +910,50 @@ func TestControlFlowStageReconciler_markFreightVerifiedForStage(t *testing.T) {
 			},
 			startTime:  oneMinuteAgo,
 			finishTime: justNow,
-			assertions: func(t *testing.T, _ client.Client, recorder *fakeevent.EventRecorder, err error) {
+			assertions: func(t *testing.T, _ client.Client, recorder *fakeevent.Sender, err error) {
 				require.NoError(t, err)
-				require.Len(t, recorder.Events, 1)
+				require.Len(t, recorder.Sent(), 1)
 
-				event := <-recorder.Events
+				sent := recorder.Sent()[0]
+				assert.Equal(
+					t,
+					string(kargoapi.EventTypeFreightVerificationSucceeded),
+					sent.Type(),
+				)
+				assert.Equal(t, "Freight", kargoEvent.KindOf(sent))
+				assert.Equal(
+					t,
+					kargoEvent.NewEventsSubjectPrefix("Freight")+"."+sent.Type(),
+					sent.Subject(),
+				)
 
-				assert.Equal(t, corev1.EventTypeNormal, event.EventType)
-				assert.Equal(t, string(kargoapi.EventTypeFreightVerificationSucceeded), event.Reason)
-				assert.Equal(t, "Freight verification succeeded", event.Message)
-
-				assert.Equal(t, map[string]string{
-					kargoapi.AnnotationKeyEventActor:                  "controller:stage-controller",
-					kargoapi.AnnotationKeyEventProject:                "default",
-					kargoapi.AnnotationKeyEventStageName:              "test-stage",
-					kargoapi.AnnotationKeyEventFreightAlias:           "fake-alias",
-					kargoapi.AnnotationKeyEventFreightName:            "freight-1",
-					kargoapi.AnnotationKeyEventFreightCreateTime:      oneHourAgo.Format(time.RFC3339),
-					kargoapi.AnnotationKeyEventVerificationStartTime:  oneMinuteAgo.Format(time.RFC3339),
-					kargoapi.AnnotationKeyEventVerificationFinishTime: justNow.Format(time.RFC3339),
-				}, event.Annotations)
+				var data kargoEvent.FreightVerificationSucceeded
+				require.NoError(t, sent.DataAs(&data))
+				assert.Equal(t, "Freight verification succeeded", data.Message)
+				require.NotNil(t, data.Actor)
+				assert.Equal(t, "controller:stage-controller", *data.Actor)
+				assert.Equal(t, "default", data.Project)
+				assert.Equal(t, "test-stage", data.StageName)
+				require.NotNil(t, data.Alias)
+				assert.Equal(t, "fake-alias", *data.Alias)
+				assert.Equal(t, "freight-1", data.Name)
+				assert.Equal(
+					t,
+					oneHourAgo.Format(time.RFC3339),
+					data.CreateTime.Format(time.RFC3339),
+				)
+				require.NotNil(t, data.StartTime)
+				assert.Equal(
+					t,
+					oneMinuteAgo.Format(time.RFC3339),
+					data.StartTime.Format(time.RFC3339),
+				)
+				require.NotNil(t, data.FinishTime)
+				assert.Equal(
+					t,
+					justNow.Format(time.RFC3339),
+					data.FinishTime.Format(time.RFC3339),
+				)
 			},
 		},
 		{
@@ -988,10 +1011,10 @@ func TestControlFlowStageReconciler_markFreightVerifiedForStage(t *testing.T) {
 					}
 				},
 			},
-			assertions: func(t *testing.T, c client.Client, recorder *fakeevent.EventRecorder, err error) {
+			assertions: func(t *testing.T, c client.Client, recorder *fakeevent.Sender, err error) {
 				require.ErrorContains(t, err, "failed to verify 1 Freight")
 
-				assert.Len(t, recorder.Events, 2)
+				assert.Len(t, recorder.Sent(), 2)
 
 				freight1 := &kargoapi.Freight{}
 				require.NoError(t, c.Get(t.Context(), types.NamespacedName{
@@ -1032,11 +1055,11 @@ func TestControlFlowStageReconciler_markFreightVerifiedForStage(t *testing.T) {
 				WithStatusSubresource(&kargoapi.Freight{}).
 				WithInterceptorFuncs(tt.interceptor).
 				Build()
-			recorder := fakeevent.NewEventRecorder(10)
+			recorder := &fakeevent.Sender{}
 
 			r := &ControlFlowStageReconciler{
 				client:      c,
-				eventSender: k8sevent.NewEventSender(recorder),
+				eventSender: recorder,
 			}
 
 			_, err := r.markFreightVerifiedForStage(t.Context(), tt.stage, tt.freight, tt.startTime, tt.finishTime)
