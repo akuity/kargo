@@ -76,10 +76,18 @@ func (t *trustedProxies) Decode(value string) error {
 		prefix, err := netip.ParsePrefix(item)
 		if err != nil {
 			addr, addrErr := netip.ParseAddr(item)
-			if addrErr != nil {
+			if addrErr != nil || addr.Zone() != "" {
 				return fmt.Errorf("invalid trusted proxy %q: expected an IP address or CIDR", item)
 			}
 			prefix = netip.PrefixFrom(addr, addr.BitLen())
+		}
+		// Addresses are compared unmapped, so an IPv4-mapped entry has to be
+		// unmapped too or it would never match.
+		if addr := prefix.Addr(); addr.Is4In6() {
+			if prefix.Bits() < 96 {
+				return fmt.Errorf("invalid trusted proxy %q: prefix is wider than the IPv4-mapped range", item)
+			}
+			prefix = netip.PrefixFrom(addr.Unmap(), prefix.Bits()-96)
 		}
 		prefixes = append(prefixes, prefix.Masked())
 	}
@@ -88,12 +96,26 @@ func (t *trustedProxies) Decode(value string) error {
 }
 
 func (t trustedProxies) contains(addr netip.Addr) bool {
+	// A prefix never contains a zoned address.
+	addr = addr.WithZone("")
 	for _, prefix := range t {
 		if prefix.Contains(addr) {
 			return true
 		}
 	}
 	return false
+}
+
+// parseForwardedAddr parses an address as it may appear in a forwarding header:
+// bare, bracketed, or followed by a port, which some proxies append.
+func parseForwardedAddr(value string) (netip.Addr, bool) {
+	value = strings.TrimSpace(value)
+	if addrPort, err := netip.ParseAddrPort(value); err == nil {
+		return addrPort.Addr().Unmap(), true
+	}
+	value = strings.TrimSuffix(strings.TrimPrefix(value, "["), "]")
+	addr, err := netip.ParseAddr(value)
+	return addr.Unmap(), err == nil
 }
 
 // sourceIP returns the address the request came from. That is the peer on the
@@ -113,18 +135,20 @@ func (c loggingConfig) sourceIP(r *http.Request) string {
 		return source.String()
 	}
 	if c.ClientIPHeader != "" {
-		addr, err := netip.ParseAddr(strings.TrimSpace(r.Header.Get(c.ClientIPHeader)))
-		if err == nil {
-			return addr.Unmap().String()
+		if addr, ok := parseForwardedAddr(r.Header.Get(c.ClientIPHeader)); ok {
+			return addr.String()
 		}
 	}
 	forwarded := strings.Split(strings.Join(r.Header.Values("X-Forwarded-For"), ","), ",")
 	for i := len(forwarded) - 1; i >= 0; i-- {
-		addr, err := netip.ParseAddr(strings.TrimSpace(forwarded[i]))
-		if err != nil {
+		if strings.TrimSpace(forwarded[i]) == "" {
+			continue
+		}
+		addr, ok := parseForwardedAddr(forwarded[i])
+		if !ok {
 			break
 		}
-		source = addr.Unmap()
+		source = addr
 		if !c.TrustedProxies.contains(source) {
 			break
 		}
@@ -136,13 +160,14 @@ func loggingMiddleware(cfg loggingConfig) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		start := time.Now()
 
+		// Taken on the way in and used for the line recorded below, so that line
+		// does not depend on what anything within does to the request's context.
+		ctx := c.Request.Context()
+		logger := logging.LoggerFromContext(ctx)
 		if cfg.SourceIPEnabled {
-			// Bound to the request's logger on the way in, so that everything
-			// logged on the request's behalf says where it came from, and not
-			// only the line recorded below.
-			ctx := c.Request.Context()
-			logger := logging.LoggerFromContext(ctx).
-				WithValues("sourceIP", cfg.sourceIP(c.Request))
+			// Bound to the request's logger, so that everything logged on the
+			// request's behalf says where it came from.
+			logger = logger.WithValues("sourceIP", cfg.sourceIP(c.Request))
 			// As received, and so only as trustworthy as whatever sent it.
 			if forwarded := c.Request.Header.Values("X-Forwarded-For"); len(forwarded) > 0 {
 				logger = logger.WithValues("forwardedFor", strings.Join(forwarded, ", "))
@@ -162,7 +187,7 @@ func loggingMiddleware(cfg loggingConfig) gin.HandlerFunc {
 		// Without stack traces, because this middleware sits above every handler
 		// and every other middleware, so a trace from here describes only the path
 		// through Gin and reveals nothing about what went wrong.
-		logger := logging.LoggerFromContext(c.Request.Context()).
+		logger = logger.
 			WithoutStackTraces().
 			WithValues(
 				"method", c.Request.Method,

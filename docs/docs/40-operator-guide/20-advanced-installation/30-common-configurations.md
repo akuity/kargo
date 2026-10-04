@@ -242,9 +242,9 @@ API server.
 
 ### API Request Logs
 
-The API server writes one log line per request, naming the method, path,
-status, duration, and the actor the request was authenticated as. Server errors
-are logged at `ERROR` level and refused requests (`401` and `403`) at `INFO`
+The API server writes one log line per REST API request, naming the method,
+path, status, duration, and the actor the request was authenticated as. Server
+errors are logged at `ERROR` level and refused requests (`401` and `403`) at `INFO`
 level. Everything else is logged at `DEBUG` level, so with the default
 `api.logLevel` of `INFO`, routine requests are not logged.
 

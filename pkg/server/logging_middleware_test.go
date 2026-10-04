@@ -199,6 +199,23 @@ func TestLoggingMiddleware(t *testing.T) {
 			},
 		},
 		{
+			name:  "source IP survives the request's logger being replaced",
+			level: zapcore.DebugLevel,
+			cfg:   loggingConfig{SourceIPEnabled: true},
+			handler: func(c *gin.Context) {
+				c.Request = c.Request.WithContext(logging.ContextWithLogger(
+					c.Request.Context(),
+					logging.Wrap(zap.NewNop()),
+				))
+				c.Status(http.StatusOK)
+			},
+			expectedStatus: http.StatusOK,
+			assertions: func(t *testing.T, entries []observer.LoggedEntry) {
+				require.Len(t, entries, 1)
+				require.Equal(t, "192.0.2.1", entries[0].ContextMap()["sourceIP"])
+			},
+		},
+		{
 			name:           "forwarded chain is recorded as received",
 			level:          zapcore.DebugLevel,
 			cfg:            loggingConfig{SourceIPEnabled: true},
@@ -355,6 +372,29 @@ func TestLoggingConfig_sourceIP(t *testing.T) {
 			expected:   "10.0.0.2",
 		},
 		{
+			name:       "forwarded entries with ports, brackets, and gaps",
+			cfg:        loggingConfig{TrustedProxies: trusted},
+			remoteAddr: "10.0.0.1:4321",
+			headers:    http.Header{"X-Forwarded-For": {"203.0.113.7:5678, [10.0.0.3], 10.0.0.2:80, "}},
+			expected:   "203.0.113.7",
+		},
+		{
+			name:       "bracketed IPv6 forwarded entry with port",
+			cfg:        loggingConfig{TrustedProxies: trusted},
+			remoteAddr: "10.0.0.1:4321",
+			headers:    http.Header{"X-Forwarded-For": {"[2001:db8::7]:443"}},
+			expected:   "2001:db8::7",
+		},
+		{
+			name: "zoned peer matches a trusted prefix",
+			cfg: loggingConfig{
+				TrustedProxies: trustedProxies{netip.MustParsePrefix("fe80::/10")},
+			},
+			remoteAddr: "[fe80::1%eth0]:4321",
+			headers:    http.Header{"X-Forwarded-For": {"203.0.113.7"}},
+			expected:   "203.0.113.7",
+		},
+		{
 			name:       "client IP header from a trusted peer wins",
 			cfg:        loggingConfig{TrustedProxies: trusted, ClientIPHeader: "CF-Connecting-IP"},
 			remoteAddr: "10.0.0.1:4321",
@@ -382,6 +422,52 @@ func TestLoggingConfig_sourceIP(t *testing.T) {
 			req.RemoteAddr = testCase.remoteAddr
 			req.Header = testCase.headers
 			require.Equal(t, testCase.expected, testCase.cfg.sourceIP(req))
+		})
+	}
+}
+
+func TestTrustedProxies_Decode(t *testing.T) {
+	testCases := []struct {
+		name     string
+		value    string
+		expected trustedProxies
+		errors   bool
+	}{
+		{name: "empty", value: ""},
+		{name: "only separators", value: " , ,"},
+		{
+			name:  "addresses and CIDRs",
+			value: "10.0.0.5/8, 192.168.1.5,2001:db8::/32,",
+			expected: trustedProxies{
+				netip.MustParsePrefix("10.0.0.0/8"),
+				netip.MustParsePrefix("192.168.1.5/32"),
+				netip.MustParsePrefix("2001:db8::/32"),
+			},
+		},
+		{
+			name:  "IPv4-mapped entries are unmapped",
+			value: "::ffff:10.0.0.0/104,::ffff:192.168.1.5",
+			expected: trustedProxies{
+				netip.MustParsePrefix("10.0.0.0/8"),
+				netip.MustParsePrefix("192.168.1.5/32"),
+			},
+		},
+		{name: "IPv4-mapped prefix too wide", value: "::ffff:0.0.0.0/64", errors: true},
+		{name: "zoned address", value: "fe80::1%eth0", errors: true},
+		{name: "zoned CIDR", value: "fe80::1%eth0/64", errors: true},
+		{name: "hostname", value: "proxy.example.com", errors: true},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+			var proxies trustedProxies
+			err := proxies.Decode(testCase.value)
+			if testCase.errors {
+				require.Error(t, err)
+				return
+			}
+			require.NoError(t, err)
+			require.Equal(t, testCase.expected, proxies)
 		})
 	}
 }
