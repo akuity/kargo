@@ -185,9 +185,9 @@ func loggingMiddleware(cfg loggingConfig) gin.HandlerFunc {
 			}
 			if cfg.AllEnabled {
 				logger.Info("handled request")
-				return
+			} else {
+				logger.Debug("handled request")
 			}
-			logger.Debug("handled request")
 			return
 		}
 		if reported == nil {
