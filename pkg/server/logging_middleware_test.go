@@ -4,6 +4,7 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"net/netip"
 	"testing"
 
 	"github.com/gin-gonic/gin"
@@ -26,6 +27,8 @@ func TestLoggingMiddleware(t *testing.T) {
 		// level is the level the logger is configured with, so that what a given
 		// LOG_LEVEL suppresses is observable.
 		level          zapcore.Level
+		cfg            loggingConfig
+		headers        map[string]string
 		handler        gin.HandlerFunc
 		expectedStatus int
 		assertions     func(t *testing.T, entries []observer.LoggedEntry)
@@ -140,6 +143,59 @@ func TestLoggingMiddleware(t *testing.T) {
 				require.EqualValues(t, http.StatusInternalServerError, fields["status"])
 			},
 		},
+		{
+			name:           "routine request is recorded at info level when enabled",
+			level:          zapcore.InfoLevel,
+			cfg:            loggingConfig{AllEnabled: true},
+			handler:        func(c *gin.Context) { c.Status(http.StatusOK) },
+			expectedStatus: http.StatusOK,
+			assertions: func(t *testing.T, entries []observer.LoggedEntry) {
+				require.Len(t, entries, 1)
+				require.Equal(t, zapcore.InfoLevel, entries[0].Level)
+				require.Equal(t, "handled request", entries[0].Message)
+			},
+		},
+		{
+			name:           "source IP is not recorded by default",
+			level:          zapcore.DebugLevel,
+			headers:        map[string]string{"X-Forwarded-For": "203.0.113.7"},
+			handler:        func(c *gin.Context) { c.Status(http.StatusOK) },
+			expectedStatus: http.StatusOK,
+			assertions: func(t *testing.T, entries []observer.LoggedEntry) {
+				require.Len(t, entries, 1)
+				fields := entries[0].ContextMap()
+				require.NotContains(t, fields, "sourceIP")
+				require.NotContains(t, fields, "forwardedFor")
+			},
+		},
+		{
+			name:           "source IP is recorded when enabled",
+			level:          zapcore.DebugLevel,
+			cfg:            loggingConfig{SourceIPEnabled: true},
+			handler:        func(c *gin.Context) { c.Status(http.StatusOK) },
+			expectedStatus: http.StatusOK,
+			assertions: func(t *testing.T, entries []observer.LoggedEntry) {
+				require.Len(t, entries, 1)
+				fields := entries[0].ContextMap()
+				// The address httptest gives every request.
+				require.Equal(t, "192.0.2.1", fields["sourceIP"])
+				require.NotContains(t, fields, "forwardedFor")
+			},
+		},
+		{
+			name:           "forwarded chain is recorded as received",
+			level:          zapcore.DebugLevel,
+			cfg:            loggingConfig{SourceIPEnabled: true},
+			headers:        map[string]string{"X-Forwarded-For": "203.0.113.7, 10.0.0.1"},
+			handler:        func(c *gin.Context) { c.Status(http.StatusOK) },
+			expectedStatus: http.StatusOK,
+			assertions: func(t *testing.T, entries []observer.LoggedEntry) {
+				require.Len(t, entries, 1)
+				fields := entries[0].ContextMap()
+				require.Equal(t, "192.0.2.1", fields["sourceIP"])
+				require.Equal(t, "203.0.113.7, 10.0.0.1", fields["forwardedFor"])
+			},
+		},
 	}
 
 	for _, testCase := range testCases {
@@ -157,15 +213,159 @@ func TestLoggingMiddleware(t *testing.T) {
 				)
 				c.Next()
 			})
-			router.Use(LoggingMiddleware())
+			router.Use(loggingMiddleware(testCase.cfg))
 			router.Use(s.handleError)
 			router.GET("/", testCase.handler)
 
 			w := httptest.NewRecorder()
-			router.ServeHTTP(w, httptest.NewRequest(http.MethodGet, "/", nil))
+			req := httptest.NewRequest(http.MethodGet, "/", nil)
+			for k, v := range testCase.headers {
+				req.Header.Set(k, v)
+			}
+			router.ServeHTTP(w, req)
 
 			require.Equal(t, testCase.expectedStatus, w.Code)
 			testCase.assertions(t, recorded.All())
+		})
+	}
+}
+
+func TestLoggingConfigFromEnv(t *testing.T) {
+	t.Run("defaults", func(t *testing.T) {
+		require.Equal(t, loggingConfig{}, loggingConfigFromEnv())
+	})
+
+	t.Run("everything set", func(t *testing.T) {
+		t.Setenv("REQUEST_LOG_ALL_ENABLED", "true")
+		t.Setenv("REQUEST_LOG_SOURCE_IP_ENABLED", "true")
+		t.Setenv("REQUEST_LOG_TRUSTED_PROXIES", "10.0.0.0/8, 192.168.1.5")
+		t.Setenv("REQUEST_LOG_CLIENT_IP_HEADER", "CF-Connecting-IP")
+		require.Equal(
+			t,
+			loggingConfig{
+				AllEnabled:      true,
+				SourceIPEnabled: true,
+				TrustedProxies: trustedProxies{
+					netip.MustParsePrefix("10.0.0.0/8"),
+					netip.MustParsePrefix("192.168.1.5/32"),
+				},
+				ClientIPHeader: "CF-Connecting-IP",
+			},
+			loggingConfigFromEnv(),
+		)
+	})
+
+	t.Run("invalid trusted proxy", func(t *testing.T) {
+		t.Setenv("REQUEST_LOG_TRUSTED_PROXIES", "not-an-address")
+		require.Panics(t, func() { loggingConfigFromEnv() })
+	})
+}
+
+func TestLoggingConfig_sourceIP(t *testing.T) {
+	trusted := trustedProxies{
+		netip.MustParsePrefix("10.0.0.0/8"),
+		netip.MustParsePrefix("127.0.0.1/32"),
+	}
+	testCases := []struct {
+		name       string
+		cfg        loggingConfig
+		remoteAddr string
+		headers    http.Header
+		expected   string
+	}{
+		{
+			name:       "direct peer",
+			remoteAddr: "203.0.113.7:4321",
+			expected:   "203.0.113.7",
+		},
+		{
+			name:       "IPv6 peer",
+			remoteAddr: "[2001:db8::1]:4321",
+			expected:   "2001:db8::1",
+		},
+		{
+			name:       "IPv4-mapped peer is unmapped",
+			remoteAddr: "[::ffff:203.0.113.7]:4321",
+			expected:   "203.0.113.7",
+		},
+		{
+			name:       "unparseable peer is recorded as is",
+			remoteAddr: "@",
+			expected:   "@",
+		},
+		{
+			name:       "headers from an untrusted peer are ignored",
+			cfg:        loggingConfig{TrustedProxies: trusted, ClientIPHeader: "X-Real-IP"},
+			remoteAddr: "203.0.113.7:4321",
+			headers: http.Header{
+				"X-Forwarded-For": {"198.51.100.1"},
+				"X-Real-Ip":       {"198.51.100.2"},
+			},
+			expected: "203.0.113.7",
+		},
+		{
+			name:       "trusted peer without headers",
+			cfg:        loggingConfig{TrustedProxies: trusted},
+			remoteAddr: "10.0.0.1:4321",
+			expected:   "10.0.0.1",
+		},
+		{
+			name:       "rightmost forwarded entry that is not a trusted proxy",
+			cfg:        loggingConfig{TrustedProxies: trusted},
+			remoteAddr: "10.0.0.1:4321",
+			// The leftmost entry is whatever the client claimed.
+			headers:  http.Header{"X-Forwarded-For": {"198.51.100.1, 203.0.113.7, 10.0.0.2"}},
+			expected: "203.0.113.7",
+		},
+		{
+			name:       "forwarded entries across header lines",
+			cfg:        loggingConfig{TrustedProxies: trusted},
+			remoteAddr: "10.0.0.1:4321",
+			headers:    http.Header{"X-Forwarded-For": {"198.51.100.1", "203.0.113.7", "10.0.0.2"}},
+			expected:   "203.0.113.7",
+		},
+		{
+			name:       "leftmost entry when every entry is a trusted proxy",
+			cfg:        loggingConfig{TrustedProxies: trusted},
+			remoteAddr: "127.0.0.1:4321",
+			headers:    http.Header{"X-Forwarded-For": {"10.0.0.3, 10.0.0.2"}},
+			expected:   "10.0.0.3",
+		},
+		{
+			name:       "walk stops at an invalid forwarded entry",
+			cfg:        loggingConfig{TrustedProxies: trusted},
+			remoteAddr: "10.0.0.1:4321",
+			headers:    http.Header{"X-Forwarded-For": {"203.0.113.7, garbage, 10.0.0.2"}},
+			expected:   "10.0.0.2",
+		},
+		{
+			name:       "client IP header from a trusted peer wins",
+			cfg:        loggingConfig{TrustedProxies: trusted, ClientIPHeader: "CF-Connecting-IP"},
+			remoteAddr: "10.0.0.1:4321",
+			headers: http.Header{
+				"X-Forwarded-For":  {"203.0.113.7"},
+				"Cf-Connecting-Ip": {"198.51.100.2"},
+			},
+			expected: "198.51.100.2",
+		},
+		{
+			name:       "invalid client IP header falls back to forwarded chain",
+			cfg:        loggingConfig{TrustedProxies: trusted, ClientIPHeader: "CF-Connecting-IP"},
+			remoteAddr: "10.0.0.1:4321",
+			headers: http.Header{
+				"X-Forwarded-For":  {"203.0.113.7"},
+				"Cf-Connecting-Ip": {"garbage"},
+			},
+			expected: "203.0.113.7",
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+			req := httptest.NewRequest(http.MethodGet, "/", nil)
+			req.RemoteAddr = testCase.remoteAddr
+			req.Header = testCase.headers
+			require.Equal(t, testCase.expected, testCase.cfg.sourceIP(req))
 		})
 	}
 }

@@ -240,6 +240,89 @@ When setting `selfSignedCert` to `false`, the `Ingress` resource expects a
 with the name `kargo-api-ingress-cert` to exist in the same namespace as the
 API server.
 
+### API Request Logs
+
+The API server writes one log line per request, naming the method, path,
+status, duration, and the actor the request was authenticated as. Server errors
+are logged at `ERROR` level and refused requests (`401` and `403`) at `INFO`
+level. Everything else is logged at `DEBUG` level, so with the default
+`api.logLevel` of `INFO`, routine requests are not logged.
+
+To log every request at `INFO` level, without enabling debug logging for the
+rest of the API server, set the following configuration:
+
+```yaml
+api:
+  requestLog:
+    allEnabled: true
+```
+
+#### Source IP Logging
+
+By default, request logs do not include the address a request came from, since
+the API server is typically behind a proxy that can log the same thing. To
+include it, set the following configuration:
+
+```yaml
+api:
+  requestLog:
+    sourceIP:
+      enabled: true
+```
+
+Each request log line then gains up to two fields:
+
+- `sourceIP`: The address of the client, as far as the API server can establish
+  it. Without trusted proxies (see below), this is the address the request
+  arrived from, which clients cannot choose.
+- `forwardedFor`: The `X-Forwarded-For` chain the request arrived with, if any.
+  It is logged as received and is only as trustworthy as whatever sent it.
+
+:::note
+
+IP addresses are personal data under several privacy regimes, which is why this
+is opt-in. Check your retention obligations before enabling it.
+
+:::
+
+If the API server is behind an ingress controller, a load balancer, or a service
+mesh sidecar, the address a request arrives from is that proxy's. To log the
+client's address instead, list the proxies as trusted:
+
+```yaml
+api:
+  requestLog:
+    sourceIP:
+      enabled: true
+      # The addresses of your ingress controller or load balancer, not the
+      # whole Pod network.
+      trustedProxies:
+        - 10.0.12.34
+        - 10.0.13.0/28
+      # Only if every trusted proxy sets or overwrites this header.
+      clientIPHeader: CF-Connecting-IP
+```
+
+When a request arrives from a trusted proxy, `sourceIP` is the value of the
+client IP header, if one is configured and the request carries a valid address
+in it. Otherwise, it is the rightmost `X-Forwarded-For` entry that is not a
+trusted proxy. Every entry to the right of that one was added by a proxy you
+trust, so the client cannot have chosen it. Requests arriving from any other
+address are attributed to that address, so clients that bypass your proxies
+cannot use either header to pick their own `sourceIP`.
+
+:::caution
+
+Every address you trust can choose the `sourceIP` of the requests it sends.
+Trusting a broad range, such as the whole Pod network, lets any Pod that calls
+the API server directly set its own `sourceIP`.
+
+Likewise, only name a client IP header that every trusted proxy sets or
+overwrites. A proxy that passes the header through from the client lets the
+client choose `sourceIP`.
+
+:::
+
 ## Git Configuration
 
 Kargo supports a number of Git-related configurations that can be set at

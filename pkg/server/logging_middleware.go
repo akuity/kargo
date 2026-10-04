@@ -2,10 +2,14 @@ package server
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
+	"net/netip"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/kelseyhightower/envconfig"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/api"
@@ -25,11 +29,110 @@ import (
 // A server error is recorded at error level. A request that was refused is
 // recorded at info level, because a refusal is never routine and is the first
 // thing anyone looks for when a user reports being unable to do something.
-// Everything else is operational detail and recorded at debug level.
+// Everything else is operational detail and recorded at debug level, unless
+// REQUEST_LOG_ALL_ENABLED raises it to info level.
+//
+// The address a request came from is recorded only when
+// REQUEST_LOG_SOURCE_IP_ENABLED is set, because it is personal data and is
+// usually better recorded by whatever proxy sits in front of the server.
+//
+// These settings are read from the environment here, rather than taken as
+// arguments, so that every router using this middleware honors them alike.
 //
 // This must be the outermost middleware, so that the status and any reported
 // error it records are the ones the client actually received.
 func LoggingMiddleware() gin.HandlerFunc {
+	return loggingMiddleware(loggingConfigFromEnv())
+}
+
+type loggingConfig struct {
+	// AllEnabled records routine requests at info level instead of debug level.
+	AllEnabled bool `envconfig:"REQUEST_LOG_ALL_ENABLED"`
+	// SourceIPEnabled adds the address each request came from.
+	SourceIPEnabled bool `envconfig:"REQUEST_LOG_SOURCE_IP_ENABLED"`
+	// TrustedProxies are the proxies whose X-Forwarded-For entries and
+	// ClientIPHeader are believed when resolving a request's source address.
+	TrustedProxies trustedProxies `envconfig:"REQUEST_LOG_TRUSTED_PROXIES"`
+	// ClientIPHeader names a header that every trusted proxy sets to the
+	// client's address, e.g. CF-Connecting-IP.
+	ClientIPHeader string `envconfig:"REQUEST_LOG_CLIENT_IP_HEADER"`
+}
+
+func loggingConfigFromEnv() loggingConfig {
+	cfg := loggingConfig{}
+	envconfig.MustProcess("", &cfg)
+	return cfg
+}
+
+// trustedProxies is decoded from a comma-separated list of addresses and CIDRs.
+type trustedProxies []netip.Prefix
+
+func (t *trustedProxies) Decode(value string) error {
+	var prefixes []netip.Prefix
+	for item := range strings.SplitSeq(value, ",") {
+		if item = strings.TrimSpace(item); item == "" {
+			continue
+		}
+		prefix, err := netip.ParsePrefix(item)
+		if err != nil {
+			addr, addrErr := netip.ParseAddr(item)
+			if addrErr != nil {
+				return fmt.Errorf("invalid trusted proxy %q: expected an IP address or CIDR", item)
+			}
+			prefix = netip.PrefixFrom(addr, addr.BitLen())
+		}
+		prefixes = append(prefixes, prefix.Masked())
+	}
+	*t = prefixes
+	return nil
+}
+
+func (t trustedProxies) contains(addr netip.Addr) bool {
+	for _, prefix := range t {
+		if prefix.Contains(addr) {
+			return true
+		}
+	}
+	return false
+}
+
+// sourceIP returns the address the request came from. That is the peer on the
+// other end of the connection, which a client cannot choose, unless the peer
+// is a trusted proxy. In that case it is the client IP header, if one is
+// configured and holds an address, and otherwise the rightmost
+// X-Forwarded-For entry that is not itself a trusted proxy. Every entry to
+// the right of that one was appended by a proxy we trust, so it is the last
+// address the client could not have made up.
+func (c loggingConfig) sourceIP(r *http.Request) string {
+	addrPort, err := netip.ParseAddrPort(r.RemoteAddr)
+	if err != nil {
+		return r.RemoteAddr
+	}
+	source := addrPort.Addr().Unmap()
+	if !c.TrustedProxies.contains(source) {
+		return source.String()
+	}
+	if c.ClientIPHeader != "" {
+		addr, err := netip.ParseAddr(strings.TrimSpace(r.Header.Get(c.ClientIPHeader)))
+		if err == nil {
+			return addr.Unmap().String()
+		}
+	}
+	forwarded := strings.Split(strings.Join(r.Header.Values("X-Forwarded-For"), ","), ",")
+	for i := len(forwarded) - 1; i >= 0; i-- {
+		addr, err := netip.ParseAddr(strings.TrimSpace(forwarded[i]))
+		if err != nil {
+			break
+		}
+		source = addr.Unmap()
+		if !c.TrustedProxies.contains(source) {
+			break
+		}
+	}
+	return source.String()
+}
+
+func loggingMiddleware(cfg loggingConfig) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		start := time.Now()
 
@@ -56,6 +159,13 @@ func LoggingMiddleware() gin.HandlerFunc {
 				// duration as a bare number of seconds.
 				"duration", time.Since(start).String(),
 			)
+		if cfg.SourceIPEnabled {
+			logger = logger.WithValues("sourceIP", cfg.sourceIP(c.Request))
+			// As received, and so only as trustworthy as whatever sent it.
+			if forwarded := c.Request.Header.Values("X-Forwarded-For"); len(forwarded) > 0 {
+				logger = logger.WithValues("forwardedFor", strings.Join(forwarded, ", "))
+			}
+		}
 		reported := c.Errors.Last()
 
 		if status < http.StatusInternalServerError {
@@ -64,6 +174,10 @@ func LoggingMiddleware() gin.HandlerFunc {
 			}
 			if status == http.StatusUnauthorized || status == http.StatusForbidden {
 				logger.Info("refused request")
+				return
+			}
+			if cfg.AllEnabled {
+				logger.Info("handled request")
 				return
 			}
 			logger.Debug("handled request")
