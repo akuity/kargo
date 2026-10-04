@@ -136,6 +136,20 @@ func loggingMiddleware(cfg loggingConfig) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		start := time.Now()
 
+		if cfg.SourceIPEnabled {
+			// Bound to the request's logger on the way in, so that everything
+			// logged on the request's behalf says where it came from, and not
+			// only the line recorded below.
+			ctx := c.Request.Context()
+			logger := logging.LoggerFromContext(ctx).
+				WithValues("sourceIP", cfg.sourceIP(c.Request))
+			// As received, and so only as trustworthy as whatever sent it.
+			if forwarded := c.Request.Header.Values("X-Forwarded-For"); len(forwarded) > 0 {
+				logger = logger.WithValues("forwardedFor", strings.Join(forwarded, ", "))
+			}
+			c.Request = c.Request.WithContext(logging.ContextWithLogger(ctx, logger))
+		}
+
 		c.Next()
 
 		status := c.Writer.Status()
@@ -159,13 +173,6 @@ func loggingMiddleware(cfg loggingConfig) gin.HandlerFunc {
 				// duration as a bare number of seconds.
 				"duration", time.Since(start).String(),
 			)
-		if cfg.SourceIPEnabled {
-			logger = logger.WithValues("sourceIP", cfg.sourceIP(c.Request))
-			// As received, and so only as trustworthy as whatever sent it.
-			if forwarded := c.Request.Header.Values("X-Forwarded-For"); len(forwarded) > 0 {
-				logger = logger.WithValues("forwardedFor", strings.Join(forwarded, ", "))
-			}
-		}
 		reported := c.Errors.Last()
 
 		if status < http.StatusInternalServerError {

@@ -257,6 +257,19 @@ api:
     allEnabled: true
 ```
 
+#### Authentication Failures
+
+Every attempt to log in as the admin user is logged at `INFO` level as either
+`login successful` or `login failed`, with a `loginType` of `admin` and, on
+failure, the reason as `error`. The password is never logged.
+
+With OpenID Connect, logging in happens between the client and the identity
+provider, so the API server never sees a failed login there. Those are recorded
+by the identity provider (or by Dex, if enabled). What the API server does see
+is the token presented with each request. A request whose token is missing,
+expired, or fails verification is logged at `INFO` level as `refused request`
+with a status of `401` and the reason as `error`.
+
 #### Source IP Logging
 
 By default, request logs do not include the address a request came from, since
@@ -270,7 +283,8 @@ api:
       enabled: true
 ```
 
-Each request log line then gains up to two fields:
+Each request log line, and anything else logged while handling the request
+(such as the login attempts above), then gains up to two fields:
 
 - `sourceIP`: The address of the client, as far as the API server can establish
   it. Without trusted proxies (see below), this is the address the request

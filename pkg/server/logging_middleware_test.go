@@ -183,6 +183,22 @@ func TestLoggingMiddleware(t *testing.T) {
 			},
 		},
 		{
+			name:  "source IP is on everything logged for the request",
+			level: zapcore.DebugLevel,
+			cfg:   loggingConfig{SourceIPEnabled: true},
+			handler: func(c *gin.Context) {
+				logging.LoggerFromContext(c.Request.Context()).Info("from the handler")
+				c.Status(http.StatusOK)
+			},
+			expectedStatus: http.StatusOK,
+			assertions: func(t *testing.T, entries []observer.LoggedEntry) {
+				require.Len(t, entries, 2)
+				require.Equal(t, "from the handler", entries[0].Message)
+				require.Equal(t, "192.0.2.1", entries[0].ContextMap()["sourceIP"])
+				require.Equal(t, "192.0.2.1", entries[1].ContextMap()["sourceIP"])
+			},
+		},
+		{
 			name:           "forwarded chain is recorded as received",
 			level:          zapcore.DebugLevel,
 			cfg:            loggingConfig{SourceIPEnabled: true},

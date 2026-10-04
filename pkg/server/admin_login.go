@@ -12,6 +12,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 
 	libhttp "github.com/akuity/kargo/pkg/http"
+	"github.com/akuity/kargo/pkg/logging"
 )
 
 func init() {
@@ -27,32 +28,43 @@ func init() {
 // @Success 200 {object} adminLoginResponse
 // @Router /v1beta1/login [post]
 func (s *server) adminLogin(c *gin.Context) {
+	logger := logging.LoggerFromContext(c.Request.Context()).
+		WithValues("loginType", "admin")
+	signedToken, err := s.newAdminToken(c.GetHeader("Authorization"))
+	if err != nil {
+		logger.Info("login failed", "error", err.Error())
+		_ = c.Error(err)
+		return
+	}
+	logger.Info("login successful")
+	c.JSON(http.StatusOK, adminLoginResponse{
+		IDToken: signedToken,
+	})
+}
+
+// newAdminToken returns a signed ID token for the admin user if authHeader
+// carries the admin password in the format "Bearer <password>".
+func (s *server) newAdminToken(authHeader string) (string, error) {
 	if s.cfg.AdminConfig == nil {
-		_ = c.Error(libhttp.Error(
+		return "", libhttp.Error(
 			errors.New("admin user is not enabled"),
 			http.StatusForbidden,
-		))
-		return
+		)
 	}
 
-	// Extract password from Authorization header (format: "Bearer <password>")
-	authHeader := c.GetHeader("Authorization")
 	if authHeader == "" {
-		_ = c.Error(libhttp.Error(
+		return "", libhttp.Error(
 			errors.New("Authorization header is required"), // nolint: staticcheck
 			http.StatusBadRequest,
-		))
-		return
+		)
 	}
 
-	// Extract the password from "Bearer <password>" format
 	const bearerPrefix = "Bearer "
 	if len(authHeader) <= len(bearerPrefix) || authHeader[:len(bearerPrefix)] != bearerPrefix {
-		_ = c.Error(libhttp.Error(
+		return "", libhttp.Error(
 			errors.New("Authorization header must be in format 'Bearer <password>'"), // nolint: staticcheck
 			http.StatusBadRequest,
-		))
-		return
+		)
 	}
 	password := authHeader[len(bearerPrefix):]
 
@@ -60,11 +72,10 @@ func (s *server) adminLogin(c *gin.Context) {
 		[]byte(s.cfg.AdminConfig.HashedPassword),
 		[]byte(password),
 	); err != nil {
-		_ = c.Error(libhttp.Error(
+		return "", libhttp.Error(
 			errors.New("invalid password"),
 			http.StatusForbidden,
-		))
-		return
+		)
 	}
 
 	now := time.Now()
@@ -83,13 +94,9 @@ func (s *server) adminLogin(c *gin.Context) {
 
 	signedToken, err := idToken.SignedString(s.cfg.AdminConfig.TokenSigningKey)
 	if err != nil {
-		_ = c.Error(fmt.Errorf("error signing ID token: %w", err))
-		return
+		return "", fmt.Errorf("error signing ID token: %w", err)
 	}
-
-	c.JSON(http.StatusOK, adminLoginResponse{
-		IDToken: signedToken,
-	})
+	return signedToken, nil
 }
 
 type adminLoginResponse struct {
