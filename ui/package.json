@@ -20,7 +20,6 @@
     "@eslint/config-helpers": "0.6.0",
     "@eslint/eslintrc": "3.3.5",
     "@eslint/js": "9.39.4",
-    "@openapi-contrib/openapi-schema-to-json-schema": "5.1.0",
     "@orval/core": "8.27.0",
     "@tanstack/react-query-devtools": "5.101.0",
     "@types/git-url-parse": "16.0.2",
