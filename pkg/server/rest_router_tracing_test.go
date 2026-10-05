@@ -64,7 +64,8 @@ func TestSetupRESTRouter_tracing(t *testing.T) {
 			))
 
 			s := &server{cfg: testCase.cfg}
-			router := s.setupRESTRouter(t.Context())
+			router, err := s.setupRESTRouter(t.Context())
+			require.NoError(t, err)
 
 			w := httptest.NewRecorder()
 			req := httptest.NewRequest(

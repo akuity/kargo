@@ -4,7 +4,6 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
-	"net/netip"
 	"testing"
 
 	"github.com/gin-gonic/gin"
@@ -16,6 +15,7 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	libhttp "github.com/akuity/kargo/pkg/http"
 	"github.com/akuity/kargo/pkg/logging"
+	"github.com/akuity/kargo/pkg/server/config"
 	"github.com/akuity/kargo/pkg/server/user"
 )
 
@@ -27,7 +27,7 @@ func TestLoggingMiddleware(t *testing.T) {
 		// level is the level the logger is configured with, so that what a given
 		// LOG_LEVEL suppresses is observable.
 		level          zapcore.Level
-		cfg            loggingConfig
+		cfg            config.ServerConfig
 		headers        map[string]string
 		handler        gin.HandlerFunc
 		expectedStatus int
@@ -146,7 +146,7 @@ func TestLoggingMiddleware(t *testing.T) {
 		{
 			name:           "routine request is recorded at info level when enabled",
 			level:          zapcore.InfoLevel,
-			cfg:            loggingConfig{AllEnabled: true},
+			cfg:            config.ServerConfig{RequestLogAllEnabled: true},
 			handler:        func(c *gin.Context) { c.Status(http.StatusOK) },
 			expectedStatus: http.StatusOK,
 			assertions: func(t *testing.T, entries []observer.LoggedEntry) {
@@ -171,7 +171,7 @@ func TestLoggingMiddleware(t *testing.T) {
 		{
 			name:           "source IP is recorded when enabled",
 			level:          zapcore.DebugLevel,
-			cfg:            loggingConfig{SourceIPEnabled: true},
+			cfg:            config.ServerConfig{RequestLogSourceIPEnabled: true},
 			handler:        func(c *gin.Context) { c.Status(http.StatusOK) },
 			expectedStatus: http.StatusOK,
 			assertions: func(t *testing.T, entries []observer.LoggedEntry) {
@@ -185,7 +185,7 @@ func TestLoggingMiddleware(t *testing.T) {
 		{
 			name:  "source IP is on everything logged for the request",
 			level: zapcore.DebugLevel,
-			cfg:   loggingConfig{SourceIPEnabled: true},
+			cfg:   config.ServerConfig{RequestLogSourceIPEnabled: true},
 			handler: func(c *gin.Context) {
 				logging.LoggerFromContext(c.Request.Context()).Info("from the handler")
 				c.Status(http.StatusOK)
@@ -201,7 +201,7 @@ func TestLoggingMiddleware(t *testing.T) {
 		{
 			name:  "source IP survives the request's logger being replaced",
 			level: zapcore.DebugLevel,
-			cfg:   loggingConfig{SourceIPEnabled: true},
+			cfg:   config.ServerConfig{RequestLogSourceIPEnabled: true},
 			handler: func(c *gin.Context) {
 				c.Request = c.Request.WithContext(logging.ContextWithLogger(
 					c.Request.Context(),
@@ -218,7 +218,7 @@ func TestLoggingMiddleware(t *testing.T) {
 		{
 			name:           "forwarded chain is recorded as received",
 			level:          zapcore.DebugLevel,
-			cfg:            loggingConfig{SourceIPEnabled: true},
+			cfg:            config.ServerConfig{RequestLogSourceIPEnabled: true},
 			headers:        map[string]string{"X-Forwarded-For": "203.0.113.7, 10.0.0.1"},
 			handler:        func(c *gin.Context) { c.Status(http.StatusOK) },
 			expectedStatus: http.StatusOK,
@@ -240,13 +240,14 @@ func TestLoggingMiddleware(t *testing.T) {
 
 			s := &server{}
 			router := gin.New()
+			require.NoError(t, ConfigureEngine(router, testCase.cfg))
 			router.Use(func(c *gin.Context) {
 				c.Request = c.Request.WithContext(
 					logging.ContextWithLogger(c.Request.Context(), logger),
 				)
 				c.Next()
 			})
-			router.Use(loggingMiddleware(testCase.cfg))
+			router.Use(LoggingMiddleware(testCase.cfg))
 			router.Use(s.handleError)
 			router.GET("/", testCase.handler)
 
@@ -259,215 +260,6 @@ func TestLoggingMiddleware(t *testing.T) {
 
 			require.Equal(t, testCase.expectedStatus, w.Code)
 			testCase.assertions(t, recorded.All())
-		})
-	}
-}
-
-func TestLoggingConfigFromEnv(t *testing.T) {
-	t.Run("defaults", func(t *testing.T) {
-		require.Equal(t, loggingConfig{}, loggingConfigFromEnv())
-	})
-
-	t.Run("everything set", func(t *testing.T) {
-		t.Setenv("REQUEST_LOG_ALL_ENABLED", "true")
-		t.Setenv("REQUEST_LOG_SOURCE_IP_ENABLED", "true")
-		t.Setenv("REQUEST_LOG_TRUSTED_PROXIES", "10.0.0.0/8, 192.168.1.5")
-		t.Setenv("REQUEST_LOG_CLIENT_IP_HEADER", "CF-Connecting-IP")
-		require.Equal(
-			t,
-			loggingConfig{
-				AllEnabled:      true,
-				SourceIPEnabled: true,
-				TrustedProxies: trustedProxies{
-					netip.MustParsePrefix("10.0.0.0/8"),
-					netip.MustParsePrefix("192.168.1.5/32"),
-				},
-				ClientIPHeader: "CF-Connecting-IP",
-			},
-			loggingConfigFromEnv(),
-		)
-	})
-
-	t.Run("invalid trusted proxy", func(t *testing.T) {
-		t.Setenv("REQUEST_LOG_TRUSTED_PROXIES", "not-an-address")
-		require.Panics(t, func() { loggingConfigFromEnv() })
-	})
-}
-
-func TestLoggingConfig_sourceIP(t *testing.T) {
-	trusted := trustedProxies{
-		netip.MustParsePrefix("10.0.0.0/8"),
-		netip.MustParsePrefix("127.0.0.1/32"),
-	}
-	testCases := []struct {
-		name       string
-		cfg        loggingConfig
-		remoteAddr string
-		headers    http.Header
-		expected   string
-	}{
-		{
-			name:       "direct peer",
-			remoteAddr: "203.0.113.7:4321",
-			expected:   "203.0.113.7",
-		},
-		{
-			name:       "IPv6 peer",
-			remoteAddr: "[2001:db8::1]:4321",
-			expected:   "2001:db8::1",
-		},
-		{
-			name:       "IPv4-mapped peer is unmapped",
-			remoteAddr: "[::ffff:203.0.113.7]:4321",
-			expected:   "203.0.113.7",
-		},
-		{
-			name:       "unparseable peer is recorded as is",
-			remoteAddr: "@",
-			expected:   "@",
-		},
-		{
-			name:       "headers from an untrusted peer are ignored",
-			cfg:        loggingConfig{TrustedProxies: trusted, ClientIPHeader: "X-Real-IP"},
-			remoteAddr: "203.0.113.7:4321",
-			headers: http.Header{
-				"X-Forwarded-For": {"198.51.100.1"},
-				"X-Real-Ip":       {"198.51.100.2"},
-			},
-			expected: "203.0.113.7",
-		},
-		{
-			name:       "trusted peer without headers",
-			cfg:        loggingConfig{TrustedProxies: trusted},
-			remoteAddr: "10.0.0.1:4321",
-			expected:   "10.0.0.1",
-		},
-		{
-			name:       "rightmost forwarded entry that is not a trusted proxy",
-			cfg:        loggingConfig{TrustedProxies: trusted},
-			remoteAddr: "10.0.0.1:4321",
-			// The leftmost entry is whatever the client claimed.
-			headers:  http.Header{"X-Forwarded-For": {"198.51.100.1, 203.0.113.7, 10.0.0.2"}},
-			expected: "203.0.113.7",
-		},
-		{
-			name:       "forwarded entries across header lines",
-			cfg:        loggingConfig{TrustedProxies: trusted},
-			remoteAddr: "10.0.0.1:4321",
-			headers:    http.Header{"X-Forwarded-For": {"198.51.100.1", "203.0.113.7", "10.0.0.2"}},
-			expected:   "203.0.113.7",
-		},
-		{
-			name:       "leftmost entry when every entry is a trusted proxy",
-			cfg:        loggingConfig{TrustedProxies: trusted},
-			remoteAddr: "127.0.0.1:4321",
-			headers:    http.Header{"X-Forwarded-For": {"10.0.0.3, 10.0.0.2"}},
-			expected:   "10.0.0.3",
-		},
-		{
-			name:       "walk stops at an invalid forwarded entry",
-			cfg:        loggingConfig{TrustedProxies: trusted},
-			remoteAddr: "10.0.0.1:4321",
-			headers:    http.Header{"X-Forwarded-For": {"203.0.113.7, garbage, 10.0.0.2"}},
-			expected:   "10.0.0.2",
-		},
-		{
-			name:       "forwarded entries with ports, brackets, and gaps",
-			cfg:        loggingConfig{TrustedProxies: trusted},
-			remoteAddr: "10.0.0.1:4321",
-			headers:    http.Header{"X-Forwarded-For": {"203.0.113.7:5678, [10.0.0.3], 10.0.0.2:80, "}},
-			expected:   "203.0.113.7",
-		},
-		{
-			name:       "bracketed IPv6 forwarded entry with port",
-			cfg:        loggingConfig{TrustedProxies: trusted},
-			remoteAddr: "10.0.0.1:4321",
-			headers:    http.Header{"X-Forwarded-For": {"[2001:db8::7]:443"}},
-			expected:   "2001:db8::7",
-		},
-		{
-			name: "zoned peer matches a trusted prefix",
-			cfg: loggingConfig{
-				TrustedProxies: trustedProxies{netip.MustParsePrefix("fe80::/10")},
-			},
-			remoteAddr: "[fe80::1%eth0]:4321",
-			headers:    http.Header{"X-Forwarded-For": {"203.0.113.7"}},
-			expected:   "203.0.113.7",
-		},
-		{
-			name:       "client IP header from a trusted peer wins",
-			cfg:        loggingConfig{TrustedProxies: trusted, ClientIPHeader: "CF-Connecting-IP"},
-			remoteAddr: "10.0.0.1:4321",
-			headers: http.Header{
-				"X-Forwarded-For":  {"203.0.113.7"},
-				"Cf-Connecting-Ip": {"198.51.100.2"},
-			},
-			expected: "198.51.100.2",
-		},
-		{
-			name:       "invalid client IP header falls back to forwarded chain",
-			cfg:        loggingConfig{TrustedProxies: trusted, ClientIPHeader: "CF-Connecting-IP"},
-			remoteAddr: "10.0.0.1:4321",
-			headers: http.Header{
-				"X-Forwarded-For":  {"203.0.113.7"},
-				"Cf-Connecting-Ip": {"garbage"},
-			},
-			expected: "203.0.113.7",
-		},
-	}
-	for _, testCase := range testCases {
-		t.Run(testCase.name, func(t *testing.T) {
-			t.Parallel()
-			req := httptest.NewRequest(http.MethodGet, "/", nil)
-			req.RemoteAddr = testCase.remoteAddr
-			req.Header = testCase.headers
-			require.Equal(t, testCase.expected, testCase.cfg.sourceIP(req))
-		})
-	}
-}
-
-func TestTrustedProxies_Decode(t *testing.T) {
-	testCases := []struct {
-		name     string
-		value    string
-		expected trustedProxies
-		errors   bool
-	}{
-		{name: "empty", value: ""},
-		{name: "only separators", value: " , ,"},
-		{
-			name:  "addresses and CIDRs",
-			value: "10.0.0.5/8, 192.168.1.5,2001:db8::/32,",
-			expected: trustedProxies{
-				netip.MustParsePrefix("10.0.0.0/8"),
-				netip.MustParsePrefix("192.168.1.5/32"),
-				netip.MustParsePrefix("2001:db8::/32"),
-			},
-		},
-		{
-			name:  "IPv4-mapped entries are unmapped",
-			value: "::ffff:10.0.0.0/104,::ffff:192.168.1.5",
-			expected: trustedProxies{
-				netip.MustParsePrefix("10.0.0.0/8"),
-				netip.MustParsePrefix("192.168.1.5/32"),
-			},
-		},
-		{name: "IPv4-mapped prefix too wide", value: "::ffff:0.0.0.0/64", errors: true},
-		{name: "zoned address", value: "fe80::1%eth0", errors: true},
-		{name: "zoned CIDR", value: "fe80::1%eth0/64", errors: true},
-		{name: "hostname", value: "proxy.example.com", errors: true},
-	}
-	for _, testCase := range testCases {
-		t.Run(testCase.name, func(t *testing.T) {
-			t.Parallel()
-			var proxies trustedProxies
-			err := proxies.Decode(testCase.value)
-			if testCase.errors {
-				require.Error(t, err)
-				return
-			}
-			require.NoError(t, err)
-			require.Equal(t, testCase.expected, proxies)
 		})
 	}
 }

@@ -28,43 +28,32 @@ func init() {
 // @Success 200 {object} adminLoginResponse
 // @Router /v1beta1/login [post]
 func (s *server) adminLogin(c *gin.Context) {
-	logger := logging.LoggerFromContext(c.Request.Context()).
-		WithValues("loginType", "admin")
-	signedToken, err := s.newAdminToken(c.GetHeader("Authorization"))
-	if err != nil {
-		logger.Info("login failed", "error", err.Error())
-		_ = c.Error(err)
-		return
-	}
-	logger.Info("login successful")
-	c.JSON(http.StatusOK, adminLoginResponse{
-		IDToken: signedToken,
-	})
-}
-
-// newAdminToken returns a signed ID token for the admin user if authHeader
-// carries the admin password in the format "Bearer <password>".
-func (s *server) newAdminToken(authHeader string) (string, error) {
 	if s.cfg.AdminConfig == nil {
-		return "", libhttp.Error(
+		_ = c.Error(libhttp.Error(
 			errors.New("admin user is not enabled"),
 			http.StatusForbidden,
-		)
+		))
+		return
 	}
 
+	// Extract password from Authorization header (format: "Bearer <password>")
+	authHeader := c.GetHeader("Authorization")
 	if authHeader == "" {
-		return "", libhttp.Error(
+		_ = c.Error(libhttp.Error(
 			errors.New("Authorization header is required"), // nolint: staticcheck
 			http.StatusBadRequest,
-		)
+		))
+		return
 	}
 
+	// Extract the password from "Bearer <password>" format
 	const bearerPrefix = "Bearer "
 	if len(authHeader) <= len(bearerPrefix) || authHeader[:len(bearerPrefix)] != bearerPrefix {
-		return "", libhttp.Error(
+		_ = c.Error(libhttp.Error(
 			errors.New("Authorization header must be in format 'Bearer <password>'"), // nolint: staticcheck
 			http.StatusBadRequest,
-		)
+		))
+		return
 	}
 	password := authHeader[len(bearerPrefix):]
 
@@ -72,10 +61,11 @@ func (s *server) newAdminToken(authHeader string) (string, error) {
 		[]byte(s.cfg.AdminConfig.HashedPassword),
 		[]byte(password),
 	); err != nil {
-		return "", libhttp.Error(
+		_ = c.Error(libhttp.Error(
 			errors.New("invalid password"),
 			http.StatusForbidden,
-		)
+		))
+		return
 	}
 
 	now := time.Now()
@@ -94,9 +84,17 @@ func (s *server) newAdminToken(authHeader string) (string, error) {
 
 	signedToken, err := idToken.SignedString(s.cfg.AdminConfig.TokenSigningKey)
 	if err != nil {
-		return "", fmt.Errorf("error signing ID token: %w", err)
+		_ = c.Error(fmt.Errorf("error signing ID token: %w", err))
+		return
 	}
-	return signedToken, nil
+
+	// Failures need no record of their own; the request logging middleware
+	// records them as refused requests.
+	logging.LoggerFromContext(c.Request.Context()).Info("admin login successful")
+
+	c.JSON(http.StatusOK, adminLoginResponse{
+		IDToken: signedToken,
+	})
 }
 
 type adminLoginResponse struct {

@@ -131,50 +131,42 @@ tests:
       - notExists:
           path: data.SECRET_MANAGEMENT_ENABLED
 
-  - it: omits request log settings by default
+  - it: omits client IP and request log settings by default
     asserts:
+      - notExists:
+          path: data.TRUSTED_PROXIES
+      - notExists:
+          path: data.CLIENT_IP_HEADER
       - notExists:
           path: data.REQUEST_LOG_ALL_ENABLED
       - notExists:
           path: data.REQUEST_LOG_SOURCE_IP_ENABLED
-      - notExists:
-          path: data.REQUEST_LOG_TRUSTED_PROXIES
-      - notExists:
-          path: data.REQUEST_LOG_CLIENT_IP_HEADER
 
-  - it: logs all requests when enabled
+  - it: configures trusted proxies and client IP header
     set:
-      api.requestLog.allEnabled: true
-    asserts:
-      - equal:
-          path: data.REQUEST_LOG_ALL_ENABLED
-          value: "true"
-
-  - it: configures source IP logging when enabled
-    set:
-      api.requestLog.sourceIP.enabled: true
-      api.requestLog.sourceIP.trustedProxies:
+      api.trustedProxies:
         - 10.0.0.0/8
         - 192.168.1.5
-      api.requestLog.sourceIP.clientIPHeader: CF-Connecting-IP
+      api.clientIPHeader: CF-Connecting-IP
     asserts:
+      - equal:
+          path: data.TRUSTED_PROXIES
+          value: 10.0.0.0/8,192.168.1.5
+      - equal:
+          path: data.CLIENT_IP_HEADER
+          value: CF-Connecting-IP
+
+  - it: enables request log settings
+    set:
+      api.requestLog.allEnabled: true
+      api.requestLog.sourceIPEnabled: true
+    asserts:
+      - equal:
+          path: data.REQUEST_LOG_ALL_ENABLED
+          value: "true"
       - equal:
           path: data.REQUEST_LOG_SOURCE_IP_ENABLED
           value: "true"
-      - equal:
-          path: data.REQUEST_LOG_TRUSTED_PROXIES
-          value: 10.0.0.0/8,192.168.1.5
-      - equal:
-          path: data.REQUEST_LOG_CLIENT_IP_HEADER
-          value: CF-Connecting-IP
-
-  - it: ignores source IP settings when source IP logging is disabled
-    set:
-      api.requestLog.sourceIP.trustedProxies:
-        - 10.0.0.0/8
-    asserts:
-      - notExists:
-          path: data.REQUEST_LOG_TRUSTED_PROXIES
 
   - it: enables OIDC config when OIDC is turned on
     set:
