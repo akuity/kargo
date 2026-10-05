@@ -183,8 +183,15 @@ func (s *server) createResource(
 				actor = u.Actor()
 				eventMsg += fmt.Sprintf(" by %q", actor)
 			}
-			evt := event.NewFreightCreated(eventMsg, actor, &freight)
-			if sendErr := s.sender.Send(ctx, evt); sendErr != nil {
+			evt, sendErr := event.NewFreightCreated(eventMsg, actor, &freight)
+			if sendErr == nil {
+				sendErr = s.sender.Send(
+					ctx,
+					event.NewEventsSubjectPrefix(event.KindOf(evt)),
+					evt,
+				)
+			}
+			if sendErr != nil {
 				logging.LoggerFromContext(ctx).Error(
 					sendErr, "error sending FreightCreated event")
 			}

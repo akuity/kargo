@@ -8,7 +8,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -16,8 +15,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	k8sevent "github.com/akuity/kargo/pkg/event/kubernetes"
-	fakeevent "github.com/akuity/kargo/pkg/kubernetes/event/fake"
+	"github.com/akuity/kargo/pkg/event"
+	fakeevent "github.com/akuity/kargo/pkg/event/fake"
 	"github.com/akuity/kargo/pkg/server/config"
 )
 
@@ -443,7 +442,7 @@ func Test_server_promoteToStage(t *testing.T) {
 				},
 			},
 			func() restTestCase {
-				recorder := fakeevent.NewEventRecorder(1)
+				sender := &fakeevent.Sender{}
 				return restTestCase{
 					name: "Successfully promote by origin records created event after resolution",
 					clientBuilder: fake.NewClientBuilder().WithObjects(
@@ -453,7 +452,7 @@ func Test_server_promoteToStage(t *testing.T) {
 					),
 					serverSetup: func(t *testing.T, s *server) {
 						authorizeAllStagesPromote(t, s)
-						s.sender = k8sevent.NewEventSender(recorder)
+						s.sender = sender
 						s.createPromotionFn = func(
 							ctx context.Context,
 							obj client.Object,
@@ -473,10 +472,23 @@ func Test_server_promoteToStage(t *testing.T) {
 					}),
 					assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
 						require.Equal(t, http.StatusCreated, w.Code)
-						require.Len(t, recorder.Events, 1)
-						event := <-recorder.Events
-						require.Equal(t, corev1.EventTypeNormal, event.EventType)
-						require.Equal(t, string(kargoapi.EventTypePromotionCreated), event.Reason)
+						sent := sender.Sent()
+						require.Len(t, sent, 1)
+						require.Equal(
+							t,
+							string(kargoapi.EventTypePromotionCreated),
+							sent[0].Type(),
+						)
+						require.Equal(
+							t,
+							"akuity.kargo.events.promotion.PromotionCreated",
+							sent[0].Subject(),
+						)
+						evt := &event.PromotionCreated{}
+						require.NoError(t, sent[0].DataAs(evt))
+						// The event reflects the Freight that admission resolved
+						require.NotNil(t, evt.Freight)
+						require.Equal(t, testFreight.Name, evt.Freight.Name)
 					},
 				}
 			}(),

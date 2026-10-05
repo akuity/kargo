@@ -7,6 +7,7 @@ import (
 	"reflect"
 	"strings"
 
+	"github.com/nats-io/nats.go"
 	admissionv1 "k8s.io/api/admission/v1"
 	authzv1 "k8s.io/api/authorization/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -21,9 +22,8 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/api"
 	kargoEvent "github.com/akuity/kargo/pkg/event"
-	k8sevent "github.com/akuity/kargo/pkg/event/kubernetes"
+	natsevent "github.com/akuity/kargo/pkg/event/nats"
 	"github.com/akuity/kargo/pkg/kubernetes"
-	libEvent "github.com/akuity/kargo/pkg/kubernetes/event"
 	"github.com/akuity/kargo/pkg/logging"
 	libWebhook "github.com/akuity/kargo/pkg/webhook/kubernetes"
 )
@@ -104,15 +104,15 @@ type webhook struct {
 }
 
 func SetupWebhookWithManager(
-	ctx context.Context,
 	cfg libWebhook.Config,
 	mgr ctrl.Manager,
+	natsClient *nats.Conn,
 ) error {
 	w := newWebhook(
 		cfg,
 		mgr.GetClient(),
 		admission.NewDecoder(mgr.GetScheme()),
-		k8sevent.NewEventSender(libEvent.NewRecorder(ctx, mgr.GetScheme(), mgr.GetClient(), "promotion-webhook")),
+		natsevent.NewDefaultingEventSender(natsClient, "promotion-webhook"),
 	)
 	return libWebhook.SetupValidatingAndDefaultingWebhook(mgr, &kargoapi.Promotion{}, w)
 }
@@ -794,10 +794,17 @@ func (w *webhook) recordPromotionCreatedEvent(
 	f *kargoapi.Freight,
 ) {
 	actor := api.FormatEventKubernetesUserActor(req.UserInfo)
-	evt := kargoEvent.NewPromotionCreated(fmt.Sprintf("Promotion created for Stage %q by %q",
+	evt, err := kargoEvent.NewPromotionCreated(fmt.Sprintf("Promotion created for Stage %q by %q",
 		p.Spec.Stage,
 		actor), actor, p, f)
-	if err := w.sender.Send(ctx, evt); err != nil {
+	if err == nil {
+		err = w.sender.Send(
+			ctx,
+			kargoEvent.NewEventsSubjectPrefix(kargoEvent.KindOf(evt)),
+			evt,
+		)
+	}
+	if err != nil {
 		logging.LoggerFromContext(ctx).Error(
 			err,
 			"failed to send Promotion created event",

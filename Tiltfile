@@ -102,6 +102,13 @@ local_resource(
   allow_parallel = True,
 )
 
+# The chart's dependencies (e.g. NATS) must be present before it can be
+# rendered. Only fetch them when any are missing or out of date.
+local(
+  "helm dependency list charts/kargo | awk 'NR > 1 && NF && $NF != \"ok\" { exit 1 }' || helm dependency build charts/kargo",
+  quiet = True,
+)
+
 kargo_base_path = os.environ.get('KARGO_BASE_PATH', '')
 k8s_yaml(
   helm(
@@ -170,6 +177,16 @@ k8s_resource(
 )
 
 k8s_resource(
+  workload = 'kargo-nats',
+  new_name = 'nats',
+  labels = ['kargo'],
+  objects = [
+    'kargo-nats-config:configmap',
+    'kargo-nats:poddisruptionbudget'
+  ]
+)
+
+k8s_resource(
   workload = 'kargo-api',
   new_name = 'api',
   port_forwards = [
@@ -187,7 +204,7 @@ k8s_resource(
     'kargo-api-rollouts:clusterrole',
     'kargo-api-rollouts:clusterrolebinding'
   ],
-  resource_deps=['back-end-compile','dex-server']
+  resource_deps=['back-end-compile', 'dex-server', 'nats']
 )
 
 k8s_resource(
@@ -211,7 +228,7 @@ k8s_resource(
     'kargo-shared-resources-controller-reader:role',
     'kargo-test-gpg-signing-key:secret'
   ],
-  resource_deps=['back-end-compile', 'credential-helper-compile', ]
+  resource_deps=['back-end-compile', 'credential-helper-compile', 'nats']
 )
 
 k8s_resource(
@@ -264,7 +281,7 @@ k8s_resource(
     'kargo-management-controller:configmap',
     'kargo-management-controller:serviceaccount'
   ],
-  resource_deps=['back-end-compile']
+  resource_deps=['back-end-compile', 'nats']
 )
 
 k8s_resource(
@@ -294,7 +311,7 @@ k8s_resource(
     'kargo-webhooks-server-ns-controller:clusterrole',
     'kargo-webhooks-server-ns-controller:clusterrolebinding'
   ],
-  resource_deps=['back-end-compile', 'ensure-cert-manager']
+  resource_deps=['back-end-compile', 'ensure-cert-manager', 'nats']
 )
 
 k8s_resource(

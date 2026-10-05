@@ -38,8 +38,15 @@ func (s *server) recordPromotionCreatedEvent(
 		msg += fmt.Sprintf(" by %q", actor)
 	}
 
-	evt := event.NewPromotionCreated(msg, actor, p, f)
-	if err := s.sender.Send(ctx, evt); err != nil {
+	evt, err := event.NewPromotionCreated(msg, actor, p, f)
+	if err == nil {
+		err = s.sender.Send(
+			ctx,
+			event.NewEventsSubjectPrefix(event.KindOf(evt)),
+			evt,
+		)
+	}
+	if err != nil {
 		logging.LoggerFromContext(ctx).Error(err, "Error when publishing new promotion event")
 	}
 }

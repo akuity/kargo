@@ -510,7 +510,7 @@ func Test_server_updateResources_clusterScopedNamespaceSpoofing(t *testing.T) {
 
 	// capturedClient is reassigned by each serverSetup before assertions reads
 	// it. Test cases are run sequentially, so this is safe (see the same
-	// pattern used for the freight event recorder in create_resource_test.go).
+	// pattern used for the freight event sender in create_resource_test.go).
 	var capturedClient client.WithWatch
 
 	testRESTEndpoint(

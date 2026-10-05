@@ -18,20 +18,33 @@ import (
 	rbacapi "github.com/akuity/kargo/api/rbac/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/event"
+	fakeevent "github.com/akuity/kargo/pkg/event/fake"
 	"github.com/akuity/kargo/pkg/server/user"
 )
 
-// recordingSender captures the events a handler sends.
-type recordingSender struct {
-	events []event.Meta
+// requireSingleEvent asserts that the sender has recorded exactly one event,
+// sent under the Kargo events subject prefix with the given type and object
+// kind, and decodes its data into data.
+func requireSingleEvent(
+	t *testing.T,
+	sender *fakeevent.Sender,
+	eventType kargoapi.EventType,
+	kind string,
+	data any,
+) {
+	t.Helper()
+	sent := sender.Sent()
+	require.Len(t, sent, 1)
+	evt := sent[0]
+	require.Equal(t, string(eventType), evt.Type())
+	require.Equal(t, kind, event.KindOf(evt))
+	require.Equal(
+		t,
+		event.NewEventsSubjectPrefix(kind)+"."+evt.Type(),
+		evt.Subject(),
+	)
+	require.NoError(t, evt.DataAs(data))
 }
-
-func (r *recordingSender) Send(_ context.Context, evt event.Meta) error {
-	r.events = append(r.events, evt)
-	return nil
-}
-
-func (r *recordingSender) Shutdown() {}
 
 func Test_server_createProjectAPIToken(t *testing.T) {
 	testProject := &kargoapi.Project{
@@ -57,7 +70,7 @@ func Test_server_createProjectAPIToken(t *testing.T) {
 		},
 		Data: map[string][]byte{"token": []byte("fake-token-data")},
 	}
-	sender := &recordingSender{}
+	sender := &fakeevent.Sender{}
 	testRESTEndpoint(
 		t, nil,
 		http.MethodPost, "/v1beta1/projects/"+testProject.Name+"/roles/"+testSA.Name+"/api-tokens",
@@ -167,11 +180,16 @@ func Test_server_createProjectAPIToken(t *testing.T) {
 					require.Equal(t, testToken.Data, secret.Data)
 
 					// Minting a token is recorded as an event attributed to the caller
-					require.Len(t, sender.events, 1)
-					evt, ok := sender.events[0].(*event.APITokenCreated)
-					require.True(t, ok)
-					require.Equal(t, testProject.Name, evt.GetProject())
-					require.Equal(t, testToken.Name, evt.GetName())
+					evt := &event.APITokenCreated{}
+					requireSingleEvent(
+						t,
+						sender,
+						kargoapi.EventTypeAPITokenCreated,
+						"Secret",
+						evt,
+					)
+					require.Equal(t, testProject.Name, evt.Project)
+					require.Equal(t, testToken.Name, evt.Name)
 					require.Equal(t, testSA.Name, evt.RoleName)
 					require.False(t, evt.SystemLevel)
 					require.NotNil(t, evt.Actor)
@@ -179,7 +197,7 @@ func Test_server_createProjectAPIToken(t *testing.T) {
 					require.Equal(
 						t,
 						`API token "fake-token" created for Role "fake-role" by "admin"`,
-						evt.GetMessage(),
+						evt.Message,
 					)
 				},
 			},
@@ -210,7 +228,7 @@ func Test_server_createSystemAPIToken(t *testing.T) {
 		},
 		Data: map[string][]byte{"token": []byte("fake-token-data")},
 	}
-	sender := &recordingSender{}
+	sender := &fakeevent.Sender{}
 	testRESTEndpoint(
 		t, nil,
 		http.MethodPost, "/v1beta1/system/roles/"+testSA.Name+"/api-tokens",
@@ -307,11 +325,16 @@ func Test_server_createSystemAPIToken(t *testing.T) {
 
 					// System-level tokens are recorded in Kargo's own namespace. With
 					// no authenticated caller there is nobody to attribute it to.
-					require.Len(t, sender.events, 1)
-					evt, ok := sender.events[0].(*event.APITokenCreated)
-					require.True(t, ok)
-					require.Equal(t, testKargoNamespace, evt.GetProject())
-					require.Equal(t, testToken.Name, evt.GetName())
+					evt := &event.APITokenCreated{}
+					requireSingleEvent(
+						t,
+						sender,
+						kargoapi.EventTypeAPITokenCreated,
+						"Secret",
+						evt,
+					)
+					require.Equal(t, testKargoNamespace, evt.Project)
+					require.Equal(t, testToken.Name, evt.Name)
 					require.Equal(t, testSA.Name, evt.RoleName)
 					require.True(t, evt.SystemLevel)
 					require.Nil(t, evt.Actor)

@@ -22,24 +22,10 @@ import (
 	"github.com/akuity/kargo/pkg/controller"
 	"github.com/akuity/kargo/pkg/credentials"
 	kargoEvent "github.com/akuity/kargo/pkg/event"
-	k8sevent "github.com/akuity/kargo/pkg/event/kubernetes"
-	fakeevent "github.com/akuity/kargo/pkg/kubernetes/event/fake"
+	fakeevent "github.com/akuity/kargo/pkg/event/fake"
 	"github.com/akuity/kargo/pkg/logging"
 	"github.com/akuity/kargo/pkg/subscription"
 )
-
-type testEventSender struct {
-	sendFn func(context.Context, kargoEvent.Meta) error
-}
-
-func (s *testEventSender) Send(ctx context.Context, evt kargoEvent.Meta) error {
-	if s.sendFn != nil {
-		return s.sendFn(ctx, evt)
-	}
-	return nil
-}
-
-func (s *testEventSender) Shutdown() {}
 
 func TestNewReconciler(t *testing.T) {
 	kubeClient := fake.NewClientBuilder().Build()
@@ -90,7 +76,7 @@ func TestReconcilerConfigName(t *testing.T) {
 }
 
 func TestSyncWarehouse(t *testing.T) {
-	fakeRecorder := fakeevent.NewEventRecorder(1)
+	fakeSender := &fakeevent.Sender{}
 
 	testCases := []struct {
 		name       string
@@ -433,7 +419,7 @@ func TestSyncWarehouse(t *testing.T) {
 			name: "automatic Freight creation",
 			reconciler: &reconciler{
 				cfg:         ReconcilerConfig{},
-				eventSender: k8sevent.NewEventSender(fakeevent.NewEventRecorder(10)),
+				eventSender: &fakeevent.Sender{},
 				discoverArtifactsFn: func(
 					context.Context, string,
 					[]kargoapi.RepoSubscription,
@@ -517,7 +503,7 @@ func TestSyncWarehouse(t *testing.T) {
 			name: "sends FreightCreated event on successful freight creation",
 			reconciler: &reconciler{
 				cfg:         ReconcilerConfig{},
-				eventSender: k8sevent.NewEventSender(fakeRecorder),
+				eventSender: fakeSender,
 				discoverArtifactsFn: func(
 					context.Context, string,
 					[]kargoapi.RepoSubscription,
@@ -562,12 +548,20 @@ func TestSyncWarehouse(t *testing.T) {
 			},
 			assertions: func(t *testing.T, _ kargoapi.WarehouseStatus, err error) {
 				require.NoError(t, err)
-				select {
-				case evt := <-fakeRecorder.Events:
-					require.Equal(t, string(kargoapi.EventTypeFreightCreated), evt.Reason)
-				default:
-					t.Fatal("expected FreightCreated event to be sent but got none")
-				}
+				sent := fakeSender.Sent()
+				require.Len(t, sent, 1)
+				evt := sent[0]
+				require.Equal(t, string(kargoapi.EventTypeFreightCreated), evt.Type())
+				require.Equal(t, "Freight", kargoEvent.KindOf(evt))
+				require.Equal(
+					t,
+					kargoEvent.NewEventsSubjectPrefix("Freight")+"."+evt.Type(),
+					evt.Subject(),
+				)
+				var data kargoEvent.FreightCreated
+				require.NoError(t, evt.DataAs(&data))
+				require.Equal(t, "fake-freight", data.Name)
+				require.Equal(t, "fake-namespace", data.Project)
 			},
 		},
 
@@ -575,10 +569,8 @@ func TestSyncWarehouse(t *testing.T) {
 			name: "event send error does not fail reconciliation",
 			reconciler: &reconciler{
 				cfg: ReconcilerConfig{},
-				eventSender: &testEventSender{
-					sendFn: func(context.Context, kargoEvent.Meta) error {
-						return errors.New("failed to send event")
-					},
+				eventSender: &fakeevent.Sender{
+					SendErr: errors.New("failed to send event"),
 				},
 				discoverArtifactsFn: func(
 					context.Context, string,
@@ -1905,7 +1897,7 @@ func Test_freightCreationCriteriaSatisfied(t *testing.T) {
 		{
 			name: "success - chart versions match with repo URL and optional name",
 			freightCreationCriteria: &kargoapi.FreightCreationCriteria{
-				Expression: `chartFrom('site/repo/frontend', 'some-name').Version == 
+				Expression: `chartFrom('site/repo/frontend', 'some-name').Version ==
 				chartFrom('site/repo/backend', 'some-other-name').Version`,
 			},
 			artifacts: &kargoapi.DiscoveredArtifacts{
@@ -1982,5 +1974,4 @@ func Test_freightCreationCriteriaSatisfied(t *testing.T) {
 			require.NoError(t, err)
 		})
 	}
-
 }

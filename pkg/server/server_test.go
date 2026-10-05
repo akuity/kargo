@@ -13,8 +13,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
-	k8sevent "github.com/akuity/kargo/pkg/event/kubernetes"
-	fakeevent "github.com/akuity/kargo/pkg/kubernetes/event/fake"
+	fakeevent "github.com/akuity/kargo/pkg/event/fake"
 	"github.com/akuity/kargo/pkg/server/config"
 	"github.com/akuity/kargo/pkg/server/kubernetes"
 	"github.com/akuity/kargo/pkg/server/rbac"
@@ -37,7 +36,7 @@ func TestNewServer(t *testing.T) {
 		},
 	)
 	require.NoError(t, err)
-	testSender := k8sevent.NewEventSender(fakeevent.NewEventRecorder(0))
+	testSender := &fakeevent.Sender{}
 
 	s, ok := NewServer(
 		testServerConfig,
