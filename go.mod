@@ -68,6 +68,7 @@ require (
 	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/klauspost/compress v1.20.0
 	github.com/microsoft/azure-devops-go-api/azuredevops/v7 v7.1.0
+	github.com/nats-io/nats.go v1.54.0
 	github.com/oapi-codegen/runtime v1.7.0
 	github.com/oklog/ulid/v2 v2.1.2
 	github.com/otiai10/copy v1.14.1
@@ -284,6 +285,8 @@ require (
 	github.com/monochromegane/go-gitignore v0.0.0-20200626010858-205db1a8cc00 // indirect
 	github.com/morikuni/aec v1.0.0 // indirect
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
+	github.com/nats-io/nkeys v0.4.16 // indirect
+	github.com/nats-io/nuid v1.0.1 // indirect
 	github.com/ncruces/go-sqlite3 v0.32.0 // indirect
 	github.com/ncruces/go-strftime v1.0.0 // indirect
 	github.com/ncruces/julianday v1.0.0 // indirect
