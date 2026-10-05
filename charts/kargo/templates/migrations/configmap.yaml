@@ -1,0 +1,20 @@
+{{- include "kargo.database.validate" . }}
+{{- if include "kargo.migrations.enabled" . }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kargo-migrate
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "kargo.labels" . | nindent 4 }}
+    {{- include "kargo.migrations.labels" . | nindent 4 }}
+  {{- include "kargo.annotations" (dict "root" . "annotations" .Values.database.migrations.annotations) | nindent 2 }}
+data:
+  LOG_LEVEL: {{ quote .Values.database.migrations.logLevel }}
+  LOG_FORMAT: {{ quote .Values.database.migrations.logFormat }}
+  {{- with (include "kargo.tracing.configMapData" .) }}
+  {{- . | nindent 2 }}
+  {{- end }}
+  DATABASE_CONNECT_TIMEOUT: {{ quote .Values.database.migrations.connectTimeout }}
+  DATABASE_MIGRATION_LOCK_TIMEOUT: {{ quote .Values.database.migrations.lockTimeout }}
+{{- end }}

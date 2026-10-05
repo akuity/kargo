@@ -1414,6 +1414,8 @@ database:
     lockTimeout: 1h
     ## @param database.migrations.logLevel The log level for the migration Job. Valid options are ERROR, INFO, DEBUG, and TRACE (case insensitive).
     logLevel: INFO
+    ## @param database.migrations.logFormat The format of logs from the migration Job. Valid options are CONSOLE or JSON (case insensitive).
+    logFormat: CONSOLE
 
     ## @param database.migrations.labels Labels to add to the migration Job resources. Merges with `global.labels`, allowing you to override or add to the global labels.
     labels: {}

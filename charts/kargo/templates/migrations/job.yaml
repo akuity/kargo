@@ -22,8 +22,9 @@ spec:
         {{ $key }}: {{ $value | quote }}
         {{- end }}
       {{- end }}
-      {{- with (mergeOverwrite (deepCopy .Values.global.podAnnotations) .Values.database.migrations.podAnnotations) }}
       annotations:
+        configmap/checksum: {{ pick ( include (print $.Template.BasePath "/migrations/configmap.yaml") . | fromYaml ) "data" | toYaml | sha256sum }}
+      {{- with (mergeOverwrite (deepCopy .Values.global.podAnnotations) .Values.database.migrations.podAnnotations) }}
         {{- range $key, $value := . }}
         {{ $key }}: {{ $value | quote }}
         {{- end }}
@@ -50,12 +51,6 @@ spec:
         command: ["/sbin/tini", "--", "/usr/local/bin/kargo"]
         args: ["migrate"]
         env:
-        - name: LOG_LEVEL
-          value: {{ .Values.database.migrations.logLevel | quote }}
-        - name: DATABASE_CONNECT_TIMEOUT
-          value: {{ .Values.database.migrations.connectTimeout | quote }}
-        - name: DATABASE_MIGRATION_LOCK_TIMEOUT
-          value: {{ .Values.database.migrations.lockTimeout | quote }}
         {{- if .Values.database.postgres.enabled }}
         # The bundled database: the binary composes the connection string from
         # these parts, escaping the password, which a $(VAR) reference could
@@ -85,8 +80,10 @@ spec:
         {{- with (concat .Values.global.env .Values.database.migrations.env) }}
         {{- tpl (toYaml .) $ | nindent 8 }}
         {{- end }}
-        {{- with (concat .Values.global.envFrom .Values.database.migrations.envFrom) }}
         envFrom:
+        - configMapRef:
+            name: kargo-migrate
+        {{- with (concat .Values.global.envFrom .Values.database.migrations.envFrom) }}
         {{- tpl (toYaml .) $ | nindent 8 }}
         {{- end }}
         {{- with .Values.database.migrations.securityContext | default .Values.global.securityContext }}

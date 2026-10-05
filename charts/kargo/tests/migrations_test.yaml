@@ -6,8 +6,10 @@ release:
   namespace: kargo
 templates:
   - templates/migrations/job.yaml
+  - templates/migrations/configmap.yaml
 tests:
   - it: renders a Job against the bundled database by default
+    template: templates/migrations/job.yaml
     asserts:
       - hasDocuments:
           count: 1
@@ -48,15 +50,13 @@ tests:
                 name: kargo-postgres
                 key: password
       - contains:
-          path: spec.template.spec.containers[0].env
+          path: spec.template.spec.containers[0].envFrom
           content:
-            name: DATABASE_CONNECT_TIMEOUT
-            value: 5m
-      - contains:
-          path: spec.template.spec.containers[0].env
-          content:
-            name: DATABASE_MIGRATION_LOCK_TIMEOUT
-            value: 1h
+            configMapRef:
+              name: kargo-migrate
+      - matchRegex:
+          path: spec.template.metadata.annotations["configmap/checksum"]
+          pattern: ^[0-9a-f]{64}$
       - notContains:
           path: spec.template.spec.containers[0].env
           content:
@@ -67,6 +67,7 @@ tests:
     set:
       database.postgres.password: ""
       database.postgres.existingSecret: my-db-password
+    template: templates/migrations/job.yaml
     asserts:
       - contains:
           path: spec.template.spec.containers[0].env
@@ -82,6 +83,7 @@ tests:
       database.postgres.enabled: false
       database.external.secretName: my-db
       database.external.secretKey: url
+    template: templates/migrations/job.yaml
     asserts:
       - contains:
           path: spec.template.spec.containers[0].env
@@ -100,6 +102,7 @@ tests:
   - it: is not rendered when migrations are disabled
     set:
       database.migrations.enabled: false
+    template: templates/migrations/job.yaml
     asserts:
       - hasDocuments:
           count: 0
@@ -107,6 +110,7 @@ tests:
   - it: is not rendered when there is no database
     set:
       database.postgres.enabled: false
+    template: templates/migrations/job.yaml
     asserts:
       - hasDocuments:
           count: 0
@@ -114,6 +118,7 @@ tests:
   - it: is not rendered when workloads are not installed
     set:
       workloads.install: false
+    template: templates/migrations/job.yaml
     asserts:
       - hasDocuments:
           count: 0
@@ -129,9 +134,12 @@ tests:
       database.migrations.env:
         - name: PGTZ
           value: UTC
+      global.envFrom:
+        - secretRef:
+            name: extra
       global.nodeSelector:
         disk: ssd
-      database.migrations.logLevel: DEBUG
+    template: templates/migrations/job.yaml
     asserts:
       - equal:
           path: metadata.labels.team
@@ -148,13 +156,71 @@ tests:
             name: PGTZ
             value: UTC
       - contains:
-          path: spec.template.spec.containers[0].env
+          path: spec.template.spec.containers[0].envFrom
           content:
-            name: LOG_LEVEL
-            value: DEBUG
+            secretRef:
+              name: extra
       - equal:
           path: spec.template.spec.nodeSelector.disk
           value: ssd
+
+---
+suite: migrations/configmap.yaml
+values:
+  - ../test/values-unittest.yaml
+templates:
+  - templates/migrations/configmap.yaml
+tests:
+  - it: renders the Job's configuration by default
+    asserts:
+      - hasDocuments:
+          count: 1
+      - isKind:
+          of: ConfigMap
+      - equal:
+          path: metadata.name
+          value: kargo-migrate
+      - equal:
+          path: data.LOG_LEVEL
+          value: INFO
+      - equal:
+          path: data.LOG_FORMAT
+          value: CONSOLE
+      - equal:
+          path: data.DATABASE_CONNECT_TIMEOUT
+          value: 5m
+      - equal:
+          path: data.DATABASE_MIGRATION_LOCK_TIMEOUT
+          value: 1h
+      - notExists:
+          path: data.TRACING_ENABLED
+
+  - it: carries the log and tracing settings
+    set:
+      database.migrations.logLevel: DEBUG
+      database.migrations.logFormat: JSON
+      global.tracing.enabled: true
+      global.tracing.otlp.endpoint: http://otel:4318
+    asserts:
+      - equal:
+          path: data.LOG_LEVEL
+          value: DEBUG
+      - equal:
+          path: data.LOG_FORMAT
+          value: JSON
+      - equal:
+          path: data.TRACING_ENABLED
+          value: "true"
+      - equal:
+          path: data.OTEL_EXPORTER_OTLP_ENDPOINT
+          value: http://otel:4318
+
+  - it: is not rendered when migrations are disabled
+    set:
+      database.migrations.enabled: false
+    asserts:
+      - hasDocuments:
+          count: 0
 
 ---
 suite: migrations/service-account.yaml
