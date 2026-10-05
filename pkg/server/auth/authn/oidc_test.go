@@ -11,6 +11,8 @@ import (
 
 	"github.com/coreos/go-oidc/v3/oidc"
 	"github.com/stretchr/testify/require"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 
 	"github.com/akuity/kargo/pkg/server/config"
@@ -247,13 +249,19 @@ func TestOIDC_Authenticate(t *testing.T) {
 			},
 		},
 		{
+			// The API server's own request was refused. The refusal's 403 must
+			// not reach the client as if it described their request.
 			name: "ServiceAccounts cannot be listed",
 			authenticator: &oidcAuthenticator{
 				cfg:             cfg,
 				verify:          verified,
 				extractClaimsFn: func(*oidc.IDToken) (Claims, error) { return fullClaims, nil },
 				listServiceAccountsFn: func(context.Context, Claims) (map[string]map[types.NamespacedName]struct{}, error) {
-					return nil, errors.New("api server down")
+					return nil, apierrors.NewForbidden(
+						schema.GroupResource{Resource: "serviceaccounts"},
+						"",
+						errors.New("not permitted"),
+					)
 				},
 			},
 			token: tokenFrom(t, issuer),
@@ -261,6 +269,7 @@ func TestOIDC_Authenticate(t *testing.T) {
 				require.True(t, ok)
 				require.ErrorContains(t, err, "list service accounts for user")
 				require.NotErrorIs(t, err, ErrInvalidToken)
+				requireErrorStatus(t, err, http.StatusInternalServerError)
 			},
 		},
 		{

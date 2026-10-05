@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net/http"
 	"net/url"
 	"os"
 	"strings"
@@ -20,6 +21,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	libhttp "github.com/akuity/kargo/pkg/http"
 	"github.com/akuity/kargo/pkg/indexer"
 	"github.com/akuity/kargo/pkg/logging"
 	"github.com/akuity/kargo/pkg/server/config"
@@ -80,7 +82,10 @@ func (a *oidcAuthenticator) Authenticate(
 		// Stated explicitly because the underlying Kubernetes error carries a
 		// status code of its own, which the error-handling middleware would
 		// otherwise report to the client as if it described their request.
-		return nil, true, fmt.Errorf("list service accounts for user: %w", err)
+		return nil, true, libhttp.Error(
+			fmt.Errorf("list service accounts for user: %w", err),
+			http.StatusInternalServerError,
+		)
 	}
 	var username string
 	if raw, ok := claims[a.cfg.OIDCConfig.UsernameClaim]; ok {
