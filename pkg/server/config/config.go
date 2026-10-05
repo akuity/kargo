@@ -31,6 +31,7 @@ type ServerConfig struct {
 	SecretManagementEnabled     bool
 	LocalMode                   bool // LocalMode is true if the server is running as a non-containerized process
 	TLSConfig                   *TLSConfig
+	AuthCacheConfig             AuthCacheConfig
 	OIDCConfig                  *oidc.Config
 	AdminConfig                 *AdminConfig
 	DexProxyConfig              *dex.ProxyConfig
@@ -80,6 +81,7 @@ func ServerConfigFromEnv() ServerConfig {
 	cfg := ServerConfig{}
 	envconfig.MustProcess("", &cfg.StandardConfig)
 	cfg.SecretManagementEnabled = types.MustParseBool(os.GetEnv("SECRET_MANAGEMENT_ENABLED", "false"))
+	envconfig.MustProcess("", &cfg.AuthCacheConfig)
 	if types.MustParseBool(os.GetEnv("TLS_ENABLED", "false")) {
 		tlsCfg := TLSConfigFromEnv()
 		cfg.TLSConfig = &tlsCfg
@@ -163,6 +165,25 @@ func TLSConfigFromEnv() TLSConfig {
 	cfg := TLSConfig{}
 	envconfig.MustProcess("", &cfg)
 	return cfg
+}
+
+// AuthCacheConfig configures how long the API server remembers what it has
+// learned about a request's credentials and permissions, so that it need not
+// ask Kubernetes again on every request. Longer TTLs mean less load on the
+// Kubernetes API server, but a longer wait before a revoked token or a change
+// to RBAC takes effect. A TTL of zero or less disables that cache. The
+// defaults are those the Kubernetes API server itself uses for webhook token
+// authentication and authorization.
+type AuthCacheConfig struct {
+	// TokenTTL is how long a verified token's identity is remembered. It is
+	// never remembered past the token's own expiry.
+	TokenTTL time.Duration `envconfig:"AUTH_TOKEN_CACHE_TTL" default:"2m"`
+	// DecisionAllowTTL is how long a permission granted to a subject is
+	// remembered.
+	DecisionAllowTTL time.Duration `envconfig:"AUTH_DECISION_CACHE_ALLOW_TTL" default:"5m"`
+	// DecisionDenyTTL is how long a permission refused to a subject is
+	// remembered.
+	DecisionDenyTTL time.Duration `envconfig:"AUTH_DECISION_CACHE_DENY_TTL" default:"30s"`
 }
 
 // AdminConfig represents configuration for an admin account.
