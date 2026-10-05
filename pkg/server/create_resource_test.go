@@ -379,7 +379,7 @@ func Test_server_createResources_freightEvent(t *testing.T) {
 					s.sender = k8sevent.NewEventSender(recorder)
 				},
 				ctxSetup: func(ctx context.Context) context.Context {
-					return user.ContextWithInfo(ctx, user.Info{IsAdmin: true})
+					return user.ContextWithIdentity(ctx, user.Admin{})
 				},
 				body: mustJSONBody(testFreight),
 				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
@@ -463,8 +463,8 @@ func Test_server_createResources_clusterScopedNamespaceSpoofing(t *testing.T) {
 	// projectCreatorUser mirrors the identity a real bearer token resolves to
 	// via TokenReview when it belongs to the kargo-project-creator
 	// ServiceAccount the chart provisions.
-	projectCreatorUser := user.Info{
-		KubernetesUserInfo: &authnv1.UserInfo{
+	projectCreatorUser := user.KubernetesUser{
+		UserInfo: authnv1.UserInfo{
 			Username: "system:serviceaccount:kargo:kargo-project-creator",
 		},
 	}
@@ -485,7 +485,7 @@ func Test_server_createResources_clusterScopedNamespaceSpoofing(t *testing.T) {
 					s.authorizeFn = s.client.Authorize
 				},
 				ctxSetup: func(ctx context.Context) context.Context {
-					return user.ContextWithInfo(ctx, projectCreatorUser)
+					return user.ContextWithIdentity(ctx, projectCreatorUser)
 				},
 				body: mustJSONBody(&kargoapi.ClusterPromotionTask{
 					TypeMeta: metav1.TypeMeta{
@@ -508,7 +508,7 @@ func Test_server_createResources_clusterScopedNamespaceSpoofing(t *testing.T) {
 					s.authorizeFn = s.client.Authorize
 				},
 				ctxSetup: func(ctx context.Context) context.Context {
-					return user.ContextWithInfo(ctx, projectCreatorUser)
+					return user.ContextWithIdentity(ctx, projectCreatorUser)
 				},
 				body: mustJSONArrayBody(
 					&kargoapi.Project{

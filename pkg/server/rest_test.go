@@ -48,7 +48,7 @@ type restTestCase struct {
 	// case-specific server initialization.
 	serverSetup func(*testing.T, *server)
 	// ctxSetup optionally transforms the request context before the request
-	// is served. Use this to inject context-bound values like user.Info.
+	// is served. Use this to inject context-bound values like a user.Identity.
 	ctxSetup   func(context.Context) context.Context
 	assertions func(*testing.T, *httptest.ResponseRecorder, client.Client)
 }

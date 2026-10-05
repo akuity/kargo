@@ -6,7 +6,7 @@ import (
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/pkg/server/auth/can"
 )
 
 // listForWatchSeed lists Kargo resources straight from the Kubernetes API,
@@ -43,12 +43,9 @@ func (s *server) listForWatchSeed(
 	// Authorize the user before bypassing the cache. The APIReader runs with the
 	// API server's own credentials, so without this check a caller could read
 	// data they would otherwise be denied.
-	if err := s.authorizeFn(
+	if err := s.authorize(
 		ctx,
-		"list",
-		kargoapi.GroupVersion.WithResource(resource),
-		"",
-		client.ObjectKey{Namespace: listOpts.Namespace},
+		can.List().Kargo(resource).In(listOpts.Namespace),
 	); err != nil {
 		return err
 	}

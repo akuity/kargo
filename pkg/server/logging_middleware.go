@@ -8,7 +8,6 @@ import (
 	"github.com/gin-gonic/gin"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	"github.com/akuity/kargo/pkg/api"
 	"github.com/akuity/kargo/pkg/logging"
 	"github.com/akuity/kargo/pkg/server/user"
 )
@@ -39,8 +38,8 @@ func LoggingMiddleware() gin.HandlerFunc {
 		// The authentication middleware binds the actor to the request context
 		// on the way in, so it is available here on the way out.
 		actor := kargoapi.EventActorUnknown
-		if u, ok := user.InfoFromContext(c.Request.Context()); ok {
-			actor = api.FormatEventUserActor(u)
+		if u, ok := user.IdentityFromContext(c.Request.Context()); ok {
+			actor = u.Actor()
 		}
 		// Without stack traces, because this middleware sits above every handler
 		// and every other middleware, so a trace from here describes only the path

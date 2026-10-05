@@ -9,7 +9,6 @@ import (
 	"github.com/gin-gonic/gin"
 	corev1 "k8s.io/api/core/v1"
 
-	"github.com/akuity/kargo/pkg/api"
 	"github.com/akuity/kargo/pkg/event"
 	libhttp "github.com/akuity/kargo/pkg/http"
 	"github.com/akuity/kargo/pkg/logging"
@@ -138,8 +137,8 @@ func apiTokenEventMessage(
 		"API token %q %s Role %q",
 		tokenSecret.Name, verb, tokenSecret.Annotations[corev1.ServiceAccountNameKey],
 	)
-	if u, ok := user.InfoFromContext(ctx); ok {
-		actor = api.FormatEventUserActor(u)
+	if u, ok := user.IdentityFromContext(ctx); ok {
+		actor = u.Actor()
 		message += fmt.Sprintf(" by %q", actor)
 	}
 	return message, actor

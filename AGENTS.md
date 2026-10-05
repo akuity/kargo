@@ -262,11 +262,11 @@ func TestGetAuthorizedClient(t *testing.T) {
     testInternalClient := fake.NewClientBuilder().Build()
     testCases := []struct {
         name     string
-        userInfo *user.Info
+        identity user.Identity
         assert   func(*testing.T, libClient.Client, error)
     }{
         {
-            name: "no context-bound user.Info",
+            name: "no context-bound identity",
             assert: func(t *testing.T, _ libClient.Client, err error) {
                 require.Error(t, err)
                 require.Equal(t, "not allowed", err.Error())
@@ -274,7 +274,7 @@ func TestGetAuthorizedClient(t *testing.T) {
         },
         {
             name: "admin user",
-            userInfo: &user.Info{IsAdmin: true},
+            identity: user.Admin{},
             assert: func(t *testing.T, c libClient.Client, err error) {
                 require.NoError(t, err)
                 require.Same(t, testInternalClient, c)
@@ -284,10 +284,10 @@ func TestGetAuthorizedClient(t *testing.T) {
     for _, testCase := range testCases {
         t.Run(testCase.name, func(t *testing.T) {
             ctx := context.Background()
-            if testCase.userInfo != nil {
-                ctx = user.ContextWithInfo(ctx, *testCase.userInfo)
+            if testCase.identity != nil {
+                ctx = user.ContextWithIdentity(ctx, testCase.identity)
             }
-            client, err := getAuthorizedClient(nil)(
+            client, err := getAuthorizedClient()(
                 ctx, testInternalClient, "",
                 schema.GroupVersionResource{}, "",
                 libClient.ObjectKey{},
@@ -412,19 +412,15 @@ collisions:
 
 ```go
 // pkg/server/user/user.go
-type userInfoKey struct{}
+type identityKey struct{}
 
-func ContextWithInfo(ctx context.Context, u Info) context.Context {
-    return context.WithValue(ctx, userInfoKey{}, u)
+func ContextWithIdentity(ctx context.Context, id Identity) context.Context {
+    return context.WithValue(ctx, identityKey{}, id)
 }
 
-func InfoFromContext(ctx context.Context) (Info, bool) {
-    val := ctx.Value(userInfoKey{})
-    if val == nil {
-        return Info{}, false
-    }
-    u, ok := val.(Info)
-    return u, ok
+func IdentityFromContext(ctx context.Context) (Identity, bool) {
+    id, ok := ctx.Value(identityKey{}).(Identity)
+    return id, ok && id != nil
 }
 ```
 
@@ -492,7 +488,13 @@ any data is read or written.
 Because this is not a standard Kubernetes CRUD verb, the authorizing client
 cannot check it implicitly. Endpoints that require promote permission
 (promote-to-stage, promote-downstream, approve-freight) must test for permission
-using the wrapper's `Authorize()` method explicitly.
+explicitly, describing the operation with `pkg/server/auth/can`:
+
+```go
+if err := s.authorize(ctx, can.Promote().Stage(project, stage)); err != nil {
+    return err
+}
+```
 
 **Internal client bypass:** In rare cases the API server uses its own
 (non-authorizing) internal client to act on behalf of a user. **Any code that

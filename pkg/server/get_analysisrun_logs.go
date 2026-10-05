@@ -275,8 +275,8 @@ func (s *server) buildRequest(
 	}
 	if s.cfg.AnalysisRunLogToken != "" {
 		env["token"] = s.cfg.AnalysisRunLogToken
-	} else if userInfo, ok := user.InfoFromContext(ctx); ok && s.cfg.AnalysisRunLogForwardUserToken {
-		env["token"] = userInfo.BearerToken
+	} else if token, ok := user.BearerTokenFromContext(ctx); ok && s.cfg.AnalysisRunLogForwardUserToken {
+		env["token"] = token
 	}
 	for key, valTemplate := range s.cfg.AnalysisRunLogHTTPHeaders {
 		valTemplateAny, err := expressions.EvaluateTemplate(valTemplate, env)

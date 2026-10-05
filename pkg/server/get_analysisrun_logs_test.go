@@ -684,7 +684,7 @@ func TestServer_buildRequest(t *testing.T) {
 			}
 			ctx := t.Context()
 			if testCase.userToken != "" {
-				ctx = user.ContextWithInfo(ctx, user.Info{BearerToken: testCase.userToken})
+				ctx = user.ContextWithBearerToken(ctx, testCase.userToken)
 			}
 			req, err := s.buildRequest(
 				ctx,

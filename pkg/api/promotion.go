@@ -196,8 +196,8 @@ func AbortPromotion(
 		Action: action,
 	}
 	// Put actor information to track on the controller side
-	if u, ok := user.InfoFromContext(ctx); ok {
-		ar.Actor = FormatEventUserActor(u)
+	if u, ok := user.IdentityFromContext(ctx); ok {
+		ar.Actor = u.Actor()
 	}
 	return patchAnnotation(ctx, c, promotion, kargoapi.AnnotationKeyAbort, ar.String())
 }
