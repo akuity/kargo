@@ -37,6 +37,18 @@ data:
   SYSTEM_RESOURCES_NAMESPACE: {{ quote .Values.global.systemResources.namespace }}
   SHARED_RESOURCES_NAMESPACE: {{ quote .Values.global.sharedResources.namespace }}
   PERMISSIVE_CORS_POLICY_ENABLED: {{ quote .Values.api.permissiveCORSPolicyEnabled }}
+  {{- with .Values.api.trustedProxies }}
+  TRUSTED_PROXIES: {{ join "," . | quote }}
+  {{- end }}
+  {{- with .Values.api.clientIPHeader }}
+  CLIENT_IP_HEADER: {{ quote . }}
+  {{- end }}
+  {{- if .Values.api.requestLog.allEnabled }}
+  REQUEST_LOG_ALL_ENABLED: "true"
+  {{- end }}
+  {{- if .Values.api.requestLog.sourceIPEnabled }}
+  REQUEST_LOG_SOURCE_IP_ENABLED: "true"
+  {{- end }}
   {{- if .Values.api.defaultControllerName }}
   DEFAULT_CONTROLLER_NAME: {{ .Values.api.defaultControllerName | quote }}
   {{- end }}

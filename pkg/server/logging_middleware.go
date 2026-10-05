@@ -3,12 +3,14 @@ package server
 import (
 	"errors"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/logging"
+	"github.com/akuity/kargo/pkg/server/config"
 	"github.com/akuity/kargo/pkg/server/user"
 )
 
@@ -24,13 +26,34 @@ import (
 // A server error is recorded at error level. A request that was refused is
 // recorded at info level, because a refusal is never routine and is the first
 // thing anyone looks for when a user reports being unable to do something.
-// Everything else is operational detail and recorded at debug level.
+// Everything else is operational detail and recorded at debug level, unless
+// cfg.RequestLogAllEnabled raises it to info level.
+//
+// The IP address a request came from is recorded only when
+// cfg.RequestLogSourceIPEnabled is set, because it is personal data and is
+// usually better recorded by whatever proxy sits in front of the server. It is
+// resolved by the engine, which ConfigureEngine must have configured.
 //
 // This must be the outermost middleware, so that the status and any reported
 // error it records are the ones the client actually received.
-func LoggingMiddleware() gin.HandlerFunc {
+func LoggingMiddleware(cfg config.ServerConfig) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		start := time.Now()
+
+		// Taken on the way in and used for the line recorded below, so that line
+		// does not depend on what anything within does to the request's context.
+		ctx := c.Request.Context()
+		logger := logging.LoggerFromContext(ctx)
+		if cfg.RequestLogSourceIPEnabled {
+			// Bound to the request's logger, so that everything logged on the
+			// request's behalf says where it came from.
+			logger = logger.WithValues("sourceIP", c.ClientIP())
+			// As received, and so only as trustworthy as whatever sent it.
+			if forwarded := c.Request.Header.Values("X-Forwarded-For"); len(forwarded) > 0 {
+				logger = logger.WithValues("forwardedFor", strings.Join(forwarded, ", "))
+			}
+			c.Request = c.Request.WithContext(logging.ContextWithLogger(ctx, logger))
+		}
 
 		c.Next()
 
@@ -44,7 +67,7 @@ func LoggingMiddleware() gin.HandlerFunc {
 		// Without stack traces, because this middleware sits above every handler
 		// and every other middleware, so a trace from here describes only the path
 		// through Gin and reveals nothing about what went wrong.
-		logger := logging.LoggerFromContext(c.Request.Context()).
+		logger = logger.
 			WithoutStackTraces().
 			WithValues(
 				"method", c.Request.Method,
@@ -65,7 +88,11 @@ func LoggingMiddleware() gin.HandlerFunc {
 				logger.Info("refused request")
 				return
 			}
-			logger.Debug("handled request")
+			if cfg.RequestLogAllEnabled {
+				logger.Info("handled request")
+			} else {
+				logger.Debug("handled request")
+			}
 			return
 		}
 		if reported == nil {

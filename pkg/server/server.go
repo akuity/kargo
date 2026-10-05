@@ -185,7 +185,10 @@ func (s *server) Serve(ctx context.Context, l net.Listener) error {
 	}
 
 	// Add Gin REST router
-	ginRouter := s.setupRESTRouter(ctx)
+	ginRouter, err := s.setupRESTRouter(ctx)
+	if err != nil {
+		return fmt.Errorf("error setting up REST router: %w", err)
+	}
 	mux.Handle("/v1beta1/", ginRouter)
 
 	var dashboardFS fs.FS
