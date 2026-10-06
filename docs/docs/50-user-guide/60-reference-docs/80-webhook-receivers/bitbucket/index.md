@@ -102,14 +102,48 @@ kubectl get projectconfigs kargo-demo \
 
 ## Registering with Bitbucket
 
-To configure a single Bitbucket repository to notify a receiver of relevant
-events:
+Webhooks can be registered for a single repository or for an entire workspace.
+A workspace webhook is triggered by events from _all_ repositories belonging to
+that workspace, which spares you from registering the same webhook
+repeatedly.
 
-1. Navigate to
-   `https://bitbucket.org/<workspace>/<repository>/admin/webhooks` where
-   `<workspace>` has been replaced with a Bitbucket workspace and `<repository>`
-   has been replaced with the name of a repository belonging to that workspace
-   and for which you are an administrator.
+1. Navigate to the webhooks dashboard.
+
+    Where you can find these settings varies based on the scope at which you'd
+    like to enable your webhook.
+
+    <Tabs groupId="navigation">
+    <TabItem value="repository-scope" label="Repository Scope" default>
+
+    Navigate to
+    `https://bitbucket.org/<workspace>/<repository>/admin/webhooks`, where
+    `<workspace>` has been replaced with a Bitbucket workspace and
+    `<repository>` has been replaced with the name of a repository belonging to
+    that workspace and for which you are an administrator.
+
+    </TabItem>
+    <TabItem value="workspace-scope" label="Workspace Scope">
+
+    Navigate to
+    `https://bitbucket.org/<workspace>/workspace/settings/webhooks`, where
+    `<workspace>` has been replaced with a Bitbucket workspace of which you are
+    an owner.
+
+    :::note
+
+    Only workspace owners can register workspace webhooks. Workspace webhooks
+    are available only in Bitbucket Cloud.
+    :::
+
+    </TabItem>
+    </Tabs>
+
+    :::caution
+
+    If you register identical webhooks affecting a given repository at _both_
+    the repository level and workspace level, both webhooks will be triggered
+    by applicable events in that repository.
+    :::
 
 1. Click <Hlt>Add webhook</Hlt>.
 
@@ -151,7 +185,7 @@ events:
 
     1. Click <Hlt>Save</Hlt>.
 
-1. Verify that the new webhook appears under <Hlt>Repository hooks</Hlt>.
+1. Verify that the new webhook appears in the list of webhooks.
 
 1. If you'd like to record outbound webhook requests for troubleshooting
    purposes:
@@ -162,8 +196,8 @@ events:
 
     ![Enable History](./img/enable-history.png "Enabled History")
 
-When these steps are complete, the repository will send events to the webhook
-receiver.
+When these steps are complete, the repository (or, for a workspace webhook,
+every repository in the workspace) will send events to the webhook receiver.
 
 :::info
 
