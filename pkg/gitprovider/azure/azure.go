@@ -509,6 +509,12 @@ func parseRepoURL(repoURL string) (string, string, string, error) {
 	if err != nil {
 		return "", "", "", fmt.Errorf("error parsing Azure DevOps repository URL %q: %w", repoURL, err)
 	}
+	if u.Scheme != "https" && u.Scheme != "http" {
+		return "", "", "", fmt.Errorf(
+			"unsupported Azure DevOps repository URL %q: only HTTP(S) URLs are supported",
+			u.Redacted(),
+		)
+	}
 	if u.Host == modernHostSuffix {
 		return parseModernRepoURL(u)
 	} else if strings.HasSuffix(u.Host, legacyHostSuffix) {

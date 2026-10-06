@@ -4,14 +4,20 @@ import { createFormSchema, repoUrlError } from './schema-validator';
 
 test('repoUrlError accepts URLs the credential type can use', () => {
   expect(repoUrlError('git', 'https://github.com/akuity/kargo.git')).toBeUndefined();
-  expect(repoUrlError('git', 'ssh://git@github.com/akuity/kargo.git')).toBeUndefined();
   expect(repoUrlError('helm', 'https://charts.example.com')).toBeUndefined();
   expect(repoUrlError('helm', 'oci://ghcr.io/akuity/charts')).toBeUndefined();
   expect(repoUrlError('image', 'ghcr.io/akuity/kargo')).toBeUndefined();
 });
 
 test('repoUrlError rejects URLs the credential type cannot use', () => {
-  expect(repoUrlError('git', 'not a url')).toBe('Repo URL must be a valid git URL.');
+  expect(repoUrlError('git', 'not a url')).toBe('Repo URL must be a valid HTTP(S) git URL.');
+  // Only HTTP(S) git URLs are supported; SSH and SCP-style URLs are not.
+  expect(repoUrlError('git', 'ssh://git@github.com/akuity/kargo.git')).toBe(
+    'Repo URL must be a valid HTTP(S) git URL.'
+  );
+  expect(repoUrlError('git', 'git@github.com:akuity/kargo.git')).toBe(
+    'Repo URL must be a valid HTTP(S) git URL.'
+  );
   // Helm charts are served over HTTP(S) or OCI -- a git transport is neither.
   expect(repoUrlError('helm', 'ssh://git@github.com/akuity/charts.git')).toBe(
     'Repo URL must be a valid Helm chart repository.'

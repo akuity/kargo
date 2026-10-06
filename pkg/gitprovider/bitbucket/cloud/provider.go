@@ -504,6 +504,12 @@ func parseRepoURL(repoURL string) (host, owner, slug string, err error) {
 	if err != nil {
 		return "", "", "", fmt.Errorf("parse Bitbucket Cloud URL %q: %w", repoURL, err)
 	}
+	if u.Scheme != "https" && u.Scheme != "http" {
+		return "", "", "", fmt.Errorf(
+			"unsupported Bitbucket Cloud URL %q: only HTTP(S) URLs are supported",
+			u.Redacted(),
+		)
+	}
 	path := strings.TrimPrefix(u.Path, "/")
 	parts := strings.Split(path, "/")
 	if len(parts) != 2 {

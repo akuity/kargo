@@ -149,9 +149,8 @@ func (g *gitPushPusher) run(
 	}
 	if creds != nil {
 		loadOpts.Credentials = &git.RepoCredentials{
-			Username:      creds.Username,
-			Password:      creds.Password,
-			SSHPrivateKey: creds.SSHPrivateKey,
+			Username: creds.Username,
+			Password: creds.Password,
 		}
 	}
 	if workTree, err = git.LoadWorkTree(ctx, path, loadOpts); err != nil {

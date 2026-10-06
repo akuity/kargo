@@ -1057,15 +1057,13 @@ func TestParseRepoURL(t *testing.T) {
 			wantSlug:  "repo",
 		},
 		{
-			name:      "valid SSH URL",
-			url:       "git@bitbucket.org:owner/repo.git",
-			wantHost:  "bitbucket.org",
-			wantOwner: "owner",
-			wantSlug:  "repo",
-		},
-		{
 			name:    "invalid URL format",
 			url:     "://invalid-url",
+			wantErr: true,
+		},
+		{
+			name:    "SSH URL",
+			url:     "ssh://git@bitbucket.org/owner/repo.git",
 			wantErr: true,
 		},
 		{
@@ -1152,16 +1150,6 @@ func TestGetCommitURL(t *testing.T) {
 		sha               string
 		expectedCommitURL string
 	}{
-		{
-			repoURL:           "ssh://git@bitbucket.org/akuity/kargo.git",
-			sha:               "sha",
-			expectedCommitURL: "https://bitbucket.org/akuity/kargo/commits/sha",
-		},
-		{
-			repoURL:           "git@bitbucket.org:akuity/kargo.git",
-			sha:               "sha",
-			expectedCommitURL: "https://bitbucket.org/akuity/kargo/commits/sha",
-		},
 		{
 			repoURL:           "https://username@bitbucket.org/akuity/kargo",
 			sha:               "sha",

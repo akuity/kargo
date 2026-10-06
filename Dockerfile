@@ -125,7 +125,7 @@ RUN --mount=type=cache,target=/go/pkg/mod --mount=type=cache,target=/root/.cache
 ####################################################################################################
 FROM alpine:latest AS back-end-dev
 
-RUN apk update && apk add ca-certificates git gpg gpg-agent openssh-client tini
+RUN apk update && apk add ca-certificates git gpg gpg-agent tini
 
 # Match the published image: use the Helm binary we build ourselves (needed
 # by the kustomize-build step's Helm plugin) rather than a distro package.

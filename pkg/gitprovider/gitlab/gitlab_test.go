@@ -459,7 +459,12 @@ func TestParseGitLabURL(t *testing.T) {
 		url            string
 		expectedScheme string
 		expectedHost   string
+		errExpected    bool
 	}{
+		{
+			url:         "ssh://git@gitlab.com/akuity/kargo.git",
+			errExpected: true,
+		},
 		{
 			url:            "https://gitlab.com/akuity/kargo",
 			expectedScheme: "https",
@@ -478,11 +483,6 @@ func TestParseGitLabURL(t *testing.T) {
 			expectedHost:   "gitlab.akuity.io",
 		},
 		{
-			url:            "ssh://gitlab.com/akuity/kargo.git",
-			expectedScheme: "https",
-			expectedHost:   "gitlab.com",
-		},
-		{
 			url:            "http://git.example.com/akuity/kargo",
 			expectedScheme: "http",
 			expectedHost:   "git.example.com",
@@ -491,6 +491,10 @@ func TestParseGitLabURL(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.url, func(t *testing.T) {
 			scheme, host, projectName, err := parseRepoURL(testCase.url)
+			if testCase.errExpected {
+				require.ErrorContains(t, err, "only HTTP(S) URLs are supported")
+				return
+			}
 			require.NoError(t, err)
 			require.Equal(t, testCase.expectedScheme, scheme)
 			require.Equal(t, testCase.expectedHost, host)
@@ -505,16 +509,6 @@ func TestGetCommitURL(t *testing.T) {
 		sha               string
 		expectedCommitURL string
 	}{
-		{
-			repoURL:           "ssh://git@gitlab.com/akuity/kargo.git",
-			sha:               "sha",
-			expectedCommitURL: "https://gitlab.com/akuity/kargo/-/commit/sha",
-		},
-		{
-			repoURL:           "git@gitlab.com:akuity/kargo.git",
-			sha:               "sha",
-			expectedCommitURL: "https://gitlab.com/akuity/kargo/-/commit/sha",
-		},
 		{
 			repoURL:           "http://gitlab.com/akuity/kargo",
 			sha:               "sha",

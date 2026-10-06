@@ -118,9 +118,6 @@ const credentialStringData = (cred: CredentialData): Record<string, string> => {
       data.username = cred.username;
       data.password = cred.password;
       break;
-    case 'ssh':
-      data.sshPrivateKey = cred.sshPrivateKey;
-      break;
     case 'github-app':
       // Kargo prioritizes githubAppClientID (recommended by GitHub) over the
       // deprecated numeric githubAppID; emit whichever the user provided.
@@ -389,9 +386,6 @@ const credentialFromSecret = ({ metadata, stringData: data }: SecretDoc): Creden
     cred.githubAppID = data.githubAppID ?? '';
     cred.githubAppInstallationID = data.githubAppInstallationID ?? '';
     cred.githubAppPrivateKey = data.githubAppPrivateKey ?? '';
-  } else if (data.sshPrivateKey) {
-    cred.auth = 'ssh';
-    cred.sshPrivateKey = data.sshPrivateKey;
   } else if (data.awsRegion || data.awsAccessKeyID || data.awsSecretAccessKey) {
     cred.auth = 'aws-ecr';
     cred.awsRegion = data.awsRegion ?? '';

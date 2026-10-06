@@ -133,6 +133,68 @@ func TestSetupUser(t *testing.T) {
 	}
 }
 
+func TestValidateRepoURL(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name    string
+		repoURL string
+		assert  func(*testing.T, error)
+	}{
+		{
+			name:    "unparseable URL",
+			repoURL: "https://user:secret@bad host/example/repo.git",
+			assert: func(t *testing.T, err error) {
+				require.ErrorContains(t, err, "only HTTP(S) URLs are supported")
+				require.NotContains(t, err.Error(), "secret")
+			},
+		},
+		{
+			name:    "SSH URL",
+			repoURL: "ssh://git:secret@github.com/example/repo.git",
+			assert: func(t *testing.T, err error) {
+				require.ErrorContains(t, err, "only HTTP(S) URLs are supported")
+				require.ErrorContains(t, err, "ssh://git:xxxxx@github.com")
+				require.NotContains(t, err.Error(), "secret")
+			},
+		},
+		{
+			name:    "SCP-style URL",
+			repoURL: "git@github.com:example/repo.git",
+			assert: func(t *testing.T, err error) {
+				require.ErrorContains(t, err, "only HTTP(S) URLs are supported")
+			},
+		},
+		{
+			name:    "local path",
+			repoURL: "/tmp/repo",
+			assert: func(t *testing.T, err error) {
+				require.ErrorContains(t, err, "only HTTP(S) URLs are supported")
+			},
+		},
+		{
+			name:    "HTTP URL",
+			repoURL: "http://localhost:8080/example/repo.git",
+			assert: func(t *testing.T, err error) {
+				require.NoError(t, err)
+			},
+		},
+		{
+			name:    "HTTPS URL",
+			repoURL: "HTTPS://github.com/example/repo.git",
+			assert: func(t *testing.T, err error) {
+				require.NoError(t, err)
+			},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+			testCase.assert(t, validateRepoURL(testCase.repoURL))
+		})
+	}
+}
+
 func TestBuildGitCommandStallDetection(t *testing.T) {
 	t.Parallel()
 

@@ -18,7 +18,8 @@
   },
   "repoURL": {
    "type": "string",
-   "description": "The URL of a remote Git repository to clone. Required. Deprecated: Support for SSH URLs (ssh:// and SCP-style git@host:path) is deprecated as of v1.10.0 and will be removed in v1.13.0. Use HTTPS URLs instead.",
+   "pattern": "^https?://",
+   "description": "The URL of a remote Git repository to clone. Required. Only HTTP(S) URLs are supported.",
    "minLength": 1
   },
   "author": {

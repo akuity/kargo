@@ -50,7 +50,6 @@ import (
 	_ "github.com/akuity/kargo/pkg/credentials/ecr"
 	_ "github.com/akuity/kargo/pkg/credentials/gar"
 	_ "github.com/akuity/kargo/pkg/credentials/github"
-	_ "github.com/akuity/kargo/pkg/credentials/ssh"
 	_ "github.com/akuity/kargo/pkg/promotion/runner/builtin"
 )
 

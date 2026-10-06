@@ -20,7 +20,6 @@ test('stripCredentialSecrets blanks secret material but keeps identifiers', () =
       repoURL: 'https://github.com/acme/repo',
       username: 'bot',
       password: 'p@ss',
-      sshPrivateKey: 'SSH-PEM',
       githubAppClientID: 'Iv1.abc',
       githubAppPrivateKey: 'APP-PEM',
       awsAccessKeyID: 'AKIA',

@@ -220,29 +220,7 @@ func Test_githubPusher_run(t *testing.T) {
 			},
 		},
 		{
-			name: "SSH key only",
-			runner: &githubPusher{
-				cfg: githubPusherConfig{},
-				credsDB: &credentials.FakeDB{
-					GetFn: func(
-						context.Context,
-						string,
-						credentials.Type,
-						string,
-					) (*credentials.Credentials, error) {
-						return &credentials.Credentials{SSHPrivateKey: "fake-ssh-key"}, nil
-					},
-				},
-			},
-			cfg: builtin.GitHubPushConfig{Path: "main"},
-			assert: func(t *testing.T, res promotion.StepResult, err error) {
-				require.ErrorContains(t, err, "found SSH key")
-				require.True(t, promotion.IsTerminal(err))
-				require.Equal(t, kargoapi.PromotionStepStatusFailed, res.Status)
-			},
-		},
-		{
-			name: "credentials with neither token nor SSH key",
+			name: "credentials without a token",
 			runner: &githubPusher{
 				cfg: githubPusherConfig{},
 				credsDB: &credentials.FakeDB{

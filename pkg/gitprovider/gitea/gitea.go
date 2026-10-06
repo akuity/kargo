@@ -429,9 +429,11 @@ func parseRepoURL(repoURL string) (string, string, string, string, error) {
 		)
 	}
 
-	scheme := u.Scheme
-	if scheme != "https" && scheme != "http" {
-		scheme = "https"
+	if u.Scheme != "https" && u.Scheme != "http" {
+		return "", "", "", "", fmt.Errorf(
+			"unsupported gitea repository URL %q: only HTTP(S) URLs are supported",
+			u.Redacted(),
+		)
 	}
 
 	path := strings.TrimPrefix(u.Path, "/")
@@ -442,5 +444,5 @@ func parseRepoURL(repoURL string) (string, string, string, string, error) {
 		)
 	}
 
-	return scheme, u.Host, parts[0], parts[1], nil
+	return u.Scheme, u.Host, parts[0], parts[1], nil
 }

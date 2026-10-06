@@ -657,6 +657,11 @@ func TestParseRepoURL(t *testing.T) {
 			errExpected: true,
 		},
 		{
+			name:        "SSH URL",
+			url:         "ssh://git@dev.azure.com/myorg/myproject/_git/myrepo",
+			errExpected: true,
+		},
+		{
 			name:        "modern URL with missing parts",
 			url:         "https://dev.azure.com/org",
 			errExpected: true,
@@ -729,16 +734,6 @@ func TestGetCommitURL(t *testing.T) {
 		sha               string
 		expectedCommitURL string
 	}{
-		{
-			repoURL:           "ssh://git@ssh.dev.azure.com/akuity/_git/kargo",
-			sha:               "sha",
-			expectedCommitURL: "https://dev.azure.com/akuity/_git/kargo/commit/sha",
-		},
-		{
-			repoURL:           "git@ssh.dev.azure.com:v3/akuity/_git/kargo",
-			sha:               "sha",
-			expectedCommitURL: "https://dev.azure.com/akuity/_git/kargo/commit/sha",
-		},
 		{
 			repoURL:           "http://dev.azure.com/akuity/_git/kargo",
 			sha:               "sha",

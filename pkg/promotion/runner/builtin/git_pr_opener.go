@@ -114,9 +114,8 @@ func (g *gitPROpener) run(
 	}
 	if creds != nil {
 		repoCreds = &git.RepoCredentials{
-			Username:      creds.Username,
-			Password:      creds.Password,
-			SSHPrivateKey: creds.SSHPrivateKey,
+			Username: creds.Username,
+			Password: creds.Password,
 		}
 	}
 

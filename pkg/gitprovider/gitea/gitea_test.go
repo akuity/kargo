@@ -35,6 +35,10 @@ func TestParseGiteaURL(t *testing.T) {
 			errExpected: true,
 		},
 		{
+			url:         "ssh://git@git.domain.com/akuity/kargo",
+			errExpected: true,
+		},
+		{
 			url:            "https://git.domain.com/akuity/kargo",
 			expectedScheme: "https",
 			expectedHost:   "git.domain.com",
@@ -43,13 +47,6 @@ func TestParseGiteaURL(t *testing.T) {
 		},
 		{
 			url:            "https://git.domain.com/akuity/kargo.git",
-			expectedScheme: "https",
-			expectedHost:   "git.domain.com",
-			expectedOwner:  "akuity",
-			expectedRepo:   "kargo",
-		},
-		{
-			url:            "git@git.domain.com:akuity/kargo",
 			expectedScheme: "https",
 			expectedHost:   "git.domain.com",
 			expectedOwner:  "akuity",
@@ -861,21 +858,6 @@ func TestGetCommitURL(t *testing.T) {
 			repoURL:           "http://gitea.com/akuity/kargo",
 			sha:               "sha",
 			expectedCommitURL: "https://gitea.com/akuity/kargo/commit/sha",
-		},
-		{
-			repoURL:           "ssh://git@gitea.com/akuity/kargo",
-			sha:               "sha",
-			expectedCommitURL: "https://gitea.com/akuity/kargo/commit/sha",
-		},
-		{
-			repoURL:           "git@gitea.com:akuity/kargo",
-			sha:               "sha",
-			expectedCommitURL: "https://gitea.com/akuity/kargo/commit/sha",
-		},
-		{
-			repoURL:           "git@custom.host.com:akuity/kargo",
-			sha:               "sha",
-			expectedCommitURL: "https://custom.host.com/akuity/kargo/commit/sha",
 		},
 		{
 			repoURL:           "http://custom.host.com/akuity/kargo",

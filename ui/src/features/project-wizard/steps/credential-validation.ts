@@ -15,8 +15,6 @@ const hasRequiredAuthFields = (cred: CredentialData): boolean => {
   switch (cred.auth) {
     case 'userpass':
       return !!cred.username && !!cred.password;
-    case 'ssh':
-      return !!cred.sshPrivateKey;
     case 'github-app':
       return (
         (!!cred.githubAppClientID || !!cred.githubAppID) &&

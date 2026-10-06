@@ -495,7 +495,6 @@ all of the following fields:
 |-------|-------------|
 | `Username` | The username identifying the principal. For token-based credentials this is often an inconsequential placeholder. |
 | `Password` | The password or token used to authenticate. **API keys and personal access tokens are surfaced here.** |
-| `SSHPrivateKey` | The SSH private key, when applicable. **Deprecated as of v1.10.0** and slated for removal in v1.13.0. |
 
 If no matching credentials are found, `nil` is returned. Optional chaining
 (`?.`) and nil-coalescing (`??`) can be used to handle this case gracefully:
