@@ -5,6 +5,7 @@ package database
 import (
 	"context"
 	"fmt"
+	"net/url"
 	"os"
 	"sync"
 	"testing"
@@ -34,10 +35,13 @@ func freshDatabase(t *testing.T) string {
 	t.Cleanup(func() {
 		_, _ = admin.Exec(ctx, "DROP DATABASE "+name+" WITH (FORCE)")
 	})
-	cfg, err := pgx.ParseConfig(adminURL)
+	// pgx's ConnConfig.ConnString returns the string it was parsed from, not
+	// one reflecting later changes, so the URL is rewritten instead. Returning
+	// the admin URL would run every test against the shared database.
+	u, err := url.Parse(adminURL)
 	require.NoError(t, err)
-	cfg.Database = name
-	return cfg.ConnString()
+	u.Path = "/" + name
+	return u.String()
 }
 
 func TestMigrator_integration(t *testing.T) {
