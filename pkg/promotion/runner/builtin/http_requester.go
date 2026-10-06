@@ -152,6 +152,7 @@ func (h *httpRequester) runDownload(
 	resp *http.Response,
 	dl *httpDownload,
 ) (promotion.StepResult, error) {
+	defer dl.discard()
 	env, err := h.buildDownloadEnv(ctx, resp, cfg.ResponseContentType, dl)
 	if err != nil {
 		var termErr *promotion.TerminalError
@@ -178,14 +179,12 @@ func (h *httpRequester) evaluateOutcome(
 	// Evaluate success and failure criteria
 	successResult, err := h.evaluateSuccessCriteria(cfg, env)
 	if err != nil {
-		dl.discard()
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 			fmt.Errorf("error evaluating success criteria: %w", err)
 	}
 
 	failureResult, err := h.evaluateFailureCriteria(cfg, env)
 	if err != nil {
-		dl.discard()
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 			fmt.Errorf("error evaluating failure criteria: %w", err)
 	}
@@ -193,7 +192,6 @@ func (h *httpRequester) evaluateOutcome(
 	// Determine outcome based on criteria evaluation results
 	switch {
 	case failureResult != nil && *failureResult:
-		dl.discard()
 		// Failure criteria met: terminal failure. Optionally enrich the error
 		// with a message extracted from the response.
 		errorMessage, err := h.extractErrorMessageFromResponse(ctx, cfg, env)
@@ -220,7 +218,6 @@ func (h *httpRequester) evaluateOutcome(
 		// Success criteria met: success
 		outputs, err := h.buildOutputs(cfg.Outputs, env)
 		if err != nil {
-			dl.discard()
 			return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 				fmt.Errorf("error extracting outputs from HTTP response: %w", err)
 		}
@@ -237,7 +234,6 @@ func (h *httpRequester) evaluateOutcome(
 			// 2xx: success
 			outputs, err := h.buildOutputs(cfg.Outputs, env)
 			if err != nil {
-				dl.discard()
 				return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 					fmt.Errorf("error extracting outputs from HTTP response: %w", err)
 			}
@@ -250,7 +246,6 @@ func (h *httpRequester) evaluateOutcome(
 			}, nil
 		}
 		// Non-2xx: retried failure (not terminal)
-		dl.discard()
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusFailed}, nil
 	default:
 		// All other cases: running (polled)
@@ -258,7 +253,6 @@ func (h *httpRequester) evaluateOutcome(
 		// - Success unmet, failure undefined
 		// - Success undefined, failure unmet
 		// - Success unmet, failure unmet
-		dl.discard()
 		pollInterval, err := resolvePollInterval(cfg.PollInterval, httpPollIntervalDefault)
 		if err != nil {
 			return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, err
@@ -406,16 +400,18 @@ func (h *httpRequester) buildDownloadEnv(
 func streamResponseToTempFile(
 	ctx context.Context,
 	r io.Reader,
-	dir, prefix string,
-) (tempPath string, size int64, err error) {
+	dir string,
+	prefix string,
+) (string, int64, error) {
 	tempFile, err := os.CreateTemp(dir, prefix+".tmp")
 	if err != nil {
 		return "", 0, fmt.Errorf("failed to create temporary file: %w", err)
 	}
-	tempPath = tempFile.Name()
+	tempPath := tempFile.Name()
+	keep := false
 	defer func() {
 		_ = tempFile.Close()
-		if err != nil {
+		if !keep {
 			_ = os.Remove(tempPath)
 		}
 	}()
@@ -430,15 +426,15 @@ func streamResponseToTempFile(
 		downloadBufferPool.Put(buf) // nolint:staticcheck
 	}()
 
+	var size int64
 	for {
 		select {
 		case <-ctx.Done():
 			return "", 0, fmt.Errorf("download canceled: %w", ctx.Err())
 		default:
 		}
-		var n int
-		var readErr error
-		if n, readErr = limitedReader.Read(buf); n > 0 {
+		n, readErr := limitedReader.Read(buf)
+		if n > 0 {
 			if _, writeErr := tempFile.Write(buf[:n]); writeErr != nil {
 				return "", 0, fmt.Errorf("failed to write to file: %w", writeErr)
 			}
@@ -459,15 +455,18 @@ func streamResponseToTempFile(
 	if size == maxDownloadSize {
 		// The body might be larger than the cap; probe for one more byte.
 		var probe [1]byte
-		if n, err := r.Read(probe[:]); err != nil && err != io.EOF {
-			return "", 0, fmt.Errorf("failed to check for additional content: %w", err)
-		} else if n > 0 {
+		n, probeErr := r.Read(probe[:])
+		if probeErr != nil && probeErr != io.EOF {
+			return "", 0, fmt.Errorf("failed to check for additional content: %w", probeErr)
+		}
+		if n > 0 {
 			return "", 0, &promotion.TerminalError{Err: fmt.Errorf(
 				"response exceeds download limit of %d bytes", maxDownloadSize,
 			)}
 		}
 	}
 
+	keep = true
 	return tempPath, size, nil
 }
 
