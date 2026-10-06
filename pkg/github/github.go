@@ -67,8 +67,8 @@ func NewClient(
 }
 
 // ParseRepoURL parses a Git repository URL and extracts the URL scheme, host,
-// repository owner, and repository name. It handles standard HTTPS URLs, SSH
-// URLs, and GitHub Enterprise URLs.
+// repository owner, and repository name. It handles standard HTTP(S) URLs
+// and GitHub Enterprise URLs.
 func ParseRepoURL(
 	repoURL string,
 ) (string, string, string, string, error) {
@@ -80,9 +80,11 @@ func ParseRepoURL(
 		)
 	}
 
-	scheme := u.Scheme
-	if scheme != "https" && scheme != "http" {
-		scheme = "https"
+	if u.Scheme != "https" && u.Scheme != "http" {
+		return "", "", "", "", fmt.Errorf(
+			"unsupported github repository URL %q: only HTTP(S) URLs are supported",
+			u.Redacted(),
+		)
 	}
 
 	path := strings.TrimPrefix(u.Path, "/")
@@ -93,5 +95,5 @@ func ParseRepoURL(
 		)
 	}
 
-	return scheme, u.Host, parts[0], parts[1], nil
+	return u.Scheme, u.Host, parts[0], parts[1], nil
 }

@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"strings"
 
-	"connectrpc.com/connect"
 	"github.com/gin-gonic/gin"
 	"github.com/hashicorp/go-cleanhttp"
 	"golang.org/x/text/encoding"
@@ -23,6 +22,7 @@ import (
 	"github.com/akuity/kargo/pkg/expressions"
 	libhttp "github.com/akuity/kargo/pkg/http"
 	"github.com/akuity/kargo/pkg/logging"
+	"github.com/akuity/kargo/pkg/server/user"
 )
 
 // getJobMetric confirms the existence of a JobMetric with the provided name or,
@@ -46,30 +46,30 @@ func (s *server) getJobMetric(
 		}
 	}
 	if jobMetricName != "" {
-		return "", nil, connect.NewError(
-			connect.CodeNotFound,
+		return "", nil, libhttp.Error(
 			fmt.Errorf(
 				"AnalysisRun %q in namespace %q has no job metric named %q",
 				run.Name, run.Namespace, jobMetricName,
 			),
+			http.StatusNotFound,
 		)
 	}
 	if len(jobMetrics) == 0 {
-		return "", nil, connect.NewError(
-			connect.CodeNotFound,
+		return "", nil, libhttp.Error(
 			fmt.Errorf(
 				"AnalysisRun %q in namespace %q has no job metrics",
 				run.Name, run.Namespace,
 			),
+			http.StatusNotFound,
 		)
 	}
 	if len(jobMetrics) > 1 {
-		return "", nil, connect.NewError(
-			connect.CodeInvalidArgument,
+		return "", nil, libhttp.Error(
 			fmt.Errorf(
 				"AnalysisRun %q in namespace %q has multiple job metrics; please specify a metric name",
 				run.Name, run.Namespace,
 			),
+			http.StatusBadRequest,
 		)
 	}
 	// If we get to here, there is exactly one job metric.
@@ -94,12 +94,12 @@ func (s *server) getContainerName(
 ) (string, error) {
 	if len(jobMetric.Spec.Template.Spec.Containers) == 0 {
 		// This probably isn't possible, but we'll check...
-		return "", connect.NewError(
-			connect.CodeNotFound,
+		return "", libhttp.Error(
 			fmt.Errorf(
 				"AnalysisRun %q in namespace %q has no containers in Jobs for metric %q",
 				run.Name, run.Namespace, jobMetricName,
 			),
+			http.StatusNotFound,
 		)
 	}
 	containerNames := make(map[string]struct{}, len(jobMetric.Spec.Template.Spec.Containers))
@@ -112,21 +112,21 @@ func (s *server) getContainerName(
 		containerNames[container.Name] = struct{}{}
 	}
 	if containerName != "" {
-		return "", connect.NewError(
-			connect.CodeNotFound,
+		return "", libhttp.Error(
 			fmt.Errorf(
 				"AnalysisRun %q in namespace %q has no container named %q in Jobs for metric %q",
 				run.Name, run.Namespace, containerName, jobMetricName,
 			),
+			http.StatusNotFound,
 		)
 	}
 	if len(containerNames) > 1 {
-		return "", connect.NewError(
-			connect.CodeInvalidArgument,
+		return "", libhttp.Error(
 			fmt.Errorf(
 				"AnalysisRun %q in namespace %q has multiple containers in Jobs for metric %q; please specify a container name",
 				run.Name, run.Namespace, jobMetricName,
 			),
+			http.StatusBadRequest,
 		)
 	}
 	// If we get to here, there is exactly one container.
@@ -151,34 +151,34 @@ func (s *server) getJobNamespaceAndName(
 		}
 	}
 	if metricResult == nil {
-		return "", "", connect.NewError(
-			connect.CodeNotFound,
+		return "", "", libhttp.Error(
 			fmt.Errorf(
 				"AnalysisRun %q in namespace %q has no result for metric  %q",
 				run.Name, run.Namespace, jobMetricName,
 			),
+			http.StatusNotFound,
 		)
 	}
 	if len(metricResult.Measurements) == 0 {
-		return "", "", connect.NewError(
-			connect.CodeNotFound,
+		return "", "", libhttp.Error(
 			fmt.Errorf("result for metric %q has no measurements", jobMetricName),
+			http.StatusNotFound,
 		)
 	}
 	// TODO(krancour): Under what circumstances would there be more than one
 	// measurement? Ask jessesuen.
 	jobNamespace := metricResult.Measurements[0].Metadata["job-namespace"]
 	if jobNamespace == "" {
-		return "", "", connect.NewError(
-			connect.CodeNotFound,
+		return "", "", libhttp.Error(
 			fmt.Errorf("result for metric %q has no Job namespace metadata", jobMetricName),
+			http.StatusNotFound,
 		)
 	}
 	jobName := metricResult.Measurements[0].Metadata["job-name"]
 	if jobName == "" {
-		return "", "", connect.NewError(
-			connect.CodeNotFound,
+		return "", "", libhttp.Error(
 			fmt.Errorf("result for metric %q has no Job name metadata", jobMetricName),
+			http.StatusNotFound,
 		)
 	}
 	return jobNamespace, jobName, nil
@@ -200,12 +200,12 @@ func (s *server) getStageFromAnalysisRun(
 	if !ok {
 		stageName, ok = run.Labels[kargoapi.LabelKeyStage]
 		if !ok {
-			return nil, connect.NewError(
-				connect.CodeNotFound,
+			return nil, libhttp.Error(
 				fmt.Errorf(
 					"AnalysisRun %q in namespace %q has no stage label",
 					run.Name, run.Namespace,
 				),
+				http.StatusNotFound,
 			)
 		}
 	}
@@ -225,9 +225,9 @@ func (s *server) getStageFromAnalysisRun(
 	}
 	if stage == nil {
 		// nolint:staticcheck
-		return nil, connect.NewError(
-			connect.CodeNotFound,
+		return nil, libhttp.Error(
 			fmt.Errorf("Stage %q in namespace %q not found", stageName, run.Namespace),
+			http.StatusNotFound,
 		)
 	}
 	return stage, nil
@@ -237,6 +237,7 @@ func (s *server) getStageFromAnalysisRun(
 // are themselves, used in evaluation of a URL template. The request is
 // returned. If it is not successfully constructed, an error is returned.
 func (s *server) buildRequest(
+	ctx context.Context,
 	stage *kargoapi.Stage,
 	run *rolloutsapi.AnalysisRun,
 	jobMetricName, jobNamespace, jobName, containerName string,
@@ -274,6 +275,8 @@ func (s *server) buildRequest(
 	}
 	if s.cfg.AnalysisRunLogToken != "" {
 		env["token"] = s.cfg.AnalysisRunLogToken
+	} else if token, ok := user.BearerTokenFromContext(ctx); ok && s.cfg.AnalysisRunLogForwardUserToken {
+		env["token"] = token
 	}
 	for key, valTemplate := range s.cfg.AnalysisRunLogHTTPHeaders {
 		valTemplateAny, err := expressions.EvaluateTemplate(valTemplate, env)
@@ -441,6 +444,7 @@ func (s *server) getAnalysisRunLogs(c *gin.Context) {
 	}
 
 	httpReq, err := s.buildRequest(
+		ctx,
 		stage,
 		analysisRun,
 		jobMetricName,

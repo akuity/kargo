@@ -47,11 +47,6 @@ type Credentials struct {
 	// #nosec G117 -- This struct is an internal representation of credentials
 	// that is not transmitted anywhere directly.
 	Password string
-	// SSHPrivateKey is a private key that can be used for access to some remote
-	// repository. This is primarily applicable for Git repositories.
-	//
-	// TODO(v1.13.0): Remove this field when SSH support is removed.
-	SSHPrivateKey string
 }
 
 // Provider is an interface for providing credentials for a given type,

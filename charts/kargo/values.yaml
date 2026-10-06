@@ -17,13 +17,6 @@ image:
 
 ## @section Global Parameters
 global:
-  ## @param global.clusterSecretsNamespace **Deprecated in favor of `systemResources.namespace`.** Designates a namespace to contain Secrets associated with cluster-scoped resources. For example, ClusterConfig is a cluster-scoped resource. Cluster-scoped webhook receivers, defined as part of that resource, each must reference a Secret, however, no such thing as a cluster-scoped Secret exists within Kubernetes. To work around that, all Secrets referenced by a ClusterConfig resource must be located in a designated namespace. NOTE: The namespace designated for this purpose is NOT the place to put Secrets that you want to share across all Projects. This namespace is strictly for Secrets that must be referenced by cluster-scoped resources. **Again, this is deprecated in favor of `systemResources.namespace`.** The name of the setting _and_ its default value are both changing to better reflect the intent to use the namespace not only for Secrets, but for _all_ types of namespaced resources that lack a cluster-scoped analog. Kargo versions >= v1.9.0 and < v1.12.0 will automatically sync Secrets from the namespace specified by `clusterSecretsNamespace` to the namespace specified by `clusterSecretsNamespace` (if they are different). That migration utility will be removed from v1.12.0, by which time operators who GitOps their ClusterConfig will need to have updated their manifests accordingly. Upgrades to v1.12.0 will FAIL if `clusterSecretsNamespace` remains defined.
-  clusterSecretsNamespace: kargo-cluster-secrets
-  ## @param global.createClusterSecretsNamespace **Deprecated, as it is directly related to `clusterSecretsNamespace`, which also is deprecated. See docs for `clusterSecretsNamespace` for more details.** Indicates whether the namespace specified by `clusterSecretsNamespace` should be created when installing the chart.
-  createClusterSecretsNamespace: true
-  ## @param global.createClusterSecretsRBAC **Deprecated, as it is directly related to `clusterSecretsNamespace`, which also is deprecated. See docs for `clusterSecretsNamespace` for more details.** Indicates whether the Roles/RoleBindings in the namespace specified by `clusterSecretsNamespace` should be created when installing the chart.
-  createClusterSecretsRBAC: true
-
   systemResources:
     ## @param global.systemResources.namespace Designates a namespace to contain resources associated with cluster-scoped resources and for which no cluster-scoped analog exists. For example, ClusterConfig is a cluster-scoped resource. Cluster-scoped webhook receivers, defined as part of that resource, each must reference a Secret, however, no such thing as a cluster-scoped Secret exists within Kubernetes. To work around that, all Secrets referenced by a ClusterConfig resource must be located in a designated namespace. NOTE: The namespace designated for this purpose is NOT the place to put resources that you want to share across all Projects. This namespace is strictly for namespaced resources that must be referenced by other, cluster-scoped resources.
     namespace: kargo-system-resources
@@ -88,6 +81,20 @@ global:
   ## @param global.securityContext Default security context for all Kargo pods.
   securityContext: {}
 
+  ## Distributed tracing settings shared by all Kargo components.
+  tracing:
+    ## @param global.tracing.enabled Whether Kargo's components export traces using OpenTelemetry. When enabled, every component sets `TRACING_ENABLED` and exports spans over OTLP to the configured endpoint. Further OpenTelemetry settings not covered below (headers, TLS, resource attributes, and so on) can be supplied as standard `OTEL_*` environment variables via `global.env`.
+    enabled: false
+    otlp:
+      ## @param global.tracing.otlp.endpoint The OTLP endpoint traces are exported to (sets `OTEL_EXPORTER_OTLP_ENDPOINT`), for example `http://otel-collector.observability.svc:4318`. When empty, the OpenTelemetry SDK's default of `localhost:4318` (for `http/protobuf`) or `localhost:4317` (for `grpc`) applies, which suits a collector running as a sidecar or as a DaemonSet with host networking.
+      endpoint: ""
+      ## @param global.tracing.otlp.protocol The OTLP transport used to export traces (sets `OTEL_EXPORTER_OTLP_PROTOCOL`). Valid options are `http/protobuf` and `grpc`.
+      protocol: http/protobuf
+    ## @param global.tracing.sampler The sampler that decides which traces are recorded (sets `OTEL_TRACES_SAMPLER`). Valid options are `always_on`, `always_off`, `traceidratio`, `parentbased_always_on`, `parentbased_always_off`, and `parentbased_traceidratio`.
+    sampler: parentbased_always_on
+    ## @param global.tracing.samplerArg An argument for the sampler (sets `OTEL_TRACES_SAMPLER_ARG`). For the `traceidratio` samplers, this is the fraction of traces to record, for example `0.1`.
+    samplerArg: ""
+
 ## @section Workloads
 workloads:
   ## @param workloads.install Whether to install workload-bearing resources (Deployments, CronJobs, etc.) and their supporting resources.
@@ -95,7 +102,7 @@ workloads:
 
 ## @section Data Plane
 dataPlane:
-  ## @param dataPlane.install Coarse switch that, when `false`, suppresses every data-plane resource — even where finer-grained flags (`crds.install`, `rbac.installClusterRoles`, `rbac.installClusterRoleBindings`, `webhooks.register`, `global.createClusterSecretsNamespace`, `global.sharedResources.createNamespace`, `global.systemResources.createNamespace`) would otherwise install them. Note: Argo CD data-plane RBAC is governed separately by `argocd.dataPlane.install`.
+  ## @param dataPlane.install Coarse switch that, when `false`, suppresses every data-plane resource — even where finer-grained flags (`crds.install`, `rbac.installClusterRoles`, `rbac.installClusterRoleBindings`, `webhooks.register`, `global.sharedResources.createNamespace`, `global.systemResources.createNamespace`) would otherwise install them. Note: Argo CD data-plane RBAC is governed separately by `argocd.dataPlane.install`.
   install: true
 
   controller:
@@ -190,6 +197,17 @@ api:
 
   ## @param api.permissiveCORSPolicyEnabled Whether to enable a permissive CORS (Cross Origin Resource Sharing) policy. This is sometimes advantageous during local development, but otherwise, should generally be left disabled.
   permissiveCORSPolicyEnabled: false
+
+  ## @param api.trustedProxies IP addresses or CIDRs of proxies (e.g. an ingress controller or load balancer) in front of the API server. When a request arrives from one of these, the client's IP address is taken from `api.clientIPHeader`, or else from the rightmost `X-Forwarded-For` entry that is not a trusted proxy. When empty, the client's IP address is always the address the request arrived from.
+  trustedProxies: []
+  ## @param api.clientIPHeader A header that every trusted proxy sets to the client's IP address, e.g. `CF-Connecting-IP` or `X-Real-IP`. Only honored on requests arriving from a trusted proxy.
+  clientIPHeader: ""
+
+  requestLog:
+    ## @param api.requestLog.allEnabled Whether to log every API request at INFO level. By default, only refused requests (401 and 403) are logged at INFO level and server errors at ERROR level, while all other requests are logged at DEBUG level.
+    allEnabled: false
+    ## @param api.requestLog.sourceIPEnabled Whether to include the IP address each request came from in the API server's logs. IP addresses may be considered personal data, so this is disabled by default.
+    sourceIPEnabled: false
 
   secret:
     ## @param api.secret.name Specifies the name of an existing Secret which contains the `ADMIN_ACCOUNT_PASSWORD_HASH` and `ADMIN_ACCOUNT_TOKEN_SIGNING_KEY` values. By setting this, the Secret will **not** be generated by Helm.
@@ -658,11 +676,6 @@ controller:
   ## @param controller.shardName [nullable] When running multiple controllers backed by a single underlying control plane, specifying a shard name will cause this controller to operate **only** on resources with a matching shard name. Leaving this field undefined will designate this controller as the default controller that is responsible for resources that are not assigned to a specific shard **regardless** of the value of `controller.isDefault` (as that was the behavior prior to the introduction of `controller.isDefault`). If this field is defined, this controller will not be considered the default **unless, additionally** `controller.isDefault` is `true`. i.e. A controller is effectively considered the default if `or (not controller.shardName) controller.isDefault`. If this field is defined **and** `controller.isDefault` is true, this controller will operate **both** on resources explicitly assigned to it **as well as** those not assigned to a specific shard.
   # shardName:
 
-  ## **Deprecated in favor of `global.sharedResources`.**. All settings relating to shared credentials (used across multiple kargo projects).
-  globalCredentials:
-    ## @param controller.globalCredentials.namespaces **Deprecated in favor of `global.sharedResources.namespace`.** List of namespaces to look for shared credentials. Note that as of v1.0.0, the Kargo controller does not have cluster-wide access to Secrets. The controller receives read-only permission for Secrets on a per-Project basis as Projects are created. If you designate some namespaces as homes for "global" credentials, you will need to manually grant the controller permission to read Secrets in those namespaces.
-    namespaces: []
-
   ## @param controller.allowCredentialsOverHTTP Specifies whether the controller should allow credentials (for Git repositories, etc.) to be retrieved and used for operations over HTTP. This is generally discouraged, as it can expose sensitive information. When set to `false`, the controller will only allow credentials to be used over HTTPS (or other secure protocols).
   allowCredentialsOverHTTP: false
 
@@ -675,6 +688,9 @@ controller:
       maxConcurrentReconciles:
     promotions:
       ## @param controller.reconcilers.promotions.maxConcurrentReconciles optionally overrides the maximum number of Promotion resources the controller can reconcile concurrently.
+      maxConcurrentReconciles:
+    promotionRequests:
+      ## @param controller.reconcilers.promotionRequests.maxConcurrentReconciles optionally overrides the maximum number of PromotionRequest resources the controller can reconcile concurrently.
       maxConcurrentReconciles:
     stages:
       ## @param controller.reconcilers.stages.maxConcurrentReconciles optionally overrides the maximum number of (non-control flow) Stage resources the controller can reconcile concurrently.
@@ -690,8 +706,8 @@ controller:
     name: "Kargo"
     ## @param controller.gitClient.email Specifies the email of the Kargo controller (used when authoring Git commits).
     email: "no-reply@kargo.io"
-    ## @param controller.gitClient.pushIntegrationPolicy Controls how remote changes are integrated before pushing. Options: AlwaysRebase (unconditionally rebase), RebaseOrMerge (rebase when safe, merge otherwise), RebaseOrFail (rebase when safe, fail otherwise), AlwaysMerge (unconditionally merge). The default will change from AlwaysRebase to RebaseOrMerge in v1.12.0.
-    pushIntegrationPolicy: "AlwaysRebase"
+    ## @param controller.gitClient.pushIntegrationPolicy Controls how remote changes are integrated before pushing. Options: AlwaysRebase (unconditionally rebase), RebaseOrMerge (rebase when safe, merge otherwise), RebaseOrFail (rebase when safe, fail otherwise), AlwaysMerge (unconditionally merge).
+    pushIntegrationPolicy: "RebaseOrMerge"
 
     signingKeySecret:
       ## @param controller.gitClient.signingKeySecret.name Specifies the name of an existing `Secret` which contains the Git user's signing key. The value should be accessible under `.data.signingKey` in the same namespace as Kargo. When the signing key is a GPG key, the GPG key's name and email address identity must match the values defined for `controller.gitClient.name` and `controller.gitClient.email`.
@@ -715,7 +731,7 @@ controller:
       ## @param controller.images.cache.maxEntries specifies the maximum number of entries in the internal image metadata cache.
       maxEntries: 100000
     push:
-      ## @param controller.images.push.maxArtifactSize The maximum size (in bytes) for cross-repository OCI artifact pushes. Defaults to 1 GiB (1073741824). Set to 0 to block all cross-repo pushes, or -1 to disable the limit.
+      ## @param controller.images.push.maxArtifactSize The maximum size (in bytes) for OCI artifact pushes that transfer blobs (cross-repository copies and local file pushes). Defaults to 1 GiB (1073741824). Set to 0 to block such pushes entirely, or -1 to disable the limit.
       maxArtifactSize: 1073741824
 
   ## All settings relating to the Argo CD control plane this controller might
@@ -1390,6 +1406,98 @@ webhooksServer:
     #   -----BEGIN CERTIFICATE-----
     #   ...
     #   -----END CERTIFICATE-----
+
+## @section Database
+## Kargo's components do not use a database yet. These settings provision one
+## ahead of that: either the minimal PostgreSQL bundled with the chart or a
+## reference to an external one.
+database:
+  postgres:
+    ## @param database.postgres.enabled Whether to run the PostgreSQL bundled with the chart: a single, minimally configurable instance meant for evaluation and development. It has no replication, backups, or tuning and is not suitable for production. Disable it and set `database.external.secretName` to use your own database.
+    enabled: true
+    image:
+      ## @param database.postgres.image.repository Image repository of the bundled PostgreSQL.
+      repository: postgres
+      ## @param database.postgres.image.tag Image tag of the bundled PostgreSQL.
+      tag: "18.6"
+      ## @param database.postgres.image.pullPolicy Image pull policy of the bundled PostgreSQL.
+      pullPolicy: IfNotPresent
+      ## @param database.postgres.image.pullSecrets List of imagePullSecrets for the bundled PostgreSQL.
+      pullSecrets: []
+    ## @param database.postgres.password Password of the bundled PostgreSQL's `kargo` user. A value **must** be provided for this field unless `database.postgres.existingSecret` is specified. It is suggested that you generate this using a password manager or a command like: `openssl rand -base64 48 \| tr -d "=+/" \| head -c 32`. Like `api.adminAccount.tokenSigningKey`, this is stored in plaintext; to keep it out of your values, use `database.postgres.existingSecret` instead.
+    password: ""
+    ## @param database.postgres.existingSecret Name of an existing Secret in Kargo's namespace holding the bundled PostgreSQL's `kargo` user password under the key `password`. When set, the chart stores no password itself. This is the recommended way to run the bundled PostgreSQL from a GitOps tool such as Argo CD. Cannot be combined with `database.postgres.password`.
+    existingSecret: ""
+    ## @param database.postgres.extraArgs Additional server settings for the bundled PostgreSQL, as `name=value` pairs passed to `postgres` as `-c` flags. For example, `log_lock_waits=on`.
+    extraArgs: []
+    persistence:
+      ## @param database.postgres.persistence.enabled Whether the bundled PostgreSQL stores its data on a PersistentVolumeClaim. When `false`, data is kept on an emptyDir and lost whenever the Pod is replaced.
+      enabled: true
+      ## @param database.postgres.persistence.size Size of the bundled PostgreSQL's PersistentVolumeClaim.
+      size: 1Gi
+      ## @param database.postgres.persistence.storageClass StorageClass of the bundled PostgreSQL's PersistentVolumeClaim. When empty, the cluster's default StorageClass is used.
+      storageClass: ""
+    resources:
+      requests:
+        ## @param database.postgres.resources.requests.cpu CPU request for the bundled PostgreSQL container.
+        cpu: 100m
+        ## @param database.postgres.resources.requests.memory Memory request for the bundled PostgreSQL container.
+        memory: 128Mi
+      limits:
+        ## @param database.postgres.resources.limits.memory Memory limit for the bundled PostgreSQL container.
+        memory: 512Mi
+    ## @param database.postgres.revisionHistoryLimit Number of old revisions of the bundled PostgreSQL StatefulSet to retain.
+    revisionHistoryLimit: 10
+
+    ## @param database.postgres.labels Labels to add to the bundled PostgreSQL resources. Merges with `global.labels`, allowing you to override or add to the global labels.
+    labels: {}
+    ## @param database.postgres.annotations Annotations to add to the bundled PostgreSQL resources. Merges with `global.annotations`, allowing you to override or add to the global annotations.
+    annotations: {}
+    ## @param database.postgres.podLabels Optional labels to add to the bundled PostgreSQL pod. Merges with `global.podLabels`, allowing you to override or add to the global labels.
+    podLabels: {}
+    ## @param database.postgres.podAnnotations Optional annotations to add to the bundled PostgreSQL pod. Merges with `global.podAnnotations`, allowing you to override or add to the global annotations.
+    podAnnotations: {}
+
+    serviceAccount:
+      ## @param database.postgres.serviceAccount.labels Additional labels to add to the bundled PostgreSQL ServiceAccount.
+      labels: {}
+      ## @param database.postgres.serviceAccount.annotations Additional annotations to add to the bundled PostgreSQL ServiceAccount.
+      annotations: {}
+
+    ## @param database.postgres.env Environment variables to add to the bundled PostgreSQL pod.
+    env: []
+    #  - name: name
+    #    value: value
+    ## @param database.postgres.envFrom Environment variables to add to the bundled PostgreSQL pod from ConfigMaps or Secrets.
+    envFrom: []
+    #  - configMapRef:
+    #      name: config-map-name
+    #  - secretRef:
+    #      name: secret-name
+
+    ## @param database.postgres.containers Additional sidecar containers to add to the bundled PostgreSQL pod. Rendered as literal YAML.
+    containers: []
+    ## @param database.postgres.initContainers Additional init containers to add to the bundled PostgreSQL pod. Rendered as literal YAML.
+    initContainers: []
+    ## @param database.postgres.volumes Additional pod-level volumes for the bundled PostgreSQL pod. Rendered as literal YAML.
+    volumes: []
+    ## @param database.postgres.volumeMounts Additional volume mounts for the bundled PostgreSQL container. Rendered as literal YAML.
+    volumeMounts: []
+
+    ## @param database.postgres.nodeSelector Node selector for the bundled PostgreSQL pod. Defaults to `global.nodeSelector`.
+    nodeSelector: {}
+    ## @param database.postgres.tolerations Tolerations for the bundled PostgreSQL pod. Defaults to `global.tolerations`.
+    tolerations: []
+    ## @param database.postgres.affinity Specifies pod affinity for the bundled PostgreSQL pod. Defaults to `global.affinity`.
+    affinity: {}
+    # priorityClassName:
+    ## @param database.postgres.securityContext Security context for the bundled PostgreSQL container. Defaults to `global.securityContext`.
+    securityContext: {}
+  external:
+    ## @param database.external.secretName Name of an existing Secret in Kargo's namespace that holds the connection string of an external PostgreSQL database under the key named by `database.external.secretKey`. Cannot be combined with `database.postgres.enabled`.
+    secretName: ""
+    ## @param database.external.secretKey Key within the Secret named by `database.external.secretName` that holds the connection string.
+    secretKey: connectionString
 
 ## @param extraObjects An array describing additional, arbitrary Kubernetes resources to include when rendering this chart. Items in the array may be YAML objects or strings. Either may be templated. Templates will be evaluated against the same set of values as the rest of the chart.
 extraObjects: []

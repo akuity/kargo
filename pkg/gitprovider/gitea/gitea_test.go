@@ -2,6 +2,7 @@ package gitea
 
 import (
 	"errors"
+	"net/http"
 	"testing"
 	"time"
 
@@ -34,6 +35,10 @@ func TestParseGiteaURL(t *testing.T) {
 			errExpected: true,
 		},
 		{
+			url:         "ssh://git@git.domain.com/akuity/kargo",
+			errExpected: true,
+		},
+		{
 			url:            "https://git.domain.com/akuity/kargo",
 			expectedScheme: "https",
 			expectedHost:   "git.domain.com",
@@ -42,13 +47,6 @@ func TestParseGiteaURL(t *testing.T) {
 		},
 		{
 			url:            "https://git.domain.com/akuity/kargo.git",
-			expectedScheme: "https",
-			expectedHost:   "git.domain.com",
-			expectedOwner:  "akuity",
-			expectedRepo:   "kargo",
-		},
-		{
-			url:            "git@git.domain.com:akuity/kargo",
 			expectedScheme: "https",
 			expectedHost:   "git.domain.com",
 			expectedOwner:  "akuity",
@@ -176,6 +174,27 @@ func (m *mockGiteaClient) MergePullRequest(
 	args := m.Called(owner, repo, number, opts)
 	resp, _ := args.Get(1).(*gitea.Response)
 	return args.Bool(0), resp, args.Error(2)
+}
+
+func (m *mockGiteaClient) DeleteRepoBranch(
+	owner string,
+	repo string,
+	branch string,
+) (bool, *gitea.Response, error) {
+	args := m.Called(owner, repo, branch)
+	resp, _ := args.Get(1).(*gitea.Response)
+	return args.Bool(0), resp, args.Error(2)
+}
+
+func (m *mockGiteaClient) GetRepoBranch(
+	owner string,
+	repo string,
+	branch string,
+) (*gitea.Branch, *gitea.Response, error) {
+	args := m.Called(owner, repo, branch)
+	b, _ := args.Get(0).(*gitea.Branch)
+	resp, _ := args.Get(1).(*gitea.Response)
+	return b, resp, args.Error(2)
 }
 
 func (m *mockGiteaClient) CreatePullRequest(
@@ -467,6 +486,7 @@ func TestGetPullRequest(t *testing.T) {
 				State: gitea.StateOpen,
 				Head: &gitea.PRBranchInfo{
 					Sha: "HeadSha",
+					Ref: "feature",
 				},
 				Base: &gitea.PRBranchInfo{
 					Sha: "BaseSha",
@@ -499,6 +519,7 @@ func TestGetPullRequest(t *testing.T) {
 	require.Equal(t, mockClient.pr.Base.Sha, pr.MergeCommitSHA)
 	require.Equal(t, mockClient.pr.HTMLURL, pr.URL)
 	require.True(t, pr.Open)
+	require.Equal(t, "feature", pr.HeadBranch)
 }
 
 func TestListPullRequests(t *testing.T) {
@@ -839,21 +860,6 @@ func TestGetCommitURL(t *testing.T) {
 			expectedCommitURL: "https://gitea.com/akuity/kargo/commit/sha",
 		},
 		{
-			repoURL:           "ssh://git@gitea.com/akuity/kargo",
-			sha:               "sha",
-			expectedCommitURL: "https://gitea.com/akuity/kargo/commit/sha",
-		},
-		{
-			repoURL:           "git@gitea.com:akuity/kargo",
-			sha:               "sha",
-			expectedCommitURL: "https://gitea.com/akuity/kargo/commit/sha",
-		},
-		{
-			repoURL:           "git@custom.host.com:akuity/kargo",
-			sha:               "sha",
-			expectedCommitURL: "https://custom.host.com/akuity/kargo/commit/sha",
-		},
-		{
 			repoURL:           "http://custom.host.com/akuity/kargo",
 			sha:               "sha",
 			expectedCommitURL: "https://custom.host.com/akuity/kargo/commit/sha",
@@ -867,6 +873,105 @@ func TestGetCommitURL(t *testing.T) {
 			commitURL, err := prov.GetCommitURL(testCase.repoURL, testCase.sha)
 			require.NoError(t, err)
 			require.Equal(t, testCase.expectedCommitURL, commitURL)
+		})
+	}
+}
+
+func TestDeleteBranch(t *testing.T) {
+	const testBranch = "kargo/promotion/test"
+
+	giteaResp := func(status int) *gitea.Response {
+		return &gitea.Response{Response: &http.Response{StatusCode: status}}
+	}
+
+	testCases := []struct {
+		name      string
+		setupMock func(*mockGiteaClient)
+		assert    func(*testing.T, error)
+	}{
+		{
+			name: "branch does not exist",
+			setupMock: func(m *mockGiteaClient) {
+				m.On("GetRepoBranch", testRepoOwner, testRepoName, testBranch).
+					Return(nil, giteaResp(http.StatusNotFound), errors.New("not found"))
+				// No delete is attempted.
+			},
+			assert: func(t *testing.T, err error) {
+				require.NoError(t, err)
+			},
+		},
+		{
+			name: "error looking up branch",
+			setupMock: func(m *mockGiteaClient) {
+				m.On("GetRepoBranch", testRepoOwner, testRepoName, testBranch).
+					Return(nil, giteaResp(http.StatusInternalServerError), errors.New("boom"))
+			},
+			assert: func(t *testing.T, err error) {
+				require.ErrorContains(t, err, "error getting branch")
+				require.ErrorContains(t, err, "boom")
+			},
+		},
+		{
+			name: "branch deleted",
+			setupMock: func(m *mockGiteaClient) {
+				m.On("GetRepoBranch", testRepoOwner, testRepoName, testBranch).
+					Return(&gitea.Branch{Name: testBranch}, giteaResp(http.StatusOK), nil)
+				m.On("DeleteRepoBranch", testRepoOwner, testRepoName, testBranch).
+					Return(true, giteaResp(http.StatusNoContent), nil)
+			},
+			assert: func(t *testing.T, err error) {
+				require.NoError(t, err)
+			},
+		},
+		{
+			name: "error deleting branch",
+			setupMock: func(m *mockGiteaClient) {
+				m.On("GetRepoBranch", testRepoOwner, testRepoName, testBranch).
+					Return(&gitea.Branch{Name: testBranch}, giteaResp(http.StatusOK), nil)
+				m.On("DeleteRepoBranch", testRepoOwner, testRepoName, testBranch).
+					Return(false, nil, errors.New("network down"))
+			},
+			assert: func(t *testing.T, err error) {
+				require.ErrorContains(t, err, "network down")
+			},
+		},
+		{
+			name: "not deleted with unexpected status",
+			setupMock: func(m *mockGiteaClient) {
+				m.On("GetRepoBranch", testRepoOwner, testRepoName, testBranch).
+					Return(&gitea.Branch{Name: testBranch}, giteaResp(http.StatusOK), nil)
+				m.On("DeleteRepoBranch", testRepoOwner, testRepoName, testBranch).
+					Return(false, giteaResp(http.StatusForbidden), nil)
+			},
+			assert: func(t *testing.T, err error) {
+				require.ErrorContains(t, err, "unexpected status 403")
+			},
+		},
+		{
+			name: "not deleted without response",
+			setupMock: func(m *mockGiteaClient) {
+				m.On("GetRepoBranch", testRepoOwner, testRepoName, testBranch).
+					Return(&gitea.Branch{Name: testBranch}, giteaResp(http.StatusOK), nil)
+				m.On("DeleteRepoBranch", testRepoOwner, testRepoName, testBranch).
+					Return(false, nil, nil)
+			},
+			assert: func(t *testing.T, err error) {
+				require.ErrorContains(t, err, "error deleting branch")
+			},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			mockClient := &mockGiteaClient{}
+			testCase.setupMock(mockClient)
+			p := provider{
+				owner:  testRepoOwner,
+				repo:   testRepoName,
+				client: mockClient,
+			}
+			err := p.DeleteBranch(t.Context(), testBranch)
+			mockClient.AssertExpectations(t)
+			testCase.assert(t, err)
 		})
 	}
 }

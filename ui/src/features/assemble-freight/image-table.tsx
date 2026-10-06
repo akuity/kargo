@@ -52,7 +52,10 @@ export const ImageTable = ({
                 {sourceUrl}
               </a>
             ) : (
-              <FontAwesomeIcon icon={faQuestionCircle} className='text-gray-400' />
+              <FontAwesomeIcon
+                icon={faQuestionCircle}
+                className='text-gray-400 dark:text-neutral-500'
+              />
             );
           }
         },

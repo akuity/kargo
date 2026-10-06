@@ -85,7 +85,13 @@ func (e *projectWarehouseHealthEnqueuer[T]) Update(
 }
 
 // projectStageHealthEnqueuer enqueues a Project for reconciliation when the
-// health condition of a Stage within that Project changes.
+// health condition of a Stage within that Project changes, or when the
+// PromotionRequest the Stage reports as current or last changes. The latter
+// marks a round of promotion to the Stage's Targets starting or ending, which
+// is when the Project's Target stats are recomputed. Those stats are a
+// high-level overview, so they deliberately do not track each child Promotion
+// finishing mid-round, or Targets appearing and disappearing; watching those
+// would multiply Project reconciles for little benefit.
 type projectStageHealthEnqueuer[T any] struct{}
 
 // Create implements TypedEventHandler.
@@ -140,6 +146,17 @@ func (e *projectStageHealthEnqueuer[T]) Update(
 		return
 	}
 
+	if promotionRequestRefName(oldStage.Status.CurrentPromotionRequest) !=
+		promotionRequestRefName(newStage.Status.CurrentPromotionRequest) ||
+		promotionRequestRefName(oldStage.Status.LastPromotionRequest) !=
+			promotionRequestRefName(newStage.Status.LastPromotionRequest) {
+		logger.Info("Stage's PromotionRequest changed, enqueueing Project")
+		wq.Add(reconcile.Request{
+			NamespacedName: types.NamespacedName{Name: newStage.Namespace},
+		})
+		return
+	}
+
 	oldCond := conditions.Get(&oldStage.Status, kargoapi.ConditionTypeHealthy)
 	newCond := conditions.Get(&newStage.Status, kargoapi.ConditionTypeHealthy)
 	switch {
@@ -153,4 +170,13 @@ func (e *projectStageHealthEnqueuer[T]) Update(
 			NamespacedName: types.NamespacedName{Name: oldStage.Namespace},
 		})
 	}
+}
+
+// promotionRequestRefName returns the name a Stage's PromotionRequest reference
+// carries, or the empty string when there is no reference.
+func promotionRequestRefName(ref *kargoapi.PromotionRequestReference) string {
+	if ref == nil {
+		return ""
+	}
+	return ref.Name
 }

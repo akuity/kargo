@@ -8,26 +8,29 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	"github.com/akuity/kargo/pkg/api"
 	"github.com/akuity/kargo/pkg/event"
 	libhttp "github.com/akuity/kargo/pkg/http"
 	"github.com/akuity/kargo/pkg/kubeclient"
 	"github.com/akuity/kargo/pkg/logging"
+	"github.com/akuity/kargo/pkg/server/auth/can"
 	"github.com/akuity/kargo/pkg/server/user"
 )
 
+// patchFreightStatus patches Freight status using the given client. The
+// caller chooses the client, and so is responsible for its own authorization
+// decision -- this function enforces none.
 func (s *server) patchFreightStatus(
 	ctx context.Context,
+	cl client.Client,
 	freight *kargoapi.Freight,
 	newStatus kargoapi.FreightStatus,
 ) error {
 	if err := kubeclient.PatchStatus(
 		ctx,
-		s.client,
+		cl,
 		freight,
 		func(status *kargoapi.FreightStatus) {
 			*status = newStatus
@@ -69,8 +72,9 @@ func (s *server) approveFreight(c *gin.Context) {
 		return
 	}
 
-	freight := s.getFreightByNameOrAliasForGin(c, project, freightNameOrAlias)
-	if freight == nil {
+	freight, err := s.getFreightByNameOrAlias(ctx, project, freightNameOrAlias)
+	if err != nil {
+		_ = c.Error(err)
 		return
 	}
 
@@ -84,16 +88,7 @@ func (s *server) approveFreight(c *gin.Context) {
 		return
 	}
 
-	if err := s.authorizeFn(
-		ctx,
-		"promote",
-		kargoapi.GroupVersion.WithResource("stages"),
-		"",
-		types.NamespacedName{
-			Namespace: project,
-			Name:      stageName,
-		},
-	); err != nil {
+	if err := s.authorize(ctx, can.Promote().Stage(project, stageName)); err != nil {
 		_ = c.Error(err)
 		return
 	}
@@ -123,13 +118,11 @@ func (s *server) approveFreight(c *gin.Context) {
 	}
 	newStatus.AddApprovedStage(stageName, time.Now())
 
-	if err := kubeclient.PatchStatus(
-		ctx,
-		s.client,
-		freight,
-		func(status *kargoapi.FreightStatus) {
-			*status = newStatus
-		},
+	// The promote check above is the authorization decision for this write,
+	// so it's written with the internal client: the caller need not also hold
+	// Kubernetes RBAC permission to patch freights/status themselves.
+	if err := s.patchFreightStatusFn(
+		ctx, s.client.InternalClient(), freight, newStatus,
 	); err != nil {
 		_ = c.Error(fmt.Errorf("patch freight status: %w", err))
 		return
@@ -137,8 +130,8 @@ func (s *server) approveFreight(c *gin.Context) {
 
 	var actor string
 	eventMsg := fmt.Sprintf("Freight approved for Stage %q", stageName)
-	if u, ok := user.InfoFromContext(ctx); ok {
-		actor = api.FormatEventUserActor(u)
+	if u, ok := user.IdentityFromContext(ctx); ok {
+		actor = u.Actor()
 		eventMsg += fmt.Sprintf(" by %q", actor)
 	}
 

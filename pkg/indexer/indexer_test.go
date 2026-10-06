@@ -911,6 +911,36 @@ func TestPromotionsByStageAndFreight(t *testing.T) {
 	require.Equal(t, []string{"fake-stage:fake-freight"}, res)
 }
 
+func TestPromotionRequestsByStageAndFreight(t *testing.T) {
+	t.Run("PromotionRequest", func(t *testing.T) {
+		promotionRequest := &kargoapi.PromotionRequest{
+			Spec: kargoapi.PromotionRequestSpec{
+				Stage:   "fake-stage",
+				Freight: "fake-freight",
+			},
+		}
+		res := PromotionRequestsByStageAndFreight(promotionRequest)
+		require.Equal(t, []string{"fake-stage:fake-freight"}, res)
+	})
+
+	t.Run("not a PromotionRequest", func(t *testing.T) {
+		require.Nil(t, PromotionRequestsByStageAndFreight(&kargoapi.Promotion{}))
+	})
+}
+
+func TestPromotionRequestsByStage(t *testing.T) {
+	t.Run("PromotionRequest", func(t *testing.T) {
+		promotionRequest := &kargoapi.PromotionRequest{
+			Spec: kargoapi.PromotionRequestSpec{Stage: "fake-stage"},
+		}
+		require.Equal(t, []string{"fake-stage"}, PromotionRequestsByStage(promotionRequest))
+	})
+
+	t.Run("not a PromotionRequest", func(t *testing.T) {
+		require.Nil(t, PromotionRequestsByStage(&kargoapi.Promotion{}))
+	})
+}
+
 func TestFreightByWarehouse(t *testing.T) {
 	testCases := []struct {
 		name     string

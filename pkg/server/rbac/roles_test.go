@@ -20,6 +20,7 @@ import (
 
 	rbacapi "github.com/akuity/kargo/api/rbac/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/pkg/server/user"
 )
 
 const (
@@ -42,7 +43,8 @@ func fakeGroupResolver(resource string) (string, error) {
 		return "", nil
 	case "roles", "rolebindings":
 		return rbacv1.SchemeGroupVersion.Group, nil
-	case "stages", "warehouses", "promotions", "freights", "projectconfigs", "promotiontasks":
+	case "stages", "warehouses", "promotions", "promotionrequests",
+		"freights", "projectconfigs", "promotiontasks", "targets":
 		return kargoapi.GroupVersion.Group, nil
 	default:
 		return "", apierrors.NewBadRequest(fmt.Sprintf("unrecognized resource type %q", resource))
@@ -1715,8 +1717,9 @@ func Test_rolesDatabase_CreateAPIToken(t *testing.T) {
 					return client.Get(ctx, key, obj, opts...)
 				},
 			}).Build()
+		ctx := user.ContextWithIdentity(t.Context(), user.Admin{})
 		tokenSecret, err := NewKubernetesRolesDatabase(c, c, RolesDatabaseConfigFromEnv()).
-			CreateAPIToken(t.Context(), false, testProject, testRoleName, testTokenName)
+			CreateAPIToken(ctx, false, testProject, testRoleName, testTokenName)
 		require.NoError(t, err)
 		require.NotNil(t, tokenSecret)
 		tokenSecret = &corev1.Secret{}
@@ -1734,6 +1737,11 @@ func Test_rolesDatabase_CreateAPIToken(t *testing.T) {
 			t,
 			testRoleName,
 			tokenSecret.Annotations["kubernetes.io/service-account.name"],
+		)
+		require.Equal(
+			t,
+			kargoapi.EventActorAdmin,
+			tokenSecret.Annotations[kargoapi.AnnotationKeyCreateActor],
 		)
 	})
 }
@@ -1813,9 +1821,10 @@ func Test_rolesDatabase_DeleteAPIToken(t *testing.T) {
 				},
 			}},
 		).Build()
-		err := NewKubernetesRolesDatabase(c, c, RolesDatabaseConfigFromEnv()).
+		deleted, err := NewKubernetesRolesDatabase(c, c, RolesDatabaseConfigFromEnv()).
 			DeleteAPIToken(t.Context(), false, testProject, "non-existent-token")
 		require.Error(t, err)
+		require.Nil(t, deleted)
 		require.True(t, apierrors.IsNotFound(err))
 	})
 
@@ -1841,9 +1850,10 @@ func Test_rolesDatabase_DeleteAPIToken(t *testing.T) {
 				Type: corev1.SecretTypeServiceAccountToken,
 			},
 		).Build()
-		err := NewKubernetesRolesDatabase(c, c, RolesDatabaseConfigFromEnv()).
+		deleted, err := NewKubernetesRolesDatabase(c, c, RolesDatabaseConfigFromEnv()).
 			DeleteAPIToken(t.Context(), false, testProject, tokenName)
 		require.Error(t, err)
+		require.Nil(t, deleted)
 		require.True(t, apierrors.IsConflict(err))
 		require.Contains(t, err.Error(), "not labeled as a Kargo API token")
 	})
@@ -1872,9 +1882,10 @@ func Test_rolesDatabase_DeleteAPIToken(t *testing.T) {
 				Type: corev1.SecretTypeServiceAccountToken,
 			},
 		).Build()
-		err := NewKubernetesRolesDatabase(c, c, RolesDatabaseConfigFromEnv()).
+		deleted, err := NewKubernetesRolesDatabase(c, c, RolesDatabaseConfigFromEnv()).
 			DeleteAPIToken(t.Context(), false, testProject, tokenName)
 		require.Error(t, err)
+		require.Nil(t, deleted)
 		require.True(t, apierrors.IsConflict(err))
 		require.Contains(t, err.Error(), "not annotated as Kargo-managed")
 	})
@@ -1904,9 +1915,11 @@ func Test_rolesDatabase_DeleteAPIToken(t *testing.T) {
 				Type: corev1.SecretTypeServiceAccountToken,
 			},
 		).Build()
-		err := NewKubernetesRolesDatabase(c, c, RolesDatabaseConfigFromEnv()).
+		deleted, err := NewKubernetesRolesDatabase(c, c, RolesDatabaseConfigFromEnv()).
 			DeleteAPIToken(t.Context(), false, testProject, tokenName)
 		require.NoError(t, err)
+		require.NotNil(t, deleted)
+		require.Equal(t, tokenName, deleted.Name)
 		// Verify the token Secret was deleted
 		secret := &corev1.Secret{}
 		err = c.Get(

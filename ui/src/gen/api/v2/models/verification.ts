@@ -5,17 +5,21 @@
  * REST API for Kargo
  * OpenAPI spec version: v1alpha1
  */
+import type { AnalysisRunArgument } from './analysisRunArgument';
 import type { AnalysisRunMetadata } from './analysisRunMetadata';
 import type { AnalysisTemplateReference } from './analysisTemplateReference';
-import type { AnalysisRunArgument } from './analysisRunArgument';
 
 export interface Verification {
-  /** AnalysisRunMetadata contains optional metadata that should be applied to
-all AnalysisRuns. */
+  /**
+   * AnalysisRunMetadata contains optional metadata that should be applied to
+   * all AnalysisRuns.
+   */
   analysisRunMetadata?: AnalysisRunMetadata;
-  /** AnalysisTemplates is a list of AnalysisTemplates from which AnalysisRuns
-should be created to verify a Stage's current Freight is fit to be promoted
-downstream. */
+  /**
+   * AnalysisTemplates is a list of AnalysisTemplates from which AnalysisRuns
+   * should be created to verify a Stage's current Freight is fit to be promoted
+   * downstream.
+   */
   analysisTemplates?: AnalysisTemplateReference[];
   /** Args lists arguments that should be added to all AnalysisRuns. */
   args?: AnalysisRunArgument[];

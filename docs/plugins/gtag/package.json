@@ -9,9 +9,9 @@
   },
   "packageManager": "pnpm@11.13.0",
   "dependencies": {
-    "@docusaurus/core": "^3.10.1",
-    "@docusaurus/types": "^3.10.1",
-    "@docusaurus/utils-validation": "3.10.1",
+    "@docusaurus/core": "^3.10.2",
+    "@docusaurus/types": "^3.10.2",
+    "@docusaurus/utils-validation": "3.10.2",
     "tslib": "^2.8.1"
   },
   "devDependencies": {

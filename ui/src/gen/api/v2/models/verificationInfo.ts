@@ -8,23 +8,31 @@
 import type { AnalysisRunReference } from './analysisRunReference';
 
 export interface VerificationInfo {
-  /** Actor is the name of the entity that initiated or aborted the
-Verification process. */
+  /**
+   * Actor is the name of the entity that initiated or aborted the
+   * Verification process.
+   */
   actor?: string;
-  /** AnalysisRun is a reference to the Argo Rollouts AnalysisRun that implements
-the Verification process. */
+  /**
+   * AnalysisRun is a reference to the Argo Rollouts AnalysisRun that implements
+   * the Verification process.
+   */
   analysisRun?: AnalysisRunReference;
   /** FinishTime is the time at which the Verification process finished. */
   finishTime?: string;
   /** ID is the identifier of the Verification process. */
   id?: string;
-  /** Message may contain additional information about why the verification
-process is in its current phase. */
+  /**
+   * Message may contain additional information about why the verification
+   * process is in its current phase.
+   */
   message?: string;
-  /** Phase describes the current phase of the Verification process. Generally,
-this will be a reflection of the underlying AnalysisRun's phase, however,
-there are exceptions to this, such as in the case where an AnalysisRun
-cannot be launched successfully. */
+  /**
+   * Phase describes the current phase of the Verification process. Generally,
+   * this will be a reflection of the underlying AnalysisRun's phase, however,
+   * there are exceptions to this, such as in the case where an AnalysisRun
+   * cannot be launched successfully.
+   */
   phase?: string;
   /** StartTime is the time at which the Verification process was started. */
   startTime?: string;

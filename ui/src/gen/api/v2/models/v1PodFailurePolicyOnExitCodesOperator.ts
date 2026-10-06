@@ -9,7 +9,6 @@
 export type V1PodFailurePolicyOnExitCodesOperator =
   (typeof V1PodFailurePolicyOnExitCodesOperator)[keyof typeof V1PodFailurePolicyOnExitCodesOperator];
 
-// eslint-disable-next-line @typescript-eslint/no-redeclare
 export const V1PodFailurePolicyOnExitCodesOperator = {
   PodFailurePolicyOnExitCodesOpIn: 'In',
   PodFailurePolicyOnExitCodesOpNotIn: 'NotIn'

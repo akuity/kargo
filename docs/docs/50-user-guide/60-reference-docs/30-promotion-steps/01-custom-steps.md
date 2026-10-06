@@ -205,7 +205,7 @@ output:
 | `Stderr` | Reads from the command's standard error. |
 | `File` | Reads from a file at the specified `path`. Format inferred from file extension when omitted. |
 
-#### Ouptut formats
+#### Output formats
 
 | Format | Behavior |
 |--------|----------|
@@ -228,6 +228,27 @@ transform:
 
 If `transform` map is used, it will completely replace the output produced by the `source`.
 To pass some values through they should map to their respective output key (like `message` in the example above)
+
+#### Viewing output as logs
+
+When a step's output is entirely console output, the dashboard renders it in a log panel rather than the YAML view: monospace, line-numbered, in original order, and expandable to show around 50 lines at a time. A <hlt>Logs</hlt> tab appears for the step, next to <hlt>Output</hlt> and <hlt>Config</hlt>.
+
+To opt in, shape the output as a single key named `lines`, `logs`, or `log`, whose value is either an array of strings or a string spanning at least three lines:
+
+```yaml
+output:
+  source:
+    type: Stdout
+    format: Text
+  transform:
+    lines: split(trimSuffix(output, "\n"), "\n")
+```
+
+`trimSuffix` is worth keeping: command output usually ends in a newline, and splitting without it leaves a trailing empty element that renders as a blank final line.
+
+:::note
+The log key must be the *only* key in the output. Adding a second `transform` entry means the output is treated as structured data and keeps its YAML view.
+:::
 
 #### Output size limits
 

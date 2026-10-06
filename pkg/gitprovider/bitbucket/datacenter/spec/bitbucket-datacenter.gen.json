@@ -2,7 +2,7 @@
   "openapi": "3.0.3",
   "info": {
     "title": "Bitbucket Data Center API",
-    "description": "Minimal Bitbucket Data Center REST API spec covering pull request and commit operations used by the Kargo git provider integration.",
+    "description": "Minimal Bitbucket Data Center REST API spec covering pull request, commit, and branch operations used by the Kargo git provider integration.",
     "version": "1.0"
   },
   "servers": [
@@ -225,6 +225,42 @@
           }
         }
       }
+    },
+    "/rest/branch-utils/latest/projects/{projectKey}/repos/{repositorySlug}/branches": {
+      "delete": {
+        "operationId": "DeleteBranch",
+        "summary": "Delete a branch",
+        "parameters": [
+          {
+            "name": "projectKey",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "repositorySlug",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/RestBranchDeleteRequest" }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "The branch was deleted."
+          },
+          "404": {
+            "description": "The repository or branch does not exist."
+          }
+        }
+      }
     }
   },
   "components": {
@@ -350,6 +386,14 @@
           "id": { "type": "string" },
           "displayId": { "type": "string" },
           "message": { "type": "string" }
+        }
+      },
+      "RestBranchDeleteRequest": {
+        "type": "object",
+        "required": ["name"],
+        "properties": {
+          "name": { "type": "string" },
+          "dryRun": { "type": "boolean" }
         }
       }
     }

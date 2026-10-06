@@ -5,10 +5,6 @@
   "additionalProperties": false,
   "required": ["repoURL", "targetBranch", "sourceBranch"],
   "properties": {
-    "createTargetBranch": {
-      "type": "boolean",
-      "description": "Deprecated. Is a no-op if set. Will be removed in a future release."
-    },
     "insecureSkipTLSVerify" : {
       "type": "boolean",
       "description": "Indicates whether to skip TLS verification when cloning the repository. Default is false."
@@ -20,7 +16,8 @@
     },
     "repoURL": {
       "type": "string",
-      "description": "The URL of a remote Git repository to clone. Deprecated: Support for SSH URLs (ssh:// and SCP-style git@host:path) is deprecated as of v1.10.0 and will be removed in v1.13.0. Use HTTPS URLs instead.",
+      "pattern": "^https?://",
+      "description": "The URL of a remote Git repository to clone. Only HTTP(S) URLs are supported.",
       "minLength": 1,
       "format": "uri"
     },

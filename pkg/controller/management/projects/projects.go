@@ -894,9 +894,28 @@ func (r *reconciler) ensureDefaultUserRoles(
 					Verbs:     []string{"*"},
 				},
 				{ // Full access to all mutable Kargo resource types
+					// PromotionRequests are deliberately absent here: only the
+					// Stage controller creates them, so no user needs to write
+					// one. Read access is granted separately, below.
 					APIGroups: []string{kargoapi.GroupVersion.Group},
-					Resources: []string{"freights", "projectconfigs", "promotiontasks", "stages", "warehouses"},
-					Verbs:     []string{"*"},
+					Resources: []string{
+						"freights",
+						"projectconfigs",
+						"promotiontasks",
+						"stages",
+						"targets",
+						"warehouses",
+					},
+					Verbs: []string{"*"},
+				},
+				{ // Read-only access to PromotionRequests
+					// A user cannot create, edit, or delete a PromotionRequest --
+					// the Stage controller and the API server own that. They can
+					// read one, because when a target-aware Stage stops promoting,
+					// the PromotionRequest's status is where the reason lives.
+					APIGroups: []string{kargoapi.GroupVersion.Group},
+					Resources: []string{"promotionrequests"},
+					Verbs:     []string{"get", "list", "watch"},
 				},
 				{ // Promote permission on all stages
 					APIGroups: []string{kargoapi.GroupVersion.Group},
@@ -907,11 +926,6 @@ func (r *reconciler) ensureDefaultUserRoles(
 					APIGroups: []string{kargoapi.GroupVersion.Group},
 					Resources: []string{"promotions"},
 					Verbs:     []string{"create", "delete", "get", "list", "watch", "patch"},
-				},
-				{ // Manual approvals involve patching Freight status
-					APIGroups: []string{kargoapi.GroupVersion.Group},
-					Resources: []string{"freights/status"},
-					Verbs:     []string{"patch"},
 				},
 				{
 					// View and delete AnalysisRuns
@@ -947,8 +961,16 @@ func (r *reconciler) ensureDefaultUserRoles(
 				},
 				{
 					APIGroups: []string{kargoapi.GroupVersion.Group},
-					Resources: []string{"freights", "promotions", "stages", "warehouses", "projectconfigs"},
-					Verbs:     []string{"get", "list", "watch"},
+					Resources: []string{
+						"freights",
+						"projectconfigs",
+						"promotionrequests",
+						"promotions",
+						"stages",
+						"targets",
+						"warehouses",
+					},
+					Verbs: []string{"get", "list", "watch"},
 				},
 				{
 					APIGroups: []string{rolloutsapi.GroupVersion.Group},
@@ -990,11 +1012,6 @@ func (r *reconciler) ensureDefaultUserRoles(
 					APIGroups: []string{kargoapi.GroupVersion.Group},
 					Resources: []string{"promotions"},
 					Verbs:     []string{"create", "get", "list", "watch"},
-				},
-				{ // Manual approvals involve patching Freight status
-					APIGroups: []string{kargoapi.GroupVersion.Group},
-					Resources: []string{"freights/status"},
-					Verbs:     []string{"patch"},
 				},
 				{ // View AnalysisRuns and AnalysisTemplates
 					APIGroups: []string{rolloutsapi.GroupVersion.Group},

@@ -15,21 +15,24 @@ import {
 } from '@ui/features/common/promotion-status/utils';
 import { getAlias, getShortFreightLabel } from '@ui/features/common/utils';
 import { getPromotionActor } from '@ui/features/project/pipelines/promotion/get-promotion-actor';
+import { PromotionWindowAlert } from '@ui/features/project/pipelines/promotion/promotion-window-alert';
 import { useWatchPromotions } from '@ui/features/project/pipelines/promotion/use-watch-promotions';
 import { useListPromotions, usePromoteToStage } from '@ui/gen/api/v2/core/core';
-import { ArgoCDShard, Promotion } from '@ui/gen/api/v2/models';
+import { ArgoCDShard, Promotion, Stage } from '@ui/gen/api/v2/models';
 import uiPlugins from '@ui/plugins';
 import { UiPluginHoles } from '@ui/plugins/atoms/ui-plugin-hole/ui-plugin-holes';
 import { parseDate } from '@ui/utils/dates';
 
+import { isStageTargetAware } from '../project/pipelines/nodes/stage-meta-utils';
 import { Promotion as PromotionComponent } from '../project/pipelines/promotion/promotion';
 
+import { PromotionRequests } from './promotion-requests';
 import { useGetFreightMap } from './tabs/freight-history/use-get-freight-map';
 import { hasAbortRequest, promotionCompareFn } from './utils/promotion';
 
 const rollbackAnnotationKey = 'kargo.akuity.io/rollback';
 
-export const Promotions = ({ argocdShard }: { argocdShard?: ArgoCDShard }) => {
+export const Promotions = ({ stage, argocdShard }: { stage: Stage; argocdShard?: ArgoCDShard }) => {
   const { token } = theme.useToken();
 
   const { name: projectName, stageName } = useParams();
@@ -180,6 +183,12 @@ export const Promotions = ({ argocdShard }: { argocdShard?: ArgoCDShard }) => {
 
   return (
     <>
+      {isStageTargetAware(stage) && (
+        <PromotionRequests projectName={projectName || ''} stageName={stageName || ''} />
+      )}
+
+      <PromotionWindowAlert stage={stage} className='mb-4' />
+
       <Table
         columns={columns}
         dataSource={promotions}

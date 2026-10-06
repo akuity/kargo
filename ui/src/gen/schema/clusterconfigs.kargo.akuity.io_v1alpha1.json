@@ -86,6 +86,15 @@
           "items": {
             "description": "PromotionWindow describes a recurring or one-shot time window that gates\npromotions for the Stages it matches. Windows may appear on both\nProjectConfig and ClusterConfig; a Stage's effective schedule is the union of\nall matching windows from both. A schedule is open at a given time when no\nmatching Deny window is active and, if any Allow windows match the Stage, at\nleast one of them is active. Windows gate all promotions uniformly (auto,\nmanual, and rollback).\n\nKargo Enterprise only: This type is ignored in Kargo OSS. The schedule is\nevaluated and enforced only by Kargo Enterprise; OSS carries the API for\ncompatibility, as it does for other Enterprise-only fields.",
             "properties": {
+              "description": {
+                "description": "Description is a human-readable description of the window.\nMay contain reason, author or any clarification for the window.",
+                "maxLength": 1024,
+                "type": "string"
+              },
+              "disabled": {
+                "description": "Disabled controls whether configured windows should be skipped when calculating the stage window status.\nOptional. Default is `false`. Unless set to `true` the window will impact the stages it's configured for.",
+                "type": "boolean"
+              },
               "dtend": {
                 "description": "DTEnd is the window's end in the same format as DTStart. When combined with\nRRule, DTEnd - DTStart defines the duration of each occurrence. The value\nis parsed and validated by Kargo Enterprise.",
                 "type": "string"

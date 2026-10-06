@@ -9,6 +9,6 @@ import type { FreightReference } from './freightReference';
 
 /**
  * Freight is a map of FreightReference objects, indexed by their Warehouse
-origin.
+ * origin.
  */
 export type FreightCollectionItems = { [key: string]: FreightReference };

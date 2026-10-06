@@ -52,7 +52,12 @@ export const GraphFilters = (props: GraphFiltersProps) => {
           allowClear
           className='w-[180px]'
           placeholder='Search stages...'
-          prefix={<FontAwesomeIcon icon={faSearch} className='text-xs text-gray-400' />}
+          prefix={
+            <FontAwesomeIcon
+              icon={faSearch}
+              className='text-xs text-gray-400 dark:text-neutral-500'
+            />
+          }
           value={filterContext?.stageSearch || ''}
           onChange={(e) => filterContext?.setStageSearch(e.target.value)}
         />

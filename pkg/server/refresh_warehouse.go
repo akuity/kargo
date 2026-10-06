@@ -8,6 +8,7 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/api"
+	"github.com/akuity/kargo/pkg/server/auth/can"
 )
 
 // @id RefreshWarehouse
@@ -27,6 +28,11 @@ func (s *server) refreshWarehouse(c *gin.Context) {
 
 	project := c.Param("project")
 	warehouseName := c.Param("warehouse")
+
+	if err := s.authorize(ctx, can.Get().Warehouse(project, warehouseName)); err != nil {
+		_ = c.Error(err)
+		return
+	}
 
 	obj := &kargoapi.Warehouse{
 		ObjectMeta: metav1.ObjectMeta{Name: warehouseName, Namespace: project},

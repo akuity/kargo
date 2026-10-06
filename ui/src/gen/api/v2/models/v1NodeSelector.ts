@@ -8,7 +8,9 @@
 import type { V1NodeSelectorTerm } from './v1NodeSelectorTerm';
 
 export interface V1NodeSelector {
-  /** Required. A list of node selector terms. The terms are ORed.
-+listType=atomic */
+  /**
+   * Required. A list of node selector terms. The terms are ORed.
+   * +listType=atomic
+   */
   nodeSelectorTerms?: V1NodeSelectorTerm[];
 }

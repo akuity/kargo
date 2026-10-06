@@ -503,6 +503,153 @@ this.
     </TabItem>
     </Tabs>
 
+## Working with PostgreSQL
+
+Tilt runs the PostgreSQL bundled with the Helm chart, configured by the
+`database.postgres` values in `hack/tilt/values.dev.yaml`, and forwards
+`127.0.0.1:15432` to its port `5432`. The database, username, and password are all `kargo`. Inside the
+cluster, the address is `kargo-postgres.kargo.svc:5432`. Kargo's application
+components do not use this database yet.
+
+To open a `psql` session against it:
+
+```shell
+make db-shell
+```
+
+This runs `psql` inside the PostgreSQL pod, so nothing needs to be installed
+locally and the client always matches the server.
+
+### Migrations
+
+The `db-migrate` Tilt resource waits for PostgreSQL to accept a connection,
+then runs the pinned Goose tool to apply pending SQL migrations from
+`db/migrations/`. It runs once at startup. After that, Tilt watches the
+directory and marks the resource as having pending changes, but applies them
+only when you trigger it, from the Tilt UI or with:
+
+```shell
+hack/bin/tilt trigger db-migrate
+```
+
+This keeps a migration you are still editing from being applied early.
+Migration failures appear in Tilt and are not retried. An empty directory is
+supported while the initial schema is being developed.
+
+To run the same migration command outside Tilt:
+
+```shell
+make db-migrate
+```
+
+To run other Goose commands, configure your shell:
+
+```shell
+export GOOSE_DRIVER=postgres
+export GOOSE_DBSTRING='postgres://kargo:kargo@127.0.0.1:15432/kargo?sslmode=disable'
+export GOOSE_MIGRATION_DIR=db/migrations
+
+go tool goose status
+```
+
+`make db-migrate` uses these values by default. Set the same environment
+variables before starting Tilt to override them, for example when using a
+separate development database.
+
+### Creating a migration
+
+Create the migration in place:
+
+```shell
+go tool goose -dir db/migrations create create_widgets sql
+```
+
+Replace the generated SQL with:
+
+```sql
+-- +goose Up
+CREATE TABLE widgets (
+    id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    name text NOT NULL
+);
+
+-- +goose Down
+DROP TABLE widgets;
+```
+
+Trigger `db-migrate`, then inspect the result:
+
+```shell
+hack/bin/tilt trigger db-migrate
+make db-shell
+```
+
+```sql
+\d widgets
+```
+
+:::note
+
+Goose tracks migrations by version and never re-applies one it has already
+run. If an applied migration turns out to be wrong, roll it back with
+`go tool goose down` before editing it. Once a migration has merged, add a new
+one instead of changing it.
+
+:::
+
+Rollback and reset are explicit operations. With the environment variables
+above set, `go tool goose down` rolls back the latest migration, and
+`go tool goose reset` rolls back all migrations. Both may delete data, depending
+on the migrations' down statements. Run `make db-migrate` to reapply them.
+
+PostgreSQL uses a persistent volume from the cluster's default StorageClass.
+Data survives pod replacement, stopping/restarting Tilt, and
+`make hack-tilt-down`: Tilt retains namespaces by default, and the StatefulSet
+retains its volume claim when deleted. Deleting the `kargo` namespace or the
+`data-kargo-postgres-0` volume claim removes this persistence; the StorageClass's
+reclaim policy determines whether the backing volume is also deleted. Treat
+this database as disposable development data.
+
+### Tracing database operations
+
+Connection pools created with `database.NewPool` record an OpenTelemetry span
+for every query and batch, using the same tracing setup as the rest of the
+control plane. Spans are named after the sqlc query
+that produced them, for example `GetProjectByName`, and carry the operation,
+the number of rows returned, and the server's SQLSTATE code when a query
+fails. For sqlc queries, which are always parameterized, the query text is
+recorded as well; parameters never are. Lock timeouts, deadlocks, and serialization
+failures each have their own code, so they can be told apart from other
+errors.
+
+A span cannot distinguish a slow query from one that waited on a lock held by
+another session. The development values set `log_lock_waits` so the
+PostgreSQL instance logs every lock wait longer than one second, naming both
+the waiting and the holding session, and the pod's logs answer that question:
+
+```shell
+kubectl logs -n kargo kargo-postgres-0 | grep 'still waiting'
+```
+
+Every component's sessions carry an `application_name`, so the log lines and
+`pg_stat_activity` show which component held the lock.
+
+### Generating query code with sqlc
+
+Kargo uses [sqlc](https://sqlc.dev) to generate type-safe Go code from SQL.
+`sqlc.yaml` reads the schema from the Goose migrations in `db/migrations/` and
+the queries in `db/queries/`, and writes pgx/v5 code to `pkg/database/`. While
+Tilt is running, the `codegen-db` resource regenerates this code whenever either
+directory changes, and the back end recompiles with the result. To regenerate
+manually:
+
+```shell
+make codegen-db
+```
+
+`make codegen` also runs this step. Commit the generated code together with the
+SQL that produced it.
+
 ## Contributing to Documentation
 
 Contributors should ensure that their changes are accompanied by relevant documentation

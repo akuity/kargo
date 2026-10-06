@@ -157,6 +157,33 @@ func (s *Stage) IsControlFlow() bool {
 	}
 }
 
+// IsTargetAware returns true if the Stage has targets in its spec.
+// A target-aware stage is handled by a separate fleet stages reconciler.
+func (s *Stage) IsTargetAware() bool {
+	return s != nil && s.Spec.Targets != nil
+}
+
+// PromotionInProgress returns true if there is a promotion currently in-flight
+// according to the stage status.
+func (s *Stage) PromotionInProgress() bool {
+	return s != nil && (s.Status.CurrentPromotion != nil || s.Status.CurrentPromotionRequest != nil)
+}
+
+// LastPromotionName returns a name of last promotion or promotion request.
+// Empty if stage is nil or there is no last promotion or request.
+func (s *Stage) LastPromotionName() string {
+	if s == nil {
+		return ""
+	}
+	if s.Status.LastPromotion != nil {
+		return s.Status.LastPromotion.Name
+	}
+	if s.Status.LastPromotionRequest != nil {
+		return s.Status.LastPromotionRequest.Name
+	}
+	return ""
+}
+
 // RequestsFreightFromOrigin returns whether any of the Stage's Freight requests
 // name the specified origin.
 func (s *Stage) RequestsFreightFromOrigin(origin FreightOrigin) bool {
@@ -240,19 +267,40 @@ type StageSpec struct {
 	// Verification describes how to verify a Stage's current Freight is fit for
 	// promotion downstream.
 	Verification *Verification `json:"verification,omitempty"`
-	// TargetSelectors select the Targets that this Stage governs and promotes
-	// Freight to, matching Targets by their labels within the Stage's own
-	// Project. A Target is selected when it matches any selector in this list.
-	// A Stage may govern any number of Targets this way.
+	// Targets describes the Targets that this Stage governs and promotes Freight
+	// to. Its presence is what makes a Stage target-aware.
 	//
 	// When this field is nil (the default), the Stage operates in classic mode:
-	// it governs a single implicit "stage-self" Target that the controller
-	// creates and maintains on the Stage's behalf. This preserves the behavior
-	// of Stages authored before Targets existed. An empty selector in a non-empty
-	// list selects all Targets in the Project.
+	// it governs no Targets and promotes Freight by way of Promotions alone.
+	// This preserves the behavior of Stages authored before Targets existed.
 	//
 	// +optional
-	TargetSelectors []metav1.LabelSelector `json:"targetSelectors,omitempty"`
+	Targets *StageTargets `json:"targets,omitempty"`
+}
+
+// StageTargets describes the Targets a Stage governs.
+type StageTargets struct {
+	// Selectors select the Targets that the Stage governs, matching Targets by
+	// their labels within the Stage's own Project. A Target is selected when it
+	// matches any selector in the list, so several selectors describe a union.
+	// A Target matching more than one of them is still governed once.
+	//
+	// An empty selector selects every Target in the Project. An empty list
+	// selects none: the Stage still governs Targets, it just governs none at the
+	// moment.
+	//
+	// +listType=atomic
+	// +kubebuilder:validation:Required
+	Selectors []metav1.LabelSelector `json:"selectors"`
+	// UpdateStrategy configures the pace of updating the targets
+	// +optional
+	UpdateStrategy TargetUpdateStrategy `json:"updateStrategy,omitempty"`
+}
+
+type TargetUpdateStrategy struct {
+	// MaxConcurrent specifies a number of targets which can be promoted to at the same time
+	// Zero means there is no limit (default)
+	MaxConcurrent int64 `json:"maxConcurrent,omitempty"`
 }
 
 // FreightRequest expresses a Stage's need for Freight having originated from a
@@ -462,9 +510,33 @@ type StageStatus struct {
 	CurrentPromotion *PromotionReference `json:"currentPromotion,omitempty"`
 	// LastPromotion is a reference to the last completed promotion.
 	LastPromotion *PromotionReference `json:"lastPromotion,omitempty"`
+	// CurrentPromotionRequest is a reference to the PromotionRequest currently
+	// fanning Freight out to this Stage's Targets. It is absent for a Stage that
+	// governs no Targets.
+	//
+	// Fanning Freight out to Targets is a Kargo Enterprise-only feature. Kargo
+	// OSS maintains this field all the same, but the PromotionRequest it refers
+	// to never gets further than being marked Errored for that reason.
+	//
+	// +optional
+	CurrentPromotionRequest *PromotionRequestReference `json:"currentPromotionRequest,omitempty"`
+	// LastPromotionRequest is a reference to the last PromotionRequest to reach a
+	// terminal phase. It is absent for a Stage that governs no Targets, and only
+	// ever moves forward, so it outlives the PromotionRequest it refers to.
+	//
+	// +optional
+	LastPromotionRequest *PromotionRequestReference `json:"lastPromotionRequest,omitempty"`
 	// AutoPromotionEnabled indicates whether automatic promotion is enabled
 	// for the Stage based on the ProjectConfig.
 	AutoPromotionEnabled bool `json:"autoPromotionEnabled,omitempty"`
+	// PromotionWindowStatus reports whether promotion windows currently permit
+	// promotion of this Stage, and when that is next expected to change. It is
+	// absent when no window gates the Stage.
+	//
+	// Kargo Enterprise only: This field is ignored in Kargo OSS.
+	//
+	// +optional
+	PromotionWindowStatus *PromotionWindowStatus `json:"promotionWindowStatus,omitempty"`
 	// Metadata is a map of arbitrary metadata associated with the Stage.
 	// This is useful for storing additional information about the Stage
 	// that can be shared across promotions, verifications, or other processes.
@@ -812,6 +884,28 @@ func (r *PromotionReference) GetHealthChecks() []HealthCheckStep {
 		return nil
 	}
 	return r.Status.HealthChecks
+}
+
+// PromotionRequestReference contains the relevant information about a
+// PromotionRequest as observed by a Stage. It mirrors the fields of the
+// PromotionRequest that a reader of the Stage needs in order to see which
+// round of fan-out the Stage is in, and how that round ended, without
+// listing PromotionRequests.
+type PromotionRequestReference struct {
+	// Name is the name of the PromotionRequest.
+	Name string `json:"name"`
+	// Freight identifies the Freight being promoted.
+	Freight *FreightReference `json:"freight,omitempty"`
+	// FreightCollection contains the details of the piece of Freight referenced
+	// by this Promotion as well as any additional Freight that is carried over
+	// from the target Stage's current state.
+	FreightCollection *FreightCollection `json:"freightCollection,omitempty"`
+	// Phase is a high-level summary of the PromotionRequest's lifecycle.
+	Phase PromotionRequestPhase `json:"phase,omitempty"`
+	// Message is a human-readable description of the promotion status
+	Message string `json:"message,omitempty"`
+	// FinishedAt is the time at which the PromotionRequest completed.
+	FinishedAt *metav1.Time `json:"finishedAt,omitempty"`
 }
 
 // Verification describes how to verify that a Promotion has been successful

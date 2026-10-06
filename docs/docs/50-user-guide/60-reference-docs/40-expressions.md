@@ -463,6 +463,71 @@ config:
 
 :::
 
+### `repoCredentials(repoURL, type)`
+
+The `repoCredentials()` function resolves repository credentials by repository
+URL and credential type, returning them as an object whose fields are accessed
+by name. It takes two required arguments:
+
+- `repoURL` (Required): A string representing the URL of the repository whose
+  credentials should be resolved.
+
+- `type` (Required): A string representing the credential type. Must be one of
+  `git`, `helm`, or `image`. The type is required because credentials are
+  indexed by type, and the same URL may resolve to different credentials
+  depending on it.
+
+Unlike `secret()`, which returns the raw `Data` of a `Secret` selected by
+_name_, `repoCredentials()` performs a lookup by repository URL through the same
+credentials database used by built-in promotion steps like `git-clone`. It
+returns the **resolved** credentials — not the raw contents of the underlying
+`Secret`. This means it transparently handles credential schemes that yield
+narrowly-scoped, short-lived credentials — such as GitHub App installation
+tokens or a cloud provider's ambient (Pod identity) credentials — instead of
+returning the raw material (e.g. an app ID and private key) from which those
+credentials are derived.
+
+Because the result is normalized, the set of available fields is **fixed** and
+does not vary by credential type or provider. The returned object always exposes
+all of the following fields:
+
+| Field | Description |
+|-------|-------------|
+| `Username` | The username identifying the principal. For token-based credentials this is often an inconsequential placeholder. |
+| `Password` | The password or token used to authenticate. **API keys and personal access tokens are surfaced here.** |
+
+If no matching credentials are found, `nil` is returned. Optional chaining
+(`?.`) and nil-coalescing (`??`) can be used to handle this case gracefully:
+
+```yaml
+config:
+  headers:
+  - name: Authorization
+    value: Bearer ${{ repoCredentials('https://github.com/example/repo.git', 'git')?.Password ?? 'anonymous' }}
+```
+
+For details on how each field is populated for a given credential type or
+provider (e.g. GitHub App, ECR, or basic username/password), see the
+[Managing Secrets](../50-security/30-managing-secrets.md#repository-credentials)
+page.
+
+Examples:
+
+```yaml
+config:
+  headers:
+  - name: Authorization
+    value: Bearer ${{ repoCredentials('https://github.com/example/repo.git', 'git').Password }}
+```
+
+:::note
+
+`repoCredentials()` is available wherever Kargo's credentials database is wired:
+within `Promotion` step expressions and within a `Stage`'s verification argument
+expressions.
+
+:::
+
 ### `warehouse(name)`
 
 The `warehouse()` function returns a `FreightOrigin` object representing a
@@ -510,6 +575,54 @@ config:
 
   # Using optional chaining (?.) with nil coalescing for nested values
   nested: ${{ freightMetadata(ctx.targetFreight.name)?.config?.settings?.timeoutSeconds ?? 300 }}
+```
+:::info
+
+You can handle `nil` values gracefully in Expr using its
+[nil coalescing](https://expr-lang.org/docs/language-definition#nil-coalescing) and
+[optional chaining](https://expr-lang.org/docs/language-definition#optional-chaining)
+features.
+
+:::
+
+### `freightStatus(freightName)`
+
+The `freightStatus()` function retrieves the entire `status` object of a
+`Freight` resource, including `currentlyIn`, `verifiedIn`, `approvedFor`, and
+`metadata`. This is a superset of what `freightMetadata()` exposes, and is
+useful when a promotion step needs to make decisions based on fields other
+than metadata e.g. checking whether a `Freight` was manually
+approved for a `Stage`. It has one required argument:
+
+- `freightName` (Required): The name of the `Freight` resource
+
+Example:
+
+```yaml
+  promotionTemplate:
+    spec:
+      steps:
+        - uses: compose-output
+          as: freight-status
+          config:
+            all: ${{ freightStatus(ctx.targetFreight.name) }}
+            currentlyIn: ${{ freightStatus(ctx.targetFreight.name).currentlyIn }}
+            verifiedIn: ${{ freightStatus(ctx.targetFreight.name).verifiedIn }}
+            approvedFor: ${{ freightStatus(ctx.targetFreight.name).approvedFor }}
+            metadata: ${{ freightStatus(ctx.targetFreight.name).metadata }}
+            wasBypassed: ${{ freightStatus(ctx.targetFreight.name).approvedFor?.prod?.approvedAt != nil }}
+
+        # Automation flows freely when this promotion resulted from normal 
+        # verification, but an additional human gate is required when it resulted from a
+        # manual "Approve" bypass of this Stage.
+        - uses: fail
+          if: ${{ freightStatus(ctx.targetFreight.name).approvedFor?.prod?.approvedAt != nil }}
+          config:
+            message: >-
+              Freight ${{ ctx.targetFreight.name }} was promoted to prod via a
+              manual approval bypass (approvedFor.prod.approvedAt =
+              ${{ freightStatus(ctx.targetFreight.name).approvedFor?.prod?.approvedAt }}).
+              This requires additional human review before proceeding.
 ```
 :::info
 

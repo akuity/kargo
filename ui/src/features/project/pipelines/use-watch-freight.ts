@@ -66,7 +66,7 @@ export const useWatchFreight = (project: string, origins?: string[], enabled = t
         }
       );
 
-      const freightKey = getGetFreightQueryKey(project, freight.metadata?.name);
+      const freightKey = getGetFreightQueryKey(project, freight.metadata?.name || '');
 
       if (type === 'DELETED') {
         client.removeQueries({ queryKey: freightKey });

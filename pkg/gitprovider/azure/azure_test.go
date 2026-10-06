@@ -30,6 +30,12 @@ type mockAzureGitClient struct {
 	updatePullRequestFn func(
 		context.Context, adogit.UpdatePullRequestArgs,
 	) (*adogit.GitPullRequest, error)
+	getRefsFn func(
+		context.Context, adogit.GetRefsArgs,
+	) (*adogit.GetRefsResponseValue, error)
+	updateRefsFn func(
+		context.Context, adogit.UpdateRefsArgs,
+	) (*[]adogit.GitRefUpdateResult, error)
 }
 
 func (m *mockAzureGitClient) GetRepository(
@@ -60,6 +66,18 @@ func (m *mockAzureGitClient) UpdatePullRequest(
 	ctx context.Context, args adogit.UpdatePullRequestArgs,
 ) (*adogit.GitPullRequest, error) {
 	return m.updatePullRequestFn(ctx, args)
+}
+
+func (m *mockAzureGitClient) GetRefs(
+	ctx context.Context, args adogit.GetRefsArgs,
+) (*adogit.GetRefsResponseValue, error) {
+	return m.getRefsFn(ctx, args)
+}
+
+func (m *mockAzureGitClient) UpdateRefs(
+	ctx context.Context, args adogit.UpdateRefsArgs,
+) (*[]adogit.GitRefUpdateResult, error) {
+	return m.updateRefsFn(ctx, args)
 }
 
 func TestMergePullRequest(t *testing.T) {
@@ -639,6 +657,11 @@ func TestParseRepoURL(t *testing.T) {
 			errExpected: true,
 		},
 		{
+			name:        "SSH URL",
+			url:         "ssh://git@dev.azure.com/myorg/myproject/_git/myrepo",
+			errExpected: true,
+		},
+		{
 			name:        "modern URL with missing parts",
 			url:         "https://dev.azure.com/org",
 			errExpected: true,
@@ -712,16 +735,6 @@ func TestGetCommitURL(t *testing.T) {
 		expectedCommitURL string
 	}{
 		{
-			repoURL:           "ssh://git@ssh.dev.azure.com/akuity/_git/kargo",
-			sha:               "sha",
-			expectedCommitURL: "https://dev.azure.com/akuity/_git/kargo/commit/sha",
-		},
-		{
-			repoURL:           "git@ssh.dev.azure.com:v3/akuity/_git/kargo",
-			sha:               "sha",
-			expectedCommitURL: "https://dev.azure.com/akuity/_git/kargo/commit/sha",
-		},
-		{
 			repoURL:           "http://dev.azure.com/akuity/_git/kargo",
 			sha:               "sha",
 			expectedCommitURL: "https://dev.azure.com/akuity/_git/kargo/commit/sha",
@@ -735,6 +748,196 @@ func TestGetCommitURL(t *testing.T) {
 			commitURL, err := prov.GetCommitURL(testCase.repoURL, testCase.sha)
 			require.NoError(t, err)
 			require.Equal(t, testCase.expectedCommitURL, commitURL)
+		})
+	}
+}
+
+func TestDeleteBranch(t *testing.T) {
+	const (
+		testProject = "project"
+		testRepo    = "repo"
+		testBranch  = "kargo/promotion/test"
+		testRefName = "refs/heads/" + testBranch
+		testSHA     = "abc123"
+	)
+
+	refsWith := func(names ...string) *adogit.GetRefsResponseValue {
+		refs := make([]adogit.GitRef, 0, len(names))
+		for _, name := range names {
+			refs = append(refs, adogit.GitRef{
+				Name:     ptr.To(name),
+				ObjectId: ptr.To(testSHA),
+			})
+		}
+		return &adogit.GetRefsResponseValue{Value: refs}
+	}
+
+	testCases := []struct {
+		name       string
+		mockClient *mockAzureGitClient
+		assert     func(*testing.T, *mockAzureGitClient, error)
+	}{
+		{
+			name: "error getting refs",
+			mockClient: &mockAzureGitClient{
+				getRefsFn: func(
+					context.Context, adogit.GetRefsArgs,
+				) (*adogit.GetRefsResponseValue, error) {
+					return nil, errors.New("something went wrong")
+				},
+			},
+			assert: func(t *testing.T, _ *mockAzureGitClient, err error) {
+				require.ErrorContains(t, err, "error getting ref for branch")
+				require.ErrorContains(t, err, "something went wrong")
+			},
+		},
+		{
+			name: "branch not found",
+			mockClient: &mockAzureGitClient{
+				getRefsFn: func(
+					context.Context, adogit.GetRefsArgs,
+				) (*adogit.GetRefsResponseValue, error) {
+					return refsWith(), nil
+				},
+			},
+			assert: func(t *testing.T, _ *mockAzureGitClient, err error) {
+				require.NoError(t, err)
+			},
+		},
+		{
+			name: "only prefix matches found",
+			mockClient: &mockAzureGitClient{
+				getRefsFn: func(
+					_ context.Context, args adogit.GetRefsArgs,
+				) (*adogit.GetRefsResponseValue, error) {
+					require.Equal(t, "heads/"+testBranch, ptr.Deref(args.Filter, ""))
+					return refsWith(testRefName + "-other"), nil
+				},
+			},
+			assert: func(t *testing.T, _ *mockAzureGitClient, err error) {
+				require.NoError(t, err)
+			},
+		},
+		{
+			name: "error updating refs",
+			mockClient: &mockAzureGitClient{
+				getRefsFn: func(
+					context.Context, adogit.GetRefsArgs,
+				) (*adogit.GetRefsResponseValue, error) {
+					return refsWith(testRefName), nil
+				},
+				updateRefsFn: func(
+					context.Context, adogit.UpdateRefsArgs,
+				) (*[]adogit.GitRefUpdateResult, error) {
+					return nil, errors.New("something went wrong")
+				},
+			},
+			assert: func(t *testing.T, _ *mockAzureGitClient, err error) {
+				require.ErrorContains(t, err, "error deleting branch")
+				require.ErrorContains(t, err, "something went wrong")
+			},
+		},
+		{
+			name: "no result returned",
+			mockClient: &mockAzureGitClient{
+				getRefsFn: func(
+					context.Context, adogit.GetRefsArgs,
+				) (*adogit.GetRefsResponseValue, error) {
+					return refsWith(testRefName), nil
+				},
+				updateRefsFn: func(
+					context.Context, adogit.UpdateRefsArgs,
+				) (*[]adogit.GitRefUpdateResult, error) {
+					return &[]adogit.GitRefUpdateResult{}, nil
+				},
+			},
+			assert: func(t *testing.T, _ *mockAzureGitClient, err error) {
+				require.ErrorContains(t, err, "no result returned")
+			},
+		},
+		{
+			name: "update rejected",
+			mockClient: &mockAzureGitClient{
+				getRefsFn: func(
+					context.Context, adogit.GetRefsArgs,
+				) (*adogit.GetRefsResponseValue, error) {
+					return refsWith(testRefName), nil
+				},
+				updateRefsFn: func(
+					context.Context, adogit.UpdateRefsArgs,
+				) (*[]adogit.GitRefUpdateResult, error) {
+					return &[]adogit.GitRefUpdateResult{{
+						Success:       ptr.To(false),
+						UpdateStatus:  &adogit.GitRefUpdateStatusValues.RejectedByPolicy,
+						CustomMessage: ptr.To("branch is protected"),
+					}}, nil
+				},
+			},
+			assert: func(t *testing.T, _ *mockAzureGitClient, err error) {
+				require.ErrorContains(t, err, "rejectedByPolicy")
+				require.ErrorContains(t, err, "branch is protected")
+			},
+		},
+		{
+			name: "ref vanished between lookup and update",
+			mockClient: &mockAzureGitClient{
+				getRefsFn: func(
+					context.Context, adogit.GetRefsArgs,
+				) (*adogit.GetRefsResponseValue, error) {
+					return refsWith(testRefName), nil
+				},
+				updateRefsFn: func(
+					context.Context, adogit.UpdateRefsArgs,
+				) (*[]adogit.GitRefUpdateResult, error) {
+					return &[]adogit.GitRefUpdateResult{{
+						Success:      ptr.To(false),
+						UpdateStatus: &adogit.GitRefUpdateStatusValues.SucceededNonExistentRef,
+					}}, nil
+				},
+			},
+			assert: func(t *testing.T, _ *mockAzureGitClient, err error) {
+				require.NoError(t, err)
+			},
+		},
+		{
+			name: "branch deleted",
+			mockClient: &mockAzureGitClient{
+				getRefsFn: func(
+					context.Context, adogit.GetRefsArgs,
+				) (*adogit.GetRefsResponseValue, error) {
+					return refsWith(testRefName), nil
+				},
+				updateRefsFn: func(
+					_ context.Context, args adogit.UpdateRefsArgs,
+				) (*[]adogit.GitRefUpdateResult, error) {
+					require.Equal(t, testRepo, ptr.Deref(args.RepositoryId, ""))
+					require.Equal(t, testProject, ptr.Deref(args.Project, ""))
+					require.NotNil(t, args.RefUpdates)
+					require.Len(t, *args.RefUpdates, 1)
+					update := (*args.RefUpdates)[0]
+					require.Equal(t, testRefName, ptr.Deref(update.Name, ""))
+					require.Equal(t, testSHA, ptr.Deref(update.OldObjectId, ""))
+					require.Equal(t, zeroObjectID, ptr.Deref(update.NewObjectId, ""))
+					return &[]adogit.GitRefUpdateResult{{
+						Success:      ptr.To(true),
+						UpdateStatus: &adogit.GitRefUpdateStatusValues.Succeeded,
+					}}, nil
+				},
+			},
+			assert: func(t *testing.T, _ *mockAzureGitClient, err error) {
+				require.NoError(t, err)
+			},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			p := &provider{
+				project: testProject,
+				repo:    testRepo,
+				client:  testCase.mockClient,
+			}
+			err := p.DeleteBranch(t.Context(), testBranch)
+			testCase.assert(t, testCase.mockClient, err)
 		})
 	}
 }

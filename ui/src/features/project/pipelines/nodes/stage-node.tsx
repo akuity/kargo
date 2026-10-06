@@ -13,6 +13,7 @@ import { formatDistance } from 'date-fns';
 import { ReactNode, useMemo } from 'react';
 import { generatePath, Link, useNavigate } from 'react-router-dom';
 
+import { withBasePath } from '@ui/config/base-path';
 import { paths } from '@ui/config/paths';
 import { useExtensionsContext } from '@ui/extensions/extensions-context';
 import { HealthStatusIcon } from '@ui/features/common/health-status/health-status-icon';
@@ -26,6 +27,7 @@ import { useGraphContext } from '../context/graph-context';
 import { stageIndexer } from '../graph/node-indexer';
 import { AutoPromotionStatusIcon } from '../promotion/auto-promotion-status-icon';
 import { DropOverlay } from '../promotion/drag-and-drop/drop-overlay';
+import { isPromotionWindowClosed } from '../promotion/promotion-window';
 
 import { AnalysisRunLogsLink } from './analysis-run-logs-link';
 import style from './node-size-source-of-truth.module.less';
@@ -34,6 +36,7 @@ import { PullRequestLink } from './pull-request-link';
 import { StageFreight } from './stage-freight';
 import {
   getLastPromotionDate,
+  getLastPromotionRef,
   getStageHealth,
   isStageControlFlow,
   useHideStageIfInPromotionMode,
@@ -89,6 +92,7 @@ export const StageNode = (props: { stage: Stage }) => {
   let descriptionItems: ReactNode;
 
   const lastPromotion = getLastPromotionDate(props.stage);
+  const lastPromotionPath = getLastPromotionRef(props.stage)?.path;
 
   if (!controlFlow) {
     descriptionItems = (
@@ -129,7 +133,8 @@ export const StageNode = (props: { stage: Stage }) => {
   const { isOver, setNodeRef } = useDroppable({
     id: props.stage.metadata?.name || 'stage-node',
     data: {
-      requestedFreightNames: props.stage.spec?.requestedFreight?.map((f) => f.origin?.name) || []
+      requestedFreightNames: props.stage.spec?.requestedFreight?.map((f) => f.origin?.name) || [],
+      promotionWindowClosed: isPromotionWindowClosed(props.stage)
     }
   });
 
@@ -168,7 +173,13 @@ export const StageNode = (props: { stage: Stage }) => {
               stage={props.stage}
               buttonProps={{
                 size: 'small',
-                icon: <img src='/argo-logo.svg' alt='ArgoCD' style={{ width: '18px' }} />
+                icon: (
+                  <img
+                    src={withBasePath('/argo-logo.svg')}
+                    alt='ArgoCD'
+                    style={{ width: '18px' }}
+                  />
+                )
               }}
             />
             <Dropdown
@@ -243,13 +254,8 @@ export const StageNode = (props: { stage: Stage }) => {
           )}
         </div>
 
-        {lastPromotion && (
-          <Link
-            to={generatePath(paths.promotion, {
-              name: props.stage?.metadata?.namespace,
-              promotionId: props.stage?.status?.lastPromotion?.name
-            })}
-          >
+        {lastPromotion && lastPromotionPath && (
+          <Link to={lastPromotionPath}>
             <Flex gap={4} align='center' justify='center' className='text-[10px]'>
               <span>Last Promotion: </span>
               <span title={lastPromotion?.toString()}>

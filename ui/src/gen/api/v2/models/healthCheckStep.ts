@@ -9,8 +9,10 @@
 export interface HealthCheckStep {
   /** Config is the configuration for the directive. */
   config?: unknown;
-  /** Uses identifies a runner that can execute this step.
-
-+kubebuilder:validation:MinLength=1 */
+  /**
+   * Uses identifies a runner that can execute this step.
+   *
+   * +kubebuilder:validation:MinLength=1
+   */
   uses?: string;
 }

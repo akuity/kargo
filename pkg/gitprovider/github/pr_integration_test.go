@@ -133,11 +133,15 @@ func TestMergeGate(t *testing.T) {
 		t.Logf("PR #%d: GitHub reports mergeable_state=%q", prNumber, state)
 		require.Equal(t, "blocked", state, "expected GitHub to block the merge")
 
+		// The gate attempts the merge anyway, since mergeable_state cannot say
+		// whether this token is authorized to bypass the rule. This assumes
+		// TEST_GITHUB_TOKEN is *not* a bypass actor for the protection above; if it
+		// were, GitHub would merge the PR here.
 		mergedPR, merged, mergeErr := prov.MergePullRequest(t.Context(), prNumber, nil)
 		require.NoError(t, mergeErr)
 		require.False(t, merged)
 		require.Nil(t, mergedPR)
-		t.Logf("gate returned not-ready (no merge, no error), so the caller retries")
+		t.Logf("GitHub declined the merge; gate returned not-ready, so the caller retries")
 	})
 }
 
@@ -165,4 +169,20 @@ func waitForMergeableComputed(
 		}
 		time.Sleep(2 * time.Second)
 	}
+}
+
+func TestDeleteBranchLive(t *testing.T) {
+	repoURL := gptest.RequireEnv(t, "TEST_GITHUB_REPO_URL")
+	token := gptest.RequireEnv(t, "TEST_GITHUB_TOKEN")
+
+	repoCfg := gptest.RepoConfig{
+		RepoURL:     repoURL,
+		Token:       token,
+		GitUsername: gptest.RequireEnv(t, "TEST_GITHUB_USERNAME"),
+	}
+
+	prov, err := NewProvider(repoURL, &gitprovider.Options{Token: token})
+	require.NoError(t, err)
+
+	gptest.RunDeleteBranchTests(t, repoCfg, prov)
 }

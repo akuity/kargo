@@ -21,6 +21,9 @@ const (
 	AnnotationKeyEventVerificationFinishTime = AnnotationKeyEventPrefix + "verification-finish-time"
 	AnnotationKeyEventApplications           = AnnotationKeyEventPrefix + "applications"
 	AnnotationKeyEventRollback               = AnnotationKeyEventPrefix + "rollback"
+	AnnotationKeyEventAPITokenName           = AnnotationKeyEventPrefix + "api-token-name"
+	AnnotationKeyEventRoleName               = AnnotationKeyEventPrefix + "role-name"
+	AnnotationKeyEventAPITokenSystemLevel    = AnnotationKeyEventPrefix + "api-token-system-level"
 )
 
 const (
@@ -38,6 +41,8 @@ const (
 	EventTypeFreightVerificationAborted      EventType = "FreightVerificationAborted"
 	EventTypeFreightVerificationInconclusive EventType = "FreightVerificationInconclusive"
 	EventTypeFreightVerificationUnknown      EventType = "FreightVerificationUnknown"
+	EventTypeAPITokenCreated                 EventType = "APITokenCreated"
+	EventTypeAPITokenDeleted                 EventType = "APITokenDeleted"
 )
 
 const (

@@ -9,12 +9,16 @@
 export interface V1GlusterfsVolumeSource {
   /** endpoints is the endpoint name that details Glusterfs topology. */
   endpoints?: string;
-  /** path is the Glusterfs volume path.
-More info: https://examples.k8s.io/volumes/glusterfs/README.md#create-a-pod */
+  /**
+   * path is the Glusterfs volume path.
+   * More info: https://examples.k8s.io/volumes/glusterfs/README.md#create-a-pod
+   */
   path?: string;
-  /** readOnly here will force the Glusterfs volume to be mounted with read-only permissions.
-Defaults to false.
-More info: https://examples.k8s.io/volumes/glusterfs/README.md#create-a-pod
-+optional */
+  /**
+   * readOnly here will force the Glusterfs volume to be mounted with read-only permissions.
+   * Defaults to false.
+   * More info: https://examples.k8s.io/volumes/glusterfs/README.md#create-a-pod
+   * +optional
+   */
   readOnly?: boolean;
 }

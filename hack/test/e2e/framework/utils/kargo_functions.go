@@ -3,7 +3,6 @@ package utils
 
 import (
 	"errors"
-	"fmt"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/e2e-framework/klient/decoder"
@@ -13,15 +12,12 @@ import (
 func UpdatePromotionTasksVar(name, key, val string) decoder.DecodeOption {
 	return MutateAsUnstructuredOptionFor("PromotionTask", name, func(unstr runtime.Unstructured) error {
 		data := unstr.UnstructuredContent()
-		fmt.Printf("Parsed data %v\n", data)
 		for _, tplVar := range data["spec"].(map[string]any)["vars"].([]any) {
 			tplVarMap := tplVar.(map[string]any)
 			if tplVarMap["name"] == key {
 				tplVarMap["value"] = val
 			}
 		}
-
-		fmt.Printf("Updated data %v\n", data)
 
 		unstr.SetUnstructuredContent(data)
 		return nil
@@ -31,7 +27,6 @@ func UpdatePromotionTasksVar(name, key, val string) decoder.DecodeOption {
 func UpdateWarehouseGitRepoURL(name, repoURL string) decoder.DecodeOption {
 	return MutateAsUnstructuredOptionFor("Warehouse", name, func(unstr runtime.Unstructured) error {
 		data := unstr.UnstructuredContent()
-		fmt.Printf("Parsed data %v\n", data)
 		for _, sub := range data["spec"].(map[string]any)["subscriptions"].([]any) {
 			subMap := sub.(map[string]any)
 
@@ -40,8 +35,6 @@ func UpdateWarehouseGitRepoURL(name, repoURL string) decoder.DecodeOption {
 				gitSubMap["repoURL"] = repoURL
 			}
 		}
-
-		fmt.Printf("Updated data %v\n", data)
 
 		unstr.SetUnstructuredContent(data)
 		return nil

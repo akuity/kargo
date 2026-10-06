@@ -27,6 +27,8 @@ type StageStatus struct {
 	Conditions []V1Condition `json:"conditions,omitempty"`
 	// CurrentPromotion is a reference to the currently Running promotion.
 	CurrentPromotion *PromotionReference `json:"currentPromotion,omitempty"`
+	// CurrentPromotionRequest is a reference to the PromotionRequest currently fanning Freight out to this Stage's Targets. It is absent for a Stage that governs no Targets.  Fanning Freight out to Targets is a Kargo Enterprise-only feature. Kargo OSS maintains this field all the same, but the PromotionRequest it refers to never gets further than being marked Errored for that reason.  +optional
+	CurrentPromotionRequest *PromotionRequestReference `json:"currentPromotionRequest,omitempty"`
 	// EffectiveAutoPromotionHolds is the set of auto-promotion holds in effect right now. It is recomputed every reconciliation from AutoPromotionHolds plus the newest in-flight Promotions, and unlike AutoPromotionHolds is not durable. Clients should read this map to reflect current hold state.
 	EffectiveAutoPromotionHolds *map[string]AutoPromotionHold `json:"effectiveAutoPromotionHolds,omitempty"`
 	// FreightHistory is a list of recent Freight selections that were deployed to the Stage. By default, the last ten Freight selections are stored. The first item in the list is the most recent Freight selection and currently deployed to the Stage, subsequent items are older selections.
@@ -39,10 +41,14 @@ type StageStatus struct {
 	LastHandledRefresh *string `json:"lastHandledRefresh,omitempty"`
 	// LastPromotion is a reference to the last completed promotion.
 	LastPromotion *PromotionReference `json:"lastPromotion,omitempty"`
+	// LastPromotionRequest is a reference to the last PromotionRequest to reach a terminal phase. It is absent for a Stage that governs no Targets, and only ever moves forward, so it outlives the PromotionRequest it refers to.  +optional
+	LastPromotionRequest *PromotionRequestReference `json:"lastPromotionRequest,omitempty"`
 	// Metadata is a map of arbitrary metadata associated with the Stage. This is useful for storing additional information about the Stage that can be shared across promotions, verifications, or other processes.
 	Metadata map[string]any `json:"metadata,omitempty"`
 	// ObservedGeneration represents the .metadata.generation that this Stage status was reconciled against.
 	ObservedGeneration *int32 `json:"observedGeneration,omitempty"`
+	// PromotionWindowStatus reports whether promotion windows currently permit promotion of this Stage, and when that is next expected to change. It is absent when no window gates the Stage.  Kargo Enterprise only: This field is ignored in Kargo OSS.  +optional
+	PromotionWindowStatus *PromotionWindowStatus `json:"promotionWindowStatus,omitempty"`
 }
 
 // NewStageStatus instantiates a new StageStatus object
@@ -188,6 +194,38 @@ func (o *StageStatus) HasCurrentPromotion() bool {
 // SetCurrentPromotion gets a reference to the given PromotionReference and assigns it to the CurrentPromotion field.
 func (o *StageStatus) SetCurrentPromotion(v PromotionReference) {
 	o.CurrentPromotion = &v
+}
+
+// GetCurrentPromotionRequest returns the CurrentPromotionRequest field value if set, zero value otherwise.
+func (o *StageStatus) GetCurrentPromotionRequest() PromotionRequestReference {
+	if o == nil || IsNil(o.CurrentPromotionRequest) {
+		var ret PromotionRequestReference
+		return ret
+	}
+	return *o.CurrentPromotionRequest
+}
+
+// GetCurrentPromotionRequestOk returns a tuple with the CurrentPromotionRequest field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *StageStatus) GetCurrentPromotionRequestOk() (*PromotionRequestReference, bool) {
+	if o == nil || IsNil(o.CurrentPromotionRequest) {
+		return nil, false
+	}
+	return o.CurrentPromotionRequest, true
+}
+
+// HasCurrentPromotionRequest returns a boolean if a field has been set.
+func (o *StageStatus) HasCurrentPromotionRequest() bool {
+	if o != nil && !IsNil(o.CurrentPromotionRequest) {
+		return true
+	}
+
+	return false
+}
+
+// SetCurrentPromotionRequest gets a reference to the given PromotionRequestReference and assigns it to the CurrentPromotionRequest field.
+func (o *StageStatus) SetCurrentPromotionRequest(v PromotionRequestReference) {
+	o.CurrentPromotionRequest = &v
 }
 
 // GetEffectiveAutoPromotionHolds returns the EffectiveAutoPromotionHolds field value if set, zero value otherwise.
@@ -382,6 +420,38 @@ func (o *StageStatus) SetLastPromotion(v PromotionReference) {
 	o.LastPromotion = &v
 }
 
+// GetLastPromotionRequest returns the LastPromotionRequest field value if set, zero value otherwise.
+func (o *StageStatus) GetLastPromotionRequest() PromotionRequestReference {
+	if o == nil || IsNil(o.LastPromotionRequest) {
+		var ret PromotionRequestReference
+		return ret
+	}
+	return *o.LastPromotionRequest
+}
+
+// GetLastPromotionRequestOk returns a tuple with the LastPromotionRequest field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *StageStatus) GetLastPromotionRequestOk() (*PromotionRequestReference, bool) {
+	if o == nil || IsNil(o.LastPromotionRequest) {
+		return nil, false
+	}
+	return o.LastPromotionRequest, true
+}
+
+// HasLastPromotionRequest returns a boolean if a field has been set.
+func (o *StageStatus) HasLastPromotionRequest() bool {
+	if o != nil && !IsNil(o.LastPromotionRequest) {
+		return true
+	}
+
+	return false
+}
+
+// SetLastPromotionRequest gets a reference to the given PromotionRequestReference and assigns it to the LastPromotionRequest field.
+func (o *StageStatus) SetLastPromotionRequest(v PromotionRequestReference) {
+	o.LastPromotionRequest = &v
+}
+
 // GetMetadata returns the Metadata field value if set, zero value otherwise.
 func (o *StageStatus) GetMetadata() map[string]any {
 	if o == nil || IsNil(o.Metadata) {
@@ -446,6 +516,38 @@ func (o *StageStatus) SetObservedGeneration(v int32) {
 	o.ObservedGeneration = &v
 }
 
+// GetPromotionWindowStatus returns the PromotionWindowStatus field value if set, zero value otherwise.
+func (o *StageStatus) GetPromotionWindowStatus() PromotionWindowStatus {
+	if o == nil || IsNil(o.PromotionWindowStatus) {
+		var ret PromotionWindowStatus
+		return ret
+	}
+	return *o.PromotionWindowStatus
+}
+
+// GetPromotionWindowStatusOk returns a tuple with the PromotionWindowStatus field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *StageStatus) GetPromotionWindowStatusOk() (*PromotionWindowStatus, bool) {
+	if o == nil || IsNil(o.PromotionWindowStatus) {
+		return nil, false
+	}
+	return o.PromotionWindowStatus, true
+}
+
+// HasPromotionWindowStatus returns a boolean if a field has been set.
+func (o *StageStatus) HasPromotionWindowStatus() bool {
+	if o != nil && !IsNil(o.PromotionWindowStatus) {
+		return true
+	}
+
+	return false
+}
+
+// SetPromotionWindowStatus gets a reference to the given PromotionWindowStatus and assigns it to the PromotionWindowStatus field.
+func (o *StageStatus) SetPromotionWindowStatus(v PromotionWindowStatus) {
+	o.PromotionWindowStatus = &v
+}
+
 func (o StageStatus) MarshalJSON() ([]byte, error) {
 	toSerialize,err := o.ToMap()
 	if err != nil {
@@ -468,6 +570,9 @@ func (o StageStatus) ToMap() (map[string]interface{}, error) {
 	if !IsNil(o.CurrentPromotion) {
 		toSerialize["currentPromotion"] = o.CurrentPromotion
 	}
+	if !IsNil(o.CurrentPromotionRequest) {
+		toSerialize["currentPromotionRequest"] = o.CurrentPromotionRequest
+	}
 	if !IsNil(o.EffectiveAutoPromotionHolds) {
 		toSerialize["effectiveAutoPromotionHolds"] = o.EffectiveAutoPromotionHolds
 	}
@@ -486,11 +591,17 @@ func (o StageStatus) ToMap() (map[string]interface{}, error) {
 	if !IsNil(o.LastPromotion) {
 		toSerialize["lastPromotion"] = o.LastPromotion
 	}
+	if !IsNil(o.LastPromotionRequest) {
+		toSerialize["lastPromotionRequest"] = o.LastPromotionRequest
+	}
 	if !IsNil(o.Metadata) {
 		toSerialize["metadata"] = o.Metadata
 	}
 	if !IsNil(o.ObservedGeneration) {
 		toSerialize["observedGeneration"] = o.ObservedGeneration
+	}
+	if !IsNil(o.PromotionWindowStatus) {
+		toSerialize["promotionWindowStatus"] = o.PromotionWindowStatus
 	}
 	return toSerialize, nil
 }

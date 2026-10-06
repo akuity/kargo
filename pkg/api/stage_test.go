@@ -836,7 +836,7 @@ func TestAnnotateStageWithArgoCDContext(t *testing.T) {
 		err := AnnotateStageWithArgoCDContext(
 			t.Context(),
 			c,
-			[]kargoapi.HealthCheckStep{},
+			&kargoapi.Promotion{},
 			types.NamespacedName{
 				Namespace: "fake-namespace",
 				Name:      "fake-stage",
@@ -845,74 +845,175 @@ func TestAnnotateStageWithArgoCDContext(t *testing.T) {
 		require.ErrorContains(t, err, "not found")
 	})
 
-	t.Run("success", func(t *testing.T) {
-		c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(
-			&kargoapi.Stage{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "fake-stage",
-					Namespace: "fake-namespace",
+	testCases := []struct {
+		name     string
+		promo    *kargoapi.Promotion
+		expected string
+	}{
+		{
+			// Argo CD-aware steps did not always report the Applications they
+			// resolved as step output. Health check criteria remain the only
+			// source of Argo CD context for such Promotions.
+			name: "health check criteria only",
+			promo: &kargoapi.Promotion{
+				Status: kargoapi.PromotionStatus{
+					HealthChecks: []kargoapi.HealthCheckStep{{
+						Uses: "argocd-update",
+						Config: &apiextensionsv1.JSON{
+							Raw: []byte(`{"apps":[{"name":"fake-argo-app","namespace":"fake-argo-namespace"}]}`),
+						},
+					}},
 				},
 			},
-		).Build()
-
-		err := AnnotateStageWithArgoCDContext(
-			t.Context(),
-			c,
-			[]kargoapi.HealthCheckStep{
-				{
-					Uses: "argocd-update",
-					Config: &apiextensionsv1.JSON{
-						Raw: []byte(`{"apps": [{"name": "fake-argo-app", "namespace": "fake-argo-namespace"}]}`),
+			expected: `[{"name":"fake-argo-app","namespace":"fake-argo-namespace"}]`,
+		},
+		{
+			name: "step output only",
+			promo: &kargoapi.Promotion{
+				Spec: kargoapi.PromotionSpec{
+					Steps: []kargoapi.PromotionStep{{Uses: "argocd-wait", As: "wait"}},
+				},
+				Status: kargoapi.PromotionStatus{
+					State: &apiextensionsv1.JSON{
+						Raw: []byte(
+							`{"wait":{"apps":[{"name":"fake-argo-app","namespace":"fake-argo-namespace"}]}}`,
+						),
 					},
 				},
 			},
-			types.NamespacedName{
-				Namespace: "fake-namespace",
-				Name:      "fake-stage",
-			},
-		)
-		require.NoError(t, err)
-
-		stage, err := GetStage(t.Context(), c, types.NamespacedName{
-			Namespace: "fake-namespace",
-			Name:      "fake-stage",
-		})
-		require.NoError(t, err)
-		require.Equal(t,
-			`[{"name":"fake-argo-app","namespace":"fake-argo-namespace"}]`,
-			stage.Annotations[kargoapi.AnnotationKeyArgoCDContext])
-	})
-
-	t.Run("no ArgoCD apps", func(t *testing.T) {
-		c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(
-			&kargoapi.Stage{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "fake-stage",
-					Namespace: "fake-namespace",
-					Annotations: map[string]string{
-						kargoapi.AnnotationKeyArgoCDContext: "fake-annotation",
+			expected: `[{"name":"fake-argo-app","namespace":"fake-argo-namespace"}]`,
+		},
+		{
+			name: "step output from a task step",
+			promo: &kargoapi.Promotion{
+				Spec: kargoapi.PromotionSpec{
+					Steps: []kargoapi.PromotionStep{{Uses: "argocd-wait", As: "task-1::wait"}},
+				},
+				Status: kargoapi.PromotionStatus{
+					State: &apiextensionsv1.JSON{
+						Raw: []byte(
+							`{"task-1::wait":{"apps":[{"name":"fake-argo-app","namespace":"fake-argo-namespace"}]}}`,
+						),
 					},
 				},
 			},
-		).Build()
+			expected: `[{"name":"fake-argo-app","namespace":"fake-argo-namespace"}]`,
+		},
+		{
+			// An argocd-update step reports the same Applications through both
+			// its output and the health check criteria it registers, and a
+			// subsequent argocd-wait step commonly targets those same
+			// Applications.
+			name: "duplicate apps across sources are deduped",
+			promo: &kargoapi.Promotion{
+				Spec: kargoapi.PromotionSpec{
+					Steps: []kargoapi.PromotionStep{
+						{Uses: "argocd-update", As: "update"},
+						{Uses: "argocd-wait", As: "wait"},
+					},
+				},
+				Status: kargoapi.PromotionStatus{
+					State: &apiextensionsv1.JSON{
+						Raw: []byte(`{
+							"update":{"apps":[
+								{"name":"fake-argo-app","namespace":"fake-argo-namespace"},
+								{"name":"other-argo-app","namespace":"fake-argo-namespace"}
+							]},
+							"wait":{"apps":[{"name":"fake-argo-app","namespace":"fake-argo-namespace"}]}
+						}`),
+					},
+					HealthChecks: []kargoapi.HealthCheckStep{{
+						Uses: "argocd-update",
+						Config: &apiextensionsv1.JSON{
+							Raw: []byte(`{"apps":[{"name":"fake-argo-app","namespace":"fake-argo-namespace"}]}`),
+						},
+					}},
+				},
+			},
+			expected: `[{"name":"fake-argo-app","namespace":"fake-argo-namespace"},` +
+				`{"name":"other-argo-app","namespace":"fake-argo-namespace"}]`,
+		},
+		{
+			name: "output of non-Argo CD steps is ignored",
+			promo: &kargoapi.Promotion{
+				Spec: kargoapi.PromotionSpec{
+					Steps: []kargoapi.PromotionStep{{Uses: "compose-output", As: "compose"}},
+				},
+				Status: kargoapi.PromotionStatus{
+					State: &apiextensionsv1.JSON{
+						Raw: []byte(`{"compose":{"apps":[{"name":"not-an-argo-app"}]}}`),
+					},
+				},
+			},
+		},
+		{
+			name: "malformed output contributes nothing",
+			promo: &kargoapi.Promotion{
+				Spec: kargoapi.PromotionSpec{
+					Steps: []kargoapi.PromotionStep{
+						{Uses: "argocd-wait", As: "wait"},
+						{Uses: "argocd-wait", As: "other-wait"},
+					},
+				},
+				Status: kargoapi.PromotionStatus{
+					State: &apiextensionsv1.JSON{
+						Raw: []byte(`{"wait":{"apps":"not-a-list"},"other-wait":{"apps":[42,{}]}}`),
+					},
+				},
+			},
+		},
+		{
+			name: "unparsable state",
+			promo: &kargoapi.Promotion{
+				Spec: kargoapi.PromotionSpec{
+					Steps: []kargoapi.PromotionStep{{Uses: "argocd-wait", As: "wait"}},
+				},
+				Status: kargoapi.PromotionStatus{
+					State: &apiextensionsv1.JSON{Raw: []byte(`{"wait":`)},
+				},
+			},
+		},
+		{
+			name:  "no ArgoCD apps",
+			promo: &kargoapi.Promotion{},
+		},
+		{
+			name: "nil Promotion",
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(
+				&kargoapi.Stage{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "fake-stage",
+						Namespace: "fake-namespace",
+						Annotations: map[string]string{
+							kargoapi.AnnotationKeyArgoCDContext: "fake-annotation",
+						},
+					},
+				},
+			).Build()
 
-		err := AnnotateStageWithArgoCDContext(
-			t.Context(),
-			c,
-			[]kargoapi.HealthCheckStep{},
-			types.NamespacedName{
+			stageKey := types.NamespacedName{
 				Namespace: "fake-namespace",
 				Name:      "fake-stage",
-			},
-		)
-		require.NoError(t, err)
+			}
+			require.NoError(t, AnnotateStageWithArgoCDContext(
+				t.Context(), c, testCase.promo, stageKey,
+			))
 
-		stage, err := GetStage(t.Context(), c, types.NamespacedName{
-			Namespace: "fake-namespace",
-			Name:      "fake-stage",
+			stage, err := GetStage(t.Context(), c, stageKey)
+			require.NoError(t, err)
+			if testCase.expected == "" {
+				require.NotContains(t, stage.Annotations, kargoapi.AnnotationKeyArgoCDContext)
+				return
+			}
+			require.Equal(
+				t,
+				testCase.expected,
+				stage.Annotations[kargoapi.AnnotationKeyArgoCDContext],
+			)
 		})
-		require.NoError(t, err)
-
-		require.NotContains(t, stage.Annotations, kargoapi.AnnotationKeyArgoCDContext)
-	})
+	}
 }

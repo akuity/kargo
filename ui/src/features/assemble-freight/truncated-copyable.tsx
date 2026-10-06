@@ -14,7 +14,10 @@ export const TruncatedCopyable = ({ text }: { text?: string }) => {
           setTimeout(() => setCopied(false), 1000);
         }}
       >
-        <FontAwesomeIcon icon={copied ? faCheck : faClipboard} className='mr-2 w-3 text-gray-400' />
+        <FontAwesomeIcon
+          icon={copied ? faCheck : faClipboard}
+          className='mr-2 w-3 text-gray-400 dark:text-neutral-500'
+        />
         <div className='truncate font-mono text-xs' style={{ maxWidth: '200px' }}>
           {text}
         </div>

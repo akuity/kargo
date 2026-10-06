@@ -12,7 +12,92 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	libConfig "github.com/akuity/kargo/pkg/cli/config"
 )
+
+func Test_loginOptions_complete(t *testing.T) {
+	testCases := []struct {
+		name   string
+		config libConfig.CLIConfig
+		args   []string
+		port   int
+		assert func(*testing.T, *loginOptions)
+	}{
+		{
+			name: "server specified with no stored config",
+			args: []string{"kargo.example.com"},
+			assert: func(t *testing.T, o *loginOptions) {
+				require.Equal(t, "https://kargo.example.com", o.ServerAddress)
+				require.Zero(t, o.CallbackPort)
+			},
+		},
+		{
+			name: "stored options are inherited when no server is specified",
+			config: libConfig.CLIConfig{
+				APIAddress:   "https://kargo.example.com",
+				AuthMethod:   authMethodSSO,
+				CallbackPort: 8085,
+			},
+			assert: func(t *testing.T, o *loginOptions) {
+				require.Equal(t, "https://kargo.example.com", o.ServerAddress)
+				require.True(t, o.UseSSO)
+				require.Equal(t, 8085, o.CallbackPort)
+			},
+		},
+		{
+			name: "specified port overrides stored port",
+			config: libConfig.CLIConfig{
+				APIAddress:   "https://kargo.example.com",
+				CallbackPort: 8085,
+			},
+			port: 9090,
+			assert: func(t *testing.T, o *loginOptions) {
+				require.Equal(t, 9090, o.CallbackPort)
+			},
+		},
+		{
+			name: "stored options are not inherited when a server is specified",
+			config: libConfig.CLIConfig{
+				APIAddress:   "https://kargo.example.com",
+				AuthMethod:   authMethodSSO,
+				CallbackPort: 8085,
+			},
+			args: []string{"https://kargo.example.org"},
+			assert: func(t *testing.T, o *loginOptions) {
+				require.Equal(t, "https://kargo.example.org", o.ServerAddress)
+				require.False(t, o.UseSSO)
+				require.Zero(t, o.CallbackPort)
+			},
+		},
+		{
+			name: "stored options are not inherited even when the specified " +
+				"server matches the stored one",
+			config: libConfig.CLIConfig{
+				APIAddress:   "https://kargo.example.com",
+				AuthMethod:   authMethodSSO,
+				CallbackPort: 8085,
+			},
+			args: []string{"https://kargo.example.com"},
+			assert: func(t *testing.T, o *loginOptions) {
+				require.Equal(t, "https://kargo.example.com", o.ServerAddress)
+				require.False(t, o.UseSSO)
+				require.Zero(t, o.CallbackPort)
+			},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+			o := &loginOptions{
+				Config:       testCase.config,
+				CallbackPort: testCase.port,
+			}
+			o.complete(testCase.args)
+			testCase.assert(t, o)
+		})
+	}
+}
 
 func TestReceiveAuthCode(t *testing.T) {
 	const (

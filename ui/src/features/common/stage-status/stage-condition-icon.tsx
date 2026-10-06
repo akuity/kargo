@@ -95,7 +95,7 @@ export const StageConditionIcon = memo(
         icon: faCircleMinus,
         tooltipTitle: 'Unknown',
         tooltipMessage: '',
-        iconClass: 'text-gray-400'
+        iconClass: 'text-gray-400 dark:text-neutral-500'
       };
 
       // Priority: Promoting > Verifying > Reconciling > Failed > Ready
@@ -104,7 +104,7 @@ export const StageConditionIcon = memo(
           icon: faCircleMinus,
           tooltipTitle: 'Promoting',
           tooltipMessage: promotingCondition?.message ?? '',
-          iconClass: 'text-gray-400'
+          iconClass: 'text-gray-400 dark:text-neutral-500'
         };
       } else if (isVerifying && verifiedCondition?.reason !== 'NoFreight') {
         iconState = {

@@ -14,8 +14,10 @@ import (
 	"github.com/akuity/kargo/pkg/gitprovider"
 )
 
-const testRepoOwner = "akuity"
-const testRepoName = "kargo"
+const (
+	testRepoOwner = "akuity"
+	testRepoName  = "kargo"
+)
 
 func TestRegistrationPredicate(t *testing.T) {
 	testCases := []struct {
@@ -242,7 +244,19 @@ func TestCreatePullRequestWithLabels(t *testing.T) {
 		"Expected PR number in returned object to match what was returned by GitHub")
 	require.Equal(t, *mockClient.pr.MergeCommitSHA, pr.MergeCommitSHA)
 	require.Equal(t, *mockClient.pr.URL, pr.URL)
+	require.Equal(t, "feature-branch", pr.HeadBranch)
 	require.True(t, pr.Open)
+}
+
+func (m *mockGithubClient) DeleteRef(
+	ctx context.Context,
+	owner string,
+	repo string,
+	ref string,
+) (*github.Response, error) {
+	args := m.Called(ctx, owner, repo, ref)
+	resp, _ := args.Get(0).(*github.Response)
+	return resp, args.Error(1)
 }
 
 func TestGetPullRequest(t *testing.T) {
@@ -290,6 +304,7 @@ func TestGetPullRequest(t *testing.T) {
 		"Expected PR number in returned object to match what was returned by GitHub")
 	require.Equal(t, *mockClient.pr.MergeCommitSHA, pr.MergeCommitSHA)
 	require.Equal(t, *mockClient.pr.URL, pr.URL)
+	require.Equal(t, "head", pr.HeadBranch)
 	require.True(t, pr.Open)
 }
 
@@ -506,7 +521,7 @@ func TestMergePullRequest(t *testing.T) {
 			expectError: false,
 		},
 		{
-			name:     "mergeable_state behind is not ready",
+			name:     "mergeable_state draft is not ready",
 			prNumber: 203,
 			setupMock: func(m *mockGithubClient) {
 				m.On("GetPullRequests", mock.Anything, testRepoOwner, testRepoName, int(203)).
@@ -514,13 +529,135 @@ func TestMergePullRequest(t *testing.T) {
 						Number:         github.Ptr(203),
 						State:          github.Ptr("open"),
 						Merged:         github.Ptr(false),
+						Draft:          github.Ptr(true),
 						Mergeable:      github.Ptr(true),
-						MergeableState: github.Ptr("behind"),
+						MergeableState: github.Ptr("draft"),
 						Head:           &github.PullRequestBranch{SHA: github.Ptr("head_sha")},
 						HTMLURL:        github.Ptr("https://github.com/akuity/kargo/pull/203"),
 					}, &github.Response{}, nil)
 			},
 			expectError: false,
+		},
+		{
+			// mergeable_state describes the repository's rules, not the caller's
+			// permissions. A caller authorized to bypass them merges a blocked PR,
+			// so the merge must be attempted rather than pre-empted.
+			name:     "mergeable_state blocked merges for a bypass-authorized caller",
+			prNumber: 205,
+			setupMock: func(m *mockGithubClient) {
+				m.On("GetPullRequests", mock.Anything, testRepoOwner, testRepoName, int(205)).
+					Return(&github.PullRequest{
+						Number:         github.Ptr(205),
+						State:          github.Ptr("open"),
+						Merged:         github.Ptr(false),
+						Mergeable:      github.Ptr(true),
+						MergeableState: github.Ptr("blocked"),
+						Head:           &github.PullRequestBranch{SHA: github.Ptr("head_sha")},
+						HTMLURL:        github.Ptr("https://github.com/akuity/kargo/pull/205"),
+					}, &github.Response{}, nil).Once()
+
+				m.On("MergePullRequest", mock.Anything, testRepoOwner, testRepoName, int(205), "",
+					mock.AnythingOfType("*github.PullRequestOptions")).
+					Return(&github.PullRequestMergeResult{
+						SHA:    github.Ptr("merge_sha"),
+						Merged: github.Ptr(true),
+					}, &github.Response{}, nil)
+
+				m.On("GetPullRequests", mock.Anything, testRepoOwner, testRepoName, int(205)).
+					Return(&github.PullRequest{
+						Number:         github.Ptr(205),
+						State:          github.Ptr("closed"),
+						Merged:         github.Ptr(true),
+						MergeCommitSHA: github.Ptr("merge_sha"),
+						Head:           &github.PullRequestBranch{SHA: github.Ptr("head_sha")},
+						HTMLURL:        github.Ptr("https://github.com/akuity/kargo/pull/205"),
+						MergedAt:       &github.Timestamp{Time: time.Now()},
+					}, &github.Response{}, nil).Once()
+			},
+			expectedMerged: true,
+		},
+		{
+			// The caller is not authorized to bypass the rules. The block may still
+			// clear on its own (a review lands, a check passes), so this is
+			// not-ready rather than an error.
+			name:     "mergeable_state blocked rejected by GitHub is not ready",
+			prNumber: 206,
+			setupMock: func(m *mockGithubClient) {
+				m.On("GetPullRequests", mock.Anything, testRepoOwner, testRepoName, int(206)).
+					Return(&github.PullRequest{
+						Number:         github.Ptr(206),
+						State:          github.Ptr("open"),
+						Merged:         github.Ptr(false),
+						Mergeable:      github.Ptr(true),
+						MergeableState: github.Ptr("blocked"),
+						Head:           &github.PullRequestBranch{SHA: github.Ptr("head_sha")},
+						HTMLURL:        github.Ptr("https://github.com/akuity/kargo/pull/206"),
+					}, &github.Response{}, nil).Once()
+
+				m.On("MergePullRequest", mock.Anything, testRepoOwner, testRepoName, int(206), "",
+					mock.AnythingOfType("*github.PullRequestOptions")).
+					Return(nil, nil, &github.ErrorResponse{
+						Response: &http.Response{StatusCode: http.StatusMethodNotAllowed},
+						// Real message observed from GitHub when a required status
+						// check has not yet reported.
+						Message: `Required status check "ci" is expected.`,
+					})
+			},
+			expectedMerged: false,
+		},
+		{
+			// A disabled merge method is permanent even for a blocked PR, so it must
+			// not be mistaken for the rejection above.
+			name:      "mergeable_state blocked with disabled merge method is terminal",
+			prNumber:  207,
+			mergeOpts: &gitprovider.MergePullRequestOpts{MergeMethod: "squash"},
+			setupMock: func(m *mockGithubClient) {
+				m.On("GetPullRequests", mock.Anything, testRepoOwner, testRepoName, int(207)).
+					Return(&github.PullRequest{
+						Number:         github.Ptr(207),
+						State:          github.Ptr("open"),
+						Merged:         github.Ptr(false),
+						Mergeable:      github.Ptr(true),
+						MergeableState: github.Ptr("blocked"),
+						Head:           &github.PullRequestBranch{SHA: github.Ptr("head_sha")},
+						HTMLURL:        github.Ptr("https://github.com/akuity/kargo/pull/207"),
+					}, &github.Response{}, nil).Once()
+
+				m.On("MergePullRequest", mock.Anything, testRepoOwner, testRepoName, int(207), "",
+					mock.AnythingOfType("*github.PullRequestOptions")).
+					Return(nil, nil, &github.ErrorResponse{
+						Response: &http.Response{StatusCode: http.StatusMethodNotAllowed},
+						Message:  "Squash merges are not allowed on this repository.",
+					})
+			},
+			expectError:   true,
+			errorContains: "Squash merges are not allowed",
+		},
+		{
+			// A branch that is behind its base is blocked by a strict required
+			// check, which a bypass-authorized caller may also override.
+			name:     "mergeable_state behind attempts the merge",
+			prNumber: 208,
+			setupMock: func(m *mockGithubClient) {
+				m.On("GetPullRequests", mock.Anything, testRepoOwner, testRepoName, int(208)).
+					Return(&github.PullRequest{
+						Number:         github.Ptr(208),
+						State:          github.Ptr("open"),
+						Merged:         github.Ptr(false),
+						Mergeable:      github.Ptr(true),
+						MergeableState: github.Ptr("behind"),
+						Head:           &github.PullRequestBranch{SHA: github.Ptr("head_sha")},
+						HTMLURL:        github.Ptr("https://github.com/akuity/kargo/pull/208"),
+					}, &github.Response{}, nil).Once()
+
+				m.On("MergePullRequest", mock.Anything, testRepoOwner, testRepoName, int(208), "",
+					mock.AnythingOfType("*github.PullRequestOptions")).
+					Return(nil, nil, &github.ErrorResponse{
+						Response: &http.Response{StatusCode: http.StatusMethodNotAllowed},
+						Message:  "Base branch was modified. Review and try the merge again.",
+					})
+			},
+			expectedMerged: false,
 		},
 		{
 			name:     "mergeable_state dirty fails with conflict",
@@ -619,6 +756,33 @@ func TestMergePullRequest(t *testing.T) {
 			},
 			expectError:   true,
 			errorContains: "Squash merges are not allowed",
+		},
+		{
+			name:     "merge call returns 405 not mergeable is not ready",
+			prNumber: 407,
+			setupMock: func(m *mockGithubClient) {
+				m.On("GetPullRequests", mock.Anything, testRepoOwner, testRepoName, int(407)).
+					Return(&github.PullRequest{
+						Number:         github.Ptr(407),
+						State:          github.Ptr("open"),
+						Merged:         github.Ptr(false),
+						Mergeable:      github.Ptr(true),
+						MergeableState: github.Ptr("clean"),
+						Head:           &github.PullRequestBranch{SHA: github.Ptr("head_sha")},
+						HTMLURL:        github.Ptr("https://github.com/akuity/kargo/pull/407"),
+					}, &github.Response{}, nil).Once()
+
+				// GitHub's own view of the PR was stale or has since changed. Its
+				// generic rejection is recomputed as checks report and reviews land,
+				// so the provider treats it as not-ready rather than as an error.
+				m.On("MergePullRequest", mock.Anything, testRepoOwner, testRepoName, int(407), "",
+					mock.AnythingOfType("*github.PullRequestOptions")).
+					Return(nil, nil, &github.ErrorResponse{
+						Response: &http.Response{StatusCode: http.StatusMethodNotAllowed},
+						Message:  "Pull Request is not mergeable",
+					})
+			},
+			expectedMerged: false,
 		},
 		{
 			name:     "nil merge result",
@@ -817,22 +981,136 @@ func TestMergePullRequest(t *testing.T) {
 	}
 }
 
+// TestMergePullRequestNotMergeableThenDirty is a sanity check that isTransientMerge405
+// handles merge conflict PRs properly. A conflict can reach the merge call
+// behind a mergeable_state that GitHub has not finished recomputing, and the first attempt reports
+// not-ready, but the caller re-reads the PR on the next attempt. So the conflict then fails
+// terminally instead of being retried indefinitely.
+func TestMergePullRequestNotMergeableThenDirty(t *testing.T) {
+	mockClient := &mockGithubClient{}
+	p := provider{
+		owner:  testRepoOwner,
+		repo:   testRepoName,
+		client: mockClient,
+	}
+
+	// First attempt: GitHub still reports the state it computed before the
+	// conflicting change landed, so the gate proceeds to the merge call, which
+	// GitHub rejects.
+	mockClient.On("GetPullRequests", mock.Anything, testRepoOwner, testRepoName, int(500)).
+		Return(&github.PullRequest{
+			Number:         new(500),
+			State:          new("open"),
+			Merged:         new(false),
+			Mergeable:      new(true),
+			MergeableState: new("clean"),
+			Head:           &github.PullRequestBranch{SHA: new("head_sha")},
+			HTMLURL:        new("https://github.com/akuity/kargo/pull/500"),
+		}, &github.Response{}, nil).Once()
+	mockClient.On("MergePullRequest", mock.Anything, testRepoOwner, testRepoName, int(500), "",
+		mock.AnythingOfType("*github.PullRequestOptions")).
+		Return(nil, nil, &github.ErrorResponse{
+			Response: &http.Response{StatusCode: http.StatusMethodNotAllowed},
+			Message:  "Pull Request is not mergeable",
+		}).Once()
+
+	pr, merged, err := p.MergePullRequest(t.Context(), 500, nil)
+	require.NoError(t, err)
+	require.False(t, merged)
+	require.Nil(t, pr)
+
+	// Second attempt: GitHub has finished recomputing and reports the conflict.
+	mockClient.On("GetPullRequests", mock.Anything, testRepoOwner, testRepoName, int(500)).
+		Return(&github.PullRequest{
+			Number:         new(500),
+			State:          new("open"),
+			Merged:         new(false),
+			Mergeable:      new(false),
+			MergeableState: new("dirty"),
+			Head:           &github.PullRequestBranch{SHA: new("head_sha")},
+			HTMLURL:        new("https://github.com/akuity/kargo/pull/500"),
+		}, &github.Response{}, nil).Once()
+
+	pr, merged, err = p.MergePullRequest(t.Context(), 500, nil)
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "has conflicts and cannot be merged")
+	require.False(t, merged)
+	require.Nil(t, pr)
+
+	// The conflict must be caught by the gate, without a second merge attempt.
+	mockClient.AssertExpectations(t)
+	mockClient.AssertNumberOfCalls(t, "MergePullRequest", 1)
+}
+
+func TestIsTransientMerge405(t *testing.T) {
+	tests := []struct {
+		name          string
+		msg           string
+		policyBlocked bool
+		expected      bool
+	}{
+		{
+			name:     "base branch modified",
+			msg:      "Base branch was modified. Review and try the merge again.",
+			expected: true,
+		},
+		{
+			name:     "not mergeable",
+			msg:      "Pull Request is not mergeable",
+			expected: true,
+		},
+		{
+			name:          "disabled squash merges",
+			msg:           "Squash merges are not allowed on this repository",
+			policyBlocked: true,
+			expected:      false,
+		},
+		{
+			name:          "disabled merge commits",
+			msg:           "Merge commits are not allowed on this repository.",
+			policyBlocked: true,
+			expected:      false,
+		},
+		{
+			name:          "disabled rebase merges",
+			msg:           "Rebase merges are not allowed",
+			policyBlocked: true,
+			expected:      false,
+		},
+		{
+			// A ruleset restricting the merge methods permitted for the branch
+			// words this differently from the repository-level settings above.
+			name:          "merge method restricted by a ruleset",
+			msg:           "The selected merge method (squash) is not allowed",
+			policyBlocked: true,
+			expected:      false,
+		},
+		{
+			name:          "unsatisfied branch protection rule",
+			msg:           `Required status check "ci" is expected.`,
+			policyBlocked: true,
+			expected:      true,
+		},
+		{
+			name:     "unrecognized message without a policy block",
+			msg:      `Required status check "ci" is expected.`,
+			expected: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			require.Equal(t, tt.expected, isTransientMerge405(tt.msg, tt.policyBlocked))
+		})
+	}
+}
+
 func TestGetCommitURL(t *testing.T) {
 	testCases := []struct {
 		repoURL           string
 		sha               string
 		expectedCommitURL string
 	}{
-		{
-			repoURL:           "ssh://git@github.com/akuity/kargo.git",
-			sha:               "sha",
-			expectedCommitURL: "https://github.com/akuity/kargo/commit/sha",
-		},
-		{
-			repoURL:           "git@github.com:akuity/kargo.git",
-			sha:               "sha",
-			expectedCommitURL: "https://github.com/akuity/kargo/commit/sha",
-		},
 		{
 			repoURL:           "https://username@github.com/akuity/kargo",
 			sha:               "sha",
@@ -852,6 +1130,83 @@ func TestGetCommitURL(t *testing.T) {
 			commitURL, err := prov.GetCommitURL(testCase.repoURL, testCase.sha)
 			require.NoError(t, err)
 			require.Equal(t, testCase.expectedCommitURL, commitURL)
+		})
+	}
+}
+
+func TestDeleteBranch(t *testing.T) {
+	const testBranch = "kargo/promotion/test"
+	const testRef = "heads/" + testBranch
+
+	ghErr := func(status int, msg string) *github.ErrorResponse {
+		return &github.ErrorResponse{
+			Response: &http.Response{StatusCode: status},
+			Message:  msg,
+		}
+	}
+
+	testCases := []struct {
+		name      string
+		deleteErr error
+		assert    func(*testing.T, error)
+	}{
+		{
+			name: "branch deleted",
+			assert: func(t *testing.T, err error) {
+				require.NoError(t, err)
+			},
+		},
+		{
+			name:      "branch not found (404)",
+			deleteErr: ghErr(http.StatusNotFound, "Not Found"),
+			assert: func(t *testing.T, err error) {
+				require.NoError(t, err)
+			},
+		},
+		{
+			name:      "branch not found (422)",
+			deleteErr: ghErr(http.StatusUnprocessableEntity, "Reference does not exist"),
+			assert: func(t *testing.T, err error) {
+				require.NoError(t, err)
+			},
+		},
+		{
+			name:      "other 422",
+			deleteErr: ghErr(http.StatusUnprocessableEntity, "Cannot delete a protected branch"),
+			assert: func(t *testing.T, err error) {
+				require.ErrorContains(t, err, "error deleting branch")
+				require.ErrorContains(t, err, "protected")
+			},
+		},
+		{
+			name:      "forbidden",
+			deleteErr: ghErr(http.StatusForbidden, "Resource not accessible by integration"),
+			assert: func(t *testing.T, err error) {
+				require.ErrorContains(t, err, "error deleting branch")
+			},
+		},
+		{
+			name:      "non-GitHub error",
+			deleteErr: errors.New("network down"),
+			assert: func(t *testing.T, err error) {
+				require.ErrorContains(t, err, "network down")
+			},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			mockClient := &mockGithubClient{}
+			mockClient.
+				On("DeleteRef", t.Context(), testRepoOwner, testRepoName, testRef).
+				Return(nil, testCase.deleteErr)
+			p := provider{
+				owner:  testRepoOwner,
+				repo:   testRepoName,
+				client: mockClient,
+			}
+			err := p.DeleteBranch(t.Context(), testBranch)
+			mockClient.AssertExpectations(t)
+			testCase.assert(t, err)
 		})
 	}
 }

@@ -115,3 +115,20 @@ tests:
     asserts:
       - hasDocuments:
           count: 0
+
+  - it: omits the external webhooks server RoleBinding when disabled
+    set:
+      externalWebhooksServer.enabled: false
+    asserts:
+      - hasDocuments:
+          count: 2
+      - documentSelector:
+          path: metadata.name
+          value: kargo-system-resources-admin
+        isKind:
+          of: RoleBinding
+      - documentSelector:
+          path: metadata.name
+          value: kargo-controller-system-resources-reader
+        isKind:
+          of: RoleBinding

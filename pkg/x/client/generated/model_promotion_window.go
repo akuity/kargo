@@ -21,6 +21,10 @@ var _ MappedNullable = &PromotionWindow{}
 
 // PromotionWindow struct for PromotionWindow
 type PromotionWindow struct {
+	// Description is a human-readable description of the window. May contain reason, author or any clarification for the window.  +optional +kubebuilder:validation:MaxLength=1024
+	Description *string `json:"description,omitempty"`
+	// Disabled controls whether configured windows should be skipped when calculating the stage window status. Optional. Default is `false`. Unless set to `true` the window will impact the stages it's configured for.  +optional
+	Disabled *bool `json:"disabled,omitempty"`
 	// DTEnd is the window's end in the same format as DTStart. When combined with RRule, DTEnd - DTStart defines the duration of each occurrence. The value is parsed and validated by Kargo Enterprise.  +optional
 	Dtend *string `json:"dtend,omitempty"`
 	// DTStart is the window's start as an iCal date-time, with an optional \"TZID=\" prefix carrying the time zone (e.g. \"TZID=America/New_York:20260101T090000\"). The value is parsed and validated by Kargo Enterprise.  +optional
@@ -56,6 +60,70 @@ func NewPromotionWindow(kind PromotionWindowKind, name string) *PromotionWindow 
 func NewPromotionWindowWithDefaults() *PromotionWindow {
 	this := PromotionWindow{}
 	return &this
+}
+
+// GetDescription returns the Description field value if set, zero value otherwise.
+func (o *PromotionWindow) GetDescription() string {
+	if o == nil || IsNil(o.Description) {
+		var ret string
+		return ret
+	}
+	return *o.Description
+}
+
+// GetDescriptionOk returns a tuple with the Description field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *PromotionWindow) GetDescriptionOk() (*string, bool) {
+	if o == nil || IsNil(o.Description) {
+		return nil, false
+	}
+	return o.Description, true
+}
+
+// HasDescription returns a boolean if a field has been set.
+func (o *PromotionWindow) HasDescription() bool {
+	if o != nil && !IsNil(o.Description) {
+		return true
+	}
+
+	return false
+}
+
+// SetDescription gets a reference to the given string and assigns it to the Description field.
+func (o *PromotionWindow) SetDescription(v string) {
+	o.Description = &v
+}
+
+// GetDisabled returns the Disabled field value if set, zero value otherwise.
+func (o *PromotionWindow) GetDisabled() bool {
+	if o == nil || IsNil(o.Disabled) {
+		var ret bool
+		return ret
+	}
+	return *o.Disabled
+}
+
+// GetDisabledOk returns a tuple with the Disabled field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *PromotionWindow) GetDisabledOk() (*bool, bool) {
+	if o == nil || IsNil(o.Disabled) {
+		return nil, false
+	}
+	return o.Disabled, true
+}
+
+// HasDisabled returns a boolean if a field has been set.
+func (o *PromotionWindow) HasDisabled() bool {
+	if o != nil && !IsNil(o.Disabled) {
+		return true
+	}
+
+	return false
+}
+
+// SetDisabled gets a reference to the given bool and assigns it to the Disabled field.
+func (o *PromotionWindow) SetDisabled(v bool) {
+	o.Disabled = &v
 }
 
 // GetDtend returns the Dtend field value if set, zero value otherwise.
@@ -276,6 +344,12 @@ func (o PromotionWindow) MarshalJSON() ([]byte, error) {
 
 func (o PromotionWindow) ToMap() (map[string]interface{}, error) {
 	toSerialize := map[string]interface{}{}
+	if !IsNil(o.Description) {
+		toSerialize["description"] = o.Description
+	}
+	if !IsNil(o.Disabled) {
+		toSerialize["disabled"] = o.Disabled
+	}
 	if !IsNil(o.Dtend) {
 		toSerialize["dtend"] = o.Dtend
 	}

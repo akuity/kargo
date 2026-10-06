@@ -1,9 +1,14 @@
 package server
 
 import (
+	"context"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	corev1 "k8s.io/api/core/v1"
+
+	"github.com/akuity/kargo/pkg/event"
+	"github.com/akuity/kargo/pkg/logging"
 )
 
 // @id DeleteProjectAPIToken
@@ -21,10 +26,12 @@ func (s *server) deleteProjectAPIToken(c *gin.Context) {
 	project := c.Param("project")
 	name := c.Param("apitoken")
 
-	if err := s.rolesDB.DeleteAPIToken(ctx, false, project, name); err != nil {
+	tokenSecret, err := s.rolesDB.DeleteAPIToken(ctx, false, project, name)
+	if err != nil {
 		_ = c.Error(err)
 		return
 	}
+	s.recordAPITokenDeleted(ctx, tokenSecret, false)
 
 	c.Status(http.StatusNoContent)
 }
@@ -42,10 +49,29 @@ func (s *server) deleteSystemAPIToken(c *gin.Context) {
 
 	name := c.Param("apitoken")
 
-	if err := s.rolesDB.DeleteAPIToken(ctx, true, "", name); err != nil {
+	tokenSecret, err := s.rolesDB.DeleteAPIToken(ctx, true, "", name)
+	if err != nil {
 		_ = c.Error(err)
 		return
 	}
+	s.recordAPITokenDeleted(ctx, tokenSecret, true)
 
 	c.Status(http.StatusNoContent)
+}
+
+// recordAPITokenDeleted emits an event attributing the token's deletion to
+// whoever requested it, completing the credential's audit trail.
+func (s *server) recordAPITokenDeleted(
+	ctx context.Context,
+	tokenSecret *corev1.Secret,
+	systemLevel bool,
+) {
+	if s.sender == nil {
+		return
+	}
+	msg, actor := apiTokenEventMessage(ctx, tokenSecret, "deleted from")
+	evt := event.NewAPITokenDeleted(msg, actor, tokenSecret, systemLevel)
+	if err := s.sender.Send(ctx, evt); err != nil {
+		logging.LoggerFromContext(ctx).Error(err, "error sending API token deleted event")
+	}
 }

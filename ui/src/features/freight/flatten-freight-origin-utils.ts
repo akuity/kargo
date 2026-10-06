@@ -6,6 +6,7 @@ export type TableSource =
       repoURL: string;
       tag?: string;
       annotations?: Record<string, string>;
+      subscriptionName?: string;
     }
   | {
       type: 'git';
@@ -16,12 +17,14 @@ export type TableSource =
       author: string;
       committer: string;
       tag?: string;
+      subscriptionName?: string;
     }
   | {
       type: 'helm';
       repoURL: string;
       name: string;
       version: string;
+      subscriptionName?: string;
     }
   | ({
       type: 'other';
@@ -35,7 +38,8 @@ export const flattenFreightOrigin = (
       type: 'image',
       repoURL: image?.repoURL || '',
       tag: image?.tag || '',
-      annotations: image?.annotations || {}
+      annotations: image?.annotations || {},
+      subscriptionName: image?.subscriptionName
     })) || [];
 
   const git: TableSource[] =
@@ -47,7 +51,8 @@ export const flattenFreightOrigin = (
       committer: commit?.committer || '',
       id: commit?.id || '',
       message: commit?.message || '',
-      tag: commit?.tag || ''
+      tag: commit?.tag || '',
+      subscriptionName: commit?.subscriptionName
     })) || [];
 
   const helm: TableSource[] =
@@ -55,7 +60,8 @@ export const flattenFreightOrigin = (
       type: 'helm',
       repoURL: chart?.repoURL || '',
       name: chart?.name || '',
-      version: chart?.version || ''
+      version: chart?.version || '',
+      subscriptionName: chart?.subscriptionName
     })) || [];
 
   const other: TableSource[] =

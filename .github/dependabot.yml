@@ -1,10 +1,81 @@
 # Documentation:
 # * https://docs.github.com/en/code-security/supply-chain-security/keeping-your-dependencies-updated-automatically/enabling-and-disabling-dependabot-version-updates
 # * https://docs.github.com/en/code-security/supply-chain-security/keeping-your-dependencies-updated-automatically/configuration-options-for-dependency-updates
+#
+# Dependabot only ever reads this file from the repository's default branch.
+# Coverage of the release branches is therefore expressed here, using
+# target-branch. Because the layout of the repository differs from one release
+# branch to the next, each branch's Go modules are enumerated separately.
+#
+# Release branches take patch and minor updates only. Major version bumps are
+# ignored there, so they land on main alone.
+#
+# Each branch runs on its own day of the week so that update PRs arrive a
+# branch at a time rather than all at once.
+
+################################################################################
+################################################################################
+#
+# IMPORTANT: There is an exception to the schedule. Every time changes
+# to this file are merged to main, dependabot will re-evaluate dependencies on
+# all affected branches and a flurry of PRs will ensue. It is therefore suggested
+# that changes to this file be batched. Fewer, larger updates will produce less
+# noise than many small, frequent updates would.
+#
+# IMPORTANT: It may seem like we are blocking many dependencies from being
+# updated, but crucially, blocking the ones that cannot succeed improves the
+# chances of clean dependency bumps for those that can.
+#
+################################################################################
+################################################################################
+
+#
+# Go itself is excluded from the docker ecosystem. A branch pins one Go version
+# in several places, and most of them live in the workflows and the setup-go
+# composite action, where the docker ecosystem cannot see them at all.
+# Dependabot cannot move them in lock-step, so raising Go is a coordinated,
+# whole-branch change made by hand.
+#
+# golangci-lint is not tracked on any branch. Its version is pinned directly in
+# hack/tools.mk, which nothing dependabot reads, and the prebuilt binary is
+# installed from there. It is bumped by hand.
+#
+# google.golang.org/api is excluded on release-1.8 through release-1.11 because
+# its own go.mod pins google.golang.org/grpc and google.golang.org/protobuf.
+# Raising it drags both past the versions frozen there, so ignoring those two
+# by name does not hold on its own.
+#
+# github.com/go-openapi/* is excluded on release-1.8 and release-1.9. Several of
+# these modules jumped straight from 0.x to v1.0.0, which Dependabot classifies
+# as a patch, so the branches' semver-major ignore does not catch them. The
+# wildcard is deliberate: swag has split into a dozen submodules, and naming the
+# affected ones individually goes stale as that continues.
+#
+# github.com/go-swagger/go-swagger is excluded on release-1.8 and release-1.9
+# because it generates pkg/client/generated, and three minor versions of it
+# rewrite every model there -- 542 files, moving from go-openapi/swag to
+# go-openapi/swag/jsonutils. check-codegen fails on the regenerated diff.
+#
+# github.com/ktrysmt/go-bitbucket is excluded on release-1.8 through
+# release-1.10. v0.10.0 changes NewOAuthbearerToken to return two values, which
+# does not compile against the call site in pkg/gitprovider/bitbucket. main and
+# release-1.11 replaced this library with a generated client, so there is no
+# upstream fix to backport.
+#
+# github.com/jferrl/go-githubauth is excluded on release-1.8 alone. v1.7.0 drops
+# WithEnterpriseURLs and stops aliasing go-github's InstallationTokenOptions.
+# release-1.9 and later already carry v1.7.0 and the code that suits it.
 version: 2
 updates:
+  # ----------------------------- main -----------------------------
+
   - package-ecosystem: "github-actions"
-    directory: "/"
+    # "/" covers .github/workflows and a root-level action.yaml only, so each
+    # composite action's directory is listed explicitly. Add a line here when
+    # adding an action.
+    directories:
+    - "/"
+    - "/.github/actions/setup-go"
     schedule:
       interval: "weekly"
       day: "sunday"
@@ -16,6 +87,8 @@ updates:
     schedule:
       interval: "weekly"
       day: "sunday"
+    ignore:
+    - dependency-name: "golang"
     commit-message:
       prefix: "chore(deps):"
 
@@ -92,3 +165,793 @@ updates:
       go-major:
         update-types:
         - "major"
+
+  - package-ecosystem: "gomod"
+    directories:
+    - "/hack/test/e2e"
+    - "/hack/test/e2e/envs"
+    - "/hack/test/e2e/framework/envfuncs"
+    - "/hack/test/e2e/framework/funcsloader"
+    schedule:
+      interval: "weekly"
+      day: "sunday"
+    commit-message:
+      prefix: "chore(deps/e2e):"
+    groups:
+      go-patch:
+        update-types:
+        - "patch"
+      go-minor:
+        update-types:
+        - "minor"
+      go-major:
+        update-types:
+        - "major"
+
+  # ----------------------------- release-1.12 -----------------------------
+  #
+  # release-1.12 carries no freezes beyond main's. It branched after the gRPC
+  # removal, so the k8s, gRPC, and protobuf pins that hold the older release
+  # branches in place do not apply here.
+
+  - package-ecosystem: "github-actions"
+    directories:
+    - "/"
+    - "/.github/actions/setup-go"
+    schedule:
+      interval: "weekly"
+      day: "friday"
+    target-branch: "release-1.12"
+    ignore:
+    - dependency-name: "*"
+      update-types:
+      - "version-update:semver-major"
+    commit-message:
+      prefix: "chore(deps):"
+
+  - package-ecosystem: "docker"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "friday"
+    target-branch: "release-1.12"
+    ignore:
+    - dependency-name: "golang"
+    - dependency-name: "*"
+      update-types:
+      - "version-update:semver-major"
+    commit-message:
+      prefix: "chore(deps):"
+
+  - package-ecosystem: "npm"
+    directory: "/ui"
+    versioning-strategy: increase
+    schedule:
+      interval: "monthly"
+    target-branch: "release-1.12"
+    ignore:
+    - dependency-name: "*"
+      update-types:
+      - "version-update:semver-major"
+    commit-message:
+      prefix: "chore(deps):"
+    groups:
+      js-patch:
+        update-types:
+        - "patch"
+      js-minor:
+        update-types:
+        - "minor"
+
+  - package-ecosystem: "gomod"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "friday"
+    target-branch: "release-1.12"
+    ignore:
+    - dependency-name: "*"
+      update-types:
+      - "version-update:semver-major"
+    commit-message:
+      prefix: "chore(deps):"
+    groups:
+      go-patch:
+        update-types:
+        - "patch"
+      go-minor:
+        update-types:
+        - "minor"
+
+  - package-ecosystem: "gomod"
+    directory: "/api"
+    schedule:
+      interval: "weekly"
+      day: "friday"
+    target-branch: "release-1.12"
+    ignore:
+    - dependency-name: "*"
+      update-types:
+      - "version-update:semver-major"
+    commit-message:
+      prefix: "chore(deps/api):"
+    groups:
+      go-patch:
+        update-types:
+        - "patch"
+      go-minor:
+        update-types:
+        - "minor"
+
+  - package-ecosystem: "gomod"
+    directories:
+    - "/pkg/x/client/fidelity"
+    - "/pkg/x/client/generated"
+    schedule:
+      interval: "weekly"
+      day: "friday"
+    target-branch: "release-1.12"
+    ignore:
+    - dependency-name: "*"
+      update-types:
+      - "version-update:semver-major"
+    commit-message:
+      prefix: "chore(deps/client):"
+    groups:
+      go-patch:
+        update-types:
+        - "patch"
+      go-minor:
+        update-types:
+        - "minor"
+
+  - package-ecosystem: "gomod"
+    directories:
+    - "/hack/test/e2e"
+    - "/hack/test/e2e/envs"
+    - "/hack/test/e2e/framework/envfuncs"
+    - "/hack/test/e2e/framework/funcsloader"
+    schedule:
+      interval: "weekly"
+      day: "friday"
+    target-branch: "release-1.12"
+    ignore:
+    - dependency-name: "*"
+      update-types:
+      - "version-update:semver-major"
+    commit-message:
+      prefix: "chore(deps/e2e):"
+    groups:
+      go-patch:
+        update-types:
+        - "patch"
+      go-minor:
+        update-types:
+        - "minor"
+
+  # ----------------------------- release-1.11 -----------------------------
+  #
+  # Kubernetes resources, our own CRDs among them, cannot be represented as
+  # protocol buffers under newer versions of Kubernetes. Everything k8s,
+  # gRPC, or protobuf related is therefore frozen at its current version
+  # here.
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    target-branch: "release-1.11"
+    ignore:
+    - dependency-name: "*"
+      update-types:
+      - "version-update:semver-major"
+    commit-message:
+      prefix: "chore(deps):"
+
+  - package-ecosystem: "docker"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    target-branch: "release-1.11"
+    ignore:
+    - dependency-name: "golang"
+    - dependency-name: "*"
+      update-types:
+      - "version-update:semver-major"
+    commit-message:
+      prefix: "chore(deps):"
+
+  - package-ecosystem: "npm"
+    directory: "/ui"
+    versioning-strategy: increase
+    schedule:
+      interval: "monthly"
+    target-branch: "release-1.11"
+    ignore:
+    - dependency-name: "*"
+      update-types:
+      - "version-update:semver-major"
+    commit-message:
+      prefix: "chore(deps):"
+    groups:
+      js-patch:
+        update-types:
+        - "patch"
+      js-minor:
+        update-types:
+        - "minor"
+
+  - package-ecosystem: "gomod"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    target-branch: "release-1.11"
+    ignore:
+    - dependency-name: "*"
+      update-types:
+      - "version-update:semver-major"
+    - dependency-name: "k8s.io/*"
+    - dependency-name: "sigs.k8s.io/*"
+    - dependency-name: "google.golang.org/grpc"
+    - dependency-name: "github.com/grpc-ecosystem/*"
+    - dependency-name: "*protobuf*"
+    - dependency-name: "google.golang.org/api"
+    - dependency-name: "helm.sh/helm/v3"
+    - dependency-name: "connectrpc.com/*"
+    - dependency-name: "github.com/bufbuild/buf"
+    commit-message:
+      prefix: "chore(deps):"
+    groups:
+      go-patch:
+        update-types:
+        - "patch"
+      go-minor:
+        update-types:
+        - "minor"
+
+  - package-ecosystem: "gomod"
+    directory: "/api"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    target-branch: "release-1.11"
+    ignore:
+    - dependency-name: "*"
+      update-types:
+      - "version-update:semver-major"
+    - dependency-name: "k8s.io/*"
+    - dependency-name: "sigs.k8s.io/*"
+    - dependency-name: "google.golang.org/grpc"
+    - dependency-name: "github.com/grpc-ecosystem/*"
+    - dependency-name: "*protobuf*"
+    - dependency-name: "google.golang.org/api"
+    - dependency-name: "helm.sh/helm/v3"
+    - dependency-name: "connectrpc.com/*"
+    - dependency-name: "github.com/bufbuild/buf"
+    commit-message:
+      prefix: "chore(deps/api):"
+    groups:
+      go-patch:
+        update-types:
+        - "patch"
+      go-minor:
+        update-types:
+        - "minor"
+
+  - package-ecosystem: "gomod"
+    directories:
+    - "/pkg/x/client/fidelity"
+    - "/pkg/x/client/generated"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    target-branch: "release-1.11"
+    ignore:
+    - dependency-name: "*"
+      update-types:
+      - "version-update:semver-major"
+    - dependency-name: "k8s.io/*"
+    - dependency-name: "sigs.k8s.io/*"
+    - dependency-name: "google.golang.org/grpc"
+    - dependency-name: "github.com/grpc-ecosystem/*"
+    - dependency-name: "*protobuf*"
+    - dependency-name: "google.golang.org/api"
+    - dependency-name: "helm.sh/helm/v3"
+    - dependency-name: "connectrpc.com/*"
+    - dependency-name: "github.com/bufbuild/buf"
+    commit-message:
+      prefix: "chore(deps/client):"
+    groups:
+      go-patch:
+        update-types:
+        - "patch"
+      go-minor:
+        update-types:
+        - "minor"
+
+  # ----------------------------- release-1.10 -----------------------------
+  #
+  # k8s, gRPC, and protobuf are frozen for the reason given under
+  # release-1.11. oras is frozen as well because any upgrade of it, patches
+  # included, would require code changes.
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "tuesday"
+    target-branch: "release-1.10"
+    ignore:
+    - dependency-name: "*"
+      update-types:
+      - "version-update:semver-major"
+    commit-message:
+      prefix: "chore(deps):"
+
+  - package-ecosystem: "docker"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "tuesday"
+    target-branch: "release-1.10"
+    ignore:
+    - dependency-name: "golang"
+    - dependency-name: "*"
+      update-types:
+      - "version-update:semver-major"
+    commit-message:
+      prefix: "chore(deps):"
+
+  - package-ecosystem: "npm"
+    directory: "/ui"
+    versioning-strategy: increase
+    schedule:
+      interval: "monthly"
+    target-branch: "release-1.10"
+    ignore:
+    - dependency-name: "*"
+      update-types:
+      - "version-update:semver-major"
+    commit-message:
+      prefix: "chore(deps):"
+    groups:
+      js-patch:
+        update-types:
+        - "patch"
+      js-minor:
+        update-types:
+        - "minor"
+
+  - package-ecosystem: "gomod"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "tuesday"
+    target-branch: "release-1.10"
+    ignore:
+    - dependency-name: "*"
+      update-types:
+      - "version-update:semver-major"
+    - dependency-name: "k8s.io/*"
+    - dependency-name: "sigs.k8s.io/*"
+    - dependency-name: "google.golang.org/grpc"
+    - dependency-name: "github.com/grpc-ecosystem/*"
+    - dependency-name: "*protobuf*"
+    - dependency-name: "google.golang.org/api"
+    - dependency-name: "oras.land/*"
+    - dependency-name: "helm.sh/helm/v3"
+    - dependency-name: "connectrpc.com/*"
+    - dependency-name: "github.com/bufbuild/buf"
+    - dependency-name: "github.com/ktrysmt/go-bitbucket"
+    commit-message:
+      prefix: "chore(deps):"
+    groups:
+      go-patch:
+        update-types:
+        - "patch"
+      go-minor:
+        update-types:
+        - "minor"
+
+  - package-ecosystem: "gomod"
+    directory: "/api"
+    schedule:
+      interval: "weekly"
+      day: "tuesday"
+    target-branch: "release-1.10"
+    ignore:
+    - dependency-name: "*"
+      update-types:
+      - "version-update:semver-major"
+    - dependency-name: "k8s.io/*"
+    - dependency-name: "sigs.k8s.io/*"
+    - dependency-name: "google.golang.org/grpc"
+    - dependency-name: "github.com/grpc-ecosystem/*"
+    - dependency-name: "*protobuf*"
+    - dependency-name: "google.golang.org/api"
+    - dependency-name: "oras.land/*"
+    - dependency-name: "helm.sh/helm/v3"
+    - dependency-name: "connectrpc.com/*"
+    - dependency-name: "github.com/bufbuild/buf"
+    - dependency-name: "github.com/ktrysmt/go-bitbucket"
+    commit-message:
+      prefix: "chore(deps/api):"
+    groups:
+      go-patch:
+        update-types:
+        - "patch"
+      go-minor:
+        update-types:
+        - "minor"
+
+  - package-ecosystem: "gomod"
+    directory: "/hack/tools"
+    schedule:
+      interval: "weekly"
+      day: "tuesday"
+    target-branch: "release-1.10"
+    ignore:
+    - dependency-name: "*"
+      update-types:
+      - "version-update:semver-major"
+    - dependency-name: "k8s.io/*"
+    - dependency-name: "sigs.k8s.io/*"
+    - dependency-name: "google.golang.org/grpc"
+    - dependency-name: "github.com/grpc-ecosystem/*"
+    - dependency-name: "*protobuf*"
+    - dependency-name: "google.golang.org/api"
+    - dependency-name: "oras.land/*"
+    - dependency-name: "helm.sh/helm/v3"
+    - dependency-name: "connectrpc.com/*"
+    - dependency-name: "github.com/bufbuild/buf"
+    - dependency-name: "github.com/ktrysmt/go-bitbucket"
+    commit-message:
+      prefix: "chore(deps/hack):"
+    groups:
+      go-patch:
+        update-types:
+        - "patch"
+      go-minor:
+        update-types:
+        - "minor"
+
+  - package-ecosystem: "gomod"
+    directory: "/pkg/client/generated"
+    schedule:
+      interval: "weekly"
+      day: "tuesday"
+    target-branch: "release-1.10"
+    ignore:
+    - dependency-name: "*"
+      update-types:
+      - "version-update:semver-major"
+    - dependency-name: "k8s.io/*"
+    - dependency-name: "sigs.k8s.io/*"
+    - dependency-name: "google.golang.org/grpc"
+    - dependency-name: "github.com/grpc-ecosystem/*"
+    - dependency-name: "*protobuf*"
+    - dependency-name: "google.golang.org/api"
+    - dependency-name: "oras.land/*"
+    - dependency-name: "helm.sh/helm/v3"
+    - dependency-name: "connectrpc.com/*"
+    - dependency-name: "github.com/bufbuild/buf"
+    - dependency-name: "github.com/ktrysmt/go-bitbucket"
+    commit-message:
+      prefix: "chore(deps/client):"
+    groups:
+      go-patch:
+        update-types:
+        - "patch"
+      go-minor:
+        update-types:
+        - "minor"
+
+  # ----------------------------- release-1.9 -----------------------------
+  #
+  # k8s, gRPC, and protobuf are frozen for the reason given under
+  # release-1.11. oras is frozen as well because any upgrade of it, patches
+  # included, would require code changes.
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "wednesday"
+    target-branch: "release-1.9"
+    ignore:
+    - dependency-name: "*"
+      update-types:
+      - "version-update:semver-major"
+    commit-message:
+      prefix: "chore(deps):"
+
+  - package-ecosystem: "docker"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "wednesday"
+    target-branch: "release-1.9"
+    ignore:
+    - dependency-name: "golang"
+    - dependency-name: "*"
+      update-types:
+      - "version-update:semver-major"
+    commit-message:
+      prefix: "chore(deps):"
+
+  - package-ecosystem: "npm"
+    directory: "/ui"
+    versioning-strategy: increase
+    schedule:
+      interval: "monthly"
+    target-branch: "release-1.9"
+    ignore:
+    - dependency-name: "*"
+      update-types:
+      - "version-update:semver-major"
+    commit-message:
+      prefix: "chore(deps):"
+    groups:
+      js-patch:
+        update-types:
+        - "patch"
+      js-minor:
+        update-types:
+        - "minor"
+
+  - package-ecosystem: "gomod"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "wednesday"
+    target-branch: "release-1.9"
+    ignore:
+    - dependency-name: "*"
+      update-types:
+      - "version-update:semver-major"
+    - dependency-name: "k8s.io/*"
+    - dependency-name: "sigs.k8s.io/*"
+    - dependency-name: "google.golang.org/grpc"
+    - dependency-name: "github.com/grpc-ecosystem/*"
+    - dependency-name: "*protobuf*"
+    - dependency-name: "google.golang.org/api"
+    - dependency-name: "oras.land/*"
+    - dependency-name: "helm.sh/helm/v3"
+    - dependency-name: "connectrpc.com/*"
+    - dependency-name: "github.com/bufbuild/buf"
+    - dependency-name: "github.com/go-swagger/go-swagger"
+    - dependency-name: "github.com/go-openapi/*"
+    - dependency-name: "github.com/ktrysmt/go-bitbucket"
+    commit-message:
+      prefix: "chore(deps):"
+    groups:
+      go-patch:
+        update-types:
+        - "patch"
+      go-minor:
+        update-types:
+        - "minor"
+
+  - package-ecosystem: "gomod"
+    directory: "/api"
+    schedule:
+      interval: "weekly"
+      day: "wednesday"
+    target-branch: "release-1.9"
+    ignore:
+    - dependency-name: "*"
+      update-types:
+      - "version-update:semver-major"
+    - dependency-name: "k8s.io/*"
+    - dependency-name: "sigs.k8s.io/*"
+    - dependency-name: "google.golang.org/grpc"
+    - dependency-name: "github.com/grpc-ecosystem/*"
+    - dependency-name: "*protobuf*"
+    - dependency-name: "google.golang.org/api"
+    - dependency-name: "oras.land/*"
+    - dependency-name: "helm.sh/helm/v3"
+    - dependency-name: "connectrpc.com/*"
+    - dependency-name: "github.com/bufbuild/buf"
+    - dependency-name: "github.com/go-swagger/go-swagger"
+    - dependency-name: "github.com/go-openapi/*"
+    - dependency-name: "github.com/ktrysmt/go-bitbucket"
+    commit-message:
+      prefix: "chore(deps/api):"
+    groups:
+      go-patch:
+        update-types:
+        - "patch"
+      go-minor:
+        update-types:
+        - "minor"
+
+  - package-ecosystem: "gomod"
+    directory: "/hack/tools"
+    schedule:
+      interval: "weekly"
+      day: "wednesday"
+    target-branch: "release-1.9"
+    ignore:
+    - dependency-name: "*"
+      update-types:
+      - "version-update:semver-major"
+    - dependency-name: "k8s.io/*"
+    - dependency-name: "sigs.k8s.io/*"
+    - dependency-name: "google.golang.org/grpc"
+    - dependency-name: "github.com/grpc-ecosystem/*"
+    - dependency-name: "*protobuf*"
+    - dependency-name: "google.golang.org/api"
+    - dependency-name: "oras.land/*"
+    - dependency-name: "helm.sh/helm/v3"
+    - dependency-name: "connectrpc.com/*"
+    - dependency-name: "github.com/bufbuild/buf"
+    - dependency-name: "github.com/go-swagger/go-swagger"
+    - dependency-name: "github.com/go-openapi/*"
+    - dependency-name: "github.com/ktrysmt/go-bitbucket"
+    commit-message:
+      prefix: "chore(deps/hack):"
+    groups:
+      go-patch:
+        update-types:
+        - "patch"
+      go-minor:
+        update-types:
+        - "minor"
+
+  # ----------------------------- release-1.8 -----------------------------
+  #
+  # k8s, gRPC, and protobuf are frozen for the reason given under
+  # release-1.11. oras is frozen as well because any upgrade of it, patches
+  # included, would require code changes.
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "thursday"
+    target-branch: "release-1.8"
+    ignore:
+    - dependency-name: "*"
+      update-types:
+      - "version-update:semver-major"
+    commit-message:
+      prefix: "chore(deps):"
+
+  - package-ecosystem: "docker"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "thursday"
+    target-branch: "release-1.8"
+    ignore:
+    - dependency-name: "golang"
+    - dependency-name: "*"
+      update-types:
+      - "version-update:semver-major"
+    commit-message:
+      prefix: "chore(deps):"
+
+  - package-ecosystem: "npm"
+    directory: "/ui"
+    versioning-strategy: increase
+    schedule:
+      interval: "monthly"
+    target-branch: "release-1.8"
+    ignore:
+    - dependency-name: "*"
+      update-types:
+      - "version-update:semver-major"
+    commit-message:
+      prefix: "chore(deps):"
+    groups:
+      js-patch:
+        update-types:
+        - "patch"
+      js-minor:
+        update-types:
+        - "minor"
+
+  - package-ecosystem: "gomod"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "thursday"
+    target-branch: "release-1.8"
+    ignore:
+    - dependency-name: "*"
+      update-types:
+      - "version-update:semver-major"
+    - dependency-name: "k8s.io/*"
+    - dependency-name: "sigs.k8s.io/*"
+    - dependency-name: "google.golang.org/grpc"
+    - dependency-name: "github.com/grpc-ecosystem/*"
+    - dependency-name: "*protobuf*"
+    - dependency-name: "google.golang.org/api"
+    - dependency-name: "oras.land/*"
+    - dependency-name: "helm.sh/helm/v3"
+    - dependency-name: "connectrpc.com/*"
+    - dependency-name: "github.com/bufbuild/buf"
+    - dependency-name: "github.com/go-swagger/go-swagger"
+    - dependency-name: "github.com/go-openapi/*"
+    - dependency-name: "github.com/ktrysmt/go-bitbucket"
+    - dependency-name: "github.com/jferrl/go-githubauth"
+    commit-message:
+      prefix: "chore(deps):"
+    groups:
+      go-patch:
+        update-types:
+        - "patch"
+      go-minor:
+        update-types:
+        - "minor"
+
+  - package-ecosystem: "gomod"
+    directory: "/api"
+    schedule:
+      interval: "weekly"
+      day: "thursday"
+    target-branch: "release-1.8"
+    ignore:
+    - dependency-name: "*"
+      update-types:
+      - "version-update:semver-major"
+    - dependency-name: "k8s.io/*"
+    - dependency-name: "sigs.k8s.io/*"
+    - dependency-name: "google.golang.org/grpc"
+    - dependency-name: "github.com/grpc-ecosystem/*"
+    - dependency-name: "*protobuf*"
+    - dependency-name: "google.golang.org/api"
+    - dependency-name: "oras.land/*"
+    - dependency-name: "helm.sh/helm/v3"
+    - dependency-name: "connectrpc.com/*"
+    - dependency-name: "github.com/bufbuild/buf"
+    - dependency-name: "github.com/go-swagger/go-swagger"
+    - dependency-name: "github.com/go-openapi/*"
+    - dependency-name: "github.com/ktrysmt/go-bitbucket"
+    - dependency-name: "github.com/jferrl/go-githubauth"
+    commit-message:
+      prefix: "chore(deps/api):"
+    groups:
+      go-patch:
+        update-types:
+        - "patch"
+      go-minor:
+        update-types:
+        - "minor"
+
+  - package-ecosystem: "gomod"
+    directory: "/hack/tools"
+    schedule:
+      interval: "weekly"
+      day: "thursday"
+    target-branch: "release-1.8"
+    ignore:
+    - dependency-name: "*"
+      update-types:
+      - "version-update:semver-major"
+    - dependency-name: "k8s.io/*"
+    - dependency-name: "sigs.k8s.io/*"
+    - dependency-name: "google.golang.org/grpc"
+    - dependency-name: "github.com/grpc-ecosystem/*"
+    - dependency-name: "*protobuf*"
+    - dependency-name: "google.golang.org/api"
+    - dependency-name: "oras.land/*"
+    - dependency-name: "helm.sh/helm/v3"
+    - dependency-name: "connectrpc.com/*"
+    - dependency-name: "github.com/bufbuild/buf"
+    - dependency-name: "github.com/go-swagger/go-swagger"
+    - dependency-name: "github.com/go-openapi/*"
+    - dependency-name: "github.com/ktrysmt/go-bitbucket"
+    - dependency-name: "github.com/jferrl/go-githubauth"
+    commit-message:
+      prefix: "chore(deps/hack):"
+    groups:
+      go-patch:
+        update-types:
+        - "patch"
+      go-minor:
+        update-types:
+        - "minor"

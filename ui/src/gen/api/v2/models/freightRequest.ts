@@ -9,12 +9,16 @@ import type { FreightOrigin } from './freightOrigin';
 import type { FreightSources } from './freightSources';
 
 export interface FreightRequest {
-  /** Origin specifies from where the requested Freight must have originated.
-This is a required field.
-
-+kubebuilder:validation:Required */
+  /**
+   * Origin specifies from where the requested Freight must have originated.
+   * This is a required field.
+   *
+   * +kubebuilder:validation:Required
+   */
   origin: FreightOrigin;
-  /** Sources describes where the requested Freight may be obtained from. This is
-a required field. */
+  /**
+   * Sources describes where the requested Freight may be obtained from. This is
+   * a required field.
+   */
   sources?: FreightSources;
 }

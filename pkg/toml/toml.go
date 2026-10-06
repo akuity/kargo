@@ -57,6 +57,8 @@ func SetValuesInFile(file string, updates []Update) error {
 	if err != nil {
 		return fmt.Errorf("error mutating bytes: %w", err)
 	}
+	// #nosec G703 -- Callers (e.g. the toml_updater promotion step) build
+	// file via securejoin.SecureJoin before calling this function.
 	if err = os.WriteFile(file, outBytes, 0o600); err != nil {
 		return fmt.Errorf("error writing mutated bytes to file %q: %w", file, err)
 	}

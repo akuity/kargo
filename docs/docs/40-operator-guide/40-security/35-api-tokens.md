@@ -97,6 +97,20 @@ line flags, you can configure it to use a token by editing
 
 :::
 
+## Auditing Tokens
+
+Anything done with a token is attributed to the role it belongs to. Promotions
+created with a token, and the Events Kargo emits about them, name the actor as
+`kubernetes:system:serviceaccount:<kargo-namespace>:<role>`, and the API server's
+request log names the same actor on every request the token makes.
+
+To find out who minted a token, look at its `kargo.akuity.io/create-actor`
+annotation:
+
+```shell
+kargo get token --system kargo-admin-token-1 -o yaml
+```
+
 ## Deleting Tokens
 
 To delete a token when it's no longer needed or to rotate credentials:

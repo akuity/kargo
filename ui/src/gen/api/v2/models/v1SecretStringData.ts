@@ -8,10 +8,10 @@
 
 /**
  * stringData allows specifying non-binary secret data in string form.
-It is provided as a write-only input field for convenience.
-All keys and values are merged into the data field on write, overwriting any existing values.
-The stringData field is never output when reading from the API.
-+k8s:conversion-gen=false
-+optional
+ * It is provided as a write-only input field for convenience.
+ * All keys and values are merged into the data field on write, overwriting any existing values.
+ * The stringData field is never output when reading from the API.
+ * +k8s:conversion-gen=false
+ * +optional
  */
 export type V1SecretStringData = { [key: string]: string };

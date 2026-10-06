@@ -51,11 +51,32 @@ Enforcement of Argo CD
 was improved substantially in Argo CD v2.11.0. If you wish for the `argocd-update`
 step to honor sync windows, you must use Argo CD v2.11.0 or later.
 
-_Additionally, it is recommended that if a promotion process is expected to
+Additionally, it is recommended that if a promotion process is expected to
 sometimes encounter an active deny window, the `argocd-update` step should be
 configured with a timeout that is at least as long as the longest expected deny
 window. The step's default timeout of five minutes can be overridden using the
 [`retry.timeout`](../15-promotion-templates.md#step-retries) field.
+
+:::
+
+:::note
+
+Argo CD evaluates sync windows differently for manual and automated syncs, and
+the `argocd-update` step initiates the sync according to how the `Promotion` was
+triggered:
+
+- A `Promotion` created by a user is initiated as a **manual** sync, attributed
+  to that user. This includes a `Promotion` created by an automated process
+  acting under its own credentials, such as a CI job.
+
+- An auto-promotion, having no user behind it, is initiated as an **automated**
+  sync, attributed to `kargo-controller`.
+
+The distinction matters for deny windows configured with `manualSync: true`,
+which permit manual syncs even while the window is active. Under such a window,
+auto-promotions are blocked, but a user-initiated `Promotion` will sync through.
+To block promotions of every kind for the duration of a deny window, set
+`manualSync: false`.
 
 :::
 
@@ -148,6 +169,21 @@ refresh groups of `Application`s with heterogeneous configurations.
 | `apps[].sources[].helm.images` | `[]object` | Y | Describes how to update  an Argo CD `ApplicationSource`'s Helm parameters to reference specific versions of container images. |
 | `apps[].sources[].helm.images[].key` | `string` | Y | The key to update within the target `ApplicationSource`'s `helm.parameters` map. See Helm documentation on the [format and limitations](https://helm.sh/docs/intro/using_helm/#the-format-and-limitations-of---set) of the notation used in this field. |
 | `apps[].sources[].helm.images[].value` | `string` | Y | Specifies the new value for the key. Typically, a value from [`chartFrom()`](../40-expressions.md#chartfrom) is used here. |
+
+## Output
+
+| Name | Type | Description |
+|------|------|-------------|
+| `apps` | `[]object` | The Argo CD `Application` resources the step resolved and updated. Kargo uses this to link the target `Stage` to those `Application`s in the UI. |
+| `apps[].name` | `string` | The name of the Argo CD `Application`. |
+| `apps[].namespace` | `string` | The namespace of the Argo CD `Application`. |
+
+:::note
+
+When `apps` are selected by label selector, this output is the concrete list of
+`Application`s the selector matched.
+
+:::
 
 ## Health Checks
 

@@ -15,6 +15,7 @@ import (
 	"github.com/akuity/kargo/pkg/event"
 	libhttp "github.com/akuity/kargo/pkg/http"
 	"github.com/akuity/kargo/pkg/logging"
+	"github.com/akuity/kargo/pkg/server/auth/can"
 	"github.com/akuity/kargo/pkg/server/user"
 )
 
@@ -32,8 +33,8 @@ func (s *server) recordPromotionCreatedEvent(
 ) {
 	var actor string
 	msg := fmt.Sprintf("Promotion created for Stage %q", p.Spec.Stage)
-	if u, ok := user.InfoFromContext(ctx); ok {
-		actor = api.FormatEventUserActor(u)
+	if u, ok := user.IdentityFromContext(ctx); ok {
+		actor = u.Actor()
 		msg += fmt.Sprintf(" by %q", actor)
 	}
 
@@ -64,7 +65,9 @@ type promoteToStageRequest struct {
 // @Param project path string true "Project name"
 // @Param stage path string true "Stage name"
 // @Param body body promoteToStageRequest true "Promote request"
-// @Success 201 {object} kargoapi.Promotion "Promotion resource (github.com/akuity/kargo/api/v1alpha1.Promotion)"
+// @Description A Stage that selects Targets yields a PromotionRequest, which fans
+// @Description the Freight out to each of them, in place of a single Promotion.
+// @Success 201 {object} kargoapi.Promotion "Promotion resource, or a PromotionRequest for a Stage that selects Targets"
 // @Router /v1beta1/projects/{project}/stages/{stage}/promotions [post]
 func (s *server) promoteToStage(c *gin.Context) {
 	ctx := c.Request.Context()
@@ -110,21 +113,27 @@ func (s *server) promoteToStage(c *gin.Context) {
 		return
 	}
 
-	if err = s.authorizeFn(
-		ctx,
-		"promote",
-		kargoapi.GroupVersion.WithResource("stages"),
-		"",
-		types.NamespacedName{
-			Namespace: project,
-			Name:      stageName,
-		},
-	); err != nil {
+	if err = s.authorize(ctx, can.Promote().Stage(project, stageName)); err != nil {
 		_ = c.Error(err)
 		return
 	}
 
 	if req.Origin != "" {
+		if stage.IsTargetAware() {
+			// Promotion by origin relies on the Promotion defaulting webhook to
+			// resolve the origin to a candidate Freight at admission time.
+			// PromotionRequests have no such webhook, so there is nothing to resolve
+			// the origin. Refuse rather than silently create a Promotion that
+			// bypasses the Stage's Targets.
+			_ = c.Error(libhttp.ErrorStr(
+				fmt.Sprintf(
+					"promotion by origin is not supported for Stage %q, which selects Targets",
+					stageName,
+				),
+				http.StatusBadRequest,
+			))
+			return
+		}
 		// Let admission resolve the origin to the auto-promotion candidate
 		// Freight. That keeps "promote by origin" race-free for REST clients.
 		origin, parseErr := kargoapi.ParseFreightOrigin(req.Origin)
@@ -136,8 +145,8 @@ func (s *server) promoteToStage(c *gin.Context) {
 			return
 		}
 		promotion := api.NewMinimalPromotionForOrigin(stage, origin)
-		if u, ok := user.InfoFromContext(ctx); ok {
-			api.SetCreateActorAnnotation(promotion, api.FormatEventUserActor(u))
+		if u, ok := user.IdentityFromContext(ctx); ok {
+			api.SetCreateActorAnnotation(promotion, u.Actor())
 		}
 		if err = s.createPromotionFn(ctx, promotion); err != nil {
 			_ = c.Error(err)
@@ -177,24 +186,10 @@ func (s *server) promoteToStage(c *gin.Context) {
 			return
 		}
 	} else {
-		list := &kargoapi.FreightList{}
-		if err = s.client.List(
-			ctx,
-			list,
-			client.InNamespace(project),
-			client.MatchingLabels{kargoapi.LabelKeyAlias: req.FreightAlias},
-		); err != nil {
+		if freight, err = s.getFreightByAlias(ctx, project, req.FreightAlias); err != nil {
 			_ = c.Error(err)
 			return
 		}
-		if len(list.Items) == 0 {
-			_ = c.Error(libhttp.ErrorStr(
-				fmt.Sprintf("Freight with alias %q not found in project %q", req.FreightAlias, project),
-				http.StatusNotFound,
-			))
-			return
-		}
-		freight = &list.Items[0]
 	}
 
 	if !stage.IsFreightAvailable(freight) {
@@ -205,11 +200,40 @@ func (s *server) promoteToStage(c *gin.Context) {
 		return
 	}
 
+	// A Stage that selects Targets fans Freight out to them via a PromotionRequest
+	// rather than promoting to itself with a single Promotion.
+	if stage.IsTargetAware() {
+		// Both the Target lookup and the create go through the internal client.
+		// PromotionRequests are system-owned, and the promote-verb check above
+		// IS the authorization decision for this request; which Targets the
+		// Stage governs is a detail of carrying it out. Resolving as the user
+		// would also break the kargo-promoter role, which holds the promote
+		// verb but no permission to list Targets.
+		promotionRequest, prErr := api.NewPromotionRequest(
+			ctx, s.client.InternalClient(), stage, freight.Name,
+		)
+		if prErr != nil {
+			_ = c.Error(prErr)
+			return
+		}
+		if u, ok := user.IdentityFromContext(ctx); ok {
+			api.SetCreateActorAnnotation(promotionRequest, u.Actor())
+		}
+		if err = s.client.InternalClient().Create(ctx, promotionRequest); err != nil {
+			_ = c.Error(err)
+			return
+		}
+		// No event is recorded: Kargo's promotion events carry a Promotion, and
+		// a PromotionRequest has none of its own.
+		c.JSON(http.StatusCreated, promotionRequest)
+		return
+	}
+
 	// Create the Promotion. The defaulting webhook fills in the rest from
 	// the Stage's PromotionTemplate.
 	promotion := api.NewMinimalPromotion(stage, freight.Name)
-	if u, ok := user.InfoFromContext(ctx); ok {
-		api.SetCreateActorAnnotation(promotion, api.FormatEventUserActor(u))
+	if u, ok := user.IdentityFromContext(ctx); ok {
+		api.SetCreateActorAnnotation(promotion, u.Actor())
 	}
 
 	if err := s.createPromotionFn(ctx, promotion); err != nil {

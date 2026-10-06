@@ -7,6 +7,30 @@ Expand the name of the chart.
 {{- end -}}
 
 {{/*
+kargo.validateNoLegacySecretNamespaces fails the render if either
+global.clusterSecretsNamespace or controller.globalCredentials.namespaces
+remains set. Both were replaced by global.systemResources.namespace and
+global.sharedResources.namespace, respectively, as of v1.9.0. The automatic
+Secret migration that bridged the old and new settings was removed in
+v1.12.0, so upgrading with either legacy setting still defined is no longer
+safe.
+
+Call this from the top-level conditional of any template belonging to a
+component that consumes global.systemResources.namespace or
+global.sharedResources.namespace. NOTES.txt is not a reliable place for this
+check: it is never rendered by `helm template`, which is how most GitOps
+tooling (e.g. Argo CD) applies this chart.
+*/}}
+{{- define "kargo.validateNoLegacySecretNamespaces" -}}
+{{- if dig "clusterSecretsNamespace" "" .Values.global }}
+{{- fail "global.clusterSecretsNamespace is no longer supported as of v1.12.0 and the automatic Secret migration that used to bridge it to global.systemResources.namespace has been removed. Remove this setting from your values. If you GitOps your Secrets, Kargo will no longer read from, or sync to, the old namespace -- make sure the Secrets it referenced already exist in the namespace specified by global.systemResources.namespace before upgrading." }}
+{{- end }}
+{{- if dig "globalCredentials" "namespaces" list .Values.controller }}
+{{- fail "controller.globalCredentials.namespaces is no longer supported as of v1.12.0 and the automatic Secret migration that used to bridge it to global.sharedResources.namespace has been removed. Remove this setting from your values. If you GitOps your Secrets, Kargo will no longer read from, or sync to, the old namespace(s) -- make sure the Secrets they referenced already exist in the namespace specified by global.sharedResources.namespace before upgrading." }}
+{{- end }}
+{{- end -}}
+
+{{/*
 kargo.controller.suffix returns `-<controller.id>` when controller.id is set,
 empty otherwise.
 */}}
@@ -188,17 +212,62 @@ annotations:
 {{- end -}}
 
 {{/*
+Environment variables that configure distributed tracing, for inclusion in
+the ConfigMap of every Kargo component. Emits nothing when tracing is disabled.
+Beyond the Kargo-specific on/off switch, these are the standard OTEL_*
+variables that the OpenTelemetry SDK reads on its own.
+*/}}
+{{- define "kargo.tracing.configMapData" -}}
+{{- with .Values.global.tracing }}
+{{- if .enabled -}}
+TRACING_ENABLED: "true"
+OTEL_EXPORTER_OTLP_PROTOCOL: {{ quote .otlp.protocol }}
+{{- if .otlp.endpoint }}
+OTEL_EXPORTER_OTLP_ENDPOINT: {{ quote .otlp.endpoint }}
+{{- end }}
+OTEL_TRACES_SAMPLER: {{ quote .sampler }}
+{{- if .samplerArg }}
+OTEL_TRACES_SAMPLER_ARG: {{ quote .samplerArg }}
+{{- end }}
+{{- end }}
+{{- end }}
+{{- end -}}
+
+{{/*
 Common labels
 */}}
 {{- define "kargo.labels" -}}
+{{ include "kargo.standardLabels" . }}
+{{- with .Values.global.labels }}
+{{ toYaml . }}
+{{- end }}
+{{- end -}}
+
+{{/*
+Standard labels, without global.labels.
+*/}}
+{{- define "kargo.standardLabels" -}}
 helm.sh/chart: {{ include "kargo.chart" . }}
 {{ include "kargo.selectorLabels" . }}
 {{- if .Chart.AppVersion }}
 app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
 {{- end }}
 app.kubernetes.io/managed-by: {{ .Release.Service }}
-{{- with .Values.global.labels }}
-{{ toYaml . }}
+{{- end -}}
+
+{{/*
+Standard labels plus global.labels merged with a component's own labels, the
+component's winning. Use this in place of kargo.labels wherever a component
+has a labels value: emitting global.labels through kargo.labels and again
+through the merge would repeat any key set in both, which YAML forbids.
+Takes a dict with "root" (the root context) and "labels" (the component's).
+*/}}
+{{- define "kargo.componentLabels" -}}
+{{ include "kargo.standardLabels" .root }}
+{{- with (mergeOverwrite (deepCopy .root.Values.global.labels) (.labels | default dict)) }}
+{{- range $key, $value := . }}
+{{ $key }}: {{ $value | quote }}
+{{- end }}
 {{- end }}
 {{- end -}}
 
@@ -236,6 +305,32 @@ app.kubernetes.io/component: kubernetes-webhooks-server
 
 {{- define "kargo.managementController.labels" -}}
 app.kubernetes.io/component: management-controller
+{{- end -}}
+
+{{- define "kargo.postgres.labels" -}}
+app.kubernetes.io/component: postgres
+{{- end -}}
+
+{{/*
+kargo.database.validate fails the render if both the bundled PostgreSQL and an
+external database are configured, since only one can be the database.
+*/}}
+{{- define "kargo.database.validate" -}}
+{{- if and .Values.database.postgres.enabled .Values.database.external.secretName }}
+{{- fail "database.postgres.enabled and database.external.secretName cannot both be set. Disable the bundled PostgreSQL to use an external database." }}
+{{- end }}
+{{- if and .Values.database.postgres.password .Values.database.postgres.existingSecret }}
+{{- fail "database.postgres.password and database.postgres.existingSecret cannot both be set." }}
+{{- end }}
+{{- end -}}
+
+{{/*
+kargo.postgres.secretName returns the name of the Secret holding the bundled
+PostgreSQL's password: the operator's, when database.postgres.existingSecret
+is set, otherwise the chart's own.
+*/}}
+{{- define "kargo.postgres.secretName" -}}
+{{- .Values.database.postgres.existingSecret | default "kargo-postgres" -}}
 {{- end -}}
 
 {{/*

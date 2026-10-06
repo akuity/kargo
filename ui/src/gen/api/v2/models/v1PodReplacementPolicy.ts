@@ -9,7 +9,6 @@
 export type V1PodReplacementPolicy =
   (typeof V1PodReplacementPolicy)[keyof typeof V1PodReplacementPolicy];
 
-// eslint-disable-next-line @typescript-eslint/no-redeclare
 export const V1PodReplacementPolicy = {
   TerminatingOrFailed: 'TerminatingOrFailed',
   Failed: 'Failed'

@@ -32,6 +32,10 @@ const (
 	PromotionsByStageAndFreightField = "stageAndFreight"
 	PromotionsByStageField           = "stage"
 	PromotionsByTerminalField        = "terminal"
+	PromotionsByNonTerminalField     = "nonTerminal"
+
+	PromotionRequestsByStageAndFreightField = "stageAndFreight"
+	PromotionRequestsByStageField           = "stage"
 
 	RunningPromotionsByArgoCDApplicationsField = "applications"
 	RunningPromotionsByArgoCDSelectorsField    = "argoCDSelectors"
@@ -121,6 +125,16 @@ func PromotionsByTerminal(obj client.Object) []string {
 	return []string{strconv.FormatBool(promo.Status.Phase.IsTerminal())}
 }
 
+// PromotionsByNonTerminal returns a client.IndexerFunc that indexes Promotions by
+// whether or not that are in a non-terminal phase.
+func PromotionsByNonTerminal(obj client.Object) []string {
+	promo, ok := obj.(*kargoapi.Promotion)
+	if !ok {
+		return nil
+	}
+	return []string{strconv.FormatBool(!promo.Status.Phase.IsTerminal())}
+}
+
 // RunningPromotionsByArgoCDApplications returns a client.IndexerFunc that
 // indexes running Promotions by the Argo CD Applications they are associated
 // with.
@@ -206,7 +220,7 @@ func RunningPromotionsByArgoCDApplications(
 				Config: rawConfig,
 			}
 
-			evaluator := promotion.NewStepEvaluator(cl, nil)
+			evaluator := promotion.NewStepEvaluator(cl, nil, nil)
 
 			// As step-level variables are allowed to reference to output, we
 			// need to provide the state.
@@ -428,6 +442,29 @@ func PromotionsByStageAndFreight(obj client.Object) []string {
 	return []string{
 		StageAndFreightKey(promo.Spec.Stage, promo.Spec.Freight),
 	}
+}
+
+// PromotionRequestsByStageAndFreight is a client.IndexerFunc that indexes
+// PromotionRequests by the Stage and Freight they promote.
+func PromotionRequestsByStageAndFreight(obj client.Object) []string {
+	promotionRequest, ok := obj.(*kargoapi.PromotionRequest)
+	if !ok {
+		return nil
+	}
+
+	return []string{
+		StageAndFreightKey(promotionRequest.Spec.Stage, promotionRequest.Spec.Freight),
+	}
+}
+
+// PromotionRequestsByStage is a client.IndexerFunc that indexes
+// PromotionRequests by the Stage on whose behalf they promote Freight.
+func PromotionRequestsByStage(obj client.Object) []string {
+	promotionRequest, ok := obj.(*kargoapi.PromotionRequest)
+	if !ok {
+		return nil
+	}
+	return []string{promotionRequest.Spec.Stage}
 }
 
 // StageAndFreightKey returns a key that uniquely identifies a Stage and

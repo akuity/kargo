@@ -284,10 +284,21 @@ strategies are:
 - `NewestBuild`: This strategy selects the image with the most recent build
   time.
 
-  The build time is evaluated using the labels
-  `org.opencontainers.image.created` or `org.label-schema.build-date`. If
-  neither label is set, Kargo will fall back to using the `config.Created` time
-  of the image.
+  Build time is the latest date Kargo can find for an image: any
+  `org.opencontainers.image.created` or `org.label-schema.build-date` annotation
+  or label the image carries, and the creation time recorded in the image's own
+  config.
+
+  :::note
+
+  An image carrying no build time metadata of its own may report the build time
+  of the base image it was built from, or a fixed timestamp chosen by a build
+  tool to make image digests reproducible. Images reporting identical build
+  times cannot be ordered by this strategy, so stamping each build with
+  `org.opencontainers.image.created` is the most reliable way to make it behave
+  predictably.
+
+  :::
 
   :::warning
 

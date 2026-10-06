@@ -1,0 +1,17 @@
+name: Set up Go
+description: >-
+  Installs Go and restores the module and build caches.
+inputs:
+  go-version:
+    description: The Go version to install
+    required: false
+    default: "1.27.1"
+runs:
+  using: composite
+  steps:
+  # setup-go caches GOMODCACHE and GOCACHE by default, keyed on a hash of
+  # every go.sum in the repository.
+  - name: Set up Go
+    uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+    with:
+      go-version: ${{ inputs.go-version }}

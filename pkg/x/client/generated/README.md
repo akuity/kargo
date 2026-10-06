@@ -91,21 +91,25 @@ Class | Method | HTTP request | Description
 *CoreAPI* | [**GetProjectConfig**](docs/CoreAPI.md#getprojectconfig) | **Get** /v1beta1/projects/{project}/config | Retrieve ProjectConfig
 *CoreAPI* | [**GetProjectConfigMap**](docs/CoreAPI.md#getprojectconfigmap) | **Get** /v1beta1/projects/{project}/configmaps/{configmap} | Retrieve a project-level ConfigMap
 *CoreAPI* | [**GetPromotion**](docs/CoreAPI.md#getpromotion) | **Get** /v1beta1/projects/{project}/promotions/{promotion} | Retrieve a Promotion
+*CoreAPI* | [**GetPromotionRequest**](docs/CoreAPI.md#getpromotionrequest) | **Get** /v1beta1/projects/{project}/promotion-requests/{promotion-request} | Retrieve a PromotionRequest
 *CoreAPI* | [**GetPromotionTask**](docs/CoreAPI.md#getpromotiontask) | **Get** /v1beta1/projects/{project}/promotion-tasks/{promotion-task} | Retrieve a PromotionTask
 *CoreAPI* | [**GetSharedConfigMap**](docs/CoreAPI.md#getsharedconfigmap) | **Get** /v1beta1/shared/configmaps/{configmap} | Retrieve a shared ConfigMap
 *CoreAPI* | [**GetStage**](docs/CoreAPI.md#getstage) | **Get** /v1beta1/projects/{project}/stages/{stage} | Retrieve a Stage
 *CoreAPI* | [**GetStageLinks**](docs/CoreAPI.md#getstagelinks) | **Get** /v1beta1/projects/{project}/stages/{stage}/links | Retrieve deep links for a Stage resource
 *CoreAPI* | [**GetSystemConfigMap**](docs/CoreAPI.md#getsystemconfigmap) | **Get** /v1beta1/system/configmaps/{configmap} | Retrieve a system-level ConfigMap
+*CoreAPI* | [**GetTarget**](docs/CoreAPI.md#gettarget) | **Get** /v1beta1/projects/{project}/targets/{target} | Retrieve a Target
 *CoreAPI* | [**GetWarehouse**](docs/CoreAPI.md#getwarehouse) | **Get** /v1beta1/projects/{project}/warehouses/{warehouse} | Retrieve a Warehouse
 *CoreAPI* | [**ListClusterPromotionTasks**](docs/CoreAPI.md#listclusterpromotiontasks) | **Get** /v1beta1/shared/cluster-promotion-tasks | List ClusterPromotionTasks
 *CoreAPI* | [**ListImages**](docs/CoreAPI.md#listimages) | **Get** /v1beta1/projects/{project}/images | List container images
 *CoreAPI* | [**ListProjectConfigMaps**](docs/CoreAPI.md#listprojectconfigmaps) | **Get** /v1beta1/projects/{project}/configmaps | List project-level ConfigMaps
 *CoreAPI* | [**ListProjects**](docs/CoreAPI.md#listprojects) | **Get** /v1beta1/projects | List projects
+*CoreAPI* | [**ListPromotionRequests**](docs/CoreAPI.md#listpromotionrequests) | **Get** /v1beta1/projects/{project}/promotion-requests | List PromotionRequests
 *CoreAPI* | [**ListPromotionTasks**](docs/CoreAPI.md#listpromotiontasks) | **Get** /v1beta1/projects/{project}/promotion-tasks | List PromotionTasks
 *CoreAPI* | [**ListPromotions**](docs/CoreAPI.md#listpromotions) | **Get** /v1beta1/projects/{project}/promotions | List Promotions
 *CoreAPI* | [**ListSharedConfigMaps**](docs/CoreAPI.md#listsharedconfigmaps) | **Get** /v1beta1/shared/configmaps | List shared ConfigMaps
 *CoreAPI* | [**ListStages**](docs/CoreAPI.md#liststages) | **Get** /v1beta1/projects/{project}/stages | List Stages
 *CoreAPI* | [**ListSystemConfigMaps**](docs/CoreAPI.md#listsystemconfigmaps) | **Get** /v1beta1/system/configmaps | List system-level ConfigMaps
+*CoreAPI* | [**ListTargets**](docs/CoreAPI.md#listtargets) | **Get** /v1beta1/projects/{project}/targets | List Targets
 *CoreAPI* | [**ListWarehouses**](docs/CoreAPI.md#listwarehouses) | **Get** /v1beta1/projects/{project}/warehouses | List Warehouses
 *CoreAPI* | [**PatchFreightAlias**](docs/CoreAPI.md#patchfreightalias) | **Patch** /v1beta1/projects/{project}/freight/{freight-name-or-alias}/alias | Patch a Freight resource&#39;s alias
 *CoreAPI* | [**PatchProjectConfigMap**](docs/CoreAPI.md#patchprojectconfigmap) | **Patch** /v1beta1/projects/{project}/configmaps/{configmap} | Patch a project-level ConfigMap
@@ -289,6 +293,15 @@ Class | Method | HTTP request | Description
  - [PromotionPolicy](docs/PromotionPolicy.md)
  - [PromotionPolicySelector](docs/PromotionPolicySelector.md)
  - [PromotionReference](docs/PromotionReference.md)
+ - [PromotionRequest](docs/PromotionRequest.md)
+ - [PromotionRequestList](docs/PromotionRequestList.md)
+ - [PromotionRequestPhase](docs/PromotionRequestPhase.md)
+ - [PromotionRequestReference](docs/PromotionRequestReference.md)
+ - [PromotionRequestSpec](docs/PromotionRequestSpec.md)
+ - [PromotionRequestStatus](docs/PromotionRequestStatus.md)
+ - [PromotionRequestSummary](docs/PromotionRequestSummary.md)
+ - [PromotionRequestTarget](docs/PromotionRequestTarget.md)
+ - [PromotionRequestTargetStatus](docs/PromotionRequestTargetStatus.md)
  - [PromotionSpec](docs/PromotionSpec.md)
  - [PromotionStatus](docs/PromotionStatus.md)
  - [PromotionStep](docs/PromotionStep.md)
@@ -301,6 +314,7 @@ Class | Method | HTTP request | Description
  - [PromotionTemplateSpec](docs/PromotionTemplateSpec.md)
  - [PromotionWindow](docs/PromotionWindow.md)
  - [PromotionWindowKind](docs/PromotionWindowKind.md)
+ - [PromotionWindowStatus](docs/PromotionWindowStatus.md)
  - [PublicConfig](docs/PublicConfig.md)
  - [QuayWebhookReceiverConfig](docs/QuayWebhookReceiverConfig.md)
  - [RbacRole](docs/RbacRole.md)
@@ -358,8 +372,16 @@ Class | Method | HTTP request | Description
  - [StageSpec](docs/StageSpec.md)
  - [StageStats](docs/StageStats.md)
  - [StageStatus](docs/StageStatus.md)
+ - [StageTargets](docs/StageTargets.md)
  - [StepExecutionMetadata](docs/StepExecutionMetadata.md)
  - [TagMap](docs/TagMap.md)
+ - [Target](docs/Target.md)
+ - [TargetList](docs/TargetList.md)
+ - [TargetSpec](docs/TargetSpec.md)
+ - [TargetStageStatus](docs/TargetStageStatus.md)
+ - [TargetStats](docs/TargetStats.md)
+ - [TargetStatus](docs/TargetStatus.md)
+ - [TargetUpdateStrategy](docs/TargetUpdateStrategy.md)
  - [UpdateConfigMapRequest](docs/UpdateConfigMapRequest.md)
  - [UpdateGenericCredentialsRequest](docs/UpdateGenericCredentialsRequest.md)
  - [UpdateRepoCredentialsRequest](docs/UpdateRepoCredentialsRequest.md)
@@ -400,6 +422,7 @@ Class | Method | HTTP request | Description
  - [V1EventList](docs/V1EventList.md)
  - [V1EventSeries](docs/V1EventSeries.md)
  - [V1EventSource](docs/V1EventSource.md)
+ - [V1EvictionResponder](docs/V1EvictionResponder.md)
  - [V1ExecAction](docs/V1ExecAction.md)
  - [V1FCVolumeSource](docs/V1FCVolumeSource.md)
  - [V1FileKeySelector](docs/V1FileKeySelector.md)
@@ -407,14 +430,17 @@ Class | Method | HTTP request | Description
  - [V1FlockerVolumeSource](docs/V1FlockerVolumeSource.md)
  - [V1GCEPersistentDiskVolumeSource](docs/V1GCEPersistentDiskVolumeSource.md)
  - [V1GRPCAction](docs/V1GRPCAction.md)
+ - [V1GRPCProbeMode](docs/V1GRPCProbeMode.md)
  - [V1GitRepoVolumeSource](docs/V1GitRepoVolumeSource.md)
  - [V1GlusterfsVolumeSource](docs/V1GlusterfsVolumeSource.md)
  - [V1HTTPGetAction](docs/V1HTTPGetAction.md)
  - [V1HTTPHeader](docs/V1HTTPHeader.md)
+ - [V1HTTPProtocol](docs/V1HTTPProtocol.md)
  - [V1HostAlias](docs/V1HostAlias.md)
  - [V1HostPathVolumeSource](docs/V1HostPathVolumeSource.md)
  - [V1ISCSIVolumeSource](docs/V1ISCSIVolumeSource.md)
  - [V1ImageVolumeSource](docs/V1ImageVolumeSource.md)
+ - [V1JobSchedulingConfiguration](docs/V1JobSchedulingConfiguration.md)
  - [V1JobSpec](docs/V1JobSpec.md)
  - [V1KeyToPath](docs/V1KeyToPath.md)
  - [V1LabelSelector](docs/V1LabelSelector.md)
@@ -498,6 +524,12 @@ Class | Method | HTTP request | Description
  - [V1VsphereVirtualDiskVolumeSource](docs/V1VsphereVirtualDiskVolumeSource.md)
  - [V1WeightedPodAffinityTerm](docs/V1WeightedPodAffinityTerm.md)
  - [V1WindowsSecurityContextOptions](docs/V1WindowsSecurityContextOptions.md)
+ - [V1alpha3TopologyConstraint](docs/V1alpha3TopologyConstraint.md)
+ - [V1alpha3WorkloadPodGroupDisruptionMode](docs/V1alpha3WorkloadPodGroupDisruptionMode.md)
+ - [V1alpha3WorkloadPodGroupGangSchedulingPolicy](docs/V1alpha3WorkloadPodGroupGangSchedulingPolicy.md)
+ - [V1alpha3WorkloadPodGroupResourceClaim](docs/V1alpha3WorkloadPodGroupResourceClaim.md)
+ - [V1alpha3WorkloadPodGroupSchedulingConstraints](docs/V1alpha3WorkloadPodGroupSchedulingConstraints.md)
+ - [V1alpha3WorkloadPodGroupSchedulingPolicy](docs/V1alpha3WorkloadPodGroupSchedulingPolicy.md)
  - [Verification](docs/Verification.md)
  - [VerificationInfo](docs/VerificationInfo.md)
  - [VerifiedStage](docs/VerifiedStage.md)

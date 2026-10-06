@@ -1,0 +1,34 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: kargo-argocd-wait
+  namespace: argocd
+spec:
+  generators:
+  - list:
+      elements:
+      - stage: test
+  template:
+    metadata:
+      name: kargo-argocd-wait-{{stage}}
+      # No kargo.akuity.io/authorized-stage annotation: argocd-wait does not
+      # require it (unlike argocd-update), since it only reads Application state.
+    spec:
+      project: default
+      source:
+        # repoURL and targetRevision are substituted at runtime: the repoURL
+        # from the test env, the targetRevision with the branch created per run.
+        repoURL: https://github.com/<github-username>/kargo-demo-gitops.git
+        targetRevision: placeholder
+        path: stages/{{stage}}
+      destination:
+        server: https://kubernetes.default.svc
+        namespace: kargo-argocd-wait-{{stage}}
+      # Auto-sync so Argo CD reconciles changes pushed to the branch on its own;
+      # the promotion's argocd-wait step waits for that reconciliation.
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+        syncOptions:
+        - CreateNamespace=true

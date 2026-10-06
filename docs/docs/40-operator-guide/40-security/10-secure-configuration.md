@@ -213,22 +213,7 @@ re-signing them as the committer. This means:
 
 The `controller.gitClient.pushIntegrationPolicy` setting controls this behavior.
 __We recommend `RebaseOrMerge` or stricter for any environment where commit
-signatures carry trust meaning.__
-
-:::caution
-
-The current default is `AlwaysRebase`.
-
-Starting with v1.12.0, the default will change to `RebaseOrMerge`. If you rely
-on the current behavior, set the policy explicitly before upgrading.
-
-:::
-
-```yaml
-controller:
-  gitClient:
-    pushIntegrationPolicy: RebaseOrMerge
-```
+signatures carry trust meaning.__ This is also the default.
 
 For a full description of all available options, see
 [Common Configurations](../20-advanced-installation/30-common-configurations.md#push-integration-policy).

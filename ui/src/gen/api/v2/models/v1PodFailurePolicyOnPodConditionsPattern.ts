@@ -7,12 +7,16 @@
  */
 
 export interface V1PodFailurePolicyOnPodConditionsPattern {
-  /** Specifies the required Pod condition status. To match a pod condition
-it is required that the specified status equals the pod condition status.
-Defaults to True.
-+optional */
+  /**
+   * Specifies the required Pod condition status. To match a pod condition
+   * it is required that the specified status equals the pod condition status.
+   * Defaults to True.
+   * +optional
+   */
   status?: string;
-  /** Specifies the required Pod condition type. To match a pod condition
-it is required that specified type equals the pod condition type. */
+  /**
+   * Specifies the required Pod condition type. To match a pod condition
+   * it is required that specified type equals the pod condition type.
+   */
   type?: string;
 }

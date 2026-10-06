@@ -27,6 +27,8 @@ type V1HTTPGetAction struct {
 	Path *string `json:"path,omitempty"`
 	// Name or number of the port to access on the container. Number must be in the range 1 to 65535. Name must be an IANA_SVC_NAME.
 	Port any `json:"port,omitempty"`
+	// Protocol selects the wire protocol for the probe connection. Nil defaults to HTTP/1.1. +optional +featureGate=H2CContainerProbe
+	Protocol *V1HTTPProtocol `json:"protocol,omitempty"`
 	// Scheme to use for connecting to the host. Defaults to HTTP. +optional
 	Scheme *string `json:"scheme,omitempty"`
 }
@@ -176,6 +178,38 @@ func (o *V1HTTPGetAction) SetPort(v any) {
 	o.Port = v
 }
 
+// GetProtocol returns the Protocol field value if set, zero value otherwise.
+func (o *V1HTTPGetAction) GetProtocol() V1HTTPProtocol {
+	if o == nil || IsNil(o.Protocol) {
+		var ret V1HTTPProtocol
+		return ret
+	}
+	return *o.Protocol
+}
+
+// GetProtocolOk returns a tuple with the Protocol field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *V1HTTPGetAction) GetProtocolOk() (*V1HTTPProtocol, bool) {
+	if o == nil || IsNil(o.Protocol) {
+		return nil, false
+	}
+	return o.Protocol, true
+}
+
+// HasProtocol returns a boolean if a field has been set.
+func (o *V1HTTPGetAction) HasProtocol() bool {
+	if o != nil && !IsNil(o.Protocol) {
+		return true
+	}
+
+	return false
+}
+
+// SetProtocol gets a reference to the given V1HTTPProtocol and assigns it to the Protocol field.
+func (o *V1HTTPGetAction) SetProtocol(v V1HTTPProtocol) {
+	o.Protocol = &v
+}
+
 // GetScheme returns the Scheme field value if set, zero value otherwise.
 func (o *V1HTTPGetAction) GetScheme() string {
 	if o == nil || IsNil(o.Scheme) {
@@ -229,6 +263,9 @@ func (o V1HTTPGetAction) ToMap() (map[string]interface{}, error) {
 	}
 	if !IsNil(o.Port) {
 		toSerialize["port"] = o.Port
+	}
+	if !IsNil(o.Protocol) {
+		toSerialize["protocol"] = o.Protocol
 	}
 	if !IsNil(o.Scheme) {
 		toSerialize["scheme"] = o.Scheme

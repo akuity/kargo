@@ -40,6 +40,9 @@ func LsRemote(
 	clientOpts *ClientOptions,
 	patterns ...string,
 ) ([]RemoteRef, error) {
+	if err := validateRepoURL(repoURL); err != nil {
+		return nil, err
+	}
 	if clientOpts == nil {
 		clientOpts = &ClientOptions{}
 	}
@@ -49,7 +52,7 @@ func LsRemote(
 		accessURL:   repoURL,
 	}
 	// setupDirs creates a temporary home directory that holds the ephemeral
-	// client configuration (and any SSH key material) needed to authenticate.
+	// client configuration needed to authenticate.
 	// There is no working tree or clone -- only the home directory -- so cleanup
 	// is a single RemoveAll.
 	if err := b.setupDirs(ctx, ""); err != nil {

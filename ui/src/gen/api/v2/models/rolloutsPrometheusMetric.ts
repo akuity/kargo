@@ -6,8 +6,8 @@
  * OpenAPI spec version: v1alpha1
  */
 import type { RolloutsAuthentication } from './rolloutsAuthentication';
-import type { RolloutsWebMetricHeader } from './rolloutsWebMetricHeader';
 import type { RolloutsPrometheusRangeQueryArgs } from './rolloutsPrometheusRangeQueryArgs';
+import type { RolloutsWebMetricHeader } from './rolloutsWebMetricHeader';
 
 export interface RolloutsPrometheusMetric {
   address?: string;

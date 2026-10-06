@@ -1,0 +1,147 @@
+{{- include "kargo.database.validate" . }}
+{{- if and .Values.workloads.install .Values.database.postgres.enabled }}
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: kargo-postgres
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "kargo.componentLabels" (dict "root" . "labels" .Values.database.postgres.labels) | nindent 4 }}
+    {{- include "kargo.postgres.labels" . | nindent 4 }}
+  {{- include "kargo.annotations" (dict "root" . "annotations" .Values.database.postgres.annotations) | nindent 2 }}
+spec:
+  serviceName: kargo-postgres
+  replicas: 1
+  revisionHistoryLimit: {{ .Values.database.postgres.revisionHistoryLimit }}
+  selector:
+    matchLabels:
+      {{- include "kargo.selectorLabels" . | nindent 6 }}
+      {{- include "kargo.postgres.labels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "kargo.labels" . | nindent 8 }}
+        {{- include "kargo.postgres.labels" . | nindent 8 }}
+      {{- with (mergeOverwrite (deepCopy .Values.global.podLabels) .Values.database.postgres.podLabels) }}
+        {{- range $key, $value := . }}
+        {{ $key }}: {{ $value | quote }}
+        {{- end }}
+      {{- end }}
+      {{- $podAnnotations := mergeOverwrite (deepCopy .Values.global.podAnnotations) .Values.database.postgres.podAnnotations }}
+      {{- if or (not .Values.database.postgres.existingSecret) $podAnnotations }}
+      annotations:
+        {{- if not .Values.database.postgres.existingSecret }}
+        secret/checksum: {{ pick ( include (print $.Template.BasePath "/postgres/secret.yaml") . | fromYaml ) "stringData" | toYaml | sha256sum }}
+        {{- end }}
+        {{- range $key, $value := $podAnnotations }}
+        {{ $key }}: {{ $value | quote }}
+        {{- end }}
+      {{- end }}
+    spec:
+      serviceAccountName: kargo-postgres
+      {{- with .Values.database.postgres.affinity | default .Values.global.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.database.postgres.priorityClassName | default .Values.global.priorityClassName }}
+      priorityClassName: {{ . }}
+      {{- end }}
+      {{- with .Values.database.postgres.image.pullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+      - name: postgres
+        image: {{ .Values.database.postgres.image.repository }}:{{ .Values.database.postgres.image.tag }}
+        imagePullPolicy: {{ .Values.database.postgres.image.pullPolicy }}
+        {{- with .Values.database.postgres.extraArgs }}
+        args:
+        {{- range . }}
+        - -c
+        - {{ . | quote }}
+        {{- end }}
+        {{- end }}
+        env:
+        - name: POSTGRES_DB
+          value: kargo
+        - name: POSTGRES_USER
+          value: kargo
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "kargo.postgres.secretName" . }}
+              key: password
+        {{- with (concat .Values.global.env .Values.database.postgres.env) }}
+        {{- tpl (toYaml .) $ | nindent 8 }}
+        {{- end }}
+        {{- with (concat .Values.global.envFrom .Values.database.postgres.envFrom) }}
+        envFrom:
+        {{- tpl (toYaml .) $ | nindent 8 }}
+        {{- end }}
+        ports:
+        - name: postgres
+          containerPort: 5432
+          protocol: TCP
+        startupProbe:
+          exec:
+            command: [pg_isready, -h, 127.0.0.1, -U, kargo, -d, kargo]
+          periodSeconds: 2
+          timeoutSeconds: 2
+          failureThreshold: 30
+        readinessProbe:
+          exec:
+            command: [pg_isready, -h, 127.0.0.1, -U, kargo, -d, kargo]
+          periodSeconds: 2
+          timeoutSeconds: 2
+        volumeMounts:
+        - name: data
+          mountPath: /var/lib/postgresql
+        {{- with .Values.database.postgres.volumeMounts }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+        {{- with .Values.database.postgres.securityContext | default .Values.global.securityContext }}
+        securityContext:
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
+        resources:
+          {{- toYaml .Values.database.postgres.resources | nindent 10 }}
+      {{- with .Values.database.postgres.containers }}
+      {{- toYaml . | nindent 6 }}
+      {{- end }}
+      {{- with .Values.database.postgres.initContainers }}
+      initContainers:
+      {{- toYaml . | nindent 6 }}
+      {{- end }}
+      {{- if or (not .Values.database.postgres.persistence.enabled) .Values.database.postgres.volumes }}
+      volumes:
+      {{- if not .Values.database.postgres.persistence.enabled }}
+      - name: data
+        emptyDir: {}
+      {{- end }}
+      {{- with .Values.database.postgres.volumes }}
+      {{- toYaml . | nindent 6 }}
+      {{- end }}
+      {{- end }}
+      {{- with .Values.database.postgres.nodeSelector | default .Values.global.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.database.postgres.tolerations | default .Values.global.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+  {{- if .Values.database.postgres.persistence.enabled }}
+  volumeClaimTemplates:
+  - metadata:
+      name: data
+    spec:
+      accessModes:
+      - ReadWriteOnce
+      {{- with .Values.database.postgres.persistence.storageClass }}
+      storageClassName: {{ . }}
+      {{- end }}
+      resources:
+        requests:
+          storage: {{ .Values.database.postgres.persistence.size }}
+  {{- end }}
+{{- end }}

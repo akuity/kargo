@@ -62,7 +62,7 @@ func init() {
 // gitPusherConfig holds controller-level configuration for the git-push step,
 // populated from environment variables.
 type gitPusherConfig struct {
-	PushIntegrationPolicy git.PushIntegrationPolicy `envconfig:"GIT_PUSH_INTEGRATION_POLICY" default:"AlwaysRebase"`
+	PushIntegrationPolicy git.PushIntegrationPolicy `envconfig:"GIT_PUSH_INTEGRATION_POLICY" default:"RebaseOrMerge"`
 }
 
 func gitPusherConfigFromEnv() gitPusherConfig {
@@ -149,9 +149,8 @@ func (g *gitPushPusher) run(
 	}
 	if creds != nil {
 		loadOpts.Credentials = &git.RepoCredentials{
-			Username:      creds.Username,
-			Password:      creds.Password,
-			SSHPrivateKey: creds.SSHPrivateKey,
+			Username: creds.Username,
+			Password: creds.Password,
 		}
 	}
 	if workTree, err = git.LoadWorkTree(ctx, path, loadOpts); err != nil {

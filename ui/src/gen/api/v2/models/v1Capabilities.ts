@@ -7,12 +7,16 @@
  */
 
 export interface V1Capabilities {
-  /** Added capabilities
-+optional
-+listType=atomic */
+  /**
+   * Added capabilities
+   * +optional
+   * +listType=atomic
+   */
   add?: string[];
-  /** Removed capabilities
-+optional
-+listType=atomic */
+  /**
+   * Removed capabilities
+   * +optional
+   * +listType=atomic
+   */
   drop?: string[];
 }

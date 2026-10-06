@@ -142,11 +142,13 @@ func AddMigrationAnnotationValue(obj client.Object, migrationType string) {
 
 // SetCreateActorAnnotation stamps promo with AnnotationKeyCreateActor set to
 // actor. It initializes the annotations map if necessary.
-func SetCreateActorAnnotation(promo *kargoapi.Promotion, actor string) {
-	if promo.Annotations == nil {
-		promo.Annotations = make(map[string]string)
+func SetCreateActorAnnotation(obj client.Object, actor string) {
+	annotations := obj.GetAnnotations()
+	if annotations == nil {
+		annotations = make(map[string]string)
 	}
-	promo.Annotations[kargoapi.AnnotationKeyCreateActor] = actor
+	annotations[kargoapi.AnnotationKeyCreateActor] = actor
+	obj.SetAnnotations(annotations)
 }
 
 // CreateActorAnnotationValue extracts the v1alpha1.AnnotationKeyCreateActor

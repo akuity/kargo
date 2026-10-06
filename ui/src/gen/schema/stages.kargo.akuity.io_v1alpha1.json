@@ -249,54 +249,77 @@
           "description": "Shard is the name of the shard that this Stage belongs to. This is an\noptional field. If not specified, the Stage will belong to the default\nshard. A defaulting webhook will sync the value of the\nkargo.akuity.io/shard label with the value of this field. When this field\nis empty, the webhook will ensure that label is absent.",
           "type": "string"
         },
-        "targetSelectors": {
-          "description": "TargetSelectors select the Targets that this Stage governs and promotes\nFreight to, matching Targets by their labels within the Stage's own\nProject. A Target is selected when it matches any selector in this list.\nA Stage may govern any number of Targets this way.\n\nWhen this field is nil (the default), the Stage operates in classic mode:\nit governs a single implicit \"stage-self\" Target that the controller\ncreates and maintains on the Stage's behalf. This preserves the behavior\nof Stages authored before Targets existed. An empty selector in a non-empty\nlist selects all Targets in the Project.",
-          "items": {
-            "description": "A label selector is a label query over a set of resources. The result of matchLabels and\nmatchExpressions are ANDed. An empty label selector matches all objects. A null\nlabel selector matches no objects.",
-            "properties": {
-              "matchExpressions": {
-                "description": "matchExpressions is a list of label selector requirements. The requirements are ANDed.",
-                "items": {
-                  "description": "A label selector requirement is a selector that contains values, a key, and an operator that\nrelates the key and values.",
-                  "properties": {
-                    "key": {
-                      "description": "key is the label key that the selector applies to.",
-                      "type": "string"
-                    },
-                    "operator": {
-                      "description": "operator represents a key's relationship to a set of values.\nValid operators are In, NotIn, Exists and DoesNotExist.",
-                      "type": "string"
-                    },
-                    "values": {
-                      "description": "values is an array of string values. If the operator is In or NotIn,\nthe values array must be non-empty. If the operator is Exists or DoesNotExist,\nthe values array must be empty. This array is replaced during a strategic\nmerge patch.",
-                      "items": {
-                        "type": "string"
+        "targets": {
+          "description": "Targets describes the Targets that this Stage governs and promotes Freight\nto. Its presence is what makes a Stage target-aware.\n\nWhen this field is nil (the default), the Stage operates in classic mode:\nit governs no Targets and promotes Freight by way of Promotions alone.\nThis preserves the behavior of Stages authored before Targets existed.",
+          "properties": {
+            "selectors": {
+              "description": "Selectors select the Targets that the Stage governs, matching Targets by\ntheir labels within the Stage's own Project. A Target is selected when it\nmatches any selector in the list, so several selectors describe a union.\nA Target matching more than one of them is still governed once.\n\nAn empty selector selects every Target in the Project. An empty list\nselects none: the Stage still governs Targets, it just governs none at the\nmoment.",
+              "items": {
+                "description": "A label selector is a label query over a set of resources. The result of matchLabels and\nmatchExpressions are ANDed. An empty label selector matches all objects. A null\nlabel selector matches no objects.",
+                "properties": {
+                  "matchExpressions": {
+                    "description": "matchExpressions is a list of label selector requirements. The requirements are ANDed.",
+                    "items": {
+                      "description": "A label selector requirement is a selector that contains values, a key, and an operator that\nrelates the key and values.",
+                      "properties": {
+                        "key": {
+                          "description": "key is the label key that the selector applies to.",
+                          "type": "string"
+                        },
+                        "operator": {
+                          "description": "operator represents a key's relationship to a set of values.\nValid operators are In, NotIn, Exists and DoesNotExist.",
+                          "type": "string"
+                        },
+                        "values": {
+                          "description": "values is an array of string values. If the operator is In or NotIn,\nthe values array must be non-empty. If the operator is Exists or DoesNotExist,\nthe values array must be empty. This array is replaced during a strategic\nmerge patch.",
+                          "items": {
+                            "type": "string"
+                          },
+                          "type": "array",
+                          "x-kubernetes-list-type": "atomic"
+                        }
                       },
-                      "type": "array",
-                      "x-kubernetes-list-type": "atomic"
-                    }
+                      "required": [
+                        "key",
+                        "operator"
+                      ],
+                      "type": "object"
+                    },
+                    "type": "array",
+                    "x-kubernetes-list-type": "atomic"
                   },
-                  "required": [
-                    "key",
-                    "operator"
-                  ],
-                  "type": "object"
+                  "matchLabels": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels\nmap is equivalent to an element of matchExpressions, whose key field is \"key\", the\noperator is \"In\", and the values array contains only \"value\". The requirements are ANDed.",
+                    "type": "object"
+                  }
                 },
-                "type": "array",
-                "x-kubernetes-list-type": "atomic"
+                "type": "object",
+                "x-kubernetes-map-type": "atomic"
               },
-              "matchLabels": {
-                "additionalProperties": {
-                  "type": "string"
-                },
-                "description": "matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels\nmap is equivalent to an element of matchExpressions, whose key field is \"key\", the\noperator is \"In\", and the values array contains only \"value\". The requirements are ANDed.",
-                "type": "object"
-              }
+              "type": "array",
+              "x-kubernetes-list-type": "atomic"
             },
-            "type": "object",
-            "x-kubernetes-map-type": "atomic"
+            "updateStrategy": {
+              "description": "UpdateStrategy configures the pace of updating the targets",
+              "properties": {
+                "maxConcurrent": {
+                  "description": "MaxConcurrent specifies a number of targets which can be promoted to at the same time\nZero means there is no limit (default)",
+                  "format": "int64",
+                  "maximum": 9223372036854776000,
+                  "minimum": -9223372036854776000,
+                  "type": "integer"
+                }
+              },
+              "type": "object"
+            }
           },
-          "type": "array"
+          "required": [
+            "selectors"
+          ],
+          "type": "object"
         },
         "vars": {
           "description": "Vars is a list of variables that can be referenced anywhere in the\nStageSpec that supports expressions. For example, the PromotionTemplate\nand arguments of the Verification.",
@@ -1205,6 +1228,438 @@
                 }
               },
               "type": "object"
+            }
+          },
+          "required": [
+            "name"
+          ],
+          "type": "object"
+        },
+        "currentPromotionRequest": {
+          "description": "CurrentPromotionRequest is a reference to the PromotionRequest currently\nfanning Freight out to this Stage's Targets. It is absent for a Stage that\ngoverns no Targets.\n\nFanning Freight out to Targets is a Kargo Enterprise-only feature. Kargo\nOSS maintains this field all the same, but the PromotionRequest it refers\nto never gets further than being marked Errored for that reason.",
+          "properties": {
+            "finishedAt": {
+              "description": "FinishedAt is the time at which the PromotionRequest completed.",
+              "format": "date-time",
+              "type": "string"
+            },
+            "freight": {
+              "description": "Freight identifies the Freight being promoted.",
+              "properties": {
+                "artifacts": {
+                  "description": "Artifacts describes specific versions of artifacts other\nthan Git repository commits, container images, and Helm charts.",
+                  "items": {
+                    "description": "ArtifactReference is a reference to a specific version of an artifact.",
+                    "properties": {
+                      "artifactType": {
+                        "description": "ArtifactType specifies the type of artifact this is. Often, but not always,\nit will be the media type (MIME type) of the artifact referenced by this\nArtifactReference.",
+                        "minLength": 1,
+                        "type": "string"
+                      },
+                      "metadata": {
+                        "description": "Metadata is a JSON object containing a mostly opaque collection of artifact\nattributes. (It must be an object. It may not be a list or a scalar value.)\n\"Mostly\" because Kargo may understand how to interpret some documented,\nwell-known, top-level keys. Those aside, this metadata is only understood\nby a corresponding Subscriber implementation that created it.",
+                        "x-kubernetes-preserve-unknown-fields": true
+                      },
+                      "subscriptionName": {
+                        "description": "SubscriptionName is the name of the Subscription that discovered this\nartifact.",
+                        "minLength": 1,
+                        "type": "string"
+                      },
+                      "version": {
+                        "description": "Version identifies a specific revision of this artifact.",
+                        "minLength": 1,
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "subscriptionName",
+                      "version"
+                    ],
+                    "type": "object"
+                  },
+                  "type": "array"
+                },
+                "charts": {
+                  "description": "Charts describes specific versions of specific Helm charts.",
+                  "items": {
+                    "description": "Chart describes a specific version of a Helm chart.",
+                    "properties": {
+                      "name": {
+                        "description": "Name specifies the name of the chart.",
+                        "type": "string"
+                      },
+                      "repoURL": {
+                        "description": "RepoURL specifies the URL of a Helm chart repository. Classic chart\nrepositories (using HTTP/S) can contain differently named charts. When this\nfield points to such a repository, the Name field will specify the name of\nthe chart within the repository. In the case of a repository within an OCI\nregistry, the URL implicitly points to a specific chart and the Name field\nwill be empty.",
+                        "type": "string"
+                      },
+                      "subscriptionName": {
+                        "description": "SubscriptionName is the name of the subscription that discovered this\nchart. This field is only populated if the subscription was assigned\na name.",
+                        "type": "string"
+                      },
+                      "version": {
+                        "description": "Version specifies a particular version of the chart.",
+                        "type": "string"
+                      }
+                    },
+                    "type": "object"
+                  },
+                  "type": "array"
+                },
+                "commits": {
+                  "description": "Commits describes specific Git repository commits.",
+                  "items": {
+                    "description": "GitCommit describes a specific commit from a specific Git repository.",
+                    "properties": {
+                      "author": {
+                        "description": "Author is the author of the commit.",
+                        "type": "string"
+                      },
+                      "branch": {
+                        "description": "Branch denotes the branch of the repository where this commit was found.",
+                        "type": "string"
+                      },
+                      "committer": {
+                        "description": "Committer is the person who committed the commit.",
+                        "type": "string"
+                      },
+                      "id": {
+                        "description": "ID is the ID of a specific commit in the Git repository specified by\nRepoURL.",
+                        "type": "string"
+                      },
+                      "message": {
+                        "description": "Message is the message associated with the commit. At present, this only\ncontains the first line (subject) of the commit message.",
+                        "type": "string"
+                      },
+                      "repoURL": {
+                        "description": "RepoURL is the URL of a Git repository.",
+                        "type": "string"
+                      },
+                      "subscriptionName": {
+                        "description": "SubscriptionName is the name of the subscription that discovered this\ncommit. This field is only populated if the subscription was assigned\na name.",
+                        "type": "string"
+                      },
+                      "tag": {
+                        "description": "Tag denotes a tag in the repository that matched selection criteria and\nresolved to this commit.",
+                        "type": "string"
+                      }
+                    },
+                    "type": "object"
+                  },
+                  "type": "array"
+                },
+                "images": {
+                  "description": "Images describes specific versions of specific container images.",
+                  "items": {
+                    "description": "Image describes a specific version of a container image.",
+                    "properties": {
+                      "annotations": {
+                        "additionalProperties": {
+                          "type": "string"
+                        },
+                        "description": "Annotations is a map of arbitrary metadata for the image.",
+                        "type": "object"
+                      },
+                      "digest": {
+                        "description": "Digest identifies a specific version of the image in the repository\nspecified by RepoURL. This is a more precise identifier than Tag.",
+                        "type": "string"
+                      },
+                      "repoURL": {
+                        "description": "RepoURL describes the repository in which the image can be found.",
+                        "type": "string"
+                      },
+                      "subscriptionName": {
+                        "description": "SubscriptionName is the name of the subscription that discovered this\nimage. This field is only populated if the subscription was assigned\na name.",
+                        "type": "string"
+                      },
+                      "tag": {
+                        "description": "Tag identifies a specific version of the image in the repository specified\nby RepoURL.",
+                        "type": "string"
+                      }
+                    },
+                    "type": "object"
+                  },
+                  "type": "array"
+                },
+                "name": {
+                  "description": "Name is a system-assigned identifier derived deterministically from\nthe contents of the Freight. I.e., two pieces of Freight can be compared\nfor equality by comparing their Names.",
+                  "type": "string"
+                },
+                "origin": {
+                  "description": "Origin describes a kind of Freight in terms of its origin.",
+                  "properties": {
+                    "kind": {
+                      "description": "Kind is the kind of resource from which Freight may have originated. At\npresent, this can only be \"Warehouse\".",
+                      "enum": [
+                        "Warehouse"
+                      ],
+                      "type": "string"
+                    },
+                    "name": {
+                      "description": "Name is the name of the resource of the kind indicated by the Kind field\nfrom which Freight may originate.",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "kind",
+                    "name"
+                  ],
+                  "type": "object"
+                }
+              },
+              "type": "object"
+            },
+            "freightCollection": {
+              "description": "FreightCollection contains the details of the piece of Freight referenced\nby this Promotion as well as any additional Freight that is carried over\nfrom the target Stage's current state.",
+              "properties": {
+                "id": {
+                  "description": "ID is a unique and deterministically calculated identifier for the\nFreightCollection. It is updated on each use of the UpdateOrPush method.",
+                  "type": "string"
+                },
+                "items": {
+                  "additionalProperties": {
+                    "description": "FreightReference is a simplified representation of a piece of Freight -- not\na root resource type.",
+                    "properties": {
+                      "artifacts": {
+                        "description": "Artifacts describes specific versions of artifacts other\nthan Git repository commits, container images, and Helm charts.",
+                        "items": {
+                          "description": "ArtifactReference is a reference to a specific version of an artifact.",
+                          "properties": {
+                            "artifactType": {
+                              "description": "ArtifactType specifies the type of artifact this is. Often, but not always,\nit will be the media type (MIME type) of the artifact referenced by this\nArtifactReference.",
+                              "minLength": 1,
+                              "type": "string"
+                            },
+                            "metadata": {
+                              "description": "Metadata is a JSON object containing a mostly opaque collection of artifact\nattributes. (It must be an object. It may not be a list or a scalar value.)\n\"Mostly\" because Kargo may understand how to interpret some documented,\nwell-known, top-level keys. Those aside, this metadata is only understood\nby a corresponding Subscriber implementation that created it.",
+                              "x-kubernetes-preserve-unknown-fields": true
+                            },
+                            "subscriptionName": {
+                              "description": "SubscriptionName is the name of the Subscription that discovered this\nartifact.",
+                              "minLength": 1,
+                              "type": "string"
+                            },
+                            "version": {
+                              "description": "Version identifies a specific revision of this artifact.",
+                              "minLength": 1,
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "subscriptionName",
+                            "version"
+                          ],
+                          "type": "object"
+                        },
+                        "type": "array"
+                      },
+                      "charts": {
+                        "description": "Charts describes specific versions of specific Helm charts.",
+                        "items": {
+                          "description": "Chart describes a specific version of a Helm chart.",
+                          "properties": {
+                            "name": {
+                              "description": "Name specifies the name of the chart.",
+                              "type": "string"
+                            },
+                            "repoURL": {
+                              "description": "RepoURL specifies the URL of a Helm chart repository. Classic chart\nrepositories (using HTTP/S) can contain differently named charts. When this\nfield points to such a repository, the Name field will specify the name of\nthe chart within the repository. In the case of a repository within an OCI\nregistry, the URL implicitly points to a specific chart and the Name field\nwill be empty.",
+                              "type": "string"
+                            },
+                            "subscriptionName": {
+                              "description": "SubscriptionName is the name of the subscription that discovered this\nchart. This field is only populated if the subscription was assigned\na name.",
+                              "type": "string"
+                            },
+                            "version": {
+                              "description": "Version specifies a particular version of the chart.",
+                              "type": "string"
+                            }
+                          },
+                          "type": "object"
+                        },
+                        "type": "array"
+                      },
+                      "commits": {
+                        "description": "Commits describes specific Git repository commits.",
+                        "items": {
+                          "description": "GitCommit describes a specific commit from a specific Git repository.",
+                          "properties": {
+                            "author": {
+                              "description": "Author is the author of the commit.",
+                              "type": "string"
+                            },
+                            "branch": {
+                              "description": "Branch denotes the branch of the repository where this commit was found.",
+                              "type": "string"
+                            },
+                            "committer": {
+                              "description": "Committer is the person who committed the commit.",
+                              "type": "string"
+                            },
+                            "id": {
+                              "description": "ID is the ID of a specific commit in the Git repository specified by\nRepoURL.",
+                              "type": "string"
+                            },
+                            "message": {
+                              "description": "Message is the message associated with the commit. At present, this only\ncontains the first line (subject) of the commit message.",
+                              "type": "string"
+                            },
+                            "repoURL": {
+                              "description": "RepoURL is the URL of a Git repository.",
+                              "type": "string"
+                            },
+                            "subscriptionName": {
+                              "description": "SubscriptionName is the name of the subscription that discovered this\ncommit. This field is only populated if the subscription was assigned\na name.",
+                              "type": "string"
+                            },
+                            "tag": {
+                              "description": "Tag denotes a tag in the repository that matched selection criteria and\nresolved to this commit.",
+                              "type": "string"
+                            }
+                          },
+                          "type": "object"
+                        },
+                        "type": "array"
+                      },
+                      "images": {
+                        "description": "Images describes specific versions of specific container images.",
+                        "items": {
+                          "description": "Image describes a specific version of a container image.",
+                          "properties": {
+                            "annotations": {
+                              "additionalProperties": {
+                                "type": "string"
+                              },
+                              "description": "Annotations is a map of arbitrary metadata for the image.",
+                              "type": "object"
+                            },
+                            "digest": {
+                              "description": "Digest identifies a specific version of the image in the repository\nspecified by RepoURL. This is a more precise identifier than Tag.",
+                              "type": "string"
+                            },
+                            "repoURL": {
+                              "description": "RepoURL describes the repository in which the image can be found.",
+                              "type": "string"
+                            },
+                            "subscriptionName": {
+                              "description": "SubscriptionName is the name of the subscription that discovered this\nimage. This field is only populated if the subscription was assigned\na name.",
+                              "type": "string"
+                            },
+                            "tag": {
+                              "description": "Tag identifies a specific version of the image in the repository specified\nby RepoURL.",
+                              "type": "string"
+                            }
+                          },
+                          "type": "object"
+                        },
+                        "type": "array"
+                      },
+                      "name": {
+                        "description": "Name is a system-assigned identifier derived deterministically from\nthe contents of the Freight. I.e., two pieces of Freight can be compared\nfor equality by comparing their Names.",
+                        "type": "string"
+                      },
+                      "origin": {
+                        "description": "Origin describes a kind of Freight in terms of its origin.",
+                        "properties": {
+                          "kind": {
+                            "description": "Kind is the kind of resource from which Freight may have originated. At\npresent, this can only be \"Warehouse\".",
+                            "enum": [
+                              "Warehouse"
+                            ],
+                            "type": "string"
+                          },
+                          "name": {
+                            "description": "Name is the name of the resource of the kind indicated by the Kind field\nfrom which Freight may originate.",
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "name"
+                        ],
+                        "type": "object"
+                      }
+                    },
+                    "type": "object"
+                  },
+                  "description": "Freight is a map of FreightReference objects, indexed by their Warehouse\norigin.",
+                  "type": "object"
+                },
+                "verificationHistory": {
+                  "description": "VerificationHistory is a stack of recent VerificationInfo. By default,\nthe last ten VerificationInfo are stored.",
+                  "items": {
+                    "description": "VerificationInfo contains the details of an instance of a Verification\nprocess.",
+                    "properties": {
+                      "actor": {
+                        "description": "Actor is the name of the entity that initiated or aborted the\nVerification process.",
+                        "type": "string"
+                      },
+                      "analysisRun": {
+                        "description": "AnalysisRun is a reference to the Argo Rollouts AnalysisRun that implements\nthe Verification process.",
+                        "properties": {
+                          "name": {
+                            "description": "Name is the name of the AnalysisRun.",
+                            "type": "string"
+                          },
+                          "namespace": {
+                            "description": "Namespace is the namespace of the AnalysisRun.",
+                            "type": "string"
+                          },
+                          "phase": {
+                            "description": "Phase is the last observed phase of the AnalysisRun referenced by Name.",
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "name",
+                          "namespace",
+                          "phase"
+                        ],
+                        "type": "object"
+                      },
+                      "finishTime": {
+                        "description": "FinishTime is the time at which the Verification process finished.",
+                        "format": "date-time",
+                        "type": "string"
+                      },
+                      "id": {
+                        "description": "ID is the identifier of the Verification process.",
+                        "type": "string"
+                      },
+                      "message": {
+                        "description": "Message may contain additional information about why the verification\nprocess is in its current phase.",
+                        "type": "string"
+                      },
+                      "phase": {
+                        "description": "Phase describes the current phase of the Verification process. Generally,\nthis will be a reflection of the underlying AnalysisRun's phase, however,\nthere are exceptions to this, such as in the case where an AnalysisRun\ncannot be launched successfully.",
+                        "type": "string"
+                      },
+                      "startTime": {
+                        "description": "StartTime is the time at which the Verification process was started.",
+                        "format": "date-time",
+                        "type": "string"
+                      }
+                    },
+                    "type": "object"
+                  },
+                  "type": "array"
+                }
+              },
+              "required": [
+                "id"
+              ],
+              "type": "object"
+            },
+            "message": {
+              "description": "Message is a human-readable description of the promotion status",
+              "type": "string"
+            },
+            "name": {
+              "description": "Name is the name of the PromotionRequest.",
+              "type": "string"
+            },
+            "phase": {
+              "description": "Phase is a high-level summary of the PromotionRequest's lifecycle.",
+              "type": "string"
             }
           },
           "required": [
@@ -2235,6 +2690,438 @@
           ],
           "type": "object"
         },
+        "lastPromotionRequest": {
+          "description": "LastPromotionRequest is a reference to the last PromotionRequest to reach a\nterminal phase. It is absent for a Stage that governs no Targets, and only\never moves forward, so it outlives the PromotionRequest it refers to.",
+          "properties": {
+            "finishedAt": {
+              "description": "FinishedAt is the time at which the PromotionRequest completed.",
+              "format": "date-time",
+              "type": "string"
+            },
+            "freight": {
+              "description": "Freight identifies the Freight being promoted.",
+              "properties": {
+                "artifacts": {
+                  "description": "Artifacts describes specific versions of artifacts other\nthan Git repository commits, container images, and Helm charts.",
+                  "items": {
+                    "description": "ArtifactReference is a reference to a specific version of an artifact.",
+                    "properties": {
+                      "artifactType": {
+                        "description": "ArtifactType specifies the type of artifact this is. Often, but not always,\nit will be the media type (MIME type) of the artifact referenced by this\nArtifactReference.",
+                        "minLength": 1,
+                        "type": "string"
+                      },
+                      "metadata": {
+                        "description": "Metadata is a JSON object containing a mostly opaque collection of artifact\nattributes. (It must be an object. It may not be a list or a scalar value.)\n\"Mostly\" because Kargo may understand how to interpret some documented,\nwell-known, top-level keys. Those aside, this metadata is only understood\nby a corresponding Subscriber implementation that created it.",
+                        "x-kubernetes-preserve-unknown-fields": true
+                      },
+                      "subscriptionName": {
+                        "description": "SubscriptionName is the name of the Subscription that discovered this\nartifact.",
+                        "minLength": 1,
+                        "type": "string"
+                      },
+                      "version": {
+                        "description": "Version identifies a specific revision of this artifact.",
+                        "minLength": 1,
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "subscriptionName",
+                      "version"
+                    ],
+                    "type": "object"
+                  },
+                  "type": "array"
+                },
+                "charts": {
+                  "description": "Charts describes specific versions of specific Helm charts.",
+                  "items": {
+                    "description": "Chart describes a specific version of a Helm chart.",
+                    "properties": {
+                      "name": {
+                        "description": "Name specifies the name of the chart.",
+                        "type": "string"
+                      },
+                      "repoURL": {
+                        "description": "RepoURL specifies the URL of a Helm chart repository. Classic chart\nrepositories (using HTTP/S) can contain differently named charts. When this\nfield points to such a repository, the Name field will specify the name of\nthe chart within the repository. In the case of a repository within an OCI\nregistry, the URL implicitly points to a specific chart and the Name field\nwill be empty.",
+                        "type": "string"
+                      },
+                      "subscriptionName": {
+                        "description": "SubscriptionName is the name of the subscription that discovered this\nchart. This field is only populated if the subscription was assigned\na name.",
+                        "type": "string"
+                      },
+                      "version": {
+                        "description": "Version specifies a particular version of the chart.",
+                        "type": "string"
+                      }
+                    },
+                    "type": "object"
+                  },
+                  "type": "array"
+                },
+                "commits": {
+                  "description": "Commits describes specific Git repository commits.",
+                  "items": {
+                    "description": "GitCommit describes a specific commit from a specific Git repository.",
+                    "properties": {
+                      "author": {
+                        "description": "Author is the author of the commit.",
+                        "type": "string"
+                      },
+                      "branch": {
+                        "description": "Branch denotes the branch of the repository where this commit was found.",
+                        "type": "string"
+                      },
+                      "committer": {
+                        "description": "Committer is the person who committed the commit.",
+                        "type": "string"
+                      },
+                      "id": {
+                        "description": "ID is the ID of a specific commit in the Git repository specified by\nRepoURL.",
+                        "type": "string"
+                      },
+                      "message": {
+                        "description": "Message is the message associated with the commit. At present, this only\ncontains the first line (subject) of the commit message.",
+                        "type": "string"
+                      },
+                      "repoURL": {
+                        "description": "RepoURL is the URL of a Git repository.",
+                        "type": "string"
+                      },
+                      "subscriptionName": {
+                        "description": "SubscriptionName is the name of the subscription that discovered this\ncommit. This field is only populated if the subscription was assigned\na name.",
+                        "type": "string"
+                      },
+                      "tag": {
+                        "description": "Tag denotes a tag in the repository that matched selection criteria and\nresolved to this commit.",
+                        "type": "string"
+                      }
+                    },
+                    "type": "object"
+                  },
+                  "type": "array"
+                },
+                "images": {
+                  "description": "Images describes specific versions of specific container images.",
+                  "items": {
+                    "description": "Image describes a specific version of a container image.",
+                    "properties": {
+                      "annotations": {
+                        "additionalProperties": {
+                          "type": "string"
+                        },
+                        "description": "Annotations is a map of arbitrary metadata for the image.",
+                        "type": "object"
+                      },
+                      "digest": {
+                        "description": "Digest identifies a specific version of the image in the repository\nspecified by RepoURL. This is a more precise identifier than Tag.",
+                        "type": "string"
+                      },
+                      "repoURL": {
+                        "description": "RepoURL describes the repository in which the image can be found.",
+                        "type": "string"
+                      },
+                      "subscriptionName": {
+                        "description": "SubscriptionName is the name of the subscription that discovered this\nimage. This field is only populated if the subscription was assigned\na name.",
+                        "type": "string"
+                      },
+                      "tag": {
+                        "description": "Tag identifies a specific version of the image in the repository specified\nby RepoURL.",
+                        "type": "string"
+                      }
+                    },
+                    "type": "object"
+                  },
+                  "type": "array"
+                },
+                "name": {
+                  "description": "Name is a system-assigned identifier derived deterministically from\nthe contents of the Freight. I.e., two pieces of Freight can be compared\nfor equality by comparing their Names.",
+                  "type": "string"
+                },
+                "origin": {
+                  "description": "Origin describes a kind of Freight in terms of its origin.",
+                  "properties": {
+                    "kind": {
+                      "description": "Kind is the kind of resource from which Freight may have originated. At\npresent, this can only be \"Warehouse\".",
+                      "enum": [
+                        "Warehouse"
+                      ],
+                      "type": "string"
+                    },
+                    "name": {
+                      "description": "Name is the name of the resource of the kind indicated by the Kind field\nfrom which Freight may originate.",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "kind",
+                    "name"
+                  ],
+                  "type": "object"
+                }
+              },
+              "type": "object"
+            },
+            "freightCollection": {
+              "description": "FreightCollection contains the details of the piece of Freight referenced\nby this Promotion as well as any additional Freight that is carried over\nfrom the target Stage's current state.",
+              "properties": {
+                "id": {
+                  "description": "ID is a unique and deterministically calculated identifier for the\nFreightCollection. It is updated on each use of the UpdateOrPush method.",
+                  "type": "string"
+                },
+                "items": {
+                  "additionalProperties": {
+                    "description": "FreightReference is a simplified representation of a piece of Freight -- not\na root resource type.",
+                    "properties": {
+                      "artifacts": {
+                        "description": "Artifacts describes specific versions of artifacts other\nthan Git repository commits, container images, and Helm charts.",
+                        "items": {
+                          "description": "ArtifactReference is a reference to a specific version of an artifact.",
+                          "properties": {
+                            "artifactType": {
+                              "description": "ArtifactType specifies the type of artifact this is. Often, but not always,\nit will be the media type (MIME type) of the artifact referenced by this\nArtifactReference.",
+                              "minLength": 1,
+                              "type": "string"
+                            },
+                            "metadata": {
+                              "description": "Metadata is a JSON object containing a mostly opaque collection of artifact\nattributes. (It must be an object. It may not be a list or a scalar value.)\n\"Mostly\" because Kargo may understand how to interpret some documented,\nwell-known, top-level keys. Those aside, this metadata is only understood\nby a corresponding Subscriber implementation that created it.",
+                              "x-kubernetes-preserve-unknown-fields": true
+                            },
+                            "subscriptionName": {
+                              "description": "SubscriptionName is the name of the Subscription that discovered this\nartifact.",
+                              "minLength": 1,
+                              "type": "string"
+                            },
+                            "version": {
+                              "description": "Version identifies a specific revision of this artifact.",
+                              "minLength": 1,
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "subscriptionName",
+                            "version"
+                          ],
+                          "type": "object"
+                        },
+                        "type": "array"
+                      },
+                      "charts": {
+                        "description": "Charts describes specific versions of specific Helm charts.",
+                        "items": {
+                          "description": "Chart describes a specific version of a Helm chart.",
+                          "properties": {
+                            "name": {
+                              "description": "Name specifies the name of the chart.",
+                              "type": "string"
+                            },
+                            "repoURL": {
+                              "description": "RepoURL specifies the URL of a Helm chart repository. Classic chart\nrepositories (using HTTP/S) can contain differently named charts. When this\nfield points to such a repository, the Name field will specify the name of\nthe chart within the repository. In the case of a repository within an OCI\nregistry, the URL implicitly points to a specific chart and the Name field\nwill be empty.",
+                              "type": "string"
+                            },
+                            "subscriptionName": {
+                              "description": "SubscriptionName is the name of the subscription that discovered this\nchart. This field is only populated if the subscription was assigned\na name.",
+                              "type": "string"
+                            },
+                            "version": {
+                              "description": "Version specifies a particular version of the chart.",
+                              "type": "string"
+                            }
+                          },
+                          "type": "object"
+                        },
+                        "type": "array"
+                      },
+                      "commits": {
+                        "description": "Commits describes specific Git repository commits.",
+                        "items": {
+                          "description": "GitCommit describes a specific commit from a specific Git repository.",
+                          "properties": {
+                            "author": {
+                              "description": "Author is the author of the commit.",
+                              "type": "string"
+                            },
+                            "branch": {
+                              "description": "Branch denotes the branch of the repository where this commit was found.",
+                              "type": "string"
+                            },
+                            "committer": {
+                              "description": "Committer is the person who committed the commit.",
+                              "type": "string"
+                            },
+                            "id": {
+                              "description": "ID is the ID of a specific commit in the Git repository specified by\nRepoURL.",
+                              "type": "string"
+                            },
+                            "message": {
+                              "description": "Message is the message associated with the commit. At present, this only\ncontains the first line (subject) of the commit message.",
+                              "type": "string"
+                            },
+                            "repoURL": {
+                              "description": "RepoURL is the URL of a Git repository.",
+                              "type": "string"
+                            },
+                            "subscriptionName": {
+                              "description": "SubscriptionName is the name of the subscription that discovered this\ncommit. This field is only populated if the subscription was assigned\na name.",
+                              "type": "string"
+                            },
+                            "tag": {
+                              "description": "Tag denotes a tag in the repository that matched selection criteria and\nresolved to this commit.",
+                              "type": "string"
+                            }
+                          },
+                          "type": "object"
+                        },
+                        "type": "array"
+                      },
+                      "images": {
+                        "description": "Images describes specific versions of specific container images.",
+                        "items": {
+                          "description": "Image describes a specific version of a container image.",
+                          "properties": {
+                            "annotations": {
+                              "additionalProperties": {
+                                "type": "string"
+                              },
+                              "description": "Annotations is a map of arbitrary metadata for the image.",
+                              "type": "object"
+                            },
+                            "digest": {
+                              "description": "Digest identifies a specific version of the image in the repository\nspecified by RepoURL. This is a more precise identifier than Tag.",
+                              "type": "string"
+                            },
+                            "repoURL": {
+                              "description": "RepoURL describes the repository in which the image can be found.",
+                              "type": "string"
+                            },
+                            "subscriptionName": {
+                              "description": "SubscriptionName is the name of the subscription that discovered this\nimage. This field is only populated if the subscription was assigned\na name.",
+                              "type": "string"
+                            },
+                            "tag": {
+                              "description": "Tag identifies a specific version of the image in the repository specified\nby RepoURL.",
+                              "type": "string"
+                            }
+                          },
+                          "type": "object"
+                        },
+                        "type": "array"
+                      },
+                      "name": {
+                        "description": "Name is a system-assigned identifier derived deterministically from\nthe contents of the Freight. I.e., two pieces of Freight can be compared\nfor equality by comparing their Names.",
+                        "type": "string"
+                      },
+                      "origin": {
+                        "description": "Origin describes a kind of Freight in terms of its origin.",
+                        "properties": {
+                          "kind": {
+                            "description": "Kind is the kind of resource from which Freight may have originated. At\npresent, this can only be \"Warehouse\".",
+                            "enum": [
+                              "Warehouse"
+                            ],
+                            "type": "string"
+                          },
+                          "name": {
+                            "description": "Name is the name of the resource of the kind indicated by the Kind field\nfrom which Freight may originate.",
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "name"
+                        ],
+                        "type": "object"
+                      }
+                    },
+                    "type": "object"
+                  },
+                  "description": "Freight is a map of FreightReference objects, indexed by their Warehouse\norigin.",
+                  "type": "object"
+                },
+                "verificationHistory": {
+                  "description": "VerificationHistory is a stack of recent VerificationInfo. By default,\nthe last ten VerificationInfo are stored.",
+                  "items": {
+                    "description": "VerificationInfo contains the details of an instance of a Verification\nprocess.",
+                    "properties": {
+                      "actor": {
+                        "description": "Actor is the name of the entity that initiated or aborted the\nVerification process.",
+                        "type": "string"
+                      },
+                      "analysisRun": {
+                        "description": "AnalysisRun is a reference to the Argo Rollouts AnalysisRun that implements\nthe Verification process.",
+                        "properties": {
+                          "name": {
+                            "description": "Name is the name of the AnalysisRun.",
+                            "type": "string"
+                          },
+                          "namespace": {
+                            "description": "Namespace is the namespace of the AnalysisRun.",
+                            "type": "string"
+                          },
+                          "phase": {
+                            "description": "Phase is the last observed phase of the AnalysisRun referenced by Name.",
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "name",
+                          "namespace",
+                          "phase"
+                        ],
+                        "type": "object"
+                      },
+                      "finishTime": {
+                        "description": "FinishTime is the time at which the Verification process finished.",
+                        "format": "date-time",
+                        "type": "string"
+                      },
+                      "id": {
+                        "description": "ID is the identifier of the Verification process.",
+                        "type": "string"
+                      },
+                      "message": {
+                        "description": "Message may contain additional information about why the verification\nprocess is in its current phase.",
+                        "type": "string"
+                      },
+                      "phase": {
+                        "description": "Phase describes the current phase of the Verification process. Generally,\nthis will be a reflection of the underlying AnalysisRun's phase, however,\nthere are exceptions to this, such as in the case where an AnalysisRun\ncannot be launched successfully.",
+                        "type": "string"
+                      },
+                      "startTime": {
+                        "description": "StartTime is the time at which the Verification process was started.",
+                        "format": "date-time",
+                        "type": "string"
+                      }
+                    },
+                    "type": "object"
+                  },
+                  "type": "array"
+                }
+              },
+              "required": [
+                "id"
+              ],
+              "type": "object"
+            },
+            "message": {
+              "description": "Message is a human-readable description of the promotion status",
+              "type": "string"
+            },
+            "name": {
+              "description": "Name is the name of the PromotionRequest.",
+              "type": "string"
+            },
+            "phase": {
+              "description": "Phase is a high-level summary of the PromotionRequest's lifecycle.",
+              "type": "string"
+            }
+          },
+          "required": [
+            "name"
+          ],
+          "type": "object"
+        },
         "metadata": {
           "additionalProperties": {
             "x-kubernetes-preserve-unknown-fields": true
@@ -2248,6 +3135,37 @@
           "maximum": 9223372036854776000,
           "minimum": -9223372036854776000,
           "type": "integer"
+        },
+        "promotionWindowStatus": {
+          "description": "PromotionWindowStatus reports whether promotion windows currently permit\npromotion of this Stage, and when that is next expected to change. It is\nabsent when no window gates the Stage.\n\nKargo Enterprise only: This field is ignored in Kargo OSS.",
+          "properties": {
+            "closed": {
+              "description": "Closed indicates that the schedule currently forbids promotion of this\nStage.",
+              "type": "boolean"
+            },
+            "nextClose": {
+              "description": "NextClose is when promotion is next expected to become forbidden, and is\nmeaningful only while Closed is false. It allows a client to give warning of\nan approaching freeze, which NextCloseReason names. Like NextOpen it is optional, and\nabsent when no such boundary is known -- a schedule that will never forbid\npromotion again has none.",
+              "format": "date-time",
+              "type": "string"
+            },
+            "nextCloseReason": {
+              "description": "NextCloseReason explains in human-readable terms why promotion will be forbidden\nat NextClose, naming the freeze responsible where there is one.\nIt is set whenever NextClose is set.",
+              "type": "string"
+            },
+            "nextOpen": {
+              "description": "NextOpen is when the schedule is next expected to permit promotions.\n\nIt is optional even while Closed is true, and its absence means only that\nno reopening is known: the schedule may have none (a one-shot Allow window\nthat has already elapsed), determining one may be impractical, or the\nclosure may be indefinite by design. Clients must therefore render Reason\nand treat a missing NextOpen as \"frozen, with no known end\" rather than\nassuming a value is present.",
+              "format": "date-time",
+              "type": "string"
+            },
+            "reason": {
+              "description": "Reason explains in human-readable terms why promotion is forbidden,\nnaming the freeze responsible where there is one.\n\nIt is set whenever Closed is true, where it is the only field guaranteed\nto explain the freeze because NextOpen may be absent.\nIt carries the same explanation as the corresponding admission rejection.",
+              "type": "string"
+            }
+          },
+          "required": [
+            "closed"
+          ],
+          "type": "object"
         }
       },
       "type": "object"

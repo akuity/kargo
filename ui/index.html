@@ -17,6 +17,24 @@
     <script>
       window.__KARGO_BASE_PATH__ = '__BASE_PATH__';
     </script>
+    <!-- Apply persisted/system theme before first paint (mirrors the provider). -->
+    <script>
+      (function () {
+        try {
+          var mode = localStorage.getItem('theme-mode');
+          var isDark =
+            mode === 'dark' ||
+            ((mode === 'system' || !mode) &&
+              window.matchMedia &&
+              window.matchMedia('(prefers-color-scheme: dark)').matches);
+          var root = document.documentElement;
+          root.setAttribute('data-theme', isDark ? 'dark' : 'light');
+          root.style.colorScheme = isDark ? 'dark' : 'light';
+        } catch (e) {
+          /* localStorage/matchMedia unavailable: fall back to light */
+        }
+      })();
+    </script>
     <link rel="icon" type="image/png" href="kargo-logo-head-only.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Kargo</title>

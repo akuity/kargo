@@ -4,9 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"slices"
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	jsonpatch "gomodules.xyz/jsonpatch/v2"
 	admissionv1 "k8s.io/api/admission/v1"
 	authnv1 "k8s.io/api/authentication/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
@@ -1481,6 +1483,88 @@ func Test_webhook_validatePromotionStepTaskRefs(t *testing.T) {
 					testCase.steps,
 				),
 			)
+		})
+	}
+}
+
+// Test_webhook_Handle_PreservesUnrelatedDurationFormatting is a regression
+// test for https://github.com/akuityio/akuity-platform/issues/12384: a
+// hand-written duration like "1h" was rewritten to its canonical form
+// ("1h0m0s") in the admission patch even though Default() never touched it,
+// causing perpetual Argo CD drift.
+func Test_webhook_Handle_PreservesUnrelatedDurationFormatting(t *testing.T) {
+	scheme := runtime.NewScheme()
+	require.NoError(t, kargoapi.AddToScheme(scheme))
+
+	kubeClient := fake.NewClientBuilder().WithScheme(scheme).Build()
+	w := newWebhook(
+		libWebhook.Config{},
+		kubeClient,
+		admission.NewDecoder(scheme),
+	)
+	wh, err := libWebhook.NewDefaultingWebhook(scheme, &kargoapi.Stage{}, w)
+	require.NoError(t, err)
+
+	// spec.shard is set so Default() makes a real mutation (the shard
+	// label), verified below as a sanity check.
+	rawStage := []byte(`{
+		"apiVersion": "kargo.akuity.io/v1alpha1",
+		"kind": "Stage",
+		"metadata": {"name": "drift-stage", "namespace": "dur-drift-repro"},
+		"spec": {
+			"shard": "us-east-01a",
+			"requestedFreight": [{
+				"origin": {"kind": "Warehouse", "name": "drift-wh"},
+				"sources": {"direct": true, "requiredSoakTime": "2h"}
+			}],
+			"promotionTemplate": {
+				"spec": {
+					"steps": [{"uses": "git-clone", "retry": {"timeout": "1h"}}]
+				}
+			}
+		}
+	}`)
+
+	req := admission.Request{
+		AdmissionRequest: admissionv1.AdmissionRequest{
+			Operation: admissionv1.Create,
+			Object:    runtime.RawExtension{Raw: rawStage},
+		},
+	}
+
+	resp := wh.Handle(admission.NewContextWithRequest(context.Background(), req), req)
+	require.True(t, resp.Allowed)
+
+	testCases := []struct {
+		name    string
+		path    string
+		present bool
+	}{
+		{
+			// Sanity check: this mutation must still appear, or the test
+			// below would pass by suppressing every patch, not just the
+			// spurious ones.
+			name:    "shard label is patched",
+			path:    "/metadata/labels",
+			present: true,
+		},
+		{
+			name:    "untouched retry timeout is not rewritten",
+			path:    "/spec/promotionTemplate/spec/steps/0/retry/timeout",
+			present: false,
+		},
+		{
+			name:    "untouched required soak time is not rewritten",
+			path:    "/spec/requestedFreight/0/sources/requiredSoakTime",
+			present: false,
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			got := slices.ContainsFunc(resp.Patches, func(p jsonpatch.JsonPatchOperation) bool {
+				return p.Path == testCase.path
+			})
+			require.Equalf(t, testCase.present, got, "patches: %+v", resp.Patches)
 		})
 	}
 }

@@ -5,18 +5,22 @@
  * REST API for Kargo
  * OpenAPI spec version: v1alpha1
  */
-import type { V1Condition } from './v1Condition';
 import type { ProjectStats } from './projectStats';
+import type { V1Condition } from './v1Condition';
 
 export interface ProjectStatus {
-  /** Conditions contains the last observations of the Project's current
-state.
-+patchMergeKey=type
-+patchStrategy=merge
-+listType=map
-+listMapKey=type */
+  /**
+   * Conditions contains the last observations of the Project's current
+   * state.
+   * +patchMergeKey=type
+   * +patchStrategy=merge
+   * +listType=map
+   * +listMapKey=type
+   */
   conditions?: V1Condition[];
-  /** Stats contains a summary of the collective state of a Project's
-constituent resources. */
+  /**
+   * Stats contains a summary of the collective state of a Project's
+   * constituent resources.
+   */
   stats?: ProjectStats;
 }

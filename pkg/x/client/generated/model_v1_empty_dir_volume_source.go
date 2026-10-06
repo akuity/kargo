@@ -21,6 +21,8 @@ var _ MappedNullable = &V1EmptyDirVolumeSource{}
 type V1EmptyDirVolumeSource struct {
 	// medium represents what type of storage medium should back this directory. The default is \"\" which means to use the node's default medium. Must be an empty string (default) or Memory. More info: https://kubernetes.io/docs/concepts/storage/volumes#emptydir +optional
 	Medium *string `json:"medium,omitempty"`
+	// mode specifies the permission bits for the emptyDir directory, in numeric notation (e.g., 0755, 01777). Must be a value between 0000 and 01777. If not specified, defaults to 0777. This might be in conflict with other options that affect the file mode, like fsGroup. If fsGroup is specified, the fsGroup permissions will override the mode specified here. This field has no effect on Windows. This field is alpha and requires EmptyDirVolumeMode featuregate to be enabled. +featureGate=EmptyDirVolumeMode +optional
+	Mode *int32 `json:"mode,omitempty"`
 	// sizeLimit is the total amount of local storage required for this EmptyDir volume. The size limit is also applicable for memory medium. The maximum usage on memory medium EmptyDir would be the minimum value between the SizeLimit specified here and the sum of memory limits of all containers in a pod. The default is nil which means that the limit is undefined. More info: https://kubernetes.io/docs/concepts/storage/volumes#emptydir +optional
 	SizeLimit *string `json:"sizeLimit,omitempty"`
 }
@@ -74,6 +76,38 @@ func (o *V1EmptyDirVolumeSource) SetMedium(v string) {
 	o.Medium = &v
 }
 
+// GetMode returns the Mode field value if set, zero value otherwise.
+func (o *V1EmptyDirVolumeSource) GetMode() int32 {
+	if o == nil || IsNil(o.Mode) {
+		var ret int32
+		return ret
+	}
+	return *o.Mode
+}
+
+// GetModeOk returns a tuple with the Mode field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *V1EmptyDirVolumeSource) GetModeOk() (*int32, bool) {
+	if o == nil || IsNil(o.Mode) {
+		return nil, false
+	}
+	return o.Mode, true
+}
+
+// HasMode returns a boolean if a field has been set.
+func (o *V1EmptyDirVolumeSource) HasMode() bool {
+	if o != nil && !IsNil(o.Mode) {
+		return true
+	}
+
+	return false
+}
+
+// SetMode gets a reference to the given int32 and assigns it to the Mode field.
+func (o *V1EmptyDirVolumeSource) SetMode(v int32) {
+	o.Mode = &v
+}
+
 // GetSizeLimit returns the SizeLimit field value if set, zero value otherwise.
 func (o *V1EmptyDirVolumeSource) GetSizeLimit() string {
 	if o == nil || IsNil(o.SizeLimit) {
@@ -118,6 +152,9 @@ func (o V1EmptyDirVolumeSource) ToMap() (map[string]interface{}, error) {
 	toSerialize := map[string]interface{}{}
 	if !IsNil(o.Medium) {
 		toSerialize["medium"] = o.Medium
+	}
+	if !IsNil(o.Mode) {
+		toSerialize["mode"] = o.Mode
 	}
 	if !IsNil(o.SizeLimit) {
 		toSerialize["sizeLimit"] = o.SizeLimit

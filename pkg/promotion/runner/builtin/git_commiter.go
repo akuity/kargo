@@ -90,15 +90,7 @@ func (g *gitCommitter) run(
 
 	// Only commit if diffs have been found
 	if hasDiffs {
-		commitOpts := &git.CommitOptions{}
-		if cfg.Author != nil {
-			commitOpts.Author = &git.User{
-				Name:       cfg.Author.Name,
-				Email:      cfg.Author.Email,
-				SigningKey: cfg.Author.SigningKey,
-			}
-		}
-		if err = workTree.Commit(ctx, cfg.Message, commitOpts); err != nil {
+		if err = workTree.Commit(ctx, cfg.Message, nil); err != nil {
 			return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 				fmt.Errorf("error committing to working tree: %w", err)
 		}

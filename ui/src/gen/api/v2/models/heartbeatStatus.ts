@@ -8,7 +8,6 @@
 
 export type HeartbeatStatus = (typeof HeartbeatStatus)[keyof typeof HeartbeatStatus];
 
-// eslint-disable-next-line @typescript-eslint/no-redeclare
 export const HeartbeatStatus = {
   StatusAlive: 'Alive',
   StatusDead: 'Dead'

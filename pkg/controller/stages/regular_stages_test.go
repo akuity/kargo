@@ -25,6 +25,7 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/api"
 	"github.com/akuity/kargo/pkg/conditions"
+	"github.com/akuity/kargo/pkg/credentials"
 	k8sevent "github.com/akuity/kargo/pkg/event/kubernetes"
 	"github.com/akuity/kargo/pkg/health"
 	"github.com/akuity/kargo/pkg/indexer"
@@ -2086,6 +2087,88 @@ func TestRegularStageReconciler_syncPromotions(t *testing.T) {
 			},
 		},
 		{
+			// Regression test for https://github.com/akuity/kargo/issues/6810.
+			// Aborting a Promotion before it ever reaches Running leaves its
+			// status.freightCollection nil (it never ran promote()). Folding
+			// that Promotion into status.lastPromotion must not clobber the
+			// multi-origin collection the Stage already had.
+			name:                 "aborted promotion that never started preserves inherited freight collection",
+			autoPromotionEnabled: true,
+			stage: &kargoapi.Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "fake-project",
+					Name:      "test-stage",
+				},
+				Spec: kargoapi.StageSpec{
+					RequestedFreight: []kargoapi.FreightRequest{
+						{Origin: kargoapi.FreightOrigin{Kind: kargoapi.FreightOriginKindWarehouse, Name: "git-origin"}},
+						{Origin: kargoapi.FreightOrigin{Kind: kargoapi.FreightOriginKindWarehouse, Name: "image-origin"}},
+					},
+				},
+				Status: kargoapi.StageStatus{
+					CurrentPromotion: &kargoapi.PromotionReference{
+						Name: "promotion-2",
+					},
+					LastPromotion: &kargoapi.PromotionReference{
+						Name: "promotion-1",
+						Status: &kargoapi.PromotionStatus{
+							Phase: kargoapi.PromotionPhaseSucceeded,
+							FreightCollection: &kargoapi.FreightCollection{
+								ID: "two-origin-collection",
+								Freight: map[string]kargoapi.FreightReference{
+									"Warehouse/git-origin": {
+										Name: "git-freight",
+										Origin: kargoapi.FreightOrigin{
+											Kind: kargoapi.FreightOriginKindWarehouse,
+											Name: "git-origin",
+										},
+									},
+									"Warehouse/image-origin": {
+										Name: "image-freight",
+										Origin: kargoapi.FreightOrigin{
+											Kind: kargoapi.FreightOriginKindWarehouse,
+											Name: "image-origin",
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			objects: []client.Object{
+				&kargoapi.Promotion{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:              "promotion-2",
+						Namespace:         "fake-project",
+						CreationTimestamp: metav1.Time{Time: now},
+					},
+					Spec: kargoapi.PromotionSpec{
+						Stage: "test-stage",
+					},
+					Status: kargoapi.PromotionStatus{
+						// Aborted before StartedAt was ever set, i.e. it never
+						// reached promote() and never got a FreightCollection.
+						Phase:      kargoapi.PromotionPhaseAborted,
+						FinishedAt: &metav1.Time{Time: now},
+					},
+				},
+			},
+			assertions: func(t *testing.T, status kargoapi.StageStatus, hasPendingPromotions bool, err error) {
+				require.NoError(t, err)
+				assert.False(t, hasPendingPromotions)
+
+				require.NotNil(t, status.LastPromotion)
+				assert.Equal(t, "promotion-2", status.LastPromotion.Name)
+				assert.Equal(t, kargoapi.PromotionPhaseAborted, status.LastPromotion.Status.Phase)
+
+				require.NotNil(t, status.LastPromotion.Status.FreightCollection)
+				require.Len(t, status.LastPromotion.Status.FreightCollection.Freight, 2)
+				assert.Contains(t, status.LastPromotion.Status.FreightCollection.Freight, "Warehouse/git-origin")
+				assert.Contains(t, status.LastPromotion.Status.FreightCollection.Freight, "Warehouse/image-origin")
+			},
+		},
+		{
 			name:                 "handles promotion phase transition",
 			autoPromotionEnabled: true,
 			stage: &kargoapi.Stage{
@@ -2192,6 +2275,129 @@ func TestRegularStageReconciler_syncPromotions(t *testing.T) {
 
 			status, requeue, err := r.syncPromotions(t.Context(), tt.stage, tt.autoPromotionEnabled)
 			tt.assertions(t, status, requeue, err)
+		})
+	}
+}
+
+func TestRegularStageReconciler_syncPromotions_partitionsTargetPromotions(t *testing.T) {
+	scheme := runtime.NewScheme()
+	require.NoError(t, kargoapi.AddToScheme(scheme))
+
+	now := metav1.NewTime(time.Now().Truncate(time.Second))
+	stagePromoName := api.GeneratePromotionName("test-stage", "test-freight")
+	childPromoName := api.GenerateChildPromotionName("test-stage", "blue", "test-freight")
+
+	newChildPromo := func(phase kargoapi.PromotionPhase, finishedAt *metav1.Time) *kargoapi.Promotion {
+		return &kargoapi.Promotion{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: "fake-project",
+				Name:      childPromoName,
+			},
+			Spec: kargoapi.PromotionSpec{
+				Stage:   "test-stage",
+				Freight: "test-freight",
+				Target:  "blue",
+			},
+			Status: kargoapi.PromotionStatus{
+				Phase:      phase,
+				FinishedAt: finishedAt,
+				FreightCollection: &kargoapi.FreightCollection{
+					Freight: map[string]kargoapi.FreightReference{
+						"Warehouse/test-warehouse": {Name: "test-freight"},
+					},
+				},
+			},
+		}
+	}
+
+	tests := []struct {
+		name       string
+		stage      *kargoapi.Stage
+		objects    []client.Object
+		assertions func(*testing.T, kargoapi.StageStatus, bool, error)
+	}{
+		{
+			name: "a child Promotion does not occupy the Stage's own slot",
+			stage: &kargoapi.Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "fake-project",
+					Name:      "test-stage",
+				},
+			},
+			objects: []client.Object{
+				&kargoapi.Promotion{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "fake-project",
+						Name:      stagePromoName,
+					},
+					Spec: kargoapi.PromotionSpec{
+						Stage:   "test-stage",
+						Freight: "test-freight",
+					},
+					Status: kargoapi.PromotionStatus{
+						Phase: kargoapi.PromotionPhaseRunning,
+					},
+				},
+				newChildPromo(kargoapi.PromotionPhaseRunning, nil),
+			},
+			assertions: func(t *testing.T, status kargoapi.StageStatus, hasPendingPromotions bool, err error) {
+				require.NoError(t, err)
+				assert.True(t, hasPendingPromotions)
+
+				// The Stage's own slot admits the Stage's own Promotion, not
+				// the alphabetically-earlier child.
+				require.NotNil(t, status.CurrentPromotion)
+				assert.Equal(t, stagePromoName, status.CurrentPromotion.Name)
+			},
+		},
+		{
+			name: "a child Promotion's success leaves the Stage's own state alone",
+			stage: &kargoapi.Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "fake-project",
+					Name:      "test-stage",
+				},
+			},
+			objects: []client.Object{
+				newChildPromo(kargoapi.PromotionPhaseSucceeded, &now),
+			},
+			assertions: func(t *testing.T, status kargoapi.StageStatus, hasPendingPromotions bool, err error) {
+				require.NoError(t, err)
+				assert.False(t, hasPendingPromotions)
+
+				// Nothing Stage-scoped absorbed the child's success.
+				assert.Nil(t, status.CurrentPromotion)
+				assert.Nil(t, status.LastPromotion)
+				assert.Empty(t, status.FreightHistory)
+				assert.Nil(t, conditions.Get(&status, kargoapi.ConditionTypeHealthy))
+				assert.Nil(t, conditions.Get(&status, kargoapi.ConditionTypeVerified))
+				assert.Nil(t, conditions.Get(&status, kargoapi.ConditionTypePromoting))
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			objects := []client.Object{tt.stage.DeepCopy()}
+			objects = append(objects, tt.objects...)
+			c := fake.NewClientBuilder().
+				WithScheme(scheme).
+				WithObjects(objects...).
+				WithIndex(
+					&kargoapi.Promotion{},
+					indexer.PromotionsByStageField,
+					indexer.PromotionsByStage,
+				).
+				WithStatusSubresource(&kargoapi.Stage{}, &kargoapi.Promotion{}).
+				Build()
+
+			r := &RegularStageReconciler{
+				client:      c,
+				eventSender: k8sevent.NewEventSender(fakeevent.NewEventRecorder(10)),
+			}
+
+			status, hasPendingPromotions, err := r.syncPromotions(t.Context(), tt.stage, false)
+			tt.assertions(t, status, hasPendingPromotions, err)
 		})
 	}
 }
@@ -4460,13 +4666,12 @@ func TestRegularStageReconciler_recordFreightVerificationEvent(t *testing.T) {
 				Build()
 
 			recorder := fakeevent.NewEventRecorder(10)
-
-			r := &RegularStageReconciler{
+			ver := verifier{
 				client:      c,
 				eventSender: k8sevent.NewEventSender(recorder),
 			}
 
-			r.recordFreightVerificationEvent(tt.stage, tt.freightRef, tt.vi)
+			ver.recordFreightVerificationEvent(tt.stage, tt.freightRef, tt.vi)
 			tt.assertions(t, recorder)
 		})
 	}
@@ -4487,6 +4692,7 @@ func TestRegularStageReconciler_startVerification(t *testing.T) {
 		freightCol       kargoapi.FreightCollection
 		req              *kargoapi.VerificationRequest
 		objects          []client.Object
+		credsDB          credentials.Database
 		rolloutsDisabled bool
 		assertions       func(*testing.T, client.Client, *kargoapi.VerificationInfo, error)
 	}{
@@ -4854,6 +5060,137 @@ func TestRegularStageReconciler_startVerification(t *testing.T) {
 			},
 		},
 		{
+			name: "resolves repoCredentials() in verification arguments",
+			stage: &kargoapi.Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "fake-project",
+					Name:      "test-stage",
+				},
+				Spec: kargoapi.StageSpec{
+					Verification: &kargoapi.Verification{
+						AnalysisTemplates: []kargoapi.AnalysisTemplateReference{
+							{Name: "test-template"},
+						},
+						Args: []kargoapi.AnalysisRunArgument{
+							{
+								Name: "token",
+								Value: "${{ repoCredentials(" +
+									"'https://github.com/example/repo.git', 'git'" +
+									").Password }}",
+							},
+						},
+					},
+				},
+			},
+			freightCol: kargoapi.FreightCollection{
+				ID: "test-collection",
+				Freight: map[string]kargoapi.FreightReference{
+					"warehouse": {Name: "test-freight"},
+				},
+			},
+			objects: []client.Object{
+				&kargoapi.Freight{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-freight",
+						Namespace: "fake-project",
+					},
+				},
+				&rolloutsapi.AnalysisTemplate{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-template",
+						Namespace: "fake-project",
+					},
+					Spec: rolloutsapi.AnalysisTemplateSpec{
+						Args: []rolloutsapi.Argument{{Name: "token"}},
+					},
+				},
+			},
+			credsDB: &credentials.FakeDB{
+				GetFn: func(
+					context.Context,
+					string,
+					credentials.Type,
+					string,
+				) (*credentials.Credentials, error) {
+					return &credentials.Credentials{Password: "s3cr3t"}, nil
+				},
+			},
+			assertions: func(t *testing.T, c client.Client, vi *kargoapi.VerificationInfo, err error) {
+				require.NoError(t, err)
+
+				require.NotNil(t, vi)
+				assert.Equal(t, kargoapi.VerificationPhasePending, vi.Phase)
+				require.NotNil(t, vi.AnalysisRun)
+
+				ar := &rolloutsapi.AnalysisRun{}
+				require.NoError(t, c.Get(t.Context(), types.NamespacedName{
+					Namespace: vi.AnalysisRun.Namespace,
+					Name:      vi.AnalysisRun.Name,
+				}, ar))
+
+				require.Len(t, ar.Spec.Args, 1)
+				assert.Equal(t, "token", ar.Spec.Args[0].Name)
+				require.NotNil(t, ar.Spec.Args[0].Value)
+				assert.Equal(t, "s3cr3t", *ar.Spec.Args[0].Value)
+			},
+		},
+		{
+			name: "surfaces error when repoCredentials() is unavailable",
+			stage: &kargoapi.Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "fake-project",
+					Name:      "test-stage",
+				},
+				Spec: kargoapi.StageSpec{
+					Verification: &kargoapi.Verification{
+						AnalysisTemplates: []kargoapi.AnalysisTemplateReference{
+							{Name: "test-template"},
+						},
+						Args: []kargoapi.AnalysisRunArgument{
+							{
+								Name: "token",
+								Value: "${{ repoCredentials(" +
+									"'https://github.com/example/repo.git', 'git'" +
+									").Password }}",
+							},
+						},
+					},
+				},
+			},
+			freightCol: kargoapi.FreightCollection{
+				ID: "test-collection",
+				Freight: map[string]kargoapi.FreightReference{
+					"warehouse": {Name: "test-freight"},
+				},
+			},
+			objects: []client.Object{
+				&kargoapi.Freight{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-freight",
+						Namespace: "fake-project",
+					},
+				},
+				&rolloutsapi.AnalysisTemplate{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-template",
+						Namespace: "fake-project",
+					},
+					Spec: rolloutsapi.AnalysisTemplateSpec{
+						Args: []rolloutsapi.Argument{{Name: "token"}},
+					},
+				},
+			},
+			// credsDB intentionally left nil.
+			assertions: func(t *testing.T, _ client.Client, vi *kargoapi.VerificationInfo, err error) {
+				require.NoError(t, err)
+
+				require.NotNil(t, vi)
+				assert.Equal(t, kargoapi.VerificationPhaseError, vi.Phase)
+				assert.Contains(t, vi.Message, "error building AnalysisRun")
+				assert.Contains(t, vi.Message, "repoCredentials is not available")
+			},
+		},
+		{
 			name: "handles analysis run build error",
 			stage: &kargoapi.Stage{
 				ObjectMeta: metav1.ObjectMeta{
@@ -4891,15 +5228,16 @@ func TestRegularStageReconciler_startVerification(t *testing.T) {
 				WithStatusSubresource(&kargoapi.Stage{}, &kargoapi.Freight{}, &rolloutsapi.AnalysisRun{}).
 				Build()
 
-			r := &RegularStageReconciler{
-				client: c,
+			ver := verifier{
+				client:        c,
+				credentialsDB: tt.credsDB,
 				cfg: ReconcilerConfig{
 					RolloutsIntegrationEnabled:   !tt.rolloutsDisabled,
 					RolloutsControllerInstanceID: "test-instance",
 				},
 			}
 
-			vi, err := r.startVerification(t.Context(), tt.stage, tt.freightCol, tt.req, startTime, fixedEndTime)
+			vi, err := ver.startVerification(t.Context(), tt.stage, tt.freightCol, tt.req, startTime, fixedEndTime)
 			tt.assertions(t, c, vi, err)
 		})
 	}
@@ -5225,7 +5563,7 @@ func TestRegularStageReconciler_getVerificationResult(t *testing.T) {
 				WithStatusSubresource(&kargoapi.Stage{}, &kargoapi.Freight{}, &rolloutsapi.AnalysisRun{}).
 				Build()
 
-			r := &RegularStageReconciler{
+			ver := verifier{
 				client: c,
 				cfg: ReconcilerConfig{
 					RolloutsIntegrationEnabled: !tt.rolloutsDisabled,
@@ -5239,7 +5577,7 @@ func TestRegularStageReconciler_getVerificationResult(t *testing.T) {
 				},
 			}
 
-			vi, err := r.getVerificationResult(t.Context(), tt.freight, fixedEndTime)
+			vi, err := ver.getVerificationResult(t.Context(), tt.freight, fixedEndTime)
 			tt.assertions(t, vi, err)
 		})
 	}
@@ -5581,14 +5919,14 @@ func TestRegularStageReconciler_abortVerification(t *testing.T) {
 
 			c := builder.Build()
 
-			r := &RegularStageReconciler{
+			ver := verifier{
 				client: c,
 				cfg: ReconcilerConfig{
 					RolloutsIntegrationEnabled: !tt.rolloutsDisabled,
 				},
 			}
 
-			vi, err := r.abortVerification(t.Context(), tt.freightCol, tt.req, fixedEndTime)
+			vi, err := ver.abortVerification(t.Context(), tt.freightCol, tt.req, fixedEndTime)
 			tt.assertions(t, c, vi, err)
 		})
 	}
@@ -5846,9 +6184,9 @@ func TestRegularStageReconciler_findExistingAnalysisRun(t *testing.T) {
 
 			c := builder.Build()
 
-			r := &RegularStageReconciler{client: c}
+			ver := verifier{client: c}
 
-			ar, err := r.findExistingAnalysisRun(t.Context(), tt.stage, tt.freightColID)
+			ar, err := ver.findExistingAnalysisRun(t.Context(), tt.stage, tt.freightColID)
 			tt.assertions(t, ar, err)
 		})
 	}
@@ -8142,7 +8480,6 @@ func TestRegularStageReconciler_autoPromoteFreight(t *testing.T) {
 					indexer.FreightApprovedForStagesField,
 					indexer.FreightApprovedForStages,
 				)
-
 			c := builder.Build()
 			recorder := fakeevent.NewEventRecorder(5)
 
@@ -8228,7 +8565,7 @@ func Test_summarizeConditions(t *testing.T) {
 		stage      *kargoapi.Stage
 		status     *kargoapi.StageStatus
 		err        error
-		assertions func(*testing.T, *kargoapi.StageStatus)
+		assertions func(*testing.T, *kargoapi.StageStatus, bool)
 	}{
 		{
 			name: "with error",
@@ -8239,7 +8576,7 @@ func Test_summarizeConditions(t *testing.T) {
 			},
 			status: &kargoapi.StageStatus{},
 			err:    errors.New("something went wrong"),
-			assertions: func(t *testing.T, status *kargoapi.StageStatus) {
+			assertions: func(t *testing.T, status *kargoapi.StageStatus, ready bool) {
 				readyCond := conditions.Get(status, kargoapi.ConditionTypeReady)
 				require.NotNil(t, readyCond)
 				assert.Equal(t, metav1.ConditionFalse, readyCond.Status)
@@ -8252,6 +8589,7 @@ func Test_summarizeConditions(t *testing.T) {
 				assert.Equal(t, metav1.ConditionTrue, reconcileCond.Status)
 				assert.Equal(t, "RetryAfterError", reconcileCond.Reason)
 				assert.Equal(t, int64(1), reconcileCond.ObservedGeneration)
+				assert.False(t, ready)
 			},
 		},
 		{
@@ -8271,13 +8609,14 @@ func Test_summarizeConditions(t *testing.T) {
 					},
 				},
 			},
-			assertions: func(t *testing.T, status *kargoapi.StageStatus) {
+			assertions: func(t *testing.T, status *kargoapi.StageStatus, ready bool) {
 				readyCond := conditions.Get(status, kargoapi.ConditionTypeReady)
 				require.NotNil(t, readyCond)
 				assert.Equal(t, metav1.ConditionFalse, readyCond.Status)
 				assert.Equal(t, "Promoting", readyCond.Reason)
 				assert.Equal(t, "Stage is promoting", readyCond.Message)
 				assert.Equal(t, int64(1), readyCond.ObservedGeneration)
+				assert.False(t, ready)
 			},
 		},
 		{
@@ -8295,13 +8634,14 @@ func Test_summarizeConditions(t *testing.T) {
 					},
 				},
 			},
-			assertions: func(t *testing.T, status *kargoapi.StageStatus) {
+			assertions: func(t *testing.T, status *kargoapi.StageStatus, ready bool) {
 				readyCond := conditions.Get(status, kargoapi.ConditionTypeReady)
 				require.NotNil(t, readyCond)
 				assert.Equal(t, metav1.ConditionFalse, readyCond.Status)
 				assert.Equal(t, "LastPromotionFailed", readyCond.Reason)
 				assert.Equal(t, "Promotion failed due to error", readyCond.Message)
 				assert.Equal(t, int64(1), readyCond.ObservedGeneration)
+				assert.False(t, ready)
 			},
 		},
 		{
@@ -8321,7 +8661,7 @@ func Test_summarizeConditions(t *testing.T) {
 					},
 				},
 			},
-			assertions: func(t *testing.T, status *kargoapi.StageStatus) {
+			assertions: func(t *testing.T, status *kargoapi.StageStatus, ready bool) {
 				readyCond := conditions.Get(status, kargoapi.ConditionTypeReady)
 
 				require.NotNil(t, readyCond)
@@ -8329,6 +8669,7 @@ func Test_summarizeConditions(t *testing.T) {
 				assert.Equal(t, "HealthCheckFailed", readyCond.Reason)
 				assert.Equal(t, "Health check failed", readyCond.Message)
 				assert.Equal(t, int64(1), readyCond.ObservedGeneration)
+				assert.False(t, ready)
 			},
 		},
 		{
@@ -8339,13 +8680,14 @@ func Test_summarizeConditions(t *testing.T) {
 				},
 			},
 			status: &kargoapi.StageStatus{},
-			assertions: func(t *testing.T, status *kargoapi.StageStatus) {
+			assertions: func(t *testing.T, status *kargoapi.StageStatus, ready bool) {
 				readyCond := conditions.Get(status, kargoapi.ConditionTypeReady)
 				require.NotNil(t, readyCond)
 				assert.Equal(t, metav1.ConditionFalse, readyCond.Status)
 				assert.Equal(t, "Unhealthy", readyCond.Reason)
 				assert.Equal(t, "Stage is not healthy", readyCond.Message)
 				assert.Equal(t, int64(1), readyCond.ObservedGeneration)
+				assert.False(t, ready)
 			},
 		},
 		{
@@ -8365,13 +8707,14 @@ func Test_summarizeConditions(t *testing.T) {
 					},
 				},
 			},
-			assertions: func(t *testing.T, status *kargoapi.StageStatus) {
+			assertions: func(t *testing.T, status *kargoapi.StageStatus, ready bool) {
 				readyCond := conditions.Get(status, kargoapi.ConditionTypeReady)
 				require.NotNil(t, readyCond)
 				assert.Equal(t, metav1.ConditionFalse, readyCond.Status)
 				assert.Equal(t, "HealthCheckPending", readyCond.Reason)
 				assert.Equal(t, "Health check in progress", readyCond.Message)
 				assert.Equal(t, int64(1), readyCond.ObservedGeneration)
+				assert.False(t, ready)
 			},
 		},
 		{
@@ -8397,13 +8740,14 @@ func Test_summarizeConditions(t *testing.T) {
 					},
 				},
 			},
-			assertions: func(t *testing.T, status *kargoapi.StageStatus) {
+			assertions: func(t *testing.T, status *kargoapi.StageStatus, ready bool) {
 				readyCond := conditions.Get(status, kargoapi.ConditionTypeReady)
 				require.NotNil(t, readyCond)
 				assert.Equal(t, metav1.ConditionFalse, readyCond.Status)
 				assert.Equal(t, "VerificationPending", readyCond.Reason)
 				assert.Equal(t, "Verification is pending", readyCond.Message)
 				assert.Equal(t, int64(1), readyCond.ObservedGeneration)
+				assert.False(t, ready)
 			},
 		},
 		{
@@ -8429,13 +8773,14 @@ func Test_summarizeConditions(t *testing.T) {
 					},
 				},
 			},
-			assertions: func(t *testing.T, status *kargoapi.StageStatus) {
+			assertions: func(t *testing.T, status *kargoapi.StageStatus, ready bool) {
 				readyCond := conditions.Get(status, kargoapi.ConditionTypeReady)
 				require.NotNil(t, readyCond)
 				assert.Equal(t, metav1.ConditionFalse, readyCond.Status)
 				assert.Equal(t, "VerificationError", readyCond.Reason)
 				assert.Equal(t, "Verification failed", readyCond.Message)
 				assert.Equal(t, int64(1), readyCond.ObservedGeneration)
+				assert.False(t, ready)
 			},
 		},
 		{
@@ -8455,12 +8800,13 @@ func Test_summarizeConditions(t *testing.T) {
 					},
 				},
 			},
-			assertions: func(t *testing.T, status *kargoapi.StageStatus) {
+			assertions: func(t *testing.T, status *kargoapi.StageStatus, ready bool) {
 				readyCond := conditions.Get(status, kargoapi.ConditionTypeReady)
 				require.NotNil(t, readyCond)
 				assert.Equal(t, metav1.ConditionFalse, readyCond.Status)
 				assert.Equal(t, "PendingVerification", readyCond.Reason)
 				assert.Equal(t, "Stage is not verified", readyCond.Message)
+				assert.False(t, ready)
 			},
 		},
 		{
@@ -8486,7 +8832,7 @@ func Test_summarizeConditions(t *testing.T) {
 					},
 				},
 			},
-			assertions: func(t *testing.T, status *kargoapi.StageStatus) {
+			assertions: func(t *testing.T, status *kargoapi.StageStatus, ready bool) {
 				readyCond := conditions.Get(status, kargoapi.ConditionTypeReady)
 				require.NotNil(t, readyCond)
 
@@ -8495,7 +8841,7 @@ func Test_summarizeConditions(t *testing.T) {
 				assert.Equal(t, "Stage is verified", readyCond.Message)
 				assert.Equal(t, int64(1), readyCond.ObservedGeneration)
 
-				assert.Equal(t, int64(1), status.ObservedGeneration)
+				assert.True(t, ready)
 			},
 		},
 		{
@@ -8527,7 +8873,7 @@ func Test_summarizeConditions(t *testing.T) {
 					},
 				},
 			},
-			assertions: func(t *testing.T, status *kargoapi.StageStatus) {
+			assertions: func(t *testing.T, status *kargoapi.StageStatus, ready bool) {
 				readyCond := conditions.Get(status, kargoapi.ConditionTypeReady)
 				require.NotNil(t, readyCond)
 				assert.Equal(t, metav1.ConditionTrue, readyCond.Status)
@@ -8535,7 +8881,7 @@ func Test_summarizeConditions(t *testing.T) {
 				reconcileCond := conditions.Get(status, kargoapi.ConditionTypeReconciling)
 				assert.Nil(t, reconcileCond, "Reconciling condition should be deleted when ready")
 
-				assert.Equal(t, int64(1), status.ObservedGeneration)
+				assert.True(t, ready)
 			},
 		},
 		{
@@ -8571,16 +8917,17 @@ func Test_summarizeConditions(t *testing.T) {
 					},
 				},
 			},
-			assertions: func(t *testing.T, status *kargoapi.StageStatus) {
+			assertions: func(t *testing.T, status *kargoapi.StageStatus, ready bool) {
 				assert.Equal(t, "1/2 Fulfilled", status.FreightSummary)
+				assert.True(t, ready)
 			},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			summarizeConditions(tt.stage, tt.status, tt.err)
-			tt.assertions(t, tt.status)
+			ready := summarizeConditions(tt.stage, tt.status, tt.err)
+			tt.assertions(t, tt.status, ready)
 		})
 	}
 }
@@ -8626,5 +8973,26 @@ func Test_buildFreightSummary(t *testing.T) {
 			result := buildFreightSummary(tt.requested, tt.current)
 			assert.Equal(t, tt.expected, result)
 		})
+	}
+}
+
+// testOrigin returns the origin of Freight from the named Warehouse.
+func testOrigin(warehouse string) kargoapi.FreightOrigin {
+	return kargoapi.FreightOrigin{
+		Kind: kargoapi.FreightOriginKindWarehouse,
+		Name: warehouse,
+	}
+}
+
+// testFreight returns a piece of Freight in the test project, produced by the
+// named Warehouse.
+// nolint:unparam
+func testFreight(name, warehouse string) *kargoapi.Freight {
+	return &kargoapi.Freight{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: "fake-project",
+			Name:      name,
+		},
+		Origin: testOrigin(warehouse),
 	}
 }

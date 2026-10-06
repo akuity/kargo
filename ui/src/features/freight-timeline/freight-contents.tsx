@@ -19,15 +19,17 @@ export const FreightContents = (props: {
   fullContentVisibility?: boolean;
 }) => {
   const { freight, highlighted, horizontal, dark } = props;
-  const linkClass = `${highlighted ? 'text-blue-500' : 'text-gray-400'} hover:text-blue-400 hover:underline max-w-full min-w-0 flex-shrink`;
+  const linkClass = `${highlighted ? 'text-blue-500' : 'text-gray-400 dark:text-neutral-500'} hover:text-blue-400 hover:underline max-w-full min-w-0 flex-shrink`;
 
   return (
     <div
       className={classNames(
         'flex justify-start items-center font-mono text-xs flex-shrink max-h-full max-w-full flex-wrap',
         {
-          'text-gray-700 hover:text-gray-800': highlighted,
-          'text-gray-400 hover:text-gray-500': !highlighted,
+          'text-gray-700 dark:text-neutral-200 hover:text-gray-800 dark:hover:text-neutral-100':
+            highlighted,
+          'text-gray-400 dark:text-neutral-500 hover:text-gray-500 dark:hover:text-neutral-400':
+            !highlighted,
           'flex-col w-44 overflow-y-auto flex-grow-0 flex-nowrap': !horizontal
         }
       )}
@@ -38,8 +40,9 @@ export const FreightContents = (props: {
           horizontal={horizontal}
           linkClass={linkClass}
           highlighted={highlighted}
-          key={c.id}
+          key={`${c.subscriptionName || ''}:${c.id}`}
           overlay={<CommitInfo commit={c} />}
+          subscriptionName={c.subscriptionName}
           icon={faGitAlt}
           href={`${c.repoURL?.replace('.git', '')}/commit/${c.id}`}
           fullContentVisibility={props.fullContentVisibility}
@@ -55,8 +58,9 @@ export const FreightContents = (props: {
           horizontal={horizontal}
           linkClass={linkClass}
           highlighted={highlighted}
-          key={`${i.repoURL}:${i.tag}`}
+          key={`${i.subscriptionName || ''}:${i.repoURL}:${i.tag}`}
           title={`${i.repoURL}:${i.tag}`}
+          subscriptionName={i.subscriptionName}
           icon={faDocker}
           href={urlForImage(i.repoURL || '')}
           fullContentVisibility={props.fullContentVisibility}
@@ -72,8 +76,9 @@ export const FreightContents = (props: {
           horizontal={horizontal}
           linkClass={linkClass}
           highlighted={highlighted}
-          key={`${c.repoURL}:${c.version}`}
+          key={`${c.subscriptionName || ''}:${c.repoURL}:${c.version}`}
           title={`${c.repoURL}${c.name ? `/${c.name}` : ''}:${c.version}`}
+          subscriptionName={c.subscriptionName}
           fullContentVisibility={props.fullContentVisibility}
           icon={faAnchor}
         >
@@ -84,6 +89,7 @@ export const FreightContents = (props: {
         <FreightContentItem
           key={(g.subscriptionName || '') + g.artifactType}
           highlighted={highlighted}
+          subscriptionName={g.subscriptionName}
           linkClass={linkClass}
           fullContentVisibility={props.fullContentVisibility}
           horizontal={horizontal}

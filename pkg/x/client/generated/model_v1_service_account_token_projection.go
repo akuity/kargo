@@ -25,6 +25,8 @@ type V1ServiceAccountTokenProjection struct {
 	ExpirationSeconds *int32 `json:"expirationSeconds,omitempty"`
 	// path is the path relative to the mount point of the file to project the token into.
 	Path *string `json:"path,omitempty"`
+	// user is Optional: The owner UID of the created file. If specified, the item-level user field takes precedence over defaultUser. (Alpha) This field requires the AtomicWriteVolumeUserFields feature gate to be enabled. +featureGate=AtomicWriteVolumeUserFields +optional
+	User *int32 `json:"user,omitempty"`
 }
 
 // NewV1ServiceAccountTokenProjection instantiates a new V1ServiceAccountTokenProjection object
@@ -140,6 +142,38 @@ func (o *V1ServiceAccountTokenProjection) SetPath(v string) {
 	o.Path = &v
 }
 
+// GetUser returns the User field value if set, zero value otherwise.
+func (o *V1ServiceAccountTokenProjection) GetUser() int32 {
+	if o == nil || IsNil(o.User) {
+		var ret int32
+		return ret
+	}
+	return *o.User
+}
+
+// GetUserOk returns a tuple with the User field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *V1ServiceAccountTokenProjection) GetUserOk() (*int32, bool) {
+	if o == nil || IsNil(o.User) {
+		return nil, false
+	}
+	return o.User, true
+}
+
+// HasUser returns a boolean if a field has been set.
+func (o *V1ServiceAccountTokenProjection) HasUser() bool {
+	if o != nil && !IsNil(o.User) {
+		return true
+	}
+
+	return false
+}
+
+// SetUser gets a reference to the given int32 and assigns it to the User field.
+func (o *V1ServiceAccountTokenProjection) SetUser(v int32) {
+	o.User = &v
+}
+
 func (o V1ServiceAccountTokenProjection) MarshalJSON() ([]byte, error) {
 	toSerialize,err := o.ToMap()
 	if err != nil {
@@ -158,6 +192,9 @@ func (o V1ServiceAccountTokenProjection) ToMap() (map[string]interface{}, error)
 	}
 	if !IsNil(o.Path) {
 		toSerialize["path"] = o.Path
+	}
+	if !IsNil(o.User) {
+		toSerialize["user"] = o.User
 	}
 	return toSerialize, nil
 }

@@ -9,6 +9,6 @@ import type { Heartbeat } from './heartbeat';
 
 /**
  * Heartbeats is the most recent heartbeat from every controller that has
-reported in indexed by controller name.
+ * reported in indexed by controller name.
  */
 export type GetControllerHeartbeatsResponseHeartbeats = { [key: string]: Heartbeat };

@@ -12,6 +12,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 
 	libhttp "github.com/akuity/kargo/pkg/http"
+	"github.com/akuity/kargo/pkg/logging"
 )
 
 func init() {
@@ -86,6 +87,10 @@ func (s *server) adminLogin(c *gin.Context) {
 		_ = c.Error(fmt.Errorf("error signing ID token: %w", err))
 		return
 	}
+
+	// Failures need no record of their own; the request logging middleware
+	// records them as refused requests.
+	logging.LoggerFromContext(c.Request.Context()).Info("admin login successful")
 
 	c.JSON(http.StatusOK, adminLoginResponse{
 		IDToken: signedToken,

@@ -34,3 +34,14 @@ func RequireContextValue(key envfuncs.ContextKey) features.Func {
 func RequireKargoCli(ctx context.Context, t *testing.T, cfg *envconf.Config) context.Context {
 	return RequireContextValue("kargo_cli")(ctx, t, cfg)
 }
+
+func SkipIfNoEnvValue(path []string) features.Func {
+	return func(ctx context.Context, t *testing.T, cfg *envconf.Config) context.Context {
+		ctx = RequireContextValue(envfuncs.EnvKey)(ctx, t, cfg)
+		_, err := envfuncs.GetEnv(ctx, path)
+		if err != nil {
+			t.Skipf("cannot get value for path %v from context %v. Skipping", path, ctx)
+		}
+		return ctx
+	}
+}

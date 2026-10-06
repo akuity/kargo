@@ -4,35 +4,45 @@ import {
   faCircleNotch,
   faCog,
   faLinesLeaning,
+  faRotate,
+  faTerminal,
   faTimes
 } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Flex, Segmented, Tag } from 'antd';
-import { SegmentedOptions } from 'antd/es/segmented';
+import { SegmentedLabeledOption } from 'antd/es/segmented';
 import classNames from 'classnames';
 import { useMemo, useState } from 'react';
 
 import { useExtensionsContext } from '@ui/extensions/extensions-context';
 import YamlEditor from '@ui/features/common/code-editor/yaml-editor-lazy';
-import { PromotionDirectiveStepStatus } from '@ui/features/common/promotion-directive-step-status/utils';
+import {
+  getStepErrorCount,
+  PromotionDirectiveStepStatus
+} from '@ui/features/common/promotion-directive-step-status/utils';
 import { usePromotionDirectivesRegistryContext } from '@ui/features/promotion-directives/registry/context/use-registry-context';
 import { Runner } from '@ui/features/promotion-directives/registry/types';
 import { Promotion, PromotionStep } from '@ui/gen/api/v2/models';
 import uiPlugins from '@ui/plugins';
 import { UiPluginHoles } from '@ui/plugins/atoms/ui-plugin-hole/ui-plugin-holes';
 
+import { StepDuration } from './promotion-step-duration';
+import { StepLogs } from './promotion-step-logs';
 import { objectToYAML } from './utils/promotion';
+import { getStepLogs } from './utils/step-logs';
 
 export const Step = ({
   step,
   result,
   output,
-  promotion
+  promotion,
+  stepIndex
 }: {
   step: PromotionStep;
   result: PromotionDirectiveStepStatus;
   output?: object;
   promotion?: Promotion;
+  stepIndex: number;
 }) => {
   const [showDetails, setShowDetails] = useState(false);
 
@@ -60,12 +70,30 @@ export const Step = ({
     };
   }, [registry, step]);
 
-  const progressing = result === PromotionDirectiveStepStatus.RUNNING;
+  const retrying = result === PromotionDirectiveStepStatus.RETRYING;
+  const running = result === PromotionDirectiveStepStatus.RUNNING;
+  const progressing = running || retrying;
   const success = result === PromotionDirectiveStepStatus.SUCCESS;
   const failed = result === PromotionDirectiveStepStatus.FAILED;
   const skipped = result === PromotionDirectiveStepStatus.SKIPPED;
+  const wontRun = result === PromotionDirectiveStepStatus.WONT_RUN;
 
-  const opts: SegmentedOptions<string> = [];
+  const attempt = getStepErrorCount(stepIndex, promotion?.status);
+
+  // Console output gets its own panel; the YAML view renders it as an
+  // unreadable escaped blob. Output keeps that view alongside.
+  const logs = useMemo(() => getStepLogs(output), [output]);
+
+  const opts: SegmentedLabeledOption<string>[] = [];
+
+  if (logs) {
+    opts.push({
+      label: 'Logs',
+      value: 'logs',
+      icon: <FontAwesomeIcon icon={faTerminal} className='text-xs' />,
+      className: 'p-2'
+    });
+  }
 
   if (output) {
     opts.push({
@@ -85,15 +113,20 @@ export const Step = ({
     });
   }
 
-  const [selectedOpts, setSelectedOpts] = useState(
-    // @ts-expect-error value is there
-    opts?.[0]?.value
-  );
+  // Which views exist depends on data that streams in -- a step still running
+  // has no output yet -- so the selection is resolved per render rather than
+  // frozen at mount. An explicit choice wins for as long as that view is still
+  // on offer; otherwise the first one does.
+  const [chosenOpt, setChosenOpt] = useState<string>();
 
-  const yamlView = {
-    config: meta?.config,
-    output: objectToYAML(output)
-  };
+  const selectedOpt = opts.find((opt) => opt.value === chosenOpt)?.value ?? opts[0]?.value;
+
+  // Serializing a step's whole output runs on every promotion watch tick
+  // otherwise, which is exactly the cost the log panel exists to avoid.
+  const yamlView = useMemo(
+    () => ({ config: meta?.config, output: objectToYAML(output) }),
+    [meta?.config, output]
+  );
 
   const filteredUiPlugins = uiPlugins
     .filter((plugin) =>
@@ -109,8 +142,9 @@ export const Step = ({
 
   return {
     className: classNames('', {
-      'border-green-500': progressing,
-      'border-gray-200': !progressing
+      'border-green-500': running,
+      'border-yellow-500': retrying,
+      'border-gray-200 dark:border-neutral-700': !progressing
     }),
     label: (
       <Flex align='center' onClick={() => setShowDetails(!showDetails)}>
@@ -120,10 +154,12 @@ export const Step = ({
           className='mr-2'
           style={{ width: '20px', height: '20px', marginBottom: '1px' }}
         >
-          {progressing && <FontAwesomeIcon spin icon={faCircleNotch} />}
+          {running && <FontAwesomeIcon spin icon={faCircleNotch} />}
+          {retrying && <FontAwesomeIcon spin icon={faRotate} className='text-yellow-500' />}
           {success && <FontAwesomeIcon icon={faCheck} className='text-green-500' />}
           {failed && <FontAwesomeIcon icon={faTimes} className='text-red-500' />}
           {skipped && <FontAwesomeIcon icon={faBan} />}
+          {wontRun && <span className='size-3.5 rounded-full border border-dashed' />}
         </Flex>
         <Flex className={'w-full'} align='center' gap={8}>
           {!!step?.as && (
@@ -134,6 +170,11 @@ export const Step = ({
             </div>
           )}
           <span className='font-semibold text-sm'>{meta.spec.identifier}</span>
+          {retrying && (
+            <Tag className='text-xs py-0' color='warning' bordered={false}>
+              Retrying &middot; attempt {attempt + 1}
+            </Tag>
+          )}
           {filteredUiPlugins.length > 0 && (
             <UiPluginHoles.DeepLinks.PromotionStep className='ml-2'>
               {filteredUiPlugins.map(
@@ -149,6 +190,7 @@ export const Step = ({
               )}
             </UiPluginHoles.DeepLinks.PromotionStep>
           )}
+          <StepDuration promotion={promotion} stepIndex={stepIndex} />
         </Flex>
       </Flex>
     ),
@@ -163,18 +205,22 @@ export const Step = ({
       <>
         {opts.length > 1 && (
           <Segmented
-            value={selectedOpts}
+            value={selectedOpt}
             size='small'
             options={opts}
-            onChange={setSelectedOpts}
+            onChange={setChosenOpt}
             className='mb-2'
           />
         )}
-        <YamlEditor
-          value={yamlView[selectedOpts as keyof typeof yamlView]}
-          height='200px'
-          disabled
-        />
+        {selectedOpt === 'logs' && logs ? (
+          <StepLogs lines={logs} />
+        ) : (
+          <YamlEditor
+            value={yamlView[selectedOpt as keyof typeof yamlView] ?? ''}
+            height='200px'
+            disabled
+          />
+        )}
       </>
     )
   };

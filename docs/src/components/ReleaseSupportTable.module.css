@@ -1,0 +1,44 @@
+.table {
+  display: table;
+  width: 100%;
+  margin-bottom: var(--ifm-spacing-vertical);
+}
+
+.release {
+  white-space: nowrap;
+}
+
+/* Status dot, echoing the at-a-glance colour coding on endoflife.date. The
+   dot is decorative reinforcement -- the relative phrase beside each date
+   carries the same information as text. */
+.dot {
+  display: inline-block;
+  width: 0.6rem;
+  height: 0.6rem;
+  margin-right: 0.5rem;
+  border-radius: 50%;
+  vertical-align: baseline;
+  background-color: currentColor;
+}
+
+.relative {
+  display: block;
+  font-size: 0.85em;
+}
+
+.supported {
+  color: var(--ifm-color-success);
+}
+
+.endingSoon {
+  color: var(--ifm-color-warning-darker);
+}
+
+.ended {
+  color: var(--ifm-color-danger);
+}
+
+/* Infima's warning is tuned for light backgrounds and washes out on dark. */
+[data-theme='dark'] .endingSoon {
+  color: var(--ifm-color-warning);
+}

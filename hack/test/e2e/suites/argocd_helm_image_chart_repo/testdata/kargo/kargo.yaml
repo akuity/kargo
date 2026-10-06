@@ -1,0 +1,93 @@
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Project
+metadata:
+  name: kargo-argocd-helm-image-chartrepo
+---
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Warehouse
+metadata:
+  name: kargo-demo
+  namespace: kargo-argocd-helm-image-chartrepo
+spec:
+  subscriptions:
+  - image:
+      repoURL: docker.io/grafana/grafana # Watch for new versions of this image
+      semverConstraint: ^13.0
+---
+apiVersion: kargo.akuity.io/v1alpha1
+kind: PromotionTask
+metadata:
+  name: promo-process
+  namespace: kargo-argocd-helm-image-chartrepo
+spec:
+  vars:
+  - name: imageRepo
+    value: docker.io/grafana/grafana
+  steps:
+  - uses: argocd-update
+    config:
+      apps:
+      - name: ${{ ctx.project }}-${{ ctx.stage }}
+        sources:
+        - repoURL: https://grafana-community.github.io/helm-charts
+          chart: grafana
+          helm:
+            images:
+            - key: image.tag
+              value: ${{ imageFrom(vars.imageRepo).Tag }}
+---
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+metadata:
+  name: test
+  namespace: kargo-argocd-helm-image-chartrepo
+spec:
+  requestedFreight:
+  - origin:
+      kind: Warehouse
+      name: kargo-demo
+    sources:
+      direct: true
+  promotionTemplate:
+    spec:
+      steps:
+      - task:
+          name: promo-process
+---
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+metadata:
+  name: uat
+  namespace: kargo-argocd-helm-image-chartrepo
+spec:
+  requestedFreight:
+  - origin:
+      kind: Warehouse
+      name: kargo-demo
+    sources:
+      stages:
+      - test
+  promotionTemplate:
+    spec:
+      steps:
+      - task:
+          name: promo-process
+---
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+metadata:
+  name: prod
+  namespace: kargo-argocd-helm-image-chartrepo
+spec:
+  requestedFreight:
+  - origin:
+      kind: Warehouse
+      name: kargo-demo
+    sources:
+      stages:
+      - uat
+  promotionTemplate:
+    spec:
+      steps:
+      - task:
+          name: promo-process

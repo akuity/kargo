@@ -28,17 +28,29 @@ import type {
   RolloutsAnalysisTemplateList,
   RolloutsClusterAnalysisTemplate,
   RolloutsClusterAnalysisTemplateList
-} from '.././models';
+} from '../models';
 
 import { customFetch } from '../../../../lib/api/custom-fetch';
 import type { ErrorType } from '../../../../lib/api/custom-fetch';
+import { serializeParams } from '../../../../lib/api/params-serializer';
 
 type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
 
-/**
- * Retrieve an AnalysisRun resource from a project's namespace.
- * @summary Retrieve an AnalysisRun
- */
+const withQueryKey = <T extends object, K>(query: T, queryKey: K): T & { queryKey: K } => {
+  const result = { queryKey } as T & { queryKey: K };
+  for (const key of Object.keys(query)) {
+    // The explicit queryKey always wins, matching the previous
+    // `{ ...query, queryKey }` spread where it was set last.
+    if (key === 'queryKey') continue;
+    Object.defineProperty(result, key, {
+      enumerable: true,
+      configurable: true,
+      get: () => (query as Record<string, unknown>)[key]
+    });
+  }
+  return result;
+};
+
 export type getAnalysisRunResponse200 = {
   data: RolloutsAnalysisRun;
   status: 200;
@@ -53,10 +65,14 @@ export const getGetAnalysisRunUrl = (project: string, analysisRun: string) => {
   return `/v1beta1/projects/${project}/analysis-runs/${analysisRun}`;
 };
 
+/**
+ * Retrieve an AnalysisRun resource from a project's namespace.
+ * @summary Retrieve an AnalysisRun
+ */
 export const getAnalysisRun = async (
   project: string,
   analysisRun: string,
-  options?: RequestInit
+  options?: Parameters<typeof customFetch>[1]
 ): Promise<getAnalysisRunResponse> => {
   return customFetch<getAnalysisRunResponse>(getGetAnalysisRunUrl(project, analysisRun), {
     ...options,
@@ -64,7 +80,7 @@ export const getAnalysisRun = async (
   });
 };
 
-export const getGetAnalysisRunQueryKey = (project?: string, analysisRun?: string) => {
+export const getGetAnalysisRunQueryKey = (project: string, analysisRun: string) => {
   return [`/v1beta1/projects/${project}/analysis-runs/${analysisRun}`] as const;
 };
 
@@ -89,7 +105,11 @@ export const getGetAnalysisRunQueryOptions = <
   return {
     queryKey,
     queryFn,
-    enabled: !!(project && analysisRun),
+    enabled:
+      project !== null &&
+      project !== undefined &&
+      analysisRun !== null &&
+      analysisRun !== undefined,
     ...queryOptions
   } as UseQueryOptions<Awaited<ReturnType<typeof getAnalysisRun>>, TError, TData> & {
     queryKey: DataTag<QueryKey, TData, TError>;
@@ -173,15 +193,9 @@ export function useGetAnalysisRun<
     queryKey: DataTag<QueryKey, TData, TError>;
   };
 
-  query.queryKey = queryOptions.queryKey;
-
-  return query;
+  return withQueryKey(query, queryOptions.queryKey);
 }
 
-/**
- * Stream logs from an AnalysisRun job as Server-Sent Events (SSE).
- * @summary Stream AnalysisRun logs
- */
 export type getAnalysisRunLogsResponse200 = {
   data: string;
   status: 200;
@@ -197,26 +211,22 @@ export const getGetAnalysisRunLogsUrl = (
   analysisRun: string,
   params?: GetAnalysisRunLogsParams
 ) => {
-  const normalizedParams = new URLSearchParams();
-
-  Object.entries(params || {}).forEach(([key, value]) => {
-    if (value !== undefined) {
-      normalizedParams.append(key, value === null ? 'null' : value.toString());
-    }
-  });
-
-  const stringifiedParams = normalizedParams.toString();
+  const stringifiedParams = serializeParams(params);
 
   return stringifiedParams.length > 0
     ? `/v1beta1/projects/${project}/analysis-runs/${analysisRun}/logs?${stringifiedParams}`
     : `/v1beta1/projects/${project}/analysis-runs/${analysisRun}/logs`;
 };
 
+/**
+ * Stream logs from an AnalysisRun job as Server-Sent Events (SSE).
+ * @summary Stream AnalysisRun logs
+ */
 export const getAnalysisRunLogs = async (
   project: string,
   analysisRun: string,
   params?: GetAnalysisRunLogsParams,
-  options?: RequestInit
+  options?: Parameters<typeof customFetch>[1]
 ): Promise<getAnalysisRunLogsResponse> => {
   return customFetch<getAnalysisRunLogsResponse>(
     getGetAnalysisRunLogsUrl(project, analysisRun, params),
@@ -228,8 +238,8 @@ export const getAnalysisRunLogs = async (
 };
 
 export const getGetAnalysisRunLogsQueryKey = (
-  project?: string,
-  analysisRun?: string,
+  project: string,
+  analysisRun: string,
   params?: GetAnalysisRunLogsParams
 ) => {
   return [
@@ -261,7 +271,11 @@ export const getGetAnalysisRunLogsQueryOptions = <
   return {
     queryKey,
     queryFn,
-    enabled: !!(project && analysisRun),
+    enabled:
+      project !== null &&
+      project !== undefined &&
+      analysisRun !== null &&
+      analysisRun !== undefined,
     ...queryOptions
   } as UseQueryOptions<Awaited<ReturnType<typeof getAnalysisRunLogs>>, TError, TData> & {
     queryKey: DataTag<QueryKey, TData, TError>;
@@ -353,15 +367,9 @@ export function useGetAnalysisRunLogs<
     queryKey: DataTag<QueryKey, TData, TError>;
   };
 
-  query.queryKey = queryOptions.queryKey;
-
-  return query;
+  return withQueryKey(query, queryOptions.queryKey);
 }
 
-/**
- * List AnalysisTemplate resources from a project's namespace.
- * @summary List AnalysisTemplates
- */
 export type listAnalysisTemplatesResponse200 = {
   data: RolloutsAnalysisTemplateList;
   status: 200;
@@ -376,9 +384,13 @@ export const getListAnalysisTemplatesUrl = (project: string) => {
   return `/v1beta1/projects/${project}/analysis-templates`;
 };
 
+/**
+ * List AnalysisTemplate resources from a project's namespace.
+ * @summary List AnalysisTemplates
+ */
 export const listAnalysisTemplates = async (
   project: string,
-  options?: RequestInit
+  options?: Parameters<typeof customFetch>[1]
 ): Promise<listAnalysisTemplatesResponse> => {
   return customFetch<listAnalysisTemplatesResponse>(getListAnalysisTemplatesUrl(project), {
     ...options,
@@ -386,7 +398,7 @@ export const listAnalysisTemplates = async (
   });
 };
 
-export const getListAnalysisTemplatesQueryKey = (project?: string) => {
+export const getListAnalysisTemplatesQueryKey = (project: string) => {
   return [`/v1beta1/projects/${project}/analysis-templates`] as const;
 };
 
@@ -409,11 +421,14 @@ export const getListAnalysisTemplatesQueryOptions = <
   const queryFn: QueryFunction<Awaited<ReturnType<typeof listAnalysisTemplates>>> = () =>
     listAnalysisTemplates(project, requestOptions);
 
-  return { queryKey, queryFn, enabled: !!project, ...queryOptions } as UseQueryOptions<
-    Awaited<ReturnType<typeof listAnalysisTemplates>>,
-    TError,
-    TData
-  > & { queryKey: DataTag<QueryKey, TData, TError> };
+  return {
+    queryKey,
+    queryFn,
+    enabled: project !== null && project !== undefined,
+    ...queryOptions
+  } as UseQueryOptions<Awaited<ReturnType<typeof listAnalysisTemplates>>, TError, TData> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
 };
 
 export type ListAnalysisTemplatesQueryResult = NonNullable<
@@ -499,16 +514,9 @@ export function useListAnalysisTemplates<
     queryKey: DataTag<QueryKey, TData, TError>;
   };
 
-  query.queryKey = queryOptions.queryKey;
-
-  return query;
+  return withQueryKey(query, queryOptions.queryKey);
 }
 
-/**
- * Retrieve an AnalysisTemplate resource from a project's
-namespace.
- * @summary Retrieve an AnalysisTemplate
- */
 export type getAnalysisTemplateResponse200 = {
   data: RolloutsAnalysisTemplate;
   status: 200;
@@ -523,10 +531,15 @@ export const getGetAnalysisTemplateUrl = (project: string, analysisTemplate: str
   return `/v1beta1/projects/${project}/analysis-templates/${analysisTemplate}`;
 };
 
+/**
+ * Retrieve an AnalysisTemplate resource from a project's
+ * namespace.
+ * @summary Retrieve an AnalysisTemplate
+ */
 export const getAnalysisTemplate = async (
   project: string,
   analysisTemplate: string,
-  options?: RequestInit
+  options?: Parameters<typeof customFetch>[1]
 ): Promise<getAnalysisTemplateResponse> => {
   return customFetch<getAnalysisTemplateResponse>(
     getGetAnalysisTemplateUrl(project, analysisTemplate),
@@ -537,7 +550,7 @@ export const getAnalysisTemplate = async (
   );
 };
 
-export const getGetAnalysisTemplateQueryKey = (project?: string, analysisTemplate?: string) => {
+export const getGetAnalysisTemplateQueryKey = (project: string, analysisTemplate: string) => {
   return [`/v1beta1/projects/${project}/analysis-templates/${analysisTemplate}`] as const;
 };
 
@@ -565,7 +578,11 @@ export const getGetAnalysisTemplateQueryOptions = <
   return {
     queryKey,
     queryFn,
-    enabled: !!(project && analysisTemplate),
+    enabled:
+      project !== null &&
+      project !== undefined &&
+      analysisTemplate !== null &&
+      analysisTemplate !== undefined,
     ...queryOptions
   } as UseQueryOptions<Awaited<ReturnType<typeof getAnalysisTemplate>>, TError, TData> & {
     queryKey: DataTag<QueryKey, TData, TError>;
@@ -659,15 +676,9 @@ export function useGetAnalysisTemplate<
     queryKey: DataTag<QueryKey, TData, TError>;
   };
 
-  query.queryKey = queryOptions.queryKey;
-
-  return query;
+  return withQueryKey(query, queryOptions.queryKey);
 }
 
-/**
- * Delete an AnalysisTemplate resource from a project's namespace.
- * @summary Delete an AnalysisTemplate
- */
 export type deleteAnalysisTemplateResponse204 = {
   data: void;
   status: 204;
@@ -682,10 +693,14 @@ export const getDeleteAnalysisTemplateUrl = (project: string, analysisTemplate: 
   return `/v1beta1/projects/${project}/analysis-templates/${analysisTemplate}`;
 };
 
+/**
+ * Delete an AnalysisTemplate resource from a project's namespace.
+ * @summary Delete an AnalysisTemplate
+ */
 export const deleteAnalysisTemplate = async (
   project: string,
   analysisTemplate: string,
-  options?: RequestInit
+  options?: Parameters<typeof customFetch>[1]
 ): Promise<deleteAnalysisTemplateResponse> => {
   return customFetch<deleteAnalysisTemplateResponse>(
     getDeleteAnalysisTemplateUrl(project, analysisTemplate),
@@ -696,6 +711,8 @@ export const deleteAnalysisTemplate = async (
   );
 };
 
+export const getDeleteAnalysisTemplateMutationKey = () => ['deleteAnalysisTemplate'] as const;
+
 export const getDeleteAnalysisTemplateMutationOptions = <
   TError = ErrorType<unknown>,
   TContext = unknown
@@ -703,17 +720,17 @@ export const getDeleteAnalysisTemplateMutationOptions = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof deleteAnalysisTemplate>>,
     TError,
-    { project: string; analysisTemplate: string },
+    DeleteAnalysisTemplateMutationVariables,
     TContext
   >;
   request?: SecondParameter<typeof customFetch>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof deleteAnalysisTemplate>>,
   TError,
-  { project: string; analysisTemplate: string },
+  DeleteAnalysisTemplateMutationVariables,
   TContext
 > => {
-  const mutationKey = ['deleteAnalysisTemplate'];
+  const mutationKey = getDeleteAnalysisTemplateMutationKey();
   const { mutation: mutationOptions, request: requestOptions } = options
     ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
       ? options
@@ -722,7 +739,7 @@ export const getDeleteAnalysisTemplateMutationOptions = <
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof deleteAnalysisTemplate>>,
-    { project: string; analysisTemplate: string }
+    DeleteAnalysisTemplateMutationVariables
   > = (props) => {
     const { project, analysisTemplate } = props ?? {};
 
@@ -737,6 +754,7 @@ export type DeleteAnalysisTemplateMutationResult = NonNullable<
 >;
 
 export type DeleteAnalysisTemplateMutationError = ErrorType<unknown>;
+export type DeleteAnalysisTemplateMutationVariables = { project: string; analysisTemplate: string };
 
 /**
  * @summary Delete an AnalysisTemplate
@@ -746,7 +764,7 @@ export const useDeleteAnalysisTemplate = <TError = ErrorType<unknown>, TContext 
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof deleteAnalysisTemplate>>,
       TError,
-      { project: string; analysisTemplate: string },
+      DeleteAnalysisTemplateMutationVariables,
       TContext
     >;
     request?: SecondParameter<typeof customFetch>;
@@ -755,18 +773,11 @@ export const useDeleteAnalysisTemplate = <TError = ErrorType<unknown>, TContext 
 ): UseMutationResult<
   Awaited<ReturnType<typeof deleteAnalysisTemplate>>,
   TError,
-  { project: string; analysisTemplate: string },
+  DeleteAnalysisTemplateMutationVariables,
   TContext
 > => {
-  const mutationOptions = getDeleteAnalysisTemplateMutationOptions(options);
-
-  return useMutation(mutationOptions, queryClient);
+  return useMutation(getDeleteAnalysisTemplateMutationOptions(options), queryClient);
 };
-/**
- * Trigger re-verification of the Freight currently in use by a
-Stage.
- * @summary Reverify Freight
- */
 export type reverifyResponse200 = {
   data: void;
   status: 200;
@@ -781,16 +792,23 @@ export const getReverifyUrl = (project: string, stage: string) => {
   return `/v1beta1/projects/${project}/stages/${stage}/verification`;
 };
 
+/**
+ * Trigger re-verification of the Freight currently in use by a
+ * Stage.
+ * @summary Reverify Freight
+ */
 export const reverify = async (
   project: string,
   stage: string,
-  options?: RequestInit
+  options?: Parameters<typeof customFetch>[1]
 ): Promise<reverifyResponse> => {
   return customFetch<reverifyResponse>(getReverifyUrl(project, stage), {
     ...options,
     method: 'POST'
   });
 };
+
+export const getReverifyMutationKey = () => ['reverify'] as const;
 
 export const getReverifyMutationOptions = <
   TError = ErrorType<unknown>,
@@ -799,17 +817,17 @@ export const getReverifyMutationOptions = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof reverify>>,
     TError,
-    { project: string; stage: string },
+    ReverifyMutationVariables,
     TContext
   >;
   request?: SecondParameter<typeof customFetch>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof reverify>>,
   TError,
-  { project: string; stage: string },
+  ReverifyMutationVariables,
   TContext
 > => {
-  const mutationKey = ['reverify'];
+  const mutationKey = getReverifyMutationKey();
   const { mutation: mutationOptions, request: requestOptions } = options
     ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
       ? options
@@ -818,7 +836,7 @@ export const getReverifyMutationOptions = <
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof reverify>>,
-    { project: string; stage: string }
+    ReverifyMutationVariables
   > = (props) => {
     const { project, stage } = props ?? {};
 
@@ -831,6 +849,7 @@ export const getReverifyMutationOptions = <
 export type ReverifyMutationResult = NonNullable<Awaited<ReturnType<typeof reverify>>>;
 
 export type ReverifyMutationError = ErrorType<unknown>;
+export type ReverifyMutationVariables = { project: string; stage: string };
 
 /**
  * @summary Reverify Freight
@@ -840,7 +859,7 @@ export const useReverify = <TError = ErrorType<unknown>, TContext = unknown>(
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof reverify>>,
       TError,
-      { project: string; stage: string },
+      ReverifyMutationVariables,
       TContext
     >;
     request?: SecondParameter<typeof customFetch>;
@@ -849,17 +868,11 @@ export const useReverify = <TError = ErrorType<unknown>, TContext = unknown>(
 ): UseMutationResult<
   Awaited<ReturnType<typeof reverify>>,
   TError,
-  { project: string; stage: string },
+  ReverifyMutationVariables,
   TContext
 > => {
-  const mutationOptions = getReverifyMutationOptions(options);
-
-  return useMutation(mutationOptions, queryClient);
+  return useMutation(getReverifyMutationOptions(options), queryClient);
 };
-/**
- * Abort a running Verification process.
- * @summary Abort a running Verification process
- */
 export type abortVerificationResponse200 = {
   data: void;
   status: 200;
@@ -874,16 +887,22 @@ export const getAbortVerificationUrl = (project: string, stage: string) => {
   return `/v1beta1/projects/${project}/stages/${stage}/verification/abort`;
 };
 
+/**
+ * Abort a running Verification process.
+ * @summary Abort a running Verification process
+ */
 export const abortVerification = async (
   project: string,
   stage: string,
-  options?: RequestInit
+  options?: Parameters<typeof customFetch>[1]
 ): Promise<abortVerificationResponse> => {
   return customFetch<abortVerificationResponse>(getAbortVerificationUrl(project, stage), {
     ...options,
     method: 'POST'
   });
 };
+
+export const getAbortVerificationMutationKey = () => ['abortVerification'] as const;
 
 export const getAbortVerificationMutationOptions = <
   TError = ErrorType<unknown>,
@@ -892,17 +911,17 @@ export const getAbortVerificationMutationOptions = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof abortVerification>>,
     TError,
-    { project: string; stage: string },
+    AbortVerificationMutationVariables,
     TContext
   >;
   request?: SecondParameter<typeof customFetch>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof abortVerification>>,
   TError,
-  { project: string; stage: string },
+  AbortVerificationMutationVariables,
   TContext
 > => {
-  const mutationKey = ['abortVerification'];
+  const mutationKey = getAbortVerificationMutationKey();
   const { mutation: mutationOptions, request: requestOptions } = options
     ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
       ? options
@@ -911,7 +930,7 @@ export const getAbortVerificationMutationOptions = <
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof abortVerification>>,
-    { project: string; stage: string }
+    AbortVerificationMutationVariables
   > = (props) => {
     const { project, stage } = props ?? {};
 
@@ -926,6 +945,7 @@ export type AbortVerificationMutationResult = NonNullable<
 >;
 
 export type AbortVerificationMutationError = ErrorType<unknown>;
+export type AbortVerificationMutationVariables = { project: string; stage: string };
 
 /**
  * @summary Abort a running Verification process
@@ -935,7 +955,7 @@ export const useAbortVerification = <TError = ErrorType<unknown>, TContext = unk
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof abortVerification>>,
       TError,
-      { project: string; stage: string },
+      AbortVerificationMutationVariables,
       TContext
     >;
     request?: SecondParameter<typeof customFetch>;
@@ -944,18 +964,11 @@ export const useAbortVerification = <TError = ErrorType<unknown>, TContext = unk
 ): UseMutationResult<
   Awaited<ReturnType<typeof abortVerification>>,
   TError,
-  { project: string; stage: string },
+  AbortVerificationMutationVariables,
   TContext
 > => {
-  const mutationOptions = getAbortVerificationMutationOptions(options);
-
-  return useMutation(mutationOptions, queryClient);
+  return useMutation(getAbortVerificationMutationOptions(options), queryClient);
 };
-/**
- * List ClusterAnalysisTemplate resources. Returns a
-ClusterAnalysisTemplateList resource.
- * @summary List ClusterAnalysisTemplates
- */
 export type listClusterAnalysisTemplatesResponse200 = {
   data: RolloutsClusterAnalysisTemplateList;
   status: 200;
@@ -971,8 +984,13 @@ export const getListClusterAnalysisTemplatesUrl = () => {
   return `/v1beta1/shared/cluster-analysis-templates`;
 };
 
+/**
+ * List ClusterAnalysisTemplate resources. Returns a
+ * ClusterAnalysisTemplateList resource.
+ * @summary List ClusterAnalysisTemplates
+ */
 export const listClusterAnalysisTemplates = async (
-  options?: RequestInit
+  options?: Parameters<typeof customFetch>[1]
 ): Promise<listClusterAnalysisTemplatesResponse> => {
   return customFetch<listClusterAnalysisTemplatesResponse>(getListClusterAnalysisTemplatesUrl(), {
     ...options,
@@ -1086,15 +1104,9 @@ export function useListClusterAnalysisTemplates<
     queryKey: DataTag<QueryKey, TData, TError>;
   };
 
-  query.queryKey = queryOptions.queryKey;
-
-  return query;
+  return withQueryKey(query, queryOptions.queryKey);
 }
 
-/**
- * Retrieve a ClusterAnalysisTemplate by name.
- * @summary Retrieve a ClusterAnalysisTemplate
- */
 export type getClusterAnalysisTemplateResponse200 = {
   data: RolloutsClusterAnalysisTemplate;
   status: 200;
@@ -1109,9 +1121,13 @@ export const getGetClusterAnalysisTemplateUrl = (clusterAnalysisTemplate: string
   return `/v1beta1/shared/cluster-analysis-templates/${clusterAnalysisTemplate}`;
 };
 
+/**
+ * Retrieve a ClusterAnalysisTemplate by name.
+ * @summary Retrieve a ClusterAnalysisTemplate
+ */
 export const getClusterAnalysisTemplate = async (
   clusterAnalysisTemplate: string,
-  options?: RequestInit
+  options?: Parameters<typeof customFetch>[1]
 ): Promise<getClusterAnalysisTemplateResponse> => {
   return customFetch<getClusterAnalysisTemplateResponse>(
     getGetClusterAnalysisTemplateUrl(clusterAnalysisTemplate),
@@ -1122,7 +1138,7 @@ export const getClusterAnalysisTemplate = async (
   );
 };
 
-export const getGetClusterAnalysisTemplateQueryKey = (clusterAnalysisTemplate?: string) => {
+export const getGetClusterAnalysisTemplateQueryKey = (clusterAnalysisTemplate: string) => {
   return [`/v1beta1/shared/cluster-analysis-templates/${clusterAnalysisTemplate}`] as const;
 };
 
@@ -1149,7 +1165,7 @@ export const getGetClusterAnalysisTemplateQueryOptions = <
   return {
     queryKey,
     queryFn,
-    enabled: !!clusterAnalysisTemplate,
+    enabled: clusterAnalysisTemplate !== null && clusterAnalysisTemplate !== undefined,
     ...queryOptions
   } as UseQueryOptions<Awaited<ReturnType<typeof getClusterAnalysisTemplate>>, TError, TData> & {
     queryKey: DataTag<QueryKey, TData, TError>;
@@ -1239,15 +1255,9 @@ export function useGetClusterAnalysisTemplate<
     queryKey: DataTag<QueryKey, TData, TError>;
   };
 
-  query.queryKey = queryOptions.queryKey;
-
-  return query;
+  return withQueryKey(query, queryOptions.queryKey);
 }
 
-/**
- * Delete a ClusterAnalysisTemplate resource.
- * @summary Delete a ClusterAnalysisTemplate
- */
 export type deleteClusterAnalysisTemplateResponse204 = {
   data: void;
   status: 204;
@@ -1263,9 +1273,13 @@ export const getDeleteClusterAnalysisTemplateUrl = (clusterAnalysisTemplate: str
   return `/v1beta1/shared/cluster-analysis-templates/${clusterAnalysisTemplate}`;
 };
 
+/**
+ * Delete a ClusterAnalysisTemplate resource.
+ * @summary Delete a ClusterAnalysisTemplate
+ */
 export const deleteClusterAnalysisTemplate = async (
   clusterAnalysisTemplate: string,
-  options?: RequestInit
+  options?: Parameters<typeof customFetch>[1]
 ): Promise<deleteClusterAnalysisTemplateResponse> => {
   return customFetch<deleteClusterAnalysisTemplateResponse>(
     getDeleteClusterAnalysisTemplateUrl(clusterAnalysisTemplate),
@@ -1276,6 +1290,9 @@ export const deleteClusterAnalysisTemplate = async (
   );
 };
 
+export const getDeleteClusterAnalysisTemplateMutationKey = () =>
+  ['deleteClusterAnalysisTemplate'] as const;
+
 export const getDeleteClusterAnalysisTemplateMutationOptions = <
   TError = ErrorType<unknown>,
   TContext = unknown
@@ -1283,17 +1300,17 @@ export const getDeleteClusterAnalysisTemplateMutationOptions = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof deleteClusterAnalysisTemplate>>,
     TError,
-    { clusterAnalysisTemplate: string },
+    DeleteClusterAnalysisTemplateMutationVariables,
     TContext
   >;
   request?: SecondParameter<typeof customFetch>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof deleteClusterAnalysisTemplate>>,
   TError,
-  { clusterAnalysisTemplate: string },
+  DeleteClusterAnalysisTemplateMutationVariables,
   TContext
 > => {
-  const mutationKey = ['deleteClusterAnalysisTemplate'];
+  const mutationKey = getDeleteClusterAnalysisTemplateMutationKey();
   const { mutation: mutationOptions, request: requestOptions } = options
     ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
       ? options
@@ -1302,7 +1319,7 @@ export const getDeleteClusterAnalysisTemplateMutationOptions = <
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof deleteClusterAnalysisTemplate>>,
-    { clusterAnalysisTemplate: string }
+    DeleteClusterAnalysisTemplateMutationVariables
   > = (props) => {
     const { clusterAnalysisTemplate } = props ?? {};
 
@@ -1317,6 +1334,7 @@ export type DeleteClusterAnalysisTemplateMutationResult = NonNullable<
 >;
 
 export type DeleteClusterAnalysisTemplateMutationError = ErrorType<unknown>;
+export type DeleteClusterAnalysisTemplateMutationVariables = { clusterAnalysisTemplate: string };
 
 /**
  * @summary Delete a ClusterAnalysisTemplate
@@ -1326,7 +1344,7 @@ export const useDeleteClusterAnalysisTemplate = <TError = ErrorType<unknown>, TC
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof deleteClusterAnalysisTemplate>>,
       TError,
-      { clusterAnalysisTemplate: string },
+      DeleteClusterAnalysisTemplateMutationVariables,
       TContext
     >;
     request?: SecondParameter<typeof customFetch>;
@@ -1335,10 +1353,8 @@ export const useDeleteClusterAnalysisTemplate = <TError = ErrorType<unknown>, TC
 ): UseMutationResult<
   Awaited<ReturnType<typeof deleteClusterAnalysisTemplate>>,
   TError,
-  { clusterAnalysisTemplate: string },
+  DeleteClusterAnalysisTemplateMutationVariables,
   TContext
 > => {
-  const mutationOptions = getDeleteClusterAnalysisTemplateMutationOptions(options);
-
-  return useMutation(mutationOptions, queryClient);
+  return useMutation(getDeleteClusterAnalysisTemplateMutationOptions(options), queryClient);
 };

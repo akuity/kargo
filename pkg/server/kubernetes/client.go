@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"strings"
 
-	authnv1 "k8s.io/api/authentication/v1"
 	authv1 "k8s.io/api/authorization/v1"
 	coordinationv1 "k8s.io/api/coordination/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -15,7 +14,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/watch"
 	kubescheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
@@ -48,9 +46,6 @@ type ClientOptions struct {
 	// Kubernetes client configuration. This is used, for instance, by the
 	// `kargo server` command.
 	SkipAuthorization bool
-	// GlobalServiceAccountNamespaces is a list of namespaces in which we should
-	// always look for ServiceAccounts when attempting to authorize a user.
-	GlobalServiceAccountNamespaces []string
 	// KargoNamespace is the namespace where Kargo itself is installed. Defaults
 	// to "kargo" when unspecified.
 	KargoNamespace string
@@ -166,9 +161,10 @@ type client struct {
 //  1. The Client interface combines the familiar controller-runtime Client
 //     interface with a helpful Watch function that is absent from that
 //     interface.
-//  2. The implementation enforces RBAC by retrieving context-bound user.Info
-//     and using it to conduct a SubjectAccessReview or SelfSubjectAccessReview
-//     before (if successful) performing the desired operation. This permits
+//  2. The implementation enforces RBAC by retrieving the context-bound
+//     user.Identity and reviewing the access of the Kubernetes subjects that
+//     stand in for it before (if successful) performing the desired
+//     operation. This permits
 //     this client to retain the benefits of using a single underlying client
 //     (typically with a built-in cache), while still enforcing RBAC as if the
 //     operation had been performed with a user-specific client constructed
@@ -234,10 +230,9 @@ func NewClient(
 			return internalClient, nil // Unconditionally return the internal client
 		}
 	} else {
-		// Examine the context-bound user.Info to determine what ServiceAccounts
-		// they are associated with and whether any of those have sufficient
-		// permissions to perform the desired operation.
-		c.getAuthorizedClientFn = getAuthorizedClient(opts.GlobalServiceAccountNamespaces)
+		// Review the access of the subjects standing in for the context-bound
+		// identity before performing the desired operation.
+		c.getAuthorizedClientFn = getAuthorizedClient()
 	}
 	return c, nil
 }
@@ -833,11 +828,12 @@ func gvrAndKeyFromObj(
 	return pluralizedGVR, key, nil
 }
 
-// getAuthorizedClient examines context-bound user.Info and uses information
-// found therein to attempt to identify or build an appropriate client for
-// performing the desired operation. If it is unable to do so, it amounts to the
-// operation being unauthorized and an error is returned.
-func getAuthorizedClient(globalServiceAccountNamespaces []string) func(
+// getAuthorizedClient decides whether the identity bound to the context may
+// perform the described operation and, if so, returns the client to perform
+// it with. An admin is allowed outright. Anyone else is allowed if any of the
+// Kubernetes subjects standing in for them is, as a SubjectAccessReview
+// decides. An unauthorized operation yields an error.
+func getAuthorizedClient() func(
 	context.Context,
 	libClient.WithWatch,
 	string,
@@ -853,14 +849,14 @@ func getAuthorizedClient(globalServiceAccountNamespaces []string) func(
 		subresource string,
 		key libClient.ObjectKey,
 	) (libClient.WithWatch, error) {
-		userInfo, ok := user.InfoFromContext(ctx)
+		id, ok := user.IdentityFromContext(ctx)
 		if !ok {
 			return nil, errors.New("not allowed")
 		}
 
-		// Admins get to use the Kargo API server's own Kubernetes client. i.e. They
-		// can do everything the server can do.
-		if userInfo.IsAdmin {
+		// Admins get to use the Kargo API server's own Kubernetes client. i.e.
+		// They can do everything the server can do.
+		if id.IsAdmin() {
 			return internalClient, nil
 		}
 
@@ -873,126 +869,34 @@ func getAuthorizedClient(globalServiceAccountNamespaces []string) func(
 			Namespace:   key.Namespace,
 			Name:        key.Name,
 		}
-
-		// sub is a standard claim. If the user has this claim, we can infer that
-		// they authenticated using OIDC.
-		if _, ok := userInfo.Claims["sub"]; ok {
-			namespacesToCheck := make(
-				[]string,
-				0,
-				// Look in the global ServiceAccount namespaces + at most one more
-				len(globalServiceAccountNamespaces)+1,
-			)
-			if key.Namespace != "" {
-				// This is written the way it is to keep key.Namespace as the first
-				// element in the slice, because it is where there is the highest
-				// likelihood of finding a ServiceAccount with the required permissions.
-				namespacesToCheck = append(namespacesToCheck, key.Namespace)
-				namespacesToCheck = append(namespacesToCheck, globalServiceAccountNamespaces...)
-			} else {
-				// For cluster-scoped resources, the set of namespaces to check is only
-				// the global ServiceAccount namespaces except in the special case of a
-				// Project. For a Project, we also need to look in the Project's
-				// underlying namespace.
-				//
-				// This is written the way it is so that in the case of a Project
-				// resource, key.Name is the first element in the slice, because this is
-				// where there is the highest likelihood of finding a ServiceAccount
-				// with the required permissions.
-				if ra.Group == kargoapi.GroupVersion.Group &&
-					ra.Version == kargoapi.GroupVersion.Version &&
-					ra.Resource == "projects" {
-					namespacesToCheck = append(namespacesToCheck, key.Name)
-				}
-				namespacesToCheck = append(namespacesToCheck, globalServiceAccountNamespaces...)
+		for _, subject := range id.Subjects(ra) {
+			err := reviewSubjectAccess(ctx, internalClient, ra, subject)
+			if err == nil {
+				return internalClient, nil
 			}
-			for _, namespaceToCheck := range namespacesToCheck {
-				serviceAccountsToCheck := userInfo.ServiceAccountsByNamespace[namespaceToCheck]
-				for serviceAccountToCheck := range serviceAccountsToCheck {
-					err := reviewSubjectAccess(
-						ctx,
-						internalClient,
-						ra,
-						serviceAccountSubject(serviceAccountToCheck),
-					)
-					if err == nil {
-						return internalClient, nil
-					}
-					if !apierrors.IsForbidden(err) {
-						return nil, fmt.Errorf("review subject access: %w", err)
-					}
-				}
+			if !apierrors.IsForbidden(err) {
+				return nil, fmt.Errorf("review subject access: %w", err)
 			}
-			return nil, newForbiddenError(ra)
 		}
-
-		if userInfo.KubernetesUserInfo == nil {
-			return nil, errors.New("not allowed")
-		}
-
-		// If we get to here, we're dealing with a user whose token was recognized
-		// by the Kubernetes API server, which told us who they are.
-		if err := reviewSubjectAccess(
-			ctx,
-			internalClient,
-			ra,
-			kubernetesUserSubject(*userInfo.KubernetesUserInfo),
-		); err != nil {
-			return nil, fmt.Errorf("review subject access: %w", err)
-		}
-		return internalClient, nil
-	}
-}
-
-// reviewSubject is the identity whose access is reviewed by
-// reviewSubjectAccess.
-type reviewSubject struct {
-	username string
-	uid      string
-	groups   []string
-	extra    map[string]authv1.ExtraValue
-}
-
-// kubernetesUserSubject is the user the Kubernetes API server resolved a bearer
-// token to. Groups, UID and extras are all carried across, because omitting them
-// would ask a different question: whether the user is permitted on the strength
-// of their username alone.
-func kubernetesUserSubject(u authnv1.UserInfo) reviewSubject {
-	subject := reviewSubject{
-		username: u.Username,
-		uid:      u.UID,
-		groups:   u.Groups,
-	}
-	if len(u.Extra) > 0 {
-		subject.extra = make(map[string]authv1.ExtraValue, len(u.Extra))
-		for k, v := range u.Extra {
-			subject.extra[k] = authv1.ExtraValue(v)
-		}
-	}
-	return subject
-}
-
-func serviceAccountSubject(name types.NamespacedName) reviewSubject {
-	return reviewSubject{
-		username: fmt.Sprintf("system:serviceaccount:%s:%s", name.Namespace, name.Name),
+		return nil, newForbiddenError(ra)
 	}
 }
 
 // reviewSubjectAccess submits a SubjectAccessReview to determine whether the
-// provided subject is allowed to do the desired operation.
+// subject is allowed to perform the described operation.
 func reviewSubjectAccess(
 	ctx context.Context,
 	cl libClient.Client,
 	ra authv1.ResourceAttributes,
-	subject reviewSubject,
+	subject user.Subject,
 ) error {
 	review := &authv1.SubjectAccessReview{
 		Spec: authv1.SubjectAccessReviewSpec{
 			ResourceAttributes: &ra,
-			User:               subject.username,
-			UID:                subject.uid,
-			Groups:             subject.groups,
-			Extra:              subject.extra,
+			User:               subject.Username,
+			UID:                subject.UID,
+			Groups:             subject.Groups,
+			Extra:              subject.Extra,
 		},
 	}
 	if err := cl.Create(ctx, review); err != nil {

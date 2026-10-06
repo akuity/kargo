@@ -68,7 +68,7 @@ export const useWatchStages = (
         }
       );
 
-      const stageKey = getGetStageQueryKey(project, stage.metadata?.name);
+      const stageKey = getGetStageQueryKey(project, stage.metadata?.name || '');
       if (type === 'DELETED') {
         client.removeQueries({ queryKey: stageKey });
       } else {

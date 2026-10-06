@@ -210,6 +210,24 @@ webhooks:
     resources: ["promotions"]
     operations: ["CREATE", "UPDATE", "DELETE"]
   failurePolicy: Fail
+- name: promotionrequest.kargo.akuity.io
+  admissionReviewVersions: [ "v1" ]
+  sideEffects: None
+  clientConfig:
+    service:
+      namespace: {{ .Release.Namespace }}
+      name: kargo-webhooks-server
+      path: /validate-kargo-akuity-io-v1alpha1-promotionrequest
+    {{- if and (not .Values.webhooksServer.tls.selfSignedCert) .Values.webhooksServer.tls.caBundle }}
+    caBundle: {{ .Values.webhooksServer.tls.caBundle | b64enc }}
+    {{- end }}
+  rules:
+  - scope: Namespaced
+    apiGroups: ["kargo.akuity.io"]
+    apiVersions: ["v1alpha1"]
+    resources: ["promotionrequests"]
+    operations: ["CREATE", "UPDATE"]
+  failurePolicy: Fail
 - name: promotiontask.kargo.akuity.io
   admissionReviewVersions: [ "v1" ]
   sideEffects: None

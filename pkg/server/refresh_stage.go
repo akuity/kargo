@@ -9,6 +9,7 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/api"
+	"github.com/akuity/kargo/pkg/server/auth/can"
 )
 
 // @id RefreshStage
@@ -29,6 +30,11 @@ func (s *server) refreshStage(c *gin.Context) {
 	project := c.Param("project")
 	stageName := c.Param("stage")
 
+	if err := s.authorize(ctx, can.Get().Stage(project, stageName)); err != nil {
+		_ = c.Error(err)
+		return
+	}
+
 	stage := &kargoapi.Stage{
 		ObjectMeta: metav1.ObjectMeta{Name: stageName, Namespace: project},
 	}
@@ -40,14 +46,39 @@ func (s *server) refreshStage(c *gin.Context) {
 
 	// If there is a current Promotion then refresh it, too
 	if stage.Status.CurrentPromotion != nil {
+		promoName := stage.Status.CurrentPromotion.Name
+		if err := s.authorize(ctx, can.Get().Promotion(project, promoName)); err != nil {
+			_ = c.Error(err)
+			return
+		}
+
 		promo := &kargoapi.Promotion{
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace: project,
-				Name:      stage.Status.CurrentPromotion.Name,
+				Name:      promoName,
 			},
 		}
 		if err := api.RefreshObject(ctx, s.client.InternalClient(), promo); err != nil {
 			_ = c.Error(fmt.Errorf("failed to refresh current Promotion: %w", err))
+			return
+		}
+	}
+
+	if stage.Status.CurrentPromotionRequest != nil {
+		currentName := stage.Status.CurrentPromotionRequest.Name
+		if err := s.authorize(ctx, can.Get().PromotionRequest(project, currentName)); err != nil {
+			_ = c.Error(err)
+			return
+		}
+
+		promoRequest := &kargoapi.PromotionRequest{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: project,
+				Name:      currentName,
+			},
+		}
+		if err := api.RefreshObject(ctx, s.client.InternalClient(), promoRequest); err != nil {
+			_ = c.Error(fmt.Errorf("failed to refresh current Promotion Request: %w", err))
 			return
 		}
 	}

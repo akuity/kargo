@@ -78,6 +78,128 @@ func TestPromoPhaseChanged_Update(t *testing.T) {
 	}
 }
 
+func TestPromotionRequestPhaseChanged(t *testing.T) {
+	p := NewPromotionRequestPhaseChangedPredicate(
+		logging.NewLoggerOrDie(logging.InfoLevel, logging.DefaultFormat),
+	)
+
+	t.Run("create", func(t *testing.T) {
+		// A PromotionRequest is created without a phase; the Stage learns nothing
+		// from its creation that the first phase change will not tell it.
+		require.False(t, p.Create(event.TypedCreateEvent[*kargoapi.PromotionRequest]{
+			Object: &kargoapi.PromotionRequest{},
+		}))
+	})
+
+	t.Run("generic", func(t *testing.T) {
+		require.False(t, p.Generic(event.TypedGenericEvent[*kargoapi.PromotionRequest]{
+			Object: &kargoapi.PromotionRequest{},
+		}))
+	})
+
+	t.Run("delete", func(t *testing.T) {
+		deleteTests := []struct {
+			name   string
+			object *kargoapi.PromotionRequest
+			want   bool
+		}{
+			{
+				name:   "no object",
+				object: nil,
+				want:   false,
+			},
+			{
+				name: "non-terminal PromotionRequest deleted",
+				object: &kargoapi.PromotionRequest{
+					Status: kargoapi.PromotionRequestStatus{
+						Phase: kargoapi.PromotionRequestPhaseRunning,
+					},
+				},
+				// The Stage must reset its status.currentPromotionRequest.
+				want: true,
+			},
+			{
+				name: "terminal PromotionRequest deleted",
+				object: &kargoapi.PromotionRequest{
+					Status: kargoapi.PromotionRequestStatus{
+						Phase: kargoapi.PromotionRequestPhaseSucceeded,
+					},
+				},
+				want: false,
+			},
+		}
+		for _, tt := range deleteTests {
+			t.Run(tt.name, func(t *testing.T) {
+				require.Equal(t, tt.want, p.Delete(
+					event.TypedDeleteEvent[*kargoapi.PromotionRequest]{Object: tt.object},
+				))
+			})
+		}
+	})
+
+	t.Run("update", func(t *testing.T) {
+		updateTests := []struct {
+			name      string
+			oldObject *kargoapi.PromotionRequest
+			newObject *kargoapi.PromotionRequest
+			want      bool
+		}{
+			{
+				name:      "no old object",
+				oldObject: nil,
+				newObject: &kargoapi.PromotionRequest{},
+				want:      false,
+			},
+			{
+				name:      "no new object",
+				oldObject: &kargoapi.PromotionRequest{},
+				newObject: nil,
+				want:      false,
+			},
+			{
+				name:      "phase unchanged",
+				oldObject: &kargoapi.PromotionRequest{},
+				newObject: &kargoapi.PromotionRequest{},
+				want:      false,
+			},
+			{
+				name:      "phase set",
+				oldObject: &kargoapi.PromotionRequest{},
+				newObject: &kargoapi.PromotionRequest{
+					Status: kargoapi.PromotionRequestStatus{
+						Phase: kargoapi.PromotionRequestPhasePending,
+					},
+				},
+				want: true,
+			},
+			{
+				name: "phase changed",
+				oldObject: &kargoapi.PromotionRequest{
+					Status: kargoapi.PromotionRequestStatus{
+						Phase: kargoapi.PromotionRequestPhaseRunning,
+					},
+				},
+				newObject: &kargoapi.PromotionRequest{
+					Status: kargoapi.PromotionRequestStatus{
+						Phase: kargoapi.PromotionRequestPhaseSucceeded,
+					},
+				},
+				want: true,
+			},
+		}
+		for _, tt := range updateTests {
+			t.Run(tt.name, func(t *testing.T) {
+				require.Equal(t, tt.want, p.Update(
+					event.TypedUpdateEvent[*kargoapi.PromotionRequest]{
+						ObjectOld: tt.oldObject,
+						ObjectNew: tt.newObject,
+					},
+				))
+			})
+		}
+	})
+}
+
 func TestRefreshRequested_Update(t *testing.T) {
 	tests := []struct {
 		name      string

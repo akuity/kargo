@@ -62,7 +62,11 @@ export const FieldContainer = <T extends FieldValues, TName extends FieldPath<T>
         help={controller.fieldState.error?.message}
         validateStatus={controller.fieldState.error?.message ? 'error' : ''}
       >
-        {description && <div className='text-xs text-gray-500 mb-2 -mt-1'>{description}</div>}
+        {description && (
+          <div className='text-xs text-gray-500 dark:text-neutral-400 mb-2 -mt-1'>
+            {description}
+          </div>
+        )}
         {children(controller)}
       </Form.Item>
     </Form>

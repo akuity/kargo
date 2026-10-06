@@ -312,7 +312,7 @@ func Test_annotateResourceWithCreator(t *testing.T) {
 	testCases := []struct {
 		name     string
 		obj      *unstructured.Unstructured
-		userInfo *user.Info
+		userInfo user.Identity
 		assert   func(*testing.T, *unstructured.Unstructured)
 	}{
 		{
@@ -321,7 +321,7 @@ func Test_annotateResourceWithCreator(t *testing.T) {
 		{
 			name:     "Project is annotated",
 			obj:      newObj("Project", nil),
-			userInfo: &user.Info{IsAdmin: true},
+			userInfo: user.Admin{},
 			assert: func(t *testing.T, obj *unstructured.Unstructured) {
 				require.Equal(
 					t,
@@ -333,7 +333,7 @@ func Test_annotateResourceWithCreator(t *testing.T) {
 		{
 			name:     "Promotion is annotated",
 			obj:      newObj("Promotion", nil),
-			userInfo: &user.Info{IsAdmin: true},
+			userInfo: user.Admin{},
 			assert: func(t *testing.T, obj *unstructured.Unstructured) {
 				require.Equal(
 					t,
@@ -347,7 +347,7 @@ func Test_annotateResourceWithCreator(t *testing.T) {
 			obj: newObj("Promotion", map[string]any{
 				kargoapi.AnnotationKeyCreateActor: "controller:forged",
 			}),
-			userInfo: &user.Info{IsAdmin: true},
+			userInfo: user.Admin{},
 			assert: func(t *testing.T, obj *unstructured.Unstructured) {
 				require.Equal(
 					t,
@@ -359,7 +359,7 @@ func Test_annotateResourceWithCreator(t *testing.T) {
 		{
 			name:     "other kinds are not annotated",
 			obj:      newObj("Stage", nil),
-			userInfo: &user.Info{IsAdmin: true},
+			userInfo: user.Admin{},
 			assert: func(t *testing.T, obj *unstructured.Unstructured) {
 				require.NotContains(
 					t,
@@ -384,7 +384,7 @@ func Test_annotateResourceWithCreator(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			ctx := context.Background()
 			if testCase.userInfo != nil {
-				ctx = user.ContextWithInfo(ctx, *testCase.userInfo)
+				ctx = user.ContextWithIdentity(ctx, testCase.userInfo)
 			}
 			annotateResourceWithCreator(ctx, testCase.obj)
 			if testCase.assert != nil {

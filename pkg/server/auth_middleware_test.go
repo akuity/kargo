@@ -5,66 +5,51 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
-	"os"
-	"path/filepath"
 	"testing"
-	"time"
 
-	"github.com/coreos/go-oidc/v3/oidc"
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/stretchr/testify/require"
-	authnv1 "k8s.io/api/authentication/v1"
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/types"
-	libClient "sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/client/fake"
-	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
 	libhttp "github.com/akuity/kargo/pkg/http"
+	"github.com/akuity/kargo/pkg/server/auth/authn"
 	"github.com/akuity/kargo/pkg/server/config"
-	"github.com/akuity/kargo/pkg/server/dex"
-	libOIDC "github.com/akuity/kargo/pkg/server/oidc"
 	"github.com/akuity/kargo/pkg/server/user"
 )
 
-// This is self-signed and completely useless CA cert just for testing purposes.
-var dummyCACertBytes = []byte(`-----BEGIN CERTIFICATE-----
-MIIDvzCCAqcCFExIS2KGsSnWD7a8V0zmqhQD+XZ8MA0GCSqGSIb3DQEBCwUAMIGb
-MQswCQYDVQQGEwJVUzEUMBIGA1UECAwLQ29ubmVjdGljdXQxEzARBgNVBAcMClBs
-YWludmlsbGUxEjAQBgNVBAoMCUtyYW5jb3ZpYTEUMBIGA1UECwwLRW5naW5lZXJp
-bmcxGDAWBgNVBAMMD2NhLmtyYW5jb3ZpYS5pbzEdMBsGCSqGSIb3DQEJARYOa2Vu
-dEBha3VpdHkuaW8wHhcNMjMwNzMxMjEzMTM1WhcNMjQwNzMwMjEzMTM1WjCBmzEL
-MAkGA1UEBhMCVVMxFDASBgNVBAgMC0Nvbm5lY3RpY3V0MRMwEQYDVQQHDApQbGFp
-bnZpbGxlMRIwEAYDVQQKDAlLcmFuY292aWExFDASBgNVBAsMC0VuZ2luZWVyaW5n
-MRgwFgYDVQQDDA9jYS5rcmFuY292aWEuaW8xHTAbBgkqhkiG9w0BCQEWDmtlbnRA
-YWt1aXR5LmlvMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAwycyalcg
-p7jSBkekhPakfJYYyu8/p5J+kY75Yj7Z+9ed7xTYy3bNJ09OkkUHGUyO39pK1oe/
-dUgsxUC9N0Wqpo2t4+UHyc12rmX8Yi1v4G4mZj5XdV4fGh7CjqFwc3497eVqwLXJ
-qDCDuvT2n5+zcgmt9f8+BUhZJh+lFPywLC62+sD74nT3oE6niREi95O3/SQT79SR
-IeMWNXiZmoTETEX3Jhs1dhkVw/KhrjCXraMKK1Og9FnmLRR3JPYpl76za2MC7i9K
-rzZfU7YW8Aj1sqZrLYuvxnVz4LiB1BaG0Aniz1gGfFDkaP/WvCYeDkyW19kmOyPC
-LHF+4K4dAmXsQwIDAQABMA0GCSqGSIb3DQEBCwUAA4IBAQBSA3qk72RbsIjKvFGy
-fwg1vpnq00y8ILRKdSYYA2+HifX9R4WyqaYSdo2S9qp+dU1iz4gFgokiut9C+kEc
-zosRma12jmuMum8RfUEGUl/V9KHWjXKoJPbCKijql4InlDN5hFh32bigtgRcj9yE
-1Ya4+nHHtLnUJOHLSRycBQ8BbK6o/fKz/RN4kDPBehWe7hlLmzdlSRfG6GT2tVUq
-pqwF8ujOBXbmjfPqZK8rlFcGtfVotldmaFsnQuEVyO132MDyfHnyDrgqT3Ytsq8d
-EZv4FqnG2KDTlXoV/Ku1ib5vzgQK5fTFfqO5dm5sLM4qQFmLadULaTcNOldyH3KG
-c1e3
------END CERTIFICATE-----`)
+// fakeAuthenticator answers every token with a fixed result.
+type fakeAuthenticator struct {
+	id  user.Identity
+	ok  bool
+	err error
+}
+
+func (f fakeAuthenticator) Authenticate(
+	context.Context,
+	string,
+) (user.Identity, bool, error) {
+	return f.id, f.ok, f.err
+}
+
+// testJWT is a syntactically valid JWT; the fake authenticators never verify
+// it.
+func testJWT(t *testing.T) string {
+	t.Helper()
+	raw, err := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.RegisteredClaims{
+		Issuer: "fake-issuer",
+	}).SignedString([]byte("any key"))
+	require.NoError(t, err)
+	return raw
+}
 
 func TestNewAuthMiddleware(t *testing.T) {
-	a := &authMiddleware{}
 	middleware := NewAuthMiddleware(t.Context(), config.ServerConfig{}, nil)
 	require.NotNil(t, middleware)
-	// Call the middleware to get the initialized authMiddleware
-	// We can't directly inspect it, but we can verify it doesn't panic
 	require.NotPanics(t, func() {
 		gin.SetMode(gin.TestMode)
 		router := gin.New()
 		router.Use(middleware)
 	})
-	_ = a // Use the variable to avoid unused error
 }
 
 func TestWithExemptPaths(t *testing.T) {
@@ -123,683 +108,152 @@ func TestWithExemptPaths(t *testing.T) {
 	}
 }
 
-func TestGetKeySet(t *testing.T) {
-	const discoPath = "/.well-known/openid-configuration"
-	const dexDiscoPath = "/dex/.well-known/openid-configuration"
-	testCases := []struct {
-		name  string
-		setup func() (*httptest.Server, config.ServerConfig)
-	}{
-		{
-			name: "basic case",
-			setup: func() (*httptest.Server, config.ServerConfig) {
-				mux := http.NewServeMux()
-				srv := httptest.NewServer(mux)
-				t.Cleanup(srv.Close)
-				mux.HandleFunc(discoPath, func(w http.ResponseWriter, _ *http.Request) {
-					_, err := w.Write([]byte(`{
-						"issuer": "` + srv.URL + `",
-						"jwks_uri": "` + srv.URL + `/keys"
-					}`))
-					require.NoError(t, err)
-				})
-				return srv, config.ServerConfig{
-					OIDCConfig: &libOIDC.Config{
-						IssuerURL: srv.URL,
-					},
-				}
-			},
-		},
-		{
-			name: "with Dex proxy",
-			setup: func() (*httptest.Server, config.ServerConfig) {
-				mux := http.NewServeMux()
-				srv := httptest.NewServer(mux)
-				t.Cleanup(srv.Close)
-				issuerURL := srv.URL + "/dex"
-				mux.HandleFunc(
-					dexDiscoPath,
-					func(w http.ResponseWriter, _ *http.Request) {
-						_, err := w.Write([]byte(`{
-						"issuer": "` + issuerURL + `",
-						"jwks_uri": "` + issuerURL + `/keys"
-					}`))
-						require.NoError(t, err)
-					},
-				)
-				return srv, config.ServerConfig{
-					DexProxyConfig: &dex.ProxyConfig{
-						ServerAddr: srv.URL,
-					},
-					OIDCConfig: &libOIDC.Config{
-						IssuerURL: issuerURL,
-					},
-				}
-			},
-		},
-		{
-			name: "with Dex proxy under basePath",
-			setup: func() (*httptest.Server, config.ServerConfig) {
-				mux := http.NewServeMux()
-				srv := httptest.NewServer(mux)
-				t.Cleanup(srv.Close)
-				issuerURL := srv.URL + "/kargo/dex"
-				mux.HandleFunc(
-					"/kargo/dex/.well-known/openid-configuration",
-					func(w http.ResponseWriter, _ *http.Request) {
-						_, err := w.Write([]byte(`{
-						"issuer": "` + issuerURL + `",
-						"jwks_uri": "` + issuerURL + `/keys"
-					}`))
-						require.NoError(t, err)
-					},
-				)
-				return srv, config.ServerConfig{
-					DexProxyConfig: &dex.ProxyConfig{
-						ServerAddr: srv.URL,
-					},
-					OIDCConfig: &libOIDC.Config{
-						IssuerURL: issuerURL,
-					},
-				}
-			},
-		},
-		{
-			name: "with Dex proxy and CA cert",
-			setup: func() (*httptest.Server, config.ServerConfig) {
-				mux := http.NewServeMux()
-				srv := httptest.NewServer(mux)
-				t.Cleanup(srv.Close)
-				issuerURL := srv.URL + "/dex"
-				mux.HandleFunc(
-					dexDiscoPath,
-					func(w http.ResponseWriter, _ *http.Request) {
-						_, err := w.Write([]byte(`{
-						"issuer": "` + issuerURL + `",
-						"jwks_uri": "` + issuerURL + `/keys"
-					}`))
-						require.NoError(t, err)
-					},
-				)
-				cfg := config.ServerConfig{
-					DexProxyConfig: &dex.ProxyConfig{
-						ServerAddr: srv.URL,
-						CACertPath: filepath.Join(t.TempDir(), "ca.crt"),
-					},
-					OIDCConfig: &libOIDC.Config{
-						IssuerURL: issuerURL,
-					},
-				}
-				err := os.WriteFile(cfg.DexProxyConfig.CACertPath, dummyCACertBytes, 0o600)
-				require.NoError(t, err)
-				return srv, cfg
-			},
-		},
-	}
-	for _, testCase := range testCases {
-		t.Run(testCase.name, func(t *testing.T) {
-			svr, cfg := testCase.setup()
-			t.Cleanup(svr.Close)
-			keyset, err := getKeySet(t.Context(), cfg)
-			require.NoError(t, err)
-			require.NotNil(t, keyset)
-		})
-	}
-}
-
 func TestAuthenticate(t *testing.T) {
-	// The way the tests are structured, we don't need this to be valid. It just
-	// needs to be non-empty.
-	const (
-		testPath        = "/v1beta1/projects"
-		testIDPIssuer   = "fake-idp-issuer"
-		testKargoIssuer = "fake-kargo-issuer"
-		testToken       = "some-token"
-	)
-	testSets := map[string]struct {
-		path           string
-		authMiddleware *authMiddleware
-		token          string
-		assertions     func(ctx context.Context, err error)
+	const testPath = "/v1beta1/projects"
+	validToken := testJWT(t)
+	testCases := []struct {
+		name          string
+		path          string
+		token         string
+		authenticator authn.Authenticator
+		assertions    func(*testing.T, context.Context, error)
 	}{
-		"exempt path": {
+		{
+			name: "exempt path",
 			path: "/v1beta1/system/public-server-config",
-			authMiddleware: &authMiddleware{
-				exemptPaths: exemptPaths,
-			},
-			// The path is exempt from authentication, so no user information
-			// should be bound to the context.
-			assertions: func(ctx context.Context, err error) {
+			// The path is exempt from authentication, so no identity should
+			// be bound to the context, and the Authenticator is never asked.
+			authenticator: fakeAuthenticator{err: errors.New("must not be called")},
+			assertions: func(t *testing.T, ctx context.Context, err error) {
 				require.NoError(t, err)
-				_, ok := user.InfoFromContext(ctx)
+				_, ok := user.IdentityFromContext(ctx)
 				require.False(t, ok)
 			},
 		},
-		"no token provided": {
+		{
+			name: "no token provided",
 			path: testPath,
-			// It's an error if no token is provided.
-			assertions: func(ctx context.Context, err error) {
-				require.Error(t, err)
-				require.Equal(t, "no token provided", err.Error())
-				_, ok := user.InfoFromContext(ctx)
-				require.False(t, ok)
-			},
-		},
-		"non-JWT token": {
-			path: testPath,
-			authMiddleware: &authMiddleware{
-				parseUnverifiedJWTFn: func(
-					string,
-					jwt.Claims,
-				) (*jwt.Token, []string, error) {
-					return nil, nil, errors.New("this is not a JWT")
-				},
-			},
-			token: testToken,
-			assertions: func(ctx context.Context, err error) {
-				require.Equal(t, "invalid token", err.Error())
-				_, ok := user.InfoFromContext(ctx)
-				require.False(t, ok)
-			},
-		},
-		"failure verifying Kargo-issued token": {
-			path: testPath,
-			authMiddleware: &authMiddleware{
-				cfg: config.ServerConfig{
-					AdminConfig: &config.AdminConfig{
-						TokenIssuer: testKargoIssuer,
-					},
-				},
-				parseUnverifiedJWTFn: func(_ string, claims jwt.Claims) (*jwt.Token, []string, error) {
-					rc, ok := claims.(*jwt.RegisteredClaims)
-					require.True(t, ok)
-					rc.Issuer = testKargoIssuer
-					return nil, nil, nil
-				},
-				verifyKargoIssuedTokenFn: func(_ string) bool {
-					return false
-				},
-			},
-			token: testToken,
-			assertions: func(ctx context.Context, err error) {
-				require.Error(t, err)
-				require.Equal(
-					t,
-					"invalid token",
-					err.Error(),
-				)
-				_, ok := user.InfoFromContext(ctx)
-				require.False(t, ok)
-			},
-		},
-		"success verifying Kargo-issued token": {
-			path: testPath,
-			authMiddleware: &authMiddleware{
-				cfg: config.ServerConfig{
-					AdminConfig: &config.AdminConfig{
-						TokenIssuer: testKargoIssuer,
-					},
-				},
-				parseUnverifiedJWTFn: func(_ string, claims jwt.Claims) (*jwt.Token, []string, error) {
-					rc, ok := claims.(*jwt.RegisteredClaims)
-					require.True(t, ok)
-					rc.Issuer = testKargoIssuer
-					return nil, nil, nil
-				},
-				verifyKargoIssuedTokenFn: func(_ string) bool {
-					return true
-				},
-			},
-			token: testToken,
-			// If this is successful, we expect that user info for the admin user
-			// is bound to the context.
-			assertions: func(ctx context.Context, err error) {
-				require.NoError(t, err)
-				u, ok := user.InfoFromContext(ctx)
-				require.True(t, ok)
-				require.True(t, u.IsAdmin)
-				require.Empty(t, u.Claims["sub"])
-				require.Empty(t, u.Claims["groups"])
-			},
-		},
-		"failure verifying IDP-issued token": {
-			path: testPath,
-			authMiddleware: &authMiddleware{
-				cfg: config.ServerConfig{
-					OIDCConfig: &libOIDC.Config{
-						IssuerURL: testIDPIssuer,
-					},
-				},
-				parseUnverifiedJWTFn: func(_ string, claims jwt.Claims) (*jwt.Token, []string, error) {
-					rc, ok := claims.(*jwt.RegisteredClaims)
-					require.True(t, ok)
-					rc.Issuer = testIDPIssuer
-					return nil, nil, nil
-				},
-				verifyIDPIssuedTokenFn: func(
-					context.Context,
-					string,
-				) (claims, error) {
-					return claims{}, errors.New("invalid token")
-				},
-			},
-			token: testToken,
-			assertions: func(ctx context.Context, err error) {
-				require.Error(t, err)
-				require.Equal(
-					t,
-					"invalid token",
-					err.Error(),
-				)
-				_, ok := user.InfoFromContext(ctx)
-				require.False(t, ok)
-			},
-		},
-		"success verifying IDP-issued token": {
-			path: testPath,
-			authMiddleware: &authMiddleware{
-				cfg: config.ServerConfig{
-					OIDCConfig: &libOIDC.Config{
-						IssuerURL:     testIDPIssuer,
-						UsernameClaim: "preferred_username",
-					},
-				},
-				parseUnverifiedJWTFn: func(_ string, claims jwt.Claims) (*jwt.Token, []string, error) {
-					rc, ok := claims.(*jwt.RegisteredClaims)
-					require.True(t, ok)
-					rc.Issuer = testIDPIssuer
-					return nil, nil, nil
-				},
-				verifyIDPIssuedTokenFn: func(
-					context.Context,
-					string,
-				) (claims, error) {
-					return claims{
-						"preferred_username": "foo",
-						"sub":                "ironman",
-						"email":              "tony@starkindustries.com",
-						"groups": []string{
-							"avengers",
-							"shield",
-						},
-					}, nil
-				},
-				listServiceAccountsFn: func(
-					context.Context,
-					claims,
-				) (map[string]map[types.NamespacedName]struct{}, error) {
-					return nil, nil
-				},
-			},
-			token: testToken,
-			// On success, we expect user info containing username and groups to be
-			// bound to the context.
-			assertions: func(ctx context.Context, err error) {
-				require.NoError(t, err)
-				u, ok := user.InfoFromContext(ctx)
-				require.True(t, ok)
-				require.False(t, u.IsAdmin)
-				require.Equal(t, u.Username, "foo")
-				require.Equal(t, "ironman", u.Claims["sub"])
-				require.Equal(t, "tony@starkindustries.com", u.Claims["email"])
-				require.Equal(t, []string{"avengers", "shield"}, u.Claims["groups"])
-			},
-		},
-		"unrecognized JWT recognized by Kubernetes": {
-			path: testPath,
-			authMiddleware: &authMiddleware{
-				parseUnverifiedJWTFn: func(_ string, claims jwt.Claims) (*jwt.Token, []string, error) {
-					rc, ok := claims.(*jwt.RegisteredClaims)
-					require.True(t, ok)
-					rc.Issuer = "unrecognized-issuer"
-					return nil, nil, nil
-				},
-				verifyKubernetesTokenFn: func(context.Context, string) (*authnv1.UserInfo, error) {
-					return &authnv1.UserInfo{
-						Username: "system:serviceaccount:kargo-demo:ci-bot",
-					}, nil
-				},
-			},
-			token: testToken,
-			// Kubernetes recognizes the token, so we expect the raw token and the
-			// Kubernetes-verified identity to be bound to the context.
-			assertions: func(ctx context.Context, err error) {
-				require.NoError(t, err)
-				u, ok := user.InfoFromContext(ctx)
-				require.True(t, ok)
-				require.NotNil(t, u.KubernetesUserInfo)
-				require.Equal(t, "system:serviceaccount:kargo-demo:ci-bot", u.KubernetesUserInfo.Username)
-			},
-		},
-		"unrecognized JWT not recognized by Kubernetes": {
-			path: testPath,
-			authMiddleware: &authMiddleware{
-				parseUnverifiedJWTFn: func(_ string, claims jwt.Claims) (*jwt.Token, []string, error) {
-					rc, ok := claims.(*jwt.RegisteredClaims)
-					require.True(t, ok)
-					rc.Issuer = "unrecognized-issuer"
-					return nil, nil, nil
-				},
-				verifyKubernetesTokenFn: func(context.Context, string) (*authnv1.UserInfo, error) {
-					return nil, errInvalidToken
-				},
-			},
-			token: testToken,
-			// We can't verify this token and Kubernetes doesn't recognize it either.
-			// This should result in an authentication error.
-			assertions: func(ctx context.Context, err error) {
-				require.Error(t, err)
+			assertions: func(t *testing.T, ctx context.Context, err error) {
 				requireErrorStatus(t, err, http.StatusUnauthorized)
-				require.Equal(t, "invalid token", err.Error())
-				_, ok := user.InfoFromContext(ctx)
+				require.Equal(t, "no token provided", err.Error())
+				_, ok := user.IdentityFromContext(ctx)
 				require.False(t, ok)
 			},
 		},
+		{
+			name:          "token rejected",
+			path:          testPath,
+			token:         validToken,
+			authenticator: fakeAuthenticator{ok: true, err: authn.ErrInvalidToken},
+			assertions: func(t *testing.T, ctx context.Context, err error) {
+				require.ErrorIs(t, err, authn.ErrInvalidToken)
+				_, ok := user.IdentityFromContext(ctx)
+				require.False(t, ok)
+				_, ok = user.BearerTokenFromContext(ctx)
+				require.False(t, ok)
+			},
+		},
+		{
+			// A failure to verify, as opposed to a failed verification, is
+			// passed through untouched so that it is reported as an internal
+			// error rather than a rejected credential.
+			name:          "token could not be verified",
+			path:          testPath,
+			token:         validToken,
+			authenticator: fakeAuthenticator{ok: true, err: errors.New("connection refused")},
+			assertions: func(t *testing.T, _ context.Context, err error) {
+				require.ErrorContains(t, err, "connection refused")
+				var httpErr *libhttp.HTTPError
+				require.False(t, errors.As(err, &httpErr))
+			},
+		},
+		{
+			name:          "token recognized by nobody",
+			path:          testPath,
+			token:         validToken,
+			authenticator: fakeAuthenticator{ok: false},
+			assertions: func(t *testing.T, _ context.Context, err error) {
+				require.ErrorIs(t, err, authn.ErrInvalidToken)
+			},
+		},
+		{
+			name:          "token verified",
+			path:          testPath,
+			token:         validToken,
+			authenticator: fakeAuthenticator{ok: true, id: user.Admin{}},
+			assertions: func(t *testing.T, ctx context.Context, err error) {
+				require.NoError(t, err)
+				id, ok := user.IdentityFromContext(ctx)
+				require.True(t, ok)
+				require.Equal(t, user.Admin{}, id)
+				token, ok := user.BearerTokenFromContext(ctx)
+				require.True(t, ok)
+				require.Equal(t, validToken, token)
+			},
+		},
 	}
-	for name, ts := range testSets {
-		t.Run(name, func(t *testing.T) {
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
-			// For exempt paths test, we need to handle the nil middleware case
-			if ts.authMiddleware == nil {
-				ts.authMiddleware = &authMiddleware{}
+			a := &authMiddleware{
+				authenticator: testCase.authenticator,
+				exemptPaths:   exemptPaths,
 			}
-			ctx, err := ts.authMiddleware.authenticate(
-				t.Context(),
-				ts.path,
-				ts.token,
-			)
-			ts.assertions(ctx, err)
-		})
-	}
-}
-
-func TestVerifyIDPIssuedTokenFn(t *testing.T) {
-	testCases := []struct {
-		name           string
-		authMiddleware *authMiddleware
-		assertions     func(t *testing.T, c claims, err error)
-	}{
-		{
-			name:           "OIDC not supported",
-			authMiddleware: &authMiddleware{},
-			assertions: func(t *testing.T, _ claims, err error) {
-				require.ErrorContains(t, err, "OpenID Connect is not supported")
-			},
-		},
-		{
-			name: "token cannot be verified",
-			authMiddleware: &authMiddleware{
-				cfg: config.ServerConfig{
-					OIDCConfig: &libOIDC.Config{},
-				},
-				oidcTokenVerifyFn: func(
-					context.Context,
-					string,
-				) (*oidc.IDToken, error) {
-					return nil, errors.New("invalid token")
-				},
-			},
-			assertions: func(t *testing.T, _ claims, err error) {
-				require.ErrorContains(t, err, "invalid token")
-			},
-		},
-		{
-			name: "error getting claims from token",
-			authMiddleware: &authMiddleware{
-				cfg: config.ServerConfig{
-					OIDCConfig: &libOIDC.Config{},
-				},
-				oidcTokenVerifyFn: func(
-					context.Context,
-					string,
-				) (*oidc.IDToken, error) {
-					return &oidc.IDToken{}, nil
-				},
-				oidcExtractClaimsFn: func(*oidc.IDToken) (claims, error) {
-					return claims{}, errors.New("something went wrong")
-				},
-			},
-			assertions: func(t *testing.T, _ claims, err error) {
-				require.ErrorContains(t, err, "something went wrong")
-			},
-		},
-		{
-			name: "token is successfully verified",
-			authMiddleware: &authMiddleware{
-				cfg: config.ServerConfig{
-					OIDCConfig: &libOIDC.Config{},
-				},
-				oidcTokenVerifyFn: func(
-					context.Context,
-					string,
-				) (*oidc.IDToken, error) {
-					return &oidc.IDToken{
-						Subject: "ironman",
-					}, nil
-				},
-				oidcExtractClaimsFn: func(*oidc.IDToken) (claims, error) {
-					return claims{
-						"sub":   "ironman",
-						"email": "tony@starkindustries.io",
-						"groups": []string{
-							"avengers",
-							"shield",
-						},
-					}, nil
-				},
-			},
-			assertions: func(t *testing.T, c claims, err error) {
-				require.NoError(t, err)
-				require.Equal(t, "ironman", c["sub"])
-				require.Equal(t, "tony@starkindustries.io", c["email"])
-				require.Equal(t, []string{"avengers", "shield"}, c["groups"])
-			},
-		},
-	}
-	for _, testCase := range testCases {
-		t.Run(testCase.name, func(t *testing.T) {
-			c, err := testCase.authMiddleware.verifyIDPIssuedToken(
-				t.Context(),
-				// With the way these tests are constructed, this doesn't have to
-				// be valid.
-				"some-token",
-			)
-			testCase.assertions(t, c, err)
-		})
-	}
-}
-
-func TestVerifyKargoIssuedToken(t *testing.T) {
-	const testNonJWTToken = "some-token"
-	testTokenSigningKey := []byte("iwishtowashmyirishwristwatch")
-	testCases := []struct {
-		name           string
-		tokenFn        func() string // Returns a raw token
-		authMiddleware *authMiddleware
-		valid          bool
-	}{
-		{
-			name:           "admin user not supported",
-			authMiddleware: &authMiddleware{},
-			tokenFn: func() string {
-				return testNonJWTToken
-			},
-			valid: false,
-		},
-		{
-			name: "token is not a JWT",
-			authMiddleware: &authMiddleware{
-				cfg: config.ServerConfig{
-					AdminConfig: &config.AdminConfig{
-						TokenSigningKey: testTokenSigningKey,
-					},
-				},
-			},
-			tokenFn: func() string {
-				return testNonJWTToken
-			},
-			valid: false,
-		},
-		{
-			name: "token was not issued by Kargo",
-			authMiddleware: &authMiddleware{
-				cfg: config.ServerConfig{
-					AdminConfig: &config.AdminConfig{
-						TokenSigningKey: testTokenSigningKey,
-					},
-				},
-			},
-			tokenFn: func() string {
-				token, err := jwt.NewWithClaims(
-					jwt.SigningMethodHS256,
-					jwt.RegisteredClaims{
-						ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Hour)),
-					},
-				).SignedString([]byte("wrong key")) // Not testTokenSigningKey
-				require.NoError(t, err)
-				return token
-			},
-			valid: false,
-		},
-		{
-			name: "token was issued by Kargo, but is expired",
-			authMiddleware: &authMiddleware{
-				cfg: config.ServerConfig{
-					AdminConfig: &config.AdminConfig{
-						TokenSigningKey: testTokenSigningKey,
-					},
-				},
-			},
-			tokenFn: func() string {
-				token, err := jwt.NewWithClaims(
-					jwt.SigningMethodHS256,
-					jwt.RegisteredClaims{
-						ExpiresAt: jwt.NewNumericDate(time.Now().Add(-1 * time.Hour)),
-					},
-				).SignedString(testTokenSigningKey)
-				require.NoError(t, err)
-				return token
-			},
-			valid: false,
-		},
-		{
-			name: "success",
-			authMiddleware: &authMiddleware{
-				cfg: config.ServerConfig{
-					AdminConfig: &config.AdminConfig{
-						TokenSigningKey: testTokenSigningKey,
-					},
-				},
-			},
-			tokenFn: func() string {
-				token, err := jwt.NewWithClaims(
-					jwt.SigningMethodHS256,
-					jwt.RegisteredClaims{
-						ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Hour)),
-					},
-				).SignedString(testTokenSigningKey)
-				require.NoError(t, err)
-				return token
-			},
-			valid: true,
-		},
-	}
-	for _, testCase := range testCases {
-		t.Run(testCase.name, func(t *testing.T) {
-			require.Equal(
-				t,
-				testCase.valid,
-				testCase.authMiddleware.verifyKargoIssuedToken(testCase.tokenFn()),
-			)
+			ctx, err := a.authenticate(t.Context(), testCase.path, testCase.token)
+			testCase.assertions(t, ctx, err)
 		})
 	}
 }
 
 func TestAuthMiddlewareHandler(t *testing.T) {
 	gin.SetMode(gin.TestMode)
+	validToken := testJWT(t)
 
 	testCases := []struct {
 		name           string
 		path           string
 		token          string
-		authMiddleware *authMiddleware
+		authenticator  authn.Authenticator
 		expectedStatus int
 		expectedBody   string
-		expectUserInfo bool
+		expectIdentity bool
 	}{
 		{
-			name: "exempt path - no auth required",
-			path: "/v1beta1/system/public-server-config",
-			authMiddleware: &authMiddleware{
-				exemptPaths: exemptPaths,
-			},
+			name:           "exempt path - no auth required",
+			path:           "/v1beta1/system/public-server-config",
 			expectedStatus: http.StatusOK,
-			expectUserInfo: false,
 		},
 		{
 			name:           "no token provided",
 			path:           "/v1beta1/projects",
-			authMiddleware: &authMiddleware{},
 			expectedStatus: http.StatusUnauthorized,
 			expectedBody:   `{"error":"no token provided"}`,
-			expectUserInfo: false,
 		},
 		{
-			name: "token rejected",
-			path: "/v1beta1/projects",
-			authMiddleware: &authMiddleware{
-				parseUnverifiedJWTFn: func(string, jwt.Claims) (*jwt.Token, []string, error) {
-					return nil, nil, errors.New("not a JWT")
-				},
-			},
-			token:          "not-a-jwt",
+			name:           "token rejected",
+			path:           "/v1beta1/projects",
+			token:          validToken,
+			authenticator:  fakeAuthenticator{ok: true, err: authn.ErrInvalidToken},
 			expectedStatus: http.StatusUnauthorized,
 			expectedBody:   `{"error":"invalid token"}`,
-			expectUserInfo: false,
 		},
 		{
 			// A failure to verify the token, as opposed to a failed verification,
 			// must not be reported to the client as a rejected credential.
-			name: "token verification fails",
-			path: "/v1beta1/projects",
-			authMiddleware: &authMiddleware{
-				parseUnverifiedJWTFn: func(_ string, claims jwt.Claims) (*jwt.Token, []string, error) {
-					rc, ok := claims.(*jwt.RegisteredClaims)
-					require.True(t, ok)
-					rc.Issuer = "unrecognized-issuer"
-					return nil, nil, nil
-				},
-				verifyKubernetesTokenFn: func(context.Context, string) (*authnv1.UserInfo, error) {
-					return nil, errors.New("create transport: no credentials")
-				},
-			},
-			token:          "some-token",
+			name:           "token verification fails",
+			path:           "/v1beta1/projects",
+			token:          validToken,
+			authenticator:  fakeAuthenticator{ok: true, err: errors.New("create transport: no credentials")},
 			expectedStatus: http.StatusInternalServerError,
 			expectedBody:   `{"error":"internal server error"}`,
-			expectUserInfo: false,
 		},
 		{
-			name: "valid admin token",
-			path: "/v1beta1/projects",
-			authMiddleware: &authMiddleware{
-				cfg: config.ServerConfig{
-					AdminConfig: &config.AdminConfig{
-						TokenIssuer: "kargo",
-					},
-				},
-				parseUnverifiedJWTFn: func(_ string, claims jwt.Claims) (*jwt.Token, []string, error) {
-					rc, ok := claims.(*jwt.RegisteredClaims)
-					require.True(t, ok)
-					rc.Issuer = "kargo"
-					return nil, nil, nil
-				},
-				verifyKargoIssuedTokenFn: func(_ string) bool {
-					return true
-				},
-			},
-			token:          "valid-admin-token",
+			name:           "valid token",
+			path:           "/v1beta1/projects",
+			token:          validToken,
+			authenticator:  fakeAuthenticator{ok: true, id: user.Admin{}},
 			expectedStatus: http.StatusOK,
-			expectUserInfo: true,
+			expectIdentity: true,
 		},
 	}
 
@@ -811,10 +265,11 @@ func TestAuthMiddlewareHandler(t *testing.T) {
 			// a client actually receives.
 			srv := &server{}
 			router.Use(srv.handleError)
-			router.Use(tc.authMiddleware.Handler)
+			a := &authMiddleware{authenticator: tc.authenticator, exemptPaths: exemptPaths}
+			router.Use(a.Handler)
 			router.GET("/v1beta1/*path", func(c *gin.Context) {
-				_, hasUser := user.InfoFromContext(c.Request.Context())
-				require.Equal(t, tc.expectUserInfo, hasUser)
+				_, hasIdentity := user.IdentityFromContext(c.Request.Context())
+				require.Equal(t, tc.expectIdentity, hasIdentity)
 				c.Status(http.StatusOK)
 			})
 
@@ -841,97 +296,4 @@ func requireErrorStatus(t *testing.T, err error, code int) {
 	var httpErr *libhttp.HTTPError
 	require.ErrorAs(t, err, &httpErr)
 	require.Equal(t, code, httpErr.Code())
-}
-
-func TestVerifyKubernetesToken(t *testing.T) {
-	const testToken = "test-bearer-token"
-	testCases := []struct {
-		name         string
-		reviewStatus authnv1.TokenReviewStatus
-		createErr    error
-		assertions   func(t *testing.T, u *authnv1.UserInfo, err error)
-	}{
-		{
-			// The check could not be carried out, which says nothing about the
-			// token, so the error must carry no status code for the
-			// error-handling middleware to report to the client.
-			name:      "TokenReview call fails",
-			createErr: errors.New("connection refused"),
-			assertions: func(t *testing.T, u *authnv1.UserInfo, err error) {
-				require.ErrorContains(t, err, "submit TokenReview")
-				require.ErrorContains(t, err, "connection refused")
-				var httpErr *libhttp.HTTPError
-				require.False(t, errors.As(err, &httpErr))
-				require.Nil(t, u)
-			},
-		},
-		{
-			name: "Kubernetes reports the token as invalid",
-			reviewStatus: authnv1.TokenReviewStatus{
-				Authenticated: false,
-			},
-			assertions: func(t *testing.T, u *authnv1.UserInfo, err error) {
-				requireErrorStatus(t, err, http.StatusUnauthorized)
-				require.ErrorIs(t, err, errInvalidToken)
-				require.Nil(t, u)
-			},
-		},
-		{
-			name: "Kubernetes reports an error verifying the token",
-			reviewStatus: authnv1.TokenReviewStatus{
-				Error: "some verification error",
-			},
-			assertions: func(t *testing.T, u *authnv1.UserInfo, err error) {
-				requireErrorStatus(t, err, http.StatusUnauthorized)
-				require.ErrorContains(t, err, "some verification error")
-				require.Nil(t, u)
-			},
-		},
-		{
-			name: "Kubernetes authenticates the token",
-			reviewStatus: authnv1.TokenReviewStatus{
-				Authenticated: true,
-				User: authnv1.UserInfo{
-					Username: "system:serviceaccount:kargo-demo:ci-bot",
-					UID:      "abc-123",
-				},
-			},
-			assertions: func(t *testing.T, u *authnv1.UserInfo, err error) {
-				require.NoError(t, err)
-				require.NotNil(t, u)
-				require.Equal(t, "system:serviceaccount:kargo-demo:ci-bot", u.Username)
-				require.Equal(t, "abc-123", u.UID)
-			},
-		},
-	}
-	for _, testCase := range testCases {
-		t.Run(testCase.name, func(t *testing.T) {
-			scheme := runtime.NewScheme()
-			require.NoError(t, authnv1.AddToScheme(scheme))
-
-			fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithInterceptorFuncs(
-				interceptor.Funcs{
-					Create: func(
-						_ context.Context,
-						_ libClient.WithWatch,
-						obj libClient.Object,
-						_ ...libClient.CreateOption,
-					) error {
-						if testCase.createErr != nil {
-							return testCase.createErr
-						}
-						review, ok := obj.(*authnv1.TokenReview)
-						require.True(t, ok)
-						require.Equal(t, testToken, review.Spec.Token)
-						review.Status = testCase.reviewStatus
-						return nil
-					},
-				},
-			).Build()
-
-			authenticator := &authMiddleware{internalClient: fakeClient}
-			u, err := authenticator.verifyKubernetesToken(t.Context(), testToken)
-			testCase.assertions(t, u, err)
-		})
-	}
 }

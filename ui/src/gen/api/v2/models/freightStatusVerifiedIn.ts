@@ -9,6 +9,6 @@ import type { VerifiedStage } from './verifiedStage';
 
 /**
  * VerifiedIn describes the Stages in which this Freight has been verified
-through promotion and subsequent health checks.
+ * through promotion and subsequent health checks.
  */
 export type FreightStatusVerifiedIn = { [key: string]: VerifiedStage };

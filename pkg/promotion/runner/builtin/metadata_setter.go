@@ -90,11 +90,11 @@ func (s *metadataSetter) run(
 			newStatus := stage.Status.DeepCopy()
 			if err := s.upsertMetadata(newStatus, update.Values); err != nil {
 				return promotion.StepResult{
-						Status: kargoapi.PromotionStepStatusErrored,
-					}, fmt.Errorf(
-						"error updating metadata for Stage %q in namespace %q: %w",
-						stage.Name, stage.Namespace, err,
-					)
+					Status: kargoapi.PromotionStepStatusErrored,
+				}, fmt.Errorf(
+					"error updating metadata for Stage %q in namespace %q: %w",
+					stage.Name, stage.Namespace, err,
+				)
 			}
 			if err := kubeclient.PatchStatus(
 				ctx,
@@ -103,11 +103,11 @@ func (s *metadataSetter) run(
 				func(status *kargoapi.StageStatus) { *status = *newStatus },
 			); err != nil {
 				return promotion.StepResult{
-						Status: kargoapi.PromotionStepStatusErrored,
-					}, fmt.Errorf(
-						"error patching status of Stage %q in namespace %q: %w",
-						stage.Name, stage.Namespace, err,
-					)
+					Status: kargoapi.PromotionStepStatusErrored,
+				}, fmt.Errorf(
+					"error patching status of Stage %q in namespace %q: %w",
+					stage.Name, stage.Namespace, err,
+				)
 			}
 
 		case "Freight":
@@ -127,11 +127,11 @@ func (s *metadataSetter) run(
 			newStatus := freight.Status.DeepCopy()
 			if err := s.upsertMetadata(newStatus, update.Values); err != nil {
 				return promotion.StepResult{
-						Status: kargoapi.PromotionStepStatusErrored,
-					}, fmt.Errorf(
-						"error updating metadata for Freight %q in namespace %q: %w",
-						freight.Name, freight.Namespace, err,
-					)
+					Status: kargoapi.PromotionStepStatusErrored,
+				}, fmt.Errorf(
+					"error updating metadata for Freight %q in namespace %q: %w",
+					freight.Name, freight.Namespace, err,
+				)
 			}
 			if err := kubeclient.PatchStatus(
 				ctx,
@@ -140,19 +140,19 @@ func (s *metadataSetter) run(
 				func(status *kargoapi.FreightStatus) { *status = *newStatus },
 			); err != nil {
 				return promotion.StepResult{
-						Status: kargoapi.PromotionStepStatusErrored,
-					}, fmt.Errorf(
-						"error patching status of Freight %q in namespace %q: %w",
-						freight.Name, freight.Namespace, err,
-					)
+					Status: kargoapi.PromotionStepStatusErrored,
+				}, fmt.Errorf(
+					"error patching status of Freight %q in namespace %q: %w",
+					freight.Name, freight.Namespace, err,
+				)
 			}
 
 		default:
 			return promotion.StepResult{
-					Status: kargoapi.PromotionStepStatusFailed,
-				}, &promotion.TerminalError{
-					Err: fmt.Errorf("unsupported kind %q", update.Kind),
-				}
+				Status: kargoapi.PromotionStepStatusFailed,
+			}, &promotion.TerminalError{
+				Err: fmt.Errorf("unsupported kind %q", update.Kind),
+			}
 		}
 	}
 

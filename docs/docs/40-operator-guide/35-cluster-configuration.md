@@ -91,9 +91,9 @@ changed by the operator at the time of installation. (Refer to the
 
 Prior to `v1.9`, `Secret`s referenced by `ClusterConfig` were contained in the namespace designated by`global.clusterSecretsNamespace`, with a default of `kargo-cluster-secrets`.
 
-Kargo v1.9.0 changed the name of the setting to `global.systemResources.namespace` and its default value to `kargo-system-resources` to better reflect the intent to use the namespace not only for `Secret`s, but for _all_ types of namespaced resources that lack a cluster-scoped analog.
+Kargo v1.9.0 changed the name of the setting to `global.systemResources.namespace` and its default value to `kargo-system-resources` to better reflect the intent to use the namespace not only for `Secret`s, but for _all_ types of namespaced resources that lack a cluster-scoped analog. Kargo versions >= v1.9.0 and < v1.12.0 automatically synced `Secret`s from the namespace specified by `global.clusterSecretsNamespace` to the namespace specified by `global.systemResources.namespace` (if they were different).
 
-Kargo versions >= v1.9.0 and < v1.12.0 will automatically sync `Secret`s from the namespace specified by `global.clusterSecretsNamespace` to the namespace specified by `global.clusterSecretsNamespace` (if they are different). That migration utility will be removed from v1.12.0, by which time operators who GitOps their `ClusterConfig` will need to have updated their manifests accordingly. Upgrades to v1.12.0 will **fail** if `global.clusterSecretsNamespace` remains defined.
+As of v1.12.0, that migration utility has been removed and `global.clusterSecretsNamespace` is no longer supported. Upgrading to v1.12.0 or later will **fail** if `global.clusterSecretsNamespace` remains defined in your values.
 
 :::
 
@@ -284,3 +284,47 @@ This is only a small example to illustrate the structure of a `ClusterMessageCha
 detailed information about all the different spec fields and configuration options, refer to the
 documentation for
 [`MessageChannel`](../50-user-guide/20-how-to-guides/20-working-with-projects.md#message-channels).
+
+## Promotion Windows
+
+<span class="tag professional"></span>
+<span class="tag beta"></span>
+
+A `ClusterConfig` can define `promotionWindows` that gate _when_ `Promotion`s
+may be created, applied _across Projects_. This is the cluster-scoped analog to the
+[`promotionWindows` field on `ProjectConfig`](../50-user-guide/20-how-to-guides/20-working-with-projects.md#promotion-windows).
+
+In addition to the `stageSelector`, a `ClusterConfig` window may specify a
+`projectSelector` to narrow which Projects it applies to (when omitted, it
+applies to every Project).
+Cluster-level windows are well suited to an organization-wide "stop the line"
+freeze or a release schedule shared by many Projects.
+
+```yaml
+apiVersion: kargo.akuity.io/v1alpha1
+kind: ClusterConfig
+metadata:
+  name: cluster
+spec:
+  promotionWindows:
+  # Freeze production promotions across every Project.
+  - name: global-prod-freeze
+    kind: Deny
+    stageSelector:
+      name: glob:prod-*
+    dtstart: "20260701T000000"
+    dtend: "20260702T000000"
+  # Restrict a group of Projects to a weekly release slot.
+  - name: friday-release-slot
+    kind: Allow
+    projectSelector:
+      matchLabels:
+        team: payments
+    rrule: FREQ=WEEKLY;BYDAY=FR
+    dtstart: "TZID=America/New_York:20260102T130000"
+    dtend: "TZID=America/New_York:20260102T170000"
+```
+
+For the full field reference, scheduling syntax, allow/deny precedence, and the
+`Stage` status Kargo publishes for a freeze, see the
+[Promotion Windows](../50-user-guide/20-how-to-guides/45-promotion-windows.md) guide.

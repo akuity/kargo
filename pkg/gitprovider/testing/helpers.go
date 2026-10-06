@@ -64,15 +64,18 @@ func (c RepoConfig) authedRepoURL() string {
 	if c.AuthedRepoURL != "" {
 		return c.AuthedRepoURL
 	}
-	const prefix = "https://"
-	if !strings.HasPrefix(c.RepoURL, prefix) {
-		return c.RepoURL
+	// http is supported so that these helpers work against a self-hosted
+	// provider reached over plain HTTP, e.g. a Gitea instance in a container.
+	for _, prefix := range []string{"https://", "http://"} {
+		if strings.HasPrefix(c.RepoURL, prefix) {
+			return fmt.Sprintf(
+				"%s%s:%s@%s",
+				prefix, c.GitUsername, c.Token,
+				c.RepoURL[len(prefix):],
+			)
+		}
 	}
-	return fmt.Sprintf(
-		"%s%s:%s@%s",
-		prefix, c.GitUsername, c.Token,
-		c.RepoURL[len(prefix):],
-	)
+	return c.RepoURL
 }
 
 func (c RepoConfig) mergeWait() time.Duration {
@@ -147,6 +150,92 @@ func RunPRTests(
 			)
 		})
 	}
+}
+
+// RunDeleteBranchTests is the shared test runner for DeleteBranch. It pushes a
+// feature branch, opens a pull request from it, and then exercises the branch
+// deletion path end to end against the live provider.
+//
+// The head branch is asserted because the git-merge-pr step learns which branch
+// to delete from the provider rather than from step config: if a provider fails
+// to report it, the step silently deletes nothing.
+func RunDeleteBranchTests(
+	t *testing.T,
+	cfg RepoConfig,
+	prov gitprovider.Interface,
+) {
+	t.Helper()
+	ensureMainBranch(t, cfg)
+
+	branchName := uniqueBranchName("delete-branch")
+	repo := cloneAndPush(t, cfg, branchName)
+	defer deleteBranchAndClose(cfg, repo, branchName)
+
+	require.True(t, remoteBranchExists(t, cfg, repo, branchName),
+		"feature branch should exist on the remote before deletion",
+	)
+
+	// These subtests share the branch above and must run in order.
+	t.Run("provider reports the head branch", func(t *testing.T) {
+		pr, err := prov.CreatePullRequest(
+			t.Context(),
+			&gitprovider.CreatePullRequestOpts{
+				Title: "integration test: delete branch",
+				Head:  branchName,
+				Base:  "main",
+			},
+		)
+		require.NoError(t, err)
+		require.NotNil(t, pr)
+		require.Equal(t, branchName, pr.HeadBranch)
+
+		// The step deletes the branch named by the PR it merged, which it reads
+		// back from the provider, so the same value must survive a fetch.
+		fetched, err := prov.GetPullRequest(t.Context(), pr.Number)
+		require.NoError(t, err)
+		require.NotNil(t, fetched)
+		require.Equal(t, branchName, fetched.HeadBranch)
+	})
+
+	t.Run("deletes the branch", func(t *testing.T) {
+		require.NoError(t, prov.DeleteBranch(t.Context(), branchName))
+		require.False(t, remoteBranchExists(t, cfg, repo, branchName),
+			"feature branch should be gone from the remote after deletion",
+		)
+	})
+
+	t.Run("deleting an absent branch is not an error", func(t *testing.T) {
+		// Providers report a missing branch in several different ways, and every
+		// implementation is expected to normalize that to success so the step is
+		// safe to retry. Both a branch that was just deleted and one that never
+		// existed take that path.
+		require.NoError(t, prov.DeleteBranch(t.Context(), branchName))
+		require.NoError(
+			t, prov.DeleteBranch(t.Context(), uniqueBranchName("never-existed")),
+		)
+	})
+}
+
+// remoteBranchExists reports whether the named branch exists on the remote. It
+// queries the remote over an authenticated URL with interactive prompts
+// disabled, for the same reasons as deleteBranchAndClose.
+func remoteBranchExists(
+	t *testing.T, cfg RepoConfig, repo git.Repo, branch string,
+) bool {
+	t.Helper()
+	ref := "refs/heads/" + branch
+	// nolint:gosec // Test helper; the URL is built from test config, not
+	// external input.
+	cmd := exec.Command("git", "ls-remote", "--heads", cfg.authedRepoURL(), ref)
+	cmd.Dir = repo.Dir()
+	cmd.Env = append(
+		os.Environ(),
+		fmt.Sprintf("HOME=%s", repo.HomeDir()),
+		"GIT_TERMINAL_PROMPT=0",
+	)
+	out, err := cmd.CombinedOutput()
+	require.NoError(t, err, string(out))
+	return strings.Contains(string(out), ref)
 }
 
 // ensureMainBranch ensures the test repo has a main branch with at least one

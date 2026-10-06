@@ -1,0 +1,127 @@
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Project
+metadata:
+  name: kargo-vars
+---
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Warehouse
+metadata:
+  name: vars
+  namespace: kargo-vars
+spec:
+  subscriptions:
+  - chart:
+      repoURL: https://grafana-community.github.io/helm-charts
+      name: grafana
+---
+apiVersion: kargo.akuity.io/v1alpha1
+kind: PromotionTask
+metadata:
+  name: promo-process
+  namespace: kargo-vars
+spec:
+  vars:
+  - name: pokemon_3
+  - name: pokemon_4
+    value: ditto
+  steps:
+  # Each step looks up a pokemon by a var defined at a different level and
+  # records the name pokeapi returns. If the var resolved correctly, the
+  # returned name equals the var's value.
+  - uses: http
+    as: query-1
+    config:
+      # Defined in Stage spec.vars
+      url: https://pokeapi.co/api/v2/pokemon/${{ vars.pokemon_1 }}
+      outputs:
+      - name: response
+        fromExpression: response.body.name
+  - uses: http
+    as: query-2
+    config:
+      # Defined in Stage spec.promotionTemplate.spec.vars
+      url: https://pokeapi.co/api/v2/pokemon/${{ vars.pokemon_2 }}
+      outputs:
+      - name: response
+        fromExpression: response.body.name
+  - uses: http
+    as: query-3
+    config:
+      # Defined in Stage spec.promotionTemplate.spec.steps[].vars
+      url: https://pokeapi.co/api/v2/pokemon/${{ vars.pokemon_3 }}
+      outputs:
+      - name: response
+        fromExpression: response.body.name
+  - uses: http
+    as: query-4
+    config:
+      # Defined in PromotionTask spec.vars
+      url: https://pokeapi.co/api/v2/pokemon/${{ vars.pokemon_4 }}
+      outputs:
+      - name: response
+        fromExpression: response.body.name
+  # Surface each resolved name as the task's output.
+  - uses: compose-output
+    config:
+      pokemon1: ${{ task.outputs['query-1'].response }}
+      pokemon2: ${{ task.outputs['query-2'].response }}
+      pokemon3: ${{ task.outputs['query-3'].response }}
+      pokemon4: ${{ task.outputs['query-4'].response }}
+---
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+metadata:
+  name: vars
+  namespace: kargo-vars
+spec:
+  vars:
+  - name: pokemon_1
+    value: pikachu
+  requestedFreight:
+  - origin:
+      kind: Warehouse
+      name: vars
+    sources:
+      direct: true
+  promotionTemplate:
+    spec:
+      vars:
+      - name: pokemon_2
+        value: charmander
+      steps:
+      - task:
+          name: promo-process
+        as: promo
+        vars:
+        - name: pokemon_3
+          value: bulbasaur
+      # Re-surface the task output at the top level so the test can read it.
+      - uses: compose-output
+        as: output
+        config:
+          pokemon1: ${{ outputs.promo.pokemon1 }}
+          pokemon2: ${{ outputs.promo.pokemon2 }}
+          pokemon3: ${{ outputs.promo.pokemon3 }}
+          pokemon4: ${{ outputs.promo.pokemon4 }}
+  verification:
+    analysisTemplates:
+    - name: pokemon-query
+    args:
+    - name: pokemon
+      value: ${{ vars.pokemon_1 }}
+---
+apiVersion: argoproj.io/v1alpha1
+kind: AnalysisTemplate
+metadata:
+  name: pokemon-query
+  namespace: kargo-vars
+spec:
+  args:
+    - name: pokemon
+  metrics:
+    - name: pokemon-xp
+      provider:
+        web:
+          url: https://pokeapi.co/api/v2/pokemon/{{args.pokemon}}
+          jsonPath: "{$.base_experience}"
+      successCondition: result < 200

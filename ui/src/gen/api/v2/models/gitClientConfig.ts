@@ -8,18 +8,24 @@
 import type { V1LocalObjectReference } from './v1LocalObjectReference';
 
 export interface GitClientConfig {
-  /** Email is the email address used for Git commits made by Kargo.
-+kubebuilder:validation:Required
-+kubebuilder:validation:MinLength=1
-+kubebuilder:validation:Format="email" */
+  /**
+   * Email is the email address used for Git commits made by Kargo.
+   * +kubebuilder:validation:Required
+   * +kubebuilder:validation:MinLength=1
+   * +kubebuilder:validation:Format="email"
+   */
   email: string;
-  /** Name is the name used for Git commits made by Kargo.
-+kubebuilder:validation:Required
-+kubebuilder:validation:MinLength=1 */
+  /**
+   * Name is the name used for Git commits made by Kargo.
+   * +kubebuilder:validation:Required
+   * +kubebuilder:validation:MinLength=1
+   */
   name: string;
-  /** SigningKeySecret references a Secret in the system namespace containing
-a GPG signing key for commit signing. The Secret must contain a data
-key named "signingKey" with the GPG private key material.
-+optional */
+  /**
+   * SigningKeySecret references a Secret in the system namespace containing
+   * a GPG signing key for commit signing. The Secret must contain a data
+   * key named "signingKey" with the GPG private key material.
+   * +optional
+   */
   signingKeySecret?: V1LocalObjectReference;
 }

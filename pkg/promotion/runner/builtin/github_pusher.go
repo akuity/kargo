@@ -105,7 +105,7 @@ type githubPushServiceAdapter struct {
 // githubPusherConfig holds controller-level configuration for the
 // github-push step, populated from environment variables.
 type githubPusherConfig struct {
-	PushIntegrationPolicy  git.PushIntegrationPolicy `envconfig:"GIT_PUSH_INTEGRATION_POLICY" default:"AlwaysRebase"`
+	PushIntegrationPolicy  git.PushIntegrationPolicy `envconfig:"GIT_PUSH_INTEGRATION_POLICY" default:"RebaseOrMerge"`
 	MaxRevisions           int                       `envconfig:"GITHUB_PUSH_MAX_REVISIONS" default:"10"`
 	VerifyUntrustedCommits bool                      `envconfig:"GITHUB_PUSH_VERIFY_UNTRUSTED_COMMITS" default:"false"`
 }
@@ -205,24 +205,13 @@ func (g *githubPusher) run(
 			)}
 	case creds.Password != "":
 		loadOpts.Credentials = &git.RepoCredentials{
-			Username:      creds.Username,
-			Password:      creds.Password,
-			SSHPrivateKey: creds.SSHPrivateKey,
+			Username: creds.Username,
+			Password: creds.Password,
 		}
 		token = creds.Password
-	case creds.SSHPrivateKey != "":
-		return promotion.StepResult{Status: kargoapi.PromotionStepStatusFailed},
-			&promotion.TerminalError{Err: fmt.Errorf(
-				"found SSH key for %s; this can be used for basic Git operations only "+
-					"and cannot be used for GitHub API authentication; note that "+
-					"authentication of any kind using SSH keys is deprecated; use a "+
-					"personal access token or GitHub App instead",
-				workTree.URL(),
-			)}
 	default:
 		// This probably never happens in practice. If we get to here, creds were
-		// found, but contained no token, and didn't even contain an SSH key worth
-		// commenting on.
+		// found, but contained no token.
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusFailed},
 			&promotion.TerminalError{Err: fmt.Errorf(
 				"credentials for %s are missing a password/token", workTree.URL(),

@@ -7,13 +7,17 @@
  */
 
 export interface ExpressionVariable {
-  /** Name is the name of the variable.
-
-+kubebuilder:validation:MinLength=1
-+kubebuilder:validation:Pattern=^[a-zA-Z_]\w*$ */
+  /**
+   * Name is the name of the variable.
+   *
+   * +kubebuilder:validation:MinLength=1
+   * +kubebuilder:validation:Pattern=^[a-zA-Z_]\w*$
+   */
   name?: string;
-  /** Value is the value of the variable. It is allowed to utilize expressions
-in the value.
-See https://docs.kargo.io/user-guide/reference-docs/expressions for details. */
+  /**
+   * Value is the value of the variable. It is allowed to utilize expressions
+   * in the value.
+   * See https://docs.kargo.io/user-guide/reference-docs/expressions for details.
+   */
   value?: string;
 }

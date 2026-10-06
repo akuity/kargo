@@ -7,8 +7,10 @@
  */
 
 export interface CurrentStage {
-  /** Since is the time at which the Stage most recently started using the
-Freight. This can be used to calculate how long the Freight has been in use
-by the Stage. */
+  /**
+   * Since is the time at which the Stage most recently started using the
+   * Freight. This can be used to calculate how long the Freight has been in use
+   * by the Stage.
+   */
   since?: string;
 }

@@ -3,6 +3,7 @@ import { useEffect } from 'react';
 
 export const monacoEditorLogLanguage = 'logs';
 export const monacoEditorLogLanguageTheme = 'logsTheme';
+export const monacoEditorLogLanguageThemeDark = 'logsThemeDark';
 
 export const useMonacoEditorLogLanguage = () => {
   useEffect(() => {
@@ -26,6 +27,18 @@ export const useMonacoEditorLogLanguage = () => {
         }
       ],
       colors: {}
+    });
+
+    editor.defineTheme(monacoEditorLogLanguageThemeDark, {
+      base: 'vs-dark',
+      inherit: true,
+      rules: [
+        {
+          token: 'time-format',
+          foreground: '4aa3ff'
+        }
+      ],
+      colors: { 'editor.background': '#0f1722' }
     });
   }, []);
 };

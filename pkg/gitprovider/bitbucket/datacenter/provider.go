@@ -325,6 +325,29 @@ func (p *provider) MergePullRequest(
 	return toProviderPR(mergedPR), true, nil
 }
 
+// DeleteBranch implements gitprovider.Interface.
+func (p *provider) DeleteBranch(ctx context.Context, branch string) error {
+	resp, err := p.client.DeleteBranchWithResponse(
+		ctx,
+		p.projectKey,
+		p.repoSlug,
+		DeleteBranchJSONRequestBody{Name: "refs/heads/" + branch},
+	)
+	if err != nil {
+		return fmt.Errorf("error deleting branch %q: %w", branch, err)
+	}
+	switch resp.StatusCode() {
+	case http.StatusNoContent:
+		return nil
+	case http.StatusNotFound:
+		// A branch that is already gone is not an error.
+		return nil
+	}
+	return fmt.Errorf(
+		"error deleting branch %q: unexpected response %d", branch, resp.StatusCode(),
+	)
+}
+
 // GetCommitURL implements gitprovider.Interface.
 func (p *provider) GetCommitURL(_ string, sha string) (string, error) {
 	var projectPath string
@@ -386,16 +409,22 @@ func toProviderPR(pr *RestPullRequest) *gitprovider.PullRequest {
 }
 
 // parseRepoURL extracts the API base URL, project key, and repo slug from a
-// Bitbucket Data Center repository URL. It handles three formats:
+// Bitbucket Data Center repository URL. Only HTTP(S) URLs are supported, in
+// two formats:
 //
 //   - Web UI:    https://host/projects/{key}/repos/{slug}
 //     https://host/users/{username}/repos/{slug}
 //   - HTTP clone: https://host/scm/{key}/{slug}
-//   - SSH clone:  ssh://host/{key}/{slug}  (after NormalizeGit)
 func parseRepoURL(repoURL string) (baseURL, projectKey, repoSlug string, err error) {
 	u, err := url.Parse(urls.NormalizeGit(repoURL))
 	if err != nil {
 		return "", "", "", fmt.Errorf("parse Bitbucket Data Center URL %q: %w", repoURL, err)
+	}
+	if u.Scheme != "https" && u.Scheme != "http" {
+		return "", "", "", fmt.Errorf(
+			"unsupported Bitbucket Data Center URL %q: only HTTP(S) URLs are supported",
+			u.Redacted(),
+		)
 	}
 
 	host := u.Hostname()
@@ -420,13 +449,9 @@ func parseRepoURL(repoURL string) (baseURL, projectKey, repoSlug string, err err
 		// HTTP clone URL: /scm/{key}/{slug}
 		projectKey = parts[1]
 		repoSlug = parts[2]
-	case len(parts) == 2:
-		// SSH clone URL (after NormalizeGit): /{key}/{slug} or /~{username}/{slug}
-		projectKey = parts[0]
-		repoSlug = parts[1]
 	default:
 		return "", "", "", fmt.Errorf(
-			"invalid repository path in URL %q: expected /projects/{key}/repos/{slug}, /scm/{key}/{slug}, or /{key}/{slug}",
+			"invalid repository path in URL %q: expected /projects/{key}/repos/{slug} or /scm/{key}/{slug}",
 			repoURL,
 		)
 	}

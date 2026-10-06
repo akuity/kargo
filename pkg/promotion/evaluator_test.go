@@ -76,6 +76,7 @@ func TestStepEvaluator_BuildExprEnv(t *testing.T) {
 					},
 				},
 				Target: &TargetContext{
+					Name:   "us-east-1",
 					Params: map[string]any{"cluster": "east"},
 					Labels: map[string]string{"env": "prod"},
 				},
@@ -104,6 +105,7 @@ func TestStepEvaluator_BuildExprEnv(t *testing.T) {
 					},
 				},
 				"target": map[string]any{
+					"name":   "us-east-1",
 					"params": map[string]any{"cluster": "east"},
 					"labels": map[string]string{"env": "prod"},
 				},
@@ -605,10 +607,11 @@ func TestBuildCtxMap(t *testing.T) {
 			},
 		},
 		{
-			name: "step context with target exposes target.params and target.labels",
+			name: "step context with target exposes target.name, target.params and target.labels",
 			stepCtx: StepContext{
 				Project: "test-project",
 				Target: &TargetContext{
+					Name:   "us-east-1",
 					Params: map[string]any{"cluster": "east", "region": "us"},
 					Labels: map[string]string{"env": "prod"},
 				},
@@ -637,6 +640,7 @@ func TestBuildCtxMap(t *testing.T) {
 					},
 				},
 				"target": map[string]any{
+					"name":   "us-east-1",
 					"params": map[string]any{"cluster": "east", "region": "us"},
 					"labels": map[string]string{"env": "prod"},
 				},
@@ -1021,7 +1025,7 @@ func TestStepEvaluator_Vars(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			evaluator := NewStepEvaluator(testClient, nil)
+			evaluator := NewStepEvaluator(testClient, nil, nil)
 			vars, err := evaluator.Vars(
 				t.Context(),
 				tt.promoCtx,
@@ -1184,6 +1188,7 @@ func TestStepEvaluator_ShouldSkip(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			evaluator := NewStepEvaluator(
 				fake.NewClientBuilder().Build(),
+				nil,
 				nil,
 			)
 			got, err := evaluator.ShouldSkip(
@@ -1755,13 +1760,13 @@ func TestStepEvaluator_Config(t *testing.T) {
 			step: Step{
 				Config: nil,
 			},
-			expectedCfg: nil,
+			expectedCfg: Config{},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			evaluator := NewStepEvaluator(testClient, nil)
+			evaluator := NewStepEvaluator(testClient, nil, nil)
 			stepCfg, err := evaluator.Config(
 				t.Context(),
 				tt.promoCtx,
@@ -1889,20 +1894,93 @@ func TestStepEvaluator_BuildStepContext(t *testing.T) {
 			assertions: func(t *testing.T, stepCtx *StepContext, err error) {
 				require.NoError(t, err)
 				require.NotNil(t, stepCtx)
-				assert.Nil(t, stepCtx.Config)
+				assert.Equal(t, Config{}, stepCtx.Config)
 			},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			evaluator := NewStepEvaluator(testClient, nil)
+			evaluator := NewStepEvaluator(testClient, nil, nil)
 			stepCtx, err := evaluator.BuildStepContext(
 				t.Context(),
 				tt.promoCtx,
 				tt.step,
 			)
 			tt.assertions(t, stepCtx, err)
+		})
+	}
+}
+
+func TestStepEvaluator_Config_target(t *testing.T) {
+	testScheme := runtime.NewScheme()
+	require.NoError(t, kargoapi.AddToScheme(testScheme))
+	testClient := fake.NewClientBuilder().WithScheme(testScheme).Build()
+
+	targetCtx := &TargetContext{
+		Name: "us-east-1",
+		Params: map[string]any{
+			"branch":   "env/prod-use1",
+			"replicas": float64(5),
+			"ingress":  map[string]any{"host": "use1.example.com"},
+		},
+		Labels: map[string]string{"region": "us-east-1"},
+	}
+
+	tests := []struct {
+		name     string
+		promoCtx Context
+		step     Step
+		assert   func(*testing.T, Config, error)
+	}{
+		{
+			name:     "target name, params and labels resolve",
+			promoCtx: Context{Project: "fake-project", Target: targetCtx},
+			step: Step{
+				Config: []byte(`{
+					"name": "${{ target.name }}",
+					"branch": "${{ target.params.branch }}",
+					"replicas": "${{ target.params.replicas }}",
+					"host": "${{ target.params.ingress.host }}",
+					"region": "${{ target.labels.region }}"
+				}`),
+			},
+			assert: func(t *testing.T, cfg Config, err error) {
+				require.NoError(t, err)
+				require.Equal(
+					t,
+					Config{
+						"name":   "us-east-1",
+						"branch": "env/prod-use1",
+						// Numeric params reach a step as int, not the float64
+						// they are decoded to, because step config is
+						// round-tripped through YAML.
+						"replicas": 5,
+						"host":     "use1.example.com",
+						"region":   "us-east-1",
+					},
+					cfg,
+				)
+			},
+		},
+		{
+			name:     "target reference fails without a Target",
+			promoCtx: Context{Project: "fake-project"},
+			step: Step{
+				Config: []byte(`{"branch": "${{ target.params.branch }}"}`),
+			},
+			assert: func(t *testing.T, cfg Config, err error) {
+				require.Error(t, err)
+				require.Nil(t, cfg)
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			evaluator := NewStepEvaluator(testClient, nil, nil)
+			cfg, err := evaluator.Config(t.Context(), tt.promoCtx, tt.step)
+			tt.assert(t, cfg, err)
 		})
 	}
 }

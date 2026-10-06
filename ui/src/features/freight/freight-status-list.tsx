@@ -37,7 +37,7 @@ const StageStatusList = ({
           ))}
         </div>
       ) : (
-        <div className='w-full bg-gray-100 px-3 py-2 font-medium text-gray-600 rounded'>
+        <div className='w-full bg-gray-100 dark:bg-neutral-800 px-3 py-2 font-medium text-gray-600 dark:text-neutral-400 rounded'>
           This freight has not been {title} any stages yet.
         </div>
       )}

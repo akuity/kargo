@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"path"
 	"strings"
+	"time"
 
-	"github.com/technosophos/moniker"
 	admissionv1 "k8s.io/api/admission/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -25,6 +25,7 @@ import (
 	"github.com/akuity/kargo/pkg/indexer"
 	libEvent "github.com/akuity/kargo/pkg/kubernetes/event"
 	"github.com/akuity/kargo/pkg/logging"
+	"github.com/akuity/kargo/pkg/namer"
 	"github.com/akuity/kargo/pkg/urls"
 	libWebhook "github.com/akuity/kargo/pkg/webhook/kubernetes"
 )
@@ -41,12 +42,15 @@ var (
 )
 
 type webhook struct {
-	client                client.Client
-	freightAliasGenerator moniker.Namer
+	client                  client.Client
+	freightAliasGenerator   namer.Namer
+	mayFourthAliasGenerator namer.Namer
 
 	sender event.Sender
 
 	// The following behaviors are overridable for testing purposes:
+
+	nowFn func() time.Time
 
 	admissionRequestFromContextFn func(context.Context) (admission.Request, error)
 
@@ -81,27 +85,36 @@ func SetupWebhookWithManager(
 	cfg libWebhook.Config,
 	mgr ctrl.Manager,
 ) error {
-	w := newWebhook(
+	w, err := newWebhook(
 		cfg,
 		mgr.GetClient(),
 		k8sevent.NewEventSender(libEvent.NewRecorder(ctx, mgr.GetScheme(), mgr.GetClient(), "freight-webhook")),
 	)
-	return ctrl.NewWebhookManagedBy(mgr, &kargoapi.Freight{}).
-		WithValidator(w).
-		WithDefaulter(w).
-		Complete()
+	if err != nil {
+		return err
+	}
+	return libWebhook.SetupValidatingAndDefaultingWebhook(mgr, &kargoapi.Freight{}, w)
 }
 
 func newWebhook(
 	cfg libWebhook.Config,
 	kubeClient client.Client,
 	sender event.Sender,
-) *webhook {
-	w := &webhook{
-		client:                kubeClient,
-		freightAliasGenerator: moniker.New(),
-		sender:                sender,
+) (*webhook, error) {
+	mayFourthAliasGenerator, err := namer.New(
+		namer.DefaultDescriptors(),
+		mayFourthNouns,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("error creating May Fourth alias generator: %w", err)
 	}
+	w := &webhook{
+		client:                  kubeClient,
+		freightAliasGenerator:   namer.NewDefault(),
+		mayFourthAliasGenerator: mayFourthAliasGenerator,
+		sender:                  sender,
+	}
+	w.nowFn = time.Now
 	w.admissionRequestFromContextFn = admission.RequestFromContext
 	w.getAvailableFreightAliasFn = w.getAvailableFreightAlias
 	w.validateProjectFn = libWebhook.ValidateProject
@@ -110,7 +123,7 @@ func newWebhook(
 	w.getWarehouseFn = api.GetWarehouse
 	w.validateFreightArtifactsFn = validateFreightArtifacts
 	w.isRequestFromKargoControlplaneFn = libWebhook.IsRequestFromKargoControlplane(cfg.ControlplaneUserRegex)
-	return w
+	return w, nil
 }
 
 func (w *webhook) Default(ctx context.Context, freight *kargoapi.Freight) error {
@@ -251,26 +264,33 @@ func (w *webhook) ValidateUpdate(
 	oldFreight *kargoapi.Freight,
 	newFreight *kargoapi.Freight,
 ) (admission.Warnings, error) {
-	freightList := kargoapi.FreightList{}
-	if err := w.listFreightFn(
-		ctx,
-		&freightList,
-		client.InNamespace(newFreight.Namespace),
-		client.MatchingLabels{kargoapi.LabelKeyAlias: newFreight.Alias},
-	); err != nil {
-		return nil, apierrors.NewInternalError(err)
-	}
-	if len(freightList.Items) > 1 ||
-		(len(freightList.Items) == 1 && freightList.Items[0].Name != newFreight.Name) {
-		return nil, apierrors.NewConflict(
-			freightGroupResource,
-			newFreight.Name,
-			fmt.Errorf(
-				"alias %q already used by another piece of Freight in namespace %q",
-				newFreight.Alias,
-				newFreight.Namespace,
-			),
-		)
+	// Alias uniqueness is checked only when the alias is changing. Two pieces
+	// of Freight can end up sharing a generated alias if they are created at
+	// nearly the same instant, and rejecting every subsequent update to either
+	// of them (including status updates) cannot undo that. It only prevents
+	// them from ever being used.
+	if newFreight.Alias != oldFreight.Alias {
+		freightList := kargoapi.FreightList{}
+		if err := w.listFreightFn(
+			ctx,
+			&freightList,
+			client.InNamespace(newFreight.Namespace),
+			client.MatchingLabels{kargoapi.LabelKeyAlias: newFreight.Alias},
+		); err != nil {
+			return nil, apierrors.NewInternalError(err)
+		}
+		if len(freightList.Items) > 1 ||
+			(len(freightList.Items) == 1 && freightList.Items[0].Name != newFreight.Name) {
+			return nil, apierrors.NewConflict(
+				freightGroupResource,
+				newFreight.Name,
+				fmt.Errorf(
+					"alias %q already used by another piece of Freight in namespace %q",
+					newFreight.Alias,
+					newFreight.Namespace,
+				),
+			)
+		}
 	}
 
 	// Freight is meant to be immutable.

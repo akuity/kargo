@@ -8,6 +8,7 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/api"
+	"github.com/akuity/kargo/pkg/server/auth/can"
 )
 
 // @id RefreshClusterConfig
@@ -21,6 +22,11 @@ import (
 // @Router /v1beta1/system/cluster-config/refresh [post]
 func (s *server) refreshClusterConfig(c *gin.Context) {
 	ctx := c.Request.Context()
+
+	if err := s.authorize(ctx, can.Get().ClusterConfig(api.ClusterConfigName)); err != nil {
+		_ = c.Error(err)
+		return
+	}
 
 	obj := &kargoapi.ClusterConfig{
 		ObjectMeta: v1.ObjectMeta{Name: api.ClusterConfigName},

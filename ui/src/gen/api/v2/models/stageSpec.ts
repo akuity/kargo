@@ -5,51 +5,59 @@
  * REST API for Kargo
  * OpenAPI spec version: v1alpha1
  */
-import type { PromotionTemplate } from './promotionTemplate';
-import type { FreightRequest } from './freightRequest';
-import type { V1LabelSelector } from './v1LabelSelector';
 import type { ExpressionVariable } from './expressionVariable';
+import type { FreightRequest } from './freightRequest';
+import type { PromotionTemplate } from './promotionTemplate';
+import type { StageTargets } from './stageTargets';
 import type { Verification } from './verification';
 
 export interface StageSpec {
-  /** PromotionTemplate describes how to incorporate Freight into the Stage
-using a Promotion. */
+  /**
+   * PromotionTemplate describes how to incorporate Freight into the Stage
+   * using a Promotion.
+   */
   promotionTemplate?: PromotionTemplate;
-  /** RequestedFreight expresses the Stage's need for certain pieces of Freight,
-each having originated from a particular Warehouse. This list must be
-non-empty. In the common case, a Stage will request Freight having
-originated from just one specific Warehouse. In advanced cases, requesting
-Freight from multiple Warehouses provides a method of advancing new
-artifacts of different types through parallel pipelines at different
-speeds. This can be useful, for instance, if a Stage is home to multiple
-microservices that are independently versioned.
-
-+kubebuilder:validation:MinItems=1 */
+  /**
+   * RequestedFreight expresses the Stage's need for certain pieces of Freight,
+   * each having originated from a particular Warehouse. This list must be
+   * non-empty. In the common case, a Stage will request Freight having
+   * originated from just one specific Warehouse. In advanced cases, requesting
+   * Freight from multiple Warehouses provides a method of advancing new
+   * artifacts of different types through parallel pipelines at different
+   * speeds. This can be useful, for instance, if a Stage is home to multiple
+   * microservices that are independently versioned.
+   *
+   * +kubebuilder:validation:MinItems=1
+   */
   requestedFreight?: FreightRequest[];
-  /** Shard is the name of the shard that this Stage belongs to. This is an
-optional field. If not specified, the Stage will belong to the default
-shard. A defaulting webhook will sync the value of the
-kargo.akuity.io/shard label with the value of this field. When this field
-is empty, the webhook will ensure that label is absent. */
+  /**
+   * Shard is the name of the shard that this Stage belongs to. This is an
+   * optional field. If not specified, the Stage will belong to the default
+   * shard. A defaulting webhook will sync the value of the
+   * kargo.akuity.io/shard label with the value of this field. When this field
+   * is empty, the webhook will ensure that label is absent.
+   */
   shard?: string;
-  /** TargetSelectors select the Targets that this Stage governs and promotes
-Freight to, matching Targets by their labels within the Stage's own
-Project. A Target is selected when it matches any selector in this list.
-A Stage may govern any number of Targets this way.
-
-When this field is nil (the default), the Stage operates in classic mode:
-it governs a single implicit "stage-self" Target that the controller
-creates and maintains on the Stage's behalf. This preserves the behavior
-of Stages authored before Targets existed. An empty selector in a non-empty
-list selects all Targets in the Project.
-
-+optional */
-  targetSelectors?: V1LabelSelector[];
-  /** Vars is a list of variables that can be referenced anywhere in the
-StageSpec that supports expressions. For example, the PromotionTemplate
-and arguments of the Verification. */
+  /**
+   * Targets describes the Targets that this Stage governs and promotes Freight
+   * to. Its presence is what makes a Stage target-aware.
+   *
+   * When this field is nil (the default), the Stage operates in classic mode:
+   * it governs no Targets and promotes Freight by way of Promotions alone.
+   * This preserves the behavior of Stages authored before Targets existed.
+   *
+   * +optional
+   */
+  targets?: StageTargets;
+  /**
+   * Vars is a list of variables that can be referenced anywhere in the
+   * StageSpec that supports expressions. For example, the PromotionTemplate
+   * and arguments of the Verification.
+   */
   vars?: ExpressionVariable[];
-  /** Verification describes how to verify a Stage's current Freight is fit for
-promotion downstream. */
+  /**
+   * Verification describes how to verify a Stage's current Freight is fit for
+   * promotion downstream.
+   */
   verification?: Verification;
 }

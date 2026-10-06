@@ -5,74 +5,46 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strings"
 
-	"connectrpc.com/connect"
 	"github.com/gin-gonic/gin"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/util/validation/field"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	libhttp "github.com/akuity/kargo/pkg/http"
-	"github.com/akuity/kargo/pkg/server/validation"
 )
-
-func validateFieldNotEmpty(fieldName string, fieldValue string) error {
-	if fieldValue == "" {
-		return connect.NewError(
-			connect.CodeInvalidArgument,
-			fmt.Errorf("%s should not be empty", fieldName),
-		)
-	}
-	return nil
-}
-
-func (s *server) validateProjectExists(ctx context.Context, project string) error {
-	var cl client.Client = s.client
-	if s.client != nil && s.client.InternalClient() != nil {
-		cl = s.client.InternalClient()
-	}
-	if err := s.externalValidateProjectFn(ctx, cl, project); err != nil {
-		if errors.Is(err, validation.ErrProjectNotFound) {
-			return connect.NewError(connect.CodeNotFound, err)
-		}
-		var fieldErr *field.Error
-		if ok := errors.As(err, &fieldErr); ok {
-			return connect.NewError(connect.CodeInvalidArgument, err)
-		}
-		return fmt.Errorf("validate project: %w", err)
-	}
-	return nil
-}
 
 func validateGroupByOrderBy(group string, groupBy string, orderBy string) error {
 	if group != "" && groupBy == "" {
-		return connect.NewError(
-			connect.CodeInvalidArgument,
+		return libhttp.Error(
 			errors.New("cannot filter by group without group by"),
+			http.StatusBadRequest,
 		)
 	}
 	switch groupBy {
 	case GroupByImageRepository, GroupByGitRepository, GroupByChartRepository, "":
 	default:
-		return connect.NewError(
-			connect.CodeInvalidArgument,
+		return libhttp.Error(
 			fmt.Errorf("invalid group by: %s", groupBy),
+			http.StatusBadRequest,
 		)
 	}
 	switch orderBy {
 	case OrderByTag:
 		if groupBy != GroupByImageRepository && groupBy != GroupByChartRepository {
-			return connect.NewError(connect.CodeInvalidArgument,
+			return libhttp.Error(
 				fmt.Errorf("tag ordering only valid when grouping by: %s, %s",
-					GroupByImageRepository, GroupByChartRepository))
+					GroupByImageRepository, GroupByChartRepository),
+				http.StatusBadRequest,
+			)
 		}
 	case OrderByFirstSeen, "":
 	default:
-		return connect.NewError(
-			connect.CodeInvalidArgument,
+		return libhttp.Error(
 			fmt.Errorf("invalid order by: %s", orderBy),
+			http.StatusBadRequest,
 		)
 	}
 
@@ -150,18 +122,15 @@ func bindJSONOrError(c *gin.Context, target any) bool {
 	return true
 }
 
-// getFreightByNameOrAliasForGin resolves a Freight resource by name or alias.
-// It first tries to get by name, and if not found, tries to find by alias.
-// Returns the Freight if found, or nil with an error added to the gin context
-// if not found or an error occurred.
-func (s *server) getFreightByNameOrAliasForGin(
-	c *gin.Context,
+// getFreightByNameOrAlias resolves a Freight resource by name or, when no
+// Freight has that name, by alias. Errors carry an HTTP status: 404 when
+// nothing matches and 409 when the alias matches more than one piece of
+// Freight.
+func (s *server) getFreightByNameOrAlias(
+	ctx context.Context,
 	project string,
 	nameOrAlias string,
-) *kargoapi.Freight {
-	ctx := c.Request.Context()
-
-	// Try getting by name first
+) (*kargoapi.Freight, error) {
 	freight := &kargoapi.Freight{}
 	err := s.client.Get(
 		ctx,
@@ -169,33 +138,54 @@ func (s *server) getFreightByNameOrAliasForGin(
 		freight,
 	)
 	if err == nil {
-		return freight
+		return freight, nil
 	}
 	if !apierrors.IsNotFound(err) {
-		_ = c.Error(err)
-		return nil
+		return nil, err
 	}
+	return s.getFreightByAlias(ctx, project, nameOrAlias)
+}
 
-	// Try getting by alias
+// getFreightByAlias resolves a Freight resource by alias. Errors carry an
+// HTTP status: 404 when nothing matches and 409 when the alias matches more
+// than one piece of Freight.
+func (s *server) getFreightByAlias(
+	ctx context.Context,
+	project string,
+	alias string,
+) (*kargoapi.Freight, error) {
 	list := &kargoapi.FreightList{}
 	if err := s.client.List(
 		ctx,
 		list,
 		client.InNamespace(project),
-		client.MatchingLabels{kargoapi.LabelKeyAlias: nameOrAlias},
+		client.MatchingLabels{kargoapi.LabelKeyAlias: alias},
 	); err != nil {
-		_ = c.Error(err)
-		return nil
+		return nil, err
 	}
-	if len(list.Items) == 0 {
-		_ = c.Error(libhttp.ErrorStr(
+	switch len(list.Items) {
+	case 0:
+		return nil, libhttp.ErrorStr(
 			fmt.Sprintf(
 				"Freight with name or alias %q not found in project %q",
-				nameOrAlias, project,
+				alias, project,
 			),
 			http.StatusNotFound,
-		))
-		return nil
+		)
+	case 1:
+		return &list.Items[0], nil
+	default:
+		names := make([]string, len(list.Items))
+		for i, freight := range list.Items {
+			names[i] = freight.Name
+		}
+		return nil, libhttp.ErrorStr(
+			fmt.Sprintf(
+				"alias %q is shared by multiple pieces of Freight in project %q (%s); "+
+					"refer to the Freight by name or give one of them a new alias",
+				alias, project, strings.Join(names, ", "),
+			),
+			http.StatusConflict,
+		)
 	}
-	return &list.Items[0]
 }

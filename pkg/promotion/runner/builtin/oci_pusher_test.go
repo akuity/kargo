@@ -1,9 +1,16 @@
 package builtin
 
 import (
+	"archive/tar"
+	"bytes"
+	"compress/gzip"
 	"context"
 	"fmt"
+	"io"
+	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/google/go-containerregistry/pkg/name"
@@ -20,17 +27,36 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/credentials"
+	intio "github.com/akuity/kargo/pkg/io"
 	"github.com/akuity/kargo/pkg/promotion"
 	builtin "github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
 )
 
+// testMaxArtifactSize is a 1 GiB size limit, generous enough that no test
+// artifact ever trips it.
+const testMaxArtifactSize = int64(1024 * 1024 * 1024)
+
 func Test_ociPusher_validate(t *testing.T) {
+	t.Parallel()
 	tests := []validationTestCase{
 		{
-			name:   "srcRef is not specified",
-			config: promotion.Config{},
+			name: "no source specified",
+			config: promotion.Config{
+				"destRef": "registry.example.com/image:newtag",
+			},
 			expectedProblems: []string{
-				"(root): srcRef is required",
+				"(root): Must validate one and only one schema (oneOf)",
+			},
+		},
+		{
+			name: "both srcRef and srcPath specified",
+			config: promotion.Config{
+				"srcRef":  "registry.example.com/image:tag",
+				"srcPath": "./artifact.tar.gz",
+				"destRef": "registry.example.com/image:newtag",
+			},
+			expectedProblems: []string{
+				"(root): Must validate one and only one schema (oneOf)",
 			},
 		},
 		{
@@ -38,6 +64,22 @@ func Test_ociPusher_validate(t *testing.T) {
 			config: promotion.Config{},
 			expectedProblems: []string{
 				"(root): destRef is required",
+			},
+		},
+		{
+			name: "valid config with srcPath",
+			config: promotion.Config{
+				"srcPath": "./artifact.tar.gz",
+				"destRef": "registry.example.com/image:newtag",
+			},
+		},
+		{
+			name: "valid config with srcPath and media types",
+			config: promotion.Config{
+				"srcPath":      "./artifact.tar.gz",
+				"destRef":      "registry.example.com/image:newtag",
+				"mediaType":    "application/vnd.cncf.flux.content.v1.tar+gzip",
+				"artifactType": "application/vnd.cncf.flux.config.v1+json",
 			},
 		},
 		{
@@ -82,7 +124,7 @@ func Test_ociPusher_validate(t *testing.T) {
 	}
 
 	r := newOCIPusher(promotion.StepRunnerCapabilities{}, ociPusherConfig{
-		MaxArtifactSize: int64(1 << 30),
+		MaxArtifactSize: testMaxArtifactSize,
 	})
 	runner, ok := r.(*ociPusher)
 	require.True(t, ok)
@@ -91,13 +133,8 @@ func Test_ociPusher_validate(t *testing.T) {
 }
 
 func Test_ociPusher_run(t *testing.T) {
-	// Start an in-memory registry for testing.
-	regHandler := registry.New()
-	srv := httptest.NewServer(regHandler)
-	t.Cleanup(srv.Close)
-
-	// Strip the "http://" prefix to get a valid registry host.
-	regHost := srv.Listener.Addr().String()
+	t.Parallel()
+	regHost := newRegistry(t)
 
 	// Push a test image to the registry for use as a source.
 	srcImageRef := fmt.Sprintf("%s/test/image:v1.0.0", regHost)
@@ -353,23 +390,20 @@ func Test_ociPusher_run(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			runner := &ociPusher{
-				credsDB:         &credentials.FakeDB{},
-				schemaLoader:    getConfigSchemaLoader(stepKindOCIPush),
-				maxArtifactSize: int64(1 << 30),
-			}
+			runner := newTestPusher()
 
 			stepCtx := &promotion.StepContext{
 				Project: "fake-project",
 			}
 
-			result, err := runner.run(context.Background(), stepCtx, tt.cfg)
+			result, err := runner.run(t.Context(), stepCtx, tt.cfg)
 			tt.assertions(t, result, err)
 		})
 	}
 }
 
 func Test_ociPusher_push_unsupportedMediaType(t *testing.T) {
+	t.Parallel()
 	// Create a descriptor with an unsupported media type.
 	desc := &remote.Descriptor{
 		Descriptor: v1.Descriptor{
@@ -377,7 +411,7 @@ func Test_ociPusher_push_unsupportedMediaType(t *testing.T) {
 		},
 	}
 
-	runner := &ociPusher{maxArtifactSize: int64(1 << 30)}
+	runner := newTestPusher()
 	srcRef, err := name.ParseReference("localhost:5000/src:tag")
 	require.NoError(t, err)
 	dstRef, err := name.ParseReference("localhost:5000/test:tag")
@@ -390,6 +424,7 @@ func Test_ociPusher_push_unsupportedMediaType(t *testing.T) {
 }
 
 func Test_ociPusher_run_credentialError(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name    string
 		cfg     builtin.OCIPushConfig
@@ -414,21 +449,36 @@ func Test_ociPusher_run_credentialError(t *testing.T) {
 			},
 			errMsg: "error obtaining credentials",
 		},
+		{
+			// The source reference is validated before any credential lookup, so
+			// a malformed reference fails terminally instead of being masked by a
+			// retryable credential error.
+			name: "malformed source reference wins over credential error",
+			cfg: builtin.OCIPushConfig{
+				SrcRef:  "invalid::ref",
+				DestRef: "registry.example.com/image:newtag",
+			},
+			credsDB: &credentials.FakeDB{
+				GetFn: func(
+					context.Context, string, credentials.Type, string,
+				) (*credentials.Credentials, error) {
+					return nil, fmt.Errorf("cred error")
+				},
+			},
+			errMsg: "failed to parse source reference",
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			runner := &ociPusher{
-				credsDB:         tt.credsDB,
-				schemaLoader:    getConfigSchemaLoader(stepKindOCIPush),
-				maxArtifactSize: int64(1 << 30),
-			}
+			runner := newTestPusher()
+			runner.credsDB = tt.credsDB
 
 			stepCtx := &promotion.StepContext{
 				Project: "fake-project",
 			}
 
-			_, err := runner.run(context.Background(), stepCtx, tt.cfg)
+			_, err := runner.run(t.Context(), stepCtx, tt.cfg)
 			assert.ErrorContains(t, err, tt.errMsg)
 		})
 	}
@@ -436,10 +486,8 @@ func Test_ociPusher_run_credentialError(t *testing.T) {
 
 // Test that annotations don't mutate the source image when none are provided.
 func Test_ociPusher_run_noAnnotationsMutation(t *testing.T) {
-	regHandler := registry.New()
-	srv := httptest.NewServer(regHandler)
-	t.Cleanup(srv.Close)
-	regHost := srv.Listener.Addr().String()
+	t.Parallel()
+	regHost := newRegistry(t)
 
 	// Create an OCI image with existing annotations.
 	srcImg, err := random.Image(256, 1)
@@ -454,14 +502,10 @@ func Test_ociPusher_run_noAnnotationsMutation(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, remote.Write(srcRef, srcImg))
 
-	runner := &ociPusher{
-		credsDB:         &credentials.FakeDB{},
-		schemaLoader:    getConfigSchemaLoader(stepKindOCIPush),
-		maxArtifactSize: int64(1 << 30),
-	}
+	runner := newTestPusher()
 
 	// Push without specifying annotations.
-	result, err := runner.run(context.Background(), &promotion.StepContext{
+	result, err := runner.run(t.Context(), &promotion.StepContext{
 		Project: "fake-project",
 	}, builtin.OCIPushConfig{
 		SrcRef:  fmt.Sprintf("%s/test/annotated:v1", regHost),
@@ -480,7 +524,394 @@ func Test_ociPusher_run_noAnnotationsMutation(t *testing.T) {
 	assert.Equal(t, "annotation", manifest.Annotations["existing"])
 }
 
+// emptyConfigDigest is the digest of the OCI empty descriptor's content.
+const emptyConfigDigest = "sha256:44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+
+// Test that a local archive is pushed as a single-layer OCI artifact with the
+// configured media types and scoped annotations.
+func Test_ociPusher_run_localFile(t *testing.T) {
+	t.Parallel()
+	regHost := newRegistry(t)
+
+	const (
+		layerMediaType = "application/vnd.cncf.flux.content.v1.tar+gzip"
+		artifactType   = "application/vnd.cncf.flux.config.v1+json"
+	)
+
+	workDir := t.TempDir()
+	tarball := writeTestArchive(t, workDir, "artifact.tar.gz")
+	runner := newTestPusher()
+
+	destRef := fmt.Sprintf("%s/test/local:v1", regHost)
+	result, err := runner.run(t.Context(), &promotion.StepContext{
+		Project: "fake-project",
+		WorkDir: workDir,
+	}, builtin.OCIPushConfig{
+		SrcPath:      "artifact.tar.gz",
+		DestRef:      destRef,
+		MediaType:    layerMediaType,
+		ArtifactType: artifactType,
+		Annotations: map[string]string{
+			"org.opencontainers.image.source":               "https://github.com/example/repo",
+			"manifest:org.opencontainers.image.description": "example manifests",
+			"index:org.opencontainers.image.revision":       "abc123",
+		},
+	})
+	require.NoError(t, err)
+	assert.Equal(t, string(kargoapi.PromotionStepStatusSucceeded), string(result.Status))
+	assert.Equal(t, destRef, result.Output["image"])
+	assert.Equal(t, "v1", result.Output["tag"])
+	digestOut, ok := result.Output["digest"].(string)
+	require.True(t, ok)
+	assert.NotEmpty(t, digestOut)
+
+	// Read the artifact back and verify its structure.
+	dstRef, err := name.ParseReference(destRef)
+	require.NoError(t, err)
+	dstImg, err := remote.Image(dstRef)
+	require.NoError(t, err)
+
+	manifest, err := dstImg.Manifest()
+	require.NoError(t, err)
+
+	// An OCI manifest, not a Docker one.
+	assert.Equal(t, types.OCIManifestSchema1, manifest.MediaType)
+	// Declared in artifactType, mirrored onto the config media type for Flux.
+	assert.Equal(t, artifactType, manifest.ArtifactType)
+	assert.Equal(t, types.MediaType(artifactType), manifest.Config.MediaType)
+	// The OCI empty descriptor: no image config, so no rootfs to get wrong.
+	assert.Equal(t, emptyConfigDigest, manifest.Config.Digest.String())
+	assert.Equal(t, int64(len(`{}`)), manifest.Config.Size)
+	rawConfig, err := dstImg.RawConfigFile()
+	require.NoError(t, err)
+	assert.JSONEq(t, `{}`, string(rawConfig))
+
+	// A single layer with the configured media type and the exact archive bytes.
+	require.Len(t, manifest.Layers, 1)
+	assert.Equal(t, types.MediaType(layerMediaType), manifest.Layers[0].MediaType)
+
+	layers, err := dstImg.Layers()
+	require.NoError(t, err)
+	require.Len(t, layers, 1)
+	rc, err := layers[0].Compressed()
+	require.NoError(t, err)
+	defer rc.Close()
+	gotBytes, err := io.ReadAll(rc)
+	require.NoError(t, err)
+	assert.Equal(t, tarball, gotBytes)
+
+	// Manifest-scoped and unprefixed annotations are applied; index-scoped keys
+	// are dropped for a single image manifest.
+	assert.Equal(t, "https://github.com/example/repo", manifest.Annotations["org.opencontainers.image.source"])
+	assert.Equal(t, "example manifests", manifest.Annotations["org.opencontainers.image.description"])
+	assert.NotContains(t, manifest.Annotations, "org.opencontainers.image.revision")
+
+	// The reported digest matches the pushed manifest.
+	gotDigest, err := dstImg.Digest()
+	require.NoError(t, err)
+	assert.Equal(t, gotDigest.String(), digestOut)
+}
+
+// Test the media type defaults: an OCI tar+gzip layer, no artifact type, and
+// the empty config.
+func Test_ociPusher_run_localFile_defaultMediaTypes(t *testing.T) {
+	t.Parallel()
+	regHost := newRegistry(t)
+
+	workDir := t.TempDir()
+	writeTestArchive(t, workDir, "artifact.tar.gz")
+	runner := newTestPusher()
+
+	destRef := fmt.Sprintf("%s/test/local:default", regHost)
+	result, err := runner.run(t.Context(), &promotion.StepContext{
+		Project: "fake-project",
+		WorkDir: workDir,
+	}, builtin.OCIPushConfig{
+		SrcPath: "artifact.tar.gz",
+		DestRef: destRef,
+	})
+	require.NoError(t, err)
+	assert.Equal(t, string(kargoapi.PromotionStepStatusSucceeded), string(result.Status))
+
+	dstRef, err := name.ParseReference(destRef)
+	require.NoError(t, err)
+	dstImg, err := remote.Image(dstRef)
+	require.NoError(t, err)
+	manifest, err := dstImg.Manifest()
+	require.NoError(t, err)
+	require.Len(t, manifest.Layers, 1)
+	assert.Equal(t, types.OCILayer, manifest.Layers[0].MediaType)
+	// The config is the OCI empty descriptor, which the spec permits only
+	// alongside an artifactType, so an unknown-artifact type is declared.
+	assert.Equal(t, defaultArtifactType, manifest.ArtifactType)
+	assert.Equal(t, emptyConfigMediaType, manifest.Config.MediaType)
+	assert.Equal(t, emptyConfigDigest, manifest.Config.Digest.String())
+}
+
+// Test that a file-backed layer reports the file's digest and size, and can be
+// read more than once.
+func Test_newFileLayer(t *testing.T) {
+	t.Parallel()
+	workDir := t.TempDir()
+	content := writeTestArchive(t, workDir, "artifact.tar.gz")
+
+	root, err := os.OpenRoot(workDir)
+	require.NoError(t, err)
+	t.Cleanup(func() { require.NoError(t, root.Close()) })
+
+	f, err := root.Open("artifact.tar.gz")
+	require.NoError(t, err)
+	t.Cleanup(func() { require.NoError(t, f.Close()) })
+
+	layer, err := newFileLayer(root, "artifact.tar.gz", f, types.OCILayer, testMaxArtifactSize)
+	require.NoError(t, err)
+
+	wantDigest, wantSize, err := v1.SHA256(bytes.NewReader(content))
+	require.NoError(t, err)
+
+	mediaType, err := layer.MediaType()
+	require.NoError(t, err)
+	assert.Equal(t, types.OCILayer, mediaType)
+	digest, err := layer.Digest()
+	require.NoError(t, err)
+	assert.Equal(t, wantDigest, digest)
+	diffID, err := layer.DiffID()
+	require.NoError(t, err)
+	assert.Equal(t, wantDigest, diffID)
+	size, err := layer.Size()
+	require.NoError(t, err)
+	assert.Equal(t, wantSize, size)
+
+	// Each read opens the file afresh, so the content is not consumed.
+	for range 2 {
+		rc, err := layer.Compressed()
+		require.NoError(t, err)
+		got, err := io.ReadAll(rc)
+		require.NoError(t, err)
+		require.NoError(t, rc.Close())
+		assert.Equal(t, content, got)
+	}
+}
+
+// Test that the size limit is enforced on the bytes actually read, so a file
+// that grows after a stat-based pre-check cannot slip past the limit.
+func Test_newFileLayer_limit(t *testing.T) {
+	t.Parallel()
+	workDir := t.TempDir()
+	content := writeTestArchive(t, workDir, "artifact.tar.gz")
+
+	root, err := os.OpenRoot(workDir)
+	require.NoError(t, err)
+	t.Cleanup(func() { require.NoError(t, root.Close()) })
+
+	openArchive := func(t *testing.T) io.Reader {
+		t.Helper()
+		f, err := root.Open("artifact.tar.gz")
+		require.NoError(t, err)
+		t.Cleanup(func() { require.NoError(t, f.Close()) })
+		return f
+	}
+
+	t.Run("content exceeds limit", func(t *testing.T) {
+		t.Parallel()
+		_, err := newFileLayer(
+			root, "artifact.tar.gz", openArchive(t), types.OCILayer,
+			int64(len(content))-1,
+		)
+		tooLarge := &intio.BodyTooLargeError{}
+		require.ErrorAs(t, err, &tooLarge)
+	})
+
+	t.Run("content exactly at limit", func(t *testing.T) {
+		t.Parallel()
+		layer, err := newFileLayer(
+			root, "artifact.tar.gz", openArchive(t), types.OCILayer,
+			int64(len(content)),
+		)
+		require.NoError(t, err)
+		wantDigest, wantSize, err := v1.SHA256(bytes.NewReader(content))
+		require.NoError(t, err)
+		digest, err := layer.Digest()
+		require.NoError(t, err)
+		assert.Equal(t, wantDigest, digest)
+		size, err := layer.Size()
+		require.NoError(t, err)
+		assert.Equal(t, wantSize, size)
+	})
+
+	t.Run("zero limit rejects any content", func(t *testing.T) {
+		t.Parallel()
+		_, err := newFileLayer(
+			root, "artifact.tar.gz", openArchive(t), types.OCILayer, 0,
+		)
+		tooLarge := &intio.BodyTooLargeError{}
+		require.ErrorAs(t, err, &tooLarge)
+	})
+
+	t.Run("negative limit disables the check", func(t *testing.T) {
+		t.Parallel()
+		layer, err := newFileLayer(
+			root, "artifact.tar.gz", openArchive(t), types.OCILayer, -1,
+		)
+		require.NoError(t, err)
+		size, err := layer.Size()
+		require.NoError(t, err)
+		assert.Equal(t, int64(len(content)), size)
+	})
+}
+
+// Test error handling for local-file pushes.
+func Test_ociPusher_run_localFile_errors(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name            string
+		maxArtifactSize int64
+		// setup writes any needed files into workDir and returns the srcPath to
+		// configure (relative to workDir).
+		setup      func(t *testing.T, workDir string) string
+		wantStatus kargoapi.PromotionStepStatus
+		errMsg     string
+	}{
+		{
+			name:            "source path is a directory",
+			maxArtifactSize: testMaxArtifactSize,
+			setup: func(t *testing.T, workDir string) string {
+				require.NoError(t, os.Mkdir(filepath.Join(workDir, "adir"), 0o755))
+				return "adir"
+			},
+			wantStatus: kargoapi.PromotionStepStatusFailed,
+			errMsg:     "is a directory",
+		},
+		{
+			name:            "source path does not exist",
+			maxArtifactSize: testMaxArtifactSize,
+			setup: func(_ *testing.T, _ string) string {
+				return "missing.tar.gz"
+			},
+			wantStatus: kargoapi.PromotionStepStatusFailed,
+			errMsg:     "failed to open source path",
+		},
+		{
+			name:            "path traversal is rejected",
+			maxArtifactSize: testMaxArtifactSize,
+			setup: func(_ *testing.T, _ string) string {
+				// The workspace root refuses to resolve an escaping path.
+				return "../../etc/passwd"
+			},
+			wantStatus: kargoapi.PromotionStepStatusFailed,
+			errMsg:     "failed to open source path",
+		},
+		{
+			name:            "artifact exceeds size limit",
+			maxArtifactSize: 8,
+			setup: func(t *testing.T, workDir string) string {
+				writeTestArchive(t, workDir, "big.tar.gz")
+				return "big.tar.gz"
+			},
+			wantStatus: kargoapi.PromotionStepStatusErrored,
+			errMsg:     "exceeds maximum allowed size of",
+		},
+		{
+			// A zero limit disables pushing entirely; even an empty file, whose
+			// size never exceeds the limit, must be rejected.
+			name:            "zero size limit disables local push",
+			maxArtifactSize: 0,
+			setup: func(t *testing.T, workDir string) string {
+				require.NoError(t, os.WriteFile(filepath.Join(workDir, "empty.tar.gz"), nil, 0o644))
+				return "empty.tar.gz"
+			},
+			wantStatus: kargoapi.PromotionStepStatusErrored,
+			errMsg:     "local artifact push is disabled",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			workDir := t.TempDir()
+			srcPath := tt.setup(t, workDir)
+
+			runner := newTestPusher()
+			runner.maxArtifactSize = tt.maxArtifactSize
+
+			result, err := runner.run(t.Context(), &promotion.StepContext{
+				Project: "fake-project",
+				WorkDir: workDir,
+			}, builtin.OCIPushConfig{
+				SrcPath: srcPath,
+				DestRef: "registry.example.com/test/local:v1",
+			})
+			require.Error(t, err)
+			assert.ErrorContains(t, err, tt.errMsg)
+			assert.Equal(t, string(tt.wantStatus), string(result.Status))
+			var termErr *promotion.TerminalError
+			assert.ErrorAs(t, err, &termErr)
+		})
+	}
+}
+
+// Test that an unopenable workspace is not reported as a source path problem.
+func Test_ociPusher_run_localFile_workspaceError(t *testing.T) {
+	t.Parallel()
+	runner := newTestPusher()
+
+	tmpDir := t.TempDir()
+	result, err := runner.run(t.Context(), &promotion.StepContext{
+		Project: "fake-project",
+		WorkDir: filepath.Join(tmpDir, "does-not-exist"),
+	}, builtin.OCIPushConfig{
+		SrcPath: "artifact.tar.gz",
+		DestRef: "registry.example.com/test/local:v1",
+	})
+	require.Error(t, err)
+	assert.ErrorContains(t, err, "failed to open workspace")
+	// Names the workspace, not the source path, and leaks no absolute path.
+	assert.NotContains(t, err.Error(), "artifact.tar.gz")
+	assert.NotContains(t, err.Error(), tmpDir)
+	assert.Equal(
+		t,
+		string(kargoapi.PromotionStepStatusFailed),
+		string(result.Status),
+	)
+	var termErr *promotion.TerminalError
+	assert.ErrorAs(t, err, &termErr)
+}
+
+// Test that a failure to write the artifact to the registry is reported as a
+// (retryable) error.
+func Test_ociPusher_run_localFile_pushError(t *testing.T) {
+	t.Parallel()
+	srv := httptest.NewServer(http.HandlerFunc(
+		func(w http.ResponseWriter, _ *http.Request) {
+			w.WriteHeader(http.StatusForbidden)
+		},
+	))
+	t.Cleanup(srv.Close)
+
+	workDir := t.TempDir()
+	writeTestArchive(t, workDir, "artifact.tar.gz")
+	runner := newTestPusher()
+
+	result, err := runner.run(t.Context(), &promotion.StepContext{
+		Project: "fake-project",
+		WorkDir: workDir,
+	}, builtin.OCIPushConfig{
+		SrcPath: "artifact.tar.gz",
+		DestRef: fmt.Sprintf("%s/test/local:v1", srv.Listener.Addr().String()),
+	})
+	require.Error(t, err)
+	assert.ErrorContains(t, err, "failed to push artifact")
+	assert.Equal(
+		t,
+		string(kargoapi.PromotionStepStatusErrored),
+		string(result.Status),
+	)
+	var termErr *promotion.TerminalError
+	assert.NotErrorAs(t, err, &termErr)
+}
+
 func Test_parseAnnotationScopes(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name         string
 		annotations  map[string]string
@@ -540,10 +971,8 @@ func Test_parseAnnotationScopes(t *testing.T) {
 }
 
 func Test_ociPusher_run_scopedAnnotationsOnImage(t *testing.T) {
-	regHandler := registry.New()
-	srv := httptest.NewServer(regHandler)
-	t.Cleanup(srv.Close)
-	regHost := srv.Listener.Addr().String()
+	t.Parallel()
+	regHost := newRegistry(t)
 
 	srcImg, err := random.Image(256, 1)
 	require.NoError(t, err)
@@ -551,14 +980,10 @@ func Test_ociPusher_run_scopedAnnotationsOnImage(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, remote.Write(srcRef, srcImg))
 
-	runner := &ociPusher{
-		credsDB:         &credentials.FakeDB{},
-		schemaLoader:    getConfigSchemaLoader(stepKindOCIPush),
-		maxArtifactSize: int64(1 << 30),
-	}
+	runner := newTestPusher()
 
 	// Push with mixed scoped annotations. "index:" should be ignored for images.
-	result, err := runner.run(context.Background(), &promotion.StepContext{
+	result, err := runner.run(t.Context(), &promotion.StepContext{
 		Project: "fake-project",
 	}, builtin.OCIPushConfig{
 		SrcRef:  fmt.Sprintf("%s/test/scoped:v1", regHost),
@@ -588,10 +1013,8 @@ func Test_ociPusher_run_scopedAnnotationsOnImage(t *testing.T) {
 
 // Test OCI image with an OCI manifest (not Docker) to ensure annotations work.
 func Test_ociPusher_run_ociManifestAnnotations(t *testing.T) {
-	regHandler := registry.New()
-	srv := httptest.NewServer(regHandler)
-	t.Cleanup(srv.Close)
-	regHost := srv.Listener.Addr().String()
+	t.Parallel()
+	regHost := newRegistry(t)
 
 	// Create an OCI-format image (empty.Image is OCI by default).
 	srcImg := empty.Image
@@ -599,13 +1022,9 @@ func Test_ociPusher_run_ociManifestAnnotations(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, remote.Write(srcRef, srcImg))
 
-	runner := &ociPusher{
-		credsDB:         &credentials.FakeDB{},
-		schemaLoader:    getConfigSchemaLoader(stepKindOCIPush),
-		maxArtifactSize: int64(1 << 30),
-	}
+	runner := newTestPusher()
 
-	result, err := runner.run(context.Background(), &promotion.StepContext{
+	result, err := runner.run(t.Context(), &promotion.StepContext{
 		Project: "fake-project",
 	}, builtin.OCIPushConfig{
 		SrcRef:  fmt.Sprintf("%s/test/oci:v1", regHost),
@@ -627,6 +1046,7 @@ func Test_ociPusher_run_ociManifestAnnotations(t *testing.T) {
 }
 
 func Test_imageSize(t *testing.T) {
+	t.Parallel()
 	img, err := random.Image(256, 3)
 	require.NoError(t, err)
 
@@ -647,6 +1067,7 @@ func Test_imageSize(t *testing.T) {
 }
 
 func Test_indexSize(t *testing.T) {
+	t.Parallel()
 	idx, err := random.Index(256, 2, 3) // 3 platform images, 2 layers each
 	require.NoError(t, err)
 
@@ -670,10 +1091,8 @@ func Test_indexSize(t *testing.T) {
 }
 
 func Test_ociPusher_push_sizeLimitExceeded(t *testing.T) {
-	regHandler := registry.New()
-	srv := httptest.NewServer(regHandler)
-	t.Cleanup(srv.Close)
-	regHost := srv.Listener.Addr().String()
+	t.Parallel()
+	regHost := newRegistry(t)
 
 	// Push a test image (will exceed our tiny limit).
 	srcImg, err := random.Image(256, 1)
@@ -705,13 +1124,10 @@ func Test_ociPusher_push_sizeLimitExceeded(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			runner := &ociPusher{
-				credsDB:         &credentials.FakeDB{},
-				schemaLoader:    getConfigSchemaLoader(stepKindOCIPush),
-				maxArtifactSize: 100, // tiny limit to trigger the error
-			}
+			runner := newTestPusher()
+			runner.maxArtifactSize = 100 // tiny limit to trigger the error
 
-			result, err := runner.run(context.Background(), &promotion.StepContext{
+			result, err := runner.run(t.Context(), &promotion.StepContext{
 				Project: "fake-project",
 			}, builtin.OCIPushConfig{
 				SrcRef:  tt.srcRef,
@@ -726,10 +1142,8 @@ func Test_ociPusher_push_sizeLimitExceeded(t *testing.T) {
 }
 
 func Test_ociPusher_push_sizeLimitZero(t *testing.T) {
-	regHandler := registry.New()
-	srv := httptest.NewServer(regHandler)
-	t.Cleanup(srv.Close)
-	regHost := srv.Listener.Addr().String()
+	t.Parallel()
+	regHost := newRegistry(t)
 
 	srcImg, err := random.Image(256, 1)
 	require.NoError(t, err)
@@ -737,15 +1151,12 @@ func Test_ociPusher_push_sizeLimitZero(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, remote.Write(srcRef, srcImg))
 
-	runner := &ociPusher{
-		credsDB:         &credentials.FakeDB{},
-		schemaLoader:    getConfigSchemaLoader(stepKindOCIPush),
-		maxArtifactSize: 0, // blocks all cross-repo pushes
-	}
+	runner := newTestPusher()
+	runner.maxArtifactSize = 0 // blocks all cross-repo pushes
 	stepCtx := &promotion.StepContext{Project: "fake-project"}
 
 	t.Run("cross-repo push is blocked", func(t *testing.T) {
-		result, err := runner.run(context.Background(), stepCtx, builtin.OCIPushConfig{
+		result, err := runner.run(t.Context(), stepCtx, builtin.OCIPushConfig{
 			SrcRef:  fmt.Sprintf("%s/test/img:v1", regHost),
 			DestRef: fmt.Sprintf("%s/other/repo:v1", regHost),
 		})
@@ -754,7 +1165,7 @@ func Test_ociPusher_push_sizeLimitZero(t *testing.T) {
 	})
 
 	t.Run("same-repo retag succeeds", func(t *testing.T) {
-		result, err := runner.run(context.Background(), stepCtx, builtin.OCIPushConfig{
+		result, err := runner.run(t.Context(), stepCtx, builtin.OCIPushConfig{
 			SrcRef:  fmt.Sprintf("%s/test/img:v1", regHost),
 			DestRef: fmt.Sprintf("%s/test/img:v2", regHost),
 		})
@@ -764,10 +1175,8 @@ func Test_ociPusher_push_sizeLimitZero(t *testing.T) {
 }
 
 func Test_ociPusher_push_sizeLimitDisabled(t *testing.T) {
-	regHandler := registry.New()
-	srv := httptest.NewServer(regHandler)
-	t.Cleanup(srv.Close)
-	regHost := srv.Listener.Addr().String()
+	t.Parallel()
+	regHost := newRegistry(t)
 
 	srcImg, err := random.Image(256, 1)
 	require.NoError(t, err)
@@ -775,13 +1184,10 @@ func Test_ociPusher_push_sizeLimitDisabled(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, remote.Write(srcRef, srcImg))
 
-	runner := &ociPusher{
-		credsDB:         &credentials.FakeDB{},
-		schemaLoader:    getConfigSchemaLoader(stepKindOCIPush),
-		maxArtifactSize: -1, // unlimited
-	}
+	runner := newTestPusher()
+	runner.maxArtifactSize = -1 // unlimited
 
-	result, err := runner.run(context.Background(), &promotion.StepContext{
+	result, err := runner.run(t.Context(), &promotion.StepContext{
 		Project: "fake-project",
 	}, builtin.OCIPushConfig{
 		SrcRef:  fmt.Sprintf("%s/test/img:v1", regHost),
@@ -789,6 +1195,15 @@ func Test_ociPusher_push_sizeLimitDisabled(t *testing.T) {
 	})
 	require.NoError(t, err)
 	assert.Equal(t, string(kargoapi.PromotionStepStatusSucceeded), string(result.Status))
+}
+
+func newRegistry(t *testing.T) string {
+	t.Helper()
+	regHandler := registry.New()
+	srv := httptest.NewServer(regHandler)
+	t.Cleanup(srv.Close)
+	regHost := srv.Listener.Addr().String()
+	return regHost
 }
 
 func Test_ociPusherConfig(t *testing.T) {
@@ -800,7 +1215,7 @@ func Test_ociPusherConfig(t *testing.T) {
 		{
 			name:     "unset returns default 1 GiB",
 			envValue: "",
-			expected: 1 << 30,
+			expected: 1024 * 1024 * 1024,
 		},
 		{
 			name:     "zero blocks cross-repo pushes",
@@ -828,5 +1243,37 @@ func Test_ociPusherConfig(t *testing.T) {
 			envconfig.MustProcess("", &cfg)
 			assert.Equal(t, tt.expected, cfg.MaxArtifactSize)
 		})
+	}
+}
+
+// writeTestArchive writes a tar.gz archive into workDir under the given name
+// and returns its bytes.
+func writeTestArchive(t *testing.T, workDir, filename string) []byte {
+	t.Helper()
+	const content = "kind: ConfigMap\n"
+	var buf bytes.Buffer
+	gz := gzip.NewWriter(&buf)
+	tw := tar.NewWriter(gz)
+	require.NoError(t, tw.WriteHeader(&tar.Header{
+		Name: "manifests.yaml",
+		Mode: 0o644,
+		Size: int64(len(content)),
+	}))
+	_, err := tw.Write([]byte(content))
+	require.NoError(t, err)
+	require.NoError(t, tw.Close())
+	require.NoError(t, gz.Close())
+	tarball := buf.Bytes()
+	require.NoError(t, os.WriteFile(filepath.Join(workDir, filename), tarball, 0o644))
+	return tarball
+}
+
+// newTestPusher returns an ociPusher wired with fake credentials and a size
+// limit generous enough that no test artifact trips it.
+func newTestPusher() *ociPusher {
+	return &ociPusher{
+		credsDB:         &credentials.FakeDB{},
+		schemaLoader:    getConfigSchemaLoader(stepKindOCIPush),
+		maxArtifactSize: testMaxArtifactSize,
 	}
 }

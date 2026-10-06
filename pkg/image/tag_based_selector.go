@@ -2,7 +2,6 @@ package image
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"regexp"
 	"slices"
@@ -54,22 +53,8 @@ func newTagBasedSelector(
 		return nil, fmt.Errorf("error compiling allow tags regex: %w", err)
 	}
 
-	// TODO(v1.13.0): Remove this check after the AllowTags field is removed.
-	if sub.AllowTags != "" { // nolint: staticcheck
-		return nil, errors.New(
-			"AllowTags is deprecated and unsupported as of v1.11.0; use AllowTagsRegexes instead",
-		)
-	}
-
 	if s.ignoreTagsRegexes, err = compileRegexes(sub.IgnoreTagsRegexes); err != nil {
 		return nil, fmt.Errorf("error compiling ignore tags regex: %w", err)
-	}
-
-	// TODO(v1.13.0): Remove this check after the IgnoreTags field is removed.
-	if len(sub.IgnoreTags) > 0 { // nolint: staticcheck
-		return nil, errors.New(
-			"IgnoreTags is deprecated and unsupported as of v1.11.0; use IgnoreTagsRegexes instead",
-		)
 	}
 
 	return s, nil

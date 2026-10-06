@@ -5,10 +5,12 @@ import (
 	"errors"
 	"fmt"
 	"regexp"
+	"slices"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/require"
+	jsonpatch "gomodules.xyz/jsonpatch/v2"
 	admissionv1 "k8s.io/api/admission/v1"
 	authnv1 "k8s.io/api/authentication/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -30,13 +32,16 @@ import (
 
 func TestNewWebhook(t *testing.T) {
 	kubeClient := fake.NewClientBuilder().Build()
-	w := newWebhook(
+	w, err := newWebhook(
 		libWebhook.Config{},
 		kubeClient,
 		k8sevent.NewEventSender(&fakeevent.EventRecorder{}),
 	)
+	require.NoError(t, err)
 	require.NotNil(t, w.freightAliasGenerator)
+	require.NotNil(t, w.mayFourthAliasGenerator)
 	// Assert that all overridable behaviors were initialized to a default:
+	require.NotNil(t, w.nowFn)
 	require.NotNil(t, w.admissionRequestFromContextFn)
 	require.NotNil(t, w.getAvailableFreightAliasFn)
 	require.NotNil(t, w.validateProjectFn)
@@ -570,6 +575,7 @@ func Test_webhook_ValidateUpdate(t *testing.T) {
 							kargoapi.LabelKeyAlias: "fake-alias",
 						},
 					},
+					Alias: "fake-alias",
 				}
 			},
 			webhook: &webhook{
@@ -609,6 +615,7 @@ func Test_webhook_ValidateUpdate(t *testing.T) {
 							kargoapi.LabelKeyAlias: "fake-alias",
 						},
 					},
+					Alias: "fake-alias",
 				}
 			},
 			webhook: &webhook{
@@ -644,6 +651,51 @@ func Test_webhook_ValidateUpdate(t *testing.T) {
 					statusErr.ErrStatus.Message,
 					"already used by another piece of Freight",
 				)
+			},
+		},
+		{
+			name: "alias unchanged skips uniqueness check",
+			setup: func() (*kargoapi.Freight, *kargoapi.Freight) {
+				oldFreight := &kargoapi.Freight{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "fake-name",
+						Namespace: "fake-namespace",
+						Labels: map[string]string{
+							kargoapi.LabelKeyAlias: "fake-alias",
+						},
+					},
+					Alias: "fake-alias",
+					Commits: []kargoapi.GitCommit{
+						{
+							RepoURL: "fake-repo-url",
+							ID:      "fake-commit-id",
+						},
+					},
+				}
+				oldFreight.Name = api.GenerateFreightID(oldFreight)
+				newFreight := oldFreight.DeepCopy()
+				return oldFreight, newFreight
+			},
+			webhook: &webhook{
+				listFreightFn: func(
+					context.Context,
+					client.ObjectList,
+					...client.ListOption,
+				) error {
+					// Any lookup would report the alias as already in use, so a
+					// success here proves the lookup was skipped.
+					return errors.New("should not have been called")
+				},
+				admissionRequestFromContextFn: admission.RequestFromContext,
+				isRequestFromKargoControlplaneFn: libWebhook.IsRequestFromKargoControlplane(
+					regexp.MustCompile("^system:serviceaccount:kargo:(kargo-api|kargo-controller)$"),
+				),
+			},
+			userInfo: &authnv1.UserInfo{
+				Username: "fake-user",
+			},
+			assertions: func(t *testing.T, _ *fakeevent.EventRecorder, err error) {
+				require.NoError(t, err)
 			},
 		},
 		{
@@ -1382,6 +1434,75 @@ func Test_webhook_CompareFreight(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			path, val, eq := compareFreight(tt.old, tt.new)
 			tt.assertions(t, tt.new, path, val, eq)
+		})
+	}
+}
+
+// Test_webhook_Handle_PreservesUnrelatedDurationFormatting is a regression
+// test for https://github.com/akuityio/akuity-platform/issues/12384: a
+// hand-written timestamp was rewritten to its canonical form in the
+// admission patch even though Default() never touched it. discoveredAt is
+// only backfilled when unset, so an explicit value must survive untouched
+// even though syncing the alias label forces a real mutation.
+func Test_webhook_Handle_PreservesUnrelatedDurationFormatting(t *testing.T) {
+	scheme := runtime.NewScheme()
+	require.NoError(t, kargoapi.AddToScheme(scheme))
+
+	kubeClient := fake.NewClientBuilder().WithScheme(scheme).Build()
+	w, err := newWebhook(
+		libWebhook.Config{},
+		kubeClient,
+		k8sevent.NewEventSender(&fakeevent.EventRecorder{}),
+	)
+	require.NoError(t, err)
+	wh, err := libWebhook.NewDefaultingWebhook(scheme, &kargoapi.Freight{}, w)
+	require.NoError(t, err)
+
+	// A +05:00 offset that metav1.Time remarshals in UTC ("...T05:30:00Z"),
+	// same class of lossy round-trip as metav1.Duration.
+	rawFreight := []byte(`{
+		"apiVersion": "kargo.akuity.io/v1alpha1",
+		"kind": "Freight",
+		"metadata": {"name": "fake-freight", "namespace": "fake-project"},
+		"alias": "fake-alias",
+		"discoveredAt": "2024-01-15T10:30:00+05:00"
+	}`)
+
+	req := admission.Request{
+		AdmissionRequest: admissionv1.AdmissionRequest{
+			Operation: admissionv1.Update,
+			Object:    runtime.RawExtension{Raw: rawFreight},
+		},
+	}
+
+	resp := wh.Handle(admission.NewContextWithRequest(context.Background(), req), req)
+	require.True(t, resp.Allowed)
+
+	testCases := []struct {
+		name    string
+		path    string
+		present bool
+	}{
+		{
+			// Sanity check: this mutation must still appear, or the test
+			// below would pass by suppressing every patch, not just the
+			// spurious ones.
+			name:    "alias label is patched",
+			path:    "/metadata/labels",
+			present: true,
+		},
+		{
+			name:    "untouched discoveredAt is not rewritten",
+			path:    "/discoveredAt",
+			present: false,
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			got := slices.ContainsFunc(resp.Patches, func(p jsonpatch.JsonPatchOperation) bool {
+				return p.Path == testCase.path
+			})
+			require.Equalf(t, testCase.present, got, "patches: %+v", resp.Patches)
 		})
 	}
 }

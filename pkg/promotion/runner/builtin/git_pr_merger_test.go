@@ -36,6 +36,24 @@ func Test_gitPRMerger_convert(t *testing.T) {
 			},
 		},
 		{
+			name: "repoURL is an SSH URL",
+			config: promotion.Config{
+				"repoURL": "ssh://git@github.com/example/repo.git",
+			},
+			expectedProblems: []string{
+				"repoURL: Does not match pattern '^https?://'",
+			},
+		},
+		{
+			name: "repoURL is an SCP-style URL",
+			config: promotion.Config{
+				"repoURL": "git@github.com:example/repo.git",
+			},
+			expectedProblems: []string{
+				"repoURL: Does not match pattern '^https?://'",
+			},
+		},
+		{
 			name: "prNumber not specified",
 			config: promotion.Config{
 				"repoURL": "https://github.com/example/repo.git",
@@ -84,6 +102,25 @@ func Test_gitPRMerger_convert(t *testing.T) {
 				"prNumber": 42,
 				"repoURL":  "https://github.com/example/repo.git",
 				"wait":     true,
+			},
+		},
+		{
+			name: "valid with deleteSourceBranch",
+			config: promotion.Config{
+				"repoURL":            "https://github.com/example/repo.git",
+				"prNumber":           42,
+				"deleteSourceBranch": true,
+			},
+		},
+		{
+			name: "deleteSourceBranch is not a boolean",
+			config: promotion.Config{
+				"repoURL":            "https://github.com/example/repo.git",
+				"prNumber":           42,
+				"deleteSourceBranch": "yes",
+			},
+			expectedProblems: []string{
+				"deleteSourceBranch: Invalid type. Expected: boolean, given: string",
 			},
 		},
 		{
@@ -311,6 +348,124 @@ func Test_gitPRMerger_run(t *testing.T) {
 				require.NoError(t, err)
 				require.Equal(t, kargoapi.PromotionStepStatusSucceeded, res.Status)
 				require.Equal(t, "squash123", res.Output[stateKeyCommit])
+			},
+		},
+		{
+			name: "source branch not deleted when not requested",
+			provider: &gitprovider.Fake{
+				MergePullRequestFn: func(
+					context.Context,
+					int64,
+					*gitprovider.MergePullRequestOpts,
+				) (*gitprovider.PullRequest, bool, error) {
+					return &gitprovider.PullRequest{
+						MergeCommitSHA: "abc123",
+						HeadBranch:     "kargo/promotion/test",
+					}, true, nil
+				},
+				DeleteBranchFn: func(context.Context, string) error {
+					require.Fail(t, "DeleteBranch should not have been called")
+					return nil
+				},
+			},
+			config: builtin.GitMergePRConfig{
+				PRNumber: 42,
+			},
+			assertions: func(t *testing.T, res promotion.StepResult, err error) {
+				require.NoError(t, err)
+				require.Equal(t, kargoapi.PromotionStepStatusSucceeded, res.Status)
+				require.Empty(t, res.Message)
+			},
+		},
+		{
+			name: "successful merge and source branch deletion",
+			provider: &gitprovider.Fake{
+				MergePullRequestFn: func(
+					context.Context,
+					int64,
+					*gitprovider.MergePullRequestOpts,
+				) (*gitprovider.PullRequest, bool, error) {
+					return &gitprovider.PullRequest{
+						MergeCommitSHA: "abc123",
+						HeadBranch:     "kargo/promotion/test",
+					}, true, nil
+				},
+				DeleteBranchFn: func(_ context.Context, branch string) error {
+					require.Equal(t, "kargo/promotion/test", branch)
+					return nil
+				},
+			},
+			config: builtin.GitMergePRConfig{
+				PRNumber:           42,
+				DeleteSourceBranch: true,
+			},
+			assertions: func(t *testing.T, res promotion.StepResult, err error) {
+				require.NoError(t, err)
+				require.Equal(t, kargoapi.PromotionStepStatusSucceeded, res.Status)
+				require.Equal(t, "abc123", res.Output[stateKeyCommit])
+				require.Empty(t, res.Message)
+			},
+		},
+		{
+			name: "source branch deletion fails",
+			provider: &gitprovider.Fake{
+				MergePullRequestFn: func(
+					context.Context,
+					int64,
+					*gitprovider.MergePullRequestOpts,
+				) (*gitprovider.PullRequest, bool, error) {
+					return &gitprovider.PullRequest{
+						MergeCommitSHA: "abc123",
+						HeadBranch:     "kargo/promotion/test",
+					}, true, nil
+				},
+				DeleteBranchFn: func(context.Context, string) error {
+					return errors.New("something went wrong")
+				},
+			},
+			config: builtin.GitMergePRConfig{
+				PRNumber:           42,
+				DeleteSourceBranch: true,
+			},
+			assertions: func(t *testing.T, res promotion.StepResult, err error) {
+				// The merge succeeded, so the step succeeds and its output is
+				// available to subsequent steps. The deletion failure is reported via
+				// the message.
+				require.NoError(t, err)
+				require.Equal(t, kargoapi.PromotionStepStatusSucceeded, res.Status)
+				require.Equal(t, "abc123", res.Output[stateKeyCommit])
+				require.Contains(t, res.Message, "merged pull request 42")
+				require.Contains(t, res.Message, "failed to delete its source branch")
+				require.Contains(t, res.Message, "something went wrong")
+			},
+		},
+		{
+			name: "source branch unknown",
+			provider: &gitprovider.Fake{
+				MergePullRequestFn: func(
+					context.Context,
+					int64,
+					*gitprovider.MergePullRequestOpts,
+				) (*gitprovider.PullRequest, bool, error) {
+					return &gitprovider.PullRequest{
+						Number:         42,
+						MergeCommitSHA: "abc123",
+					}, true, nil
+				},
+				DeleteBranchFn: func(context.Context, string) error {
+					require.Fail(t, "DeleteBranch should not have been called")
+					return nil
+				},
+			},
+			config: builtin.GitMergePRConfig{
+				PRNumber:           42,
+				DeleteSourceBranch: true,
+			},
+			assertions: func(t *testing.T, res promotion.StepResult, err error) {
+				require.NoError(t, err)
+				require.Equal(t, kargoapi.PromotionStepStatusSucceeded, res.Status)
+				require.Equal(t, "abc123", res.Output[stateKeyCommit])
+				require.Contains(t, res.Message, "did not report a source branch")
 			},
 		},
 	}

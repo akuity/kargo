@@ -18,19 +18,15 @@ import type {
   CreateResourceResponse,
   DeleteResourceResponse,
   ResourceErrorResponse,
-  UpdateResourceManifestBody,
   UpdateResourceParams
-} from '.././models';
+} from '../models';
 
 import { customFetch } from '../../../../lib/api/custom-fetch';
 import type { ErrorType } from '../../../../lib/api/custom-fetch';
+import { serializeParams } from '../../../../lib/api/params-serializer';
 
 type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
 
-/**
- * Update (or optionally, upsert) one or more Kargo resources from
- * @summary Update resources
- */
 export type updateResourceResponse200 = {
   data: CreateOrUpdateResourceResponse;
   status: 200;
@@ -42,33 +38,39 @@ export type updateResourceResponseSuccess = updateResourceResponse200 & {
 export type updateResourceResponse = updateResourceResponseSuccess;
 
 export const getUpdateResourceUrl = (params?: UpdateResourceParams) => {
-  const normalizedParams = new URLSearchParams();
-
-  Object.entries(params || {}).forEach(([key, value]) => {
-    if (value !== undefined) {
-      normalizedParams.append(key, value === null ? 'null' : value.toString());
-    }
-  });
-
-  const stringifiedParams = normalizedParams.toString();
+  const stringifiedParams = serializeParams(params);
 
   return stringifiedParams.length > 0
     ? `/v1beta1/resources?${stringifiedParams}`
     : `/v1beta1/resources`;
 };
 
+/**
+ * Update (or optionally, upsert) one or more Kargo resources from
+ * @summary Update resources
+ */
 export const updateResource = async (
-  updateResourceManifestBody: UpdateResourceManifestBody,
+  updateResourceBody: string,
   params?: UpdateResourceParams,
-  options?: RequestInit
+  options?: Parameters<typeof customFetch>[1]
 ): Promise<updateResourceResponse> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit['headers']>
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Array.isArray(h)) return Object.fromEntries(h);
+    return h;
+  };
   return customFetch<updateResourceResponse>(getUpdateResourceUrl(params), {
     ...options,
     method: 'PUT',
-    headers: { 'Content-Type': 'text/plain', ...options?.headers },
-    body: updateResourceManifestBody
+    headers: { 'Content-Type': 'text/plain', ...getHeaders(options?.headers) },
+    body: updateResourceBody
   });
 };
+
+export const getUpdateResourceMutationKey = () => ['updateResource'] as const;
 
 export const getUpdateResourceMutationOptions = <
   TError = ErrorType<unknown>,
@@ -77,17 +79,17 @@ export const getUpdateResourceMutationOptions = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof updateResource>>,
     TError,
-    { data: UpdateResourceManifestBody; params?: UpdateResourceParams },
+    UpdateResourceMutationVariables,
     TContext
   >;
   request?: SecondParameter<typeof customFetch>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof updateResource>>,
   TError,
-  { data: UpdateResourceManifestBody; params?: UpdateResourceParams },
+  UpdateResourceMutationVariables,
   TContext
 > => {
-  const mutationKey = ['updateResource'];
+  const mutationKey = getUpdateResourceMutationKey();
   const { mutation: mutationOptions, request: requestOptions } = options
     ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
       ? options
@@ -96,7 +98,7 @@ export const getUpdateResourceMutationOptions = <
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof updateResource>>,
-    { data: UpdateResourceManifestBody; params?: UpdateResourceParams }
+    UpdateResourceMutationVariables
   > = (props) => {
     const { data, params } = props ?? {};
 
@@ -107,8 +109,9 @@ export const getUpdateResourceMutationOptions = <
 };
 
 export type UpdateResourceMutationResult = NonNullable<Awaited<ReturnType<typeof updateResource>>>;
-export type UpdateResourceMutationBody = UpdateResourceManifestBody;
+export type UpdateResourceMutationBody = string;
 export type UpdateResourceMutationError = ErrorType<unknown>;
+export type UpdateResourceMutationVariables = { data: string; params?: UpdateResourceParams };
 
 /**
  * @summary Update resources
@@ -118,7 +121,7 @@ export const useUpdateResource = <TError = ErrorType<unknown>, TContext = unknow
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof updateResource>>,
       TError,
-      { data: UpdateResourceManifestBody; params?: UpdateResourceParams },
+      UpdateResourceMutationVariables,
       TContext
     >;
     request?: SecondParameter<typeof customFetch>;
@@ -127,17 +130,11 @@ export const useUpdateResource = <TError = ErrorType<unknown>, TContext = unknow
 ): UseMutationResult<
   Awaited<ReturnType<typeof updateResource>>,
   TError,
-  { data: UpdateResourceManifestBody; params?: UpdateResourceParams },
+  UpdateResourceMutationVariables,
   TContext
 > => {
-  const mutationOptions = getUpdateResourceMutationOptions(options);
-
-  return useMutation(mutationOptions, queryClient);
+  return useMutation(getUpdateResourceMutationOptions(options), queryClient);
 };
-/**
- * Create one or more Kargo resources from YAML or JSON manifests.
- * @summary Create resources
- */
 export type createResourceResponse201 = {
   data: CreateResourceResponse;
   status: 201;
@@ -161,17 +158,31 @@ export const getCreateResourceUrl = () => {
   return `/v1beta1/resources`;
 };
 
+/**
+ * Create one or more Kargo resources from YAML or JSON manifests.
+ * @summary Create resources
+ */
 export const createResource = async (
-  updateResourceManifestBody: UpdateResourceManifestBody,
-  options?: RequestInit
+  createResourceBody: string,
+  options?: Parameters<typeof customFetch>[1]
 ): Promise<createResourceResponse> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit['headers']>
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Array.isArray(h)) return Object.fromEntries(h);
+    return h;
+  };
   return customFetch<createResourceResponse>(getCreateResourceUrl(), {
     ...options,
     method: 'POST',
-    headers: { 'Content-Type': 'text/plain', ...options?.headers },
-    body: updateResourceManifestBody
+    headers: { 'Content-Type': 'text/plain', ...getHeaders(options?.headers) },
+    body: createResourceBody
   });
 };
+
+export const getCreateResourceMutationKey = () => ['createResource'] as const;
 
 export const getCreateResourceMutationOptions = <
   TError = ErrorType<ResourceErrorResponse>,
@@ -180,17 +191,17 @@ export const getCreateResourceMutationOptions = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof createResource>>,
     TError,
-    { data: UpdateResourceManifestBody },
+    CreateResourceMutationVariables,
     TContext
   >;
   request?: SecondParameter<typeof customFetch>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof createResource>>,
   TError,
-  { data: UpdateResourceManifestBody },
+  CreateResourceMutationVariables,
   TContext
 > => {
-  const mutationKey = ['createResource'];
+  const mutationKey = getCreateResourceMutationKey();
   const { mutation: mutationOptions, request: requestOptions } = options
     ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
       ? options
@@ -199,7 +210,7 @@ export const getCreateResourceMutationOptions = <
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof createResource>>,
-    { data: UpdateResourceManifestBody }
+    CreateResourceMutationVariables
   > = (props) => {
     const { data } = props ?? {};
 
@@ -210,8 +221,9 @@ export const getCreateResourceMutationOptions = <
 };
 
 export type CreateResourceMutationResult = NonNullable<Awaited<ReturnType<typeof createResource>>>;
-export type CreateResourceMutationBody = UpdateResourceManifestBody;
+export type CreateResourceMutationBody = string;
 export type CreateResourceMutationError = ErrorType<ResourceErrorResponse>;
+export type CreateResourceMutationVariables = { data: string };
 
 /**
  * @summary Create resources
@@ -221,7 +233,7 @@ export const useCreateResource = <TError = ErrorType<ResourceErrorResponse>, TCo
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof createResource>>,
       TError,
-      { data: UpdateResourceManifestBody },
+      CreateResourceMutationVariables,
       TContext
     >;
     request?: SecondParameter<typeof customFetch>;
@@ -230,18 +242,11 @@ export const useCreateResource = <TError = ErrorType<ResourceErrorResponse>, TCo
 ): UseMutationResult<
   Awaited<ReturnType<typeof createResource>>,
   TError,
-  { data: UpdateResourceManifestBody },
+  CreateResourceMutationVariables,
   TContext
 > => {
-  const mutationOptions = getCreateResourceMutationOptions(options);
-
-  return useMutation(mutationOptions, queryClient);
+  return useMutation(getCreateResourceMutationOptions(options), queryClient);
 };
-/**
- * Delete one or more Kargo resources using namespaces and names
-obtained from YAML or JSON manifests.
- * @summary Delete resources
- */
 export type deleteResourceResponse200 = {
   data: DeleteResourceResponse;
   status: 200;
@@ -256,17 +261,32 @@ export const getDeleteResourceUrl = () => {
   return `/v1beta1/resources`;
 };
 
+/**
+ * Delete one or more Kargo resources using namespaces and names
+ * obtained from YAML or JSON manifests.
+ * @summary Delete resources
+ */
 export const deleteResource = async (
-  updateResourceManifestBody: UpdateResourceManifestBody,
-  options?: RequestInit
+  deleteResourceBody: string,
+  options?: Parameters<typeof customFetch>[1]
 ): Promise<deleteResourceResponse> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit['headers']>
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Array.isArray(h)) return Object.fromEntries(h);
+    return h;
+  };
   return customFetch<deleteResourceResponse>(getDeleteResourceUrl(), {
     ...options,
     method: 'DELETE',
-    headers: { 'Content-Type': 'text/plain', ...options?.headers },
-    body: updateResourceManifestBody
+    headers: { 'Content-Type': 'text/plain', ...getHeaders(options?.headers) },
+    body: deleteResourceBody
   });
 };
+
+export const getDeleteResourceMutationKey = () => ['deleteResource'] as const;
 
 export const getDeleteResourceMutationOptions = <
   TError = ErrorType<unknown>,
@@ -275,17 +295,17 @@ export const getDeleteResourceMutationOptions = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof deleteResource>>,
     TError,
-    { data: UpdateResourceManifestBody },
+    DeleteResourceMutationVariables,
     TContext
   >;
   request?: SecondParameter<typeof customFetch>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof deleteResource>>,
   TError,
-  { data: UpdateResourceManifestBody },
+  DeleteResourceMutationVariables,
   TContext
 > => {
-  const mutationKey = ['deleteResource'];
+  const mutationKey = getDeleteResourceMutationKey();
   const { mutation: mutationOptions, request: requestOptions } = options
     ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
       ? options
@@ -294,7 +314,7 @@ export const getDeleteResourceMutationOptions = <
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof deleteResource>>,
-    { data: UpdateResourceManifestBody }
+    DeleteResourceMutationVariables
   > = (props) => {
     const { data } = props ?? {};
 
@@ -305,8 +325,9 @@ export const getDeleteResourceMutationOptions = <
 };
 
 export type DeleteResourceMutationResult = NonNullable<Awaited<ReturnType<typeof deleteResource>>>;
-export type DeleteResourceMutationBody = UpdateResourceManifestBody;
+export type DeleteResourceMutationBody = string;
 export type DeleteResourceMutationError = ErrorType<unknown>;
+export type DeleteResourceMutationVariables = { data: string };
 
 /**
  * @summary Delete resources
@@ -316,7 +337,7 @@ export const useDeleteResource = <TError = ErrorType<unknown>, TContext = unknow
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof deleteResource>>,
       TError,
-      { data: UpdateResourceManifestBody },
+      DeleteResourceMutationVariables,
       TContext
     >;
     request?: SecondParameter<typeof customFetch>;
@@ -325,10 +346,8 @@ export const useDeleteResource = <TError = ErrorType<unknown>, TContext = unknow
 ): UseMutationResult<
   Awaited<ReturnType<typeof deleteResource>>,
   TError,
-  { data: UpdateResourceManifestBody },
+  DeleteResourceMutationVariables,
   TContext
 > => {
-  const mutationOptions = getDeleteResourceMutationOptions(options);
-
-  return useMutation(mutationOptions, queryClient);
+  return useMutation(getDeleteResourceMutationOptions(options), queryClient);
 };

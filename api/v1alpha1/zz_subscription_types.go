@@ -34,10 +34,6 @@ type ChartSubscription struct {
 
 // GitSubscription defines a subscription to a Git repository.
 type GitSubscription struct {
-	// AllowTags is a regular expression that can optionally be used to limit the tags that are
-	// considered in determining the newest commit of interest. Deprecated: Use allowTagsRegexes
-	// instead.
-	AllowTags string `json:"allowTags,omitempty"`
 	// AllowTagsRegexes is a list of regular expressions that can optionally be used to limit
 	// the tags that are considered. Only has effect when CommitSelectionStrategy is Lexical,
 	// NewestTag, or SemVer.
@@ -65,9 +61,6 @@ type GitSubscription struct {
 	// tags that are considered in determining the newest commit of interest based on their
 	// metadata.
 	ExpressionFilter string `json:"expressionFilter,omitempty"`
-	// IgnoreTags is a list of tags that must be ignored when determining the newest commit of
-	// interest. Deprecated: Use ignoreTagsRegexes instead.
-	IgnoreTags []string `json:"ignoreTags,omitempty"`
 	// IgnoreTagsRegexes is a list of regular expressions that can optionally be used to exclude
 	// tags from consideration. Only has effect when CommitSelectionStrategy is Lexical,
 	// NewestTag, or SemVer.
@@ -78,9 +71,7 @@ type GitSubscription struct {
 	// InsecureSkipTLSVerify specifies whether certificate verification errors should be ignored
 	// when connecting to the repository. This should be enabled only with great caution.
 	InsecureSkipTLSVerify bool `json:"insecureSkipTLSVerify,omitempty"`
-	// URL is the repository's URL. This is a required field. Deprecated: Support for SSH URLs
-	// (ssh:// and SCP-style git@host:path) is deprecated as of v1.10.0 and will be removed in
-	// v1.13.0. Use HTTPS URLs instead.
+	// URL is the repository's URL. This is a required field. Only HTTP(S) URLs are supported.
 	RepoURL string `json:"repoURL"`
 	// SemverConstraint specifies constraints on what new tagged commits are considered in
 	// determining the newest commit of interest. Only has effect when CommitSelectionStrategy
@@ -98,11 +89,6 @@ type GitSubscription struct {
 
 // ImageSubscription defines a subscription to a container image repository.
 type ImageSubscription struct {
-	// AllowTags is a regular expression that can optionally be used to limit the image tags
-	// that are considered in determining the newest version of an image. This field is
-	// optional. Deprecated: Use allowTagsRegexes instead. Beginning in v1.11.0, artifact
-	// discovery will FAIL if this field is non-empty. This field will be removed in v1.13.0.
-	AllowTags string `json:"allowTags,omitempty"`
 	// AllowTagsRegexes is a list of regular expressions that can optionally be used to limit
 	// the image tags that are considered in determining the newest revision of an image. This
 	// field is optional.
@@ -121,11 +107,6 @@ type ImageSubscription struct {
 	// the AllowTagsRegexes and IgnoreTagsRegexes fields. When left unspecified, the field is
 	// implicitly treated as if its value were "20". The upper limit for this field is 100.
 	DiscoveryLimit int64 `json:"discoveryLimit,omitempty"`
-	// IgnoreTags is a list of tags that must be ignored when determining the newest version of
-	// an image. No regular expressions or glob patterns are supported yet. This field is
-	// optional. Deprecated: Use ignoreTagsRegexes instead. Beginning in v1.11.0, artifact
-	// discovery will FAIL if this field is non-empty. This field will be removed in v1.13.0.
-	IgnoreTags []string `json:"ignoreTags,omitempty"`
 	// IgnoreTagsRegexes is a list of regular expressions that can optionally be used to exclude
 	// tags from consideration when determining the newest revision of an image. This field is
 	// optional.

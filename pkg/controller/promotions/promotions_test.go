@@ -4,10 +4,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
 	"testing"
 	"time"
 
+	"github.com/prometheus/client_golang/prometheus"
+	dto "github.com/prometheus/client_model/go"
 	"github.com/stretchr/testify/require"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8sruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -19,6 +23,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/pkg/controller/metrics"
 	k8sevent "github.com/akuity/kargo/pkg/event/kubernetes"
 	fakeevent "github.com/akuity/kargo/pkg/kubernetes/event/fake"
 	"github.com/akuity/kargo/pkg/promotion"
@@ -655,9 +660,10 @@ func Test_reconciler_terminatePromotion(t *testing.T) {
 			recorder := fakeevent.NewEventRecorder(1)
 
 			r := &reconciler{
-				kargoClient: c,
-				apiReader:   c,
-				sender:      k8sevent.NewEventSender(recorder),
+				kargoClient:  c,
+				apiReader:    c,
+				sender:       k8sevent.NewEventSender(recorder),
+				promoMetrics: metrics.NewPromotionMetrics(c),
 				cleanupWorkDirFn: func(context.Context, types.UID) {
 					// no-op for tests
 				},
@@ -790,9 +796,10 @@ func Test_reconciler_terminatePromotion_cleansUpWorkDir(t *testing.T) {
 
 	cleanupCalled := false
 	r := &reconciler{
-		kargoClient: c,
-		apiReader:   c,
-		sender:      k8sevent.NewEventSender(recorder),
+		kargoClient:  c,
+		apiReader:    c,
+		sender:       k8sevent.NewEventSender(recorder),
+		promoMetrics: metrics.NewPromotionMetrics(c),
 		cleanupWorkDirFn: func(context.Context, types.UID) {
 			cleanupCalled = true
 		},
@@ -1152,136 +1159,107 @@ func newPromo(namespace, name, stage string,
 	}
 }
 
-func Test_buildTargetFreightCollection(t *testing.T) {
+func Test_reconciler_recordTerminalMetrics(t *testing.T) {
+	started := metav1.Time{Time: now.Add(-90 * time.Second)}
+
+	phases := []string{"Succeeded", "Errored", "Aborted"}
+
 	testCases := []struct {
-		name                      string
-		targetFreight             kargoapi.FreightReference
-		stage                     *kargoapi.Stage
-		expectedNumFreight        int
-		expectedFreightCollection *kargoapi.FreightCollection
+		name   string
+		status kargoapi.PromotionStatus
+		// expectedCompletions and expectedObservations map a phase
+		// label value to the counter increments and histogram observations
+		// expected under it.
+		expectedCompletions  map[string]float64
+		expectedObservations map[string]uint64
 	}{
 		{
-			name:          "requested freight not greater than 1",
-			targetFreight: kargoapi.FreightReference{Name: "target-freight"},
-			stage: &kargoapi.Stage{
-				Spec: kargoapi.StageSpec{
-					RequestedFreight: []kargoapi.FreightRequest{{}},
-				},
+			name: "succeeded Promotion",
+			status: kargoapi.PromotionStatus{
+				Phase:      kargoapi.PromotionPhaseSucceeded,
+				StartedAt:  &started,
+				FinishedAt: &now,
 			},
-			expectedNumFreight: 1,
+			expectedCompletions:  map[string]float64{"Succeeded": 1, "Errored": 0, "Aborted": 0},
+			expectedObservations: map[string]uint64{"Succeeded": 1, "Errored": 0, "Aborted": 0},
 		},
 		{
-			name:          "no last promotion should not panic",
-			targetFreight: kargoapi.FreightReference{Name: "target-freight"},
-			stage: &kargoapi.Stage{
-				Spec: kargoapi.StageSpec{
-					RequestedFreight: []kargoapi.FreightRequest{{}, {}},
-				},
-				Status: kargoapi.StageStatus{LastPromotion: nil},
+			name: "errored Promotion",
+			status: kargoapi.PromotionStatus{
+				Phase:      kargoapi.PromotionPhaseErrored,
+				StartedAt:  &started,
+				FinishedAt: &now,
 			},
-			expectedNumFreight: 1,
+			expectedCompletions:  map[string]float64{"Succeeded": 0, "Errored": 1, "Aborted": 0},
+			expectedObservations: map[string]uint64{"Succeeded": 0, "Errored": 1, "Aborted": 0},
 		},
 		{
-			name:          "no last promotion status should not panic",
-			targetFreight: kargoapi.FreightReference{Name: "target-freight"},
-			stage: &kargoapi.Stage{
-				Spec: kargoapi.StageSpec{
-					RequestedFreight: []kargoapi.FreightRequest{{}, {}},
-				},
-				Status: kargoapi.StageStatus{
-					LastPromotion: &kargoapi.PromotionReference{Status: nil},
-				},
+			name: "aborted Promotion",
+			status: kargoapi.PromotionStatus{
+				Phase:      kargoapi.PromotionPhaseAborted,
+				StartedAt:  &started,
+				FinishedAt: &now,
 			},
-			expectedNumFreight: 1,
+			expectedCompletions:  map[string]float64{"Succeeded": 0, "Errored": 0, "Aborted": 1},
+			expectedObservations: map[string]uint64{"Succeeded": 0, "Errored": 0, "Aborted": 1},
 		},
 		{
-			name:          "no freight collection in last promotion status should not panic",
-			targetFreight: kargoapi.FreightReference{Name: "target-freight"},
-			stage: &kargoapi.Stage{
-				Spec: kargoapi.StageSpec{
-					RequestedFreight: []kargoapi.FreightRequest{{}, {}},
-				},
-				Status: kargoapi.StageStatus{
-					LastPromotion: &kargoapi.PromotionReference{
-						Status: &kargoapi.PromotionStatus{
-							FreightCollection: nil,
-						},
-					},
-				},
+			name: "Promotion that never started counts, but has no duration",
+			status: kargoapi.PromotionStatus{
+				Phase:      kargoapi.PromotionPhaseAborted,
+				FinishedAt: &now,
 			},
-			expectedNumFreight: 1,
-		},
-		{
-			name:          "nil freight map in last promo collection should not panic",
-			targetFreight: kargoapi.FreightReference{Name: "target-freight"},
-			stage: &kargoapi.Stage{
-				Spec: kargoapi.StageSpec{
-					RequestedFreight: []kargoapi.FreightRequest{{}, {}},
-				},
-				Status: kargoapi.StageStatus{
-					LastPromotion: &kargoapi.PromotionReference{
-						Status: &kargoapi.PromotionStatus{
-							FreightCollection: &kargoapi.FreightCollection{
-								Freight: nil,
-							},
-						},
-					},
-				},
-			},
-			expectedNumFreight: 1,
-		},
-		{
-			name:          "requested freight greater than 1 and last promotion also has freight",
-			targetFreight: kargoapi.FreightReference{Name: "target-freight"},
-			stage: &kargoapi.Stage{
-				Spec: kargoapi.StageSpec{
-					RequestedFreight: []kargoapi.FreightRequest{
-						{
-							Origin: kargoapi.FreightOrigin{
-								Kind: kargoapi.FreightOriginKindWarehouse,
-								Name: "name-1",
-							},
-						},
-						{
-							Origin: kargoapi.FreightOrigin{
-								Kind: kargoapi.FreightOriginKindWarehouse,
-								Name: "name-2",
-							},
-						},
-					},
-				},
-				Status: kargoapi.StageStatus{
-					LastPromotion: &kargoapi.PromotionReference{
-						Name: "last-promo",
-						Status: &kargoapi.PromotionStatus{
-							FreightCollection: &kargoapi.FreightCollection{
-								Freight: map[string]kargoapi.FreightReference{
-									"Warehouse/name-1": {Origin: kargoapi.FreightOrigin{
-										Kind: kargoapi.FreightOriginKindWarehouse,
-										Name: "name-1",
-									}},
-									"Warehouse/name-2": {Origin: kargoapi.FreightOrigin{
-										Kind: kargoapi.FreightOriginKindWarehouse,
-										Name: "name-2",
-									}},
-								},
-							},
-						},
-					},
-				},
-			},
-			expectedNumFreight: 3,
+			expectedCompletions:  map[string]float64{"Succeeded": 0, "Errored": 0, "Aborted": 1},
+			expectedObservations: map[string]uint64{"Succeeded": 0, "Errored": 0, "Aborted": 0},
 		},
 	}
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			r := new(reconciler)
-			result := r.buildTargetFreightCollection(
-				t.Context(),
-				tc.targetFreight,
-				tc.stage,
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			// Each case needs its own collectors, but PromotionMetrics is a
+			// process-wide singleton, so swap in standalone ones.
+			completed := prometheus.NewCounterVec(
+				prometheus.CounterOpts{Name: "test_completed_total"},
+				[]string{"project", "phase"},
 			)
-			require.Len(t, result.Freight, tc.expectedNumFreight)
+			duration := prometheus.NewHistogramVec(
+				prometheus.HistogramOpts{Name: "test_duration_seconds"},
+				[]string{"project", "phase"},
+			)
+			r := &reconciler{
+				promoMetrics: &metrics.PromotionMetrics{
+					Completed: completed,
+					Duration:  duration,
+				},
+			}
+
+			r.recordTerminalMetrics("fake-project", &testCase.status)
+
+			for _, phase := range phases {
+				var m dto.Metric
+
+				counter := completed.WithLabelValues("fake-project", phase)
+				require.NoError(t, counter.Write(&m))
+				require.Equal(
+					t,
+					testCase.expectedCompletions[phase],
+					m.GetCounter().GetValue(),
+					"phase %q", phase,
+				)
+
+				observer, ok := duration.
+					WithLabelValues("fake-project", phase).(prometheus.Metric)
+				require.True(t, ok)
+
+				m = dto.Metric{}
+				require.NoError(t, observer.Write(&m))
+				expected := testCase.expectedObservations[phase]
+				require.Equal(
+					t, expected, m.GetHistogram().GetSampleCount(), "phase %q", phase,
+				)
+				if expected > 0 {
+					require.Equal(t, 90.0, m.GetHistogram().GetSampleSum())
+				}
+			}
 		})
 	}
 }
@@ -1317,4 +1295,135 @@ func fakeReaderWithObjects(t *testing.T, objs ...client.Object) client.Reader {
 	require.NoError(t, kargoapi.SchemeBuilder.AddToScheme(scheme))
 	return fake.NewClientBuilder().WithScheme(scheme).
 		WithObjects(objs...).WithStatusSubresource(objs...).Build()
+}
+
+func Test_reconciler_promote_targetContext(t *testing.T) {
+	scheme := k8sruntime.NewScheme()
+	require.NoError(t, kargoapi.SchemeBuilder.AddToScheme(scheme))
+
+	const testNamespace = "fake-namespace"
+
+	testFreight := &kargoapi.Freight{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "fake-freight",
+			Namespace: testNamespace,
+		},
+		Origin: kargoapi.FreightOrigin{
+			Kind: kargoapi.FreightOriginKindWarehouse,
+			Name: "fake-warehouse",
+		},
+	}
+
+	testStage := &kargoapi.Stage{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "fake-stage",
+			Namespace: testNamespace,
+		},
+		Spec: kargoapi.StageSpec{
+			RequestedFreight: []kargoapi.FreightRequest{{
+				Origin:  testFreight.Origin,
+				Sources: kargoapi.FreightSources{Direct: true},
+			}},
+		},
+	}
+
+	testCases := []struct {
+		name   string
+		target string
+		assert func(*testing.T, *promotion.TargetContext)
+	}{
+		{
+			name:   "Promotion without a Target carries no target context",
+			target: "",
+			assert: func(t *testing.T, targetCtx *promotion.TargetContext) {
+				require.Nil(t, targetCtx)
+			},
+		},
+		{
+			name:   "Promotion with a Target carries its params and labels",
+			target: "fake-target",
+			assert: func(t *testing.T, targetCtx *promotion.TargetContext) {
+				require.NotNil(t, targetCtx)
+				require.Equal(
+					t,
+					map[string]any{"branch": "env/prod-use1"},
+					targetCtx.Params,
+				)
+				require.Equal(
+					t,
+					map[string]string{"region": "us-east-1"},
+					targetCtx.Labels,
+				)
+			},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			promo := kargoapi.Promotion{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "fake-promotion",
+					Namespace: testNamespace,
+					UID:       types.UID(fmt.Sprintf("promote-target-%d", len(testCase.target))),
+				},
+				Spec: kargoapi.PromotionSpec{
+					Stage:   testStage.Name,
+					Freight: testFreight.Name,
+					Target:  testCase.target,
+					Steps:   []kargoapi.PromotionStep{{Uses: "fake-step"}},
+				},
+			}
+			t.Cleanup(func() {
+				require.NoError(t, os.RemoveAll(promotionWorkDir(promo.UID)))
+			})
+
+			// The fake client's tracker mutates the objects it is built with,
+			// so each subtest gets its own copies.
+			stage, freight := testStage.DeepCopy(), testFreight.DeepCopy()
+
+			var capturedCtx promotion.Context
+			engine := &promotion.MockEngine{
+				PromoteFn: func(
+					_ context.Context,
+					promoCtx promotion.Context,
+					_ []promotion.Step,
+				) (promotion.Result, error) {
+					capturedCtx = promoCtx
+					return promotion.Result{
+						Status: kargoapi.PromotionPhaseSucceeded,
+					}, nil
+				},
+			}
+			r := &reconciler{
+				kargoClient: fake.NewClientBuilder().WithScheme(scheme).WithObjects(
+					stage,
+					freight,
+					&kargoapi.Target{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "fake-target",
+							Namespace: testNamespace,
+							Labels:    map[string]string{"region": "us-east-1"},
+						},
+						Spec: kargoapi.TargetSpec{
+							Params: map[string]apiextensionsv1.JSON{
+								"branch": {Raw: []byte(`"env/prod-use1"`)},
+							},
+						},
+					},
+				).Build(),
+				promoEngine: engine,
+			}
+
+			status, _, err := r.promote(
+				context.Background(),
+				promo,
+				stage,
+				freight,
+			)
+			require.NoError(t, err)
+			require.Equal(t, kargoapi.PromotionPhaseSucceeded, status.Phase)
+			testCase.assert(t, capturedCtx.Target)
+		})
+	}
 }

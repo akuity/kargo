@@ -1,0 +1,36 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: kargo-argocd-kustomize-image
+  namespace: argocd
+spec:
+  generators:
+  - list:
+      elements:
+      - stage: test
+      - stage: uat
+      - stage: prod
+  template:
+    metadata:
+      name: kargo-argocd-kustomize-image-{{stage}}
+      annotations:
+        kargo.akuity.io/authorized-stage: kargo-argocd-kustomize-image:{{stage}}
+    spec:
+      project: default
+      source:
+        repoURL: https://github.com/<github-username>/kargo-demo-gitops.git
+        targetRevision: kustomize
+        path: stages/{{stage}}
+        kustomize:
+          images:
+          # Kargo will update this value to move new images into each stage
+          - public.ecr.aws/nginx/nginx=public.ecr.aws/nginx/nginx:placeholder
+      destination:
+        server: https://kubernetes.default.svc
+        namespace: kargo-argocd-kustomize-image-{{stage}}
+      syncPolicy:
+        syncOptions:
+        - CreateNamespace=true
+  ignoreApplicationDifferences:
+  - jqPathExpressions:
+    - .spec.source.kustomize.images

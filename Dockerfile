@@ -3,7 +3,7 @@ ARG BASE_IMAGE=kargo-base
 ####################################################################################################
 # ui-builder
 ####################################################################################################
-FROM --platform=$BUILDPLATFORM docker.io/library/node:26.4.0 AS ui-builder
+FROM --platform=$BUILDPLATFORM docker.io/library/node:26.10.0 AS ui-builder
 
 ARG PNPM_VERSION=11.13.0
 RUN npm install --global pnpm@${PNPM_VERSION}
@@ -20,7 +20,7 @@ RUN --mount=type=cache,target=/root/.local/share/pnpm/store NODE_ENV='production
 ####################################################################################################
 # back-end-builder
 ####################################################################################################
-FROM --platform=$BUILDPLATFORM golang:1.26.5-trixie AS back-end-builder
+FROM --platform=$BUILDPLATFORM golang:1.27.1-trixie AS back-end-builder
 
 ARG TARGETOS
 ARG TARGETARCH
@@ -61,29 +61,60 @@ RUN --mount=type=cache,target=/go/pkg/mod --mount=type=cache,target=/root/.cache
 WORKDIR /kargo/bin
 
 ####################################################################################################
-# tools
+# helm-builder
 ####################################################################################################
-# `tools` stage allows us to take the leverage of the parallel build.
-# For example, this stage can be cached and re-used when we have to rebuild code base.
-FROM curlimages/curl:8.21.0 AS tools
+# Helm is required by the kustomize-build promotion step's Helm plugin. We build
+# it ourselves rather than shipping Helm's prebuilt release, because that release
+# is compiled with whatever Go version upstream happened to use, and we inherit
+# its stdlib CVEs. Building here means Helm always carries a current, patched Go
+# stdlib.
+#
+# Building rather than downloading does not hide Helm from vulnerability
+# scanners. Go embeds build metadata in the binary, and the module it records is
+# the one containing the main package -- not the throwaway module used to drive
+# the build. This binary therefore reports `helm.sh/helm/v3` at HELM_VERSION --
+# the same module path and version that Helm's own release build reports.
+# Scanners key on exactly that, so an advisory filed against Helm itself is
+# matched here just as it would be against an upstream binary.
+#
+# The Helm version is intentionally ahead of the helm.sh/helm/v3 library in
+# go.mod: the standalone binary carries no k8s dependency cascade, so we track
+# the latest Helm 3 minor for CVE coverage.
+#
+# Source comes from the Go module proxy, so it is checksum-verified against
+# sum.golang.org rather than trusted from a tarball download.
+FROM --platform=$BUILDPLATFORM golang:1.27.1-trixie AS helm-builder
 
 ARG TARGETOS
 ARG TARGETARCH
 
-WORKDIR /tools
+ARG HELM_VERSION=v3.22.0
 
-# Helm is required by the kustomize-build promotion step's Helm plugin. We source
-# the binary directly from Helm's official releases (rather than a distro package)
-# so we always ship a current, CVE-patched build. This is intentionally ahead of
-# the helm.sh/helm/v3 library in go.mod: the standalone binary carries no k8s
-# dependency cascade, so we track the latest Helm 3 minor for CVE coverage.
-ARG HELM_VERSION=v3.21.2
-RUN curl -fL -o /tmp/helm.tar.gz https://get.helm.sh/helm-${HELM_VERSION}-${TARGETOS}-${TARGETARCH}.tar.gz && \
-    curl -fL -o /tmp/helm.tar.gz.sha256sum https://get.helm.sh/helm-${HELM_VERSION}-${TARGETOS}-${TARGETARCH}.tar.gz.sha256sum && \
-    echo "$(awk '{print $1}' /tmp/helm.tar.gz.sha256sum)  /tmp/helm.tar.gz" | sha256sum -c - && \
-    tar -xzf /tmp/helm.tar.gz -C /tmp && \
-    mv /tmp/${TARGETOS}-${TARGETARCH}/helm /tools/helm && \
-    chmod +x /tools/helm
+WORKDIR /helm-build
+RUN --mount=type=cache,target=/go/pkg/mod --mount=type=cache,target=/root/.cache/go-build \
+    go mod init helm-build && \
+    go get helm.sh/helm/v3/cmd/helm@${HELM_VERSION}
+
+# Helm's own Makefile derives the Kubernetes version it reports to charts from
+# the k8s.io/client-go version it was built against, and injects it via ldflags.
+# Without those, the binary falls back to the in-source default of v1.20.0, and
+# any chart declaring a `kubeVersion` constraint newer than that fails to render.
+# Mirror that derivation here rather than hardcoding a version, so it stays
+# correct as HELM_VERSION moves.
+RUN --mount=type=cache,target=/go/pkg/mod --mount=type=cache,target=/root/.cache/go-build \
+    K8S_VERSION="$(go list -f '{{.Version}}' -m k8s.io/client-go)" && \
+    K8S_VERSION_MAJOR="$(( $(echo "${K8S_VERSION}" | cut -d. -f1 | tr -d v) + 1 ))" && \
+    K8S_VERSION_MINOR="$(echo "${K8S_VERSION}" | cut -d. -f2)" && \
+    CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build \
+      -trimpath \
+      -ldflags "-w -s \
+        -X helm.sh/helm/v3/internal/version.version=${HELM_VERSION} \
+        -X helm.sh/helm/v3/pkg/chartutil.k8sVersionMajor=${K8S_VERSION_MAJOR} \
+        -X helm.sh/helm/v3/pkg/chartutil.k8sVersionMinor=${K8S_VERSION_MINOR} \
+        -X helm.sh/helm/v3/pkg/lint/rules.k8sVersionMajor=${K8S_VERSION_MAJOR} \
+        -X helm.sh/helm/v3/pkg/lint/rules.k8sVersionMinor=${K8S_VERSION_MINOR}" \
+      -o /helm-build/helm \
+      helm.sh/helm/v3/cmd/helm
 
 ####################################################################################################
 # back-end-dev
@@ -94,12 +125,11 @@ RUN curl -fL -o /tmp/helm.tar.gz https://get.helm.sh/helm-${HELM_VERSION}-${TARG
 ####################################################################################################
 FROM alpine:latest AS back-end-dev
 
-RUN apk update && apk add ca-certificates git gpg gpg-agent openssh-client tini
+RUN apk update && apk add ca-certificates git gpg gpg-agent tini
 
-# Match the published image: source Helm (needed by the kustomize-build step's
-# Helm plugin) from the official-binary "tools" stage rather than a distro
-# package.
-COPY --from=tools /tools/helm /usr/local/bin/helm
+# Match the published image: use the Helm binary we build ourselves (needed
+# by the kustomize-build step's Helm plugin) rather than a distro package.
+COPY --from=helm-builder /helm-build/helm /usr/local/bin/helm
 COPY bin/credential-helper /usr/local/bin/credential-helper
 COPY bin/controlplane/kargo /usr/local/bin/kargo
 
@@ -116,7 +146,7 @@ CMD ["/usr/local/bin/kargo"]
 # - supports development
 # - not used for official image builds
 ####################################################################################################
-FROM --platform=$BUILDPLATFORM docker.io/library/node:26.4.0 AS ui-dev
+FROM --platform=$BUILDPLATFORM docker.io/library/node:26.10.0 AS ui-dev
 
 ARG PNPM_VERSION=11.13.0
 RUN npm install --global pnpm@${PNPM_VERSION}
@@ -137,7 +167,7 @@ CMD ["pnpm", "dev"]
 FROM ${BASE_IMAGE}:latest-${TARGETARCH} AS final
 
 COPY --from=back-end-builder /kargo/bin/ /usr/local/bin/
-COPY --from=tools /tools/ /usr/local/bin/
+COPY --from=helm-builder /helm-build/helm /usr/local/bin/helm
 
 ENTRYPOINT ["/sbin/tini", "--"]
 CMD ["/usr/local/bin/kargo"]

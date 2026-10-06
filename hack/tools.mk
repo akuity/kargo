@@ -27,7 +27,7 @@ ARCH	:= $(shell uname -m)
 # (not `go tool`): building it from source is slow and, because it bundles many
 # linters, a source build can produce different results than the release binary.
 # It is bumped manually as new lints surface, so the version is pinned here.
-GOLANGCI_LINT_VERSION	?= v2.10.1
+GOLANGCI_LINT_VERSION	?= v2.13.1
 # Helm is distributed as a prebuilt binary, but we keep its version in sync with
 # the helm.sh/helm/v3 module pinned in the main go.mod.
 HELM_VERSION            ?= $(shell grep -m 1 -E '^[[:space:]]+helm.sh/helm/v3 v' $(GO_MOD_FILE) | awk '{print $$2}')

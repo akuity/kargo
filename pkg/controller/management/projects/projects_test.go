@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -2630,6 +2631,140 @@ func TestReconciler_ensureDefaultUserRoles(t *testing.T) {
 				t,
 				testCase.reconciler.ensureDefaultUserRoles(t.Context(), p),
 			)
+		})
+	}
+}
+
+func TestReconciler_ensureDefaultUserRoles_PromotionRequestPermissions(t *testing.T) {
+	scheme := runtime.NewScheme()
+	require.NoError(t, corev1.AddToScheme(scheme))
+	require.NoError(t, rbacv1.AddToScheme(scheme))
+
+	createdRoles := map[string]*rbacv1.Role{}
+	r := &reconciler{
+		client: fake.NewClientBuilder().WithScheme(scheme).Build(),
+		createServiceAccountFn: func(
+			context.Context,
+			client.Object,
+			...client.CreateOption,
+		) error {
+			return nil
+		},
+		createRoleFn: func(
+			_ context.Context,
+			obj client.Object,
+			_ ...client.CreateOption,
+		) error {
+			role, ok := obj.(*rbacv1.Role)
+			require.True(t, ok)
+			createdRoles[role.Name] = role
+			return nil
+		},
+		createRoleBindingFn: func(
+			context.Context,
+			client.Object,
+			...client.CreateOption,
+		) error {
+			return nil
+		},
+		createClusterRoleFn: func(
+			context.Context,
+			client.Object,
+			...client.CreateOption,
+		) error {
+			return nil
+		},
+		createClusterRoleBindingFn: func(
+			context.Context,
+			client.Object,
+			...client.CreateOption,
+		) error {
+			return nil
+		},
+	}
+
+	require.NoError(
+		t,
+		r.ensureDefaultUserRoles(
+			t.Context(),
+			&kargoapi.Project{ObjectMeta: metav1.ObjectMeta{Name: "test-project"}},
+		),
+	)
+
+	testCases := []struct {
+		roleName string
+		resource string
+		verbs    []string
+	}{
+		{
+			roleName: "kargo-admin",
+			resource: "targets",
+			verbs:    []string{"*"},
+		},
+		{
+			roleName: "kargo-viewer",
+			resource: "targets",
+			verbs:    []string{"get", "list", "watch"},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.roleName+"/"+testCase.resource, func(t *testing.T) {
+			role := createdRoles[testCase.roleName]
+			require.NotNil(t, role)
+			for _, rule := range role.Rules {
+				for _, resource := range rule.Resources {
+					if resource == testCase.resource {
+						require.ElementsMatch(t, testCase.verbs, rule.Verbs)
+						return
+					}
+				}
+			}
+			require.Fail(t, testCase.resource+" permissions not found")
+		})
+	}
+	// PromotionRequests are readable but never writable by a user: only the
+	// Stage controller and the API server create them.
+	for _, roleName := range []string{"kargo-admin", "kargo-viewer"} {
+		t.Run(roleName+"/promotionrequests read-only", func(t *testing.T) {
+			role := createdRoles[roleName]
+			require.NotNil(t, role)
+			var found bool
+			for _, rule := range role.Rules {
+				if !slices.Contains(rule.Resources, "promotionrequests") {
+					continue
+				}
+				found = true
+				require.ElementsMatch(t, []string{"get", "list", "watch"}, rule.Verbs)
+			}
+			require.True(t, found, "no promotionrequests rule found")
+		})
+	}
+	t.Run("kargo-promoter/no promotionrequests", func(t *testing.T) {
+		role := createdRoles["kargo-promoter"]
+		require.NotNil(t, role)
+		for _, rule := range role.Rules {
+			require.NotContains(t, rule.Resources, "promotionrequests")
+		}
+	})
+	t.Run("kargo-promoter/no targets", func(t *testing.T) {
+		role := createdRoles["kargo-promoter"]
+		require.NotNil(t, role)
+		for _, rule := range role.Rules {
+			require.NotContains(t, rule.Resources, "targets")
+		}
+	})
+	// Regression test for GHSA-rx5g-3338-f2mf: patch on freights/status let a
+	// holder write status.verifiedIn directly, bypassing verification/soak
+	// requirements without ever needing the promote verb. Freight approval now
+	// goes through the API server's internal client, so no user-facing role
+	// should grant this permission.
+	for _, roleName := range []string{"kargo-admin", "kargo-promoter", "kargo-viewer"} {
+		t.Run(roleName+"/no freights-status patch", func(t *testing.T) {
+			role := createdRoles[roleName]
+			require.NotNil(t, role)
+			for _, rule := range role.Rules {
+				require.NotContains(t, rule.Resources, "freights/status")
+			}
 		})
 	}
 }

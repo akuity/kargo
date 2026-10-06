@@ -1,9 +1,14 @@
-import { Typography } from 'antd';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { Flex, Tooltip, Typography } from 'antd';
 
 import { Freight, FreightReference } from '@ui/gen/api/v2/models';
 
 import { FreightArtifact } from './freight-artifact';
-import { DEFAULT_MAX_ARTIFACTS, getFreightArtifacts } from './freight-artifact-list-utils';
+import {
+  DEFAULT_MAX_ARTIFACTS,
+  getFreightArtifacts,
+  getHiddenFreightArtifactCounts
+} from './freight-artifact-list-utils';
 
 type FreightArtifactListProps = {
   freight?: Freight | FreightReference;
@@ -14,9 +19,10 @@ type FreightArtifactListProps = {
 };
 
 // FreightArtifactList renders up to `max` artifact tags for a piece of Freight,
-// collapsing any overflow into a "+N more" indicator. Shared by the freight
-// timeline card and the Stage drawer's current-freight panel. It renders a flat
-// fragment so callers control the surrounding layout.
+// collapsing any overflow into a "+N more" indicator that reveals a per-kind
+// breakdown of the hidden artifacts on hover. Shared by the freight timeline
+// card and the Stage drawer's current-freight panel. It renders a flat fragment
+// so callers control the surrounding layout.
 export const FreightArtifactList = ({
   freight,
   max = DEFAULT_MAX_ARTIFACTS,
@@ -31,9 +37,21 @@ export const FreightArtifactList = ({
         <FreightArtifact key={i} artifact={artifact} expand={expand} />
       ))}
       {overflow > 0 && (
-        <Typography.Text type='secondary' className='text-[10px]'>
-          +{overflow} more
-        </Typography.Text>
+        <Tooltip
+          title={
+            <Flex vertical align='center'>
+              {getHiddenFreightArtifactCounts(freight, max).map(({ icon, count }) => (
+                <div key={icon.iconName} className='text-[10px]'>
+                  {count}x <FontAwesomeIcon icon={icon} />
+                </div>
+              ))}
+            </Flex>
+          }
+        >
+          <Typography.Text type='secondary' className='text-[10px] cursor-default'>
+            +{overflow} more
+          </Typography.Text>
+        </Tooltip>
       )}
     </>
   );

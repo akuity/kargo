@@ -10,7 +10,9 @@ import type { HealthStats } from './healthStats';
 export interface WarehouseStats {
   /** Count contains the total number of Warehouses in the Project. */
   count?: number;
-  /** Health contains a summary of the collective health of a Project's
-Warehouses. */
+  /**
+   * Health contains a summary of the collective health of a Project's
+   * Warehouses.
+   */
   health?: HealthStats;
 }

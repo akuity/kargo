@@ -11,6 +11,8 @@ import (
 	"github.com/google/uuid"
 	"github.com/kelseyhightower/envconfig"
 	gocache "github.com/patrickmn/go-cache"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/trace"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
@@ -33,6 +35,8 @@ import (
 	"github.com/akuity/kargo/pkg/conditions"
 	"github.com/akuity/kargo/pkg/controller"
 	argocdapi "github.com/akuity/kargo/pkg/controller/argocd/api/v1alpha1"
+	"github.com/akuity/kargo/pkg/controller/metrics"
+	"github.com/akuity/kargo/pkg/credentials"
 	kargoEvent "github.com/akuity/kargo/pkg/event"
 	k8sevent "github.com/akuity/kargo/pkg/event/kubernetes"
 	exprfn "github.com/akuity/kargo/pkg/expressions/function"
@@ -45,6 +49,7 @@ import (
 	"github.com/akuity/kargo/pkg/logging"
 	intpredicate "github.com/akuity/kargo/pkg/predicate"
 	"github.com/akuity/kargo/pkg/rollouts"
+	"github.com/akuity/kargo/pkg/telemetry"
 )
 
 // ReconcilerConfig represents configuration for the stage reconciler.
@@ -55,6 +60,7 @@ type ReconcilerConfig struct {
 	RolloutsControllerInstanceID       string `envconfig:"ROLLOUTS_CONTROLLER_INSTANCE_ID"`
 	MaxConcurrentControlFlowReconciles int    `envconfig:"MAX_CONCURRENT_CONTROL_FLOW_RECONCILES" default:"4"`
 	MaxConcurrentReconciles            int    `envconfig:"MAX_CONCURRENT_STAGE_RECONCILES" default:"4"`
+	MaxConcurrentFleetReconciles       int    `envconfig:"MAX_CONCURRENT_FLEET_STAGE_RECONCILES" default:"4"`
 }
 
 // Name returns the name of the Stage controller.
@@ -77,6 +83,7 @@ func ReconcilerConfigFromEnv() ReconcilerConfig {
 type RegularStageReconciler struct {
 	cfg            ReconcilerConfig
 	client         client.Client
+	credentialsDB  credentials.Database
 	eventSender    kargoEvent.Sender
 	healthChecker  health.AggregatingChecker
 	shardPredicate controller.ResponsibleFor[kargoapi.Stage]
@@ -84,13 +91,23 @@ type RegularStageReconciler struct {
 	backoffCfg wait.Backoff
 }
 
+type verifier struct {
+	cfg           ReconcilerConfig
+	client        client.Client
+	credentialsDB credentials.Database
+	eventSender   kargoEvent.Sender
+	backoffCfg    wait.Backoff
+}
+
 // NewRegularStageReconciler creates a new Stages reconciler.
 func NewRegularStageReconciler(
 	cfg ReconcilerConfig,
+	credentialsDB credentials.Database,
 	healthChecker health.AggregatingChecker,
 ) *RegularStageReconciler {
 	return &RegularStageReconciler{
 		cfg:           cfg,
+		credentialsDB: credentialsDB,
 		healthChecker: healthChecker,
 		shardPredicate: controller.ResponsibleFor[kargoapi.Stage]{
 			IsDefaultController: cfg.IsDefaultController,
@@ -187,6 +204,8 @@ func (r *RegularStageReconciler) SetupWithManager(
 		return fmt.Errorf("index Freight by Stages for which it has been approved: %w", err)
 	}
 
+	metrics.RegisterStageMetrics(r.client)
+
 	// Build the controller with the reconciler.
 	c, err := ctrl.NewControllerManagedBy(kargoMgr).
 		For(&kargoapi.Stage{}).
@@ -197,6 +216,7 @@ func (r *RegularStageReconciler) SetupWithManager(
 		WithEventFilter(intpredicate.IgnoreDelete[client.Object]{}).
 		WithEventFilter(
 			predicate.And(
+				IsTargetAwareStage(false),
 				IsControlFlowStage(false),
 				predicate.Or(
 					predicate.GenerationChangedPredicate{},
@@ -320,13 +340,27 @@ func (r *RegularStageReconciler) SetupWithManager(
 
 	logging.LoggerFromContext(ctx).Info(
 		"Initialized regular Stage reconciler",
-		"maxConcurrentReconciles", r.cfg.MaxConcurrentControlFlowReconciles,
+		"maxConcurrentReconciles", r.cfg.MaxConcurrentReconciles,
 	)
 
 	return nil
 }
 
+// tracer is the instrumentation scope under which this package's spans are
+// recorded.
+var tracer = otel.Tracer("github.com/akuity/kargo/pkg/controller/stages")
+
 func (r *RegularStageReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+	ctx, span := tracer.Start(
+		ctx,
+		"Reconcile Stage",
+		trace.WithAttributes(
+			telemetry.ProjectKey.String(req.Namespace),
+			telemetry.StageKey.String(req.Name),
+		),
+	)
+	defer span.End()
+
 	logger := logging.LoggerFromContext(ctx).WithValues(
 		"namespace", req.Namespace,
 		"stage", req.Name,
@@ -342,6 +376,11 @@ func (r *RegularStageReconciler) Reconcile(ctx context.Context, req ctrl.Request
 
 	// Safety check: do not reconcile Stages that are control flow Stages.
 	if stage.IsControlFlow() {
+		return ctrl.Result{}, nil
+	}
+
+	// Safety check: do not reconcile fleet Stages.
+	if stage.IsTargetAware() {
 		return ctrl.Result{}, nil
 	}
 
@@ -558,7 +597,11 @@ func (r *RegularStageReconciler) reconcile(
 
 		// Summarize the conditions after each sub-reconciler to ensure that
 		// we have a consistent view of the Stage status.
-		summarizeConditions(working, &newStatus, err)
+		if summarizeConditions(stage, &newStatus, err) {
+			// If we are Ready, then we can also mark the current generation as
+			// observed.
+			newStatus.ObservedGeneration = stage.Generation
+		}
 
 		// If an error occurred during the sub-reconciler, then we should
 		// return the error which will cause the Stage to be requeued.
@@ -758,6 +801,15 @@ func (r *RegularStageReconciler) syncPromotions(
 			if promo.Status.Freight != nil {
 				ref.Freight = promo.Status.Freight.DeepCopy()
 			}
+			// A Promotion that was aborted before it ever reached Running never
+			// had the chance to build a FreightCollection. Recording it as-is
+			// would make the Stage forget Freight origins the previous
+			// lastPromotion had already collected, permanently breaking any
+			// subsequent Promotion's ability to inherit them.
+			if promo.Status.StartedAt == nil && ref.Status.FreightCollection == nil &&
+				newStatus.LastPromotion != nil && newStatus.LastPromotion.Status != nil {
+				ref.Status.FreightCollection = newStatus.LastPromotion.Status.FreightCollection
+			}
 			newStatus.LastPromotion = &ref
 			if promo.Status.Phase == kargoapi.PromotionPhaseSucceeded {
 				// If the Promotion was successful, then we should add the Freight
@@ -789,12 +841,12 @@ func (r *RegularStageReconciler) syncPromotions(
 				// ArgoCD Applications. This is used to provide deep links to the
 				// ArgoCD UI for the Stage in the Kargo UI.
 				//
-				// NB: If the health checks do not include ArgoCD Applications,
+				// NB: If the Promotion did not involve any ArgoCD Applications,
 				// then the annotation will be removed.
 				if err := api.AnnotateStageWithArgoCDContext(
 					ctx,
 					r.client,
-					promo.Status.HealthChecks,
+					promo,
 					client.ObjectKeyFromObject(stage),
 				); err != nil {
 					// Let the error be logged, but do not return it as it is not
@@ -977,11 +1029,15 @@ func (r *RegularStageReconciler) assessHealth(ctx context.Context, stage *kargoa
 // syncFreight ensures that all Freight statuses accurately reflect whether they
 // are currently in use by the Stage.
 func (r *RegularStageReconciler) syncFreight(ctx context.Context, stage *kargoapi.Stage) error {
+	return syncFreight(ctx, r.client, stage)
+}
+
+func syncFreight(ctx context.Context, cl client.Client, stage *kargoapi.Stage) error {
 	// Get the Stage's current FreightCollection.
 	curFreight := stage.Status.FreightHistory.Current()
 	// Find all Freight that think they're currently in use by this Stage.
 	var freight []kargoapi.Freight
-	freight, err := api.ListFreightByCurrentStage(ctx, r.client, stage)
+	freight, err := api.ListFreightByCurrentStage(ctx, cl, stage)
 	if err != nil {
 		return err
 	}
@@ -991,7 +1047,7 @@ func (r *RegularStageReconciler) syncFreight(ctx context.Context, stage *kargoap
 		if !curFreight.Includes(f.Name) {
 			newStatus := f.Status.DeepCopy()
 			newStatus.RemoveCurrentStage(stage.Name)
-			if err := kubeclient.PatchStatus(ctx, r.client, &f, func(status *kargoapi.FreightStatus) {
+			if err := kubeclient.PatchStatus(ctx, cl, &f, func(status *kargoapi.FreightStatus) {
 				*status = *newStatus
 			}); err != nil {
 				return fmt.Errorf(
@@ -1014,7 +1070,7 @@ func (r *RegularStageReconciler) syncFreight(ctx context.Context, stage *kargoap
 	for _, fr := range curFreight.References() {
 		f, err := api.GetFreight(
 			ctx,
-			r.client,
+			cl,
 			types.NamespacedName{
 				Namespace: stage.Namespace,
 				Name:      fr.Name,
@@ -1033,7 +1089,7 @@ func (r *RegularStageReconciler) syncFreight(ctx context.Context, stage *kargoap
 		if !f.IsCurrentlyIn(stage.Name) {
 			newStatus := f.Status.DeepCopy()
 			newStatus.AddCurrentStage(stage.Name, now)
-			if err = kubeclient.PatchStatus(ctx, r.client, f, func(status *kargoapi.FreightStatus) {
+			if err = kubeclient.PatchStatus(ctx, cl, f, func(status *kargoapi.FreightStatus) {
 				*status = *newStatus
 			}); err != nil {
 				return fmt.Errorf(
@@ -1067,6 +1123,22 @@ func (r *RegularStageReconciler) verifyStageFreight(
 	startTime time.Time,
 	endTime func() time.Time,
 ) (newStatus kargoapi.StageStatus, err error) {
+	ver := verifier{
+		cfg:           r.cfg,
+		client:        r.client,
+		credentialsDB: r.credentialsDB,
+		eventSender:   r.eventSender,
+		backoffCfg:    r.backoffCfg,
+	}
+	return ver.verifyStageFreight(ctx, stage, startTime, endTime)
+}
+
+func (ver verifier) verifyStageFreight(
+	ctx context.Context,
+	stage *kargoapi.Stage,
+	startTime time.Time,
+	endTime func() time.Time,
+) (newStatus kargoapi.StageStatus, err error) {
 	logger := logging.LoggerFromContext(ctx)
 	newStatus = *stage.Status.DeepCopy()
 
@@ -1086,7 +1158,7 @@ func (r *RegularStageReconciler) verifyStageFreight(
 
 	// If we are currently promoting Freight, then we are not in a stable state
 	// and should wait until the promotion is complete.
-	if curPromotion := stage.Status.CurrentPromotion; curPromotion != nil {
+	if stage.PromotionInProgress() {
 		logger.Debug("Stage is currently promoting Freight: skipping verification")
 		return newStatus, nil
 	}
@@ -1184,21 +1256,21 @@ func (r *RegularStageReconciler) verifyStageFreight(
 				logger.Debug("aborting verification of Stage Freight")
 
 				// Abort the verification.
-				newVI, err = r.abortVerification(ctx, *curFreight, abortReq, endTime)
+				newVI, err = ver.abortVerification(ctx, *curFreight, abortReq, endTime)
 				if newVI != nil {
 					newStatus.FreightHistory.Current().VerificationHistory.UpdateOrPush(*newVI)
 				}
 
 				// Issue an event for the aborted verification.
 				for _, ref := range curFreight.Freight {
-					r.recordFreightVerificationEvent(stage, ref, newVI)
+					ver.recordFreightVerificationEvent(stage, ref, newVI)
 				}
 
 				return newStatus, err
 			}
 
 			// Get the latest result of the verification.
-			newVI, err = r.getVerificationResult(ctx, *curFreight, endTime)
+			newVI, err = ver.getVerificationResult(ctx, *curFreight, endTime)
 			if newVI != nil {
 				newStatus.FreightHistory.Current().VerificationHistory.UpdateOrPush(*newVI)
 
@@ -1206,7 +1278,7 @@ func (r *RegularStageReconciler) verifyStageFreight(
 				// each Freight that was verified.
 				if newVI.Phase.IsTerminal() {
 					for _, ref := range curFreight.Freight {
-						r.recordFreightVerificationEvent(stage, ref, newVI)
+						ver.recordFreightVerificationEvent(stage, ref, newVI)
 					}
 				}
 			}
@@ -1241,13 +1313,13 @@ func (r *RegularStageReconciler) verifyStageFreight(
 
 		// Issue an event for each Freight that was verified.
 		for _, ref := range curFreight.Freight {
-			r.recordFreightVerificationEvent(stage, ref, &newVI)
+			ver.recordFreightVerificationEvent(stage, ref, &newVI)
 		}
 		return newStatus, nil
 	}
 
 	// Start a new (re-)verification.
-	newVI, err = r.startVerification(ctx, stage, *curFreight, reverifyReq, startTime, endTime)
+	newVI, err = ver.startVerification(ctx, stage, *curFreight, reverifyReq, startTime, endTime)
 	if newVI != nil {
 		newStatus.FreightHistory.Current().VerificationHistory.UpdateOrPush(*newVI)
 
@@ -1256,7 +1328,7 @@ func (r *RegularStageReconciler) verifyStageFreight(
 		// enabled. In this case, we should issue an event for the verification.
 		if newVI.Phase.IsTerminal() {
 			for _, ref := range curFreight.Freight {
-				r.recordFreightVerificationEvent(stage, ref, newVI)
+				ver.recordFreightVerificationEvent(stage, ref, newVI)
 			}
 		}
 	}
@@ -1268,6 +1340,14 @@ func (r *RegularStageReconciler) verifyStageFreight(
 // is taken.
 func (r *RegularStageReconciler) markFreightVerifiedForStage(
 	ctx context.Context,
+	stage *kargoapi.Stage,
+) (kargoapi.StageStatus, error) {
+	return markFreightVerifiedForStage(ctx, r.client, stage)
+}
+
+func markFreightVerifiedForStage(
+	ctx context.Context,
+	cl client.Client,
 	stage *kargoapi.Stage,
 ) (kargoapi.StageStatus, error) {
 	logger := logging.LoggerFromContext(ctx)
@@ -1292,7 +1372,7 @@ func (r *RegularStageReconciler) markFreightVerifiedForStage(
 	// and we can proceed with the verification.
 	for _, ref := range curFreight.Freight {
 		freight := &kargoapi.Freight{}
-		if err := r.client.Get(ctx, types.NamespacedName{
+		if err := cl.Get(ctx, types.NamespacedName{
 			Namespace: stage.Namespace,
 			Name:      ref.Name,
 		}, freight); err != nil {
@@ -1310,7 +1390,7 @@ func (r *RegularStageReconciler) markFreightVerifiedForStage(
 		}
 
 		// Verify the Freight.
-		if err := kubeclient.PatchStatus(ctx, r.client, freight, func(status *kargoapi.FreightStatus) {
+		if err := kubeclient.PatchStatus(ctx, cl, freight, func(status *kargoapi.FreightStatus) {
 			if status.VerifiedIn == nil {
 				status.VerifiedIn = make(map[string]kargoapi.VerifiedStage)
 			}
@@ -1330,13 +1410,13 @@ func (r *RegularStageReconciler) markFreightVerifiedForStage(
 // recordFreightVerificationEvent records an event for the verification of a
 // Freight. The event contains information about the Freight, the verification,
 // and the Stage that triggered the verification.
-func (r *RegularStageReconciler) recordFreightVerificationEvent(
+func (ver verifier) recordFreightVerificationEvent(
 	stage *kargoapi.Stage,
 	freightRef kargoapi.FreightReference,
 	vi *kargoapi.VerificationInfo,
 ) {
 	freight := &kargoapi.Freight{}
-	if err := r.client.Get(context.Background(), types.NamespacedName{
+	if err := ver.client.Get(context.Background(), types.NamespacedName{
 		Namespace: stage.Namespace,
 		Name:      freightRef.Name,
 	}, freight); err != nil {
@@ -1351,7 +1431,7 @@ func (r *RegularStageReconciler) recordFreightVerificationEvent(
 	// Extract metadata from the AnalysisRun if available
 	if vi.HasAnalysisRun() {
 		ar := &rolloutsapi.AnalysisRun{}
-		if err := r.client.Get(context.Background(), types.NamespacedName{
+		if err := ver.client.Get(context.Background(), types.NamespacedName{
 			Namespace: vi.AnalysisRun.Namespace,
 			Name:      vi.AnalysisRun.Name,
 		}, ar); err != nil {
@@ -1367,7 +1447,7 @@ func (r *RegularStageReconciler) recordFreightVerificationEvent(
 		}
 	}
 
-	evtActor := api.FormatEventControllerActor(r.cfg.Name())
+	evtActor := api.FormatEventControllerActor(ver.cfg.Name())
 
 	// If the verification is manually triggered (e.g. reverify),
 	// override the actor with the one who triggered the verification.
@@ -1396,7 +1476,7 @@ func (r *RegularStageReconciler) recordFreightVerificationEvent(
 
 	evt.SetTriggeredByPromotion(analysisTriggeredByPromotion)
 
-	if err := r.eventSender.Send(context.Background(), evt); err != nil {
+	if err := ver.eventSender.Send(context.Background(), evt); err != nil {
 		logging.LoggerFromContext(context.Background()).Error(
 			err, "failed to send verification event",
 			"freight", freightRef.Name,
@@ -1415,7 +1495,7 @@ func (r *RegularStageReconciler) recordFreightVerificationEvent(
 // failed with an appropriate message.
 //
 // To start a verification, the Stage must be healthy.
-func (r *RegularStageReconciler) startVerification(
+func (ver verifier) startVerification(
 	ctx context.Context,
 	stage *kargoapi.Stage,
 	freight kargoapi.FreightCollection,
@@ -1437,7 +1517,7 @@ func (r *RegularStageReconciler) startVerification(
 
 	// Return early, as we cannot start the verification if the Rollouts
 	// integration is disabled.
-	if !r.cfg.RolloutsIntegrationEnabled {
+	if !ver.cfg.RolloutsIntegrationEnabled {
 		newVI.FinishTime = ptr.To(metav1.NewTime(endTime()))
 		newVI.Phase = kargoapi.VerificationPhaseError
 		newVI.Message = "Rollouts integration is disabled on this controller: cannot start verification"
@@ -1450,7 +1530,7 @@ func (r *RegularStageReconciler) startVerification(
 	// AnalysisRun for the Stage and Freight. If there is, return the status
 	// of the existing AnalysisRun.
 	if req == nil {
-		existingAnalysisRun, err := r.findExistingAnalysisRun(ctx, types.NamespacedName{
+		existingAnalysisRun, err := ver.findExistingAnalysisRun(ctx, types.NamespacedName{
 			Namespace: stage.Namespace,
 			Name:      stage.Name,
 		}, freight.ID)
@@ -1478,8 +1558,8 @@ func (r *RegularStageReconciler) startVerification(
 	// At this point, we know that we need to start a new AnalysisRun for the
 	// verification.
 	shortStageName := kubernetes.ShortenLabelValue(stage.Name)
-	builder := rollouts.NewAnalysisRunBuilder(r.client, rollouts.Config{
-		ControllerInstanceID: r.cfg.RolloutsControllerInstanceID,
+	builder := rollouts.NewAnalysisRunBuilder(ver.client, rollouts.Config{
+		ControllerInstanceID: ver.cfg.RolloutsControllerInstanceID,
 	})
 	builderOpts := []rollouts.AnalysisRunOption{
 		rollouts.WithNamePrefix(stage.Name),
@@ -1498,13 +1578,14 @@ func (r *RegularStageReconciler) startVerification(
 			Options: slices.Concat(
 				exprfn.DataOperations(
 					ctx,
-					r.client,
+					ver.client,
+					ver.credentialsDB,
 					gocache.New(gocache.NoExpiration, gocache.NoExpiration),
 					stage.Namespace,
 				),
 				exprfn.FreightOperations(
 					ctx,
-					r.client,
+					ver.client,
 					stage.Namespace,
 					stage.Spec.RequestedFreight,
 					freight.References(),
@@ -1529,9 +1610,10 @@ func (r *RegularStageReconciler) startVerification(
 		})
 	}
 	if curVI == nil || (req.ForID(curVI.ID) && req.ControlPlane && req.Actor != "") {
-		if stage.Status.LastPromotion != nil {
+		lastPromoName := stage.LastPromotionName()
+		if lastPromoName != "" {
 			builderOpts = append(builderOpts, rollouts.WithExtraAnnotations{
-				kargoapi.AnnotationKeyPromotion: stage.Status.LastPromotion.Name,
+				kargoapi.AnnotationKeyPromotion: lastPromoName,
 			})
 		}
 	}
@@ -1548,7 +1630,7 @@ func (r *RegularStageReconciler) startVerification(
 		).Error()
 		return newVI, nil
 	}
-	if err = r.client.Create(ctx, ar); err != nil {
+	if err = ver.client.Create(ctx, ar); err != nil {
 		newVI.FinishTime = ptr.To(metav1.NewTime(endTime()))
 		newVI.Phase = kargoapi.VerificationPhaseError
 		newVI.Message = fmt.Errorf(
@@ -1579,7 +1661,7 @@ func (r *RegularStageReconciler) startVerification(
 //
 // If the Rollouts integration is disabled, then the verification is marked as
 // failed with an appropriate message.
-func (r *RegularStageReconciler) getVerificationResult(
+func (ver verifier) getVerificationResult(
 	ctx context.Context,
 	freight kargoapi.FreightCollection,
 	endTime func() time.Time,
@@ -1598,7 +1680,7 @@ func (r *RegularStageReconciler) getVerificationResult(
 
 	// If the Rollouts integration is disabled, then we cannot get the
 	// verification.
-	if !r.cfg.RolloutsIntegrationEnabled {
+	if !ver.cfg.RolloutsIntegrationEnabled {
 		return &kargoapi.VerificationInfo{
 			ID:         currentVI.ID,
 			StartTime:  currentVI.StartTime,
@@ -1614,10 +1696,10 @@ func (r *RegularStageReconciler) getVerificationResult(
 	// the symptoms for now. We should investigate the root cause of this
 	// issue and remove this retry logic when the root cause has been resolved.
 	ar := rolloutsapi.AnalysisRun{}
-	if err := retry.OnError(r.backoffCfg, func(err error) bool {
+	if err := retry.OnError(ver.backoffCfg, func(err error) bool {
 		return apierrors.IsNotFound(err)
 	}, func() error {
-		return r.client.Get(ctx, types.NamespacedName{
+		return ver.client.Get(ctx, types.NamespacedName{
 			Namespace: currentVI.AnalysisRun.Namespace,
 			Name:      currentVI.AnalysisRun.Name,
 		}, &ar)
@@ -1656,7 +1738,7 @@ func (r *RegularStageReconciler) getVerificationResult(
 }
 
 // abortVerification aborts the verification for the current Freight of a Stage.
-func (r *RegularStageReconciler) abortVerification(
+func (ver verifier) abortVerification(
 	ctx context.Context,
 	freight kargoapi.FreightCollection,
 	req *kargoapi.VerificationRequest,
@@ -1688,7 +1770,7 @@ func (r *RegularStageReconciler) abortVerification(
 
 	// If the Rollouts integration is disabled, then we cannot abort the
 	// verification.
-	if !r.cfg.RolloutsIntegrationEnabled {
+	if !ver.cfg.RolloutsIntegrationEnabled {
 		return &kargoapi.VerificationInfo{
 			ID:          currentVI.ID,
 			Actor:       actor,
@@ -1707,7 +1789,7 @@ func (r *RegularStageReconciler) abortVerification(
 			Name:      currentVI.AnalysisRun.Name,
 		},
 	}
-	if err := r.client.Patch(
+	if err := ver.client.Patch(
 		ctx,
 		ar,
 		client.RawPatch(types.MergePatchType, []byte(`{"spec":{"terminate":true}}`)),
@@ -1747,13 +1829,13 @@ func (r *RegularStageReconciler) abortVerification(
 // findExistingAnalysisRun finds the most recent AnalysisRun for a Stage and
 // Freight collection in the namespace of the Stage. If no AnalysisRun is found,
 // it returns nil.
-func (r *RegularStageReconciler) findExistingAnalysisRun(
+func (ver verifier) findExistingAnalysisRun(
 	ctx context.Context,
 	stage types.NamespacedName,
 	freightColID string,
 ) (*rolloutsapi.AnalysisRun, error) {
 	analysisRuns := &rolloutsapi.AnalysisRunList{}
-	if err := r.client.List(
+	if err := ver.client.List(
 		ctx,
 		analysisRuns,
 		client.InNamespace(stage.Namespace),
@@ -2090,6 +2172,7 @@ func (r *RegularStageReconciler) unprocessedPromotionExistsForStageFreight(
 	); err != nil {
 		return false, err
 	}
+
 	lastPromo := stage.Status.LastPromotion
 	for i := range promotions.Items {
 		promo := &promotions.Items[i]
@@ -2130,6 +2213,7 @@ func (r *RegularStageReconciler) newestTerminalPromotionForStageFreight(
 	); err != nil {
 		return nil, err
 	}
+
 	if len(promotions.Items) == 0 {
 		return nil, nil
 	}
@@ -2163,6 +2247,10 @@ func freightCollectionHasFreight(
 // It returns an error aggregate of all errors that occurred during the deletion
 // process.
 func (r *RegularStageReconciler) handleDelete(ctx context.Context, stage *kargoapi.Stage) error {
+	return handleDelete(ctx, r.cfg, r.client, stage)
+}
+
+func handleDelete(ctx context.Context, cfg ReconcilerConfig, cl client.Client, stage *kargoapi.Stage) error {
 	// If the Stage does not have the finalizer, there is nothing to do.
 	if !controllerutil.ContainsFinalizer(stage, kargoapi.FinalizerName) {
 		return nil
@@ -2170,14 +2258,14 @@ func (r *RegularStageReconciler) handleDelete(ctx context.Context, stage *kargoa
 
 	// Clear the verification and approval status of all Freight that have been
 	// verified or approved for the Stage, and delete all AnalysisRuns.
-	toClear := []func(context.Context, *kargoapi.Stage) error{
-		r.clearVerifications,
-		r.clearApprovals,
-		r.clearAnalysisRuns,
+	toClear := []func(context.Context, ReconcilerConfig, client.Client, *kargoapi.Stage) error{
+		clearVerifications,
+		clearApprovals,
+		clearAnalysisRuns,
 	}
 	var errs []error
 	for _, c := range toClear {
-		if err := c(ctx, stage); err != nil {
+		if err := c(ctx, cfg, cl, stage); err != nil {
 			errs = append(errs, err)
 		}
 	}
@@ -2188,7 +2276,7 @@ func (r *RegularStageReconciler) handleDelete(ctx context.Context, stage *kargoa
 	}
 
 	// Remove the finalizer from the Stage.
-	if err := api.RemoveFinalizer(ctx, r.client, stage); err != nil {
+	if err := api.RemoveFinalizer(ctx, cl, stage); err != nil {
 		return fmt.Errorf("error removing finalizer from Stage: %w", err)
 	}
 
@@ -2198,9 +2286,9 @@ func (r *RegularStageReconciler) handleDelete(ctx context.Context, stage *kargoa
 // clearVerifications clears the verification status of all Freight that have
 // been verified in the given Stage. It removes the Stage from the VerifiedIn
 // map of each Freight.
-func (r *RegularStageReconciler) clearVerifications(ctx context.Context, stage *kargoapi.Stage) error {
+func clearVerifications(ctx context.Context, _ ReconcilerConfig, cl client.Client, stage *kargoapi.Stage) error {
 	verified := kargoapi.FreightList{}
-	if err := r.client.List(
+	if err := cl.List(
 		ctx,
 		&verified,
 		client.InNamespace(stage.Namespace),
@@ -2227,7 +2315,7 @@ func (r *RegularStageReconciler) clearVerifications(ctx context.Context, stage *
 		}
 		delete(newStatus.VerifiedIn, stage.Name)
 
-		if err := kubeclient.PatchStatus(ctx, r.client, &f, func(status *kargoapi.FreightStatus) {
+		if err := kubeclient.PatchStatus(ctx, cl, &f, func(status *kargoapi.FreightStatus) {
 			*status = newStatus
 		}); client.IgnoreNotFound(err) != nil {
 			errs = append(errs, fmt.Errorf(
@@ -2242,9 +2330,9 @@ func (r *RegularStageReconciler) clearVerifications(ctx context.Context, stage *
 // clearApprovals clears the approval status of all Freight that have been
 // approved for the given Stage. It removes the Stage from the ApprovedFor map
 // of each Freight.
-func (r *RegularStageReconciler) clearApprovals(ctx context.Context, stage *kargoapi.Stage) error {
+func clearApprovals(ctx context.Context, _ ReconcilerConfig, cl client.Client, stage *kargoapi.Stage) error {
 	approved := kargoapi.FreightList{}
-	if err := r.client.List(
+	if err := cl.List(
 		ctx,
 		&approved,
 		client.InNamespace(stage.Namespace),
@@ -2270,7 +2358,7 @@ func (r *RegularStageReconciler) clearApprovals(ctx context.Context, stage *karg
 		}
 		delete(newStatus.ApprovedFor, stage.Name)
 
-		if err := kubeclient.PatchStatus(ctx, r.client, &f, func(status *kargoapi.FreightStatus) {
+		if err := kubeclient.PatchStatus(ctx, cl, &f, func(status *kargoapi.FreightStatus) {
 			*status = newStatus
 		}); client.IgnoreNotFound(err) != nil {
 			errs = append(errs, fmt.Errorf(
@@ -2284,12 +2372,12 @@ func (r *RegularStageReconciler) clearApprovals(ctx context.Context, stage *karg
 
 // clearAnalysisRuns clears all AnalysisRuns that are associated with the given
 // Stage. This is only done if the Rollouts integration is enabled.
-func (r *RegularStageReconciler) clearAnalysisRuns(ctx context.Context, stage *kargoapi.Stage) error {
-	if !r.cfg.RolloutsIntegrationEnabled {
+func clearAnalysisRuns(ctx context.Context, cfg ReconcilerConfig, cl client.Client, stage *kargoapi.Stage) error {
+	if !cfg.RolloutsIntegrationEnabled {
 		return nil
 	}
 
-	if err := r.client.DeleteAllOf(
+	if err := cl.DeleteAllOf(
 		ctx,
 		&rolloutsapi.AnalysisRun{},
 		client.InNamespace(stage.Namespace),
@@ -2310,7 +2398,7 @@ func (r *RegularStageReconciler) clearAnalysisRuns(ctx context.Context, stage *k
 // Ready condition based on the Promoting, Healthy, and Verified conditions.
 // If there is an error, the Ready condition is set to False until the error is
 // resolved.
-func summarizeConditions(stage *kargoapi.Stage, newStatus *kargoapi.StageStatus, err error) {
+func summarizeConditions(stage *kargoapi.Stage, newStatus *kargoapi.StageStatus, err error) bool {
 	// If there is an error, then we are not Ready until the error is resolved.
 	if err != nil {
 		conditions.Set(newStatus, &metav1.Condition{
@@ -2327,7 +2415,7 @@ func summarizeConditions(stage *kargoapi.Stage, newStatus *kargoapi.StageStatus,
 			Reason:             "RetryAfterError",
 			ObservedGeneration: stage.Generation,
 		})
-		return
+		return false
 	}
 
 	// Set the Freight summary.
@@ -2343,7 +2431,7 @@ func summarizeConditions(stage *kargoapi.Stage, newStatus *kargoapi.StageStatus,
 			Message:            promoCond.Message,
 			ObservedGeneration: stage.Generation,
 		})
-		return
+		return false
 	}
 
 	// If we are not currently Promoting but the last promotion failed,
@@ -2357,7 +2445,7 @@ func summarizeConditions(stage *kargoapi.Stage, newStatus *kargoapi.StageStatus,
 			Message:            lastPromo.Status.Message,
 			ObservedGeneration: stage.Generation,
 		})
-		return
+		return false
 	}
 
 	// If we are not Healthy, then we are not Ready.
@@ -2375,7 +2463,7 @@ func summarizeConditions(stage *kargoapi.Stage, newStatus *kargoapi.StageStatus,
 			readyCond.Message = healthCond.Message
 		}
 		conditions.Set(newStatus, readyCond)
-		return
+		return false
 	}
 
 	// If we are not verified, then we are not Ready.
@@ -2393,7 +2481,7 @@ func summarizeConditions(stage *kargoapi.Stage, newStatus *kargoapi.StageStatus,
 			readyCond.Message = verificationCond.Message
 		}
 		conditions.Set(newStatus, readyCond)
-		return
+		return false
 	}
 
 	// At this point, we can propagate the Ready condition from the Verified
@@ -2406,10 +2494,7 @@ func summarizeConditions(stage *kargoapi.Stage, newStatus *kargoapi.StageStatus,
 		ObservedGeneration: stage.Generation,
 	})
 	conditions.Delete(newStatus, kargoapi.ConditionTypeReconciling)
-
-	// If we are Ready, then we can also mark the current generation as
-	// observed.
-	newStatus.ObservedGeneration = stage.Generation
+	return true
 }
 
 func buildFreightSummary(requested int, current *kargoapi.FreightCollection) string {

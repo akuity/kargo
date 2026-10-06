@@ -11,6 +11,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/pkg/api"
 	libargocd "github.com/akuity/kargo/pkg/argocd"
 	argocd "github.com/akuity/kargo/pkg/controller/argocd/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/logging"
@@ -132,6 +133,12 @@ func (w *argocdWaiter) run(
 		newHealthStatuses[k] = v
 	}
 
+	// Applications resolved by this step, reported as output so the Stage
+	// controller can annotate the Stage with Argo CD context. This is the only
+	// place the Applications this step resolved are reported; the step
+	// deliberately registers no health check criteria.
+	var resolvedApps []api.ArgoCDAppRef
+
 	allReady := true
 	for i := range stepCfg.Apps {
 		appSpec := &stepCfg.Apps[i]
@@ -162,6 +169,11 @@ func (w *argocdWaiter) run(
 				"app", app.Name, "namespace", app.Namespace,
 			)
 
+			resolvedApps = append(resolvedApps, api.ArgoCDAppRef{
+				Name:      app.Name,
+				Namespace: app.Namespace,
+			})
+
 			ready, healthStatus, err :=
 				w.checkAppReadinessFn(ctx, app, waitFor, prevHealthStatuses[appKey])
 			if healthStatus != "" {
@@ -170,9 +182,7 @@ func (w *argocdWaiter) run(
 			if err != nil {
 				return promotion.StepResult{
 					Status: kargoapi.PromotionStepStatusErrored,
-					Output: map[string]any{
-						healthStatusKey: newHealthStatuses,
-					},
+					Output: waitStepOutput(resolvedApps, newHealthStatuses),
 				}, err
 			}
 			if !ready {
@@ -188,19 +198,27 @@ func (w *argocdWaiter) run(
 		logger.Info("all applications are ready", "status", "Succeeded")
 		return promotion.StepResult{
 			Status: kargoapi.PromotionStepStatusSucceeded,
-			Output: map[string]any{
-				healthStatusKey: newHealthStatuses,
-			},
+			Output: waitStepOutput(resolvedApps, newHealthStatuses),
 		}, nil
 	}
 
 	logger.Info("waiting for applications to become ready")
 	return promotion.StepResult{
 		Status: kargoapi.PromotionStepStatusRunning,
-		Output: map[string]any{
-			healthStatusKey: newHealthStatuses,
-		},
+		Output: waitStepOutput(resolvedApps, newHealthStatuses),
 	}, nil
+}
+
+// waitStepOutput assembles the output of an argocd-wait step from the Argo CD
+// Applications it has resolved and their last observed health statuses.
+func waitStepOutput(
+	apps []api.ArgoCDAppRef,
+	healthStatuses map[string]any,
+) map[string]any {
+	return map[string]any{
+		api.ArgoCDAppsOutputKey: api.ArgoCDAppRefsToOutput(apps),
+		healthStatusKey:         healthStatuses,
+	}
 }
 
 // checkAppReadiness checks whether a single Argo CD Application meets the

@@ -1,0 +1,144 @@
+name: E2E (nightly)
+
+on:
+  schedule:
+  # Nightly at 00:00 UTC.
+  - cron: "0 0 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    # Test provisions kind cluster, cert-manager, Argo CD and Kargo, so the full run takes a while.
+    timeout-minutes: 180
+    steps:
+    - name: Harden the runner (Audit all outbound calls)
+      uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
+      with:
+        egress-policy: audit
+
+    - name: Checkout code
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+    - name: Set up Go
+      uses: ./.github/actions/setup-go
+
+    # The test shells out to helm, kind, kargo and argocd; install them all into
+    # hack/bin, which is added to PATH for the subsequent steps.
+    - name: Add hack/bin to PATH
+      run: |
+        mkdir -p "${GITHUB_WORKSPACE}/hack/bin"
+        echo "${GITHUB_WORKSPACE}/hack/bin" >> "${GITHUB_PATH}"
+
+    - parallel:
+      - name: Cache kind
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        id: cache-kind
+        with:
+          path: ./hack/bin/kind
+          key: ${{ runner.os }}-kind
+
+      - name: Cache helm
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        id: cache-helm
+        with:
+          path: ./hack/bin/helm-*
+          key: ${{ runner.os }}-helm
+
+      - name: Cache argocd
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        id: cache-argocd
+        with:
+          path: ./hack/bin/argocd
+          key: ${{ runner.os }}-argocd
+
+    - parallel:
+      - name: Install helm
+        id: install-helm
+        run: make install-helm
+
+      - name: Build kind
+        id: install-kind
+        if: steps.cache-kind.outputs.cache-hit != 'true'
+        run: go build -o hack/bin/kind sigs.k8s.io/kind
+
+      - name: Build kargo CLI
+        run: go build -o hack/bin/kargo ./cmd/cli
+
+      - name: Install argocd CLI
+        id: install-argocd
+        if: steps.cache-argocd.outputs.cache-hit != 'true'
+        run: |
+          curl -fsSL -o hack/bin/argocd \
+            https://github.com/argoproj/argo-cd/releases/latest/download/argocd-linux-amd64
+          chmod +x hack/bin/argocd
+
+      - name: Build kargo image
+        run: |
+          make hack-build
+
+    - parallel:
+      - name: Save cache kind
+        if: steps.cache-kind.outputs.cache-hit != 'true'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ./hack/bin/kind
+          key: ${{ runner.os }}-kind
+
+      - name: Save cache helm
+        if: steps.cache-helm.outputs.cache-hit != 'true'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ./hack/bin/helm-*
+          key: ${{ runner.os }}-helm
+
+      - name: Save cache argocd
+        if: steps.cache-argocd.outputs.cache-hit != 'true'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ./hack/bin/argocd
+          key: ${{ runner.os }}-argocd
+
+    - name: Verify tools
+      run: |
+        go version
+        helm version
+        kind version
+        kargo version --client || true
+        argocd version --client
+
+    # nightly_config.yaml ships with an empty `context` section. Populate it from
+    # repository secrets so the git- and http-dependent suites can run. Each key
+    # is only written when its secret is set; suites whose context is missing
+    # skip or fail on their own.
+    - name: Configure e2e context
+      env:
+        E2E_KARGO_DEMO_GITOPS_REPO: ${{ secrets.E2E_KARGO_DEMO_GITOPS_REPO }}
+        E2E_GIT_PAT: ${{ secrets.E2E_GIT_PAT }}
+        ## TODO: We need to set up the endpoint to ebable that
+        E2E_HTTP_ENDPOINT: ${{ secrets.E2E_HTTP_ENDPOINT }}
+      run: |
+        source=hack/test/e2e/envs/nightly_config.yaml
+        cfg=hack/test/e2e/envs/nightly_config_ready.yaml
+        # Drop the existing (last) context section and re-add it from secrets.
+        sed '/^context:/,$d' "${source}" > ${cfg}
+        {
+          echo "context:"
+          [ -n "${E2E_KARGO_DEMO_GITOPS_REPO}" ] && echo "  kargo_demo_gitops_repo: ${E2E_KARGO_DEMO_GITOPS_REPO}"
+          [ -n "${E2E_GIT_PAT}" ] && echo "  git_pat: ${E2E_GIT_PAT}"
+          [ -n "${E2E_HTTP_ENDPOINT}" ] && echo "  http_endpoint: ${E2E_HTTP_ENDPOINT}"
+          echo ""
+        } >> "${cfg}"
+
+    - name: Build e2e tests
+      working-directory: hack/test/e2e
+      run: |
+        go test -c -tags=e2e,shared ./suites/shared
+
+    - name: Run e2e tests
+      working-directory: hack/test/e2e
+      run: |
+        ./shared.test -test.v -test.timeout 120m -env-file=nightly_config_ready.yaml

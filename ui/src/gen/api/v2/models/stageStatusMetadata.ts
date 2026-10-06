@@ -8,7 +8,7 @@
 
 /**
  * Metadata is a map of arbitrary metadata associated with the Stage.
-This is useful for storing additional information about the Stage
-that can be shared across promotions, verifications, or other processes.
+ * This is useful for storing additional information about the Stage
+ * that can be shared across promotions, verifications, or other processes.
  */
 export type StageStatusMetadata = { [key: string]: unknown };

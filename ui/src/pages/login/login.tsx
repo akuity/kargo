@@ -1,8 +1,9 @@
-import { Divider, Typography } from 'antd';
+import { ConfigProvider, Divider, Typography } from 'antd';
 import { Navigate, generatePath, useSearchParams } from 'react-router-dom';
 
 import { isSafeRedirectPath, redirectToQueryParam } from '@ui/config/auth';
 import { paths } from '@ui/config/paths';
+import { themeConfig } from '@ui/config/themeConfig';
 import { AdminLogin } from '@ui/features/auth/admin-login';
 import { useAuthContext } from '@ui/features/auth/context/use-auth-context';
 import { OIDCLogin } from '@ui/features/auth/oidc-login';
@@ -26,31 +27,37 @@ export const Login = () => {
     return <Navigate to={paths.home} replace />;
   }
 
-  if (isLoggedIn) {
+  const isOIDCCallback = params.has('code') && params.has('state');
+
+  if (isLoggedIn && !isOIDCCallback) {
     return <Navigate to={safeRedirectTo ? generatePath(safeRedirectTo) : paths.home} replace />;
   }
 
+  // Login always renders light. inherit:false stops the parent dark algorithm
+  // merging in; kargo-light-scope opts out of app.less's global dark patches.
   return (
-    <div className={styles.container}>
-      <KargoLogo />
-      <div className={styles.box}>
-        {isLoading && <LoadingState />}
-        {data?.adminAccountEnabled && (
-          <>
-            <Typography.Title level={4}>Admin Login</Typography.Title>
-            <AdminLogin />
-          </>
-        )}
-        {data?.oidcConfig && data?.adminAccountEnabled && (
-          <Divider className='!my-6 !text-gray-400 !font-light'>OR</Divider>
-        )}
-        {data?.oidcConfig && <OIDCLogin oidcConfig={data.oidcConfig} />}
-        {data && !data.oidcConfig && !data.adminAccountEnabled && (
-          <Typography.Text>
-            Login is disabled. Please contact your system administrator.
-          </Typography.Text>
-        )}
+    <ConfigProvider theme={{ ...themeConfig(false), inherit: false }}>
+      <div className={`kargo-light-scope ${styles.container}`}>
+        <KargoLogo />
+        <div className={styles.box}>
+          {isLoading && <LoadingState />}
+          {data?.adminAccountEnabled && (
+            <>
+              <Typography.Title level={4}>Admin Login</Typography.Title>
+              <AdminLogin />
+            </>
+          )}
+          {data?.oidcConfig && data?.adminAccountEnabled && (
+            <Divider className='!my-6 !text-gray-400 !font-light'>OR</Divider>
+          )}
+          {data?.oidcConfig && <OIDCLogin oidcConfig={data.oidcConfig} />}
+          {data && !data.oidcConfig && !data.adminAccountEnabled && (
+            <Typography.Text>
+              Login is disabled. Please contact your system administrator.
+            </Typography.Text>
+          )}
+        </div>
       </div>
-    </div>
+    </ConfigProvider>
   );
 };

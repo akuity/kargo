@@ -83,6 +83,14 @@ export const DndPromotionContext = ({ children, projectName }: Props) => {
         const originName = active?.data?.current?.originName;
         const requestedFreightNames: string[] = over.data?.current?.requestedFreightNames || [];
 
+        // a closed promotion window forbids promotion of this Stage entirely --
+        // the API would reject it at admission, so don't even start the flow. The
+        // overlay already marked the Stage as frozen for the whole drag, so there
+        // is nothing left to tell the user here
+        if (over.data?.current?.promotionWindowClosed) {
+          return;
+        }
+
         // make sure that the freight can be promoted to this stage by checking the origin
         if (requestedFreightNames.includes(originName)) {
           setStage(stageName);

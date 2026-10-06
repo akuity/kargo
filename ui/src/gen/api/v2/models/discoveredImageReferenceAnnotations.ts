@@ -8,6 +8,6 @@
 
 /**
  * Annotations is a map of key-value pairs that provide additional
-information about the image.
+ * information about the image.
  */
 export type DiscoveredImageReferenceAnnotations = { [key: string]: string };

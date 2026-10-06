@@ -186,9 +186,8 @@ type GitClearConfig struct {
 
 type GitCloneConfig struct {
 	// Default authorship information for any commits made to the cloned repository. If
-	// provided, this overrides any system-level defaults. Note: Configuration of the
-	// `git-commit` and `git-tag` steps can override this information.
-	Author *GitCloneConfigAuthor `json:"author,omitempty"`
+	// provided, this overrides any system-level defaults.
+	Author *Author `json:"author,omitempty"`
 	// Indicates whether to perform a blobless (--filter=blob:none) clone. Default is false.
 	Blobless bool `json:"blobless,omitempty"`
 	// The commits, branches, or tags to check out from the repository and the paths where they
@@ -199,16 +198,13 @@ type GitCloneConfig struct {
 	// Indicates whether to recursively clone submodules. Default is false. Note that any
 	// provided credentials must also be valid for the submodules.
 	RecurseSubmodules bool `json:"recurseSubmodules,omitempty"`
-	// The URL of a remote Git repository to clone. Required. Deprecated: Support for SSH URLs
-	// (ssh:// and SCP-style git@host:path) is deprecated as of v1.10.0 and will be removed in
-	// v1.13.0. Use HTTPS URLs instead.
+	// The URL of a remote Git repository to clone. Required. Only HTTP(S) URLs are supported.
 	RepoURL string `json:"repoURL"`
 }
 
 // Default authorship information for any commits made to the cloned repository. If
-// provided, this overrides any system-level defaults. Note: Configuration of the
-// `git-commit` and `git-tag` steps can override this information.
-type GitCloneConfigAuthor struct {
+// provided, this overrides any system-level defaults.
+type Author struct {
 	// The email of the author.
 	Email string `json:"email"`
 	// The name of the author.
@@ -242,35 +238,17 @@ type Checkout struct {
 }
 
 type GitCommitConfig struct {
-	// Optional authorship information for the commit. If provided, this takes precedence over
-	// both system-level defaults and any optional, default authorship information configured in
-	// the `git-clone` step. Deprecated: This field is deprecated as of v1.10.0 and will be
-	// removed in v1.12.0. Configure authorship in the `git-clone` step instead.
-	Author *GitCommitConfigAuthor `json:"author,omitempty"`
 	// The commit message.
 	Message string `json:"message"`
 	// The path to a working directory of a local repository.
 	Path string `json:"path"`
 }
 
-// Optional authorship information for the commit. If provided, this takes precedence over
-// both system-level defaults and any optional, default authorship information configured in
-// the `git-clone` step. Deprecated: This field is deprecated as of v1.10.0 and will be
-// removed in v1.12.0. Configure authorship in the `git-clone` step instead.
-type GitCommitConfigAuthor struct {
-	// The email of the author. Deprecated: This field is deprecated as of v1.10.0 and will be
-	// removed in v1.12.0.
-	Email string `json:"email"`
-	// The name of the author. Deprecated: This field is deprecated as of v1.10.0 and will be
-	// removed in v1.12.0.
-	Name string `json:"name"`
-	// The GPG signing key for the author. Deprecated: This field is deprecated as of v1.10.0
-	// and will be removed in v1.12.0. Configure signing keys in the `git-clone` step or via
-	// ClusterConfig instead.
-	SigningKey string `json:"signingKey,omitempty"`
-}
-
 type GitMergePRConfig struct {
+	// If true, the pull request's source branch is deleted after the pull request has been
+	// merged. Failure to delete the branch does not fail the step; the failure is reported in
+	// the step's message instead. Default is false.
+	DeleteSourceBranch bool `json:"deleteSourceBranch,omitempty"`
 	// Skip TLS verification when interacting with the Git provider. Default is false.
 	InsecureSkipTLSVerify bool `json:"insecureSkipTLSVerify,omitempty"`
 	// The merge method to use when merging the pull request. Options are provider-specific.
@@ -286,9 +264,8 @@ type GitMergePRConfig struct {
 	// and 'gitlab' are supported. Kargo will try to infer the provider if it is not explicitly
 	// specified.
 	Provider *Provider `json:"provider,omitempty"`
-	// The URL of the remote Git repository containing the pull request. Deprecated: Support for
-	// SSH URLs (ssh:// and SCP-style git@host:path) is deprecated as of v1.10.0 and will be
-	// removed in v1.13.0. Use HTTPS URLs instead.
+	// The URL of the remote Git repository containing the pull request. Only HTTP(S) URLs are
+	// supported.
 	RepoURL string `json:"repoURL"`
 	// If true, the step will return RUNNING instead of FAILED when the PR is not yet mergeable.
 	// The merge will be retried on the next reconciliation until it succeeds or times out.
@@ -297,8 +274,6 @@ type GitMergePRConfig struct {
 }
 
 type GitOpenPRConfig struct {
-	// Deprecated. Is a no-op if set. Will be removed in a future release.
-	CreateTargetBranch bool `json:"createTargetBranch,omitempty"`
 	// The description of the pull request. Kargo generates a description based on the commit
 	// messages if it is not explicitly specified.
 	Description string `json:"description,omitempty"`
@@ -310,9 +285,7 @@ type GitOpenPRConfig struct {
 	// and 'gitlab' are supported. Kargo will try to infer the provider if it is not explicitly
 	// specified.
 	Provider *Provider `json:"provider,omitempty"`
-	// The URL of a remote Git repository to clone. Deprecated: Support for SSH URLs (ssh:// and
-	// SCP-style git@host:path) is deprecated as of v1.10.0 and will be removed in v1.13.0. Use
-	// HTTPS URLs instead.
+	// The URL of a remote Git repository to clone. Only HTTP(S) URLs are supported.
 	RepoURL string `json:"repoURL"`
 	// The branch containing the changes to be merged. This branch must already exist and be up
 	// to date on the remote.
@@ -386,9 +359,7 @@ type GitWaitForPRConfig struct {
 	// and 'gitlab' are supported. Kargo will try to infer the provider if it is not explicitly
 	// specified.
 	Provider *Provider `json:"provider,omitempty"`
-	// The URL of a remote Git repository to clone. Deprecated: Support for SSH URLs (ssh:// and
-	// SCP-style git@host:path) is deprecated as of v1.10.0 and will be removed in v1.13.0. Use
-	// HTTPS URLs instead.
+	// The URL of a remote Git repository to clone. Only HTTP(S) URLs are supported.
 	RepoURL string `json:"repoURL"`
 }
 
@@ -487,6 +458,9 @@ type Chart struct {
 type HTTPConfig struct {
 	// The body of the HTTP request.
 	Body string `json:"body,omitempty"`
+	// A path relative to the promotion work directory whose contents are used as the HTTP
+	// request body. Mutually exclusive with body.
+	BodyFromFile string `json:"bodyFromFile,omitempty"`
 	// An expression to evaluate to extract an error message from the HTTP response.
 	ErrorExpression string `json:"errorExpression,omitempty"`
 	// An expression to evaluate to determine if the request failed.
@@ -680,15 +654,26 @@ type OCIPushConfig struct {
 	// 'manifest:' to scope them to the index or image manifest respectively. Unprefixed keys
 	// default to the image manifest. For single images, 'index:'-prefixed keys are ignored.
 	Annotations map[string]string `json:"annotations,omitempty"`
+	// ArtifactType declares the type of artifact being pushed via srcPath. It is recorded in
+	// the manifest's artifactType field and mirrored onto the config media type. Defaults to
+	// 'application/vnd.unknown.artifact.v1'. Ignored when using srcRef.
+	ArtifactType string `json:"artifactType,omitempty"`
 	// DestRef is the destination reference including tag (e.g. 'registry/repo:tag' or
 	// 'oci://registry/repo:tag'). For retag-in-place, use the same repo as srcRef with the new
 	// tag.
 	DestRef string `json:"destRef"`
 	// Whether to skip TLS verification when communicating with registries. Defaults to false.
 	InsecureSkipTLSVerify bool `json:"insecureSkipTLSVerify,omitempty"`
+	// MediaType is the media type of the artifact layer when pushing a local file via srcPath.
+	// Defaults to 'application/vnd.oci.image.layer.v1.tar+gzip'. Ignored when using srcRef.
+	MediaType string `json:"mediaType,omitempty"`
+	// SrcPath is the path, relative to the workspace, of a local file to push as a single-layer
+	// OCI artifact (e.g. a tarball produced by an earlier step). Mutually exclusive with srcRef.
+	SrcPath string `json:"srcPath,omitempty"`
 	// SrcRef is the source OCI artifact reference with tag or digest (e.g. 'registry/repo:tag'
-	// or 'registry/repo@sha256:...'). Use 'oci://' prefix for Helm charts.
-	SrcRef string `json:"srcRef"`
+	// or 'registry/repo@sha256:...'). Use 'oci://' prefix for Helm charts. Mutually exclusive
+	// with srcPath.
+	SrcRef string `json:"srcRef,omitempty"`
 }
 
 type SetFreightAliasConfig struct {

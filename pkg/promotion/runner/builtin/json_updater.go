@@ -103,6 +103,8 @@ func (j *jsonUpdater) updateFile(workDir string, path string, updates []builtin.
 		fileContent = []byte(updatedContent)
 	}
 
+	// #nosec G703 -- absFilePath was built via securejoin.SecureJoin above,
+	// which confines it to workDir.
 	err = os.WriteFile(absFilePath, fileContent, 0600)
 	if err != nil {
 		return fmt.Errorf("error writing updated JSON file %q: %w", absFilePath, err)

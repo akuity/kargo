@@ -18,9 +18,22 @@ type Application struct {
 }
 
 type ApplicationSpec struct {
-	Source     *ApplicationSource `json:"source,omitempty"`
-	SyncPolicy *SyncPolicy        `json:"syncPolicy,omitempty"`
-	Sources    ApplicationSources `json:"sources,omitempty"`
+	Source      *ApplicationSource     `json:"source,omitempty"`
+	Destination ApplicationDestination `json:"destination"`
+	Project     string                 `json:"project"`
+	SyncPolicy  *SyncPolicy            `json:"syncPolicy,omitempty"`
+	Sources     ApplicationSources     `json:"sources,omitempty"`
+}
+
+type ApplicationDestination struct {
+	// Server is the URL of the target cluster's Kubernetes control plane API. Must be set if Name
+	// is not set.
+	Server string `json:"server,omitempty"`
+	// Namespace is the target namespace for the application's resources.
+	Namespace string `json:"namespace,omitempty"`
+	// Name is an alternate way of specifying the target cluster by its symbolic name. Must be set
+	// if Server is not set.
+	Name string `json:"name,omitempty"`
 }
 
 type ApplicationSource struct {

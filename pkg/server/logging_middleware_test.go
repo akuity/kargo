@@ -12,8 +12,11 @@ import (
 	"go.uber.org/zap/zapcore"
 	"go.uber.org/zap/zaptest/observer"
 
+	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	libhttp "github.com/akuity/kargo/pkg/http"
 	"github.com/akuity/kargo/pkg/logging"
+	"github.com/akuity/kargo/pkg/server/config"
+	"github.com/akuity/kargo/pkg/server/user"
 )
 
 func TestLoggingMiddleware(t *testing.T) {
@@ -24,6 +27,8 @@ func TestLoggingMiddleware(t *testing.T) {
 		// level is the level the logger is configured with, so that what a given
 		// LOG_LEVEL suppresses is observable.
 		level          zapcore.Level
+		cfg            config.ServerConfig
+		headers        map[string]string
 		handler        gin.HandlerFunc
 		expectedStatus int
 		assertions     func(t *testing.T, entries []observer.LoggedEntry)
@@ -40,8 +45,26 @@ func TestLoggingMiddleware(t *testing.T) {
 				fields := entries[0].ContextMap()
 				require.Equal(t, http.MethodGet, fields["method"])
 				require.Equal(t, "/", fields["path"])
+				require.Equal(t, kargoapi.EventActorUnknown, fields["actor"])
 				require.EqualValues(t, http.StatusOK, fields["status"])
 				require.Contains(t, fields, "duration")
+			},
+		},
+		{
+			name:  "authenticated request is attributed to its actor",
+			level: zapcore.DebugLevel,
+			handler: func(c *gin.Context) {
+				// Stands in for the authentication middleware, which binds the
+				// actor to the request context in exactly this way.
+				c.Request = c.Request.WithContext(
+					user.ContextWithIdentity(c.Request.Context(), user.Admin{}),
+				)
+				c.Status(http.StatusOK)
+			},
+			expectedStatus: http.StatusOK,
+			assertions: func(t *testing.T, entries []observer.LoggedEntry) {
+				require.Len(t, entries, 1)
+				require.Equal(t, kargoapi.EventActorAdmin, entries[0].ContextMap()["actor"])
 			},
 		},
 		{
@@ -67,6 +90,7 @@ func TestLoggingMiddleware(t *testing.T) {
 				require.Equal(t, zapcore.InfoLevel, entries[0].Level)
 				require.Equal(t, "refused request", entries[0].Message)
 				fields := entries[0].ContextMap()
+				require.Equal(t, kargoapi.EventActorUnknown, fields["actor"])
 				require.EqualValues(t, http.StatusUnauthorized, fields["status"])
 				require.Equal(t, "invalid token", fields["error"])
 			},
@@ -119,6 +143,92 @@ func TestLoggingMiddleware(t *testing.T) {
 				require.EqualValues(t, http.StatusInternalServerError, fields["status"])
 			},
 		},
+		{
+			name:           "routine request is recorded at info level when enabled",
+			level:          zapcore.InfoLevel,
+			cfg:            config.ServerConfig{RequestLogAllEnabled: true},
+			handler:        func(c *gin.Context) { c.Status(http.StatusOK) },
+			expectedStatus: http.StatusOK,
+			assertions: func(t *testing.T, entries []observer.LoggedEntry) {
+				require.Len(t, entries, 1)
+				require.Equal(t, zapcore.InfoLevel, entries[0].Level)
+				require.Equal(t, "handled request", entries[0].Message)
+			},
+		},
+		{
+			name:           "source IP is not recorded by default",
+			level:          zapcore.DebugLevel,
+			headers:        map[string]string{"X-Forwarded-For": "203.0.113.7"},
+			handler:        func(c *gin.Context) { c.Status(http.StatusOK) },
+			expectedStatus: http.StatusOK,
+			assertions: func(t *testing.T, entries []observer.LoggedEntry) {
+				require.Len(t, entries, 1)
+				fields := entries[0].ContextMap()
+				require.NotContains(t, fields, "sourceIP")
+				require.NotContains(t, fields, "forwardedFor")
+			},
+		},
+		{
+			name:           "source IP is recorded when enabled",
+			level:          zapcore.DebugLevel,
+			cfg:            config.ServerConfig{RequestLogSourceIPEnabled: true},
+			handler:        func(c *gin.Context) { c.Status(http.StatusOK) },
+			expectedStatus: http.StatusOK,
+			assertions: func(t *testing.T, entries []observer.LoggedEntry) {
+				require.Len(t, entries, 1)
+				fields := entries[0].ContextMap()
+				// The address httptest gives every request.
+				require.Equal(t, "192.0.2.1", fields["sourceIP"])
+				require.NotContains(t, fields, "forwardedFor")
+			},
+		},
+		{
+			name:  "source IP is on everything logged for the request",
+			level: zapcore.DebugLevel,
+			cfg:   config.ServerConfig{RequestLogSourceIPEnabled: true},
+			handler: func(c *gin.Context) {
+				logging.LoggerFromContext(c.Request.Context()).Info("from the handler")
+				c.Status(http.StatusOK)
+			},
+			expectedStatus: http.StatusOK,
+			assertions: func(t *testing.T, entries []observer.LoggedEntry) {
+				require.Len(t, entries, 2)
+				require.Equal(t, "from the handler", entries[0].Message)
+				require.Equal(t, "192.0.2.1", entries[0].ContextMap()["sourceIP"])
+				require.Equal(t, "192.0.2.1", entries[1].ContextMap()["sourceIP"])
+			},
+		},
+		{
+			name:  "source IP survives the request's logger being replaced",
+			level: zapcore.DebugLevel,
+			cfg:   config.ServerConfig{RequestLogSourceIPEnabled: true},
+			handler: func(c *gin.Context) {
+				c.Request = c.Request.WithContext(logging.ContextWithLogger(
+					c.Request.Context(),
+					logging.Wrap(zap.NewNop()),
+				))
+				c.Status(http.StatusOK)
+			},
+			expectedStatus: http.StatusOK,
+			assertions: func(t *testing.T, entries []observer.LoggedEntry) {
+				require.Len(t, entries, 1)
+				require.Equal(t, "192.0.2.1", entries[0].ContextMap()["sourceIP"])
+			},
+		},
+		{
+			name:           "forwarded chain is recorded as received",
+			level:          zapcore.DebugLevel,
+			cfg:            config.ServerConfig{RequestLogSourceIPEnabled: true},
+			headers:        map[string]string{"X-Forwarded-For": "203.0.113.7, 10.0.0.1"},
+			handler:        func(c *gin.Context) { c.Status(http.StatusOK) },
+			expectedStatus: http.StatusOK,
+			assertions: func(t *testing.T, entries []observer.LoggedEntry) {
+				require.Len(t, entries, 1)
+				fields := entries[0].ContextMap()
+				require.Equal(t, "192.0.2.1", fields["sourceIP"])
+				require.Equal(t, "203.0.113.7, 10.0.0.1", fields["forwardedFor"])
+			},
+		},
 	}
 
 	for _, testCase := range testCases {
@@ -130,18 +240,23 @@ func TestLoggingMiddleware(t *testing.T) {
 
 			s := &server{}
 			router := gin.New()
+			require.NoError(t, ConfigureEngine(router, testCase.cfg))
 			router.Use(func(c *gin.Context) {
 				c.Request = c.Request.WithContext(
 					logging.ContextWithLogger(c.Request.Context(), logger),
 				)
 				c.Next()
 			})
-			router.Use(loggingMiddleware())
+			router.Use(LoggingMiddleware(testCase.cfg))
 			router.Use(s.handleError)
 			router.GET("/", testCase.handler)
 
 			w := httptest.NewRecorder()
-			router.ServeHTTP(w, httptest.NewRequest(http.MethodGet, "/", nil))
+			req := httptest.NewRequest(http.MethodGet, "/", nil)
+			for k, v := range testCase.headers {
+				req.Header.Set(k, v)
+			}
+			router.ServeHTTP(w, req)
 
 			require.Equal(t, testCase.expectedStatus, w.Code)
 			testCase.assertions(t, recorded.All())

@@ -35,8 +35,10 @@ rules:
   - freights
   - projects
   - projectconfigs
+  - promotionrequests
   - promotiontasks
   - stages
+  - targets
   - warehouses
   verbs:
   - create
@@ -64,12 +66,6 @@ rules:
   - list
   - patch
   - watch
-- apiGroups:
-  - kargo.akuity.io
-  resources:
-  - freights/status
-  verbs:
-  - patch # for manual approvals
 {{- if .Values.api.rollouts.integrationEnabled }}
 - apiGroups:
   - argoproj.io
@@ -221,8 +217,10 @@ rules:
   - projects
   - projectconfigs
   - promotions
+  - promotionrequests
   - promotiontasks
   - stages
+  - targets
   - warehouses
   verbs:
   - get

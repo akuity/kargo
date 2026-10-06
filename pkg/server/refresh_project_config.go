@@ -8,6 +8,7 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/api"
+	"github.com/akuity/kargo/pkg/server/auth/can"
 )
 
 // @id RefreshProjectConfig
@@ -25,6 +26,11 @@ func (s *server) refreshProjectConfig(c *gin.Context) {
 	ctx := c.Request.Context()
 
 	project := c.Param("project")
+
+	if err := s.authorize(ctx, can.Get().ProjectConfig(project)); err != nil {
+		_ = c.Error(err)
+		return
+	}
 
 	obj := &kargoapi.ProjectConfig{
 		ObjectMeta: metav1.ObjectMeta{Name: project, Namespace: project},

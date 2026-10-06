@@ -145,7 +145,7 @@ test-unit: install-helm
 		for mod in $$(find . -maxdepth 5 -type f -name 'go.mod' | grep -v tools); do \
 			echo "Testing $$(dirname $${mod}) ..."; \
 			cd $$(dirname $${mod}); \
-			PATH=$(EXTENDED_PATH) go test \
+			PATH="$(EXTENDED_PATH)" go test \
 				-v \
 				-timeout=300s \
 				-race \
@@ -247,7 +247,7 @@ build-cli-with-ui: build-ui build-cli
 ################################################################################
 
 .PHONY: codegen
-codegen: codegen-openapi codegen-controller codegen-schema-to-go codegen-ui codegen-docs
+codegen: codegen-openapi codegen-controller codegen-schema-to-go codegen-ui codegen-docs codegen-db
 
 .PHONY: codegen-openapi
 codegen-openapi: install-jq install-openapi-generator-cli
@@ -300,6 +300,12 @@ codegen-docs:
 	npm install -g @bitnami/readme-generator-for-helm
 	pnpm install --dir docs
 	bash hack/helm-docs/helm-docs.sh
+
+.PHONY: codegen-db
+codegen-db:
+ifneq ($(wildcard db/queries/*.sql),)
+	go tool sqlc generate
+endif
 
 ################################################################################
 # Hack: Targets to help you hack                                               #
@@ -415,30 +421,40 @@ hack-kind-up:
 	# ctlptl shells out to the `kind` binary, so build it (pinned via go.mod)
 	# onto PATH before invoking ctlptl.
 	go build -o hack/bin/kind sigs.k8s.io/kind
-	PATH=$(EXTENDED_PATH) go tool ctlptl apply -f hack/kind/cluster.yaml
+	PATH="$(EXTENDED_PATH)" go tool ctlptl apply -f hack/kind/cluster.yaml
 
 .PHONY: hack-k3d-up
 hack-k3d-up: install-k3d
-	PATH=$(EXTENDED_PATH) go tool ctlptl apply -f hack/k3d/cluster.yaml
+	PATH="$(EXTENDED_PATH)" go tool ctlptl apply -f hack/k3d/cluster.yaml
 
 .PHONY: hack-tilt-up
 hack-tilt-up: install-tilt install-helm
-	PATH=$(EXTENDED_PATH) $(TILT) up
+	PATH="$(EXTENDED_PATH)" $(TILT) up
 
 .PHONY: hack-tilt-down
 hack-tilt-down: install-tilt
-	PATH=$(EXTENDED_PATH) $(TILT) down
+	PATH="$(EXTENDED_PATH)" $(TILT) down
+
+.PHONY: db-migrate
+db-migrate:
+	bash hack/tilt/migrate.sh
+
+# Opens psql inside the development PostgreSQL pod, so no client needs to be
+# installed locally and the client always matches the server.
+.PHONY: db-shell
+db-shell:
+	kubectl exec -it -n kargo kargo-postgres-0 -- psql -U kargo -d kargo
 
 .PHONY: hack-kind-down
 hack-kind-down:
 	# ctlptl shells out to the `kind` binary, so build it (pinned via go.mod)
 	# onto PATH before invoking ctlptl.
 	go build -o hack/bin/kind sigs.k8s.io/kind
-	PATH=$(EXTENDED_PATH) go tool ctlptl delete -f hack/kind/cluster.yaml
+	PATH="$(EXTENDED_PATH)" go tool ctlptl delete -f hack/kind/cluster.yaml
 
 .PHONY: hack-k3d-down
 hack-k3d-down: install-k3d
-	PATH=$(EXTENDED_PATH) go tool ctlptl delete -f hack/k3d/cluster.yaml
+	PATH="$(EXTENDED_PATH)" go tool ctlptl delete -f hack/k3d/cluster.yaml
 
 .PHONY: hack-install-prereqs
 hack-install-prereqs: hack-install-cert-manager hack-install-argocd hack-install-argo-rollouts

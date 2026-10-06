@@ -5,20 +5,24 @@
  * REST API for Kargo
  * OpenAPI spec version: v1alpha1
  */
-import type { PromotionStep } from './promotionStep';
 import type { ExpressionVariable } from './expressionVariable';
+import type { PromotionStep } from './promotionStep';
 
 export interface PromotionTemplateSpec {
-  /** Steps specifies the directives to be executed as part of a Promotion.
-The order in which the directives are executed is the order in which they
-are listed in this field.
-
-+kubebuilder:validation:MinItems=1
-+kubebuilder:validation:items:XValidation:message="PromotionTemplate step must have exactly one of uses or task set",rule="(has(self.uses) ? !has(self.task) : has(self.task))"
-+kubebuilder:validation:items:XValidation:message="PromotionTemplate step referencing a task cannot set continueOnError",rule="!has(self.task) || !has(self.continueOnError)"
-+kubebuilder:validation:items:XValidation:message="PromotionTemplate step referencing a task cannot set retry",rule="!has(self.task) || !has(self.retry)" */
+  /**
+   * Steps specifies the directives to be executed as part of a Promotion.
+   * The order in which the directives are executed is the order in which they
+   * are listed in this field.
+   *
+   * +kubebuilder:validation:MinItems=1
+   * +kubebuilder:validation:items:XValidation:message="PromotionTemplate step must have exactly one of uses or task set",rule="(has(self.uses) ? !has(self.task) : has(self.task))"
+   * +kubebuilder:validation:items:XValidation:message="PromotionTemplate step referencing a task cannot set continueOnError",rule="!has(self.task) || !has(self.continueOnError)"
+   * +kubebuilder:validation:items:XValidation:message="PromotionTemplate step referencing a task cannot set retry",rule="!has(self.task) || !has(self.retry)"
+   */
   steps?: PromotionStep[];
-  /** Vars is a list of variables that can be referenced by expressions in
-promotion steps. */
+  /**
+   * Vars is a list of variables that can be referenced by expressions in
+   * promotion steps.
+   */
   vars?: ExpressionVariable[];
 }

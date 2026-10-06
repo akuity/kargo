@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"io"
+	"net/http"
 	"testing"
 	"time"
 
@@ -44,6 +45,13 @@ type mockClient struct {
 		body MergePullRequestJSONRequestBody,
 		reqEditors ...RequestEditorFn,
 	) (*MergePullRequestResponse, error)
+
+	deleteBranchFunc func(
+		ctx context.Context,
+		projectKey, repoSlug string,
+		body DeleteBranchJSONRequestBody,
+		reqEditors ...RequestEditorFn,
+	) (*DeleteBranchResponse, error)
 }
 
 func (m *mockClient) GetCommitWithResponse(
@@ -112,6 +120,25 @@ func (m *mockClient) MergePullRequestWithResponse(
 	reqEditors ...RequestEditorFn,
 ) (*MergePullRequestResponse, error) {
 	return m.mergePRFunc(ctx, projectKey, repoSlug, pullRequestId, params, body, reqEditors...)
+}
+
+func (m *mockClient) DeleteBranchWithBodyWithResponse(
+	_ context.Context,
+	_, _ string,
+	_ string,
+	_ io.Reader,
+	_ ...RequestEditorFn,
+) (*DeleteBranchResponse, error) {
+	return nil, errors.New("not implemented")
+}
+
+func (m *mockClient) DeleteBranchWithResponse(
+	ctx context.Context,
+	projectKey, repoSlug string,
+	body DeleteBranchJSONRequestBody,
+	reqEditors ...RequestEditorFn,
+) (*DeleteBranchResponse, error) {
+	return m.deleteBranchFunc(ctx, projectKey, repoSlug, body, reqEditors...)
 }
 
 func intPtr(i int) *int                                     { return &i }
@@ -981,6 +1008,82 @@ func TestMergePullRequest(t *testing.T) {
 	})
 }
 
+func TestDeleteBranch(t *testing.T) {
+	const (
+		testProjectKey = "PROJ"
+		testRepoSlug   = "repo"
+		testBranch     = "kargo/promotion/test"
+	)
+
+	deleteResp := func(status int) *DeleteBranchResponse {
+		return &DeleteBranchResponse{
+			HTTPResponse: &http.Response{StatusCode: status},
+		}
+	}
+
+	testCases := []struct {
+		name   string
+		resp   *DeleteBranchResponse
+		err    error
+		assert func(*testing.T, error)
+	}{
+		{
+			name: "branch deleted",
+			resp: deleteResp(http.StatusNoContent),
+			assert: func(t *testing.T, err error) {
+				require.NoError(t, err)
+			},
+		},
+		{
+			name: "branch not found",
+			resp: deleteResp(http.StatusNotFound),
+			assert: func(t *testing.T, err error) {
+				require.NoError(t, err)
+			},
+		},
+		{
+			name: "forbidden",
+			resp: deleteResp(http.StatusForbidden),
+			assert: func(t *testing.T, err error) {
+				require.ErrorContains(t, err, "unexpected response 403")
+			},
+		},
+		{
+			name: "transport error",
+			err:  errors.New("network down"),
+			assert: func(t *testing.T, err error) {
+				require.ErrorContains(t, err, "error deleting branch")
+				require.ErrorContains(t, err, "network down")
+			},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			mc := &mockClient{
+				deleteBranchFunc: func(
+					_ context.Context,
+					projectKey, repoSlug string,
+					body DeleteBranchJSONRequestBody,
+					_ ...RequestEditorFn,
+				) (*DeleteBranchResponse, error) {
+					require.Equal(t, testProjectKey, projectKey)
+					require.Equal(t, testRepoSlug, repoSlug)
+					require.Equal(t, "refs/heads/"+testBranch, body.Name)
+					require.Nil(t, body.DryRun)
+					return testCase.resp, testCase.err
+				},
+			}
+			p := &provider{
+				projectKey: testProjectKey,
+				repoSlug:   testRepoSlug,
+				client:     mc,
+			}
+			err := p.DeleteBranch(t.Context(), testBranch)
+			testCase.assert(t, err)
+		})
+	}
+}
+
 func Test_toProviderPR(t *testing.T) {
 	t.Parallel()
 
@@ -1110,11 +1213,9 @@ func TestParseRepoURL(t *testing.T) {
 			wantRepoSlug:   "myrepo",
 		},
 		{
-			name:           "SSH clone URL (two path segments)",
-			repoURL:        "ssh://git@bitbucket.example.com/PROJ/myrepo.git",
-			wantBaseURL:    "https://bitbucket.example.com",
-			wantProjectKey: "proj", // NormalizeGit lowercases
-			wantRepoSlug:   "myrepo",
+			name:            "SSH clone URL is rejected",
+			repoURL:         "ssh://git@bitbucket.example.com/PROJ/myrepo.git",
+			wantErrContains: "only HTTP(S) URLs are supported",
 		},
 		{
 			// NormalizeGit lowercases the entire path, so "PROJ" → "proj"

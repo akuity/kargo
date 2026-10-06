@@ -1,3 +1,10 @@
 allowBuilds:
   '@parcel/watcher': true
   core-js: false
+
+# docusaurus-plugin-llms pins these exactly, and both pinned versions carry
+# advisories (minimatch ReDoS, yaml stack overflow). Its dependents accept
+# newer patch releases, so lift them to the patched versions.
+overrides:
+  minimatch@9.0.3: ^9.0.9
+  yaml@2.8.1: ^2.9.0

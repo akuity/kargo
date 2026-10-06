@@ -11,6 +11,7 @@ import {
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 
 import { WarehouseExpanded } from '@ui/extend/types';
+import { useTheme } from '@ui/features/common/theme/use-theme';
 import { queryCache } from '@ui/features/utils/cache';
 import { Stage } from '@ui/gen/api/v2/models';
 
@@ -37,6 +38,7 @@ const nodeTypes = {
 };
 
 export const Graph = (props: GraphProps) => {
+  const { isDark } = useTheme();
   const reactFlowInstance = useRef<ReactFlowInstance | null>(null);
   const filterContext = useFreightTimelineControllerContext();
 
@@ -291,6 +293,8 @@ export const Graph = (props: GraphProps) => {
       }}
     >
       <ReactFlow
+        className='kargo-pipeline-graph'
+        colorMode={isDark ? 'dark' : 'light'}
         nodes={nodes}
         edges={edges}
         nodeTypes={nodeTypes}
@@ -307,7 +311,11 @@ export const Graph = (props: GraphProps) => {
       >
         {filterContext?.preferredFilter?.showMinimap && (
           <MiniMap
-            style={{ background: 'white', border: '1px solid lightblue', borderRadius: '5px' }}
+            style={{
+              background: 'var(--kargo-color-bg-container, white)',
+              border: '1px solid var(--kargo-color-border, lightblue)',
+              borderRadius: '5px'
+            }}
             pannable
           />
         )}

@@ -8,6 +8,8 @@ import (
 	"time"
 
 	"github.com/kelseyhightower/envconfig"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/trace"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -24,6 +26,7 @@ import (
 	"github.com/akuity/kargo/pkg/api"
 	"github.com/akuity/kargo/pkg/controller"
 	argocd "github.com/akuity/kargo/pkg/controller/argocd/api/v1alpha1"
+	"github.com/akuity/kargo/pkg/controller/metrics"
 	"github.com/akuity/kargo/pkg/event"
 	k8sevent "github.com/akuity/kargo/pkg/event/kubernetes"
 	"github.com/akuity/kargo/pkg/indexer"
@@ -33,6 +36,7 @@ import (
 	"github.com/akuity/kargo/pkg/logging"
 	intpredicate "github.com/akuity/kargo/pkg/predicate"
 	"github.com/akuity/kargo/pkg/promotion"
+	"github.com/akuity/kargo/pkg/telemetry"
 )
 
 // ReconcilerConfig represents configuration for the promotion reconciler.
@@ -67,6 +71,8 @@ type reconciler struct {
 	cfg ReconcilerConfig
 
 	sender event.Sender
+
+	promoMetrics *metrics.PromotionMetrics
 
 	// The following behaviors are overridable for testing purposes:
 
@@ -133,6 +139,17 @@ func SetupReconcilerWithManager(
 		return fmt.Errorf("index running Promotions by Argo CD selectors: %w", err)
 	}
 
+	// Index non-terminal Promotions for use by prometheus metrics. This allows the metrics to be
+	// calculated without scanning all Promotions.
+	if err := kargoMgr.GetFieldIndexer().IndexField(
+		ctx,
+		&kargoapi.Promotion{},
+		indexer.PromotionsByNonTerminalField,
+		indexer.PromotionsByNonTerminal,
+	); err != nil {
+		return fmt.Errorf("index non-terminal Promotions: %w", err)
+	}
+
 	reconciler := newReconciler(
 		kargoMgr.GetClient(),
 		kargoMgr.GetAPIReader(),
@@ -176,6 +193,7 @@ func SetupReconcilerWithManager(
 			kargoMgr.GetCache(),
 			&kargoapi.Stage{},
 			&PromotionAcknowledgedByStageHandler[*kargoapi.Stage]{
+				kargoClient: kargoMgr.GetClient(),
 				shardPredicate: controller.ResponsibleFor[kargoapi.Stage]{
 					IsDefaultController: cfg.IsDefaultController,
 					ShardName:           cfg.ShardName,
@@ -236,11 +254,12 @@ func newReconciler(
 	cfg ReconcilerConfig,
 ) *reconciler {
 	r := &reconciler{
-		kargoClient: kargoClient,
-		apiReader:   apiReader,
-		promoEngine: promoEngine,
-		sender:      sender,
-		cfg:         cfg,
+		kargoClient:  kargoClient,
+		apiReader:    apiReader,
+		promoEngine:  promoEngine,
+		sender:       sender,
+		promoMetrics: metrics.NewPromotionMetrics(kargoClient),
+		cfg:          cfg,
 		shardPredicate: controller.ResponsibleFor[kargoapi.Promotion]{
 			IsDefaultController: cfg.IsDefaultController,
 			ShardName:           cfg.ShardName,
@@ -253,12 +272,26 @@ func newReconciler(
 	return r
 }
 
+// tracer is the instrumentation scope under which this package's spans are
+// recorded.
+var tracer = otel.Tracer("github.com/akuity/kargo/pkg/controller/promotions")
+
 // Reconcile is part of the main Kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
 func (r *reconciler) Reconcile(
 	ctx context.Context,
 	req ctrl.Request,
 ) (ctrl.Result, error) {
+	ctx, span := tracer.Start(
+		ctx,
+		"Reconcile Promotion",
+		trace.WithAttributes(
+			telemetry.ProjectKey.String(req.Namespace),
+			telemetry.PromotionKey.String(req.Name),
+		),
+	)
+	defer span.End()
+
 	logger := logging.LoggerFromContext(ctx).WithValues(
 		"namespace", req.Namespace,
 		"promotion", req.Name,
@@ -368,8 +401,11 @@ func (r *reconciler) Reconcile(
 
 	// Confirm that the Stage is awaiting this Promotion.
 	// This effectively prevents the Promotion from running until the Stage
-	// decides it is the next Promotion to run.
-	if stage.Status.CurrentPromotion == nil || stage.Status.CurrentPromotion.Name != promo.Name {
+	// decides it is the next Promotion to run. A Promotion to one of the
+	// Stage's Targets is admitted by the Stage's current PromotionRequest
+	// instead, so all of one request's children -- at most one per Target --
+	// run in parallel while consecutive requests remain serialized.
+	if !api.StageAwaitsPromotion(stage, promo) {
 		// The watch on the Stage will requeue the Promotion if the Stage
 		// acknowledges it.
 		logger.Debug("Stage is not awaiting Promotion", "stage", stage.Name, "promotion", promo.Name)
@@ -435,6 +471,7 @@ func (r *reconciler) Reconcile(
 	if newStatus.Phase.IsTerminal() {
 		newStatus.FinishedAt = &metav1.Time{Time: time.Now()}
 		logger.Info("promotion", "phase", newStatus.Phase)
+		r.recordTerminalMetrics(promo.Namespace, newStatus)
 	}
 
 	// Record the current refresh token as having been handled.
@@ -553,47 +590,35 @@ func (r *reconciler) promote(
 	targetFreight *kargoapi.Freight,
 ) (*kargoapi.PromotionStatus, *time.Duration, error) {
 	logger := logging.LoggerFromContext(ctx)
-	stageName := stage.Name
-	stageNamespace := promo.Namespace
 
-	if targetFreight == nil {
-		// nolint:staticcheck
-		return nil, nil, fmt.Errorf(
-			"Freight %q not found in namespace %q",
-			promo.Spec.Freight, promo.Namespace,
-		)
-	}
+	// Resolve freight references for this promotion.
+	// ResolveFreight returns error if freight doesn't exist or not requested by the stage.
+	targetFreightRef, freightCollection, freightErr := api.ResolveFreightRefs(
+		ctx,
+		r.kargoClient,
+		promo,
+		stage,
+		targetFreight)
 
-	if !stage.IsFreightAvailable(targetFreight) {
-		// nolint:staticcheck
-		return nil, nil, fmt.Errorf(
-			"Freight %q is not available to Stage %q in namespace %q",
-			promo.Spec.Freight,
-			stageName,
-			stageNamespace,
-		)
-	}
-
-	logger = logger.WithValues("targetFreight", targetFreight.Name)
-
-	targetFreightRef := kargoapi.FreightReference{
-		Name:      targetFreight.Name,
-		Commits:   targetFreight.Commits,
-		Images:    targetFreight.Images,
-		Charts:    targetFreight.Charts,
-		Artifacts: targetFreight.Artifacts,
-		Origin:    targetFreight.Origin,
+	if freightErr != nil {
+		return nil, nil, freightErr
 	}
 
 	// Make a deep copy of the Promotion to pass to the promotion steps execution
 	// engine, which may modify its status.
 	workingPromo := promo.DeepCopy()
-	workingPromo.Status.Freight = &targetFreightRef
-	workingPromo.Status.FreightCollection = r.buildTargetFreightCollection(
-		ctx,
-		targetFreightRef,
-		stage,
-	)
+	workingPromo.Status.Freight = targetFreightRef
+	workingPromo.Status.FreightCollection = freightCollection
+
+	// Resolve the Target, if any, that this Promotion promotes Freight to. Its
+	// params and labels are exposed to step expressions, which is what allows a
+	// single Stage's promotion process to behave differently per destination.
+	// Promotions that name no Target promote to the Stage itself and carry no
+	// target context, exactly as they did before Targets existed.
+	targetCtx, targetErr := promotion.ResolveTargetContext(ctx, r.kargoClient, &promo)
+	if targetErr != nil {
+		return nil, nil, targetErr
+	}
 
 	// Prepare promotion steps and vars for the promotion execution engine.
 	steps := promotion.NewSteps(workingPromo)
@@ -602,6 +627,7 @@ func (r *reconciler) promote(
 		stage,
 		promotion.WithActor(api.CreateActorAnnotationValue(&promo)),
 		promotion.WithTargetFreightAlias(targetFreight.Alias),
+		promotion.WithTarget(targetCtx),
 		promotion.WithUIBaseURL(r.cfg.APIServerBaseURL),
 		promotion.WithWorkDir(promotionWorkDir(workingPromo.UID)),
 	)
@@ -638,27 +664,11 @@ func (r *reconciler) promote(
 	logger.Debug("promotion", "phase", workingPromo.Status.Phase)
 
 	if workingPromo.Status.Phase == kargoapi.PromotionPhaseSucceeded {
-		// Trigger re-verification of the Stage if the promotion succeeded and
-		// this is a re-promotion of the same Freight.
-		current := stage.Status.FreightHistory.Current()
-		if current != nil && current.VerificationHistory.Current() != nil {
-			for _, f := range current.Freight {
-				if f.Name == targetFreight.Name {
-					if err := api.ReverifyStageFreight(
-						ctx,
-						r.kargoClient,
-						types.NamespacedName{
-							Namespace: stageNamespace,
-							Name:      stageName,
-						},
-					); err != nil {
-						// Log the error, but don't let failure to initiate re-verification
-						// prevent the promotion from succeeding.
-						logger.Error(err, "error triggering re-verification")
-					}
-					break
-				}
-			}
+		// If the stage runs a PromotionRequest, do not trigger reverification for each promotion
+		if !stage.IsTargetAware() {
+			// Trigger re-verification of the Stage if the promotion succeeded and
+			// this is a re-promotion of the same Freight.
+			r.maybeTriggerStageReverification(ctx, logger, stage, targetFreight)
 		}
 	}
 
@@ -669,35 +679,32 @@ func (r *reconciler) promote(
 	return &workingPromo.Status, nil, nil
 }
 
-// buildTargetFreightCollection constructs a FreightCollection that contains all
-// FreightReferences from the previous Promotion (excepting those that are no
-// longer requested), plus a FreightReference for the provided targetFreight.
-func (r *reconciler) buildTargetFreightCollection(
+func (r *reconciler) maybeTriggerStageReverification(
 	ctx context.Context,
-	targetFreight kargoapi.FreightReference,
+	logger *logging.Logger,
 	stage *kargoapi.Stage,
-) *kargoapi.FreightCollection {
-	logger := logging.LoggerFromContext(ctx)
-	freightCol := &kargoapi.FreightCollection{}
-
-	// We don't simply copy the current FreightCollection because we want to
-	// account for the possibility that some freight contained therein are no
-	// longer requested by the Stage.
-	if len(stage.Spec.RequestedFreight) > 1 {
-		lastPromo := stage.Status.LastPromotion
-		if lastPromo != nil && lastPromo.Status != nil && lastPromo.Status.FreightCollection != nil &&
-			lastPromo.Status.FreightCollection.Freight != nil {
-			for _, req := range stage.Spec.RequestedFreight {
-				if freight, ok := lastPromo.Status.FreightCollection.Freight[req.Origin.String()]; ok {
-					freightCol.UpdateOrPush(freight)
+	targetFreight *kargoapi.Freight,
+) {
+	current := stage.Status.FreightHistory.Current()
+	if current != nil && current.VerificationHistory.Current() != nil {
+		for _, f := range current.Freight {
+			if f.Name == targetFreight.Name {
+				if err := api.ReverifyStageFreight(
+					ctx,
+					r.kargoClient,
+					types.NamespacedName{
+						Namespace: stage.Namespace,
+						Name:      stage.Name,
+					},
+				); err != nil {
+					// Log the error, but don't let failure to initiate re-verification
+					// prevent the promotion from succeeding.
+					logger.Error(err, "error triggering re-verification")
 				}
+				break
 			}
-		} else {
-			logger.Debug("last promotion has no collection to inherit Freight from")
 		}
 	}
-	freightCol.UpdateOrPush(targetFreight)
-	return freightCol
 }
 
 // terminatePromotion terminates the given Promotion with a message indicating
@@ -751,6 +758,8 @@ func (r *reconciler) terminatePromotion(
 		return err
 	}
 
+	r.recordTerminalMetrics(promo.Namespace, newStatus)
+
 	// Best-effort cleanup of working directory.
 	r.cleanupWorkDirFn(ctx, promo.UID)
 
@@ -761,6 +770,26 @@ func (r *reconciler) terminatePromotion(
 	}
 
 	return nil
+}
+
+// recordTerminalMetrics counts the Promotion described by the given terminal
+// status as completed and observes how long it spent running, both labeled by
+// the Project it belongs to and by the phase it finished in. A Promotion that
+// reached a terminal phase without ever having started -- one aborted while
+// still Pending, for instance -- still counts as completed, but has no running
+// time to report.
+func (r *reconciler) recordTerminalMetrics(
+	project string,
+	status *kargoapi.PromotionStatus,
+) {
+	r.promoMetrics.Completed.WithLabelValues(project, string(status.Phase)).Inc()
+	if status.StartedAt == nil || status.FinishedAt == nil {
+		return
+	}
+	r.promoMetrics.Duration.WithLabelValues(
+		project,
+		string(status.Phase),
+	).Observe(status.FinishedAt.Sub(status.StartedAt.Time).Seconds())
 }
 
 // setupDeleteCleanup registers an informer event handler that performs

@@ -1,0 +1,743 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.19.0
+  name: promotionrequests.kargo.akuity.io
+spec:
+  group: kargo.akuity.io
+  names:
+    kind: PromotionRequest
+    listKind: PromotionRequestList
+    plural: promotionrequests
+    shortNames:
+    - promotionrequest
+    - promotionrequests
+    singular: promotionrequest
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .spec.stage
+      name: Stage
+      type: string
+    - jsonPath: .spec.freight
+      name: Freight
+      type: string
+    - jsonPath: .status.phase
+      name: Phase
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: |-
+          PromotionRequest expresses the intent to promote a piece of Freight to a
+          specific set of Targets. Its Stage and Freight are fixed for its lifetime,
+          giving it a single freight transition to represent from start to terminal
+          state; only its list of Targets may change, so that Targets discovered after
+          creation can still be included.
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: |-
+              Spec describes the Stage, the Freight, and the Targets of the
+              PromotionRequest.
+            properties:
+              freight:
+                description: |-
+                  Freight specifies the piece of Freight promoted by the Stage.
+                  The Freight MUST be in the same namespace as the PromotionRequest.
+                maxLength: 253
+                minLength: 1
+                pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                type: string
+                x-kubernetes-validations:
+                - rule: self == oldSelf
+              stage:
+                description: |-
+                  Stage specifies the name of the Stage that promotes the Freight.
+                  The Stage MUST be in the same namespace as the PromotionRequest.
+                maxLength: 253
+                minLength: 1
+                pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                type: string
+                x-kubernetes-validations:
+                - rule: self == oldSelf
+              targets:
+                description: |-
+                  Targets names the Targets to which this PromotionRequest promotes Freight.
+                  Each Target MUST be in the same namespace as the PromotionRequest. The
+                  list may be empty, which records that the governing Stage governed no
+                  Targets when the PromotionRequest was created -- distinct from the field
+                  being absent, which asks for it to be resolved.
+
+                  This is a resolved list, not a selector: the Stage's target selectors are
+                  evaluated once, at creation, and the result recorded here. The membership
+                  of the PromotionRequest is therefore a snapshot of what the Stage governed
+                  at that moment, and its threshold and terminal state are computed against
+                  it rather than against a selector that could match differently later.
+
+                  This is the only mutable field in the spec. The governing Stage owns it,
+                  and may add Targets to an in-flight PromotionRequest so that Targets
+                  discovered after creation can still receive the Freight. Target names MUST
+                  be unique; this is enforced by the validating webhook rather than by the
+                  schema, since a list-map's per-item ownership tracking would roughly
+                  double the storage cost of every entry.
+                items:
+                  description: |-
+                    PromotionRequestTarget names a Target that a PromotionRequest promotes
+                    Freight to.
+                  properties:
+                    name:
+                      description: Name is the name of the Target.
+                      maxLength: 253
+                      minLength: 1
+                      pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                      type: string
+                  required:
+                  - name
+                  type: object
+                type: array
+                x-kubernetes-list-type: atomic
+              updateStrategy:
+                description: UpdateStrategy configures the pace of updating the targets
+                properties:
+                  maxConcurrent:
+                    description: |-
+                      MaxConcurrent specifies a number of targets which can be promoted to at the same time
+                      Zero means there is no limit (default)
+                    format: int64
+                    type: integer
+                type: object
+                x-kubernetes-validations:
+                - rule: self == oldSelf
+            required:
+            - freight
+            - stage
+            - targets
+            type: object
+          status:
+            description: |-
+              Status describes the per-Target progress and the aggregate state of the
+              PromotionRequest's Promotions.
+            properties:
+              conditions:
+                description: |-
+                  Conditions contains the last observations of the PromotionRequest's current
+                  state.
+                items:
+                  description: Condition contains details for one aspect of the current
+                    state of this API Resource.
+                  properties:
+                    lastTransitionTime:
+                      description: |-
+                        lastTransitionTime is the last time the condition transitioned from one status to another.
+                        This should be when the underlying condition changed.  If that is not known, then using the time when the API field changed is acceptable.
+                      format: date-time
+                      type: string
+                    message:
+                      description: |-
+                        message is a human readable message indicating details about the transition.
+                        This may be an empty string.
+                      maxLength: 32768
+                      type: string
+                    observedGeneration:
+                      description: |-
+                        observedGeneration represents the .metadata.generation that the condition was set based upon.
+                        For instance, if .metadata.generation is currently 12, but the .status.conditions[x].observedGeneration is 9, the condition is out of date
+                        with respect to the current state of the instance.
+                      format: int64
+                      minimum: 0
+                      type: integer
+                    reason:
+                      description: |-
+                        reason contains a programmatic identifier indicating the reason for the condition's last transition.
+                        Producers of specific condition types may define expected values and meanings for this field,
+                        and whether the values are considered a guaranteed API.
+                        The value should be a CamelCase string.
+                        This field may not be empty.
+                      maxLength: 1024
+                      minLength: 1
+                      pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
+                      type: string
+                    status:
+                      description: status of the condition, one of True, False, Unknown.
+                      enum:
+                      - "True"
+                      - "False"
+                      - Unknown
+                      type: string
+                    type:
+                      description: type of condition in CamelCase or in foo.example.com/CamelCase.
+                      maxLength: 316
+                      pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
+                      type: string
+                  required:
+                  - lastTransitionTime
+                  - message
+                  - reason
+                  - status
+                  - type
+                  type: object
+                type: array
+                x-kubernetes-list-map-keys:
+                - type
+                x-kubernetes-list-type: map
+              finishedAt:
+                description: FinishedAt is the time at which the PromotionRequest
+                  completed.
+                format: date-time
+                type: string
+              freight:
+                description: Freight is the detail of the piece of freight that was
+                  referenced by this promotion.
+                properties:
+                  artifacts:
+                    description: |-
+                      Artifacts describes specific versions of artifacts other
+                      than Git repository commits, container images, and Helm charts.
+                    items:
+                      description: ArtifactReference is a reference to a specific
+                        version of an artifact.
+                      properties:
+                        artifactType:
+                          description: |-
+                            ArtifactType specifies the type of artifact this is. Often, but not always,
+                            it will be the media type (MIME type) of the artifact referenced by this
+                            ArtifactReference.
+                          minLength: 1
+                          type: string
+                        metadata:
+                          description: |-
+                            Metadata is a JSON object containing a mostly opaque collection of artifact
+                            attributes. (It must be an object. It may not be a list or a scalar value.)
+                            "Mostly" because Kargo may understand how to interpret some documented,
+                            well-known, top-level keys. Those aside, this metadata is only understood
+                            by a corresponding Subscriber implementation that created it.
+                          x-kubernetes-preserve-unknown-fields: true
+                        subscriptionName:
+                          description: |-
+                            SubscriptionName is the name of the Subscription that discovered this
+                            artifact.
+                          minLength: 1
+                          type: string
+                        version:
+                          description: Version identifies a specific revision of this
+                            artifact.
+                          minLength: 1
+                          type: string
+                      required:
+                      - subscriptionName
+                      - version
+                      type: object
+                    type: array
+                  charts:
+                    description: Charts describes specific versions of specific Helm
+                      charts.
+                    items:
+                      description: Chart describes a specific version of a Helm chart.
+                      properties:
+                        name:
+                          description: Name specifies the name of the chart.
+                          type: string
+                        repoURL:
+                          description: |-
+                            RepoURL specifies the URL of a Helm chart repository. Classic chart
+                            repositories (using HTTP/S) can contain differently named charts. When this
+                            field points to such a repository, the Name field will specify the name of
+                            the chart within the repository. In the case of a repository within an OCI
+                            registry, the URL implicitly points to a specific chart and the Name field
+                            will be empty.
+                          type: string
+                        subscriptionName:
+                          description: |-
+                            SubscriptionName is the name of the subscription that discovered this
+                            chart. This field is only populated if the subscription was assigned
+                            a name.
+                          type: string
+                        version:
+                          description: Version specifies a particular version of the
+                            chart.
+                          type: string
+                      type: object
+                    type: array
+                  commits:
+                    description: Commits describes specific Git repository commits.
+                    items:
+                      description: GitCommit describes a specific commit from a specific
+                        Git repository.
+                      properties:
+                        author:
+                          description: Author is the author of the commit.
+                          type: string
+                        branch:
+                          description: Branch denotes the branch of the repository
+                            where this commit was found.
+                          type: string
+                        committer:
+                          description: Committer is the person who committed the commit.
+                          type: string
+                        id:
+                          description: |-
+                            ID is the ID of a specific commit in the Git repository specified by
+                            RepoURL.
+                          type: string
+                        message:
+                          description: |-
+                            Message is the message associated with the commit. At present, this only
+                            contains the first line (subject) of the commit message.
+                          type: string
+                        repoURL:
+                          description: RepoURL is the URL of a Git repository.
+                          type: string
+                        subscriptionName:
+                          description: |-
+                            SubscriptionName is the name of the subscription that discovered this
+                            commit. This field is only populated if the subscription was assigned
+                            a name.
+                          type: string
+                        tag:
+                          description: |-
+                            Tag denotes a tag in the repository that matched selection criteria and
+                            resolved to this commit.
+                          type: string
+                      type: object
+                    type: array
+                  images:
+                    description: Images describes specific versions of specific container
+                      images.
+                    items:
+                      description: Image describes a specific version of a container
+                        image.
+                      properties:
+                        annotations:
+                          additionalProperties:
+                            type: string
+                          description: Annotations is a map of arbitrary metadata
+                            for the image.
+                          type: object
+                        digest:
+                          description: |-
+                            Digest identifies a specific version of the image in the repository
+                            specified by RepoURL. This is a more precise identifier than Tag.
+                          type: string
+                        repoURL:
+                          description: RepoURL describes the repository in which the
+                            image can be found.
+                          type: string
+                        subscriptionName:
+                          description: |-
+                            SubscriptionName is the name of the subscription that discovered this
+                            image. This field is only populated if the subscription was assigned
+                            a name.
+                          type: string
+                        tag:
+                          description: |-
+                            Tag identifies a specific version of the image in the repository specified
+                            by RepoURL.
+                          type: string
+                      type: object
+                    type: array
+                  name:
+                    description: |-
+                      Name is a system-assigned identifier derived deterministically from
+                      the contents of the Freight. I.e., two pieces of Freight can be compared
+                      for equality by comparing their Names.
+                    type: string
+                  origin:
+                    description: Origin describes a kind of Freight in terms of its
+                      origin.
+                    properties:
+                      kind:
+                        description: |-
+                          Kind is the kind of resource from which Freight may have originated. At
+                          present, this can only be "Warehouse".
+                        enum:
+                        - Warehouse
+                        type: string
+                      name:
+                        description: |-
+                          Name is the name of the resource of the kind indicated by the Kind field
+                          from which Freight may originate.
+                        type: string
+                    required:
+                    - kind
+                    - name
+                    type: object
+                type: object
+              freightCollection:
+                description: |-
+                  FreightCollection contains the details of the piece of Freight referenced
+                  by this Promotion as well as any additional Freight that is carried over
+                  from the target Stage's current state.
+                properties:
+                  id:
+                    description: |-
+                      ID is a unique and deterministically calculated identifier for the
+                      FreightCollection. It is updated on each use of the UpdateOrPush method.
+                    type: string
+                  items:
+                    additionalProperties:
+                      description: |-
+                        FreightReference is a simplified representation of a piece of Freight -- not
+                        a root resource type.
+                      properties:
+                        artifacts:
+                          description: |-
+                            Artifacts describes specific versions of artifacts other
+                            than Git repository commits, container images, and Helm charts.
+                          items:
+                            description: ArtifactReference is a reference to a specific
+                              version of an artifact.
+                            properties:
+                              artifactType:
+                                description: |-
+                                  ArtifactType specifies the type of artifact this is. Often, but not always,
+                                  it will be the media type (MIME type) of the artifact referenced by this
+                                  ArtifactReference.
+                                minLength: 1
+                                type: string
+                              metadata:
+                                description: |-
+                                  Metadata is a JSON object containing a mostly opaque collection of artifact
+                                  attributes. (It must be an object. It may not be a list or a scalar value.)
+                                  "Mostly" because Kargo may understand how to interpret some documented,
+                                  well-known, top-level keys. Those aside, this metadata is only understood
+                                  by a corresponding Subscriber implementation that created it.
+                                x-kubernetes-preserve-unknown-fields: true
+                              subscriptionName:
+                                description: |-
+                                  SubscriptionName is the name of the Subscription that discovered this
+                                  artifact.
+                                minLength: 1
+                                type: string
+                              version:
+                                description: Version identifies a specific revision
+                                  of this artifact.
+                                minLength: 1
+                                type: string
+                            required:
+                            - subscriptionName
+                            - version
+                            type: object
+                          type: array
+                        charts:
+                          description: Charts describes specific versions of specific
+                            Helm charts.
+                          items:
+                            description: Chart describes a specific version of a Helm
+                              chart.
+                            properties:
+                              name:
+                                description: Name specifies the name of the chart.
+                                type: string
+                              repoURL:
+                                description: |-
+                                  RepoURL specifies the URL of a Helm chart repository. Classic chart
+                                  repositories (using HTTP/S) can contain differently named charts. When this
+                                  field points to such a repository, the Name field will specify the name of
+                                  the chart within the repository. In the case of a repository within an OCI
+                                  registry, the URL implicitly points to a specific chart and the Name field
+                                  will be empty.
+                                type: string
+                              subscriptionName:
+                                description: |-
+                                  SubscriptionName is the name of the subscription that discovered this
+                                  chart. This field is only populated if the subscription was assigned
+                                  a name.
+                                type: string
+                              version:
+                                description: Version specifies a particular version
+                                  of the chart.
+                                type: string
+                            type: object
+                          type: array
+                        commits:
+                          description: Commits describes specific Git repository commits.
+                          items:
+                            description: GitCommit describes a specific commit from
+                              a specific Git repository.
+                            properties:
+                              author:
+                                description: Author is the author of the commit.
+                                type: string
+                              branch:
+                                description: Branch denotes the branch of the repository
+                                  where this commit was found.
+                                type: string
+                              committer:
+                                description: Committer is the person who committed
+                                  the commit.
+                                type: string
+                              id:
+                                description: |-
+                                  ID is the ID of a specific commit in the Git repository specified by
+                                  RepoURL.
+                                type: string
+                              message:
+                                description: |-
+                                  Message is the message associated with the commit. At present, this only
+                                  contains the first line (subject) of the commit message.
+                                type: string
+                              repoURL:
+                                description: RepoURL is the URL of a Git repository.
+                                type: string
+                              subscriptionName:
+                                description: |-
+                                  SubscriptionName is the name of the subscription that discovered this
+                                  commit. This field is only populated if the subscription was assigned
+                                  a name.
+                                type: string
+                              tag:
+                                description: |-
+                                  Tag denotes a tag in the repository that matched selection criteria and
+                                  resolved to this commit.
+                                type: string
+                            type: object
+                          type: array
+                        images:
+                          description: Images describes specific versions of specific
+                            container images.
+                          items:
+                            description: Image describes a specific version of a container
+                              image.
+                            properties:
+                              annotations:
+                                additionalProperties:
+                                  type: string
+                                description: Annotations is a map of arbitrary metadata
+                                  for the image.
+                                type: object
+                              digest:
+                                description: |-
+                                  Digest identifies a specific version of the image in the repository
+                                  specified by RepoURL. This is a more precise identifier than Tag.
+                                type: string
+                              repoURL:
+                                description: RepoURL describes the repository in which
+                                  the image can be found.
+                                type: string
+                              subscriptionName:
+                                description: |-
+                                  SubscriptionName is the name of the subscription that discovered this
+                                  image. This field is only populated if the subscription was assigned
+                                  a name.
+                                type: string
+                              tag:
+                                description: |-
+                                  Tag identifies a specific version of the image in the repository specified
+                                  by RepoURL.
+                                type: string
+                            type: object
+                          type: array
+                        name:
+                          description: |-
+                            Name is a system-assigned identifier derived deterministically from
+                            the contents of the Freight. I.e., two pieces of Freight can be compared
+                            for equality by comparing their Names.
+                          type: string
+                        origin:
+                          description: Origin describes a kind of Freight in terms
+                            of its origin.
+                          properties:
+                            kind:
+                              description: |-
+                                Kind is the kind of resource from which Freight may have originated. At
+                                present, this can only be "Warehouse".
+                              enum:
+                              - Warehouse
+                              type: string
+                            name:
+                              description: |-
+                                Name is the name of the resource of the kind indicated by the Kind field
+                                from which Freight may originate.
+                              type: string
+                          required:
+                          - kind
+                          - name
+                          type: object
+                      type: object
+                    description: |-
+                      Freight is a map of FreightReference objects, indexed by their Warehouse
+                      origin.
+                    type: object
+                  verificationHistory:
+                    description: |-
+                      VerificationHistory is a stack of recent VerificationInfo. By default,
+                      the last ten VerificationInfo are stored.
+                    items:
+                      description: |-
+                        VerificationInfo contains the details of an instance of a Verification
+                        process.
+                      properties:
+                        actor:
+                          description: |-
+                            Actor is the name of the entity that initiated or aborted the
+                            Verification process.
+                          type: string
+                        analysisRun:
+                          description: |-
+                            AnalysisRun is a reference to the Argo Rollouts AnalysisRun that implements
+                            the Verification process.
+                          properties:
+                            name:
+                              description: Name is the name of the AnalysisRun.
+                              type: string
+                            namespace:
+                              description: Namespace is the namespace of the AnalysisRun.
+                              type: string
+                            phase:
+                              description: Phase is the last observed phase of the
+                                AnalysisRun referenced by Name.
+                              type: string
+                          required:
+                          - name
+                          - namespace
+                          - phase
+                          type: object
+                        finishTime:
+                          description: FinishTime is the time at which the Verification
+                            process finished.
+                          format: date-time
+                          type: string
+                        id:
+                          description: ID is the identifier of the Verification process.
+                          type: string
+                        message:
+                          description: |-
+                            Message may contain additional information about why the verification
+                            process is in its current phase.
+                          type: string
+                        phase:
+                          description: |-
+                            Phase describes the current phase of the Verification process. Generally,
+                            this will be a reflection of the underlying AnalysisRun's phase, however,
+                            there are exceptions to this, such as in the case where an AnalysisRun
+                            cannot be launched successfully.
+                          type: string
+                        startTime:
+                          description: StartTime is the time at which the Verification
+                            process was started.
+                          format: date-time
+                          type: string
+                      type: object
+                    type: array
+                required:
+                - id
+                type: object
+              message:
+                description: |-
+                  Message is a display message explaining the current Phase: what the
+                  PromotionRequest is waiting on, how far its fan-out has progressed, or
+                  why it did not succeed. i.e. If the Phase field has a value of Failed or
+                  Errored, this field can be expected to explain why.
+                type: string
+              observedGeneration:
+                description: ObservedGeneration is the generation of the spec last
+                  reconciled.
+                format: int64
+                type: integer
+              phase:
+                description: Phase is a high-level summary of the PromotionRequest's
+                  lifecycle.
+                type: string
+              startedAt:
+                description: StartedAt is the time at which the PromotionRequest started.
+                format: date-time
+                type: string
+              summary:
+                description: Summary aggregates the phases of this PromotionRequest's
+                  child Promotions.
+                properties:
+                  aborted:
+                    description: Aborted is the number of child Promotions in the
+                      Aborted phase.
+                    format: int32
+                    type: integer
+                  errored:
+                    description: Errored is the number of child Promotions in the
+                      Errored phase.
+                    format: int32
+                    type: integer
+                  failed:
+                    description: Failed is the number of child Promotions in the Failed
+                      phase.
+                    format: int32
+                    type: integer
+                  pending:
+                    description: Pending is the number of child Promotions in the
+                      Pending phase.
+                    format: int32
+                    type: integer
+                  running:
+                    description: Running is the number of child Promotions in the
+                      Running phase.
+                    format: int32
+                    type: integer
+                  succeeded:
+                    description: Succeeded is the number of child Promotions in the
+                      Succeeded phase.
+                    format: int32
+                    type: integer
+                type: object
+              targets:
+                description: |-
+                  Targets records progress against spec.targets: one entry per Target, with
+                  the child Promotion promoting to it and that Promotion's phase. Entries
+                  appear as the reconciler acts on each Target in spec.targets.
+
+                  The list is atomic rather than a map keyed by name: the reconciler is its
+                  only writer, so per-item ownership tracking in managedFields would only
+                  inflate the object -- roughly doubling the storage cost of each entry --
+                  without ever being used to merge.
+                items:
+                  description: |-
+                    PromotionRequestTargetStatus records the state of a single Target selected
+                    by a PromotionRequest.
+                  properties:
+                    name:
+                      description: Name is the name of the Target.
+                      maxLength: 253
+                      minLength: 1
+                      pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                      type: string
+                    phase:
+                      description: Phase is the phase of that Promotion.
+                      type: string
+                    promotion:
+                      description: |-
+                        Promotion is the name of the child Promotion currently promoting the
+                        Freight to this Target. Empty if none has been created yet.
+                      type: string
+                  required:
+                  - name
+                  type: object
+                type: array
+                x-kubernetes-list-type: atomic
+            type: object
+        required:
+        - spec
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}

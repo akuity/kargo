@@ -41,6 +41,24 @@ func Test_gitPROpener_convert(t *testing.T) {
 			},
 		},
 		{
+			name: "repoURL is an SSH URL",
+			config: promotion.Config{
+				"repoURL": "ssh://git@github.com/example/repo.git",
+			},
+			expectedProblems: []string{
+				"repoURL: Does not match pattern '^https?://'",
+			},
+		},
+		{
+			name: "repoURL is an SCP-style URL",
+			config: promotion.Config{
+				"repoURL": "git@github.com:example/repo.git",
+			},
+			expectedProblems: []string{
+				"repoURL: Does not match pattern '^https?://'",
+			},
+		},
+		{
 			name:   "targetBranch not specified",
 			config: promotion.Config{},
 			expectedProblems: []string{
@@ -296,13 +314,12 @@ func Test_gitPROpener_run(t *testing.T) {
 				WorkDir: workDir,
 			},
 			builtin.GitOpenPRConfig{
-				RepoURL:            testRepoURL,
-				SourceBranch:       testSourceBranch,
-				TargetBranch:       testTargetBranch,
-				CreateTargetBranch: true,
-				Provider:           ptr.To(builtin.Provider(fakeGitProviderName)),
-				Title:              "kargo",
-				Description:        "kargo description",
+				RepoURL:      testRepoURL,
+				SourceBranch: testSourceBranch,
+				TargetBranch: testTargetBranch,
+				Provider:     ptr.To(builtin.Provider(fakeGitProviderName)),
+				Title:        "kargo",
+				Description:  "kargo description",
 			},
 		)
 		require.NoError(t, err)

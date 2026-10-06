@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/spf13/cobra"
+	"go.opentelemetry.io/otel/attribute"
 	coordinationv1 "k8s.io/api/coordination/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -25,6 +26,7 @@ import (
 	libargocd "github.com/akuity/kargo/pkg/argocd"
 	"github.com/akuity/kargo/pkg/controller"
 	argocd "github.com/akuity/kargo/pkg/controller/argocd/api/v1alpha1"
+	"github.com/akuity/kargo/pkg/controller/promotionrequests"
 	"github.com/akuity/kargo/pkg/controller/promotions"
 	"github.com/akuity/kargo/pkg/controller/stages"
 	"github.com/akuity/kargo/pkg/controller/warehouses"
@@ -39,6 +41,7 @@ import (
 	"github.com/akuity/kargo/pkg/promotion"
 	"github.com/akuity/kargo/pkg/server/kubernetes"
 	"github.com/akuity/kargo/pkg/subscription"
+	"github.com/akuity/kargo/pkg/telemetry"
 	"github.com/akuity/kargo/pkg/types"
 	versionpkg "github.com/akuity/kargo/pkg/x/version"
 
@@ -47,7 +50,6 @@ import (
 	_ "github.com/akuity/kargo/pkg/credentials/ecr"
 	_ "github.com/akuity/kargo/pkg/credentials/gar"
 	_ "github.com/akuity/kargo/pkg/credentials/github"
-	_ "github.com/akuity/kargo/pkg/credentials/ssh"
 	_ "github.com/akuity/kargo/pkg/promotion/runner/builtin"
 )
 
@@ -140,6 +142,25 @@ func (o *controllerOptions) run(ctx context.Context) error {
 			"credential providers are not enabled; set CREDENTIAL_PROVIDERS_ENABLED=true",
 		)
 	}
+
+	// A controller with no shard name is the default controller regardless of
+	// IS_DEFAULT_CONTROLLER; a named controller is the default only when
+	// explicitly designated.
+	telemetryAttrs := []attribute.KeyValue{
+		telemetry.DefaultControllerKey.Bool(o.ShardName == "" || o.IsDefaultController),
+	}
+	if o.ShardName != "" {
+		telemetryAttrs = append(telemetryAttrs, telemetry.ShardKey.String(o.ShardName))
+	}
+	shutdownTelemetry, err := telemetry.SetupFromEnv(
+		logging.ContextWithLogger(ctx, o.Logger),
+		"controller",
+		telemetryAttrs...,
+	)
+	if err != nil {
+		return err
+	}
+	defer shutdownTelemetry()
 
 	kargoMgr, localClusterClient, stagesReconcilerCfg, err := o.setupKargoManager(
 		ctx,
@@ -472,8 +493,17 @@ func (o *controllerOptions) setupReconcilers(
 		return fmt.Errorf("error setting up Promotions reconciler: %w", err)
 	}
 
+	if err := promotionrequests.SetupReconcilerWithManager(
+		ctx,
+		kargoMgr,
+		promotionrequests.ReconcilerConfigFromEnv(),
+	); err != nil {
+		return fmt.Errorf("error setting up PromotionRequests reconciler: %w", err)
+	}
+
 	if err := stages.NewRegularStageReconciler(
 		stagesReconcilerCfg,
+		credentialsDB,
 		health.NewAggregatingChecker(),
 	).SetupWithManager(
 		ctx,

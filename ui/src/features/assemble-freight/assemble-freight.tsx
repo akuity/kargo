@@ -235,7 +235,9 @@ export const AssembleFreight = ({
         cloneFreight={cloneFreight}
         className='mb-5'
       />
-      <div className='text-xs font-medium text-gray-500 mb-2'>FREIGHT CONTENTS</div>
+      <div className='text-xs font-medium text-gray-500 dark:text-neutral-400 mb-2'>
+        FREIGHT CONTENTS
+      </div>
       <div className='mt-3 mb-5 flex items-center'>
         {Object.keys(chosenItems)?.length > 0 ? (
           <>
@@ -264,14 +266,14 @@ export const AssembleFreight = ({
             </Button>
           </>
         ) : (
-          <div className='text-gray-400'>
+          <div className='text-gray-400 dark:text-neutral-500'>
             Freight contents will appear here once you select artifacts below.
           </div>
         )}
       </div>
       {warehouse ? (
-        <div className='flex w-full border border-solid border-gray-200 rounded-md overflow-hidden'>
-          <div className='bg-gray-50 p-4' style={{ width: '250px' }}>
+        <div className='flex w-full border border-solid border-gray-200 dark:border-neutral-700 rounded-md overflow-hidden'>
+          <div className='bg-gray-50 dark:bg-neutral-800 p-4' style={{ width: '250px' }}>
             <ArtifactMenuGroup icon={faDocker} label='Images' items={images} {...commonProps} />
             <ArtifactMenuGroup icon={faAnchor} label='Charts' items={charts} {...commonProps} />
             <ArtifactMenuGroup icon={faGitAlt} label='Git' items={git} {...commonProps} />
@@ -282,7 +284,9 @@ export const AssembleFreight = ({
           </div>
         </div>
       ) : (
-        <div className='text-gray-500 text-sm mt-2'>Please select a warehouse to continue.</div>
+        <div className='text-gray-500 dark:text-neutral-400 text-sm mt-2'>
+          Please select a warehouse to continue.
+        </div>
       )}
     </div>
   );

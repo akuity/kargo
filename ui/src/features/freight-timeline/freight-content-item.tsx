@@ -5,6 +5,7 @@ import Link from 'antd/es/typography/Link';
 import classNames from 'classnames';
 import { useMemo } from 'react';
 
+import { SubscriptionName } from '../common/subscription-name';
 import { TruncateMiddle } from '../common/truncate-middle';
 
 export const FreightContentItem = (props: {
@@ -23,6 +24,8 @@ export const FreightContentItem = (props: {
   artifactSource?: string;
   // build date of image
   artifactBuildDate?: string;
+  // name of the subscription that discovered the artifact, if it has one
+  subscriptionName?: string;
 }) => {
   const {
     horizontal,
@@ -34,8 +37,21 @@ export const FreightContentItem = (props: {
     href,
     children,
     linkClass,
-    fullContentVisibility
+    fullContentVisibility,
+    subscriptionName
   } = props;
+
+  // The chips are too cramped to always carry the name, so it rides along in
+  // the tooltip and only becomes a visible tag where there is room for it.
+  const _title = useMemo(() => {
+    if (!subscriptionName) {
+      return title;
+    }
+
+    return title
+      ? `${title} (subscription: ${subscriptionName})`
+      : `subscription: ${subscriptionName}`;
+  }, [title, subscriptionName]);
 
   const _children = useMemo(() => {
     if (fullContentVisibility) {
@@ -52,12 +68,13 @@ export const FreightContentItem = (props: {
         'max-w-60': horizontal && !fullContentVisibility,
         'mr-2 p-2 flex-shrink': horizontal,
         'bg-black text-white': dark,
-        'bg-white': !dark && highlighted && !horizontal,
-        'border border-solid border-gray-200': !dark && !highlighted && !horizontal,
-        'bg-gray-200': !dark && horizontal
+        'bg-white dark:bg-neutral-900': !dark && highlighted && !horizontal,
+        'border border-solid border-gray-200 dark:border-neutral-700':
+          !dark && !highlighted && !horizontal,
+        'bg-gray-200 dark:bg-neutral-700': !dark && horizontal
       })}
       overlay={overlay}
-      title={title}
+      title={_title}
     >
       <Flex align='center' gap={8}>
         {!!icon && (
@@ -106,6 +123,9 @@ export const FreightContentItem = (props: {
             <FontAwesomeIcon icon={faHammer} />
             {props.artifactBuildDate}
           </span>
+        )}
+        {fullContentVisibility && (
+          <SubscriptionName name={subscriptionName} className='text-[10px]' />
         )}
       </div>
     </Tooltip>

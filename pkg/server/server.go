@@ -31,7 +31,6 @@ import (
 	"github.com/akuity/kargo/pkg/server/dex"
 	"github.com/akuity/kargo/pkg/server/kubernetes"
 	"github.com/akuity/kargo/pkg/server/rbac"
-	"github.com/akuity/kargo/pkg/server/validation"
 )
 
 //go:embed all:ui
@@ -44,18 +43,6 @@ type server struct {
 	sender  event.Sender
 
 	// The following behaviors are overridable for testing purposes:
-
-	// Common validations:
-	validateProjectExistsFn func(
-		ctx context.Context,
-		project string,
-	) error
-
-	externalValidateProjectFn func(
-		ctx context.Context,
-		client client.Client,
-		project string,
-	) error
 
 	// Common lookups:
 	getStageFn func(
@@ -117,6 +104,7 @@ type server struct {
 	// Freight approval:
 	patchFreightStatusFn func(
 		ctx context.Context,
+		cl client.Client,
 		freight *kargoapi.Freight,
 		newStatus kargoapi.FreightStatus,
 	) error
@@ -167,8 +155,6 @@ func NewServer(
 		sender:  sender,
 	}
 
-	s.validateProjectExistsFn = s.validateProjectExists
-	s.externalValidateProjectFn = validation.ValidateProject
 	s.getStageFn = api.GetStage
 	s.getFreightByNameOrAliasFn = api.GetFreightByNameOrAlias
 	s.isFreightAvailableFn = s.isFreightAvailable
@@ -199,7 +185,10 @@ func (s *server) Serve(ctx context.Context, l net.Listener) error {
 	}
 
 	// Add Gin REST router
-	ginRouter := s.setupRESTRouter(ctx)
+	ginRouter, err := s.setupRESTRouter(ctx)
+	if err != nil {
+		return fmt.Errorf("error setting up REST router: %w", err)
+	}
 	mux.Handle("/v1beta1/", ginRouter)
 
 	var dashboardFS fs.FS
@@ -311,6 +300,12 @@ func wrapWithBasePath(inner http.Handler, basePath string) http.Handler {
 		if r.URL.Path == basePath {
 			u := *r.URL
 			u.Path = basePath + "/"
+			// u.RequestURI() renders only path and query, never scheme or
+			// host, so this redirect always stays same-origin no matter what
+			// a user's request contained. Path is hardcoded to basePath+"/"
+			// above; the query string is carried through only so params
+			// (e.g. "?tab=x") survive the redirect.
+			// #nosec G710
 			http.Redirect(w, r, u.RequestURI(), http.StatusMovedPermanently)
 			return
 		}

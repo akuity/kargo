@@ -20,8 +20,10 @@ export const HeaderButton = memo(
       <Button
         onClick={onClick}
         className={classNames(
-          'p-2 w-7 h-7 flex items-center justify-center rounded-md hover:bg-gray-200 transition-colors',
-          selected ? 'bg-blue-100 text-blue-600' : 'text-gray-500 hover:text-gray-700'
+          'p-2 w-7 h-7 flex items-center justify-center rounded-md hover:bg-gray-200 dark:hover:bg-neutral-700 transition-colors',
+          selected
+            ? 'bg-blue-100 text-blue-600 dark:bg-blue-950 dark:text-blue-300'
+            : 'text-gray-500 dark:text-neutral-400 hover:text-gray-700 dark:hover:text-neutral-200'
         )}
       >
         <FontAwesomeIcon icon={icon} />
