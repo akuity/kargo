@@ -47,8 +47,7 @@ export const credentialTypes = credentialTypeEnum.options;
 // Auth methods map to the secret data keys understood by pkg/credentials/*.
 // 'ambient' stores no Secret at all (IRSA / workload identity on the
 // controller pod).
-export type CredentialAuthMethod =
-  'userpass' | 'ssh' | 'github-app' | 'aws-ecr' | 'gcp-ar' | 'ambient';
+export type CredentialAuthMethod = 'userpass' | 'github-app' | 'aws-ecr' | 'gcp-ar' | 'ambient';
 
 export type CredentialData = {
   name: string;
@@ -59,7 +58,6 @@ export type CredentialData = {
   auth: CredentialAuthMethod;
   username: string;
   password: string;
-  sshPrivateKey: string;
   githubAppClientID: string;
   githubAppID: string;
   githubAppInstallationID: string;
@@ -73,7 +71,7 @@ export type CredentialData = {
 // Per docs/docs/50-user-guide/50-security/30-managing-secrets.md: gcp-ar also
 // applies to OCI Helm chart repositories hosted in Google Artifact Registry.
 export const credentialAuthOptions: Record<CredentialType, CredentialAuthMethod[]> = {
-  git: ['userpass', 'ssh', 'github-app'],
+  git: ['userpass', 'github-app'],
   image: ['userpass', 'aws-ecr', 'gcp-ar', 'ambient'],
   helm: ['userpass', 'gcp-ar', 'ambient']
 };
@@ -87,7 +85,6 @@ export const initialCredential = (type: CredentialType = 'git'): CredentialData 
   auth: credentialAuthOptions[type][0] ?? 'userpass',
   username: '',
   password: '',
-  sshPrivateKey: '',
   githubAppClientID: '',
   githubAppID: '',
   githubAppInstallationID: '',
@@ -113,7 +110,6 @@ const credentialFieldIsSecret = {
   auth: false,
   username: false,
   password: true,
-  sshPrivateKey: true,
   githubAppClientID: false,
   githubAppID: false,
   githubAppInstallationID: false,

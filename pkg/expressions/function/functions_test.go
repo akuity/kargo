@@ -1624,32 +1624,6 @@ func Test_getRepoCredentials(t *testing.T) {
 			},
 		},
 		{
-			name: "success includes SSH private key when set",
-			credsDB: &credentials.FakeDB{
-				GetFn: func(
-					context.Context,
-					string,
-					credentials.Type,
-					string,
-				) (*credentials.Credentials, error) {
-					return &credentials.Credentials{
-						Username:      "user",
-						Password:      "token",
-						SSHPrivateKey: "private-key",
-					}, nil
-				},
-			},
-			args: []any{testRepoURL, "git"},
-			assertions: func(t *testing.T, _ *cache.Cache, result any, err error) {
-				assert.NoError(t, err)
-				assert.Equal(t, credentials.Credentials{
-					Username:      "user",
-					Password:      "token",
-					SSHPrivateKey: "private-key",
-				}, result)
-			},
-		},
-		{
 			name: "success with cache",
 			credsDB: &credentials.FakeDB{
 				GetFn: func(

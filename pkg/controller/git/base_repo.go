@@ -29,7 +29,7 @@ const (
 	// forcible termination of a command. It also bounds how long Wait can
 	// remain blocked on the command's output pipes after cancellation:
 	// killing the command does not unblock Wait if a grandchild process
-	// (e.g. ssh or an askpass helper) inherited the pipes and holds them
+	// (e.g. an askpass helper) inherited the pipes and holds them
 	// open, so a non-zero WaitDelay is required to guarantee Wait returns.
 	cmdWaitDelay = 10 * time.Second
 
@@ -107,7 +107,7 @@ func (b *baseRepo) setupClient(ctx context.Context, opts *ClientOptions) error {
 		return fmt.Errorf("error configuring the author: %w", err)
 	}
 
-	if err := b.setupAuth(b.homeDir); err != nil {
+	if err := b.setupAuth(); err != nil {
 		return fmt.Errorf("error configuring the credentials: %w", err)
 	}
 
@@ -249,36 +249,29 @@ func (b *baseRepo) setupUser(
 	return nil
 }
 
-// setupAuth configures the git CLI with authentication information. The
-// directory specified by homeDir is used as a virtual home directory for
-// storing ssh keys if applicable.
-func (b *baseRepo) setupAuth(homeDir string) error {
+// validateRepoURL returns an error if the provided URL does not use the HTTP
+// or HTTPS scheme. These are the only transports supported for accessing
+// remote repositories.
+func validateRepoURL(repoURL string) error {
+	u, err := url.Parse(repoURL)
+	if err != nil {
+		return fmt.Errorf("error parsing repository URL %q: %w", repoURL, err)
+	}
+	switch strings.ToLower(u.Scheme) {
+	case "http", "https":
+		return nil
+	default:
+		return fmt.Errorf(
+			"unsupported repository URL %q: only HTTP(S) URLs are supported",
+			repoURL,
+		)
+	}
+}
+
+// setupAuth configures the git CLI with authentication information.
+func (b *baseRepo) setupAuth() error {
 	if b.creds == nil {
 		return nil
-	}
-	// TODO(v1.13.0): Remove this block when SSH support is removed.
-	// If an SSH key was provided, use that.
-	if b.creds.SSHPrivateKey != "" {
-		sshPath := filepath.Join(homeDir, ".ssh")
-		if err := os.MkdirAll(sshPath, 0700); err != nil {
-			return fmt.Errorf("error creating SSH directory %q: %w", sshPath, err)
-		}
-		sshConfigPath := filepath.Join(sshPath, "config")
-		rsaKeyPath := filepath.Join(sshPath, "id_rsa")
-		// nolint: lll
-		sshConfig := fmt.Sprintf("Host *\n  StrictHostKeyChecking no\n  UserKnownHostsFile=/dev/null\n  IdentityFile %q\n", rsaKeyPath)
-		if err := os.WriteFile(sshConfigPath, []byte(sshConfig), 0600); err != nil {
-			return fmt.Errorf("error writing SSH config to %q: %w", sshConfigPath, err)
-		}
-
-		if err := os.WriteFile(
-			rsaKeyPath,
-			[]byte(b.creds.SSHPrivateKey),
-			0600,
-		); err != nil {
-			return fmt.Errorf("error writing SSH key to %q: %w", rsaKeyPath, err)
-		}
-		return nil // We're done
 	}
 
 	// If no password is specified, we're done'.
@@ -480,8 +473,6 @@ func (b *baseRepo) buildGitCommand(
 		"GIT_HTTP_LOW_SPEED_LIMIT="+gitHTTPLowSpeedLimit,
 		"GIT_HTTP_LOW_SPEED_TIME="+gitHTTPLowSpeedTime,
 	)
-	// TODO(v1.13.0): Remove this line when SSH support is removed.
-	cmd.Env = append(cmd.Env, fmt.Sprintf("GIT_SSH_COMMAND=ssh -F %s/.ssh/config", b.homeDir))
 	if b.creds != nil && b.creds.Password != "" {
 		cmd.Env = append(
 			cmd.Env,

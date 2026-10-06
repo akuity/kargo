@@ -387,7 +387,7 @@ func Test_gitURLRegex(t *testing.T) {
 		"https://not a url":                      false,
 		"http://github.com/example/repo?foo=bar": true,
 		"ssh://not a url":                        false,
-		"ssh://github.com/example/repo?foo=bar":  true,
+		"ssh://github.com/example/repo?foo=bar":  false,
 		"not even remotely a url":                false,
 		// URLs of the form http[s]://[proxy-user:proxy-pass@]host.xz[:port][/path/to/repo[.git][/]]
 		"https://github.com":          false,
@@ -411,40 +411,12 @@ func Test_gitURLRegex(t *testing.T) {
 		"https://foo:bar@localhost:8443/example/repo/":     true,
 		"https://foo:bar@localhost:8443/example/repo.git":  true,
 		"https://foo:bar@localhost:8443/example/repo.git/": true,
-		// ssh forms
-		"ssh://git.example.com":      false,
-		"ssh://git.example.com/":     true,
-		"ssh://git@git.example.com":  false,
-		"ssh://git@git.example.com/": true,
-		// Variable features
-		"ssh://github.com/example/repo":              true,
-		"ssh://github.com/example/repo/":             true,
-		"ssh://github.com/example/repo.git":          true,
-		"ssh://github.com/example/repo.git/":         true,
-		"ssh://localhost:2222/example/repo":          true,
-		"ssh://localhost:2222/example/repo/":         true,
-		"ssh://localhost:2222/example/repo.git":      true,
-		"ssh://localhost:2222/example/repo.git/":     true,
-		"ssh://git@github.com/example/repo":          true,
-		"ssh://git@github.com/example/repo/":         true,
-		"ssh://git@github.com/example/repo.git":      true,
-		"ssh://git@github.com/example/repo.git/":     true,
-		"ssh://git@localhost:2222/example/repo":      true,
-		"ssh://git@localhost:2222/example/repo/":     true,
-		"ssh://git@localhost:2222/example/repo.git":  true,
-		"ssh://git@localhost:2222/example/repo.git/": true,
-		// SCP-style
-		"git.example.com":     false,
-		"git@git.example.com": false,
-		// Variable features
-		"github.com:example/repo":          false,
-		"github.com:example/repo/":         false,
-		"github.com:example/repo.git":      false,
-		"github.com:example/repo.git/":     false,
-		"git@github.com:example/repo":      true,
-		"git@github.com:example/repo/":     true,
-		"git@github.com:example/repo.git":  true,
-		"git@github.com:example/repo.git/": true,
+		// SSH and SCP-style URLs are not supported
+		"ssh://git@github.com/example/repo":     false,
+		"ssh://git@localhost:2222/example/repo": false,
+		"git@github.com:example/repo":           false,
+		"git@github.com:example/repo.git":       false,
+		"github.com:example/repo":               false,
 	}
 	for input, expected := range cases {
 		t.Run(input, func(t *testing.T) {

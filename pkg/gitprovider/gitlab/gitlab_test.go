@@ -478,11 +478,6 @@ func TestParseGitLabURL(t *testing.T) {
 			expectedHost:   "gitlab.akuity.io",
 		},
 		{
-			url:            "ssh://gitlab.com/akuity/kargo.git",
-			expectedScheme: "https",
-			expectedHost:   "gitlab.com",
-		},
-		{
 			url:            "http://git.example.com/akuity/kargo",
 			expectedScheme: "http",
 			expectedHost:   "git.example.com",
@@ -505,16 +500,6 @@ func TestGetCommitURL(t *testing.T) {
 		sha               string
 		expectedCommitURL string
 	}{
-		{
-			repoURL:           "ssh://git@gitlab.com/akuity/kargo.git",
-			sha:               "sha",
-			expectedCommitURL: "https://gitlab.com/akuity/kargo/-/commit/sha",
-		},
-		{
-			repoURL:           "git@gitlab.com:akuity/kargo.git",
-			sha:               "sha",
-			expectedCommitURL: "https://gitlab.com/akuity/kargo/-/commit/sha",
-		},
 		{
 			repoURL:           "http://gitlab.com/akuity/kargo",
 			sha:               "sha",

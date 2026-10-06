@@ -175,7 +175,7 @@ func LoadWorkTree(
 		return nil,
 			fmt.Errorf(`error reading URL of remote "origin" from config: %w`, err)
 	}
-	if err = w.setupAuth(w.homeDir); err != nil {
+	if err = w.setupAuth(); err != nil {
 		return nil, fmt.Errorf("error configuring the credentials: %w", err)
 	}
 	br, err := LoadBareRepo(ctx, repoPath, &LoadBareRepoOptions{

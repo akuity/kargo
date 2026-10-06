@@ -7467,7 +7467,7 @@
           ]
         },
         "repoURL": {
-          "description": "RepoURL is the repository URL of the GitSubscription.\n\nTODO(v1.13.0): Remove SSH/SCP-style URL support from this pattern.\n\n+kubebuilder:validation:MinLength=1\n+kubebuilder:validation:Pattern=`(?:^(ssh|https?)://(?:([\\w-]+)(:(.+))?@)?([\\w-]+(?:\\.[\\w-]+)*)(?::(\\d{1,5}))?(/.*)$)|(?:^([\\w-]+)@([\\w+]+(?:\\.[\\w-]+)*):(/?.*))`\n+akuity:test-kubebuilder-pattern=GitRepoURLPattern",
+          "description": "RepoURL is the repository URL of the GitSubscription.\n\n+kubebuilder:validation:MinLength=1\n+kubebuilder:validation:Pattern=`^https?://(?:([\\w-]+)(:(.+))?@)?([\\w-]+(?:\\.[\\w-]+)*)(?::(\\d{1,5}))?(/.*)$`\n+akuity:test-kubebuilder-pattern=GitRepoURLPattern",
           "type": "string"
         },
         "subscriptionName": {

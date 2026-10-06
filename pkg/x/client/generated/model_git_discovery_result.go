@@ -23,7 +23,7 @@ type GitDiscoveryResult struct {
 	Commits []DiscoveredCommit `json:"commits,omitempty"`
 	// ObservedRefs records the raw remote ref state observed at the most recent successful discovery, after name-based filtering but before path filtering or commit selection. The Warehouse uses it to short-circuit discovery: at the start of a reconcile, a single git ls-remote call yields the current ref state, and if it matches this field, nothing relevant has moved and the previously selected Commits remain valid -- so an expensive clone and history walk can be skipped entirely. This field is optional; when absent (e.g. on a Warehouse that predates this feature), discovery falls through to a full clone and repopulates it.  +optional
 	ObservedRefs *GitDiscoveryRefs `json:"observedRefs,omitempty"`
-	// RepoURL is the repository URL of the GitSubscription.  TODO(v1.13.0): Remove SSH/SCP-style URL support from this pattern.  +kubebuilder:validation:MinLength=1 +kubebuilder:validation:Pattern=`(?:^(ssh|https?)://(?:([\\w-]+)(:(.+))?@)?([\\w-]+(?:\\.[\\w-]+)*)(?::(\\d{1,5}))?(/.*)$)|(?:^([\\w-]+)@([\\w+]+(?:\\.[\\w-]+)*):(/?.*))` +akuity:test-kubebuilder-pattern=GitRepoURLPattern
+	// RepoURL is the repository URL of the GitSubscription.  +kubebuilder:validation:MinLength=1 +kubebuilder:validation:Pattern=`^https?://(?:([\\w-]+)(:(.+))?@)?([\\w-]+(?:\\.[\\w-]+)*)(?::(\\d{1,5}))?(/.*)$` +akuity:test-kubebuilder-pattern=GitRepoURLPattern
 	RepoURL *string `json:"repoURL,omitempty"`
 	// SubscriptionName is the optional human-readable name of the subscription that produced this discovery result.  +optional
 	SubscriptionName *string `json:"subscriptionName,omitempty"`

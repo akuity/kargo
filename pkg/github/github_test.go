@@ -58,14 +58,6 @@ func TestParseRepoURL(t *testing.T) {
 			expectedOwner:  "akuity",
 			expectedRepo:   "kargo",
 		},
-		{
-			name:           "SSH URL",
-			url:            "git@github.com:akuity/kargo",
-			expectedScheme: "https",
-			expectedHost:   "github.com",
-			expectedOwner:  "akuity",
-			expectedRepo:   "kargo",
-		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {

@@ -74,6 +74,9 @@ func Clone(
 	if cloneOpts == nil {
 		cloneOpts = &CloneOptions{}
 	}
+	if err := validateRepoURL(repoURL); err != nil {
+		return nil, err
+	}
 	baseRepo := &baseRepo{
 		creds:       clientOpts.Credentials,
 		originalURL: repoURL,
@@ -158,7 +161,7 @@ func LoadRepo(
 		return nil,
 			fmt.Errorf(`error reading URL of remote "origin" from config: %w`, err)
 	}
-	if err := r.setupAuth(r.homeDir); err != nil {
+	if err := r.setupAuth(); err != nil {
 		return nil, fmt.Errorf("error configuring the credentials: %w", err)
 	}
 	return r, nil

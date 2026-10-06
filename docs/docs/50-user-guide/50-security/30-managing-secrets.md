@@ -91,27 +91,8 @@ be:
 
   :::
 
-Alternatively, for Git repositories only (and specifically ones that support
-SSH-style URLs of the form `git@github.com:example/repo.git`), the key
-`sshPrivateKey` in the `Secret`'s `data` block may have as its value a
-PEM-encoded SSH private key.
-
-:::warning[Deprecated]
-
-Support for SSH URLs and SSH private keys is **deprecated as of v1.10.0** and
-**scheduled for removal in v1.13.0**.
-
-The proprietary APIs offered by the major Git hosting platforms (e.g. GitHub or
-GitLab) to enable actions such as opening or closing pull requests are
-invariably HTTP-based and therefore cannot use an SSH private key for
-authentication. This forces users who rely on SSH to maintain a second set of
-credentials (e.g. a personal access token) for API operations.
-
-Using HTTPS URLs with a single token-based credential that works for both
-standard Git operations and provider API calls is simpler and more secure. Users
-should migrate to HTTPS URLs before v1.13.0.
-
-:::
+Kargo accesses Git repositories over HTTP(S) only. SSH URLs (e.g.
+`git@github.com:example/repo.git`) and SSH private keys are not supported.
 
 :::info[Credential Shapes]
 

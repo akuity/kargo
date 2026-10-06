@@ -16,7 +16,7 @@ test('repoUrlError applies the shared repo URL rules to a credential', () => {
     repoUrlError(credential({ type: 'helm', repoURL: 'oci://ghcr.io/akuity' }))
   ).toBeUndefined();
   expect(repoUrlError(credential({ type: 'git', repoURL: 'not a url' }))).toBe(
-    'Repo URL must be a valid git URL.'
+    'Repo URL must be a valid HTTP(S) git URL.'
   );
   expect(
     repoUrlError(credential({ type: 'git', repoURL: 'github.com/*', repoURLIsRegex: true }))

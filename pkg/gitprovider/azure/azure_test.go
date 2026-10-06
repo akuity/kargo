@@ -730,16 +730,6 @@ func TestGetCommitURL(t *testing.T) {
 		expectedCommitURL string
 	}{
 		{
-			repoURL:           "ssh://git@ssh.dev.azure.com/akuity/_git/kargo",
-			sha:               "sha",
-			expectedCommitURL: "https://dev.azure.com/akuity/_git/kargo/commit/sha",
-		},
-		{
-			repoURL:           "git@ssh.dev.azure.com:v3/akuity/_git/kargo",
-			sha:               "sha",
-			expectedCommitURL: "https://dev.azure.com/akuity/_git/kargo/commit/sha",
-		},
-		{
 			repoURL:           "http://dev.azure.com/akuity/_git/kargo",
 			sha:               "sha",
 			expectedCommitURL: "https://dev.azure.com/akuity/_git/kargo/commit/sha",

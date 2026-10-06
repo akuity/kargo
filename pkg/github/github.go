@@ -67,8 +67,8 @@ func NewClient(
 }
 
 // ParseRepoURL parses a Git repository URL and extracts the URL scheme, host,
-// repository owner, and repository name. It handles standard HTTPS URLs, SSH
-// URLs, and GitHub Enterprise URLs.
+// repository owner, and repository name. It handles standard HTTP(S) URLs
+// and GitHub Enterprise URLs.
 func ParseRepoURL(
 	repoURL string,
 ) (string, string, string, string, error) {

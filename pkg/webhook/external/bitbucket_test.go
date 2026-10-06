@@ -360,44 +360,6 @@ func TestBitbucketHandler(t *testing.T) {
 			},
 		},
 		{
-			name:       "bitbucket server refreshed ssh url",
-			secretData: testSecretData,
-			client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
-				&kargoapi.Warehouse{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: testProjectName,
-						Name:      "fake-warehouse",
-					},
-					Spec: kargoapi.WarehouseSpec{
-						InternalSubscriptions: []kargoapi.RepoSubscription{{
-							Git: &kargoapi.GitSubscription{
-								RepoURL: "ssh://git@bitbucket.example.org:7999/example/repo.git",
-							},
-						}},
-					},
-				},
-			).WithIndex(
-				&kargoapi.Warehouse{},
-				indexer.WarehousesBySubscribedURLsField,
-				indexer.WarehousesBySubscribedURLs,
-			).Build(),
-			req: func() *http.Request {
-				bodyBuf := bytes.NewBuffer([]byte(pushEventRequestBodyBitbucketServer))
-				req := httptest.NewRequest(http.MethodPost, testURL, bodyBuf)
-				req.Header.Set(bitbucketEventHeader, bitbucketRefsChangedEvent)
-				req.Header.Set(bitbucketSignatureHeader, sign(bodyBuf.Bytes()))
-				return req
-			},
-			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
-				require.Equal(t, http.StatusOK, rr.Code)
-				require.JSONEq(
-					t,
-					`{"msg":"refreshed 1 warehouse(s)"}`,
-					rr.Body.String(),
-				)
-			},
-		},
-		{
 			name:       "pullrequest:fulfilled refreshes matching Promotion",
 			secretData: testSecretData,
 			client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(

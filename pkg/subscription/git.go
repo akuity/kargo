@@ -57,10 +57,7 @@ func newGitSubscriber(
 
 var (
 	// nolint: lll
-	// TODO(v1.13.0): Remove SSH/SCP-style URL support from this regex. The
-	// first alternation allows ssh as a scheme; the second alternation handles
-	// SCP-style URLs entirely.
-	gitURLRegex = regexp.MustCompile(`(?:^(ssh|https?)://(?:([\w-]+)(:(.+))?@)?([\w-]+(?:\.[\w-]+)*)(?::(\d{1,5}))?(/.*)$)|(?:^([\w-]+)@([\w+]+(?:\.[\w-]+)*):(/?.*))`)
+	gitURLRegex = regexp.MustCompile(`^https?://(?:([\w-]+)(:(.+))?@)?([\w-]+(?:\.[\w-]+)*)(?::(\d{1,5}))?(/.*)$`)
 	branchRegex = regexp.MustCompile(`^[a-zA-Z0-9]([a-zA-Z0-9._\/-]*[a-zA-Z0-9_-])?$`)
 
 	validCommitSelectionStrategies = []kargoapi.CommitSelectionStrategy{
@@ -214,9 +211,8 @@ func (g *gitSubscriber) DiscoverArtifacts(
 	var repoCreds *git.RepoCredentials
 	if creds != nil {
 		repoCreds = &git.RepoCredentials{
-			Username:      creds.Username,
-			Password:      creds.Password,
-			SSHPrivateKey: creds.SSHPrivateKey,
+			Username: creds.Username,
+			Password: creds.Password,
 		}
 		logger.Debug("obtained credentials for git repo")
 	} else {
