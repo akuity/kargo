@@ -326,14 +326,111 @@ true
 {{- end -}}
 
 {{/*
+kargo.migrations.podTemplate renders the migration Job's pod template. It is
+a named template so that kargo.migrations.jobName can hash exactly what
+Kubernetes treats as immutable.
+*/}}
+{{- define "kargo.migrations.podTemplate" -}}
+metadata:
+  labels:
+    {{- include "kargo.labels" . | nindent 4 }}
+    {{- include "kargo.migrations.labels" . | nindent 4 }}
+  {{- with (mergeOverwrite (deepCopy .Values.global.podLabels) .Values.database.migrations.podLabels) }}
+    {{- range $key, $value := . }}
+    {{ $key }}: {{ $value | quote }}
+    {{- end }}
+  {{- end }}
+  annotations:
+    configmap/checksum: {{ pick ( include (print $.Template.BasePath "/migrations/configmap.yaml") . | fromYaml ) "data" | toYaml | sha256sum }}
+  {{- with (mergeOverwrite (deepCopy .Values.global.podAnnotations) .Values.database.migrations.podAnnotations) }}
+    {{- range $key, $value := . }}
+    {{ $key }}: {{ $value | quote }}
+    {{- end }}
+  {{- end }}
+spec:
+  # Each attempt gets a fresh Pod whose logs survive for inspection.
+  restartPolicy: Never
+  serviceAccountName: kargo-migrate
+  {{- with .Values.database.migrations.affinity | default .Values.global.affinity }}
+  affinity:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  {{- with .Values.database.migrations.priorityClassName | default .Values.global.priorityClassName }}
+  priorityClassName: {{ . }}
+  {{- end }}
+  {{- with .Values.image.pullSecrets }}
+  imagePullSecrets:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  containers:
+  - name: migrate
+    image: {{ include "kargo.image" . }}
+    imagePullPolicy: {{ .Values.image.pullPolicy }}
+    command: ["/sbin/tini", "--", "/usr/local/bin/kargo"]
+    args: ["migrate"]
+    env:
+    {{- if .Values.database.postgres.enabled }}
+    # The bundled database: the binary composes the connection string from
+    # these parts, escaping the password, which a $(VAR) reference could
+    # not.
+    - name: DATABASE_HOST
+      value: kargo-postgres.{{ .Release.Namespace }}.svc
+    - name: DATABASE_PORT
+      value: "5432"
+    - name: DATABASE_NAME
+      value: kargo
+    - name: DATABASE_USER
+      value: kargo
+    - name: DATABASE_PASSWORD
+      valueFrom:
+        secretKeyRef:
+          name: {{ include "kargo.postgres.secretName" . }}
+          key: password
+    - name: DATABASE_SSL_MODE
+      value: disable
+    {{- else }}
+    - name: DATABASE_URL
+      valueFrom:
+        secretKeyRef:
+          name: {{ .Values.database.external.secretName }}
+          key: {{ .Values.database.external.secretKey }}
+    {{- end }}
+    {{- with (concat .Values.global.env .Values.database.migrations.env) }}
+    {{- tpl (toYaml .) $ | nindent 4 }}
+    {{- end }}
+    envFrom:
+    - configMapRef:
+        name: kargo-migrate
+    {{- with (concat .Values.global.envFrom .Values.database.migrations.envFrom) }}
+    {{- tpl (toYaml .) $ | nindent 4 }}
+    {{- end }}
+    {{- with .Values.database.migrations.securityContext | default .Values.global.securityContext }}
+    securityContext:
+      {{- toYaml . | nindent 6 }}
+    {{- end }}
+    resources:
+      {{- toYaml .Values.database.migrations.resources | nindent 6 }}
+  {{- with .Values.database.migrations.nodeSelector | default .Values.global.nodeSelector }}
+  nodeSelector:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  {{- with .Values.database.migrations.tolerations | default .Values.global.tolerations }}
+  tolerations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+{{- end -}}
+
+{{/*
 kargo.migrations.jobName returns a name for the migration Job that changes
-whenever anything that shapes its pod does. A Job's pod template is immutable,
-so an upgrade that would change it must create a new Job rather than patch
-the old one. Re-running against an already-migrated database is a no-op.
+whenever its pod template does. A Job's pod template is immutable, so an
+upgrade that would change it must create a new Job rather than patch the old
+one, and an upgrade that leaves it alone must not. Hashing the rendered
+template rather than selected values keeps the two in step and keeps the
+database password, which some values carry, out of a resource name.
+Re-running against an already-migrated database is a no-op.
 */}}
 {{- define "kargo.migrations.jobName" -}}
-{{- $fingerprint := printf "%s|%s|%s" (include "kargo.image" .) (toYaml .Values.database.migrations) (toYaml .Values.database) | sha256sum | trunc 10 -}}
-kargo-migrate-{{ $fingerprint }}
+kargo-migrate-{{ include "kargo.migrations.podTemplate" . | sha256sum | trunc 10 }}
 {{- end -}}
 
 {{/*
