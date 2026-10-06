@@ -110,6 +110,9 @@ rules:
 - apiGroups:
   - rbac.authorization.k8s.io
   resources:
+  # clusterrolebindings is read by the escalation check on ServiceAccounts
+  # carrying OIDC claim annotations.
+  - clusterrolebindings
   - clusterroles
   - rolebindings
   - roles

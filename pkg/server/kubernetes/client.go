@@ -256,6 +256,14 @@ func newDefaultCluster(
 				Cache: &libClient.CacheOptions{
 					DisableFor: []libClient.Object{
 						&corev1.Secret{},
+						// ClusterRoleBindings are read only by the escalation check
+						// on claim-annotated ServiceAccount writes, which is too rare
+						// to justify caching every binding in the cluster. Reading
+						// them uncached also means a missing list permission
+						// surfaces as an immediate Forbidden error; a cached read
+						// would instead block the request on an informer that can
+						// never sync.
+						&rbacv1.ClusterRoleBinding{},
 					},
 				},
 			}
