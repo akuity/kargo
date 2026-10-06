@@ -34,8 +34,9 @@ database has not yet seen, then exit. Concurrent invocations serialize on a
 database-level lock, so running more than one at a time is safe.
 
 The database is described by DATABASE_URL, or by DATABASE_HOST and its
-companions. Connection attempts are retried until DATABASE_CONNECT_TIMEOUT
-elapses, since the database may still be starting.`,
+companions. While the database is unreachable or still starting, connection
+attempts are retried until DATABASE_CONNECT_TIMEOUT elapses. Other failures,
+such as a rejected password, are reported immediately.`,
 		DisableAutoGenTag: true,
 		SilenceErrors:     true,
 		SilenceUsage:      true,

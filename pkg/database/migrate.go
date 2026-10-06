@@ -7,6 +7,7 @@ import (
 	"io/fs"
 	"time"
 
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/jackc/pgx/v5/stdlib"
 	"github.com/pressly/goose/v3"
@@ -129,22 +130,31 @@ func (m *migrator) target() int64 {
 	return target
 }
 
-// ConnectWithRetry opens a pool as NewPool does, but keeps retrying until the
-// database accepts a connection or timeout elapses. Components start before
-// the database is ready more often than not, so a refused connection at
-// startup is expected rather than fatal.
+// ConnectWithRetry opens a pool as NewPool does, but keeps retrying while the
+// database is unreachable or still starting, until it accepts a connection or
+// timeout elapses. Components start before the database is ready more often
+// than not, so those failures are expected rather than fatal. Anything else,
+// such as a malformed connection string, a wrong password, or a database that
+// does not exist, will not fix itself and fails immediately.
 func ConnectWithRetry(
 	ctx context.Context,
 	connString string,
 	applicationName string,
 	timeout time.Duration,
 ) (*pgxpool.Pool, error) {
+	cfg, err := newPoolConfig(connString, applicationName)
+	if err != nil {
+		return nil, err
+	}
 	logger := logging.LoggerFromContext(ctx)
 	deadline := time.Now().Add(timeout)
 	for {
-		pool, err := NewPool(ctx, connString, applicationName)
+		pool, err := newPoolFromConfig(ctx, cfg)
 		if err == nil {
 			return pool, nil
+		}
+		if !isTransientConnectError(err) {
+			return nil, err
 		}
 		if time.Now().After(deadline) {
 			return nil, fmt.Errorf(
@@ -162,6 +172,35 @@ func ConnectWithRetry(
 
 // connectRetryInterval is how long ConnectWithRetry waits between attempts.
 const connectRetryInterval = 2 * time.Second
+
+// SQLSTATE codes the server answers with while it is not ready to take a
+// connection yet, which clear on their own.
+const (
+	// sqlStateCannotConnectNow is "the database system is starting up" (or
+	// shutting down).
+	sqlStateCannotConnectNow = "57P03"
+	// sqlStateTooManyConnections is the server's connection limit being hit,
+	// which other components' retries would release.
+	sqlStateTooManyConnections = "53300"
+)
+
+// isTransientConnectError reports whether a connection failure is worth
+// waiting out. A failure to reach the server at all, such as a refused
+// connection, a DNS miss, or a timeout, is transient: the database is most
+// likely still starting. So is a server that answers but is not ready yet.
+// Any other answer from the server, such as a rejected password or an unknown
+// database, is a configuration error that no amount of waiting will fix.
+func isTransientConnectError(err error) bool {
+	var pgErr *pgconn.PgError
+	if !errors.As(err, &pgErr) {
+		return true
+	}
+	switch pgErr.Code {
+	case sqlStateCannotConnectNow, sqlStateTooManyConnections:
+		return true
+	}
+	return false
+}
 
 // gooseLogger adapts Kargo's logger to the interface Goose logs through.
 type gooseLogger struct {
