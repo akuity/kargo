@@ -1000,8 +1000,15 @@ func (r *reconciler) ensureDefaultUserRoles(
 				},
 				{ // View access to Kargo resources
 					APIGroups: []string{kargoapi.GroupVersion.Group},
-					Resources: []string{"freights", "stages", "warehouses", "projectconfigs"},
-					Verbs:     []string{"get", "list", "watch"},
+					Resources: []string{
+						"freights",
+						"projectconfigs",
+						"promotionrequests",
+						"stages",
+						"targets",
+						"warehouses",
+					},
+					Verbs: []string{"get", "list", "watch"},
 				},
 				{ // Promote permission on all stages
 					APIGroups: []string{kargoapi.GroupVersion.Group},

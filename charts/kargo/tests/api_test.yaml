@@ -306,3 +306,22 @@ tests:
               - targets
             verbs:
               - "*"
+  - it: grants read access to RBAC resources
+    documentSelector:
+      path: metadata.name
+      value: kargo-api
+    asserts:
+      - contains:
+          path: rules
+          content:
+            apiGroups:
+              - rbac.authorization.k8s.io
+            resources:
+              - clusterrolebindings
+              - clusterroles
+              - rolebindings
+              - roles
+            verbs:
+              - get
+              - list
+              - watch
