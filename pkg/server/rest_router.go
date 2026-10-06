@@ -52,18 +52,11 @@ import (
 // @in header
 // @name Authorization
 // @description Bearer token authentication. Obtain token via OIDC/PKCE flow with your identity provider.
-func (s *server) setupRESTRouter(ctx context.Context) *gin.Engine {
-	// Unconditionally set Gin to "release mode" (as opposed to the default of
-	// "debug mode"). This suppresses Gin-related log noise that we don't want,
-	// even at development time.
-	//
-	// Note: The mode is package-level state, so the following statements reaches
-	// beyond this function. This is tolerable because the engine built below is
-	// the only one the server ever builds. Were we ever to build more, we would,
-	// in all likelihood, want them all to be in release mode as well.
-	gin.SetMode(gin.ReleaseMode)
-
+func (s *server) setupRESTRouter(ctx context.Context) (*gin.Engine, error) {
 	router := gin.New()
+	if err := ConfigureEngine(router, s.cfg); err != nil {
+		return nil, err
+	}
 
 	// Middleware nests, with each layer registered here wrapping the ones
 	// registered after it. Each of the layers below does its work on the way back
@@ -88,7 +81,7 @@ func (s *server) setupRESTRouter(ctx context.Context) *gin.Engine {
 	// have to write its own response. Authentication is innermost of the four so
 	// that its rejections are answered by the error handling middleware, and so
 	// that a panic within it is recovered too.
-	router.Use(LoggingMiddleware())
+	router.Use(LoggingMiddleware(s.cfg))
 	router.Use(s.handleError)
 	router.Use(recoveryMiddleware())
 	if s.cfg.AdminConfig != nil || s.cfg.OIDCConfig != nil {
@@ -336,7 +329,7 @@ func (s *server) setupRESTRouter(ctx context.Context) *gin.Engine {
 		}
 	}
 
-	return router
+	return router, nil
 }
 
 // errorResponse is the body of every error response the REST API sends.

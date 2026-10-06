@@ -182,7 +182,8 @@ func testRESTEndpoint(
 			for key, value := range testCase.headers {
 				req.Header.Set(key, value)
 			}
-			router := s.setupRESTRouter(t.Context())
+			router, err := s.setupRESTRouter(t.Context())
+			require.NoError(t, err)
 
 			router.ServeHTTP(w, req)
 
@@ -289,7 +290,8 @@ func testRESTWatchEndpoint(
 				}()
 			}
 
-			router := s.setupRESTRouter(t.Context())
+			router, err := s.setupRESTRouter(t.Context())
+			require.NoError(t, err)
 			router.ServeHTTP(w, req)
 
 			testCase.assertions(t, w, internalClient)
