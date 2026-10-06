@@ -522,27 +522,42 @@ locally and the client always matches the server.
 
 ### Migrations
 
-The `db-migrate` Tilt resource waits for PostgreSQL to accept a connection,
-then runs the pinned Goose tool to apply pending SQL migrations from
-`db/migrations/`. It runs once at startup. After that, Tilt watches the
-directory and marks the resource as having pending changes, but applies them
-only when you trigger it, from the Tilt UI or with:
+Migrations are embedded in the control plane binary and applied by its
+`migrate` subcommand, which waits for the database to accept a connection,
+takes a database-level lock so concurrent runners serialize, and applies
+whatever is pending. The chart's migration Job runs it on every install and
+upgrade, and Tilt runs that same Job as the `db-migrate` resource, so the Job
+and its connection wiring are exercised in development too. Like the other
+workloads, it deploys once at startup. After that, a change under
+`db/migrations/` recompiles the binary and rebuilds the image, and Tilt marks
+`db-migrate` as having pending changes, but applies them only when you
+trigger it, from the Tilt UI or with:
 
 ```shell
 hack/bin/tilt trigger db-migrate
 ```
 
-This keeps a migration you are still editing from being applied early.
-Migration failures appear in Tilt and are not retried. An empty directory is
-supported while the initial schema is being developed.
+This keeps a migration you are still editing from being applied early. A
+failed migration is retried up to the Job's `backoffLimit`, and each attempt's
+logs appear in Tilt.
 
-To run the same migration command outside Tilt:
+To run the same subcommand from your working tree, outside Tilt:
 
 ```shell
 make db-migrate
 ```
 
-To run other Goose commands, configure your shell:
+To run the database integration tests, which create and drop their own
+databases on the development server:
+
+```shell
+make test-db
+```
+
+Both target `DATABASE_URL`, which defaults to the development database.
+
+The subcommand only applies migrations. For inspecting, rolling back, or
+resetting, use the Goose tool directly after configuring your shell:
 
 ```shell
 export GOOSE_DRIVER=postgres
@@ -552,9 +567,11 @@ export GOOSE_MIGRATION_DIR=db/migrations
 go tool goose status
 ```
 
-`make db-migrate` uses these values by default. Set the same environment
-variables before starting Tilt to override them, for example when using a
-separate development database.
+Migrations must be forward-only and compatible with the previous release's
+code: during a rollout, and after a rollback, pods built from the previous
+release run against the migrated schema. Add a column in one release and
+remove its predecessor in the next rather than renaming in place. Keep a
+`Down` section for local development, but do not rely on it in production.
 
 ### Creating a migration
 

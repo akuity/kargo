@@ -26,6 +26,15 @@ func NewPool(
 	if err != nil {
 		return nil, err
 	}
+	return newPoolFromConfig(ctx, cfg)
+}
+
+// newPoolFromConfig opens a pool for cfg and confirms it can reach the
+// database before returning.
+func newPoolFromConfig(
+	ctx context.Context,
+	cfg *pgxpool.Config,
+) (*pgxpool.Pool, error) {
 	pool, err := pgxpool.NewWithConfig(ctx, cfg)
 	if err != nil {
 		return nil, fmt.Errorf("error creating connection pool: %w", err)

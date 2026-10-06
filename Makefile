@@ -157,6 +157,15 @@ test-unit: install-helm
 		done; \
 	}
 
+# The development database, which db-migrate and test-db target by default.
+DATABASE_URL ?= postgres://kargo:kargo@127.0.0.1:15432/kargo?sslmode=disable
+
+# Runs the database integration tests against DATABASE_URL. Each test creates
+# and drops its own database on that server.
+.PHONY: test-db
+test-db:
+	DATABASE_URL=$(DATABASE_URL) go test -race -count=1 -tags=integration,db ./pkg/database/
+
 ################################################################################
 # Builds                                                                       #
 #                                                                              #
@@ -435,9 +444,12 @@ hack-tilt-up: install-tilt install-helm
 hack-tilt-down: install-tilt
 	PATH="$(EXTENDED_PATH)" $(TILT) down
 
+# Applies pending migrations to the development database through the same
+# subcommand the chart's migration Job runs, so development exercises the
+# production path. Override DATABASE_URL to target another database.
 .PHONY: db-migrate
 db-migrate:
-	bash hack/tilt/migrate.sh
+	DATABASE_URL=$(DATABASE_URL) go run ./cmd/controlplane migrate
 
 # Opens psql inside the development PostgreSQL pod, so no client needs to be
 # installed locally and the client always matches the server.

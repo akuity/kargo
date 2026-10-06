@@ -128,6 +128,39 @@ chart then stores no password itself. This is the recommended approach when
 installing with a GitOps tool such as
 [Argo CD](./20-advanced-installation/20-advanced-with-argocd.md#database-password).
 
+### Schema migrations
+
+On every install and upgrade, the chart runs a Job that applies any pending
+database schema migrations. The migrations are embedded in the Kargo image,
+and the Job applies them with that image's `migrate` subcommand, so the
+schema it produces is the one the installed version expects. It waits for the
+database to accept connections, serializes with any other runner on a
+database-level lock, and leaves its Pod in place after finishing so that its
+logs can be inspected. The next upgrade replaces the Job, and the previous
+one is pruned with it.
+
+The Job is an ordinary resource rather than a Helm hook, so it also works
+when the chart is rendered with `helm template`, as GitOps tools do. Ordering
+does not matter: the Job waits for the database, and Kargo's components
+refuse to serve against a schema that is behind the version they expect.
+
+To apply migrations yourself, for example from a pipeline that manages schema
+changes with its own approvals, set `database.migrations.enabled` to `false`
+and run the same subcommand from the Kargo image against your database:
+
+```shell
+docker run --rm -e DATABASE_URL='postgres://...' ghcr.io/akuity/kargo:<version> migrate
+```
+
+:::note
+The `migrate` subcommand belongs to the control plane binary in the Kargo
+image, not to the `kargo` CLI you install locally.
+:::
+
+Migrations are forward-only and each release's schema remains compatible with
+the previous release's code, so a rollback of Kargo does not require a
+rollback of the schema.
+
 ## Troubleshooting
 
 ### Kargo installation fails with a `401`

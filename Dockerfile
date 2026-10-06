@@ -37,6 +37,7 @@ RUN --mount=type=cache,target=/go/pkg/mod --mount=type=cache,target=/root/.cache
 COPY api/ api/
 COPY pkg/ pkg/
 COPY cmd/ cmd/
+COPY db/ db/
 COPY --from=ui-builder /ui/build pkg/server/ui/
 
 ARG VERSION
