@@ -2,7 +2,6 @@ package commit
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"regexp"
 	"slices"
@@ -72,22 +71,8 @@ func newTagBasedSelector(
 		return nil, err
 	}
 
-	// TODO(v1.13.0): Remove this check after the AllowTags field is removed.
-	if sub.AllowTags != "" { // nolint: staticcheck
-		return nil, errors.New(
-			"AllowTags is deprecated and unsupported as of v1.11.0; use AllowTagsRegexes instead",
-		)
-	}
-
 	if s.ignoreTagsRegexes, err = compileRegexes(sub.IgnoreTagsRegexes); err != nil {
 		return nil, err
-	}
-
-	// TODO(v1.13.0): Remove this check after the IgnoreTags field is removed.
-	if len(sub.IgnoreTags) > 0 { // nolint: staticcheck
-		return nil, errors.New(
-			"IgnoreTags is deprecated and unsupported as of v1.11.0; use IgnoreTagsRegexes instead",
-		)
 	}
 
 	s.filterTagsByDiffPathsFn = s.filterTagsByDiffPaths

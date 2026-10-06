@@ -127,26 +127,6 @@ func TestNewTagBasedSelector(t *testing.T) {
 			},
 		},
 		{
-			// TODO(v1.13.0): Remove this test once AllowTags is removed.
-			name: "error using deprecated AllowTags",
-			sub: kargoapi.GitSubscription{
-				AllowTags: `^v1\.`,
-			},
-			assertions: func(t *testing.T, _ *tagBasedSelector, err error) {
-				require.ErrorContains(t, err, "AllowTags is deprecated")
-			},
-		},
-		{
-			// TODO(v1.13.0): Remove this test once IgnoreTags is removed.
-			name: "error using deprecated IgnoreTags",
-			sub: kargoapi.GitSubscription{
-				IgnoreTags: []string{"v1.0.0"},
-			},
-			assertions: func(t *testing.T, _ *tagBasedSelector, err error) {
-				require.ErrorContains(t, err, "IgnoreTags is deprecated")
-			},
-		},
-		{
 			name: "error compiling AllowTagsRegexes",
 			sub: kargoapi.GitSubscription{
 				RepoURL:          "https://github.com/example/repo.git",
