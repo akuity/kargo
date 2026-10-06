@@ -123,8 +123,9 @@ func (w *webhook) ValidateCreate(
 // leaves the spec unchanged (e.g. a refresh annotation) is permitted even if
 // the spec no longer passes validation (e.g. because it subscribes to an SSH
 // URL, support for which has been removed), so that a Warehouse that has yet
-// to be migrated can still be refreshed, relabeled, or annotated. Any other
-// update must yield a valid spec.
+// to be migrated can still be refreshed, relabeled, or annotated. This applies
+// to any validation that has become stricter since the Warehouse was written.
+// Any other update must yield a valid spec.
 func (w *webhook) ValidateUpdate(
 	ctx context.Context,
 	oldWarehouse *kargoapi.Warehouse,
