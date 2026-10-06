@@ -105,6 +105,17 @@ func (r *FleetStageReconciler) SetupWithManager(
 		)
 	}
 
+	if err := sharedIndexer.IndexField(
+		ctx,
+		&kargoapi.PromotionRequest{},
+		indexer.PromotionRequestsByStageAndFreightField,
+		indexer.PromotionRequestsByStageAndFreight,
+	); err != nil {
+		return fmt.Errorf(
+			"error setting up index for PromotionRequests by Stage and Freight: %w", err,
+		)
+	}
+
 	// This index is used to find Freight that are directly available from a
 	// Warehouse and can be automatically promoted to a Stage.
 	if err := sharedIndexer.IndexField(
