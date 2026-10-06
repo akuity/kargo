@@ -96,6 +96,47 @@ describe('dialect', () => {
   });
 });
 
+describe('types', () => {
+  // The six types a structural schema may declare. draft-04 adds `null`, which
+  // a CRD reaches through `nullable` instead.
+  test.each(['array', 'boolean', 'integer', 'number', 'object', 'string'])('accepts %s', (type) => {
+    expect(convert({ type }).type).toBe(type);
+  });
+
+  test('rejects a type it does not recognize', () => {
+    expect(() => convert({ type: 'null' })).toThrow('test/type: unrecognized type "null"');
+  });
+
+  test('names the path to an unrecognized type', () => {
+    expect(() => convert({ properties: { spec: { type: 'any' } } })).toThrow(
+      'test/properties/spec/type: unrecognized type "any"'
+    );
+  });
+});
+
+describe('formats', () => {
+  test.each(['date-time', 'email', 'hostname', 'int32', 'int64', 'ipv4', 'ipv6', 'uri'])(
+    'accepts %s',
+    (format) => {
+      expect(convert({ type: 'string', format }).format).toBe(format);
+    }
+  );
+
+  // Each of these carries a constraint draft-04 cannot express, so passing it
+  // through would quietly drop that constraint.
+  test.each(['byte', 'double', 'float'])('rejects %s', (format) => {
+    expect(() => convert({ type: 'string', format })).toThrow(
+      `test/format: unrecognized format "${format}"`
+    );
+  });
+
+  test('names the path to an unrecognized format', () => {
+    expect(() => convert({ properties: { data: { type: 'string', format: 'byte' } } })).toThrow(
+      'test/properties/data/format: unrecognized format "byte"'
+    );
+  });
+});
+
 describe('integer bounds', () => {
   test('int32 gains the bounds its format implies', () => {
     expect(convert({ type: 'integer', format: 'int32' })).toMatchObject({
@@ -153,6 +194,31 @@ describe('nullable', () => {
 
   test('is never emitted, since draft-04 has no such keyword', () => {
     expect(convert({ type: 'string', nullable: true }).nullable).toBeUndefined();
+  });
+
+  // Widening `type` cannot admit null past a sibling that already narrows the
+  // accepted values, so the conversion refuses rather than losing the null.
+  test.each([
+    ['allOf', [{ type: 'string' }]],
+    ['anyOf', [{ type: 'string' }]],
+    ['enum', ['a', 'b']],
+    ['oneOf', [{ type: 'string' }]]
+  ])('is rejected alongside %s', (keyword, value) => {
+    expect(() => convert({ type: 'string', nullable: true, [keyword]: value })).toThrow(
+      `test/nullable: null stays excluded by the sibling \`${keyword}\``
+    );
+  });
+
+  test.each(['allOf', 'anyOf', 'oneOf'])('leaves %s alone when not nullable', (keyword) => {
+    expect(() =>
+      convert({ type: 'string', nullable: false, [keyword]: [{ type: 'string' }] })
+    ).not.toThrow();
+  });
+
+  test('names the path to a conflict', () => {
+    expect(() =>
+      convert({ properties: { a: { type: 'string', nullable: true, enum: ['x'] } } })
+    ).toThrow('test/properties/a/nullable: null stays excluded by the sibling `enum`');
   });
 });
 

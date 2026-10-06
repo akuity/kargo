@@ -72,6 +72,21 @@ const subSchemaKeywords = [
 // a CRD is free to declare a property called "nullable" or "items".
 const subSchemaMapKeywords = ['definitions', 'patternProperties', 'properties'];
 
+// The types JSONSchemaProps can declare. draft-04 also has `null`, but a CRD
+// spells that with `nullable` instead.
+const knownTypes = ['array', 'boolean', 'integer', 'number', 'object', 'string'];
+
+// Formats that mean the same thing to a draft-04 validator as they do to the
+// API server, plus the integer formats that become bounds below. Kubernetes
+// accepts others, but some carry a constraint draft-04 cannot see -- `byte` is
+// base64, `float` and `double` are bounded -- so they are rejected rather than
+// passed through with that constraint silently dropped.
+const knownFormats = ['date-time', 'email', 'hostname', 'int32', 'int64', 'ipv4', 'ipv6', 'uri'];
+
+// Keywords that already pin down which values a schema admits, so `nullable`
+// cannot be folded into `type` alone without null still being rejected.
+const nullableConflicts = ['allOf', 'anyOf', 'enum', 'oneOf'];
+
 // An integer format implies bounds that draft-04 states outright.
 const integerBounds = {
   int32: { minimum: -2147483648, maximum: 2147483647 },
@@ -123,6 +138,31 @@ const convertSchema = (schema, schemaPath) => {
     } else {
       throw new Error(
         `${keywordPath}: unrecognized schema keyword; ` +
+          'teach hack/crd-to-json-schema.mjs how to convert it'
+      );
+    }
+  }
+
+  // The loop above vets keyword names. These vet the handful of values that
+  // decide what the conversion does, so an unfamiliar one stops codegen here
+  // rather than reaching a validator that reads it differently.
+  if (converted.type !== undefined && !knownTypes.includes(converted.type)) {
+    throw new Error(
+      `${schemaPath}/type: unrecognized type ${JSON.stringify(converted.type)}; ` +
+        'teach hack/crd-to-json-schema.mjs how to convert it'
+    );
+  }
+  if (converted.format !== undefined && !knownFormats.includes(converted.format)) {
+    throw new Error(
+      `${schemaPath}/format: unrecognized format ${JSON.stringify(converted.format)}; ` +
+        'teach hack/crd-to-json-schema.mjs how to convert it'
+    );
+  }
+  if (schema.nullable === true) {
+    const conflict = nullableConflicts.find((keyword) => converted[keyword] !== undefined);
+    if (conflict) {
+      throw new Error(
+        `${schemaPath}/nullable: null stays excluded by the sibling \`${conflict}\`; ` +
           'teach hack/crd-to-json-schema.mjs how to convert it'
       );
     }
