@@ -87,7 +87,7 @@ k8s_resource(
 # Migrations are applied once at startup and then only on a manual trigger, so
 # that a migration being written is never applied before it is finished. Tilt
 # still watches db/migrations and marks the resource as having pending changes.
-# This runs the same `kargo migrate` subcommand as the chart's migration Job,
+# This runs the same `migrate` subcommand as the chart's migration Job,
 # which values.dev.yaml disables in favor of this resource.
 #
 # Tilt holds a local_resource until no other update is in flight unless it is

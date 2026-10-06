@@ -1402,7 +1402,7 @@ webhooksServer:
 ## reference to an external one.
 database:
   migrations:
-    ## @param database.migrations.enabled Whether to run a Job that applies pending database schema migrations on every install and upgrade. It runs `kargo migrate` from the Kargo image against whichever database is configured below, waits for the database to accept connections, and serializes with any concurrent runner on a database-level lock. It is an ordinary Job rather than a Helm hook so that it also works when the chart is rendered with `helm template`, for example by Argo CD. Disable it to apply migrations yourself with `kargo migrate`; Kargo's components refuse to serve against a schema that is behind the version they expect.
+    ## @param database.migrations.enabled Whether to run a Job that applies pending database schema migrations on every install and upgrade. It runs the Kargo image's `migrate` subcommand against whichever database is configured below, waits for the database to accept connections, and serializes with any concurrent runner on a database-level lock. It is an ordinary Job rather than a Helm hook so that it also works when the chart is rendered with `helm template`, for example by Argo CD. Disable it to apply migrations some other way, for example from a pipeline that manages schema changes with its own approvals; Kargo's components refuse to serve against a schema that is behind the version they expect.
     enabled: true
     ## @param database.migrations.backoffLimit Number of times a failed migration Job is retried. A migration that fails should be investigated, not retried indefinitely.
     backoffLimit: 3
