@@ -1215,11 +1215,6 @@ func (in *GitSubscription) DeepCopyInto(out *GitSubscription) {
 		*out = make([]string, len(*in))
 		copy(*out, *in)
 	}
-	if in.IgnoreTags != nil {
-		in, out := &in.IgnoreTags, &out.IgnoreTags
-		*out = make([]string, len(*in))
-		copy(*out, *in)
-	}
 	if in.IgnoreTagsRegexes != nil {
 		in, out := &in.IgnoreTagsRegexes, &out.IgnoreTagsRegexes
 		*out = make([]string, len(*in))
@@ -1397,11 +1392,6 @@ func (in *ImageSubscription) DeepCopyInto(out *ImageSubscription) {
 	*out = *in
 	if in.AllowTagsRegexes != nil {
 		in, out := &in.AllowTagsRegexes, &out.AllowTagsRegexes
-		*out = make([]string, len(*in))
-		copy(*out, *in)
-	}
-	if in.IgnoreTags != nil {
-		in, out := &in.IgnoreTags, &out.IgnoreTags
 		*out = make([]string, len(*in))
 		copy(*out, *in)
 	}

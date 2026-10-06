@@ -37,23 +37,12 @@
    "type": "string",
    "description": "SemverConstraint specifies constraints on what new tagged commits are considered in determining the newest commit of interest. Only has effect when CommitSelectionStrategy is SemVer."
   },
-  "allowTags": {
-   "type": "string",
-   "description": "AllowTags is a regular expression that can optionally be used to limit the tags that are considered in determining the newest commit of interest. Deprecated: Use allowTagsRegexes instead."
-  },
   "allowTagsRegexes": {
    "type": "array",
    "items": {
     "type": "string"
    },
    "description": "AllowTagsRegexes is a list of regular expressions that can optionally be used to limit the tags that are considered. Only has effect when CommitSelectionStrategy is Lexical, NewestTag, or SemVer."
-  },
-  "ignoreTags": {
-   "type": "array",
-   "items": {
-    "type": "string"
-   },
-   "description": "IgnoreTags is a list of tags that must be ignored when determining the newest commit of interest. Deprecated: Use ignoreTagsRegexes instead."
   },
   "ignoreTagsRegexes": {
    "type": "array",
