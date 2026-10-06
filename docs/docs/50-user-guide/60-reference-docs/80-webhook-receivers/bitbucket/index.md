@@ -102,48 +102,19 @@ kubectl get projectconfigs kargo-demo \
 
 ## Registering with Bitbucket
 
-Webhooks can be registered for a single repository or for an entire workspace.
-A workspace webhook is triggered by events from _all_ repositories belonging to
-that workspace, which spares you from registering the same webhook
-repeatedly.
+Webhooks can be registered for a single repository or, in Bitbucket Cloud, for
+an entire workspace.
 
-1. Navigate to the webhooks dashboard.
+### Repository Webhooks
 
-    Where you can find these settings varies based on the scope at which you'd
-    like to enable your webhook.
+To configure a single Bitbucket repository to notify a receiver of relevant
+events:
 
-    <Tabs groupId="navigation">
-    <TabItem value="repository-scope" label="Repository Scope" default>
-
-    Navigate to
-    `https://bitbucket.org/<workspace>/<repository>/admin/webhooks`, where
-    `<workspace>` has been replaced with a Bitbucket workspace and
-    `<repository>` has been replaced with the name of a repository belonging to
-    that workspace and for which you are an administrator.
-
-    </TabItem>
-    <TabItem value="workspace-scope" label="Workspace Scope">
-
-    Navigate to
-    `https://bitbucket.org/<workspace>/workspace/settings/webhooks`, where
-    `<workspace>` has been replaced with a Bitbucket workspace of which you are
-    an owner.
-
-    :::note
-
-    Only workspace owners can register workspace webhooks. Workspace webhooks
-    are available only in Bitbucket Cloud.
-    :::
-
-    </TabItem>
-    </Tabs>
-
-    :::caution
-
-    If you register identical webhooks affecting a given repository at _both_
-    the repository level and workspace level, both webhooks will be triggered
-    by applicable events in that repository.
-    :::
+1. Navigate to
+   `https://bitbucket.org/<workspace>/<repository>/admin/webhooks` where
+   `<workspace>` has been replaced with a Bitbucket workspace and `<repository>`
+   has been replaced with the name of a repository belonging to that workspace
+   and for which you are an administrator.
 
 1. Click <Hlt>Add webhook</Hlt>.
 
@@ -185,7 +156,7 @@ repeatedly.
 
     1. Click <Hlt>Save</Hlt>.
 
-1. Verify that the new webhook appears in the list of webhooks.
+1. Verify that the new webhook appears under <Hlt>Repository hooks</Hlt>.
 
 1. If you'd like to record outbound webhook requests for troubleshooting
    purposes:
@@ -196,8 +167,89 @@ repeatedly.
 
     ![Enable History](./img/enable-history.png "Enabled History")
 
-When these steps are complete, the repository (or, for a workspace webhook,
-every repository in the workspace) will send events to the webhook receiver.
+When these steps are complete, the repository will send events to the webhook
+receiver.
+
+### Workspace Webhooks
+
+A Bitbucket Cloud workspace webhook is triggered by events from _all_
+repositories belonging to that workspace, which spares you from registering the
+same webhook on each repository individually.
+
+:::note
+
+Bitbucket Cloud does not offer a UI for managing workspace webhooks. They can
+only be managed using the
+[Bitbucket Cloud REST API](https://developer.atlassian.com/cloud/bitbucket/rest/api-group-workspaces/#api-workspaces-workspace-hooks-post),
+and only by owners of the workspace.
+
+:::
+
+To configure all repositories in a Bitbucket Cloud workspace to notify a
+receiver of relevant events:
+
+1. [Create an Atlassian API token with scopes](https://support.atlassian.com/bitbucket-cloud/docs/create-an-api-token/),
+   selecting <Hlt>Bitbucket</Hlt> as the app and granting the following
+   scopes:
+
+    - `read:webhook:bitbucket`
+    - `write:webhook:bitbucket`
+    - `read:repository:bitbucket`
+    - `read:pullrequest:bitbucket`
+
+1. Register the webhook using a command such as the following:
+
+    ```shell
+    curl -X POST \
+      -u "<email>:<api-token>" \
+      -H "Content-Type: application/json" \
+      https://api.bitbucket.org/2.0/workspaces/<workspace>/hooks \
+      -d '{
+        "description": "Kargo",
+        "url": "<receiver-url>",
+        "active": true,
+        "secret": "<secret>",
+        "events": [
+          "repo:push",
+          "pullrequest:fulfilled",
+          "pullrequest:rejected"
+        ]
+      }'
+    ```
+
+    Replace:
+
+    - `<email>` with the email address of your Atlassian account.
+    - `<api-token>` with the API token created in the previous step.
+    - `<workspace>` with the Bitbucket workspace.
+    - `<receiver-url>` with the URL
+      [for the webhook receiver](#retrieving-the-receivers-url).
+    - `<secret>` with the (unencoded) value assigned to the `secret` key of
+      the `Secret` resource referenced by the
+      [webhook receiver's configuration](#configuring-the-receiver).
+
+    The `pullrequest:fulfilled` and `pullrequest:rejected` events are only
+    needed if you use PR-based promotion workflows (i.e. promotions that
+    include a
+    [`git-wait-for-pr`](../../30-promotion-steps/git-wait-for-pr.md) step).
+
+1. Verify that the new webhook is registered:
+
+    ```shell
+    curl -u "<email>:<api-token>" \
+      https://api.bitbucket.org/2.0/workspaces/<workspace>/hooks
+    ```
+
+When these steps are complete, every repository in the workspace will send
+events to the webhook receiver.
+
+:::caution
+
+If you register identical webhooks affecting a given repository at _both_ the
+repository level and the workspace level, both webhooks will be triggered by
+applicable events in that repository.
+
+:::
 
 :::info
 
