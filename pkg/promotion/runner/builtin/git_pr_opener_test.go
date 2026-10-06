@@ -46,7 +46,7 @@ func Test_gitPROpener_convert(t *testing.T) {
 				"repoURL": "ssh://git@github.com/example/repo.git",
 			},
 			expectedProblems: []string{
-				"repoURL: Does not match pattern '^[Hh][Tt][Tt][Pp][Ss]?://'",
+				"repoURL: Does not match pattern '^https?://'",
 			},
 		},
 		{
@@ -55,7 +55,7 @@ func Test_gitPROpener_convert(t *testing.T) {
 				"repoURL": "git@github.com:example/repo.git",
 			},
 			expectedProblems: []string{
-				"repoURL: Does not match pattern '^[Hh][Tt][Tt][Pp][Ss]?://'",
+				"repoURL: Does not match pattern '^https?://'",
 			},
 		},
 		{

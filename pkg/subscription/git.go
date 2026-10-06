@@ -108,7 +108,7 @@ func (g *gitSubscriber) ValidateSubscription(
 		errs = append(errs, field.Invalid(
 			f.Child("repoURL"),
 			sub.RepoURL,
-			"must be a valid Git repository URL",
+			"must be a valid Git repository URL; only HTTP(S) URLs are supported",
 		))
 	}
 

@@ -476,6 +476,17 @@ func Test_gitSubscriber_ValidateSubscription(t *testing.T) {
 			},
 		},
 		{
+			name: "RepoURL is an SSH URL",
+			sub: kargoapi.GitSubscription{
+				RepoURL: "git@github.com:akuity/kargo.git",
+			},
+			assertions: func(t *testing.T, errs field.ErrorList) {
+				require.NotEmpty(t, errs)
+				require.Equal(t, "git.repoURL", errs[0].Field)
+				require.Contains(t, errs[0].Detail, "only HTTP(S) URLs are supported")
+			},
+		},
+		{
 			name: "Branch too long",
 			sub: kargoapi.GitSubscription{
 				RepoURL: "https://github.com/akuity/kargo.git",

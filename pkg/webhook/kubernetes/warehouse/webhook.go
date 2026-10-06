@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"strings"
 
-	"k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	k8sValidation "k8s.io/apimachinery/pkg/util/validation"
@@ -119,46 +118,15 @@ func (w *webhook) ValidateCreate(
 	return nil, nil
 }
 
-// ValidateUpdate validates the spec of an updated Warehouse. An update that
-// leaves the spec unchanged (e.g. a refresh annotation) is permitted even if
-// the spec no longer passes validation (e.g. because it subscribes to an SSH
-// URL, support for which has been removed), so that a Warehouse that has yet
-// to be migrated can still be refreshed, relabeled, or annotated. This applies
-// to any validation that has become stricter since the Warehouse was written.
-// Any other update must yield a valid spec.
 func (w *webhook) ValidateUpdate(
 	ctx context.Context,
-	oldWarehouse *kargoapi.Warehouse,
+	_ *kargoapi.Warehouse,
 	warehouse *kargoapi.Warehouse,
 ) (admission.Warnings, error) {
-	errs := w.validateSpec(ctx, field.NewPath("spec"), &warehouse.Spec)
-	if len(errs) > 0 && !w.specUnchanged(ctx, oldWarehouse, warehouse) {
+	if errs := w.validateSpec(ctx, field.NewPath("spec"), &warehouse.Spec); len(errs) > 0 {
 		return nil, apierrors.NewInvalid(warehouseGroupKind, warehouse.Name, errs)
 	}
 	return nil, nil
-}
-
-// specUnchanged reports whether an update leaves the Warehouse's spec as it
-// was. oldWarehouse is defaulted first, just as the defaulting webhook has
-// already defaulted warehouse, so that defaults introduced since oldWarehouse
-// was last written don't count as changes.
-func (w *webhook) specUnchanged(
-	ctx context.Context,
-	oldWarehouse *kargoapi.Warehouse,
-	warehouse *kargoapi.Warehouse,
-) bool {
-	if oldWarehouse == nil {
-		return false
-	}
-	old := oldWarehouse.DeepCopy()
-	if err := w.Default(ctx, old); err != nil {
-		return false
-	}
-	// Default() only updates InternalSubscriptions, so the raw Subscriptions,
-	// which aren't defaulted, are left out of the comparison.
-	oldSpec, newSpec := old.Spec, warehouse.Spec
-	oldSpec.Subscriptions, newSpec.Subscriptions = nil, nil
-	return equality.Semantic.DeepEqual(oldSpec, newSpec)
 }
 
 func (w *webhook) ValidateDelete(
