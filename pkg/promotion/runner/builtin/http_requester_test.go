@@ -3,6 +3,7 @@ package builtin
 import (
 	"bytes"
 	"context"
+	"errors"
 	"io"
 	"maps"
 	"net/http"
@@ -1749,11 +1750,7 @@ func Test_httpRequester_run_download(t *testing.T) {
 				require.JSONEq(t, `{"theMeaningOfLife": 42}`, string(content))
 				require.Equal(t, float64(42), res.Output["meaning"])
 				// No temp files left behind.
-				entries, err := os.ReadDir(filepath.Join(workDir, "downloads"))
-				require.NoError(t, err)
-				for _, e := range entries {
-					require.NotContains(t, e.Name(), ".tmp")
-				}
+				requireNoTempFiles(t, filepath.Join(workDir, "downloads"))
 			},
 		},
 		{
@@ -1769,11 +1766,12 @@ func Test_httpRequester_run_download(t *testing.T) {
 			handler: func(_ http.ResponseWriter, _ *http.Request) {
 				t.Error("request must not be sent when the file exists and overwrite is disallowed")
 			},
-			assert: func(t *testing.T, _ string, res promotion.StepResult, err error) {
+			assert: func(t *testing.T, workDir string, res promotion.StepResult, err error) {
 				require.Error(t, err)
 				var termErr *promotion.TerminalError
 				require.ErrorAs(t, err, &termErr)
 				require.Equal(t, kargoapi.PromotionStepStatusFailed, res.Status)
+				requireNoTempFiles(t, workDir)
 			},
 		},
 		{
@@ -1840,6 +1838,7 @@ func Test_httpRequester_run_download(t *testing.T) {
 				require.Equal(t, kargoapi.PromotionStepStatusFailed, res.Status)
 				_, statErr := os.Stat(filepath.Join(workDir, "huge.bin"))
 				require.True(t, os.IsNotExist(statErr))
+				requireNoTempFiles(t, workDir)
 			},
 		},
 		{
@@ -1862,6 +1861,7 @@ func Test_httpRequester_run_download(t *testing.T) {
 				require.Equal(t, kargoapi.PromotionStepStatusFailed, res.Status)
 				_, statErr := os.Stat(filepath.Join(workDir, "f.json"))
 				require.True(t, os.IsNotExist(statErr))
+				requireNoTempFiles(t, workDir)
 			},
 		},
 		{
@@ -1877,6 +1877,7 @@ func Test_httpRequester_run_download(t *testing.T) {
 				require.Equal(t, kargoapi.PromotionStepStatusFailed, res.Status)
 				_, statErr := os.Stat(filepath.Join(workDir, "f.json"))
 				require.True(t, os.IsNotExist(statErr))
+				requireNoTempFiles(t, workDir)
 			},
 		},
 		{
@@ -1898,6 +1899,31 @@ func Test_httpRequester_run_download(t *testing.T) {
 				require.Equal(t, kargoapi.PromotionStepStatusErrored, res.Status)
 				_, statErr := os.Stat(filepath.Join(workDir, "f.json"))
 				require.True(t, os.IsNotExist(statErr))
+				requireNoTempFiles(t, workDir)
+			},
+		},
+		{
+			name: "oversized body without declared length fails terminally and removes the temp file",
+			cfg: builtin.HTTPConfig{
+				OutPath: "huge2.bin",
+			},
+			handler: func(w http.ResponseWriter, _ *http.Request) {
+				// No Content-Length is declared, so the cap can only be hit
+				// mid-stream. Write errors are expected once the client hits
+				// the cap and hangs up, so they are ignored.
+				chunk := bytes.Repeat([]byte("x"), 1<<20)
+				for written := int64(0); written <= maxDownloadSize; written += int64(len(chunk)) {
+					_, _ = w.Write(chunk)
+				}
+			},
+			assert: func(t *testing.T, workDir string, res promotion.StepResult, err error) {
+				require.Error(t, err)
+				var termErr *promotion.TerminalError
+				require.ErrorAs(t, err, &termErr)
+				require.Equal(t, kargoapi.PromotionStepStatusFailed, res.Status)
+				_, statErr := os.Stat(filepath.Join(workDir, "huge2.bin"))
+				require.True(t, os.IsNotExist(statErr))
+				requireNoTempFiles(t, workDir)
 			},
 		},
 	}
@@ -1917,6 +1943,106 @@ func Test_httpRequester_run_download(t *testing.T) {
 			testCase.assert(t, workDir, res, err)
 		})
 	}
+}
+
+// requireNoTempFiles asserts that dir holds no leftover download temp files.
+func requireNoTempFiles(t *testing.T, dir string) {
+	t.Helper()
+	entries, err := os.ReadDir(dir)
+	require.NoError(t, err)
+	for _, e := range entries {
+		require.NotContains(t, e.Name(), ".tmp")
+	}
+}
+
+func Test_streamResponseToTempFile(t *testing.T) {
+	t.Run("success leaves the temp file for the caller", func(t *testing.T) {
+		dir := t.TempDir()
+		tempPath, size, err := streamResponseToTempFile(
+			t.Context(), strings.NewReader("hello"), dir, "out",
+		)
+		require.NoError(t, err)
+		require.Equal(t, int64(5), size)
+		content, err := os.ReadFile(tempPath)
+		require.NoError(t, err)
+		require.Equal(t, "hello", string(content))
+	})
+
+	t.Run("oversized body removes the temp file", func(t *testing.T) {
+		dir := t.TempDir()
+		_, _, err := streamResponseToTempFile(
+			t.Context(),
+			io.LimitReader(zeroReader{}, maxDownloadSize+1),
+			dir, "out",
+		)
+		require.Error(t, err)
+		var termErr *promotion.TerminalError
+		require.ErrorAs(t, err, &termErr)
+		requireNoTempFiles(t, dir)
+	})
+
+	t.Run("read error removes the temp file", func(t *testing.T) {
+		dir := t.TempDir()
+		_, _, err := streamResponseToTempFile(
+			t.Context(),
+			io.MultiReader(strings.NewReader("partial"), errReader{}),
+			dir, "out",
+		)
+		require.ErrorContains(t, err, "failed to read response body")
+		requireNoTempFiles(t, dir)
+	})
+
+	t.Run("canceled context removes the temp file", func(t *testing.T) {
+		dir := t.TempDir()
+		ctx, cancel := context.WithCancel(context.Background())
+		_, _, err := streamResponseToTempFile(
+			ctx, &cancelingReader{cancel: cancel}, dir, "out",
+		)
+		require.ErrorContains(t, err, "download canceled")
+		requireNoTempFiles(t, dir)
+	})
+
+	t.Run("unwritable directory fails before creating anything", func(t *testing.T) {
+		dir := t.TempDir()
+		_, _, err := streamResponseToTempFile(
+			t.Context(), strings.NewReader("hello"),
+			filepath.Join(dir, "does-not-exist"), "out",
+		)
+		require.ErrorContains(t, err, "failed to create temporary file")
+		requireNoTempFiles(t, dir)
+	})
+}
+
+// zeroReader is an io.Reader that yields an endless stream of zero bytes.
+type zeroReader struct{}
+
+func (zeroReader) Read(p []byte) (int, error) {
+	clear(p)
+	return len(p), nil
+}
+
+// errReader is an io.Reader whose reads always fail.
+type errReader struct{}
+
+func (errReader) Read([]byte) (int, error) {
+	return 0, errors.New("read failure")
+}
+
+// cancelingReader cancels its context on the first Read and then yields one
+// byte per Read without ever reaching EOF, so the only way out of the read
+// loop is the canceled context.
+type cancelingReader struct {
+	cancel context.CancelFunc
+	done   bool
+}
+
+func (r *cancelingReader) Read(p []byte) (int, error) {
+	if !r.done {
+		r.done = true
+		r.cancel()
+	}
+	p[0] = 'x'
+	return 1, nil
 }
 
 func Test_httpRequester_getClient_downloadTimeout(t *testing.T) {
