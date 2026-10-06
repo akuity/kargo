@@ -1062,6 +1062,11 @@ func TestParseRepoURL(t *testing.T) {
 			wantErr: true,
 		},
 		{
+			name:    "SSH URL",
+			url:     "ssh://git@bitbucket.org/owner/repo.git",
+			wantErr: true,
+		},
+		{
 			name:    "missing repository name",
 			url:     "https://bitbucket.org/owner",
 			wantErr: true,

@@ -35,6 +35,10 @@ func TestParseGiteaURL(t *testing.T) {
 			errExpected: true,
 		},
 		{
+			url:         "ssh://git@git.domain.com/akuity/kargo",
+			errExpected: true,
+		},
+		{
 			url:            "https://git.domain.com/akuity/kargo",
 			expectedScheme: "https",
 			expectedHost:   "git.domain.com",

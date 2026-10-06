@@ -93,14 +93,14 @@ func CloneBare(
 	clientOpts *ClientOptions,
 	cloneOpts *BareCloneOptions,
 ) (BareRepo, error) {
+	if err := validateRepoURL(repoURL); err != nil {
+		return nil, err
+	}
 	if clientOpts == nil {
 		clientOpts = &ClientOptions{}
 	}
 	if cloneOpts == nil {
 		cloneOpts = &BareCloneOptions{}
-	}
-	if err := validateRepoURL(repoURL); err != nil {
-		return nil, err
 	}
 	b := &bareRepo{
 		baseRepo: &baseRepo{

@@ -459,7 +459,12 @@ func TestParseGitLabURL(t *testing.T) {
 		url            string
 		expectedScheme string
 		expectedHost   string
+		errExpected    bool
 	}{
+		{
+			url:         "ssh://git@gitlab.com/akuity/kargo.git",
+			errExpected: true,
+		},
 		{
 			url:            "https://gitlab.com/akuity/kargo",
 			expectedScheme: "https",
@@ -486,6 +491,10 @@ func TestParseGitLabURL(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.url, func(t *testing.T) {
 			scheme, host, projectName, err := parseRepoURL(testCase.url)
+			if testCase.errExpected {
+				require.ErrorContains(t, err, "only HTTP(S) URLs are supported")
+				return
+			}
 			require.NoError(t, err)
 			require.Equal(t, testCase.expectedScheme, scheme)
 			require.Equal(t, testCase.expectedHost, host)

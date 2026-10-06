@@ -21,6 +21,7 @@
   },
   "repoURL": {
    "type": "string",
+   "pattern": "^[Hh][Tt][Tt][Pp][Ss]?://",
    "description": "The URL of a remote Git repository to clone. Only HTTP(S) URLs are supported.",
    "minLength": 1,
    "format": "uri"

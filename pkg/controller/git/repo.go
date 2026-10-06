@@ -68,14 +68,14 @@ func Clone(
 	clientOpts *ClientOptions,
 	cloneOpts *CloneOptions,
 ) (Repo, error) {
+	if err := validateRepoURL(repoURL); err != nil {
+		return nil, err
+	}
 	if clientOpts == nil {
 		clientOpts = &ClientOptions{}
 	}
 	if cloneOpts == nil {
 		cloneOpts = &CloneOptions{}
-	}
-	if err := validateRepoURL(repoURL); err != nil {
-		return nil, err
 	}
 	baseRepo := &baseRepo{
 		creds:       clientOpts.Credentials,

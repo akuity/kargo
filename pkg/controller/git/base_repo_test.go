@@ -143,23 +143,26 @@ func TestValidateRepoURL(t *testing.T) {
 	}{
 		{
 			name:    "unparseable URL",
-			repoURL: "https://bad host/example/repo.git",
+			repoURL: "https://user:secret@bad host/example/repo.git",
 			assert: func(t *testing.T, err error) {
-				require.ErrorContains(t, err, "error parsing repository URL")
+				require.ErrorContains(t, err, "only HTTP(S) URLs are supported")
+				require.NotContains(t, err.Error(), "secret")
 			},
 		},
 		{
 			name:    "SSH URL",
-			repoURL: "ssh://git@github.com/example/repo.git",
+			repoURL: "ssh://git:secret@github.com/example/repo.git",
 			assert: func(t *testing.T, err error) {
 				require.ErrorContains(t, err, "only HTTP(S) URLs are supported")
+				require.ErrorContains(t, err, "ssh://git:xxxxx@github.com")
+				require.NotContains(t, err.Error(), "secret")
 			},
 		},
 		{
 			name:    "SCP-style URL",
 			repoURL: "git@github.com:example/repo.git",
 			assert: func(t *testing.T, err error) {
-				require.ErrorContains(t, err, "error parsing repository URL")
+				require.ErrorContains(t, err, "only HTTP(S) URLs are supported")
 			},
 		},
 		{

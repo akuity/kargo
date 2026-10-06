@@ -41,6 +41,24 @@ func Test_gitPROpener_convert(t *testing.T) {
 			},
 		},
 		{
+			name: "repoURL is an SSH URL",
+			config: promotion.Config{
+				"repoURL": "ssh://git@github.com/example/repo.git",
+			},
+			expectedProblems: []string{
+				"repoURL: Does not match pattern '^[Hh][Tt][Tt][Pp][Ss]?://'",
+			},
+		},
+		{
+			name: "repoURL is an SCP-style URL",
+			config: promotion.Config{
+				"repoURL": "git@github.com:example/repo.git",
+			},
+			expectedProblems: []string{
+				"repoURL: Does not match pattern '^[Hh][Tt][Tt][Pp][Ss]?://'",
+			},
+		},
+		{
 			name:   "targetBranch not specified",
 			config: promotion.Config{},
 			expectedProblems: []string{

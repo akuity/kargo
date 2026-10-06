@@ -402,11 +402,38 @@ func Test_webhook_ValidateUpdate(t *testing.T) {
 	err = kargoapi.AddToScheme(testScheme)
 	require.NoError(t, err)
 
+	// sshWarehouse returns a Warehouse, as last written before support for SSH
+	// URLs was removed, that subscribes to an SSH URL.
+	sshWarehouse := func() *kargoapi.Warehouse {
+		return &kargoapi.Warehouse{
+			ObjectMeta: metav1.ObjectMeta{Namespace: testProject},
+			Spec: kargoapi.WarehouseSpec{
+				InternalSubscriptions: []kargoapi.RepoSubscription{{
+					Git: &kargoapi.GitSubscription{
+						RepoURL: "git@github.com:example/repo.git",
+						Branch:  "main",
+					},
+				}},
+			},
+		}
+	}
+
+	// defaulted returns a copy of the Warehouse with the defaults that the
+	// defaulting webhook would have applied before validation.
+	defaulted := func(warehouse *kargoapi.Warehouse) *kargoapi.Warehouse {
+		warehouse = warehouse.DeepCopy()
+		require.NoError(t, (&webhook{
+			subscriberRegistry: subscription.DefaultSubscriberRegistry,
+		}).Default(t.Context(), warehouse))
+		return warehouse
+	}
+
 	testCases := []struct {
-		name       string
-		webhook    *webhook
-		warehouse  *kargoapi.Warehouse
-		assertions func(*testing.T, error)
+		name         string
+		webhook      *webhook
+		oldWarehouse *kargoapi.Warehouse
+		warehouse    *kargoapi.Warehouse
+		assertions   func(*testing.T, error)
 	}{
 		{
 			name: "error validating warehouse",
@@ -501,13 +528,41 @@ func Test_webhook_ValidateUpdate(t *testing.T) {
 				require.NotContains(t, err.Error(), ".image.name")
 			},
 		},
+		{
+			name:         "unchanged invalid spec is permitted",
+			webhook:      &webhook{},
+			oldWarehouse: sshWarehouse(),
+			warehouse: func() *kargoapi.Warehouse {
+				warehouse := defaulted(sshWarehouse())
+				warehouse.Annotations = map[string]string{
+					kargoapi.AnnotationKeyRefresh: "now",
+				}
+				return warehouse
+			}(),
+			assertions: func(t *testing.T, err error) {
+				require.NoError(t, err)
+			},
+		},
+		{
+			name:         "changed invalid spec is rejected",
+			webhook:      &webhook{},
+			oldWarehouse: sshWarehouse(),
+			warehouse: func() *kargoapi.Warehouse {
+				warehouse := defaulted(sshWarehouse())
+				warehouse.Spec.InternalSubscriptions[0].Git.Branch = "other"
+				return warehouse
+			}(),
+			assertions: func(t *testing.T, err error) {
+				require.ErrorContains(t, err, "spec.subscriptions[0].git.repoURL")
+			},
+		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			testCase.webhook.subscriberRegistry = subscription.DefaultSubscriberRegistry
 			_, err := testCase.webhook.ValidateUpdate(
 				t.Context(),
-				nil,
+				testCase.oldWarehouse,
 				testCase.warehouse,
 			)
 			testCase.assertions(t, err)

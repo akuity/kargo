@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"net/url"
 
 	gh "github.com/google/go-github/v76/github"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -363,10 +364,16 @@ type bitbucketRefsChangedEventBody struct {
 	} `json:"repository"`
 }
 
-// getRepoURLs returns a set of normalized repoURLs from the event.
+// getRepoURLs returns a set of normalized repoURLs from the event. Clone links
+// that are not HTTP(S) URLs (e.g. SSH) are skipped because they cannot match
+// any subscription.
 func (b bitbucketRefsChangedEventBody) getRepoURLs() []string {
 	repoURLs := []string{}
 	for _, link := range b.Repository.Links.Clone {
+		u, err := url.Parse(link.Href)
+		if err != nil || (u.Scheme != "http" && u.Scheme != "https") {
+			continue
+		}
 		repoURLs = append(repoURLs, urls.NormalizeGit(link.Href))
 	}
 	return repoURLs

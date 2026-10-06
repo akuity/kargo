@@ -333,10 +333,12 @@ func parseRepoURL(repoURL string) (string, string, string, error) {
 		)
 	}
 
-	scheme := u.Scheme
-	if scheme != "https" && scheme != "http" {
-		scheme = "https"
+	if u.Scheme != "https" && u.Scheme != "http" {
+		return "", "", "", fmt.Errorf(
+			"unsupported gitlab repository URL %q: only HTTP(S) URLs are supported",
+			u.Redacted(),
+		)
 	}
 
-	return scheme, u.Host, strings.TrimPrefix(u.Path, "/"), nil
+	return u.Scheme, u.Host, strings.TrimPrefix(u.Path, "/"), nil
 }

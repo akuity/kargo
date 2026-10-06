@@ -80,9 +80,11 @@ func ParseRepoURL(
 		)
 	}
 
-	scheme := u.Scheme
-	if scheme != "https" && scheme != "http" {
-		scheme = "https"
+	if u.Scheme != "https" && u.Scheme != "http" {
+		return "", "", "", "", fmt.Errorf(
+			"unsupported github repository URL %q: only HTTP(S) URLs are supported",
+			u.Redacted(),
+		)
 	}
 
 	path := strings.TrimPrefix(u.Path, "/")
@@ -93,5 +95,5 @@ func ParseRepoURL(
 		)
 	}
 
-	return scheme, u.Host, parts[0], parts[1], nil
+	return u.Scheme, u.Host, parts[0], parts[1], nil
 }

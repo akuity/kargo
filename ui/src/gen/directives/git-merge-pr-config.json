@@ -6,6 +6,7 @@
  "properties": {
   "repoURL": {
    "type": "string",
+   "pattern": "^[Hh][Tt][Tt][Pp][Ss]?://",
    "description": "The URL of the remote Git repository containing the pull request. Only HTTP(S) URLs are supported.",
    "minLength": 1,
    "format": "uri"

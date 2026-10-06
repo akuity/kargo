@@ -2,6 +2,7 @@ package external
 
 import (
 	"bytes"
+	"encoding/json"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -654,4 +655,27 @@ func TestBitbucketHandler(t *testing.T) {
 			testCase.assertions(t, w)
 		})
 	}
+}
+
+func TestBitbucketRefsChangedEventBodyGetRepoURLs(t *testing.T) {
+	t.Parallel()
+
+	var body bitbucketRefsChangedEventBody
+	require.NoError(t, json.Unmarshal([]byte(`{
+		"repository": {
+			"links": {
+				"clone": [
+					{"href": "https://bitbucket.example.com/scm/example/repo.git"},
+					{"href": "ssh://git@bitbucket.example.com:7999/example/repo.git"},
+					{"href": "git@bitbucket.example.com:example/repo.git"}
+				]
+			}
+		}
+	}`), &body))
+
+	require.Equal(
+		t,
+		[]string{"https://bitbucket.example.com/scm/example/repo"},
+		body.getRepoURLs(),
+	)
 }

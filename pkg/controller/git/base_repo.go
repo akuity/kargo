@@ -255,17 +255,19 @@ func (b *baseRepo) setupUser(
 func validateRepoURL(repoURL string) error {
 	u, err := url.Parse(repoURL)
 	if err != nil {
-		return fmt.Errorf("error parsing repository URL %q: %w", repoURL, err)
-	}
-	switch strings.ToLower(u.Scheme) {
-	case "http", "https":
-		return nil
-	default:
-		return fmt.Errorf(
-			"unsupported repository URL %q: only HTTP(S) URLs are supported",
-			repoURL,
+		// The URL is deliberately omitted because it may contain credentials
+		// that cannot be redacted when it fails to parse.
+		return errors.New(
+			"unsupported repository URL: only HTTP(S) URLs are supported",
 		)
 	}
+	if u.Scheme != "http" && u.Scheme != "https" {
+		return fmt.Errorf(
+			"unsupported repository URL %q: only HTTP(S) URLs are supported",
+			u.Redacted(),
+		)
+	}
+	return nil
 }
 
 // setupAuth configures the git CLI with authentication information.

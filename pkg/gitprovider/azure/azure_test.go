@@ -657,6 +657,11 @@ func TestParseRepoURL(t *testing.T) {
 			errExpected: true,
 		},
 		{
+			name:        "SSH URL",
+			url:         "ssh://git@dev.azure.com/myorg/myproject/_git/myrepo",
+			errExpected: true,
+		},
+		{
 			name:        "modern URL with missing parts",
 			url:         "https://dev.azure.com/org",
 			errExpected: true,
