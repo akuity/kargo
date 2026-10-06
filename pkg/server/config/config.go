@@ -59,6 +59,22 @@ type ServerConfig struct {
 	// know which controller's liveness to associate with such Stages. The default
 	// controller is often unnamed, so an empty string is a valid value.
 	DefaultControllerName string
+	// TrustedProxies are the IP addresses and CIDRs of proxies in front of the
+	// server whose forwarding headers are believed when determining the IP
+	// address a request came from. When empty, no forwarding header is
+	// believed.
+	TrustedProxies []string
+	// ClientIPHeader names a header that every trusted proxy sets to the
+	// client's IP address (e.g. CF-Connecting-IP). It is believed only on
+	// requests arriving from a trusted proxy and takes precedence over
+	// X-Forwarded-For.
+	ClientIPHeader string
+	// RequestLogAllEnabled indicates whether routine requests should be logged
+	// at info level instead of debug level.
+	RequestLogAllEnabled bool
+	// RequestLogSourceIPEnabled indicates whether the IP address each request
+	// came from should be logged.
+	RequestLogSourceIPEnabled bool
 
 	// AdditionalHandlers is a map of path patterns to HTTP handlers that will
 	// be registered on the server's HTTP mux alongside its own handlers. This
@@ -129,6 +145,16 @@ func ServerConfigFromEnv() ServerConfig {
 		"kargo-shared-resources",
 	)
 	cfg.KargoNamespace = os.GetEnv("KARGO_NAMESPACE", "kargo")
+	for proxy := range strings.SplitSeq(os.GetEnv("TRUSTED_PROXIES", ""), ",") {
+		if proxy = strings.TrimSpace(proxy); proxy != "" {
+			cfg.TrustedProxies = append(cfg.TrustedProxies, proxy)
+		}
+	}
+	cfg.ClientIPHeader = os.GetEnv("CLIENT_IP_HEADER", "")
+	cfg.RequestLogAllEnabled =
+		types.MustParseBool(os.GetEnv("REQUEST_LOG_ALL_ENABLED", "false"))
+	cfg.RequestLogSourceIPEnabled =
+		types.MustParseBool(os.GetEnv("REQUEST_LOG_SOURCE_IP_ENABLED", "false"))
 	cfg.DefaultControllerName = os.GetEnv("DEFAULT_CONTROLLER_NAME", "")
 	cfg.BasePath = NormalizeBasePath(os.GetEnv("API_BASE_PATH", ""))
 	return cfg
