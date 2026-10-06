@@ -170,6 +170,14 @@ events:
 When these steps are complete, the repository will send events to the webhook
 receiver.
 
+:::info
+
+For additional information on configuring repository webhooks, refer directly
+to the
+[Bitbucket Docs](https://support.atlassian.com/bitbucket-cloud/docs/manage-webhooks/).
+
+:::
+
 ### Workspace Webhooks
 
 A Bitbucket Cloud workspace webhook is triggered by events from _all_
@@ -178,8 +186,8 @@ same webhook on each repository individually.
 
 :::note
 
-Bitbucket Cloud does not offer a UI for managing workspace webhooks. They can
-only be managed using the
+At the time of this writing, Bitbucket Cloud does not offer a UI for managing
+workspace webhooks. They can only be managed using the
 [Bitbucket Cloud REST API](https://developer.atlassian.com/cloud/bitbucket/rest/api-group-workspaces/#api-workspaces-workspace-hooks-post),
 and only by owners of the workspace.
 
@@ -228,17 +236,26 @@ receiver of relevant events:
       the `Secret` resource referenced by the
       [webhook receiver's configuration](#configuring-the-receiver).
 
-    The `pullrequest:fulfilled` and `pullrequest:rejected` events are only
-    needed if you use PR-based promotion workflows (i.e. promotions that
-    include a
+    The `pullrequest:fulfilled` (merged) and `pullrequest:rejected` (declined)
+    events are only needed if you use PR-based promotion workflows (i.e.
+    promotions that include a
     [`git-wait-for-pr`](../../30-promotion-steps/git-wait-for-pr.md) step).
 
-1. Verify that the new webhook is registered:
+1. Verify that the new webhook is registered and that its secret is set:
 
     ```shell
     curl -u "<email>:<api-token>" \
       https://api.bitbucket.org/2.0/workspaces/<workspace>/hooks
     ```
+
+    The response should include a webhook whose `url` matches the receiver's
+    URL and whose `secret_set` field is `true`.
+
+    :::note
+
+    If the secret is omitted or empty, Bitbucket still registers the webhook
+    but does not sign its requests, and the receiver will reject all of them.
+    :::
 
 When these steps are complete, every repository in the workspace will send
 events to the webhook receiver.
@@ -253,7 +270,8 @@ applicable events in that repository.
 
 :::info
 
-For additional information on configuring webhooks, refer directly to the
-[Bitbucket Docs](https://support.atlassian.com/bitbucket-cloud/docs/manage-webhooks/).
+For additional information on managing workspace webhooks, refer directly to
+the
+[Bitbucket Cloud REST API docs](https://developer.atlassian.com/cloud/bitbucket/rest/api-group-workspaces/#api-workspaces-workspace-hooks-post).
 
 :::
