@@ -254,7 +254,8 @@ receiver of relevant events:
     :::note
 
     If the secret is omitted or empty, Bitbucket still registers the webhook
-    but does not sign its requests, and the receiver will reject all of them.
+    but does not sign its requests, and the receiver will reject all of them
+    with a `401` response.
     :::
 
 When these steps are complete, every repository in the workspace will send
@@ -265,13 +266,5 @@ events to the webhook receiver.
 If you register identical webhooks affecting a given repository at _both_ the
 repository level and the workspace level, both webhooks will be triggered by
 applicable events in that repository.
-
-:::
-
-:::info
-
-For additional information on managing workspace webhooks, refer directly to
-the
-[Bitbucket Cloud REST API docs](https://developer.atlassian.com/cloud/bitbucket/rest/api-group-workspaces/#api-workspaces-workspace-hooks-post).
 
 :::
