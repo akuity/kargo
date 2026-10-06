@@ -5,10 +5,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"reflect"
+	"slices"
 	"strings"
 
-	admissionv1 "k8s.io/api/admission/v1"
+	"k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	k8sValidation "k8s.io/apimachinery/pkg/util/validation"
@@ -124,13 +124,18 @@ func (w *webhook) ValidateCreate(
 
 func (w *webhook) ValidateUpdate(
 	ctx context.Context,
-	_ *kargoapi.Warehouse,
+	oldWarehouse *kargoapi.Warehouse,
 	warehouse *kargoapi.Warehouse,
 ) (admission.Warnings, error) {
 	errs := w.validateSpec(ctx, field.NewPath("spec"), &warehouse.Spec)
 	if errs = append(
 		errs,
-		validateRemovedSubFields(ctx, field.NewPath("spec", "subscriptions"))...,
+		w.validateRemovedSubFieldsOnUpdate(
+			ctx,
+			field.NewPath("spec", "subscriptions"),
+			oldWarehouse,
+			warehouse,
+		)...,
 	); len(errs) > 0 {
 		return nil, apierrors.NewInvalid(warehouseGroupKind, warehouse.Name, errs)
 	}
@@ -173,29 +178,81 @@ var removedSubFields = []struct {
 // this inspects the raw object from the admission request in ctx. If ctx
 // carries no admission request, there is nothing to inspect and no errors are
 // returned.
-//
-// Updates that leave the spec unchanged (e.g. changes to annotations or
-// finalizers) are permitted, so that a Warehouse that still uses removed
-// fields can be refreshed or deleted. Any other update must also remove them.
 func validateRemovedSubFields(ctx context.Context, f *field.Path) field.ErrorList {
 	req, err := admission.RequestFromContext(ctx)
 	if err != nil {
 		return nil
 	}
-	spec, err := rawWarehouseSpec(req.Object.Raw)
-	if err != nil {
-		return nil // Malformed input is caught when decoding the Warehouse
+	return removedSubFieldErrs(req.Object.Raw, f)
+}
+
+// validateRemovedSubFieldsOnUpdate is like validateRemovedSubFields, but
+// permits an update that leaves the spec unchanged (e.g. a refresh annotation)
+// to keep removed fields that oldWarehouse already used, so that a Warehouse
+// that has yet to be migrated can still be refreshed. Any other update must
+// also remove them.
+func (w *webhook) validateRemovedSubFieldsOnUpdate(
+	ctx context.Context,
+	f *field.Path,
+	oldWarehouse *kargoapi.Warehouse,
+	warehouse *kargoapi.Warehouse,
+) field.ErrorList {
+	errs := validateRemovedSubFields(ctx, f)
+	if len(errs) == 0 || !w.specUnchanged(ctx, oldWarehouse, warehouse) {
+		return errs
 	}
-	if req.Operation == admissionv1.Update {
-		oldSpec, oldErr := rawWarehouseSpec(req.OldObject.Raw)
-		if oldErr == nil && reflect.DeepEqual(spec, oldSpec) {
-			return nil
+	// errs is only non-empty if ctx carries an admission request
+	req, _ := admission.RequestFromContext(ctx)
+	oldErrs := removedSubFieldErrs(req.OldObject.Raw, f)
+	for _, err := range errs {
+		// Typed specs don't include removed fields, so an update that adds one
+		// still leaves the spec "unchanged." Such an update is rejected.
+		if !slices.ContainsFunc(oldErrs, func(oldErr *field.Error) bool {
+			return oldErr.Field == err.Field
+		}) {
+			return errs
 		}
 	}
-	subs, _ := spec["subscriptions"].([]any)
+	return nil
+}
+
+// specUnchanged reports whether an update leaves the Warehouse's spec as it
+// was. oldWarehouse is defaulted first, just as the defaulting webhook has
+// already defaulted warehouse, so that defaults introduced since oldWarehouse
+// was last written don't count as changes.
+func (w *webhook) specUnchanged(
+	ctx context.Context,
+	oldWarehouse *kargoapi.Warehouse,
+	warehouse *kargoapi.Warehouse,
+) bool {
+	if oldWarehouse == nil {
+		return false
+	}
+	old := oldWarehouse.DeepCopy()
+	if err := w.Default(ctx, old); err != nil {
+		return false
+	}
+	// Default() only updates InternalSubscriptions, so the raw Subscriptions,
+	// which aren't defaulted, are left out of the comparison.
+	oldSpec, newSpec := old.Spec, warehouse.Spec
+	oldSpec.Subscriptions, newSpec.Subscriptions = nil, nil
+	return equality.Semantic.DeepEqual(oldSpec, newSpec)
+}
+
+// removedSubFieldErrs returns an error for each of the removedSubFields used
+// by a subscription of the raw, JSON-encoded Warehouse. Malformed input is
+// caught when decoding the Warehouse, so it yields no errors here.
+func removedSubFieldErrs(raw []byte, f *field.Path) field.ErrorList {
+	var obj struct {
+		Spec struct {
+			Subscriptions []map[string]any `json:"subscriptions"`
+		} `json:"spec"`
+	}
+	if err := json.Unmarshal(raw, &obj); err != nil {
+		return nil
+	}
 	var errs field.ErrorList
-	for i, rawSub := range subs {
-		sub, _ := rawSub.(map[string]any)
+	for i, sub := range obj.Spec.Subscriptions {
 		for _, removed := range removedSubFields {
 			cfg, _ := sub[removed.subType].(map[string]any)
 			for _, name := range removed.fields {
@@ -209,18 +266,6 @@ func validateRemovedSubFields(ctx context.Context, f *field.Path) field.ErrorLis
 		}
 	}
 	return errs
-}
-
-// rawWarehouseSpec returns the spec of the raw, JSON-encoded Warehouse as an
-// untyped map, preserving any fields unknown to the WarehouseSpec type.
-func rawWarehouseSpec(raw []byte) (map[string]any, error) {
-	var obj struct {
-		Spec map[string]any `json:"spec"`
-	}
-	if err := json.Unmarshal(raw, &obj); err != nil {
-		return nil, err
-	}
-	return obj.Spec, nil
 }
 
 func (w *webhook) validateSubs(

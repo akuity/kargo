@@ -2,6 +2,7 @@ package warehouse
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"slices"
 	"strings"
@@ -443,10 +444,13 @@ func Test_webhook_ValidateUpdate(t *testing.T) {
 	require.NoError(t, err)
 
 	testCases := []struct {
-		name       string
-		webhook    *webhook
-		req        *admission.Request
-		warehouse  *kargoapi.Warehouse
+		name      string
+		webhook   *webhook
+		warehouse *kargoapi.Warehouse
+		// oldRaw and newRaw, when set, are the raw old and new objects of the
+		// admission request. newRaw then also takes the place of warehouse.
+		oldRaw     string
+		newRaw     string
 		assertions func(*testing.T, error)
 	}{
 		{
@@ -543,35 +547,58 @@ func Test_webhook_ValidateUpdate(t *testing.T) {
 			},
 		},
 		{
-			name: "removed subscription fields",
-			webhook: &webhook{
-				client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
-					&corev1.Namespace{
-						ObjectMeta: metav1.ObjectMeta{
-							Name: testProject,
-							Labels: map[string]string{
-								kargoapi.LabelKeyProject: kargoapi.LabelValueTrue,
-							},
-						},
-					},
-				).Build(),
+			name:    "removed subscription fields",
+			webhook: &webhook{},
+			newRaw:  `{"spec":{"subscriptions":[{"image":{"repoURL":"fake-url","allowTags":"^v1"}}]}}`,
+			assertions: func(t *testing.T, err error) {
+				require.Error(t, err)
+				require.Contains(t, err.Error(), "spec.subscriptions[0].image.allowTags")
 			},
-			req: &admission.Request{
-				AdmissionRequest: admissionv1.AdmissionRequest{
-					Operation: admissionv1.Update,
-					Object: runtime.RawExtension{
-						Raw: []byte(`{"spec":{"subscriptions":[{"image":{"repoURL":"fake-url","allowTags":"^v1"}}]}}`),
-					},
-				},
+		},
+		{
+			name:    "removed subscription fields kept by update that changes the spec",
+			webhook: &webhook{},
+			oldRaw:  `{"spec":{"subscriptions":[{"image":{"repoURL":"fake-url","allowTags":"^v1"}}]}}`,
+			newRaw: `{"spec":{"interval":"10m","subscriptions":[
+				{"image":{"repoURL":"fake-url","allowTags":"^v1"}}
+			]}}`,
+			assertions: func(t *testing.T, err error) {
+				require.Error(t, err)
+				require.Contains(t, err.Error(), "spec.subscriptions[0].image.allowTags")
 			},
-			warehouse: &kargoapi.Warehouse{
-				ObjectMeta: metav1.ObjectMeta{Namespace: testProject},
-				Spec: kargoapi.WarehouseSpec{
-					InternalSubscriptions: []kargoapi.RepoSubscription{{
-						Image: &kargoapi.ImageSubscription{RepoURL: "fake-url"},
-					}},
-				},
+		},
+		{
+			// The old object predates defaults that the new one has been given
+			name:    "removed subscription fields kept by update that leaves the spec unchanged",
+			webhook: &webhook{},
+			oldRaw: `{"spec":{"subscriptions":[
+				{"image":{"repoURL":"fake-url","ignoreTags":["v1.0.0"]}}
+			]}}`,
+			newRaw: `{"metadata":{"annotations":{"foo":"bar"}},"spec":{"subscriptions":[{"image":{
+				"repoURL":"fake-url","ignoreTags":["v1.0.0"],"discoveryLimit":20,
+				"imageSelectionStrategy":"SemVer","strictSemvers":true
+			}}]}}`,
+			assertions: func(t *testing.T, err error) {
+				require.NoError(t, err)
 			},
+		},
+		{
+			// Changes to the values of removed fields are inconsequential
+			name:    "removed subscription field changed by update that leaves the spec unchanged",
+			webhook: &webhook{},
+			oldRaw:  `{"spec":{"subscriptions":[{"image":{"repoURL":"fake-url","ignoreTags":["v1.0.0"]}}]}}`,
+			newRaw:  `{"spec":{"subscriptions":[{"image":{"repoURL":"fake-url","ignoreTags":["v2.0.0"]}}]}}`,
+			assertions: func(t *testing.T, err error) {
+				require.NoError(t, err)
+			},
+		},
+		{
+			name:    "removed subscription field added by update that leaves the spec unchanged",
+			webhook: &webhook{},
+			oldRaw:  `{"spec":{"subscriptions":[{"image":{"repoURL":"fake-url","ignoreTags":["v1.0.0"]}}]}}`,
+			newRaw: `{"spec":{"subscriptions":[
+				{"image":{"repoURL":"fake-url","allowTags":"^v1","ignoreTags":["v1.0.0"]}}
+			]}}`,
 			assertions: func(t *testing.T, err error) {
 				require.Error(t, err)
 				require.Contains(t, err.Error(), "spec.subscriptions[0].image.allowTags")
@@ -582,13 +609,28 @@ func Test_webhook_ValidateUpdate(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			testCase.webhook.subscriberRegistry = subscription.DefaultSubscriberRegistry
 			ctx := t.Context()
-			if testCase.req != nil {
-				ctx = admission.NewContextWithRequest(ctx, *testCase.req)
+			warehouse := testCase.warehouse
+			var oldWarehouse *kargoapi.Warehouse
+			if testCase.newRaw != "" {
+				// By the time it's validated, the new object has been defaulted
+				warehouse = decodeTestWarehouse(t, testCase.newRaw)
+				require.NoError(t, testCase.webhook.Default(ctx, warehouse))
+				req := admission.Request{
+					AdmissionRequest: admissionv1.AdmissionRequest{
+						Operation: admissionv1.Update,
+						Object:    runtime.RawExtension{Raw: []byte(testCase.newRaw)},
+					},
+				}
+				if testCase.oldRaw != "" {
+					oldWarehouse = decodeTestWarehouse(t, testCase.oldRaw)
+					req.OldObject = runtime.RawExtension{Raw: []byte(testCase.oldRaw)}
+				}
+				ctx = admission.NewContextWithRequest(ctx, req)
 			}
 			_, err := testCase.webhook.ValidateUpdate(
 				ctx,
-				nil,
-				testCase.warehouse,
+				oldWarehouse,
+				warehouse,
 			)
 			testCase.assertions(t, err)
 		})
@@ -831,55 +873,6 @@ func Test_validateRemovedSubFields(t *testing.T) {
 				require.Contains(t, errs[1].Detail, "use ignoreTagsRegexes instead")
 			},
 		},
-		{
-			name: "removed fields on update that changes the spec",
-			req: &admission.Request{
-				AdmissionRequest: admissionv1.AdmissionRequest{
-					Operation: admissionv1.Update,
-					Object:    runtime.RawExtension{Raw: []byte(removedSpec)},
-					OldObject: runtime.RawExtension{
-						Raw: []byte(`{"spec":{"subscriptions":[
-							{"git":{"repoURL":"fake-git-url","allowTags":"^v1"}}
-						]}}`),
-					},
-				},
-			},
-			assertions: func(t *testing.T, errs field.ErrorList) {
-				require.Len(t, errs, 3)
-			},
-		},
-		{
-			name: "removed fields on update that leaves the spec unchanged",
-			req: &admission.Request{
-				AdmissionRequest: admissionv1.AdmissionRequest{
-					Operation: admissionv1.Update,
-					Object: runtime.RawExtension{
-						Raw: []byte(strings.Replace(
-							removedSpec,
-							`{"spec"`,
-							`{"metadata":{"annotations":{"foo":"bar"}},"spec"`,
-							1,
-						)),
-					},
-					OldObject: runtime.RawExtension{Raw: []byte(removedSpec)},
-				},
-			},
-			assertions: func(t *testing.T, errs field.ErrorList) {
-				require.Empty(t, errs)
-			},
-		},
-		{
-			name: "removed fields on update without an old object",
-			req: &admission.Request{
-				AdmissionRequest: admissionv1.AdmissionRequest{
-					Operation: admissionv1.Update,
-					Object:    runtime.RawExtension{Raw: []byte(removedSpec)},
-				},
-			},
-			assertions: func(t *testing.T, errs field.ErrorList) {
-				require.Len(t, errs, 3)
-			},
-		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
@@ -893,4 +886,13 @@ func Test_validateRemovedSubFields(t *testing.T) {
 			)
 		})
 	}
+}
+
+// decodeTestWarehouse decodes the raw, JSON-encoded Warehouse the same way the
+// webhook's decoder would.
+func decodeTestWarehouse(t *testing.T, raw string) *kargoapi.Warehouse {
+	t.Helper()
+	warehouse := &kargoapi.Warehouse{}
+	require.NoError(t, json.Unmarshal([]byte(raw), warehouse))
+	return warehouse
 }

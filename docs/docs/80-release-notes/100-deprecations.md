@@ -46,9 +46,11 @@ kubectl get warehouses -A -o json | jq -r '
   | "\(.metadata.namespace)/\(.metadata.name)"'
 ```
 
-Migrate each one to `allowTagsRegexes` and `ignoreTagsRegexes`. `ignoreTags`
-matched tags exactly, so escape and anchor each value when converting it to a
-regular expression. For example, `v1.0.0` becomes `^v1\.0\.0$`.
+Migrate each one to `allowTagsRegexes` and `ignoreTagsRegexes`. `allowTags`
+was already a regular expression, so it carries over unchanged as the sole
+entry in `allowTagsRegexes`. `ignoreTags` matched tags exactly, so escape and
+anchor each value when converting it to a regular expression. For example,
+`v1.0.0` becomes `^v1\.0\.0$`.
 
 ## Breaking Changes
 
@@ -58,4 +60,5 @@ absolute minimum.__
 
 | Change | Version | Impact | Migration Path |
 |--------|---------|--------|----------------|
+| `allowTags` and `ignoreTags` subscription fields removed | v2.0.0 | Creating a `Warehouse` that uses these fields, or changing the spec of one that does, is rejected. Artifact discovery for a `Warehouse` already stored with them runs without that tag filtering. | [Find affected `Warehouse`s](#finding-warehouses-that-use-allowtags-or-ignoretags) and migrate them to `allowTagsRegexes` and `ignoreTagsRegexes` before upgrading. |
 | Global Credential Store Changes | [v1.0.0](./99-v1.0.0.md#breaking-changes) | Affects installations using `controller.globalCredentials.namespaces` | Manually create a `RoleBinding`s to permit controller access to "global" credential namespaces _or_ set `controller.serviceAccount.clusterWideSecretReadingEnabled` to `true` at install time (not recommended). [more info](./99-v1.0.0.md#breaking-changes) |
