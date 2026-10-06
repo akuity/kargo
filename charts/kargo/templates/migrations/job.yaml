@@ -11,7 +11,9 @@ metadata:
   {{- include "kargo.annotations" (dict "root" . "annotations" .Values.database.migrations.annotations) | nindent 2 }}
 spec:
   backoffLimit: {{ .Values.database.migrations.backoffLimit }}
-  ttlSecondsAfterFinished: {{ .Values.database.migrations.ttlSecondsAfterFinished }}
+  {{- with .Values.database.migrations.ttlSecondsAfterFinished }}
+  ttlSecondsAfterFinished: {{ . }}
+  {{- end }}
   template:
     {{- include "kargo.migrations.podTemplate" . | nindent 4 }}
 {{- end }}

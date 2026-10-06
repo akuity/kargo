@@ -24,9 +24,8 @@ tests:
       - equal:
           path: spec.backoffLimit
           value: 3
-      - equal:
+      - notExists:
           path: spec.ttlSecondsAfterFinished
-          value: 86400
       - equal:
           path: spec.template.spec.restartPolicy
           value: Never
@@ -62,6 +61,15 @@ tests:
           content:
             name: DATABASE_URL
           any: true
+
+  - it: sets a TTL when one is configured
+    template: templates/migrations/job.yaml
+    set:
+      database.migrations.ttlSecondsAfterFinished: 3600
+    asserts:
+      - equal:
+          path: spec.ttlSecondsAfterFinished
+          value: 3600
 
   - it: reads the bundled database's password from an existing Secret when configured
     set:
