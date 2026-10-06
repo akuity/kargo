@@ -2,10 +2,13 @@ package warehouse
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"reflect"
 	"strings"
 
+	admissionv1 "k8s.io/api/admission/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	k8sValidation "k8s.io/apimachinery/pkg/util/validation"
@@ -109,9 +112,10 @@ func (w *webhook) ValidateCreate(
 		}
 		errs = append(errs, fieldErr)
 	}
+	errs = append(errs, w.validateSpec(ctx, field.NewPath("spec"), &warehouse.Spec)...)
 	if errs = append(
 		errs,
-		w.validateSpec(ctx, field.NewPath("spec"), &warehouse.Spec)...,
+		validateRemovedSubFields(ctx, field.NewPath("spec", "subscriptions"))...,
 	); len(errs) > 0 {
 		return nil, apierrors.NewInvalid(warehouseGroupKind, warehouse.Name, errs)
 	}
@@ -123,7 +127,11 @@ func (w *webhook) ValidateUpdate(
 	_ *kargoapi.Warehouse,
 	warehouse *kargoapi.Warehouse,
 ) (admission.Warnings, error) {
-	if errs := w.validateSpec(ctx, field.NewPath("spec"), &warehouse.Spec); len(errs) > 0 {
+	errs := w.validateSpec(ctx, field.NewPath("spec"), &warehouse.Spec)
+	if errs = append(
+		errs,
+		validateRemovedSubFields(ctx, field.NewPath("spec", "subscriptions"))...,
+	); len(errs) > 0 {
 		return nil, apierrors.NewInvalid(warehouseGroupKind, warehouse.Name, errs)
 	}
 	return nil, nil
@@ -146,6 +154,73 @@ func (w *webhook) validateSpec(
 		return nil
 	}
 	return w.validateSubs(ctx, f.Child("subscriptions"), spec.InternalSubscriptions)
+}
+
+// removedSubFields lists fields that have been removed from the original
+// subscription types, keyed by subscription type. Decoding a Warehouse
+// silently drops unknown fields, so these would otherwise be ignored without
+// any indication that the tag filtering they once provided no longer applies.
+var removedSubFields = []struct {
+	subType string
+	fields  []string
+}{
+	{subType: "git", fields: []string{"allowTags", "ignoreTags"}},
+	{subType: "image", fields: []string{"allowTags", "ignoreTags"}},
+}
+
+// validateRemovedSubFields rejects subscriptions that still use any of the
+// removedSubFields. Because the typed Warehouse has already lost those fields,
+// this inspects the raw object from the admission request in ctx. If ctx
+// carries no admission request, there is nothing to inspect and no errors are
+// returned.
+//
+// Updates that leave the spec unchanged (e.g. changes to annotations or
+// finalizers) are permitted, so that a Warehouse that still uses removed
+// fields can be refreshed or deleted. Any other update must also remove them.
+func validateRemovedSubFields(ctx context.Context, f *field.Path) field.ErrorList {
+	req, err := admission.RequestFromContext(ctx)
+	if err != nil {
+		return nil
+	}
+	spec, err := rawWarehouseSpec(req.Object.Raw)
+	if err != nil {
+		return nil // Malformed input is caught when decoding the Warehouse
+	}
+	if req.Operation == admissionv1.Update {
+		oldSpec, oldErr := rawWarehouseSpec(req.OldObject.Raw)
+		if oldErr == nil && reflect.DeepEqual(spec, oldSpec) {
+			return nil
+		}
+	}
+	subs, _ := spec["subscriptions"].([]any)
+	var errs field.ErrorList
+	for i, rawSub := range subs {
+		sub, _ := rawSub.(map[string]any)
+		for _, removed := range removedSubFields {
+			cfg, _ := sub[removed.subType].(map[string]any)
+			for _, name := range removed.fields {
+				if _, ok := cfg[name]; ok {
+					errs = append(errs, field.Forbidden(
+						f.Index(i).Child(removed.subType, name),
+						fmt.Sprintf("%s has been removed; use %sRegexes instead", name, name),
+					))
+				}
+			}
+		}
+	}
+	return errs
+}
+
+// rawWarehouseSpec returns the spec of the raw, JSON-encoded Warehouse as an
+// untyped map, preserving any fields unknown to the WarehouseSpec type.
+func rawWarehouseSpec(raw []byte) (map[string]any, error) {
+	var obj struct {
+		Spec map[string]any `json:"spec"`
+	}
+	if err := json.Unmarshal(raw, &obj); err != nil {
+		return nil, err
+	}
+	return obj.Spec, nil
 }
 
 func (w *webhook) validateSubs(

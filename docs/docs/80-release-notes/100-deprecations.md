@@ -20,6 +20,7 @@ or scheduled for removal.
 | `git-push` default integration policy (`AlwaysRebase`) | [v1.10.0](./89-v1.10.0.md) | [v1.12.0](./87-v1.12.0.md) | The default `git-push`/`github-push` push integration policy changed from `AlwaysRebase` to `RebaseOrMerge`. Set [`controller.gitClient.pushIntegrationPolicy`](https://docs.kargo.io/operator-guide/advanced-installation/common-configurations#push-integration-policy) explicitly if you rely on unconditional rebase. |
 | SSH URLs and SSH private keys for Git repositories | v1.10.0 | Scheduled for v1.13.0 | Use HTTPS URLs with a personal access token or equivalent. SSH keys cannot authenticate to git provider APIs, forcing users to maintain two sets of credentials. See [#5858](https://github.com/akuity/kargo/issues/5858) for details. |
 | The `createTargetBranch` option in the `git-open-pr` promotion step | [v1.10.0](./89-v1.10.0.md) | [v1.12.0](./87-v1.12.0.md) | The `createTargetBranch` option has been removed as the feature never worked. See [#5847](https://github.com/akuity/kargo/issues/5847) for details. |
+| `Warehouse` Git and container image subscriptions' `allowTags` and `ignoreTags` fields | [v1.9.0](./90-v1.9.0.md) | v2.0.0 | Use `allowTagsRegexes` and `ignoreTagsRegexes`. Artifact discovery has failed when either field is set since [v1.11.0](./88-v1.11.0.md). As of v2.0.0, creating a `Warehouse` with either field, or changing the spec of one that still has them, is rejected. Artifact discovery for a `Warehouse` already stored with either field stops failing, but runs without that tag filtering. [Find affected `Warehouse`s](#finding-warehouses-that-use-allowtags-or-ignoretags) before upgrading. |
 | The Connect-based (gRPC) API | [v1.9.0](./90-v1.9.0.md) | [v1.12.0](./87-v1.12.0.md) | Replaced by a new, RESTful API. The UI [completed its migration to the REST API in v1.11.0](./88-v1.11.0.md#deprecations), so the legacy API no longer had any first-party consumers. Upgrade the CLI alongside the back end, and migrate any custom integrations to the REST API before upgrading. |
 | "global credentials namespace(s)" (`controller.globalCredentials.namespaces`) | [v1.9.0](./90-v1.9.0.md) | [v1.12.0](./87-v1.12.0.md) | Replaced with "shared resources namespace" (`global.sharedResources.namespace`). The automatic migration of `Secret`s has been removed; upgrading to v1.12.0 or later will fail if this setting remains defined. See [release notes](./90-v1.9.0.md#the-secret-shuffle) and [docs](../40-operator-guide/40-security/40-managing-secrets.md#transitioning) for details. |
 | "cluster secrets namespace" (`global.clusterSecretsNamespace`) | [v1.9.0](./90-v1.9.0.md) | [v1.12.0](./87-v1.12.0.md) | Replaced with "system resources namespace" (`global.systemResources.namespace`). The automatic migration of `Secret`s has been removed; upgrading to v1.12.0 or later will fail if this setting remains defined. See [release notes](./90-v1.9.0.md#the-secret-shuffle) and [docs](../40-operator-guide/40-security/40-managing-secrets.md#transitioning) for details. |
@@ -32,6 +33,22 @@ or scheduled for removal.
 | Promotion Steps Fields | [v1.1.0](./98-v1.1.0.md#new-and-updated-promotion-steps) | [v1.3.0](./96-v1.3.0.md#breaking-changes) | Several fields in promotion steps, such as `prNumberFromStep` in the `git-wait-for-pr` step, are now deprecated. These fields were originally the only way to reference output from previous promotion steps. With the introduction of expressions, these fields have outlived their purpose, as expressions like `${{ outputs['open-pr'].pr.id }}` present a more flexible and straightforward way to reference the same output. [more info](./98-v1.1.0.md#new-and-updated-promotion-steps) |
 | `helm-update-image` step | [v1.1.0](./98-v1.1.0.md#new-and-updated-promotion-steps) | [v1.3.0](./96-v1.3.0.md#breaking-changes) | Use the more flexible `yaml-update` step. [more info](./98-v1.1.0.md#new-and-updated-promotion-steps) |
 | Legacy Promotion Mechanisms | v0.9.0 | [v1.0.0](./99-v1.0.0.md#breaking-changes) | Migrate to promotion steps. [more info](./99-v1.0.0.md#breaking-changes) |
+
+### Finding `Warehouse`s that use `allowTags` or `ignoreTags`
+
+Before upgrading to v2.0.0, find any `Warehouse`s whose Git or container image
+subscriptions still set `allowTags` or `ignoreTags`:
+
+```shell
+kubectl get warehouses -A -o json | jq -r '
+  .items[]
+  | select(any(.spec.subscriptions[]; (.git // .image // {}) | has("allowTags") or has("ignoreTags")))
+  | "\(.metadata.namespace)/\(.metadata.name)"'
+```
+
+Migrate each one to `allowTagsRegexes` and `ignoreTagsRegexes`. `ignoreTags`
+matched tags exactly, so escape and anchor each value when converting it to a
+regular expression. For example, `v1.0.0` becomes `^v1\.0\.0$`.
 
 ## Breaking Changes
 
