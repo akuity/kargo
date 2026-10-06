@@ -469,8 +469,10 @@ discovery loops.
 #### REST API structure
 
 The REST API (`pkg/server/`) uses Gin. Routes are defined in
-`rest_router.go` under `/v1beta1`. Gin middleware handles authentication,
-error formatting, and request body limits.
+`rest_router.go` under `/v1beta1`. Gin middleware in `pkg/server/middleware/`
+handles error formatting, panic recovery, body limits, and gating of optional
+features; the authentication and request logging middleware live beside the
+router in `pkg/server/`.
 
 Project-scoped routes live under `/v1beta1/projects/:project`. Middleware on
 this group confirms the project exists before any handler runs, so individual

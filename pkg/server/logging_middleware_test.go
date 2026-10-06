@@ -16,6 +16,7 @@ import (
 	libhttp "github.com/akuity/kargo/pkg/http"
 	"github.com/akuity/kargo/pkg/logging"
 	"github.com/akuity/kargo/pkg/server/config"
+	"github.com/akuity/kargo/pkg/server/middleware"
 	"github.com/akuity/kargo/pkg/server/user"
 )
 
@@ -238,7 +239,6 @@ func TestLoggingMiddleware(t *testing.T) {
 			core, recorded := observer.New(testCase.level)
 			logger := logging.Wrap(zap.New(core))
 
-			s := &server{}
 			router := gin.New()
 			require.NoError(t, ConfigureEngine(router, testCase.cfg))
 			router.Use(func(c *gin.Context) {
@@ -248,7 +248,7 @@ func TestLoggingMiddleware(t *testing.T) {
 				c.Next()
 			})
 			router.Use(LoggingMiddleware(testCase.cfg))
-			router.Use(s.handleError)
+			router.Use(middleware.HandleErrors())
 			router.GET("/", testCase.handler)
 
 			w := httptest.NewRecorder()

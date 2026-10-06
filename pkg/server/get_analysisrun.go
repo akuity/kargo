@@ -21,11 +21,6 @@ import (
 // @Success 200 {object} rolloutsapi.AnalysisRun "AnalysisRun custom resource (github.com/argoproj/argo-rollouts/pkg/apis/rollouts/v1alpha1.AnalysisRun)"
 // @Router /v1beta1/projects/{project}/analysis-runs/{analysis-run} [get]
 func (s *server) getAnalysisRun(c *gin.Context) {
-	if !s.cfg.RolloutsIntegrationEnabled {
-		_ = c.Error(errArgoRolloutsIntegrationDisabled)
-		return
-	}
-
 	ctx := c.Request.Context()
 
 	project := c.Param("project")

@@ -1,4 +1,4 @@
-package server
+package middleware
 
 import (
 	"errors"
@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestRecoveryMiddleware(t *testing.T) {
+func TestRecover(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	testCases := []struct {
@@ -60,10 +60,9 @@ func TestRecoveryMiddleware(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			s := &server{}
 			router := gin.New()
-			router.Use(s.handleError)
-			router.Use(recoveryMiddleware())
+			router.Use(HandleErrors())
+			router.Use(Recover())
 			router.GET("/", testCase.handler)
 
 			w := httptest.NewRecorder()

@@ -2,14 +2,11 @@ package server
 
 import (
 	"context"
-	"errors"
-	"net/http"
 
 	"github.com/gin-gonic/gin"
 	"go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 
-	libhttp "github.com/akuity/kargo/pkg/http"
+	"github.com/akuity/kargo/pkg/server/middleware"
 )
 
 // nolint: lll
@@ -90,8 +87,8 @@ func (s *server) setupRESTRouter(ctx context.Context) (*gin.Engine, error) {
 		router.Use(otelgin.Middleware("kargo-api"))
 	}
 	router.Use(LoggingMiddleware(s.cfg))
-	router.Use(s.handleError)
-	router.Use(recoveryMiddleware())
+	router.Use(middleware.HandleErrors())
+	router.Use(middleware.Recover())
 	if s.cfg.AdminConfig != nil || s.cfg.OIDCConfig != nil {
 		router.Use(NewAuthMiddleware(ctx, s.cfg, s.client.InternalClient()))
 	}
@@ -99,27 +96,39 @@ func (s *server) setupRESTRouter(ctx context.Context) (*gin.Engine, error) {
 	v1beta1 := router.Group("/v1beta1")
 	{
 		// =====================================================================
-		// Authentication
-		// =====================================================================
-		v1beta1.POST("/login", bodyLimitMiddleware(1*1024*1024), s.adminLogin)
-
-		// =====================================================================
 		// Generic Resources (CRUD via group/version/kind/namespace/name)
-		// These endpoints accept YAML/JSON manifests and need a larger limit (4MB).
+		// These endpoints accept YAML/JSON manifests and need a larger limit
+		// (4MB). They are registered before the default limit below so that it
+		// does not apply to them as well.
 		// =====================================================================
-		resourceLimit := bodyLimitMiddleware(4 * 1024 * 1024)
+		resourceLimit := middleware.LimitBody(4 * 1024 * 1024)
 		v1beta1.POST("/resources", resourceLimit, s.createResources)
 		v1beta1.PUT("/resources", resourceLimit, s.updateResources)
 		v1beta1.DELETE("/resources", resourceLimit, s.deleteResources)
 
-		// All other endpoints use a 1MB limit
-		defaultLimit := bodyLimitMiddleware(1 * 1024 * 1024)
+		// Every route registered from here on, including those of the groups
+		// below, gets a 1MB limit.
+		v1beta1.Use(middleware.LimitBody(1 * 1024 * 1024))
+
+		// =====================================================================
+		// Authentication
+		// =====================================================================
+		v1beta1.POST("/login", s.adminLogin)
+
+		// Optional features are gated here rather than in their handlers.
+		requireSecrets := middleware.RequireFeature(
+			s.cfg.SecretManagementEnabled,
+			errSecretManagementDisabled,
+		)
+		requireRollouts := middleware.RequireFeature(
+			s.cfg.RolloutsIntegrationEnabled,
+			errArgoRolloutsIntegrationDisabled,
+		)
 
 		// =====================================================================
 		// System-Level Endpoints (/v1beta1/system/*)
 		// =====================================================================
 		system := v1beta1.Group("/system")
-		system.Use(defaultLimit)
 		{
 			// Configuration
 			system.GET("/server-version", s.getVersionInfo)
@@ -144,11 +153,11 @@ func (s *server) setupRESTRouter(ctx context.Context) (*gin.Engine, error) {
 
 			// Generic Credentials
 			system.GET("/generic-credentials", s.listSystemGenericCredentials)
-			system.POST("/generic-credentials", s.createSystemGenericCredentials)
-			system.GET("/generic-credentials/:generic-credentials", s.getSystemGenericCredentials)
-			system.PUT("/generic-credentials/:generic-credentials", s.updateSystemGenericCredentials)
-			system.PATCH("/generic-credentials/:generic-credentials", s.patchSystemGenericCredentials)
-			system.DELETE("/generic-credentials/:generic-credentials", s.deleteSystemGenericCredentials)
+			system.POST("/generic-credentials", requireSecrets, s.createSystemGenericCredentials)
+			system.GET("/generic-credentials/:generic-credentials", requireSecrets, s.getSystemGenericCredentials)
+			system.PUT("/generic-credentials/:generic-credentials", requireSecrets, s.updateSystemGenericCredentials)
+			system.PATCH("/generic-credentials/:generic-credentials", requireSecrets, s.patchSystemGenericCredentials)
+			system.DELETE("/generic-credentials/:generic-credentials", requireSecrets, s.deleteSystemGenericCredentials)
 
 			// ConfigMaps
 			system.GET("/configmaps", s.listSystemConfigMaps)
@@ -163,12 +172,11 @@ func (s *server) setupRESTRouter(ctx context.Context) (*gin.Engine, error) {
 		// Shared Resources (/v1beta1/shared/*)
 		// =====================================================================
 		shared := v1beta1.Group("/shared")
-		shared.Use(defaultLimit)
 		{
 			// Cluster Analysis Templates (Argo Rollouts)
-			shared.GET("/cluster-analysis-templates", s.listClusterAnalysisTemplates)
-			shared.GET("/cluster-analysis-templates/:cluster-analysis-template", s.getClusterAnalysisTemplate)
-			shared.DELETE("/cluster-analysis-templates/:cluster-analysis-template", s.deleteClusterAnalysisTemplate)
+			shared.GET("/cluster-analysis-templates", requireRollouts, s.listClusterAnalysisTemplates)
+			shared.GET("/cluster-analysis-templates/:cluster-analysis-template", requireRollouts, s.getClusterAnalysisTemplate)
+			shared.DELETE("/cluster-analysis-templates/:cluster-analysis-template", requireRollouts, s.deleteClusterAnalysisTemplate)
 
 			// Cluster Promotion Tasks
 			shared.GET("/cluster-promotion-tasks", s.listClusterPromotionTasks)
@@ -176,19 +184,19 @@ func (s *server) setupRESTRouter(ctx context.Context) (*gin.Engine, error) {
 
 			// Repo Credentials
 			shared.GET("/repo-credentials", s.listSharedRepoCredentials)
-			shared.POST("/repo-credentials", s.createSharedRepoCredentials)
+			shared.POST("/repo-credentials", requireSecrets, s.createSharedRepoCredentials)
 			shared.GET("/repo-credentials/:repo-credentials", s.getSharedRepoCredentials)
-			shared.PUT("/repo-credentials/:repo-credentials", s.updateSharedRepoCredentials)
-			shared.PATCH("/repo-credentials/:repo-credentials", s.patchSharedRepoCredentials)
-			shared.DELETE("/repo-credentials/:repo-credentials", s.deleteSharedRepoCredentials)
+			shared.PUT("/repo-credentials/:repo-credentials", requireSecrets, s.updateSharedRepoCredentials)
+			shared.PATCH("/repo-credentials/:repo-credentials", requireSecrets, s.patchSharedRepoCredentials)
+			shared.DELETE("/repo-credentials/:repo-credentials", requireSecrets, s.deleteSharedRepoCredentials)
 
 			// Generic Credentials
 			shared.GET("/generic-credentials", s.listSharedGenericCredentials)
-			shared.POST("/generic-credentials", s.createSharedGenericCredentials)
-			shared.GET("/generic-credentials/:generic-credentials", s.getSharedGenericCredentials)
-			shared.PUT("/generic-credentials/:generic-credentials", s.updateSharedGenericCredentials)
-			shared.PATCH("/generic-credentials/:generic-credentials", s.patchSharedGenericCredentials)
-			shared.DELETE("/generic-credentials/:generic-credentials", s.deleteSharedGenericCredentials)
+			shared.POST("/generic-credentials", requireSecrets, s.createSharedGenericCredentials)
+			shared.GET("/generic-credentials/:generic-credentials", requireSecrets, s.getSharedGenericCredentials)
+			shared.PUT("/generic-credentials/:generic-credentials", requireSecrets, s.updateSharedGenericCredentials)
+			shared.PATCH("/generic-credentials/:generic-credentials", requireSecrets, s.patchSharedGenericCredentials)
+			shared.DELETE("/generic-credentials/:generic-credentials", requireSecrets, s.deleteSharedGenericCredentials)
 
 			// ConfigMaps
 			shared.GET("/configmaps", s.listSharedConfigMaps)
@@ -202,10 +210,15 @@ func (s *server) setupRESTRouter(ctx context.Context) (*gin.Engine, error) {
 		// =====================================================================
 		// Projects (/v1beta1/projects)
 		// =====================================================================
-		v1beta1.GET("/projects", defaultLimit, s.listProjects)
+		v1beta1.GET("/projects", s.listProjects)
 		project := v1beta1.Group("/projects/:project")
-		project.Use(defaultLimit)
-		project.Use(s.projectExistsMiddleware())
+		// The Project is looked up with the API server's own client rather than
+		// the authorizing one on purpose. Through the authorizing client, every
+		// project-scoped request would also require permission to get Projects,
+		// which a user granted access to a Project's Stages or Freight alone
+		// does not have. The lookup discloses nothing but the Project's
+		// existence; the request is then authorized as usual.
+		project.Use(middleware.RequireProject(s.client.InternalClient()))
 		{
 			// Project CRUD
 			project.GET("", s.getProject)
@@ -271,13 +284,13 @@ func (s *server) setupRESTRouter(ctx context.Context) (*gin.Engine, error) {
 			// -----------------------------------------------------------------
 
 			// Analysis Templates
-			project.GET("/analysis-templates", s.listAnalysisTemplates)
-			project.GET("/analysis-templates/:analysis-template", s.getAnalysisTemplate)
-			project.DELETE("/analysis-templates/:analysis-template", s.deleteAnalysisTemplate)
+			project.GET("/analysis-templates", requireRollouts, s.listAnalysisTemplates)
+			project.GET("/analysis-templates/:analysis-template", requireRollouts, s.getAnalysisTemplate)
+			project.DELETE("/analysis-templates/:analysis-template", requireRollouts, s.deleteAnalysisTemplate)
 
 			// Analysis Runs
-			project.GET("/analysis-runs/:analysis-run", s.getAnalysisRun)
-			project.GET("/analysis-runs/:analysis-run/logs", s.getAnalysisRunLogs)
+			project.GET("/analysis-runs/:analysis-run", requireRollouts, s.getAnalysisRun)
+			project.GET("/analysis-runs/:analysis-run/logs", requireRollouts, s.getAnalysisRunLogs)
 
 			// -----------------------------------------------------------------
 			// Generic Config
@@ -300,19 +313,19 @@ func (s *server) setupRESTRouter(ctx context.Context) (*gin.Engine, error) {
 
 			// Repo Credentials
 			project.GET("/repo-credentials", s.listProjectRepoCredentials)
-			project.POST("/repo-credentials", s.createProjectRepoCredentials)
+			project.POST("/repo-credentials", requireSecrets, s.createProjectRepoCredentials)
 			project.GET("/repo-credentials/:repo-credentials", s.getProjectRepoCredentials)
-			project.PUT("/repo-credentials/:repo-credentials", s.updateProjectRepoCredentials)
-			project.PATCH("/repo-credentials/:repo-credentials", s.patchProjectRepoCredentials)
-			project.DELETE("/repo-credentials/:repo-credentials", s.deleteProjectRepoCredentials)
+			project.PUT("/repo-credentials/:repo-credentials", requireSecrets, s.updateProjectRepoCredentials)
+			project.PATCH("/repo-credentials/:repo-credentials", requireSecrets, s.patchProjectRepoCredentials)
+			project.DELETE("/repo-credentials/:repo-credentials", requireSecrets, s.deleteProjectRepoCredentials)
 
 			// Generic Credentials
 			project.GET("/generic-credentials", s.listProjectGenericCredentials)
-			project.POST("/generic-credentials", s.createProjectGenericCredentials)
-			project.GET("/generic-credentials/:generic-credentials", s.getProjectGenericCredentials)
-			project.PUT("/generic-credentials/:generic-credentials", s.updateProjectGenericCredentials)
-			project.PATCH("/generic-credentials/:generic-credentials", s.patchProjectGenericCredentials)
-			project.DELETE("/generic-credentials/:generic-credentials", s.deleteProjectGenericCredentials)
+			project.POST("/generic-credentials", requireSecrets, s.createProjectGenericCredentials)
+			project.GET("/generic-credentials/:generic-credentials", requireSecrets, s.getProjectGenericCredentials)
+			project.PUT("/generic-credentials/:generic-credentials", requireSecrets, s.updateProjectGenericCredentials)
+			project.PATCH("/generic-credentials/:generic-credentials", requireSecrets, s.patchProjectGenericCredentials)
+			project.DELETE("/generic-credentials/:generic-credentials", requireSecrets, s.deleteProjectGenericCredentials)
 
 			// -----------------------------------------------------------------
 			// RBAC
@@ -338,52 +351,4 @@ func (s *server) setupRESTRouter(ctx context.Context) (*gin.Engine, error) {
 	}
 
 	return router, nil
-}
-
-// errorResponse is the body of every error response the REST API sends.
-type errorResponse struct {
-	Error string `json:"error"`
-}
-
-func (s *server) handleError(c *gin.Context) {
-	c.Next()
-	if len(c.Errors) > 0 {
-		err := c.Errors.Last().Err
-
-		// Check for MaxBytesError (body too large)
-		var maxBytesErr *http.MaxBytesError
-		if errors.As(err, &maxBytesErr) {
-			c.JSON(http.StatusRequestEntityTooLarge, errorResponse{Error: "request body too large"})
-			return
-		}
-
-		var httpErr *libhttp.HTTPError
-		if ok := errors.As(err, &httpErr); ok {
-			if code := httpErr.Code(); code == http.StatusInternalServerError {
-				s.respondInternalServerError(c)
-				return
-			}
-			c.JSON(httpErr.Code(), errorResponse{Error: httpErr.Error()})
-			return
-		}
-		var statusErr *apierrors.StatusError
-		if ok := errors.As(err, &statusErr); ok {
-			c.JSON(int(statusErr.Status().Code), errorResponse{Error: err.Error()})
-			return
-		}
-		// An error of no recognized type is, by definition, one we did not
-		// anticipate. Report it as such rather than leaving the response empty.
-		s.respondInternalServerError(c)
-	}
-}
-
-// respondInternalServerError responds with a 500 whose body discloses nothing
-// about the underlying failure. The error itself is recorded by the request
-// logging middleware, which knows what was requested as well as what went
-// wrong.
-func (s *server) respondInternalServerError(c *gin.Context) {
-	c.JSON(
-		http.StatusInternalServerError,
-		errorResponse{Error: "internal server error"},
-	)
 }
