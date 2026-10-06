@@ -65,12 +65,11 @@ func (i Input) DeepCopy() Input {
 }
 
 // ToJSON marshals the input to JSON.
-func (i Input) ToJSON() []byte {
+func (i Input) ToJSON() ([]byte, error) {
 	if len(i) == 0 {
-		return nil
+		return nil, nil
 	}
-	b, _ := json.Marshal(i)
-	return b
+	return json.Marshal(i)
 }
 
 // InputToStruct converts an Input to a (typed) struct.
