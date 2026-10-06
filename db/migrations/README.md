@@ -1,16 +1,19 @@
 # Database migrations
 
 This directory holds the Goose SQL migrations that define Kargo's database
-schema. Tilt applies them to the local PostgreSQL database once at startup.
-After that, changes here are applied only when you trigger the `db-migrate`
-resource, from the Tilt UI or with:
+schema. They are embedded in the control plane binary, and its `migrate`
+subcommand applies them; in an installed Kargo, the chart's migration Job runs
+it. Tilt runs the same Job as the `db-migrate` resource, once at startup.
+After that, changes here are applied only when you trigger it, from the Tilt
+UI or with:
 
 ```shell
 hack/bin/tilt trigger db-migrate
 ```
 
-Tilt still watches the directory and marks `db-migrate` as having pending
-changes, so a saved but unapplied migration is visible without being run.
+A change here still rebuilds the image and marks `db-migrate` as having
+pending changes, so a saved but unapplied migration is visible without being
+run.
 
 ## Workflow
 

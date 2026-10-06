@@ -23,8 +23,7 @@ local_resource(
 
 # Regenerate pgx code from SQL before the back end compiles. sqlc only writes
 # to pkg/database, which back-end-compile watches, so the two chain naturally.
-# It is parallel-safe for the same reason db-migrate is: it does not touch
-# anything an image build reads.
+# It is parallel-safe because it does not touch anything an image build reads.
 local_resource(
   'codegen-db',
   cmd = 'make codegen-db',
@@ -39,6 +38,7 @@ local_resource(
   deps=[
     'api/',
     'cmd/controlplane/',
+    'db/',
     'internal/',
     'pkg/',
     'go.mod',
@@ -84,48 +84,19 @@ k8s_resource(
   labels = ['kargo']
 )
 
-# Migrations are applied once at startup and then only on a manual trigger, so
-# that a migration being written is never applied before it is finished. Tilt
-# still watches db/migrations and marks the resource as having pending changes.
-# This runs the same `migrate` subcommand as the chart's migration Job,
-# which values.dev.yaml disables in favor of this resource.
-#
-# Tilt holds a local_resource until no other update is in flight unless it is
-# marked parallel-safe. Without this, migrations wait behind the image builds
-# even though the database is already ready. The command only touches the
-# database, so running it alongside other builds is safe.
-local_resource(
-  'db-migrate',
-  cmd = 'make db-migrate',
-  deps = [
-    'db/',
-    'cmd/controlplane/migrate.go',
-    'pkg/database/migrate.go',
-    'pkg/database/config.go',
-    'Makefile',
-    'go.mod',
-    'go.sum',
-  ],
-  resource_deps = ['postgres'],
-  labels = ['kargo'],
-  trigger_mode = TRIGGER_MODE_MANUAL,
-  allow_parallel = True,
-)
-
 kargo_base_path = os.environ.get('KARGO_BASE_PATH', '')
-k8s_yaml(
-  helm(
-    './charts/kargo',
-    name = 'kargo',
-    namespace = 'kargo',
-    values = 'hack/tilt/values.dev.yaml',
-    set = [
-      'externalWebhooksServer.host=' + os.environ.get('KARGO_EXTERNAL_WEBHOOKS_SERVER_HOSTNAME', 'localhost:30083'),
-      'externalWebhooksServer.tls.terminatedUpstream=' + os.environ.get('KARGO_EXTERNAL_WEBHOOKS_SERVER_TLS_TERMINATED_UPSTREAM', 'false'),
-      'api.basePath=' + kargo_base_path
-    ]
-  )
+chart = helm(
+  './charts/kargo',
+  name = 'kargo',
+  namespace = 'kargo',
+  values = 'hack/tilt/values.dev.yaml',
+  set = [
+    'externalWebhooksServer.host=' + os.environ.get('KARGO_EXTERNAL_WEBHOOKS_SERVER_HOSTNAME', 'localhost:30083'),
+    'externalWebhooksServer.tls.terminatedUpstream=' + os.environ.get('KARGO_EXTERNAL_WEBHOOKS_SERVER_TLS_TERMINATED_UPSTREAM', 'false'),
+    'api.basePath=' + kargo_base_path
+  ]
 )
+k8s_yaml(chart)
 # Normally the API server serves up the front end, but we want live updates
 # of the UI, so we're breaking it out into its own separate deployment here.
 # The __KARGO_BASE_PATH__ placeholder in the manifest is substituted so the UI
@@ -144,6 +115,28 @@ k8s_resource(
   resource_deps = ['namespaces'],
   labels = ['kargo'],
   trigger_mode = TRIGGER_MODE_AUTO,
+)
+
+# The chart's migration Job runs the `migrate` subcommand from the same image
+# as every other workload, so it goes through the same host compile and image
+# build. Like them it deploys once at startup and then only on a manual
+# trigger, which keeps a migration still being written from being applied
+# early. Its name carries a hash of its pod template, so it is read from the
+# rendered chart rather than hard-coded.
+migrate_job = [
+  o['metadata']['name']
+  for o in decode_yaml_stream(chart)
+  if o['kind'] == 'Job' and o['metadata']['name'].startswith('kargo-migrate-')
+][0]
+k8s_resource(
+  workload = migrate_job,
+  new_name = 'db-migrate',
+  objects = [
+    'kargo-migrate:configmap',
+    'kargo-migrate:serviceaccount',
+  ],
+  resource_deps = ['back-end-compile', 'postgres'],
+  labels = ['kargo'],
 )
 
 k8s_resource(

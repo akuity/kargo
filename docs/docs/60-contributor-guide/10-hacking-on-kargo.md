@@ -525,22 +525,23 @@ locally and the client always matches the server.
 Migrations are embedded in the control plane binary and applied by its
 `migrate` subcommand, which waits for the database to accept a connection,
 takes a database-level lock so concurrent runners serialize, and applies
-whatever is pending. In an installed Kargo, the chart's migration Job runs it
-on every install and upgrade. The `db-migrate` Tilt resource runs the same
-subcommand from your working tree, so a migration can be tried without an
-image build; the Job is disabled in `values.dev.yaml` for that reason. It runs
-once at startup. After that, Tilt watches `db/migrations/` and marks the
-resource as having pending changes, but applies them only when you trigger it,
-from the Tilt UI or with:
+whatever is pending. The chart's migration Job runs it on every install and
+upgrade, and Tilt runs that same Job as the `db-migrate` resource, so the Job
+and its connection wiring are exercised in development too. Like the other
+workloads, it deploys once at startup. After that, a change under
+`db/migrations/` recompiles the binary and rebuilds the image, and Tilt marks
+`db-migrate` as having pending changes, but applies them only when you
+trigger it, from the Tilt UI or with:
 
 ```shell
 hack/bin/tilt trigger db-migrate
 ```
 
-This keeps a migration you are still editing from being applied early.
-Migration failures appear in Tilt and are not retried.
+This keeps a migration you are still editing from being applied early. A
+failed migration is retried up to the Job's `backoffLimit`, and each attempt's
+logs appear in Tilt.
 
-To run the same migration command outside Tilt:
+To run the same subcommand from your working tree, outside Tilt:
 
 ```shell
 make db-migrate
