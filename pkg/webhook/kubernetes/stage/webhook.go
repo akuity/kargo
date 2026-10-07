@@ -104,6 +104,9 @@ func (w *webhook) Default(ctx context.Context, stage *kargoapi.Stage) error {
 	}
 
 	if req.Operation == admissionv1.Create || req.Operation == admissionv1.Update {
+		if stage.IsTargetAware() {
+			w.targetAwareDefaults(stage)
+		}
 		if verReq, ok := api.ReverifyAnnotationValue(stage.Annotations); ok {
 			var oldVerReq *kargoapi.VerificationRequest
 			if oldStage != nil {
@@ -143,6 +146,13 @@ func (w *webhook) Default(ctx context.Context, stage *kargoapi.Stage) error {
 		}
 	}
 	return nil
+}
+
+func (w *webhook) targetAwareDefaults(stage *kargoapi.Stage) {
+	// Set verification mode to PerStage
+	if stage.Spec.Targets.Verification.VerificationRunMode == "" {
+		stage.Spec.Targets.Verification.VerificationRunMode = kargoapi.VerificationRunModePerStage
+	}
 }
 
 func (w *webhook) ValidateCreate(

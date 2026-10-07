@@ -33,6 +33,7 @@ import (
 	"github.com/akuity/kargo/pkg/conditions"
 	"github.com/akuity/kargo/pkg/controller"
 	"github.com/akuity/kargo/pkg/controller/metrics"
+	"github.com/akuity/kargo/pkg/controller/stages/verification"
 	"github.com/akuity/kargo/pkg/credentials"
 	kargoEvent "github.com/akuity/kargo/pkg/event"
 	k8sevent "github.com/akuity/kargo/pkg/event/kubernetes"
@@ -822,14 +823,28 @@ func (r *FleetStageReconciler) verifyStageFreight(
 	endTime func() time.Time,
 ) (newStatus kargoapi.StageStatus, err error) {
 	// Verification logic is shared with regular stages
-	ver := verifier{
-		cfg:           r.cfg,
-		client:        r.client,
-		credentialsDB: r.credentialsDB,
-		eventSender:   r.eventSender,
-		backoffCfg:    r.backoffCfg,
+	analysisRunners := map[kargoapi.AnalysisRunGVK]verification.AnalysisRunner{
+		kargoapi.AnalysisRunGVKRun: verification.NewAnalysisRunnerRollouts(
+			r.cfg.RolloutsControllerInstanceID,
+			r.backoffCfg,
+			r.client,
+			r.credentialsDB,
+		),
+		kargoapi.AnalysisRunGVKRequest: verification.NewAnalysisRunnerRequest(
+			r.cfg.RolloutsControllerInstanceID,
+			r.backoffCfg,
+			r.client,
+			r.credentialsDB,
+		),
 	}
-	return ver.verifyStageFreight(ctx, stage, startTime, endTime)
+	ver := verification.NewVerifier(
+		r.cfg.Name(),
+		r.cfg.RolloutsIntegrationEnabled,
+		r.client,
+		r.eventSender,
+		analysisRunners,
+	)
+	return ver.VerifyStageFreight(ctx, stage, startTime, endTime)
 }
 
 // markFreightVerifiedForStage marks the Freight that is associated with the
