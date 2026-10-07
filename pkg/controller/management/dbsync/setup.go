@@ -23,7 +23,10 @@ import (
 
 const (
 	resyncInterval = time.Minute
-	numWorkers     = 4
+	// resyncJitter spreads the diffs of the mirrored kinds so they do not
+	// all list the database and Kubernetes at the same instant.
+	resyncJitter = 0.1
+	numWorkers   = 4
 )
 
 // SetupWithManager registers one controller per mirrored kind with the
@@ -58,7 +61,7 @@ func register(mgr manager.Manager, reader client.Reader, syncer syncapi.Syncer) 
 		// Whatever the database disagrees with, at startup and on an
 		// interval. Listed last so the watches above are already subscribed
 		// while the diff runs.
-		Watch(list.New(syncer.Diff).Every(resyncInterval)).
+		Watch(list.New(syncer.Diff).Every(resyncInterval).Jitter(resyncJitter)).
 		Workers(numWorkers).
 		Func(newReconciler(reader, syncer))
 	if err != nil {
