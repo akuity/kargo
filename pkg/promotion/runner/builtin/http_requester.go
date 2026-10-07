@@ -358,39 +358,26 @@ func (h *httpRequester) buildDownloadEnv(
 	}
 	dl.tempPath = tempPath
 
-	response := map[string]any{
-		// TODO(krancour): Casting as an int64 is a short-term fix here because
-		// deep copy of the output map will panic if any value is an int. This is
-		// a near-term fix and a better solution will be PR'ed soon.
-		"status":  int64(resp.StatusCode),
-		"header":  resp.Header.Get,
-		"headers": resp.Header,
-		"body":    map[string]any{},
-	}
-
+	var bodyBytes []byte
 	if size > maxResponseBytes {
 		logging.LoggerFromContext(ctx).Debug(
 			"response body exceeds 2 MiB; leaving response.body empty",
 			"size", size,
 		)
-		return map[string]any{"response": response}, nil
+	} else {
+		// #nosec G304 -- tempPath is a temp file this step just created.
+		if bodyBytes, err = os.ReadFile(tempPath); err != nil {
+			return nil, fmt.Errorf("reading downloaded response body: %w", err)
+		}
 	}
 
-	// The body is small enough to parse: reuse the standard env builder over
-	// the downloaded bytes so the parsing rules stay identical.
-	bodyBytes, err := os.ReadFile(tempPath) //nolint:gosec // temp file we created
-	if err != nil {
-		return nil, fmt.Errorf("reading downloaded response body: %w", err)
-	}
-	synthResp := &http.Response{
-		StatusCode:    resp.StatusCode,
-		Header:        resp.Header,
-		Body:          io.NopCloser(bytes.NewReader(bodyBytes)),
-		ContentLength: int64(len(bodyBytes)),
-	}
-	env, err := h.buildExprEnv(ctx, synthResp, contentType)
-	_ = synthResp.Body.Close()
-	return env, err
+	return h.buildExprEnvFromBytes(
+		ctx,
+		resp.StatusCode,
+		resp.Header,
+		bodyBytes,
+		contentType,
+	)
 }
 
 // streamResponseToTempFile streams r to a temporary file in dir, capped at
@@ -667,6 +654,26 @@ func (h *httpRequester) buildExprEnv(
 		return nil, fmt.Errorf("reading response body: %w", err)
 	}
 
+	return h.buildExprEnvFromBytes(
+		ctx,
+		resp.StatusCode,
+		resp.Header,
+		bodyBytes,
+		contentType,
+	)
+}
+
+// buildExprEnvFromBytes builds the expression env from an already-read
+// response body. It is shared by plain requests and downloads so the parsing
+// rules stay identical. A nil or empty bodyBytes leaves response.body as an
+// empty map.
+func (h *httpRequester) buildExprEnvFromBytes(
+	ctx context.Context,
+	statusCode int,
+	header http.Header,
+	bodyBytes []byte,
+	contentType string,
+) (map[string]any, error) {
 	// TODO(hidde): It has proven to be difficult to figure out why a HTTP step
 	// fails or is not working as expected. To remediate this, we log the
 	// response body and headers at trace level. This is a temporary solution
@@ -674,8 +681,8 @@ func (h *httpRequester) buildExprEnv(
 	// as part of the step output or error message.
 	logging.LoggerFromContext(ctx).Trace(
 		"HTTP request response",
-		"status", resp.StatusCode,
-		"header", resp.Header,
+		"status", statusCode,
+		"header", header,
 		"body", string(bodyBytes),
 	)
 
@@ -683,14 +690,14 @@ func (h *httpRequester) buildExprEnv(
 		// TODO(krancour): Casting as an int64 is a short-term fix here because
 		// deep copy of the output map will panic if any value is an int. This is
 		// a near-term fix and a better solution will be PR'ed soon.
-		"status":  int64(resp.StatusCode),
-		"header":  resp.Header.Get,
-		"headers": resp.Header,
+		"status":  int64(statusCode),
+		"header":  header.Get,
+		"headers": header,
 		"body":    map[string]any{},
 	}
 
 	if contentType == "" {
-		contentType, _, _ = mime.ParseMediaType(resp.Header.Get(contentTypeHeader))
+		contentType, _, _ = mime.ParseMediaType(header.Get(contentTypeHeader))
 	}
 
 	if len(bodyBytes) > 0 {
@@ -708,13 +715,13 @@ func (h *httpRequester) buildExprEnv(
 				}
 			}
 			var parsedBody any
-			if err = json.Unmarshal(bodyBytes, &parsedBody); err != nil {
+			if err := json.Unmarshal(bodyBytes, &parsedBody); err != nil {
 				return nil, fmt.Errorf("failed to parse JSON response: %w", err)
 			}
 			response["body"] = parsedBody
 		case httpParseModeYAML:
 			var parsedBody any
-			if err = yaml.Unmarshal(bodyBytes, &parsedBody); err != nil {
+			if err := yaml.Unmarshal(bodyBytes, &parsedBody); err != nil {
 				return nil, fmt.Errorf("failed to parse YAML response: %w", err)
 			}
 			response["body"] = parsedBody
