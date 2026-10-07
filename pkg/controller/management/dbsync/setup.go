@@ -53,11 +53,8 @@ func register(mgr manager.Manager, reader client.Reader, syncer syncapi.Syncer) 
 		return fmt.Errorf("error identifying database sync resource: %w", err)
 	}
 	name := "db-sync-" + strings.ToLower(gvk.Kind)
-	b := reconciler.New[reconcile.Request](name)
-	for _, src := range syncer.Sources(mgr.GetCache()) {
-		b.Watch(src)
-	}
-	c, err := b.
+	c, err := reconciler.New[reconcile.Request](name).
+		Watch(syncer.Sources(mgr.GetCache())...).
 		// Whatever the database disagrees with, at startup and on an
 		// interval. Listed last so the watches above are already subscribed
 		// while the diff runs.
