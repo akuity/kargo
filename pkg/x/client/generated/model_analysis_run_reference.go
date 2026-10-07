@@ -19,6 +19,8 @@ var _ MappedNullable = &AnalysisRunReference{}
 
 // AnalysisRunReference struct for AnalysisRunReference
 type AnalysisRunReference struct {
+	// Kind is a string representation of GroupVersionKind describing this run For classic analysis run it is AnalysisRunKindRun or AnalysisRunKindLegacy (empty)
+	Kind *string `json:"kind,omitempty"`
 	// Name is the name of the AnalysisRun.
 	Name *string `json:"name,omitempty"`
 	// Namespace is the namespace of the AnalysisRun.
@@ -42,6 +44,38 @@ func NewAnalysisRunReference() *AnalysisRunReference {
 func NewAnalysisRunReferenceWithDefaults() *AnalysisRunReference {
 	this := AnalysisRunReference{}
 	return &this
+}
+
+// GetKind returns the Kind field value if set, zero value otherwise.
+func (o *AnalysisRunReference) GetKind() string {
+	if o == nil || IsNil(o.Kind) {
+		var ret string
+		return ret
+	}
+	return *o.Kind
+}
+
+// GetKindOk returns a tuple with the Kind field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *AnalysisRunReference) GetKindOk() (*string, bool) {
+	if o == nil || IsNil(o.Kind) {
+		return nil, false
+	}
+	return o.Kind, true
+}
+
+// HasKind returns a boolean if a field has been set.
+func (o *AnalysisRunReference) HasKind() bool {
+	if o != nil && !IsNil(o.Kind) {
+		return true
+	}
+
+	return false
+}
+
+// SetKind gets a reference to the given string and assigns it to the Kind field.
+func (o *AnalysisRunReference) SetKind(v string) {
+	o.Kind = &v
 }
 
 // GetName returns the Name field value if set, zero value otherwise.
@@ -150,6 +184,9 @@ func (o AnalysisRunReference) MarshalJSON() ([]byte, error) {
 
 func (o AnalysisRunReference) ToMap() (map[string]interface{}, error) {
 	toSerialize := map[string]interface{}{}
+	if !IsNil(o.Kind) {
+		toSerialize["kind"] = o.Kind
+	}
 	if !IsNil(o.Name) {
 		toSerialize["name"] = o.Name
 	}
