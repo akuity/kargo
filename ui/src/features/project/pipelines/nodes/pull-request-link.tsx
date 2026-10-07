@@ -69,7 +69,7 @@ export const PullRequestLink = (props: PullRequestLinkProps) => {
 
   return (
     <Link href={pullRequestLink} target='_blank' className={classNames(props.className)}>
-      <Tag color='green' bordered={false}>
+      <Tag color='green' variant='filled'>
         <span className='text-[8px]'>
           Waiting for PR Approval <FontAwesomeIcon className='ml-1' icon={faCodePullRequest} />
           <FontAwesomeIcon icon={faExternalLink} className='ml-1' />

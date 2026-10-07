@@ -125,8 +125,7 @@ export const Promote = (props: PromoteProps) => {
           Promote {freightAlias} to {promotingTo}
         </Flex>
       }
-      size='large'
-      width={'1400px'}
+      size='1400px'
       footer={
         <Tooltip title={windowClosed ? promotionWindowClosedMessage(props.stage) : undefined}>
           <Button

@@ -49,7 +49,7 @@ export const StepWaitingLabel = (props: StepWaitingLabelProps) => {
         promotionId: promotion?.metadata?.name || ''
       })}
     >
-      <Tag color='blue' bordered={false} className={classNames(props.className)}>
+      <Tag color='blue' variant='filled' className={classNames(props.className)}>
         <span className='text-[8px]'>
           {props.label} <FontAwesomeIcon className='ml-1' icon={props.icon} />
         </span>

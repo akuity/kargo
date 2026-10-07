@@ -111,7 +111,7 @@ export const CreateStage = ({
   return (
     <Drawer
       open={!!project}
-      width={'80%'}
+      size='80%'
       onClose={close}
       title='Create Stage'
       extra={

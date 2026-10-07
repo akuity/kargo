@@ -122,7 +122,7 @@ export const PromotionSteps = (props: PromotionStepsProps) => {
   return (
     <>
       <Collapse
-        expandIconPosition='end'
+        expandIconPlacement='end'
         bordered={false}
         items={items}
         activeKey={activeKeys}

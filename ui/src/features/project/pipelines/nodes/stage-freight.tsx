@@ -229,7 +229,7 @@ const Artifact = (props: { artifact: string | GitCommit | Chart | Image | Artifa
   if (isArtifactGeneric(props.artifact)) {
     return (
       <Tag
-        bordered={false}
+        variant='filled'
         color='geekblue'
         title={subscriptionTitle(props.artifact.version, props.artifact.subscriptionName)}
       >
@@ -254,7 +254,7 @@ const Artifact = (props: { artifact: string | GitCommit | Chart | Image | Artifa
     let TagComponent = (
       <Tag
         title={subscriptionTitle(props.artifact.repoURL, props.artifact.subscriptionName)}
-        bordered={false}
+        variant='filled'
         color='geekblue'
       >
         <Flex justify='center' align='center' wrap>
@@ -298,7 +298,7 @@ const Artifact = (props: { artifact: string | GitCommit | Chart | Image | Artifa
           `${props.artifact.repoURL}:${props.artifact.version}`,
           props.artifact.subscriptionName
         )}
-        bordered={false}
+        variant='filled'
         color='geekblue'
       >
         <Flex wrap justify='center'>
@@ -325,7 +325,7 @@ const Artifact = (props: { artifact: string | GitCommit | Chart | Image | Artifa
           `${props.artifact.repoURL}:${props.artifact.tag}`,
           props.artifact.subscriptionName
         )}
-        bordered={false}
+        variant='filled'
         color='geekblue'
       >
         <Flex justify='center' wrap>

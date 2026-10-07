@@ -104,7 +104,8 @@ export const RolesList = ({ project = '', systemLevel = false }: Props) => {
         />
       )}
       <Table
-        className='my-2 overflow-x-auto'
+        className='my-2'
+        scroll={{ x: 'max-content' }}
         key={roles.length}
         dataSource={roles.sort((a, b) => {
           if (a.metadata?.name && b.metadata?.name) {

@@ -7,7 +7,7 @@ import {
   faUser
 } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { Button, Spin, Tooltip } from 'antd';
+import { Button, Layout, Spin, Tooltip } from 'antd';
 import ErrorBoundary from 'antd/es/alert/ErrorBoundary';
 import { Suspense } from 'react';
 import { Link, Outlet } from 'react-router-dom';
@@ -34,61 +34,65 @@ export const MainLayout = () => {
           </div>
         }
       >
-        <div className={styles.wrapper}>
-          <aside className={styles.sidebar}>
-            <Link to={paths.home} className='my-4' title='Home'>
-              <KargoLogo />
-            </Link>
-            <Tooltip className={styles.version} title={__UI_VERSION__} placement='right'>
-              {__UI_VERSION__ === 'development' ? 'dev' : __UI_VERSION__}
-            </Tooltip>
-            <nav className={styles.nav}>
-              <NavItem icon={faBoxes} path={paths.projects}>
-                Projects
-              </NavItem>
-              {!isJWTDirty(JWTInfo) && (
-                <NavItem icon={faUser} path={paths.user}>
-                  User
+        <Layout>
+          <div className={styles.wrapper}>
+            <aside className={styles.sidebar}>
+              <Link to={paths.home} className='my-4' title='Home'>
+                <KargoLogo />
+              </Link>
+              <Tooltip title={__UI_VERSION__} placement='right'>
+                <div className={styles.version}>
+                  {__UI_VERSION__ === 'development' ? 'dev' : __UI_VERSION__}
+                </div>
+              </Tooltip>
+              <nav className={styles.nav}>
+                <NavItem icon={faBoxes} path={paths.projects}>
+                  Projects
                 </NavItem>
-              )}
-              {appSubpages.map((page) => (
-                <NavItem
-                  key={page.path}
-                  icon={page.icon}
-                  path={`${paths.appExtensions}/${page.path}`}
-                >
-                  {page.label}
+                {!isJWTDirty(JWTInfo) && (
+                  <NavItem icon={faUser} path={paths.user}>
+                    User
+                  </NavItem>
+                )}
+                {appSubpages.map((page) => (
+                  <NavItem
+                    key={page.path}
+                    icon={page.icon}
+                    path={`${paths.appExtensions}/${page.path}`}
+                  >
+                    {page.label}
+                  </NavItem>
+                ))}
+                <NavItem icon={faGear} path={paths.settings}>
+                  Settings
                 </NavItem>
-              ))}
-              <NavItem icon={faGear} path={paths.settings}>
-                Settings
-              </NavItem>
-              <NavItem icon={faBook} path='https://docs.kargo.io' target='_blank'>
-                Docs
-              </NavItem>
-              <NavItem icon={faTerminal} path={paths.downloads}>
-                CLI
-              </NavItem>
-            </nav>
+                <NavItem icon={faBook} path='https://docs.kargo.io' target='_blank'>
+                  Docs
+                </NavItem>
+                <NavItem icon={faTerminal} path={paths.downloads}>
+                  CLI
+                </NavItem>
+              </nav>
 
-            <Button
-              className={styles.logout}
-              onClick={logout}
-              type='text'
-              icon={<FontAwesomeIcon icon={faArrowRightFromBracket} />}
-            >
-              Logout
-            </Button>
-          </aside>
-          <div className={styles.contentWrapper}>
-            <div className={styles.content}>
-              <Outlet />
+              <Button
+                className={styles.logout}
+                onClick={logout}
+                type='text'
+                icon={<FontAwesomeIcon icon={faArrowRightFromBracket} />}
+              >
+                Logout
+              </Button>
+            </aside>
+            <div className={styles.contentWrapper}>
+              <div className={styles.content}>
+                <Outlet />
+              </div>
             </div>
           </div>
-        </div>
-        {layoutExtensions.map(({ component: Comp }, index) => (
-          <Comp key={index} />
-        ))}
+          {layoutExtensions.map(({ component: Comp }, index) => (
+            <Comp key={index} />
+          ))}
+        </Layout>
       </Suspense>
     </ErrorBoundary>
   );

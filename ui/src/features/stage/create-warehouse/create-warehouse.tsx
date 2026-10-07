@@ -121,7 +121,7 @@ const CreateWarehouse = (props: ModalComponentProps) => {
     <Drawer
       open={props.visible}
       onClose={props.hide}
-      width='80%'
+      size='80%'
       title='Create Warehouse'
       extra={
         <Typography.Link

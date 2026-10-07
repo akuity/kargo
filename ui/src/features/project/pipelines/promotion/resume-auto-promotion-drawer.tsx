@@ -100,7 +100,7 @@ export const ResumeAutoPromotionDrawer = ({
     <Drawer
       open={open}
       onClose={onClose}
-      width={720}
+      size={720}
       title={
         <Flex align='center' gap={8}>
           <FontAwesomeIcon icon={faPlay} />

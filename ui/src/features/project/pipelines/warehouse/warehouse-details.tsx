@@ -60,7 +60,7 @@ export const WarehouseDetails = ({
     <Drawer
       open={!!warehouse}
       onClose={onClose}
-      width={'80%'}
+      size='80%'
       title={
         <Flex justify='space-between' className='font-normal'>
           <div>

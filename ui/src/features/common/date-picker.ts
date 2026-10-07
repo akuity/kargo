@@ -1,5 +1,5 @@
+import dateFnsGenerateConfig from '@rc-component/picker/es/generate/dateFns';
 import generatePicker from 'antd/es/date-picker/generatePicker';
-import dateFnsGenerateConfig from 'rc-picker/es/generate/dateFns';
 
 export const DatePicker = generatePicker<Date>(dateFnsGenerateConfig);
 

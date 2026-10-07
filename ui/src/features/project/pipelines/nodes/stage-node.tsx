@@ -151,7 +151,8 @@ export const StageNode = (props: { stage: Stage }) => {
           header: {
             ...headerStyle,
             textShadow: '1px 1px 2px rgba(0, 0, 0, 0.15)',
-            paddingRight: '8px'
+            paddingRight: '8px',
+            lineHeight: 1
           },
           body: {
             height: '100%',
@@ -184,7 +185,7 @@ export const StageNode = (props: { stage: Stage }) => {
             />
             <Dropdown
               trigger={['click']}
-              overlayClassName='w-fit'
+              classNames={{ root: 'w-fit' }}
               menu={{
                 items: dropdownItems
               }}
@@ -196,7 +197,7 @@ export const StageNode = (props: { stage: Stage }) => {
               />
             </Dropdown>
             <Button
-              icon={<FontAwesomeIcon icon={faBarsStaggered} className='mt-1' />}
+              icon={<FontAwesomeIcon icon={faBarsStaggered} />}
               size='small'
               onClick={() =>
                 navigate(

@@ -34,7 +34,7 @@ export const ResumeDraftModal = ({
       open={open}
       title='Resume your draft?'
       closable={false}
-      maskClosable={false}
+      mask={{ closable: false }}
       footer={[
         <Button key='fresh' danger onClick={onStartFresh}>
           Start new project

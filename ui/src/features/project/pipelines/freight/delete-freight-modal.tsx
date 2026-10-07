@@ -27,7 +27,7 @@ export const DeleteFreightModal = ({
 
   return (
     <Modal
-      destroyOnClose
+      destroyOnHidden
       open={visible}
       title='Confirm Delete'
       onCancel={hide}

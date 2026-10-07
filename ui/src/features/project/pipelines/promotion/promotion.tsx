@@ -291,8 +291,7 @@ export const Promotion = (props: PromotionProps) => {
     <Drawer
       open={props.visible}
       onClose={props.hide}
-      size='large'
-      width={'1400px'}
+      size='1400px'
       title={`Promotion - ${props.promotionId}`}
     >
       {getPromotionQuery.isLoading && <LoadingState />}
