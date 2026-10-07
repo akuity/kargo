@@ -1903,6 +1903,21 @@ func Test_httpRequester_run_download(t *testing.T) {
 			},
 		},
 		{
+			name: "unparseable body errors and removes the temp file",
+			cfg:  builtin.HTTPConfig{OutPath: "f.json"},
+			handler: func(w http.ResponseWriter, _ *http.Request) {
+				w.Header().Set(contentTypeHeader, contentTypeJSON)
+				_, _ = w.Write([]byte("{not json"))
+			},
+			assert: func(t *testing.T, workDir string, res promotion.StepResult, err error) {
+				require.Error(t, err)
+				require.Equal(t, kargoapi.PromotionStepStatusErrored, res.Status)
+				_, statErr := os.Stat(filepath.Join(workDir, "f.json"))
+				require.True(t, os.IsNotExist(statErr))
+				requireNoTempFiles(t, workDir)
+			},
+		},
+		{
 			name: "oversized body without declared length fails terminally and removes the temp file",
 			cfg: builtin.HTTPConfig{
 				OutPath: "huge2.bin",
@@ -1956,61 +1971,93 @@ func requireNoTempFiles(t *testing.T, dir string) {
 }
 
 func Test_streamResponseToTempFile(t *testing.T) {
-	t.Run("success leaves the temp file for the caller", func(t *testing.T) {
-		dir := t.TempDir()
-		tempPath, size, err := streamResponseToTempFile(
-			t.Context(), strings.NewReader("hello"), dir, "out",
-		)
-		require.NoError(t, err)
-		require.Equal(t, int64(5), size)
-		content, err := os.ReadFile(tempPath)
-		require.NoError(t, err)
-		require.Equal(t, "hello", string(content))
-	})
+	testCases := []struct {
+		name string
+		// setup builds the context and reader for the case. Most cases just
+		// pair t.Context() with a fixed reader, but the canceled-context
+		// case needs the two built together.
+		setup func(t *testing.T) (context.Context, io.Reader)
+		// subDir, when set, streams into this subdirectory of the test's
+		// temp dir instead of the temp dir itself. It is deliberately not
+		// created first, so a case can use a path that does not exist.
+		subDir string
+		assert func(t *testing.T, dir string, tempPath string, size int64, err error)
+	}{
+		{
+			name: "success leaves the temp file for the caller",
+			setup: func(t *testing.T) (context.Context, io.Reader) {
+				return t.Context(), strings.NewReader("hello")
+			},
+			assert: func(t *testing.T, _ string, tempPath string, size int64, err error) {
+				require.NoError(t, err)
+				require.Equal(t, int64(5), size)
+				content, err := os.ReadFile(tempPath)
+				require.NoError(t, err)
+				require.Equal(t, "hello", string(content))
+			},
+		},
+		{
+			name: "oversized body removes the temp file",
+			setup: func(t *testing.T) (context.Context, io.Reader) {
+				return t.Context(), io.LimitReader(zeroReader{}, maxDownloadSize+1)
+			},
+			assert: func(t *testing.T, dir string, _ string, _ int64, err error) {
+				require.Error(t, err)
+				var termErr *promotion.TerminalError
+				require.ErrorAs(t, err, &termErr)
+				requireNoTempFiles(t, dir)
+			},
+		},
+		{
+			name: "read error removes the temp file",
+			setup: func(t *testing.T) (context.Context, io.Reader) {
+				return t.Context(), io.MultiReader(
+					strings.NewReader("partial"), errReader{},
+				)
+			},
+			assert: func(t *testing.T, dir string, _ string, _ int64, err error) {
+				require.ErrorContains(t, err, "failed to read response body")
+				requireNoTempFiles(t, dir)
+			},
+		},
+		{
+			name: "canceled context removes the temp file",
+			setup: func(t *testing.T) (context.Context, io.Reader) {
+				ctx, cancel := context.WithCancel(t.Context())
+				return ctx, &cancelingReader{cancel: cancel}
+			},
+			assert: func(t *testing.T, dir string, _ string, _ int64, err error) {
+				require.ErrorContains(t, err, "download canceled")
+				requireNoTempFiles(t, dir)
+			},
+		},
+		{
+			name:   "unwritable directory fails before creating anything",
+			subDir: "does-not-exist",
+			setup: func(t *testing.T) (context.Context, io.Reader) {
+				return t.Context(), strings.NewReader("hello")
+			},
+			assert: func(t *testing.T, dir string, _ string, _ int64, err error) {
+				require.ErrorContains(t, err, "failed to create temporary file")
+				requireNoTempFiles(t, dir)
+			},
+		},
+	}
 
-	t.Run("oversized body removes the temp file", func(t *testing.T) {
-		dir := t.TempDir()
-		_, _, err := streamResponseToTempFile(
-			t.Context(),
-			io.LimitReader(zeroReader{}, maxDownloadSize+1),
-			dir, "out",
-		)
-		require.Error(t, err)
-		var termErr *promotion.TerminalError
-		require.ErrorAs(t, err, &termErr)
-		requireNoTempFiles(t, dir)
-	})
-
-	t.Run("read error removes the temp file", func(t *testing.T) {
-		dir := t.TempDir()
-		_, _, err := streamResponseToTempFile(
-			t.Context(),
-			io.MultiReader(strings.NewReader("partial"), errReader{}),
-			dir, "out",
-		)
-		require.ErrorContains(t, err, "failed to read response body")
-		requireNoTempFiles(t, dir)
-	})
-
-	t.Run("canceled context removes the temp file", func(t *testing.T) {
-		dir := t.TempDir()
-		ctx, cancel := context.WithCancel(context.Background())
-		_, _, err := streamResponseToTempFile(
-			ctx, &cancelingReader{cancel: cancel}, dir, "out",
-		)
-		require.ErrorContains(t, err, "download canceled")
-		requireNoTempFiles(t, dir)
-	})
-
-	t.Run("unwritable directory fails before creating anything", func(t *testing.T) {
-		dir := t.TempDir()
-		_, _, err := streamResponseToTempFile(
-			t.Context(), strings.NewReader("hello"),
-			filepath.Join(dir, "does-not-exist"), "out",
-		)
-		require.ErrorContains(t, err, "failed to create temporary file")
-		requireNoTempFiles(t, dir)
-	})
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			dir := t.TempDir()
+			streamDir := dir
+			if testCase.subDir != "" {
+				streamDir = filepath.Join(dir, testCase.subDir)
+			}
+			ctx, reader := testCase.setup(t)
+			tempPath, size, err := streamResponseToTempFile(
+				ctx, reader, streamDir, "out",
+			)
+			testCase.assert(t, dir, tempPath, size, err)
+		})
+	}
 }
 
 // zeroReader is an io.Reader that yields an endless stream of zero bytes.
