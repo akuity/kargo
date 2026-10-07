@@ -69,6 +69,11 @@ type BareCloneOptions struct {
 	// should be ignored when cloning the repository. The setting will be
 	// remembered for subsequent interactions with the remote repository.
 	InsecureSkipTLSVerify bool
+	// Branch, when specified, limits the clone to this single branch.
+	Branch string
+	// Depth is the number of commits to fetch from the remote repository. If
+	// zero, all commits will be fetched. Only honored when Branch is specified.
+	Depth uint
 }
 
 // CloneBare produces a local, bare clone of the remote Git repository at the
@@ -107,7 +112,7 @@ func CloneBare(
 	if err = b.setupClient(clientOpts); err != nil {
 		return nil, err
 	}
-	if err = b.clone(); err != nil {
+	if err = b.clone(cloneOpts); err != nil {
 		return nil, err
 	}
 	if err = b.saveDirs(); err != nil {
@@ -116,8 +121,16 @@ func CloneBare(
 	return b, nil
 }
 
-func (b *bareRepo) clone() error {
-	cmd := b.buildGitCommand("clone", "--bare", b.url, b.dir)
+func (b *bareRepo) clone(opts *BareCloneOptions) error {
+	args := []string{"clone", "--bare"}
+	if opts.Branch != "" {
+		args = append(args, "--single-branch", "--branch", opts.Branch)
+		if opts.Depth > 0 {
+			args = append(args, "--depth", fmt.Sprint(opts.Depth))
+		}
+	}
+	args = append(args, b.url, b.dir)
+	cmd := b.buildGitCommand(args...)
 	cmd.Dir = b.homeDir // Override the cmd.Dir that's set by r.buildGitCommand()
 	if _, err := libExec.Exec(cmd); err != nil {
 		return fmt.Errorf("error cloning repo %q into %q: %w", b.url, b.dir, err)

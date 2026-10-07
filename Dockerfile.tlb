@@ -1,0 +1,38 @@
+# Builds the kargo binary (API server UI included) from this branch and swaps it into the
+# official image of the same version, so everything else in the image is unchanged.
+ARG UPSTREAM_IMAGE=harbor.deliveryhero.net/ghcr/akuity/kargo:v1.2.3
+
+FROM --platform=$BUILDPLATFORM docker.io/library/node:22.14.0 AS ui-builder
+ARG PNPM_VERSION=9.0.3
+RUN npm install --global pnpm@${PNPM_VERSION}
+WORKDIR /ui
+COPY ["ui/package.json", "ui/pnpm-lock.yaml", "./"]
+RUN pnpm install
+COPY ["ui/", "."]
+ARG VERSION
+# The UI build needs more than node's default heap, it OOMs on small (2GB) builders.
+ENV NODE_OPTIONS=--max-old-space-size=4096
+RUN NODE_ENV='production' VERSION=${VERSION} pnpm run build
+
+FROM --platform=$BUILDPLATFORM golang:1.23.6-bookworm AS back-end-builder
+ARG TARGETOS
+ARG TARGETARCH
+ARG VERSION_PACKAGE=github.com/akuity/kargo/internal/version
+ARG CGO_ENABLED=0
+WORKDIR /kargo
+COPY ["go.mod", "go.sum", "./"]
+RUN go mod download
+COPY api/ api/
+COPY cmd/ cmd/
+COPY internal/ internal/
+COPY pkg/ pkg/
+COPY --from=ui-builder /ui/build internal/api/ui/
+ARG VERSION
+ARG GIT_COMMIT
+RUN GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build \
+      -ldflags "-w -X ${VERSION_PACKAGE}.version=${VERSION} -X ${VERSION_PACKAGE}.buildDate=$(date -u +'%Y-%m-%dT%H:%M:%SZ') -X ${VERSION_PACKAGE}.gitCommit=${GIT_COMMIT} -X ${VERSION_PACKAGE}.gitTreeState=clean" \
+      -o bin/kargo \
+      ./cmd/controlplane
+
+FROM ${UPSTREAM_IMAGE}
+COPY --from=back-end-builder /kargo/bin/kargo /usr/local/bin/kargo

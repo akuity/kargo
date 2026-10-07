@@ -127,9 +127,7 @@ func (g *gitCloner) runPromotionStep(
 			Credentials:           repoCreds,
 			InsecureSkipTLSVerify: cfg.InsecureSkipTLSVerify,
 		},
-		&git.BareCloneOptions{
-			BaseDir: stepCtx.WorkDir,
-		},
+		shallowCloneOptions(stepCtx.WorkDir, cfg.Checkout),
 	)
 	if err != nil {
 		return PromotionStepResult{Status: kargoapi.PromotionPhaseErrored},
@@ -193,6 +191,21 @@ func (g *gitCloner) runPromotionStep(
 	// around on the FS for subsequent promotion steps to use. The Engine will
 	// handle all work dir cleanup.
 	return PromotionStepResult{Status: kargoapi.PromotionPhaseSucceeded}, nil
+}
+
+// shallowCloneOptions returns options for a depth 1, single branch clone when
+// the step checks out exactly one existing branch. Full history isn't needed to
+// commit and push on top of a branch tip, and for repos with a long history
+// (e.g. GitOps repos that Kargo commits to on every promotion) a full clone
+// dominates the controller's CPU, network and disk usage. Any other checkout
+// (commits, tags, multiple branches or branch creation) keeps the full clone.
+func shallowCloneOptions(workDir string, checkouts []Checkout) *git.BareCloneOptions {
+	opts := &git.BareCloneOptions{BaseDir: workDir}
+	if len(checkouts) == 1 && checkouts[0].Branch != "" && !checkouts[0].Create {
+		opts.Branch = checkouts[0].Branch
+		opts.Depth = 1
+	}
+	return opts
 }
 
 // mustCloneRepo determines if the repository must be cloned. At present, there
