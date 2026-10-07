@@ -112,20 +112,6 @@ func TestStoreIntegration(t *testing.T) {
 			},
 		},
 		{
-			name: "cleanup deletes only candidate IDs",
-			run: func(t *testing.T) {
-				require.NoError(t, store.UpsertProject(ctx, project))
-				require.NoError(t, store.DeleteProjectsByID(ctx, []string{"absent"}))
-				ids, err := listProjectIDs(ctx, store)
-				require.NoError(t, err)
-				require.Equal(t, []string{project.ID}, ids)
-				require.NoError(t, store.DeleteProjectsByID(ctx, []string{project.ID}))
-				ids, err = listProjectIDs(ctx, store)
-				require.NoError(t, err)
-				require.Empty(t, ids)
-			},
-		},
-		{
 			name: "blocked transaction respects caller deadline and recovers",
 			run: func(t *testing.T) {
 				require.NoError(t, store.UpsertProject(ctx, project))

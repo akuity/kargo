@@ -15,7 +15,6 @@ type projectStore interface {
 	UpsertProject(context.Context, database.UpsertProjectParams) error
 	DeleteProjectByName(context.Context, string) error
 	ListProjects(context.Context) ([]database.ProjectRow, error)
-	DeleteProjectsByID(context.Context, []string) error
 }
 
 type syncer struct {
@@ -48,13 +47,6 @@ func (s *syncer) Sync(ctx context.Context, obj client.Object) error {
 func (s *syncer) Delete(ctx context.Context, key client.ObjectKey) error {
 	if err := s.store.DeleteProjectByName(ctx, key.Name); err != nil {
 		return fmt.Errorf("error deleting project row: %w", err)
-	}
-	return nil
-}
-
-func (s *syncer) DeleteByIDs(ctx context.Context, ids []string) error {
-	if err := s.store.DeleteProjectsByID(ctx, ids); err != nil {
-		return fmt.Errorf("error pruning project rows: %w", err)
 	}
 	return nil
 }

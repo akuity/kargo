@@ -11,9 +11,9 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	"github.com/akuity/kargo/pkg/controller/management/dbsync/internal/syncapi"
 	"github.com/akuity/kargo/pkg/database"
 )
 
@@ -28,7 +28,7 @@ func TestDiff(t *testing.T) {
 	wrongTimestamp.CreatedAt = created.Add(-time.Hour)
 	oldSyncTime := row
 	oldSyncTime.SyncedAt = created.Add(-24 * time.Hour)
-	key := client.ObjectKey{Name: "demo"}
+	key := []reconcile.Request{{NamespacedName: client.ObjectKey{Name: "demo"}}}
 	testCases := []struct {
 		name        string
 		project     *kargoapi.Project
@@ -37,25 +37,26 @@ func TestDiff(t *testing.T) {
 		snapshotErr error
 		incomplete  bool
 		insert      bool
-		want        syncapi.Changes
+		want        []reconcile.Request
 		wantErr     string
 	}{
-		{name: "empty database", project: live, want: syncapi.Changes{ToSync: []client.ObjectKey{key}}},
+		{name: "empty database", project: live, want: key},
 		{name: "matching row is not queued", project: live, rows: []database.ProjectRow{row}},
 		{name: "synced_at does not cause a diff", project: live, rows: []database.ProjectRow{oldSyncTime}},
 		{
 			name: "different name", project: live, rows: []database.ProjectRow{wrongName},
-			want: syncapi.Changes{ToSync: []client.ObjectKey{key}},
+			want: key,
 		},
 		{
 			name: "different creation timestamp", project: live, rows: []database.ProjectRow{wrongTimestamp},
-			want: syncapi.Changes{ToSync: []client.ObjectKey{key}},
+			want: key,
 		},
-		{name: "offline deletion", rows: []database.ProjectRow{row}, want: syncapi.Changes{ToDelete: []string{"live"}}},
-		{
-			name: "recreation", project: testProject("replacement", created), rows: []database.ProjectRow{row},
-			want: syncapi.Changes{ToSync: []client.ObjectKey{key}, ToDelete: []string{"live"}},
-		},
+		// The orphaned row is returned by name; reconciling it finds no
+		// Project and deletes the row.
+		{name: "offline deletion", rows: []database.ProjectRow{row}, want: key},
+		// The live Project and the orphaned row share a name, so one request
+		// covers both: the upsert replaces the old row.
+		{name: "recreation", project: testProject("replacement", created), rows: []database.ProjectRow{row}, want: key},
 		{
 			name: "insert after snapshot is never a candidate", project: live,
 			rows: []database.ProjectRow{row}, insert: true,
@@ -107,7 +108,6 @@ func TestDiff(t *testing.T) {
 			}
 			require.Empty(t, store.upserts)
 			require.Empty(t, store.deletes)
-			require.Empty(t, store.pruned)
 		})
 	}
 }

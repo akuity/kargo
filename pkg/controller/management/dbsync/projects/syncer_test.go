@@ -78,9 +78,6 @@ func TestDelete(t *testing.T) {
 			err := s.Delete(context.Background(), client.ObjectKey{Name: "demo"})
 			require.ErrorIs(t, err, store.writeErr)
 			require.Equal(t, []string{"demo"}, store.deletes)
-			err = s.DeleteByIDs(context.Background(), []string{"old-uid"})
-			require.ErrorIs(t, err, store.writeErr)
-			require.Equal(t, []string{"old-uid"}, store.pruned)
 		})
 	}
 }
@@ -95,7 +92,6 @@ type fakeStore struct {
 	rows     []database.ProjectRow
 	upserts  []database.UpsertProjectParams
 	deletes  []string
-	pruned   []string
 	listErr  error
 	writeErr error
 }
@@ -112,9 +108,4 @@ func (s *fakeStore) DeleteProjectByName(_ context.Context, name string) error {
 
 func (s *fakeStore) ListProjects(context.Context) ([]database.ProjectRow, error) {
 	return slices.Clone(s.rows), s.listErr
-}
-
-func (s *fakeStore) DeleteProjectsByID(_ context.Context, ids []string) error {
-	s.pruned = append(s.pruned, ids...)
-	return s.writeErr
 }

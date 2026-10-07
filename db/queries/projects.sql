@@ -18,6 +18,3 @@ SELECT id, name, created_at, synced_at FROM projects ORDER BY name;
 
 -- name: DeleteProjectByName :exec
 DELETE FROM projects WHERE name = $1;
-
--- name: DeleteProjectsByID :exec
-DELETE FROM projects WHERE id = ANY($1::text[]);

@@ -5,6 +5,7 @@ import (
 	"context"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
 // Syncer owns the resource-specific mapping and storage operations. The shared
@@ -14,14 +15,10 @@ type Syncer interface {
 	Sync(context.Context, client.Object) error
 	// Delete is called only after Kubernetes confirms that the key is absent.
 	Delete(context.Context, client.ObjectKey) error
-	// Diff snapshots database rows before obtaining complete Kubernetes lists.
-	// It performs no writes and returns no changes on a failed or incomplete list.
-	Diff(context.Context) (Changes, error)
-	DeleteByIDs(context.Context, []string) error
-}
-
-// Changes identifies work needed to bring one resource's mirror up to date.
-type Changes struct {
-	ToSync   []client.ObjectKey
-	ToDelete []string // Only UIDs from the database snapshot absent from Kubernetes.
+	// Diff snapshots database rows before obtaining a complete Kubernetes list
+	// and returns every key whose mirror needs attention: objects with a
+	// missing or differing row, and rows whose object is gone. It performs no
+	// writes and returns nothing on a failed or incomplete list. Reconciling a
+	// returned key reads Kubernetes again and upserts or deletes accordingly.
+	Diff(context.Context) ([]reconcile.Request, error)
 }

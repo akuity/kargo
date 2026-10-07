@@ -11,33 +11,46 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 )
 
 func TestDiff(t *testing.T) {
 	t.Parallel()
+	req := func(name string) reconcile.Request {
+		return reconcile.Request{NamespacedName: client.ObjectKey{Name: name}}
+	}
 	testCases := []struct {
-		name       string
-		rows       map[string]string
-		matchErr   error
-		wrongType  bool
-		wantSync   []client.ObjectKey
-		wantDelete []string
-		wantErr    string
+		name      string
+		rows      map[string]string // UID -> name
+		matchErr  error
+		wrongType bool
+		want      []reconcile.Request
+		wantErr   string
 	}{
 		{
-			name: "only missing and differing objects", rows: map[string]string{
+			// a: no row. b: row differs. c: matches. Two orphaned rows whose
+			// objects are gone come last, sorted by name.
+			name: "only missing, differing, and orphaned objects", rows: map[string]string{
 				"b-uid": "outdated", "c-uid": "c", "z-stale": "z", "a-stale": "old",
 			},
-			wantSync:   []client.ObjectKey{{Name: "a"}, {Name: "b"}},
-			wantDelete: []string{"a-stale", "z-stale"},
+			want: []reconcile.Request{req("a"), req("b"), req("old"), req("z")},
 		},
 		{
 			name: "all rows match", rows: map[string]string{"a-uid": "a", "b-uid": "b", "c-uid": "c"},
 		},
 		{
-			name: "comparison error discards partial changes", rows: map[string]string{"b-uid": "b", "old": "old"},
+			// The row for "a" carries an old UID, so "a" is both a live object
+			// without a matching row and the name of an orphaned row. It is
+			// returned once.
+			name: "recreated object is returned once", rows: map[string]string{
+				"a-old": "a", "b-uid": "b", "c-uid": "c",
+			},
+			want: []reconcile.Request{req("a")},
+		},
+		{
+			name: "comparison error discards partial results", rows: map[string]string{"b-uid": "b", "old": "old"},
 			matchErr: errors.New("conversion failed"), wantErr: "conversion failed",
 		},
 		{name: "wrong list item type", wrongType: true, wantErr: "unexpected object"},
@@ -58,7 +71,7 @@ func TestDiff(t *testing.T) {
 				list = &kargoapi.StageList{}
 			}
 			snapshot := maps.Clone(testCase.rows)
-			changes, err := Diff(
+			requests, err := Diff(
 				context.Background(),
 				kube,
 				list,
@@ -66,13 +79,14 @@ func TestDiff(t *testing.T) {
 				func(obj *kargoapi.Project, name string) (bool, error) {
 					return obj.Name == name, testCase.matchErr
 				},
+				func(name string) client.ObjectKey { return client.ObjectKey{Name: name} },
 			)
 			if testCase.wantErr != "" {
 				require.ErrorContains(t, err, testCase.wantErr)
 			} else {
 				require.NoError(t, err)
 			}
-			require.Equal(t, Changes{ToSync: testCase.wantSync, ToDelete: testCase.wantDelete}, changes)
+			require.Equal(t, testCase.want, requests)
 			require.Equal(t, testCase.rows, snapshot)
 		})
 	}

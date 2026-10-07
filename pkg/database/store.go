@@ -19,7 +19,6 @@ type Store interface {
 	UpsertProject(context.Context, UpsertProjectParams) error
 	DeleteProjectByName(context.Context, string) error
 	ListProjects(context.Context) ([]ProjectRow, error)
-	DeleteProjectsByID(context.Context, []string) error
 }
 
 type store struct {
@@ -62,10 +61,4 @@ func (s *store) ListProjects(ctx context.Context) ([]ProjectRow, error) {
 	ctx, cancel := context.WithTimeout(ctx, operationTimeout)
 	defer cancel()
 	return s.queries.ListProjects(ctx)
-}
-
-func (s *store) DeleteProjectsByID(ctx context.Context, ids []string) error {
-	ctx, cancel := context.WithTimeout(ctx, operationTimeout)
-	defer cancel()
-	return s.queries.DeleteProjectsByID(ctx, ids)
 }

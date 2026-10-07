@@ -3,6 +3,8 @@ package dbsync
 import (
 	"context"
 	"errors"
+	"slices"
+	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -13,7 +15,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	"github.com/akuity/kargo/pkg/controller/management/dbsync/internal/syncapi"
 )
 
 // The reconciler is resource-agnostic. Tests exercise it with a cluster-scoped
@@ -125,18 +126,17 @@ func TestReconcileRecreation(t *testing.T) {
 	}
 }
 
+// fakeSyncer records what the reconciler asks of it. It is safe for the
+// controller's workers to call concurrently.
 type fakeSyncer struct {
-	project       bool
-	synced        []client.Object
-	deleted       []client.ObjectKey
-	pruned        []string
-	changes       syncapi.Changes
-	syncErr       error
-	deleteErr     error
-	diffErr       error
-	pruneErr      error
-	diffCalls     int
-	failFirstDiff bool
+	project   bool
+	mu        sync.Mutex
+	synced    []client.Object
+	deleted   []client.ObjectKey
+	requests  []reconcile.Request
+	syncErr   error
+	deleteErr error
+	diffErr   error
 }
 
 func (s *fakeSyncer) NewObject() client.Object {
@@ -147,26 +147,27 @@ func (s *fakeSyncer) NewObject() client.Object {
 }
 
 func (s *fakeSyncer) Sync(_ context.Context, obj client.Object) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
 	s.synced = append(s.synced, obj)
 	return s.syncErr
 }
 
 func (s *fakeSyncer) Delete(_ context.Context, key client.ObjectKey) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
 	s.deleted = append(s.deleted, key)
 	return s.deleteErr
 }
 
-func (s *fakeSyncer) Diff(context.Context) (syncapi.Changes, error) {
-	s.diffCalls++
-	if s.failFirstDiff && s.diffCalls == 1 {
-		return syncapi.Changes{}, errors.New("database unavailable")
-	}
-	return s.changes, s.diffErr
+func (s *fakeSyncer) Diff(context.Context) ([]reconcile.Request, error) {
+	return slices.Clone(s.requests), s.diffErr
 }
 
-func (s *fakeSyncer) DeleteByIDs(_ context.Context, ids []string) error {
-	s.pruned = append(s.pruned, ids...)
-	return s.pruneErr
+func (s *fakeSyncer) snapshot() (synced []client.Object, deleted []client.ObjectKey) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return slices.Clone(s.synced), slices.Clone(s.deleted)
 }
 
 type failingReader struct {
