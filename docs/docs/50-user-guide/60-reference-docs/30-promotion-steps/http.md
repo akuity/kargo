@@ -142,6 +142,7 @@ Setting `outPath` turns the `http` step into a file downloader, replacing the
   The downloaded file is moved to `outPath` only if the step succeeds; on any
   other outcome it is discarded. If `outputs` fail to evaluate, the step errors
   and the file is discarded.
+- When criteria is not yet met, each poll downloads the body again. The file is only kept once the step succeeds.
 - The default request timeout is `1m` when `outPath` is set.
 
 ```yaml
