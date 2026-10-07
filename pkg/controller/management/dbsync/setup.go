@@ -14,7 +14,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/controller/management/dbsync/internal/syncapi"
 	"github.com/akuity/kargo/pkg/controller/management/dbsync/projects"
 	"github.com/akuity/kargo/pkg/database"
@@ -33,23 +32,25 @@ const (
 // manager. The caller owns the database pool and its lifetime.
 func SetupWithManager(ctx context.Context, mgr manager.Manager, store database.Store) error {
 	reader := mgr.GetAPIReader()
-	if err := register(mgr, reader, &kargoapi.Project{}, projects.NewSyncer(reader, store)); err != nil {
-		return err
+	// Add a kind by appending its syncer here.
+	syncers := []syncapi.Syncer{
+		projects.NewSyncer(reader, store),
+	}
+	for _, syncer := range syncers {
+		if err := register(mgr, reader, syncer); err != nil {
+			return err
+		}
 	}
 	logging.LoggerFromContext(ctx).Info("Initialized database synchronization")
 	return nil
 }
 
-// register builds the controller that mirrors one kind and adds it to the
-// manager. The controller watches the kind through the manager's cache and
-// runs the syncer's Diff on an interval; both push keys that the reconciler
-// resolves by reading Kubernetes afresh.
-func register[O client.Object](
-	mgr manager.Manager,
-	reader client.Reader,
-	obj O,
-	syncer syncapi.Syncer,
-) error {
+// register builds the controller that mirrors the syncer's kind and adds it
+// to the manager. The controller watches the kind through the manager's cache
+// and runs the syncer's Diff on an interval; both push keys that the
+// reconciler resolves by reading Kubernetes afresh.
+func register(mgr manager.Manager, reader client.Reader, syncer syncapi.Syncer) error {
+	obj := syncer.NewObject()
 	gvk, err := apiutil.GVKForObject(obj, mgr.GetScheme())
 	if err != nil {
 		return fmt.Errorf("error identifying database sync resource: %w", err)
@@ -62,8 +63,8 @@ func register[O client.Object](
 		Watch(kube.Kind(
 			mgr.GetCache(),
 			obj,
-			&handler.TypedEnqueueRequestForObject[O]{},
-			predicate.TypedResourceVersionChangedPredicate[O]{},
+			&handler.EnqueueRequestForObject{},
+			predicate.ResourceVersionChangedPredicate{},
 		)).
 		// Whatever the database disagrees with, at startup and on an
 		// interval. Listed last so the watch above is already subscribed
