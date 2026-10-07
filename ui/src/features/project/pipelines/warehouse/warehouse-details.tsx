@@ -9,7 +9,13 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Drawer, Flex, Skeleton, Tabs, Typography } from 'antd';
 import Alert from 'antd/es/alert/Alert';
 import { useMemo } from 'react';
-import { generatePath, useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import {
+  generatePath,
+  useLocation,
+  useNavigate,
+  useParams,
+  useSearchParams
+} from 'react-router-dom';
 import { stringify } from 'yaml';
 
 import { paths } from '@ui/config/paths';
@@ -18,6 +24,7 @@ import { AssembleFreight } from '@ui/features/assemble-freight/assemble-freight'
 import { useWarehouseWithClonedFreight } from '@ui/features/assemble-freight/use-warehouse-with-cloned-freight';
 import YamlEditor from '@ui/features/common/code-editor/yaml-editor-lazy';
 import { useGetFreight, useGetWarehouse } from '@ui/gen/api/v2/core/core';
+import { Freight } from '@ui/gen/api/v2/models';
 
 import { RepoSubscriptions } from './repo-subscriptions';
 import { WarehouseSettings } from './tabs/settings/warehouse-settings';
@@ -32,8 +39,11 @@ export const WarehouseDetails = ({
 }) => {
   const { name: projectName, warehouseName, tab } = useParams();
   const [search] = useSearchParams();
+  const { state } = useLocation();
 
   const cloneFreight = search.get('clone-freight');
+  const { cloneFreight: historicalCloneFreight } =
+    (state as { cloneFreight?: Freight } | undefined) ?? {};
 
   const navigate = useNavigate();
 
@@ -49,10 +59,10 @@ export const WarehouseDetails = ({
   );
 
   const freightQuery = useGetFreight(projectName || '', cloneFreight || '', {
-    query: { enabled: !!cloneFreight && tab === 'create-freight' }
+    query: { enabled: !!cloneFreight && tab === 'create-freight' && !historicalCloneFreight }
   });
 
-  const cloneFreightData = freightQuery.data?.data;
+  const cloneFreightData = historicalCloneFreight || freightQuery.data?.data;
 
   const warehouseWithClonedFreight = useWarehouseWithClonedFreight(warehouse, cloneFreightData);
 
