@@ -1,0 +1,720 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.19.0
+  name: analysisrunrequests.kargo.akuity.io
+spec:
+  group: kargo.akuity.io
+  names:
+    kind: AnalysisRunRequest
+    listKind: AnalysisRunRequestList
+    plural: analysisrunrequests
+    shortNames:
+    - analysisrunrequest
+    - analysisrunrequests
+    singular: analysisrunrequest
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .spec.stage
+      name: Stage
+      type: string
+    - jsonPath: .spec.freight
+      name: Freight
+      type: string
+    - jsonPath: .status.phase
+      name: Phase
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            properties:
+              freightCollection:
+                description: FreightCollection to verify. Stripped from verification
+                  history
+                properties:
+                  id:
+                    description: |-
+                      ID is a unique and deterministically calculated identifier for the
+                      FreightCollection. It is updated on each use of the UpdateOrPush method.
+                    type: string
+                  items:
+                    additionalProperties:
+                      description: |-
+                        FreightReference is a simplified representation of a piece of Freight -- not
+                        a root resource type.
+                      properties:
+                        artifacts:
+                          description: |-
+                            Artifacts describes specific versions of artifacts other
+                            than Git repository commits, container images, and Helm charts.
+                          items:
+                            description: ArtifactReference is a reference to a specific
+                              version of an artifact.
+                            properties:
+                              artifactType:
+                                description: |-
+                                  ArtifactType specifies the type of artifact this is. Often, but not always,
+                                  it will be the media type (MIME type) of the artifact referenced by this
+                                  ArtifactReference.
+                                minLength: 1
+                                type: string
+                              metadata:
+                                description: |-
+                                  Metadata is a JSON object containing a mostly opaque collection of artifact
+                                  attributes. (It must be an object. It may not be a list or a scalar value.)
+                                  "Mostly" because Kargo may understand how to interpret some documented,
+                                  well-known, top-level keys. Those aside, this metadata is only understood
+                                  by a corresponding Subscriber implementation that created it.
+                                x-kubernetes-preserve-unknown-fields: true
+                              subscriptionName:
+                                description: |-
+                                  SubscriptionName is the name of the Subscription that discovered this
+                                  artifact.
+                                minLength: 1
+                                type: string
+                              version:
+                                description: Version identifies a specific revision
+                                  of this artifact.
+                                minLength: 1
+                                type: string
+                            required:
+                            - subscriptionName
+                            - version
+                            type: object
+                          type: array
+                        charts:
+                          description: Charts describes specific versions of specific
+                            Helm charts.
+                          items:
+                            description: Chart describes a specific version of a Helm
+                              chart.
+                            properties:
+                              name:
+                                description: Name specifies the name of the chart.
+                                type: string
+                              repoURL:
+                                description: |-
+                                  RepoURL specifies the URL of a Helm chart repository. Classic chart
+                                  repositories (using HTTP/S) can contain differently named charts. When this
+                                  field points to such a repository, the Name field will specify the name of
+                                  the chart within the repository. In the case of a repository within an OCI
+                                  registry, the URL implicitly points to a specific chart and the Name field
+                                  will be empty.
+                                type: string
+                              subscriptionName:
+                                description: |-
+                                  SubscriptionName is the name of the subscription that discovered this
+                                  chart. This field is only populated if the subscription was assigned
+                                  a name.
+                                type: string
+                              version:
+                                description: Version specifies a particular version
+                                  of the chart.
+                                type: string
+                            type: object
+                          type: array
+                        commits:
+                          description: Commits describes specific Git repository commits.
+                          items:
+                            description: GitCommit describes a specific commit from
+                              a specific Git repository.
+                            properties:
+                              author:
+                                description: Author is the author of the commit.
+                                type: string
+                              branch:
+                                description: Branch denotes the branch of the repository
+                                  where this commit was found.
+                                type: string
+                              committer:
+                                description: Committer is the person who committed
+                                  the commit.
+                                type: string
+                              id:
+                                description: |-
+                                  ID is the ID of a specific commit in the Git repository specified by
+                                  RepoURL.
+                                type: string
+                              message:
+                                description: |-
+                                  Message is the message associated with the commit. At present, this only
+                                  contains the first line (subject) of the commit message.
+                                type: string
+                              repoURL:
+                                description: RepoURL is the URL of a Git repository.
+                                type: string
+                              subscriptionName:
+                                description: |-
+                                  SubscriptionName is the name of the subscription that discovered this
+                                  commit. This field is only populated if the subscription was assigned
+                                  a name.
+                                type: string
+                              tag:
+                                description: |-
+                                  Tag denotes a tag in the repository that matched selection criteria and
+                                  resolved to this commit.
+                                type: string
+                            type: object
+                          type: array
+                        images:
+                          description: Images describes specific versions of specific
+                            container images.
+                          items:
+                            description: Image describes a specific version of a container
+                              image.
+                            properties:
+                              annotations:
+                                additionalProperties:
+                                  type: string
+                                description: Annotations is a map of arbitrary metadata
+                                  for the image.
+                                type: object
+                              digest:
+                                description: |-
+                                  Digest identifies a specific version of the image in the repository
+                                  specified by RepoURL. This is a more precise identifier than Tag.
+                                type: string
+                              repoURL:
+                                description: RepoURL describes the repository in which
+                                  the image can be found.
+                                type: string
+                              subscriptionName:
+                                description: |-
+                                  SubscriptionName is the name of the subscription that discovered this
+                                  image. This field is only populated if the subscription was assigned
+                                  a name.
+                                type: string
+                              tag:
+                                description: |-
+                                  Tag identifies a specific version of the image in the repository specified
+                                  by RepoURL.
+                                type: string
+                            type: object
+                          type: array
+                        name:
+                          description: |-
+                            Name is a system-assigned identifier derived deterministically from
+                            the contents of the Freight. I.e., two pieces of Freight can be compared
+                            for equality by comparing their Names.
+                          type: string
+                        origin:
+                          description: Origin describes a kind of Freight in terms
+                            of its origin.
+                          properties:
+                            kind:
+                              description: |-
+                                Kind is the kind of resource from which Freight may have originated. At
+                                present, this can only be "Warehouse".
+                              enum:
+                              - Warehouse
+                              type: string
+                            name:
+                              description: |-
+                                Name is the name of the resource of the kind indicated by the Kind field
+                                from which Freight may originate.
+                              type: string
+                          required:
+                          - kind
+                          - name
+                          type: object
+                      type: object
+                    description: |-
+                      Freight is a map of FreightReference objects, indexed by their Warehouse
+                      origin.
+                    type: object
+                  verificationHistory:
+                    description: |-
+                      VerificationHistory is a stack of recent VerificationInfo. By default,
+                      the last ten VerificationInfo are stored.
+                    items:
+                      description: |-
+                        VerificationInfo contains the details of an instance of a Verification
+                        process.
+                      properties:
+                        actor:
+                          description: |-
+                            Actor is the name of the entity that initiated or aborted the
+                            Verification process.
+                          type: string
+                        analysisRun:
+                          description: |-
+                            AnalysisRun is a reference to the Argo Rollouts AnalysisRun that implements
+                            the Verification process.
+                          properties:
+                            gvk:
+                              description: |-
+                                Kind is a string representation of GroupVersionKind describing this run
+                                Options are AnalysisRunGVKRun and AnalysisRunGVKRequest
+                              type: string
+                            name:
+                              description: Name is the name of the AnalysisRun.
+                              type: string
+                            namespace:
+                              description: Namespace is the namespace of the AnalysisRun.
+                              type: string
+                            phase:
+                              description: Phase is the last observed phase of the
+                                AnalysisRun referenced by Name.
+                              type: string
+                          required:
+                          - name
+                          - namespace
+                          - phase
+                          type: object
+                        finishTime:
+                          description: FinishTime is the time at which the Verification
+                            process finished.
+                          format: date-time
+                          type: string
+                        id:
+                          description: ID is the identifier of the Verification process.
+                          type: string
+                        message:
+                          description: |-
+                            Message may contain additional information about why the verification
+                            process is in its current phase.
+                          type: string
+                        phase:
+                          description: |-
+                            Phase describes the current phase of the Verification process. Generally,
+                            this will be a reflection of the underlying AnalysisRun's phase, however,
+                            there are exceptions to this, such as in the case where an AnalysisRun
+                            cannot be launched successfully.
+                          type: string
+                        startTime:
+                          description: StartTime is the time at which the Verification
+                            process was started.
+                          format: date-time
+                          type: string
+                      type: object
+                    type: array
+                required:
+                - id
+                type: object
+              promotionName:
+                description: PromotionName (optional) is the name of the last promotion
+                  being verified
+                type: string
+              requestedFreight:
+                description: RequestedFreight spec copied from Stage spec
+                items:
+                  description: |-
+                    FreightRequest expresses a Stage's need for Freight having originated from a
+                    particular Warehouse.
+                  properties:
+                    origin:
+                      description: |-
+                        Origin specifies from where the requested Freight must have originated.
+                        This is a required field.
+                      properties:
+                        kind:
+                          description: |-
+                            Kind is the kind of resource from which Freight may have originated. At
+                            present, this can only be "Warehouse".
+                          enum:
+                          - Warehouse
+                          type: string
+                        name:
+                          description: |-
+                            Name is the name of the resource of the kind indicated by the Kind field
+                            from which Freight may originate.
+                          type: string
+                      required:
+                      - kind
+                      - name
+                      type: object
+                    sources:
+                      description: |-
+                        Sources describes where the requested Freight may be obtained from. This is
+                        a required field.
+                      properties:
+                        autoPromotionOptions:
+                          description: |-
+                            AutoPromotionOptions specifies options pertaining to auto-promotion. These
+                            settings have no effect if auto-promotion is not enabled for this Stage at
+                            the ProjectConfig level.
+                          properties:
+                            selectionPolicy:
+                              description: |-
+                                SelectionPolicy specifies the rules for identifying new Freight that is
+                                eligible for auto-promotion to this Stage. This field is optional. When
+                                left unspecified, the field is implicitly treated as if its value were
+                                "NewestFreight".
+
+                                Accepted Values:
+
+                                - "NewestFreight": The newest Freight that is available to the Stage is
+                                  eligible for auto-promotion.
+
+                                - "MatchUpstream": Only the Freight currently used immediately upstream
+                                  from this Stage is eligible for auto-promotion. This policy may only
+                                  be applied when the Stage has exactly one upstream Stage.
+                              enum:
+                              - NewestFreight
+                              - MatchUpstream
+                              type: string
+                          type: object
+                        availabilityStrategy:
+                          description: |-
+                            AvailabilityStrategy specifies the semantics for how requested Freight is
+                            made available to the Stage. This field is optional. When left unspecified,
+                            the field is implicitly treated as if its value were "OneOf".
+
+                            Accepted Values:
+
+                            - "All": Freight must be verified and, if applicable, soaked in all
+                              upstream Stages to be considered available for promotion.
+                            - "OneOf": Freight must be verified and, if applicable, soaked in at least
+                               one upstream Stage to be considered available for promotion.
+                            - "": Treated the same as "OneOf".
+                          enum:
+                          - All
+                          - OneOf
+                          - ""
+                          type: string
+                        direct:
+                          description: |-
+                            Direct indicates the requested Freight may be obtained directly from the
+                            Warehouse from which it originated. If this field's value is false, then
+                            the value of the Stages field must be non-empty. i.e. Between the two
+                            fields, at least one source must be specified.
+                          type: boolean
+                        requiredSoakTime:
+                          description: |-
+                            RequiredSoakTime specifies a minimum duration for which the requested
+                            Freight must have continuously occupied ("soaked in") in an upstream Stage
+                            before becoming available for promotion to this Stage. This is an optional
+                            field. If nil or zero, no soak time is required. Any soak time requirement
+                            is in ADDITION to the requirement that Freight be verified in an upstream
+                            Stage to become available for promotion to this Stage, although a manual
+                            approval for promotion to this Stage will supersede any soak time
+                            requirement.
+                          pattern: ^([0-9]+(\.[0-9]+)?(s|m|h))+$
+                          type: string
+                        stages:
+                          description: |-
+                            Stages identifies other "upstream" Stages as potential sources of the
+                            requested Freight. If this field's value is empty, then the value of the
+                            Direct field must be true. i.e. Between the two fields, at least on source
+                            must be specified.
+                          items:
+                            type: string
+                          type: array
+                      type: object
+                  required:
+                  - origin
+                  - sources
+                  type: object
+                type: array
+              stageName:
+                description: StageName is the name of initiating stage
+                type: string
+              stageVars:
+                description: StageVars copied from Stage spec
+                items:
+                  description: |-
+                    ExpressionVariable describes a single variable that may be referenced by
+                    expressions in the context of a ClusterPromotionTask, PromotionTask,
+                    Promotion, AnalysisRun arguments, or other objects that support expressions.
+
+                    It is used to pass information to the expression evaluation engine, and to
+                    allow for dynamic evaluation of expressions based on the variable values.
+                  properties:
+                    name:
+                      description: Name is the name of the variable.
+                      minLength: 1
+                      pattern: ^[a-zA-Z_]\w*$
+                      type: string
+                    value:
+                      description: |-
+                        Value is the value of the variable. It is allowed to utilize expressions
+                        in the value.
+                        See https://docs.kargo.io/user-guide/reference-docs/expressions for details.
+                      type: string
+                  required:
+                  - name
+                  type: object
+                type: array
+              targets:
+                description: Targets describes a list of targets to run AnalysisRuns
+                  for
+                items:
+                  description: |-
+                    PromotionRequestTarget names a Target that a PromotionRequest promotes
+                    Freight to.
+                  properties:
+                    name:
+                      description: Name is the name of the Target.
+                      maxLength: 253
+                      minLength: 1
+                      pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                      type: string
+                  required:
+                  - name
+                  type: object
+                type: array
+                x-kubernetes-list-type: atomic
+              updateStrategy:
+                description: UpdateStrategy configures the pace of running AnalysisRuns
+                properties:
+                  maxConcurrent:
+                    description: |-
+                      MaxConcurrent specifies a number of targets which can be promoted to at the same time
+                      Zero means there is no limit (default)
+                    format: int64
+                    type: integer
+                type: object
+                x-kubernetes-validations:
+                - rule: self == oldSelf
+              verificationTemplate:
+                description: Copy of the Stage.Spec.Verification.
+                properties:
+                  analysisRunMetadata:
+                    description: |-
+                      AnalysisRunMetadata contains optional metadata that should be applied to
+                      all AnalysisRuns.
+                    properties:
+                      annotations:
+                        additionalProperties:
+                          type: string
+                        description: Additional annotations to apply to an AnalysisRun.
+                        type: object
+                      labels:
+                        additionalProperties:
+                          type: string
+                        description: Additional labels to apply to an AnalysisRun.
+                        type: object
+                    type: object
+                  analysisTemplates:
+                    description: |-
+                      AnalysisTemplates is a list of AnalysisTemplates from which AnalysisRuns
+                      should be created to verify a Stage's current Freight is fit to be promoted
+                      downstream.
+                    items:
+                      description: AnalysisTemplateReference is a reference to an
+                        AnalysisTemplate.
+                      properties:
+                        kind:
+                          description: |-
+                            Kind is the type of the AnalysisTemplate. Can be either AnalysisTemplate or
+                            ClusterAnalysisTemplate, default is AnalysisTemplate.
+                          enum:
+                          - AnalysisTemplate
+                          - ClusterAnalysisTemplate
+                          type: string
+                        name:
+                          description: |-
+                            Name is the name of the AnalysisTemplate in the same project/namespace as
+                            the Stage.
+                          type: string
+                      required:
+                      - name
+                      type: object
+                    type: array
+                  args:
+                    description: Args lists arguments that should be added to all
+                      AnalysisRuns.
+                    items:
+                      description: AnalysisRunArgument represents an argument to be
+                        added to an AnalysisRun.
+                      properties:
+                        name:
+                          description: Name is the name of the argument.
+                          type: string
+                        value:
+                          description: Value is the value of the argument.
+                          type: string
+                      required:
+                      - name
+                      - value
+                      type: object
+                    type: array
+                type: object
+            required:
+            - freightCollection
+            - requestedFreight
+            - stageName
+            - targets
+            - verificationTemplate
+            type: object
+          status:
+            properties:
+              analysisRuns:
+                items:
+                  properties:
+                    analysisRunName:
+                      type: string
+                    status:
+                      properties:
+                        completedAt:
+                          format: date-time
+                          type: string
+                        dryRunSummary:
+                          properties:
+                            count:
+                              format: int32
+                              type: integer
+                            error:
+                              format: int32
+                              type: integer
+                            failed:
+                              format: int32
+                              type: integer
+                            inconclusive:
+                              format: int32
+                              type: integer
+                            successful:
+                              format: int32
+                              type: integer
+                          type: object
+                        message:
+                          type: string
+                        metricResults:
+                          items:
+                            properties:
+                              consecutiveError:
+                                format: int32
+                                type: integer
+                              consecutiveSuccess:
+                                format: int32
+                                type: integer
+                              count:
+                                format: int32
+                                type: integer
+                              dryRun:
+                                type: boolean
+                              error:
+                                format: int32
+                                type: integer
+                              failed:
+                                format: int32
+                                type: integer
+                              inconclusive:
+                                format: int32
+                                type: integer
+                              measurements:
+                                items:
+                                  properties:
+                                    finishedAt:
+                                      format: date-time
+                                      type: string
+                                    message:
+                                      type: string
+                                    metadata:
+                                      additionalProperties:
+                                        type: string
+                                      type: object
+                                    phase:
+                                      type: string
+                                    resumeAt:
+                                      format: date-time
+                                      type: string
+                                    startedAt:
+                                      format: date-time
+                                      type: string
+                                    value:
+                                      type: string
+                                  required:
+                                  - phase
+                                  type: object
+                                type: array
+                              message:
+                                type: string
+                              metadata:
+                                additionalProperties:
+                                  type: string
+                                type: object
+                              name:
+                                type: string
+                              phase:
+                                type: string
+                              successful:
+                                format: int32
+                                type: integer
+                            required:
+                            - name
+                            - phase
+                            type: object
+                          type: array
+                        phase:
+                          type: string
+                        runSummary:
+                          properties:
+                            count:
+                              format: int32
+                              type: integer
+                            error:
+                              format: int32
+                              type: integer
+                            failed:
+                              format: int32
+                              type: integer
+                            inconclusive:
+                              format: int32
+                              type: integer
+                            successful:
+                              format: int32
+                              type: integer
+                          type: object
+                        startedAt:
+                          format: date-time
+                          type: string
+                      required:
+                      - phase
+                      type: object
+                    targetName:
+                      description: Name is the name of the Target.
+                      maxLength: 253
+                      minLength: 1
+                      pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                      type: string
+                  required:
+                  - targetName
+                  type: object
+                type: array
+                x-kubernetes-list-type: atomic
+              completedAt:
+                format: date-time
+                type: string
+              message:
+                type: string
+              phase:
+                type: string
+              startedAt:
+                format: date-time
+                type: string
+            required:
+            - phase
+            type: object
+        required:
+        - spec
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}

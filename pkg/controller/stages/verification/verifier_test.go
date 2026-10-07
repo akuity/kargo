@@ -275,6 +275,12 @@ func TestVerifier_recordFreightVerificationEvent(t *testing.T) {
 			ver := Verifier{
 				client:      c,
 				eventSender: k8sevent.NewEventSender(recorder),
+				analysisRunners: map[kargoapi.AnalysisRunGVK]AnalysisRunner{
+					kargoapi.AnalysisRunGVKRun: &analysisRunnerRollouts{
+						client:                       c,
+						rolloutsControllerInstanceID: "test-instance",
+					},
+				},
 			}
 
 			ver.recordFreightVerificationEvent(tt.stage, tt.freightRef, tt.vi)

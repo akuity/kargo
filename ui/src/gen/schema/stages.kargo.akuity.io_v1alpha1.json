@@ -303,7 +303,7 @@
               "x-kubernetes-list-type": "atomic"
             },
             "updateStrategy": {
-              "description": "UpdateStrategy configures the pace of updating the targets",
+              "description": "UpdateStrategy configures the pace of promoting the targets",
               "properties": {
                 "maxConcurrent": {
                   "description": "MaxConcurrent specifies a number of targets which can be promoted to at the same time\nZero means there is no limit (default)",
@@ -311,6 +311,29 @@
                   "maximum": 9223372036854776000,
                   "minimum": -9223372036854776000,
                   "type": "integer"
+                }
+              },
+              "type": "object"
+            },
+            "verification": {
+              "description": "Verification configures mode and pace of target promotion verifications",
+              "properties": {
+                "runMode": {
+                  "description": "VerificationRunMode controls whether verifications run per-target or per-stage",
+                  "type": "string"
+                },
+                "updateStrategy": {
+                  "description": "UpdateStrategy configures the pace of verification runs",
+                  "properties": {
+                    "maxConcurrent": {
+                      "description": "MaxConcurrent specifies a number of targets which can be promoted to at the same time\nZero means there is no limit (default)",
+                      "format": "int64",
+                      "maximum": 9223372036854776000,
+                      "minimum": -9223372036854776000,
+                      "type": "integer"
+                    }
+                  },
+                  "type": "object"
                 }
               },
               "type": "object"
@@ -1087,6 +1110,10 @@
                           "analysisRun": {
                             "description": "AnalysisRun is a reference to the Argo Rollouts AnalysisRun that implements\nthe Verification process.",
                             "properties": {
+                              "gvk": {
+                                "description": "Kind is a string representation of GroupVersionKind describing this run\nOptions are AnalysisRunGVKRun and AnalysisRunGVKRequest",
+                                "type": "string"
+                              },
                               "name": {
                                 "description": "Name is the name of the AnalysisRun.",
                                 "type": "string"
@@ -1596,6 +1623,10 @@
                       "analysisRun": {
                         "description": "AnalysisRun is a reference to the Argo Rollouts AnalysisRun that implements\nthe Verification process.",
                         "properties": {
+                          "gvk": {
+                            "description": "Kind is a string representation of GroupVersionKind describing this run\nOptions are AnalysisRunGVKRun and AnalysisRunGVKRequest",
+                            "type": "string"
+                          },
                           "name": {
                             "description": "Name is the name of the AnalysisRun.",
                             "type": "string"
@@ -1909,6 +1940,10 @@
                     "analysisRun": {
                       "description": "AnalysisRun is a reference to the Argo Rollouts AnalysisRun that implements\nthe Verification process.",
                       "properties": {
+                        "gvk": {
+                          "description": "Kind is a string representation of GroupVersionKind describing this run\nOptions are AnalysisRunGVKRun and AnalysisRunGVKRequest",
+                          "type": "string"
+                        },
                         "name": {
                           "description": "Name is the name of the AnalysisRun.",
                           "type": "string"
@@ -2542,6 +2577,10 @@
                           "analysisRun": {
                             "description": "AnalysisRun is a reference to the Argo Rollouts AnalysisRun that implements\nthe Verification process.",
                             "properties": {
+                              "gvk": {
+                                "description": "Kind is a string representation of GroupVersionKind describing this run\nOptions are AnalysisRunGVKRun and AnalysisRunGVKRequest",
+                                "type": "string"
+                              },
                               "name": {
                                 "description": "Name is the name of the AnalysisRun.",
                                 "type": "string"
@@ -3051,6 +3090,10 @@
                       "analysisRun": {
                         "description": "AnalysisRun is a reference to the Argo Rollouts AnalysisRun that implements\nthe Verification process.",
                         "properties": {
+                          "gvk": {
+                            "description": "Kind is a string representation of GroupVersionKind describing this run\nOptions are AnalysisRunGVKRun and AnalysisRunGVKRequest",
+                            "type": "string"
+                          },
                           "name": {
                             "description": "Name is the name of the AnalysisRun.",
                             "type": "string"

@@ -23,8 +23,10 @@ var _ MappedNullable = &StageTargets{}
 type StageTargets struct {
 	// Selectors select the Targets that the Stage governs, matching Targets by their labels within the Stage's own Project. A Target is selected when it matches any selector in the list, so several selectors describe a union. A Target matching more than one of them is still governed once.  An empty selector selects every Target in the Project. An empty list selects none: the Stage still governs Targets, it just governs none at the moment.  +listType=atomic +kubebuilder:validation:Required
 	Selectors []V1LabelSelector `json:"selectors"`
-	// UpdateStrategy configures the pace of updating the targets +optional
+	// UpdateStrategy configures the pace of promoting the targets +optional
 	UpdateStrategy *TargetUpdateStrategy `json:"updateStrategy,omitempty"`
+	// Verification configures mode and pace of target promotion verifications +optional
+	Verification *TargetVerificaitonSpec `json:"verification,omitempty"`
 }
 
 type _StageTargets StageTargets
@@ -103,6 +105,38 @@ func (o *StageTargets) SetUpdateStrategy(v TargetUpdateStrategy) {
 	o.UpdateStrategy = &v
 }
 
+// GetVerification returns the Verification field value if set, zero value otherwise.
+func (o *StageTargets) GetVerification() TargetVerificaitonSpec {
+	if o == nil || IsNil(o.Verification) {
+		var ret TargetVerificaitonSpec
+		return ret
+	}
+	return *o.Verification
+}
+
+// GetVerificationOk returns a tuple with the Verification field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *StageTargets) GetVerificationOk() (*TargetVerificaitonSpec, bool) {
+	if o == nil || IsNil(o.Verification) {
+		return nil, false
+	}
+	return o.Verification, true
+}
+
+// HasVerification returns a boolean if a field has been set.
+func (o *StageTargets) HasVerification() bool {
+	if o != nil && !IsNil(o.Verification) {
+		return true
+	}
+
+	return false
+}
+
+// SetVerification gets a reference to the given TargetVerificaitonSpec and assigns it to the Verification field.
+func (o *StageTargets) SetVerification(v TargetVerificaitonSpec) {
+	o.Verification = &v
+}
+
 func (o StageTargets) MarshalJSON() ([]byte, error) {
 	toSerialize,err := o.ToMap()
 	if err != nil {
@@ -116,6 +150,9 @@ func (o StageTargets) ToMap() (map[string]interface{}, error) {
 	toSerialize["selectors"] = o.Selectors
 	if !IsNil(o.UpdateStrategy) {
 		toSerialize["updateStrategy"] = o.UpdateStrategy
+	}
+	if !IsNil(o.Verification) {
+		toSerialize["verification"] = o.Verification
 	}
 	return toSerialize, nil
 }

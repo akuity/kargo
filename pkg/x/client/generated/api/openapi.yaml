@@ -10925,6 +10925,11 @@ components:
       type: object
     AnalysisRunReference:
       properties:
+        gvk:
+          description: |-
+            Kind is a string representation of GroupVersionKind describing this run
+            Options are AnalysisRunGVKRun and AnalysisRunGVKRequest
+          type: string
         name:
           description: Name is the name of the AnalysisRun.
           type: string
@@ -14981,7 +14986,14 @@ components:
           allOf:
           - $ref: "#/components/schemas/TargetUpdateStrategy"
           description: |-
-            UpdateStrategy configures the pace of updating the targets
+            UpdateStrategy configures the pace of promoting the targets
+            +optional
+          type: object
+        verification:
+          allOf:
+          - $ref: "#/components/schemas/TargetVerificaitonSpec"
+          description: |-
+            Verification configures mode and pace of target promotion verifications
             +optional
           type: object
       required:
@@ -15360,6 +15372,21 @@ components:
             MaxConcurrent specifies a number of targets which can be promoted to at the same time
             Zero means there is no limit (default)
           type: integer
+      type: object
+    TargetVerificaitonSpec:
+      properties:
+        runMode:
+          description: |-
+            VerificationRunMode controls whether verifications run per-target or per-stage
+            +optional
+          type: string
+        updateStrategy:
+          allOf:
+          - $ref: "#/components/schemas/TargetUpdateStrategy"
+          description: |-
+            UpdateStrategy configures the pace of verification runs
+            +optional
+          type: object
       type: object
     Verification:
       properties:

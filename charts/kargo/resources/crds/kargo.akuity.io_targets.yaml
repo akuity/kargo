@@ -303,6 +303,11 @@ spec:
                                   AnalysisRun is a reference to the Argo Rollouts AnalysisRun that implements
                                   the Verification process.
                                 properties:
+                                  gvk:
+                                    description: |-
+                                      Kind is a string representation of GroupVersionKind describing this run
+                                      Options are AnalysisRunGVKRun and AnalysisRunGVKRequest
+                                    type: string
                                   name:
                                     description: Name is the name of the AnalysisRun.
                                     type: string

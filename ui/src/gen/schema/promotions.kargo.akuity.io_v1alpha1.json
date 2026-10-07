@@ -563,6 +563,10 @@
                   "analysisRun": {
                     "description": "AnalysisRun is a reference to the Argo Rollouts AnalysisRun that implements\nthe Verification process.",
                     "properties": {
+                      "gvk": {
+                        "description": "Kind is a string representation of GroupVersionKind describing this run\nOptions are AnalysisRunGVKRun and AnalysisRunGVKRequest",
+                        "type": "string"
+                      },
                       "name": {
                         "description": "Name is the name of the AnalysisRun.",
                         "type": "string"
