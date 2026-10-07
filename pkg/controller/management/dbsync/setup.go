@@ -9,9 +9,7 @@ import (
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
-	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
-	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"github.com/akuity/kargo/pkg/controller/management/dbsync/internal/syncapi"
@@ -46,28 +44,22 @@ func SetupWithManager(ctx context.Context, mgr manager.Manager, store database.S
 }
 
 // register builds the controller that mirrors the syncer's kind and adds it
-// to the manager. The controller watches the kind through the manager's cache
-// and runs the syncer's Diff on an interval; both push keys that the
-// reconciler resolves by reading Kubernetes afresh.
+// to the manager. The controller watches the syncer's sources through the
+// manager's cache and runs the syncer's Diff on an interval; all of them push
+// keys that the reconciler resolves by reading Kubernetes afresh.
 func register(mgr manager.Manager, reader client.Reader, syncer syncapi.Syncer) error {
-	obj := syncer.NewObject()
-	gvk, err := apiutil.GVKForObject(obj, mgr.GetScheme())
+	gvk, err := apiutil.GVKForObject(syncer.NewObject(), mgr.GetScheme())
 	if err != nil {
 		return fmt.Errorf("error identifying database sync resource: %w", err)
 	}
 	name := "db-sync-" + strings.ToLower(gvk.Kind)
-	c, err := reconciler.New[reconcile.Request](name).
-		// Every object of the kind at startup, then every change. The
-		// predicate drops the informer's periodic resync events, whose
-		// objects have not changed.
-		Watch(kube.Kind(
-			mgr.GetCache(),
-			obj,
-			&handler.EnqueueRequestForObject{},
-			predicate.ResourceVersionChangedPredicate{},
-		)).
+	b := reconciler.New[reconcile.Request](name)
+	for _, src := range syncer.Sources(mgr.GetCache()) {
+		b.Watch(src)
+	}
+	c, err := b.
 		// Whatever the database disagrees with, at startup and on an
-		// interval. Listed last so the watch above is already subscribed
+		// interval. Listed last so the watches above are already subscribed
 		// while the diff runs.
 		Watch(list.New(syncer.Diff).Every(resyncInterval)).
 		Workers(numWorkers).

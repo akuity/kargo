@@ -44,6 +44,7 @@ func TestSync(t *testing.T) {
 			store := &fakeStore{writeErr: testCase.storeErr}
 			s := NewSyncer(nil, store)
 			require.IsType(t, &kargoapi.Project{}, s.NewObject())
+			require.Len(t, s.Sources(nil), 1)
 			for range 2 {
 				err := s.Sync(context.Background(), testCase.obj)
 				if testCase.wantErr != "" {

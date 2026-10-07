@@ -4,11 +4,14 @@ import (
 	"context"
 	"fmt"
 
+	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/controller/management/dbsync/internal/syncapi"
 	"github.com/akuity/kargo/pkg/database"
+	"github.com/akuity/kargo/pkg/reconciler"
 )
 
 type projectStore interface {
@@ -28,6 +31,12 @@ func NewSyncer(reader client.Reader, store projectStore) syncapi.Syncer {
 }
 
 func (*syncer) NewObject() client.Object { return &kargoapi.Project{} }
+
+// Sources watches Projects alone. A Project row records nothing owned by
+// another kind, so no other change can make it stale.
+func (*syncer) Sources(c cache.Cache) []reconciler.Source[reconcile.Request] {
+	return []reconciler.Source[reconcile.Request]{syncapi.Kind(c, &kargoapi.Project{})}
+}
 
 func (s *syncer) Sync(ctx context.Context, obj client.Object) error {
 	project, ok := obj.(*kargoapi.Project)

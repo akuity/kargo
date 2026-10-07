@@ -10,11 +10,13 @@ import (
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/pkg/reconciler"
 )
 
 // The reconciler is resource-agnostic. Tests exercise it with a cluster-scoped
@@ -145,6 +147,8 @@ func (s *fakeSyncer) NewObject() client.Object {
 	}
 	return &kargoapi.Stage{}
 }
+
+func (*fakeSyncer) Sources(cache.Cache) []reconciler.Source[reconcile.Request] { return nil }
 
 func (s *fakeSyncer) Sync(_ context.Context, obj client.Object) error {
 	s.mu.Lock()
