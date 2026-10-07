@@ -134,7 +134,7 @@ func (ver Verifier) createAnalysisRun(
 	freightCollection kargoapi.FreightCollection,
 	lastPromoName string,
 ) (*AnalysisRun, string, error) {
-	if stage.IsTargetAware() {
+	if stage.IsTargetAware() && stage.Spec.Targets.Verification != nil {
 		return ver.createFleetAnalysisRun(ctx, stage, freightCollection, lastPromoName)
 	}
 

@@ -41,7 +41,6 @@ const (
 	RunningPromotionsByArgoCDSelectorsField    = "argoCDSelectors"
 	RunningPromotionsByPullRequestURLField     = "pullRequestURL"
 
-	StagesByAnalysisRunField    = "analysisRun"
 	StagesByFreightField        = "freight"
 	StagesByUpstreamStagesField = "upstreamStages"
 	StagesByWarehouseField      = "warehouse"
@@ -66,43 +65,6 @@ func EventsByInvolvedObjectAPIGroup(obj client.Object) []string {
 		return nil
 	}
 	return []string{gv.Group}
-}
-
-// StagesByAnalysisRun is a client.IndexerFunc that indexes Stages by the
-// AnalysisRun they are associated with.
-func StagesByAnalysisRun(
-	shardName string,
-	isDefaultController bool,
-) client.IndexerFunc {
-	return func(obj client.Object) []string {
-		// Return early if the Stage is not the responsibility of this controller.
-		objShard := obj.GetLabels()[kargoapi.LabelKeyShard]
-		// Note(krancour): staticcheck wants us to apply De Morgan's law here, but
-		// this logic feels more readable as is. i.e. NOT (responsible for).
-		if !(objShard == shardName || (objShard == "" && isDefaultController)) { // nolint: staticcheck
-			return nil
-		}
-
-		stage, ok := obj.(*kargoapi.Stage)
-		if !ok {
-			return nil
-		}
-
-		currentFC := stage.Status.FreightHistory.Current()
-		if currentFC == nil {
-			return nil
-		}
-		currentVI := currentFC.VerificationHistory.Current()
-		if currentVI == nil || currentVI.AnalysisRun == nil {
-			return nil
-		}
-
-		return []string{fmt.Sprintf(
-			"%s:%s",
-			currentVI.AnalysisRun.Namespace,
-			currentVI.AnalysisRun.Name,
-		)}
-	}
 }
 
 // PromotionsByStage returns a client.IndexerFunc that indexes Promotions

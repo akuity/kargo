@@ -302,7 +302,7 @@ type StageTargets struct {
 	UpdateStrategy TargetUpdateStrategy `json:"updateStrategy,omitempty"`
 	// Verification configures mode and pace of target promotion verifications
 	// +optional
-	Verification TargetVerificaitonSpec `json:"verification,omitempty"`
+	Verification *TargetVerificaitonSpec `json:"verification,omitempty"`
 }
 
 type TargetVerificaitonSpec struct {

@@ -302,15 +302,6 @@ func (r *RegularStageReconciler) SetupWithManager(
 	// If the Argo Rollouts integration is enabled, then we should watch for
 	// changes to AnalysisRuns and enqueue the related Stages for reconciliation.
 	if r.cfg.RolloutsIntegrationEnabled {
-		if err = sharedIndexer.IndexField(
-			ctx,
-			&kargoapi.Stage{},
-			indexer.StagesByAnalysisRunField,
-			indexer.StagesByAnalysisRun(r.cfg.ShardName, r.cfg.IsDefaultController),
-		); err != nil {
-			return fmt.Errorf("error setting up index for Stages by AnalysisRun: %w", err)
-		}
-
 		if err = c.Watch(
 			source.Kind(
 				kargoMgr.GetCache(),

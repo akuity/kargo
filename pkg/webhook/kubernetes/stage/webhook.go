@@ -150,7 +150,7 @@ func (w *webhook) Default(ctx context.Context, stage *kargoapi.Stage) error {
 
 func (w *webhook) targetAwareDefaults(stage *kargoapi.Stage) {
 	// Set verification mode to PerStage
-	if stage.Spec.Targets.Verification.VerificationRunMode == "" {
+	if stage.Spec.Targets.Verification != nil && stage.Spec.Targets.Verification.VerificationRunMode == "" {
 		stage.Spec.Targets.Verification.VerificationRunMode = kargoapi.VerificationRunModePerStage
 	}
 }

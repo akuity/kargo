@@ -389,6 +389,7 @@ func (ver Verifier) startVerification(
 				Name:      existingAnalysisRun.Name,
 				Namespace: existingAnalysisRun.Namespace,
 				Phase:     existingAnalysisRun.Status.Phase,
+				GVK:       existingAnalysisRun.GVK,
 			}
 			return newVI, nil
 		}
@@ -489,6 +490,7 @@ func (ver Verifier) getVerificationResult(
 			Name:      currentVI.AnalysisRun.Name,
 			Namespace: currentVI.AnalysisRun.Namespace,
 			Phase:     arStatus.Phase,
+			GVK:       currentVI.AnalysisRun.GVK,
 		},
 	}, nil
 }

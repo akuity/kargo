@@ -128,8 +128,6 @@ func (runner analysisRunnerRequest) FindExistingAnalysisRun(
 	stage types.NamespacedName,
 	freightColID string,
 ) (*AnalysisRun, error) {
-
-	// FIXME: implement it for other run types
 	analysisRuns := &kargoapi.AnalysisRunRequestList{}
 	if err := runner.client.List(
 		ctx,
@@ -226,11 +224,22 @@ func (runner analysisRunnerRequest) CreateAnalysisRun(
 		arrLabels[kargoapi.LabelKeyShard] = shard
 	}
 
+	annotations := map[string]string{}
+	if shortStageName != stage.Name {
+		annotations[kargoapi.AnnotationKeyStage] = stage.Name
+	}
+
+	updateStrategy := kargoapi.TargetUpdateStrategy{}
+	if stage.Spec.Targets.Verification != nil {
+		updateStrategy = stage.Spec.Targets.Verification.UpdateStrategy
+	}
+
 	request := &kargoapi.AnalysisRunRequest{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:            generateRequestName(stage.Name, freightCollection.ID),
 			Namespace:       stage.Namespace,
 			Labels:          arrLabels,
+			Annotations:     annotations,
 			OwnerReferences: ownerRefs,
 		},
 		Spec: kargoapi.AnalysisRunRequestSpec{
@@ -242,7 +251,7 @@ func (runner analysisRunnerRequest) CreateAnalysisRun(
 			VerificationTemplate: *stage.Spec.Verification.DeepCopy(),
 			// FIXME: We might want to add an extra check that these targets have a freight we're verifying
 			Targets:        specTargets,
-			UpdateStrategy: stage.Spec.Targets.Verification.UpdateStrategy,
+			UpdateStrategy: updateStrategy,
 		},
 	}
 
