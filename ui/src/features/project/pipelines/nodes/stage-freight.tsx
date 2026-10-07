@@ -54,15 +54,14 @@ export const StageFreight = (props: { stage: Stage }) => {
 
   const warehouses = currentFreight?.map((f) => f.origin?.name);
 
-  const [selectedWarehouse, setSelectedWarehouse] = useState(warehouses?.[0]);
+  const defaultToLastPromotionWarehouse = () =>
+    props.stage?.status?.lastPromotion?.freight?.origin?.name || warehouses?.[0];
+
+  const [selectedWarehouse, setSelectedWarehouse] = useState(defaultToLastPromotionWarehouse);
 
   useEffect(() => {
-    if (selectedWarehouse) {
-      return;
-    }
-
-    setSelectedWarehouse(warehouses?.[0]);
-  }, [currentFreight]);
+    setSelectedWarehouse(defaultToLastPromotionWarehouse);
+  }, [props.stage?.status?.lastPromotion?.freight?.origin?.name]);
 
   const defaultToFirstFreight = () =>
     currentFreight?.find((f) => f?.origin?.name === selectedWarehouse) as FreightReference;
