@@ -4,7 +4,7 @@ go 1.27.0
 
 require (
 	github.com/bufbuild/buf v1.57.2
-	golang.org/x/tools v0.50.0
+	golang.org/x/tools v0.51.0
 	helm.sh/helm/v3 v3.19.0
 	k8s.io/code-generator v0.34.1
 	sigs.k8s.io/controller-tools v0.19.0
@@ -167,7 +167,7 @@ require (
 	golang.org/x/oauth2 v0.37.0 // indirect
 	golang.org/x/sync v0.23.0 // indirect
 	golang.org/x/sys v0.48.0 // indirect
-	golang.org/x/telemetry v0.0.0-20260910141331-15ceca2b0a1f // indirect
+	golang.org/x/telemetry v0.0.0-20260924152758-ed294f943157 // indirect
 	golang.org/x/term v0.46.0 // indirect
 	golang.org/x/text v0.42.0 // indirect
 	golang.org/x/time v0.16.0 // indirect
