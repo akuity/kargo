@@ -25,18 +25,18 @@ const (
 	resyncInterval = time.Minute
 	// resyncJitter spreads the diffs of the mirrored kinds so they do not
 	// all list the database and Kubernetes at the same instant.
-	resyncJitter = 0.1
+	resyncJitter = 0.2
 	numWorkers   = 4
 )
 
 // SetupWithManager registers one controller per mirrored kind with the
-// manager. The caller owns the database pool and its lifetime.
-func SetupWithManager(ctx context.Context, mgr manager.Manager, store database.Store) error {
+// manager. The caller owns the database pool behind queries and its lifetime.
+func SetupWithManager(ctx context.Context, mgr manager.Manager, queries *database.Queries) error {
 	reader := mgr.GetAPIReader()
 	// Syncers list from the manager's cache. Add a kind by appending its
 	// syncer here.
 	syncers := []syncapi.Syncer{
-		projects.NewSyncer(mgr.GetClient(), store),
+		projects.NewSyncer(mgr.GetClient(), queries),
 	}
 	for _, syncer := range syncers {
 		if err := register(mgr, reader, syncer); err != nil {

@@ -21,10 +21,10 @@ import (
 	"github.com/akuity/kargo/db"
 )
 
-func TestStoreIntegration(t *testing.T) {
+func TestProjectQueriesIntegration(t *testing.T) {
 	t.Parallel()
 	pool, _ := isolatedDatabase(t)
-	store := NewStore(pool)
+	queries := New(pool)
 	ctx := context.Background()
 	created := time.Date(2020, 1, 2, 3, 4, 5, 0, time.UTC)
 	project := UpsertProjectParams{ID: "opaque-project", Name: "demo", CreatedAt: created}
@@ -35,11 +35,11 @@ func TestStoreIntegration(t *testing.T) {
 		{
 			name: "idempotent writes preserve creation and refresh sync timestamps",
 			run: func(t *testing.T) {
-				require.NoError(t, store.UpsertProject(ctx, project))
+				require.NoError(t, queries.UpsertProject(ctx, project))
 				_, err := pool.Exec(ctx, "UPDATE projects SET synced_at = '2000-01-01'")
 				require.NoError(t, err)
-				require.NoError(t, store.UpsertProject(ctx, project))
-				ids, err := listProjectIDs(ctx, store)
+				require.NoError(t, queries.UpsertProject(ctx, project))
+				ids, err := listProjectIDs(ctx, queries)
 				require.NoError(t, err)
 				require.Equal(t, []string{project.ID}, ids)
 				var creation, synced time.Time
@@ -51,8 +51,8 @@ func TestStoreIntegration(t *testing.T) {
 		{
 			name: "snapshot query includes all mirrored fields",
 			run: func(t *testing.T) {
-				require.NoError(t, store.UpsertProject(ctx, project))
-				projects, err := store.ListProjects(ctx)
+				require.NoError(t, queries.UpsertProject(ctx, project))
+				projects, err := queries.ListProjects(ctx)
 				require.NoError(t, err)
 				require.Len(t, projects, 1)
 				require.Equal(t, project.ID, projects[0].ID)
@@ -62,12 +62,29 @@ func TestStoreIntegration(t *testing.T) {
 			},
 		},
 		{
-			name: "database enforces unique names and identities",
+			// A Project deleted and recreated under the same name keeps one
+			// row, now carrying the new UID.
+			name: "recreation replaces the row's identity in place",
 			run: func(t *testing.T) {
-				require.NoError(t, store.UpsertProject(ctx, project))
-				duplicate := project
-				duplicate.ID = "another"
-				requirePGError(t, New(pool).UpsertProject(ctx, duplicate), "23505")
+				require.NoError(t, queries.UpsertProject(ctx, project))
+				replacement := project
+				replacement.ID = "new-project"
+				require.NoError(t, queries.UpsertProject(ctx, replacement))
+				ids, err := listProjectIDs(ctx, queries)
+				require.NoError(t, err)
+				require.Equal(t, []string{replacement.ID}, ids)
+			},
+		},
+		{
+			// Kubernetes never renames an object, so this can only come from
+			// corrupt data; the primary key rejects it rather than silently
+			// producing two rows for one UID.
+			name: "same identity under another name is rejected",
+			run: func(t *testing.T) {
+				require.NoError(t, queries.UpsertProject(ctx, project))
+				renamed := project
+				renamed.Name = "renamed"
+				requirePGError(t, queries.UpsertProject(ctx, renamed), "23505")
 				_, err := pool.Exec(ctx, "INSERT INTO projects SELECT * FROM projects")
 				requirePGError(t, err, "23505")
 			},
@@ -75,46 +92,20 @@ func TestStoreIntegration(t *testing.T) {
 		{
 			name: "deletion by name",
 			run: func(t *testing.T) {
-				require.NoError(t, store.UpsertProject(ctx, project))
+				require.NoError(t, queries.UpsertProject(ctx, project))
 				other := UpsertProjectParams{ID: "other-project", Name: "other", CreatedAt: created}
-				require.NoError(t, store.UpsertProject(ctx, other))
-				require.NoError(t, store.DeleteProjectByName(ctx, "other"))
-				ids, err := listProjectIDs(ctx, store)
+				require.NoError(t, queries.UpsertProject(ctx, other))
+				require.NoError(t, queries.DeleteProjectByName(ctx, "other"))
+				ids, err := listProjectIDs(ctx, queries)
 				require.NoError(t, err)
 				require.Equal(t, []string{project.ID}, ids)
-				require.NoError(t, store.DeleteProjectByName(ctx, "absent"))
+				require.NoError(t, queries.DeleteProjectByName(ctx, "absent"))
 			},
 		},
 		{
-			name: "recreation replaces identities",
+			name: "blocked write respects the caller's deadline and recovers",
 			run: func(t *testing.T) {
-				require.NoError(t, store.UpsertProject(ctx, project))
-				replacement := project
-				replacement.ID = "new-project"
-				require.NoError(t, store.UpsertProject(ctx, replacement))
-				ids, err := listProjectIDs(ctx, store)
-				require.NoError(t, err)
-				require.Equal(t, []string{replacement.ID}, ids)
-			},
-		},
-		{
-			name: "failed replacement rolls back deletion",
-			run: func(t *testing.T) {
-				require.NoError(t, store.UpsertProject(ctx, project))
-				_, err := pool.Exec(ctx, "ALTER TABLE projects ADD CONSTRAINT reject_new CHECK (id <> 'rejected')")
-				require.NoError(t, err)
-				rejected := project
-				rejected.ID = "rejected"
-				requirePGError(t, store.UpsertProject(ctx, rejected), "23514")
-				ids, err := listProjectIDs(ctx, store)
-				require.NoError(t, err)
-				require.Equal(t, []string{project.ID}, ids)
-			},
-		},
-		{
-			name: "blocked transaction respects caller deadline and recovers",
-			run: func(t *testing.T) {
-				require.NoError(t, store.UpsertProject(ctx, project))
+				require.NoError(t, queries.UpsertProject(ctx, project))
 				tx, err := pool.Begin(ctx)
 				require.NoError(t, err)
 				defer func() { _ = tx.Rollback(ctx) }()
@@ -122,17 +113,15 @@ func TestStoreIntegration(t *testing.T) {
 				require.NoError(t, err)
 				deadlineCtx, cancel := context.WithTimeout(ctx, 100*time.Millisecond)
 				defer cancel()
-				require.ErrorIs(t, store.UpsertProject(deadlineCtx, project), context.DeadlineExceeded)
+				require.ErrorIs(t, queries.UpsertProject(deadlineCtx, project), context.DeadlineExceeded)
 				require.NoError(t, tx.Rollback(ctx))
-				require.NoError(t, store.UpsertProject(ctx, project))
+				require.NoError(t, queries.UpsertProject(ctx, project))
 			},
 		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			_, err := pool.Exec(ctx, "TRUNCATE projects CASCADE")
-			require.NoError(t, err)
-			_, err = pool.Exec(ctx, "ALTER TABLE projects DROP CONSTRAINT IF EXISTS reject_new")
 			require.NoError(t, err)
 			testCase.run(t)
 		})
@@ -153,7 +142,7 @@ func TestMigrationsIntegration(t *testing.T) {
 	require.Nil(t, table)
 	_, err = migrations.Up(ctx)
 	require.NoError(t, err)
-	require.NoError(t, NewStore(pool).UpsertProject(ctx, UpsertProjectParams{
+	require.NoError(t, New(pool).UpsertProject(ctx, UpsertProjectParams{
 		ID: "after-rollback", Name: "demo", CreatedAt: time.Now(),
 	}))
 }
@@ -176,7 +165,7 @@ func isolatedDatabase(t *testing.T) (*pgxpool.Pool, *goose.Provider) {
 	_, err = admin.Exec(ctx, "CREATE SCHEMA "+quotedSchema)
 	require.NoError(t, err)
 	t.Cleanup(func() {
-		cleanupCtx, cancel := context.WithTimeout(context.Background(), operationTimeout)
+		cleanupCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 		_, cleanupErr := admin.Exec(cleanupCtx, "DROP SCHEMA "+quotedSchema+" CASCADE")
 		require.NoError(t, cleanupErr)
@@ -222,8 +211,8 @@ func requirePGError(t *testing.T, err error, code string) {
 	require.Equal(t, code, pgErr.Code)
 }
 
-func listProjectIDs(ctx context.Context, store Store) ([]string, error) {
-	rows, err := store.ListProjects(ctx)
+func listProjectIDs(ctx context.Context, queries *Queries) ([]string, error) {
+	rows, err := queries.ListProjects(ctx)
 	if err != nil {
 		return nil, err
 	}

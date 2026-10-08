@@ -178,7 +178,7 @@ func (o *managementControllerOptions) run(ctx context.Context) error {
 			return err
 		}
 		defer pool.Close()
-		if err = dbsync.SetupWithManager(ctx, kargoMgr, database.NewStore(pool)); err != nil {
+		if err = dbsync.SetupWithManager(ctx, kargoMgr, database.New(pool)); err != nil {
 			return err
 		}
 	}
