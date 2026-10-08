@@ -13,12 +13,13 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
-// Diff compares a database snapshot with a complete, current Kubernetes list
-// and returns the keys that disagree. Callers must load rows before calling
-// Diff, using an uncached reader. Matching is resource-specific; missing rows
-// and orphaned rows are handled here. Live objects come first, in list order,
-// followed by the keys of orphaned rows sorted by name, with no duplicates.
-// Neither the snapshot nor either data source is mutated.
+// Diff compares a database snapshot with a complete Kubernetes list and
+// returns the keys that disagree. Callers must load rows before calling Diff.
+// The reader may be cached, since every returned key is re-read live before
+// it is acted on. Matching is resource-specific; missing rows and orphaned
+// rows are handled here. Live objects come first, in list order, followed by
+// the keys of orphaned rows sorted by name, with no duplicates. Neither the
+// snapshot nor either data source is mutated.
 func Diff[Object client.Object, Row any](
 	ctx context.Context,
 	reader client.Reader,

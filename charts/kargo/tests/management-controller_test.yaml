@@ -51,16 +51,21 @@ tests:
       - contains:
           path: spec.template.spec.containers[0].env
           content:
-            name: DATABASE_URL
-            value: postgres://kargo@kargo-postgres.NAMESPACE.svc:5432/kargo?sslmode=disable
+            name: DATABASE_HOST
+            value: kargo-postgres.NAMESPACE.svc
       - contains:
           path: spec.template.spec.containers[0].env
           content:
-            name: PGPASSWORD
+            name: DATABASE_PASSWORD
             valueFrom:
               secretKeyRef:
                 name: kargo-postgres
                 key: password
+      - notContains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: DATABASE_URL
+          any: true
 
   - it: reads the bundled PostgreSQL password from an existing Secret
     template: templates/management-controller/deployment.yaml
@@ -70,7 +75,7 @@ tests:
       - contains:
           path: spec.template.spec.containers[0].env
           content:
-            name: PGPASSWORD
+            name: DATABASE_PASSWORD
             valueFrom:
               secretKeyRef:
                 name: my-postgres
@@ -94,7 +99,7 @@ tests:
       - notContains:
           path: spec.template.spec.containers[0].env
           content:
-            name: PGPASSWORD
+            name: DATABASE_HOST
           any: true
 
   - it: sets no database environment when no database is configured
@@ -110,7 +115,7 @@ tests:
       - notContains:
           path: spec.template.spec.containers[0].env
           content:
-            name: PGPASSWORD
+            name: DATABASE_HOST
           any: true
 
 ---

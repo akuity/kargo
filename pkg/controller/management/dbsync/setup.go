@@ -33,9 +33,10 @@ const (
 // manager. The caller owns the database pool and its lifetime.
 func SetupWithManager(ctx context.Context, mgr manager.Manager, store database.Store) error {
 	reader := mgr.GetAPIReader()
-	// Add a kind by appending its syncer here.
+	// Syncers list from the manager's cache. Add a kind by appending its
+	// syncer here.
 	syncers := []syncapi.Syncer{
-		projects.NewSyncer(reader, store),
+		projects.NewSyncer(mgr.GetClient(), store),
 	}
 	for _, syncer := range syncers {
 		if err := register(mgr, reader, syncer); err != nil {
@@ -49,7 +50,8 @@ func SetupWithManager(ctx context.Context, mgr manager.Manager, store database.S
 // register builds the controller that mirrors the syncer's kind and adds it
 // to the manager. The controller watches the syncer's sources through the
 // manager's cache and runs the syncer's Diff on an interval; all of them push
-// keys that the reconciler resolves by reading Kubernetes afresh.
+// keys that the reconciler resolves by reading Kubernetes afresh through the
+// uncached reader.
 func register(mgr manager.Manager, reader client.Reader, syncer syncapi.Syncer) error {
 	gvk, err := apiutil.GVKForObject(syncer.NewObject(), mgr.GetScheme())
 	if err != nil {

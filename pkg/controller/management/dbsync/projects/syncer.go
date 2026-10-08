@@ -25,7 +25,8 @@ type syncer struct {
 	store  projectStore
 }
 
-// NewSyncer creates a Project syncer. The reader must bypass the Kubernetes cache.
+// NewSyncer creates a Project syncer. Diff lists Projects through reader,
+// which may be the manager's cached client; see syncapi.Syncer.
 func NewSyncer(reader client.Reader, store projectStore) syncapi.Syncer {
 	return &syncer{reader: reader, store: store}
 }

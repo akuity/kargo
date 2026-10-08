@@ -29,8 +29,10 @@ type Syncer interface {
 	// Diff snapshots database rows before obtaining a complete Kubernetes list
 	// and returns every key whose mirror needs attention: objects with a
 	// missing or differing row, and rows whose object is gone. It performs no
-	// writes and returns nothing on a failed or incomplete list. Reconciling a
-	// returned key reads Kubernetes again and upserts or deletes accordingly.
+	// writes and returns nothing on a failed or incomplete list. The list may
+	// come from the cache: reconciling a returned key reads Kubernetes afresh
+	// before upserting or deleting, so a stale entry costs at most one extra
+	// reconcile or one more interval, never a wrong write.
 	Diff(context.Context) ([]reconcile.Request, error)
 }
 
