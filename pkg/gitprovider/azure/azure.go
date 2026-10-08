@@ -2,7 +2,9 @@ package azure
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"net/http"
 	"net/url"
 	"strings"
 	"time"
@@ -272,6 +274,9 @@ func (p *provider) MergePullRequest(
 		},
 	)
 	if err != nil {
+		if isNotFound(err) {
+			return nil, false, gitprovider.ErrPullRequestNotFound
+		}
 		return nil, false, fmt.Errorf("error getting pull request %d: %w", id, err)
 	}
 	if adoPR == nil {
@@ -290,7 +295,7 @@ func (p *provider) MergePullRequest(
 		return pr, true, nil
 	case adogit.PullRequestStatusValues.Abandoned:
 		return nil, false, fmt.Errorf(
-			"pull request is abandoned: %w",
+			"pull request status is abandoned: %w",
 			gitprovider.ErrPullRequestClosedUnmerged,
 		)
 	case adogit.PullRequestStatusValues.Active:
@@ -547,4 +552,19 @@ func parseLegacyRepoURL(u *url.URL) (string, string, string, error) {
 		return "", "", "", fmt.Errorf("could not extract repository organization, project, and name from URL %q", u)
 	}
 	return organization, parts[1], parts[3], nil
+}
+
+// isNotFound returns true if err is an Azure DevOps API error with a 404 status
+// code. The client returns its WrappedError both by value and by pointer, so
+// both forms are checked.
+func isNotFound(err error) bool {
+	var ptrErr *azuredevops.WrappedError
+	if errors.As(err, &ptrErr) {
+		return ptrErr.StatusCode != nil && *ptrErr.StatusCode == http.StatusNotFound
+	}
+	var valErr azuredevops.WrappedError
+	if errors.As(err, &valErr) {
+		return valErr.StatusCode != nil && *valErr.StatusCode == http.StatusNotFound
+	}
+	return false
 }

@@ -365,6 +365,11 @@ func (p *provider) MergePullRequest(
 
 	ghPR, _, err := p.client.GetPullRequests(ctx, p.owner, p.repo, int(id))
 	if err != nil {
+		var ghErr *github.ErrorResponse
+		if errors.As(err, &ghErr) && ghErr.Response != nil &&
+			ghErr.Response.StatusCode == http.StatusNotFound {
+			return nil, false, gitprovider.ErrPullRequestNotFound
+		}
 		return nil, false, fmt.Errorf("error getting pull request %d: %w", id, err)
 	}
 	if ghPR == nil {
@@ -394,7 +399,10 @@ func (p *provider) MergePullRequest(
 		// Mergeable now; fall through to the merge attempt below.
 	case mergeableStateDirty:
 		// A genuine merge conflict will not clear without human intervention.
-		return nil, false, fmt.Errorf("pull request %d has conflicts and cannot be merged", id)
+		return nil, false, fmt.Errorf(
+			"pull request has conflicts: %w",
+			gitprovider.ErrPullRequestNotMergeable,
+		)
 	case mergeableStateBlocked, mergeableStateBehind:
 		// The merge is blocked by branch protection or a repository ruleset: an
 		// unsatisfied required review or status check, or a base branch that has
@@ -438,12 +446,19 @@ func (p *provider) MergePullRequest(
 		// reporting a permanent one that way would loop forever under wait=true.
 		var ghErr *github.ErrorResponse
 		if errors.As(err, &ghErr) && ghErr.Response != nil &&
-			ghErr.Response.StatusCode == http.StatusMethodNotAllowed &&
-			isTransientMerge405(ghErr.Message, policyBlocked) {
-			return nil, false, nil
+			ghErr.Response.StatusCode == http.StatusMethodNotAllowed {
+			if isTransientMerge405(ghErr.Message, policyBlocked) {
+				return nil, false, nil
+			}
+			// Permanent, or at least not recognizably transient. Surface GitHub's
+			// message (carried by the wrapped error) so the cause is visible.
+			return nil, false, fmt.Errorf(
+				"%w: %w",
+				gitprovider.ErrPullRequestNotMergeable,
+				err,
+			)
 		}
-		// Permanent, or at least not recognizably transient. Surface GitHub's
-		// message (carried by the wrapped error) so the cause is visible.
+		// Not a 405, so the failure may be transient (e.g. a 5xx).
 		return nil, false, fmt.Errorf("error merging pull request %d: %w", id, err)
 	}
 	if mergeResult == nil {

@@ -219,6 +219,22 @@ func TestMergePullRequest(t *testing.T) {
 			errorIs:     gitprovider.ErrPullRequestNotFound,
 		},
 		{
+			name: "404 from get",
+			mockClient: func() *mockGitLabClient {
+				mc := &mockGitLabClient{}
+				mc.getMRFunc = func(_ any, _ int64, _ *gitlab.GetMergeRequestsOptions,
+					_ ...gitlab.RequestOptionFunc,
+				) (*gitlab.MergeRequest, *gitlab.Response, error) {
+					return nil, nil, gitlab.ErrNotFound
+				}
+				return mc
+			}(),
+			id:          404,
+			expectErr:   true,
+			errContains: "pull request not found",
+			errorIs:     gitprovider.ErrPullRequestNotFound,
+		},
+		{
 			name: "MR already merged",
 			mockClient: &mockGitLabClient{
 				mr: &gitlab.MergeRequest{

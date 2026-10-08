@@ -190,12 +190,13 @@ func (g *gitPRMerger) run(
 	return res, nil
 }
 
-// isTerminalMergeError returns true if err indicates the pull request can never
-// be merged, so retrying would be pointless. Anything else (5xx, 429, network
-// failures, etc.) is treated as potentially transient.
+// isTerminalMergeError returns true if err indicates the pull request cannot be
+// merged without human intervention, so retrying would be pointless. Anything
+// else (5xx, 429, network failures, etc.) is treated as potentially transient.
 func isTerminalMergeError(err error) bool {
 	return errors.Is(err, gitprovider.ErrPullRequestNotFound) ||
 		errors.Is(err, gitprovider.ErrPullRequestClosedUnmerged) ||
+		errors.Is(err, gitprovider.ErrPullRequestNotMergeable) ||
 		errors.Is(err, gitprovider.ErrUnsupportedMergeMethod)
 }
 

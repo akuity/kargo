@@ -405,6 +405,19 @@ func TestMergePullRequest(t *testing.T) {
 			errorIs:       gitprovider.ErrPullRequestNotFound,
 		},
 		{
+			name:     "404 from initial get",
+			prNumber: 404,
+			setupMock: func(m *mockGithubClient) {
+				m.On("GetPullRequests", mock.Anything, testRepoOwner, testRepoName, int(404)).
+					Return(nil, nil, &github.ErrorResponse{
+						Response: &http.Response{StatusCode: http.StatusNotFound},
+					})
+			},
+			expectError:   true,
+			errorContains: "pull request not found",
+			errorIs:       gitprovider.ErrPullRequestNotFound,
+		},
+		{
 			name:     "PR already merged",
 			prNumber: 123,
 			setupMock: func(m *mockGithubClient) {
@@ -635,6 +648,7 @@ func TestMergePullRequest(t *testing.T) {
 			},
 			expectError:   true,
 			errorContains: "Squash merges are not allowed",
+			errorIs:       gitprovider.ErrPullRequestNotMergeable,
 		},
 		{
 			// A branch that is behind its base is blocked by a strict required
@@ -678,7 +692,8 @@ func TestMergePullRequest(t *testing.T) {
 					}, &github.Response{}, nil)
 			},
 			expectError:   true,
-			errorContains: "has conflicts and cannot be merged",
+			errorContains: "pull request has conflicts",
+			errorIs:       gitprovider.ErrPullRequestNotMergeable,
 		},
 		{
 			name:     "merge call fails",
@@ -759,6 +774,7 @@ func TestMergePullRequest(t *testing.T) {
 			},
 			expectError:   true,
 			errorContains: "Squash merges are not allowed",
+			errorIs:       gitprovider.ErrPullRequestNotMergeable,
 		},
 		{
 			name:     "merge call returns 405 not mergeable is not ready",
@@ -1039,7 +1055,7 @@ func TestMergePullRequestNotMergeableThenDirty(t *testing.T) {
 
 	pr, merged, err = p.MergePullRequest(t.Context(), 500, nil)
 	require.Error(t, err)
-	require.Contains(t, err.Error(), "has conflicts and cannot be merged")
+	require.ErrorIs(t, err, gitprovider.ErrPullRequestNotMergeable)
 	require.False(t, merged)
 	require.Nil(t, pr)
 

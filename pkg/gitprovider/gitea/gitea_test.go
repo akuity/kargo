@@ -115,14 +115,10 @@ func (m *mockGiteaClient) GetPullRequest(
 	args := m.Called(owner, repo, number)
 	m.owner = owner
 	m.repo = repo
-	pr, ok := args.Get(0).(*gitea.PullRequest)
-	if !ok {
-		return nil, nil, args.Error(2)
-	}
-	resp, ok := args.Get(1).(*gitea.Response)
-	if !ok {
-		return pr, nil, args.Error(2)
-	}
+	// Like the real client, return the response alongside an error so that
+	// callers can inspect its status code.
+	pr, _ := args.Get(0).(*gitea.PullRequest)
+	resp, _ := args.Get(1).(*gitea.Response)
 	return pr, resp, args.Error(2)
 }
 
@@ -617,6 +613,23 @@ func TestMergePullRequest(t *testing.T) {
 			setupMock: func(m *mockGiteaClient) {
 				m.On("GetPullRequest", testRepoOwner, testRepoName, int64(404)).
 					Return(nil, &gitea.Response{}, nil)
+			},
+			expectError:   true,
+			errorContains: "pull request not found",
+			errorIs:       gitprovider.ErrPullRequestNotFound,
+		},
+		{
+			name:     "404 from initial get",
+			prNumber: 404,
+			setupMock: func(m *mockGiteaClient) {
+				m.On("GetPullRequest", testRepoOwner, testRepoName, int64(404)).
+					Return(
+						nil,
+						&gitea.Response{
+							Response: &http.Response{StatusCode: http.StatusNotFound},
+						},
+						errors.New("404 Not Found"),
+					)
 			},
 			expectError:   true,
 			errorContains: "pull request not found",

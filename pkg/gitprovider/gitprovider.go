@@ -12,6 +12,10 @@ var (
 	// ErrPullRequestClosedUnmerged is returned when a pull request was closed
 	// without being merged and can therefore never be merged.
 	ErrPullRequestClosedUnmerged = errors.New("pull request is closed but not merged")
+	// ErrPullRequestNotMergeable is returned when a pull request is open but
+	// cannot be merged without human intervention (e.g. it has conflicts, or
+	// the provider permanently rejected the merge).
+	ErrPullRequestNotMergeable = errors.New("pull request cannot be merged")
 	// ErrUnsupportedMergeMethod is returned when the requested merge method is
 	// not supported by the provider.
 	ErrUnsupportedMergeMethod = errors.New("unsupported merge method")
@@ -70,9 +74,10 @@ type Interface interface {
 	// - bool: true if merge was performed, false if PR is not ready to merge
 	// - error: only for actual errors (auth, network, invalid PR, etc.).
 	//   Implementations wrap ErrPullRequestNotFound,
-	//   ErrPullRequestClosedUnmerged, or ErrUnsupportedMergeMethod when the
-	//   pull request can never be merged, so callers can tell those apart from
-	//   errors that may be transient.
+	//   ErrPullRequestClosedUnmerged, ErrPullRequestNotMergeable, or
+	//   ErrUnsupportedMergeMethod when retrying cannot succeed without human
+	//   intervention, so callers can tell those apart from errors that may be
+	//   transient.
 	MergePullRequest(context.Context, int64, *MergePullRequestOpts) (*PullRequest, bool, error)
 
 	// DeleteBranch deletes the named branch from the repository. Deleting a

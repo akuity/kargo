@@ -283,6 +283,9 @@ func (p *provider) MergePullRequest(
 	if err != nil {
 		return nil, false, fmt.Errorf("error getting pull request %d: %w", id, err)
 	}
+	if getResp.StatusCode() == http.StatusNotFound {
+		return nil, false, gitprovider.ErrPullRequestNotFound
+	}
 	if getResp.JSON200 == nil {
 		return nil, false, fmt.Errorf(
 			"unexpected response %d getting pull request %d", getResp.StatusCode(), id,

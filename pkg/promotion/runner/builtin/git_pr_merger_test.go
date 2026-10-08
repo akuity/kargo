@@ -232,6 +232,28 @@ func Test_gitPRMerger_run(t *testing.T) {
 			},
 		},
 		{
+			name: "PR not mergeable",
+			provider: &gitprovider.Fake{
+				MergePullRequestFn: func(
+					context.Context,
+					int64,
+					*gitprovider.MergePullRequestOpts,
+				) (*gitprovider.PullRequest, bool, error) {
+					return nil, false, fmt.Errorf(
+						"pull request has conflicts: %w",
+						gitprovider.ErrPullRequestNotMergeable,
+					)
+				},
+			},
+			config: builtin.GitMergePRConfig{PRNumber: 42},
+			assertions: func(t *testing.T, res promotion.StepResult, err error) {
+				var termErr *promotion.TerminalError
+				require.ErrorAs(t, err, &termErr)
+				require.ErrorIs(t, termErr.Err, gitprovider.ErrPullRequestNotMergeable)
+				require.Equal(t, kargoapi.PromotionStepStatusFailed, res.Status)
+			},
+		},
+		{
 			name: "unsupported merge method",
 			provider: &gitprovider.Fake{
 				MergePullRequestFn: func(

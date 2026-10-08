@@ -303,8 +303,11 @@ func (p *provider) MergePullRequest(
 		opts = &gitprovider.MergePullRequestOpts{}
 	}
 
-	giteaPR, _, err := p.client.GetPullRequest(p.owner, p.repo, id)
+	giteaPR, resp, err := p.client.GetPullRequest(p.owner, p.repo, id)
 	if err != nil {
+		if resp != nil && resp.StatusCode == http.StatusNotFound {
+			return nil, false, gitprovider.ErrPullRequestNotFound
+		}
 		return nil, false, fmt.Errorf("error getting pull request %d: %w", id, err)
 	}
 	if giteaPR == nil {

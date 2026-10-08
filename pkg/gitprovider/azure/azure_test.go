@@ -3,9 +3,11 @@ package azure
 import (
 	"context"
 	"errors"
+	"net/http"
 	"testing"
 
 	"github.com/google/uuid"
+	"github.com/microsoft/azure-devops-go-api/azuredevops/v7"
 	adogit "github.com/microsoft/azure-devops-go-api/azuredevops/v7/git"
 	"github.com/stretchr/testify/require"
 	"k8s.io/utils/ptr"
@@ -103,6 +105,38 @@ func TestMergePullRequest(t *testing.T) {
 			},
 			expectError:   true,
 			errorContains: "error getting pull request",
+		},
+		{
+			name:     "404 getting PR",
+			prNumber: 404,
+			mockClient: &mockAzureGitClient{
+				getPullRequestFn: func(
+					context.Context, adogit.GetPullRequestArgs,
+				) (*adogit.GitPullRequest, error) {
+					return nil, azuredevops.WrappedError{
+						StatusCode: ptr.To(http.StatusNotFound),
+					}
+				},
+			},
+			expectError:   true,
+			errorContains: "pull request not found",
+			errorIs:       gitprovider.ErrPullRequestNotFound,
+		},
+		{
+			name:     "404 getting PR (pointer error)",
+			prNumber: 404,
+			mockClient: &mockAzureGitClient{
+				getPullRequestFn: func(
+					context.Context, adogit.GetPullRequestArgs,
+				) (*adogit.GitPullRequest, error) {
+					return nil, &azuredevops.WrappedError{
+						StatusCode: ptr.To(http.StatusNotFound),
+					}
+				},
+			},
+			expectError:   true,
+			errorContains: "pull request not found",
+			errorIs:       gitprovider.ErrPullRequestNotFound,
 		},
 		{
 			name:     "nil PR returned",

@@ -918,6 +918,27 @@ func TestMergePullRequest(t *testing.T) {
 		assert.Nil(t, pr)
 	})
 
+	t.Run("404 GET response returns not found", func(t *testing.T) {
+		t.Parallel()
+		mc := &mockClient{
+			getPRFunc: func(
+				_ context.Context,
+				_, _ string,
+				_ int,
+				_ ...RequestEditorFn,
+			) (*GetPullRequestResponse, error) {
+				return &GetPullRequestResponse{
+					HTTPResponse: &http.Response{StatusCode: http.StatusNotFound},
+				}, nil
+			},
+		}
+		p := &provider{client: mc}
+		pr, merged, err := p.MergePullRequest(t.Context(), 1, nil)
+		assert.ErrorIs(t, err, gitprovider.ErrPullRequestNotFound)
+		assert.False(t, merged)
+		assert.Nil(t, pr)
+	})
+
 	t.Run("error during merge API call", func(t *testing.T) {
 		t.Parallel()
 		mc := &mockClient{

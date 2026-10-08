@@ -230,8 +230,15 @@ func (p *provider) MergePullRequest(
 		opts = &gitprovider.MergePullRequestOpts{}
 	}
 
-	glMR, _, err := p.client.GetMergeRequest(p.projectName, id, nil)
+	glMR, resp, err := p.client.GetMergeRequest(p.projectName, id, nil)
 	if err != nil {
+		// The client reports a 404 as the sentinel gitlab.ErrNotFound rather than
+		// as an *ErrorResponse; the status code is checked as well in case a
+		// future client version changes that.
+		if errors.Is(err, gitlab.ErrNotFound) ||
+			(resp != nil && resp.StatusCode == http.StatusNotFound) {
+			return nil, false, gitprovider.ErrPullRequestNotFound
+		}
 		return nil, false, fmt.Errorf("error getting merge request %d: %w", id, err)
 	}
 	if glMR == nil {

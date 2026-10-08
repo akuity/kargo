@@ -762,6 +762,25 @@ func TestMergePullRequest(t *testing.T) {
 			errorContains: "error getting pull request",
 		},
 		{
+			name:     "404 getting PR",
+			prNumber: 404,
+			mockClient: &mockClient{
+				getPRFunc: func(
+					_ context.Context,
+					_, _ string,
+					_ int,
+					_ ...RequestEditorFn,
+				) (*GetRepositoriesWorkspaceRepoSlugPullrequestsPullRequestIdResponse, error) {
+					return &GetRepositoriesWorkspaceRepoSlugPullrequestsPullRequestIdResponse{
+						HTTPResponse: &http.Response{StatusCode: http.StatusNotFound},
+					}, nil
+				},
+			},
+			expectError:   true,
+			errorContains: "pull request not found",
+			errorIs:       gitprovider.ErrPullRequestNotFound,
+		},
+		{
 			name:     "PR already merged",
 			prNumber: 123,
 			mockClient: &mockClient{
