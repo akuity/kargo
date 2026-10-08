@@ -110,12 +110,19 @@ a subsequent reconciliation instead of failing the promotion:
 
 ```yaml
 steps:
+# Clone, update, commit, and push to a generated branch...
+- uses: git-open-pr
+  as: open-pr
+  config:
+    repoURL: https://github.com/example/repo.git
+    sourceBranch: ${{ outputs.push.branch }}
+    targetBranch: main
 - uses: git-merge-pr
   retry:
     errorThreshold: 3
   config:
     repoURL: https://github.com/example/repo.git
-    prNumber: 42
+    prNumber: ${{ outputs['open-pr'].pr.id }}
 ```
 
 ## Output
