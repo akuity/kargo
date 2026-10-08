@@ -43,7 +43,7 @@ export const DeleteFreightModal = ({
       <Alert
         type='error'
         banner
-        message={
+        title={
           <div>
             Are you sure you want to delete freight{' '}
             <span className='font-semibold'>{alias ? alias : freight?.metadata?.name}</span>?

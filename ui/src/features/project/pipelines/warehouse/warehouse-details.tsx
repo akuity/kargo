@@ -84,7 +84,7 @@ export const WarehouseDetails = ({
       {warehouse && (
         <div className='flex flex-col h-full'>
           {warehouseErrorMessage && (
-            <Alert className='mb-6' message={warehouseErrorMessage} type='error' closable />
+            <Alert className='mb-6' title={warehouseErrorMessage} type='error' closable />
           )}
 
           <Tabs

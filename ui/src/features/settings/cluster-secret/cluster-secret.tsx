@@ -71,11 +71,15 @@ export const ClusterSecret = () => {
                 return <Tag color='red'>It looks like this secret is empty.</Tag>;
               }
 
-              return secretKeys.map((secretKey) => (
-                <Tag key={secretKey} color='blue'>
-                  {secretKey}
-                </Tag>
-              ));
+              return (
+                <Flex gap={4} wrap>
+                  {secretKeys.map((secretKey) => (
+                    <Tag key={secretKey} color='blue'>
+                      {secretKey}
+                    </Tag>
+                  ))}
+                </Flex>
+              );
             }
           },
           {

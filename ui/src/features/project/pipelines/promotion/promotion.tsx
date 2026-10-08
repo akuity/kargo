@@ -301,7 +301,7 @@ export const Promotion = (props: PromotionProps) => {
       {!getPromotionQuery.isLoading &&
         !getPromotionQuery.data?.data &&
         (getPromotionQuery.isError ? (
-          <Alert type='error' message='Failed to load promotion' />
+          <Alert type='error' title='Failed to load promotion' />
         ) : (
           <Empty description='Promotion not found' />
         ))}

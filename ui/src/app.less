@@ -109,6 +109,13 @@ body {
     box-shadow: none !important;
 }
 
+// v6 dropped AntD's `padding-bottom: 24px` on the modal, so a modal taller than
+// the viewport ends flush against the bottom edge once scrolled. AntD's own
+// `-centered` rule (3 classes) still zeroes it and out-specifies this one.
+.ant-modal {
+    padding-bottom: 24px;
+}
+
 .ant-modal-title {
     font-size: 20px !important;
     margin-bottom: 16px !important;

@@ -175,7 +175,7 @@ export const StageDetails = ({ stage }: { stage: Stage }) => {
                 type='warning'
                 showIcon
                 icon={<FontAwesomeIcon icon={faCircleExclamation} />}
-                message={block.title}
+                title={block.title}
                 description={block.description}
               />
             )}
@@ -271,7 +271,7 @@ const AutoPromotionHolds = ({ stage }: { stage: Stage }) => {
   return (
     <Alert
       type='warning'
-      message='Auto-promotion paused'
+      title='Auto-promotion paused'
       description={
         <div className='flex flex-col gap-1'>
           {holds.map(({ key, hold }) => (
