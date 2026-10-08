@@ -275,7 +275,11 @@ func (p *provider) MergePullRequest(
 	)
 	if err != nil {
 		if isNotFound(err) {
-			return nil, false, gitprovider.ErrPullRequestNotFound
+			return nil, false, fmt.Errorf(
+				"%w: %w",
+				gitprovider.ErrPullRequestNotFound,
+				err,
+			)
 		}
 		return nil, false, fmt.Errorf("error getting pull request %d: %w", id, err)
 	}

@@ -237,7 +237,11 @@ func (p *provider) MergePullRequest(
 		// future client version changes that.
 		if errors.Is(err, gitlab.ErrNotFound) ||
 			(resp != nil && resp.StatusCode == http.StatusNotFound) {
-			return nil, false, gitprovider.ErrPullRequestNotFound
+			return nil, false, fmt.Errorf(
+				"%w: %w",
+				gitprovider.ErrPullRequestNotFound,
+				err,
+			)
 		}
 		return nil, false, fmt.Errorf("error getting merge request %d: %w", id, err)
 	}

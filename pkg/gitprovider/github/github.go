@@ -368,7 +368,11 @@ func (p *provider) MergePullRequest(
 		var ghErr *github.ErrorResponse
 		if errors.As(err, &ghErr) && ghErr.Response != nil &&
 			ghErr.Response.StatusCode == http.StatusNotFound {
-			return nil, false, gitprovider.ErrPullRequestNotFound
+			return nil, false, fmt.Errorf(
+				"%w: %w",
+				gitprovider.ErrPullRequestNotFound,
+				err,
+			)
 		}
 		return nil, false, fmt.Errorf("error getting pull request %d: %w", id, err)
 	}
@@ -452,11 +456,13 @@ func (p *provider) MergePullRequest(
 			}
 			// Permanent, or at least not recognizably transient. Surface GitHub's
 			// message (carried by the wrapped error) so the cause is visible.
-			return nil, false, fmt.Errorf(
-				"%w: %w",
-				gitprovider.ErrPullRequestNotMergeable,
-				err,
-			)
+			sentinel := gitprovider.ErrPullRequestNotMergeable
+			if strings.Contains(ghErr.Message, mergeNotAllowedMsg) {
+				// The requested merge method is disabled for the repository or
+				// restricted for the branch.
+				sentinel = gitprovider.ErrUnsupportedMergeMethod
+			}
+			return nil, false, fmt.Errorf("%w: %w", sentinel, err)
 		}
 		// Not a 405, so the failure may be transient (e.g. a 5xx).
 		return nil, false, fmt.Errorf("error merging pull request %d: %w", id, err)

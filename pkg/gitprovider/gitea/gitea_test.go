@@ -632,7 +632,7 @@ func TestMergePullRequest(t *testing.T) {
 					)
 			},
 			expectError:   true,
-			errorContains: "pull request not found",
+			errorContains: "pull request not found: 404 Not Found",
 			errorIs:       gitprovider.ErrPullRequestNotFound,
 		},
 		{
