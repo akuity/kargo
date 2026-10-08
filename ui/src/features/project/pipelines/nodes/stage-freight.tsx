@@ -64,18 +64,28 @@ export const StageFreight = (props: { stage: Stage }) => {
     currentWarehouse = props.stage?.status?.lastPromotion?.freight?.origin?.name;
   }
 
-  const [selectedWarehouse, setSelectedWarehouse] = useState(currentWarehouse);
+  const deriveSelection = (from?: { warehouse?: string; freight?: FreightReference }) => {
+    const warehouse = from?.warehouse || currentWarehouse;
+    const freight = currentFreight?.find((f) => f?.origin?.name === warehouse);
+    // @ts-expect-error FreightReference and Freight are same, at least in this case
+    const artifact = selectFirstArtifact([freight]) as ArtifactTypes;
 
-  useEffect(() => {
-    setSelectedWarehouse(currentWarehouse);
-  }, [currentWarehouse]);
+    return {
+      warehouse,
+      freight,
+      artifact
+    };
+  };
 
-  const defaultToFirstFreight = () =>
-    currentFreight?.find((f) => f?.origin?.name === selectedWarehouse) as FreightReference;
+  const [selection, setSelection] = useState(deriveSelection);
 
-  const [selectedFreight, setSelectedFreight] = useState(defaultToFirstFreight);
+  useEffect(() => setSelection(deriveSelection()), [lastPromotion]);
 
-  useEffect(() => setSelectedFreight(defaultToFirstFreight()), [selectedWarehouse, props.stage]);
+  const selectedWarehouse = selection.warehouse;
+
+  const setSelectedWarehouse = (warehouse?: string) => setSelection(deriveSelection({ warehouse }));
+
+  const selectedFreight = selection.freight;
 
   const selectedAutoPromotionHold = useMemo(
     () => getAutoPromotionHold(props.stage, selectedFreight?.origin),
@@ -88,20 +98,24 @@ export const StageFreight = (props: { stage: Stage }) => {
   );
   const showFreightAlias = freightTimelineControllerContext?.preferredFilter?.showAlias;
 
-  const defaultToFirstArtifact = () =>
-    // @ts-expect-error FreightReference and Freight are same, at least in this case
-    selectFirstArtifact([selectedFreight]) as ArtifactTypes;
-
-  const [selectedArtifact, setSelectedArtifact] = useState(defaultToFirstArtifact());
-
-  useEffect(() => setSelectedArtifact(defaultToFirstArtifact()), [selectedFreight, props.stage]);
+  const selectedArtifact = selection.artifact;
 
   const onNextArtifact = () => {
-    setSelectedArtifact(selectNextArtifact(selectedFreight, selectedArtifact));
+    if (selectedFreight) {
+      setSelection({
+        ...selection,
+        artifact: selectNextArtifact(selectedFreight, selectedArtifact)
+      });
+    }
   };
 
   const onPreviousArtifact = () => {
-    setSelectedArtifact(selectPreviousArtifact(selectedFreight, selectedArtifact));
+    if (selectedFreight) {
+      setSelection({
+        ...selection,
+        artifact: selectPreviousArtifact(selectedFreight, selectedArtifact)
+      });
+    }
   };
 
   const onNextWarehouse = () => {

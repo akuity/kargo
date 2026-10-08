@@ -1,4 +1,4 @@
-import { isArtifactGeneric } from '@ui/features/assemble-freight/artifact-type-guards';
+import { getSubscriptionKey } from '@ui/features/assemble-freight/unique-subscription-key';
 import {
   ArtifactReference,
   Chart,
@@ -36,15 +36,7 @@ export const normalizeFreight = (freight: FreightReference) => {
 export const selectFirstArtifact = _selectFirstArtifact;
 
 const isSameArtifact = (a: ArtifactTypes, b: ArtifactTypes) => {
-  if (isArtifactGeneric(a) && isArtifactGeneric(b)) {
-    return a.subscriptionName === b.subscriptionName;
-  }
-
-  if (!isArtifactGeneric(a) && !isArtifactGeneric(b)) {
-    return a.repoURL === b.repoURL;
-  }
-
-  return false;
+  return getSubscriptionKey(a) === getSubscriptionKey(b);
 };
 
 export const selectNextArtifact = (freight: FreightReference, current: ArtifactTypes) => {
