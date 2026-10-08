@@ -235,7 +235,7 @@ func (p *provider) MergePullRequest(
 		return nil, false, fmt.Errorf("error getting merge request %d: %w", id, err)
 	}
 	if glMR == nil {
-		return nil, false, fmt.Errorf("merge request %d not found", id)
+		return nil, false, gitprovider.ErrPullRequestNotFound
 	}
 
 	switch {
@@ -244,7 +244,7 @@ func (p *provider) MergePullRequest(
 		return &pr, true, nil
 
 	case glMR.State != "opened":
-		return nil, false, fmt.Errorf("pull request %d is closed but not merged", id)
+		return nil, false, gitprovider.ErrPullRequestClosedUnmerged
 
 	case glMR.Draft || glMR.DetailedMergeStatus != "mergeable":
 		return nil, false, nil
@@ -260,7 +260,11 @@ func (p *provider) MergePullRequest(
 	case "squash":
 		squash = ptr.To(true) // Opt-in to a squash merge
 	default:
-		return nil, false, fmt.Errorf("unsupported merge method %q", opts.MergeMethod)
+		return nil, false, fmt.Errorf(
+			"merge method %q: %w",
+			opts.MergeMethod,
+			gitprovider.ErrUnsupportedMergeMethod,
+		)
 	}
 	updatedMR, _, err := p.client.AcceptMergeRequest(
 		p.projectName, id, &gitlab.AcceptMergeRequestOptions{Squash: squash},

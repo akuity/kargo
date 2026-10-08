@@ -2,6 +2,7 @@ package builtin
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -132,12 +133,15 @@ func (g *gitPRMerger) run(
 		&gitprovider.MergePullRequestOpts{MergeMethod: cfg.MergeMethod},
 	)
 	if err != nil {
-		// Only actual errors (auth, network, invalid PR, closed but not merged,
-		// etc.) reach here
-		return promotion.StepResult{Status: kargoapi.PromotionStepStatusFailed},
-			&promotion.TerminalError{
-				Err: fmt.Errorf("error merging pull request %d: %w", cfg.PRNumber, err),
-			}
+		err = fmt.Errorf("error merging pull request %d: %w", cfg.PRNumber, err)
+		if isTerminalMergeError(err) {
+			return promotion.StepResult{Status: kargoapi.PromotionStepStatusFailed},
+				&promotion.TerminalError{Err: err}
+		}
+		// The error may be transient (e.g. a 5xx from the provider or a network
+		// failure), so return it as a non-terminal error and let the step's
+		// retry policy decide whether to try again.
+		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, err
 	}
 
 	if !merged {
@@ -184,6 +188,15 @@ func (g *gitPRMerger) run(
 	}
 
 	return res, nil
+}
+
+// isTerminalMergeError returns true if err indicates the pull request can never
+// be merged, so retrying would be pointless. Anything else (5xx, 429, network
+// failures, etc.) is treated as potentially transient.
+func isTerminalMergeError(err error) bool {
+	return errors.Is(err, gitprovider.ErrPullRequestNotFound) ||
+		errors.Is(err, gitprovider.ErrPullRequestClosedUnmerged) ||
+		errors.Is(err, gitprovider.ErrUnsupportedMergeMethod)
 }
 
 // deleteSourceBranch deletes the source branch of the provided (merged) pull

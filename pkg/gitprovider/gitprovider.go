@@ -2,7 +2,19 @@ package gitprovider
 
 import (
 	"context"
+	"errors"
 	"time"
+)
+
+var (
+	// ErrPullRequestNotFound is returned when a pull request does not exist.
+	ErrPullRequestNotFound = errors.New("pull request not found")
+	// ErrPullRequestClosedUnmerged is returned when a pull request was closed
+	// without being merged and can therefore never be merged.
+	ErrPullRequestClosedUnmerged = errors.New("pull request is closed but not merged")
+	// ErrUnsupportedMergeMethod is returned when the requested merge method is
+	// not supported by the provider.
+	ErrUnsupportedMergeMethod = errors.New("unsupported merge method")
 )
 
 // PullRequestState represents the state of a pull request. e.g. Closed, Open,
@@ -56,7 +68,11 @@ type Interface interface {
 	// Returns:
 	// - *PullRequest: the merged PR if successful
 	// - bool: true if merge was performed, false if PR is not ready to merge
-	// - error: only for actual errors (auth, network, invalid PR, etc.)
+	// - error: only for actual errors (auth, network, invalid PR, etc.).
+	//   Implementations wrap ErrPullRequestNotFound,
+	//   ErrPullRequestClosedUnmerged, or ErrUnsupportedMergeMethod when the
+	//   pull request can never be merged, so callers can tell those apart from
+	//   errors that may be transient.
 	MergePullRequest(context.Context, int64, *MergePullRequestOpts) (*PullRequest, bool, error)
 
 	// DeleteBranch deletes the named branch from the repository. Deleting a

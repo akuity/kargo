@@ -743,6 +743,7 @@ func TestMergePullRequest(t *testing.T) {
 		expectedMerged bool
 		expectError    bool
 		errorContains  string
+		errorIs        error
 	}{
 		{
 			name:     "error getting PR",
@@ -800,6 +801,7 @@ func TestMergePullRequest(t *testing.T) {
 			},
 			expectError:   true,
 			errorContains: "closed but not merged",
+			errorIs:       gitprovider.ErrPullRequestClosedUnmerged,
 		},
 		{
 			name:     "PR is draft",
@@ -839,7 +841,8 @@ func TestMergePullRequest(t *testing.T) {
 				},
 			},
 			expectError:   true,
-			errorContains: "unsupported merge strategy",
+			errorContains: "unsupported merge method",
+			errorIs:       gitprovider.ErrUnsupportedMergeMethod,
 		},
 		{
 			name:     "merge operation fails",
@@ -946,6 +949,9 @@ func TestMergePullRequest(t *testing.T) {
 			if tc.expectError {
 				require.Error(t, err)
 				require.Contains(t, err.Error(), tc.errorContains)
+				if tc.errorIs != nil {
+					require.ErrorIs(t, err, tc.errorIs)
+				}
 				require.False(t, merged)
 				require.Nil(t, pr)
 				return

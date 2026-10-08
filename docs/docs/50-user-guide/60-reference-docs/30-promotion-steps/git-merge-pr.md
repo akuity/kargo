@@ -98,6 +98,26 @@ and works regardless of how Kargo authenticates.
 
 :::
 
+### Retrying on Errors
+
+If the pull request can never be merged (for instance, because it does not
+exist or was closed without being merged, or because the merge method is not
+supported), the step fails immediately. Any other error encountered while
+merging, such as a transient error from the Git hosting provider's API, fails
+the step as well unless [`retry`](../15-promotion-templates.md#step-retries) is
+configured on the step. Configure `retry.errorThreshold` to retry the merge on
+a subsequent reconciliation instead of failing the promotion:
+
+```yaml
+steps:
+- uses: git-merge-pr
+  retry:
+    errorThreshold: 3
+  config:
+    repoURL: https://github.com/example/repo.git
+    prNumber: 42
+```
+
 ## Output
 
 | Name     | Type     | Description                                                                                                                                                                                                                                                                                                             |

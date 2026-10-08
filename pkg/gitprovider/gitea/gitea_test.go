@@ -599,6 +599,7 @@ func TestMergePullRequest(t *testing.T) {
 		expectedMerged bool
 		expectError    bool
 		errorContains  string
+		errorIs        error
 	}{
 		{
 			name:     "error getting initial PR state",
@@ -618,7 +619,8 @@ func TestMergePullRequest(t *testing.T) {
 					Return(nil, &gitea.Response{}, nil)
 			},
 			expectError:   true,
-			errorContains: "pull request 404 not found",
+			errorContains: "pull request not found",
+			errorIs:       gitprovider.ErrPullRequestNotFound,
 		},
 		{
 			name:     "PR already merged",
@@ -648,6 +650,7 @@ func TestMergePullRequest(t *testing.T) {
 			},
 			expectError:   true,
 			errorContains: "closed but not merged",
+			errorIs:       gitprovider.ErrPullRequestClosedUnmerged,
 		},
 		{
 			name:     "PR not mergeable",
@@ -785,7 +788,8 @@ func TestMergePullRequest(t *testing.T) {
 					}, &gitea.Response{}, nil).Once()
 			},
 			expectError:   true,
-			errorContains: `unsupported merge method "bogus"`,
+			errorContains: `merge method "bogus": unsupported merge method`,
+			errorIs:       gitprovider.ErrUnsupportedMergeMethod,
 		},
 		{
 			name:     "successful merge",
@@ -833,6 +837,9 @@ func TestMergePullRequest(t *testing.T) {
 			if tt.expectError {
 				require.Error(t, err)
 				require.Contains(t, err.Error(), tt.errorContains)
+				if tt.errorIs != nil {
+					require.ErrorIs(t, err, tt.errorIs)
+				}
 				require.False(t, merged)
 				require.Nil(t, pr)
 			} else {

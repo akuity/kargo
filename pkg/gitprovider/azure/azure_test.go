@@ -89,6 +89,7 @@ func TestMergePullRequest(t *testing.T) {
 		expectedMerged bool
 		expectError    bool
 		errorContains  string
+		errorIs        error
 	}{
 		{
 			name:     "error getting PR",
@@ -114,7 +115,8 @@ func TestMergePullRequest(t *testing.T) {
 				},
 			},
 			expectError:   true,
-			errorContains: "pull request 404 not found",
+			errorContains: "pull request not found",
+			errorIs:       gitprovider.ErrPullRequestNotFound,
 		},
 		{
 			name:     "PR already completed",
@@ -156,6 +158,7 @@ func TestMergePullRequest(t *testing.T) {
 			},
 			expectError:   true,
 			errorContains: "is abandoned",
+			errorIs:       gitprovider.ErrPullRequestClosedUnmerged,
 		},
 		{
 			name:     "PR is draft",
@@ -227,7 +230,8 @@ func TestMergePullRequest(t *testing.T) {
 				},
 			},
 			expectError:   true,
-			errorContains: `unsupported merge method "bogus"`,
+			errorContains: `merge method "bogus": unsupported merge method`,
+			errorIs:       gitprovider.ErrUnsupportedMergeMethod,
 		},
 		{
 			name:     "merge operation fails",
@@ -407,6 +411,9 @@ func TestMergePullRequest(t *testing.T) {
 			if tc.expectError {
 				require.Error(t, err)
 				require.Contains(t, err.Error(), tc.errorContains)
+				if tc.errorIs != nil {
+					require.ErrorIs(t, err, tc.errorIs)
+				}
 				require.False(t, merged)
 				require.Nil(t, pr)
 				return

@@ -368,7 +368,7 @@ func (p *provider) MergePullRequest(
 		return nil, false, fmt.Errorf("error getting pull request %d: %w", id, err)
 	}
 	if ghPR == nil {
-		return nil, false, fmt.Errorf("pull request %d not found", id)
+		return nil, false, gitprovider.ErrPullRequestNotFound
 	}
 
 	if ghPR.MergedAt != nil {
@@ -376,7 +376,7 @@ func (p *provider) MergePullRequest(
 		return &pr, true, nil
 	}
 	if ptr.Deref(ghPR.State, prStateClosed) != prStateOpen {
-		return nil, false, fmt.Errorf("pull request %d is closed but not merged", id)
+		return nil, false, gitprovider.ErrPullRequestClosedUnmerged
 	}
 
 	// Decide whether to attempt the merge based on GitHub's mergeable_state. This
