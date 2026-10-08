@@ -44,7 +44,8 @@ type TargetRow struct {
 // the real code this is declared once beside the store.
 var targetEvents = nats.NewTopic[TargetKey, TargetRow]("kargo.targets")
 
-// targetStore is the slice of database.Store a Target controller needs.
+// targetStore is the slice of the database queries a Target controller
+// needs.
 type targetStore interface {
 	GetTarget(ctx context.Context, key TargetKey) (*TargetRow, error)
 	ListTargetKeys(ctx context.Context) ([]TargetKey, error)

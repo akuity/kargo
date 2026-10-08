@@ -51,6 +51,7 @@ make lint-go              # Lint Go code (golangci-lint)
 make lint                 # Lint everything (Go, charts, UI)
 make format-go            # Auto-format Go code
 make test-unit            # Run unit tests (with -race)
+make test-db              # Run PostgreSQL integration tests against DATABASE_URL (defaults to the dev database)
 make build-cli            # Build CLI binary
 make codegen              # Run all code generation
 make hack-build-dev-tools # Build dev container with all tools

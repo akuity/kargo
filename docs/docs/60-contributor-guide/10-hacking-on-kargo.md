@@ -508,8 +508,9 @@ this.
 Tilt runs the PostgreSQL bundled with the Helm chart, configured by the
 `database.postgres` values in `hack/tilt/values.dev.yaml`, and forwards
 `127.0.0.1:15432` to its port `5432`. The database, username, and password are all `kargo`. Inside the
-cluster, the address is `kargo-postgres.kargo.svc:5432`. Kargo's application
-components do not use this database yet.
+cluster, the address is `kargo-postgres.kargo.svc:5432`. The management
+controller mirrors Project identities into this database. Kubernetes remains
+the source of truth; application API reads still use Kubernetes.
 
 To open a `psql` session against it:
 
@@ -632,7 +633,7 @@ this database as disposable development data.
 Connection pools created with `database.NewPool` record an OpenTelemetry span
 for every query and batch, using the same tracing setup as the rest of the
 control plane. Spans are named after the sqlc query
-that produced them, for example `GetProjectByName`, and carry the operation,
+that produced them, for example `UpsertProject`, and carry the operation,
 the number of rows returned, and the server's SQLSTATE code when a query
 fails. For sqlc queries, which are always parameterized, the query text is
 recorded as well; parameters never are. Lock timeouts, deadlocks, and serialization
@@ -666,6 +667,17 @@ make codegen-db
 
 `make codegen` also runs this step. Commit the generated code together with the
 SQL that produced it.
+
+### Database integration tests
+
+Tests in `pkg/database` that need a real database are tagged `integration` and
+run against a disposable schema that they create and drop, so existing tables
+are left untouched. They require a database user allowed to create schemas
+and target `DATABASE_URL`, which defaults to the development database:
+
+```shell
+make test-db
+```
 
 ## Contributing to Documentation
 
