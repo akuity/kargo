@@ -15,6 +15,7 @@ import {
   isArtifactGitCommit,
   isArtifactImage
 } from '@ui/features/assemble-freight/artifact-type-guards';
+import { PromotionStatusPhase } from '@ui/features/common/promotion-status/utils';
 import { getCurrentFreight } from '@ui/features/common/utils';
 import {
   getGitCommitURL,
@@ -45,6 +46,7 @@ import {
   selectNextArtifact,
   selectPreviousArtifact
 } from './artifact-selector-utils';
+import { getLastPromotionRef } from './stage-meta-utils';
 
 export const StageFreight = (props: { stage: Stage }) => {
   const dictionaryContext = useDictionaryContext();
@@ -52,10 +54,15 @@ export const StageFreight = (props: { stage: Stage }) => {
 
   const currentFreight = useMemo(() => getCurrentFreight(props.stage), [props.stage]);
 
+  const lastPromotion = useMemo(() => getLastPromotionRef(props.stage), [props.stage]);
+
   const warehouses = currentFreight?.map((f) => f.origin?.name);
 
-  const currentWarehouse =
-    props.stage?.status?.lastPromotion?.freight?.origin?.name || warehouses?.[0];
+  let currentWarehouse = warehouses?.[0];
+
+  if (lastPromotion?.phase === PromotionStatusPhase.SUCCEEDED) {
+    currentWarehouse = props.stage?.status?.lastPromotion?.freight?.origin?.name;
+  }
 
   const [selectedWarehouse, setSelectedWarehouse] = useState(currentWarehouse);
 
