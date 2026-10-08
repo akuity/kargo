@@ -88,6 +88,40 @@ func TestEvery(t *testing.T) {
 	require.Contains(t, got, 3)
 }
 
+// TestOnce checks that without Every the source lists once, in Start, and
+// never again.
+func TestOnce(t *testing.T) {
+	t.Parallel()
+	var calls atomic.Int32
+	source := New(func(context.Context) ([]int, error) {
+		calls.Add(1)
+		return nil, nil
+	})
+	require.NoError(t, source.Start(t.Context(), make(chan int)))
+	time.Sleep(20 * time.Millisecond)
+	require.Equal(t, int32(1), calls.Load())
+}
+
+// TestConfigFixedAtStart checks that changing the interval after Start does
+// not reach the running source. Before Start copied its configuration,
+// Every(0) here raced with the running lists and, once read, reset the
+// timer to zero on every pass.
+func TestConfigFixedAtStart(t *testing.T) {
+	t.Parallel()
+	var calls atomic.Int32
+	source := New(func(context.Context) ([]int, error) {
+		calls.Add(1)
+		return nil, nil
+	}).Every(5 * time.Millisecond)
+	require.NoError(t, source.Start(t.Context(), make(chan int)))
+	source.Every(0).Jitter(0)
+	require.Eventually(t, func() bool { return calls.Load() >= 3 }, 5*time.Second, time.Millisecond)
+	time.Sleep(20 * time.Millisecond)
+	// About four more lists at 5ms apart; a zero interval would run
+	// thousands.
+	require.Less(t, calls.Load(), int32(100))
+}
+
 func TestNextInterval(t *testing.T) {
 	t.Parallel()
 	testCases := []struct {

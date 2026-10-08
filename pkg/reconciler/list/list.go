@@ -59,19 +59,22 @@ func (s *Source[request]) Jitter(maxFactor float64) *Source[request] {
 	return s
 }
 
-// Start implements reconciler.Source.
+// Start implements reconciler.Source. It works from a copy of the source's
+// configuration, so calling Every or Jitter after Start has no effect and
+// does not race with the lists already running.
 func (s *Source[request]) Start(ctx context.Context, out chan<- request) error {
-	if s.list == nil {
+	cfg := *s
+	if cfg.list == nil {
 		return errors.New("a list function is required")
 	}
-	if s.jitter < 0 {
-		return fmt.Errorf("jitter must not be negative, got %v", s.jitter)
+	if cfg.jitter < 0 {
+		return fmt.Errorf("jitter must not be negative, got %v", cfg.jitter)
 	}
-	if err := s.push(ctx, out); err != nil {
+	if err := cfg.push(ctx, out); err != nil {
 		return fmt.Errorf("initial list failed: %w", err)
 	}
-	if s.every > 0 {
-		go s.run(ctx, out)
+	if cfg.every > 0 {
+		go cfg.run(ctx, out)
 	}
 	return nil
 }
