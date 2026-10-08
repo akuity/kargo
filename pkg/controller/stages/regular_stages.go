@@ -424,9 +424,7 @@ func (r *RegularStageReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	}
 
 	// Patch the status of the Stage.
-	if err := kubeclient.PatchStatus(ctx, r.client, stage, func(status *kargoapi.StageStatus) {
-		*status = newStatus
-	}); err != nil {
+	if err := patchStageStatus(ctx, r.client, stage, &newStatus); err != nil {
 		// Prioritize the reconcile error if it exists.
 		if reconcileErr != nil {
 			logger.Error(err, "failed to update Stage status after reconciliation error")
@@ -465,7 +463,8 @@ func (r *RegularStageReconciler) reconcile(
 	// therefore always reflects persisted state. Because it is also the base
 	// PatchStatus diffs against, a failed patch loses nothing: the next patch
 	// (including the final one in Reconcile) diffs against true server state and
-	// re-carries any unpersisted changes.
+	// re-carries any unpersisted changes. The exception is status.metadata, which
+	// no patch written here may touch; see patchStageStatus.
 	working := stage.DeepCopy()
 
 	newStatus := *working.Status.DeepCopy()
@@ -631,9 +630,7 @@ func (r *RegularStageReconciler) reconcile(
 		// Failure is non-fatal: working carries this pass's status forward
 		// regardless, and the next patch attempt's diff against stage (which still
 		// reflects persisted state) will include these changes.
-		if err = kubeclient.PatchStatus(ctx, r.client, stage, func(status *kargoapi.StageStatus) {
-			*status = newStatus
-		}); err != nil {
+		if err = patchStageStatus(ctx, r.client, stage, &newStatus); err != nil {
 			logger.Error(err, fmt.Sprintf("failed to update Stage status after %s", subR.name))
 		}
 		working.Status = newStatus
