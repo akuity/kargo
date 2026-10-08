@@ -38,7 +38,6 @@ import (
 	k8sevent "github.com/akuity/kargo/pkg/event/kubernetes"
 	"github.com/akuity/kargo/pkg/indexer"
 	"github.com/akuity/kargo/pkg/kargo"
-	"github.com/akuity/kargo/pkg/kubeclient"
 	libEvent "github.com/akuity/kargo/pkg/kubernetes/event"
 	"github.com/akuity/kargo/pkg/logging"
 	intpredicate "github.com/akuity/kargo/pkg/predicate"
@@ -339,9 +338,7 @@ func (r *FleetStageReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	}
 
 	// Patch the status of the Stage.
-	if err := kubeclient.PatchStatus(ctx, r.client, stage, func(status *kargoapi.StageStatus) {
-		*status = newStatus
-	}); err != nil {
+	if err := patchStageStatus(ctx, r.client, stage, &newStatus); err != nil {
 		// Prioritize the reconcile error if it exists.
 		if reconcileErr != nil {
 			logger.Error(err, "failed to update Stage status after reconciliation error")
@@ -507,9 +504,7 @@ func (r *FleetStageReconciler) reconcile(
 		// Failure is non-fatal: working carries this pass's status forward
 		// regardless, and the next patch attempt's diff against stage (which still
 		// reflects persisted state) will include these changes.
-		if err = kubeclient.PatchStatus(ctx, r.client, stage, func(status *kargoapi.StageStatus) {
-			*status = newStatus
-		}); err != nil {
+		if err = patchStageStatus(ctx, r.client, stage, &newStatus); err != nil {
 			logger.Error(err, fmt.Sprintf("failed to update Stage status after %s", subR.name))
 		}
 		working.Status = newStatus

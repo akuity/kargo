@@ -10,6 +10,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -29,6 +30,7 @@ import (
 	k8sevent "github.com/akuity/kargo/pkg/event/kubernetes"
 	"github.com/akuity/kargo/pkg/health"
 	"github.com/akuity/kargo/pkg/indexer"
+	"github.com/akuity/kargo/pkg/kubeclient"
 	fakeevent "github.com/akuity/kargo/pkg/kubernetes/event/fake"
 )
 
@@ -98,8 +100,8 @@ func TestRegularStageReconciler_Reconcile(t *testing.T) {
 				},
 				Spec: kargoapi.StageSpec{
 					Shard: "correct-shard",
-					// Specify some minimal promotion process to get this Stage past the
-					// logic that verifies this is not a control flow Stage.
+					// Minimal promotion process; enough to get this Stage past the
+					// control flow Stage check.
 					PromotionTemplate: &kargoapi.PromotionTemplate{
 						Spec: kargoapi.PromotionTemplateSpec{
 							Steps: []kargoapi.PromotionStep{{}, {}},
@@ -643,6 +645,173 @@ func TestRegularStagesReconciler_reconcile(t *testing.T) {
 			tt.assertions(t, status, requeue, err)
 		})
 	}
+}
+
+func upsertStageStatusMetadata(
+	ctx context.Context,
+	c client.Client,
+	objKey client.ObjectKey,
+	values map[string]any,
+) error {
+	stage := &kargoapi.Stage{}
+	if err := c.Get(ctx, objKey, stage); err != nil {
+		return err
+	}
+	newStatus := stage.Status.DeepCopy()
+	for k, v := range values {
+		if err := newStatus.UpsertMetadata(k, v); err != nil {
+			return err
+		}
+	}
+	return kubeclient.PatchStatus(ctx, c, stage, func(status *kargoapi.StageStatus) {
+		*status = *newStatus
+	})
+}
+
+// TestRegularStageReconciler_Reconcile_concurrentStatusMetadata runs a real
+// Reconcile whose status patches are interrupted by a concurrent write to
+// status.metadata, as a set-metadata promotion step would perform. Neither the
+// updated value nor the key introduced by that write may be reverted or
+// deleted by any later patch of the same pass.
+func TestRegularStageReconciler_Reconcile_concurrentStatusMetadata(t *testing.T) {
+	t.Parallel()
+
+	const (
+		testProject   = "test-project"
+		testStage     = "test-stage"
+		existingKey   = "lastPromotedAt"
+		existingValue = "2024-01-01T00:00:00Z"
+		updatedValue  = "2024-06-01T00:00:00Z"
+		addedKey      = "firstPromotedAt"
+		addedValue    = "2024-03-01T00:00:00Z"
+	)
+
+	scheme := runtime.NewScheme()
+	require.NoError(t, kargoapi.AddToScheme(scheme))
+
+	objKey := client.ObjectKey{Namespace: testProject, Name: testStage}
+
+	var stagePatches []string
+
+	c := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(&kargoapi.Stage{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace:  testProject,
+				Name:       testStage,
+				Finalizers: []string{kargoapi.FinalizerName},
+			},
+			Spec: kargoapi.StageSpec{
+				PromotionTemplate: &kargoapi.PromotionTemplate{
+					Spec: kargoapi.PromotionTemplateSpec{
+						Steps: []kargoapi.PromotionStep{{}, {}},
+					},
+				},
+			},
+			Status: kargoapi.StageStatus{
+				Metadata: map[string]apiextensionsv1.JSON{
+					existingKey: {Raw: []byte(`"` + existingValue + `"`)},
+				},
+			},
+		}).
+		WithStatusSubresource(&kargoapi.Stage{}, &kargoapi.Freight{}).
+		WithIndex(
+			&kargoapi.Promotion{},
+			indexer.PromotionsByStageField,
+			indexer.PromotionsByStage,
+		).
+		WithIndex(
+			&kargoapi.Freight{},
+			indexer.FreightByWarehouseField,
+			indexer.FreightByWarehouse,
+		).
+		WithIndex(
+			&kargoapi.Freight{},
+			indexer.FreightByCurrentStagesField,
+			indexer.FreightByCurrentStages,
+		).
+		WithIndex(
+			&kargoapi.Freight{},
+			indexer.FreightByVerifiedStagesField,
+			indexer.FreightByVerifiedStages,
+		).
+		WithIndex(
+			&kargoapi.Freight{},
+			indexer.FreightApprovedForStagesField,
+			indexer.FreightApprovedForStages,
+		).
+		WithIndex(
+			&kargoapi.Promotion{},
+			indexer.PromotionsByStageAndFreightField,
+			indexer.PromotionsByStageAndFreight,
+		).
+		WithInterceptorFuncs(interceptor.Funcs{
+			SubResourcePatch: func(
+				ctx context.Context,
+				c client.Client,
+				subResourceName string,
+				obj client.Object,
+				patch client.Patch,
+				opts ...client.SubResourcePatchOption,
+			) error {
+				data, err := patch.Data(obj)
+				if err != nil {
+					return err
+				}
+				if _, ok := obj.(*kargoapi.Stage); ok {
+					stagePatches = append(stagePatches, string(data))
+					// Write status.metadata between two of this pass's status
+					// patches, the way a set-metadata promotion step would.
+					if err = upsertStageStatusMetadata(ctx, c, objKey, map[string]any{
+						existingKey: updatedValue,
+						addedKey:    addedValue,
+					}); err != nil {
+						return err
+					}
+				}
+				return c.SubResource(subResourceName).Patch(ctx, obj, patch, opts...)
+			},
+		}).
+		Build()
+
+	r := &RegularStageReconciler{
+		client:        c,
+		eventSender:   k8sevent.NewEventSender(fakeevent.NewEventRecorder(10)),
+		healthChecker: &health.MockAggregatingChecker{},
+	}
+
+	_, err := r.Reconcile(t.Context(), ctrl.Request{
+		NamespacedName: types.NamespacedName{
+			Namespace: testProject,
+			Name:      testStage,
+		},
+	})
+	require.NoError(t, err)
+
+	// The race requires a later patch of the pass to diff against a Stage
+	// refreshed by an earlier one, so at least two patches must have happened.
+	require.GreaterOrEqual(t, len(stagePatches), 2)
+	for _, stagePatch := range stagePatches {
+		assert.NotContains(t, stagePatch, "metadata", stagePatch)
+	}
+
+	stage := &kargoapi.Stage{}
+	require.NoError(t, c.Get(t.Context(), objKey, stage))
+
+	data, ok := stage.Status.Metadata[addedKey]
+	require.True(t, ok, "status.metadata[%s] was deleted", addedKey)
+	assert.JSONEq(t, `"`+addedValue+`"`, string(data.Raw))
+
+	data, ok = stage.Status.Metadata[existingKey]
+	require.True(t, ok, "status.metadata[%s] was deleted", existingKey)
+	assert.JSONEq(t, `"`+updatedValue+`"`, string(data.Raw))
+
+	readyCond := conditions.Get(&stage.Status, kargoapi.ConditionTypeReady)
+	require.NotNil(t, readyCond)
+	assert.Equal(t, metav1.ConditionFalse, readyCond.Status)
+	assert.Equal(t, "NoFreight", readyCond.Reason)
+	assert.Equal(t, "0/0 Fulfilled", stage.Status.FreightSummary)
+	assert.Nil(t, conditions.Get(&stage.Status, kargoapi.ConditionTypeReconciling))
 }
 
 // releaseHoldAnnotations returns the annotations set on a release-intent Promotion.
