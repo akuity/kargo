@@ -16,6 +16,7 @@ import (
 )
 
 type projectStore interface {
+	DeleteReplacedProject(context.Context, database.DeleteReplacedProjectParams) error
 	UpsertProject(context.Context, database.UpsertProjectParams) error
 	DeleteProjectByName(context.Context, string) error
 	ListProjects(context.Context) ([]database.ProjectRow, error)
@@ -48,6 +49,17 @@ func (s *syncer) Sync(ctx context.Context, obj client.Object) error {
 	params, err := toUpsertParams(project)
 	if err != nil {
 		return err
+	}
+	// A Project recreated under the same name leaves its predecessor's row
+	// behind if its deletion was never seen. Deleting that row first takes
+	// everything that belonged to the old Project with it. The two writes
+	// need no transaction: if the upsert fails, the key is retried and the
+	// row inserted, and the old Project is gone either way.
+	if err = s.store.DeleteReplacedProject(ctx, database.DeleteReplacedProjectParams{
+		Name: params.Name,
+		ID:   params.ID,
+	}); err != nil {
+		return fmt.Errorf("error deleting replaced project: %w", err)
 	}
 	if err = s.store.UpsertProject(ctx, params); err != nil {
 		return fmt.Errorf("error syncing project: %w", err)

@@ -21,13 +21,23 @@ import (
 	"github.com/akuity/kargo/db"
 )
 
-func TestProjectQueriesIntegration(t *testing.T) {
+func TestProjectsIntegration(t *testing.T) {
 	t.Parallel()
 	pool, _ := isolatedDatabase(t)
 	queries := New(pool)
 	ctx := context.Background()
 	created := time.Date(2020, 1, 2, 3, 4, 5, 0, time.UTC)
 	project := UpsertProjectParams{ID: "opaque-project", Name: "demo", CreatedAt: created}
+	// replace writes a Project the way the mirror does.
+	replace := func(params UpsertProjectParams) error {
+		if err := queries.DeleteReplacedProject(ctx, DeleteReplacedProjectParams{
+			Name: params.Name,
+			ID:   params.ID,
+		}); err != nil {
+			return err
+		}
+		return queries.UpsertProject(ctx, params)
+	}
 	testCases := []struct {
 		name string
 		run  func(*testing.T)
@@ -35,10 +45,10 @@ func TestProjectQueriesIntegration(t *testing.T) {
 		{
 			name: "idempotent writes preserve creation and refresh sync timestamps",
 			run: func(t *testing.T) {
-				require.NoError(t, queries.UpsertProject(ctx, project))
+				require.NoError(t, replace(project))
 				_, err := pool.Exec(ctx, "UPDATE projects SET synced_at = '2000-01-01'")
 				require.NoError(t, err)
-				require.NoError(t, queries.UpsertProject(ctx, project))
+				require.NoError(t, replace(project))
 				ids, err := listProjectIDs(ctx, queries)
 				require.NoError(t, err)
 				require.Equal(t, []string{project.ID}, ids)
@@ -51,7 +61,7 @@ func TestProjectQueriesIntegration(t *testing.T) {
 		{
 			name: "snapshot query includes all mirrored fields",
 			run: func(t *testing.T) {
-				require.NoError(t, queries.UpsertProject(ctx, project))
+				require.NoError(t, replace(project))
 				projects, err := queries.ListProjects(ctx)
 				require.NoError(t, err)
 				require.Len(t, projects, 1)
@@ -62,39 +72,46 @@ func TestProjectQueriesIntegration(t *testing.T) {
 			},
 		},
 		{
-			// A Project deleted and recreated under the same name keeps one
-			// row, now carrying the new UID.
-			name: "recreation replaces the row's identity in place",
+			name: "database enforces unique names and identities",
 			run: func(t *testing.T) {
-				require.NoError(t, queries.UpsertProject(ctx, project))
-				replacement := project
-				replacement.ID = "new-project"
-				require.NoError(t, queries.UpsertProject(ctx, replacement))
-				ids, err := listProjectIDs(ctx, queries)
-				require.NoError(t, err)
-				require.Equal(t, []string{replacement.ID}, ids)
-			},
-		},
-		{
-			// Kubernetes never renames an object, so this can only come from
-			// corrupt data; the primary key rejects it rather than silently
-			// producing two rows for one UID.
-			name: "same identity under another name is rejected",
-			run: func(t *testing.T) {
-				require.NoError(t, queries.UpsertProject(ctx, project))
-				renamed := project
-				renamed.Name = "renamed"
-				requirePGError(t, queries.UpsertProject(ctx, renamed), "23505")
+				require.NoError(t, replace(project))
+				duplicate := project
+				duplicate.ID = "another"
+				requirePGError(t, queries.UpsertProject(ctx, duplicate), "23505")
 				_, err := pool.Exec(ctx, "INSERT INTO projects SELECT * FROM projects")
 				requirePGError(t, err, "23505")
 			},
 		},
 		{
+			// Deleting a Project deletes everything in its namespace, so rows
+			// that belonged to the old Project must not survive its
+			// recreation under the same name.
+			name: "recreation replaces the row and cascades to the old Project's rows",
+			run: func(t *testing.T) {
+				_, err := pool.Exec(ctx, `CREATE TABLE project_children (
+					project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE
+				)`)
+				require.NoError(t, err)
+				require.NoError(t, replace(project))
+				_, err = pool.Exec(ctx, "INSERT INTO project_children VALUES ($1)", project.ID)
+				require.NoError(t, err)
+				replacement := project
+				replacement.ID = "new-project"
+				require.NoError(t, replace(replacement))
+				ids, err := listProjectIDs(ctx, queries)
+				require.NoError(t, err)
+				require.Equal(t, []string{replacement.ID}, ids)
+				var children int
+				require.NoError(t, pool.QueryRow(ctx, "SELECT count(*) FROM project_children").Scan(&children))
+				require.Zero(t, children)
+			},
+		},
+		{
 			name: "deletion by name",
 			run: func(t *testing.T) {
-				require.NoError(t, queries.UpsertProject(ctx, project))
+				require.NoError(t, replace(project))
 				other := UpsertProjectParams{ID: "other-project", Name: "other", CreatedAt: created}
-				require.NoError(t, queries.UpsertProject(ctx, other))
+				require.NoError(t, replace(other))
 				require.NoError(t, queries.DeleteProjectByName(ctx, "other"))
 				ids, err := listProjectIDs(ctx, queries)
 				require.NoError(t, err)
@@ -105,7 +122,7 @@ func TestProjectQueriesIntegration(t *testing.T) {
 		{
 			name: "blocked write respects the caller's deadline and recovers",
 			run: func(t *testing.T) {
-				require.NoError(t, queries.UpsertProject(ctx, project))
+				require.NoError(t, replace(project))
 				tx, err := pool.Begin(ctx)
 				require.NoError(t, err)
 				defer func() { _ = tx.Rollback(ctx) }()
@@ -115,13 +132,15 @@ func TestProjectQueriesIntegration(t *testing.T) {
 				defer cancel()
 				require.ErrorIs(t, queries.UpsertProject(deadlineCtx, project), context.DeadlineExceeded)
 				require.NoError(t, tx.Rollback(ctx))
-				require.NoError(t, queries.UpsertProject(ctx, project))
+				require.NoError(t, replace(project))
 			},
 		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			_, err := pool.Exec(ctx, "TRUNCATE projects CASCADE")
+			_, err := pool.Exec(ctx, "DROP TABLE IF EXISTS project_children")
+			require.NoError(t, err)
+			_, err = pool.Exec(ctx, "TRUNCATE projects CASCADE")
 			require.NoError(t, err)
 			testCase.run(t)
 		})
