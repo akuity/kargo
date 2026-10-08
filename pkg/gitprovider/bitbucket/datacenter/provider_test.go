@@ -935,7 +935,7 @@ func TestMergePullRequest(t *testing.T) {
 		p := &provider{client: mc}
 		pr, merged, err := p.MergePullRequest(t.Context(), 1, nil)
 		assert.ErrorIs(t, err, gitprovider.ErrPullRequestNotFound)
-		assert.ErrorContains(t, err, "unexpected response 404")
+		assert.ErrorContains(t, err, "response status 404")
 		assert.False(t, merged)
 		assert.Nil(t, pr)
 	})
