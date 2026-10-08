@@ -27,7 +27,7 @@ export const DeleteFreightModal = ({
 
   return (
     <Modal
-      destroyOnClose
+      destroyOnHidden
       open={visible}
       title='Confirm Delete'
       onCancel={hide}
@@ -43,7 +43,7 @@ export const DeleteFreightModal = ({
       <Alert
         type='error'
         banner
-        message={
+        title={
           <div>
             Are you sure you want to delete freight{' '}
             <span className='font-semibold'>{alias ? alias : freight?.metadata?.name}</span>?

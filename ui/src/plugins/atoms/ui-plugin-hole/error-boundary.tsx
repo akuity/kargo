@@ -27,11 +27,8 @@ export class PluginErrorBoundary extends Component<Props, State> {
   public render() {
     if (this.state.hasError) {
       return (
-        <Tooltip
-          title='There is some error with UI Plugin. Please check console and open an issue.'
-          className='ml-2'
-        >
-          <Badge color='red' />
+        <Tooltip title='There is some error with UI Plugin. Please check console and open an issue.'>
+          <Badge color='red' className='ml-2' />
         </Tooltip>
       );
     }

@@ -68,7 +68,7 @@ export const ThemeContextProvider = ({ children }: PropsWithChildren) => {
   // Owns the AntD theme too, so `isDark` comes from local state, not context.
   return (
     <ThemeContext.Provider value={ctx}>
-      <ConfigProvider theme={themeConfig(isDark)}>
+      <ConfigProvider theme={themeConfig(isDark)} tag={{ variant: 'outlined' }}>
         <CssVarBridge />
         {children}
       </ConfigProvider>

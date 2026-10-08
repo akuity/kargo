@@ -97,7 +97,7 @@ body {
 
 // Spin has no color token; recolor the loader (dots + text) to secondary grey.
 :root[data-theme='dark'] .ant-spin:not(.kargo-light-scope *),
-:root[data-theme='dark'] .ant-spin .ant-spin-text:not(.kargo-light-scope *),
+:root[data-theme='dark'] .ant-spin-section:not(.kargo-light-scope *),
 :root[data-theme='dark'] .ant-spin-dot-holder:not(.kargo-light-scope *) {
     color: var(--kargo-color-text-secondary, rgba(255, 255, 255, 0.65));
 }
@@ -109,6 +109,13 @@ body {
     box-shadow: none !important;
 }
 
+// v6 dropped AntD's `padding-bottom: 24px` on the modal, so a modal taller than
+// the viewport ends flush against the bottom edge once scrolled. AntD's own
+// `-centered` rule (3 classes) still zeroes it and out-specifies this one.
+.ant-modal {
+    padding-bottom: 24px;
+}
+
 .ant-modal-title {
     font-size: 20px !important;
     margin-bottom: 16px !important;
@@ -118,7 +125,11 @@ body {
     margin-top: 24px !important;
 }
 
-.ant-select-selection-item, .ant-select-item-option-content {
+// AntD v6 renders the single-select value in `-content`; `-selection-item`
+// now only wraps multi-select tags, so both are needed.
+.ant-select-content,
+.ant-select-selection-item,
+.ant-select-item-option-content {
     font-family: 'Poppins';
     font-weight: 500 !important;
 }

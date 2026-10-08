@@ -45,7 +45,7 @@ export const RequestedFreightEditor = ({
     <div className='w-full rounded-md bg-gray-50 dark:bg-neutral-800 p-3 mb-6'>
       {(warehouses?.length || 0) <= 0 && (
         <Alert
-          message='No Warehouses exist for this project. To avoid errors, create a Warehouse before creating a Stage.'
+          title='No Warehouses exist for this project. To avoid errors, create a Warehouse before creating a Stage.'
           type='warning'
           showIcon
           className='mb-2'
@@ -89,7 +89,7 @@ export const RequestedFreightEditor = ({
           <Alert
             type='warning'
             className='mb-4'
-            message='There are no Stages in this Project that source Freight from the selected Warehouse. Before configuring Upstream Stages, create another Stage that sources Freight from this Warehouse.'
+            title='There are no Stages in this Project that source Freight from the selected Warehouse. Before configuring Upstream Stages, create another Stage that sources Freight from this Warehouse.'
           />
         )}
 

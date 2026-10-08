@@ -23,7 +23,7 @@ export const RunnerForm = (props: RunnerFormType) => {
     <ErrorBoundary
       errorRender={
         <Alert
-          message={
+          title={
             <>
               It looks like there was an error with JSON schema for runner{' '}
               <b>{props.runner.identifier}</b>

@@ -249,7 +249,6 @@ export const Pipelines = (props: { creatingStage?: boolean; creatingWarehouse?: 
                       className='z-10'
                     />
                     <Dropdown
-                      className='ml-auto z-10'
                       trigger={['click']}
                       menu={{
                         items: [
@@ -305,7 +304,9 @@ export const Pipelines = (props: { creatingStage?: boolean; creatingWarehouse?: 
                         ]
                       }}
                     >
-                      <Button icon={<FontAwesomeIcon icon={faPlus} />}>Create</Button>
+                      <Button className='ml-auto z-10' icon={<FontAwesomeIcon icon={faPlus} />}>
+                        Create
+                      </Button>
                     </Dropdown>
                     <Button
                       className='z-10'

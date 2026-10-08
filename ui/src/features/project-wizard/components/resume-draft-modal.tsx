@@ -34,7 +34,7 @@ export const ResumeDraftModal = ({
       open={open}
       title='Resume your draft?'
       closable={false}
-      maskClosable={false}
+      mask={{ closable: false }}
       footer={[
         <Button key='fresh' danger onClick={onStartFresh}>
           Start new project
@@ -51,7 +51,7 @@ export const ResumeDraftModal = ({
           className='mt-4'
           type='warning'
           showIcon
-          message={
+          title={
             `A project named ${projectName} already exists, so creating this draft will fail. ` +
             `If an earlier attempt was interrupted it may be incomplete - delete it, or give ` +
             `this draft a new name.`
@@ -63,7 +63,7 @@ export const ResumeDraftModal = ({
           className='mt-4'
           type='info'
           showIcon
-          message="For your security, saved drafts don't include credential secrets - you'll need to re-enter any passwords or keys before creating the project."
+          title="For your security, saved drafts don't include credential secrets - you'll need to re-enter any passwords or keys before creating the project."
         />
       )}
     </Modal>

@@ -38,7 +38,7 @@ export const AnalysisRunLogsLink = (props: AnalysisRunLogsLinkProps) => {
 
   return (
     <Link to={logsLink} target='_blank' className={classNames(props.className)}>
-      <Tag color='orange' className='text-[10px]' bordered={false}>
+      <Tag color='orange' className='text-[10px]' variant='filled'>
         Analysis Run Logs <FontAwesomeIcon icon={faExternalLink} className='ml-1' />
       </Tag>
     </Link>

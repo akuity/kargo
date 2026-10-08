@@ -62,7 +62,7 @@ export const CloneFreightNote = (props: {
     <Alert
       type='info'
       className={classNames(props.className)}
-      message={
+      title={
         <>
           Based on{' '}
           <Link

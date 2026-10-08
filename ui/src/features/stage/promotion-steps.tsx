@@ -104,7 +104,7 @@ export const PromotionSteps = (props: PromotionStepsProps) => {
       { ...item, className: `${item.className || ''} !border-none` },
       {
         key: `${key}-${alertType}`,
-        label: <Alert message={stepMessage} type={alertType} />,
+        label: <Alert title={stepMessage} type={alertType} />,
         showArrow: false,
         collapsible: 'disabled' as const,
         styles: { header: { paddingTop: 0 } }
@@ -122,13 +122,13 @@ export const PromotionSteps = (props: PromotionStepsProps) => {
   return (
     <>
       <Collapse
-        expandIconPosition='end'
+        expandIconPlacement='end'
         bordered={false}
         items={items}
         activeKey={activeKeys}
         onChange={(keys) => setActiveKeys(typeof keys === 'string' ? [keys] : keys)}
       />
-      {shouldShowMessage && !!message && <Alert message={message} type='error' className='mt-4' />}
+      {shouldShowMessage && !!message && <Alert title={message} type='error' className='mt-4' />}
     </>
   );
 };

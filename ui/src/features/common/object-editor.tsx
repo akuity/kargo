@@ -95,7 +95,7 @@ export const ObjectEditor: React.FC<ObjectEditorProps> = ({
       <Button type='dashed' onClick={handleAddField} block icon={<FontAwesomeIcon icon={faPlus} />}>
         Add
       </Button>
-      {duplicatedKey && <Alert message='The key must be unique' type='error' showIcon banner />}
+      {duplicatedKey && <Alert title='The key must be unique' type='error' showIcon banner />}
     </Flex>
   );
 };

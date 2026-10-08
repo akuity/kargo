@@ -100,7 +100,7 @@ export const ResumeAutoPromotionDrawer = ({
     <Drawer
       open={open}
       onClose={onClose}
-      width={720}
+      size={720}
       title={
         <Flex align='center' gap={8}>
           <FontAwesomeIcon icon={faPlay} />
@@ -125,7 +125,7 @@ export const ResumeAutoPromotionDrawer = ({
         <Alert
           banner
           type='info'
-          message='Resuming promotes the Freight that auto-promotion would select for this origin.'
+          title='Resuming promotes the Freight that auto-promotion would select for this origin.'
           description='Kargo creates a Promotion immediately and resumes auto-promotion for this origin.'
         />
 
@@ -133,7 +133,7 @@ export const ResumeAutoPromotionDrawer = ({
           <Alert
             banner
             type='warning'
-            message='No auto-promotion hold can be resumed.'
+            title='No auto-promotion hold can be resumed.'
             description='There are no auto-promotion holds on this Stage.'
           />
         )}

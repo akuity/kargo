@@ -114,7 +114,7 @@ const YamlEditor: FC<YamlEditorProps> = (props) => {
 
   if (isLoading) {
     return (
-      <Spin tip='Loading' size='small'>
+      <Spin description='Loading' size='small'>
         <div className='content py-8' />
       </Spin>
     );
