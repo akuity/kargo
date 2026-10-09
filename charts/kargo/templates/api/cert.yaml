@@ -11,6 +11,8 @@ metadata:
 spec:
   dnsNames:
   - {{ quote .Values.api.host }}
+  # The controller reaches the API server through its Service.
+  - kargo-api.{{ .Release.Namespace }}.svc
   issuerRef:
     group: cert-manager.io
     kind: Issuer

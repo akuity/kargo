@@ -3,6 +3,7 @@ package promotion
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"maps"
 	"slices"
@@ -10,12 +11,9 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/ptr"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	"github.com/akuity/kargo/pkg/api"
 	"github.com/akuity/kargo/pkg/health"
 )
 
@@ -69,45 +67,65 @@ func NewTargetContext(target *kargoapi.Target) (*TargetContext, error) {
 	return targetCtx, nil
 }
 
+// TargetGetter looks up a Target by Project and name. It returns nil, nil
+// when there is no such Target.
+type TargetGetter interface {
+	GetTarget(ctx context.Context, project, name string) (*kargoapi.Target, error)
+}
+
+// ErrTargetNotFound is returned by ResolveTargetContext when the Promotion
+// names a Target that does not exist. It is the one failure a caller should
+// treat as final: the Target is not coming back, whereas any other error is
+// worth retrying.
+var ErrTargetNotFound = errors.New("target not found")
+
 // ResolveTargetContext loads the Target named by the Promotion's spec.target
 // and builds the TargetContext that exposes it to the Promotion's steps. It
 // returns nil for a Promotion that names no Target -- one that promotes to its
-// Stage itself -- and an error for one whose Target cannot be found: the steps
-// were written against that Target, and running them with every target.*
-// reference silently evaluating to nothing would be worse than failing.
+// Stage itself -- and ErrTargetNotFound for one whose Target cannot be found:
+// the steps were written against that Target, and running them with every
+// target.* reference silently evaluating to nothing would be worse than
+// failing. A nil TargetGetter means Targets are unavailable altogether, for
+// instance because the controller has no API server to read them from, which
+// is an error for a Promotion that names one.
 //
 // Every engine that runs a Promotion's steps -- in-process or otherwise --
 // should build its Context through this function, so that a Promotion sees the
 // same Target however it is run.
 func ResolveTargetContext(
 	ctx context.Context,
-	c client.Client,
+	targets TargetGetter,
 	promo *kargoapi.Promotion,
 ) (*TargetContext, error) {
 	if promo.Spec.Target == "" {
 		return nil, nil
 	}
-	target, err := api.GetTarget(ctx, c, types.NamespacedName{
-		Namespace: promo.Namespace,
-		Name:      promo.Spec.Target,
-	})
+	if targets == nil {
+		// nolint:staticcheck
+		return nil, fmt.Errorf(
+			"Promotion %q promotes to Target %q, but Targets are unavailable "+
+				"because the controller has no API server to read them from",
+			promo.Name, promo.Spec.Target,
+		)
+	}
+	target, err := targets.GetTarget(ctx, promo.Namespace, promo.Spec.Target)
 	if err != nil {
 		return nil, fmt.Errorf(
-			"error finding Target %q in namespace %q: %w",
+			"error finding Target %q in Project %q: %w",
 			promo.Spec.Target, promo.Namespace, err,
 		)
 	}
 	if target == nil {
 		// nolint:staticcheck
 		return nil, fmt.Errorf(
-			"Target %q not found in namespace %q",
-			promo.Spec.Target, promo.Namespace,
+			"Target %q in Project %q: %w",
+			promo.Spec.Target, promo.Namespace, ErrTargetNotFound,
 		)
 	}
 	targetCtx, err := NewTargetContext(target)
 	if err != nil {
 		return nil, fmt.Errorf(
-			"error building context for Target %q in namespace %q: %w",
+			"error building context for Target %q in Project %q: %w",
 			promo.Spec.Target, promo.Namespace, err,
 		)
 	}

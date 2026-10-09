@@ -111,21 +111,24 @@ func Test_server_promoteToStage(t *testing.T) {
 			MatchLabels: map[string]string{"region": "us"},
 		}},
 	}
-	testTarget := &kargoapi.Target{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "us-east",
-			Namespace: testProject.Name,
-			Labels:    map[string]string{"region": "us"},
-		},
-	}
-	// Present in the Project but not matched by the Stage's selector, so it
-	// must not appear in the resolved list.
-	testUnselectedTarget := &kargoapi.Target{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "eu-west",
-			Namespace: testProject.Name,
-			Labels:    map[string]string{"region": "eu"},
-		},
+	// Targets live in the database. One matches the Stage's selector; the
+	// other is present in the Project but must not appear in the resolved list.
+	promoteWithTargets := func(t *testing.T, s *server) {
+		authorizeAllStagesPromote(t, s)
+		s.listTargetsFn = func(context.Context, string) ([]kargoapi.Target, error) {
+			return []kargoapi.Target{
+				{ObjectMeta: metav1.ObjectMeta{
+					Namespace: testProject.Name,
+					Name:      "us-east",
+					Labels:    map[string]string{"region": "us"},
+				}},
+				{ObjectMeta: metav1.ObjectMeta{
+					Namespace: testProject.Name,
+					Name:      "eu-west",
+					Labels:    map[string]string{"region": "eu"},
+				}},
+			}, nil
+		}
 	}
 
 	testRESTEndpoint(
@@ -133,15 +136,31 @@ func Test_server_promoteToStage(t *testing.T) {
 		http.MethodPost, "/v1beta1/projects/"+testProject.Name+"/stages/"+testStage.Name+"/promotions",
 		[]restTestCase{
 			{
+				name: "Target-aware Stage without a database",
+				clientBuilder: fake.NewClientBuilder().WithObjects(
+					testProject,
+					testTargetAwareStage,
+					testFreight,
+				),
+				serverSetup: authorizeAllStagesPromote,
+				body: mustJSONBody(promoteToStageRequest{
+					Freight: testFreight.Name,
+				}),
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, c client.Client) {
+					require.Equal(t, http.StatusNotImplemented, w.Code)
+					reqs := &kargoapi.PromotionRequestList{}
+					require.NoError(t, c.List(t.Context(), reqs, client.InNamespace(testProject.Name)))
+					require.Empty(t, reqs.Items)
+				},
+			},
+			{
 				name: "Target-aware Stage yields a PromotionRequest",
 				clientBuilder: fake.NewClientBuilder().WithObjects(
 					testProject,
 					testTargetAwareStage,
 					testFreight,
-					testTarget,
-					testUnselectedTarget,
 				),
-				serverSetup: authorizeAllStagesPromote,
+				serverSetup: promoteWithTargets,
 				body: mustJSONBody(promoteToStageRequest{
 					Freight: testFreight.Name,
 				}),
@@ -177,7 +196,6 @@ func Test_server_promoteToStage(t *testing.T) {
 					testProject,
 					testTargetAwareStage,
 					testFreight,
-					testTarget,
 					&kargoapi.PromotionRequest{
 						ObjectMeta: metav1.ObjectMeta{
 							Namespace: testProject.Name,
@@ -196,7 +214,7 @@ func Test_server_promoteToStage(t *testing.T) {
 						},
 					},
 				),
-				serverSetup: authorizeAllStagesPromote,
+				serverSetup: promoteWithTargets,
 				body: mustJSONBody(promoteToStageRequest{
 					Freight: testFreight.Name,
 				}),
