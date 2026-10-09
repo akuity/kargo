@@ -90,20 +90,19 @@ const config = {
 
             const sidebarItems = await defaultSidebarItemsGenerator(args);
 
-            // Flag Enterprise features (per enterprise-features.json) so the
-            // DocSidebarItem theme component can badge them. Categories are
-            // matched by the doc they link to (i.e. their index page).
+            // Class Enterprise features (per enterprise-features.json) so
+            // custom.css can badge them. Categories are matched by the doc
+            // they link to (i.e. their index page).
             function addBadges(items) {
               return items.map((item) => {
                 if (item.type === 'category') {
                   item.items = addBadges(item.items);
                 }
                 const docId = item.type === 'doc' ? item.id : item.link?.id;
-                if (docId) {
-                  item.customProps = {
-                    ...item.customProps,
-                    enterprise: tags.isEnterprise(docId),
-                  };
+                if (docId && tags.isEnterprise(docId)) {
+                  item.className = [item.className, 'sidebar-enterprise']
+                    .filter(Boolean)
+                    .join(' ');
                 }
                 return item;
               });

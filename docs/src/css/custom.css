@@ -95,16 +95,24 @@ main.landing-page {
   color: #000;
 }
 
-.tag-small::after {
-  display: inline-block;
+/*
+ * Sidebar Enterprise badge. Attached to the item's own link (not the whole
+ * list item) so expanded categories badge their own row, not their children.
+ * Categories without a linked doc draw their caret with ::after, so they're
+ * excluded, and Infima rotates a collapsed category link's ::after, so that's
+ * undone.
+ */
+.sidebar-enterprise > .menu__link::after,
+.sidebar-enterprise > .menu__list-item-collapsible
+  > .menu__link:not(.menu__link--sublist-caret)::after {
+  content: "Ent";
+  flex-shrink: 0;
+  margin-left: auto;
   padding: 0.05em 0.25em;
   border-radius: 0.3em;
-  vertical-align: middle;
+  font-size: small;
   font-weight: normal;
-  font-size: x-small;
-}
-
-/* Abbreviated so it doesn't overlap long sidebar labels */
-.tag-small.enterprise::after {
-  content: "Ent";
+  background: #1976d2;
+  color: #fff;
+  transform: none;
 }
