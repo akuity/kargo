@@ -525,7 +525,7 @@ locally and the client always matches the server.
 
 Migrations are embedded in the control plane binary and applied by its
 `migrate` subcommand, which waits for the database to accept a connection,
-takes a database-level lock so concurrent runners serialize, and applies
+takes a lock on the schema so concurrent runners serialize, and applies
 whatever is pending. The chart's migration Job runs it on every install and
 upgrade, and Tilt runs that same Job as the `db-migrate` resource, so the Job
 and its connection wiring are exercised in development too. Like the other

@@ -2,9 +2,12 @@ package database
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"fmt"
+	"hash/fnv"
 	"io/fs"
+	"sync"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgconn"
@@ -24,9 +27,10 @@ var ErrSchemaOutOfDate = errors.New("database schema is out of date")
 // this binary.
 type Migrator interface {
 	// Up applies every pending migration in order and returns the versions
-	// it applied. It holds a session-level advisory lock for the duration, so
-	// concurrent runners wait for one another instead of racing. It is safe to
-	// call when nothing is pending.
+	// it applied. It holds a session-level advisory lock, keyed on the schema
+	// being migrated, for the duration, so concurrent runners against the
+	// same schema wait for one another instead of racing. It is safe to call
+	// when nothing is pending.
 	Up(ctx context.Context) ([]int64, error)
 	// Version returns the version the database is at and the version this
 	// binary's migrations reach.
@@ -43,13 +47,13 @@ type migrator struct {
 }
 
 // lockProbeInterval is how often a waiting migration run re-checks whether
-// the database-level lock has been released.
+// the schema's lock has been released.
 const lockProbeInterval = 5 * time.Second
 
 // NewMigrator returns a Migrator that applies the given migrations through
 // the pool. Migrations run through pgx's database/sql adapter, so the pool's
 // tracer sees them like any other query. lockTimeout bounds how long Up waits
-// for a concurrent run to release the database-level lock; it must exceed the
+// for a concurrent run to release the schema's lock; it must exceed the
 // slowest migration, which is what a waiting run is waiting on.
 func NewMigrator(
 	ctx context.Context,
@@ -62,20 +66,13 @@ func NewMigrator(
 			"migration lock timeout must be at least %s", lockProbeInterval,
 		)
 	}
-	locker, err := lock.NewPostgresSessionLocker(
-		lock.WithLockTimeout(
-			uint64(lockProbeInterval.Seconds()),
-			uint64(lockTimeout/lockProbeInterval),
-		),
-	)
-	if err != nil {
-		return nil, fmt.Errorf("error creating migration lock: %w", err)
-	}
 	provider, err := goose.NewProvider(
 		goose.DialectPostgres,
 		stdlib.OpenDBFromPool(pool),
 		migrations,
-		goose.WithSessionLocker(locker),
+		goose.WithSessionLocker(&schemaLocker{
+			lockAttempts: uint64(lockTimeout / lockProbeInterval),
+		}),
 		goose.WithLogger(gooseLogger{
 			logger: logging.LoggerFromContext(ctx),
 		}),
@@ -128,6 +125,80 @@ func (m *migrator) target() int64 {
 		target = max(target, source.Version)
 	}
 	return target
+}
+
+// schemaLocker is a goose SessionLocker that takes a session-level advisory
+// lock keyed on the schema the migrations are applied to, rather than on
+// goose's single default key.
+//
+// Advisory locks are scoped to the database, not the schema. Kargo instances
+// that share a database and are separated only by search_path would
+// otherwise all contend for one key, so an upgrade of many instances would
+// apply their unrelated migrations one at a time. Deriving the key from the
+// schema gives each instance its own lock while runners against the same
+// schema still serialize.
+//
+// The schema is resolved on the locking connection itself, since search_path
+// is a per-connection setting and that connection is the one whose
+// resolution matters. This also keeps NewMigrator from needing the database.
+type schemaLocker struct {
+	// lockAttempts is how many times, lockProbeInterval apart, to try for the
+	// lock before giving up.
+	lockAttempts uint64
+	// mu guards delegate. Goose does not call SessionLock concurrently on a
+	// provider, but nothing about this type should depend on that.
+	mu       sync.Mutex
+	delegate lock.SessionLocker
+}
+
+// migrationLockSalt distinguishes Kargo's migration lock from any other
+// goose-based service that derives its advisory lock key the same way in a
+// shared database.
+const migrationLockSalt = "kargo-migrations:"
+
+// migrationLockID derives the advisory lock key for a schema. The same
+// schema always yields the same key, and distinct schemas yield distinct
+// keys, barring a hash collision. A collision would only make two schemas
+// serialize their migrations, never let one run unguarded.
+func migrationLockID(schema string) int64 {
+	h := fnv.New64a()
+	// Hash.Write never returns an error.
+	_, _ = h.Write([]byte(migrationLockSalt + schema))
+	return int64(h.Sum64()) // nolint: gosec
+}
+
+func (l *schemaLocker) SessionLock(ctx context.Context, conn *sql.Conn) error {
+	var schema string
+	if err := conn.QueryRowContext(
+		ctx, "SELECT current_schema()",
+	).Scan(&schema); err != nil {
+		return fmt.Errorf("error determining schema to lock: %w", err)
+	}
+	delegate, err := lock.NewPostgresSessionLocker(
+		lock.WithLockID(migrationLockID(schema)),
+		lock.WithLockTimeout(uint64(lockProbeInterval.Seconds()), l.lockAttempts),
+	)
+	if err != nil {
+		return fmt.Errorf("error creating migration lock: %w", err)
+	}
+	if err = delegate.SessionLock(ctx, conn); err != nil {
+		return err
+	}
+	l.mu.Lock()
+	l.delegate = delegate
+	l.mu.Unlock()
+	return nil
+}
+
+func (l *schemaLocker) SessionUnlock(ctx context.Context, conn *sql.Conn) error {
+	l.mu.Lock()
+	delegate := l.delegate
+	l.delegate = nil
+	l.mu.Unlock()
+	if delegate == nil {
+		return errors.New("migration lock is not held")
+	}
+	return delegate.SessionUnlock(ctx, conn)
 }
 
 // ConnectWithRetry opens a pool as NewPool does, but keeps retrying while the
