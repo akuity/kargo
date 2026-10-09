@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/sosedoff/gitkit"
@@ -256,6 +257,181 @@ func Test_gitCloner_convert(t *testing.T) {
 			// No expected problems because signingKey is optional and empty is valid
 		},
 		{
+			name: "depth is zero",
+			config: promotion.Config{
+				"repoURL":  "https://github.com/example/repo.git",
+				"depth":    0,
+				"checkout": []promotion.Config{{"path": "/fake/path/0"}},
+			},
+			expectedProblems: []string{
+				"depth: Must be greater than or equal to 1",
+			},
+		},
+		{
+			name: "depth is negative",
+			config: promotion.Config{
+				"repoURL":  "https://github.com/example/repo.git",
+				"depth":    -1,
+				"checkout": []promotion.Config{{"path": "/fake/path/0"}},
+			},
+			expectedProblems: []string{
+				"depth: Must be greater than or equal to 1",
+			},
+		},
+		{
+			name: "depth is valid",
+			config: promotion.Config{
+				"repoURL": "https://github.com/example/repo.git",
+				"depth":   100,
+				"checkout": []promotion.Config{{
+					"branch": "main",
+					"path":   "/fake/path/0",
+				}},
+			},
+		},
+		{
+			name: "depth with a commit checkout",
+			config: promotion.Config{
+				"repoURL": "https://github.com/example/repo.git",
+				"depth":   100,
+				"checkout": []promotion.Config{
+					{"branch": "main", "path": "/fake/path/0"},
+					{"commit": "fake-commit", "path": "/fake/path/1"},
+				},
+			},
+			expectedProblems: []string{
+				"checkout[1] must specify a branch when depth or branches is specified",
+			},
+		},
+		{
+			name: "depth with a tag checkout",
+			config: promotion.Config{
+				"repoURL": "https://github.com/example/repo.git",
+				"depth":   100,
+				"checkout": []promotion.Config{
+					{"tag": "fake-tag", "path": "/fake/path/0"},
+				},
+			},
+			expectedProblems: []string{
+				"checkout[0] must specify a branch when depth or branches is specified",
+			},
+		},
+		{
+			name: "branches with a default branch checkout",
+			config: promotion.Config{
+				"repoURL":  "https://github.com/example/repo.git",
+				"branches": []string{"main"},
+				"checkout": []promotion.Config{{"path": "/fake/path/0"}},
+			},
+			expectedProblems: []string{
+				"checkout[0] must specify a branch when depth or branches is specified",
+			},
+		},
+		{
+			name: "commit checkouts are fine without depth or branches",
+			config: promotion.Config{
+				"repoURL": "https://github.com/example/repo.git",
+				"checkout": []promotion.Config{
+					{"commit": "fake-commit", "path": "/fake/path/0"},
+					{"tag": "fake-tag", "path": "/fake/path/1"},
+				},
+			},
+		},
+		{
+			name: "branches is an empty array",
+			config: promotion.Config{
+				"repoURL":  "https://github.com/example/repo.git",
+				"branches": []string{},
+				"checkout": []promotion.Config{{"path": "/fake/path/0"}},
+			},
+			expectedProblems: []string{
+				"branches: Array must have at least 1 items",
+			},
+		},
+		{
+			name: "branches contains an empty string",
+			config: promotion.Config{
+				"repoURL":  "https://github.com/example/repo.git",
+				"branches": []string{""},
+				"checkout": []promotion.Config{{"path": "/fake/path/0"}},
+			},
+			expectedProblems: []string{
+				"branches.0: String length must be greater than or equal to 1",
+			},
+		},
+		{
+			name: "branches pattern contains a colon",
+			config: promotion.Config{
+				"repoURL":  "https://github.com/example/repo.git",
+				"branches": []string{"main:other"},
+				"checkout": []promotion.Config{{"path": "/fake/path/0"}},
+			},
+			expectedProblems: []string{"branches.0: Does not match pattern"},
+		},
+		{
+			name: "branches pattern contains whitespace",
+			config: promotion.Config{
+				"repoURL":  "https://github.com/example/repo.git",
+				"branches": []string{"my branch"},
+				"checkout": []promotion.Config{{"path": "/fake/path/0"}},
+			},
+			expectedProblems: []string{"branches.0: Does not match pattern"},
+		},
+		{
+			name: "branches pattern has a leading plus",
+			config: promotion.Config{
+				"repoURL":  "https://github.com/example/repo.git",
+				"branches": []string{"+main"},
+				"checkout": []promotion.Config{{"path": "/fake/path/0"}},
+			},
+			expectedProblems: []string{"branches.0: Does not match pattern"},
+		},
+		{
+			name: "branches pattern has a leading dash",
+			config: promotion.Config{
+				"repoURL":  "https://github.com/example/repo.git",
+				"branches": []string{"--upload-pack=evil"},
+				"checkout": []promotion.Config{{"path": "/fake/path/0"}},
+			},
+			expectedProblems: []string{"branches.0: Does not match pattern"},
+		},
+		{
+			name: "branches pattern contains multiple wildcards",
+			config: promotion.Config{
+				"repoURL":  "https://github.com/example/repo.git",
+				"branches": []string{"stage/*/*"},
+				"checkout": []promotion.Config{{"path": "/fake/path/0"}},
+			},
+			expectedProblems: []string{"branches.0: Does not match pattern"},
+		},
+		{
+			name: "checkout branch does not match branches",
+			config: promotion.Config{
+				"repoURL":  "https://github.com/example/repo.git",
+				"branches": []string{"main", "stage/*"},
+				"checkout": []promotion.Config{
+					{"branch": "main", "path": "/fake/path/0"},
+					{"branch": "feature/foo", "path": "/fake/path/1"},
+				},
+			},
+			expectedProblems: []string{
+				`branch "feature/foo" at checkout[1] does not match any of the patterns`,
+			},
+		},
+		{
+			name: "branches are valid",
+			config: promotion.Config{
+				"repoURL":  "https://github.com/example/repo.git",
+				"depth":    10,
+				"branches": []string{"main", "stage/*", "*-prod", "*"},
+				"checkout": []promotion.Config{
+					{"branch": "main", "path": "/fake/path/0"},
+					{"branch": "stage/dev", "path": "/fake/path/1"},
+					{"branch": "release-prod", "path": "/fake/path/2"},
+				},
+			},
+		},
+		{
 			name: "valid kitchen sink",
 			config: promotion.Config{
 				"repoURL": "https://github.com/example/repo.git",
@@ -416,6 +592,276 @@ func Test_gitCloner_run(t *testing.T) {
 		},
 		res.Output["commits"],
 	)
+}
+
+func Test_branchMatchesAny(t *testing.T) {
+	testCases := []struct {
+		name     string
+		branch   string
+		patterns []string
+		expected bool
+	}{
+		{
+			name:     "no patterns",
+			branch:   "main",
+			expected: false,
+		},
+		{
+			name:     "exact match",
+			branch:   "main",
+			patterns: []string{"main"},
+			expected: true,
+		},
+		{
+			name:     "no exact match",
+			branch:   "main",
+			patterns: []string{"mai", "mainx"},
+			expected: false,
+		},
+		{
+			name:     "prefix wildcard match",
+			branch:   "stage/dev",
+			patterns: []string{"stage/*"},
+			expected: true,
+		},
+		{
+			name:     "wildcard matches nested path",
+			branch:   "stage/dev/blue",
+			patterns: []string{"stage/*"},
+			expected: true,
+		},
+		{
+			name:     "wildcard matches empty string",
+			branch:   "stage/",
+			patterns: []string{"stage/*"},
+			expected: true,
+		},
+		{
+			name:     "suffix wildcard match",
+			branch:   "dev-prod",
+			patterns: []string{"*-prod"},
+			expected: true,
+		},
+		{
+			name:     "infix wildcard match",
+			branch:   "release/1.0/final",
+			patterns: []string{"release/*/final"},
+			expected: true,
+		},
+		{
+			name:     "prefix and suffix must not overlap",
+			branch:   "aba",
+			patterns: []string{"ab*ba"},
+			expected: false,
+		},
+		{
+			name:     "lone wildcard matches everything",
+			branch:   "anything/goes",
+			patterns: []string{"*"},
+			expected: true,
+		},
+		{
+			name:     "wildcard does not match",
+			branch:   "feature/foo",
+			patterns: []string{"stage/*", "*-prod"},
+			expected: false,
+		},
+		{
+			name:     "any pattern may match",
+			branch:   "feature/foo",
+			patterns: []string{"stage/*", "feature/*"},
+			expected: true,
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			require.Equal(
+				t,
+				testCase.expected,
+				branchMatchesAny(testCase.branch, testCase.patterns),
+			)
+		})
+	}
+}
+
+func Test_gitCloner_run_with_depth_and_branches(t *testing.T) {
+	// Set up a test Git server in-process
+	service := gitkit.New(
+		gitkit.Config{
+			Dir:        t.TempDir(),
+			AutoCreate: true,
+		},
+	)
+	require.NoError(t, service.Setup())
+	server := httptest.NewServer(service)
+	t.Cleanup(server.Close)
+
+	testRepoURL := fmt.Sprintf("%s/test.git", server.URL)
+
+	// Create a main branch with three commits and two other branches that each
+	// add one commit on top of main.
+	repo, err := git.Clone(t.Context(), testRepoURL, nil, nil)
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		_ = repo.Close(t.Context())
+	})
+	for i := range 3 {
+		err = os.WriteFile(
+			filepath.Join(repo.Dir(), "test.txt"),
+			[]byte(fmt.Sprintf("commit %d", i)),
+			0600,
+		)
+		require.NoError(t, err)
+		err = repo.AddAllAndCommit(t.Context(), fmt.Sprintf("commit %d", i), nil)
+		require.NoError(t, err)
+	}
+	err = repo.Push(t.Context(), nil)
+	require.NoError(t, err)
+	for _, branch := range []string{"stage/dev", "feature/foo"} {
+		err = repo.Checkout(t.Context(), "main")
+		require.NoError(t, err)
+		err = repo.CreateChildBranch(t.Context(), branch)
+		require.NoError(t, err)
+		err = repo.AddAllAndCommit(
+			t.Context(),
+			fmt.Sprintf("%s commit", branch),
+			&git.CommitOptions{AllowEmpty: true},
+		)
+		require.NoError(t, err)
+		err = repo.Push(t.Context(), nil)
+		require.NoError(t, err)
+	}
+
+	r := newGitCloner(promotion.StepRunnerCapabilities{
+		CredsDB:         &credentials.FakeDB{},
+		GitUserResolver: &fakeGitUserResolver{},
+	})
+	runner, ok := r.(*gitCloner)
+	require.True(t, ok)
+
+	stepCtx := &promotion.StepContext{WorkDir: t.TempDir()}
+	depth := int64(2)
+	res, err := runner.run(
+		t.Context(),
+		stepCtx,
+		builtin.GitCloneConfig{
+			RepoURL:  testRepoURL,
+			Depth:    &depth,
+			Branches: []string{"stage/*"},
+			Checkout: []builtin.Checkout{{Branch: "stage/dev", Path: "out"}},
+		},
+	)
+	require.NoError(t, err)
+	require.Equal(t, kargoapi.PromotionStepStatusSucceeded, res.Status)
+
+	outDir := filepath.Join(stepCtx.WorkDir, "out")
+	require.FileExists(t, filepath.Join(outDir, "test.txt"))
+
+	// The history should be limited to the stage/dev tip and its parent.
+	cmd := exec.CommandContext(t.Context(), "git", "rev-list", "--count", "HEAD")
+	cmd.Dir = outDir
+	out, err := cmd.CombinedOutput()
+	require.NoErrorf(t, err, "git rev-list failed: %s", out)
+	require.Equal(t, "2", strings.TrimSpace(string(out)))
+
+	// Branches that aren't covered by the specified patterns were not fetched.
+	for _, branch := range []string{"main", "feature/foo"} {
+		cmd = exec.CommandContext(
+			t.Context(),
+			"git", "rev-parse", "--verify", "--quiet", "refs/heads/"+branch,
+		)
+		cmd.Dir = outDir
+		require.Error(t, cmd.Run(), "branch %q should not have been fetched", branch)
+	}
+}
+
+func Test_gitCloner_run_with_branches_and_create(t *testing.T) {
+	// Set up a test Git server in-process
+	service := gitkit.New(
+		gitkit.Config{
+			Dir:        t.TempDir(),
+			AutoCreate: true,
+		},
+	)
+	require.NoError(t, service.Setup())
+	server := httptest.NewServer(service)
+	t.Cleanup(server.Close)
+
+	testRepoURL := fmt.Sprintf("%s/test.git", server.URL)
+
+	// Push some content to the remote's main branch
+	repo, err := git.Clone(t.Context(), testRepoURL, nil, nil)
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		_ = repo.Close(t.Context())
+	})
+	err = os.WriteFile(filepath.Join(repo.Dir(), "test.txt"), []byte("foo"), 0600)
+	require.NoError(t, err)
+	err = repo.AddAllAndCommit(t.Context(), "Initial commit", nil)
+	require.NoError(t, err)
+	err = repo.Push(t.Context(), nil)
+	require.NoError(t, err)
+
+	r := newGitCloner(promotion.StepRunnerCapabilities{
+		CredsDB:         &credentials.FakeDB{},
+		GitUserResolver: &fakeGitUserResolver{},
+	})
+	runner, ok := r.(*gitCloner)
+	require.True(t, ok)
+
+	remoteHasBranch := func(t *testing.T, branch string) bool {
+		cmd := exec.CommandContext(
+			t.Context(),
+			"git", "ls-remote", "--heads", testRepoURL, "refs/heads/"+branch,
+		)
+		out, cmdErr := cmd.CombinedOutput()
+		require.NoErrorf(t, cmdErr, "git ls-remote failed: %s", out)
+		return strings.TrimSpace(string(out)) != ""
+	}
+
+	testCases := []struct {
+		name   string
+		create bool
+		assert func(*testing.T, promotion.StepResult, error)
+	}{
+		{
+			name:   "literal branch does not exist and create is false",
+			create: false,
+			assert: func(t *testing.T, res promotion.StepResult, err error) {
+				require.ErrorContains(t, err, "does not exist")
+				require.ErrorContains(t, err, "create=true")
+				require.Equal(t, kargoapi.PromotionStepStatusErrored, res.Status)
+				require.False(t, remoteHasBranch(t, "stage/new"))
+			},
+		},
+		{
+			name:   "literal branch does not exist and create is true",
+			create: true,
+			assert: func(t *testing.T, res promotion.StepResult, err error) {
+				require.NoError(t, err)
+				require.Equal(t, kargoapi.PromotionStepStatusSucceeded, res.Status)
+				require.True(t, remoteHasBranch(t, "stage/new"))
+			},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			res, err := runner.run(
+				t.Context(),
+				&promotion.StepContext{WorkDir: t.TempDir()},
+				builtin.GitCloneConfig{
+					RepoURL:  testRepoURL,
+					Branches: []string{"main", "stage/new"},
+					Checkout: []builtin.Checkout{{
+						Branch: "stage/new",
+						Path:   "out",
+						Create: testCase.create,
+					}},
+				},
+			)
+			testCase.assert(t, res, err)
+		})
+	}
 }
 
 func Test_gitCloner_run_with_submodules(t *testing.T) {
