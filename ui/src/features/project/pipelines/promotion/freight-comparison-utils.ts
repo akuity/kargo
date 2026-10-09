@@ -34,6 +34,10 @@ export const repoLabel = (source: TableSource): string => {
   if (source.type === 'other') {
     return source.subscriptionName || '-';
   }
+  // OCI chart repoURLs already include the chart name; HTTP repos keep it separate.
+  if (source.type === 'helm' && source.name) {
+    return `${source.repoURL}/${source.name}`;
+  }
   return source.repoURL || '-';
 };
 
