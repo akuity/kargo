@@ -5,6 +5,7 @@ import MDXA from '@theme/MDXComponents/A';
 import MDXPre from '@theme/MDXComponents/Pre';
 import MDXDetails from '@theme/MDXComponents/Details';
 import MDXHeading from '@theme/MDXComponents/Heading';
+import MDXH1 from '@theme/MDXComponents/H1';
 import MDXUl from '@theme/MDXComponents/Ul';
 import MDXImg from '@theme/MDXComponents/Img';
 import Admonition from '@theme/Admonition';
@@ -17,6 +18,9 @@ import TabItem from '@theme/TabItem';
 // Custom highlight component
 import Highlight from '@site/src/components/Highlight';
 
+// Pro/Beta badges for individual sections of a page
+import {Pro, Beta} from '@site/src/components/FeatureBadges';
+
 const MDXComponents = {
   Head,
   details: MDXDetails,
@@ -26,7 +30,7 @@ const MDXComponents = {
   pre: MDXPre,
   ul: MDXUl,
   img: MDXImg,
-  h1: (props) => <MDXHeading as="h1" {...props} />,
+  h1: MDXH1,
   h2: (props) => <MDXHeading as="h2" {...props} />,
   h3: (props) => <MDXHeading as="h3" {...props} />,
   h4: (props) => <MDXHeading as="h4" {...props} />,
@@ -41,6 +45,10 @@ const MDXComponents = {
 
   // Custom highlight component
   Hlt: Highlight,
+
+  // Pro/Beta badges for individual sections of a page
+  Pro,
+  Beta,
 };
 
 export default MDXComponents;

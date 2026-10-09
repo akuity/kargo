@@ -3,9 +3,6 @@ sidebar_label: hcl-update
 description: Updates attribute values in HCL files to modify OpenTofu configuration.
 ---
 
-<span class="tag professional"></span>
-<span class="tag beta"></span>
-
 # `hcl-update`
 
 :::info
