@@ -187,7 +187,8 @@ func (b *bareRepo) cloneAllBranches(
 //
 //	git init --bare <dir>
 //	git config remote.origin.url <url>
-//	git fetch [--filter=blob:none] [--depth=<depth>] origin +refs/heads/<branch>:refs/heads/<branch>...
+//	git ls-remote --heads origin refs/heads/<pattern>...
+//	git fetch [--filter=blob:none] [--depth=<depth>] origin +<ref>:<ref>...
 func (b *bareRepo) cloneSelectBranches(
 	ctx context.Context,
 	branches []string,
@@ -207,6 +208,27 @@ func (b *bareRepo) cloneSelectBranches(
 			b.originalURL, err,
 		)
 	}
+
+	// Resolve the patterns to refs that exist on the remote
+	lsArgs := []string{"ls-remote", "--heads", "origin"}
+	for _, branch := range branches {
+		lsArgs = append(lsArgs, "refs/heads/"+branch)
+	}
+	out, err := libExec.Exec(b.buildGitCommand(ctx, lsArgs...))
+	if err != nil {
+		return fmt.Errorf(
+			"error listing branches %v of repo %q: %w",
+			branches, b.originalURL, err,
+		)
+	}
+	refs, err := parseLsRemoteOutput(out)
+	if err != nil {
+		return err
+	}
+	if len(refs) == 0 {
+		return nil
+	}
+
 	args := []string{"fetch"}
 	if blobless {
 		args = append(args, "--filter", "blob:none")
@@ -215,13 +237,10 @@ func (b *bareRepo) cloneSelectBranches(
 		args = append(args, "--depth", fmt.Sprint(depth))
 	}
 	args = append(args, "origin")
-	for _, branch := range branches {
-		args = append(
-			args,
-			fmt.Sprintf("+refs/heads/%s:refs/heads/%s", branch, branch),
-		)
+	for _, ref := range refs {
+		args = append(args, fmt.Sprintf("+%s:%s", ref.Name, ref.Name))
 	}
-	if _, err := libExec.Exec(b.buildGitCommand(ctx, args...)); err != nil {
+	if _, err = libExec.Exec(b.buildGitCommand(ctx, args...)); err != nil {
 		return fmt.Errorf(
 			"error fetching branches %v of repo %q into %q: %w",
 			branches, b.originalURL, b.dir, err,

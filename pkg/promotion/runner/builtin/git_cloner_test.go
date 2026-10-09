@@ -775,6 +775,95 @@ func Test_gitCloner_run_with_depth_and_branches(t *testing.T) {
 	}
 }
 
+func Test_gitCloner_run_with_branches_and_create(t *testing.T) {
+	// Set up a test Git server in-process
+	service := gitkit.New(
+		gitkit.Config{
+			Dir:        t.TempDir(),
+			AutoCreate: true,
+		},
+	)
+	require.NoError(t, service.Setup())
+	server := httptest.NewServer(service)
+	t.Cleanup(server.Close)
+
+	testRepoURL := fmt.Sprintf("%s/test.git", server.URL)
+
+	// Push some content to the remote's main branch
+	repo, err := git.Clone(t.Context(), testRepoURL, nil, nil)
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		_ = repo.Close(t.Context())
+	})
+	err = os.WriteFile(filepath.Join(repo.Dir(), "test.txt"), []byte("foo"), 0600)
+	require.NoError(t, err)
+	err = repo.AddAllAndCommit(t.Context(), "Initial commit", nil)
+	require.NoError(t, err)
+	err = repo.Push(t.Context(), nil)
+	require.NoError(t, err)
+
+	r := newGitCloner(promotion.StepRunnerCapabilities{
+		CredsDB:         &credentials.FakeDB{},
+		GitUserResolver: &fakeGitUserResolver{},
+	})
+	runner, ok := r.(*gitCloner)
+	require.True(t, ok)
+
+	remoteHasBranch := func(t *testing.T, branch string) bool {
+		cmd := exec.CommandContext(
+			t.Context(),
+			"git", "ls-remote", "--heads", testRepoURL, "refs/heads/"+branch,
+		)
+		out, cmdErr := cmd.CombinedOutput()
+		require.NoErrorf(t, cmdErr, "git ls-remote failed: %s", out)
+		return strings.TrimSpace(string(out)) != ""
+	}
+
+	testCases := []struct {
+		name   string
+		create bool
+		assert func(*testing.T, promotion.StepResult, error)
+	}{
+		{
+			name:   "literal branch does not exist and create is false",
+			create: false,
+			assert: func(t *testing.T, res promotion.StepResult, err error) {
+				require.ErrorContains(t, err, "does not exist")
+				require.ErrorContains(t, err, "create=true")
+				require.Equal(t, kargoapi.PromotionStepStatusErrored, res.Status)
+				require.False(t, remoteHasBranch(t, "stage/new"))
+			},
+		},
+		{
+			name:   "literal branch does not exist and create is true",
+			create: true,
+			assert: func(t *testing.T, res promotion.StepResult, err error) {
+				require.NoError(t, err)
+				require.Equal(t, kargoapi.PromotionStepStatusSucceeded, res.Status)
+				require.True(t, remoteHasBranch(t, "stage/new"))
+			},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			res, err := runner.run(
+				t.Context(),
+				&promotion.StepContext{WorkDir: t.TempDir()},
+				builtin.GitCloneConfig{
+					RepoURL:  testRepoURL,
+					Branches: []string{"main", "stage/new"},
+					Checkout: []builtin.Checkout{{
+						Branch: "stage/new",
+						Path:   "out",
+						Create: testCase.create,
+					}},
+				},
+			)
+			testCase.assert(t, res, err)
+		})
+	}
+}
+
 func Test_gitCloner_run_with_submodules(t *testing.T) {
 	// Set up a test Git server in-process
 	service := gitkit.New(

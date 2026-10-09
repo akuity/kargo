@@ -618,6 +618,28 @@ func TestBareRepo_CloneDepthAndBranches(t *testing.T) {
 			},
 			expectShallow: true,
 		},
+		{
+			name: "branches include a literal branch that does not exist",
+			opts: &BareCloneOptions{Branches: []string{"main", "stage/new"}},
+			expectedCommits: map[string]int{
+				"main": 3,
+			},
+		},
+		{
+			name: "no specified branches exist",
+			opts: &BareCloneOptions{Branches: []string{"nope", "nada/*"}},
+		},
+		{
+			name: "wildcard matching nothing with depth",
+			opts: &BareCloneOptions{
+				Depth:    1,
+				Branches: []string{"main", "nada/*"},
+			},
+			expectedCommits: map[string]int{
+				"main": 1,
+			},
+			expectShallow: true,
+		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
