@@ -2,9 +2,9 @@ import React from 'react';
 import {useDoc} from '@docusaurus/plugin-content-docs/client';
 import MDXHeading from '@theme/MDXComponents/Heading';
 import FeatureBadges from '@site/src/components/FeatureBadges';
-import {isBeta, isProfessional} from '@site/tags';
+import {isBeta, isEnterprise} from '@site/tags';
 
-// Renders a page's title followed by any Pro/Beta badges listed for it in
+// Renders a page's title followed by any Enterprise/Beta badges listed for it in
 // enterprise-features.json, so the same list drives both the sidebar and the
 // page.
 export default function MDXH1(props) {
@@ -13,7 +13,7 @@ export default function MDXH1(props) {
     <>
       <MDXHeading as="h1" {...props} />
       <FeatureBadges
-        pro={isProfessional(metadata.id)}
+        enterprise={isEnterprise(metadata.id)}
         beta={isBeta(metadata.id)}
       />
     </>

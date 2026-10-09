@@ -5,14 +5,14 @@ export default function DocSidebarItem(props) {
   const { item } = props;
 
   // Beta badges are intentionally shown only on the page itself, not here.
-  const pro = item?.customProps?.pro;
+  const enterprise = item?.customProps?.enterprise;
 
   return (
     <div style={{position: 'relative'}}>
       <DefaultSidebarItem {...props} />
 
       <div style={{position: 'absolute', top: '50%', right: '4px', transform: 'translateY(-50%)'}}>
-        {pro && <span className='tag-small professional'></span>}
+        {enterprise && <span className='tag-small enterprise'></span>}
       </div>
     </div>
   );

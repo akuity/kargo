@@ -4,8 +4,8 @@ import enterpriseFeatures from './enterprise-features.json';
 // minus numeric prefixes and file extension), e.g.
 // "user-guide/reference-docs/promotion-steps/jira".
 
-export const isProfessional = (docId) => {
-    return enterpriseFeatures.pro.includes(docId);
+export const isEnterprise = (docId) => {
+    return enterpriseFeatures.enterprise.includes(docId);
 };
 
 export const isBeta = (docId) => {

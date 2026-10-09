@@ -81,8 +81,8 @@ main.landing-page {
   font-size: small;
 }
 
-.professional::after {
-  content: "Pro";
+.enterprise::after {
+  content: "Enterprise";
   margin-bottom: 0.5em;
   background: #1976d2;
   color: #fff;
@@ -102,4 +102,9 @@ main.landing-page {
   vertical-align: middle;
   font-weight: normal;
   font-size: x-small;
+}
+
+/* Abbreviated so it doesn't overlap long sidebar labels */
+.tag-small.enterprise::after {
+  content: "Ent";
 }

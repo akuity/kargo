@@ -230,7 +230,7 @@ In the example above, the promotion policy applies to all `Stage`s with the
 
 #### Auto-Rollback
 
-<Pro />
+<Enterprise />
 <Beta />
 
 When verification fails on a `Stage`, Kargo can automatically promote that
@@ -420,7 +420,7 @@ whichever comes first.
 
 ### Promotion Windows
 
-<Pro />
+<Enterprise />
 <Beta />
 
 A `ProjectConfig` can define `promotionWindows` that gate _when_ `Promotion`s
@@ -457,7 +457,7 @@ For the full field reference, scheduling syntax, allow/deny precedence, and the
 
 ### Message Channels
 
-<Pro />
+<Enterprise />
 <Beta />
 
 Projects can define message channels to facilitate notifications and message sending as part of

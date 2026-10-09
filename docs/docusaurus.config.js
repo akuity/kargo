@@ -80,7 +80,7 @@ const config = {
             // silently drop their badges.
             const docIds = new Set(args.docs.map((doc) => doc.id));
             const listed = new Set([
-              ...enterpriseFeatures.pro,
+              ...enterpriseFeatures.enterprise,
               ...enterpriseFeatures.beta,
             ]);
             const unknown = [...listed].filter((id) => !docIds.has(id));
@@ -90,7 +90,7 @@ const config = {
 
             const sidebarItems = await defaultSidebarItemsGenerator(args);
 
-            // Flag Pro features (per enterprise-features.json) so the
+            // Flag Enterprise features (per enterprise-features.json) so the
             // DocSidebarItem theme component can badge them. Categories are
             // matched by the doc they link to (i.e. their index page).
             function addBadges(items) {
@@ -102,7 +102,7 @@ const config = {
                 if (docId) {
                   item.customProps = {
                     ...item.customProps,
-                    pro: tags.isProfessional(docId),
+                    enterprise: tags.isEnterprise(docId),
                   };
                 }
                 return item;

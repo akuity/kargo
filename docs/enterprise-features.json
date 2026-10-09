@@ -1,5 +1,5 @@
 {
-    "pro": [
+    "enterprise": [
         "operator-guide/security/promotion-pod-identity",
         "user-guide/how-to-guides/promotion-windows",
         "user-guide/reference-docs/events/notifications/configuring-routers",

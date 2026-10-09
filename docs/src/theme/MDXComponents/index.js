@@ -18,8 +18,8 @@ import TabItem from '@theme/TabItem';
 // Custom highlight component
 import Highlight from '@site/src/components/Highlight';
 
-// Pro/Beta badges for individual sections of a page
-import {Pro, Beta} from '@site/src/components/FeatureBadges';
+// Enterprise/Beta badges for individual sections of a page
+import {Enterprise, Beta} from '@site/src/components/FeatureBadges';
 
 const MDXComponents = {
   Head,
@@ -46,8 +46,8 @@ const MDXComponents = {
   // Custom highlight component
   Hlt: Highlight,
 
-  // Pro/Beta badges for individual sections of a page
-  Pro,
+  // Enterprise/Beta badges for individual sections of a page
+  Enterprise,
   Beta,
 };
 

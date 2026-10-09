@@ -251,7 +251,7 @@ step.
 
 ## Cluster Message Channels
 
-<Pro />
+<Enterprise />
 <Beta />
 
 `ClusterMessageChannel` resources are cluster-scoped analogs to
@@ -287,7 +287,7 @@ documentation for
 
 ## Promotion Windows
 
-<Pro />
+<Enterprise />
 <Beta />
 
 A `ClusterConfig` can define `promotionWindows` that gate _when_ `Promotion`s
