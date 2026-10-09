@@ -147,7 +147,7 @@ export const Step = ({
       'border-gray-200 dark:border-neutral-700': !progressing
     }),
     label: (
-      <Flex align='center' onClick={() => setShowDetails(!showDetails)}>
+      <Flex align='center' className='min-w-0' onClick={() => setShowDetails(!showDetails)}>
         <Flex
           align='center'
           justify='center'
@@ -161,7 +161,7 @@ export const Step = ({
           {skipped && <FontAwesomeIcon icon={faBan} />}
           {wontRun && <span className='size-3.5 rounded-full border border-dashed' />}
         </Flex>
-        <Flex className={'w-full'} align='center' gap={8}>
+        <Flex className={'w-full min-w-0'} align='center' gap={8}>
           {!!step?.as && (
             <div className='w-[200px]'>
               <Tag className='text-xs text-center py-1' color='blue' title={step.as}>
@@ -170,6 +170,14 @@ export const Step = ({
             </div>
           )}
           <span className='font-semibold text-sm'>{meta.spec.identifier}</span>
+          {!!step.description && (
+            <span
+              className='text-xs text-gray-600 dark:text-gray-300 truncate min-w-0 flex-1'
+              title={step.description}
+            >
+              {step.description}
+            </span>
+          )}
           {retrying && (
             <Tag className='text-xs py-0' color='warning' variant='filled'>
               Retrying &middot; attempt {attempt + 1}

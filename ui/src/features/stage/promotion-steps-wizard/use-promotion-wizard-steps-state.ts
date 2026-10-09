@@ -6,6 +6,7 @@ import { Runner } from '@ui/features/promotion-directives/registry/types';
 import { PromotionStep } from '@ui/gen/api/v2/models';
 
 import { RunnerWithConfiguration } from './types';
+import { stepDescriptionForManifest } from './utils';
 
 // separation is required as each component has separate requirement for YAML <-> Wizard transformation
 export const usePromotionWizardStepsState = (initialValue: string | PromotionStep[] = '') => {
@@ -48,6 +49,7 @@ const APIPromotionStepsToLocalStateEquivalent = (
       ...runnerMeta,
       state: step.config as Record<string, unknown>,
       as: step.as,
+      description: step.description,
       continueOnError: step.continueOnError
     });
   }
@@ -80,6 +82,7 @@ const stateToYAML = (state: RunnerWithConfiguration[]): string => {
       // precisely in the generated PromotionStep type.
       config: step.state,
       as: step.as || '',
+      description: stepDescriptionForManifest(step.description),
       continueOnError: step.continueOnError || false,
       vars: []
     });
