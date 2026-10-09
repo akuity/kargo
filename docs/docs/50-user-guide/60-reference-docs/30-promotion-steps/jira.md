@@ -5,9 +5,6 @@ description: Integrates with Jira to manage issues, comments, and track promotio
 
 # `jira`
 
-<span class="tag professional"></span>
-<span class="tag beta"></span>
-
 :::info
 
 This promotion step is only available in Kargo on the

@@ -251,8 +251,8 @@ step.
 
 ## Cluster Message Channels
 
-<span class="tag professional"></span>
-<span class="tag beta"></span>
+<Enterprise />
+<Beta />
 
 `ClusterMessageChannel` resources are cluster-scoped analogs to
 [`MessageChannel`](../50-user-guide/20-how-to-guides/20-working-with-projects.md#message-channels).
@@ -287,8 +287,8 @@ documentation for
 
 ## Promotion Windows
 
-<span class="tag professional"></span>
-<span class="tag beta"></span>
+<Enterprise />
+<Beta />
 
 A `ClusterConfig` can define `promotionWindows` that gate _when_ `Promotion`s
 may be created, applied _across Projects_. This is the cluster-scoped analog to the

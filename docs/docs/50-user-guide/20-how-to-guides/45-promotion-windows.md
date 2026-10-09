@@ -5,9 +5,6 @@ description: Gate promotions to specific time windows using allow and deny sched
 
 # Promotion Windows
 
-<span class="tag professional"></span>
-<span class="tag beta"></span>
-
 :::info
 
 Promotion windows are a Kargo Enterprise feature, available in Kargo v1.12 and

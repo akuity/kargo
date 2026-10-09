@@ -5,9 +5,6 @@ description: Pauses a promotion to collect structured input from a user through 
 
 # `get-user-input`
 
-<span class="tag professional"></span>
-<span class="tag beta"></span>
-
 :::info
 This promotion step is only available in Kargo on the
 [Akuity Platform](https://akuity.io/akuity-platform), versions v1.12.0 and above.

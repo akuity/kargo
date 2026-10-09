@@ -21,6 +21,7 @@
   "packageManager": "pnpm@11.13.0",
   "dependencies": {
     "@docusaurus/core": "^3.10.2",
+    "@docusaurus/plugin-content-docs": "^3.10.2",
     "@docusaurus/preset-classic": "^3.10.2",
     "@docusaurus/theme-classic": "^3.10.2",
     "@mdx-js/react": "^3.1.1",

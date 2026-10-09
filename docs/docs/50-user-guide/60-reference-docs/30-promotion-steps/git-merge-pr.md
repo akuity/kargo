@@ -5,8 +5,6 @@ description: Merges an open pull request.
 
 # `git-merge-pr`
 
-<span class="tag beta"></span>
-
 `git-merge-pr` merges an open pull request. This step commonly follows a
 [`git-open-pr`](git-open-pr.md) step.
 
