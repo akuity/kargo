@@ -1049,23 +1049,25 @@ func Test_tarExtractor_validRelPath(t *testing.T) {
 	}
 }
 
-func Test_symlinkIsLocal(t *testing.T) {
+func Test_symlinkTargetIsLocal(t *testing.T) {
 	tests := []struct {
-		name     string
 		target   string
 		expected bool
 	}{
-		{"link", "file.txt", true},
-		{"link", ".", true},
-		{"dir/link", "..", true},
-		{"dir/link", "../file.txt", true},
-		{"link", "..", false},
-		{"dir/link", "../..", false},
-		{"link", "/etc/passwd", false},
+		{"file.txt", true},
+		{".", true},
+		{"dir/file.txt", true},
+		{"..file", true},
+		{"", false},
+		{"..", false},
+		{"../file.txt", false},
+		{"a/..", false},
+		{"a/../b", false},
+		{"/etc/passwd", false},
 	}
 	for _, tt := range tests {
-		t.Run(fmt.Sprintf("%s->%s", tt.name, tt.target), func(t *testing.T) {
-			require.Equal(t, tt.expected, symlinkIsLocal(tt.name, tt.target))
+		t.Run(fmt.Sprintf("target_%s", tt.target), func(t *testing.T) {
+			require.Equal(t, tt.expected, symlinkTargetIsLocal(tt.target))
 		})
 	}
 }
@@ -1182,6 +1184,20 @@ func Test_tarExtractor_run_symlinkEscapes(t *testing.T) {
 				fi, err := os.Lstat(filepath.Join(outDir, "sub", "x"))
 				require.NoError(t, err)
 				require.True(t, fi.IsDir())
+			},
+		},
+		{
+			name: "symlink targets climbing through an earlier symlink",
+			entries: []entry{
+				{name: "a", linkname: "."},
+				{name: "y", linkname: "a/.."},
+				{name: "w", linkname: "y/.."},
+			},
+			assert: func(t *testing.T, outDir string) {
+				for _, name := range []string{"y", "w"} {
+					_, err := os.Lstat(filepath.Join(outDir, name))
+					require.ErrorIs(t, err, os.ErrNotExist)
+				}
 			},
 		},
 		{
