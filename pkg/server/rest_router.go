@@ -7,6 +7,7 @@ import (
 	"go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin"
 
 	"github.com/akuity/kargo/pkg/server/middleware"
+	"github.com/akuity/kargo/pkg/server/targets"
 )
 
 // nolint: lll
@@ -250,8 +251,9 @@ func (s *server) setupRESTRouter(ctx context.Context) (*gin.Engine, error) {
 			project.POST("/stages/:stage/verification/abort", s.abortVerification)
 
 			// Targets
-			project.GET("/targets", s.listTargets)
-			project.GET("/targets/:target", s.getTarget)
+			// Targets live in the database; their handlers authorize each
+			// request themselves, since no Kubernetes client does it for them.
+			targets.New(s.targetStore(), s.authorize, s.client).Register(project)
 
 			// Warehouses
 			project.GET("/warehouses", s.listWarehouses)

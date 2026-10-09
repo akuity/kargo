@@ -82,6 +82,11 @@ func (s *server) deleteResource(
 			Error: errSecretManagementDisabled.Error(),
 		}, errSecretManagementDisabled
 	}
+	if obj.GroupVersionKind() == targetGVK {
+		return deleteResourceResult{
+			Error: errTargetNotKubernetesResource.Error(),
+		}, errTargetNotKubernetesResource
+	}
 	if err := s.client.Delete(ctx, obj); err != nil {
 		return deleteResourceResult{
 			Error: fmt.Errorf("delete resource: %w", err).Error(),
