@@ -74,6 +74,21 @@ func Test_server_createResources(t *testing.T) {
 				},
 			},
 			{
+				name: "Targets are not Kubernetes resources",
+				body: mustJSONBody(&kargoapi.Target{
+					TypeMeta: metav1.TypeMeta{
+						APIVersion: kargoapi.GroupVersion.String(),
+						Kind:       "Target",
+					},
+					ObjectMeta: metav1.ObjectMeta{Namespace: testProject.Name, Name: "us-east-1"},
+				}),
+				clientBuilder: fake.NewClientBuilder().WithObjects(testProject),
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
+					require.Equal(t, http.StatusBadRequest, w.Code)
+					require.Contains(t, w.Body.String(), "/v1beta1/projects/{project}/targets")
+				},
+			},
+			{
 				name:          "resource already exists",
 				body:          mustJSONBody(testProject),
 				clientBuilder: fake.NewClientBuilder().WithObjects(testProject),

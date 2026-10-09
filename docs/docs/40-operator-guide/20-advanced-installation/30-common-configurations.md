@@ -809,11 +809,19 @@ section of the user guide.
 
 ## Database Configuration
 
-Kargo's management controller mirrors Project identities into a PostgreSQL
-database; Kubernetes remains the source of truth. The chart provides that
-database, either the minimal PostgreSQL bundled with the chart or a reference to
-an external one, and points the management controller at whichever is
-configured.
+Kargo keeps some of its state in a PostgreSQL database. The management
+controller mirrors Project identities into it, with Kubernetes remaining their
+source of truth, and Targets live only there, managed through Kargo's API
+rather than as Kubernetes resources. The chart provides that database, either
+the minimal PostgreSQL bundled with the chart or a reference to an external
+one, and points the components that use it at whichever is configured.
+
+:::note
+A Target belongs to its Project. Deleting a Project deletes its Targets, as it
+would any other resource in the Project, and so does deleting and re-creating
+a Project under the same name. Back up the database together with the
+cluster if Targets must survive that.
+:::
 
 ### Bundled PostgreSQL
 

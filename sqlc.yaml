@@ -12,7 +12,25 @@ sql:
       # types of the same name; a store layer converts between the two.
       rename:
         project: ProjectRow
+        target: TargetRow
+        promotion_request: PromotionRequestRow
+        promotion_request_target: PromotionRequestTargetRow
+        stage: StageRow
       overrides:
+      # Labels are a string map and params an object of opaque JSON values,
+      # both enforced by the schema. pgx encodes and decodes JSONB through
+      # encoding/json for any Go type.
+      - column: targets.labels
+        go_type:
+          type: map[string]string
+      - column: targets.params
+        go_type:
+          import: encoding/json
+          type: RawMessage
+      - column: promotion_requests.update_strategy
+        go_type:
+          import: encoding/json
+          type: RawMessage
       - db_type: timestamptz
         go_type:
           import: time
@@ -21,3 +39,16 @@ sql:
         go_type:
           import: github.com/google/uuid
           type: UUID
+      # Nullable values, such as optional query arguments, are pointers.
+      - db_type: timestamptz
+        nullable: true
+        go_type:
+          import: time
+          type: Time
+          pointer: true
+      - db_type: uuid
+        nullable: true
+        go_type:
+          import: github.com/google/uuid
+          type: UUID
+          pointer: true

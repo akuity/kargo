@@ -5,7 +5,10 @@
 package database
 
 import (
+	"encoding/json"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 type ProjectRow struct {
@@ -13,4 +16,44 @@ type ProjectRow struct {
 	Name      string
 	CreatedAt time.Time
 	SyncedAt  time.Time
+}
+
+type PromotionRequestRow struct {
+	ID             uuid.UUID
+	ProjectName    string
+	Name           string
+	StageName      string
+	Number         int64
+	FreightName    string
+	UpdateStrategy json.RawMessage
+	CreatedBy      string
+	Phase          string
+	Message        string
+	CreatedAt      time.Time
+	UpdatedAt      time.Time
+	StartedAt      *time.Time
+	FinishedAt     *time.Time
+}
+
+type PromotionRequestTargetRow struct {
+	PromotionRequestID uuid.UUID
+	TargetName         string
+	Promotion          string
+	Phase              string
+}
+
+type StageRow struct {
+	ProjectName                string
+	Name                       string
+	LastPromotionRequestNumber int64
+}
+
+type TargetRow struct {
+	ID          uuid.UUID
+	ProjectName string
+	Name        string
+	Labels      map[string]string
+	Params      json.RawMessage
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
 }

@@ -123,6 +123,11 @@ func (s *server) createResource(
 			Error: errSecretManagementDisabled.Error(),
 		}, errSecretManagementDisabled
 	}
+	if obj.GroupVersionKind() == targetGVK {
+		return createResourceResult{
+			Error: errTargetNotKubernetesResource.Error(),
+		}, errTargetNotKubernetesResource
+	}
 
 	// Enforce authorization checks the authorizing client cannot perform
 	// implicitly (e.g. the "promote" verb required to create a Promotion).

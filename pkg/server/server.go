@@ -24,6 +24,8 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/api"
 	rollouts "github.com/akuity/kargo/pkg/api/stubs/rollouts"
+	"github.com/akuity/kargo/pkg/database"
+	"github.com/akuity/kargo/pkg/database/targetstore"
 	"github.com/akuity/kargo/pkg/event"
 	httputil "github.com/akuity/kargo/pkg/http"
 	"github.com/akuity/kargo/pkg/logging"
@@ -41,6 +43,11 @@ type server struct {
 	client  kubernetes.Client
 	rolesDB rbac.RolesDatabase
 	sender  event.Sender
+	// db reaches the database, which holds the resources that live there
+	// rather than in Kubernetes, such as Targets. Each resource's store is
+	// built from it. It is nil when the server runs without a database, in
+	// which case the endpoints for those resources respond 501.
+	db *database.Queries
 
 	// The following behaviors are overridable for testing purposes:
 
@@ -142,17 +149,21 @@ type Server interface {
 	Serve(ctx context.Context, l net.Listener) error
 }
 
+// NewServer returns a Server. The db may be nil, in which case the resources
+// that live in the database are unavailable; see the server's db field.
 func NewServer(
 	cfg config.ServerConfig,
 	kubeClient kubernetes.Client,
 	rolesDB rbac.RolesDatabase,
 	sender event.Sender,
+	db *database.Queries,
 ) Server {
 	s := &server{
 		cfg:     cfg,
 		client:  kubeClient,
 		rolesDB: rolesDB,
 		sender:  sender,
+		db:      db,
 	}
 
 	s.getStageFn = api.GetStage
@@ -414,4 +425,13 @@ func renderIndexHTML(uiFS fs.FS, name, basePath string) ([]byte, time.Time) {
 	// stamped at process start so ServeContent's If-Modified-Since logic is
 	// well-defined.
 	return rendered, time.Now()
+}
+
+// targetStore returns the store for Targets, or nil when the server runs
+// without a database.
+func (s *server) targetStore() targetstore.Store {
+	if s.db == nil {
+		return nil
+	}
+	return targetstore.New(s.db)
 }
