@@ -328,9 +328,18 @@ func (a *argocdChecker) stageHealthForAppSync(
 			app.Name, app.Namespace, len(sources), len(desiredRevisions),
 		)
 	}
-	observedRevisions := app.Status.Sync.Revisions
+	syncResult := app.Status.OperationState.SyncResult
+	if syncResult == nil {
+		// nolint:staticcheck
+		return kargoapi.HealthStateUnknown, fmt.Errorf(
+			"Argo CD Application %q in namespace %q completed its most recent "+
+				"operation without a sync result",
+			app.Name, app.Namespace,
+		)
+	}
+	observedRevisions := syncResult.Revisions
 	if len(observedRevisions) == 0 {
-		observedRevisions = []string{app.Status.Sync.Revision}
+		observedRevisions = []string{syncResult.Revision}
 	}
 	if len(observedRevisions) != len(desiredRevisions) {
 		// This really shouldn't happen.
