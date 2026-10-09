@@ -126,3 +126,80 @@ func TestMigrator_integration_concurrent(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, m.Check(ctx))
 }
+
+// withSearchPath returns connString with search_path pointing at schema,
+// which is how instances sharing a database are told apart.
+func withSearchPath(t *testing.T, connString, schema string) string {
+	t.Helper()
+	u, err := url.Parse(connString)
+	require.NoError(t, err)
+	q := u.Query()
+	q.Set("search_path", schema)
+	u.RawQuery = q.Encode()
+	return u.String()
+}
+
+func TestMigrator_integration_schemaLock(t *testing.T) {
+	ctx := context.Background()
+	connString := freshDatabase(t)
+	migrations, err := db.Migrations()
+	require.NoError(t, err)
+
+	// Two schemas in one database, as two instances sharing a server would
+	// have.
+	admin, err := pgx.Connect(ctx, connString)
+	require.NoError(t, err)
+	defer admin.Close(ctx)
+	for _, schema := range []string{"tenant_a", "tenant_b"} {
+		_, err = admin.Exec(ctx, "CREATE SCHEMA "+schema)
+		require.NoError(t, err)
+	}
+
+	// Something holds tenant_a's migration lock for the duration of the test,
+	// as a slow migration run against that schema would.
+	holder, err := pgx.Connect(ctx, connString)
+	require.NoError(t, err)
+	defer holder.Close(ctx)
+	_, err = holder.Exec(
+		ctx, "SELECT pg_advisory_lock($1)", migrationLockID("tenant_a"),
+	)
+	require.NoError(t, err)
+
+	// lockProbeInterval is the shortest permitted timeout and allows a single
+	// attempt, so a blocked run fails fast instead of waiting on the holder.
+	run := func(schema string) error {
+		pool, runErr := NewPool(ctx, withSearchPath(t, connString, schema), schema)
+		if runErr != nil {
+			return runErr
+		}
+		defer pool.Close()
+		m, runErr := NewMigrator(ctx, pool, migrations, lockProbeInterval)
+		if runErr != nil {
+			return runErr
+		}
+		_, runErr = m.Up(ctx)
+		return runErr
+	}
+
+	// tenant_b is unaffected by tenant_a's lock.
+	require.NoError(t, run("tenant_b"))
+	// tenant_a waits on its own lock.
+	require.ErrorContains(t, run("tenant_a"), "failed to acquire lock")
+
+	// Releasing the lock lets tenant_a proceed, and each schema ends up with
+	// its own copy of the schema.
+	_, err = holder.Exec(
+		ctx, "SELECT pg_advisory_unlock($1)", migrationLockID("tenant_a"),
+	)
+	require.NoError(t, err)
+	require.NoError(t, run("tenant_a"))
+	for _, schema := range []string{"tenant_a", "tenant_b"} {
+		var exists bool
+		require.NoError(t, admin.QueryRow(
+			ctx,
+			"SELECT to_regclass($1) IS NOT NULL",
+			schema+".goose_db_version",
+		).Scan(&exists))
+		require.True(t, exists, schema)
+	}
+}

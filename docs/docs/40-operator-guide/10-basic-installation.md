@@ -134,8 +134,8 @@ On every install and upgrade, the chart runs a Job that applies any pending
 database schema migrations. The migrations are embedded in the Kargo image,
 and the Job applies them with that image's `migrate` subcommand, so the
 schema it produces is the one the installed version expects. It waits for the
-database to accept connections, serializes with any other runner on a
-database-level lock, and leaves its Pod in place after finishing so that its
+database to accept connections, serializes with any other runner against the
+same schema on a lock, and leaves its Pod in place after finishing so that its
 logs can be inspected. The next upgrade replaces the Job, and the previous
 one is pruned with it.
 

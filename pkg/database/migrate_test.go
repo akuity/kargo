@@ -13,6 +13,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/pressly/goose/v3/lock"
 	"github.com/stretchr/testify/require"
 )
 
@@ -92,6 +93,27 @@ func TestNewMigrator_lockTimeout(t *testing.T) {
 	}
 	_, err := NewMigrator(context.Background(), unreachablePool(t), migrations, time.Second)
 	require.ErrorContains(t, err, "lock timeout must be at least")
+}
+
+func TestMigrationLockID(t *testing.T) {
+	t.Parallel()
+	// The same schema must always map to the same key, or replicas of one
+	// instance would stop serializing with one another.
+	require.Equal(t, migrationLockID("public"), migrationLockID("public"))
+	// Distinct schemas must map to distinct keys, or instances sharing a
+	// database would serialize with one another.
+	require.NotEqual(t, migrationLockID("public"), migrationLockID("tenant_a"))
+	require.NotEqual(t, migrationLockID("tenant_a"), migrationLockID("tenant_b"))
+	// The key must not be goose's default, which any other goose-based
+	// service in the same database would contend for.
+	require.NotEqual(t, lock.DefaultLockID, migrationLockID("public"))
+}
+
+func TestSchemaLocker_SessionUnlock_notHeld(t *testing.T) {
+	t.Parallel()
+	l := &schemaLocker{lockAttempts: 1}
+	err := l.SessionUnlock(context.Background(), nil)
+	require.ErrorContains(t, err, "not held")
 }
 
 // refusingServer is a connection string for a port nothing listens on.
