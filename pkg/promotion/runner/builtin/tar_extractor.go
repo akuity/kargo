@@ -281,9 +281,8 @@ func (t *tarExtractor) extractToDir(
 		// The path of the entry relative to root
 		targetPath := filepath.FromSlash(targetName)
 
-		// Refuse to write through a symlink created by an earlier entry. This
-		// keeps every entry's parent a real directory, which is what makes the
-		// lexical symlink target check below sound.
+		// Refuse to write through a symlink created by an earlier entry, so
+		// every entry lands in a real directory.
 		hasLink, err := parentHasSymlink(root, targetPath)
 		if err != nil {
 			return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
@@ -311,7 +310,7 @@ func (t *tarExtractor) extractToDir(
 
 		case tar.TypeSymlink:
 			// Validate the symlink target to prevent symlink attacks
-			if !t.validRelPath(header.Linkname) || !symlinkIsLocal(targetPath, header.Linkname) {
+			if !t.validRelPath(header.Linkname) || !symlinkTargetIsLocal(header.Linkname) {
 				logger.Trace("skipping symlink with unsafe target", "path", targetName, "target", header.Linkname)
 				continue
 			}
@@ -402,15 +401,21 @@ func (t *tarExtractor) validRelPath(p string) bool {
 	return true
 }
 
-// symlinkIsLocal reports whether a symlink at name (relative to the extraction
-// root) pointing at target resolves to a location within the extraction root.
-// Symlink targets are resolved relative to the directory containing the link,
-// so a target like ".." is only safe for a link that is not at the top level.
-// This lexical check relies on name's parent directories not being symlinks
-// themselves, which parentHasSymlink enforces.
-func symlinkIsLocal(name, target string) bool {
-	return !filepath.IsAbs(target) &&
-		filepath.IsLocal(filepath.Join(filepath.Dir(name), target))
+// symlinkTargetIsLocal reports whether a symlink target is guaranteed to
+// resolve within the extraction root. Any ".." component is rejected: a
+// lexical check of where ".." lands cannot account for components of the
+// target that are themselves symlinks (e.g. "a/.." where a -> "."), so only
+// targets that never climb upward are provably safe.
+func symlinkTargetIsLocal(target string) bool {
+	if target == "" || filepath.IsAbs(target) {
+		return false
+	}
+	for part := range strings.SplitSeq(filepath.ToSlash(target), "/") {
+		if part == ".." {
+			return false
+		}
+	}
+	return true
 }
 
 // parentHasSymlink reports whether any existing parent directory of name
