@@ -190,7 +190,7 @@ k8s_resource(
     'kargo-api-rollouts:clusterrole',
     'kargo-api-rollouts:clusterrolebinding'
   ],
-  resource_deps=['back-end-compile','dex-server']
+  resource_deps=['back-end-compile', 'dex-server', 'db-migrate']
 )
 
 k8s_resource(

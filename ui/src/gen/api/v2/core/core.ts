@@ -4368,9 +4368,9 @@ export const getListTargetsUrl = (project: string, params?: ListTargetsParams) =
 };
 
 /**
- * List Target resources from a project's namespace, optionally
- * narrowed to those a particular Stage governs or those matching a
- * label selector. Returns a TargetList resource.
+ * List a project's Targets, optionally narrowed to those a
+ * particular Stage governs or those matching a label selector.
+ * Returns a TargetList resource.
  * @summary List Targets
  */
 export const listTargets = async (
@@ -4496,6 +4496,114 @@ export function useListTargets<
   return withQueryKey(query, queryOptions.queryKey);
 }
 
+export type createTargetResponse201 = {
+  data: Target;
+  status: 201;
+};
+
+export type createTargetResponseSuccess = createTargetResponse201 & {
+  headers: Headers;
+};
+export type createTargetResponse = createTargetResponseSuccess;
+
+export const getCreateTargetUrl = (project: string) => {
+  return `/v1beta1/projects/${project}/targets`;
+};
+
+/**
+ * Create a Target in a project. Targets are managed through
+ * this API rather than as Kubernetes resources. The body's
+ * metadata.name is required; its metadata.namespace, if given,
+ * must be the project. Status and server-managed metadata are
+ * ignored.
+ * @summary Create a Target
+ */
+export const createTarget = async (
+  project: string,
+  target: Target,
+  options?: Parameters<typeof customFetch>[1]
+): Promise<createTargetResponse> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit['headers']>
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Array.isArray(h)) return Object.fromEntries(h);
+    return h;
+  };
+  return customFetch<createTargetResponse>(getCreateTargetUrl(project), {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(target)
+  });
+};
+
+export const getCreateTargetMutationKey = () => ['createTarget'] as const;
+
+export const getCreateTargetMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createTarget>>,
+    TError,
+    CreateTargetMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createTarget>>,
+  TError,
+  CreateTargetMutationVariables,
+  TContext
+> => {
+  const mutationKey = getCreateTargetMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createTarget>>,
+    CreateTargetMutationVariables
+  > = (props) => {
+    const { project, data } = props ?? {};
+
+    return createTarget(project, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateTargetMutationResult = NonNullable<Awaited<ReturnType<typeof createTarget>>>;
+export type CreateTargetMutationBody = Target;
+export type CreateTargetMutationError = ErrorType<unknown>;
+export type CreateTargetMutationVariables = { project: string; data: Target };
+
+/**
+ * @summary Create a Target
+ */
+export const useCreateTarget = <TError = ErrorType<unknown>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof createTarget>>,
+      TError,
+      CreateTargetMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient
+): UseMutationResult<
+  Awaited<ReturnType<typeof createTarget>>,
+  TError,
+  CreateTargetMutationVariables,
+  TContext
+> => {
+  return useMutation(getCreateTargetMutationOptions(options), queryClient);
+};
 export type getTargetResponse200 = {
   data: Target;
   status: 200;
@@ -4506,27 +4614,27 @@ export type getTargetResponseSuccess = getTargetResponse200 & {
 };
 export type getTargetResponse = getTargetResponseSuccess;
 
-export const getGetTargetUrl = (project: string, target: string) => {
-  return `/v1beta1/projects/${project}/targets/${target}`;
+export const getGetTargetUrl = (project: string, targetName: string) => {
+  return `/v1beta1/projects/${project}/targets/${targetName}`;
 };
 
 /**
- * Retrieve a Target resource from a project's namespace.
+ * Retrieve one of a project's Targets.
  * @summary Retrieve a Target
  */
 export const getTarget = async (
   project: string,
-  target: string,
+  targetName: string,
   options?: Parameters<typeof customFetch>[1]
 ): Promise<getTargetResponse> => {
-  return customFetch<getTargetResponse>(getGetTargetUrl(project, target), {
+  return customFetch<getTargetResponse>(getGetTargetUrl(project, targetName), {
     ...options,
     method: 'GET'
   });
 };
 
-export const getGetTargetQueryKey = (project: string, target: string) => {
-  return [`/v1beta1/projects/${project}/targets/${target}`] as const;
+export const getGetTargetQueryKey = (project: string, targetName: string) => {
+  return [`/v1beta1/projects/${project}/targets/${targetName}`] as const;
 };
 
 export const getGetTargetQueryOptions = <
@@ -4534,7 +4642,7 @@ export const getGetTargetQueryOptions = <
   TError = ErrorType<unknown>
 >(
   project: string,
-  target: string,
+  targetName: string,
   options?: {
     query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getTarget>>, TError, TData>>;
     request?: SecondParameter<typeof customFetch>;
@@ -4542,15 +4650,16 @@ export const getGetTargetQueryOptions = <
 ) => {
   const { query: queryOptions, request: requestOptions } = options ?? {};
 
-  const queryKey = queryOptions?.queryKey ?? getGetTargetQueryKey(project, target);
+  const queryKey = queryOptions?.queryKey ?? getGetTargetQueryKey(project, targetName);
 
   const queryFn: QueryFunction<Awaited<ReturnType<typeof getTarget>>> = () =>
-    getTarget(project, target, requestOptions);
+    getTarget(project, targetName, requestOptions);
 
   return {
     queryKey,
     queryFn,
-    enabled: project !== null && project !== undefined && target !== null && target !== undefined,
+    enabled:
+      project !== null && project !== undefined && targetName !== null && targetName !== undefined,
     ...queryOptions
   } as UseQueryOptions<Awaited<ReturnType<typeof getTarget>>, TError, TData> & {
     queryKey: DataTag<QueryKey, TData, TError>;
@@ -4565,7 +4674,7 @@ export function useGetTarget<
   TError = ErrorType<unknown>
 >(
   project: string,
-  target: string,
+  targetName: string,
   options: {
     query: Partial<UseQueryOptions<Awaited<ReturnType<typeof getTarget>>, TError, TData>> &
       Pick<
@@ -4585,7 +4694,7 @@ export function useGetTarget<
   TError = ErrorType<unknown>
 >(
   project: string,
-  target: string,
+  targetName: string,
   options?: {
     query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getTarget>>, TError, TData>> &
       Pick<
@@ -4605,7 +4714,7 @@ export function useGetTarget<
   TError = ErrorType<unknown>
 >(
   project: string,
-  target: string,
+  targetName: string,
   options?: {
     query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getTarget>>, TError, TData>>;
     request?: SecondParameter<typeof customFetch>;
@@ -4621,14 +4730,14 @@ export function useGetTarget<
   TError = ErrorType<unknown>
 >(
   project: string,
-  target: string,
+  targetName: string,
   options?: {
     query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getTarget>>, TError, TData>>;
     request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
-  const queryOptions = getGetTargetQueryOptions(project, target, options);
+  const queryOptions = getGetTargetQueryOptions(project, targetName, options);
 
   const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
     queryKey: DataTag<QueryKey, TData, TError>;
@@ -4637,6 +4746,208 @@ export function useGetTarget<
   return withQueryKey(query, queryOptions.queryKey);
 }
 
+export type updateTargetResponse200 = {
+  data: Target;
+  status: 200;
+};
+
+export type updateTargetResponseSuccess = updateTargetResponse200 & {
+  headers: Headers;
+};
+export type updateTargetResponse = updateTargetResponseSuccess;
+
+export const getUpdateTargetUrl = (project: string, targetName: string) => {
+  return `/v1beta1/projects/${project}/targets/${targetName}`;
+};
+
+/**
+ * Replace a Target's labels and params. The body's metadata.name,
+ * if given, must match the name in the URL. A metadata.uid or
+ * metadata.resourceVersion in the body is a precondition: the
+ * update is refused if the Target no longer matches it.
+ * @summary Update a Target
+ */
+export const updateTarget = async (
+  project: string,
+  targetName: string,
+  target: Target,
+  options?: Parameters<typeof customFetch>[1]
+): Promise<updateTargetResponse> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit['headers']>
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Array.isArray(h)) return Object.fromEntries(h);
+    return h;
+  };
+  return customFetch<updateTargetResponse>(getUpdateTargetUrl(project, targetName), {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(target)
+  });
+};
+
+export const getUpdateTargetMutationKey = () => ['updateTarget'] as const;
+
+export const getUpdateTargetMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateTarget>>,
+    TError,
+    UpdateTargetMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateTarget>>,
+  TError,
+  UpdateTargetMutationVariables,
+  TContext
+> => {
+  const mutationKey = getUpdateTargetMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateTarget>>,
+    UpdateTargetMutationVariables
+  > = (props) => {
+    const { project, targetName, data } = props ?? {};
+
+    return updateTarget(project, targetName, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateTargetMutationResult = NonNullable<Awaited<ReturnType<typeof updateTarget>>>;
+export type UpdateTargetMutationBody = Target;
+export type UpdateTargetMutationError = ErrorType<unknown>;
+export type UpdateTargetMutationVariables = { project: string; targetName: string; data: Target };
+
+/**
+ * @summary Update a Target
+ */
+export const useUpdateTarget = <TError = ErrorType<unknown>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof updateTarget>>,
+      TError,
+      UpdateTargetMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient
+): UseMutationResult<
+  Awaited<ReturnType<typeof updateTarget>>,
+  TError,
+  UpdateTargetMutationVariables,
+  TContext
+> => {
+  return useMutation(getUpdateTargetMutationOptions(options), queryClient);
+};
+export type deleteTargetResponse204 = {
+  data: void;
+  status: 204;
+};
+
+export type deleteTargetResponseSuccess = deleteTargetResponse204 & {
+  headers: Headers;
+};
+export type deleteTargetResponse = deleteTargetResponseSuccess;
+
+export const getDeleteTargetUrl = (project: string, targetName: string) => {
+  return `/v1beta1/projects/${project}/targets/${targetName}`;
+};
+
+/**
+ * Delete one of a project's Targets.
+ * @summary Delete a Target
+ */
+export const deleteTarget = async (
+  project: string,
+  targetName: string,
+  options?: Parameters<typeof customFetch>[1]
+): Promise<deleteTargetResponse> => {
+  return customFetch<deleteTargetResponse>(getDeleteTargetUrl(project, targetName), {
+    ...options,
+    method: 'DELETE'
+  });
+};
+
+export const getDeleteTargetMutationKey = () => ['deleteTarget'] as const;
+
+export const getDeleteTargetMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteTarget>>,
+    TError,
+    DeleteTargetMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof deleteTarget>>,
+  TError,
+  DeleteTargetMutationVariables,
+  TContext
+> => {
+  const mutationKey = getDeleteTargetMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof deleteTarget>>,
+    DeleteTargetMutationVariables
+  > = (props) => {
+    const { project, targetName } = props ?? {};
+
+    return deleteTarget(project, targetName, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DeleteTargetMutationResult = NonNullable<Awaited<ReturnType<typeof deleteTarget>>>;
+
+export type DeleteTargetMutationError = ErrorType<unknown>;
+export type DeleteTargetMutationVariables = { project: string; targetName: string };
+
+/**
+ * @summary Delete a Target
+ */
+export const useDeleteTarget = <TError = ErrorType<unknown>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof deleteTarget>>,
+      TError,
+      DeleteTargetMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient
+): UseMutationResult<
+  Awaited<ReturnType<typeof deleteTarget>>,
+  TError,
+  DeleteTargetMutationVariables,
+  TContext
+> => {
+  return useMutation(getDeleteTargetMutationOptions(options), queryClient);
+};
 export type listWarehousesResponse200 = {
   data: WarehouseList;
   status: 200;

@@ -34,6 +34,79 @@ tests:
           path: spec.template.spec.containers[0].envFrom[1].secretRef.name
           value: kargo-api
 
+  - it: points at the bundled PostgreSQL by default
+    template: templates/api/deployment.yaml
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: DATABASE_HOST
+            value: kargo-postgres.NAMESPACE.svc
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: DATABASE_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: kargo-postgres
+                key: password
+      - notContains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: DATABASE_URL
+          any: true
+
+  - it: reads the bundled PostgreSQL password from an existing Secret
+    template: templates/api/deployment.yaml
+    set:
+      database.postgres.existingSecret: my-postgres
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: DATABASE_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: my-postgres
+                key: password
+
+  - it: reads an external database connection string from its Secret
+    template: templates/api/deployment.yaml
+    set:
+      database.postgres.enabled: false
+      database.external.secretName: my-database
+      database.external.secretKey: url
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: DATABASE_URL
+            valueFrom:
+              secretKeyRef:
+                name: my-database
+                key: url
+      - notContains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: DATABASE_HOST
+          any: true
+
+  - it: sets no database environment when no database is configured
+    template: templates/api/deployment.yaml
+    set:
+      database.postgres.enabled: false
+    asserts:
+      - notContains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: DATABASE_URL
+          any: true
+      - notContains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: DATABASE_HOST
+          any: true
+
   - it: is not rendered when the API is disabled
     template: templates/api/deployment.yaml
     set:

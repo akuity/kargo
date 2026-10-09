@@ -7,12 +7,12 @@ import { Link, generatePath, useParams } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
 import { StageTag } from '@ui/features/common/stage-tag';
-import { useWatchTargets } from '@ui/features/stage/tabs/fleet/use-watch-targets';
 import { getColors } from '@ui/features/stage/utils';
 import { useListStages, useListTargets } from '@ui/gen/api/v2/core/core';
 
 import { useWatchStages } from '../pipelines/use-watch-stages';
 
+import { TARGETS_POLL_INTERVAL_MS } from './constants';
 import {
   TargetRow,
   UNLABELED,
@@ -50,9 +50,11 @@ export const Targets = () => {
   const { name: project = '' } = useParams();
 
   const stagesQuery = useListStages(project, { freightOrigins: [] });
-  const targetsQuery = useListTargets(project, undefined);
+  // Targets live in the database, which offers no watch; the list is polled.
+  const targetsQuery = useListTargets(project, undefined, {
+    query: { refetchInterval: TARGETS_POLL_INTERVAL_MS }
+  });
   useWatchStages(project);
-  useWatchTargets(project, undefined, !!targetsQuery.data);
 
   const [groupBy, setGroupBy] = useState<string>();
   const [search, setSearch] = useState('');

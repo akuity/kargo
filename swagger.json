@@ -2867,7 +2867,7 @@
     },
     "/v1beta1/projects/{project}/targets": {
       "get": {
-        "description": "List Target resources from a project's namespace, optionally\nnarrowed to those a particular Stage governs or those matching a\nlabel selector. Returns a TargetList resource.",
+        "description": "List a project's Targets, optionally narrowed to those a\nparticular Stage governs or those matching a label selector.\nReturns a TargetList resource.",
         "produces": [
           "application/json"
         ],
@@ -2900,7 +2900,7 @@
         ],
         "responses": {
           "200": {
-            "description": "TargetList custom resource",
+            "description": "TargetList resource",
             "schema": {
               "$ref": "#/definitions/TargetList"
             }
@@ -2911,11 +2911,57 @@
             "BearerAuth": []
           }
         ]
+      },
+      "post": {
+        "description": "Create a Target in a project. Targets are managed through\nthis API rather than as Kubernetes resources. The body's\nmetadata.name is required; its metadata.namespace, if given,\nmust be the project. Status and server-managed metadata are\nignored.",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "Core",
+          "Project-Level"
+        ],
+        "summary": "Create a Target",
+        "operationId": "CreateTarget",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "Project name",
+            "name": "project",
+            "in": "path",
+            "required": true
+          },
+          {
+            "description": "Target resource",
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/Target"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Target resource",
+            "schema": {
+              "$ref": "#/definitions/Target"
+            }
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
       }
     },
-    "/v1beta1/projects/{project}/targets/{target}": {
+    "/v1beta1/projects/{project}/targets/{target-name}": {
       "get": {
-        "description": "Retrieve a Target resource from a project's namespace.",
+        "description": "Retrieve one of a project's Targets.",
         "produces": [
           "application/json"
         ],
@@ -2936,17 +2982,105 @@
           {
             "type": "string",
             "description": "Target name",
-            "name": "target",
+            "name": "target-name",
             "in": "path",
             "required": true
           }
         ],
         "responses": {
           "200": {
-            "description": "Target custom resource",
+            "description": "Target resource",
             "schema": {
               "$ref": "#/definitions/Target"
             }
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      },
+      "put": {
+        "description": "Replace a Target's labels and params. The body's metadata.name,\nif given, must match the name in the URL. A metadata.uid or\nmetadata.resourceVersion in the body is a precondition: the\nupdate is refused if the Target no longer matches it.",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "Core",
+          "Project-Level"
+        ],
+        "summary": "Update a Target",
+        "operationId": "UpdateTarget",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "Project name",
+            "name": "project",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "description": "Target name",
+            "name": "target-name",
+            "in": "path",
+            "required": true
+          },
+          {
+            "description": "Target resource",
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/Target"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Target resource",
+            "schema": {
+              "$ref": "#/definitions/Target"
+            }
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      },
+      "delete": {
+        "description": "Delete one of a project's Targets.",
+        "tags": [
+          "Core",
+          "Project-Level"
+        ],
+        "summary": "Delete a Target",
+        "operationId": "DeleteTarget",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "Project name",
+            "name": "project",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "description": "Target name",
+            "name": "target-name",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Deleted successfully"
           }
         },
         "security": [
