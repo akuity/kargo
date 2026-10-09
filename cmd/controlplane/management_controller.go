@@ -17,12 +17,14 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/controller/management/clusterconfigs"
+	"github.com/akuity/kargo/pkg/controller/management/dbsync"
 	"github.com/akuity/kargo/pkg/controller/management/legacysecrets"
 	"github.com/akuity/kargo/pkg/controller/management/namespaces"
 	"github.com/akuity/kargo/pkg/controller/management/projectconfigs"
 	"github.com/akuity/kargo/pkg/controller/management/projects"
 	"github.com/akuity/kargo/pkg/controller/management/replication"
 	"github.com/akuity/kargo/pkg/controller/management/serviceaccounts"
+	"github.com/akuity/kargo/pkg/database"
 	"github.com/akuity/kargo/pkg/logging"
 	"github.com/akuity/kargo/pkg/os"
 	"github.com/akuity/kargo/pkg/server/kubernetes"
@@ -32,6 +34,7 @@ import (
 )
 
 type managementControllerOptions struct {
+	Database   database.Config
 	KubeConfig string
 	QPS        float32
 	Burst      int
@@ -67,6 +70,7 @@ func newManagementControllerCommand() *cobra.Command {
 }
 
 func (o *managementControllerOptions) complete() {
+	o.Database = database.ConfigFromEnv()
 	o.KubeConfig = os.GetEnv("KUBECONFIG", "")
 	o.QPS = types.MustParseFloat32(os.GetEnv("KUBE_API_QPS", "50.0"))
 	o.Burst = types.MustParseInt(os.GetEnv("KUBE_API_BURST", "300"))
@@ -166,6 +170,17 @@ func (o *managementControllerOptions) run(ctx context.Context) error {
 	}
 	if err := replication.SetupConfigMapReconcilerWithManager(ctx, kargoMgr, replicationCfg); err != nil {
 		return fmt.Errorf("error setting up shared ConfigMap replication reconciler: %w", err)
+	}
+
+	if o.Database.Configured() {
+		pool, err := openDatabase(ctx, o.Database, "kargo-management-controller")
+		if err != nil {
+			return err
+		}
+		defer pool.Close()
+		if err = dbsync.SetupWithManager(ctx, kargoMgr, database.New(pool)); err != nil {
+			return err
+		}
 	}
 
 	if err := kargoMgr.Start(ctx); err != nil {

@@ -51,6 +51,13 @@ func ConfigFromEnv() Config {
 	return cfg
 }
 
+// Configured returns true when the Config names a database, by URL or by
+// host. Components treat an unconfigured database as a feature switch: the
+// functionality that needs it stays off rather than failing to start.
+func (c Config) Configured() bool {
+	return c.URL != "" || c.Host != ""
+}
+
 // ConnString returns the connection string described by the Config.
 func (c Config) ConnString() (string, error) {
 	if c.URL != "" {

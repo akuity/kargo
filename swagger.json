@@ -8371,6 +8371,10 @@
           "description": "ContinueOnError is a boolean value that, if set to true, will cause the\nPromotion to continue executing the next step even if this step fails. It\nalso will not permit this failure to impact the overall status of the\nPromotion.",
           "type": "boolean"
         },
+        "description": {
+          "description": "Description is a detail of the step's purpose.\n\n+kubebuilder:validation:Optional\n+kubebuilder:validation:MinLength=1\n+kubebuilder:validation:XValidation:message=\"description must be 256 characters or fewer\",rule=\"self.size() <= 256\"",
+          "type": "string"
+        },
         "if": {
           "description": "If is an optional expression that, if present, must evaluate to a boolean\nvalue. If the expression evaluates to false, the step will be skipped.\nIf the expression does not evaluate to a boolean value, the step will be\nconsidered to have failed.",
           "type": "string"

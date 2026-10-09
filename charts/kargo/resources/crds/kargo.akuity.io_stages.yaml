@@ -98,6 +98,13 @@ spec:
                                 also will not permit this failure to impact the overall status of the
                                 Promotion.
                               type: boolean
+                            description:
+                              description: Description is a detail of the step's purpose.
+                              minLength: 1
+                              type: string
+                              x-kubernetes-validations:
+                              - message: description must be 256 characters or fewer
+                                rule: self.size() <= 256
                             if:
                               description: |-
                                 If is an optional expression that, if present, must evaluate to a boolean

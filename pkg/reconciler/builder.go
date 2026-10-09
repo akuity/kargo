@@ -21,10 +21,10 @@ func New[request comparable](name string) *Builder[request] {
 	}
 }
 
-// Watch adds a source. Sources start in the order they are added; add
-// event-driven sources before listing ones.
-func (b *Builder[request]) Watch(src Source[request]) *Builder[request] {
-	b.controller.Sources = append(b.controller.Sources, src)
+// Watch adds one or more sources. Sources start in the order they are added;
+// add event-driven sources before listing ones.
+func (b *Builder[request]) Watch(srcs ...Source[request]) *Builder[request] {
+	b.controller.Sources = append(b.controller.Sources, srcs...)
 	return b
 }
 

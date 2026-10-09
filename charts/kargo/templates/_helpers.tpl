@@ -369,32 +369,7 @@ spec:
     command: ["/sbin/tini", "--", "/usr/local/bin/kargo"]
     args: ["migrate"]
     env:
-    {{- if .Values.database.postgres.enabled }}
-    # The bundled database: the binary composes the connection string from
-    # these parts, escaping the password, which a $(VAR) reference could
-    # not.
-    - name: DATABASE_HOST
-      value: kargo-postgres.{{ .Release.Namespace }}.svc
-    - name: DATABASE_PORT
-      value: "5432"
-    - name: DATABASE_NAME
-      value: kargo
-    - name: DATABASE_USER
-      value: kargo
-    - name: DATABASE_PASSWORD
-      valueFrom:
-        secretKeyRef:
-          name: {{ include "kargo.postgres.secretName" . }}
-          key: password
-    - name: DATABASE_SSL_MODE
-      value: disable
-    {{- else }}
-    - name: DATABASE_URL
-      valueFrom:
-        secretKeyRef:
-          name: {{ .Values.database.external.secretName }}
-          key: {{ .Values.database.external.secretKey }}
-    {{- end }}
+    {{- include "kargo.database.env" . | nindent 4 }}
     {{- with (concat .Values.global.env .Values.database.migrations.env) }}
     {{- tpl (toYaml .) $ | nindent 4 }}
     {{- end }}
@@ -443,6 +418,41 @@ external database are configured, since only one can be the database.
 {{- end }}
 {{- if and .Values.database.postgres.password .Values.database.postgres.existingSecret }}
 {{- fail "database.postgres.password and database.postgres.existingSecret cannot both be set." }}
+{{- end }}
+{{- end -}}
+
+{{/*
+kargo.database.env renders the environment variables that point a component
+at the database, for every component that uses one: the bundled PostgreSQL
+when it is enabled, otherwise the external database's connection string.
+For the bundled database the binary composes the connection string from
+these parts, escaping the password, which a $(VAR) reference could not.
+Renders nothing when no database is configured, which leaves database
+features disabled.
+*/}}
+{{- define "kargo.database.env" -}}
+{{- if .Values.database.postgres.enabled }}
+- name: DATABASE_HOST
+  value: kargo-postgres.{{ .Release.Namespace }}.svc
+- name: DATABASE_PORT
+  value: "5432"
+- name: DATABASE_NAME
+  value: kargo
+- name: DATABASE_USER
+  value: kargo
+- name: DATABASE_PASSWORD
+  valueFrom:
+    secretKeyRef:
+      name: {{ include "kargo.postgres.secretName" . }}
+      key: password
+- name: DATABASE_SSL_MODE
+  value: disable
+{{- else if .Values.database.external.secretName }}
+- name: DATABASE_URL
+  valueFrom:
+    secretKeyRef:
+      name: {{ .Values.database.external.secretName }}
+      key: {{ .Values.database.external.secretKey }}
 {{- end }}
 {{- end -}}
 
