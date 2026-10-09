@@ -46,7 +46,6 @@ import {
   selectNextArtifact,
   selectPreviousArtifact
 } from './artifact-selector-utils';
-import { getLastPromotionRef } from './stage-meta-utils';
 
 export const StageFreight = (props: { stage: Stage }) => {
   const dictionaryContext = useDictionaryContext();
@@ -54,18 +53,22 @@ export const StageFreight = (props: { stage: Stage }) => {
 
   const currentFreight = useMemo(() => getCurrentFreight(props.stage), [props.stage]);
 
-  const lastPromotion = useMemo(() => getLastPromotionRef(props.stage), [props.stage]);
+  const lastPromotion = useMemo(
+    () => props.stage?.status?.lastPromotion?.status,
+    [props.stage?.status?.lastPromotion?.status?.finishedAt]
+  );
 
   const warehouses = currentFreight?.map((f) => f.origin?.name);
 
-  let currentWarehouse = warehouses?.[0];
-
-  if (lastPromotion?.phase === PromotionStatusPhase.SUCCEEDED) {
-    currentWarehouse = props.stage?.status?.lastPromotion?.freight?.origin?.name;
-  }
-
   const deriveSelection = (from?: { warehouse?: string; freight?: FreightReference }) => {
-    const warehouse = from?.warehouse || currentWarehouse;
+    let warehouse;
+    if (from?.warehouse) {
+      warehouse = from?.warehouse;
+    } else if (lastPromotion?.phase === PromotionStatusPhase.SUCCEEDED) {
+      warehouse = lastPromotion?.freight?.origin?.name || warehouses?.[0];
+    } else {
+      warehouse = warehouses?.[0];
+    }
     const freight = currentFreight?.find((f) => f?.origin?.name === warehouse);
     // @ts-expect-error FreightReference and Freight are same, at least in this case
     const artifact = selectFirstArtifact([freight]) as ArtifactTypes;
@@ -79,7 +82,9 @@ export const StageFreight = (props: { stage: Stage }) => {
 
   const [selection, setSelection] = useState(deriveSelection);
 
-  useEffect(() => setSelection(deriveSelection()), [lastPromotion]);
+  useEffect(() => {
+    if (lastPromotion?.phase === PromotionStatusPhase.SUCCEEDED) setSelection(deriveSelection());
+  }, [lastPromotion]);
 
   const selectedWarehouse = selection.warehouse;
 
