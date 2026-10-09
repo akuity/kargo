@@ -33,6 +33,7 @@ import (
 	"github.com/akuity/kargo/pkg/conditions"
 	"github.com/akuity/kargo/pkg/controller"
 	"github.com/akuity/kargo/pkg/controller/metrics"
+	"github.com/akuity/kargo/pkg/controller/stages/verification"
 	"github.com/akuity/kargo/pkg/credentials"
 	kargoEvent "github.com/akuity/kargo/pkg/event"
 	k8sevent "github.com/akuity/kargo/pkg/event/kubernetes"
@@ -245,20 +246,23 @@ func (r *FleetStageReconciler) SetupWithManager(
 	// If the Argo Rollouts integration is enabled, then we should watch for
 	// changes to AnalysisRuns and enqueue the related Stages for reconciliation.
 	if r.cfg.RolloutsIntegrationEnabled {
-		if err = sharedIndexer.IndexField(
-			ctx,
-			&kargoapi.Stage{},
-			indexer.StagesByAnalysisRunField,
-			indexer.StagesByAnalysisRun(r.cfg.ShardName, r.cfg.IsDefaultController),
-		); err != nil {
-			return fmt.Errorf("error setting up index for Stages by AnalysisRun: %w", err)
-		}
-
 		if err = c.Watch(
 			source.Kind(
 				kargoMgr.GetCache(),
 				&rolloutsapi.AnalysisRun{},
 				&stageEnqueuerForAnalysisRuns[*rolloutsapi.AnalysisRun]{
+					kargoClient: kargoMgr.GetClient(),
+				},
+			),
+		); err != nil {
+			return fmt.Errorf("unable to watch AnalysisRuns: %w", err)
+		}
+
+		if err = c.Watch(
+			source.Kind(
+				kargoMgr.GetCache(),
+				&kargoapi.AnalysisRunRequest{},
+				&stageEnqueuerForAnalysisRuns[*kargoapi.AnalysisRunRequest]{
 					kargoClient: kargoMgr.GetClient(),
 				},
 			),
@@ -817,14 +821,28 @@ func (r *FleetStageReconciler) verifyStageFreight(
 	endTime func() time.Time,
 ) (newStatus kargoapi.StageStatus, err error) {
 	// Verification logic is shared with regular stages
-	ver := verifier{
-		cfg:           r.cfg,
-		client:        r.client,
-		credentialsDB: r.credentialsDB,
-		eventSender:   r.eventSender,
-		backoffCfg:    r.backoffCfg,
+	analysisRunners := map[kargoapi.AnalysisRunGVK]verification.AnalysisRunner{
+		kargoapi.AnalysisRunGVKRun: verification.NewAnalysisRunnerRollouts(
+			r.cfg.RolloutsControllerInstanceID,
+			r.backoffCfg,
+			r.client,
+			r.credentialsDB,
+		),
+		kargoapi.AnalysisRunGVKRequest: verification.NewAnalysisRunnerRequest(
+			r.cfg.RolloutsControllerInstanceID,
+			r.backoffCfg,
+			r.client,
+			r.credentialsDB,
+		),
 	}
-	return ver.verifyStageFreight(ctx, stage, startTime, endTime)
+	ver := verification.NewVerifier(
+		r.cfg.Name(),
+		r.cfg.RolloutsIntegrationEnabled,
+		r.client,
+		r.eventSender,
+		analysisRunners,
+	)
+	return ver.VerifyStageFreight(ctx, stage, startTime, endTime)
 }
 
 // markFreightVerifiedForStage marks the Freight that is associated with the

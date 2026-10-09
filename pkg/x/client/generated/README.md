@@ -382,6 +382,7 @@ Class | Method | HTTP request | Description
  - [TargetStats](docs/TargetStats.md)
  - [TargetStatus](docs/TargetStatus.md)
  - [TargetUpdateStrategy](docs/TargetUpdateStrategy.md)
+ - [TargetVerificaitonSpec](docs/TargetVerificaitonSpec.md)
  - [UpdateConfigMapRequest](docs/UpdateConfigMapRequest.md)
  - [UpdateGenericCredentialsRequest](docs/UpdateGenericCredentialsRequest.md)
  - [UpdateRepoCredentialsRequest](docs/UpdateRepoCredentialsRequest.md)

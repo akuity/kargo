@@ -6491,6 +6491,10 @@
     "AnalysisRunReference": {
       "type": "object",
       "properties": {
+        "gvk": {
+          "description": "Kind is a string representation of GroupVersionKind describing this run\nOptions are AnalysisRunGVKRun and AnalysisRunGVKRequest",
+          "type": "string"
+        },
         "name": {
           "description": "Name is the name of the AnalysisRun.",
           "type": "string"
@@ -8878,10 +8882,18 @@
           }
         },
         "updateStrategy": {
-          "description": "UpdateStrategy configures the pace of updating the targets\n+optional",
+          "description": "UpdateStrategy configures the pace of promoting the targets\n+optional",
           "allOf": [
             {
               "$ref": "#/definitions/TargetUpdateStrategy"
+            }
+          ]
+        },
+        "verification": {
+          "description": "Verification configures mode and pace of target promotion verifications\n+optional",
+          "allOf": [
+            {
+              "$ref": "#/definitions/TargetVerificaitonSpec"
             }
           ]
         }
@@ -9050,6 +9062,23 @@
         "maxConcurrent": {
           "description": "MaxConcurrent specifies a number of targets which can be promoted to at the same time\nZero means there is no limit (default)",
           "type": "integer"
+        }
+      }
+    },
+    "TargetVerificaitonSpec": {
+      "type": "object",
+      "properties": {
+        "runMode": {
+          "description": "VerificationRunMode controls whether verifications run per-target or per-stage\n+optional",
+          "type": "string"
+        },
+        "updateStrategy": {
+          "description": "UpdateStrategy configures the pace of verification runs\n+optional",
+          "allOf": [
+            {
+              "$ref": "#/definitions/TargetUpdateStrategy"
+            }
+          ]
         }
       }
     },

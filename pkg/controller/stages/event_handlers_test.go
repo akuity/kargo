@@ -1200,7 +1200,7 @@ func Test_stageEnqueuerForArgoCDChanges_Update(t *testing.T) {
 	}
 }
 
-func Test_stageEnqueuerForAnalysisRuns_Update(t *testing.T) {
+func Test_stageEnqueuerForAnalysisRuns_Update_AnalysisRun(t *testing.T) {
 	scheme := runtime.NewScheme()
 	require.NoError(t, kargoapi.AddToScheme(scheme))
 	require.NoError(t, rollouts.AddToScheme(scheme))
@@ -1219,6 +1219,9 @@ func Test_stageEnqueuerForAnalysisRuns_Update(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "default",
 					Name:      "test-analysis",
+					Labels: map[string]string{
+						kargoapi.LabelKeyStage: "test-stage",
+					},
 				},
 				Status: rollouts.AnalysisRunStatus{
 					Phase: "Running",
@@ -1228,6 +1231,9 @@ func Test_stageEnqueuerForAnalysisRuns_Update(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "default",
 					Name:      "test-analysis",
+					Labels: map[string]string{
+						kargoapi.LabelKeyStage: "test-stage",
+					},
 				},
 				Status: rollouts.AnalysisRunStatus{
 					Phase: "Running",
@@ -1236,11 +1242,14 @@ func Test_stageEnqueuerForAnalysisRuns_Update(t *testing.T) {
 			expectedRequests: nil,
 		},
 		{
-			name: "phase changed - enqueues regular stages",
+			name: "phase changed - enqueues stage from label",
 			oldAnalysisRun: &rollouts.AnalysisRun{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "default",
 					Name:      "test-analysis",
+					Labels: map[string]string{
+						kargoapi.LabelKeyStage: "test-stage",
+					},
 				},
 				Status: rollouts.AnalysisRunStatus{
 					Phase: "Running",
@@ -1250,38 +1259,12 @@ func Test_stageEnqueuerForAnalysisRuns_Update(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "default",
 					Name:      "test-analysis",
+					Labels: map[string]string{
+						kargoapi.LabelKeyStage: "test-stage",
+					},
 				},
 				Status: rollouts.AnalysisRunStatus{
 					Phase: "Successful",
-				},
-			},
-			objects: []client.Object{
-				&kargoapi.Stage{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "default",
-						Name:      "test-stage",
-					},
-					Spec: kargoapi.StageSpec{
-						PromotionTemplate: &kargoapi.PromotionTemplate{
-							Spec: kargoapi.PromotionTemplateSpec{
-								Steps: []kargoapi.PromotionStep{{}},
-							},
-						},
-					},
-					Status: kargoapi.StageStatus{
-						FreightHistory: kargoapi.FreightHistory{
-							{
-								VerificationHistory: []kargoapi.VerificationInfo{
-									{
-										AnalysisRun: &kargoapi.AnalysisRunReference{
-											Name:      "test-analysis",
-											Namespace: "default",
-										},
-									},
-								},
-							},
-						},
-					},
 				},
 			},
 			expectedRequests: []reconcile.Request{
@@ -1294,11 +1277,17 @@ func Test_stageEnqueuerForAnalysisRuns_Update(t *testing.T) {
 			},
 		},
 		{
-			name: "ignores control flow stages",
+			name: "phase changed - enqueues stages from annotation",
 			oldAnalysisRun: &rollouts.AnalysisRun{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "default",
 					Name:      "test-analysis",
+					Labels: map[string]string{
+						kargoapi.LabelKeyStage: "test-",
+					},
+					Annotations: map[string]string{
+						kargoapi.AnnotationKeyStage: "test-stage",
+					},
 				},
 				Status: rollouts.AnalysisRunStatus{
 					Phase: "Running",
@@ -1308,149 +1297,19 @@ func Test_stageEnqueuerForAnalysisRuns_Update(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "default",
 					Name:      "test-analysis",
+					Labels: map[string]string{
+						kargoapi.LabelKeyStage: "test-stage",
+					},
 				},
 				Status: rollouts.AnalysisRunStatus{
 					Phase: "Successful",
-				},
-			},
-			objects: []client.Object{
-				&kargoapi.Stage{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "default",
-						Name:      "test-stage",
-					},
-					Status: kargoapi.StageStatus{
-						FreightHistory: kargoapi.FreightHistory{
-							{
-								VerificationHistory: []kargoapi.VerificationInfo{
-									{
-										AnalysisRun: &kargoapi.AnalysisRunReference{
-											Name:      "test-analysis",
-											Namespace: "default",
-										},
-									},
-								},
-							},
-						},
-					},
-				},
-			},
-			expectedRequests: nil,
-		},
-		{
-			name: "handles list error",
-			oldAnalysisRun: &rollouts.AnalysisRun{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "default",
-					Name:      "test-analysis",
-				},
-				Status: rollouts.AnalysisRunStatus{
-					Phase: "Running",
-				},
-			},
-			newAnalysisRun: &rollouts.AnalysisRun{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "default",
-					Name:      "test-analysis",
-				},
-				Status: rollouts.AnalysisRunStatus{
-					Phase: "Successful",
-				},
-			},
-			interceptor: interceptor.Funcs{
-				List: func(context.Context, client.WithWatch, client.ObjectList, ...client.ListOption) error {
-					return fmt.Errorf("list error")
-				},
-			},
-			expectedRequests: nil,
-		},
-		{
-			name: "handles multiple stages",
-			oldAnalysisRun: &rollouts.AnalysisRun{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "default",
-					Name:      "test-analysis",
-				},
-				Status: rollouts.AnalysisRunStatus{
-					Phase: "Running",
-				},
-			},
-			newAnalysisRun: &rollouts.AnalysisRun{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "default",
-					Name:      "test-analysis",
-				},
-				Status: rollouts.AnalysisRunStatus{
-					Phase: "Successful",
-				},
-			},
-			objects: []client.Object{
-				&kargoapi.Stage{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "default",
-						Name:      "test-stage-1",
-					},
-					Spec: kargoapi.StageSpec{
-						PromotionTemplate: &kargoapi.PromotionTemplate{
-							Spec: kargoapi.PromotionTemplateSpec{
-								Steps: []kargoapi.PromotionStep{{}},
-							},
-						},
-					},
-					Status: kargoapi.StageStatus{
-						FreightHistory: kargoapi.FreightHistory{
-							{
-								VerificationHistory: []kargoapi.VerificationInfo{
-									{
-										AnalysisRun: &kargoapi.AnalysisRunReference{
-											Name:      "test-analysis",
-											Namespace: "default",
-										},
-									},
-								},
-							},
-						},
-					},
-				},
-				&kargoapi.Stage{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "default",
-						Name:      "test-stage-2",
-					},
-					Spec: kargoapi.StageSpec{
-						PromotionTemplate: &kargoapi.PromotionTemplate{
-							Spec: kargoapi.PromotionTemplateSpec{
-								Steps: []kargoapi.PromotionStep{{}},
-							},
-						},
-					},
-					Status: kargoapi.StageStatus{
-						FreightHistory: kargoapi.FreightHistory{
-							{
-								VerificationHistory: []kargoapi.VerificationInfo{
-									{
-										AnalysisRun: &kargoapi.AnalysisRunReference{
-											Name:      "test-analysis",
-											Namespace: "default",
-										},
-									},
-								},
-							},
-						},
-					},
 				},
 			},
 			expectedRequests: []reconcile.Request{
 				{
 					NamespacedName: types.NamespacedName{
 						Namespace: "default",
-						Name:      "test-stage-1",
-					},
-				},
-				{
-					NamespacedName: types.NamespacedName{
-						Namespace: "default",
-						Name:      "test-stage-2",
+						Name:      "test-stage",
 					},
 				},
 			},
@@ -1462,11 +1321,6 @@ func Test_stageEnqueuerForAnalysisRuns_Update(t *testing.T) {
 			c := fake.NewClientBuilder().
 				WithScheme(scheme).
 				WithObjects(tt.objects...).
-				WithIndex(
-					&kargoapi.Stage{},
-					indexer.StagesByAnalysisRunField,
-					indexer.StagesByAnalysisRun("", false),
-				).
 				WithInterceptorFuncs(tt.interceptor).
 				Build()
 
@@ -1479,6 +1333,157 @@ func Test_stageEnqueuerForAnalysisRuns_Update(t *testing.T) {
 			enqueuer.Update(
 				t.Context(),
 				event.TypedUpdateEvent[*rollouts.AnalysisRun]{
+					ObjectOld: tt.oldAnalysisRun,
+					ObjectNew: tt.newAnalysisRun,
+				},
+				queue,
+			)
+
+			var reqs []reconcile.Request
+			for queue.Len() > 0 {
+				req, _ := queue.Get()
+				reqs = append(reqs, req)
+				queue.Done(req)
+			}
+
+			assert.ElementsMatch(t, tt.expectedRequests, reqs)
+		})
+	}
+}
+
+func Test_stageEnqueuerForAnalysisRuns_Update_AnalysisRunRequest(t *testing.T) {
+	scheme := runtime.NewScheme()
+	require.NoError(t, kargoapi.AddToScheme(scheme))
+	require.NoError(t, rollouts.AddToScheme(scheme))
+
+	tests := []struct {
+		name             string
+		oldAnalysisRun   *kargoapi.AnalysisRunRequest
+		newAnalysisRun   *kargoapi.AnalysisRunRequest
+		objects          []client.Object
+		interceptor      interceptor.Funcs
+		expectedRequests []reconcile.Request
+	}{
+		{
+			name: "no phase change",
+			oldAnalysisRun: &kargoapi.AnalysisRunRequest{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "default",
+					Name:      "test-analysis",
+					Labels: map[string]string{
+						kargoapi.LabelKeyStage: "test-stage",
+					},
+				},
+				Status: kargoapi.AnalysisRunRequestStatus{
+					Phase: "Running",
+				},
+			},
+			newAnalysisRun: &kargoapi.AnalysisRunRequest{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "default",
+					Name:      "test-analysis",
+					Labels: map[string]string{
+						kargoapi.LabelKeyStage: "test-stage",
+					},
+				},
+				Status: kargoapi.AnalysisRunRequestStatus{
+					Phase: "Running",
+				},
+			},
+			expectedRequests: nil,
+		},
+		{
+			name: "phase changed - enqueues stage from label",
+			oldAnalysisRun: &kargoapi.AnalysisRunRequest{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "default",
+					Name:      "test-analysis",
+					Labels: map[string]string{
+						kargoapi.LabelKeyStage: "test-stage",
+					},
+				},
+				Status: kargoapi.AnalysisRunRequestStatus{
+					Phase: "Running",
+				},
+			},
+			newAnalysisRun: &kargoapi.AnalysisRunRequest{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "default",
+					Name:      "test-analysis",
+					Labels: map[string]string{
+						kargoapi.LabelKeyStage: "test-stage",
+					},
+				},
+				Status: kargoapi.AnalysisRunRequestStatus{
+					Phase: "Successful",
+				},
+			},
+			expectedRequests: []reconcile.Request{
+				{
+					NamespacedName: types.NamespacedName{
+						Namespace: "default",
+						Name:      "test-stage",
+					},
+				},
+			},
+		},
+		{
+			name: "phase changed - enqueues stages from annotation",
+			oldAnalysisRun: &kargoapi.AnalysisRunRequest{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "default",
+					Name:      "test-analysis",
+					Labels: map[string]string{
+						kargoapi.LabelKeyStage: "test-",
+					},
+					Annotations: map[string]string{
+						kargoapi.AnnotationKeyStage: "test-stage",
+					},
+				},
+				Status: kargoapi.AnalysisRunRequestStatus{
+					Phase: "Running",
+				},
+			},
+			newAnalysisRun: &kargoapi.AnalysisRunRequest{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "default",
+					Name:      "test-analysis",
+					Labels: map[string]string{
+						kargoapi.LabelKeyStage: "test-stage",
+					},
+				},
+				Status: kargoapi.AnalysisRunRequestStatus{
+					Phase: "Successful",
+				},
+			},
+			expectedRequests: []reconcile.Request{
+				{
+					NamespacedName: types.NamespacedName{
+						Namespace: "default",
+						Name:      "test-stage",
+					},
+				},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := fake.NewClientBuilder().
+				WithScheme(scheme).
+				WithObjects(tt.objects...).
+				WithInterceptorFuncs(tt.interceptor).
+				Build()
+
+			enqueuer := &stageEnqueuerForAnalysisRuns[*kargoapi.AnalysisRunRequest]{
+				kargoClient: c,
+			}
+
+			queue := &controllertest.Queue{TypedInterface: workqueue.NewTyped[reconcile.Request]()}
+
+			enqueuer.Update(
+				t.Context(),
+				event.TypedUpdateEvent[*kargoapi.AnalysisRunRequest]{
 					ObjectOld: tt.oldAnalysisRun,
 					ObjectNew: tt.newAnalysisRun,
 				},
