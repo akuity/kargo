@@ -5,6 +5,7 @@ import (
 	"bufio"
 	"compress/gzip"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"io/fs"
@@ -178,10 +179,10 @@ func (t *tarExtractor) extractToDir(
 	// False positive likely related to https://github.com/securego/gosec/issues/1406
 	if header[0] == gzipID1 && header[1] == gzipID2 {
 		// File is gzipped
-		gzr, err := gzip.NewReader(file)
-		if err != nil {
+		gzr, gzErr := gzip.NewReader(file)
+		if gzErr != nil {
 			return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
-				fmt.Errorf("failed to create gzip reader: %w", err)
+				fmt.Errorf("failed to create gzip reader: %w", gzErr)
 		}
 		defer gzr.Close()
 		tarReader = tar.NewReader(gzr)
@@ -206,6 +207,20 @@ func (t *tarExtractor) extractToDir(
 
 	// Track directories created to avoid duplicates
 	madeDir := make(map[string]bool)
+
+	// All writes below go through root, which refuses to follow any symlink
+	// (including ones created by earlier entries of this same archive) out of
+	// outPath.
+	if err = os.MkdirAll(outPath, defaultDirPermissions); err != nil {
+		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
+			fmt.Errorf("failed to create directory %s: %w", outPath, err)
+	}
+	root, err := os.OpenRoot(outPath)
+	if err != nil {
+		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
+			fmt.Errorf("failed to open root directory %s: %w", outPath, err)
+	}
+	defer root.Close()
 
 	for {
 		header, err := tarReader.Next()
@@ -263,21 +278,24 @@ func (t *tarExtractor) extractToDir(
 			continue
 		}
 
-		// Create the destination directory for files and links
-		targetPath := filepath.Join(outPath, targetName) // nolint:gosec
+		// The path of the entry relative to root
+		targetPath := filepath.FromSlash(targetName)
 
-		// Double-check the target path is within the output directory
-		relPath, err := filepath.Rel(outPath, targetPath)
-		if err != nil || strings.HasPrefix(relPath, "..") || strings.HasPrefix(relPath, "/") {
-			logger.Trace("skipping path escaping target directory", "path", targetName)
+		// Refuse to write through a symlink created by an earlier entry. This
+		// keeps every entry's parent a real directory, which is what makes the
+		// lexical symlink target check below sound.
+		hasLink, err := parentHasSymlink(root, targetPath)
+		if err != nil {
+			return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
+				fmt.Errorf("failed to check parent directories of %s: %w", targetName, err)
+		}
+		if hasLink {
+			logger.Trace("skipping path with symlink in parent directories", "path", targetName)
 			continue
 		}
 
 		destDir := filepath.Dir(targetPath)
-		// #nosec G703 -- Contextually, if this was constructed from a
-		// user-specified, relative path, the absolute path was constructed using
-		// securejoin.SecureJoin().
-		if err = os.MkdirAll(destDir, defaultDirPermissions); err != nil {
+		if err = root.MkdirAll(destDir, defaultDirPermissions); err != nil {
 			return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 				fmt.Errorf("failed to create directory %s: %w", destDir, err)
 		}
@@ -285,11 +303,7 @@ func (t *tarExtractor) extractToDir(
 		switch header.Typeflag {
 		case tar.TypeDir:
 			// Create directory
-			//
-			// #nosec G703 -- Contextually, if this was constructed from a
-			// user-specified, relative path, the absolute path was constructed using
-			// securejoin.SecureJoin().
-			if err = os.MkdirAll(targetPath, defaultDirPermissions); err != nil {
+			if err = root.MkdirAll(targetPath, defaultDirPermissions); err != nil {
 				return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 					fmt.Errorf("failed to create directory %s: %w", targetPath, err)
 			}
@@ -297,12 +311,12 @@ func (t *tarExtractor) extractToDir(
 
 		case tar.TypeSymlink:
 			// Validate the symlink target to prevent symlink attacks
-			if !t.validRelPath(header.Linkname) {
+			if !t.validRelPath(header.Linkname) || !symlinkIsLocal(targetPath, header.Linkname) {
 				logger.Trace("skipping symlink with unsafe target", "path", targetName, "target", header.Linkname)
 				continue
 			}
 			// Create symlink
-			if err = os.Symlink(header.Linkname, targetPath); err != nil && !os.IsExist(err) {
+			if err = root.Symlink(header.Linkname, targetPath); err != nil && !os.IsExist(err) {
 				logger.Error(err, "failed to create symlink", "path", targetPath, "target", header.Linkname)
 			}
 		case tar.TypeReg:
@@ -330,10 +344,7 @@ func (t *tarExtractor) extractToDir(
 			dir := filepath.Dir(targetPath)
 			// Create the directory if it doesn't exist
 			if !madeDir[dir] {
-				// #nosec G703 -- Contextually, if this was constructed from a
-				// user-specified, relative path, the absolute path was constructed
-				// using securejoin.SecureJoin().
-				if err = os.MkdirAll(dir, defaultDirPermissions); err != nil {
+				if err = root.MkdirAll(dir, defaultDirPermissions); err != nil {
 					return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 						fmt.Errorf("failed to create directory %s: %w", dir, err)
 				}
@@ -346,10 +357,7 @@ func (t *tarExtractor) extractToDir(
 				mode = 0o600 // Default to 0o600 if mode is invalid
 			}
 			safeMode := fs.FileMode(mode) // nolint:gosec
-			// #nosec G703 -- Contextually, if this was constructed from a
-			// user-specified, relative path, the absolute path was constructed using
-			// securejoin.SecureJoin().
-			outFile, err := os.OpenFile(targetPath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, safeMode)
+			outFile, err := root.OpenFile(targetPath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, safeMode)
 			if err != nil {
 				return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 					fmt.Errorf("failed to create file %s: %w", targetPath, err)
@@ -370,7 +378,7 @@ func (t *tarExtractor) extractToDir(
 
 			// Change mod time
 			if !header.ModTime.IsZero() {
-				if err := os.Chtimes(targetPath, header.ModTime, header.ModTime); err != nil {
+				if err := root.Chtimes(targetPath, header.ModTime, header.ModTime); err != nil {
 					return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 						fmt.Errorf("failed to change mod time for %s: %w", targetPath, err)
 				}
@@ -387,10 +395,42 @@ func (t *tarExtractor) validRelPath(p string) bool {
 		strings.Contains(p, `\`) ||
 		strings.HasPrefix(p, "/") ||
 		strings.Contains(p, "../") ||
-		strings.HasPrefix(p, "./") {
+		strings.HasPrefix(p, "./") ||
+		!filepath.IsLocal(filepath.FromSlash(p)) {
 		return false
 	}
 	return true
+}
+
+// symlinkIsLocal reports whether a symlink at name (relative to the extraction
+// root) pointing at target resolves to a location within the extraction root.
+// Symlink targets are resolved relative to the directory containing the link,
+// so a target like ".." is only safe for a link that is not at the top level.
+// This lexical check relies on name's parent directories not being symlinks
+// themselves, which parentHasSymlink enforces.
+func symlinkIsLocal(name, target string) bool {
+	return !filepath.IsAbs(target) &&
+		filepath.IsLocal(filepath.Join(filepath.Dir(name), target))
+}
+
+// parentHasSymlink reports whether any existing parent directory of name
+// (relative to root) is a symlink. Parent directories that do not exist yet
+// are not symlinks and will be created as real directories.
+func parentHasSymlink(root *os.Root, name string) (bool, error) {
+	parts := strings.Split(filepath.Dir(name), string(filepath.Separator))
+	for i := range parts {
+		fi, err := root.Lstat(filepath.Join(parts[:i+1]...))
+		if errors.Is(err, fs.ErrNotExist) {
+			return false, nil
+		}
+		if err != nil {
+			return false, err
+		}
+		if fi.Mode()&fs.ModeSymlink != 0 {
+			return true, nil
+		}
+	}
+	return false, nil
 }
 
 // loadIgnoreRules loads the ignore rules from the given string. The rules are

@@ -1034,6 +1034,7 @@ func Test_tarExtractor_validRelPath(t *testing.T) {
 		{"", false},                      // Empty path
 		{"/absolute/path", false},        // Absolute path
 		{"../traversal", false},          // Path traversal
+		{"..", false},                    // Bare parent reference
 		{"dir/../file", false},           // Path traversal
 		{"./current", false},             // Current directory
 		{"file\\with\\backslash", false}, // Backslash (Windows path separator)
@@ -1043,6 +1044,213 @@ func Test_tarExtractor_validRelPath(t *testing.T) {
 		t.Run(fmt.Sprintf("path_%s", tt.path), func(t *testing.T) {
 			result := extractor.validRelPath(tt.path)
 			assert.Equal(t, tt.expected, result, "Path: %s", tt.path)
+		})
+	}
+}
+
+func Test_symlinkIsLocal(t *testing.T) {
+	tests := []struct {
+		name     string
+		target   string
+		expected bool
+	}{
+		{"link", "file.txt", true},
+		{"link", ".", true},
+		{"dir/link", "..", true},
+		{"dir/link", "../file.txt", true},
+		{"link", "..", false},
+		{"dir/link", "../..", false},
+		{"link", "/etc/passwd", false},
+	}
+	for _, tt := range tests {
+		t.Run(fmt.Sprintf("%s->%s", tt.name, tt.target), func(t *testing.T) {
+			require.Equal(t, tt.expected, symlinkIsLocal(tt.name, tt.target))
+		})
+	}
+}
+
+func Test_parentHasSymlink(t *testing.T) {
+	dir := t.TempDir()
+	require.NoError(t, os.Mkdir(filepath.Join(dir, "real"), 0o750))
+	require.NoError(t, os.Symlink("real", filepath.Join(dir, "link")))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "file"), nil, 0o600))
+	root, err := os.OpenRoot(dir)
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = root.Close() })
+
+	tests := []struct {
+		name   string
+		assert func(*testing.T, bool, error)
+	}{
+		{
+			name: "top-level",
+			assert: func(t *testing.T, hasLink bool, err error) {
+				require.NoError(t, err)
+				require.False(t, hasLink)
+			},
+		},
+		{
+			name: "real/nested/file",
+			assert: func(t *testing.T, hasLink bool, err error) {
+				require.NoError(t, err)
+				require.False(t, hasLink)
+			},
+		},
+		{
+			name: "missing/nested/file",
+			assert: func(t *testing.T, hasLink bool, err error) {
+				require.NoError(t, err)
+				require.False(t, hasLink)
+			},
+		},
+		{
+			name: "link/file",
+			assert: func(t *testing.T, hasLink bool, err error) {
+				require.NoError(t, err)
+				require.True(t, hasLink)
+			},
+		},
+		{
+			name: "real/link/file",
+			assert: func(t *testing.T, hasLink bool, err error) {
+				require.NoError(t, err)
+				require.False(t, hasLink) // real/link does not exist
+			},
+		},
+		{
+			name: "file/nested/file",
+			assert: func(t *testing.T, _ bool, err error) {
+				require.Error(t, err)
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			hasLink, err := parentHasSymlink(root, filepath.FromSlash(tt.name))
+			tt.assert(t, hasLink, err)
+		})
+	}
+}
+
+func Test_tarExtractor_run_symlinkEscapes(t *testing.T) {
+	type entry struct {
+		name     string
+		linkname string // non-empty for a symlink
+		content  string // for a regular file
+	}
+	tests := []struct {
+		name    string
+		entries []entry
+		assert  func(t *testing.T, outDir string)
+	}{
+		{
+			name: "single symlink to parent",
+			entries: []entry{
+				{name: "a", linkname: ".."},
+				{name: "a/pwned.txt", content: "pwned"},
+			},
+			assert: func(t *testing.T, outDir string) {
+				// The unsafe symlink is skipped, so the file lands in a real directory.
+				fi, err := os.Lstat(filepath.Join(outDir, "a"))
+				require.NoError(t, err)
+				require.True(t, fi.IsDir())
+			},
+		},
+		{
+			name: "chained symlinks to parent",
+			entries: []entry{
+				{name: "a", linkname: ".."},
+				{name: "a/b", linkname: ".."},
+				{name: "a/b/pwned.txt", content: "pwned"},
+			},
+			assert: func(t *testing.T, outDir string) {
+				// The unsafe symlink is skipped, so the file lands in a real directory.
+				fi, err := os.Lstat(filepath.Join(outDir, "a"))
+				require.NoError(t, err)
+				require.True(t, fi.IsDir())
+			},
+		},
+		{
+			name: "nested symlink escaping relative to its own directory",
+			entries: []entry{
+				{name: "sub/x", linkname: "../.."},
+				{name: "sub/x/pwned.txt", content: "pwned"},
+			},
+			assert: func(t *testing.T, outDir string) {
+				// The unsafe symlink is skipped, so the file lands in a real directory.
+				fi, err := os.Lstat(filepath.Join(outDir, "sub", "x"))
+				require.NoError(t, err)
+				require.True(t, fi.IsDir())
+			},
+		},
+		{
+			name: "entries written through a local symlink",
+			entries: []entry{
+				{name: "a", linkname: "."},
+				{name: "a/b", linkname: ".."},
+				{name: "a/pwned.txt", content: "pwned"},
+			},
+			assert: func(t *testing.T, outDir string) {
+				// The local symlink itself is allowed...
+				target, err := os.Readlink(filepath.Join(outDir, "a"))
+				require.NoError(t, err)
+				require.Equal(t, ".", target)
+				// ...but nothing may be written through it.
+				for _, name := range []string{"b", "pwned.txt"} {
+					_, err = os.Lstat(filepath.Join(outDir, name))
+					require.ErrorIs(t, err, os.ErrNotExist)
+				}
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			// sharedDir stands in for the work area shared by all promotions.
+			sharedDir := t.TempDir()
+			workDir := filepath.Join(sharedDir, "promotion")
+			require.NoError(t, os.Mkdir(workDir, 0o750))
+
+			tarFile, err := os.Create(filepath.Join(workDir, "evil.tar"))
+			require.NoError(t, err)
+			tw := tar.NewWriter(tarFile)
+			for _, e := range tt.entries {
+				hdr := &tar.Header{
+					Name:     e.name,
+					Typeflag: tar.TypeReg,
+					Mode:     0o600,
+					Size:     int64(len(e.content)),
+				}
+				if e.linkname != "" {
+					hdr.Typeflag = tar.TypeSymlink
+					hdr.Linkname = e.linkname
+					hdr.Size = 0
+				}
+				require.NoError(t, tw.WriteHeader(hdr))
+				_, err = tw.Write([]byte(e.content))
+				require.NoError(t, err)
+			}
+			require.NoError(t, tw.Close())
+			require.NoError(t, tarFile.Close())
+
+			result, err := (&tarExtractor{}).run(
+				t.Context(),
+				&promotion.StepContext{WorkDir: workDir},
+				builtin.UntarConfig{InPath: "evil.tar", OutPath: "out"},
+			)
+			require.NoError(t, err)
+			require.Equal(t, kargoapi.PromotionStepStatusSucceeded, result.Status)
+
+			// Nothing may be written outside the output directory.
+			sharedEntries, err := os.ReadDir(sharedDir)
+			require.NoError(t, err)
+			require.Len(t, sharedEntries, 1)
+			workEntries, err := os.ReadDir(workDir)
+			require.NoError(t, err)
+			require.Len(t, workEntries, 2) // evil.tar and out
+
+			tt.assert(t, filepath.Join(workDir, "out"))
 		})
 	}
 }
