@@ -11,6 +11,14 @@ sources.
 
 :::note
 
+The `http-download` step is deprecated and will be removed in v2.0. Use the
+[`http` step](http.md#downloading-files) with `outPath` instead. All
+`http-download` options are supported there under the same names.
+
+:::
+
+:::note
+
 Downloads are limited to 100MB to prevent resource exhaustion.
 
 :::

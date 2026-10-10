@@ -456,6 +456,9 @@ type Chart struct {
 }
 
 type HTTPConfig struct {
+	// Whether to allow overwriting an existing file at outPath. If false and the file exists,
+	// the step fails terminally before sending the request. Only meaningful when outPath is set.
+	AllowOverwrite bool `json:"allowOverwrite,omitempty"`
 	// The body of the HTTP request.
 	Body string `json:"body,omitempty"`
 	// A path relative to the promotion work directory whose contents are used as the HTTP
@@ -471,6 +474,11 @@ type HTTPConfig struct {
 	InsecureSkipTLSVerify bool `json:"insecureSkipTLSVerify,omitempty"`
 	// The HTTP method to use for the request.
 	Method string `json:"method,omitempty"`
+	// A path relative to the promotion work directory where the response body will be saved.
+	// When set, the body is streamed to a temporary file (capped at 100 MiB) and moved to this
+	// path only if the step succeeds. Bodies larger than 2 MiB are not parsed into
+	// response.body.
+	OutPath string `json:"outPath,omitempty"`
 	// Outputs to extract from the HTTP response.
 	Outputs []HTTPOutput `json:"outputs,omitempty"`
 	// The suggested interval at which to poll the URL while the step is waiting for its success
@@ -490,7 +498,7 @@ type HTTPConfig struct {
 	// An expression to evaluate to determine if the request was successful.
 	SuccessExpression string `json:"successExpression,omitempty"`
 	// The maximum time to wait for the request to complete. If not specified, the default is 10
-	// seconds.
+	// seconds, or 1 minute when outPath is set.
 	Timeout string `json:"timeout,omitempty"`
 	// The URL to send the HTTP request to.
 	URL string `json:"url"`

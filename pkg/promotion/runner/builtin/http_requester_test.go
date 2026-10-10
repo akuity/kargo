@@ -3,6 +3,7 @@ package builtin
 import (
 	"bytes"
 	"context"
+	"errors"
 	"io"
 	"maps"
 	"net/http"
@@ -137,6 +138,15 @@ func Test_httpRequester_convert(t *testing.T) {
 			},
 		},
 		{
+			name: "outPath is empty string",
+			config: promotion.Config{
+				"outPath": "",
+			},
+			expectedProblems: []string{
+				"outPath: String length must be greater than or equal to 1",
+			},
+		},
+		{
 			name: "invalid pollInterval",
 			config: promotion.Config{
 				"pollInterval": "invalid",
@@ -229,6 +239,8 @@ func Test_httpRequester_convert(t *testing.T) {
 				"insecureSkipTLSVerify": true,
 				"timeout":               "30s",
 				"pollInterval":          "20s",
+				"outPath":               "downloads/report.json",
+				"allowOverwrite":        true,
 				"successExpression":     "response.status == 200",
 				"failureExpression":     "response.status == 404",
 				"proxy":                 "https://proxy.example.com:3000",
@@ -1704,5 +1716,414 @@ func Test_httpRequester_proxy(t *testing.T) {
 		h := &httpRequester{}
 		result, err := h.run(t.Context(), nil, tc.cfg)
 		tc.assertions(t, result, err)
+	}
+}
+
+func Test_httpRequester_run_download(t *testing.T) {
+	testCases := []struct {
+		name    string
+		cfg     builtin.HTTPConfig
+		setup   func(*testing.T, string)
+		handler http.HandlerFunc
+		assert  func(*testing.T, string, promotion.StepResult, error)
+	}{
+		{
+			name: "small download succeeds, file moved, body parsed",
+			cfg: builtin.HTTPConfig{
+				OutPath:           "downloads/answer.json",
+				SuccessExpression: "true",
+				Outputs: []builtin.HTTPOutput{{
+					Name:           "meaning",
+					FromExpression: "response.body.theMeaningOfLife",
+				}},
+			},
+			handler: func(w http.ResponseWriter, _ *http.Request) {
+				w.Header().Set(contentTypeHeader, contentTypeJSON)
+				_, err := w.Write([]byte(`{"theMeaningOfLife": 42}`))
+				require.NoError(t, err)
+			},
+			assert: func(t *testing.T, workDir string, res promotion.StepResult, err error) {
+				require.NoError(t, err)
+				require.Equal(t, kargoapi.PromotionStepStatusSucceeded, res.Status)
+				content, err := os.ReadFile(filepath.Join(workDir, "downloads", "answer.json"))
+				require.NoError(t, err)
+				require.JSONEq(t, `{"theMeaningOfLife": 42}`, string(content))
+				require.Equal(t, float64(42), res.Output["meaning"])
+				// No temp files left behind.
+				requireNoTempFiles(t, filepath.Join(workDir, "downloads"))
+			},
+		},
+		{
+			name: "existing file without allowOverwrite fails terminally before request",
+			cfg: builtin.HTTPConfig{
+				OutPath: "existing.txt",
+			},
+			setup: func(t *testing.T, workDir string) {
+				require.NoError(t, os.WriteFile(
+					filepath.Join(workDir, "existing.txt"), []byte("old"), 0o600,
+				))
+			},
+			handler: func(_ http.ResponseWriter, _ *http.Request) {
+				t.Error("request must not be sent when the file exists and overwrite is disallowed")
+			},
+			assert: func(t *testing.T, workDir string, res promotion.StepResult, err error) {
+				require.Error(t, err)
+				var termErr *promotion.TerminalError
+				require.ErrorAs(t, err, &termErr)
+				require.Equal(t, kargoapi.PromotionStepStatusFailed, res.Status)
+				requireNoTempFiles(t, workDir)
+			},
+		},
+		{
+			name: "existing file with allowOverwrite is replaced",
+			cfg: builtin.HTTPConfig{
+				OutPath:           "f.txt",
+				AllowOverwrite:    true,
+				SuccessExpression: "true",
+			},
+			setup: func(t *testing.T, workDir string) {
+				require.NoError(t, os.WriteFile(
+					filepath.Join(workDir, "f.txt"), []byte("old"), 0o600,
+				))
+			},
+			handler: func(w http.ResponseWriter, _ *http.Request) {
+				_, err := w.Write([]byte("new"))
+				require.NoError(t, err)
+			},
+			assert: func(t *testing.T, workDir string, res promotion.StepResult, err error) {
+				require.NoError(t, err)
+				require.Equal(t, kargoapi.PromotionStepStatusSucceeded, res.Status)
+				content, err := os.ReadFile(filepath.Join(workDir, "f.txt"))
+				require.NoError(t, err)
+				require.Equal(t, "new", string(content))
+			},
+		},
+		{
+			name: "large body is downloaded but not parsed into response.body",
+			cfg: builtin.HTTPConfig{
+				OutPath:           "big.bin",
+				SuccessExpression: `response.body == {}`,
+				Outputs: []builtin.HTTPOutput{{
+					Name:           "body",
+					FromExpression: "response.body",
+				}},
+			},
+			handler: func(w http.ResponseWriter, _ *http.Request) {
+				w.Header().Set(contentTypeHeader, contentTypeTextPlain)
+				_, err := w.Write(bytes.Repeat([]byte("x"), 3<<20))
+				require.NoError(t, err)
+			},
+			assert: func(t *testing.T, workDir string, res promotion.StepResult, err error) {
+				require.NoError(t, err)
+				require.Equal(t, kargoapi.PromotionStepStatusSucceeded, res.Status)
+				info, err := os.Stat(filepath.Join(workDir, "big.bin"))
+				require.NoError(t, err)
+				require.Equal(t, int64(3<<20), info.Size())
+				require.Equal(t, map[string]any{}, res.Output["body"])
+			},
+		},
+		{
+			name: "oversized response fails terminally",
+			cfg: builtin.HTTPConfig{
+				OutPath: "huge.bin",
+			},
+			handler: func(w http.ResponseWriter, _ *http.Request) {
+				w.Header().Set("Content-Length", "104857601")
+				w.WriteHeader(http.StatusOK)
+			},
+			assert: func(t *testing.T, workDir string, res promotion.StepResult, err error) {
+				require.Error(t, err)
+				var termErr *promotion.TerminalError
+				require.ErrorAs(t, err, &termErr)
+				require.Equal(t, kargoapi.PromotionStepStatusFailed, res.Status)
+				_, statErr := os.Stat(filepath.Join(workDir, "huge.bin"))
+				require.True(t, os.IsNotExist(statErr))
+				requireNoTempFiles(t, workDir)
+			},
+		},
+		{
+			name: "failure criteria discards the file",
+			cfg: builtin.HTTPConfig{
+				OutPath:           "f.json",
+				FailureExpression: "true",
+				ErrorExpression:   `"boom"`,
+			},
+			handler: func(w http.ResponseWriter, _ *http.Request) {
+				w.Header().Set(contentTypeHeader, contentTypeJSON)
+				_, err := w.Write([]byte(`{}`))
+				require.NoError(t, err)
+			},
+			assert: func(t *testing.T, workDir string, res promotion.StepResult, err error) {
+				require.Error(t, err)
+				var termErr *promotion.TerminalError
+				require.ErrorAs(t, err, &termErr)
+				require.ErrorContains(t, err, "boom")
+				require.Equal(t, kargoapi.PromotionStepStatusFailed, res.Status)
+				_, statErr := os.Stat(filepath.Join(workDir, "f.json"))
+				require.True(t, os.IsNotExist(statErr))
+				requireNoTempFiles(t, workDir)
+			},
+		},
+		{
+			name: "non-2xx without criteria fails retried and discards the file",
+			cfg: builtin.HTTPConfig{
+				OutPath: "f.json",
+			},
+			handler: func(w http.ResponseWriter, _ *http.Request) {
+				w.WriteHeader(http.StatusInternalServerError)
+			},
+			assert: func(t *testing.T, workDir string, res promotion.StepResult, err error) {
+				require.NoError(t, err)
+				require.Equal(t, kargoapi.PromotionStepStatusFailed, res.Status)
+				_, statErr := os.Stat(filepath.Join(workDir, "f.json"))
+				require.True(t, os.IsNotExist(statErr))
+				requireNoTempFiles(t, workDir)
+			},
+		},
+		{
+			name: "outputs evaluation failure errors and discards the file",
+			cfg: builtin.HTTPConfig{
+				OutPath:           "f.json",
+				SuccessExpression: "true",
+				Outputs: []builtin.HTTPOutput{{
+					Name:           "bad",
+					FromExpression: "this is not valid expr [",
+				}},
+			},
+			handler: func(w http.ResponseWriter, _ *http.Request) {
+				_, err := w.Write([]byte("ok"))
+				require.NoError(t, err)
+			},
+			assert: func(t *testing.T, workDir string, res promotion.StepResult, err error) {
+				require.Error(t, err)
+				require.Equal(t, kargoapi.PromotionStepStatusErrored, res.Status)
+				_, statErr := os.Stat(filepath.Join(workDir, "f.json"))
+				require.True(t, os.IsNotExist(statErr))
+				requireNoTempFiles(t, workDir)
+			},
+		},
+		{
+			name: "unparseable body errors and removes the temp file",
+			cfg:  builtin.HTTPConfig{OutPath: "f.json"},
+			handler: func(w http.ResponseWriter, _ *http.Request) {
+				w.Header().Set(contentTypeHeader, contentTypeJSON)
+				_, _ = w.Write([]byte("{not json"))
+			},
+			assert: func(t *testing.T, workDir string, res promotion.StepResult, err error) {
+				require.Error(t, err)
+				require.Equal(t, kargoapi.PromotionStepStatusErrored, res.Status)
+				_, statErr := os.Stat(filepath.Join(workDir, "f.json"))
+				require.True(t, os.IsNotExist(statErr))
+				requireNoTempFiles(t, workDir)
+			},
+		},
+		{
+			name: "oversized body without declared length fails terminally and removes the temp file",
+			cfg: builtin.HTTPConfig{
+				OutPath: "huge2.bin",
+			},
+			handler: func(w http.ResponseWriter, _ *http.Request) {
+				// No Content-Length is declared, so the cap can only be hit
+				// mid-stream. Write errors are expected once the client hits
+				// the cap and hangs up, so they are ignored.
+				chunk := bytes.Repeat([]byte("x"), 1<<20)
+				for written := int64(0); written <= maxDownloadSize; written += int64(len(chunk)) {
+					_, _ = w.Write(chunk)
+				}
+			},
+			assert: func(t *testing.T, workDir string, res promotion.StepResult, err error) {
+				require.Error(t, err)
+				var termErr *promotion.TerminalError
+				require.ErrorAs(t, err, &termErr)
+				require.Equal(t, kargoapi.PromotionStepStatusFailed, res.Status)
+				_, statErr := os.Stat(filepath.Join(workDir, "huge2.bin"))
+				require.True(t, os.IsNotExist(statErr))
+				requireNoTempFiles(t, workDir)
+			},
+		},
+	}
+
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			workDir := t.TempDir()
+			if testCase.setup != nil {
+				testCase.setup(t, workDir)
+			}
+			srv := httptest.NewServer(testCase.handler)
+			t.Cleanup(srv.Close)
+			testCase.cfg.URL = srv.URL
+			stepCtx := &promotion.StepContext{WorkDir: workDir}
+			h := &httpRequester{}
+			res, err := h.run(t.Context(), stepCtx, testCase.cfg)
+			testCase.assert(t, workDir, res, err)
+		})
+	}
+}
+
+// requireNoTempFiles asserts that dir holds no leftover download temp files.
+func requireNoTempFiles(t *testing.T, dir string) {
+	t.Helper()
+	entries, err := os.ReadDir(dir)
+	require.NoError(t, err)
+	for _, e := range entries {
+		require.NotContains(t, e.Name(), ".tmp")
+	}
+}
+
+func Test_streamResponseToTempFile(t *testing.T) {
+	testCases := []struct {
+		name string
+		// setup builds the context and reader for the case. Most cases just
+		// pair t.Context() with a fixed reader, but the canceled-context
+		// case needs the two built together.
+		setup func(t *testing.T) (context.Context, io.Reader)
+		// subDir, when set, streams into this subdirectory of the test's
+		// temp dir instead of the temp dir itself. It is deliberately not
+		// created first, so a case can use a path that does not exist.
+		subDir string
+		assert func(t *testing.T, dir string, tempPath string, size int64, err error)
+	}{
+		{
+			name: "success leaves the temp file for the caller",
+			setup: func(t *testing.T) (context.Context, io.Reader) {
+				return t.Context(), strings.NewReader("hello")
+			},
+			assert: func(t *testing.T, _ string, tempPath string, size int64, err error) {
+				require.NoError(t, err)
+				require.Equal(t, int64(5), size)
+				content, err := os.ReadFile(tempPath)
+				require.NoError(t, err)
+				require.Equal(t, "hello", string(content))
+			},
+		},
+		{
+			name: "oversized body removes the temp file",
+			setup: func(t *testing.T) (context.Context, io.Reader) {
+				return t.Context(), io.LimitReader(zeroReader{}, maxDownloadSize+1)
+			},
+			assert: func(t *testing.T, dir string, _ string, _ int64, err error) {
+				require.Error(t, err)
+				var termErr *promotion.TerminalError
+				require.ErrorAs(t, err, &termErr)
+				requireNoTempFiles(t, dir)
+			},
+		},
+		{
+			name: "read error removes the temp file",
+			setup: func(t *testing.T) (context.Context, io.Reader) {
+				return t.Context(), io.MultiReader(
+					strings.NewReader("partial"), errReader{},
+				)
+			},
+			assert: func(t *testing.T, dir string, _ string, _ int64, err error) {
+				require.ErrorContains(t, err, "failed to read response body")
+				requireNoTempFiles(t, dir)
+			},
+		},
+		{
+			name: "canceled context removes the temp file",
+			setup: func(t *testing.T) (context.Context, io.Reader) {
+				ctx, cancel := context.WithCancel(t.Context())
+				return ctx, &cancelingReader{cancel: cancel}
+			},
+			assert: func(t *testing.T, dir string, _ string, _ int64, err error) {
+				require.ErrorContains(t, err, "download canceled")
+				requireNoTempFiles(t, dir)
+			},
+		},
+		{
+			name:   "unwritable directory fails before creating anything",
+			subDir: "does-not-exist",
+			setup: func(t *testing.T) (context.Context, io.Reader) {
+				return t.Context(), strings.NewReader("hello")
+			},
+			assert: func(t *testing.T, dir string, _ string, _ int64, err error) {
+				require.ErrorContains(t, err, "failed to create temporary file")
+				requireNoTempFiles(t, dir)
+			},
+		},
+	}
+
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			dir := t.TempDir()
+			streamDir := dir
+			if testCase.subDir != "" {
+				streamDir = filepath.Join(dir, testCase.subDir)
+			}
+			ctx, reader := testCase.setup(t)
+			tempPath, size, err := streamResponseToTempFile(
+				ctx, reader, streamDir, "out",
+			)
+			testCase.assert(t, dir, tempPath, size, err)
+		})
+	}
+}
+
+// zeroReader is an io.Reader that yields an endless stream of zero bytes.
+type zeroReader struct{}
+
+func (zeroReader) Read(p []byte) (int, error) {
+	clear(p)
+	return len(p), nil
+}
+
+// errReader is an io.Reader whose reads always fail.
+type errReader struct{}
+
+func (errReader) Read([]byte) (int, error) {
+	return 0, errors.New("read failure")
+}
+
+// cancelingReader cancels its context on the first Read and then yields one
+// byte per Read without ever reaching EOF, so the only way out of the read
+// loop is the canceled context.
+type cancelingReader struct {
+	cancel context.CancelFunc
+	done   bool
+}
+
+func (r *cancelingReader) Read(p []byte) (int, error) {
+	if !r.done {
+		r.done = true
+		r.cancel()
+	}
+	p[0] = 'x'
+	return 1, nil
+}
+
+func Test_httpRequester_getClient_downloadTimeout(t *testing.T) {
+	testCases := []struct {
+		name        string
+		cfg         builtin.HTTPConfig
+		wantTimeout time.Duration
+	}{
+		{
+			name:        "default timeout without outPath",
+			wantTimeout: 10 * time.Second,
+		},
+		{
+			name: "default timeout with outPath",
+			cfg: builtin.HTTPConfig{
+				OutPath: "f.bin",
+			},
+			wantTimeout: time.Minute,
+		},
+		{
+			name: "explicit timeout wins over download default",
+			cfg: builtin.HTTPConfig{
+				OutPath: "f.bin",
+				Timeout: "5s",
+			},
+			wantTimeout: 5 * time.Second,
+		},
+	}
+	h := &httpRequester{}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			client, err := h.getClient(testCase.cfg)
+			require.NoError(t, err)
+			require.Equal(t, testCase.wantTimeout, client.Timeout)
+		})
 	}
 }
