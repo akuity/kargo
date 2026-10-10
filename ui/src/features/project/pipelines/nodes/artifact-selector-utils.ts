@@ -1,4 +1,9 @@
-import { isArtifactGeneric } from '@ui/features/assemble-freight/artifact-type-guards';
+import {
+  isArtifactChart,
+  isArtifactGeneric,
+  isArtifactGitCommit,
+  isArtifactImage
+} from '@ui/features/assemble-freight/artifact-type-guards';
 import {
   ArtifactReference,
   Chart,
@@ -40,7 +45,14 @@ const isSameArtifact = (a: ArtifactTypes, b: ArtifactTypes) => {
     return a.subscriptionName === b.subscriptionName;
   }
 
-  if (!isArtifactGeneric(a) && !isArtifactGeneric(b)) {
+  if (isArtifactChart(a) && isArtifactChart(b)) {
+    return `${a.repoURL}/${a.name}` === `${b.repoURL}/${b.name}`;
+  }
+
+  if (
+    (isArtifactGitCommit(a) && isArtifactGitCommit(b)) ||
+    (isArtifactImage(a) && isArtifactImage(b))
+  ) {
     return a.repoURL === b.repoURL;
   }
 
