@@ -62,6 +62,9 @@ func Test_argocdUpdater_check(t *testing.T) {
 								FinishedAt: &metav1.Time{
 									Time: time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
 								},
+								SyncResult: &argocd.SyncOperationResult{
+									Revisions: []string{"fake-version"},
+								},
 							},
 							ReconciledAt: &metav1.Time{
 								Time: time.Date(2024, 1, 1, 0, 0, 1, 0, time.UTC),
@@ -127,6 +130,9 @@ func Test_argocdUpdater_check(t *testing.T) {
 								FinishedAt: &metav1.Time{
 									Time: time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
 								},
+								SyncResult: &argocd.SyncOperationResult{
+									Revisions: []string{"fake-version"},
+								},
 							},
 							ReconciledAt: &metav1.Time{
 								Time: time.Date(2024, 1, 1, 0, 0, 1, 0, time.UTC),
@@ -153,6 +159,9 @@ func Test_argocdUpdater_check(t *testing.T) {
 								Phase: argocd.OperationSucceeded,
 								FinishedAt: &metav1.Time{
 									Time: time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
+								},
+								SyncResult: &argocd.SyncOperationResult{
+									Revisions: []string{"fake-commit"},
 								},
 							},
 							ReconciledAt: &metav1.Time{
@@ -515,6 +524,9 @@ func Test_argocdUpdater_getApplicationHealth(t *testing.T) {
 					FinishedAt: &metav1.Time{
 						Time: time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
 					},
+					SyncResult: &argocd.SyncOperationResult{
+						Revisions: []string{"fake-version", "wrong-fake-commit", "another-fake-commit"},
+					},
 				},
 				ReconciledAt: &metav1.Time{
 					Time: time.Date(2024, 1, 1, 0, 0, 1, 0, time.UTC),
@@ -552,6 +564,9 @@ func Test_argocdUpdater_getApplicationHealth(t *testing.T) {
 					Phase: argocd.OperationSucceeded,
 					FinishedAt: &metav1.Time{
 						Time: time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
+					},
+					SyncResult: &argocd.SyncOperationResult{
+						Revisions: []string{"fake-version", "fake-commit", "another-fake-commit"},
 					},
 				},
 				ReconciledAt: &metav1.Time{
@@ -645,11 +660,7 @@ func Test_argocdUpdater_stageHealthForAppSync(t *testing.T) {
 			name:      "no operation state",
 			revisions: []string{"fake-revision"},
 			app: &argocd.Application{
-				Status: argocd.ApplicationStatus{
-					Sync: argocd.SyncStatus{
-						Revision: "fake-revision",
-					},
-				},
+				Status: argocd.ApplicationStatus{},
 			},
 			assertions: func(t *testing.T, health kargoapi.HealthState, err error) {
 				require.ErrorContains(t, err, "is being synced")
@@ -661,14 +672,33 @@ func Test_argocdUpdater_stageHealthForAppSync(t *testing.T) {
 			revisions: []string{"fake-revision"},
 			app: &argocd.Application{
 				Status: argocd.ApplicationStatus{
-					Sync: argocd.SyncStatus{
-						Revision: "fake-revision",
+					OperationState: &argocd.OperationState{
+						SyncResult: &argocd.SyncOperationResult{
+							Revision: "fake-revision",
+						},
 					},
-					OperationState: &argocd.OperationState{},
 				},
 			},
 			assertions: func(t *testing.T, health kargoapi.HealthState, err error) {
 				require.ErrorContains(t, err, "is being synced")
+				require.Equal(t, kargoapi.HealthStateUnknown, health)
+			},
+		},
+		{
+			name:      "operation state without sync result",
+			revisions: []string{"fake-revision"},
+			app: &argocd.Application{
+				Spec: argocd.ApplicationSpec{
+					Source: &argocd.ApplicationSource{},
+				},
+				Status: argocd.ApplicationStatus{
+					OperationState: &argocd.OperationState{
+						FinishedAt: ptr.To(metav1.Now()),
+					},
+				},
+			},
+			assertions: func(t *testing.T, health kargoapi.HealthState, err error) {
+				require.ErrorContains(t, err, "without a sync result")
 				require.Equal(t, kargoapi.HealthStateUnknown, health)
 			},
 		},
@@ -680,11 +710,11 @@ func Test_argocdUpdater_stageHealthForAppSync(t *testing.T) {
 					Sources: []argocd.ApplicationSource{{}, {}},
 				},
 				Status: argocd.ApplicationStatus{
-					Sync: argocd.SyncStatus{
-						Revisions: []string{"fake-revision", "wrong-fake-revision"},
-					},
 					OperationState: &argocd.OperationState{
 						FinishedAt: ptr.To(metav1.Now()),
+						SyncResult: &argocd.SyncOperationResult{
+							Revisions: []string{"fake-revision", "wrong-fake-revision"},
+						},
 					},
 				},
 			},
@@ -702,11 +732,35 @@ func Test_argocdUpdater_stageHealthForAppSync(t *testing.T) {
 					Sources: []argocd.ApplicationSource{{}, {}},
 				},
 				Status: argocd.ApplicationStatus{
+					OperationState: &argocd.OperationState{
+						FinishedAt: ptr.To(metav1.Now()),
+						SyncResult: &argocd.SyncOperationResult{
+							Revisions: []string{"fake-revision", "another-fake-revision"},
+						},
+					},
+				},
+			},
+			assertions: func(t *testing.T, state kargoapi.HealthState, err error) {
+				require.NoError(t, err)
+				require.Equal(t, kargoapi.HealthStateHealthy, state)
+			},
+		},
+		{
+			name:      "monorepo: status.sync advanced by refresh but sync result still matches",
+			revisions: []string{"commit-A"},
+			app: &argocd.Application{
+				Spec: argocd.ApplicationSpec{
+					Source: &argocd.ApplicationSource{},
+				},
+				Status: argocd.ApplicationStatus{
 					Sync: argocd.SyncStatus{
-						Revisions: []string{"fake-revision", "another-fake-revision"},
+						Revision: "commit-B",
 					},
 					OperationState: &argocd.OperationState{
 						FinishedAt: ptr.To(metav1.Now()),
+						SyncResult: &argocd.SyncOperationResult{
+							Revision: "commit-A",
+						},
 					},
 				},
 			},
