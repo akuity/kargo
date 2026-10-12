@@ -5,7 +5,7 @@ inputs:
   go-version:
     description: The Go version to install
     required: false
-    default: "1.27.1"
+    default: "1.27.2"
 runs:
   using: composite
   steps:
