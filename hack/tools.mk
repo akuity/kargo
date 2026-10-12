@@ -19,7 +19,7 @@ ARCH	:= $(shell uname -m)
 # Tool versions                                                                #
 ################################################################################
 
-GOLANGCI_LINT_VERSION	?= v2.13.1
+GOLANGCI_LINT_VERSION	?= v2.14.0
 HELM_VERSION            ?= $(shell grep helm.sh/helm/v3 $(TOOLS_MOD_FILE) | awk '{print $$2}')
 GOIMPORTS_VERSION       ?= $(shell grep golang.org/x/tools $(TOOLS_MOD_FILE) | awk '{print $$2}')
 CODE_GENERATOR_VERSION	?= $(shell grep k8s.io/code-generator $(TOOLS_MOD_FILE) | awk '{print $$2}')
