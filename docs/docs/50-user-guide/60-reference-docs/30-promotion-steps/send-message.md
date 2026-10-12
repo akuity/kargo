@@ -3,8 +3,6 @@ sidebar_label: send-message
 description: Send a message to a specified destination, such as Slack or email, during the promotion process.
 ---
 
-<span class="tag professional"></span>
-<span class="tag beta"></span>
 # `send-message`
 
 :::info

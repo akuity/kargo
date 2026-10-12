@@ -5,9 +5,6 @@ description: Waits for GitHub Actions workflow runs to complete with optional st
 
 # `gha-wait-for-workflow`
 
-<span class="tag professional"></span>
-<span class="tag beta"></span>
-
 :::info
 
 This promotion step is only available in Kargo on the [Akuity Platform](https://akuity.io/akuity-platform), versions v1.8 and above.

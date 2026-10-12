@@ -3,9 +3,6 @@ sidebar_label: Custom steps
 description: Execute command in user-provided image
 ---
 
-<span class="tag professional"></span>
-<span class="tag beta"></span>
-
 # Custom steps
 
 :::info

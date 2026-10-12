@@ -230,8 +230,8 @@ In the example above, the promotion policy applies to all `Stage`s with the
 
 #### Auto-Rollback
 
-<span class="tag professional"></span>
-<span class="tag beta"></span>
+<Enterprise />
+<Beta />
 
 When verification fails on a `Stage`, Kargo can automatically promote that
 `Stage` back to its most recently verified `Freight` — its *stable Freight* —
@@ -420,8 +420,8 @@ whichever comes first.
 
 ### Promotion Windows
 
-<span class="tag professional"></span>
-<span class="tag beta"></span>
+<Enterprise />
+<Beta />
 
 A `ProjectConfig` can define `promotionWindows` that gate _when_ `Promotion`s
 may be created for the Project's `Stage`s. A window is either an **allow**
@@ -457,8 +457,8 @@ For the full field reference, scheduling syntax, allow/deny precedence, and the
 
 ### Message Channels
 
-<span class="tag professional"></span>
-<span class="tag beta"></span>
+<Enterprise />
+<Beta />
 
 Projects can define message channels to facilitate notifications and message sending as part of
 their workflows. Message channels can be configured for various platforms, such as Slack, SMTP, or
