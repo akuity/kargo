@@ -183,7 +183,7 @@ func (p *provider) CreatePullRequest(
 	}
 	pr, err := convertADOPullRequest(adoPR)
 	if err != nil {
-		return nil, fmt.Errorf("error converting pull request %d: %w", adoPR.PullRequestId, err)
+		return nil, fmt.Errorf("error converting pull request %d: %w", ptr.Deref(adoPR.PullRequestId, 0), err)
 	}
 	return pr, nil
 }
@@ -245,7 +245,7 @@ func (p *provider) ListPullRequests(
 	for _, adoPR := range *adoPRs {
 		pr, err := convertADOPullRequest(&adoPR)
 		if err != nil {
-			return nil, fmt.Errorf("error converting pull request %d: %w", adoPR.PullRequestId, err)
+			return nil, fmt.Errorf("error converting pull request %d: %w", ptr.Deref(adoPR.PullRequestId, 0), err)
 		}
 		pts = append(pts, *pr)
 	}
