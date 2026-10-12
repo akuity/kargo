@@ -5,9 +5,6 @@ description: Manages evidence creation, verification, and deletion for artifacts
 
 # `jfrog-evidence`
 
-<span class="tag professional"></span>
-<span class="tag beta"></span>
-
 :::info
 
 This promotion step is only available in Kargo on the [Akuity Platform](https://akuity.io/akuity-platform), versions v1.7 and above.
