@@ -35,7 +35,7 @@ rules:
   - freights
   - projects
   - projectconfigs
-  - promotionrequests
+  - promotionrollouts
   - promotiontasks
   - stages
   - warehouses
@@ -226,7 +226,7 @@ rules:
   - projects
   - projectconfigs
   - promotions
-  - promotionrequests
+  - promotionrollouts
   - promotiontasks
   - stages
   - targets

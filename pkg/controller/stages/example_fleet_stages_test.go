@@ -42,6 +42,8 @@ import (
 //   - For(&Stage{}) plus three WithEventFilter calls become one kube.Kind on
 //     Stages carrying the same predicates. WithEventFilter only ever applied
 //     to the For source, so nothing is lost by attaching them there.
+//   - PromotionRollouts live in the database and have no watch; the
+//     reconciler polls for them, as it does today.
 //   - Each c.Watch(source.Kind(...)) becomes a kube.Kind(...) in Sources
 //     with the arguments unchanged. The handlers in event_handlers.go
 //     already implement controller-runtime's typed handler interface.
@@ -58,14 +60,13 @@ func ExampleFleetStageReconciler_SetupWithManager() {
 	)
 	r := NewFleetStageReconciler(cfg, credentialsDB, nil)
 	r.client = kargoMgr.GetClient()
-	logger := logging.LoggerFromContext(ctx)
 
 	// Indexes are set up exactly as today; one is shown.
 	if err := sharedIndexer.IndexField(
 		ctx,
-		&kargoapi.PromotionRequest{},
-		indexer.PromotionRequestsByStageField,
-		indexer.PromotionRequestsByStage,
+		&kargoapi.Freight{},
+		indexer.FreightByWarehouseField,
+		indexer.FreightByWarehouse,
 	); err != nil {
 		return
 	}
@@ -92,18 +93,6 @@ func ExampleFleetStageReconciler_SetupWithManager() {
 					kargo.VerificationAbortRequested{},
 				),
 			),
-		),
-		// PromotionRequests whose phase changed, mapped to the owning Stage.
-		kube.Kind(
-			kargoMgr.GetCache(),
-			&kargoapi.PromotionRequest{},
-			handler.TypedEnqueueRequestForOwner[*kargoapi.PromotionRequest](
-				kargoMgr.GetScheme(),
-				kargoMgr.GetRESTMapper(),
-				&kargoapi.Stage{},
-				handler.OnlyControllerOwner(),
-			),
-			kargo.NewPromotionRequestPhaseChangedPredicate(logger),
 		),
 		// Freight, three ways, each with the handler it has today.
 		kube.Kind(
@@ -146,46 +135,43 @@ func ExampleFleetStageReconciler_SetupWithManager() {
 	_ = kargoMgr.Add(kube.Runnable(c))
 }
 
-// promotionRequestRow stands in for the database's PromotionRequest row,
-// which does not exist on this branch yet.
-type promotionRequestRow struct {
+// promotionRolloutRow stands in for the database's PromotionRollout row.
+type promotionRolloutRow struct {
 	ID      uuid.UUID
 	Project string
 	Stage   string
-	Phase   kargoapi.PromotionRequestPhase
+	Phase   kargoapi.PromotionRolloutPhase
 }
 
-// The same reconciler once PromotionRequests live in the database.
+// The same reconciler fed PromotionRollout events instead of polling.
 //
-// Only the PromotionRequest source changes. The kube.Kind on
-// PromotionRequests is replaced by a NATS subject carrying the rows the API
-// server and the request reconciler commit, mapped to the Stage each one
-// belongs to, with the phase-changed predicate expressed over rows. A
-// periodic list of Stages with open requests covers lost events. The Stage source, the Freight sources, the indexes on
-// Freight, and Reconcile are untouched. Inside Reconcile,
-// syncPromotionRequests reads the requests from the store instead of the
-// cache, which is a change to that function, not to the controller.
-func ExampleFleetStageReconciler_SetupWithManager_databaseRequests() {
+// Today the reconciler polls the API server for a Stage's rollouts. Here a
+// NATS subject carrying the rows the API server and the rollout reconciler
+// commit is mapped to the Stage each one belongs to, with a phase-changed
+// predicate expressed over rows, and a periodic list of Stages with open
+// rollouts covers lost events. The Stage source, the Freight sources, the
+// indexes on Freight, and Reconcile are untouched.
+func ExampleFleetStageReconciler_SetupWithManager_rolloutEvents() {
 	var (
 		kargoMgr ctrl.Manager
 		cfg      ReconcilerConfig
 		conn     *natsgo.Conn
-		// listStagesWithOpenRequests returns every Stage with a non-terminal
-		// PromotionRequest, from the store.
-		listStagesWithOpenRequests func(context.Context) ([]reconcile.Request, error)
+		// listStagesWithOpenRollouts returns every Stage with a non-terminal
+		// PromotionRollout, from the store.
+		listStagesWithOpenRollouts func(context.Context) ([]reconcile.Request, error)
 		stageSource                reconciler.Source[reconcile.Request]
 		freightSources             []reconciler.Source[reconcile.Request]
 		reconcileFn                reconciler.Func[reconcile.Request]
 	)
 	// Declared once beside the store in the real code.
-	requestEvents := nats.NewTopic[uuid.UUID, promotionRequestRow]("kargo.promotionrequests")
+	rolloutEvents := nats.NewTopic[uuid.UUID, promotionRolloutRow]("kargo.promotionrollouts")
 
 	sources := []reconciler.Source[reconcile.Request]{
 		// Event sources first, so they are subscribed while the resync lists.
 		nats.Mapped(
 			conn,
-			requestEvents,
-			func(_ context.Context, e nats.Event[uuid.UUID, promotionRequestRow]) []reconcile.Request {
+			rolloutEvents,
+			func(_ context.Context, e nats.Event[uuid.UUID, promotionRolloutRow]) []reconcile.Request {
 				row := e.New
 				if row == nil {
 					row = e.Old
@@ -195,13 +181,13 @@ func ExampleFleetStageReconciler_SetupWithManager_databaseRequests() {
 				}}
 			},
 		).
-			// The counterpart of kargo.PromotionRequestPhaseChanged.
-			OnUpdate(func(old, updated promotionRequestRow) bool { return old.Phase != updated.Phase }),
+			// A rollout is interesting to its Stage only when its phase moves.
+			OnUpdate(func(old, updated promotionRolloutRow) bool { return old.Phase != updated.Phase }),
 		stageSource,
 	}
 	sources = append(sources, freightSources...)
-	// Stages with requests in flight, in case an event was lost.
-	sources = append(sources, list.New(listStagesWithOpenRequests).Every(2*time.Minute))
+	// Stages with rollouts in flight, in case an event was lost.
+	sources = append(sources, list.New(listStagesWithOpenRollouts).Every(2*time.Minute))
 
 	b := reconciler.New[reconcile.Request]("fleet_stage").Workers(cfg.MaxConcurrentFleetReconciles)
 	for _, src := range sources {

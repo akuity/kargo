@@ -25,6 +25,7 @@ import (
 	"github.com/akuity/kargo/pkg/api"
 	rollouts "github.com/akuity/kargo/pkg/api/stubs/rollouts"
 	"github.com/akuity/kargo/pkg/database"
+	"github.com/akuity/kargo/pkg/database/promotionrolloutstore"
 	"github.com/akuity/kargo/pkg/database/targetstore"
 	"github.com/akuity/kargo/pkg/event"
 	httputil "github.com/akuity/kargo/pkg/http"
@@ -32,8 +33,8 @@ import (
 	"github.com/akuity/kargo/pkg/server/config"
 	"github.com/akuity/kargo/pkg/server/dex"
 	"github.com/akuity/kargo/pkg/server/kubernetes"
+	"github.com/akuity/kargo/pkg/server/promotionrollouts"
 	"github.com/akuity/kargo/pkg/server/rbac"
-	"github.com/akuity/kargo/pkg/server/targets"
 )
 
 //go:embed all:ui
@@ -136,9 +137,15 @@ type server struct {
 		types.NamespacedName,
 	) (*rolloutsapi.AnalysisRun, error)
 
-	// listTargetsFn lists a Project's Targets from the database. It is nil
-	// when the server runs without one.
-	listTargetsFn func(context.Context, string) ([]kargoapi.Target, error)
+	// createRolloutFn creates a PromotionRollout in the database, promoting
+	// the Freight to the Targets the Stage governs, on behalf of the given
+	// actor. It is nil when the server runs without a database.
+	createRolloutFn func(
+		context.Context,
+		*kargoapi.Stage,
+		*kargoapi.Freight,
+		string,
+	) (*kargoapi.PromotionRollout, error)
 
 	// Special authorizations:
 	authorizeFn func(
@@ -183,10 +190,8 @@ func NewServer(
 	s.patchFreightAliasFn = s.patchFreightAlias
 	s.patchFreightStatusFn = s.patchFreightStatus
 	s.authorizeFn = kubeClient.Authorize
-	if store := s.targetStore(); store != nil {
-		s.listTargetsFn = func(ctx context.Context, project string) ([]kargoapi.Target, error) {
-			return targets.ListFromStore(ctx, store, project)
-		}
+	if store := s.rolloutStore(); store != nil {
+		s.createRolloutFn = promotionrollouts.NewCreator(store).Create
 	}
 	s.getAnalysisTemplateFn = rollouts.GetAnalysisTemplate
 	s.getClusterAnalysisTemplateFn = rollouts.GetClusterAnalysisTemplate
@@ -445,3 +450,17 @@ func (s *server) targetStore() targetstore.Store {
 	}
 	return targetstore.New(s.db)
 }
+
+// rolloutStore returns the store for PromotionRollouts, or nil when the
+// server runs without a database.
+func (s *server) rolloutStore() promotionrolloutstore.Store {
+	if s.db == nil {
+		return nil
+	}
+	return promotionrolloutstore.New(s.db)
+}
+
+var errDatabaseNotConfigured = httputil.ErrorStr(
+	"database is not configured",
+	http.StatusNotImplemented,
+)

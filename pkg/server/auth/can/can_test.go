@@ -91,11 +91,11 @@ func TestAccess(t *testing.T) {
 			},
 		},
 		{
-			name:   "PromotionRequest",
-			access: Get().PromotionRequest("kargo-demo", "uat.abc123"),
+			name:   "PromotionRollout",
+			access: Get().PromotionRollout("kargo-demo", "uat.abc123"),
 			expected: Access{
 				Verb:     "get",
-				Resource: kargoResource("promotionrequests"),
+				Resource: kargoResource("promotionrollouts"),
 				Key:      types.NamespacedName{Namespace: "kargo-demo", Name: "uat.abc123"},
 			},
 		},

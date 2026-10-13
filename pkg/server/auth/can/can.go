@@ -82,10 +82,12 @@ func (v Verb) Promotion(project, name string) Access {
 	return v.kargo("promotions", project, name)
 }
 
-// PromotionRequest returns the Verb on the named PromotionRequest in the
-// Project.
-func (v Verb) PromotionRequest(project, name string) Access {
-	return v.kargo("promotionrequests", project, name)
+// PromotionRollout returns the Verb on the named PromotionRollout in the
+// Project. PromotionRollouts live in the database rather than in
+// Kubernetes, but RBAC rules name them like any other Kargo resource. An
+// empty name addresses the Project's collection.
+func (v Verb) PromotionRollout(project, name string) Access {
+	return v.kargo("promotionrollouts", project, name)
 }
 
 // Warehouse returns the Verb on the named Warehouse in the Project.

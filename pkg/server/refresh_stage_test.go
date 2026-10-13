@@ -28,21 +28,16 @@ func Test_server_refreshStage(t *testing.T) {
 			Namespace: testProject.Name,
 		},
 	}
-	testPromotionRequest := &kargoapi.PromotionRequest{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "fake-promotion-req",
-			Namespace: testProject.Name,
-		},
-	}
 	testStage := &kargoapi.Stage{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "fake-stage",
 			Namespace: testProject.Name,
 		},
 		Status: kargoapi.StageStatus{
-			// This is technically an invalid state, but test doesn't need it to be valid
-			CurrentPromotion:        &kargoapi.PromotionReference{Name: testPromotion.Name},
-			CurrentPromotionRequest: &kargoapi.PromotionRequestReference{Name: testPromotionRequest.Name},
+			CurrentPromotion: &kargoapi.PromotionReference{Name: testPromotion.Name},
+			// A current PromotionRollout is not refreshed: it lives in the
+			// database and is read afresh on every reconcile.
+			CurrentPromotionRequest: &kargoapi.PromotionRequestReference{Name: "fake-rollout"},
 		},
 	}
 	testRESTEndpoint(
@@ -69,7 +64,6 @@ func Test_server_refreshStage(t *testing.T) {
 					testProject,
 					testStage,
 					testPromotion,
-					testPromotionRequest,
 				),
 				serverSetup: func(_ *testing.T, s *server) {
 					s.authorizeFn = func(
@@ -106,7 +100,6 @@ func Test_server_refreshStage(t *testing.T) {
 					testProject,
 					testStage,
 					testPromotion,
-					testPromotionRequest,
 				),
 				serverSetup: func(_ *testing.T, s *server) {
 					s.authorizeFn = func(
@@ -151,62 +144,11 @@ func Test_server_refreshStage(t *testing.T) {
 				},
 			},
 			{
-				name: "current Promotion Request refresh not authorized",
-				clientBuilder: fake.NewClientBuilder().WithObjects(
-					testProject,
-					testStage,
-					testPromotion,
-					testPromotionRequest,
-				),
-				serverSetup: func(_ *testing.T, s *server) {
-					s.authorizeFn = func(
-						_ context.Context,
-						_ string,
-						gvr schema.GroupVersionResource,
-						_ string,
-						_ client.ObjectKey,
-					) error {
-						if gvr.Resource == "promotionrequests" {
-							return apierrors.NewForbidden(
-								kargoapi.GroupVersion.WithResource("promotionrequests").GroupResource(),
-								testPromotion.Name,
-								errors.New("not authorized"),
-							)
-						}
-						return nil
-					}
-				},
-				assertions: func(t *testing.T, w *httptest.ResponseRecorder, c client.Client) {
-					require.Equal(t, http.StatusForbidden, w.Code)
-
-					// The Stage refresh was already authorized and performed
-					stage := &kargoapi.Stage{}
-					err := c.Get(
-						t.Context(),
-						client.ObjectKeyFromObject(testStage),
-						stage,
-					)
-					require.NoError(t, err)
-					require.NotEmpty(t, stage.Annotations[kargoapi.AnnotationKeyRefresh])
-
-					// The current Promotion was NOT refreshed
-					promotionRequest := &kargoapi.PromotionRequest{}
-					err = c.Get(
-						t.Context(),
-						client.ObjectKeyFromObject(testPromotionRequest),
-						promotionRequest,
-					)
-					require.NoError(t, err)
-					require.Empty(t, promotionRequest.Annotations[kargoapi.AnnotationKeyRefresh])
-				},
-			},
-			{
 				name: "refreshes Stage",
 				clientBuilder: fake.NewClientBuilder().WithObjects(
 					testProject,
 					testStage,
 					testPromotion,
-					testPromotionRequest,
 				),
 				serverSetup: func(t *testing.T, s *server) {
 					s.authorizeFn = func(
@@ -225,9 +167,6 @@ func Test_server_refreshStage(t *testing.T) {
 						case "promotions":
 							require.Equal(t, kargoapi.GroupVersion.WithResource("promotions"), gvr)
 							require.Equal(t, client.ObjectKeyFromObject(testPromotion), key)
-						case "promotionrequests":
-							require.Equal(t, kargoapi.GroupVersion.WithResource("promotionrequests"), gvr)
-							require.Equal(t, client.ObjectKeyFromObject(testPromotionRequest), key)
 						default:
 							require.Failf(t, "unexpected authorization", "resource %q", gvr.Resource)
 						}
@@ -256,16 +195,6 @@ func Test_server_refreshStage(t *testing.T) {
 					)
 					require.NoError(t, err)
 					require.NotEmpty(t, promotion.Annotations[kargoapi.AnnotationKeyRefresh])
-
-					// Verify the current Promotion Request was also refreshed
-					promotionRequest := &kargoapi.PromotionRequest{}
-					err = c.Get(
-						t.Context(),
-						client.ObjectKeyFromObject(testPromotionRequest),
-						promotionRequest,
-					)
-					require.NoError(t, err)
-					require.NotEmpty(t, promotionRequest.Annotations[kargoapi.AnnotationKeyRefresh])
 				},
 			},
 		},

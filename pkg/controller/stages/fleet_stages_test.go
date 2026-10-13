@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
+	"sync"
 	"testing"
 	"time"
 
@@ -24,6 +26,7 @@ import (
 	rolloutsapi "github.com/akuity/kargo/api/stubs/rollouts/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/api"
+	"github.com/akuity/kargo/pkg/client/apiserver"
 	"github.com/akuity/kargo/pkg/conditions"
 	fakeevent "github.com/akuity/kargo/pkg/event/fake"
 	"github.com/akuity/kargo/pkg/health"
@@ -35,10 +38,13 @@ func TestFleetStageReconciler_Reconcile(t *testing.T) {
 	require.NoError(t, kargoapi.AddToScheme(scheme))
 
 	tests := []struct {
-		name        string
-		req         ctrl.Request
-		stage       *kargoapi.Stage
-		objects     []client.Object
+		name    string
+		req     ctrl.Request
+		stage   *kargoapi.Stage
+		objects []client.Object
+		// rollouts stands in for the API server. Nil means the controller
+		// has none, in which case the Stage stalls.
+		rollouts    *fakeRolloutClient
 		interceptor interceptor.Funcs
 		assertions  func(*testing.T, client.Client, ctrl.Result, error)
 	}{
@@ -409,6 +415,60 @@ func TestFleetStageReconciler_Reconcile(t *testing.T) {
 				assert.Equal(t, metav1.ConditionFalse, readyCond.Status)
 			},
 		},
+		{
+			// PromotionRollouts live in the database, so nothing enqueues the
+			// Stage when one ends: it polls instead.
+			name: "polls while a PromotionRollout is in flight",
+			req: ctrl.Request{
+				NamespacedName: types.NamespacedName{
+					Namespace: "default",
+					Name:      "test-stage",
+				},
+			},
+			stage: &kargoapi.Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace:  "default",
+					Name:       "test-stage",
+					Finalizers: []string{kargoapi.FinalizerName},
+				},
+				Spec: kargoapi.StageSpec{
+					Targets: &kargoapi.StageTargets{},
+					PromotionTemplate: &kargoapi.PromotionTemplate{
+						Spec: kargoapi.PromotionTemplateSpec{
+							Steps: []kargoapi.PromotionStep{{}, {}},
+						},
+					},
+				},
+			},
+			rollouts: &fakeRolloutClient{rollouts: []kargoapi.PromotionRollout{{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "default",
+					Name:      "test-stage.01running.abc",
+				},
+				Spec: kargoapi.PromotionRolloutSpec{
+					Stage:   "test-stage",
+					Freight: "test-freight",
+				},
+				Status: kargoapi.PromotionRolloutStatus{
+					Phase: kargoapi.PromotionRolloutPhaseRunning,
+				},
+			}}},
+			assertions: func(t *testing.T, c client.Client, result ctrl.Result, err error) {
+				require.NoError(t, err)
+				assert.Equal(t, ctrl.Result{RequeueAfter: 15 * time.Second}, result)
+
+				stage := &kargoapi.Stage{}
+				err = c.Get(t.Context(), types.NamespacedName{
+					Namespace: "default",
+					Name:      "test-stage",
+				}, stage)
+				require.NoError(t, err)
+				require.NotNil(t, stage.Status.CurrentPromotionRequest)
+				assert.Equal(t, "test-stage.01running.abc", stage.Status.CurrentPromotionRequest.Name)
+				// The controller has an API server, so the Stage is not stalled.
+				assert.Nil(t, conditions.Get(&stage.Status, kargoapi.ConditionTypeStalled))
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -442,17 +502,16 @@ func TestFleetStageReconciler_Reconcile(t *testing.T) {
 					indexer.FreightApprovedForStagesField,
 					indexer.FreightApprovedForStages,
 				).
-				WithIndex(
-					&kargoapi.PromotionRequest{},
-					indexer.PromotionRequestsByStageField,
-					indexer.PromotionRequestsByStage,
-				).
 				WithInterceptorFuncs(tt.interceptor).
 				Build()
 
 			r := &FleetStageReconciler{
+				cfg:         ReconcilerConfig{FleetRolloutPollInterval: 15 * time.Second},
 				client:      c,
 				eventSender: &fakeevent.Sender{},
+			}
+			if tt.rollouts != nil {
+				r.rollouts = tt.rollouts
 			}
 
 			result, err := r.Reconcile(t.Context(), tt.req)
@@ -529,11 +588,6 @@ func TestFleetStageReconciler_Reconcile_concurrentStatusMetadata(t *testing.T) {
 			indexer.FreightApprovedForStagesField,
 			indexer.FreightApprovedForStages,
 		).
-		WithIndex(
-			&kargoapi.PromotionRequest{},
-			indexer.PromotionRequestsByStageField,
-			indexer.PromotionRequestsByStage,
-		).
 		WithInterceptorFuncs(interceptor.Funcs{
 			SubResourcePatch: func(
 				ctx context.Context,
@@ -605,11 +659,15 @@ func TestFleetStagesReconciler_reconcile(t *testing.T) {
 	require.NoError(t, rolloutsapi.AddToScheme(scheme))
 
 	now := time.Now()
+	succeededRollout := api.GeneratePromotionRolloutName("test-stage", "test-freight")
 
 	tests := []struct {
-		name        string
-		stage       *kargoapi.Stage
-		objects     []client.Object
+		name    string
+		stage   *kargoapi.Stage
+		objects []client.Object
+		// rollouts stands in for the API server; nil means the controller
+		// has none.
+		rollouts    *fakeRolloutClient
 		interceptor interceptor.Funcs
 		assertions  func(*testing.T, kargoapi.StageStatus, bool, error)
 	}{
@@ -687,7 +745,7 @@ func TestFleetStagesReconciler_reconcile(t *testing.T) {
 			// Sub-reconcilers must see the status computed by their
 			// predecessors in the same pass even when persisting that status
 			// fails. Here, every Stage status update fails, yet the state
-			// computed by syncPromotionRequests must survive through the rest of the
+			// computed by syncPromotionRollouts must survive through the rest of the
 			// pass and be reflected in the returned status.
 			name: "subreconcilers see status computed earlier in the pass when status updates fail",
 			stage: &kargoapi.Stage{
@@ -714,24 +772,21 @@ func TestFleetStagesReconciler_reconcile(t *testing.T) {
 						Name: "test-warehouse",
 					},
 				},
-				&kargoapi.PromotionRequest{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "test-project",
-						Name:      "test-promotion-req",
-					},
-					Spec: kargoapi.PromotionRequestSpec{Stage: "test-stage"},
-					Status: kargoapi.PromotionRequestStatus{
-						Phase:      kargoapi.PromotionRequestPhaseSucceeded,
-						FinishedAt: &metav1.Time{Time: now},
-						FreightCollection: &kargoapi.FreightCollection{
-							ID: "test-collection-id",
-							Freight: map[string]kargoapi.FreightReference{
-								"Warehouse/test-warehouse": {Name: "test-freight"},
-							},
-						},
-					},
-				},
 			},
+			rollouts: &fakeRolloutClient{rollouts: []kargoapi.PromotionRollout{{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test-project",
+					Name:      succeededRollout,
+				},
+				Spec: kargoapi.PromotionRolloutSpec{
+					Stage:   "test-stage",
+					Freight: "test-freight",
+				},
+				Status: kargoapi.PromotionRolloutStatus{
+					Phase:      kargoapi.PromotionRolloutPhaseSucceeded,
+					FinishedAt: &metav1.Time{Time: now},
+				},
+			}}},
 			interceptor: interceptor.Funcs{
 				SubResourcePatch: func(
 					ctx context.Context,
@@ -753,11 +808,13 @@ func TestFleetStagesReconciler_reconcile(t *testing.T) {
 				require.NoError(t, err)
 				require.False(t, requeue)
 
-				// The results of syncPromotionRequests were carried through the rest
+				// The results of syncPromotionRollouts were carried through the rest
 				// of the pass despite never having been persisted.
+				assert.Nil(t, status.CurrentPromotionRequest)
 				require.NotNil(t, status.LastPromotionRequest)
-				assert.Equal(t, "test-promotion-req", status.LastPromotionRequest.Name)
+				assert.Equal(t, succeededRollout, status.LastPromotionRequest.Name)
 				require.Len(t, status.FreightHistory, 1)
+				assert.True(t, status.FreightHistory.Current().Includes("test-freight"))
 			},
 		},
 	}
@@ -791,17 +848,15 @@ func TestFleetStagesReconciler_reconcile(t *testing.T) {
 					indexer.FreightApprovedForStagesField,
 					indexer.FreightApprovedForStages,
 				).
-				WithIndex(
-					&kargoapi.PromotionRequest{},
-					indexer.PromotionRequestsByStageField,
-					indexer.PromotionRequestsByStage,
-				).
 				WithInterceptorFuncs(tt.interceptor).
 				Build()
 
 			r := &FleetStageReconciler{
 				client:      c,
 				eventSender: &fakeevent.Sender{},
+			}
+			if tt.rollouts != nil {
+				r.rollouts = tt.rollouts
 			}
 
 			status, requeue, err := r.reconcile(t.Context(), tt.stage, now)
@@ -882,11 +937,6 @@ func TestFleetStageReconciler_partitionsTargetPromotions(t *testing.T) {
 					indexer.PromotionsByStage,
 				).
 				WithIndex(
-					&kargoapi.PromotionRequest{},
-					indexer.PromotionRequestsByStageField,
-					indexer.PromotionRequestsByStage,
-				).
-				WithIndex(
 					&kargoapi.Freight{},
 					indexer.FreightByCurrentStagesField,
 					indexer.FreightByCurrentStages,
@@ -915,87 +965,113 @@ func TestFleetStageReconciler_partitionsTargetPromotions(t *testing.T) {
 	}
 }
 
-func TestFleetStageReconciler_syncPromotionRequests(t *testing.T) {
+func TestFleetStageReconciler_syncPromotionRollouts(t *testing.T) {
 	scheme := runtime.NewScheme()
 	require.NoError(t, kargoapi.AddToScheme(scheme))
 
 	now := metav1.NewTime(time.Now().Truncate(time.Second))
-	// Generated in this order, so the ULIDs in olderRequest, newerRequest and
-	// newestRequest ascend, and lex order over the three names is creation order.
-	olderRequest := api.GeneratePromotionRequestName("test-stage", "test-freight")
-	newerRequest := api.GeneratePromotionRequestName("test-stage", "test-freight")
-	newestRequest := api.GeneratePromotionRequestName("test-stage", "test-freight")
-	otherStageRequest := api.GeneratePromotionRequestName("other-stage", "test-freight")
+	// Generated in this order, so the ULIDs in olderRollout, newerRollout and
+	// newestRollout ascend, and lex order over the three names is creation order.
+	olderRollout := api.GeneratePromotionRolloutName("test-stage", "test-freight")
+	newerRollout := api.GeneratePromotionRolloutName("test-stage", "test-freight")
+	newestRollout := api.GeneratePromotionRolloutName("test-stage", "test-freight")
+	otherStageRollout := api.GeneratePromotionRolloutName("other-stage", "test-freight")
 
 	tests := []struct {
-		name        string
-		stage       *kargoapi.Stage
-		objects     []client.Object
-		interceptor interceptor.Funcs
-		assertions  func(*testing.T, kargoapi.StageStatus, error)
+		name  string
+		stage *kargoapi.Stage
+		// objects live in the cluster: the Freight a succeeded rollout promoted.
+		objects []client.Object
+		// rollouts are what the API server serves, across every Stage. The
+		// reconciler has no API server at all when noClient is set.
+		rollouts   []kargoapi.PromotionRollout
+		noClient   bool
+		listErr    error
+		assertions func(*testing.T, kargoapi.StageStatus, error)
 	}{
 		{
-			name: "list PromotionRequests error",
-			stage: &kargoapi.Stage{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "fake-project",
-					Name:      "test-stage",
-				},
-			},
-			interceptor: interceptor.Funcs{
-				List: func(context.Context, client.WithWatch, client.ObjectList, ...client.ListOption) error {
-					return fmt.Errorf("list error")
-				},
-			},
-			assertions: func(t *testing.T, status kargoapi.StageStatus, err error) {
-				require.ErrorContains(t, err, "failed to list PromotionRequests")
-				assert.Nil(t, status.CurrentPromotionRequest)
-				assert.Nil(t, status.LastPromotionRequest)
-			},
-		},
-		{
-			name: "no PromotionRequests clears a stale current reference",
+			name:     "no API client leaves the status untouched",
+			noClient: true,
 			stage: &kargoapi.Stage{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "fake-project",
 					Name:      "test-stage",
 				},
 				Status: kargoapi.StageStatus{
-					CurrentPromotionRequest: &kargoapi.PromotionRequestReference{Name: olderRequest},
-					LastPromotionRequest:    &kargoapi.PromotionRequestReference{Name: olderRequest},
+					CurrentPromotionRequest: &kargoapi.PromotionRequestReference{Name: newerRollout},
+					LastPromotionRequest:    &kargoapi.PromotionRequestReference{Name: olderRollout},
 				},
 			},
 			assertions: func(t *testing.T, status kargoapi.StageStatus, err error) {
 				require.NoError(t, err)
-				assert.Nil(t, status.CurrentPromotionRequest)
-				// The last PromotionRequest outlives the request itself.
+				// Nothing could be read, so nothing was changed: not even a
+				// current reference that may well be stale.
+				require.NotNil(t, status.CurrentPromotionRequest)
+				assert.Equal(t, newerRollout, status.CurrentPromotionRequest.Name)
 				require.NotNil(t, status.LastPromotionRequest)
-				assert.Equal(t, olderRequest, status.LastPromotionRequest.Name)
+				assert.Equal(t, olderRollout, status.LastPromotionRequest.Name)
 			},
 		},
 		{
-			name: "PromotionRequests for other Stages are ignored",
+			name: "list PromotionRollouts error",
 			stage: &kargoapi.Stage{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "fake-project",
 					Name:      "test-stage",
 				},
 			},
-			objects: []client.Object{
-				&kargoapi.PromotionRequest{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "fake-project",
-						Name:      otherStageRequest,
-					},
-					Spec: kargoapi.PromotionRequestSpec{
-						Stage:   "other-stage",
-						Freight: "test-freight",
-					},
-					Status: kargoapi.PromotionRequestStatus{
-						Phase: kargoapi.PromotionRequestPhaseRunning,
-					},
+			listErr: errors.New("list error"),
+			assertions: func(t *testing.T, status kargoapi.StageStatus, err error) {
+				require.ErrorContains(t, err, "failed to list PromotionRollouts")
+				require.ErrorContains(t, err, "list error")
+				assert.Nil(t, status.CurrentPromotionRequest)
+				assert.Nil(t, status.LastPromotionRequest)
+			},
+		},
+		{
+			name: "no PromotionRollouts clears a stale current reference",
+			stage: &kargoapi.Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "fake-project",
+					Name:      "test-stage",
+				},
+				Status: kargoapi.StageStatus{
+					CurrentPromotionRequest: &kargoapi.PromotionRequestReference{Name: olderRollout},
+					LastPromotionRequest:    &kargoapi.PromotionRequestReference{Name: olderRollout},
 				},
 			},
+			assertions: func(t *testing.T, status kargoapi.StageStatus, err error) {
+				require.NoError(t, err)
+				assert.Nil(t, status.CurrentPromotionRequest)
+				// The last PromotionRollout outlives the rollout itself.
+				require.NotNil(t, status.LastPromotionRequest)
+				assert.Equal(t, olderRollout, status.LastPromotionRequest.Name)
+			},
+		},
+		{
+			// The API server serves one Stage's rollouts at a time, so the
+			// reconciler must ask for the right Stage: the fake answers for the
+			// Stage it is asked about, and this rollout belongs to another.
+			name: "PromotionRollouts for other Stages are ignored",
+			stage: &kargoapi.Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "fake-project",
+					Name:      "test-stage",
+				},
+			},
+			rollouts: []kargoapi.PromotionRollout{{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "fake-project",
+					Name:      otherStageRollout,
+				},
+				Spec: kargoapi.PromotionRolloutSpec{
+					Stage:   "other-stage",
+					Freight: "test-freight",
+				},
+				Status: kargoapi.PromotionRolloutStatus{
+					Phase: kargoapi.PromotionRolloutPhaseRunning,
+				},
+			}},
 			assertions: func(t *testing.T, status kargoapi.StageStatus, err error) {
 				require.NoError(t, err)
 				assert.Nil(t, status.CurrentPromotionRequest)
@@ -1003,35 +1079,20 @@ func TestFleetStageReconciler_syncPromotionRequests(t *testing.T) {
 			},
 		},
 		{
-			name: "non-terminal PromotionRequest becomes the current one",
+			name: "non-terminal PromotionRollout becomes the current one",
 			stage: &kargoapi.Stage{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "fake-project",
 					Name:      "test-stage",
 				},
 			},
-			objects: []client.Object{
-				&kargoapi.PromotionRequest{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "fake-project",
-						Name:      olderRequest,
-					},
-					Spec: kargoapi.PromotionRequestSpec{
-						Stage:   "test-stage",
-						Freight: "test-freight",
-					},
-					Status: kargoapi.PromotionRequestStatus{
-						Phase: kargoapi.PromotionRequestPhaseRunning,
-						Freight: &kargoapi.FreightReference{
-							Name: "test-freight",
-						},
-					},
-				},
+			rollouts: []kargoapi.PromotionRollout{
+				testPromotionRollout(olderRollout, "test-freight", kargoapi.PromotionRolloutPhaseRunning, nil),
 			},
 			assertions: func(t *testing.T, status kargoapi.StageStatus, err error) {
 				require.NoError(t, err)
 				require.NotNil(t, status.CurrentPromotionRequest)
-				assert.Equal(t, olderRequest, status.CurrentPromotionRequest.Name)
+				assert.Equal(t, olderRollout, status.CurrentPromotionRequest.Name)
 				assert.Nil(t, status.CurrentPromotionRequest.FinishedAt)
 				// The reference names the Freight; it does not describe it.
 				assert.Equal(
@@ -1043,7 +1104,7 @@ func TestFleetStageReconciler_syncPromotionRequests(t *testing.T) {
 			},
 		},
 		{
-			name: "a Stage whose selectors govern no Targets still records its current request",
+			name: "a Stage whose selectors govern no Targets still records its current rollout",
 			stage: &kargoapi.Stage{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "fake-project",
@@ -1051,183 +1112,121 @@ func TestFleetStageReconciler_syncPromotionRequests(t *testing.T) {
 				},
 				// An empty selector list is target-aware but selects nothing:
 				// the Stage still governs Targets, it just governs none at the
-				// moment. The promote endpoints create PromotionRequests for
+				// moment. The promote endpoints create PromotionRollouts for
 				// such a Stage all the same, and the references mirror the
-				// requests that exist, not the Stage's spec.
+				// rollouts that exist, not the Stage's spec.
 				Spec: kargoapi.StageSpec{
 					Targets: &kargoapi.StageTargets{Selectors: []metav1.LabelSelector{}},
 				},
 			},
-			objects: []client.Object{
-				&kargoapi.PromotionRequest{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "fake-project",
-						Name:      olderRequest,
-					},
-					Spec: kargoapi.PromotionRequestSpec{
-						Stage:   "test-stage",
-						Freight: "test-freight",
-					},
-					Status: kargoapi.PromotionRequestStatus{
-						Phase: kargoapi.PromotionRequestPhaseRunning,
-					},
-				},
+			rollouts: []kargoapi.PromotionRollout{
+				testPromotionRollout(olderRollout, "test-freight", kargoapi.PromotionRolloutPhaseRunning, nil),
 			},
 			assertions: func(t *testing.T, status kargoapi.StageStatus, err error) {
 				require.NoError(t, err)
 				require.NotNil(t, status.CurrentPromotionRequest)
-				assert.Equal(t, olderRequest, status.CurrentPromotionRequest.Name)
+				assert.Equal(t, olderRollout, status.CurrentPromotionRequest.Name)
 			},
 		},
 		{
-			name: "a Stage that no longer governs Targets still mirrors a leftover request",
+			name: "a Stage that no longer governs Targets still mirrors a leftover rollout",
 			stage: &kargoapi.Stage{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "fake-project",
 					Name:      "test-stage",
 				},
 				// No spec.targets at all: a Stage converted back to classic
-				// with a request still in flight. The request exists, so it is
+				// with a rollout still in flight. The rollout exists, so it is
 				// recorded; only its absence clears the reference.
 			},
-			objects: []client.Object{
-				&kargoapi.PromotionRequest{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "fake-project",
-						Name:      olderRequest,
-					},
-					Spec: kargoapi.PromotionRequestSpec{
-						Stage:   "test-stage",
-						Freight: "test-freight",
-					},
-					Status: kargoapi.PromotionRequestStatus{
-						Phase: kargoapi.PromotionRequestPhasePending,
-					},
-				},
+			rollouts: []kargoapi.PromotionRollout{
+				testPromotionRollout(olderRollout, "test-freight", kargoapi.PromotionRolloutPhasePending, nil),
 			},
 			assertions: func(t *testing.T, status kargoapi.StageStatus, err error) {
 				require.NoError(t, err)
 				require.NotNil(t, status.CurrentPromotionRequest)
-				assert.Equal(t, olderRequest, status.CurrentPromotionRequest.Name)
+				assert.Equal(t, olderRollout, status.CurrentPromotionRequest.Name)
 			},
 		},
 		{
-			name: "a Running PromotionRequest outranks a Pending one",
+			name: "a Running PromotionRollout outranks a Pending one",
 			stage: &kargoapi.Stage{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "fake-project",
 					Name:      "test-stage",
 				},
 			},
-			objects: []client.Object{
-				&kargoapi.PromotionRequest{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "fake-project",
-						Name:      olderRequest,
-					},
-					Spec: kargoapi.PromotionRequestSpec{
-						Stage:   "test-stage",
-						Freight: "test-freight",
-					},
-					Status: kargoapi.PromotionRequestStatus{
-						Phase: kargoapi.PromotionRequestPhasePending,
-					},
-				},
-				&kargoapi.PromotionRequest{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "fake-project",
-						Name:      newerRequest,
-					},
-					Spec: kargoapi.PromotionRequestSpec{
-						Stage:   "test-stage",
-						Freight: "test-freight",
-					},
-					Status: kargoapi.PromotionRequestStatus{
-						Phase: kargoapi.PromotionRequestPhaseRunning,
-					},
-				},
+			rollouts: []kargoapi.PromotionRollout{
+				testPromotionRollout(olderRollout, "test-freight", kargoapi.PromotionRolloutPhasePending, nil),
+				testPromotionRollout(newerRollout, "test-freight", kargoapi.PromotionRolloutPhaseRunning, nil),
 			},
 			assertions: func(t *testing.T, status kargoapi.StageStatus, err error) {
 				require.NoError(t, err)
 				require.NotNil(t, status.CurrentPromotionRequest)
-				assert.Equal(t, newerRequest, status.CurrentPromotionRequest.Name)
+				assert.Equal(t, newerRollout, status.CurrentPromotionRequest.Name)
 			},
 		},
 		{
-			name: "the older of two Pending PromotionRequests becomes the current one",
+			name: "the older of two Pending PromotionRollouts becomes the current one",
 			stage: &kargoapi.Stage{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "fake-project",
 					Name:      "test-stage",
 				},
 			},
-			objects: []client.Object{
-				&kargoapi.PromotionRequest{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "fake-project",
-						Name:      newerRequest,
-					},
-					Spec: kargoapi.PromotionRequestSpec{
-						Stage:   "test-stage",
-						Freight: "test-freight",
-					},
-					Status: kargoapi.PromotionRequestStatus{
-						Phase: kargoapi.PromotionRequestPhasePending,
-					},
-				},
-				&kargoapi.PromotionRequest{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "fake-project",
-						Name:      olderRequest,
-					},
-					Spec: kargoapi.PromotionRequestSpec{
-						Stage:   "test-stage",
-						Freight: "test-freight",
-					},
-					Status: kargoapi.PromotionRequestStatus{
-						Phase: kargoapi.PromotionRequestPhasePending,
-					},
-				},
+			rollouts: []kargoapi.PromotionRollout{
+				testPromotionRollout(newerRollout, "test-freight", kargoapi.PromotionRolloutPhasePending, nil),
+				testPromotionRollout(olderRollout, "test-freight", kargoapi.PromotionRolloutPhasePending, nil),
 			},
 			assertions: func(t *testing.T, status kargoapi.StageStatus, err error) {
 				require.NoError(t, err)
 				require.NotNil(t, status.CurrentPromotionRequest)
-				assert.Equal(t, olderRequest, status.CurrentPromotionRequest.Name)
+				assert.Equal(t, olderRollout, status.CurrentPromotionRequest.Name)
 			},
 		},
 		{
-			name: "terminal PromotionRequest becomes the last one",
+			// The API server numbers a Stage's rollouts in creation order. When
+			// it has, the numbers decide, not the names.
+			name: "Pending PromotionRollouts are ordered by number when the API server assigned one",
+			stage: &kargoapi.Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "fake-project",
+					Name:      "test-stage",
+				},
+			},
+			rollouts: func() []kargoapi.PromotionRollout {
+				first := testPromotionRollout(newerRollout, "test-freight", kargoapi.PromotionRolloutPhasePending, nil)
+				first.Number = 1
+				second := testPromotionRollout(olderRollout, "test-freight", kargoapi.PromotionRolloutPhasePending, nil)
+				second.Number = 2
+				return []kargoapi.PromotionRollout{second, first}
+			}(),
+			assertions: func(t *testing.T, status kargoapi.StageStatus, err error) {
+				require.NoError(t, err)
+				require.NotNil(t, status.CurrentPromotionRequest)
+				assert.Equal(t, newerRollout, status.CurrentPromotionRequest.Name)
+			},
+		},
+		{
+			name: "terminal PromotionRollout becomes the last one",
 			stage: &kargoapi.Stage{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "fake-project",
 					Name:      "test-stage",
 				},
 				Status: kargoapi.StageStatus{
-					CurrentPromotionRequest: &kargoapi.PromotionRequestReference{Name: olderRequest},
+					CurrentPromotionRequest: &kargoapi.PromotionRequestReference{Name: olderRollout},
 				},
 			},
-			objects: []client.Object{
-				&kargoapi.PromotionRequest{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "fake-project",
-						Name:      olderRequest,
-					},
-					Spec: kargoapi.PromotionRequestSpec{
-						Stage:   "test-stage",
-						Freight: "test-freight",
-					},
-					Status: kargoapi.PromotionRequestStatus{
-						Phase:             kargoapi.PromotionRequestPhaseSucceeded,
-						FinishedAt:        &now,
-						FreightCollection: &kargoapi.FreightCollection{},
-					},
-				},
+			objects: []client.Object{testFreight("test-freight", "test-warehouse")},
+			rollouts: []kargoapi.PromotionRollout{
+				testPromotionRollout(olderRollout, "test-freight", kargoapi.PromotionRolloutPhaseSucceeded, &now),
 			},
 			assertions: func(t *testing.T, status kargoapi.StageStatus, err error) {
 				require.NoError(t, err)
 				assert.Nil(t, status.CurrentPromotionRequest)
 				require.NotNil(t, status.LastPromotionRequest)
-				assert.Equal(t, olderRequest, status.LastPromotionRequest.Name)
+				assert.Equal(t, olderRollout, status.LastPromotionRequest.Name)
 				assert.Equal(
 					t,
 					kargoapi.PromotionRequestPhaseSucceeded,
@@ -1237,86 +1236,48 @@ func TestFleetStageReconciler_syncPromotionRequests(t *testing.T) {
 			},
 		},
 		{
-			name: "a terminal and a non-terminal PromotionRequest are recorded separately",
+			name: "a terminal and a non-terminal PromotionRollout are recorded separately",
 			stage: &kargoapi.Stage{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "fake-project",
 					Name:      "test-stage",
 				},
 			},
-			objects: []client.Object{
-				&kargoapi.PromotionRequest{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "fake-project",
-						Name:      olderRequest,
-					},
-					Spec: kargoapi.PromotionRequestSpec{
-						Stage:   "test-stage",
-						Freight: "test-freight",
-					},
-					Status: kargoapi.PromotionRequestStatus{
-						Phase:      kargoapi.PromotionRequestPhaseErrored,
-						FinishedAt: &now,
-					},
-				},
-				&kargoapi.PromotionRequest{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "fake-project",
-						Name:      newerRequest,
-					},
-					Spec: kargoapi.PromotionRequestSpec{
-						Stage:   "test-stage",
-						Freight: "test-freight",
-					},
-					Status: kargoapi.PromotionRequestStatus{
-						Phase: kargoapi.PromotionRequestPhaseRunning,
-					},
-				},
+			rollouts: []kargoapi.PromotionRollout{
+				testPromotionRollout(olderRollout, "test-freight", kargoapi.PromotionRolloutPhaseErrored, &now),
+				testPromotionRollout(newerRollout, "test-freight", kargoapi.PromotionRolloutPhaseRunning, nil),
 			},
 			assertions: func(t *testing.T, status kargoapi.StageStatus, err error) {
 				require.NoError(t, err)
 				require.NotNil(t, status.CurrentPromotionRequest)
-				assert.Equal(t, newerRequest, status.CurrentPromotionRequest.Name)
+				assert.Equal(t, newerRollout, status.CurrentPromotionRequest.Name)
 				require.NotNil(t, status.LastPromotionRequest)
-				assert.Equal(t, olderRequest, status.LastPromotionRequest.Name)
+				assert.Equal(t, olderRollout, status.LastPromotionRequest.Name)
 			},
 		},
 		{
-			name: "the last PromotionRequest never moves backwards",
+			name: "the last PromotionRollout never moves backwards",
 			stage: &kargoapi.Stage{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "fake-project",
 					Name:      "test-stage",
 				},
 				Status: kargoapi.StageStatus{
-					// The PromotionRequest this refers to is gone, and the one
+					// The PromotionRollout this refers to is gone, and the one
 					// still around is older than it.
 					LastPromotionRequest: &kargoapi.PromotionRequestReference{
-						Name:  newerRequest,
+						Name:  newerRollout,
 						Phase: kargoapi.PromotionRequestPhaseSucceeded,
 					},
 				},
 			},
-			objects: []client.Object{
-				&kargoapi.PromotionRequest{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "fake-project",
-						Name:      olderRequest,
-					},
-					Spec: kargoapi.PromotionRequestSpec{
-						Stage:   "test-stage",
-						Freight: "test-freight",
-					},
-					Status: kargoapi.PromotionRequestStatus{
-						Phase:      kargoapi.PromotionRequestPhaseFailed,
-						FinishedAt: &now,
-					},
-				},
+			rollouts: []kargoapi.PromotionRollout{
+				testPromotionRollout(olderRollout, "test-freight", kargoapi.PromotionRolloutPhaseFailed, &now),
 			},
 			assertions: func(t *testing.T, status kargoapi.StageStatus, err error) {
 				require.NoError(t, err)
 				require.NotNil(t, status.LastPromotionRequest)
-				assert.Equal(t, newerRequest, status.LastPromotionRequest.Name)
+				assert.Equal(t, newerRollout, status.LastPromotionRequest.Name)
 				assert.Equal(
 					t,
 					kargoapi.PromotionRequestPhaseSucceeded,
@@ -1324,11 +1285,11 @@ func TestFleetStageReconciler_syncPromotionRequests(t *testing.T) {
 				)
 			},
 		},
-		// Recording a succeeded PromotionRequest's Freight as the Stage's current
+		// Recording a succeeded PromotionRollout's Freight as the Stage's current
 		// Freight. The collection is built at record time from the Freight the
-		// request names and what the Stage is running then.
+		// rollout names and what the Stage is running then.
 		{
-			name: "a succeeded PromotionRequest records its Freight and resets health and verification",
+			name: "a succeeded PromotionRollout records its Freight and resets health and verification",
 			stage: &kargoapi.Stage{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "fake-project",
@@ -1345,15 +1306,21 @@ func TestFleetStageReconciler_syncPromotionRequests(t *testing.T) {
 					},
 				},
 			},
-			objects: []client.Object{
-				testFreight("test-freight", "test-warehouse"),
-				testPromotionRequest(olderRequest, "test-freight", kargoapi.PromotionRequestPhaseSucceeded, &now),
+			objects: []client.Object{testFreight("test-freight", "test-warehouse")},
+			rollouts: []kargoapi.PromotionRollout{
+				testPromotionRollout(olderRollout, "test-freight", kargoapi.PromotionRolloutPhaseSucceeded, &now),
 			},
 			assertions: func(t *testing.T, status kargoapi.StageStatus, err error) {
 				require.NoError(t, err)
 				require.Len(t, status.FreightHistory, 1)
 				assert.Equal(t, testFreightCollection("test-freight").ID, status.FreightHistory.Current().ID)
 				assert.True(t, status.FreightHistory.Current().Includes("test-freight"))
+				// The last reference describes the Freight it recorded.
+				require.NotNil(t, status.LastPromotionRequest)
+				require.NotNil(t, status.LastPromotionRequest.Freight)
+				assert.Equal(t, testOrigin("test-warehouse"), status.LastPromotionRequest.Freight.Origin)
+				require.NotNil(t, status.LastPromotionRequest.FreightCollection)
+				assert.Equal(t, status.FreightHistory.Current().ID, status.LastPromotionRequest.FreightCollection.ID)
 
 				assert.Nil(t, status.Health)
 				healthyCond := conditions.Get(&status, kargoapi.ConditionTypeHealthy)
@@ -1367,7 +1334,29 @@ func TestFleetStageReconciler_syncPromotionRequests(t *testing.T) {
 			},
 		},
 		{
-			name: "a PromotionRequest that did not succeed records nothing",
+			// A rollout names its Freight but carries no description of it, so
+			// the Stage reads the Freight to record it. One that has since been
+			// deleted cannot be recorded; the sync fails and is retried.
+			name: "a succeeded rollout whose Freight is gone fails the sync",
+			stage: &kargoapi.Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "fake-project",
+					Name:      "test-stage",
+				},
+			},
+			rollouts: []kargoapi.PromotionRollout{
+				testPromotionRollout(olderRollout, "test-freight", kargoapi.PromotionRolloutPhaseSucceeded, &now),
+			},
+			assertions: func(t *testing.T, status kargoapi.StageStatus, err error) {
+				require.ErrorContains(t, err, `Freight "test-freight"`)
+				require.ErrorContains(t, err, "not found")
+				// Nothing was recorded, so the next reconcile records it.
+				assert.Nil(t, status.LastPromotionRequest)
+				assert.Empty(t, status.FreightHistory)
+			},
+		},
+		{
+			name: "a PromotionRollout that did not succeed records nothing",
 			stage: &kargoapi.Stage{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "fake-project",
@@ -1378,22 +1367,23 @@ func TestFleetStageReconciler_syncPromotionRequests(t *testing.T) {
 					FreightHistory: kargoapi.FreightHistory{testFreightCollection("previous-freight")},
 				},
 			},
-			objects: []client.Object{
-				testFreight("test-freight", "test-warehouse"),
-				testPromotionRequest(olderRequest, "test-freight", kargoapi.PromotionRequestPhaseFailed, &now),
+			objects: []client.Object{testFreight("test-freight", "test-warehouse")},
+			rollouts: []kargoapi.PromotionRollout{
+				testPromotionRollout(olderRollout, "test-freight", kargoapi.PromotionRolloutPhaseFailed, &now),
 			},
 			assertions: func(t *testing.T, status kargoapi.StageStatus, err error) {
 				require.NoError(t, err)
-				// The request is still the last one; the Stage's Freight is untouched.
+				// The rollout is still the last one; the Stage's Freight is untouched.
 				require.NotNil(t, status.LastPromotionRequest)
-				assert.Equal(t, olderRequest, status.LastPromotionRequest.Name)
+				assert.Equal(t, olderRollout, status.LastPromotionRequest.Name)
+				assert.Equal(t, kargoapi.PromotionRequestPhaseFailed, status.LastPromotionRequest.Phase)
 				require.Len(t, status.FreightHistory, 1)
 				assert.True(t, status.FreightHistory.Current().Includes("previous-freight"))
 				assert.NotNil(t, status.Health)
 			},
 		},
 		{
-			name: "a PromotionRequest already recorded as the last one is not recorded again",
+			name: "a PromotionRollout already recorded as the last one is not recorded again",
 			stage: &kargoapi.Stage{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "fake-project",
@@ -1401,16 +1391,16 @@ func TestFleetStageReconciler_syncPromotionRequests(t *testing.T) {
 				},
 				Status: kargoapi.StageStatus{
 					LastPromotionRequest: &kargoapi.PromotionRequestReference{
-						Name:  olderRequest,
+						Name:  olderRollout,
 						Phase: kargoapi.PromotionRequestPhaseSucceeded,
 					},
 					FreightHistory: kargoapi.FreightHistory{testFreightCollection("test-freight")},
 					Health:         &kargoapi.Health{Status: kargoapi.HealthStateHealthy},
 				},
 			},
-			objects: []client.Object{
-				testFreight("test-freight", "test-warehouse"),
-				testPromotionRequest(olderRequest, "test-freight", kargoapi.PromotionRequestPhaseSucceeded, &now),
+			objects: []client.Object{testFreight("test-freight", "test-warehouse")},
+			rollouts: []kargoapi.PromotionRollout{
+				testPromotionRollout(olderRollout, "test-freight", kargoapi.PromotionRolloutPhaseSucceeded, &now),
 			},
 			assertions: func(t *testing.T, status kargoapi.StageStatus, err error) {
 				require.NoError(t, err)
@@ -1420,7 +1410,7 @@ func TestFleetStageReconciler_syncPromotionRequests(t *testing.T) {
 			},
 		},
 		{
-			name: "a newer succeeded PromotionRequest records on top of an older one",
+			name: "a newer succeeded PromotionRollout records on top of an older one",
 			stage: &kargoapi.Stage{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "fake-project",
@@ -1428,7 +1418,7 @@ func TestFleetStageReconciler_syncPromotionRequests(t *testing.T) {
 				},
 				Status: kargoapi.StageStatus{
 					LastPromotionRequest: &kargoapi.PromotionRequestReference{
-						Name:  olderRequest,
+						Name:  olderRollout,
 						Phase: kargoapi.PromotionRequestPhaseSucceeded,
 					},
 					FreightHistory: kargoapi.FreightHistory{testFreightCollection("test-freight")},
@@ -1437,25 +1427,27 @@ func TestFleetStageReconciler_syncPromotionRequests(t *testing.T) {
 			objects: []client.Object{
 				testFreight("test-freight", "test-warehouse"),
 				testFreight("newer-freight", "test-warehouse"),
-				testPromotionRequest(olderRequest, "test-freight", kargoapi.PromotionRequestPhaseSucceeded, &now),
-				testPromotionRequest(newerRequest, "newer-freight", kargoapi.PromotionRequestPhaseSucceeded, &now),
+			},
+			rollouts: []kargoapi.PromotionRollout{
+				testPromotionRollout(olderRollout, "test-freight", kargoapi.PromotionRolloutPhaseSucceeded, &now),
+				testPromotionRollout(newerRollout, "newer-freight", kargoapi.PromotionRolloutPhaseSucceeded, &now),
 			},
 			assertions: func(t *testing.T, status kargoapi.StageStatus, err error) {
 				require.NoError(t, err)
 				require.NotNil(t, status.LastPromotionRequest)
-				assert.Equal(t, newerRequest, status.LastPromotionRequest.Name)
+				assert.Equal(t, newerRollout, status.LastPromotionRequest.Name)
 				require.Len(t, status.FreightHistory, 2)
 				assert.True(t, status.FreightHistory[0].Includes("newer-freight"))
 				assert.True(t, status.FreightHistory[1].Includes("test-freight"))
 			},
 		},
 		{
-			// Two rounds ended since the Stage last reconciled: the older request
-			// succeeded and a request queued behind it failed. The newest terminal
-			// request becomes the last one, but the succeeded round's Freight must
+			// Two rounds ended since the Stage last reconciled: the older rollout
+			// succeeded and a rollout queued behind it failed. The newest terminal
+			// rollout becomes the last one, but the succeeded round's Freight must
 			// be recorded all the same -- examining only the newest would drop it
 			// for good, since the last reference only moves forward by name.
-			name: "a succeeded PromotionRequest is recorded even when a newer one failed in the same reconcile",
+			name: "a succeeded PromotionRollout is recorded even when a newer one failed in the same reconcile",
 			stage: &kargoapi.Stage{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "fake-project",
@@ -1463,7 +1455,7 @@ func TestFleetStageReconciler_syncPromotionRequests(t *testing.T) {
 				},
 				Status: kargoapi.StageStatus{
 					LastPromotionRequest: &kargoapi.PromotionRequestReference{
-						Name:  olderRequest,
+						Name:  olderRollout,
 						Phase: kargoapi.PromotionRequestPhaseSucceeded,
 					},
 					FreightHistory: kargoapi.FreightHistory{testFreightCollection("test-freight")},
@@ -1474,14 +1466,16 @@ func TestFleetStageReconciler_syncPromotionRequests(t *testing.T) {
 				testFreight("test-freight", "test-warehouse"),
 				testFreight("newer-freight", "test-warehouse"),
 				testFreight("newest-freight", "test-warehouse"),
-				testPromotionRequest(olderRequest, "test-freight", kargoapi.PromotionRequestPhaseSucceeded, &now),
-				testPromotionRequest(newerRequest, "newer-freight", kargoapi.PromotionRequestPhaseSucceeded, &now),
-				testPromotionRequest(newestRequest, "newest-freight", kargoapi.PromotionRequestPhaseFailed, &now),
+			},
+			rollouts: []kargoapi.PromotionRollout{
+				testPromotionRollout(olderRollout, "test-freight", kargoapi.PromotionRolloutPhaseSucceeded, &now),
+				testPromotionRollout(newerRollout, "newer-freight", kargoapi.PromotionRolloutPhaseSucceeded, &now),
+				testPromotionRollout(newestRollout, "newest-freight", kargoapi.PromotionRolloutPhaseFailed, &now),
 			},
 			assertions: func(t *testing.T, status kargoapi.StageStatus, err error) {
 				require.NoError(t, err)
 				require.NotNil(t, status.LastPromotionRequest)
-				assert.Equal(t, newestRequest, status.LastPromotionRequest.Name)
+				assert.Equal(t, newestRollout, status.LastPromotionRequest.Name)
 				assert.Equal(t, kargoapi.PromotionRequestPhaseFailed, status.LastPromotionRequest.Phase)
 				require.Len(t, status.FreightHistory, 2)
 				assert.True(t, status.FreightHistory[0].Includes("newer-freight"))
@@ -1501,21 +1495,18 @@ func TestFleetStageReconciler_syncPromotionRequests(t *testing.T) {
 			c := fake.NewClientBuilder().
 				WithScheme(scheme).
 				WithObjects(objects...).
-				WithIndex(
-					&kargoapi.PromotionRequest{},
-					indexer.PromotionRequestsByStageField,
-					indexer.PromotionRequestsByStage,
-				).
-				WithStatusSubresource(&kargoapi.Stage{}, &kargoapi.PromotionRequest{}).
-				WithInterceptorFuncs(tt.interceptor).
+				WithStatusSubresource(&kargoapi.Stage{}).
 				Build()
 
 			r := &FleetStageReconciler{
 				client:      c,
 				eventSender: &fakeevent.Sender{},
 			}
+			if !tt.noClient {
+				r.rollouts = &fakeRolloutClient{rollouts: tt.rollouts, listErr: tt.listErr}
+			}
 
-			status, err := r.syncPromotionRequests(t.Context(), tt.stage)
+			status, err := r.syncPromotionRollouts(t.Context(), tt.stage)
 			tt.assertions(t, status, err)
 		})
 	}
@@ -2023,7 +2014,7 @@ func TestFleetStageReconciler_assessHealth(t *testing.T) {
 		assertions    func(*testing.T, kargoapi.StageStatus)
 	}{
 		{
-			name: "PromotionRequest in progress",
+			name: "PromotionRollout in progress",
 			stage: &kargoapi.Stage{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "fake-project",
@@ -2044,7 +2035,7 @@ func TestFleetStageReconciler_assessHealth(t *testing.T) {
 				require.NotNil(t, healthyCond)
 				assert.Equal(t, metav1.ConditionUnknown, healthyCond.Status)
 				assert.Equal(t, "ActivePromotion", healthyCond.Reason)
-				assert.Equal(t, "Stage has a PromotionRequest in progress", healthyCond.Message)
+				assert.Equal(t, "Stage has a PromotionRollout in progress", healthyCond.Message)
 			},
 		},
 
@@ -2122,7 +2113,7 @@ func TestFleetStageReconciler_assessHealth(t *testing.T) {
 				require.NotNil(t, healthyCond)
 				assert.Equal(t, metav1.ConditionUnknown, healthyCond.Status)
 				assert.Equal(t, "LastPromotionRequestAborted", healthyCond.Reason)
-				assert.Equal(t, "Cannot assess health because last PromotionRequest did not succeed", healthyCond.Message)
+				assert.Equal(t, "Cannot assess health because last PromotionRollout did not succeed", healthyCond.Message)
 			},
 		},
 	}
@@ -3429,43 +3420,40 @@ func TestFleetStageReconciler_autoPromoteFreight(t *testing.T) {
 	now := time.Now()
 	hourAgo := now.Add(-time.Hour)
 
-	// Targets live in the database and reach the reconciler through a lister,
-	// never as objects.
-	usAndEUTargets := fakeTargetLister{
-		{
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: "fake-project",
-				Name:      "us-east",
-				Labels:    map[string]string{"region": "us"},
-			},
+	// directFromWarehouse is what most Stages below request: Freight directly
+	// from the test Warehouse.
+	directFromWarehouse := []kargoapi.FreightRequest{{
+		Origin: kargoapi.FreightOrigin{
+			Kind: kargoapi.FreightOriginKindWarehouse,
+			Name: "test-warehouse",
 		},
-		// In the Project but not matched by the Stage's selector, so it must
-		// not appear in the resolved list.
-		{
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: "fake-project",
-				Name:      "eu-west",
-				Labels:    map[string]string{"region": "eu"},
-			},
-		},
-	}
+		Sources: kargoapi.FreightSources{Direct: true},
+	}}
 
 	tests := []struct {
 		name                 string
 		autoPromotionEnabled bool
 		stage                *kargoapi.Stage
 		objects              []client.Object
-		// targets stands in for the API server. Nil means the controller has
-		// none, in which case the Stage must stall rather than promote.
-		targets     TargetLister
-		noTargets   bool
-		interceptor interceptor.Funcs
-		assertions  func(*testing.T, *fakeevent.Sender, client.Client, kargoapi.StageStatus, error)
+		// rollouts stands in for the API server. Nil means an API server
+		// serving no PromotionRollouts; noClient means the controller has no
+		// API server at all, in which case the Stage must stall rather than
+		// promote.
+		rollouts   *fakeRolloutClient
+		noClient   bool
+		assertions func(
+			*testing.T,
+			*fakeevent.Sender,
+			*fakeRolloutClient,
+			kargoapi.StageStatus,
+			bool,
+			error,
+		)
 	}{
 		{
-			name:                 "stalls without an API server to resolve Targets from",
+			name:                 "stalls without an API server to promote through",
 			autoPromotionEnabled: true,
-			noTargets:            true,
+			noClient:             true,
 			stage: &kargoapi.Stage{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace:  "fake-project",
@@ -3473,13 +3461,7 @@ func TestFleetStageReconciler_autoPromoteFreight(t *testing.T) {
 					Generation: 2,
 				},
 				Spec: kargoapi.StageSpec{
-					RequestedFreight: []kargoapi.FreightRequest{{
-						Origin: kargoapi.FreightOrigin{
-							Kind: kargoapi.FreightOriginKindWarehouse,
-							Name: "test-warehouse",
-						},
-						Sources: kargoapi.FreightSources{Direct: true},
-					}},
+					RequestedFreight: directFromWarehouse,
 					Targets: &kargoapi.StageTargets{
 						Selectors: []metav1.LabelSelector{{}},
 					},
@@ -3507,39 +3489,31 @@ func TestFleetStageReconciler_autoPromoteFreight(t *testing.T) {
 			assertions: func(
 				t *testing.T,
 				_ *fakeevent.Sender,
-				c client.Client,
+				_ *fakeRolloutClient,
 				status kargoapi.StageStatus,
+				created bool,
 				err error,
 			) {
 				require.NoError(t, err)
+				assert.False(t, created)
 				stalled := conditions.Get(&status, kargoapi.ConditionTypeStalled)
 				require.NotNil(t, stalled)
 				assert.Equal(t, metav1.ConditionTrue, stalled.Status)
-				assert.Equal(t, "TargetsUnavailable", stalled.Reason)
+				assert.Equal(t, "RolloutsUnavailable", stalled.Reason)
+				assert.Contains(t, stalled.Message, "API_SERVER_ADDRESS")
 				assert.Equal(t, int64(2), stalled.ObservedGeneration)
-
-				reqList := &kargoapi.PromotionRequestList{}
-				require.NoError(t, c.List(t.Context(), reqList, client.InNamespace("fake-project")))
-				assert.Empty(t, reqList.Items)
 			},
 		},
 		{
-			name:                 "resolves the Stage's selectors against the Project's Targets",
+			name:                 "creates a PromotionRollout through the API server",
 			autoPromotionEnabled: true,
-			targets:              usAndEUTargets,
 			stage: &kargoapi.Stage{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "fake-project",
 					Name:      "test-stage",
 				},
 				Spec: kargoapi.StageSpec{
-					RequestedFreight: []kargoapi.FreightRequest{{
-						Origin: kargoapi.FreightOrigin{
-							Kind: kargoapi.FreightOriginKindWarehouse,
-							Name: "test-warehouse",
-						},
-						Sources: kargoapi.FreightSources{Direct: true},
-					}},
+					RequestedFreight: directFromWarehouse,
 					Targets: &kargoapi.StageTargets{
 						Selectors: []metav1.LabelSelector{{
 							MatchLabels: map[string]string{"region": "us"},
@@ -3550,7 +3524,7 @@ func TestFleetStageReconciler_autoPromoteFreight(t *testing.T) {
 					Conditions: []metav1.Condition{{
 						Type:   kargoapi.ConditionTypeStalled,
 						Status: metav1.ConditionTrue,
-						Reason: "TargetsUnavailable",
+						Reason: "RolloutsUnavailable",
 					}},
 				},
 			},
@@ -3576,49 +3550,38 @@ func TestFleetStageReconciler_autoPromoteFreight(t *testing.T) {
 			assertions: func(
 				t *testing.T,
 				recorder *fakeevent.Sender,
-				c client.Client,
+				rollouts *fakeRolloutClient,
 				status kargoapi.StageStatus,
+				created bool,
 				err error,
 			) {
 				require.NoError(t, err)
+				assert.True(t, created)
 				// An API server is back, so the Stage is no longer stalled.
 				assert.Nil(t, conditions.Get(&status, kargoapi.ConditionTypeStalled))
 
-				reqList := &kargoapi.PromotionRequestList{}
-				require.NoError(t, c.List(t.Context(), reqList, client.InNamespace("fake-project")))
-				require.Len(t, reqList.Items, 1)
-				assert.Equal(t, "test-stage", reqList.Items[0].Spec.Stage)
-				assert.Equal(t, "test-freight-1", reqList.Items[0].Spec.Freight)
-				// Only the Target the selector matches is recorded.
-				assert.Equal(
-					t,
-					[]kargoapi.PromotionRequestTarget{{Name: "us-east"}},
-					reqList.Items[0].Spec.Targets,
-				)
-				require.Len(t, reqList.Items[0].OwnerReferences, 1)
-				assert.Equal(t, "test-stage", reqList.Items[0].OwnerReferences[0].Name)
+				// The API server was asked to promote the Freight to the Stage;
+				// it resolves the Targets itself, so the request names none.
+				require.Len(t, rollouts.created, 1)
+				assert.Equal(t, "test-stage", rollouts.created[0].Spec.Stage)
+				assert.Equal(t, "test-freight-1", rollouts.created[0].Spec.Freight)
+				assert.Equal(t, "fake-project", rollouts.created[0].Namespace)
 
-				// A PromotionRequest has no Promotion to carry an event.
+				// A PromotionRollout has no Promotion to carry an event.
 				assert.Empty(t, recorder.Sent())
 			},
 		},
 		{
-			name:                 "fails the reconcile when Targets cannot be listed",
+			name:                 "fails the reconcile when PromotionRollouts cannot be listed",
 			autoPromotionEnabled: true,
-			targets:              failingTargetLister{err: errors.New("api server unreachable")},
+			rollouts:             &fakeRolloutClient{listErr: errors.New("api server unreachable")},
 			stage: &kargoapi.Stage{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "fake-project",
 					Name:      "test-stage",
 				},
 				Spec: kargoapi.StageSpec{
-					RequestedFreight: []kargoapi.FreightRequest{{
-						Origin: kargoapi.FreightOrigin{
-							Kind: kargoapi.FreightOriginKindWarehouse,
-							Name: "test-warehouse",
-						},
-						Sources: kargoapi.FreightSources{Direct: true},
-					}},
+					RequestedFreight: directFromWarehouse,
 					Targets: &kargoapi.StageTargets{
 						Selectors: []metav1.LabelSelector{{}},
 					},
@@ -3646,14 +3609,15 @@ func TestFleetStageReconciler_autoPromoteFreight(t *testing.T) {
 			assertions: func(
 				t *testing.T,
 				_ *fakeevent.Sender,
-				c client.Client,
+				rollouts *fakeRolloutClient,
 				_ kargoapi.StageStatus,
+				created bool,
 				err error,
 			) {
+				require.ErrorContains(t, err, "error listing PromotionRollouts")
 				require.ErrorContains(t, err, "api server unreachable")
-				reqList := &kargoapi.PromotionRequestList{}
-				require.NoError(t, c.List(t.Context(), reqList, client.InNamespace("fake-project")))
-				assert.Empty(t, reqList.Items)
+				assert.False(t, created)
+				assert.Empty(t, rollouts.created)
 			},
 		},
 		{
@@ -3672,16 +3636,14 @@ func TestFleetStageReconciler_autoPromoteFreight(t *testing.T) {
 			assertions: func(
 				t *testing.T,
 				_ *fakeevent.Sender,
-				c client.Client,
+				rollouts *fakeRolloutClient,
 				_ kargoapi.StageStatus,
+				created bool,
 				err error,
 			) {
 				require.NoError(t, err)
-
-				// Verify no promotions were created
-				promoList := &kargoapi.PromotionRequestList{}
-				require.NoError(t, c.List(t.Context(), promoList, client.InNamespace("fake-project")))
-				assert.Empty(t, promoList.Items)
+				assert.False(t, created)
+				assert.Empty(t, rollouts.created)
 			},
 		},
 		{
@@ -3707,18 +3669,15 @@ func TestFleetStageReconciler_autoPromoteFreight(t *testing.T) {
 			assertions: func(
 				t *testing.T,
 				_ *fakeevent.Sender,
-				c client.Client,
+				rollouts *fakeRolloutClient,
 				status kargoapi.StageStatus,
+				created bool,
 				err error,
 			) {
 				require.NoError(t, err)
-
 				assert.False(t, status.AutoPromotionEnabled)
-
-				// Verify no promotions were created
-				promoList := &kargoapi.PromotionRequestList{}
-				require.NoError(t, c.List(t.Context(), promoList, client.InNamespace("fake-project")))
-				assert.Empty(t, promoList.Items)
+				assert.False(t, created)
+				assert.Empty(t, rollouts.created)
 			},
 		},
 		{
@@ -3730,25 +3689,10 @@ func TestFleetStageReconciler_autoPromoteFreight(t *testing.T) {
 					Name:      "test-stage",
 				},
 				Spec: kargoapi.StageSpec{
-					Targets: &kargoapi.StageTargets{},
-					RequestedFreight: []kargoapi.FreightRequest{
-						{
-							Origin: kargoapi.FreightOrigin{
-								Kind: kargoapi.FreightOriginKindWarehouse,
-								Name: "test-warehouse",
-							},
-							Sources: kargoapi.FreightSources{
-								Direct: true,
-							},
-						},
-					},
+					RequestedFreight: directFromWarehouse,
 					PromotionTemplate: &kargoapi.PromotionTemplate{
 						Spec: kargoapi.PromotionTemplateSpec{
-							Steps: []kargoapi.PromotionStep{
-								{
-									Uses: "fake-step",
-								},
-							},
+							Steps: []kargoapi.PromotionStep{{Uses: "fake-step"}},
 						},
 					},
 				},
@@ -3786,19 +3730,18 @@ func TestFleetStageReconciler_autoPromoteFreight(t *testing.T) {
 			assertions: func(
 				t *testing.T,
 				_ *fakeevent.Sender,
-				c client.Client,
+				rollouts *fakeRolloutClient,
 				status kargoapi.StageStatus,
+				created bool,
 				err error,
 			) {
 				require.NoError(t, err)
-
 				assert.True(t, status.AutoPromotionEnabled)
+				assert.True(t, created)
 
-				// Verify promotion was created for newest freight
-				promoList := &kargoapi.PromotionRequestList{}
-				require.NoError(t, c.List(t.Context(), promoList, client.InNamespace("fake-project")))
-				require.Len(t, promoList.Items, 1)
-				assert.Equal(t, "test-freight-1", promoList.Items[0].Spec.Freight)
+				// A rollout was created for the newest Freight.
+				require.Len(t, rollouts.created, 1)
+				assert.Equal(t, "test-freight-1", rollouts.created[0].Spec.Freight)
 			},
 		},
 		{
@@ -3810,23 +3753,10 @@ func TestFleetStageReconciler_autoPromoteFreight(t *testing.T) {
 					Name:      "test-stage",
 				},
 				Spec: kargoapi.StageSpec{
-					Targets: &kargoapi.StageTargets{},
-					RequestedFreight: []kargoapi.FreightRequest{
-						{
-							Origin: kargoapi.FreightOrigin{
-								Kind: kargoapi.FreightOriginKindWarehouse,
-								Name: "test-warehouse",
-							},
-							Sources: kargoapi.FreightSources{
-								Direct: true,
-							},
-						},
-					},
+					RequestedFreight: directFromWarehouse,
 					PromotionTemplate: &kargoapi.PromotionTemplate{
 						Spec: kargoapi.PromotionTemplateSpec{
-							Steps: []kargoapi.PromotionStep{
-								{Uses: "fake-step"},
-							},
+							Steps: []kargoapi.PromotionStep{{Uses: "fake-step"}},
 						},
 					},
 				},
@@ -3868,20 +3798,19 @@ func TestFleetStageReconciler_autoPromoteFreight(t *testing.T) {
 			assertions: func(
 				t *testing.T,
 				_ *fakeevent.Sender,
-				c client.Client,
+				rollouts *fakeRolloutClient,
 				status kargoapi.StageStatus,
+				created bool,
 				err error,
 			) {
 				require.NoError(t, err)
-
 				assert.True(t, status.AutoPromotionEnabled)
+				assert.True(t, created)
 
 				// freight-1 wins because it has the newer discoveredAt,
 				// even though freight-2 has a newer creationTimestamp.
-				promoList := &kargoapi.PromotionRequestList{}
-				require.NoError(t, c.List(t.Context(), promoList, client.InNamespace("fake-project")))
-				require.Len(t, promoList.Items, 1)
-				assert.Equal(t, "test-freight-1", promoList.Items[0].Spec.Freight)
+				require.Len(t, rollouts.created, 1)
+				assert.Equal(t, "test-freight-1", rollouts.created[0].Spec.Freight)
 			},
 		},
 		{
@@ -3893,23 +3822,10 @@ func TestFleetStageReconciler_autoPromoteFreight(t *testing.T) {
 					Name:      "test-stage",
 				},
 				Spec: kargoapi.StageSpec{
-					Targets: &kargoapi.StageTargets{},
-					RequestedFreight: []kargoapi.FreightRequest{
-						{
-							Origin: kargoapi.FreightOrigin{
-								Kind: kargoapi.FreightOriginKindWarehouse,
-								Name: "test-warehouse",
-							},
-							Sources: kargoapi.FreightSources{
-								Direct: true,
-							},
-						},
-					},
+					RequestedFreight: directFromWarehouse,
 					PromotionTemplate: &kargoapi.PromotionTemplate{
 						Spec: kargoapi.PromotionTemplateSpec{
-							Steps: []kargoapi.PromotionStep{
-								{Uses: "fake-step"},
-							},
+							Steps: []kargoapi.PromotionStep{{Uses: "fake-step"}},
 						},
 					},
 				},
@@ -3947,20 +3863,19 @@ func TestFleetStageReconciler_autoPromoteFreight(t *testing.T) {
 			assertions: func(
 				t *testing.T,
 				_ *fakeevent.Sender,
-				c client.Client,
+				rollouts *fakeRolloutClient,
 				status kargoapi.StageStatus,
+				created bool,
 				err error,
 			) {
 				require.NoError(t, err)
-
 				assert.True(t, status.AutoPromotionEnabled)
+				assert.True(t, created)
 
 				// freight-1 wins because it has the newer creationTimestamp
 				// (neither has a discoveredAt set).
-				promoList := &kargoapi.PromotionRequestList{}
-				require.NoError(t, c.List(t.Context(), promoList, client.InNamespace("fake-project")))
-				require.Len(t, promoList.Items, 1)
-				assert.Equal(t, "test-freight-1", promoList.Items[0].Spec.Freight)
+				require.Len(t, rollouts.created, 1)
+				assert.Equal(t, "test-freight-1", rollouts.created[0].Spec.Freight)
 			},
 		},
 		{
@@ -3972,18 +3887,7 @@ func TestFleetStageReconciler_autoPromoteFreight(t *testing.T) {
 					Name:      "test-stage",
 				},
 				Spec: kargoapi.StageSpec{
-					Targets: &kargoapi.StageTargets{},
-					RequestedFreight: []kargoapi.FreightRequest{
-						{
-							Origin: kargoapi.FreightOrigin{
-								Kind: kargoapi.FreightOriginKindWarehouse,
-								Name: "test-warehouse",
-							},
-							Sources: kargoapi.FreightSources{
-								Direct: true,
-							},
-						},
-					},
+					RequestedFreight: directFromWarehouse,
 				},
 				Status: kargoapi.StageStatus{
 					FreightHistory: kargoapi.FreightHistory{
@@ -4017,41 +3921,30 @@ func TestFleetStageReconciler_autoPromoteFreight(t *testing.T) {
 			assertions: func(
 				t *testing.T,
 				_ *fakeevent.Sender,
-				c client.Client,
+				rollouts *fakeRolloutClient,
 				status kargoapi.StageStatus,
+				created bool,
 				err error,
 			) {
 				require.NoError(t, err)
-
 				assert.True(t, status.AutoPromotionEnabled)
-
-				// Verify no promotions were created
-				promoList := &kargoapi.PromotionRequestList{}
-				require.NoError(t, c.List(t.Context(), promoList, client.InNamespace("fake-project")))
-				assert.Empty(t, promoList.Items)
+				assert.False(t, created)
+				assert.Empty(t, rollouts.created)
 			},
 		},
 		{
-			name:                 "skips promotion if a non-terminal one already exists",
+			name:                 "skips promotion if a non-terminal rollout already exists",
 			autoPromotionEnabled: true,
+			rollouts: &fakeRolloutClient{rollouts: []kargoapi.PromotionRollout{
+				testPromotionRollout("existing-rollout", "test-freight-1", kargoapi.PromotionRolloutPhasePending, nil),
+			}},
 			stage: &kargoapi.Stage{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "fake-project",
 					Name:      "test-stage",
 				},
 				Spec: kargoapi.StageSpec{
-					Targets: &kargoapi.StageTargets{},
-					RequestedFreight: []kargoapi.FreightRequest{
-						{
-							Origin: kargoapi.FreightOrigin{
-								Kind: kargoapi.FreightOriginKindWarehouse,
-								Name: "test-warehouse",
-							},
-							Sources: kargoapi.FreightSources{
-								Direct: true,
-							},
-						},
-					},
+					RequestedFreight: directFromWarehouse,
 				},
 			},
 			objects: []client.Object{
@@ -4072,67 +3965,42 @@ func TestFleetStageReconciler_autoPromoteFreight(t *testing.T) {
 						Name: "test-warehouse",
 					},
 				},
-				&kargoapi.PromotionRequest{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "fake-project",
-						Name:      "existing-promotion",
-						Labels: map[string]string{
-							kargoapi.LabelKeyStage: "test-stage",
-						},
-					},
-					Spec: kargoapi.PromotionRequestSpec{
-						Stage:   "test-stage",
-						Freight: "test-freight-1",
-					},
-				},
 			},
 			assertions: func(
 				t *testing.T,
 				_ *fakeevent.Sender,
-				c client.Client,
+				rollouts *fakeRolloutClient,
 				status kargoapi.StageStatus,
+				created bool,
 				err error,
 			) {
 				require.NoError(t, err)
-
 				assert.True(t, status.AutoPromotionEnabled)
-
-				// Verify no new promotions were created
-				promoList := &kargoapi.PromotionRequestList{}
-				require.NoError(t, c.List(t.Context(), promoList, client.InNamespace("fake-project")))
-				assert.Len(t, promoList.Items, 1)
-				assert.Equal(t, "existing-promotion", promoList.Items[0].Name)
+				assert.False(t, created)
+				assert.Empty(t, rollouts.created)
 			},
 		},
 		{
-			// A fast Promotion can go from pending to succeeded in the interval
-			// between syncPromotions observing it and autoPromoteFreight acting.
-			// Its outcome is not recorded yet (it is newer than
-			// status.lastPromotionRequest), so auto-promotion must stand down rather
-			// than create a duplicate.
-			name:                 "skips promotion when a succeeded one for the candidate is not yet recorded",
+			// A fast rollout can go from pending to succeeded in the interval
+			// between syncPromotionRollouts observing it and autoPromoteFreight
+			// acting. Its outcome is not recorded yet (it is newer than
+			// status.lastPromotionRequest), so auto-promotion must stand down
+			// rather than create a duplicate.
+			name:                 "skips promotion when a succeeded rollout for the candidate is not yet recorded",
 			autoPromotionEnabled: true,
+			rollouts: &fakeRolloutClient{rollouts: []kargoapi.PromotionRollout{
+				testPromotionRollout("existing-rollout", "test-freight-1", kargoapi.PromotionRolloutPhaseSucceeded, nil),
+			}},
 			stage: &kargoapi.Stage{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "fake-project",
 					Name:      "test-stage",
 				},
 				Spec: kargoapi.StageSpec{
-					Targets: &kargoapi.StageTargets{},
-					RequestedFreight: []kargoapi.FreightRequest{
-						{
-							Origin: kargoapi.FreightOrigin{
-								Kind: kargoapi.FreightOriginKindWarehouse,
-								Name: "test-warehouse",
-							},
-							Sources: kargoapi.FreightSources{
-								Direct: true,
-							},
-						},
-					},
+					RequestedFreight: directFromWarehouse,
 				},
-				// No LastPromotionRequest: the succeeded Promotion below has not been
-				// processed by syncPromotions.
+				// No LastPromotionRequest: the succeeded rollout above has not
+				// been processed by syncPromotionRollouts.
 			},
 			objects: []client.Object{
 				&kargoapi.Warehouse{
@@ -4152,62 +4020,34 @@ func TestFleetStageReconciler_autoPromoteFreight(t *testing.T) {
 						Name: "test-warehouse",
 					},
 				},
-				&kargoapi.PromotionRequest{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "fake-project",
-						Name:      "existing-promotion",
-						Labels: map[string]string{
-							kargoapi.LabelKeyStage: "test-stage",
-						},
-					},
-					Spec: kargoapi.PromotionRequestSpec{
-						Stage:   "test-stage",
-						Freight: "test-freight-1",
-					},
-					Status: kargoapi.PromotionRequestStatus{
-						Phase: kargoapi.PromotionRequestPhaseSucceeded,
-					},
-				},
 			},
 			assertions: func(
 				t *testing.T,
 				_ *fakeevent.Sender,
-				c client.Client,
+				rollouts *fakeRolloutClient,
 				status kargoapi.StageStatus,
+				created bool,
 				err error,
 			) {
 				require.NoError(t, err)
-
 				assert.True(t, status.AutoPromotionEnabled)
-
-				// Verify no duplicate promotion was created
-				promoList := &kargoapi.PromotionRequestList{}
-				require.NoError(t, c.List(t.Context(), promoList, client.InNamespace("fake-project")))
-				assert.Len(t, promoList.Items, 1)
-				assert.Equal(t, "existing-promotion", promoList.Items[0].Name)
+				assert.False(t, created)
+				assert.Empty(t, rollouts.created)
 			},
 		},
 		{
-			name:                 "skips promotion if the last terminal one was not successful",
+			name:                 "skips promotion if the last terminal rollout was not successful",
 			autoPromotionEnabled: true,
+			rollouts: &fakeRolloutClient{rollouts: []kargoapi.PromotionRollout{
+				testPromotionRollout("existing-rollout", "test-freight-1", kargoapi.PromotionRolloutPhaseErrored, nil),
+			}},
 			stage: &kargoapi.Stage{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "fake-project",
 					Name:      "test-stage",
 				},
 				Spec: kargoapi.StageSpec{
-					Targets: &kargoapi.StageTargets{},
-					RequestedFreight: []kargoapi.FreightRequest{
-						{
-							Origin: kargoapi.FreightOrigin{
-								Kind: kargoapi.FreightOriginKindWarehouse,
-								Name: "test-warehouse",
-							},
-							Sources: kargoapi.FreightSources{
-								Direct: true,
-							},
-						},
-					},
+					RequestedFreight: directFromWarehouse,
 				},
 			},
 			objects: []client.Object{
@@ -4228,39 +4068,80 @@ func TestFleetStageReconciler_autoPromoteFreight(t *testing.T) {
 						Name: "test-warehouse",
 					},
 				},
-				&kargoapi.PromotionRequest{
+			},
+			assertions: func(
+				t *testing.T,
+				_ *fakeevent.Sender,
+				rollouts *fakeRolloutClient,
+				status kargoapi.StageStatus,
+				created bool,
+				err error,
+			) {
+				require.NoError(t, err)
+				assert.True(t, status.AutoPromotionEnabled)
+				assert.False(t, created)
+				assert.Empty(t, rollouts.created)
+			},
+		},
+		{
+			// Rollouts of other Stages, even for the same Freight, do not count:
+			// the reconciler asks the API server for this Stage's rollouts only.
+			name:                 "a rollout of another Stage for the candidate does not stand in the way",
+			autoPromotionEnabled: true,
+			rollouts: &fakeRolloutClient{rollouts: []kargoapi.PromotionRollout{{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "fake-project",
+					Name:      "other-stage.rollout",
+				},
+				Spec: kargoapi.PromotionRolloutSpec{
+					Stage:   "other-stage",
+					Freight: "test-freight-1",
+				},
+				Status: kargoapi.PromotionRolloutStatus{
+					Phase: kargoapi.PromotionRolloutPhaseRunning,
+				},
+			}}},
+			stage: &kargoapi.Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "fake-project",
+					Name:      "test-stage",
+				},
+				Spec: kargoapi.StageSpec{
+					RequestedFreight: directFromWarehouse,
+				},
+			},
+			objects: []client.Object{
+				&kargoapi.Warehouse{
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: "fake-project",
-						Name:      "existing-promotion",
-						Labels: map[string]string{
-							kargoapi.LabelKeyStage: "test-stage",
-						},
+						Name:      "test-warehouse",
 					},
-					Spec: kargoapi.PromotionRequestSpec{
-						Stage:   "test-stage",
-						Freight: "test-freight-1",
+				},
+				&kargoapi.Freight{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace:         "fake-project",
+						Name:              "test-freight-1",
+						CreationTimestamp: metav1.Time{Time: now},
 					},
-					Status: kargoapi.PromotionRequestStatus{
-						Phase: kargoapi.PromotionRequestPhaseErrored,
+					Origin: kargoapi.FreightOrigin{
+						Kind: kargoapi.FreightOriginKindWarehouse,
+						Name: "test-warehouse",
 					},
 				},
 			},
 			assertions: func(
 				t *testing.T,
 				_ *fakeevent.Sender,
-				c client.Client,
-				status kargoapi.StageStatus,
+				rollouts *fakeRolloutClient,
+				_ kargoapi.StageStatus,
+				created bool,
 				err error,
 			) {
 				require.NoError(t, err)
-
-				assert.True(t, status.AutoPromotionEnabled)
-
-				// Verify no new promotions were created
-				promoList := &kargoapi.PromotionRequestList{}
-				require.NoError(t, c.List(t.Context(), promoList, client.InNamespace("fake-project")))
-				assert.Len(t, promoList.Items, 1)
-				assert.Equal(t, "existing-promotion", promoList.Items[0].Name)
+				assert.True(t, created)
+				require.Len(t, rollouts.created, 1)
+				assert.Equal(t, "test-stage", rollouts.created[0].Spec.Stage)
+				assert.Equal(t, "test-freight-1", rollouts.created[0].Spec.Freight)
 			},
 		},
 		{
@@ -4286,11 +4167,7 @@ func TestFleetStageReconciler_autoPromoteFreight(t *testing.T) {
 					},
 					PromotionTemplate: &kargoapi.PromotionTemplate{
 						Spec: kargoapi.PromotionTemplateSpec{
-							Steps: []kargoapi.PromotionStep{
-								{
-									Uses: "fake-step",
-								},
-							},
+							Steps: []kargoapi.PromotionStep{{Uses: "fake-step"}},
 						},
 					},
 				},
@@ -4322,19 +4199,16 @@ func TestFleetStageReconciler_autoPromoteFreight(t *testing.T) {
 			assertions: func(
 				t *testing.T,
 				_ *fakeevent.Sender,
-				c client.Client,
+				rollouts *fakeRolloutClient,
 				status kargoapi.StageStatus,
+				created bool,
 				err error,
 			) {
 				require.NoError(t, err)
-
 				assert.True(t, status.AutoPromotionEnabled)
-
-				// Verify promotion was created
-				promoList := &kargoapi.PromotionRequestList{}
-				require.NoError(t, c.List(t.Context(), promoList, client.InNamespace("fake-project")))
-				require.Len(t, promoList.Items, 1)
-				assert.Equal(t, "test-freight-1", promoList.Items[0].Spec.Freight)
+				assert.True(t, created)
+				require.Len(t, rollouts.created, 1)
+				assert.Equal(t, "test-freight-1", rollouts.created[0].Spec.Freight)
 			},
 		},
 		{
@@ -4361,11 +4235,7 @@ func TestFleetStageReconciler_autoPromoteFreight(t *testing.T) {
 					},
 					PromotionTemplate: &kargoapi.PromotionTemplate{
 						Spec: kargoapi.PromotionTemplateSpec{
-							Steps: []kargoapi.PromotionStep{
-								{
-									Uses: "fake-step",
-								},
-							},
+							Steps: []kargoapi.PromotionStep{{Uses: "fake-step"}},
 						},
 					},
 				},
@@ -4432,17 +4302,15 @@ func TestFleetStageReconciler_autoPromoteFreight(t *testing.T) {
 			assertions: func(
 				t *testing.T,
 				_ *fakeevent.Sender,
-				c client.Client,
+				rollouts *fakeRolloutClient,
 				_ kargoapi.StageStatus,
+				created bool,
 				err error,
 			) {
 				require.NoError(t, err)
-
-				// Verify promotion was created
-				promoList := &kargoapi.PromotionRequestList{}
-				require.NoError(t, c.List(t.Context(), promoList, client.InNamespace("fake-project")))
-				require.Len(t, promoList.Items, 1)
-				assert.Equal(t, "test-freight-2", promoList.Items[0].Spec.Freight)
+				assert.True(t, created)
+				require.Len(t, rollouts.created, 1)
+				assert.Equal(t, "test-freight-2", rollouts.created[0].Spec.Freight)
 			},
 		},
 		{
@@ -4465,11 +4333,7 @@ func TestFleetStageReconciler_autoPromoteFreight(t *testing.T) {
 					},
 					PromotionTemplate: &kargoapi.PromotionTemplate{
 						Spec: kargoapi.PromotionTemplateSpec{
-							Steps: []kargoapi.PromotionStep{
-								{
-									Uses: "fake-step",
-								},
-							},
+							Steps: []kargoapi.PromotionStep{{Uses: "fake-step"}},
 						},
 					},
 				},
@@ -4501,17 +4365,15 @@ func TestFleetStageReconciler_autoPromoteFreight(t *testing.T) {
 			assertions: func(
 				t *testing.T,
 				_ *fakeevent.Sender,
-				c client.Client,
+				rollouts *fakeRolloutClient,
 				_ kargoapi.StageStatus,
+				created bool,
 				err error,
 			) {
 				require.NoError(t, err)
-
-				// Verify promotion was created
-				promoList := &kargoapi.PromotionRequestList{}
-				require.NoError(t, c.List(t.Context(), promoList, client.InNamespace("fake-project")))
-				require.Len(t, promoList.Items, 1)
-				assert.Equal(t, "test-freight-1", promoList.Items[0].Spec.Freight)
+				assert.True(t, created)
+				require.Len(t, rollouts.created, 1)
+				assert.Equal(t, "test-freight-1", rollouts.created[0].Spec.Freight)
 			},
 		},
 		{
@@ -4530,27 +4392,19 @@ func TestFleetStageReconciler_autoPromoteFreight(t *testing.T) {
 								Kind: kargoapi.FreightOriginKindWarehouse,
 								Name: "warehouse-1",
 							},
-							Sources: kargoapi.FreightSources{
-								Direct: true,
-							},
+							Sources: kargoapi.FreightSources{Direct: true},
 						},
 						{
 							Origin: kargoapi.FreightOrigin{
 								Kind: kargoapi.FreightOriginKindWarehouse,
 								Name: "warehouse-2",
 							},
-							Sources: kargoapi.FreightSources{
-								Direct: true,
-							},
+							Sources: kargoapi.FreightSources{Direct: true},
 						},
 					},
 					PromotionTemplate: &kargoapi.PromotionTemplate{
 						Spec: kargoapi.PromotionTemplateSpec{
-							Steps: []kargoapi.PromotionStep{
-								{
-									Uses: "fake-step",
-								},
-							},
+							Steps: []kargoapi.PromotionStep{{Uses: "fake-step"}},
 						},
 					},
 				},
@@ -4596,21 +4450,19 @@ func TestFleetStageReconciler_autoPromoteFreight(t *testing.T) {
 			assertions: func(
 				t *testing.T,
 				_ *fakeevent.Sender,
-				c client.Client,
+				rollouts *fakeRolloutClient,
 				_ kargoapi.StageStatus,
+				created bool,
 				err error,
 			) {
 				require.NoError(t, err)
+				assert.True(t, created)
 
-				// Verify promotions were created for both freight items
-				promoList := &kargoapi.PromotionRequestList{}
-				require.NoError(t, c.List(t.Context(), promoList, client.InNamespace("fake-project")))
-				require.Len(t, promoList.Items, 2)
-
-				// Verify they're for different freight
+				// A rollout was created for both pieces of Freight.
+				require.Len(t, rollouts.created, 2)
 				freightNames := map[string]bool{}
-				for _, promo := range promoList.Items {
-					freightNames[promo.Spec.Freight] = true
+				for _, rollout := range rollouts.created {
+					freightNames[rollout.Spec.Freight] = true
 				}
 				assert.Len(t, freightNames, 2)
 				assert.True(t, freightNames["freight-1"])
@@ -4640,11 +4492,7 @@ func TestFleetStageReconciler_autoPromoteFreight(t *testing.T) {
 					},
 					PromotionTemplate: &kargoapi.PromotionTemplate{
 						Spec: kargoapi.PromotionTemplateSpec{
-							Steps: []kargoapi.PromotionStep{
-								{
-									Uses: "fake-step",
-								},
-							},
+							Steps: []kargoapi.PromotionStep{{Uses: "fake-step"}},
 						},
 					},
 				},
@@ -4679,46 +4527,31 @@ func TestFleetStageReconciler_autoPromoteFreight(t *testing.T) {
 			assertions: func(
 				t *testing.T,
 				_ *fakeevent.Sender,
-				c client.Client,
+				rollouts *fakeRolloutClient,
 				_ kargoapi.StageStatus,
+				created bool,
 				err error,
 			) {
 				require.NoError(t, err)
-
-				// Verify only one promotion was created despite multiple sources
-				promoList := &kargoapi.PromotionRequestList{}
-				require.NoError(t, c.List(t.Context(), promoList, client.InNamespace("fake-project")))
-				assert.Len(t, promoList.Items, 1)
+				assert.True(t, created)
+				// Only one rollout was created despite multiple sources.
+				assert.Len(t, rollouts.created, 1)
 			},
 		},
 		{
-			name:                 "handles promotion creation error",
+			name:                 "handles rollout creation error",
 			autoPromotionEnabled: true,
+			rollouts:             &fakeRolloutClient{createErr: errors.New("something went wrong")},
 			stage: &kargoapi.Stage{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "fake-project",
 					Name:      "test-stage",
 				},
 				Spec: kargoapi.StageSpec{
-					Targets: &kargoapi.StageTargets{},
-					RequestedFreight: []kargoapi.FreightRequest{
-						{
-							Origin: kargoapi.FreightOrigin{
-								Kind: kargoapi.FreightOriginKindWarehouse,
-								Name: "test-warehouse",
-							},
-							Sources: kargoapi.FreightSources{
-								Direct: true,
-							},
-						},
-					},
+					RequestedFreight: directFromWarehouse,
 					PromotionTemplate: &kargoapi.PromotionTemplate{
 						Spec: kargoapi.PromotionTemplateSpec{
-							Steps: []kargoapi.PromotionStep{
-								{
-									Uses: "fake-step",
-								},
-							},
+							Steps: []kargoapi.PromotionStep{{Uses: "fake-step"}},
 						},
 					},
 				},
@@ -4743,52 +4576,40 @@ func TestFleetStageReconciler_autoPromoteFreight(t *testing.T) {
 					Status: kargoapi.FreightStatus{},
 				},
 			},
-			interceptor: interceptor.Funcs{
-				Create: func(context.Context, client.WithWatch, client.Object, ...client.CreateOption) error {
-					return fmt.Errorf("something went wrong")
-				},
-			},
 			assertions: func(
 				t *testing.T,
 				_ *fakeevent.Sender,
-				_ client.Client,
+				rollouts *fakeRolloutClient,
 				_ kargoapi.StageStatus,
+				created bool,
 				err error,
 			) {
-				require.ErrorContains(t, err, "error creating PromotionRequest")
+				require.ErrorContains(t, err, "error creating PromotionRollout")
+				require.ErrorContains(t, err, "something went wrong")
+				assert.False(t, created)
+				assert.Empty(t, rollouts.created)
 			},
 		},
 		{
-			// A Forbidden error from an admission webhook must not fail the
-			// reconcile: nothing is persisted and the pass continues, so a later
-			// reconcile can re-attempt once the denying policy no longer applies.
-			name:                 "tolerates a forbidden PromotionRequest create",
+			// The API server refusing the create must not fail the reconcile:
+			// nothing is persisted and the pass continues, so a later reconcile
+			// can re-attempt once the refusing policy no longer applies.
+			name:                 "tolerates a forbidden PromotionRollout create",
 			autoPromotionEnabled: true,
+			rollouts: &fakeRolloutClient{createErr: &apiserver.APIError{
+				StatusCode: http.StatusForbidden,
+				Message:    `promotion of Stage "test-stage" is not permitted at this time`,
+			}},
 			stage: &kargoapi.Stage{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "fake-project",
 					Name:      "test-stage",
 				},
 				Spec: kargoapi.StageSpec{
-					Targets: &kargoapi.StageTargets{},
-					RequestedFreight: []kargoapi.FreightRequest{
-						{
-							Origin: kargoapi.FreightOrigin{
-								Kind: kargoapi.FreightOriginKindWarehouse,
-								Name: "test-warehouse",
-							},
-							Sources: kargoapi.FreightSources{
-								Direct: true,
-							},
-						},
-					},
+					RequestedFreight: directFromWarehouse,
 					PromotionTemplate: &kargoapi.PromotionTemplate{
 						Spec: kargoapi.PromotionTemplateSpec{
-							Steps: []kargoapi.PromotionStep{
-								{
-									Uses: "fake-step",
-								},
-							},
+							Steps: []kargoapi.PromotionStep{{Uses: "fake-step"}},
 						},
 					},
 				},
@@ -4812,35 +4633,21 @@ func TestFleetStageReconciler_autoPromoteFreight(t *testing.T) {
 					},
 				},
 			},
-			interceptor: interceptor.Funcs{
-				Create: func(context.Context, client.WithWatch, client.Object, ...client.CreateOption) error {
-					return &apierrors.StatusError{ErrStatus: metav1.Status{
-						Status: metav1.StatusFailure,
-						Reason: metav1.StatusReasonForbidden,
-						// Shaped like a real denial: the API server's wrapper around
-						// what a webhook returned via apierrors.NewForbidden, naming
-						// the Promotion the mutating webhook had just generated.
-						Message: `admission webhook "fake-webhook" denied the request: ` +
-							`promotions.kargo.akuity.io "test-stage.01jzzz.abc1234" is forbidden: ` +
-							`promotion of Stage "test-stage" is not permitted at this time`,
-					}}
-				},
-			},
 			assertions: func(
 				t *testing.T,
 				recorder *fakeevent.Sender,
-				c client.Client,
+				rollouts *fakeRolloutClient,
 				_ kargoapi.StageStatus,
+				created bool,
 				err error,
 			) {
 				require.NoError(t, err)
+				assert.False(t, created)
 
-				// No Promotion is persisted when the create is denied.
-				promoList := &kargoapi.PromotionRequestList{}
-				require.NoError(t, c.List(t.Context(), promoList, client.InNamespace("fake-project")))
-				assert.Empty(t, promoList.Items)
+				// No rollout is persisted when the create is refused.
+				assert.Empty(t, rollouts.created)
 
-				// Nor is anything recorded. A denial is a condition that persists
+				// Nor is anything recorded. A refusal is a condition that persists
 				// across reconciles, not an occurrence, so an event per attempt
 				// would report the same thing indefinitely.
 				assert.Empty(t, recorder.Sent())
@@ -4851,11 +4658,10 @@ func TestFleetStageReconciler_autoPromoteFreight(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			objects := append([]client.Object{tt.stage}, tt.objects...)
-			builder := fake.NewClientBuilder().
+			c := fake.NewClientBuilder().
 				WithScheme(scheme).
 				WithObjects(objects...).
 				WithStatusSubresource(&kargoapi.Stage{}, &kargoapi.Freight{}).
-				WithInterceptorFuncs(tt.interceptor).
 				WithIndex(
 					&kargoapi.Freight{},
 					indexer.FreightByWarehouseField,
@@ -4876,29 +4682,26 @@ func TestFleetStageReconciler_autoPromoteFreight(t *testing.T) {
 					indexer.FreightApprovedForStagesField,
 					indexer.FreightApprovedForStages,
 				).
-				WithIndex(
-					&kargoapi.PromotionRequest{},
-					indexer.PromotionRequestsByStageAndFreightField,
-					indexer.PromotionRequestsByStageAndFreight,
-				)
-
-			c := builder.Build()
+				Build()
 			recorder := &fakeevent.Sender{}
 
-			// Most cases are about Freight, not Targets, and run with an empty
-			// Project; only a case that opts out runs without an API server.
-			targets := tt.targets
-			if targets == nil && !tt.noTargets {
-				targets = fakeTargetLister{}
+			// Most cases are about Freight, not rollouts, and run against an
+			// API server serving none; only a case that opts out runs without
+			// an API server.
+			rollouts := tt.rollouts
+			if rollouts == nil && !tt.noClient {
+				rollouts = &fakeRolloutClient{}
 			}
 			r := &FleetStageReconciler{
 				client:      c,
 				eventSender: recorder,
-				targets:     targets,
+			}
+			if rollouts != nil {
+				r.rollouts = rollouts
 			}
 
-			status, err := r.autoPromoteFreight(t.Context(), tt.stage, tt.autoPromotionEnabled)
-			tt.assertions(t, recorder, c, status, err)
+			status, created, err := r.autoPromoteFreight(t.Context(), tt.stage, tt.autoPromotionEnabled)
+			tt.assertions(t, recorder, rollouts, status, created, err)
 		})
 	}
 }
@@ -5274,9 +5077,9 @@ func Test_summarizeFleetConditions(t *testing.T) {
 	}
 }
 
-// testFreightCollection returns the FreightCollection a PromotionRequest for
-// the named Freight would carry, built the way the request reconciler builds
-// it, so that its ID is the real one.
+// testFreightCollection returns the FreightCollection the Stage records when
+// a PromotionRollout for the named Freight succeeds, built the way
+// recordTerminalRollout builds it, so that its ID is the real one.
 func testFreightCollection(freight string) *kargoapi.FreightCollection {
 	collection := &kargoapi.FreightCollection{}
 	collection.UpdateOrPush(kargoapi.FreightReference{
@@ -5289,48 +5092,85 @@ func testFreightCollection(freight string) *kargoapi.FreightCollection {
 	return collection
 }
 
-// testPromotionRequest returns a PromotionRequest of the test Stage for the
+// testPromotionRollout returns a PromotionRollout of the test Stage for the
 // named Freight, in the given phase.
-func testPromotionRequest(
+func testPromotionRollout(
 	name string,
 	freight string,
-	phase kargoapi.PromotionRequestPhase,
+	phase kargoapi.PromotionRolloutPhase,
 	finishedAt *metav1.Time,
-) *kargoapi.PromotionRequest {
-	freightRef := kargoapi.FreightReference{
-		Name: freight,
-	}
-	freightCollection := &kargoapi.FreightCollection{}
-	freightCollection.UpdateOrPush(freightRef)
-
-	return &kargoapi.PromotionRequest{
+) kargoapi.PromotionRollout {
+	return kargoapi.PromotionRollout{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: "fake-project",
 			Name:      name,
 		},
-		Spec: kargoapi.PromotionRequestSpec{
+		Spec: kargoapi.PromotionRolloutSpec{
 			Stage:   "test-stage",
 			Freight: freight,
 		},
-		Status: kargoapi.PromotionRequestStatus{
-			Phase:             phase,
-			FinishedAt:        finishedAt,
-			Freight:           &freightRef,
-			FreightCollection: freightCollection,
+		Status: kargoapi.PromotionRolloutStatus{
+			Phase:      phase,
+			FinishedAt: finishedAt,
 		},
 	}
 }
 
-// fakeTargetLister is a TargetLister over a fixed list of Targets.
-type fakeTargetLister []kargoapi.Target
-
-func (f fakeTargetLister) ListTargets(context.Context, string) ([]kargoapi.Target, error) {
-	return f, nil
+// fakeRolloutClient stands in for the API server: it serves a fixed set of
+// PromotionRollouts per Stage and records the ones it is asked to create.
+type fakeRolloutClient struct {
+	mu sync.Mutex
+	// rollouts are the PromotionRollouts of every Stage. List serves the ones
+	// of the Project and Stage it is asked about.
+	rollouts []kargoapi.PromotionRollout
+	// created are the PromotionRollouts Create was asked for, in order. Each
+	// is also added to rollouts, Pending, as the API server persists what it
+	// creates.
+	created   []kargoapi.PromotionRollout
+	listErr   error
+	createErr error
 }
 
-// failingTargetLister is a TargetLister that cannot reach the API server.
-type failingTargetLister struct{ err error }
+var _ RolloutClient = (*fakeRolloutClient)(nil)
 
-func (f failingTargetLister) ListTargets(context.Context, string) ([]kargoapi.Target, error) {
-	return nil, f.err
+func (f *fakeRolloutClient) ListPromotionRollouts(
+	_ context.Context,
+	project string,
+	stage string,
+) ([]kargoapi.PromotionRollout, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if f.listErr != nil {
+		return nil, f.listErr
+	}
+	// Copies, so that a caller sorting what it was served does not reorder
+	// the fake's own state.
+	var rollouts []kargoapi.PromotionRollout
+	for i := range f.rollouts {
+		if f.rollouts[i].Namespace == project && f.rollouts[i].Spec.Stage == stage {
+			rollouts = append(rollouts, *f.rollouts[i].DeepCopy())
+		}
+	}
+	return rollouts, nil
+}
+
+func (f *fakeRolloutClient) CreatePromotionRollout(
+	_ context.Context,
+	project string,
+	stage string,
+	freight string,
+) (*kargoapi.PromotionRollout, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if f.createErr != nil {
+		return nil, f.createErr
+	}
+	rollout := api.NewPromotionRollout(
+		&kargoapi.Stage{ObjectMeta: metav1.ObjectMeta{Namespace: project, Name: stage}},
+		freight,
+	)
+	rollout.Status.Phase = kargoapi.PromotionRolloutPhasePending
+	f.rollouts = append(f.rollouts, *rollout.DeepCopy())
+	f.created = append(f.created, *rollout.DeepCopy())
+	return rollout, nil
 }

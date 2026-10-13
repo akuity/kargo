@@ -4,9 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	"k8s.io/apimachinery/pkg/types"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/logging"
 )
@@ -42,18 +39,17 @@ func buildPromotionFreightCollection(
 	return freightCol
 }
 
-// ResolveFreightRefs returns FreightReference and FreightCollection for a promotion
-// If Status.Freight and Status.FreightCollection already set, it just returns them
-// If the stage is target aware - freight references are taken from PromotionRequest owning the promotion
-// If it's a regular stage - freight references are constructed from targetFreight and stage status
+// ResolveFreightRefs returns the FreightReference and FreightCollection for
+// a Promotion. If Status.Freight and Status.FreightCollection are already
+// set, it just returns them; otherwise they are constructed from
+// targetFreight and the Stage's status. A Promotion to one of a Stage's
+// Targets resolves them exactly as a Promotion to the Stage itself does: its
+// Freight is the Freight of the PromotionRollout that created it.
 // It returns errors if:
 // targetFreight is nil
 // targetFreight is not yet available for the stage
-// for PromotionRequest Status.Freight or Status.FreightCollection are not set yet
-// targetFreight is not the freight referenced in PromotionRequest
 func ResolveFreightRefs(
 	ctx context.Context,
-	cli client.Client,
 	promo kargoapi.Promotion,
 	stage *kargoapi.Stage,
 	targetFreight *kargoapi.Freight,
@@ -79,9 +75,6 @@ func ResolveFreightRefs(
 	if promo.Status.Freight != nil && promo.Status.FreightCollection != nil {
 		return promo.Status.Freight, promo.Status.FreightCollection, nil
 	}
-	if stage.IsTargetAware() {
-		return GetPromotionRequestFreightRefs(ctx, cli, promo, targetFreight)
-	}
 	return GetStageFreightRefs(ctx, targetFreight, stage)
 }
 
@@ -100,45 +93,4 @@ func GetStageFreightRefs(
 	}
 	freightCollection := buildPromotionFreightCollection(ctx, targetFreightRef, stage)
 	return &targetFreightRef, freightCollection, nil
-}
-
-func GetPromotionRequestFreightRefs(
-	ctx context.Context,
-	cli client.Client,
-	promo kargoapi.Promotion,
-	targetFreight *kargoapi.Freight,
-) (*kargoapi.FreightReference, *kargoapi.FreightCollection, error) {
-	owner := PromotionRequestOwner(&promo)
-	request, err := GetPromotionRequest(
-		ctx,
-		cli,
-		types.NamespacedName{
-			Namespace: promo.Namespace,
-			Name:      owner,
-		},
-	)
-	if err != nil {
-		return nil, nil, err
-	}
-	if request == nil {
-		return nil, nil, fmt.Errorf("cannot find PromotionRequest %q for Promotion %q", owner, promo.Name)
-	}
-
-	// PromotionRequest supposed to set their freight values by now,
-	// but it may not propagated though the caches.
-	// Since promotion is already running, the reconciler will restart
-	// and hopefully pick up the PromotionRequest changes.
-	if request.Status.Freight == nil || request.Status.FreightCollection == nil {
-		return nil,
-			nil,
-			fmt.Errorf("missing freight reference in PromotionRequest for Promotion %q in namespace %q",
-				promo.Name, promo.Namespace)
-	}
-	if request.Status.Freight.Name != targetFreight.Name {
-		return nil,
-			nil,
-			fmt.Errorf("freight mismatch between PromotionRequest and Promotion %q in namespace %q",
-				promo.Name, promo.Namespace)
-	}
-	return request.Status.Freight, request.Status.FreightCollection, nil
 }

@@ -65,7 +65,6 @@ rules:
   - kargo.akuity.io
   resources:
   - clusterconfigs
-  - promotionrequests
   - promotions
   - stages
   - warehouses

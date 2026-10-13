@@ -68,9 +68,9 @@ type promoteToStageRequest struct {
 // @Param project path string true "Project name"
 // @Param stage path string true "Stage name"
 // @Param body body promoteToStageRequest true "Promote request"
-// @Description A Stage that selects Targets yields a PromotionRequest, which fans
+// @Description A Stage that selects Targets yields a PromotionRollout, which fans
 // @Description the Freight out to each of them, in place of a single Promotion.
-// @Success 201 {object} kargoapi.Promotion "Promotion resource, or a PromotionRequest for a Stage that selects Targets"
+// @Success 201 {object} kargoapi.Promotion "Promotion resource, or a PromotionRollout for a Stage that selects Targets"
 // @Router /v1beta1/projects/{project}/stages/{stage}/promotions [post]
 func (s *server) promoteToStage(c *gin.Context) {
 	ctx := c.Request.Context()
@@ -125,7 +125,7 @@ func (s *server) promoteToStage(c *gin.Context) {
 		if stage.IsTargetAware() {
 			// Promotion by origin relies on the Promotion defaulting webhook to
 			// resolve the origin to a candidate Freight at admission time.
-			// PromotionRequests have no such webhook, so there is nothing to resolve
+			// PromotionRollouts have no such webhook, so there is nothing to resolve
 			// the origin. Refuse rather than silently create a Promotion that
 			// bypasses the Stage's Targets.
 			_ = c.Error(libhttp.ErrorStr(
@@ -203,33 +203,27 @@ func (s *server) promoteToStage(c *gin.Context) {
 		return
 	}
 
-	// A Stage that selects Targets fans Freight out to them via a PromotionRequest
-	// rather than promoting to itself with a single Promotion.
+	// A Stage that selects Targets fans Freight out to them via a
+	// PromotionRollout rather than promoting to itself with a single
+	// Promotion. The promote-verb check above IS the authorization decision
+	// for creating one.
 	if stage.IsTargetAware() {
-		// The create goes through the internal client: PromotionRequests are
-		// system-owned, and the promote-verb check above IS the authorization
-		// decision for this request. The Targets come from the database
-		// without a check of their own for the same reason.
-		targets, targetErr := s.governedTargets(ctx, stage)
-		if targetErr != nil {
-			_ = c.Error(targetErr)
+		if s.createRolloutFn == nil {
+			_ = c.Error(errDatabaseNotConfigured)
 			return
 		}
-		promotionRequest, prErr := api.NewPromotionRequestForAllTargets(stage, freight.Name, targets)
-		if prErr != nil {
-			_ = c.Error(prErr)
-			return
-		}
+		var actor string
 		if u, ok := user.IdentityFromContext(ctx); ok {
-			api.SetCreateActorAnnotation(promotionRequest, u.Actor())
+			actor = u.Actor()
 		}
-		if err = s.client.InternalClient().Create(ctx, promotionRequest); err != nil {
-			_ = c.Error(err)
+		rollout, rolloutErr := s.createRolloutFn(ctx, stage, freight, actor)
+		if rolloutErr != nil {
+			_ = c.Error(rolloutErr)
 			return
 		}
-		// No event is recorded: Kargo's promotion events carry a Promotion, and
-		// a PromotionRequest has none of its own.
-		c.JSON(http.StatusCreated, promotionRequest)
+		// No event is recorded: Kargo's promotion events carry a Promotion,
+		// and a PromotionRollout has none of its own.
+		c.JSON(http.StatusCreated, rollout)
 		return
 	}
 

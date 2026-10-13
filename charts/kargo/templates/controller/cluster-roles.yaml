@@ -43,11 +43,14 @@ rules:
   - get
   - list
   - watch
-# Targets live in the database and the controller reads them through the API
-# server, which authorizes it against these verbs.
+# Targets and PromotionRollouts live in the database and the controller
+# reaches them through the API server, which authorizes it against these
+# verbs. Creating a PromotionRollout is a promotion, authorized by the promote
+# verb on the Stage, granted below.
 - apiGroups:
   - kargo.akuity.io
   resources:
+  - promotionrollouts
   - targets
   verbs:
   - get
@@ -56,7 +59,6 @@ rules:
   - kargo.akuity.io
   resources:
   - promotions
-  - promotionrequests
   verbs:
   - create
   - get
@@ -98,7 +100,6 @@ rules:
   resources:
   - freights/status
   - promotions/status
-  - promotionrequests/status
   - stages/status
   - warehouses/finalizers
   - warehouses/status

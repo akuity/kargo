@@ -48,9 +48,7 @@ export const StageTag = ({
             <PromotionStatusIcon
               placement='top'
               status={{ phase: lastPromotion.phase, message: lastPromotion.message }}
-              subject={
-                lastPromotion.kind === 'PromotionRequest' ? 'Promotion Request' : 'Promotion'
-              }
+              subject={lastPromotion.kind === 'PromotionRollout' ? 'Rollout' : 'Promotion'}
               color='white'
               size='1x'
             />

@@ -14,6 +14,7 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	libhttp "github.com/akuity/kargo/pkg/http"
+	"github.com/akuity/kargo/pkg/server/middleware"
 )
 
 func validateGroupByOrderBy(group string, groupBy string, orderBy string) error {
@@ -105,11 +106,7 @@ func validateGenericCredentialSecret(secret *corev1.Secret) error {
 // bindJSONOrError binds JSON from the request body to the target.
 // Returns true if successful, or false if an error was added to the gin context.
 func bindJSONOrError(c *gin.Context, target any) bool {
-	if err := c.ShouldBindJSON(target); err != nil {
-		_ = c.Error(libhttp.Error(err, http.StatusBadRequest))
-		return false
-	}
-	return true
+	return middleware.BindJSON(c, target)
 }
 
 // getFreightByNameOrAlias resolves a Freight resource by name or, when no

@@ -7,7 +7,7 @@ import { Link, generatePath } from 'react-router-dom';
 import { paths } from '@ui/config/paths';
 import { TargetRow } from '@ui/features/project/targets/model/target-rows';
 import { surfaceClassName } from '@ui/features/project/targets/shared/surface';
-import { PromotionRequest } from '@ui/gen/api/v2/models';
+import { PromotionRollout } from '@ui/gen/api/v2/models';
 
 import { MarkBar, MarkDot } from './mark-visuals';
 import { Marking, tally } from './marks';
@@ -55,7 +55,7 @@ export const TargetTiles = ({
   stageName: string;
   rows: TargetRow[];
   // The Stage's latest round, when it has had one.
-  round?: PromotionRequest;
+  round?: PromotionRollout;
   // The Freight vocabulary, shared with the grid's Freight colouring so a
   // piece of Freight is the same colour in both.
   freightMarks: Marking;
@@ -119,10 +119,10 @@ export const TargetTiles = ({
             <>
               {' · '}
               <Link
-                to={generatePath(paths.promotionRequest, {
+                to={generatePath(paths.promotionRollout, {
                   name: project,
                   stageName,
-                  promotionRequestName: roundName
+                  promotionRolloutName: roundName
                 })}
               >
                 view request

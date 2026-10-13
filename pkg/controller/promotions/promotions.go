@@ -409,7 +409,7 @@ func (r *reconciler) Reconcile(
 	// Confirm that the Stage is awaiting this Promotion.
 	// This effectively prevents the Promotion from running until the Stage
 	// decides it is the next Promotion to run. A Promotion to one of the
-	// Stage's Targets is admitted by the Stage's current PromotionRequest
+	// Stage's Targets is admitted by the Stage's current PromotionRollout
 	// instead, so all of one request's children -- at most one per Target --
 	// run in parallel while consecutive requests remain serialized.
 	if !api.StageAwaitsPromotion(stage, promo) {
@@ -605,7 +605,6 @@ func (r *reconciler) promote(
 	// ResolveFreight returns error if freight doesn't exist or not requested by the stage.
 	targetFreightRef, freightCollection, freightErr := api.ResolveFreightRefs(
 		ctx,
-		r.kargoClient,
 		promo,
 		stage,
 		targetFreight)
@@ -685,7 +684,7 @@ func (r *reconciler) promote(
 	logger.Debug("promotion", "phase", workingPromo.Status.Phase)
 
 	if workingPromo.Status.Phase == kargoapi.PromotionPhaseSucceeded {
-		// If the stage runs a PromotionRequest, do not trigger reverification for each promotion
+		// If the stage runs a PromotionRollout, do not trigger reverification for each promotion
 		if !stage.IsTargetAware() {
 			// Trigger re-verification of the Stage if the promotion succeeded and
 			// this is a re-promotion of the same Freight.

@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest';
 
-import { PromotionRequest, Target } from '../../../../gen/api/v2/models';
+import { PromotionRollout, Target } from '../../../../gen/api/v2/models';
 import { targetRows } from '../../../project/targets/model/target-rows';
 import {
   fleetStage,
@@ -22,7 +22,7 @@ import {
 const stage = fleetStage('prod', [{ matchLabels: { env: 'prod' } }], 'current');
 
 // rows builds the tab's rows the way the tab does: against this one Stage.
-const rows = (targets: Target[], request?: PromotionRequest) =>
+const rows = (targets: Target[], request?: PromotionRollout) =>
   targetRows(targets, [stage], { prod: request });
 
 const governed = (

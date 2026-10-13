@@ -1,6 +1,6 @@
 import { HealthStatus, healthStatusToEnum } from '@ui/features/common/health-status/utils';
 import { GoverningStage, TargetRow } from '@ui/features/project/targets/model/target-rows';
-import { PromotionRequest, Target } from '@ui/gen/api/v2/models';
+import { PromotionRollout, Target } from '@ui/gen/api/v2/models';
 
 // governing is what the one Stage this tab is about observes of a Target.
 // Rows here are built against that Stage alone, so there is never more than
@@ -107,7 +107,7 @@ export const neverPromoted = (rows: TargetRow[]): number =>
 // Target, once it has created one. It is how a Target reaches the steps and
 // logs of its own promotion rather than the round's summary of them.
 export const childPromotionName = (
-  round: PromotionRequest | undefined,
+  round: PromotionRollout | undefined,
   target: string
 ): string | undefined => round?.status?.targets?.find(({ name }) => name === target)?.promotion;
 

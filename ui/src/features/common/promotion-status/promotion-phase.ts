@@ -8,9 +8,9 @@ import {
 } from '@fortawesome/free-solid-svg-icons';
 import { GlobalToken, theme } from 'antd';
 
-// PromotionPhase mirrors PromotionPhase on the back end. A PromotionRequest's
+// PromotionPhase mirrors PromotionPhase on the back end. A PromotionRollout's
 // summary counts child Promotions by these same phases, so both the Promotion
-// and PromotionRequest UIs present them with one shared vocabulary.
+// and PromotionRollout UIs present them with one shared vocabulary.
 export type PromotionPhase = 'Pending' | 'Running' | 'Succeeded' | 'Failed' | 'Errored' | 'Aborted';
 
 // PhaseColorToken names the Ant theme token a phase is painted with when it
