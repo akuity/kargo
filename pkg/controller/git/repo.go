@@ -67,8 +67,8 @@ func Clone(
 	repoURL string,
 	clientOpts *ClientOptions,
 	cloneOpts *CloneOptions,
-) (Repo, error) {
-	if err := validateRepoURL(repoURL); err != nil {
+) (_ Repo, err error) {
+	if err = validateRepoURL(repoURL); err != nil {
 		return nil, err
 	}
 	if clientOpts == nil {
@@ -88,19 +88,24 @@ func Clone(
 			baseRepo: baseRepo,
 		},
 	}
-	if err := r.setupDirs(ctx, cloneOpts.BaseDir); err != nil {
+	defer func() {
+		if err != nil {
+			_ = os.RemoveAll(r.homeDir)
+		}
+	}()
+	if err = r.setupDirs(ctx, cloneOpts.BaseDir); err != nil {
 		return nil, err
 	}
-	if err := r.setupClient(ctx, clientOpts); err != nil {
+	if err = r.setupClient(ctx, clientOpts); err != nil {
 		return nil, err
 	}
-	if err := r.clone(ctx, cloneOpts); err != nil {
+	if err = r.clone(ctx, cloneOpts); err != nil {
 		return nil, err
 	}
-	if err := r.saveDirs(ctx); err != nil {
+	if err = r.saveDirs(ctx); err != nil {
 		return nil, err
 	}
-	if err := r.saveOriginalURL(ctx); err != nil {
+	if err = r.saveOriginalURL(ctx); err != nil {
 		return nil, err
 	}
 	return r, nil

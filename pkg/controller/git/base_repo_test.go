@@ -133,6 +133,28 @@ func TestSetupUser(t *testing.T) {
 	}
 }
 
+func TestSetupDirs(t *testing.T) {
+	t.Parallel()
+
+	baseDir, err := filepath.EvalSymlinks(t.TempDir())
+	require.NoError(t, err)
+	b := &baseRepo{}
+	require.NoError(t, b.setupDirs(t.Context(), baseDir))
+	require.Equal(t, baseDir, filepath.Dir(b.homeDir))
+	require.Equal(t, filepath.Join(b.homeDir, "repo"), b.dir)
+
+	for key, expected := range map[string]string{
+		"init.defaultBranch": "main",
+		"maintenance.auto":   "false",
+	} {
+		cmd := b.buildGitCommand(t.Context(), "config", "--global", "--get", key)
+		cmd.Dir = b.homeDir
+		out, err := libExec.Exec(cmd)
+		require.NoError(t, err)
+		require.Equal(t, expected, strings.TrimSpace(string(out)), key)
+	}
+}
+
 func TestValidateRepoURL(t *testing.T) {
 	t.Parallel()
 

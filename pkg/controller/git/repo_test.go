@@ -174,3 +174,20 @@ with a body
 	})
 
 }
+
+func TestCloneRemovesHomeDirOnFailure(t *testing.T) {
+	testServer, testRepoURL, testRepoCreds := setupRemoteRepo(t)
+	defer testServer.Close()
+
+	baseDir := t.TempDir()
+	_, err := Clone(
+		t.Context(),
+		testRepoURL,
+		&ClientOptions{Credentials: &testRepoCreds},
+		&CloneOptions{BaseDir: baseDir, Branch: "does-not-exist"},
+	)
+	require.Error(t, err)
+	entries, err := os.ReadDir(baseDir)
+	require.NoError(t, err)
+	require.Empty(t, entries)
+}

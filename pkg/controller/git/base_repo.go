@@ -83,15 +83,20 @@ func (b *baseRepo) setupDirs(ctx context.Context, baseDir string) error {
 		return fmt.Errorf("error resolving symlinks in path %s: %w", b.homeDir, err)
 	}
 	b.dir = filepath.Join(b.homeDir, "repo")
-	cmd := b.buildGitCommand(
-		ctx, "config", "--global", "init.defaultBranch", "main",
-	)
-	// Override the cmd.Dir that's set by b.buildGitCommand(). It's normally the
-	// repository's path, but if this method was called as part of the cloning
-	// process, that path may not exist yet.
-	cmd.Dir = b.homeDir
-	if _, err := libExec.Exec(cmd); err != nil {
-		return fmt.Errorf("error configuring init.defaultBranch: %w", err)
+	for _, setting := range [][2]string{
+		{"init.defaultBranch", "main"},
+		// Fetches otherwise start a detached "git maintenance run --auto" that
+		// can keep writing into the repository after Close() has removed it.
+		{"maintenance.auto", "false"},
+	} {
+		cmd := b.buildGitCommand(ctx, "config", "--global", setting[0], setting[1])
+		// Override the cmd.Dir that's set by b.buildGitCommand(). It's normally
+		// the repository's path, but if this method was called as part of the
+		// cloning process, that path may not exist yet.
+		cmd.Dir = b.homeDir
+		if _, err := libExec.Exec(cmd); err != nil {
+			return fmt.Errorf("error configuring %s: %w", setting[0], err)
+		}
 	}
 	return nil
 }
