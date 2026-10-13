@@ -116,10 +116,10 @@ type WarehouseSpec struct {
 
 var legacySubscriptionTypes = []string{"chart", "git", "image"}
 
-// subscriptionNameKey is the one top-level key of a subscription that does not
-// name a subscription type. It qualifies the subscription instead. No
-// subscription type may use this name.
+// subscriptionNameKey and subscriptionDiscoveryLimitKey are top-level keys of a subscription that do not
+// name a subscription type. They apply to the subscription instead. No subscription type may use these names.
 const subscriptionNameKey = "name"
+const subscriptionDiscoveryLimitKey = "discoveryLimit"
 
 // UnmarshalJSON unmarshals the JSON data into WarehouseSpec, converting the
 // JSON from the Subscriptions field into typed RepoSubscription objects in
@@ -157,15 +157,15 @@ func (w *WarehouseSpec) UnmarshalJSON(data []byte) error {
 			// Only the reserved name key may accompany it.
 			typeKeys := make([]string, 0, len(rawMap))
 			for k := range rawMap {
-				if k != subscriptionNameKey {
+				if k != subscriptionNameKey && k != subscriptionDiscoveryLimitKey {
 					typeKeys = append(typeKeys, k)
 				}
 			}
 			if len(typeKeys) != 1 {
 				return fmt.Errorf(
 					"subscription at index %d must have exactly one top-level field "+
-						"naming its type, apart from an optional %q field, but has %d",
-					i, subscriptionNameKey, len(typeKeys),
+						"naming its type, apart from shared %q and %q fields, but has %d",
+					i, subscriptionNameKey, subscriptionDiscoveryLimitKey, len(typeKeys),
 				)
 			}
 			key := typeKeys[0]
@@ -334,6 +334,14 @@ type RepoSubscription struct {
 	// Subscription describes a subscription to something that is not a Git, container
 	// image, or Helm chart repository.
 	Subscription *Subscription `json:"subscription,omitempty"`
+	// DiscoveryLimit is an optional limit on the number of artifacts that can be
+	// discovered for this subscription. When left unspecified, the field is
+	// implicitly treated as if its value were 20. The upper limit is 100.
+	//
+	// +kubebuilder:validation:Minimum=1
+	// +kubebuilder:validation:Maximum=100
+	// +kubebuilder:validation:Optional
+	DiscoveryLimit int64 `json:"discoveryLimit,omitempty"`
 }
 
 // Subscription represents a subscription to some kind of artifact repository.

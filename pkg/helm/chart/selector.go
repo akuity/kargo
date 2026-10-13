@@ -26,14 +26,15 @@ type Selector interface {
 func NewSelector(
 	ctx context.Context,
 	sub kargoapi.ChartSubscription,
+	discoveryLimit int,
 	creds *helm.Credentials,
 ) (Selector, error) {
 	switch {
 	case strings.HasPrefix(sub.RepoURL, "http://"),
 		strings.HasPrefix(sub.RepoURL, "https://"):
-		return newHTTPSelector(sub, creds)
+		return newHTTPSelector(sub, discoveryLimit, creds)
 	case strings.HasPrefix(sub.RepoURL, "oci://"):
-		return newOCISelector(ctx, sub, creds)
+		return newOCISelector(ctx, sub, discoveryLimit, creds)
 	default:
 		return nil, fmt.Errorf("repository URL %q is invalid", sub.RepoURL)
 	}

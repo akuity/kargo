@@ -57,9 +57,10 @@ type newestFromBranchSelector struct {
 
 func newNewestFromBranchSelector(
 	sub kargoapi.GitSubscription,
+	discoveryLimit int,
 	creds *git.RepoCredentials,
 ) (Selector, error) {
-	base, err := newBaseSelector(sub, creds)
+	base, err := newBaseSelector(sub, discoveryLimit, creds)
 	if err != nil {
 		return nil, fmt.Errorf("error building base selector: %w", err)
 	}
