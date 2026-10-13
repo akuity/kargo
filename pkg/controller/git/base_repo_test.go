@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -131,6 +132,29 @@ func TestSetupUser(t *testing.T) {
 			tc.assert(t, homeDir, repoHomeDir, err)
 		})
 	}
+}
+
+func TestSetupDirs(t *testing.T) {
+	t.Parallel()
+
+	baseDir, err := filepath.EvalSymlinks(t.TempDir())
+	require.NoError(t, err)
+	b := &baseRepo{}
+	require.NoError(t, b.setupDirs(t.Context(), baseDir))
+	require.Equal(t, baseDir, filepath.Dir(b.homeDir))
+	require.Equal(t, filepath.Join(b.homeDir, "repo"), b.dir)
+	assertGitConfig(t, b.homeDir, "init.defaultBranch", "main")
+	assertGitConfig(t, b.homeDir, "maintenance.auto", "false")
+}
+
+func TestDisableAutoMaintenance(t *testing.T) {
+	t.Parallel()
+
+	homeDir := t.TempDir()
+	b := &baseRepo{homeDir: t.TempDir()}
+	require.NoError(t, b.disableAutoMaintenance(t.Context(), homeDir))
+	assertGitConfig(t, homeDir, "maintenance.auto", "false")
+	assertNoGitConfig(t, b.homeDir)
 }
 
 func TestValidateRepoURL(t *testing.T) {
@@ -285,12 +309,11 @@ func TestBuildCommandCancellation(t *testing.T) {
 func assertGitConfig(t *testing.T, homeDir, key, expected string) {
 	t.Helper()
 	configPath := filepath.Join(homeDir, ".gitconfig")
-	content, err := os.ReadFile(configPath)
-	require.NoError(t, err, "expected .gitconfig in %s", homeDir)
-	require.Contains(t,
-		string(content), expected,
-		"expected %s = %s in %s", key, expected, configPath,
+	out, err := libExec.Exec(
+		exec.Command("git", "config", "--file", configPath, "--get", key),
 	)
+	require.NoError(t, err, "expected %s in %s", key, configPath)
+	require.Equal(t, expected, strings.TrimSpace(string(out)), key)
 }
 
 // assertNoGitConfig verifies that no .gitconfig exists in the given directory.
