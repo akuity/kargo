@@ -292,6 +292,9 @@ func (s *server) setupRESTRouter(ctx context.Context) (*gin.Engine, error) {
 			project.GET("/analysis-runs/:analysis-run", requireRollouts, s.getAnalysisRun)
 			project.GET("/analysis-runs/:analysis-run/logs", requireRollouts, s.getAnalysisRunLogs)
 
+			// Analysis Run Requests
+			project.GET("/analysis-run-requests/:analysis-run-request", s.getAnalysisRunRequest)
+
 			// -----------------------------------------------------------------
 			// Generic Config
 			// -----------------------------------------------------------------

@@ -12,9 +12,11 @@ import { FreightCollection, VerificationInfo } from '@ui/gen/api/v2/models';
 import { parseDate } from '@ui/utils/dates';
 
 import { AnalysisModal } from '../common/analysis-modal/analysis-modal';
+import { AnalysisRunRequestModal } from '../common/analysis-modal/analysis-run-request-modal';
 import { useModal } from '../common/modal/use-modal';
 
 import { useGetFreightMap } from './tabs/freight-history/use-get-freight-map';
+import { isAnalysisRunRequest } from './utils/analysis-run-gvk';
 import { verificationPhaseIsTerminal } from './utils/verification-phase';
 import { VerificationIcon } from './verification-icon';
 
@@ -118,13 +120,21 @@ export const Verifications = ({ verifications, images }: Props) => {
           render={(val, verification) => (
             <Link
               onClick={() => {
-                show((p) => (
-                  <AnalysisModal
-                    {...p}
-                    analysisName={val.analysisRun?.name || ''}
-                    images={images}
-                  />
-                ));
+                show((p) =>
+                  isAnalysisRunRequest(val.analysisRun?.gvk) ? (
+                    <AnalysisRunRequestModal
+                      {...p}
+                      analysisName={val.analysisRun?.name || ''}
+                      images={images}
+                    />
+                  ) : (
+                    <AnalysisModal
+                      {...p}
+                      analysisName={val.analysisRun?.name || ''}
+                      images={images}
+                    />
+                  )
+                );
               }}
             >
               {verification.analysisRun?.name}
