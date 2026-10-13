@@ -15,6 +15,7 @@ import {
   isArtifactGitCommit,
   isArtifactImage
 } from '@ui/features/assemble-freight/artifact-type-guards';
+import { PromotionStatusPhase } from '@ui/features/common/promotion-status/utils';
 import { getCurrentFreight } from '@ui/features/common/utils';
 import {
   getGitCommitURL,
@@ -52,24 +53,44 @@ export const StageFreight = (props: { stage: Stage }) => {
 
   const currentFreight = useMemo(() => getCurrentFreight(props.stage), [props.stage]);
 
+  const lastPromotion = useMemo(
+    () => props.stage?.status?.lastPromotion?.status,
+    [props.stage?.status?.lastPromotion?.status?.finishedAt]
+  );
+
   const warehouses = currentFreight?.map((f) => f.origin?.name);
 
-  const [selectedWarehouse, setSelectedWarehouse] = useState(warehouses?.[0]);
+  const deriveSelection = (from?: { warehouse?: string; freight?: FreightReference }) => {
+    let warehouse;
+    if (from?.warehouse) {
+      warehouse = from?.warehouse;
+    } else if (lastPromotion?.phase === PromotionStatusPhase.SUCCEEDED) {
+      warehouse = lastPromotion?.freight?.origin?.name || warehouses?.[0];
+    } else {
+      warehouse = warehouses?.[0];
+    }
+    const freight = currentFreight?.find((f) => f?.origin?.name === warehouse);
+    // @ts-expect-error FreightReference and Freight are same, at least in this case
+    const artifact = selectFirstArtifact([freight]) as ArtifactTypes;
+
+    return {
+      warehouse,
+      freight,
+      artifact
+    };
+  };
+
+  const [selection, setSelection] = useState(deriveSelection);
 
   useEffect(() => {
-    if (selectedWarehouse) {
-      return;
-    }
+    if (lastPromotion?.phase === PromotionStatusPhase.SUCCEEDED) setSelection(deriveSelection());
+  }, [lastPromotion]);
 
-    setSelectedWarehouse(warehouses?.[0]);
-  }, [currentFreight]);
+  const selectedWarehouse = selection.warehouse;
 
-  const defaultToFirstFreight = () =>
-    currentFreight?.find((f) => f?.origin?.name === selectedWarehouse) as FreightReference;
+  const setSelectedWarehouse = (warehouse?: string) => setSelection(deriveSelection({ warehouse }));
 
-  const [selectedFreight, setSelectedFreight] = useState(defaultToFirstFreight);
-
-  useEffect(() => setSelectedFreight(defaultToFirstFreight()), [selectedWarehouse, props.stage]);
+  const selectedFreight = selection.freight;
 
   const selectedAutoPromotionHold = useMemo(
     () => getAutoPromotionHold(props.stage, selectedFreight?.origin),
@@ -82,20 +103,24 @@ export const StageFreight = (props: { stage: Stage }) => {
   );
   const showFreightAlias = freightTimelineControllerContext?.preferredFilter?.showAlias;
 
-  const defaultToFirstArtifact = () =>
-    // @ts-expect-error FreightReference and Freight are same, at least in this case
-    selectFirstArtifact([selectedFreight]) as ArtifactTypes;
-
-  const [selectedArtifact, setSelectedArtifact] = useState(defaultToFirstArtifact());
-
-  useEffect(() => setSelectedArtifact(defaultToFirstArtifact()), [selectedFreight, props.stage]);
+  const selectedArtifact = selection.artifact;
 
   const onNextArtifact = () => {
-    setSelectedArtifact(selectNextArtifact(selectedFreight, selectedArtifact));
+    if (selectedFreight) {
+      setSelection({
+        ...selection,
+        artifact: selectNextArtifact(selectedFreight, selectedArtifact)
+      });
+    }
   };
 
   const onPreviousArtifact = () => {
-    setSelectedArtifact(selectPreviousArtifact(selectedFreight, selectedArtifact));
+    if (selectedFreight) {
+      setSelection({
+        ...selection,
+        artifact: selectPreviousArtifact(selectedFreight, selectedArtifact)
+      });
+    }
   };
 
   const onNextWarehouse = () => {
