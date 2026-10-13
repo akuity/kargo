@@ -512,21 +512,3 @@ func TestBareRepo_WithFilter(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, "content in dir1", string(content))
 }
-
-func TestCloneBareRemovesHomeDirOnFailure(t *testing.T) {
-	testServer, testRepoURL, testRepoCreds := setupRemoteRepo(t)
-	// A closed server makes the clone itself fail after setupDirs succeeds.
-	testServer.Close()
-
-	baseDir := t.TempDir()
-	_, err := CloneBare(
-		t.Context(),
-		testRepoURL,
-		&ClientOptions{Credentials: &testRepoCreds},
-		&BareCloneOptions{BaseDir: baseDir},
-	)
-	require.Error(t, err)
-	entries, err := os.ReadDir(baseDir)
-	require.NoError(t, err)
-	require.Empty(t, entries)
-}

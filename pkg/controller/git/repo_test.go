@@ -176,18 +176,49 @@ with a body
 }
 
 func TestCloneRemovesHomeDirOnFailure(t *testing.T) {
-	testServer, testRepoURL, testRepoCreds := setupRemoteRepo(t)
-	defer testServer.Close()
+	t.Parallel()
 
-	baseDir := t.TempDir()
-	_, err := Clone(
-		t.Context(),
-		testRepoURL,
-		&ClientOptions{Credentials: &testRepoCreds},
-		&CloneOptions{BaseDir: baseDir, Branch: "does-not-exist"},
-	)
-	require.Error(t, err)
-	entries, err := os.ReadDir(baseDir)
-	require.NoError(t, err)
-	require.Empty(t, entries)
+	testCases := []struct {
+		name  string
+		clone func(t *testing.T, baseDir string) error
+	}{
+		{
+			name: "Clone of a missing branch",
+			clone: func(t *testing.T, baseDir string) error {
+				testServer, testRepoURL, testRepoCreds := setupRemoteRepo(t)
+				defer testServer.Close()
+				_, err := Clone(
+					t.Context(),
+					testRepoURL,
+					&ClientOptions{Credentials: &testRepoCreds},
+					&CloneOptions{BaseDir: baseDir, Branch: "does-not-exist"},
+				)
+				return err
+			},
+		},
+		{
+			name: "CloneBare from an unreachable server",
+			clone: func(t *testing.T, baseDir string) error {
+				testServer, testRepoURL, testRepoCreds := setupRemoteRepo(t)
+				testServer.Close()
+				_, err := CloneBare(
+					t.Context(),
+					testRepoURL,
+					&ClientOptions{Credentials: &testRepoCreds},
+					&BareCloneOptions{BaseDir: baseDir},
+				)
+				return err
+			},
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			baseDir := t.TempDir()
+			require.Error(t, tc.clone(t, baseDir))
+			entries, err := os.ReadDir(baseDir)
+			require.NoError(t, err)
+			require.Empty(t, entries)
+		})
+	}
 }
