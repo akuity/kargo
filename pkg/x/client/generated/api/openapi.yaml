@@ -184,6 +184,35 @@ paths:
       summary: Retrieve a Project resource
       tags:
       - Core
+  /v1beta1/projects/{project}/analysis-run-requests/{analysis-run-request}:
+    get:
+      description: Retrieve an AnalysisRunRequest resource from a project's namespace.
+      operationId: GetAnalysisRunRequest
+      parameters:
+      - description: Project name
+        in: path
+        name: project
+        required: true
+        schema:
+          type: string
+      - description: AnalysisRunRequest name
+        in: path
+        name: analysis-run-request
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AnalysisRunRequest"
+          description: AnalysisRunRequest custom resource
+      security:
+      - BearerAuth: []
+      summary: Retrieve an AnalysisRunRequest
+      tags:
+      - Verifications
   /v1beta1/projects/{project}/analysis-runs/{analysis-run}:
     get:
       description: Retrieve an AnalysisRun resource from a project's namespace.
@@ -10940,6 +10969,214 @@ components:
           description: Phase is the last observed phase of the AnalysisRun referenced
             by Name.
           type: string
+      type: object
+    AnalysisRunRequest:
+      example:
+        apiVersion: apiVersion
+        kind: kind
+        metadata:
+          annotations:
+            key: annotations
+          creationTimestamp: creationTimestamp
+          deletionGracePeriodSeconds: 0
+          deletionTimestamp: deletionTimestamp
+          finalizers:
+          - finalizers
+          - finalizers
+          generateName: generateName
+          generation: 6
+          labels:
+            key: labels
+          managedFields:
+          - apiVersion: apiVersion
+            fieldsType: fieldsType
+            fieldsV1: "{}"
+            manager: manager
+            operation: operation
+            subresource: subresource
+            time: time
+          - apiVersion: apiVersion
+            fieldsType: fieldsType
+            fieldsV1: "{}"
+            manager: manager
+            operation: operation
+            subresource: subresource
+            time: time
+          name: name
+          namespace: namespace
+          ownerReferences:
+          - apiVersion: apiVersion
+            blockOwnerDeletion: true
+            controller: true
+            kind: kind
+            name: name
+            uid: uid
+          - apiVersion: apiVersion
+            blockOwnerDeletion: true
+            controller: true
+            kind: kind
+            name: name
+            uid: uid
+          resourceVersion: resourceVersion
+          selfLink: selfLink
+          uid: uid
+        spec: "{}"
+        status: "{}"
+      properties:
+        apiVersion:
+          description: |-
+            APIVersion defines the versioned schema of this representation of an object.
+            Servers should convert recognized schemas to the latest internal value, and
+            may reject unrecognized values.
+            More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            +optional
+          type: string
+        kind:
+          description: |-
+            Kind is a string value representing the REST resource this object represents.
+            Servers may infer this from the endpoint the client submits requests to.
+            Cannot be updated.
+            In CamelCase.
+            More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            +optional
+          type: string
+        metadata:
+          $ref: "#/components/schemas/V1ObjectMeta"
+        spec:
+          allOf:
+          - $ref: "#/components/schemas/AnalysisRunRequestSpec"
+          description: +kubebuilder:validation:Required
+          type: object
+        status:
+          allOf:
+          - $ref: "#/components/schemas/AnalysisRunRequestStatus"
+          description: +kubebuilder:validation:Optional
+          type: object
+      required:
+      - spec
+      type: object
+    AnalysisRunRequestPhase:
+      enum:
+      - Pending
+      - Running
+      - Successful
+      - Failed
+      - Error
+      - Inconclusive
+      type: string
+      x-enum-varnames:
+      - AnalysisRunRequestPhasePending
+      - AnalysisRunRequestPhaseRunning
+      - AnalysisRunRequestPhaseSuccessful
+      - AnalysisRunRequestPhaseFailed
+      - AnalysisRunRequestPhaseError
+      - AnalysisRunRequestPhaseInconclusive
+    AnalysisRunRequestSpec:
+      properties:
+        freightCollection:
+          allOf:
+          - $ref: "#/components/schemas/FreightCollection"
+          description: |-
+            FreightCollection to verify. Stripped from verification history
+            +kubebuilder:validation:Required
+          type: object
+        promotionName:
+          description: |-
+            PromotionName (optional) is the name of the last promotion being verified
+            +optional
+          type: string
+        requestedFreight:
+          description: |-
+            RequestedFreight spec copied from Stage spec
+            +kubebuilder:validation:Required
+          items:
+            $ref: "#/components/schemas/FreightRequest"
+          type: array
+        stageName:
+          description: |-
+            StageName is the name of initiating stage
+            +kubebuilder:validation:Required
+          type: string
+        stageVars:
+          description: |-
+            StageVars copied from Stage spec
+            +optional
+          items:
+            $ref: "#/components/schemas/ExpressionVariable"
+          type: array
+        targets:
+          description: |-
+            Targets describes a list of targets to run AnalysisRuns for
+            +listType=atomic
+            +kubebuilder:validation:Required
+          items:
+            $ref: "#/components/schemas/PromotionRequestTarget"
+          type: array
+        updateStrategy:
+          allOf:
+          - $ref: "#/components/schemas/TargetUpdateStrategy"
+          description: |-
+            UpdateStrategy configures the pace of running AnalysisRuns
+            +optional
+            +kubebuilder:validation:XValidation:rule="self == oldSelf"
+          type: object
+        verificationTemplate:
+          allOf:
+          - $ref: "#/components/schemas/Verification"
+          description: |-
+            Copy of the Stage.Spec.Verification.
+            +kubebuilder:validation:Required
+          type: object
+      required:
+      - freightCollection
+      - requestedFreight
+      - stageName
+      - targets
+      - verificationTemplate
+      type: object
+    AnalysisRunRequestStatus:
+      properties:
+        analysisRuns:
+          description: |-
+            +kubebuilder:validation:Optional
+            +listType=atomic
+          items:
+            $ref: "#/components/schemas/AnalysisRunRequestTargetStatus"
+          type: array
+        completedAt:
+          description: +kubebuilder:validation:Optional
+          type: string
+        message:
+          description: +kubebuilder:validation:Optional
+          type: string
+        phase:
+          $ref: "#/components/schemas/AnalysisRunRequestPhase"
+        startedAt:
+          description: +kubebuilder:validation:Optional
+          type: string
+      type: object
+    AnalysisRunRequestTargetStatus:
+      properties:
+        analysisRunName:
+          description: +kubebuilder:validation:Optional
+          type: string
+        status:
+          allOf:
+          - $ref: "#/components/schemas/RolloutsAnalysisRunStatus"
+          description: +kubebuilder:validation:Optional
+          type: object
+        targetName:
+          description: |-
+            Name is the name of the Target.
+
+            +kubebuilder:validation:Required
+            +kubebuilder:validation:MinLength=1
+            +kubebuilder:validation:MaxLength=253
+            +kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`
+            +akuity:test-kubebuilder-pattern=KubernetesName
+          type: string
+      required:
+      - targetName
       type: object
     AnalysisTemplateReference:
       properties:

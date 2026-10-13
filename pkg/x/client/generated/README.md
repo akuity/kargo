@@ -189,6 +189,7 @@ Class | Method | HTTP request | Description
 *VerificationsAPI* | [**DeleteClusterAnalysisTemplate**](docs/VerificationsAPI.md#deleteclusteranalysistemplate) | **Delete** /v1beta1/shared/cluster-analysis-templates/{cluster-analysis-template} | Delete a ClusterAnalysisTemplate
 *VerificationsAPI* | [**GetAnalysisRun**](docs/VerificationsAPI.md#getanalysisrun) | **Get** /v1beta1/projects/{project}/analysis-runs/{analysis-run} | Retrieve an AnalysisRun
 *VerificationsAPI* | [**GetAnalysisRunLogs**](docs/VerificationsAPI.md#getanalysisrunlogs) | **Get** /v1beta1/projects/{project}/analysis-runs/{analysis-run}/logs | Stream AnalysisRun logs
+*VerificationsAPI* | [**GetAnalysisRunRequest**](docs/VerificationsAPI.md#getanalysisrunrequest) | **Get** /v1beta1/projects/{project}/analysis-run-requests/{analysis-run-request} | Retrieve an AnalysisRunRequest
 *VerificationsAPI* | [**GetAnalysisTemplate**](docs/VerificationsAPI.md#getanalysistemplate) | **Get** /v1beta1/projects/{project}/analysis-templates/{analysis-template} | Retrieve an AnalysisTemplate
 *VerificationsAPI* | [**GetClusterAnalysisTemplate**](docs/VerificationsAPI.md#getclusteranalysistemplate) | **Get** /v1beta1/shared/cluster-analysis-templates/{cluster-analysis-template} | Retrieve a ClusterAnalysisTemplate
 *VerificationsAPI* | [**ListAnalysisTemplates**](docs/VerificationsAPI.md#listanalysistemplates) | **Get** /v1beta1/projects/{project}/analysis-templates | List AnalysisTemplates
@@ -202,6 +203,11 @@ Class | Method | HTTP request | Description
  - [AnalysisRunArgument](docs/AnalysisRunArgument.md)
  - [AnalysisRunMetadata](docs/AnalysisRunMetadata.md)
  - [AnalysisRunReference](docs/AnalysisRunReference.md)
+ - [AnalysisRunRequest](docs/AnalysisRunRequest.md)
+ - [AnalysisRunRequestPhase](docs/AnalysisRunRequestPhase.md)
+ - [AnalysisRunRequestSpec](docs/AnalysisRunRequestSpec.md)
+ - [AnalysisRunRequestStatus](docs/AnalysisRunRequestStatus.md)
+ - [AnalysisRunRequestTargetStatus](docs/AnalysisRunRequestTargetStatus.md)
  - [AnalysisTemplateReference](docs/AnalysisTemplateReference.md)
  - [ApprovedStage](docs/ApprovedStage.md)
  - [ArgoCDShard](docs/ArgoCDShard.md)
