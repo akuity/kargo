@@ -45,7 +45,7 @@ import { useGetFreightMap } from './tabs/freight-history/use-get-freight-map';
 import { StageSettings } from './tabs/settings/stage-settings';
 import { useCurrentRound } from './use-current-round';
 import { useImages } from './use-images';
-import { roundBlock } from './utils/promotion-request';
+import { roundBlock } from './utils/promotion-rollout';
 import { Verifications } from './verifications';
 
 enum TabsTypes {

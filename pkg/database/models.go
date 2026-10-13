@@ -18,6 +18,36 @@ type ProjectRow struct {
 	SyncedAt  time.Time
 }
 
+type PromotionRolloutRow struct {
+	ID                uuid.UUID
+	ProjectName       string
+	Name              string
+	StageName         string
+	Number            int64
+	FreightName       string
+	MaxConcurrent     int64
+	CreatedBy         string
+	CreatedAt         time.Time
+	UpdatedAt         time.Time
+	TargetsResolvedAt *time.Time
+	StatusPhase       string
+	StatusReason      string
+	StatusMessage     string
+	StatusStartedAt   *time.Time
+	StatusFinishedAt  *time.Time
+}
+
+type PromotionRolloutTargetRow struct {
+	PromotionRolloutID uuid.UUID
+	TargetID           uuid.UUID
+}
+
+type StageRow struct {
+	ProjectName                string
+	Name                       string
+	LastPromotionRolloutNumber int64
+}
+
 type TargetRow struct {
 	ID            uuid.UUID
 	ProjectName   string

@@ -29,7 +29,7 @@ import (
 
 func TestNewReconciler(t *testing.T) {
 	testCfg := ReconcilerConfig{}
-	r := newReconciler(fake.NewClientBuilder().Build(), testCfg, nil)
+	r := newReconciler(fake.NewClientBuilder().Build(), testCfg, nil, nil)
 	require.Equal(t, testCfg, r.cfg)
 	require.NotNil(t, r.client)
 	require.NotNil(t, r.getProjectFn)
@@ -1995,7 +1995,7 @@ func TestReconciler_ensureControllerPermissions(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			r := newReconciler(testCase.client, cfg, nil)
+			r := newReconciler(testCase.client, cfg, nil, nil)
 			err = r.ensureControllerPermissions(t.Context(), testProject)
 			testCase.assertions(t, testCase.client, err)
 		})
@@ -2635,7 +2635,7 @@ func TestReconciler_ensureDefaultUserRoles(t *testing.T) {
 	}
 }
 
-func TestReconciler_ensureDefaultUserRoles_PromotionRequestPermissions(t *testing.T) {
+func TestReconciler_ensureDefaultUserRoles_PromotionRolloutPermissions(t *testing.T) {
 	scheme := runtime.NewScheme()
 	require.NoError(t, corev1.AddToScheme(scheme))
 	require.NoError(t, rbacv1.AddToScheme(scheme))
@@ -2727,21 +2727,21 @@ func TestReconciler_ensureDefaultUserRoles_PromotionRequestPermissions(t *testin
 			require.Fail(t, testCase.resource+" permissions not found")
 		})
 	}
-	// PromotionRequests are readable but never writable by a user: only the
+	// PromotionRollouts are readable but never writable by a user: only the
 	// Stage controller and the API server create them.
 	for _, roleName := range []string{"kargo-admin", "kargo-promoter", "kargo-viewer"} {
-		t.Run(roleName+"/promotionrequests read-only", func(t *testing.T) {
+		t.Run(roleName+"/promotionrollouts read-only", func(t *testing.T) {
 			role := createdRoles[roleName]
 			require.NotNil(t, role)
 			var found bool
 			for _, rule := range role.Rules {
-				if !slices.Contains(rule.Resources, "promotionrequests") {
+				if !slices.Contains(rule.Resources, "promotionrollouts") {
 					continue
 				}
 				found = true
 				require.ElementsMatch(t, []string{"get", "list", "watch"}, rule.Verbs)
 			}
-			require.True(t, found, "no promotionrequests rule found")
+			require.True(t, found, "no promotionrollouts rule found")
 		})
 	}
 	// Regression test for GHSA-rx5g-3338-f2mf: patch on freights/status let a

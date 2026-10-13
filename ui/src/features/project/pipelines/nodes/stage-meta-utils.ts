@@ -16,7 +16,7 @@ export const isStageControlFlow = (stage: Stage) =>
   (stage?.spec?.promotionTemplate?.spec?.steps?.length || 0) <= 0;
 
 // isStageTargetAware reports whether a Stage governs Targets, and therefore
-// promotes Freight via a PromotionRequest rather than a Promotion.
+// promotes Freight via a PromotionRollout rather than a Promotion.
 //
 // This mirrors api.IsTargetAware on the back end: the targets block being
 // present is the test, not what its selectors match. A Stage whose selectors
@@ -36,20 +36,20 @@ export const useIsColorsUsed = () => {
 //
 // A classic Stage promotes through a Promotion and records it in
 // status.currentPromotion and status.lastPromotion. A target-aware Stage
-// promotes through a PromotionRequest, which fans out one child Promotion per
+// promotes through a PromotionRollout, which fans out one child Promotion per
 // Target, and records the request in status.currentPromotionRequest and
 // status.lastPromotionRequest instead. For such a Stage the Promotion fields
 // name at most one of the children, so they never stand for the round.
 export type StagePromotionRef = {
-  kind: 'Promotion' | 'PromotionRequest';
+  kind: 'Promotion' | 'PromotionRollout';
   name?: string;
   phase?: string;
   message?: string;
   finishedAt?: string;
   freightName?: string;
   // path is where the UI shows the referenced promotion activity. A Promotion
-  // has a page of its own. A PromotionRequest does not: it is listed on the
-  // Stage page, whose Promotions tab leads with the Stage's PromotionRequests
+  // has a page of its own. A PromotionRollout does not: it is listed on the
+  // Stage page, whose Promotions tab leads with the Stage's PromotionRollouts
   // and expands the one currently fanning out.
   path?: string;
 };
@@ -81,12 +81,12 @@ const promotionRef = (stage?: Stage, ref?: PromotionReference): StagePromotionRe
     path: promotionPath(stage, ref.name)
   };
 
-const promotionRequestRef = (
+const promotionRolloutRef = (
   stage?: Stage,
   ref?: PromotionRequestReference
 ): StagePromotionRef | undefined =>
   ref && {
-    kind: 'PromotionRequest',
+    kind: 'PromotionRollout',
     name: ref.name,
     phase: ref.phase,
     finishedAt: ref.finishedAt,
@@ -98,14 +98,14 @@ const promotionRequestRef = (
 // anything.
 export const getCurrentPromotionRef = (stage?: Stage): StagePromotionRef | undefined =>
   isStageTargetAware(stage)
-    ? promotionRequestRef(stage, stage?.status?.currentPromotionRequest)
+    ? promotionRolloutRef(stage, stage?.status?.currentPromotionRequest)
     : promotionRef(stage, stage?.status?.currentPromotion);
 
 // getLastPromotionRef describes the last promotion the Stage saw through to a
 // terminal phase, if any.
 export const getLastPromotionRef = (stage?: Stage): StagePromotionRef | undefined =>
   isStageTargetAware(stage)
-    ? promotionRequestRef(stage, stage?.status?.lastPromotionRequest)
+    ? promotionRolloutRef(stage, stage?.status?.lastPromotionRequest)
     : promotionRef(stage, stage?.status?.lastPromotion);
 
 export const getLastPromotionDate = (stage: Stage) => {
@@ -115,7 +115,7 @@ export const getLastPromotionDate = (stage: Stage) => {
 
 // getCurrentPromotion names the Promotion a Stage is currently promoting
 // through, for callers that need to read the Promotion itself. A target-aware
-// Stage promotes through a PromotionRequest, whose child Promotions target
+// Stage promotes through a PromotionRollout, whose child Promotions target
 // distinct Targets and run in parallel, so no single Promotion describes what
 // it is doing: for such a Stage this is always undefined.
 export const getCurrentPromotion = (stage: Stage) => {

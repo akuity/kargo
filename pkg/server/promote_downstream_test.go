@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"net/http"
 	"net/http/httptest"
@@ -15,6 +16,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/pkg/api"
 	"github.com/akuity/kargo/pkg/server/config"
 )
 
@@ -101,12 +103,6 @@ func Test_server_promoteDownstream(t *testing.T) {
 			MatchLabels: map[string]string{"region": "us"},
 		}},
 	}
-	// Targets live in the database.
-	downstreamTargets := []kargoapi.Target{{ObjectMeta: metav1.ObjectMeta{
-		Namespace: testProject.Name,
-		Name:      "us-east",
-		Labels:    map[string]string{"region": "us"},
-	}}}
 
 	testRESTEndpoint(
 		t, &config.ServerConfig{},
@@ -246,14 +242,14 @@ func Test_server_promoteDownstream(t *testing.T) {
 				},
 			},
 			{
-				name: "target-aware downstream Stage yields a PromotionRequest",
+				name: "target-aware downstream Stage yields a PromotionRollout",
 				clientBuilder: fake.NewClientBuilder().WithObjects(
 					testProject,
 					testStage,
 					testTargetAwareDownstreamStage,
 					testFreight,
 				),
-				serverSetup: func(_ *testing.T, s *server) {
+				serverSetup: func(t *testing.T, s *server) {
 					s.authorizeFn = func(
 						context.Context,
 						string,
@@ -263,8 +259,15 @@ func Test_server_promoteDownstream(t *testing.T) {
 					) error {
 						return nil
 					}
-					s.listTargetsFn = func(context.Context, string) ([]kargoapi.Target, error) {
-						return downstreamTargets, nil
+					s.createRolloutFn = func(
+						_ context.Context,
+						stage *kargoapi.Stage,
+						freight *kargoapi.Freight,
+						_ string,
+					) (*kargoapi.PromotionRollout, error) {
+						require.Equal(t, testTargetAwareDownstreamStage.Name, stage.Name)
+						require.Equal(t, testFreight.Name, freight.Name)
+						return api.NewPromotionRollout(stage, freight.Name), nil
 					}
 				},
 				body: mustJSONBody(promoteDownstreamRequest{
@@ -272,30 +275,19 @@ func Test_server_promoteDownstream(t *testing.T) {
 				}),
 				assertions: func(t *testing.T, w *httptest.ResponseRecorder, c client.Client) {
 					require.Equal(t, http.StatusCreated, w.Code)
-					require.Contains(t, w.Body.String(), "promotionRequests")
 
 					promos := &kargoapi.PromotionList{}
 					require.NoError(t, c.List(t.Context(), promos, client.InNamespace(testProject.Name)))
 					require.Empty(t, promos.Items)
 
-					reqs := &kargoapi.PromotionRequestList{}
-					require.NoError(t, c.List(t.Context(), reqs, client.InNamespace(testProject.Name)))
-					require.Len(t, reqs.Items, 1)
-					require.Equal(t, testTargetAwareDownstreamStage.Name, reqs.Items[0].Spec.Stage)
-					require.Equal(t, testFreight.Name, reqs.Items[0].Spec.Freight)
-					// The downstream Stage's selectors are resolved to Targets
-					// at creation.
-					require.Equal(
-						t,
-						[]kargoapi.PromotionRequestTarget{{Name: "us-east"}},
-						reqs.Items[0].Spec.Targets,
-					)
-					require.Len(t, reqs.Items[0].OwnerReferences, 1)
-					require.Equal(
-						t,
-						testTargetAwareDownstreamStage.Name,
-						reqs.Items[0].OwnerReferences[0].Name,
-					)
+					var response struct {
+						PromotionRollouts []kargoapi.PromotionRollout `json:"promotionRollouts"`
+					}
+					require.NoError(t, json.Unmarshal(w.Body.Bytes(), &response))
+					require.Len(t, response.PromotionRollouts, 1)
+					require.Equal(t, testTargetAwareDownstreamStage.Name, response.PromotionRollouts[0].Spec.Stage)
+					require.Equal(t, testFreight.Name, response.PromotionRollouts[0].Spec.Freight)
+					require.Nil(t, response.PromotionRollouts[0].Spec.Targets)
 				},
 			},
 		},

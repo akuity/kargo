@@ -511,27 +511,47 @@ Tilt runs the PostgreSQL bundled with the Helm chart, configured by the
 cluster, the address is `kargo-postgres.kargo.svc:5432`.
 
 Two kinds of data live in it. The management controller mirrors Project
-identities from Kubernetes, which remains their source of truth. Targets, on
-the other hand, exist only in the database: the API server serves them
-through `/v1beta1/projects/{project}/targets`, and Target is no longer a
+identities from Kubernetes, which remains their source of truth. Targets and
+PromotionRollouts, on the other hand, exist only in the database: the API
+server serves them through `/v1beta1/projects/{project}/targets` and
+`/v1beta1/projects/{project}/promotion-rollouts`. Target is no longer a
 custom resource at all. The chart installs no CRD for it, `kubectl` does not
 see Targets, and the Go type keeps the shape of a Kubernetes resource without
 being one (no `apiVersion` or `kind`, no scheme registration), so that
-clients and the UI can treat it like one. Target custom resources from
-earlier versions are not migrated; a chart upgrade removes the CRD and them
-with it. A Target names its Project rather than referencing the mirrored
-row, so writing one never waits for the mirror. Deleting a Project does not
-yet remove its Targets.
+clients and the UI can treat it like one; PromotionRollout is built the same
+way. Target custom resources from earlier versions are not migrated; a chart
+upgrade removes the CRD and them with it. The PromotionRequest CRD is still
+installed for now, but nothing reads or writes it. A Target names its
+Project rather than referencing the mirrored row, so writing one never waits
+for the mirror. Deleting a Project does not yet remove its Targets or
+rollouts.
+
+A PromotionRollout is the intent to promote one piece of Freight to the
+Targets a target-aware Stage governs; it is what the promote endpoints and
+the Stage controller's auto-promotion create for such a Stage in place of a
+Promotion. Rollouts are numbered per Stage. Only the promote verb on the
+Stage authorizes creating one; users read them through `get` and `list` on
+`promotionrollouts`. A rollout is created without Targets: the management
+controller's rollout reconciler resolves the Stage's selectors against the
+Project's Targets once, when it first sees the rollout, and records the
+result for good. What has become of each of those Targets is not stored:
+the Promotions promoting to them carry a `kargo.akuity.io/promotion-rollout`
+annotation naming the rollout, and the API server derives the rollout's
+per-Target status from them. The reconciler relists the open rollouts on an
+interval; in Kargo OSS it ends each one, once resolved, with the
+explanation that fan-out is an Enterprise feature.
 
 Only control plane components open the database. The controller may run far
 from the control plane, on infrastructure where the database is not
-reachable, so it resolves the Targets a Stage governs and the Target a
-Promotion promotes to by calling the API server at `API_SERVER_ADDRESS`,
+reachable, so it creates and reads a Stage's PromotionRollouts, and resolves
+the Target a Promotion promotes to, by calling the API server at
+`API_SERVER_ADDRESS`,
 authenticating with the credential it already holds for the control plane:
 its ServiceAccount token in-cluster, or the bearer token its control-plane
 kubeconfig carries. The API server verifies that token with a TokenReview and
 authorizes each request against the controller's RBAC, which already grants
-it `list` and `get` on `targets`. A kubeconfig that obtains credentials
+it `list` and `get` on `targets` and `promotionrollouts`, and `promote` on
+`stages`. A kubeconfig that obtains credentials
 through an exec plugin is not supported for this; give such a shard a
 kubeconfig with a token.
 
@@ -547,7 +567,8 @@ open indefinitely.
 Every component that uses the database finds it through the same settings
 (`DATABASE_URL`, or `DATABASE_HOST` and its companions), which Tilt sets from
 the chart. A component without them runs with the database features off: the
-API server answers Target requests with `501 Not Implemented`. A component
+API server answers Target and PromotionRollout requests with
+`501 Not Implemented`. A component
 with them waits, for up to `DATABASE_CONNECT_TIMEOUT`, for the database to
 accept connections and for the schema to reach the version it expects, since
 the migrations usually run alongside it; it refuses to serve against an older

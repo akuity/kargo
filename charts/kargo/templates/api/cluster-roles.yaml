@@ -85,7 +85,6 @@ rules:
   - stages
   - warehouses
   - projectconfigs
-  - promotionrequests
   verbs:
   - "*"
 - apiGroups:

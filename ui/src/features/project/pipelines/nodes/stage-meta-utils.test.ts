@@ -19,7 +19,7 @@ const stage = (partial: Partial<Stage>): Stage =>
 // classic promotes through Promotions: no targets block.
 const classic = (status: Stage['status']) => stage({ status });
 
-// targetAware promotes through PromotionRequests: a targets block is present,
+// targetAware promotes through PromotionRollouts: a targets block is present,
 // whether or not it currently matches anything.
 const targetAware = (status: Stage['status']) => stage({ spec: { targets: {} }, status });
 
@@ -65,7 +65,7 @@ describe('getCurrentPromotionRef()', () => {
     expect(getCurrentPromotionRef(targetAware({}))).toBeUndefined();
   });
 
-  test('target-aware Stage: the current PromotionRequest, linking to the Stage page', () => {
+  test('target-aware Stage: the current PromotionRollout, linking to the Stage page', () => {
     expect(
       getCurrentPromotionRef(
         targetAware({
@@ -77,7 +77,7 @@ describe('getCurrentPromotionRef()', () => {
         })
       )
     ).toEqual({
-      kind: 'PromotionRequest',
+      kind: 'PromotionRollout',
       name: 'prod.01abc.deadbeef',
       phase: 'Running',
       finishedAt: undefined,
@@ -117,7 +117,7 @@ describe('getLastPromotionRef()', () => {
     });
   });
 
-  test('target-aware Stage: the last PromotionRequest', () => {
+  test('target-aware Stage: the last PromotionRollout', () => {
     expect(
       getLastPromotionRef(
         targetAware({
@@ -131,7 +131,7 @@ describe('getLastPromotionRef()', () => {
         })
       )
     ).toMatchObject({
-      kind: 'PromotionRequest',
+      kind: 'PromotionRollout',
       name: 'prod.01abc.deadbeef',
       phase: 'Failed',
       finishedAt: '2026-09-01T10:00:00Z',
@@ -173,7 +173,7 @@ describe('getLastPromotionDate()', () => {
     ).toEqual(new Date('2026-09-01T10:00:00Z'));
   });
 
-  test('target-aware Stage: when the last PromotionRequest finished', () => {
+  test('target-aware Stage: when the last PromotionRollout finished', () => {
     expect(
       getLastPromotionDate(
         targetAware({

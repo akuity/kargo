@@ -20,7 +20,7 @@ export const PromotionStatusIcon = ({
 }: {
   status?: PromotionStatus;
   // subject names what the phase belongs to in the tooltip. A
-  // PromotionRequest's phases share the Promotion vocabulary, so the same icon
+  // PromotionRollout's phases share the Promotion vocabulary, so the same icon
   // presents both.
   subject?: string;
   placement?: 'right' | 'top';

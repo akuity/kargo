@@ -61,6 +61,10 @@ type ReconcilerConfig struct {
 	MaxConcurrentControlFlowReconciles int    `envconfig:"MAX_CONCURRENT_CONTROL_FLOW_RECONCILES" default:"4"`
 	MaxConcurrentReconciles            int    `envconfig:"MAX_CONCURRENT_STAGE_RECONCILES" default:"4"`
 	MaxConcurrentFleetReconciles       int    `envconfig:"MAX_CONCURRENT_FLEET_STAGE_RECONCILES" default:"4"`
+	// FleetRolloutPollInterval is how often a target-aware Stage promoting
+	// through a PromotionRollout is reconciled to learn of its progress.
+	// PromotionRollouts live in the database, so nothing else reports it.
+	FleetRolloutPollInterval time.Duration `envconfig:"FLEET_ROLLOUT_POLL_INTERVAL" default:"15s"`
 }
 
 // Name returns the name of the Stage controller.

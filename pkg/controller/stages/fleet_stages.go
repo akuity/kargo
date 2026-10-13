@@ -1,7 +1,7 @@
 package stages
 
 // This reconciler is responsible for reconciling stages with `targets` specified.
-// These stages will create PromotionRequests instead of Promotions.
+// These stages will create PromotionRollouts instead of Promotions.
 // Some features of regular_stages are not supported for fleet stages:
 // - Healthchecks
 // - ArgoCD app references
@@ -17,19 +17,18 @@ import (
 	"time"
 
 	"go.opentelemetry.io/otel/trace"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/fields"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	rolloutsapi "github.com/akuity/kargo/api/stubs/rollouts/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/api"
+	"github.com/akuity/kargo/pkg/client/apiserver"
 	"github.com/akuity/kargo/pkg/conditions"
 	"github.com/akuity/kargo/pkg/controller"
 	"github.com/akuity/kargo/pkg/controller/metrics"
@@ -44,11 +43,13 @@ import (
 	"github.com/akuity/kargo/pkg/telemetry"
 )
 
-// TargetLister lists the Targets of a Project. Targets live in the control
-// plane's database and are read through the API server; see
+// RolloutClient creates and lists PromotionRollouts. PromotionRollouts live
+// in the control plane's database and are reached through the API server,
+// which resolves the Targets a rollout promotes to; see
 // pkg/client/apiserver.
-type TargetLister interface {
-	ListTargets(ctx context.Context, project string) ([]kargoapi.Target, error)
+type RolloutClient interface {
+	ListPromotionRollouts(ctx context.Context, project, stage string) ([]kargoapi.PromotionRollout, error)
+	CreatePromotionRollout(ctx context.Context, project, stage, freight string) (*kargoapi.PromotionRollout, error)
 }
 
 type FleetStageReconciler struct {
@@ -57,25 +58,26 @@ type FleetStageReconciler struct {
 	credentialsDB  credentials.Database
 	eventSender    kargoEvent.Sender
 	shardPredicate controller.ResponsibleFor[kargoapi.Stage]
-	// targets lists the Targets a Stage may govern. It is nil when the
-	// controller has no API server to read them from, in which case a Stage
-	// that selects Targets is reported Stalled rather than promoted.
-	targets TargetLister
+	// rollouts creates and lists the PromotionRollouts a Stage promotes
+	// through. It is nil when the controller has no API server to reach them
+	// through, in which case a Stage that selects Targets is reported
+	// Stalled rather than promoted.
+	rollouts RolloutClient
 
 	backoffCfg wait.Backoff
 }
 
-// NewFleetStageReconciler creates a new Stages reconciler. The TargetLister
-// may be nil; see the reconciler's targets field.
+// NewFleetStageReconciler creates a new Stages reconciler. The RolloutClient
+// may be nil; see the reconciler's rollouts field.
 func NewFleetStageReconciler(
 	cfg ReconcilerConfig,
 	credentialsDB credentials.Database,
-	targets TargetLister,
+	rollouts RolloutClient,
 ) *FleetStageReconciler {
 	return &FleetStageReconciler{
 		cfg:           cfg,
 		credentialsDB: credentialsDB,
-		targets:       targets,
+		rollouts:      rollouts,
 		shardPredicate: controller.ResponsibleFor[kargoapi.Stage]{
 			IsDefaultController: cfg.IsDefaultController,
 			ShardName:           cfg.ShardName,
@@ -104,30 +106,6 @@ func (r *FleetStageReconciler) SetupWithManager(
 	r.eventSender = k8sevent.NewEventSender(
 		libEvent.NewRecorder(ctx, kargoMgr.GetScheme(), kargoMgr.GetClient(), r.cfg.Name()),
 	)
-
-	// This index is used to find all PromotionRequests that promote Freight on
-	// behalf of a specific Stage.
-	if err := sharedIndexer.IndexField(
-		ctx,
-		&kargoapi.PromotionRequest{},
-		indexer.PromotionRequestsByStageField,
-		indexer.PromotionRequestsByStage,
-	); err != nil {
-		return fmt.Errorf(
-			"error setting up index for PromotionRequests by Stage: %w", err,
-		)
-	}
-
-	if err := sharedIndexer.IndexField(
-		ctx,
-		&kargoapi.PromotionRequest{},
-		indexer.PromotionRequestsByStageAndFreightField,
-		indexer.PromotionRequestsByStageAndFreight,
-	); err != nil {
-		return fmt.Errorf(
-			"error setting up index for PromotionRequests by Stage and Freight: %w", err,
-		)
-	}
 
 	// This index is used to find Freight that are directly available from a
 	// Warehouse and can be automatically promoted to a Stage.
@@ -194,25 +172,10 @@ func (r *FleetStageReconciler) SetupWithManager(
 	// Configure the watches.
 	// Changes to these objects that match the constraints from the predicates
 	// will enqueue a reconciliation for the related Stage(s).
-	logger := logging.LoggerFromContext(ctx)
 
-	// Watch for PromotionRequests for which the phase changed and enqueue the
-	// related Stage for reconciliation.
-	if err = c.Watch(
-		source.Kind(
-			kargoMgr.GetCache(),
-			&kargoapi.PromotionRequest{},
-			handler.TypedEnqueueRequestForOwner[*kargoapi.PromotionRequest](
-				kargoMgr.GetScheme(),
-				kargoMgr.GetRESTMapper(),
-				&kargoapi.Stage{},
-				handler.OnlyControllerOwner(),
-			),
-			kargo.NewPromotionRequestPhaseChangedPredicate(logger),
-		),
-	); err != nil {
-		return fmt.Errorf("unable to watch PromotionRequests: %w", err)
-	}
+	// PromotionRollouts live in the database, so there is nothing to watch
+	// for them: a Stage promoting through one is requeued on an interval
+	// instead; see Reconcile.
 
 	// Watch for Freight that have been newly promoted to a Stage or newly marked
 	// as verified in a Stage and enqueue downstream Stages for reconciliation.
@@ -369,6 +332,11 @@ func (r *FleetStageReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	if needsRequeue {
 		return ctrl.Result{RequeueAfter: 100 * time.Millisecond}, nil
 	}
+	// A Stage promoting through a PromotionRollout polls for its progress:
+	// rollouts live in the database, so no watch reports when one ends.
+	if newStatus.CurrentPromotionRequest != nil {
+		return ctrl.Result{RequeueAfter: r.cfg.FleetRolloutPollInterval}, nil
+	}
 	// Otherwise, requeue after a delay.
 	// TODO: Make the requeue delay configurable.
 	return ctrl.Result{RequeueAfter: 5 * time.Minute}, nil
@@ -425,11 +393,11 @@ func (r *FleetStageReconciler) reconcile(
 		reconcile func() (kargoapi.StageStatus, error)
 	}{
 		{
-			name: "syncing PromotionRequests",
+			name: "syncing PromotionRollouts",
 			reconcile: func() (kargoapi.StageStatus, error) {
-				status, err := r.syncPromotionRequests(ctx, working)
+				status, err := r.syncPromotionRollouts(ctx, working)
 				if err != nil {
-					err = fmt.Errorf("failed to sync PromotionRequests: %w", err)
+					err = fmt.Errorf("failed to sync PromotionRollouts: %w", err)
 				}
 				return status, err
 			},
@@ -485,9 +453,14 @@ func (r *FleetStageReconciler) reconcile(
 		{
 			name: "auto-promoting Freight",
 			reconcile: func() (kargoapi.StageStatus, error) {
-				status, err := r.autoPromoteFreight(ctx, working, autoPromotionEnabled)
+				status, created, err := r.autoPromoteFreight(ctx, working, autoPromotionEnabled)
 				if err != nil {
 					err = fmt.Errorf("failed to auto-promote Freight: %w", err)
+				}
+				// A rollout just created is not yet the Stage's current one;
+				// the next pass records it and polls from there.
+				if created {
+					requestRequeue = true
 				}
 				return status, err
 			},
@@ -534,129 +507,120 @@ func (r *FleetStageReconciler) reconcile(
 	return newStatus, requestRequeue, nil
 }
 
-// syncPromotionRequests records in the Stage's status which PromotionRequest is
-// currently fanning Freight out to the Stage's Targets, and which was the last
-// to reach a terminal phase.
+// syncPromotionRollouts records in the Stage's status which PromotionRollout
+// is currently fanning Freight out to the Stage's Targets, and which was the
+// last to reach a terminal phase.
 //
 // The current reference is the mutex that serializes rounds of fan-out: the
 // Promotion reconciler runs a Promotion to one of the Stage's Targets only
-// while the PromotionRequest that owns it is the Stage's current one -- see
-// api.StageAwaitsPromotion. All of one request's children (at most one per
-// Target) are admitted at once, so Promotions to distinct Targets run in
-// parallel, while the children of a queued request wait for the current
-// round to end. The last reference remains a mirror, kept so that a reader
-// of the Stage can see how the previous round ended without listing
-// PromotionRequests.
+// while the PromotionRollout that created it is the Stage's current one --
+// see api.StageAwaitsPromotion. All of one rollout's children (at most one
+// per Target at a time) are admitted at once, so Promotions to distinct
+// Targets run in parallel, while the children of a queued rollout wait for
+// the current round to end. The last reference remains a mirror, kept so
+// that a reader of the Stage can see how the previous round ended without
+// listing PromotionRollouts.
 //
-// A Stage can have more than one PromotionRequest in flight, exactly as it can
-// have more than one Promotion in flight: auto-promotion creates a request only
-// when none exists in any phase, but the promote endpoints create one per call,
-// so consecutive promotions queue up. Which one the Stage records as current is
-// therefore decided by the same ordering syncPromotions applies to Promotions.
+// A Stage can have more than one PromotionRollout in flight, exactly as it
+// can have more than one Promotion in flight: auto-promotion creates a
+// rollout only when none exists in any phase, but the promote endpoints
+// create one per call, so consecutive promotions queue up. Which one the
+// Stage records as current is therefore decided by the same ordering
+// syncPromotions applies to Promotions.
 //
-// The references mirror the requests that exist, not the Stage's spec: a
-// request in flight for a Stage whose selectors currently govern no Targets
+// The references mirror the rollouts that exist, not the Stage's spec: a
+// rollout in flight for a Stage whose selectors currently govern no Targets
 // -- or one left behind by a Stage that no longer governs any -- is recorded
-// all the same. Only for a Stage with no PromotionRequests at all is this a
+// all the same. Only for a Stage with no PromotionRollouts at all is this a
 // no-op beyond clearing a stale current reference.
-func (r *FleetStageReconciler) syncPromotionRequests(
+//
+// Without an API server to read rollouts through, the status is left as it
+// is; autoPromoteFreight reports the Stage Stalled.
+func (r *FleetStageReconciler) syncPromotionRollouts(
 	ctx context.Context,
 	stage *kargoapi.Stage,
 ) (kargoapi.StageStatus, error) {
 	newStatus := *stage.Status.DeepCopy()
+	if r.rollouts == nil {
+		return newStatus, nil
+	}
 
-	promotionRequests := &kargoapi.PromotionRequestList{}
-	if err := r.client.List(
-		ctx,
-		promotionRequests,
-		client.InNamespace(stage.Namespace),
-		client.MatchingFieldsSelector{
-			Selector: fields.OneTermEqualSelector(
-				indexer.PromotionRequestsByStageField,
-				stage.Name,
-			),
-		},
-	); err != nil {
+	rollouts, err := r.rollouts.ListPromotionRollouts(ctx, stage.Namespace, stage.Name)
+	if err != nil {
 		return newStatus, fmt.Errorf(
-			"failed to list PromotionRequests for Stage %q in namespace %q: %w",
+			"failed to list PromotionRollouts for Stage %q in namespace %q: %w",
 			stage.Name, stage.Namespace, err,
 		)
 	}
 
-	// If there are no PromotionRequests, the Stage is fanning nothing out. Clear
-	// any current reference it was left with.
-	if len(promotionRequests.Items) == 0 {
+	// If there are no PromotionRollouts, the Stage is fanning nothing out.
+	// Clear any current reference it was left with.
+	if len(rollouts) == 0 {
 		newStatus.CurrentPromotionRequest = nil
 		return newStatus, nil
 	}
 
-	// Sort the PromotionRequests exactly as syncPromotions sorts a Stage's
-	// Promotions -- Running first, then non-terminal by ULID ascending, then
-	// terminal by ULID descending -- so that the request a Stage records as
-	// current is chosen the same way its current Promotion is.
-	slices.SortFunc(
-		promotionRequests.Items,
-		api.ComparePromotionRequestByPhaseAndCreationTime,
-	)
+	// Sort the PromotionRollouts exactly as syncPromotions sorts a Stage's
+	// Promotions -- Running first, then non-terminal in creation order, then
+	// terminal newest-first -- so that the rollout a Stage records as current
+	// is chosen the same way its current Promotion is.
+	slices.SortFunc(rollouts, api.ComparePromotionRolloutByPhaseAndNumber)
 
-	// The PromotionRequest with the highest priority is the one the Stage is
+	// The PromotionRollout with the highest priority is the one the Stage is
 	// promoting through, unless it has finished -- in which case the Stage is
-	// promoting through none, and a finished request must not be left looking
+	// promoting through none, and a finished rollout must not be left looking
 	// like an active one.
 	newStatus.CurrentPromotionRequest = nil
-	if highestPrioRequest := &promotionRequests.Items[0]; !highestPrioRequest.Status.Phase.IsTerminal() {
+	if highestPrio := &rollouts[0]; !highestPrio.Status.Phase.IsTerminal() {
 		newStatus.CurrentPromotionRequest = &kargoapi.PromotionRequestReference{
-			Name: highestPrioRequest.Name,
-		}
-		if highestPrioRequest.Status.Freight != nil {
-			newStatus.CurrentPromotionRequest.Freight = highestPrioRequest.Status.Freight.DeepCopy()
+			Name:    highestPrio.Name,
+			Freight: &kargoapi.FreightReference{Name: highestPrio.Spec.Freight},
 		}
 	}
 
-	// Gather the terminal PromotionRequests newer than the one already recorded
-	// as last. A request is recorded only when it is newer: a Stage's account of
-	// how its last round of fan-out ended should outlive the request that
-	// produced it, so garbage collection of the newest request must not let an
-	// older one take its place.
+	// Gather the terminal PromotionRollouts newer than the one already
+	// recorded as last. A rollout is recorded only when it is newer: a
+	// Stage's account of how its last round of fan-out ended should outlive
+	// the rollout that produced it, so removal of the newest rollout must not
+	// let an older one take its place.
 	//
-	// Every such request is gathered, not just the newest. More than one round
-	// can end between two reconciles -- a queued request failing while the round
-	// ahead of it succeeds, or several rounds ending while the controller was
-	// down -- and each succeeded round's Freight belongs in the Stage's history.
-	// Recording only the newest would drop the others for good, since the gate
-	// only moves forward by name.
+	// Every such rollout is gathered, not just the newest. More than one round
+	// can end between two reconciles -- a queued rollout failing while the
+	// round ahead of it succeeds, or several rounds ending while the
+	// controller was down -- and each succeeded round's Freight belongs in the
+	// Stage's history. Recording only the newest would drop the others for
+	// good, since the gate only moves forward by name.
 	//
-	// NB: As in syncPromotions, this makes use of the fact that PromotionRequest
-	// names are generated with an embedded ULID, so among one Stage's requests
-	// lex order over names is creation order.
-	var newRequests []*kargoapi.PromotionRequest
-	for i := range promotionRequests.Items {
-		promotionRequest := &promotionRequests.Items[i]
-		if !promotionRequest.Status.Phase.IsTerminal() {
+	// NB: As in syncPromotions, this makes use of the fact that
+	// PromotionRollout names are generated with an embedded ULID, so among one
+	// Stage's rollouts lex order over names is creation order, as is number
+	// order. The reference carries only the name, so the gate compares names.
+	var newRollouts []*kargoapi.PromotionRollout
+	for i := range rollouts {
+		rollout := &rollouts[i]
+		if !rollout.Status.Phase.IsTerminal() {
 			continue
 		}
 		if last := newStatus.LastPromotionRequest; last != nil &&
-			strings.Compare(promotionRequest.Name, last.Name) <= 0 {
-			// Terminal PromotionRequests sort newest-first, so nothing after this
-			// one is newer than the last recorded either.
+			strings.Compare(rollout.Name, last.Name) <= 0 {
+			// Terminal PromotionRollouts sort newest-first, so nothing after
+			// this one is newer than the last recorded either.
 			break
 		}
-		newRequests = append(newRequests, promotionRequest)
+		newRollouts = append(newRollouts, rollout)
 	}
 
-	// Replay them oldest-first, exactly as syncPromotions replays Promotions, so
-	// that the last reference lands on the newest and Freight history is
+	// Replay them oldest-first, exactly as syncPromotions replays Promotions,
+	// so that the last reference lands on the newest and Freight history is
 	// recorded in the order the rounds ended. Each record builds on the status
 	// the one before it produced, which is what lets a multi-origin Stage's
 	// collection carry one round's Freight into the next.
-	slices.SortFunc(newRequests, func(a, b *kargoapi.PromotionRequest) int {
+	slices.SortFunc(newRollouts, func(a, b *kargoapi.PromotionRollout) int {
 		return strings.Compare(a.Name, b.Name)
 	})
 
-	// Process all unprocessed terminal promotion requests
-	for _, promotionRequest := range newRequests {
-		err := r.recordTerminalRequest(&newStatus, promotionRequest, stage.Generation)
-		if err != nil {
+	for _, rollout := range newRollouts {
+		if err = r.recordTerminalRollout(ctx, &newStatus, rollout, stage.Generation); err != nil {
 			return newStatus, err
 		}
 	}
@@ -664,21 +628,64 @@ func (r *FleetStageReconciler) syncPromotionRequests(
 	return newStatus, nil
 }
 
-// recordTerminalRequest records terminal promotion request in the Stage status
-// It updates LastPromotionRequest,
-// and for successful requests updates FreightHistory and resets health and verification
-func (r *FleetStageReconciler) recordTerminalRequest(
+// recordTerminalRollout records a terminal PromotionRollout in the Stage
+// status. It updates LastPromotionRequest and, for a successful rollout,
+// records the Freight in the Stage's history and resets health and
+// verification.
+//
+// A rollout names its Freight but carries no collection of it: the Stage
+// builds the collection itself, from the Freight and the collection it
+// carried before, exactly as a Promotion to a classic Stage ends up with
+// one. A Freight that has since been deleted cannot be recorded, so the
+// sync fails and is retried.
+func (r *FleetStageReconciler) recordTerminalRollout(
+	ctx context.Context,
 	newStatus *kargoapi.StageStatus,
-	promotionRequest *kargoapi.PromotionRequest,
+	rollout *kargoapi.PromotionRollout,
 	generation int64,
 ) error {
-	newStatus.LastPromotionRequest = newLastPromotionRequestReference(promotionRequest)
-	if promotionRequest.Status.Phase == kargoapi.PromotionRequestPhaseSucceeded {
-		// All successful promotion requests should have a freight collection
-		if promotionRequest.Status.FreightCollection == nil {
-			return fmt.Errorf("invalid PromotionRequest status: expected FreightCollection")
+	ref := &kargoapi.PromotionRequestReference{
+		Name:       rollout.Name,
+		Phase:      kargoapi.PromotionRequestPhase(rollout.Status.Phase),
+		Message:    rollout.Status.Message,
+		FinishedAt: rollout.Status.FinishedAt,
+		Freight:    &kargoapi.FreightReference{Name: rollout.Spec.Freight},
+	}
+	if rollout.Status.Phase == kargoapi.PromotionRolloutPhaseSucceeded {
+		freight, err := api.GetFreight(ctx, r.client, types.NamespacedName{
+			Namespace: rollout.Namespace,
+			Name:      rollout.Spec.Freight,
+		})
+		if err != nil {
+			return fmt.Errorf(
+				"error getting Freight %q of PromotionRollout %q: %w",
+				rollout.Spec.Freight, rollout.Name, err,
+			)
 		}
-		newStatus.FreightHistory.Record(promotionRequest.Status.FreightCollection)
+		if freight == nil {
+			// nolint:staticcheck
+			return fmt.Errorf(
+				"Freight %q of PromotionRollout %q not found in namespace %q",
+				rollout.Spec.Freight, rollout.Name, rollout.Namespace,
+			)
+		}
+		freightRef := kargoapi.FreightReference{
+			Name:      freight.Name,
+			Commits:   freight.Commits,
+			Images:    freight.Images,
+			Charts:    freight.Charts,
+			Artifacts: freight.Artifacts,
+			Origin:    freight.Origin,
+		}
+		collection := &kargoapi.FreightCollection{}
+		if current := newStatus.FreightHistory.Current(); current != nil {
+			collection = current.DeepCopy()
+		}
+		collection.UpdateOrPush(freightRef)
+		ref.Freight = &freightRef
+		ref.FreightCollection = collection
+
+		newStatus.FreightHistory.Record(collection)
 		// The Stage is running new Freight: what was known about the health and
 		// verification of the old is no longer relevant.
 		newStatus.Health = nil
@@ -697,30 +704,8 @@ func (r *FleetStageReconciler) recordTerminalRequest(
 			ObservedGeneration: generation,
 		})
 	}
+	newStatus.LastPromotionRequest = ref
 	return nil
-}
-
-// newLastPromotionRequestReference builds the reference a Stage records for one of
-// its PromotionRequests. The reference names the PromotionRequest's Freight
-// rather than describing it; a reader that needs the Freight's contents can
-// look them up from the Freight itself.
-func newLastPromotionRequestReference(
-	promotionRequest *kargoapi.PromotionRequest,
-) *kargoapi.PromotionRequestReference {
-	var freightRef *kargoapi.FreightReference
-	if promotionRequest.Status.Freight != nil {
-		freightRef = promotionRequest.Status.Freight.DeepCopy()
-	}
-
-	return &kargoapi.PromotionRequestReference{
-		Name:       promotionRequest.Name,
-		Phase:      promotionRequest.Status.Phase,
-		Message:    promotionRequest.Status.Message,
-		FinishedAt: promotionRequest.Status.FinishedAt,
-		Freight:    freightRef,
-		// We don't inherit freight collection here, instead it's done in the PromotionRequest reconciler
-		FreightCollection: promotionRequest.Status.FreightCollection,
-	}
 }
 
 // assessHealth assesses the health of a Stage based on the health checks from
@@ -730,18 +715,18 @@ func (r *FleetStageReconciler) assessHealth(ctx context.Context, stage *kargoapi
 	newStatus := *stage.Status.DeepCopy()
 
 	if stage.Status.CurrentPromotionRequest != nil {
-		logger.Debug("PromotionRequest is in progress: no health checks to perform")
+		logger.Debug("PromotionRollout is in progress: no health checks to perform")
 		conditions.Set(&newStatus, &metav1.Condition{
 			Type:               kargoapi.ConditionTypeHealthy,
 			Status:             metav1.ConditionUnknown,
 			Reason:             "ActivePromotion",
-			Message:            "Stage has a PromotionRequest in progress",
+			Message:            "Stage has a PromotionRollout in progress",
 			ObservedGeneration: stage.Generation,
 		})
 		newStatus.Health = &kargoapi.Health{
 			Status: kargoapi.HealthStateUnknown,
 			Issues: []string{
-				"Cannot assess health because a PromotionRequest is currently in progress",
+				"Cannot assess health because a PromotionRollout is currently in progress",
 			},
 		}
 		return newStatus
@@ -774,12 +759,12 @@ func (r *FleetStageReconciler) assessHealth(ctx context.Context, stage *kargoapi
 			Type:               kargoapi.ConditionTypeHealthy,
 			Status:             metav1.ConditionUnknown,
 			Reason:             fmt.Sprintf("LastPromotionRequest%s", lastPromo.Phase),
-			Message:            "Cannot assess health because last PromotionRequest did not succeed",
+			Message:            "Cannot assess health because last PromotionRollout did not succeed",
 			ObservedGeneration: stage.Generation,
 		})
 		newStatus.Health = &kargoapi.Health{
 			Status: kargoapi.HealthStateUnknown,
-			Issues: []string{"Cannot assess health because last PromotionRequest did not succeed"},
+			Issues: []string{"Cannot assess health because last PromotionRollout did not succeed"},
 		}
 		return newStatus
 	}
@@ -854,48 +839,49 @@ func (r *FleetStageReconciler) markFreightVerifiedForStage(
 
 // autoPromoteFreight automatically promotes the candidate Freight for each
 // requested origin, unless auto-promotion is disabled or the origin has an
-// effective auto-promotion hold.
+// effective auto-promotion hold. It reports whether it created a
+// PromotionRollout.
 func (r *FleetStageReconciler) autoPromoteFreight(
 	ctx context.Context,
 	stage *kargoapi.Stage,
 	autoPromotionEnabled bool,
-) (kargoapi.StageStatus, error) {
+) (kargoapi.StageStatus, bool, error) {
 	logger := logging.LoggerFromContext(ctx)
 	newStatus := *stage.Status.DeepCopy()
 	newStatus.AutoPromotionEnabled = autoPromotionEnabled
 
-	// The Stage promotes through PromotionRequests, whose Targets are read
-	// from the API server. Without one there is nothing to resolve them from,
-	// so say so rather than fail every reconcile.
+	// The Stage promotes through PromotionRollouts, which are created and
+	// read through the API server. Without one there is nothing to promote
+	// through, so say so rather than fail every reconcile.
 	conditions.Delete(&newStatus, kargoapi.ConditionTypeStalled)
-	if r.targets == nil {
+	if r.rollouts == nil {
 		conditions.Set(&newStatus, &metav1.Condition{
 			Type:   kargoapi.ConditionTypeStalled,
 			Status: metav1.ConditionTrue,
-			Reason: "TargetsUnavailable",
+			Reason: "RolloutsUnavailable",
 			Message: "Stage selects Targets, but the controller has no API server " +
-				"to resolve them from (API_SERVER_ADDRESS)",
+				"to promote through (API_SERVER_ADDRESS)",
 			ObservedGeneration: stage.Generation,
 		})
-		return newStatus, nil
+		return newStatus, false, nil
 	}
 
 	// If the Stage has no requested Freight, then there is nothing to promote.
 	// NB: This should not happen in practice, as a Stage cannot exist without
 	// requested Freight.
 	if len(stage.Spec.RequestedFreight) == 0 {
-		return newStatus, nil
+		return newStatus, false, nil
 	}
 
 	logger.Debug("checked auto-promotion policy for Stage", "enabled", autoPromotionEnabled)
 	if !autoPromotionEnabled {
 		// Nothing to promote.
-		return newStatus, nil
+		return newStatus, false, nil
 	}
 
 	availableFreight, err := api.ListFreightAvailableToStage(ctx, r.client, stage)
 	if err != nil {
-		return newStatus, fmt.Errorf(
+		return newStatus, false, fmt.Errorf(
 			"error listing available Freight for Stage %q: %w",
 			stage.Name, err,
 		)
@@ -904,7 +890,18 @@ func (r *FleetStageReconciler) autoPromoteFreight(
 	// If the Stage has no current Freight, any candidate is new to it.
 	currentFreight := newStatus.FreightHistory.Current()
 
+	// The Stage's rollouts, in any phase, decide whether a candidate is
+	// already being promoted. Read once for every origin.
+	rollouts, err := r.rollouts.ListPromotionRollouts(ctx, stage.Namespace, stage.Name)
+	if err != nil {
+		return newStatus, false, fmt.Errorf(
+			"error listing PromotionRollouts for Stage %q in namespace %q: %w",
+			stage.Name, stage.Namespace, err,
+		)
+	}
+
 	// Check if there is any new Freight which can be auto-promoted.
+	var created bool
 	for _, req := range stage.Spec.RequestedFreight {
 		origin := req.Origin.String()
 
@@ -914,19 +911,18 @@ func (r *FleetStageReconciler) autoPromoteFreight(
 			continue
 		}
 
-		autoPromote, err := r.shouldAutoPromoteRequestedFreight(ctx, origin, candidate, currentFreight, stage)
-		if err != nil {
-			return newStatus, err
+		if !r.shouldAutoPromoteRequestedFreight(ctx, origin, candidate, currentFreight, stage, rollouts) {
+			continue
 		}
 
-		if autoPromote {
-			if err = r.createAutoPromotionRequest(ctx, stage, &candidate, origin); err != nil {
-				return newStatus, err
-			}
+		var didCreate bool
+		if didCreate, err = r.createAutoPromotionRollout(ctx, stage, &candidate, origin); err != nil {
+			return newStatus, created, err
 		}
+		created = created || didCreate
 	}
 
-	return newStatus, nil
+	return newStatus, created, nil
 }
 
 func (r *FleetStageReconciler) shouldAutoPromoteRequestedFreight(
@@ -934,135 +930,105 @@ func (r *FleetStageReconciler) shouldAutoPromoteRequestedFreight(
 	origin string,
 	candidate kargoapi.Freight,
 	currentFreight *kargoapi.FreightCollection,
-	stage *kargoapi.Stage) (bool, error) {
-
-	// TODO: implement autopromotion holds for PromotionRequests: do not create promotion if hold is in place
+	stage *kargoapi.Stage,
+	rollouts []kargoapi.PromotionRollout,
+) bool {
+	// TODO: implement autopromotion holds for PromotionRollouts: do not create a rollout if a hold is in place
 	freightLogger := logging.LoggerFromContext(ctx).WithValues("origin", origin, "freight", candidate.Name)
 
 	// Only proceed if the candidate Freight is not already current in the Stage.
 	if freightCollectionHasFreight(currentFreight, origin, candidate.Name) {
 		freightLogger.Debug("Stage already has candidate Freight for origin")
-		return false, nil
+		return false
 	}
 	if stageAwaitingFreightForOrigin(stage, origin, candidate.Name) {
 		freightLogger.Debug("Stage is already awaiting candidate Freight for origin")
-		return false, nil
+		return false
+	}
+	if rolloutExistsForFreight(rollouts, candidate.Name) {
+		freightLogger.Debug("a PromotionRollout already exists for Stage and Freight")
+		return false
 	}
 
-	exists, err := r.promotionRequestExistsForStageFreight(ctx, stage, candidate.Name)
-	if err != nil {
-		return false, fmt.Errorf(
-			"error listing existing PromotionRequests for Freight %q in namespace %q: %w",
-			candidate.Name, stage.Namespace, err,
-		)
-	}
-	if exists {
-		freightLogger.Debug("a PromotionRequest already exists for Stage and Freight")
-		return false, nil
-	}
-
-	return true, nil
+	return true
 }
 
-// createAutoPromotionRequest creates a PromotionRequest expressing the intent
-// to promote the candidate Freight to the Targets that the target-aware Stage
-// governs. Those Targets are resolved once, as the request is built, and
-// recorded on it; the request does not promote anything itself.
+// createAutoPromotionRollout asks the API server for a PromotionRollout
+// expressing the intent to promote the candidate Freight to the Targets that
+// the target-aware Stage governs. The API server resolves those Targets
+// once, as it creates the rollout, and records them on it; the rollout does
+// not promote anything itself. It reports whether a rollout was created.
 //
-// The guard against duplicate work here is deliberately stricter than the one
-// autoPromoteFreight applies to Promotions: a PromotionRequest is created only when
-// no PromotionRequest for this Stage and Freight exists at all, in any phase.
-// Stage status now records the current and last PromotionRequest, but those are
-// mirrors of a request's own phase, not of a Stage having absorbed its outcome:
-// a PromotionRequest promotes nothing itself, so there is still no equivalent of
-// "succeeded, but the outcome is not yet recorded in status" to reason about --
-// and absent a guard that holds unconditionally, every reconcile would create
-// another PromotionRequest.
+// The guard against duplicate work here is deliberately stricter than the
+// one autoPromoteFreight applies to Promotions: a PromotionRollout is
+// created only when no PromotionRollout for this Stage and Freight exists at
+// all, in any phase. Stage status records the current and last
+// PromotionRollout, but those are mirrors of a rollout's own phase, not of a
+// Stage having absorbed its outcome: a PromotionRollout promotes nothing
+// itself, so there is still no equivalent of "succeeded, but the outcome is
+// not yet recorded in status" to reason about -- and absent a guard that
+// holds unconditionally, every reconcile would create another rollout.
 //
 // The guard is confined to auto-promotion. Promoting the same Freight to the
 // same Stage again deliberately -- rolling back to it, say -- goes through the
-// API server, which creates a PromotionRequest unconditionally.
-func (r *FleetStageReconciler) createAutoPromotionRequest(
+// API server's promote endpoints, which create a PromotionRollout
+// unconditionally.
+func (r *FleetStageReconciler) createAutoPromotionRollout(
 	ctx context.Context,
 	stage *kargoapi.Stage,
 	candidate *kargoapi.Freight,
 	origin string,
-) error {
+) (bool, error) {
 	logger := logging.LoggerFromContext(ctx).WithValues(
 		"origin", origin,
 		"freight", candidate.Name,
 	)
 
-	targets, err := r.targets.ListTargets(ctx, stage.Namespace)
+	rollout, err := r.rollouts.CreatePromotionRollout(ctx, stage.Namespace, stage.Name, candidate.Name)
 	if err != nil {
-		return fmt.Errorf(
-			"error listing Targets in Project %q: %w", stage.Namespace, err,
-		)
-	}
-	if targets, err = api.FilterTargetsForStage(stage, targets); err != nil {
-		return fmt.Errorf(
-			"error resolving Targets governed by Stage %q in namespace %q: %w",
-			stage.Name, stage.Namespace, err,
-		)
-	}
-	promotionRequest := api.NewPromotionRequest(stage, candidate.Name, targets)
-
-	if err = r.client.Create(ctx, promotionRequest); err != nil {
-		// An admission webhook may deny the create. Tolerate this as a
+		// The API server may refuse the create. Tolerate this as a
 		// non-error: nothing is persisted, so this reconcile moves on, and a
 		// later one re-derives and re-attempts the auto-promotion once the
-		// denying policy no longer applies. Any other error is still fatal to
-		// the reconcile.
+		// refusing policy no longer applies. Any other error is still fatal
+		// to the reconcile.
 		//
 		// Deliberately not recorded as an event. A policy that holds keeps
-		// denying, so this branch is taken on every reconcile for as long as
-		// it does; an event per occurrence would report one unchanging
+		// refusing, so this branch is taken on every reconcile for as long
+		// as it does; an event per occurrence would report one unchanging
 		// condition thousands of times and bury the Project's event feed. A
 		// condition belongs in status, and Kargo Enterprise reports the one
-		// it knows about in Stage.status.promotionSchedule.
-		if apierrors.IsForbidden(err) {
-			logger.Debug(
-				"auto-promotion was denied by an admission webhook",
+		// it knows about in Stage.status.promotionSchedule. Logged at Info,
+		// since a controller whose own permissions are short lands here too.
+		if apiserver.IsForbidden(err) {
+			logger.Info(
+				"auto-promotion was refused by the API server",
 				"error", err.Error(),
 			)
-			return nil
+			return false, nil
 		}
-		return fmt.Errorf(
-			"error creating PromotionRequest for Freight %q in namespace %q: %w",
+		return false, fmt.Errorf(
+			"error creating PromotionRollout for Freight %q in namespace %q: %w",
 			candidate.Name, stage.Namespace, err,
 		)
 	}
 
-	// FIXME: send promotion request events
+	// FIXME: send promotion rollout events
 	logger.Debug(
-		"created PromotionRequest resource",
-		"promotionRequest", promotionRequest.Name,
+		"created PromotionRollout",
+		"promotionRollout", rollout.Name,
 	)
-	return nil
+	return true, nil
 }
 
-// promotionRequestExistsForStageFreight reports whether any PromotionRequest exists for
-// the given Stage and Freight, in any phase.
-func (r *FleetStageReconciler) promotionRequestExistsForStageFreight(
-	ctx context.Context,
-	stage *kargoapi.Stage,
-	freightName string,
-) (bool, error) {
-	promotionRequests := &kargoapi.PromotionRequestList{}
-	if err := r.client.List(
-		ctx,
-		promotionRequests,
-		client.InNamespace(stage.Namespace),
-		client.MatchingFieldsSelector{
-			Selector: fields.OneTermEqualSelector(
-				indexer.PromotionRequestsByStageAndFreightField,
-				indexer.StageAndFreightKey(stage.Name, freightName),
-			),
-		},
-	); err != nil {
-		return false, err
+// rolloutExistsForFreight reports whether any of the PromotionRollouts
+// promotes the named Freight, in any phase.
+func rolloutExistsForFreight(rollouts []kargoapi.PromotionRollout, freightName string) bool {
+	for i := range rollouts {
+		if rollouts[i].Spec.Freight == freightName {
+			return true
+		}
 	}
-	return len(promotionRequests.Items) > 0, nil
+	return false
 }
 
 // handleDelete handles the deletion of the given Stage. It clears the
@@ -1077,7 +1043,7 @@ func (r *FleetStageReconciler) handleDelete(ctx context.Context, stage *kargoapi
 }
 
 // summarizeFleetConditions summarizes the conditions of the given Stage.
-// It extends summarizeConditions by checking last promotion request status.
+// It extends summarizeConditions by checking the last PromotionRollout's status.
 // See summarizeConditions.
 func summarizeFleetConditions(stage *kargoapi.Stage, newStatus *kargoapi.StageStatus, err error) bool {
 	baseReady := summarizeConditions(stage, newStatus, err)

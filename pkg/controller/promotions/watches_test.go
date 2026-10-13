@@ -401,22 +401,18 @@ func TestPromotionAcknowledgedByStageHandler_Update(t *testing.T) {
 	scheme := runtime.NewScheme()
 	require.NoError(t, kargoapi.AddToScheme(scheme))
 
-	controllerTrue := true
 	// Longer than the 63 characters a label value may hold.
 	longStageName := strings.Repeat("a", 70)
 	require.Greater(t, len(longStageName), 63)
-	newRequestChild := func(name, target, request string, phase kargoapi.PromotionPhase) *kargoapi.Promotion {
+	newRolloutChild := func(name, target, request string, phase kargoapi.PromotionPhase) *kargoapi.Promotion {
 		return &kargoapi.Promotion{
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace: "fake-project",
 				Name:      name,
 				Labels:    map[string]string{kargoapi.LabelKeyStage: "fake-stage"},
-				OwnerReferences: []metav1.OwnerReference{{
-					APIVersion: kargoapi.GroupVersion.String(),
-					Kind:       "PromotionRequest",
-					Name:       request,
-					Controller: &controllerTrue,
-				}},
+				Annotations: map[string]string{
+					kargoapi.AnnotationKeyPromotionRollout: request,
+				},
 			},
 			Spec: kargoapi.PromotionSpec{
 				Stage:  "fake-stage",
@@ -548,18 +544,18 @@ func TestPromotionAcknowledgedByStageHandler_Update(t *testing.T) {
 			},
 		},
 		{
-			name: "children of a newly current PromotionRequest are all enqueued",
+			name: "children of a newly current PromotionRollout are all enqueued",
 			shardPredicate: controller.ResponsibleFor[kargoapi.Stage]{
 				IsDefaultController: true,
 				ShardName:           "fake-shard",
 			},
 			objects: []client.Object{
-				newRequestChild("blue-promotion", "blue", "current-request", kargoapi.PromotionPhasePending),
-				newRequestChild("green-promotion", "green", "current-request", kargoapi.PromotionPhasePending),
+				newRolloutChild("blue-promotion", "blue", "current-request", kargoapi.PromotionPhasePending),
+				newRolloutChild("green-promotion", "green", "current-request", kargoapi.PromotionPhasePending),
 				// Terminal children and children of other requests are not
 				// enqueued.
-				newRequestChild("red-promotion", "red", "current-request", kargoapi.PromotionPhaseErrored),
-				newRequestChild("queued-promotion", "blue", "queued-request", kargoapi.PromotionPhasePending),
+				newRolloutChild("red-promotion", "red", "current-request", kargoapi.PromotionPhaseErrored),
+				newRolloutChild("queued-promotion", "blue", "queued-request", kargoapi.PromotionPhasePending),
 			},
 			e: event.TypedUpdateEvent[*kargoapi.Stage]{
 				ObjectOld: &kargoapi.Stage{},
@@ -610,12 +606,9 @@ func TestPromotionAcknowledgedByStageHandler_Update(t *testing.T) {
 						Labels: map[string]string{
 							kargoapi.LabelKeyStage: kubernetes.ShortenLabelValue(longStageName),
 						},
-						OwnerReferences: []metav1.OwnerReference{{
-							APIVersion: kargoapi.GroupVersion.String(),
-							Kind:       "PromotionRequest",
-							Name:       "current-request",
-							Controller: &controllerTrue,
-						}},
+						Annotations: map[string]string{
+							kargoapi.AnnotationKeyPromotionRollout: "current-request",
+						},
 					},
 					Spec: kargoapi.PromotionSpec{
 						Stage:  longStageName,
@@ -648,13 +641,13 @@ func TestPromotionAcknowledgedByStageHandler_Update(t *testing.T) {
 			},
 		},
 		{
-			name: "an unchanged current PromotionRequest enqueues nothing",
+			name: "an unchanged current PromotionRollout enqueues nothing",
 			shardPredicate: controller.ResponsibleFor[kargoapi.Stage]{
 				IsDefaultController: true,
 				ShardName:           "fake-shard",
 			},
 			objects: []client.Object{
-				newRequestChild("blue-promotion", "blue", "current-request", kargoapi.PromotionPhasePending),
+				newRolloutChild("blue-promotion", "blue", "current-request", kargoapi.PromotionPhasePending),
 			},
 			e: event.TypedUpdateEvent[*kargoapi.Stage]{
 				ObjectOld: &kargoapi.Stage{

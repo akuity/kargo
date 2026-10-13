@@ -1,4 +1,4 @@
-import { PromotionRequestSummary } from '@ui/gen/api/v2/models';
+import { PromotionRolloutSummary } from '@ui/gen/api/v2/models';
 
 import { PromotionPhase, promotionPhases } from './promotion-phase';
 
@@ -17,17 +17,17 @@ export type RoundProgress = {
   segments: RoundSegment[];
 };
 
-// summaryKey maps a phase to its field on PromotionRequestSummary, whose
+// summaryKey maps a phase to its field on PromotionRolloutSummary, whose
 // fields are the phases in lower case.
 const summaryKey = (phase: PromotionPhase) =>
-  phase.toLowerCase() as Lowercase<PromotionPhase> & keyof PromotionRequestSummary;
+  phase.toLowerCase() as Lowercase<PromotionPhase> & keyof PromotionRolloutSummary;
 
-// roundSegments turns a PromotionRequest's summary into ordered, non-empty
+// roundSegments turns a PromotionRollout's summary into ordered, non-empty
 // segments for a progress bar. Phases with no children are omitted, so a round
 // that entirely succeeded yields a single full-width segment. A summary with no
 // children yields no segments and a total of zero; callers decide how to draw
 // that.
-export const roundSegments = (summary?: PromotionRequestSummary): RoundProgress => {
+export const roundSegments = (summary?: PromotionRolloutSummary): RoundProgress => {
   const counts = promotionPhases.map((phase) => ({
     phase,
     count: Math.max(0, summary?.[summaryKey(phase)] ?? 0)

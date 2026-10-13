@@ -26,7 +26,7 @@ import { parseDate } from '@ui/utils/dates';
 import { isStageTargetAware } from '../project/pipelines/nodes/stage-meta-utils';
 import { Promotion as PromotionComponent } from '../project/pipelines/promotion/promotion';
 
-import { PromotionRequests } from './promotion-requests';
+import { PromotionRollouts } from './promotion-rollouts';
 import { useGetFreightMap } from './tabs/freight-history/use-get-freight-map';
 import { hasAbortRequest, promotionCompareFn } from './utils/promotion';
 
@@ -184,7 +184,7 @@ export const Promotions = ({ stage, argocdShard }: { stage: Stage; argocdShard?:
   return (
     <>
       {isStageTargetAware(stage) && (
-        <PromotionRequests projectName={projectName || ''} stageName={stageName || ''} />
+        <PromotionRollouts projectName={projectName || ''} stageName={stageName || ''} />
       )}
 
       <PromotionWindowAlert stage={stage} className='mb-4' />

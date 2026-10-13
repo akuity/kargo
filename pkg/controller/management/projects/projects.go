@@ -29,6 +29,7 @@ import (
 	"github.com/akuity/kargo/pkg/conditions"
 	"github.com/akuity/kargo/pkg/controller"
 	"github.com/akuity/kargo/pkg/database"
+	"github.com/akuity/kargo/pkg/database/promotionrolloutstore"
 	"github.com/akuity/kargo/pkg/kubeclient"
 	"github.com/akuity/kargo/pkg/kubernetes"
 	"github.com/akuity/kargo/pkg/logging"
@@ -66,6 +67,12 @@ type TargetCounter interface {
 	) (database.CountTargetsRow, error)
 }
 
+// RolloutReader reads the PromotionRollouts a Project's Stages report as
+// current or last, which live in the database.
+type RolloutReader interface {
+	GetMany(ctx context.Context, project string, names []string) ([]promotionrolloutstore.Rollout, error)
+}
+
 // reconciler reconciles Project resources.
 type reconciler struct {
 	cfg    ReconcilerConfig
@@ -74,6 +81,9 @@ type reconciler struct {
 	// when the controller runs without a database, and then no Target stats
 	// are reported.
 	targets TargetCounter
+	// rollouts reads the PromotionRollouts through which Targets were
+	// promoted to, for the same stats. It is nil exactly when targets is.
+	rollouts RolloutReader
 
 	// The following behaviors are overridable for testing purposes:
 
@@ -177,13 +187,14 @@ type reconciler struct {
 }
 
 // SetupReconcilerWithManager initializes a reconciler for Project resources and
-// registers it with the provided Manager. The targets counter may be nil; see
-// the reconciler's targets field.
+// registers it with the provided Manager. The targets counter and rollout
+// reader may be nil; see the reconciler's targets field.
 func SetupReconcilerWithManager(
 	ctx context.Context,
 	kargoMgr manager.Manager,
 	cfg ReconcilerConfig,
 	targets TargetCounter,
+	rollouts RolloutReader,
 ) error {
 	c, err := ctrl.NewControllerManagedBy(kargoMgr).
 		For(&kargoapi.Project{}).
@@ -196,7 +207,7 @@ func SetupReconcilerWithManager(
 			},
 		).
 		WithOptions(controller.CommonOptions(cfg.MaxConcurrentReconciles)).
-		Build(newReconciler(kargoMgr.GetClient(), cfg, targets))
+		Build(newReconciler(kargoMgr.GetClient(), cfg, targets, rollouts))
 	if err != nil {
 		return fmt.Errorf("error creating Project reconciler: %w", err)
 	}
@@ -235,11 +246,13 @@ func newReconciler(
 	kubeClient client.Client,
 	cfg ReconcilerConfig,
 	targets TargetCounter,
+	rollouts RolloutReader,
 ) *reconciler {
 	r := &reconciler{
-		cfg:     cfg,
-		client:  kubeClient,
-		targets: targets,
+		cfg:      cfg,
+		client:   kubeClient,
+		targets:  targets,
+		rollouts: rollouts,
 	}
 	r.getProjectFn = api.GetProject
 	r.reconcileFn = r.reconcile
@@ -916,11 +929,11 @@ func (r *reconciler) ensureDefaultUserRoles(
 					Verbs:     []string{"*"},
 				},
 				{ // Full access to all mutable Kargo resource types
-					// PromotionRequests and Targets are deliberately absent
-					// here: only the Stage controller creates a
-					// PromotionRequest, and only the controller that manages
-					// Targets creates, updates or deletes one, so no user
-					// needs to write either. Read access is granted
+					// PromotionRollouts and Targets are deliberately absent
+					// here: the Stage controller and the API server create
+					// rollouts on a user's behalf, and only the controller that
+					// manages Targets creates, updates or deletes one, so no
+					// user needs to write either. Read access is granted
 					// separately, below.
 					APIGroups: []string{kargoapi.GroupVersion.Group},
 					Resources: []string{
@@ -940,13 +953,13 @@ func (r *reconciler) ensureDefaultUserRoles(
 					Resources: []string{"targets"},
 					Verbs:     []string{"get", "list", "watch"},
 				},
-				{ // Read-only access to PromotionRequests
-					// A user cannot create, edit, or delete a PromotionRequest --
+				{ // Read-only access to PromotionRollouts
+					// A user cannot create, edit, or delete a PromotionRollout --
 					// the Stage controller and the API server own that. They can
 					// read one, because when a target-aware Stage stops promoting,
-					// the PromotionRequest's status is where the reason lives.
+					// the PromotionRollout's status is where the reason lives.
 					APIGroups: []string{kargoapi.GroupVersion.Group},
-					Resources: []string{"promotionrequests"},
+					Resources: []string{"promotionrollouts"},
 					Verbs:     []string{"get", "list", "watch"},
 				},
 				{ // Promote permission on all stages
@@ -996,7 +1009,7 @@ func (r *reconciler) ensureDefaultUserRoles(
 					Resources: []string{
 						"freights",
 						"projectconfigs",
-						"promotionrequests",
+						"promotionrollouts",
 						"promotions",
 						"stages",
 						"targets",
@@ -1035,7 +1048,7 @@ func (r *reconciler) ensureDefaultUserRoles(
 					Resources: []string{
 						"freights",
 						"projectconfigs",
-						"promotionrequests",
+						"promotionrollouts",
 						"stages",
 						"targets",
 						"warehouses",

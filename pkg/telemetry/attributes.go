@@ -26,9 +26,9 @@ const (
 	// PromotionKey is the attribute under which the name of a Promotion is
 	// recorded.
 	PromotionKey = attribute.Key("kargo.promotion")
-	// PromotionRequestKey is the attribute under which the name of a
-	// PromotionRequest is recorded.
-	PromotionRequestKey = attribute.Key("kargo.promotion_request")
+	// PromotionRolloutKey is the attribute under which the name of a
+	// PromotionRollout is recorded.
+	PromotionRolloutKey = attribute.Key("kargo.promotion_rollout")
 	// StepAliasKey is the attribute under which a promotion step's alias is
 	// recorded.
 	StepAliasKey = attribute.Key("kargo.promotion.step.alias")
