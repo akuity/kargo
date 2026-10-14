@@ -29,13 +29,34 @@ var (
 	_ interface {
 		ListTargets(context.Context, string) ([]kargoapi.Target, error)
 	} = (*Client)(nil)
+	_ interface {
+		ListPromotionRollouts(context.Context, string, string) ([]kargoapi.PromotionRollout, error)
+		CreatePromotionRollout(context.Context, string, string, string) (*kargoapi.PromotionRollout, error)
+	} = (*Client)(nil)
 )
 
-// newServer serves a Project's Targets the way the API server does, recording
-// the Authorization header of the last request.
-func newServer(t *testing.T, targets map[string][]kargoapi.Target, lastAuth *string) *httptest.Server {
+// serverFixtures is what newServer serves, per Project.
+type serverFixtures struct {
+	targets  map[string][]kargoapi.Target
+	rollouts map[string][]kargoapi.PromotionRollout
+}
+
+// lastRequest is what newServer records of the request it last answered.
+type lastRequest struct {
+	auth  string
+	query string
+}
+
+// newServer serves a Project's Targets and PromotionRollouts the way the API
+// server does, recording the Authorization header and query string of the
+// last request.
+func newServer(t *testing.T, fixtures serverFixtures, last *lastRequest) *httptest.Server {
 	t.Helper()
 	mux := http.NewServeMux()
+	record := func(r *http.Request) {
+		last.auth = r.Header.Get("Authorization")
+		last.query = r.URL.RawQuery
+	}
 	// The API server answers in JSON and says so; the generated client
 	// decodes nothing it is not told is JSON.
 	writeJSON := func(w http.ResponseWriter, status int, v any) {
@@ -50,7 +71,7 @@ func newServer(t *testing.T, targets map[string][]kargoapi.Target, lastAuth *str
 		_, _ = w.Write([]byte("<html>gateway sad</html>"))
 	}
 	mux.HandleFunc("GET /v1beta1/projects/{project}/targets", func(w http.ResponseWriter, r *http.Request) {
-		*lastAuth = r.Header.Get("Authorization")
+		record(r)
 		switch r.PathValue("project") {
 		case "broken":
 			broken(w)
@@ -61,7 +82,7 @@ func newServer(t *testing.T, targets map[string][]kargoapi.Target, lastAuth *str
 			<-r.Context().Done()
 			return
 		}
-		items, ok := targets[r.PathValue("project")]
+		items, ok := fixtures.targets[r.PathValue("project")]
 		if !ok {
 			writeJSON(w, http.StatusNotFound, map[string]string{"error": "project not found"})
 			return
@@ -69,12 +90,12 @@ func newServer(t *testing.T, targets map[string][]kargoapi.Target, lastAuth *str
 		writeJSON(w, http.StatusOK, kargoapi.TargetList{Items: items})
 	})
 	mux.HandleFunc("GET /v1beta1/projects/{project}/targets/{name}", func(w http.ResponseWriter, r *http.Request) {
-		*lastAuth = r.Header.Get("Authorization")
+		record(r)
 		if r.PathValue("project") == "broken" {
 			broken(w)
 			return
 		}
-		for _, target := range targets[r.PathValue("project")] {
+		for _, target := range fixtures.targets[r.PathValue("project")] {
 			if target.Name == r.PathValue("name") {
 				writeJSON(w, http.StatusOK, target)
 				return
@@ -82,6 +103,61 @@ func newServer(t *testing.T, targets map[string][]kargoapi.Target, lastAuth *str
 		}
 		writeJSON(w, http.StatusNotFound, map[string]string{"error": "targets.kargo.akuity.io not found"})
 	})
+	mux.HandleFunc(
+		"GET /v1beta1/projects/{project}/promotion-rollouts",
+		func(w http.ResponseWriter, r *http.Request) {
+			record(r)
+			if r.PathValue("project") == "broken" {
+				broken(w)
+				return
+			}
+			rollouts, ok := fixtures.rollouts[r.PathValue("project")]
+			if !ok {
+				writeJSON(w, http.StatusNotFound, map[string]string{"error": "project not found"})
+				return
+			}
+			// Never nil: the API server serves an empty list as [].
+			items := []kargoapi.PromotionRollout{}
+			for _, rollout := range rollouts {
+				if stage := r.URL.Query().Get("stage"); stage == "" || rollout.Spec.Stage == stage {
+					items = append(items, rollout)
+				}
+			}
+			writeJSON(w, http.StatusOK, kargoapi.PromotionRolloutList{Items: items})
+		},
+	)
+	mux.HandleFunc(
+		"POST /v1beta1/projects/{project}/promotion-rollouts",
+		func(w http.ResponseWriter, r *http.Request) {
+			record(r)
+			switch r.PathValue("project") {
+			case "broken":
+				broken(w)
+				return
+			case "forbidden":
+				writeJSON(w, http.StatusForbidden, map[string]string{"error": "not allowed"})
+				return
+			}
+			var requested kargoapi.PromotionRollout
+			if err := json.NewDecoder(r.Body).Decode(&requested); err != nil {
+				writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
+				return
+			}
+			body := requested.Spec
+			writeJSON(w, http.StatusCreated, kargoapi.PromotionRollout{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: r.PathValue("project"),
+					Name:      body.Stage + ".01X.abc",
+				},
+				Spec: kargoapi.PromotionRolloutSpec{
+					Stage:   body.Stage,
+					Freight: body.Freight,
+					Targets: []kargoapi.PromotionRolloutTarget{},
+				},
+				Status: kargoapi.PromotionRolloutStatus{Phase: kargoapi.PromotionRolloutPhasePending},
+			})
+		},
+	)
 	server := httptest.NewServer(mux)
 	t.Cleanup(server.Close)
 	return server
@@ -134,11 +210,37 @@ func TestClient(t *testing.T) {
 		Namespace: "demo", Name: "us-east", Labels: map[string]string{"region": "us"},
 	}}
 	euWest := kargoapi.Target{ObjectMeta: metav1.ObjectMeta{Namespace: "demo", Name: "eu-west"}}
-	var lastAuth string
-	server := newServer(t, map[string][]kargoapi.Target{
-		"demo":  {euWest, usEast},
-		"empty": {},
-	}, &lastAuth)
+	testRollout := kargoapi.PromotionRollout{
+		ObjectMeta: metav1.ObjectMeta{Namespace: "demo", Name: "test.01A.abc"},
+		Number:     1,
+		Spec: kargoapi.PromotionRolloutSpec{
+			Stage:   "test",
+			Freight: "fr-1",
+			Targets: []kargoapi.PromotionRolloutTarget{{Name: "us-east"}},
+		},
+		Status: kargoapi.PromotionRolloutStatus{Phase: kargoapi.PromotionRolloutPhaseSucceeded},
+	}
+	prodRollout := kargoapi.PromotionRollout{
+		ObjectMeta: metav1.ObjectMeta{Namespace: "demo", Name: "prod.01B.def"},
+		Number:     1,
+		Spec: kargoapi.PromotionRolloutSpec{
+			Stage:   "prod",
+			Freight: "fr-1",
+			Targets: []kargoapi.PromotionRolloutTarget{},
+		},
+		Status: kargoapi.PromotionRolloutStatus{Phase: kargoapi.PromotionRolloutPhaseRunning},
+	}
+	var last lastRequest
+	server := newServer(t, serverFixtures{
+		targets: map[string][]kargoapi.Target{
+			"demo":  {euWest, usEast},
+			"empty": {},
+		},
+		rollouts: map[string][]kargoapi.PromotionRollout{
+			"demo":  {testRollout, prodRollout},
+			"empty": {},
+		},
+	}, &last)
 
 	t.Run("authenticates with a static token", func(t *testing.T) {
 		c, err := New(ClientConfig{Address: server.URL}, &rest.Config{BearerToken: "static-token"})
@@ -148,7 +250,7 @@ func TestClient(t *testing.T) {
 		require.Len(t, targets, 2)
 		require.Equal(t, "us-east", targets[1].Name)
 		require.Equal(t, map[string]string{"region": "us"}, targets[1].Labels)
-		require.Equal(t, "Bearer static-token", lastAuth)
+		require.Equal(t, "Bearer static-token", last.auth)
 	})
 
 	t.Run("authenticates with a token file", func(t *testing.T) {
@@ -158,7 +260,7 @@ func TestClient(t *testing.T) {
 		require.NoError(t, err)
 		_, err = c.ListTargets(t.Context(), "demo")
 		require.NoError(t, err)
-		require.Equal(t, "Bearer file-token", lastAuth)
+		require.Equal(t, "Bearer file-token", last.auth)
 	})
 
 	t.Run("trusts the CA the config names", func(t *testing.T) {
@@ -226,6 +328,87 @@ func TestClient(t *testing.T) {
 		require.ErrorContains(t, err, `error getting Target "x" in Project "broken"`)
 	})
 
+	t.Run("lists every PromotionRollout in a Project", func(t *testing.T) {
+		rollouts, err := c.ListPromotionRollouts(t.Context(), "demo", "")
+		require.NoError(t, err)
+		require.Len(t, rollouts, 2)
+		require.Equal(t, "test.01A.abc", rollouts[0].Name)
+		require.Equal(t, int64(1), rollouts[0].Number)
+		require.Equal(t, "test", rollouts[0].Spec.Stage)
+		require.Equal(t, "fr-1", rollouts[0].Spec.Freight)
+		require.Equal(t, []kargoapi.PromotionRolloutTarget{{Name: "us-east"}}, rollouts[0].Spec.Targets)
+		require.Equal(t, kargoapi.PromotionRolloutPhaseSucceeded, rollouts[0].Status.Phase)
+		require.Equal(t, "prod.01B.def", rollouts[1].Name)
+		// No Stage was asked for, so none was sent.
+		require.Empty(t, last.query)
+		require.Equal(t, "Bearer t", last.auth)
+	})
+
+	t.Run("lists a Stage's PromotionRollouts", func(t *testing.T) {
+		rollouts, err := c.ListPromotionRollouts(t.Context(), "demo", "prod")
+		require.NoError(t, err)
+		require.Len(t, rollouts, 1)
+		require.Equal(t, "prod.01B.def", rollouts[0].Name)
+		require.Equal(t, kargoapi.PromotionRolloutPhaseRunning, rollouts[0].Status.Phase)
+		// The Stage was passed on to the API server rather than filtered here.
+		require.Equal(t, "stage=prod", last.query)
+	})
+
+	t.Run("a Project with no PromotionRollouts", func(t *testing.T) {
+		rollouts, err := c.ListPromotionRollouts(t.Context(), "empty", "")
+		require.NoError(t, err)
+		require.Empty(t, rollouts)
+	})
+
+	t.Run("rollout list error carries the server's explanation", func(t *testing.T) {
+		_, err := c.ListPromotionRollouts(t.Context(), "missing", "")
+		require.ErrorContains(t, err, `error listing PromotionRollouts in Project "missing"`)
+		var apiErr *APIError
+		require.ErrorAs(t, err, &apiErr)
+		require.Equal(t, http.StatusNotFound, apiErr.StatusCode)
+		require.Equal(t, "project not found", apiErr.Message)
+	})
+
+	t.Run("rollout list over a broken gateway", func(t *testing.T) {
+		_, err := c.ListPromotionRollouts(t.Context(), "broken", "")
+		var apiErr *APIError
+		require.ErrorAs(t, err, &apiErr)
+		require.Equal(t, http.StatusInternalServerError, apiErr.StatusCode)
+		require.Contains(t, apiErr.Message, "gateway sad")
+	})
+
+	t.Run("creates a PromotionRollout for a Stage and Freight", func(t *testing.T) {
+		rollout, err := c.CreatePromotionRollout(t.Context(), "demo", "prod", "fr-2")
+		require.NoError(t, err)
+		require.NotNil(t, rollout)
+		require.Equal(t, "prod.01X.abc", rollout.Name)
+		require.Equal(t, "demo", rollout.Namespace)
+		require.Equal(t, "prod", rollout.Spec.Stage)
+		require.Equal(t, "fr-2", rollout.Spec.Freight)
+		require.Equal(t, kargoapi.PromotionRolloutPhasePending, rollout.Status.Phase)
+		require.Equal(t, "Bearer t", last.auth)
+	})
+
+	t.Run("a refused create is forbidden", func(t *testing.T) {
+		_, err := c.CreatePromotionRollout(t.Context(), "forbidden", "prod", "fr-2")
+		require.ErrorContains(t, err, `error creating PromotionRollout for Stage "prod" in Project "forbidden"`)
+		require.ErrorContains(t, err, "not allowed")
+		require.True(t, IsForbidden(err))
+		var apiErr *APIError
+		require.ErrorAs(t, err, &apiErr)
+		require.Equal(t, http.StatusForbidden, apiErr.StatusCode)
+		require.Equal(t, "not allowed", apiErr.Message)
+	})
+
+	t.Run("other create failures are not forbidden", func(t *testing.T) {
+		_, err := c.CreatePromotionRollout(t.Context(), "broken", "prod", "fr-2")
+		require.False(t, IsForbidden(err))
+		var apiErr *APIError
+		require.ErrorAs(t, err, &apiErr)
+		require.Equal(t, http.StatusInternalServerError, apiErr.StatusCode)
+		require.Contains(t, apiErr.Message, "gateway sad")
+	})
+
 	t.Run("an unreachable server is an error", func(t *testing.T) {
 		down, err := New(ClientConfig{Address: "http://127.0.0.1:1"}, &rest.Config{})
 		require.NoError(t, err)
@@ -234,6 +417,9 @@ func TestClient(t *testing.T) {
 		var apiErr *APIError
 		require.False(t, errors.As(err, &apiErr))
 		require.True(t, IsRetryable(err))
+		_, err = down.CreatePromotionRollout(t.Context(), "demo", "prod", "fr-2")
+		require.Error(t, err)
+		require.False(t, IsForbidden(err))
 	})
 
 	t.Run("a server that never answers is cut off by the timeout", func(t *testing.T) {
@@ -307,6 +493,31 @@ func TestIsRetryable(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 			require.Equal(t, testCase.retryable, IsRetryable(testCase.err))
+		})
+	}
+}
+
+func TestIsForbidden(t *testing.T) {
+	t.Parallel()
+	testCases := []struct {
+		name     string
+		err      error
+		expected bool
+	}{
+		{name: "nil"},
+		{name: "not an API error", err: errors.New("connection refused")},
+		{name: "another status", err: &APIError{StatusCode: http.StatusNotFound}},
+		{name: "forbidden", err: &APIError{StatusCode: http.StatusForbidden}, expected: true},
+		{
+			name:     "wrapped forbidden",
+			err:      errors.Join(errors.New("outer"), &APIError{StatusCode: http.StatusForbidden}),
+			expected: true,
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+			require.Equal(t, testCase.expected, IsForbidden(testCase.err))
 		})
 	}
 }

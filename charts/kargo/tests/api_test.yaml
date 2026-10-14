@@ -357,7 +357,7 @@ values:
 templates:
   - templates/api/cluster-roles.yaml
 tests:
-  - it: grants full PromotionRequest access
+  - it: grants full access to configuration and pipeline resources
     documentSelector:
       path: metadata.name
       value: kargo-api
@@ -375,7 +375,6 @@ tests:
               - stages
               - warehouses
               - projectconfigs
-              - promotionrequests
             verbs:
               - "*"
   - it: grants read access to RBAC resources

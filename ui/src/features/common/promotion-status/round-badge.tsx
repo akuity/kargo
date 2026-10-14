@@ -2,7 +2,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Tag, Tooltip } from 'antd';
 import { useMemo } from 'react';
 
-import { PromotionRequestSummary } from '@ui/gen/api/v2/models';
+import { PromotionRolloutSummary } from '@ui/gen/api/v2/models';
 
 import { getPromotionPhasePresentation } from './promotion-phase';
 import { describeRound, roundBadgePhase, roundBadgeText, roundSegments } from './round-progress';
@@ -17,7 +17,7 @@ export const RoundBadge = ({
   summary,
   className
 }: {
-  summary?: PromotionRequestSummary;
+  summary?: PromotionRolloutSummary;
   className?: string;
 }) => {
   const progress = useMemo(() => roundSegments(summary), [summary]);

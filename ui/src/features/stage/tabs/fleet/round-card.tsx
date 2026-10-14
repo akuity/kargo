@@ -11,7 +11,7 @@ import {
 import { PromotionStatusIcon } from '@ui/features/common/promotion-status/promotion-status-icon';
 import { RoundProgressBar } from '@ui/features/common/promotion-status/round-progress-bar';
 import { SmallLabel } from '@ui/features/common/small-label';
-import { PromotionRequest, PromotionRequestSummary } from '@ui/gen/api/v2/models';
+import { PromotionRollout, PromotionRolloutSummary } from '@ui/gen/api/v2/models';
 import { parseDate } from '@ui/utils/dates';
 
 // PhaseChips renders one chip per phase present in a round, in the order the
@@ -27,13 +27,13 @@ export const PhaseChips = ({
   selected,
   onSelect
 }: {
-  summary: PromotionRequestSummary;
+  summary: PromotionRolloutSummary;
   selected?: string;
   onSelect?: (phase?: string) => void;
 }) => (
   <Flex gap={4} wrap>
     {promotionPhases.map((phase) => {
-      const count = summary[phase.toLowerCase() as keyof PromotionRequestSummary] || 0;
+      const count = summary[phase.toLowerCase() as keyof PromotionRolloutSummary] || 0;
       if (!count) {
         return null;
       }
@@ -78,8 +78,8 @@ export const RoundCard = ({
   onSelectPhase
 }: {
   projectName: string;
-  round: PromotionRequest;
-  summary: PromotionRequestSummary;
+  round: PromotionRollout;
+  summary: PromotionRolloutSummary;
   freightLabel: (name: string) => string;
   // The phase the table is filtered to, if any, and how to change it. The
   // card's chips act as shortcuts for the table's Promotion column filter.
@@ -109,7 +109,7 @@ export const RoundCard = ({
             <Typography.Text type='secondary'>none</Typography.Text>
           )}
           {round.metadata?.name && (
-            <Tooltip title='The PromotionRequest this round is. Its Promotions tab row lists every child Promotion.'>
+            <Tooltip title='The PromotionRollout this round is. Its Promotions tab row lists every child Promotion.'>
               <Typography.Text type='secondary' className='block text-xs font-mono mt-0.5'>
                 {round.metadata.name}
               </Typography.Text>
@@ -119,7 +119,7 @@ export const RoundCard = ({
         <div>
           <SmallLabel className='mb-1'>PHASE</SmallLabel>
           <Flex gap={6} align='center'>
-            <PromotionStatusIcon subject='Promotion Request' status={round.status} />
+            <PromotionStatusIcon subject='Rollout' status={round.status} />
             <span className='text-sm'>{phase}</span>
           </Flex>
         </div>

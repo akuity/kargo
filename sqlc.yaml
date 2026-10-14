@@ -13,6 +13,9 @@ sql:
       rename:
         project: ProjectRow
         target: TargetRow
+        stage: StageRow
+        promotion_rollout: PromotionRolloutRow
+        promotion_rollout_target: PromotionRolloutTargetRow
       overrides:
       # Labels are a string map and params an object of opaque JSON values,
       # both enforced by the schema. pgx encodes and decodes JSONB through
@@ -33,6 +36,11 @@ sql:
           import: github.com/google/uuid
           type: UUID
       # Nullable values, such as optional query arguments, are pointers.
+      - db_type: text
+        nullable: true
+        go_type:
+          type: string
+          pointer: true
       - db_type: timestamptz
         nullable: true
         go_type:

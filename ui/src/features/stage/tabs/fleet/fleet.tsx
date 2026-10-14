@@ -13,10 +13,10 @@ import { PromotionStatusIcon } from '@ui/features/common/promotion-status/promot
 import { getAlias } from '@ui/features/common/utils';
 import { TARGETS_POLL_INTERVAL_MS } from '@ui/features/project/targets/constants';
 import { useListTargets } from '@ui/gen/api/v2/core/core';
-import { PromotionRequest, Stage } from '@ui/gen/api/v2/models';
+import { PromotionRollout, Stage } from '@ui/gen/api/v2/models';
 import { parseDate } from '@ui/utils/dates';
 
-import { blockingMessage, roundBlock } from '../../utils/promotion-request';
+import { blockingMessage, roundBlock } from '../../utils/promotion-rollout';
 import { useGetFreightMap } from '../freight-history/use-get-freight-map';
 
 import {
@@ -37,8 +37,8 @@ type Props = {
   stage: Stage;
   // The Stage's latest round, resolved once by the drawer, which also uses it
   // to explain a blocked round above the tabs. Passing it in keeps one
-  // PromotionRequest fetch and watch per drawer rather than one per tab.
-  round?: PromotionRequest;
+  // PromotionRollout fetch and watch per drawer rather than one per tab.
+  round?: PromotionRollout;
 };
 
 const PromotionCell = ({
@@ -109,7 +109,7 @@ const PromotionCell = ({
  * Governance comes from the API's `stage` filter, which evaluates the Stage's
  * selectors exactly as the controller does. Freight and health per Target come
  * from the Target's own status for this Stage; the round's outcome comes from
- * the Stage's current PromotionRequest, which the drawer resolves once and
+ * the Stage's current PromotionRollout, which the drawer resolves once and
  * passes in.
  */
 export const Fleet = ({ projectName, stage, round }: Props) => {

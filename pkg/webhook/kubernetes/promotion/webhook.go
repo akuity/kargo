@@ -28,10 +28,6 @@ import (
 	libWebhook "github.com/akuity/kargo/pkg/webhook/kubernetes"
 )
 
-// promotionRequestKind is the Kind of the one resource permitted to own a
-// Promotion in the Stage's place. See the owner-reference handling in Default.
-const promotionRequestKind = "PromotionRequest"
-
 var (
 	promotionGroupKind = schema.GroupKind{
 		Group: kargoapi.GroupVersion.Group,
@@ -330,37 +326,29 @@ func (w *webhook) Default(ctx context.Context, promo *kargoapi.Promotion) error 
 	promo.Labels[kargoapi.LabelKeyStage] = kubernetes.ShortenLabelValue(promo.Spec.Stage)
 	promo.Annotations[kargoapi.AnnotationKeyStage] = promo.Spec.Stage
 
-	// A Promotion created as one part of a larger unit of work is owned by that
-	// unit, not by the Stage. Overwriting the reference would sever it, and the
-	// owner would then have no way to recognize the Promotions it created --
-	// leaving it to create them again on its next reconcile.
-	//
-	// Only a PromotionRequest may claim a Promotion this way. Preserving an
-	// arbitrary controller reference would let a caller detach a Promotion from
-	// Stage-based garbage collection entirely, whereas a PromotionRequest is
-	// itself owned by its Stage, so deleting the Stage still cascades to the
-	// Promotion through it.
-	if !isPromotionRequestChild(promo) {
-		ownerRef := metav1.NewControllerRef(stage, kargoapi.GroupVersion.WithKind("Stage"))
-		promo.OwnerReferences = []metav1.OwnerReference{*ownerRef}
-	}
+	// Every Promotion is owned by its Stage, so that deleting the Stage
+	// cascades to it. A Promotion created as one part of a PromotionRollout's
+	// fan-out is no exception: the rollout is not a Kubernetes resource and
+	// cannot own anything, so it is recorded as an annotation instead; see
+	// isPromotionRolloutChild.
+	ownerRef := metav1.NewControllerRef(stage, kargoapi.GroupVersion.WithKind("Stage"))
+	promo.OwnerReferences = []metav1.OwnerReference{*ownerRef}
 	return nil
 }
 
-// isPromotionRequestChild returns true if the Promotion was created by a
-// PromotionRequest as one part of that request's fan-out to Targets, rather
-// than on its own.
+// isPromotionRolloutChild returns true if the Promotion was created by a
+// PromotionRollout as one part of that rollout's fan-out to Targets, rather
+// than on its own: it then carries the rollout's name in the
+// kargo.akuity.io/promotion-rollout annotation.
 //
-// Ownership is the signal because it is the one a caller cannot usefully forge:
-// Kubernetes garbage collection deletes an object whose controller owner does
-// not exist, so a reference to a PromotionRequest that was never created takes
-// the Promotion with it. Defaulting and validation share this function so that
-// the owner reference Default preserves is exactly the one validation accepts.
-func isPromotionRequestChild(promo *kargoapi.Promotion) bool {
-	owner := metav1.GetControllerOf(promo)
-	return owner != nil &&
-		owner.APIVersion == kargoapi.GroupVersion.String() &&
-		owner.Kind == promotionRequestKind
+// The annotation is not a signal a caller can usefully forge. A Promotion
+// claiming a rollout the Stage is not currently promoting through is never
+// run -- the Promotion reconciler admits a child only while its rollout is
+// the Stage's current one -- and one claiming the current rollout still
+// needs create on Promotions, which the promote verb on the Stage already
+// implies for the same caller.
+func isPromotionRolloutChild(promo *kargoapi.Promotion) bool {
+	return api.PromotionRolloutOf(promo) != ""
 }
 
 // resolveOriginToFreight resolves promo's origin to the Freight that the
@@ -572,10 +560,10 @@ func (w *webhook) ValidateCreate(
 	}
 
 	var errs field.ErrorList
-	if fieldErr := validateTargetIsPromotionRequestChild(promo); fieldErr != nil {
+	if fieldErr := validateTargetIsPromotionRolloutChild(promo); fieldErr != nil {
 		errs = append(errs, fieldErr)
 	}
-	if fieldErr := validateTargetAwareStageIsPromotedByRequest(promo, stage); fieldErr != nil {
+	if fieldErr := validateTargetAwareStageIsPromotedByRollout(promo, stage); fieldErr != nil {
 		errs = append(errs, fieldErr)
 	}
 	if len(errs) > 0 {
@@ -612,60 +600,59 @@ func (w *webhook) ValidateCreate(
 	return nil, nil
 }
 
-// validateTargetIsPromotionRequestChild enforces that a Promotion naming a
-// Target is a child of a PromotionRequest.
+// validateTargetIsPromotionRolloutChild enforces that a Promotion naming a
+// Target is a child of a PromotionRollout.
 //
-// spec.target is not a field a user fills in. A Target belongs to the fan-out a
-// PromotionRequest describes: the request resolves the Stage's selectors once,
-// records the result in its own spec.targets, and each of its Promotions
-// carries one of those names. Letting a Promotion name a Target on its own
-// would produce work no PromotionRequest is counting, so a Stage's Targets
-// could advance without any record of it having been requested.
+// spec.target is not a field a user fills in. A Target belongs to the fan-out
+// a PromotionRollout describes: the rollout resolves the Stage's selectors
+// once, records the result in its own spec.targets, and each of its
+// Promotions carries one of those names. Letting a Promotion name a Target on
+// its own would produce work no PromotionRollout is counting, so a Stage's
+// Targets could advance without any record of it having been requested.
 //
 // Note this deliberately does not check that the Stage currently governs the
-// named Target. The Target came from a snapshot the PromotionRequest took when
+// named Target. The Target came from a snapshot the PromotionRollout took when
 // it was created, and re-resolving selectors here would let a label edit
-// invalidate a Promotion already in flight -- the same reasoning that keeps the
-// PromotionRequest webhook from re-checking its own spec.targets.
-func validateTargetIsPromotionRequestChild(
+// invalidate a Promotion already in flight.
+func validateTargetIsPromotionRolloutChild(
 	promo *kargoapi.Promotion,
 ) *field.Error {
-	if promo.Spec.Target == "" || isPromotionRequestChild(promo) {
+	if promo.Spec.Target == "" || isPromotionRolloutChild(promo) {
 		return nil
 	}
 	return field.Invalid(
 		field.NewPath("spec", "target"),
 		promo.Spec.Target,
-		"a Promotion may name a Target only when created by a PromotionRequest",
+		"a Promotion may name a Target only when created by a PromotionRollout",
 	)
 }
 
-// validateTargetAwareStageIsPromotedByRequest enforces the converse: a Stage
-// that governs Targets is promoted to only through a PromotionRequest.
+// validateTargetAwareStageIsPromotedByRollout enforces the converse: a Stage
+// that governs Targets is promoted to only through a PromotionRollout.
 //
 // A Stage promotes Freight either to itself or to the Targets it governs, never
 // both, so a Promotion created directly against a target-aware Stage would
 // promote to a destination the Stage does not have. Every in-tree caller -- the
 // promote-to-stage and promote-downstream endpoints, and the auto-promotion
-// loop -- already routes such a Stage to a PromotionRequest; this closes the
+// loop -- already routes such a Stage to a PromotionRollout; this closes the
 // path a client can still reach by creating the Promotion itself.
 //
 // Only creates are checked. A Stage can gain a targets block while Promotions
 // created before it are still running, and those must remain updatable -- an
 // abort request is an update, and refusing it would leave a running Promotion
 // with no way to stop.
-func validateTargetAwareStageIsPromotedByRequest(
+func validateTargetAwareStageIsPromotedByRollout(
 	promo *kargoapi.Promotion,
 	stage *kargoapi.Stage,
 ) *field.Error {
-	if !stage.IsTargetAware() || isPromotionRequestChild(promo) {
+	if !stage.IsTargetAware() || isPromotionRolloutChild(promo) {
 		return nil
 	}
 	return field.Invalid(
 		field.NewPath("spec", "stage"),
 		promo.Spec.Stage,
 		fmt.Sprintf(
-			"Stage %q selects Targets; it is promoted to with a PromotionRequest "+
+			"Stage %q selects Targets; it is promoted to with a PromotionRollout "+
 				"rather than a Promotion",
 			promo.Spec.Stage,
 		),
@@ -696,12 +683,12 @@ func (w *webhook) ValidateUpdate(
 		)
 	}
 
-	// spec.target is immutable by the check above, but the owner reference that
+	// spec.target is immutable by the check above, but the annotation that
 	// justifies it is metadata and is not. Re-check it so a Promotion cannot be
-	// severed from the PromotionRequest that created it -- by an apply whose
-	// manifest simply omits ownerReferences, if nothing else -- and go on
+	// severed from the PromotionRollout that created it -- by an apply whose
+	// manifest simply omits annotations, if nothing else -- and go on
 	// promoting to a Target as an orphan.
-	if fieldErr := validateTargetIsPromotionRequestChild(promo); fieldErr != nil {
+	if fieldErr := validateTargetIsPromotionRolloutChild(promo); fieldErr != nil {
 		return nil, apierrors.NewInvalid(
 			promotionGroupKind,
 			promo.Name,

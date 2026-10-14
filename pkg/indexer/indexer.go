@@ -34,9 +34,6 @@ const (
 	PromotionsByTerminalField        = "terminal"
 	PromotionsByNonTerminalField     = "nonTerminal"
 
-	PromotionRequestsByStageAndFreightField = "stageAndFreight"
-	PromotionRequestsByStageField           = "stage"
-
 	RunningPromotionsByArgoCDApplicationsField = "applications"
 	RunningPromotionsByArgoCDSelectorsField    = "argoCDSelectors"
 	RunningPromotionsByPullRequestURLField     = "pullRequestURL"
@@ -442,29 +439,6 @@ func PromotionsByStageAndFreight(obj client.Object) []string {
 	return []string{
 		StageAndFreightKey(promo.Spec.Stage, promo.Spec.Freight),
 	}
-}
-
-// PromotionRequestsByStageAndFreight is a client.IndexerFunc that indexes
-// PromotionRequests by the Stage and Freight they promote.
-func PromotionRequestsByStageAndFreight(obj client.Object) []string {
-	promotionRequest, ok := obj.(*kargoapi.PromotionRequest)
-	if !ok {
-		return nil
-	}
-
-	return []string{
-		StageAndFreightKey(promotionRequest.Spec.Stage, promotionRequest.Spec.Freight),
-	}
-}
-
-// PromotionRequestsByStage is a client.IndexerFunc that indexes
-// PromotionRequests by the Stage on whose behalf they promote Freight.
-func PromotionRequestsByStage(obj client.Object) []string {
-	promotionRequest, ok := obj.(*kargoapi.PromotionRequest)
-	if !ok {
-		return nil
-	}
-	return []string{promotionRequest.Spec.Stage}
 }
 
 // StageAndFreightKey returns a key that uniquely identifies a Stage and

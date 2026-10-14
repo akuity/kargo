@@ -212,14 +212,6 @@ tests:
           path: data.METRICS_BIND_ADDRESS
           value: ":9095"
 
-  - it: configures PromotionRequest reconciliation concurrency
-    set:
-      controller.reconcilers.promotionRequests.maxConcurrentReconciles: 7
-    asserts:
-      - equal:
-          path: data.MAX_CONCURRENT_PROMOTION_REQUEST_RECONCILES
-          value: "7"
-
 ---
 suite: controller/cluster-role-bindings.yaml
 values:
@@ -392,9 +384,7 @@ values:
 templates:
   - templates/controller/cluster-roles.yaml
 tests:
-  # The Stage controller is the only thing that creates PromotionRequests, so the
-  # controller needs create alongside the read verbs.
-  - it: grants PromotionRequest create access
+  - it: grants Promotion create access
     documentSelector:
       path: metadata.name
       value: kargo-controller
@@ -406,7 +396,6 @@ tests:
               - kargo.akuity.io
             resources:
               - promotions
-              - promotionrequests
             verbs:
               - create
               - get
@@ -432,7 +421,7 @@ tests:
               - list
               - watch
 
-  - it: grants get and list on Targets, which the API server authorizes it against
+  - it: grants get and list on Targets and PromotionRollouts, which the API server authorizes it against
     documentSelector:
       path: metadata.name
       value: kargo-controller
@@ -443,12 +432,13 @@ tests:
             apiGroups:
               - kargo.akuity.io
             resources:
+              - promotionrollouts
               - targets
             verbs:
               - get
               - list
 
-  - it: grants PromotionRequest status patch access
+  - it: grants status patch access
     documentSelector:
       path: metadata.name
       value: kargo-controller
@@ -461,7 +451,6 @@ tests:
             resources:
               - freights/status
               - promotions/status
-              - promotionrequests/status
               - stages/status
               - warehouses/finalizers
               - warehouses/status

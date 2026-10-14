@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest';
 
-import { PromotionRequest, Stage, Target } from '@ui/gen/api/v2/models';
+import { PromotionRollout, Stage, Target } from '@ui/gen/api/v2/models';
 
 import {
   FleetRow,
@@ -26,7 +26,7 @@ const target = (name: string, partial: Partial<Target> = {}): Target => ({
   ...partial
 });
 
-const request = (targets: string[], status?: PromotionRequest['status']): PromotionRequest => ({
+const request = (targets: string[], status?: PromotionRollout['status']): PromotionRollout => ({
   metadata: { name: 'prod.01a.x' },
   spec: { stage: 'prod', freight: 'f1', targets: targets.map((t) => ({ name: t })) },
   status
@@ -175,7 +175,7 @@ describe('freightNames()', () => {
 });
 
 describe('rowFreightNames()', () => {
-  const roundRequest: PromotionRequest = { spec: { freight: 'round-freight' } };
+  const roundRequest: PromotionRollout = { spec: { freight: 'round-freight' } };
   const row = (overrides: Partial<FleetRow>): FleetRow => ({
     target: { metadata: { name: 't' } },
     request: roundRequest,

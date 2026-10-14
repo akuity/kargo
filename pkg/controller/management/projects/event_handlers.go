@@ -86,7 +86,7 @@ func (e *projectWarehouseHealthEnqueuer[T]) Update(
 
 // projectStageHealthEnqueuer enqueues a Project for reconciliation when the
 // health condition of a Stage within that Project changes, or when the
-// PromotionRequest the Stage reports as current or last changes. The latter
+// PromotionRollout the Stage reports as current or last changes. The latter
 // marks a round of promotion to the Stage's Targets starting or ending, which
 // is when the Project's Target stats are recomputed. Those stats are a
 // high-level overview, so they deliberately do not track each child Promotion
@@ -150,7 +150,7 @@ func (e *projectStageHealthEnqueuer[T]) Update(
 		promotionRequestRefName(newStage.Status.CurrentPromotionRequest) ||
 		promotionRequestRefName(oldStage.Status.LastPromotionRequest) !=
 			promotionRequestRefName(newStage.Status.LastPromotionRequest) {
-		logger.Info("Stage's PromotionRequest changed, enqueueing Project")
+		logger.Info("Stage's PromotionRollout changed, enqueueing Project")
 		wq.Add(reconcile.Request{
 			NamespacedName: types.NamespacedName{Name: newStage.Namespace},
 		})

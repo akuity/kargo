@@ -1,9 +1,9 @@
-import { isPromotionRequestPhaseTerminal } from '@ui/features/stage/utils/promotion-request';
+import { isPromotionRolloutPhaseTerminal } from '@ui/features/stage/utils/promotion-rollout';
 import {
   FreightCollection,
   Health,
-  PromotionRequest,
-  PromotionRequestSummary,
+  PromotionRollout,
+  PromotionRolloutSummary,
   Stage,
   Target
 } from '@ui/gen/api/v2/models';
@@ -17,7 +17,7 @@ export const SEVERITY_SETTLED = 2;
 export type FleetRow = {
   target: Target;
   // The round whose outcome the row reports, if the Stage has had one.
-  request?: PromotionRequest;
+  request?: PromotionRollout;
   // Whether that round named this Target. A Target that joined the Stage
   // after the round was created is governed but not included.
   included: boolean;
@@ -54,7 +54,7 @@ export const rowSeverity = (row: FleetRow): number => {
 // promotionPhaseFor resolves what a Target's Promotion cell shows for a round.
 const promotionPhaseFor = (
   target: Target,
-  request?: PromotionRequest
+  request?: PromotionRollout
 ): Pick<FleetRow, 'included' | 'promotion' | 'phase'> => {
   const name = target.metadata?.name;
   const included = !!request?.spec?.targets?.some((named) => named.name === name);
@@ -70,17 +70,17 @@ const promotionPhaseFor = (
   const requestPhase = request.status?.phase;
   return {
     included,
-    phase: isPromotionRequestPhaseTerminal(requestPhase) ? requestPhase : 'Pending'
+    phase: isPromotionRolloutPhaseTerminal(requestPhase) ? requestPhase : 'Pending'
   };
 };
 
 // fleetRows builds one row per Target the Stage governs, reading the round's
-// outcome from the PromotionRequest and the Target's standing state from its
+// outcome from the PromotionRollout and the Target's standing state from its
 // own status. Rows with trouble sort first, then by Target name.
 export const fleetRows = (
   stage: Stage,
   targets: Target[],
-  request?: PromotionRequest
+  request?: PromotionRollout
 ): FleetRow[] => {
   const stageName = stage.metadata?.name || '';
   const stageCollectionID = stage.status?.freightHistory?.[0]?.id;
@@ -140,11 +140,11 @@ export const rowFreightNames = (row: FleetRow): string[] => {
 };
 
 // rowsSummary tallies the rows' Promotion phases in the shape of a
-// PromotionRequest summary, so the round's progress bar is drawn from the same
+// PromotionRollout summary, so the round's progress bar is drawn from the same
 // per-Target phases the table shows and the two cannot disagree. Rows the round
 // did not name have no phase and are not counted.
-export const rowsSummary = (rows: FleetRow[]): PromotionRequestSummary => {
-  const summary: PromotionRequestSummary = {};
+export const rowsSummary = (rows: FleetRow[]): PromotionRolloutSummary => {
+  const summary: PromotionRolloutSummary = {};
   for (const row of rows) {
     switch (row.phase) {
       case 'Pending':

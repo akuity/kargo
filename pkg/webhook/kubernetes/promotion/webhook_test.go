@@ -1733,7 +1733,7 @@ func Test_webhook_Default(t *testing.T) {
 			},
 		},
 		{
-			name: "preserves a PromotionRequest's controller reference",
+			name: "a PromotionRollout's child is owned by the Stage like any other",
 			webhook: &webhook{
 				admissionRequestFromContextFn: admission.RequestFromContext,
 				getStageFn: func(
@@ -1767,13 +1767,9 @@ func Test_webhook_Default(t *testing.T) {
 			promotion: &kargoapi.Promotion{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "fake-project",
-					OwnerReferences: []metav1.OwnerReference{{
-						APIVersion: kargoapi.GroupVersion.String(),
-						Kind:       "PromotionRequest",
-						Name:       "fake-request",
-						UID:        "fake-request-uid",
-						Controller: ptr.To(true),
-					}},
+					Annotations: map[string]string{
+						kargoapi.AnnotationKeyPromotionRollout: "fake-rollout",
+					},
 				},
 				Spec: kargoapi.PromotionSpec{
 					Stage:   "fake-stage",
@@ -1783,18 +1779,18 @@ func Test_webhook_Default(t *testing.T) {
 			},
 			assertions: func(t *testing.T, promo *kargoapi.Promotion, err error) {
 				require.NoError(t, err)
-				// The owner must survive admission. A PromotionRequest that cannot
-				// recognize the Promotions it created will create them again on
-				// every reconcile.
+				// A PromotionRollout cannot own anything; the link to it is the
+				// annotation, which must survive admission, while the Stage
+				// owns the Promotion for garbage collection.
 				owner := metav1.GetControllerOf(promo)
 				require.NotNil(t, owner)
-				require.Equal(t, "PromotionRequest", owner.Kind)
-				require.Equal(t, "fake-request", owner.Name)
-				require.Equal(t, types.UID("fake-request-uid"), owner.UID)
+				require.Equal(t, "Stage", owner.Kind)
+				require.Equal(t, "fake-stage", owner.Name)
+				require.Equal(t, "fake-rollout", promo.Annotations[kargoapi.AnnotationKeyPromotionRollout])
 			},
 		},
 		{
-			name: "replaces a non-PromotionRequest controller reference with the Stage",
+			name: "replaces a foreign controller reference with the Stage",
 			webhook: &webhook{
 				admissionRequestFromContextFn: admission.RequestFromContext,
 				getStageFn: func(
@@ -1828,8 +1824,8 @@ func Test_webhook_Default(t *testing.T) {
 			promotion: &kargoapi.Promotion{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "fake-project",
-					// Anything other than a PromotionRequest would detach the
-					// Promotion from Stage-based garbage collection.
+					// Any other owner would detach the Promotion from
+					// Stage-based garbage collection.
 					OwnerReferences: []metav1.OwnerReference{{
 						APIVersion: "v1",
 						Kind:       "ConfigMap",
@@ -2044,12 +2040,12 @@ func Test_webhook_ValidateCreate(t *testing.T) {
 				require.Contains(
 					t,
 					statusErr.ErrStatus.Message,
-					"it is promoted to with a PromotionRequest rather than a Promotion",
+					"it is promoted to with a PromotionRollout rather than a Promotion",
 				)
 			},
 		},
 		{
-			name: "Promotion naming a Target without a PromotionRequest owner is rejected",
+			name: "Promotion naming a Target without a PromotionRollout is rejected",
 			webhook: &webhook{
 				validateProjectFn: func(
 					context.Context,
@@ -2079,8 +2075,8 @@ func Test_webhook_ValidateCreate(t *testing.T) {
 			},
 			promotion: &kargoapi.Promotion{
 				ObjectMeta: metav1.ObjectMeta{
-					// A Stage owner is what defaulting gives a Promotion that no
-					// PromotionRequest claimed.
+					// A Stage owner is what defaulting gives every Promotion; no
+					// annotation names a PromotionRollout.
 					OwnerReferences: []metav1.OwnerReference{{
 						APIVersion: kargoapi.GroupVersion.String(),
 						Kind:       "Stage",
@@ -2101,12 +2097,12 @@ func Test_webhook_ValidateCreate(t *testing.T) {
 				require.Contains(
 					t,
 					statusErr.ErrStatus.Message,
-					"a Promotion may name a Target only when created by a PromotionRequest",
+					"a Promotion may name a Target only when created by a PromotionRollout",
 				)
 			},
 		},
 		{
-			name: "a PromotionRequest's child may promote a target-aware Stage",
+			name: "a PromotionRollout's child may promote a target-aware Stage",
 			webhook: &webhook{
 				validateProjectFn: func(
 					context.Context,
@@ -2155,12 +2151,9 @@ func Test_webhook_ValidateCreate(t *testing.T) {
 			},
 			promotion: &kargoapi.Promotion{
 				ObjectMeta: metav1.ObjectMeta{
-					OwnerReferences: []metav1.OwnerReference{{
-						APIVersion: kargoapi.GroupVersion.String(),
-						Kind:       "PromotionRequest",
-						Name:       "fake-request",
-						Controller: ptr.To(true),
-					}},
+					Annotations: map[string]string{
+						kargoapi.AnnotationKeyPromotionRollout: "fake-rollout",
+					},
 				},
 				Spec: kargoapi.PromotionSpec{
 					Stage:   "fake-stage",
@@ -2460,18 +2453,15 @@ func Test_webhook_ValidateUpdate(t *testing.T) {
 		},
 
 		{
-			name: "detaching a Target-naming Promotion from its PromotionRequest",
+			name: "detaching a Target-naming Promotion from its PromotionRollout",
 			setup: func() (*kargoapi.Promotion, *kargoapi.Promotion) {
 				oldPromo := &kargoapi.Promotion{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "fake-name",
 						Namespace: "fake-namespace",
-						OwnerReferences: []metav1.OwnerReference{{
-							APIVersion: kargoapi.GroupVersion.String(),
-							Kind:       "PromotionRequest",
-							Name:       "fake-request",
-							Controller: ptr.To(true),
-						}},
+						Annotations: map[string]string{
+							kargoapi.AnnotationKeyPromotionRollout: "fake-rollout",
+						},
 					},
 					Spec: kargoapi.PromotionSpec{
 						Stage:   "fake-stage",
@@ -2480,7 +2470,7 @@ func Test_webhook_ValidateUpdate(t *testing.T) {
 					},
 				}
 				newPromo := oldPromo.DeepCopy()
-				newPromo.OwnerReferences = nil
+				newPromo.Annotations = nil
 				return oldPromo, newPromo
 			},
 			authorizeFn: func(context.Context, *kargoapi.Promotion, string) error {
@@ -2493,24 +2483,21 @@ func Test_webhook_ValidateUpdate(t *testing.T) {
 				require.Contains(
 					t,
 					statusErr.ErrStatus.Message,
-					"a Promotion may name a Target only when created by a PromotionRequest",
+					"a Promotion may name a Target only when created by a PromotionRollout",
 				)
 			},
 		},
 
 		{
-			name: "update of a Promotion that keeps its PromotionRequest",
+			name: "update of a Promotion that keeps its PromotionRollout",
 			setup: func() (*kargoapi.Promotion, *kargoapi.Promotion) {
 				oldPromo := &kargoapi.Promotion{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "fake-name",
 						Namespace: "fake-namespace",
-						OwnerReferences: []metav1.OwnerReference{{
-							APIVersion: kargoapi.GroupVersion.String(),
-							Kind:       "PromotionRequest",
-							Name:       "fake-request",
-							Controller: ptr.To(true),
-						}},
+						Annotations: map[string]string{
+							kargoapi.AnnotationKeyPromotionRollout: "fake-rollout",
+						},
 					},
 					Spec: kargoapi.PromotionSpec{
 						Stage:   "fake-stage",
@@ -2520,10 +2507,8 @@ func Test_webhook_ValidateUpdate(t *testing.T) {
 				}
 				newPromo := oldPromo.DeepCopy()
 				// An abort request is an update, and must keep working for a
-				// Promotion a PromotionRequest is driving.
-				newPromo.Annotations = map[string]string{
-					kargoapi.AnnotationKeyAbort: "fake-abort-id",
-				}
+				// Promotion a PromotionRollout is driving.
+				newPromo.Annotations[kargoapi.AnnotationKeyAbort] = "fake-abort-id"
 				return oldPromo, newPromo
 			},
 			authorizeFn: func(context.Context, *kargoapi.Promotion, string) error {
