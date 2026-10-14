@@ -6,6 +6,7 @@
             "git-clear",
             "git-commit",
             "git-push",
+            "github-push",
             "git-open-pr",
             "git-wait-for-pr",
             "git-merge-pr",
@@ -76,7 +77,6 @@
     {
         "label": "GitHub",
         "steps": [
-            "github-push",
             "gh-create-issue",
             "gh-issue-add-comment",
             "gh-issue-update-comment",
