@@ -76,6 +76,7 @@ Class | Method | HTTP request | Description
 *CoreAPI* | [**CreateProjectConfigMap**](docs/CoreAPI.md#createprojectconfigmap) | **Post** /v1beta1/projects/{project}/configmaps | Create a project-level ConfigMap
 *CoreAPI* | [**CreateSharedConfigMap**](docs/CoreAPI.md#createsharedconfigmap) | **Post** /v1beta1/shared/configmaps | Create a shared ConfigMap
 *CoreAPI* | [**CreateSystemConfigMap**](docs/CoreAPI.md#createsystemconfigmap) | **Post** /v1beta1/system/configmaps | Create a system-level ConfigMap
+*CoreAPI* | [**CreateTarget**](docs/CoreAPI.md#createtarget) | **Post** /v1beta1/projects/{project}/targets | Create a Target
 *CoreAPI* | [**DeleteFreight**](docs/CoreAPI.md#deletefreight) | **Delete** /v1beta1/projects/{project}/freight/{freight-name-or-alias} | Delete a Freight resource
 *CoreAPI* | [**DeleteProject**](docs/CoreAPI.md#deleteproject) | **Delete** /v1beta1/projects/{project} | Delete a Project
 *CoreAPI* | [**DeleteProjectConfig**](docs/CoreAPI.md#deleteprojectconfig) | **Delete** /v1beta1/projects/{project}/config | Delete a ProjectConfig resource
@@ -83,6 +84,7 @@ Class | Method | HTTP request | Description
 *CoreAPI* | [**DeleteSharedConfigMap**](docs/CoreAPI.md#deletesharedconfigmap) | **Delete** /v1beta1/shared/configmaps/{configmap} | Delete a shared ConfigMap
 *CoreAPI* | [**DeleteStage**](docs/CoreAPI.md#deletestage) | **Delete** /v1beta1/projects/{project}/stages/{stage} | Delete a Stage
 *CoreAPI* | [**DeleteSystemConfigMap**](docs/CoreAPI.md#deletesystemconfigmap) | **Delete** /v1beta1/system/configmaps/{configmap} | Delete a system-level ConfigMap
+*CoreAPI* | [**DeleteTarget**](docs/CoreAPI.md#deletetarget) | **Delete** /v1beta1/projects/{project}/targets/{target-name} | Delete a Target
 *CoreAPI* | [**DeleteWarehouse**](docs/CoreAPI.md#deletewarehouse) | **Delete** /v1beta1/projects/{project}/warehouses/{warehouse} | Delete a Warehouse
 *CoreAPI* | [**GetClusterPromotionTask**](docs/CoreAPI.md#getclusterpromotiontask) | **Get** /v1beta1/shared/cluster-promotion-tasks/{cluster-promotion-task} | Retrieve a ClusterPromotionTask
 *CoreAPI* | [**GetFreight**](docs/CoreAPI.md#getfreight) | **Get** /v1beta1/projects/{project}/freight/{freight-name-or-alias} | Retrieve a Freight resource
@@ -97,7 +99,7 @@ Class | Method | HTTP request | Description
 *CoreAPI* | [**GetStage**](docs/CoreAPI.md#getstage) | **Get** /v1beta1/projects/{project}/stages/{stage} | Retrieve a Stage
 *CoreAPI* | [**GetStageLinks**](docs/CoreAPI.md#getstagelinks) | **Get** /v1beta1/projects/{project}/stages/{stage}/links | Retrieve deep links for a Stage resource
 *CoreAPI* | [**GetSystemConfigMap**](docs/CoreAPI.md#getsystemconfigmap) | **Get** /v1beta1/system/configmaps/{configmap} | Retrieve a system-level ConfigMap
-*CoreAPI* | [**GetTarget**](docs/CoreAPI.md#gettarget) | **Get** /v1beta1/projects/{project}/targets/{target} | Retrieve a Target
+*CoreAPI* | [**GetTarget**](docs/CoreAPI.md#gettarget) | **Get** /v1beta1/projects/{project}/targets/{target-name} | Retrieve a Target
 *CoreAPI* | [**GetWarehouse**](docs/CoreAPI.md#getwarehouse) | **Get** /v1beta1/projects/{project}/warehouses/{warehouse} | Retrieve a Warehouse
 *CoreAPI* | [**ListClusterPromotionTasks**](docs/CoreAPI.md#listclusterpromotiontasks) | **Get** /v1beta1/shared/cluster-promotion-tasks | List ClusterPromotionTasks
 *CoreAPI* | [**ListImages**](docs/CoreAPI.md#listimages) | **Get** /v1beta1/projects/{project}/images | List container images
@@ -125,6 +127,7 @@ Class | Method | HTTP request | Description
 *CoreAPI* | [**UpdateProjectConfigMap**](docs/CoreAPI.md#updateprojectconfigmap) | **Put** /v1beta1/projects/{project}/configmaps/{configmap} | Replace a project-level ConfigMap
 *CoreAPI* | [**UpdateSharedConfigMap**](docs/CoreAPI.md#updatesharedconfigmap) | **Put** /v1beta1/shared/configmaps/{configmap} | Replace a shared ConfigMap
 *CoreAPI* | [**UpdateSystemConfigMap**](docs/CoreAPI.md#updatesystemconfigmap) | **Put** /v1beta1/system/configmaps/{configmap} | Replace a system-level ConfigMap
+*CoreAPI* | [**UpdateTarget**](docs/CoreAPI.md#updatetarget) | **Put** /v1beta1/projects/{project}/targets/{target-name} | Update a Target
 *CredentialsAPI* | [**CreateProjectGenericCredentials**](docs/CredentialsAPI.md#createprojectgenericcredentials) | **Post** /v1beta1/projects/{project}/generic-credentials | Create project-level generic credentials
 *CredentialsAPI* | [**CreateProjectRepoCredentials**](docs/CredentialsAPI.md#createprojectrepocredentials) | **Post** /v1beta1/projects/{project}/repo-credentials | Create project-level repository credentials
 *CredentialsAPI* | [**CreateSharedGenericCredentials**](docs/CredentialsAPI.md#createsharedgenericcredentials) | **Post** /v1beta1/shared/generic-credentials | Create shared generic credentials

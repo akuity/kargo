@@ -5,7 +5,10 @@
 package database
 
 import (
+	"encoding/json"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 type ProjectRow struct {
@@ -13,4 +16,15 @@ type ProjectRow struct {
 	Name      string
 	CreatedAt time.Time
 	SyncedAt  time.Time
+}
+
+type TargetRow struct {
+	ID            uuid.UUID
+	ProjectName   string
+	Name          string
+	Labels        map[string]string
+	Params        json.RawMessage
+	TargetSetName string
+	CreatedAt     time.Time
+	UpdatedAt     time.Time
 }

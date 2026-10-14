@@ -16,6 +16,12 @@ data:
   {{- if .Values.api.enabled }}
   API_SERVER_BASE_URL: {{ include "kargo.api.baseURL" . }}
   {{- end }}
+  {{- with (include "kargo.controller.apiServerAddress" .) }}
+  API_SERVER_ADDRESS: {{ quote . }}
+  {{- end }}
+  {{- if (include "kargo.controller.mountsAPIServerCA" .) }}
+  API_SERVER_CA_CERT_PATH: /etc/kargo/api-ca.crt
+  {{- end }}
   LOG_LEVEL: {{ quote .Values.controller.logLevel }}
   LOG_FORMAT: {{ quote .Values.controller.logFormat }}
   {{- with (include "kargo.tracing.configMapData" .) }}

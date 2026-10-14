@@ -508,9 +508,62 @@ this.
 Tilt runs the PostgreSQL bundled with the Helm chart, configured by the
 `database.postgres` values in `hack/tilt/values.dev.yaml`, and forwards
 `127.0.0.1:15432` to its port `5432`. The database, username, and password are all `kargo`. Inside the
-cluster, the address is `kargo-postgres.kargo.svc:5432`. The management
-controller mirrors Project identities into this database. Kubernetes remains
-the source of truth; application API reads still use Kubernetes.
+cluster, the address is `kargo-postgres.kargo.svc:5432`.
+
+Two kinds of data live in it. The management controller mirrors Project
+identities from Kubernetes, which remains their source of truth. Targets, on
+the other hand, exist only in the database: the API server serves them
+through `/v1beta1/projects/{project}/targets`, and Target is no longer a
+custom resource at all. The chart installs no CRD for it, `kubectl` does not
+see Targets, and the Go type keeps the shape of a Kubernetes resource without
+being one (no `apiVersion` or `kind`, no scheme registration), so that
+clients and the UI can treat it like one. Target custom resources from
+earlier versions are not migrated; a chart upgrade removes the CRD and them
+with it. A Target names its Project rather than referencing the mirrored
+row, so writing one never waits for the mirror. Deleting a Project does not
+yet remove its Targets.
+
+Only control plane components open the database. The controller may run far
+from the control plane, on infrastructure where the database is not
+reachable, so it resolves the Targets a Stage governs and the Target a
+Promotion promotes to by calling the API server at `API_SERVER_ADDRESS`,
+authenticating with the credential it already holds for the control plane:
+its ServiceAccount token in-cluster, or the bearer token its control-plane
+kubeconfig carries. The API server verifies that token with a TokenReview and
+authorizes each request against the controller's RBAC, which already grants
+it `list` and `get` on `targets`. A kubeconfig that obtains credentials
+through an exec plugin is not supported for this; give such a shard a
+kubeconfig with a token.
+
+The chart points a controller installed beside the API server at the API
+server's `Service` and, when it generated the API server's certificate, hands
+the controller its CA (`API_SERVER_CA_CERT_PATH`). A controller installed
+elsewhere, such as a shard in another cluster, is given the address at which
+it reaches the API server through `controller.apiServer.address`. Each
+request is bounded by `API_SERVER_TIMEOUT` (30 seconds by default), so an
+API server that accepts a connection and then hangs cannot hold a reconcile
+open indefinitely.
+
+Every component that uses the database finds it through the same settings
+(`DATABASE_URL`, or `DATABASE_HOST` and its companions), which Tilt sets from
+the chart. A component without them runs with the database features off: the
+API server answers Target requests with `501 Not Implemented`. A component
+with them waits, for up to `DATABASE_CONNECT_TIMEOUT`, for the database to
+accept connections and for the schema to reach the version it expects, since
+the migrations usually run alongside it; it refuses to serve against an older
+schema. A controller without `API_SERVER_ADDRESS` (the
+chart leaves it unset when the API server is disabled) reports a Stage that
+selects Targets as `Stalled` instead of promoting to it, and a Promotion that
+names a Target fails.
+
+Targets are created, replaced and deleted through `POST`, `PUT` and
+`DELETE` on the same path, with a `Target` resource as the body; the generic
+`/v1beta1/resources` endpoints refuse `kind: Target`, so `kargo apply` of a
+Target manifest fails with a pointer to those endpoints. A `PUT` that carries
+the `metadata.resourceVersion` or `metadata.uid` it read is refused with
+`409 Conflict` if the Target changed in between. There is no watch on
+Targets: the database offers no change feed, so the UI polls the list every
+few seconds instead.
 
 To open a `psql` session against it:
 

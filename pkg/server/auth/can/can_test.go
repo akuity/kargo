@@ -109,6 +109,15 @@ func TestAccess(t *testing.T) {
 			},
 		},
 		{
+			name:   "Target",
+			access: Update().Target("kargo-demo", "us-east-1"),
+			expected: Access{
+				Verb:     "update",
+				Resource: kargoResource("targets"),
+				Key:      types.NamespacedName{Namespace: "kargo-demo", Name: "us-east-1"},
+			},
+		},
+		{
 			name:   "ProjectConfig is named after its Project",
 			access: Get().ProjectConfig("kargo-demo"),
 			expected: Access{

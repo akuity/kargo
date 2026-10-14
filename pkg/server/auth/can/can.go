@@ -93,6 +93,13 @@ func (v Verb) Warehouse(project, name string) Access {
 	return v.kargo("warehouses", project, name)
 }
 
+// Target returns the Verb on the named Target in the Project. Targets live in
+// the database rather than in Kubernetes, but RBAC rules name them like any
+// other Kargo resource. An empty name addresses the Project's collection.
+func (v Verb) Target(project, name string) Access {
+	return v.kargo("targets", project, name)
+}
+
 // ProjectConfig returns the Verb on the Project's ProjectConfig, which is
 // named after the Project.
 func (v Verb) ProjectConfig(project string) Access {
