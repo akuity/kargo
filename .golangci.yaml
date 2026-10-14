@@ -14,6 +14,7 @@ linters:
     - copyloopvar
     - depguard
     - errcheck
+    - forbidigo
     - forcetypeassert
     - goconst
     - gosec
@@ -36,6 +37,23 @@ linters:
             # Avoid reintroduction of `github.com/pkg/errors` package
             - pkg: github.com/pkg/errors
               desc: Should use `errors` package from the standard library
+        builtin-steps:
+          files:
+            - "**/pkg/promotion/runner/builtin/*.go"
+          deny:
+            - pkg: github.com/cyphar/filepath-securejoin
+              desc: Built-in steps access files through stepCtx.Root, which confines paths to the working directory
+
+    forbidigo:
+      # Match identifiers by the package they come from rather than by their
+      # spelling, so that root.ReadFile is not mistaken for os.ReadFile
+      analyze-types: true
+      forbid:
+        # Built-in promotion steps access files through stepCtx.Root. The rule is
+        # scoped to those steps by the exclusion rules below
+        - pattern: ^os\.(Open|OpenFile|Create|CreateTemp|ReadFile|WriteFile|Mkdir|MkdirAll|MkdirTemp|Remove|RemoveAll|Rename|Stat|Lstat|ReadDir|Readlink|Symlink|Link|Chmod|Chown|Lchown|Chtimes|Truncate|DirFS)$
+          pkg: ^os$
+          msg: Built-in steps access files through stepCtx.Root, which confines paths to the working directory
 
     errcheck:
       # Report about not checking of errors in type assertions: `a := b.(MyStruct)`
@@ -150,6 +168,13 @@ linters:
       - linters:
           - goconst
           - gosec
+        path: (.+)_test\.go
+      # forbidigo applies only to the non-test files of the built-in steps
+      - linters:
+          - forbidigo
+        path-except: ^pkg/promotion/runner/builtin/
+      - linters:
+          - forbidigo
         path: (.+)_test\.go
     paths:
       - .*/*_types.go
