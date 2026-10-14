@@ -5,6 +5,7 @@ const path = require('node:path');
 const {themes} = require('prism-react-renderer');
 const tags = require('./tags');
 const enterpriseFeatures = require('./enterprise-features.json');
+const promotionStepGroups = require('./promotion-step-groups.json');
 const lightCodeTheme = themes.github;
 const darkCodeTheme = themes.dracula;
 
@@ -107,7 +108,63 @@ const config = {
                 return item;
               });
             }
-            return addBadges(sidebarItems);
+            // Split the flat list of promotion steps into collapsible groups
+            // (per promotion-step-groups.json). Every step must be listed in
+            // exactly one group so new steps can't silently go missing.
+            const stepsDir = 'user-guide/reference-docs/promotion-steps/';
+            const stepsIndex = `${stepsDir}index`;
+            const stepGroupByDocId = new Map();
+            for (const group of promotionStepGroups) {
+              for (const step of group.steps) {
+                const docId = stepsDir + step;
+                if (!docIds.has(docId)) {
+                  throw new Error(`promotion-step-groups.json lists unknown step: ${step}`);
+                }
+                if (stepGroupByDocId.has(docId)) {
+                  throw new Error(`promotion-step-groups.json lists step more than once: ${step}`);
+                }
+                stepGroupByDocId.set(docId, group.label);
+              }
+            }
+            const missingSteps = [...docIds]
+              .filter((id) => (
+                id.startsWith(stepsDir) &&
+                id !== stepsIndex &&
+                !stepGroupByDocId.has(id)
+              ))
+              .map((id) => id.slice(stepsDir.length));
+            if (missingSteps.length) {
+              throw new Error(`promotion-step-groups.json is missing steps: ${missingSteps.join(', ')}`);
+            }
+
+            function groupSteps(items) {
+              return items.map((item) => {
+                if (item.type !== 'category') {
+                  return item;
+                }
+                if (item.link?.id !== stepsIndex) {
+                  item.items = groupSteps(item.items);
+                  return item;
+                }
+                // Groups and the steps within them appear in the order they're
+                // listed in promotion-step-groups.json. custom.css hides them
+                // so Promotion Steps is a single entry linking to its catalog.
+                const stepsById = new Map(
+                  item.items.map((step) => [step.id, step]),
+                );
+                item.className = 'sidebar-step-catalog';
+                item.items = promotionStepGroups.map((group) => ({
+                  type: 'category',
+                  label: group.label,
+                  collapsible: true,
+                  collapsed: true,
+                  items: group.steps.map((step) => stepsById.get(stepsDir + step)),
+                }));
+                return item;
+              });
+            }
+
+            return groupSteps(addBadges(sidebarItems));
           },
         },
         blog: false,

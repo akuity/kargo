@@ -10,7 +10,7 @@ descriptions.
 :::info
 
 These events are always emitted by Kargo to the Kubernetes event log with the keys encoded in the
-annotations of the event. However, they are primarily consumed by the Pro version of Kargo (such as
+annotations of the event. However, they are primarily consumed by Kargo on the Akuity Platform (such as
 the [Notification feature](./100-notifications/index.md))
 
 :::

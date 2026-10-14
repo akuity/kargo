@@ -1,0 +1,203 @@
+import React, {useEffect, useState} from 'react';
+import Link from '@docusaurus/Link';
+import {useLocation} from '@docusaurus/router';
+import {
+  useCurrentSidebarCategory,
+  useDocsVersion,
+} from '@docusaurus/plugin-content-docs/client';
+import {
+  SiArgo,
+  SiGit,
+  SiGithub,
+  SiHelm,
+  SiJfrog,
+  SiJira,
+  SiKubernetes,
+  SiOpencontainersinitiative,
+  SiOpentofu,
+} from 'react-icons/si';
+import {LuFileJson, LuFiles, LuGlobe, LuWorkflow} from 'react-icons/lu';
+import {isBeta, isEnterprise} from '@site/tags';
+import styles from './styles.module.css';
+
+const TIERS = [
+  {key: 'all', label: 'All'},
+  {key: 'oss', label: 'Open source'},
+  {key: 'enterprise', label: 'Enterprise'},
+  {key: 'beta', label: 'Beta'},
+];
+
+function matchesTier(step, tier) {
+  switch (tier) {
+    case 'oss':
+      return !step.enterprise;
+    case 'enterprise':
+      return step.enterprise;
+    case 'beta':
+      return step.beta;
+    default:
+      return true;
+  }
+}
+
+// Icon for a step, picked by name prefix. Falls back to a generic icon.
+const ICONS = [
+  [/^git-/, SiGit],
+  [/^(gh|gha|github)-/, SiGithub],
+  [/^helm-/, SiHelm],
+  [/^kustomize-/, SiKubernetes],
+  [/^argocd-/, SiArgo],
+  [/^(tf|hcl)-/, SiOpentofu],
+  [/^jira$/, SiJira],
+  [/^jfrog-/, SiJfrog],
+  [/^oci-/, SiOpencontainersinitiative],
+  [/^http/, LuGlobe],
+  [/^(json|yaml|toml)-/, LuFileJson],
+  [/^(copy|delete|file-write|tar|untar)$/, LuFiles],
+];
+
+function StepIcon({name}) {
+  const Icon = ICONS.find(([pattern]) => pattern.test(name))?.[1] ?? LuWorkflow;
+  return <Icon className={styles.icon} aria-hidden="true" />;
+}
+
+// Descriptions come from front matter and may contain `code` spans.
+function Description({text}) {
+  return (
+    <p className={styles.cardDescription}>
+      {text
+        .split(/`([^`]+)`/)
+        .map((part, i) => (i % 2 ? <code key={i}>{part}</code> : part))}
+    </p>
+  );
+}
+
+function StepCard({step}) {
+  return (
+    <Link to={step.href} className={styles.card}>
+      <div className={styles.cardHeader}>
+        <StepIcon name={step.label} />
+        <span className={styles.cardTitle}>{step.label}</span>
+      </div>
+      <Description text={step.description} />
+      {(step.enterprise || step.beta) && (
+        <div className={styles.badges}>
+          {step.enterprise && <span className={styles.entBadge}>Enterprise</span>}
+          {step.beta && <span className={styles.betaBadge}>Beta</span>}
+        </div>
+      )}
+    </Link>
+  );
+}
+
+export default function StepCatalog() {
+  const category = useCurrentSidebarCategory();
+  const groups = category.items.filter((item) => item.type === 'category');
+  const [query, setQuery] = useState('');
+  const [activeGroup, setActiveGroup] = useState(null);
+  const [tier, setTier] = useState('all');
+
+  // Filters can be preset from the URL (e.g. ?q=helm&group=Git&tier=beta).
+  // Applied after the first render so it matches the pre-built HTML, which
+  // has no filters.
+  const {search} = useLocation();
+  useEffect(() => {
+    const params = new URLSearchParams(search);
+    setQuery(params.get('q') ?? '');
+    setActiveGroup(params.get('group'));
+    setTier(params.get('tier') ?? 'all');
+  }, [search]);
+  const {docs} = useDocsVersion();
+  const steps = groups.flatMap((group) =>
+    group.items.map((item) => ({
+      label: item.label,
+      href: item.href,
+      description: docs[item.docId]?.description ?? '',
+      group: group.label,
+      enterprise: isEnterprise(item.docId),
+      beta: isBeta(item.docId),
+    })),
+  );
+
+  const q = query.trim().toLowerCase();
+  const visible = steps.filter(
+    (step) =>
+      (!activeGroup || step.group === activeGroup) &&
+      matchesTier(step, tier) &&
+      (!q ||
+        step.label.toLowerCase().includes(q) ||
+        step.description.toLowerCase().includes(q)),
+  );
+  return (
+    <div>
+      <input
+        type="search"
+        aria-label="Search promotion steps"
+        className={styles.search}
+        placeholder="Search steps by name or description…"
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+      />
+      <div className={styles.filters} role="group" aria-label="Filter by group">
+        <button
+          type="button"
+          aria-pressed={!activeGroup}
+          className={!activeGroup ? styles.chipActive : styles.chip}
+          onClick={() => setActiveGroup(null)}
+        >
+          All groups
+        </button>
+        {groups.map((group) => (
+          <button
+            key={group.label}
+            type="button"
+            aria-pressed={activeGroup === group.label}
+            className={
+              activeGroup === group.label ? styles.chipActive : styles.chip
+            }
+            onClick={() =>
+              setActiveGroup(activeGroup === group.label ? null : group.label)
+            }
+          >
+            {group.label}
+          </button>
+        ))}
+      </div>
+      <div className={styles.filters} role="group" aria-label="Filter by tier">
+        {TIERS.map((t) => (
+          <button
+            key={t.key}
+            type="button"
+            aria-pressed={tier === t.key}
+            className={tier === t.key ? styles.chipActive : styles.chip}
+            onClick={() => setTier(t.key)}
+          >
+            {t.label}
+          </button>
+        ))}
+        <span className={styles.count} aria-live="polite">
+          Showing {visible.length} of {steps.length} steps
+        </span>
+      </div>
+      {groups.map((group) => {
+        const groupSteps = visible.filter((step) => step.group === group.label);
+        if (!groupSteps.length) {
+          return null;
+        }
+        return (
+          <section key={group.label}>
+            <h2 className={styles.groupHeading}>{group.label}</h2>
+            <div className={styles.grid}>
+              {groupSteps.map((step) => (
+                <StepCard key={step.href} step={step} />
+              ))}
+            </div>
+          </section>
+        );
+      })}
+      {!visible.length && (
+        <p className={styles.empty}>No steps match your search.</p>
+      )}
+    </div>
+  );
+}
