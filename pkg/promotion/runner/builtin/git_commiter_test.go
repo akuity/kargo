@@ -126,9 +126,7 @@ func Test_gitCommitter_run(t *testing.T) {
 	runner, ok := r.(*gitCommitter)
 	require.True(t, ok)
 
-	stepCtx := &promotion.StepContext{
-		WorkDir: workDir,
-	}
+	stepCtx := newTestStepContext(t, workDir)
 
 	res, err := runner.run(
 		t.Context(),
@@ -167,4 +165,15 @@ func Test_gitCommitter_run(t *testing.T) {
 	actualCommit, ok = res.Output[stateKeyCommit]
 	require.True(t, ok)
 	require.Equal(t, expectedCommit, actualCommit)
+}
+
+func Test_gitCommitter_run_escapingSymlink(t *testing.T) {
+	workDir, _ := escapingWorkspace(t)
+	res, err := (&gitCommitter{}).run(
+		t.Context(),
+		newTestStepContext(t, workDir),
+		builtin.GitCommitConfig{Path: "out/repo", Message: "msg"},
+	)
+	require.ErrorContains(t, err, "path escapes from parent")
+	require.Equal(t, kargoapi.PromotionStepStatusErrored, res.Status)
 }

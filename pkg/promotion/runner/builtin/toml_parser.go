@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 
-	securejoin "github.com/cyphar/filepath-securejoin"
 	"github.com/expr-lang/expr"
 	tomlv2 "github.com/pelletier/go-toml/v2"
 	"github.com/xeipuuv/gojsonschema"
@@ -72,7 +71,7 @@ func (tp *tomlParser) run(
 		return failure, fmt.Errorf("invalid %s config: outputs is required", stepKindTOMLParse)
 	}
 
-	data, err := tp.readAndParseTOML(stepCtx.WorkDir, cfg.Path)
+	data, err := tp.readAndParseTOML(stepCtx.Root, cfg.Path)
 	if err != nil {
 		return failure, err
 	}
@@ -89,17 +88,17 @@ func (tp *tomlParser) run(
 }
 
 // readAndParseTOML reads and unmarshals a TOML document and returns the result.
-func (tp *tomlParser) readAndParseTOML(workDir string, path string) (any, error) {
-	absFilePath, err := securejoin.SecureJoin(workDir, path)
+func (tp *tomlParser) readAndParseTOML(root *os.Root, path string) (any, error) {
+	relPath, err := promotion.WorkspacePath(path)
 	if err != nil {
-		return nil, fmt.Errorf("error joining path %q: %w", path, err)
+		return nil, err
 	}
-	tomlData, err := os.ReadFile(absFilePath)
+	tomlData, err := root.ReadFile(relPath)
 	if err != nil {
-		return nil, fmt.Errorf("error reading TOML file %q: %w", absFilePath, err)
+		return nil, fmt.Errorf("error reading TOML file %q: %w", path, err)
 	}
 	if len(tomlData) == 0 {
-		return nil, fmt.Errorf("could not parse empty TOML file: %q", absFilePath)
+		return nil, fmt.Errorf("could not parse empty TOML file: %q", path)
 	}
 	var data any
 	if err := tomlv2.Unmarshal(tomlData, &data); err != nil {

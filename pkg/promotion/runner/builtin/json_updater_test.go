@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"os"
 	"path"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -205,7 +206,7 @@ func Test_jsonUpdater_updateValuesFile(t *testing.T) {
 				require.NoError(t, err)
 			}
 
-			err := runner.updateFile(workDir, path.Base(valuesFile), tt.changes)
+			err := runner.updateFile(newTestRoot(t, workDir), path.Base(valuesFile), tt.changes)
 			tt.assertions(t, valuesFile, err)
 		})
 	}
@@ -461,6 +462,7 @@ func Test_jsonUpdater_run(t *testing.T) {
 			stepCtx := tt.stepCtx
 
 			stepCtx.WorkDir = t.TempDir()
+			stepCtx.Root = newTestRoot(t, stepCtx.WorkDir)
 			for p, c := range tt.files {
 				require.NoError(t, os.MkdirAll(path.Join(stepCtx.WorkDir, path.Dir(p)), 0o700))
 				require.NoError(t, os.WriteFile(path.Join(stepCtx.WorkDir, p), []byte(c), 0o600))
@@ -470,4 +472,22 @@ func Test_jsonUpdater_run(t *testing.T) {
 			tt.assertions(t, stepCtx.WorkDir, result, err)
 		})
 	}
+}
+
+func Test_jsonUpdater_run_escapingSymlink(t *testing.T) {
+	workDir, outside := escapingWorkspace(t)
+	target := filepath.Join(outside, "values.json")
+	require.NoError(t, os.WriteFile(target, []byte(`{"key": "value"}`), 0o600))
+	_, err := (&jsonUpdater{}).run(
+		t.Context(),
+		newTestStepContext(t, workDir),
+		builtin.JSONUpdateConfig{
+			Path:    "out/values.json",
+			Updates: []builtin.JSONUpdate{{Key: "key", Value: "changed"}},
+		},
+	)
+	require.ErrorContains(t, err, "path escapes from parent")
+	content, err := os.ReadFile(target)
+	require.NoError(t, err)
+	require.JSONEq(t, `{"key": "value"}`, string(content))
 }

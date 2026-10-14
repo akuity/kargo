@@ -9,7 +9,6 @@ import (
 	"sync"
 	"time"
 
-	securejoin "github.com/cyphar/filepath-securejoin"
 	"github.com/google/go-github/v76/github"
 	"github.com/kelseyhightower/envconfig"
 	"github.com/xeipuuv/gojsonschema"
@@ -173,12 +172,9 @@ func (g *githubPusher) run(
 	// This is kind of hacky, but we needed to load the working tree to get the
 	// URL of the repository. With that in hand, we can look for applicable
 	// credentials and, if found, reload the work tree with the credentials.
-	path, err := securejoin.SecureJoin(stepCtx.WorkDir, cfg.Path)
+	path, err := promotion.ExternalPath(stepCtx, cfg.Path)
 	if err != nil {
-		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, fmt.Errorf(
-			"error joining path %s with work dir %s: %w",
-			cfg.Path, stepCtx.WorkDir, err,
-		)
+		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, err
 	}
 	loadOpts := &git.LoadWorkTreeOptions{}
 	workTree, err := git.LoadWorkTree(ctx, path, loadOpts)

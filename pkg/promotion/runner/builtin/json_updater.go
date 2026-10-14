@@ -6,7 +6,6 @@ import (
 	"os"
 	"strings"
 
-	securejoin "github.com/cyphar/filepath-securejoin"
 	"github.com/tidwall/sjson"
 	"github.com/xeipuuv/gojsonschema"
 
@@ -67,7 +66,7 @@ func (j *jsonUpdater) run(
 	result := promotion.StepResult{Status: kargoapi.PromotionStepStatusSucceeded}
 
 	if len(cfg.Updates) > 0 {
-		if err := j.updateFile(stepCtx.WorkDir, cfg.Path, cfg.Updates); err != nil {
+		if err := j.updateFile(stepCtx.Root, cfg.Path, cfg.Updates); err != nil {
 			return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 				fmt.Errorf("JSON file update failed: %w", err)
 		}
@@ -81,15 +80,15 @@ func (j *jsonUpdater) run(
 	return result, nil
 }
 
-func (j *jsonUpdater) updateFile(workDir string, path string, updates []builtin.JSONUpdate) error {
-	absFilePath, err := securejoin.SecureJoin(workDir, path)
+func (j *jsonUpdater) updateFile(root *os.Root, path string, updates []builtin.JSONUpdate) error {
+	relPath, err := promotion.WorkspacePath(path)
 	if err != nil {
-		return fmt.Errorf("error joining path %q: %w", path, err)
+		return err
 	}
 
-	fileContent, err := os.ReadFile(absFilePath)
+	fileContent, err := root.ReadFile(relPath)
 	if err != nil {
-		return fmt.Errorf("error reading JSON file %q: %w", absFilePath, err)
+		return fmt.Errorf("error reading JSON file %q: %w", path, err)
 	}
 
 	for _, update := range updates {
@@ -103,11 +102,8 @@ func (j *jsonUpdater) updateFile(workDir string, path string, updates []builtin.
 		fileContent = []byte(updatedContent)
 	}
 
-	// #nosec G703 -- absFilePath was built via securejoin.SecureJoin above,
-	// which confines it to workDir.
-	err = os.WriteFile(absFilePath, fileContent, 0600)
-	if err != nil {
-		return fmt.Errorf("error writing updated JSON file %q: %w", absFilePath, err)
+	if err = root.WriteFile(relPath, fileContent, 0o600); err != nil {
+		return fmt.Errorf("error writing updated JSON file %q: %w", path, err)
 	}
 
 	return nil

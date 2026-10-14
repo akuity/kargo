@@ -2,13 +2,14 @@ package builtin
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
 
-	securejoin "github.com/cyphar/filepath-securejoin"
 	"github.com/xeipuuv/gojsonschema"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
@@ -91,46 +92,27 @@ func (f *fileWriter) run(
 			&promotion.TerminalError{Err: err}
 	}
 
-	absPath, err := securejoin.SecureJoin(stepCtx.WorkDir, cfg.Path)
-	if err != nil {
+	if _, err = stepCtx.Root.Stat(cleanPath); err != nil && !errors.Is(err, fs.ErrNotExist) {
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusFailed},
-			&promotion.TerminalError{
-				Err: fmt.Errorf("could not secure join path %q: %w", cfg.Path, err),
-			}
-	}
-
-	relPath, err := filepath.Rel(stepCtx.WorkDir, absPath)
-	if err != nil {
-		return promotion.StepResult{Status: kargoapi.PromotionStepStatusFailed},
-			&promotion.TerminalError{
-				Err: fmt.Errorf("could not get relative path for %q: %w", absPath, err),
-			}
-	}
-	if relPath != cleanPath {
-		return promotion.StepResult{Status: kargoapi.PromotionStepStatusFailed},
-			&promotion.TerminalError{
-				Err: fmt.Errorf("path %q resolves to a different path %q (symlinks are forbidden)", cfg.Path, relPath),
-			}
-	}
-
-	if _, err = os.Stat(absPath); err == nil && !cfg.Overwrite {
+			&promotion.TerminalError{Err: fmt.Errorf("error inspecting path %q: %w", cfg.Path, err)}
+	} else if err == nil && !cfg.Overwrite {
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusFailed},
 			&promotion.TerminalError{Err: fmt.Errorf(
 				"file %q already exists; set overwrite to true to replace it", cfg.Path,
 			)}
 	}
 
-	if err = os.MkdirAll(filepath.Dir(absPath), 0o700); err != nil {
+	if err = stepCtx.Root.MkdirAll(filepath.Dir(cleanPath), 0o700); err != nil {
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 			fmt.Errorf("error creating parent directories for %q: %w", cfg.Path, err)
 	}
 
-	if err = os.WriteFile(absPath, []byte(cfg.Contents), permissions); err != nil {
+	if err = stepCtx.Root.WriteFile(cleanPath, []byte(cfg.Contents), permissions); err != nil {
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 			fmt.Errorf("error writing file %q: %w", cfg.Path, err)
 	}
 
-	if err = os.Chmod(absPath, permissions); err != nil {
+	if err = stepCtx.Root.Chmod(cleanPath, permissions); err != nil {
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 			fmt.Errorf("error setting permissions on file %q: %w", cfg.Path, err)
 	}

@@ -15,7 +15,7 @@ import (
 // working directory.
 func WorkspacePath(p string) (string, error) {
 	rel := filepath.Clean(strings.TrimLeft(p, "/"))
-	if rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
+	if !filepath.IsLocal(rel) {
 		return "", fmt.Errorf("path %q is outside the working directory", p)
 	}
 	return rel, nil

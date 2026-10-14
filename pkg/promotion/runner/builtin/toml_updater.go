@@ -3,9 +3,9 @@ package builtin
 import (
 	"context"
 	"fmt"
+	"os"
 	"strings"
 
-	securejoin "github.com/cyphar/filepath-securejoin"
 	"github.com/xeipuuv/gojsonschema"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
@@ -72,7 +72,7 @@ func (t *tomlUpdater) run(
 
 	result := promotion.StepResult{Status: kargoapi.PromotionStepStatusSucceeded}
 	if len(updates) > 0 {
-		if err := t.updateFile(stepCtx.WorkDir, cfg.Path, updates); err != nil {
+		if err := t.updateFile(stepCtx.Root, cfg.Path, updates); err != nil {
 			return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 				fmt.Errorf("TOML file update failed: %w", err)
 		}
@@ -86,13 +86,21 @@ func (t *tomlUpdater) run(
 	return result, nil
 }
 
-func (t *tomlUpdater) updateFile(workDir string, path string, updates []inttoml.Update) error {
-	absFilePath, err := securejoin.SecureJoin(workDir, path)
+func (t *tomlUpdater) updateFile(root *os.Root, path string, updates []inttoml.Update) error {
+	relPath, err := promotion.WorkspacePath(path)
 	if err != nil {
-		return fmt.Errorf("error joining path %q: %w", path, err)
+		return err
 	}
-	if err := inttoml.SetValuesInFile(absFilePath, updates); err != nil {
+	inBytes, err := root.ReadFile(relPath)
+	if err != nil {
+		return fmt.Errorf("error reading TOML file %q: %w", path, err)
+	}
+	outBytes, err := inttoml.SetValuesInBytes(inBytes, updates)
+	if err != nil {
 		return fmt.Errorf("error updating TOML file %q: %w", path, err)
+	}
+	if err = root.WriteFile(relPath, outBytes, 0o600); err != nil {
+		return fmt.Errorf("error writing TOML file %q: %w", path, err)
 	}
 	return nil
 }

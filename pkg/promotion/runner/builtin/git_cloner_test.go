@@ -363,9 +363,7 @@ func Test_gitCloner_run(t *testing.T) {
 	runner, ok := r.(*gitCloner)
 	require.True(t, ok)
 
-	stepCtx := &promotion.StepContext{
-		WorkDir: t.TempDir(),
-	}
+	stepCtx := newTestStepContext(t, t.TempDir())
 
 	res, err := runner.run(
 		t.Context(),
@@ -416,6 +414,20 @@ func Test_gitCloner_run(t *testing.T) {
 		},
 		res.Output["commits"],
 	)
+
+	// A checkout path that resolves outside the working directory is refused.
+	escapingWorkDir, outside := escapingWorkspace(t)
+	res, err = runner.run(
+		t.Context(),
+		newTestStepContext(t, escapingWorkDir),
+		builtin.GitCloneConfig{
+			RepoURL:  fmt.Sprintf("%s/test.git", server.URL),
+			Checkout: []builtin.Checkout{{Commit: srcBranchCommitID, Path: "out/escaped"}},
+		},
+	)
+	require.ErrorContains(t, err, "path escapes from parent")
+	require.Equal(t, kargoapi.PromotionStepStatusErrored, res.Status)
+	require.NoDirExists(t, filepath.Join(outside, "escaped"))
 }
 
 func Test_gitCloner_run_with_submodules(t *testing.T) {
@@ -475,9 +487,7 @@ func Test_gitCloner_run_with_submodules(t *testing.T) {
 	runner, ok := r.(*gitCloner)
 	require.True(t, ok)
 
-	stepCtx := &promotion.StepContext{
-		WorkDir: t.TempDir(),
-	}
+	stepCtx := newTestStepContext(t, t.TempDir())
 
 	res, err := runner.run(
 		t.Context(),
