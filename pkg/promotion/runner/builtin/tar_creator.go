@@ -11,6 +11,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	securejoin "github.com/cyphar/filepath-securejoin"
 	"github.com/go-git/go-git/v5/plumbing/format/gitignore"
@@ -88,7 +89,17 @@ func (t *tarCreator) run(
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, err
 	}
 
-	result, err := t.createTarball(absInPath, absOutPath, cfg.Gzip, cfg.Ignore)
+	var mtime *time.Time
+	if cfg.Mtime != "" {
+		parsed, parseErr := time.Parse(time.RFC3339, cfg.Mtime)
+		if parseErr != nil {
+			return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
+				fmt.Errorf("invalid mtime %q: %w", cfg.Mtime, parseErr)
+		}
+		mtime = &parsed
+	}
+
+	result, err := t.createTarball(absInPath, absOutPath, cfg.Gzip, cfg.Ignore, mtime)
 	if err != nil {
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 			fmt.Errorf("failed to create the tar archive %q: %w", cfg.OutPath, err)
@@ -155,6 +166,7 @@ func (t *tarCreator) createTarball(
 	absInPath, absOutPath string,
 	shouldGzip bool,
 	ignore string,
+	mtime *time.Time,
 ) (promotion.StepResult, error) {
 	matcher := t.buildIgnoreMatcher(ignore)
 
@@ -270,6 +282,14 @@ func (t *tarCreator) createTarball(
 			relPath += "/"
 		}
 		header.Name = relPath
+		// Who owned the files on the controller is meaningless to anyone
+		// extracting the archive, so it is never recorded.
+		header.Uid, header.Gid = 0, 0
+		header.Uname, header.Gname = "", ""
+		if mtime != nil {
+			header.ModTime = *mtime
+			header.AccessTime, header.ChangeTime = time.Time{}, time.Time{}
+		}
 
 		if err := tw.WriteHeader(header); err != nil {
 			return fmt.Errorf("failed to write tar header for %q: %w", path, err)

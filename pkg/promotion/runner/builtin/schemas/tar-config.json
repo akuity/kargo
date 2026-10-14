@@ -23,6 +23,11 @@
     "gzip": {
       "type": "boolean",
       "description": "Gzip determines whether the archive should be compressed using gzip. Defaults to false (the archive is uncompressed unless this is set to true)."
+    },
+    "mtime": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?(Z|[+-]\\d{2}:\\d{2})$",
+      "description": "Mtime is an RFC 3339 timestamp (e.g. \"1970-01-01T00:00:00Z\") to record as the modification time of every entry in the archive, like GNU tar's --mtime. Setting it makes the archive depend only on the names, permissions and content of the files, so identical input produces an identical archive. When not set, the files' own modification times are recorded."
     }
   }
 }
