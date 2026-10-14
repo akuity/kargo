@@ -260,35 +260,70 @@ func Test_tarCreator_run(t *testing.T) {
 				assert.ErrorContains(t, err, "failed to create output directory")
 			},
 		},
+		{
+			name: "records the given mtime",
+			setupFiles: func(t *testing.T) string {
+				tmpDir := t.TempDir()
+
+				inDir := filepath.Join(tmpDir, "source")
+				require.NoError(t, os.Mkdir(inDir, 0o750))
+				require.NoError(t, os.WriteFile(filepath.Join(inDir, "file.txt"), []byte("test content"), 0o600))
+
+				return tmpDir
+			},
+			cfg: builtin.TarConfig{
+				InPath:  "source",
+				OutPath: "archive.tar",
+				Mtime:   "1970-01-01T00:00:00Z",
+			},
+			assertions: func(t *testing.T, workDir string, result promotion.StepResult, err error) {
+				assert.NoError(t, err)
+				assert.Equal(t, kargoapi.PromotionStepStatusSucceeded, result.Status)
+
+				f, err := os.Open(filepath.Join(workDir, "archive.tar"))
+				require.NoError(t, err)
+				defer f.Close()
+
+				expected := time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC)
+				tr := tar.NewReader(f)
+				var entries int
+				for {
+					h, err := tr.Next()
+					if err == io.EOF {
+						break
+					}
+					require.NoError(t, err)
+					assert.True(t, h.ModTime.Equal(expected), h.Name)
+					entries++
+				}
+				assert.NotZero(t, entries)
+			},
+		},
+		{
+			name: "fails with an invalid mtime",
+			setupFiles: func(t *testing.T) string {
+				tmpDir := t.TempDir()
+
+				inDir := filepath.Join(tmpDir, "source")
+				require.NoError(t, os.Mkdir(inDir, 0o750))
+				require.NoError(t, os.WriteFile(filepath.Join(inDir, "file.txt"), []byte("test content"), 0o600))
+
+				return tmpDir
+			},
+			cfg: builtin.TarConfig{
+				InPath:  "source",
+				OutPath: "archive.tar",
+				Mtime:   "not-a-time",
+			},
+			assertions: func(t *testing.T, _ string, result promotion.StepResult, err error) {
+				assert.Error(t, err)
+				assert.Equal(t, kargoapi.PromotionStepStatusErrored, result.Status)
+				assert.ErrorContains(t, err, "invalid mtime")
+			},
+		},
 	}
 
 	runner := &tarCreator{}
-
-	tests = append(tests, struct {
-		name       string
-		setupFiles func(*testing.T) string
-		cfg        builtin.TarConfig
-		assertions func(*testing.T, string, promotion.StepResult, error)
-	}{
-		name: "fails with an invalid mtime",
-		setupFiles: func(t *testing.T) string {
-			tmpDir := t.TempDir()
-			inDir := filepath.Join(tmpDir, "source")
-			require.NoError(t, os.Mkdir(inDir, 0o750))
-			require.NoError(t, os.WriteFile(filepath.Join(inDir, "file.txt"), []byte("test content"), 0o600))
-			return tmpDir
-		},
-		cfg: builtin.TarConfig{
-			InPath:  "source",
-			OutPath: "archive.tar",
-			Mtime:   "not-a-time",
-		},
-		assertions: func(t *testing.T, _ string, result promotion.StepResult, err error) {
-			assert.Error(t, err)
-			assert.Equal(t, kargoapi.PromotionStepStatusErrored, result.Status)
-			assert.ErrorContains(t, err, "invalid mtime")
-		},
-	})
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
