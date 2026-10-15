@@ -108,7 +108,7 @@
             "jira",
             "snow-create",
             "snow-update",
-            "snow-query-for-records",
+            "snow-query-records",
             "snow-wait-for-condition",
             "snow-delete"
         ]
