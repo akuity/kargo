@@ -1,0 +1,28 @@
+{{- if and .Values.dataPlane.controller.install .Values.controller.enabled }}
+# The controller acts as its own ServiceAccount toward the API server, with
+# short-lived tokens it requests for it, so it may create that
+# ServiceAccount's tokens and no other's. The grant names this controller's
+# ServiceAccount, so unlike the kargo-controller Role every controller
+# shares, it is a Role of this controller's own: with one Helm release per
+# controller in the control plane's namespace, a shared Role would carry
+# whichever controller's name was rendered last.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ include "kargo.controller.fullname" . }}-token-requester
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "kargo.labels" . | nindent 4 }}
+    {{- include "kargo.controller.labels" . | nindent 4 }}
+    {{- include "kargo.controller.idLabel" . | nindent 4 }}
+  {{- include "kargo.annotations" (dict "root" . "annotations" .Values.controller.annotations) | nindent 2 }}
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - serviceaccounts/token
+  resourceNames:
+  - {{ include "kargo.controller.fullname" . }}
+  verbs:
+  - create
+{{- end }}

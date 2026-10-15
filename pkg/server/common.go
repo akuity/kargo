@@ -80,6 +80,12 @@ var (
 		Kind:    "Freight",
 	}
 
+	targetGVK = schema.GroupVersionKind{
+		Group:   kargoapi.GroupVersion.Group,
+		Version: kargoapi.GroupVersion.Version,
+		Kind:    "Target",
+	}
+
 	errSecretManagementDisabled = libhttp.ErrorStr(
 		"secret management is not enabled",
 		http.StatusNotImplemented,
@@ -92,6 +98,15 @@ var (
 
 	errEmptySecret = libhttp.ErrorStr(
 		"cannot have empty secret",
+		http.StatusBadRequest,
+	)
+
+	// errTargetNotKubernetesResource is returned when a Target reaches the
+	// generic resource endpoints, which only speak Kubernetes. Targets live
+	// in the database and have endpoints of their own.
+	errTargetNotKubernetesResource = libhttp.ErrorStr(
+		"Targets are not Kubernetes resources; "+
+			"use /v1beta1/projects/{project}/targets instead",
 		http.StatusBadRequest,
 	)
 )

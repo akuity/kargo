@@ -23,6 +23,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/pkg/client/apiserver"
 	"github.com/akuity/kargo/pkg/controller/metrics"
 	k8sevent "github.com/akuity/kargo/pkg/event/kubernetes"
 	fakeevent "github.com/akuity/kargo/pkg/kubernetes/event/fake"
@@ -42,8 +43,10 @@ func TestNewPromotionReconciler(t *testing.T) {
 		k8sevent.NewEventSender(&fakeevent.EventRecorder{}),
 		&promotion.MockEngine{},
 		ReconcilerConfig{},
+		nil,
 	)
 	require.NotNil(t, r.kargoClient)
+	require.Nil(t, r.targets)
 	require.NotNil(t, r.sender)
 	require.NotNil(t, r.promoEngine)
 	require.NotNil(t, r.getStageFn)
@@ -66,6 +69,7 @@ func newFakeReconciler(
 		k8sevent.NewEventSender(recorder),
 		&promotion.MockEngine{},
 		ReconcilerConfig{},
+		nil,
 	)
 }
 
@@ -1399,7 +1403,10 @@ func Test_reconciler_promote_targetContext(t *testing.T) {
 				kargoClient: fake.NewClientBuilder().WithScheme(scheme).WithObjects(
 					stage,
 					freight,
-					&kargoapi.Target{
+				).Build(),
+				promoEngine: engine,
+				targets: fakeTargetGetter{
+					"fake-target": {
 						ObjectMeta: metav1.ObjectMeta{
 							Name:      "fake-target",
 							Namespace: testNamespace,
@@ -1411,8 +1418,7 @@ func Test_reconciler_promote_targetContext(t *testing.T) {
 							},
 						},
 					},
-				).Build(),
-				promoEngine: engine,
+				},
 			}
 
 			status, _, err := r.promote(
@@ -1424,6 +1430,163 @@ func Test_reconciler_promote_targetContext(t *testing.T) {
 			require.NoError(t, err)
 			require.Equal(t, kargoapi.PromotionPhaseSucceeded, status.Phase)
 			testCase.assert(t, capturedCtx.Target)
+		})
+	}
+}
+
+// fakeTargetGetter is a promotion.TargetGetter over a fixed set of Targets,
+// keyed by name.
+type fakeTargetGetter map[string]*kargoapi.Target
+
+func (f fakeTargetGetter) GetTarget(_ context.Context, _, name string) (*kargoapi.Target, error) {
+	return f[name], nil
+}
+
+// failingTargetGetter is a promotion.TargetGetter that cannot read any Target.
+type failingTargetGetter struct{ err error }
+
+func (f failingTargetGetter) GetTarget(context.Context, string, string) (*kargoapi.Target, error) {
+	return nil, f.err
+}
+
+func Test_reconciler_promote_targetErrors(t *testing.T) {
+	scheme := k8sruntime.NewScheme()
+	require.NoError(t, kargoapi.SchemeBuilder.AddToScheme(scheme))
+
+	const testNamespace = "fake-namespace"
+
+	testFreight := &kargoapi.Freight{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "fake-freight",
+			Namespace: testNamespace,
+		},
+		Origin: kargoapi.FreightOrigin{
+			Kind: kargoapi.FreightOriginKindWarehouse,
+			Name: "fake-warehouse",
+		},
+	}
+
+	testStage := &kargoapi.Stage{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "fake-stage",
+			Namespace: testNamespace,
+		},
+		Spec: kargoapi.StageSpec{
+			RequestedFreight: []kargoapi.FreightRequest{{
+				Origin:  testFreight.Origin,
+				Sources: kargoapi.FreightSources{Direct: true},
+			}},
+		},
+	}
+
+	testCases := []struct {
+		name    string
+		targets promotion.TargetGetter
+		assert  func(*testing.T, *kargoapi.PromotionStatus, error)
+	}{
+		{
+			name: "no API server to read Targets from ends the Promotion",
+			assert: func(t *testing.T, status *kargoapi.PromotionStatus, err error) {
+				require.ErrorIs(t, err, promotion.ErrTargetsUnavailable)
+				require.ErrorContains(t, err, "no API server to read them from")
+				require.Nil(t, status)
+			},
+		},
+		{
+			name:    "a Target that does not exist ends the Promotion",
+			targets: fakeTargetGetter{},
+			assert: func(t *testing.T, status *kargoapi.PromotionStatus, err error) {
+				require.ErrorIs(t, err, promotion.ErrTargetNotFound)
+				require.Nil(t, status)
+			},
+		},
+		{
+			name: "a refused credential ends the Promotion",
+			targets: failingTargetGetter{
+				err: &apiserver.APIError{StatusCode: 403, Message: "forbidden"},
+			},
+			assert: func(t *testing.T, status *kargoapi.PromotionStatus, err error) {
+				require.ErrorContains(t, err, "forbidden")
+				require.Nil(t, status)
+			},
+		},
+		{
+			name:    "an undecodable answer ends the Promotion",
+			targets: failingTargetGetter{err: errors.New("error decoding Target")},
+			assert: func(t *testing.T, status *kargoapi.PromotionStatus, err error) {
+				require.ErrorContains(t, err, "error decoding Target")
+				require.Nil(t, status)
+			},
+		},
+		{
+			name: "an API server that could not answer leaves the Promotion Running",
+			targets: failingTargetGetter{
+				err: &apiserver.APIError{StatusCode: 503},
+			},
+			assert: func(t *testing.T, status *kargoapi.PromotionStatus, err error) {
+				require.ErrorContains(t, err, "API server responded 503")
+				require.NotNil(t, status)
+				require.Equal(t, kargoapi.PromotionPhaseRunning, status.Phase)
+			},
+		},
+		{
+			name:    "an API server that could not be reached leaves the Promotion Running",
+			targets: failingTargetGetter{err: context.DeadlineExceeded},
+			assert: func(t *testing.T, status *kargoapi.PromotionStatus, err error) {
+				require.ErrorIs(t, err, context.DeadlineExceeded)
+				require.NotNil(t, status)
+				require.Equal(t, kargoapi.PromotionPhaseRunning, status.Phase)
+			},
+		},
+	}
+	for i, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			promo := kargoapi.Promotion{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "fake-promotion",
+					Namespace: testNamespace,
+					UID:       types.UID(fmt.Sprintf("promote-target-error-%d", i)),
+				},
+				Spec: kargoapi.PromotionSpec{
+					Stage:   testStage.Name,
+					Freight: testFreight.Name,
+					Target:  "fake-target",
+					Steps:   []kargoapi.PromotionStep{{Uses: "fake-step"}},
+				},
+			}
+			t.Cleanup(func() {
+				require.NoError(t, os.RemoveAll(promotionWorkDir(promo.UID)))
+			})
+
+			stage, freight := testStage.DeepCopy(), testFreight.DeepCopy()
+
+			r := &reconciler{
+				kargoClient: fake.NewClientBuilder().WithScheme(scheme).WithObjects(
+					stage,
+					freight,
+				).Build(),
+				promoEngine: &promotion.MockEngine{
+					PromoteFn: func(
+						context.Context,
+						promotion.Context,
+						[]promotion.Step,
+					) (promotion.Result, error) {
+						t.Fatal("no steps should run for a Promotion whose Target cannot be resolved")
+						return promotion.Result{}, nil
+					},
+				},
+				targets: testCase.targets,
+			}
+
+			status, _, err := r.promote(
+				context.Background(),
+				promo,
+				stage,
+				freight,
+			)
+			testCase.assert(t, status, err)
 		})
 	}
 }

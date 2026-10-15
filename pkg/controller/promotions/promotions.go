@@ -24,6 +24,7 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/api"
+	"github.com/akuity/kargo/pkg/client/apiserver"
 	"github.com/akuity/kargo/pkg/controller"
 	argocd "github.com/akuity/kargo/pkg/controller/argocd/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/controller/metrics"
@@ -67,6 +68,11 @@ type reconciler struct {
 	promoEngine    promotion.Engine
 	apiReader      client.Reader
 	shardPredicate controller.ResponsibleFor[kargoapi.Promotion]
+	// targets resolves the Target a Promotion promotes to, through the API
+	// server. It is nil when the controller has no API server to read from,
+	// which is usual for a shard installed without one; a Promotion that
+	// names a Target then fails, saying so.
+	targets promotion.TargetGetter
 
 	cfg ReconcilerConfig
 
@@ -107,6 +113,7 @@ func SetupReconcilerWithManager(
 	argocdMgr manager.Manager,
 	promoEngine promotion.Engine,
 	cfg ReconcilerConfig,
+	targets promotion.TargetGetter,
 ) error {
 	// Index running Promotions by Argo CD Applications
 	if err := kargoMgr.GetFieldIndexer().IndexField(
@@ -158,6 +165,7 @@ func SetupReconcilerWithManager(
 		),
 		promoEngine,
 		cfg,
+		targets,
 	)
 
 	c, err := ctrl.NewControllerManagedBy(kargoMgr).
@@ -252,6 +260,7 @@ func newReconciler(
 	sender event.Sender,
 	promoEngine promotion.Engine,
 	cfg ReconcilerConfig,
+	targets promotion.TargetGetter,
 ) *reconciler {
 	r := &reconciler{
 		kargoClient:  kargoClient,
@@ -260,6 +269,7 @@ func newReconciler(
 		sender:       sender,
 		promoMetrics: metrics.NewPromotionMetrics(kargoClient),
 		cfg:          cfg,
+		targets:      targets,
 		shardPredicate: controller.ResponsibleFor[kargoapi.Promotion]{
 			IsDefaultController: cfg.IsDefaultController,
 			ShardName:           cfg.ShardName,
@@ -615,9 +625,20 @@ func (r *reconciler) promote(
 	// single Stage's promotion process to behave differently per destination.
 	// Promotions that name no Target promote to the Stage itself and carry no
 	// target context, exactly as they did before Targets existed.
-	targetCtx, targetErr := promotion.ResolveTargetContext(ctx, r.kargoClient, &promo)
+	targetCtx, targetErr := promotion.ResolveTargetContext(ctx, r.targets, &promo)
 	if targetErr != nil {
-		return nil, nil, targetErr
+		// A Target that does not exist, a controller with no API server to
+		// read Targets from, or an answer the API server will keep giving (a
+		// credential it refuses, a body that cannot be decoded) ends the
+		// Promotion: retrying cannot change the outcome. Only a failure to
+		// reach the API server, a timeout or a 5xx say, leaves the Promotion
+		// Running so that the error backs off instead of ending it.
+		if !apiserver.IsRetryable(targetErr) {
+			return nil, nil, targetErr
+		}
+		running := promo.Status.DeepCopy()
+		running.Phase = kargoapi.PromotionPhaseRunning
+		return running, nil, targetErr
 	}
 
 	// Prepare promotion steps and vars for the promotion execution engine.

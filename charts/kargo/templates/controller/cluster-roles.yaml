@@ -39,11 +39,19 @@ rules:
   - clusterconfigs
   - projects
   - projectconfigs
-  - targets
   verbs:
   - get
   - list
   - watch
+# Targets live in the database and the controller reads them through the API
+# server, which authorizes it against these verbs.
+- apiGroups:
+  - kargo.akuity.io
+  resources:
+  - targets
+  verbs:
+  - get
+  - list
 - apiGroups:
   - kargo.akuity.io
   resources:

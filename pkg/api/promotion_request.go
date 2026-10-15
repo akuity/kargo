@@ -115,35 +115,26 @@ func ComparePromotionRequestPhase(a, b kargoapi.PromotionRequestPhase) int {
 	}
 }
 
-// NewPromotionRequest constructs a PromotionRequest expressing the intent to
-// promote the given Freight to the Targets the Stage governs.
+// NewPromotionRequest builds a PromotionRequest that promotes the named
+// Freight to the given Targets on behalf of the Stage.
 //
-// The Stage's target selectors are resolved to concrete Targets here, once, and
-// the result recorded in spec.targets. That list is never recomputed: a
-// PromotionRequest is a snapshot of what the Stage governed at this moment, so
-// its threshold and terminal state are computed against a fixed set rather than
-// a selector that could match differently later. A Target that appears after
-// this point is picked up by a subsequent PromotionRequest, not by re-resolving
-// this one.
+// The Targets are the ones the Stage governs at this moment, resolved by the
+// caller (see FilterTargetsForStage), and their names are recorded in
+// spec.targets. That list is never recomputed: a PromotionRequest is a
+// snapshot of what the Stage governed when it was created, so its threshold
+// and terminal state are computed against a fixed set rather than a selector
+// that could match differently later. A Target that appears after this point
+// is picked up by a subsequent PromotionRequest, not by re-resolving this one.
 //
 // The Stage is set as the controlling owner, so its PromotionRequests are
 // garbage-collected with it.
 //
 // The Stage MUST be target-aware. Callers should gate on IsTargetAware.
 func NewPromotionRequest(
-	ctx context.Context,
-	c client.Client,
 	stage *kargoapi.Stage,
 	freightName string,
-) (*kargoapi.PromotionRequest, error) {
-	targets, err := ListTargetsForStage(ctx, c, stage)
-	if err != nil {
-		return nil, fmt.Errorf(
-			"error resolving Targets governed by Stage %q in namespace %q: %w",
-			stage.Name, stage.Namespace, err,
-		)
-	}
-
+	targets []kargoapi.Target,
+) *kargoapi.PromotionRequest {
 	// Never nil: spec.targets is a required field, so a nil slice would
 	// serialize as null and be rejected. An empty list is meaningful -- it
 	// records that the Stage governed no Targets at this moment.
@@ -183,7 +174,7 @@ func NewPromotionRequest(
 			Targets:        specTargets,
 			UpdateStrategy: updateStrategy,
 		},
-	}, nil
+	}
 }
 
 // GetPromotionRequest returns a pointer to the PromotionRequest resource specified by the

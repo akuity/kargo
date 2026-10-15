@@ -66,6 +66,21 @@ func Test_server_updateResources(t *testing.T) {
 				},
 			},
 			{
+				name: "Targets are not Kubernetes resources",
+				// A Target manifest, as a user would hand to kargo apply; the Go
+				// type carries no TypeMeta since Targets are not custom resources.
+				body: mustJSONBody(map[string]any{
+					"apiVersion": kargoapi.GroupVersion.String(),
+					"kind":       "Target",
+					"metadata":   map[string]any{"namespace": testProject.Name, "name": "us-east-1"},
+				}),
+				clientBuilder: fake.NewClientBuilder().WithObjects(testProject),
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
+					require.Equal(t, http.StatusBadRequest, w.Code)
+					require.Contains(t, w.Body.String(), "/v1beta1/projects/{project}/targets")
+				},
+			},
+			{
 				name: "resource does not exist",
 				body: mustJSONBody(testWarehouse),
 				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {

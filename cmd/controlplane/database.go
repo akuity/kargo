@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
@@ -10,9 +11,12 @@ import (
 )
 
 // openDatabase opens a pool to the configured database, waiting for it to
-// accept connections, and confirms that its schema is at the version this
-// binary expects. Refusing to start against an old schema is what keeps new
-// code from ever running against tables the migrations have not created yet.
+// accept connections and then for its schema to reach the version this
+// binary expects, within one connect timeout for both. Nothing orders a
+// component's start after the migration run, so the schema being behind is
+// waited for like the database being down; refusing to serve until it has
+// caught up is what keeps new code from ever running against tables the
+// migrations have not created yet.
 func openDatabase(
 	ctx context.Context,
 	cfg database.Config,
@@ -22,6 +26,7 @@ func openDatabase(
 	if err != nil {
 		return nil, err
 	}
+	deadline := time.Now().Add(cfg.ConnectTimeout)
 	pool, err := database.ConnectWithRetry(
 		ctx,
 		connString,
@@ -46,7 +51,7 @@ func openDatabase(
 		pool.Close()
 		return nil, err
 	}
-	if err = migrator.Check(ctx); err != nil {
+	if err = database.WaitForSchema(ctx, migrator, time.Until(deadline)); err != nil {
 		pool.Close()
 		return nil, err
 	}

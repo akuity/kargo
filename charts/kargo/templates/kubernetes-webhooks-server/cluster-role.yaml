@@ -50,7 +50,6 @@ rules:
   - projectconfigs
   - promotiontasks
   - stages
-  - targets
   - warehouses
   verbs:
   - get
