@@ -20,26 +20,6 @@ import {LuFileJson, LuFiles, LuGlobe, LuWorkflow} from 'react-icons/lu';
 import {isBeta, isEnterprise} from '@site/tags';
 import styles from './styles.module.css';
 
-const TIERS = [
-  {key: 'all', label: 'All'},
-  {key: 'oss', label: 'Open source'},
-  {key: 'enterprise', label: 'Enterprise'},
-  {key: 'beta', label: 'Beta'},
-];
-
-function matchesTier(step, tier) {
-  switch (tier) {
-    case 'oss':
-      return !step.enterprise;
-    case 'enterprise':
-      return step.enterprise;
-    case 'beta':
-      return step.beta;
-    default:
-      return true;
-  }
-}
-
 // Icon for a step, picked by name prefix. Falls back to a generic icon.
 const ICONS = [
   [/^git-/, SiGit],
@@ -95,9 +75,8 @@ export default function StepCatalog() {
   const groups = category.items.filter((item) => item.type === 'category');
   const [query, setQuery] = useState('');
   const [activeGroup, setActiveGroup] = useState(null);
-  const [tier, setTier] = useState('all');
 
-  // Filters can be preset from the URL (e.g. ?q=helm&group=Git&tier=beta).
+  // Filters can be preset from the URL (e.g. ?q=helm&group=Git).
   // Applied after the first render so it matches the pre-built HTML, which
   // has no filters.
   const {search} = useLocation();
@@ -105,7 +84,6 @@ export default function StepCatalog() {
     const params = new URLSearchParams(search);
     setQuery(params.get('q') ?? '');
     setActiveGroup(params.get('group'));
-    setTier(params.get('tier') ?? 'all');
   }, [search]);
   const {docs} = useDocsVersion();
   const steps = groups.flatMap((group) =>
@@ -123,62 +101,38 @@ export default function StepCatalog() {
   const visible = steps.filter(
     (step) =>
       (!activeGroup || step.group === activeGroup) &&
-      matchesTier(step, tier) &&
       (!q ||
         step.label.toLowerCase().includes(q) ||
         step.description.toLowerCase().includes(q)),
   );
   return (
     <div>
-      <input
-        type="search"
-        aria-label="Search promotion steps"
-        className={styles.search}
-        placeholder="Search steps by name or description…"
-        value={query}
-        onChange={(e) => setQuery(e.target.value)}
-      />
-      <div className={styles.filters} role="group" aria-label="Filter by group">
-        <button
-          type="button"
-          aria-pressed={!activeGroup}
-          className={!activeGroup ? styles.chipActive : styles.chip}
-          onClick={() => setActiveGroup(null)}
+      <div className={styles.toolbar}>
+        <input
+          type="search"
+          aria-label="Search promotion steps"
+          className={styles.search}
+          placeholder="Search steps by name or description…"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+        />
+        <select
+          aria-label="Filter by group"
+          className={styles.select}
+          value={activeGroup ?? ''}
+          onChange={(e) => setActiveGroup(e.target.value || null)}
         >
-          All groups
-        </button>
-        {groups.map((group) => (
-          <button
-            key={group.label}
-            type="button"
-            aria-pressed={activeGroup === group.label}
-            className={
-              activeGroup === group.label ? styles.chipActive : styles.chip
-            }
-            onClick={() =>
-              setActiveGroup(activeGroup === group.label ? null : group.label)
-            }
-          >
-            {group.label}
-          </button>
-        ))}
+          <option value="">All groups</option>
+          {groups.map((group) => (
+            <option key={group.label} value={group.label}>
+              {group.label}
+            </option>
+          ))}
+        </select>
       </div>
-      <div className={styles.filters} role="group" aria-label="Filter by tier">
-        {TIERS.map((t) => (
-          <button
-            key={t.key}
-            type="button"
-            aria-pressed={tier === t.key}
-            className={tier === t.key ? styles.chipActive : styles.chip}
-            onClick={() => setTier(t.key)}
-          >
-            {t.label}
-          </button>
-        ))}
-        <span className={styles.count} aria-live="polite">
-          Showing {visible.length} of {steps.length} steps
-        </span>
-      </div>
+      <p className={styles.count} aria-live="polite">
+        Showing {visible.length} of {steps.length} steps
+      </p>
       {groups.map((group) => {
         const groupSteps = visible.filter((step) => step.group === group.label);
         if (!groupSteps.length) {

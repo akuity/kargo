@@ -1,47 +1,47 @@
-.search {
-  width: 100%;
-  padding: 0.6rem 0.9rem;
-  margin-bottom: 1rem;
-  font-size: 1rem;
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.search,
+.select {
+  padding: 0.5rem 0.75rem;
+  font-size: 0.95rem;
   border: 1px solid var(--ifm-color-emphasis-300);
   border-radius: 0.5rem;
   background: var(--ifm-background-surface-color);
   color: var(--ifm-font-color-base);
 }
 
-.search:focus {
+.search {
+  flex: 1 1 16rem;
+  min-width: 0;
+}
+
+.select {
+  flex: 0 0 auto;
+  cursor: pointer;
+}
+
+.search:focus,
+.select:focus {
   outline: none;
   border-color: var(--ifm-color-primary);
 }
 
-.filters {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.4rem;
-  margin-bottom: 0.75rem;
-}
-
-.chip,
-.chipActive {
-  padding: 0.2rem 0.75rem;
-  border-radius: 1rem;
-  border: 1px solid var(--ifm-color-emphasis-300);
-  background: transparent;
-  color: var(--ifm-font-color-base);
-  font-size: 0.85rem;
-  cursor: pointer;
-}
-
-.chipActive {
-  background: var(--ifm-color-primary);
-  border-color: var(--ifm-color-primary);
-  color: #fff;
+/* Narrow screens: stack search and the group dropdown, full width. */
+@media (max-width: 768px) {
+  .search,
+  .select {
+    flex-basis: 100%;
+  }
 }
 
 .count {
-  margin-left: auto;
-  font-size: 0.85rem;
+  margin: 0.4rem 0 0;
+  text-align: right;
+  font-size: 0.8rem;
   color: var(--ifm-color-emphasis-600);
 }
 

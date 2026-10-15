@@ -108,29 +108,31 @@ const config = {
                 return item;
               });
             }
-            // Split the flat list of promotion steps into collapsible groups
-            // (per promotion-step-groups.json). Every step must be listed in
-            // exactly one group so new steps can't silently go missing.
+            // Arrange promotion steps into the groups in
+            // promotion-step-groups.json. custom.css hides them from the
+            // sidebar; they drive the catalog page, breadcrumbs, and
+            // previous/next order. Every step must be listed in exactly one
+            // group so new steps can't silently go missing.
             const stepsDir = 'user-guide/reference-docs/promotion-steps/';
             const stepsIndex = `${stepsDir}index`;
-            const stepGroupByDocId = new Map();
+            const groupedStepIds = new Set();
             for (const group of promotionStepGroups) {
               for (const step of group.steps) {
                 const docId = stepsDir + step;
                 if (!docIds.has(docId)) {
                   throw new Error(`promotion-step-groups.json lists unknown step: ${step}`);
                 }
-                if (stepGroupByDocId.has(docId)) {
+                if (groupedStepIds.has(docId)) {
                   throw new Error(`promotion-step-groups.json lists step more than once: ${step}`);
                 }
-                stepGroupByDocId.set(docId, group.label);
+                groupedStepIds.add(docId);
               }
             }
             const missingSteps = [...docIds]
               .filter((id) => (
                 id.startsWith(stepsDir) &&
                 id !== stepsIndex &&
-                !stepGroupByDocId.has(id)
+                !groupedStepIds.has(id)
               ))
               .map((id) => id.slice(stepsDir.length));
             if (missingSteps.length) {
@@ -147,8 +149,7 @@ const config = {
                   return item;
                 }
                 // Groups and the steps within them appear in the order they're
-                // listed in promotion-step-groups.json. custom.css hides them
-                // so Promotion Steps is a single entry linking to its catalog.
+                // listed in promotion-step-groups.json.
                 const stepsById = new Map(
                   item.items.map((step) => [step.id, step]),
                 );
@@ -156,8 +157,6 @@ const config = {
                 item.items = promotionStepGroups.map((group) => ({
                   type: 'category',
                   label: group.label,
-                  collapsible: true,
-                  collapsed: true,
                   items: group.steps.map((step) => stepsById.get(stepsDir + step)),
                 }));
                 return item;
