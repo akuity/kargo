@@ -21,6 +21,8 @@ import {
   LuFileJson,
   LuFiles,
   LuGlobe,
+  LuLayoutGrid,
+  LuList,
   LuMerge,
   LuMessageSquareText,
   LuScrollText,
@@ -65,9 +67,9 @@ function StepIcon({name}) {
 }
 
 // Descriptions come from front matter and may contain `code` spans.
-function Description({text}) {
+function Description({text, className}) {
   return (
-    <p className={styles.cardDescription}>
+    <p className={className}>
       {text
         .split(/`([^`]+)`/)
         .map((part, i) => (i % 2 ? <code key={i}>{part}</code> : part))}
@@ -82,31 +84,67 @@ function StepCard({step}) {
         <StepIcon name={step.label} />
         <span className={styles.cardTitle}>{step.label}</span>
       </div>
-      <Description text={step.description} />
+      <Description text={step.description} className={styles.cardDescription} />
       {/* Always rendered (even when empty) so every card is the same height. */}
-      <div className={styles.badges}>
-        {step.enterprise && <span className={styles.entBadge}>Enterprise</span>}
-        {step.beta && <span className={styles.betaBadge}>Beta</span>}
-      </div>
+      <Badges step={step} className={styles.badges} />
     </Link>
   );
 }
+
+function Badges({step, className}) {
+  return (
+    <div className={className}>
+      {step.enterprise && <span className={styles.entBadge}>Enterprise</span>}
+      {step.beta && <span className={styles.betaBadge}>Beta</span>}
+    </div>
+  );
+}
+
+// List view: one row per step, with the description clamped to two lines.
+function StepRow({step}) {
+  return (
+    <Link to={step.href} className={styles.row}>
+      <span className={styles.rowName}>
+        <StepIcon name={step.label} />
+        {step.label}
+      </span>
+      <Description text={step.description} className={styles.rowDescription} />
+      <Badges step={step} className={styles.rowBadges} />
+    </Link>
+  );
+}
+
+const VIEWS = [
+  {key: 'grid', label: 'Grid view', Icon: LuLayoutGrid},
+  {key: 'list', label: 'List view', Icon: LuList},
+];
+const VIEW_STORAGE_KEY = 'kargo.promotionStepCatalog.view';
 
 export default function StepCatalog() {
   const category = useCurrentSidebarCategory();
   const groups = category.items.filter((item) => item.type === 'category');
   const [query, setQuery] = useState('');
   const [activeGroup, setActiveGroup] = useState(null);
+  const [view, setView] = useState('grid');
 
-  // Filters can be preset from the URL (e.g. ?q=helm&group=Git).
+  // Filters and view can be preset from the URL (e.g. ?q=helm&group=Git or
+  // ?view=list); otherwise the view is the one last chosen in this browser.
   // Applied after the first render so it matches the pre-built HTML, which
-  // has no filters.
+  // has no filters and uses the grid view.
   const {search} = useLocation();
   useEffect(() => {
     const params = new URLSearchParams(search);
     setQuery(params.get('q') ?? '');
     setActiveGroup(params.get('group'));
+    const preferred =
+      params.get('view') ?? window.localStorage.getItem(VIEW_STORAGE_KEY);
+    setView(preferred === 'list' ? 'list' : 'grid');
   }, [search]);
+
+  const chooseView = (key) => {
+    setView(key);
+    window.localStorage.setItem(VIEW_STORAGE_KEY, key);
+  };
   const {docs} = useDocsVersion();
   const steps = groups.flatMap((group) =>
     group.items.map((item) => ({
@@ -151,6 +189,23 @@ export default function StepCatalog() {
             </option>
           ))}
         </select>
+        <div className={styles.viewToggle} role="group" aria-label="Layout">
+          {VIEWS.map(({key, label, Icon}) => (
+            <button
+              key={key}
+              type="button"
+              aria-label={label}
+              aria-pressed={view === key}
+              title={label}
+              className={
+                view === key ? styles.viewButtonActive : styles.viewButton
+              }
+              onClick={() => chooseView(key)}
+            >
+              <Icon aria-hidden="true" />
+            </button>
+          ))}
+        </div>
       </div>
       <p className={styles.count} aria-live="polite">
         Showing {visible.length} of {steps.length} steps
@@ -166,11 +221,19 @@ export default function StepCatalog() {
               {group.label}
               <span className={styles.groupCount}>{groupSteps.length}</span>
             </h2>
-            <div className={styles.grid}>
-              {groupSteps.map((step) => (
-                <StepCard key={step.href} step={step} />
-              ))}
-            </div>
+            {view === 'list' ? (
+              <div className={styles.list}>
+                {groupSteps.map((step) => (
+                  <StepRow key={step.href} step={step} />
+                ))}
+              </div>
+            ) : (
+              <div className={styles.grid}>
+                {groupSteps.map((step) => (
+                  <StepCard key={step.href} step={step} />
+                ))}
+              </div>
+            )}
           </section>
         );
       })}

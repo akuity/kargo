@@ -30,11 +30,50 @@
   border-color: var(--ifm-color-primary);
 }
 
-/* Narrow screens: stack search and the group dropdown, full width. */
+/* Grid/list toggle, sized to match the search box and dropdown. */
+.viewToggle {
+  display: flex;
+  border: 1px solid var(--ifm-color-emphasis-300);
+  border-radius: 0.5rem;
+  overflow: hidden;
+}
+
+.viewButton,
+.viewButtonActive {
+  display: flex;
+  align-items: center;
+  padding: 0 0.7rem;
+  border: none;
+  background: var(--ifm-background-surface-color);
+  color: var(--ifm-color-emphasis-600);
+  font-size: 1.05rem;
+  cursor: pointer;
+}
+
+.viewButton + .viewButton,
+.viewButton + .viewButtonActive,
+.viewButtonActive + .viewButton {
+  border-left: 1px solid var(--ifm-color-emphasis-300);
+}
+
+.viewButton:hover {
+  color: var(--ifm-font-color-base);
+}
+
+.viewButtonActive {
+  background: var(--ifm-color-emphasis-100);
+  color: var(--ifm-color-primary);
+}
+
+/* Narrow screens: search on its own row; dropdown and toggle share the next. */
 @media (max-width: 768px) {
-  .search,
-  .select {
+  .search {
     flex-basis: 100%;
+  }
+
+  .select {
+    flex: 1 1 0;
+    min-width: 0;
   }
 }
 
@@ -155,6 +194,93 @@
 .cardDescription code {
   font-size: 0.8em;
   padding: 0 0.2em;
+}
+
+/* List view */
+.list {
+  border: 1px solid var(--ifm-color-emphasis-300);
+  border-radius: 0.6rem;
+  overflow: hidden;
+  background: var(--ifm-background-surface-color);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+[data-theme='dark'] .list {
+  box-shadow: none;
+}
+
+.row {
+  display: grid;
+  /* Fixed name and badge columns so every row lines up, badges or not. */
+  grid-template-columns: 14rem 1fr 7.5rem;
+  align-items: center;
+  gap: 1rem;
+  /* Room for two lines of description, so every row is the same height and
+     shorter descriptions sit centred beside the name. */
+  min-height: calc(1.2rem + 2 * 1.45 * 0.85rem);
+  padding: 0.6rem 0.9rem;
+  color: inherit;
+}
+
+.row + .row {
+  border-top: 1px solid var(--ifm-color-emphasis-200);
+}
+
+.row:hover {
+  color: inherit;
+  text-decoration: none;
+  background: var(--ifm-color-emphasis-100);
+}
+
+.rowName {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-family: var(--ifm-font-family-monospace);
+  font-size: 0.85rem;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.rowDescription {
+  margin: 0;
+  font-size: 0.85rem;
+  line-height: 1.45;
+  color: var(--ifm-color-emphasis-700);
+  /* At most two lines; the row's min-height keeps all rows equal. */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.rowDescription code {
+  font-size: 0.8em;
+  padding: 0 0.2em;
+}
+
+.rowBadges {
+  display: flex;
+  gap: 0.3rem;
+  justify-content: flex-end;
+}
+
+/* Narrow screens: stack name, description and badges in each row. */
+@media (max-width: 768px) {
+  .row {
+    grid-template-columns: 1fr;
+    gap: 0.3rem;
+  }
+
+  .rowDescription {
+    min-height: calc(2 * 1.45em);
+  }
+
+  .rowBadges {
+    justify-content: flex-start;
+    min-height: 1.1rem;
+  }
 }
 
 .empty {
