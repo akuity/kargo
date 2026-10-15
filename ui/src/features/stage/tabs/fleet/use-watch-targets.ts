@@ -14,7 +14,10 @@ export const useWatchTargets = (project: string, stage?: string, enabled = true)
   const client = useQueryClient();
 
   useEffect(() => {
-    if (!project || !enabled) {
+    // An empty stage is a caller that meant to scope the watch and had no name
+    // to scope it by. Watching the whole project instead would write into a
+    // cache key that caller is not reading.
+    if (!project || !enabled || stage === '') {
       return;
     }
 

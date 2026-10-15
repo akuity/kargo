@@ -4,12 +4,14 @@ import { PromotionRequest, Stage, Target } from '@ui/gen/api/v2/models';
 
 import {
   FleetRow,
+  collectionUpToDate,
   fleetRows,
   freightNames,
   matchesTarget,
   rowFreightNames,
   rowPhase,
   rowSeverity,
+  roundPhase,
   rowsSummary,
   SEVERITY_ACTIVE,
   SEVERITY_FAILED,
@@ -102,6 +104,14 @@ describe('fleetRows()', () => {
     );
   });
 
+  test('an aborted round reports its Targets as aborted, not still pending', () => {
+    const rows = fleetRows(stage(), [target('t')], request(['t'], { phase: 'Aborted' }));
+    expect(rows[0].phase).toBe('Aborted');
+    expect(rowSeverity(rows[0])).toBe(SEVERITY_SETTLED);
+    // Nothing was landed, so the round's Freight is not claimed for the Target.
+    expect(rowFreightNames(rows[0])).toEqual([]);
+  });
+
   test('reads current Freight and health from the Target status for this Stage', () => {
     const t = target('t', {
       status: {
@@ -156,6 +166,50 @@ describe('fleetRows()', () => {
     });
     const rows = fleetRows(stage(), [target('d'), target('c'), target('b'), target('a')], round);
     expect(rows.map((row) => row.target.metadata?.name)).toEqual(['b', 'c', 'd', 'a']);
+  });
+});
+
+describe('roundPhase()', () => {
+  test('a Target the round never named has no phase', () => {
+    expect(roundPhase(request(['other']), 't')).toBeUndefined();
+    expect(roundPhase(undefined, 't')).toBeUndefined();
+  });
+
+  test("takes the child Promotion's phase when there is one", () => {
+    const round = request(['t'], { targets: [{ name: 't', phase: 'Running' }] });
+    expect(roundPhase(round, 't')).toBe('Running');
+  });
+
+  test('a child without a phase yet is Pending', () => {
+    const round = request(['t'], { targets: [{ name: 't' }] });
+    expect(roundPhase(round, 't')).toBe('Pending');
+  });
+
+  test.each([
+    // A round that ended before creating a child ended its Targets with it.
+    ['Succeeded', 'Succeeded'],
+    ['Failed', 'Failed'],
+    ['Errored', 'Errored'],
+    // Aborted is terminal too, mirroring PromotionRequestPhase.IsTerminal:
+    // reading it as Pending would leave the fleet looking mid-promotion.
+    ['Aborted', 'Aborted'],
+    ['Running', 'Pending'],
+    [undefined, 'Pending']
+  ])('a round in %s with no child reports %s', (phase, expected) => {
+    expect(roundPhase(request(['t'], { phase }), 't')).toBe(expected);
+  });
+});
+
+describe('collectionUpToDate()', () => {
+  test.each([
+    [{ id: 'abc' }, 'abc', true],
+    [{ id: 'old' }, 'abc', false],
+    // Nothing to compare: the question is open, not answered false.
+    [undefined, 'abc', undefined],
+    [{ id: 'abc' }, undefined, undefined],
+    [{}, 'abc', undefined]
+  ])('%j against %j -> %s', (collection, collectionID, expected) => {
+    expect(collectionUpToDate(collection, collectionID)).toBe(expected);
   });
 });
 

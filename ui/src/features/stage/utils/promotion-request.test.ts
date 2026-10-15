@@ -1,9 +1,11 @@
 import { describe, expect, test } from 'vitest';
 
-import { PromotionRequest } from '@ui/gen/api/v2/models';
+import { PromotionRequest, Stage } from '@ui/gen/api/v2/models';
 
 import {
   blockingMessage,
+  currentRound,
+  currentRounds,
   isPromotionRequestPhaseTerminal,
   promotionRequestCompareFn,
   roundBlock,
@@ -21,6 +23,8 @@ describe('isPromotionRequestPhaseTerminal()', () => {
     ['Succeeded', true],
     ['Failed', true],
     ['Errored', true],
+    // Mirrors PromotionRequestPhase.IsTerminal on the back end.
+    ['Aborted', true],
     ['Pending', false],
     ['Running', false],
     [undefined, false]
@@ -218,5 +222,76 @@ describe('roundBlock()', () => {
         })
       )
     ).toBeUndefined();
+  });
+});
+
+describe('currentRound()', () => {
+  const named = (name: string, stage = 'prod') =>
+    request({ metadata: { name }, spec: { stage, freight: 'abc', targets: [] } });
+  const prod = (status?: Stage['status']): Stage => ({ metadata: { name: 'prod' }, status });
+  const requests = [named('prod.01'), named('prod.03'), named('prod.02'), named('other.09', 'uat')];
+
+  test("prefers the round the Stage's status calls current", () => {
+    const stage = prod({
+      currentPromotionRequest: { name: 'prod.01' },
+      lastPromotionRequest: { name: 'prod.02' }
+    } as Stage['status']);
+    expect(currentRound(stage, requests)?.metadata?.name).toBe('prod.01');
+  });
+
+  test('falls back to the last round the status names', () => {
+    const stage = prod({ lastPromotionRequest: { name: 'prod.02' } } as Stage['status']);
+    expect(currentRound(stage, requests)?.metadata?.name).toBe('prod.02');
+  });
+
+  test('falls back to the newest round the Stage has, ignoring other Stages', () => {
+    expect(currentRound(prod(), requests)?.metadata?.name).toBe('prod.03');
+  });
+
+  test('a status naming a round of another Stage does not reach it', () => {
+    const stage = prod({ currentPromotionRequest: { name: 'other.09' } } as Stage['status']);
+    expect(currentRound(stage, requests)?.metadata?.name).toBe('prod.03');
+  });
+
+  test('a Stage with no rounds, or no name, has none', () => {
+    expect(currentRound(prod(), [])).toBeUndefined();
+    expect(currentRound(undefined, requests)).toBeUndefined();
+  });
+});
+
+describe('currentRounds()', () => {
+  const named = (name: string, stage: string) =>
+    request({ metadata: { name }, spec: { stage, freight: 'abc', targets: [] } });
+  const requests = [
+    named('prod.01', 'prod'),
+    named('prod.03', 'prod'),
+    named('uat.09', 'uat'),
+    named('prod.02', 'prod')
+  ];
+
+  test('resolves every Stage against its own requests', () => {
+    const rounds = currentRounds(
+      [
+        { metadata: { name: 'prod' } },
+        { metadata: { name: 'uat' }, status: { lastPromotionRequest: { name: 'uat.09' } } },
+        { metadata: { name: 'never-promoted' } }
+      ] as Stage[],
+      requests
+    );
+    expect(rounds.prod?.metadata?.name).toBe('prod.03');
+    expect(rounds.uat?.metadata?.name).toBe('uat.09');
+    expect(rounds['never-promoted']).toBeUndefined();
+  });
+
+  test('agrees with currentRound, Stage for Stage', () => {
+    const stages = [{ metadata: { name: 'prod' } }, { metadata: { name: 'uat' } }] as Stage[];
+    const rounds = currentRounds(stages, requests);
+    for (const stage of stages) {
+      expect(rounds[stage.metadata?.name || '']).toBe(currentRound(stage, requests));
+    }
+  });
+
+  test('a Stage with no name is left out', () => {
+    expect(currentRounds([{} as Stage], requests)).toEqual({});
   });
 });
