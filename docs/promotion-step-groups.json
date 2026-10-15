@@ -52,15 +52,20 @@
         ]
     },
     {
-        "label": "Flow Control & Metadata",
+        "label": "Approvals & Notifications",
         "steps": [
             "wait-for-approval",
             "get-user-input",
             "send-message",
+            "record-audit-event"
+        ]
+    },
+    {
+        "label": "Flow Control & Metadata",
+        "steps": [
             "set-metadata",
             "set-freight-alias",
             "compose-output",
-            "record-audit-event",
             "fail"
         ]
     },

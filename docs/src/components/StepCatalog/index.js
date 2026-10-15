@@ -16,7 +16,21 @@ import {
   SiOpencontainersinitiative,
   SiOpentofu,
 } from 'react-icons/si';
-import {LuFileJson, LuFiles, LuGlobe, LuWorkflow} from 'react-icons/lu';
+import {
+  LuCircleX,
+  LuFileJson,
+  LuFiles,
+  LuGlobe,
+  LuMerge,
+  LuMessageSquareText,
+  LuScrollText,
+  LuTag,
+  LuTags,
+  LuTextCursorInput,
+  LuTicket,
+  LuUserCheck,
+  LuWorkflow,
+} from 'react-icons/lu';
 import {isBeta, isEnterprise} from '@site/tags';
 import styles from './styles.module.css';
 
@@ -34,6 +48,15 @@ const ICONS = [
   [/^http/, LuGlobe],
   [/^(json|yaml|toml)-/, LuFileJson],
   [/^(copy|delete|file-write|tar|untar)$/, LuFiles],
+  [/^wait-for-approval$/, LuUserCheck],
+  [/^get-user-input$/, LuTextCursorInput],
+  [/^send-message$/, LuMessageSquareText],
+  [/^record-audit-event$/, LuScrollText],
+  [/^set-metadata$/, LuTags],
+  [/^set-freight-alias$/, LuTag],
+  [/^compose-output$/, LuMerge],
+  [/^fail$/, LuCircleX],
+  [/^snow-/, LuTicket],
 ];
 
 function StepIcon({name}) {
