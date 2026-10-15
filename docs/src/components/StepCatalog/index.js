@@ -83,12 +83,11 @@ function StepCard({step}) {
         <span className={styles.cardTitle}>{step.label}</span>
       </div>
       <Description text={step.description} />
-      {(step.enterprise || step.beta) && (
-        <div className={styles.badges}>
-          {step.enterprise && <span className={styles.entBadge}>Enterprise</span>}
-          {step.beta && <span className={styles.betaBadge}>Beta</span>}
-        </div>
-      )}
+      {/* Always rendered (even when empty) so every card is the same height. */}
+      <div className={styles.badges}>
+        {step.enterprise && <span className={styles.entBadge}>Enterprise</span>}
+        {step.beta && <span className={styles.betaBadge}>Beta</span>}
+      </div>
     </Link>
   );
 }
@@ -163,7 +162,10 @@ export default function StepCatalog() {
         }
         return (
           <section key={group.label}>
-            <h2 className={styles.groupHeading}>{group.label}</h2>
+            <h2 className={styles.groupHeading}>
+              {group.label}
+              <span className={styles.groupCount}>{groupSteps.length}</span>
+            </h2>
             <div className={styles.grid}>
               {groupSteps.map((step) => (
                 <StepCard key={step.href} step={step} />

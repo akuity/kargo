@@ -52,15 +52,6 @@
         ]
     },
     {
-        "label": "Approvals & Notifications",
-        "steps": [
-            "wait-for-approval",
-            "get-user-input",
-            "send-message",
-            "record-audit-event"
-        ]
-    },
-    {
         "label": "Flow Control & Metadata",
         "steps": [
             "set-metadata",
@@ -77,6 +68,15 @@
             "oci-download",
             "oci-push",
             "jfrog-evidence"
+        ]
+    },
+    {
+        "label": "Approvals & Notifications",
+        "steps": [
+            "wait-for-approval",
+            "get-user-input",
+            "send-message",
+            "record-audit-event"
         ]
     },
     {
