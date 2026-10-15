@@ -20,7 +20,9 @@ import (
 // is re-read live before it is acted on. Matching is resource-specific;
 // missing rows and orphaned rows are handled here. Live objects come first,
 // in list order, followed by the keys of orphaned rows sorted by name, with
-// no duplicates. Neither the snapshot nor either data source is mutated.
+// no duplicates. A kind whose rows outlive their objects passes a nil key:
+// orphaned rows are then not orphans at all and are left out. Neither the
+// snapshot nor either data source is mutated.
 func Diff[Object client.Object, Row any](
 	ctx context.Context,
 	reader client.Reader,
@@ -62,6 +64,9 @@ func Diff[Object client.Object, Row any](
 	})
 	if err != nil {
 		return nil, err
+	}
+	if key == nil {
+		return requests, nil
 	}
 	var orphaned []reconcile.Request
 	for id, row := range rows {

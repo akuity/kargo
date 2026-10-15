@@ -158,7 +158,9 @@ func TestMigrationsIntegration(t *testing.T) {
 		require.NoError(t, downErr)
 		require.Equal(t, version, result.Source.Version)
 	}
-	requireTable(t, pool, "projects", false)
+	for _, table := range []string{"projects", "targets", "stages", "promotions"} {
+		requireTable(t, pool, table, false)
+	}
 	_, err = migrations.Up(ctx)
 	require.NoError(t, err)
 	require.NoError(t, New(pool).UpsertProject(ctx, UpsertProjectParams{

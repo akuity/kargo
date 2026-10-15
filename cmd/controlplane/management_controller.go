@@ -142,8 +142,9 @@ func (o *managementControllerOptions) run(ctx context.Context) error {
 		return fmt.Errorf("error setting up Namespaces reconciler: %w", err)
 	}
 
-	// The database holds Targets, whose stats Projects report, and the mirror
-	// of Projects. It is optional: without it, neither happens.
+	// The database holds Targets, whose stats Projects report, and the
+	// mirrors of Projects, Stages, and Promotions. It is optional: without
+	// it, neither happens.
 	var db *database.Queries
 	if o.Database.Configured() {
 		pool, err := openDatabase(ctx, o.Database, "kargo-management-controller")

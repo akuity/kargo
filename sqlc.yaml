@@ -12,6 +12,8 @@ sql:
       # types of the same name; a store layer converts between the two.
       rename:
         project: ProjectRow
+        stage: StageRow
+        promotion: PromotionRow
         target: TargetRow
       overrides:
       # Labels are a string map and params an object of opaque JSON values,
@@ -33,6 +35,11 @@ sql:
           import: github.com/google/uuid
           type: UUID
       # Nullable values, such as optional query arguments, are pointers.
+      - db_type: text
+        nullable: true
+        go_type:
+          type: string
+          pointer: true
       - db_type: timestamptz
         nullable: true
         go_type:
