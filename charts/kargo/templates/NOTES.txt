@@ -105,9 +105,9 @@ Ready to get started?
    warning from your browser. You may safely disregard this.
 {{- end }}
 
-⬇️  The latest version of the Kargo CLI can be downloaded from:
+⬇️  The Kargo CLI for this version of Kargo can be downloaded from:
 
-      https://github.com/akuity/kargo/releases/latest
+      https://github.com/akuity/kargo/releases/tag/{{ .Chart.AppVersion }}
 
 🛠️  To log in using the Kargo CLI:
 
