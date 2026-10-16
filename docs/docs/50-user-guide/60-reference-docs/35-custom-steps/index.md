@@ -1,9 +1,9 @@
 ---
-sidebar_label: Custom steps
+sidebar_label: Custom Steps
 description: Execute command in user-provided image
 ---
 
-# Custom steps
+# Custom Steps
 
 :::info
 
