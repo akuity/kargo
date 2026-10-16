@@ -35,7 +35,6 @@ func TestDiff(t *testing.T) {
 		rows        []database.ProjectRow
 		listErr     error
 		snapshotErr error
-		incomplete  bool
 		insert      bool
 		want        []reconcile.Request
 		wantErr     string
@@ -67,10 +66,6 @@ func TestDiff(t *testing.T) {
 			listErr: errors.New("offline"), wantErr: "listing objects",
 		},
 		{
-			name: "incomplete list", rows: []database.ProjectRow{row},
-			incomplete: true, wantErr: "incomplete Kubernetes list",
-		},
-		{
 			name: "invalid identity", project: testProject("", created),
 			rows: []database.ProjectRow{row}, wantErr: "has no UID",
 		},
@@ -89,7 +84,7 @@ func TestDiff(t *testing.T) {
 				builder.WithObjects(testCase.project.DeepCopy())
 			}
 			store := &fakeStore{rows: slices.Clone(testCase.rows), listErr: testCase.snapshotErr}
-			reader := &diffReader{Reader: builder.Build(), err: testCase.listErr, incomplete: testCase.incomplete}
+			reader := &diffReader{Reader: builder.Build(), err: testCase.listErr}
 			if testCase.insert {
 				reader.insertInto = store
 			}
@@ -131,7 +126,6 @@ func TestMatchesTimestampPrecision(t *testing.T) {
 type diffReader struct {
 	client.Reader
 	err        error
-	incomplete bool
 	insertInto *fakeStore
 	calls      int
 }
@@ -144,11 +138,5 @@ func (r *diffReader) List(ctx context.Context, list client.ObjectList, opts ...c
 	if r.insertInto != nil {
 		r.insertInto.rows = append(r.insertInto.rows, database.ProjectRow{ID: "concurrent", Name: "concurrent"})
 	}
-	if err := r.Reader.List(ctx, list, opts...); err != nil {
-		return err
-	}
-	if r.incomplete {
-		list.SetContinue("next-page")
-	}
-	return nil
+	return r.Reader.List(ctx, list, opts...)
 }

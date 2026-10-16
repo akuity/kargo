@@ -25,6 +25,7 @@ func TestDiff(t *testing.T) {
 		name      string
 		rows      map[string]string // UID -> name
 		matchErr  error
+		cached    bool
 		wrongType bool
 		want      []reconcile.Request
 		wantErr   string
@@ -39,6 +40,15 @@ func TestDiff(t *testing.T) {
 		},
 		{
 			name: "all rows match", rows: map[string]string{"a-uid": "a", "b-uid": "b", "c-uid": "c"},
+		},
+		{
+			// The controller-runtime cache stamps every list with a continue
+			// token even though it never paginates. The list is complete.
+			name: "continue token from the cache is ignored", rows: map[string]string{
+				"b-uid": "outdated", "c-uid": "c", "z-stale": "z",
+			},
+			cached: true,
+			want:   []reconcile.Request{req("a"), req("b"), req("z")},
 		},
 		{
 			// The row for "a" carries an old UID, so "a" is both a live object
@@ -60,12 +70,15 @@ func TestDiff(t *testing.T) {
 			t.Parallel()
 			scheme := runtime.NewScheme()
 			require.NoError(t, kargoapi.AddToScheme(scheme))
-			kube := fake.NewClientBuilder().WithScheme(scheme).WithObjects(
+			var kube client.Reader = fake.NewClientBuilder().WithScheme(scheme).WithObjects(
 				&kargoapi.Project{ObjectMeta: metav1.ObjectMeta{Name: "a", UID: "a-uid"}},
 				&kargoapi.Project{ObjectMeta: metav1.ObjectMeta{Name: "b", UID: "b-uid"}},
 				&kargoapi.Project{ObjectMeta: metav1.ObjectMeta{Name: "c", UID: "c-uid"}},
 				&kargoapi.Stage{ObjectMeta: metav1.ObjectMeta{Namespace: "a", Name: "dev", UID: "stage"}},
 			).Build()
+			if testCase.cached {
+				kube = &cacheReader{Reader: kube}
+			}
 			var list client.ObjectList = &kargoapi.ProjectList{}
 			if testCase.wrongType {
 				list = &kargoapi.StageList{}
@@ -90,4 +103,16 @@ func TestDiff(t *testing.T) {
 			require.Equal(t, testCase.rows, snapshot)
 		})
 	}
+}
+
+// cacheReader lists like the controller-runtime cache, which stamps every
+// list it returns with a continue token.
+type cacheReader struct{ client.Reader }
+
+func (r *cacheReader) List(ctx context.Context, list client.ObjectList, opts ...client.ListOption) error {
+	if err := r.Reader.List(ctx, list, opts...); err != nil {
+		return err
+	}
+	list.SetContinue("continue-not-supported")
+	return nil
 }
