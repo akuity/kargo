@@ -87,6 +87,9 @@ const darkComponents: ThemeConfig['components'] = {
   Layout: {
     ...sharedComponents.Layout,
     headerBg: '#1f1f1f'
+  },
+  Segmented: {
+    trackBg: '#1f1f1f'
   }
 };
 
