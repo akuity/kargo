@@ -116,3 +116,23 @@ main.landing-page {
   color: #fff;
   transform: none;
 }
+
+/*
+ * Long code names (e.g. event types) in the "On this page" list break
+ * mid-word in monospace. Render them as plain text so they fit.
+ */
+.table-of-contents code {
+  font-family: inherit;
+  font-size: inherit;
+  background: none;
+  border: none;
+  padding: 0;
+  overflow-wrap: anywhere;
+}
+
+/* Promotion Steps is a single sidebar entry; its steps are listed on
+   its catalog page instead. */
+.sidebar-step-catalog > .menu__list,
+.sidebar-step-catalog > .menu__list-item-collapsible > .menu__caret {
+  display: none !important;
+}

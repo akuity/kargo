@@ -1,6 +1,6 @@
 ---
 sidebar_label: snow-update
-description: Integrates with ServiceNow to manage Change Requests, Incidents, Problems, etc., and track promotion workflows.
+description: Updates fields on an existing ServiceNow record.
 ---
 
 # `snow-update`
@@ -16,7 +16,7 @@ ServiceNow integration for kargo is a group of promotion steps:
 1. [snow-create](./snow-create.md) 
 2. [snow-update](./snow-update.md)
 3. [snow-delete](./snow-delete.md)
-4. [snow-query-for-records](./snow-query-for-records.md)
+4. [snow-query-records](./snow-query-records.md)
 5. [snow-wait-for-condition](./snow-wait-for-condition.md)
 
 These steps provide a comprehensive integration with ServiceNow, allowing you to create, update, delete, query for records, and track

@@ -1,0 +1,116 @@
+[
+    {
+        "label": "Git",
+        "steps": [
+            "git-clone",
+            "git-clear",
+            "git-commit",
+            "git-push",
+            "github-push",
+            "git-open-pr",
+            "git-wait-for-pr",
+            "git-merge-pr",
+            "git-tag"
+        ]
+    },
+    {
+        "label": "Helm & Kustomize",
+        "steps": [
+            "kustomize-set-image",
+            "kustomize-build",
+            "helm-update-chart",
+            "helm-template"
+        ]
+    },
+    {
+        "label": "Structured Data",
+        "steps": [
+            "yaml-update",
+            "yaml-parse",
+            "yaml-merge",
+            "json-update",
+            "json-parse",
+            "toml-update",
+            "toml-parse"
+        ]
+    },
+    {
+        "label": "Files",
+        "steps": [
+            "copy",
+            "file-write",
+            "delete",
+            "tar",
+            "untar"
+        ]
+    },
+    {
+        "label": "Argo CD",
+        "steps": [
+            "argocd-update",
+            "argocd-wait"
+        ]
+    },
+    {
+        "label": "Flow Control & Metadata",
+        "steps": [
+            "set-metadata",
+            "set-freight-alias",
+            "compose-output",
+            "fail"
+        ]
+    },
+    {
+        "label": "HTTP & Artifacts",
+        "steps": [
+            "http",
+            "http-download",
+            "oci-download",
+            "oci-push",
+            "jfrog-evidence"
+        ]
+    },
+    {
+        "label": "Approvals & Notifications",
+        "steps": [
+            "wait-for-approval",
+            "get-user-input",
+            "send-message",
+            "record-audit-event"
+        ]
+    },
+    {
+        "label": "GitHub",
+        "steps": [
+            "gh-create-issue",
+            "gh-issue-add-comment",
+            "gh-issue-update-comment",
+            "gh-issue-delete-comment",
+            "gh-update-issue",
+            "gh-search-issues",
+            "gh-wait-for-issue-state",
+            "gha-dispatch-workflow",
+            "gha-wait-for-workflow"
+        ]
+    },
+    {
+        "label": "Terraform & OpenTofu",
+        "steps": [
+            "hcl-update",
+            "tf-plan",
+            "tf-apply",
+            "tf-output"
+        ]
+    },
+    {
+        "label": "Change Management",
+        "steps": [
+            "jira",
+            "snow-create",
+            "snow-update",
+            "snow-query-records",
+            "snow-wait-for-condition",
+            "snow-delete"
+        ]
+    }
+]

@@ -1,22 +1,22 @@
 ---
-sidebar_label: snow-query-for-records
-description: Integrates with ServiceNow to manage Change Requests, Incidents, Problems, etc., and track promotion workflows.
+sidebar_label: snow-query-records
+description: Queries a ServiceNow table and outputs the first matching record.
 ---
 
-# `snow-query-for-records`
+# `snow-query-records`
 
 :::info
 This promotion step is only available in Kargo on the
 [Akuity Platform](https://akuity.io/akuity-platform), versions v1.9.0 and above.
 :::
 
-This page is for `snow-query-for-records` step. You can query for a ServiceNow record (returns the first matching record) using this step. Check below for other ServiceNow promotion steps.
+This page is for `snow-query-records` step. You can query for a ServiceNow record (returns the first matching record) using this step. Check below for other ServiceNow promotion steps.
 
 ServiceNow integration for kargo is a group of promotion steps:  
 1. [snow-create](./snow-create.md) 
 2. [snow-update](./snow-update.md)
 3. [snow-delete](./snow-delete.md)
-4. [snow-query-for-records](./snow-query-for-records.md)
+4. [snow-query-records](./snow-query-records.md)
 5. [snow-wait-for-condition](./snow-wait-for-condition.md)
 
 These steps provide a comprehensive integration with ServiceNow, allowing you to create, update, delete, query for records, and track
