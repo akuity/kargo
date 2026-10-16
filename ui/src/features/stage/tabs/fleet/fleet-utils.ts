@@ -51,6 +51,36 @@ export const rowSeverity = (row: FleetRow): number => {
   }
 };
 
+// roundPhase is the phase a round reports for one Target: the child Promotion's
+// when there is one, the round's own when it ended before a child could be
+// created, and Pending while the round has yet to reach the Target. A Target
+// the round never named has no phase -- the round says nothing about it.
+export const roundPhase = (
+  request: PromotionRequest | undefined,
+  target: string | undefined
+): string | undefined => {
+  if (!(request?.spec?.targets || []).some((named) => named.name === target)) {
+    return undefined;
+  }
+  const status = request?.status?.targets?.find((named) => named.name === target);
+  if (status) {
+    // A child that exists but has not been picked up yet has no phase; it is
+    // Pending in every sense that matters here.
+    return status.phase || 'Pending';
+  }
+  const requestPhase = request?.status?.phase;
+  return isPromotionRequestPhaseTerminal(requestPhase) ? requestPhase : 'Pending';
+};
+
+// collectionUpToDate compares what a Target runs for a Stage against what the
+// Stage runs. Collection IDs are deterministic in their contents, so equal IDs
+// mean equal Freight; either side missing leaves the question open.
+export const collectionUpToDate = (
+  currentFreight: FreightCollection | undefined,
+  collectionID: string | undefined
+): boolean | undefined =>
+  currentFreight?.id && collectionID ? currentFreight.id === collectionID : undefined;
+
 // promotionPhaseFor resolves what a Target's Promotion cell shows for a round.
 const promotionPhaseFor = (
   target: Target,
@@ -62,16 +92,7 @@ const promotionPhaseFor = (
     return { included };
   }
   const status = request.status?.targets?.find((named) => named.name === name);
-  if (status) {
-    // A child that exists but has not been picked up yet has no phase; it is
-    // Pending in every sense that matters here.
-    return { included, promotion: status.promotion, phase: status.phase || 'Pending' };
-  }
-  const requestPhase = request.status?.phase;
-  return {
-    included,
-    phase: isPromotionRequestPhaseTerminal(requestPhase) ? requestPhase : 'Pending'
-  };
+  return { included, promotion: status?.promotion, phase: roundPhase(request, name) };
 };
 
 // fleetRows builds one row per Target the Stage governs, reading the round's
@@ -93,10 +114,7 @@ export const fleetRows = (
         request,
         ...promotionPhaseFor(target, request),
         currentFreight,
-        upToDate:
-          currentFreight?.id && stageCollectionID
-            ? currentFreight.id === stageCollectionID
-            : undefined,
+        upToDate: collectionUpToDate(currentFreight, stageCollectionID),
         health: forStage?.health
       };
     })
