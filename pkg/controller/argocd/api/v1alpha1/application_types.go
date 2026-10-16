@@ -41,6 +41,7 @@ type ApplicationSource struct {
 	TargetRevision string                      `json:"targetRevision,omitempty"`
 	Helm           *ApplicationSourceHelm      `json:"helm,omitempty"`
 	Kustomize      *ApplicationSourceKustomize `json:"kustomize,omitempty"`
+	Directory      *ApplicationSourceDirectory `json:"directory,omitempty"`
 	Chart          string                      `json:"chart,omitempty"`
 }
 
@@ -93,6 +94,21 @@ type KustomizeImages []KustomizeImage
 
 type ApplicationSourceKustomize struct {
 	Images KustomizeImages `json:"images,omitempty"`
+}
+
+type ApplicationSourceDirectory struct {
+	Jsonnet ApplicationSourceJsonnet `json:"jsonnet,omitempty"`
+}
+
+type ApplicationSourceJsonnet struct {
+	ExtVars []JsonnetVar `json:"extVars,omitempty"`
+	TLAs    []JsonnetVar `json:"tlas,omitempty"`
+}
+
+type JsonnetVar struct {
+	Name  string `json:"name"`
+	Value string `json:"value"`
+	Code  bool   `json:"code,omitempty"`
 }
 
 type ApplicationStatus struct {

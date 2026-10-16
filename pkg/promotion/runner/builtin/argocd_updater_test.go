@@ -493,6 +493,22 @@ func Test_argoCDUpdater_convert(t *testing.T) {
 								},
 							},
 						},
+						"jsonnet": promotion.Config{
+							"tlas": []promotion.Config{
+								{
+									"name":  "image",
+									"value": "fake-image:v1.0.0",
+									"code":  false,
+								},
+							},
+							"extVars": []promotion.Config{
+								{
+									"name":  "env",
+									"value": "prod",
+									"code":  true,
+								},
+							},
+						},
 					}},
 				}},
 			},
@@ -2257,6 +2273,102 @@ func Test_argoCDUpdater_applyArgoCDSourceUpdate(t *testing.T) {
 				)
 				// Everything else should be unchanged
 				updatedSource.Helm = originalSource.Helm
+				assert.Equal(t, originalSource, updatedSource)
+			},
+		},
+
+		{
+			name: "update jsonnet parameters when directory is nil",
+			source: argocd.ApplicationSource{
+				RepoURL: "fake-url",
+			},
+			update: builtin.ArgoCDAppSourceUpdate{
+				RepoURL: "fake-url",
+				Jsonnet: &builtin.ArgoCDJsonnetUpdates{
+					TLAs: []builtin.ArgoCDJsonnetVarUpdate{
+						{
+							Name:  "image",
+							Value: "fake-image:v1.0.0",
+						},
+					},
+				},
+			},
+			assertions: func(
+				t *testing.T,
+				originalSource argocd.ApplicationSource,
+				updated bool,
+				updatedSource argocd.ApplicationSource,
+			) {
+				assert.True(t, updated)
+				require.NotNil(t, updatedSource.Directory)
+				assert.Equal(
+					t,
+					[]argocd.JsonnetVar{
+						{
+							Name:  "image",
+							Value: "fake-image:v1.0.0",
+						},
+					},
+					updatedSource.Directory.Jsonnet.TLAs,
+				)
+				updatedSource.Directory = originalSource.Directory
+				assert.Equal(t, originalSource, updatedSource)
+			},
+		},
+
+		{
+			name: "update and upsert jsonnet parameters",
+			source: argocd.ApplicationSource{
+				RepoURL: "fake-url",
+				Directory: &argocd.ApplicationSourceDirectory{
+					Jsonnet: argocd.ApplicationSourceJsonnet{
+						TLAs: []argocd.JsonnetVar{
+							{Name: "tla1", Value: "old-val"},
+						},
+						ExtVars: []argocd.JsonnetVar{
+							{Name: "ext1", Value: "old-val"},
+						},
+					},
+				},
+			},
+			update: builtin.ArgoCDAppSourceUpdate{
+				RepoURL: "fake-url",
+				Jsonnet: &builtin.ArgoCDJsonnetUpdates{
+					TLAs: []builtin.ArgoCDJsonnetVarUpdate{
+						{Name: "tla1", Value: "new-val", Code: true},
+						{Name: "tla2", Value: "val2"},
+					},
+					ExtVars: []builtin.ArgoCDJsonnetVarUpdate{
+						{Name: "ext1", Value: "new-val"},
+						{Name: "ext2", Value: "val2", Code: true},
+					},
+				},
+			},
+			assertions: func(
+				t *testing.T,
+				originalSource argocd.ApplicationSource,
+				updated bool,
+				updatedSource argocd.ApplicationSource,
+			) {
+				assert.True(t, updated)
+				require.NotNil(t, updatedSource.Directory)
+				assert.Equal(
+					t,
+					[]argocd.JsonnetVar{
+						{Name: "tla1", Value: "new-val", Code: true},
+						{Name: "tla2", Value: "val2"},
+					},
+					updatedSource.Directory.Jsonnet.TLAs,
+				)
+				assert.Equal(
+					t,
+					[]argocd.JsonnetVar{
+						{Name: "ext1", Value: "new-val"},
+						{Name: "ext2", Value: "val2", Code: true},
+					},
+					updatedSource.Directory.Jsonnet.ExtVars,
+				)
+				updatedSource.Directory = originalSource.Directory
 				assert.Equal(t, originalSource, updatedSource)
 			},
 		},
