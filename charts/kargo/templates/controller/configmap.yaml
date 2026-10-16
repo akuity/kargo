@@ -21,6 +21,7 @@ data:
   {{- with (include "kargo.tracing.configMapData" .) }}
   {{- . | nindent 2 }}
   {{- end }}
+  {{- include "kargo.nats.configMapData" . | nindent 2 }}
   {{- /*
   The controller is the only component that resolves credentials. Since all
   credential providers automatically register themselves at startup through

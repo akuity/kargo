@@ -65,3 +65,20 @@ database:
     extraArgs:
     - log_lock_waits=on
     - deadlock_timeout=1s
+nats:
+  # The NATS chart only sets metadata.namespace on its resources when this is
+  # set. Tilt applies resources lacking a namespace to the default namespace,
+  # which would leave NATS somewhere other than where Kargo expects it.
+  namespaceOverride: kargo
+  config:
+    cluster:
+      # A single server is enough for local development. Clustering is
+      # disabled rather than scaled down because a JetStream cluster needs at
+      # least two servers; a lone clustered server waits for peers forever.
+      enabled: false
+  container:
+    resources:
+      requests:
+        cpu: 500m
+        memory: 1Gi
+      limits: null

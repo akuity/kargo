@@ -105,6 +105,25 @@ controller is running.
 | `kubeconfigSecrets.kargo`  | Kubernetes `Secret` name containing kubeconfig for a remote Kubernetes cluster hosting Kargo resources. Used by all Kargo components.       | `nil` |
 | `kubeconfigSecrets.argocd` | Kubernetes `Secret` name containing kubeconfig for a remote Kubernetes cluster hosting Argo CD resources. Used by Kargo controller(s) only. | `nil` |
 
+### NATS
+
+The API server, controller, and management controller connect to a NATS
+server at startup. By default, this chart installs a NATS cluster using the
+upstream NATS chart. Any setting supported by that chart may be specified
+under `nats`. See
+https://github.com/nats-io/k8s/tree/main/helm/charts/nats for details.
+
+To use an existing NATS server instead, set `nats.enabled` to `false` and
+configure `nats.external`.
+
+| Name                                | Description                                                                                                                                                                                                                  | Value        |
+| ----------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------ |
+| `nats.enabled`                      | Whether to install NATS as part of this chart. When `false`, `nats.external.url` must be set.                                                                                                                                | `true`       |
+| `nats.fullnameOverride`             | Name of the NATS resources. Kargo components derive the URL of the NATS server from it.                                                                                                                                      | `kargo-nats` |
+| `nats.external.url`                 | URL of an existing NATS server for Kargo components to connect to (e.g. `nats://nats.example.com:4222`). Multiple, comma-separated URLs may be specified. Only used, and then required, when `nats.enabled` is `false`.      | `""`         |
+| `nats.external.nkeySeedSecret.name` | Name of a `Secret` in the release namespace containing an nkey seed with which Kargo components authenticate to the NATS server specified by `nats.external.url`. Leave empty if the server does not require authentication. | `""`         |
+| `nats.external.nkeySeedSecret.key`  | Key within the `Secret` specified by `nats.external.nkeySeedSecret.name` that contains the nkey seed.                                                                                                                        | `seed.nk`    |
+
 ### API
 
 | Name                                              | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         | Value                    |
