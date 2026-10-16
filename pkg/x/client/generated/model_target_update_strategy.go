@@ -21,6 +21,12 @@ var _ MappedNullable = &TargetUpdateStrategy{}
 type TargetUpdateStrategy struct {
 	// MaxConcurrent specifies a number of targets which can be promoted to at the same time Zero means there is no limit (default)
 	MaxConcurrent *int32 `json:"maxConcurrent,omitempty"`
+	// MaxConcurrentPercent specifies MaxConcurrent as a percent value of a fraction of number of targets in the stage (rounded down) If both MaxConcurrent and MaxConcurrentPercent are non-zero, the smallest effective value wins +kubebuilder:validation:Minimum=0 +kubebuilder:validation:Maximum=100
+	MaxConcurrentPercent *int32 `json:"maxConcurrentPercent,omitempty"`
+	// MaxFailures specifies a number of target promotions which can fail before PromotionRequest is considered failed. Specifies a tolerable number, N failing promotions with maxFailures: N is a success, N+1 is a failure. Defaults to 0, meaning no failures tolerated. +kubebuilder:validation:Minimum=0
+	MaxFailures *int32 `json:"maxFailures,omitempty"`
+	// MaxFailuresPercent specifies MaxFailures as a percent value of a fraction of number of targets in the stage (rounded down) If both MaxFailures and MaxFailuresPercent are non-zero, the smallest effective value wins +kubebuilder:validation:Minimum=0 +kubebuilder:validation:Maximum=100
+	MaxFailuresPercent *int32 `json:"maxFailuresPercent,omitempty"`
 }
 
 // NewTargetUpdateStrategy instantiates a new TargetUpdateStrategy object
@@ -72,6 +78,102 @@ func (o *TargetUpdateStrategy) SetMaxConcurrent(v int32) {
 	o.MaxConcurrent = &v
 }
 
+// GetMaxConcurrentPercent returns the MaxConcurrentPercent field value if set, zero value otherwise.
+func (o *TargetUpdateStrategy) GetMaxConcurrentPercent() int32 {
+	if o == nil || IsNil(o.MaxConcurrentPercent) {
+		var ret int32
+		return ret
+	}
+	return *o.MaxConcurrentPercent
+}
+
+// GetMaxConcurrentPercentOk returns a tuple with the MaxConcurrentPercent field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *TargetUpdateStrategy) GetMaxConcurrentPercentOk() (*int32, bool) {
+	if o == nil || IsNil(o.MaxConcurrentPercent) {
+		return nil, false
+	}
+	return o.MaxConcurrentPercent, true
+}
+
+// HasMaxConcurrentPercent returns a boolean if a field has been set.
+func (o *TargetUpdateStrategy) HasMaxConcurrentPercent() bool {
+	if o != nil && !IsNil(o.MaxConcurrentPercent) {
+		return true
+	}
+
+	return false
+}
+
+// SetMaxConcurrentPercent gets a reference to the given int32 and assigns it to the MaxConcurrentPercent field.
+func (o *TargetUpdateStrategy) SetMaxConcurrentPercent(v int32) {
+	o.MaxConcurrentPercent = &v
+}
+
+// GetMaxFailures returns the MaxFailures field value if set, zero value otherwise.
+func (o *TargetUpdateStrategy) GetMaxFailures() int32 {
+	if o == nil || IsNil(o.MaxFailures) {
+		var ret int32
+		return ret
+	}
+	return *o.MaxFailures
+}
+
+// GetMaxFailuresOk returns a tuple with the MaxFailures field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *TargetUpdateStrategy) GetMaxFailuresOk() (*int32, bool) {
+	if o == nil || IsNil(o.MaxFailures) {
+		return nil, false
+	}
+	return o.MaxFailures, true
+}
+
+// HasMaxFailures returns a boolean if a field has been set.
+func (o *TargetUpdateStrategy) HasMaxFailures() bool {
+	if o != nil && !IsNil(o.MaxFailures) {
+		return true
+	}
+
+	return false
+}
+
+// SetMaxFailures gets a reference to the given int32 and assigns it to the MaxFailures field.
+func (o *TargetUpdateStrategy) SetMaxFailures(v int32) {
+	o.MaxFailures = &v
+}
+
+// GetMaxFailuresPercent returns the MaxFailuresPercent field value if set, zero value otherwise.
+func (o *TargetUpdateStrategy) GetMaxFailuresPercent() int32 {
+	if o == nil || IsNil(o.MaxFailuresPercent) {
+		var ret int32
+		return ret
+	}
+	return *o.MaxFailuresPercent
+}
+
+// GetMaxFailuresPercentOk returns a tuple with the MaxFailuresPercent field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *TargetUpdateStrategy) GetMaxFailuresPercentOk() (*int32, bool) {
+	if o == nil || IsNil(o.MaxFailuresPercent) {
+		return nil, false
+	}
+	return o.MaxFailuresPercent, true
+}
+
+// HasMaxFailuresPercent returns a boolean if a field has been set.
+func (o *TargetUpdateStrategy) HasMaxFailuresPercent() bool {
+	if o != nil && !IsNil(o.MaxFailuresPercent) {
+		return true
+	}
+
+	return false
+}
+
+// SetMaxFailuresPercent gets a reference to the given int32 and assigns it to the MaxFailuresPercent field.
+func (o *TargetUpdateStrategy) SetMaxFailuresPercent(v int32) {
+	o.MaxFailuresPercent = &v
+}
+
 func (o TargetUpdateStrategy) MarshalJSON() ([]byte, error) {
 	toSerialize,err := o.ToMap()
 	if err != nil {
@@ -84,6 +186,15 @@ func (o TargetUpdateStrategy) ToMap() (map[string]interface{}, error) {
 	toSerialize := map[string]interface{}{}
 	if !IsNil(o.MaxConcurrent) {
 		toSerialize["maxConcurrent"] = o.MaxConcurrent
+	}
+	if !IsNil(o.MaxConcurrentPercent) {
+		toSerialize["maxConcurrentPercent"] = o.MaxConcurrentPercent
+	}
+	if !IsNil(o.MaxFailures) {
+		toSerialize["maxFailures"] = o.MaxFailures
+	}
+	if !IsNil(o.MaxFailuresPercent) {
+		toSerialize["maxFailuresPercent"] = o.MaxFailuresPercent
 	}
 	return toSerialize, nil
 }

@@ -9050,6 +9050,18 @@
         "maxConcurrent": {
           "description": "MaxConcurrent specifies a number of targets which can be promoted to at the same time\nZero means there is no limit (default)",
           "type": "integer"
+        },
+        "maxConcurrentPercent": {
+          "description": "MaxConcurrentPercent specifies MaxConcurrent as a percent value\nof a fraction of number of targets in the stage (rounded down)\nIf both MaxConcurrent and MaxConcurrentPercent are non-zero, the smallest effective value wins\n+kubebuilder:validation:Minimum=0\n+kubebuilder:validation:Maximum=100",
+          "type": "integer"
+        },
+        "maxFailures": {
+          "description": "MaxFailures specifies a number of target promotions which can fail before PromotionRequest is considered failed.\nSpecifies a tolerable number, N failing promotions with maxFailures: N is a success, N+1 is a failure.\nDefaults to 0, meaning no failures tolerated.\n+kubebuilder:validation:Minimum=0",
+          "type": "integer"
+        },
+        "maxFailuresPercent": {
+          "description": "MaxFailuresPercent specifies MaxFailures as a percent value\nof a fraction of number of targets in the stage (rounded down)\nIf both MaxFailures and MaxFailuresPercent are non-zero, the smallest effective value wins\n+kubebuilder:validation:Minimum=0\n+kubebuilder:validation:Maximum=100",
+          "type": "integer"
         }
       }
     },

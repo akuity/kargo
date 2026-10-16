@@ -12,4 +12,27 @@ export interface TargetUpdateStrategy {
    * Zero means there is no limit (default)
    */
   maxConcurrent?: number;
+  /**
+   * MaxConcurrentPercent specifies MaxConcurrent as a percent value
+   * of a fraction of number of targets in the stage (rounded down)
+   * If both MaxConcurrent and MaxConcurrentPercent are non-zero, the smallest effective value wins
+   * +kubebuilder:validation:Minimum=0
+   * +kubebuilder:validation:Maximum=100
+   */
+  maxConcurrentPercent?: number;
+  /**
+   * MaxFailures specifies a number of target promotions which can fail before PromotionRequest is considered failed.
+   * Specifies a tolerable number, N failing promotions with maxFailures: N is a success, N+1 is a failure.
+   * Defaults to 0, meaning no failures tolerated.
+   * +kubebuilder:validation:Minimum=0
+   */
+  maxFailures?: number;
+  /**
+   * MaxFailuresPercent specifies MaxFailures as a percent value
+   * of a fraction of number of targets in the stage (rounded down)
+   * If both MaxFailures and MaxFailuresPercent are non-zero, the smallest effective value wins
+   * +kubebuilder:validation:Minimum=0
+   * +kubebuilder:validation:Maximum=100
+   */
+  maxFailuresPercent?: number;
 }

@@ -127,6 +127,32 @@ spec:
                       Zero means there is no limit (default)
                     format: int64
                     type: integer
+                  maxConcurrentPercent:
+                    description: |-
+                      MaxConcurrentPercent specifies MaxConcurrent as a percent value
+                      of a fraction of number of targets in the stage (rounded down)
+                      If both MaxConcurrent and MaxConcurrentPercent are non-zero, the smallest effective value wins
+                    format: int64
+                    maximum: 100
+                    minimum: 0
+                    type: integer
+                  maxFailures:
+                    description: |-
+                      MaxFailures specifies a number of target promotions which can fail before PromotionRequest is considered failed.
+                      Specifies a tolerable number, N failing promotions with maxFailures: N is a success, N+1 is a failure.
+                      Defaults to 0, meaning no failures tolerated.
+                    format: int64
+                    minimum: 0
+                    type: integer
+                  maxFailuresPercent:
+                    description: |-
+                      MaxFailuresPercent specifies MaxFailures as a percent value
+                      of a fraction of number of targets in the stage (rounded down)
+                      If both MaxFailures and MaxFailuresPercent are non-zero, the smallest effective value wins
+                    format: int64
+                    maximum: 100
+                    minimum: 0
+                    type: integer
                 type: object
                 x-kubernetes-validations:
                 - rule: self == oldSelf
