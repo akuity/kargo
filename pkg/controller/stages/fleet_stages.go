@@ -963,7 +963,7 @@ func (r *FleetStageReconciler) createAutoPromotionRequest(
 		"freight", candidate.Name,
 	)
 
-	promotionRequest, err := api.NewPromotionRequest(ctx, r.client, stage, candidate.Name)
+	promotionRequest, err := api.NewPromotionRequestForAllTargets(ctx, r.client, stage, candidate.Name)
 	if err != nil {
 		return fmt.Errorf(
 			"error building PromotionRequest for Freight %q in namespace %q: %w",
