@@ -8,6 +8,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/nats-io/nats.go"
 	"github.com/spf13/cobra"
 	"go.opentelemetry.io/otel/attribute"
 	coordinationv1 "k8s.io/api/coordination/v1"
@@ -194,6 +195,7 @@ func (o *controllerOptions) run(ctx context.Context) error {
 		argocdMgr,
 		credentialsDB,
 		stagesReconcilerCfg,
+		natsConn,
 	); err != nil {
 		return fmt.Errorf("error setting up reconcilers: %w", err)
 	}
@@ -469,6 +471,7 @@ func (o *controllerOptions) setupReconcilers(
 	kargoMgr, argocdMgr manager.Manager,
 	credentialsDB credentials.Database,
 	stagesReconcilerCfg stages.ReconcilerConfig,
+	natsConn *nats.Conn,
 ) error {
 	var argoCDClient client.Client
 	if argocdMgr != nil {
@@ -495,6 +498,7 @@ func (o *controllerOptions) setupReconcilers(
 			promotion.DefaultExprDataCacheFn,
 		),
 		promotions.ReconcilerConfigFromEnv(),
+		natsConn,
 	); err != nil {
 		return fmt.Errorf("error setting up Promotions reconciler: %w", err)
 	}
@@ -516,6 +520,7 @@ func (o *controllerOptions) setupReconcilers(
 		kargoMgr,
 		argocdMgr,
 		sharedIndexer,
+		natsConn,
 	); err != nil {
 		return fmt.Errorf("error setting up regular Stages reconciler: %w", err)
 	}
@@ -524,6 +529,7 @@ func (o *controllerOptions) setupReconcilers(
 		ctx,
 		kargoMgr,
 		sharedIndexer,
+		natsConn,
 	); err != nil {
 		return fmt.Errorf("error setting up control flow Stages reconciler: %w", err)
 	}
@@ -534,6 +540,7 @@ func (o *controllerOptions) setupReconcilers(
 		credentialsDB,
 		subscription.DefaultSubscriberRegistry,
 		warehouses.ReconcilerConfigFromEnv(),
+		natsConn,
 	); err != nil {
 		return fmt.Errorf("error setting up Warehouses reconciler: %w", err)
 	}
