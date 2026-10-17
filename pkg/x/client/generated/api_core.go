@@ -3658,6 +3658,7 @@ type ApiListProjectsRequest struct {
 	ApiService *CoreAPIService
 	mine *bool
 	filter *string
+	labelSelector *string
 	uid *[]string
 	pageSize *int32
 	page *int32
@@ -3672,6 +3673,12 @@ func (r ApiListProjectsRequest) Mine(mine bool) ApiListProjectsRequest {
 // Case-insensitive substring filter applied to the Project name.
 func (r ApiListProjectsRequest) Filter(filter string) ApiListProjectsRequest {
 	r.filter = &filter
+	return r
+}
+
+// Kubernetes label selector applied to Project labels (e.g. &#39;env&#x3D;prod&#39;).
+func (r ApiListProjectsRequest) LabelSelector(labelSelector string) ApiListProjectsRequest {
+	r.labelSelector = &labelSelector
 	return r
 }
 
@@ -3701,9 +3708,9 @@ func (r ApiListProjectsRequest) Execute() (*ListProjectsResponse, *http.Response
 ListProjects List projects
 
 List all Projects resources. Supports server-side filtering by
-name substring, by UID, and by namespaces mapped to the
-authenticated user's ServiceAccounts, plus offset-based
-pagination.
+name substring, by Kubernetes label selector, by UID, and by
+namespaces mapped to the authenticated user's ServiceAccounts,
+plus offset-based pagination.
 
  @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
  @return ApiListProjectsRequest
@@ -3741,6 +3748,9 @@ func (a *CoreAPIService) ListProjectsExecute(r ApiListProjectsRequest) (*ListPro
 	}
 	if r.filter != nil {
 		parameterAddToHeaderOrQuery(localVarQueryParams, "filter", r.filter, "", "")
+	}
+	if r.labelSelector != nil {
+		parameterAddToHeaderOrQuery(localVarQueryParams, "labelSelector", r.labelSelector, "", "")
 	}
 	if r.uid != nil {
 		parameterAddToHeaderOrQuery(localVarQueryParams, "uid", r.uid, "form", "csv")
