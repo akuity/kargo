@@ -66,6 +66,7 @@ rules:
   resources:
   - clusterconfigs
   - promotionrequests
+  - promotions
   - stages
   - warehouses
   - projectconfigs
