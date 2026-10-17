@@ -20,7 +20,7 @@ does not preserve comments or formatting from an existing file.
 - `path` must be relative and may not traverse outside the workspace; paths
   containing `..` that escape the workspace are rejected.
 - Writing into the `.git` directory is forbidden.
-- Paths that resolve to a different location through a symlink are rejected.
+- Paths that resolve outside the workspace through a symlink are rejected.
 
 By default the step will not replace an existing file; set `overwrite` to
 `true` to allow replacement.

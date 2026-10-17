@@ -366,10 +366,7 @@ func Test_httpDownloader_run(t *testing.T) {
 			t.Cleanup(srv.Close)
 			tt.cfg.URL = srv.URL
 
-			// Create step context
-			stepCtx := &promotion.StepContext{
-				WorkDir: workDir,
-			}
+			stepCtx := newTestStepContext(t, workDir)
 
 			// Run the downloader
 			d := &httpDownloader{}
@@ -524,7 +521,7 @@ func Test_httpDownloader_downloadToFile(t *testing.T) {
 
 			// Download the file
 			d := &httpDownloader{}
-			err := d.downloadToFile(t.Context(), resp, outPath)
+			err := d.downloadToFile(t.Context(), resp, newTestRoot(t, tempDir), "downloaded-file.txt")
 			tt.assertions(t, err, outPath)
 		})
 	}
@@ -562,7 +559,7 @@ func Test_httpDownloader_downloadToFile_contextCancellation(t *testing.T) {
 	}()
 
 	d := &httpDownloader{}
-	err := d.downloadToFile(ctx, resp, outPath)
+	err := d.downloadToFile(ctx, resp, newTestRoot(t, tempDir), "interrupted-file.txt")
 
 	require.ErrorContains(t, err, "download canceled")
 
@@ -591,7 +588,7 @@ func Test_httpDownloader_downloadToFile_sizeExceeded(t *testing.T) {
 	outPath := filepath.Join(tempDir, "large-file.txt")
 
 	d := &httpDownloader{}
-	err := d.downloadToFile(t.Context(), resp, outPath)
+	err := d.downloadToFile(t.Context(), resp, newTestRoot(t, tempDir), "large-file.txt")
 
 	require.ErrorContains(t, err, "download exceeds limit")
 
@@ -622,4 +619,43 @@ func (sr *slowReader) Read(p []byte) (n int, err error) {
 	}
 
 	return 0, nil
+}
+
+func Test_httpDownloader_run_escapingSymlink(t *testing.T) {
+	workDir, outside := escapingWorkspace(t)
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write([]byte("content"))
+	}))
+	t.Cleanup(srv.Close)
+	res, err := (&httpDownloader{}).run(
+		t.Context(),
+		newTestStepContext(t, workDir),
+		builtin.HTTPDownloadConfig{URL: srv.URL, OutPath: "out/file.txt"},
+	)
+	require.ErrorContains(t, err, "path escapes from parent")
+	require.Equal(t, kargoapi.PromotionStepStatusErrored, res.Status)
+	require.NoFileExists(t, filepath.Join(outside, "file.txt"))
+}
+
+func Test_httpDownloader_run_symlinkedOutPath(t *testing.T) {
+	workDir := t.TempDir()
+	require.NoError(t, os.WriteFile(filepath.Join(workDir, "target.txt"), []byte("old"), 0o600))
+	require.NoError(t, os.Symlink("target.txt", filepath.Join(workDir, "link.txt")))
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write([]byte("new"))
+	}))
+	t.Cleanup(srv.Close)
+	res, err := (&httpDownloader{}).run(
+		t.Context(),
+		newTestStepContext(t, workDir),
+		builtin.HTTPDownloadConfig{URL: srv.URL, OutPath: "link.txt", AllowOverwrite: true},
+	)
+	require.NoError(t, err)
+	require.Equal(t, kargoapi.PromotionStepStatusSucceeded, res.Status)
+	b, err := os.ReadFile(filepath.Join(workDir, "target.txt"))
+	require.NoError(t, err)
+	require.Equal(t, "new", string(b))
+	fi, err := os.Lstat(filepath.Join(workDir, "link.txt"))
+	require.NoError(t, err)
+	require.NotZero(t, fi.Mode()&os.ModeSymlink)
 }

@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	securejoin "github.com/cyphar/filepath-securejoin"
 	"github.com/xeipuuv/gojsonschema"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
@@ -61,12 +60,9 @@ func (g *gitTagTagger) run(
 	stepCtx *promotion.StepContext,
 	cfg builtin.GitTagConfig,
 ) (promotion.StepResult, error) {
-	path, err := securejoin.SecureJoin(stepCtx.WorkDir, cfg.Path)
+	path, err := promotion.ExternalPath(stepCtx, cfg.Path)
 	if err != nil {
-		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, fmt.Errorf(
-			"error joining path %s with work dir %s: %w",
-			cfg.Path, stepCtx.WorkDir, err,
-		)
+		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, err
 	}
 	workTree, err := git.LoadWorkTree(ctx, path, nil)
 	if err != nil {

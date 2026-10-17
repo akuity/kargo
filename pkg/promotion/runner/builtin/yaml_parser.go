@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 
-	securejoin "github.com/cyphar/filepath-securejoin"
 	"github.com/expr-lang/expr"
 	"github.com/xeipuuv/gojsonschema"
 	"sigs.k8s.io/yaml"
@@ -72,7 +71,7 @@ func (yp *yamlParser) run(
 		return failure, fmt.Errorf("invalid %s config: outputs is required", stepKindYAMLParse)
 	}
 
-	data, err := yp.readAndParseYAML(stepCtx.WorkDir, cfg.Path)
+	data, err := yp.readAndParseYAML(stepCtx.Root, cfg.Path)
 	if err != nil {
 		return failure, err
 	}
@@ -90,19 +89,19 @@ func (yp *yamlParser) run(
 
 // readAndParseYAML reads and unmarshals a YAML document and returns the result.
 func (yp *yamlParser) readAndParseYAML(
-	workDir string,
+	root *os.Root,
 	path string,
 ) (any, error) {
-	absFilePath, err := securejoin.SecureJoin(workDir, path)
+	relPath, err := promotion.WorkspacePath(path)
 	if err != nil {
-		return nil, fmt.Errorf("error joining path %q: %w", path, err)
+		return nil, err
 	}
-	yamlData, err := os.ReadFile(absFilePath)
+	yamlData, err := root.ReadFile(relPath)
 	if err != nil {
-		return nil, fmt.Errorf("error reading YAML file %q: %w", absFilePath, err)
+		return nil, fmt.Errorf("error reading YAML file %q: %w", path, err)
 	}
 	if len(yamlData) == 0 {
-		return nil, fmt.Errorf("could not parse empty YAML file: %q", absFilePath)
+		return nil, fmt.Errorf("could not parse empty YAML file: %q", path)
 	}
 	var data any
 	if err := yaml.Unmarshal(yamlData, &data); err != nil {

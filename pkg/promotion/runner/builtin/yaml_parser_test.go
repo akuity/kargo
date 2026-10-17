@@ -303,6 +303,7 @@ config:
 			stepCtx := tt.stepCtx
 
 			stepCtx.WorkDir = t.TempDir()
+			stepCtx.Root = newTestRoot(t, stepCtx.WorkDir)
 			for p, c := range tt.files {
 				require.NoError(t, os.MkdirAll(path.Join(stepCtx.WorkDir, path.Dir(p)), 0o700))
 				require.NoError(t, os.WriteFile(path.Join(stepCtx.WorkDir, p), []byte(c), 0o600))
@@ -401,7 +402,7 @@ items:
 			err := os.WriteFile(filePath, []byte(tt.content), 0600)
 			require.NoError(t, err)
 
-			result, err := yp.readAndParseYAML(tempDir, "test.yaml")
+			result, err := yp.readAndParseYAML(newTestRoot(t, tempDir), "test.yaml")
 
 			if tt.expectedErrMsg != "" {
 				require.Error(t, err)
@@ -522,4 +523,20 @@ func Test_yamlParser_extractValues(t *testing.T) {
 			}
 		})
 	}
+}
+
+func Test_yamlParser_run_escapingSymlink(t *testing.T) {
+	workDir, outside := escapingWorkspace(t)
+	require.NoError(t, os.WriteFile(
+		filepath.Join(outside, "secret.yaml"), []byte("k: v\n"), 0o600,
+	))
+	_, err := (&yamlParser{}).run(
+		t.Context(),
+		newTestStepContext(t, workDir),
+		builtin.YAMLParseConfig{
+			Path:    "out/secret.yaml",
+			Outputs: []builtin.YAMLParse{{Name: "k", FromExpression: "k"}},
+		},
+	)
+	require.ErrorContains(t, err, "path escapes from parent")
 }

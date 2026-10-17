@@ -174,7 +174,7 @@ func Test_gitTagger_run(t *testing.T) {
 	// Test creating a tag
 	res, err := runner.run(
 		t.Context(),
-		&promotion.StepContext{WorkDir: workDir},
+		newTestStepContext(t, workDir),
 		builtin.GitTagConfig{
 			Path: "master",
 			Tag:  "v1.0.0",
@@ -203,7 +203,7 @@ func Test_gitTagger_run(t *testing.T) {
 	// Re-tagging without force should fail because the tag already exists.
 	res, err = runner.run(
 		t.Context(),
-		&promotion.StepContext{WorkDir: workDir},
+		newTestStepContext(t, workDir),
 		builtin.GitTagConfig{
 			Path: "master",
 			Tag:  "v1.0.0",
@@ -215,7 +215,7 @@ func Test_gitTagger_run(t *testing.T) {
 	// Re-tagging with force should succeed and move the tag to the new commit.
 	res, err = runner.run(
 		t.Context(),
-		&promotion.StepContext{WorkDir: workDir},
+		newTestStepContext(t, workDir),
 		builtin.GitTagConfig{
 			Path:  "master",
 			Tag:   "v1.0.0",
@@ -230,4 +230,15 @@ func Test_gitTagger_run(t *testing.T) {
 	actualCommit, ok = res.Output[stateKeyCommit]
 	require.True(t, ok)
 	require.Equal(t, expectedCommit, actualCommit)
+}
+
+func Test_gitTagTagger_run_escapingSymlink(t *testing.T) {
+	workDir, _ := escapingWorkspace(t)
+	res, err := (&gitTagTagger{}).run(
+		t.Context(),
+		newTestStepContext(t, workDir),
+		builtin.GitTagConfig{Path: "out/repo", Tag: "v1.0.0"},
+	)
+	require.ErrorContains(t, err, "path escapes from parent")
+	require.Equal(t, kargoapi.PromotionStepStatusErrored, res.Status)
 }

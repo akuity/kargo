@@ -27,7 +27,6 @@ import (
 	libfmt "github.com/akuity/kargo/pkg/fmt"
 	"github.com/akuity/kargo/pkg/image/mutate"
 	intio "github.com/akuity/kargo/pkg/io"
-	"github.com/akuity/kargo/pkg/io/fs"
 	"github.com/akuity/kargo/pkg/promotion"
 	builtin "github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
 )
@@ -231,18 +230,7 @@ func (p *ociPusher) pushLocalFile(
 	dstRef name.Reference,
 	dstOpts []remote.Option,
 ) (v1.Hash, kargoapi.PromotionStepStatus, error) {
-	root, err := os.OpenRoot(stepCtx.WorkDir)
-	if err != nil {
-		return v1.Hash{}, kargoapi.PromotionStepStatusFailed, &promotion.TerminalError{
-			Err: fmt.Errorf(
-				"failed to open workspace: %w",
-				fs.SanitizePathError(err, stepCtx.WorkDir),
-			),
-		}
-	}
-	defer root.Close()
-
-	f, err := root.Open(cfg.SrcPath)
+	f, err := stepCtx.Root.Open(cfg.SrcPath)
 	if err != nil {
 		return v1.Hash{}, kargoapi.PromotionStepStatusFailed, &promotion.TerminalError{
 			Err: fmt.Errorf("failed to open source path %q: %w", cfg.SrcPath, err),
@@ -301,7 +289,7 @@ func (p *ociPusher) pushLocalFile(
 	scopes := p.parseAnnotationScopes(cfg.Annotations)
 
 	configLayer := static.NewLayer([]byte(emptyConfigBlob), configMediaType)
-	artifactLayer, err := newFileLayer(root, cfg.SrcPath, f, layerMediaType, p.maxArtifactSize)
+	artifactLayer, err := newFileLayer(stepCtx.Root, cfg.SrcPath, f, layerMediaType, p.maxArtifactSize)
 	if err != nil {
 		if _, ok := errors.AsType[*intio.BodyTooLargeError](err); ok {
 			return v1.Hash{}, kargoapi.PromotionStepStatusErrored, &promotion.TerminalError{

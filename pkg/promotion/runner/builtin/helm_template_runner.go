@@ -7,13 +7,13 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"os"
 	"path"
 	"path/filepath"
 	"reflect"
 	"strings"
 
-	securejoin "github.com/cyphar/filepath-securejoin"
 	"github.com/xeipuuv/gojsonschema"
 	"helm.sh/helm/v3/pkg/action"
 	"helm.sh/helm/v3/pkg/chart"
@@ -109,7 +109,23 @@ func (h *helmTemplateRunner) run(
 	stepCtx *promotion.StepContext,
 	cfg builtin.HelmTemplateConfig,
 ) (promotion.StepResult, error) {
-	composedValues, err := h.composeValues(stepCtx.WorkDir, cfg)
+	// Helm and its dependency manager read and write the chart by path and
+	// follow symlinks while doing so, so nothing beneath it may lead outside
+	// the workspace.
+	chartPath, err := promotion.WorkspacePath(cfg.Path)
+	if err != nil {
+		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, err
+	}
+	if err = statTree(stepCtx.Root, chartPath); err != nil {
+		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
+			fmt.Errorf("failed to check chart path %q: %w", cfg.Path, err)
+	}
+	absChartPath, err := promotion.ExternalPath(stepCtx, cfg.Path)
+	if err != nil {
+		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, err
+	}
+
+	composedValues, err := h.composeValues(stepCtx, cfg)
 	if err != nil {
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 			fmt.Errorf("failed to compose values: %w", err)
@@ -122,16 +138,28 @@ func (h *helmTemplateRunner) run(
 		}
 	}
 
-	chartRequested, err := h.loadChart(stepCtx.WorkDir, cfg.Path)
+	chartRequested, err := loader.Load(absChartPath)
 	if err != nil {
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 			fmt.Errorf("failed to load chart from %q: %w", cfg.Path, err)
 	}
 
-	absOutPath, err := securejoin.SecureJoin(stepCtx.WorkDir, cfg.OutPath)
+	outPath, err := promotion.WorkspacePath(cfg.OutPath)
 	if err != nil {
-		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
-			fmt.Errorf("failed to join path %q: %w", cfg.OutPath, err)
+		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, err
+	}
+	var absOutPath string
+	if !outPathIsFile(cfg) && outLayoutIsHelm(cfg) {
+		// Helm writes the rendered files beneath the output directory itself,
+		// by path, so it is handed the absolute path and nothing already
+		// beneath it may lead outside the workspace.
+		if absOutPath, err = promotion.ExternalPath(stepCtx, cfg.OutPath); err != nil {
+			return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, err
+		}
+		if err = statTree(stepCtx.Root, outPath); err != nil && !errors.Is(err, fs.ErrNotExist) {
+			return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
+				fmt.Errorf("failed to check output path %q: %w", cfg.OutPath, err)
+		}
 	}
 
 	if err = h.checkDependencies(chartRequested); err != nil {
@@ -151,7 +179,7 @@ func (h *helmTemplateRunner) run(
 			fmt.Errorf("failed to render chart: %w", err)
 	}
 
-	if err = h.writeOutput(cfg, rls, absOutPath); err != nil {
+	if err = h.writeOutput(stepCtx.Root, cfg, rls, outPath); err != nil {
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 			fmt.Errorf("failed to write rendered chart: %w", err)
 	}
@@ -176,19 +204,25 @@ func (h *helmTemplateRunner) buildDependencies(
 // It merges the value files in the order they are provided. Set values are merged
 // into last as overrides
 func (h *helmTemplateRunner) composeValues(
-	workDir string,
+	stepCtx *promotion.StepContext,
 	cfg builtin.HelmTemplateConfig,
 ) (map[string]any, error) {
 	valueOpts := &values.Options{}
 	for _, p := range cfg.ValuesFiles {
-		absValuesPath, err := securejoin.SecureJoin(workDir, p)
+		relValuesPath, err := promotion.WorkspacePath(p)
 		if err != nil {
-			return nil, fmt.Errorf("failed to join path %q: %w", p, err)
+			return nil, err
 		}
 		if cfg.IgnoreMissingValueFiles {
-			if _, err := os.Stat(absValuesPath); os.IsNotExist(err) {
+			if _, err = stepCtx.Root.Stat(relValuesPath); errors.Is(err, fs.ErrNotExist) {
 				continue
 			}
+		}
+		// Helm reads the file by path. A values file is a single file, so a
+		// successful ExternalPath check covers everything Helm will read.
+		absValuesPath, err := promotion.ExternalPath(stepCtx, p)
+		if err != nil {
+			return nil, err
 		}
 		valueOpts.ValueFiles = append(valueOpts.ValueFiles, absValuesPath)
 	}
@@ -248,15 +282,6 @@ func (h *helmTemplateRunner) newInstallAction(
 	return client, nil
 }
 
-// loadChart loads the chart from the given path.
-func (h *helmTemplateRunner) loadChart(workDir, relPath string) (*chart.Chart, error) {
-	absChartPath, err := securejoin.SecureJoin(workDir, relPath)
-	if err != nil {
-		return nil, fmt.Errorf("failed to join relPath %q: %w", relPath, err)
-	}
-	return loader.Load(absChartPath)
-}
-
 // checkDependencies checks if the chart has all its dependencies.
 func (h *helmTemplateRunner) checkDependencies(chartRequested *chart.Chart) error {
 	if req := chartRequested.Metadata.Dependencies; req != nil {
@@ -267,9 +292,14 @@ func (h *helmTemplateRunner) checkDependencies(chartRequested *chart.Chart) erro
 	return nil
 }
 
-// writeOutput writes the rendered manifest to the output path based on the
-// configured layout.
-func (h *helmTemplateRunner) writeOutput(cfg builtin.HelmTemplateConfig, rls *release.Release, outPath string) error {
+// writeOutput writes the rendered manifest to outPath, which is relative to
+// root, based on the configured layout.
+func (h *helmTemplateRunner) writeOutput(
+	root *os.Root,
+	cfg builtin.HelmTemplateConfig,
+	rls *release.Release,
+	outPath string,
+) error {
 	var (
 		manifests       bytes.Buffer
 		outPathIsFile   = outPathIsFile(cfg)
@@ -282,7 +312,7 @@ func (h *helmTemplateRunner) writeOutput(cfg builtin.HelmTemplateConfig, rls *re
 		_, _ = fmt.Fprintln(&manifests, strings.TrimSpace(rls.Manifest))
 	case outLayoutIsFlat:
 		// Flat layout: write the main manifest resources to individual files.
-		if err := h.writeManifestFlat(outPath, rls.Manifest); err != nil {
+		if err := h.writeManifestFlat(root, outPath, rls.Manifest); err != nil {
 			return fmt.Errorf("failed to write rendered manifest: %w", err)
 		}
 	}
@@ -303,7 +333,7 @@ func (h *helmTemplateRunner) writeOutput(cfg builtin.HelmTemplateConfig, rls *re
 			case outLayoutIsFlat:
 				// Flat layout: write hook manifest resources to individual
 				// files.
-				if err := h.writeHookFlat(outPath, hook); err != nil {
+				if err := h.writeHookFlat(root, outPath, hook); err != nil {
 					return fmt.Errorf("failed to write hook %q: %w", hook.Path, err)
 				}
 			case outLayoutIsHelm(cfg):
@@ -313,14 +343,14 @@ func (h *helmTemplateRunner) writeOutput(cfg builtin.HelmTemplateConfig, rls *re
 				if cfg.UseReleaseName {
 					outDir = filepath.Join(outDir, cfg.ReleaseName)
 				}
-				if _, err := os.Stat(filepath.Join(outDir, hook.Path)); err != nil {
-					if !os.IsNotExist(err) {
+				if _, err := root.Stat(filepath.Join(outDir, hook.Path)); err != nil {
+					if !errors.Is(err, fs.ErrNotExist) {
 						return fmt.Errorf("failed to check if file %q exists: %w", hook.Path, err)
 					}
 					exists = false
 				}
 
-				if err := writeToHelmFile(outDir, hook.Path, hook.Manifest, exists); err != nil {
+				if err := writeToHelmFile(root, outDir, hook.Path, hook.Manifest, exists); err != nil {
 					return fmt.Errorf("failed to write hook %q: %w", hook.Path, err)
 				}
 			}
@@ -331,43 +361,43 @@ func (h *helmTemplateRunner) writeOutput(cfg builtin.HelmTemplateConfig, rls *re
 		return nil
 	}
 
-	if err := os.MkdirAll(filepath.Dir(outPath), 0o700); err != nil {
+	if err := root.MkdirAll(filepath.Dir(outPath), 0o700); err != nil {
 		return fmt.Errorf("failed to create directory %q: %w", cfg.OutPath, err)
 	}
-	return os.WriteFile(outPath, manifests.Bytes(), 0o600)
+	return root.WriteFile(outPath, manifests.Bytes(), 0o600)
 }
 
 // writeManifestFlat writes the main manifest resources to individual files in
 // the output directory.
-func (h *helmTemplateRunner) writeManifestFlat(outPath, manifest string) error {
+func (h *helmTemplateRunner) writeManifestFlat(root *os.Root, outPath, manifest string) error {
 	if manifest == "" {
 		return nil
 	}
 
 	// Ensure the output directory exists.
-	if err := os.MkdirAll(outPath, 0o700); err != nil {
+	if err := root.MkdirAll(outPath, 0o700); err != nil {
 		return fmt.Errorf("failed to create output directory %q: %w", outPath, err)
 	}
 
 	// Write the manifest resources to individual files.
-	return h.writeResourcesFlat(outPath, manifest)
+	return h.writeResourcesFlat(root, outPath, manifest)
 }
 
 // writeHookFlat writes a hook's resources to individual files in the output
 // directory.
-func (h *helmTemplateRunner) writeHookFlat(outPath string, hook *release.Hook) error {
+func (h *helmTemplateRunner) writeHookFlat(root *os.Root, outPath string, hook *release.Hook) error {
 	// Ensure the output directory exists.
-	if err := os.MkdirAll(outPath, 0o700); err != nil {
+	if err := root.MkdirAll(outPath, 0o700); err != nil {
 		return fmt.Errorf("failed to create output directory %q: %w", outPath, err)
 	}
 
 	// Write the hook's manifest resources to individual files.
-	return h.writeResourcesFlat(outPath, hook.Manifest)
+	return h.writeResourcesFlat(root, outPath, hook.Manifest)
 }
 
 // writeResourcesFlat reads YAML documents from a manifest and writes each
 // resource to its own file.
-func (h *helmTemplateRunner) writeResourcesFlat(outPath, manifest string) error {
+func (h *helmTemplateRunner) writeResourcesFlat(root *os.Root, outPath, manifest string) error {
 	if strings.TrimSpace(manifest) == "" {
 		return nil
 	}
@@ -405,11 +435,7 @@ func (h *helmTemplateRunner) writeResourcesFlat(outPath, manifest string) error 
 		}
 
 		// Write the resource to the output directory.
-		//
-		// #nosec G703 -- Contextually, if this was constructed from a
-		// user-specified, relative path, the absolute path was constructed using
-		// securejoin.SecureJoin().
-		if err = os.WriteFile(filepath.Join(outPath, fileName), resource, 0o600); err != nil {
+		if err = root.WriteFile(filepath.Join(outPath, fileName), resource, 0o600); err != nil {
 			return fmt.Errorf("failed to write resource to file %q: %w", fileName, err)
 		}
 	}
@@ -484,16 +510,17 @@ func isTestHook(h *release.Hook) bool {
 // https://github.com/helm/helm/blob/b2286c4caabdfdcf2baaecb42819db9d38c04597/cmd/helm/template.go#L222
 // Licensed under the Apache License 2.0.
 
-// writeToHelmFile writes the given data to the output directory with the given
-// name. If the appendMode flag is set to true, the data is appended to the file.
-func writeToHelmFile(outputDir string, name string, data string, appendMode bool) (err error) {
+// writeToHelmFile writes the given data to the output directory, which is
+// relative to root, with the given name. If the appendMode flag is set to true,
+// the data is appended to the file.
+func writeToHelmFile(root *os.Root, outputDir string, name string, data string, appendMode bool) (err error) {
 	outfileName := strings.Join([]string{outputDir, name}, string(filepath.Separator))
 
-	if err = ensureDirectoryForHelmFile(outfileName); err != nil {
+	if err = ensureDirectoryForHelmFile(root, outfileName); err != nil {
 		return err
 	}
 
-	f, err := createOrOpenHelmFile(outfileName, appendMode)
+	f, err := createOrOpenHelmFile(root, outfileName, appendMode)
 	if err != nil {
 		return err
 	}
@@ -512,20 +539,20 @@ func writeToHelmFile(outputDir string, name string, data string, appendMode bool
 
 // createOrOpenHelmFile creates or opens the file with the given name. If the
 // append flag is set to true, the file is opened in append mode.
-func createOrOpenHelmFile(filename string, appendMode bool) (*os.File, error) {
+func createOrOpenHelmFile(root *os.Root, filename string, appendMode bool) (*os.File, error) {
 	if appendMode {
-		return os.OpenFile(filename, os.O_APPEND|os.O_WRONLY, 0o600)
+		return root.OpenFile(filename, os.O_APPEND|os.O_WRONLY, 0o600)
 	}
-	return os.Create(filename)
+	return root.Create(filename)
 }
 
 // ensureDirectoryForHelmFile ensures that the directory for the given file
 // exists. If the directory does not exist, it is created with the default
 // permissions.
-func ensureDirectoryForHelmFile(file string) error {
+func ensureDirectoryForHelmFile(root *os.Root, file string) error {
 	baseDir := path.Dir(file)
-	if _, err := os.Stat(baseDir); err != nil && !os.IsNotExist(err) {
+	if _, err := root.Stat(baseDir); err != nil && !errors.Is(err, fs.ErrNotExist) {
 		return err
 	}
-	return os.MkdirAll(baseDir, 0o755)
+	return root.MkdirAll(baseDir, 0o755)
 }

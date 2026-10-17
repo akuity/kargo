@@ -3,9 +3,9 @@ package builtin
 import (
 	"context"
 	"fmt"
+	"os"
 	"strings"
 
-	securejoin "github.com/cyphar/filepath-securejoin"
 	"github.com/xeipuuv/gojsonschema"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
@@ -72,7 +72,7 @@ func (y *yamlUpdater) run(
 
 	result := promotion.StepResult{Status: kargoapi.PromotionStepStatusSucceeded}
 	if len(updates) > 0 {
-		if err := y.updateFile(stepCtx.WorkDir, cfg.Path, updates); err != nil {
+		if err := y.updateFile(stepCtx.Root, cfg.Path, updates); err != nil {
 			return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 				fmt.Errorf("values file update failed: %w", err)
 		}
@@ -86,13 +86,21 @@ func (y *yamlUpdater) run(
 	return result, nil
 }
 
-func (y *yamlUpdater) updateFile(workDir string, path string, updates []yaml.Update) error {
-	absValuesFile, err := securejoin.SecureJoin(workDir, path)
+func (y *yamlUpdater) updateFile(root *os.Root, path string, updates []yaml.Update) error {
+	relPath, err := promotion.WorkspacePath(path)
 	if err != nil {
-		return fmt.Errorf("error joining path %q: %w", path, err)
+		return err
 	}
-	if err := yaml.SetValuesInFile(absValuesFile, updates); err != nil {
+	inBytes, err := root.ReadFile(relPath)
+	if err != nil {
+		return fmt.Errorf("error reading values file %q: %w", path, err)
+	}
+	outBytes, err := yaml.SetValuesInBytes(inBytes, updates)
+	if err != nil {
 		return fmt.Errorf("error updating image references in values file %q: %w", path, err)
+	}
+	if err = root.WriteFile(relPath, outBytes, 0o600); err != nil {
+		return fmt.Errorf("error writing values file %q: %w", path, err)
 	}
 	return nil
 }
