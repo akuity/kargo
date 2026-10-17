@@ -11,6 +11,7 @@ import { paths } from '@ui/config/paths';
 import { HealthStatusIcon } from '@ui/features/common/health-status/health-status-icon';
 import { PromotionStatusIcon } from '@ui/features/common/promotion-status/promotion-status-icon';
 import { getAlias } from '@ui/features/common/utils';
+import { TARGETS_POLL_INTERVAL_MS } from '@ui/features/project/targets/constants';
 import { useListTargets } from '@ui/gen/api/v2/core/core';
 import { PromotionRequest, Stage } from '@ui/gen/api/v2/models';
 import { parseDate } from '@ui/utils/dates';
@@ -27,7 +28,6 @@ import {
   rowsSummary
 } from './fleet-utils';
 import { RoundCard } from './round-card';
-import { useWatchTargets } from './use-watch-targets';
 
 type Props = {
   projectName: string;
@@ -115,8 +115,12 @@ const PromotionCell = ({
 export const Fleet = ({ projectName, stage, round }: Props) => {
   const stageName = stage.metadata?.name || '';
 
-  const targetsQuery = useListTargets(projectName, { stage: stageName });
-  useWatchTargets(projectName, stageName, !!targetsQuery.data);
+  // Targets live in the database, which offers no watch; the list is polled.
+  const targetsQuery = useListTargets(
+    projectName,
+    { stage: stageName },
+    { query: { refetchInterval: TARGETS_POLL_INTERVAL_MS } }
+  );
   const freightMap = useGetFreightMap(projectName);
 
   const rows = useMemo(

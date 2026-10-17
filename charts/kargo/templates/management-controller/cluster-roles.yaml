@@ -67,7 +67,6 @@ rules:
   - clusterconfigs
   - promotionrequests
   - stages
-  - targets
   - warehouses
   - projectconfigs
   verbs:

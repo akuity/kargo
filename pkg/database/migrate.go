@@ -241,7 +241,44 @@ func ConnectWithRetry(
 	}
 }
 
-// connectRetryInterval is how long ConnectWithRetry waits between attempts.
+// WaitForSchema calls the migrator's Check until it passes or timeout
+// elapses. A component usually starts alongside the migration run that
+// brings the schema up to the version it expects, and nothing orders the two,
+// so a schema that is merely behind is waited for rather than fatal: the run
+// is already closing that gap. A failure to read the version at all is
+// returned at once.
+func WaitForSchema(
+	ctx context.Context,
+	migrator Migrator,
+	timeout time.Duration,
+) error {
+	logger := logging.LoggerFromContext(ctx)
+	deadline := time.Now().Add(timeout)
+	for {
+		err := migrator.Check(ctx)
+		if err == nil {
+			return nil
+		}
+		if !errors.Is(err, ErrSchemaOutOfDate) {
+			return err
+		}
+		if time.Now().After(deadline) {
+			return fmt.Errorf(
+				"database schema did not reach the expected version within %s: %w",
+				timeout, err,
+			)
+		}
+		logger.Info("waiting for the database schema", "error", err.Error())
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-time.After(connectRetryInterval):
+		}
+	}
+}
+
+// connectRetryInterval is how long ConnectWithRetry and WaitForSchema wait
+// between attempts.
 const connectRetryInterval = 2 * time.Second
 
 // SQLSTATE codes the server answers with while it is not ready to take a

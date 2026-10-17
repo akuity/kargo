@@ -9,6 +9,8 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+
+	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 )
 
 var (
@@ -217,16 +219,30 @@ func validateResourceTypeName(resource string) error {
 // resolveRuleGroups).
 type groupResolver func(resource string) (group string, err error)
 
+// databaseResources are the Kargo resources that live in the control plane's
+// database and are served by the Kargo API server rather than by Kubernetes,
+// so discovery does not know them. Access to them is still authorized through
+// Kubernetes RBAC rules in the Kargo API group, which is what a group-less
+// rule naming one of them must resolve to.
+var databaseResources = map[string]struct{}{
+	"targets":           {},
+	"promotionrollouts": {},
+}
+
 // newRESTMapperGroupResolver returns a groupResolver backed by a RESTMapper. The
 // API server's RESTMapper is discovery-backed, so this resolves the group for
 // any resource type the cluster actually serves -- core, CRDs, and Kargo's
-// enterprise APIs alike -- without a hardcoded table or configuration. Known
+// enterprise APIs alike -- without a hardcoded table or configuration, apart
+// from the database-served resources that discovery cannot know. Known
 // resources are served from the mapper's in-memory cache; it returns a
 // bad-request error for an unknown or ambiguous resource type.
 func newRESTMapperGroupResolver(mapper meta.RESTMapper) groupResolver {
 	return func(resource string) (string, error) {
 		// The group is a property of the resource, not the subresource.
 		res, _, _ := strings.Cut(resource, "/")
+		if _, ok := databaseResources[res]; ok {
+			return kargoapi.GroupVersion.Group, nil
+		}
 		gvrs, err := mapper.ResourcesFor(schema.GroupVersionResource{Resource: res})
 		if err != nil {
 			if meta.IsNoMatchError(err) {

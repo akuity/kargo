@@ -869,6 +869,13 @@ controller:
   ## @param controller.securityContext Security context for controller pods. Defaults to `global.securityContext`.
   securityContext: {}
 
+  ## Settings for how the controller reaches the Kargo API server. Targets live
+  ## in the control plane's database and the controller, which may run far from
+  ## it, reads them through the API server.
+  apiServer:
+    ## @param controller.apiServer.address The URL at which the controller reaches the API server, e.g. `https://kargo.example.com`. When empty and `api.enabled` is `true`, the API server's in-cluster `Service` is used, and a chart-generated API server certificate is trusted automatically. Set this for a controller installed apart from the API server, such as a shard in another cluster; a certificate the controller does not already trust can be added through `controller.cabundle`. Without an API server the controller cannot promote to Targets. The controller acts as the ServiceAccount of the control plane that its control plane credential resolves to, requesting short-lived tokens for it; a controller installed apart from the control plane must therefore be given a credential for a ServiceAccount there, bound to the `kargo-controller` ClusterRole and allowed to `create` its own `token` subresource.
+    address: ""
+
   cabundle:
     ## @param controller.cabundle.configMapName Specifies the name of an optional ConfigMap containing CA certs that is managed "out of band." Values in the ConfigMap named here should each contain a single PEM-encoded CA cert. If secretName is also defined, it will take precedence over this field.
     configMapName: ""
@@ -1457,9 +1464,11 @@ webhooksServer:
     #   -----END CERTIFICATE-----
 
 ## @section Database
-## Kargo's components do not use a database yet. These settings provision one
-## ahead of that: either the minimal PostgreSQL bundled with the chart or a
-## reference to an external one.
+## Kargo's API server and management controller use a PostgreSQL database:
+## Targets live in it and Project identities are mirrored into it. These
+## settings provide that database, either the minimal PostgreSQL bundled with
+## the chart or a reference to an external one, and point the components that
+## use it at whichever is configured.
 database:
   migrations:
     ## @param database.migrations.enabled Whether to run a Job that applies pending database schema migrations on every install and upgrade. It runs the Kargo image's `migrate` subcommand against whichever database is configured below, waits for the database to accept connections, and serializes with any concurrent runner against the same schema on a lock keyed on that schema. It is an ordinary Job rather than a Helm hook so that it also works when the chart is rendered with `helm template`, for example by Argo CD. Disable it to apply migrations some other way, for example from a pipeline that manages schema changes with its own approvals; Kargo's components refuse to serve against a schema that is behind the version they expect.

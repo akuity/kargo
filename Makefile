@@ -164,7 +164,7 @@ DATABASE_URL ?= postgres://kargo:kargo@127.0.0.1:15432/kargo?sslmode=disable
 # and drops its own database on that server.
 .PHONY: test-db
 test-db:
-	DATABASE_URL=$(DATABASE_URL) go test -race -count=1 -tags=integration,db ./pkg/database/
+	DATABASE_URL=$(DATABASE_URL) go test -race -count=1 -tags=integration,db ./pkg/database/...
 
 ################################################################################
 # Builds                                                                       #
