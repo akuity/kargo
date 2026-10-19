@@ -86,8 +86,16 @@ k8s_resource(
 
 # The chart's dependencies (e.g. NATS) must be present before it can be
 # rendered. Only fetch them when any are missing or out of date.
+# `helm dependency build` requires each dependency's repository to be known to
+# Helm, so they are added to a repository config belonging to this project
+# instead of the developer's own.
 local(
-  "helm dependency list charts/kargo | awk 'NR > 1 && NF && $NF != \"ok\" { exit 1 }' || helm dependency build charts/kargo",
+  "helm dependency list charts/kargo | awk 'NR > 1 && NF && $NF != \"ok\" { exit 1 }' || " +
+  "{ helm repo add nats https://nats-io.github.io/k8s/helm/charts/ && helm dependency build charts/kargo; }",
+  env = {
+    'HELM_REPOSITORY_CONFIG': '.helm/repositories.yaml',
+    'HELM_REPOSITORY_CACHE': '.helm/cache'
+  },
   quiet = True,
 )
 
