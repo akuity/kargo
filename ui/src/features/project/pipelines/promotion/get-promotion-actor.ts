@@ -1,7 +1,10 @@
-import { Promotion } from '@ui/gen/api/v2/models';
+import { V1ObjectMeta } from '@ui/gen/api/v2/models';
 
-export const getPromotionActor = (promotion: Promotion) => {
-  const annotation = promotion?.metadata?.annotations?.['kargo.akuity.io/create-actor'];
+// getPromotionActor names whoever asked for a promotion. Promotions and
+// PromotionRequests both record it in the same annotation, so one reader serves
+// both; a promotion the control plane started on its own carries none.
+export const getPromotionActor = (resource: { metadata?: V1ObjectMeta }) => {
+  const annotation = resource?.metadata?.annotations?.['kargo.akuity.io/create-actor'];
 
   if (!annotation) {
     return 'N/A';

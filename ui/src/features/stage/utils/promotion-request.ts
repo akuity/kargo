@@ -119,7 +119,7 @@ export const roundBlock = (promotionRequest?: PromotionRequest): RoundBlock | un
   return { title: 'Promotion to this Stage cannot progress', description: ready.message };
 };
 
-export type PromotionRequestTargetRow = {
+type PromotionRequestTargetRow = {
   name: string;
   promotion?: string;
   phase?: string;
