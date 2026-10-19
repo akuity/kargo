@@ -13,6 +13,7 @@ import (
 	"github.com/hashicorp/go-cleanhttp"
 
 	"github.com/akuity/kargo/pkg/credentials"
+	kargonet "github.com/akuity/kargo/pkg/net"
 )
 
 // parseOCIReference parses an OCI image or chart reference and determines the
@@ -61,10 +62,12 @@ func buildOCIRemoteOptions(
 	return remoteOpts, nil
 }
 
-// ociHTTPTransport creates a new HTTP transport with TLS settings based on the
-// insecureSkipTLSVerify flag.
+// ociHTTPTransport creates a new HTTP transport, hardened against connections
+// to link-local and cloud instance metadata addresses, with TLS settings based
+// on the insecureSkipTLSVerify flag.
 func ociHTTPTransport(insecureSkipTLSVerify bool) *http.Transport {
 	httpTransport := cleanhttp.DefaultTransport()
+	kargonet.HardenTransport(httpTransport, nil)
 	if insecureSkipTLSVerify {
 		httpTransport.TLSClientConfig = &tls.Config{
 			InsecureSkipVerify: true, // nolint: gosec
