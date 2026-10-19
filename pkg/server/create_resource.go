@@ -192,11 +192,7 @@ func (s *server) createResource(
 			}
 			evt, sendErr := event.NewFreightCreated(eventMsg, actor, &freight)
 			if sendErr == nil {
-				sendErr = s.sender.Send(
-					ctx,
-					event.EventsSubjectPrefix,
-					evt,
-				)
+				sendErr = s.sender.Send(ctx, evt)
 			}
 			if sendErr != nil {
 				logging.LoggerFromContext(ctx).Error(

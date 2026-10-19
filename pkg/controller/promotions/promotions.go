@@ -9,7 +9,6 @@ import (
 
 	cloudevents "github.com/cloudevents/sdk-go/v2/event"
 	"github.com/kelseyhightower/envconfig"
-	"github.com/nats-io/nats.go"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/trace"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
@@ -30,7 +29,6 @@ import (
 	argocd "github.com/akuity/kargo/pkg/controller/argocd/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/controller/metrics"
 	"github.com/akuity/kargo/pkg/event"
-	natsevent "github.com/akuity/kargo/pkg/event/nats"
 	"github.com/akuity/kargo/pkg/indexer"
 	"github.com/akuity/kargo/pkg/kargo"
 	"github.com/akuity/kargo/pkg/kubeclient"
@@ -114,7 +112,7 @@ func SetupReconcilerWithManager(
 	promoEngine promotion.Engine,
 	cfg ReconcilerConfig,
 	targets promotion.TargetGetter,
-	natsClient *nats.Conn,
+	sender event.Sender,
 ) error {
 	// Index running Promotions by Argo CD Applications
 	if err := kargoMgr.GetFieldIndexer().IndexField(
@@ -161,7 +159,7 @@ func SetupReconcilerWithManager(
 	reconciler := newReconciler(
 		kargoMgr.GetClient(),
 		kargoMgr.GetAPIReader(),
-		natsevent.NewDefaultingEventSender(natsClient, cfg.Name()),
+		sender,
 		promoEngine,
 		cfg,
 		targets,
@@ -568,7 +566,7 @@ func (r *reconciler) Reconcile(
 		}
 
 		if sendErr == nil {
-			sendErr = r.sender.Send(ctx, event.EventsSubjectPrefix, evt)
+			sendErr = r.sender.Send(ctx, evt)
 		}
 		if sendErr != nil {
 			logger.Error(sendErr, "error sending promotion event")
@@ -788,11 +786,7 @@ func (r *reconciler) terminatePromotion(
 
 	evt, err := event.NewPromotionAborted(newStatus.Message, actor, promo, freight)
 	if err == nil {
-		err = r.sender.Send(
-			ctx,
-			event.EventsSubjectPrefix,
-			evt,
-		)
+		err = r.sender.Send(ctx, evt)
 	}
 	if err != nil {
 		logger.Error(err, "error sending Promotion aborted event")

@@ -34,11 +34,8 @@ func TestEventSender_Send(t *testing.T) {
 	t.Cleanup(func() { _ = sub.Unsubscribe() })
 	require.NoError(t, conn.Flush())
 
-	sender := NewEventSender(conn)
-	require.NoError(
-		t,
-		sender.Send(t.Context(), event.EventsSubjectPrefix, evt),
-	)
+	sender := NewEventSender(conn, event.EventsSubjectPrefix)
+	require.NoError(t, sender.Send(t.Context(), evt))
 	sender.Shutdown()
 
 	msg, err := sub.NextMsg(time.Second)
@@ -78,11 +75,12 @@ func TestNewDefaultingEventSender(t *testing.T) {
 	t.Cleanup(func() { _ = sub.Unsubscribe() })
 	require.NoError(t, conn.Flush())
 
-	sender := NewDefaultingEventSender(conn, "test-component")
-	require.NoError(
-		t,
-		sender.Send(t.Context(), event.EventsSubjectPrefix, evt),
+	sender := NewDefaultingEventSender(
+		conn,
+		event.EventsSubjectPrefix,
+		"test-component",
 	)
+	require.NoError(t, sender.Send(t.Context(), evt))
 	sender.Shutdown()
 
 	msg, err := sub.NextMsg(time.Second)
@@ -113,8 +111,8 @@ func TestEventSender_SendInvalidType(t *testing.T) {
 	t.Cleanup(func() { _ = sub.Unsubscribe() })
 	require.NoError(t, conn.Flush())
 
-	sender := NewEventSender(conn)
-	err = sender.Send(t.Context(), event.EventsSubjectPrefix, evt)
+	sender := NewEventSender(conn, event.EventsSubjectPrefix)
+	err = sender.Send(t.Context(), evt)
 	require.ErrorIs(t, err, event.ErrInvalidEventType)
 	sender.Shutdown()
 

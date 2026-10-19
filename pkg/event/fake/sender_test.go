@@ -12,10 +12,11 @@ import (
 
 func TestSender_Send(t *testing.T) {
 	testCases := []struct {
-		name      string
-		sendErr   error
-		eventType string
-		assert    func(*testing.T, *Sender, error)
+		name          string
+		sendErr       error
+		subjectPrefix string
+		eventType     string
+		assert        func(*testing.T, *Sender, error)
 	}{
 		{
 			name:      "SendErr set",
@@ -48,14 +49,32 @@ func TestSender_Send(t *testing.T) {
 				)
 			},
 		},
+		{
+			name:          "success with custom subject prefix",
+			subjectPrefix: "akuity.kargo.things",
+			eventType:     string(kargoapi.EventTypePromotionCreated),
+			assert: func(t *testing.T, s *Sender, err error) {
+				require.NoError(t, err)
+				sent := s.Sent()
+				require.Len(t, sent, 1)
+				require.Equal(
+					t,
+					"akuity.kargo.things.promotion.created",
+					sent[0].Subject(),
+				)
+			},
+		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 			evt, err := event.NewCloudEvent(testCase.eventType, nil)
 			require.NoError(t, err)
-			s := &Sender{SendErr: testCase.sendErr}
-			err = s.Send(t.Context(), event.EventsSubjectPrefix, evt)
+			s := &Sender{
+				SendErr:       testCase.sendErr,
+				SubjectPrefix: testCase.subjectPrefix,
+			}
+			err = s.Send(t.Context(), evt)
 			testCase.assert(t, s, err)
 		})
 	}

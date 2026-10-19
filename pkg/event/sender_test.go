@@ -14,18 +14,12 @@ import (
 // recordingSender is a Sender that records what it is asked to send. The fake
 // package's Sender can't be used here because it imports this package.
 type recordingSender struct {
-	err           error
-	subjectPrefix string
-	sent          []cloudevents.Event
-	shutdown      bool
+	err      error
+	sent     []cloudevents.Event
+	shutdown bool
 }
 
-func (r *recordingSender) Send(
-	_ context.Context,
-	subjectPrefix string,
-	evt cloudevents.Event,
-) error {
-	r.subjectPrefix = subjectPrefix
+func (r *recordingSender) Send(_ context.Context, evt cloudevents.Event) error {
 	r.sent = append(r.sent, evt)
 	return r.err
 }
@@ -51,7 +45,6 @@ func TestDefaultingSender_Send(t *testing.T) {
 			name: "success",
 			assert: func(t *testing.T, r *recordingSender, err error) {
 				require.NoError(t, err)
-				require.Equal(t, "akuity.kargo.things", r.subjectPrefix)
 				require.Len(t, r.sent, 2)
 				for _, evt := range r.sent {
 					require.NoError(t, evt.Validate())
@@ -75,7 +68,7 @@ func TestDefaultingSender_Send(t *testing.T) {
 			for range 2 {
 				evt, newErr := NewCloudEvent("CustomType", nil)
 				require.NoError(t, newErr)
-				if err = sender.Send(t.Context(), "akuity.kargo.things", evt); err != nil {
+				if err = sender.Send(t.Context(), evt); err != nil {
 					break
 				}
 			}

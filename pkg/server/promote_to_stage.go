@@ -40,11 +40,7 @@ func (s *server) recordPromotionCreatedEvent(
 
 	evt, err := event.NewPromotionCreated(msg, actor, p, f)
 	if err == nil {
-		err = s.sender.Send(
-			ctx,
-			event.EventsSubjectPrefix,
-			evt,
-		)
+		err = s.sender.Send(ctx, evt)
 	}
 	if err != nil {
 		logging.LoggerFromContext(ctx).Error(err, "Error when publishing new promotion event")

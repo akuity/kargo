@@ -10,17 +10,18 @@ import (
 
 type Sender interface {
 	// Send sends the CloudEvent to the configured destination, returning an error if the send
-	// fails. Implementations may not use the provided context or subject prefix depending on the
-	// underlying transport, but it is provided for completeness and future-proofing.
+	// fails. Implementations may not use the provided context depending on the underlying
+	// transport, but it is provided for completeness and future-proofing.
 	//
-	// Implementations should publish the event on the subject returned by
-	// SubjectFromType(subjectPrefix, evt.Type()), returning its error if the event type can't be
-	// turned into a subject. They should also set the event's subject attribute to the same value,
-	// so that consumers can filter on it.
+	// Implementations should set the event's subject attribute to the same value, so that consumers
+	// can filter on it. Each implementation can decide how it wants to construct _where_ it is
+	// going to send the event (such as the subject to publish to in a pub/sub system). The
+	// SubjectFromType(subjectPrefix, evt.Type()) method can be used to construct a subject from the
+	// event type and a prefix, if desired.
 	//
 	// The passed event should not be used after this call, as it may be modified by the
 	// implementation.
-	Send(ctx context.Context, subjectPrefix string, evt cloudevents.Event) error
+	Send(ctx context.Context, evt cloudevents.Event) error
 
 	// Shutdown drains any buffered events, blocking until they have been delivered or the
 	// underlying transport gives up. Callers should invoke Shutdown during graceful termination to
@@ -47,10 +48,10 @@ func NewDefaultingSender(sender Sender, component string) *DefaultingSender {
 	}
 }
 
-func (s *DefaultingSender) Send(ctx context.Context, subjectPrefix string, evt cloudevents.Event) error {
+func (s *DefaultingSender) Send(ctx context.Context, evt cloudevents.Event) error {
 	// We use UUIDv7 here because it is time-ordered, which makes them sortable by creation time.
 	evt.SetID(uuid.NewV7().String())
 	evt.SetTime(time.Now())
 	evt.SetSource(s.source)
-	return s.Sender.Send(ctx, subjectPrefix, evt)
+	return s.Sender.Send(ctx, evt)
 }

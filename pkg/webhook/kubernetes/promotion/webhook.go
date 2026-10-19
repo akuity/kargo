@@ -7,7 +7,6 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/nats-io/nats.go"
 	admissionv1 "k8s.io/api/admission/v1"
 	authzv1 "k8s.io/api/authorization/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -22,7 +21,6 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/api"
 	kargoEvent "github.com/akuity/kargo/pkg/event"
-	natsevent "github.com/akuity/kargo/pkg/event/nats"
 	"github.com/akuity/kargo/pkg/kubernetes"
 	"github.com/akuity/kargo/pkg/logging"
 	libWebhook "github.com/akuity/kargo/pkg/webhook/kubernetes"
@@ -106,13 +104,13 @@ type webhook struct {
 func SetupWebhookWithManager(
 	cfg libWebhook.Config,
 	mgr ctrl.Manager,
-	natsClient *nats.Conn,
+	sender kargoEvent.Sender,
 ) error {
 	w := newWebhook(
 		cfg,
 		mgr.GetClient(),
 		admission.NewDecoder(mgr.GetScheme()),
-		natsevent.NewDefaultingEventSender(natsClient, "promotion-webhook"),
+		sender,
 	)
 	return libWebhook.SetupValidatingAndDefaultingWebhook(mgr, &kargoapi.Promotion{}, w)
 }
@@ -798,11 +796,7 @@ func (w *webhook) recordPromotionCreatedEvent(
 		p.Spec.Stage,
 		actor), actor, p, f)
 	if err == nil {
-		err = w.sender.Send(
-			ctx,
-			kargoEvent.EventsSubjectPrefix,
-			evt,
-		)
+		err = w.sender.Send(ctx, evt)
 	}
 	if err != nil {
 		logging.LoggerFromContext(ctx).Error(

@@ -18,38 +18,44 @@ const contentTypeHeader = "Content-Type"
 // eventSender is an implementation of event.Sender that publishes CloudEvents
 // to NATS in structured content mode, i.e. the whole event, including its
 // attributes, is the JSON message payload. The subject is chosen per event
-// rather than per sender, which is why this doesn't use the CloudEvents SDK's
-// NATS protocol binding.
+// (under a per-sender prefix) rather than per sender, which is why this doesn't
+// use the CloudEvents SDK's NATS protocol binding.
 type eventSender struct {
-	client *nats.Conn
+	client        *nats.Conn
+	subjectPrefix string
 }
 
 // NewDefaultingEventSender is a convenience wrapper around NewEventSender that automatically wraps
 // it in a DefaultingSender
-func NewDefaultingEventSender(client *nats.Conn, component string) event.Sender {
-	return event.NewDefaultingSender(NewEventSender(client), component)
+func NewDefaultingEventSender(
+	client *nats.Conn,
+	subjectPrefix string,
+	component string,
+) event.Sender {
+	return event.NewDefaultingSender(
+		NewEventSender(client, subjectPrefix),
+		component,
+	)
 }
 
 // NewEventSender creates a new event.Sender that publishes events as-is using
-// the provided NATS client. Use NewDefaultingEventSender to also have each
+// the provided NATS client, under the given subject prefix (e.g.
+// event.EventsSubjectPrefix). Use NewDefaultingEventSender to also have each
 // event's ID, time, and source set. On shutdown the sender will _flush_ the
 // client, but not close the connection. The caller is responsible for closing
 // the connection when it is no longer needed.
-func NewEventSender(client *nats.Conn) event.Sender {
+func NewEventSender(client *nats.Conn, subjectPrefix string) event.Sender {
 	return &eventSender{
-		client: client,
+		client:        client,
+		subjectPrefix: subjectPrefix,
 	}
 }
 
 // Send publishes the event on the subject returned by event.SubjectFromType
-// for the given prefix and the event's type, recording that subject as the
+// for the sender's prefix and the event's type, recording that subject as the
 // event's subject attribute.
-func (s *eventSender) Send(
-	_ context.Context,
-	subjectPrefix string,
-	evt cloudevents.Event,
-) error {
-	subject, err := event.SubjectFromType(subjectPrefix, evt.Type())
+func (s *eventSender) Send(_ context.Context, evt cloudevents.Event) error {
+	subject, err := event.SubjectFromType(s.subjectPrefix, evt.Type())
 	if err != nil {
 		return fmt.Errorf("error building subject for CloudEvent: %w", err)
 	}

@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/nats-io/nats.go"
 	"go.opentelemetry.io/otel/trace"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
@@ -22,7 +21,6 @@ import (
 	"github.com/akuity/kargo/pkg/conditions"
 	"github.com/akuity/kargo/pkg/controller"
 	"github.com/akuity/kargo/pkg/event"
-	natsevent "github.com/akuity/kargo/pkg/event/nats"
 	"github.com/akuity/kargo/pkg/indexer"
 	"github.com/akuity/kargo/pkg/kargo"
 	"github.com/akuity/kargo/pkg/kubeclient"
@@ -61,11 +59,11 @@ func (r *ControlFlowStageReconciler) SetupWithManager(
 	ctx context.Context,
 	mgr ctrl.Manager,
 	sharedIndexer client.FieldIndexer,
-	natsClient *nats.Conn,
+	eventSender event.Sender,
 ) error {
 	// Configure client using manager.
 	r.client = mgr.GetClient()
-	r.eventSender = natsevent.NewDefaultingEventSender(natsClient, r.cfg.Name())
+	r.eventSender = eventSender
 
 	// This index is used to find all Freight that are directly available from
 	// a Warehouse. It is used to find Freight that can be sourced directly from
@@ -455,11 +453,7 @@ func (r *ControlFlowStageReconciler) markFreightVerifiedForStage(
 			nil,
 		)
 		if err == nil {
-			err = r.eventSender.Send(
-				ctx,
-				event.EventsSubjectPrefix,
-				evt,
-			)
+			err = r.eventSender.Send(ctx, evt)
 		}
 		if err != nil {
 			logger.Error(

@@ -15,6 +15,10 @@ import (
 type Sender struct {
 	// SendErr, if non-nil, is returned by Send, and the event is not recorded.
 	SendErr error
+	// SubjectPrefix is the prefix of the subject recorded on each sent event.
+	// If empty, event.EventsSubjectPrefix is used, since that is what nearly
+	// every test exercises.
+	SubjectPrefix string
 
 	mu   sync.Mutex
 	sent []cloudevents.Event
@@ -24,13 +28,13 @@ type Sender struct {
 // it, using event.SubjectFromType, or returns SendErr if it is non-nil. Like a
 // real Sender, it returns an error for an event type that can't be turned
 // into a subject.
-func (s *Sender) Send(
-	_ context.Context,
-	subjectPrefix string,
-	evt cloudevents.Event,
-) error {
+func (s *Sender) Send(_ context.Context, evt cloudevents.Event) error {
 	if s.SendErr != nil {
 		return s.SendErr
+	}
+	subjectPrefix := s.SubjectPrefix
+	if subjectPrefix == "" {
+		subjectPrefix = event.EventsSubjectPrefix
 	}
 	subject, err := event.SubjectFromType(subjectPrefix, evt.Type())
 	if err != nil {

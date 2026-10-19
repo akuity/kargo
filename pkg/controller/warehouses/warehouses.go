@@ -10,7 +10,6 @@ import (
 
 	"github.com/expr-lang/expr"
 	"github.com/kelseyhightower/envconfig"
-	"github.com/nats-io/nats.go"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/trace"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -26,7 +25,6 @@ import (
 	"github.com/akuity/kargo/pkg/controller"
 	"github.com/akuity/kargo/pkg/credentials"
 	kargoEvent "github.com/akuity/kargo/pkg/event"
-	natsevent "github.com/akuity/kargo/pkg/event/nats"
 	"github.com/akuity/kargo/pkg/expressions/function"
 	"github.com/akuity/kargo/pkg/kargo"
 	"github.com/akuity/kargo/pkg/kubeclient"
@@ -91,8 +89,7 @@ func SetupReconcilerWithManager(
 	credentialsDB credentials.Database,
 	subscriberRegistry subscription.SubscriberRegistry,
 	cfg ReconcilerConfig,
-	// TODO: Maybe fold this into the reconciler config
-	natsClient *nats.Conn,
+	eventSender kargoEvent.Sender,
 ) error {
 	if err := ctrl.NewControllerManagedBy(mgr).
 		For(&kargoapi.Warehouse{}).
@@ -113,7 +110,7 @@ func SetupReconcilerWithManager(
 			credentialsDB,
 			subscriberRegistry,
 			cfg,
-			natsevent.NewDefaultingEventSender(natsClient, cfg.Name()),
+			eventSender,
 		)); err != nil {
 		return fmt.Errorf("error building Warehouse reconciler: %w", err)
 	}
@@ -531,11 +528,7 @@ func (r *reconciler) syncWarehouse(
 						freight,
 					)
 					if err == nil {
-						err = r.eventSender.Send(
-							ctx,
-							kargoEvent.EventsSubjectPrefix,
-							evt,
-						)
+						err = r.eventSender.Send(ctx, evt)
 					}
 					if err != nil {
 						logger.Error(err, "failed to send FreightCreated event",

@@ -122,11 +122,7 @@ func (s *server) recordAPITokenCreated(
 	msg, actor := apiTokenEventMessage(ctx, tokenSecret, "created for")
 	evt, err := event.NewAPITokenCreated(msg, actor, tokenSecret, systemLevel)
 	if err == nil {
-		err = s.sender.Send(
-			ctx,
-			event.EventsSubjectPrefix,
-			evt,
-		)
+		err = s.sender.Send(ctx, evt)
 	}
 	if err != nil {
 		logging.LoggerFromContext(ctx).Error(err, "error sending API token created event")

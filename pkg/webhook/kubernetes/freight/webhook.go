@@ -8,7 +8,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/nats-io/nats.go"
 	admissionv1 "k8s.io/api/admission/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -22,7 +21,6 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/api"
 	"github.com/akuity/kargo/pkg/event"
-	natsevent "github.com/akuity/kargo/pkg/event/nats"
 	"github.com/akuity/kargo/pkg/indexer"
 	"github.com/akuity/kargo/pkg/logging"
 	"github.com/akuity/kargo/pkg/namer"
@@ -83,13 +81,9 @@ type webhook struct {
 func SetupWebhookWithManager(
 	cfg libWebhook.Config,
 	mgr ctrl.Manager,
-	natsClient *nats.Conn,
+	sender event.Sender,
 ) error {
-	w, err := newWebhook(
-		cfg,
-		mgr.GetClient(),
-		natsevent.NewDefaultingEventSender(natsClient, "freight-webhook"),
-	)
+	w, err := newWebhook(cfg, mgr.GetClient(), sender)
 	if err != nil {
 		return err
 	}
@@ -368,11 +362,7 @@ func (w *webhook) recordFreightApprovedEvent(
 		actor,
 	), actor, stageName, f)
 	if err == nil {
-		err = w.sender.Send(
-			ctx,
-			event.EventsSubjectPrefix,
-			evt,
-		)
+		err = w.sender.Send(ctx, evt)
 	}
 	if err != nil {
 		logging.LoggerFromContext(ctx).Error(err,

@@ -138,11 +138,7 @@ func (s *server) approveFreight(c *gin.Context) {
 	if s.sender != nil {
 		evt, err := event.NewFreightApproved(eventMsg, actor, stageName, freight)
 		if err == nil {
-			err = s.sender.Send(
-				ctx,
-				event.EventsSubjectPrefix,
-				evt,
-			)
+			err = s.sender.Send(ctx, evt)
 		}
 		if err != nil {
 			logging.LoggerFromContext(ctx).Error(err,

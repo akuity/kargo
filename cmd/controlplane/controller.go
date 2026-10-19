@@ -8,7 +8,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/nats-io/nats.go"
 	"github.com/spf13/cobra"
 	"go.opentelemetry.io/otel/attribute"
 	coordinationv1 "k8s.io/api/coordination/v1"
@@ -34,6 +33,8 @@ import (
 	"github.com/akuity/kargo/pkg/controller/warehouses"
 	"github.com/akuity/kargo/pkg/credentials"
 	credsdb "github.com/akuity/kargo/pkg/credentials/kubernetes"
+	"github.com/akuity/kargo/pkg/event"
+	natsevent "github.com/akuity/kargo/pkg/event/nats"
 	"github.com/akuity/kargo/pkg/health"
 	healthCheckers "github.com/akuity/kargo/pkg/health/checker/builtin"
 	"github.com/akuity/kargo/pkg/heartbeat"
@@ -173,6 +174,11 @@ func (o *controllerOptions) run(ctx context.Context) error {
 	}
 	defer natsConn.Close()
 
+	// All reconcilers share one sender for user-facing events. Each wraps it to
+	// stamp its own source on the events it sends.
+	eventSender := natsevent.NewEventSender(natsConn, event.EventsSubjectPrefix)
+	defer eventSender.Shutdown()
+
 	kargoMgr, localClusterClient, stagesReconcilerCfg, err := o.setupKargoManager(
 		ctx,
 		stages.ReconcilerConfigFromEnv(),
@@ -216,7 +222,7 @@ func (o *controllerOptions) run(ctx context.Context) error {
 		credentialsDB,
 		stagesReconcilerCfg,
 		targetClient,
-		natsConn,
+		eventSender,
 	); err != nil {
 		return fmt.Errorf("error setting up reconcilers: %w", err)
 	}
@@ -493,7 +499,7 @@ func (o *controllerOptions) setupReconcilers(
 	credentialsDB credentials.Database,
 	stagesReconcilerCfg stages.ReconcilerConfig,
 	targetClient *apiserver.Client,
-	natsConn *nats.Conn,
+	eventSender event.Sender,
 ) error {
 	var argoCDClient client.Client
 	if argocdMgr != nil {
@@ -511,6 +517,7 @@ func (o *controllerOptions) setupReconcilers(
 
 	sharedIndexer := indexer.NewSharedFieldIndexer(kargoMgr.GetFieldIndexer())
 
+	promotionsReconcilerCfg := promotions.ReconcilerConfigFromEnv()
 	if err := promotions.SetupReconcilerWithManager(
 		ctx,
 		kargoMgr,
@@ -526,9 +533,9 @@ func (o *controllerOptions) setupReconcilers(
 			),
 			promotion.DefaultExprDataCacheFn,
 		),
-		promotions.ReconcilerConfigFromEnv(),
+		promotionsReconcilerCfg,
 		targetGetter,
-		natsConn,
+		event.NewDefaultingSender(eventSender, promotionsReconcilerCfg.Name()),
 	); err != nil {
 		return fmt.Errorf("error setting up Promotions reconciler: %w", err)
 	}
@@ -541,6 +548,11 @@ func (o *controllerOptions) setupReconcilers(
 		return fmt.Errorf("error setting up PromotionRequests reconciler: %w", err)
 	}
 
+	stagesEventSender := event.NewDefaultingSender(
+		eventSender,
+		stagesReconcilerCfg.Name(),
+	)
+
 	if err := stages.NewRegularStageReconciler(
 		stagesReconcilerCfg,
 		credentialsDB,
@@ -550,7 +562,7 @@ func (o *controllerOptions) setupReconcilers(
 		kargoMgr,
 		argocdMgr,
 		sharedIndexer,
-		natsConn,
+		stagesEventSender,
 	); err != nil {
 		return fmt.Errorf("error setting up regular Stages reconciler: %w", err)
 	}
@@ -559,18 +571,19 @@ func (o *controllerOptions) setupReconcilers(
 		ctx,
 		kargoMgr,
 		sharedIndexer,
-		natsConn,
+		stagesEventSender,
 	); err != nil {
 		return fmt.Errorf("error setting up control flow Stages reconciler: %w", err)
 	}
 
+	warehousesReconcilerCfg := warehouses.ReconcilerConfigFromEnv()
 	if err := warehouses.SetupReconcilerWithManager(
 		ctx,
 		kargoMgr,
 		credentialsDB,
 		subscription.DefaultSubscriberRegistry,
-		warehouses.ReconcilerConfigFromEnv(),
-		natsConn,
+		warehousesReconcilerCfg,
+		event.NewDefaultingSender(eventSender, warehousesReconcilerCfg.Name()),
 	); err != nil {
 		return fmt.Errorf("error setting up Warehouses reconciler: %w", err)
 	}

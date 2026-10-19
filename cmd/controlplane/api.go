@@ -9,6 +9,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/akuity/kargo/pkg/database"
+	"github.com/akuity/kargo/pkg/event"
 	natsevent "github.com/akuity/kargo/pkg/event/nats"
 	"github.com/akuity/kargo/pkg/logging"
 	"github.com/akuity/kargo/pkg/os"
@@ -146,7 +147,11 @@ func (o *apiOptions) run(ctx context.Context) error {
 		)
 	}
 
-	sender := natsevent.NewDefaultingEventSender(natsConn, "api")
+	sender := natsevent.NewDefaultingEventSender(
+		natsConn,
+		event.EventsSubjectPrefix,
+		"api",
+	)
 	defer sender.Shutdown()
 
 	// The database holds Targets. It is optional: without it, the endpoints

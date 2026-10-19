@@ -72,11 +72,7 @@ func (s *server) recordAPITokenDeleted(
 	msg, actor := apiTokenEventMessage(ctx, tokenSecret, "deleted from")
 	evt, err := event.NewAPITokenDeleted(msg, actor, tokenSecret, systemLevel)
 	if err == nil {
-		err = s.sender.Send(
-			ctx,
-			event.EventsSubjectPrefix,
-			evt,
-		)
+		err = s.sender.Send(ctx, evt)
 	}
 	if err != nil {
 		logging.LoggerFromContext(ctx).Error(err, "error sending API token deleted event")

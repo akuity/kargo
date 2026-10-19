@@ -10,7 +10,6 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/kelseyhightower/envconfig"
-	"github.com/nats-io/nats.go"
 	gocache "github.com/patrickmn/go-cache"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/trace"
@@ -39,7 +38,6 @@ import (
 	"github.com/akuity/kargo/pkg/controller/metrics"
 	"github.com/akuity/kargo/pkg/credentials"
 	kargoEvent "github.com/akuity/kargo/pkg/event"
-	natsevent "github.com/akuity/kargo/pkg/event/nats"
 	exprfn "github.com/akuity/kargo/pkg/expressions/function"
 	"github.com/akuity/kargo/pkg/health"
 	"github.com/akuity/kargo/pkg/indexer"
@@ -130,11 +128,11 @@ func (r *RegularStageReconciler) SetupWithManager(
 	ctx context.Context,
 	kargoMgr, argocdMgr ctrl.Manager,
 	sharedIndexer client.FieldIndexer,
-	natsClient *nats.Conn,
+	eventSender kargoEvent.Sender,
 ) error {
 	// Configure client using manager.
 	r.client = kargoMgr.GetClient()
-	r.eventSender = natsevent.NewDefaultingEventSender(natsClient, r.cfg.Name())
+	r.eventSender = eventSender
 
 	// This index is used to find all Promotions that are associated with a
 	// specific Stage.
@@ -1459,11 +1457,7 @@ func (ver verifier) recordFreightVerificationEvent(
 		analysisTriggeredByPromotion,
 	)
 	if err == nil {
-		err = ver.eventSender.Send(
-			context.Background(),
-			kargoEvent.EventsSubjectPrefix,
-			evt,
-		)
+		err = ver.eventSender.Send(context.Background(), evt)
 	}
 	if err != nil {
 		logging.LoggerFromContext(context.Background()).Error(
@@ -2098,11 +2092,7 @@ func (r *RegularStageReconciler) autoPromoteFreight(
 			&candidate,
 		)
 		if err == nil {
-			err = r.eventSender.Send(
-				ctx,
-				kargoEvent.EventsSubjectPrefix,
-				evt,
-			)
+			err = r.eventSender.Send(ctx, evt)
 		}
 		if err != nil {
 			logger.Error(err, "failed to send promotion event")
