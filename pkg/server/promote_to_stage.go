@@ -210,12 +210,16 @@ func (s *server) promoteToStage(c *gin.Context) {
 		// system-owned, and the promote-verb check above IS the authorization
 		// decision for this request. The Targets come from the database
 		// without a check of their own for the same reason.
-		targets, prErr := s.governedTargets(ctx, stage)
+		targets, targetErr := s.governedTargets(ctx, stage)
+		if targetErr != nil {
+			_ = c.Error(targetErr)
+			return
+		}
+		promotionRequest, prErr := api.NewPromotionRequestForAllTargets(stage, freight.Name, targets)
 		if prErr != nil {
 			_ = c.Error(prErr)
 			return
 		}
-		promotionRequest := api.NewPromotionRequest(stage, freight.Name, targets)
 		if u, ok := user.IdentityFromContext(ctx); ok {
 			api.SetCreateActorAnnotation(promotionRequest, u.Actor())
 		}
