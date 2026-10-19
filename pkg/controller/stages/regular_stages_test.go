@@ -5158,6 +5158,61 @@ func TestRegularStageReconciler_startVerification(t *testing.T) {
 			},
 		},
 		{
+			name: "handles reverification requested by the control plane without an actor",
+			stage: &kargoapi.Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "fake-project",
+					Name:      "test-stage",
+				},
+				Spec: kargoapi.StageSpec{
+					Verification: &kargoapi.Verification{},
+				},
+				Status: kargoapi.StageStatus{
+					LastPromotion: &kargoapi.PromotionReference{
+						Name: "test-promotion",
+					},
+				},
+			},
+			freightCol: kargoapi.FreightCollection{
+				ID: "test-collection",
+				Freight: map[string]kargoapi.FreightReference{
+					"warehouse": {Name: "test-freight"},
+				},
+				VerificationHistory: []kargoapi.VerificationInfo{
+					{
+						ID: "prev-verification",
+					},
+				},
+			},
+			objects: []client.Object{
+				&kargoapi.Freight{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "fake-project",
+						Name:      "test-freight",
+					},
+				},
+			},
+			req: &kargoapi.VerificationRequest{
+				ID:           "prev-verification",
+				ControlPlane: true,
+			},
+			assertions: func(t *testing.T, c client.Client, vi *kargoapi.VerificationInfo, err error) {
+				require.NoError(t, err)
+
+				require.NotNil(t, vi)
+				assert.Empty(t, vi.Actor)
+
+				// The promotion annotation is added even though the re-verification
+				// was not requested by a user.
+				ar := &rolloutsapi.AnalysisRun{}
+				require.NoError(t, c.Get(t.Context(), types.NamespacedName{
+					Namespace: vi.AnalysisRun.Namespace,
+					Name:      vi.AnalysisRun.Name,
+				}, ar))
+				assert.Equal(t, "test-promotion", ar.Annotations[kargoapi.AnnotationKeyPromotion])
+			},
+		},
+		{
 			name: "handles reverification with control plane actor and long stage name",
 			stage: &kargoapi.Stage{
 				ObjectMeta: metav1.ObjectMeta{

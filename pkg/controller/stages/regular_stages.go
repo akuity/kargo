@@ -1606,7 +1606,9 @@ func (ver verifier) startVerification(
 			Reference:  types.NamespacedName{Namespace: stage.Namespace, Name: freightRef.Name},
 		})
 	}
-	if curVI == nil || (req.ForID(curVI.ID) && req.ControlPlane && req.Actor != "") {
+	// A re-verification verifies the Freight the last Promotion delivered, so it
+	// is tied to that Promotion whoever requested it.
+	if curVI == nil || req.ForID(curVI.ID) {
 		lastPromoName := stage.LastPromotionName()
 		if lastPromoName != "" {
 			builderOpts = append(builderOpts, rollouts.WithExtraAnnotations{
