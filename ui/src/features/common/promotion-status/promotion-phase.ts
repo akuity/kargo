@@ -79,6 +79,10 @@ export const promotionPhases: readonly PromotionPhase[] = [
   'Aborted'
 ];
 
+// PhaseFilter is one chip in a row of phase filters. The first names no phase:
+// it is "All", and selecting it clears the filter.
+export type PhaseFilter = { phase?: PromotionPhase; count: number };
+
 export const isPromotionPhase = (phase?: string): phase is PromotionPhase =>
   !!phase && phase in promotionPhasePresentations;
 
