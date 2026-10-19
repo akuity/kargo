@@ -11,6 +11,7 @@ import (
 
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
 type VerificationPhase string
@@ -299,8 +300,16 @@ type StageTargets struct {
 
 type TargetUpdateStrategy struct {
 	// MaxConcurrent specifies a number of targets which can be promoted to at the same time
-	// Zero means there is no limit (default)
-	MaxConcurrent int64 `json:"maxConcurrent,omitempty"`
+	// Value can be an absolute number (e.g.: 5) or a percentage of targets selected by the stage (e.g.: 10%).
+	// Absolute number is calculated from percentage by rounding up to a minimum of 1.
+	// Percentage value cannot be 0%. Number value cannot be 0.
+	// If omitted or empty string, no limit is applied (default).
+	MaxConcurrent *intstr.IntOrString `json:"maxConcurrent,omitempty"`
+	// MaxFailures specifies a number of target promotions which can fail before PromotionRequest is considered failed.
+	// Specifies a tolerable number, N failing promotions with maxFailures: N is a success, N+1 is a failure.
+	// Value can be an absolute number (e.g.: 5) or a percentage of targets selected by the stage (e.g.: 10%). 
+	// Absolute number is calculated from percentage by rounding up to a minimum of 1. Default value is 0.
+	MaxFailures *intstr.IntOrString `json:"maxFailures,omitempty"`
 }
 
 // FreightRequest expresses a Stage's need for Freight having originated from a
