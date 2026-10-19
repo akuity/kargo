@@ -109,7 +109,7 @@ export const RoundCard = ({
             <Typography.Text type='secondary'>none</Typography.Text>
           )}
           {round.metadata?.name && (
-            <Tooltip title='The PromotionRequest this round is. Its Promotions tab row lists every child Promotion.'>
+            <Tooltip title='The PromotionRequest this round is. Open it from the Promotions tab to read every child Promotion.'>
               <Typography.Text type='secondary' className='block text-xs font-mono mt-0.5'>
                 {round.metadata.name}
               </Typography.Text>
