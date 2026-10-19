@@ -44,6 +44,7 @@ export const App = () => (
                 <Route path={paths.projectTargets} element={<TargetsPage />} />
                 <Route path={paths.stage} element={<Project />} />
                 <Route path={paths.promotion} element={<Project />} />
+                <Route path={paths.promotionRequest} element={<Project />} />
                 <Route path={paths.promote} element={<Project />} />
                 <Route path={paths.freight} element={<Project />} />
                 <Route path={paths.warehouse} element={<Project />} />
