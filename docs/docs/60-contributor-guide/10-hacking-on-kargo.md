@@ -533,6 +533,15 @@ with it. A Target names its Project rather than referencing the mirrored
 row, so writing one never waits for the mirror. Deleting a Project does not
 yet remove its Targets.
 
+Which Stage governs which Target is recorded too, in `stage_targets`, one row
+per Stage and Target whose labels match one of the Stage's selectors. The
+rows are derived: a controller in the management controller, built on
+`pkg/reconciler` rather than on a Kubernetes watch, recomputes a Project's
+rows from its Stages' mirrored selectors and its Targets' labels and writes
+only the difference. It learns of changes by polling a per-Project digest of
+both every few seconds, and settles every Project again every ten minutes. A
+row goes with its Stage or its Target.
+
 Only control plane components open the database. The controller may run far
 from the control plane, on infrastructure where the database is not
 reachable, so it resolves the Targets a Stage governs and the Target a

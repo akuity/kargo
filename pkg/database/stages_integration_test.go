@@ -181,7 +181,7 @@ func TestStagesIntegration(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			_, err := pool.Exec(ctx, "TRUNCATE stages")
+			_, err := pool.Exec(ctx, "TRUNCATE stages CASCADE")
 			require.NoError(t, err)
 			testCase.run(t)
 		})
