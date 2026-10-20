@@ -510,9 +510,17 @@ Tilt runs the PostgreSQL bundled with the Helm chart, configured by the
 `127.0.0.1:15432` to its port `5432`. The database, username, and password are all `kargo`. Inside the
 cluster, the address is `kargo-postgres.kargo.svc:5432`.
 
-Two kinds of data live in it. The management controller mirrors Project
-identities from Kubernetes, which remains their source of truth. Targets, on
-the other hand, exist only in the database: the API server serves them
+Two kinds of data live in it. The management controller mirrors Projects,
+Stages, and Promotions from Kubernetes, which remains their source of truth.
+Project and Stage rows record identities and follow their objects, including
+out of existence. A Stage row also records the selectors by which the Stage
+governs Targets (NULL for a classic Stage), and carries the number last given
+to one of its PromotionRollouts, which the mirror never writes. Promotion rows record what each Promotion did, its Stage,
+Freight, Target if any, phase, and timing, along with the Freight of the
+whole collection it rendered, one row per origin (`promotion_freight`), and
+are never deleted: Kubernetes retains only a
+bounded number of recent Promotions per Stage, and the database keeps them
+all as a history. Targets, on the other hand, exist only in the database: the API server serves them
 through `/v1beta1/projects/{project}/targets`, and Target is no longer a
 custom resource at all. The chart installs no CRD for it, `kubectl` does not
 see Targets, and the Go type keeps the shape of a Kubernetes resource without

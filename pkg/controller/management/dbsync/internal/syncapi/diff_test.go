@@ -27,6 +27,7 @@ func TestDiff(t *testing.T) {
 		matchErr  error
 		cached    bool
 		wrongType bool
+		nilKey    bool
 		want      []reconcile.Request
 		wantErr   string
 	}{
@@ -60,6 +61,15 @@ func TestDiff(t *testing.T) {
 			want: []reconcile.Request{req("a")},
 		},
 		{
+			// Without a key, rows whose objects are gone are not orphans and
+			// are left out; the live objects are handled as before.
+			name: "nil key ignores rows without objects", rows: map[string]string{
+				"b-uid": "outdated", "c-uid": "c", "z-stale": "z", "a-stale": "old",
+			},
+			nilKey: true,
+			want:   []reconcile.Request{req("a"), req("b")},
+		},
+		{
 			name: "comparison error discards partial results", rows: map[string]string{"b-uid": "b", "old": "old"},
 			matchErr: errors.New("conversion failed"), wantErr: "conversion failed",
 		},
@@ -84,6 +94,10 @@ func TestDiff(t *testing.T) {
 				list = &kargoapi.StageList{}
 			}
 			snapshot := maps.Clone(testCase.rows)
+			key := func(name string) client.ObjectKey { return client.ObjectKey{Name: name} }
+			if testCase.nilKey {
+				key = nil
+			}
 			requests, err := Diff(
 				context.Background(),
 				kube,
@@ -92,7 +106,7 @@ func TestDiff(t *testing.T) {
 				func(obj *kargoapi.Project, name string) (bool, error) {
 					return obj.Name == name, testCase.matchErr
 				},
-				func(name string) client.ObjectKey { return client.ObjectKey{Name: name} },
+				key,
 			)
 			if testCase.wantErr != "" {
 				require.ErrorContains(t, err, testCase.wantErr)
