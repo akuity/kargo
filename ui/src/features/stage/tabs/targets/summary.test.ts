@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest';
 
-import { PromotionRequest, Target } from '../../../../gen/api/v2/models';
+import { PromotionRequest, TargetSummary } from '../../../../gen/api/v2/models';
 import { targetRows } from '../../../project/targets/model/target-rows';
 import {
   fleetStage,
@@ -22,14 +22,16 @@ import {
 const stage = fleetStage('prod', [{ matchLabels: { env: 'prod' } }], 'current');
 
 // rows builds the tab's rows the way the tab does: against this one Stage.
-const rows = (targets: Target[], request?: PromotionRequest) =>
+const rows = (targets: TargetSummary[], request?: PromotionRequest) =>
   targetRows(targets, [stage], { prod: request });
 
+// governed builds a Target's summary as the server would for this Stage: it
+// names the Stage only when the Target's labels match its selector.
 const governed = (
   name: string,
   status?: ReturnType<typeof stageStatus>,
   labels: Record<string, string> = { env: 'prod' }
-) => target(name, labels, status ? { status: { stages: { prod: status } } } : {});
+) => target(name, labels, labels.env === 'prod' ? { prod: status ?? {} } : undefined);
 
 describe('governing()', () => {
   test("is what the tab's one Stage observes of a Target", () => {
@@ -156,26 +158,13 @@ describe('childPromotionName()', () => {
 });
 
 describe('owningTargetSet()', () => {
-  test('names the TargetSet a Target was generated from', () => {
-    expect(
-      owningTargetSet({
-        metadata: {
-          name: 't',
-          ownerReferences: [
-            { apiVersion: 'v1', kind: 'ConfigMap', name: 'not-it', uid: '1' },
-            {
-              apiVersion: 'ee.kargo.akuity.io/v1alpha1',
-              kind: 'TargetSet',
-              name: 'clusters',
-              uid: '2'
-            }
-          ]
-        }
-      })
-    ).toBe('clusters');
+  test('names the TargetSet that manages a Target', () => {
+    expect(owningTargetSet({ metadata: { name: 't' }, spec: { targetSet: 'clusters' } })).toBe(
+      'clusters'
+    );
   });
 
-  test('is nothing for a Target written by hand', () => {
-    expect(owningTargetSet(target('t'))).toBeUndefined();
+  test('is nothing until the Target has been read', () => {
+    expect(owningTargetSet(undefined)).toBeUndefined();
   });
 });

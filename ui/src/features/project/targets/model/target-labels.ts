@@ -1,4 +1,4 @@
-import { Target, V1LabelSelector } from '@ui/gen/api/v2/models';
+import { TargetSummary } from '@ui/gen/api/v2/models';
 
 // The domain Kargo stamps its own bookkeeping under.
 const internalLabelDomain = 'kargo.akuity.io';
@@ -13,56 +13,12 @@ export const isInternalLabel = (key: string): boolean => {
 
 // visibleLabels is a Target's labels with Kargo's own left out, as every
 // surface that prints or searches them wants them.
-export const visibleLabels = (target: Target): [string, string][] =>
-  Object.entries(target.metadata?.labels || {}).filter(([key]) => !isInternalLabel(key));
-
-// matchesLabelSelector evaluates a Kubernetes label selector against a label
-// set the way the API server does: matchLabels and matchExpressions are ANDed,
-// and an empty selector matches everything.
-export const matchesLabelSelector = (
-  selector: V1LabelSelector | undefined,
-  labels: Record<string, string> = {}
-): boolean => {
-  for (const [key, value] of Object.entries(selector?.matchLabels || {})) {
-    if (labels[key] !== value) {
-      return false;
-    }
-  }
-  for (const requirement of selector?.matchExpressions || []) {
-    const key = requirement.key || '';
-    const present = Object.prototype.hasOwnProperty.call(labels, key);
-    const values = requirement.values || [];
-    switch (requirement.operator) {
-      case 'In':
-        if (!present || !values.includes(labels[key])) {
-          return false;
-        }
-        break;
-      case 'NotIn':
-        if (present && values.includes(labels[key])) {
-          return false;
-        }
-        break;
-      case 'Exists':
-        if (!present) {
-          return false;
-        }
-        break;
-      case 'DoesNotExist':
-        if (present) {
-          return false;
-        }
-        break;
-      default:
-        return false;
-    }
-  }
-  return true;
-};
+export const visibleLabels = (target: TargetSummary): [string, string][] =>
+  Object.entries(target.labels || {}).filter(([key]) => !isInternalLabel(key));
 
 // labelKeys returns every label key present on the Targets, sorted, so the
 // page can offer them as grouping axes without anyone declaring them.
-export const labelKeys = (targets: Target[]): string[] => {
+export const labelKeys = (targets: TargetSummary[]): string[] => {
   const keys = new Set<string>();
   for (const target of targets) {
     for (const [key] of visibleLabels(target)) {

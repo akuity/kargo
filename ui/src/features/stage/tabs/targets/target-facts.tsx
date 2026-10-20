@@ -16,8 +16,9 @@ import { visibleLabels } from '@ui/features/project/targets/model/target-labels'
 import { TargetRow } from '@ui/features/project/targets/model/target-rows';
 import { FreightLink } from '@ui/features/project/targets/shared/freight-link';
 import { failedStepName } from '@ui/features/stage/promotion-request/round-detail';
-import { useGetPromotion } from '@ui/gen/api/v2/core/core';
-import { PromotionRequest } from '@ui/gen/api/v2/models';
+import { useGetFreightMap } from '@ui/features/stage/tabs/freight-history/use-get-freight-map';
+import { useGetPromotion, useGetTarget } from '@ui/gen/api/v2/core/core';
+import { PromotionRequest, Target } from '@ui/gen/api/v2/models';
 import { parseDate } from '@ui/utils/dates';
 
 import { childPromotionName, governing, owningTargetSet } from './summary';
@@ -106,8 +107,13 @@ export const TargetFacts = ({
   const { token } = theme.useToken();
   const { show } = useModal();
 
-  const target = row.target;
-  const name = target.metadata?.name || '';
+  const name = row.target.name || '';
+  // The row is drawn from a summary, which leaves out what only this panel
+  // shows -- params, creation time, the TargetSet, the manifest -- so the
+  // Target itself is read once someone picks it.
+  const targetQuery = useGetTarget(project, name);
+  const target = targetQuery.data?.data as Target | undefined;
+  const freightMap = useGetFreightMap(project);
   const governed = governing(row);
   const phase = governed?.phase;
   const failed = phase === 'Failed' || phase === 'Errored';
@@ -121,11 +127,11 @@ export const TargetFacts = ({
   });
   const failedStep = failedStepName(promotionQuery.data?.data);
 
-  const currentFreight = governed?.currentFreight;
-  const artifacts = freightArtifacts(currentFreight);
-  const params = flattenParams(target.spec?.params);
+  const collectionID = governed?.collectionID;
+  const artifacts = freightArtifacts(row.freight, freightMap);
+  const params = flattenParams(target?.spec?.params);
   const targetSet = owningTargetSet(target);
-  const created = parseDate(target.metadata?.creationTimestamp);
+  const created = parseDate(target?.metadata?.creationTimestamp);
   const { text, color } = headline(phase, !!row.freight.length, blocked);
 
   return (
@@ -146,7 +152,8 @@ export const TargetFacts = ({
           <Button
             size='small'
             icon={<FontAwesomeIcon icon={faFileCode} />}
-            onClick={() => show((p) => <TargetYamlModal {...p} target={target} />)}
+            disabled={!target}
+            onClick={() => target && show((p) => <TargetYamlModal {...p} target={target} />)}
           >
             YAML
           </Button>
@@ -161,7 +168,7 @@ export const TargetFacts = ({
       </Flex>
 
       <Flex gap={6} align='center' wrap className='mt-2'>
-        {visibleLabels(target).map(([key, value]) => (
+        {visibleLabels(row.target).map(([key, value]) => (
           <Tag key={key} className='m-0 text-xs font-mono'>
             {key}={value}
           </Tag>
@@ -180,7 +187,7 @@ export const TargetFacts = ({
 
       <Flex gap={12} wrap className='mt-3'>
         <Card heading={`In ${stageName}`}>
-          {currentFreight ? (
+          {collectionID ? (
             <>
               <Row label='Freight'>
                 <Flex gap={6} wrap justify='flex-end'>
@@ -194,11 +201,9 @@ export const TargetFacts = ({
                   ))}
                 </Flex>
               </Row>
-              {currentFreight.id && (
-                <Row label='Collection'>
-                  <span className='font-mono'>{currentFreight.id.slice(0, 7)}</span>
-                </Row>
-              )}
+              <Row label='Collection'>
+                <span className='font-mono'>{collectionID.slice(0, 7)}</span>
+              </Row>
               {artifacts.map((artifact) => (
                 <Row key={`${artifact.kind}-${artifact.text}`} label={artifact.kind}>
                   <span className='font-mono'>{artifact.text}</span>

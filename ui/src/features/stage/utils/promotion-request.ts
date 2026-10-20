@@ -47,28 +47,6 @@ const roundOf = (stage: Stage, mine: PromotionRequest[]): PromotionRequest | und
   );
 };
 
-// currentRounds resolves the round of many Stages at once, keyed by Stage name.
-// It separates the requests by Stage in one pass, where asking currentRound per
-// Stage would walk and copy the Project's whole list once for each of them.
-export const currentRounds = (
-  stages: Stage[],
-  requests: PromotionRequest[]
-): Record<string, PromotionRequest | undefined> => {
-  const byStage = new Map<string, PromotionRequest[]>();
-  for (const request of requests) {
-    const stageName = request.spec?.stage || '';
-    byStage.set(stageName, [...(byStage.get(stageName) || []), request]);
-  }
-  return Object.fromEntries(
-    stages
-      .filter((stage) => stage.metadata?.name)
-      .map((stage) => {
-        const stageName = stage.metadata?.name || '';
-        return [stageName, roundOf(stage, byStage.get(stageName) || [])];
-      })
-  );
-};
-
 // blockingMessage returns the message a user needs to see when a
 // PromotionRequest is not going to progress. The reconciler explains the
 // current phase in status.message; a request written before that field

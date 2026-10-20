@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest';
 
-import { Promotion, PromotionRequest, Target } from '@ui/gen/api/v2/models';
+import { Promotion, PromotionRequest, TargetSummary } from '@ui/gen/api/v2/models';
 
 import {
   ChildPromotion,
@@ -22,8 +22,10 @@ const request = (partial: Partial<PromotionRequest>): PromotionRequest =>
 const promotion = (name: string, partial: Partial<Promotion> = {}): Promotion =>
   ({ metadata: { name }, spec: { stage: 'prod-us', steps: [] }, ...partial }) as Promotion;
 
-const target = (name: string, labels: Record<string, string> = {}): Target =>
-  ({ metadata: { name, labels } }) as Target;
+const target = (name: string, labels: Record<string, string> = {}): TargetSummary => ({
+  name,
+  labels
+});
 
 // child builds a ChildPromotion directly, for the tallies that only care about
 // a phase and some labels.

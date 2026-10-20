@@ -259,8 +259,5 @@ export const byMark =
     if (!!left.attention !== !!right.attention) {
       return left.attention ? -1 : 1;
     }
-    return (
-      left.order - right.order ||
-      (lhs.target.metadata?.name || '').localeCompare(rhs.target.metadata?.name || '')
-    );
+    return left.order - right.order || (lhs.target.name || '').localeCompare(rhs.target.name || '');
   };

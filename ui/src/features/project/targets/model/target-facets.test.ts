@@ -9,35 +9,11 @@ describe('facets', () => {
   const fleet = () =>
     targetRows(
       [
-        target(
-          'a',
-          { geo: 'us', tier: 'primary' },
-          {
-            status: { stages: { 'us-stage': forStage('abc', 'Healthy') } }
-          }
-        ),
-        target(
-          'b',
-          { geo: 'us', tier: 'secondary' },
-          {
-            status: { stages: { 'us-stage': forStage('abc', 'Unhealthy') } }
-          }
-        ),
-        target(
-          'c',
-          { geo: 'eu', tier: 'primary' },
-          {
-            status: { stages: { 'us-stage': forStage('abc', 'Healthy') } }
-          }
-        ),
+        target('a', { geo: 'us', tier: 'primary' }, { 'us-stage': forStage('abc', 'Healthy') }),
+        target('b', { geo: 'us', tier: 'secondary' }, { 'us-stage': forStage('abc', 'Unhealthy') }),
+        target('c', { geo: 'eu', tier: 'primary' }, { 'us-stage': forStage('abc', 'Healthy') }),
         // Carries no tier at all.
-        target(
-          'd',
-          { geo: 'eu' },
-          {
-            status: { stages: { 'us-stage': forStage('abc', 'Healthy') } }
-          }
-        )
+        target('d', { geo: 'eu' }, { 'us-stage': forStage('abc', 'Healthy') })
       ],
       [us]
     );
@@ -51,7 +27,7 @@ describe('facets', () => {
     expect(
       fleet()
         .filter((row) => matchesFacets(row, facets))
-        .map((row) => row.target.metadata?.name)
+        .map((row) => row.target.name)
     ).toEqual(['a', 'b']);
   });
 
@@ -60,7 +36,7 @@ describe('facets', () => {
     expect(
       fleet()
         .filter((row) => matchesFacets(row, facets))
-        .map((row) => row.target.metadata?.name)
+        .map((row) => row.target.name)
     ).toEqual(['d']);
   });
 
@@ -69,7 +45,7 @@ describe('facets', () => {
     expect(
       fleet()
         .filter((row) => matchesFacets(row, facets))
-        .map((row) => row.target.metadata?.name)
+        .map((row) => row.target.name)
     ).toEqual(['a', 'c', 'd']);
   });
 

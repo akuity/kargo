@@ -1,6 +1,8 @@
 import { describe, expect, test } from 'vitest';
 
-import { describeArtifact, flattenParams } from './target-details-utils';
+import { Freight } from '@ui/gen/api/v2/models';
+
+import { describeArtifact, flattenParams, freightArtifacts } from './target-details-utils';
 
 describe('flattenParams()', () => {
   test('nests into dotted keys and sorts them', () => {
@@ -60,5 +62,33 @@ describe('describeArtifact()', () => {
     expect(
       describeArtifact({ type: 'image', repoURL: 'ghcr.io/example/otel-app/', tag: 'v1' })
     ).toEqual({ kind: 'Image', text: 'otel-app:v1' });
+  });
+});
+
+describe('freightArtifacts()', () => {
+  const freightMap: Record<string, Freight> = {
+    f1: {
+      metadata: { name: 'f1' },
+      origin: { kind: 'Warehouse', name: 'w1' },
+      images: [{ repoURL: 'ghcr.io/example/app', tag: 'v1.2.3' }]
+    },
+    f2: {
+      metadata: { name: 'f2' },
+      origin: { kind: 'Warehouse', name: 'w2' },
+      commits: [{ repoURL: 'https://github.com/example/config', id: '0123456789abcdef' }]
+    }
+  };
+
+  test("describes each named Freight's artifacts, as the Project records them", () => {
+    expect(freightArtifacts(['f1', 'f2'], freightMap)).toEqual([
+      { kind: 'Image', text: 'app:v1.2.3' },
+      { kind: 'Commit', text: 'config@0123456' }
+    ]);
+  });
+
+  test('skips Freight the Project no longer has', () => {
+    expect(freightArtifacts(['gone', 'f1'], freightMap)).toEqual([
+      { kind: 'Image', text: 'app:v1.2.3' }
+    ]);
   });
 });

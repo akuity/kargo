@@ -111,7 +111,7 @@ export const childPromotionName = (
   target: string
 ): string | undefined => round?.status?.targets?.find(({ name }) => name === target)?.promotion;
 
-// owningTargetSet names the TargetSet a Target was generated from. Targets may
-// also be written by hand, and then nothing owns them.
-export const owningTargetSet = (target: Target): string | undefined =>
-  target.metadata?.ownerReferences?.find(({ kind }) => kind === 'TargetSet')?.name;
+// owningTargetSet names the TargetSet that manages a Target. Every Target has
+// one, which it names in its spec; nothing is named until the Target is read.
+export const owningTargetSet = (target?: Target): string | undefined =>
+  target?.spec?.targetSet || undefined;

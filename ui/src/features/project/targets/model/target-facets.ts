@@ -44,7 +44,7 @@ const matchesLabelFacets = (
     if (key === skipKey || !excluded.length) {
       return true;
     }
-    const value = row.target.metadata?.labels?.[key];
+    const value = row.target.labels?.[key];
     return value === undefined || !excluded.includes(value);
   });
 
@@ -69,7 +69,7 @@ export const labelFacets = (rows: TargetRow[], keys: string[], facets: Facets): 
         if (!matchesLabelFacets(row, facets.labels, key) || facets.states.includes(row.state)) {
           continue;
         }
-        const value = row.target.metadata?.labels?.[key];
+        const value = row.target.labels?.[key];
         if (value !== undefined) {
           counts.set(value, (counts.get(value) || 0) + 1);
         }

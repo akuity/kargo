@@ -41,7 +41,7 @@ export const groupTargetRows = (rows: TargetRow[], key?: string): TargetGroup[] 
     // `||`, not `??`: an empty label value is legal in Kubernetes but names no
     // group, so it belongs with the Targets that carry no value at all rather
     // than forming a group with a blank heading.
-    const value = row.target.metadata?.labels?.[key] || UNLABELED;
+    const value = row.target.labels?.[key] || UNLABELED;
     groups.set(value, [...(groups.get(value) || []), row]);
   }
   return [...groups.entries()]
