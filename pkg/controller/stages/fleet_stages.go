@@ -990,6 +990,7 @@ func (r *FleetStageReconciler) createAutoPromotionRequest(
 		"freight", candidate.Name,
 	)
 
+	// FIXME: wrap that into NewPromotionRequestForAllTargets?
 	targets, err := r.targets.ListTargets(ctx, stage.Namespace)
 	if err != nil {
 		return fmt.Errorf(
@@ -1004,7 +1005,8 @@ func (r *FleetStageReconciler) createAutoPromotionRequest(
 		)
 	}
 
-	promotionRequest, err := api.NewPromotionRequestForAllTargets(stage, candidate.Name, targets)
+	// Default settings for PromotionrequestBuilder create promotion to all targets in the stage
+	promotionRequest, err := api.NewPromotionRequestBuilder(stage, candidate.Name).WithStageTargets(targets).Build()
 	if err != nil {
 		return fmt.Errorf(
 			"error building PromotionRequest for Freight %q in namespace %q: %w",
