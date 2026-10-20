@@ -5,7 +5,7 @@ import {
   coverageEnd,
   fallbackReleases,
   formatDate,
-  parseBestReleases,
+  mergeBestReleases,
   parseReleaseDate,
   relativePhrase,
   statusLabels,
@@ -37,10 +37,7 @@ export default function ReleaseSupportTable(): JSX.Element {
           : Promise.reject(new Error(`status ${response.status}`)),
       )
       .then((payload) => {
-        const fetched = parseBestReleases(payload);
-        if (fetched.length > 0) {
-          setReleases(fetched);
-        }
+        setReleases(mergeBestReleases(payload, fallbackReleases));
       })
       .catch(() => {
         // The snapshot is already on screen. A failed refresh is not something
