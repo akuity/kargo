@@ -16,6 +16,7 @@ data:
   {{- with (include "kargo.tracing.configMapData" .) }}
   {{- . | nindent 2 }}
   {{- end }}
+  {{- include "kargo.nats.configMapData" . | nindent 2 }}
   {{- if $kc }}
   KUBECONFIG: /etc/kargo/kubeconfigs/kubeconfig.yaml
   {{- end }}

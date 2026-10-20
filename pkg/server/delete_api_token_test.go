@@ -16,6 +16,7 @@ import (
 	rbacapi "github.com/akuity/kargo/api/rbac/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/event"
+	fakeevent "github.com/akuity/kargo/pkg/event/fake"
 	"github.com/akuity/kargo/pkg/server/config"
 	"github.com/akuity/kargo/pkg/server/user"
 )
@@ -38,7 +39,7 @@ func Test_server_deleteProjectAPIToken(t *testing.T) {
 		},
 		Type: corev1.SecretTypeServiceAccountToken,
 	}
-	sender := &recordingSender{}
+	sender := &fakeevent.Sender{}
 	testRESTEndpoint(
 		t, &config.ServerConfig{},
 		http.MethodDelete, "/v1beta1/projects/"+testProject.Name+"/api-tokens/"+testToken.Name,
@@ -138,11 +139,16 @@ func Test_server_deleteProjectAPIToken(t *testing.T) {
 					require.True(t, apierrors.IsNotFound(err))
 
 					// Deleting a token is recorded as an event attributed to the caller
-					require.Len(t, sender.events, 1)
-					evt, ok := sender.events[0].(*event.APITokenDeleted)
-					require.True(t, ok)
-					require.Equal(t, testProject.Name, evt.GetProject())
-					require.Equal(t, testToken.Name, evt.GetName())
+					evt := &event.APITokenDeleted{}
+					requireSingleEvent(
+						t,
+						sender,
+						kargoapi.EventTypeAPITokenDeleted,
+						"Secret",
+						evt,
+					)
+					require.Equal(t, testProject.Name, evt.Project)
+					require.Equal(t, testToken.Name, evt.Name)
 					require.Equal(t, "fake-service-account", evt.RoleName)
 					require.False(t, evt.SystemLevel)
 					require.NotNil(t, evt.Actor)
@@ -150,7 +156,7 @@ func Test_server_deleteProjectAPIToken(t *testing.T) {
 					require.Equal(
 						t,
 						`API token "fake-token" deleted from Role "fake-service-account" by "admin"`,
-						evt.GetMessage(),
+						evt.Message,
 					)
 				},
 			},
@@ -174,7 +180,7 @@ func Test_server_deleteSystemAPIToken(t *testing.T) {
 		Type: corev1.SecretTypeServiceAccountToken,
 	}
 
-	sender := &recordingSender{}
+	sender := &fakeevent.Sender{}
 	testRESTEndpoint(
 		t, &config.ServerConfig{},
 		http.MethodDelete, "/v1beta1/system/api-tokens/"+testToken.Name,
@@ -257,11 +263,16 @@ func Test_server_deleteSystemAPIToken(t *testing.T) {
 					require.Error(t, err)
 					require.True(t, apierrors.IsNotFound(err))
 
-					require.Len(t, sender.events, 1)
-					evt, ok := sender.events[0].(*event.APITokenDeleted)
-					require.True(t, ok)
-					require.Equal(t, testKargoNamespace, evt.GetProject())
-					require.Equal(t, testToken.Name, evt.GetName())
+					evt := &event.APITokenDeleted{}
+					requireSingleEvent(
+						t,
+						sender,
+						kargoapi.EventTypeAPITokenDeleted,
+						"Secret",
+						evt,
+					)
+					require.Equal(t, testKargoNamespace, evt.Project)
+					require.Equal(t, testToken.Name, evt.Name)
 					require.True(t, evt.SystemLevel)
 					require.Nil(t, evt.Actor)
 				},

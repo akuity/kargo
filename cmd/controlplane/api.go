@@ -9,8 +9,8 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/akuity/kargo/pkg/database"
-	k8sevent "github.com/akuity/kargo/pkg/event/kubernetes"
-	"github.com/akuity/kargo/pkg/kubernetes/event"
+	"github.com/akuity/kargo/pkg/event"
+	natsevent "github.com/akuity/kargo/pkg/event/nats"
 	"github.com/akuity/kargo/pkg/logging"
 	"github.com/akuity/kargo/pkg/os"
 	"github.com/akuity/kargo/pkg/server"
@@ -147,14 +147,10 @@ func (o *apiOptions) run(ctx context.Context) error {
 		)
 	}
 
-	recorder, shutdown := event.NewRecorderWithShutdown(
-		ctx,
-		kubeClient.InternalClient().Scheme(),
-		kubeClient.InternalClient(),
+	sender := natsevent.NewDefaultingEventSender(
+		natsConn,
+		event.EventsSubjectPrefix,
 		"api",
-	)
-	sender := k8sevent.NewEventSenderWithShutdown(
-		recorder, shutdown,
 	)
 	defer sender.Shutdown()
 
