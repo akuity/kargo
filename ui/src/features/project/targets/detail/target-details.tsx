@@ -7,9 +7,9 @@ import { Link, generatePath } from 'react-router-dom';
 import { paths } from '@ui/config/paths';
 import { useModal } from '@ui/features/common/modal/use-modal';
 import { SmallLabel } from '@ui/features/common/small-label';
-import { freightNames } from '@ui/features/stage/tabs/fleet/fleet-utils';
 import { parseDate } from '@ui/utils/dates';
 
+import { freightNames } from '../model/round-utils';
 import { flattenParams, freightArtifacts } from '../model/target-details-utils';
 import { GoverningStage, TargetRow } from '../model/target-rows';
 import { targetStatePresentations } from '../model/target-state';

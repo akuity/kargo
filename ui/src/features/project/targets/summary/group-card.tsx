@@ -8,6 +8,7 @@ import { TargetGroup, groupHeading } from '../model/target-grouping';
 import { freightTally, stateCounts } from '../model/target-rows';
 import { FreightLink } from '../shared/freight-link';
 import { StateBar, StateLegend } from '../shared/state-visuals';
+import { surfaceClassName } from '../shared/surface';
 
 import { TargetGrid } from './target-grid';
 
@@ -37,7 +38,7 @@ export const TargetGroupCard = ({
   const named = freight.slice(0, maxFreightNamed);
 
   return (
-    <div className='flex flex-col h-full rounded-md p-4 border border-solid bg-white dark:bg-neutral-800 border-gray-200 dark:border-neutral-700'>
+    <div className={`flex flex-col h-full p-4 ${surfaceClassName}`}>
       <Flex justify='space-between' align='flex-start' gap={12}>
         <div className='min-w-0'>
           {groupKey && <SmallLabel className='font-mono'>{groupKey}=</SmallLabel>}
