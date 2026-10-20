@@ -345,8 +345,17 @@ func getKeySet(ctx context.Context, cfg config.ServerConfig) (oidc.KeySet, error
 	providerCfg := struct {
 		KeysURL string `json:"jwks_uri"`
 	}{}
+	if discoResp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf(
+			"discovery request to OpenID Connect identity provider returned status %d",
+			discoResp.StatusCode,
+		)
+	}
 	if err = json.Unmarshal(bodyBytes, &providerCfg); err != nil {
 		return nil, fmt.Errorf("error unmarshaling discovery request response body: %w", err)
+	}
+	if providerCfg.KeysURL == "" {
+		return nil, errors.New("discovery response from OpenID Connect identity provider has no jwks_uri")
 	}
 
 	keysURL := providerCfg.KeysURL

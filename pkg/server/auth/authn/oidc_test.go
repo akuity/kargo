@@ -170,6 +170,46 @@ func TestGetKeySet(t *testing.T) {
 	}
 }
 
+func TestGetKeySet_DiscoveryFailure(t *testing.T) {
+	const discoPath = "/.well-known/openid-configuration"
+	testCases := []struct {
+		name   string
+		status int
+		body   string
+	}{
+		{
+			name:   "error status with JSON body and no jwks_uri",
+			status: http.StatusInternalServerError,
+			body:   `{"error":"unknown_error"}`,
+		},
+		{
+			name:   "success status with no jwks_uri",
+			status: http.StatusOK,
+			body:   `{"issuer":"placeholder"}`,
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			mux := http.NewServeMux()
+			srv := httptest.NewServer(mux)
+			t.Cleanup(srv.Close)
+			mux.HandleFunc(discoPath, func(w http.ResponseWriter, _ *http.Request) {
+				w.WriteHeader(testCase.status)
+				_, err := w.Write([]byte(testCase.body))
+				require.NoError(t, err)
+			})
+			cfg := config.ServerConfig{
+				OIDCConfig: &libOIDC.Config{
+					IssuerURL: srv.URL,
+				},
+			}
+			keyset, err := getKeySet(t.Context(), cfg)
+			require.Error(t, err)
+			require.Nil(t, keyset)
+		})
+	}
+}
+
 func TestOIDC_Authenticate(t *testing.T) {
 	t.Parallel()
 	const issuer = "https://idp.example.com"
