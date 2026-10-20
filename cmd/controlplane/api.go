@@ -162,7 +162,7 @@ func (o *apiOptions) run(ctx context.Context) error {
 	// that serve them respond 501.
 	var db *database.Queries
 	if o.Database.Configured() {
-		pool, poolErr := openDatabase(ctx, o.Database, "kargo-api")
+		pool, poolErr := database.Open(ctx, o.Database, "kargo-api")
 		if poolErr != nil {
 			return poolErr
 		}

@@ -146,7 +146,7 @@ func (o *managementControllerOptions) run(ctx context.Context) error {
 	// of Projects. It is optional: without it, neither happens.
 	var db *database.Queries
 	if o.Database.Configured() {
-		pool, err := openDatabase(ctx, o.Database, "kargo-management-controller")
+		pool, err := database.Open(ctx, o.Database, "kargo-management-controller")
 		if err != nil {
 			return err
 		}
