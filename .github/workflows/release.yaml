@@ -429,10 +429,8 @@ jobs:
         ref: main
     - name: Set up Go
       uses: ./.github/actions/setup-go
-    - name: Generate best releases JSON
-      run: |
-        mkdir _site
-        go run ./hack/best-releases > _site/best-releases.json
+    - name: Generate site
+      run: go run ./hack/best-releases
     - name: Configure Pages
       uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
     - name: Upload Pages artifact
