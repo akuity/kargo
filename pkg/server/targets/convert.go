@@ -93,13 +93,7 @@ func setStatuses(targets []kargoapi.Target, rows []database.ListTargetCurrentFre
 		if status.CurrentFreight == nil {
 			status.CurrentFreight = &kargoapi.FreightCollection{}
 		}
-		status.CurrentFreight.UpdateOrPush(kargoapi.FreightReference{
-			Name: row.FreightName,
-			Origin: kargoapi.FreightOrigin{
-				Kind: kargoapi.FreightOriginKind(row.OriginKind),
-				Name: row.OriginName,
-			},
-		})
+		status.CurrentFreight.UpdateOrPush(freightReference(row))
 		target.Status.SetStatusForStage(row.StageName, status)
 	}
 }

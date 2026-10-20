@@ -90,3 +90,43 @@ ORDER BY
     stages.name,
     promotion_freight.origin_kind,
     promotion_freight.origin_name;
+
+-- Returns, for each of the Project's Targets and each Stage that has promoted
+-- to it, that Stage's most recent Promotion to it, whatever its phase.
+-- name: ListTargetLatestPromotions :many
+SELECT
+    targets.id AS target_id,
+    latest.name,
+    latest.stage_name,
+    latest.freight_name,
+    latest.phase,
+    latest.created_at,
+    latest.finished_at
+FROM targets
+JOIN stages ON stages.project_name = targets.project_name
+CROSS JOIN LATERAL (
+    SELECT
+        promotions.name,
+        promotions.stage_name,
+        promotions.freight_name,
+        promotions.phase,
+        promotions.created_at,
+        promotions.finished_at
+    FROM promotions
+    WHERE promotions.project_name = targets.project_name
+        AND promotions.target_name = targets.name
+        AND promotions.stage_name = stages.name
+    ORDER BY promotions.created_at DESC, promotions.id DESC
+    LIMIT 1
+) AS latest
+WHERE targets.project_name = sqlc.arg(project_name)
+ORDER BY targets.name, latest.stage_name;
+
+-- Returns the Promotions to the named Target, newest first, from every Stage
+-- and including those Kubernetes no longer has. A Target is named, not
+-- referenced, so this is the history of the name.
+-- name: ListTargetPromotions :many
+SELECT * FROM promotions
+WHERE project_name = sqlc.arg(project_name) AND target_name = sqlc.arg(target_name)::text
+ORDER BY created_at DESC, id DESC
+LIMIT sqlc.arg(max_rows)::int;

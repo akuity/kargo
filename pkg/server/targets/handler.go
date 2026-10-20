@@ -61,6 +61,16 @@ func (h *Handler) Register(project *gin.RouterGroup) {
 	targets.GET("/:target-name", h.require(can.Get()), h.get)
 	targets.PUT("/:target-name", h.require(can.Update()), h.update)
 	targets.DELETE("/:target-name", h.require(can.Delete()), h.delete)
+	targets.GET("/:target-name/promotions", h.require(can.Get()), h.listPromotions)
+	// Summaries are a view of the Targets, so they take the same access as
+	// listing them. They have a collection of their own, rather than a path
+	// under the Targets', so that no Target's name is shadowed.
+	project.GET(
+		"/target-summaries",
+		middleware.RequireFeature(h.store != nil, errDatabaseNotConfigured),
+		h.require(can.List()),
+		h.listSummaries,
+	)
 }
 
 // require returns middleware that checks the caller may perform the verb on

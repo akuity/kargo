@@ -328,6 +328,50 @@ func TestPromotionsIntegration(t *testing.T) {
 				require.Empty(t, other)
 			},
 		},
+		{
+			name: "the latest Promotion to each Target from each Stage, and a Target's history",
+			run: func(t *testing.T) {
+				a := seedTarget(t, queries, "cluster-a")
+				seedTarget(t, queries, "cluster-b")
+				for _, stage := range []string{"dev", "prod"} {
+					require.NoError(t, queries.UpsertStage(ctx, UpsertStageParams{
+						ID: stage, ProjectName: "demo", Name: stage, CreatedAt: created,
+					}))
+				}
+				promote := func(id, stage, target, phase string, minute int) {
+					target = "cluster-" + target
+					requireUpsertPromotion(t, queries, UpsertPromotionParams{
+						ID: id, ProjectName: "demo", Name: id, StageName: stage,
+						FreightName: "f-" + id, TargetName: &target, Phase: phase,
+						CreatedAt: created.Add(time.Duration(minute) * time.Minute),
+					})
+				}
+				promote("dev-a-1", "dev", "a", "Succeeded", 1)
+				promote("dev-a-2", "dev", "a", "Running", 2)
+				promote("prod-a-1", "prod", "a", "Failed", 3)
+				promote("dev-b-1", "dev", "b", "Succeeded", 4)
+				promote("gone-a-1", "gone", "a", "Succeeded", 5)
+
+				latest, err := queries.ListTargetLatestPromotions(ctx, "demo")
+				require.NoError(t, err)
+				got := make([]string, 0, len(latest))
+				for _, row := range latest {
+					got = append(got, row.StageName+"="+row.Name+"/"+row.Phase)
+				}
+				require.Equal(t, []string{
+					"dev=dev-a-2/Running", "prod=prod-a-1/Failed", "dev=dev-b-1/Succeeded",
+				}, got)
+				require.Equal(t, a.ID, latest[0].TargetID)
+				require.Equal(t, "f-dev-a-2", latest[0].FreightName)
+				require.True(t, latest[0].CreatedAt.Equal(created.Add(2*time.Minute)))
+
+				history, err := queries.ListTargetPromotions(ctx, ListTargetPromotionsParams{
+					ProjectName: "demo", TargetName: "cluster-a", MaxRows: 3,
+				})
+				require.NoError(t, err)
+				require.Equal(t, []string{"gone-a-1", "prod-a-1", "dev-a-2"}, promotionIDs(history))
+			},
+		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
@@ -408,4 +452,12 @@ func promotionFreight(t *testing.T, pool *pgxpool.Pool, promotion UpsertPromotio
 	out, err := pgx.CollectRows(rows, pgx.RowTo[string])
 	require.NoError(t, err)
 	return out
+}
+
+func promotionIDs(rows []PromotionRow) []string {
+	ids := make([]string, 0, len(rows))
+	for _, row := range rows {
+		ids = append(ids, row.ID)
+	}
+	return ids
 }

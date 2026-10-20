@@ -204,6 +204,123 @@ func (q *Queries) ListTargetCurrentFreight(ctx context.Context, arg ListTargetCu
 	return items, nil
 }
 
+const listTargetLatestPromotions = `-- name: ListTargetLatestPromotions :many
+SELECT
+    targets.id AS target_id,
+    latest.name,
+    latest.stage_name,
+    latest.freight_name,
+    latest.phase,
+    latest.created_at,
+    latest.finished_at
+FROM targets
+JOIN stages ON stages.project_name = targets.project_name
+CROSS JOIN LATERAL (
+    SELECT
+        promotions.name,
+        promotions.stage_name,
+        promotions.freight_name,
+        promotions.phase,
+        promotions.created_at,
+        promotions.finished_at
+    FROM promotions
+    WHERE promotions.project_name = targets.project_name
+        AND promotions.target_name = targets.name
+        AND promotions.stage_name = stages.name
+    ORDER BY promotions.created_at DESC, promotions.id DESC
+    LIMIT 1
+) AS latest
+WHERE targets.project_name = $1
+ORDER BY targets.name, latest.stage_name
+`
+
+type ListTargetLatestPromotionsRow struct {
+	TargetID    uuid.UUID
+	Name        string
+	StageName   string
+	FreightName string
+	Phase       string
+	CreatedAt   time.Time
+	FinishedAt  *time.Time
+}
+
+// Returns, for each of the Project's Targets and each Stage that has promoted
+// to it, that Stage's most recent Promotion to it, whatever its phase.
+func (q *Queries) ListTargetLatestPromotions(ctx context.Context, projectName string) ([]ListTargetLatestPromotionsRow, error) {
+	rows, err := q.db.Query(ctx, listTargetLatestPromotions, projectName)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListTargetLatestPromotionsRow
+	for rows.Next() {
+		var i ListTargetLatestPromotionsRow
+		if err := rows.Scan(
+			&i.TargetID,
+			&i.Name,
+			&i.StageName,
+			&i.FreightName,
+			&i.Phase,
+			&i.CreatedAt,
+			&i.FinishedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listTargetPromotions = `-- name: ListTargetPromotions :many
+SELECT id, project_name, name, stage_name, freight_name, target_name, phase, created_at, finished_at, synced_at FROM promotions
+WHERE project_name = $1 AND target_name = $2::text
+ORDER BY created_at DESC, id DESC
+LIMIT $3::int
+`
+
+type ListTargetPromotionsParams struct {
+	ProjectName string
+	TargetName  string
+	MaxRows     int32
+}
+
+// Returns the Promotions to the named Target, newest first, from every Stage
+// and including those Kubernetes no longer has. A Target is named, not
+// referenced, so this is the history of the name.
+func (q *Queries) ListTargetPromotions(ctx context.Context, arg ListTargetPromotionsParams) ([]PromotionRow, error) {
+	rows, err := q.db.Query(ctx, listTargetPromotions, arg.ProjectName, arg.TargetName, arg.MaxRows)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []PromotionRow
+	for rows.Next() {
+		var i PromotionRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.ProjectName,
+			&i.Name,
+			&i.StageName,
+			&i.FreightName,
+			&i.TargetName,
+			&i.Phase,
+			&i.CreatedAt,
+			&i.FinishedAt,
+			&i.SyncedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listTargets = `-- name: ListTargets :many
 SELECT id, project_name, name, labels, params, target_set_name, created_at, updated_at FROM targets
 WHERE project_name = $1
