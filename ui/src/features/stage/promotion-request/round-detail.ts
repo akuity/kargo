@@ -25,7 +25,7 @@ export type ChildPromotion = {
 };
 
 // severity ranks a child for ordering: what went wrong first, what is still
-// moving next, what is settled last. The same ranking the Fleet tab uses, so a
+// moving next, what is settled last. The same ranking the Targets tab uses, so a
 // reader meets the fleet in the same order wherever they look at it.
 const severity = (phase: PromotionPhase): number => {
   switch (phase) {
@@ -211,7 +211,7 @@ export const conditionSummary = (request?: PromotionRequest): string | undefined
 
 // matchesChild reports whether a child matches a free-text needle against its
 // Target's name and its labels as key=value, case-insensitively. An empty
-// needle matches everything. Mirrors the Fleet tab's Target filter.
+// needle matches everything. Mirrors the Targets tab's Target filter.
 export const matchesChild = (child: ChildPromotion, needle: string): boolean => {
   const text = needle.trim().toLowerCase();
   if (!text) {

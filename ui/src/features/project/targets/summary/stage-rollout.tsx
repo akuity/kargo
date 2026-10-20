@@ -7,6 +7,7 @@ import { ColorMap } from '@ui/features/stage/utils';
 import { StageRollout } from '../model/target-rows';
 import { FreightLink } from '../shared/freight-link';
 import { StateBar } from '../shared/state-visuals';
+import { surfaceClassName } from '../shared/surface';
 
 // rolloutCaption says in words what the bar above it draws: how much of the
 // Stage's fleet has caught up, and what is wrong or still moving.
@@ -36,7 +37,7 @@ const StageCard = ({
 }) => {
   const name = rollout.stage.metadata?.name || '';
   return (
-    <div className='rounded-md px-3 py-2.5 border border-solid bg-white dark:bg-neutral-800 border-gray-200 dark:border-neutral-700'>
+    <div className={`px-3 py-2.5 ${surfaceClassName}`}>
       <Flex justify='space-between' align='center' gap={8}>
         <Link to={generatePath(paths.stage, { name: project, stageName: name })}>
           <Flex gap={6} align='center' className='min-w-0'>

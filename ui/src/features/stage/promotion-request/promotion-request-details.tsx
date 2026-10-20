@@ -23,8 +23,8 @@ import {
 import { ApiError } from '@ui/lib/api/custom-fetch';
 import { parseDate } from '@ui/utils/dates';
 
-import { useWatchTargets } from '../tabs/fleet/use-watch-targets';
 import { useGetFreightMap } from '../tabs/freight-history/use-get-freight-map';
+import { useWatchTargets } from '../tabs/targets/use-watch-targets';
 import { isPromotionRequestPhaseTerminal } from '../utils/promotion-request';
 import {
   freightVersion,
