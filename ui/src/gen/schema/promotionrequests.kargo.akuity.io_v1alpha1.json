@@ -70,6 +70,13 @@
               "maximum": 9223372036854776000,
               "minimum": -9223372036854776000,
               "type": "integer"
+            },
+            "maxFailures": {
+              "description": "MaxFailures specifies a number of target promotions which can fail before PromotionRequest is considered failed.\nSpecifies a tolerable number, N failing promotions with maxFailures: N is a success, N+1 is a failure.\nDefaults to 0, meaning no failures tolerated.",
+              "format": "int64",
+              "maximum": 9223372036854776000,
+              "minimum": 0,
+              "type": "integer"
             }
           },
           "type": "object",
