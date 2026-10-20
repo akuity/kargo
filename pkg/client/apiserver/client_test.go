@@ -348,6 +348,53 @@ func TestTokenSource(t *testing.T) {
 	require.ErrorContains(t, err, `issued no token for ServiceAccount "shard-eu"`)
 }
 
+func TestNewAPIClient(t *testing.T) {
+	t.Parallel()
+	var lastAuth string
+	server := newServer(t, map[string][]kargoapi.Target{
+		"demo": {{ObjectMeta: metav1.ObjectMeta{Namespace: "demo", Name: "us-east"}}},
+	}, &lastAuth)
+	cp := newControlPlane(t, http.StatusOK)
+
+	api, err := NewAPIClient(t.Context(), validConfig(server.URL), cp.config())
+	require.NoError(t, err)
+
+	// A request the Client does not wrap is authenticated the same way: the
+	// minted token goes to the API server.
+	target, resp, err := api.CoreAPI.GetTarget(t.Context(), "demo", "us-east").Execute()
+	require.NoError(t, err)
+	_ = resp.Body.Close()
+	metadata := target.GetMetadata()
+	require.Equal(t, "us-east", metadata.GetName())
+	require.Equal(t, "Bearer minted-1", lastAuth)
+
+	// The configuration is validated as New validates it.
+	_, err = NewAPIClient(t.Context(), ClientConfig{}, cp.config())
+	require.ErrorContains(t, err, "invalid API server address")
+}
+
+func TestResponseError(t *testing.T) {
+	t.Parallel()
+	var lastAuth string
+	server := newServer(t, map[string][]kargoapi.Target{"demo": {}}, &lastAuth)
+	cp := newControlPlane(t, http.StatusOK)
+	api, err := NewAPIClient(t.Context(), validConfig(server.URL), cp.config())
+	require.NoError(t, err)
+
+	_, resp, err := api.CoreAPI.GetTarget(t.Context(), "demo", "missing").Execute()
+	require.Error(t, err)
+	_ = resp.Body.Close()
+	var apiErr *APIError
+	require.ErrorAs(t, ResponseError(err, resp), &apiErr)
+	require.Equal(t, http.StatusNotFound, apiErr.StatusCode)
+	require.Equal(t, "targets.kargo.akuity.io not found", apiErr.Message)
+	require.False(t, IsRetryable(apiErr))
+
+	// An error that never produced a response is returned as is.
+	unreachable := errors.New("connection refused")
+	require.Same(t, unreachable, ResponseError(unreachable, nil))
+}
+
 func TestClient(t *testing.T) {
 	t.Parallel()
 	usEast := kargoapi.Target{ObjectMeta: metav1.ObjectMeta{

@@ -83,7 +83,24 @@ type Client struct {
 
 // New returns a Client for the API server the config locates, acting as the
 // ServiceAccount that restCfg, the component's Kubernetes configuration for
-// the control plane, authenticates as. It asks the control plane for that
+// the control plane, authenticates as. See NewAPIClient for how it
+// authenticates.
+func New(ctx context.Context, cfg ClientConfig, restCfg *rest.Config) (*Client, error) {
+	api, err := NewAPIClient(ctx, cfg, restCfg)
+	if err != nil {
+		return nil, err
+	}
+	return &Client{api: api}, nil
+}
+
+// NewAPIClient returns the generated API client, configured for the API
+// server the config locates and authenticated the way Client is, for a
+// component that makes requests Client does not offer. Wrap a request's
+// error with ResponseError to read what the API server said.
+//
+// The client acts as the ServiceAccount that restCfg, the component's
+// Kubernetes configuration for the control plane, authenticates as. It asks
+// the control plane for that
 // identity once, here, and fails if the identity is not a ServiceAccount:
 // the API server authorizes callers through Kubernetes RBAC, and a token can
 // be minted for a ServiceAccount only. From then on it mints tokens for that
@@ -93,7 +110,11 @@ type Client struct {
 // be allowed to create its own token subresource. The API server verifies
 // each token with a TokenReview and authorizes each request against the
 // ServiceAccount's RBAC.
-func New(ctx context.Context, cfg ClientConfig, restCfg *rest.Config) (*Client, error) {
+func NewAPIClient(
+	ctx context.Context,
+	cfg ClientConfig,
+	restCfg *rest.Config,
+) (*kargogen.APIClient, error) {
 	parsed, err := url.Parse(cfg.Address)
 	if err != nil || parsed.Scheme == "" || parsed.Host == "" {
 		return nil, fmt.Errorf("invalid API server address %q", cfg.Address)
@@ -144,7 +165,7 @@ func New(ctx context.Context, cfg ClientConfig, restCfg *rest.Config) (*Client, 
 		{URL: strings.TrimSuffix(cfg.Address, "/")},
 	}
 	genCfg.HTTPClient = &http.Client{Transport: rt, Timeout: cfg.Timeout}
-	return &Client{api: kargogen.NewAPIClient(genCfg)}, nil
+	return kargogen.NewAPIClient(genCfg), nil
 }
 
 // serviceAccountPrefix begins the username Kubernetes gives a ServiceAccount:
@@ -330,7 +351,7 @@ func (c *Client) ListTargets(ctx context.Context, project string) ([]kargoapi.Ta
 	}
 	if err != nil {
 		return nil, fmt.Errorf(
-			"error listing Targets in Project %q: %w", project, apiError(err, resp),
+			"error listing Targets in Project %q: %w", project, ResponseError(err, resp),
 		)
 	}
 	targets := &kargoapi.TargetList{}
@@ -351,7 +372,7 @@ func (c *Client) GetTarget(ctx context.Context, project, name string) (*kargoapi
 			return nil, nil
 		}
 		return nil, fmt.Errorf(
-			"error getting Target %q in Project %q: %w", name, project, apiError(err, resp),
+			"error getting Target %q in Project %q: %w", name, project, ResponseError(err, resp),
 		)
 	}
 	target := &kargoapi.Target{}
@@ -372,10 +393,11 @@ func convert(model, api any) error {
 	return json.Unmarshal(data, api)
 }
 
-// apiError turns a response the generated client refused into an APIError
-// carrying the status and the server's explanation. An error that never
-// produced a response, such as a failure to connect, is returned as is.
-func apiError(err error, resp *http.Response) error {
+// ResponseError turns an error the generated client returned, together with
+// the response it came with, into an APIError carrying the status and the
+// server's explanation, which IsRetryable then classifies. An error that
+// never produced a response, such as a failure to connect, is returned as is.
+func ResponseError(err error, resp *http.Response) error {
 	genErr := &kargogen.GenericOpenAPIError{}
 	if resp == nil || !errors.As(err, &genErr) {
 		return err
