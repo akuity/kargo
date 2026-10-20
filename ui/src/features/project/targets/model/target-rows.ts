@@ -1,12 +1,8 @@
 import { HealthStatus, healthStatusToEnum } from '@ui/features/common/health-status/utils';
-import {
-  collectionUpToDate,
-  freightNames,
-  roundPhase
-} from '@ui/features/stage/tabs/fleet/fleet-utils';
 import { roundBlock } from '@ui/features/stage/utils/promotion-request';
 import { FreightCollection, Health, PromotionRequest, Stage, Target } from '@ui/gen/api/v2/models';
 
+import { collectionUpToDate, freightNames, roundPhase } from './round-utils';
 import { byName, pipelineOrder, stageGovernsTarget, targetAwareStages } from './target-stages';
 import { StateCounts, TargetState, emptyStateCounts, statePrecedence } from './target-state';
 

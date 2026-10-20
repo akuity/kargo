@@ -7,8 +7,8 @@ import { useState } from 'react';
 import { Link, generatePath } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
-import { freightNames } from '@ui/features/stage/tabs/fleet/fleet-utils';
 
+import { freightNames } from '../model/round-utils';
 import { visibleLabels } from '../model/target-labels';
 import { TargetRow } from '../model/target-rows';
 import { targetStatePresentations } from '../model/target-state';
