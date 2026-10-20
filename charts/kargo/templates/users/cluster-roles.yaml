@@ -38,7 +38,6 @@ rules:
   - promotionrequests
   - promotiontasks
   - stages
-  - targets
   - warehouses
   verbs:
   - create
@@ -48,6 +47,16 @@ rules:
   - list
   - patch
   - update
+  - watch
+- apiGroups:
+  - kargo.akuity.io
+  resources:
+  # Targets are created and maintained by the controller that manages
+  # them, never by a person, so admins only read them.
+  - targets
+  verbs:
+  - get
+  - list
   - watch
 - apiGroups:
   - kargo.akuity.io

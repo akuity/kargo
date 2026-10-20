@@ -43,6 +43,10 @@ jobs:
       uses: ./.github/actions/setup-go
     - name: Test PostgreSQL migrations and storage
       run: make test-db
+    - name: Upload coverage reports
+      uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
 
   test-unit:
     runs-on: ubuntu-latest

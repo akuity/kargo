@@ -49,12 +49,6 @@ func targetAwareStage() *kargoapi.Stage {
 	}
 }
 
-func target(name string) *kargoapi.Target {
-	return &kargoapi.Target{
-		ObjectMeta: metav1.ObjectMeta{Namespace: testProject, Name: name},
-	}
-}
-
 func promotionRequest(targets ...string) *kargoapi.PromotionRequest {
 	specTargets := make([]kargoapi.PromotionRequestTarget, len(targets))
 	for i, name := range targets {
@@ -99,7 +93,7 @@ func Test_webhook_ValidateCreate(t *testing.T) {
 		},
 		{
 			name:    "Stage does not exist",
-			objects: append(projectObjects(), target("us-east")),
+			objects: projectObjects(),
 			// No Stage, so the request names one that cannot govern anything.
 			promotionRequest: promotionRequest("us-east"),
 			assertions: func(t *testing.T, warnings admission.Warnings, err error) {
@@ -117,7 +111,6 @@ func Test_webhook_ValidateCreate(t *testing.T) {
 						Name:      "fake-stage",
 					},
 				},
-				target("us-east"),
 			),
 			promotionRequest: promotionRequest("us-east"),
 			assertions: func(t *testing.T, warnings admission.Warnings, err error) {
@@ -132,7 +125,6 @@ func Test_webhook_ValidateCreate(t *testing.T) {
 			objects: append(
 				projectObjects(),
 				targetAwareStage(),
-				target("us-east"),
 			),
 			promotionRequest: promotionRequest("us-east", "us-east"),
 			assertions: func(t *testing.T, warnings admission.Warnings, err error) {
@@ -142,43 +134,10 @@ func Test_webhook_ValidateCreate(t *testing.T) {
 			},
 		},
 		{
-			name: "Target does not exist",
-			objects: append(
-				projectObjects(),
-				targetAwareStage(),
-				target("us-east"),
-			),
-			promotionRequest: promotionRequest("us-east", "nonexistent"),
-			assertions: func(t *testing.T, warnings admission.Warnings, err error) {
-				assert.Empty(t, warnings)
-				assert.ErrorContains(t, err, `Target "nonexistent" not found`)
-			},
-		},
-		{
-			name: "Target in another Project does not count",
-			objects: append(
-				projectObjects(),
-				targetAwareStage(),
-				&kargoapi.Target{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "other-project",
-						Name:      "us-east",
-					},
-				},
-			),
-			promotionRequest: promotionRequest("us-east"),
-			assertions: func(t *testing.T, warnings admission.Warnings, err error) {
-				assert.Empty(t, warnings)
-				assert.ErrorContains(t, err, `Target "us-east" not found`)
-			},
-		},
-		{
 			name: "valid",
 			objects: append(
 				projectObjects(),
 				targetAwareStage(),
-				target("us-east"),
-				target("us-west"),
 			),
 			promotionRequest: promotionRequest("us-east", "us-west"),
 			assertions: func(t *testing.T, warnings admission.Warnings, err error) {
@@ -192,28 +151,6 @@ func Test_webhook_ValidateCreate(t *testing.T) {
 			name:             "empty Targets list is valid",
 			objects:          append(projectObjects(), targetAwareStage()),
 			promotionRequest: promotionRequest(),
-			assertions: func(t *testing.T, warnings admission.Warnings, err error) {
-				assert.Empty(t, warnings)
-				assert.NoError(t, err)
-			},
-		},
-		{
-			// spec.targets is a snapshot of what the Stage governed at creation.
-			// A Target whose labels have since stopped matching must not
-			// retroactively invalidate a request already in flight.
-			name: "Target no longer matching the Stage's selectors is still valid",
-			objects: append(
-				projectObjects(),
-				targetAwareStage(),
-				&kargoapi.Target{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: testProject,
-						Name:      "us-east",
-						Labels:    map[string]string{"region": "eu"},
-					},
-				},
-			),
-			promotionRequest: promotionRequest("us-east"),
 			assertions: func(t *testing.T, warnings admission.Warnings, err error) {
 				assert.Empty(t, warnings)
 				assert.NoError(t, err)
@@ -259,8 +196,6 @@ func Test_webhook_ValidateUpdate(t *testing.T) {
 		w := newWebhook(append(
 			projectObjects(),
 			targetAwareStage(),
-			target("us-east"),
-			target("us-west"),
 		)...)
 
 		warnings, err := w.ValidateUpdate(
@@ -278,7 +213,6 @@ func Test_webhook_ValidateUpdate(t *testing.T) {
 		w := newWebhook(append(
 			projectObjects(),
 			targetAwareStage(),
-			target("us-east"),
 		)...)
 
 		warnings, err := w.ValidateUpdate(
@@ -288,24 +222,6 @@ func Test_webhook_ValidateUpdate(t *testing.T) {
 		)
 		assert.Empty(t, warnings)
 		assert.ErrorContains(t, err, "Duplicate value")
-	})
-
-	t.Run("adding a nonexistent Target is rejected", func(t *testing.T) {
-		t.Parallel()
-
-		w := newWebhook(append(
-			projectObjects(),
-			targetAwareStage(),
-			target("us-east"),
-		)...)
-
-		warnings, err := w.ValidateUpdate(
-			t.Context(),
-			promotionRequest("us-east"),
-			promotionRequest("us-east", "nonexistent"),
-		)
-		assert.Empty(t, warnings)
-		assert.ErrorContains(t, err, `Target "nonexistent" not found`)
 	})
 }
 
@@ -338,7 +254,6 @@ func Test_webhook_failsClosed(t *testing.T) {
 				WithObjects(append(
 					projectObjects(),
 					targetAwareStage(),
-					target("us-east"),
 				)...).
 				WithInterceptorFuncs(funcs).
 				Build(),
@@ -366,53 +281,6 @@ func Test_webhook_failsClosed(t *testing.T) {
 		_, err := w.ValidateCreate(t.Context(), promotionRequest("us-east"))
 		require.True(t, apierrors.IsInternalError(err), "got %T: %v", err, err)
 		assert.ErrorContains(t, err, "something went wrong")
-	})
-
-	t.Run("Target lookup fails", func(t *testing.T) {
-		t.Parallel()
-
-		w := newWebhook(interceptor.Funcs{
-			List: func(
-				ctx context.Context,
-				c client.WithWatch,
-				list client.ObjectList,
-				opts ...client.ListOption,
-			) error {
-				if _, ok := list.(*kargoapi.TargetList); ok {
-					return errors.New("something went wrong")
-				}
-				return c.List(ctx, list, opts...)
-			},
-		})
-
-		_, err := w.ValidateCreate(t.Context(), promotionRequest("us-east"))
-		require.True(t, apierrors.IsInternalError(err), "got %T: %v", err, err)
-		assert.ErrorContains(t, err, "something went wrong")
-	})
-
-	t.Run("Target lookup fails on update", func(t *testing.T) {
-		t.Parallel()
-
-		w := newWebhook(interceptor.Funcs{
-			List: func(
-				ctx context.Context,
-				c client.WithWatch,
-				list client.ObjectList,
-				opts ...client.ListOption,
-			) error {
-				if _, ok := list.(*kargoapi.TargetList); ok {
-					return errors.New("something went wrong")
-				}
-				return c.List(ctx, list, opts...)
-			},
-		})
-
-		_, err := w.ValidateUpdate(
-			t.Context(),
-			promotionRequest("us-east"),
-			promotionRequest("us-east", "us-west"),
-		)
-		require.True(t, apierrors.IsInternalError(err), "got %T: %v", err, err)
 	})
 }
 

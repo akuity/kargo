@@ -2867,7 +2867,7 @@
     },
     "/v1beta1/projects/{project}/targets": {
       "get": {
-        "description": "List Target resources from a project's namespace, optionally\nnarrowed to those a particular Stage governs or those matching a\nlabel selector. Returns a TargetList resource.",
+        "description": "List a project's Targets, optionally narrowed to those a\nparticular Stage governs or those matching a label selector.\nReturns a TargetList resource.",
         "produces": [
           "application/json"
         ],
@@ -2900,7 +2900,7 @@
         ],
         "responses": {
           "200": {
-            "description": "TargetList custom resource",
+            "description": "TargetList resource",
             "schema": {
               "$ref": "#/definitions/TargetList"
             }
@@ -2911,11 +2911,57 @@
             "BearerAuth": []
           }
         ]
+      },
+      "post": {
+        "description": "Create a Target in a project. Targets are managed through\nthis API rather than as Kubernetes resources. The body's\nmetadata.name is required; its metadata.namespace, if given,\nmust be the project. Status and server-managed metadata are\nignored.",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "Core",
+          "Project-Level"
+        ],
+        "summary": "Create a Target",
+        "operationId": "CreateTarget",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "Project name",
+            "name": "project",
+            "in": "path",
+            "required": true
+          },
+          {
+            "description": "Target resource",
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/Target"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Target resource",
+            "schema": {
+              "$ref": "#/definitions/Target"
+            }
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
       }
     },
-    "/v1beta1/projects/{project}/targets/{target}": {
+    "/v1beta1/projects/{project}/targets/{target-name}": {
       "get": {
-        "description": "Retrieve a Target resource from a project's namespace.",
+        "description": "Retrieve one of a project's Targets.",
         "produces": [
           "application/json"
         ],
@@ -2936,17 +2982,105 @@
           {
             "type": "string",
             "description": "Target name",
-            "name": "target",
+            "name": "target-name",
             "in": "path",
             "required": true
           }
         ],
         "responses": {
           "200": {
-            "description": "Target custom resource",
+            "description": "Target resource",
             "schema": {
               "$ref": "#/definitions/Target"
             }
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      },
+      "put": {
+        "description": "Replace a Target's labels and params. The body's metadata.name,\nif given, must match the name in the URL, and its spec.targetSet\nmust name the TargetSet that manages the Target, which cannot\nchange. A metadata.uid or metadata.resourceVersion in the body\nis a precondition: the update is refused if the Target no\nlonger matches it.",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "Core",
+          "Project-Level"
+        ],
+        "summary": "Update a Target",
+        "operationId": "UpdateTarget",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "Project name",
+            "name": "project",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "description": "Target name",
+            "name": "target-name",
+            "in": "path",
+            "required": true
+          },
+          {
+            "description": "Target resource",
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/Target"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Target resource",
+            "schema": {
+              "$ref": "#/definitions/Target"
+            }
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      },
+      "delete": {
+        "description": "Delete one of a project's Targets.",
+        "tags": [
+          "Core",
+          "Project-Level"
+        ],
+        "summary": "Delete a Target",
+        "operationId": "DeleteTarget",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "Project name",
+            "name": "project",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "description": "Target name",
+            "name": "target-name",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Deleted successfully"
           }
         },
         "security": [
@@ -8926,14 +9060,6 @@
     "Target": {
       "type": "object",
       "properties": {
-        "apiVersion": {
-          "description": "APIVersion defines the versioned schema of this representation of an object.\nServers should convert recognized schemas to the latest internal value, and\nmay reject unrecognized values.\nMore info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources\n+optional",
-          "type": "string"
-        },
-        "kind": {
-          "description": "Kind is a string value representing the REST resource this object represents.\nServers may infer this from the endpoint the client submits requests to.\nCannot be updated.\nIn CamelCase.\nMore info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds\n+optional",
-          "type": "string"
-        },
         "metadata": {
           "$ref": "#/definitions/V1ObjectMeta"
         },
@@ -8958,19 +9084,11 @@
     "TargetList": {
       "type": "object",
       "properties": {
-        "apiVersion": {
-          "description": "APIVersion defines the versioned schema of this representation of an object.\nServers should convert recognized schemas to the latest internal value, and\nmay reject unrecognized values.\nMore info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources\n+optional",
-          "type": "string"
-        },
         "items": {
           "type": "array",
           "items": {
             "$ref": "#/definitions/Target"
           }
-        },
-        "kind": {
-          "description": "Kind is a string value representing the REST resource this object represents.\nServers may infer this from the endpoint the client submits requests to.\nCannot be updated.\nIn CamelCase.\nMore info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds\n+optional",
-          "type": "string"
         },
         "metadata": {
           "$ref": "#/definitions/V1ListMeta"
@@ -8984,6 +9102,10 @@
           "description": "Params is a map of arbitrary, target-specific values. Values may be any\nvalid JSON -- including nested objects and arrays -- so promotion steps\ncan reference deeply nested data. Promotion steps of Stages that govern\nthis Target may reference these values by key in their expressions (for\nexample, target.params.branch or target.params.cluster.region).\n\n+optional",
           "type": "object",
           "additionalProperties": {}
+        },
+        "targetSet": {
+          "description": "TargetSet names the TargetSet that manages this Target. Every Target is\ncreated by one, which owns its lifecycle, so this is required and does\nnot change for as long as the Target exists.",
+          "type": "string"
         }
       }
     },

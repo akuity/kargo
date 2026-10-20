@@ -5,7 +5,6 @@ import { useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
 
 import { LoadingState } from '@ui/features/common/loading-state';
-import { useWatchTargets } from '@ui/features/stage/tabs/targets/use-watch-targets';
 import { useCurrentRounds } from '@ui/features/stage/use-current-round';
 import { getColors } from '@ui/features/stage/utils';
 import { useListStages, useListTargets } from '@ui/gen/api/v2/core/core';
@@ -13,6 +12,7 @@ import { useLocalStorage } from '@ui/utils/use-local-storage';
 
 import { useWatchStages } from '../pipelines/use-watch-stages';
 
+import { TARGETS_POLL_INTERVAL_MS } from './constants';
 import { TargetsList } from './list/targets-list';
 import { NO_GROUPING, groupTargetRows } from './model/target-grouping';
 import { labelKeys } from './model/target-labels';
@@ -59,9 +59,11 @@ export const Targets = () => {
   const { name: project = '' } = useParams();
 
   const stagesQuery = useListStages(project, { freightOrigins: [] });
-  const targetsQuery = useListTargets(project, undefined);
+  // Targets live in the database, which offers no watch; the list is polled.
+  const targetsQuery = useListTargets(project, undefined, {
+    query: { refetchInterval: TARGETS_POLL_INTERVAL_MS }
+  });
   useWatchStages(project);
-  useWatchTargets(project, undefined, !!targetsQuery.data);
 
   const allStages = useMemo(() => stagesQuery.data?.data?.items || [], [stagesQuery.data]);
   const stages = useMemo(() => targetAwareStages(allStages), [allStages]);

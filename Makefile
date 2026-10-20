@@ -161,10 +161,18 @@ test-unit: install-helm
 DATABASE_URL ?= postgres://kargo:kargo@127.0.0.1:15432/kargo?sslmode=disable
 
 # Runs the database integration tests against DATABASE_URL. Each test creates
-# and drops its own database on that server.
+# and drops its own database on that server. Coverage spans every package under
+# pkg/database, since much of it (sqlc queries, stores) is only reachable here.
 .PHONY: test-db
 test-db:
-	DATABASE_URL=$(DATABASE_URL) go test -race -count=1 -tags=integration,db ./pkg/database/
+	DATABASE_URL=$(DATABASE_URL) go test \
+		-race \
+		-count=1 \
+		-tags=integration,db \
+		-coverprofile=coverage.txt \
+		-covermode=atomic \
+		-coverpkg=./pkg/database/... \
+		./pkg/database/...
 
 ################################################################################
 # Builds                                                                       #

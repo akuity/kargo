@@ -21,6 +21,8 @@ var _ MappedNullable = &TargetSpec{}
 type TargetSpec struct {
 	// Params is a map of arbitrary, target-specific values. Values may be any valid JSON -- including nested objects and arrays -- so promotion steps can reference deeply nested data. Promotion steps of Stages that govern this Target may reference these values by key in their expressions (for example, target.params.branch or target.params.cluster.region).  +optional
 	Params map[string]any `json:"params,omitempty"`
+	// TargetSet names the TargetSet that manages this Target. Every Target is created by one, which owns its lifecycle, so this is required and does not change for as long as the Target exists.
+	TargetSet *string `json:"targetSet,omitempty"`
 }
 
 // NewTargetSpec instantiates a new TargetSpec object
@@ -72,6 +74,38 @@ func (o *TargetSpec) SetParams(v map[string]any) {
 	o.Params = v
 }
 
+// GetTargetSet returns the TargetSet field value if set, zero value otherwise.
+func (o *TargetSpec) GetTargetSet() string {
+	if o == nil || IsNil(o.TargetSet) {
+		var ret string
+		return ret
+	}
+	return *o.TargetSet
+}
+
+// GetTargetSetOk returns a tuple with the TargetSet field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *TargetSpec) GetTargetSetOk() (*string, bool) {
+	if o == nil || IsNil(o.TargetSet) {
+		return nil, false
+	}
+	return o.TargetSet, true
+}
+
+// HasTargetSet returns a boolean if a field has been set.
+func (o *TargetSpec) HasTargetSet() bool {
+	if o != nil && !IsNil(o.TargetSet) {
+		return true
+	}
+
+	return false
+}
+
+// SetTargetSet gets a reference to the given string and assigns it to the TargetSet field.
+func (o *TargetSpec) SetTargetSet(v string) {
+	o.TargetSet = &v
+}
+
 func (o TargetSpec) MarshalJSON() ([]byte, error) {
 	toSerialize,err := o.ToMap()
 	if err != nil {
@@ -84,6 +118,9 @@ func (o TargetSpec) ToMap() (map[string]interface{}, error) {
 	toSerialize := map[string]interface{}{}
 	if !IsNil(o.Params) {
 		toSerialize["params"] = o.Params
+	}
+	if !IsNil(o.TargetSet) {
+		toSerialize["targetSet"] = o.TargetSet
 	}
 	return toSerialize, nil
 }

@@ -2,6 +2,7 @@ import { Empty, Flex } from 'antd';
 import { useMemo } from 'react';
 
 import { LoadingState } from '@ui/features/common/loading-state';
+import { TARGETS_POLL_INTERVAL_MS } from '@ui/features/project/targets/constants';
 import { freightNames } from '@ui/features/project/targets/model/round-utils';
 import { targetRows } from '@ui/features/project/targets/model/target-rows';
 import { useFreightLabel } from '@ui/features/project/targets/shared/use-freight-label';
@@ -12,7 +13,6 @@ import { freightMarking } from './marks';
 import { TargetMatrix } from './target-matrix';
 import { TargetTiles } from './tiles';
 import { useMarkColors } from './use-mark-colors';
-import { useWatchTargets } from './use-watch-targets';
 
 type Props = {
   projectName: string;
@@ -44,8 +44,12 @@ type Props = {
 export const StageTargets = ({ projectName, stage, round }: Props) => {
   const stageName = stage.metadata?.name || '';
 
-  const targetsQuery = useListTargets(projectName, { stage: stageName });
-  useWatchTargets(projectName, stageName, !!targetsQuery.data);
+  // Targets live in the database, which offers no watch; the list is polled.
+  const targetsQuery = useListTargets(
+    projectName,
+    { stage: stageName },
+    { query: { refetchInterval: TARGETS_POLL_INTERVAL_MS } }
+  );
 
   const freightLabel = useFreightLabel(projectName);
   const colors = useMarkColors();

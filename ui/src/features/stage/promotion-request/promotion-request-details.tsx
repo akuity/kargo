@@ -14,6 +14,7 @@ import { SmallLabel } from '@ui/features/common/small-label';
 import { getAlias } from '@ui/features/common/utils';
 import { getPromotionActor } from '@ui/features/project/pipelines/promotion/get-promotion-actor';
 import { useWatchPromotions } from '@ui/features/project/pipelines/promotion/use-watch-promotions';
+import { TARGETS_POLL_INTERVAL_MS } from '@ui/features/project/targets/constants';
 import {
   useGetPromotionRequest,
   useListPromotions,
@@ -24,7 +25,6 @@ import { ApiError } from '@ui/lib/api/custom-fetch';
 import { parseDate } from '@ui/utils/dates';
 
 import { useGetFreightMap } from '../tabs/freight-history/use-get-freight-map';
-import { useWatchTargets } from '../tabs/targets/use-watch-targets';
 import { isPromotionRequestPhaseTerminal } from '../utils/promotion-request';
 import {
   freightVersion,
@@ -98,13 +98,13 @@ export const PromotionRequestDetails = ({
     { stage: stageName },
     { query: { enabled: !!stageName } }
   );
+  // Targets live in the database, which offers no watch; the list is polled.
   const targetsQuery = useListTargets(
     project,
     { stage: stageName },
-    { query: { enabled: !!stageName } }
+    { query: { enabled: !!stageName, refetchInterval: TARGETS_POLL_INTERVAL_MS } }
   );
   useWatchPromotions(project, stageName, !promotionsQuery.isLoading);
-  useWatchTargets(project, stageName, !!targetsQuery.data);
 
   const freightMap = useGetFreightMap(project);
   const freightName = request?.spec?.freight || '';

@@ -25,6 +25,7 @@ import (
 	"github.com/akuity/kargo/pkg/controller/management/replication"
 	"github.com/akuity/kargo/pkg/controller/management/serviceaccounts"
 	"github.com/akuity/kargo/pkg/database"
+	"github.com/akuity/kargo/pkg/database/targetstore"
 	"github.com/akuity/kargo/pkg/logging"
 	"github.com/akuity/kargo/pkg/os"
 	"github.com/akuity/kargo/pkg/server/kubernetes"
@@ -141,10 +142,27 @@ func (o *managementControllerOptions) run(ctx context.Context) error {
 		return fmt.Errorf("error setting up Namespaces reconciler: %w", err)
 	}
 
+	// The database holds Targets, whose stats Projects report, and the mirror
+	// of Projects. It is optional: without it, neither happens.
+	var db *database.Queries
+	if o.Database.Configured() {
+		pool, err := database.Open(ctx, o.Database, "kargo-management-controller")
+		if err != nil {
+			return err
+		}
+		defer pool.Close()
+		db = database.New(pool)
+	}
+	var targets projects.TargetCounter
+	if db != nil {
+		targets = targetstore.New(db)
+	}
+
 	if err := projects.SetupReconcilerWithManager(
 		ctx,
 		kargoMgr,
 		projects.ReconcilerConfigFromEnv(),
+		targets,
 	); err != nil {
 		return fmt.Errorf("error setting up Projects reconciler: %w", err)
 	}
@@ -178,13 +196,8 @@ func (o *managementControllerOptions) run(ctx context.Context) error {
 		return fmt.Errorf("error setting up shared ConfigMap replication reconciler: %w", err)
 	}
 
-	if o.Database.Configured() {
-		pool, err := openDatabase(ctx, o.Database, "kargo-management-controller")
-		if err != nil {
-			return err
-		}
-		defer pool.Close()
-		if err = dbsync.SetupWithManager(ctx, kargoMgr, database.New(pool)); err != nil {
+	if db != nil {
+		if err := dbsync.SetupWithManager(ctx, kargoMgr, db); err != nil {
 			return err
 		}
 	}
