@@ -1,5 +1,6 @@
+import { faBullseye, faUndo } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { Empty, Flex, Table, Tag, Tooltip, Typography, theme } from 'antd';
+import { Button, Empty, Flex, Table, Tag, Tooltip, Typography, theme } from 'antd';
 import { ColumnsType } from 'antd/es/table';
 import { format, formatDistanceToNow } from 'date-fns';
 import { useMemo, useState } from 'react';
@@ -11,16 +12,17 @@ import {
   PromotionPhase,
   getPromotionPhasePresentation
 } from '@ui/features/common/promotion-status/promotion-phase';
+import { PromotionStatusIcon } from '@ui/features/common/promotion-status/promotion-status-icon';
 import { RoundProgressBar } from '@ui/features/common/promotion-status/round-progress-bar';
-import { getAlias } from '@ui/features/common/utils';
+import { getAlias, getShortFreightLabel } from '@ui/features/common/utils';
 import { getPromotionActor } from '@ui/features/project/pipelines/promotion/get-promotion-actor';
-import { useListPromotionRequests } from '@ui/gen/api/v2/core/core';
-import { PromotionRequest } from '@ui/gen/api/v2/models';
+
+import { useListPromotionRequests, usePromoteToStage } from '@ui/gen/api/v2/core/core';
+import { PromotionRequest, PromotionRequestSummary } from '@ui/gen/api/v2/models';
 import { parseDate } from '@ui/utils/dates';
 
 import { useGetFreightMap } from './tabs/freight-history/use-get-freight-map';
 import { useWatchPromotionRequests } from './use-watch-promotion-requests';
-import { promotionRequestCompareFn } from './utils/promotion-request';
 import {
   describeTargets,
   freightVersion,
@@ -32,7 +34,21 @@ import {
 } from './utils/promotion-request-list';
 import { formatStepDuration } from './utils/step-duration';
 
+import {
+  PromotionRequestTargetRow,
+  isPromotionRequestPhaseTerminal,
+  isPromotionRequestRetryable,
+  promotionRequestCompareFn,
+  targetRows
+} from './utils/promotion-request';
+
+import { isPromotionRetryable } from '@ui/features/common/promotion-status/utils';
+
 const requestsPagination = { hideOnSinglePage: true, pageSize: 10, showSizeChanger: false };
+
+// summaryKey maps a phase to its counter in status.summary, whose fields are
+// the lower-cased phase names.
+const summaryKey = (phase: string) => phase.toLowerCase() as keyof PromotionRequestSummary;
 
 // TargetsCell draws how a round fared: the same bar every other surface draws a
 // round with, and beneath it the figure per phase. Only what needs to stand out
@@ -115,6 +131,25 @@ export const PromotionRequests = ({ projectName, stageName }: Props) => {
   const freightMap = useGetFreightMap(project);
 
   const [selectedPhase, setSelectedPhase] = useState<PromotionPhase | undefined>();
+  const promotionMutation = usePromoteToStage();
+
+  const onRetryPromotionRequest = (promotionRequest: PromotionRequest) => {
+    // target.phase == null selects targets for which promotions were not created due to fail-fast behaviour
+    const targets = targetRows(promotionRequest)
+      .filter((target) => isPromotionRetryable(target.phase) || target.phase == null)
+      .map((target) => target.name);
+
+    promotionMutation.mutate({
+      project: promotionRequest?.metadata?.namespace || projectName,
+      stage: stageName,
+      data: {
+        freight: promotionRequest?.spec?.freight,
+        targets
+      }
+    });
+  };
+
+  const [selectedPromotion, setSelectedPromotion] = useState<string | undefined>();
 
   const promotionRequests = useMemo(
     () => [...(listQuery.data?.data?.items || [])].sort(promotionRequestCompareFn),
@@ -231,6 +266,26 @@ export const PromotionRequests = ({ projectName, stageName }: Props) => {
       render: (_, promotionRequest) => (
         <Typography.Text className='text-xs'>{getPromotionActor(promotionRequest)}</Typography.Text>
       )
+    },
+    {
+      title: '',
+      width: 100,
+      align: 'right',
+      render: (_, promotionRequest) => {
+        if (!isPromotionRequestRetryable(promotionRequest?.status?.phase)) {
+          return null;
+        }
+        return (
+          <Button
+            size='small'
+            icon={<FontAwesomeIcon icon={faUndo} />}
+            loading={promotionMutation.isPending}
+            onClick={() => onRetryPromotionRequest(promotionRequest)}
+          >
+            Retry non successful targets
+          </Button>
+        );
+      }
     }
   ];
 
