@@ -54,3 +54,39 @@ RETURNING *;
 -- name: DeleteTarget :execrows
 DELETE FROM targets
 WHERE project_name = sqlc.arg(project_name) AND name = sqlc.arg(name);
+
+-- Returns, for each of the Project's Targets, or only the named one, and each
+-- Stage that has successfully promoted to it, the Freight of that Stage's most
+-- recent successful Promotion to it: one row per origin. Stages are those the
+-- database mirrors, so a deleted Stage's Promotions say nothing. Promotions
+-- name their Target, so a Target recreated under the same name inherits the
+-- record of what was promoted to its predecessor, which, under the same name,
+-- is almost always the same destination.
+-- name: ListTargetCurrentFreight :many
+SELECT
+    targets.id AS target_id,
+    stages.name AS stage_name,
+    promotion_freight.origin_kind,
+    promotion_freight.origin_name,
+    promotion_freight.freight_name
+FROM targets
+JOIN stages ON stages.project_name = targets.project_name
+CROSS JOIN LATERAL (
+    SELECT promotions.id
+    FROM promotions
+    WHERE promotions.project_name = targets.project_name
+        AND promotions.target_name = targets.name
+        AND promotions.stage_name = stages.name
+        AND promotions.phase = 'Succeeded'
+        AND promotions.finished_at IS NOT NULL
+    ORDER BY promotions.finished_at DESC, promotions.id DESC
+    LIMIT 1
+) AS succeeded
+JOIN promotion_freight ON promotion_freight.promotion_id = succeeded.id
+WHERE targets.project_name = sqlc.arg(project_name)
+    AND (sqlc.narg(target_name)::text IS NULL OR targets.name = sqlc.narg(target_name))
+ORDER BY
+    targets.name,
+    stages.name,
+    promotion_freight.origin_kind,
+    promotion_freight.origin_name;

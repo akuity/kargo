@@ -39,8 +39,14 @@ type fakeStore struct {
 	clock int64
 	// targets holds every Target by Project and then by name.
 	targets map[string]map[string]database.TargetRow
+	// freight holds the rows recording Targets' current Freight, by Project.
+	freight map[string][]database.ListTargetCurrentFreightRow
 	// err, when set, fails every call.
 	err error
+	// freightErr, when set, fails every read of Targets' current Freight.
+	freightErr error
+	// freightReads counts reads of Targets' current Freight.
+	freightReads int
 	// calls counts store reads and writes, so tests can prove that a refused
 	// request never touched the store.
 	calls int
@@ -218,6 +224,63 @@ func (s *fakeStore) Delete(_ context.Context, project, name string) error {
 	}
 	delete(s.project(project), name)
 	return nil
+}
+
+// addFreight records that a Stage's most recent successful Promotion to a
+// test Project's Target left the named Freight there, from Warehouse w.
+func (s *fakeStore) addFreight(target, stage, freight string) {
+	const project = testProject
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.freight == nil {
+		s.freight = map[string][]database.ListTargetCurrentFreightRow{}
+	}
+	s.freight[project] = append(s.freight[project], database.ListTargetCurrentFreightRow{
+		TargetID:    s.project(project)[target].ID,
+		StageName:   stage,
+		OriginKind:  string(kargoapi.FreightOriginKindWarehouse),
+		OriginName:  "w",
+		FreightName: freight,
+	})
+}
+
+func (s *fakeStore) CurrentFreight(
+	_ context.Context,
+	project string,
+	name string,
+) ([]database.ListTargetCurrentFreightRow, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.calls++
+	s.freightReads++
+	if s.err != nil {
+		return nil, s.err
+	}
+	if s.freightErr != nil {
+		return nil, s.freightErr
+	}
+	var rows []database.ListTargetCurrentFreightRow
+	for _, row := range s.freight[project] {
+		if name == "" || s.project(project)[name].ID == row.TargetID {
+			rows = append(rows, row)
+		}
+	}
+	return rows, nil
+}
+
+// collectionID is the ID of a FreightCollection holding the named Freight.
+func collectionID(names ...string) string {
+	collection := &kargoapi.FreightCollection{}
+	for i, name := range names {
+		collection.UpdateOrPush(kargoapi.FreightReference{
+			Name: name,
+			Origin: kargoapi.FreightOrigin{
+				Kind: kargoapi.FreightOriginKindWarehouse,
+				Name: fmt.Sprintf("w%d", i),
+			},
+		})
+	}
+	return collection.ID
 }
 
 // recordAuthorizations returns an authorize function that records every

@@ -263,6 +263,41 @@ func TestStoreIntegration(t *testing.T) {
 			},
 		},
 		{
+			name: "current Freight is per Project, or per Target when one is named",
+			run: func(t *testing.T) {
+				east, err := store.Create(ctx, "demo", newTarget("us-east"))
+				require.NoError(t, err)
+				_, err = store.Create(ctx, "demo", newTarget("us-west"))
+				require.NoError(t, err)
+				finished := time.Now()
+				require.NoError(t, queries.UpsertStage(ctx, database.UpsertStageParams{
+					ID: "fleet", ProjectName: "demo", Name: "fleet", CreatedAt: finished,
+				}))
+				for _, name := range []string{"us-east", "us-west"} {
+					taken, err := queries.UpsertPromotion(ctx, database.UpsertPromotionParams{
+						ID: name, ProjectName: "demo", Name: name, StageName: "fleet",
+						FreightName: "f1", TargetName: &name, Phase: "Succeeded",
+						CreatedAt: finished, FinishedAt: &finished,
+						OriginKinds: []string{"Warehouse"}, OriginNames: []string{"w"},
+						FreightNames: []string{"f1"},
+					})
+					require.NoError(t, err)
+					require.False(t, taken)
+				}
+				rows, err := store.CurrentFreight(ctx, "demo", "")
+				require.NoError(t, err)
+				require.Len(t, rows, 2)
+				rows, err = store.CurrentFreight(ctx, "demo", "us-east")
+				require.NoError(t, err)
+				require.Len(t, rows, 1)
+				require.Equal(t, east.ID, rows[0].TargetID)
+				require.Equal(t, "f1", rows[0].FreightName)
+				rows, err = store.CurrentFreight(ctx, "other", "")
+				require.NoError(t, err)
+				require.Empty(t, rows)
+			},
+		},
+		{
 			name: "delete",
 			run: func(t *testing.T) {
 				_, err := store.Create(ctx, "demo", newTarget("us-east"))
@@ -308,7 +343,7 @@ func TestStoreIntegration(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			_, err := pool.Exec(ctx, "TRUNCATE targets")
+			_, err := pool.Exec(ctx, "TRUNCATE targets, promotions, stages CASCADE")
 			require.NoError(t, err)
 			testCase.run(t)
 		})
