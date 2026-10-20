@@ -4,6 +4,8 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func TestTarget_GetStatus(t *testing.T) {
@@ -124,4 +126,28 @@ func TestTargetStatus_RemoveStatusForStage(t *testing.T) {
 			testCase.assert(t, status)
 		})
 	}
+}
+
+func TestTarget_DeepCopy(t *testing.T) {
+	t.Parallel()
+	target := &Target{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:   "us-east-1",
+			Labels: map[string]string{"region": "us"},
+		},
+		Spec: TargetSpec{
+			TargetSet: "fleet",
+			Params:    map[string]apiextensionsv1.JSON{"cluster": {Raw: []byte(`"c1"`)}},
+		},
+		Status: TargetStatus{
+			Stages: map[string]TargetStageStatus{"stage": {}},
+		},
+	}
+	copied := target.DeepCopy()
+	require.Equal(t, target, copied)
+	require.NotSame(t, target, copied)
+	copied.Labels["region"] = "eu"
+	copied.Spec.Params["cluster"] = apiextensionsv1.JSON{Raw: []byte(`"c2"`)}
+	require.Equal(t, "us", target.Labels["region"])
+	require.JSONEq(t, `"c1"`, string(target.Spec.Params["cluster"].Raw))
 }

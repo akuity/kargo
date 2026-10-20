@@ -113,6 +113,11 @@ func (s *server) updateResource(
 			Error: errSecretManagementDisabled.Error(),
 		}, errSecretManagementDisabled
 	}
+	if obj.GroupVersionKind() == targetGVK {
+		return createOrUpdateResourceResult{
+			Error: errTargetNotKubernetesResource.Error(),
+		}, errTargetNotKubernetesResource
+	}
 
 	// Block RBAC privilege escalation via this generic path. Applies to both
 	// creating and replacing (e.g. rewriting a Role's rules), so it runs before

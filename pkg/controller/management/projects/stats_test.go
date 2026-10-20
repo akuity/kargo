@@ -3,6 +3,7 @@ package projects
 import (
 	"context"
 	"fmt"
+	"slices"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -14,7 +15,32 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/conditions"
+	"github.com/akuity/kargo/pkg/database"
 )
+
+// fakeTargetCounter counts a fixed set of Targets the way CountTargets does,
+// or fails.
+type fakeTargetCounter struct {
+	targets []string
+	err     error
+}
+
+func (f fakeTargetCounter) Count(
+	_ context.Context,
+	_ string,
+	names []string,
+) (database.CountTargetsRow, error) {
+	if f.err != nil {
+		return database.CountTargetsRow{}, f.err
+	}
+	counts := database.CountTargetsRow{Total: int64(len(f.targets))}
+	for _, target := range f.targets {
+		if slices.Contains(names, target) {
+			counts.Among++
+		}
+	}
+	return counts, nil
+}
 
 func Test_reconciler_collectStats(t *testing.T) {
 	const testProject = "fake-project"
@@ -27,6 +53,7 @@ func Test_reconciler_collectStats(t *testing.T) {
 		name       string
 		project    *kargoapi.Project
 		client     client.Client
+		targets    TargetCounter
 		assertions func(*testing.T, kargoapi.ProjectStatus, error)
 	}{
 		{
@@ -110,20 +137,8 @@ func Test_reconciler_collectStats(t *testing.T) {
 					}},
 				},
 			},
-			client: fake.NewClientBuilder().WithScheme(scheme).
-				WithInterceptorFuncs(interceptor.Funcs{
-					List: func(
-						_ context.Context,
-						_ client.WithWatch,
-						list client.ObjectList,
-						_ ...client.ListOption,
-					) error {
-						if _, ok := list.(*kargoapi.TargetList); ok {
-							return fmt.Errorf("something went wrong")
-						}
-						return nil
-					},
-				}).Build(),
+			client:  fake.NewClientBuilder().WithScheme(scheme).Build(),
+			targets: fakeTargetCounter{err: fmt.Errorf("something went wrong")},
 			assertions: func(t *testing.T, status kargoapi.ProjectStatus, err error) {
 				require.Error(t, err)
 				cond := conditions.Get(&status, kargoapi.ConditionTypeHealthy)
@@ -164,6 +179,23 @@ func Test_reconciler_collectStats(t *testing.T) {
 				require.Equal(t, metav1.ConditionFalse, cond.Status)
 				require.Equal(t, kargoapi.ConditionTypeHealthy, cond.Type)
 				require.Equal(t, "CollectingTargetStatsFailed", cond.Reason)
+			},
+		},
+		{
+			name: "no database reports no Target stats",
+			project: &kargoapi.Project{
+				Status: kargoapi.ProjectStatus{
+					Conditions: []metav1.Condition{{
+						Type:   kargoapi.ConditionTypeReady,
+						Status: metav1.ConditionTrue,
+					}},
+				},
+			},
+			client: fake.NewClientBuilder().WithScheme(scheme).Build(),
+			assertions: func(t *testing.T, status kargoapi.ProjectStatus, err error) {
+				require.NoError(t, err)
+				require.NotNil(t, status.Stats)
+				require.Nil(t, status.Stats.Targets)
 			},
 		},
 		{
@@ -354,13 +386,8 @@ func Test_reconciler_collectStats(t *testing.T) {
 						},
 					},
 				},
-				&kargoapi.Target{
-					ObjectMeta: metav1.ObjectMeta{Name: "t1", Namespace: testProject},
-				},
-				&kargoapi.Target{
-					ObjectMeta: metav1.ObjectMeta{Name: "t2", Namespace: testProject},
-				},
 			).Build(),
+			targets: fakeTargetCounter{targets: []string{"t1", "t2"}},
 			assertions: func(t *testing.T, status kargoapi.ProjectStatus, err error) {
 				require.NoError(t, err)
 				require.Nil(t, conditions.Get(&status, kargoapi.ConditionTypeHealthy))
@@ -383,14 +410,14 @@ func Test_reconciler_collectStats(t *testing.T) {
 
 	for _, tt := range testCases {
 		t.Run(tt.name, func(t *testing.T) {
-			r := &reconciler{client: tt.client}
+			r := &reconciler{client: tt.client, targets: tt.targets}
 			status, err := r.collectStats(t.Context(), tt.project)
 			tt.assertions(t, status, err)
 		})
 	}
 }
 
-func Test_collectTargetStats(t *testing.T) {
+func Test_targetStats(t *testing.T) {
 	const testProject = "fake-project"
 
 	targetAware := func(name string, current, last string) kargoapi.Stage {
@@ -417,13 +444,6 @@ func Test_collectTargetStats(t *testing.T) {
 				LastPromotionRequest: &kargoapi.PromotionRequestReference{Name: "ignored"},
 			},
 		}
-	}
-	targets := func(names ...string) []kargoapi.Target {
-		out := make([]kargoapi.Target, len(names))
-		for i, name := range names {
-			out[i].Name = name
-		}
-		return out
 	}
 	// request builds a PromotionRequest naming the given Targets, with the
 	// given per-Target phases recorded in status where provided.
@@ -457,7 +477,7 @@ func Test_collectTargetStats(t *testing.T) {
 
 	testCases := []struct {
 		name     string
-		targets  []kargoapi.Target
+		targets  []string
 		stages   []kargoapi.Stage
 		requests []kargoapi.PromotionRequest
 		expected *kargoapi.TargetStats
@@ -470,13 +490,13 @@ func Test_collectTargetStats(t *testing.T) {
 		},
 		{
 			name:     "Targets no Stage has promoted to are not healthy",
-			targets:  targets("t1", "t2"),
+			targets:  []string{"t1", "t2"},
 			stages:   []kargoapi.Stage{targetAware("fleet", "", ""), classic("classic")},
 			expected: &kargoapi.TargetStats{Count: 2},
 		},
 		{
 			name:    "healthy when the latest promotion from every Stage succeeded",
-			targets: targets("t1", "t2", "t3"),
+			targets: []string{"t1", "t2", "t3"},
 			stages: []kargoapi.Stage{
 				targetAware("a", "", "a.01"),
 				targetAware("b", "", "b.01"),
@@ -494,7 +514,7 @@ func Test_collectTargetStats(t *testing.T) {
 		},
 		{
 			name:    "prefers the current request over the last",
-			targets: targets("t1"),
+			targets: []string{"t1"},
 			stages:  []kargoapi.Stage{targetAware("a", "a.02", "a.01")},
 			requests: []kargoapi.PromotionRequest{
 				request("a.01", kargoapi.PromotionRequestPhaseSucceeded,
@@ -506,7 +526,7 @@ func Test_collectTargetStats(t *testing.T) {
 		},
 		{
 			name:    "a Target without a recorded phase takes the request's own phase once it has ended",
-			targets: targets("t1", "t2", "t3"),
+			targets: []string{"t1", "t2", "t3"},
 			stages: []kargoapi.Stage{
 				targetAware("ok", "", "ok.01"),
 				targetAware("bad", "", "bad.01"),
@@ -521,7 +541,7 @@ func Test_collectTargetStats(t *testing.T) {
 		},
 		{
 			name:    "a Stage whose latest request no longer exists is skipped",
-			targets: targets("t1"),
+			targets: []string{"t1"},
 			stages: []kargoapi.Stage{
 				targetAware("gone", "", "gone.01"),
 				targetAware("here", "", "here.01"),
@@ -534,7 +554,7 @@ func Test_collectTargetStats(t *testing.T) {
 		},
 		{
 			name:    "a Target named by a request but no longer existing is not counted",
-			targets: targets("t1"),
+			targets: []string{"t1"},
 			stages:  []kargoapi.Stage{targetAware("a", "", "a.01")},
 			requests: []kargoapi.PromotionRequest{
 				request("a.01", kargoapi.PromotionRequestPhaseSucceeded,
@@ -547,11 +567,13 @@ func Test_collectTargetStats(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
-			require.Equal(
-				t,
-				testCase.expected,
-				collectTargetStats(testCase.targets, testCase.stages, testCase.requests),
+			counts, err := fakeTargetCounter{targets: testCase.targets}.Count(
+				t.Context(),
+				testProject,
+				healthyTargetNames(testCase.stages, testCase.requests),
 			)
+			require.NoError(t, err)
+			require.Equal(t, testCase.expected, targetStats(counts))
 		})
 	}
 }

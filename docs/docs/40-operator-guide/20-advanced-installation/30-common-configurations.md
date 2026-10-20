@@ -809,11 +809,24 @@ section of the user guide.
 
 ## Database Configuration
 
-Kargo's management controller mirrors Project identities into a PostgreSQL
-database; Kubernetes remains the source of truth. The chart provides that
-database, either the minimal PostgreSQL bundled with the chart or a reference to
-an external one, and points the management controller at whichever is
-configured.
+Kargo keeps some of its state in a PostgreSQL database. The management
+controller mirrors Project identities into it, with Kubernetes remaining their
+source of truth, and Targets live only there, managed through Kargo's API
+rather than as Kubernetes resources. The chart provides that database, either
+the minimal PostgreSQL bundled with the chart or a reference to an external
+one, and points the components that use it at whichever is configured.
+
+:::note
+A Target belongs to the Project it is named under. Deleting a Project does not
+yet delete its Targets, so a Project re-created under the same name has the
+Targets of the one it replaced. Back up the database together with the
+cluster, since Targets live only in the database.
+
+Target is no longer a custom resource, and the chart no longer installs a CRD
+for it. Upgrading removes the `targets.kargo.akuity.io` CRD and, with it, any
+Target custom resources created by earlier versions; they are not migrated.
+Recreate the Targets you still need through the API after upgrading.
+:::
 
 ### Bundled PostgreSQL
 

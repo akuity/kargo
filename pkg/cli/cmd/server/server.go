@@ -110,6 +110,7 @@ func (o *serverOptions) run(ctx context.Context) error {
 		client,
 		rbac.NewKubernetesRolesDatabase(client, client, rbac.RolesDatabaseConfigFromEnv()),
 		k8sevent.NewEventSender(&fakeevent.EventRecorder{}),
+		nil, // No database: Targets are unavailable in local mode.
 	)
 	if err := srv.Serve(ctx, l); err != nil {
 		return fmt.Errorf("serve error: %w", err)

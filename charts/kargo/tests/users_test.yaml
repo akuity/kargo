@@ -81,7 +81,6 @@ tests:
               - promotionrequests
               - promotiontasks
               - stages
-              - targets
               - warehouses
             verbs:
               - create
@@ -91,6 +90,23 @@ tests:
               - list
               - patch
               - update
+              - watch
+
+  - it: grants admins read-only Target access
+    documentSelector:
+      path: metadata.name
+      value: kargo-admin
+    asserts:
+      - contains:
+          path: rules
+          content:
+            apiGroups:
+              - kargo.akuity.io
+            resources:
+              - targets
+            verbs:
+              - get
+              - list
               - watch
 
   - it: grants viewers read-only PromotionRequest access
