@@ -3,10 +3,9 @@ import { ReactNode } from 'react';
 
 import { StateCounts, TargetState, targetStatePresentations } from '../model/target-state';
 import { StateDot } from '../shared/state-visuals';
+import { surfaceClassName } from '../shared/surface';
 
-const tileClassName =
-  'flex-1 min-w-[132px] rounded-md px-4 py-3 border border-solid ' +
-  'bg-white dark:bg-neutral-800 border-gray-200 dark:border-neutral-700';
+const tileClassName = `flex-1 min-w-[132px] px-4 py-3 ${surfaceClassName}`;
 
 const Tile = ({
   heading,

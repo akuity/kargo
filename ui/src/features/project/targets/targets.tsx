@@ -5,7 +5,7 @@ import { useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
 
 import { LoadingState } from '@ui/features/common/loading-state';
-import { useWatchTargets } from '@ui/features/stage/tabs/fleet/use-watch-targets';
+import { useWatchTargets } from '@ui/features/stage/tabs/targets/use-watch-targets';
 import { useCurrentRounds } from '@ui/features/stage/use-current-round';
 import { getColors } from '@ui/features/stage/utils';
 import { useListStages, useListTargets } from '@ui/gen/api/v2/core/core';
