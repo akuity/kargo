@@ -117,10 +117,7 @@ func (runner analysisRunnerRequest) GetAnalysisRunPromotionName(
 		return "", err
 	}
 	// AnalysisRun that triggered by a Promotion contains the Promotion name
-	if promoName, ok := ar.Annotations[kargoapi.AnnotationKeyPromotion]; ok {
-		return promoName, nil
-	}
-	return "", nil
+	return ar.Spec.PromotionName, nil
 }
 
 func (runner analysisRunnerRequest) FindExistingAnalysisRun(
