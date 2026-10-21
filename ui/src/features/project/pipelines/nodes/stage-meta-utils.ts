@@ -47,6 +47,7 @@ export type StagePromotionRef = {
   message?: string;
   finishedAt?: string;
   freightName?: string;
+  freightOrigin?: string;
   // path is where the UI shows the referenced promotion activity. A Promotion
   // has a page of its own. A PromotionRequest does not: it is listed on the
   // Stage page, whose Promotions tab leads with the Stage's PromotionRequests
@@ -78,6 +79,7 @@ const promotionRef = (stage?: Stage, ref?: PromotionReference): StagePromotionRe
     message: ref.status?.message,
     finishedAt: ref.finishedAt,
     freightName: ref.freight?.name,
+    freightOrigin: ref.freight?.origin?.name,
     path: promotionPath(stage, ref.name)
   };
 
@@ -91,6 +93,7 @@ const promotionRequestRef = (
     phase: ref.phase,
     finishedAt: ref.finishedAt,
     freightName: ref.freight?.name,
+    freightOrigin: ref.freight?.origin?.name,
     path: stagePath(stage)
   };
 
