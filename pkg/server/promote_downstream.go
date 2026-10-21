@@ -181,7 +181,7 @@ func (s *server) promoteDownstream(c *gin.Context) {
 			// client. PromotionRequests are system-owned, and the promote-verb
 			// check above IS the authorization decision for this downstream
 			// Stage; which Targets it governs is a detail of carrying it out.
-			newPromoReq, err := api.NewPromotionRequest(
+			newPromoReq, err := api.NewPromotionRequestForAllTargets(
 				ctx, s.client.InternalClient(), &downstream, freight.Name,
 			)
 			if err != nil {

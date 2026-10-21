@@ -7,6 +7,7 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
@@ -115,7 +116,7 @@ func ComparePromotionRequestPhase(a, b kargoapi.PromotionRequestPhase) int {
 	}
 }
 
-// NewPromotionRequest constructs a PromotionRequest expressing the intent to
+// NewPromotionRequestForAllTargets constructs a PromotionRequest expressing the intent to
 // promote the given Freight to the Targets the Stage governs.
 //
 // The Stage's target selectors are resolved to concrete Targets here, once, and
@@ -130,12 +131,15 @@ func ComparePromotionRequestPhase(a, b kargoapi.PromotionRequestPhase) int {
 // garbage-collected with it.
 //
 // The Stage MUST be target-aware. Callers should gate on IsTargetAware.
-func NewPromotionRequest(
+func NewPromotionRequestForAllTargets(
 	ctx context.Context,
 	c client.Client,
 	stage *kargoapi.Stage,
 	freightName string,
 ) (*kargoapi.PromotionRequest, error) {
+	if stage.Spec.Targets == nil {
+		return nil, fmt.Errorf("cannot create promotion request for a stage without targets")
+	}
 	targets, err := ListTargetsForStage(ctx, c, stage)
 	if err != nil {
 		return nil, fmt.Errorf(
@@ -144,6 +148,24 @@ func NewPromotionRequest(
 		)
 	}
 
+	// Calculate effective update strategy for promotion request
+	// This computes MaxConcurrentPercent and MaxFailuresPercent into MaxConcurrent and MaxFailures
+	updateStrategy, err := calculateUpdateStrategy(stage.Spec.Targets.UpdateStrategy, len(targets))
+	if err != nil {
+		return nil, err
+	}
+
+	return newPromotionRequest(stage, freightName, targets, updateStrategy)
+}
+
+// newPromotionRequest creates a promotion request for selected targets of the stage.
+// updateStrategy is calculated for a stage, not selected targets.
+func newPromotionRequest(
+	stage *kargoapi.Stage,
+	freightName string,
+	targets []kargoapi.Target,
+	updateStrategy kargoapi.PromotionRequestUpdateStrategy,
+) (*kargoapi.PromotionRequest, error) {
 	// Never nil: spec.targets is a required field, so a nil slice would
 	// serialize as null and be rejected. An empty list is meaningful -- it
 	// records that the Stage governed no Targets at this moment.
@@ -158,11 +180,6 @@ func NewPromotionRequest(
 	// this, only the default controller would ever reconcile it.
 	if stage.Spec.Shard != "" {
 		labels[kargoapi.LabelKeyShard] = stage.Spec.Shard
-	}
-
-	updateStrategy := kargoapi.TargetUpdateStrategy{}
-	if stage.Spec.Targets != nil {
-		updateStrategy = stage.Spec.Targets.UpdateStrategy
 	}
 
 	return &kargoapi.PromotionRequest{
@@ -184,6 +201,34 @@ func NewPromotionRequest(
 			UpdateStrategy: updateStrategy,
 		},
 	}, nil
+}
+
+// calculateUpdateStrategy calculates effective updateStrategy for a PromotionRequest
+// based on the stage updateStrategy and the number of targets selected.
+// For updateStrategy used in PromotionRequest, the percentage values are not set.
+func calculateUpdateStrategy(
+	stageStrategy kargoapi.TargetUpdateStrategy,
+	targetCount int,
+) (kargoapi.PromotionRequestUpdateStrategy, error) {
+	maxConcurrent, err := calculateUpdateStrategyValue(stageStrategy.MaxConcurrent, targetCount)
+	if err != nil {
+		return kargoapi.PromotionRequestUpdateStrategy{}, err
+	}
+	maxFailures, err := calculateUpdateStrategyValue(stageStrategy.MaxFailures, targetCount)
+	if err != nil {
+		return kargoapi.PromotionRequestUpdateStrategy{}, err
+	}
+	return kargoapi.PromotionRequestUpdateStrategy{
+		MaxConcurrent: int64(maxConcurrent),
+		MaxFailures:   int64(maxFailures),
+	}, nil
+}
+
+func calculateUpdateStrategyValue(configValue *intstr.IntOrString, targetCount int) (int, error) {
+	if configValue == nil {
+		return 0, nil
+	}
+	return intstr.GetScaledValueFromIntOrPercent(configValue, targetCount, true)
 }
 
 // GetPromotionRequest returns a pointer to the PromotionRequest resource specified by the

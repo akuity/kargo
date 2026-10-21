@@ -209,7 +209,7 @@ func (s *server) promoteToStage(c *gin.Context) {
 		// Stage governs is a detail of carrying it out. Resolving as the user
 		// would also break the kargo-promoter role, which holds the promote
 		// verb but no permission to list Targets.
-		promotionRequest, prErr := api.NewPromotionRequest(
+		promotionRequest, prErr := api.NewPromotionRequestForAllTargets(
 			ctx, s.client.InternalClient(), stage, freight.Name,
 		)
 		if prErr != nil {

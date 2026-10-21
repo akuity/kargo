@@ -13661,7 +13661,7 @@ components:
           type: array
         updateStrategy:
           allOf:
-          - $ref: "#/components/schemas/TargetUpdateStrategy"
+          - $ref: "#/components/schemas/PromotionRequestUpdateStrategy"
           description: |-
             UpdateStrategy configures the pace of updating the targets
             +optional
@@ -13821,6 +13821,21 @@ components:
           type: string
       required:
       - name
+      type: object
+    PromotionRequestUpdateStrategy:
+      properties:
+        maxConcurrent:
+          description: |-
+            MaxConcurrent specifies a number of targets which can be promoted to at the same time
+            Zero means there is no limit (default)
+          type: integer
+        maxFailures:
+          description: |-
+            MaxFailures specifies a number of target promotions which can fail before PromotionRequest is considered failed.
+            Specifies a tolerable number, N failing promotions with maxFailures: N is a success, N+1 is a failure.
+            Defaults to 0, meaning no failures tolerated.
+            +kubebuilder:validation:Minimum=0
+          type: integer
       type: object
     PromotionSpec:
       properties:
@@ -15366,8 +15381,18 @@ components:
         maxConcurrent:
           description: |-
             MaxConcurrent specifies a number of targets which can be promoted to at the same time
-            Zero means there is no limit (default)
-          type: integer
+            Value can be an absolute number (e.g.: 5) or a percentage of targets selected by the stage (e.g.: 10%).
+            Absolute number is calculated from percentage by rounding up to a minimum of 1.
+            Percentage value cannot be 0%. Number value cannot be 0.
+            If omitted or empty string, no limit is applied (default).
+          type: object
+        maxFailures:
+          description: |-
+            MaxFailures specifies a number of target promotions which can fail before PromotionRequest is considered failed.
+            Specifies a tolerable number, N failing promotions with maxFailures: N is a success, N+1 is a failure.
+            Value can be an absolute number (e.g.: 5) or a percentage of targets selected by the stage (e.g.: 10%).
+            Absolute number is calculated from percentage by rounding up to a minimum of 1. Default value is 0.
+          type: object
       type: object
     Verification:
       properties:
