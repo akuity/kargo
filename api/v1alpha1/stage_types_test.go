@@ -1014,7 +1014,28 @@ func TestImageDeepEquals(t *testing.T) {
 	}
 }
 
+func TestChartAnnotationsDeepCopy(t *testing.T) {
+	t.Parallel()
+	chart := &Chart{Annotations: map[string]string{"revision": "abc123"}}
+	copied := chart.DeepCopy()
+	copied.Annotations["revision"] = "changed"
+	require.Equal(t, "abc123", chart.Annotations["revision"])
+
+	discovered := &ChartDiscoveryResult{
+		Versions: []string{"1.2.3"},
+		Annotations: map[string]map[string]string{
+			"1.2.3": {"revision": "abc123"},
+		},
+	}
+	copiedResult := discovered.DeepCopy()
+	copiedResult.Annotations["1.2.3"]["revision"] = "changed"
+	copiedResult.Annotations["1.2.4"] = map[string]string{"revision": "new"}
+	require.Equal(t, "abc123", discovered.Annotations["1.2.3"]["revision"])
+	require.NotContains(t, discovered.Annotations, "1.2.4")
+}
+
 func TestChartDeepEquals(t *testing.T) {
+	t.Parallel()
 	testCases := []struct {
 		name           string
 		a              *Chart
@@ -1100,6 +1121,28 @@ func TestChartDeepEquals(t *testing.T) {
 				SubscriptionName: "sub-b",
 			},
 			expectedResult: false,
+		},
+		{
+			name: "annotations differ",
+			a:    &Chart{Annotations: map[string]string{"revision": "abc"}},
+			b:    &Chart{Annotations: map[string]string{"revision": "def"}},
+		},
+		{
+			name: "annotations missing",
+			a:    &Chart{Annotations: map[string]string{"revision": "abc"}},
+			b:    &Chart{},
+		},
+		{
+			name:           "nil and empty annotations are equal",
+			a:              &Chart{},
+			b:              &Chart{Annotations: map[string]string{}},
+			expectedResult: true,
+		},
+		{
+			name:           "matching annotations",
+			a:              &Chart{Annotations: map[string]string{"revision": "abc"}},
+			b:              &Chart{Annotations: map[string]string{"revision": "abc"}},
+			expectedResult: true,
 		},
 		{
 			name: "perfect match with subscription name",

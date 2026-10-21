@@ -5,8 +5,16 @@
  * REST API for Kargo
  * OpenAPI spec version: v1alpha1
  */
+import type { ChartDiscoveryResultAnnotations } from './chartDiscoveryResultAnnotations';
 
 export interface ChartDiscoveryResult {
+  /**
+   * Annotations contains OCI manifest annotations indexed by chart version.
+   * This field is only populated for charts in OCI repositories.
+   *
+   * +optional
+   */
+  annotations?: ChartDiscoveryResultAnnotations;
   /** Name is the name of the Helm chart, as specified in the ChartSubscription. */
   name?: string;
   /**

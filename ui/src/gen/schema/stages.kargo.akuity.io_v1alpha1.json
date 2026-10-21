@@ -602,6 +602,13 @@
                   "items": {
                     "description": "Chart describes a specific version of a Helm chart.",
                     "properties": {
+                      "annotations": {
+                        "additionalProperties": {
+                          "type": "string"
+                        },
+                        "description": "Annotations is a map of arbitrary metadata from the chart's OCI manifest.",
+                        "type": "object"
+                      },
                       "name": {
                         "description": "Name specifies the name of the chart.",
                         "type": "string"
@@ -786,6 +793,13 @@
                       "items": {
                         "description": "Chart describes a specific version of a Helm chart.",
                         "properties": {
+                          "annotations": {
+                            "additionalProperties": {
+                              "type": "string"
+                            },
+                            "description": "Annotations is a map of arbitrary metadata from the chart's OCI manifest.",
+                            "type": "object"
+                          },
                           "name": {
                             "description": "Name specifies the name of the chart.",
                             "type": "string"
@@ -959,6 +973,13 @@
                             "items": {
                               "description": "Chart describes a specific version of a Helm chart.",
                               "properties": {
+                                "annotations": {
+                                  "additionalProperties": {
+                                    "type": "string"
+                                  },
+                                  "description": "Annotations is a map of arbitrary metadata from the chart's OCI manifest.",
+                                  "type": "object"
+                                },
                                 "name": {
                                   "description": "Name specifies the name of the chart.",
                                   "type": "string"
@@ -1295,6 +1316,13 @@
                   "items": {
                     "description": "Chart describes a specific version of a Helm chart.",
                     "properties": {
+                      "annotations": {
+                        "additionalProperties": {
+                          "type": "string"
+                        },
+                        "description": "Annotations is a map of arbitrary metadata from the chart's OCI manifest.",
+                        "type": "object"
+                      },
                       "name": {
                         "description": "Name specifies the name of the chart.",
                         "type": "string"
@@ -1468,6 +1496,13 @@
                         "items": {
                           "description": "Chart describes a specific version of a Helm chart.",
                           "properties": {
+                            "annotations": {
+                              "additionalProperties": {
+                                "type": "string"
+                              },
+                              "description": "Annotations is a map of arbitrary metadata from the chart's OCI manifest.",
+                              "type": "object"
+                            },
                             "name": {
                               "description": "Name specifies the name of the chart.",
                               "type": "string"
@@ -1781,6 +1816,13 @@
                       "items": {
                         "description": "Chart describes a specific version of a Helm chart.",
                         "properties": {
+                          "annotations": {
+                            "additionalProperties": {
+                              "type": "string"
+                            },
+                            "description": "Annotations is a map of arbitrary metadata from the chart's OCI manifest.",
+                            "type": "object"
+                          },
                           "name": {
                             "description": "Name specifies the name of the chart.",
                             "type": "string"
@@ -2057,6 +2099,13 @@
                   "items": {
                     "description": "Chart describes a specific version of a Helm chart.",
                     "properties": {
+                      "annotations": {
+                        "additionalProperties": {
+                          "type": "string"
+                        },
+                        "description": "Annotations is a map of arbitrary metadata from the chart's OCI manifest.",
+                        "type": "object"
+                      },
                       "name": {
                         "description": "Name specifies the name of the chart.",
                         "type": "string"
@@ -2241,6 +2290,13 @@
                       "items": {
                         "description": "Chart describes a specific version of a Helm chart.",
                         "properties": {
+                          "annotations": {
+                            "additionalProperties": {
+                              "type": "string"
+                            },
+                            "description": "Annotations is a map of arbitrary metadata from the chart's OCI manifest.",
+                            "type": "object"
+                          },
                           "name": {
                             "description": "Name specifies the name of the chart.",
                             "type": "string"
@@ -2414,6 +2470,13 @@
                             "items": {
                               "description": "Chart describes a specific version of a Helm chart.",
                               "properties": {
+                                "annotations": {
+                                  "additionalProperties": {
+                                    "type": "string"
+                                  },
+                                  "description": "Annotations is a map of arbitrary metadata from the chart's OCI manifest.",
+                                  "type": "object"
+                                },
                                 "name": {
                                   "description": "Name specifies the name of the chart.",
                                   "type": "string"
@@ -2750,6 +2813,13 @@
                   "items": {
                     "description": "Chart describes a specific version of a Helm chart.",
                     "properties": {
+                      "annotations": {
+                        "additionalProperties": {
+                          "type": "string"
+                        },
+                        "description": "Annotations is a map of arbitrary metadata from the chart's OCI manifest.",
+                        "type": "object"
+                      },
                       "name": {
                         "description": "Name specifies the name of the chart.",
                         "type": "string"
@@ -2923,6 +2993,13 @@
                         "items": {
                           "description": "Chart describes a specific version of a Helm chart.",
                           "properties": {
+                            "annotations": {
+                              "additionalProperties": {
+                                "type": "string"
+                              },
+                              "description": "Annotations is a map of arbitrary metadata from the chart's OCI manifest.",
+                              "type": "object"
+                            },
                             "name": {
                               "description": "Name specifies the name of the chart.",
                               "type": "string"
