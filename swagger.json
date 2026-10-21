@@ -5500,6 +5500,15 @@
         "origin": {
           "description": "Origin is the canonical Freight origin key (e.g. \"Warehouse/foo\"). When\nset, the promotion webhook resolves it to the current auto-promotion\ncandidate. Exactly one of Freight, FreightAlias, or Origin must be set.",
           "type": "string"
+        },
+        "targets": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "updateStrategy": {
+          "$ref": "#/definitions/PromotionRequestUpdateStrategy"
         }
       }
     },
