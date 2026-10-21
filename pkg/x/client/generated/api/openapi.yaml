@@ -4049,6 +4049,12 @@ components:
         freight: freight
         freightAlias: freightAlias
         origin: origin
+        targets:
+        - targets
+        - targets
+        updateStrategy:
+          maxConcurrent: 0
+          maxFailures: 6
       properties:
         freight:
           type: string
@@ -4060,6 +4066,12 @@ components:
             set, the promotion webhook resolves it to the current auto-promotion
             candidate. Exactly one of Freight, FreightAlias, or Origin must be set.
           type: string
+        targets:
+          items:
+            type: string
+          type: array
+        updateStrategy:
+          $ref: "#/components/schemas/PromotionRequestUpdateStrategy"
       type: object
     PublicConfig:
       example:
@@ -13823,6 +13835,9 @@ components:
       - name
       type: object
     PromotionRequestUpdateStrategy:
+      example:
+        maxConcurrent: 0
+        maxFailures: 6
       properties:
         maxConcurrent:
           description: |-
