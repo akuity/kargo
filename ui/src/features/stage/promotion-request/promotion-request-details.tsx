@@ -1,6 +1,6 @@
-import { faArrowLeft, faUndo } from '@fortawesome/free-solid-svg-icons';
+import { faArrowLeft, faChevronDown, faUndo } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { Button, Empty, Flex, Tag, Tooltip, Typography, message } from 'antd';
+import { Button, Dropdown, Empty, Flex, Tag, Tooltip, Typography, message } from 'antd';
 import { format, formatDistanceToNow } from 'date-fns';
 import { useMemo } from 'react';
 import { Link, generatePath, useNavigate } from 'react-router-dom';
@@ -25,7 +25,10 @@ import { ApiError } from '@ui/lib/api/custom-fetch';
 import { parseDate } from '@ui/utils/dates';
 
 import { useGetFreightMap } from '../tabs/freight-history/use-get-freight-map';
-import { isPromotionRequestPhaseTerminal } from '../utils/promotion-request';
+import {
+  isPromotionRequestPhaseTerminal,
+  isPromotionRequestRetryable
+} from '../utils/promotion-request';
 import {
   freightVersion,
   requestDurationMs,
@@ -35,7 +38,13 @@ import {
 import { formatStepDuration } from '../utils/step-duration';
 
 import { ChildPromotions } from './child-promotions';
-import { childPromotions, childrenSummary, conditionSummary, firstFailure } from './round-detail';
+import {
+  childPromotions,
+  childrenSummary,
+  conditionSummary,
+  firstFailure,
+  retryTargets
+} from './round-detail';
 import { RoundGrid } from './round-grid';
 import { WhereItFailed } from './where-it-failed';
 
@@ -124,6 +133,11 @@ export const PromotionRequestDetails = ({
   const tally = targetsTally(summary);
   const failure = useMemo(() => firstFailure(children), [children]);
 
+  // The Targets of this round that a retry can narrow to. A round that failed
+  // before fanning out reached none of them, leaving only the whole-Stage
+  // retry to offer.
+  const retrying = useMemo(() => retryTargets(children), [children]);
+
   const promoteMutation = usePromoteToStage({
     mutation: {
       onSuccess: (data) => {
@@ -142,6 +156,34 @@ export const PromotionRequestDetails = ({
     }
   });
 
+  // Retrying either names the Targets to promote to, or leaves `targets`
+  // unset, which promotes to every Target the Stage governs now -- a set that
+  // need not be the one this round named.
+  const retry = (targets?: string[]) =>
+    confirm({
+      title: targets ? 'Retry the Targets that did not succeed?' : 'Retry every Target?',
+      content: (
+        <p>
+          This creates a new request promoting the same Freight to{' '}
+          {targets ? (
+            <>
+              the {targets.length} Target{targets.length === 1 ? '' : 's'} of this round that did
+              not succeed.
+            </>
+          ) : (
+            'every Target the Stage governs now, including the ones that already succeeded.'
+          )}
+        </p>
+      ),
+      okText: 'Retry',
+      onOk: () =>
+        promoteMutation.mutate({
+          project,
+          stage: stageName,
+          data: { freight: freightName, ...(targets ? { targets } : {}) }
+        })
+    });
+
   // Back to the list of rounds, which is this same tab without a round named.
   const back = () => navigate(generatePath(paths.stage, { name: project, stageName }));
 
@@ -152,7 +194,7 @@ export const PromotionRequestDetails = ({
   const duration = requestDurationMs(request);
   const maxConcurrent = request?.spec?.updateStrategy?.maxConcurrent;
   const conditions = conditionSummary(request);
-  const retryable = ['Failed', 'Errored', 'Aborted'].includes(phase);
+  const retryable = isPromotionRequestRetryable(phase);
 
   return (
     <Flex vertical gap={16}>
@@ -197,30 +239,31 @@ export const PromotionRequestDetails = ({
           </Typography.Text>
         </div>
         {retryable && (
-          <Button
-            icon={<FontAwesomeIcon icon={faUndo} />}
-            loading={promoteMutation.isPending}
-            onClick={() =>
-              confirm({
-                title: 'Promote this Freight again?',
-                content: (
-                  <p>
-                    This creates a new request promoting the same Freight to every Target the Stage
-                    governs now - not only the ones that did not succeed.
-                  </p>
-                ),
-                okText: 'Promote',
-                onOk: () =>
-                  promoteMutation.mutate({
-                    project,
-                    stage: stageName,
-                    data: { freight: freightName }
-                  })
-              })
-            }
+          <Dropdown
+            trigger={['click']}
+            menu={{
+              items: [
+                {
+                  key: 'unsuccessful',
+                  // Nothing to narrow to when every Target succeeded, or when
+                  // the round never reached one.
+                  disabled: !retrying.length,
+                  label: 'Unsuccessful Targets',
+                  onClick: () => retry(retrying)
+                },
+                {
+                  key: 'all',
+                  label: 'All Targets',
+                  onClick: () => retry()
+                }
+              ]
+            }}
           >
-            Retry
-          </Button>
+            <Button icon={<FontAwesomeIcon icon={faUndo} />} loading={promoteMutation.isPending}>
+              Retry
+              <FontAwesomeIcon icon={faChevronDown} size='xs' />
+            </Button>
+          </Dropdown>
         )}
       </Flex>
 
