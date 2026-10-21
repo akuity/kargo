@@ -116,46 +116,121 @@ func ComparePromotionRequestPhase(a, b kargoapi.PromotionRequestPhase) int {
 	}
 }
 
-// NewPromotionRequestForAllTargets constructs a PromotionRequest expressing the intent to
-// promote the given Freight to the Targets the Stage governs.
-//
-// The Stage's target selectors are resolved to concrete Targets here, once, and
-// the result recorded in spec.targets. That list is never recomputed: a
-// PromotionRequest is a snapshot of what the Stage governed at this moment, so
-// its threshold and terminal state are computed against a fixed set rather than
-// a selector that could match differently later. A Target that appears after
-// this point is picked up by a subsequent PromotionRequest, not by re-resolving
-// this one.
-//
-// The Stage is set as the controlling owner, so its PromotionRequests are
-// garbage-collected with it.
-//
-// The Stage MUST be target-aware. Callers should gate on IsTargetAware.
-func NewPromotionRequestForAllTargets(
-	ctx context.Context,
-	c client.Client,
+type PromotionRequestBuilder struct {
+	stage                   *kargoapi.Stage
+	freightName             string
+	stageTargets            []kargoapi.Target
+	promotionRequestTargets []kargoapi.PromotionRequestTarget
+	updateStrategy          *kargoapi.PromotionRequestUpdateStrategy
+}
+
+func NewPromotionRequestBuilder(
 	stage *kargoapi.Stage,
 	freightName string,
+) *PromotionRequestBuilder {
+	return &PromotionRequestBuilder{
+		stage:       stage,
+		freightName: freightName,
+	}
+}
+
+// WithStageTargets specifies the stageTargets for this request.
+// Unless promotionRequestTargets is set, all these targets will be promoted to (default).
+// If promotionRequestTargets is set, these targets are used
+// to validate that promotionRequestTargets are selected by the stage.
+// This targets list is also used to calculate effective update strategy unless custom updateStrategy is set
+func (builder *PromotionRequestBuilder) WithStageTargets(
+	stageTargets []kargoapi.Target,
+) *PromotionRequestBuilder {
+	builder.stageTargets = stageTargets
+	return builder
+}
+
+// WithPromotionRequestTargets overrides targets to be promoted to.
+// If set, only those targets will be promoted to, instead of all the stageTargets.
+// These targets need to be a subset of stageTargets.
+func (builder *PromotionRequestBuilder) WithPromotionRequestTargets(
+	promotionRequestTargets []kargoapi.PromotionRequestTarget,
+) *PromotionRequestBuilder {
+	builder.promotionRequestTargets = promotionRequestTargets
+	return builder
+}
+
+// WithUpdateStrategy overrides updateStrategy for the request.
+// If not set, the updateStrategy is calculated from the stages updateStrategy and a number of stageTargets.
+// If set, the configured updateStrategy is used regardless of the stage configuration.
+func (builder *PromotionRequestBuilder) WithUpdateStrategy(
+	updateStrategy *kargoapi.PromotionRequestUpdateStrategy,
+) *PromotionRequestBuilder {
+	builder.updateStrategy = updateStrategy
+	return builder
+}
+
+// Build constructs a new PromotionRequest object without creating it in the API.
+// It calculates targets and updateStrategy based on builder configuration.
+func (builder *PromotionRequestBuilder) Build(
+	ctx context.Context,
+	c client.Client,
 ) (*kargoapi.PromotionRequest, error) {
-	if stage.Spec.Targets == nil {
+	if builder.stage == nil {
+		return nil, fmt.Errorf("cannot create promotion request without a stage")
+	}
+	if builder.stage.Spec.Targets == nil {
 		return nil, fmt.Errorf("cannot create promotion request for a stage without targets")
 	}
-	targets, err := ListTargetsForStage(ctx, c, stage)
-	if err != nil {
-		return nil, fmt.Errorf(
-			"error resolving Targets governed by Stage %q in namespace %q: %w",
-			stage.Name, stage.Namespace, err,
-		)
+
+	stageTargets := builder.stageTargets
+	var err error
+
+	if stageTargets == nil {
+		stageTargets, err = ListTargetsForStage(ctx, c, builder.stage)
+		if err != nil {
+			return nil, fmt.Errorf(
+				"error resolving Targets governed by Stage %q in namespace %q: %w",
+				builder.stage.Name, builder.stage.Namespace, err,
+			)
+		}
 	}
 
-	// Calculate effective update strategy for promotion request
-	// This computes MaxConcurrentPercent and MaxFailuresPercent into MaxConcurrent and MaxFailures
-	updateStrategy, err := calculateUpdateStrategy(stage.Spec.Targets.UpdateStrategy, len(targets))
-	if err != nil {
-		return nil, err
+	updateStrategy := builder.updateStrategy
+	if updateStrategy == nil {
+		// Calculate effective update strategy for promotion request
+		// This computes MaxConcurrentPercent and MaxFailuresPercent into MaxConcurrent and MaxFailures
+		updateStrategy, err = calculateUpdateStrategy(builder.stage.Spec.Targets.UpdateStrategy, len(stageTargets))
+		if err != nil {
+			return nil, err
+		}
 	}
 
-	return newPromotionRequest(stage, freightName, targets, updateStrategy)
+	promotionRequestTargets := builder.promotionRequestTargets
+
+	// If the builder did not supply the list of targets, we assume all stage targets need to be added
+	if promotionRequestTargets == nil {
+		// Never nil: spec.targets is a required field, so a nil slice would
+		// serialize as null and be rejected. An empty list is meaningful -- it
+		// records that the Stage governed no Targets at this moment.
+		promotionRequestTargets = make([]kargoapi.PromotionRequestTarget, len(stageTargets))
+		for i, target := range stageTargets {
+			promotionRequestTargets[i] = kargoapi.PromotionRequestTarget{Name: target.Name}
+		}
+	} else {
+		// Validate that all requested targets are selected by the stage
+		stageTargetsNameSet := make(map[string]any, len(stageTargets))
+		for _, stageTarget := range stageTargets {
+			stageTargetsNameSet[stageTarget.Name] = struct{}{}
+		}
+		for _, promotionRequestTarget := range promotionRequestTargets {
+			if _, ok := stageTargetsNameSet[promotionRequestTarget.Name]; !ok {
+				return nil, fmt.Errorf(
+					"target %q is not selected by stage %q",
+					promotionRequestTarget.Name,
+					builder.stage.Name)
+			}
+		}
+	}
+
+	return newPromotionRequest(builder.stage, builder.freightName, promotionRequestTargets, *updateStrategy)
+
 }
 
 // newPromotionRequest creates a promotion request for selected targets of the stage.
@@ -163,17 +238,9 @@ func NewPromotionRequestForAllTargets(
 func newPromotionRequest(
 	stage *kargoapi.Stage,
 	freightName string,
-	targets []kargoapi.Target,
+	promotionRequestTargets []kargoapi.PromotionRequestTarget,
 	updateStrategy kargoapi.PromotionRequestUpdateStrategy,
 ) (*kargoapi.PromotionRequest, error) {
-	// Never nil: spec.targets is a required field, so a nil slice would
-	// serialize as null and be rejected. An empty list is meaningful -- it
-	// records that the Stage governed no Targets at this moment.
-	specTargets := make([]kargoapi.PromotionRequestTarget, len(targets))
-	for i, target := range targets {
-		specTargets[i] = kargoapi.PromotionRequestTarget{Name: target.Name}
-	}
-
 	labels := map[string]string{kargoapi.LabelKeyStage: stage.Name}
 	// The PromotionRequest reconciler filters by shard, so a PromotionRequest
 	// must carry the shard of the Stage that it promotes on behalf of. Without
@@ -197,7 +264,7 @@ func newPromotionRequest(
 		Spec: kargoapi.PromotionRequestSpec{
 			Stage:          stage.Name,
 			Freight:        freightName,
-			Targets:        specTargets,
+			Targets:        promotionRequestTargets,
 			UpdateStrategy: updateStrategy,
 		},
 	}, nil
@@ -209,16 +276,16 @@ func newPromotionRequest(
 func calculateUpdateStrategy(
 	stageStrategy kargoapi.TargetUpdateStrategy,
 	targetCount int,
-) (kargoapi.PromotionRequestUpdateStrategy, error) {
+) (*kargoapi.PromotionRequestUpdateStrategy, error) {
 	maxConcurrent, err := calculateUpdateStrategyValue(stageStrategy.MaxConcurrent, targetCount)
 	if err != nil {
-		return kargoapi.PromotionRequestUpdateStrategy{}, err
+		return nil, err
 	}
 	maxFailures, err := calculateUpdateStrategyValue(stageStrategy.MaxFailures, targetCount)
 	if err != nil {
-		return kargoapi.PromotionRequestUpdateStrategy{}, err
+		return nil, err
 	}
-	return kargoapi.PromotionRequestUpdateStrategy{
+	return &kargoapi.PromotionRequestUpdateStrategy{
 		MaxConcurrent: int64(maxConcurrent),
 		MaxFailures:   int64(maxFailures),
 	}, nil
