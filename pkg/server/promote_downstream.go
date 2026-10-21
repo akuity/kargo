@@ -187,7 +187,11 @@ func (s *server) promoteDownstream(c *gin.Context) {
 				promoteErrs = append(promoteErrs, err)
 				continue
 			}
-			newPromoReq := api.NewPromotionRequest(&downstream, freight.Name, targets)
+			newPromoReq, err := api.NewPromotionRequestForAllTargets(&downstream, freight.Name, targets)
+			if err != nil {
+				promoteErrs = append(promoteErrs, err)
+				continue
+			}
 			if actor != "" {
 				api.SetCreateActorAnnotation(newPromoReq, actor)
 			}

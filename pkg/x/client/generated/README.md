@@ -305,6 +305,7 @@ Class | Method | HTTP request | Description
  - [PromotionRequestSummary](docs/PromotionRequestSummary.md)
  - [PromotionRequestTarget](docs/PromotionRequestTarget.md)
  - [PromotionRequestTargetStatus](docs/PromotionRequestTargetStatus.md)
+ - [PromotionRequestUpdateStrategy](docs/PromotionRequestUpdateStrategy.md)
  - [PromotionSpec](docs/PromotionSpec.md)
  - [PromotionStatus](docs/PromotionStatus.md)
  - [PromotionStep](docs/PromotionStep.md)

@@ -19,8 +19,10 @@ var _ MappedNullable = &TargetUpdateStrategy{}
 
 // TargetUpdateStrategy struct for TargetUpdateStrategy
 type TargetUpdateStrategy struct {
-	// MaxConcurrent specifies a number of targets which can be promoted to at the same time Zero means there is no limit (default)
-	MaxConcurrent *int32 `json:"maxConcurrent,omitempty"`
+	// MaxConcurrent specifies a number of targets which can be promoted to at the same time Value can be an absolute number (e.g.: 5) or a percentage of targets selected by the stage (e.g.: 10%). Absolute number is calculated from percentage by rounding up to a minimum of 1. Percentage value cannot be 0%. Number value cannot be 0. If omitted or empty string, no limit is applied (default).
+	MaxConcurrent any `json:"maxConcurrent,omitempty"`
+	// MaxFailures specifies a number of target promotions which can fail before PromotionRequest is considered failed. Specifies a tolerable number, N failing promotions with maxFailures: N is a success, N+1 is a failure. Value can be an absolute number (e.g.: 5) or a percentage of targets selected by the stage (e.g.: 10%). Absolute number is calculated from percentage by rounding up to a minimum of 1. Default value is 0.
+	MaxFailures any `json:"maxFailures,omitempty"`
 }
 
 // NewTargetUpdateStrategy instantiates a new TargetUpdateStrategy object
@@ -41,17 +43,17 @@ func NewTargetUpdateStrategyWithDefaults() *TargetUpdateStrategy {
 }
 
 // GetMaxConcurrent returns the MaxConcurrent field value if set, zero value otherwise.
-func (o *TargetUpdateStrategy) GetMaxConcurrent() int32 {
+func (o *TargetUpdateStrategy) GetMaxConcurrent() any {
 	if o == nil || IsNil(o.MaxConcurrent) {
-		var ret int32
+		var ret any
 		return ret
 	}
-	return *o.MaxConcurrent
+	return o.MaxConcurrent
 }
 
 // GetMaxConcurrentOk returns a tuple with the MaxConcurrent field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *TargetUpdateStrategy) GetMaxConcurrentOk() (*int32, bool) {
+func (o *TargetUpdateStrategy) GetMaxConcurrentOk() (any, bool) {
 	if o == nil || IsNil(o.MaxConcurrent) {
 		return nil, false
 	}
@@ -67,9 +69,41 @@ func (o *TargetUpdateStrategy) HasMaxConcurrent() bool {
 	return false
 }
 
-// SetMaxConcurrent gets a reference to the given int32 and assigns it to the MaxConcurrent field.
-func (o *TargetUpdateStrategy) SetMaxConcurrent(v int32) {
-	o.MaxConcurrent = &v
+// SetMaxConcurrent gets a reference to the given any and assigns it to the MaxConcurrent field.
+func (o *TargetUpdateStrategy) SetMaxConcurrent(v any) {
+	o.MaxConcurrent = v
+}
+
+// GetMaxFailures returns the MaxFailures field value if set, zero value otherwise.
+func (o *TargetUpdateStrategy) GetMaxFailures() any {
+	if o == nil || IsNil(o.MaxFailures) {
+		var ret any
+		return ret
+	}
+	return o.MaxFailures
+}
+
+// GetMaxFailuresOk returns a tuple with the MaxFailures field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *TargetUpdateStrategy) GetMaxFailuresOk() (any, bool) {
+	if o == nil || IsNil(o.MaxFailures) {
+		return nil, false
+	}
+	return o.MaxFailures, true
+}
+
+// HasMaxFailures returns a boolean if a field has been set.
+func (o *TargetUpdateStrategy) HasMaxFailures() bool {
+	if o != nil && !IsNil(o.MaxFailures) {
+		return true
+	}
+
+	return false
+}
+
+// SetMaxFailures gets a reference to the given any and assigns it to the MaxFailures field.
+func (o *TargetUpdateStrategy) SetMaxFailures(v any) {
+	o.MaxFailures = v
 }
 
 func (o TargetUpdateStrategy) MarshalJSON() ([]byte, error) {
@@ -84,6 +118,9 @@ func (o TargetUpdateStrategy) ToMap() (map[string]interface{}, error) {
 	toSerialize := map[string]interface{}{}
 	if !IsNil(o.MaxConcurrent) {
 		toSerialize["maxConcurrent"] = o.MaxConcurrent
+	}
+	if !IsNil(o.MaxFailures) {
+		toSerialize["maxFailures"] = o.MaxFailures
 	}
 	return toSerialize, nil
 }
