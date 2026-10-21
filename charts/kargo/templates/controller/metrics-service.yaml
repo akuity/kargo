@@ -8,7 +8,6 @@ metadata:
   labels:
     {{- include "kargo.labels" . | nindent 4 }}
     {{- include "kargo.controller.labels" . | nindent 4 }}
-    {{- include "kargo.controller.idLabel" . | nindent 4 }}
   {{- range $key, $value := $svc.labels }}
     {{ $key }}: {{ $value | quote }}
   {{- end }}

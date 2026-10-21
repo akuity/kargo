@@ -10,7 +10,6 @@ metadata:
   labels:
     {{- include "kargo.labels" . | nindent 4 }}
     {{- include "kargo.controller.labels" . | nindent 4 }}
-    {{- include "kargo.controller.idLabel" . | nindent 4 }}
   {{- include "kargo.annotations" (dict "root" . "annotations" .Values.controller.annotations) | nindent 2 }}
 data:
   {{- if .Values.api.enabled }}

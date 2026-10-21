@@ -98,6 +98,22 @@ tests:
             name: http-metrics
             protocol: TCP
 
+  # The id label stays on the pod selector only: a Deployment selector is
+  # immutable, so dropping it there would break upgrades of suffixed controllers.
+  - it: carries the controller id only on the pod selector
+    template: templates/controller/deployment.yaml
+    set:
+      controller.id: east
+    asserts:
+      - notExists:
+          path: metadata.labels["akuity.io/kargo-controller-id"]
+      - equal:
+          path: spec.selector.matchLabels["akuity.io/kargo-controller-id"]
+          value: east
+      - equal:
+          path: spec.template.metadata.labels["akuity.io/kargo-controller-id"]
+          value: east
+
 ---
 suite: controller/configmap.yaml
 values:
@@ -385,6 +401,23 @@ tests:
           path: spec.selector.matchLabels["app.kubernetes.io/component"]
           value: controller
 
+  # The metrics Service no longer carries the id label, and a ServiceMonitor
+  # selects Services by label, so the selector must not ask for it.
+  - it: does not select on the controller id
+    set:
+      controller.id: east
+      controller.metrics.enabled: true
+      controller.metrics.serviceMonitor.enabled: true
+    capabilities:
+      apiVersions:
+        - monitoring.coreos.com/v1
+    asserts:
+      - equal:
+          path: metadata.name
+          value: kargo-controller-east-metrics
+      - notExists:
+          path: spec.selector.matchLabels["akuity.io/kargo-controller-id"]
+
 ---
 suite: controller/cluster-roles.yaml
 values:
@@ -467,6 +500,18 @@ tests:
               - warehouses/status
             verbs:
               - patch
+
+  # The id already lives in the name. As a label it is capped at 63 bytes and
+  # a long id made the apply fail.
+  - it: does not carry the controller id as a label
+    set:
+      controller.id: east
+    documentSelector:
+      path: metadata.name
+      value: kargo-controller-east-argocd
+    asserts:
+      - notExists:
+          path: metadata.labels["akuity.io/kargo-controller-id"]
 
 ---
 suite: controller/roles.yaml

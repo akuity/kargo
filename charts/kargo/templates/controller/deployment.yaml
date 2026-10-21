@@ -9,7 +9,6 @@ metadata:
   labels:
     {{- include "kargo.componentLabels" (dict "root" . "labels" .Values.controller.labels) | nindent 4 }}
     {{- include "kargo.controller.labels" . | nindent 4 }}
-    {{- include "kargo.controller.idLabel" . | nindent 4 }}
   {{- include "kargo.annotations" (dict "root" . "annotations" .Values.controller.annotations) | nindent 2 }}
 spec:
   replicas: 1

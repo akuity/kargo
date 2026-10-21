@@ -9,7 +9,6 @@ metadata:
   labels:
     {{- include "kargo.labels" . | nindent 4 }}
     {{- include "kargo.controller.labels" . | nindent 4 }}
-    {{- include "kargo.controller.idLabel" . | nindent 4 }}
   {{- range $key, $value := $sm.additionalLabels }}
     {{ $key }}: {{ $value | quote }}
   {{- end }}
@@ -18,7 +17,6 @@ spec:
     matchLabels:
       {{- include "kargo.selectorLabels" . | nindent 6 }}
       {{- include "kargo.controller.labels" . | nindent 6 }}
-      {{- include "kargo.controller.idLabel" . | nindent 6 }}
   namespaceSelector:
     matchNames:
     - {{ .Release.Namespace }}

@@ -50,8 +50,10 @@ kargo-controller{{ include "kargo.controller.suffix" . }}
 
 {{/*
 kargo.controller.idLabel emits the `akuity.io/kargo-controller-id` label line
-when controller.id is set, empty otherwise. Used inside `labels:` /
-`matchLabels:` blocks across templates in the controller's install set.
+when controller.id is set, empty otherwise. Only the controller pod selector
+and the selectors that must match those pods use it: a Deployment selector is
+immutable, so it cannot be dropped without breaking upgrades. Nothing else
+carries it, since label values cap at 63 bytes and every name has the id.
 Callers handle indentation via `| nindent N`.
 */}}
 {{- define "kargo.controller.idLabel" -}}
