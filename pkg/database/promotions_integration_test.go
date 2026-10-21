@@ -55,6 +55,21 @@ func TestPromotionsIntegration(t *testing.T) {
 			},
 		},
 		{
+			name: "an upsert that changes nothing leaves the row alone",
+			run: func(t *testing.T) {
+				for _, params := range []UpsertPromotionParams{running, succeeded} {
+					require.NoError(t, queries.UpsertPromotion(ctx, params))
+					_, err := pool.Exec(ctx, "UPDATE promotions SET synced_at = '2000-01-01'")
+					require.NoError(t, err)
+					require.NoError(t, queries.UpsertPromotion(ctx, params))
+					rows, err := queries.ListPromotionsByID(ctx, []string{params.ID})
+					require.NoError(t, err)
+					require.Len(t, rows, 1)
+					require.True(t, rows[0].SyncedAt.Equal(time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC)))
+				}
+			},
+		},
+		{
 			name: "an unfinished Promotion to no Target has no finish time or Target",
 			run: func(t *testing.T) {
 				require.NoError(t, queries.UpsertPromotion(ctx, running))
@@ -122,6 +137,9 @@ func TestPromotionsIntegration(t *testing.T) {
 				withCollection.FreightNames = []string{"f1", "f2"}
 				require.NoError(t, queries.UpsertPromotion(ctx, running))
 				require.Empty(t, promotionFreight(t, pool, running.ID))
+				// The collection arrives with nothing else changed, so the
+				// Promotion's row is not updated, and the collection is
+				// recorded all the same.
 				require.NoError(t, queries.UpsertPromotion(ctx, withCollection))
 				want := []string{"Warehouse/w1=f1", "Warehouse/w2=f2"}
 				require.Equal(t, want, promotionFreight(t, pool, running.ID))
@@ -131,6 +149,11 @@ func TestPromotionsIntegration(t *testing.T) {
 				require.NoError(t, queries.UpsertPromotion(ctx, changed))
 				require.NoError(t, queries.UpsertPromotion(ctx, succeeded))
 				require.Equal(t, want, promotionFreight(t, pool, running.ID))
+				// A Promotion first seen with its collection gets both at once.
+				fresh := withCollection
+				fresh.ID = "fresh"
+				require.NoError(t, queries.UpsertPromotion(ctx, fresh))
+				require.Equal(t, want, promotionFreight(t, pool, fresh.ID))
 				empty := running
 				empty.ID = "empty"
 				empty.OriginKinds = []string{""}

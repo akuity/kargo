@@ -4,6 +4,12 @@
 -- The Promotion's FreightCollection, if it has one yet, is recorded in the same
 -- statement, one row per origin, given as three arrays of equal length. A
 -- Promotion builds its collection once, so a row that exists is kept.
+--
+-- A running Promotion's status changes often while nothing mirrored here does,
+-- so an update that would change nothing is skipped, synced_at included. The
+-- collection is inserted by the Promotion's ID rather than by the upsert's
+-- RETURNING, which is empty when the update is skipped: a collection that
+-- arrives with no other change is still recorded.
 -- name: UpsertPromotion :exec
 WITH promotion AS (
     INSERT INTO promotions (
@@ -30,17 +36,34 @@ WITH promotion AS (
         created_at = EXCLUDED.created_at,
         finished_at = EXCLUDED.finished_at,
         synced_at = CURRENT_TIMESTAMP
-    RETURNING id
+    WHERE (
+        promotions.project_name,
+        promotions.name,
+        promotions.stage_name,
+        promotions.freight_name,
+        promotions.target_name,
+        promotions.phase,
+        promotions.created_at,
+        promotions.finished_at
+    ) IS DISTINCT FROM (
+        EXCLUDED.project_name,
+        EXCLUDED.name,
+        EXCLUDED.stage_name,
+        EXCLUDED.freight_name,
+        EXCLUDED.target_name,
+        EXCLUDED.phase,
+        EXCLUDED.created_at,
+        EXCLUDED.finished_at
+    )
 )
 INSERT INTO promotion_freight (promotion_id, origin_kind, origin_name, freight_name)
 -- Set-returning functions in one select list advance together, which zips the
 -- arrays.
 SELECT
-    promotion.id,
+    sqlc.arg(id),
     unnest(sqlc.arg(origin_kinds)::text[]),
     unnest(sqlc.arg(origin_names)::text[]),
     unnest(sqlc.arg(freight_names)::text[])
-FROM promotion
 ON CONFLICT (promotion_id, origin_kind, origin_name) DO NOTHING;
 
 -- The table grows without bound, so the mirror never lists all of it: it
