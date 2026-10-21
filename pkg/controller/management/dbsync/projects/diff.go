@@ -22,7 +22,7 @@ func (s *syncer) Diff(ctx context.Context) ([]reconcile.Request, error) {
 	for _, row := range rows {
 		snapshot[row.ID] = row
 	}
-	return syncapi.Diff(ctx, s.reader, &kargoapi.ProjectList{}, snapshot, matches, rowKey)
+	return syncapi.Diff(ctx, s.reader, &kargoapi.ProjectList{}, syncapi.UID, snapshot, matches, rowKey)
 }
 
 func matches(project *kargoapi.Project, row database.ProjectRow) (bool, error) {

@@ -35,9 +35,14 @@ CREATE TABLE stages (
 -- stays behind as its record. A Promotion names its Project and Stage rather
 -- than referencing their mirrored rows, since both may be gone while the
 -- record remains, and likewise names its Target, when it promotes to one,
--- rather than referencing the Target's row. Names are not unique here: a
--- Promotion deleted and recreated under the same name is a different
--- Promotion with a row of its own.
+-- rather than referencing the Target's row.
+--
+-- A Promotion's id is a ULID assigned when its row is first written, from the
+-- time the Promotion was created, so ids sort in creation order. It is not
+-- the Kubernetes UID, which Promotions stored here alone will not have, nor
+-- the name, which may one day be chosen freely and changed. Until then a
+-- name is unique within its Project, as Kubernetes requires, and the mirror
+-- finds a Promotion's row by it.
 CREATE TABLE promotions (
     id TEXT PRIMARY KEY,
     project_name TEXT NOT NULL,
@@ -50,7 +55,8 @@ CREATE TABLE promotions (
     phase TEXT NOT NULL,
     created_at TIMESTAMPTZ NOT NULL,
     finished_at TIMESTAMPTZ,
-    synced_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+    synced_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT promotions_project_name_name_key UNIQUE (project_name, name)
 );
 -- Serves a Stage's promotion history, newest first.
 CREATE INDEX promotions_stage_created_at_idx
@@ -59,8 +65,6 @@ CREATE INDEX promotions_stage_created_at_idx
 CREATE INDEX promotions_target_created_at_idx
     ON promotions (project_name, target_name, created_at DESC)
     WHERE target_name IS NOT NULL;
--- Serves lookups by the name Kubernetes knew the Promotion by.
-CREATE INDEX promotions_project_name_name_idx ON promotions (project_name, name);
 
 -- The Freight each Promotion promoted: one row per origin of the
 -- FreightCollection it rendered. A Promotion changes only one origin's

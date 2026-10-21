@@ -25,7 +25,7 @@ func (s *syncer) Diff(ctx context.Context) ([]reconcile.Request, error) {
 	for _, row := range rows {
 		snapshot[row.ID] = row
 	}
-	return syncapi.Diff(ctx, s.reader, &kargoapi.StageList{}, snapshot, matches, rowKey)
+	return syncapi.Diff(ctx, s.reader, &kargoapi.StageList{}, syncapi.UID, snapshot, matches, rowKey)
 }
 
 func matches(stage *kargoapi.Stage, row database.StageRow) (bool, error) {

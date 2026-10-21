@@ -10,16 +10,24 @@ import (
 	"time"
 )
 
-const listPromotionsByID = `-- name: ListPromotionsByID :many
+const listPromotionsByKey = `-- name: ListPromotionsByKey :many
 SELECT id, project_name, name, stage_name, freight_name, target_name, phase, created_at, finished_at, synced_at FROM promotions
-WHERE id = ANY($1::text[])
-ORDER BY id
+WHERE (project_name, name) IN (
+    SELECT unnest($1::text[]), unnest($2::text[])
+)
+ORDER BY project_name, name
 `
 
+type ListPromotionsByKeyParams struct {
+	ProjectNames []string
+	Names        []string
+}
+
 // The table grows without bound, so the mirror never lists all of it: it
-// asks only after the rows of the Promotions Kubernetes currently has.
-func (q *Queries) ListPromotionsByID(ctx context.Context, ids []string) ([]PromotionRow, error) {
-	rows, err := q.db.Query(ctx, listPromotionsByID, ids)
+// asks only after the rows of the Promotions Kubernetes currently has, given
+// as two arrays of equal length, zipped as in UpsertPromotion.
+func (q *Queries) ListPromotionsByKey(ctx context.Context, arg ListPromotionsByKeyParams) ([]PromotionRow, error) {
+	rows, err := q.db.Query(ctx, listPromotionsByKey, arg.ProjectNames, arg.Names)
 	if err != nil {
 		return nil, err
 	}
@@ -49,75 +57,88 @@ func (q *Queries) ListPromotionsByID(ctx context.Context, ids []string) ([]Promo
 	return items, nil
 }
 
-const upsertPromotion = `-- name: UpsertPromotion :exec
+const upsertPromotion = `-- name: UpsertPromotion :one
 
-WITH promotion AS (
+WITH existing AS (
+    SELECT
+        (
+            SELECT promotions.id FROM promotions
+            WHERE promotions.project_name = $1
+                AND promotions.name = $2
+        ) AS id,
+        EXISTS (
+            SELECT 1 FROM promotions
+            WHERE promotions.project_name = $1
+                AND promotions.name = $2
+                AND promotions.created_at <> $3
+        ) AS name_taken
+),
+promotion AS (
     INSERT INTO promotions (
         id, project_name, name, stage_name, freight_name, target_name, phase, created_at, finished_at
     )
     VALUES (
+        $4,
         $1,
+        $2,
         $5,
         $6,
         $7,
         $8,
-        $9,
-        $10,
-        $11,
-        $12
+        $3,
+        $9
     )
-    ON CONFLICT (id) DO UPDATE SET
-        project_name = EXCLUDED.project_name,
-        name = EXCLUDED.name,
+    ON CONFLICT (project_name, name) DO UPDATE SET
         stage_name = EXCLUDED.stage_name,
         freight_name = EXCLUDED.freight_name,
         target_name = EXCLUDED.target_name,
         phase = EXCLUDED.phase,
-        created_at = EXCLUDED.created_at,
         finished_at = EXCLUDED.finished_at,
         synced_at = CURRENT_TIMESTAMP
-    WHERE (
-        promotions.project_name,
-        promotions.name,
-        promotions.stage_name,
-        promotions.freight_name,
-        promotions.target_name,
-        promotions.phase,
-        promotions.created_at,
-        promotions.finished_at
-    ) IS DISTINCT FROM (
-        EXCLUDED.project_name,
-        EXCLUDED.name,
-        EXCLUDED.stage_name,
-        EXCLUDED.freight_name,
-        EXCLUDED.target_name,
-        EXCLUDED.phase,
-        EXCLUDED.created_at,
-        EXCLUDED.finished_at
-    )
+    WHERE promotions.created_at = EXCLUDED.created_at
+        AND (
+            promotions.stage_name,
+            promotions.freight_name,
+            promotions.target_name,
+            promotions.phase,
+            promotions.finished_at
+        ) IS DISTINCT FROM (
+            EXCLUDED.stage_name,
+            EXCLUDED.freight_name,
+            EXCLUDED.target_name,
+            EXCLUDED.phase,
+            EXCLUDED.finished_at
+        )
+),
+freight AS (
+    INSERT INTO promotion_freight (promotion_id, origin_kind, origin_name, freight_name)
+    -- Set-returning functions in one select list advance together, which zips
+    -- the arrays.
+    SELECT
+        COALESCE(existing.id, $4),
+        unnest($10::text[]),
+        unnest($11::text[]),
+        unnest($12::text[])
+    FROM existing
+    WHERE NOT existing.name_taken
+    ON CONFLICT (promotion_id, origin_kind, origin_name) DO NOTHING
 )
-INSERT INTO promotion_freight (promotion_id, origin_kind, origin_name, freight_name)
-SELECT
-    $1,
-    unnest($2::text[]),
-    unnest($3::text[]),
-    unnest($4::text[])
-ON CONFLICT (promotion_id, origin_kind, origin_name) DO NOTHING
+SELECT name_taken FROM existing
 `
 
 type UpsertPromotionParams struct {
-	ID           string
-	OriginKinds  []string
-	OriginNames  []string
-	FreightNames []string
 	ProjectName  string
 	Name         string
+	CreatedAt    time.Time
+	ID           string
 	StageName    string
 	FreightName  string
 	TargetName   *string
 	Phase        string
-	CreatedAt    time.Time
 	FinishedAt   *time.Time
+	OriginKinds  []string
+	OriginNames  []string
+	FreightNames []string
 }
 
 // Promotion rows are only ever inserted and updated; see the migration that
@@ -128,25 +149,32 @@ type UpsertPromotionParams struct {
 //
 // A running Promotion's status changes often while nothing mirrored here does,
 // so an update that would change nothing is skipped, synced_at included. The
-// collection is inserted by the Promotion's ID rather than by the upsert's
-// RETURNING, which is empty when the update is skipped: a collection that
-// arrives with no other change is still recorded.
-// Set-returning functions in one select list advance together, which zips the
-// arrays.
-func (q *Queries) UpsertPromotion(ctx context.Context, arg UpsertPromotionParams) error {
-	_, err := q.db.Exec(ctx, upsertPromotion,
-		arg.ID,
-		arg.OriginKinds,
-		arg.OriginNames,
-		arg.FreightNames,
+// collection is recorded under the id the Promotion's row already has, or
+// the one given for a new row, rather than by the upsert's RETURNING, which
+// is empty when the update is skipped: a collection that arrives with no
+// other change is still recorded.
+//
+// The row is found by the Promotion's Project and name. The id given is used
+// only for a new row; a row keeps the id it was first written with. A row
+// whose creation time differs belongs to another Promotion that had the same
+// name. Names are never given twice, so this should not happen; if it does,
+// that record is left as it is and name_taken reports it.
+func (q *Queries) UpsertPromotion(ctx context.Context, arg UpsertPromotionParams) (bool, error) {
+	row := q.db.QueryRow(ctx, upsertPromotion,
 		arg.ProjectName,
 		arg.Name,
+		arg.CreatedAt,
+		arg.ID,
 		arg.StageName,
 		arg.FreightName,
 		arg.TargetName,
 		arg.Phase,
-		arg.CreatedAt,
 		arg.FinishedAt,
+		arg.OriginKinds,
+		arg.OriginNames,
+		arg.FreightNames,
 	)
-	return err
+	var name_taken bool
+	err := row.Scan(&name_taken)
+	return name_taken, err
 }

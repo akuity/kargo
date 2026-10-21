@@ -6,7 +6,9 @@ package promotions
 import (
 	"context"
 	"fmt"
+	"time"
 
+	"github.com/oklog/ulid/v2"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -19,8 +21,8 @@ import (
 )
 
 type promotionStore interface {
-	UpsertPromotion(context.Context, database.UpsertPromotionParams) error
-	ListPromotionsByID(context.Context, []string) ([]database.PromotionRow, error)
+	UpsertPromotion(context.Context, database.UpsertPromotionParams) (bool, error)
+	ListPromotionsByKey(context.Context, database.ListPromotionsByKeyParams) ([]database.PromotionRow, error)
 }
 
 type syncer struct {
@@ -52,8 +54,23 @@ func (s *syncer) Sync(ctx context.Context, obj client.Object) error {
 	if err != nil {
 		return err
 	}
-	if err = s.store.UpsertPromotion(ctx, params); err != nil {
+	// The id is used only if this writes the Promotion's row for the first
+	// time. It is minted from the Promotion's creation time, so that ids sort
+	// in creation order even for Promotions first seen long after.
+	params.ID = ulid.MustNew(ulid.Timestamp(params.CreatedAt), ulid.DefaultEntropy()).String()
+	nameTaken, err := s.store.UpsertPromotion(ctx, params)
+	if err != nil {
 		return fmt.Errorf("error syncing promotion: %w", err)
+	}
+	// Kargo never gives a name twice, so this takes a Promotion made some
+	// other way. The record already under the name is kept; failing makes
+	// the conflict visible and retries it, in case the record is the one
+	// that is wrong and gets corrected.
+	if nameTaken {
+		return fmt.Errorf(
+			"promotion %q has the name of an earlier Promotion, whose record was kept",
+			client.ObjectKeyFromObject(promotion),
+		)
 	}
 	return nil
 }
@@ -64,19 +81,20 @@ func (s *syncer) Sync(ctx context.Context, obj client.Object) error {
 func (*syncer) Delete(context.Context, client.ObjectKey) error { return nil }
 
 func toUpsertParams(promotion *kargoapi.Promotion) (database.UpsertPromotionParams, error) {
-	if promotion.UID == "" || promotion.Namespace == "" || promotion.CreationTimestamp.IsZero() {
+	if promotion.Namespace == "" || promotion.Name == "" || promotion.CreationTimestamp.IsZero() {
 		return database.UpsertPromotionParams{}, fmt.Errorf(
 			"promotion %q has incomplete identity metadata", client.ObjectKeyFromObject(promotion),
 		)
 	}
 	params := database.UpsertPromotionParams{
-		ID:          string(promotion.UID),
 		ProjectName: promotion.Namespace,
 		Name:        promotion.Name,
 		StageName:   promotion.Spec.Stage,
 		FreightName: promotion.Spec.Freight,
 		Phase:       string(promotion.Status.Phase),
-		CreatedAt:   promotion.CreationTimestamp.UTC(),
+		// At PostgreSQL's precision, since the upsert compares it with the
+		// stored creation time to tell one Promotion from another.
+		CreatedAt: promotion.CreationTimestamp.UTC().Truncate(time.Microsecond),
 	}
 	if target := promotion.Spec.Target; target != "" {
 		params.TargetName = &target

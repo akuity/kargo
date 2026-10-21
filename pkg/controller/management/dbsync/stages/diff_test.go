@@ -97,7 +97,7 @@ func TestDiff(t *testing.T) {
 		},
 		{
 			name: "invalid identity", stage: testStage("", created),
-			rows: []database.StageRow{row}, wantErr: "has no UID",
+			rows: []database.StageRow{row}, wantErr: "has no identity",
 		},
 		{
 			name: "invalid timestamp", stage: testStage("live", time.Time{}),
