@@ -1,4 +1,9 @@
-import { isArtifactGeneric } from '@ui/features/assemble-freight/artifact-type-guards';
+import {
+  isArtifactChart,
+  isArtifactGeneric,
+  isArtifactGitCommit,
+  isArtifactImage
+} from '@ui/features/assemble-freight/artifact-type-guards';
 import {
   ArtifactReference,
   Chart,
@@ -11,7 +16,7 @@ import { selectFirstArtifact as _selectFirstArtifact } from '../freight/artifact
 
 export type ArtifactTypes = Image | Chart | GitCommit | ArtifactReference;
 
-export const normalizeFreight = (freight: FreightReference) => {
+export const normalizeFreight = (freight?: FreightReference) => {
   const artifacts: ArtifactTypes[] = [];
 
   for (const image of freight?.images || []) {
@@ -40,12 +45,33 @@ const isSameArtifact = (a: ArtifactTypes, b: ArtifactTypes) => {
     return a.subscriptionName === b.subscriptionName;
   }
 
-  if (!isArtifactGeneric(a) && !isArtifactGeneric(b)) {
+  if (isArtifactChart(a) && isArtifactChart(b)) {
+    return `${a.repoURL}/${a.name}` === `${b.repoURL}/${b.name}`;
+  }
+
+  if (
+    (isArtifactGitCommit(a) && isArtifactGitCommit(b)) ||
+    (isArtifactImage(a) && isArtifactImage(b))
+  ) {
     return a.repoURL === b.repoURL;
   }
 
   return false;
 };
+
+export const resolveArtifact = (
+  freight: FreightReference | undefined,
+  preferred: ArtifactTypes | undefined
+): ArtifactTypes | '' => {
+  const match = preferred && normalizeFreight(freight).find((a) => isSameArtifact(a, preferred));
+  // @ts-expect-error FreightReference and Freight are same, at least in this case
+  return match || selectFirstArtifact([freight]);
+};
+
+export const resolveWarehouse = (
+  warehouses: (string | undefined)[],
+  preferred: string | undefined
+) => (preferred && warehouses.includes(preferred) ? preferred : warehouses[0]);
 
 export const selectNextArtifact = (freight: FreightReference, current: ArtifactTypes) => {
   const artifacts = normalizeFreight(freight);
