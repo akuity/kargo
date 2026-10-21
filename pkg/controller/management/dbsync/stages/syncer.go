@@ -8,6 +8,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
@@ -41,7 +43,23 @@ func (*syncer) NewObject() client.Object { return &kargoapi.Stage{} }
 // which no change to the Project can alter, and its own selectors, so no
 // other change can make it stale.
 func (*syncer) Sources(c cache.Cache) []reconciler.Source[reconcile.Request] {
-	return []reconciler.Source[reconcile.Request]{kube.Objects(c, &kargoapi.Stage{})}
+	return []reconciler.Source[reconcile.Request]{
+		kube.Kind(
+			c,
+			&kargoapi.Stage{},
+			&handler.TypedEnqueueRequestForObject[*kargoapi.Stage]{},
+			specChanged(),
+		),
+	}
+}
+
+// specChanged passes a Stage's creation and deletion and the updates that
+// change its spec. A row records the Stage's identity, which never changes,
+// and selectors from its spec; the Stage's status, which its controller
+// updates constantly, is none of the row's concern. The periodic Diff catches
+// whatever a dropped event might have missed.
+func specChanged() predicate.TypedPredicate[*kargoapi.Stage] {
+	return predicate.TypedGenerationChangedPredicate[*kargoapi.Stage]{}
 }
 
 func (s *syncer) Sync(ctx context.Context, obj client.Object) error {

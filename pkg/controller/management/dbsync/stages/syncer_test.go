@@ -11,6 +11,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/event"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/database"
@@ -178,4 +179,57 @@ func TestTargetSelectors(t *testing.T) {
 			require.JSONEq(t, testCase.want, string(params.TargetSelectors))
 		})
 	}
+}
+
+func TestSpecChanged(t *testing.T) {
+	t.Parallel()
+	stage := func(generation int64, mutate func(*kargoapi.Stage)) *kargoapi.Stage {
+		s := &kargoapi.Stage{ObjectMeta: metav1.ObjectMeta{Name: "dev", Generation: generation}}
+		if mutate != nil {
+			mutate(s)
+		}
+		return s
+	}
+	testCases := []struct {
+		name string
+		old  *kargoapi.Stage
+		new  *kargoapi.Stage
+		want bool
+	}{
+		{
+			name: "a spec change passes",
+			old:  stage(1, nil),
+			new:  stage(2, nil),
+			want: true,
+		},
+		{
+			// The Stage's controller updates its status constantly, and
+			// nothing in the row comes from it.
+			name: "a status change is dropped",
+			old:  stage(1, nil),
+			new: stage(1, func(s *kargoapi.Stage) {
+				s.Status.LastHandledRefresh = "refreshed"
+			}),
+		},
+		{
+			name: "a metadata change is dropped",
+			old:  stage(1, nil),
+			new: stage(1, func(s *kargoapi.Stage) {
+				s.Annotations = map[string]string{"kargo.akuity.io/refresh": "now"}
+			}),
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+			require.Equal(t, testCase.want, specChanged().Update(event.TypedUpdateEvent[*kargoapi.Stage]{
+				ObjectOld: testCase.old,
+				ObjectNew: testCase.new,
+			}))
+		})
+	}
+	// Creation and deletion always pass: a row is written for every Stage and
+	// removed once it is gone.
+	require.True(t, specChanged().Create(event.TypedCreateEvent[*kargoapi.Stage]{Object: stage(1, nil)}))
+	require.True(t, specChanged().Delete(event.TypedDeleteEvent[*kargoapi.Stage]{Object: stage(1, nil)}))
 }

@@ -35,18 +35,41 @@ func TestStagesIntegration(t *testing.T) {
 		run  func(*testing.T)
 	}{
 		{
-			name: "idempotent writes preserve creation and refresh sync timestamps",
+			name: "a write that changes nothing leaves the row alone",
+			run: func(t *testing.T) {
+				fleet := stage
+				fleet.TargetSelectors = []byte(`[{"matchLabels":{"region":"us"}}]`)
+				for _, params := range []UpsertStageParams{stage, fleet} {
+					require.NoError(t, replace(params))
+					_, err := pool.Exec(ctx, "UPDATE stages SET synced_at = '2000-01-01'")
+					require.NoError(t, err)
+					// The same selectors in other spacing are the same JSONB.
+					same := params
+					if same.TargetSelectors != nil {
+						same.TargetSelectors = []byte(`[ { "matchLabels": { "region": "us" } } ]`)
+					}
+					require.NoError(t, replace(same))
+					ids, err := listStageIDs(ctx, queries)
+					require.NoError(t, err)
+					require.Equal(t, []string{stage.ID}, ids)
+					var creation, synced time.Time
+					require.NoError(t, pool.QueryRow(ctx, "SELECT created_at, synced_at FROM stages").Scan(&creation, &synced))
+					require.True(t, creation.Equal(created))
+					require.True(t, synced.Equal(time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC)))
+				}
+			},
+		},
+		{
+			name: "a write that changes the row refreshes its sync timestamp",
 			run: func(t *testing.T) {
 				require.NoError(t, replace(stage))
 				_, err := pool.Exec(ctx, "UPDATE stages SET synced_at = '2000-01-01'")
 				require.NoError(t, err)
-				require.NoError(t, replace(stage))
-				ids, err := listStageIDs(ctx, queries)
-				require.NoError(t, err)
-				require.Equal(t, []string{stage.ID}, ids)
-				var creation, synced time.Time
-				require.NoError(t, pool.QueryRow(ctx, "SELECT created_at, synced_at FROM stages").Scan(&creation, &synced))
-				require.True(t, creation.Equal(created))
+				fleet := stage
+				fleet.TargetSelectors = []byte(`[]`)
+				require.NoError(t, replace(fleet))
+				var synced time.Time
+				require.NoError(t, pool.QueryRow(ctx, "SELECT synced_at FROM stages").Scan(&synced))
 				require.True(t, synced.After(created))
 			},
 		},

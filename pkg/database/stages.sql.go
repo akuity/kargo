@@ -93,6 +93,17 @@ ON CONFLICT (id) DO UPDATE SET
     target_selectors = EXCLUDED.target_selectors,
     created_at = EXCLUDED.created_at,
     synced_at = CURRENT_TIMESTAMP
+WHERE (
+    stages.project_name,
+    stages.name,
+    stages.target_selectors,
+    stages.created_at
+) IS DISTINCT FROM (
+    EXCLUDED.project_name,
+    EXCLUDED.name,
+    EXCLUDED.target_selectors,
+    EXCLUDED.created_at
+)
 `
 
 type UpsertStageParams struct {
@@ -104,7 +115,8 @@ type UpsertStageParams struct {
 }
 
 // The rollout counter is not the mirror's to write: an insert starts it at
-// zero and an update leaves it alone.
+// zero and an update leaves it alone. An update that would change nothing
+// the mirror writes is skipped, synced_at included.
 func (q *Queries) UpsertStage(ctx context.Context, arg UpsertStageParams) error {
 	_, err := q.db.Exec(ctx, upsertStage,
 		arg.ID,

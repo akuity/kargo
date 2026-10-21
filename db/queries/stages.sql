@@ -8,7 +8,8 @@ WHERE project_name = sqlc.arg(project_name)
     AND id <> sqlc.arg(id);
 
 -- The rollout counter is not the mirror's to write: an insert starts it at
--- zero and an update leaves it alone.
+-- zero and an update leaves it alone. An update that would change nothing
+-- the mirror writes is skipped, synced_at included.
 -- name: UpsertStage :exec
 INSERT INTO stages (id, project_name, name, target_selectors, created_at)
 VALUES (
@@ -23,7 +24,18 @@ ON CONFLICT (id) DO UPDATE SET
     name = EXCLUDED.name,
     target_selectors = EXCLUDED.target_selectors,
     created_at = EXCLUDED.created_at,
-    synced_at = CURRENT_TIMESTAMP;
+    synced_at = CURRENT_TIMESTAMP
+WHERE (
+    stages.project_name,
+    stages.name,
+    stages.target_selectors,
+    stages.created_at
+) IS DISTINCT FROM (
+    EXCLUDED.project_name,
+    EXCLUDED.name,
+    EXCLUDED.target_selectors,
+    EXCLUDED.created_at
+);
 
 -- name: ListStages :many
 SELECT * FROM stages ORDER BY project_name, name;
