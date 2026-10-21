@@ -1,6 +1,5 @@
-import { faUndo } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { Button, Empty, Flex, Table, Tag, Tooltip, Typography, theme } from 'antd';
+import { Empty, Flex, Table, Tag, Tooltip, Typography, theme } from 'antd';
 import { ColumnsType } from 'antd/es/table';
 import { format, formatDistanceToNow } from 'date-fns';
 import { useMemo, useState } from 'react';
@@ -13,23 +12,15 @@ import {
   getPromotionPhasePresentation
 } from '@ui/features/common/promotion-status/promotion-phase';
 import { RoundProgressBar } from '@ui/features/common/promotion-status/round-progress-bar';
-import {
-  PromotionStatusPhase,
-  isPromotionRetryable
-} from '@ui/features/common/promotion-status/utils';
 import { getAlias } from '@ui/features/common/utils';
 import { getPromotionActor } from '@ui/features/project/pipelines/promotion/get-promotion-actor';
-import { useListPromotionRequests, usePromoteToStage } from '@ui/gen/api/v2/core/core';
+import { useListPromotionRequests } from '@ui/gen/api/v2/core/core';
 import { PromotionRequest } from '@ui/gen/api/v2/models';
 import { parseDate } from '@ui/utils/dates';
 
 import { useGetFreightMap } from './tabs/freight-history/use-get-freight-map';
 import { useWatchPromotionRequests } from './use-watch-promotion-requests';
-import {
-  isPromotionRequestRetryable,
-  promotionRequestCompareFn,
-  targetRows
-} from './utils/promotion-request';
+import { promotionRequestCompareFn } from './utils/promotion-request';
 import {
   describeTargets,
   freightVersion,
@@ -124,26 +115,6 @@ export const PromotionRequests = ({ projectName, stageName }: Props) => {
   const freightMap = useGetFreightMap(project);
 
   const [selectedPhase, setSelectedPhase] = useState<PromotionPhase | undefined>();
-  const promotionMutation = usePromoteToStage();
-
-  const onRetryPromotionRequest = (promotionRequest: PromotionRequest) => {
-    // target.phase == null selects targets for which promotions were not created due to fail-fast behaviour
-    const targets = targetRows(promotionRequest)
-      .filter(
-        (target) =>
-          target.phase == null || isPromotionRetryable((target.phase ?? '') as PromotionStatusPhase)
-      )
-      .map((target) => target.name);
-
-    promotionMutation.mutate({
-      project: promotionRequest?.metadata?.namespace || projectName,
-      stage: stageName,
-      data: {
-        freight: promotionRequest?.spec?.freight,
-        targets
-      }
-    });
-  };
 
   const promotionRequests = useMemo(
     () => [...(listQuery.data?.data?.items || [])].sort(promotionRequestCompareFn),
@@ -260,26 +231,6 @@ export const PromotionRequests = ({ projectName, stageName }: Props) => {
       render: (_, promotionRequest) => (
         <Typography.Text className='text-xs'>{getPromotionActor(promotionRequest)}</Typography.Text>
       )
-    },
-    {
-      title: '',
-      width: 100,
-      align: 'right',
-      render: (_, promotionRequest) => {
-        if (!isPromotionRequestRetryable(promotionRequest?.status?.phase)) {
-          return null;
-        }
-        return (
-          <Button
-            size='small'
-            icon={<FontAwesomeIcon icon={faUndo} />}
-            loading={promotionMutation.isPending}
-            onClick={() => onRetryPromotionRequest(promotionRequest)}
-          >
-            Retry non successful targets
-          </Button>
-        );
-      }
     }
   ];
 
