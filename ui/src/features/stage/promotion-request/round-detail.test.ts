@@ -13,6 +13,7 @@ import {
   failuresByStep,
   firstFailure,
   matchesChild,
+  retryTargets,
   stepStatuses
 } from './round-detail';
 
@@ -255,6 +256,34 @@ describe('firstFailure()', () => {
 
   test('a round with nothing wrong has no first failure', () => {
     expect(firstFailure([child({ target: 'a', phase: 'Succeeded' })])).toBeUndefined();
+  });
+});
+
+describe('retryTargets()', () => {
+  test('every Target that did not succeed, whatever went wrong with it', () => {
+    expect(
+      retryTargets([
+        child({ target: 'failed', phase: 'Failed' }),
+        child({ target: 'errored', phase: 'Errored' }),
+        child({ target: 'aborted', phase: 'Aborted' }),
+        child({ target: 'never-reached', phase: 'Pending' }),
+        child({ target: 'running', phase: 'Running' }),
+        child({ target: 'ok', phase: 'Succeeded' })
+      ])
+    ).toEqual(['failed', 'errored', 'aborted', 'never-reached', 'running']);
+  });
+
+  test('a round that went entirely well leaves nothing to retry', () => {
+    expect(
+      retryTargets([
+        child({ target: 'a', phase: 'Succeeded' }),
+        child({ target: 'b', phase: 'Succeeded' })
+      ])
+    ).toEqual([]);
+  });
+
+  test('a round that never fanned out names no Targets', () => {
+    expect(retryTargets([])).toEqual([]);
   });
 });
 
