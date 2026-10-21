@@ -1,4 +1,4 @@
-import { faBullseye, faUndo } from '@fortawesome/free-solid-svg-icons';
+import { faUndo } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Button, Empty, Flex, Table, Tag, Tooltip, Typography, theme } from 'antd';
 import { ColumnsType } from 'antd/es/table';
@@ -12,17 +12,24 @@ import {
   PromotionPhase,
   getPromotionPhasePresentation
 } from '@ui/features/common/promotion-status/promotion-phase';
-import { PromotionStatusIcon } from '@ui/features/common/promotion-status/promotion-status-icon';
 import { RoundProgressBar } from '@ui/features/common/promotion-status/round-progress-bar';
-import { getAlias, getShortFreightLabel } from '@ui/features/common/utils';
+import {
+  PromotionStatusPhase,
+  isPromotionRetryable
+} from '@ui/features/common/promotion-status/utils';
+import { getAlias } from '@ui/features/common/utils';
 import { getPromotionActor } from '@ui/features/project/pipelines/promotion/get-promotion-actor';
-
 import { useListPromotionRequests, usePromoteToStage } from '@ui/gen/api/v2/core/core';
-import { PromotionRequest, PromotionRequestSummary } from '@ui/gen/api/v2/models';
+import { PromotionRequest } from '@ui/gen/api/v2/models';
 import { parseDate } from '@ui/utils/dates';
 
 import { useGetFreightMap } from './tabs/freight-history/use-get-freight-map';
 import { useWatchPromotionRequests } from './use-watch-promotion-requests';
+import {
+  isPromotionRequestRetryable,
+  promotionRequestCompareFn,
+  targetRows
+} from './utils/promotion-request';
 import {
   describeTargets,
   freightVersion,
@@ -34,21 +41,7 @@ import {
 } from './utils/promotion-request-list';
 import { formatStepDuration } from './utils/step-duration';
 
-import {
-  PromotionRequestTargetRow,
-  isPromotionRequestPhaseTerminal,
-  isPromotionRequestRetryable,
-  promotionRequestCompareFn,
-  targetRows
-} from './utils/promotion-request';
-
-import { isPromotionRetryable } from '@ui/features/common/promotion-status/utils';
-
 const requestsPagination = { hideOnSinglePage: true, pageSize: 10, showSizeChanger: false };
-
-// summaryKey maps a phase to its counter in status.summary, whose fields are
-// the lower-cased phase names.
-const summaryKey = (phase: string) => phase.toLowerCase() as keyof PromotionRequestSummary;
 
 // TargetsCell draws how a round fared: the same bar every other surface draws a
 // round with, and beneath it the figure per phase. Only what needs to stand out
@@ -136,7 +129,10 @@ export const PromotionRequests = ({ projectName, stageName }: Props) => {
   const onRetryPromotionRequest = (promotionRequest: PromotionRequest) => {
     // target.phase == null selects targets for which promotions were not created due to fail-fast behaviour
     const targets = targetRows(promotionRequest)
-      .filter((target) => isPromotionRetryable(target.phase) || target.phase == null)
+      .filter(
+        (target) =>
+          target.phase == null || isPromotionRetryable((target.phase ?? '') as PromotionStatusPhase)
+      )
       .map((target) => target.name);
 
     promotionMutation.mutate({
@@ -148,8 +144,6 @@ export const PromotionRequests = ({ projectName, stageName }: Props) => {
       }
     });
   };
-
-  const [selectedPromotion, setSelectedPromotion] = useState<string | undefined>();
 
   const promotionRequests = useMemo(
     () => [...(listQuery.data?.data?.items || [])].sort(promotionRequestCompareFn),
