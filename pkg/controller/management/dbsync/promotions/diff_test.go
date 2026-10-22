@@ -36,19 +36,26 @@ func TestDiff(t *testing.T) {
 	targeted := testPromotion(created)
 	targeted.Spec.Target = targetName
 	targetedRow := differing(func(r *database.PromotionRow) { r.TargetName = &targetName })
-	history := database.PromotionRow{ProjectName: "demo", Name: "dev.00old.abc123", StageName: "dev"}
+	history := database.PromotionRow{
+		ProjectName: "demo", Name: "dev.00old.abc123", StageName: "dev", Phase: "Succeeded", FinishedAt: &finished,
+	}
+	// A row without a finish time whose Promotion is gone: deleted before it
+	// finished, and the mirror never saw it go.
+	abandoned := database.PromotionRow{ProjectName: "demo", Name: "dev.00gone.abc123", StageName: "dev", Phase: "Running"}
+	abandonedKey := reconcile.Request{NamespacedName: client.ObjectKey{Namespace: "demo", Name: abandoned.Name}}
 	liveKey := client.ObjectKey{Namespace: "demo", Name: "dev.01abc.def456"}
 	key := []reconcile.Request{{NamespacedName: liveKey}}
 	asked := []client.ObjectKey{liveKey}
 	testCases := []struct {
-		name        string
-		promotion   *kargoapi.Promotion
-		rows        []database.PromotionRow
-		listErr     error
-		snapshotErr error
-		want        []reconcile.Request
-		wantErr     string
-		wantKeys    []client.ObjectKey
+		name          string
+		promotion     *kargoapi.Promotion
+		rows          []database.PromotionRow
+		listErr       error
+		snapshotErr   error
+		unfinishedErr error
+		want          []reconcile.Request
+		wantErr       string
+		wantKeys      []client.ObjectKey
 	}{
 		{name: "empty database", promotion: live, want: key, wantKeys: asked},
 		{
@@ -104,16 +111,37 @@ func TestDiff(t *testing.T) {
 			name: "unfinished row for a finished Promotion", promotion: live, want: key, wantKeys: asked,
 			rows: []database.PromotionRow{differing(func(r *database.PromotionRow) { r.FinishedAt = nil })},
 		},
-		// A row whose Promotion is gone is history, not an orphan: it is
-		// neither asked for nor returned.
+		// A finished row whose Promotion is gone is history, not an orphan:
+		// it is neither asked for nor returned.
 		{name: "deleted Promotions are kept", rows: []database.PromotionRow{history}, wantKeys: []client.ObjectKey{}},
 		{
 			name: "history beside a live Promotion", promotion: live,
 			rows: []database.PromotionRow{history, row}, wantKeys: asked,
 		},
+		// An unfinished row whose Promotion is gone is queued, after the live
+		// keys, so that Delete records the Promotion as finished.
+		{
+			name: "an unfinished row without a Promotion is queued",
+			rows: []database.PromotionRow{history, abandoned}, want: []reconcile.Request{abandonedKey},
+			wantKeys: []client.ObjectKey{},
+		},
+		{
+			name: "an unfinished row without a Promotion is queued after live keys", promotion: live,
+			rows: []database.PromotionRow{abandoned, history}, want: append(key, abandonedKey), wantKeys: asked,
+		},
+		{
+			// The live Promotion's own unfinished row is not an orphan.
+			name: "an unfinished row of a live Promotion is compared, not queued", promotion: live,
+			rows: []database.PromotionRow{differing(func(r *database.PromotionRow) { r.FinishedAt = nil })},
+			want: key, wantKeys: asked,
+		},
 		{
 			name: "failed database snapshot", promotion: live, snapshotErr: errors.New("offline"),
 			wantErr: "listing mirrored promotions", wantKeys: asked,
+		},
+		{
+			name: "failed unfinished snapshot", promotion: live, unfinishedErr: errors.New("offline"),
+			wantErr: "listing unfinished mirrored promotions", wantKeys: asked,
 		},
 		{
 			name: "failed Kubernetes list", rows: []database.PromotionRow{row},
@@ -133,7 +161,9 @@ func TestDiff(t *testing.T) {
 			if testCase.promotion != nil {
 				builder.WithObjects(testCase.promotion.DeepCopy())
 			}
-			store := &fakeStore{rows: slices.Clone(testCase.rows), listErr: testCase.snapshotErr}
+			store := &fakeStore{
+				rows: slices.Clone(testCase.rows), listErr: testCase.snapshotErr, unfinishedErr: testCase.unfinishedErr,
+			}
 			reader := &diffReader{Reader: builder.Build(), err: testCase.listErr}
 			changes, err := NewSyncer(reader, store).Diff(context.Background())
 			if testCase.wantErr != "" {

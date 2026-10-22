@@ -1,6 +1,8 @@
 // Package promotions mirrors Promotions into the database as a history:
 // rows are written and refreshed while a Promotion exists in Kubernetes and
-// kept once it is gone.
+// kept once it is gone. A Promotion deleted before it finished is recorded
+// as Aborted, so that no row claims a Promotion is running that no longer
+// exists.
 package promotions
 
 import (
@@ -23,6 +25,8 @@ import (
 type promotionStore interface {
 	UpsertPromotion(context.Context, database.UpsertPromotionParams) (bool, error)
 	ListPromotionsByKey(context.Context, database.ListPromotionsByKeyParams) ([]database.PromotionRow, error)
+	ListUnfinishedPromotions(context.Context) ([]database.PromotionRow, error)
+	FinishDeletedPromotion(context.Context, database.FinishDeletedPromotionParams) (int64, error)
 }
 
 type syncer struct {
@@ -77,8 +81,19 @@ func (s *syncer) Sync(ctx context.Context, obj client.Object) error {
 
 // Delete keeps the row. A Promotion deleted from Kubernetes, by the garbage
 // collector or anyone else, stays in the database as the record of what it
-// did.
-func (*syncer) Delete(context.Context, client.ObjectKey) error { return nil }
+// did. One deleted before it finished, which Kubernetes allows since a
+// Promotion has no finalizer, is recorded as Aborted as of now: its row
+// would otherwise say it is running for good.
+func (s *syncer) Delete(ctx context.Context, key client.ObjectKey) error {
+	if _, err := s.store.FinishDeletedPromotion(ctx, database.FinishDeletedPromotionParams{
+		Phase:       string(kargoapi.PromotionPhaseAborted),
+		ProjectName: key.Namespace,
+		Name:        key.Name,
+	}); err != nil {
+		return fmt.Errorf("error recording deleted promotion as finished: %w", err)
+	}
+	return nil
+}
 
 func toUpsertParams(promotion *kargoapi.Promotion) (database.UpsertPromotionParams, error) {
 	if promotion.Namespace == "" || promotion.Name == "" || promotion.CreationTimestamp.IsZero() {

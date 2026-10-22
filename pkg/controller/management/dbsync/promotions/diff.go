@@ -16,12 +16,14 @@ import (
 // Diff differs from other kinds' in what it snapshots. The table holds
 // every Promotion there has ever been and is never pruned, so listing it
 // whole each interval would cost ever more; and since no row is ever
-// deleted, a row without an object is of no interest. Diff therefore
-// snapshots only the rows of the Promotions Kubernetes has now, which are
-// bounded in number, and asks syncapi.Diff to leave the rest alone. Reading
-// Kubernetes before the snapshot is safe for the same reason: a Promotion
-// created between the two is listed as missing its row and re-synced, and
-// one deleted between them is simply not listed.
+// deleted, a finished row without an object is of no interest. Diff
+// therefore snapshots the rows of the Promotions Kubernetes has now, which
+// are bounded in number, and the unfinished rows, which are few: one of
+// those without an object belongs to a Promotion deleted before it finished,
+// whose deletion the mirror may have missed, and is queued so that Delete
+// records it as finished. Reading Kubernetes before the snapshot is safe: a
+// Promotion created between the two is listed as missing its row and
+// re-synced, and one deleted between them is simply not listed.
 func (s *syncer) Diff(ctx context.Context) ([]reconcile.Request, error) {
 	promotions := &kargoapi.PromotionList{}
 	if err := s.reader.List(ctx, promotions); err != nil {
@@ -39,8 +41,15 @@ func (s *syncer) Diff(ctx context.Context) ([]reconcile.Request, error) {
 	if err != nil {
 		return nil, fmt.Errorf("error listing mirrored promotions: %w", err)
 	}
-	snapshot := make(map[client.ObjectKey]database.PromotionRow, len(rows))
+	unfinished, err := s.store.ListUnfinishedPromotions(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("error listing unfinished mirrored promotions: %w", err)
+	}
+	snapshot := make(map[client.ObjectKey]database.PromotionRow, len(rows)+len(unfinished))
 	for _, row := range rows {
+		snapshot[rowKey(row)] = row
+	}
+	for _, row := range unfinished {
 		snapshot[rowKey(row)] = row
 	}
 	return syncapi.Diff(
@@ -50,7 +59,7 @@ func (s *syncer) Diff(ctx context.Context) ([]reconcile.Request, error) {
 		client.ObjectKeyFromObject,
 		snapshot,
 		matches,
-		nil,
+		rowKey,
 	)
 }
 

@@ -520,7 +520,9 @@ Freight, Target if any, phase, and timing, along with the Freight of the
 whole collection it rendered, one row per origin (`promotion_freight`), and
 are never deleted: Kubernetes retains only a
 bounded number of recent Promotions per Stage, and the database keeps them
-all as a history. Targets, on the other hand, exist only in the database: the API server serves them
+all as a history. A Promotion deleted before it finished is recorded as
+`Aborted` as of its deletion, so no row claims a Promotion is running that
+no longer exists. Targets, on the other hand, exist only in the database: the API server serves them
 through `/v1beta1/projects/{project}/targets`, and Target is no longer a
 custom resource at all. The chart installs no CRD for it, `kubectl` does not
 see Targets, and the Go type keeps the shape of a Kubernetes resource without

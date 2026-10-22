@@ -178,6 +178,51 @@ func TestPromotionsIntegration(t *testing.T) {
 			},
 		},
 		{
+			// Only unfinished rows are listed, and only an unfinished row is
+			// finished: a finished one is the record of what the Promotion did.
+			name: "a Promotion deleted before it finished is recorded as finished",
+			run: func(t *testing.T) {
+				other := running
+				other.Name = "dev.02def.abc123"
+				other.ID = "id-other"
+				for _, params := range []UpsertPromotionParams{running, other, {
+					ID: "id-done", ProjectName: "demo", Name: "dev.00abc.def456", StageName: "dev",
+					FreightName: "def456", Phase: "Succeeded", CreatedAt: created, FinishedAt: &finished,
+				}} {
+					requireUpsertPromotion(t, queries, params)
+				}
+				unfinished, err := queries.ListUnfinishedPromotions(ctx)
+				require.NoError(t, err)
+				require.Equal(t, []string{"demo/" + running.Name, "demo/" + other.Name}, promotionKeys(unfinished))
+				finish := FinishDeletedPromotionParams{Phase: "Aborted", ProjectName: "demo", Name: running.Name}
+				n, err := queries.FinishDeletedPromotion(ctx, finish)
+				require.NoError(t, err)
+				require.EqualValues(t, 1, n)
+				rows, err := queries.ListPromotionsByKey(ctx, keysOf(running))
+				require.NoError(t, err)
+				require.Len(t, rows, 1)
+				require.Equal(t, "Aborted", rows[0].Phase)
+				require.NotNil(t, rows[0].FinishedAt)
+				require.True(t, rows[0].FinishedAt.After(created))
+				// Finished once, the row is left alone, whatever phase is asked.
+				finish.Phase = "Failed"
+				n, err = queries.FinishDeletedPromotion(ctx, finish)
+				require.NoError(t, err)
+				require.Zero(t, n)
+				rows, err = queries.ListPromotionsByKey(ctx, keysOf(running))
+				require.NoError(t, err)
+				require.Equal(t, "Aborted", rows[0].Phase)
+				n, err = queries.FinishDeletedPromotion(ctx, FinishDeletedPromotionParams{
+					Phase: "Aborted", ProjectName: "demo", Name: "dev.00abc.def456",
+				})
+				require.NoError(t, err)
+				require.Zero(t, n)
+				unfinished, err = queries.ListUnfinishedPromotions(ctx)
+				require.NoError(t, err)
+				require.Equal(t, []string{"demo/" + other.Name}, promotionKeys(unfinished))
+			},
+		},
+		{
 			name: "a Promotion's collection is recorded once, by origin",
 			run: func(t *testing.T) {
 				withCollection := running

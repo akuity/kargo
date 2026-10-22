@@ -126,16 +126,35 @@ func TestSync(t *testing.T) {
 	}
 }
 
-// TestDelete checks that a Promotion's row survives its deletion from
-// Kubernetes: the store has no delete to call.
+// TestDelete checks that a Promotion's deletion from Kubernetes records it
+// as finished, Aborted, and never removes its row.
 func TestDelete(t *testing.T) {
 	t.Parallel()
-	store := &fakeStore{writeErr: errors.New("offline")}
-	s := NewSyncer(nil, store)
-	err := s.Delete(context.Background(), client.ObjectKey{Namespace: "demo", Name: "dev.01abc.def456"})
-	require.NoError(t, err)
-	require.Empty(t, store.upserts)
-	require.Zero(t, store.lists)
+	key := client.ObjectKey{Namespace: "demo", Name: "dev.01abc.def456"}
+	finished := database.FinishDeletedPromotionParams{Phase: "Aborted", ProjectName: "demo", Name: key.Name}
+	testCases := []struct {
+		name     string
+		storeErr error
+		wantErr  string
+	}{
+		{name: "records the Promotion as finished"},
+		{name: "storage failure propagates", storeErr: errors.New("offline"), wantErr: "recording deleted promotion"},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+			store := &fakeStore{writeErr: testCase.storeErr}
+			err := NewSyncer(nil, store).Delete(context.Background(), key)
+			if testCase.wantErr != "" {
+				require.ErrorContains(t, err, testCase.wantErr)
+			} else {
+				require.NoError(t, err)
+			}
+			require.Equal(t, []database.FinishDeletedPromotionParams{finished}, store.finished)
+			require.Empty(t, store.upserts)
+			require.Zero(t, store.lists)
+		})
+	}
 }
 
 func testPromotion(created time.Time) *kargoapi.Promotion {
@@ -153,12 +172,15 @@ func testPromotion(created time.Time) *kargoapi.Promotion {
 }
 
 type fakeStore struct {
-	rows      []database.PromotionRow
-	upserts   []database.UpsertPromotionParams
-	lists     [][]client.ObjectKey
-	listErr   error
-	writeErr  error
-	nameTaken bool
+	rows     []database.PromotionRow
+	upserts  []database.UpsertPromotionParams
+	finished []database.FinishDeletedPromotionParams
+	lists    [][]client.ObjectKey
+	listErr  error
+	// unfinishedErr fails ListUnfinishedPromotions alone.
+	unfinishedErr error
+	writeErr      error
+	nameTaken     bool
 }
 
 func (s *fakeStore) UpsertPromotion(_ context.Context, params database.UpsertPromotionParams) (bool, error) {
@@ -187,4 +209,27 @@ func (s *fakeStore) ListPromotionsByKey(
 		}
 	}
 	return rows, s.listErr
+}
+
+// ListUnfinishedPromotions returns the rows without a finish time, as the
+// query does.
+func (s *fakeStore) ListUnfinishedPromotions(context.Context) ([]database.PromotionRow, error) {
+	var rows []database.PromotionRow
+	for _, row := range s.rows {
+		if row.FinishedAt == nil {
+			rows = append(rows, row)
+		}
+	}
+	return rows, s.unfinishedErr
+}
+
+func (s *fakeStore) FinishDeletedPromotion(
+	_ context.Context,
+	params database.FinishDeletedPromotionParams,
+) (int64, error) {
+	s.finished = append(s.finished, params)
+	if s.writeErr != nil {
+		return 0, s.writeErr
+	}
+	return 1, nil
 }

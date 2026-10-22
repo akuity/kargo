@@ -32,7 +32,10 @@ CREATE TABLE stages (
 -- of recent Promotions per Stage, and this table keeps every one of them as
 -- a history. A row is written when a Promotion first appears and refreshed
 -- as its phase changes, until it is deleted from Kubernetes and the row
--- stays behind as its record. A Promotion names its Project and Stage rather
+-- stays behind as its record. A Promotion deleted before it finished is
+-- recorded as Aborted, finished when its deletion was seen, so that no row
+-- claims a Promotion is still running that no longer exists. A Promotion
+-- names its Project and Stage rather
 -- than referencing their mirrored rows, since both may be gone while the
 -- record remains, and likewise names its Target, when it promotes to one,
 -- rather than referencing the Target's row.
@@ -65,6 +68,12 @@ CREATE INDEX promotions_stage_created_at_idx
 CREATE INDEX promotions_target_created_at_idx
     ON promotions (project_name, target_name, created_at DESC)
     WHERE target_name IS NOT NULL;
+-- Serves the resync's look for Promotions that are gone but whose rows say
+-- they are still running. Few Promotions are unfinished at any time, however
+-- long the history grows.
+CREATE INDEX promotions_unfinished_idx
+    ON promotions (project_name, name)
+    WHERE finished_at IS NULL;
 
 -- The Freight each Promotion promoted: one row per origin of the
 -- FreightCollection it rendered. A Promotion changes only one origin's

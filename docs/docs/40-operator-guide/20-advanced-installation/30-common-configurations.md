@@ -812,7 +812,8 @@ section of the user guide.
 Kargo keeps some of its state in a PostgreSQL database. The management
 controller mirrors Projects, Stages, and Promotions into it, with Kubernetes
 remaining their source of truth; Promotion rows are kept as a history after
-the Promotions themselves are garbage collected. Targets live only there,
+the Promotions themselves are garbage collected, and a Promotion deleted
+before it finished is recorded as aborted. Targets live only there,
 managed through Kargo's API rather than as Kubernetes resources. The chart provides that database, either
 the minimal PostgreSQL bundled with the chart or a reference to an external
 one, and points the components that use it at whichever is configured.
