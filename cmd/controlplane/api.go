@@ -12,6 +12,7 @@ import (
 	"github.com/akuity/kargo/pkg/kubernetes/event"
 	"github.com/akuity/kargo/pkg/logging"
 	"github.com/akuity/kargo/pkg/os"
+	"github.com/akuity/kargo/pkg/password"
 	"github.com/akuity/kargo/pkg/server"
 	"github.com/akuity/kargo/pkg/server/config"
 	"github.com/akuity/kargo/pkg/server/kubernetes"
@@ -77,6 +78,14 @@ func (o *apiOptions) complete() {
 
 func (o *apiOptions) run(ctx context.Context) error {
 	serverCfg := config.ServerConfigFromEnv()
+	if serverCfg.AdminConfig != nil {
+		if err = password.Validate(serverCfg.AdminConfig.HashedPassword); err != nil {
+			return fmt.Errorf(
+				"invalid admin account password hash (generate one with `kargo hash-password`): %w",
+				err,
+			)
+		}
+	}
 
 	restCfg, err := kubernetes.GetRestConfig(ctx, o.KubeConfig)
 	if err != nil {

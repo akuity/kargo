@@ -188,7 +188,8 @@ func TLSConfigFromEnv() TLSConfig {
 
 // AdminConfig represents configuration for an admin account.
 type AdminConfig struct {
-	// HashedPassword is a bcrypt hash of the password for the admin account.
+	// HashedPassword is a PBKDF2-HMAC-SHA256 or bcrypt hash of the password for
+	// the admin account.
 	HashedPassword string `envconfig:"ADMIN_ACCOUNT_PASSWORD_HASH" required:"true"`
 	// TokenIssuer is the value to be used in the ISS claim of ID tokens issued for
 	// the admin account.
