@@ -10,12 +10,48 @@ import (
 	"time"
 )
 
+const finishDeletedPromotion = `-- name: FinishDeletedPromotion :execrows
+UPDATE promotions SET
+    phase = $1,
+    finished_at = CURRENT_TIMESTAMP,
+    synced_at = CURRENT_TIMESTAMP
+WHERE project_name = $2
+    AND name = $3
+    AND finished_at IS NULL
+`
+
+type FinishDeletedPromotionParams struct {
+	Phase       string
+	ProjectName string
+	Name        string
+}
+
+// Records a Promotion that was deleted before it finished as finished in the
+// given phase, at the time its deletion was seen. A row already finished is
+// left alone: it is the record of what the Promotion did.
+func (q *Queries) FinishDeletedPromotion(ctx context.Context, arg FinishDeletedPromotionParams) (int64, error) {
+	result, err := q.db.Exec(ctx, finishDeletedPromotion, arg.Phase, arg.ProjectName, arg.Name)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
 const listPromotionsByKey = `-- name: ListPromotionsByKey :many
-SELECT id, project_name, name, stage_name, freight_name, target_name, phase, created_at, finished_at, synced_at FROM promotions
-WHERE (project_name, name) IN (
-    SELECT unnest($1::text[]), unnest($2::text[])
+WITH keys AS (
+    SELECT
+        unnest($1::text[]) AS project_name,
+        unnest($2::text[]) AS name
 )
-ORDER BY project_name, name
+SELECT promotions.id, promotions.project_name, promotions.name, promotions.stage_name, promotions.freight_name, promotions.target_name, promotions.phase, promotions.created_at, promotions.finished_at, promotions.synced_at
+FROM keys
+CROSS JOIN LATERAL (
+    SELECT id, project_name, name, stage_name, freight_name, target_name, phase, created_at, finished_at, synced_at FROM promotions
+    WHERE promotions.project_name = keys.project_name
+        AND promotions.name = keys.name
+    LIMIT 1
+) AS promotions
+ORDER BY promotions.project_name, promotions.name
 `
 
 type ListPromotionsByKeyParams struct {
@@ -25,9 +61,53 @@ type ListPromotionsByKeyParams struct {
 
 // The table grows without bound, so the mirror never lists all of it: it
 // asks only after the rows of the Promotions Kubernetes currently has, given
-// as two arrays of equal length, zipped as in UpsertPromotion.
+// as two arrays of equal length, zipped as in UpsertPromotion. Each key is
+// looked up on its own, through the unique index: a join would let the
+// planner scan the whole table instead when it expects many keys, and the
+// LIMIT, harmless since a key matches at most one row, keeps the lookup from
+// being flattened into one.
 func (q *Queries) ListPromotionsByKey(ctx context.Context, arg ListPromotionsByKeyParams) ([]PromotionRow, error) {
 	rows, err := q.db.Query(ctx, listPromotionsByKey, arg.ProjectNames, arg.Names)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []PromotionRow
+	for rows.Next() {
+		var i PromotionRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.ProjectName,
+			&i.Name,
+			&i.StageName,
+			&i.FreightName,
+			&i.TargetName,
+			&i.Phase,
+			&i.CreatedAt,
+			&i.FinishedAt,
+			&i.SyncedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listUnfinishedPromotions = `-- name: ListUnfinishedPromotions :many
+SELECT id, project_name, name, stage_name, freight_name, target_name, phase, created_at, finished_at, synced_at FROM promotions
+WHERE finished_at IS NULL
+ORDER BY project_name, name
+`
+
+// Rows of Promotions that have not finished. The resync compares them with
+// Kubernetes so that a Promotion deleted before it finished, whose deletion
+// the mirror may not have seen, is still recorded as finished.
+func (q *Queries) ListUnfinishedPromotions(ctx context.Context) ([]PromotionRow, error) {
+	rows, err := q.db.Query(ctx, listUnfinishedPromotions)
 	if err != nil {
 		return nil, err
 	}

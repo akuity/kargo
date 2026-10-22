@@ -86,10 +86,43 @@ SELECT name_taken FROM existing;
 
 -- The table grows without bound, so the mirror never lists all of it: it
 -- asks only after the rows of the Promotions Kubernetes currently has, given
--- as two arrays of equal length, zipped as in UpsertPromotion.
+-- as two arrays of equal length, zipped as in UpsertPromotion. Each key is
+-- looked up on its own, through the unique index: a join would let the
+-- planner scan the whole table instead when it expects many keys, and the
+-- LIMIT, harmless since a key matches at most one row, keeps the lookup from
+-- being flattened into one.
 -- name: ListPromotionsByKey :many
-SELECT * FROM promotions
-WHERE (project_name, name) IN (
-    SELECT unnest(sqlc.arg(project_names)::text[]), unnest(sqlc.arg(names)::text[])
+WITH keys AS (
+    SELECT
+        unnest(sqlc.arg(project_names)::text[]) AS project_name,
+        unnest(sqlc.arg(names)::text[]) AS name
 )
+SELECT promotions.*
+FROM keys
+CROSS JOIN LATERAL (
+    SELECT * FROM promotions
+    WHERE promotions.project_name = keys.project_name
+        AND promotions.name = keys.name
+    LIMIT 1
+) AS promotions
+ORDER BY promotions.project_name, promotions.name;
+
+-- Rows of Promotions that have not finished. The resync compares them with
+-- Kubernetes so that a Promotion deleted before it finished, whose deletion
+-- the mirror may not have seen, is still recorded as finished.
+-- name: ListUnfinishedPromotions :many
+SELECT * FROM promotions
+WHERE finished_at IS NULL
 ORDER BY project_name, name;
+
+-- Records a Promotion that was deleted before it finished as finished in the
+-- given phase, at the time its deletion was seen. A row already finished is
+-- left alone: it is the record of what the Promotion did.
+-- name: FinishDeletedPromotion :execrows
+UPDATE promotions SET
+    phase = sqlc.arg(phase),
+    finished_at = CURRENT_TIMESTAMP,
+    synced_at = CURRENT_TIMESTAMP
+WHERE project_name = sqlc.arg(project_name)
+    AND name = sqlc.arg(name)
+    AND finished_at IS NULL;
