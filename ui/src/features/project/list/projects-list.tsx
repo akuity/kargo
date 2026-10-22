@@ -1,5 +1,6 @@
 import { faStar, faUser } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { keepPreviousData } from '@tanstack/react-query';
 import { Empty, Flex, Pagination, Space, Tag, Tooltip } from 'antd';
 import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
@@ -38,14 +39,19 @@ export const ProjectsList = () => {
 
   const labelSelector = buildLabelSelector(selectedLabels);
 
-  const { data, isLoading } = useListProjects({
-    pageSize,
-    page: page - 1,
-    filter,
-    labelSelector: labelSelector || undefined,
-    uid: starredProjectsView ? starred : undefined,
-    mine: myProjectsView || undefined
-  });
+  // Keep the current list on screen while a changed filter, search or page
+  // loads, instead of swapping the whole page (filters included) for a spinner.
+  const { data, isLoading, isPlaceholderData } = useListProjects(
+    {
+      pageSize,
+      page: page - 1,
+      filter,
+      labelSelector: labelSelector || undefined,
+      uid: starredProjectsView ? starred : undefined,
+      mine: myProjectsView || undefined
+    },
+    { query: { placeholderData: keepPreviousData } }
+  );
 
   const projects = data?.data?.items ?? [];
   const total = data?.data?.total ?? 0;
@@ -152,7 +158,10 @@ export const ProjectsList = () => {
           </Tag.CheckableTag>
         </Space>
       </Flex>
-      <div className={styles.list}>
+      <div
+        className={styles.list}
+        style={{ opacity: isPlaceholderData ? 0.5 : 1, transition: 'opacity 0.2s' }}
+      >
         {projects.map((proj) => (
           <ProjectItem
             key={proj?.metadata?.name}
