@@ -14,3 +14,4 @@ vendor/
 internal/server/ui/
 .DS_Store
 docs/static/swagger.json
+_site/
