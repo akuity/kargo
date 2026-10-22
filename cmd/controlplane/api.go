@@ -79,7 +79,7 @@ func (o *apiOptions) complete() {
 func (o *apiOptions) run(ctx context.Context) error {
 	serverCfg := config.ServerConfigFromEnv()
 	if serverCfg.AdminConfig != nil {
-		if err = password.Validate(serverCfg.AdminConfig.HashedPassword); err != nil {
+		if err := password.Validate(serverCfg.AdminConfig.HashedPassword); err != nil {
 			return fmt.Errorf(
 				"invalid admin account password hash (generate one with `kargo hash-password`): %w",
 				err,
