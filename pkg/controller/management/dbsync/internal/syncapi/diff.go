@@ -13,7 +13,8 @@ import (
 )
 
 // Diff compares a database snapshot with a Kubernetes list and returns the
-// keys that disagree. Callers must load rows before calling Diff. The list is
+// keys that disagree. Rows are keyed by the identity id gives each object:
+// its UID for most kinds. Callers must load rows before calling Diff. The list is
 // never paginated: no limit is passed, so the API server returns every object,
 // and the continue token the cache reader stamps on its lists carries no
 // meaning and is ignored. The reader may be cached, since every returned key
@@ -21,11 +22,12 @@ import (
 // missing rows and orphaned rows are handled here. Live objects come first,
 // in list order, followed by the keys of orphaned rows sorted by name, with
 // no duplicates. Neither the snapshot nor either data source is mutated.
-func Diff[Object client.Object, Row any](
+func Diff[Object client.Object, Row any, ID comparable](
 	ctx context.Context,
 	reader client.Reader,
 	list client.ObjectList,
-	rows map[string]Row,
+	id func(client.Object) ID,
+	rows map[ID]Row,
 	matches func(Object, Row) (bool, error),
 	key func(Row) client.ObjectKey,
 ) ([]reconcile.Request, error) {
@@ -34,19 +36,20 @@ func Diff[Object client.Object, Row any](
 	}
 	var requests []reconcile.Request
 	seen := make(map[client.ObjectKey]struct{})
-	live := make(map[string]struct{})
+	live := make(map[ID]struct{})
 	err := meta.EachListItem(list, func(item runtime.Object) error {
 		obj, ok := item.(Object)
 		if !ok {
 			return fmt.Errorf("unexpected object %T in database resync list", item)
 		}
-		id := string(obj.GetUID())
+		objID := id(obj)
 		objKey := client.ObjectKeyFromObject(obj)
-		if id == "" {
-			return fmt.Errorf("object %q has no UID", objKey)
+		var zero ID
+		if objID == zero {
+			return fmt.Errorf("object %q has no identity", objKey)
 		}
-		live[id] = struct{}{}
-		row, exists := rows[id]
+		live[objID] = struct{}{}
+		row, exists := rows[objID]
 		if exists {
 			match, matchErr := matches(obj, row)
 			if matchErr != nil {
@@ -64,8 +67,8 @@ func Diff[Object client.Object, Row any](
 		return nil, err
 	}
 	var orphaned []reconcile.Request
-	for id, row := range rows {
-		if _, exists := live[id]; exists {
+	for rowID, row := range rows {
+		if _, exists := live[rowID]; exists {
 			continue
 		}
 		rowKey := key(row)
@@ -79,4 +82,10 @@ func Diff[Object client.Object, Row any](
 		return strings.Compare(a.String(), b.String())
 	})
 	return append(requests, orphaned...), nil
+}
+
+// UID identifies an object by its Kubernetes UID, for kinds whose rows follow
+// one object each and are keyed by it.
+func UID(obj client.Object) string {
+	return string(obj.GetUID())
 }

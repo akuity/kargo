@@ -67,7 +67,7 @@ func TestDiff(t *testing.T) {
 		},
 		{
 			name: "invalid identity", project: testProject("", created),
-			rows: []database.ProjectRow{row}, wantErr: "has no UID",
+			rows: []database.ProjectRow{row}, wantErr: "has no identity",
 		},
 		{
 			name: "invalid timestamp", project: testProject("live", time.Time{}),
