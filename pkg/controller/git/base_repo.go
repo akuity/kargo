@@ -393,8 +393,7 @@ func (b *baseRepo) reconcileGPGState(ctx context.Context) {
 		return
 	}
 	// Must run before removing sockets: gpgconf finds each daemon via its
-	// socket and tells it to shut down cleanly. Stopping every daemon ensures
-	// none of the sockets removed below is still in use.
+	// socket and tells it to shut down cleanly.
 	_, _ = libExec.Exec(b.buildCommand(ctx, "gpgconf", "--kill", "all"))
 
 	logger := logging.LoggerFromContext(ctx)
