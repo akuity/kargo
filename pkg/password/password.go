@@ -72,9 +72,16 @@ func Verify(hash, password string) (bool, error) {
 	return h.matches(password)
 }
 
-// Validate returns an error if hash is not a hash Verify accepts.
+// Validate returns an error if Verify would return one for hash. Only checking
+// a password against a hash fully establishes that the hash is usable, so
+// Validate does that, and costs as much as a call to Verify.
 func Validate(hash string) error {
-	_, err := parse(hash, fips140.Enabled())
+	h, err := parse(hash, fips140.Enabled())
+	if err != nil {
+		return err
+	}
+	// A mismatch is expected and is not an error
+	_, err = h.matches("")
 	return err
 }
 

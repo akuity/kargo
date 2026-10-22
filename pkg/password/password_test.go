@@ -121,8 +121,47 @@ func TestVerify(t *testing.T) {
 }
 
 func TestValidate(t *testing.T) {
-	require.NoError(t, Validate(testPasslibHash))
-	require.Error(t, Validate("not-a-hash"))
+	testCases := []struct {
+		name   string
+		hash   string
+		assert func(*testing.T, error)
+	}{
+		{
+			name: "unparseable hash",
+			hash: "not-a-hash",
+			assert: func(t *testing.T, err error) {
+				require.ErrorContains(t, err, "neither")
+			},
+		},
+		{
+			// Parses, but bcrypt can't decode the salt when checking a password
+			name: "bcrypt hash with corrupt salt",
+			hash: "$2y$10$!ZBBAL5bfbo/mF0tzxBicuC0su8mjDvspG2NS6VXWMht1Sobmg4Iu",
+			assert: func(t *testing.T, err error) {
+				require.ErrorContains(t, err, "error comparing bcrypt hash")
+			},
+		},
+		{
+			name: "bcrypt hash",
+			hash: testHtpasswdHash,
+			assert: func(t *testing.T, err error) {
+				require.NoError(t, err)
+			},
+		},
+		{
+			name: "PBKDF2 hash",
+			hash: testPasslibHash,
+			assert: func(t *testing.T, err error) {
+				require.NoError(t, err)
+			},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+			testCase.assert(t, Validate(testCase.hash))
+		})
+	}
 }
 
 func Test_parse(t *testing.T) {
