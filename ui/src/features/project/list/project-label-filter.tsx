@@ -27,10 +27,10 @@ export const ProjectLabelFilter = ({
   );
 
   const selectedByKey = useMemo(() => {
-    const byKey = new Map<string, string>();
+    const byKey = new Map<string, Set<string>>();
     for (const pair of value) {
       const [key, val] = splitPair(pair);
-      byKey.set(key, val);
+      byKey.set(key, (byKey.get(key) ?? new Set()).add(val));
     }
     return byKey;
   }, [value]);
@@ -38,11 +38,11 @@ export const ProjectLabelFilter = ({
   // Build the "pick a key, then a value" drill-down. Each key's available
   // values are computed from the projects that satisfy every *other* selected
   // label, so picking one label narrows what the remaining labels offer (while
-  // a chosen key still shows its alternatives so its value can be switched).
+  // a chosen key still shows all its values, so more of them can be added).
   const options = useMemo<LabelOption[]>(() => {
     const matchesSelectionExcept = (labels: Record<string, string>, exceptKey: string): boolean => {
-      for (const [key, val] of selectedByKey) {
-        if (key !== exceptKey && labels[key] !== val) {
+      for (const [key, vals] of selectedByKey) {
+        if (key !== exceptKey && !vals.has(labels[key])) {
           return false;
         }
       }
@@ -83,21 +83,10 @@ export const ProjectLabelFilter = ({
   // The Cascader works with [key, value] paths; our state is "key=value".
   const cascaderValue = useMemo(() => value.map(splitPair), [value]);
 
+  // Several values of one key are OR'd (`key in (a,b)`), different keys AND'd -
+  // see buildLabelSelector.
   const handleChange = (paths: (string | number)[][]) => {
-    // Allow at most one value per key: when a value is picked for a key that is
-    // already selected, the newly chosen one replaces the previous value.
-    const previouslySelected = new Set(value);
-    const pairByKey = new Map<string, string>();
-    for (const path of paths) {
-      const key = String(path[0]);
-      const pair = `${key}=${String(path[1])}`;
-      const existing = pairByKey.get(key);
-      // Keep the pair that wasn't already selected (i.e. the fresh pick).
-      if (!existing || previouslySelected.has(existing)) {
-        pairByKey.set(key, pair);
-      }
-    }
-    onChange(Array.from(pairByKey.values()));
+    onChange(paths.map((path) => `${String(path[0])}=${String(path[1])}`));
   };
 
   return (
