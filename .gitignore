@@ -1,4 +1,5 @@
 .claude/settings.local.json
+.helm/
 .idea/
 .pnpm-store/
 .vscode/
