@@ -193,6 +193,11 @@ nats:
       replicas: 3
     jetstream:
       enabled: true
+      # Without a memory store, JetStream refuses to create in-memory streams,
+      # such as one holding a short-lived history of Kargo events.
+      memoryStore:
+        enabled: true
+        maxSize: 256Mi
   ## @skip nats.container
   container:
     # Requests and limits are equal (Guaranteed QoS) so that NATS is neither
