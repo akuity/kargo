@@ -28,6 +28,8 @@ const (
 	// embedded in a generated Promotion name.
 	promotionShortHashLength = 7
 
+	promotionTaskKind = "PromotionTask"
+
 	// maxPrefixForPromotionName is the maximum length of the descriptive prefix
 	// of a generated Promotion name -- the Stage name, or the Stage and Target
 	// names together -- before the name would exceed the Kubernetes resource
@@ -371,6 +373,15 @@ func inflateTaskSteps(
 		return nil, err
 	}
 
+	ref := kargoapi.PromotionStepTaskRef{
+		Name:        taskStep.Task.Name,
+		Kind:        taskStep.Task.Kind,
+		Description: taskStep.Description,
+	}
+	if ref.Kind == "" {
+		ref.Kind = promotionTaskKind
+	}
+
 	var steps []kargoapi.PromotionStep
 	for i := range task.Steps {
 		// Copy the step as-is.
@@ -383,6 +394,9 @@ func inflateTaskSteps(
 		// With the variables validated and mapped, they are now available to
 		// the Config of the step during the Promotion execution.
 		step.Vars = append(vars, step.Vars...)
+
+		stepRef := ref
+		step.Ref = &stepRef
 
 		// Append the inflated step to the list of steps.
 		steps = append(steps, *step)
@@ -405,7 +419,7 @@ func getPromotionTaskSpec(
 	}
 
 	switch ref.Kind {
-	case "PromotionTask", "":
+	case promotionTaskKind, "":
 		task := &kargoapi.PromotionTask{}
 		if err := c.Get(ctx, client.ObjectKey{Namespace: project, Name: ref.Name}, task); err != nil {
 			return nil, err

@@ -7,6 +7,7 @@
  */
 import type { ExpressionVariable } from './expressionVariable';
 import type { PromotionStepRetry } from './promotionStepRetry';
+import type { PromotionStepTaskRef } from './promotionStepTaskRef';
 import type { PromotionTaskReference } from './promotionTaskReference';
 
 export interface PromotionStep {
@@ -41,6 +42,14 @@ export interface PromotionStep {
    * considered to have failed.
    */
   if?: string;
+  /**
+   * Ref identifies the (Cluster)PromotionTask this step was inflated
+   * from. It is set by Kargo when a Promotion is built from a
+   * PromotionTemplate and must not be set by users.
+   *
+   * +kubebuilder:validation:Optional
+   */
+  ref?: PromotionStepTaskRef;
   /** Retry is the retry policy for this step. */
   retry?: PromotionStepRetry;
   /**

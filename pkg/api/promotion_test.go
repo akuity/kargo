@@ -781,6 +781,7 @@ func TestInflateSteps(t *testing.T) {
 				require.Len(t, steps, 2)
 				require.Equal(t, "direct-step", steps[0].As)
 				require.Equal(t, "fake-step", steps[0].Uses)
+				require.Nil(t, steps[0].Ref)
 				require.Equal(t, "task-step::sub-step", steps[1].As)
 				require.Equal(t, "other-fake-step", steps[1].Uses)
 				require.ElementsMatch(t, []kargoapi.ExpressionVariable{
@@ -950,6 +951,7 @@ func Test_inflateTaskSteps(t *testing.T) {
 				Task: &kargoapi.PromotionTaskReference{
 					Name: "test-task",
 				},
+				Description: "Render and commit",
 				Vars: []kargoapi.ExpressionVariable{
 					{Name: "input1", Value: "value1"},
 					{Name: "input2", Value: "value2"},
@@ -1001,6 +1003,15 @@ func Test_inflateTaskSteps(t *testing.T) {
 					{Name: "input2", Value: "value2"},
 					{Name: "input4", Value: "value4"},
 				}, steps[1].Vars)
+				expectedRef := &kargoapi.PromotionStepTaskRef{
+					Kind:        "PromotionTask",
+					Name:        "test-task",
+					Description: "Render and commit",
+				}
+				require.Equal(t, expectedRef, steps[0].Ref)
+				require.Equal(t, expectedRef, steps[1].Ref)
+				require.NotSame(t, steps[0].Ref, steps[1].Ref)
+				require.Empty(t, steps[0].Description)
 			},
 		},
 		{
@@ -1078,6 +1089,14 @@ func Test_inflateTaskSteps(t *testing.T) {
 				require.NoError(t, err)
 				require.Len(t, steps, 1)
 				require.Equal(t, "task-0::custom-alias", steps[0].As)
+				require.Equal(
+					t,
+					&kargoapi.PromotionStepTaskRef{
+						Kind: "ClusterPromotionTask",
+						Name: "test-cluster-task",
+					},
+					steps[0].Ref,
+				)
 			},
 		},
 	}
