@@ -198,10 +198,25 @@ func Test_parse(t *testing.T) {
 			},
 		},
 		{
-			name: "PBKDF2 hash with zero iteration count",
-			hash: "$pbkdf2-sha256$0$eW/NeU.ptfb.HwOgtHZuTQ$vHtiZuoQvlZMighjw.jqxLaox6lVPNdPEzjOVFJFdrs",
+			name: "PBKDF2 hash with iteration count below minimum",
+			hash: "$pbkdf2-sha256$999$eW/NeU.ptfb.HwOgtHZuTQ$vHtiZuoQvlZMighjw.jqxLaox6lVPNdPEzjOVFJFdrs",
 			assert: func(t *testing.T, _ parsedHash, err error) {
-				require.ErrorContains(t, err, "invalid iteration count")
+				require.ErrorContains(t, err, "must be between")
+			},
+		},
+		{
+			name: "PBKDF2 hash with iteration count above maximum",
+			hash: "$pbkdf2-sha256$10000001$eW/NeU.ptfb.HwOgtHZuTQ$vHtiZuoQvlZMighjw.jqxLaox6lVPNdPEzjOVFJFdrs",
+			assert: func(t *testing.T, _ parsedHash, err error) {
+				require.ErrorContains(t, err, "must be between")
+			},
+		},
+		{
+			name: "PBKDF2 hash with iteration count at maximum",
+			hash: "$pbkdf2-sha256$10000000$eW/NeU.ptfb.HwOgtHZuTQ$vHtiZuoQvlZMighjw.jqxLaox6lVPNdPEzjOVFJFdrs",
+			assert: func(t *testing.T, h parsedHash, err error) {
+				require.NoError(t, err)
+				require.IsType(t, pbkdf2Hash{}, h)
 			},
 		},
 		{

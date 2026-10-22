@@ -23,7 +23,19 @@ const (
 	// bcryptPrefix begins every bcrypt hash, whatever its minor version.
 	bcryptPrefix = "$2"
 
+	// pbkdf2Iterations is the iteration count OWASP recommends for
+	// PBKDF2-HMAC-SHA256.
 	pbkdf2Iterations = 600_000
+	// pbkdf2MinIterations is the minimum iteration count NIST SP 800-132
+	// recommends. It is far below pbkdf2Iterations on purpose: a minimum exists
+	// to reject hashes that are plainly weak, not to enforce best practice, and
+	// OWASP's recommendation rises over time, so a minimum that followed it
+	// would reject hashes that already work.
+	pbkdf2MinIterations = 1_000
+	// pbkdf2MaxIterations is the highest iteration count NIST SP 800-132
+	// suggests, for especially critical keys. It bounds how long a password
+	// check, which any unauthenticated login request triggers, can take.
+	pbkdf2MaxIterations = 10_000_000
 	// pbkdf2SaltLength is in bytes. It is also the minimum length FIPS 140-3
 	// permits.
 	pbkdf2SaltLength = 16
@@ -130,10 +142,16 @@ func parsePBKDF2(hash string, fipsEnabled bool) (pbkdf2Hash, error) {
 		)
 	}
 	iterations, err := strconv.Atoi(fields[0])
-	if err != nil || iterations < 1 {
+	if err != nil {
 		return pbkdf2Hash{}, fmt.Errorf(
 			"PBKDF2 hash has invalid iteration count %q",
 			fields[0],
+		)
+	}
+	if iterations < pbkdf2MinIterations || iterations > pbkdf2MaxIterations {
+		return pbkdf2Hash{}, fmt.Errorf(
+			"PBKDF2 hash has iteration count %d; it must be between %d and %d",
+			iterations, pbkdf2MinIterations, pbkdf2MaxIterations,
 		)
 	}
 	salt, err := ab64.DecodeString(fields[1])
