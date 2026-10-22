@@ -543,10 +543,7 @@ func Test_ociPusher_run_localFile(t *testing.T) {
 	runner := newTestPusher()
 
 	destRef := fmt.Sprintf("%s/test/local:v1", regHost)
-	result, err := runner.run(t.Context(), &promotion.StepContext{
-		Project: "fake-project",
-		WorkDir: workDir,
-	}, builtin.OCIPushConfig{
+	result, err := runner.run(t.Context(), newTestStepContext(t, workDir), builtin.OCIPushConfig{
 		SrcPath:      "artifact.tar.gz",
 		DestRef:      destRef,
 		MediaType:    layerMediaType,
@@ -623,10 +620,7 @@ func Test_ociPusher_run_localFile_defaultMediaTypes(t *testing.T) {
 	runner := newTestPusher()
 
 	destRef := fmt.Sprintf("%s/test/local:default", regHost)
-	result, err := runner.run(t.Context(), &promotion.StepContext{
-		Project: "fake-project",
-		WorkDir: workDir,
-	}, builtin.OCIPushConfig{
+	result, err := runner.run(t.Context(), newTestStepContext(t, workDir), builtin.OCIPushConfig{
 		SrcPath: "artifact.tar.gz",
 		DestRef: destRef,
 	})
@@ -834,10 +828,7 @@ func Test_ociPusher_run_localFile_errors(t *testing.T) {
 			runner := newTestPusher()
 			runner.maxArtifactSize = tt.maxArtifactSize
 
-			result, err := runner.run(t.Context(), &promotion.StepContext{
-				Project: "fake-project",
-				WorkDir: workDir,
-			}, builtin.OCIPushConfig{
+			result, err := runner.run(t.Context(), newTestStepContext(t, workDir), builtin.OCIPushConfig{
 				SrcPath: srcPath,
 				DestRef: "registry.example.com/test/local:v1",
 			})
@@ -848,33 +839,6 @@ func Test_ociPusher_run_localFile_errors(t *testing.T) {
 			assert.ErrorAs(t, err, &termErr)
 		})
 	}
-}
-
-// Test that an unopenable workspace is not reported as a source path problem.
-func Test_ociPusher_run_localFile_workspaceError(t *testing.T) {
-	t.Parallel()
-	runner := newTestPusher()
-
-	tmpDir := t.TempDir()
-	result, err := runner.run(t.Context(), &promotion.StepContext{
-		Project: "fake-project",
-		WorkDir: filepath.Join(tmpDir, "does-not-exist"),
-	}, builtin.OCIPushConfig{
-		SrcPath: "artifact.tar.gz",
-		DestRef: "registry.example.com/test/local:v1",
-	})
-	require.Error(t, err)
-	assert.ErrorContains(t, err, "failed to open workspace")
-	// Names the workspace, not the source path, and leaks no absolute path.
-	assert.NotContains(t, err.Error(), "artifact.tar.gz")
-	assert.NotContains(t, err.Error(), tmpDir)
-	assert.Equal(
-		t,
-		string(kargoapi.PromotionStepStatusFailed),
-		string(result.Status),
-	)
-	var termErr *promotion.TerminalError
-	assert.ErrorAs(t, err, &termErr)
 }
 
 // Test that a failure to write the artifact to the registry is reported as a
@@ -892,10 +856,7 @@ func Test_ociPusher_run_localFile_pushError(t *testing.T) {
 	writeTestArchive(t, workDir, "artifact.tar.gz")
 	runner := newTestPusher()
 
-	result, err := runner.run(t.Context(), &promotion.StepContext{
-		Project: "fake-project",
-		WorkDir: workDir,
-	}, builtin.OCIPushConfig{
+	result, err := runner.run(t.Context(), newTestStepContext(t, workDir), builtin.OCIPushConfig{
 		SrcPath: "artifact.tar.gz",
 		DestRef: fmt.Sprintf("%s/test/local:v1", srv.Listener.Addr().String()),
 	})

@@ -798,7 +798,7 @@ func Test_httpRequester_buildRequest(t *testing.T) {
 					[]byte{0x00, 0xff, 0x01, 0x7f},
 					0600,
 				))
-				return &promotion.StepContext{WorkDir: workDir}, builtin.HTTPConfig{
+				return newTestStepContext(t, workDir), builtin.HTTPConfig{
 					Method:       "POST",
 					URL:          "http://example.com",
 					BodyFromFile: "payload.json",
@@ -820,7 +820,7 @@ func Test_httpRequester_buildRequest(t *testing.T) {
 					bytes.Repeat([]byte{0x01}, maxResponseBytes+1),
 					0600,
 				))
-				return &promotion.StepContext{WorkDir: workDir}, builtin.HTTPConfig{
+				return newTestStepContext(t, workDir), builtin.HTTPConfig{
 					Method:       "POST",
 					URL:          "http://example.com",
 					BodyFromFile: "payload.bin",
@@ -841,7 +841,7 @@ func Test_httpRequester_buildRequest(t *testing.T) {
 					[]byte("outside work directory"),
 					0600,
 				))
-				return &promotion.StepContext{WorkDir: workDir}, builtin.HTTPConfig{
+				return newTestStepContext(t, workDir), builtin.HTTPConfig{
 					URL:          "http://example.com",
 					BodyFromFile: "../payload.json",
 				}
@@ -1705,4 +1705,20 @@ func Test_httpRequester_proxy(t *testing.T) {
 		result, err := h.run(t.Context(), nil, tc.cfg)
 		tc.assertions(t, result, err)
 	}
+}
+
+func Test_httpRequester_buildRequest_escapingSymlink(t *testing.T) {
+	workDir, outside := escapingWorkspace(t)
+	require.NoError(t, os.WriteFile(
+		filepath.Join(outside, "payload.json"), []byte("outside"), 0o600,
+	))
+	_, err := (&httpRequester{}).buildRequest(
+		t.Context(),
+		newTestStepContext(t, workDir),
+		builtin.HTTPConfig{
+			URL:          "http://example.com",
+			BodyFromFile: "out/payload.json",
+		},
+	)
+	require.ErrorContains(t, err, "path escapes from parent")
 }

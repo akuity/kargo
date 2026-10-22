@@ -100,6 +100,7 @@ func Test_gitTreeOverwriter_run(t *testing.T) {
 			Project: "fake-project",
 			Stage:   "fake-stage",
 			WorkDir: workDir,
+			Root:    newTestRoot(t, workDir),
 		},
 		builtin.GitClearConfig{
 			Path: "master",
@@ -115,4 +116,15 @@ func Test_gitTreeOverwriter_run(t *testing.T) {
 	// Make sure the .git directory is still there
 	_, err = os.Stat(filepath.Join(workTree.Dir(), ".git"))
 	require.NoError(t, err)
+}
+
+func Test_gitTreeClearer_run_escapingSymlink(t *testing.T) {
+	workDir, _ := escapingWorkspace(t)
+	res, err := (&gitTreeClearer{}).run(
+		t.Context(),
+		newTestStepContext(t, workDir),
+		builtin.GitClearConfig{Path: "out/repo"},
+	)
+	require.ErrorContains(t, err, "path escapes from parent")
+	require.Equal(t, kargoapi.PromotionStepStatusErrored, res.Status)
 }

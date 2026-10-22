@@ -328,10 +328,41 @@ func Test_fileWriter_run(t *testing.T) {
 
 			result, err := runner.run(
 				t.Context(),
-				&promotion.StepContext{WorkDir: workDir},
+				newTestStepContext(t, workDir),
 				tt.cfg,
 			)
 			tt.assertions(t, workDir, result, err)
 		})
 	}
+}
+
+func Test_fileWriter_run_escapingSymlink(t *testing.T) {
+	workDir, outside := escapingWorkspace(t)
+	result, err := (&fileWriter{}).run(
+		t.Context(),
+		newTestStepContext(t, workDir),
+		builtin.FileWriteConfig{Path: "out/new.txt", Contents: "x"},
+	)
+	require.ErrorContains(t, err, "path escapes from parent")
+	require.Equal(t, kargoapi.PromotionStepStatusFailed, result.Status)
+	require.NoFileExists(t, filepath.Join(outside, "new.txt"))
+	entries, err := os.ReadDir(workDir)
+	require.NoError(t, err)
+	require.Len(t, entries, 1) // only the "out" symlink
+}
+
+func Test_fileWriter_run_symlinkInsideWorkspace(t *testing.T) {
+	workDir := t.TempDir()
+	require.NoError(t, os.Mkdir(filepath.Join(workDir, "real"), 0o755))
+	require.NoError(t, os.Symlink("real", filepath.Join(workDir, "link")))
+	result, err := (&fileWriter{}).run(
+		t.Context(),
+		newTestStepContext(t, workDir),
+		builtin.FileWriteConfig{Path: "link/new.txt", Contents: "x"},
+	)
+	require.NoError(t, err)
+	require.Equal(t, kargoapi.PromotionStepStatusSucceeded, result.Status)
+	b, err := os.ReadFile(filepath.Join(workDir, "real", "new.txt"))
+	require.NoError(t, err)
+	require.Equal(t, "x", string(b))
 }

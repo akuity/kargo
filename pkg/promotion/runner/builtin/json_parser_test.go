@@ -302,6 +302,7 @@ func Test_jsonParser_run(t *testing.T) {
 			stepCtx := tt.stepCtx
 
 			stepCtx.WorkDir = t.TempDir()
+			stepCtx.Root = newTestRoot(t, stepCtx.WorkDir)
 			for p, c := range tt.files {
 				require.NoError(t, os.MkdirAll(path.Join(stepCtx.WorkDir, path.Dir(p)), 0o700))
 				require.NoError(t, os.WriteFile(path.Join(stepCtx.WorkDir, p), []byte(c), 0o600))
@@ -412,7 +413,7 @@ func Test_jsonParser_readAndParseJSON(t *testing.T) {
 			err := os.WriteFile(filePath, []byte(tt.content), 0600)
 			require.NoError(t, err)
 
-			result, err := jp.readAndParseJSON(tempDir, "test.json")
+			result, err := jp.readAndParseJSON(newTestRoot(t, tempDir), "test.json")
 
 			if tt.expectedErrMsg != "" {
 				assert.Error(t, err)
@@ -533,4 +534,20 @@ func Test_jsonParser_extractValues(t *testing.T) {
 			}
 		})
 	}
+}
+
+func Test_jsonParser_run_escapingSymlink(t *testing.T) {
+	workDir, outside := escapingWorkspace(t)
+	require.NoError(t, os.WriteFile(
+		filepath.Join(outside, "secret.json"), []byte(`{"k": "v"}`), 0o600,
+	))
+	_, err := (&jsonParser{}).run(
+		t.Context(),
+		newTestStepContext(t, workDir),
+		builtin.JSONParseConfig{
+			Path:    "out/secret.json",
+			Outputs: []builtin.JSONParse{{Name: "k", FromExpression: "k"}},
+		},
+	)
+	require.ErrorContains(t, err, "path escapes from parent")
 }

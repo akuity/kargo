@@ -10,7 +10,6 @@ import (
 	"slices"
 	"strings"
 
-	securejoin "github.com/cyphar/filepath-securejoin"
 	"github.com/xeipuuv/gojsonschema"
 	"go.yaml.in/yaml/v3"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -89,7 +88,7 @@ func (k *kustomizeImageSetter) run(
 	cfg builtin.KustomizeSetImageConfig,
 ) (promotion.StepResult, error) {
 	// Find the Kustomization file.
-	kusPath, err := findKustomization(stepCtx.WorkDir, cfg.Path)
+	kusPath, err := findKustomization(stepCtx.Root, cfg.Path)
 	if err != nil {
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 			fmt.Errorf("could not discover kustomization file: %w", err)
@@ -109,7 +108,7 @@ func (k *kustomizeImageSetter) run(
 	}
 
 	// Update the Kustomization file with the new images.
-	if err = updateKustomizationFile(kusPath, targetImages); err != nil {
+	if err = updateKustomizationFile(stepCtx.Root, kusPath, targetImages); err != nil {
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, err
 	}
 
@@ -219,9 +218,9 @@ func (k *kustomizeImageSetter) generateCommitMessage(path string, images map[str
 	return commitMsg.String()
 }
 
-func updateKustomizationFile(kusPath string, targetImages map[string]kustypes.Image) error {
+func updateKustomizationFile(root *os.Root, kusPath string, targetImages map[string]kustypes.Image) error {
 	// Read the Kustomization file, and unmarshal it.
-	node, err := readKustomizationFile(kusPath)
+	node, err := readKustomizationFile(root, kusPath)
 	if err != nil {
 		return err
 	}
@@ -241,11 +240,11 @@ func updateKustomizationFile(kusPath string, targetImages map[string]kustypes.Im
 	}
 
 	// Write the updated Kustomization file.
-	return writeKustomizationFile(kusPath, node)
+	return writeKustomizationFile(root, kusPath, node)
 }
 
-func readKustomizationFile(kusPath string) (*yaml.Node, error) {
-	b, err := os.ReadFile(kusPath)
+func readKustomizationFile(root *os.Root, kusPath string) (*yaml.Node, error) {
+	b, err := root.ReadFile(kusPath)
 	if err != nil {
 		return nil, fmt.Errorf("could not read Kustomization file: %w", err)
 	}
@@ -318,29 +317,32 @@ func mergeImages(currentImages []kustypes.Image, targetImages map[string]kustype
 	return newImages
 }
 
-func writeKustomizationFile(kusPath string, node *yaml.Node) error {
+func writeKustomizationFile(root *os.Root, kusPath string, node *yaml.Node) error {
 	b, err := kyaml.Marshal(node)
 	if err != nil {
 		return fmt.Errorf("could not marshal updated Kustomization file: %w", err)
 	}
-	if err = os.WriteFile(kusPath, b, fs.ModePerm); err != nil {
+	if err = root.WriteFile(kusPath, b, fs.ModePerm); err != nil {
 		return fmt.Errorf("could not write updated Kustomization file: %w", err)
 	}
 	return nil
 }
 
-func findKustomization(workDir, path string) (string, error) {
-	secureDir, err := securejoin.SecureJoin(workDir, path)
+func findKustomization(root *os.Root, path string) (string, error) {
+	dir, err := promotion.WorkspacePath(path)
 	if err != nil {
-		return "", fmt.Errorf("could not secure join path %q: %w", path, err)
+		return "", err
 	}
 
 	var candidates []string
 	for _, name := range konfig.RecognizedKustomizationFileNames() {
-		p := filepath.Join(secureDir, name)
-		fi, err := os.Lstat(p)
+		p := filepath.Join(dir, name)
+		fi, err := root.Lstat(p)
 		if err != nil {
-			continue
+			if errors.Is(err, fs.ErrNotExist) {
+				continue
+			}
+			return "", fmt.Errorf("could not inspect %q: %w", p, err)
 		}
 		if !fi.Mode().IsRegular() {
 			continue

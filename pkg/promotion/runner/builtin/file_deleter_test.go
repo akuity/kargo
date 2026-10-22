@@ -709,7 +709,7 @@ func Test_fileDeleter_run(t *testing.T) {
 			assertions: func(t *testing.T, workDir string, result promotion.StepResult, err error) {
 				assert.Error(t, err)
 				assert.Equal(t, promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, result)
-				assert.ErrorContains(t, err, "attempts to traverse outside the working directory")
+				assert.ErrorContains(t, err, "path escapes from parent")
 				// The external file must survive.
 				_, statErr := os.Stat(
 					filepath.Join(filepath.Dir(workDir), "kargo-ext-literal", "secret.txt"))
@@ -720,9 +720,7 @@ func Test_fileDeleter_run(t *testing.T) {
 			},
 		},
 		{
-			// ".." cannot be expressed through os.DirFS (it refuses to traverse
-			// above the root), so the pattern simply matches nothing
-			name: "glob pattern with .. matches nothing",
+			name: "glob pattern with .. errors",
 			setupFiles: func(t *testing.T) string {
 				tmpDir := t.TempDir()
 				escapePath := filepath.Join(filepath.Dir(tmpDir), "escape-target")
@@ -738,7 +736,7 @@ func Test_fileDeleter_run(t *testing.T) {
 			assertions: func(t *testing.T, workDir string, result promotion.StepResult, err error) {
 				assert.Error(t, err)
 				assert.Equal(t, promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, result)
-				assert.ErrorContains(t, err, "no paths matched pattern")
+				assert.ErrorContains(t, err, "outside the working directory")
 				// Nothing outside workDir was deleted.
 				_, statErr := os.Stat(filepath.Join(filepath.Dir(workDir), "escape-target"))
 				assert.NoError(t, statErr)
@@ -763,7 +761,7 @@ func Test_fileDeleter_run(t *testing.T) {
 			assertions: func(t *testing.T, workDir string, result promotion.StepResult, err error) {
 				assert.Error(t, err)
 				assert.Equal(t, promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, result)
-				assert.ErrorContains(t, err, "attempts to traverse outside the working directory")
+				assert.ErrorContains(t, err, "path escapes from parent")
 				// The external file must survive.
 				_, statErr := os.Stat(
 					filepath.Join(filepath.Dir(workDir), "kargo-ext-target", "secret.txt"))
@@ -781,10 +779,46 @@ func Test_fileDeleter_run(t *testing.T) {
 			workDir := tt.setupFiles(t)
 			result, err := runner.run(
 				t.Context(),
-				&promotion.StepContext{WorkDir: workDir},
+				newTestStepContext(t, workDir),
 				tt.cfg,
 			)
 			tt.assertions(t, workDir, result, err)
 		})
 	}
+}
+
+func Test_fileDeleter_run_globWalksPastEscapingSymlink(t *testing.T) {
+	workDir, outside := escapingWorkspace(t)
+	require.NoError(t, os.MkdirAll(filepath.Join(workDir, "src", "docs"), 0o755))
+	require.NoError(t, os.WriteFile(filepath.Join(workDir, "src", "docs", "a.md"), []byte("a"), 0o600))
+	require.NoError(t, os.WriteFile(filepath.Join(outside, "b.md"), []byte("b"), 0o600))
+	// An escaping link the pattern never targets, as a repository might contain.
+	require.NoError(t, os.Symlink(filepath.Join("..", "..", "out"), filepath.Join(workDir, "src", "docs", "zone")))
+	result, err := (&fileDeleter{}).run(
+		t.Context(),
+		newTestStepContext(t, workDir),
+		builtin.DeleteConfig{Path: "src/**/*.md", PathsAreGlobs: true},
+	)
+	require.NoError(t, err)
+	require.Equal(t, kargoapi.PromotionStepStatusSucceeded, result.Status)
+	require.NoFileExists(t, filepath.Join(workDir, "src", "docs", "a.md"))
+	require.FileExists(t, filepath.Join(outside, "b.md"))
+}
+
+func Test_fileDeleter_run_globModeLiteralEscapingSymlink(t *testing.T) {
+	workDir, outside := escapingWorkspace(t)
+	require.NoError(t, os.MkdirAll(filepath.Join(workDir, "src", "docs"), 0o755))
+	require.NoError(t, os.WriteFile(filepath.Join(outside, "keep"), []byte("x"), 0o600))
+	require.NoError(t, os.Symlink(filepath.Join("..", "..", "out"), filepath.Join(workDir, "src", "docs", "zone")))
+	result, err := (&fileDeleter{}).run(
+		t.Context(),
+		newTestStepContext(t, workDir),
+		builtin.DeleteConfig{Path: "src/docs/zone", PathsAreGlobs: true, Strict: true},
+	)
+	require.NoError(t, err)
+	require.Equal(t, kargoapi.PromotionStepStatusSucceeded, result.Status)
+	// The link is deleted as a link; what it pointed to survives.
+	_, err = os.Lstat(filepath.Join(workDir, "src", "docs", "zone"))
+	require.ErrorIs(t, err, os.ErrNotExist)
+	require.FileExists(t, filepath.Join(outside, "keep"))
 }

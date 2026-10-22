@@ -421,7 +421,7 @@ func Test_tarExtractor_run(t *testing.T) {
 			workDir := tt.setupFiles(t)
 			result, err := runner.run(
 				t.Context(),
-				&promotion.StepContext{WorkDir: workDir},
+				newTestStepContext(t, workDir),
 				tt.cfg,
 			)
 			tt.assertions(t, workDir, result, err)
@@ -1009,12 +1009,15 @@ func Test_tarExtractor_extractToDir(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			workDir, tarPath := tt.setupFiles(t)
 			extractDir := filepath.Join(workDir, "temp_extract")
+			relTarPath, err := filepath.Rel(workDir, tarPath)
+			require.NoError(t, err)
 
 			result, err := runner.extractToDir(
 				t.Context(),
 				tt.cfg,
-				tarPath,
-				extractDir,
+				newTestRoot(t, workDir),
+				relTarPath,
+				"temp_extract",
 			)
 
 			tt.assertions(t, workDir, extractDir, result, err)
@@ -1110,7 +1113,7 @@ func Test_tarExtractor_run_symlinkEscape(t *testing.T) {
 
 			result, err := (&tarExtractor{}).run(
 				t.Context(),
-				&promotion.StepContext{WorkDir: workDir},
+				newTestStepContext(t, workDir),
 				builtin.UntarConfig{InPath: "evil.tar", OutPath: "out"},
 			)
 			require.NoError(t, err)
@@ -1149,4 +1152,65 @@ func Test_tarExtractor_run_symlinkEscape(t *testing.T) {
 			require.NoError(t, err)
 		})
 	}
+}
+
+// writeSingleFileArchive writes a tar archive at path containing one file,
+// a.txt, with the content "x".
+func writeSingleFileArchive(t *testing.T, path string) {
+	t.Helper()
+	tarFile, err := os.Create(path)
+	require.NoError(t, err)
+	tw := tar.NewWriter(tarFile)
+	data := []byte("x")
+	require.NoError(t, tw.WriteHeader(&tar.Header{Name: "a.txt", Mode: 0o600, Size: int64(len(data))}))
+	_, err = tw.Write(data)
+	require.NoError(t, err)
+	require.NoError(t, tw.Close())
+	require.NoError(t, tarFile.Close())
+}
+
+func Test_tarExtractor_run_escapingSymlink(t *testing.T) {
+	t.Run("input path", func(t *testing.T) {
+		workDir, outside := escapingWorkspace(t)
+		writeSingleFileArchive(t, filepath.Join(outside, "archive.tar"))
+		result, err := (&tarExtractor{}).run(
+			t.Context(),
+			newTestStepContext(t, workDir),
+			builtin.UntarConfig{InPath: "out/archive.tar", OutPath: "extracted"},
+		)
+		require.ErrorContains(t, err, "path escapes from parent")
+		require.Equal(t, kargoapi.PromotionStepStatusErrored, result.Status)
+		require.NoDirExists(t, filepath.Join(workDir, "extracted"))
+	})
+	t.Run("output path", func(t *testing.T) {
+		workDir, outside := escapingWorkspace(t)
+		writeSingleFileArchive(t, filepath.Join(workDir, "archive.tar"))
+		result, err := (&tarExtractor{}).run(
+			t.Context(),
+			newTestStepContext(t, workDir),
+			builtin.UntarConfig{InPath: "archive.tar", OutPath: "out/extracted"},
+		)
+		require.ErrorContains(t, err, "path escapes from parent")
+		require.Equal(t, kargoapi.PromotionStepStatusErrored, result.Status)
+		require.NoDirExists(t, filepath.Join(outside, "extracted"))
+	})
+}
+
+func Test_tarExtractor_run_symlinkedOutPath(t *testing.T) {
+	workDir := t.TempDir()
+	writeSingleFileArchive(t, filepath.Join(workDir, "archive.tar"))
+	require.NoError(t, os.Mkdir(filepath.Join(workDir, "real"), 0o755))
+	require.NoError(t, os.Symlink("real", filepath.Join(workDir, "out")))
+
+	result, err := (&tarExtractor{}).run(
+		t.Context(),
+		newTestStepContext(t, workDir),
+		builtin.UntarConfig{InPath: "archive.tar", OutPath: "out"},
+	)
+	require.NoError(t, err)
+	require.Equal(t, kargoapi.PromotionStepStatusSucceeded, result.Status)
+	require.FileExists(t, filepath.Join(workDir, "real", "a.txt"))
+	fi, err := os.Lstat(filepath.Join(workDir, "out"))
+	require.NoError(t, err)
+	require.NotZero(t, fi.Mode()&os.ModeSymlink)
 }

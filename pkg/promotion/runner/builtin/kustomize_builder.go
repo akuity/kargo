@@ -8,7 +8,6 @@ import (
 	"strings"
 	"sync"
 
-	securejoin "github.com/cyphar/filepath-securejoin"
 	securefs "github.com/fluxcd/pkg/kustomize/filesys"
 	"github.com/xeipuuv/gojsonschema"
 	"sigs.k8s.io/kustomize/api/krusty"
@@ -20,7 +19,6 @@ import (
 	"sigs.k8s.io/yaml"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	"github.com/akuity/kargo/pkg/io/fs"
 	"github.com/akuity/kargo/pkg/promotion"
 	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
 )
@@ -88,41 +86,49 @@ func (k *kustomizeBuilder) run(
 	}
 
 	// Build the manifests.
-	rm, err := kustomizeBuild(diskFS, filepath.Join(stepCtx.WorkDir, cfg.Path), cfg.Plugin)
+	kusPath, err := promotion.ExternalPath(stepCtx, cfg.Path)
+	if err != nil {
+		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, err
+	}
+	rm, err := kustomizeBuild(diskFS, stepCtx.Root, kusPath, cfg.Plugin)
 	if err != nil {
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, err
 	}
 
 	// Prepare the output path.
-	outPath, err := securejoin.SecureJoin(stepCtx.WorkDir, cfg.OutPath)
+	outPath, err := promotion.WorkspacePath(cfg.OutPath)
 	if err != nil {
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, err
 	}
 
 	// Write the built manifests to the output path.
-	if err = k.writeResult(rm, outPath, cfg.OutputFormat); err != nil {
+	if err = k.writeResult(stepCtx.Root, rm, outPath, cfg.OutputFormat); err != nil {
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, fmt.Errorf(
-			"failed to write built manifests to %q: %w", cfg.OutPath,
-			fs.SanitizePathError(err, stepCtx.WorkDir),
+			"failed to write built manifests to %q: %w", cfg.OutPath, err,
 		)
 	}
 	return promotion.StepResult{Status: kargoapi.PromotionStepStatusSucceeded}, nil
 }
 
-func (k *kustomizeBuilder) writeResult(rm resmap.ResMap, outPath string, outputFmt *builtin.OutputFormat) error {
+func (k *kustomizeBuilder) writeResult(
+	root *os.Root,
+	rm resmap.ResMap,
+	outPath string,
+	outputFmt *builtin.OutputFormat,
+) error {
 	if ext := filepath.Ext(outPath); ext == ".yaml" || ext == ".yml" {
-		if err := os.MkdirAll(filepath.Dir(outPath), 0o700); err != nil {
+		if err := root.MkdirAll(filepath.Dir(outPath), 0o700); err != nil {
 			return err
 		}
 		b, err := rm.AsYaml()
 		if err != nil {
 			return err
 		}
-		return os.WriteFile(outPath, b, 0o600)
+		return root.WriteFile(outPath, b, 0o600)
 	}
 
 	// If the output path is a directory, write each manifest to a separate file.
-	if err := os.MkdirAll(outPath, 0o700); err != nil {
+	if err := root.MkdirAll(outPath, 0o700); err != nil {
 		return err
 	}
 
@@ -133,16 +139,23 @@ func (k *kustomizeBuilder) writeResult(rm resmap.ResMap, outPath string, outputF
 	}
 	switch format {
 	case builtin.Kargo:
-		return k.writeIndividualFiles(outPath, rm, k.fileNameKargo)
+		return k.writeIndividualFiles(root, outPath, rm, k.fileNameKargo)
 	case builtin.Kustomize:
-		return k.writeIndividualFiles(outPath, rm, k.fileNameKustomize)
+		return k.writeIndividualFiles(root, outPath, rm, k.fileNameKustomize)
 	default:
 		return fmt.Errorf("unsupported output format: %v", format)
 	}
 }
 
 // kustomizeBuild builds the manifests in the given directory using Kustomize.
-func kustomizeBuild(kusFS filesys.FileSystem, path string, pluginCfg *builtin.Plugin) (_ resmap.ResMap, err error) {
+// Kustomization files and Helm chart inflation settings read during the build
+// are validated against root; see kustomizeValidatorFS.
+func kustomizeBuild(
+	kusFS filesys.FileSystem,
+	root *os.Root,
+	path string,
+	pluginCfg *builtin.Plugin,
+) (_ resmap.ResMap, err error) {
 	kustomizeRenderMutex.Lock()
 	defer kustomizeRenderMutex.Unlock()
 
@@ -183,7 +196,10 @@ func kustomizeBuild(kusFS filesys.FileSystem, path string, pluginCfg *builtin.Pl
 
 	// Reject remote entries whose Git ref would be interpreted by git as an
 	// option. See kustomizeValidatorFS.
-	validatingFS := newKustomizeValidatorFS(kusFS)
+	validatingFS, err := newKustomizeValidatorFS(kusFS, root)
+	if err != nil {
+		return nil, err
+	}
 	k := krusty.MakeKustomizer(buildOptions)
 	rm, err := k.Run(validatingFS, path)
 	if err != nil {
@@ -211,26 +227,31 @@ type fileNameFunc func(res *resource.Resource, multipleNamespaces bool) string
 //
 // Copyright 2019 The Kubernetes Authors.
 // SPDX-License-Identifier: Apache-2.0
-func (k *kustomizeBuilder) writeIndividualFiles(dirPath string, m resmap.ResMap, fileNameFn fileNameFunc) error {
+func (k *kustomizeBuilder) writeIndividualFiles(
+	root *os.Root,
+	dirPath string,
+	m resmap.ResMap,
+	fileNameFn fileNameFunc,
+) error {
 	byNamespace := m.GroupedByCurrentNamespace()
 	multiNs := len(byNamespace) > 1
 
 	for _, resList := range byNamespace {
 		for _, res := range resList {
-			if err := k.writeResource(dirPath, fileNameFn(res, multiNs), res); err != nil {
+			if err := k.writeResource(root, dirPath, fileNameFn(res, multiNs), res); err != nil {
 				return err
 			}
 		}
 	}
 	for _, res := range m.ClusterScoped() {
-		if err := k.writeResource(dirPath, fileNameFn(res, false), res); err != nil {
+		if err := k.writeResource(root, dirPath, fileNameFn(res, false), res); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func (k *kustomizeBuilder) writeResource(path, fName string, res *resource.Resource) error {
+func (k *kustomizeBuilder) writeResource(root *os.Root, path, fName string, res *resource.Resource) error {
 	// Filenames are derived from rendered resource metadata, which is untrusted
 	// input. Reject anything that isn't a plain filename so a malicious or
 	// malformed resource cannot write outside path.
@@ -245,7 +266,7 @@ func (k *kustomizeBuilder) writeResource(path, fName string, res *resource.Resou
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(filepath.Join(path, fName), yml, 0o600)
+	return root.WriteFile(filepath.Join(path, fName), yml, 0o600)
 }
 
 // fileNameKargo generates filenames in Kargo format: [namespace-]kind-name.yaml.

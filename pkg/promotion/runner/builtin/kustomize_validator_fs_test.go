@@ -221,7 +221,8 @@ func Test_kustomizeValidatorFS_ReadFile(t *testing.T) {
 				path = filepath.Join("/work", testCase.fileName)
 				require.NoError(t, memFS.WriteFile(path, []byte(testCase.content)))
 			}
-			validatingFS := newKustomizeValidatorFS(memFS)
+			validatingFS, err := newKustomizeValidatorFS(memFS, newTestRoot(t, t.TempDir()))
+			require.NoError(t, err)
 			content, err := validatingFS.ReadFile(path)
 			testCase.assert(t, content, err, validatingFS.Err())
 		})
@@ -301,7 +302,7 @@ func Test_kustomizeBuild_remoteGitRefInjection(t *testing.T) {
 			diskFS, err := securefs.MakeFsOnDiskSecureBuild(workDir)
 			require.NoError(t, err)
 
-			_, err = kustomizeBuild(diskFS, workDir, nil)
+			_, err = kustomizeBuild(diskFS, newTestRoot(t, workDir), workDir, nil)
 			require.NoFileExists(t, markerPath)
 			testCase.assert(t, err)
 		})
@@ -334,4 +335,144 @@ func newTestGitRepo(t *testing.T, gitPath, kustomization string) string {
 		require.NoError(t, err, string(out))
 	}
 	return dir
+}
+
+func Test_kustomizeValidatorFS_ReadFile_helmInflation(t *testing.T) {
+	testCases := []struct {
+		name string
+		// kusDir is the directory of the kustomization, relative to the
+		// workspace, or absolute for one outside it.
+		kusDir   string
+		fileName string
+		content  string
+		setup    func(t *testing.T, workDir string)
+		assert   func(t *testing.T, err error)
+	}{
+		{
+			name:     "default chart home",
+			fileName: "kustomization.yaml",
+			content:  "helmCharts:\n- name: foo\n",
+			assert: func(t *testing.T, err error) {
+				require.NoError(t, err)
+			},
+		},
+		{
+			name:     "chart home elsewhere in the workspace",
+			kusDir:   "overlays/dev",
+			fileName: "kustomization.yaml",
+			content:  "helmGlobals:\n  chartHome: ../../charts\nhelmCharts:\n- name: foo\n",
+			assert: func(t *testing.T, err error) {
+				require.NoError(t, err)
+			},
+		},
+		{
+			name:     "chart home climbs out of the workspace",
+			kusDir:   "overlays/dev",
+			fileName: "kustomization.yaml",
+			content:  "helmGlobals:\n  chartHome: ../../../charts\nhelmCharts:\n- name: foo\n",
+			assert: func(t *testing.T, err error) {
+				require.ErrorContains(t, err, "chart home \"../../../charts\" resolves outside")
+			},
+		},
+		{
+			name:     "absolute chart home",
+			fileName: "kustomization.yaml",
+			content:  "helmGlobals:\n  chartHome: /srv/charts\nhelmCharts:\n- name: foo\n",
+			assert: func(t *testing.T, err error) {
+				require.ErrorContains(t, err, "must be relative")
+			},
+		},
+		{
+			name:     "absolute config home",
+			fileName: "kustomization.yaml",
+			content:  "helmGlobals:\n  configHome: /root/.config/helm\nhelmCharts:\n- name: foo\n",
+			assert: func(t *testing.T, err error) {
+				require.ErrorContains(t, err, "config home \"/root/.config/helm\" must be relative")
+			},
+		},
+		{
+			name:     "chart home leads outside through a symlink",
+			fileName: "kustomization.yaml",
+			content:  "helmCharts:\n- name: foo\n",
+			setup: func(t *testing.T, workDir string) {
+				require.NoError(t, os.Symlink(filepath.Join("..", "outside"), filepath.Join(workDir, "charts")))
+			},
+			assert: func(t *testing.T, err error) {
+				require.ErrorContains(t, err, "path escapes from parent")
+			},
+		},
+		{
+			name:     "chart name with a path separator",
+			fileName: "kustomization.yaml",
+			content:  "helmCharts:\n- name: ../foo\n",
+			assert: func(t *testing.T, err error) {
+				require.ErrorContains(t, err, "must be a plain name")
+			},
+		},
+		{
+			name:     "legacy field",
+			fileName: "Kustomization",
+			content:  "helmChartInflationGenerator:\n- chartName: foo\n  chartHome: /srv/charts\n",
+			assert: func(t *testing.T, err error) {
+				require.ErrorContains(t, err, "must be relative")
+			},
+		},
+		{
+			name:     "generator configuration",
+			fileName: "helm.yaml",
+			content:  "apiVersion: builtin\nkind: HelmChartInflationGenerator\nchartHome: ../../charts\nname: foo\n",
+			assert: func(t *testing.T, err error) {
+				require.ErrorContains(t, err, "resolves outside")
+			},
+		},
+		{
+			name:     "generator configuration of another kind is not inspected",
+			fileName: "gen.yaml",
+			content:  "apiVersion: builtin\nkind: ConfigMapGenerator\nchartHome: /srv/charts\n",
+			assert: func(t *testing.T, err error) {
+				require.NoError(t, err)
+			},
+		},
+		{
+			name:     "remote kustomization uses a directory beneath its own",
+			kusDir:   "/remote",
+			fileName: "kustomization.yaml",
+			content:  "helmCharts:\n- name: foo\n",
+			assert: func(t *testing.T, err error) {
+				require.NoError(t, err)
+			},
+		},
+		{
+			name:     "remote kustomization climbs out of its own directory",
+			kusDir:   "/remote",
+			fileName: "kustomization.yaml",
+			content:  "helmGlobals:\n  chartHome: ../charts\nhelmCharts:\n- name: foo\n",
+			assert: func(t *testing.T, err error) {
+				require.ErrorContains(t, err, "resolves outside")
+			},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			workDir, _ := escapingWorkspace(t)
+			if testCase.setup != nil {
+				testCase.setup(t, workDir)
+			}
+			kusDir := filepath.Join(workDir, testCase.kusDir)
+			if filepath.IsAbs(testCase.kusDir) {
+				// A kustomization Kustomize cloned from a remote lives outside
+				// the workspace.
+				kusDir = filepath.Join(filepath.Dir(workDir), testCase.kusDir)
+			}
+			require.NoError(t, os.MkdirAll(kusDir, 0o755))
+			memFS := filesys.MakeFsInMemory()
+			path := filepath.Join(kusDir, testCase.fileName)
+			require.NoError(t, memFS.WriteFile(path, []byte(testCase.content)))
+			validatingFS, err := newKustomizeValidatorFS(memFS, newTestRoot(t, workDir))
+			require.NoError(t, err)
+			_, err = validatingFS.ReadFile(path)
+			testCase.assert(t, err)
+			require.Equal(t, err, validatingFS.Err())
+		})
+	}
 }

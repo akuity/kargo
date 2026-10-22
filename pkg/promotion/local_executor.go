@@ -3,6 +3,7 @@ package promotion
 import (
 	"context"
 	"fmt"
+	"os"
 
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/trace"
@@ -87,6 +88,15 @@ func (e *LocalStepExecutor) ExecuteStep(
 			capabilities.GitUserResolver = e.gitUserResolver
 		}
 	}
+
+	root, err := os.OpenRoot(req.Context.WorkDir)
+	if err != nil {
+		return StepResult{
+			Status: kargoapi.PromotionStepStatusErrored,
+		}, fmt.Errorf("error opening working directory %q: %w", req.Context.WorkDir, err)
+	}
+	defer root.Close()
+	req.Context.Root = root
 
 	factory := reg.Value
 	runner := factory(capabilities)

@@ -199,6 +199,7 @@ func Test_tomlParser_run(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			stepCtx := tt.stepCtx
 			stepCtx.WorkDir = t.TempDir()
+			stepCtx.Root = newTestRoot(t, stepCtx.WorkDir)
 			for p, c := range tt.files {
 				require.NoError(t, os.MkdirAll(path.Join(stepCtx.WorkDir, path.Dir(p)), 0o700))
 				require.NoError(t, os.WriteFile(path.Join(stepCtx.WorkDir, p), []byte(c), 0o600))
@@ -252,7 +253,7 @@ func Test_tomlParser_readAndParseTOML(t *testing.T) {
 			err := os.WriteFile(filePath, []byte(tt.content), 0o600)
 			require.NoError(t, err)
 
-			result, err := tp.readAndParseTOML(tempDir, "test.toml")
+			result, err := tp.readAndParseTOML(newTestRoot(t, tempDir), "test.toml")
 
 			if tt.expectedErrMsg != "" {
 				assert.Error(t, err)
@@ -264,4 +265,20 @@ func Test_tomlParser_readAndParseTOML(t *testing.T) {
 			assert.EqualValues(t, tt.expected, result)
 		})
 	}
+}
+
+func Test_tomlParser_run_escapingSymlink(t *testing.T) {
+	workDir, outside := escapingWorkspace(t)
+	require.NoError(t, os.WriteFile(
+		filepath.Join(outside, "secret.toml"), []byte("k = \"v\"\n"), 0o600,
+	))
+	_, err := (&tomlParser{}).run(
+		t.Context(),
+		newTestStepContext(t, workDir),
+		builtin.TOMLParseConfig{
+			Path:    "out/secret.toml",
+			Outputs: []builtin.TomlParse{{Name: "k", FromExpression: "k"}},
+		},
+	)
+	require.ErrorContains(t, err, "path escapes from parent")
 }

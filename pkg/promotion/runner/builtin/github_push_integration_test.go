@@ -730,6 +730,7 @@ func TestGitHubPush_Integration(t *testing.T) {
 					Stage:     "test-stage",
 					Promotion: promotionID,
 					WorkDir:   workDir,
+					Root:      newTestRoot(t, workDir),
 					Config:    stepCfg,
 				},
 			)

@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"maps"
+	"os"
 	"slices"
 	"time"
 
@@ -548,6 +549,10 @@ type StepContext struct {
 	UIBaseURL string
 	// WorkDir is the root directory for the execution of a step.
 	WorkDir string
+	// Root is WorkDir opened as an os.Root by the StepExecutor. All file access
+	// by a step goes through it, so a path that resolves outside WorkDir,
+	// symlinks included, is refused.
+	Root *os.Root `json:"-"`
 	// SharedState is the state shared between steps.
 	SharedState State
 	// Alias is the alias of the step that is currently being executed.

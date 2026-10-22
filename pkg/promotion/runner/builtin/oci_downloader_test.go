@@ -167,33 +167,29 @@ func Test_ociDownloader_prepareOutputPath(t *testing.T) {
 		{
 			name:    "valid relative path",
 			outPath: "output/file.tar",
-			assertions: func(t *testing.T, workDir, absPath string, err error) {
+			assertions: func(t *testing.T, workDir, relPath string, err error) {
 				require.NoError(t, err)
-				assert.True(t, strings.HasPrefix(absPath, workDir))
+				assert.Equal(t, "output/file.tar", relPath)
 				// Check that the directory was created
-				dir := path.Dir(absPath)
-				_, statErr := os.Stat(dir)
-				assert.NoError(t, statErr)
+				assert.DirExists(t, filepath.Join(workDir, "output"))
 			},
 		},
 		{
 			name:    "valid nested path",
 			outPath: "deep/nested/output/file.tar",
-			assertions: func(t *testing.T, workDir, absPath string, err error) {
+			assertions: func(t *testing.T, workDir, relPath string, err error) {
 				require.NoError(t, err)
-				assert.True(t, strings.HasPrefix(absPath, workDir))
+				assert.Equal(t, "deep/nested/output/file.tar", relPath)
 				// Check that the directory was created
-				dir := path.Dir(absPath)
-				_, statErr := os.Stat(dir)
-				assert.NoError(t, statErr)
+				assert.DirExists(t, filepath.Join(workDir, "deep", "nested", "output"))
 			},
 		},
 		{
 			name:    "path traversal attempt",
 			outPath: "../../../etc/passwd",
-			assertions: func(t *testing.T, workDir, absPath string, err error) {
-				require.NoError(t, err)
-				assert.Equal(t, filepath.Join(workDir, "etc", "passwd"), absPath)
+			assertions: func(t *testing.T, _, relPath string, err error) {
+				require.ErrorContains(t, err, "outside the working directory")
+				assert.Empty(t, relPath)
 			},
 		},
 		{
@@ -206,9 +202,9 @@ func Test_ociDownloader_prepareOutputPath(t *testing.T) {
 				require.NoError(t, os.WriteFile(existingFile, []byte("existing content"), 0o600))
 			},
 			allowOverwrite: false,
-			assertions: func(t *testing.T, _, absPath string, err error) {
+			assertions: func(t *testing.T, _, relPath string, err error) {
 				assert.ErrorContains(t, err, "file already exists")
-				assert.Empty(t, absPath)
+				assert.Empty(t, relPath)
 			},
 		},
 		{
@@ -221,9 +217,9 @@ func Test_ociDownloader_prepareOutputPath(t *testing.T) {
 				require.NoError(t, os.WriteFile(existingFile, []byte("existing content"), 0o600))
 			},
 			allowOverwrite: true,
-			assertions: func(t *testing.T, workDir, absPath string, err error) {
+			assertions: func(t *testing.T, _, relPath string, err error) {
 				require.NoError(t, err)
-				assert.True(t, strings.HasPrefix(absPath, workDir))
+				assert.Equal(t, "output/file.tar", relPath)
 			},
 		},
 	}
@@ -237,8 +233,8 @@ func Test_ociDownloader_prepareOutputPath(t *testing.T) {
 				tt.setup(t, workDir)
 			}
 
-			absPath, err := runner.prepareOutputPath(workDir, tt.outPath, tt.allowOverwrite)
-			tt.assertions(t, workDir, absPath, err)
+			relPath, err := runner.prepareOutputPath(newTestRoot(t, workDir), tt.outPath, tt.allowOverwrite)
+			tt.assertions(t, workDir, relPath, err)
 		})
 	}
 }
@@ -343,7 +339,7 @@ func Test_ociDownloader_extractLayerToFile(t *testing.T) {
 			absOutPath := path.Join(workDir, "output.tar")
 
 			img := tt.setupImg()
-			err := runner.extractLayerToFile(img, tt.mediaType, absOutPath)
+			err := runner.extractLayerToFile(img, tt.mediaType, newTestRoot(t, workDir), "output.tar")
 			tt.assertions(t, absOutPath, err)
 		})
 	}
@@ -506,15 +502,13 @@ func Test_ociDownloader_writeLayerToFile(t *testing.T) {
 	tests := []struct {
 		name       string
 		layerData  string
-		setupPath  func(string) string
+		outPath    string
 		assertions func(*testing.T, string, error)
 	}{
 		{
 			name:      "successful write",
 			layerData: "test layer content",
-			setupPath: func(workDir string) string {
-				return filepath.Join(workDir, "output.tar")
-			},
+			outPath:   "output.tar",
 			assertions: func(t *testing.T, absOutPath string, err error) {
 				require.NoError(t, err)
 
@@ -528,9 +522,7 @@ func Test_ociDownloader_writeLayerToFile(t *testing.T) {
 		{
 			name:      "empty content",
 			layerData: "",
-			setupPath: func(workDir string) string {
-				return filepath.Join(workDir, "output.tar")
-			},
+			outPath:   "output.tar",
 			assertions: func(t *testing.T, absOutPath string, err error) {
 				require.NoError(t, err)
 
@@ -544,10 +536,8 @@ func Test_ociDownloader_writeLayerToFile(t *testing.T) {
 		{
 			name:      "temp file creation error",
 			layerData: "test content",
-			setupPath: func(workDir string) string {
-				// Try to create temp file in non-existent directory
-				return filepath.Join(workDir, "nonexistent", "subdir", "output.tar")
-			},
+			// Try to create temp file in non-existent directory
+			outPath: "nonexistent/subdir/output.tar",
 			assertions: func(t *testing.T, _ string, err error) {
 				assert.ErrorContains(t, err, "failed to create temporary file")
 			},
@@ -559,51 +549,14 @@ func Test_ociDownloader_writeLayerToFile(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			workDir := t.TempDir()
-			absOutPath := tt.setupPath(workDir)
 
 			layer := static.NewLayer(
 				[]byte(tt.layerData),
 				types.DockerLayer,
 			)
 
-			err := runner.writeLayerToFile(layer, absOutPath)
-			tt.assertions(t, absOutPath, err)
-		})
-	}
-}
-
-func Test_ociDownloader_createTempFile(t *testing.T) {
-	tests := []struct {
-		name       string
-		assertions func(*testing.T, *os.File, string, error)
-	}{
-		{
-			name: "successful temp file creation",
-			assertions: func(t *testing.T, tempFile *os.File, tempPath string, err error) {
-				require.NoError(t, err)
-				require.NotNil(t, tempFile)
-				require.NotEmpty(t, tempPath)
-
-				// Check file exists and has correct permissions
-				info, statErr := os.Stat(tempPath)
-				require.NoError(t, statErr)
-				assert.Equal(t, os.FileMode(0600), info.Mode().Perm())
-
-				t.Cleanup(func() {
-					_ = tempFile.Close()
-				})
-			},
-		},
-	}
-
-	runner := &ociDownloader{}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			workDir := t.TempDir()
-			absOutPath := filepath.Join(workDir, "output.tar.gz")
-			tempFile, tempPath, err := runner.createTempFile(absOutPath)
-			tt.assertions(t, tempFile, tempPath, err)
+			err := runner.writeLayerToFile(layer, newTestRoot(t, workDir), tt.outPath)
+			tt.assertions(t, filepath.Join(workDir, tt.outPath), err)
 		})
 	}
 }
@@ -730,4 +683,24 @@ func (l *fakeSizeLayer) Size() (int64, error) {
 
 func (l *fakeSizeLayer) MediaType() (types.MediaType, error) {
 	return types.DockerLayer, nil
+}
+
+func Test_ociDownloader_prepareOutputPath_escapingSymlink(t *testing.T) {
+	workDir, outside := escapingWorkspace(t)
+	_, err := (&ociDownloader{}).prepareOutputPath(newTestRoot(t, workDir), "out/file.tar", false)
+	require.ErrorContains(t, err, "path escapes from parent")
+	entries, err := os.ReadDir(outside)
+	require.NoError(t, err)
+	require.Empty(t, entries)
+}
+
+func Test_ociDownloader_writeLayerToFile_symlinkedOutPath(t *testing.T) {
+	workDir := t.TempDir()
+	require.NoError(t, os.WriteFile(filepath.Join(workDir, "target.tar"), []byte("old"), 0o600))
+	require.NoError(t, os.Symlink("target.tar", filepath.Join(workDir, "link.tar")))
+	layer := static.NewLayer([]byte("new"), types.DockerLayer)
+	require.NoError(t, (&ociDownloader{}).writeLayerToFile(layer, newTestRoot(t, workDir), "link.tar"))
+	b, err := os.ReadFile(filepath.Join(workDir, "target.tar"))
+	require.NoError(t, err)
+	require.Equal(t, "new", string(b))
 }

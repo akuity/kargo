@@ -260,6 +260,7 @@ kind: Kustomization
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			tt.stepCtx.WorkDir = t.TempDir()
+			tt.stepCtx.Root = newTestRoot(t, tt.stepCtx.WorkDir)
 			if tt.setupFiles != nil {
 				tt.setupFiles(t, tt.stepCtx.WorkDir)
 			}
@@ -588,7 +589,7 @@ kind: Kustomization
 			err := os.WriteFile(kusPath, []byte(tt.initialYAML), 0o600)
 			require.NoError(t, err)
 
-			err = updateKustomizationFile(kusPath, tt.targetImages)
+			err = updateKustomizationFile(newTestRoot(t, tmpDir), "kustomization.yaml", tt.targetImages)
 			tt.assertions(t, kusPath, err)
 		})
 	}
@@ -638,7 +639,7 @@ images:
 			kusPath := filepath.Join(tmpDir, "kustomization.yaml")
 			require.NoError(t, os.WriteFile(kusPath, []byte(tt.content), 0o600))
 
-			node, err := readKustomizationFile(kusPath)
+			node, err := readKustomizationFile(newTestRoot(t, tmpDir), "kustomization.yaml")
 			tt.assertions(t, node, err)
 		})
 	}
@@ -772,14 +773,14 @@ func Test_mergeImages(t *testing.T) {
 func Test_writeKustomizationFile(t *testing.T) {
 	tests := []struct {
 		name       string
-		setup      func(t *testing.T) (string, *yaml.Node)
+		setup      func(t *testing.T) (string, string, *yaml.Node)
 		assertions func(*testing.T, string, error)
 	}{
 		{
 			name: "write valid Kustomization file",
-			setup: func(t *testing.T) (string, *yaml.Node) {
+			setup: func(t *testing.T) (string, string, *yaml.Node) {
 				dir := t.TempDir()
-				kusPath := filepath.Join(dir, "kustomization.yaml")
+				kusPath := "kustomization.yaml"
 				node := &yaml.Node{
 					Kind: yaml.DocumentNode,
 					Content: []*yaml.Node{
@@ -794,7 +795,7 @@ func Test_writeKustomizationFile(t *testing.T) {
 						},
 					},
 				}
-				return kusPath, node
+				return dir, kusPath, node
 			},
 			assertions: func(t *testing.T, kusPath string, err error) {
 				require.NoError(t, err)
@@ -808,16 +809,16 @@ func Test_writeKustomizationFile(t *testing.T) {
 		},
 		{
 			name: "write to non-existent directory",
-			setup: func(t *testing.T) (string, *yaml.Node) {
+			setup: func(t *testing.T) (string, string, *yaml.Node) {
 				dir := t.TempDir()
-				kusPath := filepath.Join(dir, "non-existent-dir", "kustomization.yaml")
+				kusPath := filepath.Join("non-existent-dir", "kustomization.yaml")
 				node := &yaml.Node{
 					Kind: yaml.DocumentNode,
 					Content: []*yaml.Node{
 						{Kind: yaml.MappingNode, Content: []*yaml.Node{}},
 					},
 				}
-				return kusPath, node
+				return dir, kusPath, node
 			},
 			assertions: func(t *testing.T, _ string, err error) {
 				require.ErrorContains(t, err, "could not write updated Kustomization file")
@@ -827,9 +828,9 @@ func Test_writeKustomizationFile(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			kusPath, node := tt.setup(t)
-			err := writeKustomizationFile(kusPath, node)
-			tt.assertions(t, kusPath, err)
+			dir, kusPath, node := tt.setup(t)
+			err := writeKustomizationFile(newTestRoot(t, dir), kusPath, node)
+			tt.assertions(t, filepath.Join(dir, kusPath), err)
 		})
 	}
 }
@@ -915,7 +916,7 @@ func Test_findKustomization(t *testing.T) {
 			workDir, cleanup := tt.setup(t)
 			defer cleanup()
 
-			result, err := findKustomization(workDir, tt.path)
+			result, err := findKustomization(newTestRoot(t, workDir), tt.path)
 			tt.assertions(t, result, err)
 		})
 	}
@@ -933,4 +934,23 @@ func mockWarehouse(namespace, name string, spec kargoapi.WarehouseSpec) *kargoap
 		},
 		Spec: spec,
 	}
+}
+
+func Test_kustomizeImageSetter_run_escapingSymlink(t *testing.T) {
+	workDir, outside := escapingWorkspace(t)
+	kusPath := filepath.Join(outside, "kustomization.yaml")
+	content := "apiVersion: kustomize.config.k8s.io/v1beta1\nkind: Kustomization\n"
+	require.NoError(t, os.WriteFile(kusPath, []byte(content), 0o600))
+	_, err := (&kustomizeImageSetter{}).run(
+		t.Context(),
+		newTestStepContext(t, workDir),
+		builtin.KustomizeSetImageConfig{
+			Path:   "out",
+			Images: []builtin.Image{{Image: "nginx", Tag: "1.21.0"}},
+		},
+	)
+	require.ErrorContains(t, err, "path escapes from parent")
+	b, err := os.ReadFile(kusPath)
+	require.NoError(t, err)
+	require.Equal(t, content, string(b))
 }
