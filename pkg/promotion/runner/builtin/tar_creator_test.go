@@ -2,6 +2,7 @@ package builtin
 
 import (
 	"archive/tar"
+	"bytes"
 	"compress/gzip"
 	"context"
 	"fmt"
@@ -10,6 +11,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -81,6 +83,36 @@ func Test_tarConfig_convert(t *testing.T) {
 				"inPath":  "source_dir/",
 				"outPath": "archive.tar",
 				"gzip":    false,
+			},
+		},
+		{
+			name: "mtime is not a timestamp",
+			config: promotion.Config{
+				"inPath":  "source_dir/",
+				"outPath": "archive.tar.gz",
+				"mtime":   "yesterday",
+			},
+			expectedProblems: []string{
+				"mtime: Does not match format 'date-time'",
+			},
+		},
+		{
+			name: "mtime is not a real date",
+			config: promotion.Config{
+				"inPath":  "source_dir/",
+				"outPath": "archive.tar.gz",
+				"mtime":   "2026-02-30T00:00:00Z",
+			},
+			expectedProblems: []string{
+				"mtime: Does not match format 'date-time'",
+			},
+		},
+		{
+			name: "valid config with mtime",
+			config: promotion.Config{
+				"inPath":  "source_dir/",
+				"outPath": "archive.tar.gz",
+				"mtime":   "1970-01-01T00:00:00Z",
 			},
 		},
 		{
@@ -237,6 +269,67 @@ func Test_tarCreator_run(t *testing.T) {
 				assert.Error(t, err)
 				assert.Equal(t, kargoapi.PromotionStepStatusErrored, result.Status)
 				assert.ErrorContains(t, err, "failed to create output directory")
+			},
+		},
+		{
+			name: "records the given mtime",
+			setupFiles: func(t *testing.T) string {
+				tmpDir := t.TempDir()
+
+				inDir := filepath.Join(tmpDir, "source")
+				require.NoError(t, os.Mkdir(inDir, 0o750))
+				require.NoError(t, os.WriteFile(filepath.Join(inDir, "file.txt"), []byte("test content"), 0o600))
+
+				return tmpDir
+			},
+			cfg: builtin.TarConfig{
+				InPath:  "source",
+				OutPath: "archive.tar",
+				Mtime:   "1970-01-01T00:00:00Z",
+			},
+			assertions: func(t *testing.T, workDir string, result promotion.StepResult, err error) {
+				assert.NoError(t, err)
+				assert.Equal(t, kargoapi.PromotionStepStatusSucceeded, result.Status)
+
+				f, err := os.Open(filepath.Join(workDir, "archive.tar"))
+				require.NoError(t, err)
+				defer f.Close()
+
+				expected := time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC)
+				tr := tar.NewReader(f)
+				var entries int
+				for {
+					h, err := tr.Next()
+					if err == io.EOF {
+						break
+					}
+					require.NoError(t, err)
+					assert.True(t, h.ModTime.Equal(expected), h.Name)
+					entries++
+				}
+				assert.NotZero(t, entries)
+			},
+		},
+		{
+			name: "fails with an invalid mtime",
+			setupFiles: func(t *testing.T) string {
+				tmpDir := t.TempDir()
+
+				inDir := filepath.Join(tmpDir, "source")
+				require.NoError(t, os.Mkdir(inDir, 0o750))
+				require.NoError(t, os.WriteFile(filepath.Join(inDir, "file.txt"), []byte("test content"), 0o600))
+
+				return tmpDir
+			},
+			cfg: builtin.TarConfig{
+				InPath:  "source",
+				OutPath: "archive.tar",
+				Mtime:   "not-a-time",
+			},
+			assertions: func(t *testing.T, _ string, result promotion.StepResult, err error) {
+				assert.Error(t, err)
+				assert.Equal(t, kargoapi.PromotionStepStatusErrored, result.Status)
+				assert.ErrorContains(t, err, "invalid mtime")
 			},
 		},
 	}
@@ -538,11 +631,118 @@ func Test_tarCreator_createTarball(t *testing.T) {
 				outPath,
 				tt.gzip,
 				tt.ignore,
+				nil,
 			)
 
 			tt.assertions(t, outPath, result, err)
 		})
 	}
+}
+
+func Test_tarCreator_createTarball_mtime(t *testing.T) {
+	t.Parallel()
+
+	// writeTree writes the same files every time, owned by whoever runs the
+	// test, with the given modification time.
+	writeTree := func(t *testing.T, mtime time.Time) string {
+		dir := t.TempDir()
+		require.NoError(t, os.Mkdir(filepath.Join(dir, "dev"), 0o750))
+		files := map[string]string{
+			"dev/deployment.yaml": "kind: Deployment\n",
+			"dev/service.yaml":    "kind: Service\n",
+		}
+		for name, content := range files {
+			path := filepath.Join(dir, name)
+			require.NoError(t, os.WriteFile(path, []byte(content), 0o600))
+			require.NoError(t, os.Chtimes(path, mtime, mtime))
+		}
+		require.NoError(t, os.Chtimes(filepath.Join(dir, "dev"), mtime, mtime))
+		return dir
+	}
+
+	written := []time.Time{
+		time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
+		time.Date(2025, 6, 15, 12, 30, 0, 0, time.UTC),
+	}
+
+	// pack archives the same content written at each of the times above and
+	// returns the archives.
+	pack := func(t *testing.T, gzipped bool, mtime *time.Time) [][]byte {
+		runner := &tarCreator{}
+		var archives [][]byte
+		for _, w := range written {
+			inPath := writeTree(t, w)
+			outPath := filepath.Join(t.TempDir(), "archive.tar")
+			result, err := runner.createTarball(inPath, outPath, gzipped, "", mtime)
+			require.NoError(t, err)
+			require.Equal(t, kargoapi.PromotionStepStatusSucceeded, result.Status)
+			data, err := os.ReadFile(outPath)
+			require.NoError(t, err)
+			archives = append(archives, data)
+		}
+		return archives
+	}
+
+	// headers returns the headers of every entry in an archive.
+	headers := func(t *testing.T, gzipped bool, archive []byte) []*tar.Header {
+		var r io.Reader = bytes.NewReader(archive)
+		if gzipped {
+			gr, err := gzipReader(archive)
+			require.NoError(t, err)
+			r = gr
+		}
+		tr := tar.NewReader(r)
+		var hs []*tar.Header
+		for {
+			h, err := tr.Next()
+			if err == io.EOF {
+				return hs
+			}
+			require.NoError(t, err)
+			hs = append(hs, h)
+		}
+	}
+
+	fixed := time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC)
+
+	for _, gzipped := range []bool{false, true} {
+		t.Run(fmt.Sprintf("gzip=%t", gzipped), func(t *testing.T) {
+			t.Parallel()
+
+			// Without mtime, each file's own time is recorded, so the
+			// archives differ. The owner is never recorded.
+			archives := pack(t, gzipped, nil)
+			assert.NotEqual(t, archives[0], archives[1], "without mtime, file times are recorded")
+			for i, archive := range archives {
+				for _, h := range headers(t, gzipped, archive) {
+					assert.True(t, h.ModTime.Equal(written[i]), h.Name)
+					assert.Zero(t, h.Uid, h.Name)
+					assert.Zero(t, h.Gid, h.Name)
+					assert.Empty(t, h.Uname, h.Name)
+					assert.Empty(t, h.Gname, h.Name)
+				}
+			}
+
+			// With mtime, identical content gives an identical archive, and
+			// every entry carries that time and keeps its permissions.
+			archives = pack(t, gzipped, &fixed)
+			assert.Equal(t, archives[0], archives[1], "with mtime, identical content gives an identical archive")
+			for _, h := range headers(t, gzipped, archives[1]) {
+				assert.True(t, h.ModTime.Equal(fixed), h.Name)
+				assert.Zero(t, h.Uid, h.Name)
+				assert.Empty(t, h.Uname, h.Name)
+				if h.Typeflag == tar.TypeDir {
+					assert.Equal(t, int64(0o750), h.Mode, h.Name)
+				} else {
+					assert.Equal(t, int64(0o600), h.Mode, h.Name)
+				}
+			}
+		})
+	}
+}
+
+func gzipReader(data []byte) (io.Reader, error) {
+	return gzip.NewReader(bytes.NewReader(data))
 }
 
 func Test_tarCreator_prepareInputPath(t *testing.T) {
