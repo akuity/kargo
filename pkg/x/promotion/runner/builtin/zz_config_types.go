@@ -713,6 +713,12 @@ type TarConfig struct {
 	Ignore string `json:"ignore,omitempty"`
 	// InPath is the path to the source directory or file to be archived.
 	InPath string `json:"inPath"`
+	// Mtime is an RFC 3339 timestamp (e.g. "1970-01-01T00:00:00Z") to record as the
+	// modification time of every entry in the archive, like GNU tar's --mtime. Setting it makes
+	// the archive depend only on the names, permissions and content of the files, so identical
+	// input produces an identical archive. When not set, the files' own modification times are
+	// recorded.
+	Mtime string `json:"mtime,omitempty"`
 	// OutPath is the path to the destination tar file to create. If the file already exists, it
 	// will be overwritten.
 	OutPath string `json:"outPath"`
