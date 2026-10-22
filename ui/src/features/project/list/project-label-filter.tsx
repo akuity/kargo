@@ -72,7 +72,9 @@ export const ProjectLabelFilter = ({
         label: key,
         children: Array.from(values)
           .sort()
-          .map((val) => ({ value: val, label: val }))
+          // The label doubles as the selected tag's text, which must name the
+          // key too: a bare "aws" or "core" is ambiguous across keys.
+          .map((val) => ({ value: val, label: `${key}: ${val}` }))
       });
     }
     return result;

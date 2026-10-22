@@ -159,6 +159,14 @@ export const ProjectsList = () => {
             project={proj}
             starred={starred.includes(proj?.metadata?.uid || '')}
             onToggleStar={(id) => toggleStar(id)}
+            onLabelClick={(key, value) =>
+              // One value per key, as in the filter itself: a clicked label
+              // replaces any value already selected for its key.
+              handleLabelChange([
+                ...selectedLabels.filter((pair) => !pair.startsWith(`${key}=`)),
+                `${key}=${value}`
+              ])
+            }
           />
         ))}
       </div>
