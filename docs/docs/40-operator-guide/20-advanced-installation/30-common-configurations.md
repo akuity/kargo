@@ -834,11 +834,12 @@ recommended and should only be done with caution.
 
 ### Scheduling the Garbage Collection
 
-By default, the garbage collector runs every 24 hours. This can be configured
+By default, the garbage collector runs hourly. This can be configured
 using a cron expression:
 
 ```yaml
 garbageCollector:
+  # Changes garbage collection to run every 24 hours at midnight
   schedule: "0 0 * * *"
 ```
 
