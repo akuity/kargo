@@ -16,16 +16,22 @@ nodes:
 - extraPortMappings:
   - containerPort: 31080 # Argo CD dashboard
     hostPort: 31080
+    listenAddress: "127.0.0.1"
   - containerPort: 31081 # Kargo dashboard
     hostPort: 31081
+    listenAddress: "127.0.0.1"
   - containerPort: 31082 # External webhooks server
     hostPort: 31082
+    listenAddress: "127.0.0.1"
   - containerPort: 32080 # test application instance
     hostPort: 32080
+    listenAddress: "127.0.0.1"
   - containerPort: 32081 # UAT application instance
     hostPort: 32081
+    listenAddress: "127.0.0.1"
   - containerPort: 32082 # prod application instance
     hostPort: 32082
+    listenAddress: "127.0.0.1"
   
 EOF
 
