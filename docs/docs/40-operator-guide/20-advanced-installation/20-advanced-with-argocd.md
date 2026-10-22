@@ -37,12 +37,13 @@ For important security-related configuration, refer to the
 :::
 
 Recommended commands for generating a complex password and signing key, and for
-hashing the password as required are:
+hashing the password as required, are below. Hashing the password requires the
+[Kargo CLI](../../50-user-guide/05-cli/10-installation.md).
 
 ```console
 pass=$(openssl rand -base64 48 | tr -d "=+/" | head -c 32)
 echo "Password: $pass"
-echo "Password Hash: $(htpasswd -bnBC 10 "" $pass | tr -d ':\n')"
+echo "Password Hash: $(kargo hash-password --password "$pass")"
 echo "Signing Key: $(openssl rand -base64 48 | tr -d "=+/" | head -c 32)"
 ```
 
@@ -76,9 +77,9 @@ spec:
     helm:
       parameters:
         - name: api.adminAccount.passwordHash
-          # Note: A bcrypt-hashed password will contain `$` characters that
-          # MUST each be escaped as `$$`
-          value: <bcrypt-hashed password>
+          # Note: A hashed password will contain `$` characters that MUST
+          # each be escaped as `$$`
+          value: <hashed password>
         - name: api.adminAccount.tokenSigningKey
           value: <token signing key>
   syncPolicy:
@@ -114,7 +115,7 @@ spec:
       valuesObject:
         api:
           adminAccount:
-            passwordHash: <bcrypt-hashed password>
+            passwordHash: <hashed password>
             tokenSigningKey: <token signing key>
             tokenTTL: 24h
         controller:

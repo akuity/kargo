@@ -67,15 +67,17 @@ coverage of this topic.
 ### Securing the Admin Account
 
 If, for some reason, you must leave the admin account enabled, __you must
-provide a bcrypt-hashed password for the account and a signing key__ that the
-API server will use to sign tokens (JWTs) for the account.
+provide a hashed password for the account and a signing key__ that the API
+server will use to sign tokens (JWTs) for the account.
 
-1. Generate and base64 encoded a bcrypt-hashed password and a signing key:
+1. Generate and base64 encode a hashed password and a signing key. Hashing the
+   password requires the
+   [Kargo CLI](../../50-user-guide/05-cli/10-installation.md).
 
     ```console
     pass=$(openssl rand -base64 48 | tr -d "=+/" | head -c 32)
     echo "Password: $pass"
-    hashed_pass=$(htpasswd -bnBC 10 "" $pass | tr -d ':\n')
+    hashed_pass=$(kargo hash-password --password "$pass")
     echo "Password Hash: $hashed_pass"
     echo "Encoded Password Hash: $(echo -n "$hashed_pass" | base64)"
     echo "Encoded Signing Key: $(openssl rand -base64 48 | tr -d "=+/" | head -c 32 | base64)"
@@ -93,7 +95,7 @@ with the following format:
       namespace: <kargo namespace>
     data:
       ADMIN_ACCOUNT_TOKEN_SIGNING_KEY: <base64 encoded signing key>
-      ADMIN_ACCOUNT_PASSWORD_HASH: <base64 encoded bcrypt-hashed password>
+      ADMIN_ACCOUNT_PASSWORD_HASH: <base64 encoded hashed password>
     ```
 
 1. At installation time, set `api.secret.name` to the name of the `Secret`
