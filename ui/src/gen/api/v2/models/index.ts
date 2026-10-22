@@ -148,6 +148,7 @@ export * from './promotionSpec';
 export * from './promotionStatus';
 export * from './promotionStep';
 export * from './promotionStepRetry';
+export * from './promotionStepTaskRef';
 export * from './promotionTask';
 export * from './promotionTaskList';
 export * from './promotionTaskReference';

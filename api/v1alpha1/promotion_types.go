@@ -235,6 +235,18 @@ type PromotionTaskReference struct {
 	Kind string `json:"kind,omitempty"`
 }
 
+// PromotionStepTaskRef describes the (Cluster)PromotionTask a PromotionStep
+// was inflated from.
+type PromotionStepTaskRef struct {
+	// Name is the name of the (Cluster)PromotionTask.
+	Name string `json:"name"`
+	// Kind is the type of the task. Either PromotionTask or
+	// ClusterPromotionTask.
+	Kind string `json:"kind,omitempty"`
+	// Description is the description of the step that referenced the task.
+	Description string `json:"description,omitempty"`
+}
+
 // PromotionStepRetry describes the retry policy for a PromotionStep.
 type PromotionStepRetry struct {
 	// Timeout is the soft maximum interval in which a step that returns a Running
@@ -301,6 +313,12 @@ type PromotionStep struct {
 	// Task is a reference to a PromotionTask that should be inflated into a
 	// Promotion when it is built from a PromotionTemplate.
 	Task *PromotionTaskReference `json:"task,omitempty"`
+	// Ref identifies the (Cluster)PromotionTask this step was inflated
+	// from. It is set by Kargo when a Promotion is built from a
+	// PromotionTemplate and must not be set by users.
+	//
+	// +kubebuilder:validation:Optional
+	Ref *PromotionStepTaskRef `json:"ref,omitempty"`
 	// As is the alias this step can be referred to as.
 	As string `json:"as,omitempty"`
 	// Description is a detail of the step's purpose.

@@ -309,6 +309,7 @@ Class | Method | HTTP request | Description
  - [PromotionStatus](docs/PromotionStatus.md)
  - [PromotionStep](docs/PromotionStep.md)
  - [PromotionStepRetry](docs/PromotionStepRetry.md)
+ - [PromotionStepTaskRef](docs/PromotionStepTaskRef.md)
  - [PromotionTask](docs/PromotionTask.md)
  - [PromotionTaskList](docs/PromotionTaskList.md)
  - [PromotionTaskReference](docs/PromotionTaskReference.md)

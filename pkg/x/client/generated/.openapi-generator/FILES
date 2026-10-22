@@ -121,6 +121,7 @@ model_promotion_spec.go
 model_promotion_status.go
 model_promotion_step.go
 model_promotion_step_retry.go
+model_promotion_step_task_ref.go
 model_promotion_task.go
 model_promotion_task_list.go
 model_promotion_task_reference.go
