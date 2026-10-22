@@ -93,7 +93,18 @@ func Test_tarConfig_convert(t *testing.T) {
 				"mtime":   "yesterday",
 			},
 			expectedProblems: []string{
-				"mtime: Does not match pattern",
+				"mtime: Does not match format 'date-time'",
+			},
+		},
+		{
+			name: "mtime is not a real date",
+			config: promotion.Config{
+				"inPath":  "source_dir/",
+				"outPath": "archive.tar.gz",
+				"mtime":   "2026-02-30T00:00:00Z",
+			},
+			expectedProblems: []string{
+				"mtime: Does not match format 'date-time'",
 			},
 		},
 		{
