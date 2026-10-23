@@ -24,7 +24,7 @@ with a wide variety of external services.
 | `bodyFromFile` | `string` | N | A path relative to the promotion work directory whose contents become the request body. This is mutually exclusive with `body`; use it for payloads produced by an earlier step. |
 | `insecureSkipTLSVerify` | `boolean` | N | Indicates whether to bypass TLS certificate verification when making the request. Setting this to `true` is highly discouraged. |
 | `proxy` | `string` | N | An optional URL: the proxy server to send the request through. If provided, it must include a scheme. This overrides Go's [default proxy behavior](https://pkg.go.dev/net/http#ProxyFromEnvironment). __Note:__ The format of `proxy` is more restrictive than the standard HTTP(S)_PROXY environment variables, because of the scheme requirement. |
-| `timeout` | `string` | N | A string representation of the maximum time interval to wait for a request to complete. _This is the timeout for an individual HTTP request. If a request is retried, each attempt is independently subject to this timeout._ See Go's [`time` package docs](https://pkg.go.dev/time#ParseDuration) for a description of the accepted format. |
+| `timeout` | `string` | N | A string representation of the maximum time interval to wait for a request to complete. _This is the timeout for an individual HTTP request. If a request is retried, each attempt is independently subject to this timeout._ Defaults to `10s`, or `1m` when `outPath` is set. See Go's [`time` package docs](https://pkg.go.dev/time#ParseDuration) for a description of the accepted format. |
 | `pollInterval` | `string` | N | The suggested interval at which to repeat the request while the step is waiting for its `successExpression` or `failureExpression` to be met (e.g. `30s`, `2m`). This is only a suggestion: Kargo enforces a lower bound of 10 seconds and may reconcile sooner in response to other events. Defaults to `30s`. See Go's [`time` package docs](https://pkg.go.dev/time#ParseDuration) for the accepted format. |
 | `responseContentType` | `string` | N | Overrides automatic content-type detection for response parsing. Accepts `application/json`, `application/yaml`, or `text/plain`. When not set, the step uses the response's `Content-Type` header, falling back to JSON parsing for unrecognized types. |
 | `successExpression` | `string` | N | An [expr-lang] expression that can evaluate the response to determine success. When defined, the step succeeds only when this expression evaluates to `true`. If both `successExpression` and `failureExpression` are defined and both evaluate to `true`, the failure takes precedence and the step fails terminally. Note that this expression should _not_ be offset by `${{` and `}}`. See examples for more details. |
@@ -33,6 +33,8 @@ with a wide variety of external services.
 | `outputs` | `[]object` | N | A list of rules for extracting outputs from the HTTP response. These are only applied to responses deemed successful. |
 | `outputs[].name` | `string` | Y | The name of the output. |
 | `outputs[].fromExpression` | `string` | Y | An [expr-lang] expression that can extract a value from the HTTP response. Note that this expression should _not_ be offset by `${{` and `}}`. See examples for more details. |
+| `outPath` | `string` | N | A path relative to the promotion work directory where the response body will be saved. When set, the body is streamed to a temporary file (capped at 100 MiB) and moved to this path only if the step succeeds. See [downloading files](#downloading-files). |
+| `allowOverwrite` | `boolean` | N | Whether to allow overwriting an existing file at `outPath`. If `false` and the file exists, the step fails terminally before sending the request. Only meaningful with `outPath`. |
 
 ## Success and Failure Determination
 
@@ -123,6 +125,35 @@ is structured as follows:
 
 The `http` step only produces the outputs described by the `outputs` field of
 its configuration.
+
+## Downloading Files
+
+Setting `outPath` turns the `http` step into a file downloader, replacing the
+`http-download` step (which will be removed in v2.0). The behavior is:
+
+- If a file already exists at `outPath` and `allowOverwrite` is `false`, the
+  step fails terminally before sending the request.
+- The response body is streamed to a temporary file, capped at 100 MiB.
+  Responses larger than that fail terminally; they are not retried.
+- If the body is 2 MiB or smaller, it is parsed into `response.body` as usual.
+  Larger bodies leave `response.body` as an empty map, so criteria for large
+  downloads should use `response.status` and `response.headers`.
+- Success and failure criteria are evaluated exactly as for a plain request.
+  The downloaded file is moved to `outPath` only if the step succeeds; on any
+  other outcome it is discarded. If `outputs` fail to evaluate, the step errors
+  and the file is discarded.
+- When criteria is not yet met, each poll downloads the body again. The file is only kept once the step succeeds.
+- The default request timeout is `1m` when `outPath` is set.
+
+```yaml
+steps:
+# ...
+- uses: http
+  as: download-report
+  config:
+    url: https://artifacts.example.com/report.tar.gz
+    outPath: downloads/report.tar.gz
+```
 
 ## Examples
 
