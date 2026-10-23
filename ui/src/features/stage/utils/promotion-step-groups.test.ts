@@ -1,0 +1,156 @@
+import { describe, expect, test } from 'vitest';
+
+import { PromotionStep } from '@ui/gen/api/v2/models';
+
+import { PromotionDirectiveStepStatus } from '../../common/promotion-directive-step-status/utils';
+
+import {
+  countStepStatuses,
+  getTaskGroupExecutionMetadata,
+  getTaskGroupStatus,
+  getTaskGroupStepStatuses,
+  getUserStepAlias,
+  groupPromotionSteps,
+  PromotionTaskGroup
+} from './promotion-step-groups';
+
+const renderTask = { kind: 'PromotionTask', name: 'render' };
+
+const taskStep = (as: string, step: PromotionStep = {}): PromotionStep => ({
+  as,
+  uses: 'git-clone',
+  ref: renderTask,
+  ...step
+});
+
+const taskGroup = (steps: PromotionStep[]): PromotionTaskGroup => ({
+  type: 'task',
+  key: 'task-1',
+  task: renderTask,
+  steps: steps.map((step, index) => ({ type: 'step', step, index }))
+});
+
+const { FAILED, RETRYING, RUNNING, SKIPPED, SUCCESS, WONT_RUN } = PromotionDirectiveStepStatus;
+
+describe('getUserStepAlias()', () => {
+  test.each([
+    { name: 'no alias', alias: undefined, expected: undefined },
+    { name: 'generated step alias', alias: 'step-3', expected: undefined },
+    { name: 'generated task step alias', alias: 'task-7::step-2', expected: undefined },
+    { name: 'user alias', alias: 'push', expected: 'push' },
+    { name: 'user alias inside a task', alias: 'task-7::commit', expected: 'commit' },
+    {
+      name: 'generated step in a user-named task',
+      alias: 'render-prod::step-1',
+      expected: undefined
+    }
+  ])('$name', ({ alias, expected }) => {
+    expect(getUserStepAlias(alias)).toBe(expected);
+  });
+});
+
+describe('groupPromotionSteps()', () => {
+  test('keeps steps without a task as plain steps', () => {
+    const steps = [{ as: 'step-1' }, { as: 'step-2' }];
+    expect(groupPromotionSteps(steps)).toEqual([
+      { type: 'step', step: steps[0], index: 0 },
+      { type: 'step', step: steps[1], index: 1 }
+    ]);
+  });
+
+  test('groups consecutive steps of the same task step', () => {
+    const steps = [taskStep('task-1::step-1'), taskStep('task-1::commit')];
+    expect(groupPromotionSteps(steps)).toEqual([
+      {
+        type: 'task',
+        key: 'task-1',
+        task: renderTask,
+        steps: [
+          { type: 'step', step: steps[0], index: 0 },
+          { type: 'step', step: steps[1], index: 1 }
+        ]
+      }
+    ]);
+  });
+
+  test('splits back-to-back instances of the same task', () => {
+    const steps = [taskStep('task-1::step-1'), taskStep('task-2::step-1')];
+    expect(groupPromotionSteps(steps).map((entry) => entry.type === 'task' && entry.key)).toEqual([
+      'task-1',
+      'task-2'
+    ]);
+  });
+
+  test('keeps plain steps between task groups in spec order', () => {
+    const steps = [taskStep('task-1::step-1'), { as: 'step-2' }, taskStep('task-3::step-1')];
+    expect(groupPromotionSteps(steps).map((entry) => entry.type)).toEqual(['task', 'step', 'task']);
+  });
+
+  test('treats a step with a ref but no task alias as a plain step', () => {
+    const steps = [taskStep('step-1')];
+    expect(groupPromotionSteps(steps)).toEqual([{ type: 'step', step: steps[0], index: 0 }]);
+  });
+});
+
+describe('getTaskGroupStepStatuses()', () => {
+  test('reads each step status by its spec index', () => {
+    const group = taskGroup([taskStep('task-1::step-1'), taskStep('task-1::step-2')]);
+    expect(
+      getTaskGroupStepStatuses(group, {
+        phase: 'Running',
+        currentStep: 1,
+        stepExecutionMetadata: [{ status: 'Succeeded' }, { status: 'Running' }]
+      })
+    ).toEqual([SUCCESS, RUNNING]);
+  });
+});
+
+describe('getTaskGroupStatus()', () => {
+  test.each([
+    { name: 'failed wins', statuses: [SUCCESS, RETRYING, FAILED], expected: FAILED },
+    { name: 'retrying over running', statuses: [SUCCESS, RETRYING, RUNNING], expected: RETRYING },
+    { name: 'running', statuses: [SUCCESS, RUNNING, WONT_RUN], expected: RUNNING },
+    { name: 'all skipped', statuses: [SKIPPED, SKIPPED], expected: SKIPPED },
+    { name: 'not started', statuses: [WONT_RUN, WONT_RUN], expected: WONT_RUN },
+    { name: 'partially done', statuses: [SUCCESS, WONT_RUN], expected: RUNNING },
+    { name: 'succeeded with skips', statuses: [SUCCESS, SKIPPED], expected: SUCCESS }
+  ])('$name', ({ statuses, expected }) => {
+    expect(getTaskGroupStatus(statuses)).toBe(expected);
+  });
+});
+
+describe('countStepStatuses()', () => {
+  test('counts each status', () => {
+    expect(countStepStatuses([SUCCESS, SUCCESS, SKIPPED])).toEqual({
+      [SUCCESS]: 2,
+      [SKIPPED]: 1
+    });
+  });
+});
+
+describe('getTaskGroupExecutionMetadata()', () => {
+  const group = taskGroup([
+    taskStep('task-1::step-1'),
+    taskStep('task-1::step-2'),
+    taskStep('task-1::step-3')
+  ]);
+
+  test('spans from the first start to the last finish', () => {
+    expect(
+      getTaskGroupExecutionMetadata(group, {
+        stepExecutionMetadata: [
+          { startedAt: '2026-10-22T00:00:00Z', finishedAt: '2026-10-22T00:00:05Z' },
+          { startedAt: '2026-10-22T00:00:05Z', finishedAt: '2026-10-22T00:00:09Z' },
+          { status: 'Skipped' }
+        ]
+      })
+    ).toEqual({ startedAt: '2026-10-22T00:00:00Z', finishedAt: '2026-10-22T00:00:09Z' });
+  });
+
+  test('is empty when no step has run', () => {
+    expect(getTaskGroupExecutionMetadata(group, {})).toEqual({
+      startedAt: undefined,
+      finishedAt: undefined
+    });
+  });
+});
