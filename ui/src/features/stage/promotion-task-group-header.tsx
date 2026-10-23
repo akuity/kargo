@@ -1,13 +1,14 @@
 import { faLayerGroup } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { Flex, Popover, Tag, Typography } from 'antd';
+import { Flex, Tag, Typography } from 'antd';
 
 import { PromotionDirectiveStepStatus } from '@ui/features/common/promotion-directive-step-status/utils';
-import { ExpressionVariable, Promotion } from '@ui/gen/api/v2/models';
+import { Promotion } from '@ui/gen/api/v2/models';
 
 import { ExecutionDuration } from './promotion-step-duration';
 import { StepStatusIcon } from './promotion-step-status-icon';
 import { StepTitle } from './promotion-step-title';
+import { TaskVarTags } from './promotion-task-var-tags';
 import {
   countStepStatuses,
   didPromotionEndUnsuccessfullyInTaskGroup,
@@ -16,18 +17,9 @@ import {
   getTaskGroupStatus,
   getTaskGroupStepStatuses,
   isProgressingStatus,
-  PromotionTaskGroup
+  PromotionTaskGroup,
+  stepStatusLabels
 } from './utils/promotion-step-groups';
-
-const maxVisibleVars = 3;
-
-const stepStatusLabels: [PromotionDirectiveStepStatus, string][] = [
-  [PromotionDirectiveStepStatus.SUCCESS, 'succeeded'],
-  [PromotionDirectiveStepStatus.FAILED, 'failed'],
-  [PromotionDirectiveStepStatus.RETRYING, 'retrying'],
-  [PromotionDirectiveStepStatus.RUNNING, 'running'],
-  [PromotionDirectiveStepStatus.SKIPPED, 'skipped']
-];
 
 const formatStepCounts = (statuses: PromotionDirectiveStepStatus[]) => {
   const counts = countStepStatuses(statuses);
@@ -36,16 +28,6 @@ const formatStepCounts = (statuses: PromotionDirectiveStepStatus[]) => {
     .map(([status, label]) => `${counts[status]} ${label}`);
 
   return [`${statuses.length} step${statuses.length === 1 ? '' : 's'}`, ...countLabels].join(' · ');
-};
-
-const VarTag = ({ variable }: { variable: ExpressionVariable }) => {
-  const text = `${variable.name}: ${variable.value}`;
-
-  return (
-    <Tag className='text-xs max-w-full truncate' title={text}>
-      {text}
-    </Tag>
-  );
 };
 
 export const PromotionTaskGroupHeader = ({
@@ -62,8 +44,6 @@ export const PromotionTaskGroupHeader = ({
   );
   const { inflatedTask } = group;
   const vars = getEffectiveVars(inflatedTask.vars);
-  const visibleVars = vars.slice(0, maxVisibleVars);
-  const hiddenVars = vars.slice(maxVisibleVars);
 
   return (
     <Flex align='start' className='min-w-0'>
@@ -85,26 +65,7 @@ export const PromotionTaskGroupHeader = ({
             {inflatedTask.description}
           </Typography.Text>
         )}
-        {vars.length > 0 && (
-          <Flex wrap gap={4}>
-            {visibleVars.map((variable) => (
-              <VarTag key={variable.name} variable={variable} />
-            ))}
-            {hiddenVars.length > 0 && (
-              <Popover
-                content={
-                  <Flex vertical gap={4} align='start' className='max-w-md'>
-                    {hiddenVars.map((variable) => (
-                      <VarTag key={variable.name} variable={variable} />
-                    ))}
-                  </Flex>
-                }
-              >
-                <Tag className='text-xs'>+{hiddenVars.length} more</Tag>
-              </Popover>
-            )}
-          </Flex>
-        )}
+        {vars.length > 0 && <TaskVarTags vars={vars} />}
       </Flex>
       <Flex align='center' gap={8}>
         <Typography.Text type='secondary' className='text-xs'>

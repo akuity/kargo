@@ -1,5 +1,5 @@
 import { Alert, Collapse, CollapseProps } from 'antd';
-import { useEffect, useMemo, useState } from 'react';
+import { Dispatch, SetStateAction, useEffect, useMemo } from 'react';
 
 import { useExtensionsContext } from '@ui/extensions/extensions-context';
 import { Promotion } from '@ui/gen/api/v2/models';
@@ -29,12 +29,14 @@ type CollapseItem = NonNullable<CollapseProps['items']>[number];
 
 type PromotionStepsProps = {
   promotion: Promotion;
+  activeKeys: string[];
+  setActiveKeys: Dispatch<SetStateAction<string[]>>;
 };
 
 export const PromotionSteps = (props: PromotionStepsProps) => {
   const { promotionStepExtensions } = useExtensionsContext();
 
-  const [activeKeys, setActiveKeys] = useState<string[]>([]);
+  const { activeKeys, setActiveKeys } = props;
 
   const onActiveKeysChange = (keys: string | string[]) =>
     setActiveKeys(typeof keys === 'string' ? [keys] : keys);
@@ -97,7 +99,8 @@ export const PromotionSteps = (props: PromotionStepsProps) => {
         promotion: props.promotion,
         stepIndex: i
       }),
-      key
+      key,
+      id: `promotion-entry-${key}`
     };
 
     let alertType: 'error' | 'warning' | undefined;
@@ -135,6 +138,7 @@ export const PromotionSteps = (props: PromotionStepsProps) => {
 
     return {
       key: group.key,
+      id: `promotion-entry-${group.key}`,
       className: 'border-gray-200 dark:border-neutral-700',
       label: <PromotionTaskGroupHeader group={group} promotion={props.promotion} />,
       children: (

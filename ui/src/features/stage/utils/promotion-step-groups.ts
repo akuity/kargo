@@ -19,6 +19,14 @@ const taskStepAliasSeparator = '::';
 
 const generatedStepAliasRegex = /^(step|task)-\d+$/;
 
+export const stepStatusLabels: [PromotionDirectiveStepStatus, string][] = [
+  [PromotionDirectiveStepStatus.SUCCESS, 'succeeded'],
+  [PromotionDirectiveStepStatus.FAILED, 'failed'],
+  [PromotionDirectiveStepStatus.RETRYING, 'retrying'],
+  [PromotionDirectiveStepStatus.RUNNING, 'running'],
+  [PromotionDirectiveStepStatus.SKIPPED, 'skipped']
+];
+
 export type IndexedPromotionStep = {
   type: 'step';
   step: PromotionStep;
