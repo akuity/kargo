@@ -8,6 +8,7 @@ import { useEffect } from 'react';
 import { generatePath, Link, useNavigate } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
+import { getFreightDiscoveredAt } from '@ui/features/project/pipelines/freight/get-freight-discovered-at';
 import { shortVersion } from '@ui/features/project/pipelines/freight/short-version-utils';
 import { Freight, FreightReference, FreightRequest, StageStatus } from '@ui/gen/api/v2/models';
 
@@ -151,7 +152,7 @@ export const FreightHistory = ({
         <Table.Column<FreightReference>
           title='Created at'
           render={(_, record) => {
-            const freightCreation = freightMap[record?.name || '']?.metadata?.creationTimestamp;
+            const freightCreation = getFreightDiscoveredAt(freightMap[record?.name || '']);
 
             if (freightCreation) {
               return (
