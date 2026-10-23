@@ -641,6 +641,29 @@ func (p *stageEnqueuerForAnalysisRuns[T]) Update(
 				"analysisRun", analysisRun.Name,
 			)
 		}
+
+		if len(stages.Items) == 0 {
+			stageName := analysisRun.Annotations[kargoapi.AnnotationKeyStage]
+			if stageName == "" {
+				stageName = analysisRun.Labels[kargoapi.LabelKeyStage]
+			}
+			if stageName != "" {
+				wq.Add(
+					reconcile.Request{
+						NamespacedName: types.NamespacedName{
+							Namespace: analysisRun.Namespace,
+							Name:      stageName,
+						},
+					},
+				)
+				logger.Debug(
+					"enqueued Stage for reconciliation",
+					"namespace", analysisRun.Namespace,
+					"stage", stageName,
+					"analysisRun", analysisRun.Name,
+				)
+			}
+		}
 	}
 }
 
