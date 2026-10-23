@@ -7,14 +7,12 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/gin-gonic/gin"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	libhttp "github.com/akuity/kargo/pkg/http"
-	"github.com/akuity/kargo/pkg/server/middleware"
 )
 
 func validateGroupByOrderBy(group string, groupBy string, orderBy string) error {
@@ -101,12 +99,6 @@ func validateGenericCredentialSecret(secret *corev1.Secret) error {
 		)
 	}
 	return nil
-}
-
-// bindJSONOrError binds JSON from the request body to the target.
-// Returns true if successful, or false if an error was added to the gin context.
-func bindJSONOrError(c *gin.Context, target any) bool {
-	return middleware.BindJSON(c, target)
 }
 
 // getFreightByNameOrAlias resolves a Freight resource by name or, when no

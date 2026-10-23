@@ -7,6 +7,7 @@ import (
 
 	rbacapi "github.com/akuity/kargo/api/rbac/v1alpha1"
 	libhttp "github.com/akuity/kargo/pkg/http"
+	"github.com/akuity/kargo/pkg/server/middleware"
 )
 
 // grantRequest represents the request body for the Grant REST endpoint.
@@ -38,7 +39,7 @@ func (s *server) grant(c *gin.Context) {
 	project := c.Param("project")
 
 	var req grantRequest
-	if !bindJSONOrError(c, &req) {
+	if !middleware.BindJSON(c, &req) {
 		return
 	}
 

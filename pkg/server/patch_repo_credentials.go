@@ -9,6 +9,7 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	libCreds "github.com/akuity/kargo/pkg/credentials"
+	"github.com/akuity/kargo/pkg/server/middleware"
 )
 
 // patchRepoCredentialsRequest is the request body for patching repository credentials.
@@ -43,7 +44,7 @@ func (s *server) patchProjectRepoCredentials(c *gin.Context) {
 	name := c.Param("repo-credentials")
 
 	var req patchRepoCredentialsRequest
-	if !bindJSONOrError(c, &req) {
+	if !middleware.BindJSON(c, &req) {
 		return
 	}
 
@@ -89,7 +90,7 @@ func (s *server) patchSharedRepoCredentials(c *gin.Context) {
 	name := c.Param("repo-credentials")
 
 	var req patchRepoCredentialsRequest
-	if !bindJSONOrError(c, &req) {
+	if !middleware.BindJSON(c, &req) {
 		return
 	}
 

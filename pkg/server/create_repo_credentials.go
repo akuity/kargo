@@ -11,6 +11,7 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	libCreds "github.com/akuity/kargo/pkg/credentials"
 	libhttp "github.com/akuity/kargo/pkg/http"
+	"github.com/akuity/kargo/pkg/server/middleware"
 )
 
 type repoCredentials struct {
@@ -55,7 +56,7 @@ func (s *server) createProjectRepoCredentials(c *gin.Context) {
 	project := c.Param("project")
 
 	var req createRepoCredentialsRequest
-	if !bindJSONOrError(c, &req) {
+	if !middleware.BindJSON(c, &req) {
 		return
 	}
 
@@ -99,7 +100,7 @@ func (s *server) createSharedRepoCredentials(c *gin.Context) {
 	ctx := c.Request.Context()
 
 	var req createRepoCredentialsRequest
-	if !bindJSONOrError(c, &req) {
+	if !middleware.BindJSON(c, &req) {
 		return
 	}
 
