@@ -1,9 +1,9 @@
 import { faLayerGroup } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { Flex, Tag, Typography } from 'antd';
+import { Flex, Popover, Tag, Typography } from 'antd';
 
 import { PromotionDirectiveStepStatus } from '@ui/features/common/promotion-directive-step-status/utils';
-import { Promotion } from '@ui/gen/api/v2/models';
+import { ExpressionVariable, Promotion } from '@ui/gen/api/v2/models';
 
 import { ExecutionDuration } from './promotion-step-duration';
 import { StepStatusIcon } from './promotion-step-status-icon';
@@ -16,6 +16,8 @@ import {
   isProgressingStatus,
   PromotionTaskGroup
 } from './utils/promotion-step-groups';
+
+const maxVisibleVars = 3;
 
 const stepStatusLabels: [PromotionDirectiveStepStatus, string][] = [
   [PromotionDirectiveStepStatus.SUCCESS, 'succeeded'],
@@ -34,6 +36,16 @@ const formatStepCounts = (statuses: PromotionDirectiveStepStatus[]) => {
   return [`${statuses.length} steps`, ...countLabels].join(' · ');
 };
 
+const VarTag = ({ variable }: { variable: ExpressionVariable }) => {
+  const text = `${variable.name}: ${variable.value}`;
+
+  return (
+    <Tag className='text-xs max-w-full truncate' title={text}>
+      {text}
+    </Tag>
+  );
+};
+
 export const PromotionTaskGroupHeader = ({
   group,
   promotion
@@ -44,6 +56,8 @@ export const PromotionTaskGroupHeader = ({
   const statuses = getTaskGroupStepStatuses(group, promotion.status);
   const status = getTaskGroupStatus(statuses);
   const vars = group.task.vars ?? [];
+  const visibleVars = vars.slice(0, maxVisibleVars);
+  const hiddenVars = vars.slice(maxVisibleVars);
 
   return (
     <Flex align='start' className='min-w-0'>
@@ -61,22 +75,28 @@ export const PromotionTaskGroupHeader = ({
           </Tag>
         </Flex>
         {!!group.task.description && (
-          <Typography.Text
-            type='secondary'
-            className='text-xs'
-            ellipsis
-            title={group.task.description}
-          >
+          <Typography.Text type='secondary' className='text-xs'>
             {group.task.description}
           </Typography.Text>
         )}
         {vars.length > 0 && (
           <Flex wrap gap={4}>
-            {vars.map((variable) => (
-              <Tag key={variable.name} className='text-xs'>
-                {variable.name}: {variable.value}
-              </Tag>
+            {visibleVars.map((variable) => (
+              <VarTag key={variable.name} variable={variable} />
             ))}
+            {hiddenVars.length > 0 && (
+              <Popover
+                content={
+                  <Flex vertical gap={4} align='start' className='max-w-md'>
+                    {hiddenVars.map((variable) => (
+                      <VarTag key={variable.name} variable={variable} />
+                    ))}
+                  </Flex>
+                }
+              >
+                <Tag className='text-xs'>+{hiddenVars.length} more</Tag>
+              </Popover>
+            )}
           </Flex>
         )}
       </Flex>

@@ -154,7 +154,7 @@ export const Step = ({
             )}
           </Flex>
           {!!step.description && (
-            <Typography.Text type='secondary' className='text-xs' ellipsis title={step.description}>
+            <Typography.Text type='secondary' className='text-xs'>
               {step.description}
             </Typography.Text>
           )}
