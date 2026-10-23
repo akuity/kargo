@@ -2,7 +2,9 @@ package azure
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"net/http"
 	"net/url"
 	"strings"
 	"time"
@@ -272,10 +274,17 @@ func (p *provider) MergePullRequest(
 		},
 	)
 	if err != nil {
+		if isNotFound(err) {
+			return nil, false, fmt.Errorf(
+				"%w: %w",
+				gitprovider.ErrPullRequestNotFound,
+				err,
+			)
+		}
 		return nil, false, fmt.Errorf("error getting pull request %d: %w", id, err)
 	}
 	if adoPR == nil {
-		return nil, false, fmt.Errorf("pull request %d not found", id)
+		return nil, false, gitprovider.ErrPullRequestNotFound
 	}
 
 	status := ptr.Deref(adoPR.Status, adogit.PullRequestStatusValues.NotSet)
@@ -289,7 +298,10 @@ func (p *provider) MergePullRequest(
 		}
 		return pr, true, nil
 	case adogit.PullRequestStatusValues.Abandoned:
-		return nil, false, fmt.Errorf("pull request %d is abandoned", id)
+		return nil, false, fmt.Errorf(
+			"pull request status is abandoned: %w",
+			gitprovider.ErrPullRequestClosedUnmerged,
+		)
 	case adogit.PullRequestStatusValues.Active:
 		// Draft PRs can have a merge status of `succeeded`, but aren't actually
 		// mergable, so we explicitly check for draft status.
@@ -308,7 +320,11 @@ func (p *provider) MergePullRequest(
 	if opts.MergeMethod != "" {
 		if _, ok := validMergeMethods[opts.MergeMethod]; !ok {
 			return nil, false,
-				fmt.Errorf("unsupported merge method %q", opts.MergeMethod)
+				fmt.Errorf(
+					"merge method %q: %w",
+					opts.MergeMethod,
+					gitprovider.ErrUnsupportedMergeMethod,
+				)
 		}
 		completionOptions = &adogit.GitPullRequestCompletionOptions{
 			MergeStrategy: ptr.To(adogit.GitPullRequestMergeStrategy(opts.MergeMethod)),
@@ -540,4 +556,19 @@ func parseLegacyRepoURL(u *url.URL) (string, string, string, error) {
 		return "", "", "", fmt.Errorf("could not extract repository organization, project, and name from URL %q", u)
 	}
 	return organization, parts[1], parts[3], nil
+}
+
+// isNotFound returns true if err is an Azure DevOps API error with a 404 status
+// code. The client returns its WrappedError both by value and by pointer, so
+// both forms are checked.
+func isNotFound(err error) bool {
+	var ptrErr *azuredevops.WrappedError
+	if errors.As(err, &ptrErr) {
+		return ptrErr.StatusCode != nil && *ptrErr.StatusCode == http.StatusNotFound
+	}
+	var valErr azuredevops.WrappedError
+	if errors.As(err, &valErr) {
+		return valErr.StatusCode != nil && *valErr.StatusCode == http.StatusNotFound
+	}
+	return false
 }

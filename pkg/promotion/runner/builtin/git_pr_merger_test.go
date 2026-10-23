@@ -3,6 +3,7 @@ package builtin
 import (
 	"context"
 	"errors"
+	"fmt"
 	"testing"
 	"time"
 
@@ -171,23 +172,107 @@ func Test_gitPRMerger_run(t *testing.T) {
 		assertions func(*testing.T, promotion.StepResult, error)
 	}{
 		{
-			name: "error during merge attempt",
+			name: "transient error during merge attempt",
 			provider: &gitprovider.Fake{
 				MergePullRequestFn: func(
 					context.Context,
 					int64,
 					*gitprovider.MergePullRequestOpts,
 				) (*gitprovider.PullRequest, bool, error) {
-					return nil, false, errors.New("authentication failed")
+					return nil, false, errors.New("500 Internal Server Error")
 				},
 			},
-			config: builtin.GitMergePRConfig{
-				PRNumber: 42,
-			},
+			config: builtin.GitMergePRConfig{PRNumber: 42},
 			assertions: func(t *testing.T, res promotion.StepResult, err error) {
-				require.ErrorContains(t, err, "error merging pull request")
-				require.ErrorContains(t, err, "authentication failed")
-				require.True(t, promotion.IsTerminal(err))
+				require.ErrorContains(t, err, "error merging pull request 42")
+				require.ErrorContains(t, err, "500 Internal Server Error")
+				require.False(t, promotion.IsTerminal(err))
+				require.Equal(t, kargoapi.PromotionStepStatusErrored, res.Status)
+			},
+		},
+		{
+			name: "PR not found",
+			provider: &gitprovider.Fake{
+				MergePullRequestFn: func(
+					context.Context,
+					int64,
+					*gitprovider.MergePullRequestOpts,
+				) (*gitprovider.PullRequest, bool, error) {
+					return nil, false, gitprovider.ErrPullRequestNotFound
+				},
+			},
+			config: builtin.GitMergePRConfig{PRNumber: 42},
+			assertions: func(t *testing.T, res promotion.StepResult, err error) {
+				var termErr *promotion.TerminalError
+				require.ErrorAs(t, err, &termErr)
+				require.ErrorIs(t, termErr.Err, gitprovider.ErrPullRequestNotFound)
+				require.Equal(t, kargoapi.PromotionStepStatusFailed, res.Status)
+			},
+		},
+		{
+			name: "PR closed but not merged",
+			provider: &gitprovider.Fake{
+				MergePullRequestFn: func(
+					context.Context,
+					int64,
+					*gitprovider.MergePullRequestOpts,
+				) (*gitprovider.PullRequest, bool, error) {
+					return nil, false, fmt.Errorf(
+						"pull request state is DECLINED: %w",
+						gitprovider.ErrPullRequestClosedUnmerged,
+					)
+				},
+			},
+			config: builtin.GitMergePRConfig{PRNumber: 42},
+			assertions: func(t *testing.T, res promotion.StepResult, err error) {
+				var termErr *promotion.TerminalError
+				require.ErrorAs(t, err, &termErr)
+				require.ErrorIs(t, termErr.Err, gitprovider.ErrPullRequestClosedUnmerged)
+				require.Equal(t, kargoapi.PromotionStepStatusFailed, res.Status)
+			},
+		},
+		{
+			name: "PR not mergeable",
+			provider: &gitprovider.Fake{
+				MergePullRequestFn: func(
+					context.Context,
+					int64,
+					*gitprovider.MergePullRequestOpts,
+				) (*gitprovider.PullRequest, bool, error) {
+					return nil, false, fmt.Errorf(
+						"pull request has conflicts: %w",
+						gitprovider.ErrPullRequestNotMergeable,
+					)
+				},
+			},
+			config: builtin.GitMergePRConfig{PRNumber: 42},
+			assertions: func(t *testing.T, res promotion.StepResult, err error) {
+				var termErr *promotion.TerminalError
+				require.ErrorAs(t, err, &termErr)
+				require.ErrorIs(t, termErr.Err, gitprovider.ErrPullRequestNotMergeable)
+				require.Equal(t, kargoapi.PromotionStepStatusFailed, res.Status)
+			},
+		},
+		{
+			name: "unsupported merge method",
+			provider: &gitprovider.Fake{
+				MergePullRequestFn: func(
+					context.Context,
+					int64,
+					*gitprovider.MergePullRequestOpts,
+				) (*gitprovider.PullRequest, bool, error) {
+					return nil, false, fmt.Errorf(
+						"merge method %q: %w",
+						"bogus",
+						gitprovider.ErrUnsupportedMergeMethod,
+					)
+				},
+			},
+			config: builtin.GitMergePRConfig{PRNumber: 42},
+			assertions: func(t *testing.T, res promotion.StepResult, err error) {
+				var termErr *promotion.TerminalError
+				require.ErrorAs(t, err, &termErr)
+				require.ErrorIs(t, termErr.Err, gitprovider.ErrUnsupportedMergeMethod)
 				require.Equal(t, kargoapi.PromotionStepStatusFailed, res.Status)
 			},
 		},
