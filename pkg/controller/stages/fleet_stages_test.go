@@ -961,6 +961,11 @@ func TestFleetStageReconciler_syncPromotionRequests(t *testing.T) {
 					Name:      "test-stage",
 				},
 				Status: kargoapi.StageStatus{
+					Conditions: []metav1.Condition{{
+						Type:   kargoapi.ConditionTypePromoting,
+						Status: metav1.ConditionTrue,
+						Reason: "ActivePromotion",
+					}},
 					CurrentPromotionRequest: &kargoapi.PromotionRequestReference{Name: olderRequest},
 					LastPromotionRequest:    &kargoapi.PromotionRequestReference{Name: olderRequest},
 				},
@@ -968,6 +973,7 @@ func TestFleetStageReconciler_syncPromotionRequests(t *testing.T) {
 			assertions: func(t *testing.T, status kargoapi.StageStatus, err error) {
 				require.NoError(t, err)
 				assert.Nil(t, status.CurrentPromotionRequest)
+				assert.Nil(t, conditions.Get(&status, kargoapi.ConditionTypePromoting))
 				// The last PromotionRequest outlives the request itself.
 				require.NotNil(t, status.LastPromotionRequest)
 				assert.Equal(t, olderRequest, status.LastPromotionRequest.Name)
@@ -1040,6 +1046,12 @@ func TestFleetStageReconciler_syncPromotionRequests(t *testing.T) {
 					status.CurrentPromotionRequest.Freight,
 				)
 				assert.Nil(t, status.LastPromotionRequest)
+				// A round in flight means the Stage is promoting.
+				promoCond := conditions.Get(&status, kargoapi.ConditionTypePromoting)
+				require.NotNil(t, promoCond)
+				assert.Equal(t, metav1.ConditionTrue, promoCond.Status)
+				assert.Equal(t, "ActivePromotion", promoCond.Reason)
+				assert.Contains(t, promoCond.Message, olderRequest)
 			},
 		},
 		{
@@ -1203,6 +1215,11 @@ func TestFleetStageReconciler_syncPromotionRequests(t *testing.T) {
 					Name:      "test-stage",
 				},
 				Status: kargoapi.StageStatus{
+					Conditions: []metav1.Condition{{
+						Type:   kargoapi.ConditionTypePromoting,
+						Status: metav1.ConditionTrue,
+						Reason: "ActivePromotion",
+					}},
 					CurrentPromotionRequest: &kargoapi.PromotionRequestReference{Name: olderRequest},
 				},
 			},
@@ -1226,6 +1243,8 @@ func TestFleetStageReconciler_syncPromotionRequests(t *testing.T) {
 			assertions: func(t *testing.T, status kargoapi.StageStatus, err error) {
 				require.NoError(t, err)
 				assert.Nil(t, status.CurrentPromotionRequest)
+				// With the round over, the Stage is no longer promoting.
+				assert.Nil(t, conditions.Get(&status, kargoapi.ConditionTypePromoting))
 				require.NotNil(t, status.LastPromotionRequest)
 				assert.Equal(t, olderRequest, status.LastPromotionRequest.Name)
 				assert.Equal(

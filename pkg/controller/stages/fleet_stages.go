@@ -584,6 +584,7 @@ func (r *FleetStageReconciler) syncPromotionRequests(
 	// any current reference it was left with.
 	if len(promotionRequests.Items) == 0 {
 		newStatus.CurrentPromotionRequest = nil
+		conditions.Delete(&newStatus, kargoapi.ConditionTypePromoting)
 		return newStatus, nil
 	}
 
@@ -600,7 +601,13 @@ func (r *FleetStageReconciler) syncPromotionRequests(
 	// promoting through, unless it has finished -- in which case the Stage is
 	// promoting through none, and a finished request must not be left looking
 	// like an active one.
+	//
+	// The Promoting condition follows the current reference, exactly as it
+	// follows the current Promotion of a Stage that is not target-aware, so that
+	// readers of the Stage's conditions (summarizeFleetConditions, the UI) see a
+	// Stage with a round in flight as promoting rather than as not Ready.
 	newStatus.CurrentPromotionRequest = nil
+	conditions.Delete(&newStatus, kargoapi.ConditionTypePromoting)
 	if highestPrioRequest := &promotionRequests.Items[0]; !highestPrioRequest.Status.Phase.IsTerminal() {
 		newStatus.CurrentPromotionRequest = &kargoapi.PromotionRequestReference{
 			Name: highestPrioRequest.Name,
@@ -608,6 +615,16 @@ func (r *FleetStageReconciler) syncPromotionRequests(
 		if highestPrioRequest.Status.Freight != nil {
 			newStatus.CurrentPromotionRequest.Freight = highestPrioRequest.Status.Freight.DeepCopy()
 		}
+		conditions.Set(&newStatus, &metav1.Condition{
+			Type:   kargoapi.ConditionTypePromoting,
+			Status: metav1.ConditionTrue,
+			Reason: "ActivePromotion",
+			Message: fmt.Sprintf(
+				"PromotionRequest %q is currently %s",
+				highestPrioRequest.Name, highestPrioRequest.Status.Phase,
+			),
+			ObservedGeneration: stage.Generation,
+		})
 	}
 
 	// Gather the terminal PromotionRequests newer than the one already recorded
