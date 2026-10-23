@@ -921,6 +921,7 @@ func TestFleetStageReconciler_syncPromotionRequests(t *testing.T) {
 	require.NoError(t, kargoapi.AddToScheme(scheme))
 
 	now := metav1.NewTime(time.Now().Truncate(time.Second))
+	earlier := metav1.NewTime(now.Add(-time.Hour))
 	// Generated in this order, so the ULIDs in olderRequest, newerRequest and
 	// newestRequest ascend, and lex order over the three names is creation order.
 	olderRequest := api.GeneratePromotionRequestName("test-stage", "test-freight")
@@ -952,6 +953,12 @@ func TestFleetStageReconciler_syncPromotionRequests(t *testing.T) {
 				require.ErrorContains(t, err, "failed to list PromotionRequests")
 				assert.Nil(t, status.CurrentPromotionRequest)
 				assert.Nil(t, status.LastPromotionRequest)
+				// Without the requests, whether the Stage is promoting is unknown.
+				promoCond := conditions.Get(&status, kargoapi.ConditionTypePromoting)
+				require.NotNil(t, promoCond)
+				assert.Equal(t, metav1.ConditionUnknown, promoCond.Status)
+				assert.Equal(t, "ListPromotionRequestsFailed", promoCond.Reason)
+				assert.Contains(t, promoCond.Message, "list error")
 			},
 		},
 		{
@@ -962,6 +969,11 @@ func TestFleetStageReconciler_syncPromotionRequests(t *testing.T) {
 					Name:      "test-stage",
 				},
 				Status: kargoapi.StageStatus{
+					Conditions: []metav1.Condition{{
+						Type:   kargoapi.ConditionTypePromoting,
+						Status: metav1.ConditionTrue,
+						Reason: "ActivePromotion",
+					}},
 					CurrentPromotionRequest: &kargoapi.PromotionRequestReference{Name: olderRequest},
 					LastPromotionRequest:    &kargoapi.PromotionRequestReference{Name: olderRequest},
 				},
@@ -969,6 +981,7 @@ func TestFleetStageReconciler_syncPromotionRequests(t *testing.T) {
 			assertions: func(t *testing.T, status kargoapi.StageStatus, err error) {
 				require.NoError(t, err)
 				assert.Nil(t, status.CurrentPromotionRequest)
+				assert.Nil(t, conditions.Get(&status, kargoapi.ConditionTypePromoting))
 				// The last PromotionRequest outlives the request itself.
 				require.NotNil(t, status.LastPromotionRequest)
 				assert.Equal(t, olderRequest, status.LastPromotionRequest.Name)
@@ -1041,6 +1054,146 @@ func TestFleetStageReconciler_syncPromotionRequests(t *testing.T) {
 					status.CurrentPromotionRequest.Freight,
 				)
 				assert.Nil(t, status.LastPromotionRequest)
+				// A round in flight means the Stage is promoting.
+				promoCond := conditions.Get(&status, kargoapi.ConditionTypePromoting)
+				require.NotNil(t, promoCond)
+				assert.Equal(t, metav1.ConditionTrue, promoCond.Status)
+				assert.Equal(t, "ActivePromotion", promoCond.Reason)
+				assert.Contains(t, promoCond.Message, olderRequest)
+			},
+		},
+		{
+			name: "a Promoting condition keeps its transition time while the round is in flight",
+			stage: &kargoapi.Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "fake-project",
+					Name:      "test-stage",
+				},
+				Status: kargoapi.StageStatus{
+					// Recorded by an earlier reconcile, while the request was
+					// still Pending.
+					Conditions: []metav1.Condition{{
+						Type:               kargoapi.ConditionTypePromoting,
+						Status:             metav1.ConditionTrue,
+						Reason:             "ActivePromotion",
+						Message:            fmt.Sprintf("PromotionRequest %q is currently Pending", olderRequest),
+						LastTransitionTime: earlier,
+					}},
+					CurrentPromotionRequest: &kargoapi.PromotionRequestReference{Name: olderRequest},
+				},
+			},
+			objects: []client.Object{
+				&kargoapi.PromotionRequest{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "fake-project",
+						Name:      olderRequest,
+					},
+					Spec: kargoapi.PromotionRequestSpec{
+						Stage:   "test-stage",
+						Freight: "test-freight",
+					},
+					Status: kargoapi.PromotionRequestStatus{
+						Phase: kargoapi.PromotionRequestPhaseRunning,
+					},
+				},
+			},
+			assertions: func(t *testing.T, status kargoapi.StageStatus, err error) {
+				require.NoError(t, err)
+				promoCond := conditions.Get(&status, kargoapi.ConditionTypePromoting)
+				require.NotNil(t, promoCond)
+				assert.Equal(t, metav1.ConditionTrue, promoCond.Status)
+				assert.Contains(t, promoCond.Message, "Running")
+				assert.True(t, earlier.Equal(&promoCond.LastTransitionTime))
+			},
+		},
+		{
+			name: "a new round restarts the Promoting condition's transition time",
+			stage: &kargoapi.Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "fake-project",
+					Name:      "test-stage",
+				},
+				Status: kargoapi.StageStatus{
+					// Recorded while the older round was in flight.
+					Conditions: []metav1.Condition{{
+						Type:               kargoapi.ConditionTypePromoting,
+						Status:             metav1.ConditionTrue,
+						Reason:             "ActivePromotion",
+						Message:            fmt.Sprintf("PromotionRequest %q is currently Running", olderRequest),
+						LastTransitionTime: earlier,
+					}},
+					CurrentPromotionRequest: &kargoapi.PromotionRequestReference{Name: olderRequest},
+				},
+			},
+			objects: []client.Object{
+				&kargoapi.PromotionRequest{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "fake-project",
+						Name:      olderRequest,
+					},
+					Spec: kargoapi.PromotionRequestSpec{
+						Stage:   "test-stage",
+						Freight: "test-freight",
+					},
+					Status: kargoapi.PromotionRequestStatus{
+						Phase:             kargoapi.PromotionRequestPhaseSucceeded,
+						FinishedAt:        &now,
+						FreightCollection: &kargoapi.FreightCollection{},
+					},
+				},
+				&kargoapi.PromotionRequest{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "fake-project",
+						Name:      newerRequest,
+					},
+					Spec: kargoapi.PromotionRequestSpec{
+						Stage:   "test-stage",
+						Freight: "test-freight",
+					},
+					Status: kargoapi.PromotionRequestStatus{
+						Phase: kargoapi.PromotionRequestPhaseRunning,
+					},
+				},
+			},
+			assertions: func(t *testing.T, status kargoapi.StageStatus, err error) {
+				require.NoError(t, err)
+				require.NotNil(t, status.CurrentPromotionRequest)
+				assert.Equal(t, newerRequest, status.CurrentPromotionRequest.Name)
+				promoCond := conditions.Get(&status, kargoapi.ConditionTypePromoting)
+				require.NotNil(t, promoCond)
+				assert.Contains(t, promoCond.Message, newerRequest)
+				assert.True(t, promoCond.LastTransitionTime.After(earlier.Time))
+			},
+		},
+		{
+			name: "a PromotionRequest with no phase yet is reported as Pending",
+			stage: &kargoapi.Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "fake-project",
+					Name:      "test-stage",
+				},
+			},
+			objects: []client.Object{
+				&kargoapi.PromotionRequest{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "fake-project",
+						Name:      olderRequest,
+					},
+					Spec: kargoapi.PromotionRequestSpec{
+						Stage:   "test-stage",
+						Freight: "test-freight",
+					},
+				},
+			},
+			assertions: func(t *testing.T, status kargoapi.StageStatus, err error) {
+				require.NoError(t, err)
+				promoCond := conditions.Get(&status, kargoapi.ConditionTypePromoting)
+				require.NotNil(t, promoCond)
+				assert.Equal(
+					t,
+					fmt.Sprintf("PromotionRequest %q is currently Pending", olderRequest),
+					promoCond.Message,
+				)
 			},
 		},
 		{
@@ -1204,6 +1357,11 @@ func TestFleetStageReconciler_syncPromotionRequests(t *testing.T) {
 					Name:      "test-stage",
 				},
 				Status: kargoapi.StageStatus{
+					Conditions: []metav1.Condition{{
+						Type:   kargoapi.ConditionTypePromoting,
+						Status: metav1.ConditionTrue,
+						Reason: "ActivePromotion",
+					}},
 					CurrentPromotionRequest: &kargoapi.PromotionRequestReference{Name: olderRequest},
 				},
 			},
@@ -1227,6 +1385,8 @@ func TestFleetStageReconciler_syncPromotionRequests(t *testing.T) {
 			assertions: func(t *testing.T, status kargoapi.StageStatus, err error) {
 				require.NoError(t, err)
 				assert.Nil(t, status.CurrentPromotionRequest)
+				// With the round over, the Stage is no longer promoting.
+				assert.Nil(t, conditions.Get(&status, kargoapi.ConditionTypePromoting))
 				require.NotNil(t, status.LastPromotionRequest)
 				assert.Equal(t, olderRequest, status.LastPromotionRequest.Name)
 				assert.Equal(
