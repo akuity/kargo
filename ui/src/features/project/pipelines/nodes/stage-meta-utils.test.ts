@@ -129,7 +129,7 @@ describe('getLastPromotionRef()', () => {
             name: 'prod.01abc.deadbeef',
             finishedAt: '2026-09-01T10:00:00Z',
             phase: 'Failed',
-            freight: { name: 'freight-1', origin: { kind: 'Warehouse', name: 'beta' } }
+            freight: { name: 'freight-1' }
           }
         })
       )
@@ -139,7 +139,6 @@ describe('getLastPromotionRef()', () => {
       phase: 'Failed',
       finishedAt: '2026-09-01T10:00:00Z',
       freightName: 'freight-1',
-      freightOrigin: 'beta',
       path: '/project/my-project/stage/prod'
     });
   });

@@ -93,7 +93,6 @@ const promotionRequestRef = (
     phase: ref.phase,
     finishedAt: ref.finishedAt,
     freightName: ref.freight?.name,
-    freightOrigin: ref.freight?.origin?.name,
     path: stagePath(stage)
   };
 
