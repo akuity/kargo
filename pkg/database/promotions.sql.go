@@ -8,6 +8,8 @@ package database
 import (
 	"context"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 const finishDeletedPromotion = `-- name: FinishDeletedPromotion :execrows
@@ -43,10 +45,10 @@ WITH keys AS (
         unnest($1::text[]) AS project_name,
         unnest($2::text[]) AS name
 )
-SELECT promotions.id, promotions.project_name, promotions.name, promotions.stage_name, promotions.freight_name, promotions.target_name, promotions.phase, promotions.created_at, promotions.finished_at, promotions.synced_at
+SELECT promotions.id, promotions.project_name, promotions.name, promotions.stage_name, promotions.freight_name, promotions.target_name, promotions.phase, promotions.created_at, promotions.finished_at, promotions.synced_at, promotions.promotion_rollout_id
 FROM keys
 CROSS JOIN LATERAL (
-    SELECT id, project_name, name, stage_name, freight_name, target_name, phase, created_at, finished_at, synced_at FROM promotions
+    SELECT id, project_name, name, stage_name, freight_name, target_name, phase, created_at, finished_at, synced_at, promotion_rollout_id FROM promotions
     WHERE promotions.project_name = keys.project_name
         AND promotions.name = keys.name
     LIMIT 1
@@ -86,6 +88,7 @@ func (q *Queries) ListPromotionsByKey(ctx context.Context, arg ListPromotionsByK
 			&i.CreatedAt,
 			&i.FinishedAt,
 			&i.SyncedAt,
+			&i.PromotionRolloutID,
 		); err != nil {
 			return nil, err
 		}
@@ -98,7 +101,7 @@ func (q *Queries) ListPromotionsByKey(ctx context.Context, arg ListPromotionsByK
 }
 
 const listUnfinishedPromotions = `-- name: ListUnfinishedPromotions :many
-SELECT id, project_name, name, stage_name, freight_name, target_name, phase, created_at, finished_at, synced_at FROM promotions
+SELECT id, project_name, name, stage_name, freight_name, target_name, phase, created_at, finished_at, synced_at, promotion_rollout_id FROM promotions
 WHERE finished_at IS NULL
 ORDER BY project_name, name
 `
@@ -126,6 +129,7 @@ func (q *Queries) ListUnfinishedPromotions(ctx context.Context) ([]PromotionRow,
 			&i.CreatedAt,
 			&i.FinishedAt,
 			&i.SyncedAt,
+			&i.PromotionRolloutID,
 		); err != nil {
 			return nil, err
 		}
@@ -155,7 +159,16 @@ WITH existing AS (
 ),
 promotion AS (
     INSERT INTO promotions (
-        id, project_name, name, stage_name, freight_name, target_name, phase, created_at, finished_at
+        id,
+        project_name,
+        name,
+        stage_name,
+        freight_name,
+        target_name,
+        promotion_rollout_id,
+        phase,
+        created_at,
+        finished_at
     )
     VALUES (
         $4,
@@ -164,14 +177,20 @@ promotion AS (
         $5,
         $6,
         $7,
-        $8,
+        (
+            SELECT promotion_rollouts.id FROM promotion_rollouts
+            WHERE promotion_rollouts.project_name = $1
+                AND promotion_rollouts.id = $8
+        ),
+        $9,
         $3,
-        $9
+        $10
     )
     ON CONFLICT (project_name, name) DO UPDATE SET
         stage_name = EXCLUDED.stage_name,
         freight_name = EXCLUDED.freight_name,
         target_name = EXCLUDED.target_name,
+        promotion_rollout_id = COALESCE(promotions.promotion_rollout_id, EXCLUDED.promotion_rollout_id),
         phase = EXCLUDED.phase,
         finished_at = EXCLUDED.finished_at,
         synced_at = CURRENT_TIMESTAMP
@@ -180,12 +199,14 @@ promotion AS (
             promotions.stage_name,
             promotions.freight_name,
             promotions.target_name,
+            promotions.promotion_rollout_id,
             promotions.phase,
             promotions.finished_at
         ) IS DISTINCT FROM (
             EXCLUDED.stage_name,
             EXCLUDED.freight_name,
             EXCLUDED.target_name,
+            COALESCE(promotions.promotion_rollout_id, EXCLUDED.promotion_rollout_id),
             EXCLUDED.phase,
             EXCLUDED.finished_at
         )
@@ -196,9 +217,9 @@ freight AS (
     -- the arrays.
     SELECT
         COALESCE(existing.id, $4),
-        unnest($10::text[]),
         unnest($11::text[]),
-        unnest($12::text[])
+        unnest($12::text[]),
+        unnest($13::text[])
     FROM existing
     WHERE NOT existing.name_taken
     ON CONFLICT (promotion_id, origin_kind, origin_name) DO NOTHING
@@ -207,18 +228,19 @@ SELECT name_taken FROM existing
 `
 
 type UpsertPromotionParams struct {
-	ProjectName  string
-	Name         string
-	CreatedAt    time.Time
-	ID           string
-	StageName    string
-	FreightName  string
-	TargetName   *string
-	Phase        string
-	FinishedAt   *time.Time
-	OriginKinds  []string
-	OriginNames  []string
-	FreightNames []string
+	ProjectName        string
+	Name               string
+	CreatedAt          time.Time
+	ID                 string
+	StageName          string
+	FreightName        string
+	TargetName         *string
+	PromotionRolloutID *uuid.UUID
+	Phase              string
+	FinishedAt         *time.Time
+	OriginKinds        []string
+	OriginNames        []string
+	FreightNames       []string
 }
 
 // Promotion rows are only ever inserted and updated; see the migration that
@@ -239,6 +261,11 @@ type UpsertPromotionParams struct {
 // whose creation time differs belongs to another Promotion that had the same
 // name. Names are never given twice, so this should not happen; if it does,
 // that record is left as it is and name_taken reports it.
+//
+// The PromotionRollout the Promotion was created by is recorded only if it
+// is one of the Promotion's own Project; an id naming no such rollout is
+// recorded as none. Once recorded it is kept, whatever the Promotion later
+// claims.
 func (q *Queries) UpsertPromotion(ctx context.Context, arg UpsertPromotionParams) (bool, error) {
 	row := q.db.QueryRow(ctx, upsertPromotion,
 		arg.ProjectName,
@@ -248,6 +275,7 @@ func (q *Queries) UpsertPromotion(ctx context.Context, arg UpsertPromotionParams
 		arg.StageName,
 		arg.FreightName,
 		arg.TargetName,
+		arg.PromotionRolloutID,
 		arg.Phase,
 		arg.FinishedAt,
 		arg.OriginKinds,
