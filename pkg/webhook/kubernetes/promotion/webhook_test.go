@@ -2900,7 +2900,7 @@ func Test_webhook_ValidateCreate_CacheMiss(t *testing.T) {
 				},
 				isRequestFromKargoControlplaneFn: func(admission.Request) bool { return true },
 			}
-			w.sender = &fakeevent.Sender{}
+			w.sender = k8sevent.NewEventSender(fakeevent.NewEventRecorder(1))
 			ctx := admission.NewContextWithRequest(t.Context(), admission.Request{})
 			_, err := w.ValidateCreate(ctx, promo)
 			if !testCase.invalid {
