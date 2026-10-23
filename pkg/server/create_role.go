@@ -8,7 +8,7 @@ import (
 
 	rbacapi "github.com/akuity/kargo/api/rbac/v1alpha1"
 	libhttp "github.com/akuity/kargo/pkg/http"
-	"github.com/akuity/kargo/pkg/server/middleware"
+	"github.com/akuity/kargo/pkg/server/request"
 )
 
 // @id CreateProjectRole
@@ -29,7 +29,7 @@ func (s *server) createProjectRole(c *gin.Context) {
 	project := c.Param("project")
 
 	role := &rbacapi.Role{}
-	if !middleware.BindJSON(c, role) {
+	if !request.BindJSON(c, role) {
 		return
 	}
 

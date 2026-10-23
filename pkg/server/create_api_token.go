@@ -12,7 +12,7 @@ import (
 	"github.com/akuity/kargo/pkg/event"
 	libhttp "github.com/akuity/kargo/pkg/http"
 	"github.com/akuity/kargo/pkg/logging"
-	"github.com/akuity/kargo/pkg/server/middleware"
+	"github.com/akuity/kargo/pkg/server/request"
 	"github.com/akuity/kargo/pkg/server/user"
 )
 
@@ -43,7 +43,7 @@ func (s *server) createProjectAPIToken(c *gin.Context) {
 	role := c.Param("role")
 
 	var req createAPITokenRequest
-	if !middleware.BindJSON(c, &req) {
+	if !request.BindJSON(c, &req) {
 		return
 	}
 	if req.Name == "" {
@@ -87,7 +87,7 @@ func (s *server) createSystemAPIToken(c *gin.Context) {
 	role := c.Param("role")
 
 	var req createAPITokenRequest
-	if !middleware.BindJSON(c, &req) {
+	if !request.BindJSON(c, &req) {
 		return
 	}
 	if req.Name == "" {

@@ -12,7 +12,7 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	libhttp "github.com/akuity/kargo/pkg/http"
-	"github.com/akuity/kargo/pkg/server/middleware"
+	"github.com/akuity/kargo/pkg/server/request"
 )
 
 // bindTarget reads a Target from the request body and checks it the way
@@ -23,7 +23,7 @@ import (
 func bindTarget(c *gin.Context) (*kargoapi.Target, bool) {
 	project, urlName := c.Param(paramProject), c.Param(paramName)
 	target := &kargoapi.Target{}
-	if !middleware.BindJSON(c, target) {
+	if !request.BindJSON(c, target) {
 		return nil, false
 	}
 	if urlName != "" {

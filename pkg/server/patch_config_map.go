@@ -10,7 +10,7 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	libhttp "github.com/akuity/kargo/pkg/http"
-	"github.com/akuity/kargo/pkg/server/middleware"
+	"github.com/akuity/kargo/pkg/server/request"
 )
 
 var errEmptyConfigMap = errors.New("ConfigMap data cannot be empty after patch")
@@ -45,7 +45,7 @@ func (s *server) patchProjectConfigMap(c *gin.Context) {
 	name := c.Param("configmap")
 
 	var req patchConfigMapRequest
-	if !middleware.BindJSON(c, &req) {
+	if !request.BindJSON(c, &req) {
 		return
 	}
 
@@ -92,7 +92,7 @@ func (s *server) patchSystemConfigMap(c *gin.Context) {
 	name := c.Param("configmap")
 
 	var req patchConfigMapRequest
-	if !middleware.BindJSON(c, &req) {
+	if !request.BindJSON(c, &req) {
 		return
 	}
 
@@ -142,7 +142,7 @@ func (s *server) patchSharedConfigMap(c *gin.Context) {
 	name := c.Param("configmap")
 
 	var req patchConfigMapRequest
-	if !middleware.BindJSON(c, &req) {
+	if !request.BindJSON(c, &req) {
 		return
 	}
 

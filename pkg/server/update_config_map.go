@@ -9,7 +9,7 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	libhttp "github.com/akuity/kargo/pkg/http"
-	"github.com/akuity/kargo/pkg/server/middleware"
+	"github.com/akuity/kargo/pkg/server/request"
 )
 
 // updateConfigMapRequest is the request body for updating a ConfigMap.
@@ -39,7 +39,7 @@ func (s *server) updateProjectConfigMap(c *gin.Context) {
 	name := c.Param("configmap")
 
 	var req updateConfigMapRequest
-	if !middleware.BindJSON(c, &req) {
+	if !request.BindJSON(c, &req) {
 		return
 	}
 
@@ -88,7 +88,7 @@ func (s *server) updateSystemConfigMap(c *gin.Context) {
 	name := c.Param("configmap")
 
 	var req updateConfigMapRequest
-	if !middleware.BindJSON(c, &req) {
+	if !request.BindJSON(c, &req) {
 		return
 	}
 
@@ -140,7 +140,7 @@ func (s *server) updateSharedConfigMap(c *gin.Context) {
 	name := c.Param("configmap")
 
 	var req updateConfigMapRequest
-	if !middleware.BindJSON(c, &req) {
+	if !request.BindJSON(c, &req) {
 		return
 	}
 

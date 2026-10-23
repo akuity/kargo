@@ -16,7 +16,7 @@ import (
 	libhttp "github.com/akuity/kargo/pkg/http"
 	"github.com/akuity/kargo/pkg/logging"
 	"github.com/akuity/kargo/pkg/server/auth/can"
-	"github.com/akuity/kargo/pkg/server/middleware"
+	"github.com/akuity/kargo/pkg/server/request"
 	"github.com/akuity/kargo/pkg/server/user"
 )
 
@@ -79,7 +79,7 @@ func (s *server) promoteToStage(c *gin.Context) {
 	stageName := c.Param("stage")
 
 	var req promoteToStageRequest
-	if !middleware.BindJSON(c, &req) {
+	if !request.BindJSON(c, &req) {
 		return
 	}
 

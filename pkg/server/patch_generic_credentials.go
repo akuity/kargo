@@ -9,7 +9,7 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	libhttp "github.com/akuity/kargo/pkg/http"
-	"github.com/akuity/kargo/pkg/server/middleware"
+	"github.com/akuity/kargo/pkg/server/request"
 )
 
 type patchGenericCredentialsRequest struct {
@@ -39,7 +39,7 @@ func (s *server) patchProjectGenericCredentials(c *gin.Context) {
 	name := c.Param("generic-credentials")
 
 	var req patchGenericCredentialsRequest
-	if !middleware.BindJSON(c, &req) {
+	if !request.BindJSON(c, &req) {
 		return
 	}
 
@@ -91,7 +91,7 @@ func (s *server) patchSystemGenericCredentials(c *gin.Context) {
 	name := c.Param("generic-credentials")
 
 	var req patchGenericCredentialsRequest
-	if !middleware.BindJSON(c, &req) {
+	if !request.BindJSON(c, &req) {
 		return
 	}
 
@@ -146,7 +146,7 @@ func (s *server) patchSharedGenericCredentials(c *gin.Context) {
 	name := c.Param("generic-credentials")
 
 	var req patchGenericCredentialsRequest
-	if !middleware.BindJSON(c, &req) {
+	if !request.BindJSON(c, &req) {
 		return
 	}
 

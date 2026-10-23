@@ -7,7 +7,7 @@ import (
 
 	rbacapi "github.com/akuity/kargo/api/rbac/v1alpha1"
 	libhttp "github.com/akuity/kargo/pkg/http"
-	"github.com/akuity/kargo/pkg/server/middleware"
+	"github.com/akuity/kargo/pkg/server/request"
 )
 
 // @id UpdateRole
@@ -30,7 +30,7 @@ func (s *server) updateRole(c *gin.Context) {
 	name := c.Param("role")
 
 	role := &rbacapi.Role{}
-	if !middleware.BindJSON(c, role) {
+	if !request.BindJSON(c, role) {
 		return
 	}
 

@@ -11,7 +11,7 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	libCreds "github.com/akuity/kargo/pkg/credentials"
 	libhttp "github.com/akuity/kargo/pkg/http"
-	"github.com/akuity/kargo/pkg/server/middleware"
+	"github.com/akuity/kargo/pkg/server/request"
 )
 
 // updateRepoCredentialsRequest is the request body for replacing repository credentials.
@@ -46,7 +46,7 @@ func (s *server) updateProjectRepoCredentials(c *gin.Context) {
 	name := c.Param("repo-credentials")
 
 	var req updateRepoCredentialsRequest
-	if !middleware.BindJSON(c, &req) {
+	if !request.BindJSON(c, &req) {
 		return
 	}
 
@@ -97,7 +97,7 @@ func (s *server) updateSharedRepoCredentials(c *gin.Context) {
 	name := c.Param("repo-credentials")
 
 	var req updateRepoCredentialsRequest
-	if !middleware.BindJSON(c, &req) {
+	if !request.BindJSON(c, &req) {
 		return
 	}
 

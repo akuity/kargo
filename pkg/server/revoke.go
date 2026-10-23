@@ -7,7 +7,7 @@ import (
 
 	rbacapi "github.com/akuity/kargo/api/rbac/v1alpha1"
 	libhttp "github.com/akuity/kargo/pkg/http"
-	"github.com/akuity/kargo/pkg/server/middleware"
+	"github.com/akuity/kargo/pkg/server/request"
 )
 
 // revokeRequest represents the request body for the Revoke REST endpoint.
@@ -34,7 +34,7 @@ func (s *server) revoke(c *gin.Context) {
 	project := c.Param("project")
 
 	var req revokeRequest
-	if !middleware.BindJSON(c, &req) {
+	if !request.BindJSON(c, &req) {
 		return
 	}
 
