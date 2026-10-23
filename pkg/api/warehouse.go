@@ -225,10 +225,10 @@ func ListFreightFromWarehouse(
 			}
 		}
 
-		// Track set of Stages that have passed the verification soak time
-		// for the Freight.
+		// Track set of VerifiedIn Stages in which the Freight has passed the
+		// verification soak time.
 		verifiedStages := sets.New[string]()
-		for stage := range f.Status.VerifiedIn {
+		for _, stage := range opts.VerifiedIn {
 			if f.HasSoakedIn(stage, opts.RequiredSoakTime) {
 				verifiedStages.Insert(stage)
 			}
