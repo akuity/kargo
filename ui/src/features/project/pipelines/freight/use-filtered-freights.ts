@@ -6,6 +6,7 @@ import { FreightTimelineControllerContextType } from '@ui/features/project/pipel
 import { Freight } from '@ui/gen/api/v2/models';
 
 import { timerangeToDate } from './filter-timerange-utils';
+import { getFreightDiscoveredAt } from './get-freight-discovered-at';
 import { filterFreightBySource, filterFreightByTimerange } from './source-catalogue-utils';
 
 export type FilteredFreight = Freight & { count?: number };
@@ -22,11 +23,10 @@ export const useFilteredFreights = (
     actionContext?.action?.type === IAction.PROMOTE_DOWNSTREAM;
 
   return useMemo(() => {
-    let filtered = [...(freights || [])].sort((a, b) => {
-      const t1 = new Date(a?.metadata?.creationTimestamp || '');
-      const t2 = new Date(b?.metadata?.creationTimestamp || '');
-      return (t2?.getTime() || 0) - (t1?.getTime() || 0);
-    });
+    let filtered = [...(freights || [])].sort(
+      (a, b) =>
+        (getFreightDiscoveredAt(b)?.getTime() || 0) - (getFreightDiscoveredAt(a)?.getTime() || 0)
+    );
 
     filtered = filtered
       .map(filterFreightBySource(preferredFilter.sources))
