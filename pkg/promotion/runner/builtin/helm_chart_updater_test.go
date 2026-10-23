@@ -297,6 +297,7 @@ func Test_helmChartUpdater_run(t *testing.T) {
 
 			stepCtx := tt.context
 			stepCtx.WorkDir = t.TempDir()
+			stepCtx.Root = newTestRoot(t, stepCtx.WorkDir)
 			chartMetadata := tt.chartMetadata
 
 			if tt.setupRepository != nil {
@@ -451,4 +452,21 @@ func Test_helmChartUpdater_generateCommitMessage(t *testing.T) {
 			tt.assertions(t, got)
 		})
 	}
+}
+
+func Test_helmChartUpdater_run_escapingSymlink(t *testing.T) {
+	workDir, outside := escapingWorkspace(t)
+	stepCtx := newTestStepContext(t, workDir)
+	require.NoError(t, stepCtx.Root.Mkdir("chart", 0o700))
+	chartYAML := "apiVersion: v2\nname: demo\nversion: 1.0.0\n" +
+		"dependencies:\n- name: dep\n  version: 1.0.0\n  repository: ''\n"
+	require.NoError(t, os.WriteFile(filepath.Join(outside, "Chart.yaml"), []byte(chartYAML), 0o600))
+	require.NoError(t, stepCtx.Root.Symlink("../../outside/Chart.yaml", "chart/Chart.yaml"))
+	_, err := (&helmChartUpdater{}).run(t.Context(), stepCtx, builtin.HelmUpdateChartConfig{
+		Path: "chart", Charts: []builtin.Chart{{Name: "dep", Version: "2.0.0"}},
+	})
+	require.ErrorContains(t, err, "path escapes from parent")
+	content, err := os.ReadFile(filepath.Join(outside, "Chart.yaml"))
+	require.NoError(t, err)
+	require.Equal(t, chartYAML, string(content))
 }

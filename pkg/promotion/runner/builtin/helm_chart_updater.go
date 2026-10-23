@@ -71,6 +71,18 @@ func (h *helmChartUpdater) run(
 	stepCtx *promotion.StepContext,
 	cfg builtin.HelmUpdateChartConfig,
 ) (promotion.StepResult, error) {
+	// The dependency manager reads and writes the chart directory by path and
+	// follows symlinks while doing so, so nothing beneath it may lead outside
+	// the workspace.
+	chartPath, err := promotion.WorkspacePath(cfg.Path)
+	if err != nil {
+		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, err
+	}
+	if err = statTree(stepCtx.Root, chartPath); err != nil {
+		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
+			fmt.Errorf("failed to check chart path %q: %w", cfg.Path, err)
+	}
+
 	manager, err := helm.NewEphemeralDependencyManager(h.credsDB, stepCtx.Project, stepCtx.WorkDir)
 	if err != nil {
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
