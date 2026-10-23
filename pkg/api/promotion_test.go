@@ -1007,6 +1007,11 @@ func Test_inflateTaskSteps(t *testing.T) {
 					Kind:        "PromotionTask",
 					Name:        "test-task",
 					Description: "Render and commit",
+					Vars: []kargoapi.ExpressionVariable{
+						{Name: "input2", Value: "default2"},
+						{Name: "input1", Value: "value1"},
+						{Name: "input2", Value: "value2"},
+					},
 				}
 				require.Equal(t, expectedRef, steps[0].Ref)
 				require.Equal(t, expectedRef, steps[1].Ref)
@@ -1094,6 +1099,9 @@ func Test_inflateTaskSteps(t *testing.T) {
 					&kargoapi.PromotionStepTaskRef{
 						Kind: "ClusterPromotionTask",
 						Name: "test-cluster-task",
+						Vars: []kargoapi.ExpressionVariable{
+							{Name: "input1", Value: "value1"},
+						},
 					},
 					steps[0].Ref,
 				)

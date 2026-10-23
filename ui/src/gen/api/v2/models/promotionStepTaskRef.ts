@@ -5,6 +5,7 @@
  * REST API for Kargo
  * OpenAPI spec version: v1alpha1
  */
+import type { ExpressionVariable } from './expressionVariable';
 
 export interface PromotionStepTaskRef {
   /** Description is the description of the step that referenced the task. */
@@ -16,4 +17,9 @@ export interface PromotionStepTaskRef {
   kind?: string;
   /** Name is the name of the (Cluster)PromotionTask. */
   name?: string;
+  /**
+   * Vars are the variables the task was inflated with: the task's defaults
+   * and the variables set by the step that referenced the task.
+   */
+  vars?: ExpressionVariable[];
 }
