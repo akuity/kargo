@@ -24,7 +24,9 @@ import (
 	"github.com/akuity/kargo/pkg/controller/management/projects"
 	"github.com/akuity/kargo/pkg/controller/management/replication"
 	"github.com/akuity/kargo/pkg/controller/management/serviceaccounts"
+	"github.com/akuity/kargo/pkg/controller/promotionrollouts"
 	"github.com/akuity/kargo/pkg/database"
+	"github.com/akuity/kargo/pkg/database/promotionrolloutstore"
 	"github.com/akuity/kargo/pkg/database/targetstore"
 	"github.com/akuity/kargo/pkg/logging"
 	"github.com/akuity/kargo/pkg/os"
@@ -153,6 +155,8 @@ func (o *managementControllerOptions) run(ctx context.Context) error {
 		}
 		defer pool.Close()
 		db = database.New(pool)
+	} else {
+		o.Logger.Info("no database is configured; PromotionRollouts will not be reconciled")
 	}
 	var targets projects.TargetCounter
 	if db != nil {
@@ -200,6 +204,15 @@ func (o *managementControllerOptions) run(ctx context.Context) error {
 	if db != nil {
 		if err := dbsync.SetupWithManager(ctx, kargoMgr, db); err != nil {
 			return err
+		}
+		if err := promotionrollouts.SetupWithManager(
+			ctx,
+			kargoMgr,
+			promotionrollouts.ReconcilerConfigFromEnv(),
+			promotionrolloutstore.New(db),
+			targetstore.New(db),
+		); err != nil {
+			return fmt.Errorf("error setting up PromotionRollouts reconciler: %w", err)
 		}
 	}
 
