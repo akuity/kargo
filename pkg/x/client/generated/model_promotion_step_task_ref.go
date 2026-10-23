@@ -25,6 +25,8 @@ type PromotionStepTaskRef struct {
 	Kind *string `json:"kind,omitempty"`
 	// Name is the name of the (Cluster)PromotionTask.
 	Name *string `json:"name,omitempty"`
+	// Vars are the variables the task was inflated with: the task's defaults and the variables set by the step that referenced the task.
+	Vars []ExpressionVariable `json:"vars,omitempty"`
 }
 
 // NewPromotionStepTaskRef instantiates a new PromotionStepTaskRef object
@@ -140,6 +142,38 @@ func (o *PromotionStepTaskRef) SetName(v string) {
 	o.Name = &v
 }
 
+// GetVars returns the Vars field value if set, zero value otherwise.
+func (o *PromotionStepTaskRef) GetVars() []ExpressionVariable {
+	if o == nil || IsNil(o.Vars) {
+		var ret []ExpressionVariable
+		return ret
+	}
+	return o.Vars
+}
+
+// GetVarsOk returns a tuple with the Vars field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *PromotionStepTaskRef) GetVarsOk() ([]ExpressionVariable, bool) {
+	if o == nil || IsNil(o.Vars) {
+		return nil, false
+	}
+	return o.Vars, true
+}
+
+// HasVars returns a boolean if a field has been set.
+func (o *PromotionStepTaskRef) HasVars() bool {
+	if o != nil && !IsNil(o.Vars) {
+		return true
+	}
+
+	return false
+}
+
+// SetVars gets a reference to the given []ExpressionVariable and assigns it to the Vars field.
+func (o *PromotionStepTaskRef) SetVars(v []ExpressionVariable) {
+	o.Vars = v
+}
+
 func (o PromotionStepTaskRef) MarshalJSON() ([]byte, error) {
 	toSerialize,err := o.ToMap()
 	if err != nil {
@@ -158,6 +192,9 @@ func (o PromotionStepTaskRef) ToMap() (map[string]interface{}, error) {
 	}
 	if !IsNil(o.Name) {
 		toSerialize["name"] = o.Name
+	}
+	if !IsNil(o.Vars) {
+		toSerialize["vars"] = o.Vars
 	}
 	return toSerialize, nil
 }

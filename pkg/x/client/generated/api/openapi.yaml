@@ -14194,6 +14194,13 @@ components:
         name:
           description: Name is the name of the (Cluster)PromotionTask.
           type: string
+        vars:
+          description: |-
+            Vars are the variables the task was inflated with: the task's defaults
+            and the variables set by the step that referenced the task.
+          items:
+            $ref: "#/components/schemas/ExpressionVariable"
+          type: array
       type: object
     PromotionTask:
       example:
