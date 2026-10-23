@@ -2,10 +2,13 @@ package chart
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"strings"
 
 	"github.com/Masterminds/semver/v3"
+	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
+	"oras.land/oras-go/v2"
 	"oras.land/oras-go/v2/registry"
 	"oras.land/oras-go/v2/registry/remote"
 
@@ -80,4 +83,22 @@ func (o *ociSelector) Select(ctx context.Context) ([]string, error) {
 	semvers = o.filterSemvers(semvers)
 	o.sort(semvers)
 	return o.semversToVersionStrings(semvers), nil
+}
+
+// Annotations implements Selector. Only the manifest is fetched, not chart layers.
+func (o *ociSelector) Annotations(ctx context.Context, version string) (map[string]string, error) {
+	// Helm encodes SemVer build metadata using "_" in OCI tags.
+	tag := strings.ReplaceAll(version, "+", "_")
+	_, data, err := oras.FetchBytes(ctx, o.repo, tag, oras.DefaultFetchBytesOptions)
+	if err != nil {
+		return nil, fmt.Errorf(
+			"error fetching manifest for chart version %q from repository %q: %w",
+			version, o.repoURL, err,
+		)
+	}
+	var manifest ocispec.Manifest
+	if err = json.Unmarshal(data, &manifest); err != nil {
+		return nil, fmt.Errorf("error decoding manifest for chart version %q: %w", version, err)
+	}
+	return manifest.Annotations, nil
 }
