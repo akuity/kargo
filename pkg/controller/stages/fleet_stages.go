@@ -574,10 +574,20 @@ func (r *FleetStageReconciler) syncPromotionRequests(
 			),
 		},
 	); err != nil {
-		return newStatus, fmt.Errorf(
+		err = fmt.Errorf(
 			"failed to list PromotionRequests for Stage %q in namespace %q: %w",
 			stage.Name, stage.Namespace, err,
 		)
+		// Whether a round is in flight is not known, so neither is whether the
+		// Stage is promoting.
+		conditions.Set(&newStatus, &metav1.Condition{
+			Type:               kargoapi.ConditionTypePromoting,
+			Status:             metav1.ConditionUnknown,
+			Reason:             "ListPromotionRequestsFailed",
+			Message:            err.Error(),
+			ObservedGeneration: stage.Generation,
+		})
+		return newStatus, err
 	}
 
 	// If there are no PromotionRequests, the Stage is fanning nothing out. Clear
@@ -603,11 +613,15 @@ func (r *FleetStageReconciler) syncPromotionRequests(
 	// like an active one.
 	//
 	// The Promoting condition follows the current reference, exactly as it
-	// follows the current Promotion of a Stage that is not target-aware, so that
-	// readers of the Stage's conditions (summarizeFleetConditions, the UI) see a
-	// Stage with a round in flight as promoting rather than as not Ready. It is
-	// updated in place rather than deleted and set anew, so that it keeps its
-	// transition time across reconciles of the same round.
+	// follows the current Promotion of a Stage that is not target-aware. While it
+	// is present, summarizeFleetConditions reports the Stage not Ready because it
+	// is promoting (reason ActivePromotion), which readers such as the UI tell
+	// apart from a Stage that is not Ready because something went wrong.
+	//
+	// Its transition time marks when the current round began. It is kept across
+	// reconciles of the same round, but a different round -- or a Stage that was
+	// not known to be promoting -- starts it afresh.
+	prevRequest := stage.Status.CurrentPromotionRequest
 	newStatus.CurrentPromotionRequest = nil
 	if highestPrioRequest := &promotionRequests.Items[0]; highestPrioRequest.Status.Phase.IsTerminal() {
 		conditions.Delete(&newStatus, kargoapi.ConditionTypePromoting)
@@ -618,13 +632,23 @@ func (r *FleetStageReconciler) syncPromotionRequests(
 		if highestPrioRequest.Status.Freight != nil {
 			newStatus.CurrentPromotionRequest.Freight = highestPrioRequest.Status.Freight.DeepCopy()
 		}
+		promoCond := conditions.Get(&newStatus, kargoapi.ConditionTypePromoting)
+		if prevRequest == nil || prevRequest.Name != highestPrioRequest.Name ||
+			promoCond == nil || promoCond.Status != metav1.ConditionTrue {
+			conditions.Delete(&newStatus, kargoapi.ConditionTypePromoting)
+		}
+		// A request no controller has picked up yet has no phase.
+		phase := highestPrioRequest.Status.Phase
+		if phase == "" {
+			phase = kargoapi.PromotionRequestPhasePending
+		}
 		conditions.Set(&newStatus, &metav1.Condition{
 			Type:   kargoapi.ConditionTypePromoting,
 			Status: metav1.ConditionTrue,
 			Reason: "ActivePromotion",
 			Message: fmt.Sprintf(
 				"PromotionRequest %q is currently %s",
-				highestPrioRequest.Name, highestPrioRequest.Status.Phase,
+				highestPrioRequest.Name, phase,
 			),
 			ObservedGeneration: stage.Generation,
 		})
