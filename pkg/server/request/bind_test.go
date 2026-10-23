@@ -42,6 +42,17 @@ func TestBindJSON(t *testing.T) {
 				require.Equal(t, http.StatusBadRequest, httpErr.Code())
 			},
 		},
+		{
+			name: "type mismatch",
+			body: `{"name": 1}`,
+			assert: func(t *testing.T, _ body, ok bool, c *gin.Context) {
+				require.False(t, ok)
+				require.Len(t, c.Errors, 1)
+				var httpErr *libhttp.HTTPError
+				require.ErrorAs(t, c.Errors[0].Err, &httpErr)
+				require.Equal(t, http.StatusBadRequest, httpErr.Code())
+			},
+		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
