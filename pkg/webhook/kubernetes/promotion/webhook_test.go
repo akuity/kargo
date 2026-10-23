@@ -2845,3 +2845,71 @@ func Test_webhook_Handle_PreservesUnrelatedDurationFormatting(t *testing.T) {
 		})
 	}
 }
+
+// Test_webhook_ValidateCreate_CacheMiss: a Freight the cache doesn't show as
+// available is confirmed against the API server (apiReader) before the
+// Promotion is refused.
+func Test_webhook_ValidateCreate_CacheMiss(t *testing.T) {
+	scheme := runtime.NewScheme()
+	require.NoError(t, kargoapi.AddToScheme(scheme))
+	origin := kargoapi.FreightOrigin{Kind: kargoapi.FreightOriginKindWarehouse, Name: "fake-warehouse"}
+	stage := &kargoapi.Stage{
+		ObjectMeta: metav1.ObjectMeta{Namespace: "fake-project", Name: "fake-stage"},
+		Spec: kargoapi.StageSpec{
+			RequestedFreight: []kargoapi.FreightRequest{{Origin: origin, Sources: kargoapi.FreightSources{Direct: true}}},
+		},
+	}
+	freight := &kargoapi.Freight{
+		ObjectMeta: metav1.ObjectMeta{Namespace: "fake-project", Name: "fake-freight"},
+		Origin:     origin,
+	}
+	promo := &kargoapi.Promotion{
+		ObjectMeta: metav1.ObjectMeta{Namespace: "fake-project"},
+		Spec: kargoapi.PromotionSpec{
+			Stage:   "fake-stage",
+			Freight: "fake-freight",
+			Steps:   []kargoapi.PromotionStep{{Uses: "fake-step"}},
+		},
+	}
+	for _, testCase := range []struct {
+		name    string
+		objects []client.Object
+		invalid bool
+	}{
+		{name: "available on the API server", objects: []client.Object{stage, freight}},
+		{name: "not on the API server either", objects: []client.Object{stage}, invalid: true},
+		// No Stage on the API server makes the confirm read fail: the cached refusal stands.
+		{name: "API server read fails", objects: nil, invalid: true},
+	} {
+		t.Run(testCase.name, func(t *testing.T) {
+			w := &webhook{
+				apiReader: fake.NewClientBuilder().WithScheme(scheme).WithObjects(testCase.objects...).Build(),
+				validateProjectFn: func(context.Context, client.Client, client.Object) error {
+					return nil
+				},
+				authorizeFn: func(context.Context, *kargoapi.Promotion, string) error {
+					return nil
+				},
+				admissionRequestFromContextFn: admission.RequestFromContext,
+				// The cache hasn't seen the Freight yet.
+				getStageFn: func(context.Context, client.Client, types.NamespacedName) (*kargoapi.Stage, error) {
+					return stage.DeepCopy(), nil
+				},
+				getFreightFn: func(context.Context, client.Client, types.NamespacedName) (*kargoapi.Freight, error) {
+					return nil, nil
+				},
+				isRequestFromKargoControlplaneFn: func(admission.Request) bool { return true },
+			}
+			w.sender = k8sevent.NewEventSender(fakeevent.NewEventRecorder(1))
+			ctx := admission.NewContextWithRequest(t.Context(), admission.Request{})
+			_, err := w.ValidateCreate(ctx, promo)
+			if !testCase.invalid {
+				require.NoError(t, err)
+				return
+			}
+			var statusErr *apierrors.StatusError
+			require.True(t, errors.As(err, &statusErr))
+			require.Equal(t, metav1.StatusReasonInvalid, statusErr.ErrStatus.Reason)
+		})
+	}
+}
