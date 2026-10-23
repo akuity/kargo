@@ -142,6 +142,55 @@ spec:
                         If the expression does not evaluate to a boolean value, the step will be
                         considered to have failed.
                       type: string
+                    ref:
+                      description: |-
+                        Ref identifies the (Cluster)PromotionTask this step was inflated
+                        from. It is set by Kargo when a Promotion is built from a
+                        PromotionTemplate and must not be set by users.
+                      properties:
+                        description:
+                          description: Description is the description of the step
+                            that referenced the task.
+                          type: string
+                        kind:
+                          description: |-
+                            Kind is the type of the task. Either PromotionTask or
+                            ClusterPromotionTask.
+                          type: string
+                        name:
+                          description: Name is the name of the (Cluster)PromotionTask.
+                          type: string
+                        vars:
+                          description: |-
+                            Vars are the variables the task was inflated with: the task's defaults
+                            and the variables set by the step that referenced the task.
+                          items:
+                            description: |-
+                              ExpressionVariable describes a single variable that may be referenced by
+                              expressions in the context of a ClusterPromotionTask, PromotionTask,
+                              Promotion, AnalysisRun arguments, or other objects that support expressions.
+
+                              It is used to pass information to the expression evaluation engine, and to
+                              allow for dynamic evaluation of expressions based on the variable values.
+                            properties:
+                              name:
+                                description: Name is the name of the variable.
+                                minLength: 1
+                                pattern: ^[a-zA-Z_]\w*$
+                                type: string
+                              value:
+                                description: |-
+                                  Value is the value of the variable. It is allowed to utilize expressions
+                                  in the value.
+                                  See https://docs.kargo.io/user-guide/reference-docs/expressions for details.
+                                type: string
+                            required:
+                            - name
+                            type: object
+                          type: array
+                      required:
+                      - name
+                      type: object
                     retry:
                       description: Retry is the retry policy for this step.
                       properties:

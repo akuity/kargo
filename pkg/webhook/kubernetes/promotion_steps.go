@@ -17,6 +17,15 @@ func ValidatePromotionSteps(
 	errs := field.ErrorList{}
 	indicesByAlias := make(map[string]int)
 	for i, step := range steps {
+		if step.Ref != nil {
+			errs = append(
+				errs,
+				field.Forbidden(
+					f.Index(i).Child("ref"),
+					"field is set by Kargo and must not be set",
+				),
+			)
+		}
 		stepAlias := strings.TrimSpace(step.As)
 		if stepAlias == "" {
 			continue

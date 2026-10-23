@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 	"time"
 
@@ -27,6 +28,9 @@ const (
 	// promotionShortHashLength is the length of the short Freight hash
 	// embedded in a generated Promotion name.
 	promotionShortHashLength = 7
+
+	kindPromotionTask        = "PromotionTask"
+	kindClusterPromotionTask = "ClusterPromotionTask"
 
 	// maxPrefixForPromotionName is the maximum length of the descriptive prefix
 	// of a generated Promotion name -- the Stage name, or the Stage and Target
@@ -371,6 +375,15 @@ func inflateTaskSteps(
 		return nil, err
 	}
 
+	ref := kargoapi.PromotionStepTaskRef{
+		Name:        taskStep.Task.Name,
+		Kind:        taskStep.Task.Kind,
+		Description: taskStep.Description,
+	}
+	if ref.Kind == "" {
+		ref.Kind = kindPromotionTask
+	}
+
 	var steps []kargoapi.PromotionStep
 	for i := range task.Steps {
 		// Copy the step as-is.
@@ -383,6 +396,10 @@ func inflateTaskSteps(
 		// With the variables validated and mapped, they are now available to
 		// the Config of the step during the Promotion execution.
 		step.Vars = append(vars, step.Vars...)
+
+		stepRef := ref
+		stepRef.Vars = slices.Clone(vars)
+		step.Ref = &stepRef
 
 		// Append the inflated step to the list of steps.
 		steps = append(steps, *step)
@@ -405,13 +422,13 @@ func getPromotionTaskSpec(
 	}
 
 	switch ref.Kind {
-	case "PromotionTask", "":
+	case kindPromotionTask, "":
 		task := &kargoapi.PromotionTask{}
 		if err := c.Get(ctx, client.ObjectKey{Namespace: project, Name: ref.Name}, task); err != nil {
 			return nil, err
 		}
 		spec = task.Spec
-	case "ClusterPromotionTask":
+	case kindClusterPromotionTask:
 		task := &kargoapi.ClusterPromotionTask{}
 		if err := c.Get(ctx, client.ObjectKey{Name: ref.Name}, task); err != nil {
 			return nil, err
