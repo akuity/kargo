@@ -1127,6 +1127,28 @@ func Test_calculateRequeueInterval(t *testing.T) {
 			},
 		},
 		{
+			name: "timeout deadline already passed",
+			promo: &kargoapi.Promotion{
+				Spec: kargoapi.PromotionSpec{
+					Steps: []kargoapi.PromotionStep{{
+						Uses: testStepKindWithTimeout,
+					}},
+				},
+				Status: kargoapi.PromotionStatus{
+					CurrentStep: 0,
+					StepExecutionMetadata: []kargoapi.StepExecutionMetadata{{
+						StartedAt: &metav1.Time{
+							Time: time.Now().Add(-testTimeout).Add(-time.Minute),
+						},
+					}},
+				},
+			},
+			assertions: func(t *testing.T, requeueInterval time.Duration) {
+				// controller-runtime drops non-positive RequeueAfter values.
+				require.Equal(t, minTimeoutRequeueInterval, requeueInterval)
+			},
+		},
+		{
 			name: "timeout would occur before next default interval elapses",
 			promo: &kargoapi.Promotion{
 				Spec: kargoapi.PromotionSpec{

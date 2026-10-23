@@ -899,6 +899,11 @@ var defaultRequeueInterval = 5 * time.Minute
 // -- now or in the future -- can drive a pathologically short interval.
 var minSuggestedRequeueInterval = 10 * time.Second
 
+// minTimeoutRequeueInterval is the shortest interval used to requeue a
+// Promotion so that a step's timeout deadline is checked promptly. It
+// guarantees the interval is always positive.
+const minTimeoutRequeueInterval = time.Second
+
 func calculateRequeueInterval(
 	ctx context.Context,
 	p *kargoapi.Promotion,
@@ -944,7 +949,9 @@ func calculateRequeueInterval(
 	md := p.Status.StepExecutionMetadata[p.Status.CurrentStep]
 	targetTimeout := md.StartedAt.Add(timeout)
 	if targetTimeout.Before(time.Now().Add(requeueInterval)) {
-		return time.Until(targetTimeout)
+		// controller-runtime only requeues when RequeueAfter is positive, so
+		// never return a non-positive interval if the deadline has just passed.
+		return max(time.Until(targetTimeout), minTimeoutRequeueInterval)
 	}
 	return requeueInterval
 }
