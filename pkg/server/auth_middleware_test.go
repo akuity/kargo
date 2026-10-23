@@ -247,6 +247,53 @@ func TestGetKeySet(t *testing.T) {
 	}
 }
 
+func TestGetKeySet_UnusableDiscoveryResponse(t *testing.T) {
+	testCases := []struct {
+		name   string
+		status int
+		body   string
+		assert func(*testing.T, error)
+	}{
+		{
+			// Keycloak answers this way while its database is unavailable
+			name:   "error status with JSON body",
+			status: http.StatusInternalServerError,
+			body:   `{"error":"unknown_error"}`,
+			assert: func(t *testing.T, err error) {
+				require.ErrorContains(t, err, "unexpected status 500")
+			},
+		},
+		{
+			name:   "no jwks_uri",
+			status: http.StatusOK,
+			body:   `{"issuer":"https://example.com"}`,
+			assert: func(t *testing.T, err error) {
+				require.ErrorContains(t, err, "has no jwks_uri")
+			},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			srv := httptest.NewServer(http.HandlerFunc(
+				func(w http.ResponseWriter, _ *http.Request) {
+					w.WriteHeader(testCase.status)
+					_, err := w.Write([]byte(testCase.body))
+					require.NoError(t, err)
+				},
+			))
+			t.Cleanup(srv.Close)
+			keyset, err := getKeySet(
+				t.Context(),
+				config.ServerConfig{
+					OIDCConfig: &libOIDC.Config{IssuerURL: srv.URL},
+				},
+			)
+			require.Nil(t, keyset)
+			testCase.assert(t, err)
+		})
+	}
+}
+
 func TestAuthenticate(t *testing.T) {
 	// The way the tests are structured, we don't need this to be valid. It just
 	// needs to be non-empty.
