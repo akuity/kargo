@@ -51,13 +51,14 @@ func LsRemote(
 	// setupDirs creates a temporary home directory that holds the ephemeral
 	// client configuration (and any SSH key material) needed to authenticate.
 	// There is no working tree or clone -- only the home directory -- so cleanup
-	// is a single RemoveAll.
-	if err := b.setupDirs(ctx, ""); err != nil {
-		return nil, err
-	}
+	// is a single RemoveAll. It's deferred before setupDirs runs because
+	// setupDirs can fail after creating the directory.
 	defer func() {
 		_ = os.RemoveAll(b.homeDir)
 	}()
+	if err := b.setupDirs(ctx, ""); err != nil {
+		return nil, err
+	}
 	if err := b.setupClient(ctx, clientOpts); err != nil {
 		return nil, err
 	}
