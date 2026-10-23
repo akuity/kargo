@@ -79,19 +79,35 @@ func (b *baseRepo) setupDirs(ctx context.Context, baseDir string) error {
 			b.originalURL, err,
 		)
 	}
-	if b.homeDir, err = filepath.EvalSymlinks(b.homeDir); err != nil {
+	resolvedHomeDir, err := filepath.EvalSymlinks(b.homeDir)
+	if err != nil {
 		return fmt.Errorf("error resolving symlinks in path %s: %w", b.homeDir, err)
 	}
+	b.homeDir = resolvedHomeDir
 	b.dir = filepath.Join(b.homeDir, "repo")
-	cmd := b.buildGitCommand(
-		ctx, "config", "--global", "init.defaultBranch", "main",
-	)
-	// Override the cmd.Dir that's set by b.buildGitCommand(). It's normally the
-	// repository's path, but if this method was called as part of the cloning
-	// process, that path may not exist yet.
-	cmd.Dir = b.homeDir
+	if err = b.setGlobalConfig(ctx, b.homeDir, "init.defaultBranch", "main"); err != nil {
+		return err
+	}
+	return b.disableAutoMaintenance(ctx, b.homeDir)
+}
+
+// disableAutoMaintenance stops git commands such as fetch and commit from
+// starting a detached "git maintenance run --auto", which can keep writing
+// into the repository after Close() has removed it.
+func (b *baseRepo) disableAutoMaintenance(ctx context.Context, homeDir string) error {
+	return b.setGlobalConfig(ctx, homeDir, "maintenance.auto", "false")
+}
+
+// setGlobalConfig writes a "global" git config value into the given virtual
+// home directory.
+func (b *baseRepo) setGlobalConfig(ctx context.Context, homeDir, key, value string) error {
+	cmd := b.buildGitCommand(ctx, "config", "--global", key, value)
+	// Override cmd.Dir set by buildGitCommand(). The repo path may not exist
+	// yet if called during clone.
+	cmd.Dir = homeDir
+	b.setCmdHome(cmd, homeDir)
 	if _, err := libExec.Exec(cmd); err != nil {
-		return fmt.Errorf("error configuring init.defaultBranch: %w", err)
+		return fmt.Errorf("error configuring %s: %w", key, err)
 	}
 	return nil
 }

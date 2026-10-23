@@ -294,6 +294,9 @@ func (w *workTree) Commit(
 				"error setting up author + committer information for commit command: %w", err,
 			)
 		}
+		if err = w.disableAutoMaintenance(ctx, homeDir); err != nil {
+			return err
+		}
 	}
 
 	cmdTokens := []string{"commit", "-m", message}
