@@ -622,8 +622,8 @@ func (r *FleetStageReconciler) syncPromotionRequests(
 	// reconciles of the same round, but a different round -- or a Stage that was
 	// not known to be promoting -- starts it afresh.
 	prevRequest := stage.Status.CurrentPromotionRequest
-	newStatus.CurrentPromotionRequest = nil
 	if highestPrioRequest := &promotionRequests.Items[0]; highestPrioRequest.Status.Phase.IsTerminal() {
+		newStatus.CurrentPromotionRequest = nil
 		conditions.Delete(&newStatus, kargoapi.ConditionTypePromoting)
 	} else {
 		newStatus.CurrentPromotionRequest = &kargoapi.PromotionRequestReference{
@@ -632,17 +632,12 @@ func (r *FleetStageReconciler) syncPromotionRequests(
 		if highestPrioRequest.Status.Freight != nil {
 			newStatus.CurrentPromotionRequest.Freight = highestPrioRequest.Status.Freight.DeepCopy()
 		}
-		promoCond := conditions.Get(&newStatus, kargoapi.ConditionTypePromoting)
-		if prevRequest == nil || prevRequest.Name != highestPrioRequest.Name ||
-			promoCond == nil || promoCond.Status != metav1.ConditionTrue {
-			conditions.Delete(&newStatus, kargoapi.ConditionTypePromoting)
-		}
 		// A request no controller has picked up yet has no phase.
 		phase := highestPrioRequest.Status.Phase
 		if phase == "" {
 			phase = kargoapi.PromotionRequestPhasePending
 		}
-		conditions.Set(&newStatus, &metav1.Condition{
+		promoCond := &metav1.Condition{
 			Type:   kargoapi.ConditionTypePromoting,
 			Status: metav1.ConditionTrue,
 			Reason: "ActivePromotion",
@@ -651,7 +646,16 @@ func (r *FleetStageReconciler) syncPromotionRequests(
 				highestPrioRequest.Name, phase,
 			),
 			ObservedGeneration: stage.Generation,
-		})
+		}
+		// conditions.Set carries the existing transition time over to a
+		// condition that does not specify one, so a new round must specify its
+		// own.
+		existing := conditions.Get(&newStatus, kargoapi.ConditionTypePromoting)
+		if prevRequest == nil || prevRequest.Name != highestPrioRequest.Name ||
+			existing == nil || existing.Status != metav1.ConditionTrue {
+			promoCond.LastTransitionTime = metav1.NewTime(time.Now().UTC().Truncate(time.Second))
+		}
+		conditions.Set(&newStatus, promoCond)
 	}
 
 	// Gather the terminal PromotionRequests newer than the one already recorded
