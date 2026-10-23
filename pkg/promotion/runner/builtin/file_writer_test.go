@@ -343,7 +343,7 @@ func Test_fileWriter_run_escapingSymlink(t *testing.T) {
 		newTestStepContext(t, workDir),
 		builtin.FileWriteConfig{Path: "out/new.txt", Contents: "x"},
 	)
-	require.ErrorContains(t, err, "path escapes from parent")
+	require.ErrorContains(t, err, "outside the working directory")
 	require.Equal(t, kargoapi.PromotionStepStatusFailed, result.Status)
 	require.NoFileExists(t, filepath.Join(outside, "new.txt"))
 	entries, err := os.ReadDir(workDir)
@@ -365,4 +365,16 @@ func Test_fileWriter_run_symlinkInsideWorkspace(t *testing.T) {
 	b, err := os.ReadFile(filepath.Join(workDir, "real", "new.txt"))
 	require.NoError(t, err)
 	require.Equal(t, "x", string(b))
+}
+
+func Test_fileWriter_run_gitDirectoryThroughSymlink(t *testing.T) {
+	stepCtx := newTestStepContext(t, t.TempDir())
+	require.NoError(t, stepCtx.Root.Mkdir(".git", 0o700))
+	require.NoError(t, stepCtx.Root.Symlink(".git", "alias"))
+	_, err := (&fileWriter{}).run(t.Context(), stepCtx, builtin.FileWriteConfig{
+		Path: "alias/config", Contents: "[core]\nsshCommand = arbitrary-command\n",
+	})
+	require.ErrorContains(t, err, "writing to the .git directory is forbidden")
+	_, err = stepCtx.Root.Stat(".git/config")
+	require.ErrorIs(t, err, os.ErrNotExist)
 }

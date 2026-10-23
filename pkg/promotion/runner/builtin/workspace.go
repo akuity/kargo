@@ -136,24 +136,29 @@ func hideNotExist(err error) error {
 }
 
 // resolvePath resolves the symlinks in rel, a path relative to root, and
-// returns the resulting path, also relative to root. A path that does not
-// exist is returned unchanged. It returns an error if the path resolves
-// outside root.
+// returns the resulting path, also relative to root. The longest existing
+// prefix of the path is resolved and the rest is appended unchanged, so a
+// path about to be created resolves through the symlinks above it. It
+// returns an error if the path resolves outside root.
 func resolvePath(root *os.Root, rel string) (string, error) {
-	resolved, err := filepath.EvalSymlinks(filepath.Join(root.Name(), rel))
-	if err != nil {
-		if errors.Is(err, fs.ErrNotExist) {
-			return rel, nil
-		}
-		return "", fmt.Errorf("failed to resolve path %q: %w", rel, err)
-	}
 	workDir, err := filepath.EvalSymlinks(root.Name())
 	if err != nil {
 		return "", fmt.Errorf("failed to resolve working directory: %w", err)
 	}
-	resolvedRel, err := filepath.Rel(workDir, resolved)
-	if err != nil || !filepath.IsLocal(resolvedRel) {
-		return "", fmt.Errorf("path %q resolves outside the working directory", rel)
+	prefix, rest := rel, ""
+	for {
+		resolved, err := filepath.EvalSymlinks(filepath.Join(root.Name(), prefix))
+		if err == nil {
+			resolvedRel, relErr := filepath.Rel(workDir, resolved)
+			if relErr != nil || !filepath.IsLocal(resolvedRel) {
+				return "", fmt.Errorf("path %q resolves outside the working directory", rel)
+			}
+			return filepath.Join(resolvedRel, rest), nil
+		}
+		if !errors.Is(err, fs.ErrNotExist) {
+			return "", fmt.Errorf("failed to resolve path %q: %w", rel, err)
+		}
+		rest = filepath.Join(filepath.Base(prefix), rest)
+		prefix = filepath.Dir(prefix)
 	}
-	return resolvedRel, nil
 }

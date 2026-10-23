@@ -79,7 +79,14 @@ func (f *fileWriter) run(
 			}
 	}
 
-	if cleanPath == ".git" || strings.HasPrefix(cleanPath, ".git"+string(filepath.Separator)) {
+	// The path is checked as it resolves, so a symlink cannot lead into the
+	// .git directory under another name.
+	resolvedPath, err := resolvePath(stepCtx.Root, cleanPath)
+	if err != nil {
+		return promotion.StepResult{Status: kargoapi.PromotionStepStatusFailed},
+			&promotion.TerminalError{Err: err}
+	}
+	if resolvedPath == ".git" || strings.HasPrefix(resolvedPath, ".git"+string(filepath.Separator)) {
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusFailed},
 			&promotion.TerminalError{
 				Err: fmt.Errorf("writing to the .git directory is forbidden: %q", cfg.Path),

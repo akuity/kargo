@@ -67,7 +67,7 @@ func Test_replace(t *testing.T) {
 		workDir, outside := escapingWorkspace(t)
 		root := newTestRoot(t, workDir)
 		require.NoError(t, root.WriteFile("src", []byte("x"), 0o600))
-		require.ErrorContains(t, replace(root, "src", "out/dst"), "path escapes from parent")
+		require.ErrorContains(t, replace(root, "src", "out/dst"), "outside the working directory")
 		require.NoFileExists(t, filepath.Join(outside, "dst"))
 	})
 }
@@ -138,6 +138,21 @@ func Test_resolvePath(t *testing.T) {
 			assert: func(t *testing.T, resolved string, err error) {
 				require.NoError(t, err)
 				require.Equal(t, "real/missing", resolved)
+			},
+		},
+		{
+			name: "missing path beneath a symlink inside the workspace",
+			path: "in/missing",
+			assert: func(t *testing.T, resolved string, err error) {
+				require.NoError(t, err)
+				require.Equal(t, "real/missing", resolved)
+			},
+		},
+		{
+			name: "missing path beneath a symlink outside the workspace",
+			path: "out/missing",
+			assert: func(t *testing.T, _ string, err error) {
+				require.ErrorContains(t, err, "outside the working directory")
 			},
 		},
 	}
