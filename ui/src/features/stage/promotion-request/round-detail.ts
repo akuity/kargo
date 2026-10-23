@@ -122,6 +122,14 @@ export const failedStepName = (promotion?: Promotion): string | undefined => {
 const didNotSucceed = (child: ChildPromotion) =>
   child.phase === 'Failed' || child.phase === 'Errored';
 
+// retryTargets names the Targets a retry of a round promotes to again: the
+// ones that did not succeed. A Target the round never reached is among them --
+// it has no child Promotion because the fan-out stopped short of it, which is
+// not the same as having succeeded. Aborted and still-running children count
+// too: the round is over, and whatever they are, they are not done well.
+export const retryTargets = (children: ChildPromotion[]): string[] =>
+  children.filter((child) => child.phase !== 'Succeeded').map((child) => child.target);
+
 // FailureTally is one line of the "where it failed" panel: what failed, how
 // many times, and -- where the question means anything -- out of how many.
 export type FailureTally = { key: string; failed: number; total?: number };

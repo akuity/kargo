@@ -5,6 +5,7 @@
  * REST API for Kargo
  * OpenAPI spec version: v1alpha1
  */
+import type { PromotionRequestUpdateStrategy } from './promotionRequestUpdateStrategy';
 
 export interface PromoteToStageRequest {
   freight?: string;
@@ -15,4 +16,6 @@ export interface PromoteToStageRequest {
    * candidate. Exactly one of Freight, FreightAlias, or Origin must be set.
    */
   origin?: string;
+  targets?: string[];
+  updateStrategy?: PromotionRequestUpdateStrategy;
 }
