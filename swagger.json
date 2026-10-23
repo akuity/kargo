@@ -8247,7 +8247,7 @@
           "description": "UpdateStrategy configures the pace of updating the targets\n+optional\n+kubebuilder:validation:XValidation:rule=\"self == oldSelf\"",
           "allOf": [
             {
-              "$ref": "#/definitions/TargetUpdateStrategy"
+              "$ref": "#/definitions/PromotionRequestUpdateStrategy"
             }
           ]
         }
@@ -8385,6 +8385,19 @@
       "required": [
         "name"
       ]
+    },
+    "PromotionRequestUpdateStrategy": {
+      "type": "object",
+      "properties": {
+        "maxConcurrent": {
+          "description": "MaxConcurrent specifies a number of targets which can be promoted to at the same time\nZero means there is no limit (default)",
+          "type": "integer"
+        },
+        "maxFailures": {
+          "description": "MaxFailures specifies a number of target promotions which can fail before PromotionRequest is considered failed.\nSpecifies a tolerable number, N failing promotions with maxFailures: N is a success, N+1 is a failure.\nDefaults to 0, meaning no failures tolerated.\n+kubebuilder:validation:Minimum=0",
+          "type": "integer"
+        }
+      }
     },
     "PromotionSpec": {
       "type": "object",
@@ -9202,8 +9215,10 @@
       "type": "object",
       "properties": {
         "maxConcurrent": {
-          "description": "MaxConcurrent specifies a number of targets which can be promoted to at the same time\nZero means there is no limit (default)",
-          "type": "integer"
+          "description": "MaxConcurrent specifies a number of targets which can be promoted to at the same time\nValue can be an absolute number (e.g.: 5) or a percentage of targets selected by the stage (e.g.: 10%).\nAbsolute number is calculated from percentage by rounding up to a minimum of 1.\nPercentage value cannot be 0%. Number value cannot be 0.\nIf omitted or empty string, no limit is applied (default)."
+        },
+        "maxFailures": {
+          "description": "MaxFailures specifies a number of target promotions which can fail before PromotionRequest is considered failed.\nSpecifies a tolerable number, N failing promotions with maxFailures: N is a success, N+1 is a failure.\nValue can be an absolute number (e.g.: 5) or a percentage of targets selected by the stage (e.g.: 10%).\nAbsolute number is calculated from percentage by rounding up to a minimum of 1. Default value is 0."
         }
       }
     },

@@ -88,6 +88,7 @@ func TestDiff(t *testing.T) {
 				context.Background(),
 				kube,
 				list,
+				UID,
 				snapshot,
 				func(obj *kargoapi.Project, name string) (bool, error) {
 					return obj.Name == name, testCase.matchErr

@@ -3665,6 +3665,7 @@ func TestFleetStageReconciler_autoPromoteFreight(t *testing.T) {
 					Name:      "test-stage",
 				},
 				Spec: kargoapi.StageSpec{
+					Targets:          &kargoapi.StageTargets{},
 					RequestedFreight: nil,
 				},
 			},
@@ -3692,6 +3693,7 @@ func TestFleetStageReconciler_autoPromoteFreight(t *testing.T) {
 					Name:      "test-stage",
 				},
 				Spec: kargoapi.StageSpec{
+					Targets: &kargoapi.StageTargets{},
 					RequestedFreight: []kargoapi.FreightRequest{
 						{
 							Origin: kargoapi.FreightOrigin{
@@ -3728,6 +3730,7 @@ func TestFleetStageReconciler_autoPromoteFreight(t *testing.T) {
 					Name:      "test-stage",
 				},
 				Spec: kargoapi.StageSpec{
+					Targets: &kargoapi.StageTargets{},
 					RequestedFreight: []kargoapi.FreightRequest{
 						{
 							Origin: kargoapi.FreightOrigin{
@@ -3807,6 +3810,7 @@ func TestFleetStageReconciler_autoPromoteFreight(t *testing.T) {
 					Name:      "test-stage",
 				},
 				Spec: kargoapi.StageSpec{
+					Targets: &kargoapi.StageTargets{},
 					RequestedFreight: []kargoapi.FreightRequest{
 						{
 							Origin: kargoapi.FreightOrigin{
@@ -3889,6 +3893,7 @@ func TestFleetStageReconciler_autoPromoteFreight(t *testing.T) {
 					Name:      "test-stage",
 				},
 				Spec: kargoapi.StageSpec{
+					Targets: &kargoapi.StageTargets{},
 					RequestedFreight: []kargoapi.FreightRequest{
 						{
 							Origin: kargoapi.FreightOrigin{
@@ -3967,6 +3972,7 @@ func TestFleetStageReconciler_autoPromoteFreight(t *testing.T) {
 					Name:      "test-stage",
 				},
 				Spec: kargoapi.StageSpec{
+					Targets: &kargoapi.StageTargets{},
 					RequestedFreight: []kargoapi.FreightRequest{
 						{
 							Origin: kargoapi.FreightOrigin{
@@ -4034,6 +4040,7 @@ func TestFleetStageReconciler_autoPromoteFreight(t *testing.T) {
 					Name:      "test-stage",
 				},
 				Spec: kargoapi.StageSpec{
+					Targets: &kargoapi.StageTargets{},
 					RequestedFreight: []kargoapi.FreightRequest{
 						{
 							Origin: kargoapi.FreightOrigin{
@@ -4111,6 +4118,7 @@ func TestFleetStageReconciler_autoPromoteFreight(t *testing.T) {
 					Name:      "test-stage",
 				},
 				Spec: kargoapi.StageSpec{
+					Targets: &kargoapi.StageTargets{},
 					RequestedFreight: []kargoapi.FreightRequest{
 						{
 							Origin: kargoapi.FreightOrigin{
@@ -4188,6 +4196,7 @@ func TestFleetStageReconciler_autoPromoteFreight(t *testing.T) {
 					Name:      "test-stage",
 				},
 				Spec: kargoapi.StageSpec{
+					Targets: &kargoapi.StageTargets{},
 					RequestedFreight: []kargoapi.FreightRequest{
 						{
 							Origin: kargoapi.FreightOrigin{
@@ -4263,6 +4272,7 @@ func TestFleetStageReconciler_autoPromoteFreight(t *testing.T) {
 					Name:      "test-stage",
 				},
 				Spec: kargoapi.StageSpec{
+					Targets: &kargoapi.StageTargets{},
 					RequestedFreight: []kargoapi.FreightRequest{
 						{
 							Origin: kargoapi.FreightOrigin{
@@ -4336,6 +4346,7 @@ func TestFleetStageReconciler_autoPromoteFreight(t *testing.T) {
 					Name:      "test-stage",
 				},
 				Spec: kargoapi.StageSpec{
+					Targets: &kargoapi.StageTargets{},
 					RequestedFreight: []kargoapi.FreightRequest{
 						{
 							Origin: kargoapi.FreightOrigin{
@@ -4443,6 +4454,7 @@ func TestFleetStageReconciler_autoPromoteFreight(t *testing.T) {
 					Name:      "test-stage",
 				},
 				Spec: kargoapi.StageSpec{
+					Targets: &kargoapi.StageTargets{},
 					RequestedFreight: []kargoapi.FreightRequest{
 						{
 							Origin: kargoapi.FreightOrigin{
@@ -4511,6 +4523,7 @@ func TestFleetStageReconciler_autoPromoteFreight(t *testing.T) {
 					Name:      "test-stage",
 				},
 				Spec: kargoapi.StageSpec{
+					Targets: &kargoapi.StageTargets{},
 					RequestedFreight: []kargoapi.FreightRequest{
 						{
 							Origin: kargoapi.FreightOrigin{
@@ -4613,6 +4626,7 @@ func TestFleetStageReconciler_autoPromoteFreight(t *testing.T) {
 					Name:      "test-stage",
 				},
 				Spec: kargoapi.StageSpec{
+					Targets: &kargoapi.StageTargets{},
 					RequestedFreight: []kargoapi.FreightRequest{
 						{
 							Origin: kargoapi.FreightOrigin{
@@ -4686,6 +4700,7 @@ func TestFleetStageReconciler_autoPromoteFreight(t *testing.T) {
 					Name:      "test-stage",
 				},
 				Spec: kargoapi.StageSpec{
+					Targets: &kargoapi.StageTargets{},
 					RequestedFreight: []kargoapi.FreightRequest{
 						{
 							Origin: kargoapi.FreightOrigin{
@@ -4755,6 +4770,7 @@ func TestFleetStageReconciler_autoPromoteFreight(t *testing.T) {
 					Name:      "test-stage",
 				},
 				Spec: kargoapi.StageSpec{
+					Targets: &kargoapi.StageTargets{},
 					RequestedFreight: []kargoapi.FreightRequest{
 						{
 							Origin: kargoapi.FreightOrigin{

@@ -22,6 +22,8 @@ type Syncer interface {
 	Sources(cache.Cache) []reconciler.Source[reconcile.Request]
 	Sync(context.Context, client.Object) error
 	// Delete is called only after Kubernetes confirms that the key is absent.
+	// A kind whose rows outlive their objects records the object as gone
+	// rather than deleting the row.
 	Delete(context.Context, client.ObjectKey) error
 	// Diff snapshots database rows before obtaining a Kubernetes list and
 	// returns every key whose mirror needs attention: objects with a missing

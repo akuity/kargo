@@ -15,6 +15,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -1057,6 +1058,7 @@ func Test_webhook_ValidateSpec(t *testing.T) {
 	}
 	w := &webhook{}
 	w.validatePromotionStepTaskRefsFn = w.validatePromotionStepTaskRefs
+	w.validateTargetsFn = w.validateTargets
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			testCase.assertions(
@@ -1565,6 +1567,118 @@ func Test_webhook_Handle_PreservesUnrelatedDurationFormatting(t *testing.T) {
 				return p.Path == testCase.path
 			})
 			require.Equalf(t, testCase.present, got, "patches: %+v", resp.Patches)
+		})
+	}
+}
+
+func Test_webhook_validateTargets(t *testing.T) {
+	testCases := []struct {
+		name       string
+		targets    *kargoapi.StageTargets
+		assertions func(*testing.T, field.ErrorList)
+	}{
+		{
+			name:    "nil targets is valid",
+			targets: nil,
+			assertions: func(t *testing.T, errs field.ErrorList) {
+				require.Empty(t, errs)
+			},
+		},
+		{
+			name:    "empty updateStrategy is valid",
+			targets: &kargoapi.StageTargets{},
+			assertions: func(t *testing.T, errs field.ErrorList) {
+				require.Empty(t, errs)
+			},
+		},
+		{
+			name: "integers updateStrategy is valid",
+			targets: &kargoapi.StageTargets{UpdateStrategy: kargoapi.TargetUpdateStrategy{
+				MaxConcurrent: new(intstr.FromInt(10)),
+				MaxFailures:   new(intstr.FromInt(10)),
+			}},
+			assertions: func(t *testing.T, errs field.ErrorList) {
+				require.Empty(t, errs)
+			},
+		},
+		{
+			name: "percentage strings updateStrategy is valid",
+			targets: &kargoapi.StageTargets{UpdateStrategy: kargoapi.TargetUpdateStrategy{
+				MaxConcurrent: new(intstr.FromString("20%")),
+				MaxFailures:   new(intstr.FromString("20%")),
+			}},
+			assertions: func(t *testing.T, errs field.ErrorList) {
+				require.Empty(t, errs)
+			},
+		},
+		{
+			name: "number below allowed is invalid",
+			targets: &kargoapi.StageTargets{UpdateStrategy: kargoapi.TargetUpdateStrategy{
+				MaxConcurrent: new(intstr.FromInt(0)),
+				MaxFailures:   new(intstr.FromInt(-1)),
+			}},
+			assertions: func(t *testing.T, errs field.ErrorList) {
+				require.Len(t, errs, 2)
+				require.Equal(t, field.ErrorTypeInvalid, errs[0].Type)
+				require.Equal(t, "targets.updateStrategy.maxConcurrent", errs[0].Field)
+				require.Equal(t, "value cannot be below 1", errs[0].Detail)
+
+				require.Equal(t, field.ErrorTypeInvalid, errs[1].Type)
+				require.Equal(t, "targets.updateStrategy.maxFailures", errs[1].Field)
+				require.Equal(t, "value cannot be below 0", errs[1].Detail)
+
+			},
+		},
+		{
+			name: "percentage below allowed is invalid",
+			targets: &kargoapi.StageTargets{UpdateStrategy: kargoapi.TargetUpdateStrategy{
+				MaxConcurrent: new(intstr.FromString("0%")),
+				MaxFailures:   new(intstr.FromString("-1%")),
+			}},
+			assertions: func(t *testing.T, errs field.ErrorList) {
+				require.Len(t, errs, 2)
+				require.Equal(t, field.ErrorTypeInvalid, errs[0].Type)
+				require.Equal(t, "targets.updateStrategy.maxConcurrent", errs[0].Field)
+				require.Equal(t, "value cannot be below 1", errs[0].Detail)
+
+				require.Equal(t, field.ErrorTypeInvalid, errs[1].Type)
+				require.Equal(t, "targets.updateStrategy.maxFailures", errs[1].Field)
+				require.Equal(t, "value cannot be below 0", errs[1].Detail)
+			},
+		},
+		{
+			name: "invalid percentage string",
+			targets: &kargoapi.StageTargets{UpdateStrategy: kargoapi.TargetUpdateStrategy{
+				MaxConcurrent: new(intstr.FromString("something")),
+				MaxFailures:   new(intstr.FromString("-1")),
+			}},
+			assertions: func(t *testing.T, errs field.ErrorList) {
+				require.Len(t, errs, 2)
+				require.Equal(t, field.ErrorTypeInvalid, errs[0].Type)
+				require.Equal(t, "targets.updateStrategy.maxConcurrent", errs[0].Field)
+				require.Equal(t,
+					"invalid value for IntOrString: invalid type: string is not a percentage",
+					errs[0].Detail)
+
+				require.Equal(t, field.ErrorTypeInvalid, errs[1].Type)
+				require.Equal(t, "targets.updateStrategy.maxFailures", errs[1].Field)
+				require.Equal(t,
+					"invalid value for IntOrString: invalid type: string is not a percentage",
+					errs[1].Detail)
+
+			},
+		},
+	}
+	w := &webhook{}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			testCase.assertions(
+				t,
+				w.validateTargets(
+					field.NewPath("targets"),
+					testCase.targets,
+				),
+			)
 		})
 	}
 }

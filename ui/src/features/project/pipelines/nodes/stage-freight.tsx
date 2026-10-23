@@ -15,6 +15,7 @@ import {
   isArtifactGitCommit,
   isArtifactImage
 } from '@ui/features/assemble-freight/artifact-type-guards';
+import { PromotionStatusPhase } from '@ui/features/common/promotion-status/utils';
 import { getCurrentFreight } from '@ui/features/common/utils';
 import {
   getGitCommitURL,
@@ -22,14 +23,7 @@ import {
   getImageSource
 } from '@ui/features/freight-timeline/open-container-initiative-utils';
 import { useGetFreightCreation } from '@ui/features/project/pipelines/freight/use-get-freight-creation';
-import {
-  ArtifactReference,
-  Chart,
-  FreightReference,
-  GitCommit,
-  Image,
-  Stage
-} from '@ui/gen/api/v2/models';
+import { ArtifactReference, Chart, GitCommit, Image, Stage } from '@ui/gen/api/v2/models';
 
 import './stage-node.less';
 
@@ -41,10 +35,12 @@ import { getAutoPromotionHold, holdStateMessage } from '../promotion/auto-promot
 
 import {
   ArtifactTypes,
-  selectFirstArtifact,
+  resolveArtifact,
+  resolveWarehouse,
   selectNextArtifact,
   selectPreviousArtifact
 } from './artifact-selector-utils';
+import { getLastPromotionRef } from './stage-meta-utils';
 
 export const StageFreight = (props: { stage: Stage }) => {
   const dictionaryContext = useDictionaryContext();
@@ -54,22 +50,35 @@ export const StageFreight = (props: { stage: Stage }) => {
 
   const warehouses = currentFreight?.map((f) => f.origin?.name);
 
-  const [selectedWarehouse, setSelectedWarehouse] = useState(warehouses?.[0]);
+  const lastPromotion = getLastPromotionRef(props.stage);
+  const lastSucceededOrigin =
+    lastPromotion?.phase === PromotionStatusPhase.SUCCEEDED
+      ? lastPromotion.freightOrigin
+      : undefined;
+
+  const [preferredWarehouse, setPreferredWarehouse] = useState(lastSucceededOrigin);
+  const [preferredArtifact, setPreferredArtifact] = useState<ArtifactTypes>();
 
   useEffect(() => {
-    if (selectedWarehouse) {
+    if (!lastSucceededOrigin) {
       return;
     }
 
-    setSelectedWarehouse(warehouses?.[0]);
-  }, [currentFreight]);
+    setPreferredWarehouse(lastSucceededOrigin);
+    setPreferredArtifact(undefined);
+  }, [lastPromotion?.kind, lastPromotion?.name, lastSucceededOrigin]);
 
-  const defaultToFirstFreight = () =>
-    currentFreight?.find((f) => f?.origin?.name === selectedWarehouse) as FreightReference;
+  const selectedWarehouse = resolveWarehouse(warehouses, preferredWarehouse);
 
-  const [selectedFreight, setSelectedFreight] = useState(defaultToFirstFreight);
+  const selectedFreight = useMemo(
+    () => currentFreight?.find((f) => f?.origin?.name === selectedWarehouse),
+    [currentFreight, selectedWarehouse]
+  );
 
-  useEffect(() => setSelectedFreight(defaultToFirstFreight()), [selectedWarehouse, props.stage]);
+  const setSelectedWarehouse = (warehouse?: string) => {
+    setPreferredWarehouse(warehouse);
+    setPreferredArtifact(undefined);
+  };
 
   const selectedAutoPromotionHold = useMemo(
     () => getAutoPromotionHold(props.stage, selectedFreight?.origin),
@@ -82,20 +91,20 @@ export const StageFreight = (props: { stage: Stage }) => {
   );
   const showFreightAlias = freightTimelineControllerContext?.preferredFilter?.showAlias;
 
-  const defaultToFirstArtifact = () =>
-    // @ts-expect-error FreightReference and Freight are same, at least in this case
-    selectFirstArtifact([selectedFreight]) as ArtifactTypes;
-
-  const [selectedArtifact, setSelectedArtifact] = useState(defaultToFirstArtifact());
-
-  useEffect(() => setSelectedArtifact(defaultToFirstArtifact()), [selectedFreight, props.stage]);
+  const selectedArtifact = resolveArtifact(selectedFreight, preferredArtifact);
 
   const onNextArtifact = () => {
-    setSelectedArtifact(selectNextArtifact(selectedFreight, selectedArtifact));
+    if (selectedFreight) {
+      setPreferredArtifact(selectNextArtifact(selectedFreight, selectedArtifact as ArtifactTypes));
+    }
   };
 
   const onPreviousArtifact = () => {
-    setSelectedArtifact(selectPreviousArtifact(selectedFreight, selectedArtifact));
+    if (selectedFreight) {
+      setPreferredArtifact(
+        selectPreviousArtifact(selectedFreight, selectedArtifact as ArtifactTypes)
+      );
+    }
   };
 
   const onNextWarehouse = () => {

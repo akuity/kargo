@@ -996,13 +996,21 @@ func (r *FleetStageReconciler) createAutoPromotionRequest(
 			"error listing Targets in Project %q: %w", stage.Namespace, err,
 		)
 	}
+
 	if targets, err = api.FilterTargetsForStage(stage, targets); err != nil {
 		return fmt.Errorf(
 			"error resolving Targets governed by Stage %q in namespace %q: %w",
 			stage.Name, stage.Namespace, err,
 		)
 	}
-	promotionRequest := api.NewPromotionRequest(stage, candidate.Name, targets)
+
+	promotionRequest, err := api.NewPromotionRequestForAllTargets(stage, candidate.Name, targets)
+	if err != nil {
+		return fmt.Errorf(
+			"error building PromotionRequest for Freight %q in namespace %q: %w",
+			candidate.Name, stage.Namespace, err,
+		)
+	}
 
 	if err = r.client.Create(ctx, promotionRequest); err != nil {
 		// An admission webhook may deny the create. Tolerate this as a

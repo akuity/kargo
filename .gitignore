@@ -1,4 +1,5 @@
 .claude/settings.local.json
+.helm/
 .idea/
 .pnpm-store/
 .vscode/
@@ -13,3 +14,4 @@ vendor/
 internal/server/ui/
 .DS_Store
 docs/static/swagger.json
+_site/

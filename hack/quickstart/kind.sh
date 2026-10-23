@@ -2,9 +2,9 @@
 
 set -x
 
-argo_cd_chart_version=9.4.3
-argo_rollouts_chart_version=2.40.6
-cert_manager_chart_version=1.19.3
+argo_cd_chart_version=10.10.5
+argo_rollouts_chart_version=2.43.8
+cert_manager_chart_version=1.21.2
 
 kind create cluster \
   --wait 120s \
@@ -16,16 +16,22 @@ nodes:
 - extraPortMappings:
   - containerPort: 31080 # Argo CD dashboard
     hostPort: 31080
+    listenAddress: "127.0.0.1"
   - containerPort: 31081 # Kargo dashboard
     hostPort: 31081
+    listenAddress: "127.0.0.1"
   - containerPort: 31082 # External webhooks server
     hostPort: 31082
+    listenAddress: "127.0.0.1"
   - containerPort: 32080 # test application instance
     hostPort: 32080
+    listenAddress: "127.0.0.1"
   - containerPort: 32081 # UAT application instance
     hostPort: 32081
+    listenAddress: "127.0.0.1"
   - containerPort: 32082 # prod application instance
     hostPort: 32082
+    listenAddress: "127.0.0.1"
   
 EOF
 
@@ -48,10 +54,6 @@ helm install argocd argo-cd \
   --set server.service.type=NodePort \
   --set server.service.nodePortHttp=31080 \
   --set 'server.extraArgs={--insecure}' \
-  --set server.extensions.enabled=true \
-  --set 'server.extensions.extensionList[0].name=argo-rollouts' \
-  --set 'server.extensions.extensionList[0].env[0].name=EXTENSION_URL' \
-  --set 'server.extensions.extensionList[0].env[0].value=https://github.com/argoproj-labs/rollout-extension/releases/download/v0.3.7/extension.tar' \
   --wait
 
 helm install argo-rollouts argo-rollouts \

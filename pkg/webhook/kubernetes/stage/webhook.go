@@ -8,6 +8,7 @@ import (
 	admissionv1 "k8s.io/api/admission/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -45,6 +46,8 @@ type webhook struct {
 		[]kargoapi.PromotionStep,
 	) field.ErrorList
 
+	validateTargetsFn func(*field.Path, *kargoapi.StageTargets) field.ErrorList
+
 	isRequestFromKargoControlplaneFn libWebhook.IsRequestFromKargoControlplaneFn
 }
 
@@ -75,6 +78,7 @@ func newWebhook(
 	w.validatePromotionStepTaskRefsFn = w.validatePromotionStepTaskRefs
 	w.isRequestFromKargoControlplaneFn =
 		libWebhook.IsRequestFromKargoControlplane(cfg.ControlplaneUserRegex)
+	w.validateTargetsFn = w.validateTargets
 	return w
 }
 
@@ -215,7 +219,72 @@ func (w *webhook) validateSpec(
 		)...,
 	)
 
+	errs = append(
+		errs,
+		w.validateTargetsFn(f.Child("targets"),
+			spec.Targets,
+		)...,
+	)
+
 	return errs
+}
+
+func (w *webhook) validateTargets(path *field.Path, targets *kargoapi.StageTargets) field.ErrorList {
+	errs := field.ErrorList{}
+	if targets == nil {
+		return errs
+	}
+	errs = append(errs, w.validateUpdateStrategy(path.Child("updateStrategy"), targets.UpdateStrategy)...)
+	return errs
+}
+
+func (w *webhook) validateUpdateStrategy(
+	path *field.Path,
+	updateStrategy kargoapi.TargetUpdateStrategy,
+) field.ErrorList {
+	errs := field.ErrorList{}
+	if updateStrategy.MaxConcurrent != nil {
+		// maxConcurrent cannot be below 1 or 1%
+		err := w.validateUpdateStrategyValue(
+			path.Child("maxConcurrent"),
+			updateStrategy.MaxConcurrent, 1)
+		if err != nil {
+			errs = append(errs, err)
+		}
+	}
+	if updateStrategy.MaxFailures != nil {
+		err := w.validateUpdateStrategyValue(
+			path.Child("maxFailures"),
+			updateStrategy.MaxFailures, 0)
+		if err != nil {
+			errs = append(errs, err)
+		}
+	}
+	return errs
+}
+
+func (w *webhook) validateUpdateStrategyValue(
+	valuePath *field.Path,
+	intOrStrValue *intstr.IntOrString,
+	allowedValueMin int,
+) *field.Error {
+	numberValue, err := intstr.GetScaledValueFromIntOrPercent(intOrStrValue, 100, true)
+	if err != nil {
+		return field.Invalid(
+			valuePath,
+			intOrStrValue,
+			err.Error(),
+		)
+	}
+
+	if numberValue < allowedValueMin {
+		return field.Invalid(
+			valuePath,
+			intOrStrValue,
+			fmt.Sprintf("value cannot be below %v", allowedValueMin),
+		)
+	}
+	return nil
 }
 
 func (w *webhook) validateRequestedFreight(

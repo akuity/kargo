@@ -347,3 +347,18 @@ tests:
     asserts:
       - failedTemplate:
           errorPattern: nats\.external\.url must be set when nats\.enabled is false
+
+---
+suite: NATS server
+values:
+  - ../test/values-unittest.yaml
+release:
+  namespace: kargo
+templates:
+  - charts/nats/templates/config-map.yaml
+tests:
+  - it: gives JetStream a memory store so in-memory streams can be created
+    asserts:
+      - matchRegex:
+          path: data["nats.conf"]
+          pattern: '"max_memory_store": 256Mi'

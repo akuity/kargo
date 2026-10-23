@@ -6,6 +6,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 )
@@ -269,7 +270,7 @@ func TestComparePromotionRequestByPhaseAndCreationTime(t *testing.T) {
 	}
 }
 
-func TestNewPromotionRequest(t *testing.T) {
+func TestNewPromotionRequestForAllTargets(t *testing.T) {
 	t.Parallel()
 
 	const (
@@ -305,7 +306,8 @@ func TestNewPromotionRequest(t *testing.T) {
 	t.Run("records the Stage, the Freight and the Targets it was given", func(t *testing.T) {
 		t.Parallel()
 
-		promoReq := NewPromotionRequest(testStage, freight, []kargoapi.Target{usEast, usWest})
+		promoReq, err := NewPromotionRequestForAllTargets(testStage, freight, []kargoapi.Target{usEast, usWest})
+		require.NoError(t, err)
 
 		require.Equal(t, project, promoReq.Namespace)
 		require.Equal(t, stage, promoReq.Spec.Stage)
@@ -325,7 +327,8 @@ func TestNewPromotionRequest(t *testing.T) {
 	t.Run("the Stage is the controlling owner", func(t *testing.T) {
 		t.Parallel()
 
-		promoReq := NewPromotionRequest(testStage, freight, []kargoapi.Target{usEast})
+		promoReq, err := NewPromotionRequestForAllTargets(testStage, freight, []kargoapi.Target{usEast})
+		require.NoError(t, err)
 
 		require.Len(t, promoReq.OwnerReferences, 1)
 		ownerRef := promoReq.OwnerReferences[0]
@@ -339,7 +342,8 @@ func TestNewPromotionRequest(t *testing.T) {
 	t.Run("identifying labels", func(t *testing.T) {
 		t.Parallel()
 
-		promoReq := NewPromotionRequest(testStage, freight, []kargoapi.Target{usEast})
+		promoReq, err := NewPromotionRequestForAllTargets(testStage, freight, []kargoapi.Target{usEast})
+		require.NoError(t, err)
 		require.Equal(t, stage, promoReq.Labels[kargoapi.LabelKeyStage])
 		// Without the shard label, only the default controller would ever
 		// reconcile this PromotionRequest.
@@ -351,7 +355,8 @@ func TestNewPromotionRequest(t *testing.T) {
 
 		unsharded := testStage.DeepCopy()
 		unsharded.Spec.Shard = ""
-		promoReq := NewPromotionRequest(unsharded, freight, []kargoapi.Target{usEast})
+		promoReq, err := NewPromotionRequestForAllTargets(unsharded, freight, []kargoapi.Target{usEast})
+		require.NoError(t, err)
 		require.NotContains(t, promoReq.Labels, kargoapi.LabelKeyShard)
 	})
 
@@ -361,10 +366,12 @@ func TestNewPromotionRequest(t *testing.T) {
 		// spec.targets is required and has no omitempty, so a nil slice would
 		// serialize as null and be rejected by the API server. An empty list
 		// records that the Stage governed no Targets at this moment.
-		promoReq := NewPromotionRequest(testStage, freight, nil)
+		promoReq, err := NewPromotionRequestForAllTargets(testStage, freight, nil)
+		require.NoError(t, err)
 		require.NotNil(t, promoReq.Spec.Targets)
 		require.Empty(t, promoReq.Spec.Targets)
 	})
+
 }
 
 // Two separate properties, and only the first one holds.
@@ -411,4 +418,92 @@ func TestGenerateChildPromotionNameOrdering(t *testing.T) {
 		east := GenerateChildPromotionName(stage, "us-east", freight)
 		require.Less(t, east, west)
 	})
+}
+
+func Test_calculateUpdateStrategy(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name             string
+		stageStrategy    kargoapi.TargetUpdateStrategy
+		targetCount      int
+		expectedStrategy kargoapi.PromotionRequestUpdateStrategy
+	}{
+		{
+			name:             "empty strategy maps to 0-s",
+			targetCount:      100,
+			stageStrategy:    kargoapi.TargetUpdateStrategy{},
+			expectedStrategy: kargoapi.PromotionRequestUpdateStrategy{},
+		},
+		{
+			name:        "number values map as is",
+			targetCount: 100,
+			stageStrategy: kargoapi.TargetUpdateStrategy{
+				MaxConcurrent: new(intstr.FromInt(10)),
+				MaxFailures:   new(intstr.FromInt(10)),
+			},
+			expectedStrategy: kargoapi.PromotionRequestUpdateStrategy{
+				MaxConcurrent: 10,
+				MaxFailures:   10,
+			},
+		},
+		{
+			name:        "percentage values resolve in actual values",
+			targetCount: 1000,
+			stageStrategy: kargoapi.TargetUpdateStrategy{
+				MaxConcurrent: new(intstr.FromString("16%")),
+				MaxFailures:   new(intstr.FromString("8%")),
+			},
+			expectedStrategy: kargoapi.PromotionRequestUpdateStrategy{
+				MaxConcurrent: 160,
+				MaxFailures:   80,
+			},
+		},
+		{
+			name:        "percentage values rounded up",
+			targetCount: 1111,
+			stageStrategy: kargoapi.TargetUpdateStrategy{
+				MaxConcurrent: new(intstr.FromString("16%")),
+				MaxFailures:   new(intstr.FromString("8%")),
+			},
+			expectedStrategy: kargoapi.PromotionRequestUpdateStrategy{
+				MaxConcurrent: 178,
+				MaxFailures:   89,
+			},
+		},
+		{
+			name:        "low percent value resolves into 1",
+			targetCount: 5,
+			stageStrategy: kargoapi.TargetUpdateStrategy{
+				MaxConcurrent: new(intstr.FromString("5%")),
+				MaxFailures:   new(intstr.FromString("5%")),
+			},
+			expectedStrategy: kargoapi.PromotionRequestUpdateStrategy{
+				MaxConcurrent: 1,
+				MaxFailures:   1,
+			},
+		},
+
+		{
+			name:        "over 100% is not an error",
+			targetCount: 100,
+			stageStrategy: kargoapi.TargetUpdateStrategy{
+				MaxConcurrent: new(intstr.FromString("105%")),
+			},
+			expectedStrategy: kargoapi.PromotionRequestUpdateStrategy{
+				MaxConcurrent: 105,
+				MaxFailures:   0,
+			},
+		},
+	}
+
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+			resultStrategy, err := calculateUpdateStrategy(testCase.stageStrategy, testCase.targetCount)
+			require.NoError(t, err)
+
+			require.Equal(t, testCase.expectedStrategy, resultStrategy)
+		})
+	}
 }
