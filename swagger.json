@@ -1597,6 +1597,168 @@
         ]
       }
     },
+    "/v1beta1/projects/{project}/promotion-rollouts": {
+      "get": {
+        "description": "List a project's PromotionRollouts, one page at a time, as\na PromotionRolloutList resource. A Project or a Stage may\nhave had any number of rollouts, so a list is never more\nthan one page, newest first: the Project's, or a Stage's,\nor a Stage's of one piece of Freight. When a page is full,\nthe list's metadata.continue names where the next page\nstarts; pass it as continue to read on. With after, a\nStage's rollouts numbered above it are listed oldest first\ninstead. With latest, the list is instead each Stage's\nlatest rollouts -- the one it is promoting through, if any,\nand the newest that has finished, if any -- which is what a\nreader of a Stage's state wants without reading its history.",
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "Core",
+          "Project-Level"
+        ],
+        "summary": "List PromotionRollouts",
+        "operationId": "ListPromotionRollouts",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "Project name",
+            "name": "project",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "description": "Only PromotionRollouts of this Stage",
+            "name": "stage",
+            "in": "query"
+          },
+          {
+            "type": "string",
+            "description": "Only PromotionRollouts of this Freight; requires stage",
+            "name": "freight",
+            "in": "query"
+          },
+          {
+            "type": "boolean",
+            "description": "Each Stage's latest rollouts, or the named Stage's; takes only stage besides",
+            "name": "latest",
+            "in": "query"
+          },
+          {
+            "type": "integer",
+            "format": "int64",
+            "description": "Only the Stage's PromotionRollouts numbered above this, oldest first; requires stage",
+            "name": "after",
+            "in": "query"
+          },
+          {
+            "type": "string",
+            "description": "The metadata.continue of the previous page, to read the page after it",
+            "name": "continue",
+            "in": "query"
+          },
+          {
+            "type": "integer",
+            "description": "The page size, at most 500; 50 if omitted",
+            "name": "limit",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "PromotionRolloutList resource",
+            "schema": {
+              "$ref": "#/definitions/PromotionRolloutList"
+            }
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      },
+      "post": {
+        "description": "Create a PromotionRollout in a project, which promotes the\nFreight named by spec.freight to each of the Targets the\nStage named by spec.stage governs. PromotionRollouts are\nmanaged through this API rather than as Kubernetes\nresources. The Stage must select Targets: its selectors are\nresolved against the project's Targets as the rollout is\ncreated, its update strategy against how many they match,\nand both are recorded with the rollout for good. The name,\nnumber, Targets, update strategy and status are assigned by\nthe server and must not be given. This is a promotion: it\nrequires the promote verb on the Stage.",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "Core",
+          "Project-Level"
+        ],
+        "summary": "Create a PromotionRollout",
+        "operationId": "CreatePromotionRollout",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "Project name",
+            "name": "project",
+            "in": "path",
+            "required": true
+          },
+          {
+            "description": "PromotionRollout resource",
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/PromotionRollout"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "PromotionRollout resource",
+            "schema": {
+              "$ref": "#/definitions/PromotionRollout"
+            }
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      }
+    },
+    "/v1beta1/projects/{project}/promotion-rollouts/{promotion-rollout-name}": {
+      "get": {
+        "description": "Retrieve one of a project's PromotionRollouts.",
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "Core",
+          "Project-Level"
+        ],
+        "summary": "Retrieve a PromotionRollout",
+        "operationId": "GetPromotionRollout",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "Project name",
+            "name": "project",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "description": "PromotionRollout name",
+            "name": "promotion-rollout-name",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "PromotionRollout resource",
+            "schema": {
+              "$ref": "#/definitions/PromotionRollout"
+            }
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      }
+    },
     "/v1beta1/projects/{project}/promotion-tasks": {
       "get": {
         "description": "List PromotionTask resources from a project's namespace. Returns\na PromotionTaskList resource.",
@@ -8395,6 +8557,210 @@
         },
         "maxFailures": {
           "description": "MaxFailures specifies a number of target promotions which can fail before PromotionRequest is considered failed.\nSpecifies a tolerable number, N failing promotions with maxFailures: N is a success, N+1 is a failure.\nDefaults to 0, meaning no failures tolerated.\n+kubebuilder:validation:Minimum=0",
+          "type": "integer"
+        }
+      }
+    },
+    "PromotionRollout": {
+      "type": "object",
+      "properties": {
+        "metadata": {
+          "$ref": "#/definitions/V1ObjectMeta"
+        },
+        "number": {
+          "description": "Number is the rollout's position among its Stage's rollouts, counting\nfrom 1. It is assigned when the rollout is created and never changes.",
+          "type": "integer"
+        },
+        "spec": {
+          "description": "Spec describes the Stage, the Freight, and the Targets of the\nPromotionRollout.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/PromotionRolloutSpec"
+            }
+          ]
+        },
+        "status": {
+          "description": "Status describes the per-Target progress and the aggregate state of the\nPromotionRollout's Promotions.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/PromotionRolloutStatus"
+            }
+          ]
+        }
+      }
+    },
+    "PromotionRolloutList": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/PromotionRollout"
+          }
+        },
+        "metadata": {
+          "$ref": "#/definitions/V1ListMeta"
+        }
+      }
+    },
+    "PromotionRolloutPhase": {
+      "type": "string",
+      "enum": [
+        "Pending",
+        "Running",
+        "Succeeded",
+        "Failed",
+        "Errored",
+        "Aborted"
+      ],
+      "x-enum-varnames": [
+        "PromotionRolloutPhasePending",
+        "PromotionRolloutPhaseRunning",
+        "PromotionRolloutPhaseSucceeded",
+        "PromotionRolloutPhaseFailed",
+        "PromotionRolloutPhaseErrored",
+        "PromotionRolloutPhaseAborted"
+      ]
+    },
+    "PromotionRolloutSpec": {
+      "type": "object",
+      "properties": {
+        "freight": {
+          "description": "Freight specifies the piece of Freight promoted by the Stage. The\nFreight is in the same Project as the PromotionRollout.",
+          "type": "string"
+        },
+        "stage": {
+          "description": "Stage specifies the name of the Stage that promotes the Freight. The\nStage is in the same Project as the PromotionRollout.",
+          "type": "string"
+        },
+        "targets": {
+          "description": "Targets names the Targets to which this PromotionRollout promotes\nFreight. Each Target is in the same Project as the PromotionRollout.\n\nThis is a resolved list, not a selector: the Stage's target selectors\nare evaluated once, when the rollout is created, and the result\nrecorded here. The list may be empty, which records that the governing\nStage governed no Targets at that moment.",
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/PromotionRolloutTarget"
+          }
+        },
+        "updateStrategy": {
+          "description": "UpdateStrategy configures the pace of updating the Targets.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/PromotionRolloutUpdateStrategy"
+            }
+          ]
+        }
+      }
+    },
+    "PromotionRolloutStatus": {
+      "type": "object",
+      "properties": {
+        "conditions": {
+          "description": "Conditions contains the last observations of the PromotionRollout's\ncurrent state.",
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/V1Condition"
+          }
+        },
+        "finishedAt": {
+          "description": "FinishedAt is the time at which the PromotionRollout completed.",
+          "type": "string"
+        },
+        "message": {
+          "description": "Message is a display message explaining the current Phase: what the\nPromotionRollout is waiting on, how far its fan-out has progressed, or\nwhy it did not succeed.",
+          "type": "string"
+        },
+        "phase": {
+          "description": "Phase is a high-level summary of the PromotionRollout's lifecycle.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/PromotionRolloutPhase"
+            }
+          ]
+        },
+        "startedAt": {
+          "description": "StartedAt is the time at which the PromotionRollout started.",
+          "type": "string"
+        },
+        "summary": {
+          "description": "Summary tallies the entries of Targets by phase.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/PromotionRolloutSummary"
+            }
+          ]
+        },
+        "targets": {
+          "description": "Targets records progress against spec.targets: one entry per Target\nthat has been promoted to, naming the latest Promotion promoting the\nFreight to it and that Promotion's phase. A Target promoted to more\nthan once within the rollout, for instance after a retry, reports its\nnewest Promotion.",
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/PromotionRolloutTargetStatus"
+          }
+        }
+      }
+    },
+    "PromotionRolloutSummary": {
+      "type": "object",
+      "properties": {
+        "aborted": {
+          "description": "Aborted is the number of Targets whose Promotion was Aborted.",
+          "type": "integer"
+        },
+        "errored": {
+          "description": "Errored is the number of Targets whose Promotion Errored.",
+          "type": "integer"
+        },
+        "failed": {
+          "description": "Failed is the number of Targets whose Promotion Failed.",
+          "type": "integer"
+        },
+        "pending": {
+          "description": "Pending is the number of Targets whose Promotion is Pending.",
+          "type": "integer"
+        },
+        "running": {
+          "description": "Running is the number of Targets whose Promotion is Running.",
+          "type": "integer"
+        },
+        "succeeded": {
+          "description": "Succeeded is the number of Targets whose Promotion Succeeded.",
+          "type": "integer"
+        }
+      }
+    },
+    "PromotionRolloutTarget": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "description": "Name is the name of the Target.",
+          "type": "string"
+        }
+      }
+    },
+    "PromotionRolloutTargetStatus": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "description": "Name is the name of the Target.",
+          "type": "string"
+        },
+        "phase": {
+          "description": "Phase is the phase of that Promotion.",
+          "type": "string"
+        },
+        "promotion": {
+          "description": "Promotion is the name of the newest Promotion promoting the Freight to\nthis Target.",
+          "type": "string"
+        }
+      }
+    },
+    "PromotionRolloutUpdateStrategy": {
+      "type": "object",
+      "properties": {
+        "maxConcurrent": {
+          "description": "MaxConcurrent specifies a number of Targets which can be promoted to at\nthe same time. Zero means there is no limit (default).\n\n+optional",
+          "type": "integer"
+        },
+        "maxFailures": {
+          "description": "MaxFailures specifies a number of Target promotions which can fail\nbefore the PromotionRollout is considered failed: N failing promotions\nwith maxFailures: N is a success, N+1 is a failure. Defaults to 0,\nmeaning no failures tolerated.\n\n+optional",
           "type": "integer"
         }
       }

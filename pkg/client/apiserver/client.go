@@ -1,9 +1,10 @@
 // Package apiserver is the control plane's client for the Kargo API server.
-// Some of what Kargo manages, such as Targets, lives in the control plane's
-// database rather than in Kubernetes, and only the API server serves it. A
-// component may run far from the control plane, on infrastructure where the
-// database is not reachable, so such a component never opens the database
-// itself; it asks the API server, which authorizes it like any other caller.
+// Some of what Kargo manages, such as Targets and PromotionRollouts, lives in
+// the control plane's database rather than in Kubernetes, and only the API
+// server serves it. A component may run far from the control plane, on
+// infrastructure where the database is not reachable, so such a component
+// never opens the database itself; it asks the API server, which authorizes
+// it like any other caller.
 //
 // The client authenticates as the ServiceAccount of the control plane that
 // the component's Kubernetes credential for the control plane resolves to.
@@ -75,8 +76,8 @@ func ClientConfigFromEnv() ClientConfig {
 	return cfg
 }
 
-// Client reads Targets from the Kargo API server through the generated
-// client that the CLI uses too.
+// Client reads Targets and reads and creates PromotionRollouts through the
+// Kargo API server, using the generated client that the CLI uses too.
 type Client struct {
 	api *kargogen.APIClient
 }
@@ -382,6 +383,99 @@ func (c *Client) GetTarget(ctx context.Context, project, name string) (*kargoapi
 	return target, nil
 }
 
+// PromotionRolloutListOptions narrows and bounds a list of
+// PromotionRollouts, as the API's query parameters do. A list is one page,
+// newest first; the list's Continue names where the next page starts, and
+// is passed back as Continue to read it. With After, a Stage's rollouts
+// numbered above it are listed oldest first. With Latest, the list is
+// instead each Stage's latest rollouts: the one it is promoting through, if
+// any, and the newest that has finished, if any.
+type PromotionRolloutListOptions struct {
+	Stage    string
+	Freight  string
+	Latest   bool
+	After    *int64
+	Continue string
+	Limit    int32
+}
+
+// ListPromotionRollouts returns one page of the Project's PromotionRollouts,
+// as the options narrow and bound it. The page's metadata.continue is set
+// when a further page may follow.
+func (c *Client) ListPromotionRollouts(
+	ctx context.Context,
+	project string,
+	opts PromotionRolloutListOptions,
+) (*kargoapi.PromotionRolloutList, error) {
+	req := c.api.CoreAPI.ListPromotionRollouts(ctx, project)
+	if opts.Stage != "" {
+		req = req.Stage(opts.Stage)
+	}
+	if opts.Freight != "" {
+		req = req.Freight(opts.Freight)
+	}
+	if opts.Latest {
+		req = req.Latest(true)
+	}
+	if opts.After != nil {
+		req = req.After(*opts.After)
+	}
+	if opts.Continue != "" {
+		req = req.Continue_(opts.Continue)
+	}
+	if opts.Limit > 0 {
+		req = req.Limit(opts.Limit)
+	}
+	list, resp, err := req.Execute()
+	if resp != nil {
+		_ = resp.Body.Close()
+	}
+	if err != nil {
+		return nil, fmt.Errorf(
+			"error listing PromotionRollouts in Project %q: %w", project, ResponseError(err, resp),
+		)
+	}
+	rollouts := &kargoapi.PromotionRolloutList{}
+	if err = convert(list, rollouts); err != nil {
+		return nil, fmt.Errorf("error decoding PromotionRollouts in Project %q: %w", project, err)
+	}
+	return rollouts, nil
+}
+
+// CreatePromotionRollout asks the API server to promote the Freight to the
+// Targets the Stage governs now, and returns the PromotionRollout it
+// created. The API server resolves the Targets and authorizes the request
+// as a promotion to the Stage; IsForbidden tells a refusal apart from a
+// failure.
+func (c *Client) CreatePromotionRollout(
+	ctx context.Context,
+	project string,
+	stage string,
+	freight string,
+) (*kargoapi.PromotionRollout, error) {
+	model, resp, err := c.api.CoreAPI.CreatePromotionRollout(ctx, project).
+		Body(kargogen.PromotionRollout{
+			Spec: &kargogen.PromotionRolloutSpec{Stage: &stage, Freight: &freight},
+		}).
+		Execute()
+	if resp != nil {
+		_ = resp.Body.Close()
+	}
+	if err != nil {
+		return nil, fmt.Errorf(
+			"error creating PromotionRollout for Stage %q in Project %q: %w",
+			stage, project, ResponseError(err, resp),
+		)
+	}
+	rollout := &kargoapi.PromotionRollout{}
+	if err = convert(model, rollout); err != nil {
+		return nil, fmt.Errorf(
+			"error decoding PromotionRollout for Stage %q in Project %q: %w", stage, project, err,
+		)
+	}
+	return rollout, nil
+}
+
 // convert re-encodes a model of the generated client as the API type it was
 // generated from. The two agree on their JSON, which is the only form either
 // is ever exchanged in.
@@ -435,6 +529,13 @@ func IsRetryable(err error) bool {
 	return errors.As(err, &netErr) ||
 		errors.Is(err, context.DeadlineExceeded) ||
 		errors.Is(err, context.Canceled)
+}
+
+// IsForbidden reports whether err is the API server refusing a request for
+// want of permission.
+func IsForbidden(err error) bool {
+	var apiErr *APIError
+	return errors.As(err, &apiErr) && apiErr.StatusCode == http.StatusForbidden
 }
 
 func (e *APIError) Error() string {

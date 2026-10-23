@@ -17,11 +17,18 @@ import (
 	"github.com/akuity/kargo/pkg/database/targetstore"
 )
 
+// Lister lists the Target rows of a Project. targetstore.Store is one.
+type Lister interface {
+	List(context.Context, string) ([]database.TargetRow, error)
+}
+
+var _ Lister = targetstore.Store(nil)
+
 // ListFromStore returns every Target of the Project as the resource the API
 // serves, for the server's own use where it needs Targets rather than rows.
 func ListFromStore(
 	ctx context.Context,
-	store targetstore.Store,
+	store Lister,
 	project string,
 ) ([]kargoapi.Target, error) {
 	rows, err := store.List(ctx, project)

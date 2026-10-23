@@ -62,7 +62,7 @@ tests:
         isKind:
           of: ClusterRole
 
-  - it: grants admins full PromotionRequest access
+  - it: grants admins full PromotionRequest and PromotionRollout access
     documentSelector:
       path: metadata.name
       value: kargo-admin
@@ -79,6 +79,7 @@ tests:
               - projects
               - projectconfigs
               - promotionrequests
+              - promotionrollouts
               - promotiontasks
               - stages
               - warehouses
@@ -109,7 +110,7 @@ tests:
               - list
               - watch
 
-  - it: grants viewers read-only PromotionRequest access
+  - it: grants viewers read-only PromotionRequest and PromotionRollout access
     documentSelector:
       path: metadata.name
       value: kargo-viewer
@@ -127,6 +128,7 @@ tests:
               - projectconfigs
               - promotions
               - promotionrequests
+              - promotionrollouts
               - promotiontasks
               - stages
               - targets
