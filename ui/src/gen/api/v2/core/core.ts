@@ -102,9 +102,9 @@ export const getListProjectsUrl = (params?: ListProjectsParams) => {
 
 /**
  * List all Projects resources. Supports server-side filtering by
- * name substring, by UID, and by namespaces mapped to the
- * authenticated user's ServiceAccounts, plus offset-based
- * pagination.
+ * name substring, by Kubernetes label selector, by UID, and by
+ * namespaces mapped to the authenticated user's ServiceAccounts,
+ * plus offset-based pagination.
  * @summary List projects
  */
 export const listProjects = async (
