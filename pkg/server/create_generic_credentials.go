@@ -10,6 +10,7 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	libhttp "github.com/akuity/kargo/pkg/http"
+	"github.com/akuity/kargo/pkg/server/request"
 )
 
 type genericCredentials struct {
@@ -52,7 +53,7 @@ func (s *server) createProjectGenericCredentials(c *gin.Context) {
 	project := c.Param("project")
 
 	var req createGenericCredentialsRequest
-	if !bindJSONOrError(c, &req) {
+	if !request.BindJSON(c, &req) {
 		return
 	}
 
@@ -94,7 +95,7 @@ func (s *server) createSystemGenericCredentials(c *gin.Context) {
 	ctx := c.Request.Context()
 
 	var req createGenericCredentialsRequest
-	if !bindJSONOrError(c, &req) {
+	if !request.BindJSON(c, &req) {
 		return
 	}
 
@@ -136,7 +137,7 @@ func (s *server) createSharedGenericCredentials(c *gin.Context) {
 	ctx := c.Request.Context()
 
 	var req createGenericCredentialsRequest
-	if !bindJSONOrError(c, &req) {
+	if !request.BindJSON(c, &req) {
 		return
 	}
 
