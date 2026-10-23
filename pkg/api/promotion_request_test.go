@@ -390,8 +390,8 @@ func TestPromotionRequestBuilder(t *testing.T) {
 			Build()
 
 		require.NoError(t, err)
-		require.Equal(t, 2, pr.Spec.UpdateStrategy.MaxConcurrent)
-		require.Equal(t, 2, pr.Spec.UpdateStrategy.MaxFailures)
+		require.Equal(t, int64(2), pr.Spec.UpdateStrategy.MaxConcurrent)
+		require.Equal(t, int64(2), pr.Spec.UpdateStrategy.MaxFailures)
 	})
 
 	t.Run("updateStrategy override overrides the calculation", func(t *testing.T) {
@@ -405,12 +405,15 @@ func TestPromotionRequestBuilder(t *testing.T) {
 		pr, err := NewPromotionRequestBuilder(testStage, freight).
 			WithStageTargets([]kargoapi.Target{usEast, usWest, usNorth, usSouth, usCenter}).
 			WithPromotionRequestTargets([]kargoapi.PromotionRequestTarget{{Name: "us-north"}}).
-			WithUpdateStrategy(&kargoapi.PromotionRequestUpdateStrategy{MaxConcurrent: 10, MaxFailures: 10}).
+			WithUpdateStrategy(&kargoapi.PromotionRequestUpdateStrategy{
+				MaxConcurrent: 10,
+				MaxFailures:   10,
+			}).
 			Build()
 
 		require.NoError(t, err)
-		require.Equal(t, 10, pr.Spec.UpdateStrategy.MaxConcurrent)
-		require.Equal(t, 10, pr.Spec.UpdateStrategy.MaxFailures)
+		require.Equal(t, int64(10), pr.Spec.UpdateStrategy.MaxConcurrent)
+		require.Equal(t, int64(10), pr.Spec.UpdateStrategy.MaxFailures)
 	})
 
 	t.Run("the Stage is the controlling owner", func(t *testing.T) {
@@ -449,7 +452,7 @@ func TestPromotionRequestBuilder(t *testing.T) {
 
 		unsharded := testStage.DeepCopy()
 		unsharded.Spec.Shard = ""
-		promoReq, err := NewPromotionRequestBuilder(testStage, freight).
+		promoReq, err := NewPromotionRequestBuilder(unsharded, freight).
 			WithStageTargets([]kargoapi.Target{usEast}).
 			Build()
 		require.NoError(t, err)
