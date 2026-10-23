@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest';
 
-import { PromotionRequest, Target } from '../../../../gen/api/v2/models';
+import { PromotionRollout, Target } from '../../../../gen/api/v2/models';
 import { targetRows } from '../../../project/targets/model/target-rows';
 import {
   fleetStage,
@@ -43,7 +43,7 @@ const colors: MarkColors = {
 
 const stage = fleetStage('prod', [{ matchLabels: { env: 'prod' } }], 'current');
 
-const rows = (targets: Target[], request?: PromotionRequest) =>
+const rows = (targets: Target[], request?: PromotionRollout) =>
   targetRows(targets, [stage], { prod: request });
 
 const governed = (name: string, status?: ReturnType<typeof stageStatus>) =>

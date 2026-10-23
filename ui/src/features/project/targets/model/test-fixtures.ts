@@ -1,5 +1,5 @@
 import {
-  PromotionRequest,
+  PromotionRollout,
   Stage,
   Target,
   TargetStageStatus,
@@ -47,8 +47,8 @@ export const forStage = (
 export const round = (
   stageName: string,
   targets: string[],
-  partial: Partial<PromotionRequest['status']> = {}
-): PromotionRequest => ({
+  partial: Partial<PromotionRollout['status']> = {}
+): PromotionRollout => ({
   metadata: { name: `${stageName}.01` },
   spec: { stage: stageName, freight: 'freight-new', targets: targets.map((name) => ({ name })) },
   status: partial

@@ -15,9 +15,9 @@ import {
 import { visibleLabels } from '@ui/features/project/targets/model/target-labels';
 import { TargetRow } from '@ui/features/project/targets/model/target-rows';
 import { FreightLink } from '@ui/features/project/targets/shared/freight-link';
-import { failedStepName } from '@ui/features/stage/promotion-request/round-detail';
+import { failedStepName } from '@ui/features/stage/promotion-rollout/round-detail';
 import { useGetPromotion } from '@ui/gen/api/v2/core/core';
-import { PromotionRequest } from '@ui/gen/api/v2/models';
+import { PromotionRollout } from '@ui/gen/api/v2/models';
 import { parseDate } from '@ui/utils/dates';
 
 import { childPromotionName, governing, owningTargetSet } from './summary';
@@ -95,7 +95,7 @@ export const TargetFacts = ({
   stageName: string;
   row: TargetRow;
   // The Stage's latest round, which names the child Promotion this Target got.
-  round?: PromotionRequest;
+  round?: PromotionRollout;
   // Whether that round is blocked, and so reached nothing.
   blocked?: boolean;
   // What the Stage itself is on, shown when this Target is not on it.
@@ -236,10 +236,10 @@ export const TargetFacts = ({
                   {' · '}
                   <Link
                     style={{ color: token.colorError }}
-                    to={generatePath(paths.promotionRequest, {
+                    to={generatePath(paths.promotionRollout, {
                       name: project,
                       stageName,
-                      promotionRequestName: round.metadata.name
+                      promotionRolloutName: round.metadata.name
                     })}
                   >
                     view request

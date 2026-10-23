@@ -62,6 +62,13 @@ const (
 	// resource to indicate that it is related to a specific promotion.
 	AnnotationKeyPromotion = "kargo.akuity.io/promotion"
 
+	// AnnotationKeyPromotionRollout is an annotation key set on a Promotion
+	// created as one part of a PromotionRollout's fan-out to Targets. Its
+	// value is the name of the PromotionRollout. A PromotionRollout is not a
+	// Kubernetes resource, so it cannot own the Promotion; this annotation
+	// is the link in place of an owner reference.
+	AnnotationKeyPromotionRollout = "kargo.akuity.io/promotion-rollout"
+
 	// AnnotationKeyArgoCDContext is an annotation key that is set on a Stage
 	// to reference the last ArgoCD Applications that were part of a Promotion.
 	AnnotationKeyArgoCDContext = "kargo.akuity.io/argocd-context"

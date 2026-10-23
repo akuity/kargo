@@ -263,17 +263,13 @@ func TestAbortPromotion(t *testing.T) {
 }
 
 func TestStageAwaitsPromotion(t *testing.T) {
-	requestChild := func(name, target, request string) *kargoapi.Promotion {
-		controller := true
+	rolloutChild := func(name, target, rollout string) *kargoapi.Promotion {
 		return &kargoapi.Promotion{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: name,
-				OwnerReferences: []metav1.OwnerReference{{
-					APIVersion: kargoapi.GroupVersion.String(),
-					Kind:       "PromotionRequest",
-					Name:       request,
-					Controller: &controller,
-				}},
+				Annotations: map[string]string{
+					kargoapi.AnnotationKeyPromotionRollout: rollout,
+				},
 			},
 			Spec: kargoapi.PromotionSpec{Stage: "test-stage", Target: target},
 		}
@@ -315,23 +311,23 @@ func TestStageAwaitsPromotion(t *testing.T) {
 			status: kargoapi.StageStatus{
 				CurrentPromotion: &kargoapi.PromotionReference{Name: "test-promotion"},
 			},
-			promo: requestChild("test-promotion", "blue", "test-request"),
+			promo: rolloutChild("test-promotion", "blue", "test-request"),
 		},
 		{
-			name:  "a Target Promotion is not admitted without a current PromotionRequest",
-			promo: requestChild("test-promotion", "blue", "test-request"),
+			name:  "a Target Promotion is not admitted without a current PromotionRollout",
+			promo: rolloutChild("test-promotion", "blue", "test-request"),
 		},
 		{
-			name: "a Target Promotion of a queued PromotionRequest is not admitted",
+			name: "a Target Promotion of a queued PromotionRollout is not admitted",
 			status: kargoapi.StageStatus{
 				CurrentPromotionRequest: &kargoapi.PromotionRequestReference{
 					Name: "current-request",
 				},
 			},
-			promo: requestChild("test-promotion", "blue", "queued-request"),
+			promo: rolloutChild("test-promotion", "blue", "queued-request"),
 		},
 		{
-			name: "a Target Promotion without a PromotionRequest owner is not admitted",
+			name: "a Target Promotion that names no PromotionRollout is not admitted",
 			status: kargoapi.StageStatus{
 				CurrentPromotionRequest: &kargoapi.PromotionRequestReference{
 					Name: "current-request",
@@ -343,13 +339,13 @@ func TestStageAwaitsPromotion(t *testing.T) {
 			},
 		},
 		{
-			name: "a Target Promotion of the current PromotionRequest is admitted",
+			name: "a Target Promotion of the current PromotionRollout is admitted",
 			status: kargoapi.StageStatus{
 				CurrentPromotionRequest: &kargoapi.PromotionRequestReference{
 					Name: "current-request",
 				},
 			},
-			promo:    requestChild("test-promotion", "blue", "current-request"),
+			promo:    rolloutChild("test-promotion", "blue", "current-request"),
 			expected: true,
 		},
 	}
@@ -362,57 +358,6 @@ func TestStageAwaitsPromotion(t *testing.T) {
 				testCase.expected,
 				StageAwaitsPromotion(stage, testCase.promo),
 			)
-		})
-	}
-}
-
-func TestPromotionRequestOwner(t *testing.T) {
-	controller := true
-	testCases := []struct {
-		name     string
-		owner    *metav1.OwnerReference
-		expected string
-	}{
-		{
-			name: "no owner",
-		},
-		{
-			name: "owner of another kind",
-			owner: &metav1.OwnerReference{
-				APIVersion: kargoapi.GroupVersion.String(),
-				Kind:       "Stage",
-				Name:       "test-stage",
-				Controller: &controller,
-			},
-		},
-		{
-			name: "owner of another group",
-			owner: &metav1.OwnerReference{
-				APIVersion: "apps/v1",
-				Kind:       "PromotionRequest",
-				Name:       "test-request",
-				Controller: &controller,
-			},
-		},
-		{
-			name: "PromotionRequest owner",
-			owner: &metav1.OwnerReference{
-				APIVersion: kargoapi.GroupVersion.String(),
-				Kind:       "PromotionRequest",
-				Name:       "test-request",
-				Controller: &controller,
-			},
-			expected: "test-request",
-		},
-	}
-	for _, testCase := range testCases {
-		t.Run(testCase.name, func(t *testing.T) {
-			t.Parallel()
-			promo := &kargoapi.Promotion{}
-			if testCase.owner != nil {
-				promo.OwnerReferences = []metav1.OwnerReference{*testCase.owner}
-			}
-			require.Equal(t, testCase.expected, PromotionRequestOwner(promo))
 		})
 	}
 }

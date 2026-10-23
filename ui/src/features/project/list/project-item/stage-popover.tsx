@@ -14,7 +14,7 @@ export const StagePopover = ({ project, stage }: { project?: string; stage?: Sta
   const lastPromotion = getLastPromotionRef(stage);
 
   // A classic Stage's last promotion is a Promotion, which is read to date it
-  // by its creation. A target-aware Stage's is a PromotionRequest, for which
+  // by its creation. A target-aware Stage's is a PromotionRollout, for which
   // the Stage's own reference already carries the time it finished.
   const isPromotion = lastPromotion?.kind === 'Promotion';
   const getPromotionQuery = useGetPromotion(project || '', lastPromotion?.name || '', {

@@ -32,7 +32,7 @@ import type {
   ListImages200,
   ListProjectsParams,
   ListProjectsResponse,
-  ListPromotionRequestsParams,
+  ListPromotionRolloutsParams,
   ListPromotionsParams,
   ListStagesParams,
   ListTargetsParams,
@@ -45,8 +45,8 @@ import type {
   PromoteToStageRequest,
   Promotion,
   PromotionList,
-  PromotionRequest,
-  PromotionRequestList,
+  PromotionRollout,
+  PromotionRolloutList,
   PromotionTask,
   PromotionTaskList,
   QueryFreightsRestParams,
@@ -2414,100 +2414,101 @@ export function useListImages<
   return withQueryKey(query, queryOptions.queryKey);
 }
 
-export type listPromotionRequestsResponse200 = {
-  data: PromotionRequestList;
+export type listPromotionRolloutsResponse200 = {
+  data: PromotionRolloutList;
   status: 200;
 };
 
-export type listPromotionRequestsResponseSuccess = listPromotionRequestsResponse200 & {
+export type listPromotionRolloutsResponseSuccess = listPromotionRolloutsResponse200 & {
   headers: Headers;
 };
-export type listPromotionRequestsResponse = listPromotionRequestsResponseSuccess;
+export type listPromotionRolloutsResponse = listPromotionRolloutsResponseSuccess;
 
-export const getListPromotionRequestsUrl = (
+export const getListPromotionRolloutsUrl = (
   project: string,
-  params?: ListPromotionRequestsParams
+  params?: ListPromotionRolloutsParams
 ) => {
   const stringifiedParams = serializeParams(params);
 
   return stringifiedParams.length > 0
-    ? `/v1beta1/projects/${project}/promotion-requests?${stringifiedParams}`
-    : `/v1beta1/projects/${project}/promotion-requests`;
+    ? `/v1beta1/projects/${project}/promotion-rollouts?${stringifiedParams}`
+    : `/v1beta1/projects/${project}/promotion-rollouts`;
 };
 
 /**
- * List PromotionRequest resources from a project's namespace.
- * Returns a PromotionRequestList resource.
- * @summary List PromotionRequests
+ * List a project's PromotionRollouts, optionally narrowed to
+ * those of a particular Stage, in creation order. Returns a
+ * PromotionRolloutList resource.
+ * @summary List PromotionRollouts
  */
-export const listPromotionRequests = async (
+export const listPromotionRollouts = async (
   project: string,
-  params?: ListPromotionRequestsParams,
+  params?: ListPromotionRolloutsParams,
   options?: Parameters<typeof customFetch>[1]
-): Promise<listPromotionRequestsResponse> => {
-  return customFetch<listPromotionRequestsResponse>(getListPromotionRequestsUrl(project, params), {
+): Promise<listPromotionRolloutsResponse> => {
+  return customFetch<listPromotionRolloutsResponse>(getListPromotionRolloutsUrl(project, params), {
     ...options,
     method: 'GET'
   });
 };
 
-export const getListPromotionRequestsQueryKey = (
+export const getListPromotionRolloutsQueryKey = (
   project: string,
-  params?: ListPromotionRequestsParams
+  params?: ListPromotionRolloutsParams
 ) => {
-  return [`/v1beta1/projects/${project}/promotion-requests`, ...(params ? [params] : [])] as const;
+  return [`/v1beta1/projects/${project}/promotion-rollouts`, ...(params ? [params] : [])] as const;
 };
 
-export const getListPromotionRequestsQueryOptions = <
-  TData = Awaited<ReturnType<typeof listPromotionRequests>>,
+export const getListPromotionRolloutsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listPromotionRollouts>>,
   TError = ErrorType<unknown>
 >(
   project: string,
-  params?: ListPromotionRequestsParams,
+  params?: ListPromotionRolloutsParams,
   options?: {
     query?: Partial<
-      UseQueryOptions<Awaited<ReturnType<typeof listPromotionRequests>>, TError, TData>
+      UseQueryOptions<Awaited<ReturnType<typeof listPromotionRollouts>>, TError, TData>
     >;
     request?: SecondParameter<typeof customFetch>;
   }
 ) => {
   const { query: queryOptions, request: requestOptions } = options ?? {};
 
-  const queryKey = queryOptions?.queryKey ?? getListPromotionRequestsQueryKey(project, params);
+  const queryKey = queryOptions?.queryKey ?? getListPromotionRolloutsQueryKey(project, params);
 
-  const queryFn: QueryFunction<Awaited<ReturnType<typeof listPromotionRequests>>> = () =>
-    listPromotionRequests(project, params, requestOptions);
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listPromotionRollouts>>> = () =>
+    listPromotionRollouts(project, params, requestOptions);
 
   return {
     queryKey,
     queryFn,
     enabled: project !== null && project !== undefined,
     ...queryOptions
-  } as UseQueryOptions<Awaited<ReturnType<typeof listPromotionRequests>>, TError, TData> & {
+  } as UseQueryOptions<Awaited<ReturnType<typeof listPromotionRollouts>>, TError, TData> & {
     queryKey: DataTag<QueryKey, TData, TError>;
   };
 };
 
-export type ListPromotionRequestsQueryResult = NonNullable<
-  Awaited<ReturnType<typeof listPromotionRequests>>
+export type ListPromotionRolloutsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listPromotionRollouts>>
 >;
-export type ListPromotionRequestsQueryError = ErrorType<unknown>;
+export type ListPromotionRolloutsQueryError = ErrorType<unknown>;
 
-export function useListPromotionRequests<
-  TData = Awaited<ReturnType<typeof listPromotionRequests>>,
+export function useListPromotionRollouts<
+  TData = Awaited<ReturnType<typeof listPromotionRollouts>>,
   TError = ErrorType<unknown>
 >(
   project: string,
-  params: undefined | ListPromotionRequestsParams,
+  params: undefined | ListPromotionRolloutsParams,
   options: {
     query: Partial<
-      UseQueryOptions<Awaited<ReturnType<typeof listPromotionRequests>>, TError, TData>
+      UseQueryOptions<Awaited<ReturnType<typeof listPromotionRollouts>>, TError, TData>
     > &
       Pick<
         DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof listPromotionRequests>>,
+          Awaited<ReturnType<typeof listPromotionRollouts>>,
           TError,
-          Awaited<ReturnType<typeof listPromotionRequests>>
+          Awaited<ReturnType<typeof listPromotionRollouts>>
         >,
         'initialData'
       >;
@@ -2515,21 +2516,21 @@ export function useListPromotionRequests<
   },
   queryClient?: QueryClient
 ): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-export function useListPromotionRequests<
-  TData = Awaited<ReturnType<typeof listPromotionRequests>>,
+export function useListPromotionRollouts<
+  TData = Awaited<ReturnType<typeof listPromotionRollouts>>,
   TError = ErrorType<unknown>
 >(
   project: string,
-  params?: ListPromotionRequestsParams,
+  params?: ListPromotionRolloutsParams,
   options?: {
     query?: Partial<
-      UseQueryOptions<Awaited<ReturnType<typeof listPromotionRequests>>, TError, TData>
+      UseQueryOptions<Awaited<ReturnType<typeof listPromotionRollouts>>, TError, TData>
     > &
       Pick<
         UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof listPromotionRequests>>,
+          Awaited<ReturnType<typeof listPromotionRollouts>>,
           TError,
-          Awaited<ReturnType<typeof listPromotionRequests>>
+          Awaited<ReturnType<typeof listPromotionRollouts>>
         >,
         'initialData'
       >;
@@ -2537,39 +2538,39 @@ export function useListPromotionRequests<
   },
   queryClient?: QueryClient
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-export function useListPromotionRequests<
-  TData = Awaited<ReturnType<typeof listPromotionRequests>>,
+export function useListPromotionRollouts<
+  TData = Awaited<ReturnType<typeof listPromotionRollouts>>,
   TError = ErrorType<unknown>
 >(
   project: string,
-  params?: ListPromotionRequestsParams,
+  params?: ListPromotionRolloutsParams,
   options?: {
     query?: Partial<
-      UseQueryOptions<Awaited<ReturnType<typeof listPromotionRequests>>, TError, TData>
+      UseQueryOptions<Awaited<ReturnType<typeof listPromotionRollouts>>, TError, TData>
     >;
     request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 /**
- * @summary List PromotionRequests
+ * @summary List PromotionRollouts
  */
 
-export function useListPromotionRequests<
-  TData = Awaited<ReturnType<typeof listPromotionRequests>>,
+export function useListPromotionRollouts<
+  TData = Awaited<ReturnType<typeof listPromotionRollouts>>,
   TError = ErrorType<unknown>
 >(
   project: string,
-  params?: ListPromotionRequestsParams,
+  params?: ListPromotionRolloutsParams,
   options?: {
     query?: Partial<
-      UseQueryOptions<Awaited<ReturnType<typeof listPromotionRequests>>, TError, TData>
+      UseQueryOptions<Awaited<ReturnType<typeof listPromotionRollouts>>, TError, TData>
     >;
     request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
-  const queryOptions = getListPromotionRequestsQueryOptions(project, params, options);
+  const queryOptions = getListPromotionRolloutsQueryOptions(project, params, options);
 
   const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
     queryKey: DataTag<QueryKey, TData, TError>;
@@ -2578,31 +2579,147 @@ export function useListPromotionRequests<
   return withQueryKey(query, queryOptions.queryKey);
 }
 
-export type getPromotionRequestResponse200 = {
-  data: PromotionRequest;
-  status: 200;
+export type createPromotionRolloutResponse201 = {
+  data: PromotionRollout;
+  status: 201;
 };
 
-export type getPromotionRequestResponseSuccess = getPromotionRequestResponse200 & {
+export type createPromotionRolloutResponseSuccess = createPromotionRolloutResponse201 & {
   headers: Headers;
 };
-export type getPromotionRequestResponse = getPromotionRequestResponseSuccess;
+export type createPromotionRolloutResponse = createPromotionRolloutResponseSuccess;
 
-export const getGetPromotionRequestUrl = (project: string, promotionRequest: string) => {
-  return `/v1beta1/projects/${project}/promotion-requests/${promotionRequest}`;
+export const getCreatePromotionRolloutUrl = (project: string) => {
+  return `/v1beta1/projects/${project}/promotion-rollouts`;
 };
 
 /**
- * Retrieve a PromotionRequest resource from a project's namespace.
- * @summary Retrieve a PromotionRequest
+ * Create a PromotionRollout in a project, which promotes the
+ * Freight named by spec.freight to each of the Targets the
+ * Stage named by spec.stage governs. PromotionRollouts are
+ * managed through this API rather than as Kubernetes
+ * resources. The Stage must select Targets; which ones are
+ * resolved by the rollout reconciler shortly after creation.
+ * The name, number, Targets, update strategy and status are
+ * assigned by the server and must not be given. This is a
+ * promotion: it requires the promote verb on the Stage, like
+ * the promote-to-stage endpoint, which creates a
+ * PromotionRollout the same way for such a Stage.
+ * @summary Create a PromotionRollout
  */
-export const getPromotionRequest = async (
+export const createPromotionRollout = async (
   project: string,
-  promotionRequest: string,
+  promotionRollout: PromotionRollout,
   options?: Parameters<typeof customFetch>[1]
-): Promise<getPromotionRequestResponse> => {
-  return customFetch<getPromotionRequestResponse>(
-    getGetPromotionRequestUrl(project, promotionRequest),
+): Promise<createPromotionRolloutResponse> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit['headers']>
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Array.isArray(h)) return Object.fromEntries(h);
+    return h;
+  };
+  return customFetch<createPromotionRolloutResponse>(getCreatePromotionRolloutUrl(project), {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(promotionRollout)
+  });
+};
+
+export const getCreatePromotionRolloutMutationKey = () => ['createPromotionRollout'] as const;
+
+export const getCreatePromotionRolloutMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createPromotionRollout>>,
+    TError,
+    CreatePromotionRolloutMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createPromotionRollout>>,
+  TError,
+  CreatePromotionRolloutMutationVariables,
+  TContext
+> => {
+  const mutationKey = getCreatePromotionRolloutMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createPromotionRollout>>,
+    CreatePromotionRolloutMutationVariables
+  > = (props) => {
+    const { project, data } = props ?? {};
+
+    return createPromotionRollout(project, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreatePromotionRolloutMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createPromotionRollout>>
+>;
+export type CreatePromotionRolloutMutationBody = PromotionRollout;
+export type CreatePromotionRolloutMutationError = ErrorType<unknown>;
+export type CreatePromotionRolloutMutationVariables = { project: string; data: PromotionRollout };
+
+/**
+ * @summary Create a PromotionRollout
+ */
+export const useCreatePromotionRollout = <TError = ErrorType<unknown>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof createPromotionRollout>>,
+      TError,
+      CreatePromotionRolloutMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient
+): UseMutationResult<
+  Awaited<ReturnType<typeof createPromotionRollout>>,
+  TError,
+  CreatePromotionRolloutMutationVariables,
+  TContext
+> => {
+  return useMutation(getCreatePromotionRolloutMutationOptions(options), queryClient);
+};
+export type getPromotionRolloutResponse200 = {
+  data: PromotionRollout;
+  status: 200;
+};
+
+export type getPromotionRolloutResponseSuccess = getPromotionRolloutResponse200 & {
+  headers: Headers;
+};
+export type getPromotionRolloutResponse = getPromotionRolloutResponseSuccess;
+
+export const getGetPromotionRolloutUrl = (project: string, promotionRolloutName: string) => {
+  return `/v1beta1/projects/${project}/promotion-rollouts/${promotionRolloutName}`;
+};
+
+/**
+ * Retrieve one of a project's PromotionRollouts.
+ * @summary Retrieve a PromotionRollout
+ */
+export const getPromotionRollout = async (
+  project: string,
+  promotionRolloutName: string,
+  options?: Parameters<typeof customFetch>[1]
+): Promise<getPromotionRolloutResponse> => {
+  return customFetch<getPromotionRolloutResponse>(
+    getGetPromotionRolloutUrl(project, promotionRolloutName),
     {
       ...options,
       method: 'GET'
@@ -2610,19 +2727,19 @@ export const getPromotionRequest = async (
   );
 };
 
-export const getGetPromotionRequestQueryKey = (project: string, promotionRequest: string) => {
-  return [`/v1beta1/projects/${project}/promotion-requests/${promotionRequest}`] as const;
+export const getGetPromotionRolloutQueryKey = (project: string, promotionRolloutName: string) => {
+  return [`/v1beta1/projects/${project}/promotion-rollouts/${promotionRolloutName}`] as const;
 };
 
-export const getGetPromotionRequestQueryOptions = <
-  TData = Awaited<ReturnType<typeof getPromotionRequest>>,
+export const getGetPromotionRolloutQueryOptions = <
+  TData = Awaited<ReturnType<typeof getPromotionRollout>>,
   TError = ErrorType<unknown>
 >(
   project: string,
-  promotionRequest: string,
+  promotionRolloutName: string,
   options?: {
     query?: Partial<
-      UseQueryOptions<Awaited<ReturnType<typeof getPromotionRequest>>, TError, TData>
+      UseQueryOptions<Awaited<ReturnType<typeof getPromotionRollout>>, TError, TData>
     >;
     request?: SecondParameter<typeof customFetch>;
   }
@@ -2630,10 +2747,10 @@ export const getGetPromotionRequestQueryOptions = <
   const { query: queryOptions, request: requestOptions } = options ?? {};
 
   const queryKey =
-    queryOptions?.queryKey ?? getGetPromotionRequestQueryKey(project, promotionRequest);
+    queryOptions?.queryKey ?? getGetPromotionRolloutQueryKey(project, promotionRolloutName);
 
-  const queryFn: QueryFunction<Awaited<ReturnType<typeof getPromotionRequest>>> = () =>
-    getPromotionRequest(project, promotionRequest, requestOptions);
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getPromotionRollout>>> = () =>
+    getPromotionRollout(project, promotionRolloutName, requestOptions);
 
   return {
     queryKey,
@@ -2641,34 +2758,34 @@ export const getGetPromotionRequestQueryOptions = <
     enabled:
       project !== null &&
       project !== undefined &&
-      promotionRequest !== null &&
-      promotionRequest !== undefined,
+      promotionRolloutName !== null &&
+      promotionRolloutName !== undefined,
     ...queryOptions
-  } as UseQueryOptions<Awaited<ReturnType<typeof getPromotionRequest>>, TError, TData> & {
+  } as UseQueryOptions<Awaited<ReturnType<typeof getPromotionRollout>>, TError, TData> & {
     queryKey: DataTag<QueryKey, TData, TError>;
   };
 };
 
-export type GetPromotionRequestQueryResult = NonNullable<
-  Awaited<ReturnType<typeof getPromotionRequest>>
+export type GetPromotionRolloutQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getPromotionRollout>>
 >;
-export type GetPromotionRequestQueryError = ErrorType<unknown>;
+export type GetPromotionRolloutQueryError = ErrorType<unknown>;
 
-export function useGetPromotionRequest<
-  TData = Awaited<ReturnType<typeof getPromotionRequest>>,
+export function useGetPromotionRollout<
+  TData = Awaited<ReturnType<typeof getPromotionRollout>>,
   TError = ErrorType<unknown>
 >(
   project: string,
-  promotionRequest: string,
+  promotionRolloutName: string,
   options: {
     query: Partial<
-      UseQueryOptions<Awaited<ReturnType<typeof getPromotionRequest>>, TError, TData>
+      UseQueryOptions<Awaited<ReturnType<typeof getPromotionRollout>>, TError, TData>
     > &
       Pick<
         DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof getPromotionRequest>>,
+          Awaited<ReturnType<typeof getPromotionRollout>>,
           TError,
-          Awaited<ReturnType<typeof getPromotionRequest>>
+          Awaited<ReturnType<typeof getPromotionRollout>>
         >,
         'initialData'
       >;
@@ -2676,21 +2793,21 @@ export function useGetPromotionRequest<
   },
   queryClient?: QueryClient
 ): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-export function useGetPromotionRequest<
-  TData = Awaited<ReturnType<typeof getPromotionRequest>>,
+export function useGetPromotionRollout<
+  TData = Awaited<ReturnType<typeof getPromotionRollout>>,
   TError = ErrorType<unknown>
 >(
   project: string,
-  promotionRequest: string,
+  promotionRolloutName: string,
   options?: {
     query?: Partial<
-      UseQueryOptions<Awaited<ReturnType<typeof getPromotionRequest>>, TError, TData>
+      UseQueryOptions<Awaited<ReturnType<typeof getPromotionRollout>>, TError, TData>
     > &
       Pick<
         UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof getPromotionRequest>>,
+          Awaited<ReturnType<typeof getPromotionRollout>>,
           TError,
-          Awaited<ReturnType<typeof getPromotionRequest>>
+          Awaited<ReturnType<typeof getPromotionRollout>>
         >,
         'initialData'
       >;
@@ -2698,39 +2815,39 @@ export function useGetPromotionRequest<
   },
   queryClient?: QueryClient
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-export function useGetPromotionRequest<
-  TData = Awaited<ReturnType<typeof getPromotionRequest>>,
+export function useGetPromotionRollout<
+  TData = Awaited<ReturnType<typeof getPromotionRollout>>,
   TError = ErrorType<unknown>
 >(
   project: string,
-  promotionRequest: string,
+  promotionRolloutName: string,
   options?: {
     query?: Partial<
-      UseQueryOptions<Awaited<ReturnType<typeof getPromotionRequest>>, TError, TData>
+      UseQueryOptions<Awaited<ReturnType<typeof getPromotionRollout>>, TError, TData>
     >;
     request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 /**
- * @summary Retrieve a PromotionRequest
+ * @summary Retrieve a PromotionRollout
  */
 
-export function useGetPromotionRequest<
-  TData = Awaited<ReturnType<typeof getPromotionRequest>>,
+export function useGetPromotionRollout<
+  TData = Awaited<ReturnType<typeof getPromotionRollout>>,
   TError = ErrorType<unknown>
 >(
   project: string,
-  promotionRequest: string,
+  promotionRolloutName: string,
   options?: {
     query?: Partial<
-      UseQueryOptions<Awaited<ReturnType<typeof getPromotionRequest>>, TError, TData>
+      UseQueryOptions<Awaited<ReturnType<typeof getPromotionRollout>>, TError, TData>
     >;
     request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
-  const queryOptions = getGetPromotionRequestQueryOptions(project, promotionRequest, options);
+  const queryOptions = getGetPromotionRolloutQueryOptions(project, promotionRolloutName, options);
 
   const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
     queryKey: DataTag<QueryKey, TData, TError>;
@@ -4045,7 +4162,7 @@ export const getPromoteToStageUrl = (project: string, stage: string) => {
 /**
  * Create a Promotion resource to transition a specified Stage into
  * the state represented by the specified Freight.
- * A Stage that selects Targets yields a PromotionRequest, which fans
+ * A Stage that selects Targets yields a PromotionRollout, which fans
  * the Freight out to each of them, in place of a single Promotion.
  * @summary Promote to Stage
  */
@@ -4157,7 +4274,7 @@ export const getPromoteDownstreamUrl = (project: string, stage: string) => {
 /**
  * Creates a Promotion resource for each of a Stage's immediately
  * downstream Stages. Downstream Stages that select Targets yield a
- * PromotionRequest each, returned separately under "promotionRequests".
+ * PromotionRollout each, returned separately under "promotionRollouts".
  * @summary Promote downstream
  */
 export const promoteDownstream = async (

@@ -218,8 +218,8 @@ func NewPromotionAcknowledgedByStageHandler[T any](
 // PromotionAcknowledgedByStageHandler is an event handler that enqueues a
 // Promotion for reconciliation when it has been acknowledged by the Stage\
 // it is for. That is the Stage's current Promotion when one changes, and
-// every child of the Stage's current PromotionRequest when that changes: the
-// children of a newly current request -- at most one per Target -- are all
+// every child of the Stage's current PromotionRollout when that changes: the
+// children of a newly current rollout -- at most one per Target -- are all
 // admitted at once.
 type PromotionAcknowledgedByStageHandler[T any] struct {
 	kargoClient    client.Client
@@ -308,9 +308,8 @@ func (p *PromotionAcknowledgedByStageHandler[T]) Update(
 }
 
 // enqueueChildrenOf enqueues every non-terminal child Promotion of the named
-// PromotionRequest for reconciliation. It lists the Stage's Promotions by
-// label, since a child carries the Stage label but is owned by the
-// PromotionRequest that created it.
+// PromotionRollout for reconciliation. It lists the Stage's Promotions by
+// label and keeps those annotated with the rollout that created them.
 func (p *PromotionAcknowledgedByStageHandler[T]) enqueueChildrenOf(
 	ctx context.Context,
 	stage *kargoapi.Stage,
@@ -339,7 +338,7 @@ func (p *PromotionAcknowledgedByStageHandler[T]) enqueueChildrenOf(
 		if promo.Status.Phase.IsTerminal() {
 			continue
 		}
-		if api.PromotionRequestOwner(promo) != request {
+		if api.PromotionRolloutOf(promo) != request {
 			continue
 		}
 		wq.Add(reconcile.Request{

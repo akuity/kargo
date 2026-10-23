@@ -1,10 +1,10 @@
 import { describe, expect, test } from 'vitest';
 
-import { PromotionRequest } from '@ui/gen/api/v2/models';
+import { PromotionRollout } from '@ui/gen/api/v2/models';
 
 import { collectionUpToDate, freightNames, roundPhase } from './round-utils';
 
-const request = (targets: string[], status?: PromotionRequest['status']): PromotionRequest => ({
+const request = (targets: string[], status?: PromotionRollout['status']): PromotionRollout => ({
   metadata: { name: 'prod.01a.x' },
   spec: { stage: 'prod', freight: 'f1', targets: targets.map((t) => ({ name: t })) },
   status
@@ -31,7 +31,7 @@ describe('roundPhase()', () => {
     ['Succeeded', 'Succeeded'],
     ['Failed', 'Failed'],
     ['Errored', 'Errored'],
-    // Aborted is terminal too, mirroring PromotionRequestPhase.IsTerminal:
+    // Aborted is terminal too, mirroring PromotionRolloutPhase.IsTerminal:
     // reading it as Pending would leave the fleet looking mid-promotion.
     ['Aborted', 'Aborted'],
     ['Running', 'Pending'],

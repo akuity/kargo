@@ -7,7 +7,7 @@ import { freightNames } from '@ui/features/project/targets/model/round-utils';
 import { targetRows } from '@ui/features/project/targets/model/target-rows';
 import { useFreightLabel } from '@ui/features/project/targets/shared/use-freight-label';
 import { useListTargets } from '@ui/gen/api/v2/core/core';
-import { PromotionRequest, Stage } from '@ui/gen/api/v2/models';
+import { PromotionRollout, Stage } from '@ui/gen/api/v2/models';
 
 import { freightMarking } from './marks';
 import { TargetMatrix } from './target-matrix';
@@ -22,8 +22,8 @@ type Props = {
   stage: Stage;
   // The Stage's latest round, resolved once by the drawer, which also uses it
   // to explain a blocked round above the tabs. Passing it in keeps one
-  // PromotionRequest fetch and watch per drawer rather than one per tab.
-  round?: PromotionRequest;
+  // PromotionRollout fetch and watch per drawer rather than one per tab.
+  round?: PromotionRollout;
 };
 
 /**
@@ -38,7 +38,7 @@ type Props = {
  * Governance comes from the API's `stage` filter, which evaluates the Stage's
  * selectors exactly as the controller does. Freight and health per Target come
  * from the Target's own status for this Stage; the round's outcome comes from
- * the Stage's current PromotionRequest, which the drawer resolves once and
+ * the Stage's current PromotionRollout, which the drawer resolves once and
  * passes in.
  */
 export const StageTargets = ({ projectName, stage, round }: Props) => {

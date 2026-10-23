@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest';
 
-import { PromotionRequest } from '@ui/gen/api/v2/models';
+import { PromotionRollout } from '@ui/gen/api/v2/models';
 
 import {
   Rounds,
@@ -206,7 +206,7 @@ describe('targetRows()', () => {
       conditions: [
         { type: 'Ready', status: 'False', reason: 'EnterpriseOnlyFeature', message: 'nope' }
       ]
-    } as Partial<PromotionRequest['status']>);
+    } as Partial<PromotionRollout['status']>);
     expect(targetRows([t], [us], { 'us-stage': blocked })[0].state).toBe('Behind');
   });
 

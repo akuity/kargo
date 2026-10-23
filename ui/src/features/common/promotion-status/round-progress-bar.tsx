@@ -2,7 +2,7 @@ import { Tooltip, theme } from 'antd';
 import classNames from 'classnames';
 import { useMemo } from 'react';
 
-import { PromotionRequestSummary } from '@ui/gen/api/v2/models';
+import { PromotionRolloutSummary } from '@ui/gen/api/v2/models';
 
 import { getPromotionPhasePresentation } from './promotion-phase';
 import { describeRound, roundSegments } from './round-progress';
@@ -22,7 +22,7 @@ export const RoundProgressBar = ({
   size = 'compact',
   className
 }: {
-  summary?: PromotionRequestSummary;
+  summary?: PromotionRolloutSummary;
   size?: Size;
   className?: string;
 }) => {

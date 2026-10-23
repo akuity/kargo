@@ -55,7 +55,7 @@ type promoteDownstreamRequest struct {
 // @Summary Promote downstream
 // @Description Creates a Promotion resource for each of a Stage's immediately
 // @Description downstream Stages. Downstream Stages that select Targets yield a
-// @Description PromotionRequest each, returned separately under "promotionRequests".
+// @Description PromotionRollout each, returned separately under "promotionRollouts".
 // @Tags Core, Project-Level
 // @Security BearerAuth
 // @Accept json
@@ -165,7 +165,7 @@ func (s *server) promoteDownstream(c *gin.Context) {
 
 	promoteErrs := make([]error, 0, len(downstreams))
 	createdPromos := make([]*kargoapi.Promotion, 0, len(downstreams))
-	createdPromoReqs := make([]*kargoapi.PromotionRequest, 0, len(downstreams))
+	createdRollouts := make([]*kargoapi.PromotionRollout, 0, len(downstreams))
 
 	for _, downstream := range downstreams {
 		// Skip "control flow" stages with no promotion steps
@@ -175,33 +175,22 @@ func (s *server) promoteDownstream(c *gin.Context) {
 		}
 
 		// A downstream Stage that selects Targets fans Freight out to them via
-		// a PromotionRequest rather than promoting to itself with a Promotion.
+		// a PromotionRollout rather than promoting to itself with a Promotion.
+		// The promote-verb check above IS the authorization decision for this
+		// downstream Stage.
 		if downstream.IsTargetAware() {
-			// The create goes through the internal client: PromotionRequests
-			// are system-owned, and the promote-verb check above IS the
-			// authorization decision for this downstream Stage. The Targets
-			// come from the database without a check of their own for the
-			// same reason.
-			targets, err := s.governedTargets(ctx, &downstream)
-			if err != nil {
-				promoteErrs = append(promoteErrs, err)
+			if s.createRolloutFn == nil {
+				promoteErrs = append(promoteErrs, errDatabaseNotConfigured)
 				continue
 			}
-			newPromoReq, err := api.NewPromotionRequestForAllTargets(&downstream, freight.Name, targets)
+			rollout, err := s.createRolloutFn(ctx, &downstream, freight, actor)
 			if err != nil {
-				promoteErrs = append(promoteErrs, err)
-				continue
-			}
-			if actor != "" {
-				api.SetCreateActorAnnotation(newPromoReq, actor)
-			}
-			if err = s.client.InternalClient().Create(ctx, newPromoReq); err != nil {
 				promoteErrs = append(promoteErrs, err)
 				continue
 			}
 			// No event is recorded: Kargo's promotion events carry a Promotion,
-			// and a PromotionRequest has none of its own.
-			createdPromoReqs = append(createdPromoReqs, newPromoReq)
+			// and a PromotionRollout has none of its own.
+			createdRollouts = append(createdRollouts, rollout)
 			continue
 		}
 
@@ -222,8 +211,8 @@ func (s *server) promoteDownstream(c *gin.Context) {
 	}
 
 	response := gin.H{"promotions": createdPromos}
-	if len(createdPromoReqs) > 0 {
-		response["promotionRequests"] = createdPromoReqs
+	if len(createdRollouts) > 0 {
+		response["promotionRollouts"] = createdRollouts
 	}
 	if len(promoteErrs) > 0 {
 		response["errors"] = errors.Join(promoteErrs...).Error()

@@ -47,8 +47,8 @@ export const Promote = (props: PromoteProps) => {
   const promoteActionMutation = usePromoteToStage({
     mutation: {
       onSuccess: (response) => {
-        // A target-aware Stage promotes through a PromotionRequest, so the
-        // response is a PromotionRequest and there is no Promotion to open.
+        // A target-aware Stage promotes through a PromotionRollout, so the
+        // response is a PromotionRollout and there is no Promotion to open.
         // Send the user to the Stage's Promotions tab, where the request and
         // whatever it reports are listed.
         if (isStageTargetAware(props.stage)) {
