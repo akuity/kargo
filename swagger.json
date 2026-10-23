@@ -8590,6 +8590,13 @@
         "name": {
           "description": "Name is the name of the (Cluster)PromotionTask.",
           "type": "string"
+        },
+        "vars": {
+          "description": "Vars are the variables the task was inflated with: the task's defaults\nand the variables set by the step that referenced the task.",
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/ExpressionVariable"
+          }
         }
       }
     },

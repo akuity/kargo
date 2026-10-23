@@ -130,6 +130,34 @@ spec:
                                 name:
                                   description: Name is the name of the (Cluster)PromotionTask.
                                   type: string
+                                vars:
+                                  description: |-
+                                    Vars are the variables the task was inflated with: the task's defaults
+                                    and the variables set by the step that referenced the task.
+                                  items:
+                                    description: |-
+                                      ExpressionVariable describes a single variable that may be referenced by
+                                      expressions in the context of a ClusterPromotionTask, PromotionTask,
+                                      Promotion, AnalysisRun arguments, or other objects that support expressions.
+
+                                      It is used to pass information to the expression evaluation engine, and to
+                                      allow for dynamic evaluation of expressions based on the variable values.
+                                    properties:
+                                      name:
+                                        description: Name is the name of the variable.
+                                        minLength: 1
+                                        pattern: ^[a-zA-Z_]\w*$
+                                        type: string
+                                      value:
+                                        description: |-
+                                          Value is the value of the variable. It is allowed to utilize expressions
+                                          in the value.
+                                          See https://docs.kargo.io/user-guide/reference-docs/expressions for details.
+                                        type: string
+                                    required:
+                                    - name
+                                    type: object
+                                  type: array
                               required:
                               - name
                               type: object

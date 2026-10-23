@@ -245,6 +245,9 @@ type PromotionStepTaskRef struct {
 	Kind string `json:"kind,omitempty"`
 	// Description is the description of the step that referenced the task.
 	Description string `json:"description,omitempty"`
+	// Vars are the variables the task was inflated with: the task's defaults
+	// and the variables set by the step that referenced the task.
+	Vars []ExpressionVariable `json:"vars,omitempty"`
 }
 
 // PromotionStepRetry describes the retry policy for a PromotionStep.
