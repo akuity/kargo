@@ -88,8 +88,10 @@ func replace(root *os.Root, src, dst string) error {
 // statTree stats p, a path relative to root, and if it is a directory every
 // entry beneath it, following symlinks and descending into directories they
 // lead to. It returns an error if anything cannot be resolved, including an
-// entry that resolves outside root. A clean return means a library that reads
-// or writes the tree by path will, at this moment, touch nothing outside root.
+// entry that resolves outside root or a dangling symlink. Only p itself being
+// absent is reported as fs.ErrNotExist. A clean return means a library that
+// reads or writes the tree by path will, at this moment, touch nothing outside
+// root.
 func statTree(root *os.Root, p string) error {
 	info, err := root.Stat(p)
 	if err != nil {
@@ -107,13 +109,13 @@ func statTreeAtDepth(root *os.Root, dir string, depth int) error {
 	}
 	entries, err := fs.ReadDir(root.FS(), dir)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to read directory %q: %w", dir, hideNotExist(err))
 	}
 	for _, entry := range entries {
 		name := path.Join(dir, entry.Name())
 		info, err := root.Stat(name)
 		if err != nil {
-			return fmt.Errorf("failed to inspect %q: %w", name, err)
+			return fmt.Errorf("failed to inspect %q: %w", name, hideNotExist(err))
 		}
 		if info.IsDir() {
 			if err = statTreeAtDepth(root, name, depth+1); err != nil {
@@ -122,6 +124,15 @@ func statTreeAtDepth(root *os.Root, dir string, depth int) error {
 		}
 	}
 	return nil
+}
+
+// hideNotExist returns err, or an error with the same message that does not
+// match fs.ErrNotExist if err does.
+func hideNotExist(err error) error {
+	if errors.Is(err, fs.ErrNotExist) {
+		return errors.New(err.Error())
+	}
+	return err
 }
 
 // resolvePath resolves the symlinks in rel, a path relative to root, and

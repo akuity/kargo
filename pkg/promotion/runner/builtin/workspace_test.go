@@ -149,6 +149,18 @@ func Test_resolvePath(t *testing.T) {
 	}
 }
 
+func Test_statTree_danglingLinkDoesNotHideEscapingLink(t *testing.T) {
+	workDir, _ := escapingWorkspace(t)
+	root := newTestRoot(t, workDir)
+	require.NoError(t, root.Mkdir("dir", 0o755))
+	require.NoError(t, root.Symlink("missing", "dir/a-dangling"))
+	require.NoError(t, root.Symlink("../out", "dir/z-escaping"))
+	err := statTree(root, "dir")
+	require.Error(t, err)
+	require.NotErrorIs(t, err, os.ErrNotExist)
+	require.ErrorIs(t, statTree(root, "absent"), os.ErrNotExist)
+}
+
 func Test_replace_symlinkedDestination(t *testing.T) {
 	t.Run("destination is a symlink to a directory", func(t *testing.T) {
 		workDir := t.TempDir()

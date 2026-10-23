@@ -544,3 +544,21 @@ func Test_fileCopier_run_escapingSymlinkBeneathOutPath(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, "old", string(b))
 }
+
+func Test_fileCopier_run_danglingLinkDoesNotHideEscapingLink(t *testing.T) {
+	workDir, outside := escapingWorkspace(t)
+	stepCtx := newTestStepContext(t, workDir)
+	require.NoError(t, stepCtx.Root.MkdirAll("src", 0o700))
+	require.NoError(t, stepCtx.Root.MkdirAll("dst", 0o700))
+	require.NoError(t, stepCtx.Root.WriteFile("src/z-target", []byte("overwritten"), 0o600))
+	require.NoError(t, os.WriteFile(filepath.Join(outside, "victim"), []byte("original"), 0o600))
+	// Sorted before the escaping link, so a walk that stops at the first
+	// not-found error would never see the escaping link.
+	require.NoError(t, stepCtx.Root.Symlink("missing", "dst/a-dangling"))
+	require.NoError(t, stepCtx.Root.Symlink("../../outside/victim", "dst/z-target"))
+	_, err := (&fileCopier{}).run(t.Context(), stepCtx, builtin.CopyConfig{InPath: "src", OutPath: "dst"})
+	require.Error(t, err)
+	content, err := os.ReadFile(filepath.Join(outside, "victim"))
+	require.NoError(t, err)
+	require.Equal(t, "original", string(content))
+}
