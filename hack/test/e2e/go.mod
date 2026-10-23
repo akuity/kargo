@@ -29,7 +29,7 @@ require (
 
 require (
 	code.gitea.io/sdk/gitea v0.25.1 // indirect
-	connectrpc.com/connect v1.21.0 // indirect
+	connectrpc.com/connect v1.21.1 // indirect
 	dario.cat/mergo v1.0.2 // indirect
 	envs v0.0.0-00010101000000-000000000000 // indirect
 	github.com/42wim/httpsig v1.2.4 // indirect
