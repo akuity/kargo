@@ -684,3 +684,48 @@ metadata:
 		require.NoError(t, build(t, workDir))
 	})
 }
+
+func Test_kustomizeBuilder_run_helmInflationReview(t *testing.T) {
+	const outsideChart = "apiVersion: v2\nname: demo\nversion: 1.0.0\n"
+	const outsideTemplate = "apiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: outside-secret\n" +
+		"data:\n  secret: outside-content\n"
+	setup := func(t *testing.T) (*promotion.StepContext, string) {
+		workDir, outside := escapingWorkspace(t)
+		stepCtx := newTestStepContext(t, workDir)
+		require.NoError(t, os.MkdirAll(filepath.Join(outside, "demo", "templates"), 0o700))
+		require.NoError(t, os.WriteFile(filepath.Join(outside, "demo", "Chart.yaml"), []byte(outsideChart), 0o600))
+		require.NoError(t, os.WriteFile(
+			filepath.Join(outside, "demo", "templates", "secret.yaml"), []byte(outsideTemplate), 0o600,
+		))
+		require.NoError(t, stepCtx.Root.WriteFile("values.yaml", []byte("{}\n"), 0o600))
+		return stepCtx, outside
+	}
+	build := func(t *testing.T, stepCtx *promotion.StepContext) error {
+		t.Helper()
+		_, err := (&kustomizeBuilder{}).run(stepCtx, builtin.KustomizeBuildConfig{Path: ".", OutPath: "result.yaml"})
+		if err == nil {
+			content, readErr := stepCtx.Root.ReadFile("result.yaml")
+			require.NoError(t, readErr)
+			require.NotContains(t, string(content), "outside-content")
+		}
+		return err
+	}
+
+	t.Run("version with a path separator", func(t *testing.T) {
+		stepCtx, _ := setup(t)
+		require.NoError(t, stepCtx.Root.WriteFile("kustomization.yaml", []byte(
+			"helmCharts:\n- name: demo\n  repo: https://example.invalid\n"+
+				"  version: v/../../../outside\n  valuesFile: values.yaml\n",
+		), 0o600))
+		require.ErrorContains(t, build(t, stepCtx), "must be a plain")
+	})
+	t.Run("inflation generator in a later document of a generator file", func(t *testing.T) {
+		stepCtx, outside := setup(t)
+		require.NoError(t, stepCtx.Root.WriteFile("kustomization.yaml", []byte("generators:\n- generators.yaml\n"), 0o600))
+		config := "apiVersion: builtin\nkind: ConfigMapGenerator\nmetadata:\n  name: benign\n" +
+			"literals:\n- key=value\n---\napiVersion: builtin\nkind: HelmChartInflationGenerator\n" +
+			"metadata:\n  name: escape\nname: demo\nchartHome: " + outside + "\nvaluesFile: values.yaml\n"
+		require.NoError(t, stepCtx.Root.WriteFile("generators.yaml", []byte(config), 0o600))
+		require.ErrorContains(t, build(t, stepCtx), "must be relative")
+	})
+}

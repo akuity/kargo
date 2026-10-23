@@ -1,8 +1,11 @@
 package builtin
 
 import (
+	"bufio"
+	"bytes"
 	"errors"
 	"fmt"
+	"io"
 	"io/fs"
 	"maps"
 	"net/url"
@@ -11,6 +14,7 @@ import (
 	"slices"
 	"strings"
 
+	utilyaml "k8s.io/apimachinery/pkg/util/yaml"
 	"sigs.k8s.io/kustomize/api/konfig"
 	kustypes "sigs.k8s.io/kustomize/api/types"
 	"sigs.k8s.io/kustomize/kyaml/filesys"
@@ -98,12 +102,9 @@ func (r *kustomizeValidatorFS) ReadFile(path string) ([]byte, error) {
 		filepath.Base(path),
 	) {
 		// A generator configuration that inflates a Helm chart is validated
-		// like the equivalent kustomization fields.
-		var cfg helmInflationGeneratorConfig
-		if err = yaml.Unmarshal(content, &cfg); err != nil || cfg.Kind != helmInflationGeneratorKind {
-			return content, nil
-		}
-		if err = r.validateHelmInflation(path, &cfg.HelmGlobals, []kustypes.HelmChart{cfg.HelmChart}); err != nil {
+		// like the equivalent kustomization fields. The file may hold several
+		// documents.
+		if err = r.validateHelmInflationGenerators(path, content); err != nil {
 			return nil, r.record(err)
 		}
 		return content, nil
@@ -148,11 +149,34 @@ func (r *kustomizeValidatorFS) record(err error) error {
 	return err
 }
 
+// validateHelmInflationGenerators validates every HelmChartInflationGenerator
+// configuration among the YAML documents in content, read from the file at
+// path. Documents that are not YAML or not of that kind are ignored.
+func (r *kustomizeValidatorFS) validateHelmInflationGenerators(path string, content []byte) error {
+	reader := utilyaml.NewYAMLReader(bufio.NewReader(bytes.NewReader(content)))
+	for {
+		doc, err := reader.Read()
+		if errors.Is(err, io.EOF) {
+			return nil
+		}
+		if err != nil {
+			return nil
+		}
+		var cfg helmInflationGeneratorConfig
+		if err = yaml.Unmarshal(doc, &cfg); err != nil || cfg.Kind != helmInflationGeneratorKind {
+			continue
+		}
+		if err = r.validateHelmInflation(path, &cfg.HelmGlobals, []kustypes.HelmChart{cfg.HelmChart}); err != nil {
+			return err
+		}
+	}
+}
+
 // validateHelmInflation returns an error if the Helm chart inflation settings
 // read from the file at path would make Kustomize read or write outside the
 // working directory: a chart home or config home that is absolute or resolves
-// outside, a symlink beneath either that leads outside, or a chart name with a
-// path separator, which Kustomize joins onto the chart home.
+// outside, a symlink beneath either that leads outside, or a chart name or
+// version with a path separator, which Kustomize joins onto the chart home.
 func (r *kustomizeValidatorFS) validateHelmInflation(
 	path string,
 	globals *kustypes.HelmGlobals,
@@ -175,11 +199,20 @@ func (r *kustomizeValidatorFS) validateHelmInflation(
 		}
 	}
 	for _, chart := range charts {
-		if chart.Name == "" || chart.Name == "." || chart.Name == ".." || chart.Name != filepath.Base(chart.Name) {
+		if !isPlainName(chart.Name) {
 			return fmt.Errorf("error validating %s: chart name %q must be a plain name", path, chart.Name)
+		}
+		if chart.Version != "" && !isPlainName(chart.Version) {
+			return fmt.Errorf("error validating %s: chart version %q must be a plain name", path, chart.Version)
 		}
 	}
 	return nil
+}
+
+// isPlainName reports whether name is a single, non-empty path component that
+// is neither "." nor "..".
+func isPlainName(name string) bool {
+	return name != "" && name != "." && name != ".." && name == filepath.Base(name)
 }
 
 // validateHelmDir returns an error if dir, a directory a Helm chart inflation
