@@ -27,6 +27,7 @@ import { useManualApprovalModal } from '../promotion/use-manual-approval-modal';
 
 import { DeleteFreightModal } from './delete-freight-modal';
 import { FreightArtifactList } from './freight-artifact-list';
+import { getFreightDiscoveredAt } from './get-freight-discovered-at';
 import { useSoakTimeCounter } from './use-soak-time-counter';
 
 type FreightCardProps = {
@@ -54,11 +55,11 @@ export const FreightCard = (props: FreightCardProps) => {
   const deleteFreightModal = useModal();
 
   const creation = useMemo(() => {
-    if (!props.freight?.metadata?.creationTimestamp) {
+    const creationDate = getFreightDiscoveredAt(props.freight);
+
+    if (!creationDate) {
       return { relative: '', abs: null };
     }
-
-    const creationDate = new Date(props.freight?.metadata?.creationTimestamp);
 
     return {
       relative: formatDistance(creationDate, new Date(), { addSuffix: false })?.replace(
