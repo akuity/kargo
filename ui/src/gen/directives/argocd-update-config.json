@@ -17,8 +17,8 @@
      "minLength": 1
     },
     "selector": {
-     "description": "Specifies a label selector to match Argo CD Application resources to be updated. Mutually exclusive with 'name'.",
      "type": "object",
+     "description": "Specifies a label selector to match Argo CD Application resources to be updated. Mutually exclusive with 'name'.",
      "additionalProperties": false,
      "properties": {
       "matchLabels": {
@@ -99,6 +99,61 @@
             "value": {
              "type": "string",
              "description": "Specifies a new value for the setting within an Argo CD Application source's Helm parameters identified by the 'key' field."
+            }
+           }
+          }
+         }
+        }
+       },
+       "jsonnet": {
+        "type": "object",
+        "description": "Describes updates to an Argo CD Application source's Jsonnet parameters.",
+        "additionalProperties": false,
+        "properties": {
+         "extVars": {
+          "type": "array",
+          "description": "Describes external variables to set within an Argo CD Application source's Jsonnet parameters.",
+          "items": {
+           "type": "object",
+           "description": "Describes a Jsonnet variable (top-level argument or external variable) to be added or updated.",
+           "additionalProperties": false,
+           "properties": {
+            "code": {
+             "type": "boolean",
+             "description": "Specifies whether the value should be evaluated as code rather than a string literal."
+            },
+            "name": {
+             "type": "string",
+             "description": "Specifies the name of the variable.",
+             "minLength": 1
+            },
+            "value": {
+             "type": "string",
+             "description": "Specifies the value of the variable."
+            }
+           }
+          }
+         },
+         "tlas": {
+          "type": "array",
+          "description": "Describes top-level arguments to set within an Argo CD Application source's Jsonnet parameters.",
+          "items": {
+           "type": "object",
+           "description": "Describes a Jsonnet variable (top-level argument or external variable) to be added or updated.",
+           "additionalProperties": false,
+           "properties": {
+            "code": {
+             "type": "boolean",
+             "description": "Specifies whether the value should be evaluated as code rather than a string literal."
+            },
+            "name": {
+             "type": "string",
+             "description": "Specifies the name of the variable.",
+             "minLength": 1
+            },
+            "value": {
+             "type": "string",
+             "description": "Specifies the value of the variable."
             }
            }
           }
@@ -194,6 +249,61 @@
       }
      }
     },
+    "jsonnet": {
+     "type": "object",
+     "description": "Describes updates to an Argo CD Application source's Jsonnet parameters.",
+     "additionalProperties": false,
+     "properties": {
+      "extVars": {
+       "type": "array",
+       "description": "Describes external variables to set within an Argo CD Application source's Jsonnet parameters.",
+       "items": {
+        "type": "object",
+        "description": "Describes a Jsonnet variable (top-level argument or external variable) to be added or updated.",
+        "additionalProperties": false,
+        "properties": {
+         "code": {
+          "type": "boolean",
+          "description": "Specifies whether the value should be evaluated as code rather than a string literal."
+         },
+         "name": {
+          "type": "string",
+          "description": "Specifies the name of the variable.",
+          "minLength": 1
+         },
+         "value": {
+          "type": "string",
+          "description": "Specifies the value of the variable."
+         }
+        }
+       }
+      },
+      "tlas": {
+       "type": "array",
+       "description": "Describes top-level arguments to set within an Argo CD Application source's Jsonnet parameters.",
+       "items": {
+        "type": "object",
+        "description": "Describes a Jsonnet variable (top-level argument or external variable) to be added or updated.",
+        "additionalProperties": false,
+        "properties": {
+         "code": {
+          "type": "boolean",
+          "description": "Specifies whether the value should be evaluated as code rather than a string literal."
+         },
+         "name": {
+          "type": "string",
+          "description": "Specifies the name of the variable.",
+          "minLength": 1
+         },
+         "value": {
+          "type": "string",
+          "description": "Specifies the value of the variable."
+         }
+        }
+       }
+      }
+     }
+    },
     "kustomize": {
      "type": "object",
      "description": "Describes updates to an Argo CD Application source's Kustomize images.",
@@ -282,6 +392,81 @@
     }
    }
   },
+  "argoCDJsonnetUpdates": {
+   "type": "object",
+   "description": "Describes updates to an Argo CD Application source's Jsonnet parameters.",
+   "additionalProperties": false,
+   "properties": {
+    "extVars": {
+     "type": "array",
+     "description": "Describes external variables to set within an Argo CD Application source's Jsonnet parameters.",
+     "items": {
+      "type": "object",
+      "description": "Describes a Jsonnet variable (top-level argument or external variable) to be added or updated.",
+      "additionalProperties": false,
+      "properties": {
+       "code": {
+        "type": "boolean",
+        "description": "Specifies whether the value should be evaluated as code rather than a string literal."
+       },
+       "name": {
+        "type": "string",
+        "description": "Specifies the name of the variable.",
+        "minLength": 1
+       },
+       "value": {
+        "type": "string",
+        "description": "Specifies the value of the variable."
+       }
+      }
+     }
+    },
+    "tlas": {
+     "type": "array",
+     "description": "Describes top-level arguments to set within an Argo CD Application source's Jsonnet parameters.",
+     "items": {
+      "type": "object",
+      "description": "Describes a Jsonnet variable (top-level argument or external variable) to be added or updated.",
+      "additionalProperties": false,
+      "properties": {
+       "code": {
+        "type": "boolean",
+        "description": "Specifies whether the value should be evaluated as code rather than a string literal."
+       },
+       "name": {
+        "type": "string",
+        "description": "Specifies the name of the variable.",
+        "minLength": 1
+       },
+       "value": {
+        "type": "string",
+        "description": "Specifies the value of the variable."
+       }
+      }
+     }
+    }
+   }
+  },
+  "argoCDJsonnetVarUpdate": {
+   "type": "object",
+   "description": "Describes a Jsonnet variable (top-level argument or external variable) to be added or updated.",
+   "additionalProperties": false,
+   "properties": {
+    "code": {
+     "type": "boolean",
+     "description": "Specifies whether the value should be evaluated as code rather than a string literal."
+    },
+    "name": {
+     "type": "string",
+     "description": "Specifies the name of the variable.",
+     "minLength": 1
+    },
+    "value": {
+     "type": "string",
+     "description": "Specifies the value of the variable."
+    }
+   }
+  },
   "argoCDKustomizeImageUpdates": {
    "type": "object",
    "description": "Describes updates to an Argo CD Application source's Kustomize images.",
@@ -363,8 +548,8 @@
       "minLength": 1
      },
      "selector": {
-      "description": "Specifies a label selector to match Argo CD Application resources to be updated. Mutually exclusive with 'name'.",
       "type": "object",
+      "description": "Specifies a label selector to match Argo CD Application resources to be updated. Mutually exclusive with 'name'.",
       "additionalProperties": false,
       "properties": {
        "matchLabels": {
@@ -445,6 +630,61 @@
              "value": {
               "type": "string",
               "description": "Specifies a new value for the setting within an Argo CD Application source's Helm parameters identified by the 'key' field."
+             }
+            }
+           }
+          }
+         }
+        },
+        "jsonnet": {
+         "type": "object",
+         "description": "Describes updates to an Argo CD Application source's Jsonnet parameters.",
+         "additionalProperties": false,
+         "properties": {
+          "extVars": {
+           "type": "array",
+           "description": "Describes external variables to set within an Argo CD Application source's Jsonnet parameters.",
+           "items": {
+            "type": "object",
+            "description": "Describes a Jsonnet variable (top-level argument or external variable) to be added or updated.",
+            "additionalProperties": false,
+            "properties": {
+             "code": {
+              "type": "boolean",
+              "description": "Specifies whether the value should be evaluated as code rather than a string literal."
+             },
+             "name": {
+              "type": "string",
+              "description": "Specifies the name of the variable.",
+              "minLength": 1
+             },
+             "value": {
+              "type": "string",
+              "description": "Specifies the value of the variable."
+             }
+            }
+           }
+          },
+          "tlas": {
+           "type": "array",
+           "description": "Describes top-level arguments to set within an Argo CD Application source's Jsonnet parameters.",
+           "items": {
+            "type": "object",
+            "description": "Describes a Jsonnet variable (top-level argument or external variable) to be added or updated.",
+            "additionalProperties": false,
+            "properties": {
+             "code": {
+              "type": "boolean",
+              "description": "Specifies whether the value should be evaluated as code rather than a string literal."
+             },
+             "name": {
+              "type": "string",
+              "description": "Specifies the name of the variable.",
+              "minLength": 1
+             },
+             "value": {
+              "type": "string",
+              "description": "Specifies the value of the variable."
              }
             }
            }
