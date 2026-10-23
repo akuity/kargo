@@ -17,6 +17,11 @@
 -- whose creation time differs belongs to another Promotion that had the same
 -- name. Names are never given twice, so this should not happen; if it does,
 -- that record is left as it is and name_taken reports it.
+--
+-- The PromotionRollout the Promotion was created by is recorded only if it
+-- is one of the Promotion's own Project; an id naming no such rollout is
+-- recorded as none. Once recorded it is kept, whatever the Promotion later
+-- claims.
 -- name: UpsertPromotion :one
 WITH existing AS (
     SELECT
@@ -34,7 +39,16 @@ WITH existing AS (
 ),
 promotion AS (
     INSERT INTO promotions (
-        id, project_name, name, stage_name, freight_name, target_name, phase, created_at, finished_at
+        id,
+        project_name,
+        name,
+        stage_name,
+        freight_name,
+        target_name,
+        promotion_rollout_id,
+        phase,
+        created_at,
+        finished_at
     )
     VALUES (
         sqlc.arg(id),
@@ -43,6 +57,11 @@ promotion AS (
         sqlc.arg(stage_name),
         sqlc.arg(freight_name),
         sqlc.narg(target_name),
+        (
+            SELECT promotion_rollouts.id FROM promotion_rollouts
+            WHERE promotion_rollouts.project_name = sqlc.arg(project_name)
+                AND promotion_rollouts.id = sqlc.narg(promotion_rollout_id)
+        ),
         sqlc.arg(phase),
         sqlc.arg(created_at),
         sqlc.narg(finished_at)
@@ -51,6 +70,7 @@ promotion AS (
         stage_name = EXCLUDED.stage_name,
         freight_name = EXCLUDED.freight_name,
         target_name = EXCLUDED.target_name,
+        promotion_rollout_id = COALESCE(promotions.promotion_rollout_id, EXCLUDED.promotion_rollout_id),
         phase = EXCLUDED.phase,
         finished_at = EXCLUDED.finished_at,
         synced_at = CURRENT_TIMESTAMP
@@ -59,12 +79,14 @@ promotion AS (
             promotions.stage_name,
             promotions.freight_name,
             promotions.target_name,
+            promotions.promotion_rollout_id,
             promotions.phase,
             promotions.finished_at
         ) IS DISTINCT FROM (
             EXCLUDED.stage_name,
             EXCLUDED.freight_name,
             EXCLUDED.target_name,
+            COALESCE(promotions.promotion_rollout_id, EXCLUDED.promotion_rollout_id),
             EXCLUDED.phase,
             EXCLUDED.finished_at
         )

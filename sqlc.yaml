@@ -16,6 +16,8 @@ sql:
         promotion: PromotionRow
         target: TargetRow
         promotion_freight: PromotionFreightRow
+        promotion_rollout: PromotionRolloutRow
+        promotion_rollout_target: PromotionRolloutTargetRow
       overrides:
       # Labels are a string map and params an object of opaque JSON values,
       # both enforced by the schema. pgx encodes and decodes JSONB through
@@ -56,4 +58,9 @@ sql:
         go_type:
           import: github.com/google/uuid
           type: UUID
+          pointer: true
+      - db_type: pg_catalog.int8
+        nullable: true
+        go_type:
+          type: int64
           pointer: true

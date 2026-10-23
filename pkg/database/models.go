@@ -25,17 +25,43 @@ type PromotionFreightRow struct {
 	FreightName string
 }
 
+type PromotionRolloutRow struct {
+	ID                uuid.UUID
+	ProjectName       string
+	Name              string
+	StageName         string
+	Number            int64
+	FreightName       string
+	MaxConcurrent     *string
+	MaxFailures       *string
+	CreatedBy         string
+	CreatedAt         time.Time
+	UpdatedAt         time.Time
+	TargetsResolvedAt *time.Time
+	StatusPhase       string
+	StatusReason      string
+	StatusMessage     string
+	StatusStartedAt   *time.Time
+	StatusFinishedAt  *time.Time
+}
+
+type PromotionRolloutTargetRow struct {
+	PromotionRolloutID uuid.UUID
+	TargetID           uuid.UUID
+}
+
 type PromotionRow struct {
-	ID          string
-	ProjectName string
-	Name        string
-	StageName   string
-	FreightName string
-	TargetName  *string
-	Phase       string
-	CreatedAt   time.Time
-	FinishedAt  *time.Time
-	SyncedAt    time.Time
+	ID                 string
+	ProjectName        string
+	Name               string
+	StageName          string
+	FreightName        string
+	TargetName         *string
+	Phase              string
+	CreatedAt          time.Time
+	FinishedAt         *time.Time
+	SyncedAt           time.Time
+	PromotionRolloutID *uuid.UUID
 }
 
 type StageRow struct {
