@@ -92,7 +92,7 @@ func CloneBare(
 	repoURL string,
 	clientOpts *ClientOptions,
 	cloneOpts *BareCloneOptions,
-) (BareRepo, error) {
+) (_ BareRepo, err error) {
 	if clientOpts == nil {
 		clientOpts = &ClientOptions{}
 	}
@@ -106,19 +106,24 @@ func CloneBare(
 			accessURL:   repoURL,
 		},
 	}
-	if err := b.setupDirs(ctx, cloneOpts.BaseDir); err != nil {
+	defer func() {
+		if err != nil {
+			_ = os.RemoveAll(b.homeDir)
+		}
+	}()
+	if err = b.setupDirs(ctx, cloneOpts.BaseDir); err != nil {
 		return nil, err
 	}
-	if err := b.setupClient(ctx, clientOpts); err != nil {
+	if err = b.setupClient(ctx, clientOpts); err != nil {
 		return nil, err
 	}
-	if err := b.clone(ctx, cloneOpts); err != nil {
+	if err = b.clone(ctx, cloneOpts); err != nil {
 		return nil, err
 	}
-	if err := b.saveDirs(ctx); err != nil {
+	if err = b.saveDirs(ctx); err != nil {
 		return nil, err
 	}
-	if err := b.saveOriginalURL(ctx); err != nil {
+	if err = b.saveOriginalURL(ctx); err != nil {
 		return nil, err
 	}
 	return b, nil
