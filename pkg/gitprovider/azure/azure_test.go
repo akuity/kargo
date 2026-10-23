@@ -492,6 +492,25 @@ func TestCreatePullRequest(t *testing.T) {
 			expectError:   true,
 			errorContains: "error creating pull request",
 		},
+		{
+			name: "error converting pull request",
+			opts: &gitprovider.CreatePullRequestOpts{Head: "feature", Base: "main", Title: "t"},
+			mockClient: &mockAzureGitClient{
+				getRepositoryFn: func(
+					_ context.Context, _ adogit.GetRepositoryArgs,
+				) (*adogit.GitRepository, error) {
+					id := uuid.New()
+					return &adogit.GitRepository{Id: &id}, nil
+				},
+				createPullRequestFn: func(
+					context.Context, adogit.CreatePullRequestArgs,
+				) (*adogit.GitPullRequest, error) {
+					return &adogit.GitPullRequest{PullRequestId: ptr.To(42)}, nil
+				},
+			},
+			expectError:   true,
+			errorContains: "error converting pull request 42:",
+		},
 	}
 
 	for _, tc := range testCases {
@@ -588,6 +607,19 @@ func TestListPullRequests(t *testing.T) {
 			},
 			expectError:   true,
 			errorContains: "list failed",
+		},
+		{
+			name: "error converting pull request",
+			opts: &gitprovider.ListPullRequestOptions{State: gitprovider.PullRequestStateOpen},
+			mockClient: &mockAzureGitClient{
+				getPullRequestsFn: func(
+					context.Context, adogit.GetPullRequestsArgs,
+				) (*[]adogit.GitPullRequest, error) {
+					return &[]adogit.GitPullRequest{{PullRequestId: ptr.To(42)}}, nil
+				},
+			},
+			expectError:   true,
+			errorContains: "error converting pull request 42:",
 		},
 		{
 			name: "returns converted pull requests",
