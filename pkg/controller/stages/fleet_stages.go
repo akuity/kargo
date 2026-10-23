@@ -605,10 +605,13 @@ func (r *FleetStageReconciler) syncPromotionRequests(
 	// The Promoting condition follows the current reference, exactly as it
 	// follows the current Promotion of a Stage that is not target-aware, so that
 	// readers of the Stage's conditions (summarizeFleetConditions, the UI) see a
-	// Stage with a round in flight as promoting rather than as not Ready.
+	// Stage with a round in flight as promoting rather than as not Ready. It is
+	// updated in place rather than deleted and set anew, so that it keeps its
+	// transition time across reconciles of the same round.
 	newStatus.CurrentPromotionRequest = nil
-	conditions.Delete(&newStatus, kargoapi.ConditionTypePromoting)
-	if highestPrioRequest := &promotionRequests.Items[0]; !highestPrioRequest.Status.Phase.IsTerminal() {
+	if highestPrioRequest := &promotionRequests.Items[0]; highestPrioRequest.Status.Phase.IsTerminal() {
+		conditions.Delete(&newStatus, kargoapi.ConditionTypePromoting)
+	} else {
 		newStatus.CurrentPromotionRequest = &kargoapi.PromotionRequestReference{
 			Name: highestPrioRequest.Name,
 		}
