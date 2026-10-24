@@ -300,14 +300,21 @@ Takes a dict with "root" (the root context) and "labels" (the component's).
 {{- end -}}
 
 {{/*
-Pod labels: the common labels without helm.sh/chart. That label is the chart version, and
-including it in a pod template restarts every pod on a chart upgrade that changes nothing else.
+Pod labels for the bundled components whose image does not track Kargo's version, currently
+Dex and PostgreSQL.
+
+The common labels minus helm.sh/chart and app.kubernetes.io/version. Both change on every
+Kargo release, and both sit inside the pod template, so they feed pod-template-hash and
+restart these pods on a Kargo upgrade that leaves their own images untouched.
+app.kubernetes.io/version is also wrong on them: it reports Kargo's version, not Dex's or
+PostgreSQL's.
+
+Kargo's own workloads deliberately keep the full label set. The chart is released with Kargo
+and carries the same version, so a chart upgrade changes their image too and the restart is
+both expected and correct.
 */}}
-{{- define "kargo.podLabels" -}}
+{{- define "kargo.bundledPodLabels" -}}
 {{ include "kargo.selectorLabels" . }}
-{{- if .Chart.AppVersion }}
-app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
-{{- end }}
 app.kubernetes.io/managed-by: {{ .Release.Service }}
 {{- with .Values.global.labels }}
 {{ toYaml . }}

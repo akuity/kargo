@@ -1,66 +1,52 @@
-# The chart version lives in helm.sh/chart. Inside a pod template it feeds
-# pod-template-hash, so every workload rolls on a chart upgrade that changed
-# nothing else. It belongs on the objects, not on the pods.
-suite: pod labels exclude the chart version
+# Dex and PostgreSQL are bundled components whose images do not track Kargo's version, so a
+# Kargo upgrade should not restart them. helm.sh/chart and app.kubernetes.io/version both
+# change on every Kargo release and both sit inside the pod template, where they feed
+# pod-template-hash. app.kubernetes.io/version is also inaccurate on these pods: it reports
+# Kargo's version rather than Dex's or PostgreSQL's.
+#
+# Kargo's own workloads keep the full label set on purpose. The release workflow derives the
+# chart version and appVersion from the same release tag, and the image tag defaults to
+# appVersion, so a chart upgrade changes their image too and the restart is correct.
+suite: bundled component pod labels
 values:
   - ../test/values-unittest.yaml
 templates:
-  - templates/api/deployment.yaml
-  - templates/controller/deployment.yaml
-  - templates/management-controller/deployment.yaml
-  - templates/kubernetes-webhooks-server/deployment.yaml
-  - templates/external-webhooks-server/deployment.yaml
-  - templates/dex-server/deployment.yaml
   - templates/postgres/statefulset.yaml
-  - templates/garbage-collector/cron-job.yaml
-  # Referenced by the workloads above for their checksum annotations, so they
-  # have to be part of the suite.
+  - templates/postgres/secret.yaml
+  - templates/dex-server/deployment.yaml
+  - templates/dex-server/secret.yaml
+  - templates/api/deployment.yaml
   - templates/api/configmap.yaml
   - templates/api/secret.yaml
-  - templates/controller/configmap.yaml
-  - templates/dex-server/secret.yaml
-  - templates/external-webhooks-server/configmap.yaml
-  - templates/garbage-collector/configmap.yaml
-  - templates/kubernetes-webhooks-server/configmap.yaml
-  - templates/management-controller/configmap.yaml
-  - templates/postgres/secret.yaml
 tests:
-  - it: should not put the chart version in any Deployment pod template
-    templates:
-      - templates/api/deployment.yaml
-      - templates/controller/deployment.yaml
-      - templates/management-controller/deployment.yaml
-      - templates/kubernetes-webhooks-server/deployment.yaml
-      - templates/external-webhooks-server/deployment.yaml
-      - templates/dex-server/deployment.yaml
+  - it: should not version-label the postgres pod template
+    template: templates/postgres/statefulset.yaml
+    asserts:
+      - notExists:
+          path: spec.template.metadata.labels["helm.sh/chart"]
+      - notExists:
+          path: spec.template.metadata.labels["app.kubernetes.io/version"]
+      - exists:
+          path: metadata.labels["helm.sh/chart"]
+      - exists:
+          path: metadata.labels["app.kubernetes.io/version"]
+
+  - it: should not version-label the dex pod template
+    template: templates/dex-server/deployment.yaml
     set:
-      api.enabled: true
-      externalWebhooksServer.enabled: true
       api.oidc.enabled: true
       api.oidc.dex.enabled: true
     asserts:
       - notExists:
           path: spec.template.metadata.labels["helm.sh/chart"]
-      - exists:
-          path: metadata.labels["helm.sh/chart"]
-
-  - it: should not put the chart version in the postgres pod template
-    template: templates/postgres/statefulset.yaml
-    asserts:
       - notExists:
-          path: spec.template.metadata.labels["helm.sh/chart"]
+          path: spec.template.metadata.labels["app.kubernetes.io/version"]
       - exists:
           path: metadata.labels["helm.sh/chart"]
-
-  - it: should not put the chart version in the garbage-collector pod template
-    template: templates/garbage-collector/cron-job.yaml
-    asserts:
-      - notExists:
-          path: spec.jobTemplate.spec.template.metadata.labels["helm.sh/chart"]
       - exists:
-          path: metadata.labels["helm.sh/chart"]
+          path: metadata.labels["app.kubernetes.io/version"]
 
-  - it: should keep the other common labels on the pod template
+  - it: should keep the remaining common labels on a bundled pod template
     template: templates/postgres/statefulset.yaml
     asserts:
       - equal:
@@ -73,7 +59,7 @@ tests:
           path: spec.template.metadata.labels["app.kubernetes.io/component"]
           value: postgres
 
-  - it: should keep global.labels on the pod template
+  - it: should keep global.labels on a bundled pod template
     template: templates/postgres/statefulset.yaml
     set:
       global.labels:
@@ -82,3 +68,12 @@ tests:
       - equal:
           path: spec.template.metadata.labels.team
           value: platform
+
+  # Kargo's own workloads are deliberately left alone.
+  - it: should leave the full label set on Kargo's own pod templates
+    template: templates/api/deployment.yaml
+    asserts:
+      - exists:
+          path: spec.template.metadata.labels["helm.sh/chart"]
+      - exists:
+          path: spec.template.metadata.labels["app.kubernetes.io/version"]
