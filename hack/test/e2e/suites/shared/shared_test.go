@@ -34,6 +34,7 @@ import (
 	_ "github.com/akuity/kargo/hack/test/e2e/suites/soak_time"
 	_ "github.com/akuity/kargo/hack/test/e2e/suites/vars"
 	_ "github.com/akuity/kargo/hack/test/e2e/suites/yaml_parse_update"
+	_ "github.com/akuity/kargo/hack/test/e2e/suites/git_steps"
 )
 
 func TestMain(m *testing.M) {
