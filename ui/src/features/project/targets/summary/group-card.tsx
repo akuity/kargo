@@ -4,7 +4,7 @@ import { Fragment, useMemo, useState } from 'react';
 import { SmallLabel } from '@ui/features/common/small-label';
 
 import { TargetDrawer } from '../detail/target-drawer';
-import { TargetGroup, groupHeading } from '../model/target-grouping';
+import { STAGE_GROUPING, TargetGroup, groupHeading } from '../model/target-grouping';
 import { freightTally, stateCounts } from '../model/target-rows';
 import { FreightLink } from '../shared/freight-link';
 import { StateBar, StateLegend } from '../shared/state-visuals';
@@ -41,7 +41,11 @@ export const TargetGroupCard = ({
     <div className={`flex flex-col h-full p-4 ${surfaceClassName}`}>
       <Flex justify='space-between' align='flex-start' gap={12}>
         <div className='min-w-0'>
-          {groupKey && <SmallLabel className='font-mono'>{groupKey}=</SmallLabel>}
+          {groupKey === STAGE_GROUPING ? (
+            <SmallLabel>Stage</SmallLabel>
+          ) : (
+            groupKey && <SmallLabel className='font-mono'>{groupKey}=</SmallLabel>
+          )}
           <div className='text-lg font-semibold truncate'>{groupHeading(group, groupKey)}</div>
         </div>
         <div className='text-right shrink-0'>
