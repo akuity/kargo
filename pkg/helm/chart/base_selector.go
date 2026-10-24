@@ -22,10 +22,11 @@ type baseSelector struct {
 
 func newBaseSelector(
 	sub kargoapi.ChartSubscription,
+	discoveryLimit int,
 ) (*baseSelector, error) {
 	s := &baseSelector{
 		repoURL:               sub.RepoURL,
-		discoveryLimit:        int(sub.DiscoveryLimit),
+		discoveryLimit:        discoveryLimit,
 		insecureSkipTLSVerify: sub.InsecureSkipTLSVerify,
 	}
 	if sub.SemverConstraint != "" {

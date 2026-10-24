@@ -407,7 +407,7 @@ spec:
   - image:
       repoURL: public.ecr.aws/nginx/nginx
       constraint: ^1.29.0
-      discoveryLimit: 5
+    discoveryLimit: 5
 ---
 apiVersion: kargo.akuity.io/v1alpha1
 kind: PromotionTask
@@ -580,7 +580,7 @@ spec:
   - image:
       repoURL: public.ecr.aws/nginx/nginx
       constraint: ^1.29.0
-      discoveryLimit: 5
+    discoveryLimit: 5
 ---
 apiVersion: kargo.akuity.io/v1alpha1
 kind: PromotionTask
