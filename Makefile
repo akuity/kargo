@@ -163,6 +163,8 @@ DATABASE_URL ?= postgres://kargo:kargo@127.0.0.1:15432/kargo?sslmode=disable
 # Runs the database integration tests against DATABASE_URL. Each test creates
 # and drops its own database on that server. Coverage spans every package under
 # pkg/database, since much of it (sqlc queries, stores) is only reachable here.
+# Controllers that work only against the database have their integration tests
+# run here too.
 .PHONY: test-db
 test-db:
 	DATABASE_URL=$(DATABASE_URL) go test \
@@ -172,7 +174,8 @@ test-db:
 		-coverprofile=coverage.txt \
 		-covermode=atomic \
 		-coverpkg=./pkg/database/... \
-		./pkg/database/...
+		./pkg/database/... \
+		./pkg/controller/management/stagetargets/...
 
 ################################################################################
 # Builds                                                                       #
