@@ -3,12 +3,13 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Dropdown, Flex, Tag, Typography, theme } from 'antd';
 import { useMemo } from 'react';
 
-import { NO_GROUPING, splitKeys } from '../model/target-grouping';
+import { NO_GROUPING, STAGE_GROUPING, splitKeys } from '../model/target-grouping';
 
 /**
  * GroupByFilter chooses the label key a fleet is sliced along, as a row of
- * pills: the keys the Targets actually carry, none of them picked to begin
- * with. Each pill toggles, so the way back to an ungrouped fleet is to unpick
+ * pills: Stage first, when there are Stages to group by, then the keys the
+ * Targets actually carry, none of them picked to begin with. Stage never folds
+ * into the dropdown: it is the one axis every project with a fleet has. Each pill toggles, so the way back to an ungrouped fleet is to unpick
  * the key in force rather than to find a "None" among the axes -- not grouping
  * is the absence of a choice, not a choice of its own.
  *
@@ -19,13 +20,16 @@ import { NO_GROUPING, splitKeys } from '../model/target-grouping';
  */
 export const GroupByFilter = ({
   keys,
+  byStage,
   value,
   onChange,
   disabled
 }: {
   // The label keys available as axes, in the order they should be offered.
   keys: string[];
-  // The key in force, or NO_GROUPING.
+  // Whether grouping by Stage is offered.
+  byStage?: boolean;
+  // The key in force, STAGE_GROUPING, or NO_GROUPING.
   value: string;
   onChange: (value: string) => void;
   disabled?: boolean;
@@ -50,6 +54,17 @@ export const GroupByFilter = ({
       <Typography.Text type='secondary' className='text-xs shrink-0'>
         Group by
       </Typography.Text>
+      {byStage && (
+        <Tag.CheckableTag
+          className='m-0'
+          style={outline(value === STAGE_GROUPING)}
+          disabled={disabled}
+          checked={value === STAGE_GROUPING}
+          onChange={() => onChange(toggle(STAGE_GROUPING))}
+        >
+          Stage
+        </Tag.CheckableTag>
+      )}
       {inline.map((key) => (
         <Tag.CheckableTag
           key={key}

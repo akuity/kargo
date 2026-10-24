@@ -7,7 +7,7 @@ import {
   behindCount,
   byWorstState,
   freightTally,
-  stageRollouts,
+  scopeToStage,
   stateCounts,
   targetRows,
   worstState
@@ -293,42 +293,43 @@ describe('freightTally()', () => {
   });
 });
 
-describe('stageRollouts()', () => {
-  const us = fleetStage('us-stage', [{ matchLabels: { region: 'us' } }], 'abc');
-  const eu = fleetStage('eu-stage', [{ matchLabels: { region: 'eu' } }], 'abc');
+describe('scopeToStage()', () => {
+  const us = fleetStage('us-stage', [{ matchLabels: { region: 'us' } }], 'new');
+  const all = fleetStage('all-stage', [{}], 'new');
 
-  test('summarizes each Stage over the rows given', () => {
-    const rows = targetRows(
+  test('reads the row as one Stage sees it', () => {
+    const [row] = targetRows(
       [
         target(
           'a',
           { region: 'us' },
-          { status: { stages: { 'us-stage': forStage('abc', 'Healthy', 'new') } } }
-        ),
-        target(
-          'b',
-          { region: 'us' },
-          { status: { stages: { 'us-stage': forStage('old', 'Unhealthy') } } }
+          {
+            status: {
+              stages: {
+                'all-stage': forStage('old', 'Healthy', 'f-old'),
+                'us-stage': forStage('new', 'Unhealthy', 'f-new')
+              }
+            }
+          }
         )
       ],
-      [us, eu]
+      [us, all]
     );
-    const [euRollout, usRollout] = stageRollouts(rows, [us, eu]);
+    expect(row.state).toBe('Unhealthy');
+    expect(row.behind).toBe(true);
 
-    expect(usRollout.governed).toBe(2);
-    expect(usRollout.onLatest).toBe(1);
-    expect(usRollout.unhealthy).toBe(1);
-    expect(usRollout.inFlight).toBe(0);
-    expect(usRollout.counts.Healthy).toBe(1);
+    const [allStage, usStage] = row.stages;
+    const scoped = scopeToStage(row, allStage);
+    expect(scoped.stages).toEqual([allStage]);
+    expect(scoped.state).toBe('Behind');
+    expect(scoped.behind).toBe(true);
+    expect(scoped.freight).toEqual(['f-old']);
 
-    // A Stage governing none of the rows still gets a rollout.
-    expect(euRollout.governed).toBe(0);
-  });
-
-  test('names the Freight the Stage itself is on', () => {
-    const current = fleetStage('cur', [{}]);
-    current.status = { freightHistory: [{ id: 'abc', items: { 'Warehouse/w': { name: 'f1' } } }] };
-    expect(stageRollouts([], [current])[0].freight).toEqual(['f1']);
+    const other = scopeToStage(row, usStage);
+    expect(other.state).toBe('Unhealthy');
+    expect(other.behind).toBe(false);
+    expect(other.freight).toEqual(['f-new']);
+    expect(other.target).toBe(row.target);
   });
 });
 

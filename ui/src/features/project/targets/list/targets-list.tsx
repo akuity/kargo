@@ -1,6 +1,8 @@
 import { Button, Collapse, Empty, Flex, Tag, Typography } from 'antd';
 import { useEffect, useMemo, useState } from 'react';
 
+import { Stage } from '@ui/gen/api/v2/models';
+
 import { TargetTable } from '../detail/target-table';
 import { Facets, labelFacets, matchesFacets, noFacets, stateFacet } from '../model/target-facets';
 import { TargetGroup, groupTargetRows, groupTitle } from '../model/target-grouping';
@@ -11,7 +13,8 @@ import { StateBar } from '../shared/state-visuals';
 import { FiltersPanel } from './filters-panel';
 
 // A group opens on a preview of its worst Targets. Reading past that is a
-// deliberate act, because a group may hold hundreds.
+// deliberate act, because a group may hold hundreds. Ungrouped, the one group
+// is the whole list, and a preview of it would only hide the rest.
 const previewSize = 6;
 const fullPageSize = 20;
 
@@ -51,7 +54,8 @@ const GroupBody = ({
   groupKey?: string;
   freightLabel: (name: string) => string;
 }) => {
-  const [all, setAll] = useState(false);
+  const [expanded, setExpanded] = useState(false);
+  const all = expanded || !groupKey;
   const shown = all ? group.rows : group.rows.slice(0, previewSize);
 
   return (
@@ -73,12 +77,12 @@ const GroupBody = ({
             : false
         }
       />
-      {group.rows.length > previewSize && (
+      {groupKey && group.rows.length > previewSize && (
         <Flex justify='space-between' align='center' gap={12} wrap>
           <Typography.Text type='secondary' className='text-xs'>
             {all ? '' : `Showing ${shown.length} of ${group.rows.length}`}
           </Typography.Text>
-          <Button type='link' size='small' className='px-0' onClick={() => setAll(!all)}>
+          <Button type='link' size='small' className='px-0' onClick={() => setExpanded(!expanded)}>
             {all
               ? `Show the first ${previewSize}`
               : `Show all ${group.rows.length} in ${groupTitle(group, groupKey)}`}
@@ -103,6 +107,7 @@ export const TargetsList = ({
   rows,
   keys,
   groupKey,
+  stages,
   freightLabel
 }: {
   project: string;
@@ -112,15 +117,24 @@ export const TargetsList = ({
   keys: string[];
   // The label key the list is grouped by, if any.
   groupKey?: string;
+  // The Project's Stages, which order the groups when grouped by Stage.
+  stages: Stage[];
   freightLabel: (name: string) => string;
 }) => {
   const [facets, setFacets] = useState<Facets>(noFacets());
 
   const labels = useMemo(() => labelFacets(rows, keys, facets), [rows, keys, facets]);
   const states = useMemo(() => stateFacet(rows, facets), [rows, facets]);
+  const filtered = useMemo(() => rows.filter((row) => matchesFacets(row, facets)), [rows, facets]);
+  // Sorted after grouping, not before: grouped by Stage, a row's state is the
+  // one its Stage sees, which is not the state it was sorted by beforehand.
   const groups = useMemo(
-    () => groupTargetRows(byWorstState(rows.filter((row) => matchesFacets(row, facets))), groupKey),
-    [rows, facets, groupKey]
+    () =>
+      groupTargetRows(filtered, groupKey, stages).map((group) => ({
+        ...group,
+        rows: byWorstState(group.rows)
+      })),
+    [filtered, groupKey, stages]
   );
 
   // Which groups are open, once the reader has said. Until then it is
@@ -136,7 +150,9 @@ export const TargetsList = ({
   // rather than leaving the reader a wall of shut rows.
   useEffect(() => setOpen(undefined), [groupKey]);
 
-  const shown = groups.reduce((sum, group) => sum + group.rows.length, 0);
+  // Counted before grouping, since grouped by Stage a Target may appear in
+  // several groups.
+  const shown = filtered.length;
 
   return (
     <Flex gap={16} align='flex-start' className='min-h-0' wrap>

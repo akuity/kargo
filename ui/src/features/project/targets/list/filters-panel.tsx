@@ -4,7 +4,7 @@ import {
   Facets,
   LabelFacet,
   STATE_FACET,
-  facetExclusions,
+  facetSelections,
   noFacets,
   toggleFacet
 } from '../model/target-facets';
@@ -33,11 +33,12 @@ const Entry = ({
 
 /**
  * FiltersPanel narrows the fleet by what its Targets are labelled with and by
- * where they stand. Everything starts ticked, so the panel reads as a census
- * of the fleet first and a filter second: unticking a value takes it out.
+ * where they stand. Nothing starts ticked, and nothing ticked filters nothing:
+ * ticking a value narrows the fleet to it, and ticking more values of the same
+ * facet widens it to any of them.
  *
- * Each figure counts the Targets that value would bring back, so it does not
- * fall to nothing the moment the value is unticked.
+ * Each figure counts the Targets that value would bring in, so the values not
+ * yet ticked do not fall to nothing the moment another one is.
  */
 export const FiltersPanel = ({
   labels,
@@ -50,7 +51,7 @@ export const FiltersPanel = ({
   facets: Facets;
   onChange: (facets: Facets) => void;
 }) => {
-  const exclusions = facetExclusions(facets);
+  const selections = facetSelections(facets);
   const toggle = (key: string, value: string) => onChange(toggleFacet(facets, key, value));
 
   return (
@@ -69,7 +70,7 @@ export const FiltersPanel = ({
           type='link'
           size='small'
           className='px-0'
-          disabled={exclusions === 0}
+          disabled={selections === 0}
           onClick={() => onChange(noFacets())}
         >
           Reset
@@ -78,13 +79,13 @@ export const FiltersPanel = ({
 
       <Flex vertical gap={6}>
         {statePrecedence
-          // A state switched off keeps its box even once its tally is zero --
+          // A picked state keeps its box even once its tally is zero --
           // another facet may have emptied it, and it is still filtering.
           .filter((state) => states[state] || facets.states.includes(state))
           .map((state) => (
             <Entry
               key={state}
-              checked={!facets.states.includes(state)}
+              checked={facets.states.includes(state)}
               label={
                 <Flex gap={6} align='center'>
                   <StateDot state={state} />
@@ -111,10 +112,10 @@ export const FiltersPanel = ({
           <Typography.Text type='secondary' className='text-xs font-mono'>
             {facet.key}
           </Typography.Text>
-          {facet.values.map(({ value, count, excluded }) => (
+          {facet.values.map(({ value, count, selected }) => (
             <Entry
               key={value}
-              checked={!excluded}
+              checked={selected}
               label={value}
               count={count}
               onChange={() => toggle(facet.key, value)}

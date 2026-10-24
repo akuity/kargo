@@ -6,7 +6,6 @@ import { useParams } from 'react-router-dom';
 
 import { LoadingState } from '@ui/features/common/loading-state';
 import { useCurrentRounds } from '@ui/features/stage/use-current-round';
-import { getColors } from '@ui/features/stage/utils';
 import { useListStages, useListTargets } from '@ui/gen/api/v2/core/core';
 import { useLocalStorage } from '@ui/utils/use-local-storage';
 
@@ -14,15 +13,14 @@ import { useWatchStages } from '../pipelines/use-watch-stages';
 
 import { TARGETS_POLL_INTERVAL_MS } from './constants';
 import { TargetsList } from './list/targets-list';
-import { NO_GROUPING, groupTargetRows } from './model/target-grouping';
+import { NO_GROUPING, STAGE_GROUPING, groupAxis, groupTargetRows } from './model/target-grouping';
 import { labelKeys } from './model/target-labels';
-import { behindCount, stageRollouts, stateCounts, targetRows } from './model/target-rows';
+import { behindCount, stateCounts, targetRows } from './model/target-rows';
 import { matchesSearch } from './model/target-search';
 import { targetAwareStages } from './model/target-stages';
 import { GroupByFilter } from './shared/group-by-filter';
 import { useFreightLabel } from './shared/use-freight-label';
 import { TargetGroupCard } from './summary/group-card';
-import { StageRollouts } from './summary/stage-rollout';
 import { StatTiles } from './summary/stat-tiles';
 
 const plural = (count: number) => (count === 1 ? '' : 's');
@@ -43,12 +41,11 @@ const views = [
 /**
  * Targets summarizes a project's fleet.
  *
- * The page answers three questions in the order they get asked: how is the
- * fleet as a whole, how far has each Stage got in reaching the Targets it
- * governs, and where in the fleet is the trouble. The last is answered by
- * slicing the fleet along whichever label the reader picks -- region, tier,
- * cloud, whatever the Targets happen to carry -- and drawing each slice as one
- * card. Opening a card lists its Targets.
+ * The page answers two questions in the order they get asked: how is the
+ * fleet as a whole, and where in the fleet is the trouble. The second is
+ * answered by slicing the fleet along whichever label the reader picks --
+ * region, tier, cloud, whatever the Targets happen to carry -- and drawing
+ * each slice as one card. Opening a card lists its Targets.
  *
  * Governance is evaluated from each Stage's selectors, mirroring the
  * controller. What a Target runs and how healthy it is comes from its own
@@ -70,7 +67,6 @@ export const Targets = () => {
   const targets = useMemo(() => targetsQuery.data?.data?.items || [], [targetsQuery.data]);
   const rounds = useCurrentRounds(project, stages);
 
-  const stageColorMap = useMemo(() => getColors(project, allStages), [project, allStages]);
   const freightLabel = useFreightLabel(project);
 
   // Which view and which grouping a reader prefers outlive the visit. The
@@ -89,7 +85,12 @@ export const Targets = () => {
   // A remembered key that this project's Targets do not carry would group
   // everything into one unlabeled bucket, which says less than not grouping at
   // all -- so it falls back to that until the keys are loaded and do contain it.
-  const groupBy = keys.includes(storedGroupBy) ? storedGroupBy : NO_GROUPING;
+  // Grouping by Stage likewise waits for there to be Stages to group by.
+  const byStage = stages.length > 0;
+  const groupBy =
+    keys.includes(storedGroupBy) || (byStage && storedGroupBy === STAGE_GROUPING)
+      ? storedGroupBy
+      : NO_GROUPING;
   const groupKey = groupBy || undefined;
 
   const allRows = useMemo(() => targetRows(targets, stages, rounds), [targets, stages, rounds]);
@@ -97,9 +98,11 @@ export const Targets = () => {
     () => allRows.filter((row) => matchesSearch(row, search)),
     [allRows, search]
   );
-  const groups = useMemo(() => groupTargetRows(rows, groupKey), [rows, groupKey]);
+  const groups = useMemo(
+    () => groupTargetRows(rows, groupKey, allStages),
+    [rows, groupKey, allStages]
+  );
   const counts = useMemo(() => stateCounts(rows), [rows]);
-  const rollouts = useMemo(() => stageRollouts(rows, allStages), [rows, allStages]);
 
   const loading = stagesQuery.isLoading || targetsQuery.isLoading;
 
@@ -136,8 +139,14 @@ export const Targets = () => {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
-        {keys.length > 0 && (
-          <GroupByFilter keys={keys} value={groupBy} onChange={setGroupBy} disabled={loading} />
+        {(keys.length > 0 || byStage) && (
+          <GroupByFilter
+            keys={keys}
+            byStage={byStage}
+            value={groupBy}
+            onChange={setGroupBy}
+            disabled={loading}
+          />
         )}
       </Flex>
 
@@ -149,6 +158,7 @@ export const Targets = () => {
           rows={rows}
           keys={keys}
           groupKey={groupKey}
+          stages={allStages}
           freightLabel={freightLabel}
         />
       ) : (
@@ -160,20 +170,6 @@ export const Targets = () => {
             behind={behindCount(rows)}
           />
 
-          {rollouts.length > 0 && (
-            <Flex vertical gap={8}>
-              <Typography.Text strong className='text-sm'>
-                Rollout by Stage
-              </Typography.Text>
-              <StageRollouts
-                project={project}
-                rollouts={rollouts}
-                stageColorMap={stageColorMap}
-                freightLabel={freightLabel}
-              />
-            </Flex>
-          )}
-
           {groups.length === 0 ? (
             <Empty
               image={Empty.PRESENTED_IMAGE_SIMPLE}
@@ -183,14 +179,18 @@ export const Targets = () => {
             <Flex vertical gap={8}>
               <Typography.Text strong className='text-sm'>
                 {groupKey
-                  ? `${groups.length} group${plural(groups.length)} by ${groupKey}`
+                  ? `${groups.length} group${plural(groups.length)} by ${groupAxis(groupKey)}`
                   : 'All Targets'}
               </Typography.Text>
               {/* No items-start: grid rows stretch, so cards sitting side by
-                  side are the same height however much each has to say. */}
+                  side are the same height however much each has to say.
+                  Ungrouped, the fleet is one card, and it takes the full
+                  width rather than a single column's worth. */}
               <div
                 className='grid gap-3'
-                style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))' }}
+                style={{
+                  gridTemplateColumns: groupKey ? 'repeat(auto-fill, minmax(340px, 1fr))' : '1fr'
+                }}
               >
                 {groups.map((group) => (
                   <TargetGroupCard

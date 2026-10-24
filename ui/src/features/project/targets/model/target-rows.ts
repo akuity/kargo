@@ -3,7 +3,7 @@ import { roundBlock } from '@ui/features/stage/utils/promotion-request';
 import { FreightCollection, Health, PromotionRequest, Stage, Target } from '@ui/gen/api/v2/models';
 
 import { collectionUpToDate, freightNames, roundPhase } from './round-utils';
-import { byName, pipelineOrder, stageGovernsTarget, targetAwareStages } from './target-stages';
+import { byName, stageGovernsTarget, targetAwareStages } from './target-stages';
 import { StateCounts, TargetState, emptyStateCounts, statePrecedence } from './target-state';
 
 // Rounds is the PromotionRequest each target-aware Stage is running now, keyed
@@ -168,6 +168,18 @@ export const targetRows = (
   });
 };
 
+// scopeToStage reads a row as one of its governing Stages sees it. Grouped by
+// Stage, a Target governed by several appears under each, and under each it
+// should show where it stands for that Stage alone -- not the worst of all of
+// them, which would paint a Stage's group with trouble from another Stage.
+export const scopeToStage = (row: TargetRow, governing: GoverningStage): TargetRow => ({
+  ...row,
+  stages: [governing],
+  state: governing.state,
+  behind: governing.upToDate === false,
+  freight: freightNames(governing.currentFreight)
+});
+
 // stateCounts tallies rows by the state they show. Every state is present, so
 // callers may index any of them without a fallback.
 export const stateCounts = (rows: TargetRow[]): StateCounts =>
@@ -196,63 +208,6 @@ export const freightTally = (rows: TargetRow[]): FreightTally[] => {
   return [...counts.entries()]
     .map(([name, count]) => ({ name, count }))
     .sort((lhs, rhs) => rhs.count - lhs.count || lhs.name.localeCompare(rhs.name));
-};
-
-// StageRollout is how far one Stage has got in reaching the Targets it governs.
-export type StageRollout = {
-  stage: Stage;
-  // The Freight the Stage itself is on, by name: what every Target it governs
-  // is on its way to.
-  freight: string[];
-  governed: number;
-  // Targets already on the Stage's current Freight collection.
-  onLatest: number;
-  // Targets this Stage is promoting to right now.
-  inFlight: number;
-  unhealthy: number;
-  counts: StateCounts;
-};
-
-// stageRollouts summarizes each target-aware Stage over the rows given, so a
-// search narrows the Stage cards with everything else. Stages come out in
-// pipeline order, which is why this takes the Project's Stages rather than only
-// the target-aware ones it summarizes.
-export const stageRollouts = (rows: TargetRow[], stages: Stage[]): StageRollout[] => {
-  const ordered = pipelineOrder(targetAwareStages(stages), stages);
-  // One pass, tallying into each Stage's accumulator: this recomputes on every
-  // keystroke in the search box.
-  const tallies = new Map(
-    ordered.map((stage) => [
-      stage.metadata?.name || '',
-      { governed: 0, onLatest: 0, counts: emptyStateCounts() }
-    ])
-  );
-  for (const row of rows) {
-    for (const pairing of row.stages) {
-      const tally = tallies.get(pairing.stage.metadata?.name || '');
-      if (!tally) {
-        continue;
-      }
-      tally.governed++;
-      tally.counts[pairing.state]++;
-      if (pairing.upToDate === true) {
-        tally.onLatest++;
-      }
-    }
-  }
-  return ordered.map((stage) => {
-    const tally = tallies.get(stage.metadata?.name || '');
-    const counts = tally?.counts ?? emptyStateCounts();
-    return {
-      stage,
-      freight: freightNames(stage.status?.freightHistory?.[0]),
-      governed: tally?.governed ?? 0,
-      onLatest: tally?.onLatest ?? 0,
-      inFlight: counts.Progressing,
-      unhealthy: counts.Unhealthy,
-      counts
-    };
-  });
 };
 
 // byWorstState orders rows worst first, so whatever needs attention is at the
