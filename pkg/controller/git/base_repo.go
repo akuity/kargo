@@ -393,8 +393,8 @@ func (b *baseRepo) loadHomeDir(ctx context.Context) error {
 // toward public-keys.d/pubring.db) are covered automatically.
 //
 // Safe to call when no GnuPG state exists (no-op) and in traditional
-// single-process deployments where no cross-container state sharing occurs
-// (also effectively a no-op).
+// single-process deployments, where the next gpg invocation restarts any
+// daemons this stopped.
 func (b *baseRepo) reconcileGPGState(ctx context.Context) {
 	if b.homeDir == "" {
 		return
@@ -403,9 +403,9 @@ func (b *baseRepo) reconcileGPGState(ctx context.Context) {
 	if _, err := os.Stat(gnupgDir); err != nil {
 		return
 	}
-	// Must run before removing sockets: gpgconf finds the agent via its
-	// sockets and tells it to shut down cleanly.
-	_, _ = libExec.Exec(b.buildCommand(ctx, "gpgconf", "--kill", "gpg-agent"))
+	// Must run before removing sockets: gpgconf finds each daemon via its
+	// socket and tells it to shut down cleanly.
+	_, _ = libExec.Exec(b.buildCommand(ctx, "gpgconf", "--kill", "all"))
 
 	logger := logging.LoggerFromContext(ctx)
 	remove := func(path string) {
@@ -428,7 +428,7 @@ func (b *baseRepo) reconcileGPGState(ctx context.Context) {
 			remove(path)
 		default:
 			// Any remaining UNIX-domain socket in GNUPGHOME belongs to a
-			// dead daemon (we killed the live agent above).
+			// dead daemon (we killed the live daemons above).
 			if info, statErr := d.Info(); statErr == nil && info.Mode()&os.ModeSocket != 0 {
 				remove(path)
 			}
