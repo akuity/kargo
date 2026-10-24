@@ -1,6 +1,15 @@
 import { describe, expect, test } from 'vitest';
 
-import { labelFacets, matchesFacets, noFacets, stateFacet, toggleFacet } from './target-facets';
+import {
+  Facets,
+  STATE_FACET,
+  facetSelections,
+  labelFacets,
+  matchesFacets,
+  noFacets,
+  stateFacet,
+  toggleFacet
+} from './target-facets';
 import { targetRows } from './target-rows';
 import { fleetStage, forStage, target } from './test-fixtures';
 
@@ -42,77 +51,79 @@ describe('facets', () => {
       [us]
     );
 
-  test('nothing is excluded to begin with', () => {
-    expect(fleet().filter((row) => matchesFacets(row, noFacets()))).toHaveLength(4);
+  const names = (facets: Facets) =>
+    fleet()
+      .filter((row) => matchesFacets(row, facets))
+      .map((row) => row.target.metadata?.name);
+
+  test('nothing picked filters nothing', () => {
+    expect(names(noFacets())).toEqual(['a', 'b', 'c', 'd']);
   });
 
-  test('a switched-off label value takes its Targets out', () => {
-    const facets = toggleFacet(noFacets(), 'geo', 'eu');
-    expect(
-      fleet()
-        .filter((row) => matchesFacets(row, facets))
-        .map((row) => row.target.metadata?.name)
-    ).toEqual(['a', 'b']);
+  test('a picked label value narrows the fleet to it', () => {
+    expect(names(toggleFacet(noFacets(), 'geo', 'eu'))).toEqual(['c', 'd']);
   });
 
-  test('a Target that does not carry the key is never excluded by it', () => {
+  test('picking more values of one key widens it to any of them', () => {
+    const facets = toggleFacet(toggleFacet(noFacets(), 'geo', 'eu'), 'geo', 'us');
+    expect(names(facets)).toEqual(['a', 'b', 'c', 'd']);
+  });
+
+  test('picks on different keys must all hold', () => {
+    const facets = toggleFacet(toggleFacet(noFacets(), 'geo', 'eu'), 'tier', 'primary');
+    expect(names(facets)).toEqual(['c']);
+  });
+
+  test('a Target that does not carry a picked key is left out', () => {
     const facets = toggleFacet(toggleFacet(noFacets(), 'tier', 'primary'), 'tier', 'secondary');
-    expect(
-      fleet()
-        .filter((row) => matchesFacets(row, facets))
-        .map((row) => row.target.metadata?.name)
-    ).toEqual(['d']);
+    expect(names(facets)).toEqual(['a', 'b', 'c']);
   });
 
-  test('a switched-off state takes its Targets out', () => {
-    const facets = toggleFacet(noFacets(), '', 'Unhealthy');
-    expect(
-      fleet()
-        .filter((row) => matchesFacets(row, facets))
-        .map((row) => row.target.metadata?.name)
-    ).toEqual(['a', 'c', 'd']);
+  test('a picked state narrows the fleet to it', () => {
+    expect(names(toggleFacet(noFacets(), STATE_FACET, 'Unhealthy'))).toEqual(['b']);
   });
 
-  test('toggling the same value twice puts it back', () => {
+  test('toggling the same value twice unpicks it', () => {
     const once = toggleFacet(noFacets(), 'geo', 'eu');
-    expect(
-      fleet().filter((row) => matchesFacets(row, toggleFacet(once, 'geo', 'eu')))
-    ).toHaveLength(4);
+    expect(names(toggleFacet(once, 'geo', 'eu'))).toHaveLength(4);
+  });
+
+  test('facetSelections counts every pick', () => {
+    const facets = toggleFacet(toggleFacet(noFacets(), 'geo', 'eu'), STATE_FACET, 'Healthy');
+    expect(facetSelections(noFacets())).toBe(0);
+    expect(facetSelections(facets)).toBe(2);
   });
 
   test('values count commonest first, and keep their own key out of the tally', () => {
     const facets = toggleFacet(noFacets(), 'geo', 'eu');
     const [geo, tier] = labelFacets(fleet(), ['geo', 'tier'], facets);
-    // geo ignores its own exclusion, so eu still says what it would bring back.
+    // geo ignores its own pick, so us still says what picking it would add.
     expect(geo).toEqual({
       key: 'geo',
       values: [
-        { value: 'eu', count: 2, excluded: true },
-        { value: 'us', count: 2, excluded: false }
+        { value: 'eu', count: 2, selected: true },
+        { value: 'us', count: 2, selected: false }
       ]
     });
-    // tier is counted over what geo has left, so the eu Targets are gone.
-    expect(tier.values).toEqual([
-      { value: 'primary', count: 1, excluded: false },
-      { value: 'secondary', count: 1, excluded: false }
-    ]);
+    // tier is counted over what geo has left, so the us Targets are gone.
+    expect(tier.values).toEqual([{ value: 'primary', count: 1, selected: false }]);
   });
 
-  test('a switched-off value keeps its entry once another facet empties it', () => {
-    // b is the only secondary Target and the only one geo=us removes, so
-    // switching geo=us off leaves tier=secondary with nothing. It is switched
-    // off too, so without an entry there would be no way to switch it back on.
-    const facets = toggleFacet(toggleFacet(noFacets(), 'geo', 'us'), 'tier', 'secondary');
+  test('a picked value keeps its entry once another facet empties it', () => {
+    // b is the only secondary Target, and picking geo=eu leaves it out, so
+    // tier=secondary has nothing left. It is picked, so without an entry there
+    // would be no way to unpick it.
+    const facets = toggleFacet(toggleFacet(noFacets(), 'geo', 'eu'), 'tier', 'secondary');
     const [, tier] = labelFacets(fleet(), ['geo', 'tier'], facets);
-    expect(tier.values).toContainEqual({ value: 'secondary', count: 0, excluded: true });
+    expect(tier.values).toContainEqual({ value: 'secondary', count: 0, selected: true });
   });
 
   test('a key no surviving Target carries drops out of the panel', () => {
     expect(labelFacets(fleet(), ['geo', 'absent'], noFacets()).map((f) => f.key)).toEqual(['geo']);
   });
 
-  test('the state tally ignores the state exclusions but honours the label ones', () => {
-    const facets = toggleFacet(toggleFacet(noFacets(), 'geo', 'eu'), '', 'Unhealthy');
+  test('the state tally ignores the picked states but honours the label picks', () => {
+    const facets = toggleFacet(toggleFacet(noFacets(), 'geo', 'us'), STATE_FACET, 'Healthy');
     expect(stateFacet(fleet(), facets)).toEqual({
       Healthy: 1,
       Behind: 0,
