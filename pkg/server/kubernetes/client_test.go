@@ -19,6 +19,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
+	"github.com/akuity/kargo/pkg/server/auth/authz"
 	"github.com/akuity/kargo/pkg/server/user"
 )
 
@@ -501,7 +502,7 @@ func TestGetAuthorizedClient(t *testing.T) {
 			if internalClient == nil {
 				internalClient = testInternalClient
 			}
-			client, err := getAuthorizedClient()(
+			client, err := getAuthorizedClient(authz.NewAuthorizer(internalClient))(
 				ctx,
 				internalClient,
 				"", // Verb doesn't matter for these tests
