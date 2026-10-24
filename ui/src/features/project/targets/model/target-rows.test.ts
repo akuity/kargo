@@ -7,6 +7,7 @@ import {
   behindCount,
   byWorstState,
   freightTally,
+  scopeToStage,
   stateCounts,
   targetRows,
   worstState
@@ -289,6 +290,46 @@ describe('freightTally()', () => {
       { name: 'new', count: 2 },
       { name: 'old', count: 1 }
     ]);
+  });
+});
+
+describe('scopeToStage()', () => {
+  const us = fleetStage('us-stage', [{ matchLabels: { region: 'us' } }], 'new');
+  const all = fleetStage('all-stage', [{}], 'new');
+
+  test('reads the row as one Stage sees it', () => {
+    const [row] = targetRows(
+      [
+        target(
+          'a',
+          { region: 'us' },
+          {
+            status: {
+              stages: {
+                'all-stage': forStage('old', 'Healthy', 'f-old'),
+                'us-stage': forStage('new', 'Unhealthy', 'f-new')
+              }
+            }
+          }
+        )
+      ],
+      [us, all]
+    );
+    expect(row.state).toBe('Unhealthy');
+    expect(row.behind).toBe(true);
+
+    const [allStage, usStage] = row.stages;
+    const scoped = scopeToStage(row, allStage);
+    expect(scoped.stages).toEqual([allStage]);
+    expect(scoped.state).toBe('Behind');
+    expect(scoped.behind).toBe(true);
+    expect(scoped.freight).toEqual(['f-old']);
+
+    const other = scopeToStage(row, usStage);
+    expect(other.state).toBe('Unhealthy');
+    expect(other.behind).toBe(false);
+    expect(other.freight).toEqual(['f-new']);
+    expect(other.target).toBe(row.target);
   });
 });
 

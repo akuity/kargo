@@ -168,6 +168,18 @@ export const targetRows = (
   });
 };
 
+// scopeToStage reads a row as one of its governing Stages sees it. Grouped by
+// Stage, a Target governed by several appears under each, and under each it
+// should show where it stands for that Stage alone -- not the worst of all of
+// them, which would paint a Stage's group with trouble from another Stage.
+export const scopeToStage = (row: TargetRow, governing: GoverningStage): TargetRow => ({
+  ...row,
+  stages: [governing],
+  state: governing.state,
+  behind: governing.upToDate === false,
+  freight: freightNames(governing.currentFreight)
+});
+
 // stateCounts tallies rows by the state they show. Every state is present, so
 // callers may index any of them without a fallback.
 export const stateCounts = (rows: TargetRow[]): StateCounts =>
