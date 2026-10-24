@@ -11,7 +11,8 @@ import { StateBar } from '../shared/state-visuals';
 import { FiltersPanel } from './filters-panel';
 
 // A group opens on a preview of its worst Targets. Reading past that is a
-// deliberate act, because a group may hold hundreds.
+// deliberate act, because a group may hold hundreds. Ungrouped, the one group
+// is the whole list, and a preview of it would only hide the rest.
 const previewSize = 6;
 const fullPageSize = 20;
 
@@ -51,7 +52,8 @@ const GroupBody = ({
   groupKey?: string;
   freightLabel: (name: string) => string;
 }) => {
-  const [all, setAll] = useState(false);
+  const [expanded, setExpanded] = useState(false);
+  const all = expanded || !groupKey;
   const shown = all ? group.rows : group.rows.slice(0, previewSize);
 
   return (
@@ -73,12 +75,12 @@ const GroupBody = ({
             : false
         }
       />
-      {group.rows.length > previewSize && (
+      {groupKey && group.rows.length > previewSize && (
         <Flex justify='space-between' align='center' gap={12} wrap>
           <Typography.Text type='secondary' className='text-xs'>
             {all ? '' : `Showing ${shown.length} of ${group.rows.length}`}
           </Typography.Text>
-          <Button type='link' size='small' className='px-0' onClick={() => setAll(!all)}>
+          <Button type='link' size='small' className='px-0' onClick={() => setExpanded(!expanded)}>
             {all
               ? `Show the first ${previewSize}`
               : `Show all ${group.rows.length} in ${groupTitle(group, groupKey)}`}
