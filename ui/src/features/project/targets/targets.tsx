@@ -5,9 +5,8 @@ import { useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
 
 import { LoadingState } from '@ui/features/common/loading-state';
-import { useCurrentRounds } from '@ui/features/stage/use-current-round';
 import { getColors } from '@ui/features/stage/utils';
-import { useListStages, useListTargets } from '@ui/gen/api/v2/core/core';
+import { useListStages, useListTargetSummaries } from '@ui/gen/api/v2/core/core';
 import { useLocalStorage } from '@ui/utils/use-local-storage';
 
 import { useWatchStages } from '../pipelines/use-watch-stages';
@@ -50,17 +49,18 @@ const views = [
  * cloud, whatever the Targets happen to carry -- and drawing each slice as one
  * card. Opening a card lists its Targets.
  *
- * Governance is evaluated from each Stage's selectors, mirroring the
- * controller. What a Target runs and how healthy it is comes from its own
- * status, scoped per Stage; what is moving right now comes from each Stage's
- * current round of fan-out.
+ * Everything per Target comes from one list of summaries, which carries only
+ * what the page draws: which Stages govern each Target, as the server settles
+ * it from their selectors, what each of those Stages last landed on it, and
+ * the phase of each one's latest Promotion to it. The Stages themselves supply
+ * the Freight each is on, their colours, and their order.
  */
 export const Targets = () => {
   const { name: project = '' } = useParams();
 
   const stagesQuery = useListStages(project, { freightOrigins: [] });
   // Targets live in the database, which offers no watch; the list is polled.
-  const targetsQuery = useListTargets(project, undefined, {
+  const targetsQuery = useListTargetSummaries(project, undefined, {
     query: { refetchInterval: TARGETS_POLL_INTERVAL_MS }
   });
   useWatchStages(project);
@@ -68,7 +68,6 @@ export const Targets = () => {
   const allStages = useMemo(() => stagesQuery.data?.data?.items || [], [stagesQuery.data]);
   const stages = useMemo(() => targetAwareStages(allStages), [allStages]);
   const targets = useMemo(() => targetsQuery.data?.data?.items || [], [targetsQuery.data]);
-  const rounds = useCurrentRounds(project, stages);
 
   const stageColorMap = useMemo(() => getColors(project, allStages), [project, allStages]);
   const freightLabel = useFreightLabel(project);
@@ -92,7 +91,7 @@ export const Targets = () => {
   const groupBy = keys.includes(storedGroupBy) ? storedGroupBy : NO_GROUPING;
   const groupKey = groupBy || undefined;
 
-  const allRows = useMemo(() => targetRows(targets, stages, rounds), [targets, stages, rounds]);
+  const allRows = useMemo(() => targetRows(targets, stages), [targets, stages]);
   const rows = useMemo(
     () => allRows.filter((row) => matchesSearch(row, search)),
     [allRows, search]

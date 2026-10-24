@@ -30,5 +30,10 @@ func (h *Handler) get(c *gin.Context) {
 		_ = c.Error(err)
 		return
 	}
-	c.JSON(http.StatusOK, target)
+	targets := []kargoapi.Target{*target}
+	if err = h.setStatuses(c.Request.Context(), project, name, targets); err != nil {
+		_ = c.Error(err)
+		return
+	}
+	c.JSON(http.StatusOK, &targets[0])
 }

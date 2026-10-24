@@ -55,10 +55,10 @@ export const matchesSearch = (row: TargetRow, needle: string): boolean => {
   }
   const requirements = parseSelector(trimmed);
   if (requirements) {
-    return matchesRequirements(requirements, row.target.metadata?.labels || {});
+    return matchesRequirements(requirements, row.target.labels || {});
   }
   const haystack = [
-    row.target.metadata?.name || '',
+    row.target.name || '',
     ...visibleLabels(row.target).map(([key, value]) => `${key}=${value}`),
     ...row.stages.map(({ stage }) => stage.metadata?.name || '')
   ]

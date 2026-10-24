@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest';
 
-import { PromotionRequest, Target } from '../../../../gen/api/v2/models';
+import { PromotionRequest, TargetSummary } from '../../../../gen/api/v2/models';
 import { targetRows } from '../../../project/targets/model/target-rows';
 import {
   fleetStage,
@@ -43,11 +43,11 @@ const colors: MarkColors = {
 
 const stage = fleetStage('prod', [{ matchLabels: { env: 'prod' } }], 'current');
 
-const rows = (targets: Target[], request?: PromotionRequest) =>
+const rows = (targets: TargetSummary[], request?: PromotionRequest) =>
   targetRows(targets, [stage], { prod: request });
 
 const governed = (name: string, status?: ReturnType<typeof stageStatus>) =>
-  target(name, { env: 'prod' }, status ? { status: { stages: { prod: status } } } : {});
+  target(name, { env: 'prod' }, { prod: status ?? {} });
 
 // freightLabel stands in for the alias a piece of Freight is named by.
 const freightLabel = (name: string) => name.replace('freight-', '');
@@ -208,8 +208,8 @@ describe('byMark()', () => {
       ['won', 'also-won', 'lost', 'waiting'].map((name) => governed(name)),
       request
     );
-    expect(
-      [...fleet].sort(byMark(promotionMarking(colors))).map((row) => row.target.metadata?.name)
-    ).toEqual(['lost', 'also-won', 'won', 'waiting']);
+    expect([...fleet].sort(byMark(promotionMarking(colors))).map((row) => row.target.name)).toEqual(
+      ['lost', 'also-won', 'won', 'waiting']
+    );
   });
 });

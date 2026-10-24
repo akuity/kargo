@@ -26,10 +26,10 @@ export const roundPhase = (
 // Stage runs. Collection IDs are deterministic in their contents, so equal IDs
 // mean equal Freight; either side missing leaves the question open.
 export const collectionUpToDate = (
-  currentFreight: FreightCollection | undefined,
-  collectionID: string | undefined
+  collectionID: string | undefined,
+  stageCollectionID: string | undefined
 ): boolean | undefined =>
-  currentFreight?.id && collectionID ? currentFreight.id === collectionID : undefined;
+  collectionID && stageCollectionID ? collectionID === stageCollectionID : undefined;
 
 // freightNames lists the Freight a collection holds, one per origin, in a
 // stable order.

@@ -1,4 +1,4 @@
-import { useQueryClient } from '@tanstack/react-query';
+import { QueryClient, useQueryClient } from '@tanstack/react-query';
 import { useEffect } from 'react';
 
 import {
@@ -8,6 +8,42 @@ import {
 import { PromotionRequest } from '@ui/gen/api/v2/models';
 
 import { runSeededWatch, upsertOrDelete } from '../project/pipelines/watch-utils';
+
+// A watch writes into one query's cache, so any number of components reading
+// the same list need only one. Watches are shared per query client and list
+// key, counted by subscriber, and closed when the last one unmounts: the Stage
+// drawer's current round and its Promotions tab read the same list, and
+// without this each opened a stream of its own.
+type SharedWatch = { subscribers: number; abort: AbortController };
+const sharedWatches = new WeakMap<QueryClient, Map<string, SharedWatch>>();
+
+export const shareWatch = (
+  client: QueryClient,
+  key: string,
+  start: (signal: AbortSignal) => void
+) => {
+  let watches = sharedWatches.get(client);
+  if (!watches) {
+    watches = new Map();
+    sharedWatches.set(client, watches);
+  }
+  let watch = watches.get(key);
+  if (!watch) {
+    watch = { subscribers: 0, abort: new AbortController() };
+    watches.set(key, watch);
+    start(watch.abort.signal);
+  }
+  watch.subscribers++;
+  const shared = watch;
+  const all = watches;
+  return () => {
+    shared.subscribers--;
+    if (shared.subscribers === 0) {
+      shared.abort.abort();
+      all.delete(key);
+    }
+  };
+};
 
 // useWatchPromotionRequests keeps a PromotionRequest list current. With a
 // stage, it follows that Stage's requests; without one, every request in the
@@ -28,7 +64,6 @@ export const useWatchPromotionRequests = (project: string, stage?: string, enabl
       return;
     }
 
-    const abort = new AbortController();
     const listKey = getListPromotionRequestsQueryKey(project, stage ? { stage } : undefined);
 
     const seedResourceVersion = () =>
@@ -66,14 +101,14 @@ export const useWatchPromotionRequests = (project: string, stage?: string, enabl
       });
     };
 
-    runSeededWatch<PromotionRequest>({
-      signal: abort.signal,
-      buildUrl,
-      seedResourceVersion,
-      relist,
-      onEvent
-    });
-
-    return () => abort.abort();
+    return shareWatch(client, JSON.stringify(listKey), (signal) =>
+      runSeededWatch<PromotionRequest>({
+        signal,
+        buildUrl,
+        seedResourceVersion,
+        relist,
+        onEvent
+      })
+    );
   }, [project, stage, client, enabled]);
 };

@@ -23,7 +23,7 @@ describe('groupTargetRows()', () => {
   test('by label, unlabeled last', () => {
     const groups = groupTargetRows(rows, 'region');
     expect(groups.map((g) => g.value)).toEqual(['eu', 'us', UNLABELED]);
-    expect(groups[1].rows.map((r) => r.target.metadata?.name)).toEqual(['us-east-1', 'us-west-2']);
+    expect(groups[1].rows.map((r) => r.target.name)).toEqual(['us-east-1', 'us-west-2']);
   });
 
   test('an empty label value groups with the unlabeled, not into a blank group', () => {
@@ -33,7 +33,7 @@ describe('groupTargetRows()', () => {
     );
     const groups = groupTargetRows(withEmpty, 'region');
     expect(groups.map((g) => g.value)).toEqual(['us', UNLABELED]);
-    expect(groups[1].rows.map((r) => r.target.metadata?.name)).toEqual(['a', 'c']);
+    expect(groups[1].rows.map((r) => r.target.name)).toEqual(['a', 'c']);
   });
 
   test('no rows yields no groups', () => {

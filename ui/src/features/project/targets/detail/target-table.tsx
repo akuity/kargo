@@ -59,7 +59,7 @@ export const TargetTable = ({
       render: (_, row) => (
         <Typography.Text className='text-xs font-semibold'>
           <FontAwesomeIcon icon={faBullseye} className='mr-2 text-gray-400' />
-          {row.target.metadata?.name}
+          {row.target.name}
         </Typography.Text>
       )
     },
@@ -188,7 +188,7 @@ export const TargetTable = ({
       columns={columns}
       size='small'
       pagination={pagination}
-      rowKey={(row) => row.target.metadata?.name || ''}
+      rowKey={(row) => row.target.name || ''}
       expandable={{
         expandedRowKeys: expanded,
         onExpandedRowsChange: (keys) => setExpanded(keys.map(String)),
@@ -229,7 +229,7 @@ export const TargetTable = ({
           if (window.getSelection()?.toString()) {
             return;
           }
-          toggle(row.target.metadata?.name || '');
+          toggle(row.target.name || '');
         }
       })}
     />

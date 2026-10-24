@@ -59,8 +59,8 @@ export const stateOrder: readonly TargetState[] = [
 
 // statePrecedence lists the states worst first. A Target governed by several
 // Stages shows the worst state any of them reports: a Target is only as well
-// off as its worst Stage. A round still moving outranks a health reading,
-// which describes the Freight that round is on its way to replace.
+// off as its worst Stage. A Promotion still moving outranks a health reading,
+// which describes the Freight that Promotion is on its way to replace.
 export const statePrecedence: readonly TargetState[] = [
   'Progressing',
   'Unhealthy',

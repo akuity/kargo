@@ -1,14 +1,13 @@
 import { Flex, Modal, Table, Tooltip, Typography } from 'antd';
 import { ColumnsType } from 'antd/es/table';
 import { formatDistanceToNow } from 'date-fns';
-import { useMemo } from 'react';
 import { Link, generatePath } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
 import { ModalComponentProps } from '@ui/features/common/modal/modal-context';
 import { PromotionStatusIcon } from '@ui/features/common/promotion-status/promotion-status-icon';
-import { useListPromotions } from '@ui/gen/api/v2/core/core';
-import { Promotion } from '@ui/gen/api/v2/models';
+import { useListTargetPromotions } from '@ui/gen/api/v2/core/core';
+import { TargetPromotion } from '@ui/gen/api/v2/models';
 import { parseDate } from '@ui/utils/dates';
 
 import { FreightLink } from '../shared/freight-link';
@@ -16,40 +15,26 @@ import { useFreightLabel } from '../shared/use-freight-label';
 
 const pagination = { pageSize: 10, hideOnSinglePage: true, showSizeChanger: false };
 
-const startedAt = (promotion: Promotion): number =>
-  parseDate(promotion.status?.startedAt)?.getTime() ??
-  parseDate(promotion.metadata?.creationTimestamp)?.getTime() ??
-  0;
-
 /**
- * TargetPromotions lists every Promotion that named this Target, newest first.
- *
- * A Promotion records the Target it promoted to in its spec, but the API offers
- * no filter for it, so this reads the Project's Promotions and picks out the
- * Target's own. That is why it lives behind a button rather than on the row:
- * the list is fetched only when someone asks for it.
+ * TargetPromotions lists the Promotions to this Target, newest first, from
+ * Kargo's record of every Promotion, so those Kubernetes has since garbage
+ * collected are listed too. It lives behind a button rather than on the row:
+ * the history is fetched only when someone asks for it.
  */
 const TargetPromotions = ({ project, target }: { project: string; target: string }) => {
-  const query = useListPromotions(project, undefined);
+  const query = useListTargetPromotions(project, target);
   const freightLabel = useFreightLabel(project);
+  const promotions = query.data?.data?.items || [];
 
-  const promotions = useMemo(
-    () =>
-      (query.data?.data?.items || [])
-        .filter((promotion) => promotion.spec?.target === target)
-        .sort((lhs, rhs) => startedAt(rhs) - startedAt(lhs)),
-    [query.data, target]
-  );
-
-  const columns: ColumnsType<Promotion> = [
+  const columns: ColumnsType<TargetPromotion> = [
     {
       title: 'Phase',
       key: 'phase',
       width: 130,
       render: (_, promotion) => (
         <Flex gap={8} align='center'>
-          <PromotionStatusIcon status={promotion.status} />
-          <span className='text-xs'>{promotion.status?.phase || 'Pending'}</span>
+          <PromotionStatusIcon status={{ phase: promotion.phase }} />
+          <span className='text-xs'>{promotion.phase || 'Pending'}</span>
         </Flex>
       )
     },
@@ -61,10 +46,10 @@ const TargetPromotions = ({ project, target }: { project: string; target: string
           className='text-xs font-mono'
           to={generatePath(paths.promotion, {
             name: project,
-            promotionId: promotion.metadata?.name || ''
+            promotionId: promotion.name || ''
           })}
         >
-          {promotion.metadata?.name}
+          {promotion.name}
         </Link>
       )
     },
@@ -75,9 +60,9 @@ const TargetPromotions = ({ project, target }: { project: string; target: string
       render: (_, promotion) => (
         <Link
           className='text-xs'
-          to={generatePath(paths.stage, { name: project, stageName: promotion.spec?.stage || '' })}
+          to={generatePath(paths.stage, { name: project, stageName: promotion.stage || '' })}
         >
-          {promotion.spec?.stage}
+          {promotion.stage}
         </Link>
       )
     },
@@ -86,7 +71,7 @@ const TargetPromotions = ({ project, target }: { project: string; target: string
       key: 'freight',
       width: 140,
       render: (_, promotion) => {
-        const freight = promotion.spec?.freight || '';
+        const freight = promotion.freight || '';
         return freight ? (
           <FreightLink
             project={project}
@@ -106,14 +91,14 @@ const TargetPromotions = ({ project, target }: { project: string; target: string
       key: 'when',
       width: 150,
       render: (_, promotion) => {
-        const finished = parseDate(promotion.status?.finishedAt);
-        const started = parseDate(promotion.status?.startedAt);
-        const when = finished || started;
+        const finished = parseDate(promotion.finishedAt);
+        const created = parseDate(promotion.createdAt);
+        const when = finished || created;
         return (
           <Tooltip title={when?.toLocaleString()}>
             <Typography.Text type='secondary' className='text-xs'>
               {when
-                ? `${finished ? 'finished' : 'started'} ${formatDistanceToNow(when, { addSuffix: true })}`
+                ? `${finished ? 'finished' : 'created'} ${formatDistanceToNow(when, { addSuffix: true })}`
                 : 'not yet'}
             </Typography.Text>
           </Tooltip>
@@ -129,7 +114,8 @@ const TargetPromotions = ({ project, target }: { project: string; target: string
       size='small'
       loading={query.isLoading}
       pagination={pagination}
-      rowKey={(promotion) => promotion.metadata?.name || ''}
+      // A name is reused when a Promotion is recreated; its creation is not.
+      rowKey={(promotion) => `${promotion.name}@${promotion.createdAt}`}
       locale={{ emptyText: 'No Promotion has named this Target' }}
     />
   );
@@ -137,8 +123,7 @@ const TargetPromotions = ({ project, target }: { project: string; target: string
 
 /**
  * TargetPromotionsModal wraps that list for the modal stack. It is handed only
- * the Project and the Target's name, so the list fetches its own Promotions and
- * stays live for as long as it is open.
+ * the Project and the Target's name, so the list fetches its own Promotions.
  */
 export const TargetPromotionsModal = ({
   project,

@@ -2865,6 +2865,54 @@
         ]
       }
     },
+    "/v1beta1/projects/{project}/target-summaries": {
+      "get": {
+        "description": "List a summary of each of a project's Targets: its name, its\nlabels, and, for each Stage that governs it, the Freight it\nruns and the latest Promotion to it. Optionally narrowed to\nthe Targets a Stage governs or those matching a label\nselector. Returns a TargetSummaryList.",
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "Core",
+          "Project-Level"
+        ],
+        "summary": "List Target summaries",
+        "operationId": "ListTargetSummaries",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "Project name",
+            "name": "project",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "description": "Only Targets governed by this Stage, i.e. selected by its targets.selectors",
+            "name": "stage",
+            "in": "query"
+          },
+          {
+            "type": "string",
+            "description": "Kubernetes label selector to filter Targets by, e.g. region=us,tier!=canary",
+            "name": "labelSelector",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "TargetSummaryList",
+            "schema": {
+              "$ref": "#/definitions/TargetSummaryList"
+            }
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      }
+    },
     "/v1beta1/projects/{project}/targets": {
       "get": {
         "description": "List a project's Targets, optionally narrowed to those a\nparticular Stage governs or those matching a label selector.\nReturns a TargetList resource.",
@@ -3081,6 +3129,55 @@
         "responses": {
           "204": {
             "description": "Deleted successfully"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      }
+    },
+    "/v1beta1/projects/{project}/targets/{target-name}/promotions": {
+      "get": {
+        "description": "List the Promotions to one of a project's Targets, newest\nfirst, from every Stage, including those Kubernetes no longer\nhas. Returns a TargetPromotionList.",
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "Core",
+          "Project-Level"
+        ],
+        "summary": "List a Target's Promotions",
+        "operationId": "ListTargetPromotions",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "Project name",
+            "name": "project",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "description": "Target name",
+            "name": "target-name",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "integer",
+            "description": "Most Promotions to return, 1 to 1000; default 100",
+            "name": "limit",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "TargetPromotionList",
+            "schema": {
+              "$ref": "#/definitions/TargetPromotionList"
+            }
           }
         },
         "security": [
@@ -5577,6 +5674,112 @@
           "type": "object",
           "additionalProperties": {
             "$ref": "#/definitions/ImageStageMap"
+          }
+        }
+      }
+    },
+    "TargetPromotion": {
+      "type": "object",
+      "properties": {
+        "createdAt": {
+          "description": "CreatedAt is when the Promotion was created.",
+          "type": "string"
+        },
+        "finishedAt": {
+          "description": "FinishedAt is when the Promotion finished, absent until it has.",
+          "type": "string"
+        },
+        "freight": {
+          "description": "Freight names the Freight promoted.",
+          "type": "string"
+        },
+        "name": {
+          "description": "Name is the Promotion's name.",
+          "type": "string"
+        },
+        "phase": {
+          "description": "Phase is the Promotion's phase, absent until it has one.",
+          "type": "string"
+        },
+        "stage": {
+          "description": "Stage names the Stage that promoted.",
+          "type": "string"
+        }
+      }
+    },
+    "TargetPromotionList": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/TargetPromotion"
+          }
+        }
+      }
+    },
+    "TargetStageSummary": {
+      "type": "object",
+      "properties": {
+        "collectionID": {
+          "description": "CollectionID identifies the Freight the Stage's most recent successful\nPromotion to the Target left there. It is computed as the Stage computes\nthe ID of its own current collection, so the two are equal exactly when\nthe Target has the Stage's current Freight. It is absent until a\nPromotion from the Stage to the Target has succeeded.",
+          "type": "string"
+        },
+        "freight": {
+          "description": "Freight names the Freight in that collection, sorted.",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "health": {
+          "description": "Health is the Target's health with respect to the Stage's Freight. It\nis absent until it has been assessed, and nothing assesses it yet.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/Health"
+            }
+          ]
+        },
+        "lastPromotion": {
+          "description": "LastPromotion is the Stage's most recent Promotion to the Target,\nwhatever its phase. It is absent until there has been one.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/TargetPromotion"
+            }
+          ]
+        }
+      }
+    },
+    "TargetSummary": {
+      "type": "object",
+      "properties": {
+        "labels": {
+          "description": "Labels are the Target's labels.",
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "name": {
+          "description": "Name is the Target's name.",
+          "type": "string"
+        },
+        "stages": {
+          "description": "Stages describes the Target with respect to each Stage that governs it,\nkeyed by Stage name. A Stage that does not govern the Target is absent,\neven if it once promoted to it.",
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/definitions/TargetStageSummary"
+          }
+        }
+      }
+    },
+    "TargetSummaryList": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/TargetSummary"
           }
         }
       }

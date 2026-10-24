@@ -2,6 +2,7 @@ package targets
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -67,6 +68,39 @@ func TestGet(t *testing.T) {
 				require.NotEmpty(t, target.UID)
 				require.NotEmpty(t, target.ResourceVersion)
 				require.Equal(t, []can.Access{can.Get().Target(testProject, "us-east-1")}, authorizations)
+				require.Empty(t, target.Status.Stages)
+			},
+		},
+		{
+			name: "returns the Target with its status, and only its own",
+			store: func() *fakeStore {
+				store := newStore()
+				store.add(testProject, "us-west-2", nil)
+				store.addFreight("us-east-1", "fleet", "f1")
+				store.addFreight("us-west-2", "fleet", "f0")
+				return store
+			}(),
+			method: http.MethodGet,
+			url:    projectURL("/us-east-1"),
+			assertions: func(t *testing.T, w *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusOK, w.Code)
+				target := &kargoapi.Target{}
+				require.NoError(t, json.Unmarshal(w.Body.Bytes(), target))
+				require.Len(t, target.Status.Stages, 1)
+				require.Equal(t, collectionID("f1"), target.Status.Stages["fleet"].CurrentFreight.ID)
+			},
+		},
+		{
+			name: "a failure to read its status fails the get",
+			store: func() *fakeStore {
+				store := newStore()
+				store.freightErr = errors.New("offline")
+				return store
+			}(),
+			method: http.MethodGet,
+			url:    projectURL("/us-east-1"),
+			assertions: func(t *testing.T, w *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusInternalServerError, w.Code)
 			},
 		},
 	})

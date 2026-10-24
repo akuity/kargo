@@ -6,7 +6,7 @@ import { TARGETS_POLL_INTERVAL_MS } from '@ui/features/project/targets/constants
 import { freightNames } from '@ui/features/project/targets/model/round-utils';
 import { targetRows } from '@ui/features/project/targets/model/target-rows';
 import { useFreightLabel } from '@ui/features/project/targets/shared/use-freight-label';
-import { useListTargets } from '@ui/gen/api/v2/core/core';
+import { useListTargetSummaries } from '@ui/gen/api/v2/core/core';
 import { PromotionRequest, Stage } from '@ui/gen/api/v2/models';
 
 import { freightMarking } from './marks';
@@ -37,15 +37,15 @@ type Props = {
  *
  * Governance comes from the API's `stage` filter, which evaluates the Stage's
  * selectors exactly as the controller does. Freight and health per Target come
- * from the Target's own status for this Stage; the round's outcome comes from
- * the Stage's current PromotionRequest, which the drawer resolves once and
- * passes in.
+ * from the Target's summary for this Stage, which carries only what this tab
+ * draws; the round's outcome comes from the Stage's current PromotionRequest,
+ * which the drawer resolves once and passes in.
  */
 export const StageTargets = ({ projectName, stage, round }: Props) => {
   const stageName = stage.metadata?.name || '';
 
   // Targets live in the database, which offers no watch; the list is polled.
-  const targetsQuery = useListTargets(
+  const targetsQuery = useListTargetSummaries(
     projectName,
     { stage: stageName },
     { query: { refetchInterval: TARGETS_POLL_INTERVAL_MS } }

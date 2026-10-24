@@ -2,6 +2,7 @@ package targets
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -51,6 +52,7 @@ func TestList(t *testing.T) {
 
 	var authorizations []can.Access
 	forbiddenStore := newStore()
+	classicStore := newStore()
 
 	runTestCases(t, []testCase{
 		{
@@ -93,6 +95,46 @@ func TestList(t *testing.T) {
 			},
 		},
 		{
+			name: "includes each Target's current Freight for each Stage that promoted to it",
+			store: func() *fakeStore {
+				store := newStore()
+				store.addFreight("us-east-1", "fleet", "f1")
+				store.addFreight("us-east-1", "canary", "f2")
+				store.addFreight("us-west-2", "fleet", "f0")
+				return store
+			}(),
+			method: http.MethodGet,
+			url:    projectURL(""),
+			assertions: func(t *testing.T, w *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusOK, w.Code)
+				list := &kargoapi.TargetList{}
+				require.NoError(t, json.Unmarshal(w.Body.Bytes(), list))
+				require.Len(t, list.Items, 3)
+				require.Empty(t, list.Items[0].Status.Stages)
+				stages := list.Items[1].Status.Stages
+				require.Len(t, stages, 2)
+				require.Equal(t, collectionID("f1"), stages["fleet"].CurrentFreight.ID)
+				require.Equal(t, "f1", stages["fleet"].CurrentFreight.Freight["Warehouse/w"].Name)
+				require.Equal(t, collectionID("f2"), stages["canary"].CurrentFreight.ID)
+				require.Nil(t, stages["fleet"].Health)
+				require.Nil(t, stages["fleet"].HealthChecks)
+				require.Equal(t, collectionID("f0"), list.Items[2].Status.Stages["fleet"].CurrentFreight.ID)
+			},
+		},
+		{
+			name: "a failure to read current Freight fails the list",
+			store: func() *fakeStore {
+				store := newStore()
+				store.freightErr = errors.New("offline")
+				return store
+			}(),
+			method: http.MethodGet,
+			url:    projectURL(""),
+			assertions: func(t *testing.T, w *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusInternalServerError, w.Code)
+			},
+		},
+		{
 			name:   "filters by label selector",
 			store:  newStore(),
 			method: http.MethodGet,
@@ -121,12 +163,14 @@ func TestList(t *testing.T) {
 		},
 		{
 			name:    "Stage filter with a classic Stage governs no Targets",
-			store:   newStore(),
+			store:   classicStore,
 			objects: []client.Object{newStage("classic")},
 			method:  http.MethodGet,
 			url:     projectURL("?stage=classic"),
 			assertions: func(t *testing.T, w *httptest.ResponseRecorder) {
 				require.Empty(t, names(t, w))
+				// No Targets means no Freight to read.
+				require.Zero(t, classicStore.freightReads)
 			},
 		},
 		{

@@ -84,6 +84,49 @@ func TestTargetFromRow(t *testing.T) {
 	}
 }
 
+func TestSetStatuses(t *testing.T) {
+	t.Parallel()
+	known := uuid.MustParse("11111111-2222-3333-4444-555555555555")
+	targets := []kargoapi.Target{{
+		ObjectMeta: metav1.ObjectMeta{Name: "us-east", UID: types.UID(known.String())},
+	}}
+	row := func(id uuid.UUID, stage, warehouse, freight string) database.ListTargetCurrentFreightRow {
+		return database.ListTargetCurrentFreightRow{
+			TargetID:    id,
+			StageName:   stage,
+			OriginKind:  string(kargoapi.FreightOriginKindWarehouse),
+			OriginName:  warehouse,
+			FreightName: freight,
+		}
+	}
+	setStatuses(targets, []database.ListTargetCurrentFreightRow{
+		row(known, "canary", "w1", "c1"),
+		row(known, "fleet", "w1", "f1"),
+		row(known, "fleet", "w2", "f2"),
+		row(uuid.New(), "fleet", "w1", "other"),
+	})
+	stages := targets[0].Status.Stages
+	require.Len(t, stages, 2)
+	// The collection is the one a Stage would build from the same Freight, ID
+	// and all.
+	want := &kargoapi.FreightCollection{}
+	want.UpdateOrPush(
+		kargoapi.FreightReference{
+			Name:   "f1",
+			Origin: kargoapi.FreightOrigin{Kind: kargoapi.FreightOriginKindWarehouse, Name: "w1"},
+		},
+		kargoapi.FreightReference{
+			Name:   "f2",
+			Origin: kargoapi.FreightOrigin{Kind: kargoapi.FreightOriginKindWarehouse, Name: "w2"},
+		},
+	)
+	require.Equal(t, want, stages["fleet"].CurrentFreight)
+	require.Nil(t, stages["fleet"].Health)
+	require.Nil(t, stages["fleet"].HealthChecks)
+	require.Len(t, stages["canary"].CurrentFreight.Freight, 1)
+	require.Equal(t, "c1", stages["canary"].CurrentFreight.Freight["Warehouse/w1"].Name)
+}
+
 func TestRowFromTarget(t *testing.T) {
 	t.Parallel()
 	testCases := []struct {

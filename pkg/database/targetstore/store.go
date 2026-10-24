@@ -29,6 +29,9 @@ type Store interface {
 	Count(context.Context, string, []string) (database.CountTargetsRow, error)
 	Update(context.Context, string, database.TargetRow) (database.TargetRow, error)
 	Delete(context.Context, string, string) error
+	CurrentFreight(context.Context, string, string) ([]database.ListTargetCurrentFreightRow, error)
+	LatestPromotions(context.Context, string) ([]database.ListTargetLatestPromotionsRow, error)
+	Promotions(context.Context, string, string, int32) ([]database.PromotionRow, error)
 }
 
 type store struct {
@@ -210,6 +213,66 @@ func (s *store) Delete(ctx context.Context, project string, name string) error {
 		return targetError(err, project, name)
 	}
 	return nil
+}
+
+// CurrentFreight returns, for each of the named Project's Targets and each
+// Stage that has successfully promoted to it, the Freight of that Stage's
+// most recent successful Promotion to it, one row per origin, ordered by
+// Target id, Stage and origin. Only the named Target's are returned if a name
+// is given. A Target no Stage has promoted to has none.
+func (s *store) CurrentFreight(
+	ctx context.Context,
+	project string,
+	name string,
+) ([]database.ListTargetCurrentFreightRow, error) {
+	args := database.ListTargetCurrentFreightParams{ProjectName: project}
+	if name != "" {
+		args.TargetName = &name
+	}
+	rows, err := s.queries.ListTargetCurrentFreight(ctx, args)
+	if err != nil {
+		return nil, fmt.Errorf(
+			"error listing the current Freight of Targets in Project %q: %w", project, err,
+		)
+	}
+	return rows, nil
+}
+
+// LatestPromotions returns, for each of the named Project's Targets and each
+// Stage that has promoted to it, that Stage's most recent Promotion to it,
+// whatever its phase, ordered by Target name and Stage.
+func (s *store) LatestPromotions(
+	ctx context.Context,
+	project string,
+) ([]database.ListTargetLatestPromotionsRow, error) {
+	rows, err := s.queries.ListTargetLatestPromotions(ctx, project)
+	if err != nil {
+		return nil, fmt.Errorf(
+			"error listing the latest Promotions to Targets in Project %q: %w", project, err,
+		)
+	}
+	return rows, nil
+}
+
+// Promotions returns at most limit of the Promotions to the named Target,
+// newest first, including those Kubernetes no longer has.
+func (s *store) Promotions(
+	ctx context.Context,
+	project string,
+	name string,
+	limit int32,
+) ([]database.PromotionRow, error) {
+	rows, err := s.queries.ListTargetPromotions(ctx, database.ListTargetPromotionsParams{
+		ProjectName: project,
+		TargetName:  name,
+		MaxRows:     limit,
+	})
+	if err != nil {
+		return nil, fmt.Errorf(
+			"error listing Promotions to Target %q in Project %q: %w", name, project, err,
+		)
+	}
+	return rows, nil
 }
 
 // checkPreconditions compares the manager, and the identity and version a

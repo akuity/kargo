@@ -36,7 +36,10 @@ describe('parseSelector()', () => {
 
 describe('matchesSearch()', () => {
   const us = fleetStage('prod-us', [{ matchLabels: { region: 'us' } }]);
-  const [row] = targetRows([target('us-east-1', { region: 'us', tier: 'canary' })], [us]);
+  const [row] = targetRows(
+    [target('us-east-1', { region: 'us', tier: 'canary' }, { 'prod-us': {} })],
+    [us]
+  );
 
   test.each([
     ['', true],

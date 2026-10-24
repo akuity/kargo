@@ -4,9 +4,11 @@ package database
 
 import (
 	"context"
+	"fmt"
 	"testing"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/stretchr/testify/require"
@@ -259,10 +261,121 @@ func TestPromotionsIntegration(t *testing.T) {
 				databasetest.RequirePGError(t, err, "23514")
 			},
 		},
+		{
+			name: "current Freight is that of each Stage's latest successful Promotion to each Target",
+			run: func(t *testing.T) {
+				a := seedTarget(t, queries, "cluster-a")
+				b := seedTarget(t, queries, "cluster-b")
+				for _, stage := range []string{"dev", "prod"} {
+					require.NoError(t, queries.UpsertStage(ctx, UpsertStageParams{
+						ID: stage, ProjectName: "demo", Name: stage, CreatedAt: created,
+					}))
+				}
+				at := func(minutes int) *time.Time {
+					when := created.Add(time.Duration(minutes) * time.Minute)
+					return &when
+				}
+				promote := func(id, stage, target, phase string, finishedAt *time.Time, freight ...string) {
+					params := UpsertPromotionParams{
+						ID: id, ProjectName: "demo", Name: id, StageName: stage,
+						FreightName: freight[0], TargetName: &target, Phase: phase,
+						CreatedAt: created, FinishedAt: finishedAt,
+					}
+					for i, name := range freight {
+						params.OriginKinds = append(params.OriginKinds, "Warehouse")
+						params.OriginNames = append(params.OriginNames, fmt.Sprintf("w%d", i+1))
+						params.FreightNames = append(params.FreightNames, name)
+					}
+					requireUpsertPromotion(t, queries, params)
+				}
+				promote("dev-a-old", "dev", "cluster-a", "Succeeded", at(1), "old")
+				promote("dev-a-new", "dev", "cluster-a", "Succeeded", at(2), "new1", "new2")
+				promote("dev-a-failed", "dev", "cluster-a", "Failed", at(3), "failed")
+				promote("dev-a-running", "dev", "cluster-a", "Running", nil, "running")
+				promote("prod-a", "prod", "cluster-a", "Succeeded", at(1), "prod")
+				promote("dev-b", "dev", "cluster-b", "Succeeded", at(1), "b")
+				// Promotions from a Stage the database does not know say nothing.
+				promote("gone-a", "gone", "cluster-a", "Succeeded", at(9), "gone")
+
+				type entry struct {
+					target  uuid.UUID
+					stage   string
+					freight string
+				}
+				entries := func(rows []ListTargetCurrentFreightRow) []entry {
+					out := make([]entry, 0, len(rows))
+					for _, row := range rows {
+						out = append(out, entry{
+							row.TargetID, row.StageName,
+							row.OriginKind + "/" + row.OriginName + "=" + row.FreightName,
+						})
+					}
+					return out
+				}
+				wantA := []entry{
+					{a.ID, "dev", "Warehouse/w1=new1"},
+					{a.ID, "dev", "Warehouse/w2=new2"},
+					{a.ID, "prod", "Warehouse/w1=prod"},
+				}
+				wantB := []entry{{b.ID, "dev", "Warehouse/w1=b"}}
+				all := entries(currentFreight(t, queries, ""))
+				require.ElementsMatch(t, append(wantA, wantB...), all)
+				require.Equal(t, wantA, entries(currentFreight(t, queries, "cluster-a")))
+				other, err := queries.ListTargetCurrentFreight(
+					ctx, ListTargetCurrentFreightParams{ProjectName: "other"},
+				)
+				require.NoError(t, err)
+				require.Empty(t, other)
+			},
+		},
+		{
+			name: "the latest Promotion to each Target from each Stage, and a Target's history",
+			run: func(t *testing.T) {
+				a := seedTarget(t, queries, "cluster-a")
+				seedTarget(t, queries, "cluster-b")
+				for _, stage := range []string{"dev", "prod"} {
+					require.NoError(t, queries.UpsertStage(ctx, UpsertStageParams{
+						ID: stage, ProjectName: "demo", Name: stage, CreatedAt: created,
+					}))
+				}
+				promote := func(id, stage, target, phase string, minute int) {
+					target = "cluster-" + target
+					requireUpsertPromotion(t, queries, UpsertPromotionParams{
+						ID: id, ProjectName: "demo", Name: id, StageName: stage,
+						FreightName: "f-" + id, TargetName: &target, Phase: phase,
+						CreatedAt: created.Add(time.Duration(minute) * time.Minute),
+					})
+				}
+				promote("dev-a-1", "dev", "a", "Succeeded", 1)
+				promote("dev-a-2", "dev", "a", "Running", 2)
+				promote("prod-a-1", "prod", "a", "Failed", 3)
+				promote("dev-b-1", "dev", "b", "Succeeded", 4)
+				promote("gone-a-1", "gone", "a", "Succeeded", 5)
+
+				latest, err := queries.ListTargetLatestPromotions(ctx, "demo")
+				require.NoError(t, err)
+				got := make([]string, 0, len(latest))
+				for _, row := range latest {
+					got = append(got, row.StageName+"="+row.Name+"/"+row.Phase)
+				}
+				require.Equal(t, []string{
+					"dev=dev-a-2/Running", "prod=prod-a-1/Failed", "dev=dev-b-1/Succeeded",
+				}, got)
+				require.Equal(t, a.ID, latest[0].TargetID)
+				require.Equal(t, "f-dev-a-2", latest[0].FreightName)
+				require.True(t, latest[0].CreatedAt.Equal(created.Add(2*time.Minute)))
+
+				history, err := queries.ListTargetPromotions(ctx, ListTargetPromotionsParams{
+					ProjectName: "demo", TargetName: "cluster-a", MaxRows: 3,
+				})
+				require.NoError(t, err)
+				require.Equal(t, []string{"gone-a-1", "prod-a-1", "dev-a-2"}, promotionIDs(history))
+			},
+		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			_, err := pool.Exec(ctx, "TRUNCATE promotions, promotion_freight")
+			_, err := pool.Exec(ctx, "TRUNCATE promotions, promotion_freight, targets, stages CASCADE")
 			require.NoError(t, err)
 			testCase.run(t)
 		})
@@ -296,6 +409,32 @@ func promotionKeys(rows []PromotionRow) []string {
 	return keys
 }
 
+func seedTarget(t *testing.T, queries *Queries, name string) TargetRow {
+	t.Helper()
+	target, err := queries.CreateTarget(context.Background(), CreateTargetParams{
+		ProjectName:   "demo",
+		Name:          name,
+		Labels:        []byte(`{}`),
+		Params:        []byte(`{}`),
+		TargetSetName: "fleet",
+	})
+	require.NoError(t, err)
+	return target
+}
+
+// currentFreight lists the demo Project's Targets' current Freight, or only
+// the named Target's.
+func currentFreight(t *testing.T, queries *Queries, target string) []ListTargetCurrentFreightRow {
+	t.Helper()
+	args := ListTargetCurrentFreightParams{ProjectName: "demo"}
+	if target != "" {
+		args.TargetName = &target
+	}
+	rows, err := queries.ListTargetCurrentFreight(context.Background(), args)
+	require.NoError(t, err)
+	return rows
+}
+
 // promotionFreight lists a Promotion's recorded Freight as origin=name, in
 // origin order.
 func promotionFreight(t *testing.T, pool *pgxpool.Pool, promotion UpsertPromotionParams) []string {
@@ -313,4 +452,12 @@ func promotionFreight(t *testing.T, pool *pgxpool.Pool, promotion UpsertPromotio
 	out, err := pgx.CollectRows(rows, pgx.RowTo[string])
 	require.NoError(t, err)
 	return out
+}
+
+func promotionIDs(rows []PromotionRow) []string {
+	ids := make([]string, 0, len(rows))
+	for _, row := range rows {
+		ids = append(ids, row.ID)
+	}
+	return ids
 }
