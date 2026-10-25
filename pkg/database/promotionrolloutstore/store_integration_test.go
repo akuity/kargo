@@ -612,3 +612,82 @@ func rolloutNames(rollouts []Rollout) []string {
 	}
 	return names
 }
+
+// TestErrorPendingIntegration runs in a database of its own: the sweep ends
+// rollouts in every Project, so it must not meet the rollouts other tests
+// leave behind.
+func TestErrorPendingIntegration(t *testing.T) {
+	t.Parallel()
+	pool, _ := databasetest.IsolatedDatabase(t)
+	queries := database.New(pool)
+	store := New(queries)
+	ctx := context.Background()
+
+	for _, key := range []struct{ project, stage string }{
+		{"sweep-a", "prod"}, {"sweep-a", "staging"}, {"sweep-b", "prod"},
+	} {
+		require.NoError(t, queries.UpsertStage(ctx, database.UpsertStageParams{
+			ID:          key.project + "/" + key.stage,
+			ProjectName: key.project,
+			Name:        key.stage,
+			CreatedAt:   time.Now(),
+		}))
+	}
+	create := func(project, stage, name string) Rollout {
+		t.Helper()
+		rollout, err := store.Create(ctx, project, database.PromotionRolloutRow{
+			Name:        name,
+			StageName:   stage,
+			FreightName: "freight-1",
+		}, nil)
+		require.NoError(t, err)
+		return rollout
+	}
+	get := func(project, name string) Rollout {
+		t.Helper()
+		rollout, err := store.Get(ctx, project, name)
+		require.NoError(t, err)
+		return rollout
+	}
+
+	pending := create("sweep-a", "prod", "prod.01A.abc")
+	queued := create("sweep-a", "prod", "prod.01B.abc")
+	running := create("sweep-a", "staging", "staging.01A.abc").PromotionRolloutRow
+	running.StatusPhase = string(kargoapi.PromotionRolloutPhaseRunning)
+	_, err := store.UpdateStatus(ctx, "sweep-a", running)
+	require.NoError(t, err)
+	done := create("sweep-a", "staging", "staging.01B.abc").PromotionRolloutRow
+	done.StatusPhase = string(kargoapi.PromotionRolloutPhaseSucceeded)
+	_, err = store.UpdateStatus(ctx, "sweep-a", done)
+	require.NoError(t, err)
+	elsewhere := create("sweep-b", "prod", "prod.01A.abc")
+
+	// Every rollout that has not started, in every Project.
+	ended, err := store.ErrorPending(ctx, "Unsupported", "not here")
+	require.NoError(t, err)
+	require.EqualValues(t, 3, ended)
+	for _, rollout := range []Rollout{pending, queued, elsewhere} {
+		got := get(rollout.ProjectName, rollout.Name)
+		require.Equal(t, string(kargoapi.PromotionRolloutPhaseErrored), got.StatusPhase)
+		require.Equal(t, "Unsupported", got.StatusReason)
+		require.Equal(t, "not here", got.StatusMessage)
+		require.NotNil(t, got.StatusFinishedAt)
+		require.True(t, got.UpdatedAt.After(rollout.UpdatedAt))
+	}
+	// What had started or ended is left alone.
+	require.Equal(
+		t,
+		string(kargoapi.PromotionRolloutPhaseRunning),
+		get(running.ProjectName, running.Name).StatusPhase,
+	)
+	require.Equal(
+		t,
+		string(kargoapi.PromotionRolloutPhaseSucceeded),
+		get("sweep-a", done.Name).StatusPhase,
+	)
+
+	// A second sweep finds nothing.
+	ended, err = store.ErrorPending(ctx, "Unsupported", "not here")
+	require.NoError(t, err)
+	require.Zero(t, ended)
+}

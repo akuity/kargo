@@ -210,7 +210,6 @@ func (o *managementControllerOptions) run(ctx context.Context) error {
 			kargoMgr,
 			promotionrollouts.ReconcilerConfigFromEnv(),
 			promotionrolloutstore.New(db),
-			targetstore.New(db),
 		); err != nil {
 			return fmt.Errorf("error setting up PromotionRollouts reconciler: %w", err)
 		}

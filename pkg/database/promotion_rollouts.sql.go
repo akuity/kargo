@@ -131,6 +131,35 @@ func (q *Queries) CreatePromotionRollout(ctx context.Context, arg CreatePromotio
 	return i, err
 }
 
+const errorPendingPromotionRollouts = `-- name: ErrorPendingPromotionRollouts :execrows
+UPDATE promotion_rollouts SET
+    status_phase = 'Errored',
+    status_reason = $1::text,
+    status_message = $2::text,
+    status_finished_at = COALESCE(status_finished_at, CURRENT_TIMESTAMP),
+    updated_at = GREATEST(clock_timestamp(), updated_at + interval '1 microsecond')
+WHERE status_phase = 'Pending'
+`
+
+type ErrorPendingPromotionRolloutsParams struct {
+	StatusReason  string
+	StatusMessage string
+}
+
+// Ends every rollout, in any Project, that has not started, as Errored with
+// the given reason and message, and reports how many it ended. It is how a
+// rollout reconciler that does not fan rollouts out reports, in one
+// statement, that it never will: a rollout only it reconciles is never
+// started, so Pending is the only open phase it meets. updated_at advances
+// as for any write.
+func (q *Queries) ErrorPendingPromotionRollouts(ctx context.Context, arg ErrorPendingPromotionRolloutsParams) (int64, error) {
+	result, err := q.db.Exec(ctx, errorPendingPromotionRollouts, arg.StatusReason, arg.StatusMessage)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
 const getPromotionRollout = `-- name: GetPromotionRollout :one
 SELECT id, project_name, name, stage_name, number, freight_name, max_concurrent, max_failures, created_by, created_at, updated_at, status_phase, status_reason, status_message, status_started_at, status_finished_at FROM promotion_rollouts
 WHERE project_name = $1 AND name = $2

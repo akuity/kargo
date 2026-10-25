@@ -184,6 +184,21 @@ WHERE promotion_rollout_id = sqlc.arg(id)::uuid
     AND target_name IS NOT NULL
 ORDER BY target_name, name DESC;
 
+-- Ends every rollout, in any Project, that has not started, as Errored with
+-- the given reason and message, and reports how many it ended. It is how a
+-- rollout reconciler that does not fan rollouts out reports, in one
+-- statement, that it never will: a rollout only it reconciles is never
+-- started, so Pending is the only open phase it meets. updated_at advances
+-- as for any write.
+-- name: ErrorPendingPromotionRollouts :execrows
+UPDATE promotion_rollouts SET
+    status_phase = 'Errored',
+    status_reason = sqlc.arg(status_reason)::text,
+    status_message = sqlc.arg(status_message)::text,
+    status_finished_at = COALESCE(status_finished_at, CURRENT_TIMESTAMP),
+    updated_at = GREATEST(clock_timestamp(), updated_at + interval '1 microsecond')
+WHERE status_phase = 'Pending';
+
 -- updated_at doubles as the row's version, so it must grow with every write
 -- to a row even across a clock step or two writes in one microsecond. A
 -- non-null id or updated_at is a precondition; a row that fails one is left

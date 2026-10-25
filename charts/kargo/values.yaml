@@ -1251,9 +1251,6 @@ managementController:
     projects:
       ## @param managementController.reconcilers.projects.maxConcurrentReconciles optionally overrides the maximum number of Project resources the management controller can reconcile concurrently.
       maxConcurrentReconciles:
-    promotionRollouts:
-      ## @param managementController.reconcilers.promotionRollouts.maxConcurrentReconciles optionally overrides the maximum number of PromotionRollouts the management controller can reconcile concurrently.
-      maxConcurrentReconciles:
     serviceAccounts:
       ## @param managementController.reconcilers.serviceAccounts.maxConcurrentReconciles optionally overrides the maximum number of ServiceAccount resources the management controller can reconcile concurrently.
       maxConcurrentReconciles:

@@ -93,6 +93,7 @@ type Store interface {
 	ListLatest(context.Context, string, string) ([]Rollout, error)
 	ListOpen(context.Context) ([]Key, error)
 	ListTargetStatuses(context.Context, Rollout) ([]database.ListPromotionRolloutTargetStatusesRow, error)
+	ErrorPending(context.Context, string, string) (int64, error)
 	UpdateStatus(context.Context, string, database.PromotionRolloutRow) (database.PromotionRolloutRow, error)
 }
 
@@ -312,6 +313,20 @@ func (s *store) ListTargetStatuses(
 		return nil, rolloutError(err, rollout.ProjectName, rollout.Name)
 	}
 	return rows, nil
+}
+
+// ErrorPending ends every PromotionRollout, in any Project, that has not
+// started, as Errored with the given reason and message, and returns how
+// many it ended. A rollout already started or ended is left alone.
+func (s *store) ErrorPending(ctx context.Context, reason, message string) (int64, error) {
+	n, err := s.queries.ErrorPendingPromotionRollouts(ctx, database.ErrorPendingPromotionRolloutsParams{
+		StatusReason:  reason,
+		StatusMessage: message,
+	})
+	if err != nil {
+		return 0, fmt.Errorf("error ending pending PromotionRollouts: %w", err)
+	}
+	return n, nil
 }
 
 // UpdateStatus replaces the status of the PromotionRollout named by the
