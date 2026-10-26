@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -36,6 +37,13 @@ func TestDiff(t *testing.T) {
 	targeted := testPromotion(created)
 	targeted.Spec.Target = targetName
 	targetedRow := differing(func(r *database.PromotionRow) { r.TargetName = &targetName })
+	rolloutID := uuid.New()
+	ofRollout := func(id string) *kargoapi.Promotion {
+		promotion := testPromotion(created)
+		promotion.Annotations = map[string]string{kargoapi.AnnotationKeyPromotionRollout: id}
+		return promotion
+	}
+	linkedRow := differing(func(r *database.PromotionRow) { r.PromotionRolloutID = &rolloutID })
 	history := database.PromotionRow{
 		ProjectName: "demo", Name: "dev.00old.abc123", StageName: "dev", Phase: "Succeeded", FinishedAt: &finished,
 	}
@@ -94,6 +102,29 @@ func TestDiff(t *testing.T) {
 		{
 			name: "Target lost", promotion: live, rows: []database.PromotionRow{targetedRow},
 			want: key, wantKeys: asked,
+		},
+		{
+			name: "matching rollout link is not queued", promotion: ofRollout(rolloutID.String()),
+			rows: []database.PromotionRow{linkedRow}, wantKeys: asked,
+		},
+		{
+			// The mirror missed the annotation, or could not record it then.
+			name: "rollout link missing", promotion: ofRollout(rolloutID.String()),
+			rows: []database.PromotionRow{row}, want: key, wantKeys: asked,
+		},
+		{
+			// A recorded link is kept, so a different claim changes nothing.
+			name: "recorded rollout link is kept", promotion: ofRollout(uuid.NewString()),
+			rows: []database.PromotionRow{linkedRow}, wantKeys: asked,
+		},
+		{
+			name: "recorded rollout link without an annotation", promotion: live,
+			rows: []database.PromotionRow{linkedRow}, wantKeys: asked,
+		},
+		{
+			// An annotation that is not an id is recorded as no rollout.
+			name: "rollout annotation that is not an id", promotion: ofRollout("dev.01abc.def456"),
+			rows: []database.PromotionRow{row}, wantKeys: asked,
 		},
 		{
 			name: "different phase", promotion: live, want: key, wantKeys: asked,
