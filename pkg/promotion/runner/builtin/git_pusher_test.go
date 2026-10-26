@@ -6,6 +6,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"sync"
 	"testing"
 
 	"github.com/google/uuid"
@@ -321,4 +322,28 @@ func Test_gitPusher_run(t *testing.T) {
 		actualCommitURL := res.Output[stateKeyCommitURL]
 		require.Equal(t, expectedCommitURL, actualCommitURL)
 	})
+}
+
+func Test_gitPushPusher_getBranchMu(t *testing.T) {
+	r := newGitPusher(
+		promotion.StepRunnerCapabilities{CredsDB: &credentials.FakeDB{}},
+		gitPusherConfig{},
+	)
+	runner, ok := r.(*gitPushPusher)
+	require.True(t, ok)
+
+	// Concurrent lookups of new and existing keys must not race on the map
+	// (run with -race).
+	var wg sync.WaitGroup
+	for i := range 50 {
+		wg.Go(func() {
+			mu := runner.getBranchMu(fmt.Sprintf("repo:branch-%d", i%10))
+			mu.Lock()
+			defer mu.Unlock()
+		})
+	}
+	wg.Wait()
+
+	require.Len(t, runner.branchMus, 10)
+	require.Same(t, runner.getBranchMu("repo:branch-0"), runner.getBranchMu("repo:branch-0"))
 }

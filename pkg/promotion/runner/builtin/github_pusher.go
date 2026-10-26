@@ -799,18 +799,23 @@ func (g *githubPusher) isRetryableError(err error) bool {
 }
 
 func (g *githubPusher) acquireBranchLock(repoURL, branch string) {
-	key := fmt.Sprintf("%s:%s", repoURL, branch)
-	if _, exists := g.branchMus[key]; !exists {
-		g.masterMu.Lock()
-		if _, exists = g.branchMus[key]; !exists {
-			g.branchMus[key] = &sync.Mutex{}
-		}
-		g.masterMu.Unlock()
-	}
-	g.branchMus[key].Lock()
+	g.getBranchMu(repoURL, branch).Lock()
 }
 
 func (g *githubPusher) releaseBranchLock(repoURL, branch string) {
+	g.getBranchMu(repoURL, branch).Unlock()
+}
+
+// getBranchMu returns the mutex for the given repo + branch, creating it if
+// necessary. masterMu guards the map itself.
+func (g *githubPusher) getBranchMu(repoURL, branch string) *sync.Mutex {
 	key := fmt.Sprintf("%s:%s", repoURL, branch)
-	g.branchMus[key].Unlock()
+	g.masterMu.Lock()
+	defer g.masterMu.Unlock()
+	mu, exists := g.branchMus[key]
+	if !exists {
+		mu = &sync.Mutex{}
+		g.branchMus[key] = mu
+	}
+	return mu
 }

@@ -293,19 +293,25 @@ func (g *gitPushPusher) push(
 	workTree git.WorkTree,
 	pushOpts *git.PushOptions,
 ) error {
-	branchKey := g.getBranchKey(workTree.URL(), pushOpts.TargetBranch)
-	if _, exists := g.branchMus[branchKey]; !exists {
-		g.masterMu.Lock()
-		// Double-check to make sure it wasn't created while we were waiting for the
-		// lock.
-		if _, exists = g.branchMus[branchKey]; !exists {
-			g.branchMus[branchKey] = &sync.Mutex{}
-		}
-		g.masterMu.Unlock()
-	}
-	g.branchMus[branchKey].Lock()
-	defer g.branchMus[branchKey].Unlock()
+	branchMu := g.getBranchMu(
+		g.getBranchKey(workTree.URL(), pushOpts.TargetBranch),
+	)
+	branchMu.Lock()
+	defer branchMu.Unlock()
 	return workTree.Push(ctx, pushOpts)
+}
+
+// getBranchMu returns the mutex for the given repo + branch key, creating it
+// if necessary. masterMu guards the map itself.
+func (g *gitPushPusher) getBranchMu(branchKey string) *sync.Mutex {
+	g.masterMu.Lock()
+	defer g.masterMu.Unlock()
+	mu, exists := g.branchMus[branchKey]
+	if !exists {
+		mu = &sync.Mutex{}
+		g.branchMus[branchKey] = mu
+	}
+	return mu
 }
 
 func (g *gitPushPusher) getBranchKey(repoURL, branch string) string {

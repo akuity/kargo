@@ -1536,3 +1536,21 @@ func (m *mockGitHubPushClient) DeleteRef(
 ) (*github.Response, error) {
 	return m.deleteRefFn(ctx, owner, repo, ref)
 }
+
+func Test_githubPusher_branchLock(t *testing.T) {
+	pusher := &githubPusher{branchMus: map[string]*sync.Mutex{}}
+
+	// Concurrent acquire/release of new and existing branches must not race on
+	// the map (run with -race).
+	var wg sync.WaitGroup
+	for i := range 50 {
+		wg.Go(func() {
+			branch := fmt.Sprintf("branch-%d", i%10)
+			pusher.acquireBranchLock("repo", branch)
+			pusher.releaseBranchLock("repo", branch)
+		})
+	}
+	wg.Wait()
+
+	require.Len(t, pusher.branchMus, 10)
+}
