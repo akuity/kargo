@@ -1,7 +1,7 @@
 import {
+  InflatedPromotionTask,
   PromotionStatus,
   PromotionStep,
-  PromotionStepTaskRef,
   StepExecutionMetadata
 } from '@ui/gen/api/v2/models';
 
@@ -23,19 +23,11 @@ export type IndexedPromotionStep = {
 export type PromotionTaskGroup = {
   type: 'task';
   key: string;
-  task: PromotionStepTaskRef;
+  inflatedTask: InflatedPromotionTask;
   steps: IndexedPromotionStep[];
 };
 
 export type PromotionStepEntry = IndexedPromotionStep | PromotionTaskGroup;
-
-const getTaskAlias = (step: PromotionStep) => {
-  if (!step.ref || !step.as?.includes(taskStepAliasSeparator)) {
-    return undefined;
-  }
-
-  return step.as.split(taskStepAliasSeparator)[0];
-};
 
 export const getUserStepAlias = (alias?: string) => {
   const userAlias = alias?.split(taskStepAliasSeparator).at(-1);
@@ -47,30 +39,42 @@ export const getUserStepAlias = (alias?: string) => {
   return userAlias;
 };
 
-export const groupPromotionSteps = (steps: PromotionStep[]): PromotionStepEntry[] => {
+const getInflatedTasksByStepAlias = (inflatedTasks: InflatedPromotionTask[]) =>
+  new Map(
+    inflatedTasks.flatMap((inflatedTask) =>
+      (inflatedTask.steps ?? []).map((stepAlias) => [stepAlias, inflatedTask] as const)
+    )
+  );
+
+export const groupPromotionSteps = (
+  steps: PromotionStep[],
+  inflatedTasks: InflatedPromotionTask[] = []
+): PromotionStepEntry[] => {
+  const inflatedTasksByStepAlias = getInflatedTasksByStepAlias(inflatedTasks);
   const entries: PromotionStepEntry[] = [];
 
   steps.forEach((step, index) => {
     const indexedStep: IndexedPromotionStep = { type: 'step', step, index };
+    const inflatedTask = step.as ? inflatedTasksByStepAlias.get(step.as) : undefined;
 
-    const sourceTask = step.ref;
-    const taskAlias = getTaskAlias(step);
-    const isStepInflatedFromTask = !!sourceTask && !!taskAlias;
+    if (!inflatedTask) {
+      entries.push(indexedStep);
+      return;
+    }
 
     const previousEntry = entries.at(-1);
-    const previousTaskGroup = previousEntry?.type === 'task' ? previousEntry : undefined;
 
-    if (isStepInflatedFromTask) {
-      const continuesPreviousTaskGroup = previousTaskGroup?.key === taskAlias;
-
-      if (previousTaskGroup && continuesPreviousTaskGroup) {
-        previousTaskGroup.steps.push(indexedStep);
-      } else {
-        entries.push({ type: 'task', key: taskAlias, task: sourceTask, steps: [indexedStep] });
-      }
-    } else {
-      entries.push(indexedStep);
+    if (previousEntry?.type === 'task' && previousEntry.inflatedTask === inflatedTask) {
+      previousEntry.steps.push(indexedStep);
+      return;
     }
+
+    entries.push({
+      type: 'task',
+      key: inflatedTask.alias || `task-${index}`,
+      inflatedTask,
+      steps: [indexedStep]
+    });
   });
 
   return entries;

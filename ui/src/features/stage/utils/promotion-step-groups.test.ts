@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest';
 
-import { PromotionStep } from '@ui/gen/api/v2/models';
+import { InflatedPromotionTask, PromotionStep } from '@ui/gen/api/v2/models';
 
 import { PromotionDirectiveStepStatus } from '../../common/promotion-directive-step-status/utils';
 
@@ -14,19 +14,21 @@ import {
   PromotionTaskGroup
 } from './promotion-step-groups';
 
-const renderTask = { kind: 'PromotionTask', name: 'render' };
-
-const taskStep = (as: string, step: PromotionStep = {}): PromotionStep => ({
-  as,
-  uses: 'git-clone',
-  ref: renderTask,
-  ...step
+const inflatedTask = (alias: string, steps: string[]): InflatedPromotionTask => ({
+  alias,
+  task: { kind: 'PromotionTask', name: 'render' },
+  steps
 });
+
+const taskStep = (as: string): PromotionStep => ({ as, uses: 'git-clone' });
 
 const taskGroup = (steps: PromotionStep[]): PromotionTaskGroup => ({
   type: 'task',
   key: 'task-1',
-  task: renderTask,
+  inflatedTask: inflatedTask(
+    'task-1',
+    steps.map((step) => step.as ?? '')
+  ),
   steps: steps.map((step, index) => ({ type: 'step', step, index }))
 });
 
@@ -50,7 +52,7 @@ describe('getUserStepAlias()', () => {
 });
 
 describe('groupPromotionSteps()', () => {
-  test('keeps steps without a task as plain steps', () => {
+  test('keeps steps as plain steps when no task was inflated', () => {
     const steps = [{ as: 'step-1' }, { as: 'step-2' }];
     expect(groupPromotionSteps(steps)).toEqual([
       { type: 'step', step: steps[0], index: 0 },
@@ -58,13 +60,14 @@ describe('groupPromotionSteps()', () => {
     ]);
   });
 
-  test('groups consecutive steps of the same task step', () => {
+  test('groups the steps inflated from a task', () => {
     const steps = [taskStep('task-1::step-1'), taskStep('task-1::commit')];
-    expect(groupPromotionSteps(steps)).toEqual([
+    const task = inflatedTask('task-1', ['task-1::step-1', 'task-1::commit']);
+    expect(groupPromotionSteps(steps, [task])).toEqual([
       {
         type: 'task',
         key: 'task-1',
-        task: renderTask,
+        inflatedTask: task,
         steps: [
           { type: 'step', step: steps[0], index: 0 },
           { type: 'step', step: steps[1], index: 1 }
@@ -75,20 +78,32 @@ describe('groupPromotionSteps()', () => {
 
   test('splits back-to-back instances of the same task', () => {
     const steps = [taskStep('task-1::step-1'), taskStep('task-2::step-1')];
-    expect(groupPromotionSteps(steps).map((entry) => entry.type === 'task' && entry.key)).toEqual([
-      'task-1',
-      'task-2'
-    ]);
+    const tasks = [
+      inflatedTask('task-1', ['task-1::step-1']),
+      inflatedTask('task-2', ['task-2::step-1'])
+    ];
+    expect(
+      groupPromotionSteps(steps, tasks).map((entry) => entry.type === 'task' && entry.key)
+    ).toEqual(['task-1', 'task-2']);
   });
 
   test('keeps plain steps between task groups in spec order', () => {
     const steps = [taskStep('task-1::step-1'), { as: 'step-2' }, taskStep('task-3::step-1')];
-    expect(groupPromotionSteps(steps).map((entry) => entry.type)).toEqual(['task', 'step', 'task']);
+    const tasks = [
+      inflatedTask('task-1', ['task-1::step-1']),
+      inflatedTask('task-3', ['task-3::step-1'])
+    ];
+    expect(groupPromotionSteps(steps, tasks).map((entry) => entry.type)).toEqual([
+      'task',
+      'step',
+      'task'
+    ]);
   });
 
-  test('treats a step with a ref but no task alias as a plain step', () => {
-    const steps = [taskStep('step-1')];
-    expect(groupPromotionSteps(steps)).toEqual([{ type: 'step', step: steps[0], index: 0 }]);
+  test('treats a user alias that looks like a task step as a plain step', () => {
+    const steps = [taskStep('task-1::step-1'), { as: 'task-1::push' }];
+    const tasks = [inflatedTask('task-1', ['task-1::step-1'])];
+    expect(groupPromotionSteps(steps, tasks).map((entry) => entry.type)).toEqual(['task', 'step']);
   });
 });
 

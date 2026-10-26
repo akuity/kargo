@@ -55,7 +55,8 @@ export const PromotionTaskGroupHeader = ({
 }) => {
   const statuses = getTaskGroupStepStatuses(group, promotion.status);
   const status = getTaskGroupStatus(statuses);
-  const vars = group.task.vars ?? [];
+  const { inflatedTask } = group;
+  const vars = inflatedTask.vars ?? [];
   const visibleVars = vars.slice(0, maxVisibleVars);
   const hiddenVars = vars.slice(maxVisibleVars);
 
@@ -64,19 +65,19 @@ export const PromotionTaskGroupHeader = ({
       <StepStatusIcon status={status} />
       <Flex vertical gap={4} className='flex-1 min-w-0'>
         <Flex align='center' gap={8}>
-          <StepTitle title={group.task.name} />
+          <StepTitle title={inflatedTask.task?.name ?? group.key} />
           <Tag
             color='purple'
             variant='filled'
             icon={<FontAwesomeIcon icon={faLayerGroup} />}
             className='text-xs'
           >
-            {group.task.kind}
+            {inflatedTask.task?.kind}
           </Tag>
         </Flex>
-        {!!group.task.description && (
+        {!!inflatedTask.description && (
           <Typography.Text type='secondary' className='text-xs'>
-            {group.task.description}
+            {inflatedTask.description}
           </Typography.Text>
         )}
         {vars.length > 0 && (

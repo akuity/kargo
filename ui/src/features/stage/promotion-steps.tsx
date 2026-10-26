@@ -75,7 +75,7 @@ export const PromotionSteps = (props: PromotionStepsProps) => {
   const hasExtension = (step: (typeof steps)[number]) =>
     promotionStepExtensions.some((ext) => ext.identifier === step.uses);
 
-  const entries = groupPromotionSteps(steps);
+  const entries = groupPromotionSteps(steps, props.promotion?.spec?.inflatedTasks);
 
   // The first interactive step that's currently running, if any.
   let runningKey: string | undefined;
