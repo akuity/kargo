@@ -1950,6 +1950,205 @@ func Test_getStatus(t *testing.T) {
 	}
 }
 
+func Test_getFreight(t *testing.T) {
+	const testProject = "fake-project"
+	const testFreightName = "fake-freight"
+
+	scheme := runtime.NewScheme()
+	require.NoError(t, kargoapi.AddToScheme(scheme))
+
+	testFreight := &kargoapi.Freight{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      testFreightName,
+			Namespace: testProject,
+		},
+		Origin: kargoapi.FreightOrigin{
+			Kind: kargoapi.FreightOriginKindWarehouse,
+			Name: "fake-warehouse",
+		},
+		Images: []kargoapi.Image{{
+			RepoURL:          "registry.example.com/app",
+			Tag:              "v1.2.3",
+			SubscriptionName: "app",
+		}},
+		Charts: []kargoapi.Chart{{
+			RepoURL:          "oci://registry.example.com/charts/app",
+			Name:             "app-chart",
+			Version:          "2.3.4",
+			SubscriptionName: "app-chart",
+		}},
+		Commits: []kargoapi.GitCommit{{
+			RepoURL:          "https://github.com/example/app.git",
+			ID:               "abc123",
+			Branch:           "main",
+			SubscriptionName: "app-source",
+		}},
+		Artifacts: []kargoapi.ArtifactReference{{
+			ArtifactType:     "application/vnd.example.artifact",
+			SubscriptionName: "custom-artifact",
+			Version:          "v5",
+		}},
+	}
+
+	tests := []struct {
+		name       string
+		objects    []client.Object
+		args       []any
+		assertions func(t *testing.T, result any, err error)
+	}{
+		{
+			name: "no arguments",
+			args: []any{},
+			assertions: func(t *testing.T, result any, err error) {
+				require.ErrorContains(t, err, "expected 1 argument, got 0")
+				require.Nil(t, result)
+			},
+		},
+		{
+			name: "too many arguments",
+			args: []any{testFreightName, "extra"},
+			assertions: func(t *testing.T, result any, err error) {
+				require.ErrorContains(t, err, "expected 1 argument, got 2")
+				require.Nil(t, result)
+			},
+		},
+		{
+			name: "invalid argument type",
+			args: []any{123},
+			assertions: func(t *testing.T, result any, err error) {
+				require.ErrorContains(t, err, "first argument must be string")
+				require.Nil(t, result)
+			},
+		},
+		{
+			name: "empty freight ref name",
+			args: []any{""},
+			assertions: func(t *testing.T, result any, err error) {
+				require.ErrorContains(t, err, "freight ref name must not be empty")
+				require.Nil(t, result)
+			},
+		},
+		{
+			name: "freight not found",
+			args: []any{testFreightName},
+			assertions: func(t *testing.T, result any, err error) {
+				require.NoError(t, err)
+				require.Nil(t, result)
+			},
+		},
+		{
+			name:    "freight with all artifact types",
+			objects: []client.Object{testFreight},
+			args:    []any{testFreightName},
+			assertions: func(t *testing.T, result any, err error) {
+				require.NoError(t, err)
+				freightData, ok := result.(map[string]any)
+				require.True(t, ok, "expected Freight to be returned as map[string]any")
+
+				images, ok := freightData["images"].([]any)
+				require.True(t, ok)
+				require.Len(t, images, 1)
+				image, ok := images[0].(map[string]any)
+				require.True(t, ok)
+				require.Equal(t, "registry.example.com/app", image["repoURL"])
+				require.Equal(t, "v1.2.3", image["tag"])
+				require.Equal(t, "app", image["subscriptionName"])
+
+				charts, ok := freightData["charts"].([]any)
+				require.True(t, ok)
+				require.Len(t, charts, 1)
+				chart, ok := charts[0].(map[string]any)
+				require.True(t, ok)
+				require.Equal(t, "oci://registry.example.com/charts/app", chart["repoURL"])
+				require.Equal(t, "app-chart", chart["name"])
+				require.Equal(t, "2.3.4", chart["version"])
+
+				commits, ok := freightData["commits"].([]any)
+				require.True(t, ok)
+				require.Len(t, commits, 1)
+				commit, ok := commits[0].(map[string]any)
+				require.True(t, ok)
+				require.Equal(t, "https://github.com/example/app.git", commit["repoURL"])
+				require.Equal(t, "abc123", commit["id"])
+				require.Equal(t, "main", commit["branch"])
+
+				artifacts, ok := freightData["artifacts"].([]any)
+				require.True(t, ok)
+				require.Len(t, artifacts, 1)
+				artifact, ok := artifacts[0].(map[string]any)
+				require.True(t, ok)
+				require.Equal(t, "application/vnd.example.artifact", artifact["artifactType"])
+				require.Equal(t, "custom-artifact", artifact["subscriptionName"])
+				require.Equal(t, "v5", artifact["version"])
+			},
+		},
+		{
+			name: "freight with empty artifact lists",
+			objects: []client.Object{&kargoapi.Freight{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      testFreightName,
+					Namespace: testProject,
+				},
+			}},
+			args: []any{testFreightName},
+			assertions: func(t *testing.T, result any, err error) {
+				require.NoError(t, err)
+				freightData, ok := result.(map[string]any)
+				require.True(t, ok)
+				for _, field := range []string{"images", "charts", "commits", "artifacts"} {
+					values, ok := freightData[field].([]any)
+					require.Truef(t, ok, "expected %q to be an empty list", field)
+					require.Empty(t, values, "expected %q to be empty", field)
+				}
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := fake.NewClientBuilder().
+				WithScheme(scheme).
+				WithObjects(tt.objects...).
+				Build()
+
+			result, err := getFreight(t.Context(), c, testProject)(tt.args...)
+			tt.assertions(t, result, err)
+		})
+	}
+}
+
+func Test_Freight_expression(t *testing.T) {
+	const testProject = "fake-project"
+	const testFreightName = "fake-freight"
+
+	scheme := runtime.NewScheme()
+	require.NoError(t, kargoapi.AddToScheme(scheme))
+
+	c := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(&kargoapi.Freight{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      testFreightName,
+				Namespace: testProject,
+			},
+			Images: []kargoapi.Image{{
+				RepoURL: "registry.example.com/app",
+				Tag:     "v1.2.3",
+			}},
+		}).
+		Build()
+
+	program, err := expr.Compile(
+		`first(freight("fake-freight").images)?.tag`,
+		Freight(t.Context(), c, testProject),
+	)
+	require.NoError(t, err)
+
+	result, err := expr.Run(program, nil)
+	require.NoError(t, err)
+	require.Equal(t, "v1.2.3", result)
+}
+
 func Test_freightMetadata(t *testing.T) {
 	const testProject = "fake-project"
 	const testFreightName = "fake-freight"

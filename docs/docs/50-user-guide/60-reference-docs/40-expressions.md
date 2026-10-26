@@ -585,6 +585,50 @@ features.
 
 :::
 
+### `freight(freightName)`
+
+The `freight()` function retrieves a `Freight` resource by name and returns its fields, including its artifact collections. This allows promotion steps to inspect the artifacts contained in a `Freight` without knowing their repository URLs or subscription names in advance.
+
+It has one required argument:
+
+- `freightName` (Required): The name of the `Freight` resource in the current `Project`.
+
+The returned object exposes the following artifact collections:
+
+| Field | Description |
+|-------|-------------|
+| `images` | Container images associated with the Freight, including their repository URLs, tags, and digests. |
+| `charts` | Helm charts associated with the Freight, including their repository URLs, names, and versions. |
+| `commits` | Git commits associated with the Freight, including their repository URLs, IDs, branches, and tags. |
+| `artifacts` | Other artifacts associated with the Freight, including their types, subscription names, and versions. |
+
+Each collection can contain zero or more artifacts. Use expr-lang's built-in functions, such as `first()`, `find()`, `filter()`, and `len()`, to select artifacts or inspect their contents.
+
+Example:
+
+```yaml
+config:
+  repository: ${{ first(freight(ctx.targetFreight.name).images)?.repoURL }}
+  tag: ${{ first(freight(ctx.targetFreight.name).images)?.tag }}
+```
+
+You can also branch based on the artifact types present in a Freight:
+
+```yaml
+steps:
+- uses: argocd-update
+  if: ${{ len(freight(ctx.targetFreight.name).charts) > 0 }}
+  config:
+    # Configure the application using the Freight's chart information.
+
+- uses: argocd-update
+  if: ${{ len(freight(ctx.targetFreight.name).images) > 0 }}
+  config:
+    # Configure the application using the Freight's image information.
+```
+
+Use optional chaining (`?.`) when accessing an artifact that may not exist. For example, `first(freight(ctx.targetFreight.name).images)?.tag` evaluates to `nil` when the Freight has no images.
+
 ### `freightStatus(freightName)`
 
 The `freightStatus()` function retrieves the entire `status` object of a

@@ -47,6 +47,7 @@ func FreightOperations(
 		ImageFromFreight(ctx, c, project, freightRequests, freightRefs),
 		ChartFromFreight(ctx, c, project, freightRequests, freightRefs),
 		ArtifactFromFreight(ctx, c, project, freightRequests, freightRefs),
+		Freight(ctx, c, project),
 		FreightMetadata(ctx, c, project),
 		FreightStatus(ctx, c, project),
 	}
@@ -339,6 +340,87 @@ func freightMetadata(
 			}
 			decoded[k] = val
 		}
+		return decoded, nil
+	}
+}
+
+// Freight returns an expr.Option that provides a `freight()` function
+// for use in expressions.
+//
+// The freight function retrieves a Freight resource by name and returns
+// its fields in a form that can be accessed within expressions.
+func Freight(
+	ctx context.Context,
+	c client.Client,
+	project string,
+) expr.Option {
+	return expr.Function(
+		"freight",
+		getFreight(ctx, c, project),
+		new(func(freightRefName string) map[string]any),
+	)
+}
+
+func getFreight(
+	ctx context.Context,
+	c client.Client,
+	project string,
+) exprFn {
+	return func(a ...any) (any, error) {
+		if len(a) != 1 {
+			return nil, fmt.Errorf(
+				"expected 1 argument, got %d",
+				len(a),
+			)
+		}
+
+		freightRefName, ok := a[0].(string)
+		if !ok {
+			return nil, fmt.Errorf(
+				"first argument must be string, got %T",
+				a[0],
+			)
+		}
+
+		if freightRefName == "" {
+			return nil, fmt.Errorf("freight ref name must not be empty")
+		}
+
+		freightObj, err := getFreightForExpr(
+			ctx,
+			c,
+			project,
+			freightRefName,
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		if freightObj == nil {
+			return nil, nil
+		}
+
+		raw, err := json.Marshal(freightObj)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling freight: %w", err)
+		}
+
+		var decoded map[string]any
+		if err := json.Unmarshal(raw, &decoded); err != nil {
+			return nil, fmt.Errorf("error unmarshaling freight: %w", err)
+		}
+
+		for _, field := range []string{
+			"images",
+			"charts",
+			"commits",
+			"artifacts",
+		} {
+			if decoded[field] == nil {
+				decoded[field] = []any{}
+			}
+		}
+
 		return decoded, nil
 	}
 }
