@@ -327,11 +327,12 @@ func InflateSteps(
 	promo *kargoapi.Promotion,
 ) error {
 	steps := make([]kargoapi.PromotionStep, 0, len(promo.Spec.Steps))
+	var inflatedTasks []kargoapi.InflatedPromotionTask
 	for i, step := range promo.Spec.Steps {
 		switch {
 		case step.Task != nil:
 			alias := step.GetAlias(i)
-			taskSteps, err := inflateTaskSteps(
+			taskSteps, inflatedTask, err := inflateTaskSteps(
 				ctx,
 				c,
 				promo.Namespace,
@@ -346,12 +347,14 @@ func InflateSteps(
 				)
 			}
 			steps = append(steps, taskSteps...)
+			inflatedTasks = append(inflatedTasks, inflatedTask)
 		default:
 			step.As = step.GetAlias(i)
 			steps = append(steps, step)
 		}
 	}
 	promo.Spec.Steps = steps
+	promo.Spec.InflatedTasks = inflatedTasks
 	return nil
 }
 
@@ -364,24 +367,26 @@ func inflateTaskSteps(
 	project, taskAlias string,
 	promoVars []kargoapi.ExpressionVariable,
 	taskStep kargoapi.PromotionStep,
-) ([]kargoapi.PromotionStep, error) {
+) ([]kargoapi.PromotionStep, kargoapi.InflatedPromotionTask, error) {
 	task, err := getPromotionTaskSpec(ctx, c, project, taskStep.Task)
 	if err != nil {
-		return nil, err
+		return nil, kargoapi.InflatedPromotionTask{}, err
 	}
 
 	vars, err := promotionTaskVarsToStepVars(task.Vars, promoVars, taskStep.Vars)
 	if err != nil {
-		return nil, err
+		return nil, kargoapi.InflatedPromotionTask{}, err
 	}
 
-	ref := kargoapi.PromotionStepTaskRef{
-		Name:        taskStep.Task.Name,
-		Kind:        taskStep.Task.Kind,
+	inflatedTask := kargoapi.InflatedPromotionTask{
+		Alias:       taskAlias,
+		Task:        *taskStep.Task,
 		Description: taskStep.Description,
+		Vars:        slices.Clone(vars),
+		Steps:       make([]string, 0, len(task.Steps)),
 	}
-	if ref.Kind == "" {
-		ref.Kind = kindPromotionTask
+	if inflatedTask.Task.Kind == "" {
+		inflatedTask.Task.Kind = kindPromotionTask
 	}
 
 	var steps []kargoapi.PromotionStep
@@ -397,14 +402,11 @@ func inflateTaskSteps(
 		// the Config of the step during the Promotion execution.
 		step.Vars = append(vars, step.Vars...)
 
-		stepRef := ref
-		stepRef.Vars = slices.Clone(vars)
-		step.Ref = &stepRef
-
 		// Append the inflated step to the list of steps.
 		steps = append(steps, *step)
+		inflatedTask.Steps = append(inflatedTask.Steps, step.As)
 	}
-	return steps, nil
+	return steps, inflatedTask, nil
 }
 
 // getPromotionTaskSpec retrieves the PromotionTaskSpec for the given

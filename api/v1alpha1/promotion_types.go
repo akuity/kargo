@@ -214,6 +214,13 @@ type PromotionSpec struct {
 	// +kubebuilder:validation:MinItems=1
 	// +kubebuilder:validation:items:XValidation:message="Promotion step must have uses set and must not reference a task",rule="has(self.uses) && !has(self.task)"
 	Steps []PromotionStep `json:"steps"`
+	// InflatedTasks records each step of the Stage's PromotionTemplate that
+	// referenced a (Cluster)PromotionTask and was inflated into Steps. It is
+	// set by Kargo when the Promotion is created and any value supplied by
+	// users is discarded.
+	//
+	// +kubebuilder:validation:Optional
+	InflatedTasks []InflatedPromotionTask `json:"inflatedTasks,omitempty"`
 }
 
 // PromotionTaskReference describes a reference to a PromotionTask.
@@ -235,19 +242,27 @@ type PromotionTaskReference struct {
 	Kind string `json:"kind,omitempty"`
 }
 
-// PromotionStepTaskRef describes the (Cluster)PromotionTask a PromotionStep
-// was inflated from.
-type PromotionStepTaskRef struct {
-	// Name is the name of the (Cluster)PromotionTask.
-	Name string `json:"name"`
-	// Kind is the type of the task. Either PromotionTask or
-	// ClusterPromotionTask.
-	Kind string `json:"kind,omitempty"`
+// InflatedPromotionTask records a step of a Stage's PromotionTemplate that
+// referenced a (Cluster)PromotionTask and was inflated into the steps of a
+// Promotion.
+type InflatedPromotionTask struct {
+	// Alias is the alias of the step that referenced the task. The aliases of
+	// the steps inflated from the task are prefixed with it.
+	Alias string `json:"alias"`
+	// Task is the (Cluster)PromotionTask that was inflated.
+	Task PromotionTaskReference `json:"task"`
 	// Description is the description of the step that referenced the task.
+	//
+	// +kubebuilder:validation:Optional
 	Description string `json:"description,omitempty"`
 	// Vars are the variables the task was inflated with: the task's defaults
 	// and the variables set by the step that referenced the task.
+	//
+	// +kubebuilder:validation:Optional
 	Vars []ExpressionVariable `json:"vars,omitempty"`
+	// Steps are the aliases of the Promotion's steps that were inflated from
+	// the task, in order.
+	Steps []string `json:"steps"`
 }
 
 // PromotionStepRetry describes the retry policy for a PromotionStep.
@@ -316,12 +331,6 @@ type PromotionStep struct {
 	// Task is a reference to a PromotionTask that should be inflated into a
 	// Promotion when it is built from a PromotionTemplate.
 	Task *PromotionTaskReference `json:"task,omitempty"`
-	// Ref identifies the (Cluster)PromotionTask this step was inflated
-	// from. It is set by Kargo when a Promotion is built from a
-	// PromotionTemplate and must not be set by users.
-	//
-	// +kubebuilder:validation:Optional
-	Ref *PromotionStepTaskRef `json:"ref,omitempty"`
 	// As is the alias this step can be referred to as.
 	As string `json:"as,omitempty"`
 	// Description is a detail of the step's purpose.

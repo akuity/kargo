@@ -686,7 +686,12 @@ func TestInflateSteps(t *testing.T) {
 		name       string
 		promo      kargoapi.Promotion
 		objects    []client.Object
-		assertions func(*testing.T, []kargoapi.PromotionStep, error)
+		assertions func(
+			*testing.T,
+			[]kargoapi.PromotionStep,
+			[]kargoapi.InflatedPromotionTask,
+			error,
+		)
 	}{
 		{
 			name: "task not found returns error",
@@ -705,7 +710,12 @@ func TestInflateSteps(t *testing.T) {
 					},
 				},
 			},
-			assertions: func(t *testing.T, _ []kargoapi.PromotionStep, err error) {
+			assertions: func(
+				t *testing.T,
+				_ []kargoapi.PromotionStep,
+				_ []kargoapi.InflatedPromotionTask,
+				err error,
+			) {
 				require.ErrorContains(t, err, "not found")
 			},
 		},
@@ -725,11 +735,44 @@ func TestInflateSteps(t *testing.T) {
 					},
 				},
 			},
-			assertions: func(t *testing.T, steps []kargoapi.PromotionStep, err error) {
+			assertions: func(
+				t *testing.T,
+				steps []kargoapi.PromotionStep,
+				inflatedTasks []kargoapi.InflatedPromotionTask,
+				err error,
+			) {
 				require.NoError(t, err)
 				require.Len(t, steps, 1)
 				require.Equal(t, "direct-step", steps[0].As)
 				require.Equal(t, "fake-step", steps[0].Uses)
+				require.Nil(t, inflatedTasks)
+			},
+		},
+		{
+			name: "supplied inflated tasks are discarded",
+			promo: kargoapi.Promotion{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-promotion",
+					Namespace: "test-project",
+				},
+				Spec: kargoapi.PromotionSpec{
+					Steps: []kargoapi.PromotionStep{{Uses: "fake-step"}},
+					InflatedTasks: []kargoapi.InflatedPromotionTask{{
+						Alias: "task-1",
+						Task:  kargoapi.PromotionTaskReference{Name: "fake-task"},
+						Steps: []string{"step-1"},
+					}},
+				},
+			},
+			assertions: func(
+				t *testing.T,
+				steps []kargoapi.PromotionStep,
+				inflatedTasks []kargoapi.InflatedPromotionTask,
+				err error,
+			) {
+				require.NoError(t, err)
+				require.Len(t, steps, 1)
+				require.Nil(t, inflatedTasks)
 			},
 		},
 		{
@@ -776,17 +819,36 @@ func TestInflateSteps(t *testing.T) {
 					},
 				},
 			},
-			assertions: func(t *testing.T, steps []kargoapi.PromotionStep, err error) {
+			assertions: func(
+				t *testing.T,
+				steps []kargoapi.PromotionStep,
+				inflatedTasks []kargoapi.InflatedPromotionTask,
+				err error,
+			) {
 				require.NoError(t, err)
 				require.Len(t, steps, 2)
 				require.Equal(t, "direct-step", steps[0].As)
 				require.Equal(t, "fake-step", steps[0].Uses)
-				require.Nil(t, steps[0].Ref)
 				require.Equal(t, "task-step::sub-step", steps[1].As)
 				require.Equal(t, "other-fake-step", steps[1].Uses)
 				require.ElementsMatch(t, []kargoapi.ExpressionVariable{
 					{Name: "input1", Value: "value1"},
 				}, steps[1].Vars)
+				require.Equal(
+					t,
+					[]kargoapi.InflatedPromotionTask{{
+						Alias: "task-step",
+						Task: kargoapi.PromotionTaskReference{
+							Name: "test-task",
+							Kind: "PromotionTask",
+						},
+						Vars: []kargoapi.ExpressionVariable{
+							{Name: "input1", Value: "value1"},
+						},
+						Steps: []string{"task-step::sub-step"},
+					}},
+					inflatedTasks,
+				)
 			},
 		},
 		{
@@ -855,7 +917,12 @@ func TestInflateSteps(t *testing.T) {
 					},
 				},
 			},
-			assertions: func(t *testing.T, steps []kargoapi.PromotionStep, err error) {
+			assertions: func(
+				t *testing.T,
+				steps []kargoapi.PromotionStep,
+				inflatedTasks []kargoapi.InflatedPromotionTask,
+				err error,
+			) {
 				require.NoError(t, err)
 				require.Len(t, steps, 2)
 				require.Equal(t, "task1::step1", steps[0].As)
@@ -868,6 +935,27 @@ func TestInflateSteps(t *testing.T) {
 				require.ElementsMatch(t, []kargoapi.ExpressionVariable{
 					{Name: "input2", Value: "value2"},
 				}, steps[1].Vars)
+				require.Len(t, inflatedTasks, 2)
+				require.Equal(t, "task1", inflatedTasks[0].Alias)
+				require.Equal(
+					t,
+					kargoapi.PromotionTaskReference{
+						Name: "test-task-1",
+						Kind: "PromotionTask",
+					},
+					inflatedTasks[0].Task,
+				)
+				require.Equal(t, []string{"task1::step1"}, inflatedTasks[0].Steps)
+				require.Equal(t, "task2", inflatedTasks[1].Alias)
+				require.Equal(
+					t,
+					kargoapi.PromotionTaskReference{
+						Name: "test-task-2",
+						Kind: "ClusterPromotionTask",
+					},
+					inflatedTasks[1].Task,
+				)
+				require.Equal(t, []string{"task2::step2"}, inflatedTasks[1].Steps)
 			},
 		},
 	}
@@ -881,7 +969,7 @@ func TestInflateSteps(t *testing.T) {
 
 			p := tt.promo.DeepCopy()
 			err := InflateSteps(t.Context(), c, p)
-			tt.assertions(t, p.Spec.Steps, err)
+			tt.assertions(t, p.Spec.Steps, p.Spec.InflatedTasks, err)
 		})
 	}
 }
@@ -897,7 +985,12 @@ func Test_inflateTaskSteps(t *testing.T) {
 		promoVars  []kargoapi.ExpressionVariable
 		taskStep   kargoapi.PromotionStep
 		objects    []client.Object
-		assertions func(*testing.T, []kargoapi.PromotionStep, error)
+		assertions func(
+			*testing.T,
+			[]kargoapi.PromotionStep,
+			kargoapi.InflatedPromotionTask,
+			error,
+		)
 	}{
 		{
 			name:      "task not found",
@@ -908,7 +1001,12 @@ func Test_inflateTaskSteps(t *testing.T) {
 					Name: "missing-task",
 				},
 			},
-			assertions: func(t *testing.T, steps []kargoapi.PromotionStep, err error) {
+			assertions: func(
+				t *testing.T,
+				steps []kargoapi.PromotionStep,
+				_ kargoapi.InflatedPromotionTask,
+				err error,
+			) {
 				require.True(t, apierrors.IsNotFound(err))
 				require.Nil(t, steps)
 			},
@@ -935,7 +1033,12 @@ func Test_inflateTaskSteps(t *testing.T) {
 					},
 				},
 			},
-			assertions: func(t *testing.T, steps []kargoapi.PromotionStep, err error) {
+			assertions: func(
+				t *testing.T,
+				steps []kargoapi.PromotionStep,
+				_ kargoapi.InflatedPromotionTask,
+				err error,
+			) {
 				require.ErrorContains(t, err, "missing value for variable")
 				require.Nil(t, steps)
 			},
@@ -985,7 +1088,12 @@ func Test_inflateTaskSteps(t *testing.T) {
 					},
 				},
 			},
-			assertions: func(t *testing.T, steps []kargoapi.PromotionStep, err error) {
+			assertions: func(
+				t *testing.T,
+				steps []kargoapi.PromotionStep,
+				inflatedTask kargoapi.InflatedPromotionTask,
+				err error,
+			) {
 				require.NoError(t, err)
 				require.Len(t, steps, 2)
 				require.Equal(t, "task-1::step1", steps[0].As)
@@ -1003,20 +1111,25 @@ func Test_inflateTaskSteps(t *testing.T) {
 					{Name: "input2", Value: "value2"},
 					{Name: "input4", Value: "value4"},
 				}, steps[1].Vars)
-				expectedRef := &kargoapi.PromotionStepTaskRef{
-					Kind:        "PromotionTask",
-					Name:        "test-task",
-					Description: "Render and commit",
-					Vars: []kargoapi.ExpressionVariable{
-						{Name: "input2", Value: "default2"},
-						{Name: "input1", Value: "value1"},
-						{Name: "input2", Value: "value2"},
-					},
-				}
-				require.Equal(t, expectedRef, steps[0].Ref)
-				require.Equal(t, expectedRef, steps[1].Ref)
-				require.NotSame(t, steps[0].Ref, steps[1].Ref)
 				require.Empty(t, steps[0].Description)
+				require.Equal(
+					t,
+					kargoapi.InflatedPromotionTask{
+						Alias: "task-1",
+						Task: kargoapi.PromotionTaskReference{
+							Name: "test-task",
+							Kind: "PromotionTask",
+						},
+						Description: "Render and commit",
+						Vars: []kargoapi.ExpressionVariable{
+							{Name: "input2", Value: "default2"},
+							{Name: "input1", Value: "value1"},
+							{Name: "input2", Value: "value2"},
+						},
+						Steps: []string{"task-1::step1", "task-1::step2"},
+					},
+					inflatedTask,
+				)
 			},
 		},
 		{
@@ -1052,7 +1165,12 @@ func Test_inflateTaskSteps(t *testing.T) {
 					},
 				},
 			},
-			assertions: func(t *testing.T, steps []kargoapi.PromotionStep, err error) {
+			assertions: func(
+				t *testing.T,
+				steps []kargoapi.PromotionStep,
+				_ kargoapi.InflatedPromotionTask,
+				err error,
+			) {
 				require.NoError(t, err)
 				require.Len(t, steps, 2)
 				require.Equal(t, "custom-alias::step-1", steps[0].As)
@@ -1090,20 +1208,29 @@ func Test_inflateTaskSteps(t *testing.T) {
 					},
 				},
 			},
-			assertions: func(t *testing.T, steps []kargoapi.PromotionStep, err error) {
+			assertions: func(
+				t *testing.T,
+				steps []kargoapi.PromotionStep,
+				inflatedTask kargoapi.InflatedPromotionTask,
+				err error,
+			) {
 				require.NoError(t, err)
 				require.Len(t, steps, 1)
 				require.Equal(t, "task-0::custom-alias", steps[0].As)
 				require.Equal(
 					t,
-					&kargoapi.PromotionStepTaskRef{
-						Kind: "ClusterPromotionTask",
-						Name: "test-cluster-task",
+					kargoapi.InflatedPromotionTask{
+						Alias: "task-0",
+						Task: kargoapi.PromotionTaskReference{
+							Name: "test-cluster-task",
+							Kind: "ClusterPromotionTask",
+						},
 						Vars: []kargoapi.ExpressionVariable{
 							{Name: "input1", Value: "value1"},
 						},
+						Steps: []string{"task-0::custom-alias"},
 					},
-					steps[0].Ref,
+					inflatedTask,
 				)
 			},
 		},
@@ -1115,10 +1242,10 @@ func Test_inflateTaskSteps(t *testing.T) {
 				WithScheme(s).
 				WithObjects(tt.objects...).
 				Build()
-			steps, err := inflateTaskSteps(
+			steps, inflatedTask, err := inflateTaskSteps(
 				t.Context(), c, tt.project, tt.taskAlias, tt.promoVars, tt.taskStep,
 			)
-			tt.assertions(t, steps, err)
+			tt.assertions(t, steps, inflatedTask, err)
 		})
 	}
 }

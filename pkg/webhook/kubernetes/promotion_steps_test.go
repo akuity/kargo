@@ -55,28 +55,6 @@ func TestValidatePromotionSteps(t *testing.T) {
 				)
 			},
 		},
-		{
-			name: "step sets ref",
-			steps: []kargoapi.PromotionStep{
-				{Uses: "fake-step"},
-				{
-					Uses: "fake-step",
-					Ref:  &kargoapi.PromotionStepTaskRef{Name: "fake-task"},
-				},
-			},
-			assertions: func(t *testing.T, errs field.ErrorList) {
-				require.Equal(
-					t,
-					field.ErrorList{{
-						Type:     field.ErrorTypeForbidden,
-						Field:    "steps[1].ref",
-						BadValue: "",
-						Detail:   "field is set by Kargo and must not be set",
-					}},
-					errs,
-				)
-			},
-		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {

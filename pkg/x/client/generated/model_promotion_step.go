@@ -29,8 +29,6 @@ type PromotionStep struct {
 	Description *string `json:"description,omitempty"`
 	// If is an optional expression that, if present, must evaluate to a boolean value. If the expression evaluates to false, the step will be skipped. If the expression does not evaluate to a boolean value, the step will be considered to have failed.
 	If *string `json:"if,omitempty"`
-	// Ref identifies the (Cluster)PromotionTask this step was inflated from. It is set by Kargo when a Promotion is built from a PromotionTemplate and must not be set by users.  +kubebuilder:validation:Optional
-	Ref *PromotionStepTaskRef `json:"ref,omitempty"`
 	// Retry is the retry policy for this step.
 	Retry *PromotionStepRetry `json:"retry,omitempty"`
 	// Task is a reference to a PromotionTask that should be inflated into a Promotion when it is built from a PromotionTemplate.
@@ -218,38 +216,6 @@ func (o *PromotionStep) SetIf(v string) {
 	o.If = &v
 }
 
-// GetRef returns the Ref field value if set, zero value otherwise.
-func (o *PromotionStep) GetRef() PromotionStepTaskRef {
-	if o == nil || IsNil(o.Ref) {
-		var ret PromotionStepTaskRef
-		return ret
-	}
-	return *o.Ref
-}
-
-// GetRefOk returns a tuple with the Ref field value if set, nil otherwise
-// and a boolean to check if the value has been set.
-func (o *PromotionStep) GetRefOk() (*PromotionStepTaskRef, bool) {
-	if o == nil || IsNil(o.Ref) {
-		return nil, false
-	}
-	return o.Ref, true
-}
-
-// HasRef returns a boolean if a field has been set.
-func (o *PromotionStep) HasRef() bool {
-	if o != nil && !IsNil(o.Ref) {
-		return true
-	}
-
-	return false
-}
-
-// SetRef gets a reference to the given PromotionStepTaskRef and assigns it to the Ref field.
-func (o *PromotionStep) SetRef(v PromotionStepTaskRef) {
-	o.Ref = &v
-}
-
 // GetRetry returns the Retry field value if set, zero value otherwise.
 func (o *PromotionStep) GetRetry() PromotionStepRetry {
 	if o == nil || IsNil(o.Retry) {
@@ -402,9 +368,6 @@ func (o PromotionStep) ToMap() (map[string]interface{}, error) {
 	}
 	if !IsNil(o.If) {
 		toSerialize["if"] = o.If
-	}
-	if !IsNil(o.Ref) {
-		toSerialize["ref"] = o.Ref
 	}
 	if !IsNil(o.Retry) {
 		toSerialize["retry"] = o.Retry
