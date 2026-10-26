@@ -326,3 +326,108 @@ func assertNoGitConfig(t *testing.T, homeDir string) {
 		"expected no .gitconfig in %s but found one", homeDir,
 	)
 }
+
+func TestSetupClientConfiguresProactiveHTTPAuth(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name           string
+		repoURL        string
+		creds          *RepoCredentials
+		wantConfigured bool
+	}{
+		{
+			name:    "HTTPS with complete credentials",
+			repoURL: "https://git-codecommit.us-east-1.amazonaws.com/v1/repos/example",
+			creds: &RepoCredentials{
+				Username: "test-user",
+				Password: "test-password",
+			},
+			wantConfigured: true,
+		},
+		{
+			name:           "no credentials",
+			repoURL:        "https://example.com/repo.git",
+			creds:          nil,
+			wantConfigured: false,
+		},
+		{
+			name:    "empty password",
+			repoURL: "https://example.com/repo.git",
+			creds: &RepoCredentials{
+				Username: "test-user",
+			},
+			wantConfigured: false,
+		},
+		{
+			name:    "empty username",
+			repoURL: "https://example.com/repo.git",
+			creds: &RepoCredentials{
+				Password: "test-password",
+			},
+			wantConfigured: false,
+		},
+		{
+			name:    "HTTP with complete credentials",
+			repoURL: "http://example.com/repo.git",
+			creds: &RepoCredentials{
+				Username: "test-user",
+				Password: "test-password",
+			},
+			wantConfigured: false,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			b := &baseRepo{
+				creds:       tc.creds,
+				dir:         t.TempDir(),
+				homeDir:     t.TempDir(),
+				originalURL: tc.repoURL,
+				accessURL:   tc.repoURL,
+			}
+
+			require.NoError(t, b.setupClient(t.Context(), nil))
+
+			keys := []struct {
+				key   string
+				value string
+			}{
+				{key: "http.emptyAuth", value: "false"},
+				{key: "http.proactiveAuth", value: "basic"},
+			}
+
+			for _, setting := range keys {
+				if tc.wantConfigured {
+					assertGitConfig(
+						t,
+						b.homeDir,
+						setting.key,
+						setting.value,
+					)
+				} else {
+					assertGitConfigAbsent(
+						t,
+						b.homeDir,
+						setting.key,
+					)
+				}
+			}
+		})
+	}
+}
+
+// assertGitConfigAbsent verifies that a Git configuration key is not set
+// in the .gitconfig within the given home directory.
+func assertGitConfigAbsent(t *testing.T, homeDir, key string) {
+	t.Helper()
+
+	configPath := filepath.Join(homeDir, ".gitconfig")
+	_, err := libExec.Exec(
+		exec.Command("git", "config", "--file", configPath, "--get", key),
+	)
+	require.Error(t, err, "expected %s not to be configured", key)
+}

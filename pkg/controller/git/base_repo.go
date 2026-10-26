@@ -127,6 +127,31 @@ func (b *baseRepo) setupClient(ctx context.Context, opts *ClientOptions) error {
 		return fmt.Errorf("error configuring the credentials: %w", err)
 	}
 
+	if b.creds != nil &&
+    b.creds.Username != "" &&
+    b.creds.Password != "" &&
+    strings.HasPrefix(strings.ToLower(b.originalURL), "https://") {
+		for _, setting := range []struct {
+			key   string
+			value string
+		}{
+			{key: "http.emptyAuth", value: "false"},
+			{key: "http.proactiveAuth", value: "basic"},
+		} {
+			if err := b.setGlobalConfig(
+				ctx,
+				b.homeDir,
+				setting.key,
+				setting.value,
+			); err != nil {
+				return fmt.Errorf(
+					"error configuring HTTP authentication: %w",
+					err,
+				)
+			}
+		}
+	}
+
 	if opts.InsecureSkipTLSVerify {
 		cmd := b.buildGitCommand(
 			ctx, "config", "--global", "http.sslVerify", "false",
