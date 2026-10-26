@@ -19,13 +19,12 @@ CREATE TABLE promotion_rollouts (
     -- The rollout's position among its Stage's rollouts, from 1.
     number BIGINT NOT NULL CHECK (number > 0),
     freight_name TEXT NOT NULL,
-    -- The Stage's update strategy when the rollout was created, as the Stage
-    -- gives it: a number of Targets, or a percentage of the rollout's
-    -- Targets such as '10%', which the reconciler resolves once it knows
-    -- them. NULL max_concurrent is no limit; NULL max_failures is none
-    -- tolerated.
-    max_concurrent TEXT CHECK (max_concurrent ~ '^[1-9][0-9]*%?$'),
-    max_failures TEXT CHECK (max_failures ~ '^(0|[1-9][0-9]*)%?$'),
+    -- The rollout's update strategy, as numbers of Targets: whoever creates
+    -- the rollout resolves any percentage the Stage gives against the
+    -- Stage's Targets first, as for a PromotionRequest. A max_concurrent of
+    -- 0 is no limit; a max_failures of 0 tolerates none.
+    max_concurrent BIGINT NOT NULL DEFAULT 0 CHECK (max_concurrent >= 0),
+    max_failures BIGINT NOT NULL DEFAULT 0 CHECK (max_failures >= 0),
     created_by TEXT NOT NULL DEFAULT '',
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,

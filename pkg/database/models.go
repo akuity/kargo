@@ -32,8 +32,8 @@ type PromotionRolloutRow struct {
 	StageName         string
 	Number            int64
 	FreightName       string
-	MaxConcurrent     *string
-	MaxFailures       *string
+	MaxConcurrent     int64
+	MaxFailures       int64
 	CreatedBy         string
 	CreatedAt         time.Time
 	UpdatedAt         time.Time

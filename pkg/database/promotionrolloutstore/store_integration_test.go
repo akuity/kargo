@@ -72,8 +72,8 @@ func TestStoreIntegration(t *testing.T) {
 			Name:          name,
 			StageName:     stage,
 			FreightName:   "freight-1",
-			MaxConcurrent: new("2"),
-			MaxFailures:   new("10%"),
+			MaxConcurrent: 2,
+			MaxFailures:   1,
 			CreatedBy:     "tester",
 		}
 	}
@@ -103,8 +103,8 @@ func TestStoreIntegration(t *testing.T) {
 				require.Equal(t, "prod", rollout.StageName)
 				require.EqualValues(t, 1, rollout.Number)
 				require.Equal(t, "freight-1", rollout.FreightName)
-				require.Equal(t, new("2"), rollout.MaxConcurrent)
-				require.Equal(t, new("10%"), rollout.MaxFailures)
+				require.EqualValues(t, 2, rollout.MaxConcurrent)
+				require.EqualValues(t, 1, rollout.MaxFailures)
 				require.Equal(t, "tester", rollout.CreatedBy)
 				require.NotEqual(t, uuid.Nil, rollout.ID)
 				require.False(t, rollout.CreatedAt.IsZero())
@@ -278,6 +278,11 @@ func TestStoreIntegration(t *testing.T) {
 				databasetest.RequirePGError(t, err, "23514")
 				_, err = pool.Exec(ctx,
 					`INSERT INTO promotion_rollouts (project_name, name, stage_name, number, freight_name, max_concurrent)
+					 VALUES ('bad', 'a', 'prod', 1, 'f', -1)`,
+				)
+				databasetest.RequirePGError(t, err, "23514")
+				_, err = pool.Exec(ctx,
+					`INSERT INTO promotion_rollouts (project_name, name, stage_name, number, freight_name, max_failures)
 					 VALUES ('bad', 'a', 'prod', 1, 'f', -1)`,
 				)
 				databasetest.RequirePGError(t, err, "23514")

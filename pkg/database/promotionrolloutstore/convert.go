@@ -6,7 +6,6 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/apimachinery/pkg/util/intstr"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/database"
@@ -50,8 +49,8 @@ func ToAPI(rollout Rollout) *kargoapi.PromotionRollout {
 			Freight: rollout.FreightName,
 			Targets: targets,
 			UpdateStrategy: kargoapi.PromotionRolloutUpdateStrategy{
-				MaxConcurrent: intOrPercent(rollout.MaxConcurrent),
-				MaxFailures:   intOrPercent(rollout.MaxFailures),
+				MaxConcurrent: rollout.MaxConcurrent,
+				MaxFailures:   rollout.MaxFailures,
 			},
 		},
 		Status: kargoapi.PromotionRolloutStatus{
@@ -73,30 +72,9 @@ func FromSpec(name string, spec kargoapi.PromotionRolloutSpec) database.Promotio
 		Name:          name,
 		StageName:     spec.Stage,
 		FreightName:   spec.Freight,
-		MaxConcurrent: intOrPercentString(spec.UpdateStrategy.MaxConcurrent),
-		MaxFailures:   intOrPercentString(spec.UpdateStrategy.MaxFailures),
+		MaxConcurrent: spec.UpdateStrategy.MaxConcurrent,
+		MaxFailures:   spec.UpdateStrategy.MaxFailures,
 	}
-}
-
-// intOrPercent reads a stored update strategy value, a number or a
-// percentage such as "10%", or nil for none. The schema admits nothing
-// else.
-func intOrPercent(value *string) *intstr.IntOrString {
-	if value == nil {
-		return nil
-	}
-	parsed := intstr.Parse(*value)
-	return &parsed
-}
-
-// intOrPercentString renders an update strategy value as the database
-// stores it, or nil for none.
-func intOrPercentString(value *intstr.IntOrString) *string {
-	if value == nil {
-		return nil
-	}
-	s := value.String()
-	return &s
 }
 
 // readyCondition states the rollout's phase, reason and message as a Ready

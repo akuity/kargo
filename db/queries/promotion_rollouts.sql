@@ -41,8 +41,8 @@ WITH stage AS (
         sqlc.arg(stage_name)::text,
         stage.number,
         sqlc.arg(freight_name)::text,
-        sqlc.narg(max_concurrent)::text,
-        sqlc.narg(max_failures)::text,
+        sqlc.arg(max_concurrent)::bigint,
+        sqlc.arg(max_failures)::bigint,
         sqlc.arg(created_by)::text
     FROM stage
     RETURNING *

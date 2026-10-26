@@ -92,7 +92,8 @@ func TestNewPromotionRollout(t *testing.T) {
 	t.Run("records the Stage and the Freight, and no Targets yet", func(t *testing.T) {
 		t.Parallel()
 
-		rollout := NewPromotionRollout(testStage, freight)
+		rollout, err := NewPromotionRollout(testStage, freight, nil)
+		require.NoError(t, err)
 
 		require.Equal(t, project, rollout.Namespace)
 		require.Equal(t, stage, rollout.Spec.Stage)
@@ -107,33 +108,44 @@ func TestNewPromotionRollout(t *testing.T) {
 
 		// A PromotionRollout is not a Kubernetes resource: nothing garbage
 		// collects it and no controller filters it by label.
-		rollout := NewPromotionRollout(testStage, freight)
+		rollout, err := NewPromotionRollout(testStage, freight, nil)
+		require.NoError(t, err)
 		require.Empty(t, rollout.OwnerReferences)
 		require.Empty(t, rollout.Labels)
 	})
 
-	t.Run("records the Stage's update strategy as given", func(t *testing.T) {
+	t.Run("resolves the Stage's update strategy against its Targets", func(t *testing.T) {
 		t.Parallel()
 
 		withStrategy := testStage.DeepCopy()
 		withStrategy.Spec.Targets.UpdateStrategy.MaxConcurrent = new(intstr.FromString("50%"))
 		withStrategy.Spec.Targets.UpdateStrategy.MaxFailures = new(intstr.FromInt32(2))
-		rollout := NewPromotionRollout(withStrategy, freight)
-		// A percentage is carried as such: it counts the rollout's Targets,
-		// which are resolved only later.
-		require.Equal(t, new(intstr.FromString("50%")), rollout.Spec.UpdateStrategy.MaxConcurrent)
-		require.Equal(t, new(intstr.FromInt32(2)), rollout.Spec.UpdateStrategy.MaxFailures)
-		// Copies, not the Stage's own values.
-		require.NotSame(
+		stageTargets := make([]kargoapi.Target, 10)
+		rollout, err := NewPromotionRollout(withStrategy, freight, stageTargets)
+		require.NoError(t, err)
+		require.Equal(
 			t,
-			withStrategy.Spec.Targets.UpdateStrategy.MaxConcurrent,
-			rollout.Spec.UpdateStrategy.MaxConcurrent,
+			kargoapi.PromotionRolloutUpdateStrategy{
+				MaxConcurrent: 5,
+				MaxFailures:   2,
+			},
+			rollout.Spec.UpdateStrategy,
 		)
+	})
+
+	t.Run("an invalid update strategy is an error", func(t *testing.T) {
+		t.Parallel()
+
+		withStrategy := testStage.DeepCopy()
+		withStrategy.Spec.Targets.UpdateStrategy.MaxConcurrent = new(intstr.FromString("half"))
+		_, err := NewPromotionRollout(withStrategy, freight, make([]kargoapi.Target, 10))
+		require.Error(t, err)
 	})
 
 	t.Run("a Stage without an update strategy gives the rollout none", func(t *testing.T) {
 		t.Parallel()
-		rollout := NewPromotionRollout(testStage, freight)
+		rollout, err := NewPromotionRollout(testStage, freight, nil)
+		require.NoError(t, err)
 		require.Zero(t, rollout.Spec.UpdateStrategy)
 	})
 

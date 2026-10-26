@@ -43,8 +43,8 @@ WITH stage AS (
         $2::text,
         stage.number,
         $4::text,
-        $5::text,
-        $6::text,
+        $5::bigint,
+        $6::bigint,
         $7::text
     FROM stage
     RETURNING id, project_name, name, stage_name, number, freight_name, max_concurrent, max_failures, created_by, created_at, updated_at, targets_resolved_at, status_phase, status_reason, status_message, status_started_at, status_finished_at
@@ -57,8 +57,8 @@ type CreatePromotionRolloutParams struct {
 	StageName     string
 	Name          string
 	FreightName   string
-	MaxConcurrent *string
-	MaxFailures   *string
+	MaxConcurrent int64
+	MaxFailures   int64
 	CreatedBy     string
 }
 
@@ -69,8 +69,8 @@ type CreatePromotionRolloutRow struct {
 	StageName         string
 	Number            int64
 	FreightName       string
-	MaxConcurrent     *string
-	MaxFailures       *string
+	MaxConcurrent     int64
+	MaxFailures       int64
 	CreatedBy         string
 	CreatedAt         time.Time
 	UpdatedAt         time.Time
@@ -641,8 +641,8 @@ type SetPromotionRolloutTargetsRow struct {
 	StageName         string
 	Number            int64
 	FreightName       string
-	MaxConcurrent     *string
-	MaxFailures       *string
+	MaxConcurrent     int64
+	MaxFailures       int64
 	CreatedBy         string
 	CreatedAt         time.Time
 	UpdatedAt         time.Time

@@ -2,7 +2,6 @@ package v1alpha1
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
 // PromotionRollout is not a Kubernetes resource. It lives in Kargo's
@@ -100,26 +99,23 @@ type PromotionRolloutSpec struct {
 	UpdateStrategy PromotionRolloutUpdateStrategy `json:"updateStrategy,omitempty"`
 }
 
-// PromotionRolloutUpdateStrategy is the part of a Stage's TargetUpdateStrategy
-// that a PromotionRollout records when it is created.
-//
-// Each value is taken from the Stage as the Stage gives it: an absolute
-// number, or a percentage of the rollout's Targets (e.g.: 10%), which is
-// resolved against the Targets the rollout records once it has recorded
-// them.
+// PromotionRolloutUpdateStrategy is a Stage's TargetUpdateStrategy as a
+// PromotionRollout records it when it is created: as numbers of Targets,
+// with any percentage the Stage gives resolved against the Stage's Targets,
+// as for a PromotionRequest.
 type PromotionRolloutUpdateStrategy struct {
 	// MaxConcurrent specifies a number of Targets which can be promoted to at
-	// the same time. If omitted, no limit is applied (default).
+	// the same time. Zero means there is no limit (default).
 	//
 	// +optional
-	MaxConcurrent *intstr.IntOrString `json:"maxConcurrent,omitempty"`
+	MaxConcurrent int64 `json:"maxConcurrent,omitempty"`
 	// MaxFailures specifies a number of Target promotions which can fail
 	// before the PromotionRollout is considered failed: N failing promotions
-	// with maxFailures: N is a success, N+1 is a failure. If omitted, no
-	// failure is tolerated (default).
+	// with maxFailures: N is a success, N+1 is a failure. Defaults to 0,
+	// meaning no failures tolerated.
 	//
 	// +optional
-	MaxFailures *intstr.IntOrString `json:"maxFailures,omitempty"`
+	MaxFailures int64 `json:"maxFailures,omitempty"`
 }
 
 // PromotionRolloutTarget names a Target that a PromotionRollout promotes

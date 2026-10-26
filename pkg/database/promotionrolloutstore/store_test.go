@@ -10,7 +10,6 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/intstr"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/database"
@@ -184,8 +183,8 @@ func TestToAPI(t *testing.T) {
 		StageName:         "prod",
 		Number:            7,
 		FreightName:       "abc",
-		MaxConcurrent:     new("2"),
-		MaxFailures:       new("10%"),
+		MaxConcurrent:     2,
+		MaxFailures:       1,
 		CreatedBy:         "someone",
 		CreatedAt:         created,
 		UpdatedAt:         updated,
@@ -211,8 +210,11 @@ func TestToAPI(t *testing.T) {
 				require.EqualValues(t, 7, rollout.Number)
 				require.Equal(t, "prod", rollout.Spec.Stage)
 				require.Equal(t, "abc", rollout.Spec.Freight)
-				require.Equal(t, new(intstr.FromInt32(2)), rollout.Spec.UpdateStrategy.MaxConcurrent)
-				require.Equal(t, new(intstr.FromString("10%")), rollout.Spec.UpdateStrategy.MaxFailures)
+				require.Equal(
+					t,
+					kargoapi.PromotionRolloutUpdateStrategy{MaxConcurrent: 2, MaxFailures: 1},
+					rollout.Spec.UpdateStrategy,
+				)
 				require.Equal(t, []kargoapi.PromotionRolloutTarget{{Name: "us-east"}, {Name: "us-west"}}, rollout.Spec.Targets)
 				require.Nil(t, rollout.Status.Targets)
 				require.Nil(t, rollout.Status.Summary)
@@ -316,15 +318,15 @@ func TestFromSpec(t *testing.T) {
 		Freight: "abc",
 		Targets: []kargoapi.PromotionRolloutTarget{{Name: "ignored"}},
 		UpdateStrategy: kargoapi.PromotionRolloutUpdateStrategy{
-			MaxConcurrent: new(intstr.FromInt32(3)),
-			MaxFailures:   new(intstr.FromString("10%")),
+			MaxConcurrent: 3,
+			MaxFailures:   1,
 		},
 	})
 	require.Equal(t, database.PromotionRolloutRow{
 		Name:          "prod.01A.abc",
 		StageName:     "prod",
 		FreightName:   "abc",
-		MaxConcurrent: new("3"),
-		MaxFailures:   new("10%"),
+		MaxConcurrent: 3,
+		MaxFailures:   1,
 	}, row)
 }

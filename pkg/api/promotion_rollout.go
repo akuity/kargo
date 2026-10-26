@@ -5,7 +5,6 @@ import (
 	"strings"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/intstr"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 )
@@ -28,6 +27,10 @@ func GeneratePromotionRolloutName(stageName, freight string) string {
 // a selector that could match differently later. A Target that appears
 // after that point is picked up by a subsequent PromotionRollout.
 //
+// stageTargets should contain all of the Stage's Targets. As for a
+// PromotionRequest, any percentage in the Stage's update strategy is
+// resolved against how many there are.
+//
 // The result carries no owner references and no labels: a PromotionRollout
 // is not a Kubernetes resource. Its Stage is recorded in its spec, and the
 // store it is written to records its Project.
@@ -36,14 +39,18 @@ func GeneratePromotionRolloutName(stageName, freight string) string {
 func NewPromotionRollout(
 	stage *kargoapi.Stage,
 	freightName string,
-) *kargoapi.PromotionRollout {
-	// The strategy is carried as the Stage gives it. A percentage counts the
-	// rollout's Targets, which are resolved only later, so it is resolved
-	// then too.
-	updateStrategy := kargoapi.PromotionRolloutUpdateStrategy{}
+	stageTargets []kargoapi.Target,
+) (*kargoapi.PromotionRollout, error) {
+	var updateStrategy kargoapi.PromotionRolloutUpdateStrategy
 	if stage.Spec.Targets != nil {
-		updateStrategy.MaxConcurrent = copyIntOrString(stage.Spec.Targets.UpdateStrategy.MaxConcurrent)
-		updateStrategy.MaxFailures = copyIntOrString(stage.Spec.Targets.UpdateStrategy.MaxFailures)
+		strategy, err := calculateUpdateStrategy(
+			stage.Spec.Targets.UpdateStrategy,
+			len(stageTargets),
+		)
+		if err != nil {
+			return nil, err
+		}
+		updateStrategy = kargoapi.PromotionRolloutUpdateStrategy(strategy)
 	}
 
 	return &kargoapi.PromotionRollout{
@@ -56,16 +63,7 @@ func NewPromotionRollout(
 			Freight:        freightName,
 			UpdateStrategy: updateStrategy,
 		},
-	}
-}
-
-// copyIntOrString returns a copy of the value, or nil for nil.
-func copyIntOrString(value *intstr.IntOrString) *intstr.IntOrString {
-	if value == nil {
-		return nil
-	}
-	copied := *value
-	return &copied
+	}, nil
 }
 
 // PromotionRolloutOf returns the id of the PromotionRollout the Promotion was
