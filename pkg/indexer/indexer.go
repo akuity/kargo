@@ -607,37 +607,18 @@ func ServiceAccountsByOIDCClaims(obj client.Object) []string {
 		return nil
 	}
 
-	refinedClaimValues := []string{}
-	for annotationKey, annotationValue := range sa.GetAnnotations() {
-		switch {
-		case strings.HasPrefix(annotationKey, rbacapi.AnnotationKeyOIDCClaimNamePrefix):
-			rawClaimName := strings.TrimPrefix(annotationKey, rbacapi.AnnotationKeyOIDCClaimNamePrefix)
-			rawClaimValue := strings.TrimSpace(annotationValue)
-			if rawClaimValue == "" {
-				continue
-			}
-			for e := range strings.SplitSeq(rawClaimValue, ",") {
-				if claimValue := strings.TrimSpace(e); claimValue != "" {
-					refinedClaimValues = append(refinedClaimValues, FormatClaim(rawClaimName, claimValue))
-				}
-			}
-		case annotationKey == rbacapi.AnnotationKeyOIDCClaims:
-			claims := make(map[string][]string)
-			if err := json.Unmarshal([]byte(annotationValue), &claims); err != nil {
-				continue
-			}
-			for name, values := range claims {
-				for _, v := range values {
-					refinedClaimValues = append(refinedClaimValues,
-						FormatClaim(name, strings.TrimSpace(v)),
-					)
-				}
-			}
-		}
+	claims, err := rbacapi.OIDCClaimsFromAnnotationValues(sa.GetAnnotations())
+	if err != nil {
+		return nil
 	}
 
-	if len(refinedClaimValues) == 0 {
-		return nil
+	var refinedClaimValues []string
+	for name, values := range claims {
+		for _, v := range values {
+			if claimValue := strings.TrimSpace(v); claimValue != "" {
+				refinedClaimValues = append(refinedClaimValues, FormatClaim(name, claimValue))
+			}
+		}
 	}
 	return refinedClaimValues
 }
