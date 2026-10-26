@@ -43,14 +43,14 @@ describe('roundPhase()', () => {
 
 describe('collectionUpToDate()', () => {
   test.each([
-    [{ id: 'abc' }, 'abc', true],
-    [{ id: 'old' }, 'abc', false],
+    ['abc', 'abc', true],
+    ['old', 'abc', false],
     // Nothing to compare: the question is open, not answered false.
     [undefined, 'abc', undefined],
-    [{ id: 'abc' }, undefined, undefined],
-    [{}, 'abc', undefined]
-  ])('%j against %j -> %s', (collection, collectionID, expected) => {
-    expect(collectionUpToDate(collection, collectionID)).toBe(expected);
+    ['abc', undefined, undefined],
+    ['', 'abc', undefined]
+  ])('%j against %j -> %s', (collectionID, stageCollectionID, expected) => {
+    expect(collectionUpToDate(collectionID, stageCollectionID)).toBe(expected);
   });
 });
 

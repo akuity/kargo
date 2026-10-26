@@ -7,6 +7,9 @@ import { Link, generatePath } from 'react-router-dom';
 import { paths } from '@ui/config/paths';
 import { useModal } from '@ui/features/common/modal/use-modal';
 import { SmallLabel } from '@ui/features/common/small-label';
+import { useGetFreightMap } from '@ui/features/stage/tabs/freight-history/use-get-freight-map';
+import { useGetTarget } from '@ui/gen/api/v2/core/core';
+import { Freight, Target } from '@ui/gen/api/v2/models';
 import { parseDate } from '@ui/utils/dates';
 
 import { freightNames } from '../model/round-utils';
@@ -62,15 +65,17 @@ const FreightLinks = ({
 const StageCard = ({
   project,
   governing,
-  freightLabel
+  freightLabel,
+  freightMap
 }: {
   project: string;
   governing: GoverningStage;
   freightLabel: (name: string) => string;
+  freightMap: Record<string, Freight>;
 }) => {
   const stageName = governing.stage.metadata?.name || '';
   const stageFreight = freightNames(governing.stage.status?.freightHistory?.[0]);
-  const artifacts = freightArtifacts(governing.currentFreight);
+  const artifacts = freightArtifacts(governing.freight, freightMap);
   const issues = governing.health?.issues || [];
 
   return (
@@ -87,11 +92,7 @@ const StageCard = ({
 
       <Flex vertical gap={6}>
         <Row label='Freight'>
-          <FreightLinks
-            project={project}
-            names={freightNames(governing.currentFreight)}
-            freightLabel={freightLabel}
-          />
+          <FreightLinks project={project} names={governing.freight} freightLabel={freightLabel} />
         </Row>
         {governing.upToDate === false && (
           <Row label='Stage Freight'>
@@ -117,7 +118,7 @@ const StageCard = ({
       {governing.upToDate === false && (
         <Typography.Text type='warning' className='text-xs block mt-2'>
           Behind: Stage is on {stageFreight.map(freightLabel).join(', ') || 'other Freight'}, Target
-          on {freightNames(governing.currentFreight).map(freightLabel).join(', ') || 'none'}
+          on {governing.freight.map(freightLabel).join(', ') || 'none'}
         </Typography.Text>
       )}
       {issues.length > 0 && (
@@ -132,6 +133,8 @@ const StageCard = ({
 /**
  * TargetDetails is everything about one Target that does not fit on its row:
  * a card per Stage that governs it, and the params its promotion steps read.
+ * The rows are drawn from summaries, which leave params out, so the Target
+ * itself is read here, once someone opens it.
  */
 export const TargetDetails = ({
   project,
@@ -142,12 +145,16 @@ export const TargetDetails = ({
   row: TargetRow;
   freightLabel: (name: string) => string;
 }) => {
-  const params = flattenParams(row.target.spec?.params);
-  const created = parseDate(row.target.metadata?.creationTimestamp);
-  const name = row.target.metadata?.name || '';
-  const { show: showYaml } = useModal((props) => (
-    <TargetYamlModal target={row.target} {...props} />
-  ));
+  const name = row.target.name || '';
+  const targetQuery = useGetTarget(project, name);
+  const target = targetQuery.data?.data as Target | undefined;
+  const freightMap = useGetFreightMap(project);
+  const params = flattenParams(target?.spec?.params);
+  const created = parseDate(target?.metadata?.creationTimestamp);
+  // The Target is passed when the modal opens, since it loads after mount.
+  const { show: showModal } = useModal();
+  const showYaml = () =>
+    target && showModal((props) => <TargetYamlModal target={target} {...props} />);
   const { show: showPromotions } = useModal((props) => (
     <TargetPromotionsModal project={project} target={name} {...props} />
   ));
@@ -162,7 +169,7 @@ export const TargetDetails = ({
             : ''}
         </SmallLabel>
         <Flex gap={8}>
-          <Button size='small' onClick={() => showYaml()}>
+          <Button size='small' disabled={!target} onClick={() => showYaml()}>
             <FontAwesomeIcon icon={faFileCode} className='mr-1' />
             YAML
           </Button>
@@ -182,6 +189,7 @@ export const TargetDetails = ({
             project={project}
             governing={governing}
             freightLabel={freightLabel}
+            freightMap={freightMap}
           />
         ))}
         {params.length > 0 && (
@@ -198,7 +206,7 @@ export const TargetDetails = ({
             </Flex>
           </div>
         )}
-        {!row.stages.length && !params.length && (
+        {!row.stages.length && !params.length && !targetQuery.isLoading && (
           <Typography.Text type='secondary' className='text-xs'>
             No Stage selects this Target, and it carries no params.
           </Typography.Text>

@@ -2094,6 +2094,44 @@ paths:
       summary: Abort a running Verification process
       tags:
       - Verifications
+  /v1beta1/projects/{project}/target-summaries:
+    get:
+      description: |-
+        List a summary of each of a project's Targets: its name, its
+        labels, and, for each Stage that governs it, the Freight it
+        runs and the latest Promotion to it. Optionally narrowed to
+        the Targets a Stage governs or those matching a label
+        selector. Returns a TargetSummaryList.
+      operationId: ListTargetSummaries
+      parameters:
+      - description: Project name
+        in: path
+        name: project
+        required: true
+        schema:
+          type: string
+      - description: "Only Targets governed by this Stage, i.e. selected by its targets.selectors"
+        in: query
+        name: stage
+        schema:
+          type: string
+      - description: "Kubernetes label selector to filter Targets by, e.g. region=us,tier!=canary"
+        in: query
+        name: labelSelector
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TargetSummaryList"
+          description: TargetSummaryList
+      security:
+      - BearerAuth: []
+      summary: List Target summaries
+      tags:
+      - Core
   /v1beta1/projects/{project}/targets:
     get:
       description: |-
@@ -2261,6 +2299,43 @@ paths:
       tags:
       - Core
       x-codegen-request-body-name: body
+  /v1beta1/projects/{project}/targets/{target-name}/promotions:
+    get:
+      description: |-
+        List the Promotions to one of a project's Targets, newest
+        first, from every Stage, including those Kubernetes no longer
+        has. Returns a TargetPromotionList.
+      operationId: ListTargetPromotions
+      parameters:
+      - description: Project name
+        in: path
+        name: project
+        required: true
+        schema:
+          type: string
+      - description: Target name
+        in: path
+        name: target-name
+        required: true
+        schema:
+          type: string
+      - description: "Most Promotions to return, 1 to 1000; default 100"
+        in: query
+        name: limit
+        schema:
+          type: integer
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TargetPromotionList"
+          description: TargetPromotionList
+      security:
+      - BearerAuth: []
+      summary: List a Target's Promotions
+      tags:
+      - Core
   /v1beta1/projects/{project}/warehouses:
     get:
       description: |-
@@ -4252,6 +4327,155 @@ components:
           additionalProperties:
             $ref: "#/components/schemas/ImageStageMap"
           type: object
+      type: object
+    TargetPromotion:
+      example:
+        createdAt: createdAt
+        finishedAt: finishedAt
+        freight: freight
+        name: name
+        phase: phase
+        stage: stage
+      properties:
+        createdAt:
+          description: CreatedAt is when the Promotion was created.
+          type: string
+        finishedAt:
+          description: "FinishedAt is when the Promotion finished, absent until it\
+            \ has."
+          type: string
+        freight:
+          description: Freight names the Freight promoted.
+          type: string
+        name:
+          description: Name is the Promotion's name.
+          type: string
+        phase:
+          description: "Phase is the Promotion's phase, absent until it has one."
+          type: string
+        stage:
+          description: Stage names the Stage that promoted.
+          type: string
+      type: object
+    TargetPromotionList:
+      example:
+        items:
+        - createdAt: createdAt
+          finishedAt: finishedAt
+          freight: freight
+          name: name
+          phase: phase
+          stage: stage
+        - createdAt: createdAt
+          finishedAt: finishedAt
+          freight: freight
+          name: name
+          phase: phase
+          stage: stage
+      properties:
+        items:
+          items:
+            $ref: "#/components/schemas/TargetPromotion"
+          type: array
+      type: object
+    TargetStageSummary:
+      example:
+        collectionID: collectionID
+        freight:
+        - freight
+        - freight
+        health: "{}"
+        lastPromotion: "{}"
+      properties:
+        collectionID:
+          description: |-
+            CollectionID identifies the Freight the Stage's most recent successful
+            Promotion to the Target left there. It is computed as the Stage computes
+            the ID of its own current collection, so the two are equal exactly when
+            the Target has the Stage's current Freight. It is absent until a
+            Promotion from the Stage to the Target has succeeded.
+          type: string
+        freight:
+          description: "Freight names the Freight in that collection, sorted."
+          items:
+            type: string
+          type: array
+        health:
+          allOf:
+          - $ref: "#/components/schemas/Health"
+          description: |-
+            Health is the Target's health with respect to the Stage's Freight. It
+            is absent until it has been assessed, and nothing assesses it yet.
+          type: object
+        lastPromotion:
+          allOf:
+          - $ref: "#/components/schemas/TargetPromotion"
+          description: |-
+            LastPromotion is the Stage's most recent Promotion to the Target,
+            whatever its phase. It is absent until there has been one.
+          type: object
+      type: object
+    TargetSummary:
+      example:
+        labels:
+          key: labels
+        name: name
+        stages:
+          key:
+            collectionID: collectionID
+            freight:
+            - freight
+            - freight
+            health: "{}"
+            lastPromotion: "{}"
+      properties:
+        labels:
+          additionalProperties:
+            type: string
+          description: Labels are the Target's labels.
+          type: object
+        name:
+          description: Name is the Target's name.
+          type: string
+        stages:
+          additionalProperties:
+            $ref: "#/components/schemas/TargetStageSummary"
+          description: |-
+            Stages describes the Target with respect to each Stage that governs it,
+            keyed by Stage name. A Stage that does not govern the Target is absent,
+            even if it once promoted to it.
+          type: object
+      type: object
+    TargetSummaryList:
+      example:
+        items:
+        - labels:
+            key: labels
+          name: name
+          stages:
+            key:
+              collectionID: collectionID
+              freight:
+              - freight
+              - freight
+              health: "{}"
+              lastPromotion: "{}"
+        - labels:
+            key: labels
+          name: name
+          stages:
+            key:
+              collectionID: collectionID
+              freight:
+              - freight
+              - freight
+              health: "{}"
+              lastPromotion: "{}"
+      properties:
+        items:
+          items:
+            $ref: "#/components/schemas/TargetSummary"
+          type: array
       type: object
     UpdateConfigMapRequest:
       example:

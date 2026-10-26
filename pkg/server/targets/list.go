@@ -1,6 +1,7 @@
 package targets
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 
@@ -54,9 +55,32 @@ func (h *Handler) list(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, &kargoapi.TargetList{
-		Items: filterTargets(targets, selector, stageSelectors),
-	})
+	targets = filterTargets(targets, selector, stageSelectors)
+	if err = h.setStatuses(ctx, project, "", targets); err != nil {
+		_ = c.Error(err)
+		return
+	}
+	c.JSON(http.StatusOK, &kargoapi.TargetList{Items: targets})
+}
+
+// setStatuses reads the current Freight of the named Target, or of every
+// Target in the Project if no name is given, and sets it as the status of
+// those of the given Targets it concerns. Nothing is read for no Targets.
+func (h *Handler) setStatuses(
+	ctx context.Context,
+	project string,
+	name string,
+	targets []kargoapi.Target,
+) error {
+	if len(targets) == 0 {
+		return nil
+	}
+	rows, err := h.store.CurrentFreight(ctx, project, name)
+	if err != nil {
+		return err
+	}
+	setStatuses(targets, rows)
+	return nil
 }
 
 // parseLabelSelectorQuery parses the labelSelector query parameter. An empty

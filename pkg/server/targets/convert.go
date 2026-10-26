@@ -71,6 +71,33 @@ func targetFromRow(row database.TargetRow, project string) (*kargoapi.Target, er
 	}, nil
 }
 
+// setStatuses sets the status of each Target from the rows recording, per
+// Stage, the Freight that Stage's most recent successful Promotion to the
+// Target left there. Rows name their Target by id; a row for a Target not
+// among those given, one filtered out or created after they were read, is
+// skipped. Each collection's ID is derived from its Freight exactly as a
+// Stage derives its own, so comparing the two tells whether a Target is on the
+// Stage's current Freight. Health is absent: nothing assesses a Target's
+// health yet.
+func setStatuses(targets []kargoapi.Target, rows []database.ListTargetCurrentFreightRow) {
+	byUID := make(map[types.UID]*kargoapi.Target, len(targets))
+	for i := range targets {
+		byUID[targets[i].UID] = &targets[i]
+	}
+	for _, row := range rows {
+		target, ok := byUID[types.UID(row.TargetID.String())]
+		if !ok {
+			continue
+		}
+		status := target.Status.Stages[row.StageName]
+		if status.CurrentFreight == nil {
+			status.CurrentFreight = &kargoapi.FreightCollection{}
+		}
+		status.CurrentFreight.UpdateOrPush(freightReference(row))
+		target.Status.SetStatusForStage(row.StageName, status)
+	}
+}
+
 // rowFromTarget takes what the database stores from a Target: its name,
 // labels, params and the TargetSet that manages it. Everything else about the
 // resource is the database's to assign.

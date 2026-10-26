@@ -1,21 +1,21 @@
 import {
   PromotionRequest,
   Stage,
-  Target,
-  TargetStageStatus,
+  TargetStageSummary,
+  TargetSummary,
   V1LabelSelector
 } from '@ui/gen/api/v2/models';
 
 // Builders shared by the Target util suites, so each reads as the case it is
 // about rather than as object literals.
+
+// target builds a Target's summary. Its stages are the Stages that govern it,
+// as the server settles them, each with what that Stage has done to it.
 export const target = (
   name: string,
   labels?: Record<string, string>,
-  partial: Partial<Target> = {}
-): Target => ({
-  metadata: { name, labels },
-  ...partial
-});
+  stages?: Record<string, TargetStageSummary>
+): TargetSummary => ({ name, labels, stages });
 
 export const stage = (name: string, partial: Partial<Stage> = {}): Stage => ({
   metadata: { name },
@@ -31,17 +31,20 @@ export const fleetStage = (name: string, selectors: V1LabelSelector[], collectio
     status: collectionID ? { freightHistory: [{ id: collectionID }] } : undefined
   });
 
-// forStage builds the entry a Target's status carries for one Stage: the
-// Freight collection that Stage last landed on it, and its health since.
+// forStage builds what a Target's summary says about one Stage that governs
+// it: the collection that Stage last landed on it, its health since, and the
+// phase of the Stage's latest Promotion to it. An undefined phase means no
+// Promotion at all; an empty one, a Promotion not yet picked up.
 export const forStage = (
   collectionID?: string,
   health?: string,
-  freight?: string
-): TargetStageStatus => ({
-  currentFreight: collectionID
-    ? { id: collectionID, items: freight ? { 'Warehouse/w': { name: freight } } : {} }
-    : undefined,
-  health: health ? { status: health } : undefined
+  freight?: string,
+  phase?: string
+): TargetStageSummary => ({
+  collectionID,
+  freight: freight ? [freight] : undefined,
+  health: health ? { status: health } : undefined,
+  lastPromotion: phase === undefined ? undefined : { name: 'promotion', phase }
 });
 
 export const round = (

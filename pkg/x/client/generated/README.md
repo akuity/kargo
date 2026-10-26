@@ -111,6 +111,8 @@ Class | Method | HTTP request | Description
 *CoreAPI* | [**ListSharedConfigMaps**](docs/CoreAPI.md#listsharedconfigmaps) | **Get** /v1beta1/shared/configmaps | List shared ConfigMaps
 *CoreAPI* | [**ListStages**](docs/CoreAPI.md#liststages) | **Get** /v1beta1/projects/{project}/stages | List Stages
 *CoreAPI* | [**ListSystemConfigMaps**](docs/CoreAPI.md#listsystemconfigmaps) | **Get** /v1beta1/system/configmaps | List system-level ConfigMaps
+*CoreAPI* | [**ListTargetPromotions**](docs/CoreAPI.md#listtargetpromotions) | **Get** /v1beta1/projects/{project}/targets/{target-name}/promotions | List a Target&#39;s Promotions
+*CoreAPI* | [**ListTargetSummaries**](docs/CoreAPI.md#listtargetsummaries) | **Get** /v1beta1/projects/{project}/target-summaries | List Target summaries
 *CoreAPI* | [**ListTargets**](docs/CoreAPI.md#listtargets) | **Get** /v1beta1/projects/{project}/targets | List Targets
 *CoreAPI* | [**ListWarehouses**](docs/CoreAPI.md#listwarehouses) | **Get** /v1beta1/projects/{project}/warehouses | List Warehouses
 *CoreAPI* | [**PatchFreightAlias**](docs/CoreAPI.md#patchfreightalias) | **Patch** /v1beta1/projects/{project}/freight/{freight-name-or-alias}/alias | Patch a Freight resource&#39;s alias
@@ -381,10 +383,15 @@ Class | Method | HTTP request | Description
  - [TagMap](docs/TagMap.md)
  - [Target](docs/Target.md)
  - [TargetList](docs/TargetList.md)
+ - [TargetPromotion](docs/TargetPromotion.md)
+ - [TargetPromotionList](docs/TargetPromotionList.md)
  - [TargetSpec](docs/TargetSpec.md)
  - [TargetStageStatus](docs/TargetStageStatus.md)
+ - [TargetStageSummary](docs/TargetStageSummary.md)
  - [TargetStats](docs/TargetStats.md)
  - [TargetStatus](docs/TargetStatus.md)
+ - [TargetSummary](docs/TargetSummary.md)
+ - [TargetSummaryList](docs/TargetSummaryList.md)
  - [TargetUpdateStrategy](docs/TargetUpdateStrategy.md)
  - [UpdateConfigMapRequest](docs/UpdateConfigMapRequest.md)
  - [UpdateGenericCredentialsRequest](docs/UpdateGenericCredentialsRequest.md)

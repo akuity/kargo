@@ -531,7 +531,10 @@ clients and the UI can treat it like one. Target custom resources from
 earlier versions are not migrated; a chart upgrade removes the CRD and them
 with it. A Target names its Project rather than referencing the mirrored
 row, so writing one never waits for the mirror. Deleting a Project does not
-yet remove its Targets.
+yet remove its Targets. A Target's status is not written by anyone: it
+is read from the Promotion history, its current Freight for a Stage being
+the collection that Stage's most recent successful Promotion to it
+rendered.
 
 Only control plane components open the database. The controller may run far
 from the control plane, on infrastructure where the database is not

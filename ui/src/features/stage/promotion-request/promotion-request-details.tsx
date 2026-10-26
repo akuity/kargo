@@ -18,7 +18,7 @@ import { TARGETS_POLL_INTERVAL_MS } from '@ui/features/project/targets/constants
 import {
   useGetPromotionRequest,
   useListPromotions,
-  useListTargets,
+  useListTargetSummaries,
   usePromoteToStage
 } from '@ui/gen/api/v2/core/core';
 import { ApiError } from '@ui/lib/api/custom-fetch';
@@ -99,7 +99,8 @@ export const PromotionRequestDetails = ({
     { query: { enabled: !!stageName } }
   );
   // Targets live in the database, which offers no watch; the list is polled.
-  const targetsQuery = useListTargets(
+  // Only the Targets' labels are read, so their summaries do.
+  const targetsQuery = useListTargetSummaries(
     project,
     { stage: stageName },
     { query: { enabled: !!stageName, refetchInterval: TARGETS_POLL_INTERVAL_MS } }

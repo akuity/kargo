@@ -193,10 +193,15 @@ model_step_execution_metadata.go
 model_tag_map.go
 model_target.go
 model_target_list.go
+model_target_promotion.go
+model_target_promotion_list.go
 model_target_spec.go
 model_target_stage_status.go
+model_target_stage_summary.go
 model_target_stats.go
 model_target_status.go
+model_target_summary.go
+model_target_summary_list.go
 model_target_update_strategy.go
 model_update_config_map_request.go
 model_update_generic_credentials_request.go

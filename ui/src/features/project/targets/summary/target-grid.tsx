@@ -63,7 +63,7 @@ export const TargetGrid = ({
       <div className='flex flex-wrap gap-[2px]'>
         {shown.map((row) => {
           const { label, color, hollow } = paint(row);
-          const name = row.target.metadata?.name || '';
+          const name = row.target.name || '';
           const style = {
             width: size,
             height: size,

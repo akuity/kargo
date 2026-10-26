@@ -9,7 +9,8 @@ import { useDocumentTitle } from '@ui/features/common/document-title/use-documen
 import { BaseHeader } from '@ui/features/common/layout/base-header';
 import { Pipelines } from '@ui/features/project/pipelines/pipelines';
 import { useProjectBreadcrumbs } from '@ui/features/project/project-utils';
-import { useListTargets } from '@ui/gen/api/v2/core/core';
+import { useGetProject } from '@ui/gen/api/v2/core/core';
+import { Project as ProjectResource } from '@ui/gen/api/v2/models';
 
 export const Project = ({
   creatingStage,
@@ -25,9 +26,12 @@ export const Project = ({
   const { projectSubpages } = useExtensionsContext();
 
   // The Targets page only means something once the project has Targets, so
-  // its button appears only then.
-  const targetsQuery = useListTargets(name || '', undefined);
-  const showTargets = (targetsQuery.data?.data?.items?.length || 0) > 0;
+  // its button appears only then. The Project's stats count its Targets, and
+  // the pipelines view reads the Project under the same query key, so this
+  // costs no request of its own rather than one for every Target there is.
+  const projectQuery = useGetProject(name || '');
+  const project = projectQuery.data?.data as ProjectResource | undefined;
+  const showTargets = (project?.status?.stats?.targets?.count || 0) > 0;
 
   const resourceLabel =
     (stageName && `Stage: ${stageName}`) ||

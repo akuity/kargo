@@ -141,7 +141,7 @@ export const TargetMatrix = ({
   // Target as its row is rebuilt -- a promotion landing on it while it is
   // being read updates the panel rather than closing it.
   const [pickedName, setPickedName] = useState<string>();
-  const picked = rows.find((row) => row.target.metadata?.name === pickedName);
+  const picked = rows.find((row) => row.target.name === pickedName);
 
   return (
     <div className={`px-4 py-3 ${surfaceClassName}`}>
@@ -190,9 +190,7 @@ export const TargetMatrix = ({
           marks={marks}
           picked={pickedName}
           onPick={(row) =>
-            setPickedName((current) =>
-              current === row.target.metadata?.name ? undefined : row.target.metadata?.name
-            )
+            setPickedName((current) => (current === row.target.name ? undefined : row.target.name))
           }
         />
       ))}

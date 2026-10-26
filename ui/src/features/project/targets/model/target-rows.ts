@@ -1,14 +1,16 @@
 import { HealthStatus, healthStatusToEnum } from '@ui/features/common/health-status/utils';
 import { roundBlock } from '@ui/features/stage/utils/promotion-request';
-import { FreightCollection, Health, PromotionRequest, Stage, Target } from '@ui/gen/api/v2/models';
+import {
+  Health,
+  PromotionRequest,
+  Stage,
+  TargetPromotion,
+  TargetSummary
+} from '@ui/gen/api/v2/models';
 
 import { collectionUpToDate, freightNames, roundPhase } from './round-utils';
-import { byName, pipelineOrder, stageGovernsTarget, targetAwareStages } from './target-stages';
+import { pipelineOrder, targetAwareStages } from './target-stages';
 import { StateCounts, TargetState, emptyStateCounts, statePrecedence } from './target-state';
-
-// Rounds is the PromotionRequest each target-aware Stage is running now, keyed
-// by Stage name. A Stage with no round in flight simply has no entry.
-export type Rounds = Record<string, PromotionRequest | undefined>;
 
 // GoverningStage is one Stage that governs a Target, with everything that
 // Stage observes about it. All of it is scoped to the Stage: a Target governed
@@ -18,27 +20,35 @@ export type GoverningStage = {
   // The Target's health with respect to this Stage's Freight, absent until the
   // first assessment.
   health?: Health;
-  // What the Target runs for this Stage, absent until a Promotion from the
-  // Stage to this Target has succeeded.
-  currentFreight?: FreightCollection;
+  // What the Target runs for this Stage: the ID of the collection the Stage's
+  // latest successful Promotion to it rendered, and the Freight in it. Absent
+  // and empty until a Promotion from the Stage to this Target has succeeded.
+  collectionID?: string;
+  freight: string[];
   // Whether the Target has what the Stage has. False when it has fallen
   // behind; undefined when there is nothing to tell either way.
   upToDate?: boolean;
-  // The phase the Stage's current round reports for this Target, when it names
-  // it at all.
+  // The Stage's latest Promotion to the Target, whatever its phase, and that
+  // phase, Pending until the Promotion is picked up.
+  promotion?: TargetPromotion;
   phase?: string;
   state: TargetState;
 };
 
+// promotionPhase is the phase a Target shows for a Promotion: its own, or
+// Pending for one that has yet to be picked up.
+export const promotionPhase = (promotion?: TargetPromotion): string | undefined =>
+  promotion ? promotion.phase || 'Pending' : undefined;
+
 // isUpToDate reports whether a Target has what its Stage has. With no recorded
-// collection to compare, the Stage's latest round stands in: it promotes the
-// Stage's own Freight, so a Target it succeeded on has caught up.
+// collection to compare, the Stage's latest Promotion to it stands in: it
+// promotes the Stage's own Freight, so a Target it succeeded on has caught up.
 const isUpToDate = (
-  currentFreight: FreightCollection | undefined,
   collectionID: string | undefined,
+  stageCollectionID: string | undefined,
   phase: string | undefined
 ): boolean | undefined => {
-  const compared = collectionUpToDate(currentFreight, collectionID);
+  const compared = collectionUpToDate(collectionID, stageCollectionID);
   if (compared !== undefined) {
     return compared;
   }
@@ -60,8 +70,8 @@ const settledState = (governed: Omit<GoverningStage, 'state'>): TargetState =>
 
 // governingStageState is the one word for a Target under one Stage.
 const governingStageState = (governed: Omit<GoverningStage, 'state'>): TargetState => {
-  // A round still moving says more than a health reading, which describes the
-  // Freight that round is on its way to replace.
+  // A Promotion still moving says more than a health reading, which describes
+  // the Freight that Promotion is on its way to replace.
   if (governed.phase === 'Pending' || governed.phase === 'Running') {
     return 'Progressing';
   }
@@ -81,8 +91,8 @@ const governingStageState = (governed: Omit<GoverningStage, 'state'>): TargetSta
   }
 
   // No health recorded -- the ordinary case, since Targets are not
-  // health-checked yet. Fall back to how the Stage's latest round went, as the
-  // back end's own Target stats do until health is written.
+  // health-checked yet. Fall back to how the Stage's latest Promotion to the
+  // Target went, as the back end's own Target stats do until health is written.
   switch (governed.phase) {
     case 'Failed':
     case 'Errored':
@@ -93,9 +103,8 @@ const governingStageState = (governed: Omit<GoverningStage, 'state'>): TargetSta
       break;
   }
 
-  // The round says nothing about this Target. Freight on it means some earlier
-  // promotion succeeded; none means nothing ever has.
-  return governed.currentFreight ? settledState(governed) : 'NotPromoted';
+  // Freight on it means some promotion succeeded; none means nothing ever has.
+  return governed.collectionID ? settledState(governed) : 'NotPromoted';
 };
 
 // worstState is the state a Target shows when several Stages govern it.
@@ -109,7 +118,7 @@ export const worstState = (states: TargetState[]): TargetState => {
 };
 
 export type TargetRow = {
-  target: Target;
+  target: TargetSummary;
   stages: GoverningStage[];
   // The Target's state across every Stage that governs it.
   state: TargetState;
@@ -121,12 +130,22 @@ export type TargetRow = {
   freight: string[];
 };
 
+// Rounds is the PromotionRequest each target-aware Stage is running now, keyed
+// by Stage name. A Stage with no round in flight simply has no entry.
+export type Rounds = Record<string, PromotionRequest | undefined>;
+
 // targetRows pairs every Target with the Stages that govern it, both sorted by
-// name, and reads each pairing's state from the Target's own status and from
-// the round that Stage is running. A Target no Stage governs still gets a row,
-// with no Stages.
+// name, and reads each pairing's state from the Target's summary for that
+// Stage. Which Stages govern a Target is the server's to say; a Stage it names
+// that is not among those given is left out. A Target no Stage governs still
+// gets a row, with no Stages.
+//
+// A pairing's phase is that of the Stage's latest Promotion to the Target,
+// unless the caller hands in the Stage's round: a surface about one Stage
+// reports its current round instead, in which a Target the round never named
+// has no phase at all.
 export const targetRows = (
-  targets: Target[],
+  targets: TargetSummary[],
   stages: Stage[],
   rounds: Rounds = {}
 ): TargetRow[] => {
@@ -139,33 +158,38 @@ export const targetRows = (
       return [stage.metadata?.name || '', round && !roundBlock(round) ? round : undefined];
     })
   );
-  return [...targets].sort(byName).map((target) => {
-    const name = target.metadata?.name || '';
-    const governed = governing
-      .filter((stage) => stageGovernsTarget(stage, target))
-      .map<GoverningStage>((stage) => {
+  return [...targets]
+    .sort((lhs, rhs) => (lhs.name || '').localeCompare(rhs.name || ''))
+    .map((target) => {
+      const governed = governing.flatMap<GoverningStage>((stage) => {
         const stageName = stage.metadata?.name || '';
-        const forStage = target.status?.stages?.[stageName];
-        const currentFreight = forStage?.currentFreight;
-        const collectionID = stage.status?.freightHistory?.[0]?.id;
-        const phase = roundPhase(reaching.get(stageName), name);
+        const forStage = target.stages?.[stageName];
+        if (!forStage) {
+          return [];
+        }
+        const phase =
+          stageName in rounds
+            ? roundPhase(reaching.get(stageName), target.name)
+            : promotionPhase(forStage.lastPromotion);
         const pairing = {
           stage,
-          health: forStage?.health,
-          currentFreight,
-          upToDate: isUpToDate(currentFreight, collectionID, phase),
+          health: forStage.health,
+          collectionID: forStage.collectionID,
+          freight: forStage.freight || [],
+          upToDate: isUpToDate(forStage.collectionID, stage.status?.freightHistory?.[0]?.id, phase),
+          promotion: forStage.lastPromotion,
           phase
         };
-        return { ...pairing, state: governingStageState(pairing) };
+        return [{ ...pairing, state: governingStageState(pairing) }];
       });
-    return {
-      target,
-      stages: governed,
-      state: worstState(governed.map(({ state }) => state)),
-      behind: governed.some(({ upToDate }) => upToDate === false),
-      freight: [...new Set(governed.flatMap(({ currentFreight }) => freightNames(currentFreight)))]
-    };
-  });
+      return {
+        target,
+        stages: governed,
+        state: worstState(governed.map(({ state }) => state)),
+        behind: governed.some(({ upToDate }) => upToDate === false),
+        freight: [...new Set(governed.flatMap(({ freight }) => freight))]
+      };
+    });
 };
 
 // stateCounts tallies rows by the state they show. Every state is present, so
@@ -261,5 +285,5 @@ export const byWorstState = (rows: TargetRow[]): TargetRow[] =>
   [...rows].sort(
     (lhs, rhs) =>
       statePrecedence.indexOf(lhs.state) - statePrecedence.indexOf(rhs.state) ||
-      (lhs.target.metadata?.name || '').localeCompare(rhs.target.metadata?.name || '')
+      (lhs.target.name || '').localeCompare(rhs.target.name || '')
   );

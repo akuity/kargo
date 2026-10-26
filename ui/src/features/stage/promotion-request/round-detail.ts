@@ -8,7 +8,7 @@ import {
   Promotion,
   PromotionRequest,
   PromotionRequestSummary,
-  Target
+  TargetSummary
 } from '@ui/gen/api/v2/models';
 import { parseDate } from '@ui/utils/dates';
 
@@ -52,14 +52,12 @@ const severity = (phase: PromotionPhase): number => {
 export const childPromotions = (
   request?: PromotionRequest,
   promotions: Promotion[] = [],
-  targets: Target[] = []
+  targets: TargetSummary[] = []
 ): ChildPromotion[] => {
   const byName = new Map(
     promotions.map((promotion) => [promotion.metadata?.name || '', promotion])
   );
-  const labelsOf = new Map(
-    targets.map((target) => [target.metadata?.name || '', target.metadata?.labels || {}])
-  );
+  const labelsOf = new Map(targets.map((target) => [target.name || '', target.labels || {}]));
 
   return targetRows(request)
     .map<ChildPromotion>((row) => {
