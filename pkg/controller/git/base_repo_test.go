@@ -420,8 +420,6 @@ func TestSetupClientConfiguresProactiveHTTPAuth(t *testing.T) {
 	}
 }
 
-// assertGitConfigAbsent verifies that a Git configuration key is not set
-// in the .gitconfig within the given home directory.
 func assertGitConfigAbsent(t *testing.T, homeDir, key string) {
 	t.Helper()
 
