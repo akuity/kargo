@@ -5,7 +5,6 @@ import {
   getPromotionDirectiveStepStatus,
   PromotionDirectiveStepStatus
 } from '@ui/features/common/promotion-directive-step-status/utils';
-import { getPromotionPhasePresentation } from '@ui/features/common/promotion-status/promotion-phase';
 import {
   getPromotionStatusPhase,
   isPromotionPhaseTerminal,
@@ -69,7 +68,6 @@ export const PromotionProgress = ({
       <Flex vertical gap={8}>
         <Flex align='center' gap={8}>
           {extra}
-          <Tag color={getPromotionPhasePresentation(phase).tagColor}>{phase}</Tag>
           <Typography.Text strong>
             {doneStepCount} / {steps.length} steps done
           </Typography.Text>
