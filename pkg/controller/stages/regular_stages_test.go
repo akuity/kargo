@@ -788,9 +788,9 @@ func TestRegularStageReconciler_Reconcile_concurrentStatusMetadata(t *testing.T)
 	})
 	require.NoError(t, err)
 
-	// The race requires a later patch of the pass to diff against a Stage
-	// refreshed by an earlier one, so at least two patches must have happened.
-	require.GreaterOrEqual(t, len(stagePatches), 2)
+	// A pass with no new current Promotion writes its status once, at the end;
+	// that patch must still leave the concurrent status.metadata write alone.
+	require.Len(t, stagePatches, 1)
 	for _, stagePatch := range stagePatches {
 		assert.NotContains(t, stagePatch, "metadata", stagePatch)
 	}
