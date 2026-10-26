@@ -64,7 +64,7 @@ export const groupPromotionSteps = (
 
     const previousEntry = entries.at(-1);
 
-    if (previousEntry?.type === 'task' && previousEntry.inflatedTask === inflatedTask) {
+    if (previousEntry?.type === 'task' && previousEntry.inflatedTask.alias === inflatedTask.alias) {
       previousEntry.steps.push(indexedStep);
       return;
     }
