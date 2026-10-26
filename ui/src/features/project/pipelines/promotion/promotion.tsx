@@ -212,15 +212,29 @@ const Content = (props: { promotion: TPromotion; yaml: string }) => {
 
   return (
     <>
-      <PromotionProgress
-        promotion={promotion}
-        onSegmentClick={(key) => {
-          setActiveStepKeys((keys) => (keys.includes(key) ? keys : [...keys, key]));
-          document
-            .getElementById(`promotion-entry-${key}`)
-            ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }}
-      />
+      {!isPromotionTerminal && (
+        <PromotionProgress
+          promotion={promotion}
+          onCurrentStepClick={(key) => {
+            setActiveStepKeys((keys) => (keys.includes(key) ? keys : [...keys, key]));
+            document
+              .getElementById(`promotion-entry-${key}`)
+              ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }}
+          extra={
+            canAbortPromotion(promotion) && (
+              <Button
+                danger
+                size='small'
+                onClick={confirmAbortRequest}
+                icon={<FontAwesomeIcon icon={faStopCircle} className='text-xs' />}
+              >
+                Abort
+              </Button>
+            )
+          }
+        />
+      )}
       {affiliatedStage && (
         <Flex align='center' gap={8} className='mb-2'>
           <h1 className='text-sm font-semibold m-0'>Stage: </h1>
@@ -257,19 +271,6 @@ const Content = (props: { promotion: TPromotion; yaml: string }) => {
                 />
 
                 <div className='mt-5'>
-                  {canAbortPromotion(promotion) && (
-                    <Flex className='mb-2'>
-                      <Button
-                        className='ml-auto'
-                        danger
-                        size='small'
-                        onClick={confirmAbortRequest}
-                        icon={<FontAwesomeIcon icon={faStopCircle} className='text-xs' />}
-                      >
-                        Abort
-                      </Button>
-                    </Flex>
-                  )}
                   <PromotionSteps
                     promotion={promotion}
                     activeKeys={activeStepKeys}
