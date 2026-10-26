@@ -693,8 +693,8 @@ github.com/oapi-codegen/nullable v1.1.0 h1:eAh8JVc5430VtYVnq00Hrbpag9PFRGWLjxR1/
 github.com/oapi-codegen/nullable v1.1.0/go.mod h1:KUZ3vUzkmEKY90ksAmit2+5juDIhIZhfDl+0PwOQlFY=
 github.com/oapi-codegen/oapi-codegen/v2 v2.7.1 h1:a7Ab7YlpqkVG5HKrTaeFstm32Z5QOnyjnbsCO0jiMYM=
 github.com/oapi-codegen/oapi-codegen/v2 v2.7.1/go.mod h1:qzFy6iuobJw/hD1aRILee4G87/ShmhR0xYCwcUtZMCw=
-github.com/oapi-codegen/runtime v1.7.0 h1:t7358VYPvNbWJ9gdAkIK/smVeHpBf6yp8VTsaZsb/7k=
-github.com/oapi-codegen/runtime v1.7.0/go.mod h1:GwV7hC2hviaMzj+ITfHVRESK5J2W/GefVwIND/bMGvU=
+github.com/oapi-codegen/runtime v1.8.0 h1:RJzEgQSJQADEPaG1cYuSCKYai/cCVRE2xnkrqhJs/3c=
+github.com/oapi-codegen/runtime v1.8.0/go.mod h1:GwV7hC2hviaMzj+ITfHVRESK5J2W/GefVwIND/bMGvU=
 github.com/oasdiff/yaml v0.0.9 h1:zQOvd2UKoozsSsAknnWoDJlSK4lC0mpmjfDsfqNwX48=
 github.com/oasdiff/yaml v0.0.9/go.mod h1:8lvhgJG4xiKPj3HN5lDow4jZHPlx1i7dIwzkdAo6oAM=
 github.com/oasdiff/yaml3 v0.0.9 h1:rWPrKccrdUm8J0F3sGuU+fuh9+1K/RdJlWF7O/9yw2g=
@@ -1274,8 +1274,8 @@ k8s.io/utils v0.0.0-20200324210504-a9aa75ae1b89/go.mod h1:sZAwmy6armz5eXlNoLmJcl
 k8s.io/utils v0.0.0-20200603063816-c1c6865ac451/go.mod h1:jPW/WVKK9YHAvNhRxK0md/EJ228hCsBRufyofKtW8HA=
 k8s.io/utils v0.0.0-20250604170112-4c0f3b243397 h1:hwvWFiBzdWw1FhfY1FooPn3kzWuJ8tmbZBHi4zVsl1Y=
 k8s.io/utils v0.0.0-20250604170112-4c0f3b243397/go.mod h1:OLgZIPagt7ERELqWJFomSt595RzquPNLL48iOWgYOg0=
-oras.land/oras-go/v2 v2.6.4 h1:l4uv+UT7QK4Hju+KOEZ/c8iOjq3iZH7cULoRpUnSDAU=
-oras.land/oras-go/v2 v2.6.4/go.mod h1:imXEFiYkTZUVVYkfv/r5GVmWeiLkGtNQA8FU4F/sjKs=
+oras.land/oras-go/v2 v2.7.0 h1:0bXRBBSqYgPSjZRrhJbT71Rb465c+rdlft2xdQPxLtQ=
+oras.land/oras-go/v2 v2.7.0/go.mod h1:imXEFiYkTZUVVYkfv/r5GVmWeiLkGtNQA8FU4F/sjKs=
 pgregory.net/rapid v1.2.0 h1:keKAYRcjm+e1F0oAuU5F5+YPAWcyxNNRK2wud503Gnk=
 pgregory.net/rapid v1.2.0/go.mod h1:PY5XlDGj0+V1FCq0o192FdRhpKHGTRIWBgqjDBTrq04=
 pluginrpc.com/pluginrpc v0.5.0 h1:tOQj2D35hOmvHyPu8e7ohW2/QvAnEtKscy2IJYWQ2yo=

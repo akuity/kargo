@@ -75,7 +75,7 @@ require (
 	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/klauspost/compress v1.20.3
 	github.com/microsoft/azure-devops-go-api/azuredevops/v7 v7.1.0
-	github.com/oapi-codegen/runtime v1.7.0
+	github.com/oapi-codegen/runtime v1.8.0
 	github.com/oklog/ulid/v2 v2.1.2
 	github.com/otiai10/copy v1.14.1
 	github.com/patrickmn/go-cache v2.1.0+incompatible
@@ -110,7 +110,7 @@ require (
 	k8s.io/client-go v0.34.3
 	k8s.io/klog/v2 v2.130.1
 	k8s.io/utils v0.0.0-20250604170112-4c0f3b243397
-	oras.land/oras-go/v2 v2.6.4
+	oras.land/oras-go/v2 v2.7.0
 	sigs.k8s.io/cli-utils v0.37.2
 	sigs.k8s.io/controller-runtime v0.22.4
 	sigs.k8s.io/kustomize/api v0.21.0
