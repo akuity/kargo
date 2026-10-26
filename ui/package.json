@@ -16,7 +16,8 @@
   "license": "ISC",
   "pnpm": {
     "overrides": {
-      "@ant-design/icons": "6.1.1"
+      "@ant-design/icons": "6.1.1",
+      "dompurify": "3.4.17"
     }
   },
   "devDependencies": {
