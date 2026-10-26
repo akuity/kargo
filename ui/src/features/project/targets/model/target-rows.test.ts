@@ -7,7 +7,6 @@ import {
   behindCount,
   byWorstState,
   freightTally,
-  stageRollouts,
   stateCounts,
   targetRows,
   worstState
@@ -290,45 +289,6 @@ describe('freightTally()', () => {
       { name: 'new', count: 2 },
       { name: 'old', count: 1 }
     ]);
-  });
-});
-
-describe('stageRollouts()', () => {
-  const us = fleetStage('us-stage', [{ matchLabels: { region: 'us' } }], 'abc');
-  const eu = fleetStage('eu-stage', [{ matchLabels: { region: 'eu' } }], 'abc');
-
-  test('summarizes each Stage over the rows given', () => {
-    const rows = targetRows(
-      [
-        target(
-          'a',
-          { region: 'us' },
-          { status: { stages: { 'us-stage': forStage('abc', 'Healthy', 'new') } } }
-        ),
-        target(
-          'b',
-          { region: 'us' },
-          { status: { stages: { 'us-stage': forStage('old', 'Unhealthy') } } }
-        )
-      ],
-      [us, eu]
-    );
-    const [euRollout, usRollout] = stageRollouts(rows, [us, eu]);
-
-    expect(usRollout.governed).toBe(2);
-    expect(usRollout.onLatest).toBe(1);
-    expect(usRollout.unhealthy).toBe(1);
-    expect(usRollout.inFlight).toBe(0);
-    expect(usRollout.counts.Healthy).toBe(1);
-
-    // A Stage governing none of the rows still gets a rollout.
-    expect(euRollout.governed).toBe(0);
-  });
-
-  test('names the Freight the Stage itself is on', () => {
-    const current = fleetStage('cur', [{}]);
-    current.status = { freightHistory: [{ id: 'abc', items: { 'Warehouse/w': { name: 'f1' } } }] };
-    expect(stageRollouts([], [current])[0].freight).toEqual(['f1']);
   });
 });
 
