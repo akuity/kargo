@@ -29,7 +29,6 @@ import (
 	"github.com/akuity/kargo/pkg/conditions"
 	"github.com/akuity/kargo/pkg/controller"
 	"github.com/akuity/kargo/pkg/database"
-	"github.com/akuity/kargo/pkg/database/promotionrolloutstore"
 	"github.com/akuity/kargo/pkg/kubeclient"
 	"github.com/akuity/kargo/pkg/kubernetes"
 	"github.com/akuity/kargo/pkg/logging"
@@ -57,21 +56,10 @@ func ReconcilerConfigFromEnv() ReconcilerConfig {
 
 var errProjectNamespaceExists = errors.New("namespace already exists and is not labeled as a Project namespace")
 
-// RolloutReader reads the latest PromotionRollouts of a Project's Stages,
-// which live in the database: for each Stage, the rollout it is promoting
-// through, if any, and the newest that has finished, if any.
-type RolloutReader interface {
-	ListLatest(ctx context.Context, project, stage string) ([]promotionrolloutstore.Rollout, error)
-}
-
 // TargetCounter counts a Project's Targets, which live in the database: all
-// of them, and those among the given names.
+// of them, and the healthy ones among them.
 type TargetCounter interface {
-	Count(
-		ctx context.Context,
-		project string,
-		names []string,
-	) (database.CountTargetsRow, error)
+	Count(ctx context.Context, project string) (database.CountTargetsRow, error)
 }
 
 // reconciler reconciles Project resources.
@@ -82,9 +70,6 @@ type reconciler struct {
 	// when the controller runs without a database, and then no Target stats
 	// are reported.
 	targets TargetCounter
-	// rollouts reads the PromotionRollouts through which Targets were
-	// promoted to, for the same stats. It is nil exactly when targets is.
-	rollouts RolloutReader
 
 	// The following behaviors are overridable for testing purposes:
 
@@ -188,14 +173,13 @@ type reconciler struct {
 }
 
 // SetupReconcilerWithManager initializes a reconciler for Project resources and
-// registers it with the provided Manager. The targets counter and rollout
-// reader may be nil; see the reconciler's targets field.
+// registers it with the provided Manager. The targets counter may be nil; see
+// the reconciler's targets field.
 func SetupReconcilerWithManager(
 	ctx context.Context,
 	kargoMgr manager.Manager,
 	cfg ReconcilerConfig,
 	targets TargetCounter,
-	rollouts RolloutReader,
 ) error {
 	c, err := ctrl.NewControllerManagedBy(kargoMgr).
 		For(&kargoapi.Project{}).
@@ -208,7 +192,7 @@ func SetupReconcilerWithManager(
 			},
 		).
 		WithOptions(controller.CommonOptions(cfg.MaxConcurrentReconciles)).
-		Build(newReconciler(kargoMgr.GetClient(), cfg, targets, rollouts))
+		Build(newReconciler(kargoMgr.GetClient(), cfg, targets))
 	if err != nil {
 		return fmt.Errorf("error creating Project reconciler: %w", err)
 	}
@@ -247,13 +231,11 @@ func newReconciler(
 	kubeClient client.Client,
 	cfg ReconcilerConfig,
 	targets TargetCounter,
-	rollouts RolloutReader,
 ) *reconciler {
 	r := &reconciler{
-		cfg:      cfg,
-		client:   kubeClient,
-		targets:  targets,
-		rollouts: rollouts,
+		cfg:     cfg,
+		client:  kubeClient,
+		targets: targets,
 	}
 	r.getProjectFn = api.GetProject
 	r.reconcileFn = r.reconcile

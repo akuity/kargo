@@ -175,21 +175,115 @@ func TestStoreIntegration(t *testing.T) {
 			},
 		},
 		{
-			name: "count totals a Project's Targets and those among the names",
+			name: "count totals a Project's Targets and those healthy by each Stage's latest rollout",
 			run: func(t *testing.T) {
-				for _, name := range []string{"a", "b", "c"} {
-					_, err := store.Create(ctx, "demo", newTarget(name))
+				const project = "health"
+				ids := map[string]uuid.UUID{}
+				for _, name := range []string{"t1", "t2", "t3", "t4", "t5", "t6"} {
+					target, err := store.Create(ctx, project, newTarget(name))
 					require.NoError(t, err)
+					ids[name] = target.ID
 				}
-				_, err := store.Create(ctx, "other", newTarget("a"))
+				_, err := store.Create(ctx, "elsewhere", newTarget("t1"))
 				require.NoError(t, err)
-				counts, err := store.Count(ctx, "demo", []string{"a", "c", "absent"})
+
+				// stage records a Stage as the mirror would: a target-aware
+				// one with selectors, a classic one without.
+				stage := func(name string, targetAware bool) {
+					t.Helper()
+					var selectors []byte
+					if targetAware {
+						selectors = []byte(`[{}]`)
+					}
+					require.NoError(t, queries.UpsertStage(ctx, database.UpsertStageParams{
+						ID:              project + "/" + name,
+						ProjectName:     project,
+						Name:            name,
+						TargetSelectors: selectors,
+						CreatedAt:       time.Now(),
+					}))
+				}
+				// rollout records a rollout of the Stage to the Targets, in the
+				// given phase.
+				rollout := func(stageName, name, phase string, targets ...string) uuid.UUID {
+					t.Helper()
+					targetIDs := make([]uuid.UUID, len(targets))
+					for k, target := range targets {
+						targetIDs[k] = ids[target]
+					}
+					created, err := queries.CreatePromotionRollout(ctx, database.CreatePromotionRolloutParams{
+						ProjectName: project,
+						StageName:   stageName,
+						Name:        name,
+						FreightName: "freight",
+						TargetIds:   targetIDs,
+					})
+					require.NoError(t, err)
+					_, err = queries.UpdatePromotionRolloutStatus(ctx, database.UpdatePromotionRolloutStatusParams{
+						StatusPhase: phase,
+						ProjectName: project,
+						Name:        name,
+					})
+					require.NoError(t, err)
+					return created.ID
+				}
+				// promotion records a child Promotion of the rollout to the
+				// Target, as the mirror would; ids order Promotions by creation.
+				promotion := func(id, stageName string, rolloutID uuid.UUID, target, phase string) {
+					t.Helper()
+					taken, err := queries.UpsertPromotion(ctx, database.UpsertPromotionParams{
+						ID:                 id,
+						ProjectName:        project,
+						Name:               id,
+						StageName:          stageName,
+						FreightName:        "freight",
+						TargetName:         &target,
+						PromotionRolloutID: &rolloutID,
+						Phase:              phase,
+						CreatedAt:          time.Now().Truncate(time.Microsecond),
+					})
+					require.NoError(t, err)
+					require.False(t, taken)
+				}
+
+				stage("a", true)
+				stage("b", true)
+				stage("classic", false)
+				stage("idle", true)
+
+				// a's latest rollout succeeded. t1 succeeded; t2 failed and its
+				// retry succeeded; t3 has no Promotion and takes the rollout's
+				// phase.
+				a1 := rollout("a", "a.01", "Succeeded", "t1", "t2", "t3")
+				promotion("p01", "a", a1, "t1", "Succeeded")
+				promotion("p02", "a", a1, "t2", "Failed")
+				promotion("p03", "a", a1, "t2", "Succeeded")
+
+				// b once succeeded at t1, but its rollout in progress, which
+				// stands for it, is still promoting there; t4 is Pending.
+				b1 := rollout("b", "b.01", "Succeeded", "t1")
+				promotion("p04", "b", b1, "t1", "Succeeded")
+				b2 := rollout("b", "b.02", "Running", "t1", "t4")
+				promotion("p05", "b", b2, "t1", "Running")
+
+				// A classic Stage says nothing about Targets, even with a
+				// rollout left behind that failed at t2.
+				c1 := rollout("classic", "classic.01", "Errored", "t2")
+				promotion("p06", "classic", c1, "t2", "Errored")
+
+				// An Errored rollout fails its Targets with no Promotion.
+				rollout("idle", "idle.01", "Errored", "t5")
+
+				// t2 and t3 are healthy; t1 is promoting from b; t4 is
+				// Pending; t5 failed; t6 was never promoted to.
+				counts, err := store.Count(ctx, project)
 				require.NoError(t, err)
-				require.Equal(t, database.CountTargetsRow{Total: 3, Among: 2}, counts)
-				counts, err = store.Count(ctx, "demo", nil)
+				require.Equal(t, database.CountTargetsRow{Total: 6, Healthy: 2}, counts)
+
+				counts, err = store.Count(ctx, "elsewhere")
 				require.NoError(t, err)
-				require.Equal(t, database.CountTargetsRow{Total: 3}, counts)
-				counts, err = store.Count(ctx, "missing", []string{"a"})
+				require.Equal(t, database.CountTargetsRow{Total: 1}, counts)
+				counts, err = store.Count(ctx, "missing")
 				require.NoError(t, err)
 				require.Equal(t, database.CountTargetsRow{}, counts)
 			},
