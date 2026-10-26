@@ -20,7 +20,7 @@ RUN NODE_ENV='production' VERSION=${VERSION} pnpm run build
 ####################################################################################################
 # back-end-builder
 ####################################################################################################
-FROM --platform=$BUILDPLATFORM golang:1.27.2-trixie AS back-end-builder
+FROM --platform=$BUILDPLATFORM golang:1.27.3-trixie AS back-end-builder
 
 ARG TARGETOS
 ARG TARGETARCH
@@ -82,12 +82,12 @@ WORKDIR /kargo/bin
 #
 # Source comes from the Go module proxy, so it is checksum-verified against
 # sum.golang.org rather than trusted from a tarball download.
-FROM --platform=$BUILDPLATFORM golang:1.27.2-trixie AS helm-builder
+FROM --platform=$BUILDPLATFORM golang:1.27.3-trixie AS helm-builder
 
 ARG TARGETOS
 ARG TARGETARCH
 
-ARG HELM_VERSION=v3.22.0
+ARG HELM_VERSION=v3.22.1
 
 WORKDIR /helm-build
 RUN --mount=type=cache,target=/go/pkg/mod --mount=type=cache,target=/root/.cache/go-build \
@@ -129,7 +129,7 @@ ARG TARGETARCH
 
 WORKDIR /tools
 
-RUN GRPC_HEALTH_PROBE_VERSION=v0.4.59 && \
+RUN GRPC_HEALTH_PROBE_VERSION=v0.4.60 && \
     curl -fL -o /tools/grpc_health_probe https://github.com/grpc-ecosystem/grpc-health-probe/releases/download/${GRPC_HEALTH_PROBE_VERSION}/grpc_health_probe-${TARGETOS}-${TARGETARCH} && \
     chmod +x /tools/grpc_health_probe
 
