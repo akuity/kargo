@@ -20,7 +20,7 @@ RUN --mount=type=cache,target=/root/.local/share/pnpm/store NODE_ENV='production
 ####################################################################################################
 # back-end-builder
 ####################################################################################################
-FROM --platform=$BUILDPLATFORM golang:1.27.2-trixie AS back-end-builder
+FROM --platform=$BUILDPLATFORM golang:1.27.3-trixie AS back-end-builder
 
 ARG TARGETOS
 ARG TARGETARCH
@@ -85,12 +85,12 @@ WORKDIR /kargo/bin
 #
 # Source comes from the Go module proxy, so it is checksum-verified against
 # sum.golang.org rather than trusted from a tarball download.
-FROM --platform=$BUILDPLATFORM golang:1.27.2-trixie AS helm-builder
+FROM --platform=$BUILDPLATFORM golang:1.27.3-trixie AS helm-builder
 
 ARG TARGETOS
 ARG TARGETARCH
 
-ARG HELM_VERSION=v3.22.0
+ARG HELM_VERSION=v3.22.1
 
 WORKDIR /helm-build
 RUN --mount=type=cache,target=/go/pkg/mod --mount=type=cache,target=/root/.cache/go-build \
