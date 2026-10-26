@@ -37,9 +37,8 @@ type Key struct {
 func (k Key) String() string { return k.Project + "/" + k.Name }
 
 // Rollout is a PromotionRollout as stored: its row and its Targets, ordered
-// by Target name. Targets is empty until ResolveTargets has run, which
-// TargetsResolvedAt tells from a rollout that resolved to none. The
-// database records which Targets a rollout promotes to and nothing about
+// by Target name, recorded when the rollout was created. The database
+// records which Targets a rollout promotes to and nothing about
 // the Promotions that do so; those say so themselves.
 type Rollout struct {
 	database.PromotionRolloutRow
@@ -87,8 +86,7 @@ type ListOptions struct {
 // Store reads and writes PromotionRollouts. Rollouts are addressed by Project
 // name and rollout name.
 type Store interface {
-	Create(context.Context, string, database.PromotionRolloutRow) (Rollout, error)
-	ResolveTargets(context.Context, Rollout, []uuid.UUID) (Rollout, error)
+	Create(context.Context, string, database.PromotionRolloutRow, []uuid.UUID) (Rollout, error)
 	Get(context.Context, string, string) (Rollout, error)
 	GetMany(context.Context, string, []string) ([]Rollout, error)
 	List(context.Context, string, ListOptions) ([]Rollout, error)
@@ -114,44 +112,16 @@ func New(queries *database.Queries) Store {
 // creator are read; the database assigns the rest, including the rollout's
 // number within its Stage, which it takes from the Stage's mirrored row.
 // The Project, Stage and Freight are not checked: the caller confirms they
-// exist. The rollout promotes to no Targets until ResolveTargets records
-// them. database.ErrAlreadyExists says a rollout of that name exists, and
-// database.ErrNotMirrored that the Stage has no mirrored row yet.
+// exist. The rollout promotes to the Targets with the given ids, recorded
+// with it; no ids record that it promotes to none.
+// database.ErrAlreadyExists says a rollout of that name exists,
+// database.ErrNotMirrored that the Stage has no mirrored row yet, and
+// database.ErrConflict that a Target no longer exists. Nothing is written
+// in any of those cases.
 func (s *store) Create(
 	ctx context.Context,
 	project string,
 	rollout database.PromotionRolloutRow,
-) (Rollout, error) {
-	created, err := s.queries.CreatePromotionRollout(ctx, database.CreatePromotionRolloutParams{
-		ProjectName:   project,
-		Name:          rollout.Name,
-		StageName:     rollout.StageName,
-		FreightName:   rollout.FreightName,
-		MaxConcurrent: rollout.MaxConcurrent,
-		MaxFailures:   rollout.MaxFailures,
-		CreatedBy:     rollout.CreatedBy,
-	})
-	if errors.Is(err, pgx.ErrNoRows) {
-		// nolint:staticcheck
-		err = fmt.Errorf("Stage %q: %w", rollout.StageName, database.ErrNotMirrored)
-	}
-	if err != nil {
-		return Rollout{}, rolloutError(err, project, rollout.Name)
-	}
-	return Rollout{
-		PromotionRolloutRow: database.PromotionRolloutRow(created),
-		Targets:             []database.ListPromotionRolloutTargetsRow{},
-	}, nil
-}
-
-// ResolveTargets records the Targets, by id, that the rollout promotes to
-// and marks it resolved, and returns it as stored. It writes exactly once:
-// a rollout already resolved is left alone and reported as
-// database.ErrConflict, as is a Target id that no longer exists, in which
-// case nothing is written. No ids resolve the rollout to no Targets.
-func (s *store) ResolveTargets(
-	ctx context.Context,
-	rollout Rollout,
 	targetIDs []uuid.UUID,
 ) (Rollout, error) {
 	ids := slices.Clone(targetIDs)
@@ -162,19 +132,26 @@ func (s *store) ResolveTargets(
 		// column's cast expects.
 		ids = []uuid.UUID{}
 	}
-	resolved, err := s.queries.SetPromotionRolloutTargets(ctx, database.SetPromotionRolloutTargetsParams{
-		ID:        rollout.ID,
-		TargetIds: ids,
+	created, err := s.queries.CreatePromotionRollout(ctx, database.CreatePromotionRolloutParams{
+		ProjectName:   project,
+		Name:          rollout.Name,
+		StageName:     rollout.StageName,
+		FreightName:   rollout.FreightName,
+		MaxConcurrent: rollout.MaxConcurrent,
+		MaxFailures:   rollout.MaxFailures,
+		CreatedBy:     rollout.CreatedBy,
+		TargetIds:     ids,
 	})
 	if errors.Is(err, pgx.ErrNoRows) {
-		err = fmt.Errorf("%w: the PromotionRollout's Targets are already resolved", database.ErrConflict)
+		// nolint:staticcheck
+		err = fmt.Errorf("Stage %q: %w", rollout.StageName, database.ErrNotMirrored)
 	}
 	if err != nil {
-		return Rollout{}, rolloutError(err, rollout.ProjectName, rollout.Name)
+		return Rollout{}, rolloutError(err, project, rollout.Name)
 	}
-	rollouts, err := s.attachTargets(ctx, []database.PromotionRolloutRow{database.PromotionRolloutRow(resolved)})
+	rollouts, err := s.attachTargets(ctx, []database.PromotionRolloutRow{database.PromotionRolloutRow(created)})
 	if err != nil {
-		return Rollout{}, rolloutError(err, rollout.ProjectName, rollout.Name)
+		return Rollout{}, rolloutError(err, project, rollout.Name)
 	}
 	return rollouts[0], nil
 }
@@ -472,7 +449,7 @@ func rolloutError(err error, project, name string) error {
 		case pgErr.Code == "23505" && pgErr.ConstraintName == runningConstraint:
 			err = fmt.Errorf("%w: another PromotionRollout of the Stage is Running", database.ErrConflict)
 		case pgErr.Code == "23503":
-			// A Target the rollout is being resolved to no longer exists.
+			// A Target the rollout is being created with no longer exists.
 			err = fmt.Errorf("%w: %s", database.ErrConflict, pgErr.Message)
 		case pgErr.Code == "23514" || strings.HasPrefix(pgErr.Code, "22"):
 			err = fmt.Errorf("%w: %s", database.ErrInvalid, pgErr.Message)

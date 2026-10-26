@@ -177,19 +177,18 @@ func TestToAPI(t *testing.T) {
 	updated := created.Add(time.Minute)
 	finished := created.Add(2 * time.Minute)
 	base := database.PromotionRolloutRow{
-		ID:                id,
-		ProjectName:       "demo",
-		Name:              "prod.01A.abc",
-		StageName:         "prod",
-		Number:            7,
-		FreightName:       "abc",
-		MaxConcurrent:     2,
-		MaxFailures:       1,
-		CreatedBy:         "someone",
-		CreatedAt:         created,
-		UpdatedAt:         updated,
-		TargetsResolvedAt: &updated,
-		StatusPhase:       "Pending",
+		ID:            id,
+		ProjectName:   "demo",
+		Name:          "prod.01A.abc",
+		StageName:     "prod",
+		Number:        7,
+		FreightName:   "abc",
+		MaxConcurrent: 2,
+		MaxFailures:   1,
+		CreatedBy:     "someone",
+		CreatedAt:     created,
+		UpdatedAt:     updated,
+		StatusPhase:   "Pending",
 	}
 	testCases := []struct {
 		name   string
@@ -232,17 +231,12 @@ func TestToAPI(t *testing.T) {
 			},
 		},
 		{
-			name: "targets are absent until resolved, then a list even when empty",
-			row: func() database.PromotionRolloutRow {
-				row := base
-				row.TargetsResolvedAt = nil
-				return row
-			},
-			assert: func(t *testing.T, rollout *kargoapi.PromotionRollout) {
-				require.Nil(t, rollout.Spec.Targets)
-				resolved := ToAPI(Rollout{PromotionRolloutRow: base, Targets: []database.ListPromotionRolloutTargetsRow{}})
-				require.NotNil(t, resolved.Spec.Targets)
-				require.Empty(t, resolved.Spec.Targets)
+			name: "targets are a list even when there are none",
+			row:  func() database.PromotionRolloutRow { return base },
+			assert: func(t *testing.T, _ *kargoapi.PromotionRollout) {
+				rollout := ToAPI(Rollout{PromotionRolloutRow: base})
+				require.NotNil(t, rollout.Spec.Targets)
+				require.Empty(t, rollout.Spec.Targets)
 			},
 		},
 		{

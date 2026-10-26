@@ -89,18 +89,34 @@ func TestNewPromotionRollout(t *testing.T) {
 		},
 	}
 
-	t.Run("records the Stage and the Freight, and no Targets yet", func(t *testing.T) {
+	t.Run("records the Stage, the Freight and the Stage's Targets", func(t *testing.T) {
 		t.Parallel()
 
-		rollout, err := NewPromotionRollout(testStage, freight, nil)
+		stageTargets := []kargoapi.Target{
+			{ObjectMeta: metav1.ObjectMeta{Name: "us-east"}},
+			{ObjectMeta: metav1.ObjectMeta{Name: "us-west"}},
+		}
+		rollout, err := NewPromotionRollout(testStage, freight, stageTargets)
 		require.NoError(t, err)
 
 		require.Equal(t, project, rollout.Namespace)
 		require.Equal(t, stage, rollout.Spec.Stage)
 		require.Equal(t, freight, rollout.Spec.Freight)
 		require.True(t, strings.HasPrefix(rollout.Name, stage+"."))
-		// The reconciler resolves the Targets once it sees the rollout.
-		require.Nil(t, rollout.Spec.Targets)
+		require.Equal(
+			t,
+			[]kargoapi.PromotionRolloutTarget{{Name: "us-east"}, {Name: "us-west"}},
+			rollout.Spec.Targets,
+		)
+	})
+
+	t.Run("records an empty list for a Stage with no Targets", func(t *testing.T) {
+		t.Parallel()
+
+		rollout, err := NewPromotionRollout(testStage, freight, nil)
+		require.NoError(t, err)
+		require.NotNil(t, rollout.Spec.Targets)
+		require.Empty(t, rollout.Spec.Targets)
 	})
 
 	t.Run("carries no owner references or labels", func(t *testing.T) {

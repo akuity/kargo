@@ -60,7 +60,7 @@ func TestStoreIntegration(t *testing.T) {
 	// Every case below but those about the mirror itself creates rollouts for
 	// these Stages in a Project of its own.
 	for _, project := range []string{
-		"create", "numbers", "concurrent", "empty", "once", "unique-a", "unique-b",
+		"create", "numbers", "concurrent", "empty", "unique-a", "unique-b",
 		"vanished", "cascade", "list", "latest", "many", "open", "start", "update",
 	} {
 		for _, stage := range []string{"prod", "staging"} {
@@ -83,21 +83,16 @@ func TestStoreIntegration(t *testing.T) {
 		run  func(*testing.T)
 	}{
 		{
-			name: "create returns the stored rollout, unresolved, and resolve records its Targets in name order",
+			name: "create returns the stored rollout with its Targets in name order",
 			run: func(t *testing.T) {
 				ids := seedTargets(t, "create", "us-west", "us-east")
-				rollout, err := store.Create(ctx, "create", newRollout("prod", "prod.01A.abc"))
-				require.NoError(t, err)
-				require.Nil(t, rollout.TargetsResolvedAt)
-				require.NotNil(t, rollout.Targets)
-				require.Empty(t, rollout.Targets)
-				unresolved := rollout
-				rollout, err = store.ResolveTargets(
-					ctx, rollout, []uuid.UUID{ids["us-west"], ids["us-east"], ids["us-west"]},
+				rollout, err := store.Create(
+					ctx,
+					"create",
+					newRollout("prod", "prod.01A.abc"),
+					[]uuid.UUID{ids["us-west"], ids["us-east"], ids["us-west"]},
 				)
 				require.NoError(t, err)
-				require.NotNil(t, rollout.TargetsResolvedAt)
-				require.True(t, rollout.UpdatedAt.After(unresolved.UpdatedAt))
 				require.Equal(t, "create", rollout.ProjectName)
 				require.Equal(t, "prod.01A.abc", rollout.Name)
 				require.Equal(t, "prod", rollout.StageName)
@@ -108,7 +103,7 @@ func TestStoreIntegration(t *testing.T) {
 				require.Equal(t, "tester", rollout.CreatedBy)
 				require.NotEqual(t, uuid.Nil, rollout.ID)
 				require.False(t, rollout.CreatedAt.IsZero())
-				require.True(t, unresolved.CreatedAt.Equal(unresolved.UpdatedAt))
+				require.True(t, rollout.CreatedAt.Equal(rollout.UpdatedAt))
 				require.Equal(t, "Pending", rollout.StatusPhase)
 				require.Nil(t, rollout.StatusStartedAt)
 				require.Nil(t, rollout.StatusFinishedAt)
@@ -123,20 +118,20 @@ func TestStoreIntegration(t *testing.T) {
 		{
 			name: "numbers count per Stage and survive a failed create",
 			run: func(t *testing.T) {
-				first, err := store.Create(ctx, "numbers", newRollout("prod", "prod.01A.abc"))
+				first, err := store.Create(ctx, "numbers", newRollout("prod", "prod.01A.abc"), nil)
 				require.NoError(t, err)
 				require.EqualValues(t, 1, first.Number)
-				second, err := store.Create(ctx, "numbers", newRollout("prod", "prod.01B.abc"))
+				second, err := store.Create(ctx, "numbers", newRollout("prod", "prod.01B.abc"), nil)
 				require.NoError(t, err)
 				require.EqualValues(t, 2, second.Number)
-				other, err := store.Create(ctx, "numbers", newRollout("staging", "staging.01A.abc"))
+				other, err := store.Create(ctx, "numbers", newRollout("staging", "staging.01A.abc"), nil)
 				require.NoError(t, err)
 				require.EqualValues(t, 1, other.Number)
 
 				// A duplicate name fails the whole statement, increment included.
-				_, err = store.Create(ctx, "numbers", newRollout("prod", "prod.01B.abc"))
+				_, err = store.Create(ctx, "numbers", newRollout("prod", "prod.01B.abc"), nil)
 				require.ErrorIs(t, err, database.ErrAlreadyExists)
-				third, err := store.Create(ctx, "numbers", newRollout("prod", "prod.01C.abc"))
+				third, err := store.Create(ctx, "numbers", newRollout("prod", "prod.01C.abc"), nil)
 				require.NoError(t, err)
 				require.EqualValues(t, 3, third.Number)
 			},
@@ -144,7 +139,7 @@ func TestStoreIntegration(t *testing.T) {
 		{
 			name: "a Stage the mirror has not recorded yet is refused and nothing is written",
 			run: func(t *testing.T) {
-				_, err := store.Create(ctx, "unmirrored", newRollout("prod", "prod.01A.abc"))
+				_, err := store.Create(ctx, "unmirrored", newRollout("prod", "prod.01A.abc"), nil)
 				require.ErrorIs(t, err, database.ErrNotMirrored)
 				rollouts, err := store.List(ctx, "unmirrored", ListOptions{})
 				require.NoError(t, err)
@@ -156,16 +151,16 @@ func TestStoreIntegration(t *testing.T) {
 			run: func(t *testing.T) {
 				seedStage(t, "recreated", "prod", "old-uid")
 				for _, name := range []string{"prod.01A.abc", "prod.01B.abc"} {
-					_, err := store.Create(ctx, "recreated", newRollout("prod", name))
+					_, err := store.Create(ctx, "recreated", newRollout("prod", name), nil)
 					require.NoError(t, err)
 				}
 				// The new Stage's row replaces the old one and starts its
 				// counter over.
 				seedStage(t, "recreated", "prod", "new-uid")
-				rollout, err := store.Create(ctx, "recreated", newRollout("prod", "prod.01C.abc"))
+				rollout, err := store.Create(ctx, "recreated", newRollout("prod", "prod.01C.abc"), nil)
 				require.NoError(t, err)
 				require.EqualValues(t, 3, rollout.Number)
-				rollout, err = store.Create(ctx, "recreated", newRollout("prod", "prod.01D.abc"))
+				rollout, err = store.Create(ctx, "recreated", newRollout("prod", "prod.01D.abc"), nil)
 				require.NoError(t, err)
 				require.EqualValues(t, 4, rollout.Number)
 			},
@@ -180,7 +175,7 @@ func TestStoreIntegration(t *testing.T) {
 				for i := range n {
 					wg.Go(func() {
 						rollout, err := store.Create(
-							ctx, "concurrent", newRollout("prod", "prod."+uuid.NewString()),
+							ctx, "concurrent", newRollout("prod", "prod."+uuid.NewString()), nil,
 						)
 						numbers[i], errs[i] = rollout.Number, err
 					})
@@ -197,73 +192,67 @@ func TestStoreIntegration(t *testing.T) {
 			},
 		},
 		{
-			name: "resolving to no Targets marks the rollout resolved with an empty list",
+			name: "a rollout created with no Targets has an empty list",
 			run: func(t *testing.T) {
-				rollout, err := store.Create(ctx, "empty", newRollout("prod", "prod.01A.abc"))
+				rollout, err := store.Create(ctx, "empty", newRollout("prod", "prod.01A.abc"), nil)
 				require.NoError(t, err)
-				rollout, err = store.ResolveTargets(ctx, rollout, nil)
-				require.NoError(t, err)
-				require.NotNil(t, rollout.TargetsResolvedAt)
 				require.NotNil(t, rollout.Targets)
 				require.Empty(t, rollout.Targets)
-			},
-		},
-		{
-			name: "resolve writes exactly once",
-			run: func(t *testing.T) {
-				ids := seedTargets(t, "once", "us-east", "us-west")
-				rollout, err := store.Create(ctx, "once", newRollout("prod", "prod.01A.abc"))
+				fetched, err := store.Get(ctx, "empty", "prod.01A.abc")
 				require.NoError(t, err)
-				resolved, err := store.ResolveTargets(ctx, rollout, []uuid.UUID{ids["us-east"]})
-				require.NoError(t, err)
-				_, err = store.ResolveTargets(ctx, rollout, []uuid.UUID{ids["us-west"]})
-				require.ErrorIs(t, err, database.ErrConflict)
-				require.ErrorContains(t, err, "already resolved")
-				fetched, err := store.Get(ctx, "once", "prod.01A.abc")
-				require.NoError(t, err)
-				require.Equal(t, resolved, fetched)
-				require.Equal(t, []string{"us-east"}, targetNames(fetched))
+				require.Empty(t, fetched.Targets)
 			},
 		},
 		{
 			name: "names are unique within a Project only",
 			run: func(t *testing.T) {
-				_, err := store.Create(ctx, "unique-a", newRollout("prod", "prod.01A.abc"))
+				_, err := store.Create(ctx, "unique-a", newRollout("prod", "prod.01A.abc"), nil)
 				require.NoError(t, err)
-				_, err = store.Create(ctx, "unique-a", newRollout("prod", "prod.01A.abc"))
+				_, err = store.Create(ctx, "unique-a", newRollout("prod", "prod.01A.abc"), nil)
 				require.ErrorIs(t, err, database.ErrAlreadyExists)
-				_, err = store.Create(ctx, "unique-b", newRollout("prod", "prod.01A.abc"))
+				_, err = store.Create(ctx, "unique-b", newRollout("prod", "prod.01A.abc"), nil)
 				require.NoError(t, err)
 			},
 		},
 		{
-			name: "a Target that no longer exists fails the resolve and writes nothing",
+			name: "a Target that no longer exists fails the create and writes nothing",
 			run: func(t *testing.T) {
 				ids := seedTargets(t, "vanished", "us-east")
-				rollout, err := store.Create(ctx, "vanished", newRollout("prod", "prod.01A.abc"))
-				require.NoError(t, err)
-				_, err = store.ResolveTargets(ctx, rollout, []uuid.UUID{ids["us-east"], uuid.New()})
+				_, err := store.Create(
+					ctx,
+					"vanished",
+					newRollout("prod", "prod.01A.abc"),
+					[]uuid.UUID{ids["us-east"], uuid.New()},
+				)
 				require.ErrorIs(t, err, database.ErrConflict)
-				fetched, err := store.Get(ctx, "vanished", "prod.01A.abc")
+				_, err = store.Get(ctx, "vanished", "prod.01A.abc")
+				require.ErrorIs(t, err, database.ErrNotFound)
+				// The number is not used up either, so a second attempt,
+				// without the vanished Target, is the Stage's first.
+				rollout, err := store.Create(
+					ctx,
+					"vanished",
+					newRollout("prod", "prod.01A.abc"),
+					[]uuid.UUID{ids["us-east"]},
+				)
 				require.NoError(t, err)
-				require.Nil(t, fetched.TargetsResolvedAt)
-				require.Empty(t, fetched.Targets)
-				// So a second attempt, without the vanished Target, succeeds.
-				resolved, err := store.ResolveTargets(ctx, fetched, []uuid.UUID{ids["us-east"]})
-				require.NoError(t, err)
-				require.Equal(t, []string{"us-east"}, targetNames(resolved))
+				require.EqualValues(t, 1, rollout.Number)
+				require.Equal(t, []string{"us-east"}, targetNames(rollout))
 			},
 		},
 		{
 			name: "deleting a Target removes it from the snapshot",
 			run: func(t *testing.T) {
 				ids := seedTargets(t, "cascade", "us-east", "us-west")
-				rollout, err := store.Create(ctx, "cascade", newRollout("prod", "prod.01A.abc"))
-				require.NoError(t, err)
-				_, err = store.ResolveTargets(ctx, rollout, []uuid.UUID{ids["us-east"], ids["us-west"]})
+				_, err := store.Create(
+					ctx,
+					"cascade",
+					newRollout("prod", "prod.01A.abc"),
+					[]uuid.UUID{ids["us-east"], ids["us-west"]},
+				)
 				require.NoError(t, err)
 				require.NoError(t, targets.Delete(ctx, "cascade", "us-west"))
-				rollout, err = store.Get(ctx, "cascade", "prod.01A.abc")
+				rollout, err := store.Get(ctx, "cascade", "prod.01A.abc")
 				require.NoError(t, err)
 				require.Equal(t, []string{"us-east"}, targetNames(rollout))
 			},
@@ -300,9 +289,7 @@ func TestStoreIntegration(t *testing.T) {
 				create := func(stage, name, freight string) Rollout {
 					row := newRollout(stage, name)
 					row.FreightName = freight
-					rollout, err := store.Create(ctx, "list", row)
-					require.NoError(t, err)
-					rollout, err = store.ResolveTargets(ctx, rollout, []uuid.UUID{ids["us-east"]})
+					rollout, err := store.Create(ctx, "list", row, []uuid.UUID{ids["us-east"]})
 					require.NoError(t, err)
 					return rollout
 				}
@@ -360,7 +347,7 @@ func TestStoreIntegration(t *testing.T) {
 			name: "latest lists each Stage's open rollout and its newest finished one",
 			run: func(t *testing.T) {
 				create := func(stage, name string) Rollout {
-					rollout, err := store.Create(ctx, "latest", newRollout(stage, name))
+					rollout, err := store.Create(ctx, "latest", newRollout(stage, name), nil)
 					require.NoError(t, err)
 					return rollout
 				}
@@ -403,7 +390,7 @@ func TestStoreIntegration(t *testing.T) {
 			name: "start admits one rollout per Stage at a time, in number order",
 			run: func(t *testing.T) {
 				create := func(stage, name string) Rollout {
-					rollout, err := store.Create(ctx, "start", newRollout(stage, name))
+					rollout, err := store.Create(ctx, "start", newRollout(stage, name), nil)
 					require.NoError(t, err)
 					return rollout
 				}
@@ -451,7 +438,7 @@ func TestStoreIntegration(t *testing.T) {
 			name: "get many returns what exists, by name",
 			run: func(t *testing.T) {
 				for _, name := range []string{"prod.01A.abc", "prod.01B.abc"} {
-					_, err := store.Create(ctx, "many", newRollout("prod", name))
+					_, err := store.Create(ctx, "many", newRollout("prod", name), nil)
 					require.NoError(t, err)
 				}
 				rollouts, err := store.GetMany(ctx, "many", []string{"prod.01B.abc", "missing", "prod.01A.abc"})
@@ -472,7 +459,7 @@ func TestStoreIntegration(t *testing.T) {
 					"prod.01D.abc": "Errored",
 				}
 				for name, phase := range phases {
-					rollout, err := store.Create(ctx, "open", newRollout("prod", name))
+					rollout, err := store.Create(ctx, "open", newRollout("prod", name), nil)
 					require.NoError(t, err)
 					rollout.StatusPhase = phase
 					_, err = store.UpdateStatus(ctx, "open", rollout.PromotionRolloutRow)
@@ -496,9 +483,12 @@ func TestStoreIntegration(t *testing.T) {
 			name: "update status advances the version and leaves Targets alone",
 			run: func(t *testing.T) {
 				ids := seedTargets(t, "update", "us-east")
-				bare, err := store.Create(ctx, "update", newRollout("prod", "prod.01A.abc"))
-				require.NoError(t, err)
-				created, err := store.ResolveTargets(ctx, bare, []uuid.UUID{ids["us-east"]})
+				created, err := store.Create(
+					ctx,
+					"update",
+					newRollout("prod", "prod.01A.abc"),
+					[]uuid.UUID{ids["us-east"]},
+				)
 				require.NoError(t, err)
 				now := time.Now().UTC().Truncate(time.Microsecond)
 				row := created.PromotionRolloutRow

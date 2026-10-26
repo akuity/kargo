@@ -10,7 +10,8 @@
 -- starts over, so the next number is also kept past any the name's earlier
 -- rollouts hold. A Stage the mirror has not recorded yet has no row to
 -- number from, and the statement inserts nothing. The rollout's Targets are
--- resolved later; see SetPromotionRolloutTargets.
+-- recorded in the same statement, so a Target that no longer exists fails
+-- the whole create.
 -- name: CreatePromotionRollout :one
 WITH stage AS (
     UPDATE stages SET last_promotion_rollout_number = GREATEST(
@@ -46,25 +47,11 @@ WITH stage AS (
         sqlc.arg(created_by)::text
     FROM stage
     RETURNING *
-)
-SELECT * FROM rollout;
-
--- Records the Targets a rollout promotes to and marks it resolved, in one
--- statement. Only a rollout not yet resolved is written; one that is yields
--- no row and is left alone, so the snapshot is taken exactly once however
--- many reconcilers try. updated_at advances as for any write.
--- name: SetPromotionRolloutTargets :one
-WITH resolved AS (
-    UPDATE promotion_rollouts SET
-        targets_resolved_at = CURRENT_TIMESTAMP,
-        updated_at = GREATEST(clock_timestamp(), updated_at + interval '1 microsecond')
-    WHERE id = sqlc.arg(id) AND targets_resolved_at IS NULL
-    RETURNING *
 ), targets AS (
     INSERT INTO promotion_rollout_targets (promotion_rollout_id, target_id)
-    SELECT resolved.id, unnest(sqlc.arg(target_ids)::uuid[]) FROM resolved
+    SELECT rollout.id, unnest(sqlc.arg(target_ids)::uuid[]) FROM rollout
 )
-SELECT * FROM resolved;
+SELECT * FROM rollout;
 
 -- name: GetPromotionRollout :one
 SELECT * FROM promotion_rollouts

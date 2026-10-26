@@ -20,16 +20,13 @@ func GeneratePromotionRolloutName(stageName, freight string) string {
 // NewPromotionRollout builds a PromotionRollout that promotes the named
 // Freight to the Targets the Stage governs, on behalf of the Stage.
 //
-// Which Targets those are is not recorded here. The rollout reconciler
-// resolves the Stage's selectors once, when it first sees the rollout, and
-// records the result; that list is never recomputed, so the rollout's
-// threshold and terminal state are computed against a fixed set rather than
-// a selector that could match differently later. A Target that appears
-// after that point is picked up by a subsequent PromotionRollout.
-//
 // stageTargets should contain all of the Stage's Targets. As for a
-// PromotionRequest, any percentage in the Stage's update strategy is
-// resolved against how many there are.
+// PromotionRequest, they are recorded in the rollout's spec and any
+// percentage in the Stage's update strategy is resolved against how many
+// there are. That list is never recomputed, so the rollout's threshold and
+// terminal state are computed against a fixed set rather than a selector
+// that could match differently later. A Target that appears after the
+// rollout is created is picked up by a subsequent PromotionRollout.
 //
 // The result carries no owner references and no labels: a PromotionRollout
 // is not a Kubernetes resource. Its Stage is recorded in its spec, and the
@@ -41,6 +38,13 @@ func NewPromotionRollout(
 	freightName string,
 	stageTargets []kargoapi.Target,
 ) (*kargoapi.PromotionRollout, error) {
+	// Never nil: spec.targets is a required field, and an empty list records
+	// that the Stage governed no Targets at this moment.
+	specTargets := make([]kargoapi.PromotionRolloutTarget, len(stageTargets))
+	for i, target := range stageTargets {
+		specTargets[i] = kargoapi.PromotionRolloutTarget{Name: target.Name}
+	}
+
 	var updateStrategy kargoapi.PromotionRolloutUpdateStrategy
 	if stage.Spec.Targets != nil {
 		strategy, err := calculateUpdateStrategy(
@@ -61,6 +65,7 @@ func NewPromotionRollout(
 		Spec: kargoapi.PromotionRolloutSpec{
 			Stage:          stage.Name,
 			Freight:        freightName,
+			Targets:        specTargets,
 			UpdateStrategy: updateStrategy,
 		},
 	}, nil

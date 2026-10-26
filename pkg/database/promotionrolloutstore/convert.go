@@ -18,14 +18,11 @@ import (
 // not the store's to say, so status.targets and status.summary are left for
 // the caller, who reads the Promotions.
 func ToAPI(rollout Rollout) *kargoapi.PromotionRollout {
-	// spec.targets is absent until the rollout's Targets have been resolved,
-	// and an empty list once it resolved to none.
-	var targets []kargoapi.PromotionRolloutTarget
-	if rollout.TargetsResolvedAt != nil {
-		targets = make([]kargoapi.PromotionRolloutTarget, len(rollout.Targets))
-		for i, target := range rollout.Targets {
-			targets[i] = kargoapi.PromotionRolloutTarget{Name: target.TargetName}
-		}
+	// spec.targets is a required field, so it is a list even when the
+	// rollout promotes to no Targets.
+	targets := make([]kargoapi.PromotionRolloutTarget, len(rollout.Targets))
+	for i, target := range rollout.Targets {
+		targets[i] = kargoapi.PromotionRolloutTarget{Name: target.TargetName}
 	}
 	// Who asked for the rollout is served the way a Promotion says who asked
 	// for it, so one reader serves both.

@@ -28,11 +28,6 @@ CREATE TABLE promotion_rollouts (
     created_by TEXT NOT NULL DEFAULT '',
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    -- When the reconciler resolved the Stage's selectors into the rollout's
-    -- Targets (promotion_rollout_targets). NULL until it has: a rollout
-    -- with no Target rows is one that has not been resolved yet, or one
-    -- that resolved to nothing, and this tells the two apart.
-    targets_resolved_at TIMESTAMPTZ,
     -- The status_* columns are the rollout's status, written only by the
     -- reconciler. The API presents status_phase, status_reason and
     -- status_message as the rollout's Ready condition as well. What has
@@ -76,8 +71,8 @@ CREATE UNIQUE INDEX promotion_rollouts_running_key
     ON promotion_rollouts (project_name, stage_name)
     WHERE status_phase = 'Running';
 
--- The Targets a rollout promotes to: the snapshot the reconciler takes, once,
--- when it first sees the rollout, one row per Target and nothing else.
+-- The Targets a rollout promotes to: the Stage's Targets when the rollout
+-- was created, recorded with it, one row per Target and nothing else.
 -- Targets are database-native, so the snapshot references their rows.
 -- Deleting a Target removes it from every rollout's snapshot; deleting a
 -- rollout removes its snapshot.
