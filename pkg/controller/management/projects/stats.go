@@ -9,8 +9,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/pkg/api"
 	"github.com/akuity/kargo/pkg/conditions"
 	"github.com/akuity/kargo/pkg/database"
+	"github.com/akuity/kargo/pkg/database/promotionrolloutstore"
 	"github.com/akuity/kargo/pkg/logging"
 )
 
@@ -64,22 +66,6 @@ func (r *reconciler) collectStats(
 		return status, fmt.Errorf("error listing Stages: %w", err)
 	}
 
-	promotionRequests := &kargoapi.PromotionRequestList{}
-	if err := r.client.List(
-		ctx,
-		promotionRequests,
-		client.InNamespace(project.Name),
-	); err != nil {
-		conditions.Set(&status, &metav1.Condition{
-			Type:               kargoapi.ConditionTypeHealthy,
-			Status:             metav1.ConditionFalse,
-			Reason:             "CollectingTargetStatsFailed",
-			Message:            "Failed to list promotion requests: " + err.Error(),
-			ObservedGeneration: project.GetGeneration(),
-		})
-		return status, fmt.Errorf("error listing PromotionRequests: %w", err)
-	}
-
 	controlFlowStages := 0
 	for _, stage := range stages.Items {
 		if stage.IsControlFlow() {
@@ -116,10 +102,21 @@ func (r *reconciler) collectStats(
 
 	// Targets live in the database. Without one there are none to count.
 	if r.targets != nil {
+		rollouts, err := r.latestRollouts(ctx, project.Name)
+		if err != nil {
+			conditions.Set(&status, &metav1.Condition{
+				Type:               kargoapi.ConditionTypeHealthy,
+				Status:             metav1.ConditionFalse,
+				Reason:             "CollectingTargetStatsFailed",
+				Message:            "Failed to read promotion rollouts: " + err.Error(),
+				ObservedGeneration: project.GetGeneration(),
+			})
+			return status, err
+		}
 		counts, err := r.targets.Count(
 			ctx,
 			project.Name,
-			healthyTargetNames(stages.Items, promotionRequests.Items),
+			healthyTargetNames(stages.Items, rollouts),
 		)
 		if err != nil {
 			conditions.Set(&status, &metav1.Condition{
@@ -153,32 +150,71 @@ func targetStats(counts database.CountTargetsRow) *kargoapi.TargetStats {
 	}
 }
 
+// latestRollouts reads the latest PromotionRollouts of the Project's Stages
+// -- for each, the one it is promoting through and the newest that has
+// finished -- and what has become of each of their Targets, which the
+// Promotions of the Project say.
+func (r *reconciler) latestRollouts(
+	ctx context.Context,
+	project string,
+) ([]kargoapi.PromotionRollout, error) {
+	stored, err := r.rollouts.ListLatest(ctx, project, "")
+	if err != nil {
+		return nil, fmt.Errorf("error reading PromotionRollouts: %w", err)
+	}
+	if len(stored) == 0 {
+		return nil, nil
+	}
+	promos := &kargoapi.PromotionList{}
+	if err = r.client.List(ctx, promos, client.InNamespace(project)); err != nil {
+		return nil, fmt.Errorf("error listing Promotions: %w", err)
+	}
+	rollouts := make([]kargoapi.PromotionRollout, len(stored))
+	for i, s := range stored {
+		rollout := promotionrolloutstore.ToAPI(s)
+		rollout.Status.Targets, rollout.Status.Summary = api.PromotionRolloutTargetStatuses(
+			string(rollout.UID),
+			promos.Items,
+		)
+		rollouts[i] = *rollout
+	}
+	return rollouts, nil
+}
+
 // healthyTargetNames returns, in order, the names of the Targets that count
 // as healthy. Target status does not yet record health, so a Target is
 // counted as healthy when at least one Stage has promoted to it and the
 // latest promotion to it from every Stage that did so succeeded. The latest
 // promotion from a Stage is the child Promotion for the Target in the
-// PromotionRequest the Stage reports as current, else as last. A Stage whose
-// latest request no longer exists says nothing about its Targets and is
-// skipped.
+// Stage's latest PromotionRollout: the one it is promoting through, else
+// the newest that has finished. A Stage with no rollout says nothing about
+// its Targets.
 func healthyTargetNames(
 	stages []kargoapi.Stage,
-	promotionRequests []kargoapi.PromotionRequest,
+	rollouts []kargoapi.PromotionRollout,
 ) []string {
-	requestsByName := make(map[string]*kargoapi.PromotionRequest, len(promotionRequests))
-	for i := range promotionRequests {
-		requestsByName[promotionRequests[i].Name] = &promotionRequests[i]
+	latestByStage := make(map[string]*kargoapi.PromotionRollout, len(stages))
+	for i := range rollouts {
+		rollout := &rollouts[i]
+		// The rollout in progress stands for the Stage over one that has
+		// finished.
+		if current, ok := latestByStage[rollout.Spec.Stage]; !ok || current.Status.Phase.IsTerminal() {
+			latestByStage[rollout.Spec.Stage] = rollout
+		}
 	}
 
 	// succeeded records, for every Target named by some Stage's latest
-	// request, whether every such request's promotion to it succeeded.
+	// rollout, whether every such rollout's promotion to it succeeded.
 	succeeded := map[string]bool{}
 	for i := range stages {
-		request := latestPromotionRequest(&stages[i], requestsByName)
-		if request == nil {
+		if !stages[i].IsTargetAware() {
 			continue
 		}
-		for name, phase := range targetPhases(request) {
+		rollout := latestByStage[stages[i].Name]
+		if rollout == nil {
+			continue
+		}
+		for name, phase := range targetPhases(rollout) {
 			ok, seen := succeeded[name]
 			succeeded[name] = (!seen || ok) && phase == kargoapi.PromotionPhaseSucceeded
 		}
@@ -194,48 +230,29 @@ func healthyTargetNames(
 	return names
 }
 
-// latestPromotionRequest returns the PromotionRequest a target-aware Stage
-// reports as current, else as last, or nil when the Stage is classic, has
-// never promoted, or reports a request that no longer exists.
-func latestPromotionRequest(
-	stage *kargoapi.Stage,
-	requestsByName map[string]*kargoapi.PromotionRequest,
-) *kargoapi.PromotionRequest {
-	if !stage.IsTargetAware() {
-		return nil
-	}
-	var name string
-	if ref := stage.Status.CurrentPromotionRequest; ref != nil {
-		name = ref.Name
-	} else if ref := stage.Status.LastPromotionRequest; ref != nil {
-		name = ref.Name
-	}
-	return requestsByName[name]
-}
-
 // targetPhases returns the phase of the promotion to each Target a
-// PromotionRequest names. The fan-out controller records a phase per Target
-// in status.targets once it has created that Target's child Promotion. A
-// Target without one is pending while the request runs, and shares the
-// request's own phase once it has ended -- a request that ended without ever
-// fanning out ended every one of its Targets that way.
-func targetPhases(request *kargoapi.PromotionRequest) map[string]kargoapi.PromotionPhase {
+// PromotionRollout names. status.targets records a phase per Target once
+// that Target's child Promotion exists. A Target without one is pending
+// while the rollout runs, and shares the rollout's own phase once it has
+// ended -- a rollout that ended without ever fanning out ended every one of
+// its Targets that way.
+func targetPhases(rollout *kargoapi.PromotionRollout) map[string]kargoapi.PromotionPhase {
 	var fallback kargoapi.PromotionPhase
-	switch request.Status.Phase {
-	case kargoapi.PromotionRequestPhaseSucceeded:
+	switch rollout.Status.Phase {
+	case kargoapi.PromotionRolloutPhaseSucceeded:
 		fallback = kargoapi.PromotionPhaseSucceeded
-	case kargoapi.PromotionRequestPhaseFailed:
+	case kargoapi.PromotionRolloutPhaseFailed:
 		fallback = kargoapi.PromotionPhaseFailed
-	case kargoapi.PromotionRequestPhaseErrored:
+	case kargoapi.PromotionRolloutPhaseErrored:
 		fallback = kargoapi.PromotionPhaseErrored
 	default:
 		fallback = kargoapi.PromotionPhasePending
 	}
-	phases := make(map[string]kargoapi.PromotionPhase, len(request.Spec.Targets))
-	for _, target := range request.Spec.Targets {
+	phases := make(map[string]kargoapi.PromotionPhase, len(rollout.Spec.Targets))
+	for _, target := range rollout.Spec.Targets {
 		phases[target.Name] = fallback
 	}
-	for _, target := range request.Status.Targets {
+	for _, target := range rollout.Status.Targets {
 		if target.Phase != "" {
 			phases[target.Name] = target.Phase
 		}

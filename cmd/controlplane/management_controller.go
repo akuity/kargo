@@ -25,6 +25,7 @@ import (
 	"github.com/akuity/kargo/pkg/controller/management/replication"
 	"github.com/akuity/kargo/pkg/controller/management/serviceaccounts"
 	"github.com/akuity/kargo/pkg/database"
+	"github.com/akuity/kargo/pkg/database/promotionrolloutstore"
 	"github.com/akuity/kargo/pkg/database/targetstore"
 	"github.com/akuity/kargo/pkg/logging"
 	"github.com/akuity/kargo/pkg/os"
@@ -155,8 +156,10 @@ func (o *managementControllerOptions) run(ctx context.Context) error {
 		db = database.New(pool)
 	}
 	var targets projects.TargetCounter
+	var rollouts projects.RolloutReader
 	if db != nil {
 		targets = targetstore.New(db)
+		rollouts = promotionrolloutstore.New(db)
 	}
 
 	if err := projects.SetupReconcilerWithManager(
@@ -164,6 +167,7 @@ func (o *managementControllerOptions) run(ctx context.Context) error {
 		kargoMgr,
 		projects.ReconcilerConfigFromEnv(),
 		targets,
+		rollouts,
 	); err != nil {
 		return fmt.Errorf("error setting up Projects reconciler: %w", err)
 	}
