@@ -8,7 +8,9 @@ import {
   countStepStatuses,
   didPromotionEndUnsuccessfullyInTaskGroup,
   getEffectiveVars,
+  getStepKey,
   getTaskGroupExecutionMetadata,
+  getTaskGroupName,
   getTaskGroupStatus,
   getTaskGroupStepStatuses,
   getUserStepAlias,
@@ -50,6 +52,28 @@ describe('getUserStepAlias()', () => {
     }
   ])('$name', ({ alias, expected }) => {
     expect(getUserStepAlias(alias)).toBe(expected);
+  });
+});
+
+describe('getStepKey()', () => {
+  test.each([
+    { name: 'uses the alias', step: { as: 'push' }, expected: 'push' },
+    { name: 'falls back to the index', step: {}, expected: 'step-3' },
+    { name: 'falls back on an empty alias', step: { as: '' }, expected: 'step-3' }
+  ])('$name', ({ step, expected }) => {
+    expect(getStepKey(step, 3)).toBe(expected);
+  });
+});
+
+describe('getTaskGroupName()', () => {
+  test('uses the task name', () => {
+    expect(getTaskGroupName(taskGroup([]))).toBe('render');
+  });
+
+  test('falls back to the group key', () => {
+    expect(getTaskGroupName({ ...taskGroup([]), inflatedTask: { alias: 'task-1' } })).toBe(
+      'task-1'
+    );
   });
 });
 

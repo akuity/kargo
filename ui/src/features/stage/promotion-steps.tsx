@@ -20,6 +20,7 @@ import { Step } from './promotion-step';
 import { PromotionTaskGroupHeader } from './promotion-task-group-header';
 import { getPromotionOutputsByStepAlias } from './utils/promotion';
 import {
+  getStepKey,
   groupPromotionSteps,
   IndexedPromotionStep,
   PromotionTaskGroup
@@ -85,7 +86,7 @@ export const PromotionSteps = (props: PromotionStepsProps) => {
 
   const toStepItems = ({ step, index: i }: IndexedPromotionStep): CollapseItem[] => {
     const result = getPromotionDirectiveStepStatus(i, props.promotion.status);
-    const key = step.as || `step-${i}`;
+    const key = getStepKey(step, i);
 
     if (!runningKey && isProgressingStep(i, props.promotion.status) && hasExtension(step)) {
       runningKey = key;

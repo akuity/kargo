@@ -15,6 +15,7 @@ import {
   getEffectiveVars,
   getTaskGroupExecutionMetadata,
   getTaskGroupStatus,
+  getTaskGroupName,
   getTaskGroupStepStatuses,
   isProgressingStatus,
   PromotionTaskGroup,
@@ -50,7 +51,7 @@ export const PromotionTaskGroupHeader = ({
       <StepStatusIcon status={status} />
       <Flex vertical gap={4} className='flex-1 min-w-0'>
         <Flex align='center' gap={8}>
-          <StepTitle title={inflatedTask.task?.name ?? group.key} />
+          <StepTitle title={getTaskGroupName(group)} />
           <Tag
             color='purple'
             variant='filled'

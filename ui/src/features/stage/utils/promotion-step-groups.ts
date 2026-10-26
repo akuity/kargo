@@ -52,6 +52,11 @@ export const getUserStepAlias = (alias?: string) => {
   return userAlias;
 };
 
+export const getStepKey = (step: PromotionStep, index: number) => step.as || `step-${index}`;
+
+export const getTaskGroupName = (group: PromotionTaskGroup) =>
+  group.inflatedTask.task?.name ?? group.key;
+
 const getInflatedTasksByStepAlias = (inflatedTasks: InflatedPromotionTask[]) =>
   new Map(
     inflatedTasks.flatMap((inflatedTask) =>
