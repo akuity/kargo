@@ -10,6 +10,8 @@ import (
 	securefs "github.com/fluxcd/pkg/kustomize/filesys"
 	"github.com/stretchr/testify/require"
 	"sigs.k8s.io/kustomize/kyaml/filesys"
+
+	"github.com/akuity/kargo/pkg/kustomize"
 )
 
 func Test_validateQueryValues(t *testing.T) {
@@ -301,7 +303,12 @@ func Test_kustomizeBuild_remoteGitRefInjection(t *testing.T) {
 			diskFS, err := securefs.MakeFsOnDiskSecureBuild(workDir)
 			require.NoError(t, err)
 
-			_, err = kustomizeBuild(diskFS, workDir, nil)
+			err = kustomizeBuild(
+				diskFS,
+				workDir,
+				nil,
+				func(kustomize.ResMap) error { return nil },
+			)
 			require.NoFileExists(t, markerPath)
 			testCase.assert(t, err)
 		})
