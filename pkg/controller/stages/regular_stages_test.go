@@ -4885,7 +4885,7 @@ func TestRegularStageReconciler_recordFreightVerificationEvent(t *testing.T) {
 				Build()
 
 			recorder := &fakeevent.Sender{}
-			ver := verifier{
+			ver := Verifier{
 				client:      c,
 				eventSender: recorder,
 			}
@@ -5447,7 +5447,7 @@ func TestRegularStageReconciler_startVerification(t *testing.T) {
 				WithStatusSubresource(&kargoapi.Stage{}, &kargoapi.Freight{}, &rolloutsapi.AnalysisRun{}).
 				Build()
 
-			ver := verifier{
+			ver := Verifier{
 				client:        c,
 				credentialsDB: tt.credsDB,
 				cfg: ReconcilerConfig{
@@ -5782,7 +5782,7 @@ func TestRegularStageReconciler_getVerificationResult(t *testing.T) {
 				WithStatusSubresource(&kargoapi.Stage{}, &kargoapi.Freight{}, &rolloutsapi.AnalysisRun{}).
 				Build()
 
-			ver := verifier{
+			ver := Verifier{
 				client: c,
 				cfg: ReconcilerConfig{
 					RolloutsIntegrationEnabled: !tt.rolloutsDisabled,
@@ -6138,7 +6138,7 @@ func TestRegularStageReconciler_abortVerification(t *testing.T) {
 
 			c := builder.Build()
 
-			ver := verifier{
+			ver := Verifier{
 				client: c,
 				cfg: ReconcilerConfig{
 					RolloutsIntegrationEnabled: !tt.rolloutsDisabled,
@@ -6403,7 +6403,7 @@ func TestRegularStageReconciler_findExistingAnalysisRun(t *testing.T) {
 
 			c := builder.Build()
 
-			ver := verifier{client: c}
+			ver := Verifier{client: c}
 
 			ar, err := ver.findExistingAnalysisRun(t.Context(), tt.stage, tt.freightColID)
 			tt.assertions(t, ar, err)
@@ -8790,7 +8790,7 @@ func terminalPromotionOrderingObjects(
 	}
 }
 
-func Test_summarizeConditions(t *testing.T) {
+func TestSummarizeConditions(t *testing.T) {
 	tests := []struct {
 		name       string
 		stage      *kargoapi.Stage
@@ -9157,7 +9157,7 @@ func Test_summarizeConditions(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			ready := summarizeConditions(tt.stage, tt.status, tt.err)
+			ready := SummarizeConditions(tt.stage, tt.status, tt.err)
 			tt.assertions(t, tt.status, ready)
 		})
 	}
@@ -9204,27 +9204,6 @@ func Test_buildFreightSummary(t *testing.T) {
 			result := buildFreightSummary(tt.requested, tt.current)
 			assert.Equal(t, tt.expected, result)
 		})
-	}
-}
-
-// testOrigin returns the origin of Freight from the named Warehouse.
-func testOrigin(warehouse string) kargoapi.FreightOrigin {
-	return kargoapi.FreightOrigin{
-		Kind: kargoapi.FreightOriginKindWarehouse,
-		Name: warehouse,
-	}
-}
-
-// testFreight returns a piece of Freight in the test project, produced by the
-// named Warehouse.
-// nolint:unparam
-func testFreight(name, warehouse string) *kargoapi.Freight {
-	return &kargoapi.Freight{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: "fake-project",
-			Name:      name,
-		},
-		Origin: testOrigin(warehouse),
 	}
 }
 

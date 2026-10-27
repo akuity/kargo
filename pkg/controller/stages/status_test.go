@@ -185,7 +185,7 @@ func TestPatchStageStatus(t *testing.T) {
 			require.NoError(t, c.Get(t.Context(), objKey, stage))
 
 			newStatus := testCase.newStatus.DeepCopy()
-			require.NoError(t, patchStageStatus(t.Context(), c, stage, newStatus))
+			require.NoError(t, PatchStageStatus(t.Context(), c, stage, newStatus))
 
 			require.Len(t, patches, 1)
 

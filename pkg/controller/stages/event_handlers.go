@@ -12,6 +12,7 @@ import (
 	"k8s.io/client-go/util/workqueue"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/event"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	rollouts "github.com/akuity/kargo/api/stubs/rollouts/v1alpha1"
@@ -21,6 +22,16 @@ import (
 	"github.com/akuity/kargo/pkg/indexer"
 	"github.com/akuity/kargo/pkg/logging"
 )
+
+func NewDownstreamStageEnqueuer(
+	kargoClient client.Client,
+	forControlFlowStages bool,
+) handler.TypedEventHandler[*kargoapi.Freight, reconcile.Request] {
+	return &downstreamStageEnqueuer[*kargoapi.Freight]{
+		kargoClient,
+		forControlFlowStages,
+	}
+}
 
 // downstreamStageEnqueuer triggers reconciliation of downstream Stages when
 // Freight is verified in an upstream Stage. This handler can be configured
@@ -160,6 +171,14 @@ func getNewlyInStages(existing, updated *kargoapi.Freight) []string {
 	return stages
 }
 
+func NewStageEnqueuerForApprovedFreight(
+	kargoClient client.Client,
+) handler.TypedEventHandler[*kargoapi.Freight, reconcile.Request] {
+	return &stageEnqueuerForApprovedFreight[*kargoapi.Freight]{
+		kargoClient,
+	}
+}
+
 // stageEnqueuerForApprovedFreight is an event handler that enqueues Stages when
 // Freight is marked as approved for them, so that those Stages can reconcile
 // and possibly create a Promotion if auto-promotion is enabled.
@@ -236,6 +255,16 @@ func getNewlyApprovedStages(existing, updated *kargoapi.Freight) []string {
 		}
 	}
 	return stages
+}
+
+func NewWarehouseStageEnqueuer(
+	kargoClient client.Client,
+	forControlFlowStages bool,
+) handler.TypedEventHandler[*kargoapi.Freight, reconcile.Request] {
+	return &warehouseStageEnqueuer[*kargoapi.Freight]{
+		kargoClient,
+		forControlFlowStages,
+	}
 }
 
 // warehouseStageEnqueuer triggers reconciliation of Stages that are subscribed
@@ -558,6 +587,14 @@ func appHealthOrSyncStatusChanged[T any](ctx context.Context, e event.TypedUpdat
 	// RFC3339 timestamps are lexicographically orderable, so string
 	// comparison preserves chronological order.
 	return oldReconciledAt == "" || oldReconciledAt < finishedAt
+}
+
+func NewStageEnqueuerForAnalysisRuns[T any](
+	kargoClient client.Client,
+) handler.TypedEventHandler[T, reconcile.Request] {
+	return &stageEnqueuerForAnalysisRuns[T]{
+		kargoClient,
+	}
 }
 
 // stageEnqueuerForAnalysisRuns triggers reconciliation of Stages when their
