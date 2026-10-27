@@ -1,3 +1,222 @@
+suite: _helpers.tpl/kargo.nats.*
+# The NATS helpers render identically for every component that includes them,
+# so their behavior is tested once, against the API server. The suites that
+# follow check only that each component includes them.
+values:
+  - ../test/values-unittest.yaml
+release:
+  namespace: kargo
+templates:
+  - templates/api/deployment.yaml
+  - templates/api/configmap.yaml
+  - templates/api/secret.yaml
+tests:
+  - it: ignores external NATS settings when NATS is installed by the chart
+    set:
+      nats.external.nkeySeedSecret.name: nats-nkey-seed
+      nats.external.credsSecret.name: nats-creds
+      nats.external.tokenSecret.name: nats-token
+      nats.external.userPasswordSecret.name: nats-user
+      nats.external.tls.caSecret.name: nats-ca
+      nats.external.tls.clientCertSecret.name: nats-client-cert
+    asserts:
+      - equal:
+          path: data.NATS_SERVER_URL
+          value: nats://kargo-nats.kargo.svc.cluster.local:4222
+        template: templates/api/configmap.yaml
+      - notExists:
+          path: data.NATS_SEED_KEY_FILE
+        template: templates/api/configmap.yaml
+      - notExists:
+          path: data.NATS_CREDS_FILE
+        template: templates/api/configmap.yaml
+      - notExists:
+          path: data.NATS_TLS_CA_FILE
+        template: templates/api/configmap.yaml
+      - notExists:
+          path: data.NATS_TLS_CERT_FILE
+        template: templates/api/configmap.yaml
+      - notContains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: NATS_TOKEN
+          any: true
+        template: templates/api/deployment.yaml
+      - notContains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: NATS_USERNAME
+          any: true
+        template: templates/api/deployment.yaml
+      - notContains:
+          path: spec.template.spec.volumes
+          content:
+            name: nats
+          any: true
+        template: templates/api/deployment.yaml
+
+  - it: mounts an nkey seed
+    set:
+      nats.enabled: false
+      nats.external.url: nats://nats.example.com:4222
+      nats.external.nkeySeedSecret.name: nats-nkey-seed
+      nats.external.nkeySeedSecret.key: my-seed
+    asserts:
+      - equal:
+          path: data.NATS_SEED_KEY_FILE
+          value: /etc/kargo/nats/seed.nk
+        template: templates/api/configmap.yaml
+      - contains:
+          path: spec.template.spec.volumes
+          content:
+            name: nats
+            projected:
+              sources:
+              - secret:
+                  name: nats-nkey-seed
+                  items:
+                  - key: my-seed
+                    path: seed.nk
+        template: templates/api/deployment.yaml
+
+  - it: mounts a creds file
+    set:
+      nats.enabled: false
+      nats.external.url: nats://nats.example.com:4222
+      nats.external.credsSecret.name: nats-creds
+      nats.external.credsSecret.key: kargo.creds
+    asserts:
+      - equal:
+          path: data.NATS_CREDS_FILE
+          value: /etc/kargo/nats/user.creds
+        template: templates/api/configmap.yaml
+      - contains:
+          path: spec.template.spec.volumes
+          content:
+            name: nats
+            projected:
+              sources:
+              - secret:
+                  name: nats-creds
+                  items:
+                  - key: kargo.creds
+                    path: user.creds
+        template: templates/api/deployment.yaml
+
+  - it: mounts TLS material alongside other credentials
+    set:
+      nats.enabled: false
+      nats.external.url: tls://nats.example.com:4222
+      nats.external.credsSecret.name: nats-creds
+      nats.external.tls.caSecret.name: nats-tls
+      nats.external.tls.clientCertSecret.name: nats-tls
+    asserts:
+      - equal:
+          path: data.NATS_TLS_CA_FILE
+          value: /etc/kargo/nats/ca.crt
+        template: templates/api/configmap.yaml
+      - equal:
+          path: data.NATS_TLS_CERT_FILE
+          value: /etc/kargo/nats/tls.crt
+        template: templates/api/configmap.yaml
+      - equal:
+          path: data.NATS_TLS_KEY_FILE
+          value: /etc/kargo/nats/tls.key
+        template: templates/api/configmap.yaml
+      - contains:
+          path: spec.template.spec.volumes
+          content:
+            name: nats
+            projected:
+              sources:
+              - secret:
+                  name: nats-creds
+                  items:
+                  - key: user.creds
+                    path: user.creds
+              - secret:
+                  name: nats-tls
+                  items:
+                  - key: ca.crt
+                    path: ca.crt
+              - secret:
+                  name: nats-tls
+                  items:
+                  - key: tls.crt
+                    path: tls.crt
+              - secret:
+                  name: nats-tls
+                  items:
+                  - key: tls.key
+                    path: tls.key
+        template: templates/api/deployment.yaml
+
+  - it: passes a token through the environment without mounting anything
+    template: templates/api/deployment.yaml
+    set:
+      nats.enabled: false
+      nats.external.url: nats://nats.example.com:4222
+      nats.external.tokenSecret.name: nats-token
+      nats.external.tokenSecret.key: my-token
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: NATS_TOKEN
+            valueFrom:
+              secretKeyRef:
+                name: nats-token
+                key: my-token
+      - notContains:
+          path: spec.template.spec.volumes
+          content:
+            name: nats
+          any: true
+
+  - it: passes a username and password through the environment
+    template: templates/api/deployment.yaml
+    set:
+      nats.enabled: false
+      nats.external.url: nats://nats.example.com:4222
+      nats.external.userPasswordSecret.name: nats-user
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: NATS_USERNAME
+            valueFrom:
+              secretKeyRef:
+                name: nats-user
+                key: username
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: NATS_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: nats-user
+                key: password
+
+  - it: fails when more than one kind of external NATS credentials is set
+    template: templates/api/deployment.yaml
+    set:
+      nats.enabled: false
+      nats.external.url: nats://nats.example.com:4222
+      nats.external.nkeySeedSecret.name: nats-nkey-seed
+      nats.external.credsSecret.name: nats-creds
+    asserts:
+      - failedTemplate:
+          errorPattern: nats\.external\.nkeySeedSecret\.name, nats\.external\.credsSecret\.name are all set
+
+  - it: fails when NATS is disabled and no external URL is set
+    template: templates/api/deployment.yaml
+    set:
+      nats.enabled: false
+    asserts:
+      - failedTemplate:
+          errorPattern: nats\.external\.url must be set when nats\.enabled is false
+
+---
 suite: api (NATS)
 values:
   - ../test/values-unittest.yaml
@@ -9,17 +228,11 @@ templates:
   - templates/api/secret.yaml
 tests:
   - it: connects to the NATS installed by the chart by default
-    template: templates/api/configmap.yaml
     asserts:
       - equal:
           path: data.NATS_SERVER_URL
           value: nats://kargo-nats.kargo.svc.cluster.local:4222
-      - notExists:
-          path: data.NATS_SEED_KEY_FILE
-
-  - it: names its NATS connection after the pod
-    template: templates/api/deployment.yaml
-    asserts:
+        template: templates/api/configmap.yaml
       - contains:
           path: spec.template.spec.containers[0].env
           content:
@@ -27,61 +240,51 @@ tests:
             valueFrom:
               fieldRef:
                 fieldPath: metadata.name
-
-  - it: ignores the external nkey seed Secret when NATS is installed by the chart
-    set:
-      nats.external.nkeySeedSecret.name: nats-nkey-seed
-    asserts:
-      - notExists:
-          path: data.NATS_SEED_KEY_FILE
-        template: templates/api/configmap.yaml
-      - notContains:
-          path: spec.template.spec.volumes
-          content:
-            name: nats-nkey
-          any: true
         template: templates/api/deployment.yaml
 
-  - it: connects to an external NATS server with an nkey seed
+  - it: mounts files for connecting to an external NATS server
     set:
       nats.enabled: false
-      nats.external.url: nats://nats.example.com:4222
-      nats.external.nkeySeedSecret.name: nats-nkey-seed
-      nats.external.nkeySeedSecret.key: my-seed
+      nats.external.url: tls://nats.example.com:4222
+      nats.external.credsSecret.name: nats-creds
+      nats.external.tls.caSecret.name: nats-ca
     asserts:
       - equal:
           path: data.NATS_SERVER_URL
-          value: nats://nats.example.com:4222
+          value: tls://nats.example.com:4222
         template: templates/api/configmap.yaml
       - equal:
-          path: data.NATS_SEED_KEY_FILE
-          value: /etc/kargo/nats/seed.nk
+          path: data.NATS_CREDS_FILE
+          value: /etc/kargo/nats/user.creds
+        template: templates/api/configmap.yaml
+      - equal:
+          path: data.NATS_TLS_CA_FILE
+          value: /etc/kargo/nats/ca.crt
         template: templates/api/configmap.yaml
       - contains:
           path: spec.template.spec.containers[0].volumeMounts
           content:
             mountPath: /etc/kargo/nats
-            name: nats-nkey
+            name: nats
             readOnly: true
         template: templates/api/deployment.yaml
       - contains:
           path: spec.template.spec.volumes
           content:
-            name: nats-nkey
-            secret:
-              secretName: nats-nkey-seed
-              items:
-              - key: my-seed
-                path: seed.nk
+            name: nats
+            projected:
+              sources:
+              - secret:
+                  name: nats-creds
+                  items:
+                  - key: user.creds
+                    path: user.creds
+              - secret:
+                  name: nats-ca
+                  items:
+                  - key: ca.crt
+                    path: ca.crt
         template: templates/api/deployment.yaml
-
-  - it: fails when NATS is disabled and no external URL is set
-    template: templates/api/deployment.yaml
-    set:
-      nats.enabled: false
-    asserts:
-      - failedTemplate:
-          errorPattern: nats\.external\.url must be set when nats\.enabled is false
 
 ---
 suite: controller (NATS)
@@ -94,17 +297,11 @@ templates:
   - templates/controller/configmap.yaml
 tests:
   - it: connects to the NATS installed by the chart by default
-    template: templates/controller/configmap.yaml
     asserts:
       - equal:
           path: data.NATS_SERVER_URL
           value: nats://kargo-nats.kargo.svc.cluster.local:4222
-      - notExists:
-          path: data.NATS_SEED_KEY_FILE
-
-  - it: names its NATS connection after the pod
-    template: templates/controller/deployment.yaml
-    asserts:
+        template: templates/controller/configmap.yaml
       - contains:
           path: spec.template.spec.containers[0].env
           content:
@@ -112,6 +309,7 @@ tests:
             valueFrom:
               fieldRef:
                 fieldPath: metadata.name
+        template: templates/controller/deployment.yaml
 
   - it: honors the NATS subchart's namespace and port overrides
     template: templates/controller/configmap.yaml
@@ -123,60 +321,49 @@ tests:
           path: data.NATS_SERVER_URL
           value: nats://kargo-nats.nats-system.svc.cluster.local:4333
 
-  - it: ignores the external nkey seed Secret when NATS is installed by the chart
-    set:
-      nats.external.nkeySeedSecret.name: nats-nkey-seed
-    asserts:
-      - notExists:
-          path: data.NATS_SEED_KEY_FILE
-        template: templates/controller/configmap.yaml
-      - notContains:
-          path: spec.template.spec.volumes
-          content:
-            name: nats-nkey
-          any: true
-        template: templates/controller/deployment.yaml
-
-  - it: connects to an external NATS server with an nkey seed
+  - it: mounts files for connecting to an external NATS server
     set:
       nats.enabled: false
-      nats.external.url: nats://nats.example.com:4222
-      nats.external.nkeySeedSecret.name: nats-nkey-seed
-      nats.external.nkeySeedSecret.key: my-seed
+      nats.external.url: tls://nats.example.com:4222
+      nats.external.credsSecret.name: nats-creds
+      nats.external.tls.caSecret.name: nats-ca
     asserts:
       - equal:
           path: data.NATS_SERVER_URL
-          value: nats://nats.example.com:4222
+          value: tls://nats.example.com:4222
         template: templates/controller/configmap.yaml
       - equal:
-          path: data.NATS_SEED_KEY_FILE
-          value: /etc/kargo/nats/seed.nk
+          path: data.NATS_CREDS_FILE
+          value: /etc/kargo/nats/user.creds
+        template: templates/controller/configmap.yaml
+      - equal:
+          path: data.NATS_TLS_CA_FILE
+          value: /etc/kargo/nats/ca.crt
         template: templates/controller/configmap.yaml
       - contains:
           path: spec.template.spec.containers[0].volumeMounts
           content:
             mountPath: /etc/kargo/nats
-            name: nats-nkey
+            name: nats
             readOnly: true
         template: templates/controller/deployment.yaml
       - contains:
           path: spec.template.spec.volumes
           content:
-            name: nats-nkey
-            secret:
-              secretName: nats-nkey-seed
-              items:
-              - key: my-seed
-                path: seed.nk
+            name: nats
+            projected:
+              sources:
+              - secret:
+                  name: nats-creds
+                  items:
+                  - key: user.creds
+                    path: user.creds
+              - secret:
+                  name: nats-ca
+                  items:
+                  - key: ca.crt
+                    path: ca.crt
         template: templates/controller/deployment.yaml
-
-  - it: fails when NATS is disabled and no external URL is set
-    template: templates/controller/deployment.yaml
-    set:
-      nats.enabled: false
-    asserts:
-      - failedTemplate:
-          errorPattern: nats\.external\.url must be set when nats\.enabled is false
 
 ---
 suite: management-controller (NATS)
@@ -189,17 +376,11 @@ templates:
   - templates/management-controller/configmap.yaml
 tests:
   - it: connects to the NATS installed by the chart by default
-    template: templates/management-controller/configmap.yaml
     asserts:
       - equal:
           path: data.NATS_SERVER_URL
           value: nats://kargo-nats.kargo.svc.cluster.local:4222
-      - notExists:
-          path: data.NATS_SEED_KEY_FILE
-
-  - it: names its NATS connection after the pod
-    template: templates/management-controller/deployment.yaml
-    asserts:
+        template: templates/management-controller/configmap.yaml
       - contains:
           path: spec.template.spec.containers[0].env
           content:
@@ -207,61 +388,51 @@ tests:
             valueFrom:
               fieldRef:
                 fieldPath: metadata.name
-
-  - it: ignores the external nkey seed Secret when NATS is installed by the chart
-    set:
-      nats.external.nkeySeedSecret.name: nats-nkey-seed
-    asserts:
-      - notExists:
-          path: data.NATS_SEED_KEY_FILE
-        template: templates/management-controller/configmap.yaml
-      - notContains:
-          path: spec.template.spec.volumes
-          content:
-            name: nats-nkey
-          any: true
         template: templates/management-controller/deployment.yaml
 
-  - it: connects to an external NATS server with an nkey seed
+  - it: mounts files for connecting to an external NATS server
     set:
       nats.enabled: false
-      nats.external.url: nats://nats.example.com:4222
-      nats.external.nkeySeedSecret.name: nats-nkey-seed
-      nats.external.nkeySeedSecret.key: my-seed
+      nats.external.url: tls://nats.example.com:4222
+      nats.external.credsSecret.name: nats-creds
+      nats.external.tls.caSecret.name: nats-ca
     asserts:
       - equal:
           path: data.NATS_SERVER_URL
-          value: nats://nats.example.com:4222
+          value: tls://nats.example.com:4222
         template: templates/management-controller/configmap.yaml
       - equal:
-          path: data.NATS_SEED_KEY_FILE
-          value: /etc/kargo/nats/seed.nk
+          path: data.NATS_CREDS_FILE
+          value: /etc/kargo/nats/user.creds
+        template: templates/management-controller/configmap.yaml
+      - equal:
+          path: data.NATS_TLS_CA_FILE
+          value: /etc/kargo/nats/ca.crt
         template: templates/management-controller/configmap.yaml
       - contains:
           path: spec.template.spec.containers[0].volumeMounts
           content:
             mountPath: /etc/kargo/nats
-            name: nats-nkey
+            name: nats
             readOnly: true
         template: templates/management-controller/deployment.yaml
       - contains:
           path: spec.template.spec.volumes
           content:
-            name: nats-nkey
-            secret:
-              secretName: nats-nkey-seed
-              items:
-              - key: my-seed
-                path: seed.nk
+            name: nats
+            projected:
+              sources:
+              - secret:
+                  name: nats-creds
+                  items:
+                  - key: user.creds
+                    path: user.creds
+              - secret:
+                  name: nats-ca
+                  items:
+                  - key: ca.crt
+                    path: ca.crt
         template: templates/management-controller/deployment.yaml
-
-  - it: fails when NATS is disabled and no external URL is set
-    template: templates/management-controller/deployment.yaml
-    set:
-      nats.enabled: false
-    asserts:
-      - failedTemplate:
-          errorPattern: nats\.external\.url must be set when nats\.enabled is false
 
 ---
 suite: kubernetes-webhooks-server (NATS)
@@ -274,17 +445,11 @@ templates:
   - templates/kubernetes-webhooks-server/configmap.yaml
 tests:
   - it: connects to the NATS installed by the chart by default
-    template: templates/kubernetes-webhooks-server/configmap.yaml
     asserts:
       - equal:
           path: data.NATS_SERVER_URL
           value: nats://kargo-nats.kargo.svc.cluster.local:4222
-      - notExists:
-          path: data.NATS_SEED_KEY_FILE
-
-  - it: names its NATS connection after the pod
-    template: templates/kubernetes-webhooks-server/deployment.yaml
-    asserts:
+        template: templates/kubernetes-webhooks-server/configmap.yaml
       - contains:
           path: spec.template.spec.containers[0].env
           content:
@@ -292,61 +457,51 @@ tests:
             valueFrom:
               fieldRef:
                 fieldPath: metadata.name
-
-  - it: ignores the external nkey seed Secret when NATS is installed by the chart
-    set:
-      nats.external.nkeySeedSecret.name: nats-nkey-seed
-    asserts:
-      - notExists:
-          path: data.NATS_SEED_KEY_FILE
-        template: templates/kubernetes-webhooks-server/configmap.yaml
-      - notContains:
-          path: spec.template.spec.volumes
-          content:
-            name: nats-nkey
-          any: true
         template: templates/kubernetes-webhooks-server/deployment.yaml
 
-  - it: connects to an external NATS server with an nkey seed
+  - it: mounts files for connecting to an external NATS server
     set:
       nats.enabled: false
-      nats.external.url: nats://nats.example.com:4222
-      nats.external.nkeySeedSecret.name: nats-nkey-seed
-      nats.external.nkeySeedSecret.key: my-seed
+      nats.external.url: tls://nats.example.com:4222
+      nats.external.credsSecret.name: nats-creds
+      nats.external.tls.caSecret.name: nats-ca
     asserts:
       - equal:
           path: data.NATS_SERVER_URL
-          value: nats://nats.example.com:4222
+          value: tls://nats.example.com:4222
         template: templates/kubernetes-webhooks-server/configmap.yaml
       - equal:
-          path: data.NATS_SEED_KEY_FILE
-          value: /etc/kargo/nats/seed.nk
+          path: data.NATS_CREDS_FILE
+          value: /etc/kargo/nats/user.creds
+        template: templates/kubernetes-webhooks-server/configmap.yaml
+      - equal:
+          path: data.NATS_TLS_CA_FILE
+          value: /etc/kargo/nats/ca.crt
         template: templates/kubernetes-webhooks-server/configmap.yaml
       - contains:
           path: spec.template.spec.containers[0].volumeMounts
           content:
             mountPath: /etc/kargo/nats
-            name: nats-nkey
+            name: nats
             readOnly: true
         template: templates/kubernetes-webhooks-server/deployment.yaml
       - contains:
           path: spec.template.spec.volumes
           content:
-            name: nats-nkey
-            secret:
-              secretName: nats-nkey-seed
-              items:
-              - key: my-seed
-                path: seed.nk
+            name: nats
+            projected:
+              sources:
+              - secret:
+                  name: nats-creds
+                  items:
+                  - key: user.creds
+                    path: user.creds
+              - secret:
+                  name: nats-ca
+                  items:
+                  - key: ca.crt
+                    path: ca.crt
         template: templates/kubernetes-webhooks-server/deployment.yaml
-
-  - it: fails when NATS is disabled and no external URL is set
-    template: templates/kubernetes-webhooks-server/deployment.yaml
-    set:
-      nats.enabled: false
-    asserts:
-      - failedTemplate:
-          errorPattern: nats\.external\.url must be set when nats\.enabled is false
 
 ---
 suite: NATS server
