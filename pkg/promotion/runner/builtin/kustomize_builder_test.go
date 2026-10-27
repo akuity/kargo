@@ -466,12 +466,162 @@ metadata:
 
 			tt.setupFiles(t, tempDir)
 
-			stepCtx := &promotion.StepContext{
-				WorkDir: tempDir,
-			}
-
-			result, err := runner.run(stepCtx, tt.config)
+			result, err := runner.run(newTestStepContext(t, tempDir), tt.config)
 			tt.assertions(t, tempDir, result, err)
 		})
 	}
+}
+
+func Test_kustomizeBuilder_run_escapingSymlink(t *testing.T) {
+	workDir, outside := escapingWorkspace(t)
+	require.NoError(t, os.WriteFile(filepath.Join(workDir, "kustomization.yaml"), []byte(`
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+- deployment.yaml
+`), 0o600))
+	require.NoError(t, os.WriteFile(filepath.Join(workDir, "deployment.yaml"), []byte(`---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: test-deployment
+`), 0o600))
+	result, err := (&kustomizeBuilder{}).run(
+		newTestStepContext(t, workDir),
+		builtin.KustomizeBuildConfig{Path: ".", OutPath: "out/output.yaml"},
+	)
+	require.ErrorContains(t, err, "path escapes from parent")
+	require.Equal(t, kargoapi.PromotionStepStatusErrored, result.Status)
+	require.NoFileExists(t, filepath.Join(outside, "output.yaml"))
+}
+
+func Test_kustomizeBuilder_run_helmInflation(t *testing.T) {
+	const deployment = `---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: test-deployment
+`
+	writeFiles := func(t *testing.T, workDir string, files map[string]string) {
+		t.Helper()
+		for name, content := range files {
+			require.NoError(t, os.MkdirAll(filepath.Dir(filepath.Join(workDir, name)), 0o755))
+			require.NoError(t, os.WriteFile(filepath.Join(workDir, name), []byte(content), 0o600))
+		}
+	}
+	build := func(t *testing.T, workDir string) error {
+		t.Helper()
+		_, err := (&kustomizeBuilder{}).run(
+			newTestStepContext(t, workDir),
+			builtin.KustomizeBuildConfig{Path: ".", OutPath: "output.yaml"},
+		)
+		return err
+	}
+
+	t.Run("chart home is an escaping symlink", func(t *testing.T) {
+		workDir, _ := escapingWorkspace(t)
+		writeFiles(t, workDir, map[string]string{
+			"kustomization.yaml": "helmCharts:\n- name: foo\n",
+		})
+		require.NoError(t, os.Symlink(filepath.Join("..", "out"), filepath.Join(workDir, "charts")))
+		require.ErrorContains(t, build(t, workDir), "path escapes from parent")
+	})
+	t.Run("absolute chart home", func(t *testing.T) {
+		workDir := t.TempDir()
+		writeFiles(t, workDir, map[string]string{
+			"kustomization.yaml": "helmGlobals:\n  chartHome: /tmp/charts\nhelmCharts:\n- name: foo\n",
+		})
+		require.ErrorContains(t, build(t, workDir), "must be relative")
+	})
+	t.Run("chart home climbs out of the workspace", func(t *testing.T) {
+		workDir := t.TempDir()
+		writeFiles(t, workDir, map[string]string{
+			"kustomization.yaml": "helmGlobals:\n  chartHome: ../../charts\nhelmCharts:\n- name: foo\n",
+		})
+		require.ErrorContains(t, build(t, workDir), "resolves outside")
+	})
+	t.Run("chart home in a nested kustomization", func(t *testing.T) {
+		workDir := t.TempDir()
+		writeFiles(t, workDir, map[string]string{
+			"kustomization.yaml":      "resources:\n- base\n",
+			"base/kustomization.yaml": "helmGlobals:\n  chartHome: ../../../charts\nhelmCharts:\n- name: foo\n",
+		})
+		require.ErrorContains(t, build(t, workDir), "resolves outside")
+	})
+	t.Run("chart home in a generator configuration", func(t *testing.T) {
+		workDir := t.TempDir()
+		writeFiles(t, workDir, map[string]string{
+			"kustomization.yaml": "generators:\n- helm.yaml\n",
+			"helm.yaml": "apiVersion: builtin\nkind: HelmChartInflationGenerator\n" +
+				"chartHome: /tmp/charts\nname: foo\n",
+		})
+		require.ErrorContains(t, build(t, workDir), "must be relative")
+	})
+	t.Run("chart home in the legacy field", func(t *testing.T) {
+		workDir := t.TempDir()
+		writeFiles(t, workDir, map[string]string{
+			"kustomization.yaml": "helmChartInflationGenerator:\n- chartName: foo\n  chartHome: /tmp/charts\n",
+		})
+		require.ErrorContains(t, build(t, workDir), "must be relative")
+	})
+	t.Run("chart name with a path separator", func(t *testing.T) {
+		workDir := t.TempDir()
+		writeFiles(t, workDir, map[string]string{
+			"kustomization.yaml": "helmCharts:\n- name: ../../foo\n",
+		})
+		require.ErrorContains(t, build(t, workDir), "must be a plain name")
+	})
+	t.Run("no helm charts builds", func(t *testing.T) {
+		workDir := t.TempDir()
+		writeFiles(t, workDir, map[string]string{
+			"kustomization.yaml": "resources:\n- deployment.yaml\nhelmGlobals:\n  chartHome: vendor/charts\n",
+			"deployment.yaml":    deployment,
+		})
+		require.NoError(t, build(t, workDir))
+	})
+}
+
+func Test_kustomizeBuilder_run_helmInflationReview(t *testing.T) {
+	const outsideChart = "apiVersion: v2\nname: demo\nversion: 1.0.0\n"
+	const outsideTemplate = "apiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: outside-secret\n" +
+		"data:\n  secret: outside-content\n"
+	setup := func(t *testing.T) (*promotion.StepContext, string) {
+		workDir, outside := escapingWorkspace(t)
+		stepCtx := newTestStepContext(t, workDir)
+		require.NoError(t, os.MkdirAll(filepath.Join(outside, "demo", "templates"), 0o700))
+		require.NoError(t, os.WriteFile(filepath.Join(outside, "demo", "Chart.yaml"), []byte(outsideChart), 0o600))
+		require.NoError(t, os.WriteFile(
+			filepath.Join(outside, "demo", "templates", "secret.yaml"), []byte(outsideTemplate), 0o600,
+		))
+		require.NoError(t, stepCtx.Root.WriteFile("values.yaml", []byte("{}\n"), 0o600))
+		return stepCtx, outside
+	}
+	build := func(t *testing.T, stepCtx *promotion.StepContext) error {
+		t.Helper()
+		_, err := (&kustomizeBuilder{}).run(stepCtx, builtin.KustomizeBuildConfig{Path: ".", OutPath: "result.yaml"})
+		if err == nil {
+			content, readErr := stepCtx.Root.ReadFile("result.yaml")
+			require.NoError(t, readErr)
+			require.NotContains(t, string(content), "outside-content")
+		}
+		return err
+	}
+
+	t.Run("version with a path separator", func(t *testing.T) {
+		stepCtx, _ := setup(t)
+		require.NoError(t, stepCtx.Root.WriteFile("kustomization.yaml", []byte(
+			"helmCharts:\n- name: demo\n  repo: https://example.invalid\n"+
+				"  version: v/../../../outside\n  valuesFile: values.yaml\n",
+		), 0o600))
+		require.ErrorContains(t, build(t, stepCtx), "must be a plain")
+	})
+	t.Run("inflation generator in a later document of a generator file", func(t *testing.T) {
+		stepCtx, outside := setup(t)
+		require.NoError(t, stepCtx.Root.WriteFile("kustomization.yaml", []byte("generators:\n- generators.yaml\n"), 0o600))
+		config := "apiVersion: builtin\nkind: ConfigMapGenerator\nmetadata:\n  name: benign\n" +
+			"literals:\n- key=value\n---\napiVersion: builtin\nkind: HelmChartInflationGenerator\n" +
+			"metadata:\n  name: escape\nname: demo\nchartHome: " + outside + "\nvaluesFile: values.yaml\n"
+		require.NoError(t, stepCtx.Root.WriteFile("generators.yaml", []byte(config), 0o600))
+		require.ErrorContains(t, build(t, stepCtx), "must be relative")
+	})
 }

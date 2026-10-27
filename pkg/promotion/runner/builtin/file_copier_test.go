@@ -359,7 +359,7 @@ func Test_fileCopier_run(t *testing.T) {
 			workDir := tt.setupFiles(t)
 			result, err := runner.run(
 				t.Context(),
-				&promotion.StepContext{WorkDir: workDir},
+				newTestStepContext(t, workDir),
 				tt.cfg,
 			)
 			tt.assertions(t, workDir, result, err)
@@ -370,19 +370,19 @@ func Test_fileCopier_run(t *testing.T) {
 func Test_fileCopier_loadIgnoreRules(t *testing.T) {
 	tests := []struct {
 		name       string
-		inPath     string
 		rules      string
-		setup      func(*testing.T) string
+		setup      func(*testing.T) (workDir, inPath string)
 		assertions func(*testing.T, string, gitignore.Matcher, error)
 	}{
 		{
-			name:   "directory path",
-			inPath: "testdir",
+			name: "directory path",
 			rules: `*.txt
 # comment
 *.go`,
-			setup: func(t *testing.T) string {
-				return t.TempDir()
+			setup: func(t *testing.T) (string, string) {
+				dir := t.TempDir()
+				require.NoError(t, os.Mkdir(filepath.Join(dir, "testdir"), 0o755))
+				return dir, "testdir"
 			},
 			assertions: func(t *testing.T, inPath string, matcher gitignore.Matcher, err error) {
 				assert.NoError(t, err)
@@ -403,11 +403,10 @@ func Test_fileCopier_loadIgnoreRules(t *testing.T) {
 		{
 			name:  "file path",
 			rules: "*.log",
-			setup: func(t *testing.T) string {
+			setup: func(t *testing.T) (string, string) {
 				dir := t.TempDir()
-				inPath := filepath.Join(dir, "testfile.txt")
-				assert.NoError(t, os.WriteFile(inPath, []byte("test"), 0o600))
-				return inPath
+				assert.NoError(t, os.WriteFile(filepath.Join(dir, "testfile.txt"), []byte("test"), 0o600))
+				return dir, "testfile.txt"
 			},
 			assertions: func(t *testing.T, inPath string, matcher gitignore.Matcher, err error) {
 				assert.NoError(t, err)
@@ -420,11 +419,10 @@ func Test_fileCopier_loadIgnoreRules(t *testing.T) {
 			},
 		},
 		{
-			name:   "non-existent path",
-			inPath: "nonexistent",
-			rules:  "*.tmp",
-			setup: func(*testing.T) string {
-				return "does-not-exist"
+			name:  "non-existent path",
+			rules: "*.tmp",
+			setup: func(t *testing.T) (string, string) {
+				return t.TempDir(), "does-not-exist"
 			},
 			assertions: func(t *testing.T, _ string, matcher gitignore.Matcher, err error) {
 				assert.NoError(t, err)
@@ -432,11 +430,12 @@ func Test_fileCopier_loadIgnoreRules(t *testing.T) {
 			},
 		},
 		{
-			name:   "empty rules",
-			inPath: "testdir",
-			rules:  "",
-			setup: func(t *testing.T) string {
-				return t.TempDir()
+			name:  "empty rules",
+			rules: "",
+			setup: func(t *testing.T) (string, string) {
+				dir := t.TempDir()
+				require.NoError(t, os.Mkdir(filepath.Join(dir, "testdir"), 0o755))
+				return dir, "testdir"
 			},
 			assertions: func(t *testing.T, inPath string, matcher gitignore.Matcher, err error) {
 				assert.NoError(t, err)
@@ -449,8 +448,8 @@ func Test_fileCopier_loadIgnoreRules(t *testing.T) {
 		},
 		{
 			name: "invalid path",
-			setup: func(*testing.T) string {
-				return string([]byte{0})
+			setup: func(t *testing.T) (string, string) {
+				return t.TempDir(), string([]byte{0})
 			},
 			rules: "*.tmp",
 			assertions: func(t *testing.T, _ string, matcher gitignore.Matcher, err error) {
@@ -464,9 +463,102 @@ func Test_fileCopier_loadIgnoreRules(t *testing.T) {
 		f := &fileCopier{}
 
 		t.Run(tt.name, func(t *testing.T) {
-			inPath := tt.setup(t)
-			matcher, err := f.loadIgnoreRules(inPath, tt.rules)
-			tt.assertions(t, inPath, matcher, err)
+			workDir, inPath := tt.setup(t)
+			matcher, err := f.loadIgnoreRules(newTestStepContext(t, workDir), inPath, tt.rules)
+			tt.assertions(t, filepath.Join(workDir, inPath), matcher, err)
 		})
 	}
+}
+
+func Test_fileCopier_run_escapingSymlink(t *testing.T) {
+	t.Run("destination directory", func(t *testing.T) {
+		workDir, outside := escapingWorkspace(t)
+		require.NoError(t, os.Mkdir(filepath.Join(workDir, "input"), 0o755))
+		require.NoError(t, os.WriteFile(filepath.Join(workDir, "input", "a.txt"), []byte("x"), 0o600))
+		result, err := (&fileCopier{}).run(
+			t.Context(),
+			newTestStepContext(t, workDir),
+			builtin.CopyConfig{InPath: "input", OutPath: "out/copied"},
+		)
+		require.ErrorContains(t, err, "path escapes from parent")
+		require.Equal(t, kargoapi.PromotionStepStatusErrored, result.Status)
+		entries, err := os.ReadDir(outside)
+		require.NoError(t, err)
+		require.Empty(t, entries)
+	})
+	t.Run("destination file", func(t *testing.T) {
+		workDir, outside := escapingWorkspace(t)
+		require.NoError(t, os.WriteFile(filepath.Join(workDir, "a.txt"), []byte("x"), 0o600))
+		_, err := (&fileCopier{}).run(
+			t.Context(),
+			newTestStepContext(t, workDir),
+			builtin.CopyConfig{InPath: "a.txt", OutPath: "out/a.txt"},
+		)
+		require.ErrorContains(t, err, "path escapes from parent")
+		require.NoFileExists(t, filepath.Join(outside, "a.txt"))
+	})
+	t.Run("source", func(t *testing.T) {
+		workDir, outside := escapingWorkspace(t)
+		require.NoError(t, os.WriteFile(filepath.Join(outside, "secret.txt"), []byte("x"), 0o600))
+		_, err := (&fileCopier{}).run(
+			t.Context(),
+			newTestStepContext(t, workDir),
+			builtin.CopyConfig{InPath: "out/secret.txt", OutPath: "copied.txt"},
+		)
+		require.ErrorContains(t, err, "resolves outside the working directory")
+		require.NoFileExists(t, filepath.Join(workDir, "copied.txt"))
+	})
+}
+
+func Test_fileCopier_run_symlinkedInPath(t *testing.T) {
+	workDir := t.TempDir()
+	require.NoError(t, os.Mkdir(filepath.Join(workDir, "real"), 0o755))
+	require.NoError(t, os.WriteFile(filepath.Join(workDir, "real", "a.txt"), []byte("x"), 0o600))
+	require.NoError(t, os.Symlink("real", filepath.Join(workDir, "link")))
+	result, err := (&fileCopier{}).run(
+		t.Context(),
+		newTestStepContext(t, workDir),
+		builtin.CopyConfig{InPath: "link", OutPath: "copied"},
+	)
+	require.NoError(t, err)
+	require.Equal(t, kargoapi.PromotionStepStatusSucceeded, result.Status)
+	b, err := os.ReadFile(filepath.Join(workDir, "copied", "a.txt"))
+	require.NoError(t, err)
+	require.Equal(t, "x", string(b))
+}
+
+func Test_fileCopier_run_escapingSymlinkBeneathOutPath(t *testing.T) {
+	workDir, outside := escapingWorkspace(t)
+	require.NoError(t, os.Mkdir(filepath.Join(workDir, "input"), 0o755))
+	require.NoError(t, os.WriteFile(filepath.Join(workDir, "input", "a.txt"), []byte("new"), 0o600))
+	require.NoError(t, os.WriteFile(filepath.Join(outside, "a.txt"), []byte("old"), 0o600))
+	require.NoError(t, os.Mkdir(filepath.Join(workDir, "copied"), 0o755))
+	require.NoError(t, os.Symlink(filepath.Join("..", "out", "a.txt"), filepath.Join(workDir, "copied", "a.txt")))
+	_, err := (&fileCopier{}).run(
+		t.Context(),
+		newTestStepContext(t, workDir),
+		builtin.CopyConfig{InPath: "input", OutPath: "copied"},
+	)
+	require.ErrorContains(t, err, "path escapes from parent")
+	b, err := os.ReadFile(filepath.Join(outside, "a.txt"))
+	require.NoError(t, err)
+	require.Equal(t, "old", string(b))
+}
+
+func Test_fileCopier_run_danglingLinkDoesNotHideEscapingLink(t *testing.T) {
+	workDir, outside := escapingWorkspace(t)
+	stepCtx := newTestStepContext(t, workDir)
+	require.NoError(t, stepCtx.Root.MkdirAll("src", 0o700))
+	require.NoError(t, stepCtx.Root.MkdirAll("dst", 0o700))
+	require.NoError(t, stepCtx.Root.WriteFile("src/z-target", []byte("overwritten"), 0o600))
+	require.NoError(t, os.WriteFile(filepath.Join(outside, "victim"), []byte("original"), 0o600))
+	// Sorted before the escaping link, so a walk that stops at the first
+	// not-found error would never see the escaping link.
+	require.NoError(t, stepCtx.Root.Symlink("missing", "dst/a-dangling"))
+	require.NoError(t, stepCtx.Root.Symlink("../../outside/victim", "dst/z-target"))
+	_, err := (&fileCopier{}).run(t.Context(), stepCtx, builtin.CopyConfig{InPath: "src", OutPath: "dst"})
+	require.Error(t, err)
+	content, err := os.ReadFile(filepath.Join(outside, "victim"))
+	require.NoError(t, err)
+	require.Equal(t, "original", string(content))
 }

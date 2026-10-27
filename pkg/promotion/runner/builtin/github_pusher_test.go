@@ -157,7 +157,7 @@ func Test_githubPusher_run(t *testing.T) {
 		workTree.AddAllAndCommit(t.Context(), "initial commit", nil),
 	)
 
-	stepCtx := &promotion.StepContext{WorkDir: workDir}
+	stepCtx := newTestStepContext(t, workDir)
 
 	testCases := []struct {
 		name   string
@@ -1535,6 +1535,17 @@ func (m *mockGitHubPushClient) DeleteRef(
 	ref string,
 ) (*github.Response, error) {
 	return m.deleteRefFn(ctx, owner, repo, ref)
+}
+
+func Test_githubPusher_run_escapingSymlink(t *testing.T) {
+	workDir, _ := escapingWorkspace(t)
+	res, err := (&githubPusher{}).run(
+		t.Context(),
+		newTestStepContext(t, workDir),
+		builtin.GitHubPushConfig{Path: "out/repo"},
+	)
+	require.ErrorContains(t, err, "path escapes from parent")
+	require.Equal(t, kargoapi.PromotionStepStatusErrored, res.Status)
 }
 
 func Test_githubPusher_getBranchMu(t *testing.T) {

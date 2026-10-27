@@ -10,11 +10,9 @@ import (
 	"mime"
 	"net/http"
 	"net/url"
-	"os"
 	"strings"
 	"time"
 
-	securejoin "github.com/cyphar/filepath-securejoin"
 	"github.com/expr-lang/expr"
 	"github.com/hashicorp/go-cleanhttp"
 	"github.com/xeipuuv/gojsonschema"
@@ -314,14 +312,15 @@ func (h *httpRequester) buildRequest(
 		if stepCtx == nil {
 			return nil, fmt.Errorf("cannot read bodyFromFile %q without a step context", cfg.BodyFromFile)
 		}
-		bodyPath, err := securejoin.SecureJoin(stepCtx.WorkDir, cfg.BodyFromFile)
-		if err != nil {
-			return nil, fmt.Errorf("could not secure join bodyFromFile %q: %w", cfg.BodyFromFile, err)
-		}
-		bodyFile, err := os.Open(bodyPath)
+		bodyPath, err := promotion.WorkspacePath(cfg.BodyFromFile)
 		if err != nil {
 			return nil, fmt.Errorf("could not read bodyFromFile %q: %w", cfg.BodyFromFile, err)
 		}
+		bodyFile, err := stepCtx.Root.Open(bodyPath)
+		if err != nil {
+			return nil, fmt.Errorf("could not read bodyFromFile %q: %w", cfg.BodyFromFile, err)
+		}
+		defer bodyFile.Close()
 		bodyBytes, err := kargoio.LimitRead(bodyFile, maxResponseBytes)
 		if err != nil {
 			return nil, fmt.Errorf("could not read bodyFromFile %q: %w", cfg.BodyFromFile, err)

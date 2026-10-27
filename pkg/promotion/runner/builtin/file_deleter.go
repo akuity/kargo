@@ -12,16 +12,11 @@ import (
 	"github.com/xeipuuv/gojsonschema"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	"github.com/akuity/kargo/pkg/io/fs"
 	"github.com/akuity/kargo/pkg/promotion"
 	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
 )
 
 const stepKindDelete = "delete"
-
-// errPathTraversal is returned when a configured path would result in the
-// deletion of something outside the working directory.
-var errPathTraversal = errors.New("path attempts to traverse outside the working directory")
 
 func init() {
 	promotion.DefaultStepRunnerRegistry.MustRegister(
@@ -75,13 +70,13 @@ func (f *fileDeleter) run(
 	}
 
 	var (
-		absPaths []string
+		relPaths []string
 		err      error
 	)
 	if cfg.PathsAreGlobs {
-		absPaths, err = f.resolveGlobs(stepCtx.WorkDir, paths, cfg.Strict)
+		relPaths, err = f.resolveGlobs(stepCtx.Root, paths, cfg.Strict)
 	} else {
-		absPaths, err = f.resolveLiteralPaths(stepCtx.WorkDir, paths, cfg.Strict)
+		relPaths, err = f.resolveLiteralPaths(stepCtx.Root, paths, cfg.Strict)
 	}
 	if err != nil {
 		if errors.Is(err, doublestar.ErrBadPattern) {
@@ -92,71 +87,72 @@ func (f *fileDeleter) run(
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, err
 	}
 
-	for _, absPath := range absPaths {
+	for _, relPath := range relPaths {
 		// A path may have already been removed by an earlier entry (e.g. a
 		// parent directory), so a not-found error here is not fatal.
-		if err = removePath(absPath); err != nil && !errors.Is(err, os.ErrNotExist) {
+		if err = removePath(stepCtx.Root, relPath); err != nil && !errors.Is(err, os.ErrNotExist) {
 			return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
-				fmt.Errorf("failed to delete: %w", fs.SanitizePathError(err, stepCtx.WorkDir))
+				fmt.Errorf("failed to delete: %w", err)
 		}
 	}
 	return promotion.StepResult{Status: kargoapi.PromotionStepStatusSucceeded}, nil
 }
 
-// resolveLiteralPaths resolves each entry as a literal (non-glob) path. It
-// returns an error when strict is true and a path does not exist.
+// resolveLiteralPaths resolves each entry as a literal (non-glob) path
+// relative to root. It returns an error when strict is true and a path does
+// not exist.
 func (f *fileDeleter) resolveLiteralPaths(
-	workDir string,
+	root *os.Root,
 	paths []string,
 	strict bool,
 ) ([]string, error) {
-	var absPaths []string
+	var relPaths []string
 	seen := make(map[string]struct{})
 	for _, path := range paths {
-		absPath, err := f.secureResolve(workDir, path)
+		relPath, err := promotion.WorkspacePath(path)
+		if err != nil {
+			return nil, err
+		}
+		exists, err := f.exists(root, relPath)
 		if err != nil {
 			return nil, fmt.Errorf("could not resolve path %q: %w", path, err)
 		}
-		if absPath == "" {
-			// The path does not exist.
+		if !exists {
 			if strict {
 				return nil, fmt.Errorf("path %q does not exist", path)
 			}
 			continue
 		}
 
-		if _, ok := seen[absPath]; !ok {
-			seen[absPath] = struct{}{}
-			absPaths = append(absPaths, absPath)
+		if _, ok := seen[relPath]; !ok {
+			seen[relPath] = struct{}{}
+			relPaths = append(relPaths, relPath)
 		}
 	}
 
-	return absPaths, nil
+	return relPaths, nil
 }
 
-// resolveGlobs expands the provided glob patterns relative to workDir and
-// returns the deduplicated absolute paths that should be deleted. Returns
-// an error when strict is true and a glob pattern matches nothing.
+// resolveGlobs expands the provided glob patterns relative to root and
+// returns the deduplicated paths, relative to root, that should be deleted.
+// Returns an error when strict is true and a glob pattern matches nothing.
 func (f *fileDeleter) resolveGlobs(
-	workDir string,
+	root *os.Root,
 	patterns []string,
 	strict bool,
 ) ([]string, error) {
-	root, err := filepath.EvalSymlinks(workDir)
-	if err != nil {
-		return nil, fmt.Errorf("could not resolve working directory: %w", err)
-	}
-	workDirFS := os.DirFS(root)
-
-	var absPaths []string
+	var relPaths []string
 	seen := make(map[string]struct{})
 	for _, pattern := range patterns {
+		if _, err := promotion.WorkspacePath(pattern); err != nil {
+			return nil, err
+		}
 		// Strip a leading "./" so that glob patterns are matched relative to
 		// the working directory.
 		globPattern := strings.TrimPrefix(pattern, "./")
-		matches, err := doublestar.Glob(workDirFS, globPattern)
+		matches, err := f.expandGlob(root, globPattern)
 		if err != nil {
-			return nil, fmt.Errorf("invalid glob pattern %q: %w", pattern, err)
+			return nil, err
 		}
 
 		if len(matches) == 0 {
@@ -167,76 +163,67 @@ func (f *fileDeleter) resolveGlobs(
 		}
 
 		for _, match := range matches {
-			absPath, err := f.secureResolve(root, filepath.FromSlash(match))
-			if err != nil {
-				return nil, err
-			}
-			if absPath == "" {
-				// Matched but no longer exists; nothing to delete.
-				continue
-			}
-			if _, ok := seen[absPath]; !ok {
-				seen[absPath] = struct{}{}
-				absPaths = append(absPaths, absPath)
+			relPath := filepath.FromSlash(match)
+			if _, ok := seen[relPath]; !ok {
+				seen[relPath] = struct{}{}
+				relPaths = append(relPaths, relPath)
 			}
 		}
 	}
-	return absPaths, nil
+	return relPaths, nil
 }
 
-// secureResolve resolves path against workDir and returns its absolute
-// location, guaranteeing the result stays within workDir. A symlink at the leaf
-// is returned as-is so that it is deleted as a link rather than followed through
-// to its target.
-func (f *fileDeleter) secureResolve(workDir, path string) (string, error) {
-	// workDir itself might contain symlinks, so we need to resolve it first.
-	root, err := filepath.EvalSymlinks(workDir)
-	if err != nil {
-		return "", fmt.Errorf("could not resolve working directory: %w", err)
-	}
-
-	// Reject any path that lexically escapes the working directory.
-	absPath := filepath.Join(root, path)
-	if !fs.IsSubPath(root, absPath) {
-		return "", errPathTraversal
-	}
-
-	resolvedParent, err := filepath.EvalSymlinks(filepath.Dir(absPath))
-	if err != nil {
-		if errors.Is(err, os.ErrNotExist) {
-			// The parent does not exist, so neither does the target.
-			return "", nil
+// expandGlob returns the paths, relative to root, matched by pattern. A
+// pattern without metacharacters names one path, and a symlink there is
+// matched as a link. The literal prefix of any other pattern must resolve
+// inside root; entries the expansion merely walks past are skipped if they
+// cannot be read, as a shell would skip them.
+func (f *fileDeleter) expandGlob(root *os.Root, pattern string) ([]string, error) {
+	if !strings.ContainsAny(pattern, `*?[{\`) {
+		exists, err := f.exists(root, filepath.FromSlash(pattern))
+		if err != nil {
+			return nil, fmt.Errorf("could not resolve path %q: %w", pattern, err)
 		}
-		return "", err
-	}
-	if !fs.IsSubPath(root, resolvedParent) {
-		return "", errPathTraversal
-	}
-
-	// Use Lstat so that a symlink counts as existing and is removed as a link
-	// rather than followed.
-	target := filepath.Join(resolvedParent, filepath.Base(absPath))
-	if _, err = os.Lstat(target); err != nil {
-		if errors.Is(err, os.ErrNotExist) {
-			return "", nil
+		if !exists {
+			return nil, nil
 		}
-		return "", fs.SanitizePathError(err, root)
+		return []string{pattern}, nil
 	}
-
-	return target, nil
+	base, _ := doublestar.SplitPattern(pattern)
+	if _, err := root.Stat(base); err != nil && !errors.Is(err, os.ErrNotExist) {
+		return nil, fmt.Errorf("could not resolve path %q: %w", base, err)
+	}
+	matches, err := doublestar.Glob(root.FS(), pattern)
+	if err != nil {
+		return nil, fmt.Errorf("invalid glob pattern %q: %w", pattern, err)
+	}
+	return matches, nil
 }
 
-// removePath deletes the file, directory, or symlink at path. A symlink is
-// removed as a link rather than followed through to its target.
-func removePath(path string) error {
-	fi, err := os.Lstat(path)
+// exists reports whether relPath exists within root. A symlink at the leaf
+// counts as existing without being followed, so that it is later deleted as a
+// link rather than followed through to its target.
+func (f *fileDeleter) exists(root *os.Root, relPath string) (bool, error) {
+	if _, err := root.Lstat(relPath); err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return false, nil
+		}
+		return false, err
+	}
+	return true, nil
+}
+
+// removePath deletes the file, directory, or symlink at relPath within root.
+// A symlink is removed as a link rather than followed through to its target.
+func removePath(root *os.Root, relPath string) error {
+	fi, err := root.Lstat(relPath)
 	if err != nil {
 		return err
 	}
 
 	if fi.IsDir() {
-		return os.RemoveAll(path)
+		return root.RemoveAll(relPath)
 	}
 
-	return os.Remove(path)
+	return root.Remove(relPath)
 }

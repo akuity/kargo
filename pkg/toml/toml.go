@@ -3,7 +3,6 @@ package toml
 import (
 	"bytes"
 	"fmt"
-	"os"
 	"sort"
 	"strconv"
 	"strings"
@@ -41,28 +40,6 @@ type change struct {
 	offset      int
 	length      int
 	replacement []byte
-}
-
-// SetValuesInFile overwrites the specified file with the changes specified by
-// the list of Updates. Keys are of the form <key 0>.<key 1>...<key n>.
-// Integers may be used as keys where a specific array element needs to be
-// selected. An error is returned for any attempted update to a key that does
-// not exist or does not address a scalar node. Untouched bytes are preserved.
-func SetValuesInFile(file string, updates []Update) error {
-	inBytes, err := os.ReadFile(file)
-	if err != nil {
-		return fmt.Errorf("error reading file %q: %w", file, err)
-	}
-	outBytes, err := SetValuesInBytes(inBytes, updates)
-	if err != nil {
-		return fmt.Errorf("error mutating bytes: %w", err)
-	}
-	// #nosec G703 -- Callers (e.g. the toml_updater promotion step) build
-	// file via securejoin.SecureJoin before calling this function.
-	if err = os.WriteFile(file, outBytes, 0o600); err != nil {
-		return fmt.Errorf("error writing mutated bytes to file %q: %w", file, err)
-	}
-	return nil
 }
 
 // SetValuesInBytes returns a copy of the provided bytes with the changes

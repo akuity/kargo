@@ -7,7 +7,6 @@ import (
 	"os"
 	"path/filepath"
 
-	securejoin "github.com/cyphar/filepath-securejoin"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/xeipuuv/gojsonschema"
@@ -15,7 +14,6 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/credentials"
 	intio "github.com/akuity/kargo/pkg/io"
-	"github.com/akuity/kargo/pkg/io/fs"
 	"github.com/akuity/kargo/pkg/promotion"
 	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
 )
@@ -83,7 +81,7 @@ func (d *ociDownloader) run(
 	stepCtx *promotion.StepContext,
 	cfg builtin.OCIDownloadConfig,
 ) (promotion.StepResult, error) {
-	absOutPath, err := d.prepareOutputPath(stepCtx.WorkDir, cfg.OutPath, cfg.AllowOverwrite)
+	outPath, err := d.prepareOutputPath(stepCtx.Root, cfg.OutPath, cfg.AllowOverwrite)
 	if err != nil {
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, err
 	}
@@ -93,7 +91,7 @@ func (d *ociDownloader) run(
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, err
 	}
 
-	if err = d.extractLayerToFile(img, cfg.MediaType, absOutPath); err != nil {
+	if err = d.extractLayerToFile(img, cfg.MediaType, stepCtx.Root, outPath); err != nil {
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, err
 	}
 
@@ -101,28 +99,28 @@ func (d *ociDownloader) run(
 }
 
 // prepareOutputPath validates and prepares the output path for the artifact.
-func (d *ociDownloader) prepareOutputPath(workDir, outPath string, allowOverwrite bool) (string, error) {
-	absOutPath, err := securejoin.SecureJoin(workDir, outPath)
+// It returns the path relative to root.
+func (d *ociDownloader) prepareOutputPath(root *os.Root, outPath string, allowOverwrite bool) (string, error) {
+	relOutPath, err := promotion.WorkspacePath(outPath)
 	if err != nil {
-		return "", fmt.Errorf("failed to join path %q: %w", outPath, err)
-	}
-
-	if err = d.checkFileOverwrite(absOutPath, outPath, allowOverwrite); err != nil {
 		return "", err
 	}
 
-	destDir := filepath.Dir(absOutPath)
-	if err = os.MkdirAll(destDir, 0o700); err != nil {
+	if err = d.checkFileOverwrite(root, relOutPath, outPath, allowOverwrite); err != nil {
+		return "", err
+	}
+
+	if err = root.MkdirAll(filepath.Dir(relOutPath), 0o700); err != nil {
 		return "", fmt.Errorf("failed to create destination directory: %w", err)
 	}
 
-	return absOutPath, nil
+	return relOutPath, nil
 }
 
 // checkFileOverwrite validates file overwrite conditions.
-func (d *ociDownloader) checkFileOverwrite(absOutPath, outPath string, allowOverwrite bool) error {
+func (d *ociDownloader) checkFileOverwrite(root *os.Root, relOutPath, outPath string, allowOverwrite bool) error {
 	if !allowOverwrite {
-		if _, err := os.Stat(absOutPath); err == nil || !os.IsNotExist(err) {
+		if _, err := root.Stat(relOutPath); err == nil || !os.IsNotExist(err) {
 			if err != nil {
 				return fmt.Errorf("error checking destination file: %w", err)
 			}
@@ -162,7 +160,7 @@ func (d *ociDownloader) resolveImage(
 
 // extractLayerToFile extracts the target layer from the image to the specified
 // file.
-func (d *ociDownloader) extractLayerToFile(img v1.Image, mediaType, absOutPath string) error {
+func (d *ociDownloader) extractLayerToFile(img v1.Image, mediaType string, root *os.Root, outPath string) error {
 	manifest, err := img.Manifest()
 	if err != nil {
 		return fmt.Errorf("failed to get manifest: %w", err)
@@ -173,7 +171,7 @@ func (d *ociDownloader) extractLayerToFile(img v1.Image, mediaType, absOutPath s
 		return fmt.Errorf("failed to find target layer: %w", err)
 	}
 
-	return d.writeLayerToFile(targetLayer, absOutPath)
+	return d.writeLayerToFile(targetLayer, root, outPath)
 }
 
 // findTargetLayer finds the appropriate layer based on media type preference.
@@ -208,16 +206,17 @@ func (d *ociDownloader) findTargetLayer(
 	return layers[0], nil
 }
 
-// writeLayerToFile writes the layer content to a file using atomic operations.
-func (d *ociDownloader) writeLayerToFile(layer v1.Layer, absOutPath string) error {
-	tempFile, tempPath, err := d.createTempFile(absOutPath)
+// writeLayerToFile writes the layer content to the file at outPath, which is
+// relative to root, using atomic operations.
+func (d *ociDownloader) writeLayerToFile(layer v1.Layer, root *os.Root, outPath string) error {
+	tempFile, tempPath, err := createTempFile(root, filepath.Dir(outPath), filepath.Base(outPath)+".tmp")
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to create temporary file: %w", err)
 	}
 
 	defer func() {
 		_ = tempFile.Close()
-		_ = os.Remove(tempPath)
+		_ = root.Remove(tempPath)
 	}()
 
 	if err = d.copyLayerToFile(layer, tempFile); err != nil {
@@ -228,33 +227,11 @@ func (d *ociDownloader) writeLayerToFile(layer v1.Layer, absOutPath string) erro
 		return fmt.Errorf("failed to close temporary file: %w", err)
 	}
 
-	if err = fs.SimpleAtomicMove(tempPath, absOutPath); err != nil {
+	if err = replace(root, tempPath, outPath); err != nil {
 		return fmt.Errorf("failed to move file to final destination: %w", err)
 	}
 
 	return nil
-}
-
-// createTempFile creates a temporary file in the same directory as the target.
-func (d *ociDownloader) createTempFile(absOutPath string) (*os.File, string, error) {
-	destDir := filepath.Dir(absOutPath)
-	baseFile := filepath.Base(absOutPath)
-
-	tempFile, err := os.CreateTemp(destDir, baseFile+".tmp")
-	if err != nil {
-		return nil, "", fmt.Errorf("failed to create temporary file: %w", err)
-	}
-
-	if err = tempFile.Chmod(0o600); err != nil {
-		_ = tempFile.Close()
-		// #nosec G703 -- Contextually, if this was constructed from a
-		// user-specified, relative path, the absolute path was constructed using
-		// securejoin.SecureJoin().
-		_ = os.Remove(tempFile.Name())
-		return nil, "", fmt.Errorf("failed to set permissions on temporary file: %w", err)
-	}
-
-	return tempFile, tempFile.Name(), nil
 }
 
 // copyLayerToFile copies layer content to the file with size limits.

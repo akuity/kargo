@@ -2,7 +2,10 @@ package promotion
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -191,8 +194,101 @@ func TestLocalStepExecutor_ExecuteStep(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			executor := NewLocalStepExecutor(tt.registry, nil, nil, nil, nil)
+			tt.request.Context.WorkDir = t.TempDir()
 			result, err := executor.ExecuteStep(t.Context(), tt.request)
 			tt.assertions(t, result, err)
 		})
 	}
+}
+
+func TestLocalStepExecutor_ExecuteStep_Root(t *testing.T) {
+	t.Run("runner receives a Root on the working directory", func(t *testing.T) {
+		workDir := t.TempDir()
+		var seen *os.Root
+		registry := MustNewStepRunnerRegistry(StepRunnerRegistration{
+			Name: "test-step",
+			Value: func(_ StepRunnerCapabilities) StepRunner {
+				return &MockStepRunner{
+					RunFunc: func(_ context.Context, stepCtx *StepContext) (StepResult, error) {
+						seen = stepCtx.Root
+						require.NotNil(t, stepCtx.Root)
+						require.Equal(t, workDir, stepCtx.Root.Name())
+						require.NoError(t, stepCtx.Root.WriteFile("f", []byte("x"), 0o600))
+						return StepResult{Status: kargoapi.PromotionStepStatusSucceeded}, nil
+					},
+				}
+			},
+		})
+		executor := NewLocalStepExecutor(registry, nil, nil, nil, nil)
+		result, err := executor.ExecuteStep(t.Context(), StepExecutionRequest{
+			Context: StepContext{WorkDir: workDir},
+			Step:    Step{Kind: "test-step"},
+		})
+		require.NoError(t, err)
+		require.Equal(t, kargoapi.PromotionStepStatusSucceeded, result.Status)
+		require.FileExists(t, filepath.Join(workDir, "f"))
+		// The Root is closed once the step has run.
+		require.NotNil(t, seen)
+		_, err = seen.Stat(".")
+		require.ErrorIs(t, err, os.ErrClosed)
+	})
+
+	t.Run("request round-tripped through JSON", func(t *testing.T) {
+		workDir := t.TempDir()
+		registry := MustNewStepRunnerRegistry(StepRunnerRegistration{
+			Name: "test-step",
+			Value: func(_ StepRunnerCapabilities) StepRunner {
+				return &MockStepRunner{
+					RunFunc: func(_ context.Context, stepCtx *StepContext) (StepResult, error) {
+						require.NotNil(t, stepCtx.Root)
+						require.NoError(t, stepCtx.Root.WriteFile("f", []byte("x"), 0o600))
+						return StepResult{Status: kargoapi.PromotionStepStatusSucceeded}, nil
+					},
+				}
+			},
+		})
+		// A Root set on the request before serialization is never part of the
+		// JSON and is not what the step sees.
+		stale, err := os.OpenRoot(t.TempDir())
+		require.NoError(t, err)
+		t.Cleanup(func() { _ = stale.Close() })
+		req := StepExecutionRequest{
+			Context: StepContext{WorkDir: workDir, Root: stale},
+			Step:    Step{Kind: "test-step"},
+		}
+		b, err := json.Marshal(req)
+		require.NoError(t, err)
+		require.NotContains(t, string(b), `"Root"`)
+		var decoded StepExecutionRequest
+		require.NoError(t, json.Unmarshal(b, &decoded))
+		require.Nil(t, decoded.Context.Root)
+
+		executor := NewLocalStepExecutor(registry, nil, nil, nil, nil)
+		result, err := executor.ExecuteStep(t.Context(), decoded)
+		require.NoError(t, err)
+		require.Equal(t, kargoapi.PromotionStepStatusSucceeded, result.Status)
+		require.FileExists(t, filepath.Join(workDir, "f"))
+		require.NoFileExists(t, filepath.Join(stale.Name(), "f"))
+	})
+
+	t.Run("working directory does not exist", func(t *testing.T) {
+		registry := MustNewStepRunnerRegistry(StepRunnerRegistration{
+			Name: "test-step",
+			Value: func(_ StepRunnerCapabilities) StepRunner {
+				return &MockStepRunner{
+					RunFunc: func(context.Context, *StepContext) (StepResult, error) {
+						t.Fatal("runner must not run without a working directory")
+						return StepResult{}, nil
+					},
+				}
+			},
+		})
+		executor := NewLocalStepExecutor(registry, nil, nil, nil, nil)
+		result, err := executor.ExecuteStep(t.Context(), StepExecutionRequest{
+			Context: StepContext{WorkDir: filepath.Join(t.TempDir(), "missing")},
+			Step:    Step{Kind: "test-step"},
+		})
+		require.ErrorContains(t, err, "error opening working directory")
+		require.Equal(t, kargoapi.PromotionStepStatusErrored, result.Status)
+	})
 }

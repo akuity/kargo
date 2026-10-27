@@ -342,7 +342,7 @@ func Test_tarCreator_run(t *testing.T) {
 			workDir := tt.setupFiles(t)
 			result, err := runner.run(
 				context.Background(),
-				&promotion.StepContext{WorkDir: workDir},
+				newTestStepContext(t, workDir),
 				tt.cfg,
 			)
 			tt.assertions(t, workDir, result, err)
@@ -624,11 +624,16 @@ func Test_tarCreator_createTarball(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			_, inPath, outPath := tt.setupFiles(t)
+			workDir, inPath, outPath := tt.setupFiles(t)
+			relInPath, err := filepath.Rel(workDir, inPath)
+			require.NoError(t, err)
+			relOutPath, err := filepath.Rel(workDir, outPath)
+			require.NoError(t, err)
 
 			result, err := runner.createTarball(
-				inPath,
-				outPath,
+				newTestRoot(t, workDir),
+				relInPath,
+				relOutPath,
 				tt.gzip,
 				tt.ignore,
 				nil,
@@ -642,21 +647,22 @@ func Test_tarCreator_createTarball(t *testing.T) {
 func Test_tarCreator_createTarball_mtime(t *testing.T) {
 	t.Parallel()
 
-	// writeTree writes the same files every time, owned by whoever runs the
-	// test, with the given modification time.
+	// writeTree writes the same files every time under "in" in a new
+	// directory, owned by whoever runs the test, with the given modification
+	// time, and returns the new directory.
 	writeTree := func(t *testing.T, mtime time.Time) string {
 		dir := t.TempDir()
-		require.NoError(t, os.Mkdir(filepath.Join(dir, "dev"), 0o750))
+		require.NoError(t, os.MkdirAll(filepath.Join(dir, "in", "dev"), 0o750))
 		files := map[string]string{
-			"dev/deployment.yaml": "kind: Deployment\n",
-			"dev/service.yaml":    "kind: Service\n",
+			"in/dev/deployment.yaml": "kind: Deployment\n",
+			"in/dev/service.yaml":    "kind: Service\n",
 		}
 		for name, content := range files {
 			path := filepath.Join(dir, name)
 			require.NoError(t, os.WriteFile(path, []byte(content), 0o600))
 			require.NoError(t, os.Chtimes(path, mtime, mtime))
 		}
-		require.NoError(t, os.Chtimes(filepath.Join(dir, "dev"), mtime, mtime))
+		require.NoError(t, os.Chtimes(filepath.Join(dir, "in", "dev"), mtime, mtime))
 		return dir
 	}
 
@@ -671,12 +677,18 @@ func Test_tarCreator_createTarball_mtime(t *testing.T) {
 		runner := &tarCreator{}
 		var archives [][]byte
 		for _, w := range written {
-			inPath := writeTree(t, w)
-			outPath := filepath.Join(t.TempDir(), "archive.tar")
-			result, err := runner.createTarball(inPath, outPath, gzipped, "", mtime)
+			workDir := writeTree(t, w)
+			result, err := runner.createTarball(
+				newTestRoot(t, workDir),
+				"in",
+				"archive.tar",
+				gzipped,
+				"",
+				mtime,
+			)
 			require.NoError(t, err)
 			require.Equal(t, kargoapi.PromotionStepStatusSucceeded, result.Status)
-			data, err := os.ReadFile(outPath)
+			data, err := os.ReadFile(filepath.Join(workDir, "archive.tar"))
 			require.NoError(t, err)
 			archives = append(archives, data)
 		}
@@ -761,20 +773,21 @@ func Test_tarCreator_prepareInputPath(t *testing.T) {
 		{"valid file path", "real.txt", ""},
 		{"valid dir path", "real_dir", ""},
 		{"non-existent path", "fake.txt", "does not exist"},
-		{"path traversal attempt", "../outside.txt", "does not exist"},
-		{"fails to secure join", string([]byte{0}), "failed to secure join input path"},
+		{"path traversal attempt", "../outside.txt", "outside the working directory"},
+		{"invalid path", string([]byte{0}), "failed to stat input path"},
 	}
 
+	root := newTestRoot(t, workDir)
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			absPath, err := runner.prepareInputPath(workDir, tt.inPath)
+			relPath, err := runner.prepareInputPath(root, tt.inPath)
 			if tt.expectedError != "" {
 				assert.ErrorContains(t, err, tt.expectedError)
-				assert.Empty(t, absPath)
+				assert.Empty(t, relPath)
 			} else {
 				assert.NoError(t, err)
-				assert.True(t, strings.HasSuffix(absPath, tt.inPath))
+				assert.Equal(t, tt.inPath, relPath)
 			}
 		})
 	}
@@ -789,49 +802,20 @@ func Test_tarCreator_prepareOutputPath(t *testing.T) {
 		workDir := t.TempDir()
 		nestedOutPath := "deeply/nested/archive.tar"
 
-		absPath, err := runner.prepareOutputPath(workDir, nestedOutPath)
+		relPath, err := runner.prepareOutputPath(newTestRoot(t, workDir), nestedOutPath)
 		assert.NoError(t, err)
-		assert.True(t, strings.HasSuffix(absPath, nestedOutPath))
+		assert.Equal(t, nestedOutPath, relPath)
 
 		// Check the directory exists.
-		dirInfo, statErr := os.Stat(filepath.Dir(absPath))
-		assert.NoError(t, statErr)
-		assert.True(t, dirInfo.IsDir())
+		assert.DirExists(t, filepath.Join(workDir, filepath.Dir(nestedOutPath)))
 	})
 
-	t.Run("fails to secure join", func(t *testing.T) {
+	t.Run("path climbs out of the working directory", func(t *testing.T) {
 		t.Parallel()
 		workDir := t.TempDir()
 
-		_, err := runner.prepareOutputPath(workDir, string([]byte{0}))
-		assert.ErrorContains(t, err, "failed to secure join output path")
-	})
-}
-
-func Test_tarCreator_createTempFile(t *testing.T) {
-	t.Parallel()
-	runner := &tarCreator{}
-
-	t.Run("succeeds to create temp file", func(t *testing.T) {
-		t.Parallel()
-		workDir := t.TempDir()
-
-		f, path, err := runner.createTempFile(filepath.Join(workDir, "out.tar"))
-		assert.NoError(t, err)
-		assert.NotNil(t, f)
-		assert.NotEmpty(t, path)
-
-		f.Close()
-	})
-
-	t.Run("fails to create temp file", func(t *testing.T) {
-		t.Parallel()
-		workDir := t.TempDir()
-
-		f, path, err := runner.createTempFile(filepath.Join(workDir, "non_existent_dir", "out.tar"))
-		assert.ErrorContains(t, err, "failed to create temporary file")
-		assert.Nil(t, f)
-		assert.Empty(t, path)
+		_, err := runner.prepareOutputPath(newTestRoot(t, workDir), "../archive.tar")
+		assert.ErrorContains(t, err, "outside the working directory")
 	})
 }
 
@@ -943,4 +927,53 @@ func verifyNoTempFiles(t *testing.T, dir string) {
 		assert.False(t, !entry.IsDir() && strings.HasSuffix(entry.Name(), ".tmp"),
 			"No temporary files should remain: %s", entry.Name())
 	}
+}
+
+func Test_tarCreator_run_escapingSymlink(t *testing.T) {
+	t.Run("input path", func(t *testing.T) {
+		workDir, outside := escapingWorkspace(t)
+		require.NoError(t, os.WriteFile(filepath.Join(outside, "secret.txt"), []byte("x"), 0o600))
+		result, err := (&tarCreator{}).run(
+			t.Context(),
+			newTestStepContext(t, workDir),
+			builtin.TarConfig{InPath: "out", OutPath: "archive.tar"},
+		)
+		require.ErrorContains(t, err, "path escapes from parent")
+		require.Equal(t, kargoapi.PromotionStepStatusErrored, result.Status)
+		require.NoFileExists(t, filepath.Join(workDir, "archive.tar"))
+	})
+	t.Run("output path", func(t *testing.T) {
+		workDir, outside := escapingWorkspace(t)
+		require.NoError(t, os.Mkdir(filepath.Join(workDir, "source"), 0o750))
+		require.NoError(t, os.WriteFile(filepath.Join(workDir, "source", "a.txt"), []byte("x"), 0o600))
+		result, err := (&tarCreator{}).run(
+			t.Context(),
+			newTestStepContext(t, workDir),
+			builtin.TarConfig{InPath: "source", OutPath: "out/archive.tar"},
+		)
+		require.ErrorContains(t, err, "path escapes from parent")
+		require.Equal(t, kargoapi.PromotionStepStatusErrored, result.Status)
+		entries, err := os.ReadDir(outside)
+		require.NoError(t, err)
+		require.Empty(t, entries)
+	})
+}
+
+func Test_tarCreator_run_symlinkedOutPath(t *testing.T) {
+	workDir := t.TempDir()
+	require.NoError(t, os.Mkdir(filepath.Join(workDir, "source"), 0o750))
+	require.NoError(t, os.WriteFile(filepath.Join(workDir, "source", "a.txt"), []byte("x"), 0o600))
+	require.NoError(t, os.WriteFile(filepath.Join(workDir, "target.tar"), []byte("old"), 0o600))
+	require.NoError(t, os.Symlink("target.tar", filepath.Join(workDir, "link.tar")))
+	result, err := (&tarCreator{}).run(
+		t.Context(),
+		newTestStepContext(t, workDir),
+		builtin.TarConfig{InPath: "source", OutPath: "link.tar"},
+	)
+	require.NoError(t, err)
+	require.Equal(t, kargoapi.PromotionStepStatusSucceeded, result.Status)
+	verifyTarContents(t, filepath.Join(workDir, "target.tar"), false, map[string]string{"a.txt": "x"})
+	fi, err := os.Lstat(filepath.Join(workDir, "link.tar"))
+	require.NoError(t, err)
+	require.NotZero(t, fi.Mode()&os.ModeSymlink)
 }

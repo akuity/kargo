@@ -3,6 +3,7 @@ package builtin
 import (
 	"os"
 	"path"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -154,6 +155,7 @@ func Test_tomlUpdater_run(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			stepCtx := tt.stepCtx
 			stepCtx.WorkDir = t.TempDir()
+			stepCtx.Root = newTestRoot(t, stepCtx.WorkDir)
 			for p, c := range tt.files {
 				require.NoError(t, os.MkdirAll(path.Join(stepCtx.WorkDir, path.Dir(p)), 0o700))
 				require.NoError(t, os.WriteFile(path.Join(stepCtx.WorkDir, p), []byte(c), 0o600))
@@ -217,7 +219,7 @@ func Test_tomlUpdater_updateFile(t *testing.T) {
 				require.NoError(t, err)
 			}
 
-			err := runner.updateFile(workDir, path.Base(valuesFile), tt.updates)
+			err := runner.updateFile(newTestRoot(t, workDir), path.Base(valuesFile), tt.updates)
 			tt.assertions(t, valuesFile, err)
 		})
 	}
@@ -271,4 +273,22 @@ func Test_tomlUpdater_generateCommitMessage(t *testing.T) {
 			tt.assertions(t, result)
 		})
 	}
+}
+
+func Test_tomlUpdater_run_escapingSymlink(t *testing.T) {
+	workDir, outside := escapingWorkspace(t)
+	target := filepath.Join(outside, "values.toml")
+	require.NoError(t, os.WriteFile(target, []byte("title = \"value\"\n"), 0o600))
+	_, err := (&tomlUpdater{}).run(
+		t.Context(),
+		newTestStepContext(t, workDir),
+		builtin.TOMLUpdateConfig{
+			Path:    "out/values.toml",
+			Updates: []builtin.TomlUpdate{{Key: "title", Value: "changed"}},
+		},
+	)
+	require.ErrorContains(t, err, "path escapes from parent")
+	content, err := os.ReadFile(target)
+	require.NoError(t, err)
+	require.Equal(t, "title = \"value\"\n", string(content))
 }

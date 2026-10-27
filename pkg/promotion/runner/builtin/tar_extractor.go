@@ -12,12 +12,10 @@ import (
 	"path/filepath"
 	"strings"
 
-	securejoin "github.com/cyphar/filepath-securejoin"
 	"github.com/go-git/go-git/v5/plumbing/format/gitignore"
 	"github.com/xeipuuv/gojsonschema"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	intfs "github.com/akuity/kargo/pkg/io/fs"
 	"github.com/akuity/kargo/pkg/logging"
 	"github.com/akuity/kargo/pkg/promotion"
 	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
@@ -93,20 +91,17 @@ func (t *tarExtractor) run(
 ) (promotion.StepResult, error) {
 	logger := logging.LoggerFromContext(ctx)
 
-	// Secure join the paths to prevent path traversal attacks
-	inPath, err := securejoin.SecureJoin(stepCtx.WorkDir, cfg.InPath)
+	inPath, err := promotion.WorkspacePath(cfg.InPath)
 	if err != nil {
-		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
-			fmt.Errorf("could not secure join inPath %q: %w", cfg.InPath, err)
+		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, err
 	}
-	outPath, err := securejoin.SecureJoin(stepCtx.WorkDir, cfg.OutPath)
+	outPath, err := promotion.WorkspacePath(cfg.OutPath)
 	if err != nil {
-		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
-			fmt.Errorf("could not secure join outPath %q: %w", cfg.OutPath, err)
+		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, err
 	}
 
 	// Create a temporary directory to atomically extract the tar file
-	tempDir, err := os.MkdirTemp(stepCtx.WorkDir, "."+stepKindUntar+"-*")
+	tempDir, err := mkdirTemp(stepCtx.Root, ".", "."+stepKindUntar+"-*")
 	if err != nil {
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 			fmt.Errorf("failed to create temporary directory for extraction: %w", err)
@@ -114,26 +109,26 @@ func (t *tarExtractor) run(
 
 	// Ensure the temporary directory is cleaned up after extraction
 	defer func() {
-		if err = os.RemoveAll(tempDir); err != nil {
+		if err = stepCtx.Root.RemoveAll(tempDir); err != nil {
 			logger.Error(err, "failed to remove temporary directory after extraction")
 		}
 	}()
 
 	// Extract the tar file to the temporary directory
-	result, err := t.extractToDir(ctx, cfg, inPath, tempDir)
+	result, err := t.extractToDir(ctx, cfg, stepCtx.Root, inPath, tempDir)
 	if err != nil {
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
-			fmt.Errorf("failed to extract tar file %q: %w", inPath, err)
+			fmt.Errorf("failed to extract tar file %q: %w", cfg.InPath, err)
 	}
 
 	// Move the extracted files from the temporary directory to the final output
 	// path atomically, creating any necessary parent directories.
-	if err = os.MkdirAll(outPath, defaultDirPermissions); err != nil {
+	if err = stepCtx.Root.MkdirAll(outPath, defaultDirPermissions); err != nil {
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
-			fmt.Errorf("failed to create directory %q: %w", outPath, err)
+			fmt.Errorf("failed to create directory %q: %w", cfg.OutPath, err)
 	}
 
-	if err = intfs.SimpleAtomicMove(tempDir, outPath); err != nil {
+	if err = replace(stepCtx.Root, tempDir, outPath); err != nil {
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, err
 	}
 
@@ -141,21 +136,37 @@ func (t *tarExtractor) run(
 	return result, nil
 }
 
+// extractToDir extracts the tar file at inPath into the directory at outPath,
+// creating it if necessary. Both paths are relative to root.
 func (t *tarExtractor) extractToDir(
 	ctx context.Context,
 	cfg builtin.UntarConfig,
+	root *os.Root,
 	inPath, outPath string,
 ) (promotion.StepResult, error) {
 	// Load the ignore rules.
 	matcher := t.loadIgnoreRules(outPath, cfg.Ignore)
 
 	// Open the tar file
-	file, err := os.Open(inPath)
+	file, err := root.Open(inPath)
 	if err != nil {
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 			fmt.Errorf("failed to open tar file %q: %w", cfg.InPath, err)
 	}
 	defer file.Close()
+
+	// Everything is written through a Root on the output directory, so no
+	// entry can land outside it.
+	if err = root.MkdirAll(outPath, defaultDirPermissions); err != nil {
+		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
+			fmt.Errorf("failed to create directory %s: %w", outPath, err)
+	}
+	outRoot, err := root.OpenRoot(outPath)
+	if err != nil {
+		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
+			fmt.Errorf("failed to open directory %s: %w", outPath, err)
+	}
+	defer outRoot.Close()
 
 	logger := logging.LoggerFromContext(ctx)
 	var tarReader *tar.Reader
@@ -263,21 +274,11 @@ func (t *tarExtractor) extractToDir(
 			continue
 		}
 
-		// Create the destination directory for files and links
-		targetPath := filepath.Join(outPath, targetName) // nolint:gosec
-
-		// Double-check the target path is within the output directory
-		relPath, err := filepath.Rel(outPath, targetPath)
-		if err != nil || strings.HasPrefix(relPath, "..") || strings.HasPrefix(relPath, "/") {
-			logger.Trace("skipping path escaping target directory", "path", targetName)
-			continue
-		}
+		// The entry's path within the output directory.
+		targetPath := filepath.Clean(filepath.FromSlash(targetName))
 
 		destDir := filepath.Dir(targetPath)
-		// #nosec G703 -- Contextually, if this was constructed from a
-		// user-specified, relative path, the absolute path was constructed using
-		// securejoin.SecureJoin().
-		if err = os.MkdirAll(destDir, defaultDirPermissions); err != nil {
+		if err = outRoot.MkdirAll(destDir, defaultDirPermissions); err != nil {
 			return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 				fmt.Errorf("failed to create directory %s: %w", destDir, err)
 		}
@@ -285,11 +286,7 @@ func (t *tarExtractor) extractToDir(
 		switch header.Typeflag {
 		case tar.TypeDir:
 			// Create directory
-			//
-			// #nosec G703 -- Contextually, if this was constructed from a
-			// user-specified, relative path, the absolute path was constructed using
-			// securejoin.SecureJoin().
-			if err = os.MkdirAll(targetPath, defaultDirPermissions); err != nil {
+			if err = outRoot.MkdirAll(targetPath, defaultDirPermissions); err != nil {
 				return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 					fmt.Errorf("failed to create directory %s: %w", targetPath, err)
 			}
@@ -302,7 +299,7 @@ func (t *tarExtractor) extractToDir(
 				continue
 			}
 			// Create symlink
-			if err = os.Symlink(header.Linkname, targetPath); err != nil && !os.IsExist(err) {
+			if err = outRoot.Symlink(header.Linkname, targetPath); err != nil && !os.IsExist(err) {
 				logger.Error(err, "failed to create symlink", "path", targetPath, "target", header.Linkname)
 			}
 		case tar.TypeReg:
@@ -330,10 +327,7 @@ func (t *tarExtractor) extractToDir(
 			dir := filepath.Dir(targetPath)
 			// Create the directory if it doesn't exist
 			if !madeDir[dir] {
-				// #nosec G703 -- Contextually, if this was constructed from a
-				// user-specified, relative path, the absolute path was constructed
-				// using securejoin.SecureJoin().
-				if err = os.MkdirAll(dir, defaultDirPermissions); err != nil {
+				if err = outRoot.MkdirAll(dir, defaultDirPermissions); err != nil {
 					return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 						fmt.Errorf("failed to create directory %s: %w", dir, err)
 				}
@@ -346,10 +340,7 @@ func (t *tarExtractor) extractToDir(
 				mode = 0o600 // Default to 0o600 if mode is invalid
 			}
 			safeMode := fs.FileMode(mode) // nolint:gosec
-			// #nosec G703 -- Contextually, if this was constructed from a
-			// user-specified, relative path, the absolute path was constructed using
-			// securejoin.SecureJoin().
-			outFile, err := os.OpenFile(targetPath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, safeMode)
+			outFile, err := outRoot.OpenFile(targetPath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, safeMode)
 			if err != nil {
 				return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 					fmt.Errorf("failed to create file %s: %w", targetPath, err)
@@ -370,7 +361,7 @@ func (t *tarExtractor) extractToDir(
 
 			// Change mod time
 			if !header.ModTime.IsZero() {
-				if err := os.Chtimes(targetPath, header.ModTime, header.ModTime); err != nil {
+				if err := outRoot.Chtimes(targetPath, header.ModTime, header.ModTime); err != nil {
 					return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 						fmt.Errorf("failed to change mod time for %s: %w", targetPath, err)
 				}

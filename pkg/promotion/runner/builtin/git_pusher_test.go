@@ -14,6 +14,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"k8s.io/utils/ptr"
 
+	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/controller/git"
 	"github.com/akuity/kargo/pkg/credentials"
 	"github.com/akuity/kargo/pkg/gitprovider"
@@ -277,6 +278,7 @@ func Test_gitPusher_run(t *testing.T) {
 				Stage:     "fake-stage",
 				Promotion: "fake-promotion",
 				WorkDir:   workDir,
+				Root:      newTestRoot(t, workDir),
 			},
 			builtin.GitPushConfig{
 				Path:                 "master",
@@ -305,6 +307,7 @@ func Test_gitPusher_run(t *testing.T) {
 				Stage:     "fake-stage",
 				Promotion: "fake-promotion",
 				WorkDir:   workDir,
+				Root:      newTestRoot(t, workDir),
 			},
 			builtin.GitPushConfig{
 				Path: "master",
@@ -322,6 +325,17 @@ func Test_gitPusher_run(t *testing.T) {
 		actualCommitURL := res.Output[stateKeyCommitURL]
 		require.Equal(t, expectedCommitURL, actualCommitURL)
 	})
+}
+
+func Test_gitPushPusher_run_escapingSymlink(t *testing.T) {
+	workDir, _ := escapingWorkspace(t)
+	res, err := (&gitPushPusher{}).run(
+		t.Context(),
+		newTestStepContext(t, workDir),
+		builtin.GitPushConfig{Path: "out/repo"},
+	)
+	require.ErrorContains(t, err, "path escapes from parent")
+	require.Equal(t, kargoapi.PromotionStepStatusErrored, res.Status)
 }
 
 func Test_gitPushPusher_getBranchMu(t *testing.T) {

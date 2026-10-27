@@ -185,7 +185,7 @@ func TestLocalStepExecutor_ExecuteStep_tracing(t *testing.T) {
 			res, err := executor.ExecuteStep(
 				context.Background(),
 				StepExecutionRequest{
-					Context: StepContext{Project: "fake-project"},
+					Context: StepContext{WorkDir: t.TempDir(), Project: "fake-project"},
 					Step:    Step{Kind: "fake-step", Alias: "fake-alias"},
 				},
 			)

@@ -2,11 +2,12 @@ package builtin
 
 import (
 	"context"
+	"errors"
 	"fmt"
-	"os"
+	"io/fs"
+	"path/filepath"
 	"strings"
 
-	securejoin "github.com/cyphar/filepath-securejoin"
 	"github.com/xeipuuv/gojsonschema"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
@@ -63,51 +64,53 @@ func (y *yamlMerger) run(
 	stepCtx *promotion.StepContext,
 	cfg builtin.YAMLMergeConfig,
 ) (promotion.StepResult, error) {
-	// Update input paths and check for the existence of files at those locations
-	relInputPaths := make([]string, 0, len(cfg.InFiles))
-	absInputPaths := make([]string, 0, len(cfg.InFiles))
-	for _, relInputPath := range cfg.InFiles {
-		absInputPath, err := securejoin.SecureJoin(stepCtx.WorkDir, relInputPath)
+	// Read the input files, skipping any that are missing if configured to.
+	inputPaths := make([]string, 0, len(cfg.InFiles))
+	inputs := make([][]byte, 0, len(cfg.InFiles))
+	for _, inputPath := range cfg.InFiles {
+		relInputPath, err := promotion.WorkspacePath(inputPath)
 		if err != nil {
-			return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
-				fmt.Errorf(
-					"error joining path %s with work dir %s: %w",
-					relInputPath, stepCtx.WorkDir, err,
-				)
+			return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, err
 		}
-		if _, err = os.Stat(absInputPath); err != nil {
-			if os.IsNotExist(err) {
+		input, err := stepCtx.Root.ReadFile(relInputPath)
+		if err != nil {
+			if errors.Is(err, fs.ErrNotExist) {
 				if cfg.IgnoreMissingFiles {
 					continue
 				}
 				return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
-					fmt.Errorf("input file %q not found: %w", relInputPath, err)
+					fmt.Errorf("input file %q not found: %w", inputPath, err)
 			}
 			return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
-				fmt.Errorf("unexpected error with file %q: %w", relInputPath, err)
+				fmt.Errorf("unexpected error with file %q: %w", inputPath, err)
 		}
-		relInputPaths = append(relInputPaths, relInputPath)
-		absInputPaths = append(absInputPaths, absInputPath)
+		inputPaths = append(inputPaths, inputPath)
+		inputs = append(inputs, input)
 	}
 
-	outFile, err := securejoin.SecureJoin(stepCtx.WorkDir, cfg.OutFile)
+	outFile, err := promotion.WorkspacePath(cfg.OutFile)
+	if err != nil {
+		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, err
+	}
+
+	merged, err := yaml.Merge(inputs)
 	if err != nil {
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
-			fmt.Errorf(
-				"error joining path %s with work dir %s: %w",
-				cfg.OutFile, stepCtx.WorkDir, err,
-			)
-	}
-
-	if err = yaml.MergeFiles(absInputPaths, outFile); err != nil {
-		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 			fmt.Errorf("error merging YAML files: %w", err)
+	}
+	if err = stepCtx.Root.MkdirAll(filepath.Dir(outFile), 0o700); err != nil {
+		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
+			fmt.Errorf("error creating directory for %q: %w", cfg.OutFile, err)
+	}
+	if err = stepCtx.Root.WriteFile(outFile, merged, 0o600); err != nil {
+		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
+			fmt.Errorf("error writing merged YAML to %q: %w", cfg.OutFile, err)
 	}
 
 	// Generate commit message with relative paths. This does not include any
 	// that were ignored.
 	result := promotion.StepResult{Status: kargoapi.PromotionStepStatusSucceeded}
-	if msg := y.generateCommitMessage(relInputPaths, cfg.OutFile); msg != "" {
+	if msg := y.generateCommitMessage(inputPaths, cfg.OutFile); msg != "" {
 		result.Output = map[string]any{"commitMessage": msg}
 	}
 	return result, nil

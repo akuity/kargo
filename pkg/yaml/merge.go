@@ -4,30 +4,25 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"os"
-	"path"
 
 	kyaml "sigs.k8s.io/kustomize/kyaml/yaml"
 
 	"github.com/akuity/kargo/pkg/kustomize"
 )
 
-// MergeFiles merges the specified list of YAML files into an output file at
-// the specified path. All specified input files must exist. If a file already
-// exists at the specified path for the output, it will be overwritten.
-func MergeFiles(inputPaths []string, outputPath string) error {
-	if outputPath == "" {
-		return fmt.Errorf("output path must not be empty")
-	}
-
+// Merge merges the provided YAML documents, in order, with the fields of each
+// taking precedence over those of the documents before it. Lists are replaced
+// rather than merged. Empty documents are skipped and the result is empty if
+// every document is.
+func Merge(docs [][]byte) ([]byte, error) {
 	var mergeTarget *kyaml.RNode
-	for _, inputPath := range inputPaths {
-		patchNode, err := kyaml.ReadFile(inputPath)
+	for i, doc := range docs {
+		patchNode, err := kyaml.Parse(string(doc))
 		if err != nil {
 			if errors.Is(err, io.EOF) {
 				continue
 			}
-			return fmt.Errorf("error reading input file %s: %w", inputPath, err)
+			return nil, fmt.Errorf("error parsing document %d: %w", i, err)
 		}
 		if mergeTarget == nil {
 			mergeTarget = patchNode
@@ -36,22 +31,15 @@ func MergeFiles(inputPaths []string, outputPath string) error {
 		if mergeTarget, err = kustomize.Merge(
 			patchNode, mergeTarget, kyaml.MergeOptions{},
 		); err != nil {
-			return fmt.Errorf("error merging in file %s: %w", inputPath, err)
+			return nil, fmt.Errorf("error merging document %d: %w", i, err)
 		}
-	}
-
-	if err := os.MkdirAll(path.Dir(outputPath), 0o700); err != nil {
-		return fmt.Errorf("error writing merged YAML to %s: %w", outputPath, err)
 	}
 	if mergeTarget == nil {
-		if err := os.WriteFile(outputPath, []byte{}, 0600); err != nil {
-			return fmt.Errorf("error writing empty file to %s: %w", outputPath, err)
-		}
-		return nil
+		return []byte{}, nil
 	}
-	if err := kyaml.WriteFile(mergeTarget, outputPath); err != nil {
-		return fmt.Errorf("error writing merged YAML to %s: %w", outputPath, err)
+	out, err := mergeTarget.String()
+	if err != nil {
+		return nil, fmt.Errorf("error serializing merged YAML: %w", err)
 	}
-
-	return nil
+	return []byte(out), nil
 }

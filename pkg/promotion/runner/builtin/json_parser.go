@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"os"
 
-	securejoin "github.com/cyphar/filepath-securejoin"
 	"github.com/expr-lang/expr"
 	"github.com/xeipuuv/gojsonschema"
 
@@ -72,7 +71,7 @@ func (jp *jsonParser) run(
 		return failure, fmt.Errorf("invalid %s config: outputs is required", stepKindJSONParse)
 	}
 
-	data, err := jp.readAndParseJSON(stepCtx.WorkDir, cfg.Path)
+	data, err := jp.readAndParseJSON(stepCtx.Root, cfg.Path)
 	if err != nil {
 		return failure, err
 	}
@@ -90,16 +89,16 @@ func (jp *jsonParser) run(
 
 // readAndParseJSON reads and unmarshals a JSON document and returns the result.
 func (jp *jsonParser) readAndParseJSON(
-	workDir string,
+	root *os.Root,
 	path string,
 ) (any, error) {
-	absFilePath, err := securejoin.SecureJoin(workDir, path)
+	relPath, err := promotion.WorkspacePath(path)
 	if err != nil {
-		return nil, fmt.Errorf("error joining path %q: %w", path, err)
+		return nil, err
 	}
-	jsonData, err := os.ReadFile(absFilePath)
+	jsonData, err := root.ReadFile(relPath)
 	if err != nil {
-		return nil, fmt.Errorf("error reading JSON file %q: %w", absFilePath, err)
+		return nil, fmt.Errorf("error reading JSON file %q: %w", path, err)
 	}
 	var data any
 	if err := json.Unmarshal(jsonData, &data); err != nil {

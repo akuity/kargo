@@ -3,6 +3,7 @@ package builtin
 import (
 	"os"
 	"path"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -149,8 +150,7 @@ func Test_YAMLMerger_run(t *testing.T) {
 				)
 				require.NoError(t, err)
 			}
-			stepCtx := &promotion.StepContext{WorkDir: workDir}
-			result, err := runner.run(t.Context(), stepCtx, testCase.cfg)
+			result, err := runner.run(t.Context(), newTestStepContext(t, workDir), testCase.cfg)
 			testCase.assertions(t, result, err)
 		})
 	}
@@ -196,4 +196,38 @@ func Test_YAMLMerger_generateCommitMessage(t *testing.T) {
 			assert.Equal(t, testCase.expected, result)
 		})
 	}
+}
+
+func Test_yamlMerger_run_escapingSymlink(t *testing.T) {
+	t.Run("input file", func(t *testing.T) {
+		workDir, outside := escapingWorkspace(t)
+		require.NoError(t, os.WriteFile(
+			filepath.Join(outside, "base.yaml"), []byte("k: v\n"), 0o600,
+		))
+		_, err := (&yamlMerger{}).run(
+			t.Context(),
+			newTestStepContext(t, workDir),
+			builtin.YAMLMergeConfig{
+				InFiles: []string{"out/base.yaml"},
+				OutFile: "merged.yaml",
+			},
+		)
+		require.ErrorContains(t, err, "path escapes from parent")
+	})
+	t.Run("output file", func(t *testing.T) {
+		workDir, outside := escapingWorkspace(t)
+		require.NoError(t, os.WriteFile(
+			filepath.Join(workDir, "base.yaml"), []byte("k: v\n"), 0o600,
+		))
+		_, err := (&yamlMerger{}).run(
+			t.Context(),
+			newTestStepContext(t, workDir),
+			builtin.YAMLMergeConfig{
+				InFiles: []string{"base.yaml"},
+				OutFile: "out/merged.yaml",
+			},
+		)
+		require.ErrorContains(t, err, "path escapes from parent")
+		require.NoFileExists(t, filepath.Join(outside, "merged.yaml"))
+	})
 }

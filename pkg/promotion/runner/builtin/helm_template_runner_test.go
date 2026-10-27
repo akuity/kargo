@@ -745,10 +745,8 @@ metadata:
 				require.NoError(t, os.MkdirAll(filepath.Dir(filepath.Join(workDir, p)), 0o700))
 				require.NoError(t, os.WriteFile(filepath.Join(workDir, p), []byte(c), 0o600))
 			}
-			stepCtx := &promotion.StepContext{
-				WorkDir: workDir,
-				Project: "test-project",
-			}
+			stepCtx := newTestStepContext(t, workDir)
+			stepCtx.Project = "test-project"
 			result, err := runner.run(t.Context(), stepCtx, tt.cfg)
 			tt.assertions(t, workDir, result, err)
 		})
@@ -923,7 +921,7 @@ func Test_helmTemplateRunner_composeValues(t *testing.T) {
 			for p, c := range tt.valuesContents {
 				require.NoError(t, os.WriteFile(filepath.Join(tt.workDir, p), []byte(c), 0o600))
 			}
-			result, err := runner.composeValues(tt.workDir, tt.cfg)
+			result, err := runner.composeValues(newTestStepContext(t, tt.workDir), tt.cfg)
 			tt.assertions(t, result, err)
 		})
 	}
@@ -1051,48 +1049,6 @@ func Test_helmTemplateRunner_newInstallAction(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			client, err := runner.newInstallAction(tt.cfg, tt.project, tt.absOutPath)
 			tt.assertions(t, client, err)
-		})
-	}
-}
-
-func Test_helmTemplateRunner_loadChart(t *testing.T) {
-	absWorkDir, err := filepath.Abs("../../../helm/testdata/charts")
-	require.NoError(t, err)
-
-	tests := []struct {
-		name       string
-		workDir    string
-		path       string
-		assertions func(*testing.T, *chart.Chart, error)
-	}{
-		{
-			name:    "successful load",
-			workDir: absWorkDir,
-			path:    "demo-0.1.0.tgz",
-			assertions: func(t *testing.T, c *chart.Chart, err error) {
-				assert.NoError(t, err)
-				assert.NotNil(t, c)
-				assert.Equal(t, "demo", c.Name())
-				assert.Equal(t, "0.1.0", c.Metadata.Version)
-			},
-		},
-		{
-			name:    "chart not found",
-			workDir: t.TempDir(),
-			path:    "nonexistent.tgz",
-			assertions: func(t *testing.T, c *chart.Chart, err error) {
-				assert.Error(t, err)
-				assert.Nil(t, c)
-			},
-		},
-	}
-
-	runner := &helmTemplateRunner{}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			c, err := runner.loadChart(tt.workDir, tt.path)
-			tt.assertions(t, c, err)
 		})
 	}
 }
@@ -1446,7 +1402,7 @@ hook2: content
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			workDir := tt.setup(t)
-			err := runner.writeOutput(tt.cfg, tt.rls, filepath.Join(workDir, tt.cfg.OutPath))
+			err := runner.writeOutput(newTestRoot(t, workDir), tt.cfg, tt.rls, tt.cfg.OutPath)
 			tt.assertions(t, workDir, err)
 		})
 	}
@@ -1812,4 +1768,171 @@ func Test_isTestHook(t *testing.T) {
 			assert.Equal(t, tt.expected, result)
 		})
 	}
+}
+
+// writeTestChart writes a minimal chart named test-chart at chartDir with one
+// ConfigMap template whose data comes from .Values.key.
+func writeTestChart(t *testing.T, chartDir string) {
+	t.Helper()
+	require.NoError(t, os.MkdirAll(filepath.Join(chartDir, "templates"), 0o755))
+	require.NoError(t, os.WriteFile(
+		filepath.Join(chartDir, "Chart.yaml"),
+		[]byte("apiVersion: v2\nname: test-chart\nversion: 0.1.0\n"),
+		0o600,
+	))
+	require.NoError(t, os.WriteFile(
+		filepath.Join(chartDir, "templates", "configmap.yaml"),
+		[]byte(`apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-configmap
+data:
+  value: {{ .Values.key }}
+`),
+		0o600,
+	))
+}
+
+func Test_helmTemplateRunner_run_symlinks(t *testing.T) {
+	const secretTemplate = `apiVersion: v1
+kind: Secret
+metadata:
+  name: leaked
+stringData:
+  token: top-secret
+`
+	runner := &helmTemplateRunner{credsDB: &credentials.FakeDB{}}
+	render := func(t *testing.T, workDir string, cfg builtin.HelmTemplateConfig) (promotion.StepResult, error) {
+		t.Helper()
+		if cfg.Path == "" {
+			cfg.Path = "chart"
+		}
+		if cfg.OutPath == "" {
+			cfg.OutPath = "output.yaml"
+		}
+		stepCtx := newTestStepContext(t, workDir)
+		stepCtx.Project = "test-project"
+		return runner.run(t.Context(), stepCtx, cfg)
+	}
+
+	t.Run("template symlinked inside the workspace renders", func(t *testing.T) {
+		workDir := t.TempDir()
+		writeTestChart(t, filepath.Join(workDir, "chart"))
+		require.NoError(t, os.WriteFile(filepath.Join(workDir, "shared.yaml"), []byte(secretTemplate), 0o600))
+		require.NoError(t, os.Symlink(
+			filepath.Join("..", "..", "shared.yaml"),
+			filepath.Join(workDir, "chart", "templates", "shared.yaml"),
+		))
+		result, err := render(t, workDir, builtin.HelmTemplateConfig{
+			SetValues: []builtin.SetValues{{Key: "key", Value: "v"}},
+		})
+		require.NoError(t, err)
+		require.Equal(t, kargoapi.PromotionStepStatusSucceeded, result.Status)
+		out, err := os.ReadFile(filepath.Join(workDir, "output.yaml"))
+		require.NoError(t, err)
+		require.Contains(t, string(out), "name: leaked")
+	})
+
+	t.Run("template symlinked outside the workspace fails", func(t *testing.T) {
+		workDir, outside := escapingWorkspace(t)
+		writeTestChart(t, filepath.Join(workDir, "chart"))
+		require.NoError(t, os.WriteFile(filepath.Join(outside, "secret.yaml"), []byte(secretTemplate), 0o600))
+		require.NoError(t, os.Symlink(
+			filepath.Join(outside, "secret.yaml"),
+			filepath.Join(workDir, "chart", "templates", "secret.yaml"),
+		))
+		result, err := render(t, workDir, builtin.HelmTemplateConfig{
+			SetValues: []builtin.SetValues{{Key: "key", Value: "v"}},
+		})
+		require.ErrorContains(t, err, "path escapes from parent")
+		require.Equal(t, kargoapi.PromotionStepStatusErrored, result.Status)
+		require.NoFileExists(t, filepath.Join(workDir, "output.yaml"))
+	})
+
+	t.Run("directory symlinked outside the workspace fails", func(t *testing.T) {
+		workDir, outside := escapingWorkspace(t)
+		writeTestChart(t, filepath.Join(workDir, "chart"))
+		require.NoError(t, os.Mkdir(filepath.Join(outside, "extra"), 0o755))
+		require.NoError(t, os.WriteFile(filepath.Join(outside, "extra", "secret.yaml"), []byte(secretTemplate), 0o600))
+		require.NoError(t, os.Symlink(
+			filepath.Join(outside, "extra"),
+			filepath.Join(workDir, "chart", "templates", "extra"),
+		))
+		_, err := render(t, workDir, builtin.HelmTemplateConfig{
+			SetValues: []builtin.SetValues{{Key: "key", Value: "v"}},
+		})
+		require.ErrorContains(t, err, "path escapes from parent")
+	})
+
+	t.Run("packaged chart renders", func(t *testing.T) {
+		workDir := t.TempDir()
+		pkg, err := os.ReadFile(filepath.Join("..", "..", "..", "helm", "testdata", "charts", "examplechart-0.1.0.tgz"))
+		require.NoError(t, err)
+		require.NoError(t, os.WriteFile(filepath.Join(workDir, "examplechart-0.1.0.tgz"), pkg, 0o600))
+		result, err := render(t, workDir, builtin.HelmTemplateConfig{Path: "examplechart-0.1.0.tgz"})
+		require.NoError(t, err)
+		require.Equal(t, kargoapi.PromotionStepStatusSucceeded, result.Status)
+		require.FileExists(t, filepath.Join(workDir, "output.yaml"))
+	})
+
+	t.Run("helmignore is honored", func(t *testing.T) {
+		workDir := t.TempDir()
+		writeTestChart(t, filepath.Join(workDir, "chart"))
+		require.NoError(t, os.WriteFile(
+			filepath.Join(workDir, "chart", "templates", "ignored.yaml"), []byte(secretTemplate), 0o600,
+		))
+		require.NoError(t, os.WriteFile(
+			filepath.Join(workDir, "chart", ".helmignore"), []byte("templates/ignored.yaml\n"), 0o600,
+		))
+		_, err := render(t, workDir, builtin.HelmTemplateConfig{
+			SetValues: []builtin.SetValues{{Key: "key", Value: "v"}},
+		})
+		require.NoError(t, err)
+		out, err := os.ReadFile(filepath.Join(workDir, "output.yaml"))
+		require.NoError(t, err)
+		require.NotContains(t, string(out), "name: leaked")
+	})
+
+	t.Run("values file symlinked outside the workspace fails", func(t *testing.T) {
+		workDir, outside := escapingWorkspace(t)
+		writeTestChart(t, filepath.Join(workDir, "chart"))
+		require.NoError(t, os.WriteFile(filepath.Join(outside, "values.yaml"), []byte("key: v\n"), 0o600))
+		_, err := render(t, workDir, builtin.HelmTemplateConfig{ValuesFiles: []string{"out/values.yaml"}})
+		require.ErrorContains(t, err, "path escapes from parent")
+	})
+
+	t.Run("output file through an escaping symlink fails", func(t *testing.T) {
+		workDir, outside := escapingWorkspace(t)
+		writeTestChart(t, filepath.Join(workDir, "chart"))
+		_, err := render(t, workDir, builtin.HelmTemplateConfig{
+			OutPath:   "out/output.yaml",
+			SetValues: []builtin.SetValues{{Key: "key", Value: "v"}},
+		})
+		require.ErrorContains(t, err, "path escapes from parent")
+		require.NoFileExists(t, filepath.Join(outside, "output.yaml"))
+	})
+
+	t.Run("helm layout output directory containing an escaping symlink fails", func(t *testing.T) {
+		workDir, outside := escapingWorkspace(t)
+		writeTestChart(t, filepath.Join(workDir, "chart"))
+		require.NoError(t, os.MkdirAll(filepath.Join(workDir, "rendered", "test-chart"), 0o755))
+		require.NoError(t, os.Symlink(outside, filepath.Join(workDir, "rendered", "test-chart", "templates")))
+		_, err := render(t, workDir, builtin.HelmTemplateConfig{
+			OutPath:   "rendered",
+			SetValues: []builtin.SetValues{{Key: "key", Value: "v"}},
+		})
+		require.ErrorContains(t, err, "path escapes from parent")
+		require.NoFileExists(t, filepath.Join(outside, "configmap.yaml"))
+	})
+
+	t.Run("dependency build with an escaping charts directory fails", func(t *testing.T) {
+		workDir, outside := escapingWorkspace(t)
+		writeTestChart(t, filepath.Join(workDir, "chart"))
+		require.NoError(t, os.Symlink(outside, filepath.Join(workDir, "chart", "charts")))
+		_, err := render(t, workDir, builtin.HelmTemplateConfig{
+			BuildDependencies: true,
+			SetValues:         []builtin.SetValues{{Key: "key", Value: "v"}},
+		})
+		require.ErrorContains(t, err, "path escapes from parent")
+	})
 }

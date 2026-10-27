@@ -13,12 +13,10 @@ import (
 	"strings"
 	"time"
 
-	securejoin "github.com/cyphar/filepath-securejoin"
 	"github.com/go-git/go-git/v5/plumbing/format/gitignore"
 	"github.com/xeipuuv/gojsonschema"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	intfs "github.com/akuity/kargo/pkg/io/fs"
 	"github.com/akuity/kargo/pkg/promotion"
 	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
 )
@@ -80,11 +78,11 @@ func (t *tarCreator) run(
 	stepCtx *promotion.StepContext,
 	cfg builtin.TarConfig,
 ) (promotion.StepResult, error) {
-	absInPath, err := t.prepareInputPath(stepCtx.WorkDir, cfg.InPath)
+	inPath, err := t.prepareInputPath(stepCtx.Root, cfg.InPath)
 	if err != nil {
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, err
 	}
-	absOutPath, err := t.prepareOutputPath(stepCtx.WorkDir, cfg.OutPath)
+	outPath, err := t.prepareOutputPath(stepCtx.Root, cfg.OutPath)
 	if err != nil {
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, err
 	}
@@ -99,7 +97,7 @@ func (t *tarCreator) run(
 		mtime = &parsed
 	}
 
-	result, err := t.createTarball(absInPath, absOutPath, cfg.Gzip, cfg.Ignore, mtime)
+	result, err := t.createTarball(stepCtx.Root, inPath, outPath, cfg.Gzip, cfg.Ignore, mtime)
 	if err != nil {
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 			fmt.Errorf("failed to create the tar archive %q: %w", cfg.OutPath, err)
@@ -108,94 +106,58 @@ func (t *tarCreator) run(
 	return result, nil
 }
 
-// prepareInputPath validates the input path.
-func (t *tarCreator) prepareInputPath(
-	workDir, inPath string,
-) (string, error) {
-	absInPath, err := securejoin.SecureJoin(workDir, inPath)
+// prepareInputPath validates the input path and returns it relative to root.
+func (t *tarCreator) prepareInputPath(root *os.Root, inPath string) (string, error) {
+	relInPath, err := promotion.WorkspacePath(inPath)
 	if err != nil {
-		return "", fmt.Errorf("failed to secure join input path %q: %w", inPath, err)
+		return "", err
 	}
 
-	_, err = os.Stat(absInPath)
-	if err != nil {
+	if _, err = root.Stat(relInPath); err != nil {
 		if errors.Is(err, fs.ErrNotExist) {
 			return "", fmt.Errorf("input path %q does not exist: %w", inPath, err)
 		}
 		return "", fmt.Errorf("failed to stat input path %q: %w", inPath, err)
 	}
 
-	return absInPath, nil
+	return relInPath, nil
 }
 
-// prepareOutputPath validates and prepares the output path.
-func (t *tarCreator) prepareOutputPath(
-	workDir, outPath string,
-) (string, error) {
-	absOutPath, err := securejoin.SecureJoin(workDir, outPath)
+// prepareOutputPath validates and prepares the output path and returns it
+// relative to root.
+func (t *tarCreator) prepareOutputPath(root *os.Root, outPath string) (string, error) {
+	relOutPath, err := promotion.WorkspacePath(outPath)
 	if err != nil {
-		return "", fmt.Errorf("failed to secure join output path %q: %w", outPath, err)
+		return "", err
 	}
 
-	absOutPathDir := filepath.Dir(absOutPath)
-	err = os.MkdirAll(absOutPathDir, 0o750)
-	if err != nil {
+	if err = root.MkdirAll(filepath.Dir(relOutPath), 0o750); err != nil {
 		return "", fmt.Errorf("failed to create output directory for %q: %w", outPath, err)
 	}
 
-	return absOutPath, nil
+	return relOutPath, nil
 }
 
-// createTempFile creates a temporary file.
-func (t *tarCreator) createTempFile(
-	absOutPath string,
-) (*os.File, string, error) {
-	destDir := filepath.Dir(absOutPath)
-	baseFile := filepath.Base(absOutPath)
-
-	tempFile, err := os.CreateTemp(destDir, baseFile+".tmp")
-	if err != nil {
-		return nil, "", fmt.Errorf("failed to create temporary file in %q: %w", destDir, err)
-	}
-
-	return tempFile, tempFile.Name(), nil
-}
-
-// createTarball walks the input path and writes its contents to a tar archive.
+// createTarball walks the input path, which is relative to root, and writes its
+// contents to a tar archive at the output path, which is also relative to root.
 func (t *tarCreator) createTarball(
-	absInPath, absOutPath string,
+	root *os.Root,
+	inPath, outPath string,
 	shouldGzip bool,
 	ignore string,
 	mtime *time.Time,
 ) (promotion.StepResult, error) {
 	matcher := t.buildIgnoreMatcher(ignore)
 
-	// Regular files are opened relative to root rather than by their
-	// absolute path (below) so that a symlink swapped in after WalkDir
-	// stats an entry can't redirect the read outside rootDir: os.Root
-	// guarantees that symlinks it follows cannot escape the directory it
-	// was opened on.
-	rootDir := absInPath
-	if info, statErr := os.Stat(absInPath); statErr == nil && !info.IsDir() {
-		rootDir = filepath.Dir(absInPath)
-	}
-	root, err := os.OpenRoot(rootDir)
+	tempFile, tempFilePath, err := createTempFile(root, filepath.Dir(outPath), filepath.Base(outPath)+".tmp")
 	if err != nil {
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
-			fmt.Errorf("failed to open root directory %q: %w", rootDir, err)
-	}
-	defer func() {
-		_ = root.Close()
-	}()
-
-	tempFile, tempFilePath, err := t.createTempFile(absOutPath)
-	if err != nil {
-		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, err
+			fmt.Errorf("failed to create temporary file in %q: %w", filepath.Dir(outPath), err)
 	}
 
 	defer func() {
 		_ = tempFile.Close()
-		_ = os.Remove(tempFilePath)
+		_ = root.Remove(tempFilePath)
 	}()
 
 	var (
@@ -211,7 +173,7 @@ func (t *tarCreator) createTarball(
 		tw = tar.NewWriter(tempFile)
 	}
 
-	err = filepath.WalkDir(absInPath, func(path string, d fs.DirEntry, err error) error {
+	err = fs.WalkDir(root.FS(), inPath, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
@@ -223,7 +185,7 @@ func (t *tarCreator) createTarball(
 
 		// Tar header's relative path.
 		var relPath string
-		if path == absInPath {
+		if path == inPath {
 			if info.IsDir() {
 				// Skip root dir to avoid a "." entry.
 				return nil
@@ -231,7 +193,7 @@ func (t *tarCreator) createTarball(
 			relPath = filepath.Base(path)
 		} else {
 			var relErr error
-			relPath, relErr = filepath.Rel(absInPath, path)
+			relPath, relErr = filepath.Rel(inPath, path)
 			if relErr != nil {
 				return fmt.Errorf("failed to calculate relative path for %q: %w", path, relErr)
 			}
@@ -257,16 +219,13 @@ func (t *tarCreator) createTarball(
 			}
 		}
 
-		// fsRelPath keeps the OS-native separators needed for root.Open
-		// below; relPath is normalized to forward slashes for the tar
-		// header name.
-		fsRelPath := relPath
+		// The tar header name uses forward slashes.
 		relPath = filepath.ToSlash(relPath)
 
 		// Read its target if it's a symlink.
 		var linkTarget string
 		if info.Mode()&os.ModeSymlink != 0 {
-			linkTarget, err = os.Readlink(path)
+			linkTarget, err = root.Readlink(path)
 			if err != nil {
 				return fmt.Errorf("failed to read symlink target for %q: %w", path, err)
 			}
@@ -296,7 +255,7 @@ func (t *tarCreator) createTarball(
 		}
 
 		if info.Mode().IsRegular() {
-			srcFile, err := root.Open(fsRelPath)
+			srcFile, err := root.Open(path)
 			if err != nil {
 				return fmt.Errorf("failed to open source file %q: %w", path, err)
 			}
@@ -337,7 +296,7 @@ func (t *tarCreator) createTarball(
 			fmt.Errorf("failed to close temporary file: %w", err)
 	}
 
-	if err = intfs.SimpleAtomicMove(tempFilePath, absOutPath); err != nil {
+	if err = replace(root, tempFilePath, outPath); err != nil {
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 			fmt.Errorf("failed to move temporary file to output path: %w", err)
 	}
