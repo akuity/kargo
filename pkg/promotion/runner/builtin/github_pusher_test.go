@@ -1536,3 +1536,22 @@ func (m *mockGitHubPushClient) DeleteRef(
 ) (*github.Response, error) {
 	return m.deleteRefFn(ctx, owner, repo, ref)
 }
+
+func Test_githubPusher_getBranchMu(t *testing.T) {
+	pusher := &githubPusher{branchMus: map[string]*sync.Mutex{}}
+
+	// Concurrent lookups of new and existing keys must not race on the map
+	// (run with -race).
+	var wg sync.WaitGroup
+	for i := range 50 {
+		wg.Go(func() {
+			mu := pusher.getBranchMu("repo", fmt.Sprintf("branch-%d", i%10))
+			mu.Lock()
+			defer mu.Unlock()
+		})
+	}
+	wg.Wait()
+
+	require.Len(t, pusher.branchMus, 10)
+	require.Same(t, pusher.getBranchMu("repo", "branch-0"), pusher.getBranchMu("repo", "branch-0"))
+}
