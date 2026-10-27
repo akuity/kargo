@@ -48,6 +48,11 @@ type StageRow struct {
 	SyncedAt                   time.Time
 }
 
+type StageTargetRow struct {
+	StageID  string
+	TargetID uuid.UUID
+}
+
 type TargetRow struct {
 	ID            uuid.UUID
 	ProjectName   string
