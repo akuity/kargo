@@ -25,11 +25,11 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/credentials"
 	libfmt "github.com/akuity/kargo/pkg/fmt"
-	"github.com/akuity/kargo/pkg/image/mutate"
 	intio "github.com/akuity/kargo/pkg/io"
 	"github.com/akuity/kargo/pkg/io/fs"
 	"github.com/akuity/kargo/pkg/promotion"
 	builtin "github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
+	"github.com/google/go-containerregistry/pkg/v1/mutate"
 )
 
 const stepKindOCIPush = "oci-push"
@@ -554,11 +554,9 @@ func (p *ociPusher) push(
 		if err != nil {
 			return v1.Hash{}, fmt.Errorf("failed to resolve source image: %w", err)
 		}
-		annotated, err := mutate.Annotations(img, nil, scopes.manifest)
-		if err != nil {
-			return v1.Hash{}, fmt.Errorf("failed to annotate image: %w", err)
+		if len(scopes.manifest) > 0 {
+			img = mutate.Annotations(img, scopes.manifest).(v1.Image) //nolint:forcetypeassert
 		}
-		img = annotated.(v1.Image) //nolint:forcetypeassert
 		if err = remote.Write(dstRef, img, dstOpts...); err != nil {
 			return v1.Hash{}, fmt.Errorf("failed to push image to %q: %w", dstRef.String(), err)
 		}
@@ -569,13 +567,16 @@ func (p *ociPusher) push(
 		if err != nil {
 			return v1.Hash{}, fmt.Errorf("failed to resolve source image index: %w", err)
 		}
-		annotated, err := mutate.Annotations(idx, scopes.index, scopes.manifest)
+		idx, err = annotateOCIIndex(idx, scopes.index, scopes.manifest)
 		if err != nil {
 			return v1.Hash{}, fmt.Errorf("failed to annotate index: %w", err)
 		}
-		idx = annotated.(v1.ImageIndex) //nolint:forcetypeassert
 		if err = remote.WriteIndex(dstRef, idx, dstOpts...); err != nil {
-			return v1.Hash{}, fmt.Errorf("failed to push image index to %q: %w", dstRef.String(), err)
+			return v1.Hash{}, fmt.Errorf(
+				"failed to push image index to %q: %w",
+				dstRef.String(),
+				err,
+			)
 		}
 		return idx.Digest()
 
@@ -584,4 +585,118 @@ func (p *ociPusher) push(
 			Err: fmt.Errorf("unsupported media type %q", desc.MediaType),
 		}
 	}
+}
+
+func annotateOCIIndex(
+	idx v1.ImageIndex,
+	indexAnnotations, manifestAnnotations map[string]string,
+) (v1.ImageIndex, error) {
+	if len(indexAnnotations) > 0 {
+		idx = mutate.Annotations(
+			idx,
+			indexAnnotations,
+		).(v1.ImageIndex) //nolint:forcetypeassert
+	}
+
+	if len(manifestAnnotations) == 0 {
+		return idx, nil
+	}
+
+	manifest, err := idx.IndexManifest()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get index manifest: %w", err)
+	}
+
+	addenda := make([]mutate.IndexAddendum, 0, len(manifest.Manifests))
+
+	for _, desc := range manifest.Manifests {
+		var add mutate.Appendable
+
+		switch {
+		case desc.MediaType.IsImage():
+			img, err := idx.Image(desc.Digest)
+			if err != nil {
+				return nil, fmt.Errorf(
+					"failed to resolve child image %s: %w",
+					desc.Digest,
+					err,
+				)
+			}
+
+			img = mutate.Annotations(
+				img,
+				manifestAnnotations,
+			).(v1.Image) //nolint:forcetypeassert
+
+			desc.Digest, err = img.Digest()
+			if err != nil {
+				return nil, fmt.Errorf(
+					"failed to compute annotated digest: %w",
+					err,
+				)
+			}
+
+			desc.Size, err = img.Size()
+			if err != nil {
+				return nil, fmt.Errorf(
+					"failed to compute annotated size: %w",
+					err,
+				)
+			}
+
+			if desc.Data != nil {
+				desc.Data, err = img.RawManifest()
+				if err != nil {
+					return nil, fmt.Errorf(
+						"failed to read annotated manifest: %w",
+						err,
+					)
+				}
+			}
+
+			add = img
+
+		case desc.MediaType.IsIndex():
+			child, err := idx.ImageIndex(desc.Digest)
+			if err != nil {
+				return nil, fmt.Errorf(
+					"failed to resolve child index %s: %w",
+					desc.Digest,
+					err,
+				)
+			}
+			add = child
+
+		default:
+			add = descriptorAppendable{descriptor: desc}
+		}
+
+		addenda = append(addenda, mutate.IndexAddendum{
+			Add:        add,
+			Descriptor: desc,
+		})
+	}
+
+	idx = mutate.RemoveManifests(
+		idx,
+		func(v1.Descriptor) bool { return true },
+	)
+
+	return mutate.AppendManifests(idx, addenda...), nil
+}
+
+type descriptorAppendable struct {
+	descriptor v1.Descriptor
+}
+
+func (d descriptorAppendable) MediaType() (types.MediaType, error) {
+	return d.descriptor.MediaType, nil
+}
+
+func (d descriptorAppendable) Digest() (v1.Hash, error) {
+	return d.descriptor.Digest, nil
+}
+
+func (d descriptorAppendable) Size() (int64, error) {
+	return d.descriptor.Size, nil
 }
