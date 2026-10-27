@@ -4,7 +4,10 @@ import (
 	"fmt"
 	"net/url"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"slices"
+	"strings"
 	"testing"
 
 	"github.com/google/uuid"
@@ -511,4 +514,191 @@ func TestBareRepo_WithFilter(t *testing.T) {
 	content, err := os.ReadFile(filepath.Join(workTree.Dir(), "dir1", "file.txt"))
 	require.NoError(t, err)
 	require.Equal(t, "content in dir1", string(content))
+}
+
+func TestBareRepo_CloneDepthAndBranches(t *testing.T) {
+	// The remote has a main branch with 3 commits and three other branches that
+	// each add 1 commit on top of main.
+	otherBranches := []string{"other", "stage/dev", "stage/prod"}
+	testServer, testRepoURL, testRepoCreds := setupRemoteRepo(
+		t,
+		func(t *testing.T, repo WorkTree) {
+			for i := range 3 {
+				require.NoError(t, os.WriteFile(
+					filepath.Join(repo.Dir(), "main.txt"),
+					[]byte(fmt.Sprintf("main %d", i)),
+					0600,
+				))
+				require.NoError(t, repo.AddAllAndCommit(
+					t.Context(),
+					fmt.Sprintf("main commit %d", i),
+					nil,
+				))
+			}
+			require.NoError(t, repo.Push(t.Context(), nil))
+			for _, branch := range otherBranches {
+				require.NoError(t, repo.Checkout(t.Context(), "main"))
+				require.NoError(t, repo.CreateChildBranch(t.Context(), branch))
+				require.NoError(t, os.WriteFile(
+					filepath.Join(repo.Dir(), "branch.txt"),
+					[]byte(branch),
+					0600,
+				))
+				require.NoError(t, repo.AddAllAndCommit(
+					t.Context(),
+					fmt.Sprintf("%s commit", branch),
+					nil,
+				))
+				require.NoError(t, repo.Push(t.Context(), nil))
+			}
+		},
+	)
+	defer testServer.Close()
+
+	testCases := []struct {
+		name string
+		opts *BareCloneOptions
+		// expectedCommits maps each branch that is expected to exist in the clone
+		// to the number of commits expected in that branch's history.
+		expectedCommits map[string]int
+		expectShallow   bool
+	}{
+		{
+			name: "no depth or branches",
+			opts: &BareCloneOptions{},
+			expectedCommits: map[string]int{
+				"main":       3,
+				"other":      4,
+				"stage/dev":  4,
+				"stage/prod": 4,
+			},
+		},
+		{
+			name: "depth only",
+			opts: &BareCloneOptions{Depth: 1},
+			expectedCommits: map[string]int{
+				"main":       1,
+				"other":      1,
+				"stage/dev":  1,
+				"stage/prod": 1,
+			},
+			expectShallow: true,
+		},
+		{
+			name: "branches only",
+			opts: &BareCloneOptions{Branches: []string{"main", "stage/*"}},
+			expectedCommits: map[string]int{
+				"main":       3,
+				"stage/dev":  4,
+				"stage/prod": 4,
+			},
+		},
+		{
+			name: "depth and branches",
+			opts: &BareCloneOptions{
+				Depth:    2,
+				Branches: []string{"stage/*"},
+			},
+			expectedCommits: map[string]int{
+				"stage/dev":  2,
+				"stage/prod": 2,
+			},
+			expectShallow: true,
+		},
+		{
+			name: "blobless, depth, and branches",
+			opts: &BareCloneOptions{
+				Blobless: true,
+				Depth:    1,
+				Branches: []string{"main", "other"},
+			},
+			expectedCommits: map[string]int{
+				"main":  1,
+				"other": 1,
+			},
+			expectShallow: true,
+		},
+		{
+			name: "branches include a literal branch that does not exist",
+			opts: &BareCloneOptions{Branches: []string{"main", "stage/new"}},
+			expectedCommits: map[string]int{
+				"main": 3,
+			},
+		},
+		{
+			name: "no specified branches exist",
+			opts: &BareCloneOptions{Branches: []string{"nope", "nada/*"}},
+		},
+		{
+			name: "wildcard matching nothing with depth",
+			opts: &BareCloneOptions{
+				Depth:    1,
+				Branches: []string{"main", "nada/*"},
+			},
+			expectedCommits: map[string]int{
+				"main": 1,
+			},
+			expectShallow: true,
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			rep, err := CloneBare(
+				t.Context(),
+				testRepoURL,
+				&ClientOptions{Credentials: &testRepoCreds},
+				testCase.opts,
+			)
+			require.NoError(t, err)
+			defer rep.Close(t.Context())
+
+			// runGit runs a git command in the bare repository
+			runGit := func(args ...string) string {
+				cmd := exec.CommandContext(t.Context(), "git", args...)
+				cmd.Dir = rep.Dir()
+				out, cmdErr := cmd.CombinedOutput()
+				require.NoErrorf(t, cmdErr, "git %v failed: %s", args, out)
+				return strings.TrimSpace(string(out))
+			}
+
+			// Exactly the expected branches should exist.
+			expectedBranches := make([]string, 0, len(testCase.expectedCommits))
+			for branch := range testCase.expectedCommits {
+				expectedBranches = append(expectedBranches, branch)
+			}
+			slices.Sort(expectedBranches)
+			require.Equal(
+				t,
+				expectedBranches,
+				strings.Fields(runGit(
+					"for-each-ref", "--format=%(refname:short)", "refs/heads",
+				)),
+			)
+
+			require.Equal(
+				t,
+				fmt.Sprint(testCase.expectShallow),
+				runGit("rev-parse", "--is-shallow-repository"),
+			)
+
+			for branch, expectedCount := range testCase.expectedCommits {
+				require.Equal(
+					t,
+					fmt.Sprint(expectedCount),
+					runGit("rev-list", "--count", branch),
+					"unexpected commit count for branch %q", branch,
+				)
+				// The branch should be usable.
+				var workTree WorkTree
+				workTree, err = rep.AddWorkTree(
+					t.Context(),
+					filepath.Join(rep.HomeDir(), strings.ReplaceAll(branch, "/", "-")),
+					&AddWorkTreeOptions{Ref: branch},
+				)
+				require.NoError(t, err)
+				require.FileExists(t, filepath.Join(workTree.Dir(), "main.txt"))
+				require.NoError(t, workTree.Close(t.Context()))
+			}
+		})
+	}
 }
