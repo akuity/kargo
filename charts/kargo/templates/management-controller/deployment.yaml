@@ -84,7 +84,7 @@ spec:
           name: {{ .Values.managementController.metrics.service.portName }}
           protocol: TCP
         {{- end }}
-        {{- if or $kc .Values.managementController.volumeMounts (include "kargo.nats.nkeySeedSecretName" .) }}
+        {{- if or $kc .Values.managementController.volumeMounts (include "kargo.nats.volume" .) }}
         volumeMounts:
         {{- include "kargo.nats.volumeMount" . | nindent 8 }}
         {{- if $kc }}
@@ -109,7 +109,7 @@ spec:
       initContainers:
       {{- toYaml . | nindent 6 }}
       {{- end }}
-      {{- if or $kc .Values.managementController.volumes (include "kargo.nats.nkeySeedSecretName" .) }}
+      {{- if or $kc .Values.managementController.volumes (include "kargo.nats.volume" .) }}
       volumes:
       {{- include "kargo.nats.volume" . | nindent 6 }}
       {{- if $kc }}
