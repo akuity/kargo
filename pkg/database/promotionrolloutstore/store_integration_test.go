@@ -61,7 +61,7 @@ func TestStoreIntegration(t *testing.T) {
 	// these Stages in a Project of its own.
 	for _, project := range []string{
 		"create", "numbers", "concurrent", "empty", "unique-a", "unique-b",
-		"vanished", "cascade", "list", "latest", "many", "open", "start", "update",
+		"vanished", "cascade", "list", "latest", "many", "open", "running", "update",
 		"statuses",
 	} {
 		for _, stage := range []string{"prod", "staging"} {
@@ -388,51 +388,38 @@ func TestStoreIntegration(t *testing.T) {
 			},
 		},
 		{
-			name: "start admits one rollout per Stage at a time, in number order",
+			name: "one rollout per Stage can be Running at a time",
 			run: func(t *testing.T) {
 				create := func(stage, name string) Rollout {
-					rollout, err := store.Create(ctx, "start", newRollout(stage, name), nil)
+					rollout, err := store.Create(ctx, "running", newRollout(stage, name), nil)
 					require.NoError(t, err)
 					return rollout
 				}
-				first := create("prod", "prod.01A.abc")
-				second := create("prod", "prod.01B.abc")
-				third := create("prod", "prod.01C.abc")
-				other := create("staging", "staging.01A.abc")
+				// setPhase writes the phase without preconditions, so a row may
+				// be written more than once.
+				setPhase := func(name string, phase kargoapi.PromotionRolloutPhase) error {
+					_, err := store.UpdateStatus(ctx, "running", database.PromotionRolloutRow{
+						Name:        name,
+						StatusPhase: string(phase),
+					})
+					return err
+				}
+				create("prod", "prod.01A.abc")
+				create("prod", "prod.01B.abc")
+				create("staging", "staging.01A.abc")
 
-				// Not next: an older rollout is still open.
-				_, err := store.Start(ctx, second)
+				require.NoError(t, setPhase("prod.01A.abc", kargoapi.PromotionRolloutPhaseRunning))
+				// The index holds whatever writes a second Running row of the
+				// Stage.
+				err := setPhase("prod.01B.abc", kargoapi.PromotionRolloutPhaseRunning)
 				require.ErrorIs(t, err, database.ErrConflict)
-				started, err := store.Start(ctx, first)
-				require.NoError(t, err)
-				require.Equal(t, string(kargoapi.PromotionRolloutPhaseRunning), started.StatusPhase)
-				require.NotNil(t, started.StatusStartedAt)
-				require.True(t, started.UpdatedAt.After(first.UpdatedAt))
-				// Not next: the Stage is promoting through another rollout.
-				_, err = store.Start(ctx, second)
-				require.ErrorIs(t, err, database.ErrConflict)
-				// Not Pending any more.
-				_, err = store.Start(ctx, first)
-				require.ErrorIs(t, err, database.ErrConflict)
+				require.ErrorContains(t, err, "another PromotionRollout of the Stage is Running")
 				// Another Stage's rollout is not held up.
-				_, err = store.Start(ctx, other)
-				require.NoError(t, err)
+				require.NoError(t, setPhase("staging.01A.abc", kargoapi.PromotionRolloutPhaseRunning))
 
-				// The index holds whatever writes a second Running row.
-				row := third.PromotionRolloutRow
-				row.StatusPhase = string(kargoapi.PromotionRolloutPhaseRunning)
-				_, err = store.UpdateStatus(ctx, "start", row)
-				require.ErrorIs(t, err, database.ErrConflict)
-
-				// Once the round ends, the next in number order is admitted.
-				row = started.PromotionRolloutRow
-				row.StatusPhase = string(kargoapi.PromotionRolloutPhaseSucceeded)
-				_, err = store.UpdateStatus(ctx, "start", row)
-				require.NoError(t, err)
-				_, err = store.Start(ctx, third)
-				require.ErrorIs(t, err, database.ErrConflict)
-				_, err = store.Start(ctx, second)
-				require.NoError(t, err)
+				// Once the first finishes, the second may run.
+				require.NoError(t, setPhase("prod.01A.abc", kargoapi.PromotionRolloutPhaseSucceeded))
+				require.NoError(t, setPhase("prod.01B.abc", kargoapi.PromotionRolloutPhaseRunning))
 			},
 		},
 		{

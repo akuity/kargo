@@ -61,12 +61,10 @@ CREATE INDEX promotion_rollouts_open_idx
     ON promotion_rollouts (project_name, stage_name, number)
     WHERE status_phase IN ('Pending', 'Running');
 
--- A Stage promotes through one rollout at a time. StartPromotionRollout
--- moves a rollout to Running only when it is the next of its Stage's to
--- run, and this index is the guarantee behind it: however the claims race,
--- two rollouts of one Stage cannot both be Running. The Stage's own status
--- records nothing about which rollout is in progress; this is where that is
--- decided.
+-- A Stage promotes through one rollout at a time, and this index is the
+-- guarantee: however the writes race, two rollouts of one Stage cannot
+-- both be Running. Which rollout runs next, and when, is decided by
+-- whatever moves a rollout to Running; the index only holds it to one.
 CREATE UNIQUE INDEX promotion_rollouts_running_key
     ON promotion_rollouts (project_name, stage_name)
     WHERE status_phase = 'Running';

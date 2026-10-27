@@ -184,29 +184,6 @@ WHERE promotion_rollout_id = sqlc.arg(id)::uuid
     AND target_name IS NOT NULL
 ORDER BY target_name, name DESC;
 
--- Moves the rollout from Pending to Running, if it is the next of its
--- Stage's rollouts to run: the oldest that has not finished, with none
--- Running. Rounds of fan-out are serialized here, in number order. The
--- partial unique index promotion_rollouts_running_key is the final guard:
--- two claims that both pass this statement's checks cannot both commit. No
--- row is returned when the rollout is not Pending or not next; a unique
--- violation says another rollout of the Stage is Running.
--- name: StartPromotionRollout :one
-UPDATE promotion_rollouts SET
-    status_phase = 'Running',
-    status_started_at = COALESCE(status_started_at, CURRENT_TIMESTAMP),
-    updated_at = GREATEST(clock_timestamp(), updated_at + interval '1 microsecond')
-WHERE promotion_rollouts.id = sqlc.arg(id)
-    AND promotion_rollouts.status_phase = 'Pending'
-    AND NOT EXISTS (
-        SELECT 1 FROM promotion_rollouts ahead
-        WHERE ahead.project_name = promotion_rollouts.project_name
-            AND ahead.stage_name = promotion_rollouts.stage_name
-            AND ahead.status_phase IN ('Pending', 'Running')
-            AND ahead.number < promotion_rollouts.number
-    )
-RETURNING *;
-
 -- updated_at doubles as the row's version, so it must grow with every write
 -- to a row even across a clock step or two writes in one microsecond. A
 -- non-null id or updated_at is a precondition; a row that fails one is left

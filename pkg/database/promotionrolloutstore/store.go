@@ -23,7 +23,7 @@ const nameConstraint = "promotion_rollouts_project_name_name_key"
 
 // runningConstraint is the unique index that allows one Running
 // PromotionRollout per Stage. Its violation is how the database reports a
-// second one; see Start.
+// status update that would make a second one.
 const runningConstraint = "promotion_rollouts_running_key"
 
 // Key identifies a PromotionRollout: the Project it belongs to and its name.
@@ -93,7 +93,6 @@ type Store interface {
 	ListLatest(context.Context, string, string) ([]Rollout, error)
 	ListOpen(context.Context) ([]Key, error)
 	ListTargetStatuses(context.Context, Rollout) ([]database.ListPromotionRolloutTargetStatusesRow, error)
-	Start(context.Context, Rollout) (Rollout, error)
 	UpdateStatus(context.Context, string, database.PromotionRolloutRow) (database.PromotionRolloutRow, error)
 }
 
@@ -313,26 +312,6 @@ func (s *store) ListTargetStatuses(
 		return nil, rolloutError(err, rollout.ProjectName, rollout.Name)
 	}
 	return rows, nil
-}
-
-// Start moves the rollout from Pending to Running and returns it as stored.
-// Only the lowest-numbered open rollout of a Stage can start, and only while
-// none of the Stage's rollouts is Running. database.ErrConflict says the
-// rollout is not Pending, is not next, or another claim won; nothing is
-// written in any of those cases.
-func (s *store) Start(ctx context.Context, rollout Rollout) (Rollout, error) {
-	started, err := s.queries.StartPromotionRollout(ctx, rollout.ID)
-	if errors.Is(err, pgx.ErrNoRows) {
-		err = fmt.Errorf("%w: the PromotionRollout is not the next of its Stage's to run", database.ErrConflict)
-	}
-	if err != nil {
-		return Rollout{}, rolloutError(err, rollout.ProjectName, rollout.Name)
-	}
-	rollouts, err := s.attachTargets(ctx, []database.PromotionRolloutRow{started})
-	if err != nil {
-		return Rollout{}, rolloutError(err, rollout.ProjectName, rollout.Name)
-	}
-	return rollouts[0], nil
 }
 
 // UpdateStatus replaces the status of the PromotionRollout named by the
