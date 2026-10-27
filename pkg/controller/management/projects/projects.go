@@ -29,6 +29,7 @@ import (
 	"github.com/akuity/kargo/pkg/conditions"
 	"github.com/akuity/kargo/pkg/controller"
 	"github.com/akuity/kargo/pkg/database"
+	"github.com/akuity/kargo/pkg/kargo"
 	"github.com/akuity/kargo/pkg/kubeclient"
 	"github.com/akuity/kargo/pkg/kubernetes"
 	"github.com/akuity/kargo/pkg/logging"
@@ -187,6 +188,12 @@ func SetupReconcilerWithManager(
 ) error {
 	c, err := ctrl.NewControllerManagedBy(kargoMgr).
 		For(&kargoapi.Project{}).
+		WithEventFilter(
+			predicate.Or(
+				predicate.GenerationChangedPredicate{},
+				kargo.RefreshRequested{},
+			),
+		).
 		WithEventFilter(
 			predicate.Funcs{
 				DeleteFunc: func(event.DeleteEvent) bool {
