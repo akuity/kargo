@@ -605,12 +605,15 @@ func (r *RegularStageReconciler) reconcile(
 			return newStatus, false, err
 		}
 
-		// Patch the status of the Stage after each sub-reconciler to show progress.
+		// Persist once, at the end of Reconcile, except a newly acknowledged
+		// current Promotion, which the Promotion reconciler waits on.
 		// Failure is non-fatal: working carries this pass's status forward
 		// regardless, and the next patch attempt's diff against stage (which still
 		// reflects persisted state) will include these changes.
-		if err = patchStageStatus(ctx, r.client, stage, &newStatus); err != nil {
-			logger.Error(err, fmt.Sprintf("failed to update Stage status after %s", subR.name))
+		if acknowledgesNewPromotion(stage.Status.CurrentPromotion, newStatus.CurrentPromotion) {
+			if err = patchStageStatus(ctx, r.client, stage, &newStatus); err != nil {
+				logger.Error(err, fmt.Sprintf("failed to update Stage status after %s", subR.name))
+			}
 		}
 		working.Status = newStatus
 	}
@@ -2493,4 +2496,10 @@ func buildFreightSummary(requested int, current *kargoapi.FreightCollection) str
 		}
 	}
 	return fmt.Sprintf("%d/%d Fulfilled", len(current.Freight), requested)
+}
+
+// acknowledgesNewPromotion reports whether newRef names a current Promotion
+// that oldRef does not.
+func acknowledgesNewPromotion(oldRef, newRef *kargoapi.PromotionReference) bool {
+	return newRef != nil && (oldRef == nil || oldRef.Name != newRef.Name)
 }
