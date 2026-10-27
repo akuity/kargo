@@ -293,27 +293,22 @@ func (g *gitPushPusher) push(
 	workTree git.WorkTree,
 	pushOpts *git.PushOptions,
 ) error {
-	branchMu := g.getBranchMu(
-		g.getBranchKey(workTree.URL(), pushOpts.TargetBranch),
-	)
+	branchMu := g.getBranchMu(workTree.URL(), pushOpts.TargetBranch)
 	branchMu.Lock()
 	defer branchMu.Unlock()
 	return workTree.Push(ctx, pushOpts)
 }
 
-// getBranchMu returns the mutex for the given repo + branch key, creating it
-// if necessary. masterMu guards the map itself.
-func (g *gitPushPusher) getBranchMu(branchKey string) *sync.Mutex {
+// getBranchMu returns the mutex for the given repo + branch, creating it if
+// necessary. masterMu guards the map itself.
+func (g *gitPushPusher) getBranchMu(repoURL, branch string) *sync.Mutex {
+	key := fmt.Sprintf("%s:%s", repoURL, branch)
 	g.masterMu.Lock()
 	defer g.masterMu.Unlock()
-	mu, exists := g.branchMus[branchKey]
+	mu, exists := g.branchMus[key]
 	if !exists {
 		mu = &sync.Mutex{}
-		g.branchMus[branchKey] = mu
+		g.branchMus[key] = mu
 	}
 	return mu
-}
-
-func (g *gitPushPusher) getBranchKey(repoURL, branch string) string {
-	return fmt.Sprintf("%s:%s", repoURL, branch)
 }

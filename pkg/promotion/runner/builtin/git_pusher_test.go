@@ -337,7 +337,7 @@ func Test_gitPushPusher_getBranchMu(t *testing.T) {
 	var wg sync.WaitGroup
 	for i := range 50 {
 		wg.Go(func() {
-			mu := runner.getBranchMu(fmt.Sprintf("repo:branch-%d", i%10))
+			mu := runner.getBranchMu("repo", fmt.Sprintf("branch-%d", i%10))
 			mu.Lock()
 			defer mu.Unlock()
 		})
@@ -345,5 +345,5 @@ func Test_gitPushPusher_getBranchMu(t *testing.T) {
 	wg.Wait()
 
 	require.Len(t, runner.branchMus, 10)
-	require.Same(t, runner.getBranchMu("repo:branch-0"), runner.getBranchMu("repo:branch-0"))
+	require.Same(t, runner.getBranchMu("repo", "branch-0"), runner.getBranchMu("repo", "branch-0"))
 }
