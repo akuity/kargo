@@ -405,8 +405,9 @@ func (g *githubPusher) push(
 ) error {
 	logger := logging.LoggerFromContext(ctx)
 
-	g.acquireBranchLock(workTree.URL(), opts.targetBranch)
-	defer g.releaseBranchLock(workTree.URL(), opts.targetBranch)
+	branchMu := g.getBranchMu(workTree.URL(), opts.targetBranch)
+	branchMu.Lock()
+	defer branchMu.Unlock()
 
 	// The local branch may be behind the remote branch it tracks or may have
 	// diverged from it. Start by integrating any remote changes we don't have
@@ -796,14 +797,6 @@ func (e *retryableError) Unwrap() error { return e.err }
 func (g *githubPusher) isRetryableError(err error) bool {
 	var re *retryableError
 	return errors.As(err, &re)
-}
-
-func (g *githubPusher) acquireBranchLock(repoURL, branch string) {
-	g.getBranchMu(repoURL, branch).Lock()
-}
-
-func (g *githubPusher) releaseBranchLock(repoURL, branch string) {
-	g.getBranchMu(repoURL, branch).Unlock()
 }
 
 // getBranchMu returns the mutex for the given repo + branch, creating it if
