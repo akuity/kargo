@@ -6,7 +6,8 @@ import (
 	"io"
 
 	kyaml "sigs.k8s.io/kustomize/kyaml/yaml"
-	"sigs.k8s.io/kustomize/kyaml/yaml/merge2"
+
+	"github.com/akuity/kargo/pkg/kustomize"
 )
 
 // Merge merges the provided YAML documents, in order, with the fields of each
@@ -27,7 +28,7 @@ func Merge(docs [][]byte) ([]byte, error) {
 			mergeTarget = patchNode
 			continue
 		}
-		if mergeTarget, err = merge2.Merge(
+		if mergeTarget, err = kustomize.Merge(
 			patchNode, mergeTarget, kyaml.MergeOptions{},
 		); err != nil {
 			return nil, fmt.Errorf("error merging document %d: %w", i, err)

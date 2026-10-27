@@ -6,6 +6,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"sync"
 	"testing"
 
 	"github.com/google/uuid"
@@ -335,4 +336,23 @@ func Test_gitPushPusher_run_escapingSymlink(t *testing.T) {
 	)
 	require.ErrorContains(t, err, "path escapes from parent")
 	require.Equal(t, kargoapi.PromotionStepStatusErrored, res.Status)
+}
+
+func Test_gitPushPusher_getBranchMu(t *testing.T) {
+	pusher := &gitPushPusher{branchMus: map[string]*sync.Mutex{}}
+
+	// Concurrent lookups of new and existing keys must not race on the map
+	// (run with -race).
+	var wg sync.WaitGroup
+	for i := range 50 {
+		wg.Go(func() {
+			mu := pusher.getBranchMu("repo", fmt.Sprintf("branch-%d", i%10))
+			mu.Lock()
+			defer mu.Unlock()
+		})
+	}
+	wg.Wait()
+
+	require.Len(t, pusher.branchMus, 10)
+	require.Same(t, pusher.getBranchMu("repo", "branch-0"), pusher.getBranchMu("repo", "branch-0"))
 }

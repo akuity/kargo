@@ -1,10 +1,12 @@
 .claude/settings.local.json
+.helm/
 .idea/
 .pnpm-store/
 .vscode/
 bin/
 build/
 charts/kargo/*.tgz
+charts/kargo/charts/
 coverage.txt
 hack/include/
 pkg/api/v1alpha1/
@@ -12,3 +14,4 @@ vendor/
 internal/server/ui/
 .DS_Store
 docs/static/swagger.json
+_site/

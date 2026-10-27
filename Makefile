@@ -3,9 +3,9 @@ include $(CURDIR)/hack/tools.mk
 SHELL	      ?= /bin/bash
 EXTENDED_PATH ?= $(CURDIR)/hack/bin:$(PATH)
 
-ARGO_CD_CHART_VERSION		:= 9.4.3
-ARGO_ROLLOUTS_CHART_VERSION := 2.40.6
-CERT_MANAGER_CHART_VERSION 	:= 1.19.3
+ARGO_CD_CHART_VERSION		:= 10.10.5
+ARGO_ROLLOUTS_CHART_VERSION := 2.43.8
+CERT_MANAGER_CHART_VERSION 	:= 1.21.2
 
 GO_LINT_EXTRA_FLAGS 	?= --output.text.print-issued-lines --output.text.colors
 
@@ -161,10 +161,18 @@ test-unit: install-helm
 DATABASE_URL ?= postgres://kargo:kargo@127.0.0.1:15432/kargo?sslmode=disable
 
 # Runs the database integration tests against DATABASE_URL. Each test creates
-# and drops its own database on that server.
+# and drops its own database on that server. Coverage spans every package under
+# pkg/database, since much of it (sqlc queries, stores) is only reachable here.
 .PHONY: test-db
 test-db:
-	DATABASE_URL=$(DATABASE_URL) go test -race -count=1 -tags=integration,db ./pkg/database/
+	DATABASE_URL=$(DATABASE_URL) go test \
+		-race \
+		-count=1 \
+		-tags=integration,db \
+		-coverprofile=coverage.txt \
+		-covermode=atomic \
+		-coverpkg=./pkg/database/... \
+		./pkg/database/...
 
 ################################################################################
 # Builds                                                                       #
@@ -494,10 +502,6 @@ hack-install-argocd: install-helm
 		--set 'configs.params."application\.namespaces"=*' \
 		--set server.service.type=NodePort \
 		--set server.service.nodePortHttp=30080 \
-		--set server.extensions.enabled=true \
-		--set server.extensions.extensionList[0].name=argo-rollouts \
-		--set server.extensions.extensionList[0].env[0].name=EXTENSION_URL \
-		--set server.extensions.extensionList[0].env[0].value=https://github.com/argoproj-labs/rollout-extension/releases/download/v0.3.7/extension.tar \
 		--wait
 
 .PHONY: hack-install-argo-rollouts

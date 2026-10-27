@@ -84,6 +84,21 @@ k8s_resource(
   labels = ['kargo']
 )
 
+# The chart's dependencies (e.g. NATS) must be present before it can be
+# rendered. Only fetch them when any are missing or out of date.
+# `helm dependency build` requires each dependency's repository to be known to
+# Helm, so they are added to a repository config belonging to this project
+# instead of the developer's own.
+local(
+  "helm dependency list charts/kargo | awk 'NR > 1 && NF && $NF != \"ok\" { exit 1 }' || " +
+  "{ helm repo add nats https://nats-io.github.io/k8s/helm/charts/ && helm dependency build charts/kargo; }",
+  env = {
+    'HELM_REPOSITORY_CONFIG': '.helm/repositories.yaml',
+    'HELM_REPOSITORY_CACHE': '.helm/cache'
+  },
+  quiet = True,
+)
+
 kargo_base_path = os.environ.get('KARGO_BASE_PATH', '')
 chart = helm(
   './charts/kargo',
@@ -173,6 +188,17 @@ k8s_resource(
 )
 
 k8s_resource(
+  workload = 'kargo-nats',
+  new_name = 'nats',
+  labels = ['kargo'],
+  objects = [
+    'kargo-nats-config:configmap',
+    'kargo-nats:poddisruptionbudget'
+  ],
+  resource_deps = ['namespaces']
+)
+
+k8s_resource(
   workload = 'kargo-api',
   new_name = 'api',
   port_forwards = [
@@ -190,7 +216,7 @@ k8s_resource(
     'kargo-api-rollouts:clusterrole',
     'kargo-api-rollouts:clusterrolebinding'
   ],
-  resource_deps=['back-end-compile','dex-server']
+  resource_deps=['back-end-compile', 'dex-server', 'db-migrate', 'nats']
 )
 
 k8s_resource(
@@ -214,7 +240,7 @@ k8s_resource(
     'kargo-shared-resources-controller-reader:role',
     'kargo-test-gpg-signing-key:secret'
   ],
-  resource_deps=['back-end-compile', 'credential-helper-compile', ]
+  resource_deps=['back-end-compile', 'credential-helper-compile', 'nats']
 )
 
 k8s_resource(
@@ -267,7 +293,7 @@ k8s_resource(
     'kargo-management-controller:configmap',
     'kargo-management-controller:serviceaccount'
   ],
-  resource_deps=['back-end-compile', 'db-migrate']
+  resource_deps=['back-end-compile', 'db-migrate', 'nats']
 )
 
 k8s_resource(
@@ -297,7 +323,7 @@ k8s_resource(
     'kargo-webhooks-server-ns-controller:clusterrole',
     'kargo-webhooks-server-ns-controller:clusterrolebinding'
   ],
-  resource_deps=['back-end-compile', 'ensure-cert-manager']
+  resource_deps=['back-end-compile', 'ensure-cert-manager', 'nats']
 )
 
 k8s_resource(

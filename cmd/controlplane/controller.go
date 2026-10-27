@@ -24,6 +24,7 @@ import (
 	rollouts "github.com/akuity/kargo/api/stubs/rollouts/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	libargocd "github.com/akuity/kargo/pkg/argocd"
+	"github.com/akuity/kargo/pkg/client/apiserver"
 	"github.com/akuity/kargo/pkg/controller"
 	argocd "github.com/akuity/kargo/pkg/controller/argocd/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/controller/promotionrequests"
@@ -32,6 +33,8 @@ import (
 	"github.com/akuity/kargo/pkg/controller/warehouses"
 	"github.com/akuity/kargo/pkg/credentials"
 	credsdb "github.com/akuity/kargo/pkg/credentials/kubernetes"
+	"github.com/akuity/kargo/pkg/event"
+	natsevent "github.com/akuity/kargo/pkg/event/nats"
 	"github.com/akuity/kargo/pkg/health"
 	healthCheckers "github.com/akuity/kargo/pkg/health/checker/builtin"
 	"github.com/akuity/kargo/pkg/heartbeat"
@@ -54,6 +57,8 @@ import (
 )
 
 type controllerOptions struct {
+	APIServer apiserver.ClientConfig
+
 	IsDefaultController bool
 	ShardName           string
 
@@ -107,6 +112,7 @@ func newControllerCommand() *cobra.Command {
 }
 
 func (o *controllerOptions) complete() {
+	o.APIServer = apiserver.ClientConfigFromEnv()
 	o.IsDefaultController = types.MustParseBool(os.GetEnv("IS_DEFAULT_CONTROLLER", "false"))
 	o.ShardName = os.GetEnv("SHARD_NAME", "")
 
@@ -162,6 +168,17 @@ func (o *controllerOptions) run(ctx context.Context) error {
 	}
 	defer shutdownTelemetry()
 
+	natsConn, err := connectNATS(logging.ContextWithLogger(ctx, o.Logger))
+	if err != nil {
+		return err
+	}
+	defer natsConn.Close()
+
+	// All reconcilers share one sender for user-facing events. Each wraps it to
+	// stamp its own source on the events it sends.
+	eventSender := natsevent.NewEventSender(natsConn, event.EventsSubjectPrefix)
+	defer eventSender.Shutdown()
+
 	kargoMgr, localClusterClient, stagesReconcilerCfg, err := o.setupKargoManager(
 		ctx,
 		stages.ReconcilerConfigFromEnv(),
@@ -182,12 +199,30 @@ func (o *controllerOptions) run(ctx context.Context) error {
 		credsdb.DatabaseConfigFromEnv(),
 	)
 
+	// Targets live in the control plane's database and are served by the API
+	// server. The controller may run far from both, so it reads Targets
+	// through the API server, acting as the ServiceAccount of the control
+	// plane that its credential for the control plane resolves to, with
+	// tokens it obtains for that ServiceAccount. Without an API server,
+	// Stages that select Targets cannot be promoted and Promotions that name
+	// a Target fail.
+	var targetClient *apiserver.Client
+	if o.APIServer.Address != "" {
+		if targetClient, err = apiserver.New(ctx, o.APIServer, kargoMgr.GetConfig()); err != nil {
+			return fmt.Errorf("error configuring access to Targets: %w", err)
+		}
+	} else {
+		o.Logger.Info("API_SERVER_ADDRESS is not set; promotion to Targets is unavailable")
+	}
+
 	if err := o.setupReconcilers(
 		ctx,
 		kargoMgr,
 		argocdMgr,
 		credentialsDB,
 		stagesReconcilerCfg,
+		targetClient,
+		eventSender,
 	); err != nil {
 		return fmt.Errorf("error setting up reconcilers: %w", err)
 	}
@@ -463,16 +498,26 @@ func (o *controllerOptions) setupReconcilers(
 	kargoMgr, argocdMgr manager.Manager,
 	credentialsDB credentials.Database,
 	stagesReconcilerCfg stages.ReconcilerConfig,
+	targetClient *apiserver.Client,
+	eventSender event.Sender,
 ) error {
 	var argoCDClient client.Client
 	if argocdMgr != nil {
 		argoCDClient = argocdMgr.GetClient()
 	}
 
+	// A nil client must reach the reconciler as a nil interface of its own
+	// type, which is what it tests for.
+	var targetGetter promotion.TargetGetter
+	if targetClient != nil {
+		targetGetter = targetClient
+	}
+
 	healthCheckers.Initialize(argoCDClient)
 
 	sharedIndexer := indexer.NewSharedFieldIndexer(kargoMgr.GetFieldIndexer())
 
+	promotionsReconcilerCfg := promotions.ReconcilerConfigFromEnv()
 	if err := promotions.SetupReconcilerWithManager(
 		ctx,
 		kargoMgr,
@@ -488,7 +533,9 @@ func (o *controllerOptions) setupReconcilers(
 			),
 			promotion.DefaultExprDataCacheFn,
 		),
-		promotions.ReconcilerConfigFromEnv(),
+		promotionsReconcilerCfg,
+		targetGetter,
+		event.NewDefaultingSender(eventSender, promotionsReconcilerCfg.Name()),
 	); err != nil {
 		return fmt.Errorf("error setting up Promotions reconciler: %w", err)
 	}
@@ -501,6 +548,11 @@ func (o *controllerOptions) setupReconcilers(
 		return fmt.Errorf("error setting up PromotionRequests reconciler: %w", err)
 	}
 
+	stagesEventSender := event.NewDefaultingSender(
+		eventSender,
+		stagesReconcilerCfg.Name(),
+	)
+
 	if err := stages.NewRegularStageReconciler(
 		stagesReconcilerCfg,
 		credentialsDB,
@@ -510,6 +562,7 @@ func (o *controllerOptions) setupReconcilers(
 		kargoMgr,
 		argocdMgr,
 		sharedIndexer,
+		stagesEventSender,
 	); err != nil {
 		return fmt.Errorf("error setting up regular Stages reconciler: %w", err)
 	}
@@ -518,16 +571,19 @@ func (o *controllerOptions) setupReconcilers(
 		ctx,
 		kargoMgr,
 		sharedIndexer,
+		stagesEventSender,
 	); err != nil {
 		return fmt.Errorf("error setting up control flow Stages reconciler: %w", err)
 	}
 
+	warehousesReconcilerCfg := warehouses.ReconcilerConfigFromEnv()
 	if err := warehouses.SetupReconcilerWithManager(
 		ctx,
 		kargoMgr,
 		credentialsDB,
 		subscription.DefaultSubscriberRegistry,
-		warehouses.ReconcilerConfigFromEnv(),
+		warehousesReconcilerCfg,
+		event.NewDefaultingSender(eventSender, warehousesReconcilerCfg.Name()),
 	); err != nil {
 		return fmt.Errorf("error setting up Warehouses reconciler: %w", err)
 	}

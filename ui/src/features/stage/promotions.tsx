@@ -26,13 +26,60 @@ import { parseDate } from '@ui/utils/dates';
 import { isStageTargetAware } from '../project/pipelines/nodes/stage-meta-utils';
 import { Promotion as PromotionComponent } from '../project/pipelines/promotion/promotion';
 
+import { PromotionRequestDetails } from './promotion-request/promotion-request-details';
 import { PromotionRequests } from './promotion-requests';
 import { useGetFreightMap } from './tabs/freight-history/use-get-freight-map';
 import { hasAbortRequest, promotionCompareFn } from './utils/promotion';
 
 const rollbackAnnotationKey = 'kargo.akuity.io/rollback';
 
-export const Promotions = ({ stage, argocdShard }: { stage: Stage; argocdShard?: ArgoCDShard }) => {
+/**
+ * Promotions is the Stage drawer's Promotions tab, which shows a different
+ * thing depending on how the Stage promotes.
+ *
+ * A classic Stage promotes to itself, with one Promotion per round, so its tab
+ * lists Promotions. A target-aware Stage promotes to the Targets it governs by
+ * way of a PromotionRequest that fans out into one Promotion per Target, so
+ * its tab lists the requests and leaves the children to be read inside one.
+ * Listing both at this level would bury a fleet's rounds under hundreds of
+ * Promotions that say nothing on their own.
+ */
+export const Promotions = ({ stage, argocdShard }: { stage: Stage; argocdShard?: ArgoCDShard }) =>
+  isStageTargetAware(stage) ? (
+    <TargetAwarePromotions stage={stage} />
+  ) : (
+    <ClassicPromotions stage={stage} argocdShard={argocdShard} />
+  );
+
+const TargetAwarePromotions = ({ stage }: { stage: Stage }) => {
+  const { name: projectName, stageName, promotionRequestName } = useParams();
+
+  // One round, opened from the list, replaces the list in place rather than
+  // opening a second drawer over the Stage's: a round is a thing the Stage
+  // did, and reading it should not mean leaving the Stage.
+  if (promotionRequestName) {
+    return (
+      <PromotionRequestDetails
+        // Retrying moves from one round straight to another, which would
+        // otherwise keep the chips and search of the round left behind and
+        // open the new one already filtered.
+        key={promotionRequestName}
+        project={projectName || ''}
+        stageName={stageName || ''}
+        promotionRequestName={promotionRequestName}
+      />
+    );
+  }
+
+  return (
+    <>
+      <PromotionWindowAlert stage={stage} className='mb-4' />
+      <PromotionRequests projectName={projectName || ''} stageName={stageName || ''} />
+    </>
+  );
+};
+
+const ClassicPromotions = ({ stage, argocdShard }: { stage: Stage; argocdShard?: ArgoCDShard }) => {
   const { token } = theme.useToken();
 
   const { name: projectName, stageName } = useParams();
@@ -183,10 +230,6 @@ export const Promotions = ({ stage, argocdShard }: { stage: Stage; argocdShard?:
 
   return (
     <>
-      {isStageTargetAware(stage) && (
-        <PromotionRequests projectName={projectName || ''} stageName={stageName || ''} />
-      )}
-
       <PromotionWindowAlert stage={stage} className='mb-4' />
 
       <Table

@@ -23,9 +23,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/pkg/client/apiserver"
 	"github.com/akuity/kargo/pkg/controller/metrics"
-	k8sevent "github.com/akuity/kargo/pkg/event/kubernetes"
-	fakeevent "github.com/akuity/kargo/pkg/kubernetes/event/fake"
+	"github.com/akuity/kargo/pkg/event"
+	fakeevent "github.com/akuity/kargo/pkg/event/fake"
 	"github.com/akuity/kargo/pkg/promotion"
 )
 
@@ -39,11 +40,13 @@ func TestNewPromotionReconciler(t *testing.T) {
 	r := newReconciler(
 		kubeClient,
 		kubeClient,
-		k8sevent.NewEventSender(&fakeevent.EventRecorder{}),
+		&fakeevent.Sender{},
 		&promotion.MockEngine{},
 		ReconcilerConfig{},
+		nil,
 	)
 	require.NotNil(t, r.kargoClient)
+	require.Nil(t, r.targets)
 	require.NotNil(t, r.sender)
 	require.NotNil(t, r.promoEngine)
 	require.NotNil(t, r.getStageFn)
@@ -53,7 +56,7 @@ func TestNewPromotionReconciler(t *testing.T) {
 
 func newFakeReconciler(
 	t *testing.T,
-	recorder *fakeevent.EventRecorder,
+	sender *fakeevent.Sender,
 	objects ...client.Object,
 ) *reconciler {
 	scheme := k8sruntime.NewScheme()
@@ -63,9 +66,10 @@ func newFakeReconciler(
 	return newReconciler(
 		kargoClient,
 		kargoClient,
-		k8sevent.NewEventSender(recorder),
+		sender,
 		&promotion.MockEngine{},
 		ReconcilerConfig{},
+		nil,
 	)
 }
 
@@ -431,8 +435,8 @@ func TestReconcile(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			ctx := t.Context()
-			recorder := fakeevent.NewEventRecorder(1)
-			r := newFakeReconciler(t, recorder, tc.promos...)
+			sender := &fakeevent.Sender{}
+			r := newFakeReconciler(t, sender, tc.promos...)
 			if tc.apiReader != nil {
 				r.apiReader = tc.apiReader
 			}
@@ -499,12 +503,17 @@ func TestReconcile(t *testing.T) {
 				err = r.kargoClient.Get(ctx, req.NamespacedName, &updatedPromo)
 				require.NoError(t, err)
 				require.Equal(t, tc.expectedPhase, updatedPromo.Status.Phase)
+				sent := sender.Sent()
 				if tc.expectedEventRecorded {
-					require.Len(t, recorder.Events, 1)
-					event := <-recorder.Events
-					require.Equal(t, tc.expectedEventType, kargoapi.EventType(event.Reason))
+					require.Len(t, sent, 1)
+					expectedSubject, subjectErr := event.NewEventSubject(string(tc.expectedEventType))
+					require.NoError(t, subjectErr)
+					require.Equal(t, string(tc.expectedEventType), sent[0].Type())
+					require.Equal(t, "Promotion", event.KindOf(sent[0]))
+					require.Equal(t, expectedSubject, sent[0].Subject())
+				} else {
+					require.Empty(t, sent)
 				}
-				require.Empty(t, recorder.Events)
 			}
 		})
 	}
@@ -520,7 +529,7 @@ func Test_reconciler_terminatePromotion(t *testing.T) {
 		promo       *kargoapi.Promotion
 		freight     *kargoapi.Freight
 		interceptor interceptor.Funcs
-		assertions  func(*testing.T, *fakeevent.EventRecorder, *kargoapi.Promotion, error)
+		assertions  func(*testing.T, *fakeevent.Sender, *kargoapi.Promotion, error)
 	}{
 		{
 			name: "terminates pending promotion",
@@ -531,15 +540,21 @@ func Test_reconciler_terminatePromotion(t *testing.T) {
 				kargoapi.PromotionPhasePending,
 				now,
 			),
-			assertions: func(t *testing.T, recorder *fakeevent.EventRecorder, promo *kargoapi.Promotion, err error) {
+			assertions: func(t *testing.T, sender *fakeevent.Sender, promo *kargoapi.Promotion, err error) {
 				require.NoError(t, err)
 				require.Equal(t, kargoapi.PromotionPhaseAborted, promo.Status.Phase)
 				require.Contains(t, promo.Status.Message, "terminated")
 				require.NotNil(t, promo.Status.FinishedAt)
 
-				require.Len(t, recorder.Events, 1)
-				event := <-recorder.Events
-				require.Equal(t, string(kargoapi.EventTypePromotionAborted), event.Reason)
+				sent := sender.Sent()
+				require.Len(t, sent, 1)
+				require.Equal(t, string(kargoapi.EventTypePromotionAborted), sent[0].Type())
+				require.Equal(t, "Promotion", event.KindOf(sent[0]))
+				require.Equal(
+					t,
+					"akuity.kargo.events.promotion.aborted",
+					sent[0].Subject(),
+				)
 			},
 		},
 		{
@@ -562,7 +577,7 @@ func Test_reconciler_terminatePromotion(t *testing.T) {
 					}},
 				},
 			},
-			assertions: func(t *testing.T, recorder *fakeevent.EventRecorder, promo *kargoapi.Promotion, err error) {
+			assertions: func(t *testing.T, sender *fakeevent.Sender, promo *kargoapi.Promotion, err error) {
 				require.NoError(t, err)
 				require.Equal(t, kargoapi.PromotionPhaseAborted, promo.Status.Phase)
 				require.Contains(t, promo.Status.Message, "terminated")
@@ -571,9 +586,15 @@ func Test_reconciler_terminatePromotion(t *testing.T) {
 				require.Equal(t, kargoapi.PromotionStepStatusAborted, promo.Status.StepExecutionMetadata[0].Status)
 				require.NotNil(t, promo.Status.StepExecutionMetadata[0].FinishedAt)
 
-				require.Len(t, recorder.Events, 1)
-				event := <-recorder.Events
-				require.Equal(t, string(kargoapi.EventTypePromotionAborted), event.Reason)
+				sent := sender.Sent()
+				require.Len(t, sent, 1)
+				require.Equal(t, string(kargoapi.EventTypePromotionAborted), sent[0].Type())
+				require.Equal(t, "Promotion", event.KindOf(sent[0]))
+				require.Equal(
+					t,
+					"akuity.kargo.events.promotion.aborted",
+					sent[0].Subject(),
+				)
 			},
 		},
 		{
@@ -588,17 +609,25 @@ func Test_reconciler_terminatePromotion(t *testing.T) {
 				kargoapi.PromotionPhasePending,
 				now,
 			),
-			assertions: func(t *testing.T, recorder *fakeevent.EventRecorder, promo *kargoapi.Promotion, err error) {
+			assertions: func(t *testing.T, sender *fakeevent.Sender, promo *kargoapi.Promotion, err error) {
 				require.NoError(t, err)
 				require.Equal(t, kargoapi.PromotionPhaseAborted, promo.Status.Phase)
 				require.Contains(t, promo.Status.Message, "terminated")
 				require.NotNil(t, promo.Status.FinishedAt)
 
-				require.Len(t, recorder.Events, 1)
-				event := <-recorder.Events
-				require.Equal(t, string(kargoapi.EventTypePromotionAborted), event.Reason)
-				actor := event.Annotations[kargoapi.AnnotationKeyEventActor]
-				require.Equal(t, "fake-actor", actor)
+				sent := sender.Sent()
+				require.Len(t, sent, 1)
+				require.Equal(t, string(kargoapi.EventTypePromotionAborted), sent[0].Type())
+				require.Equal(t, "Promotion", event.KindOf(sent[0]))
+				require.Equal(
+					t,
+					"akuity.kargo.events.promotion.aborted",
+					sent[0].Subject(),
+				)
+				var data event.PromotionAborted
+				require.NoError(t, sent[0].DataAs(&data))
+				require.Equal(t, ptr.To("fake-actor"), data.Actor)
+				require.Equal(t, "fake-namespace", data.Project)
 			},
 		},
 		{
@@ -614,11 +643,11 @@ func Test_reconciler_terminatePromotion(t *testing.T) {
 				p.Status.Message = "an existing message"
 				return p
 			}(),
-			assertions: func(t *testing.T, recorder *fakeevent.EventRecorder, promo *kargoapi.Promotion, err error) {
+			assertions: func(t *testing.T, sender *fakeevent.Sender, promo *kargoapi.Promotion, err error) {
 				require.NoError(t, err)
 				require.Equal(t, kargoapi.PromotionPhaseSucceeded, promo.Status.Phase)
 				require.Equal(t, "an existing message", promo.Status.Message)
-				require.Len(t, recorder.Events, 0)
+				require.Empty(t, sender.Sent())
 			},
 		},
 		{
@@ -642,10 +671,10 @@ func Test_reconciler_terminatePromotion(t *testing.T) {
 					return errors.New("something went wrong")
 				},
 			},
-			assertions: func(t *testing.T, recorder *fakeevent.EventRecorder, promo *kargoapi.Promotion, err error) {
+			assertions: func(t *testing.T, sender *fakeevent.Sender, promo *kargoapi.Promotion, err error) {
 				require.ErrorContains(t, err, "something went wrong")
 				require.Equal(t, kargoapi.PromotionPhasePending, promo.Status.Phase)
-				require.Len(t, recorder.Events, 0)
+				require.Empty(t, sender.Sent())
 			},
 		},
 	}
@@ -657,12 +686,12 @@ func Test_reconciler_terminatePromotion(t *testing.T) {
 				WithStatusSubresource(&kargoapi.Promotion{}).
 				WithInterceptorFuncs(tt.interceptor).
 				Build()
-			recorder := fakeevent.NewEventRecorder(1)
+			sender := &fakeevent.Sender{}
 
 			r := &reconciler{
 				kargoClient:  c,
 				apiReader:    c,
-				sender:       k8sevent.NewEventSender(recorder),
+				sender:       sender,
 				promoMetrics: metrics.NewPromotionMetrics(c),
 				cleanupWorkDirFn: func(context.Context, types.UID) {
 					// no-op for tests
@@ -671,7 +700,7 @@ func Test_reconciler_terminatePromotion(t *testing.T) {
 
 			req := tt.req
 			err := r.terminatePromotion(t.Context(), &req, tt.promo, tt.freight)
-			tt.assertions(t, recorder, tt.promo, err)
+			tt.assertions(t, sender, tt.promo, err)
 		})
 	}
 }
@@ -682,7 +711,7 @@ func Test_reconciler_handleDeletion(t *testing.T) {
 		objects    []client.Object
 		reconcile  types.NamespacedName
 		assertions func(
-			*testing.T, *reconciler, *fakeevent.EventRecorder,
+			*testing.T, *reconciler, *fakeevent.Sender,
 			bool, ctrl.Result, error,
 		)
 	}{
@@ -691,13 +720,13 @@ func Test_reconciler_handleDeletion(t *testing.T) {
 			reconcile: types.NamespacedName{Namespace: "fake-ns", Name: "deleted-promo"},
 			objects:   []client.Object{},
 			assertions: func(
-				t *testing.T, _ *reconciler, recorder *fakeevent.EventRecorder,
+				t *testing.T, _ *reconciler, sender *fakeevent.Sender,
 				cleanupCalled bool, result ctrl.Result, err error,
 			) {
 				require.NoError(t, err)
 				require.Equal(t, ctrl.Result{}, result)
 				require.False(t, cleanupCalled)
-				require.Len(t, recorder.Events, 0)
+				require.Empty(t, sender.Sent())
 			},
 		},
 		{
@@ -707,7 +736,7 @@ func Test_reconciler_handleDeletion(t *testing.T) {
 				newPromo("fake-ns", "fake-promo", "fake-stage", kargoapi.PromotionPhaseSucceeded, now),
 			},
 			assertions: func(
-				t *testing.T, _ *reconciler, _ *fakeevent.EventRecorder,
+				t *testing.T, _ *reconciler, _ *fakeevent.Sender,
 				cleanupCalled bool, result ctrl.Result, err error,
 			) {
 				require.NoError(t, err)
@@ -729,13 +758,13 @@ func Test_reconciler_handleDeletion(t *testing.T) {
 				}(),
 			},
 			assertions: func(
-				t *testing.T, _ *reconciler, recorder *fakeevent.EventRecorder,
+				t *testing.T, _ *reconciler, sender *fakeevent.Sender,
 				cleanupCalled bool, result ctrl.Result, err error,
 			) {
 				require.NoError(t, err)
 				require.Equal(t, ctrl.Result{}, result)
 				require.True(t, cleanupCalled)
-				require.Len(t, recorder.Events, 0)
+				require.Empty(t, sender.Sent())
 			},
 		},
 		{
@@ -754,21 +783,21 @@ func Test_reconciler_handleDeletion(t *testing.T) {
 				}(),
 			},
 			assertions: func(
-				t *testing.T, _ *reconciler, recorder *fakeevent.EventRecorder,
+				t *testing.T, _ *reconciler, sender *fakeevent.Sender,
 				cleanupCalled bool, result ctrl.Result, err error,
 			) {
 				require.NoError(t, err)
 				require.Equal(t, ctrl.Result{}, result)
 				require.False(t, cleanupCalled)
-				require.Len(t, recorder.Events, 0)
+				require.Empty(t, sender.Sent())
 			},
 		},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			ctx := t.Context()
-			recorder := fakeevent.NewEventRecorder(1)
-			r := newFakeReconciler(t, recorder, tc.objects...)
+			sender := &fakeevent.Sender{}
+			r := newFakeReconciler(t, sender, tc.objects...)
 
 			cleanupCalled := false
 			r.cleanupWorkDirFn = func(context.Context, types.UID) {
@@ -776,7 +805,7 @@ func Test_reconciler_handleDeletion(t *testing.T) {
 			}
 
 			result, err := r.Reconcile(ctx, ctrl.Request{NamespacedName: tc.reconcile})
-			tc.assertions(t, r, recorder, cleanupCalled, result, err)
+			tc.assertions(t, r, sender, cleanupCalled, result, err)
 		})
 	}
 }
@@ -792,13 +821,13 @@ func Test_reconciler_terminatePromotion_cleansUpWorkDir(t *testing.T) {
 		WithObjects(promo).
 		WithStatusSubresource(&kargoapi.Promotion{}).
 		Build()
-	recorder := fakeevent.NewEventRecorder(1)
+	sender := &fakeevent.Sender{}
 
 	cleanupCalled := false
 	r := &reconciler{
 		kargoClient:  c,
 		apiReader:    c,
-		sender:       k8sevent.NewEventSender(recorder),
+		sender:       sender,
 		promoMetrics: metrics.NewPromotionMetrics(c),
 		cleanupWorkDirFn: func(context.Context, types.UID) {
 			cleanupCalled = true
@@ -1095,6 +1124,28 @@ func Test_calculateRequeueInterval(t *testing.T) {
 			},
 			assertions: func(t *testing.T, requeueInterval time.Duration) {
 				require.Equal(t, 20*time.Second, requeueInterval)
+			},
+		},
+		{
+			name: "timeout deadline already passed",
+			promo: &kargoapi.Promotion{
+				Spec: kargoapi.PromotionSpec{
+					Steps: []kargoapi.PromotionStep{{
+						Uses: testStepKindWithTimeout,
+					}},
+				},
+				Status: kargoapi.PromotionStatus{
+					CurrentStep: 0,
+					StepExecutionMetadata: []kargoapi.StepExecutionMetadata{{
+						StartedAt: &metav1.Time{
+							Time: time.Now().Add(-testTimeout).Add(-time.Minute),
+						},
+					}},
+				},
+			},
+			assertions: func(t *testing.T, requeueInterval time.Duration) {
+				// controller-runtime drops non-positive RequeueAfter values.
+				require.Equal(t, minTimeoutRequeueInterval, requeueInterval)
 			},
 		},
 		{
@@ -1399,7 +1450,10 @@ func Test_reconciler_promote_targetContext(t *testing.T) {
 				kargoClient: fake.NewClientBuilder().WithScheme(scheme).WithObjects(
 					stage,
 					freight,
-					&kargoapi.Target{
+				).Build(),
+				promoEngine: engine,
+				targets: fakeTargetGetter{
+					"fake-target": {
 						ObjectMeta: metav1.ObjectMeta{
 							Name:      "fake-target",
 							Namespace: testNamespace,
@@ -1411,8 +1465,7 @@ func Test_reconciler_promote_targetContext(t *testing.T) {
 							},
 						},
 					},
-				).Build(),
-				promoEngine: engine,
+				},
 			}
 
 			status, _, err := r.promote(
@@ -1424,6 +1477,163 @@ func Test_reconciler_promote_targetContext(t *testing.T) {
 			require.NoError(t, err)
 			require.Equal(t, kargoapi.PromotionPhaseSucceeded, status.Phase)
 			testCase.assert(t, capturedCtx.Target)
+		})
+	}
+}
+
+// fakeTargetGetter is a promotion.TargetGetter over a fixed set of Targets,
+// keyed by name.
+type fakeTargetGetter map[string]*kargoapi.Target
+
+func (f fakeTargetGetter) GetTarget(_ context.Context, _, name string) (*kargoapi.Target, error) {
+	return f[name], nil
+}
+
+// failingTargetGetter is a promotion.TargetGetter that cannot read any Target.
+type failingTargetGetter struct{ err error }
+
+func (f failingTargetGetter) GetTarget(context.Context, string, string) (*kargoapi.Target, error) {
+	return nil, f.err
+}
+
+func Test_reconciler_promote_targetErrors(t *testing.T) {
+	scheme := k8sruntime.NewScheme()
+	require.NoError(t, kargoapi.SchemeBuilder.AddToScheme(scheme))
+
+	const testNamespace = "fake-namespace"
+
+	testFreight := &kargoapi.Freight{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "fake-freight",
+			Namespace: testNamespace,
+		},
+		Origin: kargoapi.FreightOrigin{
+			Kind: kargoapi.FreightOriginKindWarehouse,
+			Name: "fake-warehouse",
+		},
+	}
+
+	testStage := &kargoapi.Stage{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "fake-stage",
+			Namespace: testNamespace,
+		},
+		Spec: kargoapi.StageSpec{
+			RequestedFreight: []kargoapi.FreightRequest{{
+				Origin:  testFreight.Origin,
+				Sources: kargoapi.FreightSources{Direct: true},
+			}},
+		},
+	}
+
+	testCases := []struct {
+		name    string
+		targets promotion.TargetGetter
+		assert  func(*testing.T, *kargoapi.PromotionStatus, error)
+	}{
+		{
+			name: "no API server to read Targets from ends the Promotion",
+			assert: func(t *testing.T, status *kargoapi.PromotionStatus, err error) {
+				require.ErrorIs(t, err, promotion.ErrTargetsUnavailable)
+				require.ErrorContains(t, err, "no API server to read them from")
+				require.Nil(t, status)
+			},
+		},
+		{
+			name:    "a Target that does not exist ends the Promotion",
+			targets: fakeTargetGetter{},
+			assert: func(t *testing.T, status *kargoapi.PromotionStatus, err error) {
+				require.ErrorIs(t, err, promotion.ErrTargetNotFound)
+				require.Nil(t, status)
+			},
+		},
+		{
+			name: "a refused credential ends the Promotion",
+			targets: failingTargetGetter{
+				err: &apiserver.APIError{StatusCode: 403, Message: "forbidden"},
+			},
+			assert: func(t *testing.T, status *kargoapi.PromotionStatus, err error) {
+				require.ErrorContains(t, err, "forbidden")
+				require.Nil(t, status)
+			},
+		},
+		{
+			name:    "an undecodable answer ends the Promotion",
+			targets: failingTargetGetter{err: errors.New("error decoding Target")},
+			assert: func(t *testing.T, status *kargoapi.PromotionStatus, err error) {
+				require.ErrorContains(t, err, "error decoding Target")
+				require.Nil(t, status)
+			},
+		},
+		{
+			name: "an API server that could not answer leaves the Promotion Running",
+			targets: failingTargetGetter{
+				err: &apiserver.APIError{StatusCode: 503},
+			},
+			assert: func(t *testing.T, status *kargoapi.PromotionStatus, err error) {
+				require.ErrorContains(t, err, "API server responded 503")
+				require.NotNil(t, status)
+				require.Equal(t, kargoapi.PromotionPhaseRunning, status.Phase)
+			},
+		},
+		{
+			name:    "an API server that could not be reached leaves the Promotion Running",
+			targets: failingTargetGetter{err: context.DeadlineExceeded},
+			assert: func(t *testing.T, status *kargoapi.PromotionStatus, err error) {
+				require.ErrorIs(t, err, context.DeadlineExceeded)
+				require.NotNil(t, status)
+				require.Equal(t, kargoapi.PromotionPhaseRunning, status.Phase)
+			},
+		},
+	}
+	for i, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			promo := kargoapi.Promotion{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "fake-promotion",
+					Namespace: testNamespace,
+					UID:       types.UID(fmt.Sprintf("promote-target-error-%d", i)),
+				},
+				Spec: kargoapi.PromotionSpec{
+					Stage:   testStage.Name,
+					Freight: testFreight.Name,
+					Target:  "fake-target",
+					Steps:   []kargoapi.PromotionStep{{Uses: "fake-step"}},
+				},
+			}
+			t.Cleanup(func() {
+				require.NoError(t, os.RemoveAll(promotionWorkDir(promo.UID)))
+			})
+
+			stage, freight := testStage.DeepCopy(), testFreight.DeepCopy()
+
+			r := &reconciler{
+				kargoClient: fake.NewClientBuilder().WithScheme(scheme).WithObjects(
+					stage,
+					freight,
+				).Build(),
+				promoEngine: &promotion.MockEngine{
+					PromoteFn: func(
+						context.Context,
+						promotion.Context,
+						[]promotion.Step,
+					) (promotion.Result, error) {
+						t.Fatal("no steps should run for a Promotion whose Target cannot be resolved")
+						return promotion.Result{}, nil
+					},
+				},
+				targets: testCase.targets,
+			}
+
+			status, _, err := r.promote(
+				context.Background(),
+				promo,
+				stage,
+				freight,
+			)
+			testCase.assert(t, status, err)
 		})
 	}
 }

@@ -252,6 +252,99 @@ func TestConnectWithRetry(t *testing.T) {
 	}
 }
 
+// fakeMigrator answers Check from a scripted sequence of errors, repeating
+// the last one once the sequence is exhausted, and counts the calls.
+type fakeMigrator struct {
+	checks []error
+	calls  int
+}
+
+func (*fakeMigrator) Up(context.Context) ([]int64, error) { return nil, nil }
+
+func (*fakeMigrator) Version(context.Context) (int64, int64, error) { return 0, 0, nil }
+
+func (f *fakeMigrator) Check(context.Context) error {
+	f.calls++
+	if f.calls <= len(f.checks) {
+		return f.checks[f.calls-1]
+	}
+	return f.checks[len(f.checks)-1]
+}
+
+func TestWaitForSchema(t *testing.T) {
+	t.Parallel()
+	behind := fmt.Errorf("%w: database is at version 1 but this binary expects 2", ErrSchemaOutOfDate)
+	testCases := []struct {
+		name     string
+		ctx      func() (context.Context, context.CancelFunc)
+		migrator *fakeMigrator
+		timeout  time.Duration
+		assert   func(*testing.T, *fakeMigrator, error)
+	}{
+		{
+			name:     "a current schema passes at once",
+			migrator: &fakeMigrator{checks: []error{nil}},
+			timeout:  time.Hour,
+			assert: func(t *testing.T, m *fakeMigrator, err error) {
+				require.NoError(t, err)
+				require.Equal(t, 1, m.calls)
+			},
+		},
+		{
+			name:     "a schema that catches up is waited for",
+			migrator: &fakeMigrator{checks: []error{behind, behind, nil}},
+			timeout:  time.Hour,
+			assert: func(t *testing.T, m *fakeMigrator, err error) {
+				require.NoError(t, err)
+				require.Equal(t, 3, m.calls)
+			},
+		},
+		{
+			name:     "a schema still behind at the timeout is an error",
+			migrator: &fakeMigrator{checks: []error{behind}},
+			timeout:  0,
+			assert: func(t *testing.T, m *fakeMigrator, err error) {
+				require.ErrorIs(t, err, ErrSchemaOutOfDate)
+				require.ErrorContains(t, err, "did not reach the expected version within 0s")
+				require.ErrorContains(t, err, "expects 2")
+				require.Equal(t, 1, m.calls)
+			},
+		},
+		{
+			name:     "a failure to read the version is not retried",
+			migrator: &fakeMigrator{checks: []error{errors.New("connection reset")}},
+			timeout:  time.Hour,
+			assert: func(t *testing.T, m *fakeMigrator, err error) {
+				require.EqualError(t, err, "connection reset")
+				require.Equal(t, 1, m.calls)
+			},
+		},
+		{
+			name: "stops when the context is canceled",
+			ctx: func() (context.Context, context.CancelFunc) {
+				return context.WithTimeout(context.Background(), 500*time.Millisecond)
+			},
+			migrator: &fakeMigrator{checks: []error{behind}},
+			timeout:  time.Hour,
+			assert: func(t *testing.T, _ *fakeMigrator, err error) {
+				require.ErrorIs(t, err, context.DeadlineExceeded)
+			},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+			ctx, cancel := context.WithCancel(context.Background())
+			if testCase.ctx != nil {
+				ctx, cancel = testCase.ctx()
+			}
+			defer cancel()
+			err := WaitForSchema(ctx, testCase.migrator, testCase.timeout)
+			testCase.assert(t, testCase.migrator, err)
+		})
+	}
+}
+
 func TestIsTransientConnectError(t *testing.T) {
 	t.Parallel()
 	testCases := []struct {

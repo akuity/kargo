@@ -22,11 +22,13 @@ type Syncer interface {
 	Sources(cache.Cache) []reconciler.Source[reconcile.Request]
 	Sync(context.Context, client.Object) error
 	// Delete is called only after Kubernetes confirms that the key is absent.
+	// A kind whose rows outlive their objects records the object as gone
+	// rather than deleting the row.
 	Delete(context.Context, client.ObjectKey) error
-	// Diff snapshots database rows before obtaining a complete Kubernetes list
-	// and returns every key whose mirror needs attention: objects with a
-	// missing or differing row, and rows whose object is gone. It performs no
-	// writes and returns nothing on a failed or incomplete list. The list may
+	// Diff snapshots database rows before obtaining a Kubernetes list and
+	// returns every key whose mirror needs attention: objects with a missing
+	// or differing row, and rows whose object is gone. It performs no writes
+	// and returns nothing on a failed list. The list may
 	// come from the cache: reconciling a returned key reads Kubernetes afresh
 	// before upserting or deleting, so a stale entry costs at most one extra
 	// reconcile or one more interval, never a wrong write.

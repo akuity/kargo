@@ -43,6 +43,22 @@ linters:
           deny:
             - pkg: github.com/cyphar/filepath-securejoin
               desc: Built-in steps access files through stepCtx.Root, which confines paths to the working directory
+        kustomize:
+          # Most Kustomize packages read Kustomize's package-level OpenAPI
+          # schema, which pkg/kustomize guards. Outside pkg/kustomize, only
+          # these packages, which do not read it, are allowed.
+          list-mode: lax
+          files:
+            - $all
+            - "!**/pkg/kustomize/*.go"
+          allow:
+            - sigs.k8s.io/kustomize/api/konfig
+            - sigs.k8s.io/kustomize/api/types
+            - sigs.k8s.io/kustomize/kyaml/filesys
+            - sigs.k8s.io/kustomize/kyaml/yaml$
+          deny:
+            - pkg: sigs.k8s.io/kustomize
+              desc: Use github.com/akuity/kargo/pkg/kustomize
 
     forbidigo:
       # Match identifiers by the package they come from rather than by their

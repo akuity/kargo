@@ -16,6 +16,7 @@ import (
 	libhttp "github.com/akuity/kargo/pkg/http"
 	"github.com/akuity/kargo/pkg/logging"
 	"github.com/akuity/kargo/pkg/server/auth/can"
+	"github.com/akuity/kargo/pkg/server/request"
 	"github.com/akuity/kargo/pkg/server/user"
 )
 
@@ -38,8 +39,11 @@ func (s *server) recordPromotionCreatedEvent(
 		msg += fmt.Sprintf(" by %q", actor)
 	}
 
-	evt := event.NewPromotionCreated(msg, actor, p, f)
-	if err := s.sender.Send(ctx, evt); err != nil {
+	evt, err := event.NewPromotionCreated(msg, actor, p, f)
+	if err == nil {
+		err = s.sender.Send(ctx, evt)
+	}
+	if err != nil {
 		logging.LoggerFromContext(ctx).Error(err, "Error when publishing new promotion event")
 	}
 }
@@ -75,7 +79,7 @@ func (s *server) promoteToStage(c *gin.Context) {
 	stageName := c.Param("stage")
 
 	var req promoteToStageRequest
-	if !bindJSONOrError(c, &req) {
+	if !request.BindJSON(c, &req) {
 		return
 	}
 
@@ -203,15 +207,16 @@ func (s *server) promoteToStage(c *gin.Context) {
 	// A Stage that selects Targets fans Freight out to them via a PromotionRequest
 	// rather than promoting to itself with a single Promotion.
 	if stage.IsTargetAware() {
-		// Both the Target lookup and the create go through the internal client.
-		// PromotionRequests are system-owned, and the promote-verb check above
-		// IS the authorization decision for this request; which Targets the
-		// Stage governs is a detail of carrying it out. Resolving as the user
-		// would also break the kargo-promoter role, which holds the promote
-		// verb but no permission to list Targets.
-		promotionRequest, prErr := api.NewPromotionRequest(
-			ctx, s.client.InternalClient(), stage, freight.Name,
-		)
+		// The create goes through the internal client: PromotionRequests are
+		// system-owned, and the promote-verb check above IS the authorization
+		// decision for this request. The Targets come from the database
+		// without a check of their own for the same reason.
+		targets, targetErr := s.governedTargets(ctx, stage)
+		if targetErr != nil {
+			_ = c.Error(targetErr)
+			return
+		}
+		promotionRequest, prErr := api.NewPromotionRequestForAllTargets(stage, freight.Name, targets)
 		if prErr != nil {
 			_ = c.Error(prErr)
 			return

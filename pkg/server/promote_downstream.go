@@ -14,6 +14,7 @@ import (
 	"github.com/akuity/kargo/pkg/api"
 	libhttp "github.com/akuity/kargo/pkg/http"
 	"github.com/akuity/kargo/pkg/server/auth/can"
+	"github.com/akuity/kargo/pkg/server/request"
 	"github.com/akuity/kargo/pkg/server/user"
 )
 
@@ -71,7 +72,7 @@ func (s *server) promoteDownstream(c *gin.Context) {
 	stageName := c.Param("stage")
 
 	var req promoteDownstreamRequest
-	if !bindJSONOrError(c, &req) {
+	if !request.BindJSON(c, &req) {
 		return
 	}
 
@@ -177,13 +178,17 @@ func (s *server) promoteDownstream(c *gin.Context) {
 		// A downstream Stage that selects Targets fans Freight out to them via
 		// a PromotionRequest rather than promoting to itself with a Promotion.
 		if downstream.IsTargetAware() {
-			// Both the Target lookup and the create go through the internal
-			// client. PromotionRequests are system-owned, and the promote-verb
-			// check above IS the authorization decision for this downstream
-			// Stage; which Targets it governs is a detail of carrying it out.
-			newPromoReq, err := api.NewPromotionRequest(
-				ctx, s.client.InternalClient(), &downstream, freight.Name,
-			)
+			// The create goes through the internal client: PromotionRequests
+			// are system-owned, and the promote-verb check above IS the
+			// authorization decision for this downstream Stage. The Targets
+			// come from the database without a check of their own for the
+			// same reason.
+			targets, err := s.governedTargets(ctx, &downstream)
+			if err != nil {
+				promoteErrs = append(promoteErrs, err)
+				continue
+			}
+			newPromoReq, err := api.NewPromotionRequestForAllTargets(&downstream, freight.Name, targets)
 			if err != nil {
 				promoteErrs = append(promoteErrs, err)
 				continue

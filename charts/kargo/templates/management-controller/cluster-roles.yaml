@@ -66,8 +66,8 @@ rules:
   resources:
   - clusterconfigs
   - promotionrequests
+  - promotions
   - stages
-  - targets
   - warehouses
   - projectconfigs
   verbs:

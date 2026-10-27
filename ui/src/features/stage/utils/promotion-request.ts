@@ -1,6 +1,10 @@
-import { PromotionRequest } from '@ui/gen/api/v2/models';
+import { PromotionRequest, Stage } from '@ui/gen/api/v2/models';
 
-const terminalPhases = ['Succeeded', 'Failed', 'Errored'];
+// The phases a PromotionRequest does not come back from, mirroring
+// PromotionRequestPhase.IsTerminal on the back end. Aborted belongs here: a
+// round someone cancelled is as finished as one that failed, and reading it as
+// still running leaves every Target it named looking like it is mid-promotion.
+const terminalPhases = ['Succeeded', 'Failed', 'Errored', 'Aborted'];
 
 export const isPromotionRequestPhaseTerminal = (phase?: string) =>
   terminalPhases.includes(phase || '');
@@ -9,6 +13,61 @@ export const isPromotionRequestPhaseTerminal = (phase?: string) =>
 // a ULID, so within a Stage, name order is creation order.
 export const promotionRequestCompareFn = (lhs: PromotionRequest, rhs: PromotionRequest) =>
   (rhs?.metadata?.name || '').localeCompare(lhs?.metadata?.name || '');
+
+// currentRound picks, out of a list of PromotionRequests, the one that best
+// describes what a Stage is doing right now: the one its status names as
+// current, else the one it names as last, else the newest it has at all -- the
+// last two cover a Stage whose status has not caught up with its requests yet.
+// Requests belonging to other Stages are ignored, so the list may be a whole
+// Project's. A Stage that is not target-aware has no rounds, and callers
+// filter those out before asking.
+export const currentRound = (
+  stage: Stage | undefined,
+  requests: PromotionRequest[]
+): PromotionRequest | undefined => {
+  const stageName = stage?.metadata?.name || '';
+  if (!stage || !stageName) {
+    return undefined;
+  }
+  return roundOf(
+    stage,
+    requests.filter((request) => request.spec?.stage === stageName)
+  );
+};
+
+// roundOf applies that precedence to one Stage's own requests, already
+// separated out.
+const roundOf = (stage: Stage, mine: PromotionRequest[]): PromotionRequest | undefined => {
+  const named = (name?: string) =>
+    name ? mine.find((request) => request.metadata?.name === name) : undefined;
+  return (
+    named(stage.status?.currentPromotionRequest?.name) ||
+    named(stage.status?.lastPromotionRequest?.name) ||
+    [...mine].sort(promotionRequestCompareFn)[0]
+  );
+};
+
+// currentRounds resolves the round of many Stages at once, keyed by Stage name.
+// It separates the requests by Stage in one pass, where asking currentRound per
+// Stage would walk and copy the Project's whole list once for each of them.
+export const currentRounds = (
+  stages: Stage[],
+  requests: PromotionRequest[]
+): Record<string, PromotionRequest | undefined> => {
+  const byStage = new Map<string, PromotionRequest[]>();
+  for (const request of requests) {
+    const stageName = request.spec?.stage || '';
+    byStage.set(stageName, [...(byStage.get(stageName) || []), request]);
+  }
+  return Object.fromEntries(
+    stages
+      .filter((stage) => stage.metadata?.name)
+      .map((stage) => {
+        const stageName = stage.metadata?.name || '';
+        return [stageName, roundOf(stage, byStage.get(stageName) || [])];
+      })
+  );
+};
 
 // blockingMessage returns the message a user needs to see when a
 // PromotionRequest is not going to progress. The reconciler explains the
@@ -60,7 +119,7 @@ export const roundBlock = (promotionRequest?: PromotionRequest): RoundBlock | un
   return { title: 'Promotion to this Stage cannot progress', description: ready.message };
 };
 
-export type PromotionRequestTargetRow = {
+type PromotionRequestTargetRow = {
   name: string;
   promotion?: string;
   phase?: string;

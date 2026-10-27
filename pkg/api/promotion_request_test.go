@@ -6,9 +6,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"k8s.io/apimachinery/pkg/util/intstr"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 )
@@ -272,7 +270,7 @@ func TestComparePromotionRequestByPhaseAndCreationTime(t *testing.T) {
 	}
 }
 
-func TestNewPromotionRequest(t *testing.T) {
+func TestNewPromotionRequestForAllTargets(t *testing.T) {
 	t.Parallel()
 
 	const (
@@ -280,9 +278,6 @@ func TestNewPromotionRequest(t *testing.T) {
 		stage   = "fake-stage"
 		freight = "abcdef1234567890"
 	)
-
-	scheme := runtime.NewScheme()
-	require.NoError(t, kargoapi.AddToScheme(scheme))
 
 	testStage := &kargoapi.Stage{
 		ObjectMeta: metav1.ObjectMeta{
@@ -300,44 +295,25 @@ func TestNewPromotionRequest(t *testing.T) {
 		},
 	}
 
-	newTarget := func(name string, labels map[string]string) *kargoapi.Target {
-		return &kargoapi.Target{
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: project,
-				Name:      name,
-				Labels:    labels,
-			},
+	newTarget := func(name string) kargoapi.Target {
+		return kargoapi.Target{
+			ObjectMeta: metav1.ObjectMeta{Namespace: project, Name: name},
 		}
 	}
+	usEast := newTarget("us-east")
+	usWest := newTarget("us-west")
 
-	// Deep-copy: the builder takes ownership of the objects it is given, and
-	// these fixtures are shared across parallel subtests.
-	newClient := func(targets ...*kargoapi.Target) client.Client {
-		builder := fake.NewClientBuilder().WithScheme(scheme)
-		for _, target := range targets {
-			builder = builder.WithObjects(target.DeepCopy())
-		}
-		return builder.Build()
-	}
-
-	usEast := newTarget("us-east", map[string]string{"region": "us"})
-	usWest := newTarget("us-west", map[string]string{"region": "us"})
-	euWest := newTarget("eu-west", map[string]string{"region": "eu"})
-
-	t.Run("resolves selectors to Targets and records Stage and Freight", func(t *testing.T) {
+	t.Run("records the Stage, the Freight and the Targets it was given", func(t *testing.T) {
 		t.Parallel()
 
-		promoReq, err := NewPromotionRequest(
-			t.Context(), newClient(usWest, usEast, euWest), testStage, freight,
-		)
+		promoReq, err := NewPromotionRequestForAllTargets(testStage, freight, []kargoapi.Target{usEast, usWest})
 		require.NoError(t, err)
 
 		require.Equal(t, project, promoReq.Namespace)
 		require.Equal(t, stage, promoReq.Spec.Stage)
 		require.Equal(t, freight, promoReq.Spec.Freight)
 		require.True(t, strings.HasPrefix(promoReq.Name, stage+"."))
-		// Only Targets matching the selector, sorted by name so that repeated
-		// calls agree.
+		// In the order given: the caller has already filtered and sorted.
 		require.Equal(
 			t,
 			[]kargoapi.PromotionRequestTarget{
@@ -348,81 +324,10 @@ func TestNewPromotionRequest(t *testing.T) {
 		)
 	})
 
-	t.Run("the resolved list is a snapshot, not a live query", func(t *testing.T) {
-		t.Parallel()
-
-		c := newClient(usEast)
-		promoReq, err := NewPromotionRequest(t.Context(), c, testStage, freight)
-		require.NoError(t, err)
-		require.Len(t, promoReq.Spec.Targets, 1)
-
-		// A Target appearing after the PromotionRequest was built does not
-		// belong to it. It is picked up by a subsequent PromotionRequest, not
-		// by re-resolving this one.
-		require.NoError(t, c.Create(t.Context(), usWest.DeepCopy()))
-		require.Equal(
-			t,
-			[]kargoapi.PromotionRequestTarget{{Name: "us-east"}},
-			promoReq.Spec.Targets,
-		)
-	})
-
-	t.Run("selectors describe a union of Targets", func(t *testing.T) {
-		t.Parallel()
-
-		union := testStage.DeepCopy()
-		union.Spec.Targets = &kargoapi.StageTargets{
-			Selectors: []metav1.LabelSelector{
-				{MatchLabels: map[string]string{"region": "us"}},
-				{MatchLabels: map[string]string{"region": "eu"}},
-			},
-		}
-		inUS := newTarget("us-east", map[string]string{"region": "us"})
-		inEU := newTarget("eu-west", map[string]string{"region": "eu"})
-
-		promoReq, err := NewPromotionRequest(
-			t.Context(), newClient(inUS, inEU), union, freight,
-		)
-		require.NoError(t, err)
-		require.Equal(
-			t,
-			[]kargoapi.PromotionRequestTarget{
-				{Name: "eu-west"},
-				{Name: "us-east"},
-			},
-			promoReq.Spec.Targets,
-		)
-	})
-
-	t.Run("a Target matching two selectors appears once", func(t *testing.T) {
-		t.Parallel()
-
-		multiSelector := testStage.DeepCopy()
-		multiSelector.Spec.Targets = &kargoapi.StageTargets{
-			Selectors: []metav1.LabelSelector{
-				{MatchLabels: map[string]string{"region": "us"}},
-				{MatchLabels: map[string]string{"tier": "prod"}},
-			},
-		}
-		both := newTarget("us-east", map[string]string{"region": "us", "tier": "prod"})
-
-		promoReq, err := NewPromotionRequest(
-			t.Context(), newClient(both), multiSelector, freight,
-		)
-		require.NoError(t, err)
-		require.Equal(
-			t,
-			[]kargoapi.PromotionRequestTarget{{Name: "us-east"}},
-			promoReq.Spec.Targets,
-		)
-	})
-
 	t.Run("the Stage is the controlling owner", func(t *testing.T) {
 		t.Parallel()
 
-		promoReq, err := NewPromotionRequest(
-			t.Context(), newClient(usEast), testStage, freight,
-		)
+		promoReq, err := NewPromotionRequestForAllTargets(testStage, freight, []kargoapi.Target{usEast})
 		require.NoError(t, err)
 
 		require.Len(t, promoReq.OwnerReferences, 1)
@@ -437,9 +342,7 @@ func TestNewPromotionRequest(t *testing.T) {
 	t.Run("identifying labels", func(t *testing.T) {
 		t.Parallel()
 
-		promoReq, err := NewPromotionRequest(
-			t.Context(), newClient(usEast), testStage, freight,
-		)
+		promoReq, err := NewPromotionRequestForAllTargets(testStage, freight, []kargoapi.Target{usEast})
 		require.NoError(t, err)
 		require.Equal(t, stage, promoReq.Labels[kargoapi.LabelKeyStage])
 		// Without the shard label, only the default controller would ever
@@ -452,42 +355,23 @@ func TestNewPromotionRequest(t *testing.T) {
 
 		unsharded := testStage.DeepCopy()
 		unsharded.Spec.Shard = ""
-		promoReq, err := NewPromotionRequest(
-			t.Context(), newClient(usEast), unsharded, freight,
-		)
+		promoReq, err := NewPromotionRequestForAllTargets(unsharded, freight, []kargoapi.Target{usEast})
 		require.NoError(t, err)
 		require.NotContains(t, promoReq.Labels, kargoapi.LabelKeyShard)
 	})
 
-	t.Run("selectors matching nothing yield an empty list, not nil", func(t *testing.T) {
+	t.Run("no Targets yield an empty list, not nil", func(t *testing.T) {
 		t.Parallel()
 
 		// spec.targets is required and has no omitempty, so a nil slice would
 		// serialize as null and be rejected by the API server. An empty list
 		// records that the Stage governed no Targets at this moment.
-		promoReq, err := NewPromotionRequest(
-			t.Context(), newClient(euWest), testStage, freight,
-		)
+		promoReq, err := NewPromotionRequestForAllTargets(testStage, freight, nil)
 		require.NoError(t, err)
 		require.NotNil(t, promoReq.Spec.Targets)
 		require.Empty(t, promoReq.Spec.Targets)
 	})
 
-	t.Run("invalid selector", func(t *testing.T) {
-		t.Parallel()
-
-		bad := testStage.DeepCopy()
-		bad.Spec.Targets = &kargoapi.StageTargets{
-			Selectors: []metav1.LabelSelector{{
-				MatchExpressions: []metav1.LabelSelectorRequirement{{
-					Key:      "region",
-					Operator: "NotAnOperator",
-				}},
-			}},
-		}
-		_, err := NewPromotionRequest(t.Context(), newClient(), bad, freight)
-		require.ErrorContains(t, err, "error resolving Targets governed by Stage")
-	})
 }
 
 // Two separate properties, and only the first one holds.
@@ -534,4 +418,92 @@ func TestGenerateChildPromotionNameOrdering(t *testing.T) {
 		east := GenerateChildPromotionName(stage, "us-east", freight)
 		require.Less(t, east, west)
 	})
+}
+
+func Test_calculateUpdateStrategy(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name             string
+		stageStrategy    kargoapi.TargetUpdateStrategy
+		targetCount      int
+		expectedStrategy kargoapi.PromotionRequestUpdateStrategy
+	}{
+		{
+			name:             "empty strategy maps to 0-s",
+			targetCount:      100,
+			stageStrategy:    kargoapi.TargetUpdateStrategy{},
+			expectedStrategy: kargoapi.PromotionRequestUpdateStrategy{},
+		},
+		{
+			name:        "number values map as is",
+			targetCount: 100,
+			stageStrategy: kargoapi.TargetUpdateStrategy{
+				MaxConcurrent: new(intstr.FromInt(10)),
+				MaxFailures:   new(intstr.FromInt(10)),
+			},
+			expectedStrategy: kargoapi.PromotionRequestUpdateStrategy{
+				MaxConcurrent: 10,
+				MaxFailures:   10,
+			},
+		},
+		{
+			name:        "percentage values resolve in actual values",
+			targetCount: 1000,
+			stageStrategy: kargoapi.TargetUpdateStrategy{
+				MaxConcurrent: new(intstr.FromString("16%")),
+				MaxFailures:   new(intstr.FromString("8%")),
+			},
+			expectedStrategy: kargoapi.PromotionRequestUpdateStrategy{
+				MaxConcurrent: 160,
+				MaxFailures:   80,
+			},
+		},
+		{
+			name:        "percentage values rounded up",
+			targetCount: 1111,
+			stageStrategy: kargoapi.TargetUpdateStrategy{
+				MaxConcurrent: new(intstr.FromString("16%")),
+				MaxFailures:   new(intstr.FromString("8%")),
+			},
+			expectedStrategy: kargoapi.PromotionRequestUpdateStrategy{
+				MaxConcurrent: 178,
+				MaxFailures:   89,
+			},
+		},
+		{
+			name:        "low percent value resolves into 1",
+			targetCount: 5,
+			stageStrategy: kargoapi.TargetUpdateStrategy{
+				MaxConcurrent: new(intstr.FromString("5%")),
+				MaxFailures:   new(intstr.FromString("5%")),
+			},
+			expectedStrategy: kargoapi.PromotionRequestUpdateStrategy{
+				MaxConcurrent: 1,
+				MaxFailures:   1,
+			},
+		},
+
+		{
+			name:        "over 100% is not an error",
+			targetCount: 100,
+			stageStrategy: kargoapi.TargetUpdateStrategy{
+				MaxConcurrent: new(intstr.FromString("105%")),
+			},
+			expectedStrategy: kargoapi.PromotionRequestUpdateStrategy{
+				MaxConcurrent: 105,
+				MaxFailures:   0,
+			},
+		},
+	}
+
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+			resultStrategy, err := calculateUpdateStrategy(testCase.stageStrategy, testCase.targetCount)
+			require.NoError(t, err)
+
+			require.Equal(t, testCase.expectedStrategy, resultStrategy)
+		})
+	}
 }

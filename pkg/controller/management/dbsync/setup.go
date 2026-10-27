@@ -14,6 +14,8 @@ import (
 
 	"github.com/akuity/kargo/pkg/controller/management/dbsync/internal/syncapi"
 	"github.com/akuity/kargo/pkg/controller/management/dbsync/projects"
+	"github.com/akuity/kargo/pkg/controller/management/dbsync/promotions"
+	"github.com/akuity/kargo/pkg/controller/management/dbsync/stages"
 	"github.com/akuity/kargo/pkg/database"
 	"github.com/akuity/kargo/pkg/logging"
 	"github.com/akuity/kargo/pkg/reconciler"
@@ -37,6 +39,8 @@ func SetupWithManager(ctx context.Context, mgr manager.Manager, queries *databas
 	// syncer here.
 	syncers := []syncapi.Syncer{
 		projects.NewSyncer(mgr.GetClient(), queries),
+		stages.NewSyncer(mgr.GetClient(), queries),
+		promotions.NewSyncer(mgr.GetClient(), queries),
 	}
 	for _, syncer := range syncers {
 		if err := register(mgr, reader, syncer); err != nil {

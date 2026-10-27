@@ -9,7 +9,7 @@ rm -rf ${out_file}
 
 quicktype \
   --src-lang schema --alphabetize-properties \
-  --lang go --just-types-and-package --package builtin --omit-empty \
+  --lang go --just-types-and-package --package builtin --omit-empty --no-date-times \
   -o ${out_file} \
   pkg/promotion/runner/builtin/schemas/*.json
 

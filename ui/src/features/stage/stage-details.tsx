@@ -39,17 +39,17 @@ import { StageConditionIcon } from '../common/stage-status/stage-condition-icon'
 import { Promotions } from './promotions';
 import { RequestedFreight } from './requested-freight';
 import { StageActions } from './stage-actions';
-import { Fleet } from './tabs/fleet/fleet';
 import { FreightHistory } from './tabs/freight-history/freight-history';
 import { useGetFreightMap } from './tabs/freight-history/use-get-freight-map';
 import { StageSettings } from './tabs/settings/stage-settings';
+import { StageTargets } from './tabs/targets/targets';
 import { useCurrentRound } from './use-current-round';
 import { useImages } from './use-images';
 import { roundBlock } from './utils/promotion-request';
 import { Verifications } from './verifications';
 
 enum TabsTypes {
-  FLEET = 'Fleet',
+  TARGETS = 'Targets',
   PROMOTION = 'Promotion',
   VERIFICATIONS = 'Verification',
   LIVE_MANIFEST = 'Live Manifest',
@@ -58,7 +58,7 @@ enum TabsTypes {
 }
 
 export const StageDetails = ({ stage }: { stage: Stage }) => {
-  const { name: projectName, stageName } = useParams();
+  const { name: projectName, stageName, promotionRequestName } = useParams();
   const navigate = useNavigate();
 
   const images = useImages([stage]);
@@ -93,13 +93,27 @@ export const StageDetails = ({ stage }: { stage: Stage }) => {
   const stageQuery = useGetStage(projectName || '', stage?.metadata?.name || '');
 
   // The tab a user picks sticks; until then a target-aware Stage opens on its
-  // Fleet tab and a classic Stage on Promotions.
+  // Targets tab and a classic Stage on Promotions. A link to one round of
+  // promotion opens on Promotions whatever the Stage is, since that is the tab
+  // the round is read in.
   const [pickedTab, setActiveTab] = useState<TabsTypes>();
   const targetAware = isStageTargetAware(stage);
-  const activeTab = pickedTab ?? (targetAware ? TabsTypes.FLEET : TabsTypes.PROMOTION);
+  const defaultTab = targetAware && !promotionRequestName ? TabsTypes.TARGETS : TabsTypes.PROMOTION;
+  const activeTab = pickedTab ?? defaultTab;
+
+  // Opening a round counts as picking the Promotions tab, so stepping back out
+  // of the round lands on the list it was opened from. Without this, a reader
+  // who arrived by link rather than by clicking the tab has picked nothing, and
+  // leaving the round would drop a target-aware Stage back to its Targets tab --
+  // somewhere they have never been.
+  useEffect(() => {
+    if (promotionRequestName) {
+      setActiveTab(TabsTypes.PROMOTION);
+    }
+  }, [promotionRequestName]);
 
   // When a target-aware Stage's latest round cannot progress, say so once,
-  // above the tabs, so the Fleet and Promotions tabs both sit under the
+  // above the tabs, so the Targets and Promotions tabs both sit under the
   // explanation rather than each hinting at it.
   const round = useCurrentRound(projectName || '', stage);
   const block = roundBlock(round);
@@ -184,16 +198,27 @@ export const StageDetails = ({ stage }: { stage: Stage }) => {
               defaultActiveKey='1'
               style={{ minHeight: 'fit-content' }}
               activeKey={activeTab}
-              onChange={(newActiveTab) => setActiveTab(newActiveTab as TabsTypes)}
+              onChange={(newActiveTab) => {
+                setActiveTab(newActiveTab as TabsTypes);
+                // Leaving the Promotions tab leaves the round that was open in
+                // it, so the URL stops naming one it is no longer showing.
+                if (promotionRequestName && newActiveTab !== TabsTypes.PROMOTION) {
+                  navigate(generatePath(paths.stage, { name: projectName, stageName }));
+                }
+              }}
               items={[
                 ...(targetAware
                   ? [
                       {
-                        key: TabsTypes.FLEET,
-                        label: 'Fleet',
+                        key: TabsTypes.TARGETS,
+                        label: 'Targets',
                         icon: <FontAwesomeIcon icon={faBullseye} />,
                         children: (
-                          <Fleet projectName={projectName || ''} stage={stage} round={round} />
+                          <StageTargets
+                            projectName={projectName || ''}
+                            stage={stage}
+                            round={round}
+                          />
                         )
                       }
                     ]

@@ -127,6 +127,14 @@ spec:
                       Zero means there is no limit (default)
                     format: int64
                     type: integer
+                  maxFailures:
+                    description: |-
+                      MaxFailures specifies a number of target promotions which can fail before PromotionRequest is considered failed.
+                      Specifies a tolerable number, N failing promotions with maxFailures: N is a success, N+1 is a failure.
+                      Defaults to 0, meaning no failures tolerated.
+                    format: int64
+                    minimum: 0
+                    type: integer
                 type: object
                 x-kubernetes-validations:
                 - rule: self == oldSelf

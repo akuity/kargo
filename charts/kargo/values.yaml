@@ -160,6 +160,92 @@ kubeconfigSecrets: {}
   ## @param kubeconfigSecrets.argocd [nullable] Kubernetes `Secret` name containing kubeconfig for a remote Kubernetes cluster hosting Argo CD resources. Used by Kargo controller(s) only.
   # argocd: ""
 
+## @section NATS
+## @descriptionStart
+## The API server, controller, management controller, and Kubernetes webhooks
+## server connect to a NATS server at startup. By default, this chart installs a NATS cluster using the
+## upstream NATS chart. Any setting supported by that chart may be specified
+## under `nats`. See
+## https://github.com/nats-io/k8s/tree/main/helm/charts/nats for details.
+##
+## To use an existing NATS server instead, set `nats.enabled` to `false` and
+## configure `nats.external`.
+## @descriptionEnd
+nats:
+  ## @param nats.enabled Whether to install NATS as part of this chart. When `false`, `nats.external.url` must be set.
+  enabled: true
+  ## @param nats.fullnameOverride Name of the NATS resources. Kargo components derive the URL of the NATS server from it.
+  fullnameOverride: kargo-nats
+  # Settings for connecting to a NATS server not installed by this chart. These
+  # are Kargo's own; the NATS chart ignores them.
+  external:
+    ## @param nats.external.url URL of an existing NATS server for Kargo components to connect to (e.g. `nats://nats.example.com:4222`). Multiple, comma-separated URLs may be specified. Only used, and then required, when `nats.enabled` is `false`.
+    url: ""
+    # Credentials with which Kargo components authenticate to the server. At
+    # most one of the following may be set. Leave all unset if the server does
+    # not require authentication.
+    nkeySeedSecret:
+      ## @param nats.external.nkeySeedSecret.name Name of a `Secret` in the release namespace containing an nkey seed with which Kargo components authenticate to the NATS server specified by `nats.external.url`. Mutually exclusive with the other `nats.external.*Secret.name` settings.
+      name: ""
+      ## @param nats.external.nkeySeedSecret.key Key within the `Secret` specified by `nats.external.nkeySeedSecret.name` that contains the nkey seed.
+      key: seed.nk
+    credsSecret:
+      ## @param nats.external.credsSecret.name Name of a `Secret` in the release namespace containing a NATS credentials (`.creds`) file, holding a user JWT and nkey seed, with which Kargo components authenticate to the NATS server specified by `nats.external.url`. Used with servers in decentralized (operator) mode. The file is re-read on every reconnect, so updates to the `Secret` take effect without restarting Kargo components. Mutually exclusive with the other `nats.external.*Secret.name` settings.
+      name: ""
+      ## @param nats.external.credsSecret.key Key within the `Secret` specified by `nats.external.credsSecret.name` that contains the credentials file.
+      key: user.creds
+    tokenSecret:
+      ## @param nats.external.tokenSecret.name Name of a `Secret` in the release namespace containing a token with which Kargo components authenticate to the NATS server specified by `nats.external.url`. Mutually exclusive with the other `nats.external.*Secret.name` settings.
+      name: ""
+      ## @param nats.external.tokenSecret.key Key within the `Secret` specified by `nats.external.tokenSecret.name` that contains the token.
+      key: token
+    userPasswordSecret:
+      ## @param nats.external.userPasswordSecret.name Name of a `Secret` in the release namespace containing a username and password with which Kargo components authenticate to the NATS server specified by `nats.external.url`. The default keys match those of a `kubernetes.io/basic-auth` `Secret`. Mutually exclusive with the other `nats.external.*Secret.name` settings.
+      name: ""
+      ## @param nats.external.userPasswordSecret.usernameKey Key within the `Secret` specified by `nats.external.userPasswordSecret.name` that contains the username.
+      usernameKey: username
+      ## @param nats.external.userPasswordSecret.passwordKey Key within the `Secret` specified by `nats.external.userPasswordSecret.name` that contains the password.
+      passwordKey: password
+    # TLS settings for the connection to the server. These may be combined with
+    # any of the credentials above. Setting either secret requires the server
+    # to use TLS.
+    tls:
+      caSecret:
+        ## @param nats.external.tls.caSecret.name Name of a `Secret` in the release namespace containing PEM-encoded CA certificates with which Kargo components verify the certificate of the NATS server specified by `nats.external.url`. Leave empty to use the system's root CAs.
+        name: ""
+        ## @param nats.external.tls.caSecret.key Key within the `Secret` specified by `nats.external.tls.caSecret.name` that contains the CA certificates.
+        key: ca.crt
+      clientCertSecret:
+        ## @param nats.external.tls.clientCertSecret.name Name of a `kubernetes.io/tls` `Secret` in the release namespace containing a client certificate (`tls.crt`) and private key (`tls.key`) that Kargo components present to the NATS server specified by `nats.external.url`. Required by servers that verify client certificates, including those that authenticate clients by them.
+        name: ""
+  ## @skip nats.config
+  config:
+    cluster:
+      enabled: true
+      replicas: 3
+    jetstream:
+      enabled: true
+      # Without a memory store, JetStream refuses to create in-memory streams,
+      # such as one holding a short-lived history of Kargo events.
+      memoryStore:
+        enabled: true
+        maxSize: 256Mi
+  ## @skip nats.container
+  container:
+    # Requests and limits are equal (Guaranteed QoS) so that NATS is neither
+    # CPU-throttled nor evicted ahead of other workloads under node pressure.
+    resources:
+      requests:
+        cpu: "1"
+        memory: 2Gi
+      limits:
+        cpu: "1"
+        memory: 2Gi
+  ## @skip nats.natsBox
+  natsBox:
+    # A debugging aid only. Enable if a NATS CLI inside the cluster is needed.
+    enabled: false
+
 ## @section API
 api:
   ## @param api.enabled Whether the API server is enabled.
@@ -216,7 +302,7 @@ api:
   adminAccount:
     ## @param api.adminAccount.enabled Whether to enable the admin account.
     enabled: true
-    ## @param api.adminAccount.passwordHash Bcrypt password hash for the admin account. A value **must** be provided for this field unless `api.secret.name` is specified.
+    ## @param api.adminAccount.passwordHash Password hash for the admin account, as generated by `kargo hash-password`. bcrypt hashes are also accepted. A value **must** be provided for this field unless `api.secret.name` is specified.
     passwordHash: ""
     ## @param api.adminAccount.tokenSigningKey Key used to sign ID tokens (JWTs) for the admin account. It is suggested that you generate this using a password manager or a command like: `openssl rand -base64 29 \| tr -d "=+/" \| cut`. A value **must** be provided for this field, unless `api.secret.name` is specified.
     tokenSigningKey: ""
@@ -339,7 +425,7 @@ api:
         ## @param api.oidc.dex.image.repository Image repository of Dex
         repository: ghcr.io/dexidp/dex
         ## @param api.oidc.dex.image.tag Image tag for Dex.
-        tag: v2.44.0
+        tag: v2.46.0
         ## @param api.oidc.dex.image.pullPolicy Image pull policy for Dex.
         pullPolicy: IfNotPresent
         ## @param api.oidc.dex.image.pullSecrets List of imagePullSecrets.
@@ -819,6 +905,13 @@ controller:
   # priorityClassName:
   ## @param controller.securityContext Security context for controller pods. Defaults to `global.securityContext`.
   securityContext: {}
+
+  ## Settings for how the controller reaches the Kargo API server. Targets live
+  ## in the control plane's database and the controller, which may run far from
+  ## it, reads them through the API server.
+  apiServer:
+    ## @param controller.apiServer.address The URL at which the controller reaches the API server, e.g. `https://kargo.example.com`. When empty and `api.enabled` is `true`, the API server's in-cluster `Service` is used, and a chart-generated API server certificate is trusted automatically. Set this for a controller installed apart from the API server, such as a shard in another cluster; a certificate the controller does not already trust can be added through `controller.cabundle`. Without an API server the controller cannot promote to Targets. The controller acts as the ServiceAccount of the control plane that its control plane credential resolves to, requesting short-lived tokens for it; a controller installed apart from the control plane must therefore be given a credential for a ServiceAccount there, bound to the `kargo-controller` ClusterRole and allowed to `create` its own `token` subresource.
+    address: ""
 
   cabundle:
     ## @param controller.cabundle.configMapName Specifies the name of an optional ConfigMap containing CA certs that is managed "out of band." Values in the ConfigMap named here should each contain a single PEM-encoded CA cert. If secretName is also defined, it will take precedence over this field.
@@ -1408,9 +1501,11 @@ webhooksServer:
     #   -----END CERTIFICATE-----
 
 ## @section Database
-## Kargo's components do not use a database yet. These settings provision one
-## ahead of that: either the minimal PostgreSQL bundled with the chart or a
-## reference to an external one.
+## Kargo's API server and management controller use a PostgreSQL database:
+## Targets live in it and Project identities are mirrored into it. These
+## settings provide that database, either the minimal PostgreSQL bundled with
+## the chart or a reference to an external one, and point the components that
+## use it at whichever is configured.
 database:
   migrations:
     ## @param database.migrations.enabled Whether to run a Job that applies pending database schema migrations on every install and upgrade. It runs the Kargo image's `migrate` subcommand against whichever database is configured below, waits for the database to accept connections, and serializes with any concurrent runner against the same schema on a lock keyed on that schema. It is an ordinary Job rather than a Helm hook so that it also works when the chart is rendered with `helm template`, for example by Argo CD. Disable it to apply migrations some other way, for example from a pipeline that manages schema changes with its own approvals; Kargo's components refuse to serve against a schema that is behind the version they expect.

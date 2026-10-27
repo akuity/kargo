@@ -31,10 +31,12 @@ type Config struct {
 	Password string `envconfig:"DATABASE_PASSWORD"`
 	// SSLMode is the libpq sslmode to use, used when URL is empty.
 	SSLMode string `envconfig:"DATABASE_SSL_MODE" default:"disable"`
-	// ConnectTimeout bounds how long to keep retrying the first connection.
-	// The database may still be starting when a component does, so being
-	// unreachable or not ready is retried rather than treated as fatal until
-	// this elapses. Errors that cannot clear on their own, such as a rejected
+	// ConnectTimeout bounds how long a component keeps retrying the first
+	// connection and, once connected, waiting for the schema to reach the
+	// version it expects. The database may still be starting and the
+	// migrations still running when a component does, so being unreachable,
+	// not ready or behind is retried rather than treated as fatal until this
+	// elapses. Errors that cannot clear on their own, such as a rejected
 	// password, are not retried.
 	ConnectTimeout time.Duration `envconfig:"DATABASE_CONNECT_TIMEOUT" default:"5m"`
 	// MigrationLockTimeout bounds how long a migration run waits for another

@@ -14,6 +14,7 @@ import (
 	"github.com/akuity/kargo/pkg/cli/cmd/delete"
 	"github.com/akuity/kargo/pkg/cli/cmd/get"
 	"github.com/akuity/kargo/pkg/cli/cmd/grant"
+	"github.com/akuity/kargo/pkg/cli/cmd/hashpassword"
 	"github.com/akuity/kargo/pkg/cli/cmd/login"
 	"github.com/akuity/kargo/pkg/cli/cmd/logout"
 	"github.com/akuity/kargo/pkg/cli/cmd/logs"
@@ -50,6 +51,7 @@ func NewRootCommand(cfg clicfg.CLIConfig) *cobra.Command {
 	cmd.AddCommand(delete.NewCommand(cfg, streams))
 	cmd.AddCommand(get.NewCommand(cfg, streams))
 	cmd.AddCommand(grant.NewCommand(cfg, streams))
+	cmd.AddCommand(hashpassword.NewCommand(streams))
 	cmd.AddCommand(login.NewCommand(cfg))
 	cmd.AddCommand(logs.NewCommand(cfg, streams))
 	cmd.AddCommand(logout.NewCommand())

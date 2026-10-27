@@ -6,19 +6,15 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"sync"
 
 	securefs "github.com/fluxcd/pkg/kustomize/filesys"
 	"github.com/xeipuuv/gojsonschema"
-	"sigs.k8s.io/kustomize/api/krusty"
-	"sigs.k8s.io/kustomize/api/resmap"
-	"sigs.k8s.io/kustomize/api/resource"
 	kustypes "sigs.k8s.io/kustomize/api/types"
 	"sigs.k8s.io/kustomize/kyaml/filesys"
-	"sigs.k8s.io/kustomize/kyaml/openapi"
 	"sigs.k8s.io/yaml"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/pkg/kustomize"
 	"github.com/akuity/kargo/pkg/promotion"
 	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
 )
@@ -33,12 +29,6 @@ func init() {
 		},
 	)
 }
-
-// kustomizeRenderMutex is a mutex that ensures only one kustomize build is
-// running at a time. Required because of an ancient bug in Kustomize that
-// causes it to concurrently read and write to the same map, causing a panic.
-// xref: https://github.com/kubernetes-sigs/kustomize/issues/3659
-var kustomizeRenderMutex sync.Mutex
 
 // kustomizeBuilder is an implementation of the promotion.StepRunner interface
 // that builds a set of Kubernetes manifests using Kustomize.
@@ -85,12 +75,8 @@ func (k *kustomizeBuilder) run(
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, err
 	}
 
-	// Build the manifests.
+	// Prepare the path to the Kustomization.
 	kusPath, err := promotion.ExternalPath(stepCtx, cfg.Path)
-	if err != nil {
-		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, err
-	}
-	rm, err := kustomizeBuild(diskFS, stepCtx.Root, kusPath, cfg.Plugin)
 	if err != nil {
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, err
 	}
@@ -101,18 +87,29 @@ func (k *kustomizeBuilder) run(
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, err
 	}
 
-	// Write the built manifests to the output path.
-	if err = k.writeResult(stepCtx.Root, rm, outPath, cfg.OutputFormat); err != nil {
-		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, fmt.Errorf(
-			"failed to write built manifests to %q: %w", cfg.OutPath, err,
-		)
+	// Build the manifests and write them to the output path.
+	if err = kustomizeBuild(
+		diskFS,
+		stepCtx.Root,
+		kusPath,
+		cfg.Plugin,
+		func(rm kustomize.ResMap) error {
+			if writeErr := k.writeResult(stepCtx.Root, rm, outPath, cfg.OutputFormat); writeErr != nil {
+				return fmt.Errorf(
+					"failed to write built manifests to %q: %w", cfg.OutPath, writeErr,
+				)
+			}
+			return nil
+		},
+	); err != nil {
+		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, err
 	}
 	return promotion.StepResult{Status: kargoapi.PromotionStepStatusSucceeded}, nil
 }
 
 func (k *kustomizeBuilder) writeResult(
 	root *os.Root,
-	rm resmap.ResMap,
+	rm kustomize.ResMap,
 	outPath string,
 	outputFmt *builtin.OutputFormat,
 ) error {
@@ -147,32 +144,17 @@ func (k *kustomizeBuilder) writeResult(
 	}
 }
 
-// kustomizeBuild builds the manifests in the given directory using Kustomize.
-// Kustomization files and Helm chart inflation settings read during the build
-// are validated against root; see kustomizeValidatorFS.
+// kustomizeBuild builds the manifests in the given directory using Kustomize
+// and calls use with the result. use must not retain the ResMap; see
+// kustomize.Build. Kustomization files and Helm chart inflation settings read
+// during the build are validated against root; see kustomizeValidatorFS.
 func kustomizeBuild(
 	kusFS filesys.FileSystem,
 	root *os.Root,
 	path string,
 	pluginCfg *builtin.Plugin,
-) (_ resmap.ResMap, err error) {
-	kustomizeRenderMutex.Lock()
-	defer kustomizeRenderMutex.Unlock()
-
-	// Kustomize stores custom OpenAPI schemas in package-level state. Reset it
-	// before and after every build to isolate independent Promotion steps.
-	openapi.ResetOpenAPI()
-	defer openapi.ResetOpenAPI()
-
-	// Kustomize can panic in unpredicted ways due to (accidental)
-	// invalid object data; recover when this happens to ensure
-	// continuity of operations.
-	defer func() {
-		if r := recover(); r != nil {
-			err = fmt.Errorf("recovered from kustomize build panic: %v", r)
-		}
-	}()
-
+	use func(kustomize.ResMap) error,
+) error {
 	// Disable plugins (i.e. "function based" plugins), but enable builtins
 	// (e.g. transformers, generators).
 	buildPluginCfg := kustypes.DisabledPluginConfig()
@@ -187,7 +169,7 @@ func kustomizeBuild(
 		buildPluginCfg.HelmConfig.KubeVersion = pluginCfg.Helm.KubeVersion
 	}
 
-	buildOptions := &krusty.Options{
+	buildOptions := &kustomize.Options{
 		// As we make use of a "chrooted" filesystem, we can safely allow
 		// loading of files from anywhere.
 		LoadRestrictions: kustypes.LoadRestrictionsNone,
@@ -198,23 +180,21 @@ func kustomizeBuild(
 	// option. See kustomizeValidatorFS.
 	validatingFS, err := newKustomizeValidatorFS(kusFS, root)
 	if err != nil {
-		return nil, err
+		return err
 	}
-	k := krusty.MakeKustomizer(buildOptions)
-	rm, err := k.Run(validatingFS, path)
-	if err != nil {
+	if err = kustomize.Build(validatingFS, path, buildOptions, use); err != nil {
 		// Kustomize obscures validation errors (see kustomizeValidatorFS), so
 		// report them in preference to whatever error Kustomize returned.
 		if validationErr := validatingFS.Err(); validationErr != nil {
-			return nil, validationErr
+			return validationErr
 		}
-		return nil, err
+		return err
 	}
-	return rm, nil
+	return nil
 }
 
 // fileNameFunc generates a filename for a resource.
-type fileNameFunc func(res *resource.Resource, multipleNamespaces bool) string
+type fileNameFunc func(res *kustomize.Resource, multipleNamespaces bool) string
 
 // writeIndividualFiles writes each resource to a separate file using the provided
 // filename generator function.
@@ -230,7 +210,7 @@ type fileNameFunc func(res *resource.Resource, multipleNamespaces bool) string
 func (k *kustomizeBuilder) writeIndividualFiles(
 	root *os.Root,
 	dirPath string,
-	m resmap.ResMap,
+	m kustomize.ResMap,
 	fileNameFn fileNameFunc,
 ) error {
 	byNamespace := m.GroupedByCurrentNamespace()
@@ -251,7 +231,7 @@ func (k *kustomizeBuilder) writeIndividualFiles(
 	return nil
 }
 
-func (k *kustomizeBuilder) writeResource(root *os.Root, path, fName string, res *resource.Resource) error {
+func (k *kustomizeBuilder) writeResource(root *os.Root, path, fName string, res *kustomize.Resource) error {
 	// Filenames are derived from rendered resource metadata, which is untrusted
 	// input. Reject anything that isn't a plain filename so a malicious or
 	// malformed resource cannot write outside path.
@@ -271,7 +251,7 @@ func (k *kustomizeBuilder) writeResource(root *os.Root, path, fName string, res 
 
 // fileNameKargo generates filenames in Kargo format: [namespace-]kind-name.yaml.
 // Namespace is always included when present on the resource.
-func (k *kustomizeBuilder) fileNameKargo(res *resource.Resource, _ bool) string {
+func (k *kustomizeBuilder) fileNameKargo(res *kustomize.Resource, _ bool) string {
 	kind, namespace, name := res.GetKind(), res.GetNamespace(), res.GetName()
 	if namespace != "" {
 		return strings.ToLower(fmt.Sprintf("%s-%s-%s.yaml", namespace, kind, name))
@@ -283,7 +263,7 @@ func (k *kustomizeBuilder) fileNameKargo(res *resource.Resource, _ bool) string 
 // [namespace_]group_version_kind_name.yaml.
 // Namespace is only included when multiple namespaces are present in the
 // resource map.
-func (k *kustomizeBuilder) fileNameKustomize(res *resource.Resource, multipleNamespaces bool) string {
+func (k *kustomizeBuilder) fileNameKustomize(res *kustomize.Resource, multipleNamespaces bool) string {
 	base := strings.ToLower(res.GetGvk().StringWoEmptyField()) + "_" + strings.ToLower(res.GetName()) + ".yaml"
 	if multipleNamespaces {
 		namespace := res.GetNamespace()

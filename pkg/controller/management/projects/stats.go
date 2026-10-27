@@ -3,12 +3,14 @@ package projects
 import (
 	"context"
 	"fmt"
+	"slices"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/conditions"
+	"github.com/akuity/kargo/pkg/database"
 	"github.com/akuity/kargo/pkg/logging"
 )
 
@@ -62,22 +64,6 @@ func (r *reconciler) collectStats(
 		return status, fmt.Errorf("error listing Stages: %w", err)
 	}
 
-	targets := &kargoapi.TargetList{}
-	if err := r.client.List(
-		ctx,
-		targets,
-		client.InNamespace(project.Name),
-	); err != nil {
-		conditions.Set(&status, &metav1.Condition{
-			Type:               kargoapi.ConditionTypeHealthy,
-			Status:             metav1.ConditionFalse,
-			Reason:             "CollectingTargetStatsFailed",
-			Message:            "Failed to list targets: " + err.Error(),
-			ObservedGeneration: project.GetGeneration(),
-		})
-		return status, fmt.Errorf("error listing Targets: %w", err)
-	}
-
 	promotionRequests := &kargoapi.PromotionRequestList{}
 	if err := r.client.List(
 		ctx,
@@ -128,11 +114,25 @@ func (r *reconciler) collectStats(
 		}
 	}
 
-	stats.Targets = collectTargetStats(
-		targets.Items,
-		stages.Items,
-		promotionRequests.Items,
-	)
+	// Targets live in the database. Without one there are none to count.
+	if r.targets != nil {
+		counts, err := r.targets.Count(
+			ctx,
+			project.Name,
+			healthyTargetNames(stages.Items, promotionRequests.Items),
+		)
+		if err != nil {
+			conditions.Set(&status, &metav1.Condition{
+				Type:               kargoapi.ConditionTypeHealthy,
+				Status:             metav1.ConditionFalse,
+				Reason:             "CollectingTargetStatsFailed",
+				Message:            "Failed to count targets: " + err.Error(),
+				ObservedGeneration: project.GetGeneration(),
+			})
+			return status, fmt.Errorf("error counting Targets: %w", err)
+		}
+		stats.Targets = targetStats(counts)
+	}
 
 	status.Stats = &stats
 
@@ -140,25 +140,31 @@ func (r *reconciler) collectStats(
 	return status, nil
 }
 
-// collectTargetStats summarizes a Project's Targets: how many there are, and
-// how many are healthy. It returns nil for a Project with no Targets, so that
+// targetStats summarizes a Project's Targets: how many there are, and how
+// many are healthy. It returns nil for a Project with no Targets, so that
 // classic Projects carry no Target stats at all.
-//
-// Target status does not yet record health, so a Target is counted as healthy
-// when at least one Stage has promoted to it and the latest promotion to it
-// from every Stage that did so succeeded. The latest promotion from a Stage is
-// the child Promotion for the Target in the PromotionRequest the Stage reports
-// as current, else as last. A Stage whose latest request no longer exists says
-// nothing about its Targets and is skipped.
-func collectTargetStats(
-	targets []kargoapi.Target,
-	stages []kargoapi.Stage,
-	promotionRequests []kargoapi.PromotionRequest,
-) *kargoapi.TargetStats {
-	if len(targets) == 0 {
+func targetStats(counts database.CountTargetsRow) *kargoapi.TargetStats {
+	if counts.Total == 0 {
 		return nil
 	}
+	return &kargoapi.TargetStats{
+		Count:  counts.Total,
+		Health: kargoapi.HealthStats{Healthy: counts.Among},
+	}
+}
 
+// healthyTargetNames returns, in order, the names of the Targets that count
+// as healthy. Target status does not yet record health, so a Target is
+// counted as healthy when at least one Stage has promoted to it and the
+// latest promotion to it from every Stage that did so succeeded. The latest
+// promotion from a Stage is the child Promotion for the Target in the
+// PromotionRequest the Stage reports as current, else as last. A Stage whose
+// latest request no longer exists says nothing about its Targets and is
+// skipped.
+func healthyTargetNames(
+	stages []kargoapi.Stage,
+	promotionRequests []kargoapi.PromotionRequest,
+) []string {
 	requestsByName := make(map[string]*kargoapi.PromotionRequest, len(promotionRequests))
 	for i := range promotionRequests {
 		requestsByName[promotionRequests[i].Name] = &promotionRequests[i]
@@ -166,7 +172,7 @@ func collectTargetStats(
 
 	// succeeded records, for every Target named by some Stage's latest
 	// request, whether every such request's promotion to it succeeded.
-	succeeded := make(map[string]bool, len(targets))
+	succeeded := map[string]bool{}
 	for i := range stages {
 		request := latestPromotionRequest(&stages[i], requestsByName)
 		if request == nil {
@@ -178,13 +184,14 @@ func collectTargetStats(
 		}
 	}
 
-	stats := &kargoapi.TargetStats{Count: int64(len(targets))}
-	for _, target := range targets {
-		if succeeded[target.Name] {
-			stats.Health.Healthy++
+	names := make([]string, 0, len(succeeded))
+	for name, ok := range succeeded {
+		if ok {
+			names = append(names, name)
 		}
 	}
-	return stats
+	slices.Sort(names)
+	return names
 }
 
 // latestPromotionRequest returns the PromotionRequest a target-aware Stage

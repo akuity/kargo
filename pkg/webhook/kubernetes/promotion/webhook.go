@@ -21,9 +21,7 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/api"
 	kargoEvent "github.com/akuity/kargo/pkg/event"
-	k8sevent "github.com/akuity/kargo/pkg/event/kubernetes"
 	"github.com/akuity/kargo/pkg/kubernetes"
-	libEvent "github.com/akuity/kargo/pkg/kubernetes/event"
 	"github.com/akuity/kargo/pkg/logging"
 	libWebhook "github.com/akuity/kargo/pkg/webhook/kubernetes"
 )
@@ -44,10 +42,10 @@ var (
 )
 
 type webhook struct {
-	client  client.Client
-	decoder admission.Decoder
-
-	sender kargoEvent.Sender
+	client    client.Client
+	decoder   admission.Decoder
+	apiReader client.Reader
+	sender    kargoEvent.Sender
 
 	// The following behaviors are overridable for testing purposes:
 
@@ -104,17 +102,44 @@ type webhook struct {
 }
 
 func SetupWebhookWithManager(
-	ctx context.Context,
 	cfg libWebhook.Config,
 	mgr ctrl.Manager,
+	sender kargoEvent.Sender,
 ) error {
 	w := newWebhook(
 		cfg,
 		mgr.GetClient(),
 		admission.NewDecoder(mgr.GetScheme()),
-		k8sevent.NewEventSender(libEvent.NewRecorder(ctx, mgr.GetScheme(), mgr.GetClient(), "promotion-webhook")),
+		sender,
 	)
+	w.apiReader = mgr.GetAPIReader()
 	return libWebhook.SetupValidatingAndDefaultingWebhook(mgr, &kargoapi.Promotion{}, w)
+}
+
+// getUncached reads the Promotion's Stage and Freight from the API server. A missing
+// Freight is nil, as api.GetFreight returns it.
+func (w *webhook) getUncached(
+	ctx context.Context,
+	promo *kargoapi.Promotion,
+) (*kargoapi.Stage, *kargoapi.Freight, error) {
+	stage := &kargoapi.Stage{}
+	if err := w.apiReader.Get(ctx, types.NamespacedName{
+		Namespace: promo.Namespace,
+		Name:      promo.Spec.Stage,
+	}, stage); err != nil {
+		return nil, nil, fmt.Errorf("get stage from the API server: %w", err)
+	}
+	freight := &kargoapi.Freight{}
+	if err := w.apiReader.Get(ctx, types.NamespacedName{
+		Namespace: promo.Namespace,
+		Name:      promo.Spec.Freight,
+	}, freight); err != nil {
+		if apierrors.IsNotFound(err) {
+			return stage, nil, nil
+		}
+		return nil, nil, fmt.Errorf("get freight from the API server: %w", err)
+	}
+	return stage, freight, nil
 }
 
 func newWebhook(
@@ -590,6 +615,24 @@ func (w *webhook) ValidateCreate(
 		return nil, apierrors.NewInternalError(fmt.Errorf("get freight: %w", err))
 	}
 
+	if !stage.IsFreightAvailable(freight) && w.apiReader != nil {
+		// The cache can trail the writer that just made the Freight available, so
+		// confirm with the API server. If it can't answer, keep the cached decision.
+		logger := logging.LoggerFromContext(ctx)
+		if s, f, err := w.getUncached(ctx, promo); err != nil {
+			logger.Error(err, "confirming Freight availability; using the cached result",
+				"stage", promo.Spec.Stage, "freight", promo.Spec.Freight)
+		} else {
+			stage, freight = s, f
+			if stage.IsFreightAvailable(freight) {
+				logger.Debug(
+					"Freight available on the API server but not yet in the cache",
+					"stage", promo.Spec.Stage, "freight", promo.Spec.Freight,
+				)
+			}
+		}
+	}
+
 	if !stage.IsFreightAvailable(freight) {
 		return nil, apierrors.NewInvalid(
 			promotionGroupKind,
@@ -794,10 +837,13 @@ func (w *webhook) recordPromotionCreatedEvent(
 	f *kargoapi.Freight,
 ) {
 	actor := api.FormatEventKubernetesUserActor(req.UserInfo)
-	evt := kargoEvent.NewPromotionCreated(fmt.Sprintf("Promotion created for Stage %q by %q",
+	evt, err := kargoEvent.NewPromotionCreated(fmt.Sprintf("Promotion created for Stage %q by %q",
 		p.Spec.Stage,
 		actor), actor, p, f)
-	if err := w.sender.Send(ctx, evt); err != nil {
+	if err == nil {
+		err = w.sender.Send(ctx, evt)
+	}
+	if err != nil {
 		logging.LoggerFromContext(ctx).Error(
 			err,
 			"failed to send Promotion created event",

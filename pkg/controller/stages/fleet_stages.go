@@ -35,14 +35,19 @@ import (
 	"github.com/akuity/kargo/pkg/controller/metrics"
 	"github.com/akuity/kargo/pkg/credentials"
 	kargoEvent "github.com/akuity/kargo/pkg/event"
-	k8sevent "github.com/akuity/kargo/pkg/event/kubernetes"
 	"github.com/akuity/kargo/pkg/indexer"
 	"github.com/akuity/kargo/pkg/kargo"
-	libEvent "github.com/akuity/kargo/pkg/kubernetes/event"
 	"github.com/akuity/kargo/pkg/logging"
 	intpredicate "github.com/akuity/kargo/pkg/predicate"
 	"github.com/akuity/kargo/pkg/telemetry"
 )
+
+// TargetLister lists the Targets of a Project. Targets live in the control
+// plane's database and are read through the API server; see
+// pkg/client/apiserver.
+type TargetLister interface {
+	ListTargets(ctx context.Context, project string) ([]kargoapi.Target, error)
+}
 
 type FleetStageReconciler struct {
 	cfg            ReconcilerConfig
@@ -50,18 +55,25 @@ type FleetStageReconciler struct {
 	credentialsDB  credentials.Database
 	eventSender    kargoEvent.Sender
 	shardPredicate controller.ResponsibleFor[kargoapi.Stage]
+	// targets lists the Targets a Stage may govern. It is nil when the
+	// controller has no API server to read them from, in which case a Stage
+	// that selects Targets is reported Stalled rather than promoted.
+	targets TargetLister
 
 	backoffCfg wait.Backoff
 }
 
-// NewFleetStageReconciler creates a new Stages reconciler.
+// NewFleetStageReconciler creates a new Stages reconciler. The TargetLister
+// may be nil; see the reconciler's targets field.
 func NewFleetStageReconciler(
 	cfg ReconcilerConfig,
 	credentialsDB credentials.Database,
+	targets TargetLister,
 ) *FleetStageReconciler {
 	return &FleetStageReconciler{
 		cfg:           cfg,
 		credentialsDB: credentialsDB,
+		targets:       targets,
 		shardPredicate: controller.ResponsibleFor[kargoapi.Stage]{
 			IsDefaultController: cfg.IsDefaultController,
 			ShardName:           cfg.ShardName,
@@ -84,12 +96,11 @@ func (r *FleetStageReconciler) SetupWithManager(
 	kargoMgr ctrl.Manager,
 	_ ctrl.Manager,
 	sharedIndexer client.FieldIndexer,
+	eventSender kargoEvent.Sender,
 ) error {
-	// Configure client and event recorder using manager.
+	// Configure client using manager.
 	r.client = kargoMgr.GetClient()
-	r.eventSender = k8sevent.NewEventSender(
-		libEvent.NewRecorder(ctx, kargoMgr.GetScheme(), kargoMgr.GetClient(), r.cfg.Name()),
-	)
+	r.eventSender = eventSender
 
 	// This index is used to find all PromotionRequests that promote Freight on
 	// behalf of a specific Stage.
@@ -563,16 +574,27 @@ func (r *FleetStageReconciler) syncPromotionRequests(
 			),
 		},
 	); err != nil {
-		return newStatus, fmt.Errorf(
+		err = fmt.Errorf(
 			"failed to list PromotionRequests for Stage %q in namespace %q: %w",
 			stage.Name, stage.Namespace, err,
 		)
+		// Whether a round is in flight is not known, so neither is whether the
+		// Stage is promoting.
+		conditions.Set(&newStatus, &metav1.Condition{
+			Type:               kargoapi.ConditionTypePromoting,
+			Status:             metav1.ConditionUnknown,
+			Reason:             "ListPromotionRequestsFailed",
+			Message:            err.Error(),
+			ObservedGeneration: stage.Generation,
+		})
+		return newStatus, err
 	}
 
 	// If there are no PromotionRequests, the Stage is fanning nothing out. Clear
 	// any current reference it was left with.
 	if len(promotionRequests.Items) == 0 {
 		newStatus.CurrentPromotionRequest = nil
+		conditions.Delete(&newStatus, kargoapi.ConditionTypePromoting)
 		return newStatus, nil
 	}
 
@@ -589,14 +611,51 @@ func (r *FleetStageReconciler) syncPromotionRequests(
 	// promoting through, unless it has finished -- in which case the Stage is
 	// promoting through none, and a finished request must not be left looking
 	// like an active one.
-	newStatus.CurrentPromotionRequest = nil
-	if highestPrioRequest := &promotionRequests.Items[0]; !highestPrioRequest.Status.Phase.IsTerminal() {
+	//
+	// The Promoting condition follows the current reference, exactly as it
+	// follows the current Promotion of a Stage that is not target-aware. While it
+	// is present, summarizeFleetConditions reports the Stage not Ready because it
+	// is promoting (reason ActivePromotion), which readers such as the UI tell
+	// apart from a Stage that is not Ready because something went wrong.
+	//
+	// Its transition time marks when the current round began. It is kept across
+	// reconciles of the same round, but a different round -- or a Stage that was
+	// not known to be promoting -- starts it afresh.
+	prevRequest := stage.Status.CurrentPromotionRequest
+	if highestPrioRequest := &promotionRequests.Items[0]; highestPrioRequest.Status.Phase.IsTerminal() {
+		newStatus.CurrentPromotionRequest = nil
+		conditions.Delete(&newStatus, kargoapi.ConditionTypePromoting)
+	} else {
 		newStatus.CurrentPromotionRequest = &kargoapi.PromotionRequestReference{
 			Name: highestPrioRequest.Name,
 		}
 		if highestPrioRequest.Status.Freight != nil {
 			newStatus.CurrentPromotionRequest.Freight = highestPrioRequest.Status.Freight.DeepCopy()
 		}
+		// A request no controller has picked up yet has no phase.
+		phase := highestPrioRequest.Status.Phase
+		if phase == "" {
+			phase = kargoapi.PromotionRequestPhasePending
+		}
+		promoCond := &metav1.Condition{
+			Type:   kargoapi.ConditionTypePromoting,
+			Status: metav1.ConditionTrue,
+			Reason: "ActivePromotion",
+			Message: fmt.Sprintf(
+				"PromotionRequest %q is currently %s",
+				highestPrioRequest.Name, phase,
+			),
+			ObservedGeneration: stage.Generation,
+		}
+		// conditions.Set carries the existing transition time over to a
+		// condition that does not specify one, so a new round must specify its
+		// own.
+		existing := conditions.Get(&newStatus, kargoapi.ConditionTypePromoting)
+		if prevRequest == nil || prevRequest.Name != highestPrioRequest.Name ||
+			existing == nil || existing.Status != metav1.ConditionTrue {
+			promoCond.LastTransitionTime = metav1.NewTime(time.Now().UTC().Truncate(time.Second))
+		}
+		conditions.Set(&newStatus, promoCond)
 	}
 
 	// Gather the terminal PromotionRequests newer than the one already recorded
@@ -850,6 +909,22 @@ func (r *FleetStageReconciler) autoPromoteFreight(
 	newStatus := *stage.Status.DeepCopy()
 	newStatus.AutoPromotionEnabled = autoPromotionEnabled
 
+	// The Stage promotes through PromotionRequests, whose Targets are read
+	// from the API server. Without one there is nothing to resolve them from,
+	// so say so rather than fail every reconcile.
+	conditions.Delete(&newStatus, kargoapi.ConditionTypeStalled)
+	if r.targets == nil {
+		conditions.Set(&newStatus, &metav1.Condition{
+			Type:   kargoapi.ConditionTypeStalled,
+			Status: metav1.ConditionTrue,
+			Reason: "TargetsUnavailable",
+			Message: "Stage selects Targets, but the controller has no API server " +
+				"to resolve them from (API_SERVER_ADDRESS)",
+			ObservedGeneration: stage.Generation,
+		})
+		return newStatus, nil
+	}
+
 	// If the Stage has no requested Freight, then there is nothing to promote.
 	// NB: This should not happen in practice, as a Stage cannot exist without
 	// requested Freight.
@@ -963,7 +1038,21 @@ func (r *FleetStageReconciler) createAutoPromotionRequest(
 		"freight", candidate.Name,
 	)
 
-	promotionRequest, err := api.NewPromotionRequest(ctx, r.client, stage, candidate.Name)
+	targets, err := r.targets.ListTargets(ctx, stage.Namespace)
+	if err != nil {
+		return fmt.Errorf(
+			"error listing Targets in Project %q: %w", stage.Namespace, err,
+		)
+	}
+
+	if targets, err = api.FilterTargetsForStage(stage, targets); err != nil {
+		return fmt.Errorf(
+			"error resolving Targets governed by Stage %q in namespace %q: %w",
+			stage.Name, stage.Namespace, err,
+		)
+	}
+
+	promotionRequest, err := api.NewPromotionRequestForAllTargets(stage, candidate.Name, targets)
 	if err != nil {
 		return fmt.Errorf(
 			"error building PromotionRequest for Freight %q in namespace %q: %w",

@@ -3,7 +3,7 @@ ARG BASE_IMAGE=kargo-base
 ####################################################################################################
 # ui-builder
 ####################################################################################################
-FROM --platform=$BUILDPLATFORM docker.io/library/node:26.10.0 AS ui-builder
+FROM --platform=$BUILDPLATFORM docker.io/library/node:26.12.1 AS ui-builder
 
 ARG PNPM_VERSION=11.13.0
 RUN npm install --global pnpm@${PNPM_VERSION}
@@ -20,7 +20,7 @@ RUN --mount=type=cache,target=/root/.local/share/pnpm/store NODE_ENV='production
 ####################################################################################################
 # back-end-builder
 ####################################################################################################
-FROM --platform=$BUILDPLATFORM golang:1.27.2-trixie AS back-end-builder
+FROM --platform=$BUILDPLATFORM golang:1.27.3-trixie AS back-end-builder
 
 ARG TARGETOS
 ARG TARGETARCH
@@ -44,10 +44,12 @@ ARG VERSION
 ARG GIT_COMMIT
 ARG GIT_TREE_STATE
 
+# -w drops DWARF. Keep the Go symbol table (no -s): without it govulncheck can't
+# tell which functions are linked and reports every vulnerable symbol as called.
 RUN --mount=type=cache,target=/go/pkg/mod --mount=type=cache,target=/root/.cache/go-build \
     GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build \
       -trimpath \
-      -ldflags "-w -s" \
+      -ldflags "-w" \
       -o bin/credential-helper \
       ./cmd/credential-helper
 
@@ -84,12 +86,12 @@ WORKDIR /kargo/bin
 #
 # Source comes from the Go module proxy, so it is checksum-verified against
 # sum.golang.org rather than trusted from a tarball download.
-FROM --platform=$BUILDPLATFORM golang:1.27.2-trixie AS helm-builder
+FROM --platform=$BUILDPLATFORM golang:1.27.3-trixie AS helm-builder
 
 ARG TARGETOS
 ARG TARGETARCH
 
-ARG HELM_VERSION=v3.22.0
+ARG HELM_VERSION=v3.22.1
 
 WORKDIR /helm-build
 RUN --mount=type=cache,target=/go/pkg/mod --mount=type=cache,target=/root/.cache/go-build \
@@ -102,13 +104,15 @@ RUN --mount=type=cache,target=/go/pkg/mod --mount=type=cache,target=/root/.cache
 # any chart declaring a `kubeVersion` constraint newer than that fails to render.
 # Mirror that derivation here rather than hardcoding a version, so it stays
 # correct as HELM_VERSION moves.
+# -w drops DWARF. Keep the Go symbol table (no -s): without it govulncheck can't
+# tell which functions are linked and reports every vulnerable symbol as called.
 RUN --mount=type=cache,target=/go/pkg/mod --mount=type=cache,target=/root/.cache/go-build \
     K8S_VERSION="$(go list -f '{{.Version}}' -m k8s.io/client-go)" && \
     K8S_VERSION_MAJOR="$(( $(echo "${K8S_VERSION}" | cut -d. -f1 | tr -d v) + 1 ))" && \
     K8S_VERSION_MINOR="$(echo "${K8S_VERSION}" | cut -d. -f2)" && \
     CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build \
       -trimpath \
-      -ldflags "-w -s \
+      -ldflags "-w \
         -X helm.sh/helm/v3/internal/version.version=${HELM_VERSION} \
         -X helm.sh/helm/v3/pkg/chartutil.k8sVersionMajor=${K8S_VERSION_MAJOR} \
         -X helm.sh/helm/v3/pkg/chartutil.k8sVersionMinor=${K8S_VERSION_MINOR} \
@@ -147,7 +151,7 @@ CMD ["/usr/local/bin/kargo"]
 # - supports development
 # - not used for official image builds
 ####################################################################################################
-FROM --platform=$BUILDPLATFORM docker.io/library/node:26.10.0 AS ui-dev
+FROM --platform=$BUILDPLATFORM docker.io/library/node:26.12.1 AS ui-dev
 
 ARG PNPM_VERSION=11.13.0
 RUN npm install --global pnpm@${PNPM_VERSION}

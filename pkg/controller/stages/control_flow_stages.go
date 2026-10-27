@@ -21,12 +21,10 @@ import (
 	"github.com/akuity/kargo/pkg/conditions"
 	"github.com/akuity/kargo/pkg/controller"
 	"github.com/akuity/kargo/pkg/event"
-	k8sevent "github.com/akuity/kargo/pkg/event/kubernetes"
 	"github.com/akuity/kargo/pkg/indexer"
 	"github.com/akuity/kargo/pkg/kargo"
 	"github.com/akuity/kargo/pkg/kubeclient"
 	"github.com/akuity/kargo/pkg/kubernetes"
-	libEvent "github.com/akuity/kargo/pkg/kubernetes/event"
 	"github.com/akuity/kargo/pkg/logging"
 	intpredicate "github.com/akuity/kargo/pkg/predicate"
 	"github.com/akuity/kargo/pkg/telemetry"
@@ -61,12 +59,11 @@ func (r *ControlFlowStageReconciler) SetupWithManager(
 	ctx context.Context,
 	mgr ctrl.Manager,
 	sharedIndexer client.FieldIndexer,
+	eventSender event.Sender,
 ) error {
-	// Configure client and event sender using manager.
+	// Configure client using manager.
 	r.client = mgr.GetClient()
-	r.eventSender = k8sevent.NewEventSender(
-		libEvent.NewRecorder(ctx, mgr.GetScheme(), mgr.GetClient(), r.cfg.Name()),
-	)
+	r.eventSender = eventSender
 
 	// This index is used to find all Freight that are directly available from
 	// a Warehouse. It is used to find Freight that can be sourced directly from
@@ -444,22 +441,21 @@ func (r *ControlFlowStageReconciler) markFreightVerifiedForStage(
 
 		newlyVerified++
 
-		common, fr := event.NewFreightCommon(
-			"Freight verification succeeded",
+		evt, err := event.NewFreightVerification(
 			api.FormatEventControllerActor(r.cfg.Name()),
 			stage.Name,
 			&f,
-		)
-		evt := &event.FreightVerificationSucceeded{
-			Common:  common,
-			Freight: fr,
-			FreightVerification: event.FreightVerification{
-				StartTime:  &startTime,
-				FinishTime: &finishTime,
+			&kargoapi.VerificationInfo{
+				Phase:      kargoapi.VerificationPhaseSuccessful,
+				StartTime:  &metav1.Time{Time: startTime},
+				FinishTime: &metav1.Time{Time: finishTime},
 			},
+			nil,
+		)
+		if err == nil {
+			err = r.eventSender.Send(ctx, evt)
 		}
-
-		if err := r.eventSender.Send(ctx, evt); err != nil {
+		if err != nil {
 			logger.Error(
 				err,
 				"failed to send Freight verification succeeded event",

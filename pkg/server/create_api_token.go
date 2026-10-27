@@ -12,6 +12,7 @@ import (
 	"github.com/akuity/kargo/pkg/event"
 	libhttp "github.com/akuity/kargo/pkg/http"
 	"github.com/akuity/kargo/pkg/logging"
+	"github.com/akuity/kargo/pkg/server/request"
 	"github.com/akuity/kargo/pkg/server/user"
 )
 
@@ -42,7 +43,7 @@ func (s *server) createProjectAPIToken(c *gin.Context) {
 	role := c.Param("role")
 
 	var req createAPITokenRequest
-	if !bindJSONOrError(c, &req) {
+	if !request.BindJSON(c, &req) {
 		return
 	}
 	if req.Name == "" {
@@ -86,7 +87,7 @@ func (s *server) createSystemAPIToken(c *gin.Context) {
 	role := c.Param("role")
 
 	var req createAPITokenRequest
-	if !bindJSONOrError(c, &req) {
+	if !request.BindJSON(c, &req) {
 		return
 	}
 	if req.Name == "" {
@@ -120,8 +121,11 @@ func (s *server) recordAPITokenCreated(
 		return
 	}
 	msg, actor := apiTokenEventMessage(ctx, tokenSecret, "created for")
-	evt := event.NewAPITokenCreated(msg, actor, tokenSecret, systemLevel)
-	if err := s.sender.Send(ctx, evt); err != nil {
+	evt, err := event.NewAPITokenCreated(msg, actor, tokenSecret, systemLevel)
+	if err == nil {
+		err = s.sender.Send(ctx, evt)
+	}
+	if err != nil {
 		logging.LoggerFromContext(ctx).Error(err, "error sending API token created event")
 	}
 }
