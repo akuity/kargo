@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/oklog/ulid/v2"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -119,7 +120,27 @@ func toUpsertParams(promotion *kargoapi.Promotion) (database.UpsertPromotionPara
 		params.FinishedAt = &finishedAt
 	}
 	setFreight(promotion, &params)
+	setPromotionRollout(promotion, &params)
 	return params, nil
+}
+
+// setPromotionRollout carries the id of the PromotionRollout the Promotion
+// was created by, if it names one, onto the upsert. The annotation is all
+// that links the two; the rollout's creator does not record the link. An
+// annotation that is not an id is recorded as no rollout rather than
+// failing the sync, as is one naming no rollout of the Promotion's Project,
+// which the upsert checks.
+func setPromotionRollout(
+	promotion *kargoapi.Promotion,
+	params *database.UpsertPromotionParams,
+) {
+	value := promotion.Annotations[kargoapi.AnnotationKeyPromotionRollout]
+	if value == "" {
+		return
+	}
+	if id, err := uuid.Parse(value); err == nil {
+		params.PromotionRolloutID = &id
+	}
 }
 
 // setFreight carries the Promotion's FreightCollection, if it has one yet,

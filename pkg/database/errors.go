@@ -14,4 +14,8 @@ var (
 	// ErrInvalid is returned when the database rejects a value, for instance
 	// a label whose value is not a string or a parameter containing a NUL.
 	ErrInvalid = errors.New("invalid")
+	// ErrNotMirrored is returned when a write depends on the mirrored row of
+	// a Kubernetes object that the mirror has not recorded yet. Retrying
+	// once the mirror catches up succeeds.
+	ErrNotMirrored = errors.New("not mirrored yet")
 )

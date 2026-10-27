@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/stretchr/testify/require"
@@ -28,6 +29,10 @@ func TestPromotionsIntegration(t *testing.T) {
 	succeeded := running
 	succeeded.Phase = "Succeeded"
 	succeeded.FinishedAt = &finished
+	// A rollout in the Promotions' Project, and one of another Project, to
+	// link them to.
+	rollout := requireCreatePromotionRollout(t, queries, "demo", "dev", "dev.rollout")
+	elsewhere := requireCreatePromotionRollout(t, queries, "other", "dev", "dev.elsewhere")
 	testCases := []struct {
 		name string
 		run  func(*testing.T)
@@ -259,6 +264,42 @@ func TestPromotionsIntegration(t *testing.T) {
 				databasetest.RequirePGError(t, err, "23514")
 			},
 		},
+		{
+			name: "a Promotion's rollout is recorded only if it is one of its Project, and then kept",
+			run: func(t *testing.T) {
+				child := running
+				child.PromotionRolloutID = &rollout
+				requireUpsertPromotion(t, queries, child)
+				require.Equal(t, &rollout, promotionRolloutID(t, queries, child))
+				// A later sync naming another rollout, or none, changes
+				// nothing.
+				child.PromotionRolloutID = &elsewhere
+				requireUpsertPromotion(t, queries, child)
+				child.PromotionRolloutID = nil
+				requireUpsertPromotion(t, queries, child)
+				require.Equal(t, &rollout, promotionRolloutID(t, queries, child))
+				// A rollout of another Project is recorded as none, as is an id
+				// naming no rollout at all.
+				foreign := running
+				foreign.ID = "id-foreign"
+				foreign.Name = "foreign"
+				foreign.PromotionRolloutID = &elsewhere
+				requireUpsertPromotion(t, queries, foreign)
+				require.Nil(t, promotionRolloutID(t, queries, foreign))
+				unknownID := uuid.New()
+				unknown := running
+				unknown.ID = "id-unknown"
+				unknown.Name = "unknown"
+				unknown.PromotionRolloutID = &unknownID
+				requireUpsertPromotion(t, queries, unknown)
+				require.Nil(t, promotionRolloutID(t, queries, unknown))
+				// A record left without its rollout gets it once the
+				// Promotion names one that is there.
+				unknown.PromotionRolloutID = &rollout
+				requireUpsertPromotion(t, queries, unknown)
+				require.Equal(t, &rollout, promotionRolloutID(t, queries, unknown))
+			},
+		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
@@ -267,6 +308,42 @@ func TestPromotionsIntegration(t *testing.T) {
 			testCase.run(t)
 		})
 	}
+}
+
+// requireCreatePromotionRollout records a Stage and a rollout of it, and returns
+// the rollout's id.
+func requireCreatePromotionRollout(
+	t *testing.T,
+	queries *Queries,
+	project string,
+	stage string,
+	name string,
+) uuid.UUID {
+	t.Helper()
+	ctx := context.Background()
+	require.NoError(t, queries.UpsertStage(ctx, UpsertStageParams{
+		ID:          project + "-" + stage,
+		ProjectName: project,
+		Name:        stage,
+		CreatedAt:   time.Now(),
+	}))
+	row, err := queries.CreatePromotionRollout(ctx, CreatePromotionRolloutParams{
+		ProjectName: project,
+		StageName:   stage,
+		Name:        name,
+		FreightName: "def456",
+	})
+	require.NoError(t, err)
+	return row.ID
+}
+
+// promotionRolloutID returns the id of the rollout a Promotion's row records.
+func promotionRolloutID(t *testing.T, queries *Queries, promotion UpsertPromotionParams) *uuid.UUID {
+	t.Helper()
+	rows, err := queries.ListPromotionsByKey(context.Background(), keysOf(promotion))
+	require.NoError(t, err)
+	require.Len(t, rows, 1)
+	return rows[0].PromotionRolloutID
 }
 
 // requireUpsertPromotion upserts a Promotion whose name no other Promotion was

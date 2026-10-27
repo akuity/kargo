@@ -1,0 +1,153 @@
+package promotionrolloutstore
+
+import (
+	"strconv"
+	"time"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
+
+	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/pkg/database"
+)
+
+// ToAPI presents a stored rollout as the PromotionRollout resource the API
+// serves. The row's id is the UID and its last update, which every write
+// advances, the resource version. The status is the row's status columns,
+// summarized as a Ready condition as well; what has become of each Target is
+// not the store's to say, so status.targets and status.summary are left for
+// the caller, who reads the Promotions.
+func ToAPI(rollout Rollout) *kargoapi.PromotionRollout {
+	// spec.targets is a required field, so it is a list even when the
+	// rollout promotes to no Targets.
+	targets := make([]kargoapi.PromotionRolloutTarget, len(rollout.Targets))
+	for i, target := range rollout.Targets {
+		targets[i] = kargoapi.PromotionRolloutTarget{Name: target.TargetName}
+	}
+	// Who asked for the rollout is served the way a Promotion says who asked
+	// for it, so one reader serves both.
+	var annotations map[string]string
+	if rollout.CreatedBy != "" {
+		annotations = map[string]string{kargoapi.AnnotationKeyCreateActor: rollout.CreatedBy}
+	}
+	return &kargoapi.PromotionRollout{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace:         rollout.ProjectName,
+			Name:              rollout.Name,
+			UID:               types.UID(rollout.ID.String()),
+			ResourceVersion:   resourceVersion(rollout.UpdatedAt),
+			CreationTimestamp: metav1.NewTime(rollout.CreatedAt),
+			Labels:            map[string]string{kargoapi.LabelKeyStage: rollout.StageName},
+			Annotations:       annotations,
+		},
+		Number: rollout.Number,
+		Spec: kargoapi.PromotionRolloutSpec{
+			Stage:   rollout.StageName,
+			Freight: rollout.FreightName,
+			Targets: targets,
+			UpdateStrategy: kargoapi.PromotionRolloutUpdateStrategy{
+				MaxConcurrent: rollout.MaxConcurrent,
+				MaxFailures:   rollout.MaxFailures,
+			},
+		},
+		Status: kargoapi.PromotionRolloutStatus{
+			Conditions: []metav1.Condition{readyCondition(rollout.PromotionRolloutRow)},
+			Phase:      kargoapi.PromotionRolloutPhase(rollout.StatusPhase),
+			Message:    rollout.StatusMessage,
+			StartedAt:  timeOrNil(rollout.StatusStartedAt),
+			FinishedAt: timeOrNil(rollout.StatusFinishedAt),
+		},
+	}
+}
+
+// TargetStatuses presents the rows of ListTargetStatuses as the rollout's
+// status.targets, one entry per Target in the order the rows came, with a
+// tally of their phases as status.summary. Both are nil when there are no
+// rows: no Target has a Promotion yet.
+func TargetStatuses(
+	rows []database.ListPromotionRolloutTargetStatusesRow,
+) ([]kargoapi.PromotionRolloutTargetStatus, *kargoapi.PromotionRolloutSummary) {
+	if len(rows) == 0 {
+		return nil, nil
+	}
+	statuses := make([]kargoapi.PromotionRolloutTargetStatus, len(rows))
+	summary := &kargoapi.PromotionRolloutSummary{}
+	for i, row := range rows {
+		phase := kargoapi.PromotionPhase(row.Phase)
+		statuses[i] = kargoapi.PromotionRolloutTargetStatus{
+			Name:      row.TargetName,
+			Promotion: row.PromotionName,
+			Phase:     phase,
+		}
+		switch phase {
+		case kargoapi.PromotionPhaseRunning:
+			summary.Running++
+		case kargoapi.PromotionPhaseSucceeded:
+			summary.Succeeded++
+		case kargoapi.PromotionPhaseFailed:
+			summary.Failed++
+		case kargoapi.PromotionPhaseErrored:
+			summary.Errored++
+		case kargoapi.PromotionPhaseAborted:
+			summary.Aborted++
+		default:
+			summary.Pending++
+		}
+	}
+	return statuses, summary
+}
+
+// FromSpec takes what the database stores from a PromotionRollout's spec:
+// its Stage, Freight and update strategy, under the given name. Which
+// Targets it promotes to is given to Create separately, by id, since the
+// spec names them only.
+func FromSpec(name string, spec kargoapi.PromotionRolloutSpec) database.PromotionRolloutRow {
+	return database.PromotionRolloutRow{
+		Name:          name,
+		StageName:     spec.Stage,
+		FreightName:   spec.Freight,
+		MaxConcurrent: spec.UpdateStrategy.MaxConcurrent,
+		MaxFailures:   spec.UpdateStrategy.MaxFailures,
+	}
+}
+
+// readyCondition states the rollout's phase, reason and message as a Ready
+// condition: True once the rollout succeeded, False with the reason it did
+// not, and Unknown while it is still in progress.
+func readyCondition(row database.PromotionRolloutRow) metav1.Condition {
+	phase := kargoapi.PromotionRolloutPhase(row.StatusPhase)
+	cond := metav1.Condition{
+		Type:    kargoapi.ConditionTypeReady,
+		Status:  metav1.ConditionUnknown,
+		Reason:  row.StatusReason,
+		Message: row.StatusMessage,
+	}
+	switch {
+	case phase == kargoapi.PromotionRolloutPhaseSucceeded:
+		cond.Status = metav1.ConditionTrue
+	case phase.IsTerminal():
+		cond.Status = metav1.ConditionFalse
+	}
+	if cond.Reason == "" {
+		cond.Reason = string(phase)
+	}
+	if cond.Reason == "" {
+		cond.Reason = string(kargoapi.PromotionRolloutPhasePending)
+	}
+	return cond
+}
+
+// resourceVersion renders a row's last update as the resource version of
+// the object the API serves: microseconds since the epoch, which the
+// database keeps unique per row.
+func resourceVersion(updatedAt time.Time) string {
+	return strconv.FormatInt(updatedAt.UnixMicro(), 10)
+}
+
+func timeOrNil(t *time.Time) *metav1.Time {
+	if t == nil {
+		return nil
+	}
+	mt := metav1.NewTime(*t)
+	return &mt
+}

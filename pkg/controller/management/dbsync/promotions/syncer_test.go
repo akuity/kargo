@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/oklog/ulid/v2"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -57,6 +58,13 @@ func TestSync(t *testing.T) {
 	withFreight.OriginKinds = []string{"Warehouse", "Warehouse"}
 	withFreight.OriginNames = []string{"w1", "w2"}
 	withFreight.FreightNames = []string{"def456", "abc123"}
+	rolloutID := uuid.MustParse("0b9f4a3e-6c1d-4a8e-9f2b-3c4d5e6f7a8b")
+	child := testPromotion(created)
+	child.Annotations = map[string]string{kargoapi.AnnotationKeyPromotionRollout: rolloutID.String()}
+	ofRollout := upserted
+	ofRollout.PromotionRolloutID = &rolloutID
+	notAnID := testPromotion(created)
+	notAnID.Annotations = map[string]string{kargoapi.AnnotationKeyPromotionRollout: "dev.01abc.def456"}
 	noName := testPromotion(created)
 	noName.Name = ""
 	precise := testPromotion(created.Add(123456789 * time.Nanosecond))
@@ -78,6 +86,8 @@ func TestSync(t *testing.T) {
 			name: "a Promotion's collection is carried as names by origin, in origin order",
 			obj:  withCollection, want: &withFreight,
 		},
+		{name: "a Promotion of a rollout names its id", obj: child, want: &ofRollout},
+		{name: "a rollout annotation that is not an id names no rollout", obj: notAnID, want: &upserted},
 		{name: "preserves terminating objects", obj: terminating, want: &upserted},
 		{name: "creation time is carried at PostgreSQL's precision", obj: precise, want: &truncated},
 		{
