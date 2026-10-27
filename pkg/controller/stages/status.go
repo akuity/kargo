@@ -13,7 +13,7 @@ import (
 // status.metadata, which set-metadata steps may write mid-pass. It copies
 // metadata from stage into newStatus (in place) so the server's value always
 // wins.
-func patchStageStatus(
+func PatchStageStatus(
 	ctx context.Context,
 	c client.Client,
 	stage *kargoapi.Stage,

@@ -166,10 +166,7 @@ func (r *ControlFlowStageReconciler) SetupWithManager(
 		source.Kind(
 			mgr.GetCache(),
 			&kargoapi.Freight{},
-			&warehouseStageEnqueuer[*kargoapi.Freight]{
-				kargoClient:          mgr.GetClient(),
-				forControlFlowStages: true,
-			},
+			NewWarehouseStageEnqueuer(mgr.GetClient(), true),
 		),
 	); err != nil {
 		return fmt.Errorf("unable to watch Freight produced by Warehouse: %w", err)
@@ -180,10 +177,7 @@ func (r *ControlFlowStageReconciler) SetupWithManager(
 		source.Kind(
 			mgr.GetCache(),
 			&kargoapi.Freight{},
-			&downstreamStageEnqueuer[*kargoapi.Freight]{
-				kargoClient:          mgr.GetClient(),
-				forControlFlowStages: true,
-			},
+			NewDownstreamStageEnqueuer(mgr.GetClient(), true),
 		),
 	); err != nil {
 		return fmt.Errorf("unable to watch Freight verified in upstream Stages: %w", err)
