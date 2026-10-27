@@ -290,21 +290,22 @@ func (g *gitPushPusher) run(
 // helps reduce the likelihood of conflicts when multiple Promotions that push
 // to the same branch are running concurrently.
 func (g *gitPushPusher) push(workTree git.WorkTree, pushOpts *git.PushOptions) error {
-	branchKey := g.getBranchKey(workTree.URL(), pushOpts.TargetBranch)
-	if _, exists := g.branchMus[branchKey]; !exists {
-		g.masterMu.Lock()
-		// Double-check to make sure it wasn't created while we were waiting for the
-		// lock.
-		if _, exists = g.branchMus[branchKey]; !exists {
-			g.branchMus[branchKey] = &sync.Mutex{}
-		}
-		g.masterMu.Unlock()
-	}
-	g.branchMus[branchKey].Lock()
-	defer g.branchMus[branchKey].Unlock()
+	branchMu := g.getBranchMu(workTree.URL(), pushOpts.TargetBranch)
+	branchMu.Lock()
+	defer branchMu.Unlock()
 	return workTree.Push(pushOpts)
 }
 
-func (g *gitPushPusher) getBranchKey(repoURL, branch string) string {
-	return fmt.Sprintf("%s:%s", repoURL, branch)
+// getBranchMu returns the mutex for the given repo + branch, creating it if
+// necessary. masterMu guards the map itself.
+func (g *gitPushPusher) getBranchMu(repoURL, branch string) *sync.Mutex {
+	key := fmt.Sprintf("%s:%s", repoURL, branch)
+	g.masterMu.Lock()
+	defer g.masterMu.Unlock()
+	mu, exists := g.branchMus[key]
+	if !exists {
+		mu = &sync.Mutex{}
+		g.branchMus[key] = mu
+	}
+	return mu
 }

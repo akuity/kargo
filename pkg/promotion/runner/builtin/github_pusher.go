@@ -416,8 +416,9 @@ func (g *githubPusher) push(
 ) error {
 	logger := logging.LoggerFromContext(ctx)
 
-	g.acquireBranchLock(workTree.URL(), opts.targetBranch)
-	defer g.releaseBranchLock(workTree.URL(), opts.targetBranch)
+	branchMu := g.getBranchMu(workTree.URL(), opts.targetBranch)
+	branchMu.Lock()
+	defer branchMu.Unlock()
 
 	// The local branch may be behind the remote branch it tracks or may have
 	// diverged from it. Start by integrating any remote changes we don't have
@@ -808,19 +809,16 @@ func (g *githubPusher) isRetryableError(err error) bool {
 	return errors.As(err, &re)
 }
 
-func (g *githubPusher) acquireBranchLock(repoURL, branch string) {
+// getBranchMu returns the mutex for the given repo + branch, creating it if
+// necessary. masterMu guards the map itself.
+func (g *githubPusher) getBranchMu(repoURL, branch string) *sync.Mutex {
 	key := fmt.Sprintf("%s:%s", repoURL, branch)
-	if _, exists := g.branchMus[key]; !exists {
-		g.masterMu.Lock()
-		if _, exists = g.branchMus[key]; !exists {
-			g.branchMus[key] = &sync.Mutex{}
-		}
-		g.masterMu.Unlock()
+	g.masterMu.Lock()
+	defer g.masterMu.Unlock()
+	mu, exists := g.branchMus[key]
+	if !exists {
+		mu = &sync.Mutex{}
+		g.branchMus[key] = mu
 	}
-	g.branchMus[key].Lock()
-}
-
-func (g *githubPusher) releaseBranchLock(repoURL, branch string) {
-	key := fmt.Sprintf("%s:%s", repoURL, branch)
-	g.branchMus[key].Unlock()
+	return mu
 }
