@@ -163,6 +163,27 @@ JOIN targets ON targets.id = t.target_id
 WHERE t.promotion_rollout_id = ANY(sqlc.arg(ids)::uuid[])
 ORDER BY t.promotion_rollout_id, targets.name;
 
+-- What has become of each Target of a rollout: the newest Promotion to it
+-- and that Promotion's phase, in Target name order. Among one Target's
+-- Promotions, name order is creation order (names embed a ULID), so the
+-- newest is the greatest name. A Promotion the controller has not picked
+-- up yet has no phase and is reported as Pending. Only Promotions that
+-- name a Target count; a rollout's Promotions all do, but the mirror does
+-- not enforce it.
+--
+-- These are the mirror's rows, so they lag the cluster by the mirror's
+-- sync. From rough testing that lag is fine for what reads this: the API
+-- and Project stats, which present progress rather than act on it.
+-- name: ListPromotionRolloutTargetStatuses :many
+SELECT DISTINCT ON (target_name)
+    target_name::text AS target_name,
+    name AS promotion_name,
+    COALESCE(NULLIF(phase, ''), 'Pending')::text AS phase
+FROM promotions
+WHERE promotion_rollout_id = sqlc.arg(id)::uuid
+    AND target_name IS NOT NULL
+ORDER BY target_name, name DESC;
+
 -- Moves the rollout from Pending to Running, if it is the next of its
 -- Stage's rollouts to run: the oldest that has not finished, with none
 -- Running. Rounds of fan-out are serialized here, in number order. The

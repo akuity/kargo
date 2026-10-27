@@ -60,6 +60,43 @@ func ToAPI(rollout Rollout) *kargoapi.PromotionRollout {
 	}
 }
 
+// TargetStatuses presents the rows of ListTargetStatuses as the rollout's
+// status.targets, one entry per Target in the order the rows came, with a
+// tally of their phases as status.summary. Both are nil when there are no
+// rows: no Target has a Promotion yet.
+func TargetStatuses(
+	rows []database.ListPromotionRolloutTargetStatusesRow,
+) ([]kargoapi.PromotionRolloutTargetStatus, *kargoapi.PromotionRolloutSummary) {
+	if len(rows) == 0 {
+		return nil, nil
+	}
+	statuses := make([]kargoapi.PromotionRolloutTargetStatus, len(rows))
+	summary := &kargoapi.PromotionRolloutSummary{}
+	for i, row := range rows {
+		phase := kargoapi.PromotionPhase(row.Phase)
+		statuses[i] = kargoapi.PromotionRolloutTargetStatus{
+			Name:      row.TargetName,
+			Promotion: row.PromotionName,
+			Phase:     phase,
+		}
+		switch phase {
+		case kargoapi.PromotionPhaseRunning:
+			summary.Running++
+		case kargoapi.PromotionPhaseSucceeded:
+			summary.Succeeded++
+		case kargoapi.PromotionPhaseFailed:
+			summary.Failed++
+		case kargoapi.PromotionPhaseErrored:
+			summary.Errored++
+		case kargoapi.PromotionPhaseAborted:
+			summary.Aborted++
+		default:
+			summary.Pending++
+		}
+	}
+	return statuses, summary
+}
+
 // FromSpec takes what the database stores from a PromotionRollout's spec:
 // its Stage, Freight and update strategy, under the given name. Which
 // Targets it promotes to is given to Create separately, by id, since the

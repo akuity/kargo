@@ -92,6 +92,7 @@ type Store interface {
 	List(context.Context, string, ListOptions) ([]Rollout, error)
 	ListLatest(context.Context, string, string) ([]Rollout, error)
 	ListOpen(context.Context) ([]Key, error)
+	ListTargetStatuses(context.Context, Rollout) ([]database.ListPromotionRolloutTargetStatusesRow, error)
 	Start(context.Context, Rollout) (Rollout, error)
 	UpdateStatus(context.Context, string, database.PromotionRolloutRow) (database.PromotionRolloutRow, error)
 }
@@ -296,6 +297,22 @@ func (s *store) ListOpen(ctx context.Context) ([]Key, error) {
 		keys[i] = Key{Project: row.ProjectName, Name: row.Name}
 	}
 	return keys, nil
+}
+
+// ListTargetStatuses returns what has become of each Target of the rollout:
+// the newest mirrored Promotion to it and that Promotion's phase, in Target
+// name order. Only Targets that have a Promotion appear. The rows are the
+// mirror's, so they lag the cluster by the mirror's sync; TargetStatuses
+// presents them as the rollout's status.
+func (s *store) ListTargetStatuses(
+	ctx context.Context,
+	rollout Rollout,
+) ([]database.ListPromotionRolloutTargetStatusesRow, error) {
+	rows, err := s.queries.ListPromotionRolloutTargetStatuses(ctx, rollout.ID)
+	if err != nil {
+		return nil, rolloutError(err, rollout.ProjectName, rollout.Name)
+	}
+	return rows, nil
 }
 
 // Start moves the rollout from Pending to Running and returns it as stored.

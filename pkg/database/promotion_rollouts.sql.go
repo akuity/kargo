@@ -343,6 +343,54 @@ func (q *Queries) ListProjectPromotionRollouts(ctx context.Context, arg ListProj
 	return items, nil
 }
 
+const listPromotionRolloutTargetStatuses = `-- name: ListPromotionRolloutTargetStatuses :many
+SELECT DISTINCT ON (target_name)
+    target_name::text AS target_name,
+    name AS promotion_name,
+    COALESCE(NULLIF(phase, ''), 'Pending')::text AS phase
+FROM promotions
+WHERE promotion_rollout_id = $1::uuid
+    AND target_name IS NOT NULL
+ORDER BY target_name, name DESC
+`
+
+type ListPromotionRolloutTargetStatusesRow struct {
+	TargetName    string
+	PromotionName string
+	Phase         string
+}
+
+// What has become of each Target of a rollout: the newest Promotion to it
+// and that Promotion's phase, in Target name order. Among one Target's
+// Promotions, name order is creation order (names embed a ULID), so the
+// newest is the greatest name. A Promotion the controller has not picked
+// up yet has no phase and is reported as Pending. Only Promotions that
+// name a Target count; a rollout's Promotions all do, but the mirror does
+// not enforce it.
+//
+// These are the mirror's rows, so they lag the cluster by the mirror's
+// sync. From rough testing that lag is fine for what reads this: the API
+// and Project stats, which present progress rather than act on it.
+func (q *Queries) ListPromotionRolloutTargetStatuses(ctx context.Context, id uuid.UUID) ([]ListPromotionRolloutTargetStatusesRow, error) {
+	rows, err := q.db.Query(ctx, listPromotionRolloutTargetStatuses, id)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListPromotionRolloutTargetStatusesRow
+	for rows.Next() {
+		var i ListPromotionRolloutTargetStatusesRow
+		if err := rows.Scan(&i.TargetName, &i.PromotionName, &i.Phase); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listPromotionRolloutTargets = `-- name: ListPromotionRolloutTargets :many
 SELECT t.promotion_rollout_id, t.target_id, targets.name AS target_name
 FROM promotion_rollout_targets t

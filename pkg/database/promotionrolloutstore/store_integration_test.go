@@ -62,6 +62,7 @@ func TestStoreIntegration(t *testing.T) {
 	for _, project := range []string{
 		"create", "numbers", "concurrent", "empty", "unique-a", "unique-b",
 		"vanished", "cascade", "list", "latest", "many", "open", "start", "update",
+		"statuses",
 	} {
 		for _, stage := range []string{"prod", "staging"} {
 			seedStage(t, project, stage, project+"/"+stage)
@@ -539,6 +540,69 @@ func TestStoreIntegration(t *testing.T) {
 					StatusPhase: "Bogus",
 				})
 				require.ErrorIs(t, err, database.ErrInvalid)
+			},
+		},
+		{
+			name: "target statuses report the newest mirrored Promotion to each Target",
+			run: func(t *testing.T) {
+				ids := seedTargets(t, "statuses", "us-east", "us-west", "eu-west")
+				rollout, err := store.Create(
+					ctx,
+					"statuses",
+					newRollout("prod", "prod.01A.abc"),
+					[]uuid.UUID{ids["us-east"], ids["us-west"], ids["eu-west"]},
+				)
+				require.NoError(t, err)
+				other, err := store.Create(ctx, "statuses", newRollout("prod", "prod.01B.abc"), nil)
+				require.NoError(t, err)
+
+				// No Target has a Promotion yet.
+				rows, err := store.ListTargetStatuses(ctx, rollout)
+				require.NoError(t, err)
+				require.Empty(t, rows)
+
+				promotion := func(name, target string, of Rollout, phase string) database.UpsertPromotionParams {
+					params := database.UpsertPromotionParams{
+						ID:                 name,
+						ProjectName:        "statuses",
+						Name:               name,
+						StageName:          "prod",
+						FreightName:        "freight-1",
+						PromotionRolloutID: &of.ID,
+						Phase:              phase,
+						CreatedAt:          time.Now(),
+					}
+					if target != "" {
+						params.TargetName = &target
+					}
+					return params
+				}
+				for _, params := range []database.UpsertPromotionParams{
+					// us-west: one Running Promotion.
+					promotion("prod.us-west.01A.abc", "us-west", rollout, "Running"),
+					// us-east: promoted to twice; the newest name wins.
+					promotion("prod.us-east.01C.abc", "us-east", rollout, "Succeeded"),
+					promotion("prod.us-east.01A.abc", "us-east", rollout, "Failed"),
+					// eu-west: not picked up by the controller yet.
+					promotion("prod.eu-west.01A.abc", "eu-west", rollout, ""),
+					// Ignored: to no Target, and of another rollout.
+					promotion("prod.01D.abc", "", rollout, "Succeeded"),
+					promotion("prod.us-east.01E.abc", "us-east", other, "Succeeded"),
+				} {
+					_, err = queries.UpsertPromotion(ctx, params)
+					require.NoError(t, err)
+				}
+
+				rows, err = store.ListTargetStatuses(ctx, rollout)
+				require.NoError(t, err)
+				require.Equal(t, []database.ListPromotionRolloutTargetStatusesRow{
+					{TargetName: "eu-west", PromotionName: "prod.eu-west.01A.abc", Phase: "Pending"},
+					{TargetName: "us-east", PromotionName: "prod.us-east.01C.abc", Phase: "Succeeded"},
+					{TargetName: "us-west", PromotionName: "prod.us-west.01A.abc", Phase: "Running"},
+				}, rows)
+				statuses, summary := TargetStatuses(rows)
+				require.Len(t, statuses, 3)
+				require.Equal(t, &kargoapi.PromotionRolloutSummary{Pending: 1, Running: 1, Succeeded: 1}, summary)
 			},
 		},
 		{
