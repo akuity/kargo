@@ -8,7 +8,8 @@ import (
 	"path"
 
 	kyaml "sigs.k8s.io/kustomize/kyaml/yaml"
-	"sigs.k8s.io/kustomize/kyaml/yaml/merge2"
+
+	"github.com/akuity/kargo/pkg/kustomize"
 )
 
 // MergeFiles merges the specified list of YAML files into an output file at
@@ -32,7 +33,7 @@ func MergeFiles(inputPaths []string, outputPath string) error {
 			mergeTarget = patchNode
 			continue
 		}
-		if mergeTarget, err = merge2.Merge(
+		if mergeTarget, err = kustomize.Merge(
 			patchNode, mergeTarget, kyaml.MergeOptions{},
 		); err != nil {
 			return fmt.Errorf("error merging in file %s: %w", inputPath, err)
