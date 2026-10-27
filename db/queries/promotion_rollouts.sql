@@ -1,17 +1,17 @@
 -- PromotionRollouts are addressed by Project name and rollout name
 -- everywhere, in the database as outside it.
 
--- Numbers the rollout within its Stage and inserts it in one statement, so
--- that both land or neither does without a transaction. The Stage's row is
--- the mirror's, which never writes the counter; the update locks the row,
--- which serializes a Stage's creates, and a failure anywhere in the
--- statement rolls the increment back, so numbers stay gapless. A Stage
--- deleted and recreated under the same name gets a new row whose counter
--- starts over, so the next number is also kept past any the name's earlier
--- rollouts hold. A Stage the mirror has not recorded yet has no row to
--- number from, and the statement inserts nothing. The rollout's Targets are
--- recorded in the same statement, so a Target that no longer exists fails
--- the whole create.
+-- Numbers the rollout within its Stage and inserts it in one statement. The
+-- number comes from the Stage row's counter, which only this query writes.
+-- The UPDATE locks the row, serializing a Stage's creates, and a failure
+-- anywhere in the statement rolls the increment back, so numbers are
+-- gapless. The counter is also kept above MAX(number) of the name's existing
+-- rollouts, because a Stage deleted and recreated gets a fresh row with the
+-- counter at 0. A Stage the mirror has not recorded has no row, so nothing
+-- is inserted. The targets CTE records the rollout's Targets in the same
+-- statement (an INSERT in a data-modifying CTE always runs, even though the
+-- outer SELECT reads only from rollout), so a Target that no longer exists
+-- fails the whole create.
 -- name: CreatePromotionRollout :one
 WITH stage AS (
     UPDATE stages SET last_promotion_rollout_number = GREATEST(

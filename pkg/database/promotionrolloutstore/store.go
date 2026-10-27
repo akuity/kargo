@@ -298,13 +298,11 @@ func (s *store) ListOpen(ctx context.Context) ([]Key, error) {
 	return keys, nil
 }
 
-// Start moves the rollout from Pending to Running, if it is the next of its
-// Stage's rollouts to run -- the oldest not yet finished, with none Running
-// -- and returns it as stored. A Stage promotes through one rollout at a
-// time, in number order, and this is where that is decided: a reconciler
-// fans a rollout out only once Start has admitted it. database.ErrConflict
-// says the rollout is not Pending, is not next, or lost the claim to
-// another; nothing is written in any of those cases.
+// Start moves the rollout from Pending to Running and returns it as stored.
+// Only the lowest-numbered open rollout of a Stage can start, and only while
+// none of the Stage's rollouts is Running. database.ErrConflict says the
+// rollout is not Pending, is not next, or another claim won; nothing is
+// written in any of those cases.
 func (s *store) Start(ctx context.Context, rollout Rollout) (Rollout, error) {
 	started, err := s.queries.StartPromotionRollout(ctx, rollout.ID)
 	if errors.Is(err, pgx.ErrNoRows) {
