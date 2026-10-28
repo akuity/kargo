@@ -32,9 +32,11 @@ WHERE project_name = sqlc.arg(project_name) AND name = sqlc.arg(name);
 -- ended without fanning out ended every one of its Targets that way.
 --
 -- Only target-aware Stages, those the mirror records with selectors, are
--- read: a Stage converted back to classic says nothing about Targets. Every
--- lookup reads a few rows through an index, however many rollouts and
--- Promotions the Project has had.
+-- read: a Stage converted back to classic says nothing about Targets. Each
+-- latest rollout's Promotions are read once, through the index on their
+-- rollout, so the work grows with those rollouts' fan-out rather than with
+-- the Project's history. Targets are joined within the Project too, so no
+-- other Project's rows are read, though Target names repeat across Projects.
 -- name: CountTargets :one
 WITH latest AS (
     SELECT DISTINCT ON (stages.name) latest.id, latest.status_phase
@@ -64,17 +66,18 @@ WITH latest AS (
         AND stages.target_selectors IS NOT NULL
     ORDER BY stages.name, latest.status_phase IN ('Pending', 'Running') DESC
 ),
+newest AS (
+    SELECT DISTINCT ON (promotions.promotion_rollout_id, promotions.target_name)
+        promotions.promotion_rollout_id, promotions.target_name, promotions.phase
+    FROM latest
+    JOIN promotions ON promotions.promotion_rollout_id = latest.id
+    ORDER BY promotions.promotion_rollout_id, promotions.target_name, promotions.id DESC
+),
 target_phases AS (
     SELECT
         promotion_rollout_targets.target_id,
         COALESCE(
-            (
-                SELECT promotions.phase FROM promotions
-                WHERE promotions.promotion_rollout_id = latest.id
-                    AND promotions.target_name = targets.name
-                ORDER BY promotions.id DESC
-                LIMIT 1
-            ),
+            newest.phase,
             CASE
                 WHEN latest.status_phase IN ('Succeeded', 'Failed', 'Errored') THEN latest.status_phase
                 ELSE 'Pending'
@@ -83,6 +86,9 @@ target_phases AS (
     FROM latest
     JOIN promotion_rollout_targets ON promotion_rollout_targets.promotion_rollout_id = latest.id
     JOIN targets ON targets.id = promotion_rollout_targets.target_id
+        AND targets.project_name = sqlc.arg(project_name)
+    LEFT JOIN newest ON newest.promotion_rollout_id = latest.id
+        AND newest.target_name = targets.name
 )
 SELECT
     (SELECT count(*) FROM targets WHERE targets.project_name = sqlc.arg(project_name)) AS total,
