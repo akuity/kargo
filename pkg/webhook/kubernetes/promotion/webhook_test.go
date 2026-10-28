@@ -2106,6 +2106,107 @@ func Test_webhook_ValidateCreate(t *testing.T) {
 			},
 		},
 		{
+			name: "Promotion naming a PromotionRollout created by a user is rejected",
+			webhook: &webhook{
+				validateProjectFn: func(
+					context.Context,
+					client.Client,
+					client.Object,
+				) error {
+					return nil
+				},
+				authorizeFn: func(context.Context, *kargoapi.Promotion, string) error {
+					return nil
+				},
+				admissionRequestFromContextFn: admission.RequestFromContext,
+				getStageFn: func(
+					context.Context,
+					client.Client,
+					types.NamespacedName,
+				) (*kargoapi.Stage, error) {
+					return &kargoapi.Stage{}, nil
+				},
+				isRequestFromKargoControlplaneFn: func(admission.Request) bool {
+					return false
+				},
+			},
+			promotion: &kargoapi.Promotion{
+				Spec: kargoapi.PromotionSpec{
+					Stage:            "fake-stage",
+					Freight:          "fake-freight",
+					PromotionRollout: "0b9f4a3e-6c1d-4a8e-9f2b-3c4d5e6f7a8b",
+				},
+			},
+			assertions: func(t *testing.T, _ *fakeevent.Sender, err error) {
+				var statusErr *apierrors.StatusError
+				require.True(t, errors.As(err, &statusErr))
+				require.Equal(t, metav1.StatusReasonInvalid, statusErr.ErrStatus.Reason)
+				require.Contains(
+					t,
+					statusErr.ErrStatus.Message,
+					"only the Kargo control plane may create a Promotion naming a PromotionRollout",
+				)
+			},
+		},
+		{
+			name: "the control plane may create a Promotion naming a PromotionRollout",
+			webhook: &webhook{
+				validateProjectFn: func(
+					context.Context,
+					client.Client,
+					client.Object,
+				) error {
+					return nil
+				},
+				authorizeFn: func(context.Context, *kargoapi.Promotion, string) error {
+					return nil
+				},
+				admissionRequestFromContextFn: admission.RequestFromContext,
+				getStageFn: func(
+					context.Context,
+					client.Client,
+					types.NamespacedName,
+				) (*kargoapi.Stage, error) {
+					return &kargoapi.Stage{
+						Spec: kargoapi.StageSpec{
+							RequestedFreight: []kargoapi.FreightRequest{{
+								Origin: kargoapi.FreightOrigin{
+									Kind: kargoapi.FreightOriginKindWarehouse,
+									Name: testWarehouse,
+								},
+								Sources: kargoapi.FreightSources{Direct: true},
+							}},
+						},
+					}, nil
+				},
+				getFreightFn: func(
+					context.Context,
+					client.Client,
+					types.NamespacedName,
+				) (*kargoapi.Freight, error) {
+					return &kargoapi.Freight{
+						Origin: kargoapi.FreightOrigin{
+							Kind: kargoapi.FreightOriginKindWarehouse,
+							Name: testWarehouse,
+						},
+					}, nil
+				},
+				isRequestFromKargoControlplaneFn: func(admission.Request) bool {
+					return true
+				},
+			},
+			promotion: &kargoapi.Promotion{
+				Spec: kargoapi.PromotionSpec{
+					Stage:            "fake-stage",
+					Freight:          "fake-freight",
+					PromotionRollout: "0b9f4a3e-6c1d-4a8e-9f2b-3c4d5e6f7a8b",
+				},
+			},
+			assertions: func(t *testing.T, _ *fakeevent.Sender, err error) {
+				require.NoError(t, err)
+			},
+		},
+		{
 			name: "a PromotionRequest's child may promote a target-aware Stage",
 			webhook: &webhook{
 				validateProjectFn: func(

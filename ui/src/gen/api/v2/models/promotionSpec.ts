@@ -39,7 +39,8 @@ export interface PromotionSpec {
    * the one the database's record of the Promotion is linked by.
    *
    * When empty (the default), the Promotion was not created by a
-   * PromotionRollout.
+   * PromotionRollout. When set, Target must be set too, and only the Kargo
+   * control plane may set it.
    *
    * +kubebuilder:validation:Optional
    * +kubebuilder:validation:Pattern=`^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$`

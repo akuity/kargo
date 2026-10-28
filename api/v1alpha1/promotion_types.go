@@ -160,6 +160,7 @@ func (p *Promotion) GetStatus() *PromotionStatus {
 // specific Freight.
 //
 // +kubebuilder:validation:XValidation:message="exactly one of freight or origin must be set",rule="has(self.freight) != has(self.origin)"
+// +kubebuilder:validation:XValidation:message="target must be set when promotionRollout is set",rule="!has(self.promotionRollout) || has(self.target)"
 type PromotionSpec struct {
 	// Stage specifies the name of the Stage to which this Promotion
 	// applies. The Stage referenced by this field MUST be in the same
@@ -211,7 +212,8 @@ type PromotionSpec struct {
 	// the one the database's record of the Promotion is linked by.
 	//
 	// When empty (the default), the Promotion was not created by a
-	// PromotionRollout.
+	// PromotionRollout. When set, Target must be set too, and only the Kargo
+	// control plane may set it.
 	//
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:validation:Pattern=`^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$`

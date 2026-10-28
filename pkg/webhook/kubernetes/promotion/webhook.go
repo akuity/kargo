@@ -603,6 +603,9 @@ func (w *webhook) ValidateCreate(
 	if fieldErr := validateTargetAwareStageIsPromotedByRequest(promo, stage); fieldErr != nil {
 		errs = append(errs, fieldErr)
 	}
+	if fieldErr := w.validatePromotionRolloutIsSetByControlPlane(req, promo); fieldErr != nil {
+		errs = append(errs, fieldErr)
+	}
 	if len(errs) > 0 {
 		return nil, apierrors.NewInvalid(promotionGroupKind, promo.Name, errs)
 	}
@@ -712,6 +715,31 @@ func validateTargetAwareStageIsPromotedByRequest(
 				"rather than a Promotion",
 			promo.Spec.Stage,
 		),
+	)
+}
+
+// validatePromotionRolloutIsSetByControlPlane enforces that only the Kargo
+// control plane creates a Promotion naming a PromotionRollout.
+//
+// spec.promotionRollout is not a field a user fills in. A PromotionRollout is
+// not a Kubernetes resource, so unlike a PromotionRequest it cannot own the
+// Promotions it creates, and there is no owner reference to check. The field
+// is the whole link, and the database keeps it once recorded. Letting any
+// client with rights to create Promotions set it would let that client attach
+// work to a rollout's history that the rollout never asked for.
+//
+// Only creates are checked. spec is immutable, so a Promotion admitted with a
+// rollout keeps it, and one admitted without can never gain one.
+func (w *webhook) validatePromotionRolloutIsSetByControlPlane(
+	req admission.Request,
+	promo *kargoapi.Promotion,
+) *field.Error {
+	if promo.Spec.PromotionRollout == "" || w.isRequestFromKargoControlplaneFn(req) {
+		return nil
+	}
+	return field.Forbidden(
+		field.NewPath("spec", "promotionRollout"),
+		"only the Kargo control plane may create a Promotion naming a PromotionRollout",
 	)
 }
 

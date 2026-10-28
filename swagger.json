@@ -8415,7 +8415,7 @@
           ]
         },
         "promotionRollout": {
-          "description": "PromotionRollout optionally holds the id of the PromotionRollout this\nPromotion was created by, as one part of that rollout's fan-out to\nTargets. The id is the UID the API serves the rollout with. A\nPromotionRollout is not a Kubernetes resource, so it cannot own the\nPromotion; this field is the link in place of an owner reference, and\nthe one the database's record of the Promotion is linked by.\n\nWhen empty (the default), the Promotion was not created by a\nPromotionRollout.\n\n+kubebuilder:validation:Optional\n+kubebuilder:validation:Pattern=`^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$`\n+akuity:test-kubebuilder-pattern=UUID",
+          "description": "PromotionRollout optionally holds the id of the PromotionRollout this\nPromotion was created by, as one part of that rollout's fan-out to\nTargets. The id is the UID the API serves the rollout with. A\nPromotionRollout is not a Kubernetes resource, so it cannot own the\nPromotion; this field is the link in place of an owner reference, and\nthe one the database's record of the Promotion is linked by.\n\nWhen empty (the default), the Promotion was not created by a\nPromotionRollout. When set, Target must be set too, and only the Kargo\ncontrol plane may set it.\n\n+kubebuilder:validation:Optional\n+kubebuilder:validation:Pattern=`^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$`\n+akuity:test-kubebuilder-pattern=UUID",
           "type": "string"
         },
         "stage": {
