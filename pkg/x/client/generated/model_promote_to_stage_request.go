@@ -23,7 +23,9 @@ type PromoteToStageRequest struct {
 	FreightAlias *string `json:"freightAlias,omitempty"`
 	// Origin is the canonical Freight origin key (e.g. \"Warehouse/foo\"). When set, the promotion webhook resolves it to the current auto-promotion candidate. Exactly one of Freight, FreightAlias, or Origin must be set.
 	Origin *string `json:"origin,omitempty"`
+	// Targets is a list of target names to promote to. If set to `nil` - selects all targets for the stage. If non-nil, should be a subset of targets selected by the stage, empty list is an error.
 	Targets []string `json:"targets,omitempty"`
+	// UpdateStrategy configures overrides for maxConcurrent and maxErrors for this request. If nil - calculated from the stages updateStrategy based on the number of stage targets.
 	UpdateStrategy *PromotionRequestUpdateStrategy `json:"updateStrategy,omitempty"`
 }
 
