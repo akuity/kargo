@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -12,6 +13,8 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 )
+
+var ErrTargetNotSelected = errors.New("target is not selected")
 
 // GeneratePromotionRequestName generates a name for a PromotionRequest by
 // combining the Stage name, a ULID, and a short hash of the Freight, in the
@@ -116,6 +119,7 @@ func ComparePromotionRequestPhase(a, b kargoapi.PromotionRequestPhase) int {
 	}
 }
 
+// NewPromotionRequestForAllTargets creates a promotion request for all stage targets.
 func NewPromotionRequestForAllTargets(
 	ctx context.Context,
 	stage *kargoapi.Stage,
@@ -139,6 +143,8 @@ func NewPromotionRequestForAllTargets(
 	return new(newPromotionRequest(stage, freightName, promotionRequestTargets, *updateStrategy)), nil
 }
 
+// NewPromotionRequestForSelectTargets creates a promotion request for specific subset of targets.
+// If targets don't match the targets selected by the stage, ErrTargetNotSelected is returned.
 func NewPromotionRequestForSelectTargets(
 	ctx context.Context,
 	stage *kargoapi.Stage,
@@ -160,7 +166,8 @@ func NewPromotionRequestForSelectTargets(
 	for _, promotionRequestTarget := range promotionRequestTargets {
 		if _, ok := stageTargetsNameSet[promotionRequestTarget.Name]; !ok {
 			return nil, fmt.Errorf(
-				"target %q is not selected by stage %q",
+				"%w: target %q is not selected by stage %q",
+				ErrTargetNotSelected,
 				promotionRequestTarget.Name,
 				stage.Name)
 		}
@@ -186,7 +193,7 @@ func precheckPromotionRequestFields(
 
 	stageTargets, err := getStageTargets(ctx, projectTargetsFn, stage)
 	if err != nil {
-		return nil, nil, fmt.Errorf("cannot creat promotion request without stage targets: %w", err)
+		return nil, nil, fmt.Errorf("cannot create promotion request without stage targets: %w", err)
 	}
 
 	updateStrategy, err = ensureUpdateStrategy(updateStrategy, stage, stageTargets)

@@ -415,19 +415,21 @@ func TestPromotionRequestBuilder(t *testing.T) {
 			[]kargoapi.PromotionRequestTarget{{Name: "us-north"}},
 		)
 		require.Error(t, err)
+		require.ErrorIs(t, err, ErrTargetNotSelected)
 	})
 
 	t.Run("updateStrategy is calculated based on stageTargets", func(t *testing.T) {
 		t.Parallel()
 
+		updatedStage := testStage.DeepCopy()
 		// UpdateStrategy values calculated for stageTargets would be 5*40/100 = 2
-		testStage.Spec.Targets.UpdateStrategy = kargoapi.TargetUpdateStrategy{
+		updatedStage.Spec.Targets.UpdateStrategy = kargoapi.TargetUpdateStrategy{
 			MaxConcurrent: new(intstr.FromString("40%")),
 			MaxFailures:   new(intstr.FromString("40%")),
 		}
 		pr, err := NewPromotionRequestForSelectTargets(
 			context.Background(),
-			testStage,
+			updatedStage,
 			freight,
 			projectTargetsFn(usEast, usWest, usNorth, usSouth, usCenter),
 			nil,
@@ -442,14 +444,15 @@ func TestPromotionRequestBuilder(t *testing.T) {
 	t.Run("updateStrategy override overrides the calculation", func(t *testing.T) {
 		t.Parallel()
 
+		updatedStage := testStage.DeepCopy()
 		// UpdateStrategy values calculated for stageTargets would be 5*40/100 = 2
-		testStage.Spec.Targets.UpdateStrategy = kargoapi.TargetUpdateStrategy{
+		updatedStage.Spec.Targets.UpdateStrategy = kargoapi.TargetUpdateStrategy{
 			MaxConcurrent: new(intstr.FromString("40%")),
 			MaxFailures:   new(intstr.FromString("40%")),
 		}
 		pr, err := NewPromotionRequestForSelectTargets(
 			context.Background(),
-			testStage,
+			updatedStage,
 			freight,
 			projectTargetsFn(usEast, usWest, usNorth, usSouth, usCenter),
 			&kargoapi.PromotionRequestUpdateStrategy{

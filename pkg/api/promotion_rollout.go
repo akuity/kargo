@@ -89,7 +89,8 @@ func NewPromotionRolloutForSelectTargets(
 	for _, rolloutTarget := range rolloutTargets {
 		if _, ok := stageTargetsNameSet[rolloutTarget.Name]; !ok {
 			return nil, fmt.Errorf(
-				"target %q is not selected by stage %q",
+				"%w: target %q is not selected by stage %q",
+				ErrTargetNotSelected,
 				rolloutTarget.Name,
 				stage.Name)
 		}

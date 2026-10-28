@@ -273,6 +273,7 @@ func TestNewPromotionRolloutForSelectTargets(t *testing.T) {
 			nil,
 		)
 		require.Error(t, err)
+		require.ErrorIs(t, err, ErrTargetNotSelected)
 	})
 
 	t.Run("resolves the update strategy against all Stage Targets", func(t *testing.T) {
