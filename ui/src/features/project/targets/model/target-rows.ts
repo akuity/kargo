@@ -119,6 +119,11 @@ export type TargetRow = {
   behind: boolean;
   // The Freight the Target runs, by name, across its governing Stages.
   freight: string[];
+  // The one governing Stage this row has been read for, when the page is
+  // grouped by Stage. state, behind and freight are then that Stage's reading
+  // alone; stages stays whole either way, so a row always knows every Stage
+  // that governs its Target. Absent on an unscoped row.
+  scopedTo?: GoverningStage;
 };
 
 // targetRows pairs every Target with the Stages that govern it, both sorted by
@@ -172,13 +177,33 @@ export const targetRows = (
 // Stage, a Target governed by several appears under each, and under each it
 // should show where it stands for that Stage alone -- not the worst of all of
 // them, which would paint a Stage's group with trouble from another Stage.
+//
+// stages is deliberately left whole. The reading narrows to one Stage; the
+// facts about the Target do not, and a reader who opens the row from a Stage's
+// group still needs to see every Stage that governs it -- including the one
+// the trouble is actually on.
 export const scopeToStage = (row: TargetRow, governing: GoverningStage): TargetRow => ({
   ...row,
-  stages: [governing],
   state: governing.state,
   behind: governing.upToDate === false,
-  freight: freightNames(governing.currentFreight)
+  freight: freightNames(governing.currentFreight),
+  scopedTo: governing
 });
+
+// aheadFreight names the Freight that Stages which have left this Target behind
+// have moved on to.
+//
+// A row read for one Stage answers for that Stage alone: a Target up to date
+// for the Stage whose group it sits in is not behind there, whatever another
+// Stage has since promoted. Reading every governing Stage would put a "behind"
+// tag on a row the same view calls Healthy.
+export const aheadFreight = (row: TargetRow): string[] => [
+  ...new Set(
+    (row.scopedTo ? [row.scopedTo] : row.stages)
+      .filter(({ upToDate }) => upToDate === false)
+      .flatMap(({ stage }) => freightNames(stage.status?.freightHistory?.[0]))
+  )
+];
 
 // stateCounts tallies rows by the state they show. Every state is present, so
 // callers may index any of them without a fallback.

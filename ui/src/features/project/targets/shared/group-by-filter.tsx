@@ -9,9 +9,10 @@ import { NO_GROUPING, STAGE_GROUPING, splitKeys } from '../model/target-grouping
  * GroupByFilter chooses the label key a fleet is sliced along, as a row of
  * pills: Stage first, when there are Stages to group by, then the keys the
  * Targets actually carry, none of them picked to begin with. Stage never folds
- * into the dropdown: it is the one axis every project with a fleet has. Each pill toggles, so the way back to an ungrouped fleet is to unpick
- * the key in force rather than to find a "None" among the axes -- not grouping
- * is the absence of a choice, not a choice of its own.
+ * into the dropdown: it is the one axis every project with a fleet has. Each
+ * pill toggles, so the way back to an ungrouped fleet is to unpick the key in
+ * force rather than to find a "None" among the axes -- not grouping is the
+ * absence of a choice, not a choice of its own.
  *
  * Keys that do not fit fold into a dropdown behind a dots pill, and that pill
  * takes the selected background when the axis in force is one of them -- so the

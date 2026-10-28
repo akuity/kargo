@@ -82,26 +82,34 @@ export const Targets = () => {
   // the axis that slices one fleet may mean nothing in the next.
   const [storedGroupBy, setGroupBy] = useLocalStorage<string>(groupByKey(project), NO_GROUPING);
   const keys = useMemo(() => labelKeys(targets), [targets]);
+
+  const allRows = useMemo(() => targetRows(targets, stages, rounds), [targets, stages, rounds]);
+
   // A remembered key that this project's Targets do not carry would group
   // everything into one unlabeled bucket, which says less than not grouping at
   // all -- so it falls back to that until the keys are loaded and do contain it.
-  // Grouping by Stage likewise waits for there to be Stages to group by.
-  const byStage = stages.length > 0;
+  // Grouping by Stage goes by the same rule, and so waits for a Stage to
+  // actually govern something: target-aware Stages whose selectors match
+  // nothing yet would leave every Target in one "no Stage" bucket.
+  const byStage = useMemo(() => allRows.some((row) => row.stages.length > 0), [allRows]);
   const groupBy =
     keys.includes(storedGroupBy) || (byStage && storedGroupBy === STAGE_GROUPING)
       ? storedGroupBy
       : NO_GROUPING;
   const groupKey = groupBy || undefined;
 
-  const allRows = useMemo(() => targetRows(targets, stages, rounds), [targets, stages, rounds]);
   const rows = useMemo(
     () => allRows.filter((row) => matchesSearch(row, search)),
     [allRows, search]
   );
+  // Only the cards view reads these; the list builds its own groups from its
+  // own faceted rows.
   const groups = useMemo(
-    () => groupTargetRows(rows, groupKey, allStages),
-    [rows, groupKey, allStages]
+    () => (view === 'cards' ? groupTargetRows(rows, groupKey, allStages) : []),
+    [view, rows, groupKey, allStages]
   );
+  // Fleet figures, one row per Target however the page is grouped. See
+  // StatTiles for why these and the per-Stage cards differ.
   const counts = useMemo(() => stateCounts(rows), [rows]);
 
   const loading = stagesQuery.isLoading || targetsQuery.isLoading;

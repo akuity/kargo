@@ -47,6 +47,10 @@ const share = (count: number, total: number): string =>
  * Targets are not health-checked yet, so for most fleets these figures come
  * from how each Stage's latest round of promotion went rather than from
  * recorded health. See governingStageState.
+ *
+ * These stay fleet figures however the page is grouped: a Target governed by
+ * several Stages counts once, under its worst state, while the cards below
+ * count each Stage's own reading. The two answer different questions.
  */
 export const StatTiles = ({
   shown,

@@ -2,17 +2,20 @@ import { describe, expect, test } from 'vitest';
 
 import { Stage } from '@ui/gen/api/v2/models';
 
+import { Facets, matchesFacets, stateFacet } from './target-facets';
 import {
   STAGE_GROUPING,
   UNGOVERNED,
   UNLABELED,
   groupAxis,
   groupHeading,
+  filterGroupedRows,
   groupTargetRows,
   groupTitle,
+  groupedRows,
   splitKeys
 } from './target-grouping';
-import { targetRows } from './target-rows';
+import { stateCounts, targetRows } from './target-rows';
 import { fleetStage, forStage, stage, target } from './test-fixtures';
 
 describe('groupTargetRows()', () => {
@@ -100,9 +103,17 @@ describe('groupTargetRows() by Stage', () => {
     expect(groups[1].rows[0].freight).toEqual(['f-old']);
   });
 
+  test('a scoped row still knows every Stage that governs its Target', () => {
+    // The reading narrows to one Stage; the Stages column and the detail panel
+    // must still show the Stage the trouble is on.
+    expect(groups[0].rows[0].scopedTo?.stage.metadata?.name).toBe('dev');
+    expect(groups[0].rows[0].stages.map((s) => s.stage.metadata?.name)).toEqual(['dev', 'prod']);
+  });
+
   test('the ungoverned come last, unscoped', () => {
     expect(groups[2].rows.map((r) => r.target.metadata?.name)).toEqual(['orphan']);
     expect(groups[2].rows[0].stages).toEqual([]);
+    expect(groups[2].rows[0].scopedTo).toBeUndefined();
   });
 
   test('a Stage no row is governed by gets no group', () => {
@@ -115,6 +126,38 @@ describe('groupTargetRows() by Stage', () => {
 
   test('no rows yields no groups', () => {
     expect(groupTargetRows([], STAGE_GROUPING, [dev, stage('classic')])).toEqual([]);
+  });
+
+  // The regression the ordering exists for: faceting runs inside the groups,
+  // so the filter and the rows it leaves behind cannot disagree.
+  describe('faceting inside the groups', () => {
+    const facetedGroups = (states: Facets['states']) =>
+      filterGroupedRows(groups, (row) => matchesFacets(row, { labels: {}, states }));
+
+    test('ticking Healthy keeps the Stage that sees the Target healthy', () => {
+      const healthy = facetedGroups(['Healthy']);
+      expect(healthy.map((g) => g.value)).toEqual(['dev']);
+      expect(healthy[0].rows.map((r) => r.target.metadata?.name)).toEqual(['shared']);
+    });
+
+    test('ticking Unhealthy keeps only the Stage that sees it unhealthy', () => {
+      const unhealthy = facetedGroups(['Unhealthy']);
+      expect(unhealthy.map((g) => g.value)).toEqual(['prod']);
+      expect(unhealthy[0].rows[0].state).toBe('Unhealthy');
+    });
+
+    test('the facet counts agree with what each group shows', () => {
+      expect(stateFacet(groupedRows(groups), { labels: {}, states: [] }).Healthy).toBe(
+        stateCounts(groups[0].rows).Healthy
+      );
+    });
+
+    test('the summary counts the readings the groups hold between them', () => {
+      const counts = stateCounts(groupedRows(groups));
+      expect(counts.Healthy).toBe(1);
+      expect(counts.Unhealthy).toBe(1);
+      expect(groupedRows(groups)).toHaveLength(3);
+    });
   });
 });
 
@@ -133,7 +176,12 @@ describe('groupHeading() and groupTitle()', () => {
     [group(UNLABELED), 'geo', 'no geo label', 'no geo label'],
     [group(''), undefined, 'All Targets', 'All Targets'],
     [group('prod'), STAGE_GROUPING, 'prod', 'Stage prod'],
-    [group(UNGOVERNED), STAGE_GROUPING, 'no Stage', 'no Stage']
+    [group(UNGOVERNED), STAGE_GROUPING, 'no Stage', 'no Stage'],
+    // Each sentinel is only read on the axis that can produce it: a Target may
+    // carry the sentinel's own text as a label value, and that is a label group
+    // like any other.
+    [group(UNGOVERNED), 'geo', UNGOVERNED, `geo=${UNGOVERNED}`],
+    [group(UNLABELED), STAGE_GROUPING, UNLABELED, `Stage ${UNLABELED}`]
   ])('%j by %j', (target, key, heading, title) => {
     expect(groupHeading(target, key)).toBe(heading);
     expect(groupTitle(target, key)).toBe(title);
