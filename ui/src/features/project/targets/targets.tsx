@@ -13,7 +13,7 @@ import { useWatchStages } from '../pipelines/use-watch-stages';
 
 import { TARGETS_POLL_INTERVAL_MS } from './constants';
 import { TargetsList } from './list/targets-list';
-import { NO_GROUPING, groupTargetRows } from './model/target-grouping';
+import { NO_GROUPING, STAGE_GROUPING, groupAxis, groupTargetRows } from './model/target-grouping';
 import { labelKeys } from './model/target-labels';
 import { behindCount, stateCounts, targetRows } from './model/target-rows';
 import { matchesSearch } from './model/target-search';
@@ -82,18 +82,34 @@ export const Targets = () => {
   // the axis that slices one fleet may mean nothing in the next.
   const [storedGroupBy, setGroupBy] = useLocalStorage<string>(groupByKey(project), NO_GROUPING);
   const keys = useMemo(() => labelKeys(targets), [targets]);
+
+  const allRows = useMemo(() => targetRows(targets, stages, rounds), [targets, stages, rounds]);
+
   // A remembered key that this project's Targets do not carry would group
   // everything into one unlabeled bucket, which says less than not grouping at
   // all -- so it falls back to that until the keys are loaded and do contain it.
-  const groupBy = keys.includes(storedGroupBy) ? storedGroupBy : NO_GROUPING;
+  // Grouping by Stage goes by the same rule, and so waits for a Stage to
+  // actually govern something: target-aware Stages whose selectors match
+  // nothing yet would leave every Target in one "no Stage" bucket.
+  const byStage = useMemo(() => allRows.some((row) => row.stages.length > 0), [allRows]);
+  const groupBy =
+    keys.includes(storedGroupBy) || (byStage && storedGroupBy === STAGE_GROUPING)
+      ? storedGroupBy
+      : NO_GROUPING;
   const groupKey = groupBy || undefined;
 
-  const allRows = useMemo(() => targetRows(targets, stages, rounds), [targets, stages, rounds]);
   const rows = useMemo(
     () => allRows.filter((row) => matchesSearch(row, search)),
     [allRows, search]
   );
-  const groups = useMemo(() => groupTargetRows(rows, groupKey), [rows, groupKey]);
+  // Only the cards view reads these; the list builds its own groups from its
+  // own faceted rows.
+  const groups = useMemo(
+    () => (view === 'cards' ? groupTargetRows(rows, groupKey, allStages) : []),
+    [view, rows, groupKey, allStages]
+  );
+  // Fleet figures, one row per Target however the page is grouped. See
+  // StatTiles for why these and the per-Stage cards differ.
   const counts = useMemo(() => stateCounts(rows), [rows]);
 
   const loading = stagesQuery.isLoading || targetsQuery.isLoading;
@@ -131,8 +147,14 @@ export const Targets = () => {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
-        {keys.length > 0 && (
-          <GroupByFilter keys={keys} value={groupBy} onChange={setGroupBy} disabled={loading} />
+        {(keys.length > 0 || byStage) && (
+          <GroupByFilter
+            keys={keys}
+            byStage={byStage}
+            value={groupBy}
+            onChange={setGroupBy}
+            disabled={loading}
+          />
         )}
       </Flex>
 
@@ -144,6 +166,7 @@ export const Targets = () => {
           rows={rows}
           keys={keys}
           groupKey={groupKey}
+          stages={allStages}
           freightLabel={freightLabel}
         />
       ) : (
@@ -164,7 +187,7 @@ export const Targets = () => {
             <Flex vertical gap={8}>
               <Typography.Text strong className='text-sm'>
                 {groupKey
-                  ? `${groups.length} group${plural(groups.length)} by ${groupKey}`
+                  ? `${groups.length} group${plural(groups.length)} by ${groupAxis(groupKey)}`
                   : 'All Targets'}
               </Typography.Text>
               {/* No items-start: grid rows stretch, so cards sitting side by
