@@ -253,7 +253,7 @@ export const PromotionRequestDetails = ({
                 },
                 {
                   key: 'all',
-                  label: 'All Targets',
+                  label: 'All Stage Targets',
                   onClick: () => retry()
                 }
               ]
