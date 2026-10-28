@@ -224,7 +224,7 @@ func (s *server) promoteToStage(c *gin.Context) {
 			ctx, stage, freight, allTargets, req.Targets, req.UpdateStrategy)
 		if promoErr != nil {
 			if errors.Is(promoErr, api.ErrTargetNotSelected) {
-				_ = c.Error(libhttp.Error(err, http.StatusBadRequest))
+				_ = c.Error(libhttp.Error(promoErr, http.StatusBadRequest))
 			} else {
 				_ = c.Error(promoErr)
 			}
