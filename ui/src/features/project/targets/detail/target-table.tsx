@@ -8,9 +8,8 @@ import { Link, generatePath } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
 
-import { freightNames } from '../model/round-utils';
 import { visibleLabels } from '../model/target-labels';
-import { TargetRow } from '../model/target-rows';
+import { TargetRow, aheadFreight } from '../model/target-rows';
 import { targetStatePresentations } from '../model/target-state';
 import { FreightLink } from '../shared/freight-link';
 import { StateDot } from '../shared/state-visuals';
@@ -133,14 +132,7 @@ export const TargetTable = ({
       key: 'freight',
       width: 200,
       render: (_, row) => {
-        // What the Stages that have left this Target behind have moved on to.
-        const ahead = [
-          ...new Set(
-            row.stages
-              .filter(({ upToDate }) => upToDate === false)
-              .flatMap(({ stage }) => freightNames(stage.status?.freightHistory?.[0]))
-          )
-        ];
+        const ahead = aheadFreight(row);
         return (
           <Flex gap={6} wrap align='center'>
             {row.freight.length ? (
