@@ -1,6 +1,8 @@
 package api
 
 import (
+	"context"
+	"fmt"
 	"strings"
 	"testing"
 
@@ -295,9 +297,15 @@ func TestPromotionRequestBuilder(t *testing.T) {
 		},
 	}
 
+	// Targets must carry the Stage's selector label so that they survive
+	// FilterTargetsForStage, which projectTargetsFn results are run through.
 	newTarget := func(name string) kargoapi.Target {
 		return kargoapi.Target{
-			ObjectMeta: metav1.ObjectMeta{Namespace: project, Name: name},
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: project,
+				Name:      name,
+				Labels:    map[string]string{"region": "us"},
+			},
 		}
 	}
 	usEast := newTarget("us-east")
@@ -306,12 +314,24 @@ func TestPromotionRequestBuilder(t *testing.T) {
 	usSouth := newTarget("us-south")
 	usCenter := newTarget("us-center")
 
+	// projectTargetsFn builds a mock that returns the given Project Targets,
+	// standing in for the database lookup the real callers perform.
+	projectTargetsFn := func(targets ...kargoapi.Target) func(context.Context, string) ([]kargoapi.Target, error) {
+		return func(context.Context, string) ([]kargoapi.Target, error) {
+			return targets, nil
+		}
+	}
+
 	t.Run("records the Stage, the Freight and the Targets it was given", func(t *testing.T) {
 		t.Parallel()
 
-		promoReq, err := NewPromotionRequestBuilder(testStage, freight).
-			WithStageTargets([]kargoapi.Target{usEast, usWest}).
-			Build()
+		promoReq, err := NewPromotionRequestForAllTargets(
+			context.Background(),
+			testStage,
+			freight,
+			projectTargetsFn(usEast, usWest),
+			nil,
+		)
 		require.NoError(t, err)
 
 		require.Equal(t, project, promoReq.Namespace)
@@ -329,27 +349,44 @@ func TestPromotionRequestBuilder(t *testing.T) {
 		)
 	})
 
-	t.Run("no stageTargets is an error", func(t *testing.T) {
+	t.Run("failure to get stage targets is an error", func(t *testing.T) {
 		t.Parallel()
 
-		// spec.targets is required and has no omitempty, so a nil is invalid value
-		// and will be rejected by the API server.
-		_, err := NewPromotionRequestBuilder(testStage, freight).
-			WithStageTargets(nil).
-			Build()
+		_, err := NewPromotionRequestForAllTargets(
+			context.Background(),
+			testStage,
+			freight,
+			func(context.Context, string) ([]kargoapi.Target, error) {
+				return nil, fmt.Errorf("something went wrong")
+			},
+			nil,
+		)
 		require.Error(t, err)
 
-		_, err = NewPromotionRequestBuilder(testStage, freight).Build()
+		// A Stage without a targets block cannot have a PromotionRequest.
+		noTargets := testStage.DeepCopy()
+		noTargets.Spec.Targets = nil
+		_, err = NewPromotionRequestForAllTargets(
+			context.Background(),
+			noTargets,
+			freight,
+			projectTargetsFn(usEast),
+			nil,
+		)
 		require.Error(t, err)
 	})
 
 	t.Run("promotionTargets override sets the targets ", func(t *testing.T) {
 		t.Parallel()
 
-		promoReq, err := NewPromotionRequestBuilder(testStage, freight).
-			WithStageTargets([]kargoapi.Target{usEast, usWest}).
-			WithPromotionRequestTargets([]kargoapi.PromotionRequestTarget{{Name: usEast.Name}}).
-			Build()
+		promoReq, err := NewPromotionRequestForSelectTargets(
+			context.Background(),
+			testStage,
+			freight,
+			projectTargetsFn(usEast, usWest),
+			nil,
+			[]kargoapi.PromotionRequestTarget{{Name: usEast.Name}},
+		)
 		require.NoError(t, err)
 
 		require.Equal(t, project, promoReq.Namespace)
@@ -369,10 +406,14 @@ func TestPromotionRequestBuilder(t *testing.T) {
 	t.Run("promotionTargets outside of stage targets is an error", func(t *testing.T) {
 		t.Parallel()
 
-		_, err := NewPromotionRequestBuilder(testStage, freight).
-			WithStageTargets([]kargoapi.Target{usEast, usWest}).
-			WithPromotionRequestTargets([]kargoapi.PromotionRequestTarget{{Name: "us-north"}}).
-			Build()
+		_, err := NewPromotionRequestForSelectTargets(
+			context.Background(),
+			testStage,
+			freight,
+			projectTargetsFn(usEast, usWest),
+			nil,
+			[]kargoapi.PromotionRequestTarget{{Name: "us-north"}},
+		)
 		require.Error(t, err)
 	})
 
@@ -384,10 +425,14 @@ func TestPromotionRequestBuilder(t *testing.T) {
 			MaxConcurrent: new(intstr.FromString("40%")),
 			MaxFailures:   new(intstr.FromString("40%")),
 		}
-		pr, err := NewPromotionRequestBuilder(testStage, freight).
-			WithStageTargets([]kargoapi.Target{usEast, usWest, usNorth, usSouth, usCenter}).
-			WithPromotionRequestTargets([]kargoapi.PromotionRequestTarget{{Name: "us-north"}}).
-			Build()
+		pr, err := NewPromotionRequestForSelectTargets(
+			context.Background(),
+			testStage,
+			freight,
+			projectTargetsFn(usEast, usWest, usNorth, usSouth, usCenter),
+			nil,
+			[]kargoapi.PromotionRequestTarget{{Name: "us-north"}},
+		)
 
 		require.NoError(t, err)
 		require.Equal(t, int64(2), pr.Spec.UpdateStrategy.MaxConcurrent)
@@ -402,14 +447,17 @@ func TestPromotionRequestBuilder(t *testing.T) {
 			MaxConcurrent: new(intstr.FromString("40%")),
 			MaxFailures:   new(intstr.FromString("40%")),
 		}
-		pr, err := NewPromotionRequestBuilder(testStage, freight).
-			WithStageTargets([]kargoapi.Target{usEast, usWest, usNorth, usSouth, usCenter}).
-			WithPromotionRequestTargets([]kargoapi.PromotionRequestTarget{{Name: "us-north"}}).
-			WithUpdateStrategy(&kargoapi.PromotionRequestUpdateStrategy{
+		pr, err := NewPromotionRequestForSelectTargets(
+			context.Background(),
+			testStage,
+			freight,
+			projectTargetsFn(usEast, usWest, usNorth, usSouth, usCenter),
+			&kargoapi.PromotionRequestUpdateStrategy{
 				MaxConcurrent: 10,
 				MaxFailures:   10,
-			}).
-			Build()
+			},
+			[]kargoapi.PromotionRequestTarget{{Name: "us-north"}},
+		)
 
 		require.NoError(t, err)
 		require.Equal(t, int64(10), pr.Spec.UpdateStrategy.MaxConcurrent)
@@ -419,9 +467,13 @@ func TestPromotionRequestBuilder(t *testing.T) {
 	t.Run("the Stage is the controlling owner", func(t *testing.T) {
 		t.Parallel()
 
-		promoReq, err := NewPromotionRequestBuilder(testStage, freight).
-			WithStageTargets([]kargoapi.Target{usEast}).
-			Build()
+		promoReq, err := NewPromotionRequestForAllTargets(
+			context.Background(),
+			testStage,
+			freight,
+			projectTargetsFn(usEast),
+			nil,
+		)
 
 		require.NoError(t, err)
 
@@ -437,9 +489,13 @@ func TestPromotionRequestBuilder(t *testing.T) {
 	t.Run("identifying labels", func(t *testing.T) {
 		t.Parallel()
 
-		promoReq, err := NewPromotionRequestBuilder(testStage, freight).
-			WithStageTargets([]kargoapi.Target{usEast}).
-			Build()
+		promoReq, err := NewPromotionRequestForAllTargets(
+			context.Background(),
+			testStage,
+			freight,
+			projectTargetsFn(usEast),
+			nil,
+		)
 		require.NoError(t, err)
 		require.Equal(t, stage, promoReq.Labels[kargoapi.LabelKeyStage])
 		// Without the shard label, only the default controller would ever
@@ -452,9 +508,13 @@ func TestPromotionRequestBuilder(t *testing.T) {
 
 		unsharded := testStage.DeepCopy()
 		unsharded.Spec.Shard = ""
-		promoReq, err := NewPromotionRequestBuilder(unsharded, freight).
-			WithStageTargets([]kargoapi.Target{usEast}).
-			Build()
+		promoReq, err := NewPromotionRequestForAllTargets(
+			context.Background(),
+			unsharded,
+			freight,
+			projectTargetsFn(usEast),
+			nil,
+		)
 		require.NoError(t, err)
 		require.NotContains(t, promoReq.Labels, kargoapi.LabelKeyShard)
 	})

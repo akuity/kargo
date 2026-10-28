@@ -208,7 +208,11 @@ func (s *server) promoteToStage(c *gin.Context) {
 	// A Stage that selects Targets fans Freight out to them via a PromotionRequest
 	// rather than promoting to itself with a single Promotion.
 	if stage.IsTargetAware() {
-		newPromoReq, promoErr := s.createPromotionRequest(ctx, stage, *freight, req.Targets, req.UpdateStrategy)
+		// We explicitly request all targets if req.Targets is nil
+		// TODO: split up API functions to avoid confusion between nil argument and empty argument
+		allTargets := req.Targets == nil
+		newPromoReq, promoErr := s.createPromotionRequest(
+			ctx, stage, *freight, allTargets, req.Targets, req.UpdateStrategy)
 		if promoErr != nil {
 			_ = c.Error(promoErr)
 			return
@@ -256,6 +260,7 @@ func (s *server) createPromotionRequest(
 	ctx context.Context,
 	stage *kargoapi.Stage,
 	freight kargoapi.Freight,
+	allTargets bool,
 	targets []string,
 	updateStrategy *kargoapi.PromotionRequestUpdateStrategy,
 ) (*kargoapi.PromotionRequest, error) {
@@ -264,30 +269,25 @@ func (s *server) createPromotionRequest(
 	// decision for this request. The Targets come from the database
 	// without a check of their own for the same reason.
 
-	stageTargets, targetErr := s.governedTargets(ctx, stage)
-	if targetErr != nil {
-		return nil, targetErr
+	listTargetsFn, err := s.getListTargetsFn()
+	if err != nil {
+		return nil, err
 	}
 
-	// NOTE: if targets is nil, promotionrequest will be create for all targets in the stage
-	var promotionRequestTargets []kargoapi.PromotionRequestTarget
-	if targets != nil {
-		promotionRequestTargets = make([]kargoapi.PromotionRequestTarget, len(targets))
+	var newPromoReq *kargoapi.PromotionRequest
+	if allTargets {
+		newPromoReq, err = api.NewPromotionRequestForAllTargets(
+			ctx, stage, freight.Name, listTargetsFn, updateStrategy)
+	} else {
+		// Build promotionRequestTargets from targets arg.
+		// If allTargets is false deliberately builds an empty list.
+		promotionRequestTargets := make([]kargoapi.PromotionRequestTarget, len(targets))
 		for i, targetName := range targets {
 			promotionRequestTargets[i] = kargoapi.PromotionRequestTarget{Name: targetName}
 		}
+		newPromoReq, err = api.NewPromotionRequestForSelectTargets(
+			ctx, stage, freight.Name, listTargetsFn, updateStrategy, promotionRequestTargets)
 	}
-	// Both the Target lookup and the create go through the internal client.
-	// PromotionRequests are system-owned, and the promote-verb check above
-	// IS the authorization decision for this request; which Targets the
-	// Stage governs is a detail of carrying it out. Resolving as the user
-	// would also break the kargo-promoter role, which holds the promote
-	// verb but no permission to list Targets.
-	newPromoReq, err := api.NewPromotionRequestBuilder(stage, freight.Name).
-		WithStageTargets(stageTargets).
-		WithPromotionRequestTargets(promotionRequestTargets).
-		WithUpdateStrategy(updateStrategy).
-		Build()
 
 	if err != nil {
 		return nil, err

@@ -51,7 +51,7 @@ func NewPromotionRollout(
 		if err != nil {
 			return nil, err
 		}
-		updateStrategy = kargoapi.PromotionRolloutUpdateStrategy(strategy)
+		updateStrategy = kargoapi.PromotionRolloutUpdateStrategy(*strategy)
 	}
 
 	return &kargoapi.PromotionRollout{
