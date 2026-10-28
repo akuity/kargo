@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 
@@ -55,8 +56,12 @@ type promoteToStageRequest struct {
 	// Origin is the canonical Freight origin key (e.g. "Warehouse/foo"). When
 	// set, the promotion webhook resolves it to the current auto-promotion
 	// candidate. Exactly one of Freight, FreightAlias, or Origin must be set.
-	Origin         string                                   `json:"origin,omitempty"`
-	Targets        []string                                 `json:"targets,omitempty"`
+	Origin string `json:"origin,omitempty"`
+	// Targets is a list of target names to promote to. If set to `nil` - selects all targets for the stage.
+	// If non-nil, should be a subset of targets selected by the stage, empty list is an error.
+	Targets []string `json:"targets,omitempty"`
+	// UpdateStrategy configures overrides for maxConcurrent and maxErrors for this request.
+	// If nil - calculated from the stages updateStrategy based on the number of stage targets.
 	UpdateStrategy *kargoapi.PromotionRequestUpdateStrategy `json:"updateStrategy,omitempty"`
 } // @name PromoteToStageRequest
 
@@ -211,10 +216,18 @@ func (s *server) promoteToStage(c *gin.Context) {
 		// We explicitly request all targets if req.Targets is nil
 		// TODO: split up API functions to avoid confusion between nil argument and empty argument
 		allTargets := req.Targets == nil
+		if !allTargets && len(req.Targets) == 0 {
+			_ = c.Error(libhttp.Error(fmt.Errorf("target list cannot be empty"), http.StatusBadRequest))
+			return
+		}
 		newPromoReq, promoErr := s.createPromotionRequest(
-			ctx, stage, *freight, allTargets, req.Targets, req.UpdateStrategy)
+			ctx, stage, freight, allTargets, req.Targets, req.UpdateStrategy)
 		if promoErr != nil {
-			_ = c.Error(promoErr)
+			if errors.Is(promoErr, api.ErrTargetNotSelected) {
+				_ = c.Error(libhttp.Error(err, http.StatusBadRequest))
+			} else {
+				_ = c.Error(promoErr)
+			}
 			return
 		}
 		c.JSON(http.StatusCreated, newPromoReq)
@@ -223,7 +236,7 @@ func (s *server) promoteToStage(c *gin.Context) {
 
 	// Create the Promotion. The defaulting webhook fills in the rest from
 	// the Stage's PromotionTemplate.
-	newPromo, err := s.createPromotion(ctx, stage, *freight)
+	newPromo, err := s.createPromotion(ctx, stage, freight)
 	if err != nil {
 		_ = c.Error(err)
 		return
@@ -235,7 +248,7 @@ func (s *server) promoteToStage(c *gin.Context) {
 func (s *server) createPromotion(
 	ctx context.Context,
 	stage *kargoapi.Stage,
-	freight kargoapi.Freight,
+	freight *kargoapi.Freight,
 ) (*kargoapi.Promotion, error) {
 	newPromo := api.NewMinimalPromotion(stage, freight.Name)
 
@@ -251,7 +264,7 @@ func (s *server) createPromotion(
 		return nil, err
 	}
 	if s.sender != nil {
-		s.recordPromotionCreatedEvent(ctx, newPromo, &freight)
+		s.recordPromotionCreatedEvent(ctx, newPromo, freight)
 	}
 	return newPromo, nil
 }
@@ -259,7 +272,7 @@ func (s *server) createPromotion(
 func (s *server) createPromotionRequest(
 	ctx context.Context,
 	stage *kargoapi.Stage,
-	freight kargoapi.Freight,
+	freight *kargoapi.Freight,
 	allTargets bool,
 	targets []string,
 	updateStrategy *kargoapi.PromotionRequestUpdateStrategy,

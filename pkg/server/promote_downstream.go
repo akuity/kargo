@@ -171,7 +171,7 @@ func (s *server) promoteDownstream(c *gin.Context) {
 		// a PromotionRequest rather than promoting to itself with a Promotion.
 		if downstream.IsTargetAware() {
 			// Promote downstream never sets custom targets or updateStrategy and always runs for all targets
-			newPromoReq, err := s.createPromotionRequest(ctx, &downstream, *freight, true, nil, nil)
+			newPromoReq, err := s.createPromotionRequest(ctx, &downstream, freight, true, nil, nil)
 			if err != nil {
 				promoteErrs = append(promoteErrs, err)
 				continue
@@ -181,7 +181,7 @@ func (s *server) promoteDownstream(c *gin.Context) {
 			continue
 		}
 
-		newPromo, err := s.createPromotion(ctx, &downstream, *freight)
+		newPromo, err := s.createPromotion(ctx, &downstream, freight)
 		if err != nil {
 			promoteErrs = append(promoteErrs, err)
 			continue
