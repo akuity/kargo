@@ -1,12 +1,14 @@
 import { describe, expect, test } from 'vitest';
 
-import { PromotionRequest } from '@ui/gen/api/v2/models';
+import { PromotionRequest, Stage } from '@ui/gen/api/v2/models';
 
 import {
   Rounds,
+  aheadFreight,
   behindCount,
   byWorstState,
   freightTally,
+  scopeToStage,
   stateCounts,
   targetRows,
   worstState
@@ -289,6 +291,90 @@ describe('freightTally()', () => {
       { name: 'new', count: 2 },
       { name: 'old', count: 1 }
     ]);
+  });
+});
+
+describe('scopeToStage()', () => {
+  const us = fleetStage('us-stage', [{ matchLabels: { region: 'us' } }], 'new');
+  const all = fleetStage('all-stage', [{}], 'new');
+
+  test('reads the row as one Stage sees it', () => {
+    const [row] = targetRows(
+      [
+        target(
+          'a',
+          { region: 'us' },
+          {
+            status: {
+              stages: {
+                'all-stage': forStage('old', 'Healthy', 'f-old'),
+                'us-stage': forStage('new', 'Unhealthy', 'f-new')
+              }
+            }
+          }
+        )
+      ],
+      [us, all]
+    );
+    expect(row.state).toBe('Unhealthy');
+    expect(row.behind).toBe(true);
+
+    const [allStage, usStage] = row.stages;
+    const scoped = scopeToStage(row, allStage);
+    expect(scoped.scopedTo).toBe(allStage);
+    expect(scoped.state).toBe('Behind');
+    expect(scoped.behind).toBe(true);
+    expect(scoped.freight).toEqual(['f-old']);
+
+    const other = scopeToStage(row, usStage);
+    expect(other.state).toBe('Unhealthy');
+    expect(other.behind).toBe(false);
+    expect(other.freight).toEqual(['f-new']);
+    expect(other.target).toBe(row.target);
+  });
+
+  test('leaves the governing Stages whole, so the detail views keep them', () => {
+    const [row] = targetRows([target('a', { region: 'us' })], [us, all]);
+    expect(scopeToStage(row, row.stages[0]).stages).toBe(row.stages);
+  });
+
+  // Keeping every governing Stage on the row means anything reading them has
+  // to say which Stage it is answering for. aheadFreight is the one that does.
+  test('aheadFreight answers for the scoped Stage alone', () => {
+    // The Stages need Freight of their own, since that is what a "behind" tag
+    // names: what the Stage has moved on to.
+    const onLatest = (stage: Stage, freight: string): Stage => ({
+      ...stage,
+      status: { freightHistory: [{ id: 'new', items: { 'Warehouse/w': { name: freight } } }] }
+    });
+    const [row] = targetRows(
+      [
+        target(
+          'a',
+          { region: 'us' },
+          {
+            status: {
+              stages: {
+                // Behind: the Stage is on 'new', the Target still on 'old'.
+                'all-stage': forStage('old', 'Healthy', 'f-old'),
+                // Up to date.
+                'us-stage': forStage('new', 'Healthy', 'f-new')
+              }
+            }
+          }
+        )
+      ],
+      [onLatest(us, 'us-latest'), onLatest(all, 'all-latest')]
+    );
+    const [allStage, usStage] = row.stages;
+
+    // Unscoped, the row speaks for every Stage, and all-stage is behind.
+    expect(aheadFreight(row)).toEqual(['all-latest']);
+    // Scoped to all-stage, which is the Stage that is behind.
+    expect(aheadFreight(scopeToStage(row, allStage))).toEqual(['all-latest']);
+    // Scoped to us-stage, which is up to date: no "behind" tag belongs on a
+    // row this very view calls Healthy.
+    expect(aheadFreight(scopeToStage(row, usStage))).toEqual([]);
   });
 });
 

@@ -1,9 +1,18 @@
 import { Button, Collapse, Empty, Flex, Tag, Typography } from 'antd';
 import { useEffect, useMemo, useState } from 'react';
 
+import { Stage } from '@ui/gen/api/v2/models';
+
 import { TargetTable } from '../detail/target-table';
 import { Facets, labelFacets, matchesFacets, noFacets, stateFacet } from '../model/target-facets';
-import { TargetGroup, groupTargetRows, groupTitle } from '../model/target-grouping';
+import {
+  STAGE_GROUPING,
+  TargetGroup,
+  filterGroupedRows,
+  groupTargetRows,
+  groupTitle,
+  groupedRows
+} from '../model/target-grouping';
 import { TargetRow, byWorstState, stateCounts } from '../model/target-rows';
 import { targetStatePresentations } from '../model/target-state';
 import { StateBar } from '../shared/state-visuals';
@@ -22,7 +31,14 @@ const GroupHeader = ({ group, groupKey }: { group: TargetGroup; groupKey?: strin
   const counts = stateCounts(group.rows);
   return (
     <Flex align='center' gap={16} className='min-w-0'>
-      <span className='text-sm font-semibold font-mono shrink-0'>
+      {/* Monospace reads a label group for what it is, a key=value token. Only
+          a label axis produces one: the Stage axis names a Stage, and no axis
+          at all heads the group "All Targets". Both are prose. */}
+      <span
+        className={`text-sm font-semibold shrink-0 ${
+          groupKey && groupKey !== STAGE_GROUPING ? 'font-mono' : ''
+        }`}
+      >
         {groupTitle(group, groupKey)}
       </span>
       <Typography.Text type='secondary' className='text-xs shrink-0'>
@@ -105,24 +121,39 @@ export const TargetsList = ({
   rows,
   keys,
   groupKey,
+  stages,
   freightLabel
 }: {
   project: string;
-  // The rows the search has left, before faceting.
+  // The rows the search has left, before grouping or faceting.
   rows: TargetRow[];
   // Every label key the Targets carry, as facet axes.
   keys: string[];
   // The label key the list is grouped by, if any.
   groupKey?: string;
+  // The Project's Stages, which order the groups when grouped by Stage.
+  stages: Stage[];
   freightLabel: (name: string) => string;
 }) => {
   const [facets, setFacets] = useState<Facets>(noFacets());
 
-  const labels = useMemo(() => labelFacets(rows, keys, facets), [rows, keys, facets]);
-  const states = useMemo(() => stateFacet(rows, facets), [rows, facets]);
+  // Grouped before anything is faceted or counted, because grouped by Stage a
+  // row's state is the one its own Stage sees and only grouping settles which
+  // Stage that is. The facets then count, and filter, the rows the groups hold.
+  const grouped = useMemo(() => groupTargetRows(rows, groupKey, stages), [rows, groupKey, stages]);
+  const facetRows = useMemo(() => groupedRows(grouped), [grouped]);
+
+  const labels = useMemo(() => labelFacets(facetRows, keys, facets), [facetRows, keys, facets]);
+  const states = useMemo(() => stateFacet(facetRows, facets), [facetRows, facets]);
+  // Sorted after grouping, not before: grouped by Stage, a row's state is the
+  // one its Stage sees, which is not the state it was sorted by beforehand.
   const groups = useMemo(
-    () => groupTargetRows(byWorstState(rows.filter((row) => matchesFacets(row, facets))), groupKey),
-    [rows, facets, groupKey]
+    () =>
+      filterGroupedRows(grouped, (row) => matchesFacets(row, facets)).map((group) => ({
+        ...group,
+        rows: byWorstState(group.rows)
+      })),
+    [grouped, facets]
   );
 
   // Which groups are open, once the reader has said. Until then it is
@@ -138,7 +169,12 @@ export const TargetsList = ({
   // rather than leaving the reader a wall of shut rows.
   useEffect(() => setOpen(undefined), [groupKey]);
 
-  const shown = groups.reduce((sum, group) => sum + group.rows.length, 0);
+  // Distinct Targets, not rows: grouped by Stage a Target appears once per
+  // Stage that governs it, and the caption counts Targets.
+  const shown = useMemo(
+    () => new Set(groupedRows(groups).map((row) => row.target.metadata?.name)).size,
+    [groups]
+  );
 
   return (
     <Flex gap={16} align='flex-start' className='min-h-0' wrap>
