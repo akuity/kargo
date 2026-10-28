@@ -22,6 +22,16 @@
 -- is one of the Promotion's own Project; an id naming no such rollout is
 -- recorded as none. Once recorded it is kept, whatever the Promotion later
 -- claims.
+--
+-- A Promotion to a Target also keeps the Target's row in
+-- target_stage_promotions current, under the id the Promotion's row has: it
+-- becomes the pair's latest Promotion unless a later one (by creation time,
+-- then id) already is, and its latest successful one if it has succeeded
+-- and none finished later (by finish time, then id). The comparison is made
+-- against the Promotion's own timestamps, not the order syncs arrive in, so
+-- a Promotion first seen late, such as during a resync, settles in the same
+-- place. The same Promotion arriving again, with a new phase, is its own
+-- successor.
 -- name: UpsertPromotion :one
 WITH existing AS (
     SELECT
@@ -103,6 +113,67 @@ freight AS (
     FROM existing
     WHERE NOT existing.name_taken
     ON CONFLICT (promotion_id, origin_kind, origin_name) DO NOTHING
+),
+pair AS (
+    INSERT INTO target_stage_promotions (
+        project_name,
+        target_name,
+        stage_name,
+        latest_promotion_id,
+        latest_phase,
+        latest_created_at,
+        succeeded_promotion_id,
+        succeeded_finished_at
+    )
+    SELECT
+        sqlc.arg(project_name),
+        sqlc.narg(target_name),
+        sqlc.arg(stage_name),
+        COALESCE(existing.id, sqlc.arg(id)),
+        sqlc.arg(phase),
+        sqlc.arg(created_at),
+        CASE
+            WHEN sqlc.arg(phase) = 'Succeeded' AND sqlc.narg(finished_at)::timestamptz IS NOT NULL
+            THEN COALESCE(existing.id, sqlc.arg(id))
+        END,
+        CASE
+            WHEN sqlc.arg(phase) = 'Succeeded' AND sqlc.narg(finished_at)::timestamptz IS NOT NULL
+            THEN sqlc.narg(finished_at)::timestamptz
+        END
+    FROM existing
+    WHERE NOT existing.name_taken AND sqlc.narg(target_name)::text IS NOT NULL
+    ON CONFLICT (project_name, target_name, stage_name) DO UPDATE SET
+        latest_promotion_id = CASE
+            WHEN (EXCLUDED.latest_created_at, EXCLUDED.latest_promotion_id)
+                >= (target_stage_promotions.latest_created_at, target_stage_promotions.latest_promotion_id)
+            THEN EXCLUDED.latest_promotion_id
+            ELSE target_stage_promotions.latest_promotion_id
+        END,
+        latest_phase = CASE
+            WHEN (EXCLUDED.latest_created_at, EXCLUDED.latest_promotion_id)
+                >= (target_stage_promotions.latest_created_at, target_stage_promotions.latest_promotion_id)
+            THEN EXCLUDED.latest_phase
+            ELSE target_stage_promotions.latest_phase
+        END,
+        latest_created_at = GREATEST(EXCLUDED.latest_created_at, target_stage_promotions.latest_created_at),
+        succeeded_promotion_id = CASE
+            WHEN EXCLUDED.succeeded_finished_at IS NOT NULL AND (
+                target_stage_promotions.succeeded_finished_at IS NULL
+                OR (EXCLUDED.succeeded_finished_at, EXCLUDED.succeeded_promotion_id)
+                    >= (target_stage_promotions.succeeded_finished_at, target_stage_promotions.succeeded_promotion_id)
+            )
+            THEN EXCLUDED.succeeded_promotion_id
+            ELSE target_stage_promotions.succeeded_promotion_id
+        END,
+        succeeded_finished_at = CASE
+            WHEN EXCLUDED.succeeded_finished_at IS NOT NULL AND (
+                target_stage_promotions.succeeded_finished_at IS NULL
+                OR (EXCLUDED.succeeded_finished_at, EXCLUDED.succeeded_promotion_id)
+                    >= (target_stage_promotions.succeeded_finished_at, target_stage_promotions.succeeded_promotion_id)
+            )
+            THEN EXCLUDED.succeeded_finished_at
+            ELSE target_stage_promotions.succeeded_finished_at
+        END
 )
 SELECT name_taken FROM existing;
 
@@ -139,12 +210,27 @@ ORDER BY project_name, name;
 
 -- Records a Promotion that was deleted before it finished as finished in the
 -- given phase, at the time its deletion was seen. A row already finished is
--- left alone: it is the record of what the Promotion did.
+-- left alone: it is the record of what the Promotion did. If the Promotion
+-- is its Target's latest from its Stage, the pair's row takes the phase
+-- too. Both statements read the row as it was before either ran, so they
+-- agree on whether it was unfinished.
 -- name: FinishDeletedPromotion :execrows
+WITH pair AS (
+    UPDATE target_stage_promotions SET latest_phase = sqlc.arg(phase)
+    FROM promotions
+    WHERE promotions.project_name = sqlc.arg(project_name)
+        AND promotions.name = sqlc.arg(name)
+        AND promotions.finished_at IS NULL
+        AND promotions.target_name IS NOT NULL
+        AND target_stage_promotions.project_name = promotions.project_name
+        AND target_stage_promotions.target_name = promotions.target_name
+        AND target_stage_promotions.stage_name = promotions.stage_name
+        AND target_stage_promotions.latest_promotion_id = promotions.id
+)
 UPDATE promotions SET
     phase = sqlc.arg(phase),
     finished_at = CURRENT_TIMESTAMP,
     synced_at = CURRENT_TIMESTAMP
-WHERE project_name = sqlc.arg(project_name)
-    AND name = sqlc.arg(name)
-    AND finished_at IS NULL;
+WHERE promotions.project_name = sqlc.arg(project_name)
+    AND promotions.name = sqlc.arg(name)
+    AND promotions.finished_at IS NULL;

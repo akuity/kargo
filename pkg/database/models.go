@@ -83,3 +83,14 @@ type TargetRow struct {
 	CreatedAt     time.Time
 	UpdatedAt     time.Time
 }
+
+type TargetStagePromotionRow struct {
+	ProjectName          string
+	TargetName           string
+	StageName            string
+	LatestPromotionID    string
+	LatestPhase          string
+	LatestCreatedAt      time.Time
+	SucceededPromotionID *string
+	SucceededFinishedAt  *time.Time
+}
