@@ -82,8 +82,8 @@ func matches(promotion *kargoapi.Promotion, row database.PromotionRow) (bool, er
 // linksRollout reports whether the row records the PromotionRollout the
 // Promotion names, as far as the upsert would change it. A recorded link is
 // kept whatever the Promotion later claims, so only a missing one differs:
-// one the annotation names but the row lacks, for instance because the
-// mirror missed the annotation while it was down. An id naming no rollout
+// one the Promotion's spec names but the row lacks, for instance because
+// the rollout was not yet stored when the mirror first saw the Promotion. An id naming no rollout
 // of the Promotion's Project is never recorded, so its row is queued again
 // each resync; the upsert that follows writes nothing.
 func linksRollout(row database.PromotionRow, params database.UpsertPromotionParams) bool {

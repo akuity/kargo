@@ -67,13 +67,3 @@ func NewPromotionRollout(
 		},
 	}, nil
 }
-
-// PromotionRolloutOf returns the id of the PromotionRollout the Promotion was
-// created by, as one part of that rollout's fan-out to Targets, or an empty
-// string if the Promotion is not the child of one. The id is the UID the API
-// serves the rollout with. The link is the kargo.akuity.io/promotion-rollout
-// annotation: a PromotionRollout is not a Kubernetes resource and so cannot
-// own the Promotion.
-func PromotionRolloutOf(promo *kargoapi.Promotion) string {
-	return promo.Annotations[kargoapi.AnnotationKeyPromotionRollout]
-}

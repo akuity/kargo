@@ -25,6 +25,8 @@ type PromotionSpec struct {
 	Freight *string `json:"freight,omitempty"`
 	// Origin, when set, identifies the FreightOrigin whose auto-promotion candidate should be promoted. The mutating webhook resolves this to the candidate Freight for that origin and fills Freight before the Promotion is persisted. Exactly one of Freight or Origin must be set.  +kubebuilder:validation:Optional
 	Origin *FreightOrigin `json:"origin,omitempty"`
+	// PromotionRollout optionally holds the id of the PromotionRollout this Promotion was created by, as one part of that rollout's fan-out to Targets. The id is the UID the API serves the rollout with. A PromotionRollout is not a Kubernetes resource, so it cannot own the Promotion; this field is the link in place of an owner reference, and the one the database's record of the Promotion is linked by.  When empty (the default), the Promotion was not created by a PromotionRollout.  +kubebuilder:validation:Optional +kubebuilder:validation:Pattern=`^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$` +akuity:test-kubebuilder-pattern=UUID
+	PromotionRollout *string `json:"promotionRollout,omitempty"`
 	// Stage specifies the name of the Stage to which this Promotion applies. The Stage referenced by this field MUST be in the same namespace as the Promotion.  +kubebuilder:validation:Required +kubebuilder:validation:MinLength=1 +kubebuilder:validation:MaxLength=253 +kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$` +akuity:test-kubebuilder-pattern=KubernetesName
 	Stage string `json:"stage"`
 	// Steps specifies the directives to be executed as part of this Promotion. The order in which the directives are executed is the order in which they are listed in this field.  +kubebuilder:validation:Required +kubebuilder:validation:MinItems=1 +kubebuilder:validation:items:XValidation:message=\"Promotion step must have uses set and must not reference a task\",rule=\"has(self.uses) && !has(self.task)\"
@@ -118,6 +120,38 @@ func (o *PromotionSpec) HasOrigin() bool {
 // SetOrigin gets a reference to the given FreightOrigin and assigns it to the Origin field.
 func (o *PromotionSpec) SetOrigin(v FreightOrigin) {
 	o.Origin = &v
+}
+
+// GetPromotionRollout returns the PromotionRollout field value if set, zero value otherwise.
+func (o *PromotionSpec) GetPromotionRollout() string {
+	if o == nil || IsNil(o.PromotionRollout) {
+		var ret string
+		return ret
+	}
+	return *o.PromotionRollout
+}
+
+// GetPromotionRolloutOk returns a tuple with the PromotionRollout field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *PromotionSpec) GetPromotionRolloutOk() (*string, bool) {
+	if o == nil || IsNil(o.PromotionRollout) {
+		return nil, false
+	}
+	return o.PromotionRollout, true
+}
+
+// HasPromotionRollout returns a boolean if a field has been set.
+func (o *PromotionSpec) HasPromotionRollout() bool {
+	if o != nil && !IsNil(o.PromotionRollout) {
+		return true
+	}
+
+	return false
+}
+
+// SetPromotionRollout gets a reference to the given string and assigns it to the PromotionRollout field.
+func (o *PromotionSpec) SetPromotionRollout(v string) {
+	o.PromotionRollout = &v
 }
 
 // GetStage returns the Stage field value
@@ -247,6 +281,9 @@ func (o PromotionSpec) ToMap() (map[string]interface{}, error) {
 	}
 	if !IsNil(o.Origin) {
 		toSerialize["origin"] = o.Origin
+	}
+	if !IsNil(o.PromotionRollout) {
+		toSerialize["promotionRollout"] = o.PromotionRollout
 	}
 	toSerialize["stage"] = o.Stage
 	toSerialize["steps"] = o.Steps

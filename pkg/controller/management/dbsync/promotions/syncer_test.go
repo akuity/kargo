@@ -60,11 +60,11 @@ func TestSync(t *testing.T) {
 	withFreight.FreightNames = []string{"def456", "abc123"}
 	rolloutID := uuid.MustParse("0b9f4a3e-6c1d-4a8e-9f2b-3c4d5e6f7a8b")
 	child := testPromotion(created)
-	child.Annotations = map[string]string{kargoapi.AnnotationKeyPromotionRollout: rolloutID.String()}
+	child.Spec.PromotionRollout = rolloutID.String()
 	ofRollout := upserted
 	ofRollout.PromotionRolloutID = &rolloutID
 	notAnID := testPromotion(created)
-	notAnID.Annotations = map[string]string{kargoapi.AnnotationKeyPromotionRollout: "dev.01abc.def456"}
+	notAnID.Spec.PromotionRollout = "dev.01abc.def456"
 	noName := testPromotion(created)
 	noName.Name = ""
 	precise := testPromotion(created.Add(123456789 * time.Nanosecond))
@@ -87,7 +87,7 @@ func TestSync(t *testing.T) {
 			obj:  withCollection, want: &withFreight,
 		},
 		{name: "a Promotion of a rollout names its id", obj: child, want: &ofRollout},
-		{name: "a rollout annotation that is not an id names no rollout", obj: notAnID, want: &upserted},
+		{name: "a rollout reference that is not an id names no rollout", obj: notAnID, want: &upserted},
 		{name: "preserves terminating objects", obj: terminating, want: &upserted},
 		{name: "creation time is carried at PostgreSQL's precision", obj: precise, want: &truncated},
 		{

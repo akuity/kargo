@@ -84,8 +84,8 @@ CREATE INDEX promotion_rollout_targets_target_idx ON promotion_rollout_targets (
 
 -- The PromotionRollout a mirrored Promotion was created by, as one part of
 -- its fan-out to Targets. NULL for a Promotion created on its own. The
--- mirror records it from the Promotion's kargo.akuity.io/promotion-rollout
--- annotation, which carries the rollout's id; nothing that creates
+-- mirror records it from the Promotion's spec.promotionRollout field,
+-- which carries the rollout's id; nothing that creates
 -- Promotions writes it here. Once recorded it is kept, like the rest of the
 -- Promotion's record. A rollout is never deleted, and while Promotion rows
 -- refer to it, it cannot be: the history they record would lose its rollout.
