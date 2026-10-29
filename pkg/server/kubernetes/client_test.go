@@ -2,7 +2,6 @@ package kubernetes
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"net/http"
 	"net/http/httptest"
@@ -13,6 +12,7 @@ import (
 	authnv1 "k8s.io/api/authentication/v1"
 	authv1 "k8s.io/api/authorization/v1"
 	corev1 "k8s.io/api/core/v1"
+	flowcontrolv1 "k8s.io/api/flowcontrol/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -523,53 +523,75 @@ func TestConfigureQPSBurst(t *testing.T) {
 	flowControlCheckTimeout = 100 * time.Millisecond
 	t.Cleanup(func() { flowControlCheckTimeout = timeout })
 
+	const exemptUID = "exempt-uid"
 	testCases := []struct {
 		name          string
-		apf           bool
-		groups        []string
-		reviewFails   bool
-		reviewHangs   bool
-		pingHangs     bool
+		pathPrefix    string // a server URL with a path, as behind a proxy
+		matched       string // the matched priority level's UID; "" when APF is disabled
+		status        int
+		body          string
+		hangs         bool
 		down          bool
 		expectedQPS   float32
 		expectedBurst int
 	}{
 		{
-			name:          "PriorityAndFairness enabled",
-			apf:           true,
-			groups:        []string{"system:serviceaccounts", "system:authenticated"},
+			name:          "PriorityAndFairness limits the client",
+			matched:       "workload-low-uid",
+			status:        http.StatusOK,
+			body:          `{"metadata":{"name":"exempt","uid":"exempt-uid"}}`,
 			expectedQPS:   -1,
 			expectedBurst: -1,
 		},
 		{
-			name:          "PriorityAndFairness enabled, exempt identity",
-			apf:           true,
-			groups:        []string{"system:masters", "system:authenticated"},
+			name:          "PriorityAndFairness limits the client, server URL with a path",
+			pathPrefix:    "/proxy",
+			matched:       "workload-low-uid",
+			status:        http.StatusOK,
+			body:          `{"metadata":{"name":"exempt","uid":"exempt-uid"}}`,
+			expectedQPS:   -1,
+			expectedBurst: -1,
+		},
+		{
+			name:          "client is exempt",
+			matched:       exemptUID,
+			status:        http.StatusOK,
+			body:          `{"metadata":{"name":"exempt","uid":"exempt-uid"}}`,
 			expectedQPS:   50,
 			expectedBurst: 300,
 		},
 		{
-			name:          "PriorityAndFairness enabled, SelfSubjectReview fails",
-			apf:           true,
-			reviewFails:   true,
+			name:          "client may not read the exempt priority level",
+			matched:       "workload-low-uid",
+			status:        http.StatusForbidden,
 			expectedQPS:   50,
 			expectedBurst: 300,
 		},
 		{
-			name:          "PriorityAndFairness enabled, SelfSubjectReview hangs",
-			apf:           true,
-			reviewHangs:   true,
+			name:          "unexpected status",
+			matched:       "workload-low-uid",
+			status:        http.StatusInternalServerError,
 			expectedQPS:   50,
 			expectedBurst: 300,
 		},
 		{
-			name:          "API server hangs",
-			pingHangs:     true,
+			name:          "no UID in the response",
+			matched:       "workload-low-uid",
+			status:        http.StatusOK,
+			body:          `{"metadata":{"name":"exempt"}}`,
 			expectedQPS:   50,
 			expectedBurst: 300,
 		},
 		{
 			name:          "PriorityAndFairness disabled",
+			status:        http.StatusOK,
+			body:          `{"metadata":{"name":"exempt","uid":"exempt-uid"}}`,
+			expectedQPS:   50,
+			expectedBurst: 300,
+		},
+		{
+			name:          "API server hangs",
+			hangs:         true,
 			expectedQPS:   50,
 			expectedBurst: 300,
 		},
@@ -584,39 +606,27 @@ func TestConfigureQPSBurst(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			release := make(chan struct{})
 			srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				if testCase.pingHangs {
+				if testCase.hangs {
 					<-release
 					return
 				}
-				if testCase.apf {
-					w.Header().Set("X-Kubernetes-PF-FlowSchema-UID", "uid")
-				}
-				if r.URL.Path != "/apis/authentication.k8s.io/v1/selfsubjectreviews" {
+				if r.Method != http.MethodGet || r.URL.Path != testCase.pathPrefix+exemptPriorityLevelPath {
+					w.WriteHeader(http.StatusNotFound)
 					return
 				}
-				if testCase.reviewFails {
-					w.WriteHeader(http.StatusInternalServerError)
-					return
-				}
-				if testCase.reviewHangs {
-					<-release
-					return
+				if testCase.matched != "" {
+					w.Header().Set(flowcontrolv1.ResponseHeaderMatchedPriorityLevelConfigurationUID, testCase.matched)
 				}
 				w.Header().Set("Content-Type", "application/json")
-				w.WriteHeader(http.StatusCreated)
-				require.NoError(t, json.NewEncoder(w).Encode(authnv1.SelfSubjectReview{
-					TypeMeta: metav1.TypeMeta{APIVersion: "authentication.k8s.io/v1", Kind: "SelfSubjectReview"},
-					Status: authnv1.SelfSubjectReviewStatus{
-						UserInfo: authnv1.UserInfo{Groups: testCase.groups},
-					},
-				}))
+				w.WriteHeader(testCase.status)
+				_, _ = w.Write([]byte(testCase.body))
 			}))
 			defer srv.Close()
 			defer close(release) // before Close, which waits for the hanging handler
 			if testCase.down {
 				srv.Close()
 			}
-			cfg := &rest.Config{Host: srv.URL}
+			cfg := &rest.Config{Host: srv.URL + testCase.pathPrefix}
 			ConfigureQPSBurst(context.Background(), cfg, 50, 300)
 			require.Equal(t, testCase.expectedQPS, cfg.QPS)
 			require.Equal(t, testCase.expectedBurst, cfg.Burst)
