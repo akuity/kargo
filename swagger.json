@@ -2712,7 +2712,7 @@
     },
     "/v1beta1/projects/{project}/stages/{stage}/promotion-rollouts": {
       "post": {
-        "description": "Create a PromotionRollout, which promotes the Freight named\nin the body to each of the Targets the Stage governs.\nPromotionRollouts are managed through this API rather than\nas Kubernetes resources. The Stage must select Targets: its\nselectors are resolved against the project's Targets as the\nrollout is created, its update strategy against how many\nthey match, and both are recorded with the rollout for good.\nEverything else about the rollout is assigned by the server.\nThis is a promotion: it requires the promote verb on the\nStage. A server that does not create PromotionRollouts\nresponds 501.",
+        "description": "Create a PromotionRollout, which promotes the Freight named\nin the body to each of the Targets the Stage governs, or to\nthe ones the body names among them. PromotionRollouts are\nmanaged through this API rather than as Kubernetes\nresources. The Stage must select Targets: its selectors are\nresolved against the project's Targets as the rollout is\ncreated, narrowed to the Targets named if any are, and its\nupdate strategy is resolved against how many that leaves;\nboth are recorded with the rollout for good. A Target the\nStage does not govern is refused. Everything else about the\nrollout is assigned by the server.\nThis is a promotion: it requires the promote verb on the\nStage. A server that does not create PromotionRollouts\nresponds 501.",
         "consumes": [
           "application/json"
         ],
@@ -5357,6 +5357,13 @@
         "freight": {
           "description": "Freight is the name of the Freight to promote.",
           "type": "string"
+        },
+        "targets": {
+          "description": "Targets names the Targets to promote to, each of which the Stage must\ngovern. Omitted, the rollout promotes to every Target the Stage\ngoverns. Naming a few is how a canary is run or a failed rollout is\nretried for only the Targets that failed.",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
         }
       }
     },

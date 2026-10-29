@@ -26,6 +26,15 @@ func TestValidateCreateRequest(t *testing.T) {
 			req:    createPromotionRolloutRequest{Freight: "a_b"},
 			fields: []string{"freight"},
 		},
+		{
+			name: "valid with Targets",
+			req:  createPromotionRolloutRequest{Freight: "abc123", Targets: []string{"us-east", "us-west"}},
+		},
+		{
+			name:   "Targets must be DNS subdomains, named once",
+			req:    createPromotionRolloutRequest{Freight: "abc123", Targets: []string{"us-east", "US", "us-east"}},
+			fields: []string{"targets[1]", "targets[2]"},
+		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {

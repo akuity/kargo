@@ -21,6 +21,8 @@ var _ MappedNullable = &CreatePromotionRolloutRequest{}
 type CreatePromotionRolloutRequest struct {
 	// Freight is the name of the Freight to promote.
 	Freight *string `json:"freight,omitempty"`
+	// Targets names the Targets to promote to, each of which the Stage must govern. Omitted, the rollout promotes to every Target the Stage governs. Naming a few is how a canary is run or a failed rollout is retried for only the Targets that failed.
+	Targets []string `json:"targets,omitempty"`
 }
 
 // NewCreatePromotionRolloutRequest instantiates a new CreatePromotionRolloutRequest object
@@ -72,6 +74,38 @@ func (o *CreatePromotionRolloutRequest) SetFreight(v string) {
 	o.Freight = &v
 }
 
+// GetTargets returns the Targets field value if set, zero value otherwise.
+func (o *CreatePromotionRolloutRequest) GetTargets() []string {
+	if o == nil || IsNil(o.Targets) {
+		var ret []string
+		return ret
+	}
+	return o.Targets
+}
+
+// GetTargetsOk returns a tuple with the Targets field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *CreatePromotionRolloutRequest) GetTargetsOk() ([]string, bool) {
+	if o == nil || IsNil(o.Targets) {
+		return nil, false
+	}
+	return o.Targets, true
+}
+
+// HasTargets returns a boolean if a field has been set.
+func (o *CreatePromotionRolloutRequest) HasTargets() bool {
+	if o != nil && !IsNil(o.Targets) {
+		return true
+	}
+
+	return false
+}
+
+// SetTargets gets a reference to the given []string and assigns it to the Targets field.
+func (o *CreatePromotionRolloutRequest) SetTargets(v []string) {
+	o.Targets = v
+}
+
 func (o CreatePromotionRolloutRequest) MarshalJSON() ([]byte, error) {
 	toSerialize,err := o.ToMap()
 	if err != nil {
@@ -84,6 +118,9 @@ func (o CreatePromotionRolloutRequest) ToMap() (map[string]interface{}, error) {
 	toSerialize := map[string]interface{}{}
 	if !IsNil(o.Freight) {
 		toSerialize["freight"] = o.Freight
+	}
+	if !IsNil(o.Targets) {
+		toSerialize["targets"] = o.Targets
 	}
 	return toSerialize, nil
 }

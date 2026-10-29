@@ -17,13 +17,16 @@ import (
 // @id CreatePromotionRollout
 // @Summary Create a PromotionRollout
 // @Description Create a PromotionRollout, which promotes the Freight named
-// @Description in the body to each of the Targets the Stage governs.
-// @Description PromotionRollouts are managed through this API rather than
-// @Description as Kubernetes resources. The Stage must select Targets: its
-// @Description selectors are resolved against the project's Targets as the
-// @Description rollout is created, its update strategy against how many
-// @Description they match, and both are recorded with the rollout for good.
-// @Description Everything else about the rollout is assigned by the server.
+// @Description in the body to each of the Targets the Stage governs, or to
+// @Description the ones the body names among them. PromotionRollouts are
+// @Description managed through this API rather than as Kubernetes
+// @Description resources. The Stage must select Targets: its selectors are
+// @Description resolved against the project's Targets as the rollout is
+// @Description created, narrowed to the Targets named if any are, and its
+// @Description update strategy is resolved against how many that leaves;
+// @Description both are recorded with the rollout for good. A Target the
+// @Description Stage does not govern is refused. Everything else about the
+// @Description rollout is assigned by the server.
 // @Description This is a promotion: it requires the promote verb on the
 // @Description Stage. A server that does not create PromotionRollouts
 // @Description responds 501.
@@ -110,7 +113,7 @@ func (h *Handler) create(c *gin.Context) {
 		actor = u.Actor()
 	}
 	var rollout *kargoapi.PromotionRollout
-	if rollout, err = h.creator.Create(ctx, stage, freight, actor); err != nil {
+	if rollout, err = h.creator.Create(ctx, stage, freight, req.Targets, actor); err != nil {
 		_ = c.Error(err)
 		return
 	}

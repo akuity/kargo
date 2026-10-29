@@ -406,13 +406,16 @@ func (r ApiCreatePromotionRolloutRequest) Execute() (*PromotionRollout, *http.Re
 CreatePromotionRollout Create a PromotionRollout
 
 Create a PromotionRollout, which promotes the Freight named
-in the body to each of the Targets the Stage governs.
-PromotionRollouts are managed through this API rather than
-as Kubernetes resources. The Stage must select Targets: its
-selectors are resolved against the project's Targets as the
-rollout is created, its update strategy against how many
-they match, and both are recorded with the rollout for good.
-Everything else about the rollout is assigned by the server.
+in the body to each of the Targets the Stage governs, or to
+the ones the body names among them. PromotionRollouts are
+managed through this API rather than as Kubernetes
+resources. The Stage must select Targets: its selectors are
+resolved against the project's Targets as the rollout is
+created, narrowed to the Targets named if any are, and its
+update strategy is resolved against how many that leaves;
+both are recorded with the rollout for good. A Target the
+Stage does not govern is refused. Everything else about the
+rollout is assigned by the server.
 This is a promotion: it requires the promote verb on the
 Stage. A server that does not create PromotionRollouts
 responds 501.

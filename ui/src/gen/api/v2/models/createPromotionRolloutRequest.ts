@@ -9,4 +9,11 @@
 export interface CreatePromotionRolloutRequest {
   /** Freight is the name of the Freight to promote. */
   freight?: string;
+  /**
+   * Targets names the Targets to promote to, each of which the Stage must
+   * govern. Omitted, the rollout promotes to every Target the Stage
+   * governs. Naming a few is how a canary is run or a failed rollout is
+   * retried for only the Targets that failed.
+   */
+  targets?: string[];
 }

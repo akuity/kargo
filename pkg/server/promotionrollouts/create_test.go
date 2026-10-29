@@ -6,6 +6,7 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"slices"
 	"strings"
 	"testing"
 
@@ -23,9 +24,10 @@ import (
 func TestCreate(t *testing.T) {
 	t.Parallel()
 
-	// body encodes a request to promote the Freight, as the API takes it.
-	body := func(freight string) *bytes.Buffer {
-		raw, err := json.Marshal(createPromotionRolloutRequest{Freight: freight})
+	// body encodes a request to promote the Freight, as the API takes it, to
+	// the named Targets or, with none, to every one the Stage governs.
+	body := func(freight string, targets ...string) *bytes.Buffer {
+		raw, err := json.Marshal(createPromotionRolloutRequest{Freight: freight, Targets: targets})
 		require.NoError(t, err)
 		return bytes.NewBuffer(raw)
 	}
@@ -81,6 +83,11 @@ func TestCreate(t *testing.T) {
 		targetRow("eu-west", map[string]string{"region": "eu"}),
 		usEast,
 	}}
+
+	// A third Target in region us, for a case that promotes to one of three.
+	wideFleet := fakeTargets{rows: append(
+		slices.Clone(fleet.rows), targetRow("us-central", map[string]string{"region": "us"}),
+	)}
 
 	forbiddenStore := &fakeStore{}
 	disabledStore := &fakeStore{targets: fleet.rows}
@@ -249,6 +256,42 @@ func TestCreate(t *testing.T) {
 					ids[i] = target.TargetID
 				}
 				require.ElementsMatch(t, []uuid.UUID{usEast.ID, usWest.ID}, ids)
+			},
+		},
+		{
+			name:    "created for some of the Targets the Stage governs",
+			store:   &fakeStore{targets: wideFleet.rows},
+			targets: wideFleet,
+			objects: objects,
+			method:  http.MethodPost,
+			url:     stageURL("prod"),
+			body:    body("fake-freight", "us-west"),
+			assertions: func(t *testing.T, w *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusCreated, w.Code)
+				rollout := &kargoapi.PromotionRollout{}
+				require.NoError(t, json.Unmarshal(w.Body.Bytes(), rollout))
+				require.Equal(t, []kargoapi.PromotionRolloutTarget{{Name: "us-west"}}, rollout.Spec.Targets)
+				// The strategy is resolved against the Targets promoted to,
+				// rounding up: 50% of the one named is 1, where 50% of the
+				// three the Stage governs would have been 2.
+				require.Equal(
+					t,
+					kargoapi.PromotionRolloutUpdateStrategy{MaxConcurrent: 2, MaxFailures: 1},
+					rollout.Spec.UpdateStrategy,
+				)
+			},
+		},
+		{
+			name:    "a Target the Stage does not govern is refused",
+			store:   &fakeStore{targets: fleet.rows},
+			targets: fleet,
+			objects: objects,
+			method:  http.MethodPost,
+			url:     stageURL("prod"),
+			body:    body("fake-freight", "us-east", "eu-west", "nowhere"),
+			assertions: func(t *testing.T, w *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusBadRequest, w.Code)
+				require.Contains(t, w.Body.String(), `does not govern Targets eu-west, nowhere`)
 			},
 		},
 		{
