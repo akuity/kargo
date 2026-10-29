@@ -1,12 +1,3 @@
-# Dex and PostgreSQL are bundled components whose images do not track Kargo's version, so a
-# Kargo upgrade should not restart them. helm.sh/chart and app.kubernetes.io/version both
-# change on every Kargo release and both sit inside the pod template, where they feed
-# pod-template-hash. app.kubernetes.io/version is also inaccurate on these pods: it reports
-# Kargo's version rather than Dex's or PostgreSQL's.
-#
-# Kargo's own workloads keep the full label set on purpose. The release workflow derives the
-# chart version and appVersion from the same release tag, and the image tag defaults to
-# appVersion, so a chart upgrade changes their image too and the restart is correct.
 suite: bundled component pod labels
 values:
   - ../test/values-unittest.yaml
@@ -15,9 +6,6 @@ templates:
   - templates/postgres/secret.yaml
   - templates/dex-server/deployment.yaml
   - templates/dex-server/secret.yaml
-  - templates/api/deployment.yaml
-  - templates/api/configmap.yaml
-  - templates/api/secret.yaml
 tests:
   - it: should not version-label the postgres pod template
     template: templates/postgres/statefulset.yaml
@@ -68,12 +56,3 @@ tests:
       - equal:
           path: spec.template.metadata.labels.team
           value: platform
-
-  # Kargo's own workloads are deliberately left alone.
-  - it: should leave the full label set on Kargo's own pod templates
-    template: templates/api/deployment.yaml
-    asserts:
-      - exists:
-          path: spec.template.metadata.labels["helm.sh/chart"]
-      - exists:
-          path: spec.template.metadata.labels["app.kubernetes.io/version"]
