@@ -23,12 +23,9 @@ import (
 func TestCreate(t *testing.T) {
 	t.Parallel()
 
-	// body encodes a request to promote the Freight to the Stage, as the API
-	// takes it: a PromotionRollout with only its spec.stage and spec.freight.
-	body := func(stage, freight string) *bytes.Buffer {
-		raw, err := json.Marshal(kargoapi.PromotionRollout{
-			Spec: kargoapi.PromotionRolloutSpec{Stage: stage, Freight: freight},
-		})
+	// body encodes a request to promote the Freight, as the API takes it.
+	body := func(freight string) *bytes.Buffer {
+		raw, err := json.Marshal(createPromotionRolloutRequest{Freight: freight})
 		require.NoError(t, err)
 		return bytes.NewBuffer(raw)
 	}
@@ -96,8 +93,8 @@ func TestCreate(t *testing.T) {
 		{
 			name:   "database is not configured",
 			method: http.MethodPost,
-			url:    projectURL(""),
-			body:   body("prod", "fake-freight"),
+			url:    stageURL("prod"),
+			body:   body("fake-freight"),
 			assertions: func(t *testing.T, w *httptest.ResponseRecorder) {
 				require.Equal(t, http.StatusNotImplemented, w.Code)
 			},
@@ -110,8 +107,8 @@ func TestCreate(t *testing.T) {
 			createDisabled: true,
 			objects:        objects,
 			method:         http.MethodPost,
-			url:            projectURL(""),
-			body:           body("prod", "fake-freight"),
+			url:            stageURL("prod"),
+			body:           body("fake-freight"),
 			assertions: func(t *testing.T, w *httptest.ResponseRecorder) {
 				require.Equal(t, http.StatusNotImplemented, w.Code)
 				require.Contains(t, w.Body.String(), "not supported by this server")
@@ -124,21 +121,21 @@ func TestCreate(t *testing.T) {
 			name:   "malformed body",
 			store:  &fakeStore{},
 			method: http.MethodPost,
-			url:    projectURL(""),
+			url:    stageURL("prod"),
 			body:   strings.NewReader("{"),
 			assertions: func(t *testing.T, w *httptest.ResponseRecorder) {
 				require.Equal(t, http.StatusBadRequest, w.Code)
 			},
 		},
 		{
-			name:   "invalid resource",
+			name:   "Freight is required",
 			store:  &fakeStore{},
 			method: http.MethodPost,
-			url:    projectURL(""),
-			body:   body("", "fake-freight"),
+			url:    stageURL("prod"),
+			body:   body(""),
 			assertions: func(t *testing.T, w *httptest.ResponseRecorder) {
 				require.Equal(t, http.StatusUnprocessableEntity, w.Code)
-				require.Contains(t, w.Body.String(), "spec.stage")
+				require.Contains(t, w.Body.String(), "freight")
 			},
 		},
 		{
@@ -146,8 +143,8 @@ func TestCreate(t *testing.T) {
 			store:   &fakeStore{},
 			objects: objects,
 			method:  http.MethodPost,
-			url:     projectURL(""),
-			body:    body("missing", "fake-freight"),
+			url:     stageURL("missing"),
+			body:    body("fake-freight"),
 			assertions: func(t *testing.T, w *httptest.ResponseRecorder) {
 				require.Equal(t, http.StatusNotFound, w.Code)
 			},
@@ -158,8 +155,8 @@ func TestCreate(t *testing.T) {
 			authorize: forbidEverything,
 			objects:   objects,
 			method:    http.MethodPost,
-			url:       projectURL(""),
-			body:      body("prod", "fake-freight"),
+			url:       stageURL("prod"),
+			body:      body("fake-freight"),
 			assertions: func(t *testing.T, w *httptest.ResponseRecorder) {
 				require.Equal(t, http.StatusForbidden, w.Code)
 				require.Zero(t, forbiddenStore.calls)
@@ -171,8 +168,8 @@ func TestCreate(t *testing.T) {
 			authorize: recordAuthorizations(&authorizations),
 			objects:   objects,
 			method:    http.MethodPost,
-			url:       projectURL(""),
-			body:      body("prod", "fake-freight"),
+			url:       stageURL("prod"),
+			body:      body("fake-freight"),
 			assertions: func(t *testing.T, w *httptest.ResponseRecorder) {
 				require.Equal(t, http.StatusCreated, w.Code)
 				require.Equal(t, []can.Access{can.Promote().Stage(testProject, "prod")}, authorizations)
@@ -183,8 +180,8 @@ func TestCreate(t *testing.T) {
 			store:   &fakeStore{},
 			objects: objects,
 			method:  http.MethodPost,
-			url:     projectURL(""),
-			body:    body("classic", "fake-freight"),
+			url:     stageURL("classic"),
+			body:    body("fake-freight"),
 			assertions: func(t *testing.T, w *httptest.ResponseRecorder) {
 				require.Equal(t, http.StatusBadRequest, w.Code)
 				require.Contains(t, w.Body.String(), "does not select Targets")
@@ -195,8 +192,8 @@ func TestCreate(t *testing.T) {
 			store:   &fakeStore{},
 			objects: objects,
 			method:  http.MethodPost,
-			url:     projectURL(""),
-			body:    body("prod", "missing"),
+			url:     stageURL("prod"),
+			body:    body("missing"),
 			assertions: func(t *testing.T, w *httptest.ResponseRecorder) {
 				require.Equal(t, http.StatusNotFound, w.Code)
 			},
@@ -206,8 +203,8 @@ func TestCreate(t *testing.T) {
 			store:   &fakeStore{},
 			objects: objects,
 			method:  http.MethodPost,
-			url:     projectURL(""),
-			body:    body("unrelated", "fake-freight"),
+			url:     stageURL("unrelated"),
+			body:    body("fake-freight"),
 			assertions: func(t *testing.T, w *httptest.ResponseRecorder) {
 				require.Equal(t, http.StatusBadRequest, w.Code)
 				require.Contains(t, w.Body.String(), "not available")
@@ -219,8 +216,8 @@ func TestCreate(t *testing.T) {
 			targets: fleet,
 			objects: objects,
 			method:  http.MethodPost,
-			url:     projectURL(""),
-			body:    body("prod", "fake-freight"),
+			url:     stageURL("prod"),
+			body:    body("fake-freight"),
 			assertions: func(t *testing.T, w *httptest.ResponseRecorder) {
 				require.Equal(t, http.StatusCreated, w.Code)
 				rollout := &kargoapi.PromotionRollout{}
@@ -259,8 +256,8 @@ func TestCreate(t *testing.T) {
 			store:   &fakeStore{},
 			objects: objects,
 			method:  http.MethodPost,
-			url:     projectURL(""),
-			body:    body("prod", "fake-freight"),
+			url:     stageURL("prod"),
+			body:    body("fake-freight"),
 			assertions: func(t *testing.T, w *httptest.ResponseRecorder) {
 				require.Equal(t, http.StatusCreated, w.Code)
 				rollout := &kargoapi.PromotionRollout{}
@@ -275,8 +272,8 @@ func TestCreate(t *testing.T) {
 			targets: fleet,
 			objects: objects,
 			method:  http.MethodPost,
-			url:     projectURL(""),
-			body:    body("broken", "fake-freight"),
+			url:     stageURL("broken"),
+			body:    body("fake-freight"),
 			assertions: func(t *testing.T, w *httptest.ResponseRecorder) {
 				require.Equal(t, http.StatusBadRequest, w.Code)
 			},
@@ -287,8 +284,8 @@ func TestCreate(t *testing.T) {
 			targets: fakeTargets{err: errors.New("database is down")},
 			objects: objects,
 			method:  http.MethodPost,
-			url:     projectURL(""),
-			body:    body("prod", "fake-freight"),
+			url:     stageURL("prod"),
+			body:    body("fake-freight"),
 			assertions: func(t *testing.T, w *httptest.ResponseRecorder) {
 				require.Equal(t, http.StatusInternalServerError, w.Code)
 			},
@@ -301,8 +298,8 @@ func TestCreate(t *testing.T) {
 			targets: fleet,
 			objects: objects,
 			method:  http.MethodPost,
-			url:     projectURL(""),
-			body:    body("prod", "fake-freight"),
+			url:     stageURL("prod"),
+			body:    body("fake-freight"),
 			assertions: func(t *testing.T, w *httptest.ResponseRecorder) {
 				require.Equal(t, http.StatusConflict, w.Code)
 			},
@@ -313,8 +310,8 @@ func TestCreate(t *testing.T) {
 			targets: fleet,
 			objects: objects,
 			method:  http.MethodPost,
-			url:     projectURL(""),
-			body:    body("prod", "fake-freight"),
+			url:     stageURL("prod"),
+			body:    body("fake-freight"),
 			assertions: func(t *testing.T, w *httptest.ResponseRecorder) {
 				require.Equal(t, http.StatusInternalServerError, w.Code)
 			},

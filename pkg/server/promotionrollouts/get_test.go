@@ -26,7 +26,7 @@ func TestGet(t *testing.T) {
 		{
 			name:   "database is not configured",
 			method: http.MethodGet,
-			url:    projectURL("/prod.01A.abc"),
+			url:    stageURL("prod") + "/1",
 			assertions: func(t *testing.T, w *httptest.ResponseRecorder) {
 				require.Equal(t, http.StatusNotImplemented, w.Code)
 			},
@@ -36,7 +36,7 @@ func TestGet(t *testing.T) {
 			store:     forbiddenStore,
 			authorize: forbidEverything,
 			method:    http.MethodGet,
-			url:       projectURL("/prod.01A.abc"),
+			url:       stageURL("prod") + "/1",
 			assertions: func(t *testing.T, w *httptest.ResponseRecorder) {
 				require.Equal(t, http.StatusForbidden, w.Code)
 				require.Zero(t, forbiddenStore.calls)
@@ -46,16 +46,34 @@ func TestGet(t *testing.T) {
 			name:   "not found",
 			store:  newStore(),
 			method: http.MethodGet,
-			url:    projectURL("/prod.01Z.abc"),
+			url:    stageURL("prod") + "/9",
 			assertions: func(t *testing.T, w *httptest.ResponseRecorder) {
 				require.Equal(t, http.StatusNotFound, w.Code)
+			},
+		},
+		{
+			name:   "numbers are per Stage",
+			store:  newStore(),
+			method: http.MethodGet,
+			url:    stageURL("staging") + "/1",
+			assertions: func(t *testing.T, w *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusNotFound, w.Code)
+			},
+		},
+		{
+			name:   "an invalid number is refused",
+			store:  newStore(),
+			method: http.MethodGet,
+			url:    stageURL("prod") + "/0",
+			assertions: func(t *testing.T, w *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusBadRequest, w.Code)
 			},
 		},
 		{
 			name:   "the store fails",
 			store:  &fakeStore{err: errors.New("database is down")},
 			method: http.MethodGet,
-			url:    projectURL("/prod.01A.abc"),
+			url:    stageURL("prod") + "/1",
 			assertions: func(t *testing.T, w *httptest.ResponseRecorder) {
 				require.Equal(t, http.StatusInternalServerError, w.Code)
 			},
@@ -67,7 +85,7 @@ func TestGet(t *testing.T) {
 				child("prod.us-east.00A.abc", "prod.00A.abc", "us-east", kargoapi.PromotionPhaseSucceeded),
 			),
 			method: http.MethodGet,
-			url:    projectURL("/prod.01A.abc"),
+			url:    stageURL("prod") + "/1",
 			assertions: func(t *testing.T, w *httptest.ResponseRecorder) {
 				require.Equal(t, http.StatusOK, w.Code)
 				rollout := &kargoapi.PromotionRollout{}
@@ -96,7 +114,7 @@ func TestGet(t *testing.T) {
 			store:     newStore(),
 			authorize: forbidPromotions,
 			method:    http.MethodGet,
-			url:       projectURL("/prod.01A.abc"),
+			url:       stageURL("prod") + "/1",
 			assertions: func(t *testing.T, w *httptest.ResponseRecorder) {
 				require.Equal(t, http.StatusForbidden, w.Code)
 			},

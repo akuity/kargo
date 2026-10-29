@@ -230,6 +230,26 @@ func (s *fakeStore) Get(_ context.Context, project, name string) (promotionrollo
 	return rollout, nil
 }
 
+func (s *fakeStore) GetByNumber(
+	_ context.Context,
+	project string,
+	stage string,
+	number int64,
+) (promotionrolloutstore.Rollout, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.calls++
+	if s.err != nil {
+		return promotionrolloutstore.Rollout{}, s.err
+	}
+	for _, rollout := range s.project(project) {
+		if rollout.StageName == stage && rollout.Number == number {
+			return rollout, nil
+		}
+	}
+	return promotionrolloutstore.Rollout{}, fmt.Errorf("PromotionRollout %s #%d: %w", stage, number, database.ErrNotFound)
+}
+
 func (s *fakeStore) GetMany(
 	_ context.Context,
 	project string,
@@ -528,6 +548,11 @@ func projectURL(path string) string {
 	return "/v1beta1/projects/" + testProject + "/promotion-rollouts" + path
 }
 
+// stageURL is where rollouts to the Stage are created.
+func stageURL(stage string) string {
+	return "/v1beta1/projects/" + testProject + "/stages/" + stage + "/promotion-rollouts"
+}
+
 // rolloutID is the id the fake store gives the named rollout, so that a
 // rollout's children can name it before it is stored.
 func rolloutID(project, name string) uuid.UUID {
@@ -572,13 +597,13 @@ func TestRequireAccess(t *testing.T) {
 	var calls []can.Access
 	runTestCases(t, []testCase{
 		{
-			name:      "records the verb, resource and key",
+			name:      "a rollout read by number is authorized as the Project's",
 			store:     &fakeStore{},
 			authorize: recordAuthorizations(&calls),
 			method:    http.MethodGet,
-			url:       projectURL("/prod.01A.abc"),
+			url:       stageURL("prod") + "/1",
 			assertions: func(t *testing.T, _ *httptest.ResponseRecorder) {
-				require.Equal(t, []can.Access{can.Get().PromotionRollout(testProject, "prod.01A.abc")}, calls)
+				require.Equal(t, []can.Access{can.Get().PromotionRollout(testProject, "")}, calls)
 			},
 		},
 		{

@@ -453,10 +453,8 @@ func (c *Client) CreatePromotionRollout(
 	stage string,
 	freight string,
 ) (*kargoapi.PromotionRollout, error) {
-	model, resp, err := c.api.CoreAPI.CreatePromotionRollout(ctx, project).
-		Body(kargogen.PromotionRollout{
-			Spec: &kargogen.PromotionRolloutSpec{Stage: &stage, Freight: &freight},
-		}).
+	model, resp, err := c.api.CoreAPI.CreatePromotionRollout(ctx, project, stage).
+		Body(kargogen.CreatePromotionRolloutRequest{Freight: &freight}).
 		Execute()
 	if resp != nil {
 		_ = resp.Body.Close()

@@ -1255,77 +1255,6 @@ paths:
       summary: List PromotionRollouts
       tags:
       - Core
-    post:
-      description: |-
-        Create a PromotionRollout in a project, which promotes the
-        Freight named by spec.freight to each of the Targets the
-        Stage named by spec.stage governs. PromotionRollouts are
-        managed through this API rather than as Kubernetes
-        resources. The Stage must select Targets: its selectors are
-        resolved against the project's Targets as the rollout is
-        created, its update strategy against how many they match,
-        and both are recorded with the rollout for good. The name,
-        number, Targets, update strategy and status are assigned by
-        the server and must not be given. This is a promotion: it
-        requires the promote verb on the Stage. A server that does
-        not create PromotionRollouts responds 501.
-      operationId: CreatePromotionRollout
-      parameters:
-      - description: Project name
-        in: path
-        name: project
-        required: true
-        schema:
-          type: string
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/PromotionRollout"
-        description: PromotionRollout resource
-        required: true
-      responses:
-        "201":
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PromotionRollout"
-          description: PromotionRollout resource
-      security:
-      - BearerAuth: []
-      summary: Create a PromotionRollout
-      tags:
-      - Core
-      x-codegen-request-body-name: body
-  /v1beta1/projects/{project}/promotion-rollouts/{promotion-rollout-name}:
-    get:
-      description: Retrieve one of a project's PromotionRollouts.
-      operationId: GetPromotionRollout
-      parameters:
-      - description: Project name
-        in: path
-        name: project
-        required: true
-        schema:
-          type: string
-      - description: PromotionRollout name
-        in: path
-        name: promotion-rollout-name
-        required: true
-        schema:
-          type: string
-      responses:
-        "200":
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PromotionRollout"
-          description: PromotionRollout resource
-      security:
-      - BearerAuth: []
-      summary: Retrieve a PromotionRollout
-      tags:
-      - Core
   /v1beta1/projects/{project}/promotion-tasks:
     get:
       description: |-
@@ -2067,6 +1996,92 @@ paths:
       security:
       - BearerAuth: []
       summary: Retrieve deep links for a Stage resource
+      tags:
+      - Core
+  /v1beta1/projects/{project}/stages/{stage}/promotion-rollouts:
+    post:
+      description: |-
+        Create a PromotionRollout, which promotes the Freight named
+        in the body to each of the Targets the Stage governs.
+        PromotionRollouts are managed through this API rather than
+        as Kubernetes resources. The Stage must select Targets: its
+        selectors are resolved against the project's Targets as the
+        rollout is created, its update strategy against how many
+        they match, and both are recorded with the rollout for good.
+        Everything else about the rollout is assigned by the server.
+        This is a promotion: it requires the promote verb on the
+        Stage. A server that does not create PromotionRollouts
+        responds 501.
+      operationId: CreatePromotionRollout
+      parameters:
+      - description: Project name
+        in: path
+        name: project
+        required: true
+        schema:
+          type: string
+      - description: Stage name
+        in: path
+        name: stage
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreatePromotionRolloutRequest"
+        description: Create request
+        required: true
+      responses:
+        "201":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PromotionRollout"
+          description: PromotionRollout resource
+      security:
+      - BearerAuth: []
+      summary: Create a PromotionRollout
+      tags:
+      - Core
+      x-codegen-request-body-name: body
+  /v1beta1/projects/{project}/stages/{stage}/promotion-rollouts/{number}:
+    get:
+      description: |-
+        Retrieve one of a Stage's PromotionRollouts by its number
+        among them.
+      operationId: GetPromotionRollout
+      parameters:
+      - description: Project name
+        in: path
+        name: project
+        required: true
+        schema:
+          type: string
+      - description: Stage name
+        in: path
+        name: stage
+        required: true
+        schema:
+          type: string
+      - description: PromotionRollout number
+        in: path
+        name: number
+        required: true
+        schema:
+          format: int64
+          type: integer
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PromotionRollout"
+          description: PromotionRollout resource
+      security:
+      - BearerAuth: []
+      summary: Retrieve a PromotionRollout
       tags:
       - Core
   /v1beta1/projects/{project}/stages/{stage}/promotions:
@@ -3834,6 +3849,14 @@ components:
           additionalProperties:
             type: object
           type: object
+      type: object
+    CreatePromotionRolloutRequest:
+      example:
+        freight: freight
+      properties:
+        freight:
+          description: Freight is the name of the Freight to promote.
+          type: string
       type: object
     CreateRepoCredentialsRequest:
       example:

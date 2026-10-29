@@ -40,6 +40,7 @@ model_create_config_map_request.go
 model_create_generic_credentials_request.go
 model_create_or_update_resource_response.go
 model_create_or_update_resource_result.go
+model_create_promotion_rollout_request.go
 model_create_repo_credentials_request.go
 model_create_resource_response.go
 model_create_resource_result.go

@@ -1668,95 +1668,6 @@
             "BearerAuth": []
           }
         ]
-      },
-      "post": {
-        "description": "Create a PromotionRollout in a project, which promotes the\nFreight named by spec.freight to each of the Targets the\nStage named by spec.stage governs. PromotionRollouts are\nmanaged through this API rather than as Kubernetes\nresources. The Stage must select Targets: its selectors are\nresolved against the project's Targets as the rollout is\ncreated, its update strategy against how many they match,\nand both are recorded with the rollout for good. The name,\nnumber, Targets, update strategy and status are assigned by\nthe server and must not be given. This is a promotion: it\nrequires the promote verb on the Stage. A server that does\nnot create PromotionRollouts responds 501.",
-        "consumes": [
-          "application/json"
-        ],
-        "produces": [
-          "application/json"
-        ],
-        "tags": [
-          "Core",
-          "Project-Level"
-        ],
-        "summary": "Create a PromotionRollout",
-        "operationId": "CreatePromotionRollout",
-        "parameters": [
-          {
-            "type": "string",
-            "description": "Project name",
-            "name": "project",
-            "in": "path",
-            "required": true
-          },
-          {
-            "description": "PromotionRollout resource",
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/PromotionRollout"
-            }
-          }
-        ],
-        "responses": {
-          "201": {
-            "description": "PromotionRollout resource",
-            "schema": {
-              "$ref": "#/definitions/PromotionRollout"
-            }
-          }
-        },
-        "security": [
-          {
-            "BearerAuth": []
-          }
-        ]
-      }
-    },
-    "/v1beta1/projects/{project}/promotion-rollouts/{promotion-rollout-name}": {
-      "get": {
-        "description": "Retrieve one of a project's PromotionRollouts.",
-        "produces": [
-          "application/json"
-        ],
-        "tags": [
-          "Core",
-          "Project-Level"
-        ],
-        "summary": "Retrieve a PromotionRollout",
-        "operationId": "GetPromotionRollout",
-        "parameters": [
-          {
-            "type": "string",
-            "description": "Project name",
-            "name": "project",
-            "in": "path",
-            "required": true
-          },
-          {
-            "type": "string",
-            "description": "PromotionRollout name",
-            "name": "promotion-rollout-name",
-            "in": "path",
-            "required": true
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "PromotionRollout resource",
-            "schema": {
-              "$ref": "#/definitions/PromotionRollout"
-            }
-          }
-        },
-        "security": [
-          {
-            "BearerAuth": []
-          }
-        ]
       }
     },
     "/v1beta1/projects/{project}/promotion-tasks": {
@@ -2789,6 +2700,112 @@
             "description": "OK",
             "schema": {
               "$ref": "#/definitions/GetStageLinksResponse"
+            }
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      }
+    },
+    "/v1beta1/projects/{project}/stages/{stage}/promotion-rollouts": {
+      "post": {
+        "description": "Create a PromotionRollout, which promotes the Freight named\nin the body to each of the Targets the Stage governs.\nPromotionRollouts are managed through this API rather than\nas Kubernetes resources. The Stage must select Targets: its\nselectors are resolved against the project's Targets as the\nrollout is created, its update strategy against how many\nthey match, and both are recorded with the rollout for good.\nEverything else about the rollout is assigned by the server.\nThis is a promotion: it requires the promote verb on the\nStage. A server that does not create PromotionRollouts\nresponds 501.",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "Core",
+          "Project-Level"
+        ],
+        "summary": "Create a PromotionRollout",
+        "operationId": "CreatePromotionRollout",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "Project name",
+            "name": "project",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "description": "Stage name",
+            "name": "stage",
+            "in": "path",
+            "required": true
+          },
+          {
+            "description": "Create request",
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/CreatePromotionRolloutRequest"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "PromotionRollout resource",
+            "schema": {
+              "$ref": "#/definitions/PromotionRollout"
+            }
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      }
+    },
+    "/v1beta1/projects/{project}/stages/{stage}/promotion-rollouts/{number}": {
+      "get": {
+        "description": "Retrieve one of a Stage's PromotionRollouts by its number\namong them.",
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "Core",
+          "Project-Level"
+        ],
+        "summary": "Retrieve a PromotionRollout",
+        "operationId": "GetPromotionRollout",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "Project name",
+            "name": "project",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "description": "Stage name",
+            "name": "stage",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "integer",
+            "format": "int64",
+            "description": "PromotionRollout number",
+            "name": "number",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "PromotionRollout resource",
+            "schema": {
+              "$ref": "#/definitions/PromotionRollout"
             }
           }
         },
@@ -5331,6 +5348,15 @@
         "updatedResourceManifest": {
           "type": "object",
           "additionalProperties": {}
+        }
+      }
+    },
+    "CreatePromotionRolloutRequest": {
+      "type": "object",
+      "properties": {
+        "freight": {
+          "description": "Freight is the name of the Freight to promote.",
+          "type": "string"
         }
       }
     },

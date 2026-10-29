@@ -40,6 +40,7 @@ export * from './createOrUpdateResourceResponse';
 export * from './createOrUpdateResourceResult';
 export * from './createOrUpdateResourceResultCreatedResourceManifest';
 export * from './createOrUpdateResourceResultUpdatedResourceManifest';
+export * from './createPromotionRolloutRequest';
 export * from './createRepoCredentialsRequest';
 export * from './createResourceResponse';
 export * from './createResourceResult';

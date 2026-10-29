@@ -165,6 +165,44 @@ func (q *Queries) GetPromotionRollout(ctx context.Context, arg GetPromotionRollo
 	return i, err
 }
 
+const getPromotionRolloutByNumber = `-- name: GetPromotionRolloutByNumber :one
+SELECT id, project_name, name, stage_name, number, freight_name, max_concurrent, max_failures, created_by, created_at, updated_at, status_phase, status_reason, status_message, status_started_at, status_finished_at FROM promotion_rollouts
+WHERE project_name = $1
+    AND stage_name = $2
+    AND number = $3
+`
+
+type GetPromotionRolloutByNumberParams struct {
+	ProjectName string
+	StageName   string
+	Number      int64
+}
+
+// A Stage's rollout by its number, served by the Stage/number unique key.
+func (q *Queries) GetPromotionRolloutByNumber(ctx context.Context, arg GetPromotionRolloutByNumberParams) (PromotionRolloutRow, error) {
+	row := q.db.QueryRow(ctx, getPromotionRolloutByNumber, arg.ProjectName, arg.StageName, arg.Number)
+	var i PromotionRolloutRow
+	err := row.Scan(
+		&i.ID,
+		&i.ProjectName,
+		&i.Name,
+		&i.StageName,
+		&i.Number,
+		&i.FreightName,
+		&i.MaxConcurrent,
+		&i.MaxFailures,
+		&i.CreatedBy,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.StatusPhase,
+		&i.StatusReason,
+		&i.StatusMessage,
+		&i.StatusStartedAt,
+		&i.StatusFinishedAt,
+	)
+	return i, err
+}
+
 const listLatestPromotionRollouts = `-- name: ListLatestPromotionRollouts :many
 SELECT latest.id, latest.project_name, latest.name, latest.stage_name, latest.number, latest.freight_name, latest.max_concurrent, latest.max_failures, latest.created_by, latest.created_at, latest.updated_at, latest.status_phase, latest.status_reason, latest.status_message, latest.status_started_at, latest.status_finished_at
 FROM stages

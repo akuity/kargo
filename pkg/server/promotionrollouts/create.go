@@ -16,38 +16,39 @@ import (
 
 // @id CreatePromotionRollout
 // @Summary Create a PromotionRollout
-// @Description Create a PromotionRollout in a project, which promotes the
-// @Description Freight named by spec.freight to each of the Targets the
-// @Description Stage named by spec.stage governs. PromotionRollouts are
-// @Description managed through this API rather than as Kubernetes
-// @Description resources. The Stage must select Targets: its selectors are
-// @Description resolved against the project's Targets as the rollout is
-// @Description created, its update strategy against how many they match,
-// @Description and both are recorded with the rollout for good. The name,
-// @Description number, Targets, update strategy and status are assigned by
-// @Description the server and must not be given. This is a promotion: it
-// @Description requires the promote verb on the Stage. A server that does
-// @Description not create PromotionRollouts responds 501.
+// @Description Create a PromotionRollout, which promotes the Freight named
+// @Description in the body to each of the Targets the Stage governs.
+// @Description PromotionRollouts are managed through this API rather than
+// @Description as Kubernetes resources. The Stage must select Targets: its
+// @Description selectors are resolved against the project's Targets as the
+// @Description rollout is created, its update strategy against how many
+// @Description they match, and both are recorded with the rollout for good.
+// @Description Everything else about the rollout is assigned by the server.
+// @Description This is a promotion: it requires the promote verb on the
+// @Description Stage. A server that does not create PromotionRollouts
+// @Description responds 501.
 // @Tags Core, Project-Level
 // @Security BearerAuth
 // @Accept json
 // @Produce json
 // @Param project path string true "Project name"
-// @Param body body kargoapi.PromotionRollout true "PromotionRollout resource"
+// @Param stage path string true "Stage name"
+// @Param body body createPromotionRolloutRequest true "Create request"
 // @Success 201 {object} kargoapi.PromotionRollout "PromotionRollout resource"
-// @Router /v1beta1/projects/{project}/promotion-rollouts [post]
+// @Router /v1beta1/projects/{project}/stages/{stage}/promotion-rollouts [post]
 func (h *Handler) create(c *gin.Context) {
-	requested, ok := bindPromotionRollout(c)
+	req, ok := bindCreateRequest(c)
 	if !ok {
 		return
 	}
 	ctx := c.Request.Context()
 	project := c.Param(paramProject)
+	stageName := c.Param(paramStage)
 
 	stage, err := api.GetStage(
 		ctx,
 		h.kube,
-		types.NamespacedName{Namespace: project, Name: requested.Spec.Stage},
+		types.NamespacedName{Namespace: project, Name: stageName},
 	)
 	if err != nil {
 		_ = c.Error(err)
@@ -55,16 +56,16 @@ func (h *Handler) create(c *gin.Context) {
 	}
 	if stage == nil {
 		_ = c.Error(libhttp.ErrorStr(
-			fmt.Sprintf("Stage %q not found in project %q", requested.Spec.Stage, project),
+			fmt.Sprintf("Stage %q not found in project %q", stageName, project),
 			http.StatusNotFound,
 		))
 		return
 	}
 
 	// Creating a rollout is promoting to its Stage, so the promote verb on
-	// the Stage is the authorization decision. The Stage comes from the
-	// body, which is why this is not route middleware like the reads'.
-	if err = h.authorize(ctx, can.Promote().Stage(project, requested.Spec.Stage)); err != nil {
+	// the Stage is the authorization decision. It is checked once the Stage
+	// is known to exist, as the promote endpoints check it.
+	if err = h.authorize(ctx, can.Promote().Stage(project, stageName)); err != nil {
 		_ = c.Error(err)
 		return
 	}
@@ -73,7 +74,7 @@ func (h *Handler) create(c *gin.Context) {
 		_ = c.Error(libhttp.ErrorStr(
 			fmt.Sprintf(
 				"Stage %q does not select Targets; promote to it with a Promotion instead",
-				requested.Spec.Stage,
+				stageName,
 			),
 			http.StatusBadRequest,
 		))
@@ -83,7 +84,7 @@ func (h *Handler) create(c *gin.Context) {
 	freight, err := api.GetFreight(
 		ctx,
 		h.kube,
-		types.NamespacedName{Namespace: project, Name: requested.Spec.Freight},
+		types.NamespacedName{Namespace: project, Name: req.Freight},
 	)
 	if err != nil {
 		_ = c.Error(err)
@@ -91,14 +92,14 @@ func (h *Handler) create(c *gin.Context) {
 	}
 	if freight == nil {
 		_ = c.Error(libhttp.ErrorStr(
-			fmt.Sprintf("Freight %q not found in project %q", requested.Spec.Freight, project),
+			fmt.Sprintf("Freight %q not found in project %q", req.Freight, project),
 			http.StatusNotFound,
 		))
 		return
 	}
 	if !stage.IsFreightAvailable(freight) {
 		_ = c.Error(libhttp.ErrorStr(
-			fmt.Sprintf("Freight %q is not available to Stage %q", freight.Name, requested.Spec.Stage),
+			fmt.Sprintf("Freight %q is not available to Stage %q", freight.Name, stageName),
 			http.StatusBadRequest,
 		))
 		return

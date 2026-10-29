@@ -388,11 +388,12 @@ type ApiCreatePromotionRolloutRequest struct {
 	ctx context.Context
 	ApiService *CoreAPIService
 	project string
-	body *PromotionRollout
+	stage string
+	body *CreatePromotionRolloutRequest
 }
 
-// PromotionRollout resource
-func (r ApiCreatePromotionRolloutRequest) Body(body PromotionRollout) ApiCreatePromotionRolloutRequest {
+// Create request
+func (r ApiCreatePromotionRolloutRequest) Body(body CreatePromotionRolloutRequest) ApiCreatePromotionRolloutRequest {
 	r.body = &body
 	return r
 }
@@ -404,28 +405,29 @@ func (r ApiCreatePromotionRolloutRequest) Execute() (*PromotionRollout, *http.Re
 /*
 CreatePromotionRollout Create a PromotionRollout
 
-Create a PromotionRollout in a project, which promotes the
-Freight named by spec.freight to each of the Targets the
-Stage named by spec.stage governs. PromotionRollouts are
-managed through this API rather than as Kubernetes
-resources. The Stage must select Targets: its selectors are
-resolved against the project's Targets as the rollout is
-created, its update strategy against how many they match,
-and both are recorded with the rollout for good. The name,
-number, Targets, update strategy and status are assigned by
-the server and must not be given. This is a promotion: it
-requires the promote verb on the Stage. A server that does
-not create PromotionRollouts responds 501.
+Create a PromotionRollout, which promotes the Freight named
+in the body to each of the Targets the Stage governs.
+PromotionRollouts are managed through this API rather than
+as Kubernetes resources. The Stage must select Targets: its
+selectors are resolved against the project's Targets as the
+rollout is created, its update strategy against how many
+they match, and both are recorded with the rollout for good.
+Everything else about the rollout is assigned by the server.
+This is a promotion: it requires the promote verb on the
+Stage. A server that does not create PromotionRollouts
+responds 501.
 
  @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
  @param project Project name
+ @param stage Stage name
  @return ApiCreatePromotionRolloutRequest
 */
-func (a *CoreAPIService) CreatePromotionRollout(ctx context.Context, project string) ApiCreatePromotionRolloutRequest {
+func (a *CoreAPIService) CreatePromotionRollout(ctx context.Context, project string, stage string) ApiCreatePromotionRolloutRequest {
 	return ApiCreatePromotionRolloutRequest{
 		ApiService: a,
 		ctx: ctx,
 		project: project,
+		stage: stage,
 	}
 }
 
@@ -444,8 +446,9 @@ func (a *CoreAPIService) CreatePromotionRolloutExecute(r ApiCreatePromotionRollo
 		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
 	}
 
-	localVarPath := localBasePath + "/v1beta1/projects/{project}/promotion-rollouts"
+	localVarPath := localBasePath + "/v1beta1/projects/{project}/stages/{stage}/promotion-rollouts"
 	localVarPath = strings.Replace(localVarPath, "{"+"project"+"}", url.PathEscape(parameterValueToString(r.project, "project")), -1)
+	localVarPath = strings.Replace(localVarPath, "{"+"stage"+"}", url.PathEscape(parameterValueToString(r.stage, "stage")), -1)
 
 	localVarHeaderParams := make(map[string]string)
 	localVarQueryParams := url.Values{}
@@ -2849,7 +2852,8 @@ type ApiGetPromotionRolloutRequest struct {
 	ctx context.Context
 	ApiService *CoreAPIService
 	project string
-	promotionRolloutName string
+	stage string
+	number int64
 }
 
 func (r ApiGetPromotionRolloutRequest) Execute() (*PromotionRollout, *http.Response, error) {
@@ -2859,19 +2863,22 @@ func (r ApiGetPromotionRolloutRequest) Execute() (*PromotionRollout, *http.Respo
 /*
 GetPromotionRollout Retrieve a PromotionRollout
 
-Retrieve one of a project's PromotionRollouts.
+Retrieve one of a Stage's PromotionRollouts by its number
+among them.
 
  @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
  @param project Project name
- @param promotionRolloutName PromotionRollout name
+ @param stage Stage name
+ @param number PromotionRollout number
  @return ApiGetPromotionRolloutRequest
 */
-func (a *CoreAPIService) GetPromotionRollout(ctx context.Context, project string, promotionRolloutName string) ApiGetPromotionRolloutRequest {
+func (a *CoreAPIService) GetPromotionRollout(ctx context.Context, project string, stage string, number int64) ApiGetPromotionRolloutRequest {
 	return ApiGetPromotionRolloutRequest{
 		ApiService: a,
 		ctx: ctx,
 		project: project,
-		promotionRolloutName: promotionRolloutName,
+		stage: stage,
+		number: number,
 	}
 }
 
@@ -2890,9 +2897,10 @@ func (a *CoreAPIService) GetPromotionRolloutExecute(r ApiGetPromotionRolloutRequ
 		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
 	}
 
-	localVarPath := localBasePath + "/v1beta1/projects/{project}/promotion-rollouts/{promotion-rollout-name}"
+	localVarPath := localBasePath + "/v1beta1/projects/{project}/stages/{stage}/promotion-rollouts/{number}"
 	localVarPath = strings.Replace(localVarPath, "{"+"project"+"}", url.PathEscape(parameterValueToString(r.project, "project")), -1)
-	localVarPath = strings.Replace(localVarPath, "{"+"promotion-rollout-name"+"}", url.PathEscape(parameterValueToString(r.promotionRolloutName, "promotionRolloutName")), -1)
+	localVarPath = strings.Replace(localVarPath, "{"+"stage"+"}", url.PathEscape(parameterValueToString(r.stage, "stage")), -1)
+	localVarPath = strings.Replace(localVarPath, "{"+"number"+"}", url.PathEscape(parameterValueToString(r.number, "number")), -1)
 
 	localVarHeaderParams := make(map[string]string)
 	localVarQueryParams := url.Values{}

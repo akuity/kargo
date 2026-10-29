@@ -61,42 +61,40 @@ func New(
 	return h
 }
 
-// paramProject and paramName are the route parameters the handlers read.
-// paramName is not "promotion-rollout" because the generated clients could
-// not hold a path parameter and a PromotionRollout schema of the same name.
+// paramProject, paramStage and paramNumber are the route parameters the
+// handlers read.
 const (
 	paramProject = "project"
-	paramName    = "promotion-rollout-name"
+	paramStage   = "stage"
+	paramNumber  = "number"
 )
 
 // Register adds the PromotionRollout routes to a project's route group.
 // Every route first confirms that a database is configured. Reads then
-// check that the caller holds the verb on the rollout the route names or,
-// for the collection, on the Project's rollouts. A create is a promotion,
-// so it is authorized by the promote verb on the Stage instead, which the
-// handler checks once it knows the Stage; before that, a server that does
-// not create rollouts refuses it.
+// check that the caller holds the verb on the Project's rollouts. A create
+// is a promotion, so it is authorized by the promote verb on the Stage
+// instead, which the handler checks once it knows the Stage; before that, a
+// server that does not create rollouts refuses it.
+//
+// A rollout belongs to one Stage and is numbered among its rollouts, so it
+// is created and read under the Stage, as a Promotion is created; the
+// Project's rollouts are listed together.
 func (h *Handler) Register(project *gin.RouterGroup) {
-	rollouts := project.Group(
-		"/promotion-rollouts",
-		middleware.RequireFeature(h.store != nil, errDatabaseNotConfigured),
-	)
-	rollouts.GET("", h.require(can.List()), h.list)
-	rollouts.POST(
-		"",
-		middleware.RequireFeature(h.createEnabled, errCreateDisabled),
-		h.create,
-	)
-	rollouts.GET("/:promotion-rollout-name", h.require(can.Get()), h.get)
+	requireDatabase := middleware.RequireFeature(h.store != nil, errDatabaseNotConfigured)
+	project.GET("/promotion-rollouts", requireDatabase, h.require(can.List()), h.list)
+	stage := project.Group("/stages/:stage/promotion-rollouts", requireDatabase)
+	stage.POST("", middleware.RequireFeature(h.createEnabled, errCreateDisabled), h.create)
+	stage.GET("/:number", h.require(can.Get()), h.get)
 }
 
 // require returns middleware that checks the caller may perform the verb on
-// the rollout the route names, or on the Project's rollouts for the
-// collection, and refuses the request if not, so that no handler reaches
-// the store for a caller who may not.
+// the Project's rollouts, and refuses the request if not, so that no handler
+// reaches the store for a caller who may not. A rollout read by its number
+// has no name to check until it is read, so access to one is access to all
+// of the Project's.
 func (h *Handler) require(verb can.Verb) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		access := verb.PromotionRollout(c.Param(paramProject), c.Param(paramName))
+		access := verb.PromotionRollout(c.Param(paramProject), "")
 		if err := h.authorize(c.Request.Context(), access); err != nil {
 			_ = c.Error(err)
 			c.Abort()

@@ -158,7 +158,7 @@ func newServer(
 		},
 	)
 	mux.HandleFunc(
-		"POST /v1beta1/projects/{project}/promotion-rollouts",
+		"POST /v1beta1/projects/{project}/stages/{stage}/promotion-rollouts",
 		func(w http.ResponseWriter, r *http.Request) {
 			if !accept(w, r) {
 				return
@@ -171,20 +171,22 @@ func newServer(
 				writeJSON(w, http.StatusForbidden, map[string]string{"error": "not allowed"})
 				return
 			}
-			var requested kargoapi.PromotionRollout
+			var requested struct {
+				Freight string `json:"freight"`
+			}
 			if err := json.NewDecoder(r.Body).Decode(&requested); err != nil {
 				writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
 				return
 			}
-			body := requested.Spec
+			stage := r.PathValue("stage")
 			writeJSON(w, http.StatusCreated, kargoapi.PromotionRollout{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: r.PathValue("project"),
-					Name:      body.Stage + ".01X.abc",
+					Name:      stage + ".01X.abc",
 				},
 				Spec: kargoapi.PromotionRolloutSpec{
-					Stage:   body.Stage,
-					Freight: body.Freight,
+					Stage:   stage,
+					Freight: requested.Freight,
 					Targets: []kargoapi.PromotionRolloutTarget{},
 				},
 				Status: kargoapi.PromotionRolloutStatus{Phase: kargoapi.PromotionRolloutPhasePending},
