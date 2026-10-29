@@ -7,8 +7,10 @@ import {
   labelFacets,
   matchesFacets,
   noFacets,
+  searchLabelFacets,
   stateFacet,
-  toggleFacet
+  toggleFacet,
+  truncateFacetValues
 } from './target-facets';
 import { targetRows } from './target-rows';
 import { fleetStage, forStage, target } from './test-fixtures';
@@ -122,6 +124,15 @@ describe('facets', () => {
     expect(labelFacets(fleet(), ['geo', 'absent'], noFacets()).map((f) => f.key)).toEqual(['geo']);
   });
 
+  test('a picked key keeps its boxes once no Target carries it', () => {
+    // The pick on a key no Target carries leaves every Target out, so geo has
+    // nothing left to offer -- the stale pick is all there is to untick.
+    const facets = toggleFacet(noFacets(), 'gone', 'x');
+    expect(labelFacets(fleet(), ['geo'], facets)).toEqual([
+      { key: 'gone', values: [{ value: 'x', count: 0, selected: true }] }
+    ]);
+  });
+
   test('the state tally ignores the picked states but honours the label picks', () => {
     const facets = toggleFacet(toggleFacet(noFacets(), 'geo', 'us'), STATE_FACET, 'Healthy');
     expect(stateFacet(fleet(), facets)).toEqual({
@@ -132,5 +143,72 @@ describe('facets', () => {
       Unknown: 0,
       NotPromoted: 0
     });
+  });
+});
+
+describe('searchLabelFacets', () => {
+  const labels = [
+    {
+      key: 'geo',
+      values: [
+        { value: 'us', count: 2, selected: false },
+        { value: 'eu', count: 1, selected: false }
+      ]
+    },
+    {
+      key: 'tier',
+      values: [
+        { value: 'primary', count: 2, selected: false },
+        { value: 'secondary', count: 1, selected: true }
+      ]
+    }
+  ];
+
+  test('an empty search keeps everything', () => {
+    expect(searchLabelFacets(labels, '  ')).toBe(labels);
+  });
+
+  test('a matching key keeps all its values', () => {
+    expect(searchLabelFacets(labels, 'GE')).toEqual([
+      labels[0],
+      { key: 'tier', values: [{ value: 'secondary', count: 1, selected: true }] }
+    ]);
+  });
+
+  test('otherwise only matching values stay, and keys left with none drop out', () => {
+    expect(searchLabelFacets(labels, 'prim')).toEqual([
+      {
+        key: 'tier',
+        values: [
+          { value: 'primary', count: 2, selected: false },
+          { value: 'secondary', count: 1, selected: true }
+        ]
+      }
+    ]);
+  });
+
+  test('a picked value survives a search that does not name it', () => {
+    expect(searchLabelFacets(labels, 'us')).toEqual([
+      { key: 'geo', values: [{ value: 'us', count: 2, selected: false }] },
+      { key: 'tier', values: [{ value: 'secondary', count: 1, selected: true }] }
+    ]);
+  });
+});
+
+describe('truncateFacetValues', () => {
+  const values = ['a', 'b', 'c', 'd'].map((value) => ({
+    value,
+    count: 1,
+    selected: value === 'd'
+  }));
+
+  test('keeps everything within the limit', () => {
+    expect(truncateFacetValues(values, 5)).toEqual({ shown: values, hidden: 0 });
+  });
+
+  test('keeps the first few plus any picked value past them', () => {
+    const { shown, hidden } = truncateFacetValues(values, 2);
+    expect(shown.map(({ value }) => value)).toEqual(['a', 'b', 'd']);
+    expect(hidden).toBe(1);
   });
 });

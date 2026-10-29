@@ -65,8 +65,15 @@ export type LabelFacet = { key: string; values: FacetValue[] };
 // labelFacets tallies each key's values over the rows the OTHER facets have
 // kept, so a figure says what picking that value would bring in rather than
 // collapsing to nothing for every value but the ones already picked.
+//
+// A key with something picked stays an axis even once no Target carries it --
+// say it was relabelled between polls -- because it is still filtering, and
+// without its boxes the fleet would sit emptied with nothing to untick.
 export const labelFacets = (rows: TargetRow[], keys: string[], facets: Facets): LabelFacet[] =>
-  keys
+  [
+    ...keys,
+    ...Object.keys(facets.labels).filter((key) => !keys.includes(key) && facets.labels[key].length)
+  ]
     .map((key) => {
       const picked = facets.labels[key] || [];
       const counts = new Map<string, number>();
@@ -100,3 +107,37 @@ export const labelFacets = (rows: TargetRow[], keys: string[], facets: Facets): 
 // ignoring the picked states, on the same principle as labelFacets.
 export const stateFacet = (rows: TargetRow[], facets: Facets): StateCounts =>
   stateCounts(rows.filter((row) => matchesLabelFacets(row, facets.labels)));
+
+// searchLabelFacets narrows the label facets to what a search names. A key
+// that matches keeps every value, since the reader asked for that axis; any
+// other key keeps only the values that match, and drops out if none do. A
+// picked value always stays, so a search never hides a box still filtering.
+export const searchLabelFacets = (labels: LabelFacet[], search: string): LabelFacet[] => {
+  const needle = search.trim().toLowerCase();
+  if (!needle) {
+    return labels;
+  }
+  return labels
+    .map((facet) =>
+      facet.key.toLowerCase().includes(needle)
+        ? facet
+        : {
+            ...facet,
+            values: facet.values.filter(
+              ({ value, selected }) => selected || value.toLowerCase().includes(needle)
+            )
+          }
+    )
+    .filter((facet) => facet.values.length);
+};
+
+// truncateFacetValues keeps the first few of a facet's values -- its
+// commonest, as labelFacets sorts them -- plus any picked value past them, so
+// a box still filtering is never folded away. hidden is how many are left out.
+export const truncateFacetValues = (
+  values: FacetValue[],
+  limit: number
+): { shown: FacetValue[]; hidden: number } => {
+  const shown = values.filter((value, index) => index < limit || value.selected);
+  return { shown, hidden: values.length - shown.length };
+};
