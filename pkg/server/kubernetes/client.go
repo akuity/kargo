@@ -4,17 +4,21 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 
+	authnv1 "k8s.io/api/authentication/v1"
 	authv1 "k8s.io/api/authorization/v1"
 	coordinationv1 "k8s.io/api/coordination/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/watch"
+	clientgo "k8s.io/client-go/kubernetes"
 	kubescheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
@@ -791,7 +795,9 @@ func GetRestConfig(ctx context.Context, path string) (*rest.Config, error) {
 
 // ConfigureQPSBurst configures the provided REST config to use the specified
 // QPS and burst values, unless PriorityAndFairness flow control is enabled in
-// the cluster, in which case, it disables QPS and burst.
+// the cluster, in which case, it disables QPS and burst. Requests from the
+// system:masters group are exempt from PriorityAndFairness by default, so QPS
+// and burst stay configured for that identity.
 //
 // For more information on PriorityAndFairness flow control, see:
 // https://kubernetes.io/docs/concepts/cluster-administration/flow-control/
@@ -799,9 +805,22 @@ func ConfigureQPSBurst(ctx context.Context, cfg *rest.Config, qps float32, burst
 	logger := logging.LoggerFromContext(ctx)
 
 	ok, err := flowcontrol.IsEnabled(ctx, cfg)
-	if err != nil {
+	switch {
+	case err != nil:
 		logger.Error(err, "error checking for PriorityAndFairness flow control; configuring QPS and burst")
-	} else if ok {
+	case ok:
+		exempt, err := isFlowControlExempt(ctx, cfg)
+		if err != nil {
+			logger.Error(
+				err,
+				"error checking whether the client is exempt from PriorityAndFairness; configuring QPS and burst",
+			)
+			break
+		}
+		if exempt {
+			logger.Debug("client is exempt from PriorityAndFairness flow control; configuring QPS and burst")
+			break
+		}
 		logger.Debug("PriorityAndFairness flow control is enabled; disabling QPS and burst")
 		cfg.QPS = -1
 		cfg.Burst = -1
@@ -811,6 +830,25 @@ func ConfigureQPSBurst(ctx context.Context, cfg *rest.Config, qps float32, burst
 	logger.Debug("configuring QPS and burst for REST config", "qps", qps, "burst", burst)
 	cfg.QPS = qps
 	cfg.Burst = burst
+}
+
+// isFlowControlExempt reports whether the identity of the provided REST config
+// is in the system:masters group, which the mandatory exempt FlowSchema matches.
+// It uses a SelfSubjectReview, which every authenticated user may create.
+func isFlowControlExempt(ctx context.Context, cfg *rest.Config) (bool, error) {
+	client, err := clientgo.NewForConfig(rest.CopyConfig(cfg))
+	if err != nil {
+		return false, fmt.Errorf("error building client: %w", err)
+	}
+	review, err := client.AuthenticationV1().SelfSubjectReviews().Create(
+		ctx,
+		&authnv1.SelfSubjectReview{},
+		metav1.CreateOptions{},
+	)
+	if err != nil {
+		return false, fmt.Errorf("error creating SelfSubjectReview: %w", err)
+	}
+	return slices.Contains(review.Status.UserInfo.Groups, "system:masters"), nil
 }
 
 // gvrAndKeyFromObj extracts the group, version, and plural resource type

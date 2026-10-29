@@ -2,6 +2,7 @@ package kubernetes
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"net/http"
 	"net/http/httptest"
@@ -520,6 +521,8 @@ func TestConfigureQPSBurst(t *testing.T) {
 	testCases := []struct {
 		name          string
 		apf           bool
+		groups        []string
+		reviewFails   bool
 		down          bool
 		expectedQPS   float32
 		expectedBurst int
@@ -527,8 +530,23 @@ func TestConfigureQPSBurst(t *testing.T) {
 		{
 			name:          "PriorityAndFairness enabled",
 			apf:           true,
+			groups:        []string{"system:serviceaccounts", "system:authenticated"},
 			expectedQPS:   -1,
 			expectedBurst: -1,
+		},
+		{
+			name:          "PriorityAndFairness enabled, exempt identity",
+			apf:           true,
+			groups:        []string{"system:masters", "system:authenticated"},
+			expectedQPS:   50,
+			expectedBurst: 300,
+		},
+		{
+			name:          "PriorityAndFairness enabled, SelfSubjectReview fails",
+			apf:           true,
+			reviewFails:   true,
+			expectedQPS:   50,
+			expectedBurst: 300,
 		},
 		{
 			name:          "PriorityAndFairness disabled",
@@ -544,10 +562,25 @@ func TestConfigureQPSBurst(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+			srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				if testCase.apf {
 					w.Header().Set("X-Kubernetes-PF-FlowSchema-UID", "uid")
 				}
+				if r.URL.Path != "/apis/authentication.k8s.io/v1/selfsubjectreviews" {
+					return
+				}
+				if testCase.reviewFails {
+					w.WriteHeader(http.StatusInternalServerError)
+					return
+				}
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(http.StatusCreated)
+				require.NoError(t, json.NewEncoder(w).Encode(authnv1.SelfSubjectReview{
+					TypeMeta: metav1.TypeMeta{APIVersion: "authentication.k8s.io/v1", Kind: "SelfSubjectReview"},
+					Status: authnv1.SelfSubjectReviewStatus{
+						UserInfo: authnv1.UserInfo{Groups: testCase.groups},
+					},
+				}))
 			}))
 			defer srv.Close()
 			if testCase.down {
