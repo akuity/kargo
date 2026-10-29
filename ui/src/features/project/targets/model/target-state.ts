@@ -70,6 +70,18 @@ export const statePrecedence: readonly TargetState[] = [
   'Healthy'
 ];
 
+// stateDisplayOrder lists the states in the order the summary tiles read them,
+// for anything else that lists every state beside them. It orders the display
+// only; which state outranks which is statePrecedence's to say.
+export const stateDisplayOrder: readonly TargetState[] = [
+  'Healthy',
+  'Progressing',
+  'Unhealthy',
+  'Unknown',
+  'NotPromoted',
+  'Behind'
+];
+
 export type StateCounts = Record<TargetState, number>;
 
 // emptyStateCounts returns a fresh tally with every state at zero, so callers

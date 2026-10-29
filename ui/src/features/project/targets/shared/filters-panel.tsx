@@ -13,13 +13,17 @@ import {
   toggleFacet,
   truncateFacetValues
 } from '../model/target-facets';
-import { StateCounts, statePrecedence, targetStatePresentations } from '../model/target-state';
+import { StateCounts, stateDisplayOrder, targetStatePresentations } from '../model/target-state';
 
 import { StateDot } from './state-visuals';
 
 // A label key lists this many values before the rest fold behind a link. A
 // key like hostname may carry one value per Target.
 const valueLimit = 5;
+
+// The label search is offered once the fleet carries more label values than
+// this. A few values are quicker to read than to search.
+const searchThreshold = 15;
 
 const Entry = ({
   checked,
@@ -69,9 +73,8 @@ export const FiltersPanel = ({
 
   const [search, setSearch] = useState('');
   const shownLabels = useMemo(() => searchLabelFacets(labels, search), [labels, search]);
-  // A few values are quicker to read than to search. A search already typed
-  // keeps its box, so it can always be cleared.
-  const searchable = labelValueCount > valueLimit || search !== '';
+  // A search already typed keeps its box, so it can always be cleared.
+  const searchable = labelValueCount > searchThreshold || search !== '';
   // Label keys the reader has opened past the first few values.
   const [expanded, setExpanded] = useState<string[]>([]);
   const toggleExpanded = (key: string) =>
@@ -103,7 +106,7 @@ export const FiltersPanel = ({
       </Flex>
 
       <Flex vertical gap={6}>
-        {statePrecedence
+        {stateDisplayOrder
           // A picked state keeps its box even once its tally is zero --
           // another facet may have emptied it, and it is still filtering.
           .filter((state) => states[state] || facets.states.includes(state))
