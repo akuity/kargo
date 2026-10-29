@@ -798,7 +798,10 @@ func GetRestConfig(ctx context.Context, path string) (*rest.Config, error) {
 func ConfigureQPSBurst(ctx context.Context, cfg *rest.Config, qps float32, burst int) {
 	logger := logging.LoggerFromContext(ctx)
 
-	if ok, err := flowcontrol.IsEnabled(ctx, cfg); err != nil && ok {
+	ok, err := flowcontrol.IsEnabled(ctx, cfg)
+	if err != nil {
+		logger.Error(err, "error checking for PriorityAndFairness flow control; configuring QPS and burst")
+	} else if ok {
 		logger.Debug("PriorityAndFairness flow control is enabled; disabling QPS and burst")
 		cfg.QPS = -1
 		cfg.Burst = -1

@@ -3,6 +3,8 @@ package kubernetes
 import (
 	"context"
 	"errors"
+	"net/http"
+	"net/http/httptest"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -510,6 +512,51 @@ func TestGetAuthorizedClient(t *testing.T) {
 				libClient.ObjectKey{}, // Object key doesn't matter for these tests
 			)
 			testCase.assert(t, client, err)
+		})
+	}
+}
+
+func TestConfigureQPSBurst(t *testing.T) {
+	testCases := []struct {
+		name          string
+		apf           bool
+		down          bool
+		expectedQPS   float32
+		expectedBurst int
+	}{
+		{
+			name:          "PriorityAndFairness enabled",
+			apf:           true,
+			expectedQPS:   -1,
+			expectedBurst: -1,
+		},
+		{
+			name:          "PriorityAndFairness disabled",
+			expectedQPS:   50,
+			expectedBurst: 300,
+		},
+		{
+			name:          "API server unreachable",
+			down:          true,
+			expectedQPS:   50,
+			expectedBurst: 300,
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+				if testCase.apf {
+					w.Header().Set("X-Kubernetes-PF-FlowSchema-UID", "uid")
+				}
+			}))
+			defer srv.Close()
+			if testCase.down {
+				srv.Close()
+			}
+			cfg := &rest.Config{Host: srv.URL}
+			ConfigureQPSBurst(context.Background(), cfg, 50, 300)
+			require.Equal(t, testCase.expectedQPS, cfg.QPS)
+			require.Equal(t, testCase.expectedBurst, cfg.Burst)
 		})
 	}
 }
