@@ -91,7 +91,7 @@ func TestStoreIntegration(t *testing.T) {
 	}
 	// createPromotion records a child Promotion of the rollout to the
 	// Target, as the mirror would; ids order Promotions by creation.
-	createPromotion := func(
+	createPromotionAt := func(
 		t *testing.T,
 		project string,
 		id string,
@@ -99,6 +99,7 @@ func TestStoreIntegration(t *testing.T) {
 		rolloutID uuid.UUID,
 		target string,
 		phase string,
+		createdAt time.Time,
 	) {
 		t.Helper()
 		taken, err := queries.UpsertPromotion(ctx, database.UpsertPromotionParams{
@@ -110,10 +111,24 @@ func TestStoreIntegration(t *testing.T) {
 			TargetName:         &target,
 			PromotionRolloutID: &rolloutID,
 			Phase:              phase,
-			CreatedAt:          time.Now().Truncate(time.Microsecond),
+			CreatedAt:          createdAt.Truncate(time.Microsecond),
 		})
 		require.NoError(t, err)
 		require.False(t, taken)
+	}
+	createPromotion := func(
+		t *testing.T,
+		project string,
+		id string,
+		stageName string,
+		rolloutID uuid.UUID,
+		target string,
+		phase string,
+	) {
+		t.Helper()
+		createPromotionAt(
+			t, project, id, stageName, rolloutID, target, phase, time.Now(),
+		)
 	}
 	testCases := []struct {
 		name string
@@ -317,6 +332,29 @@ func TestStoreIntegration(t *testing.T) {
 				counts, err = store.Count(ctx, "missing")
 				require.NoError(t, err)
 				require.Equal(t, database.CountTargetsRow{}, counts)
+			},
+		},
+		{
+			name: "count takes the newest Promotion to a Target by creation time, not ID",
+			run: func(t *testing.T) {
+				// Promotion IDs are ULIDs, whose timestamps have only
+				// millisecond precision, so two Promotions created within the
+				// same millisecond may order by their random bits. created_at
+				// keeps microseconds and must decide which Promotion is newest.
+				const project = "ordering"
+				ids := createTargets(t, project, "t1")
+				createStage(t, project, "s", true)
+				r1 := createRollout(t, project, "s", "s.01", "Succeeded", ids, "t1")
+				now := time.Now()
+				createPromotionAt(t, project, "z-older", "s", r1, "t1", "Failed", now)
+				createPromotionAt(
+					t, project, "a-newer", "s", r1, "t1", "Succeeded",
+					now.Add(time.Microsecond),
+				)
+
+				counts, err := store.Count(ctx, project)
+				require.NoError(t, err)
+				require.Equal(t, database.CountTargetsRow{Total: 1, Healthy: 1}, counts)
 			},
 		},
 		{

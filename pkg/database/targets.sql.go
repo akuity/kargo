@@ -46,7 +46,8 @@ newest AS (
         promotions.promotion_rollout_id, promotions.target_name, promotions.phase
     FROM latest
     JOIN promotions ON promotions.promotion_rollout_id = latest.id
-    ORDER BY promotions.promotion_rollout_id, promotions.target_name, promotions.id DESC
+    ORDER BY promotions.promotion_rollout_id, promotions.target_name,
+        promotions.created_at DESC, promotions.id DESC
 ),
 target_phases AS (
     SELECT
