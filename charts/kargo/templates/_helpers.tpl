@@ -300,6 +300,19 @@ Takes a dict with "root" (the root context) and "labels" (the component's).
 {{- end -}}
 
 {{/*
+Pod labels for bundled components whose images don't track Kargo's version:
+kargo.labels without helm.sh/chart or app.kubernetes.io/version, so that a
+Kargo upgrade doesn't restart these pods.
+*/}}
+{{- define "kargo.bundledPodLabels" -}}
+{{ include "kargo.selectorLabels" . }}
+app.kubernetes.io/managed-by: {{ .Release.Service }}
+{{- with .Values.global.labels }}
+{{ toYaml . }}
+{{- end }}
+{{- end -}}
+
+{{/*
 Selector labels
 */}}
 {{- define "kargo.selectorLabels" -}}
