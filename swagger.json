@@ -5509,10 +5509,10 @@
           }
         },
         "updateStrategy": {
-          "description": "UpdateStrategy configures overrides for maxConcurrent and maxErrors for this request.\nIf nil - calculated from the stages updateStrategy based on the number of stage targets.",
+          "description": "UpdateStrategy configures overrides for maxConcurrent and maxErrors for this request.\nPercentage values are calculated based on the total stage targets and not just ones selected for promotion\nIf nil - calculated from the stages updateStrategy based on the number of stage targets.",
           "allOf": [
             {
-              "$ref": "#/definitions/PromotionRequestUpdateStrategy"
+              "$ref": "#/definitions/TargetUpdateStrategy"
             }
           ]
         }

@@ -5,7 +5,7 @@
  * REST API for Kargo
  * OpenAPI spec version: v1alpha1
  */
-import type { PromotionRequestUpdateStrategy } from './promotionRequestUpdateStrategy';
+import type { TargetUpdateStrategy } from './targetUpdateStrategy';
 
 export interface PromoteToStageRequest {
   freight?: string;
@@ -23,7 +23,8 @@ export interface PromoteToStageRequest {
   targets?: string[];
   /**
    * UpdateStrategy configures overrides for maxConcurrent and maxErrors for this request.
+   * Percentage values are calculated based on the total stage targets and not just ones selected for promotion
    * If nil - calculated from the stages updateStrategy based on the number of stage targets.
    */
-  updateStrategy?: PromotionRequestUpdateStrategy;
+  updateStrategy?: TargetUpdateStrategy;
 }

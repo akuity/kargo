@@ -25,8 +25,8 @@ type PromoteToStageRequest struct {
 	Origin *string `json:"origin,omitempty"`
 	// Targets is a list of target names to promote to. If set to `nil` - selects all targets for the stage. If non-nil, should be a subset of targets selected by the stage, empty list is an error.
 	Targets []string `json:"targets,omitempty"`
-	// UpdateStrategy configures overrides for maxConcurrent and maxErrors for this request. If nil - calculated from the stages updateStrategy based on the number of stage targets.
-	UpdateStrategy *PromotionRequestUpdateStrategy `json:"updateStrategy,omitempty"`
+	// UpdateStrategy configures overrides for maxConcurrent and maxErrors for this request. Percentage values are calculated based on the total stage targets and not just ones selected for promotion If nil - calculated from the stages updateStrategy based on the number of stage targets.
+	UpdateStrategy *TargetUpdateStrategy `json:"updateStrategy,omitempty"`
 }
 
 // NewPromoteToStageRequest instantiates a new PromoteToStageRequest object
@@ -175,9 +175,9 @@ func (o *PromoteToStageRequest) SetTargets(v []string) {
 }
 
 // GetUpdateStrategy returns the UpdateStrategy field value if set, zero value otherwise.
-func (o *PromoteToStageRequest) GetUpdateStrategy() PromotionRequestUpdateStrategy {
+func (o *PromoteToStageRequest) GetUpdateStrategy() TargetUpdateStrategy {
 	if o == nil || IsNil(o.UpdateStrategy) {
-		var ret PromotionRequestUpdateStrategy
+		var ret TargetUpdateStrategy
 		return ret
 	}
 	return *o.UpdateStrategy
@@ -185,7 +185,7 @@ func (o *PromoteToStageRequest) GetUpdateStrategy() PromotionRequestUpdateStrate
 
 // GetUpdateStrategyOk returns a tuple with the UpdateStrategy field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *PromoteToStageRequest) GetUpdateStrategyOk() (*PromotionRequestUpdateStrategy, bool) {
+func (o *PromoteToStageRequest) GetUpdateStrategyOk() (*TargetUpdateStrategy, bool) {
 	if o == nil || IsNil(o.UpdateStrategy) {
 		return nil, false
 	}
@@ -201,8 +201,8 @@ func (o *PromoteToStageRequest) HasUpdateStrategy() bool {
 	return false
 }
 
-// SetUpdateStrategy gets a reference to the given PromotionRequestUpdateStrategy and assigns it to the UpdateStrategy field.
-func (o *PromoteToStageRequest) SetUpdateStrategy(v PromotionRequestUpdateStrategy) {
+// SetUpdateStrategy gets a reference to the given TargetUpdateStrategy and assigns it to the UpdateStrategy field.
+func (o *PromoteToStageRequest) SetUpdateStrategy(v TargetUpdateStrategy) {
 	o.UpdateStrategy = &v
 }
 
