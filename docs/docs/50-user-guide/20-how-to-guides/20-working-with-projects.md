@@ -467,7 +467,7 @@ Each link has the following fields:
 | Name | Required | Description |
 |------|----------|-------------|
 | `title` | Y | The label displayed for the link. |
-| `url` | Y | The link's URL. This is a Go [template](https://pkg.go.dev/text/template), with [Sprig](https://masterminds.github.io/sprig/) functions available, that is rendered against the resource being viewed as `.freight` or `.stage`. |
+| `url` | Y | The link's URL. This is a Go [template](https://pkg.go.dev/text/template), with [Sprig](https://masterminds.github.io/sprig/) functions available, that is rendered against the resource being viewed as `.freight` or `.stage`. Fields use the same names as in the resource's YAML, for example `.stage.metadata.name`. |
 | `description` | N | A short description displayed alongside the link. |
 | `if` | N | An [expr-lang](https://expr-lang.org/) condition evaluated against the same resource as `freight` or `stage`. The link is shown only when it evaluates to `true`. |
 
@@ -476,6 +476,9 @@ Each link has the following fields:
 Unlike most expressions in Kargo, these are not wrapped in `${{ }}`. `url` uses
 Go template syntax (`{{ .stage.metadata.name }}`), and `if` is a bare
 expression (`stage.metadata.name == "prod"`).
+
+This syntax is likely to change in Kargo v2.0 to match the rest of Kargo. See
+[#7774](https://github.com/akuity/kargo/issues/7774).
 
 :::
 
