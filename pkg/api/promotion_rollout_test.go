@@ -166,13 +166,3 @@ func TestNewPromotionRollout(t *testing.T) {
 	})
 
 }
-
-func TestPromotionRolloutOf(t *testing.T) {
-	t.Parallel()
-	require.Empty(t, PromotionRolloutOf(&kargoapi.Promotion{}))
-	require.Equal(t, "fake-rollout", PromotionRolloutOf(&kargoapi.Promotion{
-		ObjectMeta: metav1.ObjectMeta{
-			Annotations: map[string]string{kargoapi.AnnotationKeyPromotionRollout: "fake-rollout"},
-		},
-	}))
-}

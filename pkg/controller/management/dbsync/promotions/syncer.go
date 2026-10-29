@@ -125,16 +125,16 @@ func toUpsertParams(promotion *kargoapi.Promotion) (database.UpsertPromotionPara
 }
 
 // setPromotionRollout carries the id of the PromotionRollout the Promotion
-// was created by, if it names one, onto the upsert. The annotation is all
-// that links the two; the rollout's creator does not record the link. An
-// annotation that is not an id is recorded as no rollout rather than
-// failing the sync, as is one naming no rollout of the Promotion's Project,
-// which the upsert checks.
+// was created by, if it names one, onto the upsert. spec.promotionRollout is
+// all that links the two; the rollout's creator does not record the link. A
+// value that is not an id, which the CRD's schema should already refuse, is
+// recorded as no rollout rather than failing the sync, as is one naming no
+// rollout of the Promotion's Project, which the upsert checks.
 func setPromotionRollout(
 	promotion *kargoapi.Promotion,
 	params *database.UpsertPromotionParams,
 ) {
-	value := promotion.Annotations[kargoapi.AnnotationKeyPromotionRollout]
+	value := promotion.Spec.PromotionRollout
 	if value == "" {
 		return
 	}

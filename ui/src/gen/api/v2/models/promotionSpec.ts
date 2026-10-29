@@ -31,6 +31,23 @@ export interface PromotionSpec {
    */
   origin?: FreightOrigin;
   /**
+   * PromotionRollout optionally holds the id of the PromotionRollout this
+   * Promotion was created by, as one part of that rollout's fan-out to
+   * Targets. The id is the UID the API serves the rollout with. A
+   * PromotionRollout is not a Kubernetes resource, so it cannot own the
+   * Promotion; this field is the link in place of an owner reference, and
+   * the one the database's record of the Promotion is linked by.
+   *
+   * When empty (the default), the Promotion was not created by a
+   * PromotionRollout. When set, Target must be set too, and only the Kargo
+   * control plane may set it.
+   *
+   * +kubebuilder:validation:Optional
+   * +kubebuilder:validation:Pattern=`^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$`
+   * +akuity:test-kubebuilder-pattern=UUID
+   */
+  promotionRollout?: string;
+  /**
    * Stage specifies the name of the Stage to which this Promotion
    * applies. The Stage referenced by this field MUST be in the same
    * namespace as the Promotion.

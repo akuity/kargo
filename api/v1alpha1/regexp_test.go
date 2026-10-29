@@ -85,6 +85,21 @@ func TestKubernetesNamePattern(t *testing.T) {
 	ValidateResourceExpression(t, "KubernetesName", testCases)
 }
 
+func TestUUIDPattern(t *testing.T) {
+	testCases := map[string]bool{
+		"":                                       false,
+		"0b9f4a3e-6c1d-4a8e-9f2b-3c4d5e6f7a8b":   true,
+		"0B9F4A3E-6C1D-4A8E-9F2B-3C4D5E6F7A8B":   false,
+		"0b9f4a3e6c1d4a8e9f2b3c4d5e6f7a8b":       false,
+		"{0b9f4a3e-6c1d-4a8e-9f2b-3c4d5e6f7a8b}": false,
+		"0b9f4a3e-6c1d-4a8e-9f2b-3c4d5e6f7a8":    false,
+		"0b9f4a3e-6c1d-4a8e-9f2b-3c4d5e6f7a8bc":  false,
+		"dev.01abc.def456":                       false,
+	}
+
+	ValidateResourceExpression(t, "UUID", testCases)
+}
+
 func TestTagPattern(t *testing.T) {
 	testCases := map[string]bool{
 		"":  false,

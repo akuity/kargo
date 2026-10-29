@@ -40,7 +40,7 @@ func TestDiff(t *testing.T) {
 	rolloutID := uuid.New()
 	ofRollout := func(id string) *kargoapi.Promotion {
 		promotion := testPromotion(created)
-		promotion.Annotations = map[string]string{kargoapi.AnnotationKeyPromotionRollout: id}
+		promotion.Spec.PromotionRollout = id
 		return promotion
 	}
 	linkedRow := differing(func(r *database.PromotionRow) { r.PromotionRolloutID = &rolloutID })
@@ -108,7 +108,7 @@ func TestDiff(t *testing.T) {
 			rows: []database.PromotionRow{linkedRow}, wantKeys: asked,
 		},
 		{
-			// The mirror missed the annotation, or could not record it then.
+			// The mirror could not record the link when it first saw the Promotion.
 			name: "rollout link missing", promotion: ofRollout(rolloutID.String()),
 			rows: []database.PromotionRow{row}, want: key, wantKeys: asked,
 		},
@@ -118,12 +118,12 @@ func TestDiff(t *testing.T) {
 			rows: []database.PromotionRow{linkedRow}, wantKeys: asked,
 		},
 		{
-			name: "recorded rollout link without an annotation", promotion: live,
+			name: "recorded rollout link without a rollout in the spec", promotion: live,
 			rows: []database.PromotionRow{linkedRow}, wantKeys: asked,
 		},
 		{
-			// An annotation that is not an id is recorded as no rollout.
-			name: "rollout annotation that is not an id", promotion: ofRollout("dev.01abc.def456"),
+			// A rollout reference that is not an id is recorded as no rollout.
+			name: "rollout reference that is not an id", promotion: ofRollout("dev.01abc.def456"),
 			rows: []database.PromotionRow{row}, wantKeys: asked,
 		},
 		{

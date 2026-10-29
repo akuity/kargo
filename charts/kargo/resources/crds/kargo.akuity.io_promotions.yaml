@@ -93,6 +93,20 @@ spec:
                 - kind
                 - name
                 type: object
+              promotionRollout:
+                description: |-
+                  PromotionRollout optionally holds the id of the PromotionRollout this
+                  Promotion was created by, as one part of that rollout's fan-out to
+                  Targets. The id is the UID the API serves the rollout with. A
+                  PromotionRollout is not a Kubernetes resource, so it cannot own the
+                  Promotion; this field is the link in place of an owner reference, and
+                  the one the database's record of the Promotion is linked by.
+
+                  When empty (the default), the Promotion was not created by a
+                  PromotionRollout. When set, Target must be set too, and only the Kargo
+                  control plane may set it.
+                pattern: ^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$
+                type: string
               stage:
                 description: |-
                   Stage specifies the name of the Stage to which this Promotion
@@ -299,6 +313,8 @@ spec:
             x-kubernetes-validations:
             - message: exactly one of freight or origin must be set
               rule: has(self.freight) != has(self.origin)
+            - message: target must be set when promotionRollout is set
+              rule: '!has(self.promotionRollout) || has(self.target)'
           status:
             description: |-
               Status describes the current state of the transition represented by this
