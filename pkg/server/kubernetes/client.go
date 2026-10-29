@@ -19,7 +19,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/watch"
-	k8suser "k8s.io/apiserver/pkg/authentication/user"
 	clientgo "k8s.io/client-go/kubernetes"
 	kubescheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
@@ -842,6 +841,10 @@ func ConfigureQPSBurst(ctx context.Context, cfg *rest.Config, qps float32, burst
 	cfg.Burst = burst
 }
 
+// systemMastersGroup is the group the mandatory exempt FlowSchema matches
+// (user.SystemPrivilegedGroup in k8s.io/apiserver).
+const systemMastersGroup = "system:masters"
+
 // flowControlCheckTimeout bounds the PriorityAndFairness checks in
 // ConfigureQPSBurst, so an unresponsive API server can't block startup.
 var flowControlCheckTimeout = 10 * time.Second
@@ -864,7 +867,7 @@ func isFlowControlExempt(ctx context.Context, cfg *rest.Config) (bool, error) {
 	if err != nil {
 		return false, fmt.Errorf("error creating SelfSubjectReview: %w", err)
 	}
-	return slices.Contains(review.Status.UserInfo.Groups, k8suser.SystemPrivilegedGroup), nil
+	return slices.Contains(review.Status.UserInfo.Groups, systemMastersGroup), nil
 }
 
 // gvrAndKeyFromObj extracts the group, version, and plural resource type
