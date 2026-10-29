@@ -12,6 +12,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -249,8 +250,6 @@ func Test_server_promoteToStage(t *testing.T) {
 				},
 			},
 			{
-				// Test 1: a non-nil Targets list restricts the PromotionRequest to
-				// exactly the named Target, not every Target the Stage selects.
 				name: "Target-aware Stage with a target subset yields a scoped PromotionRequest",
 				clientBuilder: fake.NewClientBuilder().WithObjects(
 					testProject,
@@ -276,7 +275,6 @@ func Test_server_promoteToStage(t *testing.T) {
 				},
 			},
 			{
-				// Test 2: multiple named Targets land in Spec.Targets in request order.
 				name: "Target-aware Stage with multiple named targets preserves order",
 				clientBuilder: fake.NewClientBuilder().WithObjects(
 					testProject,
@@ -305,9 +303,6 @@ func Test_server_promoteToStage(t *testing.T) {
 				},
 			},
 			{
-				// Test 3: a non-nil but empty Targets list is an error. The raw body
-				// is required because `targets,omitempty` would drop a []string{},
-				// turning it back into the nil "all targets" case.
 				name: "Target-aware Stage with an empty target list is rejected",
 				clientBuilder: fake.NewClientBuilder().WithObjects(
 					testProject,
@@ -328,8 +323,6 @@ func Test_server_promoteToStage(t *testing.T) {
 				},
 			},
 			{
-				// Test 4: a Target not selected by the Stage is rejected, and the
-				// response surfaces the underlying reason.
 				name: "Target-aware Stage rejects a target it does not select",
 				clientBuilder: fake.NewClientBuilder().WithObjects(
 					testProject,
@@ -351,8 +344,6 @@ func Test_server_promoteToStage(t *testing.T) {
 				},
 			},
 			{
-				// Test 5: validation is all-or-nothing -- one unselected Target in
-				// an otherwise valid list fails the whole request.
 				name: "Target-aware Stage rejects a mix of selected and unselected targets",
 				clientBuilder: fake.NewClientBuilder().WithObjects(
 					testProject,
@@ -373,8 +364,6 @@ func Test_server_promoteToStage(t *testing.T) {
 				},
 			},
 			{
-				// Test 6: Targets only apply to target-aware Stages. For a plain
-				// Stage the field is ignored and a normal Promotion is created.
 				name: "Targets are ignored for a Stage that does not select Targets",
 				clientBuilder: fake.NewClientBuilder().WithObjects(
 					testProject,
@@ -399,8 +388,6 @@ func Test_server_promoteToStage(t *testing.T) {
 				},
 			},
 			{
-				// Test 7: an explicit UpdateStrategy is written through to the
-				// PromotionRequest spec rather than recalculated from the Stage.
 				name: "Target-aware Stage honors an explicit updateStrategy",
 				clientBuilder: fake.NewClientBuilder().WithObjects(
 					testProject,
@@ -410,9 +397,9 @@ func Test_server_promoteToStage(t *testing.T) {
 				serverSetup: promoteWithTargets,
 				body: mustJSONBody(promoteToStageRequest{
 					Freight: testFreight.Name,
-					UpdateStrategy: &kargoapi.PromotionRequestUpdateStrategy{
-						MaxConcurrent: 1,
-						MaxFailures:   2,
+					UpdateStrategy: &kargoapi.TargetUpdateStrategy{
+						MaxConcurrent: new(intstr.FromInt(1)),
+						MaxFailures:   new(intstr.FromInt(2)),
 					},
 				}),
 				assertions: func(t *testing.T, w *httptest.ResponseRecorder, c client.Client) {
@@ -432,8 +419,37 @@ func Test_server_promoteToStage(t *testing.T) {
 				},
 			},
 			{
-				// Test 8: a nil UpdateStrategy is derived from the Stage. This Stage
-				// sets no strategy, so both bounds default to zero (unbounded).
+				name: "Target-aware Stage calculates updateStrategy from percentages",
+				clientBuilder: fake.NewClientBuilder().WithObjects(
+					testProject,
+					testTargetAwareStage,
+					testFreight,
+				),
+				serverSetup: promoteWithTwoMatchingTargets,
+				body: mustJSONBody(promoteToStageRequest{
+					Freight: testFreight.Name,
+					UpdateStrategy: &kargoapi.TargetUpdateStrategy{
+						MaxConcurrent: new(intstr.FromString("50%")),
+						MaxFailures:   new(intstr.FromString("100%")),
+					},
+				}),
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, c client.Client) {
+					require.Equal(t, http.StatusCreated, w.Code)
+
+					reqs := &kargoapi.PromotionRequestList{}
+					require.NoError(t, c.List(t.Context(), reqs, client.InNamespace(testProject.Name)))
+					require.Len(t, reqs.Items, 1)
+					require.Equal(
+						t,
+						kargoapi.PromotionRequestUpdateStrategy{
+							MaxConcurrent: 1,
+							MaxFailures:   2,
+						},
+						reqs.Items[0].Spec.UpdateStrategy,
+					)
+				},
+			},
+			{
 				name: "Target-aware Stage derives updateStrategy when none is provided",
 				clientBuilder: fake.NewClientBuilder().WithObjects(
 					testProject,

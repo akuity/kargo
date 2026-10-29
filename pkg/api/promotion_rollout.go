@@ -36,10 +36,10 @@ func NewPromotionRolloutForAllTargets(
 	stage *kargoapi.Stage,
 	freightName string,
 	stageTargets []kargoapi.Target,
-	updateStrategy *kargoapi.PromotionRolloutUpdateStrategy,
+	updateStrategy *kargoapi.TargetUpdateStrategy,
 ) (*kargoapi.PromotionRollout, error) {
 
-	updateStrategy, err := precheckPromotionRolloutFields(stage, stageTargets, updateStrategy)
+	promotionUpdateStrategy, err := precheckPromotionRolloutFields(stage, stageTargets, updateStrategy)
 	if err != nil {
 		return nil, err
 	}
@@ -51,7 +51,7 @@ func NewPromotionRolloutForAllTargets(
 		rolloutTargets[i] = kargoapi.PromotionRolloutTarget{Name: target.Name}
 	}
 
-	return newPromotionRollout(stage, freightName, rolloutTargets, *updateStrategy), nil
+	return newPromotionRollout(stage, freightName, rolloutTargets, *promotionUpdateStrategy), nil
 }
 
 // NewPromotionRolloutForSelectTargets builds a PromotionRollout that promotes the named
@@ -73,10 +73,10 @@ func NewPromotionRolloutForSelectTargets(
 	freightName string,
 	stageTargets []kargoapi.Target,
 	rolloutTargets []kargoapi.PromotionRolloutTarget,
-	updateStrategy *kargoapi.PromotionRolloutUpdateStrategy,
+	updateStrategy *kargoapi.TargetUpdateStrategy,
 ) (*kargoapi.PromotionRollout, error) {
 
-	updateStrategy, err := precheckPromotionRolloutFields(stage, stageTargets, updateStrategy)
+	promotionUpdateStrategy, err := precheckPromotionRolloutFields(stage, stageTargets, updateStrategy)
 	if err != nil {
 		return nil, err
 	}
@@ -96,7 +96,7 @@ func NewPromotionRolloutForSelectTargets(
 		}
 	}
 
-	return newPromotionRollout(stage, freightName, rolloutTargets, *updateStrategy), nil
+	return newPromotionRollout(stage, freightName, rolloutTargets, *promotionUpdateStrategy), nil
 }
 
 func newPromotionRollout(
@@ -124,7 +124,7 @@ func newPromotionRollout(
 func precheckPromotionRolloutFields(
 	stage *kargoapi.Stage,
 	stageTargets []kargoapi.Target,
-	updateStrategy *kargoapi.PromotionRolloutUpdateStrategy,
+	updateStrategy *kargoapi.TargetUpdateStrategy,
 ) (*kargoapi.PromotionRolloutUpdateStrategy, error) {
 	if stage == nil {
 		return nil, fmt.Errorf("cannot create promotion request without a stage")
@@ -133,29 +133,34 @@ func precheckPromotionRolloutFields(
 		return nil, fmt.Errorf("cannot create promotion request for a stage without targets")
 	}
 
-	updateStrategy, err := ensureRolloutUpdateStrategy(updateStrategy, stage, stageTargets)
+	promotionUpdateStrategy, err := ensureRolloutUpdateStrategy(updateStrategy, stage, stageTargets)
 	if err != nil {
 		return nil, err
 	}
-	return updateStrategy, nil
+	return promotionUpdateStrategy, nil
 }
 
 func ensureRolloutUpdateStrategy(
-	updateStrategy *kargoapi.PromotionRolloutUpdateStrategy,
+	updateStrategy *kargoapi.TargetUpdateStrategy,
 	stage *kargoapi.Stage,
 	stageTargets []kargoapi.Target,
 ) (*kargoapi.PromotionRolloutUpdateStrategy, error) {
 	if updateStrategy == nil {
-		strategy, err := calculateUpdateStrategy(
-			stage.Spec.Targets.UpdateStrategy,
-			len(stageTargets),
-		)
-		if err != nil {
-			return nil, err
-		}
-		updateStrategy = new(kargoapi.PromotionRolloutUpdateStrategy(*strategy))
+		return calculateRolloutUpdateStrategy(stage.Spec.Targets.UpdateStrategy, len(stageTargets))
 	}
-	return updateStrategy, nil
+
+	return calculateRolloutUpdateStrategy(*updateStrategy, len(stageTargets))
+}
+
+func calculateRolloutUpdateStrategy(
+	targetUpdateStrategy kargoapi.TargetUpdateStrategy,
+	numTargets int,
+) (*kargoapi.PromotionRolloutUpdateStrategy, error) {
+	strategy, err := calculateUpdateStrategy(targetUpdateStrategy, numTargets)
+	if err != nil {
+		return nil, err
+	}
+	return new(kargoapi.PromotionRolloutUpdateStrategy(*strategy)), nil
 }
 
 // PromotionRolloutOf returns the id of the PromotionRollout the Promotion was

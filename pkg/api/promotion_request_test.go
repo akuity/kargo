@@ -455,9 +455,9 @@ func TestPromotionRequestBuilder(t *testing.T) {
 			updatedStage,
 			freight,
 			projectTargetsFn(usEast, usWest, usNorth, usSouth, usCenter),
-			&kargoapi.PromotionRequestUpdateStrategy{
-				MaxConcurrent: 10,
-				MaxFailures:   10,
+			&kargoapi.TargetUpdateStrategy{
+				MaxConcurrent: new(intstr.FromInt(10)),
+				MaxFailures:   new(intstr.FromInt(10)),
 			},
 			[]kargoapi.PromotionRequestTarget{{Name: "us-north"}},
 		)
@@ -465,6 +465,26 @@ func TestPromotionRequestBuilder(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, int64(10), pr.Spec.UpdateStrategy.MaxConcurrent)
 		require.Equal(t, int64(10), pr.Spec.UpdateStrategy.MaxFailures)
+	})
+
+	t.Run("updateStrategy override can set percentage of stage targets", func(t *testing.T) {
+		t.Parallel()
+
+		pr, err := NewPromotionRequestForSelectTargets(
+			context.Background(),
+			testStage,
+			freight,
+			projectTargetsFn(usEast, usWest, usNorth, usSouth, usCenter),
+			&kargoapi.TargetUpdateStrategy{
+				MaxConcurrent: new(intstr.FromString("40%")),
+				MaxFailures:   new(intstr.FromString("40%")),
+			},
+			[]kargoapi.PromotionRequestTarget{{Name: "us-north"}},
+		)
+
+		require.NoError(t, err)
+		require.Equal(t, int64(2), pr.Spec.UpdateStrategy.MaxConcurrent)
+		require.Equal(t, int64(2), pr.Spec.UpdateStrategy.MaxFailures)
 	})
 
 	t.Run("the Stage is the controlling owner", func(t *testing.T) {

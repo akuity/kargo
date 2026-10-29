@@ -177,9 +177,9 @@ func TestNewPromotionRolloutForAllTargets(t *testing.T) {
 			withStrategy,
 			freight,
 			make([]kargoapi.Target, 10),
-			&kargoapi.PromotionRolloutUpdateStrategy{
-				MaxConcurrent: 10,
-				MaxFailures:   10,
+			&kargoapi.TargetUpdateStrategy{
+				MaxConcurrent: new(intstr.FromInt(10)),
+				MaxFailures:   new(intstr.FromInt(10)),
 			},
 		)
 		require.NoError(t, err)
@@ -188,6 +188,29 @@ func TestNewPromotionRolloutForAllTargets(t *testing.T) {
 			kargoapi.PromotionRolloutUpdateStrategy{
 				MaxConcurrent: 10,
 				MaxFailures:   10,
+			},
+			rollout.Spec.UpdateStrategy,
+		)
+	})
+
+	t.Run("an explicit update strategy override supports percentages", func(t *testing.T) {
+		t.Parallel()
+
+		rollout, err := NewPromotionRolloutForAllTargets(
+			testStage,
+			freight,
+			make([]kargoapi.Target, 10),
+			&kargoapi.TargetUpdateStrategy{
+				MaxConcurrent: new(intstr.FromString("50%")),
+				MaxFailures:   new(intstr.FromString("20%")),
+			},
+		)
+		require.NoError(t, err)
+		require.Equal(
+			t,
+			kargoapi.PromotionRolloutUpdateStrategy{
+				MaxConcurrent: 5,
+				MaxFailures:   2,
 			},
 			rollout.Spec.UpdateStrategy,
 		)
@@ -312,9 +335,9 @@ func TestNewPromotionRolloutForSelectTargets(t *testing.T) {
 			freight,
 			stageTargets,
 			[]kargoapi.PromotionRolloutTarget{{Name: "us-east"}},
-			&kargoapi.PromotionRolloutUpdateStrategy{
-				MaxConcurrent: 10,
-				MaxFailures:   10,
+			&kargoapi.TargetUpdateStrategy{
+				MaxConcurrent: new(intstr.FromInt(10)),
+				MaxFailures:   new(intstr.FromInt(10)),
 			},
 		)
 		require.NoError(t, err)
@@ -323,6 +346,35 @@ func TestNewPromotionRolloutForSelectTargets(t *testing.T) {
 			kargoapi.PromotionRolloutUpdateStrategy{
 				MaxConcurrent: 10,
 				MaxFailures:   10,
+			},
+			rollout.Spec.UpdateStrategy,
+		)
+	})
+
+	t.Run("an explicit update strategy override supports percentages based on stage targets", func(t *testing.T) {
+		t.Parallel()
+
+		longStageTargets := make([]kargoapi.Target, 10)
+		// We need a target to match
+		longStageTargets[0] = kargoapi.Target{
+			ObjectMeta: metav1.ObjectMeta{Name: "us-east"},
+		}
+		rollout, err := NewPromotionRolloutForSelectTargets(
+			testStage,
+			freight,
+			longStageTargets,
+			[]kargoapi.PromotionRolloutTarget{{Name: "us-east"}},
+			&kargoapi.TargetUpdateStrategy{
+				MaxConcurrent: new(intstr.FromString("50%")),
+				MaxFailures:   new(intstr.FromString("20%")),
+			},
+		)
+		require.NoError(t, err)
+		require.Equal(
+			t,
+			kargoapi.PromotionRolloutUpdateStrategy{
+				MaxConcurrent: 5,
+				MaxFailures:   2,
 			},
 			rollout.Spec.UpdateStrategy,
 		)

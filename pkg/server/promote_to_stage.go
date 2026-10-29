@@ -61,8 +61,9 @@ type promoteToStageRequest struct {
 	// If non-nil, should be a subset of targets selected by the stage, empty list is an error.
 	Targets []string `json:"targets,omitempty"`
 	// UpdateStrategy configures overrides for maxConcurrent and maxErrors for this request.
+	// Percentage values are calculated based on the total stage targets and not just ones selected for promotion
 	// If nil - calculated from the stages updateStrategy based on the number of stage targets.
-	UpdateStrategy *kargoapi.PromotionRequestUpdateStrategy `json:"updateStrategy,omitempty"`
+	UpdateStrategy *kargoapi.TargetUpdateStrategy `json:"updateStrategy,omitempty"`
 } // @name PromoteToStageRequest
 
 // @id PromoteToStage
@@ -275,7 +276,7 @@ func (s *server) createPromotionRequest(
 	freight *kargoapi.Freight,
 	allTargets bool,
 	targets []string,
-	updateStrategy *kargoapi.PromotionRequestUpdateStrategy,
+	updateStrategy *kargoapi.TargetUpdateStrategy,
 ) (*kargoapi.PromotionRequest, error) {
 	// The create goes through the internal client: PromotionRequests are
 	// system-owned, and the promote-verb check above IS the authorization

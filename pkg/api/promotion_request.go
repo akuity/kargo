@@ -125,9 +125,10 @@ func NewPromotionRequestForAllTargets(
 	stage *kargoapi.Stage,
 	freightName string,
 	projectTargetsFn func(context.Context, string) ([]kargoapi.Target, error),
-	updateStrategy *kargoapi.PromotionRequestUpdateStrategy,
+	updateStrategy *kargoapi.TargetUpdateStrategy,
 ) (*kargoapi.PromotionRequest, error) {
-	stageTargets, updateStrategy, err := precheckPromotionRequestFields(ctx, stage, projectTargetsFn, updateStrategy)
+	stageTargets, requestUpdateStrategy, err := precheckPromotionRequestFields(
+		ctx, stage, projectTargetsFn, updateStrategy)
 	if err != nil {
 		return nil, err
 	}
@@ -140,7 +141,7 @@ func NewPromotionRequestForAllTargets(
 		promotionRequestTargets[i] = kargoapi.PromotionRequestTarget{Name: target.Name}
 	}
 
-	return new(newPromotionRequest(stage, freightName, promotionRequestTargets, *updateStrategy)), nil
+	return new(newPromotionRequest(stage, freightName, promotionRequestTargets, *requestUpdateStrategy)), nil
 }
 
 // NewPromotionRequestForSelectTargets creates a promotion request for specific subset of targets.
@@ -150,10 +151,11 @@ func NewPromotionRequestForSelectTargets(
 	stage *kargoapi.Stage,
 	freightName string,
 	projectTargetsFn func(context.Context, string) ([]kargoapi.Target, error),
-	updateStrategy *kargoapi.PromotionRequestUpdateStrategy,
+	updateStrategy *kargoapi.TargetUpdateStrategy,
 	promotionRequestTargets []kargoapi.PromotionRequestTarget,
 ) (*kargoapi.PromotionRequest, error) {
-	stageTargets, updateStrategy, err := precheckPromotionRequestFields(ctx, stage, projectTargetsFn, updateStrategy)
+	stageTargets, requestUpdateStrategy, err := precheckPromotionRequestFields(
+		ctx, stage, projectTargetsFn, updateStrategy)
 	if err != nil {
 		return nil, err
 	}
@@ -173,7 +175,7 @@ func NewPromotionRequestForSelectTargets(
 		}
 	}
 
-	return new(newPromotionRequest(stage, freightName, promotionRequestTargets, *updateStrategy)), nil
+	return new(newPromotionRequest(stage, freightName, promotionRequestTargets, *requestUpdateStrategy)), nil
 }
 
 // precheckPromotionRequestFields initializes shared fields and runs shared checks
@@ -182,7 +184,7 @@ func precheckPromotionRequestFields(
 	ctx context.Context,
 	stage *kargoapi.Stage,
 	projectTargetsFn func(context.Context, string) ([]kargoapi.Target, error),
-	updateStrategy *kargoapi.PromotionRequestUpdateStrategy,
+	updateStrategy *kargoapi.TargetUpdateStrategy,
 ) ([]kargoapi.Target, *kargoapi.PromotionRequestUpdateStrategy, error) {
 	if stage == nil {
 		return nil, nil, fmt.Errorf("cannot create promotion request without a stage")
@@ -196,16 +198,16 @@ func precheckPromotionRequestFields(
 		return nil, nil, fmt.Errorf("cannot create promotion request without stage targets: %w", err)
 	}
 
-	updateStrategy, err = ensureUpdateStrategy(updateStrategy, stage, stageTargets)
+	requestUpdateStrategy, err := ensureUpdateStrategy(updateStrategy, stage, stageTargets)
 	if err != nil {
 		return nil, nil, err
 	}
-	return stageTargets, updateStrategy, nil
+	return stageTargets, requestUpdateStrategy, nil
 }
 
 // ensureUpdateStrategy calculates update strategy from stage targets if it's not set in updateStrategy
 func ensureUpdateStrategy(
-	updateStrategy *kargoapi.PromotionRequestUpdateStrategy,
+	updateStrategy *kargoapi.TargetUpdateStrategy,
 	stage *kargoapi.Stage,
 	stageTargets []kargoapi.Target,
 ) (*kargoapi.PromotionRequestUpdateStrategy, error) {
@@ -214,7 +216,7 @@ func ensureUpdateStrategy(
 		// This computes MaxConcurrentPercent and MaxFailuresPercent into MaxConcurrent and MaxFailures
 		return calculateUpdateStrategy(stage.Spec.Targets.UpdateStrategy, len(stageTargets))
 	}
-	return updateStrategy, nil
+	return calculateUpdateStrategy(*updateStrategy, len(stageTargets))
 }
 
 func getStageTargets(
