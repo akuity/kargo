@@ -83,7 +83,7 @@ has gone unmerged for too long, set `retry.timeout`:
 ```
 
 To check the PR again right away instead of waiting for the next poll, click
-**Refresh** on the `Promotion` in the UI, or refresh its `Stage` from the CLI.
+<hlt>Refresh</hlt> on the `Promotion` in the UI, or refresh its `Stage` from the CLI.
 Refreshing a `Stage` also refreshes its current `Promotion`.
 
 ```shell
