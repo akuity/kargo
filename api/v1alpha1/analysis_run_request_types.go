@@ -50,7 +50,7 @@ type AnalysisRunRequestSpec struct {
 	// UpdateStrategy configures the pace of running AnalysisRuns
 	// +optional
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf"
-	UpdateStrategy TargetUpdateStrategy `json:"updateStrategy,omitempty"`
+	UpdateStrategy PromotionRequestUpdateStrategy `json:"updateStrategy,omitempty"`
 }
 
 type AnalysisRunRequestPhase string
