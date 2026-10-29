@@ -26,6 +26,7 @@ import { parseDate } from '@ui/utils/dates';
 
 import { useGetFreightMap } from '../tabs/freight-history/use-get-freight-map';
 import {
+  isPromotionRequestFailed,
   isPromotionRequestPhaseTerminal,
   isPromotionRequestRetryable
 } from '../utils/promotion-request';
@@ -194,7 +195,8 @@ export const PromotionRequestDetails = ({
   const duration = requestDurationMs(request);
   const maxConcurrent = request?.spec?.updateStrategy?.maxConcurrent;
   const conditions = conditionSummary(request);
-  const retryable = isPromotionRequestRetryable(phase);
+  const failed = isPromotionRequestFailed(phase);
+  const retryable = isPromotionRequestRetryable(phase, retrying.length);
 
   return (
     <Flex vertical gap={16}>
@@ -349,7 +351,7 @@ export const PromotionRequestDetails = ({
               <RoundProgressBar summary={summary} size='full' />
               <RoundGrid rows={children} />
               {request.status?.message && (
-                <Typography.Text type={retryable ? 'danger' : 'secondary'} className='text-xs'>
+                <Typography.Text type={failed ? 'danger' : 'secondary'} className='text-xs'>
                   {request.status.message}
                 </Typography.Text>
               )}
