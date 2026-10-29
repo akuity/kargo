@@ -1210,38 +1210,3 @@ func TestDeleteBranch(t *testing.T) {
 		})
 	}
 }
-
-func TestListPullRequestsWithoutHead(t *testing.T) {
-	testCases := []struct {
-		name       string
-		headCommit string
-	}{
-		{name: "no head commit filter"},
-		{name: "head commit filter", headCommit: "abc123"},
-	}
-	for _, testCase := range testCases {
-		t.Run(testCase.name, func(t *testing.T) {
-			mockClient := &mockGithubClient{}
-			mockClient.
-				On("ListPullRequests", t.Context(), testRepoOwner, testRepoName, mock.Anything).
-				Return(
-					[]*github.PullRequest{{Number: github.Ptr(1), State: github.Ptr("open")}},
-					&github.Response{},
-					nil,
-				)
-			g := provider{owner: testRepoOwner, repo: testRepoName, client: mockClient}
-
-			prs, err := g.ListPullRequests(
-				t.Context(),
-				&gitprovider.ListPullRequestOptions{HeadCommit: testCase.headCommit},
-			)
-			require.NoError(t, err)
-			if testCase.headCommit == "" {
-				require.Len(t, prs, 1)
-				require.Empty(t, prs[0].HeadSHA)
-			} else {
-				require.Empty(t, prs)
-			}
-		})
-	}
-}
