@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 	authnv1 "k8s.io/api/authentication/v1"
@@ -518,11 +519,17 @@ func TestGetAuthorizedClient(t *testing.T) {
 }
 
 func TestConfigureQPSBurst(t *testing.T) {
+	timeout := flowControlCheckTimeout
+	flowControlCheckTimeout = 100 * time.Millisecond
+	t.Cleanup(func() { flowControlCheckTimeout = timeout })
+
 	testCases := []struct {
 		name          string
 		apf           bool
 		groups        []string
 		reviewFails   bool
+		reviewHangs   bool
+		pingHangs     bool
 		down          bool
 		expectedQPS   float32
 		expectedBurst int
@@ -549,6 +556,19 @@ func TestConfigureQPSBurst(t *testing.T) {
 			expectedBurst: 300,
 		},
 		{
+			name:          "PriorityAndFairness enabled, SelfSubjectReview hangs",
+			apf:           true,
+			reviewHangs:   true,
+			expectedQPS:   50,
+			expectedBurst: 300,
+		},
+		{
+			name:          "API server hangs",
+			pingHangs:     true,
+			expectedQPS:   50,
+			expectedBurst: 300,
+		},
+		{
 			name:          "PriorityAndFairness disabled",
 			expectedQPS:   50,
 			expectedBurst: 300,
@@ -562,7 +582,12 @@ func TestConfigureQPSBurst(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
+			release := make(chan struct{})
 			srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if testCase.pingHangs {
+					<-release
+					return
+				}
 				if testCase.apf {
 					w.Header().Set("X-Kubernetes-PF-FlowSchema-UID", "uid")
 				}
@@ -571,6 +596,10 @@ func TestConfigureQPSBurst(t *testing.T) {
 				}
 				if testCase.reviewFails {
 					w.WriteHeader(http.StatusInternalServerError)
+					return
+				}
+				if testCase.reviewHangs {
+					<-release
 					return
 				}
 				w.Header().Set("Content-Type", "application/json")
@@ -583,6 +612,7 @@ func TestConfigureQPSBurst(t *testing.T) {
 				}))
 			}))
 			defer srv.Close()
+			defer close(release) // before Close, which waits for the hanging handler
 			if testCase.down {
 				srv.Close()
 			}
