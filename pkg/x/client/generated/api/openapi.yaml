@@ -4151,6 +4151,10 @@ components:
         freight: freight
         freightAlias: freightAlias
         origin: origin
+        targets:
+        - targets
+        - targets
+        updateStrategy: "{}"
       properties:
         freight:
           type: string
@@ -4162,6 +4166,21 @@ components:
             set, the promotion webhook resolves it to the current auto-promotion
             candidate. Exactly one of Freight, FreightAlias, or Origin must be set.
           type: string
+        targets:
+          description: |-
+            Targets is a list of target names to promote to. If set to `nil` - selects all targets for the stage.
+            If non-nil, should be a subset of targets selected by the stage, empty list is an error.
+          items:
+            type: string
+          type: array
+        updateStrategy:
+          allOf:
+          - $ref: "#/components/schemas/TargetUpdateStrategy"
+          description: |-
+            UpdateStrategy configures overrides for maxConcurrent and maxErrors for this request.
+            Percentage values are calculated based on the total stage targets and not just ones selected for promotion
+            If nil - calculated from the stages updateStrategy based on the number of stage targets.
+          type: object
       type: object
     PublicConfig:
       example:
@@ -13930,6 +13949,7 @@ components:
           description: |-
             MaxConcurrent specifies a number of targets which can be promoted to at the same time
             Zero means there is no limit (default)
+          minimum: 0
           type: integer
         maxFailures:
           description: |-
@@ -13937,6 +13957,7 @@ components:
             Specifies a tolerable number, N failing promotions with maxFailures: N is a success, N+1 is a failure.
             Defaults to 0, meaning no failures tolerated.
             +kubebuilder:validation:Minimum=0
+          minimum: 0
           type: integer
       type: object
     PromotionSpec:

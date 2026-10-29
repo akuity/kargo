@@ -5500,6 +5500,21 @@
         "origin": {
           "description": "Origin is the canonical Freight origin key (e.g. \"Warehouse/foo\"). When\nset, the promotion webhook resolves it to the current auto-promotion\ncandidate. Exactly one of Freight, FreightAlias, or Origin must be set.",
           "type": "string"
+        },
+        "targets": {
+          "description": "Targets is a list of target names to promote to. If set to `nil` - selects all targets for the stage.\nIf non-nil, should be a subset of targets selected by the stage, empty list is an error.",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "updateStrategy": {
+          "description": "UpdateStrategy configures overrides for maxConcurrent and maxErrors for this request.\nPercentage values are calculated based on the total stage targets and not just ones selected for promotion\nIf nil - calculated from the stages updateStrategy based on the number of stage targets.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/TargetUpdateStrategy"
+            }
+          ]
         }
       }
     },
@@ -8391,11 +8406,13 @@
       "properties": {
         "maxConcurrent": {
           "description": "MaxConcurrent specifies a number of targets which can be promoted to at the same time\nZero means there is no limit (default)",
-          "type": "integer"
+          "type": "integer",
+          "minimum": 0
         },
         "maxFailures": {
           "description": "MaxFailures specifies a number of target promotions which can fail before PromotionRequest is considered failed.\nSpecifies a tolerable number, N failing promotions with maxFailures: N is a success, N+1 is a failure.\nDefaults to 0, meaning no failures tolerated.\n+kubebuilder:validation:Minimum=0",
-          "type": "integer"
+          "type": "integer",
+          "minimum": 0
         }
       }
     },
