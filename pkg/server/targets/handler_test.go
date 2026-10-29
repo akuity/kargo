@@ -154,24 +154,16 @@ func (s *fakeStore) List(_ context.Context, project string) ([]database.TargetRo
 	return targets, nil
 }
 
-func (s *fakeStore) Count(
-	_ context.Context,
-	project string,
-	names []string,
-) (database.CountTargetsRow, error) {
+// Count totals the Project's Targets. Which are healthy is the database's to
+// decide, and nothing served here reads it, so none are.
+func (s *fakeStore) Count(_ context.Context, project string) (database.CountTargetsRow, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.calls++
 	if s.err != nil {
 		return database.CountTargetsRow{}, s.err
 	}
-	counts := database.CountTargetsRow{Total: int64(len(s.project(project)))}
-	for name := range s.project(project) {
-		if slices.Contains(names, name) {
-			counts.Among++
-		}
-	}
-	return counts, nil
+	return database.CountTargetsRow{Total: int64(len(s.project(project)))}, nil
 }
 
 func (s *fakeStore) Update(

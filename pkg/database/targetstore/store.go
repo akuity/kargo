@@ -26,7 +26,7 @@ type Store interface {
 	Create(context.Context, string, database.TargetRow) (database.TargetRow, error)
 	Get(context.Context, string, string) (database.TargetRow, error)
 	List(context.Context, string) ([]database.TargetRow, error)
-	Count(context.Context, string, []string) (database.CountTargetsRow, error)
+	Count(context.Context, string) (database.CountTargetsRow, error)
 	Update(context.Context, string, database.TargetRow) (database.TargetRow, error)
 	Delete(context.Context, string, string) error
 }
@@ -110,17 +110,12 @@ func (s *store) List(
 }
 
 // Count returns how many Targets the named Project has, and how many of them
-// are among the given names. It reads no Target's labels or params, so it is
-// cheap however many Targets there are.
-func (s *store) Count(
-	ctx context.Context,
-	project string,
-	names []string,
-) (database.CountTargetsRow, error) {
-	counts, err := s.queries.CountTargets(ctx, database.CountTargetsParams{
-		ProjectName: project,
-		Names:       names,
-	})
+// are healthy: promoted to by at least one Stage, with every Stage's latest
+// promotion to it having succeeded. It reads no Target's labels or params,
+// and reads promotions through indexes, so it is cheap however many Targets
+// and promotions there are.
+func (s *store) Count(ctx context.Context, project string) (database.CountTargetsRow, error) {
+	counts, err := s.queries.CountTargets(ctx, project)
 	if err != nil {
 		return database.CountTargetsRow{}, fmt.Errorf(
 			"error counting Targets in Project %q: %w", project, err,

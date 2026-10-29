@@ -58,13 +58,9 @@ func ReconcilerConfigFromEnv() ReconcilerConfig {
 var errProjectNamespaceExists = errors.New("namespace already exists and is not labeled as a Project namespace")
 
 // TargetCounter counts a Project's Targets, which live in the database: all
-// of them, and those among the given names.
+// of them, and the healthy ones among them.
 type TargetCounter interface {
-	Count(
-		ctx context.Context,
-		project string,
-		names []string,
-	) (database.CountTargetsRow, error)
+	Count(ctx context.Context, project string) (database.CountTargetsRow, error)
 }
 
 // reconciler reconciles Project resources.
