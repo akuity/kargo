@@ -17,11 +17,6 @@ model_admin_login_response.go
 model_analysis_run_argument.go
 model_analysis_run_metadata.go
 model_analysis_run_reference.go
-model_analysis_run_request.go
-model_analysis_run_request_phase.go
-model_analysis_run_request_spec.go
-model_analysis_run_request_status.go
-model_analysis_run_request_target_status.go
 model_analysis_template_reference.go
 model_approved_stage.go
 model_argo_cd_shard.go

@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"slices"
 
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -590,7 +589,7 @@ func appHealthOrSyncStatusChanged[T any](ctx context.Context, e event.TypedUpdat
 	return oldReconciledAt == "" || oldReconciledAt < finishedAt
 }
 
-func NewStageEnqueuerForAnalysisRuns[T metav1.Object](
+func NewStageEnqueuerForAnalysisRuns[T any](
 	kargoClient client.Client,
 ) handler.TypedEventHandler[T, reconcile.Request] {
 	return &stageEnqueuerForAnalysisRuns[T]{
@@ -600,7 +599,7 @@ func NewStageEnqueuerForAnalysisRuns[T metav1.Object](
 
 // stageEnqueuerForAnalysisRuns triggers reconciliation of Stages when their
 // associated Argo Rollouts AnalysisRun's phase changes.
-type stageEnqueuerForAnalysisRuns[T metav1.Object] struct {
+type stageEnqueuerForAnalysisRuns[T any] struct {
 	kargoClient client.Client
 }
 
@@ -638,101 +637,61 @@ func (p *stageEnqueuerForAnalysisRuns[T]) Update(
 	wq workqueue.TypedRateLimitingInterface[reconcile.Request],
 ) {
 	if analysisRunPhaseChanged(ctx, e) {
+		analysisRun := any(e.ObjectNew).(*rollouts.AnalysisRun) // nolint: forcetypeassert
 		logger := logging.LoggerFromContext(ctx)
-
-		labels := e.ObjectNew.GetLabels()
-		annotations := e.ObjectNew.GetAnnotations()
-
-		_, ok := labels[kargoapi.LabelKeyAnalysisRunTarget]
-		if ok {
-			// Target analysis runs would overflow stage reconciler, do not reconcile on those
-			return
+		// Find the Stage associated with this AnalysisRun
+		stages := &kargoapi.StageList{}
+		if err := p.kargoClient.List(
+			ctx,
+			stages,
+			&client.ListOptions{
+				FieldSelector: fields.OneTermEqualSelector(
+					indexer.StagesByAnalysisRunField,
+					fmt.Sprintf("%s:%s", analysisRun.Namespace, analysisRun.Name),
+				),
+			},
+		); err != nil {
+			logger.Error(
+				err, "error listing Stages for AnalysisRun",
+				"analysisRun", analysisRun.Name,
+				"namespace", analysisRun.Namespace,
+			)
 		}
+		for _, stage := range stages.Items {
+			// If the Stage is a control flow Stage, there is no need to reconcile it.
+			if stage.IsControlFlow() {
+				continue
+			}
 
-		// Stage label contains either the stage name or its shortened version.
-		// If label is shortened, annotation is added to keep the full stage name.
-		// We first check the annotation, if it's empty - the label should contain the full stage name.
-		stageNameAnn, ok := annotations[kargoapi.AnnotationKeyStage]
-		if ok {
-			enqueueAnalysisRunStage(
-				wq,
-				logger,
-				stageNameAnn,
-				e.ObjectNew.GetNamespace(),
-				e.ObjectNew.GetName())
-			// There is only one stage per analysis run
-			return
-		}
-
-		// If annotation is not set, the label contains the full name of the stage.
-		stageNameLabel, ok := labels[kargoapi.LabelKeyStage]
-		if ok {
-			enqueueAnalysisRunStage(
-				wq,
-				logger,
-				stageNameLabel,
-				e.ObjectNew.GetNamespace(),
-				e.ObjectNew.GetName())
+			wq.Add(
+				reconcile.Request{
+					NamespacedName: types.NamespacedName{
+						Namespace: stage.Namespace,
+						Name:      stage.Name,
+					},
+				},
+			)
+			logger.Debug(
+				"enqueued Stage for reconciliation",
+				"namespace", stage.Namespace,
+				"stage", stage.Name,
+				"analysisRun", analysisRun.Name,
+			)
 		}
 	}
-}
-
-func enqueueAnalysisRunStage(
-	wq workqueue.TypedRateLimitingInterface[reconcile.Request],
-	logger *logging.Logger,
-	stageName,
-	stageNamespace,
-	analysisRunName string) {
-	wq.Add(
-		reconcile.Request{
-			NamespacedName: types.NamespacedName{
-				Namespace: stageNamespace,
-				Name:      stageName,
-			},
-		},
-	)
-	logger.Debug(
-		"enqueued Stage for reconciliation",
-		"namespace", stageNamespace,
-		"stage", stageName,
-		"analysisRun", analysisRunName,
-	)
 }
 
 func analysisRunPhaseChanged[T any](ctx context.Context, e event.TypedUpdateEvent[T]) bool {
 	logger := logging.LoggerFromContext(ctx)
-	var oldApp *rollouts.AnalysisRun
-	var oldReq *kargoapi.AnalysisRunRequest
-	var ok bool
-	oldApp, ok = any(e.ObjectNew).(*rollouts.AnalysisRun)
-	if !ok {
-		oldReq, ok = any(e.ObjectNew).(*kargoapi.AnalysisRunRequest)
-		if !ok {
-			logger.Error(
-				fmt.Errorf("failed to convert old object to AnalysisRun or AnalysisRunRequest"),
-				"object", e.ObjectNew,
-			)
-		}
-	}
-	if oldApp == nil && oldReq == nil {
+	oldApp := any(e.ObjectOld).(*rollouts.AnalysisRun) // nolint: forcetypeassert
+	if oldApp == nil {
 		logger.Error(
-			nil, "Update event has no old object for update",
+			nil, "Update event has no old object to update",
 			"event", e,
 		)
 	}
-	var newApp *rollouts.AnalysisRun
-	var newReq *kargoapi.AnalysisRunRequest
-	newApp, ok = any(e.ObjectNew).(*rollouts.AnalysisRun)
-	if !ok {
-		newReq, ok = any(e.ObjectNew).(*kargoapi.AnalysisRunRequest)
-		if !ok {
-			logger.Error(
-				fmt.Errorf("failed to convert new object to AnalysisRun or AnalysisRunRequest"),
-				"object", e.ObjectNew,
-			)
-		}
-	}
-	if newApp == nil && newReq == nil {
+	newApp := any(e.ObjectNew).(*rollouts.AnalysisRun) // nolint: forcetypeassert
+	if newApp == nil {
 		logger.Error(
 			nil, "Update event has no new object for update",
 			"event", e,
