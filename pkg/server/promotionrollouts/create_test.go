@@ -86,6 +86,8 @@ func TestCreate(t *testing.T) {
 	}}
 
 	forbiddenStore := &fakeStore{}
+	disabledStore := &fakeStore{targets: fleet.rows}
+	var disabledAuthorizations []can.Access
 	var authorizations []can.Access
 	recordingStore := &fakeStore{}
 	happyStore := &fakeStore{targets: fleet.rows}
@@ -98,6 +100,24 @@ func TestCreate(t *testing.T) {
 			body:   body("prod", "fake-freight"),
 			assertions: func(t *testing.T, w *httptest.ResponseRecorder) {
 				require.Equal(t, http.StatusNotImplemented, w.Code)
+			},
+		},
+		{
+			name:           "creating is not supported by this server",
+			store:          disabledStore,
+			targets:        fleet,
+			authorize:      recordAuthorizations(&disabledAuthorizations),
+			createDisabled: true,
+			objects:        objects,
+			method:         http.MethodPost,
+			url:            projectURL(""),
+			body:           body("prod", "fake-freight"),
+			assertions: func(t *testing.T, w *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusNotImplemented, w.Code)
+				require.Contains(t, w.Body.String(), "not supported by this server")
+				// Refused before anything is read or authorized.
+				require.Zero(t, disabledStore.calls)
+				require.Empty(t, disabledAuthorizations)
 			},
 		},
 		{

@@ -33,18 +33,28 @@ type Handler struct {
 	// creator creates rollouts on behalf of the promote endpoints and this
 	// handler alike. It is nil when store is.
 	creator *Creator
+	// createEnabled is whether this server creates rollouts. When it does
+	// not, the create endpoint responds 501; rollouts can still be read.
+	createEnabled bool
 }
 
 // New returns a Handler. The store may be nil; see the store field.
 // targetLister is where the Targets a created rollout promotes to are read
-// from; it is used only with a store.
+// from; it is used only with a store. createEnabled is whether the create
+// endpoint is served; see the createEnabled field.
 func New(
 	store promotionrolloutstore.Store,
 	targetLister targets.Lister,
 	authorize func(context.Context, can.Access) error,
 	kube client.Client,
+	createEnabled bool,
 ) *Handler {
-	h := &Handler{store: store, authorize: authorize, kube: kube}
+	h := &Handler{
+		store:         store,
+		authorize:     authorize,
+		kube:          kube,
+		createEnabled: createEnabled,
+	}
 	if store != nil {
 		h.creator = NewCreator(store, targetLister)
 	}
@@ -64,14 +74,19 @@ const (
 // check that the caller holds the verb on the rollout the route names or,
 // for the collection, on the Project's rollouts. A create is a promotion,
 // so it is authorized by the promote verb on the Stage instead, which the
-// handler checks once it knows the Stage.
+// handler checks once it knows the Stage; before that, a server that does
+// not create rollouts refuses it.
 func (h *Handler) Register(project *gin.RouterGroup) {
 	rollouts := project.Group(
 		"/promotion-rollouts",
 		middleware.RequireFeature(h.store != nil, errDatabaseNotConfigured),
 	)
 	rollouts.GET("", h.require(can.List()), h.list)
-	rollouts.POST("", h.create)
+	rollouts.POST(
+		"",
+		middleware.RequireFeature(h.createEnabled, errCreateDisabled),
+		h.create,
+	)
 	rollouts.GET("/:promotion-rollout-name", h.require(can.Get()), h.get)
 }
 

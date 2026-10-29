@@ -11,9 +11,16 @@ import (
 	libhttp "github.com/akuity/kargo/pkg/http"
 )
 
-var errDatabaseNotConfigured = libhttp.ErrorStr(
-	"database is not configured",
-	http.StatusNotImplemented,
+var (
+	errDatabaseNotConfigured = libhttp.ErrorStr(
+		"database is not configured",
+		http.StatusNotImplemented,
+	)
+
+	errCreateDisabled = libhttp.ErrorStr(
+		"creating PromotionRollouts is not supported by this server",
+		http.StatusNotImplemented,
+	)
 )
 
 // storeError translates what the store reports into the error a

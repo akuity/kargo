@@ -414,7 +414,8 @@ created, its update strategy against how many they match,
 and both are recorded with the rollout for good. The name,
 number, Targets, update strategy and status are assigned by
 the server and must not be given. This is a promotion: it
-requires the promote verb on the Stage.
+requires the promote verb on the Stage. A server that does
+not create PromotionRollouts responds 501.
 
  @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
  @param project Project name

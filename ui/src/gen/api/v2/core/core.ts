@@ -2941,7 +2941,8 @@ export const getCreatePromotionRolloutUrl = (project: string) => {
  * and both are recorded with the rollout for good. The name,
  * number, Targets, update strategy and status are assigned by
  * the server and must not be given. This is a promotion: it
- * requires the promote verb on the Stage.
+ * requires the promote verb on the Stage. A server that does
+ * not create PromotionRollouts responds 501.
  * @summary Create a PromotionRollout
  */
 export const createPromotionRollout = async (

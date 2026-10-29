@@ -76,6 +76,16 @@ func TestList(t *testing.T) {
 			},
 		},
 		{
+			name:           "rollouts are listed by a server that does not create them",
+			store:          &fakeStore{},
+			createDisabled: true,
+			method:         http.MethodGet,
+			url:            projectURL(""),
+			assertions: func(t *testing.T, w *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusOK, w.Code)
+			},
+		},
+		{
 			name:   "the store fails",
 			store:  failingStore,
 			method: http.MethodGet,

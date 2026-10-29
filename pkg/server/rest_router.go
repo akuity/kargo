@@ -258,7 +258,13 @@ func (s *server) setupRESTRouter(ctx context.Context) (*gin.Engine, error) {
 
 			// PromotionRollouts
 			// PromotionRollouts live in the database too; see above.
-			promotionrollouts.New(s.rolloutStore(), s.targetStore(), s.authorize, s.client).Register(project)
+			promotionrollouts.New(
+				s.rolloutStore(),
+				s.targetStore(),
+				s.authorize,
+				s.client,
+				s.cfg.PromotionRolloutsEnabled,
+			).Register(project)
 
 			// Warehouses
 			project.GET("/warehouses", s.listWarehouses)

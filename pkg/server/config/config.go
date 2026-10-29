@@ -37,8 +37,13 @@ type ServerConfig struct {
 	ArgoCDConfig                ArgoCDConfig
 	PermissiveCORSPolicyEnabled bool
 	RolloutsIntegrationEnabled  bool
-	AnalysisRunLogURLTemplate   string
-	AnalysisRunLogToken         string
+	// PromotionRolloutsEnabled indicates whether the server creates
+	// PromotionRollouts. Only a build that reconciles them sets it; without
+	// that, a rollout would never progress, so it is deliberately not read
+	// from the environment. When false, creating one is refused with 501.
+	PromotionRolloutsEnabled  bool
+	AnalysisRunLogURLTemplate string
+	AnalysisRunLogToken       string
 	// AnalysisRunLogForwardUserToken indicates whether a user's own bearer token
 	// should be available as a value in an authentication header for requests to
 	// the AnalysisRun log service in cases where AnalysisRunLogToken is not set.

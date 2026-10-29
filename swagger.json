@@ -1670,7 +1670,7 @@
         ]
       },
       "post": {
-        "description": "Create a PromotionRollout in a project, which promotes the\nFreight named by spec.freight to each of the Targets the\nStage named by spec.stage governs. PromotionRollouts are\nmanaged through this API rather than as Kubernetes\nresources. The Stage must select Targets: its selectors are\nresolved against the project's Targets as the rollout is\ncreated, its update strategy against how many they match,\nand both are recorded with the rollout for good. The name,\nnumber, Targets, update strategy and status are assigned by\nthe server and must not be given. This is a promotion: it\nrequires the promote verb on the Stage.",
+        "description": "Create a PromotionRollout in a project, which promotes the\nFreight named by spec.freight to each of the Targets the\nStage named by spec.stage governs. PromotionRollouts are\nmanaged through this API rather than as Kubernetes\nresources. The Stage must select Targets: its selectors are\nresolved against the project's Targets as the rollout is\ncreated, its update strategy against how many they match,\nand both are recorded with the rollout for good. The name,\nnumber, Targets, update strategy and status are assigned by\nthe server and must not be given. This is a promotion: it\nrequires the promote verb on the Stage. A server that does\nnot create PromotionRollouts responds 501.",
         "consumes": [
           "application/json"
         ],

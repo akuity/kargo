@@ -443,13 +443,16 @@ type testCase struct {
 	store *fakeStore
 	// targets are the Project's Targets, which rollouts are created to
 	// promote to.
-	targets    fakeTargets
-	authorize  func(context.Context, can.Access) error
-	objects    []client.Object
-	method     string
-	url        string
-	body       io.Reader
-	assertions func(*testing.T, *httptest.ResponseRecorder)
+	targets   fakeTargets
+	authorize func(context.Context, can.Access) error
+	// createDisabled mounts the handler on a server that does not create
+	// rollouts.
+	createDisabled bool
+	objects        []client.Object
+	method         string
+	url            string
+	body           io.Reader
+	assertions     func(*testing.T, *httptest.ResponseRecorder)
 }
 
 func TestMain(m *testing.M) {
@@ -467,10 +470,11 @@ func newRouter(
 	targets fakeTargets,
 	authorize func(context.Context, can.Access) error,
 	kube client.Client,
+	createEnabled bool,
 ) *gin.Engine {
 	router := gin.New()
 	router.Use(middleware.HandleErrors(), middleware.Recover())
-	New(store, targets, authorize, kube).Register(router.Group("/v1beta1/projects/:project"))
+	New(store, targets, authorize, kube, createEnabled).Register(router.Group("/v1beta1/projects/:project"))
 	return router
 }
 
@@ -512,7 +516,7 @@ func runTestCases(t *testing.T, cases []testCase) {
 			}
 			kube := fake.NewClientBuilder().WithScheme(scheme).WithObjects(tc.objects...).Build()
 			w := httptest.NewRecorder()
-			newRouter(store, tc.targets, authorize, kube).ServeHTTP(
+			newRouter(store, tc.targets, authorize, kube, !tc.createDisabled).ServeHTTP(
 				w, httptest.NewRequest(tc.method, tc.url, tc.body),
 			)
 			tc.assertions(t, w)
@@ -553,12 +557,14 @@ func TestNew(t *testing.T) {
 	t.Parallel()
 	// A nil store leaves the handler without one, which RequireFeature turns
 	// into 501 for every request.
-	h := New(nil, nil, nil, nil)
+	h := New(nil, nil, nil, nil, false)
 	require.Nil(t, h.store)
 	require.Nil(t, h.creator)
-	h = New(&fakeStore{}, fakeTargets{}, nil, nil)
+	require.False(t, h.createEnabled)
+	h = New(&fakeStore{}, fakeTargets{}, nil, nil, true)
 	require.NotNil(t, h.store)
 	require.NotNil(t, h.creator)
+	require.True(t, h.createEnabled)
 }
 
 func TestRequireAccess(t *testing.T) {
@@ -590,7 +596,7 @@ func TestRequireAccess(t *testing.T) {
 	t.Run("no authorizer fails closed", func(t *testing.T) {
 		t.Parallel()
 		w := httptest.NewRecorder()
-		newRouter(&fakeStore{}, fakeTargets{}, nil, nil).ServeHTTP(
+		newRouter(&fakeStore{}, fakeTargets{}, nil, nil, true).ServeHTTP(
 			w, httptest.NewRequest(http.MethodGet, projectURL(""), nil),
 		)
 		require.Equal(t, http.StatusInternalServerError, w.Code)

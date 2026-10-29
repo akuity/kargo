@@ -26,7 +26,8 @@ import (
 // @Description and both are recorded with the rollout for good. The name,
 // @Description number, Targets, update strategy and status are assigned by
 // @Description the server and must not be given. This is a promotion: it
-// @Description requires the promote verb on the Stage.
+// @Description requires the promote verb on the Stage. A server that does
+// @Description not create PromotionRollouts responds 501.
 // @Tags Core, Project-Level
 // @Security BearerAuth
 // @Accept json
