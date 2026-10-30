@@ -6,6 +6,8 @@ import { PromotionDirectiveStepStatus } from '../../common/promotion-directive-s
 
 import {
   countStepStatuses,
+  didPromotionEndUnsuccessfullyInTaskGroup,
+  getEffectiveVars,
   getTaskGroupExecutionMetadata,
   getTaskGroupStatus,
   getTaskGroupStepStatuses,
@@ -132,6 +134,52 @@ describe('getTaskGroupStatus()', () => {
   ])('$name', ({ statuses, expected }) => {
     expect(getTaskGroupStatus(statuses)).toBe(expected);
   });
+
+  test('promotion ended unsuccessfully in the group', () => {
+    expect(getTaskGroupStatus([SUCCESS, WONT_RUN], true)).toBe(FAILED);
+  });
+});
+
+describe('didPromotionEndUnsuccessfullyInTaskGroup()', () => {
+  const group: PromotionTaskGroup = {
+    ...taskGroup([taskStep('task-1::step-1'), taskStep('task-1::step-2')]),
+    steps: [
+      { type: 'step', step: taskStep('task-1::step-1'), index: 1 },
+      { type: 'step', step: taskStep('task-1::step-2'), index: 2 }
+    ]
+  };
+
+  test.each([
+    { name: 'no status', promotionStatus: undefined, expected: false },
+    {
+      name: 'still running',
+      promotionStatus: { phase: 'Running', currentStep: 2 },
+      expected: false
+    },
+    { name: 'succeeded', promotionStatus: { phase: 'Succeeded', currentStep: 2 }, expected: false },
+    {
+      name: 'ended before the group',
+      promotionStatus: { phase: 'Errored', currentStep: 0 },
+      expected: false
+    },
+    {
+      name: 'ended after the group',
+      promotionStatus: { phase: 'Failed', currentStep: 3 },
+      expected: false
+    },
+    {
+      name: 'errored in the group',
+      promotionStatus: { phase: 'Errored', currentStep: 2 },
+      expected: true
+    },
+    {
+      name: 'aborted in the group',
+      promotionStatus: { phase: 'Aborted', currentStep: 1 },
+      expected: true
+    }
+  ])('$name', ({ promotionStatus, expected }) => {
+    expect(didPromotionEndUnsuccessfullyInTaskGroup(group, promotionStatus)).toBe(expected);
+  });
 });
 
 describe('countStepStatuses()', () => {
@@ -167,5 +215,36 @@ describe('getTaskGroupExecutionMetadata()', () => {
       startedAt: undefined,
       finishedAt: undefined
     });
+  });
+});
+
+describe('getEffectiveVars()', () => {
+  test.each([
+    { name: 'no vars', vars: undefined, expected: [] },
+    {
+      name: 'unique names',
+      vars: [
+        { name: 'branch', value: 'main' },
+        { name: 'path', value: 'env/prod' }
+      ],
+      expected: [
+        { name: 'branch', value: 'main' },
+        { name: 'path', value: 'env/prod' }
+      ]
+    },
+    {
+      name: 'step var overrides task default in place',
+      vars: [
+        { name: 'branch', value: 'main' },
+        { name: 'path', value: 'env/prod' },
+        { name: 'branch', value: 'stage/prod' }
+      ],
+      expected: [
+        { name: 'branch', value: 'stage/prod' },
+        { name: 'path', value: 'env/prod' }
+      ]
+    }
+  ])('$name', ({ vars, expected }) => {
+    expect(getEffectiveVars(vars)).toEqual(expected);
   });
 });

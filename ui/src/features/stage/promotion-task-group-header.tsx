@@ -10,6 +10,8 @@ import { StepStatusIcon } from './promotion-step-status-icon';
 import { StepTitle } from './promotion-step-title';
 import {
   countStepStatuses,
+  didPromotionEndUnsuccessfullyInTaskGroup,
+  getEffectiveVars,
   getTaskGroupExecutionMetadata,
   getTaskGroupStatus,
   getTaskGroupStepStatuses,
@@ -33,7 +35,7 @@ const formatStepCounts = (statuses: PromotionDirectiveStepStatus[]) => {
     .filter(([status]) => counts[status])
     .map(([status, label]) => `${counts[status]} ${label}`);
 
-  return [`${statuses.length} steps`, ...countLabels].join(' · ');
+  return [`${statuses.length} step${statuses.length === 1 ? '' : 's'}`, ...countLabels].join(' · ');
 };
 
 const VarTag = ({ variable }: { variable: ExpressionVariable }) => {
@@ -54,9 +56,12 @@ export const PromotionTaskGroupHeader = ({
   promotion: Promotion;
 }) => {
   const statuses = getTaskGroupStepStatuses(group, promotion.status);
-  const status = getTaskGroupStatus(statuses);
+  const status = getTaskGroupStatus(
+    statuses,
+    didPromotionEndUnsuccessfullyInTaskGroup(group, promotion.status)
+  );
   const { inflatedTask } = group;
-  const vars = inflatedTask.vars ?? [];
+  const vars = getEffectiveVars(inflatedTask.vars);
   const visibleVars = vars.slice(0, maxVisibleVars);
   const hiddenVars = vars.slice(maxVisibleVars);
 

@@ -1,4 +1,5 @@
 import {
+  ExpressionVariable,
   InflatedPromotionTask,
   PromotionStatus,
   PromotionStep,
@@ -9,6 +10,10 @@ import {
   getPromotionDirectiveStepStatus,
   PromotionDirectiveStepStatus
 } from '../../common/promotion-directive-step-status/utils';
+import {
+  isPromotionPhaseTerminal,
+  PromotionStatusPhase
+} from '../../common/promotion-status/utils';
 
 const taskStepAliasSeparator = '::';
 
@@ -85,9 +90,29 @@ export const getTaskGroupStepStatuses = (
   promotionStatus?: PromotionStatus
 ) => group.steps.map(({ index }) => getPromotionDirectiveStepStatus(index, promotionStatus));
 
+export const didPromotionEndUnsuccessfullyInTaskGroup = (
+  group: PromotionTaskGroup,
+  promotionStatus?: PromotionStatus
+) => {
+  const phase = promotionStatus?.phase as PromotionStatusPhase;
+
+  if (!isPromotionPhaseTerminal(phase) || phase === PromotionStatusPhase.SUCCEEDED) {
+    return false;
+  }
+
+  const currentStep = promotionStatus?.currentStep ?? 0;
+
+  return group.steps.some(({ index }) => index === currentStep);
+};
+
 export const getTaskGroupStatus = (
-  statuses: PromotionDirectiveStepStatus[]
+  statuses: PromotionDirectiveStepStatus[],
+  promotionEndedUnsuccessfully = false
 ): PromotionDirectiveStepStatus => {
+  if (promotionEndedUnsuccessfully) {
+    return PromotionDirectiveStepStatus.FAILED;
+  }
+
   const has = (status: PromotionDirectiveStepStatus) => statuses.includes(status);
   const all = (status: PromotionDirectiveStepStatus) => statuses.every((s) => s === status);
 
@@ -141,3 +166,7 @@ export const getTaskGroupExecutionMetadata = (
     finishedAt: metas.filter((meta) => meta.finishedAt).at(-1)?.finishedAt
   };
 };
+
+export const getEffectiveVars = (vars: ExpressionVariable[] = []) => [
+  ...new Map(vars.map((variable) => [variable.name, variable])).values()
+];
