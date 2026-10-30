@@ -9,7 +9,12 @@ import { ExecutionDuration } from './promotion-step-duration';
 import { StepStatusIcon } from './promotion-step-status-icon';
 import { TaskVarTags } from './promotion-task-var-tags';
 import { useGetPromotionProgress } from './use-get-promotion-progress';
-import { getStepKey, getTaskGroupName, getUserStepAlias } from './utils/promotion-step-groups';
+import {
+  getEffectiveVars,
+  getStepKey,
+  getTaskGroupName,
+  getUserStepAlias
+} from './utils/promotion-step-groups';
 
 export const PromotionProgress = ({
   promotion,
@@ -77,7 +82,7 @@ export const PromotionProgress = ({
                 ? `Task ${tasks.indexOf(currentTask) + 1} of ${tasks.length} · step ${currentTask.steps.findIndex(({ index }) => index === currentStepIndex) + 1} of ${currentTask.steps.length}`
                 : `Step ${currentStepIndex + 1} of ${stepCount}`}
             </Typography.Text>
-            <TaskVarTags vars={currentTask?.inflatedTask.vars ?? []} />
+            <TaskVarTags vars={getEffectiveVars(currentTask?.inflatedTask.vars)} />
           </Flex>
         )}
       </Flex>
