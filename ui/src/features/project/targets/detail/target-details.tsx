@@ -1,6 +1,6 @@
 import { faFileCode, faRocket } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { Button, Flex, Typography } from 'antd';
+import { Button, Flex, Tag, Tooltip, Typography } from 'antd';
 import { formatDistanceToNow } from 'date-fns';
 import { Link, generatePath } from 'react-router-dom';
 
@@ -9,8 +9,8 @@ import { useModal } from '@ui/features/common/modal/use-modal';
 import { SmallLabel } from '@ui/features/common/small-label';
 import { parseDate } from '@ui/utils/dates';
 
-import { freightNames } from '../model/round-utils';
-import { flattenParams, freightArtifacts } from '../model/target-details-utils';
+import { OriginFreight, freightByOrigin } from '../model/round-utils';
+import { artifactSummary, flattenParams, referenceArtifacts } from '../model/target-details-utils';
 import { GoverningStage, TargetRow } from '../model/target-rows';
 import { targetStatePresentations } from '../model/target-state';
 import { FreightLink } from '../shared/freight-link';
@@ -32,32 +32,62 @@ const Row = ({ label, children }: { label: string; children: React.ReactNode }) 
   </Flex>
 );
 
-const FreightLinks = ({
+/**
+ * OriginRows is a Target's Freight laid out one origin to a line: what the
+ * origin's Freight carries, the Freight itself, and what the Stage has moved
+ * that origin on to when it has. A Stage requesting from many Warehouses puts
+ * as many pieces of Freight on a Target, and listed apart from their artifacts
+ * and from the Stage's own, nothing says which goes with which.
+ */
+const OriginRows = ({
   project,
-  names,
+  origins,
   freightLabel
 }: {
   project: string;
-  names: string[];
+  origins: OriginFreight[];
   freightLabel: (name: string) => string;
-}) =>
-  names.length ? (
-    <Flex gap={6} wrap justify='flex-end'>
-      {names.map((name) => (
-        <FreightLink key={name} project={project} name={name} label={freightLabel(name)} />
-      ))}
-    </Flex>
-  ) : (
-    <Typography.Text type='secondary' className='text-xs'>
-      none
-    </Typography.Text>
-  );
+}) => (
+  <>
+    {origins.map(({ origin, current, stage, behind }) => (
+      <Row key={origin} label={origin}>
+        <Flex gap={8} wrap justify='flex-end' align='center'>
+          {referenceArtifacts(current).map(({ kind, text }) => (
+            <span key={`${kind}:${text}`} className='font-mono' title={kind}>
+              {text}
+            </span>
+          ))}
+          {current?.name ? (
+            <FreightLink
+              project={project}
+              name={current.name}
+              label={freightLabel(current.name)}
+              className='text-gray-500 dark:text-neutral-400'
+              showName={false}
+            />
+          ) : (
+            <Typography.Text type='secondary' className='text-xs'>
+              none
+            </Typography.Text>
+          )}
+          {behind && stage?.name && (
+            <Tooltip title={`Stage is on ${artifactSummary(stage) || 'other Freight'}`}>
+              <Tag variant='filled' color='warning' className='m-0 text-xs'>
+                behind
+              </Tag>
+            </Tooltip>
+          )}
+        </Flex>
+      </Row>
+    ))}
+  </>
+);
 
 /**
  * StageCard is what one Stage has put on a Target and what has become of it:
  * the Freight the Stage landed here, what the Stage itself has moved on to when
  * the two differ, the artifacts that Freight carries, and the Target's health
- * under that Stage.
+ * under that Stage, one line per origin the Freight comes from.
  */
 const StageCard = ({
   project,
@@ -69,8 +99,14 @@ const StageCard = ({
   freightLabel: (name: string) => string;
 }) => {
   const stageName = governing.stage.metadata?.name || '';
-  const stageFreight = freightNames(governing.stage.status?.freightHistory?.[0]);
-  const artifacts = freightArtifacts(governing.currentFreight);
+  // A Target with no Freight is only shown what the Stage is on once a
+  // promotion to it has failed. Until then it has simply not been promoted to,
+  // and is not behind on anything.
+  const origins =
+    governing.currentFreight || governing.upToDate === false
+      ? freightByOrigin(governing.currentFreight, governing.stage.status?.freightHistory?.[0])
+      : [];
+  const anyBehind = origins.some(({ behind }) => behind);
   const issues = governing.health?.issues || [];
 
   return (
@@ -86,23 +122,15 @@ const StageCard = ({
       </Flex>
 
       <Flex vertical gap={6}>
-        <Row label='Freight'>
-          <FreightLinks
-            project={project}
-            names={freightNames(governing.currentFreight)}
-            freightLabel={freightLabel}
-          />
-        </Row>
-        {governing.upToDate === false && (
-          <Row label='Stage Freight'>
-            <FreightLinks project={project} names={stageFreight} freightLabel={freightLabel} />
+        {origins.length ? (
+          <OriginRows project={project} origins={origins} freightLabel={freightLabel} />
+        ) : (
+          <Row label='Freight'>
+            <Typography.Text type='secondary' className='text-xs'>
+              none
+            </Typography.Text>
           </Row>
         )}
-        {artifacts.map(({ kind, text }) => (
-          <Row key={`${kind}:${text}`} label={kind}>
-            <span className='font-mono'>{text}</span>
-          </Row>
-        ))}
         <Row label='Health'>
           {governing.health?.status ? (
             governing.health.status
@@ -114,10 +142,11 @@ const StageCard = ({
         </Row>
       </Flex>
 
-      {governing.upToDate === false && (
+      {/* Each origin's own line says when it is behind. A Stage that has moved
+          on with no origin to show for it still needs saying somewhere. */}
+      {governing.upToDate === false && !anyBehind && (
         <Typography.Text type='warning' className='text-xs block mt-2'>
-          Behind: Stage is on {stageFreight.map(freightLabel).join(', ') || 'other Freight'}, Target
-          on {freightNames(governing.currentFreight).map(freightLabel).join(', ') || 'none'}
+          Behind: Stage is on other Freight
         </Typography.Text>
       )}
       {issues.length > 0 && (
