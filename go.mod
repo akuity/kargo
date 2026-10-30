@@ -39,13 +39,13 @@ require (
 	github.com/akuity/kargo/pkg/x/client/generated v0.0.0
 	github.com/aws/aws-lambda-go v1.55.1
 	github.com/aws/aws-sdk-go-v2 v1.47.4
-	github.com/aws/aws-sdk-go-v2/config v1.33.10
-	github.com/aws/aws-sdk-go-v2/credentials v1.20.10
+	github.com/aws/aws-sdk-go-v2/config v1.33.11
+	github.com/aws/aws-sdk-go-v2/credentials v1.20.11
 	github.com/aws/aws-sdk-go-v2/service/ecr v1.66.6
 	github.com/aws/aws-sdk-go-v2/service/sts v1.51.5
 	github.com/aws/smithy-go v1.28.6
 	github.com/awslabs/aws-lambda-go-api-proxy v0.16.2
-	github.com/bmatcuk/doublestar/v4 v4.10.3
+	github.com/bmatcuk/doublestar/v4 v4.10.4
 	github.com/coreos/go-oidc/v3 v3.21.0
 	github.com/cyphar/filepath-securejoin v0.7.0
 	github.com/evanphx/json-patch/v5 v5.9.11
@@ -134,7 +134,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/internal/v4a v1.5.7 // indirect
 	github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.13.22 // indirect
 	github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.14.7 // indirect
-	github.com/aws/aws-sdk-go-v2/service/signin v1.10.5 // indirect
+	github.com/aws/aws-sdk-go-v2/service/signin v1.11.0 // indirect
 	github.com/aws/aws-sdk-go-v2/service/sso v1.38.5 // indirect
 	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.43.5 // indirect
 	github.com/benbjohnson/clock v1.3.5 // indirect
