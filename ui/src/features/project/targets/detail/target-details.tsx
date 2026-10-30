@@ -52,8 +52,10 @@ const OriginRows = ({
     {origins.map(({ origin, current, stage, behind }) => (
       <Row key={origin} label={origin}>
         <Flex gap={8} wrap justify='flex-end' align='center'>
-          {referenceArtifacts(current).map(({ kind, text }) => (
-            <span key={`${kind}:${text}`} className='font-mono' title={kind}>
+          {/* Shortened names can repeat across registries, so the index keeps
+              each key unique. */}
+          {referenceArtifacts(current).map(({ kind, text }, i) => (
+            <span key={`${kind}:${text}:${i}`} className='font-mono' title={kind}>
               {text}
             </span>
           ))}
