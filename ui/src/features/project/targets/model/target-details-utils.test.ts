@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest';
 
-import { describeArtifact, flattenParams } from './target-details-utils';
+import { artifactSummary, describeArtifact, flattenParams } from './target-details-utils';
 
 describe('flattenParams()', () => {
   test('nests into dotted keys and sorts them', () => {
@@ -60,5 +60,22 @@ describe('describeArtifact()', () => {
     expect(
       describeArtifact({ type: 'image', repoURL: 'ghcr.io/example/otel-app/', tag: 'v1' })
     ).toEqual({ kind: 'Image', text: 'otel-app:v1' });
+  });
+});
+
+describe('artifactSummary()', () => {
+  test('names Freight by what it carries, not by its name', () => {
+    expect(
+      artifactSummary({
+        name: '0123456789abcdef',
+        images: [{ repoURL: 'quay.io/jetstack/cert-manager-controller', tag: 'v1.19.5' }],
+        charts: [{ repoURL: 'oci://example.com/charts', name: 'cert-manager', version: '1.19.5' }]
+      })
+    ).toBe('cert-manager-controller:v1.19.5, cert-manager:1.19.5');
+  });
+
+  test('nothing to carry, nothing to say', () => {
+    expect(artifactSummary(undefined)).toBe('');
+    expect(artifactSummary({ name: '0123456789abcdef' })).toBe('');
   });
 });
