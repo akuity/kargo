@@ -40,6 +40,10 @@ const severity = (phase: PromotionPhase): number => {
   }
 };
 
+// isFinished is a phase a Promotion does not come back from.
+const isFinished = (phase?: string) =>
+  isPromotionPhase(phase) && phase !== 'Pending' && phase !== 'Running';
+
 /**
  * childPromotions pairs every Target a round named with its child Promotion
  * and that Target's labels.
@@ -47,7 +51,11 @@ const severity = (phase: PromotionPhase): number => {
  * The round's own status records a phase per Target, written as the reconciler
  * reaches each one; the child Promotion carries the detail -- its steps, its
  * message, when it finished. Where the two disagree the Promotion wins, since
- * the round's copy is a snapshot taken when it was last reconciled.
+ * the round's copy is a snapshot taken when it was last reconciled -- unless
+ * the round already records the Target as finished and the Promotion still
+ * reads as unfinished. A finished phase does not go back, so that Promotion is
+ * only a watch that has not caught up yet, and trusting it would leave a
+ * finished round showing a Target as still running.
  */
 export const childPromotions = (
   request?: PromotionRequest,
@@ -64,7 +72,9 @@ export const childPromotions = (
   return targetRows(request)
     .map<ChildPromotion>((row) => {
       const promotion = row.promotion ? byName.get(row.promotion) : undefined;
-      const phase = promotion?.status?.phase ?? row.phase;
+      const promoted = promotion?.status?.phase;
+      const phase =
+        isFinished(row.phase) && !isFinished(promoted) ? row.phase : (promoted ?? row.phase);
       return {
         target: row.name,
         promotion,
