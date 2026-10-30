@@ -4,6 +4,8 @@ import (
 	"archive/tar"
 	"compress/gzip"
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"io"
@@ -14,6 +16,7 @@ import (
 	"time"
 
 	"github.com/go-git/go-git/v5/plumbing/format/gitignore"
+	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/xeipuuv/gojsonschema"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
@@ -166,11 +169,17 @@ func (t *tarCreator) createTarball(
 		totalSize int64
 	)
 
+	// digest hashes the archive as written; diffID hashes the uncompressed tar
+	// stream.
+	digest := sha256.New()
+	diffID := digest
+	out := io.MultiWriter(tempFile, digest)
 	if shouldGzip {
-		gw = gzip.NewWriter(tempFile)
-		tw = tar.NewWriter(gw)
+		diffID = sha256.New()
+		gw = gzip.NewWriter(out)
+		tw = tar.NewWriter(io.MultiWriter(gw, diffID))
 	} else {
-		tw = tar.NewWriter(tempFile)
+		tw = tar.NewWriter(out)
 	}
 
 	err = fs.WalkDir(root.FS(), inPath, func(path string, d fs.DirEntry, err error) error {
@@ -301,7 +310,13 @@ func (t *tarCreator) createTarball(
 			fmt.Errorf("failed to move temporary file to output path: %w", err)
 	}
 
-	return promotion.StepResult{Status: kargoapi.PromotionStepStatusSucceeded}, nil
+	return promotion.StepResult{
+		Status: kargoapi.PromotionStepStatusSucceeded,
+		Output: map[string]any{
+			"digest": v1.Hash{Algorithm: "sha256", Hex: hex.EncodeToString(digest.Sum(nil))}.String(),
+			"diffID": v1.Hash{Algorithm: "sha256", Hex: hex.EncodeToString(diffID.Sum(nil))}.String(),
+		},
+	}, nil
 }
 
 // buildIgnoreMatcher parses a multiline string of gitignore-style patterns

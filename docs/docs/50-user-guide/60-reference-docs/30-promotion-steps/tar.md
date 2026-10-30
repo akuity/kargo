@@ -20,6 +20,13 @@ Ownership is never recorded: every entry in the archive has user and group ID
 | `gzip` | `boolean` | N | Gzip determines whether the archive should be compressed using gzip. Defaults to false (the archive is uncompressed unless this is set to true). |
 | `mtime` | `string` | N | Mtime is an RFC 3339 timestamp (e.g. `"1970-01-01T00:00:00Z"`) to record as the modification time of every entry in the archive, like GNU tar's `--mtime`. Setting it makes the archive depend only on the names, permissions and content of the files, so identical input produces an identical archive. When not set, the files' own modification times are recorded. |
 
+## Output
+
+| Name | Type | Description |
+|------|------|-------------|
+| `digest` | `string` | Digest of the archive as written (e.g., `sha256:abc123...`). It is stable across promotions only when `mtime` is set; otherwise files' modification times are recorded and can change it. |
+| `diffID` | `string` | Digest of the uncompressed tar stream. It equals `digest` unless `gzip` is set. Tooling that treats the archive as an OCI image layer can use it as the layer's `diff_id`. |
+
 ## Examples
 
 ### Basic Usage

@@ -5,6 +5,8 @@ import (
 	"bytes"
 	"compress/gzip"
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"io"
 	"os"
@@ -748,6 +750,52 @@ func Test_tarCreator_createTarball_mtime(t *testing.T) {
 				} else {
 					assert.Equal(t, int64(0o600), h.Mode, h.Name)
 				}
+			}
+		})
+	}
+}
+
+// Test that the digest output is the archive's digest and diffID is the digest
+// of the uncompressed tar stream.
+func Test_tarCreator_run_digests(t *testing.T) {
+	t.Parallel()
+	sha := func(b []byte) string {
+		sum := sha256.Sum256(b)
+		return "sha256:" + hex.EncodeToString(sum[:])
+	}
+	for _, gzipped := range []bool{false, true} {
+		t.Run(fmt.Sprintf("gzip=%t", gzipped), func(t *testing.T) {
+			t.Parallel()
+			workDir := t.TempDir()
+			require.NoError(t, os.MkdirAll(filepath.Join(workDir, "in", "dev"), 0o750))
+			require.NoError(t, os.WriteFile(
+				filepath.Join(workDir, "in", "dev", "health.lua"),
+				[]byte("return {}\n"),
+				0o600,
+			))
+
+			result, err := (&tarCreator{}).run(
+				t.Context(),
+				newTestStepContext(t, workDir),
+				builtin.TarConfig{InPath: "in", OutPath: "archive.tar", Gzip: gzipped},
+			)
+			require.NoError(t, err)
+			require.Equal(t, kargoapi.PromotionStepStatusSucceeded, result.Status)
+
+			archive, err := os.ReadFile(filepath.Join(workDir, "archive.tar"))
+			require.NoError(t, err)
+			uncompressed := archive
+			if gzipped {
+				var gr io.Reader
+				gr, err = gzipReader(archive)
+				require.NoError(t, err)
+				uncompressed, err = io.ReadAll(gr)
+				require.NoError(t, err)
+			}
+			require.Equal(t, sha(archive), result.Output["digest"])
+			require.Equal(t, sha(uncompressed), result.Output["diffID"])
+			if !gzipped {
+				require.Equal(t, result.Output["digest"], result.Output["diffID"])
 			}
 		})
 	}
