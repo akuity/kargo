@@ -2,23 +2,27 @@ package kubernetes
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"net/http"
 	"strings"
+	"time"
 
 	authv1 "k8s.io/api/authorization/v1"
 	coordinationv1 "k8s.io/api/coordination/v1"
 	corev1 "k8s.io/api/core/v1"
+	flowcontrolv1 "k8s.io/api/flowcontrol/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/watch"
 	kubescheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
-	"sigs.k8s.io/cli-utils/pkg/flowcontrol"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	libClient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
@@ -790,16 +794,33 @@ func GetRestConfig(ctx context.Context, path string) (*rest.Config, error) {
 }
 
 // ConfigureQPSBurst configures the provided REST config to use the specified
-// QPS and burst values, unless PriorityAndFairness flow control is enabled in
-// the cluster, in which case, it disables QPS and burst.
+// QPS and burst values, unless PriorityAndFairness flow control limits the
+// config's requests, in which case, it disables QPS and burst.
+//
+// PriorityAndFairness limits a request unless it is disabled or the request is
+// classified into the exempt priority level (the system:masters group, or any
+// FlowSchema an admin points at it). QPS and burst stay configured in both
+// cases, and when the check fails or takes longer than flowControlCheckTimeout.
 //
 // For more information on PriorityAndFairness flow control, see:
 // https://kubernetes.io/docs/concepts/cluster-administration/flow-control/
 func ConfigureQPSBurst(ctx context.Context, cfg *rest.Config, qps float32, burst int) {
 	logger := logging.LoggerFromContext(ctx)
 
-	if ok, err := flowcontrol.IsEnabled(ctx, cfg); err != nil && ok {
-		logger.Debug("PriorityAndFairness flow control is enabled; disabling QPS and burst")
+	checkCtx, cancel := context.WithTimeout(ctx, flowControlCheckTimeout)
+	defer cancel()
+
+	limited, err := flowControlLimits(checkCtx, cfg)
+	switch {
+	case errors.Is(err, errExemptPriorityLevelForbidden):
+		logger.Info(
+			"cannot read the exempt PriorityAndFairness priority level; configuring QPS and burst",
+			"error", err.Error(),
+		)
+	case err != nil:
+		logger.Error(err, "error checking for PriorityAndFairness flow control; configuring QPS and burst")
+	case limited:
+		logger.Debug("PriorityAndFairness flow control limits this client; disabling QPS and burst")
 		cfg.QPS = -1
 		cfg.Burst = -1
 		return
@@ -808,6 +829,80 @@ func ConfigureQPSBurst(ctx context.Context, cfg *rest.Config, qps float32, burst
 	logger.Debug("configuring QPS and burst for REST config", "qps", qps, "burst", burst)
 	cfg.QPS = qps
 	cfg.Burst = burst
+}
+
+// flowControlCheckTimeout bounds the PriorityAndFairness check in
+// ConfigureQPSBurst, so an unresponsive API server can't block startup.
+const flowControlCheckTimeout = 10 * time.Second
+
+// errExemptPriorityLevelForbidden is returned by flowControlLimits when the
+// config's identity may not read the exempt priority level.
+var errExemptPriorityLevelForbidden = errors.New("forbidden to get the exempt PriorityLevelConfiguration")
+
+// exemptPriorityLevelPath is the API path of the mandatory exempt priority
+// level, the only one of type Exempt.
+const exemptPriorityLevelPath = "/apis/flowcontrol.apiserver.k8s.io/v1/prioritylevelconfigurations/" +
+	flowcontrolv1.PriorityLevelConfigurationNameExempt
+
+// flowControlLimits reports whether PriorityAndFairness limits requests made
+// with the provided REST config. It gets the exempt priority level: the API
+// server names the priority level it matched that request to in a response
+// header, and the response body carries the exempt priority level's UID.
+// FlowSchemas usually match on the identity, so that request lands where the
+// identity's other requests do; one that exempts only some verbs or resources
+// isn't detected. Health checks such as /livez can't be used: a suggested
+// FlowSchema exempts them for everyone.
+//
+// No header means PriorityAndFairness is disabled. A matched priority level
+// other than the exempt one means it limits the identity. The header is set
+// before authorization, so a 403 shows PriorityAndFairness is enabled but
+// can't tell whether the identity is exempt.
+func flowControlLimits(ctx context.Context, cfg *rest.Config) (bool, error) {
+	client, err := rest.HTTPClientFor(cfg)
+	if err != nil {
+		return false, fmt.Errorf("error building HTTP client: %w", err)
+	}
+	u, _, err := rest.DefaultServerUrlFor(cfg)
+	if err != nil {
+		return false, fmt.Errorf("error building server URL: %w", err)
+	}
+	u = u.JoinPath(exemptPriorityLevelPath)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u.String(), nil)
+	if err != nil {
+		return false, fmt.Errorf("error building request: %w", err)
+	}
+	req.Header.Set("Accept", runtime.ContentTypeJSON)
+	if cfg.UserAgent != "" {
+		req.Header.Set("User-Agent", cfg.UserAgent)
+	}
+	resp, err := client.Do(req)
+	if err != nil {
+		return false, fmt.Errorf("error getting the exempt PriorityLevelConfiguration: %w", err)
+	}
+	defer resp.Body.Close()
+
+	matched := resp.Header.Get(flowcontrolv1.ResponseHeaderMatchedPriorityLevelConfigurationUID)
+	if matched == "" {
+		return false, nil
+	}
+	switch resp.StatusCode {
+	case http.StatusOK:
+	case http.StatusForbidden:
+		return false, errExemptPriorityLevelForbidden
+	default:
+		return false, fmt.Errorf(
+			"unexpected status getting the exempt PriorityLevelConfiguration: %s",
+			resp.Status,
+		)
+	}
+	var exempt metav1.PartialObjectMetadata
+	if err = json.NewDecoder(resp.Body).Decode(&exempt); err != nil {
+		return false, fmt.Errorf("error decoding the exempt PriorityLevelConfiguration: %w", err)
+	}
+	if exempt.UID == "" {
+		return false, errors.New("the exempt PriorityLevelConfiguration has no UID")
+	}
+	return matched != string(exempt.UID), nil
 }
 
 // gvrAndKeyFromObj extracts the group, version, and plural resource type
