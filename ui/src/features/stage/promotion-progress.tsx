@@ -17,7 +17,7 @@ export const PromotionProgress = ({
   extra
 }: {
   promotion: Promotion;
-  onCurrentStepClick: (key: string) => void;
+  onCurrentStepClick?: (key: string) => void;
   extra?: ReactNode;
 }) => {
   const { phase, tasks, currentStep, currentStepIndex, currentTask, stepCount, doneStepCount } =
@@ -34,7 +34,7 @@ export const PromotionProgress = ({
           </Typography.Text>
           <ExecutionDuration
             meta={{
-              startedAt: promotion.metadata?.creationTimestamp,
+              startedAt: promotion.status?.stepExecutionMetadata?.[0]?.startedAt,
               finishedAt: promotion.status?.finishedAt
             }}
             progressing={!isPromotionPhaseTerminal(phase)}
@@ -55,8 +55,9 @@ export const PromotionProgress = ({
               type='link'
               size='small'
               className='!p-0'
+              disabled={!onCurrentStepClick}
               onClick={() =>
-                onCurrentStepClick(currentTask?.key ?? getStepKey(currentStep, currentStepIndex))
+                onCurrentStepClick?.(currentTask?.key ?? getStepKey(currentStep, currentStepIndex))
               }
             >
               <Typography.Text strong code>

@@ -56,6 +56,7 @@ const Content = (props: { promotion: TPromotion; yaml: string }) => {
   const dictionaryContext = useDictionaryContext();
   const promotionDescriptions: DescriptionsProps['items'] = [];
   const [activeStepKeys, setActiveStepKeys] = useState<string[]>([]);
+  const [activeTab, setActiveTab] = useState('promotion');
 
   const abortPromotionMutation = useAbortPromotion({
     mutation: {
@@ -215,12 +216,16 @@ const Content = (props: { promotion: TPromotion; yaml: string }) => {
       {!isPromotionTerminal && (
         <PromotionProgress
           promotion={promotion}
-          onCurrentStepClick={(key) => {
-            setActiveStepKeys((keys) => (keys.includes(key) ? keys : [...keys, key]));
-            document
-              .getElementById(`promotion-entry-${key}`)
-              ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-          }}
+          onCurrentStepClick={
+            activeTab === 'yaml'
+              ? undefined
+              : (key) => {
+                  setActiveStepKeys((keys) => (keys.includes(key) ? keys : [...keys, key]));
+                  document
+                    .getElementById(`promotion-entry-${key}`)
+                    ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+          }
           extra={
             canAbortPromotion(promotion) && (
               <Button
@@ -256,6 +261,8 @@ const Content = (props: { promotion: TPromotion; yaml: string }) => {
       )}
       <Tabs
         className='mb-5'
+        activeKey={activeTab}
+        onChange={setActiveTab}
         items={[
           {
             key: 'promotion',
