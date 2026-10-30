@@ -14,6 +14,10 @@ describe('isPromotionPhase()', () => {
     ['Aborted', true],
     ['succeeded', false],
     ['Unknown', false],
+    // Names every object inherits are not phases.
+    ['toString', false],
+    ['constructor', false],
+    ['__proto__', false],
     ['', false],
     [undefined, false]
   ])('%s -> %s', (phase, expected) => {
@@ -33,7 +37,7 @@ describe('getPromotionPhasePresentation()', () => {
     expect(getPromotionPhasePresentation('Failed')).toEqual(errored);
   });
 
-  test.each([undefined, '', 'Unknown'])('%s falls back to Pending', (phase) => {
+  test.each([undefined, '', 'Unknown', 'toString'])('%s falls back to Pending', (phase) => {
     const presentation = getPromotionPhasePresentation(phase);
     expect(presentation).toBe(promotionPhasePresentations.Pending);
     expect(presentation.icon).toBe(faHourglassStart);
