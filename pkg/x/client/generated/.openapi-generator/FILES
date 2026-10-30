@@ -88,6 +88,7 @@ model_image_discovery_result.go
 model_image_stage_map.go
 model_index_selector.go
 model_index_selector_requirement.go
+model_inflated_promotion_task.go
 model_list_projects_response.go
 model_oidc_config.go
 model_patch_config_map_request.go

@@ -23,6 +23,83 @@
           "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$",
           "type": "string"
         },
+        "inflatedTasks": {
+          "description": "InflatedTasks records each step of the Stage's PromotionTemplate that\nreferenced a (Cluster)PromotionTask and was inflated into Steps. It is\nset by Kargo when the Promotion is created and any value supplied by\nusers is discarded.",
+          "items": {
+            "description": "InflatedPromotionTask records a step of a Stage's PromotionTemplate that\nreferenced a (Cluster)PromotionTask and was inflated into the steps of a\nPromotion.",
+            "properties": {
+              "alias": {
+                "description": "Alias is the alias of the step that referenced the task. The aliases of\nthe steps inflated from the task are prefixed with it.",
+                "type": "string"
+              },
+              "description": {
+                "description": "Description is the description of the step that referenced the task.",
+                "type": "string"
+              },
+              "steps": {
+                "description": "Steps are the aliases of the Promotion's steps that were inflated from\nthe task, in order.",
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "task": {
+                "description": "Task is the (Cluster)PromotionTask that was inflated.",
+                "properties": {
+                  "kind": {
+                    "description": "Kind is the type of the PromotionTask. Can be either PromotionTask or\nClusterPromotionTask, default is PromotionTask.",
+                    "enum": [
+                      "PromotionTask",
+                      "ClusterPromotionTask"
+                    ],
+                    "type": "string"
+                  },
+                  "name": {
+                    "description": "Name is the name of the (Cluster)PromotionTask.",
+                    "maxLength": 253,
+                    "minLength": 1,
+                    "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "name"
+                ],
+                "type": "object"
+              },
+              "vars": {
+                "description": "Vars are the variables the task was inflated with: the task's defaults\nand the variables set by the step that referenced the task.",
+                "items": {
+                  "description": "ExpressionVariable describes a single variable that may be referenced by\nexpressions in the context of a ClusterPromotionTask, PromotionTask,\nPromotion, AnalysisRun arguments, or other objects that support expressions.\n\nIt is used to pass information to the expression evaluation engine, and to\nallow for dynamic evaluation of expressions based on the variable values.",
+                  "properties": {
+                    "name": {
+                      "description": "Name is the name of the variable.",
+                      "minLength": 1,
+                      "pattern": "^[a-zA-Z_]\\w*$",
+                      "type": "string"
+                    },
+                    "value": {
+                      "description": "Value is the value of the variable. It is allowed to utilize expressions\nin the value.\nSee https://docs.kargo.io/user-guide/reference-docs/expressions for details.",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "name"
+                  ],
+                  "type": "object"
+                },
+                "type": "array"
+              }
+            },
+            "required": [
+              "alias",
+              "steps",
+              "task"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
         "origin": {
           "description": "Origin, when set, identifies the FreightOrigin whose auto-promotion\ncandidate should be promoted. The mutating webhook resolves this to the\ncandidate Freight for that origin and fills Freight before the Promotion\nis persisted. Exactly one of Freight or Origin must be set.",
           "properties": {
