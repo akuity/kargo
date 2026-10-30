@@ -65,6 +65,32 @@ describe('childPromotions()', () => {
     expect(children.find((entry) => entry.target === 'east-2')?.phase).toBe('Failed');
   });
 
+  test('a Promotion the watch has not caught up on does not undo a finished Target', () => {
+    const children = childPromotions(base, [
+      promotion('promo-east-1', { status: { phase: 'Running' } })
+    ]);
+    expect(children.find((entry) => entry.target === 'east-1')?.phase).toBe('Succeeded');
+  });
+
+  test('a round that succeeded everywhere leaves nothing to retry', () => {
+    const succeeded = request({
+      ...base,
+      status: {
+        phase: 'Succeeded',
+        targets: [
+          { name: 'east-1', promotion: 'promo-east-1', phase: 'Succeeded' },
+          { name: 'east-2', promotion: 'promo-east-2', phase: 'Succeeded' }
+        ]
+      },
+      spec: { stage: 'prod-us', freight: 'abc', targets: [{ name: 'east-1' }, { name: 'east-2' }] }
+    });
+    const children = childPromotions(succeeded, [
+      promotion('promo-east-1', { status: { phase: 'Running' } }),
+      promotion('promo-east-2', { status: { phase: 'Pending' } })
+    ]);
+    expect(retryTargets(children)).toEqual([]);
+  });
+
   test('a Target the round has not reached yet is Pending', () => {
     const children = childPromotions(base);
     expect(children.find((entry) => entry.target === 'west-1')?.phase).toBe('Pending');
