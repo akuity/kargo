@@ -57,8 +57,7 @@ export const layoutGraph = (
     const warehouseNodeIndex = warehouseIndexer.index(w);
     graph.setNode(warehouseNodeIndex, {
       ...warehouseLabelling.label(w),
-      ...warehouseSizer.size(),
-      height: maxStageHeight
+      ...warehouseSizer.size()
     });
 
     if (hideSubscriptions?.[w?.metadata?.name || '']) {
