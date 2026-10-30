@@ -833,7 +833,7 @@ func ConfigureQPSBurst(ctx context.Context, cfg *rest.Config, qps float32, burst
 
 // flowControlCheckTimeout bounds the PriorityAndFairness check in
 // ConfigureQPSBurst, so an unresponsive API server can't block startup.
-var flowControlCheckTimeout = 10 * time.Second
+const flowControlCheckTimeout = 10 * time.Second
 
 // errExemptPriorityLevelForbidden is returned by flowControlLimits when the
 // config's identity may not read the exempt priority level.

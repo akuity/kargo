@@ -519,9 +519,6 @@ func TestGetAuthorizedClient(t *testing.T) {
 }
 
 func TestConfigureQPSBurst(t *testing.T) {
-	timeout := flowControlCheckTimeout
-	flowControlCheckTimeout = 100 * time.Millisecond
-	t.Cleanup(func() { flowControlCheckTimeout = timeout })
 
 	const exemptUID = "exempt-uid"
 	testCases := []struct {
@@ -627,7 +624,9 @@ func TestConfigureQPSBurst(t *testing.T) {
 				srv.Close()
 			}
 			cfg := &rest.Config{Host: srv.URL + testCase.pathPrefix}
-			ConfigureQPSBurst(context.Background(), cfg, 50, 300)
+			ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
+			defer cancel()
+			ConfigureQPSBurst(ctx, cfg, 50, 300)
 			require.Equal(t, testCase.expectedQPS, cfg.QPS)
 			require.Equal(t, testCase.expectedBurst, cfg.Burst)
 		})
