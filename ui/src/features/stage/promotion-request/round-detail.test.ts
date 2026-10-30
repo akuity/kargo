@@ -72,6 +72,13 @@ describe('childPromotions()', () => {
     expect(children.find((entry) => entry.target === 'east-1')?.phase).toBe('Succeeded');
   });
 
+  test('a Promotion phase that is not a phase does not undo a finished Target', () => {
+    const children = childPromotions(base, [
+      promotion('promo-east-1', { status: { phase: 'toString' } })
+    ]);
+    expect(children.find((entry) => entry.target === 'east-1')?.phase).toBe('Succeeded');
+  });
+
   test('a round that succeeded everywhere leaves nothing to retry', () => {
     const succeeded = request({
       ...base,
