@@ -1,0 +1,24 @@
+language: "en-US"
+reviews:
+  profile: "assertive"
+  high_level_summary: true
+  review_status: true
+  review_details: false
+  review_info: false
+  sequence_diagrams: false
+  estimate_code_review_effort: false
+  suggested_labels: false
+  auto_review:
+    enabled: true
+    drafts: false
+  pre_merge_checks:
+    docstrings:
+      mode: off
+    title:
+      mode: off
+  path_instructions:
+    - path: "pkg/server/{auth,rbac,kubernetes}/**/*.go"
+      instructions: "This is important security code for the API that maps Kubernetes RBAC and authorization into REST API primitives. Any code changes should be heavily scrutinized for correctness and security bugs"
+    - path: "pkg/server/*.go"
+      instructions: "In addition to normal review, ensure that all authorization is done properly and no privilege escalation or creation of other resources is possible. This uses Kubernetes RBAC mappings and so it can be tricky to get right. Ensure that all code paths are covered and that no security holes are introduced."
+   
