@@ -28,8 +28,8 @@ export const GraphFilters = (props: GraphFiltersProps) => {
   );
 
   return (
-    <Card size='small' className={props.className}>
-      <Space size={12}>
+    <Card size='small' className={props.className} styles={{ body: { padding: 8 } }}>
+      <Space size={8}>
         <Select
           mode='multiple'
           className='min-w-[240px]'

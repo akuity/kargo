@@ -37,6 +37,10 @@ const nodeTypes = {
   [reactFlowNodeConstants.CUSTOM_REPO_SUBSCRIPTION_NODE]: CustomRepoSubscriptionNode
 };
 
+// Keep fitted nodes clear of the filters and buttons floating over the top of
+// the graph. Horizontal padding matches React Flow's default.
+const fitViewPadding = { top: '80px', bottom: '60px', x: 0.1 } as const;
+
 export const Graph = (props: GraphProps) => {
   const { isDark } = useTheme();
   const reactFlowInstance = useRef<ReactFlowInstance | null>(null);
@@ -215,7 +219,7 @@ export const Graph = (props: GraphProps) => {
   const nodesExcludingSubscriptionNodes = useMemo(() => {
     const subscriptionNodes = nodes.filter((n) => repoSubscriptionIndexer.is(n.id));
 
-    if (subscriptionNodes?.length > 5) {
+    if (subscriptionNodes?.length > 8) {
       return nodes.filter((n) => !repoSubscriptionIndexer.is(n.id));
     }
 
@@ -224,7 +228,7 @@ export const Graph = (props: GraphProps) => {
 
   useEffect(() => {
     requestAnimationFrame(() => {
-      reactFlowInstance.current?.fitView();
+      reactFlowInstance.current?.fitView({ padding: fitViewPadding });
     });
   }, [filterContext?.preferredFilter?.hideSubscriptions]);
 
@@ -300,7 +304,8 @@ export const Graph = (props: GraphProps) => {
         nodeTypes={nodeTypes}
         fitView
         fitViewOptions={{
-          nodes: nodesExcludingSubscriptionNodes
+          nodes: nodesExcludingSubscriptionNodes,
+          padding: fitViewPadding
         }}
         proOptions={{ hideAttribution: true }}
         minZoom={nodes.length > 100 ? 0.4 : 0.1}
@@ -312,6 +317,8 @@ export const Graph = (props: GraphProps) => {
         {filterContext?.preferredFilter?.showMinimap && (
           <MiniMap
             style={{
+              width: 140,
+              height: 100,
               background: 'var(--kargo-color-bg-container, white)',
               border: '1px solid var(--kargo-color-border, lightblue)',
               borderRadius: '5px'
@@ -321,6 +328,7 @@ export const Graph = (props: GraphProps) => {
         )}
         <Controls
           showInteractive={false}
+          fitViewOptions={{ padding: fitViewPadding }}
           onFitView={() => {
             setRedraw(!redraw);
           }}
