@@ -50,6 +50,28 @@ func Test_tarConfig_convert(t *testing.T) {
 			},
 		},
 		{
+			name: "fileMode and dirMode are not octal modes",
+			config: promotion.Config{
+				"inPath":   "source_dir/",
+				"outPath":  "archive.tar",
+				"fileMode": "644",
+				"dirMode":  "0758",
+			},
+			expectedProblems: []string{
+				"fileMode: Does not match pattern",
+				"dirMode: Does not match pattern",
+			},
+		},
+		{
+			name: "valid fileMode and dirMode",
+			config: promotion.Config{
+				"inPath":   "source_dir/",
+				"outPath":  "archive.tar",
+				"fileMode": "0644",
+				"dirMode":  "0755",
+			},
+		},
+		{
 			name: "outPath is empty string",
 			config: promotion.Config{
 				"inPath":  "source_dir/",
@@ -632,6 +654,8 @@ func Test_tarCreator_createTarball(t *testing.T) {
 				tt.gzip,
 				tt.ignore,
 				nil,
+				nil,
+				nil,
 			)
 
 			tt.assertions(t, outPath, result, err)
@@ -673,7 +697,15 @@ func Test_tarCreator_createTarball_mtime(t *testing.T) {
 		for _, w := range written {
 			inPath := writeTree(t, w)
 			outPath := filepath.Join(t.TempDir(), "archive.tar")
-			result, err := runner.createTarball(inPath, outPath, gzipped, "", mtime)
+			result, err := runner.createTarball(
+				inPath,
+				outPath,
+				gzipped,
+				"",
+				mtime,
+				nil,
+				nil,
+			)
 			require.NoError(t, err)
 			require.Equal(t, kargoapi.PromotionStepStatusSucceeded, result.Status)
 			data, err := os.ReadFile(outPath)
@@ -737,6 +769,177 @@ func Test_tarCreator_createTarball_mtime(t *testing.T) {
 					assert.Equal(t, int64(0o600), h.Mode, h.Name)
 				}
 			}
+		})
+	}
+}
+
+// Test that fileMode and dirMode replace the recorded modes of regular files
+// and directories, and that each defaults to the entry's own mode.
+func Test_tarCreator_run_modes(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name     string
+		fileMode string
+		dirMode  string
+		wantFile int64
+		wantDir  int64
+	}{
+		{name: "own modes by default", wantFile: 0o600, wantDir: 0o700},
+		{name: "fileMode only", fileMode: "0644", wantFile: 0o644, wantDir: 0o700},
+		{name: "dirMode only", dirMode: "0755", wantFile: 0o600, wantDir: 0o755},
+		{name: "both", fileMode: "0644", dirMode: "0755", wantFile: 0o644, wantDir: 0o755},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			workDir := t.TempDir()
+			dir := filepath.Join(workDir, "in", "dev")
+			require.NoError(t, os.MkdirAll(dir, 0o700))
+			// MkdirAll's mode is subject to the umask, so set it explicitly.
+			require.NoError(t, os.Chmod(dir, 0o700))
+			require.NoError(t, os.WriteFile(
+				filepath.Join(dir, "health.lua"),
+				[]byte("return {}\n"),
+				0o600,
+			))
+			require.NoError(t, os.Symlink("health.lua", filepath.Join(dir, "link.lua")))
+			linkInfo, err := os.Lstat(filepath.Join(dir, "link.lua"))
+			require.NoError(t, err)
+
+			result, err := (&tarCreator{}).run(
+				t.Context(),
+				&promotion.StepContext{WorkDir: workDir},
+				builtin.TarConfig{
+					InPath:   "in",
+					OutPath:  "archive.tar",
+					FileMode: tt.fileMode,
+					DirMode:  tt.dirMode,
+				},
+			)
+			require.NoError(t, err)
+			require.Equal(t, kargoapi.PromotionStepStatusSucceeded, result.Status)
+
+			f, err := os.Open(filepath.Join(workDir, "archive.tar"))
+			require.NoError(t, err)
+			t.Cleanup(func() { require.NoError(t, f.Close()) })
+			tr := tar.NewReader(f)
+			seen := map[byte]bool{}
+			for {
+				h, err := tr.Next()
+				if err == io.EOF {
+					break
+				}
+				require.NoError(t, err)
+				seen[h.Typeflag] = true
+				switch h.Typeflag {
+				case tar.TypeReg:
+					require.Equal(t, tt.wantFile, h.Mode, h.Name)
+				case tar.TypeDir:
+					require.Equal(t, tt.wantDir, h.Mode, h.Name)
+				case tar.TypeSymlink:
+					// Symlink modes are meaningless and left alone.
+					require.Equal(t, int64(linkInfo.Mode().Perm()), h.Mode, h.Name)
+				}
+			}
+			require.True(t, seen[tar.TypeReg] && seen[tar.TypeDir] && seen[tar.TypeSymlink])
+		})
+	}
+}
+
+// Test that run reports which mode is invalid.
+func Test_tarCreator_run_invalidModes(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name    string
+		cfg     builtin.TarConfig
+		wantErr string
+	}{
+		{
+			name:    "fileMode",
+			cfg:     builtin.TarConfig{FileMode: "0666"},
+			wantErr: "invalid fileMode",
+		},
+		{
+			name:    "dirMode",
+			cfg:     builtin.TarConfig{DirMode: "0777"},
+			wantErr: "invalid dirMode",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			workDir := t.TempDir()
+			require.NoError(t, os.Mkdir(filepath.Join(workDir, "in"), 0o700))
+			tt.cfg.InPath, tt.cfg.OutPath = "in", "archive.tar"
+
+			result, err := (&tarCreator{}).run(
+				t.Context(),
+				&promotion.StepContext{WorkDir: workDir},
+				tt.cfg,
+			)
+			require.ErrorContains(t, err, tt.wantErr)
+			require.True(t, promotion.IsTerminal(err))
+			require.Equal(t, kargoapi.PromotionStepStatusFailed, result.Status)
+		})
+	}
+}
+
+func Test_parseTarMode(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name   string
+		mode   string
+		assert func(*testing.T, *int64, error)
+	}{
+		{
+			name: "empty",
+			assert: func(t *testing.T, mode *int64, err error) {
+				require.NoError(t, err)
+				require.Nil(t, mode)
+			},
+		},
+		{
+			name: "not octal",
+			mode: "0x1",
+			assert: func(t *testing.T, _ *int64, err error) {
+				require.ErrorContains(t, err, "failed to parse octal mode")
+			},
+		},
+		{
+			name: "special bits",
+			mode: "04755",
+			assert: func(t *testing.T, _ *int64, err error) {
+				require.ErrorContains(t, err, "must be between 0000 and 0777")
+			},
+		},
+		{
+			name: "negative",
+			mode: "-4",
+			assert: func(t *testing.T, _ *int64, err error) {
+				require.ErrorContains(t, err, "must be between 0000 and 0777")
+			},
+		},
+		{
+			name: "world-writable",
+			mode: "0666",
+			assert: func(t *testing.T, _ *int64, err error) {
+				require.ErrorContains(t, err, "must not be world-writable")
+			},
+		},
+		{
+			name: "valid",
+			mode: "0755",
+			assert: func(t *testing.T, mode *int64, err error) {
+				require.NoError(t, err)
+				require.Equal(t, int64(0o755), *mode)
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			mode, err := parseTarMode(tt.mode)
+			tt.assert(t, mode, err)
 		})
 	}
 }
