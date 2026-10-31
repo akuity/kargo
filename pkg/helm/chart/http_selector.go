@@ -4,14 +4,12 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
-	"io"
 	"net/http"
 	"strings"
 	"time"
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/hashicorp/go-cleanhttp"
-	"gopkg.in/yaml.v3"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/helm"
@@ -83,29 +81,16 @@ func (h *httpSelector) Select(ctx context.Context) ([]string, error) {
 			h.indexURL,
 		)
 	}
-	resBodyBytes, err := io.ReadAll(res.Body)
+	versions, err := versionsFromIndex(res.Body, h.chartName)
 	if err != nil {
-		return nil,
-			fmt.Errorf("error reading repository index from %q: %w", h.indexURL, err)
-	}
-	index := struct {
-		Entries map[string][]struct {
-			Version string `json:"version,omitempty"`
-		} `json:"entries,omitempty"`
-	}{}
-	if err = yaml.Unmarshal(resBodyBytes, &index); err != nil {
 		return nil, fmt.Errorf(
-			"error unmarshaling repository index from %q: %w",
+			"error reading repository index from %q: %w",
 			h.indexURL, err,
 		)
 	}
-	entries, ok := index.Entries[h.chartName]
-	if !ok {
-		return nil, nil
-	}
-	semvers := make(semver.Collection, 0, len(entries))
-	for _, entry := range entries {
-		sv, err := semver.NewVersion(entry.Version)
+	semvers := make(semver.Collection, 0, len(versions))
+	for _, version := range versions {
+		sv, err := semver.NewVersion(version)
 		if err == nil {
 			semvers = append(semvers, sv)
 		}
