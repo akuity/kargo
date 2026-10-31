@@ -6,6 +6,7 @@ import {
   blockingMessage,
   currentRound,
   currentRounds,
+  isPromotionRequestFailed,
   isPromotionRequestPhaseTerminal,
   isPromotionRequestRetryable,
   promotionRequestCompareFn,
@@ -34,19 +35,36 @@ describe('isPromotionRequestPhaseTerminal()', () => {
   });
 });
 
-describe('isPromotionRequestRetryable()', () => {
+describe('isPromotionRequestFailed()', () => {
   test.each([
     ['Failed', true],
     ['Errored', true],
-    // A round someone cancelled is as worth another go as one that broke.
     ['Aborted', true],
-    // Nothing to retry: it either worked or has not finished.
     ['Succeeded', false],
     ['Pending', false],
     ['Running', false],
     [undefined, false]
-  ])('%s -> %s', (phase, retryable) => {
-    expect(isPromotionRequestRetryable(phase)).toBe(retryable);
+  ])('%s -> %s', (phase, failed) => {
+    expect(isPromotionRequestFailed(phase)).toBe(failed);
+  });
+});
+
+describe('isPromotionRequestRetryable()', () => {
+  test.each([
+    ['Failed', 0, true],
+    ['Errored', 0, true],
+    // A round someone cancelled is as worth another go as one that broke.
+    ['Aborted', 0, true],
+    // Every Target made it: nothing to retry.
+    ['Succeeded', 0, false],
+    // Succeeded within its tolerance for failure, leaving Targets behind.
+    ['Succeeded', 2, true],
+    // Not finished, however its Targets are doing so far.
+    ['Pending', 0, false],
+    ['Running', 2, false],
+    [undefined, 0, false]
+  ])('%s with %i unsuccessful Targets -> %s', (phase, unsuccessful, retryable) => {
+    expect(isPromotionRequestRetryable(phase, unsuccessful)).toBe(retryable);
   });
 });
 
