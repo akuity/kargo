@@ -16,6 +16,10 @@ export type ListProjectsParams = {
    */
   filter?: string;
   /**
+   * Kubernetes label selector applied to Project labels (e.g. 'env=prod').
+   */
+  labelSelector?: string;
+  /**
    * Return only Projects whose UID matches one of the given values.
    */
   uid?: string[];
