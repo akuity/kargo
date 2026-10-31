@@ -59,6 +59,7 @@ A subscription may be given a name:
 spec:
   subscriptions:
   - name: frontend
+    discoveryLimit: 20
     image:
       repoURL: public.ecr.aws/nginx/nginx
       constraint: ^1.26.0
@@ -67,8 +68,8 @@ spec:
       repoURL: public.ecr.aws/myorg/backend
 ```
 
-The `name` field is a sibling of the field identifying the subscription's type
--- `image` in the example above -- and not a field within it.
+The `name` and `discoveryLimit` fields are siblings of the field identifying the subscription's type
+-- `image` in the example above -- and are not fields within it.
 
 A name must be unique among all of a `Warehouse`'s subscriptions and must be a
 valid [RFC 1123](https://datatracker.ietf.org/doc/html/rfc1123) label: no more
@@ -100,6 +101,26 @@ that has already produced `Freight` may result in the one-time production of new
 name.
 
 :::
+
+- `discoveryLimit`: Artifact discovery often times do not select a _single_ artifact;
+  rather they find the n best fits for the specified constraints.
+  The _best_ fit is the zero element in the list.
+  `discoveryLimit` specifies how many artifacts to discover.
+
+  The default is `20`.
+
+  :::note
+
+  For poorly performing `Warehouse`s -- for instance ones frequently
+  encountering rate limits -- decreasing this limit may improve performance.
+  :::
+
+  :::note
+
+  This field was moved from specific subscriptions (`image`, `git`, `chart`) spec
+  to generalize the setting.
+  :::
+
 
 ### Container Image Subscriptions
 
@@ -143,6 +164,12 @@ fields:
 
   For poorly performing `Warehouse`s -- for instance ones frequently
   encountering rate limits -- decreasing this limit may improve performance.
+  :::
+
+  :::warning[Deprecated]
+
+  This field is now deprecated and will be removed in favour of `discoveryLimit`
+  on the base subscription level.
   :::
 
 - `insecureSkipTLSVerify`: Set to `true` to disable validation of the
@@ -392,6 +419,13 @@ Git repository subscriptions can be defined using the following fields:
   subscription.
   :::
 
+  :::warning[Deprecated]
+
+  This field is now deprecated and will be removed in favour of `discoveryLimit`
+  on the base subscription level.
+  :::
+
+
 - `since`: An optional date in RFC 3339 format (e.g. `2026-01-01T00:00:00Z`)
   that bounds how far back commit discovery will look. When specified, only
   commits at or after this date are considered. When left unspecified, there is
@@ -403,7 +437,7 @@ Git repository subscriptions can be defined using the following fields:
   `NewestFromBranch` (or unspecified, since `NewestFromBranch` is the default).
   It is particularly useful for large repositories with long histories where
   `discoveryLimit` alone is not sufficient to prevent slow lookbacks.
-  
+
   :::
 
 - `insecureSkipTLSVerify`: Set to `true` to disable validation of the
@@ -844,6 +878,12 @@ Helm chart repository subscriptions can be defined using the following fields:
   charts. `discoveryLimit` specifies how many chart versions to discover.
 
   The default is `20`.
+
+  :::warning[Deprecated]
+
+  This field is now deprecated and will be removed in favour of `discoveryLimit`
+  on the base subscription level.
+  :::
 
 - `insecureSkipTLSVerify`: Set to `true` to disable validation of the
   repository's TLS certificate.
