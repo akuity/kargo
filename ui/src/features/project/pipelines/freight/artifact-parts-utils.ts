@@ -26,4 +26,4 @@ export const artifactBase = (repoURL: string) => {
 };
 
 export const artifactURL = (repoURL: string) =>
-  repoURL.startsWith('https://') ? repoURL : `https://${repoURL}`;
+  repoURL.startsWith('https://') ? repoURL : `https://${repoURL.replace(/^oci:\/\//, '')}`;
