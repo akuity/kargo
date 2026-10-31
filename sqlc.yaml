@@ -18,6 +18,7 @@ sql:
         promotion_freight: PromotionFreightRow
         promotion_rollout: PromotionRolloutRow
         promotion_rollout_target: PromotionRolloutTargetRow
+        target_stage_promotion: TargetStagePromotionRow
       overrides:
       # Labels are a string map and params an object of opaque JSON values,
       # both enforced by the schema. pgx encodes and decodes JSONB through

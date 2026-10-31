@@ -522,7 +522,11 @@ are never deleted: Kubernetes retains only a
 bounded number of recent Promotions per Stage, and the database keeps them
 all as a history. A Promotion deleted before it finished is recorded as
 `Aborted` as of its deletion, so no row claims a Promotion is running that
-no longer exists. Targets, on the other hand, exist only in the database: the API server serves them
+no longer exists. For each Stage and each Target it has promoted to,
+`target_stage_promotions` keeps the Stage's latest Promotion to the Target
+and its latest successful one, written by the same statements that write
+the Promotion rows, so that a fleet view reads every pair's state from one
+row apiece rather than searching the history for it. Targets, on the other hand, exist only in the database: the API server serves them
 through `/v1beta1/projects/{project}/targets`, and Target is no longer a
 custom resource at all. The chart installs no CRD for it, `kubectl` does not
 see Targets, and the Go type keeps the shape of a Kubernetes resource without
