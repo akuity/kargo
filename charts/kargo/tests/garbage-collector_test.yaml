@@ -21,6 +21,15 @@ tests:
       - equal:
           path: spec.concurrencyPolicy
           value: Forbid
+      - notExists:
+          path: spec.timeZone
+      - notExists:
+          path: spec.startingDeadlineSeconds
+      - notExists:
+          path: spec.jobTemplate.spec.activeDeadlineSeconds
+      - equal:
+          path: spec.jobTemplate.spec.backoffLimit
+          value: 6
       - equal:
           path: spec.jobTemplate.spec.template.spec.serviceAccountName
           value: kargo-garbage-collector
@@ -36,6 +45,27 @@ tests:
       - equal:
           path: spec.schedule
           value: "*/30 * * * *"
+
+  - it: honors custom CronJob and Job execution controls
+    template: templates/garbage-collector/cron-job.yaml
+    set:
+      garbageCollector.timeZone: Etc/UTC
+      garbageCollector.startingDeadlineSeconds: 1800
+      garbageCollector.activeDeadlineSeconds: 1200
+      garbageCollector.backoffLimit: 2
+    asserts:
+      - equal:
+          path: spec.timeZone
+          value: Etc/UTC
+      - equal:
+          path: spec.startingDeadlineSeconds
+          value: 1800
+      - equal:
+          path: spec.jobTemplate.spec.activeDeadlineSeconds
+          value: 1200
+      - equal:
+          path: spec.jobTemplate.spec.backoffLimit
+          value: 2
 
   - it: is not rendered when the garbage collector is disabled
     template: templates/garbage-collector/cron-job.yaml
