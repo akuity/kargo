@@ -258,6 +258,12 @@ func PromotionStepOutput(promotion *kargoapi.Promotion, stepAlias, key string) (
 	return value, ok
 }
 
+// PullRequestID returns the pull request id recorded by the git-open-pr step
+// with the given alias in the promotion's state (its pr.id output).
+func PullRequestID(promotion *kargoapi.Promotion, stepAlias string) (int, bool) {
+	return pullRequestIDFromState(promotion, stepAlias)
+}
+
 // pullRequestIDFromState extracts the pull request id recorded by the
 // git-open-pr step, stored in the promotion state under stepAlias -> pr -> id.
 func pullRequestIDFromState(promotion *kargoapi.Promotion, stepAlias string) (int, bool) {
