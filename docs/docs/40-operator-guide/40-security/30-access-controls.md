@@ -253,3 +253,35 @@ by the operator:
         namespaces:
         - kargo-global-service-accounts
    ```  
+
+## How Quickly Changes Take Effect
+
+To spare the Kubernetes API server a `TokenReview` and one or more
+`SubjectAccessReview`s on every request, the Kargo API server briefly remembers
+what it learns about each request's credentials and permissions. As a result,
+some changes take a short while to take effect:
+
+| Change | Takes effect within | Setting |
+|--------|---------------------|---------|
+| A token is revoked (e.g. an API token is deleted), or an SSO user's `ServiceAccount` mappings change | 2 minutes (never past the token's own expiry) | `AUTH_TOKEN_CACHE_TTL` |
+| A permission is removed (e.g. a `RoleBinding` is deleted) | 5 minutes | `AUTH_DECISION_CACHE_ALLOW_TTL` |
+| A permission is granted | 30 seconds | `AUTH_DECISION_CACHE_DENY_TTL` |
+
+These defaults match those the Kubernetes API server itself uses for webhook
+token authentication and authorization. Each can be changed by setting the
+corresponding environment variable on the API server, with a value such as
+`1m` or `30s`. A value of `0` disables that cache:
+
+```yaml
+api:
+  env:
+  - name: AUTH_DECISION_CACHE_ALLOW_TTL
+    value: 1m
+```
+
+:::note
+
+Shorter durations mean changes take effect sooner, at the cost of more requests
+to the Kubernetes API server.
+
+:::
