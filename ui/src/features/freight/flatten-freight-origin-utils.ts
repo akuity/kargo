@@ -24,6 +24,7 @@ export type TableSource =
       repoURL: string;
       name: string;
       version: string;
+      annotations?: Record<string, string>;
       subscriptionName?: string;
     }
   | ({
@@ -61,6 +62,7 @@ export const flattenFreightOrigin = (
       repoURL: chart?.repoURL || '',
       name: chart?.name || '',
       version: chart?.version || '',
+      annotations: chart?.annotations || {},
       subscriptionName: chart?.subscriptionName
     })) || [];
 

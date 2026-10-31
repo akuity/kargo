@@ -843,6 +843,7 @@ The `chartFrom()` function returns a corresponding `Chart` object.
 | `RepoURL` | The URL of the Helm chart repository the chart originates from. For HTTP/S repositories, this is the URL of the repository. For OCI repositories, this is the URL of the container image repository including the chart's name. |
 | `Name` | The name of the Helm chart. Only present for HTTP/S repositories. |
 | `Version` | The version of the Helm chart. |
+| `Annotations` | A map of annotations from the chart's OCI manifest. Not populated for classic HTTP/S chart repositories. |
 
 Example:
 

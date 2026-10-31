@@ -8,14 +8,11 @@ import yaml from 'yaml';
 import { WarehouseExpanded } from '@ui/extend/types';
 import {
   ArtifactReference,
-  Chart,
   ChartDiscoveryResult,
   DiscoveredCommit,
   DiscoveredImageReference,
   Freight,
-  GitCommit,
   GitDiscoveryResult,
-  Image,
   ImageDiscoveryResult,
   DiscoveryResult as GenericDiscoveryResult
 } from '@ui/gen/api/v2/models';
@@ -28,75 +25,13 @@ import { ArtifactMenuGroup } from './artifact-menu-group';
 import { ChartTable } from './chart-table';
 import { CloneFreightNote } from './clone-freight-note';
 import { CommitTable } from './commit-table';
+import { constructFreight } from './construct-freight';
 import { GenericArtifactTable } from './generic-artifact-table';
 import { ImageTable } from './image-table';
 import { mergeWithClonedFreight } from './merge-with-cloned-freight';
 import { missingArtifactsToClonedFreight } from './missing-artifacts-to-cloned-freight';
 import { DiscoveryResult, FreightInfo } from './types';
 import { getSubscriptionKey } from './unique-subscription-key';
-
-const constructFreight = (
-  chosenItems: {
-    [key: string]: {
-      artifact: DiscoveryResult;
-      info: FreightInfo;
-    };
-  },
-  warehouse: string
-): Freight => {
-  const freight = {
-    origin: {
-      kind: 'Warehouse',
-      name: warehouse
-    },
-    images: [] as Image[],
-    charts: [] as Chart[],
-    commits: [] as GitCommit[],
-    artifacts: [] as ArtifactReference[]
-  } as Freight;
-
-  for (const key in chosenItems) {
-    const { artifact, info } = chosenItems[key];
-    if ('references' in artifact) {
-      const imageRef = info as DiscoveredImageReference;
-      if (!imageRef) {
-        continue;
-      }
-      freight.images?.push({
-        repoURL: artifact.repoURL,
-        tag: imageRef.tag,
-        digest: imageRef.digest,
-        annotations: imageRef.annotations
-      } as Image);
-    } else if ('versions' in artifact) {
-      freight.charts?.push({
-        repoURL: artifact.repoURL,
-        name: artifact.name,
-        version: info as string
-      } as Chart);
-    } else if ('commits' in artifact) {
-      const commitRef = info as DiscoveredCommit;
-
-      if (!commitRef) {
-        continue;
-      }
-
-      freight.commits?.push({
-        repoURL: artifact.repoURL,
-        id: commitRef.id,
-        message: commitRef.subject,
-        branch: commitRef.branch,
-        tag: commitRef.tag,
-        author: commitRef.author,
-        committer: commitRef.committer
-      } as GitCommit);
-    } else if ('artifactReferences' in artifact) {
-      freight.artifacts?.push(info as ArtifactReference);
-    }
-  }
-
-  return freight;
-};
 
 export const AssembleFreight = ({
   warehouse,

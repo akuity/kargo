@@ -6811,6 +6811,13 @@
     "Chart": {
       "type": "object",
       "properties": {
+        "annotations": {
+          "description": "Annotations is a map of arbitrary metadata from the chart's OCI manifest.",
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
         "name": {
           "description": "Name specifies the name of the chart.",
           "type": "string"
@@ -6832,6 +6839,16 @@
     "ChartDiscoveryResult": {
       "type": "object",
       "properties": {
+        "annotations": {
+          "description": "Annotations contains OCI manifest annotations indexed by chart version.\nThis field is only populated for charts in OCI repositories.\n\n+optional",
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          }
+        },
         "name": {
           "description": "Name is the name of the Helm chart, as specified in the ChartSubscription.",
           "type": "string"
