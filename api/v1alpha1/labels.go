@@ -64,4 +64,8 @@ const (
 	// the time it was last replicated. This is used to optimize whether updates
 	// to replicated resources are needed.
 	LabelKeyReplicatedSHA = "kargo.akuity.io/replicated-sha"
+
+	// LabelKeyAnalysisRunTarget is a label key for AnalysisRun resources created
+	// per-target by AnalysisRunRequest
+	LabelKeyAnalysisRunTarget = "kargo.akuity.io/target"
 )

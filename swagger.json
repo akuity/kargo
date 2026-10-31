@@ -6640,6 +6640,10 @@
     "AnalysisRunReference": {
       "type": "object",
       "properties": {
+        "gvk": {
+          "description": "Kind is a string representation of GroupVersionKind describing this run\nOptions are AnalysisRunGVKRun and AnalysisRunGVKRequest",
+          "type": "string"
+        },
         "name": {
           "description": "Name is the name of the AnalysisRun.",
           "type": "string"
@@ -9088,10 +9092,18 @@
           }
         },
         "updateStrategy": {
-          "description": "UpdateStrategy configures the pace of updating the targets\n+optional",
+          "description": "UpdateStrategy configures the pace of promoting the targets\n+optional",
           "allOf": [
             {
               "$ref": "#/definitions/TargetUpdateStrategy"
+            }
+          ]
+        },
+        "verification": {
+          "description": "Verification configures mode and pace of target promotion verifications\n+optional",
+          "allOf": [
+            {
+              "$ref": "#/definitions/TargetVerificaitonSpec"
             }
           ]
         }
@@ -9250,6 +9262,23 @@
         },
         "maxFailures": {
           "description": "MaxFailures specifies a number of target promotions which can fail before PromotionRequest is considered failed.\nSpecifies a tolerable number, N failing promotions with maxFailures: N is a success, N+1 is a failure.\nValue can be an absolute number (e.g.: 5) or a percentage of targets selected by the stage (e.g.: 10%).\nAbsolute number is calculated from percentage by rounding up to a minimum of 1. Default value is 0."
+        }
+      }
+    },
+    "TargetVerificaitonSpec": {
+      "type": "object",
+      "properties": {
+        "runMode": {
+          "description": "VerificationRunMode controls whether verifications run per-target or per-stage\n+optional",
+          "type": "string"
+        },
+        "updateStrategy": {
+          "description": "UpdateStrategy configures the pace of verification runs\n+optional",
+          "allOf": [
+            {
+              "$ref": "#/definitions/TargetUpdateStrategy"
+            }
+          ]
         }
       }
     },

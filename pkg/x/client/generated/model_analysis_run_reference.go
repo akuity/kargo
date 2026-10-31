@@ -19,6 +19,8 @@ var _ MappedNullable = &AnalysisRunReference{}
 
 // AnalysisRunReference struct for AnalysisRunReference
 type AnalysisRunReference struct {
+	// Kind is a string representation of GroupVersionKind describing this run Options are AnalysisRunGVKRun and AnalysisRunGVKRequest
+	Gvk *string `json:"gvk,omitempty"`
 	// Name is the name of the AnalysisRun.
 	Name *string `json:"name,omitempty"`
 	// Namespace is the namespace of the AnalysisRun.
@@ -42,6 +44,38 @@ func NewAnalysisRunReference() *AnalysisRunReference {
 func NewAnalysisRunReferenceWithDefaults() *AnalysisRunReference {
 	this := AnalysisRunReference{}
 	return &this
+}
+
+// GetGvk returns the Gvk field value if set, zero value otherwise.
+func (o *AnalysisRunReference) GetGvk() string {
+	if o == nil || IsNil(o.Gvk) {
+		var ret string
+		return ret
+	}
+	return *o.Gvk
+}
+
+// GetGvkOk returns a tuple with the Gvk field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *AnalysisRunReference) GetGvkOk() (*string, bool) {
+	if o == nil || IsNil(o.Gvk) {
+		return nil, false
+	}
+	return o.Gvk, true
+}
+
+// HasGvk returns a boolean if a field has been set.
+func (o *AnalysisRunReference) HasGvk() bool {
+	if o != nil && !IsNil(o.Gvk) {
+		return true
+	}
+
+	return false
+}
+
+// SetGvk gets a reference to the given string and assigns it to the Gvk field.
+func (o *AnalysisRunReference) SetGvk(v string) {
+	o.Gvk = &v
 }
 
 // GetName returns the Name field value if set, zero value otherwise.
@@ -150,6 +184,9 @@ func (o AnalysisRunReference) MarshalJSON() ([]byte, error) {
 
 func (o AnalysisRunReference) ToMap() (map[string]interface{}, error) {
 	toSerialize := map[string]interface{}{}
+	if !IsNil(o.Gvk) {
+		toSerialize["gvk"] = o.Gvk
+	}
 	if !IsNil(o.Name) {
 		toSerialize["name"] = o.Name
 	}

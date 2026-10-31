@@ -589,7 +589,7 @@ func TestGenerateChildPromotionNameOrdering(t *testing.T) {
 	})
 }
 
-func Test_calculateUpdateStrategy(t *testing.T) {
+func TestCalculateUpdateStrategy(t *testing.T) {
 	t.Parallel()
 
 	testCases := []struct {
@@ -669,7 +669,7 @@ func Test_calculateUpdateStrategy(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
-			resultStrategy, err := calculateUpdateStrategy(testCase.stageStrategy, testCase.targetCount)
+			resultStrategy, err := CalculateUpdateStrategy(testCase.stageStrategy, testCase.targetCount)
 			require.NoError(t, err)
 
 			require.Equal(t, testCase.expectedStrategy, resultStrategy)
