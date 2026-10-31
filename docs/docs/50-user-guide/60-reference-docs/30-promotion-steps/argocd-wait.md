@@ -66,6 +66,23 @@ during the wait.
 
 :::
 
+### Degraded Grace Period
+
+Some `Application`s briefly report `Degraded` health during normal operation
+and recover on their own a moment later. To tolerate this, set
+`degradedGracePeriod` on the step. When the health of any `Application` the
+step waits on regresses to `Degraded`, the step keeps waiting instead of
+failing. It fails only if that `Application` is still `Degraded` once the grace
+period has elapsed. If its health changes to anything else within the grace
+period, waiting continues normally, and a later regression starts a new grace
+period.
+
+The grace period applies to every `Application` the step waits on, and is timed
+separately for each one from the first time the step observes its regression.
+It is independent of the step's
+[timeout](../15-promotion-templates.md#step-retries): if the step times out
+first, the step fails with a timeout instead.
+
 ## Configuration
 
 | Name | Type | Required | Description |
@@ -80,6 +97,7 @@ during the wait.
 | `apps[].selector.matchExpressions[].operator` | `string` | Y | The operator to use for matching. Valid values: `In`, `NotIn`, `Exists`, `DoesNotExist`. |
 | `apps[].selector.matchExpressions[].values` | `[]string` | N | An array of string values. Required when `operator` is `In` or `NotIn`. Must be empty when `operator` is `Exists` or `DoesNotExist`. |
 | `apps[].waitFor` | `[]string` | N | Conditions to wait for. Valid values: `health`, `sync`, `operation`, `suspended`, `degraded`. Defaults to `[health, sync, operation]` when omitted. |
+| `degradedGracePeriod` | `string` | N | How long any `Application` whose health regresses to `Degraded` may stay `Degraded` before the step fails, as a duration string such as `"90s"` or `"5m"`. Applies to every `Application` in `apps`, timed separately for each, and only to those whose `waitFor` includes `health`. Defaults to zero, which fails the step as soon as a regression is observed. See [Degraded Grace Period](#degraded-grace-period). |
 
 ## Output
 
@@ -167,6 +185,22 @@ steps:
     - selector:
         matchLabels:
           environment: staging
+```
+
+### Tolerating a Transient Degraded State
+
+This example waits for two `Application`s to become healthy, synced, and idle,
+but allows either of them to report `Degraded` health for up to two minutes
+before the step fails.
+
+```yaml
+steps:
+- uses: argocd-wait
+  config:
+    degradedGracePeriod: 2m
+    apps:
+    - name: my-app
+    - name: my-other-app
 ```
 
 ### Waiting for a Suspended Application
