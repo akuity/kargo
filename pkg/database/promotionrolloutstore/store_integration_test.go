@@ -114,6 +114,10 @@ func TestStoreIntegration(t *testing.T) {
 				fetched, err := store.Get(ctx, "create", "prod.01A.abc")
 				require.NoError(t, err)
 				require.Equal(t, rollout, fetched)
+
+				fetched, err = store.GetByNumber(ctx, "create", "prod", 1)
+				require.NoError(t, err)
+				require.Equal(t, rollout, fetched)
 			},
 		},
 		{
@@ -596,6 +600,16 @@ func TestStoreIntegration(t *testing.T) {
 			name: "get reports a missing rollout",
 			run: func(t *testing.T) {
 				_, err := store.Get(ctx, "missing", "prod.01A.abc")
+				require.ErrorIs(t, err, database.ErrNotFound)
+			},
+		},
+		{
+			name: "get by number reports a number the Stage has not reached",
+			run: func(t *testing.T) {
+				_, err := store.GetByNumber(ctx, "create", "prod", 99)
+				require.ErrorIs(t, err, database.ErrNotFound)
+				// Numbers are per Stage: the other Stage has no #1.
+				_, err = store.GetByNumber(ctx, "create", "staging", 1)
 				require.ErrorIs(t, err, database.ErrNotFound)
 			},
 		},

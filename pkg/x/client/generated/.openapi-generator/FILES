@@ -40,6 +40,7 @@ model_create_config_map_request.go
 model_create_generic_credentials_request.go
 model_create_or_update_resource_response.go
 model_create_or_update_resource_result.go
+model_create_promotion_rollout_request.go
 model_create_repo_credentials_request.go
 model_create_resource_response.go
 model_create_resource_result.go
@@ -119,6 +120,15 @@ model_promotion_request_summary.go
 model_promotion_request_target.go
 model_promotion_request_target_status.go
 model_promotion_request_update_strategy.go
+model_promotion_rollout.go
+model_promotion_rollout_list.go
+model_promotion_rollout_phase.go
+model_promotion_rollout_spec.go
+model_promotion_rollout_status.go
+model_promotion_rollout_summary.go
+model_promotion_rollout_target.go
+model_promotion_rollout_target_status.go
+model_promotion_rollout_update_strategy.go
 model_promotion_spec.go
 model_promotion_status.go
 model_promotion_step.go

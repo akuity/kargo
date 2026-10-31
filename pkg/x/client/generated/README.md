@@ -74,6 +74,7 @@ Class | Method | HTTP request | Description
 *CoreAPI* | [**AbortPromotion**](docs/CoreAPI.md#abortpromotion) | **Post** /v1beta1/projects/{project}/promotions/{promotion}/abort | Abort a Promotion
 *CoreAPI* | [**ApproveFreight**](docs/CoreAPI.md#approvefreight) | **Post** /v1beta1/projects/{project}/freight/{freight-name-or-alias}/approve | Approve Freight for promotion to a Stage
 *CoreAPI* | [**CreateProjectConfigMap**](docs/CoreAPI.md#createprojectconfigmap) | **Post** /v1beta1/projects/{project}/configmaps | Create a project-level ConfigMap
+*CoreAPI* | [**CreatePromotionRollout**](docs/CoreAPI.md#createpromotionrollout) | **Post** /v1beta1/projects/{project}/stages/{stage}/promotion-rollouts | Create a PromotionRollout
 *CoreAPI* | [**CreateSharedConfigMap**](docs/CoreAPI.md#createsharedconfigmap) | **Post** /v1beta1/shared/configmaps | Create a shared ConfigMap
 *CoreAPI* | [**CreateSystemConfigMap**](docs/CoreAPI.md#createsystemconfigmap) | **Post** /v1beta1/system/configmaps | Create a system-level ConfigMap
 *CoreAPI* | [**CreateTarget**](docs/CoreAPI.md#createtarget) | **Post** /v1beta1/projects/{project}/targets | Create a Target
@@ -94,6 +95,7 @@ Class | Method | HTTP request | Description
 *CoreAPI* | [**GetProjectConfigMap**](docs/CoreAPI.md#getprojectconfigmap) | **Get** /v1beta1/projects/{project}/configmaps/{configmap} | Retrieve a project-level ConfigMap
 *CoreAPI* | [**GetPromotion**](docs/CoreAPI.md#getpromotion) | **Get** /v1beta1/projects/{project}/promotions/{promotion} | Retrieve a Promotion
 *CoreAPI* | [**GetPromotionRequest**](docs/CoreAPI.md#getpromotionrequest) | **Get** /v1beta1/projects/{project}/promotion-requests/{promotion-request} | Retrieve a PromotionRequest
+*CoreAPI* | [**GetPromotionRollout**](docs/CoreAPI.md#getpromotionrollout) | **Get** /v1beta1/projects/{project}/stages/{stage}/promotion-rollouts/{number} | Retrieve a PromotionRollout
 *CoreAPI* | [**GetPromotionTask**](docs/CoreAPI.md#getpromotiontask) | **Get** /v1beta1/projects/{project}/promotion-tasks/{promotion-task} | Retrieve a PromotionTask
 *CoreAPI* | [**GetSharedConfigMap**](docs/CoreAPI.md#getsharedconfigmap) | **Get** /v1beta1/shared/configmaps/{configmap} | Retrieve a shared ConfigMap
 *CoreAPI* | [**GetStage**](docs/CoreAPI.md#getstage) | **Get** /v1beta1/projects/{project}/stages/{stage} | Retrieve a Stage
@@ -106,6 +108,7 @@ Class | Method | HTTP request | Description
 *CoreAPI* | [**ListProjectConfigMaps**](docs/CoreAPI.md#listprojectconfigmaps) | **Get** /v1beta1/projects/{project}/configmaps | List project-level ConfigMaps
 *CoreAPI* | [**ListProjects**](docs/CoreAPI.md#listprojects) | **Get** /v1beta1/projects | List projects
 *CoreAPI* | [**ListPromotionRequests**](docs/CoreAPI.md#listpromotionrequests) | **Get** /v1beta1/projects/{project}/promotion-requests | List PromotionRequests
+*CoreAPI* | [**ListPromotionRollouts**](docs/CoreAPI.md#listpromotionrollouts) | **Get** /v1beta1/projects/{project}/promotion-rollouts | List PromotionRollouts
 *CoreAPI* | [**ListPromotionTasks**](docs/CoreAPI.md#listpromotiontasks) | **Get** /v1beta1/projects/{project}/promotion-tasks | List PromotionTasks
 *CoreAPI* | [**ListPromotions**](docs/CoreAPI.md#listpromotions) | **Get** /v1beta1/projects/{project}/promotions | List Promotions
 *CoreAPI* | [**ListSharedConfigMaps**](docs/CoreAPI.md#listsharedconfigmaps) | **Get** /v1beta1/shared/configmaps | List shared ConfigMaps
@@ -228,6 +231,7 @@ Class | Method | HTTP request | Description
  - [CreateGenericCredentialsRequest](docs/CreateGenericCredentialsRequest.md)
  - [CreateOrUpdateResourceResponse](docs/CreateOrUpdateResourceResponse.md)
  - [CreateOrUpdateResourceResult](docs/CreateOrUpdateResourceResult.md)
+ - [CreatePromotionRolloutRequest](docs/CreatePromotionRolloutRequest.md)
  - [CreateRepoCredentialsRequest](docs/CreateRepoCredentialsRequest.md)
  - [CreateResourceResponse](docs/CreateResourceResponse.md)
  - [CreateResourceResult](docs/CreateResourceResult.md)
@@ -307,6 +311,15 @@ Class | Method | HTTP request | Description
  - [PromotionRequestTarget](docs/PromotionRequestTarget.md)
  - [PromotionRequestTargetStatus](docs/PromotionRequestTargetStatus.md)
  - [PromotionRequestUpdateStrategy](docs/PromotionRequestUpdateStrategy.md)
+ - [PromotionRollout](docs/PromotionRollout.md)
+ - [PromotionRolloutList](docs/PromotionRolloutList.md)
+ - [PromotionRolloutPhase](docs/PromotionRolloutPhase.md)
+ - [PromotionRolloutSpec](docs/PromotionRolloutSpec.md)
+ - [PromotionRolloutStatus](docs/PromotionRolloutStatus.md)
+ - [PromotionRolloutSummary](docs/PromotionRolloutSummary.md)
+ - [PromotionRolloutTarget](docs/PromotionRolloutTarget.md)
+ - [PromotionRolloutTargetStatus](docs/PromotionRolloutTargetStatus.md)
+ - [PromotionRolloutUpdateStrategy](docs/PromotionRolloutUpdateStrategy.md)
  - [PromotionSpec](docs/PromotionSpec.md)
  - [PromotionStatus](docs/PromotionStatus.md)
  - [PromotionStep](docs/PromotionStep.md)

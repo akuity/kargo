@@ -7,6 +7,7 @@ import (
 	"go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin"
 
 	"github.com/akuity/kargo/pkg/server/middleware"
+	"github.com/akuity/kargo/pkg/server/promotionrollouts"
 	"github.com/akuity/kargo/pkg/server/targets"
 )
 
@@ -254,6 +255,16 @@ func (s *server) setupRESTRouter(ctx context.Context) (*gin.Engine, error) {
 			// Targets live in the database; their handlers authorize each
 			// request themselves, since no Kubernetes client does it for them.
 			targets.New(s.targetStore(), s.authorize, s.client).Register(project)
+
+			// PromotionRollouts
+			// PromotionRollouts live in the database too; see above.
+			promotionrollouts.New(
+				s.rolloutStore(),
+				s.targetStore(),
+				s.authorize,
+				s.client,
+				s.cfg.PromotionRolloutsEnabled,
+			).Register(project)
 
 			// Warehouses
 			project.GET("/warehouses", s.listWarehouses)

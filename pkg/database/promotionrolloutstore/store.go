@@ -88,6 +88,7 @@ type ListOptions struct {
 type Store interface {
 	Create(context.Context, string, database.PromotionRolloutRow, []uuid.UUID) (Rollout, error)
 	Get(context.Context, string, string) (Rollout, error)
+	GetByNumber(context.Context, string, string, int64) (Rollout, error)
 	GetMany(context.Context, string, []string) ([]Rollout, error)
 	List(context.Context, string, ListOptions) ([]Rollout, error)
 	ListLatest(context.Context, string, string) ([]Rollout, error)
@@ -171,6 +172,27 @@ func (s *store) Get(ctx context.Context, project, name string) (Rollout, error) 
 	rollouts, err := s.attachTargets(ctx, []database.PromotionRolloutRow{row})
 	if err != nil {
 		return Rollout{}, rolloutError(err, project, name)
+	}
+	return rollouts[0], nil
+}
+
+// GetByNumber returns the Stage's PromotionRollout of the given number, or
+// database.ErrNotFound.
+func (s *store) GetByNumber(ctx context.Context, project, stage string, number int64) (Rollout, error) {
+	row, err := s.queries.GetPromotionRolloutByNumber(ctx, database.GetPromotionRolloutByNumberParams{
+		ProjectName: project,
+		StageName:   stage,
+		Number:      number,
+	})
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			err = database.ErrNotFound
+		}
+		return Rollout{}, rolloutError(err, project, fmt.Sprintf("%s #%d", stage, number))
+	}
+	rollouts, err := s.attachTargets(ctx, []database.PromotionRolloutRow{row})
+	if err != nil {
+		return Rollout{}, rolloutError(err, project, row.Name)
 	}
 	return rollouts[0], nil
 }

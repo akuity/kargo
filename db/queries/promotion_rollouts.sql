@@ -57,6 +57,13 @@ SELECT * FROM rollout;
 SELECT * FROM promotion_rollouts
 WHERE project_name = sqlc.arg(project_name) AND name = sqlc.arg(name);
 
+-- A Stage's rollout by its number, served by the Stage/number unique key.
+-- name: GetPromotionRolloutByNumber :one
+SELECT * FROM promotion_rollouts
+WHERE project_name = sqlc.arg(project_name)
+    AND stage_name = sqlc.arg(stage_name)
+    AND number = sqlc.arg(number);
+
 -- The named rollouts of a Project, for a reader that already knows which
 -- ones it wants. Names that do not exist are simply absent from the result.
 -- name: ListPromotionRolloutsByName :many
