@@ -24,6 +24,8 @@ sed -i.bak 's/\*string/string/g' ${out_file}
 # As of right now, this transformation is ok, but we can revisit it if we ever
 # need nullable numbers or non-int numbers.
 sed -i.bak 's/\*float64/int64/g' ${out_file}
+sed -i.bak 's/EXTVars/ExtVars/g' ${out_file}
+sed -i.bak 's/Tlas/TLAs/g' ${out_file}
 
 rm ${out_file}.bak
 
