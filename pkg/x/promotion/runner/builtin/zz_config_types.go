@@ -705,6 +705,12 @@ type Update struct {
 }
 
 type TarConfig struct {
+	// DirMode is an octal mode (e.g. "0755") to record for every directory in the archive
+	// instead of the directory's own mode. It must not be world-writable.
+	DirMode string `json:"dirMode,omitempty"`
+	// FileMode is an octal mode (e.g. "0644") to record for every regular file in the archive
+	// instead of the file's own mode. It must not be world-writable.
+	FileMode string `json:"fileMode,omitempty"`
 	// Gzip determines whether the archive should be compressed using gzip. Defaults to false
 	// (the archive is uncompressed unless this is set to true).
 	Gzip bool `json:"gzip,omitempty"`
