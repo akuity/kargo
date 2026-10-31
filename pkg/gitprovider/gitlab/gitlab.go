@@ -230,12 +230,23 @@ func (p *provider) MergePullRequest(
 		opts = &gitprovider.MergePullRequestOpts{}
 	}
 
-	glMR, _, err := p.client.GetMergeRequest(p.projectName, id, nil)
+	glMR, resp, err := p.client.GetMergeRequest(p.projectName, id, nil)
 	if err != nil {
+		// The client reports a 404 as the sentinel gitlab.ErrNotFound rather than
+		// as an *ErrorResponse; the status code is checked as well in case a
+		// future client version changes that.
+		if errors.Is(err, gitlab.ErrNotFound) ||
+			(resp != nil && resp.StatusCode == http.StatusNotFound) {
+			return nil, false, fmt.Errorf(
+				"%w: %w",
+				gitprovider.ErrPullRequestNotFound,
+				err,
+			)
+		}
 		return nil, false, fmt.Errorf("error getting merge request %d: %w", id, err)
 	}
 	if glMR == nil {
-		return nil, false, fmt.Errorf("merge request %d not found", id)
+		return nil, false, gitprovider.ErrPullRequestNotFound
 	}
 
 	switch {
@@ -244,7 +255,7 @@ func (p *provider) MergePullRequest(
 		return &pr, true, nil
 
 	case glMR.State != "opened":
-		return nil, false, fmt.Errorf("pull request %d is closed but not merged", id)
+		return nil, false, gitprovider.ErrPullRequestClosedUnmerged
 
 	case glMR.Draft || glMR.DetailedMergeStatus != "mergeable":
 		return nil, false, nil
@@ -260,7 +271,11 @@ func (p *provider) MergePullRequest(
 	case "squash":
 		squash = ptr.To(true) // Opt-in to a squash merge
 	default:
-		return nil, false, fmt.Errorf("unsupported merge method %q", opts.MergeMethod)
+		return nil, false, fmt.Errorf(
+			"merge method %q: %w",
+			opts.MergeMethod,
+			gitprovider.ErrUnsupportedMergeMethod,
+		)
 	}
 	updatedMR, _, err := p.client.AcceptMergeRequest(
 		p.projectName, id, &gitlab.AcceptMergeRequestOptions{Squash: squash},

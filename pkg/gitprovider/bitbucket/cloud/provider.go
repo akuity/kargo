@@ -283,6 +283,13 @@ func (p *provider) MergePullRequest(
 	if err != nil {
 		return nil, false, fmt.Errorf("error getting pull request %d: %w", id, err)
 	}
+	if getResp.StatusCode() == http.StatusNotFound {
+		return nil, false, fmt.Errorf(
+			"%w: response status %d",
+			gitprovider.ErrPullRequestNotFound,
+			getResp.StatusCode(),
+		)
+	}
 	if getResp.JSON200 == nil {
 		return nil, false, fmt.Errorf(
 			"unexpected response %d getting pull request %d", getResp.StatusCode(), id,
@@ -301,7 +308,9 @@ func (p *provider) MergePullRequest(
 
 	if state != PullrequestStateOPEN {
 		return nil, false, fmt.Errorf(
-			"pull request %d is closed but not merged (state: %s)", id, state,
+			"pull request state is %s: %w",
+			state,
+			gitprovider.ErrPullRequestClosedUnmerged,
 		)
 	}
 
@@ -323,7 +332,11 @@ func (p *provider) MergePullRequest(
 	if opts.MergeMethod != "" {
 		s := PullrequestMergeParametersMergeStrategy(opts.MergeMethod)
 		if !s.Valid() {
-			return nil, false, fmt.Errorf("unsupported merge strategy %q", opts.MergeMethod)
+			return nil, false, fmt.Errorf(
+				"merge strategy %q: %w",
+				opts.MergeMethod,
+				gitprovider.ErrUnsupportedMergeMethod,
+			)
 		}
 		mergeStrategy = &s
 	}
