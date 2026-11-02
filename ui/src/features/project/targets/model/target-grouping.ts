@@ -64,6 +64,16 @@ export const filterGroupedRows = (
     .map((group) => ({ ...group, rows: group.rows.filter(keep) }))
     .filter((group) => group.rows.length > 0);
 
+// keptRows is the rows, one per Target, whose Target the groups still hold.
+// It takes the page's ungrouped rows back, not the grouped ones: grouped by
+// Stage a Target sits in each governing Stage's group, read as that Stage sees
+// it, and the fleet figures want it once, read across them all. A Target any
+// one of its groups kept counts as kept.
+export const keptRows = (rows: TargetRow[], groups: TargetGroup[]): TargetRow[] => {
+  const kept = new Set(groupedRows(groups).map((row) => row.target.metadata?.name));
+  return rows.filter((row) => kept.has(row.target.metadata?.name));
+};
+
 // groupTargetRows buckets rows by the value they carry for a label key. With no
 // key, every row lands in one group. Groups sort by value with the unlabeled
 // bucket last; rows keep their order within a group.
