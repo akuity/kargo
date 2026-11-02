@@ -122,9 +122,19 @@ func (c Config) options(ctx context.Context) ([]nats.Option, error) {
 	// reachable at startup should fail loudly rather than let the component
 	// come up in a reconnecting state and look healthy. This only governs a
 	// connection that was established once and then lost.
+	//
+	// Retrying forever also has to cover auth errors, which the library
+	// otherwise treats as fatal once the server rejects the same credentials
+	// twice in a row. Rotated credentials reach us through a mounted file that
+	// the kubelet refreshes only on its own sync period, which is far longer
+	// than two reconnect attempts. A rotation that drops our connection would
+	// therefore close it for good. A credentials file (CredsFile) is re-read on
+	// every attempt, so retrying lets the connection recover once the file
+	// catches up.
 	opts = append(
 		opts,
 		nats.MaxReconnects(-1),
+		nats.IgnoreAuthErrorAbort(),
 		nats.DisconnectErrHandler(func(conn *nats.Conn, err error) {
 			if err == nil {
 				// A nil error means the disconnect was initiated by us (e.g. Close)
