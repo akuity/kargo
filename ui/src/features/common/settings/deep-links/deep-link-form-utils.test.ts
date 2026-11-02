@@ -41,6 +41,16 @@ describe('deepLinkFormSchema', () => {
     ]);
   });
 
+  test('rejects Go template syntax at the start of a URL', () => {
+    expect(issuePaths(values({ url: '{{ .stage.metadata.name }}' }))).toEqual([['url']]);
+  });
+
+  test('rejects Go template syntax next to a valid expression', () => {
+    expect(issuePaths(values({ url: 'https://x/${{ stage.metadata.name }}/{{ .y }}' }))).toEqual([
+      ['url']
+    ]);
+  });
+
   test('accepts a URL with several expressions', () => {
     const url = 'https://example.com/${{ stage.metadata.namespace }}/${{ stage.metadata.name }}';
 
@@ -139,10 +149,11 @@ describe('the examples the form offers', () => {
   });
 
   // the context is the resource as JSON, so an unset `omitempty` field is
-  // absent rather than null. `[...]` and `len()` raise on an absent field, and
-  // the server drops the whole link when they do, which is invisible in the
-  // UI. An example has to hold for a resource with none of its optional fields
-  // set, so it reaches them with `?.` and defaults them with `??` instead.
+  // absent rather than null. `[...]` and a bare `len()` raise on an absent
+  // field, and the server drops the whole link when they do, which is
+  // invisible in the UI. An example has to hold for a resource with none of
+  // its optional fields set, so it reaches them with `?.` and defaults them
+  // with `??` instead.
   test.each(kinds)('%s examples avoid constructs that raise on an unset field', (_, kind) => {
     for (const example of [...kind.urlExamples, ...kind.conditionExamples]) {
       expect(example).not.toMatch(/\bindex\b|\blen\(|\["/);

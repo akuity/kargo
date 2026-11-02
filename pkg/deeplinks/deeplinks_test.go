@@ -161,6 +161,19 @@ func TestEvaluateLinks(t *testing.T) {
 			},
 		},
 		{
+			name: "wrapped condition evaluating to a string collects error and skips link",
+			links: []kargoapi.DeepLink{{
+				Title: "String",
+				URL:   "https://example.com",
+				If:    `${{ freight.metadata.name }}`,
+			}},
+			assert: func(t *testing.T, resolved []ResolvedLink, errs []string) {
+				require.Empty(t, resolved)
+				require.Len(t, errs, 1)
+				require.Contains(t, errs[0], `got string "abc123"`)
+			},
+		},
+		{
 			name: "invalid condition expression collects error and skips link",
 			links: []kargoapi.DeepLink{{
 				Title: "Bad Condition",
@@ -183,6 +196,30 @@ func TestEvaluateLinks(t *testing.T) {
 				require.Empty(t, resolved)
 				require.Len(t, errs, 1)
 				require.Contains(t, errs[0], `"Legacy URL"`)
+				require.Contains(t, errs[0], "Go template syntax")
+			},
+		},
+		{
+			name: "legacy Go template at the start of the URL collects error",
+			links: []kargoapi.DeepLink{{
+				Title: "Leading",
+				URL:   "{{ .freight.metadata.name }}",
+			}},
+			assert: func(t *testing.T, resolved []ResolvedLink, errs []string) {
+				require.Empty(t, resolved)
+				require.Len(t, errs, 1)
+				require.Contains(t, errs[0], "Go template syntax")
+			},
+		},
+		{
+			name: "legacy Go template next to a valid expression collects error",
+			links: []kargoapi.DeepLink{{
+				Title: "Mixed Syntax",
+				URL:   "https://x/${{ freight.metadata.name }}/{{ .y }}",
+			}},
+			assert: func(t *testing.T, resolved []ResolvedLink, errs []string) {
+				require.Empty(t, resolved)
+				require.Len(t, errs, 1)
 				require.Contains(t, errs[0], "Go template syntax")
 			},
 		},
@@ -233,6 +270,18 @@ func TestEvaluateLinks(t *testing.T) {
 				require.Empty(t, resolved)
 				require.Len(t, errs, 1)
 				require.Contains(t, errs[0], "not a string")
+			},
+		},
+		{
+			name: "missing field renders as null",
+			links: []kargoapi.DeepLink{{
+				Title: "Null",
+				URL:   "https://example.com/${{ freight.alias }}",
+			}},
+			assert: func(t *testing.T, resolved []ResolvedLink, errs []string) {
+				require.Empty(t, errs)
+				require.Len(t, resolved, 1)
+				require.Equal(t, "https://example.com/null", resolved[0].URL)
 			},
 		},
 		{

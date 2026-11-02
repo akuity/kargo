@@ -45,7 +45,7 @@ func EvaluateLinks(
 		// only partially migrated still fails loudly when its condition is false.
 		if err := checkLegacyURL(link.URL); err != nil {
 			errs = append(errs, fmt.Sprintf(
-				"error evaluating URL for link %q: %v", link.Title, err,
+				"invalid URL for link %q: %v", link.Title, err,
 			))
 			continue
 		}
@@ -109,9 +109,14 @@ func evaluateCondition(cond string, ctx map[string]any) (bool, error) {
 	case bool:
 		return res, nil
 	case string:
-		// A condition with no expression in it comes back unevaluated.
-		return false, errors.New(
-			"condition must be a ${{ }} expression that evaluates to a boolean",
+		if !strings.Contains(cond, "${{") {
+			// A condition with no expression in it comes back unevaluated.
+			return false, errors.New(
+				"condition must be a ${{ }} expression that evaluates to a boolean",
+			)
+		}
+		return false, fmt.Errorf(
+			"condition must evaluate to a boolean, got string %q", res,
 		)
 	default:
 		return false, fmt.Errorf(

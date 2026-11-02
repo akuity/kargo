@@ -125,7 +125,7 @@ export const DeepLinkModal = ({
         control={form.control}
         name='if'
         label='Condition'
-        description={`Optional. An expression over ${expressionRoot}. The link is hidden unless it evaluates to true.`}
+        description={`Optional. A \${{ }} expression over ${expressionRoot}. The link is hidden unless it evaluates to true.`}
         tooltip={
           <ExpressionHelp
             syntax={`An expression in \${{ }} returning true or false. The ${resource} is bound to ${expressionRoot}. Reach optional fields with ?. and default them with ??. Indexing a missing one drops the link.`}
