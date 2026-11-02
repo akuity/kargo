@@ -14,19 +14,24 @@ export const FreightLink = ({
   project,
   name,
   label,
-  className
+  className,
+  showName = true
 }: {
   project: string;
   name: string;
   label: string;
   className?: string;
-}) => (
-  <Tooltip title={name}>
+  // Whether hovering shows the full name. Off where the Freight is already
+  // told apart by what it carries, and its name would only add an opaque ID.
+  showName?: boolean;
+}) => {
+  const link = (
     <Link
       className={classNames('font-mono', className)}
       to={generatePath(paths.freight, { name: project, freightName: name })}
     >
       {label}
     </Link>
-  </Tooltip>
-);
+  );
+  return showName ? <Tooltip title={name}>{link}</Tooltip> : link;
+};
