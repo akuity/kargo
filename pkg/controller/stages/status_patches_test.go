@@ -102,6 +102,7 @@ func TestRegularStageReconciler_Reconcile_statusPatchesPerPass(t *testing.T) {
 
 	r := &RegularStageReconciler{
 		client:        c,
+		apiReader:     c,
 		eventSender:   &fakeevent.Sender{},
 		healthChecker: &health.MockAggregatingChecker{},
 	}

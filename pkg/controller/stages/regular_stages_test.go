@@ -44,7 +44,10 @@ func TestRegularStageReconciler_Reconcile(t *testing.T) {
 		stage       *kargoapi.Stage
 		objects     []client.Object
 		interceptor interceptor.Funcs
-		assertions  func(*testing.T, client.Client, ctrl.Result, error)
+		// apiReader, when set, returns the uncached reader to use in place of
+		// the cached client.
+		apiReader  func(*testing.T) client.Reader
+		assertions func(*testing.T, client.Client, ctrl.Result, error)
 	}{
 		{
 			name: "stage not found",
@@ -112,6 +115,92 @@ func TestRegularStageReconciler_Reconcile(t *testing.T) {
 			assertions: func(t *testing.T, _ client.Client, result ctrl.Result, err error) {
 				require.NoError(t, err)
 				assert.True(t, result.IsZero())
+			},
+		},
+		{
+			name: "stage not found through API reader",
+			req: ctrl.Request{
+				NamespacedName: types.NamespacedName{
+					Namespace: "default",
+					Name:      "test-stage",
+				},
+			},
+			// The Stage is still in the cache, but has been deleted.
+			stage: &kargoapi.Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "default",
+					Name:      "test-stage",
+				},
+				Spec: kargoapi.StageSpec{
+					PromotionTemplate: &kargoapi.PromotionTemplate{
+						Spec: kargoapi.PromotionTemplateSpec{
+							Steps: []kargoapi.PromotionStep{{}, {}},
+						},
+					},
+				},
+			},
+			apiReader: func(*testing.T) client.Reader {
+				return fake.NewClientBuilder().WithScheme(scheme).Build()
+			},
+			assertions: func(t *testing.T, c client.Client, result ctrl.Result, err error) {
+				require.NoError(t, err)
+				assert.Equal(t, ctrl.Result{}, result)
+
+				// Verify the Stage was not reconciled
+				stage := &kargoapi.Stage{}
+				require.NoError(t, c.Get(t.Context(), types.NamespacedName{
+					Namespace: "default",
+					Name:      "test-stage",
+				}, stage))
+				assert.NotContains(t, stage.Finalizers, kargoapi.FinalizerName)
+			},
+		},
+		{
+			name: "reconciles Stage read through API reader",
+			req: ctrl.Request{
+				NamespacedName: types.NamespacedName{
+					Namespace: "default",
+					Name:      "test-stage",
+				},
+			},
+			// The cached Stage predates the addition of the finalizer.
+			stage: &kargoapi.Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "default",
+					Name:      "test-stage",
+				},
+				Spec: kargoapi.StageSpec{
+					PromotionTemplate: &kargoapi.PromotionTemplate{
+						Spec: kargoapi.PromotionTemplateSpec{
+							Steps: []kargoapi.PromotionStep{{}, {}},
+						},
+					},
+				},
+			},
+			apiReader: func(*testing.T) client.Reader {
+				return fake.NewClientBuilder().
+					WithScheme(scheme).
+					WithObjects(&kargoapi.Stage{
+						ObjectMeta: metav1.ObjectMeta{
+							Namespace:  "default",
+							Name:       "test-stage",
+							Finalizers: []string{kargoapi.FinalizerName},
+						},
+						Spec: kargoapi.StageSpec{
+							PromotionTemplate: &kargoapi.PromotionTemplate{
+								Spec: kargoapi.PromotionTemplateSpec{
+									Steps: []kargoapi.PromotionStep{{}, {}},
+								},
+							},
+						},
+					}).
+					Build()
+			},
+			assertions: func(t *testing.T, _ client.Client, result ctrl.Result, err error) {
+				require.NoError(t, err)
+				// The finalizer seen through the API reader means the Stage is
+				// reconciled rather than requeued to add the finalizer.
+				assert.Equal(t, ctrl.Result{RequeueAfter: 5 * time.Minute}, result)
 			},
 		},
 		{
@@ -424,7 +513,11 @@ func TestRegularStageReconciler_Reconcile(t *testing.T) {
 
 			r := &RegularStageReconciler{
 				client:      c,
+				apiReader:   c,
 				eventSender: &fakeevent.Sender{},
+			}
+			if tt.apiReader != nil {
+				r.apiReader = tt.apiReader(t)
 			}
 
 			result, err := r.Reconcile(t.Context(), tt.req)
@@ -776,6 +869,7 @@ func TestRegularStageReconciler_Reconcile_concurrentStatusMetadata(t *testing.T)
 
 	r := &RegularStageReconciler{
 		client:        c,
+		apiReader:     c,
 		eventSender:   &fakeevent.Sender{},
 		healthChecker: &health.MockAggregatingChecker{},
 	}
@@ -4991,6 +5085,58 @@ func TestRegularStageReconciler_startVerification(t *testing.T) {
 				require.NotNil(t, vi.FinishTime)
 				assert.Equal(t, startTime.Unix(), vi.StartTime.Unix())
 				assert.Equal(t, endTime.Unix(), vi.FinishTime.Unix())
+			},
+		},
+		{
+			name: "finds existing analysis run despite stale reverification request",
+			stage: &kargoapi.Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "fake-project",
+					Name:      "test-stage",
+				},
+				Spec: kargoapi.StageSpec{
+					Verification: &kargoapi.Verification{},
+				},
+			},
+			// New Freight has no verification yet, so the request below is a
+			// leftover from re-verifying earlier Freight.
+			freightCol: kargoapi.FreightCollection{
+				ID: "test-collection",
+				Freight: map[string]kargoapi.FreightReference{
+					"warehouse": {Name: "test-freight"},
+				},
+			},
+			req: &kargoapi.VerificationRequest{
+				ID:           "earlier-freight-verification",
+				Actor:        "test-user",
+				ControlPlane: true,
+			},
+			objects: []client.Object{
+				&rolloutsapi.AnalysisRun{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "existing-analysis",
+						Namespace: "fake-project",
+						Labels: map[string]string{
+							kargoapi.LabelKeyStage:             "test-stage",
+							kargoapi.LabelKeyFreightCollection: "test-collection",
+						},
+					},
+					Status: rolloutsapi.AnalysisRunStatus{Phase: "Running"},
+				},
+			},
+			assertions: func(t *testing.T, c client.Client, vi *kargoapi.VerificationInfo, err error) {
+				require.NoError(t, err)
+
+				require.NotNil(t, vi)
+				assert.Equal(t, kargoapi.VerificationPhaseRunning, vi.Phase)
+				require.NotNil(t, vi.AnalysisRun)
+				assert.Equal(t, "existing-analysis", vi.AnalysisRun.Name)
+				assert.Empty(t, vi.Actor)
+
+				// No second AnalysisRun was created
+				analysisRuns := &rolloutsapi.AnalysisRunList{}
+				require.NoError(t, c.List(t.Context(), analysisRuns))
+				assert.Len(t, analysisRuns.Items, 1)
 			},
 		},
 		{
