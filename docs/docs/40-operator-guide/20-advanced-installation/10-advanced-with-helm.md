@@ -14,7 +14,7 @@ location. In the example below, we save it to `kargo-values.yaml`
     ```shell
     helm inspect values \
       oci://ghcr.io/akuity/kargo-charts/kargo \
-      --version 1.11.6 > kargo-values.yaml
+      --version 1.11.x > kargo-values.yaml
     ```
 
 1. Edit and save the values.
@@ -35,7 +35,7 @@ location. In the example below, we save it to `kargo-values.yaml`
     ```shell
     helm install kargo \
       oci://ghcr.io/akuity/kargo-charts/kargo \
-      --version 1.11.6 \
+      --version 1.11.x \
       --namespace kargo \
       --create-namespace \
       --values kargo-values.yaml \
