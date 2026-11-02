@@ -143,8 +143,8 @@ github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.8.8 h1:PWv+vG8aCLS8qd+HPdY
 github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.8.8/go.mod h1:xxPZEpflYHJA12366ZGyq66z9dHPCoeCIu99Jck+MPw=
 github.com/aws/aws-sdk-go-v2/internal/v4a v1.5.8 h1:WOp5De9iWdEHDPh2Kb0tBP3vGBm/dVAuRGh4a4tqduo=
 github.com/aws/aws-sdk-go-v2/internal/v4a v1.5.8/go.mod h1:z8W8YgfhbWl62XqcTtK+CxPrE+iHGRVUOtrrbIOp7ZY=
-github.com/aws/aws-sdk-go-v2/service/ecr v1.66.6 h1:BLPDoTpiLhoMZd2QfAbSC6QWbLEd/KYcsps9rKrqlig=
-github.com/aws/aws-sdk-go-v2/service/ecr v1.66.6/go.mod h1:hbHHpYZ/29gAnar+fh7C0BpL/ELXMwxh2q7ZqXSZePI=
+github.com/aws/aws-sdk-go-v2/service/ecr v1.67.1 h1:EJlz0wSlZDKaCN2FHwg9RBR+C+gsuVdYblJnEnrq3M4=
+github.com/aws/aws-sdk-go-v2/service/ecr v1.67.1/go.mod h1:6rVJFO9ZO+4j/QL5/FbtAsbb8xHC85j79wXA9ndOCTY=
 github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.13.23 h1:MCIR6iZaCKO4UE0hUvoWWLI6JVjppopV64JfAJaMjng=
 github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.13.23/go.mod h1:pphWFS+z0MmIPivj8c/6bATd1Z+Av7Ust75DPdEFsPA=
 github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.14.8 h1:+PMpWlJYOn2tm7sm6OZ/ZLd4jStl17T7wjNapd1Rczs=
@@ -558,8 +558,8 @@ github.com/jbenet/go-context v0.0.0-20150711004518-d14ea06fba99 h1:BQSFePA1RWJOl
 github.com/jbenet/go-context v0.0.0-20150711004518-d14ea06fba99/go.mod h1:1lJo3i6rXxKeerYnT8Nvf0QmHCRC1n8sfWVwXF2Frvo=
 github.com/jdx/go-netrc v1.0.0 h1:QbLMLyCZGj0NA8glAhxUpf1zDg6cxnWgMBbjq40W0gQ=
 github.com/jdx/go-netrc v1.0.0/go.mod h1:Gh9eFQJnoTNIRHXl2j5bJXA1u84hQWJWgGh569zF3v8=
-github.com/jferrl/go-githubauth v1.9.1 h1:gDBgNgPxU4gL0yWKf6FOwKCdLb3ICHPVMQrPEq+xq0I=
-github.com/jferrl/go-githubauth v1.9.1/go.mod h1:HkuzaWMeDf+S09Dq/5wlBwPeho9ZZm3MixLdD2WTqO0=
+github.com/jferrl/go-githubauth v1.10.0 h1:QS1ML3qwIkWwsZqqGiqRNukhr6TVHAE+aFssspjImw4=
+github.com/jferrl/go-githubauth v1.10.0/go.mod h1:HkuzaWMeDf+S09Dq/5wlBwPeho9ZZm3MixLdD2WTqO0=
 github.com/jhump/protoreflect/v2 v2.0.0-beta.2 h1:qZU+rEZUOYTz1Bnhi3xbwn+VxdXkLVeEpAeZzVXLY88=
 github.com/jhump/protoreflect/v2 v2.0.0-beta.2/go.mod h1:4tnOYkB/mq7QTyS3YKtVtNrJv4Psqout8HA1U+hZtgM=
 github.com/jmoiron/sqlx v1.4.0 h1:1PLqN7S1UYp5t4SrVVnt4nUVNemrDAtxlulVe+Qgm3o=
