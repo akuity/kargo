@@ -34,4 +34,7 @@ data:
   {{- if .Values.managementController.metrics.enabled }}
   METRICS_BIND_ADDRESS: ":{{ .Values.managementController.metrics.service.servicePort }}"
   {{- end }}
+  {{- if .Values.managementController.probes.enabled }}
+  HEALTH_PROBE_BIND_ADDRESS: ":{{ .Values.managementController.probes.port }}"
+  {{- end }}
 {{- end }}

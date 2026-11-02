@@ -83,8 +83,64 @@ tests:
   - it: declares no metrics container port by default
     template: templates/controller/deployment.yaml
     asserts:
+      - notContains:
+          path: spec.template.spec.containers[0].ports
+          content:
+            containerPort: 9090
+            name: http-metrics
+            protocol: TCP
+
+  - it: declares the health container port and probes by default
+    template: templates/controller/deployment.yaml
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].ports
+          content:
+            containerPort: 8081
+            name: health
+            protocol: TCP
+      - equal:
+          path: spec.template.spec.containers[0].startupProbe.httpGet
+          value:
+            path: /healthz
+            port: health
+      - equal:
+          path: spec.template.spec.containers[0].livenessProbe.httpGet
+          value:
+            path: /healthz
+            port: health
+      - equal:
+          path: spec.template.spec.containers[0].readinessProbe.httpGet
+          value:
+            path: /readyz
+            port: health
+
+  - it: merges probe overrides into the chart-built probes
+    template: templates/controller/deployment.yaml
+    set:
+      controller.probes.livenessProbe:
+        failureThreshold: 6
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].livenessProbe.failureThreshold
+          value: 6
+      - equal:
+          path: spec.template.spec.containers[0].livenessProbe.httpGet.path
+          value: /healthz
+
+  - it: declares no ports or probes when both metrics and probes are disabled
+    template: templates/controller/deployment.yaml
+    set:
+      controller.probes.enabled: false
+    asserts:
       - notExists:
           path: spec.template.spec.containers[0].ports
+      - notExists:
+          path: spec.template.spec.containers[0].startupProbe
+      - notExists:
+          path: spec.template.spec.containers[0].livenessProbe
+      - notExists:
+          path: spec.template.spec.containers[0].readinessProbe
 
   - it: declares the metrics container port when metrics are enabled
     template: templates/controller/deployment.yaml
@@ -211,6 +267,27 @@ tests:
       - equal:
           path: data.METRICS_BIND_ADDRESS
           value: ":9095"
+
+  - it: sets HEALTH_PROBE_BIND_ADDRESS by default
+    asserts:
+      - equal:
+          path: data.HEALTH_PROBE_BIND_ADDRESS
+          value: ":8081"
+
+  - it: sets HEALTH_PROBE_BIND_ADDRESS to the configured port
+    set:
+      controller.probes.port: 8091
+    asserts:
+      - equal:
+          path: data.HEALTH_PROBE_BIND_ADDRESS
+          value: ":8091"
+
+  - it: omits HEALTH_PROBE_BIND_ADDRESS when probes are disabled
+    set:
+      controller.probes.enabled: false
+    asserts:
+      - notExists:
+          path: data.HEALTH_PROBE_BIND_ADDRESS
 
   - it: configures PromotionRequest reconciliation concurrency
     set:
