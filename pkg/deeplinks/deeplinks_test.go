@@ -33,7 +33,7 @@ func TestEvaluateLinks(t *testing.T) {
 			name: "simple URL with no condition",
 			links: []kargoapi.DeepLink{{
 				Title: "Freight",
-				URL:   "https://example.com/{{ .freight.metadata.name }}",
+				URL:   "https://example.com/${{ freight.metadata.name }}",
 			}},
 			assert: func(t *testing.T, resolved []ResolvedLink, errs []string) {
 				require.Empty(t, errs)
@@ -46,7 +46,7 @@ func TestEvaluateLinks(t *testing.T) {
 			name: "description is passed through",
 			links: []kargoapi.DeepLink{{
 				Title:       "Freight",
-				URL:         "https://example.com/{{ .freight.metadata.name }}",
+				URL:         "https://example.com/${{ freight.metadata.name }}",
 				Description: "View freight details",
 			}},
 			assert: func(t *testing.T, resolved []ResolvedLink, errs []string) {
@@ -56,11 +56,40 @@ func TestEvaluateLinks(t *testing.T) {
 			},
 		},
 		{
+			name: "static URL with no expressions is returned verbatim",
+			links: []kargoapi.DeepLink{{
+				Title: "Static",
+				URL:   "https://example.com/runbook?a=1&b=2",
+			}},
+			assert: func(t *testing.T, resolved []ResolvedLink, errs []string) {
+				require.Empty(t, errs)
+				require.Len(t, resolved, 1)
+				require.Equal(t, "https://example.com/runbook?a=1&b=2", resolved[0].URL)
+			},
+		},
+		{
+			name: "multiple expressions mixed with text",
+			links: []kargoapi.DeepLink{{
+				Title: "Mixed",
+				URL: "https://example.com/${{ freight.metadata.namespace }}/" +
+					"${{ freight.metadata.name }}?tag=${{ freight.images[0].tag }}",
+			}},
+			assert: func(t *testing.T, resolved []ResolvedLink, errs []string) {
+				require.Empty(t, errs)
+				require.Len(t, resolved, 1)
+				require.Equal(
+					t,
+					"https://example.com/my-project/abc123?tag=v1.2.3",
+					resolved[0].URL,
+				)
+			},
+		},
+		{
 			name: "condition true includes link",
 			links: []kargoapi.DeepLink{{
 				Title: "Release Notes",
-				URL:   "https://github.com/releases/{{ .freight.metadata.name }}",
-				If:    `freight.metadata.namespace == "my-project"`,
+				URL:   "https://github.com/releases/${{ freight.metadata.name }}",
+				If:    `${{ freight.metadata.namespace == "my-project" }}`,
 			}},
 			assert: func(t *testing.T, resolved []ResolvedLink, errs []string) {
 				require.Empty(t, errs)
@@ -71,8 +100,8 @@ func TestEvaluateLinks(t *testing.T) {
 			name: "condition false omits link",
 			links: []kargoapi.DeepLink{{
 				Title: "Release Notes",
-				URL:   "https://github.com/releases/{{ .freight.metadata.name }}",
-				If:    `freight.metadata.namespace == "other-project"`,
+				URL:   "https://github.com/releases/${{ freight.metadata.name }}",
+				If:    `${{ freight.metadata.namespace == "other-project" }}`,
 			}},
 			assert: func(t *testing.T, resolved []ResolvedLink, errs []string) {
 				require.Empty(t, errs)
@@ -80,11 +109,63 @@ func TestEvaluateLinks(t *testing.T) {
 			},
 		},
 		{
+			name: "condition with surrounding whitespace includes link",
+			links: []kargoapi.DeepLink{{
+				Title: "Padded",
+				URL:   "https://example.com",
+				If:    " ${{ freight.metadata.namespace == \"my-project\" }} \n",
+			}},
+			assert: func(t *testing.T, resolved []ResolvedLink, errs []string) {
+				require.Empty(t, errs)
+				require.Len(t, resolved, 1)
+			},
+		},
+		{
+			name: "bare condition without delimiters collects error and skips link",
+			links: []kargoapi.DeepLink{{
+				Title: "Legacy Condition",
+				URL:   "https://example.com",
+				If:    `freight.metadata.namespace == "my-project"`,
+			}},
+			assert: func(t *testing.T, resolved []ResolvedLink, errs []string) {
+				require.Empty(t, resolved)
+				require.Len(t, errs, 1)
+				require.Contains(t, errs[0], `"Legacy Condition"`)
+				require.Contains(t, errs[0], "${{ }}")
+			},
+		},
+		{
+			name: "non-boolean condition collects error and skips link",
+			links: []kargoapi.DeepLink{{
+				Title: "Non-bool",
+				URL:   "https://example.com",
+				If:    `${{ 1 + 1 }}`,
+			}},
+			assert: func(t *testing.T, resolved []ResolvedLink, errs []string) {
+				require.Empty(t, resolved)
+				require.Len(t, errs, 1)
+				require.Contains(t, errs[0], "must evaluate to a boolean")
+			},
+		},
+		{
+			name: "nil condition collects error and skips link",
+			links: []kargoapi.DeepLink{{
+				Title: "Nil",
+				URL:   "https://example.com",
+				If:    `${{ freight.metadata.labels?.env }}`,
+			}},
+			assert: func(t *testing.T, resolved []ResolvedLink, errs []string) {
+				require.Empty(t, resolved)
+				require.Len(t, errs, 1)
+				require.Contains(t, errs[0], "got <nil>")
+			},
+		},
+		{
 			name: "invalid condition expression collects error and skips link",
 			links: []kargoapi.DeepLink{{
 				Title: "Bad Condition",
 				URL:   "https://example.com",
-				If:    `!!!invalid!!!`,
+				If:    `${{ !!!invalid!!! }}`,
 			}},
 			assert: func(t *testing.T, resolved []ResolvedLink, errs []string) {
 				require.Empty(t, resolved)
@@ -93,64 +174,88 @@ func TestEvaluateLinks(t *testing.T) {
 			},
 		},
 		{
-			name: "non-boolean condition collects error and skips link",
+			name: "legacy Go template URL collects error and skips link",
 			links: []kargoapi.DeepLink{{
-				Title: "Non-bool",
-				URL:   "https://example.com",
-				If:    `1 + 1`,
+				Title: "Legacy URL",
+				URL:   "https://example.com/{{ .freight.metadata.name }}",
 			}},
 			assert: func(t *testing.T, resolved []ResolvedLink, errs []string) {
 				require.Empty(t, resolved)
 				require.Len(t, errs, 1)
-				require.Contains(t, errs[0], "non-boolean value")
+				require.Contains(t, errs[0], `"Legacy URL"`)
+				require.Contains(t, errs[0], "Go template syntax")
 			},
 		},
 		{
-			name: "invalid URL template collects error and skips link",
+			name: "legacy Go template URL behind a false condition still errors",
 			links: []kargoapi.DeepLink{{
-				Title: "Bad Template",
-				URL:   "https://example.com/{{ .freight.metadata.name",
+				Title: "Half Migrated",
+				URL:   "https://example.com/{{ .freight.metadata.name }}",
+				If:    `${{ false }}`,
 			}},
 			assert: func(t *testing.T, resolved []ResolvedLink, errs []string) {
 				require.Empty(t, resolved)
 				require.Len(t, errs, 1)
-				require.Contains(t, errs[0], "error parsing URL template")
+				require.Contains(t, errs[0], "Go template syntax")
 			},
 		},
 		{
-			name: "URL template execution error collects error and skips link",
+			name: "unclosed expression in URL collects error and skips link",
 			links: []kargoapi.DeepLink{{
-				Title: "Exec Error",
-				URL:   `https://example.com/{{ index "invalid" .freight.metadata.labels }}`,
+				Title: "Unclosed",
+				URL:   "https://example.com/${{ freight.metadata.name",
 			}},
 			assert: func(t *testing.T, resolved []ResolvedLink, errs []string) {
 				require.Empty(t, resolved)
 				require.Len(t, errs, 1)
-				require.Contains(t, errs[0], "error evaluating URL template")
+				require.Contains(t, errs[0], "unclosed expression")
 			},
 		},
 		{
-			name: "sprig functions available in URL template",
+			name: "URL expression runtime error collects error and skips link",
 			links: []kargoapi.DeepLink{{
-				Title: "Sprig",
-				URL:   "https://example.com/{{ .freight.metadata.name | upper }}",
+				Title: "Out of Range",
+				URL:   "https://example.com/${{ freight.images[5].tag }}",
+			}},
+			assert: func(t *testing.T, resolved []ResolvedLink, errs []string) {
+				require.Empty(t, resolved)
+				require.Len(t, errs, 1)
+				require.Contains(t, errs[0], `"Out of Range"`)
+			},
+		},
+		{
+			name: "URL evaluating to a non-string collects error and skips link",
+			links: []kargoapi.DeepLink{{
+				Title: "Number",
+				URL:   "${{ len(freight.images) }}",
+			}},
+			assert: func(t *testing.T, resolved []ResolvedLink, errs []string) {
+				require.Empty(t, resolved)
+				require.Len(t, errs, 1)
+				require.Contains(t, errs[0], "not a string")
+			},
+		},
+		{
+			name: "missing optional field can be defaulted",
+			links: []kargoapi.DeepLink{{
+				Title: "Alias",
+				URL:   `https://example.com/${{ freight.alias ?? "" }}`,
 			}},
 			assert: func(t *testing.T, resolved []ResolvedLink, errs []string) {
 				require.Empty(t, errs)
 				require.Len(t, resolved, 1)
-				require.Equal(t, "https://example.com/ABC123", resolved[0].URL)
+				require.Equal(t, "https://example.com/", resolved[0].URL)
 			},
 		},
 		{
-			name: "blocked sprig function env is unavailable",
+			name: "secret function is unavailable",
 			links: []kargoapi.DeepLink{{
-				Title: "Env",
-				URL:   `https://example.com/{{ env "HOME" }}`,
+				Title: "Secret",
+				URL:   `https://example.com/${{ secret("x") }}`,
 			}},
 			assert: func(t *testing.T, resolved []ResolvedLink, errs []string) {
 				require.Empty(t, resolved)
 				require.Len(t, errs, 1)
-				require.Contains(t, errs[0], "error parsing URL template")
 			},
 		},
 		{
@@ -158,11 +263,11 @@ func TestEvaluateLinks(t *testing.T) {
 			links: []kargoapi.DeepLink{
 				{
 					Title: "Good",
-					URL:   "https://example.com/{{ .freight.metadata.name }}",
+					URL:   "https://example.com/${{ freight.metadata.name }}",
 				},
 				{
 					Title: "Bad",
-					URL:   "https://example.com/{{ .freight.metadata.name",
+					URL:   "https://example.com/${{ freight.metadata.name",
 				},
 			},
 			assert: func(t *testing.T, resolved []ResolvedLink, errs []string) {
