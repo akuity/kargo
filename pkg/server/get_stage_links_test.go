@@ -155,7 +155,7 @@ func Test_server_getStageLinks(t *testing.T) {
 							StageLinks: []kargoapi.DeepLink{{
 								Title: "Conditional Link",
 								URL:   "https://example.com",
-								If:    `false`,
+								If:    `${{ false }}`,
 							}},
 						},
 					},
@@ -165,6 +165,7 @@ func Test_server_getStageLinks(t *testing.T) {
 					var resp getStageLinksResponse
 					require.NoError(t, json.Unmarshal(w.Body.Bytes(), &resp))
 					require.Empty(t, resp.Links)
+					require.Empty(t, resp.Errors)
 				},
 			},
 			{
