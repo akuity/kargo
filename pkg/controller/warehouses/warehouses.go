@@ -140,11 +140,11 @@ func newReconciler(
 			IsDefaultController: cfg.IsDefaultController,
 			ShardName:           cfg.ShardName,
 		},
-		createFreightFn: kubeClient.Create,
 	}
 	r.discoverArtifactsFn = r.discoverArtifacts
 	r.buildFreightFromLatestArtifactsFn = r.buildFreightFromLatestArtifacts
 	r.patchStatusFn = r.patchStatus
+	r.createFreightFn = r.createFreightIfAbsent
 	return r
 }
 
@@ -459,6 +459,8 @@ func (r *reconciler) syncWarehouse(
 				Kind: kargoapi.FreightOriginKindWarehouse,
 				Name: warehouse.Name,
 			}
+			// The ID includes the Origin; it must match the webhook's.
+			freight.Name = api.GenerateFreightID(freight)
 
 			// Attempt to create the Freight.
 			if err = r.createFreightFn(ctx, freight); err != nil {
@@ -714,10 +716,31 @@ func (r *reconciler) buildFreightFromLatestArtifacts(
 		)
 	}
 
-	// Generate a unique ID for the Freight based on its contents.
-	freight.Name = api.GenerateFreightID(freight)
-
 	return freight, nil
+}
+
+// createFreightIfAbsent returns AlreadyExists without an API call when the
+// cache holds the Freight; otherwise it creates it.
+// Freight deleted but still cached is re-created on the next poll.
+func (r *reconciler) createFreightIfAbsent(
+	ctx context.Context,
+	obj client.Object,
+	opts ...client.CreateOption,
+) error {
+	err := r.client.Get(ctx, client.ObjectKeyFromObject(obj), &kargoapi.Freight{})
+	if err == nil {
+		return apierrors.NewAlreadyExists(
+			kargoapi.GroupVersion.WithResource("freights").GroupResource(),
+			obj.GetName(),
+		)
+	}
+	if !apierrors.IsNotFound(err) {
+		logging.LoggerFromContext(ctx).Error(
+			err, "error checking cache for Freight; creating it",
+			"freight", obj.GetName(),
+		)
+	}
+	return r.client.Create(ctx, obj, opts...)
 }
 
 func (r *reconciler) patchStatus(
