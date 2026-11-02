@@ -24,6 +24,16 @@
       "type": "boolean",
       "description": "Gzip determines whether the archive should be compressed using gzip. Defaults to false (the archive is uncompressed unless this is set to true)."
     },
+    "fileMode": {
+      "type": "string",
+      "description": "FileMode is an octal mode (e.g. \"0644\") to record for every regular file in the archive instead of the file's own mode. It must not be world-writable.",
+      "pattern": "^0[0-7]{3}$"
+    },
+    "dirMode": {
+      "type": "string",
+      "description": "DirMode is an octal mode (e.g. \"0755\") to record for every directory in the archive instead of the directory's own mode. It must not be world-writable.",
+      "pattern": "^0[0-7]{3}$"
+    },
     "mtime": {
       "type": "string",
       "format": "date-time",
