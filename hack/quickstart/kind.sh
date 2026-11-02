@@ -70,7 +70,7 @@ helm install argo-rollouts argo-rollouts \
 # Password is 'admin'
 helm install kargo \
   oci://ghcr.io/akuity/kargo-charts/kargo \
-  --version 1.10.9 \
+  --version 1.10.x \
   --namespace kargo \
   --create-namespace \
   --set api.service.type=NodePort \
