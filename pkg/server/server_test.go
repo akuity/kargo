@@ -37,6 +37,7 @@ func TestNewServer(t *testing.T) {
 	)
 	require.NoError(t, err)
 	testSender := &fakeevent.Sender{}
+	testHealth := &fakeHealthChecker{}
 
 	s, ok := NewServer(
 		testServerConfig,
@@ -48,6 +49,7 @@ func TestNewServer(t *testing.T) {
 		),
 		testSender,
 		nil,
+		testHealth,
 	).(*server)
 
 	require.True(t, ok)
@@ -56,6 +58,7 @@ func TestNewServer(t *testing.T) {
 	require.Nil(t, s.db)
 	require.NotNil(t, testClient, s.rolesDB)
 	require.Same(t, testSender, s.sender)
+	require.Same(t, testHealth, s.health)
 	require.Equal(t, testServerConfig, s.cfg)
 	require.NotNil(t, s.getStageFn)
 	require.NotNil(t, s.getFreightByNameOrAliasFn)
@@ -79,6 +82,10 @@ func TestWrapWithBasePath(t *testing.T) {
 	innerMux.HandleFunc("/healthz", func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte("health-ok"))
+	})
+	innerMux.HandleFunc("/readyz", func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte("ready-ok"))
 	})
 	innerMux.HandleFunc("/v1beta1/projects", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
@@ -126,6 +133,13 @@ func TestWrapWithBasePath(t *testing.T) {
 			requestPath: "/healthz",
 			wantStatus:  http.StatusOK,
 			wantBodyHas: "health-ok",
+		},
+		{
+			name:        "basePath set: readiness at root still reaches handler",
+			basePath:    "/kargo",
+			requestPath: "/readyz",
+			wantStatus:  http.StatusOK,
+			wantBodyHas: "ready-ok",
 		},
 		{
 			name:        "basePath set: health under basePath also works",

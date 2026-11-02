@@ -12,6 +12,7 @@ import (
 	"github.com/akuity/kargo/pkg/event"
 	natsevent "github.com/akuity/kargo/pkg/event/nats"
 	"github.com/akuity/kargo/pkg/logging"
+	"github.com/akuity/kargo/pkg/nats"
 	"github.com/akuity/kargo/pkg/os"
 	"github.com/akuity/kargo/pkg/password"
 	"github.com/akuity/kargo/pkg/server"
@@ -187,6 +188,7 @@ func (o *apiOptions) run(ctx context.Context) error {
 		),
 		sender,
 		db,
+		nats.NewHealthChecker(natsConn, nats.HealthCheckerConfigFromEnv()),
 	)
 	l, err := net.Listen("tcp", fmt.Sprintf("%s:%s", o.BindAddress, o.Port))
 	if err != nil {
