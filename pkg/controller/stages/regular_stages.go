@@ -1418,6 +1418,9 @@ func MarkFreightVerifiedForStage(
 			)
 		}
 		logger.Debug("marked Freight as verified in Stage", "freight", freight.Name)
+		metrics.NewFreightMetrics().VerificationLeadTime.WithLabelValues(freight.Namespace).Observe(
+			curFreight.VerificationHistory.Current().FinishTime.Sub(freight.CreationTimestamp.Time).Seconds(),
+		)
 	}
 
 	return newStatus, nil

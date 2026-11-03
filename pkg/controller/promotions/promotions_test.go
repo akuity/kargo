@@ -1315,6 +1315,31 @@ func Test_reconciler_recordTerminalMetrics(t *testing.T) {
 	}
 }
 
+func Test_reconciler_recordStartMetrics(t *testing.T) {
+	pending := prometheus.NewHistogramVec(
+		prometheus.HistogramOpts{Name: "test_pending_duration_seconds"},
+		[]string{"project"},
+	)
+	r := &reconciler{
+		promoMetrics: &metrics.PromotionMetrics{PendingDuration: pending},
+	}
+	promo := &kargoapi.Promotion{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace:         "fake-project",
+			CreationTimestamp: metav1.Time{Time: now.Add(-42 * time.Second)},
+		},
+	}
+
+	r.recordStartMetrics(promo, now.Time)
+
+	observer, ok := pending.WithLabelValues("fake-project").(prometheus.Metric)
+	require.True(t, ok)
+	var m dto.Metric
+	require.NoError(t, observer.Write(&m))
+	require.Equal(t, uint64(1), m.GetHistogram().GetSampleCount())
+	require.Equal(t, 42.0, m.GetHistogram().GetSampleSum())
+}
+
 // assertNotCalledReader returns a client.Reader that fails the test if Get is
 // called. Use it to verify that a code path exits before reaching the direct
 // API read.

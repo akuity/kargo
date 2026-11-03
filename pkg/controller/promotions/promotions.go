@@ -424,13 +424,15 @@ func (r *reconciler) Reconcile(
 	// Update promo status as Running to give visibility in UI. Also, a promo which
 	// has already entered Running status will be allowed to continue to reconcile.
 	if promo.Status.Phase != kargoapi.PromotionPhaseRunning {
+		startedAt := metav1.Now()
 		if err = kubeclient.PatchStatus(ctx, r.kargoClient, promo, func(status *kargoapi.PromotionStatus) {
 			status.Phase = kargoapi.PromotionPhaseRunning
-			status.StartedAt = &metav1.Time{Time: time.Now()}
+			status.StartedAt = &startedAt
 		}); err != nil {
 			return ctrl.Result{}, err
 		}
 		logger.Info("began promotion")
+		r.recordStartMetrics(promo, startedAt.Time)
 	} else {
 		logger.Debug("continuing Promotion")
 	}
@@ -795,6 +797,14 @@ func (r *reconciler) terminatePromotion(
 	}
 
 	return nil
+}
+
+// recordStartMetrics observes how long promo waited before starting at
+// startedAt.
+func (r *reconciler) recordStartMetrics(promo *kargoapi.Promotion, startedAt time.Time) {
+	r.promoMetrics.PendingDuration.WithLabelValues(promo.Namespace).Observe(
+		startedAt.Sub(promo.CreationTimestamp.Time).Seconds(),
+	)
 }
 
 // recordTerminalMetrics counts the Promotion described by the given terminal
