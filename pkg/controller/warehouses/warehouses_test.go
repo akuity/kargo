@@ -1020,13 +1020,16 @@ func Test_syncWarehouse_existingFreight(t *testing.T) {
 			}
 
 			var status kargoapi.WarehouseStatus
+			// Each poll starts from the status the previous one returned.
+			current := warehouse.DeepCopy()
 			for poll := 1; poll <= max(testCase.polls, 1); poll++ {
 				// Read by the Get interceptor during this poll.
 				stale = testCase.deleteAfter > 0 && poll > testCase.deleteAfter &&
 					poll <= testCase.deleteAfter+testCase.staleGets
 				var err error
-				status, err = r.syncWarehouse(t.Context(), warehouse.DeepCopy())
+				status, err = r.syncWarehouse(t.Context(), current)
 				require.NoError(t, err)
+				current.Status = status
 				if poll == testCase.deleteAfter {
 					require.NoError(t, kubeClient.Delete(t.Context(), expected.DeepCopy()))
 				}
