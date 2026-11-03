@@ -60,12 +60,12 @@ func validateCreateRequest(req createPromotionRolloutRequest) field.ErrorList {
 	}
 	seen := make(map[string]struct{}, len(req.Targets))
 	for i, name := range req.Targets {
-		path := field.NewPath("targets").Index(i)
+		targetPath := field.NewPath("targets").Index(i)
 		for _, msg := range validation.IsDNS1123Subdomain(name) {
-			errs = append(errs, field.Invalid(path, name, msg))
+			errs = append(errs, field.Invalid(targetPath, name, msg))
 		}
 		if _, dup := seen[name]; dup {
-			errs = append(errs, field.Duplicate(path, name))
+			errs = append(errs, field.Duplicate(targetPath, name))
 		}
 		seen[name] = struct{}{}
 	}
