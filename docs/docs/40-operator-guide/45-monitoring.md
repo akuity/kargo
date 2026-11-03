@@ -246,7 +246,7 @@ its requests to the Kubernetes API server. controller-runtime registers only
 | `rest_client_request_retries_total` | Counter | `code`, `verb`, `host` | Retried requests. |
 | `rest_client_request_size_bytes` | Histogram | `verb`, `host` | Request body size. |
 | `rest_client_response_size_bytes` | Histogram | `verb`, `host` | Response body size. |
-| `rest_client_dns_resolution_duration_seconds` | Histogram | `host` | DNS resolution latency. Only reported when the API server is addressed by host name, so it is absent for the in-cluster API server, which is addressed by IP. |
+| `rest_client_dns_resolution_duration_seconds` | Histogram | `host` | DNS resolution latency for the host the client connects to (the API server, or a proxy). Absent when that host is an IP address, as with the in-cluster API server. |
 
 Every request records a rate limiter wait, even when it is zero, so the
 metric's count grows with traffic alone. Watch the mean wait instead, for
