@@ -2,6 +2,7 @@ package api
 
 import (
 	"fmt"
+	"strings"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -14,6 +15,39 @@ import (
 // name should always use this function.
 func GeneratePromotionRolloutName(stageName, freight string) string {
 	return generatePromotionStyleName(stageName, freight)
+}
+
+// GenerateRolloutChildPromotionName generates the name of the Promotion a
+// PromotionRollout creates to promote its Freight to one of its Targets.
+//
+// The name has the format of:
+//
+//	<stage-name>.<target-name>.<rollout-id>
+//
+// Unlike every other generated Promotion name, it carries no ULID. A rollout
+// creates at most one Promotion per Target, so the rollout's id and the
+// Target's name identify the child completely, and creating it a second time
+// -- from a stale view of the rollout's children, or from a second controller
+// instance -- fails with AlreadyExists instead of running the same promotion
+// twice. The short Freight hash is left out as well: the rollout fixes the
+// Freight.
+//
+// Lex order of these names is therefore not creation order. Only
+// ComparePromotionByPhaseAndCreationTime reads it that way, and the regular
+// Stage reconciler that sorts with it never handles a target-aware Stage.
+func GenerateRolloutChildPromotionName(stageName, targetName, rolloutID string) string {
+	if stageName == "" || targetName == "" || rolloutID == "" {
+		return ""
+	}
+	prefix := stageName + promotionNameSeparator + targetName
+	// A rollout id is a UUID, so the limit is always well above zero.
+	limit := 253 - len(promotionNameSeparator) - len(rolloutID)
+	if len(prefix) > limit {
+		// Truncation can land on a separator or hyphen, neither of which a
+		// Kubernetes resource name may end with.
+		prefix = strings.TrimRight(prefix[:limit], promotionNameSeparator+"-")
+	}
+	return strings.ToLower(prefix + promotionNameSeparator + rolloutID)
 }
 
 // NewPromotionRolloutForAllTargets builds a PromotionRollout that promotes the named

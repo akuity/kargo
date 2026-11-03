@@ -65,6 +65,121 @@ func TestGeneratePromotionRolloutName(t *testing.T) {
 	}
 }
 
+func TestGenerateRolloutChildPromotionName(t *testing.T) {
+	t.Parallel()
+
+	const rolloutID = "0B9F4A3E-6c1d-4a8e-9f2b-3c4d5e6f7a8b"
+
+	testCases := []struct {
+		name       string
+		stageName  string
+		targetName string
+		rolloutID  string
+		assertions func(*testing.T, string)
+	}{
+		{
+			name:       "empty Stage name",
+			targetName: "us-east",
+			rolloutID:  rolloutID,
+			assertions: func(t *testing.T, name string) {
+				require.Empty(t, name)
+			},
+		},
+		{
+			name:      "empty Target name",
+			stageName: "prod",
+			rolloutID: rolloutID,
+			assertions: func(t *testing.T, name string) {
+				require.Empty(t, name)
+			},
+		},
+		{
+			name:       "empty rollout id",
+			stageName:  "prod",
+			targetName: "us-east",
+			assertions: func(t *testing.T, name string) {
+				require.Empty(t, name)
+			},
+		},
+		{
+			name:       "Stage, Target and rollout id, lowercased",
+			stageName:  "prod",
+			targetName: "us-east",
+			rolloutID:  rolloutID,
+			assertions: func(t *testing.T, name string) {
+				require.Equal(t, "prod.us-east."+strings.ToLower(rolloutID), name)
+			},
+		},
+		{
+			name:       "repeated calls collide",
+			stageName:  "prod",
+			targetName: "us-east",
+			rolloutID:  rolloutID,
+			assertions: func(t *testing.T, name string) {
+				require.Equal(
+					t,
+					GenerateRolloutChildPromotionName("prod", "us-east", rolloutID),
+					name,
+				)
+			},
+		},
+		{
+			name:       "another Target or rollout gives another name",
+			stageName:  "prod",
+			targetName: "us-east",
+			rolloutID:  rolloutID,
+			assertions: func(t *testing.T, name string) {
+				require.NotEqual(
+					t,
+					GenerateRolloutChildPromotionName("prod", "us-west", rolloutID),
+					name,
+				)
+				require.NotEqual(
+					t,
+					GenerateRolloutChildPromotionName(
+						"prod", "us-east", "1c8e5b4f-7d2e-4b9f-8a3c-4d5e6f7a8b9c",
+					),
+					name,
+				)
+			},
+		},
+		{
+			name:       "over-long names are truncated to a valid resource name",
+			stageName:  strings.Repeat("a", 200),
+			targetName: strings.Repeat("b", 200),
+			rolloutID:  rolloutID,
+			assertions: func(t *testing.T, name string) {
+				require.LessOrEqual(t, len(name), 253)
+				require.True(t, strings.HasSuffix(name, "."+strings.ToLower(rolloutID)))
+				// Truncation must not leave a separator or hyphen adjacent to
+				// the rollout id, which would make the name invalid.
+				require.NotContains(t, name, "..")
+				require.NotContains(t, name, "-.")
+			},
+		},
+		{
+			name:       "truncation that lands on the separator drops it",
+			stageName:  strings.Repeat("a", 253-len(rolloutID)-2),
+			targetName: strings.Repeat("b", 10),
+			rolloutID:  rolloutID,
+			assertions: func(t *testing.T, name string) {
+				require.LessOrEqual(t, len(name), 253)
+				require.NotContains(t, name, "..")
+			},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+			testCase.assertions(t, GenerateRolloutChildPromotionName(
+				testCase.stageName,
+				testCase.targetName,
+				testCase.rolloutID,
+			))
+		})
+	}
+}
+
 func TestNewPromotionRolloutForAllTargets(t *testing.T) {
 	t.Parallel()
 

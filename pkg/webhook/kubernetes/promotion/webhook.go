@@ -247,13 +247,25 @@ func (w *webhook) Default(ctx context.Context, promo *kargoapi.Promotion) error 
 		// than by when they were created. Deterministic either way, and they are
 		// created within milliseconds of each other, but it is not what the
 		// comparator's doc comment claims.
-		if promo.Spec.Target != "" {
+		//
+		// A PromotionRollout's child goes further and carries no ULID at all: its
+		// name is a function of the rollout and the Target, so that creating it
+		// twice yields AlreadyExists rather than two Promotions running against
+		// one Target. Nothing on a target-aware Stage sorts Promotions by name.
+		switch {
+		case promo.Spec.PromotionRollout != "" && promo.Spec.Target != "":
+			promo.Name = api.GenerateRolloutChildPromotionName(
+				stage.Name,
+				promo.Spec.Target,
+				promo.Spec.PromotionRollout,
+			)
+		case promo.Spec.Target != "":
 			promo.Name = api.GenerateChildPromotionName(
 				stage.Name,
 				promo.Spec.Target,
 				promo.Spec.Freight,
 			)
-		} else {
+		default:
 			promo.Name = api.GeneratePromotionName(stage.Name, promo.Spec.Freight)
 		}
 

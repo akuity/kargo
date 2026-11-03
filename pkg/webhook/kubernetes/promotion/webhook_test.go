@@ -1849,6 +1849,13 @@ func Test_webhook_Default(t *testing.T) {
 				require.NotNil(t, owner)
 				require.Equal(t, "Stage", owner.Kind)
 				require.Equal(t, "fake-stage", owner.Name)
+				// The name is a function of the rollout and the Target, with no
+				// random part, so a second create of the same child collides.
+				require.Equal(
+					t,
+					"fake-stage.fake-target.0b9f4a3e-6c1d-4a8e-9f2b-3c4d5e6f7a8b",
+					promo.Name,
+				)
 			},
 		},
 		{
