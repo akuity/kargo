@@ -246,19 +246,20 @@ its requests to the Kubernetes API server. controller-runtime registers only
 | `rest_client_request_retries_total` | Counter | `code`, `verb`, `host` | Retried requests. |
 | `rest_client_request_size_bytes` | Histogram | `verb`, `host` | Request body size. |
 | `rest_client_response_size_bytes` | Histogram | `verb`, `host` | Response body size. |
-| `rest_client_dns_resolution_duration_seconds` | Histogram | `host` | DNS resolution latency. |
+| `rest_client_dns_resolution_duration_seconds` | Histogram | `host` | DNS resolution latency. Only reported when the API server is addressed by host name, so it is absent for the in-cluster API server, which is addressed by IP. |
 
 Every request records a rate limiter wait, even when it is zero, so the
-metric's count grows with traffic alone. Watch the wait time instead, for
-example the 99th percentile per scrape job:
+metric's count grows with traffic alone. Watch the mean wait instead, for
+example per scrape job:
 
 ```
-histogram_quantile(0.99, sum by (le, job) (rate(rest_client_rate_limiter_duration_seconds_bucket[5m])))
+sum by (job) (rate(rest_client_rate_limiter_duration_seconds_sum[5m]))
+  / sum by (job) (rate(rest_client_rate_limiter_duration_seconds_count[5m]))
 ```
 
-A sustained non-zero value means the component is throttled by its own
-`KUBE_API_QPS` / `KUBE_API_BURST` limits. API server throttling is separate
-and shows up as `429` responses in `rest_client_requests_total`.
+A mean that stays above a few milliseconds means the component is throttled by
+its own `KUBE_API_QPS` / `KUBE_API_BURST` limits. API server throttling is
+separate and shows up as `429` responses in `rest_client_requests_total`.
 
 ## Scraping With the Prometheus Operator
 

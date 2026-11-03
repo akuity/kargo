@@ -1,9 +1,9 @@
 package main
 
 import (
+	"net"
 	"net/http"
 	"net/http/httptest"
-	"strings"
 	"sync/atomic"
 	"testing"
 
@@ -30,25 +30,22 @@ func TestEnableRESTClientMetrics(t *testing.T) {
 	enableRESTClientMetrics()
 	enableRESTClientMetrics()
 
+	// A host name, rather than an IP, so the client resolves it. The server
+	// may listen on 127.0.0.1 or [::1]; localhost reaches either.
+	_, port, err := net.SplitHostPort(srv.Listener.Addr().String())
+	require.NoError(t, err)
+
 	clientset, err := kubernetes.NewForConfig(&rest.Config{
-		// A host name, rather than an IP, so the client resolves it.
-		Host:  strings.Replace(srv.URL, "127.0.0.1", "localhost", 1),
-		QPS:   100,
-		Burst: 1,
+		Host: "http://" + net.JoinHostPort("localhost", port),
 	})
 	require.NoError(t, err)
+
+	// The registry is global, so compare against what was recorded before.
+	before := gatherRESTClientSamples(t)
 	_, err = clientset.CoreV1().RESTClient().Get().AbsPath("/healthz").Do(t.Context()).Raw()
 	require.NoError(t, err)
 
-	families, err := ctrlmetrics.Registry.Gather()
-	require.NoError(t, err)
-	samples := map[string]float64{}
-	for _, family := range families {
-		for _, metric := range family.GetMetric() {
-			samples[family.GetName()] += float64(metric.GetHistogram().GetSampleCount()) +
-				metric.GetCounter().GetValue()
-		}
-	}
+	after := gatherRESTClientSamples(t)
 
 	for _, name := range []string{
 		"rest_client_request_duration_seconds",
@@ -58,6 +55,22 @@ func TestEnableRESTClientMetrics(t *testing.T) {
 		"rest_client_response_size_bytes",
 		"rest_client_dns_resolution_duration_seconds",
 	} {
-		require.Positive(t, samples[name], "expected samples for %s", name)
+		require.Greater(t, after[name], before[name], "expected new samples for %s", name)
 	}
+}
+
+// gatherRESTClientSamples returns, per metric family in the controller-runtime
+// registry, the total histogram sample count plus counter value.
+func gatherRESTClientSamples(t *testing.T) map[string]float64 {
+	t.Helper()
+	families, err := ctrlmetrics.Registry.Gather()
+	require.NoError(t, err)
+	samples := map[string]float64{}
+	for _, family := range families {
+		for _, metric := range family.GetMetric() {
+			samples[family.GetName()] += float64(metric.GetHistogram().GetSampleCount()) +
+				metric.GetCounter().GetValue()
+		}
+	}
+	return samples
 }
