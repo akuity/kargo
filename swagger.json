@@ -5695,6 +5695,21 @@
         "origin": {
           "description": "Origin is the canonical Freight origin key (e.g. \"Warehouse/foo\"). When\nset, the promotion webhook resolves it to the current auto-promotion\ncandidate. Exactly one of Freight, FreightAlias, or Origin must be set.",
           "type": "string"
+        },
+        "targets": {
+          "description": "Targets is a list of target names to promote to. If set to `nil` - selects all targets for the stage.\nIf non-nil, should be a subset of targets selected by the stage, empty list is an error.",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "updateStrategy": {
+          "description": "UpdateStrategy configures overrides for maxConcurrent and maxErrors for this request.\nPercentage values are calculated based on the total stage targets and not just ones selected for promotion\nIf nil - calculated from the stages updateStrategy based on the number of stage targets.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/TargetUpdateStrategy"
+            }
+          ]
         }
       }
     },
@@ -7993,6 +8008,41 @@
         }
       }
     },
+    "InflatedPromotionTask": {
+      "type": "object",
+      "properties": {
+        "alias": {
+          "description": "Alias is the alias of the step that referenced the task. The aliases of\nthe steps inflated from the task are prefixed with it.",
+          "type": "string"
+        },
+        "description": {
+          "description": "Description is the description of the step that referenced the task.\n\n+kubebuilder:validation:Optional",
+          "type": "string"
+        },
+        "steps": {
+          "description": "Steps are the aliases of the Promotion's steps that were inflated from\nthe task, in order.",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "task": {
+          "description": "Task is the (Cluster)PromotionTask that was inflated.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/PromotionTaskReference"
+            }
+          ]
+        },
+        "vars": {
+          "description": "Vars are the variables the task was inflated with: the task's defaults\nand the variables set by the step that referenced the task.\n\n+kubebuilder:validation:Optional",
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/ExpressionVariable"
+          }
+        }
+      }
+    },
     "Project": {
       "type": "object",
       "properties": {
@@ -8586,11 +8636,13 @@
       "properties": {
         "maxConcurrent": {
           "description": "MaxConcurrent specifies a number of targets which can be promoted to at the same time\nZero means there is no limit (default)",
-          "type": "integer"
+          "type": "integer",
+          "minimum": 0
         },
         "maxFailures": {
           "description": "MaxFailures specifies a number of target promotions which can fail before PromotionRequest is considered failed.\nSpecifies a tolerable number, N failing promotions with maxFailures: N is a success, N+1 is a failure.\nDefaults to 0, meaning no failures tolerated.\n+kubebuilder:validation:Minimum=0",
-          "type": "integer"
+          "type": "integer",
+          "minimum": 0
         }
       }
     },
@@ -8804,6 +8856,13 @@
         "freight": {
           "description": "Freight specifies the piece of Freight to be promoted into the Stage.\nExactly one of Freight or Origin must be set.\n\n+kubebuilder:validation:Optional\n+kubebuilder:validation:MinLength=1\n+kubebuilder:validation:MaxLength=253\n+kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`\n+akuity:test-kubebuilder-pattern=KubernetesName",
           "type": "string"
+        },
+        "inflatedTasks": {
+          "description": "InflatedTasks records each step of the Stage's PromotionTemplate that\nreferenced a (Cluster)PromotionTask and was inflated into Steps. It is\nset by Kargo when the Promotion is created and any value supplied by\nusers is discarded.\n\n+kubebuilder:validation:Optional",
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/InflatedPromotionTask"
+          }
         },
         "origin": {
           "description": "Origin, when set, identifies the FreightOrigin whose auto-promotion\ncandidate should be promoted. The mutating webhook resolves this to the\ncandidate Freight for that origin and fills Freight before the Promotion\nis persisted. Exactly one of Freight or Origin must be set.\n\n+kubebuilder:validation:Optional",

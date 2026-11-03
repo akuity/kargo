@@ -5,12 +5,14 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -129,6 +131,25 @@ func Test_server_promoteToStage(t *testing.T) {
 			}, nil
 		}
 	}
+	// Two Targets match the Stage's selector, so a request may name a proper
+	// subset of them.
+	promoteWithTwoMatchingTargets := func(t *testing.T, s *server) {
+		authorizeAllStagesPromote(t, s)
+		s.listTargetsFn = func(context.Context, string) ([]kargoapi.Target, error) {
+			return []kargoapi.Target{
+				{ObjectMeta: metav1.ObjectMeta{
+					Namespace: testProject.Name,
+					Name:      "us-east",
+					Labels:    map[string]string{"region": "us"},
+				}},
+				{ObjectMeta: metav1.ObjectMeta{
+					Namespace: testProject.Name,
+					Name:      "us-west",
+					Labels:    map[string]string{"region": "us"},
+				}},
+			}, nil
+		}
+	}
 
 	testRESTEndpoint(
 		t, &config.ServerConfig{},
@@ -226,6 +247,230 @@ func Test_server_promoteToStage(t *testing.T) {
 					// Distinct objects: names embed a ULID, so a repeat
 					// promotion of the same Stage and Freight cannot collide.
 					require.NotEqual(t, reqs.Items[0].Name, reqs.Items[1].Name)
+				},
+			},
+			{
+				name: "Target-aware Stage with a target subset yields a scoped PromotionRequest",
+				clientBuilder: fake.NewClientBuilder().WithObjects(
+					testProject,
+					testTargetAwareStage,
+					testFreight,
+				),
+				serverSetup: promoteWithTargets,
+				body: mustJSONBody(promoteToStageRequest{
+					Freight: testFreight.Name,
+					Targets: []string{"us-east"},
+				}),
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, c client.Client) {
+					require.Equal(t, http.StatusCreated, w.Code)
+
+					reqs := &kargoapi.PromotionRequestList{}
+					require.NoError(t, c.List(t.Context(), reqs, client.InNamespace(testProject.Name)))
+					require.Len(t, reqs.Items, 1)
+					require.Equal(
+						t,
+						[]kargoapi.PromotionRequestTarget{{Name: "us-east"}},
+						reqs.Items[0].Spec.Targets,
+					)
+				},
+			},
+			{
+				name: "Target-aware Stage with multiple named targets preserves order",
+				clientBuilder: fake.NewClientBuilder().WithObjects(
+					testProject,
+					testTargetAwareStage,
+					testFreight,
+				),
+				serverSetup: promoteWithTwoMatchingTargets,
+				body: mustJSONBody(promoteToStageRequest{
+					Freight: testFreight.Name,
+					Targets: []string{"us-west", "us-east"},
+				}),
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, c client.Client) {
+					require.Equal(t, http.StatusCreated, w.Code)
+
+					reqs := &kargoapi.PromotionRequestList{}
+					require.NoError(t, c.List(t.Context(), reqs, client.InNamespace(testProject.Name)))
+					require.Len(t, reqs.Items, 1)
+					require.Equal(
+						t,
+						[]kargoapi.PromotionRequestTarget{
+							{Name: "us-west"},
+							{Name: "us-east"},
+						},
+						reqs.Items[0].Spec.Targets,
+					)
+				},
+			},
+			{
+				name: "Target-aware Stage with an empty target list is rejected",
+				clientBuilder: fake.NewClientBuilder().WithObjects(
+					testProject,
+					testTargetAwareStage,
+					testFreight,
+				),
+				serverSetup: promoteWithTargets,
+				body: strings.NewReader(
+					`{"freight":"` + testFreight.Name + `","targets":[]}`,
+				),
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, c client.Client) {
+					require.Equal(t, http.StatusBadRequest, w.Code)
+					require.Contains(t, w.Body.String(), "target list cannot be empty")
+
+					reqs := &kargoapi.PromotionRequestList{}
+					require.NoError(t, c.List(t.Context(), reqs, client.InNamespace(testProject.Name)))
+					require.Empty(t, reqs.Items)
+				},
+			},
+			{
+				name: "Target-aware Stage rejects a target it does not select",
+				clientBuilder: fake.NewClientBuilder().WithObjects(
+					testProject,
+					testTargetAwareStage,
+					testFreight,
+				),
+				serverSetup: promoteWithTargets,
+				body: mustJSONBody(promoteToStageRequest{
+					Freight: testFreight.Name,
+					Targets: []string{"eu-west"},
+				}),
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, c client.Client) {
+					require.Equal(t, http.StatusBadRequest, w.Code)
+					require.Contains(t, w.Body.String(), "is not selected by stage")
+
+					reqs := &kargoapi.PromotionRequestList{}
+					require.NoError(t, c.List(t.Context(), reqs, client.InNamespace(testProject.Name)))
+					require.Empty(t, reqs.Items)
+				},
+			},
+			{
+				name: "Target-aware Stage rejects a mix of selected and unselected targets",
+				clientBuilder: fake.NewClientBuilder().WithObjects(
+					testProject,
+					testTargetAwareStage,
+					testFreight,
+				),
+				serverSetup: promoteWithTargets,
+				body: mustJSONBody(promoteToStageRequest{
+					Freight: testFreight.Name,
+					Targets: []string{"us-east", "eu-west"},
+				}),
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, c client.Client) {
+					require.Equal(t, http.StatusBadRequest, w.Code)
+
+					reqs := &kargoapi.PromotionRequestList{}
+					require.NoError(t, c.List(t.Context(), reqs, client.InNamespace(testProject.Name)))
+					require.Empty(t, reqs.Items)
+				},
+			},
+			{
+				name: "Targets are ignored for a Stage that does not select Targets",
+				clientBuilder: fake.NewClientBuilder().WithObjects(
+					testProject,
+					testStage,
+					testFreight,
+				),
+				serverSetup: authorizeAllStagesPromote,
+				body: mustJSONBody(promoteToStageRequest{
+					Freight: testFreight.Name,
+					Targets: []string{"us-east"},
+				}),
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, c client.Client) {
+					require.Equal(t, http.StatusCreated, w.Code)
+
+					promos := &kargoapi.PromotionList{}
+					require.NoError(t, c.List(t.Context(), promos, client.InNamespace(testProject.Name)))
+					require.Len(t, promos.Items, 1)
+
+					reqs := &kargoapi.PromotionRequestList{}
+					require.NoError(t, c.List(t.Context(), reqs, client.InNamespace(testProject.Name)))
+					require.Empty(t, reqs.Items)
+				},
+			},
+			{
+				name: "Target-aware Stage honors an explicit updateStrategy",
+				clientBuilder: fake.NewClientBuilder().WithObjects(
+					testProject,
+					testTargetAwareStage,
+					testFreight,
+				),
+				serverSetup: promoteWithTargets,
+				body: mustJSONBody(promoteToStageRequest{
+					Freight: testFreight.Name,
+					UpdateStrategy: &kargoapi.TargetUpdateStrategy{
+						MaxConcurrent: new(intstr.FromInt(1)),
+						MaxFailures:   new(intstr.FromInt(2)),
+					},
+				}),
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, c client.Client) {
+					require.Equal(t, http.StatusCreated, w.Code)
+
+					reqs := &kargoapi.PromotionRequestList{}
+					require.NoError(t, c.List(t.Context(), reqs, client.InNamespace(testProject.Name)))
+					require.Len(t, reqs.Items, 1)
+					require.Equal(
+						t,
+						kargoapi.PromotionRequestUpdateStrategy{
+							MaxConcurrent: 1,
+							MaxFailures:   2,
+						},
+						reqs.Items[0].Spec.UpdateStrategy,
+					)
+				},
+			},
+			{
+				name: "Target-aware Stage calculates updateStrategy from percentages",
+				clientBuilder: fake.NewClientBuilder().WithObjects(
+					testProject,
+					testTargetAwareStage,
+					testFreight,
+				),
+				serverSetup: promoteWithTwoMatchingTargets,
+				body: mustJSONBody(promoteToStageRequest{
+					Freight: testFreight.Name,
+					UpdateStrategy: &kargoapi.TargetUpdateStrategy{
+						MaxConcurrent: new(intstr.FromString("50%")),
+						MaxFailures:   new(intstr.FromString("100%")),
+					},
+				}),
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, c client.Client) {
+					require.Equal(t, http.StatusCreated, w.Code)
+
+					reqs := &kargoapi.PromotionRequestList{}
+					require.NoError(t, c.List(t.Context(), reqs, client.InNamespace(testProject.Name)))
+					require.Len(t, reqs.Items, 1)
+					require.Equal(
+						t,
+						kargoapi.PromotionRequestUpdateStrategy{
+							MaxConcurrent: 1,
+							MaxFailures:   2,
+						},
+						reqs.Items[0].Spec.UpdateStrategy,
+					)
+				},
+			},
+			{
+				name: "Target-aware Stage derives updateStrategy when none is provided",
+				clientBuilder: fake.NewClientBuilder().WithObjects(
+					testProject,
+					testTargetAwareStage,
+					testFreight,
+				),
+				serverSetup: promoteWithTargets,
+				body: mustJSONBody(promoteToStageRequest{
+					Freight: testFreight.Name,
+				}),
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, c client.Client) {
+					require.Equal(t, http.StatusCreated, w.Code)
+
+					reqs := &kargoapi.PromotionRequestList{}
+					require.NoError(t, c.List(t.Context(), reqs, client.InNamespace(testProject.Name)))
+					require.Len(t, reqs.Items, 1)
+					require.Equal(
+						t,
+						kargoapi.PromotionRequestUpdateStrategy{},
+						reqs.Items[0].Spec.UpdateStrategy,
+					)
 				},
 			},
 			{

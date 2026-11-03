@@ -10,6 +10,7 @@ export interface PromotionRequestUpdateStrategy {
   /**
    * MaxConcurrent specifies a number of targets which can be promoted to at the same time
    * Zero means there is no limit (default)
+   * @minimum 0
    */
   maxConcurrent?: number;
   /**
@@ -17,6 +18,7 @@ export interface PromotionRequestUpdateStrategy {
    * Specifies a tolerable number, N failing promotions with maxFailures: N is a success, N+1 is a failure.
    * Defaults to 0, meaning no failures tolerated.
    * +kubebuilder:validation:Minimum=0
+   * @minimum 0
    */
   maxFailures?: number;
 }

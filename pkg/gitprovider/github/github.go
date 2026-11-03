@@ -340,7 +340,7 @@ func (p *provider) ListPullRequests(
 			return nil, err
 		}
 		for _, ghPR := range ghPRs {
-			if opts.HeadCommit == "" || ptr.Deref(ghPR.Head.SHA, "") == opts.HeadCommit {
+			if opts.HeadCommit == "" || ghPR.GetHead().GetSHA() == opts.HeadCommit {
 				prs = append(prs, convertGithubPR(*ghPR))
 			}
 		}
@@ -545,8 +545,8 @@ func convertGithubPR(ghPR github.PullRequest) gitprovider.PullRequest {
 		Merged:         ghPR.MergedAt != nil,
 		MergeCommitSHA: ptr.Deref(ghPR.MergeCommitSHA, ""),
 		Object:         ghPR,
-		HeadSHA:        ptr.Deref(ghPR.Head.SHA, ""),
-		HeadBranch:     ptr.Deref(ghPR.Head.Ref, ""),
+		HeadSHA:        ghPR.GetHead().GetSHA(),
+		HeadBranch:     ghPR.GetHead().GetRef(),
 	}
 	if ghPR.CreatedAt != nil {
 		pr.CreatedAt = &ghPR.CreatedAt.Time

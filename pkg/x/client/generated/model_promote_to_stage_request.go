@@ -23,6 +23,10 @@ type PromoteToStageRequest struct {
 	FreightAlias *string `json:"freightAlias,omitempty"`
 	// Origin is the canonical Freight origin key (e.g. \"Warehouse/foo\"). When set, the promotion webhook resolves it to the current auto-promotion candidate. Exactly one of Freight, FreightAlias, or Origin must be set.
 	Origin *string `json:"origin,omitempty"`
+	// Targets is a list of target names to promote to. If set to `nil` - selects all targets for the stage. If non-nil, should be a subset of targets selected by the stage, empty list is an error.
+	Targets []string `json:"targets,omitempty"`
+	// UpdateStrategy configures overrides for maxConcurrent and maxErrors for this request. Percentage values are calculated based on the total stage targets and not just ones selected for promotion If nil - calculated from the stages updateStrategy based on the number of stage targets.
+	UpdateStrategy *TargetUpdateStrategy `json:"updateStrategy,omitempty"`
 }
 
 // NewPromoteToStageRequest instantiates a new PromoteToStageRequest object
@@ -138,6 +142,70 @@ func (o *PromoteToStageRequest) SetOrigin(v string) {
 	o.Origin = &v
 }
 
+// GetTargets returns the Targets field value if set, zero value otherwise.
+func (o *PromoteToStageRequest) GetTargets() []string {
+	if o == nil || IsNil(o.Targets) {
+		var ret []string
+		return ret
+	}
+	return o.Targets
+}
+
+// GetTargetsOk returns a tuple with the Targets field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *PromoteToStageRequest) GetTargetsOk() ([]string, bool) {
+	if o == nil || IsNil(o.Targets) {
+		return nil, false
+	}
+	return o.Targets, true
+}
+
+// HasTargets returns a boolean if a field has been set.
+func (o *PromoteToStageRequest) HasTargets() bool {
+	if o != nil && !IsNil(o.Targets) {
+		return true
+	}
+
+	return false
+}
+
+// SetTargets gets a reference to the given []string and assigns it to the Targets field.
+func (o *PromoteToStageRequest) SetTargets(v []string) {
+	o.Targets = v
+}
+
+// GetUpdateStrategy returns the UpdateStrategy field value if set, zero value otherwise.
+func (o *PromoteToStageRequest) GetUpdateStrategy() TargetUpdateStrategy {
+	if o == nil || IsNil(o.UpdateStrategy) {
+		var ret TargetUpdateStrategy
+		return ret
+	}
+	return *o.UpdateStrategy
+}
+
+// GetUpdateStrategyOk returns a tuple with the UpdateStrategy field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *PromoteToStageRequest) GetUpdateStrategyOk() (*TargetUpdateStrategy, bool) {
+	if o == nil || IsNil(o.UpdateStrategy) {
+		return nil, false
+	}
+	return o.UpdateStrategy, true
+}
+
+// HasUpdateStrategy returns a boolean if a field has been set.
+func (o *PromoteToStageRequest) HasUpdateStrategy() bool {
+	if o != nil && !IsNil(o.UpdateStrategy) {
+		return true
+	}
+
+	return false
+}
+
+// SetUpdateStrategy gets a reference to the given TargetUpdateStrategy and assigns it to the UpdateStrategy field.
+func (o *PromoteToStageRequest) SetUpdateStrategy(v TargetUpdateStrategy) {
+	o.UpdateStrategy = &v
+}
+
 func (o PromoteToStageRequest) MarshalJSON() ([]byte, error) {
 	toSerialize,err := o.ToMap()
 	if err != nil {
@@ -156,6 +224,12 @@ func (o PromoteToStageRequest) ToMap() (map[string]interface{}, error) {
 	}
 	if !IsNil(o.Origin) {
 		toSerialize["origin"] = o.Origin
+	}
+	if !IsNil(o.Targets) {
+		toSerialize["targets"] = o.Targets
+	}
+	if !IsNil(o.UpdateStrategy) {
+		toSerialize["updateStrategy"] = o.UpdateStrategy
 	}
 	return toSerialize, nil
 }

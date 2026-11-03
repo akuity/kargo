@@ -46,20 +46,31 @@ type webhook struct {
 		[]kargoapi.PromotionStep,
 	) field.ErrorList
 
-	validateTargetsFn func(*field.Path, *kargoapi.StageTargets) field.ErrorList
+	validatePromotionTemplateFn func(*field.Path, *kargoapi.PromotionTemplate) field.ErrorList
+	validateTargetsFn           func(*field.Path, *kargoapi.StageTargets) field.ErrorList
 
 	isRequestFromKargoControlplaneFn libWebhook.IsRequestFromKargoControlplaneFn
+}
+
+type Option func(*webhook)
+
+func WithTargetStages(w *webhook) {
+	w.validateTargetsFn = w.validateTargets
 }
 
 func SetupWebhookWithManager(
 	cfg libWebhook.Config,
 	mgr ctrl.Manager,
+	options ...Option,
 ) error {
 	w := newWebhook(
 		cfg,
 		mgr.GetClient(),
 		admission.NewDecoder(mgr.GetScheme()),
 	)
+	for _, option := range options {
+		option(w)
+	}
 	return libWebhook.SetupValidatingAndDefaultingWebhook(mgr, &kargoapi.Stage{}, w)
 }
 
@@ -78,7 +89,8 @@ func newWebhook(
 	w.validatePromotionStepTaskRefsFn = w.validatePromotionStepTaskRefs
 	w.isRequestFromKargoControlplaneFn =
 		libWebhook.IsRequestFromKargoControlplane(cfg.ControlplaneUserRegex)
-	w.validateTargetsFn = w.validateTargets
+	w.validateTargetsFn = w.validateNoTargets
+	w.validatePromotionTemplateFn = w.validatePromotionTemplate
 	return w
 }
 
@@ -199,23 +211,10 @@ func (w *webhook) validateSpec(
 ) field.ErrorList {
 	errs := w.validateRequestedFreight(f.Child("requestedFreight"), spec.RequestedFreight)
 
-	if spec.PromotionTemplate == nil {
-		return errs
-	}
-
 	errs = append(
 		errs,
-		libWebhook.ValidatePromotionSteps(
-			f.Child("promotionTemplate").Child("spec").Child("steps"),
-			spec.PromotionTemplate.Spec.Steps,
-		)...,
-	)
-
-	errs = append(
-		errs,
-		w.validatePromotionStepTaskRefsFn(
-			f.Child("promotionTemplate").Child("spec").Child("steps"),
-			spec.PromotionTemplate.Spec.Steps,
+		w.validatePromotionTemplate(f.Child("promotionTemplate"),
+			spec.PromotionTemplate,
 		)...,
 	)
 
@@ -226,6 +225,47 @@ func (w *webhook) validateSpec(
 		)...,
 	)
 
+	return errs
+}
+
+func (w *webhook) validatePromotionTemplate(
+	path *field.Path,
+	promotionTemplate *kargoapi.PromotionTemplate,
+) field.ErrorList {
+	errs := field.ErrorList{}
+
+	if promotionTemplate == nil {
+		return errs
+	}
+
+	errs = append(
+		errs,
+		libWebhook.ValidatePromotionSteps(
+			path.Child("spec").Child("steps"),
+			promotionTemplate.Spec.Steps,
+		)...,
+	)
+
+	errs = append(
+		errs,
+		w.validatePromotionStepTaskRefsFn(
+			path.Child("spec").Child("steps"),
+			promotionTemplate.Spec.Steps,
+		)...,
+	)
+	return errs
+}
+
+func (w *webhook) validateNoTargets(path *field.Path, targets *kargoapi.StageTargets) field.ErrorList {
+	errs := field.ErrorList{}
+	if targets == nil {
+		return errs
+	}
+	errs = append(errs, field.Invalid(
+		path,
+		targets,
+		"per-target stages are not supported, targets should not be set",
+	))
 	return errs
 }
 

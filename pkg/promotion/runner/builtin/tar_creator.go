@@ -10,6 +10,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
@@ -78,6 +79,17 @@ func (t *tarCreator) run(
 	stepCtx *promotion.StepContext,
 	cfg builtin.TarConfig,
 ) (promotion.StepResult, error) {
+	fileMode, err := parseTarMode(cfg.FileMode)
+	if err != nil {
+		return promotion.StepResult{Status: kargoapi.PromotionStepStatusFailed},
+			&promotion.TerminalError{Err: fmt.Errorf("invalid fileMode: %w", err)}
+	}
+	dirMode, err := parseTarMode(cfg.DirMode)
+	if err != nil {
+		return promotion.StepResult{Status: kargoapi.PromotionStepStatusFailed},
+			&promotion.TerminalError{Err: fmt.Errorf("invalid dirMode: %w", err)}
+	}
+
 	inPath, err := t.prepareInputPath(stepCtx.Root, cfg.InPath)
 	if err != nil {
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, err
@@ -97,7 +109,16 @@ func (t *tarCreator) run(
 		mtime = &parsed
 	}
 
-	result, err := t.createTarball(stepCtx.Root, inPath, outPath, cfg.Gzip, cfg.Ignore, mtime)
+	result, err := t.createTarball(
+		stepCtx.Root,
+		inPath,
+		outPath,
+		cfg.Gzip,
+		cfg.Ignore,
+		mtime,
+		fileMode,
+		dirMode,
+	)
 	if err != nil {
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 			fmt.Errorf("failed to create the tar archive %q: %w", cfg.OutPath, err)
@@ -146,6 +167,8 @@ func (t *tarCreator) createTarball(
 	shouldGzip bool,
 	ignore string,
 	mtime *time.Time,
+	fileMode *int64,
+	dirMode *int64,
 ) (promotion.StepResult, error) {
 	matcher := t.buildIgnoreMatcher(ignore)
 
@@ -245,6 +268,12 @@ func (t *tarCreator) createTarball(
 		// extracting the archive, so it is never recorded.
 		header.Uid, header.Gid = 0, 0
 		header.Uname, header.Gname = "", ""
+		switch {
+		case header.Typeflag == tar.TypeReg && fileMode != nil:
+			header.Mode = *fileMode
+		case header.Typeflag == tar.TypeDir && dirMode != nil:
+			header.Mode = *dirMode
+		}
 		if mtime != nil {
 			header.ModTime = *mtime
 			header.AccessTime, header.ChangeTime = time.Time{}, time.Time{}
@@ -302,6 +331,25 @@ func (t *tarCreator) createTarball(
 	}
 
 	return promotion.StepResult{Status: kargoapi.PromotionStepStatusSucceeded}, nil
+}
+
+// parseTarMode parses an optional octal mode. It returns nil when mode is
+// empty, meaning each entry keeps its own mode.
+func parseTarMode(mode string) (*int64, error) {
+	if mode == "" {
+		return nil, nil
+	}
+	parsed, err := strconv.ParseInt(mode, 8, 64)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse octal mode: %w", err)
+	}
+	if parsed < 0 || parsed > 0o777 {
+		return nil, fmt.Errorf("mode %q must be between 0000 and 0777", mode)
+	}
+	if parsed&0o002 != 0 {
+		return nil, fmt.Errorf("mode %q must not be world-writable", mode)
+	}
+	return &parsed, nil
 }
 
 // buildIgnoreMatcher parses a multiline string of gitignore-style patterns

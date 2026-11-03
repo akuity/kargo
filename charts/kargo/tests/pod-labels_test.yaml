@@ -1,0 +1,58 @@
+suite: bundled component pod labels
+values:
+  - ../test/values-unittest.yaml
+templates:
+  - templates/postgres/statefulset.yaml
+  - templates/postgres/secret.yaml
+  - templates/dex-server/deployment.yaml
+  - templates/dex-server/secret.yaml
+tests:
+  - it: should not version-label the postgres pod template
+    template: templates/postgres/statefulset.yaml
+    asserts:
+      - notExists:
+          path: spec.template.metadata.labels["helm.sh/chart"]
+      - notExists:
+          path: spec.template.metadata.labels["app.kubernetes.io/version"]
+      - exists:
+          path: metadata.labels["helm.sh/chart"]
+      - exists:
+          path: metadata.labels["app.kubernetes.io/version"]
+
+  - it: should not version-label the dex pod template
+    template: templates/dex-server/deployment.yaml
+    set:
+      api.oidc.enabled: true
+      api.oidc.dex.enabled: true
+    asserts:
+      - notExists:
+          path: spec.template.metadata.labels["helm.sh/chart"]
+      - notExists:
+          path: spec.template.metadata.labels["app.kubernetes.io/version"]
+      - exists:
+          path: metadata.labels["helm.sh/chart"]
+      - exists:
+          path: metadata.labels["app.kubernetes.io/version"]
+
+  - it: should keep the remaining common labels on a bundled pod template
+    template: templates/postgres/statefulset.yaml
+    asserts:
+      - equal:
+          path: spec.template.metadata.labels["app.kubernetes.io/name"]
+          value: kargo
+      - equal:
+          path: spec.template.metadata.labels["app.kubernetes.io/managed-by"]
+          value: Helm
+      - equal:
+          path: spec.template.metadata.labels["app.kubernetes.io/component"]
+          value: postgres
+
+  - it: should keep global.labels on a bundled pod template
+    template: templates/postgres/statefulset.yaml
+    set:
+      global.labels:
+        team: platform
+    asserts:
+      - equal:
+          path: spec.template.metadata.labels.team
+          value: platform

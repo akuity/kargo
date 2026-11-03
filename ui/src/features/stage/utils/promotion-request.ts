@@ -9,6 +9,13 @@ const terminalPhases = ['Succeeded', 'Failed', 'Errored', 'Aborted'];
 export const isPromotionRequestPhaseTerminal = (phase?: string) =>
   terminalPhases.includes(phase || '');
 
+// A PromotionRequest that did not succeed can be retried by promoting the same
+// Freight to the Stage again, which fans out a fresh request.
+const retryablePhases = ['Failed', 'Errored', 'Aborted'];
+
+export const isPromotionRequestRetryable = (phase?: string) =>
+  retryablePhases.includes(phase || '');
+
 // promotionRequestCompareFn orders PromotionRequests newest first. Names embed
 // a ULID, so within a Stage, name order is creation order.
 export const promotionRequestCompareFn = (lhs: PromotionRequest, rhs: PromotionRequest) =>

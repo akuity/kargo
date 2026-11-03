@@ -1,6 +1,8 @@
 package api
 
 import (
+	"context"
+	"fmt"
 	"strings"
 	"testing"
 
@@ -270,7 +272,7 @@ func TestComparePromotionRequestByPhaseAndCreationTime(t *testing.T) {
 	}
 }
 
-func TestNewPromotionRequestForAllTargets(t *testing.T) {
+func TestPromotionRequestBuilder(t *testing.T) {
 	t.Parallel()
 
 	const (
@@ -295,18 +297,41 @@ func TestNewPromotionRequestForAllTargets(t *testing.T) {
 		},
 	}
 
+	// Targets must carry the Stage's selector label so that they survive
+	// FilterTargetsForStage, which projectTargetsFn results are run through.
 	newTarget := func(name string) kargoapi.Target {
 		return kargoapi.Target{
-			ObjectMeta: metav1.ObjectMeta{Namespace: project, Name: name},
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: project,
+				Name:      name,
+				Labels:    map[string]string{"region": "us"},
+			},
 		}
 	}
 	usEast := newTarget("us-east")
 	usWest := newTarget("us-west")
+	usNorth := newTarget("us-north")
+	usSouth := newTarget("us-south")
+	usCenter := newTarget("us-center")
+
+	// projectTargetsFn builds a mock that returns the given Project Targets,
+	// standing in for the database lookup the real callers perform.
+	projectTargetsFn := func(targets ...kargoapi.Target) func(context.Context, string) ([]kargoapi.Target, error) {
+		return func(context.Context, string) ([]kargoapi.Target, error) {
+			return targets, nil
+		}
+	}
 
 	t.Run("records the Stage, the Freight and the Targets it was given", func(t *testing.T) {
 		t.Parallel()
 
-		promoReq, err := NewPromotionRequestForAllTargets(testStage, freight, []kargoapi.Target{usEast, usWest})
+		promoReq, err := NewPromotionRequestForAllTargets(
+			context.Background(),
+			testStage,
+			freight,
+			projectTargetsFn(usEast, usWest),
+			nil,
+		)
 		require.NoError(t, err)
 
 		require.Equal(t, project, promoReq.Namespace)
@@ -324,10 +349,155 @@ func TestNewPromotionRequestForAllTargets(t *testing.T) {
 		)
 	})
 
+	t.Run("failure to get stage targets is an error", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := NewPromotionRequestForAllTargets(
+			context.Background(),
+			testStage,
+			freight,
+			func(context.Context, string) ([]kargoapi.Target, error) {
+				return nil, fmt.Errorf("something went wrong")
+			},
+			nil,
+		)
+		require.Error(t, err)
+
+		// A Stage without a targets block cannot have a PromotionRequest.
+		noTargets := testStage.DeepCopy()
+		noTargets.Spec.Targets = nil
+		_, err = NewPromotionRequestForAllTargets(
+			context.Background(),
+			noTargets,
+			freight,
+			projectTargetsFn(usEast),
+			nil,
+		)
+		require.Error(t, err)
+	})
+
+	t.Run("promotionTargets override sets the targets ", func(t *testing.T) {
+		t.Parallel()
+
+		promoReq, err := NewPromotionRequestForSelectTargets(
+			context.Background(),
+			testStage,
+			freight,
+			projectTargetsFn(usEast, usWest),
+			nil,
+			[]kargoapi.PromotionRequestTarget{{Name: usEast.Name}},
+		)
+		require.NoError(t, err)
+
+		require.Equal(t, project, promoReq.Namespace)
+		require.Equal(t, stage, promoReq.Spec.Stage)
+		require.Equal(t, freight, promoReq.Spec.Freight)
+		require.True(t, strings.HasPrefix(promoReq.Name, stage+"."))
+		// In the order given: the caller has already filtered and sorted.
+		require.Equal(
+			t,
+			[]kargoapi.PromotionRequestTarget{
+				{Name: "us-east"},
+			},
+			promoReq.Spec.Targets,
+		)
+	})
+
+	t.Run("promotionTargets outside of stage targets is an error", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := NewPromotionRequestForSelectTargets(
+			context.Background(),
+			testStage,
+			freight,
+			projectTargetsFn(usEast, usWest),
+			nil,
+			[]kargoapi.PromotionRequestTarget{{Name: "us-north"}},
+		)
+		require.Error(t, err)
+		require.ErrorIs(t, err, ErrTargetNotSelected)
+	})
+
+	t.Run("updateStrategy is calculated based on stageTargets", func(t *testing.T) {
+		t.Parallel()
+
+		updatedStage := testStage.DeepCopy()
+		// UpdateStrategy values calculated for stageTargets would be 5*40/100 = 2
+		updatedStage.Spec.Targets.UpdateStrategy = kargoapi.TargetUpdateStrategy{
+			MaxConcurrent: new(intstr.FromString("40%")),
+			MaxFailures:   new(intstr.FromString("40%")),
+		}
+		pr, err := NewPromotionRequestForSelectTargets(
+			context.Background(),
+			updatedStage,
+			freight,
+			projectTargetsFn(usEast, usWest, usNorth, usSouth, usCenter),
+			nil,
+			[]kargoapi.PromotionRequestTarget{{Name: "us-north"}},
+		)
+
+		require.NoError(t, err)
+		require.Equal(t, int64(2), pr.Spec.UpdateStrategy.MaxConcurrent)
+		require.Equal(t, int64(2), pr.Spec.UpdateStrategy.MaxFailures)
+	})
+
+	t.Run("updateStrategy override overrides the calculation", func(t *testing.T) {
+		t.Parallel()
+
+		updatedStage := testStage.DeepCopy()
+		// UpdateStrategy values calculated for stageTargets would be 5*40/100 = 2
+		updatedStage.Spec.Targets.UpdateStrategy = kargoapi.TargetUpdateStrategy{
+			MaxConcurrent: new(intstr.FromString("40%")),
+			MaxFailures:   new(intstr.FromString("40%")),
+		}
+		pr, err := NewPromotionRequestForSelectTargets(
+			context.Background(),
+			updatedStage,
+			freight,
+			projectTargetsFn(usEast, usWest, usNorth, usSouth, usCenter),
+			&kargoapi.TargetUpdateStrategy{
+				MaxConcurrent: new(intstr.FromInt(10)),
+				MaxFailures:   new(intstr.FromInt(10)),
+			},
+			[]kargoapi.PromotionRequestTarget{{Name: "us-north"}},
+		)
+
+		require.NoError(t, err)
+		require.Equal(t, int64(10), pr.Spec.UpdateStrategy.MaxConcurrent)
+		require.Equal(t, int64(10), pr.Spec.UpdateStrategy.MaxFailures)
+	})
+
+	t.Run("updateStrategy override can set percentage of stage targets", func(t *testing.T) {
+		t.Parallel()
+
+		pr, err := NewPromotionRequestForSelectTargets(
+			context.Background(),
+			testStage,
+			freight,
+			projectTargetsFn(usEast, usWest, usNorth, usSouth, usCenter),
+			&kargoapi.TargetUpdateStrategy{
+				MaxConcurrent: new(intstr.FromString("40%")),
+				MaxFailures:   new(intstr.FromString("40%")),
+			},
+			[]kargoapi.PromotionRequestTarget{{Name: "us-north"}},
+		)
+
+		require.NoError(t, err)
+		require.Equal(t, int64(2), pr.Spec.UpdateStrategy.MaxConcurrent)
+		require.Equal(t, int64(2), pr.Spec.UpdateStrategy.MaxFailures)
+	})
+
 	t.Run("the Stage is the controlling owner", func(t *testing.T) {
 		t.Parallel()
 
-		promoReq, err := NewPromotionRequestForAllTargets(testStage, freight, []kargoapi.Target{usEast})
+		promoReq, err := NewPromotionRequestForAllTargets(
+			context.Background(),
+			testStage,
+			freight,
+			projectTargetsFn(usEast),
+			nil,
+		)
+
 		require.NoError(t, err)
 
 		require.Len(t, promoReq.OwnerReferences, 1)
@@ -342,7 +512,13 @@ func TestNewPromotionRequestForAllTargets(t *testing.T) {
 	t.Run("identifying labels", func(t *testing.T) {
 		t.Parallel()
 
-		promoReq, err := NewPromotionRequestForAllTargets(testStage, freight, []kargoapi.Target{usEast})
+		promoReq, err := NewPromotionRequestForAllTargets(
+			context.Background(),
+			testStage,
+			freight,
+			projectTargetsFn(usEast),
+			nil,
+		)
 		require.NoError(t, err)
 		require.Equal(t, stage, promoReq.Labels[kargoapi.LabelKeyStage])
 		// Without the shard label, only the default controller would ever
@@ -355,23 +531,16 @@ func TestNewPromotionRequestForAllTargets(t *testing.T) {
 
 		unsharded := testStage.DeepCopy()
 		unsharded.Spec.Shard = ""
-		promoReq, err := NewPromotionRequestForAllTargets(unsharded, freight, []kargoapi.Target{usEast})
+		promoReq, err := NewPromotionRequestForAllTargets(
+			context.Background(),
+			unsharded,
+			freight,
+			projectTargetsFn(usEast),
+			nil,
+		)
 		require.NoError(t, err)
 		require.NotContains(t, promoReq.Labels, kargoapi.LabelKeyShard)
 	})
-
-	t.Run("no Targets yield an empty list, not nil", func(t *testing.T) {
-		t.Parallel()
-
-		// spec.targets is required and has no omitempty, so a nil slice would
-		// serialize as null and be rejected by the API server. An empty list
-		// records that the Stage governed no Targets at this moment.
-		promoReq, err := NewPromotionRequestForAllTargets(testStage, freight, nil)
-		require.NoError(t, err)
-		require.NotNil(t, promoReq.Spec.Targets)
-		require.Empty(t, promoReq.Spec.Targets)
-	})
-
 }
 
 // Two separate properties, and only the first one holds.
@@ -427,13 +596,13 @@ func Test_calculateUpdateStrategy(t *testing.T) {
 		name             string
 		stageStrategy    kargoapi.TargetUpdateStrategy
 		targetCount      int
-		expectedStrategy kargoapi.PromotionRequestUpdateStrategy
+		expectedStrategy *kargoapi.PromotionRequestUpdateStrategy
 	}{
 		{
 			name:             "empty strategy maps to 0-s",
 			targetCount:      100,
 			stageStrategy:    kargoapi.TargetUpdateStrategy{},
-			expectedStrategy: kargoapi.PromotionRequestUpdateStrategy{},
+			expectedStrategy: &kargoapi.PromotionRequestUpdateStrategy{},
 		},
 		{
 			name:        "number values map as is",
@@ -442,7 +611,7 @@ func Test_calculateUpdateStrategy(t *testing.T) {
 				MaxConcurrent: new(intstr.FromInt(10)),
 				MaxFailures:   new(intstr.FromInt(10)),
 			},
-			expectedStrategy: kargoapi.PromotionRequestUpdateStrategy{
+			expectedStrategy: &kargoapi.PromotionRequestUpdateStrategy{
 				MaxConcurrent: 10,
 				MaxFailures:   10,
 			},
@@ -454,7 +623,7 @@ func Test_calculateUpdateStrategy(t *testing.T) {
 				MaxConcurrent: new(intstr.FromString("16%")),
 				MaxFailures:   new(intstr.FromString("8%")),
 			},
-			expectedStrategy: kargoapi.PromotionRequestUpdateStrategy{
+			expectedStrategy: &kargoapi.PromotionRequestUpdateStrategy{
 				MaxConcurrent: 160,
 				MaxFailures:   80,
 			},
@@ -466,7 +635,7 @@ func Test_calculateUpdateStrategy(t *testing.T) {
 				MaxConcurrent: new(intstr.FromString("16%")),
 				MaxFailures:   new(intstr.FromString("8%")),
 			},
-			expectedStrategy: kargoapi.PromotionRequestUpdateStrategy{
+			expectedStrategy: &kargoapi.PromotionRequestUpdateStrategy{
 				MaxConcurrent: 178,
 				MaxFailures:   89,
 			},
@@ -478,7 +647,7 @@ func Test_calculateUpdateStrategy(t *testing.T) {
 				MaxConcurrent: new(intstr.FromString("5%")),
 				MaxFailures:   new(intstr.FromString("5%")),
 			},
-			expectedStrategy: kargoapi.PromotionRequestUpdateStrategy{
+			expectedStrategy: &kargoapi.PromotionRequestUpdateStrategy{
 				MaxConcurrent: 1,
 				MaxFailures:   1,
 			},
@@ -490,7 +659,7 @@ func Test_calculateUpdateStrategy(t *testing.T) {
 			stageStrategy: kargoapi.TargetUpdateStrategy{
 				MaxConcurrent: new(intstr.FromString("105%")),
 			},
-			expectedStrategy: kargoapi.PromotionRequestUpdateStrategy{
+			expectedStrategy: &kargoapi.PromotionRequestUpdateStrategy{
 				MaxConcurrent: 105,
 				MaxFailures:   0,
 			},

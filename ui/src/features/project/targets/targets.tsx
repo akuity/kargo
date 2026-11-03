@@ -13,11 +13,21 @@ import { useWatchStages } from '../pipelines/use-watch-stages';
 
 import { TARGETS_POLL_INTERVAL_MS } from './constants';
 import { TargetsList } from './list/targets-list';
-import { NO_GROUPING, STAGE_GROUPING, groupAxis, groupTargetRows } from './model/target-grouping';
+import { Facets, labelFacets, matchesFacets, noFacets, stateFacet } from './model/target-facets';
+import {
+  NO_GROUPING,
+  STAGE_GROUPING,
+  filterGroupedRows,
+  groupAxis,
+  groupTargetRows,
+  groupedRows,
+  keptRows
+} from './model/target-grouping';
 import { labelKeys } from './model/target-labels';
 import { behindCount, stateCounts, targetRows } from './model/target-rows';
 import { matchesSearch } from './model/target-search';
 import { targetAwareStages } from './model/target-stages';
+import { FiltersPanel } from './shared/filters-panel';
 import { GroupByFilter } from './shared/group-by-filter';
 import { useFreightLabel } from './shared/use-freight-label';
 import { TargetGroupCard } from './summary/group-card';
@@ -70,13 +80,15 @@ export const Targets = () => {
   const freightLabel = useFreightLabel(project);
 
   // Which view and which grouping a reader prefers outlive the visit. The
-  // search does not: a filter still in force from last week would hide most of
-  // the fleet with nothing on screen to say why.
+  // search and the filters do not: a filter still in force from last week would
+  // hide most of the fleet with nothing on screen to say why. Both views share
+  // them, so switching view keeps the same Targets on screen.
   const [storedView, setView] = useLocalStorage<View>(viewKey, 'cards');
   // Anything may be in storage, including a view that no longer exists.
   const view: View = storedView === 'list' ? 'list' : 'cards';
 
   const [search, setSearch] = useState('');
+  const [facets, setFacets] = useState<Facets>(noFacets());
 
   // Grouping is remembered per project, because label keys are a project's own:
   // the axis that slices one fleet may mean nothing in the next.
@@ -102,15 +114,36 @@ export const Targets = () => {
     () => allRows.filter((row) => matchesSearch(row, search)),
     [allRows, search]
   );
-  // Only the cards view reads these; the list builds its own groups from its
-  // own faceted rows.
-  const groups = useMemo(
-    () => (view === 'cards' ? groupTargetRows(rows, groupKey, allStages) : []),
-    [view, rows, groupKey, allStages]
+
+  // Grouped before anything is faceted or counted, because grouped by Stage a
+  // row's state is the one its own Stage sees and only grouping settles which
+  // Stage that is. The facets then count, and filter, the rows the groups hold.
+  const grouped = useMemo(
+    () => groupTargetRows(rows, groupKey, allStages),
+    [rows, groupKey, allStages]
   );
+  const facetRows = useMemo(() => groupedRows(grouped), [grouped]);
+  const labels = useMemo(() => labelFacets(facetRows, keys, facets), [facetRows, keys, facets]);
+  const states = useMemo(() => stateFacet(facetRows, facets), [facetRows, facets]);
+  // How many label values the whole fleet carries, whatever is searched or
+  // ticked. The panel offers a label search only when there are enough to need
+  // one, and a figure that moved with every tick would pull the search box out
+  // from under the reader.
+  const labelValueCount = useMemo(
+    () => labelFacets(allRows, keys, noFacets()).reduce((sum, f) => sum + f.values.length, 0),
+    [allRows, keys]
+  );
+  const groups = useMemo(
+    () => filterGroupedRows(grouped, (row) => matchesFacets(row, facets)),
+    [grouped, facets]
+  );
+
+  // The Targets the filters have left, one row each however the page is
+  // grouped.
+  const shownRows = useMemo(() => keptRows(rows, groups), [rows, groups]);
   // Fleet figures, one row per Target however the page is grouped. See
   // StatTiles for why these and the per-Stage cards differ.
-  const counts = useMemo(() => stateCounts(rows), [rows]);
+  const counts = useMemo(() => stateCounts(shownRows), [shownRows]);
 
   const loading = stagesQuery.isLoading || targetsQuery.isLoading;
 
@@ -125,7 +158,7 @@ export const Targets = () => {
           <Typography.Text type='secondary' className='text-xs'>
             {loading
               ? 'Loading the fleet'
-              : `${rows.length} of ${targets.length} Target${plural(targets.length)}, ` +
+              : `${shownRows.length} of ${targets.length} Target${plural(targets.length)}, ` +
                 `governed by ${stages.length} Stage${plural(stages.length)}`}
           </Typography.Text>
         </Flex>
@@ -160,59 +193,82 @@ export const Targets = () => {
 
       {loading ? (
         <LoadingState />
-      ) : view === 'list' ? (
-        <TargetsList
-          project={project}
-          rows={rows}
-          keys={keys}
-          groupKey={groupKey}
-          stages={allStages}
-          freightLabel={freightLabel}
-        />
       ) : (
-        <>
-          <StatTiles
-            shown={rows.length}
-            total={targets.length}
-            counts={counts}
-            behind={behindCount(rows)}
-          />
-
-          {groups.length === 0 ? (
-            <Empty
-              image={Empty.PRESENTED_IMAGE_SIMPLE}
-              description={targets.length ? 'No Targets match' : 'This project has no Targets'}
-            />
-          ) : (
-            <Flex vertical gap={8}>
-              <Typography.Text strong className='text-sm'>
-                {groupKey
-                  ? `${groups.length} group${plural(groups.length)} by ${groupAxis(groupKey)}`
-                  : 'All Targets'}
-              </Typography.Text>
-              {/* No items-start: grid rows stretch, so cards sitting side by
-                  side are the same height however much each has to say.
-                  Ungrouped, the fleet is one card, and it takes the full
-                  width rather than a single column's worth. */}
-              <div
-                className='grid gap-3'
-                style={{
-                  gridTemplateColumns: groupKey ? 'repeat(auto-fill, minmax(340px, 1fr))' : '1fr'
-                }}
-              >
-                {groups.map((group) => (
-                  <TargetGroupCard
-                    key={group.value || 'all'}
-                    project={project}
-                    groupKey={groupKey}
-                    group={group}
-                    freightLabel={freightLabel}
-                  />
-                ))}
-              </div>
-            </Flex>
+        <Flex gap={16} align='flex-start' className='min-h-0' wrap>
+          {/* With no Targets there is nothing to filter, and the panel would be
+              a heading over an empty box. */}
+          {targets.length > 0 && (
+            <div className='w-[260px] shrink-0 max-w-full'>
+              <FiltersPanel
+                labels={labels}
+                states={states}
+                facets={facets}
+                labelValueCount={labelValueCount}
+                onChange={setFacets}
+              />
+            </div>
           )}
-        </>
+          <Flex vertical gap={16} className='flex-1 min-w-[320px]'>
+            {view === 'list' ? (
+              <TargetsList
+                project={project}
+                groups={groups}
+                shown={shownRows.length}
+                total={rows.length}
+                groupKey={groupKey}
+                freightLabel={freightLabel}
+              />
+            ) : (
+              <>
+                <StatTiles
+                  shown={shownRows.length}
+                  total={targets.length}
+                  counts={counts}
+                  behind={behindCount(shownRows)}
+                />
+
+                {groups.length === 0 ? (
+                  <Empty
+                    image={Empty.PRESENTED_IMAGE_SIMPLE}
+                    description={
+                      targets.length ? 'No Targets match' : 'This project has no Targets'
+                    }
+                  />
+                ) : (
+                  <Flex vertical gap={8}>
+                    <Typography.Text strong className='text-sm'>
+                      {groupKey
+                        ? `${groups.length} group${plural(groups.length)} by ${groupAxis(groupKey)}`
+                        : 'All Targets'}
+                    </Typography.Text>
+                    {/* No items-start: grid rows stretch, so cards sitting side
+                        by side are the same height however much each has to
+                        say. Ungrouped, the fleet is one card, and it takes the
+                        full width rather than a single column's worth. */}
+                    <div
+                      className='grid gap-3'
+                      style={{
+                        gridTemplateColumns: groupKey
+                          ? 'repeat(auto-fill, minmax(340px, 1fr))'
+                          : '1fr'
+                      }}
+                    >
+                      {groups.map((group) => (
+                        <TargetGroupCard
+                          key={group.value || 'all'}
+                          project={project}
+                          groupKey={groupKey}
+                          group={group}
+                          freightLabel={freightLabel}
+                        />
+                      ))}
+                    </div>
+                  </Flex>
+                )}
+              </>
+            )}
+          </Flex>
+        </Flex>
       )}
     </div>
   );

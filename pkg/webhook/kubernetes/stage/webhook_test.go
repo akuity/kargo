@@ -1058,6 +1058,7 @@ func Test_webhook_ValidateSpec(t *testing.T) {
 	}
 	w := &webhook{}
 	w.validatePromotionStepTaskRefsFn = w.validatePromotionStepTaskRefs
+	w.validatePromotionTemplateFn = w.validatePromotionTemplate
 	w.validateTargetsFn = w.validateTargets
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
@@ -1567,6 +1568,46 @@ func Test_webhook_Handle_PreservesUnrelatedDurationFormatting(t *testing.T) {
 				return p.Path == testCase.path
 			})
 			require.Equalf(t, testCase.present, got, "patches: %+v", resp.Patches)
+		})
+	}
+}
+
+func Test_webhook_validateNoTargets(t *testing.T) {
+	testCases := []struct {
+		name       string
+		targets    *kargoapi.StageTargets
+		assertions func(*testing.T, field.ErrorList)
+	}{
+		{
+			name:    "nil targets is valid",
+			targets: nil,
+			assertions: func(t *testing.T, errs field.ErrorList) {
+				require.Empty(t, errs)
+			},
+		},
+
+		{
+			name:    "targets set is invalid",
+			targets: &kargoapi.StageTargets{},
+			assertions: func(t *testing.T, errs field.ErrorList) {
+				require.Len(t, errs, 1)
+				require.Equal(t, field.ErrorTypeInvalid, errs[0].Type)
+				require.Equal(t, "targets", errs[0].Field)
+				require.Equal(t, "per-target stages are not supported, targets should not be set", errs[0].Detail)
+			},
+		},
+	}
+
+	w := &webhook{}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			testCase.assertions(
+				t,
+				w.validateNoTargets(
+					field.NewPath("targets"),
+					testCase.targets,
+				),
+			)
 		})
 	}
 }

@@ -7,6 +7,7 @@ import {
   currentRound,
   currentRounds,
   isPromotionRequestPhaseTerminal,
+  isPromotionRequestRetryable,
   promotionRequestCompareFn,
   roundBlock,
   targetRows
@@ -30,6 +31,22 @@ describe('isPromotionRequestPhaseTerminal()', () => {
     [undefined, false]
   ])('%s -> %s', (phase, terminal) => {
     expect(isPromotionRequestPhaseTerminal(phase)).toBe(terminal);
+  });
+});
+
+describe('isPromotionRequestRetryable()', () => {
+  test.each([
+    ['Failed', true],
+    ['Errored', true],
+    // A round someone cancelled is as worth another go as one that broke.
+    ['Aborted', true],
+    // Nothing to retry: it either worked or has not finished.
+    ['Succeeded', false],
+    ['Pending', false],
+    ['Running', false],
+    [undefined, false]
+  ])('%s -> %s', (phase, retryable) => {
+    expect(isPromotionRequestRetryable(phase)).toBe(retryable);
   });
 });
 

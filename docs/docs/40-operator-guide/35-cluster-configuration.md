@@ -328,3 +328,23 @@ spec:
 For the full field reference, scheduling syntax, allow/deny precedence, and the
 `Stage` status Kargo publishes for a freeze, see the
 [Promotion Windows](../50-user-guide/20-how-to-guides/45-promotion-windows.md) guide.
+
+## Deep Links
+
+`ClusterConfig` accepts the same `freightLinks` and `stageLinks` fields as a
+`ProjectConfig`. Links defined here are shown on `Freight` and `Stage`s in
+every Project, before any links the Project defines itself.
+
+```yaml
+apiVersion: kargo.akuity.io/v1alpha1
+kind: ClusterConfig
+metadata:
+  name: cluster
+spec:
+  stageLinks:
+  - title: Logs
+    url: https://logs.example.com/search?project={{ .stage.metadata.namespace }}&stage={{ .stage.metadata.name }}
+```
+
+For the available fields and template syntax, see
+[Deep Links](../50-user-guide/20-how-to-guides/20-working-with-projects.md#deep-links).

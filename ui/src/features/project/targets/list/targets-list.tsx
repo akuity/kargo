@@ -1,23 +1,11 @@
 import { Button, Collapse, Empty, Flex, Tag, Typography } from 'antd';
 import { useEffect, useMemo, useState } from 'react';
 
-import { Stage } from '@ui/gen/api/v2/models';
-
 import { TargetTable } from '../detail/target-table';
-import { Facets, labelFacets, matchesFacets, noFacets, stateFacet } from '../model/target-facets';
-import {
-  STAGE_GROUPING,
-  TargetGroup,
-  filterGroupedRows,
-  groupTargetRows,
-  groupTitle,
-  groupedRows
-} from '../model/target-grouping';
-import { TargetRow, byWorstState, stateCounts } from '../model/target-rows';
+import { STAGE_GROUPING, TargetGroup, groupTitle } from '../model/target-grouping';
+import { byWorstState, stateCounts } from '../model/target-rows';
 import { targetStatePresentations } from '../model/target-state';
 import { StateBar } from '../shared/state-visuals';
-
-import { FiltersPanel } from './filters-panel';
 
 // A group opens on a preview of its worst Targets. Reading past that is a
 // deliberate act, because a group may hold hundreds. Ungrouped, the one group
@@ -108,52 +96,36 @@ const GroupBody = ({
 };
 
 /**
- * TargetsList is the fleet read as a list rather than as cards: a facet panel
- * that narrows it by label and by state, and the Targets themselves grouped
- * into sections, each opening on the worst of what it holds.
+ * TargetsList is the fleet read as a list rather than as cards: the Targets
+ * grouped into sections, each opening on the worst of what it holds.
  *
  * It answers a different question from the cards. The cards ask what shape the
- * fleet is in; the list asks which Targets, exactly, and lets a reader cut the
- * fleet down until only those are left.
+ * fleet is in; the list asks which Targets, exactly, and the filters beside it
+ * cut the fleet down until only those are left.
  */
 export const TargetsList = ({
   project,
-  rows,
-  keys,
+  groups: filtered,
+  shown,
+  total,
   groupKey,
-  stages,
   freightLabel
 }: {
   project: string;
-  // The rows the search has left, before grouping or faceting.
-  rows: TargetRow[];
-  // Every label key the Targets carry, as facet axes.
-  keys: string[];
+  // The groups the search and the filters have left.
+  groups: TargetGroup[];
+  // Targets the filters have left, and how many the search left before them.
+  shown: number;
+  total: number;
   // The label key the list is grouped by, if any.
   groupKey?: string;
-  // The Project's Stages, which order the groups when grouped by Stage.
-  stages: Stage[];
   freightLabel: (name: string) => string;
 }) => {
-  const [facets, setFacets] = useState<Facets>(noFacets());
-
-  // Grouped before anything is faceted or counted, because grouped by Stage a
-  // row's state is the one its own Stage sees and only grouping settles which
-  // Stage that is. The facets then count, and filter, the rows the groups hold.
-  const grouped = useMemo(() => groupTargetRows(rows, groupKey, stages), [rows, groupKey, stages]);
-  const facetRows = useMemo(() => groupedRows(grouped), [grouped]);
-
-  const labels = useMemo(() => labelFacets(facetRows, keys, facets), [facetRows, keys, facets]);
-  const states = useMemo(() => stateFacet(facetRows, facets), [facetRows, facets]);
   // Sorted after grouping, not before: grouped by Stage, a row's state is the
   // one its Stage sees, which is not the state it was sorted by beforehand.
   const groups = useMemo(
-    () =>
-      filterGroupedRows(grouped, (row) => matchesFacets(row, facets)).map((group) => ({
-        ...group,
-        rows: byWorstState(group.rows)
-      })),
-    [grouped, facets]
+    () => filtered.map((group) => ({ ...group, rows: byWorstState(group.rows) })),
+    [filtered]
   );
 
   // Which groups are open, once the reader has said. Until then it is
@@ -169,50 +141,38 @@ export const TargetsList = ({
   // rather than leaving the reader a wall of shut rows.
   useEffect(() => setOpen(undefined), [groupKey]);
 
-  // Distinct Targets, not rows: grouped by Stage a Target appears once per
-  // Stage that governs it, and the caption counts Targets.
-  const shown = useMemo(
-    () => new Set(groupedRows(groups).map((row) => row.target.metadata?.name)).size,
-    [groups]
-  );
-
   return (
-    <Flex gap={16} align='flex-start' className='min-h-0' wrap>
-      <div className='w-[260px] shrink-0 max-w-full'>
-        <FiltersPanel labels={labels} states={states} facets={facets} onChange={setFacets} />
-      </div>
-      <Flex vertical gap={8} className='flex-1 min-w-[320px]'>
-        <Flex justify='space-between' align='center' gap={12} wrap>
-          <Typography.Text type='secondary' className='text-xs'>
-            {shown === rows.length
-              ? `${rows.length} Target${rows.length === 1 ? '' : 's'}`
-              : `Showing ${shown} of ${rows.length} Targets`}
-          </Typography.Text>
-          <Typography.Text type='secondary' className='text-xs'>
-            Sorted worst health first
-          </Typography.Text>
-        </Flex>
-        {groups.length === 0 ? (
-          <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description='No Targets match' />
-        ) : (
-          <Collapse
-            activeKey={openKeys}
-            onChange={(keys) => setOpen(Array.isArray(keys) ? keys.map(String) : [String(keys)])}
-            items={groups.map((group) => ({
-              key: group.value || 'all',
-              label: <GroupHeader group={group} groupKey={groupKey} />,
-              children: (
-                <GroupBody
-                  project={project}
-                  group={group}
-                  groupKey={groupKey}
-                  freightLabel={freightLabel}
-                />
-              )
-            }))}
-          />
-        )}
+    <Flex vertical gap={8}>
+      <Flex justify='space-between' align='center' gap={12} wrap>
+        <Typography.Text type='secondary' className='text-xs'>
+          {shown === total
+            ? `${total} Target${total === 1 ? '' : 's'}`
+            : `Showing ${shown} of ${total} Targets`}
+        </Typography.Text>
+        <Typography.Text type='secondary' className='text-xs'>
+          Sorted worst health first
+        </Typography.Text>
       </Flex>
+      {groups.length === 0 ? (
+        <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description='No Targets match' />
+      ) : (
+        <Collapse
+          activeKey={openKeys}
+          onChange={(keys) => setOpen(Array.isArray(keys) ? keys.map(String) : [String(keys)])}
+          items={groups.map((group) => ({
+            key: group.value || 'all',
+            label: <GroupHeader group={group} groupKey={groupKey} />,
+            children: (
+              <GroupBody
+                project={project}
+                group={group}
+                groupKey={groupKey}
+                freightLabel={freightLabel}
+              />
+            )
+          }))}
+        />
+      )}
     </Flex>
   );
 };

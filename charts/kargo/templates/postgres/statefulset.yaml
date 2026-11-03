@@ -20,7 +20,7 @@ spec:
   template:
     metadata:
       labels:
-        {{- include "kargo.labels" . | nindent 8 }}
+        {{- include "kargo.bundledPodLabels" . | nindent 8 }}
         {{- include "kargo.postgres.labels" . | nindent 8 }}
       {{- with (mergeOverwrite (deepCopy .Values.global.podLabels) .Values.database.postgres.podLabels) }}
         {{- range $key, $value := . }}

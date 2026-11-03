@@ -133,12 +133,12 @@ type PromotionRequestSpec struct {
 type PromotionRequestUpdateStrategy struct {
 	// MaxConcurrent specifies a number of targets which can be promoted to at the same time
 	// Zero means there is no limit (default)
-	MaxConcurrent int64 `json:"maxConcurrent,omitempty"`
+	MaxConcurrent int64 `json:"maxConcurrent,omitempty" minimum:"0"`
 	// MaxFailures specifies a number of target promotions which can fail before PromotionRequest is considered failed.
 	// Specifies a tolerable number, N failing promotions with maxFailures: N is a success, N+1 is a failure.
 	// Defaults to 0, meaning no failures tolerated.
 	// +kubebuilder:validation:Minimum=0
-	MaxFailures int64 `json:"maxFailures,omitempty"`
+	MaxFailures int64 `json:"maxFailures,omitempty" minimum:"0"`
 }
 
 // PromotionRequestTarget names a Target that a PromotionRequest promotes
