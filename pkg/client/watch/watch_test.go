@@ -407,14 +407,20 @@ func TestWatchResource_ErrorResponse(t *testing.T) {
 
 	eventCh, errCh := client.WatchStage(ctx, "test-project", "test-stage")
 
+	// On an error the watch buffers it on errCh and then closes both channels.
+	// Selecting on eventCh alongside errCh would race: a closed eventCh is
+	// always ready, so it could win over the error that is already waiting.
+	// Wait for the error alone, then confirm no event was ever delivered.
 	select {
-	case <-eventCh:
-		t.Fatal("expected error, got event")
-	case err := <-errCh:
+	case err, ok := <-errCh:
+		require.True(t, ok, "errCh closed without an error")
 		assert.Contains(t, err.Error(), "unexpected status 401")
 	case <-ctx.Done():
 		t.Fatal("timeout waiting for error")
 	}
+
+	event, ok := <-eventCh
+	require.False(t, ok, "expected no event, got %+v", event)
 }
 
 func TestWatchResource_ContextCancellation(t *testing.T) {
