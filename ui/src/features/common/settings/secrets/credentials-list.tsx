@@ -7,7 +7,7 @@ import {
   faTrash
 } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button, Popover, Space, Table, Typography } from 'antd';
 import Card from 'antd/es/card/Card';
 
@@ -24,6 +24,7 @@ import { descriptionExpandable } from '../../description-expandable';
 import { useModal } from '../../modal/use-modal';
 
 import { CreateCredentialsModal } from './create-credentials-modal';
+import { updateCredentialsCache } from './secret-cache';
 import { CredentialsDataKey, CredentialsType, CredentialTypeLabelKey } from './types';
 import { iconForCredentialsType } from './utils';
 
@@ -34,24 +35,22 @@ type Props = {
 
 export const CredentialsList = ({ project = '' }: Props) => {
   const confirm = useConfirmModal();
+  const client = useQueryClient();
+  const onSaved = (secret: V1Secret) =>
+    updateCredentialsCache(client, project, 'repo', secret.metadata?.name || '', secret);
 
   const sharedQuery = useListSharedRepoCredentials({ query: { enabled: !project } });
   const projectQuery = useListProjectRepoCredentials(project, { query: { enabled: !!project } });
   const listCredentialsQuery = project ? projectQuery : sharedQuery;
 
   const { show: showCreate } = useModal((p) => (
-    <CreateCredentialsModal
-      type='repo'
-      project={project}
-      onSuccess={listCredentialsQuery.refetch}
-      {...p}
-    />
+    <CreateCredentialsModal type='repo' project={project} onSuccess={onSaved} {...p} />
   ));
 
   const deleteCredentialsMutation = useMutation({
     mutationFn: (name: string) =>
       project ? deleteProjectRepoCredentials(project, name) : deleteSharedRepoCredentials(name),
-    onSuccess: () => listCredentialsQuery.refetch()
+    onSuccess: (_response, name) => updateCredentialsCache(client, project, 'repo', name)
   });
 
   const specificCredentials: V1Secret[] = listCredentialsQuery.data?.data?.items || [];
@@ -153,7 +152,7 @@ export const CredentialsList = ({ project = '' }: Props) => {
                         <CreateCredentialsModal
                           type='repo'
                           project={project}
-                          onSuccess={listCredentialsQuery.refetch}
+                          onSuccess={onSaved}
                           editing
                           init={record}
                           {...p}

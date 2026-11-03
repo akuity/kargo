@@ -7,10 +7,10 @@ import { useForm } from 'react-hook-form';
 import YamlEditor from '@ui/features/common/code-editor/yaml-editor-lazy';
 import { FieldContainer } from '@ui/features/common/form/field-container';
 import { ModalComponentProps } from '@ui/features/common/modal/modal-context';
-import { getListClusterPromotionTasksQueryKey } from '@ui/gen/api/v2/core/core';
 import { useCreateResource } from '@ui/gen/api/v2/resources/resources';
 
 import { getClusterPromotionTaskYAMLExample } from './cluster-promotion-task-example';
+import { updateClusterPromotionTaskCache } from './task-cache';
 
 type CreateClusterPromotionTaskModalProps = ModalComponentProps;
 
@@ -19,10 +19,10 @@ export const CreateClusterPromotionTaskModal = (props: CreateClusterPromotionTas
 
   const createResourceMutation = useCreateResource({
     mutation: {
-      onSuccess: () => {
-        queryClient.invalidateQueries({
-          queryKey: getListClusterPromotionTasksQueryKey()
-        });
+      onSuccess: async (response) => {
+        if (response.status === 201) {
+          await updateClusterPromotionTaskCache(queryClient, response.data.results);
+        }
         props.hide();
       }
     }

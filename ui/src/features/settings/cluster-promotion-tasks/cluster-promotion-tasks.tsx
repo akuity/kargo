@@ -1,5 +1,6 @@
 import { faPencil, faPlus, faTrash } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { useQueryClient } from '@tanstack/react-query';
 import { Button, Card, Flex, Table } from 'antd';
 import { format } from 'date-fns';
 import { stringify } from 'yaml';
@@ -12,15 +13,17 @@ import { useDeleteResource } from '@ui/gen/api/v2/resources/resources';
 
 import { CreateClusterPromotionTaskModal } from './create-cluster-promotion-task';
 import { EditClusterPromotionTaskModal } from './edit-cluster-promotion-task-modal';
+import { updateClusterPromotionTaskCache } from './task-cache';
 
 export const ClusterPromotionTasks = () => {
   const confirm = useConfirmModal();
+  const queryClient = useQueryClient();
 
   const listClusterPromotionTasksQuery = useListClusterPromotionTasks();
 
   const deleteClusterPromotionTaskMutation = useDeleteResource({
     mutation: {
-      onSuccess: () => listClusterPromotionTasksQuery.refetch()
+      onSuccess: (response) => updateClusterPromotionTaskCache(queryClient, response.data.results)
     }
   });
 

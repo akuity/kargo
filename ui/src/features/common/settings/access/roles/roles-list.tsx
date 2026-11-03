@@ -6,6 +6,7 @@ import {
   faTrash
 } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { useQueryClient } from '@tanstack/react-query';
 import { Button, Card, Space, Table } from 'antd';
 import classNames from 'classnames';
 import { useState } from 'react';
@@ -21,6 +22,7 @@ import {
 } from '@ui/gen/api/v2/rbac/rbac';
 
 import { CreateRole } from './create-role';
+import { updateProjectRoleCache } from './role-cache';
 import { RulesModal } from './rules-modal';
 
 const renderColumn = (key: string) => {
@@ -48,13 +50,16 @@ type Props = {
 };
 
 export const RolesList = ({ project = '', systemLevel = false }: Props) => {
+  const client = useQueryClient();
+  const onSaved = (role: RbacRole) =>
+    updateProjectRoleCache(client, project, role.metadata?.name || '', role);
   const systemRolesQuery = useListSystemRoles({ query: { enabled: systemLevel } });
   const projectRolesQuery = useListProjectRoles(project, {
     query: { enabled: !systemLevel && !!project }
   });
   const activeQuery = systemLevel ? systemRolesQuery : projectRolesQuery;
 
-  const { data, refetch, isLoading } = activeQuery;
+  const { data, isLoading } = activeQuery;
   // backend returns json object instead of array of RbacRole for some reason, so we need to cast it
   const roles = (data?.data as unknown as RbacRole[]) || [];
 
@@ -65,9 +70,9 @@ export const RolesList = ({ project = '', systemLevel = false }: Props) => {
 
   const { mutate: deleteRoleAction } = useDeleteProjectRole({
     mutation: {
-      onSuccess: () => {
+      onSuccess: async (_response, variables) => {
+        await updateProjectRoleCache(client, project, variables.role);
         hide();
-        setTimeout(() => refetch(), 500);
       }
     }
   });
@@ -95,7 +100,7 @@ export const RolesList = ({ project = '', systemLevel = false }: Props) => {
       {(showCreateRole || editingRole) && (
         <CreateRole
           project={project}
-          onSuccess={refetch}
+          onSuccess={onSaved}
           hide={() => {
             setShowCreateRole(false);
             setEditingRole(undefined);
@@ -183,7 +188,6 @@ export const RolesList = ({ project = '', systemLevel = false }: Props) => {
                                   project,
                                   role: record.metadata?.name || ''
                                 });
-                                refetch();
                               }}
                               {...p}
                             />

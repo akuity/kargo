@@ -1,8 +1,8 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { message } from 'antd';
 
+import { updateConfigurationCache } from '@ui/features/common/settings/configuration-cache';
 import { projectConfigGen } from '@ui/features/promotion-windows/utils';
-import { getGetProjectConfigQueryKey } from '@ui/gen/api/v2/core/core';
 import { ProjectConfig, PromotionPolicy } from '@ui/gen/api/v2/models';
 import { useUpdateResource } from '@ui/gen/api/v2/resources/resources';
 
@@ -26,9 +26,9 @@ export const useSaveProjectPromotionPolicies = (project: string, projectConfig?:
         }),
         params: { upsert: true }
       }),
-    onSuccess: () => {
+    onSuccess: async (response) => {
+      await updateConfigurationCache(queryClient, project, response.data.results);
       message.success({ content: 'Promotion policies updated' });
-      queryClient.invalidateQueries({ queryKey: getGetProjectConfigQueryKey(project) });
     }
   });
 };

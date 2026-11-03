@@ -220,6 +220,7 @@ func (r *RegularStageReconciler) SetupWithManager(
 					kargo.RefreshRequested{},
 					kargo.ReverifyRequested{},
 					kargo.VerificationAbortRequested{},
+					kargo.VerificationStarted{},
 				),
 			),
 		).

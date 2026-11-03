@@ -7,12 +7,11 @@ import YamlEditor from '@ui/features/common/code-editor/yaml-editor-lazy';
 import { FieldContainer } from '@ui/features/common/form/field-container';
 import { ModalComponentProps } from '@ui/features/common/modal/modal-context';
 import { getClusterAnalysisTemplateYAMLExample } from '@ui/features/utils/cluster-analysis-template-example';
-import {
-  getListClusterPromotionTasksQueryKey,
-  useGetClusterPromotionTask
-} from '@ui/gen/api/v2/core/core';
+import { useGetClusterPromotionTask } from '@ui/gen/api/v2/core/core';
 import { ClusterPromotionTask } from '@ui/gen/api/v2/models';
 import { useUpdateResource } from '@ui/gen/api/v2/resources/resources';
+
+import { updateClusterPromotionTaskCache } from './task-cache';
 
 type EditClusterPromotionTaskModalProps = ModalComponentProps & {
   clusterPromotionTask: ClusterPromotionTask;
@@ -27,10 +26,8 @@ export const EditClusterPromotionTaskModal = (props: EditClusterPromotionTaskMod
 
   const updateResourceMutation = useUpdateResource({
     mutation: {
-      onSuccess: () => {
-        queryClient.invalidateQueries({
-          queryKey: getListClusterPromotionTasksQueryKey()
-        });
+      onSuccess: async (response) => {
+        await updateClusterPromotionTaskCache(queryClient, response.data.results);
         props.hide();
       }
     }

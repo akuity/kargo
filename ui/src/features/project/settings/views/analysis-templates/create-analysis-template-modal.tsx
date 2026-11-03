@@ -6,8 +6,8 @@ import YamlEditor from '@ui/features/common/code-editor/yaml-editor-lazy';
 import { FieldContainer } from '@ui/features/common/form/field-container';
 import { ModalProps } from '@ui/features/common/modal/use-modal';
 import { useCreateResource } from '@ui/gen/api/v2/resources/resources';
-import { getListAnalysisTemplatesQueryKey } from '@ui/gen/api/v2/verifications/verifications';
 
+import { updateAnalysisTemplateCache } from './template-cache';
 import { getAnalysisTemplateYAMLExample } from './utils/analysis-template-example';
 
 type Props = ModalProps & {
@@ -19,10 +19,10 @@ export const CreateAnalysisTemplateModal = ({ visible, hide, namespace }: Props)
 
   const { mutate, isPending } = useCreateResource({
     mutation: {
-      onSuccess: () => {
-        queryClient.invalidateQueries({
-          queryKey: getListAnalysisTemplatesQueryKey(namespace)
-        });
+      onSuccess: async (response) => {
+        if (response.status === 201) {
+          await updateAnalysisTemplateCache(queryClient, namespace, response.data.results);
+        }
         hide();
       }
     }

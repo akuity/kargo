@@ -8,7 +8,7 @@ import { Stage } from '@ui/gen/api/v2/models';
 
 import { edgeIndexer } from './edge-indexer';
 import { layoutGraph } from './layout-graph';
-import { stackedIndexer, warehouseIndexer } from './node-indexer';
+import { resourceMembership, stackedIndexer, warehouseIndexer } from './node-indexer';
 import { repoSubscriptionSizer, stackSizer, stageSizer, warehouseSizer } from './node-sizer';
 import { stackNodes } from './stack-nodes';
 
@@ -38,6 +38,8 @@ export const useReactFlowPipelineGraph = (
   });
   const lastRunRef = useRef(0);
   const functionCalled = useRef(false);
+  const stageMembership = resourceMembership(stages);
+  const warehouseMembership = resourceMembership(warehouses);
 
   useEffect(() => {
     const compute = () => {
@@ -180,7 +182,15 @@ export const useReactFlowPipelineGraph = (
     const delay = Math.max(0, 3000 - elapsed);
     const id = setTimeout(compute, delay);
     return () => clearTimeout(id);
-  }, [stack?.afterNodes, pipeline, redraw, warehouseColorMap, hideSubscriptions]);
+  }, [
+    stack?.afterNodes,
+    pipeline,
+    redraw,
+    warehouseColorMap,
+    hideSubscriptions,
+    stageMembership,
+    warehouseMembership
+  ]);
 
   return result;
 };

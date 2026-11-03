@@ -9,24 +9,9 @@ import { FieldContainer } from '@ui/features/common/form/field-container';
 import { MultiStringEditor } from '@ui/features/common/form/multi-string-editor';
 import { V1PolicyRule } from '@ui/gen/api/v2/models';
 
-const availableResources = [
-  // core
-  'configmaps',
-  'events',
-  'secrets',
-  'serviceaccounts',
-  // rbac.authorization.k8s.io
-  'rolebindings',
-  'roles',
-  // kargo.akuity.io
-  'freights',
-  'stages',
-  'promotions',
-  'warehouses',
-  // argoproj.io
-  'analysisruns',
-  'analysistemplates'
-];
+import { resourceGroups, rulesForResources } from './rule-resources';
+
+const availableResources = Object.keys(resourceGroups);
 
 const availableVerbs = ['get', 'create', 'update', 'delete', 'patch', 'list', '*'];
 
@@ -41,7 +26,7 @@ export const RuleEditor = ({
   onSuccess,
   style
 }: {
-  onSuccess: (rule: V1PolicyRule) => void;
+  onSuccess: (rules: V1PolicyRule[]) => void;
   style?: React.CSSProperties;
 }) => {
   const { control, handleSubmit, reset, watch } = useForm({
@@ -49,11 +34,13 @@ export const RuleEditor = ({
   });
 
   const onSubmit = handleSubmit((values) => {
-    onSuccess({
-      verbs: values.verbs,
-      resources: values.resources,
-      resourceNames: values.resourceNames
-    } as V1PolicyRule);
+    onSuccess(
+      rulesForResources({
+        verbs: values.verbs,
+        resources: values.resources,
+        resourceNames: values.resourceNames
+      } as V1PolicyRule)
+    );
     reset({
       verbs: [] as string[],
       resources: [] as string[],

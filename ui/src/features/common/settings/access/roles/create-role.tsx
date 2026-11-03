@@ -16,7 +16,7 @@ import { RulesTable } from './rules-table';
 
 type Props = {
   project: string;
-  onSuccess: () => void;
+  onSuccess: (role: RbacRole) => void | Promise<void>;
   editing?: RbacRole;
   hide: () => void;
 };
@@ -58,18 +58,18 @@ export const CreateRole = ({ editing, onSuccess, project, hide }: Props) => {
 
   const { mutate } = useCreateProjectRole({
     mutation: {
-      onSuccess: () => {
+      onSuccess: async (response) => {
+        await onSuccess(response.data);
         hide();
-        onSuccess();
       }
     }
   });
 
   const { mutate: update } = useUpdateRole({
     mutation: {
-      onSuccess: () => {
+      onSuccess: async (response) => {
+        await onSuccess(response.data);
         hide();
-        onSuccess();
       }
     }
   });
@@ -180,7 +180,10 @@ export const CreateRole = ({ editing, onSuccess, project, hide }: Props) => {
         <div className='text-lg font-semibold mb-4'>Rules</div>
         <div className='flex gap-4'>
           <RulesTable rules={rules} setRules={setRules} />
-          <RuleEditor onSuccess={(rule) => setRules([...rules, rule])} style={{ width: '600px' }} />
+          <RuleEditor
+            onSuccess={(added) => setRules([...rules, ...added])}
+            style={{ width: '600px' }}
+          />
         </div>
       </div>
       <Button type='primary' onClick={onSubmit}>

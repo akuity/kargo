@@ -70,7 +70,12 @@ export const CreateProjectModal = ({ visible, hide }: ModalComponentProps) => {
       onCancel={hide}
       okText='Create'
       onOk={onSubmit}
-      okButtonProps={{ loading: isPending }}
+      okButtonProps={{
+        loading: isPending,
+        disabled: isPending,
+        'aria-label': 'Create',
+        'aria-busy': isPending
+      }}
     >
       <Tabs
         items={[

@@ -1,5 +1,6 @@
 import { faPencil, faPlus, faTrash } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { useQueryClient } from '@tanstack/react-query';
 import { Button, Card, Space, Table } from 'antd';
 import { format } from 'date-fns';
 import { useParams } from 'react-router-dom';
@@ -15,18 +16,23 @@ import {
 
 import { CreateAnalysisTemplateModal } from './create-analysis-template-modal';
 import { EditAnalysisTemplateModal } from './edit-analysis-template-modal';
+import { removeAnalysisTemplateFromCache } from './template-cache';
 
 export const AnalysisTemplatesSettings = () => {
   const { name } = useParams();
   const confirm = useConfirmModal();
+  const queryClient = useQueryClient();
 
-  const { data, isLoading, refetch } = useListAnalysisTemplates(name || '');
+  const { data, isLoading } = useListAnalysisTemplates(name || '');
   const { show: showEdit } = useModal();
   const { show: showCreate } = useModal((p) => (
     <CreateAnalysisTemplateModal {...p} namespace={name || ''} />
   ));
   const { mutate: deleteTemplate, isPending: isDeleting } = useDeleteAnalysisTemplate({
-    mutation: { onSuccess: () => refetch() }
+    mutation: {
+      onSuccess: (_, variables) =>
+        removeAnalysisTemplateFromCache(queryClient, variables.project, variables.analysisTemplate)
+    }
   });
 
   return (

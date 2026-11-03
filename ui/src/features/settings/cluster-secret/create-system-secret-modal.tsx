@@ -21,7 +21,7 @@ const createFormSchema = z.object({
 
 type CreateSystemSecretModalProps = ModalComponentProps & {
   init?: V1Secret;
-  onSuccess?(): void;
+  onSuccess?(secret: V1Secret): void;
 };
 
 export const CreateSystemSecretModal = (props: CreateSystemSecretModalProps) => {
@@ -37,18 +37,18 @@ export const CreateSystemSecretModal = (props: CreateSystemSecretModalProps) => 
 
   const createSystemSecretsMutation = useCreateSystemGenericCredentials({
     mutation: {
-      onSuccess: () => {
+      onSuccess: (response) => {
         props.hide();
-        props.onSuccess?.();
+        props.onSuccess?.(response.data);
       }
     }
   });
 
   const updateSystemSecretMutation = useUpdateSystemGenericCredentials({
     mutation: {
-      onSuccess: () => {
+      onSuccess: (response) => {
         props.hide();
-        props.onSuccess?.();
+        props.onSuccess?.(response.data);
       }
     }
   });

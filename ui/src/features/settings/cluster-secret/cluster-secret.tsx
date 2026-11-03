@@ -1,5 +1,6 @@
 import { faPencil, faPlus, faTrash } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { useQueryClient } from '@tanstack/react-query';
 import { Button, Card, Flex, Table, Tag } from 'antd';
 
 import { useConfirmModal } from '@ui/features/common/confirm-modal/use-confirm-modal';
@@ -12,21 +13,24 @@ import { V1Secret } from '@ui/gen/api/v2/models';
 import { useGetConfig } from '@ui/gen/api/v2/system/system';
 
 import { CreateSystemSecretModal } from './create-system-secret-modal';
+import { updateSystemSecretCache } from './secret-cache';
 
 export const ClusterSecret = () => {
+  const client = useQueryClient();
   const listSystemSecretsQuery = useListSystemGenericCredentials();
+  const onSaved = (secret: V1Secret) =>
+    updateSystemSecretCache(client, secret.metadata?.name || '', secret);
   const confirm = useConfirmModal();
 
   const getConfigQuery = useGetConfig();
   const config = getConfigQuery.data?.data;
 
-  const createSecretModal = useModal((p) => (
-    <CreateSystemSecretModal {...p} onSuccess={listSystemSecretsQuery.refetch} />
-  ));
+  const createSecretModal = useModal((p) => <CreateSystemSecretModal {...p} onSuccess={onSaved} />);
 
   const deleteSecretsMutation = useDeleteSystemGenericCredentials({
     mutation: {
-      onSuccess: () => listSystemSecretsQuery.refetch()
+      onSuccess: (_response, variables) =>
+        updateSystemSecretCache(client, variables.genericCredentials)
     }
   });
 
@@ -94,11 +98,7 @@ export const ClusterSecret = () => {
                   size='small'
                   onClick={() =>
                     createSecretModal.show((p) => (
-                      <CreateSystemSecretModal
-                        onSuccess={listSystemSecretsQuery.refetch}
-                        init={record}
-                        {...p}
-                      />
+                      <CreateSystemSecretModal onSuccess={onSaved} init={record} {...p} />
                     ))
                   }
                 >

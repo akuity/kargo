@@ -68,7 +68,7 @@ const repoUrlPatternPlaceholder = '(?:https?://)?(?:www.)?github.com/[w.-]+/[w.-
 
 type Props = ModalComponentProps & {
   project: string;
-  onSuccess: () => void;
+  onSuccess: (secret: V1Secret) => void | Promise<void>;
   init?: V1Secret;
   editing?: boolean;
   type: 'repo' | 'generic';
@@ -80,9 +80,9 @@ export const CreateCredentialsModal = ({ project, onSuccess, editing, init, ...p
     resolver: zodResolver(createFormSchema(props.type === 'generic', editing))
   });
 
-  const onMutationSuccess = () => {
+  const onMutationSuccess = async (response: { data: V1Secret }) => {
+    await onSuccess(response.data);
     props.hide();
-    onSuccess();
   };
 
   const createRepoMutation = useMutation({

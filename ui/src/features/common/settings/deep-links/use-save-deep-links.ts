@@ -7,6 +7,8 @@ import { useUpdateResource } from '@ui/gen/api/v2/resources/resources';
 import { getGetClusterConfigQueryOptions } from '@ui/gen/api/v2/system/system';
 import { ApiError } from '@ui/lib/api/custom-fetch';
 
+import { updateConfigurationCache } from '../configuration-cache';
+
 import { DeepLinkPatch } from './deep-links';
 
 /**
@@ -54,11 +56,9 @@ export const useSaveProjectDeepLinks = (project: string) => {
         params: { upsert: true }
       });
     },
-    onSuccess: () => {
+    onSuccess: async (response) => {
+      await updateConfigurationCache(queryClient, project, response.data.results);
       message.success({ content: 'Deep links updated' });
-      queryClient.invalidateQueries({
-        queryKey: getGetProjectConfigQueryOptions(project).queryKey
-      });
     }
   });
 };
@@ -83,9 +83,9 @@ export const useSaveClusterDeepLinks = () => {
         params: { upsert: true }
       });
     },
-    onSuccess: () => {
+    onSuccess: async (response) => {
+      await updateConfigurationCache(queryClient, undefined, response.data.results);
       message.success({ content: 'Deep links updated' });
-      queryClient.invalidateQueries({ queryKey: getGetClusterConfigQueryOptions().queryKey });
     }
   });
 };

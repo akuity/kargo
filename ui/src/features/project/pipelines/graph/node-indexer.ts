@@ -1,6 +1,13 @@
 import { RepoSubscription, WarehouseExpanded } from '@ui/extend/types';
 import { Stage, Warehouse } from '@ui/gen/api/v2/models';
 
+// Membership changes need a relayout even when no content-update callback is
+// emitted (notably DELETED watch events). Status-only updates do not.
+export const resourceMembership = (resources: Pick<Stage, 'metadata'>[]) =>
+  JSON.stringify(
+    resources.map((resource) => [resource.metadata?.uid, resource.metadata?.name]).sort()
+  );
+
 export const warehouseIndexer = {
   index: (warehouse: Pick<Warehouse, 'metadata'>) => {
     const warehouseUID = warehouse?.metadata?.uid;

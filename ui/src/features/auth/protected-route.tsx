@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
 import { Navigate, Outlet } from 'react-router-dom';
 
 import { redirectToQueryParam } from '@ui/config/auth';
@@ -14,11 +14,13 @@ export const ProtectedRoute = () => {
   const { data: response, isLoading } = useGetPublicConfig();
   const data = response?.data;
 
-  const modalRef = useRef<HTMLDivElement>(null);
   const [modalRoot, setModalRoot] = useState<HTMLDivElement | null>(null);
-  useEffect(() => {
-    setModalRoot(modalRef.current);
-  }, []);
+
+  // Protected children can issue requests as soon as they mount. Wait until
+  // skipAuth is known, so their 401s cannot race the login redirect.
+  if (isLoading) {
+    return null;
+  }
 
   if (!data?.skipAuth && !isLoading && !isLoggedIn) {
     return (
@@ -34,7 +36,7 @@ export const ProtectedRoute = () => {
     // Its either use this context only where needed and use query caching (not a concern for now) OR just keep this available all the time without invalidation
     // Not a concern as of now but something to keep in mind
     <PromotionDirectivesRegistryContextProvider>
-      <div ref={modalRef}>
+      <div ref={setModalRoot}>
         {modalRoot && (
           <ModalContextProvider container={modalRoot}>
             <Outlet />

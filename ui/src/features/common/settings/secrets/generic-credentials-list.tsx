@@ -1,6 +1,6 @@
 import { faPencil, faPlus, faQuestionCircle, faTrash } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button, Card, Flex, Popover, Space, Table, Tag, Typography } from 'antd';
 import React from 'react';
 
@@ -16,6 +16,7 @@ import {
 import { V1Secret } from '@ui/gen/api/v2/models';
 
 import { CreateCredentialsModal } from './create-credentials-modal';
+import { updateCredentialsCache } from './secret-cache';
 
 type Props = {
   // empty means shared
@@ -25,6 +26,9 @@ type Props = {
 
 export const GenericCredentialsList = ({ project = '', description }: Props) => {
   const confirm = useConfirmModal();
+  const client = useQueryClient();
+  const onSaved = (secret: V1Secret) =>
+    updateCredentialsCache(client, project, 'generic', secret.metadata?.name || '', secret);
 
   const sharedQuery = useListSharedGenericCredentials({ query: { enabled: !project } });
   const projectQuery = useListProjectGenericCredentials(project, { query: { enabled: !!project } });
@@ -35,18 +39,13 @@ export const GenericCredentialsList = ({ project = '', description }: Props) => 
       project
         ? deleteProjectGenericCredentials(project, name)
         : deleteSharedGenericCredentials(name),
-    onSuccess: () => listSecretsQuery.refetch()
+    onSuccess: (_response, name) => updateCredentialsCache(client, project, 'generic', name)
   });
 
   const genericCredentials: V1Secret[] = listSecretsQuery.data?.data?.items || [];
 
   const { show: showCreateGeneric } = useModal((p) => (
-    <CreateCredentialsModal
-      type='generic'
-      project={project}
-      onSuccess={listSecretsQuery.refetch}
-      {...p}
-    />
+    <CreateCredentialsModal type='generic' project={project} onSuccess={onSaved} {...p} />
   ));
 
   return (
@@ -134,7 +133,7 @@ export const GenericCredentialsList = ({ project = '', description }: Props) => 
                         <CreateCredentialsModal
                           type='generic'
                           project={project}
-                          onSuccess={listSecretsQuery.refetch}
+                          onSuccess={onSaved}
                           editing
                           init={record}
                           {...p}
