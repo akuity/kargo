@@ -81,6 +81,7 @@ func ReconcilerConfigFromEnv() ReconcilerConfig {
 type RegularStageReconciler struct {
 	cfg            ReconcilerConfig
 	client         client.Client
+	apiReader      client.Reader
 	credentialsDB  credentials.Database
 	eventSender    kargoEvent.Sender
 	healthChecker  health.AggregatingChecker
@@ -132,6 +133,7 @@ func (r *RegularStageReconciler) SetupWithManager(
 ) error {
 	// Configure client using manager.
 	r.client = kargoMgr.GetClient()
+	r.apiReader = kargoMgr.GetAPIReader()
 	r.eventSender = eventSender
 
 	// This index is used to find all Promotions that are associated with a
@@ -357,25 +359,35 @@ func (r *RegularStageReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	)
 	ctx = logging.ContextWithLogger(ctx, logger)
 
-	// Find the Stage.
-	stage := &kargoapi.Stage{}
-	if err := r.client.Get(ctx, req.NamespacedName, stage); err != nil {
+	// Use the cache for cheap early exits. No API server call is needed for
+	// Stages that this reconciler does not handle.
+	cachedStage := &kargoapi.Stage{}
+	if err := r.client.Get(ctx, req.NamespacedName, cachedStage); err != nil {
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
 	// Safety check: do not reconcile Stages that are control flow Stages.
-	if stage.IsControlFlow() {
+	if cachedStage.IsControlFlow() {
 		return ctrl.Result{}, nil
 	}
 
 	// Safety check: do not reconcile fleet Stages.
-	if stage.IsTargetAware() {
+	if cachedStage.IsTargetAware() {
 		return ctrl.Result{}, nil
 	}
 
-	if !r.shardPredicate.IsResponsible(stage) {
+	if !r.shardPredicate.IsResponsible(cachedStage) {
 		logger.Debug("ignoring Stage because it is not assigned to this shard")
 		return ctrl.Result{}, nil
+	}
+
+	// Use a direct API read (bypassing the cache) to ensure we see the latest
+	// status. This avoids a race condition where the informer cache hasn't yet
+	// reflected the status patched by the previous reconciliation, which would
+	// cause the reconciler to start a duplicate verification.
+	stage := &kargoapi.Stage{}
+	if err := r.apiReader.Get(ctx, req.NamespacedName, stage); err != nil {
+		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
 	// Handle deletion of the Stage.
@@ -1501,10 +1513,16 @@ func (ver Verifier) startVerification(
 		StartTime: &metav1.Time{Time: startTime},
 	}
 
+	// A request only re-verifies the current verification if it is for that
+	// verification's ID. The re-verification annotation is never cleared, so
+	// a request left over from an earlier re-verification may still be
+	// present after the current Freight has changed.
+	curVI := freight.VerificationHistory.Current()
+	isReverification := curVI != nil && req.ForID(curVI.ID)
+
 	// If we have a verification request, we should enrich the information
 	// with the actor who requested the verification.
-	curVI := freight.VerificationHistory.Current()
-	if curVI != nil && req.ForID(curVI.ID) {
+	if isReverification {
 		newVI.Actor = req.Actor
 	}
 
@@ -1519,10 +1537,10 @@ func (ver Verifier) startVerification(
 
 	logger := logging.LoggerFromContext(ctx)
 
-	// If this is not a re-verification request, check if there is an existing
+	// If this is not a re-verification, check if there is an existing
 	// AnalysisRun for the Stage and Freight. If there is, return the status
 	// of the existing AnalysisRun.
-	if req == nil {
+	if !isReverification {
 		existingAnalysisRun, err := ver.findExistingAnalysisRun(ctx, types.NamespacedName{
 			Namespace: stage.Namespace,
 			Name:      stage.Name,
@@ -1602,7 +1620,7 @@ func (ver Verifier) startVerification(
 			Reference:  types.NamespacedName{Namespace: stage.Namespace, Name: freightRef.Name},
 		})
 	}
-	if curVI == nil || (req.ForID(curVI.ID) && req.ControlPlane && req.Actor != "") {
+	if curVI == nil || (isReverification && req.ControlPlane && req.Actor != "") {
 		lastPromoName := stage.LastPromotionName()
 		if lastPromoName != "" {
 			builderOpts = append(builderOpts, rollouts.WithExtraAnnotations{
