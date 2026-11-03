@@ -30,6 +30,7 @@ import (
 	"github.com/akuity/kargo/pkg/event"
 	httputil "github.com/akuity/kargo/pkg/http"
 	"github.com/akuity/kargo/pkg/logging"
+	"github.com/akuity/kargo/pkg/reconciler/nats"
 	"github.com/akuity/kargo/pkg/server/config"
 	"github.com/akuity/kargo/pkg/server/dex"
 	"github.com/akuity/kargo/pkg/server/kubernetes"
@@ -50,6 +51,11 @@ type server struct {
 	// built from it. It is nil when the server runs without a database, in
 	// which case the endpoints for those resources respond 501.
 	db *database.Queries
+	// events is where the stores built from db publish an event after each
+	// write, for the controllers that drive the resources in the database.
+	// It is nil when the server runs without NATS, such as in local mode,
+	// in which case nothing is published.
+	events nats.Publisher
 
 	// The following behaviors are overridable for testing purposes:
 
@@ -156,13 +162,16 @@ type Server interface {
 }
 
 // NewServer returns a Server. The db may be nil, in which case the resources
-// that live in the database are unavailable; see the server's db field.
+// that live in the database are unavailable; see the server's db field. The
+// events may be nil, in which case writes to those resources are not
+// announced; see the server's events field.
 func NewServer(
 	cfg config.ServerConfig,
 	kubeClient kubernetes.Client,
 	rolesDB rbac.RolesDatabase,
 	sender event.Sender,
 	db *database.Queries,
+	events nats.Publisher,
 ) Server {
 	s := &server{
 		cfg:     cfg,
@@ -170,6 +179,7 @@ func NewServer(
 		rolesDB: rolesDB,
 		sender:  sender,
 		db:      db,
+		events:  events,
 	}
 
 	s.getStageFn = api.GetStage
@@ -453,5 +463,5 @@ func (s *server) rolloutStore() promotionrolloutstore.Store {
 	if s.db == nil {
 		return nil
 	}
-	return promotionrolloutstore.New(s.db)
+	return promotionrolloutstore.New(s.db, s.events)
 }

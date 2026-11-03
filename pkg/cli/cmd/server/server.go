@@ -110,6 +110,7 @@ func (o *serverOptions) run(ctx context.Context) error {
 		// Local mode has no event bus to publish to
 		nil,
 		nil, // No database: Targets are unavailable in local mode.
+		nil, // No NATS either: there is nothing to announce writes on.
 	)
 	if err := srv.Serve(ctx, l); err != nil {
 		return fmt.Errorf("serve error: %w", err)

@@ -17,13 +17,29 @@ import (
 	"github.com/akuity/kargo/pkg/database"
 	"github.com/akuity/kargo/pkg/database/databasetest"
 	"github.com/akuity/kargo/pkg/database/targetstore"
+	"github.com/akuity/kargo/pkg/reconciler/nats"
 )
+
+// forProject returns the events published about the Project's rollouts, in
+// the order they were published.
+func (p *recordingPublisher) forProject(project string) []published {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	var events []published
+	for _, e := range p.events {
+		if e.event.Key.Project == project {
+			events = append(events, e)
+		}
+	}
+	return events
+}
 
 func TestStoreIntegration(t *testing.T) {
 	t.Parallel()
 	pool, _ := databasetest.IsolatedDatabase(t)
 	queries := database.New(pool)
-	store := New(queries)
+	events := &recordingPublisher{}
+	store := New(queries, events)
 	targets := targetstore.New(queries)
 	ctx := context.Background()
 
@@ -110,6 +126,14 @@ func TestStoreIntegration(t *testing.T) {
 				require.Equal(t, "Pending", rollout.StatusPhase)
 				require.Nil(t, rollout.StatusStartedAt)
 				require.Nil(t, rollout.StatusFinishedAt)
+
+				// The creation is announced with the row as stored.
+				published := events.forProject("create")
+				require.Len(t, published, 1)
+				require.Equal(t, "kargo.promotionrollouts.created", published[0].subject)
+				require.Equal(t, nats.Created, published[0].event.Kind)
+				require.Equal(t, Key{Project: "create", Name: "prod.01A.abc"}, published[0].event.Key)
+				require.Equal(t, rollout.PromotionRolloutRow, *published[0].event.New)
 				require.Equal(t, []string{"us-east", "us-west"}, targetNames(rollout))
 				require.Equal(t, ids["us-east"], rollout.Targets[0].TargetID)
 
@@ -566,10 +590,22 @@ func TestStoreIntegration(t *testing.T) {
 				require.Equal(t, updated, fetched.PromotionRolloutRow)
 				require.Equal(t, []string{"us-east"}, targetNames(fetched))
 
-				// The version the first update was based on is now stale.
+				// The update is announced with the row before and after it.
+				published := events.forProject("update")
+				require.Len(t, published, 2)
+				require.Equal(t, nats.Created, published[0].event.Kind)
+				require.Equal(t, "kargo.promotionrollouts.updated", published[1].subject)
+				require.Equal(t, nats.Updated, published[1].event.Kind)
+				require.Equal(t, Key{Project: "update", Name: "prod.01A.abc"}, published[1].event.Key)
+				require.Equal(t, created.PromotionRolloutRow, *published[1].event.Old)
+				require.Equal(t, updated, *published[1].event.New)
+
+				// The version the first update was based on is now stale, and
+				// a refused update announces nothing.
 				_, err = store.UpdateStatus(ctx, "update", row)
 				require.ErrorIs(t, err, database.ErrConflict)
 				require.ErrorContains(t, err, "modified")
+				require.Len(t, events.forProject("update"), 2)
 
 				// A different id says the rollout was replaced.
 				row = updated
@@ -578,12 +614,18 @@ func TestStoreIntegration(t *testing.T) {
 				require.ErrorIs(t, err, database.ErrConflict)
 				require.ErrorContains(t, err, "recreated")
 
-				// Without preconditions the update is unconditional.
+				// Without preconditions the update is unconditional, and
+				// announced from the row as it was just before.
 				_, err = store.UpdateStatus(ctx, "update", database.PromotionRolloutRow{
 					Name:        "prod.01A.abc",
 					StatusPhase: "Failed",
 				})
 				require.NoError(t, err)
+				published = events.forProject("update")
+				require.Len(t, published, 3)
+				require.Equal(t, nats.Updated, published[2].event.Kind)
+				require.Equal(t, "Errored", published[2].event.Old.StatusPhase)
+				require.Equal(t, "Failed", published[2].event.New.StatusPhase)
 
 				_, err = store.UpdateStatus(ctx, "update", database.PromotionRolloutRow{
 					Name:        "missing",
