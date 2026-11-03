@@ -11,10 +11,15 @@ export const isPromotionRequestPhaseTerminal = (phase?: string) =>
 
 // A PromotionRequest that did not succeed can be retried by promoting the same
 // Freight to the Stage again, which fans out a fresh request.
-const retryablePhases = ['Failed', 'Errored', 'Aborted'];
+const failedPhases = ['Failed', 'Errored', 'Aborted'];
 
-export const isPromotionRequestRetryable = (phase?: string) =>
-  retryablePhases.includes(phase || '');
+export const isPromotionRequestFailed = (phase?: string) => failedPhases.includes(phase || '');
+
+// A round that succeeded can still have left Targets behind -- as many as its
+// update strategy tolerates failing -- and those are as worth another go as
+// the Targets of a round that failed outright.
+export const isPromotionRequestRetryable = (phase?: string, unsuccessfulTargets = 0) =>
+  isPromotionRequestFailed(phase) || (phase === 'Succeeded' && unsuccessfulTargets > 0);
 
 // promotionRequestCompareFn orders PromotionRequests newest first. Names embed
 // a ULID, so within a Stage, name order is creation order.

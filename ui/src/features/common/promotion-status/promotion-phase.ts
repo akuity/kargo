@@ -84,7 +84,7 @@ export const promotionPhases: readonly PromotionPhase[] = [
 export type PhaseFilter = { phase?: PromotionPhase; count: number };
 
 export const isPromotionPhase = (phase?: string): phase is PromotionPhase =>
-  !!phase && phase in promotionPhasePresentations;
+  !!phase && Object.hasOwn(promotionPhasePresentations, phase);
 
 // getPromotionPhasePresentation treats an unset or unknown phase as Pending,
 // which is what a Promotion is until the controller says otherwise.
