@@ -1,8 +1,7 @@
 import {
+  faArrowsLeftRightToLine,
   faCheck,
-  faCompress,
   faCopy,
-  faExpand,
   faTextWidth
 } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
@@ -19,6 +18,8 @@ import {
   monacoEditorLogLanguageThemeDark,
   useMonacoEditorLogLanguage
 } from '../common/analysis-run-logs/use-monaco-editor-log-language';
+
+import { FullViewButton } from './promotion-step-full-view-button';
 
 // Pinned rather than left to Monaco's default so the panel can be sized in
 // whole lines.
@@ -40,12 +41,17 @@ const expandedKey = 'promotion-step-logs-expanded';
 
 type StepLogsProps = {
   lines: string[];
+  // A fixed height, for when the panel already has the room it needs (e.g. a
+  // full view). Replaces the content-sized height and the expand toggle.
+  height?: string;
+  // Offers a full view from the toolbar when given.
+  onFullView?(): void;
 };
 
 // A log panel for a step's console output. Uses the same Monaco log language
 // and themes as AnalysisRun logs, so both read the same way, and adds an
 // expand toggle for reading more than a preview at a time.
-export const StepLogs = ({ lines }: StepLogsProps) => {
+export const StepLogs = ({ lines, height: fixedHeight, onFullView }: StepLogsProps) => {
   const [expanded, setExpanded] = useLocalStorage(expandedKey, false);
   const [wrap, setWrap] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -56,11 +62,11 @@ export const StepLogs = ({ lines }: StepLogsProps) => {
 
   const value = useMemo(() => lines.join('\n'), [lines]);
 
-  const expandable = lines.length > collapsedLines;
+  const expandable = !fixedHeight && lines.length > collapsedLines;
 
   // Never taller than the log itself, so a three-line log gets a three-line box.
   const visibleLines = Math.min(lines.length, expanded ? expandedLines : collapsedLines);
-  const height = `${visibleLines * lineHeightPx + chromePx}px`;
+  const height = fixedHeight ?? `${visibleLines * lineHeightPx + chromePx}px`;
 
   const copy = async () => {
     try {
@@ -96,15 +102,21 @@ export const StepLogs = ({ lines }: StepLogsProps) => {
           />
         </Tooltip>
         {expandable && (
-          <Button
-            size='small'
-            type='text'
-            icon={<FontAwesomeIcon icon={expanded ? faCompress : faExpand} className='text-xs' />}
-            onClick={() => setExpanded(!expanded)}
-          >
-            {expanded ? 'Collapse' : 'Expand'}
-          </Button>
+          <Tooltip title={expanded ? 'Collapse' : 'Expand'}>
+            <Button
+              size='small'
+              type='text'
+              aria-label={expanded ? 'Collapse' : 'Expand'}
+              icon={
+                // One icon for both states; the tooltip says which. Rotated:
+                // the set has no vertical "squeeze" icon.
+                <FontAwesomeIcon icon={faArrowsLeftRightToLine} rotation={90} className='text-xs' />
+              }
+              onClick={() => setExpanded(!expanded)}
+            />
+          </Tooltip>
         )}
+        {onFullView && <FullViewButton onClick={onFullView} />}
       </Flex>
 
       <Editor

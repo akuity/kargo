@@ -1,6 +1,6 @@
 import { faCog, faLinesLeaning, faTerminal } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { Flex, Segmented, Tag, Typography } from 'antd';
+import { Flex, Modal, Segmented, Tag, Typography } from 'antd';
 import { SegmentedLabeledOption } from 'antd/es/segmented';
 import classNames from 'classnames';
 import { useMemo, useState } from 'react';
@@ -18,12 +18,16 @@ import uiPlugins from '@ui/plugins';
 import { UiPluginHoles } from '@ui/plugins/atoms/ui-plugin-hole/ui-plugin-holes';
 
 import { StepDuration } from './promotion-step-duration';
+import { FullViewButton } from './promotion-step-full-view-button';
 import { StepLogs } from './promotion-step-logs';
 import { StepStatusIcon } from './promotion-step-status-icon';
 import { StepTitle } from './promotion-step-title';
 import { objectToYAML } from './utils/promotion';
 import { getUserStepAlias } from './utils/promotion-step-groups';
 import { getStepLogs } from './utils/step-logs';
+
+// Leaves room for the modal's title and padding on a short window.
+const fullViewHeight = '75vh';
 
 export const Step = ({
   step,
@@ -39,6 +43,7 @@ export const Step = ({
   stepIndex: number;
 }) => {
   const [showDetails, setShowDetails] = useState(false);
+  const [showFullView, setShowFullView] = useState(false);
 
   const { registry } = usePromotionDirectivesRegistryContext();
 
@@ -111,12 +116,21 @@ export const Step = ({
 
   const selectedOpt = opts.find((opt) => opt.value === chosenOpt)?.value ?? opts[0]?.value;
 
+  // Opening a view in full counts as choosing it, so the modal does not move to
+  // another view if the step's output arrives while it is open.
+  const openFullView = () => {
+    setChosenOpt(selectedOpt);
+    setShowFullView(true);
+  };
+
   // Serializing a step's whole output runs on every promotion watch tick
   // otherwise, which is exactly the cost the log panel exists to avoid.
   const yamlView = useMemo(
     () => ({ config: meta?.config, output: objectToYAML(output) }),
     [meta?.config, output]
   );
+
+  const yamlValue = yamlView[selectedOpt as keyof typeof yamlView] ?? '';
 
   const filteredUiPlugins = uiPlugins
     .filter((plugin) =>
@@ -198,14 +212,35 @@ export const Step = ({
           />
         )}
         {selectedOpt === 'logs' && logs ? (
-          <StepLogs lines={logs} />
+          <StepLogs lines={logs} onFullView={openFullView} />
         ) : (
-          <YamlEditor
-            value={yamlView[selectedOpt as keyof typeof yamlView] ?? ''}
-            height='200px'
-            disabled
-          />
+          <>
+            {selectedOpt && (
+              <Flex justify='end' className='mb-1'>
+                <FullViewButton onClick={openFullView} />
+              </Flex>
+            )}
+            <YamlEditor value={yamlValue} height='200px' disabled />
+          </>
         )}
+        {/* Rendered from the step's own state rather than the modal stack so
+            that it keeps following the step's output while the promotion runs.
+            Escape and the close button both dismiss it. */}
+        <Modal
+          open={showFullView && !!selectedOpt}
+          onCancel={() => setShowFullView(false)}
+          footer={null}
+          width='90vw'
+          centered
+          destroyOnHidden
+          title={step.as || meta.spec.identifier}
+        >
+          {selectedOpt === 'logs' && logs ? (
+            <StepLogs lines={logs} height={fullViewHeight} />
+          ) : (
+            <YamlEditor value={yamlValue} height={fullViewHeight} disabled />
+          )}
+        </Modal>
       </>
     )
   };
