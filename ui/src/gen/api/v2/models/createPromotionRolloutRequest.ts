@@ -5,6 +5,7 @@
  * REST API for Kargo
  * OpenAPI spec version: v1alpha1
  */
+import type { TargetUpdateStrategy } from './targetUpdateStrategy';
 
 export interface CreatePromotionRolloutRequest {
   /** Freight is the name of the Freight to promote. */
@@ -16,4 +17,11 @@ export interface CreatePromotionRolloutRequest {
    * retried for only the Targets that failed.
    */
   targets?: string[];
+  /**
+   * UpdateStrategy paces this rollout in place of the Stage's update
+   * strategy. Omitted, the Stage's applies. Either way, a percentage is
+   * resolved against the Targets the rollout promotes to, and the numbers
+   * that gives are recorded with the rollout for good.
+   */
+  updateStrategy?: TargetUpdateStrategy;
 }

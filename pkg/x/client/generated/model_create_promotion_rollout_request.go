@@ -23,6 +23,8 @@ type CreatePromotionRolloutRequest struct {
 	Freight *string `json:"freight,omitempty"`
 	// Targets names the Targets to promote to, each of which the Stage must govern. Omitted, the rollout promotes to every Target the Stage governs. Naming a few is how a canary is run or a failed rollout is retried for only the Targets that failed.
 	Targets []string `json:"targets,omitempty"`
+	// UpdateStrategy paces this rollout in place of the Stage's update strategy. Omitted, the Stage's applies. Either way, a percentage is resolved against the Targets the rollout promotes to, and the numbers that gives are recorded with the rollout for good.
+	UpdateStrategy *TargetUpdateStrategy `json:"updateStrategy,omitempty"`
 }
 
 // NewCreatePromotionRolloutRequest instantiates a new CreatePromotionRolloutRequest object
@@ -106,6 +108,38 @@ func (o *CreatePromotionRolloutRequest) SetTargets(v []string) {
 	o.Targets = v
 }
 
+// GetUpdateStrategy returns the UpdateStrategy field value if set, zero value otherwise.
+func (o *CreatePromotionRolloutRequest) GetUpdateStrategy() TargetUpdateStrategy {
+	if o == nil || IsNil(o.UpdateStrategy) {
+		var ret TargetUpdateStrategy
+		return ret
+	}
+	return *o.UpdateStrategy
+}
+
+// GetUpdateStrategyOk returns a tuple with the UpdateStrategy field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *CreatePromotionRolloutRequest) GetUpdateStrategyOk() (*TargetUpdateStrategy, bool) {
+	if o == nil || IsNil(o.UpdateStrategy) {
+		return nil, false
+	}
+	return o.UpdateStrategy, true
+}
+
+// HasUpdateStrategy returns a boolean if a field has been set.
+func (o *CreatePromotionRolloutRequest) HasUpdateStrategy() bool {
+	if o != nil && !IsNil(o.UpdateStrategy) {
+		return true
+	}
+
+	return false
+}
+
+// SetUpdateStrategy gets a reference to the given TargetUpdateStrategy and assigns it to the UpdateStrategy field.
+func (o *CreatePromotionRolloutRequest) SetUpdateStrategy(v TargetUpdateStrategy) {
+	o.UpdateStrategy = &v
+}
+
 func (o CreatePromotionRolloutRequest) MarshalJSON() ([]byte, error) {
 	toSerialize,err := o.ToMap()
 	if err != nil {
@@ -121,6 +155,9 @@ func (o CreatePromotionRolloutRequest) ToMap() (map[string]interface{}, error) {
 	}
 	if !IsNil(o.Targets) {
 		toSerialize["targets"] = o.Targets
+	}
+	if !IsNil(o.UpdateStrategy) {
+		toSerialize["updateStrategy"] = o.UpdateStrategy
 	}
 	return toSerialize, nil
 }

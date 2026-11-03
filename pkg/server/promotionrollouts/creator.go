@@ -36,11 +36,13 @@ func NewCreator(store promotionrolloutstore.Store, targetLister targets.Lister) 
 // selectors are resolved against the Project's Targets, narrowed to
 // targetNames if any are given, and the rollout's update strategy is
 // resolved against how many that leaves; both are recorded with the rollout
-// for good. A name the Stage does not govern is refused rather than
-// promoted to, since the Stage's selectors are what decide where its
-// Freight may go. The Stage must be target-aware and the Freight available
-// to it: the caller has checked both, and that the caller may promote to the
-// Stage, which is the whole authorization decision. actor is recorded as the
+// for good. The strategy is the Stage's, or updateStrategy in its place
+// when the caller gives one, which is how a retry runs one Target at a
+// time. A name the Stage does not govern is refused rather than promoted
+// to, since the Stage's selectors are what decide where its Freight may go.
+// The Stage must be target-aware and the Freight available to it: the
+// caller has checked both, and that the caller may promote to the Stage,
+// which is the whole authorization decision. actor is recorded as the
 // rollout's creator.
 //
 // The Project's Targets are read without the caller's authorization. Which
@@ -53,6 +55,7 @@ func (cr *Creator) Create(
 	stage *kargoapi.Stage,
 	freight *kargoapi.Freight,
 	targetNames []string,
+	updateStrategy *kargoapi.TargetUpdateStrategy,
 	actor string,
 ) (*kargoapi.PromotionRollout, error) {
 	all, err := targets.ListFromStore(ctx, cr.targets, stage.Namespace)
@@ -68,7 +71,9 @@ func (cr *Creator) Create(
 			return nil, err
 		}
 	}
-	rollout, err := api.NewPromotionRollout(stage, freight.Name, governed)
+	// governed is already narrowed to the Targets promoted to, so the
+	// strategy is resolved against that count, not the Stage's whole fleet.
+	rollout, err := api.NewPromotionRolloutForAllTargets(stage, freight.Name, governed, updateStrategy)
 	if err != nil {
 		return nil, libhttp.Error(err, http.StatusBadRequest)
 	}

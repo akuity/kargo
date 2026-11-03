@@ -24,12 +24,16 @@ import (
 func TestCreate(t *testing.T) {
 	t.Parallel()
 
-	// body encodes a request to promote the Freight, as the API takes it, to
-	// the named Targets or, with none, to every one the Stage governs.
-	body := func(freight string, targets ...string) *bytes.Buffer {
-		raw, err := json.Marshal(createPromotionRolloutRequest{Freight: freight, Targets: targets})
+	// bodyOf encodes a request to create a rollout as the API takes it.
+	bodyOf := func(req createPromotionRolloutRequest) *bytes.Buffer {
+		raw, err := json.Marshal(req)
 		require.NoError(t, err)
 		return bytes.NewBuffer(raw)
+	}
+	// body encodes a request to promote the Freight to the named Targets or,
+	// with none, to every one the Stage governs, at the Stage's pace.
+	body := func(freight string, targets ...string) *bytes.Buffer {
+		return bodyOf(createPromotionRolloutRequest{Freight: freight, Targets: targets})
 	}
 
 	freight := &kargoapi.Freight{
@@ -279,6 +283,78 @@ func TestCreate(t *testing.T) {
 					kargoapi.PromotionRolloutUpdateStrategy{MaxConcurrent: 2, MaxFailures: 1},
 					rollout.Spec.UpdateStrategy,
 				)
+			},
+		},
+		{
+			name:    "created at the caller's pace in place of the Stage's",
+			store:   &fakeStore{targets: fleet.rows},
+			targets: fleet,
+			objects: objects,
+			method:  http.MethodPost,
+			url:     stageURL("prod"),
+			body: bodyOf(createPromotionRolloutRequest{
+				Freight: "fake-freight",
+				UpdateStrategy: &kargoapi.TargetUpdateStrategy{
+					MaxConcurrent: new(intstr.FromInt32(1)),
+					MaxFailures:   new(intstr.FromInt32(0)),
+				},
+			}),
+			assertions: func(t *testing.T, w *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusCreated, w.Code)
+				rollout := &kargoapi.PromotionRollout{}
+				require.NoError(t, json.Unmarshal(w.Body.Bytes(), rollout))
+				// The Stage says two at a time and tolerates half failing; the
+				// caller said one at a time and none, and the rollout records
+				// the caller's numbers.
+				require.Equal(
+					t,
+					kargoapi.PromotionRolloutUpdateStrategy{MaxConcurrent: 1, MaxFailures: 0},
+					rollout.Spec.UpdateStrategy,
+				)
+			},
+		},
+		{
+			name:    "the caller's percentages are resolved against the Targets promoted to",
+			store:   &fakeStore{targets: wideFleet.rows},
+			targets: wideFleet,
+			objects: objects,
+			method:  http.MethodPost,
+			url:     stageURL("prod"),
+			body: bodyOf(createPromotionRolloutRequest{
+				Freight: "fake-freight",
+				Targets: []string{"us-east", "us-west"},
+				UpdateStrategy: &kargoapi.TargetUpdateStrategy{
+					MaxConcurrent: new(intstr.FromString("50%")),
+					MaxFailures:   new(intstr.FromString("50%")),
+				},
+			}),
+			assertions: func(t *testing.T, w *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusCreated, w.Code)
+				rollout := &kargoapi.PromotionRollout{}
+				require.NoError(t, json.Unmarshal(w.Body.Bytes(), rollout))
+				// Half of the two named is one each, where half of the three
+				// the Stage governs would have been two.
+				require.Equal(
+					t,
+					kargoapi.PromotionRolloutUpdateStrategy{MaxConcurrent: 1, MaxFailures: 1},
+					rollout.Spec.UpdateStrategy,
+				)
+			},
+		},
+		{
+			name:    "a pace a Stage could not have is refused",
+			store:   &fakeStore{targets: fleet.rows},
+			targets: fleet,
+			objects: objects,
+			method:  http.MethodPost,
+			url:     stageURL("prod"),
+			body: bodyOf(createPromotionRolloutRequest{
+				Freight:        "fake-freight",
+				UpdateStrategy: &kargoapi.TargetUpdateStrategy{MaxConcurrent: new(intstr.FromInt32(0))},
+			}),
+			assertions: func(t *testing.T, w *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusUnprocessableEntity, w.Code)
+				require.Contains(t, w.Body.String(), "updateStrategy.maxConcurrent")
 			},
 		},
 		{

@@ -23,10 +23,11 @@ import (
 // @Description resources. The Stage must select Targets: its selectors are
 // @Description resolved against the project's Targets as the rollout is
 // @Description created, narrowed to the Targets named if any are, and its
-// @Description update strategy is resolved against how many that leaves;
-// @Description both are recorded with the rollout for good. A Target the
-// @Description Stage does not govern is refused. Everything else about the
-// @Description rollout is assigned by the server.
+// @Description update strategy, or the one the body gives in its place, is
+// @Description resolved against how many that leaves; both are recorded
+// @Description with the rollout for good. A Target the Stage does not
+// @Description govern is refused. Everything else about the rollout is
+// @Description assigned by the server.
 // @Description This is a promotion: it requires the promote verb on the
 // @Description Stage. A server that does not create PromotionRollouts
 // @Description responds 501.
@@ -113,7 +114,9 @@ func (h *Handler) create(c *gin.Context) {
 		actor = u.Actor()
 	}
 	var rollout *kargoapi.PromotionRollout
-	if rollout, err = h.creator.Create(ctx, stage, freight, req.Targets, actor); err != nil {
+	if rollout, err = h.creator.Create(
+		ctx, stage, freight, req.Targets, req.UpdateStrategy, actor,
+	); err != nil {
 		_ = c.Error(err)
 		return
 	}

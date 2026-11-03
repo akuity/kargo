@@ -4228,10 +4228,11 @@ export const getCreatePromotionRolloutUrl = (project: string, stage: string) => 
  * resources. The Stage must select Targets: its selectors are
  * resolved against the project's Targets as the rollout is
  * created, narrowed to the Targets named if any are, and its
- * update strategy is resolved against how many that leaves;
- * both are recorded with the rollout for good. A Target the
- * Stage does not govern is refused. Everything else about the
- * rollout is assigned by the server.
+ * update strategy, or the one the body gives in its place, is
+ * resolved against how many that leaves; both are recorded
+ * with the rollout for good. A Target the Stage does not
+ * govern is refused. Everything else about the rollout is
+ * assigned by the server.
  * This is a promotion: it requires the promote verb on the
  * Stage. A server that does not create PromotionRollouts
  * responds 501.
