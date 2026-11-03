@@ -361,3 +361,50 @@ func TestCreate(t *testing.T) {
 		},
 	})
 }
+
+func TestSelectTargets(t *testing.T) {
+	t.Parallel()
+	target := func(name string) kargoapi.Target {
+		return kargoapi.Target{ObjectMeta: metav1.ObjectMeta{Name: name}}
+	}
+	governed := []kargoapi.Target{target("eu-west"), target("us-east"), target("us-west")}
+	testCases := []struct {
+		name   string
+		names  []string
+		assert func(*testing.T, []kargoapi.Target, error)
+	}{
+		{
+			name:  "the named Targets, in the order governed lists them",
+			names: []string{"us-west", "eu-west"},
+			assert: func(t *testing.T, selected []kargoapi.Target, err error) {
+				require.NoError(t, err)
+				require.Equal(t, []kargoapi.Target{target("eu-west"), target("us-west")}, selected)
+			},
+		},
+		{
+			// The API refuses a name given twice, but a caller of Create may
+			// not have.
+			name:  "a name given twice counts once",
+			names: []string{"us-west", "us-west", "us-east"},
+			assert: func(t *testing.T, selected []kargoapi.Target, err error) {
+				require.NoError(t, err)
+				require.Equal(t, []kargoapi.Target{target("us-east"), target("us-west")}, selected)
+			},
+		},
+		{
+			name:  "names the Stage does not govern are reported together, once each",
+			names: []string{"nowhere", "us-east", "elsewhere", "nowhere"},
+			assert: func(t *testing.T, selected []kargoapi.Target, err error) {
+				require.Nil(t, selected)
+				require.ErrorContains(t, err, `Stage "prod" does not govern Targets elsewhere, nowhere;`)
+			},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+			selected, err := selectTargets("prod", governed, testCase.names)
+			testCase.assert(t, selected, err)
+		})
+	}
+}

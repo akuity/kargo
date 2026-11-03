@@ -4498,7 +4498,7 @@ func (r ApiListPromotionRolloutsRequest) After(after int64) ApiListPromotionRoll
 	return r
 }
 
-// The metadata.continue of the previous page, to read the page after it
+// The previous page&#39;s metadata.continue; with stage, must be one of the Stage&#39;s
 func (r ApiListPromotionRolloutsRequest) Continue_(continue_ string) ApiListPromotionRolloutsRequest {
 	r.continue_ = &continue_
 	return r

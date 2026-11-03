@@ -597,13 +597,18 @@ func TestRequireAccess(t *testing.T) {
 	var calls []can.Access
 	runTestCases(t, []testCase{
 		{
+			// A read is also a read of the Project's Promotions, which say what
+			// has become of the rollout's Targets.
 			name:      "a rollout read by number is authorized as the Project's",
 			store:     &fakeStore{},
 			authorize: recordAuthorizations(&calls),
 			method:    http.MethodGet,
 			url:       stageURL("prod") + "/1",
 			assertions: func(t *testing.T, _ *httptest.ResponseRecorder) {
-				require.Equal(t, []can.Access{can.Get().PromotionRollout(testProject, "")}, calls)
+				require.Equal(t, []can.Access{
+					can.Get().PromotionRollout(testProject, ""),
+					can.List().Promotion(testProject, ""),
+				}, calls)
 			},
 		},
 		{
@@ -613,7 +618,10 @@ func TestRequireAccess(t *testing.T) {
 			method:    http.MethodGet,
 			url:       projectURL(""),
 			assertions: func(t *testing.T, _ *httptest.ResponseRecorder) {
-				require.Equal(t, can.List().PromotionRollout(testProject, ""), calls[len(calls)-1])
+				require.Equal(t, []can.Access{
+					can.List().PromotionRollout(testProject, ""),
+					can.List().Promotion(testProject, ""),
+				}, calls[len(calls)-2:])
 			},
 		},
 	})

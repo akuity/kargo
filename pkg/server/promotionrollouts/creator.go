@@ -89,8 +89,11 @@ func (cr *Creator) Create(
 
 // selectTargets returns those of the Stage's governed Targets that are
 // named, in the order governed lists them. Every name must be governed; the
-// ones that are not are reported together, as a bad request.
+// ones that are not are reported together, as a bad request. A name given
+// more than once counts once: the API refuses duplicates, but a caller of
+// Create need not have.
 func selectTargets(stage string, governed []kargoapi.Target, names []string) ([]kargoapi.Target, error) {
+	names = slices.Compact(slices.Sorted(slices.Values(names)))
 	selected := make([]kargoapi.Target, 0, len(names))
 	for _, target := range governed {
 		if slices.Contains(names, target.Name) {

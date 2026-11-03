@@ -21,6 +21,7 @@ func TestGet(t *testing.T) {
 		return store
 	}
 	forbiddenStore := newStore()
+	promotionsForbiddenStore := newStore()
 
 	runTestCases(t, []testCase{
 		{
@@ -109,14 +110,16 @@ func TestGet(t *testing.T) {
 		},
 		{
 			// What has become of the Targets is read from the mirrored
-			// Promotions, which the caller must be allowed to list.
+			// Promotions, which the caller must be allowed to list. That is
+			// settled before the store is read.
 			name:      "a caller who may not list Promotions is refused",
-			store:     newStore(),
+			store:     promotionsForbiddenStore,
 			authorize: forbidPromotions,
 			method:    http.MethodGet,
 			url:       stageURL("prod") + "/1",
 			assertions: func(t *testing.T, w *httptest.ResponseRecorder) {
 				require.Equal(t, http.StatusForbidden, w.Code)
+				require.Zero(t, promotionsForbiddenStore.calls)
 			},
 		},
 	})

@@ -117,6 +117,6 @@ func (h *Handler) create(c *gin.Context) {
 		_ = c.Error(err)
 		return
 	}
-	logChange(ctx, "PromotionRollout created", project, rollout.Name)
+	logChange(ctx, "PromotionRollout created", project, rollout.Name, actor)
 	c.JSON(http.StatusCreated, rollout)
 }

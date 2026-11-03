@@ -52,9 +52,8 @@ func validateCreateRequest(req createPromotionRolloutRequest) field.ErrorList {
 	path := field.NewPath("freight")
 	if req.Freight == "" {
 		errs = append(errs, field.Required(path, "a name is required"))
-	}
-	for _, msg := range validation.IsDNS1123Subdomain(req.Freight) {
-		if req.Freight != "" {
+	} else {
+		for _, msg := range validation.IsDNS1123Subdomain(req.Freight) {
 			errs = append(errs, field.Invalid(path, req.Freight, msg))
 		}
 	}

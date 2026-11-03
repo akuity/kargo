@@ -38,7 +38,7 @@ func (h *Handler) get(c *gin.Context) {
 		return
 	}
 	var rollouts []*kargoapi.PromotionRollout
-	if rollouts, err = h.present(ctx, project, []promotionrolloutstore.Rollout{stored}); err != nil {
+	if rollouts, err = h.present(ctx, []promotionrolloutstore.Rollout{stored}); err != nil {
 		_ = c.Error(err)
 		return
 	}

@@ -14,7 +14,6 @@ import (
 	"github.com/akuity/kargo/pkg/server/auth/can"
 	"github.com/akuity/kargo/pkg/server/middleware"
 	"github.com/akuity/kargo/pkg/server/targets"
-	"github.com/akuity/kargo/pkg/server/user"
 )
 
 // Handler serves the PromotionRollout endpoints of one API server.
@@ -71,10 +70,11 @@ const (
 
 // Register adds the PromotionRollout routes to a project's route group.
 // Every route first confirms that a database is configured. Reads then
-// check that the caller holds the verb on the Project's rollouts. A create
-// is a promotion, so it is authorized by the promote verb on the Stage
-// instead, which the handler checks once it knows the Stage; before that, a
-// server that does not create rollouts refuses it.
+// check that the caller holds the verb on the Project's rollouts, and may
+// list its Promotions; see require. A create is a promotion, so it is
+// authorized by the promote verb on the Stage instead, which the handler
+// checks once it knows the Stage; before that, a server that does not
+// create rollouts refuses it.
 //
 // A rollout belongs to one Stage and is numbered among its rollouts, so it
 // is created and read under the Stage, as a Promotion is created; the
@@ -87,17 +87,31 @@ func (h *Handler) Register(project *gin.RouterGroup) {
 	stage.GET("/:number", h.require(can.Get()), h.get)
 }
 
-// require returns middleware that checks the caller may perform the verb on
-// the Project's rollouts, and refuses the request if not, so that no handler
-// reaches the store for a caller who may not. A rollout read by its number
-// has no name to check until it is read, so access to one is access to all
-// of the Project's.
+// require returns middleware that checks the caller may read the Project's
+// rollouts, and refuses the request if not, so that no handler reaches the
+// store for a caller who may not. That takes the verb on the Project's
+// rollouts: a rollout read by its number has no name to check until it is
+// read, so access to one is access to all of the Project's. It also takes
+// list on the Project's Promotions. A rollout is served with what has become
+// of its Targets, which present reads from the mirrored Promotions in the
+// database, and the database carries no authorization of its own; reading
+// those Promotions from Kubernetes would take list on them, so it is
+// required here too. A caller who may read rollouts but not Promotions is
+// refused, as the API server refused them when it read the Promotions
+// themselves.
 func (h *Handler) require(verb can.Verb) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		access := verb.PromotionRollout(c.Param(paramProject), "")
-		if err := h.authorize(c.Request.Context(), access); err != nil {
-			_ = c.Error(err)
-			c.Abort()
+		ctx := c.Request.Context()
+		project := c.Param(paramProject)
+		for _, access := range []can.Access{
+			verb.PromotionRollout(project, ""),
+			can.List().Promotion(project, ""),
+		} {
+			if err := h.authorize(ctx, access); err != nil {
+				_ = c.Error(err)
+				c.Abort()
+				return
+			}
 		}
 	}
 }
@@ -106,25 +120,13 @@ func (h *Handler) require(verb can.Verb) gin.HandlerFunc {
 // API serves, each with what has become of its Targets: the newest
 // Promotion to each and its phase, and a tally of those. That comes from the
 // mirrored Promotions the rollout's id links, so it lags the cluster by the
-// mirror's sync.
-//
-// Those are Promotions, read from the database, which carries no
-// authorization of its own. Reading them from Kubernetes would take list on
-// the Project's Promotions, so it is required here too: a caller who may read
-// rollouts but not Promotions is refused, as the API server refused them when
-// it read the Promotions themselves.
+// mirror's sync. That the caller may list the Project's Promotions has been
+// checked by then; see require.
 func (h *Handler) present(
 	ctx context.Context,
-	project string,
 	stored []promotionrolloutstore.Rollout,
 ) ([]*kargoapi.PromotionRollout, error) {
 	rollouts := make([]*kargoapi.PromotionRollout, len(stored))
-	if len(stored) == 0 {
-		return rollouts, nil
-	}
-	if err := h.authorize(ctx, can.List().Promotion(project, "")); err != nil {
-		return nil, err
-	}
 	for i, s := range stored {
 		rows, err := h.store.ListTargetStatuses(ctx, s)
 		if err != nil {
@@ -136,13 +138,12 @@ func (h *Handler) present(
 	return rollouts, nil
 }
 
-// logChange records a change to a PromotionRollout and who made it.
-// PromotionRollouts are not Kubernetes resources, so the Kubernetes audit
-// log never sees these.
-func logChange(ctx context.Context, what, project, name string) {
-	actor := "unknown"
-	if id, ok := user.IdentityFromContext(ctx); ok {
-		actor = id.Actor()
+// logChange records a change to a PromotionRollout and who made it, which
+// the caller has already worked out from the request. PromotionRollouts are
+// not Kubernetes resources, so the Kubernetes audit log never sees these.
+func logChange(ctx context.Context, what, project, name, actor string) {
+	if actor == "" {
+		actor = "unknown"
 	}
 	logging.LoggerFromContext(ctx).Info(
 		what,

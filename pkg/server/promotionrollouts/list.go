@@ -50,7 +50,7 @@ const (
 // @Param freight query string false "Only PromotionRollouts of this Freight; requires stage"
 // @Param latest query boolean false "Each Stage's latest rollouts, or the named Stage's; takes only stage besides"
 // @Param after query int64 false "Only the Stage's PromotionRollouts numbered above this, oldest first; requires stage"
-// @Param continue query string false "The metadata.continue of the previous page, to read the page after it"
+// @Param continue query string false "The previous page's metadata.continue; with stage, must be one of the Stage's"
 // @Param limit query int false "The page size, at most 500; 50 if omitted"
 // @Produce json
 // @Success 200 {object} kargoapi.PromotionRolloutList "PromotionRolloutList resource"
@@ -64,14 +64,24 @@ func (h *Handler) list(c *gin.Context) {
 		stored []promotionrolloutstore.Rollout
 		err    error
 	)
-	latest, _ := strconv.ParseBool(c.Query(queryLatest))
-	if latest {
-		if c.Query(queryFreight) != "" || c.Query(queryAfter) != "" || c.Query(queryContinue) != "" {
-			_ = c.Error(libhttp.ErrorStr(
-				"latest cannot be combined with freight, after or continue",
-				http.StatusBadRequest,
-			))
+	var latest bool
+	if raw := c.Query(queryLatest); raw != "" {
+		if latest, err = strconv.ParseBool(raw); err != nil {
+			_ = c.Error(libhttp.ErrorStr(fmt.Sprintf("invalid latest %q", raw), http.StatusBadRequest))
 			return
+		}
+	}
+	if latest {
+		// The latest rollouts are not a page of anything, so nothing that
+		// narrows or pages a list goes with them.
+		for _, param := range []string{queryFreight, queryAfter, queryContinue, queryLimit} {
+			if c.Query(param) != "" {
+				_ = c.Error(libhttp.ErrorStr(
+					"latest cannot be combined with freight, after, continue or limit",
+					http.StatusBadRequest,
+				))
+				return
+			}
 		}
 		stored, err = h.store.ListLatest(ctx, project, stage)
 	} else {
@@ -87,7 +97,7 @@ func (h *Handler) list(c *gin.Context) {
 		return
 	}
 
-	rollouts, err := h.present(ctx, project, stored)
+	rollouts, err := h.present(ctx, stored)
 	if err != nil {
 		_ = c.Error(err)
 		return
@@ -106,9 +116,10 @@ func (h *Handler) list(c *gin.Context) {
 
 // listOptions reads a page's options from the request: which rollouts, and
 // from where. A continue token names the rollout the previous page ended
-// at, which is read back to find where this one starts. The limit the page
-// was read with is kept on the context for the handler to tell a full page
-// by.
+// at, which is read back to find where this one starts; the parameters are
+// checked first, so that a request that is refused never reads it. The
+// limit the page was read with is kept on the context for the handler to
+// tell a full page by.
 func (h *Handler) listOptions(c *gin.Context) (promotionrolloutstore.ListOptions, error) {
 	ctx := c.Request.Context()
 	project := c.Param(paramProject)
@@ -129,6 +140,18 @@ func (h *Handler) listOptions(c *gin.Context) (promotionrolloutstore.ListOptions
 	}
 	c.Set(queryLimit, int(opts.Limit))
 
+	// after is -1 when not given: a number is never negative.
+	after := int64(-1)
+	if raw := c.Query(queryAfter); raw != "" {
+		if opts.Stage == "" || opts.Freight != "" {
+			return opts, libhttp.ErrorStr("after requires stage and excludes freight", http.StatusBadRequest)
+		}
+		var err error
+		if after, err = strconv.ParseInt(raw, 10, 64); err != nil || after < 0 {
+			return opts, libhttp.ErrorStr(fmt.Sprintf("invalid after %q", raw), http.StatusBadRequest)
+		}
+	}
+
 	var cursor *promotionrolloutstore.Cursor
 	if token := c.Query(queryContinue); token != "" {
 		rollout, err := h.store.Get(ctx, project, token)
@@ -138,25 +161,31 @@ func (h *Handler) listOptions(c *gin.Context) (promotionrolloutstore.ListOptions
 		if err != nil {
 			return opts, err
 		}
+		// A Stage's rollouts are paged by number, which only means something
+		// among that Stage's rollouts. A token from another Stage would page
+		// silently from the wrong place.
+		if opts.Stage != "" && rollout.StageName != opts.Stage {
+			return opts, libhttp.ErrorStr(
+				fmt.Sprintf(
+					"continue token %q names a PromotionRollout of Stage %q, not %q",
+					token, rollout.StageName, opts.Stage,
+				),
+				http.StatusBadRequest,
+			)
+		}
 		at := promotionrolloutstore.CursorOf(rollout)
 		cursor = &at
 	}
-	if raw := c.Query(queryAfter); raw != "" {
-		if opts.Stage == "" || opts.Freight != "" {
-			return opts, libhttp.ErrorStr("after requires stage and excludes freight", http.StatusBadRequest)
-		}
-		after, err := strconv.ParseInt(raw, 10, 64)
-		if err != nil || after < 0 {
-			return opts, libhttp.ErrorStr(fmt.Sprintf("invalid after %q", raw), http.StatusBadRequest)
-		}
-		// A page continues after its last rollout, which is past the number
-		// asked for.
-		if cursor == nil {
-			cursor = &promotionrolloutstore.Cursor{Number: after}
-		}
-		opts.After = cursor
+	if after < 0 {
+		opts.Before = cursor
 		return opts, nil
 	}
-	opts.Before = cursor
+	// A page continues after its last rollout, which is normally past the
+	// number asked for; whichever is further along is where this one starts,
+	// so that after is honored whether or not a token comes with it.
+	if cursor == nil || cursor.Number < after {
+		cursor = &promotionrolloutstore.Cursor{Number: after}
+	}
+	opts.After = cursor
 	return opts, nil
 }

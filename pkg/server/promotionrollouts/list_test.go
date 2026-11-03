@@ -44,6 +44,7 @@ func TestList(t *testing.T) {
 	}
 
 	forbiddenStore := newStore()
+	promotionsForbiddenStore := newStore()
 	failingStore := &fakeStore{err: errors.New("database is down")}
 
 	runTestCases(t, []testCase{
@@ -183,6 +184,18 @@ func TestList(t *testing.T) {
 			},
 		},
 		{
+			// A Stage's rollouts are paged by number, which means nothing
+			// among another Stage's.
+			name:   "a continue token from another Stage is refused",
+			store:  newStore(),
+			method: http.MethodGet,
+			url:    projectURL("?stage=prod&continue=staging.01A.abc"),
+			assertions: func(t *testing.T, w *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusBadRequest, w.Code)
+				require.Contains(t, w.Body.String(), `of Stage \"staging\", not \"prod\"`)
+			},
+		},
+		{
 			name:   "an invalid limit is refused",
 			store:  newStore(),
 			method: http.MethodGet,
@@ -219,6 +232,37 @@ func TestList(t *testing.T) {
 			},
 		},
 		{
+			// A page read with after continues from its last rollout, which is
+			// past the number asked for.
+			name:   "continues an after list from where the previous page ended",
+			store:  newStore(),
+			method: http.MethodGet,
+			url:    projectURL("?stage=prod&after=0&continue=prod.01A.abc"),
+			assertions: func(t *testing.T, w *httptest.ResponseRecorder) {
+				require.Equal(t, []string{"prod.01B.abc"}, names(decode(t, w)))
+			},
+		},
+		{
+			// A continue token never takes a list back below the number asked
+			// for.
+			name:   "after is honored alongside a continue token",
+			store:  newStore(),
+			method: http.MethodGet,
+			url:    projectURL("?stage=prod&after=5&continue=prod.01A.abc"),
+			assertions: func(t *testing.T, w *httptest.ResponseRecorder) {
+				require.Empty(t, decode(t, w))
+			},
+		},
+		{
+			name:   "an invalid latest is refused",
+			store:  newStore(),
+			method: http.MethodGet,
+			url:    projectURL("?latest=yes"),
+			assertions: func(t *testing.T, w *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusBadRequest, w.Code)
+			},
+		},
+		{
 			// prod is promoting through prod.01B and last finished prod.01A;
 			// staging is promoting through staging.01A and has finished none.
 			name:   "lists each Stage's latest rollouts",
@@ -245,6 +289,15 @@ func TestList(t *testing.T) {
 			store:  newStore(),
 			method: http.MethodGet,
 			url:    projectURL("?latest=true&continue=prod.01A.abc"),
+			assertions: func(t *testing.T, w *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusBadRequest, w.Code)
+			},
+		},
+		{
+			name:   "the latest rollouts take no limit",
+			store:  newStore(),
+			method: http.MethodGet,
+			url:    projectURL("?latest=true&limit=1"),
 			assertions: func(t *testing.T, w *httptest.ResponseRecorder) {
 				require.Equal(t, http.StatusBadRequest, w.Code)
 			},
@@ -277,25 +330,16 @@ func TestList(t *testing.T) {
 		},
 		{
 			// What has become of the Targets is read from the mirrored
-			// Promotions, which the caller must be allowed to list.
+			// Promotions, which the caller must be allowed to list. That is
+			// settled before the store is read.
 			name:      "a caller who may not list Promotions is refused",
-			store:     newStore(),
+			store:     promotionsForbiddenStore,
 			authorize: forbidPromotions,
 			method:    http.MethodGet,
 			url:       projectURL("?stage=prod"),
 			assertions: func(t *testing.T, w *httptest.ResponseRecorder) {
 				require.Equal(t, http.StatusForbidden, w.Code)
-			},
-		},
-		{
-			// With no rollouts there are no Promotions to read.
-			name:      "an empty list does not ask about Promotions",
-			store:     &fakeStore{},
-			authorize: forbidPromotions,
-			method:    http.MethodGet,
-			url:       projectURL(""),
-			assertions: func(t *testing.T, w *httptest.ResponseRecorder) {
-				require.Empty(t, decode(t, w))
+				require.Zero(t, promotionsForbiddenStore.calls)
 			},
 		},
 	})
