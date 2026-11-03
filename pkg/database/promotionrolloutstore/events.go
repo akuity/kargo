@@ -14,4 +14,6 @@ import (
 // an event only to the subscribers connected when it is published.
 //
 // Rollouts are never deleted on their own, so no Deleted event is published.
-var Events = nats.NewTopic[Key, database.PromotionRolloutRow]("kargo.promotionrollouts")
+var Events = nats.NewTopic[Key, database.PromotionRolloutRow](
+	nats.InternalSubjectPrefix + ".promotionrollouts",
+)

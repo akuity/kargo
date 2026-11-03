@@ -130,7 +130,7 @@ func TestStoreIntegration(t *testing.T) {
 				// The creation is announced with the row as stored.
 				published := events.forProject("create")
 				require.Len(t, published, 1)
-				require.Equal(t, "kargo.promotionrollouts.created", published[0].subject)
+				require.Equal(t, "akuity.platform.internal.promotionrollouts.created", published[0].subject)
 				require.Equal(t, nats.Created, published[0].event.Kind)
 				require.Equal(t, Key{Project: "create", Name: "prod.01A.abc"}, published[0].event.Key)
 				require.Equal(t, rollout.PromotionRolloutRow, *published[0].event.New)
@@ -594,7 +594,7 @@ func TestStoreIntegration(t *testing.T) {
 				published := events.forProject("update")
 				require.Len(t, published, 2)
 				require.Equal(t, nats.Created, published[0].event.Kind)
-				require.Equal(t, "kargo.promotionrollouts.updated", published[1].subject)
+				require.Equal(t, "akuity.platform.internal.promotionrollouts.updated", published[1].subject)
 				require.Equal(t, nats.Updated, published[1].event.Kind)
 				require.Equal(t, Key{Project: "update", Name: "prod.01A.abc"}, published[1].event.Key)
 				require.Equal(t, created.PromotionRolloutRow, *published[1].event.Old)

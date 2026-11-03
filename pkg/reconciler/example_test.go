@@ -42,7 +42,7 @@ type TargetRow struct {
 // targetEvents is the topic Target events travel on. The database row is
 // the event body, so the API server publishes exactly what it committed. In
 // the real code this is declared once beside the store.
-var targetEvents = nats.NewTopic[TargetKey, TargetRow]("kargo.targets")
+var targetEvents = nats.NewTopic[TargetKey, TargetRow](nats.InternalSubjectPrefix + ".targets")
 
 // targetStore is the slice of the database queries a Target controller
 // needs.

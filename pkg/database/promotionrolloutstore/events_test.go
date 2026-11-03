@@ -70,7 +70,7 @@ func TestPublish(t *testing.T) {
 			assert: func(t *testing.T, events *recordingPublisher) {
 				require.Len(t, events.events, 1)
 				e := events.events[0]
-				require.Equal(t, "kargo.promotionrollouts.created", e.subject)
+				require.Equal(t, "akuity.platform.internal.promotionrollouts.created", e.subject)
 				require.Equal(t, nats.Created, e.event.Kind)
 				require.Equal(t, Key{Project: "demo", Name: "prod.01A.abc"}, e.event.Key)
 				require.Nil(t, e.event.Old)
@@ -86,7 +86,7 @@ func TestPublish(t *testing.T) {
 			assert: func(t *testing.T, events *recordingPublisher) {
 				require.Len(t, events.events, 1)
 				e := events.events[0]
-				require.Equal(t, "kargo.promotionrollouts.updated", e.subject)
+				require.Equal(t, "akuity.platform.internal.promotionrollouts.updated", e.subject)
 				require.Equal(t, nats.Updated, e.event.Kind)
 				require.Equal(t, Key{Project: "demo", Name: "prod.01A.abc"}, e.event.Key)
 				require.Equal(t, old, *e.event.Old)
