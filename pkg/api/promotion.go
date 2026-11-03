@@ -222,10 +222,20 @@ const promotionRequestKind = "PromotionRequest"
 // Target, so Promotions to distinct Targets run in parallel and Promotions
 // to the same Target never contend -- while the children of a queued
 // request wait for the current round of fan-out to end.
+//
+// A PromotionRollout's child is admitted as soon as it exists. The Stage
+// records nothing about rollouts: they are serialized where they live, in the
+// database, which allows one Running rollout per Stage, and the reconciler
+// that progresses them creates children only for that rollout, at most one
+// per Target, and ends it only once every child has finished. The Stage would
+// only repeat a decision that has already been made.
 func StageAwaitsPromotion(
 	stage *kargoapi.Stage,
 	promo *kargoapi.Promotion,
 ) bool {
+	if promo.Spec.PromotionRollout != "" {
+		return true
+	}
 	if promo.Spec.Target != "" {
 		owner := PromotionRequestOwner(promo)
 		return owner != "" &&

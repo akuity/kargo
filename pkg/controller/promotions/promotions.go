@@ -411,7 +411,9 @@ func (r *reconciler) Reconcile(
 	// decides it is the next Promotion to run. A Promotion to one of the
 	// Stage's Targets is admitted by the Stage's current PromotionRequest
 	// instead, so all of one request's children -- at most one per Target --
-	// run in parallel while consecutive requests remain serialized.
+	// run in parallel while consecutive requests remain serialized. A
+	// PromotionRollout's child is admitted outright: rollouts are serialized
+	// by the database and the reconciler that progresses them.
 	if !api.StageAwaitsPromotion(stage, promo) {
 		// The watch on the Stage will requeue the Promotion if the Stage
 		// acknowledges it.
