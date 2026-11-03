@@ -1,23 +1,20 @@
-import { faEllipsisVertical } from '@fortawesome/free-solid-svg-icons';
+import { faChevronDown } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Dropdown, Flex, Tag, Typography, theme } from 'antd';
-import { useMemo } from 'react';
 
-import { NO_GROUPING, STAGE_GROUPING, splitKeys } from '../model/target-grouping';
+import { NO_GROUPING, STAGE_GROUPING } from '../model/target-grouping';
 
 /**
- * GroupByFilter chooses the label key a fleet is sliced along, as a row of
- * pills: Stage first, when there are Stages to group by, then the keys the
- * Targets actually carry, none of them picked to begin with. Stage never folds
- * into the dropdown: it is the one axis every project with a fleet has. Each
- * pill toggles, so the way back to an ungrouped fleet is to unpick the key in
- * force rather than to find a "None" among the axes -- not grouping is the
- * absence of a choice, not a choice of its own.
+ * GroupByFilter chooses the axis a fleet is sliced along, as two pills: Stage,
+ * when there are Stages to group by, and Label, a dropdown of every label key
+ * the Targets actually carry. Neither is picked to begin with. Each choice
+ * toggles, so the way back to an ungrouped fleet is to unpick the axis in force
+ * rather than to find a "None" among the axes -- not grouping is the absence of
+ * a choice, not a choice of its own.
  *
- * Keys that do not fit fold into a dropdown behind a dots pill, and that pill
- * takes the selected background when the axis in force is one of them -- so the
- * row always shows whether what is selected is on it or behind the dots,
- * without the dots themselves changing shape.
+ * The Label pill takes the selected background and names the key while a label
+ * is the axis in force, so the row always shows what the fleet is grouped by
+ * without opening the dropdown.
  */
 export const GroupByFilter = ({
   keys,
@@ -36,8 +33,7 @@ export const GroupByFilter = ({
   disabled?: boolean;
 }) => {
   const { token } = theme.useToken();
-  const { inline, overflow } = useMemo(() => splitKeys(keys), [keys]);
-  const overflowSelected = overflow.includes(value);
+  const labelSelected = keys.includes(value);
 
   // Picking the key already in force unpicks it, leaving the fleet ungrouped.
   const toggle = (key: string) => (value === key ? NO_GROUPING : key);
@@ -66,26 +62,14 @@ export const GroupByFilter = ({
           Stage
         </Tag.CheckableTag>
       )}
-      {inline.map((key) => (
-        <Tag.CheckableTag
-          key={key}
-          className='m-0'
-          style={outline(value === key)}
-          disabled={disabled}
-          checked={value === key}
-          onChange={() => onChange(toggle(key))}
-        >
-          {key}
-        </Tag.CheckableTag>
-      ))}
-      {overflow.length > 0 && (
+      {keys.length > 0 && (
         <Dropdown
           trigger={['click']}
           disabled={disabled}
           menu={{
             selectable: true,
-            selectedKeys: overflowSelected ? [value] : [],
-            items: overflow.map((key) => ({ key, label: key })),
+            selectedKeys: labelSelected ? [value] : [],
+            items: keys.map((key) => ({ key, label: key })),
             onClick: ({ key }) => onChange(toggle(key))
           }}
         >
@@ -93,14 +77,16 @@ export const GroupByFilter = ({
               Dropdown injects lands on something that forwards it. */}
           <Tag.CheckableTag
             className='m-0'
-            style={outline(overflowSelected)}
+            style={outline(labelSelected)}
             disabled={disabled}
-            checked={overflowSelected}
-            aria-label={`${overflow.length} more grouping axes`}
+            checked={labelSelected}
             // The pill opens the dropdown; it is not a choice of its own.
             onChange={() => undefined}
           >
-            <FontAwesomeIcon icon={faEllipsisVertical} />
+            <Flex gap={6} align='center'>
+              {labelSelected ? value : 'Label'}
+              <FontAwesomeIcon icon={faChevronDown} className='text-[10px]' />
+            </Flex>
           </Tag.CheckableTag>
         </Dropdown>
       )}
