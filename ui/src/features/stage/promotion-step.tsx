@@ -202,26 +202,20 @@ export const Step = ({
       />
     ) : (
       <>
-        {opts.length > 1 && (
-          <Segmented
-            value={selectedOpt}
-            size='small'
-            options={opts}
-            onChange={setChosenOpt}
-            className='mb-2'
-          />
+        {/* Shown even for a single view, so that Full view always has the
+            same place to sit and the view is labelled. */}
+        {selectedOpt && (
+          <Flex align='center' className='mb-2'>
+            <Segmented value={selectedOpt} size='small' options={opts} onChange={setChosenOpt} />
+            <div className='ml-auto'>
+              <FullViewButton onClick={openFullView} />
+            </div>
+          </Flex>
         )}
         {selectedOpt === 'logs' && logs ? (
-          <StepLogs lines={logs} onFullView={openFullView} />
+          <StepLogs lines={logs} />
         ) : (
-          <>
-            {selectedOpt && (
-              <Flex justify='end' className='mb-1'>
-                <FullViewButton onClick={openFullView} />
-              </Flex>
-            )}
-            <YamlEditor value={yamlValue} height='200px' disabled />
-          </>
+          <YamlEditor value={yamlValue} height='200px' disabled />
         )}
         {/* Rendered from the step's own state rather than the modal stack so
             that it keeps following the step's output while the promotion runs.

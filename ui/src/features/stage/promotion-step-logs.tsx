@@ -19,8 +19,6 @@ import {
   useMonacoEditorLogLanguage
 } from '../common/analysis-run-logs/use-monaco-editor-log-language';
 
-import { FullViewButton } from './promotion-step-full-view-button';
-
 // Pinned rather than left to Monaco's default so the panel can be sized in
 // whole lines.
 const fontSizePx = 12;
@@ -44,14 +42,12 @@ type StepLogsProps = {
   // A fixed height, for when the panel already has the room it needs (e.g. a
   // full view). Replaces the content-sized height and the expand toggle.
   height?: string;
-  // Offers a full view from the toolbar when given.
-  onFullView?(): void;
 };
 
 // A log panel for a step's console output. Uses the same Monaco log language
 // and themes as AnalysisRun logs, so both read the same way, and adds an
 // expand toggle for reading more than a preview at a time.
-export const StepLogs = ({ lines, height: fixedHeight, onFullView }: StepLogsProps) => {
+export const StepLogs = ({ lines, height: fixedHeight }: StepLogsProps) => {
   const [expanded, setExpanded] = useLocalStorage(expandedKey, false);
   const [wrap, setWrap] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -116,7 +112,6 @@ export const StepLogs = ({ lines, height: fixedHeight, onFullView }: StepLogsPro
             />
           </Tooltip>
         )}
-        {onFullView && <FullViewButton onClick={onFullView} />}
       </Flex>
 
       <Editor
