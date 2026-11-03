@@ -204,7 +204,6 @@ export const TargetMatrix = ({
           row={picked}
           round={round}
           blocked={blocked}
-          stageFreight={stageFreight}
           freightLabel={freightLabel}
           onClose={() => setPickedName(undefined)}
         />
