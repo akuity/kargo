@@ -276,6 +276,7 @@ Class | Method | HTTP request | Description
  - [ImageStageMap](docs/ImageStageMap.md)
  - [IndexSelector](docs/IndexSelector.md)
  - [IndexSelectorRequirement](docs/IndexSelectorRequirement.md)
+ - [InflatedPromotionTask](docs/InflatedPromotionTask.md)
  - [ListProjectsResponse](docs/ListProjectsResponse.md)
  - [OIDCConfig](docs/OIDCConfig.md)
  - [PatchConfigMapRequest](docs/PatchConfigMapRequest.md)

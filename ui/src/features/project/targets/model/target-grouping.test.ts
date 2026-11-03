@@ -13,6 +13,7 @@ import {
   groupTargetRows,
   groupTitle,
   groupedRows,
+  keptRows,
   splitKeys
 } from './target-grouping';
 import { stateCounts, targetRows } from './target-rows';
@@ -157,6 +158,25 @@ describe('groupTargetRows() by Stage', () => {
       expect(counts.Healthy).toBe(1);
       expect(counts.Unhealthy).toBe(1);
       expect(groupedRows(groups)).toHaveLength(3);
+    });
+
+    test('keptRows gives back each Target once, as the fleet reads it', () => {
+      const kept = keptRows(rows, groups);
+      // In the page's own order, and the page's own rows, not the scoped ones.
+      expect(kept.map((r) => r.target.metadata?.name)).toEqual(['orphan', 'shared']);
+      expect(kept[1]).toBe(rows[1]);
+    });
+
+    test('keptRows keeps a Target any one of its Stages kept, read across them all', () => {
+      // Only dev sees it Healthy, but the fleet figures read it Unhealthy.
+      const kept = keptRows(rows, facetedGroups(['Healthy']));
+      expect(kept.map((r) => r.target.metadata?.name)).toEqual(['shared']);
+      expect(kept[0].state).toBe('Unhealthy');
+      expect(kept[0].scopedTo).toBeUndefined();
+    });
+
+    test('keptRows keeps nothing when the groups hold nothing', () => {
+      expect(keptRows(rows, [])).toEqual([]);
     });
   });
 });

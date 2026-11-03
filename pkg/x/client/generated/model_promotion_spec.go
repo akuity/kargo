@@ -23,6 +23,8 @@ var _ MappedNullable = &PromotionSpec{}
 type PromotionSpec struct {
 	// Freight specifies the piece of Freight to be promoted into the Stage. Exactly one of Freight or Origin must be set.  +kubebuilder:validation:Optional +kubebuilder:validation:MinLength=1 +kubebuilder:validation:MaxLength=253 +kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$` +akuity:test-kubebuilder-pattern=KubernetesName
 	Freight *string `json:"freight,omitempty"`
+	// InflatedTasks records each step of the Stage's PromotionTemplate that referenced a (Cluster)PromotionTask and was inflated into Steps. It is set by Kargo when the Promotion is created and any value supplied by users is discarded.  +kubebuilder:validation:Optional
+	InflatedTasks []InflatedPromotionTask `json:"inflatedTasks,omitempty"`
 	// Origin, when set, identifies the FreightOrigin whose auto-promotion candidate should be promoted. The mutating webhook resolves this to the candidate Freight for that origin and fills Freight before the Promotion is persisted. Exactly one of Freight or Origin must be set.  +kubebuilder:validation:Optional
 	Origin *FreightOrigin `json:"origin,omitempty"`
 	// PromotionRollout optionally holds the id of the PromotionRollout this Promotion was created by, as one part of that rollout's fan-out to Targets. The id is the UID the API serves the rollout with. A PromotionRollout is not a Kubernetes resource, so it cannot own the Promotion; this field is the link in place of an owner reference, and the one the database's record of the Promotion is linked by.  When empty (the default), the Promotion was not created by a PromotionRollout. When set, Target must be set too, and only the Kargo control plane may set it.  +kubebuilder:validation:Optional +kubebuilder:validation:Pattern=`^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$` +akuity:test-kubebuilder-pattern=UUID
@@ -88,6 +90,38 @@ func (o *PromotionSpec) HasFreight() bool {
 // SetFreight gets a reference to the given string and assigns it to the Freight field.
 func (o *PromotionSpec) SetFreight(v string) {
 	o.Freight = &v
+}
+
+// GetInflatedTasks returns the InflatedTasks field value if set, zero value otherwise.
+func (o *PromotionSpec) GetInflatedTasks() []InflatedPromotionTask {
+	if o == nil || IsNil(o.InflatedTasks) {
+		var ret []InflatedPromotionTask
+		return ret
+	}
+	return o.InflatedTasks
+}
+
+// GetInflatedTasksOk returns a tuple with the InflatedTasks field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *PromotionSpec) GetInflatedTasksOk() ([]InflatedPromotionTask, bool) {
+	if o == nil || IsNil(o.InflatedTasks) {
+		return nil, false
+	}
+	return o.InflatedTasks, true
+}
+
+// HasInflatedTasks returns a boolean if a field has been set.
+func (o *PromotionSpec) HasInflatedTasks() bool {
+	if o != nil && !IsNil(o.InflatedTasks) {
+		return true
+	}
+
+	return false
+}
+
+// SetInflatedTasks gets a reference to the given []InflatedPromotionTask and assigns it to the InflatedTasks field.
+func (o *PromotionSpec) SetInflatedTasks(v []InflatedPromotionTask) {
+	o.InflatedTasks = v
 }
 
 // GetOrigin returns the Origin field value if set, zero value otherwise.
@@ -278,6 +312,9 @@ func (o PromotionSpec) ToMap() (map[string]interface{}, error) {
 	toSerialize := map[string]interface{}{}
 	if !IsNil(o.Freight) {
 		toSerialize["freight"] = o.Freight
+	}
+	if !IsNil(o.InflatedTasks) {
+		toSerialize["inflatedTasks"] = o.InflatedTasks
 	}
 	if !IsNil(o.Origin) {
 		toSerialize["origin"] = o.Origin

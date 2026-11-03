@@ -270,6 +270,11 @@ func Test_webhook_Default(t *testing.T) {
 					Vars: []kargoapi.ExpressionVariable{
 						{Name: "user-var", Value: "user-val"},
 					},
+					InflatedTasks: []kargoapi.InflatedPromotionTask{{
+						Alias: "from-user",
+						Task:  kargoapi.PromotionTaskReference{Name: "user-task"},
+						Steps: []string{"from-user"},
+					}},
 				},
 			},
 			assertions: func(t *testing.T, promo *kargoapi.Promotion, err error) {
@@ -284,6 +289,7 @@ func Test_webhook_Default(t *testing.T) {
 					{Name: "stage-var", Value: "stage-val"},
 					{Name: "tmpl-var", Value: "tmpl-val"},
 				}, promo.Spec.Vars)
+				require.Nil(t, promo.Spec.InflatedTasks)
 				// Caller-supplied name was overwritten with one Kargo
 				// generated.
 				require.NotEqual(t, "user-supplied-name", promo.Name)

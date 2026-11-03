@@ -8,9 +8,12 @@ import (
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/pem"
+	"errors"
 	"math/big"
+	"net"
 	"os"
 	"path/filepath"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -101,8 +104,10 @@ func TestConfigConnect(t *testing.T) {
 				require.NoError(t, err)
 				require.True(t, conn.IsConnected())
 				require.Equal(t, "fake-client", conn.Opts.Name)
-				// Reconnect attempts must never be exhausted
+				// Reconnect attempts must never be exhausted, not even by
+				// repeated auth errors
 				require.Equal(t, -1, conn.Opts.MaxReconnect)
+				require.True(t, conn.Opts.IgnoreAuthErrorAbort)
 				// Default connect timeout applies when none is specified
 				require.Equal(t, 2*time.Second, conn.Opts.Timeout)
 			},
@@ -130,6 +135,73 @@ func TestConfigConnect(t *testing.T) {
 			testCase.assert(t, conn, err)
 		})
 	}
+}
+
+func TestConfigConnectSurvivesRepeatedAuthErrors(t *testing.T) {
+	t.Parallel()
+
+	const (
+		username    = "fake-user"
+		password    = "fake-password"
+		newPassword = "fake-new-password"
+	)
+
+	srvOpts := natstest.DefaultTestOptions
+	srvOpts.Port = -1
+	srvOpts.Username = username
+	srvOpts.Password = password
+	srv := natstest.RunServer(&srvOpts)
+	t.Cleanup(srv.Shutdown)
+
+	var authErrs atomic.Int32
+	conn, err := Config{
+		ServerURL: srv.ClientURL(),
+		Username:  username,
+		Password:  password,
+	}.Connect(
+		context.Background(),
+		nats.ReconnectWait(10*time.Millisecond),
+		nats.ErrorHandler(func(_ *nats.Conn, _ *nats.Subscription, err error) {
+			if errors.Is(err, nats.ErrAuthorization) {
+				authErrs.Add(1)
+			}
+		}),
+	)
+	require.NoError(t, err)
+	t.Cleanup(conn.Close)
+
+	// Rotating the server's credentials disconnects the client, and every
+	// reconnect attempt is then rejected because the client still presents the
+	// old credentials. The library would close the connection after the second
+	// rejection.
+	//
+	// The server retains the options it is given, so each reload gets its own
+	// copy.
+	srvAddr, ok := srv.Addr().(*net.TCPAddr)
+	require.True(t, ok)
+	reloadWithPassword := func(pw string) {
+		opts := srvOpts
+		opts.Port = srvAddr.Port
+		opts.Password = pw
+		require.NoError(t, srv.ReloadOptions(&opts))
+	}
+	reloadWithPassword(newPassword)
+	require.Eventually(
+		t,
+		func() bool { return authErrs.Load() > 2 },
+		5*time.Second,
+		10*time.Millisecond,
+	)
+	require.False(t, conn.IsClosed())
+
+	// Once the client's credentials are accepted again, it reconnects.
+	reloadWithPassword(password)
+	require.Eventually(
+		t,
+		conn.IsConnected,
+		5*time.Second,
+		10*time.Millisecond,
+	)
 }
 
 func TestConfigAuthOptions(t *testing.T) {

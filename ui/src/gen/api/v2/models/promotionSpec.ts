@@ -7,6 +7,7 @@
  */
 import type { ExpressionVariable } from './expressionVariable';
 import type { FreightOrigin } from './freightOrigin';
+import type { InflatedPromotionTask } from './inflatedPromotionTask';
 import type { PromotionStep } from './promotionStep';
 
 export interface PromotionSpec {
@@ -21,6 +22,15 @@ export interface PromotionSpec {
    * +akuity:test-kubebuilder-pattern=KubernetesName
    */
   freight?: string;
+  /**
+   * InflatedTasks records each step of the Stage's PromotionTemplate that
+   * referenced a (Cluster)PromotionTask and was inflated into Steps. It is
+   * set by Kargo when the Promotion is created and any value supplied by
+   * users is discarded.
+   *
+   * +kubebuilder:validation:Optional
+   */
+  inflatedTasks?: InflatedPromotionTask[];
   /**
    * Origin, when set, identifies the FreightOrigin whose auto-promotion
    * candidate should be promoted. The mutating webhook resolves this to the

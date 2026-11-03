@@ -38,14 +38,14 @@ require (
 	github.com/akuity/kargo/api v0.0.0
 	github.com/akuity/kargo/pkg/x/client/generated v0.0.0
 	github.com/aws/aws-lambda-go v1.55.1
-	github.com/aws/aws-sdk-go-v2 v1.47.4
-	github.com/aws/aws-sdk-go-v2/config v1.33.10
-	github.com/aws/aws-sdk-go-v2/credentials v1.20.10
+	github.com/aws/aws-sdk-go-v2 v1.47.5
+	github.com/aws/aws-sdk-go-v2/config v1.33.13
+	github.com/aws/aws-sdk-go-v2/credentials v1.20.13
 	github.com/aws/aws-sdk-go-v2/service/ecr v1.66.6
-	github.com/aws/aws-sdk-go-v2/service/sts v1.51.5
-	github.com/aws/smithy-go v1.28.6
+	github.com/aws/aws-sdk-go-v2/service/sts v1.51.6
+	github.com/aws/smithy-go v1.28.7
 	github.com/awslabs/aws-lambda-go-api-proxy v0.16.2
-	github.com/bmatcuk/doublestar/v4 v4.10.3
+	github.com/bmatcuk/doublestar/v4 v4.10.4
 	github.com/cloudevents/sdk-go/v2 v2.16.2
 	github.com/coreos/go-oidc/v3 v3.21.0
 	github.com/cyphar/filepath-securejoin v0.7.0
@@ -68,7 +68,7 @@ require (
 	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/klauspost/compress v1.20.3
 	github.com/microsoft/azure-devops-go-api/azuredevops/v7 v7.1.0
-	github.com/nats-io/nats-server/v2 v2.15.1
+	github.com/nats-io/nats-server/v2 v2.15.2
 	github.com/nats-io/nats.go v1.55.0
 	github.com/nats-io/nkeys v0.4.16
 	github.com/oapi-codegen/runtime v1.8.0
@@ -97,7 +97,7 @@ require (
 	go.opentelemetry.io/otel/trace v1.47.0
 	go.uber.org/ratelimit v0.3.1
 	go.uber.org/zap v1.28.0
-	go.yaml.in/yaml/v3 v3.0.5
+	go.yaml.in/yaml/v3 v3.0.6
 	golang.org/x/crypto v0.58.0
 	golang.org/x/oauth2 v0.37.0
 	golang.org/x/sync v0.24.0
@@ -106,12 +106,12 @@ require (
 	google.golang.org/api v0.308.0
 	gopkg.in/yaml.v3 v3.0.1
 	helm.sh/helm/v3 v3.22.1
-	k8s.io/api v0.37.1
-	k8s.io/apiextensions-apiserver v0.37.1
-	k8s.io/apimachinery v0.37.1
-	k8s.io/apiserver v0.37.1
-	k8s.io/cli-runtime v0.37.1
-	k8s.io/client-go v0.37.1
+	k8s.io/api v0.37.2
+	k8s.io/apiextensions-apiserver v0.37.2
+	k8s.io/apimachinery v0.37.2
+	k8s.io/apiserver v0.37.2
+	k8s.io/cli-runtime v0.37.2
+	k8s.io/client-go v0.37.2
 	k8s.io/klog/v2 v2.140.0
 	k8s.io/utils v0.0.0-20260707023825-cf1189d6abe3
 	oras.land/oras-go/v2 v2.7.0
@@ -146,15 +146,15 @@ require (
 	github.com/antlr4-go/antlr/v4 v4.13.1 // indirect
 	github.com/apapsch/go-jsonmerge/v2 v2.0.0 // indirect
 	github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2 // indirect
-	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.20.4 // indirect
-	github.com/aws/aws-sdk-go-v2/internal/configsources v1.5.7 // indirect
-	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.8.7 // indirect
-	github.com/aws/aws-sdk-go-v2/internal/v4a v1.5.7 // indirect
-	github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.13.22 // indirect
-	github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.14.7 // indirect
-	github.com/aws/aws-sdk-go-v2/service/signin v1.10.5 // indirect
-	github.com/aws/aws-sdk-go-v2/service/sso v1.38.5 // indirect
-	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.43.5 // indirect
+	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.20.5 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/configsources v1.5.8 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.8.8 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/v4a v1.5.8 // indirect
+	github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.13.23 // indirect
+	github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.14.8 // indirect
+	github.com/aws/aws-sdk-go-v2/service/signin v1.12.1 // indirect
+	github.com/aws/aws-sdk-go-v2/service/sso v1.39.1 // indirect
+	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.44.1 // indirect
 	github.com/benbjohnson/clock v1.3.5 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/blang/semver/v4 v4.0.0 // indirect
@@ -204,7 +204,7 @@ require (
 	github.com/go-git/gcfg v1.5.1-0.20230307220236-3a3c6141e376 // indirect
 	github.com/go-git/go-billy/v5 v5.9.2 // indirect
 	github.com/go-gorp/gorp/v3 v3.1.0 // indirect
-	github.com/go-jose/go-jose/v4 v4.1.4 // indirect
+	github.com/go-jose/go-jose/v4 v4.1.6 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/go-ole/go-ole v1.3.0 // indirect
 	github.com/go-openapi/jsonpointer v1.0.0 // indirect
@@ -399,8 +399,8 @@ require (
 	gopkg.in/warnings.v0 v0.1.2 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	howett.net/plist v1.0.1 // indirect
-	k8s.io/code-generator v0.37.1 // indirect
-	k8s.io/component-base v0.37.1 // indirect
+	k8s.io/code-generator v0.37.2 // indirect
+	k8s.io/component-base v0.37.2 // indirect
 	k8s.io/gengo/v2 v2.0.0-20260408192533-25e2208e0dc3 // indirect
 	k8s.io/kube-openapi v0.0.0-20260721132016-d427ff9ee9ad // indirect
 	k8s.io/kubectl v0.37.1 // indirect

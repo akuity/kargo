@@ -102,6 +102,7 @@ export * from './imageStageMap';
 export * from './imageStageMapStages';
 export * from './indexSelector';
 export * from './indexSelectorRequirement';
+export * from './inflatedPromotionTask';
 export * from './listImages200';
 export * from './listProjectAPITokensParams';
 export * from './listProjectsParams';
