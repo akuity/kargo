@@ -5,6 +5,10 @@ import {
   isPromotionPhase
 } from '@ui/features/common/promotion-status/promotion-phase';
 import {
+  PromotionStatusPhase,
+  isPromotionPhaseTerminal
+} from '@ui/features/common/promotion-status/utils';
+import {
   Promotion,
   PromotionRequest,
   PromotionRequestSummary,
@@ -40,10 +44,6 @@ const severity = (phase: PromotionPhase): number => {
   }
 };
 
-// isFinished is a phase a Promotion does not come back from.
-const isFinished = (phase?: string) =>
-  isPromotionPhase(phase) && phase !== 'Pending' && phase !== 'Running';
-
 /**
  * childPromotions pairs every Target a round named with its child Promotion
  * and that Target's labels.
@@ -74,7 +74,10 @@ export const childPromotions = (
       const promotion = row.promotion ? byName.get(row.promotion) : undefined;
       const promoted = promotion?.status?.phase;
       const phase =
-        isFinished(row.phase) && !isFinished(promoted) ? row.phase : (promoted ?? row.phase);
+        isPromotionPhaseTerminal(row.phase as PromotionStatusPhase) &&
+        !isPromotionPhaseTerminal(promoted as PromotionStatusPhase)
+          ? row.phase
+          : (promoted ?? row.phase);
       return {
         target: row.name,
         promotion,
