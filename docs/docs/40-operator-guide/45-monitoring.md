@@ -233,7 +233,7 @@ zero, so use `or vector(0)` in queries that need a value when a state is empty.
 
 ## Kubernetes API Client Metrics
 
-Every component also reports the
+Each component that serves metrics also reports the
 [client-go](https://github.com/kubernetes/client-go) REST client metrics for
 its requests to the Kubernetes API server. controller-runtime registers only
 `rest_client_requests_total` by default; Kargo enables the rest:
