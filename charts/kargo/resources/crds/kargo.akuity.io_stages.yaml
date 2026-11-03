@@ -456,7 +456,7 @@ spec:
                     type: array
                     x-kubernetes-list-type: atomic
                   updateStrategy:
-                    description: UpdateStrategy configures the pace of updating the
+                    description: UpdateStrategy configures the pace of promoting the
                       targets
                     properties:
                       maxConcurrent:
@@ -480,6 +480,41 @@ spec:
                           Value can be an absolute number (e.g.: 5) or a percentage of targets selected by the stage (e.g.: 10%).
                           Absolute number is calculated from percentage by rounding up to a minimum of 1. Default value is 0.
                         x-kubernetes-int-or-string: true
+                    type: object
+                  verification:
+                    description: Verification configures mode and pace of target promotion
+                      verifications
+                    properties:
+                      runMode:
+                        description: VerificationRunMode controls whether verifications
+                          run per-target or per-stage
+                        type: string
+                      updateStrategy:
+                        description: UpdateStrategy configures the pace of verification
+                          runs
+                        properties:
+                          maxConcurrent:
+                            anyOf:
+                            - type: integer
+                            - type: string
+                            description: |-
+                              MaxConcurrent specifies a number of targets which can be promoted to at the same time
+                              Value can be an absolute number (e.g.: 5) or a percentage of targets selected by the stage (e.g.: 10%).
+                              Absolute number is calculated from percentage by rounding up to a minimum of 1.
+                              Percentage value cannot be 0%. Number value cannot be 0.
+                              If omitted or empty string, no limit is applied (default).
+                            x-kubernetes-int-or-string: true
+                          maxFailures:
+                            anyOf:
+                            - type: integer
+                            - type: string
+                            description: |-
+                              MaxFailures specifies a number of target promotions which can fail before PromotionRequest is considered failed.
+                              Specifies a tolerable number, N failing promotions with maxFailures: N is a success, N+1 is a failure.
+                              Value can be an absolute number (e.g.: 5) or a percentage of targets selected by the stage (e.g.: 10%).
+                              Absolute number is calculated from percentage by rounding up to a minimum of 1. Default value is 0.
+                            x-kubernetes-int-or-string: true
+                        type: object
                     type: object
                 required:
                 - selectors
@@ -1313,6 +1348,11 @@ spec:
                                     AnalysisRun is a reference to the Argo Rollouts AnalysisRun that implements
                                     the Verification process.
                                   properties:
+                                    gvk:
+                                      description: |-
+                                        Kind is a string representation of GroupVersionKind describing this run
+                                        Options are AnalysisRunGVKRun and AnalysisRunGVKRequest
+                                      type: string
                                     name:
                                       description: Name is the name of the AnalysisRun.
                                       type: string
@@ -1866,6 +1906,11 @@ spec:
                                 AnalysisRun is a reference to the Argo Rollouts AnalysisRun that implements
                                 the Verification process.
                               properties:
+                                gvk:
+                                  description: |-
+                                    Kind is a string representation of GroupVersionKind describing this run
+                                    Options are AnalysisRunGVKRun and AnalysisRunGVKRequest
+                                  type: string
                                 name:
                                   description: Name is the name of the AnalysisRun.
                                   type: string
@@ -2203,6 +2248,11 @@ spec:
                               AnalysisRun is a reference to the Argo Rollouts AnalysisRun that implements
                               the Verification process.
                             properties:
+                              gvk:
+                                description: |-
+                                  Kind is a string representation of GroupVersionKind describing this run
+                                  Options are AnalysisRunGVKRun and AnalysisRunGVKRequest
+                                type: string
                               name:
                                 description: Name is the name of the AnalysisRun.
                                 type: string
@@ -2893,6 +2943,11 @@ spec:
                                     AnalysisRun is a reference to the Argo Rollouts AnalysisRun that implements
                                     the Verification process.
                                   properties:
+                                    gvk:
+                                      description: |-
+                                        Kind is a string representation of GroupVersionKind describing this run
+                                        Options are AnalysisRunGVKRun and AnalysisRunGVKRequest
+                                      type: string
                                     name:
                                       description: Name is the name of the AnalysisRun.
                                       type: string
@@ -3442,6 +3497,11 @@ spec:
                                 AnalysisRun is a reference to the Argo Rollouts AnalysisRun that implements
                                 the Verification process.
                               properties:
+                                gvk:
+                                  description: |-
+                                    Kind is a string representation of GroupVersionKind describing this run
+                                    Options are AnalysisRunGVKRun and AnalysisRunGVKRequest
+                                  type: string
                                 name:
                                   description: Name is the name of the AnalysisRun.
                                   type: string

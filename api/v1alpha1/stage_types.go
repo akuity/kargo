@@ -279,6 +279,11 @@ type StageSpec struct {
 	Targets *StageTargets `json:"targets,omitempty"`
 }
 
+type VerificationRunMode string
+
+const VerificationRunModePerStage = "PerStage"
+const VerificationRunModePerTarget = "PerTarget"
+
 // StageTargets describes the Targets a Stage governs.
 type StageTargets struct {
 	// Selectors select the Targets that the Stage governs, matching Targets by
@@ -293,7 +298,19 @@ type StageTargets struct {
 	// +listType=atomic
 	// +kubebuilder:validation:Required
 	Selectors []metav1.LabelSelector `json:"selectors"`
-	// UpdateStrategy configures the pace of updating the targets
+	// UpdateStrategy configures the pace of promoting the targets
+	// +optional
+	UpdateStrategy TargetUpdateStrategy `json:"updateStrategy,omitempty"`
+	// Verification configures mode and pace of target promotion verifications
+	// +optional
+	Verification *TargetVerificaitonSpec `json:"verification,omitempty"`
+}
+
+type TargetVerificaitonSpec struct {
+	// VerificationRunMode controls whether verifications run per-target or per-stage
+	// +optional
+	VerificationRunMode VerificationRunMode `json:"runMode,omitempty"`
+	// UpdateStrategy configures the pace of verification runs
 	// +optional
 	UpdateStrategy TargetUpdateStrategy `json:"updateStrategy,omitempty"`
 }
@@ -1039,6 +1056,12 @@ func (v *VerificationInfoStack) UpdateOrPush(info ...VerificationInfo) {
 	}
 }
 
+type AnalysisRunGVK string
+
+const AnalysisRunGVKRun = "argoproj.io/v1alpha1, Kind=AnalysisRun"
+const AnalysisRunGVKRequest = "kargo.akuity.io/v1alpha1, Kind=AnalysisRunRequest"
+const AnalysisRunGVKLegacy = ""
+
 // AnalysisRunReference is a reference to an AnalysisRun.
 type AnalysisRunReference struct {
 	// Namespace is the namespace of the AnalysisRun.
@@ -1047,4 +1070,7 @@ type AnalysisRunReference struct {
 	Name string `json:"name"`
 	// Phase is the last observed phase of the AnalysisRun referenced by Name.
 	Phase string `json:"phase"`
+	// Kind is a string representation of GroupVersionKind describing this run
+	// Options are AnalysisRunGVKRun and AnalysisRunGVKRequest
+	GVK AnalysisRunGVK `json:"gvk,omitempty"`
 }

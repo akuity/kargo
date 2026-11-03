@@ -156,7 +156,7 @@ func calculateRolloutUpdateStrategy(
 	targetUpdateStrategy kargoapi.TargetUpdateStrategy,
 	numTargets int,
 ) (*kargoapi.PromotionRolloutUpdateStrategy, error) {
-	strategy, err := calculateUpdateStrategy(targetUpdateStrategy, numTargets)
+	strategy, err := CalculateUpdateStrategy(targetUpdateStrategy, numTargets)
 	if err != nil {
 		return nil, err
 	}
