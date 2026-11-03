@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 
-import { batchEmitter } from './watch-utils';
+import { advanceResourceVersion, batchEmitter } from './watch-utils';
 
 type Obj = { name: string; value: number };
 
@@ -92,5 +92,35 @@ describe('batchEmitter', () => {
 
     expect(flush).toHaveBeenCalledTimes(1);
     expect(flush.mock.calls[0][0]).toEqual([{ name: 'b', value: 2 }]);
+  });
+});
+
+describe('advanceResourceVersion', () => {
+  test('moves the list resourceVersion up to a newer event object', () => {
+    const meta = { resourceVersion: '100', continue: 'x' };
+
+    expect(advanceResourceVersion(meta, { metadata: { resourceVersion: '150' } })).toEqual({
+      resourceVersion: '150',
+      continue: 'x'
+    });
+  });
+
+  test('keeps the list resourceVersion for an older or equal event object', () => {
+    const meta = { resourceVersion: '100' };
+
+    expect(advanceResourceVersion(meta, { metadata: { resourceVersion: '90' } })).toBe(meta);
+    expect(advanceResourceVersion(meta, { metadata: { resourceVersion: '100' } })).toBe(meta);
+  });
+
+  test('keeps the list resourceVersion when the event object has none', () => {
+    const meta = { resourceVersion: '100' };
+
+    expect(advanceResourceVersion(meta, {})).toBe(meta);
+  });
+
+  test('sets a resourceVersion on a list that has none', () => {
+    expect(advanceResourceVersion(undefined, { metadata: { resourceVersion: '5' } })).toEqual({
+      resourceVersion: '5'
+    });
   });
 });

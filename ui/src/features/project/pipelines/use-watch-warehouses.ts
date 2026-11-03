@@ -9,7 +9,12 @@ import {
 } from '@ui/gen/api/v2/core/core';
 import { Warehouse } from '@ui/gen/api/v2/models';
 
-import { batchEmitter, runSeededWatch, upsertOrDelete } from './watch-utils';
+import {
+  advanceResourceVersion,
+  batchEmitter,
+  runSeededWatch,
+  upsertOrDelete
+} from './watch-utils';
 
 export const useWatchWarehouses = (
   project: string,
@@ -68,6 +73,7 @@ export const useWatchWarehouses = (
             ...old,
             data: {
               ...old.data,
+              metadata: advanceResourceVersion(old.data.metadata, warehouse),
               items: upsertOrDelete(old.data.items ?? [], warehouse, type)
             }
           };

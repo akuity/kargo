@@ -121,6 +121,22 @@ function isNewerResourceVersion(incoming?: string, existing?: string): boolean {
   }
 }
 
+// advanceResourceVersion moves a cached list's resourceVersion up to that of a
+// watch event's object. Otherwise the list keeps the resourceVersion of its
+// initial fetch, and a watch reopened from it later (e.g. when the browser tab
+// becomes visible again) replays every change since then — briefly showing
+// stale states, such as a finished Stage as Promoting, while it catches up.
+export function advanceResourceVersion<M extends { resourceVersion?: string }>(
+  meta: M | undefined,
+  item: { metadata?: { resourceVersion?: string } }
+): M | undefined {
+  const incoming = item.metadata?.resourceVersion;
+  if (!isNewerResourceVersion(incoming, meta?.resourceVersion)) {
+    return meta;
+  }
+  return { ...meta, resourceVersion: incoming } as M;
+}
+
 // Reads an SSE stream of raw text chunks (e.g. AnalysisRun logs). The server
 // writes each line of a chunk as its own `data:` line, so rejoining the data
 // lines with `\n` reconstructs the original chunk verbatim. Unlike

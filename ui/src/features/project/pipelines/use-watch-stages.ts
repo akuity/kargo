@@ -9,7 +9,12 @@ import {
 } from '@ui/gen/api/v2/core/core';
 import { Stage } from '@ui/gen/api/v2/models';
 
-import { batchEmitter, runSeededWatch, upsertOrDelete } from './watch-utils';
+import {
+  advanceResourceVersion,
+  batchEmitter,
+  runSeededWatch,
+  upsertOrDelete
+} from './watch-utils';
 
 export const useWatchStages = (
   project: string,
@@ -63,7 +68,11 @@ export const useWatchStages = (
           }
           return {
             ...old,
-            data: { ...old.data, items: upsertOrDelete(old.data.items ?? [], stage, type) }
+            data: {
+              ...old.data,
+              metadata: advanceResourceVersion(old.data.metadata, stage),
+              items: upsertOrDelete(old.data.items ?? [], stage, type)
+            }
           };
         }
       );
