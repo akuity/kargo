@@ -59,7 +59,7 @@ describe('confirmed AnalysisTemplate saves', () => {
     metadata: { name: 'new', namespace: 'owned-project' },
     spec: { args: [{ name: 'message', value: 'saved' }] }
   };
-  it('keeps a created row and detail after an older empty list finishes', async () => {
+  it('keeps existing rows and the confirmed creation when the initial list finishes', async () => {
     const client = new QueryClient();
     let finish!: (value: listAnalysisTemplatesResponse) => void;
     const pending = client
@@ -71,12 +71,15 @@ describe('confirmed AnalysisTemplate saves', () => {
           })
       })
       .catch(() => undefined);
-    await updateAnalysisTemplateCache(client, 'owned-project', [
+    const saving = updateAnalysisTemplateCache(client, 'owned-project', [
       { createdResourceManifest: saved }
     ]);
-    finish(response([]));
-    await pending;
-    expect(client.getQueryData<listAnalysisTemplatesResponse>(key)?.data.items).toEqual([saved]);
+    finish(response(['untouched']));
+    await Promise.all([pending, saving]);
+    expect(client.getQueryData<listAnalysisTemplatesResponse>(key)?.data.items).toEqual([
+      saved,
+      { metadata: { name: 'untouched' }, spec: {} }
+    ]);
     expect(
       client.getQueryData<{ data: unknown }>(getGetAnalysisTemplateQueryKey('owned-project', 'new'))
         ?.data

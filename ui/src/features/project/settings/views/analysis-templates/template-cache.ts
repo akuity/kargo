@@ -4,6 +4,7 @@ import { CreateOrUpdateResourceResult, RolloutsAnalysisTemplate } from '@ui/gen/
 import {
   getGetAnalysisTemplateQueryKey,
   getListAnalysisTemplatesQueryKey,
+  getListAnalysisTemplatesQueryOptions,
   listAnalysisTemplatesResponse
 } from '@ui/gen/api/v2/verifications/verifications';
 
@@ -26,6 +27,11 @@ export const updateAnalysisTemplateCache = async (
   });
   if (!templates.length) return;
   const key = getListAnalysisTemplatesQueryKey(project);
+  // If the first list is still loading, finish that read before merging the
+  // confirmed save. Otherwise replacing it with one row hides existing templates.
+  if (!client.getQueryData(key)) {
+    await client.fetchQuery(getListAnalysisTemplatesQueryOptions(project));
+  }
   await client.cancelQueries({ queryKey: key, exact: true });
   for (const template of templates) {
     const detailKey = getGetAnalysisTemplateQueryKey(project, template.metadata!.name!);
