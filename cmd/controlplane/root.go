@@ -19,6 +19,8 @@ var (
 )
 
 func Execute(ctx context.Context) error {
+	enableRESTClientMetrics()
+
 	rootCmd.AddCommand(newAPICommand())
 	rootCmd.AddCommand(newControllerCommand())
 	rootCmd.AddCommand(newExternalWebhooksServerCommand())

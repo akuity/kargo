@@ -231,6 +231,26 @@ zero, so use `or vector(0)` in queries that need a value when a state is empty.
 
 :::
 
+## Kubernetes API Client Metrics
+
+Every component also reports the
+[client-go](https://github.com/kubernetes/client-go) REST client metrics for
+its requests to the Kubernetes API server. controller-runtime registers only
+`rest_client_requests_total` by default; Kargo enables the rest:
+
+| Metric | Type | Labels | Description |
+|--------|------|--------|-------------|
+| `rest_client_requests_total` | Counter | `code`, `method`, `host` | Requests, by HTTP status code. |
+| `rest_client_request_duration_seconds` | Histogram | `verb`, `host` | Request latency. |
+| `rest_client_rate_limiter_duration_seconds` | Histogram | `verb`, `host` | Time spent waiting on the client-side rate limiter (`KUBE_API_QPS` / `KUBE_API_BURST`). |
+| `rest_client_request_retries_total` | Counter | `code`, `verb`, `host` | Retried requests. |
+| `rest_client_request_size_bytes` | Histogram | `verb`, `host` | Request body size. |
+| `rest_client_response_size_bytes` | Histogram | `verb`, `host` | Response body size. |
+| `rest_client_dns_resolution_duration_seconds` | Histogram | `host` | DNS resolution latency. |
+
+A rising `rest_client_rate_limiter_duration_seconds` means the component is
+throttled by its own client-side limits rather than by the API server.
+
 ## Scraping With the Prometheus Operator
 
 If your cluster runs the
