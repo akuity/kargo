@@ -187,6 +187,9 @@ func (o *apiOptions) run(ctx context.Context) error {
 		),
 		sender,
 		db,
+		// Writes to the resources in the database are announced on NATS to
+		// the controllers that drive them.
+		natsConn,
 	)
 	l, err := net.Listen("tcp", fmt.Sprintf("%s:%s", o.BindAddress, o.Port))
 	if err != nil {

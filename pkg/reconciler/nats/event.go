@@ -61,12 +61,22 @@ func (e Event[K, T]) Validate() error {
 	return nil
 }
 
+// InternalSubjectPrefix roots the subject tree of every topic. Topics carry
+// internal events, which tell controllers what was written, so they travel
+// apart from the user-facing events published under akuity.kargo.events:
+// the two serve different purposes, and a subscriber to one never receives
+// the other, even when both are published for the same write.
+const InternalSubjectPrefix = "akuity.platform.internal"
+
 // Topic names the subject tree events about one kind of resource travel on
 // and fixes, once, the types of their keys and rows. Declare one beside the
-// store that owns the resource and use it from both the publisher and the
-// controllers, so neither spells out the types again:
+// store that owns the resource, under InternalSubjectPrefix, and use it from
+// both the publisher and the controllers, so neither spells out the types
+// again:
 //
-//	var TargetEvents = nats.NewTopic[reconciler.Key, database.TargetRow]("kargo.targets")
+//	var TargetEvents = nats.NewTopic[reconciler.Key, database.TargetRow](
+//		nats.InternalSubjectPrefix + ".targets",
+//	)
 //
 // Events are published to <prefix>.created, <prefix>.updated and
 // <prefix>.deleted, and a subscription to the topic receives all three.
@@ -74,7 +84,8 @@ type Topic[K comparable, T any] struct {
 	prefix string
 }
 
-// NewTopic returns the topic rooted at prefix, such as "kargo.targets".
+// NewTopic returns the topic rooted at prefix, such as
+// InternalSubjectPrefix + ".targets".
 func NewTopic[K comparable, T any](prefix string) Topic[K, T] {
 	return Topic[K, T]{prefix: prefix}
 }

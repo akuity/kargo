@@ -15,6 +15,8 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 
 	"github.com/akuity/kargo/pkg/database"
+	"github.com/akuity/kargo/pkg/logging"
+	"github.com/akuity/kargo/pkg/reconciler/nats"
 )
 
 // nameConstraint is the unique constraint on a PromotionRollout's name
@@ -101,13 +103,20 @@ type Store interface {
 
 type store struct {
 	queries *database.Queries
+	// events is where the store publishes an event after each committed
+	// write; see Events. It is nil when the store publishes nothing.
+	events nats.Publisher
 }
 
 // New returns a Store that runs its statements through queries. No call opens
 // a transaction of its own, so a caller may bind queries to one, through
-// Queries.WithTx, to make several calls atomic.
-func New(queries *database.Queries) Store {
-	return &store{queries: queries}
+// Queries.WithTx, to make several calls atomic; but an event is published
+// as soon as a call's statement returns, so a caller that binds the store
+// to a transaction it then rolls back announces a write that never
+// happened. The events may be nil, in which case the store publishes
+// nothing.
+func New(queries *database.Queries, events nats.Publisher) Store {
+	return &store{queries: queries, events: events}
 }
 
 // Create stores a new PromotionRollout in the named Project and returns it
@@ -156,6 +165,7 @@ func (s *store) Create(
 	if err != nil {
 		return Rollout{}, rolloutError(err, project, rollout.Name)
 	}
+	s.publishCreated(ctx, rollouts[0].PromotionRolloutRow)
 	return rollouts[0], nil
 }
 
@@ -377,6 +387,27 @@ func (s *store) UpdateStatus(
 	if !rollout.UpdatedAt.IsZero() {
 		args.UpdatedAt = &rollout.UpdatedAt
 	}
+	// The event about the update carries the row as it was, which the
+	// argument does not say: it carries the status to write, not the status
+	// written over. So the row is read first, only when there is somewhere
+	// to publish to. With a version precondition, an update that then
+	// succeeds proves the row read is the one it replaced, since any write
+	// in between would have advanced the version and failed the update.
+	// Without one, a write in between is announced as this update's.
+	var old *database.PromotionRolloutRow
+	if s.events != nil {
+		current, err := s.queries.GetPromotionRollout(ctx, database.GetPromotionRolloutParams{
+			ProjectName: project,
+			Name:        rollout.Name,
+		})
+		if errors.Is(err, pgx.ErrNoRows) {
+			return database.PromotionRolloutRow{}, rolloutError(database.ErrNotFound, project, rollout.Name)
+		}
+		if err != nil {
+			return database.PromotionRolloutRow{}, rolloutError(err, project, rollout.Name)
+		}
+		old = &current
+	}
 	row, err := s.queries.UpdatePromotionRolloutStatus(ctx, args)
 	if errors.Is(err, pgx.ErrNoRows) {
 		err = s.updateMissed(ctx, project, rollout)
@@ -384,7 +415,36 @@ func (s *store) UpdateStatus(
 	if err != nil {
 		return database.PromotionRolloutRow{}, rolloutError(err, project, rollout.Name)
 	}
+	if old != nil {
+		s.publishUpdated(ctx, *old, row)
+	}
 	return row, nil
+}
+
+// publishCreated announces the rollout's creation on Events. A failure to
+// publish is logged, not returned: the write has committed, and a
+// subscriber's resync picks up what its events missed.
+func (s *store) publishCreated(ctx context.Context, created database.PromotionRolloutRow) {
+	key := Key{Project: created.ProjectName, Name: created.Name}
+	if err := Events.PublishCreated(s.events, key, created); err != nil {
+		logging.LoggerFromContext(ctx).Error(
+			err, "error publishing PromotionRollout created event",
+			"project", key.Project, "promotionRollout", key.Name,
+		)
+	}
+}
+
+// publishUpdated announces the rollout's change from old to updated on
+// Events. A failure to publish is logged, not returned, as for
+// publishCreated.
+func (s *store) publishUpdated(ctx context.Context, old, updated database.PromotionRolloutRow) {
+	key := Key{Project: updated.ProjectName, Name: updated.Name}
+	if err := Events.PublishUpdated(s.events, key, old, updated); err != nil {
+		logging.LoggerFromContext(ctx).Error(
+			err, "error publishing PromotionRollout updated event",
+			"project", key.Project, "promotionRollout", key.Name,
+		)
+	}
 }
 
 // updateMissed explains an update that matched no row: either the rollout
