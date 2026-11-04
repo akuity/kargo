@@ -1,6 +1,9 @@
 package telemetry
 
-import "go.opentelemetry.io/otel/attribute"
+import (
+	"go.opentelemetry.io/otel/attribute"
+	semconv "go.opentelemetry.io/otel/semconv/v1.43.0"
+)
 
 // Attribute keys shared by Kargo's spans. Keeping them here, rather than
 // spelled out at each call site, keeps the attributes consistent so that they
@@ -29,6 +32,16 @@ const (
 	// PromotionRequestKey is the attribute under which the name of a
 	// PromotionRequest is recorded.
 	PromotionRequestKey = attribute.Key("kargo.promotion_request")
+	// FreightKey is the attribute under which the name of a Freight is
+	// recorded.
+	FreightKey = attribute.Key("kargo.freight")
+	// FreightOriginKey is the attribute under which a Freight's origin is
+	// recorded as kind/name, e.g. "Warehouse/smoke".
+	FreightOriginKey = attribute.Key("kargo.freight.origin")
+	// VCSCommitKey is the attribute under which a Git commit ID is recorded
+	// (OTel semconv).
+	VCSCommitKey = semconv.VCSRefHeadRevisionKey
+
 	// StepAliasKey is the attribute under which a promotion step's alias is
 	// recorded.
 	StepAliasKey = attribute.Key("kargo.promotion.step.alias")

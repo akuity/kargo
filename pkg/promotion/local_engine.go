@@ -77,8 +77,9 @@ func (e *LocalEngine) Promote(
 	promoCtx Context,
 	steps []Step,
 ) (_ Result, err error) {
-	ctx, span := tracer.Start(
+	ctx, span := telemetry.StartSpan(
 		ctx,
+		tracer,
 		"Promote",
 		trace.WithAttributes(
 			telemetry.ProjectKey.String(promoCtx.Project),

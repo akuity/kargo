@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"time"
 
-	"go.opentelemetry.io/otel/trace"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	kerrors "k8s.io/apimachinery/pkg/util/errors"
@@ -192,16 +191,12 @@ func (r *ControlFlowStageReconciler) SetupWithManager(
 }
 
 // Reconcile reconciles the given control flow Stage.
-func (r *ControlFlowStageReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	ctx, span := tracer.Start(
-		ctx,
-		"Reconcile Stage",
-		trace.WithAttributes(
-			telemetry.ProjectKey.String(req.Namespace),
-			telemetry.StageKey.String(req.Name),
-		),
-	)
-	defer span.End()
+func (r *ControlFlowStageReconciler) Reconcile(ctx context.Context, req ctrl.Request) (_ ctrl.Result, err error) {
+	ctx, span := startReconcileSpan(ctx, req)
+	defer func() {
+		telemetry.RecordError(span, err)
+		span.End()
+	}()
 
 	logger := logging.LoggerFromContext(ctx).WithValues(
 		"namespace", req.Namespace,
