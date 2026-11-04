@@ -30,23 +30,23 @@ const RunningStepDuration = ({ meta }: { meta?: StepExecutionMetadata }) => {
   );
 };
 
-export const StepDuration = ({
-  promotion,
-  stepIndex
+export const ExecutionDuration = ({
+  meta,
+  progressing,
+  promotionFinishedAt
 }: {
-  promotion?: Promotion;
-  stepIndex: number;
+  meta?: StepExecutionMetadata;
+  progressing: boolean;
+  promotionFinishedAt?: string;
 }) => {
-  const meta = promotion?.status?.stepExecutionMetadata?.[stepIndex];
-
-  if (isProgressingStep(stepIndex, promotion?.status)) {
+  if (progressing) {
     return <RunningStepDuration meta={meta} />;
   }
 
   const startedAt = parseDate(meta?.startedAt);
   // A Promotion aborted or errored mid-step can leave that step's finishedAt
   // unstamped. The Promotion's own finishedAt is when the step really stopped.
-  const finishedAtRaw = meta?.finishedAt || promotion?.status?.finishedAt;
+  const finishedAtRaw = meta?.finishedAt || promotionFinishedAt;
   const finishedAt = parseDate(finishedAtRaw);
 
   if (!startedAt || !finishedAt) {
@@ -62,3 +62,17 @@ export const StepDuration = ({
     </span>
   );
 };
+
+export const StepDuration = ({
+  promotion,
+  stepIndex
+}: {
+  promotion?: Promotion;
+  stepIndex: number;
+}) => (
+  <ExecutionDuration
+    meta={promotion?.status?.stepExecutionMetadata?.[stepIndex]}
+    progressing={isProgressingStep(stepIndex, promotion?.status)}
+    promotionFinishedAt={promotion?.status?.finishedAt}
+  />
+);

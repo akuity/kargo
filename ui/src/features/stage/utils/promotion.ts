@@ -46,6 +46,9 @@ export const promotionCompareFn = (
   return (promotion1?.metadata?.name || 0) < (promotion2?.metadata?.name || 0) ? -1 : 1;
 };
 
+export const getPromotionStartedAt = (promotion?: Promotion) =>
+  promotion?.status?.stepExecutionMetadata?.find((meta) => meta?.startedAt)?.startedAt;
+
 export const getPromotionOutputsByStepAlias = (promotion?: Promotion) => {
   return (promotion?.status?.state || {}) as Record<string, object>;
 };
