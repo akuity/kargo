@@ -127,10 +127,9 @@ func initPromotionMetrics(
 	ctrlmetrics.Registry.MustRegister(
 		m.Completed,
 		m.Duration,
-		m.PendingDuration,
 		nonTerminalCollector,
-		phaseCollector,
 	)
+	registerLifecycle(ctrlmetrics.Registry, m.PendingDuration, phaseCollector)
 	return m
 }
 

@@ -17,6 +17,7 @@ func TestConfigFromEnv(t *testing.T) {
 			assert: func(t *testing.T, cfg Config, err error) {
 				require.NoError(t, err)
 				require.True(t, cfg.Enabled(FamilyRESTClient))
+				require.True(t, cfg.Enabled(FamilyLifecycle))
 			},
 		},
 		{
@@ -36,11 +37,21 @@ func TestConfigFromEnv(t *testing.T) {
 			},
 		},
 		{
+			name:    "lifecycle disabled",
+			disable: "lifecycle",
+			assert: func(t *testing.T, cfg Config, err error) {
+				require.NoError(t, err)
+				require.False(t, cfg.Enabled(FamilyLifecycle))
+				require.True(t, cfg.Enabled(FamilyRESTClient))
+			},
+		},
+		{
 			name:    "all",
 			disable: "all",
 			assert: func(t *testing.T, cfg Config, err error) {
 				require.NoError(t, err)
 				require.False(t, cfg.Enabled(FamilyRESTClient))
+				require.False(t, cfg.Enabled(FamilyLifecycle))
 			},
 		},
 		{

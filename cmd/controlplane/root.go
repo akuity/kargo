@@ -5,6 +5,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	controllermetrics "github.com/akuity/kargo/pkg/controller/metrics"
 	"github.com/akuity/kargo/pkg/metrics"
 )
 
@@ -27,6 +28,9 @@ func Execute(ctx context.Context) error {
 	}
 	if metricsCfg.Enabled(metrics.FamilyRESTClient) {
 		metrics.EnableRESTClientMetrics()
+	}
+	if !metricsCfg.Enabled(metrics.FamilyLifecycle) {
+		controllermetrics.DisableLifecycleMetrics()
 	}
 
 	rootCmd.AddCommand(newAPICommand())

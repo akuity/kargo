@@ -82,7 +82,8 @@ func initWarehouseMetrics(c client.Client) *WarehouseMetrics {
 			[]string{metrics.ProjectLabel},
 		),
 	}
-	ctrlmetrics.Registry.MustRegister(
+	registerLifecycle(
+		ctrlmetrics.Registry,
 		m.DiscoveryDuration,
 		m.DiscoveryInterval,
 		m.FreightCreated,

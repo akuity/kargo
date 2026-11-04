@@ -91,6 +91,12 @@ labeled by `project`:
 | `kargo_warehouse_oldest_discovery_timestamp_seconds` | Gauge | Time of the least recent successful discovery among a Project's Warehouses, sampled at scrape time. |
 | `kargo_warehouse_freight_created_total` | Counter | Number of Freight created by Warehouses. |
 
+The lifecycle metrics -- `kargo_promotion_pending_duration_seconds`,
+`kargo_promotions_by_phase`, `kargo_promotion_oldest_pending_timestamp_seconds`,
+`kargo_freight_verification_lead_time_seconds` and the `kargo_warehouse_*`
+metrics -- can be turned off with `METRICS_DISABLE=lifecycle`, for example
+through `global.env`.
+
 :::note
 
 The `project` label is the name of the Kargo `Project` (namespace) the

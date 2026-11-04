@@ -44,7 +44,7 @@ func NewFreightMetrics() *FreightMetrics {
 				[]string{metrics.ProjectLabel},
 			),
 		}
-		ctrlmetrics.Registry.MustRegister(freightMetrics.VerificationLeadTime)
+		registerLifecycle(ctrlmetrics.Registry, freightMetrics.VerificationLeadTime)
 	})
 	return freightMetrics
 }
