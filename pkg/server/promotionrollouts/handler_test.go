@@ -68,44 +68,57 @@ func (s *fakeStore) withPromotions(promotions ...mirroredPromotion) *fakeStore {
 	return s
 }
 
-// ListTargetStatuses answers as the query does: the newest of the rollout's
-// Promotions to each Target, by name, in Target name order, with no phase
-// read as Pending. A Promotion naming no Target does not count.
+// ListTargetStatuses answers as the query does: for each of the rollouts
+// that has any, the newest of its Promotions to each Target, by name, in
+// Target name order, with no phase read as Pending. A Promotion naming no
+// Target does not count.
 func (s *fakeStore) ListTargetStatuses(
 	_ context.Context,
-	rollout promotionrolloutstore.Rollout,
-) ([]database.ListPromotionRolloutTargetStatusesRow, error) {
+	rollouts []promotionrolloutstore.Rollout,
+) (map[uuid.UUID][]database.ListPromotionRolloutTargetStatusesRow, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.calls++
 	if s.err != nil {
 		return nil, s.err
 	}
-	newest := map[string]mirroredPromotion{}
+	wanted := make(map[uuid.UUID]struct{}, len(rollouts))
+	for _, rollout := range rollouts {
+		wanted[rollout.ID] = struct{}{}
+	}
+	type key struct {
+		rollout uuid.UUID
+		target  string
+	}
+	newest := map[key]mirroredPromotion{}
 	for _, promo := range s.promotions {
-		if promo.rolloutID != rollout.ID || promo.target == "" {
+		if _, ok := wanted[promo.rolloutID]; !ok || promo.target == "" {
 			continue
 		}
-		if current, ok := newest[promo.target]; !ok || promo.name > current.name {
-			newest[promo.target] = promo
+		k := key{rollout: promo.rolloutID, target: promo.target}
+		if current, ok := newest[k]; !ok || promo.name > current.name {
+			newest[k] = promo
 		}
 	}
-	rows := make([]database.ListPromotionRolloutTargetStatusesRow, 0, len(newest))
-	for target, promo := range newest {
+	byID := map[uuid.UUID][]database.ListPromotionRolloutTargetStatusesRow{}
+	for k, promo := range newest {
 		phase := string(promo.phase)
 		if phase == "" {
 			phase = string(kargoapi.PromotionPhasePending)
 		}
-		rows = append(rows, database.ListPromotionRolloutTargetStatusesRow{
-			TargetName:    target,
-			PromotionName: promo.name,
-			Phase:         phase,
+		byID[k.rollout] = append(byID[k.rollout], database.ListPromotionRolloutTargetStatusesRow{
+			PromotionRolloutID: k.rollout,
+			TargetName:         k.target,
+			PromotionName:      promo.name,
+			Phase:              phase,
 		})
 	}
-	slices.SortFunc(rows, func(a, b database.ListPromotionRolloutTargetStatusesRow) int {
-		return strings.Compare(a.TargetName, b.TargetName)
-	})
-	return rows, nil
+	for _, rows := range byID {
+		slices.SortFunc(rows, func(a, b database.ListPromotionRolloutTargetStatusesRow) int {
+			return strings.Compare(a.TargetName, b.TargetName)
+		})
+	}
+	return byID, nil
 }
 
 var _ promotionrolloutstore.Store = (*fakeStore)(nil)
@@ -584,11 +597,11 @@ func TestNew(t *testing.T) {
 	// into 501 for every request.
 	h := New(nil, nil, nil, nil, false)
 	require.Nil(t, h.store)
-	require.Nil(t, h.creator)
+	require.Nil(t, h.targets)
 	require.False(t, h.createEnabled)
 	h = New(&fakeStore{}, fakeTargets{}, nil, nil, true)
 	require.NotNil(t, h.store)
-	require.NotNil(t, h.creator)
+	require.NotNil(t, h.targets)
 	require.True(t, h.createEnabled)
 }
 

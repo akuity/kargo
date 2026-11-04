@@ -54,9 +54,10 @@ func bindCreateRequest(c *gin.Context) (createPromotionRolloutRequest, bool) {
 }
 
 // validateCreateRequest checks that the request names Freight, that any
-// Targets it names are names and named once, and that any update strategy
-// it gives is one a Stage could have, as the PromotionRequest and Stage
-// custom resources' schemas would have.
+// Targets it names are named once, and that any update strategy it gives
+// is one a Stage could have, as the Stage custom resource's schema would
+// have. A Target's name is not checked for form: one the Stage does not
+// govern is refused when the rollout is built, whatever it looks like.
 func validateCreateRequest(req createPromotionRolloutRequest) field.ErrorList {
 	var errs field.ErrorList
 	path := field.NewPath("freight")
@@ -77,9 +78,6 @@ func validateCreateRequest(req createPromotionRolloutRequest) field.ErrorList {
 	seen := make(map[string]struct{}, len(req.Targets))
 	for i, name := range req.Targets {
 		targetPath := field.NewPath("targets").Index(i)
-		for _, msg := range validation.IsDNS1123Subdomain(name) {
-			errs = append(errs, field.Invalid(targetPath, name, msg))
-		}
 		if _, dup := seen[name]; dup {
 			errs = append(errs, field.Duplicate(targetPath, name))
 		}

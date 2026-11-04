@@ -114,7 +114,7 @@ func (h *Handler) create(c *gin.Context) {
 		actor = u.Actor()
 	}
 	var rollout *kargoapi.PromotionRollout
-	if rollout, err = h.creator.Create(
+	if rollout, err = h.createRollout(
 		ctx, stage, freight, req.Targets, req.UpdateStrategy, actor,
 	); err != nil {
 		_ = c.Error(err)

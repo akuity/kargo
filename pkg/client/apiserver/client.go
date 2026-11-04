@@ -399,6 +399,16 @@ type PromotionRolloutListOptions struct {
 	Limit    int32
 }
 
+// PromotionRolloutCreateOptions narrows what a PromotionRollout is created
+// for, as the API's request body does. Targets names the Targets to
+// promote to, each of which the Stage must govern; none means every Target
+// it governs. UpdateStrategy paces the rollout in place of the Stage's
+// update strategy; nil means the Stage's.
+type PromotionRolloutCreateOptions struct {
+	Targets        []string
+	UpdateStrategy *kargoapi.TargetUpdateStrategy
+}
+
 // ListPromotionRollouts returns one page of the Project's PromotionRollouts,
 // as the options narrow and bound it. The page's metadata.continue is set
 // when a further page may follow.
@@ -443,19 +453,27 @@ func (c *Client) ListPromotionRollouts(
 }
 
 // CreatePromotionRollout asks the API server to promote the Freight to the
-// Targets the Stage governs now, and returns the PromotionRollout it
-// created. The API server resolves the Targets and authorizes the request
-// as a promotion to the Stage; IsForbidden tells a refusal apart from a
-// failure.
+// Targets the Stage governs now, or to those of them opts names, at the
+// pace opts gives, and returns the PromotionRollout it created. The API
+// server resolves the Targets and authorizes the request as a promotion to
+// the Stage; IsForbidden tells a refusal apart from a failure.
 func (c *Client) CreatePromotionRollout(
 	ctx context.Context,
 	project string,
 	stage string,
 	freight string,
+	opts PromotionRolloutCreateOptions,
 ) (*kargoapi.PromotionRollout, error) {
-	model, resp, err := c.api.CoreAPI.CreatePromotionRollout(ctx, project, stage).
-		Body(kargogen.CreatePromotionRolloutRequest{Freight: &freight}).
-		Execute()
+	body := kargogen.CreatePromotionRolloutRequest{Freight: &freight, Targets: opts.Targets}
+	if opts.UpdateStrategy != nil {
+		body.UpdateStrategy = &kargogen.TargetUpdateStrategy{}
+		if err := convert(opts.UpdateStrategy, body.UpdateStrategy); err != nil {
+			return nil, fmt.Errorf(
+				"error encoding the update strategy for Stage %q in Project %q: %w", stage, project, err,
+			)
+		}
+	}
+	model, resp, err := c.api.CoreAPI.CreatePromotionRollout(ctx, project, stage).Body(body).Execute()
 	if resp != nil {
 		_ = resp.Body.Close()
 	}

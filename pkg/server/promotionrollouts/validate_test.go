@@ -34,9 +34,9 @@ func TestValidateCreateRequest(t *testing.T) {
 			req:  createPromotionRolloutRequest{Freight: "abc123", Targets: []string{"us-east", "us-west"}},
 		},
 		{
-			name:   "Targets must be DNS subdomains, named once",
-			req:    createPromotionRolloutRequest{Freight: "abc123", Targets: []string{"us-east", "US", "us-east"}},
-			fields: []string{"targets[1]", "targets[2]"},
+			name:   "Targets must be named once",
+			req:    createPromotionRolloutRequest{Freight: "abc123", Targets: []string{"us-east", "us-west", "us-east"}},
+			fields: []string{"targets[2]"},
 		},
 		{
 			name: "valid with an update strategy",

@@ -29,9 +29,9 @@ type Handler struct {
 	// kube reads the Stage and Freight a rollout is created for, with the
 	// caller's authorization.
 	kube client.Client
-	// creator creates rollouts on behalf of the promote endpoints and this
-	// handler alike. It is nil when store is.
-	creator *Creator
+	// targets is where the Targets a created rollout promotes to are read
+	// from. It is used only with a store; see createRollout.
+	targets targets.Lister
 	// createEnabled is whether this server creates rollouts. When it does
 	// not, the create endpoint responds 501; rollouts can still be read.
 	createEnabled bool
@@ -48,16 +48,13 @@ func New(
 	kube client.Client,
 	createEnabled bool,
 ) *Handler {
-	h := &Handler{
+	return &Handler{
 		store:         store,
+		targets:       targetLister,
 		authorize:     authorize,
 		kube:          kube,
 		createEnabled: createEnabled,
 	}
-	if store != nil {
-		h.creator = NewCreator(store, targetLister)
-	}
-	return h
 }
 
 // paramProject, paramStage and paramNumber are the route parameters the
@@ -119,21 +116,22 @@ func (h *Handler) require(verb can.Verb) gin.HandlerFunc {
 // present returns the stored rollouts as the PromotionRollout resources the
 // API serves, each with what has become of its Targets: the newest
 // Promotion to each and its phase, and a tally of those. That comes from the
-// mirrored Promotions the rollout's id links, so it lags the cluster by the
-// mirror's sync. That the caller may list the Project's Promotions has been
-// checked by then; see require.
+// mirrored Promotions the rollouts' ids link, read in one query for all of
+// them, so it lags the cluster by the mirror's sync. That the caller may
+// list the Project's Promotions has been checked by then; see require.
 func (h *Handler) present(
 	ctx context.Context,
 	stored []promotionrolloutstore.Rollout,
 ) ([]*kargoapi.PromotionRollout, error) {
+	statuses, err := h.store.ListTargetStatuses(ctx, stored)
+	if err != nil {
+		return nil, err
+	}
 	rollouts := make([]*kargoapi.PromotionRollout, len(stored))
 	for i, s := range stored {
-		rows, err := h.store.ListTargetStatuses(ctx, s)
-		if err != nil {
-			return nil, err
-		}
 		rollouts[i] = promotionrolloutstore.ToAPI(s)
-		rollouts[i].Status.Targets, rollouts[i].Status.Summary = promotionrolloutstore.TargetStatuses(rows)
+		rollouts[i].Status.Targets, rollouts[i].Status.Summary =
+			promotionrolloutstore.TargetStatuses(statuses[s.ID])
 	}
 	return rollouts, nil
 }

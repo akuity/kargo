@@ -23,6 +23,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/rest"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 
@@ -38,7 +39,9 @@ var (
 	} = (*Client)(nil)
 	_ interface {
 		ListPromotionRollouts(context.Context, string, PromotionRolloutListOptions) (*kargoapi.PromotionRolloutList, error)
-		CreatePromotionRollout(context.Context, string, string, string) (*kargoapi.PromotionRollout, error)
+		CreatePromotionRollout(
+			context.Context, string, string, string, PromotionRolloutCreateOptions,
+		) (*kargoapi.PromotionRollout, error)
 	} = (*Client)(nil)
 )
 
@@ -52,11 +55,12 @@ type serverFixtures struct {
 type lastRequest struct {
 	auth  string
 	query string
+	body  string
 }
 
 // newServer serves a Project's Targets and PromotionRollouts the way the API
-// server does, recording the Authorization header and query string of the
-// last request. Requests carrying one of the rejected Authorization headers
+// server does, recording the Authorization header, query string and body
+// of the last request. Requests carrying one of the rejected Authorization headers
 // are refused as the API server refuses a token it cannot verify.
 func newServer(
 	t *testing.T,
@@ -171,10 +175,16 @@ func newServer(
 				writeJSON(w, http.StatusForbidden, map[string]string{"error": "not allowed"})
 				return
 			}
+			var body json.RawMessage
+			if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+				writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
+				return
+			}
+			last.body = string(body)
 			var requested struct {
 				Freight string `json:"freight"`
 			}
-			if err := json.NewDecoder(r.Body).Decode(&requested); err != nil {
+			if err := json.Unmarshal(body, &requested); err != nil {
 				writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
 				return
 			}
@@ -733,9 +743,12 @@ func TestClient(t *testing.T) {
 	})
 
 	t.Run("creates a PromotionRollout for a Stage and Freight", func(t *testing.T) {
-		rollout, err := c.CreatePromotionRollout(t.Context(), "demo", "prod", "fr-2")
+		rollout, err := c.CreatePromotionRollout(
+			t.Context(), "demo", "prod", "fr-2", PromotionRolloutCreateOptions{},
+		)
 		require.NoError(t, err)
 		require.NotNil(t, rollout)
+		require.JSONEq(t, `{"freight":"fr-2"}`, last.body)
 		require.Equal(t, "prod.01X.abc", rollout.Name)
 		require.Equal(t, "demo", rollout.Namespace)
 		require.Equal(t, "prod", rollout.Spec.Stage)
@@ -744,8 +757,29 @@ func TestClient(t *testing.T) {
 		require.Regexp(t, `^Bearer minted-\d+$`, last.auth)
 	})
 
+	t.Run("sends the Targets and pace asked for", func(t *testing.T) {
+		_, err := c.CreatePromotionRollout(
+			t.Context(), "demo", "prod", "fr-2",
+			PromotionRolloutCreateOptions{
+				Targets: []string{"us-east", "us-west"},
+				UpdateStrategy: &kargoapi.TargetUpdateStrategy{
+					MaxConcurrent: new(intstr.FromInt32(1)),
+					MaxFailures:   new(intstr.FromString("50%")),
+				},
+			},
+		)
+		require.NoError(t, err)
+		require.JSONEq(
+			t,
+			`{"freight":"fr-2","targets":["us-east","us-west"],"updateStrategy":{"maxConcurrent":1,"maxFailures":"50%"}}`,
+			last.body,
+		)
+	})
+
 	t.Run("a refused create is forbidden", func(t *testing.T) {
-		_, err := c.CreatePromotionRollout(t.Context(), "forbidden", "prod", "fr-2")
+		_, err := c.CreatePromotionRollout(
+			t.Context(), "forbidden", "prod", "fr-2", PromotionRolloutCreateOptions{},
+		)
 		require.ErrorContains(t, err, `error creating PromotionRollout for Stage "prod" in Project "forbidden"`)
 		require.ErrorContains(t, err, "not allowed")
 		require.True(t, IsForbidden(err))
@@ -756,7 +790,9 @@ func TestClient(t *testing.T) {
 	})
 
 	t.Run("other create failures are not forbidden", func(t *testing.T) {
-		_, err := c.CreatePromotionRollout(t.Context(), "broken", "prod", "fr-2")
+		_, err := c.CreatePromotionRollout(
+			t.Context(), "broken", "prod", "fr-2", PromotionRolloutCreateOptions{},
+		)
 		require.False(t, IsForbidden(err))
 		var apiErr *APIError
 		require.ErrorAs(t, err, &apiErr)
@@ -772,7 +808,9 @@ func TestClient(t *testing.T) {
 		var apiErr *APIError
 		require.False(t, errors.As(err, &apiErr))
 		require.True(t, IsRetryable(err))
-		_, err = down.CreatePromotionRollout(t.Context(), "demo", "prod", "fr-2")
+		_, err = down.CreatePromotionRollout(
+			t.Context(), "demo", "prod", "fr-2", PromotionRolloutCreateOptions{},
+		)
 		require.Error(t, err)
 		require.False(t, IsForbidden(err))
 	})

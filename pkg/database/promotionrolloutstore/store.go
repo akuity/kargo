@@ -93,7 +93,9 @@ type Store interface {
 	List(context.Context, string, ListOptions) ([]Rollout, error)
 	ListLatest(context.Context, string, string) ([]Rollout, error)
 	ListOpen(context.Context) ([]Key, error)
-	ListTargetStatuses(context.Context, Rollout) ([]database.ListPromotionRolloutTargetStatusesRow, error)
+	ListTargetStatuses(
+		context.Context, []Rollout,
+	) (map[uuid.UUID][]database.ListPromotionRolloutTargetStatusesRow, error)
 	UpdateStatus(context.Context, string, database.PromotionRolloutRow) (database.PromotionRolloutRow, error)
 }
 
@@ -320,20 +322,34 @@ func (s *store) ListOpen(ctx context.Context) ([]Key, error) {
 	return keys, nil
 }
 
-// ListTargetStatuses returns what has become of each Target of the rollout:
-// the newest mirrored Promotion to it and that Promotion's phase, in Target
-// name order. Only Targets that have a Promotion appear. The rows are the
-// mirror's, so they lag the cluster by the mirror's sync; TargetStatuses
-// presents them as the rollout's status.
+// ListTargetStatuses returns what has become of each Target of each of the
+// rollouts, by the rollout's id: the newest mirrored Promotion to the Target
+// and that Promotion's phase, in Target name order. Only Targets that have a
+// Promotion appear, so a rollout none of whose Targets has one is absent.
+// However many rollouts there are, the rows are read in one query, since a
+// page of rollouts is presented with them. They are the mirror's, so they
+// lag the cluster by the mirror's sync; TargetStatuses presents a rollout's
+// as its status.
 func (s *store) ListTargetStatuses(
 	ctx context.Context,
-	rollout Rollout,
-) ([]database.ListPromotionRolloutTargetStatusesRow, error) {
-	rows, err := s.queries.ListPromotionRolloutTargetStatuses(ctx, rollout.ID)
-	if err != nil {
-		return nil, rolloutError(err, rollout.ProjectName, rollout.Name)
+	rollouts []Rollout,
+) (map[uuid.UUID][]database.ListPromotionRolloutTargetStatusesRow, error) {
+	byID := make(map[uuid.UUID][]database.ListPromotionRolloutTargetStatusesRow, len(rollouts))
+	if len(rollouts) == 0 {
+		return byID, nil
 	}
-	return rows, nil
+	ids := make([]uuid.UUID, len(rollouts))
+	for i, rollout := range rollouts {
+		ids[i] = rollout.ID
+	}
+	rows, err := s.queries.ListPromotionRolloutTargetStatuses(ctx, ids)
+	if err != nil {
+		return nil, fmt.Errorf("error listing Target statuses of PromotionRollouts: %w", err)
+	}
+	for _, row := range rows {
+		byID[row.PromotionRolloutID] = append(byID[row.PromotionRolloutID], row)
+	}
+	return byID, nil
 }
 
 // UpdateStatus replaces the status of the PromotionRollout named by the

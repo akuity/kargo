@@ -16,21 +16,7 @@ import (
 	"github.com/akuity/kargo/pkg/server/targets"
 )
 
-// Creator creates PromotionRollouts. The promote endpoints and the create
-// endpoint share one, so that a rollout is built the same way whichever
-// path asks for it.
-type Creator struct {
-	store   promotionrolloutstore.Store
-	targets targets.Lister
-}
-
-// NewCreator returns a Creator that records rollouts in the store and reads
-// the Targets they promote to from targetLister.
-func NewCreator(store promotionrolloutstore.Store, targetLister targets.Lister) *Creator {
-	return &Creator{store: store, targets: targetLister}
-}
-
-// Create records the intent to promote the Freight to the Targets the Stage
+// createRollout records the intent to promote the Freight to the Targets the Stage
 // governs, or to the named ones among them, and returns the rollout as
 // stored. Which Targets those are is decided here, once: the Stage's
 // selectors are resolved against the Project's Targets, narrowed to
@@ -50,7 +36,7 @@ func NewCreator(store promotionrolloutstore.Store, targetLister targets.Lister) 
 // caller is allowed to make; checking it as the caller would make promoting
 // depend on also being allowed to list Targets, which a role granting the
 // promote verb need not include.
-func (cr *Creator) Create(
+func (h *Handler) createRollout(
 	ctx context.Context,
 	stage *kargoapi.Stage,
 	freight *kargoapi.Freight,
@@ -58,7 +44,7 @@ func (cr *Creator) Create(
 	updateStrategy *kargoapi.TargetUpdateStrategy,
 	actor string,
 ) (*kargoapi.PromotionRollout, error) {
-	all, err := targets.ListFromStore(ctx, cr.targets, stage.Namespace)
+	all, err := targets.ListFromStore(ctx, h.targets, stage.Namespace)
 	if err != nil {
 		return nil, fmt.Errorf("error listing Targets in Project %q: %w", stage.Namespace, err)
 	}
@@ -85,7 +71,7 @@ func (cr *Creator) Create(
 	}
 	row := promotionrolloutstore.FromSpec(rollout.Name, rollout.Spec)
 	row.CreatedBy = actor
-	stored, err := cr.store.Create(ctx, stage.Namespace, row, ids)
+	stored, err := h.store.Create(ctx, stage.Namespace, row, ids)
 	if err != nil {
 		return nil, storeError(err, rollout.Name)
 	}
@@ -96,7 +82,7 @@ func (cr *Creator) Create(
 // named, in the order governed lists them. Every name must be governed; the
 // ones that are not are reported together, as a bad request. A name given
 // more than once counts once: the API refuses duplicates, but a caller of
-// Create need not have.
+// createRollout need not have.
 func selectTargets(stage string, governed []kargoapi.Target, names []string) ([]kargoapi.Target, error) {
 	names = slices.Compact(slices.Sorted(slices.Values(names)))
 	selected := make([]kargoapi.Target, 0, len(names))
