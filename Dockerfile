@@ -30,7 +30,6 @@ ARG VERSION_PACKAGE=github.com/akuity/kargo/pkg/x/version
 ARG CGO_ENABLED=0
 
 WORKDIR /kargo
-COPY ["api/go.mod", "api/go.sum", "api/"]
 COPY ["pkg/x/client/generated/go.mod", "pkg/x/client/generated/"]
 COPY ["go.mod", "go.sum", "./"]
 RUN --mount=type=cache,target=/go/pkg/mod --mount=type=cache,target=/root/.cache/go-build go mod download
