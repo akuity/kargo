@@ -13,13 +13,25 @@ import (
 )
 
 const finishDeletedPromotion = `-- name: FinishDeletedPromotion :execrows
+WITH pair AS (
+    UPDATE target_stage_promotions SET latest_phase = $1
+    FROM promotions
+    WHERE promotions.project_name = $2
+        AND promotions.name = $3
+        AND promotions.finished_at IS NULL
+        AND promotions.target_name IS NOT NULL
+        AND target_stage_promotions.project_name = promotions.project_name
+        AND target_stage_promotions.target_name = promotions.target_name
+        AND target_stage_promotions.stage_name = promotions.stage_name
+        AND target_stage_promotions.latest_promotion_id = promotions.id
+)
 UPDATE promotions SET
     phase = $1,
     finished_at = CURRENT_TIMESTAMP,
     synced_at = CURRENT_TIMESTAMP
-WHERE project_name = $2
-    AND name = $3
-    AND finished_at IS NULL
+WHERE promotions.project_name = $2
+    AND promotions.name = $3
+    AND promotions.finished_at IS NULL
 `
 
 type FinishDeletedPromotionParams struct {
@@ -30,7 +42,10 @@ type FinishDeletedPromotionParams struct {
 
 // Records a Promotion that was deleted before it finished as finished in the
 // given phase, at the time its deletion was seen. A row already finished is
-// left alone: it is the record of what the Promotion did.
+// left alone: it is the record of what the Promotion did. If the Promotion
+// is its Target's latest from its Stage, the pair's row takes the phase
+// too. Both statements read the row as it was before either ran, so they
+// agree on whether it was unfinished.
 func (q *Queries) FinishDeletedPromotion(ctx context.Context, arg FinishDeletedPromotionParams) (int64, error) {
 	result, err := q.db.Exec(ctx, finishDeletedPromotion, arg.Phase, arg.ProjectName, arg.Name)
 	if err != nil {
@@ -223,6 +238,67 @@ freight AS (
     FROM existing
     WHERE NOT existing.name_taken
     ON CONFLICT (promotion_id, origin_kind, origin_name) DO NOTHING
+),
+pair AS (
+    INSERT INTO target_stage_promotions (
+        project_name,
+        target_name,
+        stage_name,
+        latest_promotion_id,
+        latest_phase,
+        latest_created_at,
+        succeeded_promotion_id,
+        succeeded_finished_at
+    )
+    SELECT
+        $1,
+        $7,
+        $5,
+        COALESCE(existing.id, $4),
+        $9,
+        $3,
+        CASE
+            WHEN $9 = 'Succeeded' AND $10::timestamptz IS NOT NULL
+            THEN COALESCE(existing.id, $4)
+        END,
+        CASE
+            WHEN $9 = 'Succeeded' AND $10::timestamptz IS NOT NULL
+            THEN $10::timestamptz
+        END
+    FROM existing
+    WHERE NOT existing.name_taken AND $7::text IS NOT NULL
+    ON CONFLICT (project_name, target_name, stage_name) DO UPDATE SET
+        latest_promotion_id = CASE
+            WHEN (EXCLUDED.latest_created_at, EXCLUDED.latest_promotion_id)
+                >= (target_stage_promotions.latest_created_at, target_stage_promotions.latest_promotion_id)
+            THEN EXCLUDED.latest_promotion_id
+            ELSE target_stage_promotions.latest_promotion_id
+        END,
+        latest_phase = CASE
+            WHEN (EXCLUDED.latest_created_at, EXCLUDED.latest_promotion_id)
+                >= (target_stage_promotions.latest_created_at, target_stage_promotions.latest_promotion_id)
+            THEN EXCLUDED.latest_phase
+            ELSE target_stage_promotions.latest_phase
+        END,
+        latest_created_at = GREATEST(EXCLUDED.latest_created_at, target_stage_promotions.latest_created_at),
+        succeeded_promotion_id = CASE
+            WHEN EXCLUDED.succeeded_finished_at IS NOT NULL AND (
+                target_stage_promotions.succeeded_finished_at IS NULL
+                OR (EXCLUDED.succeeded_finished_at, EXCLUDED.succeeded_promotion_id)
+                    >= (target_stage_promotions.succeeded_finished_at, target_stage_promotions.succeeded_promotion_id)
+            )
+            THEN EXCLUDED.succeeded_promotion_id
+            ELSE target_stage_promotions.succeeded_promotion_id
+        END,
+        succeeded_finished_at = CASE
+            WHEN EXCLUDED.succeeded_finished_at IS NOT NULL AND (
+                target_stage_promotions.succeeded_finished_at IS NULL
+                OR (EXCLUDED.succeeded_finished_at, EXCLUDED.succeeded_promotion_id)
+                    >= (target_stage_promotions.succeeded_finished_at, target_stage_promotions.succeeded_promotion_id)
+            )
+            THEN EXCLUDED.succeeded_finished_at
+            ELSE target_stage_promotions.succeeded_finished_at
+        END
 )
 SELECT name_taken FROM existing
 `
@@ -266,6 +342,16 @@ type UpsertPromotionParams struct {
 // is one of the Promotion's own Project; an id naming no such rollout is
 // recorded as none. Once recorded it is kept, whatever the Promotion later
 // claims.
+//
+// A Promotion to a Target also keeps the Target's row in
+// target_stage_promotions current, under the id the Promotion's row has: it
+// becomes the pair's latest Promotion unless a later one (by creation time,
+// then id) already is, and its latest successful one if it has succeeded
+// and none finished later (by finish time, then id). The comparison is made
+// against the Promotion's own timestamps, not the order syncs arrive in, so
+// a Promotion first seen late, such as during a resync, settles in the same
+// place. The same Promotion arriving again, with a new phase, is its own
+// successor.
 func (q *Queries) UpsertPromotion(ctx context.Context, arg UpsertPromotionParams) (bool, error) {
 	row := q.db.QueryRow(ctx, upsertPromotion,
 		arg.ProjectName,
