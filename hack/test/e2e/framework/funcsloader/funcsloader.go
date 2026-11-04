@@ -1,12 +1,10 @@
- // This package defines the set of environment configuration functions.
- // It is a separate package to allow replacing it without changing the main `InitEnv`
- // This allows calling test for OSS packages from EE codebase.
+ // Package funcsloader defines the ordered setup and teardown functions for the e2e test environment.
  package funcsloader
 
 import (
 	"slices"
 
-	"github.com/akuity/kargo/hack/test/e2e/envfuncs"
+	"github.com/akuity/kargo/hack/test/e2e/framework/envfuncs"
 	"sigs.k8s.io/e2e-framework/pkg/env"
 )
 

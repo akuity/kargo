@@ -9,10 +9,10 @@ import (
 	"path/filepath"
 	"strconv"
 
-	env "envs"
-
 	"sigs.k8s.io/e2e-framework/pkg/envconf"
 	"sigs.k8s.io/yaml"
+
+	env "github.com/akuity/kargo/hack/test/e2e/envs"
 )
 
 type ContextKey string

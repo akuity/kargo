@@ -3,7 +3,6 @@ package envfuncs
 import (
 	"context"
 	"encoding/json"
-	env "envs"
 	"fmt"
 	"io"
 	"os"
@@ -13,6 +12,7 @@ import (
 	"sigs.k8s.io/e2e-framework/pkg/envconf"
 	"sigs.k8s.io/e2e-framework/pkg/utils"
 
+	env "github.com/akuity/kargo/hack/test/e2e/envs"
 	"github.com/akuity/kargo/pkg/cli/config"
 	"sigs.k8s.io/yaml"
 )
