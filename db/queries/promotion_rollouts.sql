@@ -5,25 +5,18 @@
 -- number comes from the Stage row's counter, which only this query writes.
 -- The UPDATE locks the row, serializing a Stage's creates, and a failure
 -- anywhere in the statement rolls the increment back, so numbers are
--- gapless. The counter is also kept above MAX(number) of the name's existing
--- rollouts, because a Stage deleted and recreated gets a fresh row with the
--- counter at 0, and the predecessor's rollouts are deleted with its row. The
--- same locked row supplies the Stage's id, which the rollout references so
--- that it is deleted with the Stage. A Stage the mirror has not recorded
--- has no row, so nothing is inserted. The targets CTE records the rollout's
--- Targets in the same statement (an INSERT in a data-modifying CTE always
--- runs, even though the outer SELECT reads only from rollout), so a Target
--- that no longer exists fails the whole create.
+-- gapless. A Stage deleted and recreated gets a fresh row with the counter
+-- at 0, and its predecessor's rollouts go with the old row, so the new
+-- Stage's rollouts number from 1. The same locked row supplies the Stage's
+-- id, which the rollout references so that it is deleted with the Stage. A
+-- Stage the mirror has not recorded has no row, so nothing is inserted. The
+-- targets CTE records the rollout's Targets in the same statement (an INSERT
+-- in a data-modifying CTE always runs, even though the outer SELECT reads
+-- only from rollout), so a Target that no longer exists fails the whole
+-- create.
 -- name: CreatePromotionRollout :one
 WITH stage AS (
-    UPDATE stages SET last_promotion_rollout_number = GREATEST(
-        stages.last_promotion_rollout_number,
-        (
-            SELECT COALESCE(MAX(number), 0) FROM promotion_rollouts
-            WHERE project_name = sqlc.arg(project_name)::text
-                AND stage_name = sqlc.arg(stage_name)::text
-        )
-    ) + 1
+    UPDATE stages SET last_promotion_rollout_number = last_promotion_rollout_number + 1
     WHERE project_name = sqlc.arg(project_name)::text
         AND name = sqlc.arg(stage_name)::text
     RETURNING id AS stage_id, last_promotion_rollout_number AS number
@@ -73,7 +66,9 @@ ORDER BY name;
 -- lists below is unbounded: each reads a page of at most page_size rows
 -- from an index, and a caller wanting more asks again from where the page
 -- ended. Bounds are compared with COALESCE rather than an IS NULL test so
--- that the index serves them whether or not a bound is given.
+-- that the index serves them whether or not a bound is given. A Stage's
+-- rollouts are keyed by its row's id, which each list of them finds by the
+-- Stage's name first; a Stage the mirror has not recorded has none.
 
 -- A page of a Project's rollouts, newest first: those created before the
 -- given rollout, or the newest when none is given.
@@ -91,8 +86,11 @@ LIMIT sqlc.arg(page_size);
 -- before_number, or the newest when it is NULL.
 -- name: ListStagePromotionRollouts :many
 SELECT * FROM promotion_rollouts
-WHERE project_name = sqlc.arg(project_name)
-    AND stage_name = sqlc.arg(stage_name)
+WHERE stage_id = (
+    SELECT id FROM stages
+    WHERE stages.project_name = sqlc.arg(project_name)
+        AND stages.name = sqlc.arg(stage_name)
+)
     AND number < COALESCE(sqlc.narg(before_number)::bigint, 9223372036854775807)
 ORDER BY number DESC
 LIMIT sqlc.arg(page_size);
@@ -101,8 +99,11 @@ LIMIT sqlc.arg(page_size);
 -- ListStagePromotionRollouts.
 -- name: ListStagePromotionRolloutsOfFreight :many
 SELECT * FROM promotion_rollouts
-WHERE project_name = sqlc.arg(project_name)
-    AND stage_name = sqlc.arg(stage_name)
+WHERE stage_id = (
+    SELECT id FROM stages
+    WHERE stages.project_name = sqlc.arg(project_name)
+        AND stages.name = sqlc.arg(stage_name)
+)
     AND freight_name = sqlc.arg(freight_name)
     AND number < COALESCE(sqlc.narg(before_number)::bigint, 9223372036854775807)
 ORDER BY number DESC
@@ -111,8 +112,11 @@ LIMIT sqlc.arg(page_size);
 -- A page of a Stage's rollouts numbered above after_number, oldest first.
 -- name: ListStagePromotionRolloutsAfter :many
 SELECT * FROM promotion_rollouts
-WHERE project_name = sqlc.arg(project_name)
-    AND stage_name = sqlc.arg(stage_name)
+WHERE stage_id = (
+    SELECT id FROM stages
+    WHERE stages.project_name = sqlc.arg(project_name)
+        AND stages.name = sqlc.arg(stage_name)
+)
     AND number > sqlc.arg(after_number)
 ORDER BY number
 LIMIT sqlc.arg(page_size);
@@ -130,8 +134,7 @@ FROM stages
 CROSS JOIN LATERAL (
     (
         SELECT * FROM promotion_rollouts
-        WHERE promotion_rollouts.project_name = stages.project_name
-            AND promotion_rollouts.stage_name = stages.name
+        WHERE promotion_rollouts.stage_id = stages.id
             AND promotion_rollouts.status_phase IN ('Pending', 'Running')
         ORDER BY promotion_rollouts.status_phase = 'Running' DESC, promotion_rollouts.number
         LIMIT 1
@@ -139,8 +142,7 @@ CROSS JOIN LATERAL (
     UNION ALL
     (
         SELECT * FROM promotion_rollouts
-        WHERE promotion_rollouts.project_name = stages.project_name
-            AND promotion_rollouts.stage_name = stages.name
+        WHERE promotion_rollouts.stage_id = stages.id
             AND promotion_rollouts.status_phase NOT IN ('Pending', 'Running')
         ORDER BY promotion_rollouts.number DESC
         LIMIT 1

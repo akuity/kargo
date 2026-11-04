@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/stretchr/testify/require"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
@@ -310,6 +311,41 @@ func TestStoreIntegration(t *testing.T) {
 					 VALUES ('bad', 'a', 'bad/absent', 'prod', 1, 'f')`,
 				)
 				databasetest.RequirePGError(t, err, "23503")
+			},
+		},
+		{
+			name: "a Stage's row keys its rollouts' numbers and its Running one",
+			run: func(t *testing.T) {
+				seedStage(t, "keys", "prod", "keys/prod")
+				insert := func(name, stage string, number int, phase string) error {
+					_, err := pool.Exec(ctx,
+						`INSERT INTO promotion_rollouts
+						 (project_name, name, stage_id, stage_name, number, freight_name, status_phase)
+						 VALUES ('keys', $1, 'keys/prod', $2, $3, 'f', $4)`,
+						name, stage, number, phase,
+					)
+					return err
+				}
+				requireViolation := func(t *testing.T, err error, code, constraint string) {
+					t.Helper()
+					var pgErr *pgconn.PgError
+					require.ErrorAs(t, err, &pgErr)
+					require.Equal(t, code, pgErr.Code)
+					require.Equal(t, constraint, pgErr.ConstraintName)
+				}
+				require.NoError(t, insert("a", "prod", 1, "Running"))
+				// Two rollouts of the Stage's row cannot both be Running...
+				requireViolation(t, insert("b", "prod", 2, "Running"), "23505", runningConstraint)
+				// ...nor share a number.
+				requireViolation(
+					t, insert("b", "prod", 1, "Pending"), "23505", "promotion_rollouts_stage_number_key",
+				)
+				require.NoError(t, insert("b", "prod", 2, "Pending"))
+				// A rollout carries the names of the Stage whose row it
+				// references.
+				requireViolation(
+					t, insert("c", "staging", 3, "Pending"), "23503", "promotion_rollouts_stage_fkey",
+				)
 			},
 		},
 		{
