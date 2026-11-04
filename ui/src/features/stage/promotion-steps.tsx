@@ -1,5 +1,5 @@
 import { Alert, Collapse, CollapseProps } from 'antd';
-import { useEffect, useMemo, useState } from 'react';
+import { Dispatch, SetStateAction, useEffect, useMemo } from 'react';
 
 import { useExtensionsContext } from '@ui/extensions/extensions-context';
 import { Promotion } from '@ui/gen/api/v2/models';
@@ -20,6 +20,7 @@ import { Step } from './promotion-step';
 import { PromotionTaskGroupHeader } from './promotion-task-group-header';
 import { getPromotionOutputsByStepAlias } from './utils/promotion';
 import {
+  getStepKey,
   groupPromotionSteps,
   IndexedPromotionStep,
   PromotionTaskGroup
@@ -29,12 +30,14 @@ type CollapseItem = NonNullable<CollapseProps['items']>[number];
 
 type PromotionStepsProps = {
   promotion: Promotion;
+  activeKeys: string[];
+  setActiveKeys: Dispatch<SetStateAction<string[]>>;
 };
 
 export const PromotionSteps = (props: PromotionStepsProps) => {
   const { promotionStepExtensions } = useExtensionsContext();
 
-  const [activeKeys, setActiveKeys] = useState<string[]>([]);
+  const { activeKeys, setActiveKeys } = props;
 
   const onActiveKeysChange = (keys: string | string[]) =>
     setActiveKeys(typeof keys === 'string' ? [keys] : keys);
@@ -83,7 +86,7 @@ export const PromotionSteps = (props: PromotionStepsProps) => {
 
   const toStepItems = ({ step, index: i }: IndexedPromotionStep): CollapseItem[] => {
     const result = getPromotionDirectiveStepStatus(i, props.promotion.status);
-    const key = step.as || `step-${i}`;
+    const key = getStepKey(step, i);
 
     if (!runningKey && isProgressingStep(i, props.promotion.status) && hasExtension(step)) {
       runningKey = key;
@@ -97,7 +100,8 @@ export const PromotionSteps = (props: PromotionStepsProps) => {
         promotion: props.promotion,
         stepIndex: i
       }),
-      key
+      key,
+      id: `promotion-entry-${key}`
     };
 
     let alertType: 'error' | 'warning' | undefined;
@@ -135,6 +139,7 @@ export const PromotionSteps = (props: PromotionStepsProps) => {
 
     return {
       key: group.key,
+      id: `promotion-entry-${group.key}`,
       className: 'border-gray-200 dark:border-neutral-700',
       label: <PromotionTaskGroupHeader group={group} promotion={props.promotion} />,
       children: (

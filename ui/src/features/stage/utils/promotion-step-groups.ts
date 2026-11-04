@@ -19,6 +19,14 @@ const taskStepAliasSeparator = '::';
 
 const generatedStepAliasRegex = /^(step|task)-\d+$/;
 
+export const stepStatusLabels: [PromotionDirectiveStepStatus, string][] = [
+  [PromotionDirectiveStepStatus.SUCCESS, 'succeeded'],
+  [PromotionDirectiveStepStatus.FAILED, 'failed'],
+  [PromotionDirectiveStepStatus.RETRYING, 'retrying'],
+  [PromotionDirectiveStepStatus.RUNNING, 'running'],
+  [PromotionDirectiveStepStatus.SKIPPED, 'skipped']
+];
+
 export type IndexedPromotionStep = {
   type: 'step';
   step: PromotionStep;
@@ -43,6 +51,11 @@ export const getUserStepAlias = (alias?: string) => {
 
   return userAlias;
 };
+
+export const getStepKey = (step: PromotionStep, index: number) => step.as || `step-${index}`;
+
+export const getTaskGroupName = (group: PromotionTaskGroup) =>
+  group.inflatedTask.task?.name ?? group.key;
 
 const getInflatedTasksByStepAlias = (inflatedTasks: InflatedPromotionTask[]) =>
   new Map(
