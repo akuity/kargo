@@ -805,6 +805,8 @@ type Chart struct {
 	Name string `json:"name,omitempty"`
 	// Version specifies a particular version of the chart.
 	Version string `json:"version,omitempty"`
+	// Annotations is a map of arbitrary metadata from the chart's OCI manifest.
+	Annotations map[string]string `json:"annotations,omitempty"`
 	// SubscriptionName is the name of the subscription that discovered this
 	// chart. This field is only populated if the subscription was assigned
 	// a name.
@@ -823,6 +825,7 @@ func (c *Chart) DeepEquals(other *Chart) bool {
 	return c.RepoURL == other.RepoURL &&
 		c.Name == other.Name &&
 		c.Version == other.Version &&
+		maps.Equal(c.Annotations, other.Annotations) &&
 		c.SubscriptionName == other.SubscriptionName
 }
 

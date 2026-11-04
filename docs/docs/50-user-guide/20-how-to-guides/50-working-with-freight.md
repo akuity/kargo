@@ -363,3 +363,26 @@ docker buildx build \
 
 By including these annotations, you enable Kargo to provide
 rich context around your container images directly in the UI.
+
+### OCI Helm chart annotations
+
+Kargo also discovers annotations from the OCI manifest of each selected Helm
+chart version. These annotations are preserved in Freight and displayed in the
+dashboard's artifact metadata, including custom annotations such as release-notes
+URLs. The source and revision annotations described above also provide source
+code links for charts.
+
+Chart annotations are available through `chartFrom().Annotations` in promotion
+expressions and `freightCreationCriteria`. For example, a Warehouse can require
+that a chart and an image originate from the same commit:
+
+```yaml
+freightCreationCriteria:
+  expression: |
+    let revision = chartFrom('oci://registry.example.com/charts/my-app').Annotations['org.opencontainers.image.revision'];
+    revision != nil && revision != '' &&
+      revision == imageFrom('registry.example.com/my-app').Annotations['org.opencontainers.image.revision']
+```
+
+This support applies only to OCI manifest annotations. Kargo does not extract
+annotations from `Chart.yaml` or classic HTTP/S chart repositories.

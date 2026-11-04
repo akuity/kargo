@@ -11304,11 +11304,19 @@ components:
       type: object
     Chart:
       example:
+        annotations:
+          key: annotations
         name: name
         repoURL: repoURL
         subscriptionName: subscriptionName
         version: version
       properties:
+        annotations:
+          additionalProperties:
+            type: string
+          description: Annotations is a map of arbitrary metadata from the chart's
+            OCI manifest.
+          type: object
         name:
           description: Name specifies the name of the chart.
           type: string
@@ -11333,6 +11341,17 @@ components:
       type: object
     ChartDiscoveryResult:
       properties:
+        annotations:
+          additionalProperties:
+            additionalProperties:
+              type: string
+            type: object
+          description: |-
+            Annotations contains OCI manifest annotations indexed by chart version.
+            This field is only populated for charts in OCI repositories.
+
+            +optional
+          type: object
         name:
           description: "Name is the name of the Helm chart, as specified in the ChartSubscription."
           type: string
@@ -11998,11 +12017,15 @@ components:
           subscriptionName: subscriptionName
           version: version
         charts:
-        - name: name
+        - annotations:
+            key: annotations
+          name: name
           repoURL: repoURL
           subscriptionName: subscriptionName
           version: version
-        - name: name
+        - annotations:
+            key: annotations
+          name: name
           repoURL: repoURL
           subscriptionName: subscriptionName
           version: version
@@ -16285,11 +16308,15 @@ components:
             subscriptionName: subscriptionName
             version: version
           charts:
-          - name: name
+          - annotations:
+              key: annotations
+            name: name
             repoURL: repoURL
             subscriptionName: subscriptionName
             version: version
-          - name: name
+          - annotations:
+              key: annotations
+            name: name
             repoURL: repoURL
             subscriptionName: subscriptionName
             version: version
@@ -16385,11 +16412,15 @@ components:
             subscriptionName: subscriptionName
             version: version
           charts:
-          - name: name
+          - annotations:
+              key: annotations
+            name: name
             repoURL: repoURL
             subscriptionName: subscriptionName
             version: version
-          - name: name
+          - annotations:
+              key: annotations
+            name: name
             repoURL: repoURL
             subscriptionName: subscriptionName
             version: version
@@ -16496,11 +16527,15 @@ components:
                 subscriptionName: subscriptionName
                 version: version
               charts:
-              - name: name
+              - annotations:
+                  key: annotations
+                name: name
                 repoURL: repoURL
                 subscriptionName: subscriptionName
                 version: version
-              - name: name
+              - annotations:
+                  key: annotations
+                name: name
                 repoURL: repoURL
                 subscriptionName: subscriptionName
                 version: version
@@ -16596,11 +16631,15 @@ components:
                 subscriptionName: subscriptionName
                 version: version
               charts:
-              - name: name
+              - annotations:
+                  key: annotations
+                name: name
                 repoURL: repoURL
                 subscriptionName: subscriptionName
                 version: version
-              - name: name
+              - annotations:
+                  key: annotations
+                name: name
                 repoURL: repoURL
                 subscriptionName: subscriptionName
                 version: version

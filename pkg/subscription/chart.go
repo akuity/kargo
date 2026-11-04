@@ -197,11 +197,30 @@ func (c *chartSubscriber) DiscoverArtifacts(
 		logger.Debug("discovered chart versions", "count", len(versions))
 	}
 
+	versions = trimSlice(versions, int(chartSub.DiscoveryLimit))
+	var annotations map[string]map[string]string
+	for _, version := range versions {
+		metadata, metadataErr := selector.Annotations(ctx, version)
+		if metadataErr != nil {
+			return nil, fmt.Errorf(
+				"error discovering annotations for chart version %q from repository %q: %w",
+				version, chartSub.RepoURL, metadataErr,
+			)
+		}
+		if len(metadata) > 0 {
+			if annotations == nil {
+				annotations = make(map[string]map[string]string)
+			}
+			annotations[version] = metadata
+		}
+	}
+
 	return kargoapi.ChartDiscoveryResult{
 		RepoURL:          chartSub.RepoURL,
 		Name:             chartSub.Name,
 		SemverConstraint: chartSub.SemverConstraint,
-		Versions:         trimSlice(versions, int(chartSub.DiscoveryLimit)),
+		Versions:         versions,
+		Annotations:      annotations,
 		SubscriptionName: sub.Name,
 	}, nil
 }

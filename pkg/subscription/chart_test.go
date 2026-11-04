@@ -369,6 +369,10 @@ func Test_chartSubscriber_DiscoverArtifacts(t *testing.T) {
 						selectFn: func(context.Context) ([]string, error) {
 							return []string{"3.0.0", "2.0.0", "1.0.0"}, nil
 						},
+						annotationsFn: func(_ context.Context, version string) (map[string]string, error) {
+							require.NotEqual(t, "1.0.0", version, "must not fetch beyond the discovery limit")
+							return map[string]string{"org.opencontainers.image.version": version}, nil
+						},
 					}, nil
 				},
 			},
@@ -381,6 +385,36 @@ func Test_chartSubscriber_DiscoverArtifacts(t *testing.T) {
 				result, ok := res.(kargoapi.ChartDiscoveryResult)
 				require.True(t, ok)
 				require.Equal(t, []string{"3.0.0", "2.0.0"}, result.Versions)
+				require.Equal(t, map[string]map[string]string{
+					"3.0.0": {"org.opencontainers.image.version": "3.0.0"},
+					"2.0.0": {"org.opencontainers.image.version": "2.0.0"},
+				}, result.Annotations)
+			},
+		},
+		{
+			name: "error retrieving annotations",
+			subscriber: &chartSubscriber{
+				credentialsDB: &credentials.FakeDB{},
+				newSelectorFn: func(
+					context.Context,
+					kargoapi.ChartSubscription,
+					*helm.Credentials,
+				) (chart.Selector, error) {
+					return &fakeChartSelector{
+						selectFn: func(context.Context) ([]string, error) {
+							return []string{"1.0.0"}, nil
+						},
+						annotationsFn: func(context.Context, string) (map[string]string, error) {
+							return nil, errors.New("manifest unavailable")
+						},
+					}, nil
+				},
+			},
+			sub: kargoapi.RepoSubscription{Chart: &kargoapi.ChartSubscription{RepoURL: "fake-url"}},
+			assertions: func(t *testing.T, res any, err error) {
+				require.ErrorContains(t, err, "error discovering annotations for chart version \"1.0.0\"")
+				require.ErrorContains(t, err, "manifest unavailable")
+				require.Nil(t, res)
 			},
 		},
 		{
@@ -467,10 +501,18 @@ func Test_chartSubscriber_DiscoverArtifacts(t *testing.T) {
 // fakeChartSelector is a fake implementation of chart.Selector for testing the
 // chartSubscriber's discovery orchestration.
 type fakeChartSelector struct {
-	selectFn func(context.Context) ([]string, error)
+	selectFn      func(context.Context) ([]string, error)
+	annotationsFn func(context.Context, string) (map[string]string, error)
 }
 
 func (f *fakeChartSelector) MatchesVersion(string) bool { return true }
+
+func (f *fakeChartSelector) Annotations(ctx context.Context, version string) (map[string]string, error) {
+	if f.annotationsFn != nil {
+		return f.annotationsFn(ctx, version)
+	}
+	return nil, nil
+}
 
 func (f *fakeChartSelector) Select(ctx context.Context) ([]string, error) {
 	return f.selectFn(ctx)

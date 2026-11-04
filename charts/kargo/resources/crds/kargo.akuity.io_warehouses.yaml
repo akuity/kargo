@@ -184,6 +184,15 @@ spec:
                         ChartDiscoveryResult represents the result of a chart discovery operation for
                         a ChartSubscription.
                       properties:
+                        annotations:
+                          additionalProperties:
+                            additionalProperties:
+                              type: string
+                            type: object
+                          description: |-
+                            Annotations contains OCI manifest annotations indexed by chart version.
+                            This field is only populated for charts in OCI repositories.
+                          type: object
                         name:
                           description: Name is the name of the Helm chart, as specified
                             in the ChartSubscription.

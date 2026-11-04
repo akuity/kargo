@@ -702,6 +702,7 @@ func (r *reconciler) buildFreightFromLatestArtifacts(
 			RepoURL:          result.RepoURL,
 			Name:             result.Name,
 			Version:          latestChart,
+			Annotations:      result.Annotations[latestChart],
 			SubscriptionName: result.SubscriptionName,
 		})
 	}

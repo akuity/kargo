@@ -591,6 +591,11 @@ type ChartDiscoveryResult struct {
 	//
 	// +optional
 	Versions []string `json:"versions"`
+	// Annotations contains OCI manifest annotations indexed by chart version.
+	// This field is only populated for charts in OCI repositories.
+	//
+	// +optional
+	Annotations map[string]map[string]string `json:"annotations,omitempty"`
 	// SubscriptionName is the optional human-readable name of the subscription
 	// that produced this discovery result.
 	//

@@ -1442,8 +1442,12 @@ func TestBuildFreightFromLatestArtifacts(t *testing.T) {
 				},
 				Charts: []kargoapi.ChartDiscoveryResult{
 					{
-						RepoURL:          "fake-repo",
-						Versions:         []string{"fake-version"},
+						RepoURL:  "fake-repo",
+						Versions: []string{"fake-version", "older-version"},
+						Annotations: map[string]map[string]string{
+							"fake-version":  {"org.opencontainers.image.revision": "abc123"},
+							"older-version": {"org.opencontainers.image.revision": "old"},
+						},
 						SubscriptionName: "fake-chart-sub",
 					},
 					{RepoURL: "fake-repo", Versions: []string{"fake-version"}},
@@ -1476,6 +1480,10 @@ func TestBuildFreightFromLatestArtifacts(t *testing.T) {
 				require.Empty(t, freight.Images[1].SubscriptionName)
 				require.Len(t, freight.Charts, 2)
 				require.Equal(t, "fake-chart-sub", freight.Charts[0].SubscriptionName)
+				require.Equal(t, map[string]string{
+					"org.opencontainers.image.revision": "abc123",
+				}, freight.Charts[0].Annotations)
+				require.Empty(t, freight.Charts[1].Annotations)
 				require.Empty(t, freight.Charts[1].SubscriptionName)
 				require.Len(t, freight.Artifacts, 2)
 			},
