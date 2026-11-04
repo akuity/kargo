@@ -9,6 +9,7 @@ import { ExecutionDuration } from './promotion-step-duration';
 import { StepStatusIcon } from './promotion-step-status-icon';
 import { TaskVarTags } from './promotion-task-var-tags';
 import { useGetPromotionProgress } from './use-get-promotion-progress';
+import { getPromotionStartedAt } from './utils/promotion';
 import {
   getEffectiveVars,
   getStepKey,
@@ -39,7 +40,7 @@ export const PromotionProgress = ({
           </Typography.Text>
           <ExecutionDuration
             meta={{
-              startedAt: promotion.status?.stepExecutionMetadata?.[0]?.startedAt,
+              startedAt: getPromotionStartedAt(promotion),
               finishedAt: promotion.status?.finishedAt
             }}
             progressing={!isPromotionPhaseTerminal(phase)}
