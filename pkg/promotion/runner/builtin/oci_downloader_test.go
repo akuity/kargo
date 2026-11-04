@@ -19,7 +19,7 @@ import (
 
 	"github.com/akuity/kargo/pkg/credentials"
 	"github.com/akuity/kargo/pkg/promotion"
-	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
+	"github.com/akuity/kargo/pkg/x/promotion/stepconfig"
 )
 
 func Test_ociDownloader_validate(t *testing.T) {
@@ -87,13 +87,13 @@ func Test_ociDownloader_validate(t *testing.T) {
 func Test_ociDownloader_resolveImage(t *testing.T) {
 	tests := []struct {
 		name       string
-		cfg        builtin.OCIDownloadConfig
+		cfg        stepconfig.OCIDownloadConfig
 		credsDB    credentials.Database
 		assertions func(*testing.T, v1.Image, error)
 	}{
 		{
 			name: "invalid image reference",
-			cfg: builtin.OCIDownloadConfig{
+			cfg: stepconfig.OCIDownloadConfig{
 				ImageRef: "invalid::reference",
 			},
 			credsDB: &credentials.FakeDB{},
@@ -104,7 +104,7 @@ func Test_ociDownloader_resolveImage(t *testing.T) {
 		},
 		{
 			name: "credentials error",
-			cfg: builtin.OCIDownloadConfig{
+			cfg: stepconfig.OCIDownloadConfig{
 				ImageRef: "registry.example.com/image:tag",
 			},
 			credsDB: &credentials.FakeDB{
@@ -119,7 +119,7 @@ func Test_ociDownloader_resolveImage(t *testing.T) {
 		},
 		{
 			name: "OCI Helm reference credentials lookup",
-			cfg: builtin.OCIDownloadConfig{
+			cfg: stepconfig.OCIDownloadConfig{
 				ImageRef: "oci://registry.example.com/chart:1.0.0",
 			},
 			credsDB: &credentials.FakeDB{

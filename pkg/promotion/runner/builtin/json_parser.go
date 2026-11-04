@@ -11,7 +11,7 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/promotion"
-	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
+	"github.com/akuity/kargo/pkg/x/promotion/stepconfig"
 )
 
 const stepKindJSONParse = "json-parse"
@@ -51,15 +51,15 @@ func (jp *jsonParser) Run(
 }
 
 // convert validates jsonParser configuration against a JSON schema and
-// converts it into a builtin.JSONParseConfig struct.
-func (jp *jsonParser) convert(cfg promotion.Config) (builtin.JSONParseConfig, error) {
-	return validateAndConvert[builtin.JSONParseConfig](jp.schemaLoader, cfg, stepKindJSONParse)
+// converts it into a stepconfig.JSONParseConfig struct.
+func (jp *jsonParser) convert(cfg promotion.Config) (stepconfig.JSONParseConfig, error) {
+	return validateAndConvert[stepconfig.JSONParseConfig](jp.schemaLoader, cfg, stepKindJSONParse)
 }
 
 func (jp *jsonParser) run(
 	_ context.Context,
 	stepCtx *promotion.StepContext,
-	cfg builtin.JSONParseConfig,
+	cfg stepconfig.JSONParseConfig,
 ) (promotion.StepResult, error) {
 	failure := promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}
 
@@ -109,10 +109,10 @@ func (jp *jsonParser) readAndParseJSON(
 
 // extractValues returns select data extracted from the provided data by
 // evaluating it against expressions contained within the provided
-// []builtin.JSONParse.
+// []stepconfig.JSONParse.
 func (jp *jsonParser) extractValues(
 	data any,
-	outputs []builtin.JSONParse,
+	outputs []stepconfig.JSONParse,
 ) (map[string]any, error) {
 	results := make(map[string]any, len(outputs))
 	for _, output := range outputs {

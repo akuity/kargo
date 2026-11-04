@@ -23,7 +23,7 @@ import (
 	"github.com/akuity/kargo/pkg/logging"
 	kargonet "github.com/akuity/kargo/pkg/net"
 	"github.com/akuity/kargo/pkg/promotion"
-	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
+	"github.com/akuity/kargo/pkg/x/promotion/stepconfig"
 )
 
 const (
@@ -83,15 +83,15 @@ func (h *httpRequester) Run(
 }
 
 // convert validates httpRequester configuration against a JSON schema and
-// converts it into a builtin.HTTPConfig struct.
-func (h *httpRequester) convert(cfg promotion.Config) (builtin.HTTPConfig, error) {
-	return validateAndConvert[builtin.HTTPConfig](h.schemaLoader, cfg, stepKindHTTP)
+// converts it into a stepconfig.HTTPConfig struct.
+func (h *httpRequester) convert(cfg promotion.Config) (stepconfig.HTTPConfig, error) {
+	return validateAndConvert[stepconfig.HTTPConfig](h.schemaLoader, cfg, stepKindHTTP)
 }
 
 func (h *httpRequester) run(
 	ctx context.Context,
 	stepCtx *promotion.StepContext,
-	cfg builtin.HTTPConfig,
+	cfg stepconfig.HTTPConfig,
 ) (promotion.StepResult, error) {
 	req, err := h.buildRequest(ctx, stepCtx, cfg)
 	if err != nil {
@@ -202,7 +202,7 @@ func (h *httpRequester) run(
 // evaluateSuccessCriteria evaluates the success criteria expression if defined.
 // If the expression is not defined, it returns nil.
 func (h *httpRequester) evaluateSuccessCriteria(
-	cfg builtin.HTTPConfig,
+	cfg stepconfig.HTTPConfig,
 	env map[string]any,
 ) (*bool, error) {
 	if cfg.SuccessExpression == "" {
@@ -231,7 +231,7 @@ func (h *httpRequester) evaluateSuccessCriteria(
 // evaluateFailureCriteria evaluates the failure criteria expression if defined.
 // If the expression is not defined, it returns nil as the result.
 func (h *httpRequester) evaluateFailureCriteria(
-	cfg builtin.HTTPConfig,
+	cfg stepconfig.HTTPConfig,
 	env map[string]any,
 ) (*bool, error) {
 	if cfg.FailureExpression == "" {
@@ -272,7 +272,7 @@ func (h *httpRequester) evaluateFailureCriteria(
 //     matching field). Returns an empty string so the caller falls back.
 func (h *httpRequester) extractErrorMessageFromResponse(
 	ctx context.Context,
-	cfg builtin.HTTPConfig,
+	cfg stepconfig.HTTPConfig,
 	env map[string]any,
 ) (string, error) {
 	if cfg.ErrorExpression == "" {
@@ -301,7 +301,7 @@ func (h *httpRequester) extractErrorMessageFromResponse(
 func (h *httpRequester) buildRequest(
 	ctx context.Context,
 	stepCtx *promotion.StepContext,
-	cfg builtin.HTTPConfig,
+	cfg stepconfig.HTTPConfig,
 ) (*http.Request, error) {
 	method := cfg.Method
 	if method == "" {
@@ -349,7 +349,7 @@ func (h *httpRequester) buildRequest(
 	return req, nil
 }
 
-func (h *httpRequester) getClient(cfg builtin.HTTPConfig) (*http.Client, error) {
+func (h *httpRequester) getClient(cfg stepconfig.HTTPConfig) (*http.Client, error) {
 	httpTransport := cleanhttp.DefaultTransport()
 	kargonet.HardenTransport(httpTransport, nil)
 	if cfg.InsecureSkipTLSVerify {
@@ -456,7 +456,7 @@ func (h *httpRequester) buildExprEnv(
 }
 
 func (h *httpRequester) buildOutputs(
-	outputExprs []builtin.HTTPOutput,
+	outputExprs []stepconfig.HTTPOutput,
 	env map[string]any,
 ) (map[string]any, error) {
 	outputs := make(map[string]any, len(outputExprs))

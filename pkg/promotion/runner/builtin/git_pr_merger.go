@@ -13,7 +13,7 @@ import (
 	"github.com/akuity/kargo/pkg/gitprovider"
 	"github.com/akuity/kargo/pkg/logging"
 	"github.com/akuity/kargo/pkg/promotion"
-	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
+	"github.com/akuity/kargo/pkg/x/promotion/stepconfig"
 
 	_ "github.com/akuity/kargo/pkg/gitprovider/azure"                // Azure provider registration
 	_ "github.com/akuity/kargo/pkg/gitprovider/bitbucket/cloud"      // Bitbucket Cloud provider registration
@@ -77,15 +77,15 @@ func (g *gitPRMerger) Run(
 }
 
 // convert validates the configuration against a JSON schema and converts it
-// into a builtin.GitMergePRConfig struct.
-func (g *gitPRMerger) convert(cfg promotion.Config) (builtin.GitMergePRConfig, error) {
-	return validateAndConvert[builtin.GitMergePRConfig](g.schemaLoader, cfg, stepKindGitMergePR)
+// into a stepconfig.GitMergePRConfig struct.
+func (g *gitPRMerger) convert(cfg promotion.Config) (stepconfig.GitMergePRConfig, error) {
+	return validateAndConvert[stepconfig.GitMergePRConfig](g.schemaLoader, cfg, stepKindGitMergePR)
 }
 
 func (g *gitPRMerger) run(
 	ctx context.Context,
 	stepCtx *promotion.StepContext,
-	cfg builtin.GitMergePRConfig,
+	cfg stepconfig.GitMergePRConfig,
 ) (promotion.StepResult, error) {
 	var repoCreds *git.RepoCredentials
 	creds, err := g.credsDB.Get(

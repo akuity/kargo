@@ -16,7 +16,7 @@ import (
 	"github.com/akuity/kargo/pkg/controller/git"
 	"github.com/akuity/kargo/pkg/credentials"
 	"github.com/akuity/kargo/pkg/promotion"
-	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
+	"github.com/akuity/kargo/pkg/x/promotion/stepconfig"
 )
 
 func Test_gitCloner_convert(t *testing.T) {
@@ -368,9 +368,9 @@ func Test_gitCloner_run(t *testing.T) {
 	res, err := runner.run(
 		t.Context(),
 		stepCtx,
-		builtin.GitCloneConfig{
+		stepconfig.GitCloneConfig{
 			RepoURL: fmt.Sprintf("%s/test.git", server.URL),
-			Checkout: []builtin.Checkout{
+			Checkout: []stepconfig.Checkout{
 				{
 					Commit: srcBranchCommitID,
 					Path:   "src",
@@ -420,9 +420,9 @@ func Test_gitCloner_run(t *testing.T) {
 	res, err = runner.run(
 		t.Context(),
 		newTestStepContext(t, escapingWorkDir),
-		builtin.GitCloneConfig{
+		stepconfig.GitCloneConfig{
 			RepoURL:  fmt.Sprintf("%s/test.git", server.URL),
-			Checkout: []builtin.Checkout{{Commit: srcBranchCommitID, Path: "out/escaped"}},
+			Checkout: []stepconfig.Checkout{{Commit: srcBranchCommitID, Path: "out/escaped"}},
 		},
 	)
 	require.ErrorContains(t, err, "path escapes from parent")
@@ -492,9 +492,9 @@ func Test_gitCloner_run_with_submodules(t *testing.T) {
 	res, err := runner.run(
 		t.Context(),
 		stepCtx,
-		builtin.GitCloneConfig{
+		stepconfig.GitCloneConfig{
 			RepoURL:           mainRepoURL,
-			Checkout:          []builtin.Checkout{{Commit: mainCommitID, Path: "src"}},
+			Checkout:          []stepconfig.Checkout{{Commit: mainCommitID, Path: "src"}},
 			RecurseSubmodules: true,
 		},
 	)

@@ -11,17 +11,17 @@ import (
 	"github.com/akuity/kargo/pkg/logging"
 	"github.com/akuity/kargo/pkg/promotion"
 	rbuiltin "github.com/akuity/kargo/pkg/promotion/runner/builtin"
-	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
+	"github.com/akuity/kargo/pkg/x/promotion/stepconfig"
 )
 
 // argoCDSelectorStepConfig is the minimal subset of an argocd-update or
 // argocd-wait step config needed to determine whether the step targets an Argo
-// CD Application by label selector. It reuses builtin.ArgoCDAppSelector so the
+// CD Application by label selector. It reuses stepconfig.ArgoCDAppSelector so the
 // selector shape stays in sync with the step runners.
 type argoCDSelectorStepConfig struct {
 	Apps []struct {
-		Namespace string                     `json:"namespace,omitempty"`
-		Selector  *builtin.ArgoCDAppSelector `json:"selector,omitempty"`
+		Namespace string                        `json:"namespace,omitempty"`
+		Selector  *stepconfig.ArgoCDAppSelector `json:"selector,omitempty"`
 	} `json:"apps"`
 }
 

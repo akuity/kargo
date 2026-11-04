@@ -11,7 +11,7 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/promotion"
-	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
+	"github.com/akuity/kargo/pkg/x/promotion/stepconfig"
 	"github.com/akuity/kargo/pkg/yaml"
 )
 
@@ -111,7 +111,7 @@ func Test_yamlUpdater_run(t *testing.T) {
 	tests := []struct {
 		name       string
 		stepCtx    *promotion.StepContext
-		cfg        builtin.YAMLUpdateConfig
+		cfg        stepconfig.YAMLUpdateConfig
 		files      map[string]string
 		assertions func(*testing.T, string, promotion.StepResult, error)
 	}{
@@ -120,9 +120,9 @@ func Test_yamlUpdater_run(t *testing.T) {
 			stepCtx: &promotion.StepContext{
 				Project: "test-project",
 			},
-			cfg: builtin.YAMLUpdateConfig{
+			cfg: stepconfig.YAMLUpdateConfig{
 				Path: "values.yaml",
-				Updates: []builtin.YAMLUpdate{
+				Updates: []stepconfig.YAMLUpdate{
 					{Key: "image.tag", Value: "fake-tag"},
 					{Key: "image.numStr", Value: "42"},
 					{Key: "image.realNum", Value: 42},
@@ -160,9 +160,9 @@ image:
 			stepCtx: &promotion.StepContext{
 				Project: "test-project",
 			},
-			cfg: builtin.YAMLUpdateConfig{
+			cfg: stepconfig.YAMLUpdateConfig{
 				Path: "non-existent/values.yaml",
-				Updates: []builtin.YAMLUpdate{
+				Updates: []stepconfig.YAMLUpdate{
 					{Key: "image.tag", Value: "fake-tag"},
 				},
 			},
@@ -258,7 +258,7 @@ func Test_yamlUpdater_generateCommitMessage(t *testing.T) {
 	tests := []struct {
 		name       string
 		path       string
-		updates    []builtin.YAMLUpdate
+		updates    []stepconfig.YAMLUpdate
 		assertions func(*testing.T, string)
 	}{
 		{
@@ -271,7 +271,7 @@ func Test_yamlUpdater_generateCommitMessage(t *testing.T) {
 		{
 			name:    "single change",
 			path:    "values.yaml",
-			updates: []builtin.YAMLUpdate{{Key: "image", Value: "repo/image:tag1"}},
+			updates: []stepconfig.YAMLUpdate{{Key: "image", Value: "repo/image:tag1"}},
 			assertions: func(t *testing.T, result string) {
 				assert.Equal(t, `Updated values.yaml
 
@@ -281,7 +281,7 @@ func Test_yamlUpdater_generateCommitMessage(t *testing.T) {
 		{
 			name: "multiple changes",
 			path: "chart/values.yaml",
-			updates: []builtin.YAMLUpdate{
+			updates: []stepconfig.YAMLUpdate{
 				{Key: "image1", Value: "repo1/image1:tag1"},
 				{Key: "image2", Value: "repo2/image2:tag2"},
 				{Key: "numStr", Value: "42"},
@@ -319,9 +319,9 @@ func Test_yamlUpdater_run_escapingSymlink(t *testing.T) {
 	_, err := (&yamlUpdater{}).run(
 		t.Context(),
 		newTestStepContext(t, workDir),
-		builtin.YAMLUpdateConfig{
+		stepconfig.YAMLUpdateConfig{
 			Path:    "out/values.yaml",
-			Updates: []builtin.YAMLUpdate{{Key: "key", Value: "changed"}},
+			Updates: []stepconfig.YAMLUpdate{{Key: "key", Value: "changed"}},
 		},
 	)
 	require.ErrorContains(t, err, "path escapes from parent")
