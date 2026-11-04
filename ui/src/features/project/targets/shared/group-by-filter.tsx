@@ -1,6 +1,7 @@
 import { faChevronDown } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Dropdown, Flex, Tag, Typography, theme } from 'antd';
+import { useState } from 'react';
 
 import { NO_GROUPING, STAGE_GROUPING } from '../model/target-grouping';
 
@@ -34,6 +35,7 @@ export const GroupByFilter = ({
 }) => {
   const { token } = theme.useToken();
   const labelSelected = keys.includes(value);
+  const [labelMenuOpen, setLabelMenuOpen] = useState(false);
 
   // Picking the key already in force unpicks it, leaving the fleet ungrouped.
   const toggle = (key: string) => (value === key ? NO_GROUPING : key);
@@ -66,6 +68,8 @@ export const GroupByFilter = ({
         <Dropdown
           trigger={['click']}
           disabled={disabled}
+          open={labelMenuOpen}
+          onOpenChange={setLabelMenuOpen}
           menu={{
             selectable: true,
             selectedKeys: labelSelected ? [value] : [],
@@ -76,16 +80,32 @@ export const GroupByFilter = ({
           {/* The pill is the Dropdown's own child, so that the click handler
               Dropdown injects lands on something that forwards it. */}
           <Tag.CheckableTag
-            className='m-0'
+            className='m-0 max-w-full'
             style={outline(labelSelected)}
             disabled={disabled}
             checked={labelSelected}
+            aria-haspopup='menu'
+            aria-expanded={labelMenuOpen}
             // The pill opens the dropdown; it is not a choice of its own.
             onChange={() => undefined}
+            // Dropdown only listens for clicks, and the pill swallows Space
+            // without forwarding it, so the keyboard opens the menu here. Once
+            // open, Tab moves focus into the menu.
+            onKeyDown={(e) => {
+              if (disabled || (e.key !== 'Enter' && e.key !== ' ')) {
+                return;
+              }
+              e.preventDefault();
+              setLabelMenuOpen(true);
+            }}
           >
-            <Flex gap={6} align='center'>
-              {labelSelected ? value : 'Label'}
-              <FontAwesomeIcon icon={faChevronDown} className='text-[10px]' />
+            <Flex gap={6} align='center' className='min-w-0'>
+              {/* Label keys can run long; cap the pill so the chevron stays
+                  on screen, and keep the full key on hover. */}
+              <span className='truncate max-w-[200px]' title={labelSelected ? value : undefined}>
+                {labelSelected ? value : 'Label'}
+              </span>
+              <FontAwesomeIcon icon={faChevronDown} className='text-[10px] shrink-0' />
             </Flex>
           </Tag.CheckableTag>
         </Dropdown>
