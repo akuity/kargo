@@ -145,18 +145,29 @@ func (q *Queries) ListUnfinishedPromotions(ctx context.Context) ([]PromotionRow,
 
 const upsertPromotion = `-- name: UpsertPromotion :one
 
-WITH existing AS (
+WITH stage AS (
+    SELECT (
+        SELECT stages.id FROM stages
+        WHERE stages.project_name = $1
+            AND stages.name = $2
+            AND (
+                $3::text IS NULL
+                OR stages.id = $3::text
+            )
+    ) AS id
+),
+existing AS (
     SELECT
         (
             SELECT promotions.id FROM promotions
             WHERE promotions.project_name = $1
-                AND promotions.name = $2
+                AND promotions.name = $4
         ) AS id,
         EXISTS (
             SELECT 1 FROM promotions
             WHERE promotions.project_name = $1
-                AND promotions.name = $2
-                AND promotions.created_at <> $3
+                AND promotions.name = $4
+                AND promotions.created_at <> $5
         ) AS name_taken
 ),
 promotion AS (
@@ -174,28 +185,23 @@ promotion AS (
         finished_at
     )
     VALUES (
-        $4,
-        $1,
-        $2,
-        (
-            SELECT stages.id FROM stages
-            WHERE stages.project_name = $1
-                AND stages.name = $5
-        ),
-        $5,
         $6,
+        $1,
+        $4,
+        (SELECT stage.id FROM stage),
+        $2,
         $7,
+        $8,
         (
-            SELECT promotion_rollouts.id FROM promotion_rollouts
-            WHERE promotion_rollouts.project_name = $1
-                AND promotion_rollouts.id = $8
+            SELECT promotion_rollouts.id FROM promotion_rollouts, stage
+            WHERE promotion_rollouts.stage_id = stage.id
+                AND promotion_rollouts.id = $9
         ),
-        $9,
-        $3,
-        $10
+        $10,
+        $5,
+        $11
     )
     ON CONFLICT (project_name, name) DO UPDATE SET
-        stage_id = EXCLUDED.stage_id,
         stage_name = EXCLUDED.stage_name,
         freight_name = EXCLUDED.freight_name,
         target_name = EXCLUDED.target_name,
@@ -205,7 +211,6 @@ promotion AS (
         synced_at = CURRENT_TIMESTAMP
     WHERE promotions.created_at = EXCLUDED.created_at
         AND (
-            promotions.stage_id,
             promotions.stage_name,
             promotions.freight_name,
             promotions.target_name,
@@ -213,7 +218,6 @@ promotion AS (
             promotions.phase,
             promotions.finished_at
         ) IS DISTINCT FROM (
-            EXCLUDED.stage_id,
             EXCLUDED.stage_name,
             EXCLUDED.freight_name,
             EXCLUDED.target_name,
@@ -227,10 +231,10 @@ freight AS (
     -- Set-returning functions in one select list advance together, which zips
     -- the arrays.
     SELECT
-        COALESCE(existing.id, $4),
-        unnest($11::text[]),
+        COALESCE(existing.id, $6),
         unnest($12::text[]),
-        unnest($13::text[])
+        unnest($13::text[]),
+        unnest($14::text[])
     FROM existing
     WHERE NOT existing.name_taken
     ON CONFLICT (promotion_id, origin_kind, origin_name) DO NOTHING
@@ -240,10 +244,11 @@ SELECT name_taken FROM existing
 
 type UpsertPromotionParams struct {
 	ProjectName        string
+	StageName          string
+	OwnerStageID       *string
 	Name               string
 	CreatedAt          time.Time
 	ID                 string
-	StageName          string
 	FreightName        string
 	TargetName         *string
 	PromotionRolloutID *uuid.UUID
@@ -275,22 +280,29 @@ type UpsertPromotionParams struct {
 // name. Names are never given twice, so this should not happen; if it does,
 // that record is left as it is and name_taken reports it.
 //
-// The PromotionRollout the Promotion was created by is recorded only if it
-// is one of the Promotion's own Project; an id naming no such rollout is
-// recorded as none. Once recorded it is kept, whatever the Promotion later
-// claims.
-//
 // The row references its Stage's mirrored row, found by Project and Stage
-// name, so that it is deleted with the Stage. A Stage the mirror has not
-// recorded yet has no row, and the write fails on the column's NOT NULL
-// constraint, to be retried once the mirror has caught up.
+// name, so that it is deleted with the Stage. When the Promotion names the
+// Stage that owns it, by owner_stage_id, the row found must be that Stage's:
+// a Stage deleted and recreated under the same name is a new row, and a
+// Promotion of the old one, still in Kubernetes until it is collected, must
+// not be recorded under the new one. A Stage the mirror has not recorded
+// yet, or one that has been replaced, has no row to find, and the write
+// fails on the column's NOT NULL constraint. The reference is written once:
+// a row never moves to another Stage, since a Stage's replacement deletes
+// the rows of the old one.
+//
+// The PromotionRollout the Promotion was created by is recorded only if it
+// is one of the same Stage's; an id naming no such rollout is recorded as
+// none, so that a rollout's deletion never takes another Stage's history
+// with it. Once recorded it is kept, whatever the Promotion later claims.
 func (q *Queries) UpsertPromotion(ctx context.Context, arg UpsertPromotionParams) (bool, error) {
 	row := q.db.QueryRow(ctx, upsertPromotion,
 		arg.ProjectName,
+		arg.StageName,
+		arg.OwnerStageID,
 		arg.Name,
 		arg.CreatedAt,
 		arg.ID,
-		arg.StageName,
 		arg.FreightName,
 		arg.TargetName,
 		arg.PromotionRolloutID,
