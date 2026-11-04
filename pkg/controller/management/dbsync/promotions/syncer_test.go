@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/oklog/ulid/v2"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -93,6 +94,22 @@ func TestSync(t *testing.T) {
 		{
 			name: "storage failure propagates", obj: testPromotion(created),
 			storeErr: errors.New("offline"), wantErr: "error syncing promotion", want: &upserted,
+		},
+		{
+			name: "a Stage the mirror has not recorded yet is named as what is waited for",
+			obj:  testPromotion(created),
+			storeErr: &pgconn.PgError{
+				Code: "23502", ColumnName: "stage_id", Message: `null value in column "stage_id"`,
+			},
+			wantErr: `Stage "dev": not mirrored yet`, want: &upserted,
+		},
+		{
+			name: "another missing value is reported as the database says",
+			obj:  testPromotion(created),
+			storeErr: &pgconn.PgError{
+				Code: "23502", ColumnName: "phase", Message: `null value in column "phase"`,
+			},
+			wantErr: `null value in column "phase"`, want: &upserted,
 		},
 		{
 			name: "a name another Promotion was recorded under is an error", obj: testPromotion(created),

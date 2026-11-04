@@ -1,5 +1,7 @@
--- Promotion rows are only ever inserted and updated; see the migration that
--- creates the table. There is no delete.
+-- Promotion rows are inserted and updated here, never deleted: a row is kept
+-- past its Promotion's deletion as the record of what it did, and goes only
+-- with its Stage, by cascade from the stages table. See the migrations that
+-- create the table and add the cascade.
 
 -- The Promotion's FreightCollection, if it has one yet, is recorded in the same
 -- statement, one row per origin, given as three arrays of equal length. A
@@ -22,6 +24,11 @@
 -- is one of the Promotion's own Project; an id naming no such rollout is
 -- recorded as none. Once recorded it is kept, whatever the Promotion later
 -- claims.
+--
+-- The row references its Stage's mirrored row, found by Project and Stage
+-- name, so that it is deleted with the Stage. A Stage the mirror has not
+-- recorded yet has no row, and the write fails on the column's NOT NULL
+-- constraint, to be retried once the mirror has caught up.
 -- name: UpsertPromotion :one
 WITH existing AS (
     SELECT
@@ -42,6 +49,7 @@ promotion AS (
         id,
         project_name,
         name,
+        stage_id,
         stage_name,
         freight_name,
         target_name,
@@ -54,6 +62,11 @@ promotion AS (
         sqlc.arg(id),
         sqlc.arg(project_name),
         sqlc.arg(name),
+        (
+            SELECT stages.id FROM stages
+            WHERE stages.project_name = sqlc.arg(project_name)
+                AND stages.name = sqlc.arg(stage_name)
+        ),
         sqlc.arg(stage_name),
         sqlc.arg(freight_name),
         sqlc.narg(target_name),
@@ -67,6 +80,7 @@ promotion AS (
         sqlc.narg(finished_at)
     )
     ON CONFLICT (project_name, name) DO UPDATE SET
+        stage_id = EXCLUDED.stage_id,
         stage_name = EXCLUDED.stage_name,
         freight_name = EXCLUDED.freight_name,
         target_name = EXCLUDED.target_name,
@@ -76,6 +90,7 @@ promotion AS (
         synced_at = CURRENT_TIMESTAMP
     WHERE promotions.created_at = EXCLUDED.created_at
         AND (
+            promotions.stage_id,
             promotions.stage_name,
             promotions.freight_name,
             promotions.target_name,
@@ -83,6 +98,7 @@ promotion AS (
             promotions.phase,
             promotions.finished_at
         ) IS DISTINCT FROM (
+            EXCLUDED.stage_id,
             EXCLUDED.stage_name,
             EXCLUDED.freight_name,
             EXCLUDED.target_name,

@@ -300,6 +300,25 @@ func TestPromotionsIntegration(t *testing.T) {
 				require.Equal(t, &rollout, promotionRolloutID(t, queries, unknown))
 			},
 		},
+		{
+			name: "a row references its Stage's row, and a Stage the mirror has not recorded is refused",
+			run: func(t *testing.T) {
+				requireUpsertPromotion(t, queries, running)
+				rows, err := queries.ListPromotionsByKey(ctx, keysOf(running))
+				require.NoError(t, err)
+				require.Len(t, rows, 1)
+				require.Equal(t, "demo-dev", rows[0].StageID)
+				unmirrored := running
+				unmirrored.ID = "id-unmirrored"
+				unmirrored.Name = "unmirrored.01abc.def456"
+				unmirrored.StageName = "unmirrored"
+				_, err = queries.UpsertPromotion(ctx, unmirrored)
+				databasetest.RequirePGError(t, err, "23502")
+				rows, err = queries.ListPromotionsByKey(ctx, keysOf(unmirrored))
+				require.NoError(t, err)
+				require.Empty(t, rows)
+			},
+		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {

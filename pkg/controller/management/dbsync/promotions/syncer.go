@@ -1,16 +1,19 @@
 // Package promotions mirrors Promotions into the database as a history:
 // rows are written and refreshed while a Promotion exists in Kubernetes and
-// kept once it is gone. A Promotion deleted before it finished is recorded
-// as Aborted, so that no row claims a Promotion is running that no longer
-// exists.
+// kept once it is gone, for as long as its Stage remains. A Promotion deleted
+// before it finished is recorded as Aborted, so that no row claims a
+// Promotion is running that no longer exists. A Stage's deletion deletes its
+// Promotions' rows by cascade, which the Stage syncer brings about.
 package promotions
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/oklog/ulid/v2"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -65,6 +68,14 @@ func (s *syncer) Sync(ctx context.Context, obj client.Object) error {
 	params.ID = ulid.MustNew(ulid.Timestamp(params.CreatedAt), ulid.DefaultEntropy()).String()
 	nameTaken, err := s.store.UpsertPromotion(ctx, params)
 	if err != nil {
+		// The row references its Stage's mirrored row, which the Stage
+		// syncer writes independently and may not have yet. The retry that
+		// follows any error finds it once it has; the name says what is
+		// being waited for.
+		if stageNotMirrored(err) {
+			// nolint:staticcheck
+			err = fmt.Errorf("Stage %q: %w", promotion.Spec.Stage, database.ErrNotMirrored)
+		}
 		return fmt.Errorf("error syncing promotion: %w", err)
 	}
 	// Kargo never gives a name twice, so this takes a Promotion made some
@@ -82,9 +93,11 @@ func (s *syncer) Sync(ctx context.Context, obj client.Object) error {
 
 // Delete keeps the row. A Promotion deleted from Kubernetes, by the garbage
 // collector or anyone else, stays in the database as the record of what it
-// did. One deleted before it finished, which Kubernetes allows since a
-// Promotion has no finalizer, is recorded as Aborted as of now: its row
-// would otherwise say it is running for good.
+// did, until its Stage is deleted and takes the row with it. One deleted
+// before it finished, which Kubernetes allows since a Promotion has no
+// finalizer, is recorded as Aborted as of now: its row would otherwise say
+// it is running for good. A Promotion collected with its Stage has no row
+// left to record, and the update finds nothing.
 func (s *syncer) Delete(ctx context.Context, key client.ObjectKey) error {
 	if _, err := s.store.FinishDeletedPromotion(ctx, database.FinishDeletedPromotionParams{
 		Phase:       string(kargoapi.PromotionPhaseAborted),
@@ -94,6 +107,15 @@ func (s *syncer) Delete(ctx context.Context, key client.ObjectKey) error {
 		return fmt.Errorf("error recording deleted promotion as finished: %w", err)
 	}
 	return nil
+}
+
+// stageNotMirrored reports whether the upsert failed for want of the Stage's
+// mirrored row: the row's stage_id is resolved from the stages table in the
+// statement itself and is NULL, which the column refuses, when the Stage has
+// no row yet.
+func stageNotMirrored(err error) bool {
+	var pgErr *pgconn.PgError
+	return errors.As(err, &pgErr) && pgErr.Code == "23502" && pgErr.ColumnName == "stage_id"
 }
 
 func toUpsertParams(promotion *kargoapi.Promotion) (database.UpsertPromotionParams, error) {
