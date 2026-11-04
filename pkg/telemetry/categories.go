@@ -11,12 +11,18 @@ import (
 // Category names a group of spans TRACING_CATEGORIES selects.
 type Category string
 
-// CategoryDatabase covers database query and batch spans.
-const CategoryDatabase Category = "database"
+const (
+	// CategoryDatabase covers database query and batch spans.
+	CategoryDatabase Category = "database"
+	// CategoryDiscovery covers artifact discovery, container registry request
+	// and Freight creation spans.
+	CategoryDiscovery Category = "discovery"
+)
 
 // categories maps every Category to whether it is on by default.
 var categories = map[Category]bool{
-	CategoryDatabase: true,
+	CategoryDatabase:  true,
+	CategoryDiscovery: false,
 }
 
 // CategoryEnabled returns whether tracing is on and c is selected by
