@@ -1,19 +1,19 @@
- // Package funcsloader defines the ordered setup and teardown functions for the e2e test environment.
- package funcsloader
+// Package funcsloader defines the ordered setup and teardown functions for the e2e test environment.
+package funcsloader
 
 import (
 	"slices"
 
-	"github.com/akuity/kargo/hack/test/e2e/framework/envfuncs"
 	"sigs.k8s.io/e2e-framework/pkg/env"
+
+	"github.com/akuity/kargo/hack/test/e2e/framework/envfuncs"
 )
 
 // GetFuncs provides an ordered list Setup and Teardown functions for test env (see scaffolding.go)
 // All functions will be added to the environment and called when test is run,
-// however function definitions may decide to return early and not perform a setup 
+// however function definitions may decide to return early and not perform a setup
 // based on configuration.
 func GetFuncs() ([]env.Func, []env.Func) {
-	
 
 	baseSetup := []env.Func{
 		// Load a yaml file set by `--env-file` and makes it accessible via context.
