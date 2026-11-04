@@ -1,6 +1,7 @@
 package telemetry
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"reflect"
@@ -34,6 +35,15 @@ func RecordError(span trace.Span, err error) {
 		),
 	)
 	span.SetStatus(codes.Error, msg)
+}
+
+// RecordErrorCtx is RecordError, skipped when err or ctx is canceled. A
+// command killed on cancellation fails without wrapping context.Canceled.
+func RecordErrorCtx(ctx context.Context, span trace.Span, err error) {
+	if errors.Is(err, context.Canceled) || errors.Is(ctx.Err(), context.Canceled) {
+		return
+	}
+	RecordError(span, err)
 }
 
 // errorType returns err's type, skipping fmt.Errorf("...: %w") layers. It

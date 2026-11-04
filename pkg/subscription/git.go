@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/trace"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/utils/ptr"
 
@@ -12,8 +14,12 @@ import (
 	"github.com/akuity/kargo/pkg/controller/git/commit"
 	"github.com/akuity/kargo/pkg/credentials"
 	"github.com/akuity/kargo/pkg/logging"
+	"github.com/akuity/kargo/pkg/telemetry"
 	"github.com/akuity/kargo/pkg/validation"
 )
+
+// tracer records this package's spans.
+var tracer = otel.Tracer("github.com/akuity/kargo/pkg/subscription")
 
 func init() {
 	DefaultSubscriberRegistry.MustRegister(SubscriberRegistration{
@@ -151,7 +157,11 @@ func (g *gitSubscriber) DiscoverArtifacts(
 	// before committing to an expensive clone. If it matches what we recorded at
 	// the previous successful discovery, nothing relevant has moved and the
 	// previously selected commits remain valid -- so we can skip the clone.
-	observedRefs, err := selector.ListRefs(ctx)
+	//
+	// A failure is handled below, by cloning, so it is not the span's error.
+	lsCtx, lsSpan := telemetry.StartSpanIn(ctx, telemetry.CategoryDiscovery, tracer, "Git ls-remote")
+	observedRefs, err := selector.ListRefs(lsCtx)
+	lsSpan.End()
 	if err != nil {
 		// Treat ls-remote failure as non-fatal: fall through to the clone path,
 		// which preserves today's behavior (and will surface any real
@@ -172,6 +182,7 @@ func (g *gitSubscriber) DiscoverArtifacts(
 			"remote refs unchanged since last discovery; skipping clone",
 			"commits", len(prev.Commits),
 		)
+		setCloneSkipped(ctx, true)
 		return kargoapi.GitDiscoveryResult{
 			RepoURL:          gitSub.RepoURL,
 			Commits:          prev.Commits,
@@ -180,7 +191,16 @@ func (g *gitSubscriber) DiscoverArtifacts(
 		}, nil
 	}
 
-	commits, err := selector.Select(ctx)
+	setCloneSkipped(ctx, false)
+	selectCtx, selectSpan := telemetry.StartSpanIn(
+		ctx,
+		telemetry.CategoryDiscovery,
+		tracer,
+		"Git select commits",
+	)
+	commits, err := selector.Select(selectCtx)
+	telemetry.RecordErrorCtx(selectCtx, selectSpan, err)
+	selectSpan.End()
 	if err != nil {
 		return nil, fmt.Errorf(
 			"error discovering commits from git repo %q: %w",
@@ -218,4 +238,12 @@ func gitRefsEqual(a, b *kargoapi.GitDiscoveryRefs) bool {
 		}
 	}
 	return true
+}
+
+// setCloneSkipped records on the subscription's span whether the clone was
+// skipped. Unless discovery is enabled, ctx's span is the caller's: no-op.
+func setCloneSkipped(ctx context.Context, skipped bool) {
+	if telemetry.CategoryEnabled(telemetry.CategoryDiscovery) {
+		trace.SpanFromContext(ctx).SetAttributes(telemetry.CloneSkippedKey.Bool(skipped))
+	}
 }
