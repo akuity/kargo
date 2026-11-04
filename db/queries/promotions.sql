@@ -1,5 +1,7 @@
--- Promotion rows are only ever inserted and updated; see the migration that
--- creates the table. There is no delete.
+-- Promotion rows are inserted and updated here, never deleted: a row is kept
+-- past its Promotion's deletion as the record of what it did, and goes only
+-- with its Stage, by cascade from the stages table. See the migrations that
+-- create the table and add the cascade.
 
 -- The Promotion's FreightCollection, if it has one yet, is recorded in the same
 -- statement, one row per origin, given as three arrays of equal length. A
@@ -18,12 +20,34 @@
 -- name. Names are never given twice, so this should not happen; if it does,
 -- that record is left as it is and name_taken reports it.
 --
+-- The row references its Stage's mirrored row, found by Project and Stage
+-- name, so that it is deleted with the Stage. When the Promotion names the
+-- Stage that owns it, by owner_stage_id, the row found must be that Stage's:
+-- a Stage deleted and recreated under the same name is a new row, and a
+-- Promotion of the old one, still in Kubernetes until it is collected, must
+-- not be recorded under the new one. A Stage the mirror has not recorded
+-- yet, or one that has been replaced, has no row to find, and the write
+-- fails on the column's NOT NULL constraint. The reference is written once:
+-- a row never moves to another Stage, since a Stage's replacement deletes
+-- the rows of the old one.
+--
 -- The PromotionRollout the Promotion was created by is recorded only if it
--- is one of the Promotion's own Project; an id naming no such rollout is
--- recorded as none. Once recorded it is kept, whatever the Promotion later
--- claims.
+-- is one of the same Stage's; an id naming no such rollout is recorded as
+-- none, so that a rollout's deletion never takes another Stage's history
+-- with it. Once recorded it is kept, whatever the Promotion later claims.
 -- name: UpsertPromotion :one
-WITH existing AS (
+WITH stage AS (
+    SELECT (
+        SELECT stages.id FROM stages
+        WHERE stages.project_name = sqlc.arg(project_name)
+            AND stages.name = sqlc.arg(stage_name)
+            AND (
+                sqlc.narg(owner_stage_id)::text IS NULL
+                OR stages.id = sqlc.narg(owner_stage_id)::text
+            )
+    ) AS id
+),
+existing AS (
     SELECT
         (
             SELECT promotions.id FROM promotions
@@ -42,6 +66,7 @@ promotion AS (
         id,
         project_name,
         name,
+        stage_id,
         stage_name,
         freight_name,
         target_name,
@@ -54,12 +79,13 @@ promotion AS (
         sqlc.arg(id),
         sqlc.arg(project_name),
         sqlc.arg(name),
+        (SELECT stage.id FROM stage),
         sqlc.arg(stage_name),
         sqlc.arg(freight_name),
         sqlc.narg(target_name),
         (
-            SELECT promotion_rollouts.id FROM promotion_rollouts
-            WHERE promotion_rollouts.project_name = sqlc.arg(project_name)
+            SELECT promotion_rollouts.id FROM promotion_rollouts, stage
+            WHERE promotion_rollouts.stage_id = stage.id
                 AND promotion_rollouts.id = sqlc.narg(promotion_rollout_id)
         ),
         sqlc.arg(phase),

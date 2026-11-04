@@ -42,6 +42,7 @@ type PromotionRolloutRow struct {
 	StatusMessage    string
 	StatusStartedAt  *time.Time
 	StatusFinishedAt *time.Time
+	StageID          string
 }
 
 type PromotionRolloutTargetRow struct {
@@ -61,6 +62,7 @@ type PromotionRow struct {
 	FinishedAt         *time.Time
 	SyncedAt           time.Time
 	PromotionRolloutID *uuid.UUID
+	StageID            string
 }
 
 type StageRow struct {

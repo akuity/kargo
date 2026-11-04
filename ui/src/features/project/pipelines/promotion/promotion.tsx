@@ -14,7 +14,7 @@ import {
   Tabs
 } from 'antd';
 import { formatDistance } from 'date-fns';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { generatePath, useNavigate } from 'react-router-dom';
 import { stringify } from 'yaml';
 
@@ -29,6 +29,7 @@ import {
   isPromotionRetryable
 } from '@ui/features/common/promotion-status/utils';
 import { useDictionaryContext } from '@ui/features/project/pipelines/context/dictionary-context';
+import { PromotionProgress } from '@ui/features/stage/promotion-progress';
 import { PromotionSteps } from '@ui/features/stage/promotion-steps';
 import { canAbortPromotion, hasAbortRequest } from '@ui/features/stage/utils/promotion';
 import {
@@ -54,6 +55,8 @@ const Content = (props: { promotion: TPromotion; yaml: string }) => {
   const navigate = useNavigate();
   const dictionaryContext = useDictionaryContext();
   const promotionDescriptions: DescriptionsProps['items'] = [];
+  const [activeStepKeys, setActiveStepKeys] = useState<string[]>([]);
+  const [activeTab, setActiveTab] = useState('promotion');
 
   const abortPromotionMutation = useAbortPromotion({
     mutation: {
@@ -210,6 +213,33 @@ const Content = (props: { promotion: TPromotion; yaml: string }) => {
 
   return (
     <>
+      {!isPromotionTerminal && (
+        <PromotionProgress
+          promotion={promotion}
+          onCurrentStepClick={
+            activeTab === 'yaml'
+              ? undefined
+              : (key) => {
+                  setActiveStepKeys((keys) => (keys.includes(key) ? keys : [...keys, key]));
+                  document
+                    .getElementById(`promotion-entry-${key}`)
+                    ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+          }
+          extra={
+            canAbortPromotion(promotion) && (
+              <Button
+                danger
+                size='small'
+                onClick={confirmAbortRequest}
+                icon={<FontAwesomeIcon icon={faStopCircle} className='text-xs' />}
+              >
+                Abort
+              </Button>
+            )
+          }
+        />
+      )}
       {affiliatedStage && (
         <Flex align='center' gap={8} className='mb-2'>
           <h1 className='text-sm font-semibold m-0'>Stage: </h1>
@@ -231,6 +261,8 @@ const Content = (props: { promotion: TPromotion; yaml: string }) => {
       )}
       <Tabs
         className='mb-5'
+        activeKey={activeTab}
+        onChange={setActiveTab}
         items={[
           {
             key: 'promotion',
@@ -246,20 +278,11 @@ const Content = (props: { promotion: TPromotion; yaml: string }) => {
                 />
 
                 <div className='mt-5'>
-                  {canAbortPromotion(promotion) && (
-                    <Flex className='mb-2'>
-                      <Button
-                        className='ml-auto'
-                        danger
-                        size='small'
-                        onClick={confirmAbortRequest}
-                        icon={<FontAwesomeIcon icon={faStopCircle} className='text-xs' />}
-                      >
-                        Abort
-                      </Button>
-                    </Flex>
-                  )}
-                  <PromotionSteps promotion={promotion} />
+                  <PromotionSteps
+                    promotion={promotion}
+                    activeKeys={activeStepKeys}
+                    setActiveKeys={setActiveStepKeys}
+                  />
                 </div>
               </>
             )

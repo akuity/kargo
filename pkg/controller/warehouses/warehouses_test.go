@@ -869,7 +869,7 @@ func TestSyncWarehouse(t *testing.T) {
 }
 
 // Test_syncWarehouse_existingFreight verifies Freight in the cache is not
-// re-created.
+// re-created, and that deleted Freight is.
 func Test_syncWarehouse_existingFreight(t *testing.T) {
 	testScheme := runtime.NewScheme()
 	require.NoError(t, kargoapi.AddToScheme(testScheme))
@@ -896,10 +896,14 @@ func Test_syncWarehouse_existingFreight(t *testing.T) {
 	expected.Name = api.GenerateFreightID(expected)
 
 	testCases := []struct {
-		name          string
-		objects       []client.Object
-		getErr        error
-		polls         int
+		name    string
+		objects []client.Object
+		getErr  error
+		polls   int
+		// deleteAfter deletes the Freight after that poll; staleGets is how
+		// many polls after the delete the cache still holds it.
+		deleteAfter   int
+		staleGets     int
 		expectCreates int
 		expectStatus  metav1.ConditionStatus
 		expectReason  string
@@ -942,11 +946,29 @@ func Test_syncWarehouse_existingFreight(t *testing.T) {
 			expectStatus:  metav1.ConditionFalse,
 			expectReason:  "AlreadyExists",
 		},
+		{
+			name:          "deleted Freight: re-created on the next poll",
+			polls:         2,
+			deleteAfter:   1,
+			expectCreates: 2,
+			expectStatus:  metav1.ConditionTrue,
+			expectReason:  "NewFreight",
+		},
+		{
+			name:          "deleted Freight still cached: re-created a poll later",
+			polls:         3,
+			deleteAfter:   1,
+			staleGets:     1,
+			expectCreates: 2,
+			expectStatus:  metav1.ConditionTrue,
+			expectReason:  "NewFreight",
+		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			creates := 0
 			getErr := testCase.getErr
+			stale := false
 			kubeClient := fake.NewClientBuilder().
 				WithScheme(testScheme).
 				WithObjects(testCase.objects...).
@@ -960,6 +982,9 @@ func Test_syncWarehouse_existingFreight(t *testing.T) {
 					) error {
 						if getErr != nil {
 							return getErr
+						}
+						if _, ok := obj.(*kargoapi.Freight); ok && stale {
+							return nil // the cache's copy of a deleted Freight
 						}
 						return c.Get(ctx, key, obj, opts...)
 					},
@@ -995,14 +1020,24 @@ func Test_syncWarehouse_existingFreight(t *testing.T) {
 			}
 
 			var status kargoapi.WarehouseStatus
-			for range max(testCase.polls, 1) {
+			// Each poll starts from the status the previous one returned.
+			current := warehouse.DeepCopy()
+			for poll := 1; poll <= max(testCase.polls, 1); poll++ {
+				// Read by the Get interceptor during this poll.
+				stale = testCase.deleteAfter > 0 && poll > testCase.deleteAfter &&
+					poll <= testCase.deleteAfter+testCase.staleGets
 				var err error
-				status, err = r.syncWarehouse(t.Context(), warehouse.DeepCopy())
+				status, err = r.syncWarehouse(t.Context(), current)
 				require.NoError(t, err)
+				current.Status = status
+				if poll == testCase.deleteAfter {
+					require.NoError(t, kubeClient.Delete(t.Context(), expected.DeepCopy()))
+				}
 			}
 			require.Equal(t, testCase.expectCreates, creates)
 			require.Equal(t, expected.Name, status.LastFreightID)
-			getErr = nil
+			// The check below reads the store, not the interceptor's view.
+			getErr, stale = nil, false
 			require.NoError(t, kubeClient.Get(
 				t.Context(),
 				client.ObjectKeyFromObject(expected),

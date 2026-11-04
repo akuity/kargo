@@ -7,11 +7,13 @@
 -- anywhere in the statement rolls the increment back, so numbers are
 -- gapless. The counter is also kept above MAX(number) of the name's existing
 -- rollouts, because a Stage deleted and recreated gets a fresh row with the
--- counter at 0. A Stage the mirror has not recorded has no row, so nothing
--- is inserted. The targets CTE records the rollout's Targets in the same
--- statement (an INSERT in a data-modifying CTE always runs, even though the
--- outer SELECT reads only from rollout), so a Target that no longer exists
--- fails the whole create.
+-- counter at 0, and the predecessor's rollouts are deleted with its row. The
+-- same locked row supplies the Stage's id, which the rollout references so
+-- that it is deleted with the Stage. A Stage the mirror has not recorded
+-- has no row, so nothing is inserted. The targets CTE records the rollout's
+-- Targets in the same statement (an INSERT in a data-modifying CTE always
+-- runs, even though the outer SELECT reads only from rollout), so a Target
+-- that no longer exists fails the whole create.
 -- name: CreatePromotionRollout :one
 WITH stage AS (
     UPDATE stages SET last_promotion_rollout_number = GREATEST(
@@ -24,11 +26,12 @@ WITH stage AS (
     ) + 1
     WHERE project_name = sqlc.arg(project_name)::text
         AND name = sqlc.arg(stage_name)::text
-    RETURNING last_promotion_rollout_number AS number
+    RETURNING id AS stage_id, last_promotion_rollout_number AS number
 ), rollout AS (
     INSERT INTO promotion_rollouts (
         project_name,
         name,
+        stage_id,
         stage_name,
         number,
         freight_name,
@@ -39,6 +42,7 @@ WITH stage AS (
     SELECT
         sqlc.arg(project_name)::text,
         sqlc.arg(name)::text,
+        stage.stage_id,
         sqlc.arg(stage_name)::text,
         stage.number,
         sqlc.arg(freight_name)::text,

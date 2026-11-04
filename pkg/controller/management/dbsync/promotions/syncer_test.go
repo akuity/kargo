@@ -8,10 +8,14 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/oklog/ulid/v2"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/database"
@@ -71,9 +75,25 @@ func TestSync(t *testing.T) {
 	precise.Status.FinishedAt = &metav1.Time{Time: finished}
 	truncated := upserted
 	truncated.CreatedAt = created.Add(123456 * time.Microsecond)
+	owned := testPromotion(created)
+	owned.OwnerReferences = []metav1.OwnerReference{
+		*metav1.NewControllerRef(testStage("old-uid"), kargoapi.GroupVersion.WithKind("Stage")),
+	}
+	ownerID := "old-uid"
+	ofOwner := upserted
+	ofOwner.OwnerStageID = &ownerID
+	ofRequest := testPromotion(created)
+	ofRequest.OwnerReferences = []metav1.OwnerReference{{
+		APIVersion: kargoapi.GroupVersion.String(), Kind: "PromotionRequest",
+		Name: "dev.request", UID: "request-uid", Controller: new(true),
+	}}
+	noStageRow := &pgconn.PgError{
+		Code: "23502", ColumnName: "stage_id", Message: `null value in column "stage_id"`,
+	}
 	testCases := []struct {
 		name      string
 		obj       client.Object
+		stages    []client.Object
 		storeErr  error
 		nameTaken bool
 		wantErr   string
@@ -95,6 +115,36 @@ func TestSync(t *testing.T) {
 			storeErr: errors.New("offline"), wantErr: "error syncing promotion", want: &upserted,
 		},
 		{
+			name: "a Stage the mirror has not recorded yet is named as what is waited for",
+			obj:  testPromotion(created), storeErr: noStageRow,
+			wantErr: `Stage "dev": not mirrored yet`, want: &upserted,
+		},
+		{name: "a Promotion its Stage owns names the Stage", obj: owned, want: &ofOwner},
+		{name: "a Promotion owned by something else names no Stage", obj: ofRequest, want: &upserted},
+		{
+			name: "a Promotion whose Stage was replaced is not recorded",
+			obj:  owned, stages: []client.Object{testStage("new-uid")}, storeErr: noStageRow,
+			want: &ofOwner,
+		},
+		{
+			name: "a Promotion whose Stage is not found waits for it",
+			obj:  owned, storeErr: noStageRow,
+			wantErr: `Stage "dev": not mirrored yet`, want: &ofOwner,
+		},
+		{
+			name: "a Promotion whose Stage is the live one waits for its row",
+			obj:  owned, stages: []client.Object{testStage("old-uid")}, storeErr: noStageRow,
+			wantErr: `Stage "dev": not mirrored yet`, want: &ofOwner,
+		},
+		{
+			name: "another missing value is reported as the database says",
+			obj:  testPromotion(created),
+			storeErr: &pgconn.PgError{
+				Code: "23502", ColumnName: "phase", Message: `null value in column "phase"`,
+			},
+			wantErr: `null value in column "phase"`, want: &upserted,
+		},
+		{
 			name: "a name another Promotion was recorded under is an error", obj: testPromotion(created),
 			nameTaken: true, wantErr: "has the name of an earlier Promotion", want: &upserted,
 		},
@@ -107,7 +157,10 @@ func TestSync(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 			store := &fakeStore{writeErr: testCase.storeErr, nameTaken: testCase.nameTaken}
-			s := NewSyncer(nil, store)
+			scheme := runtime.NewScheme()
+			require.NoError(t, kargoapi.AddToScheme(scheme))
+			reader := fake.NewClientBuilder().WithScheme(scheme).WithObjects(testCase.stages...).Build()
+			s := NewSyncer(reader, store)
 			require.IsType(t, &kargoapi.Promotion{}, s.NewObject())
 			require.Len(t, s.Sources(nil), 1)
 			for range 2 {
@@ -179,6 +232,12 @@ func testPromotion(created time.Time) *kargoapi.Promotion {
 			FinishedAt: &metav1.Time{Time: created.Add(time.Minute)},
 		},
 	}
+}
+
+func testStage(uid string) *kargoapi.Stage {
+	return &kargoapi.Stage{ObjectMeta: metav1.ObjectMeta{
+		Namespace: "demo", Name: "dev", UID: types.UID(uid),
+	}}
 }
 
 type fakeStore struct {

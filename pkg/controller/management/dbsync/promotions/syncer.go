@@ -1,17 +1,22 @@
 // Package promotions mirrors Promotions into the database as a history:
 // rows are written and refreshed while a Promotion exists in Kubernetes and
-// kept once it is gone. A Promotion deleted before it finished is recorded
-// as Aborted, so that no row claims a Promotion is running that no longer
-// exists.
+// kept once it is gone, for as long as its Stage remains. A Promotion deleted
+// before it finished is recorded as Aborted, so that no row claims a
+// Promotion is running that no longer exists. A Stage's deletion deletes its
+// Promotions' rows by cascade, which the Stage syncer brings about.
 package promotions
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/oklog/ulid/v2"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -19,6 +24,7 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/controller/management/dbsync/internal/syncapi"
 	"github.com/akuity/kargo/pkg/database"
+	"github.com/akuity/kargo/pkg/logging"
 	"github.com/akuity/kargo/pkg/reconciler"
 	"github.com/akuity/kargo/pkg/reconciler/kube"
 )
@@ -65,6 +71,30 @@ func (s *syncer) Sync(ctx context.Context, obj client.Object) error {
 	params.ID = ulid.MustNew(ulid.Timestamp(params.CreatedAt), ulid.DefaultEntropy()).String()
 	nameTaken, err := s.store.UpsertPromotion(ctx, params)
 	if err != nil {
+		if !stageNotMirrored(err) {
+			return fmt.Errorf("error syncing promotion: %w", err)
+		}
+		// The Promotion's Stage has no row the upsert would take. If the
+		// Stage that owns it has been replaced by another of the same name,
+		// it never will: the Promotion's history went with its Stage, and
+		// the Promotion itself is about to be collected.
+		replaced, ownerErr := s.ownerReplaced(ctx, promotion, params.OwnerStageID)
+		if ownerErr != nil {
+			return fmt.Errorf("error syncing promotion: %w", ownerErr)
+		}
+		if replaced {
+			logging.LoggerFromContext(ctx).Debug(
+				"not recording Promotion of a replaced Stage",
+				"promotion", client.ObjectKeyFromObject(promotion),
+				"stage", promotion.Spec.Stage,
+			)
+			return nil
+		}
+		// Otherwise the Stage syncer, which writes independently, has not
+		// recorded the Stage yet. The retry that follows finds it once it
+		// has; the name says what is being waited for.
+		// nolint:staticcheck
+		err = fmt.Errorf("Stage %q: %w", promotion.Spec.Stage, database.ErrNotMirrored)
 		return fmt.Errorf("error syncing promotion: %w", err)
 	}
 	// Kargo never gives a name twice, so this takes a Promotion made some
@@ -82,9 +112,11 @@ func (s *syncer) Sync(ctx context.Context, obj client.Object) error {
 
 // Delete keeps the row. A Promotion deleted from Kubernetes, by the garbage
 // collector or anyone else, stays in the database as the record of what it
-// did. One deleted before it finished, which Kubernetes allows since a
-// Promotion has no finalizer, is recorded as Aborted as of now: its row
-// would otherwise say it is running for good.
+// did, until its Stage is deleted and takes the row with it. One deleted
+// before it finished, which Kubernetes allows since a Promotion has no
+// finalizer, is recorded as Aborted as of now: its row would otherwise say
+// it is running for good. A Promotion collected with its Stage has no row
+// left to record, and the update finds nothing.
 func (s *syncer) Delete(ctx context.Context, key client.ObjectKey) error {
 	if _, err := s.store.FinishDeletedPromotion(ctx, database.FinishDeletedPromotionParams{
 		Phase:       string(kargoapi.PromotionPhaseAborted),
@@ -94,6 +126,39 @@ func (s *syncer) Delete(ctx context.Context, key client.ObjectKey) error {
 		return fmt.Errorf("error recording deleted promotion as finished: %w", err)
 	}
 	return nil
+}
+
+// stageNotMirrored reports whether the upsert failed for want of the Stage's
+// mirrored row: the row's stage_id is resolved from the stages table in the
+// statement itself and is NULL, which the column refuses, when the Stage has
+// no row yet.
+func stageNotMirrored(err error) bool {
+	var pgErr *pgconn.PgError
+	return errors.As(err, &pgErr) && pgErr.Code == "23502" && pgErr.ColumnName == "stage_id"
+}
+
+// ownerReplaced reports whether the Stage that owns the Promotion, by the
+// given id, has been replaced by another Stage of the same name. No owner
+// replaces nothing. A Stage that is not found is not taken as replaced:
+// the reader may not have seen it yet, and if it is gone for good the
+// Promotion soon follows it, which ends the retries.
+func (s *syncer) ownerReplaced(
+	ctx context.Context,
+	promotion *kargoapi.Promotion,
+	ownerID *string,
+) (bool, error) {
+	if ownerID == nil {
+		return false, nil
+	}
+	stage := &kargoapi.Stage{}
+	key := client.ObjectKey{Namespace: promotion.Namespace, Name: promotion.Spec.Stage}
+	if err := s.reader.Get(ctx, key, stage); err != nil {
+		if apierrors.IsNotFound(err) {
+			return false, nil
+		}
+		return false, fmt.Errorf("error getting stage %q: %w", key, err)
+	}
+	return string(stage.UID) != *ownerID, nil
 }
 
 func toUpsertParams(promotion *kargoapi.Promotion) (database.UpsertPromotionParams, error) {
@@ -121,7 +186,21 @@ func toUpsertParams(promotion *kargoapi.Promotion) (database.UpsertPromotionPara
 	}
 	setFreight(promotion, &params)
 	setPromotionRollout(promotion, &params)
+	setOwnerStage(promotion, &params)
 	return params, nil
+}
+
+// setOwnerStage carries the id of the Stage that owns the Promotion, if one
+// does, onto the upsert, which records the Promotion under that Stage alone.
+// A Promotion owned by something else, such as a PromotionRequest, is
+// recorded under whichever Stage has its Stage's name.
+func setOwnerStage(promotion *kargoapi.Promotion, params *database.UpsertPromotionParams) {
+	owner := metav1.GetControllerOf(promotion)
+	if owner == nil || owner.Kind != "Stage" || owner.APIVersion != kargoapi.GroupVersion.String() {
+		return
+	}
+	id := string(owner.UID)
+	params.OwnerStageID = &id
 }
 
 // setPromotionRollout carries the id of the PromotionRollout the Promotion
