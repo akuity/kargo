@@ -102,6 +102,10 @@ export const didPromotionEndUnsuccessfullyInTaskGroup = (
 
   const currentStep = promotionStatus?.currentStep ?? 0;
 
+  if (!promotionStatus?.stepExecutionMetadata?.[currentStep]?.startedAt) {
+    return false;
+  }
+
   return group.steps.some(({ index }) => index === currentStep);
 };
 
@@ -161,9 +165,11 @@ export const getTaskGroupExecutionMetadata = (
     .map(({ index }) => promotionStatus?.stepExecutionMetadata?.[index])
     .filter((meta) => !!meta);
 
+  const startedMetas = metas.filter((meta) => meta.startedAt);
+
   return {
-    startedAt: metas.find((meta) => meta.startedAt)?.startedAt,
-    finishedAt: metas.filter((meta) => meta.finishedAt).at(-1)?.finishedAt
+    startedAt: startedMetas.at(0)?.startedAt,
+    finishedAt: startedMetas.at(-1)?.finishedAt
   };
 };
 

@@ -149,6 +149,9 @@ describe('didPromotionEndUnsuccessfullyInTaskGroup()', () => {
     ]
   };
 
+  const started = (count: number) =>
+    Array.from({ length: count + 1 }, () => ({ startedAt: '2026-10-22T00:00:00Z' }));
+
   test.each([
     { name: 'no status', promotionStatus: undefined, expected: false },
     {
@@ -169,13 +172,18 @@ describe('didPromotionEndUnsuccessfullyInTaskGroup()', () => {
     },
     {
       name: 'errored in the group',
-      promotionStatus: { phase: 'Errored', currentStep: 2 },
+      promotionStatus: { phase: 'Errored', currentStep: 2, stepExecutionMetadata: started(2) },
       expected: true
     },
     {
       name: 'aborted in the group',
-      promotionStatus: { phase: 'Aborted', currentStep: 1 },
+      promotionStatus: { phase: 'Aborted', currentStep: 1, stepExecutionMetadata: started(1) },
       expected: true
+    },
+    {
+      name: 'ended in the group before its step started',
+      promotionStatus: { phase: 'Failed', currentStep: 2, stepExecutionMetadata: started(1) },
+      expected: false
     }
   ])('$name', ({ promotionStatus, expected }) => {
     expect(didPromotionEndUnsuccessfullyInTaskGroup(group, promotionStatus)).toBe(expected);
@@ -208,6 +216,17 @@ describe('getTaskGroupExecutionMetadata()', () => {
         ]
       })
     ).toEqual({ startedAt: '2026-10-22T00:00:00Z', finishedAt: '2026-10-22T00:00:09Z' });
+  });
+
+  test('leaves the finish unset when the last started step did not finish', () => {
+    expect(
+      getTaskGroupExecutionMetadata(group, {
+        stepExecutionMetadata: [
+          { startedAt: '2026-10-22T00:00:00Z', finishedAt: '2026-10-22T00:00:05Z' },
+          { startedAt: '2026-10-22T00:00:05Z', status: 'Errored' }
+        ]
+      })
+    ).toEqual({ startedAt: '2026-10-22T00:00:00Z', finishedAt: undefined });
   });
 
   test('is empty when no step has run', () => {
