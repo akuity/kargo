@@ -61,7 +61,7 @@ export const useWatchStages = (
 
     const onEvent = (type: string, stage: Stage) => {
       client.setQueriesData(
-        { exact: false, queryKey: listKey },
+        { exact: true, queryKey: listKey },
         (old: listStagesResponse | undefined) => {
           if (!old?.data) {
             return old;
@@ -105,7 +105,7 @@ export const useWatchStages = (
 
     return () => {
       abort.abort();
-      emitStageEvents.cancel();
+      emitStageEvents.flush();
     };
   }, [project, (warehouses || []).join(','), client]);
 };

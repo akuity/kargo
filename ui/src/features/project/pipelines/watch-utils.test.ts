@@ -68,30 +68,37 @@ describe('batchEmitter', () => {
     expect(flush.mock.calls[1][0]).toEqual([{ name: 'b', value: 2 }]);
   });
 
-  test('cancel drops the pending batch without flushing', () => {
+  test('flush delivers the pending batch immediately and only once', () => {
     const flush = vi.fn<(items: Obj[]) => void>();
     const emitter = batchEmitter(flush, keyOf);
 
     emitter.call({ name: 'a', value: 1 });
-    emitter.cancel();
-
-    vi.runAllTimers();
-
-    expect(flush).not.toHaveBeenCalled();
-  });
-
-  test('cancel clears accumulated items so a later call starts fresh', () => {
-    const flush = vi.fn<(items: Obj[]) => void>();
-    const emitter = batchEmitter(flush, keyOf);
-
-    emitter.call({ name: 'a', value: 1 });
-    emitter.cancel();
-
     emitter.call({ name: 'b', value: 2 });
+    emitter.flush();
+
+    expect(flush).toHaveBeenCalledTimes(1);
+    expect(flush.mock.calls[0][0]).toEqual([
+      { name: 'a', value: 1 },
+      { name: 'b', value: 2 }
+    ]);
+
     vi.runAllTimers();
 
     expect(flush).toHaveBeenCalledTimes(1);
-    expect(flush.mock.calls[0][0]).toEqual([{ name: 'b', value: 2 }]);
+  });
+
+  test('flush does nothing when no batch is pending', () => {
+    const flush = vi.fn<(items: Obj[]) => void>();
+    const emitter = batchEmitter(flush, keyOf);
+
+    emitter.flush();
+
+    emitter.call({ name: 'a', value: 1 });
+    vi.runAllTimers();
+    emitter.flush();
+
+    expect(flush).toHaveBeenCalledTimes(1);
+    expect(flush.mock.calls[0][0]).toEqual([{ name: 'a', value: 1 }]);
   });
 });
 

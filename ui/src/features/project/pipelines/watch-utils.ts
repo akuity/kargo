@@ -199,28 +199,32 @@ export async function* readSSETextStream(url: string, signal: AbortSignal): Asyn
 // object collapse to the latest, while updates to distinct objects all survive
 // and are delivered together. The default zero delay batches every event parsed
 // from a single network chunk, since the stream consumer processes them
-// synchronously before the next read.
+// synchronously before the next read. `flush` delivers the pending batch right
+// away; watches call it when they close, because a reopened watch resumes after
+// the last event it saw and will not deliver those objects again.
 export function batchEmitter<T>(
-  flush: (items: T[]) => void,
+  onFlush: (items: T[]) => void,
   keyOf: (item: T) => string,
   delayMs = 0
-): { call: (item: T) => void; cancel: () => void } {
+): { call: (item: T) => void; flush: () => void } {
   const pending = new Map<string, T>();
   let timer: ReturnType<typeof setTimeout> | undefined;
+  const flush = () => {
+    clearTimeout(timer);
+    if (pending.size === 0) {
+      return;
+    }
+    const batch = [...pending.values()];
+    pending.clear();
+    onFlush(batch);
+  };
   return {
     call: (item: T) => {
       pending.set(keyOf(item), item);
       clearTimeout(timer);
-      timer = setTimeout(() => {
-        const batch = [...pending.values()];
-        pending.clear();
-        flush(batch);
-      }, delayMs);
+      timer = setTimeout(flush, delayMs);
     },
-    cancel: () => {
-      clearTimeout(timer);
-      pending.clear();
-    }
+    flush
   };
 }
 
