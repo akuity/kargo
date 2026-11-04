@@ -46,6 +46,7 @@ export const stackNodes = (
           for (const s of successors) {
             if (!stackedIndexer.is(s)) {
               graph.removeNode(s);
+              visited.add(s);
             }
           }
 
@@ -78,6 +79,7 @@ export const stackNodes = (
 
 const getAllSuccessors = (afterNode: string, graph: graphlib.Graph) => {
   const successors = new Set<string>();
+  const visited = new Set<string>();
 
   const traverseQueue: string[] = [afterNode];
 
@@ -85,12 +87,13 @@ const getAllSuccessors = (afterNode: string, graph: graphlib.Graph) => {
     const currentNode = traverseQueue.shift();
 
     if (currentNode) {
-      for (const _successor of graph.successors(currentNode) || []) {
-        const successor = _successor as string;
-
+      for (const successor of graph.successors(currentNode) || []) {
         successors.add(successor);
 
-        traverseQueue.push(successor);
+        if (!visited.has(successor)) {
+          traverseQueue.push(successor);
+          visited.add(successor);
+        }
       }
     }
   }
