@@ -419,8 +419,12 @@ func TestWatchResource_ErrorResponse(t *testing.T) {
 		t.Fatal("timeout waiting for error")
 	}
 
-	event, ok := <-eventCh
-	require.False(t, ok, "expected no event, got %+v", event)
+	select {
+	case event, ok := <-eventCh:
+		require.False(t, ok, "expected no event, got %+v", event)
+	case <-ctx.Done():
+		t.Fatal("timeout waiting for eventCh to close")
+	}
 }
 
 func TestWatchResource_ContextCancellation(t *testing.T) {

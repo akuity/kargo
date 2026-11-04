@@ -8,6 +8,7 @@ import (
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/apimachinery/pkg/util/validation"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 )
@@ -69,6 +70,15 @@ func TestGenerateRolloutChildPromotionName(t *testing.T) {
 	t.Parallel()
 
 	const rolloutID = "0B9F4A3E-6c1d-4a8e-9f2b-3c4d5e6f7a8b"
+
+	// requireValidName requires that name is a valid Kubernetes resource name
+	// that ends with the rollout's id.
+	requireValidName := func(t *testing.T, name string) {
+		t.Helper()
+		require.LessOrEqual(t, len(name), 253)
+		require.Empty(t, validation.IsDNS1123Subdomain(name))
+		require.True(t, strings.HasSuffix(name, "."+strings.ToLower(rolloutID)))
+	}
 
 	testCases := []struct {
 		name       string
@@ -144,27 +154,111 @@ func TestGenerateRolloutChildPromotionName(t *testing.T) {
 			},
 		},
 		{
-			name:       "over-long names are truncated to a valid resource name",
+			name:       "a name that just fits is not shortened",
+			stageName:  strings.Repeat("a", 100),
+			targetName: strings.Repeat("b", 253-len(rolloutID)-2-100),
+			rolloutID:  rolloutID,
+			assertions: func(t *testing.T, name string) {
+				require.Len(t, name, 253)
+				require.Equal(
+					t,
+					strings.Repeat("a", 100)+"."+
+						strings.Repeat("b", 253-len(rolloutID)-2-100)+"."+
+						strings.ToLower(rolloutID),
+					name,
+				)
+			},
+		},
+		{
+			name:       "an over-long name is shortened to a valid name with a hash",
 			stageName:  strings.Repeat("a", 200),
 			targetName: strings.Repeat("b", 200),
 			rolloutID:  rolloutID,
 			assertions: func(t *testing.T, name string) {
-				require.LessOrEqual(t, len(name), 253)
-				require.True(t, strings.HasSuffix(name, "."+strings.ToLower(rolloutID)))
-				// Truncation must not leave a separator or hyphen adjacent to
-				// the rollout id, which would make the name invalid.
-				require.NotContains(t, name, "..")
-				require.NotContains(t, name, "-.")
+				requireValidName(t, name)
+				// The kept part of the Stage name, then the hash, then the
+				// rollout id.
+				prefix := strings.TrimSuffix(name, "."+strings.ToLower(rolloutID))
+				hashStart := len(prefix) - rolloutChildHashLength
+				require.Equal(t, "-", prefix[hashStart-1:hashStart])
+				require.Regexp(t, "^[0-9a-f]{8}$", prefix[hashStart:])
 			},
 		},
 		{
-			name:       "truncation that lands on the separator drops it",
-			stageName:  strings.Repeat("a", 253-len(rolloutID)-2),
+			name:       "an over-long name is shortened the same way every time",
+			stageName:  strings.Repeat("a", 200),
+			targetName: strings.Repeat("b", 200),
+			rolloutID:  rolloutID,
+			assertions: func(t *testing.T, name string) {
+				require.Equal(
+					t,
+					GenerateRolloutChildPromotionName(
+						strings.Repeat("a", 200),
+						strings.Repeat("b", 200),
+						rolloutID,
+					),
+					name,
+				)
+			},
+		},
+		{
+			// A Stage name this long leaves no room for any of the Target's
+			// name, so only the hash can tell the Targets apart.
+			name:       "distinct Targets of a Stage with a long name get distinct names",
+			stageName:  strings.Repeat("a", 216),
+			targetName: "us-east",
+			rolloutID:  rolloutID,
+			assertions: func(t *testing.T, name string) {
+				requireValidName(t, name)
+				other := GenerateRolloutChildPromotionName(
+					strings.Repeat("a", 216),
+					"us-west",
+					rolloutID,
+				)
+				requireValidName(t, other)
+				require.NotEqual(t, other, name)
+			},
+		},
+		{
+			name:       "long Target names that differ only past the cut get distinct names",
+			stageName:  "prod",
+			targetName: strings.Repeat("c", 240) + "-east",
+			rolloutID:  rolloutID,
+			assertions: func(t *testing.T, name string) {
+				requireValidName(t, name)
+				other := GenerateRolloutChildPromotionName(
+					"prod",
+					strings.Repeat("c", 240)+"-west",
+					rolloutID,
+				)
+				requireValidName(t, other)
+				require.NotEqual(t, other, name)
+			},
+		},
+		{
+			// The kept part is limit-9 characters long. A Stage name one
+			// shorter than that ends the kept part on the separator.
+			name: "a cut that lands on the separator drops it",
+			stageName: strings.Repeat(
+				"a",
+				253-1-len(rolloutID)-1-rolloutChildHashLength-1,
+			),
 			targetName: strings.Repeat("b", 10),
 			rolloutID:  rolloutID,
 			assertions: func(t *testing.T, name string) {
-				require.LessOrEqual(t, len(name), 253)
-				require.NotContains(t, name, "..")
+				requireValidName(t, name)
+				require.NotContains(t, name, ".-")
+			},
+		},
+		{
+			// The Target name's hyphen falls at the very end of the kept part.
+			name:       "a cut that lands on a hyphen drops it",
+			stageName:  strings.Repeat("a", 100),
+			targetName: strings.Repeat("b", 105) + "-" + strings.Repeat("c", 50),
+			rolloutID:  rolloutID,
+			assertions: func(t *testing.T, name string) {
+				requireValidName(t, name)
+				require.NotContains(t, name, "--")
 			},
 		},
 	}
