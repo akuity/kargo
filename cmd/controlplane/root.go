@@ -19,7 +19,13 @@ var (
 )
 
 func Execute(ctx context.Context) error {
-	enableRESTClientMetrics()
+	metricsCfg, err := metricsConfigFromEnv()
+	if err != nil {
+		return err
+	}
+	if metricsCfg.restClientMetricsEnabled() {
+		enableRESTClientMetrics()
+	}
 
 	rootCmd.AddCommand(newAPICommand())
 	rootCmd.AddCommand(newControllerCommand())

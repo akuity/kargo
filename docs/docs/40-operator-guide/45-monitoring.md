@@ -261,6 +261,12 @@ A mean that stays above a few milliseconds means the component is throttled by
 its own `KUBE_API_QPS` / `KUBE_API_BURST` limits. API server throttling is
 separate and shows up as `429` responses in `rest_client_requests_total`.
 
+To turn these metrics off, set `METRICS_DISABLE=rest-client` on the component,
+for example through `global.env`; `METRICS_DISABLE=all` turns off every metric
+family Kargo registers. `rest_client_requests_total` and controller-runtime's
+other metrics, which it registers itself, remain. To turn off a component's
+metrics entirely, set `METRICS_BIND_ADDRESS=0`.
+
 ## Scraping With the Prometheus Operator
 
 If your cluster runs the
