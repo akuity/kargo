@@ -4,6 +4,7 @@ package promotionrolloutstore
 
 import (
 	"context"
+	"fmt"
 	"sync"
 	"testing"
 	"time"
@@ -148,22 +149,45 @@ func TestStoreIntegration(t *testing.T) {
 			},
 		},
 		{
-			name: "a recreated Stage numbers past the rollouts of its predecessor",
+			name: "a rollout goes with its Stage, and a recreated Stage starts over",
 			run: func(t *testing.T) {
+				ids := seedTargets(t, "recreated", "us-east")
 				seedStage(t, "recreated", "prod", "old-uid")
 				for _, name := range []string{"prod.01A.abc", "prod.01B.abc"} {
-					_, err := store.Create(ctx, "recreated", newRollout("prod", name), nil)
+					_, err := store.Create(
+						ctx, "recreated", newRollout("prod", name), []uuid.UUID{ids["us-east"]},
+					)
 					require.NoError(t, err)
 				}
-				// The new Stage's row replaces the old one and starts its
-				// counter over.
+				rollouts, err := store.List(ctx, "recreated", ListOptions{})
+				require.NoError(t, err)
+				require.Len(t, rollouts, 2)
+				require.Equal(t, "old-uid", rollouts[0].StageID)
+				// The new Stage's row replaces the old one, which takes the
+				// old Stage's rollouts and their snapshots with it, so the
+				// new Stage's history begins at 1.
 				seedStage(t, "recreated", "prod", "new-uid")
+				rollouts, err = store.List(ctx, "recreated", ListOptions{})
+				require.NoError(t, err)
+				require.Empty(t, rollouts)
+				var snapshots int
+				require.NoError(t, pool.QueryRow(ctx,
+					"SELECT count(*) FROM promotion_rollout_targets WHERE target_id = $1",
+					ids["us-east"],
+				).Scan(&snapshots))
+				require.Zero(t, snapshots)
 				rollout, err := store.Create(ctx, "recreated", newRollout("prod", "prod.01C.abc"), nil)
 				require.NoError(t, err)
-				require.EqualValues(t, 3, rollout.Number)
-				rollout, err = store.Create(ctx, "recreated", newRollout("prod", "prod.01D.abc"), nil)
-				require.NoError(t, err)
-				require.EqualValues(t, 4, rollout.Number)
+				require.EqualValues(t, 1, rollout.Number)
+				require.Equal(t, "new-uid", rollout.StageID)
+				// Deleting the Stage's row, as the mirror does when the Stage
+				// is deleted, deletes the rollouts the same way.
+				require.NoError(t, queries.DeleteStageByName(ctx, database.DeleteStageByNameParams{
+					ProjectName: "recreated",
+					Name:        "prod",
+				}))
+				_, err = store.Get(ctx, "recreated", "prod.01C.abc")
+				require.ErrorIs(t, err, database.ErrNotFound)
 			},
 		},
 		{
@@ -261,26 +285,31 @@ func TestStoreIntegration(t *testing.T) {
 		{
 			name: "the database rejects bad values",
 			run: func(t *testing.T) {
+				seedStage(t, "bad", "prod", "bad/prod")
+				const insert = `INSERT INTO promotion_rollouts
+					(project_name, name, stage_id, stage_name, number, freight_name, %s)
+					VALUES ('bad', 'a', 'bad/prod', 'prod', %s, 'f', %s)`
+				for _, bad := range []struct{ column, number, value string }{
+					{column: "status_phase", number: "1", value: "'Bogus'"},
+					{column: "max_concurrent", number: "1", value: "-1"},
+					{column: "max_failures", number: "1", value: "-1"},
+					{column: "max_failures", number: "0", value: "0"},
+				} {
+					_, err := pool.Exec(ctx, fmt.Sprintf(insert, bad.column, bad.number, bad.value))
+					databasetest.RequirePGError(t, err, "23514")
+				}
+				// A rollout must reference a Stage's row, and the one it
+				// references must exist.
 				_, err := pool.Exec(ctx,
-					`INSERT INTO promotion_rollouts (project_name, name, stage_name, number, freight_name, status_phase)
-					 VALUES ('bad', 'a', 'prod', 1, 'f', 'Bogus')`,
-				)
-				databasetest.RequirePGError(t, err, "23514")
-				_, err = pool.Exec(ctx,
-					`INSERT INTO promotion_rollouts (project_name, name, stage_name, number, freight_name, max_concurrent)
-					 VALUES ('bad', 'a', 'prod', 1, 'f', -1)`,
-				)
-				databasetest.RequirePGError(t, err, "23514")
-				_, err = pool.Exec(ctx,
-					`INSERT INTO promotion_rollouts (project_name, name, stage_name, number, freight_name, max_failures)
-					 VALUES ('bad', 'a', 'prod', 1, 'f', -1)`,
-				)
-				databasetest.RequirePGError(t, err, "23514")
-				_, err = pool.Exec(ctx,
 					`INSERT INTO promotion_rollouts (project_name, name, stage_name, number, freight_name)
-					 VALUES ('bad', 'a', 'prod', 0, 'f')`,
+					 VALUES ('bad', 'a', 'prod', 1, 'f')`,
 				)
-				databasetest.RequirePGError(t, err, "23514")
+				databasetest.RequirePGError(t, err, "23502")
+				_, err = pool.Exec(ctx,
+					`INSERT INTO promotion_rollouts (project_name, name, stage_id, stage_name, number, freight_name)
+					 VALUES ('bad', 'a', 'bad/absent', 'prod', 1, 'f')`,
+				)
+				databasetest.RequirePGError(t, err, "23503")
 			},
 		},
 		{
