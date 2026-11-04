@@ -173,7 +173,7 @@ func (q *Queries) GetPromotionRollout(ctx context.Context, arg GetPromotionRollo
 }
 
 const getPromotionRolloutByNumber = `-- name: GetPromotionRolloutByNumber :one
-SELECT id, project_name, name, stage_name, number, freight_name, max_concurrent, max_failures, created_by, created_at, updated_at, status_phase, status_reason, status_message, status_started_at, status_finished_at FROM promotion_rollouts
+SELECT id, project_name, name, stage_name, number, freight_name, max_concurrent, max_failures, created_by, created_at, updated_at, status_phase, status_reason, status_message, status_started_at, status_finished_at, stage_id FROM promotion_rollouts
 WHERE project_name = $1
     AND stage_name = $2
     AND number = $3
@@ -206,6 +206,7 @@ func (q *Queries) GetPromotionRolloutByNumber(ctx context.Context, arg GetPromot
 		&i.StatusMessage,
 		&i.StatusStartedAt,
 		&i.StatusFinishedAt,
+		&i.StageID,
 	)
 	return i, err
 }
