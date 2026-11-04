@@ -1932,21 +1932,19 @@ func Test_webhook_ValidateCreate(t *testing.T) {
 					return nil
 				},
 				authorizeFn: func(context.Context, *kargoapi.Promotion, string) error {
-					return errors.New("something went wrong")
+					return apierrors.NewForbidden(
+						promotionGroupResource,
+						"fake-promotion",
+						errors.New("not permitted"),
+					)
 				},
 			},
 			promotion: &kargoapi.Promotion{
 				Spec: kargoapi.PromotionSpec{Freight: "fake-freight"},
 			},
 			assertions: func(t *testing.T, _ *fakeevent.Sender, err error) {
-				var statusErr *apierrors.StatusError
-				require.True(t, errors.As(err, &statusErr))
-				require.Equal(
-					t,
-					metav1.StatusReasonInternalError,
-					statusErr.ErrStatus.Reason,
-				)
-				require.Contains(t, statusErr.ErrStatus.Message, "something went wrong")
+				require.True(t, apierrors.IsForbidden(err))
+				require.ErrorContains(t, err, "not permitted")
 			},
 		},
 		{
@@ -2539,17 +2537,15 @@ func Test_webhook_ValidateUpdate(t *testing.T) {
 				return &kargoapi.Promotion{}, &kargoapi.Promotion{}
 			},
 			authorizeFn: func(context.Context, *kargoapi.Promotion, string) error {
-				return errors.New("something went wrong")
+				return apierrors.NewForbidden(
+					promotionGroupResource,
+					"fake-promotion",
+					errors.New("not permitted"),
+				)
 			},
 			assertions: func(t *testing.T, err error) {
-				var statusErr *apierrors.StatusError
-				require.True(t, errors.As(err, &statusErr))
-				require.Equal(
-					t,
-					metav1.StatusReasonInternalError,
-					statusErr.ErrStatus.Reason,
-				)
-				require.Contains(t, statusErr.ErrStatus.Message, "something went wrong")
+				require.True(t, apierrors.IsForbidden(err))
+				require.ErrorContains(t, err, "not permitted")
 			},
 		},
 
