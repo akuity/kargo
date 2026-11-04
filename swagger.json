@@ -1644,7 +1644,7 @@
           },
           {
             "type": "string",
-            "description": "The previous page's metadata.continue; with stage, must be one of the Stage's",
+            "description": "Previous page's metadata.continue; with stage, one of the Stage's; resend after",
             "name": "continue",
             "in": "query"
           },

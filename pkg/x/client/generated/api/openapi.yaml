@@ -1232,8 +1232,8 @@ paths:
         schema:
           format: int64
           type: integer
-      - description: "The previous page's metadata.continue; with stage, must be one\
-          \ of the Stage's"
+      - description: "Previous page's metadata.continue; with stage, one of the Stage's;\
+          \ resend after"
         in: query
         name: continue
         schema:

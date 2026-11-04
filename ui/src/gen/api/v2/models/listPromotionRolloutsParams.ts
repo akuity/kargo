@@ -24,7 +24,7 @@ export type ListPromotionRolloutsParams = {
    */
   after?: number;
   /**
-   * The previous page's metadata.continue; with stage, must be one of the Stage's
+   * Previous page's metadata.continue; with stage, one of the Stage's; resend after
    */
   continue?: string;
   /**

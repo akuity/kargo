@@ -50,7 +50,7 @@ const (
 // @Param freight query string false "Only PromotionRollouts of this Freight; requires stage"
 // @Param latest query boolean false "Each Stage's latest rollouts, or the named Stage's; takes only stage besides"
 // @Param after query int64 false "Only the Stage's PromotionRollouts numbered above this, oldest first; requires stage"
-// @Param continue query string false "The previous page's metadata.continue; with stage, must be one of the Stage's. To continue a list read with after, send the same after again"
+// @Param continue query string false "Previous page's metadata.continue; with stage, one of the Stage's; resend after"
 // @Param limit query int false "The page size, at most 500; 50 if omitted"
 // @Produce json
 // @Success 200 {object} kargoapi.PromotionRolloutList "PromotionRolloutList resource"

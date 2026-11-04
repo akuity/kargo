@@ -4499,7 +4499,7 @@ func (r ApiListPromotionRolloutsRequest) After(after int64) ApiListPromotionRoll
 	return r
 }
 
-// The previous page&#39;s metadata.continue; with stage, must be one of the Stage&#39;s
+// Previous page&#39;s metadata.continue; with stage, one of the Stage&#39;s; resend after
 func (r ApiListPromotionRolloutsRequest) Continue_(continue_ string) ApiListPromotionRolloutsRequest {
 	r.continue_ = &continue_
 	return r
