@@ -142,26 +142,6 @@ updates:
         update-types:
         - "major"
 
-  - package-ecosystem: "gomod"
-    directories:
-    - "/pkg/x/client/fidelity"
-    - "/pkg/x/client/generated"
-    schedule:
-      interval: "weekly"
-      day: "sunday"
-    commit-message:
-      prefix: "chore(deps/client):"
-    groups:
-      go-patch:
-        update-types:
-        - "patch"
-      go-minor:
-        update-types:
-        - "minor"
-      go-major:
-        update-types:
-        - "major"
-
   # ----------------------------- release-1.12 -----------------------------
   #
   # release-1.12 carries no freezes beyond main's. It branched after the gRPC
