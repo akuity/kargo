@@ -67,6 +67,13 @@ func validateCreateRequest(req createPromotionRolloutRequest) field.ErrorList {
 			errs = append(errs, field.Invalid(path, req.Freight, msg))
 		}
 	}
+	if req.Targets != nil && len(req.Targets) == 0 {
+		errs = append(errs, field.Invalid(
+			field.NewPath("targets"),
+			req.Targets,
+			"must name at least one Target; omit the field to promote to every Target the Stage governs",
+		))
+	}
 	seen := make(map[string]struct{}, len(req.Targets))
 	for i, name := range req.Targets {
 		targetPath := field.NewPath("targets").Index(i)
