@@ -59,6 +59,27 @@ describe('stackNodes', () => {
     expect(callsFor('f')).toBe(1);
   });
 
+  test('skips a queued node that stacking removes', () => {
+    const graph = new graphlib.Graph();
+    const parent = stageId('parent');
+    const shared = stageId('shared');
+
+    graph.setNode('source-a', {});
+    graph.setNode('source-b', {});
+    graph.setNode(parent, {});
+    graph.setNode(shared, {});
+    graph.setEdge('source-a', shared);
+    graph.setEdge('source-b', parent);
+    graph.setEdge(parent, shared);
+
+    const successorsSpy = vi.spyOn(graph, 'successors');
+
+    stackNodes([parent], graph, stageByName, 200);
+
+    const sharedCalls = successorsSpy.mock.calls.filter(([node]) => node === shared);
+    expect(sharedCalls).toHaveLength(1);
+  });
+
   test('replaces all downstream nodes with a single stack of the correct count', () => {
     const graph = buildFanOutFanInGraph();
     const parent = stageId('parent');
