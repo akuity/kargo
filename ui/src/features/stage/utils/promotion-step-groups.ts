@@ -6,6 +6,7 @@ import {
   StepExecutionMetadata
 } from '@ui/gen/api/v2/models';
 
+import { PromotionStepStatus } from '../../common/promotion-directive-step-status/promotion-step-status';
 import {
   getPromotionDirectiveStepStatus,
   PromotionDirectiveStepStatus
@@ -114,8 +115,9 @@ export const didPromotionEndUnsuccessfullyInTaskGroup = (
   }
 
   const currentStep = promotionStatus?.currentStep ?? 0;
+  const currentStepMeta = promotionStatus?.stepExecutionMetadata?.[currentStep];
 
-  if (!promotionStatus?.stepExecutionMetadata?.[currentStep]?.startedAt) {
+  if (!currentStepMeta?.startedAt || currentStepMeta.status === PromotionStepStatus.SUCCEEDED) {
     return false;
   }
 

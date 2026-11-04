@@ -205,6 +205,18 @@ describe('didPromotionEndUnsuccessfullyInTaskGroup()', () => {
       expected: true
     },
     {
+      name: 'ended in the group on a step that succeeded',
+      promotionStatus: {
+        phase: 'Failed',
+        currentStep: 2,
+        stepExecutionMetadata: [
+          ...started(1),
+          { startedAt: '2026-10-22T00:00:00Z', status: 'Succeeded' }
+        ]
+      },
+      expected: false
+    },
+    {
       name: 'ended in the group before its step started',
       promotionStatus: { phase: 'Failed', currentStep: 2, stepExecutionMetadata: started(1) },
       expected: false
