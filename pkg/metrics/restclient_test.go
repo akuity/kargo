@@ -1,4 +1,4 @@
-package main
+package metrics
 
 import (
 	"net"
@@ -27,11 +27,10 @@ func TestEnableRESTClientMetrics(t *testing.T) {
 	t.Cleanup(srv.Close)
 
 	// Enabling twice must not panic on duplicate registration.
-	enableRESTClientMetrics()
-	enableRESTClientMetrics()
+	EnableRESTClientMetrics()
+	EnableRESTClientMetrics()
 
-	// A host name, rather than an IP, so the client resolves it. The server
-	// may listen on 127.0.0.1 or [::1]; localhost reaches either.
+	// A host name, so the client resolves it.
 	_, port, err := net.SplitHostPort(srv.Listener.Addr().String())
 	require.NoError(t, err)
 
@@ -59,8 +58,7 @@ func TestEnableRESTClientMetrics(t *testing.T) {
 	}
 }
 
-// gatherRESTClientSamples returns, per metric family in the controller-runtime
-// registry, the total histogram sample count plus counter value.
+// gatherRESTClientSamples returns each metric family's sample count.
 func gatherRESTClientSamples(t *testing.T) map[string]float64 {
 	t.Helper()
 	families, err := ctrlmetrics.Registry.Gather()
