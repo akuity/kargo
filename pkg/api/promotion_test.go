@@ -352,6 +352,36 @@ func TestStageAwaitsPromotion(t *testing.T) {
 			promo:    requestChild("test-promotion", "blue", "current-request"),
 			expected: true,
 		},
+		{
+			name: "a PromotionRollout's child is admitted without the Stage's say",
+			promo: &kargoapi.Promotion{
+				ObjectMeta: metav1.ObjectMeta{Name: "test-promotion"},
+				Spec: kargoapi.PromotionSpec{
+					Stage:            "test-stage",
+					Target:           "blue",
+					PromotionRollout: "0b9f4a3e-6c1d-4a8e-9f2b-3c4d5e6f7a8b",
+				},
+			},
+			expected: true,
+		},
+		{
+			name: "a PromotionRollout's child is admitted while another Promotion is current",
+			status: kargoapi.StageStatus{
+				CurrentPromotion: &kargoapi.PromotionReference{Name: "other-promotion"},
+				CurrentPromotionRequest: &kargoapi.PromotionRequestReference{
+					Name: "current-request",
+				},
+			},
+			promo: &kargoapi.Promotion{
+				ObjectMeta: metav1.ObjectMeta{Name: "test-promotion"},
+				Spec: kargoapi.PromotionSpec{
+					Stage:            "test-stage",
+					Target:           "blue",
+					PromotionRollout: "0b9f4a3e-6c1d-4a8e-9f2b-3c4d5e6f7a8b",
+				},
+			},
+			expected: true,
+		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {

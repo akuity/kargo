@@ -1,7 +1,10 @@
 package api
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
+	"strings"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -15,6 +18,80 @@ import (
 func GeneratePromotionRolloutName(stageName, freight string) string {
 	return generatePromotionStyleName(stageName, freight)
 }
+
+// GenerateRolloutChildPromotionName generates the name of the Promotion a
+// PromotionRollout creates to promote its Freight to one of its Targets.
+//
+// The name has the format of:
+//
+//	<stage-name>.<target-name>.<rollout-id>
+//
+// Unlike every other generated Promotion name, it carries no ULID. A rollout
+// creates at most one Promotion per Target, so the rollout's id and the
+// Target's name identify the child completely, and creating it a second time
+// -- from a stale view of the rollout's children, or from a second controller
+// instance -- fails with AlreadyExists instead of running the same promotion
+// twice. The short Freight hash is left out as well: the rollout fixes the
+// Freight.
+//
+// Lex order of these names is therefore not creation order. Only
+// ComparePromotionByPhaseAndCreationTime reads it that way, and the regular
+// Stage reconciler that sorts with it never handles a target-aware Stage.
+//
+// A name too long for a Kubernetes resource keeps as much of
+// <stage-name>.<target-name> as fits and ends it with a short hash of the
+// whole of it:
+//
+//	<truncated-stage-and-target>-<hash>.<rollout-id>
+//
+// Truncating alone would cut the Target's name, which is the end of the
+// prefix, and two Targets of one rollout could then be given the same name.
+// The second create would fail with AlreadyExists, be taken for a child that
+// already exists, and that Target would never be promoted to. The hash keeps
+// the names of distinct Targets distinct. The rollout id is part of the name,
+// so the hash only has to tell apart the Targets of one rollout.
+//
+// WARNING: Do not change how these names are generated. A rollout recognizes
+// a child it has already created by this name. Under a different scheme, a
+// child created by an earlier version would not match, and its Target could
+// be promoted to twice.
+func GenerateRolloutChildPromotionName(stageName, targetName, rolloutID string) string {
+	if stageName == "" || targetName == "" || rolloutID == "" {
+		return ""
+	}
+	prefix := stageName + promotionNameSeparator + targetName
+	// A rollout id is a UUID, so the limit is always well above the length
+	// of a short hash.
+	limit := maxResourceNameLength - len(promotionNameSeparator) - len(rolloutID)
+	if len(prefix) > limit {
+		sum := sha256.Sum256([]byte(prefix))
+		hash := hex.EncodeToString(sum[:])[:rolloutChildHashLength]
+		// Truncation can land on a separator or hyphen. Either would put two
+		// separators side by side, or start a part of the name with a hyphen,
+		// and a Kubernetes resource name may do neither.
+		kept := strings.TrimRight(
+			prefix[:limit-len(rolloutChildHashSeparator)-len(hash)],
+			promotionNameSeparator+rolloutChildHashSeparator,
+		)
+		prefix = kept + rolloutChildHashSeparator + hash
+	}
+	return strings.ToLower(prefix + promotionNameSeparator + rolloutID)
+}
+
+const (
+	// maxResourceNameLength is the longest name a Kubernetes resource may
+	// have.
+	maxResourceNameLength = 253
+
+	// rolloutChildHashSeparator separates the truncated part of an over-long
+	// rollout child's name from the hash that keeps it unique.
+	rolloutChildHashSeparator = "-"
+
+	// rolloutChildHashLength is the length of that hash.
+	//
+	// WARNING: Do not change this. See GenerateRolloutChildPromotionName.
+	rolloutChildHashLength = 8
+)
 
 // NewPromotionRolloutForAllTargets builds a PromotionRollout that promotes the named
 // Freight to the Targets the Stage governs, on behalf of the Stage.
