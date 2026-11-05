@@ -2740,6 +2740,7 @@ func TestReconciler_ensureDefaultUserRoles_PromotionRequestPermissions(t *testin
 						continue
 					}
 					found = true
+					require.Equal(t, []string{kargoapi.GroupVersion.Group}, rule.APIGroups)
 					require.ElementsMatch(t, []string{"get", "list", "watch"}, rule.Verbs)
 				}
 				require.True(t, found, "no "+resource+" rule found")
