@@ -2,19 +2,11 @@ import { faExternalLink } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Dropdown, ButtonProps, Button } from 'antd';
 import React from 'react';
-import { generatePath, useNavigate, useParams } from 'react-router-dom';
 
-import { withBasePath } from '@ui/config/base-path';
-import { ARGOCD_CONTEXT_KEY, SHARD_LABEL_KEY } from '@ui/config/labels';
-import { paths } from '@ui/config/paths';
-import { useExtensionsContext } from '@ui/extensions/extensions-context';
-import { HealthStatusIcon } from '@ui/features/common/health-status/health-status-icon';
-import { useEmbeddedArgoCD } from '@ui/features/common/preferences/use-embedded-argocd';
-import { Health, Stage } from '@ui/gen/api/v2/models';
+import { Stage } from '@ui/gen/api/v2/models';
 
-import { useDictionaryContext } from '../context/dictionary-context';
-
-import { ArgoCDContext, argoCDAppKey, parseArgoCDContext } from './argocd-link-utils';
+import { argoCDAppKey } from './argocd-link-utils';
+import { argoCDAppLabel, useArgoCDLinks } from './use-argocd-links';
 
 type ArgoCDLinkProps = React.PropsWithChildren<{
   stage: Stage;
@@ -28,77 +20,22 @@ export const ArgoCDLink = ({
   externalLinksOnly,
   stage
 }: ArgoCDLinkProps) => {
-  const navigate = useNavigate();
-  const { name: projectName } = useParams();
-  const { argoCDExtension } = useExtensionsContext();
-  const dictionaryContext = useDictionaryContext();
-  const [embeddedArgoCD] = useEmbeddedArgoCD();
-
-  const shardKey = stage?.metadata?.labels?.[SHARD_LABEL_KEY] || '';
-  // Remove trailing slash if present
-  const argoCDShardURL = dictionaryContext?.argocdShards?.[shardKey]?.url?.replace(/\/$/, '');
-  const isExtensionArgoCD = Boolean(argoCDExtension) && !externalLinksOnly && embeddedArgoCD;
-
-  const argoCDApps = React.useMemo(() => {
-    try {
-      return parseArgoCDContext(stage.metadata?.annotations?.[ARGOCD_CONTEXT_KEY]);
-    } catch (e) {
-      // eslint-disable-next-line no-console
-      console.error(e);
-      return [];
-    }
-  }, [stage]);
-
-  // Router-relative path for the in-app extension route (no basePath -- navigate
-  // prepends the router basename itself).
-  const extensionPath = React.useCallback(
-    (link: ArgoCDContext) =>
-      generatePath(paths.projectArgoCDExtension, {
-        name: projectName,
-        namespace: link.namespace,
-        appName: link.name,
-        stageName: stage.metadata?.name
-      }),
-    [projectName, stage]
+  const { apps, isExtensionArgoCD, href, open, healthOf } = useArgoCDLinks(
+    stage,
+    externalLinksOnly
   );
 
-  // Browser href carrying the real destination, so cmd/ctrl-click and "open in
-  // new tab" work natively. withBasePath re-adds the prefix for the SPA route.
-  const argoCDHref = React.useCallback(
-    (link: ArgoCDContext) =>
-      isExtensionArgoCD
-        ? withBasePath(extensionPath(link))
-        : `${argoCDShardURL}/applications/${link.namespace}/${link.name}`,
-    [isExtensionArgoCD, extensionPath, argoCDShardURL]
-  );
-
-  // A plain click on the in-app extension route stays SPA navigation; modified
-  // clicks fall through to the browser's native new-tab handling.
-  const openArgoCD = React.useCallback(
-    (e: React.MouseEvent, link: ArgoCDContext) => {
-      if (!isExtensionArgoCD) {
-        return;
-      }
-      if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) {
-        return;
-      }
-      e.preventDefault();
-      navigate(extensionPath(link));
-    },
-    [isExtensionArgoCD, navigate, extensionPath]
-  );
-
-  if (argoCDApps.length === 0 || !argoCDShardURL) {
+  if (apps.length === 0) {
     return null;
   }
 
-  if (argoCDApps.length === 1) {
+  if (apps.length === 1) {
     return (
       <Button
-        href={argoCDHref(argoCDApps[0])}
+        href={href(apps[0])}
         target={isExtensionArgoCD ? undefined : '_blank'}
         rel={isExtensionArgoCD ? undefined : 'noopener noreferrer'}
-        onClick={(e) => openArgoCD(e, argoCDApps[0])}
+        onClick={(e) => open(e, apps[0])}
         {...buttonProps}
       >
         {children}
@@ -111,45 +48,25 @@ export const ArgoCDLink = ({
       trigger={['click']}
       menu={{
         style: { maxHeight: '278px', overflowY: 'auto' },
-        items: argoCDApps.map((app) => {
-          const status = stage.status?.health?.output
-            ? getStatusFromHealthOutput(stage.status.health.output, app.name)
-            : undefined;
-
-          return {
-            key: argoCDAppKey(app),
-            label: (
-              <a
-                href={argoCDHref(app)}
-                target={isExtensionArgoCD ? undefined : '_blank'}
-                rel={isExtensionArgoCD ? undefined : 'noopener noreferrer'}
-                onClick={(e) => openArgoCD(e, app)}
-              >
-                {status && <HealthStatusIcon health={status} className='mr-2' />}
-                {`${app.name} - ${app.namespace}`}
-                {!isExtensionArgoCD && (
-                  <FontAwesomeIcon icon={faExternalLink} className='text-xs ml-2' />
-                )}
-              </a>
-            )
-          };
-        })
+        items: apps.map((app) => ({
+          key: argoCDAppKey(app),
+          label: (
+            <a
+              href={href(app)}
+              target={isExtensionArgoCD ? undefined : '_blank'}
+              rel={isExtensionArgoCD ? undefined : 'noopener noreferrer'}
+              onClick={(e) => open(e, app)}
+            >
+              {argoCDAppLabel(app, healthOf(app.name))}
+              {!isExtensionArgoCD && (
+                <FontAwesomeIcon icon={faExternalLink} className='text-xs ml-2' />
+              )}
+            </a>
+          )
+        }))
       }}
     >
       <Button {...buttonProps}>{children}</Button>
     </Dropdown>
   );
-};
-
-const getStatusFromHealthOutput = (healthOutput: unknown, app: string): Health | undefined => {
-  try {
-    type HealthEntry = { applicationStatuses?: Array<{ Name: string; health?: Health }> };
-    const outputs = healthOutput as HealthEntry[];
-    const appStatus = outputs
-      .flatMap((item) => item.applicationStatuses ?? [])
-      .find((status) => status.Name === app);
-    return appStatus?.health;
-  } catch {
-    return undefined;
-  }
 };

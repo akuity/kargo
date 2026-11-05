@@ -11,9 +11,10 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Tooltip } from 'antd';
 import { CSSProperties } from 'react';
 
+import { useToneColor } from '@ui/features/common/status-tone';
 import { Health } from '@ui/gen/api/v2/models';
 
-import { HealthStatus, healthStatusToEnum } from './utils';
+import { healthTone, HealthStatus, healthStatusToEnum } from './utils';
 
 export const HealthStatusIcon = (props: {
   health?: Health;
@@ -24,16 +25,14 @@ export const HealthStatusIcon = (props: {
 }) => {
   const { health, hideColor } = props;
   const reason = health?.issues?.join('; ') ?? '';
+  const toneColor = useToneColor(healthTone(health?.status));
 
   const Icon = (
     <FontAwesomeIcon
       icon={iconForHealthStatus(health)}
       spin={healthStatusToEnum(health?.status) === HealthStatus.PROGRESSING}
       className={props.className}
-      style={{
-        color: !hideColor ? colorForHealthStatus(health) : undefined,
-        ...props.style
-      }}
+      style={{ color: hideColor ? undefined : toneColor, ...props.style }}
     />
   );
 
@@ -78,21 +77,5 @@ const iconForHealthStatus = (health?: Health): IconDefinition => {
       return faQuestionCircle;
     default:
       return faCircle;
-  }
-};
-
-const colorForHealthStatus = (health?: Health): string => {
-  switch (healthStatusToEnum(health?.status)) {
-    case HealthStatus.HEALTHY:
-      return '#52c41a';
-    case HealthStatus.DEGRADED:
-    case HealthStatus.UNHEALTHY:
-      return '#f5222d';
-    case HealthStatus.PROGRESSING:
-      return '#0dabea';
-    case HealthStatus.UNKNOWN:
-      return '#faad14';
-    default:
-      return '#ccc';
   }
 };

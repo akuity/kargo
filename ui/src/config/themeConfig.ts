@@ -13,9 +13,21 @@ const sharedToken: Partial<MapToken> = {
   fontFamily: 'Poppins, sans-serif'
 };
 
+// The status text colors AntD derives are tuned as fills, not as type: stock
+// `colorWarningText` is #faad14, which is 1.9:1 on white. These are the palette
+// steps that hold up at the 10-12px the pipeline and tables set status in.
+// They back `<Typography.Text type=...>` as well as `--kargo-color-*-text`.
+const statusTextToken: Partial<MapToken> = {
+  colorSuccessText: '#389e0d',
+  colorErrorText: '#cf1322',
+  colorWarningText: '#d48806',
+  colorInfoText: '#0958d9'
+};
+
 // Light overrides. Also exported for vite.config.mts to seed build-time LESS vars.
 export const token: Partial<MapToken> = {
   ...sharedToken,
+  ...statusTextToken,
   colorText: '#454545',
   colorBgLayout: '#f7f8fa'
 };
@@ -29,7 +41,14 @@ const darkToken: Partial<MapToken> = {
   colorBgBase: '#141414',
   colorLink: '#7aa0d6',
   colorLinkHover: '#97b6e2',
-  colorLinkActive: '#6690cc'
+  colorLinkActive: '#6690cc',
+  // The same statuses a step the other way, since the container they sit on is
+  // #282828. The dark algorithm's own values are darker than its light ones and
+  // leave `colorInfoText` at 2.8:1 there.
+  colorSuccessText: '#73d13d',
+  colorErrorText: '#ff7875',
+  colorWarningText: '#ffc53d',
+  colorInfoText: '#69b1ff'
 };
 
 const sharedComponents: ThemeConfig['components'] = {

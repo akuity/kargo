@@ -1,4 +1,45 @@
 .stage-node {
+    // The lift the subscription nodes get for free: they are borderless Cards,
+    // which AntD gives `boxShadowTertiary`, while this one is bordered and has
+    // to ask. Carried on a custom property rather than set per theme here, so
+    // the states that draw a shadow of their own -- the promoting glow, the
+    // search match -- still win on nothing more than coming later.
+    box-shadow: var(--stage-node-shadow, none);
+
+    // AntD sizes small buttons from a single class, so these rules are scoped
+    // to the card to outrank it rather than tie with it
+    .stage-node__action {
+        width: 22px;
+        min-width: 22px;
+        height: 22px;
+        padding: 0;
+        font-size: 11px;
+        color: var(--kargo-color-text-tertiary, #8c8c8c);
+    }
+
+    // The arrows stay small to look at but are a comfortable target: the box
+    // is 20px square, and the negative block margin keeps that from pushing
+    // the rows it sits in any further apart.
+    .stage-node__pager-button {
+        width: 20px;
+        min-width: 20px;
+        height: 20px;
+        margin-block: -4px;
+        padding: 0;
+        font-size: 9px;
+        color: var(--kargo-color-text-tertiary, #8c8c8c);
+    }
+
+    // The arrows stay exactly as they are under the pointer and through a
+    // click -- no background, no change of color. AntD's text-button states
+    // are more specific than this selector, hence !important.
+    .stage-node__pager-button:hover,
+    .stage-node__pager-button:focus,
+    .stage-node__pager-button:active {
+        background: transparent !important;
+        color: var(--kargo-color-text-tertiary, #8c8c8c);
+    }
+
     .ant-descriptions-item-label,
     .ant-descriptions-item-content {
         font-size: 10px;
@@ -17,8 +58,463 @@
     }
 }
 
+:root[data-theme='light'] {
+    --stage-node-shadow:
+        0 1px 2px 0 rgba(0, 0, 0, 0.025), 0 1px 6px -1px rgba(0, 0, 0, 0.015),
+        0 2px 4px 0 rgba(0, 0, 0, 0.015);
+}
+
+// While a promotion runs, the node breathes a blue glow.
+//
+// The glow is drawn entirely with box-shadow, so it follows the card's
+// border-radius without being told what that radius is, and nothing on the
+// node moves. Its tints are declared here rather than in the frames below:
+// keyframes resolve custom properties against the element being animated, so
+// the color lives in one place and the frames stay readable.
+.stage-node--promoting {
+    --promo-glow-ring: color-mix(in srgb, var(--kargo-color-info, #1677ff) 30%, transparent);
+    --promo-glow-ring-lit: color-mix(in srgb, var(--kargo-color-info, #1677ff) 75%, transparent);
+    --promo-glow-halo: color-mix(in srgb, var(--kargo-color-info, #1677ff) 32%, transparent);
+
+    animation: stage-node-glow 3s ease-in-out infinite;
+}
+
+@keyframes stage-node-glow {
+    0%,
+    100% {
+        box-shadow: 0 0 0 1px var(--promo-glow-ring), 0 0 0 0 transparent;
+    }
+
+    50% {
+        box-shadow: 0 0 0 1px var(--promo-glow-ring-lit), 0 0 22px 3px var(--promo-glow-halo);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .stage-node--promoting {
+        box-shadow: 0 0 0 1px var(--promo-glow-ring-lit);
+        animation: none;
+    }
+}
+
+// A control flow Stage runs no steps of its own: it only hands Freight on.
+// It says so with a dashed, uncolored outline and none of a Stage's
+// furniture -- no health, no verification, no freight, no footer. The
+// selector is doubled so it outranks AntD's own .ant-card.
+//
+// On light it is the card color, not the page color it used to take: the
+// pipeline canvas is painted the page color, and the two are only a few
+// percent apart there, so the card was invisible against its own backdrop.
+// The outline is given a border color of its own for the same reason --
+// AntD's default card border is lighter than the page behind this one.
+.stage-node.stage-node--control-flow {
+    border-style: dashed;
+    border-color: var(--kargo-color-border, #d9d9d9);
+    background: var(--kargo-color-bg-container, #fff);
+}
+
+// On dark the page sits far below the card, so there is room to recess it --
+// still lifted off the page, but not level with a Stage that does real work.
+:root[data-theme='dark'] .stage-node.stage-node--control-flow {
+    background: color-mix(in srgb, var(--kargo-color-bg-layout) 70%, var(--kargo-color-bg-container));
+}
+
+.stage-node__control-flow-icon {
+    flex: none;
+    font-size: 11px;
+}
+
+// One short line would leave the card dwarfed by its neighbours, so the label
+// keeps a floor of its own and sits centered in it. The floor belongs here
+// rather than on the card body: a body-level min-height pads above the header
+// too, which pushes the header rule down the card.
+.stage-node__control-flow-label {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    min-height: 54px;
+    margin-top: 8px;
+    font-size: 12px;
+    line-height: 14px;
+    // The same tracking and casing the Current Freight label uses, so the two
+    // read as one kind of caption rather than two.
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--kargo-color-text-tertiary, #8c8c8c);
+}
+
 .stage-node--search-match {
     border-color: #f5c518 !important;
     box-shadow: 0 0 0 1px #f5c518, 0 0 12px 2px rgba(245, 197, 24, 0.55);
     transition: box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+// The same yellow that reads as a highlight on a white page glares on a dark
+// one, so the match is marked more quietly there.
+:root[data-theme='dark'] .stage-node--search-match {
+    border-color: color-mix(in srgb, #f5c518 60%, transparent) !important;
+    box-shadow: 0 0 0 1px color-mix(in srgb, #f5c518 35%, transparent),
+        0 0 10px 1px rgba(245, 197, 24, 0.2);
+}
+
+// A rule under the title, run out to the card's edges past its padding --
+// the -10px matches the body's horizontal padding.
+// The header is the Stage's color at its gentlest: a wash of the same hue the
+// top border states outright, so the two read as one band rather than a stripe
+// sitting on a white card.
+//
+// It is pulled up by the body's top padding and pads the same amount back, so
+// the tint reaches the border while the title does not move. That padding
+// varies with the border's thickness, which is why it arrives as a property
+// rather than being written here twice. The radius is an approximation of the
+// card's inner corner -- 10px outer less a 1px side border and a 4px top one
+// -- which is an ellipse CSS has no shorthand for.
+//
+// Without --stage-accent the color-mix has nothing to resolve, which makes the
+// background invalid at computed-value time and leaves it transparent. That is
+// the control flow Stage, and any Stage at all when colors are turned off.
+.stage-node__header {
+    margin: calc(var(--stage-head-pull, 8px) * -1) -10px 0;
+    padding: var(--stage-head-pull, 8px) 10px 8px;
+    border-radius: 7px 7px 0 0;
+    background: color-mix(in srgb, var(--stage-accent) 6%, transparent);
+}
+
+// A Stage with no color -- one carrying control flow, or any Stage at all
+// with colors turned off -- has no tint for its header to end on, so it takes
+// a rule instead. Where there is a wash, the wash closes the band itself.
+.stage-node--uncolored .stage-node__header {
+    border-bottom: 1px solid var(--kargo-color-border-secondary, #f0f0f0);
+}
+
+// The same wash that reads as a tint on a white card barely registers against
+// a dark one, so it is given more of the hue there.
+:root[data-theme='dark'] .stage-node__header {
+    background: color-mix(in srgb, var(--stage-accent) 9%, transparent);
+}
+
+.stage-node__dot {
+    flex: none;
+    width: 8px;
+    height: 8px;
+    border-radius: 2px;
+}
+
+// A control flow Stage carries no color, so it keeps the square's place in
+// the title with the same gray the rest of its chrome uses.
+.stage-node__dot--muted {
+    background: var(--kargo-color-text-tertiary, #8c8c8c);
+}
+
+// The whole header, short of the action buttons, is the way into the Stage's
+// own page. It reads as a title rather than a link: no color of its own, and
+// nothing changes under the pointer.
+// It also claims the whole band to click on rather than just the width of its
+// own text: out to the card's left edge, and up and down through the header's
+// padding. The pulls match the padding they cancel, so nothing moves -- the
+// target grows under the text, not around it.
+a.stage-node__title {
+    display: flex;
+    align-items: center;
+    align-self: stretch;
+    flex: 1;
+    gap: 8px;
+    min-width: 0;
+    margin: calc(var(--stage-head-pull, 8px) * -1) 0 -8px -10px;
+    padding: var(--stage-head-pull, 8px) 0 8px 10px;
+    color: inherit;
+}
+
+// AntD's own a:hover ties with the rule above, so the states are pinned here
+a.stage-node__title:hover,
+a.stage-node__title:focus,
+a.stage-node__title:active {
+    color: inherit;
+    text-decoration: none;
+}
+
+.stage-node__name {
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 16px;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+// Status and health are a pair of facts about the Stage, so they share a band
+// of their own: two equal columns, each a label over its value.
+.stage-node__status-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin: 8px 0;
+}
+
+.stage-node__status-cell {
+    min-width: 0;
+}
+
+.stage-node__status-label {
+    font-size: 10px;
+    line-height: 13px;
+    color: var(--kargo-color-text-tertiary, #8c8c8c);
+}
+
+// AntD reserves min-width:14px for a menu item's icon, but a glyph with a
+// wide viewBox (the truck is 640x512) renders wider than that and shoves its
+// label out of line with the others. A fixed, centered slot keeps every label
+// starting at the same place, whatever the glyph's aspect ratio.
+// An entry that is a link rather than an action. The anchor is stretched to
+// the row it labels -- inline, only the words themselves answered a click --
+// and kept in the menu's own color so it does not read as the odd one out.
+a.stage-node__menu-link,
+a.stage-node__menu-link:hover {
+    display: block;
+    color: inherit;
+}
+
+.stage-node__menu-icon {
+    width: 14px;
+    min-width: 14px;
+    justify-content: center;
+    text-align: center;
+}
+
+// A quiet link riding alongside a status value, e.g. the analysis run's logs
+// beside a failed verification.
+a.stage-node__status-link {
+    flex: none;
+    color: var(--kargo-color-link, #1677ff);
+    font-size: 10px;
+    line-height: 17px;
+    white-space: nowrap;
+
+    .svg-inline--fa {
+        margin-left: 3px;
+        font-size: 8px;
+    }
+}
+
+// The waiting state puts a label and a link in a column half a card wide, so
+// the two stack rather than sharing a line -- the Flex wraps, and the link
+// takes the whole of the second line.
+//
+// The link has to ask for that itself. Scoping it to the row instead would
+// catch the analysis run's logs, which carry the same class and belong beside
+// the status rather than under it. Qualified with `a` to match the rule above
+// it, which sets `flex` in full and would otherwise win on specificity.
+.stage-node__status-line {
+    column-gap: 6px;
+    row-gap: 1px;
+}
+
+a.stage-node__status-link--own-line {
+    flex-basis: 100%;
+}
+
+// The label is wrapped in a link to the Promotion, which makes the link -- not
+// the label -- the flex item. An inline box with the default `auto` floor, it
+// holds the label at its full width and pushes it into the column beside it,
+// however willing to shrink the label itself is.
+a.stage-node__status-value-link {
+    display: flex;
+    min-width: 0;
+    color: inherit;
+}
+
+// The label keeps to one line and gives ground by truncating. An extension
+// names its own waiting label and can make it as long as it likes, so there
+// has to be somewhere for the overflow to go: the title carries it.
+//
+// min-width is what makes that happen. Without it the span keeps its default
+// `auto` floor, refuses to shrink below its text, and overruns the column
+// into the gap beside Health rather than ellipsising inside it.
+.stage-node__status-text {
+    min-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+// Two steps down for a label too long to sit at the status size. The mark
+// beside it keeps its own size: shrinking that too would make the whole
+// status look further away rather than merely wordier.
+.stage-node__status-text--sm {
+    font-size: 10px;
+}
+
+.stage-node__status-text--xs {
+    font-size: 9px;
+}
+
+.stage-node__status-value {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 17px;
+    white-space: nowrap;
+    color: var(--kargo-color-text-secondary, #595959);
+}
+
+// The mark takes the column's color rather than its own, so it and the word
+// beside it cannot disagree by a shade. Both icons are told to keep their
+// color to themselves through their own `hideColor` prop; this catches the
+// rest, the waiting mark and the promoting spinner among them. Color alone is
+// overridden -- the icons that spin keep spinning.
+.stage-node__status-value .svg-inline--fa {
+    color: inherit;
+}
+
+// The freight the Stage is carrying sits in a well cut into the card, down to
+// the color of the page behind it, so it reads as the node's payload rather
+// than as one more row of status.
+.stage-node__freight {
+    padding: 8px 9px;
+    border-radius: 8px;
+    background: var(--kargo-color-bg-layout, #f5f5f5);
+}
+
+// On dark the page sits far below the card, so the well is lifted off it a
+// little -- still recessed, but not a hole punched through the card.
+:root[data-theme='dark'] .stage-node__freight {
+    background: color-mix(in srgb, var(--kargo-color-bg-layout) 70%, var(--kargo-color-bg-container));
+}
+
+.stage-node__section-label {
+    flex: none;
+    white-space: nowrap;
+    font-size: 10px;
+    font-weight: 400;
+    line-height: 12px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--kargo-color-text-tertiary, #8c8c8c);
+}
+
+.stage-node__pager {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    // it carries a name now, so it has to be able to give ground
+    min-width: 0;
+    font-size: 10px;
+    line-height: 12px;
+    color: var(--kargo-color-text-tertiary, #8c8c8c);
+}
+
+.stage-node__pager-label {
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.stage-node__freight-alias {
+    font-size: 12px;
+    font-weight: 400;
+    line-height: 20px;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.stage-node__freight-empty {
+    font-size: 12px;
+    line-height: 20px;
+    color: var(--kargo-color-text-tertiary, #8c8c8c);
+}
+
+.stage-node__freight-age {
+    flex: none;
+    font-size: 10px;
+    line-height: 20px;
+    color: var(--kargo-color-text-tertiary, #8c8c8c);
+}
+
+// The artifact carries the link color whether or not it links anywhere: the
+// tint is the chip, drawn from currentColor so one rule covers both themes.
+.stage-node__artifact {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex: 1;
+    min-width: 0;
+    width: 100%;
+    height: 24px;
+    padding: 0 8px;
+    border-radius: 6px;
+    color: var(--kargo-color-link, #1677ff);
+    background: color-mix(in srgb, currentColor 12%, transparent);
+    transition: background 0.1s ease;
+}
+
+a.stage-node__artifact-link {
+    display: block;
+    min-width: 0;
+    flex: 1;
+}
+
+a.stage-node__artifact-link:hover .stage-node__artifact {
+    background: color-mix(in srgb, currentColor 20%, transparent);
+}
+
+.stage-node__artifact-icon {
+    flex: none;
+}
+
+.stage-node__artifact-name {
+    font-size: 11px;
+    line-height: 22px;
+    color: color-mix(in srgb, currentColor 65%, var(--kargo-color-text, #000));
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.stage-node__artifact-version {
+    flex: none;
+    margin-left: auto;
+    font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace;
+    font-size: 11px;
+    font-weight: 500;
+    line-height: 22px;
+}
+
+.stage-node__artifact--empty {
+    justify-content: center;
+    color: var(--kargo-color-text-tertiary, #8c8c8c);
+    background: none;
+    font-size: 11px;
+}
+
+.stage-node__footer {
+    font-size: 10px;
+    line-height: 14px;
+    color: var(--kargo-color-text-tertiary, #8c8c8c);
+}
+
+// The whole line opens the promotion it names, so it is one link rather than
+// a link inside a sentence -- and it reads as footer text throughout, since
+// AntD colors both `a` and `a:hover` unless told otherwise.
+a.stage-node__footer-link,
+a.stage-node__footer-link:hover {
+    // the three below do nothing to an inline box, which is what an anchor in
+    // a plain block is until it is told otherwise
+    display: block;
+    color: inherit;
+    min-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+// The time is what the promotion the line opens is identified by, so it is
+// the part that looks like the link. Set on the span rather than the anchor,
+// it holds through the anchor's hover state as well.
+.stage-node__footer-time {
+    font-weight: 600;
+    color: var(--kargo-color-link, #1677ff);
 }
