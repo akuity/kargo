@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	jsonpatch "github.com/evanphx/json-patch/v5"
+	"k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -34,6 +35,12 @@ func PatchStatus[T HasStatus[S], S any](
 		return err
 	}
 	update(updated)
+
+	// Most calls change nothing. Equal statuses marshal alike, so the merge
+	// patch would be empty: skip marshaling and diffing them.
+	if equality.Semantic.DeepEqual(resource.GetStatus(), updated) {
+		return nil
+	}
 
 	modifiedJSON, err := json.Marshal(updated)
 	if err != nil {
