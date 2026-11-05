@@ -6050,8 +6050,15 @@ func (r ApiPromoteDownstreamRequest) Execute() (*any, *http.Response, error) {
 PromoteDownstream Promote downstream
 
 Creates a Promotion resource for each of a Stage's immediately
-downstream Stages. Downstream Stages that select Targets yield a
-PromotionRequest each, returned separately under "promotionRequests".
+downstream Stages, returned under "promotions". Downstream
+Stages that select Targets each yield, in place of a
+Promotion, a PromotionRollout on a server that creates
+PromotionRollouts, returned under "promotionRollouts", or a
+PromotionRequest otherwise, returned under
+"promotionRequests"; each key is present only when it has
+entries. Each promotes to every Target its Stage governs, at
+the Stage's pace. A Stage that could not be promoted to is
+reported under "errors", with a 207 status.
 
  @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
  @param project Project name

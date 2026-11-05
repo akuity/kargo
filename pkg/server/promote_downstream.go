@@ -53,8 +53,15 @@ type promoteDownstreamRequest struct {
 // @id PromoteDownstream
 // @Summary Promote downstream
 // @Description Creates a Promotion resource for each of a Stage's immediately
-// @Description downstream Stages. Downstream Stages that select Targets yield a
-// @Description PromotionRequest each, returned separately under "promotionRequests".
+// @Description downstream Stages, returned under "promotions". Downstream
+// @Description Stages that select Targets each yield, in place of a
+// @Description Promotion, a PromotionRollout on a server that creates
+// @Description PromotionRollouts, returned under "promotionRollouts", or a
+// @Description PromotionRequest otherwise, returned under
+// @Description "promotionRequests"; each key is present only when it has
+// @Description entries. Each promotes to every Target its Stage governs, at
+// @Description the Stage's pace. A Stage that could not be promoted to is
+// @Description reported under "errors", with a 207 status.
 // @Tags Core, Project-Level
 // @Security BearerAuth
 // @Accept json
@@ -159,6 +166,7 @@ func (s *server) promoteDownstream(c *gin.Context) {
 	promoteErrs := make([]error, 0, len(downstreams))
 	createdPromos := make([]*kargoapi.Promotion, 0, len(downstreams))
 	createdPromoReqs := make([]*kargoapi.PromotionRequest, 0, len(downstreams))
+	createdRollouts := make([]*kargoapi.PromotionRollout, 0, len(downstreams))
 
 	for _, downstream := range downstreams {
 		// Skip "control flow" stages with no promotion steps
@@ -168,9 +176,23 @@ func (s *server) promoteDownstream(c *gin.Context) {
 		}
 
 		// A downstream Stage that selects Targets fans Freight out to them via
-		// a PromotionRequest rather than promoting to itself with a Promotion.
+		// a PromotionRollout, or a PromotionRequest on a server that does not
+		// create rollouts, rather than promoting to itself with a Promotion.
+		// Promote downstream never names Targets or an update strategy: it
+		// promotes to every Target the Stage governs, at the Stage's pace.
 		if downstream.IsTargetAware() {
-			// Promote downstream never sets custom targets or updateStrategy and always runs for all targets
+			// TODO(promotion-requests): a server that does not create
+			// rollouts falls back to a PromotionRequest. Remove this check,
+			// and the fallback below it, along with PromotionRequests.
+			if s.cfg.PromotionRolloutsEnabled {
+				rollout, err := s.createPromotionRollout(ctx, &downstream, freight, nil, nil)
+				if err != nil {
+					promoteErrs = append(promoteErrs, err)
+					continue
+				}
+				createdRollouts = append(createdRollouts, rollout)
+				continue
+			}
 			newPromoReq, err := s.createPromotionRequest(ctx, &downstream, freight, true, nil, nil)
 			if err != nil {
 				promoteErrs = append(promoteErrs, err)
@@ -192,6 +214,9 @@ func (s *server) promoteDownstream(c *gin.Context) {
 	response := gin.H{"promotions": createdPromos}
 	if len(createdPromoReqs) > 0 {
 		response["promotionRequests"] = createdPromoReqs
+	}
+	if len(createdRollouts) > 0 {
+		response["promotionRollouts"] = createdRollouts
 	}
 	if len(promoteErrs) > 0 {
 		response["errors"] = errors.Join(promoteErrs...).Error()

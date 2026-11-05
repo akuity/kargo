@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"net/http"
 	"net/http/httptest"
@@ -107,6 +108,62 @@ func Test_server_promoteDownstream(t *testing.T) {
 		Name:      "us-east",
 		Labels:    map[string]string{"region": "us"},
 	}}}
+
+	// Two more target-aware downstream Stages, named apart from the one above
+	// so that a Stage's downstreams can mix Stages that select Targets with
+	// one that does not.
+	testTargetAwareDownstreamStage2 := testTargetAwareDownstreamStage.DeepCopy()
+	testTargetAwareDownstreamStage2.Name = "fake-downstream-stage-2"
+	testTargetAwareDownstreamStage3 := testTargetAwareDownstreamStage.DeepCopy()
+	testTargetAwareDownstreamStage3.Name = "fake-downstream-stage-3"
+
+	// A server that creates PromotionRollouts promotes to a target-aware
+	// downstream Stage through one, in place of a PromotionRequest.
+	rolloutsEnabled := &config.ServerConfig{PromotionRolloutsEnabled: true}
+	authorizeEverything := func(_ *testing.T, s *server) {
+		s.authorizeFn = func(
+			context.Context,
+			string,
+			schema.GroupVersionResource,
+			string,
+			client.ObjectKey,
+		) error {
+			return nil
+		}
+	}
+	promoteWithRollouts := func(creator *fakeRolloutCreator) func(*testing.T, *server) {
+		return func(t *testing.T, s *server) {
+			authorizeEverything(t, s)
+			s.rolloutCreator = creator
+		}
+	}
+	// downstreamResponse is the shape of the endpoint's response.
+	type downstreamResponse struct {
+		Promotions        []kargoapi.Promotion        `json:"promotions"`
+		PromotionRequests []kargoapi.PromotionRequest `json:"promotionRequests"`
+		PromotionRollouts []kargoapi.PromotionRollout `json:"promotionRollouts"`
+		Errors            string                      `json:"errors"`
+	}
+	decode := func(t *testing.T, w *httptest.ResponseRecorder) downstreamResponse {
+		var res downstreamResponse
+		require.NoError(t, json.Unmarshal(w.Body.Bytes(), &res))
+		return res
+	}
+	stagesOf := func(rollouts []kargoapi.PromotionRollout) []string {
+		stages := make([]string, len(rollouts))
+		for i, rollout := range rollouts {
+			stages[i] = rollout.Spec.Stage
+		}
+		return stages
+	}
+	happyCreator := &fakeRolloutCreator{}
+	fanOutCreator := &fakeRolloutCreator{}
+	failingCreator := &fakeRolloutCreator{
+		errs: map[string]error{
+			testTargetAwareDownstreamStage3.Name: errors.New("something went wrong"),
+		},
+	}
+	disabledCreator := &fakeRolloutCreator{}
 
 	testRESTEndpoint(
 		t, &config.ServerConfig{},
@@ -243,6 +300,161 @@ func Test_server_promoteDownstream(t *testing.T) {
 					require.Len(t, promos.Items, 1)
 					require.Equal(t, testDownstreamStage.Name, promos.Items[0].Spec.Stage)
 					require.Equal(t, testFreight.Name, promos.Items[0].Spec.Freight)
+				},
+			},
+			{
+				name: "rollouts enabled: target-aware downstream Stage without a database",
+				clientBuilder: fake.NewClientBuilder().WithObjects(
+					testProject,
+					testStage,
+					testTargetAwareDownstreamStage,
+					testFreight,
+				),
+				serverConfig: rolloutsEnabled,
+				serverSetup:  authorizeEverything,
+				body: mustJSONBody(promoteDownstreamRequest{
+					Freight: testFreight.Name,
+				}),
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, c client.Client) {
+					// As without the flag, a Stage that cannot be promoted to
+					// is reported with the rest rather than failing the call.
+					require.Equal(t, http.StatusMultiStatus, w.Code)
+					res := decode(t, w)
+					require.Contains(t, res.Errors, "database is not configured")
+					require.Empty(t, res.PromotionRollouts)
+					reqs := &kargoapi.PromotionRequestList{}
+					require.NoError(t, c.List(t.Context(), reqs, client.InNamespace(testProject.Name)))
+					require.Empty(t, reqs.Items)
+				},
+			},
+			{
+				name: "rollouts enabled: target-aware downstream Stage yields a PromotionRollout",
+				clientBuilder: fake.NewClientBuilder().WithObjects(
+					testProject,
+					testStage,
+					testTargetAwareDownstreamStage,
+					testFreight,
+				),
+				serverConfig: rolloutsEnabled,
+				serverSetup:  promoteWithRollouts(happyCreator),
+				body: mustJSONBody(promoteDownstreamRequest{
+					Freight: testFreight.Name,
+				}),
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, c client.Client) {
+					require.Equal(t, http.StatusCreated, w.Code)
+					res := decode(t, w)
+					require.Empty(t, res.Promotions)
+					require.Empty(t, res.PromotionRequests)
+					require.NotContains(t, w.Body.String(), "promotionRequests")
+					require.Equal(t, []string{testTargetAwareDownstreamStage.Name}, stagesOf(res.PromotionRollouts))
+					require.Equal(t, testFreight.Name, res.PromotionRollouts[0].Spec.Freight)
+					promos := &kargoapi.PromotionList{}
+					require.NoError(t, c.List(t.Context(), promos, client.InNamespace(testProject.Name)))
+					require.Empty(t, promos.Items)
+					reqs := &kargoapi.PromotionRequestList{}
+					require.NoError(t, c.List(t.Context(), reqs, client.InNamespace(testProject.Name)))
+					require.Empty(t, reqs.Items)
+					// Promote downstream promotes to every Target the Stage
+					// governs, at the Stage's pace.
+					require.Equal(t, []rolloutCreation{{
+						stage:   testTargetAwareDownstreamStage.Name,
+						freight: testFreight.Name,
+					}}, happyCreator.creations)
+				},
+			},
+			{
+				name: "rollouts enabled: fans out over downstream Stages with and without Targets",
+				clientBuilder: fake.NewClientBuilder().WithObjects(
+					testProject,
+					testStage,
+					testDownstreamStage,
+					testTargetAwareDownstreamStage2,
+					testTargetAwareDownstreamStage3,
+					testFreight,
+				),
+				serverConfig: rolloutsEnabled,
+				serverSetup:  promoteWithRollouts(fanOutCreator),
+				body: mustJSONBody(promoteDownstreamRequest{
+					Freight: testFreight.Name,
+				}),
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, c client.Client) {
+					require.Equal(t, http.StatusCreated, w.Code)
+					res := decode(t, w)
+					require.Empty(t, res.Errors)
+					// The Stage without Targets got a Promotion; each of the
+					// two with Targets got a rollout.
+					require.Len(t, res.Promotions, 1)
+					require.Equal(t, testDownstreamStage.Name, res.Promotions[0].Spec.Stage)
+					require.ElementsMatch(
+						t,
+						[]string{testTargetAwareDownstreamStage2.Name, testTargetAwareDownstreamStage3.Name},
+						stagesOf(res.PromotionRollouts),
+					)
+					require.Empty(t, res.PromotionRequests)
+					promos := &kargoapi.PromotionList{}
+					require.NoError(t, c.List(t.Context(), promos, client.InNamespace(testProject.Name)))
+					require.Len(t, promos.Items, 1)
+					require.Equal(t, testDownstreamStage.Name, promos.Items[0].Spec.Stage)
+					reqs := &kargoapi.PromotionRequestList{}
+					require.NoError(t, c.List(t.Context(), reqs, client.InNamespace(testProject.Name)))
+					require.Empty(t, reqs.Items)
+					require.ElementsMatch(t, []rolloutCreation{
+						{stage: testTargetAwareDownstreamStage2.Name, freight: testFreight.Name},
+						{stage: testTargetAwareDownstreamStage3.Name, freight: testFreight.Name},
+					}, fanOutCreator.creations)
+				},
+			},
+			{
+				name: "rollouts enabled: a rollout that cannot be created is reported with the rest",
+				clientBuilder: fake.NewClientBuilder().WithObjects(
+					testProject,
+					testStage,
+					testDownstreamStage,
+					testTargetAwareDownstreamStage2,
+					testTargetAwareDownstreamStage3,
+					testFreight,
+				),
+				serverConfig: rolloutsEnabled,
+				serverSetup:  promoteWithRollouts(failingCreator),
+				body: mustJSONBody(promoteDownstreamRequest{
+					Freight: testFreight.Name,
+				}),
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
+					require.Equal(t, http.StatusMultiStatus, w.Code)
+					res := decode(t, w)
+					require.Contains(t, res.Errors, "something went wrong")
+					require.Len(t, res.Promotions, 1)
+					require.Equal(t, []string{testTargetAwareDownstreamStage2.Name}, stagesOf(res.PromotionRollouts))
+				},
+			},
+			{
+				name: "rollouts disabled: target-aware downstream Stage yields a PromotionRequest even with a creator",
+				clientBuilder: fake.NewClientBuilder().WithObjects(
+					testProject,
+					testStage,
+					testTargetAwareDownstreamStage,
+					testFreight,
+				),
+				serverSetup: func(t *testing.T, s *server) {
+					authorizeEverything(t, s)
+					s.rolloutCreator = disabledCreator
+					s.listTargetsFn = func(context.Context, string) ([]kargoapi.Target, error) {
+						return downstreamTargets, nil
+					}
+				},
+				body: mustJSONBody(promoteDownstreamRequest{
+					Freight: testFreight.Name,
+				}),
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, c client.Client) {
+					require.Equal(t, http.StatusCreated, w.Code)
+					res := decode(t, w)
+					require.Len(t, res.PromotionRequests, 1)
+					require.Empty(t, res.PromotionRollouts)
+					require.NotContains(t, w.Body.String(), "promotionRollouts")
+					reqs := &kargoapi.PromotionRequestList{}
+					require.NoError(t, c.List(t.Context(), reqs, client.InNamespace(testProject.Name)))
+					require.Len(t, reqs.Items, 1)
+					require.Empty(t, disabledCreator.creations)
 				},
 			},
 			{
