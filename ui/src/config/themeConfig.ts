@@ -14,13 +14,21 @@ const sharedToken: Partial<MapToken> = {
 };
 
 // The status text colors AntD derives are tuned as fills, not as type: stock
-// `colorWarningText` is #faad14, which is 1.9:1 on white. These are the palette
-// steps that hold up at the 10-12px the pipeline and tables set status in.
-// They back `<Typography.Text type=...>` as well as `--kargo-color-*-text`.
+// `colorWarningText` is #faad14, which is 1.9:1 on white, where the pipeline
+// and the tables set status at 10-12px. These sit on the WCAG AA bar instead
+// -- 12px semibold is not large text, so the bar is 4.5:1, not 3:1 -- and they
+// back `<Typography.Text type=...>` as well as `--kargo-color-*-text`.
+//
+// Success and warning are the most saturated colors to be had at that bar in
+// their hue, which is as light as the standard allows: every color at 4.5:1
+// carries the same luminance, so chroma is all there is left to spend. Neither
+// is an AntD palette step, since the palette steps from under the bar to well
+// past it. Warning is orange rather than gold because yellow carries most of a
+// color's luminance, and the gold that clears the bar is a brown.
 const statusTextToken: Partial<MapToken> = {
-  colorSuccessText: '#389e0d',
+  colorSuccessText: '#008a00',
   colorErrorText: '#cf1322',
-  colorWarningText: '#d48806',
+  colorWarningText: '#c85100',
   colorInfoText: '#0958d9'
 };
 
