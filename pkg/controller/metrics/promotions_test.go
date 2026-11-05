@@ -2,6 +2,7 @@ package metrics
 
 import (
 	"context"
+	"errors"
 	"strings"
 	"testing"
 	"time"
@@ -13,10 +14,38 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
+	ctrlmetrics "sigs.k8s.io/controller-runtime/pkg/metrics"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/indexer"
 )
+
+func TestNewPromotionMetrics(t *testing.T) {
+	t.Parallel()
+	scheme := runtime.NewScheme()
+	require.NoError(t, kargoapi.AddToScheme(scheme))
+	c := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithIndex(
+			&kargoapi.Promotion{},
+			indexer.PromotionsByNonTerminalField,
+			indexer.PromotionsByNonTerminal,
+		).
+		Build()
+	m := NewPromotionMetrics(c)
+	require.Same(t, m, NewPromotionMetrics(nil))
+	m.Completed.WithLabelValues("project-a", "Succeeded").Inc()
+	m.Duration.WithLabelValues("project-a", "Succeeded").Observe(60)
+	m.PendingDuration.WithLabelValues("project-a").Observe(1)
+	count, err := testutil.GatherAndCount(
+		ctrlmetrics.Registry,
+		"kargo_promotions_completed_total",
+		"kargo_promotion_duration_seconds",
+		"kargo_promotion_pending_duration_seconds",
+	)
+	require.NoError(t, err)
+	require.Equal(t, 3, count)
+}
 
 func Test_countPromotionsByProject(t *testing.T) {
 	t.Parallel()
@@ -173,4 +202,21 @@ kargo_promotion_oldest_pending_timestamp_seconds{project="project-a"} 1.76722548
 	for _, promo := range listed {
 		require.False(t, promo.Status.Phase.IsTerminal(), promo.Name)
 	}
+}
+
+func Test_promotionPhaseCollector_listError(t *testing.T) {
+	t.Parallel()
+	c := fake.NewClientBuilder().
+		WithInterceptorFuncs(interceptor.Funcs{
+			List: func(
+				context.Context,
+				client.WithWatch,
+				client.ObjectList,
+				...client.ListOption,
+			) error {
+				return errors.New("something went wrong")
+			},
+		}).
+		Build()
+	require.Zero(t, testutil.CollectAndCount(newPromotionPhaseCollector(c)))
 }
