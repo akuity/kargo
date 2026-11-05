@@ -202,6 +202,24 @@ func TestGenerateRolloutChildPromotionName(t *testing.T) {
 			},
 		},
 		{
+			// The expected name is written out in full, hash included, so
+			// that any change to how names are shortened -- which would
+			// rename the children of rollouts already in progress -- fails
+			// here.
+			name:       "an over-long name is shortened to exactly this name",
+			stageName:  strings.Repeat("a", 200),
+			targetName: strings.Repeat("b", 200),
+			rolloutID:  rolloutID,
+			assertions: func(t *testing.T, name string) {
+				require.Equal(
+					t,
+					strings.Repeat("a", 200)+".bbbbbb-c34b8615."+
+						"0b9f4a3e-6c1d-4a8e-9f2b-3c4d5e6f7a8b",
+					name,
+				)
+			},
+		},
+		{
 			// A Stage name this long leaves no room for any of the Target's
 			// name, so only the hash can tell the Targets apart.
 			name:       "distinct Targets of a Stage with a long name get distinct names",
