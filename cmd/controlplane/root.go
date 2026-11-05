@@ -4,6 +4,8 @@ import (
 	"context"
 
 	"github.com/spf13/cobra"
+
+	"github.com/akuity/kargo/pkg/metrics"
 )
 
 var (
@@ -19,6 +21,14 @@ var (
 )
 
 func Execute(ctx context.Context) error {
+	metricsCfg, err := metrics.ConfigFromEnv()
+	if err != nil {
+		return err
+	}
+	if metricsCfg.Enabled(metrics.FamilyRESTClient) {
+		metrics.EnableRESTClientMetrics()
+	}
+
 	rootCmd.AddCommand(newAPICommand())
 	rootCmd.AddCommand(newControllerCommand())
 	rootCmd.AddCommand(newExternalWebhooksServerCommand())

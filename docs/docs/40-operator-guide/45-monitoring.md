@@ -231,6 +231,42 @@ zero, so use `or vector(0)` in queries that need a value when a state is empty.
 
 :::
 
+## Kubernetes API Client Metrics
+
+Each component that serves metrics also reports the
+[client-go](https://github.com/kubernetes/client-go) REST client metrics for
+its requests to the Kubernetes API server. controller-runtime registers only
+`rest_client_requests_total` by default; Kargo enables the rest:
+
+| Metric | Type | Labels | Description |
+|--------|------|--------|-------------|
+| `rest_client_requests_total` | Counter | `code`, `method`, `host` | Requests, by HTTP status code. |
+| `rest_client_request_duration_seconds` | Histogram | `verb`, `host` | Request latency. |
+| `rest_client_rate_limiter_duration_seconds` | Histogram | `verb`, `host` | Time spent waiting on the client-side rate limiter (`KUBE_API_QPS` / `KUBE_API_BURST`). |
+| `rest_client_request_retries_total` | Counter | `code`, `verb`, `host` | Retried requests. |
+| `rest_client_request_size_bytes` | Histogram | `verb`, `host` | Request body size. |
+| `rest_client_response_size_bytes` | Histogram | `verb`, `host` | Response body size. |
+| `rest_client_dns_resolution_duration_seconds` | Histogram | `host` | DNS resolution latency for the host the client connects to (the API server, or a proxy). Absent when that host is an IP address, as with the in-cluster API server. |
+
+Every request records a rate limiter wait, even when it is zero, so the
+metric's count grows with traffic alone. Watch the mean wait instead, for
+example per scrape job:
+
+```
+sum by (job) (rate(rest_client_rate_limiter_duration_seconds_sum[5m]))
+  / sum by (job) (rate(rest_client_rate_limiter_duration_seconds_count[5m]))
+```
+
+A mean that stays above a few milliseconds means the component is throttled by
+its own `KUBE_API_QPS` / `KUBE_API_BURST` limits. API server throttling is
+separate and shows up as `429` responses in `rest_client_requests_total`.
+
+To turn these metrics off, set `METRICS_DISABLE=rest-client` on the component,
+for example through `global.env`; `METRICS_DISABLE=all` turns off every metric
+family Kargo registers. `rest_client_requests_total` and controller-runtime's
+other metrics, which it registers itself, remain. To turn off a component's
+metrics entirely, set `METRICS_BIND_ADDRESS=0`.
+
 ## Scraping With the Prometheus Operator
 
 If your cluster runs the
