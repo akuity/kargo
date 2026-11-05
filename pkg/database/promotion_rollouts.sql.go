@@ -165,6 +165,45 @@ func (q *Queries) GetPromotionRollout(ctx context.Context, arg GetPromotionRollo
 	return i, err
 }
 
+const getPromotionRolloutByNumber = `-- name: GetPromotionRolloutByNumber :one
+SELECT id, project_name, name, stage_name, number, freight_name, max_concurrent, max_failures, created_by, created_at, updated_at, status_phase, status_reason, status_message, status_started_at, status_finished_at, stage_id FROM promotion_rollouts
+WHERE project_name = $1
+    AND stage_name = $2
+    AND number = $3
+`
+
+type GetPromotionRolloutByNumberParams struct {
+	ProjectName string
+	StageName   string
+	Number      int64
+}
+
+// A Stage's rollout by its number, served by the Stage/number unique key.
+func (q *Queries) GetPromotionRolloutByNumber(ctx context.Context, arg GetPromotionRolloutByNumberParams) (PromotionRolloutRow, error) {
+	row := q.db.QueryRow(ctx, getPromotionRolloutByNumber, arg.ProjectName, arg.StageName, arg.Number)
+	var i PromotionRolloutRow
+	err := row.Scan(
+		&i.ID,
+		&i.ProjectName,
+		&i.Name,
+		&i.StageName,
+		&i.Number,
+		&i.FreightName,
+		&i.MaxConcurrent,
+		&i.MaxFailures,
+		&i.CreatedBy,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.StatusPhase,
+		&i.StatusReason,
+		&i.StatusMessage,
+		&i.StatusStartedAt,
+		&i.StatusFinishedAt,
+		&i.StageID,
+	)
+	return i, err
+}
+
 const listLatestPromotionRollouts = `-- name: ListLatestPromotionRollouts :many
 SELECT latest.id, latest.project_name, latest.name, latest.stage_name, latest.number, latest.freight_name, latest.max_concurrent, latest.max_failures, latest.created_by, latest.created_at, latest.updated_at, latest.status_phase, latest.status_reason, latest.status_message, latest.status_started_at, latest.status_finished_at, latest.stage_id
 FROM stages
@@ -346,24 +385,27 @@ func (q *Queries) ListProjectPromotionRollouts(ctx context.Context, arg ListProj
 }
 
 const listPromotionRolloutTargetStatuses = `-- name: ListPromotionRolloutTargetStatuses :many
-SELECT DISTINCT ON (target_name)
+SELECT DISTINCT ON (promotion_rollout_id, target_name)
+    promotion_rollout_id::uuid AS promotion_rollout_id,
     target_name::text AS target_name,
     name AS promotion_name,
     COALESCE(NULLIF(phase, ''), 'Pending')::text AS phase
 FROM promotions
-WHERE promotion_rollout_id = $1::uuid
+WHERE promotion_rollout_id = ANY($1::uuid[])
     AND target_name IS NOT NULL
-ORDER BY target_name, name DESC
+ORDER BY promotion_rollout_id, target_name, name DESC
 `
 
 type ListPromotionRolloutTargetStatusesRow struct {
-	TargetName    string
-	PromotionName string
-	Phase         string
+	PromotionRolloutID uuid.UUID
+	TargetName         string
+	PromotionName      string
+	Phase              string
 }
 
-// What has become of each Target of a rollout: the newest Promotion to it
-// and that Promotion's phase, in Target name order. Among one Target's
+// What has become of each Target of each of the rollouts: the newest
+// Promotion to it and that Promotion's phase, in rollout then Target name
+// order. One query serves a whole page of rollouts. Among one Target's
 // Promotions, name order is creation order (names embed a ULID), so the
 // newest is the greatest name. A Promotion the controller has not picked
 // up yet has no phase and is reported as Pending. Only Promotions that
@@ -373,8 +415,8 @@ type ListPromotionRolloutTargetStatusesRow struct {
 // These are the mirror's rows, so they lag the cluster by the mirror's
 // sync. From rough testing that lag is fine for what reads this: the API
 // and Project stats, which present progress rather than act on it.
-func (q *Queries) ListPromotionRolloutTargetStatuses(ctx context.Context, id uuid.UUID) ([]ListPromotionRolloutTargetStatusesRow, error) {
-	rows, err := q.db.Query(ctx, listPromotionRolloutTargetStatuses, id)
+func (q *Queries) ListPromotionRolloutTargetStatuses(ctx context.Context, ids []uuid.UUID) ([]ListPromotionRolloutTargetStatusesRow, error) {
+	rows, err := q.db.Query(ctx, listPromotionRolloutTargetStatuses, ids)
 	if err != nil {
 		return nil, err
 	}
@@ -382,7 +424,12 @@ func (q *Queries) ListPromotionRolloutTargetStatuses(ctx context.Context, id uui
 	var items []ListPromotionRolloutTargetStatusesRow
 	for rows.Next() {
 		var i ListPromotionRolloutTargetStatusesRow
-		if err := rows.Scan(&i.TargetName, &i.PromotionName, &i.Phase); err != nil {
+		if err := rows.Scan(
+			&i.PromotionRolloutID,
+			&i.TargetName,
+			&i.PromotionName,
+			&i.Phase,
+		); err != nil {
 			return nil, err
 		}
 		items = append(items, i)

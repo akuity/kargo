@@ -54,6 +54,13 @@ SELECT * FROM rollout;
 SELECT * FROM promotion_rollouts
 WHERE project_name = sqlc.arg(project_name) AND name = sqlc.arg(name);
 
+-- A Stage's rollout by its number, served by the Stage/number unique key.
+-- name: GetPromotionRolloutByNumber :one
+SELECT * FROM promotion_rollouts
+WHERE project_name = sqlc.arg(project_name)
+    AND stage_name = sqlc.arg(stage_name)
+    AND number = sqlc.arg(number);
+
 -- The named rollouts of a Project, for a reader that already knows which
 -- ones it wants. Names that do not exist are simply absent from the result.
 -- name: ListPromotionRolloutsByName :many
@@ -169,8 +176,9 @@ JOIN targets ON targets.id = t.target_id
 WHERE t.promotion_rollout_id = ANY(sqlc.arg(ids)::uuid[])
 ORDER BY t.promotion_rollout_id, targets.name;
 
--- What has become of each Target of a rollout: the newest Promotion to it
--- and that Promotion's phase, in Target name order. Among one Target's
+-- What has become of each Target of each of the rollouts: the newest
+-- Promotion to it and that Promotion's phase, in rollout then Target name
+-- order. One query serves a whole page of rollouts. Among one Target's
 -- Promotions, name order is creation order (names embed a ULID), so the
 -- newest is the greatest name. A Promotion the controller has not picked
 -- up yet has no phase and is reported as Pending. Only Promotions that
@@ -181,14 +189,15 @@ ORDER BY t.promotion_rollout_id, targets.name;
 -- sync. From rough testing that lag is fine for what reads this: the API
 -- and Project stats, which present progress rather than act on it.
 -- name: ListPromotionRolloutTargetStatuses :many
-SELECT DISTINCT ON (target_name)
+SELECT DISTINCT ON (promotion_rollout_id, target_name)
+    promotion_rollout_id::uuid AS promotion_rollout_id,
     target_name::text AS target_name,
     name AS promotion_name,
     COALESCE(NULLIF(phase, ''), 'Pending')::text AS phase
 FROM promotions
-WHERE promotion_rollout_id = sqlc.arg(id)::uuid
+WHERE promotion_rollout_id = ANY(sqlc.arg(ids)::uuid[])
     AND target_name IS NOT NULL
-ORDER BY target_name, name DESC;
+ORDER BY promotion_rollout_id, target_name, name DESC;
 
 -- updated_at doubles as the row's version, so it must grow with every write
 -- to a row even across a clock step or two writes in one microsecond. A

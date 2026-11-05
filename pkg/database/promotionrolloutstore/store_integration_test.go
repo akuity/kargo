@@ -116,6 +116,10 @@ func TestStoreIntegration(t *testing.T) {
 				fetched, err := store.Get(ctx, "create", "prod.01A.abc")
 				require.NoError(t, err)
 				require.Equal(t, rollout, fetched)
+
+				fetched, err = store.GetByNumber(ctx, "create", "prod", 1)
+				require.NoError(t, err)
+				require.Equal(t, rollout, fetched)
 			},
 		},
 		{
@@ -609,9 +613,9 @@ func TestStoreIntegration(t *testing.T) {
 				require.NoError(t, err)
 
 				// No Target has a Promotion yet.
-				rows, err := store.ListTargetStatuses(ctx, rollout)
+				statuses, err := store.ListTargetStatuses(ctx, []Rollout{rollout, other})
 				require.NoError(t, err)
-				require.Empty(t, rows)
+				require.Empty(t, statuses)
 
 				promotion := func(name, target string, of Rollout, phase string) database.UpsertPromotionParams {
 					params := database.UpsertPromotionParams{
@@ -637,7 +641,7 @@ func TestStoreIntegration(t *testing.T) {
 					promotion("prod.us-east.01A.abc", "us-east", rollout, "Failed"),
 					// eu-west: not picked up by the controller yet.
 					promotion("prod.eu-west.01A.abc", "eu-west", rollout, ""),
-					// Ignored: to no Target, and of another rollout.
+					// Ignored: to no Target. Of another rollout: reported under it.
 					promotion("prod.01D.abc", "", rollout, "Succeeded"),
 					promotion("prod.us-east.01E.abc", "us-east", other, "Succeeded"),
 				} {
@@ -645,22 +649,53 @@ func TestStoreIntegration(t *testing.T) {
 					require.NoError(t, err)
 				}
 
-				rows, err = store.ListTargetStatuses(ctx, rollout)
+				row := func(of Rollout, target, name, phase string) database.ListPromotionRolloutTargetStatusesRow {
+					return database.ListPromotionRolloutTargetStatusesRow{
+						PromotionRolloutID: of.ID,
+						TargetName:         target,
+						PromotionName:      name,
+						Phase:              phase,
+					}
+				}
+				statuses, err = store.ListTargetStatuses(ctx, []Rollout{rollout, other})
 				require.NoError(t, err)
-				require.Equal(t, []database.ListPromotionRolloutTargetStatusesRow{
-					{TargetName: "eu-west", PromotionName: "prod.eu-west.01A.abc", Phase: "Pending"},
-					{TargetName: "us-east", PromotionName: "prod.us-east.01C.abc", Phase: "Succeeded"},
-					{TargetName: "us-west", PromotionName: "prod.us-west.01A.abc", Phase: "Running"},
-				}, rows)
-				statuses, summary := TargetStatuses(rows)
-				require.Len(t, statuses, 3)
+				require.Equal(t, map[uuid.UUID][]database.ListPromotionRolloutTargetStatusesRow{
+					rollout.ID: {
+						row(rollout, "eu-west", "prod.eu-west.01A.abc", "Pending"),
+						row(rollout, "us-east", "prod.us-east.01C.abc", "Succeeded"),
+						row(rollout, "us-west", "prod.us-west.01A.abc", "Running"),
+					},
+					other.ID: {row(other, "us-east", "prod.us-east.01E.abc", "Succeeded")},
+				}, statuses)
+
+				targetStatuses, summary := TargetStatuses(statuses[rollout.ID])
+				require.Len(t, targetStatuses, 3)
 				require.Equal(t, &kargoapi.PromotionRolloutSummary{Pending: 1, Running: 1, Succeeded: 1}, summary)
+
+				// Only the rollouts asked about are reported.
+				statuses, err = store.ListTargetStatuses(ctx, []Rollout{other})
+				require.NoError(t, err)
+				require.Len(t, statuses, 1)
+				require.Len(t, statuses[other.ID], 1)
+				statuses, err = store.ListTargetStatuses(ctx, nil)
+				require.NoError(t, err)
+				require.Empty(t, statuses)
 			},
 		},
 		{
 			name: "get reports a missing rollout",
 			run: func(t *testing.T) {
 				_, err := store.Get(ctx, "missing", "prod.01A.abc")
+				require.ErrorIs(t, err, database.ErrNotFound)
+			},
+		},
+		{
+			name: "get by number reports a number the Stage has not reached",
+			run: func(t *testing.T) {
+				_, err := store.GetByNumber(ctx, "create", "prod", 99)
+				require.ErrorIs(t, err, database.ErrNotFound)
+				// Numbers are per Stage: the other Stage has no #1.
+				_, err = store.GetByNumber(ctx, "create", "staging", 1)
 				require.ErrorIs(t, err, database.ErrNotFound)
 			},
 		},
