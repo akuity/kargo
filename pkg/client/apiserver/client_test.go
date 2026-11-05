@@ -557,7 +557,10 @@ func TestClient(t *testing.T) {
 
 	t.Run("a server that never answers is cut off by the timeout", func(t *testing.T) {
 		impatientCfg := validConfig(server.URL)
-		impatientCfg.Timeout = 50 * time.Millisecond
+		// The same timeout bounds the identity lookup New performs against the
+		// control plane, so it must be long enough for that to succeed on a
+		// heavily loaded machine.
+		impatientCfg.Timeout = time.Second
 		impatient, err := New(t.Context(), impatientCfg, cp.config())
 		require.NoError(t, err)
 		start := time.Now()
