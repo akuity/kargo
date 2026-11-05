@@ -15,14 +15,7 @@ import (
 const createPromotionRollout = `-- name: CreatePromotionRollout :one
 
 WITH stage AS (
-    UPDATE stages SET last_promotion_rollout_number = GREATEST(
-        stages.last_promotion_rollout_number,
-        (
-            SELECT COALESCE(MAX(number), 0) FROM promotion_rollouts
-            WHERE project_name = $1::text
-                AND stage_name = $2::text
-        )
-    ) + 1
+    UPDATE stages SET last_promotion_rollout_number = last_promotion_rollout_number + 1
     WHERE project_name = $1::text
         AND name = $2::text
     RETURNING id AS stage_id, last_promotion_rollout_number AS number
@@ -94,15 +87,15 @@ type CreatePromotionRolloutRow struct {
 // number comes from the Stage row's counter, which only this query writes.
 // The UPDATE locks the row, serializing a Stage's creates, and a failure
 // anywhere in the statement rolls the increment back, so numbers are
-// gapless. The counter is also kept above MAX(number) of the name's existing
-// rollouts, because a Stage deleted and recreated gets a fresh row with the
-// counter at 0, and the predecessor's rollouts are deleted with its row. The
-// same locked row supplies the Stage's id, which the rollout references so
-// that it is deleted with the Stage. A Stage the mirror has not recorded
-// has no row, so nothing is inserted. The targets CTE records the rollout's
-// Targets in the same statement (an INSERT in a data-modifying CTE always
-// runs, even though the outer SELECT reads only from rollout), so a Target
-// that no longer exists fails the whole create.
+// gapless. A Stage deleted and recreated gets a fresh row with the counter
+// at 0, and its predecessor's rollouts go with the old row, so the new
+// Stage's rollouts number from 1. The same locked row supplies the Stage's
+// id, which the rollout references so that it is deleted with the Stage. A
+// Stage the mirror has not recorded has no row, so nothing is inserted. The
+// targets CTE records the rollout's Targets in the same statement (an INSERT
+// in a data-modifying CTE always runs, even though the outer SELECT reads
+// only from rollout), so a Target that no longer exists fails the whole
+// create.
 func (q *Queries) CreatePromotionRollout(ctx context.Context, arg CreatePromotionRolloutParams) (CreatePromotionRolloutRow, error) {
 	row := q.db.QueryRow(ctx, createPromotionRollout,
 		arg.ProjectName,
@@ -178,8 +171,7 @@ FROM stages
 CROSS JOIN LATERAL (
     (
         SELECT id, project_name, name, stage_name, number, freight_name, max_concurrent, max_failures, created_by, created_at, updated_at, status_phase, status_reason, status_message, status_started_at, status_finished_at, stage_id FROM promotion_rollouts
-        WHERE promotion_rollouts.project_name = stages.project_name
-            AND promotion_rollouts.stage_name = stages.name
+        WHERE promotion_rollouts.stage_id = stages.id
             AND promotion_rollouts.status_phase IN ('Pending', 'Running')
         ORDER BY promotion_rollouts.status_phase = 'Running' DESC, promotion_rollouts.number
         LIMIT 1
@@ -187,8 +179,7 @@ CROSS JOIN LATERAL (
     UNION ALL
     (
         SELECT id, project_name, name, stage_name, number, freight_name, max_concurrent, max_failures, created_by, created_at, updated_at, status_phase, status_reason, status_message, status_started_at, status_finished_at, stage_id FROM promotion_rollouts
-        WHERE promotion_rollouts.project_name = stages.project_name
-            AND promotion_rollouts.stage_name = stages.name
+        WHERE promotion_rollouts.stage_id = stages.id
             AND promotion_rollouts.status_phase NOT IN ('Pending', 'Running')
         ORDER BY promotion_rollouts.number DESC
         LIMIT 1
@@ -306,7 +297,9 @@ type ListProjectPromotionRolloutsParams struct {
 // lists below is unbounded: each reads a page of at most page_size rows
 // from an index, and a caller wanting more asks again from where the page
 // ended. Bounds are compared with COALESCE rather than an IS NULL test so
-// that the index serves them whether or not a bound is given.
+// that the index serves them whether or not a bound is given. A Stage's
+// rollouts are keyed by its row's id, which each list of them finds by the
+// Stage's name first; a Stage the mirror has not recorded has none.
 // A page of a Project's rollouts, newest first: those created before the
 // given rollout, or the newest when none is given.
 func (q *Queries) ListProjectPromotionRollouts(ctx context.Context, arg ListProjectPromotionRolloutsParams) ([]PromotionRolloutRow, error) {
@@ -490,8 +483,11 @@ func (q *Queries) ListPromotionRolloutsByName(ctx context.Context, arg ListPromo
 
 const listStagePromotionRollouts = `-- name: ListStagePromotionRollouts :many
 SELECT id, project_name, name, stage_name, number, freight_name, max_concurrent, max_failures, created_by, created_at, updated_at, status_phase, status_reason, status_message, status_started_at, status_finished_at, stage_id FROM promotion_rollouts
-WHERE project_name = $1
-    AND stage_name = $2
+WHERE stage_id = (
+    SELECT id FROM stages
+    WHERE stages.project_name = $1
+        AND stages.name = $2
+)
     AND number < COALESCE($3::bigint, 9223372036854775807)
 ORDER BY number DESC
 LIMIT $4
@@ -551,8 +547,11 @@ func (q *Queries) ListStagePromotionRollouts(ctx context.Context, arg ListStageP
 
 const listStagePromotionRolloutsAfter = `-- name: ListStagePromotionRolloutsAfter :many
 SELECT id, project_name, name, stage_name, number, freight_name, max_concurrent, max_failures, created_by, created_at, updated_at, status_phase, status_reason, status_message, status_started_at, status_finished_at, stage_id FROM promotion_rollouts
-WHERE project_name = $1
-    AND stage_name = $2
+WHERE stage_id = (
+    SELECT id FROM stages
+    WHERE stages.project_name = $1
+        AND stages.name = $2
+)
     AND number > $3
 ORDER BY number
 LIMIT $4
@@ -611,8 +610,11 @@ func (q *Queries) ListStagePromotionRolloutsAfter(ctx context.Context, arg ListS
 
 const listStagePromotionRolloutsOfFreight = `-- name: ListStagePromotionRolloutsOfFreight :many
 SELECT id, project_name, name, stage_name, number, freight_name, max_concurrent, max_failures, created_by, created_at, updated_at, status_phase, status_reason, status_message, status_started_at, status_finished_at, stage_id FROM promotion_rollouts
-WHERE project_name = $1
-    AND stage_name = $2
+WHERE stage_id = (
+    SELECT id FROM stages
+    WHERE stages.project_name = $1
+        AND stages.name = $2
+)
     AND freight_name = $3
     AND number < COALESCE($4::bigint, 9223372036854775807)
 ORDER BY number DESC
