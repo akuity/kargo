@@ -919,11 +919,12 @@ func (r *reconciler) ensureDefaultUserRoles(
 					Verbs:     []string{"*"},
 				},
 				{ // Full access to all mutable Kargo resource types
-					// PromotionRequests and Targets are deliberately absent
-					// here: only the Stage controller creates a
-					// PromotionRequest, and only the controller that manages
+					// PromotionRequests, PromotionRollouts and Targets are
+					// deliberately absent here: only the Stage controller and
+					// the API server create a PromotionRequest or a
+					// PromotionRollout, and only the controller that manages
 					// Targets creates, updates or deletes one, so no user
-					// needs to write either. Read access is granted
+					// needs to write any of them. Read access is granted
 					// separately, below.
 					APIGroups: []string{kargoapi.GroupVersion.Group},
 					Resources: []string{
@@ -943,13 +944,15 @@ func (r *reconciler) ensureDefaultUserRoles(
 					Resources: []string{"targets"},
 					Verbs:     []string{"get", "list", "watch"},
 				},
-				{ // Read-only access to PromotionRequests
-					// A user cannot create, edit, or delete a PromotionRequest --
-					// the Stage controller and the API server own that. They can
-					// read one, because when a target-aware Stage stops promoting,
-					// the PromotionRequest's status is where the reason lives.
+				{ // Read-only access to PromotionRequests and PromotionRollouts
+					// A user cannot create, edit, or delete either -- the Stage
+					// controller and the API server own that, and a promotion
+					// to a target-aware Stage is authorized by the promote verb
+					// on the Stage. They can read one, because when a
+					// target-aware Stage stops promoting, its status is where
+					// the reason lives.
 					APIGroups: []string{kargoapi.GroupVersion.Group},
-					Resources: []string{"promotionrequests"},
+					Resources: []string{"promotionrequests", "promotionrollouts"},
 					Verbs:     []string{"get", "list", "watch"},
 				},
 				{ // Promote permission on all stages
@@ -1000,6 +1003,7 @@ func (r *reconciler) ensureDefaultUserRoles(
 						"freights",
 						"projectconfigs",
 						"promotionrequests",
+						"promotionrollouts",
 						"promotions",
 						"stages",
 						"targets",
@@ -1039,6 +1043,7 @@ func (r *reconciler) ensureDefaultUserRoles(
 						"freights",
 						"projectconfigs",
 						"promotionrequests",
+						"promotionrollouts",
 						"stages",
 						"targets",
 						"warehouses",
