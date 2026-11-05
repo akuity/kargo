@@ -77,9 +77,13 @@ type promoteToStageRequest struct {
 // @Param project path string true "Project name"
 // @Param stage path string true "Stage name"
 // @Param body body promoteToStageRequest true "Promote request"
-// @Description A Stage that selects Targets yields a PromotionRequest, which fans
-// @Description the Freight out to each of them, in place of a single Promotion.
-// @Success 201 {object} kargoapi.Promotion "Promotion resource, or a PromotionRequest for a Stage that selects Targets"
+// @Description A Stage that selects Targets yields, in place of a single
+// @Description Promotion, something that fans the Freight out to each of
+// @Description them: a PromotionRollout on a server that creates
+// @Description PromotionRollouts, and a PromotionRequest otherwise. Either
+// @Description way, the body's targets and updateStrategy narrow which
+// @Description Targets are promoted to and at what pace.
+// @Success 201 {object} kargoapi.Promotion "Promotion; a PromotionRollout or PromotionRequest for a Stage with Targets"
 // @Router /v1beta1/projects/{project}/stages/{stage}/promotions [post]
 func (s *server) promoteToStage(c *gin.Context) {
 	ctx := c.Request.Context()
@@ -211,14 +215,30 @@ func (s *server) promoteToStage(c *gin.Context) {
 		return
 	}
 
-	// A Stage that selects Targets fans Freight out to them via a PromotionRequest
-	// rather than promoting to itself with a single Promotion.
+	// A Stage that selects Targets fans Freight out to them via a
+	// PromotionRollout, or a PromotionRequest on a server that does not
+	// create rollouts, rather than promoting to itself with a single
+	// Promotion.
 	if stage.IsTargetAware() {
 		// We explicitly request all targets if req.Targets is nil
 		// TODO: split up API functions to avoid confusion between nil argument and empty argument
 		allTargets := req.Targets == nil
 		if !allTargets && len(req.Targets) == 0 {
 			_ = c.Error(libhttp.Error(fmt.Errorf("target list cannot be empty"), http.StatusBadRequest))
+			return
+		}
+		// TODO(promotion-requests): a server that does not create rollouts
+		// falls back to a PromotionRequest. Remove this check, and the
+		// fallback below it, along with PromotionRequests.
+		if s.cfg.PromotionRolloutsEnabled {
+			rollout, rolloutErr := s.createPromotionRollout(
+				ctx, stage, freight, req.Targets, req.UpdateStrategy,
+			)
+			if rolloutErr != nil {
+				_ = c.Error(rolloutErr)
+				return
+			}
+			c.JSON(http.StatusCreated, rollout)
 			return
 		}
 		newPromoReq, promoErr := s.createPromotionRequest(
