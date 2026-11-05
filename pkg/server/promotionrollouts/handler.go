@@ -10,10 +10,8 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/database/promotionrolloutstore"
-	"github.com/akuity/kargo/pkg/logging"
 	"github.com/akuity/kargo/pkg/server/auth/can"
 	"github.com/akuity/kargo/pkg/server/middleware"
-	"github.com/akuity/kargo/pkg/server/targets"
 )
 
 // Handler serves the PromotionRollout endpoints of one API server.
@@ -29,28 +27,29 @@ type Handler struct {
 	// kube reads the Stage and Freight a rollout is created for, with the
 	// caller's authorization.
 	kube client.Client
-	// targets is where the Targets a created rollout promotes to are read
-	// from. It is used only with a store; see createRollout.
-	targets targets.Lister
+	// creator builds the rollouts the create endpoint asks for. It is used
+	// only with a store, and is nil without one, as the store is.
+	creator Creator
 	// createEnabled is whether this server creates rollouts. When it does
 	// not, the create endpoint responds 501; rollouts can still be read.
 	createEnabled bool
 }
 
-// New returns a Handler. The store may be nil; see the store field.
-// targetLister is where the Targets a created rollout promotes to are read
-// from; it is used only with a store. createEnabled is whether the create
-// endpoint is served; see the createEnabled field.
+// New returns a Handler. The store may be nil; see the store field. The
+// creator builds the rollouts the create endpoint asks for; it may be nil
+// without a store, and is shared with the promote endpoints, which create
+// rollouts the same way. createEnabled is whether the create endpoint is
+// served; see the createEnabled field.
 func New(
 	store promotionrolloutstore.Store,
-	targetLister targets.Lister,
+	creator Creator,
 	authorize func(context.Context, can.Access) error,
 	kube client.Client,
 	createEnabled bool,
 ) *Handler {
 	return &Handler{
 		store:         store,
-		targets:       targetLister,
+		creator:       creator,
 		authorize:     authorize,
 		kube:          kube,
 		createEnabled: createEnabled,
@@ -134,19 +133,4 @@ func (h *Handler) present(
 			promotionrolloutstore.TargetStatuses(statuses[s.ID])
 	}
 	return rollouts, nil
-}
-
-// logChange records a change to a PromotionRollout and who made it, which
-// the caller has already worked out from the request. PromotionRollouts are
-// not Kubernetes resources, so the Kubernetes audit log never sees these.
-func logChange(ctx context.Context, what, project, name, actor string) {
-	if actor == "" {
-		actor = "unknown"
-	}
-	logging.LoggerFromContext(ctx).Info(
-		what,
-		"project", project,
-		"promotionRollout", name,
-		"actor", actor,
-	)
 }

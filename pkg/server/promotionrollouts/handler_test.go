@@ -507,7 +507,8 @@ func newRouter(
 ) *gin.Engine {
 	router := gin.New()
 	router.Use(middleware.HandleErrors(), middleware.Recover())
-	New(store, targets, authorize, kube, createEnabled).Register(router.Group("/v1beta1/projects/:project"))
+	New(store, NewCreator(store, targets), authorize, kube, createEnabled).
+		Register(router.Group("/v1beta1/projects/:project"))
 	return router
 }
 
@@ -597,11 +598,12 @@ func TestNew(t *testing.T) {
 	// into 501 for every request.
 	h := New(nil, nil, nil, nil, false)
 	require.Nil(t, h.store)
-	require.Nil(t, h.targets)
+	require.Nil(t, h.creator)
 	require.False(t, h.createEnabled)
-	h = New(&fakeStore{}, fakeTargets{}, nil, nil, true)
+	store := &fakeStore{}
+	h = New(store, NewCreator(store, fakeTargets{}), nil, nil, true)
 	require.NotNil(t, h.store)
-	require.NotNil(t, h.targets)
+	require.NotNil(t, h.creator)
 	require.True(t, h.createEnabled)
 }
 

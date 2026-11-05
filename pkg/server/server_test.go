@@ -13,6 +13,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
+	"github.com/akuity/kargo/pkg/database"
 	fakeevent "github.com/akuity/kargo/pkg/event/fake"
 	"github.com/akuity/kargo/pkg/server/config"
 	"github.com/akuity/kargo/pkg/server/kubernetes"
@@ -70,6 +71,55 @@ func TestNewServer(t *testing.T) {
 	require.NotNil(t, s.patchFreightStatusFn)
 	require.NotNil(t, s.authorizeFn)
 	require.NotNil(t, s.getAnalysisRunFn)
+}
+
+func TestNewServer_rolloutCreator(t *testing.T) {
+	testClient, err := kubernetes.NewClient(
+		t.Context(),
+		&rest.Config{},
+		kubernetes.ClientOptions{
+			NewInternalClient: func(
+				context.Context,
+				*rest.Config,
+				*runtime.Scheme,
+				string,
+			) (client.WithWatch, error) {
+				return fake.NewClientBuilder().Build(), nil
+			},
+		},
+	)
+	require.NoError(t, err)
+
+	testCases := []struct {
+		name string
+		cfg  config.ServerConfig
+		db   *database.Queries
+		// wired is whether the promote endpoints create PromotionRollouts.
+		wired bool
+	}{
+		{
+			name: "without a database",
+			cfg:  config.ServerConfig{PromotionRolloutsEnabled: true},
+		},
+		{
+			name: "a server that does not create rollouts",
+			db:   database.New(nil),
+		},
+		{
+			name:  "a server that creates rollouts",
+			cfg:   config.ServerConfig{PromotionRolloutsEnabled: true},
+			db:    database.New(nil),
+			wired: true,
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			s, ok := NewServer(testCase.cfg, testClient, nil, nil, testCase.db).(*server)
+			require.True(t, ok)
+			require.Equal(t, testCase.db != nil, s.listTargetsFn != nil)
+			require.Equal(t, testCase.wired, s.rolloutCreator != nil)
+		})
+	}
 }
 
 func TestWrapWithBasePath(t *testing.T) {
