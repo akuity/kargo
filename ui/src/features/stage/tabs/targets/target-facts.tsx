@@ -8,13 +8,11 @@ import { Link, generatePath } from 'react-router-dom';
 import { paths } from '@ui/config/paths';
 import { useModal } from '@ui/features/common/modal/use-modal';
 import { TargetYamlModal } from '@ui/features/project/targets/detail/target-yaml-modal';
-import {
-  flattenParams,
-  freightArtifacts
-} from '@ui/features/project/targets/model/target-details-utils';
+import { freightByOrigin } from '@ui/features/project/targets/model/round-utils';
+import { flattenParams } from '@ui/features/project/targets/model/target-details-utils';
 import { visibleLabels } from '@ui/features/project/targets/model/target-labels';
 import { TargetRow } from '@ui/features/project/targets/model/target-rows';
-import { FreightLink } from '@ui/features/project/targets/shared/freight-link';
+import { OriginRows, Row } from '@ui/features/project/targets/shared/origin-rows';
 import { failedStepName } from '@ui/features/stage/promotion-request/round-detail';
 import { useGetPromotion } from '@ui/gen/api/v2/core/core';
 import { PromotionRequest } from '@ui/gen/api/v2/models';
@@ -25,15 +23,6 @@ import { childPromotionName, governing, owningTargetSet } from './summary';
 const cardClassName =
   'flex-1 min-w-[240px] rounded-md p-3 border border-solid bg-gray-50 dark:bg-neutral-900 ' +
   'border-gray-200 dark:border-neutral-700';
-
-// Row is one labelled value in a card: the label on the left, the value on the
-// right, as the Target details panel lays its own out.
-const Row = ({ label, children }: { label: string; children: ReactNode }) => (
-  <Flex justify='space-between' align='flex-start' gap={12}>
-    <span className='text-xs text-gray-500 dark:text-neutral-400 shrink-0'>{label}</span>
-    <span className='text-xs text-right min-w-0 break-words'>{children}</span>
-  </Flex>
-);
 
 const Card = ({ heading, children }: { heading: string; children: ReactNode }) => (
   <div className={cardClassName}>
@@ -87,7 +76,6 @@ export const TargetFacts = ({
   row,
   round,
   blocked = false,
-  stageFreight,
   freightLabel,
   onClose
 }: {
@@ -98,8 +86,6 @@ export const TargetFacts = ({
   round?: PromotionRequest;
   // Whether that round is blocked, and so reached nothing.
   blocked?: boolean;
-  // What the Stage itself is on, shown when this Target is not on it.
-  stageFreight: string[];
   freightLabel: (name: string) => string;
   onClose: () => void;
 }) => {
@@ -122,7 +108,14 @@ export const TargetFacts = ({
   const failedStep = failedStepName(promotionQuery.data?.data);
 
   const currentFreight = governed?.currentFreight;
-  const artifacts = freightArtifacts(currentFreight);
+  // A Target with no Freight is only shown what the Stage is on once a
+  // promotion to it has failed. Until then it has simply not been promoted to,
+  // and is not behind on anything.
+  const origins =
+    currentFreight || governed?.upToDate === false
+      ? freightByOrigin(currentFreight, governed?.stage.status?.freightHistory?.[0])
+      : [];
+  const anyBehind = origins.some(({ behind }) => behind);
   const params = flattenParams(target.spec?.params);
   const targetSet = owningTargetSet(target);
   const created = parseDate(target.metadata?.creationTimestamp);
@@ -180,50 +173,19 @@ export const TargetFacts = ({
 
       <Flex gap={12} wrap className='mt-3'>
         <Card heading={`In ${stageName}`}>
-          {currentFreight ? (
-            <>
-              <Row label='Freight'>
-                <Flex gap={6} wrap justify='flex-end'>
-                  {row.freight.map((freight) => (
-                    <FreightLink
-                      key={freight}
-                      project={project}
-                      name={freight}
-                      label={freightLabel(freight)}
-                    />
-                  ))}
-                </Flex>
-              </Row>
-              {currentFreight.id && (
-                <Row label='Collection'>
-                  <span className='font-mono'>{currentFreight.id.slice(0, 7)}</span>
-                </Row>
-              )}
-              {artifacts.map((artifact) => (
-                <Row key={`${artifact.kind}-${artifact.text}`} label={artifact.kind}>
-                  <span className='font-mono'>{artifact.text}</span>
-                </Row>
-              ))}
-              {/* What the Stage has moved on to, shown only when this Target
-                  has not got there yet. */}
-              {governed?.upToDate === false && stageFreight.length > 0 && (
-                <Row label='Stage Freight'>
-                  <Flex gap={6} wrap justify='flex-end'>
-                    {stageFreight.map((freight) => (
-                      <FreightLink
-                        key={freight}
-                        project={project}
-                        name={freight}
-                        label={freightLabel(freight)}
-                      />
-                    ))}
-                  </Flex>
-                </Row>
-              )}
-            </>
+          {origins.length ? (
+            <OriginRows project={project} origins={origins} freightLabel={freightLabel} />
           ) : (
             <Typography.Text type='secondary' className='text-xs'>
               Nothing promoted here yet
+            </Typography.Text>
+          )}
+
+          {/* Each origin's own line says when it is behind. A Stage that has
+              moved on with no origin to show for it still needs saying. */}
+          {governed?.upToDate === false && !anyBehind && (
+            <Typography.Text type='warning' className='text-xs'>
+              Behind: Stage is on other Freight
             </Typography.Text>
           )}
 
