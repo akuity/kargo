@@ -2,7 +2,7 @@ import {
   TableSource,
   flattenFreightOrigin
 } from '@ui/features/freight/flatten-freight-origin-utils';
-import { FreightCollection, FreightReference } from '@ui/gen/api/v2/models';
+import { FreightReference } from '@ui/gen/api/v2/models';
 
 export type Param = { key: string; value: string };
 
@@ -70,8 +70,3 @@ export const artifactSummary = (reference?: FreightReference): string =>
   referenceArtifacts(reference)
     .map(({ text }) => text)
     .join(', ');
-
-// freightArtifacts describes everything a Freight collection carries, across
-// every origin in it.
-export const freightArtifacts = (collection?: FreightCollection): Artifact[] =>
-  Object.values(collection?.items || {}).flatMap(referenceArtifacts);
