@@ -2,8 +2,10 @@ package metrics
 
 import (
 	"fmt"
+	"regexp"
 	"slices"
 	"strings"
+	"sync"
 
 	"github.com/kelseyhightower/envconfig"
 )
@@ -24,6 +26,26 @@ const familiesAll = "all"
 // families are the known families.
 var families = []Family{FamilyRESTClient, FamilyLifecycle}
 
+// familiesMu guards families.
+var familiesMu sync.RWMutex
+
+// familyName matches a valid family name.
+var familyName = regexp.MustCompile(`^[a-z0-9-]+$`)
+
+// RegisterFamily adds f to the families METRICS_DISABLE accepts. Call it before
+// ConfigFromEnv. Registering a known family is a no-op. It panics if f is
+// empty, "all", or not lower-case [a-z0-9-].
+func RegisterFamily(f Family) {
+	if f == familiesAll || !familyName.MatchString(string(f)) {
+		panic(fmt.Sprintf("metrics: invalid family name %q", f))
+	}
+	familiesMu.Lock()
+	defer familiesMu.Unlock()
+	if !slices.Contains(families, f) {
+		families = append(families, f)
+	}
+}
+
 // Config configures which metric families are registered.
 type Config struct {
 	// Disable lists the families not to register, or "all".
@@ -35,6 +57,9 @@ type Config struct {
 // ConfigFromEnv returns a Config from the environment. An unknown family is an
 // error.
 func ConfigFromEnv() (Config, error) {
+	familiesMu.RLock()
+	known := slices.Clone(families)
+	familiesMu.RUnlock()
 	cfg := Config{}
 	envconfig.MustProcess("", &cfg)
 	for _, name := range cfg.Disable {
@@ -43,15 +68,15 @@ func ConfigFromEnv() (Config, error) {
 			continue
 		}
 		if name == familiesAll {
-			cfg.disabled = append(cfg.disabled, families...)
+			cfg.disabled = append(cfg.disabled, known...)
 			continue
 		}
 		family := Family(name)
-		if !slices.Contains(families, family) {
+		if !slices.Contains(known, family) {
 			return Config{}, fmt.Errorf(
 				"unknown metrics family %q in METRICS_DISABLE; known families: %s, or %s",
 				name,
-				joinFamilies(families),
+				joinFamilies(known),
 				familiesAll,
 			)
 		}
