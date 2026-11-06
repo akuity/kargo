@@ -82,6 +82,20 @@ labeled by `project`:
 | `kargo_promotion_duration_seconds` | Histogram | Time each Promotion spent running, from the moment it started until it reached a terminal phase. |
 | `kargo_promotion_step_duration_seconds` | Histogram | Time each individual promotion step spent running, from the moment it started until it reached a terminal status. |
 | `kargo_stages_by_ready_reason` | Gauge | Number of Stages in each readiness state, by Project, sampled at scrape time. Control flow Stages are omitted. |
+| `kargo_promotion_pending_duration_seconds` | Histogram | Time each Promotion waited, from its creation until it started running. |
+| `kargo_promotions_by_phase` | Gauge | Number of non-terminal Promotions (Pending, Running or Unknown), by the `phase` label, sampled at scrape time. |
+| `kargo_promotion_oldest_pending_timestamp_seconds` | Gauge | Creation time of the oldest Promotion that has not started running, sampled at scrape time. |
+| `kargo_freight_verification_lead_time_seconds` | Histogram | Time from a Freight's creation until it was verified in a Stage, observed once per Stage. Control flow Stages are omitted. |
+| `kargo_warehouse_discovery_duration_seconds` | Histogram | Time each successful artifact discovery took, across all of a Warehouse's subscriptions. |
+| `kargo_warehouse_discovery_interval_seconds` | Histogram | Time between a Warehouse's previous successful discovery and its latest one. |
+| `kargo_warehouse_oldest_discovery_timestamp_seconds` | Gauge | Time of the least recent successful discovery among a Project's Warehouses, sampled at scrape time. |
+| `kargo_warehouse_freight_created_total` | Counter | Number of Freight created by Warehouses. |
+
+The lifecycle metrics -- `kargo_promotion_pending_duration_seconds`,
+`kargo_promotions_by_phase`, `kargo_promotion_oldest_pending_timestamp_seconds`,
+`kargo_freight_verification_lead_time_seconds` and the `kargo_warehouse_*`
+metrics -- can be turned off with `METRICS_DISABLE=lifecycle`, for example
+through `global.env`.
 
 :::note
 
@@ -170,6 +184,52 @@ Because step durations span a very wide range, this histogram also emits a
 [native histogram](https://prometheus.io/docs/specs/native_histograms/).
 Scraping the native histogram rather than the static buckets gives a much more
 accurate view of the distribution, if your Prometheus server supports it.
+
+### Promotion Lifecycle
+
+A Promotion's life splits into time spent waiting and time spent running:
+
+| Interval | Metric |
+|----------|--------|
+| Created to started | `kargo_promotion_pending_duration_seconds` |
+| Started to finished | `kargo_promotion_duration_seconds` |
+
+A Promotion waits while its Stage runs the Promotions ahead of it.
+`kargo_promotion_pending_duration_seconds` only observes Promotions once they
+start, so a queue that is not moving shows in
+`kargo_promotion_oldest_pending_timestamp_seconds` instead:
+
+```
+time() - min(kargo_promotion_oldest_pending_timestamp_seconds)
+```
+
+`kargo_promotions_by_phase` counts non-terminal Promotions, with a `phase`
+label of `Pending`, `Running`, or `Unknown` for a Promotion the controller has
+not reconciled yet. Terminal Promotions are left out: how many the controller
+holds depends on garbage collection, and `kargo_promotions_completed_total`
+already reports how Promotions finish. Like `kargo_promotions_non_terminal`, it
+reads only non-terminal Promotions at scrape time, so its cost does not grow with
+the number of Promotions retained.
+
+### Freight Verification Lead Time
+
+`kargo_freight_verification_lead_time_seconds` measures from a Freight's
+creation to the end of its successful verification in a Stage, once for each
+Stage it is verified in. It covers waiting for and running every Promotion and
+verification on the way, so it grows with a Stage's distance from the
+Warehouse.
+
+Control flow Stages are omitted: they pass Freight through as soon as an
+upstream Stage verifies it, without a verification of their own.
+
+### Warehouse Discovery
+
+| Metric | Answers |
+|--------|---------|
+| `kargo_warehouse_discovery_duration_seconds` | How long discovery takes. Failed discoveries are not observed. |
+| `kargo_warehouse_discovery_interval_seconds` | How often Warehouses are rediscovered: close to `spec.interval` when the controller keeps up, longer when it does not. |
+| `kargo_warehouse_oldest_discovery_timestamp_seconds` | Whether any Warehouse has stopped being rediscovered. Use `time() - kargo_warehouse_oldest_discovery_timestamp_seconds`. |
+| `kargo_warehouse_freight_created_total` | How much Freight Warehouses produce. |
 
 ### Stages by Ready Reason
 

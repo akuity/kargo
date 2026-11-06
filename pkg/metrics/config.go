@@ -11,14 +11,18 @@ import (
 // Family is a group of metrics that METRICS_DISABLE can turn off.
 type Family string
 
-// FamilyRESTClient is the metrics EnableRESTClientMetrics registers.
-const FamilyRESTClient Family = "rest-client"
+const (
+	// FamilyRESTClient is the metrics EnableRESTClientMetrics registers.
+	FamilyRESTClient Family = "rest-client"
+	// FamilyLifecycle is the controller's lifecycle metrics.
+	FamilyLifecycle Family = "lifecycle"
+)
 
 // familiesAll disables every family.
 const familiesAll = "all"
 
 // families are the known families.
-var families = []Family{FamilyRESTClient}
+var families = []Family{FamilyRESTClient, FamilyLifecycle}
 
 // Config configures which metric families are registered.
 type Config struct {
