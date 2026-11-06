@@ -1,6 +1,6 @@
 import { faFileCode, faRocket } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { Button, Flex, Tag, Tooltip, Typography } from 'antd';
+import { Button, Flex, Typography } from 'antd';
 import { formatDistanceToNow } from 'date-fns';
 import { Link, generatePath } from 'react-router-dom';
 
@@ -9,11 +9,11 @@ import { useModal } from '@ui/features/common/modal/use-modal';
 import { SmallLabel } from '@ui/features/common/small-label';
 import { parseDate } from '@ui/utils/dates';
 
-import { OriginFreight, freightByOrigin } from '../model/round-utils';
-import { artifactSummary, flattenParams, referenceArtifacts } from '../model/target-details-utils';
+import { freightByOrigin } from '../model/round-utils';
+import { flattenParams } from '../model/target-details-utils';
 import { GoverningStage, TargetRow } from '../model/target-rows';
 import { targetStatePresentations } from '../model/target-state';
-import { FreightLink } from '../shared/freight-link';
+import { OriginRows, Row } from '../shared/origin-rows';
 import { StateDot } from '../shared/state-visuals';
 
 import { TargetPromotionsModal } from './target-promotions';
@@ -22,68 +22,6 @@ import { TargetYamlModal } from './target-yaml-modal';
 const cardClassName =
   'rounded-md p-3 border border-solid bg-gray-50 dark:bg-neutral-900 ' +
   'border-gray-200 dark:border-neutral-700';
-
-// Row is one labelled value in a card: the label on the left, the value on the
-// right, as the Stage and Freight detail panels lay theirs out.
-const Row = ({ label, children }: { label: string; children: React.ReactNode }) => (
-  <Flex justify='space-between' align='flex-start' gap={12}>
-    <span className='text-xs text-gray-500 dark:text-neutral-400 shrink-0'>{label}</span>
-    <span className='text-xs text-right min-w-0 break-words'>{children}</span>
-  </Flex>
-);
-
-/**
- * OriginRows is a Target's Freight laid out one origin to a line: what the
- * origin's Freight carries, the Freight itself, and what the Stage has moved
- * that origin on to when it has. A Stage requesting from many Warehouses puts
- * as many pieces of Freight on a Target, and listed apart from their artifacts
- * and from the Stage's own, nothing says which goes with which.
- */
-const OriginRows = ({
-  project,
-  origins,
-  freightLabel
-}: {
-  project: string;
-  origins: OriginFreight[];
-  freightLabel: (name: string) => string;
-}) => (
-  <>
-    {origins.map(({ origin, current, stage, behind }) => (
-      <Row key={origin} label={origin}>
-        <Flex gap={8} wrap justify='flex-end' align='center'>
-          {/* Shortened names can repeat across registries, so the index keeps
-              each key unique. */}
-          {referenceArtifacts(current).map(({ kind, text }, i) => (
-            <span key={`${kind}:${text}:${i}`} className='font-mono' title={kind}>
-              {text}
-            </span>
-          ))}
-          {current?.name ? (
-            <FreightLink
-              project={project}
-              name={current.name}
-              label={freightLabel(current.name)}
-              className='text-gray-500 dark:text-neutral-400'
-              showName={false}
-            />
-          ) : (
-            <Typography.Text type='secondary' className='text-xs'>
-              none
-            </Typography.Text>
-          )}
-          {behind && stage?.name && (
-            <Tooltip title={`Stage is on ${artifactSummary(stage) || 'other Freight'}`}>
-              <Tag variant='filled' color='warning' className='m-0 text-xs'>
-                behind
-              </Tag>
-            </Tooltip>
-          )}
-        </Flex>
-      </Row>
-    ))}
-  </>
-);
 
 /**
  * StageCard is what one Stage has put on a Target and what has become of it:
