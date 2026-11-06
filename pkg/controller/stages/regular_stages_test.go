@@ -2691,6 +2691,11 @@ func TestRegularStageReconciler_syncFreight(t *testing.T) {
 	}{
 		{
 			name: "error listing Freight",
+			// Freight in use is synced first, so it must exist for the list to run.
+			objects: []client.Object{
+				&kargoapi.Freight{ObjectMeta: metav1.ObjectMeta{Namespace: testProject, Name: "fake-freight-1"}},
+				&kargoapi.Freight{ObjectMeta: metav1.ObjectMeta{Namespace: testProject, Name: "fake-freight-2"}},
+			},
 			interceptor: interceptor.Funcs{
 				List: func(context.Context, client.WithWatch, client.ObjectList, ...client.ListOption) error {
 					return fmt.Errorf("something went wrong")
@@ -3398,6 +3403,212 @@ func TestRegularStageReconciler_assessHealth(t *testing.T) {
 
 			status := r.assessHealth(t.Context(), tt.stage)
 			tt.assertions(t, status)
+		})
+	}
+}
+
+// TestRegularStageReconciler_syncFreight_writesPerPromotion counts Freight
+// status writes for one promotion: one to the Freight coming into the Stage,
+// carrying both currentlyIn and verifiedIn, then one to the Freight leaving it.
+func TestRegularStageReconciler_syncFreight_writesPerPromotion(t *testing.T) {
+	const project = "fake-project"
+	finished := metav1.NewTime(time.Now().Add(-time.Minute).Truncate(time.Second))
+	since := metav1.NewTime(time.Now().Add(-time.Hour).Truncate(time.Second))
+
+	newStage := func(hs kargoapi.HealthState) *kargoapi.Stage {
+		return &kargoapi.Stage{
+			ObjectMeta: metav1.ObjectMeta{Namespace: project, Name: "fake-stage"},
+			Status: kargoapi.StageStatus{
+				Health: &kargoapi.Health{Status: hs},
+				FreightHistory: kargoapi.FreightHistory{{
+					Freight: map[string]kargoapi.FreightReference{
+						"fake-warehouse": {Name: "new-freight"},
+					},
+					VerificationHistory: []kargoapi.VerificationInfo{{
+						Phase:      kargoapi.VerificationPhaseSuccessful,
+						FinishTime: &finished,
+					}},
+				}},
+			},
+		}
+	}
+
+	scheme := runtime.NewScheme()
+	require.NoError(t, kargoapi.AddToScheme(scheme))
+
+	// newClient returns a client holding the Freight leaving and the Freight
+	// entering the Stage, which records each Freight status write in order.
+	newClient := func(patched *[]string) client.Client {
+		return fake.NewClientBuilder().
+			WithScheme(scheme).
+			WithObjects(
+				&kargoapi.Freight{
+					ObjectMeta: metav1.ObjectMeta{Namespace: project, Name: "new-freight"},
+				},
+				&kargoapi.Freight{
+					ObjectMeta: metav1.ObjectMeta{Namespace: project, Name: "old-freight"},
+					Status: kargoapi.FreightStatus{
+						CurrentlyIn: map[string]kargoapi.CurrentStage{"fake-stage": {Since: &since}},
+						VerifiedIn:  map[string]kargoapi.VerifiedStage{"fake-stage": {}},
+					},
+				},
+			).
+			WithIndex(
+				&kargoapi.Freight{},
+				indexer.FreightByCurrentStagesField,
+				indexer.FreightByCurrentStages,
+			).
+			WithStatusSubresource(&kargoapi.Freight{}).
+			WithInterceptorFuncs(interceptor.Funcs{
+				SubResourcePatch: func(
+					ctx context.Context,
+					c client.Client,
+					sub string,
+					obj client.Object,
+					p client.Patch,
+					opts ...client.SubResourcePatchOption,
+				) error {
+					*patched = append(*patched, obj.GetName())
+					return c.SubResource(sub).Patch(ctx, obj, p, opts...)
+				},
+			}).
+			Build()
+	}
+
+	getFreight := func(t *testing.T, c client.Client, name string) *kargoapi.Freight {
+		f := &kargoapi.Freight{}
+		require.NoError(t, c.Get(t.Context(), types.NamespacedName{Namespace: project, Name: name}, f))
+		return f
+	}
+
+	t.Run("verified in the same pass: two writes, not three", func(t *testing.T) {
+		var patched []string
+		c := newClient(&patched)
+		r := &RegularStageReconciler{client: c}
+
+		require.NoError(t, r.syncFreight(t.Context(), newStage(kargoapi.HealthStateHealthy)))
+		// The Freight downstream Stages wait on is written first.
+		require.Equal(t, []string{"new-freight", "old-freight"}, patched)
+
+		f := getFreight(t, c, "new-freight")
+		require.Contains(t, f.Status.CurrentlyIn, "fake-stage")
+		require.Contains(t, f.Status.VerifiedIn, "fake-stage")
+		require.Equal(t, finished.Unix(), f.Status.VerifiedIn["fake-stage"].VerifiedAt.Unix())
+		require.NotContains(t, getFreight(t, c, "old-freight").Status.CurrentlyIn, "fake-stage")
+
+		// Nothing left to write.
+		patched = nil
+		require.NoError(t, r.syncFreight(t.Context(), newStage(kargoapi.HealthStateHealthy)))
+		require.Empty(t, patched)
+	})
+
+	t.Run("verified in a later pass: currentlyIn first, verifiedIn after", func(t *testing.T) {
+		var patched []string
+		c := newClient(&patched)
+		r := &RegularStageReconciler{client: c}
+
+		require.NoError(t, r.syncFreight(t.Context(), newStage(kargoapi.HealthStateProgressing)))
+		require.Equal(t, []string{"new-freight", "old-freight"}, patched)
+		f := getFreight(t, c, "new-freight")
+		require.Contains(t, f.Status.CurrentlyIn, "fake-stage")
+		require.NotContains(t, f.Status.VerifiedIn, "fake-stage")
+		firstSince := f.Status.CurrentlyIn["fake-stage"].Since
+
+		patched = nil
+		require.NoError(t, r.syncFreight(t.Context(), newStage(kargoapi.HealthStateHealthy)))
+		require.Equal(t, []string{"new-freight"}, patched)
+		f = getFreight(t, c, "new-freight")
+		require.Contains(t, f.Status.VerifiedIn, "fake-stage")
+		// The existing currentlyIn entry is left alone.
+		require.Equal(t, firstSince.Unix(), f.Status.CurrentlyIn["fake-stage"].Since.Unix())
+	})
+
+	t.Run("verified without a finish time: verifiedAt falls back to now", func(t *testing.T) {
+		var patched []string
+		c := newClient(&patched)
+		r := &RegularStageReconciler{client: c}
+
+		stage := newStage(kargoapi.HealthStateHealthy)
+		stage.Status.FreightHistory[0].VerificationHistory[0].FinishTime = nil
+		before := time.Now().Truncate(time.Second)
+		require.NoError(t, r.syncFreight(t.Context(), stage))
+		f := getFreight(t, c, "new-freight")
+		require.Contains(t, f.Status.VerifiedIn, "fake-stage")
+		require.False(t, f.Status.VerifiedIn["fake-stage"].VerifiedAt.Time.Before(before))
+	})
+}
+
+func Test_freightVerifiedAt(t *testing.T) {
+	finished := metav1.NewTime(time.Now().Truncate(time.Second))
+	healthy := &kargoapi.Health{Status: kargoapi.HealthStateHealthy}
+	withVerifications := func(h *kargoapi.Health, vis ...kargoapi.VerificationInfo) *kargoapi.Stage {
+		return &kargoapi.Stage{
+			Status: kargoapi.StageStatus{
+				Health: h,
+				FreightHistory: kargoapi.FreightHistory{{
+					Freight: map[string]kargoapi.FreightReference{
+						"fake-warehouse": {Name: "fake-freight"},
+					},
+					VerificationHistory: vis,
+				}},
+			},
+		}
+	}
+	successful := kargoapi.VerificationInfo{
+		Phase:      kargoapi.VerificationPhaseSuccessful,
+		FinishTime: &finished,
+	}
+
+	testCases := []struct {
+		name     string
+		stage    *kargoapi.Stage
+		verified bool
+		at       time.Time
+	}{
+		{
+			name:  "nil health",
+			stage: withVerifications(nil, successful),
+		},
+		{
+			name:  "unhealthy",
+			stage: withVerifications(&kargoapi.Health{Status: kargoapi.HealthStateUnhealthy}, successful),
+		},
+		{
+			name:  "no current Freight",
+			stage: &kargoapi.Stage{Status: kargoapi.StageStatus{Health: healthy}},
+		},
+		{
+			name:  "no verification yet",
+			stage: withVerifications(healthy),
+		},
+		{
+			name:  "verification running",
+			stage: withVerifications(healthy, kargoapi.VerificationInfo{Phase: kargoapi.VerificationPhaseRunning}),
+		},
+		{
+			name:  "verification failed",
+			stage: withVerifications(healthy, kargoapi.VerificationInfo{Phase: kargoapi.VerificationPhaseFailed}),
+		},
+		{
+			name:     "healthy and verified",
+			stage:    withVerifications(healthy, successful),
+			verified: true,
+			at:       finished.Time,
+		},
+		{
+			name: "verified without a finish time",
+			stage: withVerifications(
+				healthy,
+				kargoapi.VerificationInfo{Phase: kargoapi.VerificationPhaseSuccessful},
+			),
+			verified: true,
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			at, ok := freightVerifiedAt(testCase.stage)
+			require.Equal(t, testCase.verified, ok)
+			require.Equal(t, testCase.at.Unix(), at.Unix())
 		})
 	}
 }
@@ -4254,7 +4465,7 @@ func TestRegularStageReconciler_verifyStageFreight(t *testing.T) {
 	}
 }
 
-func TestRegularStageReconciler_markFreightVerifiedForStage(t *testing.T) {
+func TestMarkFreightVerifiedForStage(t *testing.T) {
 	scheme := runtime.NewScheme()
 	require.NoError(t, kargoapi.AddToScheme(scheme))
 
@@ -4676,7 +4887,7 @@ func TestRegularStageReconciler_markFreightVerifiedForStage(t *testing.T) {
 				healthChecker: &health.MockAggregatingChecker{},
 			}
 
-			status, err := r.markFreightVerifiedForStage(t.Context(), tt.stage)
+			status, err := MarkFreightVerifiedForStage(t.Context(), r.client, tt.stage)
 			tt.assertions(t, c, status, err)
 		})
 	}
