@@ -27,32 +27,27 @@ type Handler struct {
 	// kube reads the Stage and Freight a rollout is created for, with the
 	// caller's authorization.
 	kube client.Client
-	// creator builds the rollouts the create endpoint asks for. It is used
-	// only with a store, and is nil without one, as the store is.
+	// creator builds the rollouts the create endpoint asks for. It is nil
+	// when this server does not create rollouts, or runs without a store, in
+	// which case the create endpoint responds 501; rollouts can still be
+	// read.
 	creator Creator
-	// createEnabled is whether this server creates rollouts. When it does
-	// not, the create endpoint responds 501; rollouts can still be read.
-	createEnabled bool
 }
 
 // New returns a Handler. The store may be nil; see the store field. The
-// creator builds the rollouts the create endpoint asks for; it may be nil
-// without a store, and is shared with the promote endpoints, which create
-// rollouts the same way. createEnabled is whether the create endpoint is
-// served; see the createEnabled field.
+// creator may be nil too; see the creator field. It is shared with the
+// promote endpoints, which create rollouts the same way.
 func New(
 	store promotionrolloutstore.Store,
 	creator Creator,
 	authorize func(context.Context, can.Access) error,
 	kube client.Client,
-	createEnabled bool,
 ) *Handler {
 	return &Handler{
-		store:         store,
-		creator:       creator,
-		authorize:     authorize,
-		kube:          kube,
-		createEnabled: createEnabled,
+		store:     store,
+		creator:   creator,
+		authorize: authorize,
+		kube:      kube,
 	}
 }
 
@@ -79,7 +74,7 @@ func (h *Handler) Register(project *gin.RouterGroup) {
 	requireDatabase := middleware.RequireFeature(h.store != nil, errDatabaseNotConfigured)
 	project.GET("/promotion-rollouts", requireDatabase, h.require(can.List()), h.list)
 	stage := project.Group("/stages/:stage/promotion-rollouts", requireDatabase)
-	stage.POST("", middleware.RequireFeature(h.createEnabled, errCreateDisabled), h.create)
+	stage.POST("", middleware.RequireFeature(h.creator != nil, errCreateDisabled), h.create)
 	stage.GET("/:number", h.require(can.Get()), h.get)
 }
 

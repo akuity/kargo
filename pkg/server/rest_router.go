@@ -263,7 +263,6 @@ func (s *server) setupRESTRouter(ctx context.Context) (*gin.Engine, error) {
 				s.rolloutCreator,
 				s.authorize,
 				s.client,
-				s.cfg.PromotionRolloutsEnabled,
 			).Register(project)
 
 			// Warehouses

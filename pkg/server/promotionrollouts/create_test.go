@@ -12,6 +12,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
+	authnv1 "k8s.io/api/authentication/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -19,6 +20,7 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/database"
 	"github.com/akuity/kargo/pkg/server/auth/can"
+	"github.com/akuity/kargo/pkg/server/user"
 )
 
 func TestCreate(t *testing.T) {
@@ -253,6 +255,9 @@ func TestCreate(t *testing.T) {
 				)
 				require.Equal(t, kargoapi.PromotionRolloutPhasePending, rollout.Status.Phase)
 				require.Nil(t, rollout.Status.Targets)
+				// No identity is bound to the request, so no creator is
+				// recorded.
+				require.NotContains(t, rollout.Annotations, kargoapi.AnnotationKeyCreateActor)
 				stored, err := happyStore.Get(t.Context(), testProject, rollout.Name)
 				require.NoError(t, err)
 				ids := make([]uuid.UUID, len(stored.Targets))
@@ -260,6 +265,26 @@ func TestCreate(t *testing.T) {
 					ids[i] = target.TargetID
 				}
 				require.ElementsMatch(t, []uuid.UUID{usEast.ID, usWest.ID}, ids)
+			},
+		},
+		{
+			name:     "the caller is recorded as the rollout's creator",
+			store:    &fakeStore{targets: fleet.rows},
+			targets:  fleet,
+			identity: user.KubernetesUser{UserInfo: authnv1.UserInfo{Username: "alice"}},
+			objects:  objects,
+			method:   http.MethodPost,
+			url:      stageURL("prod"),
+			body:     body("fake-freight"),
+			assertions: func(t *testing.T, w *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusCreated, w.Code)
+				rollout := &kargoapi.PromotionRollout{}
+				require.NoError(t, json.Unmarshal(w.Body.Bytes(), rollout))
+				require.Equal(
+					t,
+					kargoapi.EventActorKubernetesUserPrefix+"alice",
+					rollout.Annotations[kargoapi.AnnotationKeyCreateActor],
+				)
 			},
 		},
 		{
