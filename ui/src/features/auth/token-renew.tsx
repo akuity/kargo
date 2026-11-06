@@ -94,7 +94,7 @@ export const TokenRenew = () => {
         }
 
         onLogin(result.id_token, result.refresh_token);
-        navigate(safeRedirectQuery ?? paths.home);
+        navigate(safeRedirectQuery ?? paths.home, { replace: true });
       } catch (err) {
         logout();
         navigate(
