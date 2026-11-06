@@ -6186,8 +6186,12 @@ PromoteToStage Promote to Stage
 
 Create a Promotion resource to transition a specified Stage into
 the state represented by the specified Freight.
-A Stage that selects Targets yields a PromotionRequest, which fans
-the Freight out to each of them, in place of a single Promotion.
+A Stage that selects Targets yields, in place of a single
+Promotion, something that fans the Freight out to each of
+them: a PromotionRollout on a server that creates
+PromotionRollouts, and a PromotionRequest otherwise. Either
+way, the body's targets and updateStrategy narrow which
+Targets are promoted to and at what pace.
 
  @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
  @param project Project name
