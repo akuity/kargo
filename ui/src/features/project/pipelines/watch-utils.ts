@@ -121,20 +121,24 @@ function isNewerResourceVersion(incoming?: string, existing?: string): boolean {
   }
 }
 
-// advanceResourceVersion moves a cached list's resourceVersion up to that of a
-// watch event's object. Otherwise the list keeps the resourceVersion of its
-// initial fetch, and a watch reopened from it later (e.g. when the browser tab
-// becomes visible again) replays every change since then — briefly showing
-// stale states, such as a finished Stage as Promoting, while it catches up.
-export function advanceResourceVersion<M extends { resourceVersion?: string }>(
-  meta: M | undefined,
-  item: { metadata?: { resourceVersion?: string } }
-): M | undefined {
-  const incoming = item.metadata?.resourceVersion;
-  if (!isNewerResourceVersion(incoming, meta?.resourceVersion)) {
-    return meta;
+type WithResourceVersion = { metadata?: { resourceVersion?: string } };
+
+// advanceResourceVersion returns existing (a cached list) with its
+// resourceVersion moved up to that of incoming (a watch event's object), or
+// existing as-is if incoming is not newer. Without this, the list keeps the
+// resourceVersion of its initial fetch, and a watch reopened from it later
+// (e.g. when the browser tab becomes visible again) replays every change since
+// then — briefly showing stale states, such as a finished Stage as Promoting,
+// while it catches up.
+export function advanceResourceVersion<T extends WithResourceVersion>(
+  existing: T,
+  incoming: WithResourceVersion
+): T {
+  const resourceVersion = incoming.metadata?.resourceVersion;
+  if (!isNewerResourceVersion(resourceVersion, existing.metadata?.resourceVersion)) {
+    return existing;
   }
-  return { ...meta, resourceVersion: incoming } as M;
+  return { ...existing, metadata: { ...existing.metadata, resourceVersion } };
 }
 
 // Reads an SSE stream of raw text chunks (e.g. AnalysisRun logs). The server

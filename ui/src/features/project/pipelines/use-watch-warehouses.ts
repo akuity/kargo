@@ -89,8 +89,7 @@ export const useWatchWarehouses = (
           return {
             ...old,
             data: {
-              ...old.data,
-              metadata: advanceResourceVersion(old.data.metadata, warehouse),
+              ...advanceResourceVersion(old.data, warehouse),
               items: upsertOrDelete(old.data.items ?? [], warehouse, type)
             }
           };

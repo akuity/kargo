@@ -103,31 +103,36 @@ describe('batchEmitter', () => {
 });
 
 describe('advanceResourceVersion', () => {
-  test('moves the list resourceVersion up to a newer event object', () => {
-    const meta = { resourceVersion: '100', continue: 'x' };
+  type List = { metadata?: { resourceVersion?: string; continue?: string }; items: string[] };
 
-    expect(advanceResourceVersion(meta, { metadata: { resourceVersion: '150' } })).toEqual({
-      resourceVersion: '150',
-      continue: 'x'
+  test('moves the list resourceVersion up to a newer event object', () => {
+    const list: List = { metadata: { resourceVersion: '100', continue: 'x' }, items: ['a'] };
+
+    expect(advanceResourceVersion(list, { metadata: { resourceVersion: '150' } })).toEqual({
+      metadata: { resourceVersion: '150', continue: 'x' },
+      items: ['a']
     });
   });
 
   test('keeps the list resourceVersion for an older or equal event object', () => {
-    const meta = { resourceVersion: '100' };
+    const list: List = { metadata: { resourceVersion: '100' }, items: [] };
 
-    expect(advanceResourceVersion(meta, { metadata: { resourceVersion: '90' } })).toBe(meta);
-    expect(advanceResourceVersion(meta, { metadata: { resourceVersion: '100' } })).toBe(meta);
+    expect(advanceResourceVersion(list, { metadata: { resourceVersion: '90' } })).toBe(list);
+    expect(advanceResourceVersion(list, { metadata: { resourceVersion: '100' } })).toBe(list);
   });
 
   test('keeps the list resourceVersion when the event object has none', () => {
-    const meta = { resourceVersion: '100' };
+    const list: List = { metadata: { resourceVersion: '100' }, items: [] };
 
-    expect(advanceResourceVersion(meta, {})).toBe(meta);
+    expect(advanceResourceVersion(list, {})).toBe(list);
   });
 
   test('sets a resourceVersion on a list that has none', () => {
-    expect(advanceResourceVersion(undefined, { metadata: { resourceVersion: '5' } })).toEqual({
-      resourceVersion: '5'
+    const list: List = { items: ['a'] };
+
+    expect(advanceResourceVersion(list, { metadata: { resourceVersion: '5' } })).toEqual({
+      metadata: { resourceVersion: '5' },
+      items: ['a']
     });
   });
 });

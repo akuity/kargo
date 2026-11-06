@@ -69,8 +69,7 @@ export const useWatchStages = (
           return {
             ...old,
             data: {
-              ...old.data,
-              metadata: advanceResourceVersion(old.data.metadata, stage),
+              ...advanceResourceVersion(old.data, stage),
               items: upsertOrDelete(old.data.items ?? [], stage, type)
             }
           };
