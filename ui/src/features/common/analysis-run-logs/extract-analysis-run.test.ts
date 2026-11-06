@@ -71,6 +71,35 @@ describe('isJobPending', () => {
     ).toBe(true);
   });
 
+  test('measurement has no Job namespace metadata', () => {
+    expect(
+      isJobPending(
+        analysisRun('Running', [
+          { name: 'job-a', measurements: [{ metadata: { 'job-name': 'job-a-1' } }] }
+        ]),
+        'job-a'
+      )
+    ).toBe(true);
+  });
+
+  // The API server finds a Job's logs using the first measurement only.
+  test('only a later measurement records the Job', () => {
+    expect(
+      isJobPending(
+        analysisRun('Running', [
+          {
+            name: 'job-a',
+            measurements: [
+              { phase: 'Error' },
+              { metadata: { 'job-name': 'job-a-1', 'job-namespace': 'kargo-demo' } }
+            ]
+          }
+        ]),
+        'job-a'
+      )
+    ).toBe(true);
+  });
+
   test('Job for another metric has started', () => {
     expect(isJobPending(analysisRun('Running', [started('job-b')]), 'job-a')).toBe(true);
   });

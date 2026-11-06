@@ -41,16 +41,18 @@ const completedPhases: string[] = [
 ];
 
 // isJobPending returns whether the Job for the named metric of the given
-// AnalysisRun is yet to start. Until it does, the metric has no measurement
-// recording the Job's name, so there are no logs to request.
+// AnalysisRun is yet to start. The API server finds a Job's logs using the
+// namespace and name recorded on the metric's first measurement, so until that
+// measurement records both, there are no logs to request.
 export const isJobPending = (ar?: RolloutsAnalysisRun, metricName?: string) => {
   if (!ar || !metricName || completedPhases.includes(ar.status?.phase || '')) {
     return false;
   }
 
   const result = ar.status?.metricResults?.find((r) => r?.name === metricName);
+  const metadata = result?.measurements?.[0]?.metadata;
 
-  return !result?.measurements?.some((m) => !!m?.metadata?.['job-name']);
+  return !metadata?.['job-namespace'] || !metadata?.['job-name'];
 };
 
 // hasPendingJob returns whether the Job for any job metric of the given
