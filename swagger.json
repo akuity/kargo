@@ -2873,7 +2873,7 @@
     },
     "/v1beta1/projects/{project}/stages/{stage}/promotions/downstream": {
       "post": {
-        "description": "Creates a Promotion resource for each of a Stage's immediately\ndownstream Stages. Downstream Stages that select Targets yield a\nPromotionRequest each, returned separately under \"promotionRequests\".",
+        "description": "Creates a Promotion resource for each of a Stage's immediately\ndownstream Stages, returned under \"promotions\". Downstream\nStages that select Targets each yield, in place of a\nPromotion, a PromotionRollout on a server that creates\nPromotionRollouts, returned under \"promotionRollouts\", or a\nPromotionRequest otherwise, returned under\n\"promotionRequests\"; each key is present only when it has\nentries. Each promotes to every Target its Stage governs, at\nthe Stage's pace. A Stage that could not be promoted to is\nreported under \"errors\", with a 207 status.",
         "consumes": [
           "application/json"
         ],
