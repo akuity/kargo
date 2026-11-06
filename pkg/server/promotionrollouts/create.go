@@ -11,7 +11,6 @@ import (
 	"github.com/akuity/kargo/pkg/api"
 	libhttp "github.com/akuity/kargo/pkg/http"
 	"github.com/akuity/kargo/pkg/server/auth/can"
-	"github.com/akuity/kargo/pkg/server/user"
 )
 
 // @id CreatePromotionRollout
@@ -109,17 +108,12 @@ func (h *Handler) create(c *gin.Context) {
 		return
 	}
 
-	var actor string
-	if u, ok := user.IdentityFromContext(ctx); ok {
-		actor = u.Actor()
-	}
 	var rollout *kargoapi.PromotionRollout
-	if rollout, err = h.createRollout(
-		ctx, stage, freight, req.Targets, req.UpdateStrategy, actor,
+	if rollout, err = h.creator.Create(
+		ctx, stage, freight, req.Targets, req.UpdateStrategy,
 	); err != nil {
 		_ = c.Error(err)
 		return
 	}
-	logChange(ctx, "PromotionRollout created", project, rollout.Name, actor)
 	c.JSON(http.StatusCreated, rollout)
 }

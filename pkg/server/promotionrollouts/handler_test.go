@@ -28,6 +28,7 @@ import (
 	"github.com/akuity/kargo/pkg/database/promotionrolloutstore"
 	"github.com/akuity/kargo/pkg/server/auth/can"
 	"github.com/akuity/kargo/pkg/server/middleware"
+	"github.com/akuity/kargo/pkg/server/user"
 )
 
 const testProject = "fake-project"
@@ -481,11 +482,14 @@ type testCase struct {
 	// createDisabled mounts the handler on a server that does not create
 	// rollouts.
 	createDisabled bool
-	objects        []client.Object
-	method         string
-	url            string
-	body           io.Reader
-	assertions     func(*testing.T, *httptest.ResponseRecorder)
+	// identity, if set, is bound to the request's context, as the API
+	// server's authentication middleware binds the caller's.
+	identity   user.Identity
+	objects    []client.Object
+	method     string
+	url        string
+	body       io.Reader
+	assertions func(*testing.T, *httptest.ResponseRecorder)
 }
 
 func TestMain(m *testing.M) {
@@ -507,7 +511,12 @@ func newRouter(
 ) *gin.Engine {
 	router := gin.New()
 	router.Use(middleware.HandleErrors(), middleware.Recover())
-	New(store, targets, authorize, kube, createEnabled).Register(router.Group("/v1beta1/projects/:project"))
+	// A server that does not create rollouts has no Creator.
+	var creator Creator
+	if createEnabled {
+		creator = NewCreator(store, targets)
+	}
+	New(store, creator, authorize, kube).Register(router.Group("/v1beta1/projects/:project"))
 	return router
 }
 
@@ -548,10 +557,12 @@ func runTestCases(t *testing.T, cases []testCase) {
 				authorize = recordAuthorizations(&[]can.Access{})
 			}
 			kube := fake.NewClientBuilder().WithScheme(scheme).WithObjects(tc.objects...).Build()
+			req := httptest.NewRequest(tc.method, tc.url, tc.body)
+			if tc.identity != nil {
+				req = req.WithContext(user.ContextWithIdentity(req.Context(), tc.identity))
+			}
 			w := httptest.NewRecorder()
-			newRouter(store, tc.targets, authorize, kube, !tc.createDisabled).ServeHTTP(
-				w, httptest.NewRequest(tc.method, tc.url, tc.body),
-			)
+			newRouter(store, tc.targets, authorize, kube, !tc.createDisabled).ServeHTTP(w, req)
 			tc.assertions(t, w)
 		})
 	}
@@ -595,14 +606,13 @@ func TestNew(t *testing.T) {
 	t.Parallel()
 	// A nil store leaves the handler without one, which RequireFeature turns
 	// into 501 for every request.
-	h := New(nil, nil, nil, nil, false)
+	h := New(nil, nil, nil, nil)
 	require.Nil(t, h.store)
-	require.Nil(t, h.targets)
-	require.False(t, h.createEnabled)
-	h = New(&fakeStore{}, fakeTargets{}, nil, nil, true)
+	require.Nil(t, h.creator)
+	store := &fakeStore{}
+	h = New(store, NewCreator(store, fakeTargets{}), nil, nil)
 	require.NotNil(t, h.store)
-	require.NotNil(t, h.targets)
-	require.True(t, h.createEnabled)
+	require.NotNil(t, h.creator)
 }
 
 func TestRequireAccess(t *testing.T) {
