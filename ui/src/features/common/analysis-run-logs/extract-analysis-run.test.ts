@@ -4,6 +4,7 @@ import { RolloutsAnalysisRun, RolloutsMetricResult } from '@ui/gen/api/v2/models
 
 import {
   hasPendingJob,
+  isJobMissing,
   isJobPending,
   pendingJobRefetchIntervalMs,
   refetchWhileJobPending
@@ -106,6 +107,31 @@ describe('isJobPending', () => {
 
   test('Job has started', () => {
     expect(isJobPending(analysisRun('Running', [started('job-a')]), 'job-a')).toBe(false);
+  });
+});
+
+describe('isJobMissing', () => {
+  test('no AnalysisRun', () => {
+    expect(isJobMissing(undefined, 'job-a')).toBe(false);
+  });
+
+  test('no metric name', () => {
+    expect(isJobMissing(analysisRun('Successful'), undefined)).toBe(false);
+  });
+
+  test('run is still running', () => {
+    expect(isJobMissing(analysisRun('Running'), 'job-a')).toBe(false);
+  });
+
+  test.each(['Successful', 'Failed', 'Error', 'Inconclusive'])(
+    'run is %s and the Job never started',
+    (phase) => {
+      expect(isJobMissing(analysisRun(phase), 'job-a')).toBe(true);
+    }
+  );
+
+  test('run is complete and the Job started', () => {
+    expect(isJobMissing(analysisRun('Successful', [started('job-a')]), 'job-a')).toBe(false);
   });
 });
 

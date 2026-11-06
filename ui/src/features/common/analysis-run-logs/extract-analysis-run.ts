@@ -40,20 +40,30 @@ const completedPhases: string[] = [
   AnalysisStatus.Inconclusive
 ];
 
-// isJobPending returns whether the Job for the named metric of the given
-// AnalysisRun is yet to start. The API server finds a Job's logs using the
-// namespace and name recorded on the metric's first measurement, so until that
-// measurement records both, there are no logs to request.
-export const isJobPending = (ar?: RolloutsAnalysisRun, metricName?: string) => {
-  if (!ar || !metricName || completedPhases.includes(ar.status?.phase || '')) {
-    return false;
-  }
+const isComplete = (ar: RolloutsAnalysisRun) => completedPhases.includes(ar.status?.phase || '');
 
+// isJobRecorded returns whether the Job for the named metric of the given
+// AnalysisRun has been recorded where the API server looks for it. The server
+// finds a Job's logs using the namespace and name recorded on the metric's
+// first measurement, so until that measurement records both, there are no logs
+// to request.
+const isJobRecorded = (ar: RolloutsAnalysisRun, metricName: string) => {
   const result = ar.status?.metricResults?.find((r) => r?.name === metricName);
   const metadata = result?.measurements?.[0]?.metadata;
 
-  return !metadata?.['job-namespace'] || !metadata?.['job-name'];
+  return !!metadata?.['job-namespace'] && !!metadata?.['job-name'];
 };
+
+// isJobPending returns whether the Job for the named metric of the given
+// AnalysisRun is yet to start.
+export const isJobPending = (ar?: RolloutsAnalysisRun, metricName?: string) =>
+  !!ar && !!metricName && !isComplete(ar) && !isJobRecorded(ar, metricName);
+
+// isJobMissing returns whether the given AnalysisRun completed without the Job
+// for the named metric ever starting, as when verification is aborted while the
+// Job is still delayed. Such a metric will never have logs.
+export const isJobMissing = (ar?: RolloutsAnalysisRun, metricName?: string) =>
+  !!ar && !!metricName && isComplete(ar) && !isJobRecorded(ar, metricName);
 
 // hasPendingJob returns whether the Job for any job metric of the given
 // AnalysisRun is yet to start.

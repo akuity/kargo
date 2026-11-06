@@ -11,7 +11,7 @@ import { paths } from '@ui/config/paths';
 import { useTheme } from '@ui/features/common/theme/use-theme';
 import { RolloutsAnalysisRun } from '@ui/gen/api/v2/models';
 
-import { extractFilters, isJobPending } from './extract-analysis-run';
+import { extractFilters, isJobMissing, isJobPending } from './extract-analysis-run';
 import {
   monacoEditorLogLanguage,
   monacoEditorLogLanguageTheme,
@@ -85,8 +85,11 @@ export const AnalysisRunLogs = (props: {
     filters.selectedContainer
   );
 
-  // There are no logs to request until the Job for the selected metric starts.
+  // There are no logs to request until the Job for the selected metric starts,
+  // and never will be if the run completed before it did.
   const jobPending = isJobPending(props.analysisRun, filters.selectedJob);
+  const jobMissing = isJobMissing(props.analysisRun, filters.selectedJob);
+  const noJob = jobPending || jobMissing;
 
   const {
     logs,
@@ -95,7 +98,7 @@ export const AnalysisRunLogs = (props: {
   } = useWatchAnalysisRunLogs(
     project,
     analysisRunId,
-    validSelection && !jobPending
+    validSelection && !noJob
       ? { metricName: filters.selectedJob, containerName: filters.selectedContainer }
       : undefined
   );
@@ -201,10 +204,16 @@ export const AnalysisRunLogs = (props: {
           className='p-10'
         />
       )}
-      {!jobPending && !logs && !logsLoading && !logsError && (
+      {jobMissing && (
+        <Empty
+          description='No Job ran for this metric, so there are no logs to show.'
+          className='p-10'
+        />
+      )}
+      {!noJob && !logs && !logsLoading && !logsError && (
         <Empty description={`No logs found.`} className='p-10' />
       )}
-      {!jobPending && logsError && <Alert type='error' description={logsError} />}
+      {!noJob && logsError && <Alert type='error' description={logsError} />}
       {logsLoading && <Skeleton />}
     </>
   );
