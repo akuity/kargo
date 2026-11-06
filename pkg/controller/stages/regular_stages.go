@@ -507,15 +507,6 @@ func (r *RegularStageReconciler) reconcile(
 			},
 		},
 		{
-			name: "syncing Freight",
-			reconcile: func() (kargoapi.StageStatus, error) {
-				if err := r.syncFreight(ctx, working); err != nil {
-					return working.Status, fmt.Errorf("failed to sync Freight: %w", err)
-				}
-				return working.Status, nil
-			},
-		},
-		{
 			name: "assessing health",
 			reconcile: func() (kargoapi.StageStatus, error) {
 				status := r.assessHealth(ctx, working)
@@ -533,6 +524,11 @@ func (r *RegularStageReconciler) reconcile(
 				status, err := r.verifyStageFreight(ctx, working, startTime, time.Now)
 				if err != nil {
 					err = fmt.Errorf("failed to verify Stage Freight: %w", err)
+					// The pass ends here, so sync Freight now: a verification that
+					// cannot run must not keep the Freight out of currentlyIn.
+					if syncErr := r.syncFreight(ctx, working); syncErr != nil {
+						logger.Error(syncErr, "failed to sync Freight")
+					}
 				}
 				// If we have a non-terminal verification for the current Freight,
 				// then we should rely on the watcher to requeue the Stage when the
@@ -545,13 +541,14 @@ func (r *RegularStageReconciler) reconcile(
 			},
 		},
 		{
-			name: "verifying Freight for Stage",
+			// Runs after verification so that one write per Freight records the
+			// Stage in both currentlyIn and verifiedIn.
+			name: "syncing Freight",
 			reconcile: func() (kargoapi.StageStatus, error) {
-				status, err := r.markFreightVerifiedForStage(ctx, working)
-				if err != nil {
-					err = fmt.Errorf("failed to verify Freight for Stage: %w", err)
+				if err := r.syncFreight(ctx, working); err != nil {
+					return working.Status, fmt.Errorf("failed to sync Freight: %w", err)
 				}
-				return status, err
+				return working.Status, nil
 			},
 		},
 		{
@@ -1028,36 +1025,20 @@ func (r *RegularStageReconciler) assessHealth(ctx context.Context, stage *kargoa
 }
 
 // syncFreight ensures that all Freight statuses accurately reflect whether they
-// are currently in use by the Stage.
+// are currently in use by, and verified in, the Stage.
 func (r *RegularStageReconciler) syncFreight(ctx context.Context, stage *kargoapi.Stage) error {
 	return SyncFreight(ctx, r.client, stage)
 }
 
+// SyncFreight ensures that all Freight statuses accurately reflect whether they
+// are currently in use by, and verified in, the Stage. Each Freight the Stage
+// uses gets at most one write that carries both, so callers should run it after
+// verification. Freight the Stage no longer uses is updated last, so the write
+// that downstream Stages wait on is not queued behind it.
 func SyncFreight(ctx context.Context, cl client.Client, stage *kargoapi.Stage) error {
 	// Get the Stage's current FreightCollection.
 	curFreight := stage.Status.FreightHistory.Current()
-	// Find all Freight that think they're currently in use by this Stage.
-	var freight []kargoapi.Freight
-	freight, err := api.ListFreightByCurrentStage(ctx, cl, stage)
-	if err != nil {
-		return err
-	}
-	// Step through all the Freight that think they're currently used by this
-	// Stage and, if they're not, patch their status to accurately reflect that.
-	for _, f := range freight {
-		if !curFreight.Includes(f.Name) {
-			newStatus := f.Status.DeepCopy()
-			newStatus.RemoveCurrentStage(stage.Name)
-			if err := kubeclient.PatchStatus(ctx, cl, &f, func(status *kargoapi.FreightStatus) {
-				*status = *newStatus
-			}); err != nil {
-				return fmt.Errorf(
-					"error patching status of Freight %q in namespace %q: %w",
-					f.Name, f.Namespace, err,
-				)
-			}
-		}
-	}
+	verifiedAt, verified := freightVerifiedAt(stage)
 	// Iterate over every piece of Freight that the Stage is actually using to
 	// make sure that their status accurately reflects that.
 	//
@@ -1068,6 +1049,9 @@ func SyncFreight(ctx context.Context, cl client.Client, stage *kargoapi.Stage) e
 	// inaccuracy in the timestamp only means the Freight has actually "soaked"
 	// LONGER than what we calculate.
 	now := time.Now()
+	if verified && verifiedAt.IsZero() {
+		verifiedAt = now
+	}
 	for _, fr := range curFreight.References() {
 		f, err := api.GetFreight(
 			ctx,
@@ -1087,10 +1071,38 @@ func SyncFreight(ctx context.Context, cl client.Client, stage *kargoapi.Stage) e
 			// nolint:staticcheck
 			return fmt.Errorf("Freight %q not found in namespace %q", fr.Name, stage.Namespace)
 		}
-		if !f.IsCurrentlyIn(stage.Name) {
+		// Both helpers leave an existing entry alone, and PatchStatus sends
+		// nothing when neither entry is new.
+		newlyVerified := verified && !f.IsVerifiedIn(stage.Name)
+		newStatus := f.Status.DeepCopy()
+		newStatus.AddCurrentStage(stage.Name, now)
+		if verified {
+			newStatus.AddVerifiedStage(stage.Name, verifiedAt)
+		}
+		if err = kubeclient.PatchStatus(ctx, cl, f, func(status *kargoapi.FreightStatus) {
+			*status = *newStatus
+		}); err != nil {
+			return fmt.Errorf(
+				"error patching status of Freight %q in namespace %q: %w",
+				f.Name, f.Namespace, err,
+			)
+		}
+		if newlyVerified {
+			observeVerificationLeadTime(f, verifiedAt)
+		}
+	}
+	// Find all Freight that think they're currently in use by this Stage.
+	freight, err := api.ListFreightByCurrentStage(ctx, cl, stage)
+	if err != nil {
+		return err
+	}
+	// Step through all the Freight that think they're currently used by this
+	// Stage and, if they're not, patch their status to accurately reflect that.
+	for _, f := range freight {
+		if !curFreight.Includes(f.Name) {
 			newStatus := f.Status.DeepCopy()
-			newStatus.AddCurrentStage(stage.Name, now)
-			if err = kubeclient.PatchStatus(ctx, cl, f, func(status *kargoapi.FreightStatus) {
+			newStatus.RemoveCurrentStage(stage.Name)
+			if err := kubeclient.PatchStatus(ctx, cl, &f, func(status *kargoapi.FreightStatus) {
 				*status = *newStatus
 			}); err != nil {
 				return fmt.Errorf(
@@ -1351,16 +1363,9 @@ func (ver Verifier) VerifyStageFreight(
 	return newStatus, err
 }
 
-// markFreightVerifiedForStage marks the Freight that is associated with the
+// MarkFreightVerifiedForStage marks the Freight that is associated with the
 // Stage as verified. If the Freight has already been verified, then no action
-// is taken.
-func (r *RegularStageReconciler) markFreightVerifiedForStage(
-	ctx context.Context,
-	stage *kargoapi.Stage,
-) (kargoapi.StageStatus, error) {
-	return MarkFreightVerifiedForStage(ctx, r.client, stage)
-}
-
+// is taken. Regular Stages record verification in SyncFreight instead.
 func MarkFreightVerifiedForStage(
 	ctx context.Context,
 	cl client.Client,
@@ -1369,20 +1374,14 @@ func MarkFreightVerifiedForStage(
 	logger := logging.LoggerFromContext(ctx)
 	newStatus := *stage.Status.DeepCopy()
 
-	// If the Stage is unhealthy, then we should not verify the Freight.
-	if stage.Status.Health == nil || stage.Status.Health.Status != kargoapi.HealthStateHealthy {
+	verifiedAt, verified := freightVerifiedAt(stage)
+	if !verified {
 		return newStatus, nil
 	}
-
-	// If there is no current Freight, or the Stage has not been verified yet
-	// after the last Promotion, then we are not ready to verify the Freight.
+	if verifiedAt.IsZero() {
+		verifiedAt = time.Now()
+	}
 	curFreight := stage.Status.FreightHistory.Current()
-	if curFreight == nil ||
-		len(curFreight.VerificationHistory) == 0 ||
-		curFreight.HasNonTerminalVerification() ||
-		curFreight.VerificationHistory.Current().Phase != kargoapi.VerificationPhaseSuccessful {
-		return newStatus, nil
-	}
 
 	// At this point, all preconditions for verifying the Freight have been met,
 	// and we can proceed with the verification.
@@ -1410,7 +1409,7 @@ func MarkFreightVerifiedForStage(
 			if status.VerifiedIn == nil {
 				status.VerifiedIn = make(map[string]kargoapi.VerifiedStage)
 			}
-			status.AddVerifiedStage(stage.Name, curFreight.VerificationHistory.Current().FinishTime.Time)
+			status.AddVerifiedStage(stage.Name, verifiedAt)
 		}); err != nil {
 			return newStatus, fmt.Errorf(
 				"error marking Freight %q as verified in Stage: %w",
@@ -1418,12 +1417,42 @@ func MarkFreightVerifiedForStage(
 			)
 		}
 		logger.Debug("marked Freight as verified in Stage", "freight", freight.Name)
-		metrics.NewFreightMetrics().VerificationLeadTime.WithLabelValues(freight.Namespace).Observe(
-			curFreight.VerificationHistory.Current().FinishTime.Sub(freight.CreationTimestamp.Time).Seconds(),
-		)
+		observeVerificationLeadTime(freight, verifiedAt)
 	}
 
 	return newStatus, nil
+}
+
+// freightVerifiedAt returns when the Stage's current Freight passed
+// verification. It returns false while the Stage is not healthy, or while the
+// Freight has no successful, terminal verification to record. The time is zero
+// when the verification has no FinishTime.
+func freightVerifiedAt(stage *kargoapi.Stage) (time.Time, bool) {
+	// If the Stage is unhealthy, then we should not verify the Freight.
+	if stage.Status.Health == nil || stage.Status.Health.Status != kargoapi.HealthStateHealthy {
+		return time.Time{}, false
+	}
+	// If there is no current Freight, or the Stage has not been verified yet
+	// after the last Promotion, then we are not ready to verify the Freight.
+	curFreight := stage.Status.FreightHistory.Current()
+	if curFreight == nil ||
+		len(curFreight.VerificationHistory) == 0 ||
+		curFreight.HasNonTerminalVerification() ||
+		curFreight.VerificationHistory.Current().Phase != kargoapi.VerificationPhaseSuccessful {
+		return time.Time{}, false
+	}
+	if finished := curFreight.VerificationHistory.Current().FinishTime; finished != nil {
+		return finished.Time, true
+	}
+	return time.Time{}, true
+}
+
+// observeVerificationLeadTime records the time from the Freight's creation to
+// its verification in a Stage.
+func observeVerificationLeadTime(freight *kargoapi.Freight, verifiedAt time.Time) {
+	metrics.NewFreightMetrics().VerificationLeadTime.WithLabelValues(freight.Namespace).Observe(
+		verifiedAt.Sub(freight.CreationTimestamp.Time).Seconds(),
+	)
 }
 
 // recordFreightVerificationEvent records an event for the verification of a
