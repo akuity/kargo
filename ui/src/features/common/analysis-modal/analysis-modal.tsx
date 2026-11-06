@@ -9,6 +9,7 @@ import { stringify } from 'yaml';
 import { useGetAnalysisRun } from '@ui/gen/api/v2/verifications/verifications';
 
 import { AnalysisRunLogs } from '../analysis-run-logs/analysis-run-logs';
+import { refetchWhileJobPending } from '../analysis-run-logs/extract-analysis-run';
 import YamlEditor from '../code-editor/yaml-editor-lazy';
 import { ModalProps } from '../modal/use-modal';
 
@@ -41,7 +42,8 @@ export const AnalysisModal = ({
 
   const { data: analysisRunData, isLoading } = useGetAnalysisRun(
     namespace || '',
-    analysisName || ''
+    analysisName || '',
+    { query: { refetchInterval: refetchWhileJobPending } }
   );
 
   const [analysis, transformedMetrics] = useMemo(() => {
