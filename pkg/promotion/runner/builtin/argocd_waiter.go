@@ -25,6 +25,14 @@ const (
 	// healthStatusKey is the key used to store per-app health statuses in
 	// step output. Used for degradation detection across re-invocations.
 	healthStatusKey = "healthStatus"
+
+	// degradedSinceKey is the key used to store, per app, when a health
+	// regression to Degraded was first observed and the health status it
+	// regressed from. Used to time the step's degradedGracePeriod separately
+	// for each app across re-invocations.
+	degradedSinceKey     = "degradedSince"
+	degradedSinceTimeKey = "time"
+	degradedSinceFromKey = "from"
 )
 
 // defaultWaitFor is the default set of conditions to wait for, matching the
@@ -123,6 +131,15 @@ func (w *argocdWaiter) run(
 	logger := logging.LoggerFromContext(ctx)
 	logger.Info("executing argocd-wait promotion step")
 
+	gracePeriod, err := parseDegradedGracePeriod(stepCfg.DegradedGracePeriod)
+	if err != nil {
+		return promotion.StepResult{
+			Status: kargoapi.PromotionStepStatusFailed,
+		}, &promotion.TerminalError{Err: err}
+	}
+
+	now := time.Now()
+
 	// Load previous health statuses from shared state (for degradation
 	// detection across re-invocations).
 	prevHealthStatuses := w.loadPreviousHealthStatuses(stepCtx)
@@ -132,6 +149,19 @@ func (w *argocdWaiter) run(
 	for k, v := range prevHealthStatuses {
 		newHealthStatuses[k] = v
 	}
+
+	// Load health regressions still within their grace period, seeded the
+	// same way for the same reason.
+	prevRegressions := w.loadPreviousRegressions(stepCtx)
+	newRegressions := make(map[string]any, len(prevRegressions))
+	for k, v := range prevRegressions {
+		newRegressions[k] = v.toOutput()
+	}
+
+	// The soonest a grace period ends. Promotions using this step are
+	// otherwise only re-evaluated when an Application changes, and an
+	// Application that stays Degraded may not change again.
+	var retryAfter *time.Duration
 
 	// Applications resolved by this step, reported as output so the Stage
 	// controller can annotate the Stage with Argo CD context. This is the only
@@ -174,15 +204,53 @@ func (w *argocdWaiter) run(
 				Namespace: app.Namespace,
 			})
 
+			// While a regression is within its grace period, keep comparing
+			// against the status the app regressed from so the regression
+			// keeps being detected for as long as the app stays Degraded.
+			prevHealthStatus := prevHealthStatuses[appKey]
+			regression, regressed := prevRegressions[appKey]
+			if regressed {
+				prevHealthStatus = regression.from
+			}
+
 			ready, healthStatus, err :=
-				w.checkAppReadinessFn(ctx, app, waitFor, prevHealthStatuses[appKey])
+				w.checkAppReadinessFn(ctx, app, waitFor, prevHealthStatus)
 			if healthStatus != "" {
 				newHealthStatuses[appKey] = healthStatus
 			}
+			if healthStatus != string(argocd.HealthStatusDegraded) {
+				delete(newRegressions, appKey)
+			}
+
+			if regressionErr, ok := asHealthRegressionError(err); ok && gracePeriod > 0 {
+				if !regressed {
+					regression = healthRegression{since: now, from: regressionErr.from}
+				}
+				if remaining := gracePeriod - now.Sub(regression.since); remaining > 0 {
+					appLogger.Info(
+						"application health has regressed to Degraded; "+
+							"waiting for it to recover within its grace period",
+						"remaining", remaining,
+					)
+					newRegressions[appKey] = regression.toOutput()
+					if retryAfter == nil || remaining < *retryAfter {
+						retryAfter = &remaining
+					}
+					allReady = false
+					continue
+				}
+				err = &promotion.TerminalError{
+					Err: fmt.Errorf(
+						"%w and did not recover within its degraded grace period of %s",
+						regressionErr, gracePeriod,
+					),
+				}
+			}
+
 			if err != nil {
 				return promotion.StepResult{
 					Status: kargoapi.PromotionStepStatusErrored,
-					Output: waitStepOutput(resolvedApps, newHealthStatuses),
+					Output: waitStepOutput(resolvedApps, newHealthStatuses, newRegressions),
 				}, err
 			}
 			if !ready {
@@ -198,26 +266,89 @@ func (w *argocdWaiter) run(
 		logger.Info("all applications are ready", "status", "Succeeded")
 		return promotion.StepResult{
 			Status: kargoapi.PromotionStepStatusSucceeded,
-			Output: waitStepOutput(resolvedApps, newHealthStatuses),
+			Output: waitStepOutput(resolvedApps, newHealthStatuses, newRegressions),
 		}, nil
 	}
 
 	logger.Info("waiting for applications to become ready")
 	return promotion.StepResult{
-		Status: kargoapi.PromotionStepStatusRunning,
-		Output: waitStepOutput(resolvedApps, newHealthStatuses),
+		Status:     kargoapi.PromotionStepStatusRunning,
+		Output:     waitStepOutput(resolvedApps, newHealthStatuses, newRegressions),
+		RetryAfter: retryAfter,
 	}, nil
 }
 
 // waitStepOutput assembles the output of an argocd-wait step from the Argo CD
-// Applications it has resolved and their last observed health statuses.
+// Applications it has resolved, their last observed health statuses, and any
+// health regressions that are still within their grace period.
 func waitStepOutput(
 	apps []api.ArgoCDAppRef,
 	healthStatuses map[string]any,
+	regressions map[string]any,
 ) map[string]any {
 	return map[string]any{
 		api.ArgoCDAppsOutputKey: api.ArgoCDAppRefsToOutput(apps),
 		healthStatusKey:         healthStatuses,
+		degradedSinceKey:        regressions,
+	}
+}
+
+// parseDegradedGracePeriod parses the step's degradedGracePeriod. An empty
+// value means no grace period.
+func parseDegradedGracePeriod(value string) (time.Duration, error) {
+	if value == "" {
+		return 0, nil
+	}
+	gracePeriod, err := time.ParseDuration(value)
+	if err != nil {
+		return 0, fmt.Errorf("error parsing degradedGracePeriod %q: %w", value, err)
+	}
+	return gracePeriod, nil
+}
+
+// healthRegressionError indicates that an Argo CD Application's health has
+// regressed to Degraded from a status that was neither Degraded nor Unknown.
+type healthRegressionError struct {
+	app       string
+	namespace string
+	from      string
+	to        string
+}
+
+// Error implements the error interface.
+func (e *healthRegressionError) Error() string {
+	return fmt.Sprintf(
+		"Argo CD Application %q in namespace %q health has regressed from %s to %s",
+		e.app, e.namespace, e.from, e.to,
+	)
+}
+
+// asHealthRegressionError returns the healthRegressionError wrapped by a
+// TerminalError, if there is one.
+func asHealthRegressionError(err error) (*healthRegressionError, bool) {
+	terminalErr := &promotion.TerminalError{}
+	if !errors.As(err, &terminalErr) {
+		return nil, false
+	}
+	regressionErr := &healthRegressionError{}
+	if !errors.As(terminalErr.Err, &regressionErr) {
+		return nil, false
+	}
+	return regressionErr, true
+}
+
+// healthRegression records when an Application's health was first observed
+// to have regressed to Degraded, and the status it regressed from.
+type healthRegression struct {
+	since time.Time
+	from  string
+}
+
+// toOutput converts the healthRegression into JSON-native step output.
+func (r healthRegression) toOutput() map[string]any {
+	return map[string]any{
+		degradedSinceTimeKey: r.since.UTC().Format(time.RFC3339Nano),
+		degradedSinceFromKey: r.from,
 	}
 }
 
@@ -307,12 +438,12 @@ func (w *argocdWaiter) checkAppReadiness(
 			prevHealthStatus != string(argocd.HealthStatusDegraded) &&
 			prevHealthStatus != string(argocd.HealthStatusUnknown) {
 			return false, healthStatus, &promotion.TerminalError{
-				Err: fmt.Errorf( // nolint:staticcheck
-					"Argo CD Application %q in namespace %q health has "+
-						"regressed from %s to %s",
-					app.Name, app.Namespace,
-					prevHealthStatus, app.Status.Health.Status,
-				),
+				Err: &healthRegressionError{
+					app:       app.Name,
+					namespace: app.Namespace,
+					from:      prevHealthStatus,
+					to:        healthStatus,
+				},
 			}
 		}
 
@@ -379,6 +510,37 @@ func (w *argocdWaiter) loadPreviousHealthStatuses(
 		if s, ok := v.(string); ok {
 			result[k] = s
 		}
+	}
+	return result
+}
+
+// loadPreviousRegressions loads the health regressions still within their
+// grace period from the step's shared state output. Returns an empty map if
+// not available. Malformed entries are ignored.
+func (w *argocdWaiter) loadPreviousRegressions(
+	stepCtx *promotion.StepContext,
+) map[string]healthRegression {
+	result := make(map[string]healthRegression)
+	prevOutput, ok := stepCtx.SharedState[stepCtx.Alias].(map[string]any)
+	if !ok {
+		return result
+	}
+	regressions, ok := prevOutput[degradedSinceKey].(map[string]any)
+	if !ok {
+		return result
+	}
+	for appKey, v := range regressions {
+		entry, ok := v.(map[string]any)
+		if !ok {
+			continue
+		}
+		sinceStr, _ := entry[degradedSinceTimeKey].(string)
+		from, _ := entry[degradedSinceFromKey].(string)
+		since, err := time.Parse(time.RFC3339Nano, sinceStr)
+		if err != nil || from == "" {
+			continue
+		}
+		result[appKey] = healthRegression{since: since, from: from}
 	}
 	return result
 }

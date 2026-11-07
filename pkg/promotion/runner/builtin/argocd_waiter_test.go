@@ -123,6 +123,24 @@ func Test_argocdWaiter_convert(t *testing.T) {
 			},
 			expectedProblems: nil,
 		},
+		{
+			name: "degradedGracePeriod is not a duration",
+			config: promotion.Config{
+				"apps":                []promotion.Config{{"name": "my-app"}},
+				"degradedGracePeriod": "soon",
+			},
+			expectedProblems: []string{
+				"degradedGracePeriod: Does not match pattern",
+			},
+		},
+		{
+			name: "valid config with degradedGracePeriod",
+			config: promotion.Config{
+				"apps":                []promotion.Config{{"name": "my-app"}},
+				"degradedGracePeriod": "1m30s",
+			},
+			expectedProblems: nil,
+		},
 	}
 	runner := &argocdWaiter{}
 	runner.schemaLoader = getConfigSchemaLoader(stepKindArgoCDWait)
@@ -327,6 +345,233 @@ func Test_argocdWaiter_run(t *testing.T) {
 			assertions: func(t *testing.T, res promotion.StepResult, err error) {
 				require.NoError(t, err)
 				assert.Equal(t, kargoapi.PromotionStepStatusSucceeded, res.Status)
+			},
+		},
+		{
+			name: "invalid degradedGracePeriod fails",
+			runner: &argocdWaiter{
+				argocdClient: fake.NewFakeClient(),
+			},
+			stepCtx: &promotion.StepContext{},
+			stepCfg: builtin.ArgoCDWaitConfig{
+				Apps:                []builtin.ArgoCDAppWait{{Name: "my-app"}},
+				DegradedGracePeriod: "1x",
+			},
+			assertions: func(t *testing.T, res promotion.StepResult, err error) {
+				assert.Equal(t, kargoapi.PromotionStepStatusFailed, res.Status)
+				require.True(t, promotion.IsTerminal(err))
+				require.ErrorContains(t, err, "error parsing degradedGracePeriod")
+			},
+		},
+		{
+			name: "health regression without grace period is terminal",
+			runner: &argocdWaiter{
+				argocdClient:        fake.NewFakeClient(),
+				getApplicationsFn:   appsFn(testWaitApp()),
+				checkAppReadinessFn: regressesFromProgressing(t),
+			},
+			stepCtx: waitStepCtx(map[string]any{
+				healthStatusKey: map[string]any{"argocd/my-app": "Progressing"},
+			}),
+			stepCfg: builtin.ArgoCDWaitConfig{
+				Apps: []builtin.ArgoCDAppWait{{Name: "my-app"}},
+			},
+			assertions: func(t *testing.T, res promotion.StepResult, err error) {
+				assert.Equal(t, kargoapi.PromotionStepStatusErrored, res.Status)
+				require.True(t, promotion.IsTerminal(err))
+				require.ErrorContains(t, err, "regressed from Progressing to Degraded")
+				assert.Empty(t, res.Output[degradedSinceKey])
+			},
+		},
+		{
+			name: "health regression within grace period keeps waiting",
+			runner: &argocdWaiter{
+				argocdClient:        fake.NewFakeClient(),
+				getApplicationsFn:   appsFn(testWaitApp()),
+				checkAppReadinessFn: regressesFromProgressing(t),
+			},
+			stepCtx: waitStepCtx(map[string]any{
+				healthStatusKey: map[string]any{"argocd/my-app": "Progressing"},
+			}),
+			stepCfg: builtin.ArgoCDWaitConfig{
+				Apps:                []builtin.ArgoCDAppWait{{Name: "my-app"}},
+				DegradedGracePeriod: "1m",
+			},
+			assertions: func(t *testing.T, res promotion.StepResult, err error) {
+				require.NoError(t, err)
+				assert.Equal(t, kargoapi.PromotionStepStatusRunning, res.Status)
+				require.NotNil(t, res.RetryAfter)
+				assert.InDelta(t, time.Minute, *res.RetryAfter, float64(5*time.Second))
+				statuses, ok := res.Output[healthStatusKey].(map[string]any)
+				require.True(t, ok)
+				assert.Equal(t, "Degraded", statuses["argocd/my-app"])
+				regressions, ok := res.Output[degradedSinceKey].(map[string]any)
+				require.True(t, ok)
+				regression, ok := regressions["argocd/my-app"].(map[string]any)
+				require.True(t, ok)
+				assert.Equal(t, "Progressing", regression[degradedSinceFromKey])
+			},
+		},
+		{
+			name: "health regression still within grace period keeps original start",
+			runner: &argocdWaiter{
+				argocdClient:        fake.NewFakeClient(),
+				getApplicationsFn:   appsFn(testWaitApp()),
+				checkAppReadinessFn: regressesFromProgressing(t),
+			},
+			stepCtx: waitStepCtx(map[string]any{
+				healthStatusKey: map[string]any{"argocd/my-app": "Degraded"},
+				degradedSinceKey: map[string]any{
+					"argocd/my-app": healthRegression{
+						since: time.Now().Add(-40 * time.Second),
+						from:  "Progressing",
+					}.toOutput(),
+				},
+			}),
+			stepCfg: builtin.ArgoCDWaitConfig{
+				Apps:                []builtin.ArgoCDAppWait{{Name: "my-app"}},
+				DegradedGracePeriod: "1m",
+			},
+			assertions: func(t *testing.T, res promotion.StepResult, err error) {
+				require.NoError(t, err)
+				assert.Equal(t, kargoapi.PromotionStepStatusRunning, res.Status)
+				require.NotNil(t, res.RetryAfter)
+				assert.InDelta(t, 20*time.Second, *res.RetryAfter, float64(5*time.Second))
+			},
+		},
+		{
+			name: "health regression past grace period is terminal",
+			runner: &argocdWaiter{
+				argocdClient:        fake.NewFakeClient(),
+				getApplicationsFn:   appsFn(testWaitApp()),
+				checkAppReadinessFn: regressesFromProgressing(t),
+			},
+			stepCtx: waitStepCtx(map[string]any{
+				healthStatusKey: map[string]any{"argocd/my-app": "Degraded"},
+				degradedSinceKey: map[string]any{
+					"argocd/my-app": healthRegression{
+						since: time.Now().Add(-2 * time.Minute),
+						from:  "Progressing",
+					}.toOutput(),
+				},
+			}),
+			stepCfg: builtin.ArgoCDWaitConfig{
+				Apps:                []builtin.ArgoCDAppWait{{Name: "my-app"}},
+				DegradedGracePeriod: "1m",
+			},
+			assertions: func(t *testing.T, res promotion.StepResult, err error) {
+				assert.Equal(t, kargoapi.PromotionStepStatusErrored, res.Status)
+				require.True(t, promotion.IsTerminal(err))
+				require.ErrorContains(
+					t,
+					err,
+					"regressed from Progressing to Degraded and did not recover "+
+						"within its degraded grace period of 1m0s",
+				)
+			},
+		},
+		{
+			name: "grace period is timed separately for each app",
+			runner: &argocdWaiter{
+				argocdClient: fake.NewFakeClient(),
+				getApplicationsFn: appsFn(
+					&argocd.Application{
+						ObjectMeta: metav1.ObjectMeta{Name: "app-a", Namespace: "argocd"},
+					},
+					&argocd.Application{
+						ObjectMeta: metav1.ObjectMeta{Name: "app-b", Namespace: "argocd"},
+					},
+				),
+				checkAppReadinessFn: regressesFromProgressing(t),
+			},
+			stepCtx: waitStepCtx(map[string]any{
+				healthStatusKey: map[string]any{
+					"argocd/app-a": "Degraded",
+					"argocd/app-b": "Progressing",
+				},
+				degradedSinceKey: map[string]any{
+					"argocd/app-a": healthRegression{
+						since: time.Now().Add(-50 * time.Second),
+						from:  "Progressing",
+					}.toOutput(),
+				},
+			}),
+			stepCfg: builtin.ArgoCDWaitConfig{
+				Apps:                []builtin.ArgoCDAppWait{{Selector: &builtin.ArgoCDAppSelector{}}},
+				DegradedGracePeriod: "1m",
+			},
+			assertions: func(t *testing.T, res promotion.StepResult, err error) {
+				require.NoError(t, err)
+				assert.Equal(t, kargoapi.PromotionStepStatusRunning, res.Status)
+				require.NotNil(t, res.RetryAfter)
+				assert.InDelta(t, 10*time.Second, *res.RetryAfter, float64(5*time.Second))
+				regressions, ok := res.Output[degradedSinceKey].(map[string]any)
+				require.True(t, ok)
+				regressionA, ok := regressions["argocd/app-a"].(map[string]any)
+				require.True(t, ok)
+				regressionB, ok := regressions["argocd/app-b"].(map[string]any)
+				require.True(t, ok)
+				assert.NotEqual(
+					t,
+					regressionA[degradedSinceTimeKey],
+					regressionB[degradedSinceTimeKey],
+				)
+			},
+		},
+		{
+			name: "recovery within grace period clears the regression",
+			runner: &argocdWaiter{
+				argocdClient:      fake.NewFakeClient(),
+				getApplicationsFn: appsFn(testWaitApp()),
+				checkAppReadinessFn: func(
+					context.Context, *argocd.Application,
+					[]builtin.WaitFor, string,
+				) (bool, string, error) {
+					return true, "Healthy", nil
+				},
+			},
+			stepCtx: waitStepCtx(map[string]any{
+				healthStatusKey: map[string]any{"argocd/my-app": "Degraded"},
+				degradedSinceKey: map[string]any{
+					"argocd/my-app": healthRegression{
+						since: time.Now().Add(-10 * time.Second),
+						from:  "Progressing",
+					}.toOutput(),
+				},
+			}),
+			stepCfg: builtin.ArgoCDWaitConfig{
+				Apps:                []builtin.ArgoCDAppWait{{Name: "my-app"}},
+				DegradedGracePeriod: "1m",
+			},
+			assertions: func(t *testing.T, res promotion.StepResult, err error) {
+				require.NoError(t, err)
+				assert.Equal(t, kargoapi.PromotionStepStatusSucceeded, res.Status)
+				assert.Empty(t, res.Output[degradedSinceKey])
+			},
+		},
+		{
+			name: "grace period does not apply to other terminal errors",
+			runner: &argocdWaiter{
+				argocdClient:      fake.NewFakeClient(),
+				getApplicationsFn: appsFn(testWaitApp()),
+				checkAppReadinessFn: func(
+					context.Context, *argocd.Application,
+					[]builtin.WaitFor, string,
+				) (bool, string, error) {
+					return false, "Degraded", &promotion.TerminalError{
+						Err: errors.New("bad condition"),
+					}
+				},
+			},
+			stepCtx: &promotion.StepContext{},
+			stepCfg: builtin.ArgoCDWaitConfig{
+				Apps:                []builtin.ArgoCDAppWait{{Name: "my-app"}},
+				DegradedGracePeriod: "1m",
+			},
+			assertions: func(t *testing.T, res promotion.StepResult, err error) {
+				assert.Equal(t, kargoapi.PromotionStepStatusErrored, res.Status)
+				require.True(t, promotion.IsTerminal(err))
+				require.ErrorContains(t, err, "bad condition")
 			},
 		},
 	}
@@ -545,6 +790,9 @@ func Test_argocdWaiter_checkAppReadiness(t *testing.T) {
 				assert.False(t, ready)
 				require.True(t, promotion.IsTerminal(err))
 				require.ErrorContains(t, err, "regressed")
+				regressionErr, ok := asHealthRegressionError(err)
+				require.True(t, ok)
+				assert.Equal(t, string(argocd.HealthStatusProgressing), regressionErr.from)
 			},
 		},
 		{
@@ -601,6 +849,45 @@ func Test_argocdWaiter_checkAppReadiness(t *testing.T) {
 			)
 			tc.assertions(t, ready, healthStatus, err)
 		})
+	}
+}
+
+// testWaitApp returns the Application used by argocd-wait run tests.
+func testWaitApp() *argocd.Application {
+	return &argocd.Application{
+		ObjectMeta: metav1.ObjectMeta{Name: "my-app", Namespace: "argocd"},
+	}
+}
+
+// waitStepCtx returns a StepContext whose shared state holds the given output
+// from a previous invocation of the step.
+func waitStepCtx(prevOutput map[string]any) *promotion.StepContext {
+	return &promotion.StepContext{
+		Alias:       "wait-step",
+		SharedState: promotion.State{"wait-step": prevOutput},
+	}
+}
+
+// regressesFromProgressing returns a checkAppReadinessFn that reports a health
+// regression from Progressing to Degraded, after asserting that it was called
+// with Progressing as the previous health status.
+func regressesFromProgressing(t *testing.T) func(
+	context.Context, *argocd.Application,
+	[]builtin.WaitFor, string,
+) (bool, string, error) {
+	return func(
+		_ context.Context, app *argocd.Application,
+		_ []builtin.WaitFor, prevHealthStatus string,
+	) (bool, string, error) {
+		assert.Equal(t, string(argocd.HealthStatusProgressing), prevHealthStatus)
+		return false, "Degraded", &promotion.TerminalError{
+			Err: &healthRegressionError{
+				app:       app.Name,
+				namespace: app.Namespace,
+				from:      prevHealthStatus,
+				to:        "Degraded",
+			},
+		}
 	}
 }
 
