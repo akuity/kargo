@@ -90,4 +90,7 @@ data:
   {{- if .Values.controller.metrics.enabled }}
   METRICS_BIND_ADDRESS: ":{{ .Values.controller.metrics.service.servicePort }}"
   {{- end }}
+  {{- if .Values.controller.probes.enabled }}
+  HEALTH_PROBE_BIND_ADDRESS: ":{{ .Values.controller.probes.port }}"
+  {{- end }}
 {{- end }}

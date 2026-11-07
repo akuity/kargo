@@ -919,6 +919,33 @@ controller:
     ## @param controller.cabundle.secretName Specifies the name of an optional Secret containing CA certs that is managed "out of band." Values in the Secret named here should each contain a single PEM-encoded CA cert. If defined, the value of this field takes precedence over any in configMapName.
     secretName: ""
 
+  probes:
+    ## @param controller.probes.enabled Whether startup, liveness, and readiness probes should be included in the controller deployment. When enabled, the controller serves them (via `HEALTH_PROBE_BIND_ADDRESS`) on `controller.probes.port`. The controller is not ready while it is disconnected from NATS, and is restarted once it has been disconnected for longer than `NATS_LIVENESS_GRACE_PERIOD` (10m by default).
+    enabled: true
+    ## @param controller.probes.port The container port the controller serves its probes on.
+    port: 8081
+    ## @param controller.probes.startupProbe [object] Values merged into the chart-built `startupProbe` for the controller. Typically used to tune timing fields like `initialDelaySeconds`, `periodSeconds`, `timeoutSeconds`, `successThreshold`, and `failureThreshold`.
+    startupProbe:
+      initialDelaySeconds: 10
+      # periodSeconds: 10
+      # timeoutSeconds: 1
+      # successThreshold: 1
+      failureThreshold: 30
+    ## @param controller.probes.livenessProbe [object] Values merged into the chart-built `livenessProbe` for the controller. Default is an empty map, so the chart's `livenessProbe` renders with Kubernetes-default timings.
+    livenessProbe: {}
+      # initialDelaySeconds: 0
+      # periodSeconds: 10
+      # timeoutSeconds: 1
+      # successThreshold: 1
+      # failureThreshold: 3
+    ## @param controller.probes.readinessProbe [object] Values merged into the chart-built `readinessProbe` for the controller. Default is an empty map, so the chart's `readinessProbe` renders with Kubernetes-default timings.
+    readinessProbe: {}
+      # initialDelaySeconds: 0
+      # periodSeconds: 10
+      # timeoutSeconds: 1
+      # successThreshold: 1
+      # failureThreshold: 3
+
   ## All settings relating to exposing the controller's Prometheus metrics.
   metrics:
     ## @param controller.metrics.enabled Whether to expose the controller's Prometheus metrics. When enabled, the controller binds its metrics server (via `METRICS_BIND_ADDRESS`), declares a metrics container port, and a metrics `Service` is created. Metrics are served over plain HTTP.
@@ -1312,6 +1339,33 @@ managementController:
   # priorityClassName:
   ## @param managementController.securityContext Security context for management controller pods. Defaults to `global.securityContext`.
   securityContext: {}
+
+  probes:
+    ## @param managementController.probes.enabled Whether startup, liveness, and readiness probes should be included in the management controller deployment. When enabled, the management controller serves them (via `HEALTH_PROBE_BIND_ADDRESS`) on `managementController.probes.port`. The management controller is not ready while it is disconnected from NATS, and is restarted once it has been disconnected for longer than `NATS_LIVENESS_GRACE_PERIOD` (10m by default).
+    enabled: true
+    ## @param managementController.probes.port The container port the management controller serves its probes on.
+    port: 8081
+    ## @param managementController.probes.startupProbe [object] Values merged into the chart-built `startupProbe` for the management controller. Typically used to tune timing fields like `initialDelaySeconds`, `periodSeconds`, `timeoutSeconds`, `successThreshold`, and `failureThreshold`.
+    startupProbe:
+      initialDelaySeconds: 10
+      # periodSeconds: 10
+      # timeoutSeconds: 1
+      # successThreshold: 1
+      failureThreshold: 30
+    ## @param managementController.probes.livenessProbe [object] Values merged into the chart-built `livenessProbe` for the management controller. Default is an empty map, so the chart's `livenessProbe` renders with Kubernetes-default timings.
+    livenessProbe: {}
+      # initialDelaySeconds: 0
+      # periodSeconds: 10
+      # timeoutSeconds: 1
+      # successThreshold: 1
+      # failureThreshold: 3
+    ## @param managementController.probes.readinessProbe [object] Values merged into the chart-built `readinessProbe` for the management controller. Default is an empty map, so the chart's `readinessProbe` renders with Kubernetes-default timings.
+    readinessProbe: {}
+      # initialDelaySeconds: 0
+      # periodSeconds: 10
+      # timeoutSeconds: 1
+      # successThreshold: 1
+      # failureThreshold: 3
 
   ## All settings relating to exposing the management controller's Prometheus metrics.
   metrics:

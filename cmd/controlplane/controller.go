@@ -70,8 +70,9 @@ type controllerOptions struct {
 	ArgoCDKubeConfig    string
 	ArgoCDNamespaceOnly bool
 
-	MetricsBindAddress string
-	PprofBindAddress   string
+	MetricsBindAddress     string
+	HealthProbeBindAddress string
+	PprofBindAddress       string
 
 	Logger *logging.Logger
 }
@@ -125,6 +126,7 @@ func (o *controllerOptions) complete() {
 	o.ArgoCDNamespaceOnly = types.MustParseBool(os.GetEnv("ARGOCD_WATCH_ARGOCD_NAMESPACE_ONLY", "false"))
 
 	o.MetricsBindAddress = os.GetEnv("METRICS_BIND_ADDRESS", "0")
+	o.HealthProbeBindAddress = os.GetEnv("HEALTH_PROBE_BIND_ADDRESS", "0")
 	o.PprofBindAddress = os.GetEnv("PPROF_BIND_ADDRESS", "")
 
 	logLevel, logFormat := getLogVars()
@@ -185,6 +187,11 @@ func (o *controllerOptions) run(ctx context.Context) error {
 	)
 	if err != nil {
 		return fmt.Errorf("error initializing Kargo controller manager: %w", err)
+	}
+	// Only the Kargo manager serves probes. Its probes speak for the whole
+	// process.
+	if err = addNATSHealthChecks(kargoMgr, natsConn); err != nil {
+		return err
 	}
 
 	argocdMgr, err := o.setupArgoCDManager(ctx)
@@ -333,7 +340,8 @@ func (o *controllerOptions) setupKargoManager(
 			Metrics: server.Options{
 				BindAddress: o.MetricsBindAddress,
 			},
-			PprofBindAddress: o.PprofBindAddress,
+			HealthProbeBindAddress: o.HealthProbeBindAddress,
+			PprofBindAddress:       o.PprofBindAddress,
 			Client: client.Options{
 				Cache: &client.CacheOptions{
 					DisableFor: []client.Object{
