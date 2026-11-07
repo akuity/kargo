@@ -65,7 +65,8 @@ func WithAuthenticator(authenticator authn.Authenticator) AuthMiddlewareOpt {
 }
 
 // NewAuthMiddleware returns a Gin middleware that authenticates requests with
-// the Authenticators the server configuration calls for; see authn.New.
+// the Authenticators the server configuration calls for (see authn.New),
+// remembering verified tokens for as long as it allows.
 func NewAuthMiddleware(
 	ctx context.Context,
 	cfg config.ServerConfig,
@@ -73,8 +74,11 @@ func NewAuthMiddleware(
 	opts ...AuthMiddlewareOpt,
 ) gin.HandlerFunc {
 	a := &authMiddleware{
-		authenticator: authn.New(ctx, cfg, client),
-		exemptPaths:   maps.Clone(exemptPaths),
+		authenticator: authn.WithTokenCache(
+			authn.New(ctx, cfg, client),
+			cfg.AuthCacheConfig.TokenTTL,
+		),
+		exemptPaths: maps.Clone(exemptPaths),
 	}
 	for _, opt := range opts {
 		opt(a)
