@@ -130,7 +130,8 @@ func TestConfig_ToJSON(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := tt.config.ToJSON()
+			got, err := tt.config.ToJSON()
+			assert.NoError(t, err)
 			if tt.want == "" {
 				assert.Nil(t, got)
 				return
