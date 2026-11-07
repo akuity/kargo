@@ -93,15 +93,17 @@ func (p *ProjectConfigStatus) SetConditions(conditions []metav1.Condition) {
 }
 
 // DeepLink defines a configurable external link that is rendered in the UI
-// when viewing a Freight or Stage resource. The URL is an expression evaluated
-// against the resource. The optional If field is an expression condition;
-// when set, the link is only shown when the expression evaluates to true.
+// when viewing a Freight or Stage resource. The URL may contain expr-lang
+// expressions offset by ${{ }}, evaluated against the resource. The optional
+// If field is a ${{ }} expression that must evaluate to a boolean; when set,
+// the link is only shown when it evaluates to true.
 type DeepLink struct {
 	// Title is the display label for the link.
 	//
 	// +kubebuilder:validation:MinLength=1
 	Title string `json:"title"`
-	// URL is an expression that resolves to the link's href.
+	// URL is the link's href. It may contain expr-lang expressions offset by
+	// ${{ }}, evaluated against the resource as freight or stage.
 	//
 	// +kubebuilder:validation:MinLength=1
 	URL string `json:"url"`
@@ -110,8 +112,9 @@ type DeepLink struct {
 	//
 	// +optional
 	Description string `json:"description,omitempty"`
-	// If is an optional expression condition. When set, the link is only shown
-	// when the expression evaluates to true.
+	// If is an optional expr-lang expression, offset by ${{ }}, that must
+	// evaluate to a boolean. When set, the link is shown only when it
+	// evaluates to true.
 	//
 	// +optional
 	If string `json:"if,omitempty"`
