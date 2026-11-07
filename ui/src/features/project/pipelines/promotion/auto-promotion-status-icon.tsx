@@ -1,6 +1,7 @@
 import { faBolt, faPause, faSnowflake } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Tooltip } from 'antd';
+import classNames from 'classnames';
 
 import type { Stage } from '@ui/gen/api/v2/models';
 
@@ -47,7 +48,12 @@ export const AutoPromotionStatusIcon = ({
 
   return (
     <Tooltip title={title}>
-      <span aria-label={label} className='inline-flex mr-1.5 relative'>
+      {/* the badge overhangs the glyph to the right, so only a bare bolt
+          needs the wider gap trimmed back to the same apparent spacing */}
+      <span
+        aria-label={label}
+        className={classNames('inline-flex relative', badge ? 'mr-1.5' : 'mr-[3px]')}
+      >
         <FontAwesomeIcon icon={faBolt} className='text-[10px]' />
         {badge && (
           <FontAwesomeIcon

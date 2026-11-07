@@ -9,163 +9,88 @@ import {
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Tooltip } from 'antd';
 import classNames from 'classnames';
-import { memo, useMemo } from 'react';
+import { memo } from 'react';
 
-import { StageConditionType, StageConditionStatus } from '@ui/features/common/stage-status/utils';
-import { V1Condition } from '@ui/gen/api/v2/models';
+import { useToneColor } from '@ui/features/common/status-tone';
+import { Stage } from '@ui/gen/api/v2/models';
 
 import styles from './styles.module.less';
 import { TruckIcon } from './truck-icon/truck-icon';
+import { getStageStatus, phaseTone, StagePhase } from './utils';
 
-interface IconState {
-  icon: IconDefinition;
-  tooltipTitle: string;
-  tooltipMessage: string;
-  iconClass: string;
-}
+// The mark for each phase. The two that describe work under way say so by
+// moving. Promoting's entry is never drawn -- it gets the truck below -- but
+// the map stays total so a new phase cannot be added without a mark.
+const phaseMark: Record<StagePhase, { icon: IconDefinition; animation?: string }> = {
+  Promoting: { icon: faCircleMinus },
+  Verifying: { icon: faMagnifyingGlass, animation: styles.magnifyingGlass },
+  Reconciling: { icon: faSync, animation: styles.rotate },
+  Failed: { icon: faTimesCircle },
+  Ready: { icon: faCircle },
+  Unknown: { icon: faCircleMinus }
+};
 
+// StageConditionIcon is the mark beside a Stage's phase -- or, where there is
+// no room for the word, in place of it. It states the phase getStageStatus
+// reports and nothing of its own.
 export const StageConditionIcon = memo(
   ({
-    conditions,
+    stage,
     className,
     noTooltip,
+    hideColor,
     isControllerDead,
     controllerName
   }: {
-    conditions: V1Condition[];
+    stage: Stage;
     className?: string;
     noTooltip?: boolean;
+    // Set where the mark sits beside something already stating the phase, so
+    // that it takes the color of what it belongs to instead of its own.
+    hideColor?: boolean;
     isControllerDead?: boolean;
     controllerName?: string;
   }) => {
-    const { iconState, isPromoting } = useMemo(() => {
-      // A dead (or absent) controller overrides everything: the
-      // conditions on the Stage were written by the very controller that
-      // has gone silent, so they cannot be trusted. Surface this as
-      // Failed with a tooltip explaining why.
-      if (isControllerDead) {
-        return {
-          iconState: {
-            icon: faTimesCircle,
-            tooltipTitle: 'Failed',
-            tooltipMessage: controllerName
-              ? `Controller '${controllerName}' is dead or nonexistent`
-              : 'The default controller is dead or nonexistent',
-            iconClass: 'text-red-400'
-          },
-          isPromoting: false
-        };
-      }
+    const { phase, message } = getStageStatus(stage, isControllerDead);
+    const toneColor = useToneColor(phaseTone[phase]);
 
-      const hasCondition = (
-        type: StageConditionType,
-        status: StageConditionStatus
-      ): { condition: V1Condition | undefined; isActive: boolean } => {
-        const condition = conditions.find((c) => c.type === type);
-        return {
-          condition,
-          isActive: condition?.status === status
-        };
-      };
+    // The one reason that is not the Stage's own: its conditions were written
+    // by the controller that has since gone silent, which is why the phase
+    // above is Failed however healthy they read.
+    const deadControllerReason = controllerName
+      ? `Controller '${controllerName}' is dead or nonexistent`
+      : 'The default controller is dead or nonexistent';
 
-      const { condition: promotingCondition, isActive: isPromoting } = hasCondition(
-        StageConditionType.Promoting,
-        StageConditionStatus.True
+    const reason = isControllerDead ? deadControllerReason : message;
+
+    const mark = phaseMark[phase];
+
+    const Icon =
+      phase === 'Promoting' ? (
+        <TruckIcon className={className} />
+      ) : (
+        <FontAwesomeIcon
+          icon={mark.icon}
+          className={classNames(className, mark.animation)}
+          style={{ color: hideColor ? undefined : toneColor }}
+        />
       );
-
-      const { condition: reconcilingCondition, isActive: isReconciling } = hasCondition(
-        StageConditionType.Reconciling,
-        StageConditionStatus.True
-      );
-
-      const { condition: readyCondition, isActive: isReady } = hasCondition(
-        StageConditionType.Ready,
-        StageConditionStatus.True
-      );
-
-      const isFailed = readyCondition?.status === StageConditionStatus.False;
-
-      const { condition: verifiedCondition, isActive: isVerifying } = hasCondition(
-        StageConditionType.Verified,
-        StageConditionStatus.Unknown
-      );
-
-      // Default state
-      let iconState: IconState = {
-        icon: faCircleMinus,
-        tooltipTitle: 'Unknown',
-        tooltipMessage: '',
-        iconClass: 'text-gray-400 dark:text-neutral-500'
-      };
-
-      // Priority: Promoting > Verifying > Reconciling > Failed > Ready
-      if (isPromoting && promotingCondition?.reason !== 'NoFreight') {
-        iconState = {
-          icon: faCircleMinus,
-          tooltipTitle: 'Promoting',
-          tooltipMessage: promotingCondition?.message ?? '',
-          iconClass: 'text-gray-400 dark:text-neutral-500'
-        };
-      } else if (isVerifying && verifiedCondition?.reason !== 'NoFreight') {
-        iconState = {
-          icon: faMagnifyingGlass,
-          tooltipTitle: 'Verifying',
-          tooltipMessage: verifiedCondition?.message ?? '',
-          iconClass: `text-blue-500 ${styles.magnifyingGlass}`
-        };
-      } else if (isReconciling) {
-        iconState = {
-          icon: faSync,
-          tooltipTitle: 'Reconciling',
-          tooltipMessage: reconcilingCondition?.message ?? '',
-          iconClass: `text-yellow-500 ${styles.rotate}`
-        };
-      } else if (isFailed && readyCondition.reason !== 'NoFreight') {
-        iconState = {
-          icon: faTimesCircle,
-          tooltipTitle: 'Failed',
-          tooltipMessage: readyCondition?.message ?? '',
-          iconClass: 'text-red-400'
-        };
-      } else if (isReady) {
-        iconState = {
-          icon: faCircle,
-          tooltipTitle: 'Ready',
-          tooltipMessage: readyCondition?.message ?? '',
-          iconClass: 'text-green-400'
-        };
-      }
-
-      return { iconState, isPromoting };
-    }, [conditions, isControllerDead, controllerName]);
-
-    const tooltipContent = useMemo(
-      () => (
-        <>
-          {iconState.tooltipTitle && (
-            <>
-              <b>Stage Status:</b> {iconState.tooltipTitle}
-            </>
-          )}
-          {iconState.tooltipMessage && <div>{iconState.tooltipMessage}</div>}
-        </>
-      ),
-      [iconState.tooltipTitle, iconState.tooltipMessage] // Only recalculate when tooltip content changes
-    );
-
-    const Icon = isPromoting ? (
-      <TruckIcon className={className} />
-    ) : (
-      <FontAwesomeIcon
-        icon={iconState.icon}
-        className={classNames(className, iconState.iconClass)}
-      />
-    );
 
     if (noTooltip) {
       return Icon;
     }
 
-    return <Tooltip title={tooltipContent}>{Icon}</Tooltip>;
+    return (
+      <Tooltip
+        title={
+          <>
+            <b>Stage Status:</b> {phase}
+            {reason && <div>{reason}</div>}
+          </>
+        }
+      >
+        {Icon}
+      </Tooltip>
+    );
   }
 );
