@@ -8,7 +8,8 @@ import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 type ChartSubscription struct {
 	// DiscoveryLimit is an optional limit on the number of chart versions that can be
 	// discovered for this subscription. The limit is applied after filtering charts based on
-	// the semverConstraint field. The upper limit for this field is 100.
+	// the semverConstraint field. The upper limit for this field is 100. Deprecated: Set
+	// discoveryLimit on the subscription (as a sibling of the chart field) instead.
 	DiscoveryLimit int64 `json:"discoveryLimit,omitempty"`
 	// InsecureSkipTLSVerify specifies whether certificate verification errors should be ignored
 	// when connecting to the repository. This should be enabled only with great caution.
@@ -52,7 +53,8 @@ type GitSubscription struct {
 	// interest in the repository specified by the RepoURL field.
 	CommitSelectionStrategy CommitSelectionStrategy `json:"commitSelectionStrategy,omitempty"`
 	// DiscoveryLimit is an optional limit on the number of commits that can be discovered for
-	// this subscription. The upper limit is 100.
+	// this subscription. The upper limit is 100. Deprecated: Set discoveryLimit on the
+	// subscription (as a sibling of the git field) instead.
 	DiscoveryLimit int64 `json:"discoveryLimit,omitempty"`
 	// ExcludePaths is a list of selectors that designate paths in the repository that should
 	// NOT trigger the production of new Freight when changes are detected therein.
@@ -106,6 +108,8 @@ type ImageSubscription struct {
 	// discovered for this subscription. The limit is applied after filtering images based on
 	// the AllowTagsRegexes and IgnoreTagsRegexes fields. When left unspecified, the field is
 	// implicitly treated as if its value were "20". The upper limit for this field is 100.
+	// Deprecated: Set discoveryLimit on the subscription (as a sibling of the image field)
+	// instead.
 	DiscoveryLimit int64 `json:"discoveryLimit,omitempty"`
 	// IgnoreTagsRegexes is a list of regular expressions that can optionally be used to exclude
 	// tags from consideration when determining the newest revision of an image. This field is

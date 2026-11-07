@@ -62,7 +62,7 @@ func TestNewOCISelector(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			s, err := newOCISelector(t.Context(), testCase.sub, nil)
+			s, err := newOCISelector(t.Context(), testCase.sub, 20, nil)
 			testCase.assertions(t, s, err)
 		})
 	}
@@ -76,6 +76,7 @@ func Test_ociSelector_Select(t *testing.T) {
 		kargoapi.ChartSubscription{
 			RepoURL: "oci://ghcr.io/akuity/kargo-charts/kargo",
 		},
+		20,
 		nil,
 	)
 	require.NoError(t, err)

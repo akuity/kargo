@@ -21,6 +21,7 @@ type (
 	// selectorFactory is a function that returns an implementation of Selector.
 	selectorFactory = func(
 		kargoapi.GitSubscription,
+		int,
 		*git.RepoCredentials,
 	) (Selector, error)
 

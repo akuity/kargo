@@ -30,9 +30,10 @@ type newestBuildSelector struct {
 
 func newNewestBuildSelector(
 	sub kargoapi.ImageSubscription,
+	discoveryLimit int,
 	creds *Credentials,
 ) (Selector, error) {
-	tagBased, err := newTagBasedSelector(sub, creds)
+	tagBased, err := newTagBasedSelector(sub, discoveryLimit, creds)
 	if err != nil {
 		return nil, fmt.Errorf("error building tag based selector: %w", err)
 	}
