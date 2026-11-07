@@ -5,6 +5,7 @@ import { DescriptionsItemType } from 'antd/es/descriptions';
 import { Navigate } from 'react-router-dom';
 
 import { redirectToQueryParam } from '@ui/config/auth';
+import { withoutBasePath } from '@ui/config/base-path';
 import { paths } from '@ui/config/paths';
 import { useAuthContext } from '@ui/features/auth/context/use-auth-context';
 import { claimsMapping, isJWTDirty } from '@ui/features/auth/jwt-utils';
@@ -18,7 +19,11 @@ export const User = () => {
   if (isJWTDirty(JWTInfo)) {
     // other pages depend on API failure code to redirect to login
     // since this page doesn't make any API call, this is the only reason to redirect
-    return <Navigate to={`${paths.login}?${redirectToQueryParam}=${window.location.pathname}`} />;
+    return (
+      <Navigate
+        to={`${paths.login}?${redirectToQueryParam}=${withoutBasePath(window.location.pathname)}`}
+      />
+    );
   }
 
   const items: DescriptionsItemType[] = [];
