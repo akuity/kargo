@@ -48,6 +48,49 @@ tests:
       - isNotEmpty:
           path: webhooks[0].clientConfig.caBundle
 
+  - it: omits the timeout by default, deferring to the API server's own default
+    asserts:
+      - documentSelector:
+          path: kind
+          value: MutatingWebhookConfiguration
+        notExists:
+          path: webhooks[0].timeoutSeconds
+      - documentSelector:
+          path: kind
+          value: ValidatingWebhookConfiguration
+        notExists:
+          path: webhooks[0].timeoutSeconds
+
+  - it: sets the timeout on every webhook when configured
+    set:
+      webhooks.timeoutSeconds: 30
+    asserts:
+      - documentSelector:
+          path: kind
+          value: MutatingWebhookConfiguration
+        equal:
+          path: webhooks[*].timeoutSeconds
+          value: 30
+      - documentSelector:
+          path: kind
+          value: ValidatingWebhookConfiguration
+        equal:
+          path: webhooks[*].timeoutSeconds
+          value: 30
+
+  # The last validating webhook uses failurePolicy: Ignore rather than Fail,
+  # so it is easy to miss when adding a field to every webhook.
+  - it: sets the timeout on the webhook that does not use failurePolicy Fail
+    set:
+      webhooks.timeoutSeconds: 30
+    documentSelector:
+      path: kind
+      value: ValidatingWebhookConfiguration
+    asserts:
+      - equal:
+          path: webhooks[?(@.name=="replicated-resource-delete.kargo.akuity.io")].timeoutSeconds
+          value: 30
+
 ---
 suite: kubernetes-webhooks-server/configmap.yaml
 values:
