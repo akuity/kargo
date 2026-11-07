@@ -760,7 +760,7 @@ func TestMergePullRequest(t *testing.T) {
 		}
 		p := &provider{client: mc}
 		pr, merged, err := p.MergePullRequest(t.Context(), 1, nil)
-		assert.Error(t, err)
+		assert.ErrorIs(t, err, gitprovider.ErrPullRequestClosedUnmerged)
 		assert.False(t, merged)
 		assert.Nil(t, pr)
 	})
@@ -875,7 +875,7 @@ func TestMergePullRequest(t *testing.T) {
 		pr, merged, err := p.MergePullRequest(t.Context(), 1, &gitprovider.MergePullRequestOpts{
 			MergeMethod: "bad-strategy",
 		})
-		assert.Error(t, err)
+		assert.ErrorIs(t, err, gitprovider.ErrUnsupportedMergeMethod)
 		assert.False(t, merged)
 		assert.Nil(t, pr)
 	})
@@ -914,6 +914,28 @@ func TestMergePullRequest(t *testing.T) {
 		p := &provider{client: mc}
 		pr, merged, err := p.MergePullRequest(t.Context(), 1, nil)
 		assert.Error(t, err)
+		assert.False(t, merged)
+		assert.Nil(t, pr)
+	})
+
+	t.Run("404 GET response returns not found", func(t *testing.T) {
+		t.Parallel()
+		mc := &mockClient{
+			getPRFunc: func(
+				_ context.Context,
+				_, _ string,
+				_ int,
+				_ ...RequestEditorFn,
+			) (*GetPullRequestResponse, error) {
+				return &GetPullRequestResponse{
+					HTTPResponse: &http.Response{StatusCode: http.StatusNotFound},
+				}, nil
+			},
+		}
+		p := &provider{client: mc}
+		pr, merged, err := p.MergePullRequest(t.Context(), 1, nil)
+		assert.ErrorIs(t, err, gitprovider.ErrPullRequestNotFound)
+		assert.ErrorContains(t, err, "response status 404")
 		assert.False(t, merged)
 		assert.Nil(t, pr)
 	})
