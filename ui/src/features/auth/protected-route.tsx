@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Navigate, Outlet } from 'react-router-dom';
 
 import { redirectToQueryParam } from '@ui/config/auth';
+import { withoutBasePath } from '@ui/config/base-path';
 import { paths } from '@ui/config/paths';
 import { ModalContextProvider } from '@ui/features/common/modal/modal-context-provider';
 import { PromotionDirectivesRegistryContextProvider } from '@ui/features/promotion-directives/registry/context/registry-context-provider';
@@ -21,9 +22,10 @@ export const ProtectedRoute = () => {
   }, []);
 
   if (!data?.skipAuth && !isLoading && !isLoggedIn) {
+    const currentPath = withoutBasePath(window.location.pathname);
     return (
       <Navigate
-        to={`${paths.login}?${window.location.pathname !== paths.home ? `${redirectToQueryParam}=${window.location.pathname}` : ''}`}
+        to={`${paths.login}?${currentPath !== paths.home ? `${redirectToQueryParam}=${currentPath}` : ''}`}
         replace
       />
     );

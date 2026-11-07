@@ -17,6 +17,7 @@ import React from 'react';
 import { useLocation } from 'react-router-dom';
 
 import { isSafeRedirectPath, redirectToQueryParam } from '@ui/config/auth';
+import { withBasePath } from '@ui/config/base-path';
 import { paths } from '@ui/config/paths';
 import { OIDCConfig } from '@ui/gen/api/v2/models';
 
@@ -161,7 +162,8 @@ export const OIDCLogin = ({ oidcConfig }: Props) => {
           : null;
 
         window.location.replace(
-          window.location.origin + (isSafeRedirectPath(redirectTo) ? redirectTo : paths.home)
+          window.location.origin +
+            withBasePath(isSafeRedirectPath(redirectTo) ? redirectTo : paths.home)
         );
       } catch (err) {
         if (err instanceof AuthorizationResponseError) {
