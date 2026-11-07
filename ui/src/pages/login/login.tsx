@@ -40,17 +40,21 @@ export const Login = () => {
       <div className={`kargo-light-scope ${styles.container}`}>
         <KargoLogo />
         <div className={styles.box}>
-          {isLoading && <LoadingState />}
-          {data?.adminAccountEnabled && (
+          {(isLoading || isOIDCCallback) && <LoadingState />}
+          {data?.adminAccountEnabled && !isOIDCCallback && (
             <>
               <Typography.Title level={4}>Admin Login</Typography.Title>
               <AdminLogin />
             </>
           )}
-          {data?.oidcConfig && data?.adminAccountEnabled && (
+          {data?.oidcConfig && data?.adminAccountEnabled && !isOIDCCallback && (
             <Divider className='!my-6 !text-gray-400 !font-light'>OR</Divider>
           )}
-          {data?.oidcConfig && <OIDCLogin oidcConfig={data.oidcConfig} />}
+          {data?.oidcConfig && (
+            <div hidden={isOIDCCallback}>
+              <OIDCLogin oidcConfig={data.oidcConfig} />
+            </div>
+          )}
           {data && !data.oidcConfig && !data.adminAccountEnabled && (
             <Typography.Text>
               Login is disabled. Please contact your system administrator.
