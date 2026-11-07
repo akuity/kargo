@@ -49,12 +49,14 @@ func TestNewServer(t *testing.T) {
 		),
 		testSender,
 		nil,
+		nil,
 	).(*server)
 
 	require.True(t, ok)
 	require.NotNil(t, s)
 	require.Same(t, testClient, s.client)
 	require.Nil(t, s.db)
+	require.Nil(t, s.events)
 	require.NotNil(t, testClient, s.rolesDB)
 	require.Same(t, testSender, s.sender)
 	require.Equal(t, testServerConfig, s.cfg)

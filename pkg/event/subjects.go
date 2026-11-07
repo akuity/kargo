@@ -13,7 +13,9 @@ const (
 	BasePrefix = "akuity.kargo"
 
 	// EventsSubjectPrefix is the subject prefix used for the user-facing events published by Kargo
-	// components. Other system components will publish events on other subjects
+	// components. Other system components will publish events on other subjects. The internal
+	// events that tell controllers what was written travel under nats.InternalSubjectPrefix, in
+	// package github.com/akuity/kargo/pkg/reconciler/nats, instead.
 	EventsSubjectPrefix = BasePrefix + ".events"
 )
 
