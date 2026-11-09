@@ -496,7 +496,7 @@ func TestNewPromotionRolloutForSelectTargets(t *testing.T) {
 			testStage,
 			freight,
 			stageTargets,
-			[]kargoapi.PromotionRolloutTarget{{Name: "us-east"}},
+			[]string{"us-east"},
 			nil,
 		)
 		require.NoError(t, err)
@@ -519,7 +519,7 @@ func TestNewPromotionRolloutForSelectTargets(t *testing.T) {
 			testStage,
 			freight,
 			stageTargets,
-			[]kargoapi.PromotionRolloutTarget{{Name: "us-north"}},
+			[]string{"us-north"},
 			nil,
 		)
 		require.Error(t, err)
@@ -541,7 +541,7 @@ func TestNewPromotionRolloutForSelectTargets(t *testing.T) {
 			withStrategy,
 			freight,
 			allTargets,
-			[]kargoapi.PromotionRolloutTarget{{Name: "us-0"}},
+			[]string{"us-0"},
 			nil,
 		)
 		require.NoError(t, err)
@@ -561,7 +561,7 @@ func TestNewPromotionRolloutForSelectTargets(t *testing.T) {
 			withStrategy,
 			freight,
 			stageTargets,
-			[]kargoapi.PromotionRolloutTarget{{Name: "us-east"}},
+			[]string{"us-east"},
 			&kargoapi.TargetUpdateStrategy{
 				MaxConcurrent: new(intstr.FromInt(10)),
 				MaxFailures:   new(intstr.FromInt(10)),
@@ -590,7 +590,7 @@ func TestNewPromotionRolloutForSelectTargets(t *testing.T) {
 			testStage,
 			freight,
 			longStageTargets,
-			[]kargoapi.PromotionRolloutTarget{{Name: "us-east"}},
+			[]string{"us-east"},
 			&kargoapi.TargetUpdateStrategy{
 				MaxConcurrent: new(intstr.FromString("50%")),
 				MaxFailures:   new(intstr.FromString("20%")),
@@ -616,7 +616,7 @@ func TestNewPromotionRolloutForSelectTargets(t *testing.T) {
 			classic,
 			freight,
 			stageTargets,
-			[]kargoapi.PromotionRolloutTarget{{Name: "us-east"}},
+			[]string{"us-east"},
 			nil,
 		)
 		require.Error(t, err)
