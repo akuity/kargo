@@ -336,6 +336,7 @@ func TestIsAutoPromotionEnabled(t *testing.T) {
 
 func TestSelectAutoPromotionCandidates(t *testing.T) {
 	now := time.Now()
+	sec := now.Truncate(time.Second)
 	warehouseOrigin := kargoapi.FreightOrigin{
 		Kind: kargoapi.FreightOriginKindWarehouse,
 		Name: "fake-warehouse",
@@ -443,6 +444,38 @@ func TestSelectAutoPromotionCandidates(t *testing.T) {
 			},
 			assert: func(t *testing.T, candidates map[string]kargoapi.Freight) {
 				require.Equal(t, "bbb-freight", candidates[warehouseOrigin.String()].Name)
+			},
+		},
+		{
+			name:  "same-second tie broken by discovered-at annotation",
+			stage: newestFreightStage,
+			availableFreight: []kargoapi.Freight{
+				{
+					// Would win the name tie-break
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "zzz-older-freight",
+						Annotations: map[string]string{
+							kargoapi.AnnotationKeyDiscoveredAt: sec.Add(100 * time.Millisecond).
+								Format(time.RFC3339Nano),
+						},
+					},
+					DiscoveredAt: &metav1.Time{Time: sec},
+					Origin:       warehouseOrigin,
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "aaa-newer-freight",
+						Annotations: map[string]string{
+							kargoapi.AnnotationKeyDiscoveredAt: sec.Add(900 * time.Millisecond).
+								Format(time.RFC3339Nano),
+						},
+					},
+					DiscoveredAt: &metav1.Time{Time: sec},
+					Origin:       warehouseOrigin,
+				},
+			},
+			assert: func(t *testing.T, candidates map[string]kargoapi.Freight) {
+				require.Equal(t, "aaa-newer-freight", candidates[warehouseOrigin.String()].Name)
 			},
 		},
 		{

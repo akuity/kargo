@@ -1,6 +1,7 @@
 package v1alpha1
 
 import (
+	"encoding/json"
 	"testing"
 	"time"
 
@@ -273,6 +274,123 @@ func TestFreight_IsApprovedFor(t *testing.T) {
 	require.False(t, freight.IsApprovedFor(testStage))
 	freight.Status.ApprovedFor = map[string]ApprovedStage{testStage: {}}
 	require.True(t, freight.IsApprovedFor(testStage))
+}
+
+func TestFreight_EffectiveDiscoveredAt(t *testing.T) {
+	sec := time.Date(2026, time.January, 1, 0, 0, 0, 0, time.UTC)
+	precise := sec.Add(500 * time.Millisecond)
+	testCases := []struct {
+		name    string
+		freight Freight
+		want    time.Time
+	}{
+		{
+			name: "falls back to creationTimestamp",
+			freight: Freight{
+				ObjectMeta: metav1.ObjectMeta{CreationTimestamp: metav1.NewTime(sec)},
+			},
+			want: sec,
+		},
+		{
+			name: "discoveredAt without annotation",
+			freight: Freight{
+				ObjectMeta:   metav1.ObjectMeta{CreationTimestamp: metav1.NewTime(sec)},
+				DiscoveredAt: &metav1.Time{Time: sec.Add(-time.Hour)},
+			},
+			want: sec.Add(-time.Hour),
+		},
+		{
+			name: "annotation in the same second as discoveredAt",
+			freight: Freight{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						AnnotationKeyDiscoveredAt: precise.Format(time.RFC3339Nano),
+					},
+				},
+				DiscoveredAt: &metav1.Time{Time: sec},
+			},
+			want: precise,
+		},
+		{
+			name: "annotation in the same second as creationTimestamp",
+			freight: Freight{
+				ObjectMeta: metav1.ObjectMeta{
+					CreationTimestamp: metav1.NewTime(sec),
+					Annotations: map[string]string{
+						AnnotationKeyDiscoveredAt: precise.Format(time.RFC3339Nano),
+					},
+				},
+			},
+			want: precise,
+		},
+		{
+			name: "annotation in a different second is ignored",
+			freight: Freight{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						AnnotationKeyDiscoveredAt: precise.Add(time.Hour).Format(time.RFC3339Nano),
+					},
+				},
+				DiscoveredAt: &metav1.Time{Time: sec},
+			},
+			want: sec,
+		},
+		{
+			name: "malformed annotation is ignored",
+			freight: Freight{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{AnnotationKeyDiscoveredAt: "nope"},
+				},
+				DiscoveredAt: &metav1.Time{Time: sec},
+			},
+			want: sec,
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			require.WithinDuration(t, testCase.want, testCase.freight.EffectiveDiscoveredAt(), 0)
+		})
+	}
+}
+
+func TestFreight_EffectiveDiscoveredAt_JSON(t *testing.T) {
+	t.Run("decodes Freight stored without the annotation", func(t *testing.T) {
+		freight := Freight{}
+		require.NoError(t, json.Unmarshal(
+			[]byte(`{"metadata":{"name":"fake-freight"},"discoveredAt":"2026-01-01T00:00:00Z"}`),
+			&freight,
+		))
+		require.WithinDuration(
+			t,
+			time.Date(2026, time.January, 1, 0, 0, 0, 0, time.UTC),
+			freight.EffectiveDiscoveredAt(),
+			0,
+		)
+	})
+
+	t.Run("orders Freight from the same second after a round trip", func(t *testing.T) {
+		sec := time.Date(2026, time.January, 1, 0, 0, 0, 0, time.UTC)
+		newFreight := func(at time.Time) Freight {
+			data, err := json.Marshal(Freight{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						AnnotationKeyDiscoveredAt: at.Format(time.RFC3339Nano),
+					},
+				},
+				DiscoveredAt: &metav1.Time{Time: at},
+			})
+			require.NoError(t, err)
+			freight := Freight{}
+			require.NoError(t, json.Unmarshal(data, &freight))
+			return freight
+		}
+		older := newFreight(sec.Add(100 * time.Millisecond))
+		newer := newFreight(sec.Add(900 * time.Millisecond))
+		// Precondition: the round trip truncates both to the same second.
+		require.WithinDuration(t, sec, older.DiscoveredAt.Time, 0)
+		require.WithinDuration(t, sec, newer.DiscoveredAt.Time, 0)
+		require.True(t, newer.EffectiveDiscoveredAt().After(older.EffectiveDiscoveredAt()))
+	})
 }
 
 func TestFreight_GetLongestSoak(t *testing.T) {
