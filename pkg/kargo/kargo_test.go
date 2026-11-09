@@ -5,10 +5,13 @@ import (
 
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/pkg/api"
 	"github.com/akuity/kargo/pkg/logging"
 )
 
@@ -331,6 +334,31 @@ func TestRefreshRequested_Update(t *testing.T) {
 			}))
 		})
 	}
+}
+
+func TestRefreshRequested_BackToBackRefreshes(t *testing.T) {
+	scheme := runtime.NewScheme()
+	require.NoError(t, kargoapi.AddToScheme(scheme))
+	c := fake.NewClientBuilder().WithScheme(scheme).Build()
+	ctx := t.Context()
+
+	wh := &kargoapi.Warehouse{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: "fake-project",
+			Name:      "fake-warehouse",
+		},
+	}
+	require.NoError(t, c.Create(ctx, wh))
+
+	require.NoError(t, api.RefreshObject(ctx, c, wh))
+	first := wh.DeepCopy()
+	require.NoError(t, api.RefreshObject(ctx, c, wh))
+	second := wh.DeepCopy()
+
+	require.True(t, RefreshRequested{}.Update(event.UpdateEvent{
+		ObjectOld: first,
+		ObjectNew: second,
+	}))
 }
 
 func TestReverifyRequested_Update(t *testing.T) {

@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"slices"
 	"strings"
-	"time"
 
 	"github.com/oklog/ulid/v2"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -162,7 +161,7 @@ func RefreshPromotion(
 			Name:      namespacedName.Name,
 		},
 	}
-	if err := patchAnnotation(ctx, c, promo, kargoapi.AnnotationKeyRefresh, time.Now().Format(time.RFC3339)); err != nil {
+	if err := RefreshObject(ctx, c, promo); err != nil {
 		return nil, fmt.Errorf("refresh: %w", err)
 	}
 	return promo, nil
