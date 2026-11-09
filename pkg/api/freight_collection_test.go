@@ -2,9 +2,14 @@ package api
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 )
@@ -105,6 +110,116 @@ func TestBuildPromotionFreightCollection(t *testing.T) {
 			require.NotNil(t, result)
 			require.Equal(t, testCase.expected, names(result))
 			require.NotEmpty(t, result.ID)
+		})
+	}
+}
+
+func TestGetStageFreightRefs(t *testing.T) {
+	metadata := &apiextensionsv1.JSON{Raw: []byte(`{"key":"value"}`)}
+	origin := kargoapi.FreightOrigin{Kind: kargoapi.FreightOriginKindWarehouse, Name: "artifacts"}
+	other := kargoapi.FreightOrigin{Kind: kargoapi.FreightOriginKindWarehouse, Name: "other"}
+	freight := &kargoapi.Freight{
+		ObjectMeta: metav1.ObjectMeta{Name: "new"},
+		Origin:     origin,
+		Artifacts: []kargoapi.ArtifactReference{{
+			SubscriptionName: "sub",
+			Version:          "v2",
+			Metadata:         metadata,
+		}},
+	}
+	inherited := kargoapi.FreightReference{
+		Name:   "old",
+		Origin: other,
+		Artifacts: []kargoapi.ArtifactReference{{
+			SubscriptionName: "other-sub",
+			Version:          "v1",
+			Metadata:         metadata,
+		}},
+	}
+	lastCollection := &kargoapi.FreightCollection{}
+	lastCollection.UpdateOrPush(inherited)
+	stage := &kargoapi.Stage{
+		Spec: kargoapi.StageSpec{
+			RequestedFreight: []kargoapi.FreightRequest{{Origin: origin}, {Origin: other}},
+		},
+		Status: kargoapi.StageStatus{
+			LastPromotion: &kargoapi.PromotionReference{
+				Status: &kargoapi.PromotionStatus{FreightCollection: lastCollection},
+			},
+		},
+	}
+
+	ref, col, err := GetStageFreightRefs(context.Background(), freight, stage)
+	require.NoError(t, err)
+
+	require.Equal(t, "v2", ref.Artifacts[0].Version)
+	require.Nil(t, ref.Artifacts[0].Metadata)
+	require.Len(t, col.Freight, 2)
+	for _, f := range col.Freight {
+		for _, a := range f.Artifacts {
+			require.Nil(t, a.Metadata)
+		}
+	}
+	require.Equal(t, metadata, freight.Artifacts[0].Metadata)
+	require.Equal(t, metadata, lastCollection.Freight[other.String()].Artifacts[0].Metadata)
+}
+
+// TestGetStageFreightRefsStageStatusSize compares Stage status size with and
+// without artifact Metadata.
+func TestGetStageFreightRefsStageStatusSize(t *testing.T) {
+	const historyLen = 10
+	origin := kargoapi.FreightOrigin{Kind: kargoapi.FreightOriginKindWarehouse, Name: "artifacts"}
+	stageStatusBytes := func(t *testing.T, metadataBytes int, keepMetadata bool) int {
+		stage := &kargoapi.Stage{
+			Spec: kargoapi.StageSpec{
+				RequestedFreight: []kargoapi.FreightRequest{{Origin: origin}},
+			},
+		}
+		raw := fmt.Sprintf(`{"data":%q}`, strings.Repeat("x", metadataBytes))
+		for i := range historyLen {
+			freight := &kargoapi.Freight{
+				ObjectMeta: metav1.ObjectMeta{Name: fmt.Sprintf("freight-%d", i)},
+				Origin:     origin,
+				Artifacts: []kargoapi.ArtifactReference{{
+					ArtifactType:     "application/json",
+					SubscriptionName: "sub",
+					Version:          fmt.Sprintf("v%d", i),
+					Metadata:         &apiextensionsv1.JSON{Raw: []byte(raw)},
+				}},
+			}
+			ref, col, err := GetStageFreightRefs(context.Background(), freight, stage)
+			require.NoError(t, err)
+			if keepMetadata {
+				ref.Artifacts = freight.Artifacts
+				col.UpdateOrPush(*ref)
+			}
+			stage.Status.LastPromotion = &kargoapi.PromotionReference{
+				Name:    fmt.Sprintf("promo-%d", i),
+				Freight: ref.DeepCopy(),
+				Status: &kargoapi.PromotionStatus{
+					Phase:             kargoapi.PromotionPhaseSucceeded,
+					Freight:           ref.DeepCopy(),
+					FreightCollection: col.DeepCopy(),
+				},
+			}
+			stage.Status.FreightHistory.Record(col.DeepCopy())
+		}
+		b, err := json.Marshal(stage.Status)
+		require.NoError(t, err)
+		return len(b)
+	}
+
+	for _, metadataBytes := range []int{1 << 10, 31 << 10, 120 << 10} {
+		t.Run(fmt.Sprintf("metadata=%dKiB", metadataBytes>>10), func(t *testing.T) {
+			before := stageStatusBytes(t, metadataBytes, true)
+			after := stageStatusBytes(t, metadataBytes, false)
+			t.Logf(
+				"Stage status: %.1f KiB with Metadata, %.1f KiB without",
+				float64(before)/1024, float64(after)/1024,
+			)
+			// History plus three status fields each hold a copy.
+			require.Greater(t, before, (historyLen+3)*metadataBytes)
+			require.Less(t, after, 8<<10)
 		})
 	}
 }

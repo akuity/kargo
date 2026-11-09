@@ -14,7 +14,8 @@ import type { Image } from './image';
 export interface FreightReference {
   /**
    * Artifacts describes specific versions of artifacts other
-   * than Git repository commits, container images, and Helm charts.
+   * than Git repository commits, container images, and Helm charts. Metadata
+   * may be omitted; read it from the Freight.
    */
   artifacts?: ArtifactReference[];
   /** Charts describes specific versions of specific Helm charts. */

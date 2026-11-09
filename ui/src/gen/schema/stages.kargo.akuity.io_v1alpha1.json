@@ -582,7 +582,7 @@
               "description": "Freight is the freight being promoted.",
               "properties": {
                 "artifacts": {
-                  "description": "Artifacts describes specific versions of artifacts other\nthan Git repository commits, container images, and Helm charts.",
+                  "description": "Artifacts describes specific versions of artifacts other\nthan Git repository commits, container images, and Helm charts. Metadata\nmay be omitted; read it from the Freight.",
                   "items": {
                     "description": "ArtifactReference is a reference to a specific version of an artifact.",
                     "properties": {
@@ -766,7 +766,7 @@
                   "description": "Freight is the detail of the piece of freight that was referenced by this promotion.",
                   "properties": {
                     "artifacts": {
-                      "description": "Artifacts describes specific versions of artifacts other\nthan Git repository commits, container images, and Helm charts.",
+                      "description": "Artifacts describes specific versions of artifacts other\nthan Git repository commits, container images, and Helm charts. Metadata\nmay be omitted; read it from the Freight.",
                       "items": {
                         "description": "ArtifactReference is a reference to a specific version of an artifact.",
                         "properties": {
@@ -939,7 +939,7 @@
                         "description": "FreightReference is a simplified representation of a piece of Freight -- not\na root resource type.",
                         "properties": {
                           "artifacts": {
-                            "description": "Artifacts describes specific versions of artifacts other\nthan Git repository commits, container images, and Helm charts.",
+                            "description": "Artifacts describes specific versions of artifacts other\nthan Git repository commits, container images, and Helm charts. Metadata\nmay be omitted; read it from the Freight.",
                             "items": {
                               "description": "ArtifactReference is a reference to a specific version of an artifact.",
                               "properties": {
@@ -1275,7 +1275,7 @@
               "description": "Freight identifies the Freight being promoted.",
               "properties": {
                 "artifacts": {
-                  "description": "Artifacts describes specific versions of artifacts other\nthan Git repository commits, container images, and Helm charts.",
+                  "description": "Artifacts describes specific versions of artifacts other\nthan Git repository commits, container images, and Helm charts. Metadata\nmay be omitted; read it from the Freight.",
                   "items": {
                     "description": "ArtifactReference is a reference to a specific version of an artifact.",
                     "properties": {
@@ -1448,7 +1448,7 @@
                     "description": "FreightReference is a simplified representation of a piece of Freight -- not\na root resource type.",
                     "properties": {
                       "artifacts": {
-                        "description": "Artifacts describes specific versions of artifacts other\nthan Git repository commits, container images, and Helm charts.",
+                        "description": "Artifacts describes specific versions of artifacts other\nthan Git repository commits, container images, and Helm charts. Metadata\nmay be omitted; read it from the Freight.",
                         "items": {
                           "description": "ArtifactReference is a reference to a specific version of an artifact.",
                           "properties": {
@@ -1761,7 +1761,7 @@
                   "description": "FreightReference is a simplified representation of a piece of Freight -- not\na root resource type.",
                   "properties": {
                     "artifacts": {
-                      "description": "Artifacts describes specific versions of artifacts other\nthan Git repository commits, container images, and Helm charts.",
+                      "description": "Artifacts describes specific versions of artifacts other\nthan Git repository commits, container images, and Helm charts. Metadata\nmay be omitted; read it from the Freight.",
                       "items": {
                         "description": "ArtifactReference is a reference to a specific version of an artifact.",
                         "properties": {
@@ -2037,7 +2037,7 @@
               "description": "Freight is the freight being promoted.",
               "properties": {
                 "artifacts": {
-                  "description": "Artifacts describes specific versions of artifacts other\nthan Git repository commits, container images, and Helm charts.",
+                  "description": "Artifacts describes specific versions of artifacts other\nthan Git repository commits, container images, and Helm charts. Metadata\nmay be omitted; read it from the Freight.",
                   "items": {
                     "description": "ArtifactReference is a reference to a specific version of an artifact.",
                     "properties": {
@@ -2221,7 +2221,7 @@
                   "description": "Freight is the detail of the piece of freight that was referenced by this promotion.",
                   "properties": {
                     "artifacts": {
-                      "description": "Artifacts describes specific versions of artifacts other\nthan Git repository commits, container images, and Helm charts.",
+                      "description": "Artifacts describes specific versions of artifacts other\nthan Git repository commits, container images, and Helm charts. Metadata\nmay be omitted; read it from the Freight.",
                       "items": {
                         "description": "ArtifactReference is a reference to a specific version of an artifact.",
                         "properties": {
@@ -2394,7 +2394,7 @@
                         "description": "FreightReference is a simplified representation of a piece of Freight -- not\na root resource type.",
                         "properties": {
                           "artifacts": {
-                            "description": "Artifacts describes specific versions of artifacts other\nthan Git repository commits, container images, and Helm charts.",
+                            "description": "Artifacts describes specific versions of artifacts other\nthan Git repository commits, container images, and Helm charts. Metadata\nmay be omitted; read it from the Freight.",
                             "items": {
                               "description": "ArtifactReference is a reference to a specific version of an artifact.",
                               "properties": {
@@ -2730,7 +2730,7 @@
               "description": "Freight identifies the Freight being promoted.",
               "properties": {
                 "artifacts": {
-                  "description": "Artifacts describes specific versions of artifacts other\nthan Git repository commits, container images, and Helm charts.",
+                  "description": "Artifacts describes specific versions of artifacts other\nthan Git repository commits, container images, and Helm charts. Metadata\nmay be omitted; read it from the Freight.",
                   "items": {
                     "description": "ArtifactReference is a reference to a specific version of an artifact.",
                     "properties": {
@@ -2903,7 +2903,7 @@
                     "description": "FreightReference is a simplified representation of a piece of Freight -- not\na root resource type.",
                     "properties": {
                       "artifacts": {
-                        "description": "Artifacts describes specific versions of artifacts other\nthan Git repository commits, container images, and Helm charts.",
+                        "description": "Artifacts describes specific versions of artifacts other\nthan Git repository commits, container images, and Helm charts. Metadata\nmay be omitted; read it from the Freight.",
                         "items": {
                           "description": "ArtifactReference is a reference to a specific version of an artifact.",
                           "properties": {

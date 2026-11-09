@@ -346,9 +346,33 @@ func FindArtifact(
 		if f.Origin.Equals(desiredOrigin) {
 			for j := range f.Artifacts {
 				a := &f.Artifacts[j]
-				if a.SubscriptionName == subName {
+				if a.SubscriptionName != subName {
+					continue
+				}
+				if a.Metadata != nil || f.Name == "" {
 					return a, nil
 				}
+				// FreightReferences omit Metadata; read it from the Freight.
+				freight, err := api.GetFreight(
+					ctx,
+					cl,
+					types.NamespacedName{Namespace: project, Name: f.Name},
+				)
+				if err != nil {
+					return nil, err
+				}
+				if freight == nil {
+					// nolint:staticcheck
+					return nil, fmt.Errorf(
+						"Freight %q not found in namespace %q", f.Name, project,
+					)
+				}
+				for k := range freight.Artifacts {
+					if freight.Artifacts[k].SubscriptionName == subName {
+						return &freight.Artifacts[k], nil
+					}
+				}
+				return a, nil
 			}
 		}
 	}

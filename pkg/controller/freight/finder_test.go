@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -876,6 +877,10 @@ func TestFindArtifact(t *testing.T) {
 
 	testArtifact1 := kargoapi.ArtifactReference{SubscriptionName: testSubName}
 	testArtifact2 := kargoapi.ArtifactReference{SubscriptionName: testSubName}
+	testArtifactWithMetadata := kargoapi.ArtifactReference{
+		SubscriptionName: testSubName,
+		Metadata:         &apiextensionsv1.JSON{Raw: []byte(`{"key":"value"}`)},
+	}
 
 	testCases := []struct {
 		name          string
@@ -1079,6 +1084,115 @@ func TestFindArtifact(t *testing.T) {
 			) {
 				require.NoError(t, err)
 				require.Equal(t, &testArtifact1, artifact)
+			},
+		},
+		{
+			name:          "metadata on the reference is returned without a lookup",
+			stage:         &kargoapi.Stage{},
+			desiredOrigin: &testOrigin1,
+			freight: []kargoapi.FreightReference{{
+				Name:      "fake-freight",
+				Origin:    testOrigin1,
+				Artifacts: []kargoapi.ArtifactReference{testArtifactWithMetadata},
+			}},
+			assertions: func(
+				t *testing.T,
+				artifact *kargoapi.ArtifactReference,
+				err error,
+			) {
+				require.NoError(t, err)
+				require.Equal(t, &testArtifactWithMetadata, artifact)
+			},
+		},
+		{
+			name: "metadata omitted from the reference is read from the Freight",
+			client: func() client.Client {
+				return fake.NewClientBuilder().WithScheme(scheme).WithObjects(
+					&kargoapi.Freight{
+						ObjectMeta: metav1.ObjectMeta{
+							Namespace: testNamespace,
+							Name:      "fake-freight",
+						},
+						Origin:    testOrigin1,
+						Artifacts: []kargoapi.ArtifactReference{testArtifactWithMetadata},
+					},
+				).Build()
+			},
+			stage: &kargoapi.Stage{
+				ObjectMeta: metav1.ObjectMeta{Namespace: testNamespace},
+			},
+			desiredOrigin: &testOrigin1,
+			freight: []kargoapi.FreightReference{{
+				Name:      "fake-freight",
+				Origin:    testOrigin1,
+				Artifacts: []kargoapi.ArtifactReference{testArtifact1},
+			}},
+			assertions: func(
+				t *testing.T,
+				artifact *kargoapi.ArtifactReference,
+				err error,
+			) {
+				require.NoError(t, err)
+				require.NotNil(t, artifact)
+				require.Equal(t, testArtifactWithMetadata.Metadata, artifact.Metadata)
+			},
+		},
+		{
+			name: "metadata omitted from the reference and absent from the Freight",
+			client: func() client.Client {
+				return fake.NewClientBuilder().WithScheme(scheme).WithObjects(
+					&kargoapi.Freight{
+						ObjectMeta: metav1.ObjectMeta{
+							Namespace: testNamespace,
+							Name:      "fake-freight",
+						},
+						Origin: testOrigin1,
+						Artifacts: []kargoapi.ArtifactReference{{
+							SubscriptionName: "other-sub",
+							Metadata:         testArtifactWithMetadata.Metadata,
+						}},
+					},
+				).Build()
+			},
+			stage: &kargoapi.Stage{
+				ObjectMeta: metav1.ObjectMeta{Namespace: testNamespace},
+			},
+			desiredOrigin: &testOrigin1,
+			freight: []kargoapi.FreightReference{{
+				Name:      "fake-freight",
+				Origin:    testOrigin1,
+				Artifacts: []kargoapi.ArtifactReference{testArtifact1},
+			}},
+			assertions: func(
+				t *testing.T,
+				artifact *kargoapi.ArtifactReference,
+				err error,
+			) {
+				require.NoError(t, err)
+				require.Equal(t, &testArtifact1, artifact)
+			},
+		},
+		{
+			name: "metadata omitted from the reference and Freight not found",
+			client: func() client.Client {
+				return fake.NewClientBuilder().WithScheme(scheme).Build()
+			},
+			stage: &kargoapi.Stage{
+				ObjectMeta: metav1.ObjectMeta{Namespace: testNamespace},
+			},
+			desiredOrigin: &testOrigin1,
+			freight: []kargoapi.FreightReference{{
+				Name:      "fake-freight",
+				Origin:    testOrigin1,
+				Artifacts: []kargoapi.ArtifactReference{testArtifact1},
+			}},
+			assertions: func(
+				t *testing.T,
+				_ *kargoapi.ArtifactReference,
+				err error,
+			) {
+				require.ErrorContains(t, err, "Freight")
+				require.ErrorContains(t, err, "not found in namespace")
 			},
 		},
 	}

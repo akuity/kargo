@@ -31,6 +31,8 @@ func buildPromotionFreightCollection(
 			lastPromo.Status.FreightCollection.Freight != nil {
 			for _, req := range stage.Spec.RequestedFreight {
 				if freight, ok := lastPromo.Status.FreightCollection.Freight[req.Origin.String()]; ok {
+					// Older references may still carry Metadata.
+					freight.Artifacts = WithoutArtifactMetadata(freight.Artifacts)
 					freightCol.UpdateOrPush(freight)
 				}
 			}
@@ -95,11 +97,27 @@ func GetStageFreightRefs(
 		Commits:   targetFreight.Commits,
 		Images:    targetFreight.Images,
 		Charts:    targetFreight.Charts,
-		Artifacts: targetFreight.Artifacts,
+		Artifacts: WithoutArtifactMetadata(targetFreight.Artifacts),
 		Origin:    targetFreight.Origin,
 	}
 	freightCollection := buildPromotionFreightCollection(ctx, targetFreightRef, stage)
 	return &targetFreightRef, freightCollection, nil
+}
+
+// WithoutArtifactMetadata returns a copy of artifacts without Metadata, which
+// is read from the Freight when needed.
+func WithoutArtifactMetadata(
+	artifacts []kargoapi.ArtifactReference,
+) []kargoapi.ArtifactReference {
+	if artifacts == nil {
+		return nil
+	}
+	out := make([]kargoapi.ArtifactReference, len(artifacts))
+	for i, a := range artifacts {
+		a.Metadata = nil
+		out[i] = a
+	}
+	return out
 }
 
 func GetPromotionRequestFreightRefs(

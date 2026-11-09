@@ -19,7 +19,7 @@ var _ MappedNullable = &FreightReference{}
 
 // FreightReference struct for FreightReference
 type FreightReference struct {
-	// Artifacts describes specific versions of artifacts other than Git repository commits, container images, and Helm charts.
+	// Artifacts describes specific versions of artifacts other than Git repository commits, container images, and Helm charts. Metadata may be omitted; read it from the Freight.
 	Artifacts []ArtifactReference `json:"artifacts,omitempty"`
 	// Charts describes specific versions of specific Helm charts.
 	Charts []Chart `json:"charts,omitempty"`
