@@ -354,6 +354,8 @@ func TestRefreshRequested_BackToBackRefreshes(t *testing.T) {
 	first := wh.DeepCopy()
 	require.NoError(t, api.RefreshObject(ctx, c, wh))
 	second := wh.DeepCopy()
+	require.NotEmpty(t, first.GetAnnotations()[kargoapi.AnnotationKeyRefresh])
+	require.NotEmpty(t, second.GetAnnotations()[kargoapi.AnnotationKeyRefresh])
 
 	require.True(t, RefreshRequested{}.Update(event.UpdateEvent{
 		ObjectOld: first,

@@ -44,6 +44,7 @@ func TestRefreshObject(t *testing.T) {
 
 	require.NoError(t, RefreshObject(ctx, c, wh))
 	second := wh.GetAnnotations()[kargoapi.AnnotationKeyRefresh]
+	require.NotEmpty(t, second)
 	require.NotEqual(t, annotation, second)
 
 	stored := &kargoapi.Warehouse{}
@@ -121,6 +122,7 @@ func TestRefreshHelpers(t *testing.T) {
 			firstVal := first.GetAnnotations()[kargoapi.AnnotationKeyRefresh]
 			secondVal := second.GetAnnotations()[kargoapi.AnnotationKeyRefresh]
 			require.NotEmpty(t, firstVal)
+			require.NotEmpty(t, secondVal)
 			require.NotEqual(t, firstVal, secondVal)
 
 			stored := tt.obj.DeepCopyObject().(client.Object) // nolint: forcetypeassert
