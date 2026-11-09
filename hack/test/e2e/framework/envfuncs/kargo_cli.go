@@ -67,7 +67,15 @@ func processLoginConfig(ctx context.Context, loginConfigVal any) (context.Contex
 	if loginConfig, ok := loginConfigVal.(map[string]any); ok {
 		// There are extra fields in the config
 		// Using tmpdir for config home
-		if useTmpConfigHome, _ := loginConfig["use_tmp_config_home"].(bool); useTmpConfigHome {
+		rawUseTmpConfigHome, present := loginConfig["use_tmp_config_home"]
+		useTmpConfigHome, isBool := rawUseTmpConfigHome.(bool)
+		if present && !isBool {
+			return ctx, nil, fmt.Errorf(
+				"kargo_cli.kargo_login.use_tmp_config_home must be a boolean, got %T",
+				rawUseTmpConfigHome,
+			)
+		}
+		if useTmpConfigHome {
 			oldConfigHome := os.Getenv(ConfigHomeVar)
 
 			tempdir, _ := ctx.Value(TmpDirKey).(string)
