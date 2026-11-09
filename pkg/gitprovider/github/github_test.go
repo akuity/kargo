@@ -380,6 +380,8 @@ func TestMergePullRequest(t *testing.T) {
 		expectedMerged     bool
 		expectError        bool
 		errorContains      string
+		errorIs            error
+		notErrorIs         error
 		expectMergeOptions *github.PullRequestOptions
 	}{
 		{
@@ -400,7 +402,21 @@ func TestMergePullRequest(t *testing.T) {
 					Return(nil, &github.Response{}, nil)
 			},
 			expectError:   true,
-			errorContains: "pull request 404 not found",
+			errorContains: "pull request not found",
+			errorIs:       gitprovider.ErrPullRequestNotFound,
+		},
+		{
+			name:     "404 from initial get",
+			prNumber: 404,
+			setupMock: func(m *mockGithubClient) {
+				m.On("GetPullRequests", mock.Anything, testRepoOwner, testRepoName, int(404)).
+					Return(nil, nil, &github.ErrorResponse{
+						Response: &http.Response{StatusCode: http.StatusNotFound},
+					})
+			},
+			expectError:   true,
+			errorContains: "pull request not found",
+			errorIs:       gitprovider.ErrPullRequestNotFound,
 		},
 		{
 			name:     "PR already merged",
@@ -436,6 +452,7 @@ func TestMergePullRequest(t *testing.T) {
 			},
 			expectError:   true,
 			errorContains: "closed but not merged",
+			errorIs:       gitprovider.ErrPullRequestClosedUnmerged,
 		},
 		{
 			name:     "unknown mergeability",
@@ -632,6 +649,7 @@ func TestMergePullRequest(t *testing.T) {
 			},
 			expectError:   true,
 			errorContains: "Squash merges are not allowed",
+			errorIs:       gitprovider.ErrUnsupportedMergeMethod,
 		},
 		{
 			// A branch that is behind its base is blocked by a strict required
@@ -675,7 +693,8 @@ func TestMergePullRequest(t *testing.T) {
 					}, &github.Response{}, nil)
 			},
 			expectError:   true,
-			errorContains: "has conflicts and cannot be merged",
+			errorContains: "pull request has conflicts",
+			errorIs:       gitprovider.ErrPullRequestNotMergeable,
 		},
 		{
 			name:     "merge call fails",
@@ -699,6 +718,9 @@ func TestMergePullRequest(t *testing.T) {
 			},
 			expectError:   true,
 			errorContains: "error merging pull request",
+			// A non-405 failure may be transient, so it must not be classified as
+			// permanent.
+			notErrorIs: gitprovider.ErrPullRequestNotMergeable,
 		},
 		{
 			name:     "merge call returns 405 base branch modified is not ready",
@@ -756,6 +778,34 @@ func TestMergePullRequest(t *testing.T) {
 			},
 			expectError:   true,
 			errorContains: "Squash merges are not allowed",
+			errorIs:       gitprovider.ErrUnsupportedMergeMethod,
+		},
+		{
+			name:     "merge call returns unrecognized 405 is terminal",
+			prNumber: 408,
+			setupMock: func(m *mockGithubClient) {
+				m.On("GetPullRequests", mock.Anything, testRepoOwner, testRepoName, int(408)).
+					Return(&github.PullRequest{
+						Number:    github.Ptr(408),
+						State:     github.Ptr("open"),
+						Merged:    github.Ptr(false),
+						Mergeable: github.Ptr(true),
+						Head:      &github.PullRequestBranch{SHA: github.Ptr("head_sha")},
+						HTMLURL:   github.Ptr("https://github.com/akuity/kargo/pull/408"),
+					}, &github.Response{}, nil).Once()
+
+				// A 405 that is not recognizably transient, for a PR that was not
+				// blocked by policy, is permanent.
+				m.On("MergePullRequest", mock.Anything, testRepoOwner, testRepoName, int(408), "",
+					mock.AnythingOfType("*github.PullRequestOptions")).
+					Return(nil, nil, &github.ErrorResponse{
+						Response: &http.Response{StatusCode: http.StatusMethodNotAllowed},
+						Message:  "Something unexpected",
+					})
+			},
+			expectError:   true,
+			errorContains: "Something unexpected",
+			errorIs:       gitprovider.ErrPullRequestNotMergeable,
 		},
 		{
 			name:     "merge call returns 405 not mergeable is not ready",
@@ -966,6 +1016,12 @@ func TestMergePullRequest(t *testing.T) {
 			if tt.expectError {
 				require.Error(t, err)
 				require.Contains(t, err.Error(), tt.errorContains)
+				if tt.errorIs != nil {
+					require.ErrorIs(t, err, tt.errorIs)
+				}
+				if tt.notErrorIs != nil {
+					require.NotErrorIs(t, err, tt.notErrorIs)
+				}
 				require.False(t, merged)
 				require.Nil(t, pr)
 			} else {
@@ -1033,7 +1089,7 @@ func TestMergePullRequestNotMergeableThenDirty(t *testing.T) {
 
 	pr, merged, err = p.MergePullRequest(t.Context(), 500, nil)
 	require.Error(t, err)
-	require.Contains(t, err.Error(), "has conflicts and cannot be merged")
+	require.ErrorIs(t, err, gitprovider.ErrPullRequestNotMergeable)
 	require.False(t, merged)
 	require.Nil(t, pr)
 
