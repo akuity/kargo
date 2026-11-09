@@ -149,7 +149,7 @@ func NewPromotionRolloutForSelectTargets(
 	stage *kargoapi.Stage,
 	freightName string,
 	stageTargets []kargoapi.Target,
-	rolloutTargets []kargoapi.PromotionRolloutTarget,
+	selectTargets []string,
 	updateStrategy *kargoapi.TargetUpdateStrategy,
 ) (*kargoapi.PromotionRollout, error) {
 
@@ -163,13 +163,22 @@ func NewPromotionRolloutForSelectTargets(
 	for _, stageTarget := range stageTargets {
 		stageTargetsNameSet[stageTarget.Name] = struct{}{}
 	}
-	for _, rolloutTarget := range rolloutTargets {
-		if _, ok := stageTargetsNameSet[rolloutTarget.Name]; !ok {
+
+	selectTargetsNameSet := make(map[string]any, len(selectTargets))
+
+	rolloutTargets := []kargoapi.PromotionRolloutTarget{}
+	for _, selectTarget := range selectTargets {
+		if _, ok := stageTargetsNameSet[selectTarget]; !ok {
 			return nil, fmt.Errorf(
 				"%w: target %q is not selected by stage %q",
 				ErrTargetNotSelected,
-				rolloutTarget.Name,
+				selectTarget,
 				stage.Name)
+		}
+		// Deduplicate configured targets
+		if _, ok := selectTargetsNameSet[selectTarget]; !ok {
+			selectTargetsNameSet[selectTarget] = struct{}{}
+			rolloutTargets = append(rolloutTargets, kargoapi.PromotionRolloutTarget{Name: selectTarget})
 		}
 	}
 

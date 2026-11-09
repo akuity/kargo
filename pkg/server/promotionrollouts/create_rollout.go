@@ -4,8 +4,6 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"slices"
-	"strings"
 
 	"github.com/google/uuid"
 
@@ -88,30 +86,31 @@ func (c *creator) Create(
 	if err != nil {
 		return nil, libhttp.Error(err, http.StatusBadRequest)
 	}
+	var rollout *kargoapi.PromotionRollout
 	if len(targetNames) > 0 {
-		if governed, err = selectTargets(stage.Name, governed, targetNames); err != nil {
-			return nil, err
-		}
+		rollout, err = api.NewPromotionRolloutForSelectTargets(
+			stage, freight.Name, governed, targetNames, updateStrategy)
+	} else {
+		rollout, err = api.NewPromotionRolloutForAllTargets(
+			stage, freight.Name, governed, updateStrategy)
 	}
-	// governed is already narrowed to the Targets promoted to, so the
-	// strategy is resolved against that count, not the Stage's whole fleet.
-	rollout, err := api.NewPromotionRolloutForAllTargets(stage, freight.Name, governed, updateStrategy)
+
 	if err != nil {
 		return nil, libhttp.Error(err, http.StatusBadRequest)
 	}
-	ids := make([]uuid.UUID, len(governed))
-	for i, target := range governed {
-		if ids[i], err = uuid.Parse(string(target.UID)); err != nil {
-			return nil, fmt.Errorf("error reading the id of Target %q: %w", target.Name, err)
-		}
+
+	targetIds, err := getTargetIds(rollout, governed)
+	if err != nil {
+		return nil, err
 	}
+
 	var actor string
 	if u, ok := user.IdentityFromContext(ctx); ok {
 		actor = u.Actor()
 	}
 	row := promotionrolloutstore.FromSpec(rollout.Name, rollout.Spec)
 	row.CreatedBy = actor
-	stored, err := c.store.Create(ctx, stage.Namespace, row, ids)
+	stored, err := c.store.Create(ctx, stage.Namespace, row, targetIds)
 	if err != nil {
 		return nil, storeError(err, rollout.Name)
 	}
@@ -119,35 +118,20 @@ func (c *creator) Create(
 	return promotionrolloutstore.ToAPI(stored), nil
 }
 
-// selectTargets returns those of the Stage's governed Targets that are
-// named, in the order governed lists them. Every name must be governed; the
-// ones that are not are reported together, as a bad request. A name given
-// more than once counts once: the API refuses duplicates, but a caller of
-// Create need not have.
-func selectTargets(stage string, governed []kargoapi.Target, names []string) ([]kargoapi.Target, error) {
-	names = slices.Compact(slices.Sorted(slices.Values(names)))
-	selected := make([]kargoapi.Target, 0, len(names))
-	for _, target := range governed {
-		if slices.Contains(names, target.Name) {
-			selected = append(selected, target)
+// TODO: we might instead add UID as a field to PromotionRolloutTarget and resolve IDs in NewPromotionRollout functions
+func getTargetIds(rollout *kargoapi.PromotionRollout, stageTargets []kargoapi.Target) ([]uuid.UUID, error) {
+	stageTargetsByName := make(map[string]kargoapi.Target, len(stageTargets))
+	for _, stageTarget := range stageTargets {
+		stageTargetsByName[stageTarget.Name] = stageTarget
+	}
+	ids := make([]uuid.UUID, len(rollout.Spec.Targets))
+	var err error
+	for i, target := range rollout.Spec.Targets {
+		if ids[i], err = uuid.Parse(string(stageTargetsByName[target.Name].UID)); err != nil {
+			return nil, fmt.Errorf("error reading the id of Target %q: %w", target.Name, err)
 		}
 	}
-	if len(selected) == len(names) {
-		return selected, nil
-	}
-	var ungoverned []string
-	for _, name := range names {
-		if !slices.ContainsFunc(governed, func(t kargoapi.Target) bool { return t.Name == name }) {
-			ungoverned = append(ungoverned, name)
-		}
-	}
-	return nil, libhttp.ErrorStr(
-		fmt.Sprintf(
-			"Stage %q does not govern Targets %s; a PromotionRollout promotes only to Targets its Stage selects",
-			stage, strings.Join(ungoverned, ", "),
-		),
-		http.StatusBadRequest,
-	)
+	return ids, nil
 }
 
 // logChange records a change to a PromotionRollout and who made it, which
