@@ -519,6 +519,84 @@ func Test_httpRequester_run(t *testing.T) {
 			},
 		},
 		{
+			name: "failed while success expression cannot be evaluated",
+			handler: func(w http.ResponseWriter, _ *http.Request) {
+				w.Header().Set(contentTypeHeader, contentTypeJSON)
+				w.WriteHeader(http.StatusNotFound)
+				_, err := w.Write([]byte(`{"message": "not found"}`))
+				require.NoError(t, err)
+			},
+			cfg: builtin.HTTPConfig{
+				SuccessExpression: "response.body.items[0].state == 'done'",
+				FailureExpression: "response.status >= 400",
+				ErrorExpression:   "response.body.message",
+			},
+			// Failure takes precedence, so the success expression, which expects
+			// a differently shaped body, should not be evaluated at all.
+			assertions: func(t *testing.T, res promotion.StepResult, err error) {
+				require.ErrorContains(
+					t,
+					err,
+					`HTTP (404) response met failure criteria: "not found"`,
+				)
+				require.True(t, promotion.IsTerminal(err))
+				require.Equal(t, kargoapi.PromotionStepStatusFailed, res.Status)
+			},
+		},
+		{
+			name: "not failed while success expression cannot be evaluated",
+			handler: func(w http.ResponseWriter, _ *http.Request) {
+				w.Header().Set(contentTypeHeader, contentTypeJSON)
+				_, err := w.Write([]byte(`{}`))
+				require.NoError(t, err)
+			},
+			cfg: builtin.HTTPConfig{
+				SuccessExpression: "response.body.items[0].state == 'done'",
+				FailureExpression: "response.status >= 400",
+			},
+			assertions: func(t *testing.T, res promotion.StepResult, err error) {
+				require.ErrorContains(t, err, "error evaluating success expression")
+				require.False(t, promotion.IsTerminal(err))
+				require.Equal(t, kargoapi.PromotionStepStatusErrored, res.Status)
+			},
+		},
+		{
+			name: "failed while success expression does not compile",
+			handler: func(w http.ResponseWriter, _ *http.Request) {
+				w.WriteHeader(http.StatusNotFound)
+			},
+			cfg: builtin.HTTPConfig{
+				SuccessExpression: "(1 + 2",
+				FailureExpression: "response.status == 404",
+			},
+			// A success expression that does not compile is a misconfiguration,
+			// reported even when the failure criteria are met.
+			assertions: func(t *testing.T, res promotion.StepResult, err error) {
+				require.ErrorContains(t, err, `error compiling success expression "(1 + 2"`)
+				require.True(t, promotion.IsTerminal(err))
+				require.Equal(t, kargoapi.PromotionStepStatusErrored, res.Status)
+			},
+		},
+		{
+			name: "succeeded while failure expression cannot be evaluated",
+			handler: func(w http.ResponseWriter, _ *http.Request) {
+				w.Header().Set(contentTypeHeader, contentTypeJSON)
+				_, err := w.Write([]byte(`{}`))
+				require.NoError(t, err)
+			},
+			cfg: builtin.HTTPConfig{
+				SuccessExpression: "response.status == 200",
+				FailureExpression: "response.body.items[0].state == 'failed'",
+			},
+			// Whether the failure criteria are met is unknown, so the step must
+			// not succeed.
+			assertions: func(t *testing.T, res promotion.StepResult, err error) {
+				require.ErrorContains(t, err, "error evaluating failure expression")
+				require.False(t, promotion.IsTerminal(err))
+				require.Equal(t, kargoapi.PromotionStepStatusErrored, res.Status)
+			},
+		},
+		{
 			name: "neither success nor failed",
 			handler: func(w http.ResponseWriter, _ *http.Request) {
 				w.WriteHeader(http.StatusBadGateway)
@@ -1332,6 +1410,60 @@ func Test_httpRequester_buildExprEnv(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			env, err := h.buildExprEnv(t.Context(), testCase.resp, testCase.responseContentType)
 			testCase.assertions(t, env, err)
+		})
+	}
+}
+
+func Test_httpRequester_compileCriteria(t *testing.T) {
+	testCases := []struct {
+		name       string
+		cfg        builtin.HTTPConfig
+		assertions func(t *testing.T, err error)
+	}{
+		{
+			name: "no expressions",
+			cfg:  builtin.HTTPConfig{},
+			assertions: func(t *testing.T, err error) {
+				require.NoError(t, err)
+			},
+		},
+		{
+			name: "both expressions compile",
+			cfg: builtin.HTTPConfig{
+				SuccessExpression: "response.status == 200",
+				FailureExpression: "response.status == 404",
+			},
+			assertions: func(t *testing.T, err error) {
+				require.NoError(t, err)
+			},
+		},
+		{
+			name: "success expression does not compile",
+			cfg: builtin.HTTPConfig{
+				SuccessExpression: "(1 + 2",
+				FailureExpression: "response.status == 404",
+			},
+			assertions: func(t *testing.T, err error) {
+				require.ErrorContains(t, err, `error compiling success expression "(1 + 2"`)
+				require.True(t, promotion.IsTerminal(err))
+			},
+		},
+		{
+			name: "failure expression does not compile",
+			cfg: builtin.HTTPConfig{
+				SuccessExpression: "response.status == 200",
+				FailureExpression: "(1 + 2",
+			},
+			assertions: func(t *testing.T, err error) {
+				require.ErrorContains(t, err, `error compiling failure expression "(1 + 2"`)
+				require.True(t, promotion.IsTerminal(err))
+			},
+		},
+	}
+	h := &httpRequester{}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			testCase.assertions(t, h.compileCriteria(testCase.cfg))
 		})
 	}
 }

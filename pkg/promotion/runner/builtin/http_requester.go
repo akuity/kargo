@@ -117,17 +117,29 @@ func (h *httpRequester) run(
 			fmt.Errorf("error building expression context from HTTP response: %w", err)
 	}
 
-	// Evaluate success and failure criteria
-	successResult, err := h.evaluateSuccessCriteria(cfg, env)
-	if err != nil {
-		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
-			fmt.Errorf("error evaluating success criteria: %w", err)
+	// Compile both criteria before evaluating either, so that an expression
+	// that does not compile is reported even when the other one decides the
+	// outcome.
+	if err = h.compileCriteria(cfg); err != nil {
+		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, err
 	}
 
+	// Failure takes precedence over success, so evaluate the failure criteria
+	// first and the success criteria only if they are not met. An error
+	// response seldom has the shape a success expression expects, so
+	// evaluating it then could fail and hide the failure.
 	failureResult, err := h.evaluateFailureCriteria(cfg, env)
 	if err != nil {
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 			fmt.Errorf("error evaluating failure criteria: %w", err)
+	}
+
+	var successResult *bool
+	if failureResult == nil || !*failureResult {
+		if successResult, err = h.evaluateSuccessCriteria(cfg, env); err != nil {
+			return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
+				fmt.Errorf("error evaluating success criteria: %w", err)
+		}
 	}
 
 	// Determine outcome based on criteria evaluation results
@@ -197,6 +209,31 @@ func (h *httpRequester) run(
 			RetryAfter: &pollInterval,
 		}, nil
 	}
+}
+
+// compileCriteria compiles the success and failure criteria expressions, if
+// defined, returning a terminal error for the first one that does not compile.
+func (h *httpRequester) compileCriteria(cfg builtin.HTTPConfig) error {
+	for _, criteria := range []struct {
+		name       string
+		expression string
+	}{
+		{name: "success", expression: cfg.SuccessExpression},
+		{name: "failure", expression: cfg.FailureExpression},
+	} {
+		if criteria.expression == "" {
+			continue
+		}
+		if _, err := expr.Compile(criteria.expression); err != nil {
+			return &promotion.TerminalError{
+				Err: fmt.Errorf(
+					"error compiling %s expression %q: %w",
+					criteria.name, criteria.expression, err,
+				),
+			}
+		}
+	}
+	return nil
 }
 
 // evaluateSuccessCriteria evaluates the success criteria expression if defined.
