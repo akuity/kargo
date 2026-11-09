@@ -1,5 +1,6 @@
 // Package fidelity proves (or disproves) wire compatibility between the
-// openapi-generator-generated Go client (../generated) and the canonical
+// openapi-generator-generated Go client
+// (github.com/akuity/kargo/pkg/x/client/generated) and the canonical
 // serialization produced by the real Kargo/Kubernetes API types.
 //
 // Method: construct richly-populated resources using the canonical types

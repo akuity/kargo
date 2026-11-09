@@ -3,8 +3,7 @@ module github.com/akuity/kargo
 go 1.27.0
 
 replace (
-	github.com/akuity/kargo/pkg/x/client/generated => ./pkg/x/client/generated
-	github.com/akuity/kargo/pkg/x/client/watch => ./pkg/x/client/watch
+	github.com/akuity/kargo/pkg/x/client => ./pkg/x/client
 	github.com/akuity/kargo/pkg/x/promotion/stepconfig => ./pkg/x/promotion/stepconfig
 
 	// NB(hidde): required because of https://github.com/kubernetes-sigs/kustomize/issues/6014
@@ -36,8 +35,7 @@ require (
 	github.com/Masterminds/semver/v3 v3.5.0
 	github.com/Masterminds/sprig/v3 v3.3.0
 	github.com/adrg/xdg v0.5.3
-	github.com/akuity/kargo/pkg/x/client/generated v0.0.0
-	github.com/akuity/kargo/pkg/x/client/watch v0.0.0
+	github.com/akuity/kargo/pkg/x/client v0.0.0
 	github.com/akuity/kargo/pkg/x/promotion/stepconfig v0.0.0
 	github.com/aws/aws-lambda-go v1.55.1
 	github.com/aws/aws-sdk-go-v2 v1.47.6
