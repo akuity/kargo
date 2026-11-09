@@ -18,8 +18,8 @@ import (
 	"github.com/akuity/kargo/pkg/cli/kubernetes"
 	"github.com/akuity/kargo/pkg/cli/option"
 	"github.com/akuity/kargo/pkg/cli/templates"
-	"github.com/akuity/kargo/pkg/client/watch"
 	kargogen "github.com/akuity/kargo/pkg/x/client/generated"
+	"github.com/akuity/kargo/pkg/x/client/watch"
 )
 
 type promotionOptions struct {
@@ -353,7 +353,11 @@ func (o *promotionOptions) waitForPromotion(
 				}
 				return errors.New("unexpected end of watch stream")
 			}
-			if event.Object != nil && event.Object.Status.Phase.IsTerminal() {
+			if event.Object == nil {
+				continue
+			}
+			phase := kargoapi.PromotionPhase(event.Object.Status.GetPhase())
+			if phase.IsTerminal() {
 				return nil
 			}
 		case err := <-errCh:

@@ -12,7 +12,7 @@ import (
 
 	"github.com/hashicorp/go-cleanhttp"
 
-	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	kargogen "github.com/akuity/kargo/pkg/x/client/generated"
 )
 
 // EventType represents the type of watch event.
@@ -55,9 +55,9 @@ func (c *Client) WatchStage(
 	ctx context.Context,
 	project string,
 	stage string,
-) (<-chan Event[*kargoapi.Stage], <-chan error) {
+) (<-chan Event[*kargogen.Stage], <-chan error) {
 	url := fmt.Sprintf("%s/v1beta1/projects/%s/stages/%s?watch=true", c.baseURL, project, stage)
-	return watchResource[*kargoapi.Stage](ctx, c, url)
+	return watchResource[*kargogen.Stage](ctx, c, url)
 }
 
 // WatchFreight watches a specific Freight for changes. Cancel the provided context
@@ -66,9 +66,9 @@ func (c *Client) WatchFreight(
 	ctx context.Context,
 	project string,
 	freight string,
-) (<-chan Event[*kargoapi.Freight], <-chan error) {
+) (<-chan Event[*kargogen.Freight], <-chan error) {
 	url := fmt.Sprintf("%s/v1beta1/projects/%s/freight/%s?watch=true", c.baseURL, project, freight)
-	return watchResource[*kargoapi.Freight](ctx, c, url)
+	return watchResource[*kargogen.Freight](ctx, c, url)
 }
 
 // WatchWarehouses watches all Warehouses in a project for changes. Cancel the
@@ -76,9 +76,9 @@ func (c *Client) WatchFreight(
 func (c *Client) WatchWarehouses(
 	ctx context.Context,
 	project string,
-) (<-chan Event[*kargoapi.Warehouse], <-chan error) {
+) (<-chan Event[*kargogen.Warehouse], <-chan error) {
 	url := fmt.Sprintf("%s/v1beta1/projects/%s/warehouses?watch=true", c.baseURL, project)
-	return watchResource[*kargoapi.Warehouse](ctx, c, url)
+	return watchResource[*kargogen.Warehouse](ctx, c, url)
 }
 
 // WatchStages watches all Stages in a project for changes. Cancel the provided
@@ -86,9 +86,9 @@ func (c *Client) WatchWarehouses(
 func (c *Client) WatchStages(
 	ctx context.Context,
 	project string,
-) (<-chan Event[*kargoapi.Stage], <-chan error) {
+) (<-chan Event[*kargogen.Stage], <-chan error) {
 	url := fmt.Sprintf("%s/v1beta1/projects/%s/stages?watch=true", c.baseURL, project)
-	return watchResource[*kargoapi.Stage](ctx, c, url)
+	return watchResource[*kargogen.Stage](ctx, c, url)
 }
 
 // WatchPromotions watches all Promotions in a project for changes. Cancel the
@@ -96,9 +96,9 @@ func (c *Client) WatchStages(
 func (c *Client) WatchPromotions(
 	ctx context.Context,
 	project string,
-) (<-chan Event[*kargoapi.Promotion], <-chan error) {
+) (<-chan Event[*kargogen.Promotion], <-chan error) {
 	url := fmt.Sprintf("%s/v1beta1/projects/%s/promotions?watch=true", c.baseURL, project)
-	return watchResource[*kargoapi.Promotion](ctx, c, url)
+	return watchResource[*kargogen.Promotion](ctx, c, url)
 }
 
 // WatchWarehouse watches a specific Warehouse for changes. Cancel the provided
@@ -107,9 +107,9 @@ func (c *Client) WatchWarehouse(
 	ctx context.Context,
 	project string,
 	warehouse string,
-) (<-chan Event[*kargoapi.Warehouse], <-chan error) {
+) (<-chan Event[*kargogen.Warehouse], <-chan error) {
 	url := fmt.Sprintf("%s/v1beta1/projects/%s/warehouses/%s?watch=true", c.baseURL, project, warehouse)
-	return watchResource[*kargoapi.Warehouse](ctx, c, url)
+	return watchResource[*kargogen.Warehouse](ctx, c, url)
 }
 
 // WatchPromotion watches a specific Promotion for changes. Cancel the provided
@@ -118,9 +118,9 @@ func (c *Client) WatchPromotion(
 	ctx context.Context,
 	project string,
 	promotion string,
-) (<-chan Event[*kargoapi.Promotion], <-chan error) {
+) (<-chan Event[*kargogen.Promotion], <-chan error) {
 	url := fmt.Sprintf("%s/v1beta1/projects/%s/promotions/%s?watch=true", c.baseURL, project, promotion)
-	return watchResource[*kargoapi.Promotion](ctx, c, url)
+	return watchResource[*kargogen.Promotion](ctx, c, url)
 }
 
 // WatchProjectConfig watches the ProjectConfig for a specific project. Cancel
@@ -128,18 +128,18 @@ func (c *Client) WatchPromotion(
 func (c *Client) WatchProjectConfig(
 	ctx context.Context,
 	project string,
-) (<-chan Event[*kargoapi.ProjectConfig], <-chan error) {
+) (<-chan Event[*kargogen.ProjectConfig], <-chan error) {
 	url := fmt.Sprintf("%s/v1beta1/projects/%s/config?watch=true", c.baseURL, project)
-	return watchResource[*kargoapi.ProjectConfig](ctx, c, url)
+	return watchResource[*kargogen.ProjectConfig](ctx, c, url)
 }
 
 // WatchClusterConfig watches the ClusterConfig. Cancel the provided context to
 // stop watching.
 func (c *Client) WatchClusterConfig(
 	ctx context.Context,
-) (<-chan Event[*kargoapi.ClusterConfig], <-chan error) {
+) (<-chan Event[*kargogen.ClusterConfig], <-chan error) {
 	url := fmt.Sprintf("%s/v1beta1/cluster-config?watch=true", c.baseURL)
-	return watchResource[*kargoapi.ClusterConfig](ctx, c, url)
+	return watchResource[*kargogen.ClusterConfig](ctx, c, url)
 }
 
 // watchEvent is the generic JSON structure for all watch events.
