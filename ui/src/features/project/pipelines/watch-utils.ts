@@ -121,6 +121,26 @@ function isNewerResourceVersion(incoming?: string, existing?: string): boolean {
   }
 }
 
+type WithResourceVersion = { metadata?: { resourceVersion?: string } };
+
+// advanceResourceVersion returns existing (a cached list) with its
+// resourceVersion moved up to that of incoming (a watch event's object), or
+// existing as-is if incoming is not newer. Without this, the list keeps the
+// resourceVersion of its initial fetch, and a watch reopened from it later
+// (e.g. when the browser tab becomes visible again) replays every change since
+// then — briefly showing stale states, such as a finished Stage as Promoting,
+// while it catches up.
+export function advanceResourceVersion<T extends WithResourceVersion>(
+  existing: T,
+  incoming: WithResourceVersion
+): T {
+  const resourceVersion = incoming.metadata?.resourceVersion;
+  if (!isNewerResourceVersion(resourceVersion, existing.metadata?.resourceVersion)) {
+    return existing;
+  }
+  return { ...existing, metadata: { ...existing.metadata, resourceVersion } };
+}
+
 // Reads an SSE stream of raw text chunks (e.g. AnalysisRun logs). The server
 // writes each line of a chunk as its own `data:` line, so rejoining the data
 // lines with `\n` reconstructs the original chunk verbatim. Unlike
@@ -183,28 +203,32 @@ export async function* readSSETextStream(url: string, signal: AbortSignal): Asyn
 // object collapse to the latest, while updates to distinct objects all survive
 // and are delivered together. The default zero delay batches every event parsed
 // from a single network chunk, since the stream consumer processes them
-// synchronously before the next read.
+// synchronously before the next read. `flush` delivers the pending batch right
+// away; watches call it when they close, because a reopened watch resumes after
+// the last event it saw and will not deliver those objects again.
 export function batchEmitter<T>(
-  flush: (items: T[]) => void,
+  onFlush: (items: T[]) => void,
   keyOf: (item: T) => string,
   delayMs = 0
-): { call: (item: T) => void; cancel: () => void } {
+): { call: (item: T) => void; flush: () => void } {
   const pending = new Map<string, T>();
   let timer: ReturnType<typeof setTimeout> | undefined;
+  const flush = () => {
+    clearTimeout(timer);
+    if (pending.size === 0) {
+      return;
+    }
+    const batch = [...pending.values()];
+    pending.clear();
+    onFlush(batch);
+  };
   return {
     call: (item: T) => {
       pending.set(keyOf(item), item);
       clearTimeout(timer);
-      timer = setTimeout(() => {
-        const batch = [...pending.values()];
-        pending.clear();
-        flush(batch);
-      }, delayMs);
+      timer = setTimeout(flush, delayMs);
     },
-    cancel: () => {
-      clearTimeout(timer);
-      pending.clear();
-    }
+    flush
   };
 }
 
