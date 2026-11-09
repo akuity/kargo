@@ -1,16 +1,24 @@
 import { Flex, Popover, Tag } from 'antd';
-import { MouseEvent, useLayoutEffect, useRef, useState } from 'react';
+import { KeyboardEvent, SyntheticEvent, useLayoutEffect, useRef, useState } from 'react';
 
-import { fitCount, visibleLabels } from './visible-labels';
+import { fitCount, isActivationKey, visibleLabels } from './visible-labels';
 
 const GAP = 4;
 
 // The tile is a link to the Project, so a click on a label must neither follow
 // it nor bubble up to it (Popover content is portalled, but React still
-// bubbles synthetic events through the portal to the Link).
-const stop = (e: MouseEvent) => {
+// bubbles synthetic events through the portal to the Link). The same applies
+// to Enter on a focused label, which would otherwise activate the Link.
+const stop = (e: SyntheticEvent) => {
   e.preventDefault();
   e.stopPropagation();
+};
+
+// stopKeys keeps Enter/Space on a focused tag from reaching the Link.
+const stopKeys = (e: KeyboardEvent) => {
+  if (isActivationKey(e.key)) {
+    stop(e);
+  }
 };
 
 const LabelTag = ({
@@ -25,10 +33,24 @@ const LabelTag = ({
     title={`${key}: ${value}`}
     className='!m-0 min-w-0 max-w-full truncate'
     style={{ cursor: onClick ? 'pointer' : undefined }}
+    // Clickable labels act as buttons, so they are reachable and usable from
+    // the keyboard too.
+    role={onClick ? 'button' : undefined}
+    tabIndex={onClick ? 0 : undefined}
     onClick={(e) => {
       stop(e);
       onClick?.(key, value);
     }}
+    onKeyDown={
+      onClick
+        ? (e) => {
+            if (isActivationKey(e.key)) {
+              stop(e);
+              onClick(key, value);
+            }
+          }
+        : undefined
+    }
   >
     {key}: {value}
   </Tag>
@@ -95,6 +117,8 @@ export const ProjectLabels = ({
         ))}
         {hidden > 0 && (
           <Popover
+            // focus lets keyboard users open the list of all labels.
+            trigger={['hover', 'focus']}
             content={
               <Flex gap={GAP} wrap style={{ maxWidth: 320 }}>
                 {pairs.map((pair) => (
@@ -103,7 +127,14 @@ export const ProjectLabels = ({
               </Flex>
             }
           >
-            <Tag bordered={false} className='!m-0 shrink-0 cursor-pointer' onClick={stop}>
+            <Tag
+              bordered={false}
+              className='!m-0 shrink-0 cursor-pointer'
+              tabIndex={0}
+              aria-label={`Show all ${pairs.length} labels`}
+              onClick={stop}
+              onKeyDown={stopKeys}
+            >
               +{hidden}
             </Tag>
           </Popover>

@@ -49,3 +49,7 @@ export const fitCount = (
   }
   return widths.length;
 };
+
+// isActivationKey reports whether a key press should activate a control that
+// acts as a button: Enter or Space, like a native <button>.
+export const isActivationKey = (key: string): boolean => key === 'Enter' || key === ' ';

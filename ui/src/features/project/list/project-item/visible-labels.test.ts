@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest';
 
-import { fitCount, visibleLabels } from './visible-labels';
+import { fitCount, isActivationKey, visibleLabels } from './visible-labels';
 
 describe('visibleLabels', () => {
   test('drops system labels and sorts by key', () => {
@@ -41,5 +41,14 @@ describe('fitCount', () => {
 
   test('no labels', () => {
     expect(fitCount([], 30, 100, 4)).toBe(0);
+  });
+});
+
+describe('isActivationKey', () => {
+  test('accepts Enter and Space only', () => {
+    expect(isActivationKey('Enter')).toBe(true);
+    expect(isActivationKey(' ')).toBe(true);
+    expect(isActivationKey('Tab')).toBe(false);
+    expect(isActivationKey('a')).toBe(false);
   });
 });
