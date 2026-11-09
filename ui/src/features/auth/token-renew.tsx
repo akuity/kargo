@@ -94,14 +94,7 @@ export const TokenRenew = () => {
         }
 
         onLogin(result.id_token, result.refresh_token);
-        if (safeRedirectQuery) {
-          // safeRedirectQuery is an absolute path that already carries the
-          // deployed basePath, so go through window.location to avoid
-          // react-router applying its basename a second time.
-          window.location.replace(window.location.origin + safeRedirectQuery);
-        } else {
-          navigate(paths.home);
-        }
+        navigate(safeRedirectQuery ?? paths.home, { replace: true });
       } catch (err) {
         logout();
         navigate(
