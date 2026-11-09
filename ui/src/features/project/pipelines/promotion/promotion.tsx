@@ -306,7 +306,11 @@ export const Promotion = (props: PromotionProps) => {
 
   const getPromotionQuery = useGetPromotion(props.project, props.promotionId, {
     query: justCreated
-      ? { retry: shouldRetryCreatedPromotion, retryDelay: createdPromotionRetryDelay }
+      ? {
+          retry: shouldRetryCreatedPromotion,
+          retryDelay: createdPromotionRetryDelay,
+          meta: { silent404: true }
+        }
       : undefined
   });
 
