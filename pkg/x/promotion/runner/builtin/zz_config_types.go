@@ -118,6 +118,13 @@ type ArgoCDKustomizeImageUpdate struct {
 
 type ArgoCDWaitConfig struct {
 	Apps []ArgoCDAppWait `json:"apps"`
+	// Specifies how long any Application whose health regresses to 'Degraded' may remain
+	// 'Degraded' before the step fails. Applies to every Application the step waits on, each
+	// timed separately from when its own regression is first observed. If an Application's
+	// health changes to anything other than 'Degraded' within this period, waiting continues
+	// normally. Only applies to Applications whose 'waitFor' includes 'health'. Defaults to
+	// zero, which fails the step as soon as a regression is observed.
+	DegradedGracePeriod string `json:"degradedGracePeriod,omitempty"`
 }
 
 type ArgoCDAppWait struct {
