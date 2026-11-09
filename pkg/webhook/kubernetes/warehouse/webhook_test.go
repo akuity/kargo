@@ -417,6 +417,47 @@ func Test_webhook_ValidateCreate(t *testing.T) {
 				require.Contains(t, err.Error(), "spec.subscriptions[0].image.allowTags")
 			},
 		},
+		{
+			name: "unknown subscription fields",
+			webhook: &webhook{
+				client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
+					&corev1.Namespace{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: testProject,
+							Labels: map[string]string{
+								kargoapi.LabelKeyProject: kargoapi.LabelValueTrue,
+							},
+						},
+					},
+				).Build(),
+			},
+			req: &admission.Request{
+				AdmissionRequest: admissionv1.AdmissionRequest{
+					Operation: admissionv1.Create,
+					Object: runtime.RawExtension{
+						Raw: []byte(`{"spec":{"subscriptions":[
+							{"chart":{"repoURL":"oci://example.com/chart","constraint":"<1.1.0"}}
+						]}}`),
+					},
+				},
+			},
+			warehouse: &kargoapi.Warehouse{
+				ObjectMeta: metav1.ObjectMeta{Namespace: testProject},
+				Spec: kargoapi.WarehouseSpec{
+					InternalSubscriptions: []kargoapi.RepoSubscription{{
+						Chart: &kargoapi.ChartSubscription{
+							RepoURL:        "oci://example.com/chart",
+							DiscoveryLimit: 20,
+						},
+					}},
+				},
+			},
+			assertions: func(t *testing.T, err error) {
+				require.Error(t, err)
+				require.Contains(t, err.Error(), "spec.subscriptions[0].chart.constraint")
+				require.Contains(t, err.Error(), "unknown field")
+			},
+		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
@@ -602,6 +643,49 @@ func Test_webhook_ValidateUpdate(t *testing.T) {
 			assertions: func(t *testing.T, err error) {
 				require.Error(t, err)
 				require.Contains(t, err.Error(), "spec.subscriptions[0].image.allowTags")
+			},
+		},
+		{
+			name:    "unknown subscription field added by update",
+			webhook: &webhook{},
+			oldRaw:  `{"spec":{"subscriptions":[{"chart":{"repoURL":"oci://example.com/chart"}}]}}`,
+			newRaw: `{"spec":{"subscriptions":[
+				{"chart":{"repoURL":"oci://example.com/chart","constraint":"<1.1.0"}}
+			]}}`,
+			assertions: func(t *testing.T, err error) {
+				require.Error(t, err)
+				require.Contains(t, err.Error(), "spec.subscriptions[0].chart.constraint")
+				require.Contains(t, err.Error(), "unknown field")
+			},
+		},
+		{
+			// Rejecting fields the old object already had would block every edit
+			// of a Warehouse that predates this validation
+			name:    "unknown subscription field kept by update that changes the spec",
+			webhook: &webhook{},
+			oldRaw: `{"spec":{"subscriptions":[
+				{"chart":{"repoURL":"oci://example.com/chart","constraint":"<1.1.0"}}
+			]}}`,
+			newRaw: `{"spec":{"interval":"10m","subscriptions":[
+				{"chart":{"repoURL":"oci://example.com/chart","constraint":"<1.2.0"}}
+			]}}`,
+			assertions: func(t *testing.T, err error) {
+				require.NoError(t, err)
+			},
+		},
+		{
+			name:    "unknown subscription field added alongside one the old object had",
+			webhook: &webhook{},
+			oldRaw: `{"spec":{"subscriptions":[
+				{"chart":{"repoURL":"oci://example.com/chart","constraint":"<1.1.0"}}
+			]}}`,
+			newRaw: `{"spec":{"subscriptions":[
+				{"chart":{"repoURL":"oci://example.com/chart","constraint":"<1.1.0","bogus":true}}
+			]}}`,
+			assertions: func(t *testing.T, err error) {
+				require.Error(t, err)
+				require.Contains(t, err.Error(), "spec.subscriptions[0].chart.bogus")
+				require.NotContains(t, err.Error(), "spec.subscriptions[0].chart.constraint")
 			},
 		},
 	}
@@ -883,6 +967,73 @@ func Test_validateRemovedSubFields(t *testing.T) {
 			testCase.assertions(
 				t,
 				validateRemovedSubFields(ctx, field.NewPath("spec", "subscriptions")),
+			)
+		})
+	}
+}
+
+func Test_unknownSubFieldErrs(t *testing.T) {
+	testCases := []struct {
+		name       string
+		raw        string
+		assertions func(*testing.T, field.ErrorList)
+	}{
+		{
+			name: "malformed object",
+			raw:  `{`,
+			assertions: func(t *testing.T, errs field.ErrorList) {
+				require.Empty(t, errs)
+			},
+		},
+		{
+			name: "no unknown fields",
+			raw: `{"spec":{"subscriptions":[
+				{"name":"img","image":{"repoURL":"fake-url","constraint":"^1"}},
+				{"fake-type":{"bogus":true}}
+			]}}`,
+			assertions: func(t *testing.T, errs field.ErrorList) {
+				require.Empty(t, errs)
+			},
+		},
+		{
+			// Removed fields are reported by validateRemovedSubFields instead
+			name: "removed fields",
+			raw:  `{"spec":{"subscriptions":[{"git":{"repoURL":"fake-url","allowTags":"^v1"}}]}}`,
+			assertions: func(t *testing.T, errs field.ErrorList) {
+				require.Empty(t, errs)
+			},
+		},
+		{
+			name: "unknown fields",
+			raw: `{"spec":{"subscriptions":[
+				{"image":{"repoURL":"fake-url","semverConstraint":"^1"}},
+				{"chart":{"repoURL":"oci://example.com/chart"}},
+				{"git":{"repoURL":"fake-url","zeta":1,"constraint":"^1"}}
+			]}}`,
+			assertions: func(t *testing.T, errs field.ErrorList) {
+				paths := make([]string, len(errs))
+				for i, err := range errs {
+					require.Equal(t, field.ErrorTypeForbidden, err.Type)
+					require.Equal(t, "unknown field", err.Detail)
+					paths[i] = err.Field
+				}
+				require.Equal(
+					t,
+					[]string{
+						"spec.subscriptions[0].image.semverConstraint",
+						"spec.subscriptions[2].git.constraint",
+						"spec.subscriptions[2].git.zeta",
+					},
+					paths,
+				)
+			},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			testCase.assertions(
+				t,
+				unknownSubFieldErrs([]byte(testCase.raw), field.NewPath("spec", "subscriptions")),
 			)
 		})
 	}

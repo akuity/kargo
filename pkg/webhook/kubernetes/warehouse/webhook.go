@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"maps"
 	"slices"
 	"strings"
 
@@ -113,10 +114,9 @@ func (w *webhook) ValidateCreate(
 		errs = append(errs, fieldErr)
 	}
 	errs = append(errs, w.validateSpec(ctx, field.NewPath("spec"), &warehouse.Spec)...)
-	if errs = append(
-		errs,
-		validateRemovedSubFields(ctx, field.NewPath("spec", "subscriptions"))...,
-	); len(errs) > 0 {
+	subsPath := field.NewPath("spec", "subscriptions")
+	errs = append(errs, validateRemovedSubFields(ctx, subsPath)...)
+	if errs = append(errs, validateUnknownSubFields(ctx, subsPath)...); len(errs) > 0 {
 		return nil, apierrors.NewInvalid(warehouseGroupKind, warehouse.Name, errs)
 	}
 	return nil, nil
@@ -128,15 +128,12 @@ func (w *webhook) ValidateUpdate(
 	warehouse *kargoapi.Warehouse,
 ) (admission.Warnings, error) {
 	errs := w.validateSpec(ctx, field.NewPath("spec"), &warehouse.Spec)
-	if errs = append(
+	subsPath := field.NewPath("spec", "subscriptions")
+	errs = append(
 		errs,
-		w.validateRemovedSubFieldsOnUpdate(
-			ctx,
-			field.NewPath("spec", "subscriptions"),
-			oldWarehouse,
-			warehouse,
-		)...,
-	); len(errs) > 0 {
+		w.validateRemovedSubFieldsOnUpdate(ctx, subsPath, oldWarehouse, warehouse)...,
+	)
+	if errs = append(errs, validateUnknownSubFields(ctx, subsPath)...); len(errs) > 0 {
 		return nil, apierrors.NewInvalid(warehouseGroupKind, warehouse.Name, errs)
 	}
 	return nil, nil
@@ -161,14 +158,18 @@ func (w *webhook) validateSpec(
 	return w.validateSubs(ctx, f.Child("subscriptions"), spec.InternalSubscriptions)
 }
 
+// removedSubField names fields that have been removed from subscriptions of
+// one type.
+type removedSubField struct {
+	subType string
+	fields  []string
+}
+
 // removedSubFields lists fields that have been removed from the original
 // subscription types, keyed by subscription type. Decoding a Warehouse
 // silently drops unknown fields, so these would otherwise be ignored without
 // any indication that the tag filtering they once provided no longer applies.
-var removedSubFields = []struct {
-	subType string
-	fields  []string
-}{
+var removedSubFields = []removedSubField{
 	{subType: "git", fields: []string{"allowTags", "ignoreTags"}},
 	{subType: "image", fields: []string{"allowTags", "ignoreTags"}},
 }
@@ -266,6 +267,72 @@ func removedSubFieldErrs(raw []byte, f *field.Path) field.ErrorList {
 		}
 	}
 	return errs
+}
+
+// validateUnknownSubFields rejects subscriptions that set fields their type
+// doesn't define. Because the typed Warehouse has already lost those fields,
+// this inspects the raw object from the admission request in ctx. On update,
+// fields the old object already set are permitted, so that a Warehouse
+// admitted before this validation existed can still be edited. If ctx carries
+// no admission request, there is nothing to inspect and no errors are returned.
+func validateUnknownSubFields(ctx context.Context, f *field.Path) field.ErrorList {
+	req, err := admission.RequestFromContext(ctx)
+	if err != nil {
+		return nil
+	}
+	errs := unknownSubFieldErrs(req.Object.Raw, f)
+	if len(errs) == 0 || req.OldObject.Raw == nil {
+		return errs
+	}
+	oldErrs := unknownSubFieldErrs(req.OldObject.Raw, f)
+	return slices.DeleteFunc(errs, func(err *field.Error) bool {
+		return slices.ContainsFunc(oldErrs, func(oldErr *field.Error) bool {
+			return oldErr.Field == err.Field
+		})
+	})
+}
+
+// unknownSubFieldErrs returns an error for each field set by a subscription of
+// the raw, JSON-encoded Warehouse that the JSON schema for the subscription's
+// type doesn't define. removedSubFields are left to removedSubFieldErrs, which
+// reports them with a more helpful message. Malformed input is caught when
+// decoding the Warehouse, so it yields no errors here.
+func unknownSubFieldErrs(raw []byte, f *field.Path) field.ErrorList {
+	var obj struct {
+		Spec struct {
+			Subscriptions []map[string]json.RawMessage `json:"subscriptions"`
+		} `json:"spec"`
+	}
+	if err := json.Unmarshal(raw, &obj); err != nil {
+		return nil
+	}
+	var errs field.ErrorList
+	for i, sub := range obj.Spec.Subscriptions {
+		for _, subType := range slices.Sorted(maps.Keys(sub)) {
+			names, err := subscription.UnknownFields(subType, sub[subType])
+			if err != nil {
+				errs = append(errs, field.InternalError(f.Index(i).Child(subType), err))
+				continue
+			}
+			for _, name := range names {
+				if !isRemovedSubField(subType, name) {
+					errs = append(
+						errs,
+						field.Forbidden(f.Index(i).Child(subType, name), "unknown field"),
+					)
+				}
+			}
+		}
+	}
+	return errs
+}
+
+// isRemovedSubField reports whether name is one of the removedSubFields of
+// subscriptions of type subType.
+func isRemovedSubField(subType, name string) bool {
+	return slices.ContainsFunc(removedSubFields, func(removed removedSubField) bool {
+		return removed.subType == subType && slices.Contains(removed.fields, name)
+	})
 }
 
 func (w *webhook) validateSubs(
