@@ -19,6 +19,6 @@ func RefreshObject(ctx context.Context, c client.Client, obj client.Object) erro
 		c,
 		obj,
 		kargoapi.AnnotationKeyRefresh,
-		time.Now().Format(time.RFC3339),
+		time.Now().Format(time.RFC3339Nano),
 	)
 }

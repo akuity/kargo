@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"slices"
 	"strings"
-	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -224,7 +223,7 @@ func RefreshStage(
 			Name:      namespacedName.Name,
 		},
 	}
-	if err := patchAnnotation(ctx, c, stage, kargoapi.AnnotationKeyRefresh, time.Now().Format(time.RFC3339)); err != nil {
+	if err := RefreshObject(ctx, c, stage); err != nil {
 		return nil, fmt.Errorf("refresh: %w", err)
 	}
 	return stage, nil
