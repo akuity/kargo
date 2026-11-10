@@ -18,7 +18,7 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/promotion"
-	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
+	"github.com/akuity/kargo/pkg/x/promotion/stepconfig"
 )
 
 func Test_tarConfig_convert(t *testing.T) {
@@ -159,7 +159,7 @@ func Test_tarCreator_run(t *testing.T) {
 	tests := []struct {
 		name       string
 		setupFiles func(*testing.T) string
-		cfg        builtin.TarConfig
+		cfg        stepconfig.TarConfig
 		assertions func(*testing.T, string, promotion.StepResult, error)
 	}{
 		{
@@ -174,7 +174,7 @@ func Test_tarCreator_run(t *testing.T) {
 
 				return tmpDir
 			},
-			cfg: builtin.TarConfig{
+			cfg: stepconfig.TarConfig{
 				InPath:  "source",
 				OutPath: "archive.tar",
 				Gzip:    false,
@@ -200,7 +200,7 @@ func Test_tarCreator_run(t *testing.T) {
 
 				return tmpDir
 			},
-			cfg: builtin.TarConfig{
+			cfg: stepconfig.TarConfig{
 				InPath:  "source",
 				OutPath: filepath.Join("nested", "archive.tar"),
 				Gzip:    false,
@@ -229,7 +229,7 @@ func Test_tarCreator_run(t *testing.T) {
 
 				return tmpDir
 			},
-			cfg: builtin.TarConfig{
+			cfg: stepconfig.TarConfig{
 				InPath:  "source",
 				OutPath: "archive.tar",
 				Gzip:    false,
@@ -257,7 +257,7 @@ func Test_tarCreator_run(t *testing.T) {
 			setupFiles: func(t *testing.T) string {
 				return t.TempDir()
 			},
-			cfg: builtin.TarConfig{
+			cfg: stepconfig.TarConfig{
 				InPath:  "nonexistent_source",
 				OutPath: "archive.tar",
 			},
@@ -282,7 +282,7 @@ func Test_tarCreator_run(t *testing.T) {
 
 				return tmpDir
 			},
-			cfg: builtin.TarConfig{
+			cfg: stepconfig.TarConfig{
 				InPath:  "source",
 				OutPath: filepath.Join("nested", "archive.tar"),
 				Gzip:    false,
@@ -304,7 +304,7 @@ func Test_tarCreator_run(t *testing.T) {
 
 				return tmpDir
 			},
-			cfg: builtin.TarConfig{
+			cfg: stepconfig.TarConfig{
 				InPath:  "source",
 				OutPath: "archive.tar",
 				Mtime:   "1970-01-01T00:00:00Z",
@@ -343,7 +343,7 @@ func Test_tarCreator_run(t *testing.T) {
 
 				return tmpDir
 			},
-			cfg: builtin.TarConfig{
+			cfg: stepconfig.TarConfig{
 				InPath:  "source",
 				OutPath: "archive.tar",
 				Mtime:   "not-a-time",
@@ -815,7 +815,7 @@ func Test_tarCreator_run_modes(t *testing.T) {
 			result, err := (&tarCreator{}).run(
 				t.Context(),
 				newTestStepContext(t, workDir),
-				builtin.TarConfig{
+				stepconfig.TarConfig{
 					InPath:   "in",
 					OutPath:  "archive.tar",
 					FileMode: tt.fileMode,
@@ -857,17 +857,17 @@ func Test_tarCreator_run_invalidModes(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
 		name    string
-		cfg     builtin.TarConfig
+		cfg     stepconfig.TarConfig
 		wantErr string
 	}{
 		{
 			name:    "fileMode",
-			cfg:     builtin.TarConfig{FileMode: "0666"},
+			cfg:     stepconfig.TarConfig{FileMode: "0666"},
 			wantErr: "invalid fileMode",
 		},
 		{
 			name:    "dirMode",
-			cfg:     builtin.TarConfig{DirMode: "0777"},
+			cfg:     stepconfig.TarConfig{DirMode: "0777"},
 			wantErr: "invalid dirMode",
 		},
 	}
@@ -1133,7 +1133,7 @@ func Test_tarCreator_run_escapingSymlink(t *testing.T) {
 		result, err := (&tarCreator{}).run(
 			t.Context(),
 			newTestStepContext(t, workDir),
-			builtin.TarConfig{InPath: "out", OutPath: "archive.tar"},
+			stepconfig.TarConfig{InPath: "out", OutPath: "archive.tar"},
 		)
 		require.ErrorContains(t, err, "path escapes from parent")
 		require.Equal(t, kargoapi.PromotionStepStatusErrored, result.Status)
@@ -1146,7 +1146,7 @@ func Test_tarCreator_run_escapingSymlink(t *testing.T) {
 		result, err := (&tarCreator{}).run(
 			t.Context(),
 			newTestStepContext(t, workDir),
-			builtin.TarConfig{InPath: "source", OutPath: "out/archive.tar"},
+			stepconfig.TarConfig{InPath: "source", OutPath: "out/archive.tar"},
 		)
 		require.ErrorContains(t, err, "path escapes from parent")
 		require.Equal(t, kargoapi.PromotionStepStatusErrored, result.Status)
@@ -1165,7 +1165,7 @@ func Test_tarCreator_run_symlinkedOutPath(t *testing.T) {
 	result, err := (&tarCreator{}).run(
 		t.Context(),
 		newTestStepContext(t, workDir),
-		builtin.TarConfig{InPath: "source", OutPath: "link.tar"},
+		stepconfig.TarConfig{InPath: "source", OutPath: "link.tar"},
 	)
 	require.NoError(t, err)
 	require.Equal(t, kargoapi.PromotionStepStatusSucceeded, result.Status)

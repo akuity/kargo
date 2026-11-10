@@ -73,28 +73,11 @@ trap 'rm -rf "${WORK_DIR}"' EXIT
 # standalone-repo scaffolding (per-operation test stubs, per-model/API
 # markdown docs) -- pure diff noise that duplicates the Go doc comments
 # already on the generated types and the real fidelity suite in
-# pkg/x/client/fidelity, referenced nowhere in this repo.
+# pkg/client/fidelity, referenced nowhere in this repo.
 #
-# withGoMod=false: the generator would otherwise emit its own go.mod, wiping
-# out whatever's already committed. We preserve the previous go.mod/go.sum
-# across the `rm -rf` (Step 3 restores them) instead of writing a fresh one
-# from scratch every run, for three reasons: (1) Dependabot updates the real
-# committed go.mod directly -- it has no way to know to reach into this
-# script; (2) regenerating from a blank go.mod every run would silently
-# revert any dependency bump Dependabot lands; (3) `go mod tidy` against an
-# empty go.mod always re-resolves to whatever's latest at that moment, so
-# re-running codegen with zero repo changes could still produce a diff --
-# exactly the kind of thing that makes CI's check-codegen job flaky for
-# reasons unrelated to any real spec change. None of this currently bites in
-# practice (this module has zero external dependencies today), but it will
-# the moment it ever gains one.
-if [[ -f "${OUT_DIR}/go.mod" ]]; then
-  cp "${OUT_DIR}/go.mod" "${WORK_DIR}/go.mod"
-fi
-if [[ -f "${OUT_DIR}/go.sum" ]]; then
-  cp "${OUT_DIR}/go.sum" "${WORK_DIR}/go.sum"
-fi
-
+# withGoMod=false: the generated package belongs to the module rooted at
+# pkg/x/client, whose go.mod is one directory up and untouched by the
+# `rm -rf` below.
 rm -rf "${OUT_DIR}"
 java -jar "$GENERATOR_JAR" generate \
   -i "${WORK_DIR}/swagger-go-gen.json" \
@@ -107,20 +90,7 @@ java -jar "$GENERATOR_JAR" generate \
   --global-property apiTests=false,modelTests=false,apiDocs=false,modelDocs=false \
   --skip-validate-spec
 
-# --- Step 3: restore go.mod/go.sum ---------------------------------------
-#
-# No fallback for a missing go.mod: that can only happen if a previous run
-# crashed after the `rm -rf` above but before this restore, since go.mod is
-# otherwise always committed. Fabricating a fresh one here would silently
-# reintroduce the blank-slate volatility Step 2's comment describes -- better
-# to fail loudly. `go mod tidy` below errors clearly on a missing go.mod; the
-# fix is `git checkout` the missing file and re-run.
-if [[ -f "${WORK_DIR}/go.mod" ]]; then
-  cp "${WORK_DIR}/go.mod" "${OUT_DIR}/go.mod"
-fi
-if [[ -f "${WORK_DIR}/go.sum" ]]; then
-  cp "${WORK_DIR}/go.sum" "${OUT_DIR}/go.sum"
-fi
-(cd "${OUT_DIR}" && go mod tidy && go build ./...)
+# --- Step 3: tidy and build the client module --------------------------------
+(cd "${REPO_ROOT}/pkg/x/client" && go mod tidy && go build ./...)
 
 echo "OK: pkg/x/client/generated regenerated."

@@ -7226,7 +7226,7 @@
           "type": "string"
         },
         "if": {
-          "description": "If is an optional expression condition. When set, the link is only shown\nwhen the expression evaluates to true.\n\n+optional",
+          "description": "If is an optional expr-lang expression, offset by ${{ }}, that must\nevaluate to a boolean. When set, the link is shown only when it\nevaluates to true.\n\n+optional",
           "type": "string"
         },
         "title": {
@@ -7234,7 +7234,7 @@
           "type": "string"
         },
         "url": {
-          "description": "URL is an expression that resolves to the link's href.\n\n+kubebuilder:validation:MinLength=1",
+          "description": "URL is the link's href. It may contain expr-lang expressions offset by\n${{ }}, evaluated against the resource as freight or stage.\n\n+kubebuilder:validation:MinLength=1",
           "type": "string"
         }
       }

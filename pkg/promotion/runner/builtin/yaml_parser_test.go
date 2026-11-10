@@ -11,7 +11,7 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/promotion"
-	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
+	"github.com/akuity/kargo/pkg/x/promotion/stepconfig"
 )
 
 func Test_yamlParser_convert(t *testing.T) {
@@ -129,7 +129,7 @@ func Test_yamlParser_run(t *testing.T) {
 	tests := []struct {
 		name       string
 		stepCtx    *promotion.StepContext
-		cfg        builtin.YAMLParseConfig
+		cfg        stepconfig.YAMLParseConfig
 		files      map[string]string
 		assertions func(*testing.T, string, promotion.StepResult, error)
 	}{
@@ -138,9 +138,9 @@ func Test_yamlParser_run(t *testing.T) {
 			stepCtx: &promotion.StepContext{
 				Project: "test-project",
 			},
-			cfg: builtin.YAMLParseConfig{
+			cfg: stepconfig.YAMLParseConfig{
 				Path: "config.yaml",
-				Outputs: []builtin.YAMLParse{
+				Outputs: []stepconfig.YAMLParse{
 					{Name: "appVersion", FromExpression: "app.version"},
 					{Name: "featureStatus", FromExpression: "features.newFeature"},
 				},
@@ -170,9 +170,9 @@ features:
 			stepCtx: &promotion.StepContext{
 				Project: "test-project",
 			},
-			cfg: builtin.YAMLParseConfig{
+			cfg: stepconfig.YAMLParseConfig{
 				Path: "config.yaml",
-				Outputs: []builtin.YAMLParse{
+				Outputs: []stepconfig.YAMLParse{
 					{Name: "invalidField", FromExpression: "nonexistent.path"},
 				},
 			},
@@ -193,9 +193,9 @@ app:
 			stepCtx: &promotion.StepContext{
 				Project: "test-project",
 			},
-			cfg: builtin.YAMLParseConfig{
+			cfg: stepconfig.YAMLParseConfig{
 				Path:    "config.yaml",
-				Outputs: []builtin.YAMLParse{},
+				Outputs: []stepconfig.YAMLParse{},
 			},
 			files: map[string]string{
 				"config.yaml": `
@@ -216,9 +216,9 @@ app:
 			stepCtx: &promotion.StepContext{
 				Project: "test-project",
 			},
-			cfg: builtin.YAMLParseConfig{
+			cfg: stepconfig.YAMLParseConfig{
 				Path: "config.yaml",
-				Outputs: []builtin.YAMLParse{
+				Outputs: []stepconfig.YAMLParse{
 					{Name: "key", FromExpression: "app.key"},
 				},
 			},
@@ -234,9 +234,9 @@ app:
 		{
 			name:    "path is empty",
 			stepCtx: &promotion.StepContext{Project: "test-project"},
-			cfg: builtin.YAMLParseConfig{
+			cfg: stepconfig.YAMLParseConfig{
 				Path:    "",
-				Outputs: []builtin.YAMLParse{{Name: "key", FromExpression: "app.key"}},
+				Outputs: []stepconfig.YAMLParse{{Name: "key", FromExpression: "app.key"}},
 			},
 			files: map[string]string{},
 			assertions: func(t *testing.T, _ string, result promotion.StepResult, err error) {
@@ -248,9 +248,9 @@ app:
 		{
 			name:    "path is a directory instead of a file",
 			stepCtx: &promotion.StepContext{Project: "test-project"},
-			cfg: builtin.YAMLParseConfig{
+			cfg: stepconfig.YAMLParseConfig{
 				Path:    "config",
-				Outputs: []builtin.YAMLParse{{Name: "key", FromExpression: "app.key"}},
+				Outputs: []stepconfig.YAMLParse{{Name: "key", FromExpression: "app.key"}},
 			},
 			files: map[string]string{},
 			assertions: func(t *testing.T, _ string, result promotion.StepResult, err error) {
@@ -264,9 +264,9 @@ app:
 			stepCtx: &promotion.StepContext{
 				Project: "test-project",
 			},
-			cfg: builtin.YAMLParseConfig{
+			cfg: stepconfig.YAMLParseConfig{
 				Path: "config.yaml",
-				Outputs: []builtin.YAMLParse{
+				Outputs: []stepconfig.YAMLParse{
 					{Name: "appVersion", FromExpression: "app.version"},
 					{Name: "isEnabled", FromExpression: "features.enabled"},
 					{Name: "threshold", FromExpression: "config.threshold"},
@@ -421,14 +421,14 @@ func Test_yamlParser_extractValues(t *testing.T) {
 	tests := []struct {
 		name           string
 		data           any
-		outputs        []builtin.YAMLParse
+		outputs        []stepconfig.YAMLParse
 		expected       map[string]any
 		expectedErrMsg string
 	}{
 		{
 			name: "valid expression",
 			data: map[string]any{"key": "value"},
-			outputs: []builtin.YAMLParse{
+			outputs: []stepconfig.YAMLParse{
 				{Name: "result", FromExpression: "key"},
 			},
 			expected: map[string]any{"result": "value"},
@@ -436,7 +436,7 @@ func Test_yamlParser_extractValues(t *testing.T) {
 		{
 			name: "root list - access by index",
 			data: []any{"first", "second", "third"},
-			outputs: []builtin.YAMLParse{
+			outputs: []stepconfig.YAMLParse{
 				{Name: "result", FromExpression: "$env[0]"},
 			},
 			expected: map[string]any{"result": "first"},
@@ -444,7 +444,7 @@ func Test_yamlParser_extractValues(t *testing.T) {
 		{
 			name: "root list - get length",
 			data: []any{"first", "second", "third"},
-			outputs: []builtin.YAMLParse{
+			outputs: []stepconfig.YAMLParse{
 				{Name: "result", FromExpression: "len($env)"},
 			},
 			expected: map[string]any{"result": 3},
@@ -455,7 +455,7 @@ func Test_yamlParser_extractValues(t *testing.T) {
 				map[string]any{"name": "item1", "value": 10},
 				map[string]any{"name": "item2", "value": 20},
 			},
-			outputs: []builtin.YAMLParse{
+			outputs: []stepconfig.YAMLParse{
 				{Name: "result", FromExpression: "$env[1].name"},
 			},
 			expected: map[string]any{"result": "item2"},
@@ -463,7 +463,7 @@ func Test_yamlParser_extractValues(t *testing.T) {
 		{
 			name: "expression points to missing key",
 			data: map[string]any{"key": "value"},
-			outputs: []builtin.YAMLParse{
+			outputs: []stepconfig.YAMLParse{
 				{Name: "result", FromExpression: "missingKey"},
 			},
 			expected: map[string]any{"result": nil},
@@ -471,7 +471,7 @@ func Test_yamlParser_extractValues(t *testing.T) {
 		{
 			name: "expression evaluates to a nested object",
 			data: map[string]any{"nested": map[string]any{"key": "value"}},
-			outputs: []builtin.YAMLParse{
+			outputs: []stepconfig.YAMLParse{
 				{Name: "result", FromExpression: "nested"},
 			},
 			expected: map[string]any{"result": map[string]any{"key": "value"}},
@@ -479,7 +479,7 @@ func Test_yamlParser_extractValues(t *testing.T) {
 		{
 			name: "expression evaluates to an array",
 			data: map[string]any{"array": []any{1, 2, 3}},
-			outputs: []builtin.YAMLParse{
+			outputs: []stepconfig.YAMLParse{
 				{Name: "result", FromExpression: "array"},
 			},
 			expected: map[string]any{"result": []any{1, 2, 3}},
@@ -487,7 +487,7 @@ func Test_yamlParser_extractValues(t *testing.T) {
 		{
 			name: "expression evaluates to a string",
 			data: map[string]any{"key": "value"},
-			outputs: []builtin.YAMLParse{
+			outputs: []stepconfig.YAMLParse{
 				{Name: "result", FromExpression: "key"},
 			},
 			expected: map[string]any{"result": "value"},
@@ -495,7 +495,7 @@ func Test_yamlParser_extractValues(t *testing.T) {
 		{
 			name: "expression evaluates to an integer",
 			data: map[string]any{"number": 42},
-			outputs: []builtin.YAMLParse{
+			outputs: []stepconfig.YAMLParse{
 				{Name: "result", FromExpression: "number"},
 			},
 			expected: map[string]any{"result": 42},
@@ -503,7 +503,7 @@ func Test_yamlParser_extractValues(t *testing.T) {
 		{
 			name: "expression compilation error",
 			data: map[string]any{"key": "value"},
-			outputs: []builtin.YAMLParse{
+			outputs: []stepconfig.YAMLParse{
 				{Name: "result", FromExpression: "(1 + 2"},
 			},
 			expectedErrMsg: "error compiling expression",
@@ -533,9 +533,9 @@ func Test_yamlParser_run_escapingSymlink(t *testing.T) {
 	_, err := (&yamlParser{}).run(
 		t.Context(),
 		newTestStepContext(t, workDir),
-		builtin.YAMLParseConfig{
+		stepconfig.YAMLParseConfig{
 			Path:    "out/secret.yaml",
-			Outputs: []builtin.YAMLParse{{Name: "k", FromExpression: "k"}},
+			Outputs: []stepconfig.YAMLParse{{Name: "k", FromExpression: "k"}},
 		},
 	)
 	require.ErrorContains(t, err, "path escapes from parent")

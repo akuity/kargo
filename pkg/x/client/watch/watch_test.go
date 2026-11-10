@@ -13,9 +13,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	kargogen "github.com/akuity/kargo/pkg/x/client/generated"
 )
 
 func TestNewClient(t *testing.T) {
@@ -66,10 +65,10 @@ func TestNewClient(t *testing.T) {
 }
 
 func TestWatchStage(t *testing.T) {
-	stage := &kargoapi.Stage{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-stage",
-			Namespace: "test-project",
+	stage := &kargogen.Stage{
+		Metadata: &kargogen.V1ObjectMeta{
+			Name:      kargogen.PtrString("test-stage"),
+			Namespace: kargogen.PtrString("test-project"),
 		},
 	}
 
@@ -82,7 +81,7 @@ func TestWatchStage(t *testing.T) {
 		w.Header().Set("Content-Type", "text/event-stream")
 		w.WriteHeader(http.StatusOK)
 
-		event := watchEvent[*kargoapi.Stage]{
+		event := watchEvent[*kargogen.Stage]{
 			Type:   string(Added),
 			Object: stage,
 		}
@@ -100,7 +99,7 @@ func TestWatchStage(t *testing.T) {
 	select {
 	case event := <-eventCh:
 		assert.Equal(t, Added, event.Type)
-		assert.Equal(t, "test-stage", event.Object.Name)
+		assert.Equal(t, "test-stage", event.Object.Metadata.GetName())
 	case err := <-errCh:
 		t.Fatalf("unexpected error: %v", err)
 	case <-ctx.Done():
@@ -109,10 +108,10 @@ func TestWatchStage(t *testing.T) {
 }
 
 func TestWatchStages(t *testing.T) {
-	stage := &kargoapi.Stage{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-stage",
-			Namespace: "test-project",
+	stage := &kargogen.Stage{
+		Metadata: &kargogen.V1ObjectMeta{
+			Name:      kargogen.PtrString("test-stage"),
+			Namespace: kargogen.PtrString("test-project"),
 		},
 	}
 
@@ -123,7 +122,7 @@ func TestWatchStages(t *testing.T) {
 		w.Header().Set("Content-Type", "text/event-stream")
 		w.WriteHeader(http.StatusOK)
 
-		event := watchEvent[*kargoapi.Stage]{
+		event := watchEvent[*kargogen.Stage]{
 			Type:   string(Modified),
 			Object: stage,
 		}
@@ -141,7 +140,7 @@ func TestWatchStages(t *testing.T) {
 	select {
 	case event := <-eventCh:
 		assert.Equal(t, Modified, event.Type)
-		assert.Equal(t, "test-stage", event.Object.Name)
+		assert.Equal(t, "test-stage", event.Object.Metadata.GetName())
 	case err := <-errCh:
 		t.Fatalf("unexpected error: %v", err)
 	case <-ctx.Done():
@@ -150,10 +149,10 @@ func TestWatchStages(t *testing.T) {
 }
 
 func TestWatchWarehouse(t *testing.T) {
-	warehouse := &kargoapi.Warehouse{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-warehouse",
-			Namespace: "test-project",
+	warehouse := &kargogen.Warehouse{
+		Metadata: &kargogen.V1ObjectMeta{
+			Name:      kargogen.PtrString("test-warehouse"),
+			Namespace: kargogen.PtrString("test-project"),
 		},
 	}
 
@@ -164,7 +163,7 @@ func TestWatchWarehouse(t *testing.T) {
 		w.Header().Set("Content-Type", "text/event-stream")
 		w.WriteHeader(http.StatusOK)
 
-		event := watchEvent[*kargoapi.Warehouse]{
+		event := watchEvent[*kargogen.Warehouse]{
 			Type:   string(Deleted),
 			Object: warehouse,
 		}
@@ -182,7 +181,7 @@ func TestWatchWarehouse(t *testing.T) {
 	select {
 	case event := <-eventCh:
 		assert.Equal(t, Deleted, event.Type)
-		assert.Equal(t, "test-warehouse", event.Object.Name)
+		assert.Equal(t, "test-warehouse", event.Object.Metadata.GetName())
 	case err := <-errCh:
 		t.Fatalf("unexpected error: %v", err)
 	case <-ctx.Done():
@@ -191,10 +190,10 @@ func TestWatchWarehouse(t *testing.T) {
 }
 
 func TestWatchWarehouses(t *testing.T) {
-	warehouse := &kargoapi.Warehouse{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-warehouse",
-			Namespace: "test-project",
+	warehouse := &kargogen.Warehouse{
+		Metadata: &kargogen.V1ObjectMeta{
+			Name:      kargogen.PtrString("test-warehouse"),
+			Namespace: kargogen.PtrString("test-project"),
 		},
 	}
 
@@ -205,7 +204,7 @@ func TestWatchWarehouses(t *testing.T) {
 		w.Header().Set("Content-Type", "text/event-stream")
 		w.WriteHeader(http.StatusOK)
 
-		event := watchEvent[*kargoapi.Warehouse]{
+		event := watchEvent[*kargogen.Warehouse]{
 			Type:   string(Added),
 			Object: warehouse,
 		}
@@ -223,7 +222,7 @@ func TestWatchWarehouses(t *testing.T) {
 	select {
 	case event := <-eventCh:
 		assert.Equal(t, Added, event.Type)
-		assert.Equal(t, "test-warehouse", event.Object.Name)
+		assert.Equal(t, "test-warehouse", event.Object.Metadata.GetName())
 	case err := <-errCh:
 		t.Fatalf("unexpected error: %v", err)
 	case <-ctx.Done():
@@ -232,10 +231,10 @@ func TestWatchWarehouses(t *testing.T) {
 }
 
 func TestWatchPromotion(t *testing.T) {
-	promotion := &kargoapi.Promotion{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-promotion",
-			Namespace: "test-project",
+	promotion := &kargogen.Promotion{
+		Metadata: &kargogen.V1ObjectMeta{
+			Name:      kargogen.PtrString("test-promotion"),
+			Namespace: kargogen.PtrString("test-project"),
 		},
 	}
 
@@ -246,7 +245,7 @@ func TestWatchPromotion(t *testing.T) {
 		w.Header().Set("Content-Type", "text/event-stream")
 		w.WriteHeader(http.StatusOK)
 
-		event := watchEvent[*kargoapi.Promotion]{
+		event := watchEvent[*kargogen.Promotion]{
 			Type:   string(Modified),
 			Object: promotion,
 		}
@@ -264,7 +263,7 @@ func TestWatchPromotion(t *testing.T) {
 	select {
 	case event := <-eventCh:
 		assert.Equal(t, Modified, event.Type)
-		assert.Equal(t, "test-promotion", event.Object.Name)
+		assert.Equal(t, "test-promotion", event.Object.Metadata.GetName())
 	case err := <-errCh:
 		t.Fatalf("unexpected error: %v", err)
 	case <-ctx.Done():
@@ -273,10 +272,10 @@ func TestWatchPromotion(t *testing.T) {
 }
 
 func TestWatchPromotions(t *testing.T) {
-	promotion := &kargoapi.Promotion{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-promotion",
-			Namespace: "test-project",
+	promotion := &kargogen.Promotion{
+		Metadata: &kargogen.V1ObjectMeta{
+			Name:      kargogen.PtrString("test-promotion"),
+			Namespace: kargogen.PtrString("test-project"),
 		},
 	}
 
@@ -287,7 +286,7 @@ func TestWatchPromotions(t *testing.T) {
 		w.Header().Set("Content-Type", "text/event-stream")
 		w.WriteHeader(http.StatusOK)
 
-		event := watchEvent[*kargoapi.Promotion]{
+		event := watchEvent[*kargogen.Promotion]{
 			Type:   string(Added),
 			Object: promotion,
 		}
@@ -305,7 +304,7 @@ func TestWatchPromotions(t *testing.T) {
 	select {
 	case event := <-eventCh:
 		assert.Equal(t, Added, event.Type)
-		assert.Equal(t, "test-promotion", event.Object.Name)
+		assert.Equal(t, "test-promotion", event.Object.Metadata.GetName())
 	case err := <-errCh:
 		t.Fatalf("unexpected error: %v", err)
 	case <-ctx.Done():
@@ -314,10 +313,10 @@ func TestWatchPromotions(t *testing.T) {
 }
 
 func TestWatchProjectConfig(t *testing.T) {
-	config := &kargoapi.ProjectConfig{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-project",
-			Namespace: "test-project",
+	config := &kargogen.ProjectConfig{
+		Metadata: &kargogen.V1ObjectMeta{
+			Name:      kargogen.PtrString("test-project"),
+			Namespace: kargogen.PtrString("test-project"),
 		},
 	}
 
@@ -328,7 +327,7 @@ func TestWatchProjectConfig(t *testing.T) {
 		w.Header().Set("Content-Type", "text/event-stream")
 		w.WriteHeader(http.StatusOK)
 
-		event := watchEvent[*kargoapi.ProjectConfig]{
+		event := watchEvent[*kargogen.ProjectConfig]{
 			Type:   string(Modified),
 			Object: config,
 		}
@@ -346,7 +345,7 @@ func TestWatchProjectConfig(t *testing.T) {
 	select {
 	case event := <-eventCh:
 		assert.Equal(t, Modified, event.Type)
-		assert.Equal(t, "test-project", event.Object.Name)
+		assert.Equal(t, "test-project", event.Object.Metadata.GetName())
 	case err := <-errCh:
 		t.Fatalf("unexpected error: %v", err)
 	case <-ctx.Done():
@@ -355,9 +354,9 @@ func TestWatchProjectConfig(t *testing.T) {
 }
 
 func TestWatchClusterConfig(t *testing.T) {
-	config := &kargoapi.ClusterConfig{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "cluster-config",
+	config := &kargogen.ClusterConfig{
+		Metadata: &kargogen.V1ObjectMeta{
+			Name: kargogen.PtrString("cluster-config"),
 		},
 	}
 
@@ -368,7 +367,7 @@ func TestWatchClusterConfig(t *testing.T) {
 		w.Header().Set("Content-Type", "text/event-stream")
 		w.WriteHeader(http.StatusOK)
 
-		event := watchEvent[*kargoapi.ClusterConfig]{
+		event := watchEvent[*kargogen.ClusterConfig]{
 			Type:   string(Modified),
 			Object: config,
 		}
@@ -386,7 +385,7 @@ func TestWatchClusterConfig(t *testing.T) {
 	select {
 	case event := <-eventCh:
 		assert.Equal(t, Modified, event.Type)
-		assert.Equal(t, "cluster-config", event.Object.Name)
+		assert.Equal(t, "cluster-config", event.Object.Metadata.GetName())
 	case err := <-errCh:
 		t.Fatalf("unexpected error: %v", err)
 	case <-ctx.Done():
@@ -750,10 +749,10 @@ data: line 2
 }
 
 func TestMultipleEventsInStream(t *testing.T) {
-	stages := []*kargoapi.Stage{
-		{ObjectMeta: metav1.ObjectMeta{Name: "stage-1"}},
-		{ObjectMeta: metav1.ObjectMeta{Name: "stage-2"}},
-		{ObjectMeta: metav1.ObjectMeta{Name: "stage-3"}},
+	stages := []*kargogen.Stage{
+		{Metadata: &kargogen.V1ObjectMeta{Name: kargogen.PtrString("stage-1")}},
+		{Metadata: &kargogen.V1ObjectMeta{Name: kargogen.PtrString("stage-2")}},
+		{Metadata: &kargogen.V1ObjectMeta{Name: kargogen.PtrString("stage-3")}},
 	}
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
@@ -771,7 +770,7 @@ func TestMultipleEventsInStream(t *testing.T) {
 				eventType = Added
 			}
 
-			event := watchEvent[*kargoapi.Stage]{
+			event := watchEvent[*kargogen.Stage]{
 				Type:   string(eventType),
 				Object: stage,
 			}
@@ -787,7 +786,7 @@ func TestMultipleEventsInStream(t *testing.T) {
 
 	eventCh, errCh := client.WatchStages(ctx, "test-project")
 
-	events := make([]Event[*kargoapi.Stage], 0)
+	events := make([]Event[*kargogen.Stage], 0)
 	for event := range eventCh {
 		events = append(events, event)
 	}
@@ -800,9 +799,9 @@ func TestMultipleEventsInStream(t *testing.T) {
 
 	require.Len(t, events, 3)
 	assert.Equal(t, Added, events[0].Type)
-	assert.Equal(t, "stage-1", events[0].Object.Name)
+	assert.Equal(t, "stage-1", events[0].Object.Metadata.GetName())
 	assert.Equal(t, Modified, events[1].Type)
-	assert.Equal(t, "stage-2", events[1].Object.Name)
+	assert.Equal(t, "stage-2", events[1].Object.Metadata.GetName())
 	assert.Equal(t, Deleted, events[2].Type)
-	assert.Equal(t, "stage-3", events[2].Object.Name)
+	assert.Equal(t, "stage-3", events[2].Object.Metadata.GetName())
 }

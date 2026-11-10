@@ -12,7 +12,7 @@ import (
 	"github.com/akuity/kargo/pkg/controller/git"
 	"github.com/akuity/kargo/pkg/credentials"
 	"github.com/akuity/kargo/pkg/promotion"
-	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
+	"github.com/akuity/kargo/pkg/x/promotion/stepconfig"
 )
 
 const stepKindGitClone = "git-clone"
@@ -79,10 +79,10 @@ func (g *gitCloner) Run(
 	return g.run(ctx, stepCtx, cfg)
 }
 
-func (g *gitCloner) convert(cfg promotion.Config) (builtin.GitCloneConfig, error) {
-	typedCfg, err := validateAndConvert[builtin.GitCloneConfig](g.schemaLoader, cfg, stepKindGitClone)
+func (g *gitCloner) convert(cfg promotion.Config) (stepconfig.GitCloneConfig, error) {
+	typedCfg, err := validateAndConvert[stepconfig.GitCloneConfig](g.schemaLoader, cfg, stepKindGitClone)
 	if err != nil {
-		return builtin.GitCloneConfig{}, err
+		return stepconfig.GitCloneConfig{}, err
 	}
 
 	// Ensure any specified aliases are unique across all checkouts
@@ -90,7 +90,7 @@ func (g *gitCloner) convert(cfg promotion.Config) (builtin.GitCloneConfig, error
 	for i, checkout := range typedCfg.Checkout {
 		if checkout.As != "" {
 			if _, exists := seen[checkout.As]; exists {
-				return builtin.GitCloneConfig{},
+				return stepconfig.GitCloneConfig{},
 					fmt.Errorf("duplicate checkout alias %q at checkout[%d]", checkout.As, i)
 			}
 			seen[checkout.As] = struct{}{}
@@ -103,7 +103,7 @@ func (g *gitCloner) convert(cfg promotion.Config) (builtin.GitCloneConfig, error
 func (g *gitCloner) run(
 	ctx context.Context,
 	stepCtx *promotion.StepContext,
-	cfg builtin.GitCloneConfig,
+	cfg stepconfig.GitCloneConfig,
 ) (promotion.StepResult, error) {
 	var repoCreds *git.RepoCredentials
 	creds, err := g.credsDB.Get(

@@ -1,18 +1,15 @@
 package builtin
 
 import (
-	"embed"
 	"fmt"
 	"net/http"
 
 	"github.com/xeipuuv/gojsonschema"
+
+	"github.com/akuity/kargo/pkg/x/promotion/stepconfig"
 )
 
-var (
-	//go:embed schemas/*
-	embeddedSchemasFS embed.FS
-	schemasFS         = http.FS(embeddedSchemasFS)
-)
+var schemasFS = http.FS(stepconfig.Schemas)
 
 func getConfigSchemaLoader(name string) gojsonschema.JSONLoader {
 	return gojsonschema.NewReferenceLoaderFileSystem(

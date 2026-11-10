@@ -23,7 +23,7 @@ import (
 	githubprov "github.com/akuity/kargo/pkg/gitprovider/github"
 	"github.com/akuity/kargo/pkg/logging"
 	"github.com/akuity/kargo/pkg/promotion"
-	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
+	"github.com/akuity/kargo/pkg/x/promotion/stepconfig"
 )
 
 const (
@@ -156,8 +156,8 @@ func (g *githubPusher) Run(
 
 func (g *githubPusher) convert(
 	cfg promotion.Config,
-) (builtin.GitHubPushConfig, error) {
-	return validateAndConvert[builtin.GitHubPushConfig](
+) (stepconfig.GitHubPushConfig, error) {
+	return validateAndConvert[stepconfig.GitHubPushConfig](
 		g.schemaLoader, cfg, stepKindGitHubPush,
 	)
 }
@@ -165,7 +165,7 @@ func (g *githubPusher) convert(
 func (g *githubPusher) run(
 	ctx context.Context,
 	stepCtx *promotion.StepContext,
-	cfg builtin.GitHubPushConfig,
+	cfg stepconfig.GitHubPushConfig,
 ) (promotion.StepResult, error) {
 	logger := logging.LoggerFromContext(ctx)
 
