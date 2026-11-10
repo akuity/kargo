@@ -16,6 +16,7 @@ import (
 
 	securejoin "github.com/cyphar/filepath-securejoin"
 	"github.com/expr-lang/expr"
+	"github.com/expr-lang/expr/vm"
 	"github.com/hashicorp/go-cleanhttp"
 	"github.com/xeipuuv/gojsonschema"
 	"sigs.k8s.io/yaml"
@@ -95,6 +96,18 @@ func (h *httpRequester) run(
 	stepCtx *promotion.StepContext,
 	cfg builtin.HTTPConfig,
 ) (promotion.StepResult, error) {
+	// Compile both criteria before sending the request, so that an expression
+	// that does not compile is reported without the request being sent, and
+	// even when the other one decides the outcome.
+	successProgram, err := h.compileCriteria("success", cfg.SuccessExpression)
+	if err != nil {
+		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, err
+	}
+	failureProgram, err := h.compileCriteria("failure", cfg.FailureExpression)
+	if err != nil {
+		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, err
+	}
+
 	req, err := h.buildRequest(ctx, stepCtx, cfg)
 	if err != nil {
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
@@ -119,17 +132,22 @@ func (h *httpRequester) run(
 			fmt.Errorf("error building expression context from HTTP response: %w", err)
 	}
 
-	// Evaluate success and failure criteria
-	successResult, err := h.evaluateSuccessCriteria(cfg, env)
-	if err != nil {
-		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
-			fmt.Errorf("error evaluating success criteria: %w", err)
-	}
-
-	failureResult, err := h.evaluateFailureCriteria(cfg, env)
+	// Failure takes precedence over success, so evaluate the failure criteria
+	// first and the success criteria only if they are not met. An error
+	// response seldom has the shape a success expression expects, so
+	// evaluating it then could fail and hide the failure.
+	failureResult, err := h.evaluateCriteria("failure", failureProgram, env)
 	if err != nil {
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 			fmt.Errorf("error evaluating failure criteria: %w", err)
+	}
+
+	var successResult *bool
+	if failureResult == nil || !*failureResult {
+		if successResult, err = h.evaluateCriteria("success", successProgram, env); err != nil {
+			return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
+				fmt.Errorf("error evaluating success criteria: %w", err)
+		}
 	}
 
 	// Determine outcome based on criteria evaluation results
@@ -201,61 +219,50 @@ func (h *httpRequester) run(
 	}
 }
 
-// evaluateSuccessCriteria evaluates the success criteria expression if defined.
-// If the expression is not defined, it returns nil.
-func (h *httpRequester) evaluateSuccessCriteria(
-	cfg builtin.HTTPConfig,
-	env map[string]any,
-) (*bool, error) {
-	if cfg.SuccessExpression == "" {
+// compileCriteria compiles a success or failure criteria expression, named by
+// kind, returning a terminal error if it does not compile. If the expression is
+// not defined, it returns a nil program.
+func (h *httpRequester) compileCriteria(
+	kind string,
+	expression string,
+) (*vm.Program, error) {
+	if expression == "" {
 		return nil, nil
 	}
-
-	program, err := expr.Compile(cfg.SuccessExpression)
+	program, err := expr.Compile(expression)
 	if err != nil {
 		return nil, &promotion.TerminalError{
-			Err: fmt.Errorf("error compiling success expression %q: %w", cfg.SuccessExpression, err),
+			Err: fmt.Errorf("error compiling %s expression %q: %w", kind, expression, err),
 		}
 	}
-	successAny, err := expr.Run(program, env)
-	if err != nil {
-		return nil, fmt.Errorf("error evaluating success expression %q: %w", cfg.SuccessExpression, err)
-	}
-	if success, ok := successAny.(bool); ok {
-		return &success, nil
-	}
-	return nil, fmt.Errorf(
-		"success expression %q did not evaluate to a boolean (got %T)",
-		cfg.SuccessExpression, successAny,
-	)
+	return program, nil
 }
 
-// evaluateFailureCriteria evaluates the failure criteria expression if defined.
-// If the expression is not defined, it returns nil as the result.
-func (h *httpRequester) evaluateFailureCriteria(
-	cfg builtin.HTTPConfig,
+// evaluateCriteria evaluates a compiled success or failure criteria expression,
+// named by kind. If the program is nil, meaning the expression is not defined,
+// it returns a nil result.
+func (h *httpRequester) evaluateCriteria(
+	kind string,
+	program *vm.Program,
 	env map[string]any,
 ) (*bool, error) {
-	if cfg.FailureExpression == "" {
+	if program == nil {
 		return nil, nil
 	}
 
-	program, err := expr.Compile(cfg.FailureExpression)
+	resultAny, err := expr.Run(program, env)
 	if err != nil {
-		return nil, &promotion.TerminalError{
-			Err: fmt.Errorf("error compiling failure expression %q: %w", cfg.FailureExpression, err),
-		}
+		return nil, fmt.Errorf(
+			"error evaluating %s expression %q: %w",
+			kind, program.Source().String(), err,
+		)
 	}
-	failureAny, err := expr.Run(program, env)
-	if err != nil {
-		return nil, fmt.Errorf("error evaluating failure expression %q: %w", cfg.FailureExpression, err)
-	}
-	if failure, ok := failureAny.(bool); ok {
-		return &failure, nil
+	if result, ok := resultAny.(bool); ok {
+		return &result, nil
 	}
 	return nil, fmt.Errorf(
-		"failure expression %q did not evaluate to a boolean (got %T)",
-		cfg.FailureExpression, failureAny,
+		"%s expression %q did not evaluate to a boolean (got %T)",
+		kind, program.Source().String(), resultAny,
 	)
 }
 
