@@ -13,6 +13,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/expr-lang/expr/vm"
 	"github.com/stretchr/testify/require"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
@@ -561,18 +562,34 @@ func Test_httpRequester_run(t *testing.T) {
 			},
 		},
 		{
-			name: "failed while success expression does not compile",
-			handler: func(w http.ResponseWriter, _ *http.Request) {
-				w.WriteHeader(http.StatusNotFound)
+			name: "success expression does not compile",
+			handler: func(_ http.ResponseWriter, _ *http.Request) {
+				t.Error("request sent despite a misconfigured expression")
 			},
 			cfg: builtin.HTTPConfig{
 				SuccessExpression: "(1 + 2",
-				FailureExpression: "response.status == 404",
+				FailureExpression: "true",
 			},
 			// A success expression that does not compile is a misconfiguration,
-			// reported even when the failure criteria are met.
+			// reported before the request is sent, so even when the failure
+			// criteria would be met.
 			assertions: func(t *testing.T, res promotion.StepResult, err error) {
 				require.ErrorContains(t, err, `error compiling success expression "(1 + 2"`)
+				require.True(t, promotion.IsTerminal(err))
+				require.Equal(t, kargoapi.PromotionStepStatusErrored, res.Status)
+			},
+		},
+		{
+			name: "failure expression does not compile",
+			handler: func(_ http.ResponseWriter, _ *http.Request) {
+				t.Error("request sent despite a misconfigured expression")
+			},
+			cfg: builtin.HTTPConfig{
+				SuccessExpression: "true",
+				FailureExpression: "(1 + 2",
+			},
+			assertions: func(t *testing.T, res promotion.StepResult, err error) {
+				require.ErrorContains(t, err, `error compiling failure expression "(1 + 2"`)
 				require.True(t, promotion.IsTerminal(err))
 				require.Equal(t, kargoapi.PromotionStepStatusErrored, res.Status)
 			},
@@ -1417,102 +1434,82 @@ func Test_httpRequester_buildExprEnv(t *testing.T) {
 func Test_httpRequester_compileCriteria(t *testing.T) {
 	testCases := []struct {
 		name       string
-		cfg        builtin.HTTPConfig
-		assertions func(t *testing.T, err error)
+		expression string
+		assertions func(t *testing.T, program *vm.Program, err error)
 	}{
 		{
-			name: "no expressions",
-			cfg:  builtin.HTTPConfig{},
-			assertions: func(t *testing.T, err error) {
+			name: "no expression",
+			assertions: func(t *testing.T, program *vm.Program, err error) {
 				require.NoError(t, err)
+				require.Nil(t, program)
 			},
 		},
 		{
-			name: "both expressions compile",
-			cfg: builtin.HTTPConfig{
-				SuccessExpression: "response.status == 200",
-				FailureExpression: "response.status == 404",
-			},
-			assertions: func(t *testing.T, err error) {
-				require.NoError(t, err)
-			},
-		},
-		{
-			name: "success expression does not compile",
-			cfg: builtin.HTTPConfig{
-				SuccessExpression: "(1 + 2",
-				FailureExpression: "response.status == 404",
-			},
-			assertions: func(t *testing.T, err error) {
+			name:       "expression does not compile",
+			expression: "(1 + 2",
+			assertions: func(t *testing.T, program *vm.Program, err error) {
 				require.ErrorContains(t, err, `error compiling success expression "(1 + 2"`)
 				require.True(t, promotion.IsTerminal(err))
+				require.Nil(t, program)
 			},
 		},
 		{
-			name: "failure expression does not compile",
-			cfg: builtin.HTTPConfig{
-				SuccessExpression: "response.status == 200",
-				FailureExpression: "(1 + 2",
-			},
-			assertions: func(t *testing.T, err error) {
-				require.ErrorContains(t, err, `error compiling failure expression "(1 + 2"`)
-				require.True(t, promotion.IsTerminal(err))
+			name:       "expression compiles",
+			expression: "response.status == 200",
+			assertions: func(t *testing.T, program *vm.Program, err error) {
+				require.NoError(t, err)
+				require.NotNil(t, program)
+				require.Equal(t, "response.status == 200", program.Source().String())
 			},
 		},
 	}
 	h := &httpRequester{}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			testCase.assertions(t, h.compileCriteria(testCase.cfg))
+			program, err := h.compileCriteria("success", testCase.expression)
+			testCase.assertions(t, program, err)
 		})
 	}
 }
 
-func Test_httpRequester_evaluateSuccessCriteria(t *testing.T) {
+func Test_httpRequester_evaluateCriteria(t *testing.T) {
 	testCases := []struct {
 		name       string
-		cfg        builtin.HTTPConfig
+		expression string
 		assertions func(t *testing.T, result *bool, err error)
 	}{
 		{
-			name: "no success expression",
-			cfg:  builtin.HTTPConfig{},
+			name: "no expression",
 			assertions: func(t *testing.T, result *bool, err error) {
 				require.NoError(t, err)
 				require.Nil(t, result)
 			},
 		},
 		{
-			name: "error compiling success expression",
-			cfg:  builtin.HTTPConfig{SuccessExpression: "(1 + 2"},
+			name:       "error evaluating expression",
+			expression: "invalid()",
 			assertions: func(t *testing.T, result *bool, err error) {
-				require.ErrorContains(t, err, "error compiling success expression")
-				require.True(t, promotion.IsTerminal(err))
-				require.Nil(t, result)
-			},
-		},
-		{
-			name: "error evaluating success expression",
-			cfg:  builtin.HTTPConfig{SuccessExpression: "invalid()"},
-			assertions: func(t *testing.T, result *bool, err error) {
-				require.ErrorContains(t, err, "error evaluating success expression")
+				require.ErrorContains(t, err, `error evaluating success expression "invalid()"`)
 				require.False(t, promotion.IsTerminal(err))
 				require.Nil(t, result)
 			},
 		},
 		{
-			name: "success expression evaluates to non-boolean",
-			cfg:  builtin.HTTPConfig{SuccessExpression: `"foo"`},
+			name:       "expression evaluates to non-boolean",
+			expression: `"foo"`,
 			assertions: func(t *testing.T, result *bool, err error) {
-				require.ErrorContains(t, err, "success expression")
-				require.ErrorContains(t, err, "did not evaluate to a boolean")
+				require.ErrorContains(
+					t,
+					err,
+					`success expression "\"foo\"" did not evaluate to a boolean`,
+				)
 				require.False(t, promotion.IsTerminal(err))
 				require.Nil(t, result)
 			},
 		},
 		{
-			name: "success expression evaluates to true",
-			cfg:  builtin.HTTPConfig{SuccessExpression: "true"},
+			name:       "expression evaluates to true",
+			expression: "true",
 			assertions: func(t *testing.T, result *bool, err error) {
 				require.NoError(t, err)
 				require.NotNil(t, result)
@@ -1520,8 +1517,8 @@ func Test_httpRequester_evaluateSuccessCriteria(t *testing.T) {
 			},
 		},
 		{
-			name: "success expression evaluates to false",
-			cfg:  builtin.HTTPConfig{SuccessExpression: "false"},
+			name:       "expression evaluates to false",
+			expression: "false",
 			assertions: func(t *testing.T, result *bool, err error) {
 				require.NoError(t, err)
 				require.NotNil(t, result)
@@ -1532,76 +1529,9 @@ func Test_httpRequester_evaluateSuccessCriteria(t *testing.T) {
 	h := &httpRequester{}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			result, err := h.evaluateSuccessCriteria(testCase.cfg, nil)
-			testCase.assertions(t, result, err)
-		})
-	}
-}
-
-func Test_httpRequester_evaluateFailureCriteria(t *testing.T) {
-	testCases := []struct {
-		name       string
-		cfg        builtin.HTTPConfig
-		assertions func(t *testing.T, result *bool, err error)
-	}{
-		{
-			name: "no failure expression",
-			cfg:  builtin.HTTPConfig{},
-			assertions: func(t *testing.T, result *bool, err error) {
-				require.NoError(t, err)
-				require.Nil(t, result)
-			},
-		},
-		{
-			name: "error compiling failure expression",
-			cfg:  builtin.HTTPConfig{FailureExpression: "(1 + 2"},
-			assertions: func(t *testing.T, result *bool, err error) {
-				require.ErrorContains(t, err, "error compiling failure expression")
-				require.True(t, promotion.IsTerminal(err))
-				require.Nil(t, result)
-			},
-		},
-		{
-			name: "error evaluating failure expression",
-			cfg:  builtin.HTTPConfig{FailureExpression: "invalid()"},
-			assertions: func(t *testing.T, result *bool, err error) {
-				require.ErrorContains(t, err, "error evaluating failure expression")
-				require.False(t, promotion.IsTerminal(err))
-				require.Nil(t, result)
-			},
-		},
-		{
-			name: "failure expression evaluates to non-boolean",
-			cfg:  builtin.HTTPConfig{FailureExpression: `"foo"`},
-			assertions: func(t *testing.T, result *bool, err error) {
-				require.ErrorContains(t, err, "did not evaluate to a boolean")
-				require.False(t, promotion.IsTerminal(err))
-				require.Nil(t, result)
-			},
-		},
-		{
-			name: "failure expression evaluates to true",
-			cfg:  builtin.HTTPConfig{FailureExpression: "true"},
-			assertions: func(t *testing.T, result *bool, err error) {
-				require.NoError(t, err)
-				require.NotNil(t, result)
-				require.True(t, *result)
-			},
-		},
-		{
-			name: "failure expression evaluates to false",
-			cfg:  builtin.HTTPConfig{FailureExpression: "false"},
-			assertions: func(t *testing.T, result *bool, err error) {
-				require.NoError(t, err)
-				require.NotNil(t, result)
-				require.False(t, *result)
-			},
-		},
-	}
-	h := &httpRequester{}
-	for _, testCase := range testCases {
-		t.Run(testCase.name, func(t *testing.T) {
-			result, err := h.evaluateFailureCriteria(testCase.cfg, nil)
+			program, err := h.compileCriteria("success", testCase.expression)
+			require.NoError(t, err)
+			result, err := h.evaluateCriteria("success", program, nil)
 			testCase.assertions(t, result, err)
 		})
 	}
