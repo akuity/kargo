@@ -17,6 +17,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/credentials"
@@ -1284,6 +1285,7 @@ func Test_getSecret(t *testing.T) {
 		args            []any
 		cache           *cache.Cache
 		hasDirectAccess bool
+		interceptor     interceptor.Funcs
 		assertions      func(t *testing.T, cache *cache.Cache, result any, err error)
 	}{
 		{
@@ -1319,6 +1321,19 @@ func Test_getSecret(t *testing.T) {
 				assert.IsType(t, map[string]string{}, result)
 				assert.Empty(t, result)
 				assert.Nil(t, cache)
+			},
+		},
+		{
+			name: "error getting Secret",
+			args: []any{testSecret},
+			interceptor: interceptor.Funcs{
+				Get: func(context.Context, client.WithWatch, client.ObjectKey, client.Object, ...client.GetOption) error {
+					return errors.New("something went wrong")
+				},
+			},
+			assertions: func(t *testing.T, _ *cache.Cache, result any, err error) {
+				assert.EqualError(t, err, `failed to get secret "fake-secret": something went wrong`)
+				assert.Nil(t, result)
 			},
 		},
 		{
@@ -1451,6 +1466,7 @@ func Test_getSecret(t *testing.T) {
 			c := fake.NewClientBuilder().
 				WithScheme(scheme).
 				WithObjects(tt.objects...).
+				WithInterceptorFuncs(tt.interceptor).
 				Build()
 
 			fn := getSecret(ctx, c, tt.cache, testProject, tt.hasDirectAccess)

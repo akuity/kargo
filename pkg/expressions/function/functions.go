@@ -1142,7 +1142,7 @@ func getSecret(
 			if apierrors.IsNotFound(err) {
 				return map[string]string{}, nil
 			}
-			return nil, fmt.Errorf("failed to get secret %s: %w", name, err)
+			return nil, fmt.Errorf("failed to get secret %q: %w", name, err)
 		}
 
 		// limit shared secret access to generic credentials only
