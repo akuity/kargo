@@ -16,7 +16,7 @@ import (
 	"sigs.k8s.io/e2e-framework/pkg/features"
 	"sigs.k8s.io/yaml"
 
-	"github.com/akuity/kargo/hack/test/e2e/envfuncs"
+	"github.com/akuity/kargo/hack/test/e2e/framework/envfuncs"
 	"github.com/akuity/kargo/pkg/cli/client"
 	"github.com/akuity/kargo/pkg/cli/config"
 	"github.com/akuity/kargo/pkg/client/watch"
