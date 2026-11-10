@@ -19,6 +19,8 @@ var _ MappedNullable = &ChartDiscoveryResult{}
 
 // ChartDiscoveryResult struct for ChartDiscoveryResult
 type ChartDiscoveryResult struct {
+	// Annotations contains OCI manifest annotations indexed by chart version. This field is only populated for charts in OCI repositories.  +optional
+	Annotations *map[string]map[string]string `json:"annotations,omitempty"`
 	// Name is the name of the Helm chart, as specified in the ChartSubscription.
 	Name *string `json:"name,omitempty"`
 	// RepoURL is the repository URL of the Helm chart, as specified in the ChartSubscription.  +kubebuilder:validation:MinLength=1
@@ -46,6 +48,38 @@ func NewChartDiscoveryResult() *ChartDiscoveryResult {
 func NewChartDiscoveryResultWithDefaults() *ChartDiscoveryResult {
 	this := ChartDiscoveryResult{}
 	return &this
+}
+
+// GetAnnotations returns the Annotations field value if set, zero value otherwise.
+func (o *ChartDiscoveryResult) GetAnnotations() map[string]map[string]string {
+	if o == nil || IsNil(o.Annotations) {
+		var ret map[string]map[string]string
+		return ret
+	}
+	return *o.Annotations
+}
+
+// GetAnnotationsOk returns a tuple with the Annotations field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *ChartDiscoveryResult) GetAnnotationsOk() (*map[string]map[string]string, bool) {
+	if o == nil || IsNil(o.Annotations) {
+		return nil, false
+	}
+	return o.Annotations, true
+}
+
+// HasAnnotations returns a boolean if a field has been set.
+func (o *ChartDiscoveryResult) HasAnnotations() bool {
+	if o != nil && !IsNil(o.Annotations) {
+		return true
+	}
+
+	return false
+}
+
+// SetAnnotations gets a reference to the given map[string]map[string]string and assigns it to the Annotations field.
+func (o *ChartDiscoveryResult) SetAnnotations(v map[string]map[string]string) {
+	o.Annotations = &v
 }
 
 // GetName returns the Name field value if set, zero value otherwise.
@@ -218,6 +252,9 @@ func (o ChartDiscoveryResult) MarshalJSON() ([]byte, error) {
 
 func (o ChartDiscoveryResult) ToMap() (map[string]interface{}, error) {
 	toSerialize := map[string]interface{}{}
+	if !IsNil(o.Annotations) {
+		toSerialize["annotations"] = o.Annotations
+	}
 	if !IsNil(o.Name) {
 		toSerialize["name"] = o.Name
 	}

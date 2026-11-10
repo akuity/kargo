@@ -1,6 +1,7 @@
 package chart
 
 import (
+	"context"
 	"fmt"
 	"slices"
 	"strings"
@@ -44,6 +45,11 @@ func newBaseSelector(
 func (b *baseSelector) MatchesVersion(version string) bool {
 	sv, err := semver.NewVersion(version)
 	return err == nil && b.matchesSemver(sv)
+}
+
+// Annotations implements Selector for repositories without OCI manifests.
+func (b *baseSelector) Annotations(context.Context, string) (map[string]string, error) {
+	return nil, nil
 }
 
 func (b *baseSelector) matchesSemver(sv *semver.Version) bool {

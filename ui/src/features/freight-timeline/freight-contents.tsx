@@ -81,6 +81,8 @@ export const FreightContents = (props: {
           subscriptionName={c.subscriptionName}
           fullContentVisibility={props.fullContentVisibility}
           icon={faAnchor}
+          artifactSource={getImageSource(c.annotations || {})}
+          artifactBuildDate={getImageBuiltDate(c.annotations || {})}
         >
           {c.version}
         </FreightContentItem>

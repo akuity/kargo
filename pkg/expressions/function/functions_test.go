@@ -799,6 +799,121 @@ func Test_getChartFromFreight(t *testing.T) {
 	}
 }
 
+func TestChartAnnotationsFreightCreationCriteria(t *testing.T) {
+	t.Parallel()
+	testCases := []struct {
+		name          string
+		chartRevision string
+		imageRevision string
+		expected      bool
+	}{
+		{name: "matching revisions", chartRevision: "abc", imageRevision: "abc", expected: true},
+		{name: "different revisions", chartRevision: "abc", imageRevision: "def"},
+		{name: "missing chart revision", imageRevision: "abc"},
+		{name: "missing image revision", chartRevision: "abc"},
+		{name: "both revisions missing"},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+			chartAnnotations := map[string]string{}
+			imageAnnotations := map[string]string{}
+			if testCase.chartRevision != "" {
+				chartAnnotations["org.opencontainers.image.revision"] = testCase.chartRevision
+			}
+			if testCase.imageRevision != "" {
+				imageAnnotations["org.opencontainers.image.revision"] = testCase.imageRevision
+			}
+			program, err := expr.Compile(
+				`let revision = chartFrom('oci://registry.example.com/charts/my-app')`+
+					`.Annotations['org.opencontainers.image.revision'];
+				 revision != nil && revision != '' &&
+				 revision == imageFrom('registry.example.com/my-app').Annotations['org.opencontainers.image.revision']`,
+				DiscoveredArtifactsOperations(&kargoapi.DiscoveredArtifacts{
+					Charts: []kargoapi.ChartDiscoveryResult{{
+						RepoURL:     "oci://registry.example.com/charts/my-app",
+						Versions:    []string{"1.2.3"},
+						Annotations: map[string]map[string]string{"1.2.3": chartAnnotations},
+					}},
+					Images: []kargoapi.ImageDiscoveryResult{{
+						RepoURL:    "registry.example.com/my-app",
+						References: []kargoapi.DiscoveredImageReference{{Annotations: imageAnnotations}},
+					}},
+				})...,
+			)
+			require.NoError(t, err)
+			result, err := expr.Run(program, nil)
+			require.NoError(t, err)
+			require.Equal(t, testCase.expected, result)
+		})
+	}
+}
+
+func TestChartAnnotationsExpressions(t *testing.T) {
+	t.Parallel()
+	const repoURL = "oci://registry.example.com/charts/app"
+	scheme := runtime.NewScheme()
+	require.NoError(t, kargoapi.AddToScheme(scheme))
+	warehouse := &kargoapi.Warehouse{
+		ObjectMeta: metav1.ObjectMeta{Namespace: "project", Name: "charts"},
+		Spec: kargoapi.WarehouseSpec{
+			InternalSubscriptions: []kargoapi.RepoSubscription{{
+				Chart: &kargoapi.ChartSubscription{RepoURL: repoURL},
+			}},
+		},
+	}
+	annotations := map[string]string{"org.opencontainers.image.revision": "abc123"}
+	origin := kargoapi.FreightOrigin{Kind: "Warehouse", Name: "charts"}
+	testCases := []struct {
+		name    string
+		options []expr.Option
+	}{
+		{
+			name: "Freight creation criteria use annotations from the selected version",
+			options: DiscoveredArtifactsOperations(&kargoapi.DiscoveredArtifacts{
+				Charts: []kargoapi.ChartDiscoveryResult{{
+					RepoURL:  repoURL,
+					Versions: []string{"1.2.3", "1.2.2"},
+					Annotations: map[string]map[string]string{
+						"1.2.3": annotations,
+						"1.2.2": {"org.opencontainers.image.revision": "old"},
+					},
+				}},
+			}),
+		},
+		{
+			name: "promotion expressions preserve annotations",
+			options: FreightOperations(
+				t.Context(),
+				fake.NewClientBuilder().WithScheme(scheme).WithObjects(warehouse).Build(),
+				"project",
+				[]kargoapi.FreightRequest{{Origin: origin}},
+				[]kargoapi.FreightReference{{
+					Origin: origin,
+					Charts: []kargoapi.Chart{{
+						RepoURL:     repoURL,
+						Version:     "1.2.3",
+						Annotations: annotations,
+					}},
+				}},
+			),
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+			program, err := expr.Compile(
+				`chartFrom('`+repoURL+`').Annotations['org.opencontainers.image.revision'] == 'abc123'`,
+				testCase.options...,
+			)
+			require.NoError(t, err)
+			result, err := expr.Run(program, nil)
+			require.NoError(t, err)
+			require.Equal(t, true, result)
+		})
+	}
+}
+
 func Test_getChartFromDiscoveredArtifacts(t *testing.T) {
 	for _, tc := range []struct {
 		name       string
