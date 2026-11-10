@@ -43,9 +43,9 @@ func EvaluateLinks(
 	for _, link := range links {
 		// Check for legacy syntax before the condition so that a link that was
 		// only partially migrated still fails loudly when its condition is false.
-		if err := checkLegacyURL(link.URL); err != nil {
+		if err := checkLegacyURLTemplate(link.URL); err != nil {
 			errs = append(errs, fmt.Sprintf(
-				"invalid URL for link %q: %v", link.Title, err,
+				"invalid URL template for link %q: %v", link.Title, err,
 			))
 			continue
 		}
@@ -61,10 +61,10 @@ func EvaluateLinks(
 			continue
 		}
 
-		url, err := evaluateURL(link.URL, ctx)
+		url, err := evaluateURLTemplate(link.URL, ctx)
 		if err != nil {
 			errs = append(errs, fmt.Sprintf(
-				"error evaluating URL for link %q: %v", link.Title, err,
+				"error evaluating URL template for link %q: %v", link.Title, err,
 			))
 			continue
 		}
@@ -79,15 +79,17 @@ func EvaluateLinks(
 	return resolved, errs
 }
 
-// checkLegacyURL returns an error if url contains Go template syntax. Without
-// this check, such a URL contains no expressions and would be returned
-// verbatim, braces and all. Under the old engine every "{{" in a URL was a
-// template action, so this rejects nothing that used to work.
-func checkLegacyURL(url string) error {
-	if legacyTemplateRegex.MatchString(url) {
+// checkLegacyURLTemplate returns an error if tmpl contains Go template syntax.
+// Without this check, such a template contains no expressions and would be
+// returned verbatim, braces and all. Under the old engine every "{{" in a URL
+// template was a template action, so this rejects nothing that used to work.
+func checkLegacyURLTemplate(tmpl string) error {
+	if legacyTemplateRegex.MatchString(tmpl) {
 		return errors.New(
-			"URL uses Go template syntax ({{ }}), which is no longer " +
-				"supported; use ${{ }} expressions",
+			"URL template uses Go template syntax " +
+				"(e.g. {{ .freight.metadata.name }}), which is no longer " +
+				"supported; use expr-lang expressions offset by ${{ }} instead " +
+				"(e.g. ${{ freight.metadata.name }})",
 		)
 	}
 	return nil
@@ -125,17 +127,18 @@ func evaluateCondition(cond string, ctx map[string]any) (bool, error) {
 	}
 }
 
-// evaluateURL evaluates any expressions in url against ctx.
-func evaluateURL(url string, ctx map[string]any) (string, error) {
-	out, err := expressions.EvaluateTemplate(url, ctx)
+// evaluateURLTemplate evaluates any expressions in tmpl against ctx and
+// returns the resulting URL.
+func evaluateURLTemplate(tmpl string, ctx map[string]any) (string, error) {
+	out, err := expressions.EvaluateTemplate(tmpl, ctx)
 	if err != nil {
 		return "", err
 	}
 	res, ok := out.(string)
 	if !ok {
-		// A URL made of a single expression can evaluate to a number, bool,
-		// list or object, none of which is a usable href.
-		return "", fmt.Errorf("URL evaluated to %T, not a string", out)
+		// A URL template made of a single expression can evaluate to a number,
+		// bool, list or object, none of which is a usable href.
+		return "", fmt.Errorf("URL template evaluated to %T, not a string", out)
 	}
 	return res, nil
 }

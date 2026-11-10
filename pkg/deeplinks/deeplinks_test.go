@@ -195,8 +195,9 @@ func TestEvaluateLinks(t *testing.T) {
 			assert: func(t *testing.T, resolved []ResolvedLink, errs []string) {
 				require.Empty(t, resolved)
 				require.Len(t, errs, 1)
-				require.Contains(t, errs[0], `"Legacy URL"`)
+				require.Contains(t, errs[0], `invalid URL template for link "Legacy URL"`)
 				require.Contains(t, errs[0], "Go template syntax")
+				require.Contains(t, errs[0], "expr-lang expressions offset by ${{ }}")
 			},
 		},
 		{

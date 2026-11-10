@@ -32,7 +32,8 @@ export const deepLinkFormSchema = z.object({
   title: zodValidators.requiredString,
   url: zodValidators.requiredString
     .refine((value) => !legacyTemplateSyntax.test(value), {
-      error: 'Use ${{ }} expressions. Go template syntax ({{ }}) is no longer supported.',
+      error:
+        'Go template syntax (e.g. {{ .stage.metadata.name }}) is no longer supported. Use expr-lang expressions offset by ${{ }} instead (e.g. ${{ stage.metadata.name }}).',
       // the delimiter count would also fail on legacy syntax; one message is enough
       abort: true
     })
