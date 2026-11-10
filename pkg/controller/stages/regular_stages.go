@@ -1363,66 +1363,6 @@ func (ver Verifier) VerifyStageFreight(
 	return newStatus, err
 }
 
-// MarkFreightVerifiedForStage marks the Freight that is associated with the
-// Stage as verified. If the Freight has already been verified, then no action
-// is taken. Regular Stages record verification in SyncFreight instead.
-func MarkFreightVerifiedForStage(
-	ctx context.Context,
-	cl client.Client,
-	stage *kargoapi.Stage,
-) (kargoapi.StageStatus, error) {
-	logger := logging.LoggerFromContext(ctx)
-	newStatus := *stage.Status.DeepCopy()
-
-	verifiedAt, verified := freightVerifiedAt(stage)
-	if !verified {
-		return newStatus, nil
-	}
-	if verifiedAt.IsZero() {
-		verifiedAt = time.Now()
-	}
-	curFreight := stage.Status.FreightHistory.Current()
-
-	// At this point, all preconditions for verifying the Freight have been met,
-	// and we can proceed with the verification.
-	for _, ref := range curFreight.Freight {
-		freight := &kargoapi.Freight{}
-		if err := cl.Get(ctx, types.NamespacedName{
-			Namespace: stage.Namespace,
-			Name:      ref.Name,
-		}, freight); err != nil {
-			return newStatus, fmt.Errorf(
-				"error getting Freight %q in namespace %q: %w",
-				ref.Name, stage.Namespace, err,
-			)
-		}
-
-		// If the Freight has already been verified, then there is no need to
-		// verify it again.
-		if freight.IsVerifiedIn(stage.Name) {
-			logger.Debug("Freight has already been verified in Stage")
-			continue
-		}
-
-		// Verify the Freight.
-		if err := kubeclient.PatchStatus(ctx, cl, freight, func(status *kargoapi.FreightStatus) {
-			if status.VerifiedIn == nil {
-				status.VerifiedIn = make(map[string]kargoapi.VerifiedStage)
-			}
-			status.AddVerifiedStage(stage.Name, verifiedAt)
-		}); err != nil {
-			return newStatus, fmt.Errorf(
-				"error marking Freight %q as verified in Stage: %w",
-				freight.Name, err,
-			)
-		}
-		logger.Debug("marked Freight as verified in Stage", "freight", freight.Name)
-		observeVerificationLeadTime(freight, verifiedAt)
-	}
-
-	return newStatus, nil
-}
-
 // freightVerifiedAt returns when the Stage's current Freight passed
 // verification. It returns false while the Stage is not healthy, or while the
 // Freight has no successful, terminal verification to record. The time is zero
