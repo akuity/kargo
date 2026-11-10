@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"slices"
 	"strings"
-	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
@@ -54,13 +53,7 @@ func RefreshWarehouse(
 			Name:      namespacedName.Name,
 		},
 	}
-	if err := patchAnnotation(
-		ctx,
-		c,
-		warehouse,
-		kargoapi.AnnotationKeyRefresh,
-		time.Now().Format(time.RFC3339),
-	); err != nil {
+	if err := RefreshObject(ctx, c, warehouse); err != nil {
 		return nil, fmt.Errorf("refresh: %w", err)
 	}
 	return warehouse, nil
