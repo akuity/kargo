@@ -12,7 +12,7 @@ import (
 	"sigs.k8s.io/e2e-framework/pkg/features"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	"github.com/akuity/kargo/hack/test/e2e/envfuncs"
+	"github.com/akuity/kargo/hack/test/e2e/framework/envfuncs"
 	"github.com/akuity/kargo/hack/test/e2e/framework/utils"
 )
 

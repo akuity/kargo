@@ -12,7 +12,7 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/promotion"
-	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
+	"github.com/akuity/kargo/pkg/x/promotion/stepconfig"
 	"github.com/akuity/kargo/pkg/yaml"
 )
 
@@ -54,15 +54,15 @@ func (y *yamlMerger) Run(
 }
 
 // convert validates yamlMerger configuration against a JSON schema and
-// converts it into a builtin.YAMLMergeConfig struct.
-func (y *yamlMerger) convert(cfg promotion.Config) (builtin.YAMLMergeConfig, error) {
-	return validateAndConvert[builtin.YAMLMergeConfig](y.schemaLoader, cfg, stepKindYAMLMerge)
+// converts it into a stepconfig.YAMLMergeConfig struct.
+func (y *yamlMerger) convert(cfg promotion.Config) (stepconfig.YAMLMergeConfig, error) {
+	return validateAndConvert[stepconfig.YAMLMergeConfig](y.schemaLoader, cfg, stepKindYAMLMerge)
 }
 
 func (y *yamlMerger) run(
 	_ context.Context,
 	stepCtx *promotion.StepContext,
-	cfg builtin.YAMLMergeConfig,
+	cfg stepconfig.YAMLMergeConfig,
 ) (promotion.StepResult, error) {
 	// Read the input files, skipping any that are missing if configured to.
 	inputPaths := make([]string, 0, len(cfg.InFiles))

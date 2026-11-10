@@ -3,8 +3,8 @@ module github.com/akuity/kargo
 go 1.27.0
 
 replace (
-	github.com/akuity/kargo/api => ./api
-	github.com/akuity/kargo/pkg/x/client/generated => ./pkg/x/client/generated
+	github.com/akuity/kargo/pkg/x/client => ./pkg/x/client
+	github.com/akuity/kargo/pkg/x/promotion/stepconfig => ./pkg/x/promotion/stepconfig
 
 	// NB(hidde): required because of https://github.com/kubernetes-sigs/kustomize/issues/6014
 	sigs.k8s.io/kustomize/api => sigs.k8s.io/kustomize/api v0.20.1
@@ -35,8 +35,8 @@ require (
 	github.com/Masterminds/semver/v3 v3.5.0
 	github.com/Masterminds/sprig/v3 v3.3.0
 	github.com/adrg/xdg v0.5.3
-	github.com/akuity/kargo/api v0.0.0
-	github.com/akuity/kargo/pkg/x/client/generated v0.0.0
+	github.com/akuity/kargo/pkg/x/client v0.0.0
+	github.com/akuity/kargo/pkg/x/promotion/stepconfig v0.0.0
 	github.com/aws/aws-lambda-go v1.55.1
 	github.com/aws/aws-sdk-go-v2 v1.47.6
 	github.com/aws/aws-sdk-go-v2/config v1.33.13
@@ -117,6 +117,7 @@ require (
 	oras.land/oras-go/v2 v2.7.0
 	sigs.k8s.io/cli-utils v0.37.2
 	sigs.k8s.io/controller-runtime v0.25.2
+	sigs.k8s.io/e2e-framework v0.7.0
 	sigs.k8s.io/kustomize/api v0.21.2
 	sigs.k8s.io/kustomize/kyaml v0.21.2
 	sigs.k8s.io/yaml v1.6.0
@@ -243,6 +244,7 @@ require (
 	github.com/google/s2a-go v0.1.11 // indirect
 	github.com/googleapis/enterprise-certificate-proxy v0.3.24 // indirect
 	github.com/googleapis/gax-go/v2 v2.27.0 // indirect
+	github.com/gorilla/websocket v1.5.4-0.20250319132907-e064f32e3674 // indirect
 	github.com/gosuri/uitable v0.0.4 // indirect
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.30.0 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
@@ -284,6 +286,7 @@ require (
 	github.com/moby/docker-image-spec v1.3.1 // indirect
 	github.com/moby/moby/api v1.56.1 // indirect
 	github.com/moby/moby/client v0.6.2 // indirect
+	github.com/moby/spdystream v0.5.1 // indirect
 	github.com/moby/sys/atomicwriter v0.1.0 // indirect
 	github.com/moby/sys/sequential v0.7.0 // indirect
 	github.com/moby/term v0.5.2 // indirect
@@ -354,6 +357,7 @@ require (
 	github.com/ugorji/go/codec v1.3.2 // indirect
 	github.com/urfave/cli/v2 v2.3.0 // indirect
 	github.com/vertica/vertica-sql-go v1.3.8 // indirect
+	github.com/vladimirvivien/gexe v0.5.0 // indirect
 	github.com/vmware-labs/yaml-jsonpath v0.3.2 // indirect
 	github.com/wasilibs/go-pgquery v0.0.0-20250409022910-10ac41983c07 // indirect
 	github.com/wasilibs/wazero-helpers v0.0.0-20240620070341-3dff1577cd52 // indirect
@@ -405,6 +409,7 @@ require (
 	k8s.io/gengo/v2 v2.0.0-20260408192533-25e2208e0dc3 // indirect
 	k8s.io/kube-openapi v0.0.0-20260721132016-d427ff9ee9ad // indirect
 	k8s.io/kubectl v0.37.1 // indirect
+	k8s.io/streaming v0.37.2 // indirect
 	modernc.org/libc v1.78.0 // indirect
 	modernc.org/mathutil v1.7.1 // indirect
 	modernc.org/memory v1.12.1 // indirect

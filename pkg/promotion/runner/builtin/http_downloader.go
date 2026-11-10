@@ -18,7 +18,7 @@ import (
 	"github.com/akuity/kargo/pkg/logging"
 	kargonet "github.com/akuity/kargo/pkg/net"
 	"github.com/akuity/kargo/pkg/promotion"
-	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
+	"github.com/akuity/kargo/pkg/x/promotion/stepconfig"
 )
 
 const (
@@ -76,16 +76,16 @@ func (d *httpDownloader) Run(
 }
 
 // convert validates httpDownloader configuration against a JSON schema and
-// converts it into a builtin.HTTPDownloadConfig struct.
-func (d *httpDownloader) convert(cfg promotion.Config) (builtin.HTTPDownloadConfig, error) {
-	return validateAndConvert[builtin.HTTPDownloadConfig](d.schemaLoader, cfg, stepKindHTTPDownload)
+// converts it into a stepconfig.HTTPDownloadConfig struct.
+func (d *httpDownloader) convert(cfg promotion.Config) (stepconfig.HTTPDownloadConfig, error) {
+	return validateAndConvert[stepconfig.HTTPDownloadConfig](d.schemaLoader, cfg, stepKindHTTPDownload)
 }
 
 // run executes the httpDownloader step with the provided configuration.
 func (d *httpDownloader) run(
 	ctx context.Context,
 	stepCtx *promotion.StepContext,
-	cfg builtin.HTTPDownloadConfig,
+	cfg stepconfig.HTTPDownloadConfig,
 ) (promotion.StepResult, error) {
 	outPath, err := d.prepareOutputPath(stepCtx.Root, cfg.OutPath, cfg.AllowOverwrite)
 	if err != nil {
@@ -144,7 +144,7 @@ func (d *httpDownloader) checkFileOverwrite(root *os.Root, relOutPath, outPath s
 }
 
 // performHTTPRequest executes the HTTP request and returns the response.
-func (d *httpDownloader) performHTTPRequest(cfg builtin.HTTPDownloadConfig) (*http.Response, error) {
+func (d *httpDownloader) performHTTPRequest(cfg stepconfig.HTTPDownloadConfig) (*http.Response, error) {
 	req, err := d.buildRequest(cfg)
 	if err != nil {
 		return nil, &promotion.TerminalError{Err: fmt.Errorf("error building HTTP request: %w", err)}
@@ -166,7 +166,7 @@ func (d *httpDownloader) performHTTPRequest(cfg builtin.HTTPDownloadConfig) (*ht
 }
 
 // buildRequest constructs the HTTP request with headers and query parameters.
-func (d *httpDownloader) buildRequest(cfg builtin.HTTPDownloadConfig) (*http.Request, error) {
+func (d *httpDownloader) buildRequest(cfg stepconfig.HTTPDownloadConfig) (*http.Request, error) {
 	req, err := http.NewRequest(http.MethodGet, cfg.URL, nil)
 	if err != nil {
 		return nil, fmt.Errorf("error creating HTTP request: %w", err)
@@ -190,7 +190,7 @@ func (d *httpDownloader) buildRequest(cfg builtin.HTTPDownloadConfig) (*http.Req
 }
 
 // buildHTTPClient creates an HTTP client with the specified configuration.
-func (d *httpDownloader) buildHTTPClient(cfg builtin.HTTPDownloadConfig) (*http.Client, error) {
+func (d *httpDownloader) buildHTTPClient(cfg stepconfig.HTTPDownloadConfig) (*http.Client, error) {
 	httpTransport := cleanhttp.DefaultTransport()
 	kargonet.HardenTransport(httpTransport, nil)
 	if cfg.InsecureSkipTLSVerify {

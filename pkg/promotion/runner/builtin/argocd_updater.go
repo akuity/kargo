@@ -27,7 +27,7 @@ import (
 	"github.com/akuity/kargo/pkg/logging"
 	"github.com/akuity/kargo/pkg/promotion"
 	"github.com/akuity/kargo/pkg/urls"
-	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
+	"github.com/akuity/kargo/pkg/x/promotion/stepconfig"
 )
 
 const (
@@ -64,15 +64,15 @@ type argocdUpdater struct {
 	getAuthorizedApplicationsFn func(
 		context.Context,
 		*promotion.StepContext,
-		*builtin.ArgoCDAppUpdate,
+		*stepconfig.ArgoCDAppUpdate,
 	) ([]*argocd.Application, error)
 
 	buildLabelSelectorFn func(
-		*builtin.ArgoCDAppSelector,
+		*stepconfig.ArgoCDAppSelector,
 	) (labels.Selector, error)
 
 	buildDesiredSourcesFn func(
-		update *builtin.ArgoCDAppUpdate,
+		update *stepconfig.ArgoCDAppUpdate,
 		desiredRevisions []string,
 		app *argocd.Application,
 	) (argocd.ApplicationSources, error)
@@ -80,7 +80,7 @@ type argocdUpdater struct {
 	mustPerformUpdateFn func(
 		context.Context,
 		*promotion.StepContext,
-		*builtin.ArgoCDAppUpdate,
+		*stepconfig.ArgoCDAppUpdate,
 		*argocd.Application,
 	) (argocd.OperationPhase, bool, error)
 
@@ -92,7 +92,7 @@ type argocdUpdater struct {
 	) error
 
 	applyArgoCDSourceUpdateFn func(
-		update *builtin.ArgoCDAppSourceUpdate,
+		update *stepconfig.ArgoCDAppSourceUpdate,
 		desiredRevision string,
 		src argocd.ApplicationSource,
 	) (argocd.ApplicationSource, bool)
@@ -143,15 +143,15 @@ func (a *argocdUpdater) Run(
 }
 
 // convert validates argocdUpdater configuration against a JSON schema and
-// converts it into a builtin.ArgoCDUpdateConfig struct.
-func (a *argocdUpdater) convert(cfg promotion.Config) (builtin.ArgoCDUpdateConfig, error) {
-	return validateAndConvert[builtin.ArgoCDUpdateConfig](a.schemaLoader, cfg, stepKindArgoCDUpdate)
+// converts it into a stepconfig.ArgoCDUpdateConfig struct.
+func (a *argocdUpdater) convert(cfg promotion.Config) (stepconfig.ArgoCDUpdateConfig, error) {
+	return validateAndConvert[stepconfig.ArgoCDUpdateConfig](a.schemaLoader, cfg, stepKindArgoCDUpdate)
 }
 
 func (a *argocdUpdater) run(
 	ctx context.Context,
 	stepCtx *promotion.StepContext,
-	stepCfg builtin.ArgoCDUpdateConfig,
+	stepCfg stepconfig.ArgoCDUpdateConfig,
 ) (promotion.StepResult, error) {
 	if a.argocdClient == nil {
 		// nolint:staticcheck
@@ -263,7 +263,7 @@ func (a *argocdUpdater) run(
 // prevents partial updates due to validation failures (e.g., if only some apps
 // have sources matching the update).
 func (a *argocdUpdater) validateSourceUpdatesApplicable(
-	update *builtin.ArgoCDAppUpdate,
+	update *stepconfig.ArgoCDAppUpdate,
 	apps []*argocd.Application,
 ) error {
 	if len(apps) <= 1 {
@@ -316,7 +316,7 @@ func (a *argocdUpdater) validateSourceUpdatesApplicable(
 func (a *argocdUpdater) processApplication(
 	ctx context.Context,
 	stepCtx *promotion.StepContext,
-	update *builtin.ArgoCDAppUpdate,
+	update *stepconfig.ArgoCDAppUpdate,
 	app *argocd.Application,
 ) (argocd.OperationPhase, error) {
 	logger := logging.LoggerFromContext(ctx).WithValues("app", app.Name, "namespace", app.Namespace)
@@ -401,7 +401,7 @@ func (a *argocdUpdater) processApplication(
 // buildDesiredSources returns the desired source(s) for an Argo CD Application,
 // by updating the current source(s) with the given source updates.
 func (a *argocdUpdater) buildDesiredSources(
-	update *builtin.ArgoCDAppUpdate,
+	update *stepconfig.ArgoCDAppUpdate,
 	desiredRevisions []string,
 	app *argocd.Application,
 ) (argocd.ApplicationSources, error) {
@@ -452,7 +452,7 @@ updateLoop:
 func (a *argocdUpdater) mustPerformUpdate(
 	ctx context.Context,
 	stepCtx *promotion.StepContext,
-	update *builtin.ArgoCDAppUpdate,
+	update *stepconfig.ArgoCDAppUpdate,
 	app *argocd.Application,
 ) (phase argocd.OperationPhase, mustUpdate bool, err error) {
 	logger := logging.LoggerFromContext(ctx).WithValues(
@@ -794,7 +794,7 @@ func (a *argocdUpdater) logAppEvent(
 func (a *argocdUpdater) getAuthorizedApplications(
 	ctx context.Context,
 	stepCtx *promotion.StepContext,
-	update *builtin.ArgoCDAppUpdate,
+	update *stepconfig.ArgoCDAppUpdate,
 ) ([]*argocd.Application, error) {
 	namespace := update.Namespace
 	if namespace == "" {
@@ -1017,7 +1017,7 @@ func (a *argocdUpdater) authorizeArgoCDAppUpdate(
 
 // applyArgoCDSourceUpdate updates a single Argo CD ApplicationSource.
 func (a *argocdUpdater) applyArgoCDSourceUpdate(
-	update *builtin.ArgoCDAppSourceUpdate,
+	update *stepconfig.ArgoCDAppSourceUpdate,
 	desiredRevision string,
 	source argocd.ApplicationSource,
 ) (argocd.ApplicationSource, bool) {
@@ -1081,7 +1081,7 @@ func (a *argocdUpdater) applyArgoCDSourceUpdate(
 }
 
 func (a *argocdUpdater) buildKustomizeImagesForAppSource(
-	update *builtin.ArgoCDKustomizeImageUpdates,
+	update *stepconfig.ArgoCDKustomizeImageUpdates,
 ) argocd.KustomizeImages {
 	kustomizeImages := make(argocd.KustomizeImages, 0, len(update.Images))
 	for i := range update.Images {
@@ -1111,7 +1111,7 @@ func (a *argocdUpdater) buildKustomizeImagesForAppSource(
 }
 
 func (a *argocdUpdater) buildHelmParamChangesForAppSource(
-	update *builtin.ArgoCDHelmParameterUpdates,
+	update *stepconfig.ArgoCDHelmParameterUpdates,
 ) map[string]string {
 	changes := map[string]string{}
 	for i := range update.Images {

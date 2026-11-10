@@ -17,7 +17,7 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/promotion"
-	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
+	"github.com/akuity/kargo/pkg/x/promotion/stepconfig"
 )
 
 func Test_kustomizeImageSetter_convert(t *testing.T) {
@@ -145,7 +145,7 @@ func Test_kustomizeImageSetter_run(t *testing.T) {
 	tests := []struct {
 		name       string
 		setupFiles func(t *testing.T, workDir string)
-		cfg        builtin.KustomizeSetImageConfig
+		cfg        stepconfig.KustomizeSetImageConfig
 		client     client.Client
 		stepCtx    *promotion.StepContext
 		assertions func(*testing.T, string, promotion.StepResult, error)
@@ -159,9 +159,9 @@ kind: Kustomization
 				err := os.WriteFile(filepath.Join(workDir, "kustomization.yaml"), []byte(kustomizationContent), 0o600)
 				require.NoError(t, err)
 			},
-			cfg: builtin.KustomizeSetImageConfig{
+			cfg: stepconfig.KustomizeSetImageConfig{
 				Path:   ".",
-				Images: []builtin.Image{{Image: "nginx", Tag: "1.21.0"}},
+				Images: []stepconfig.Image{{Image: "nginx", Tag: "1.21.0"}},
 			},
 			client: fake.NewClientBuilder().WithScheme(scheme).WithObjects(
 				mockWarehouse(testNamespace, "warehouse1", kargoapi.WarehouseSpec{
@@ -207,7 +207,7 @@ kind: Kustomization
 				err := os.WriteFile(filepath.Join(workDir, "kustomization.yaml"), []byte(kustomizationContent), 0o600)
 				require.NoError(t, err)
 			},
-			cfg: builtin.KustomizeSetImageConfig{
+			cfg: stepconfig.KustomizeSetImageConfig{
 				Path:   ".",
 				Images: nil, // Automatically set all images
 			},
@@ -240,9 +240,9 @@ kind: Kustomization
 		},
 		{
 			name: "Kustomization file not found",
-			cfg: builtin.KustomizeSetImageConfig{
+			cfg: stepconfig.KustomizeSetImageConfig{
 				Path: ".",
-				Images: []builtin.Image{
+				Images: []stepconfig.Image{
 					{Image: "nginx"},
 				},
 			},
@@ -273,12 +273,12 @@ kind: Kustomization
 func Test_kustomizeImageSetter_buildTargetImages(t *testing.T) {
 	tests := []struct {
 		name       string
-		images     []builtin.Image
+		images     []stepconfig.Image
 		assertions func(*testing.T, map[string]kustypes.Image)
 	}{
 		{
 			name: "digest or tag specified",
-			images: []builtin.Image{
+			images: []stepconfig.Image{
 				{
 					Image: "nginx",
 					Tag:   "fake-tag",
@@ -944,9 +944,9 @@ func Test_kustomizeImageSetter_run_escapingSymlink(t *testing.T) {
 	_, err := (&kustomizeImageSetter{}).run(
 		t.Context(),
 		newTestStepContext(t, workDir),
-		builtin.KustomizeSetImageConfig{
+		stepconfig.KustomizeSetImageConfig{
 			Path:   "out",
-			Images: []builtin.Image{{Image: "nginx", Tag: "1.21.0"}},
+			Images: []stepconfig.Image{{Image: "nginx", Tag: "1.21.0"}},
 		},
 	)
 	require.ErrorContains(t, err, "path escapes from parent")

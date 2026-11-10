@@ -19,7 +19,7 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/io/fs"
 	"github.com/akuity/kargo/pkg/promotion"
-	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
+	"github.com/akuity/kargo/pkg/x/promotion/stepconfig"
 )
 
 func Test_helmChartUpdater_convert(t *testing.T) {
@@ -141,7 +141,7 @@ func Test_helmChartUpdater_run(t *testing.T) {
 	tests := []struct {
 		name            string
 		context         *promotion.StepContext
-		cfg             builtin.HelmUpdateChartConfig
+		cfg             stepconfig.HelmUpdateChartConfig
 		chartMetadata   *chart.Metadata
 		setupRepository func(t *testing.T) (string, func())
 		assertions      func(*testing.T, string, promotion.StepResult, error)
@@ -166,9 +166,9 @@ func Test_helmChartUpdater_run(t *testing.T) {
 					},
 				},
 			},
-			cfg: builtin.HelmUpdateChartConfig{
+			cfg: stepconfig.HelmUpdateChartConfig{
 				Path: "testchart",
-				Charts: []builtin.Chart{
+				Charts: []stepconfig.Chart{
 					{
 						Repository: "https://charts.example.com",
 						Name:       "examplechart",
@@ -230,7 +230,7 @@ func Test_helmChartUpdater_run(t *testing.T) {
 			context: &promotion.StepContext{
 				Project: "test-project",
 			},
-			cfg: builtin.HelmUpdateChartConfig{
+			cfg: stepconfig.HelmUpdateChartConfig{
 				Path: "testchart",
 			},
 			chartMetadata: &chart.Metadata{
@@ -462,8 +462,8 @@ func Test_helmChartUpdater_run_escapingSymlink(t *testing.T) {
 		"dependencies:\n- name: dep\n  version: 1.0.0\n  repository: ''\n"
 	require.NoError(t, os.WriteFile(filepath.Join(outside, "Chart.yaml"), []byte(chartYAML), 0o600))
 	require.NoError(t, stepCtx.Root.Symlink("../../outside/Chart.yaml", "chart/Chart.yaml"))
-	_, err := (&helmChartUpdater{}).run(t.Context(), stepCtx, builtin.HelmUpdateChartConfig{
-		Path: "chart", Charts: []builtin.Chart{{Name: "dep", Version: "2.0.0"}},
+	_, err := (&helmChartUpdater{}).run(t.Context(), stepCtx, stepconfig.HelmUpdateChartConfig{
+		Path: "chart", Charts: []stepconfig.Chart{{Name: "dep", Version: "2.0.0"}},
 	})
 	require.ErrorContains(t, err, "path escapes from parent")
 	content, err := os.ReadFile(filepath.Join(outside, "Chart.yaml"))

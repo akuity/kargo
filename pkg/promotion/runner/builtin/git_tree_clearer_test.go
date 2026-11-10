@@ -13,7 +13,7 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/controller/git"
 	"github.com/akuity/kargo/pkg/promotion"
-	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
+	"github.com/akuity/kargo/pkg/x/promotion/stepconfig"
 )
 
 func Test_gitTreeOverwriter_convert(t *testing.T) {
@@ -102,7 +102,7 @@ func Test_gitTreeOverwriter_run(t *testing.T) {
 			WorkDir: workDir,
 			Root:    newTestRoot(t, workDir),
 		},
-		builtin.GitClearConfig{
+		stepconfig.GitClearConfig{
 			Path: "master",
 		},
 	)
@@ -123,7 +123,7 @@ func Test_gitTreeClearer_run_escapingSymlink(t *testing.T) {
 	res, err := (&gitTreeClearer{}).run(
 		t.Context(),
 		newTestStepContext(t, workDir),
-		builtin.GitClearConfig{Path: "out/repo"},
+		stepconfig.GitClearConfig{Path: "out/repo"},
 	)
 	require.ErrorContains(t, err, "path escapes from parent")
 	require.Equal(t, kargoapi.PromotionStepStatusErrored, res.Status)

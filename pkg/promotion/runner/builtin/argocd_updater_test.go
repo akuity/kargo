@@ -25,7 +25,7 @@ import (
 	argocd "github.com/akuity/kargo/pkg/controller/argocd/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/kubeclient"
 	"github.com/akuity/kargo/pkg/promotion"
-	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
+	"github.com/akuity/kargo/pkg/x/promotion/stepconfig"
 )
 
 func Test_newArgocdUpdater(t *testing.T) {
@@ -509,13 +509,13 @@ func Test_argoCDUpdater_run(t *testing.T) {
 	testCases := []struct {
 		name       string
 		runner     *argocdUpdater
-		stepCfg    builtin.ArgoCDUpdateConfig
+		stepCfg    stepconfig.ArgoCDUpdateConfig
 		assertions func(*testing.T, promotion.StepResult, error)
 	}{
 		{
 			name:    "argo cd integration disabled",
 			runner:  &argocdUpdater{},
-			stepCfg: builtin.ArgoCDUpdateConfig{},
+			stepCfg: stepconfig.ArgoCDUpdateConfig{},
 			assertions: func(t *testing.T, res promotion.StepResult, err error) {
 				assert.Equal(t, kargoapi.PromotionStepStatusErrored, res.Status)
 				assert.Nil(t, res.RetryAfter)
@@ -531,13 +531,13 @@ func Test_argoCDUpdater_run(t *testing.T) {
 				getAuthorizedApplicationsFn: func(
 					context.Context,
 					*promotion.StepContext,
-					*builtin.ArgoCDAppUpdate,
+					*stepconfig.ArgoCDAppUpdate,
 				) ([]*argocd.Application, error) {
 					return nil, errors.New("something went wrong")
 				},
 			},
-			stepCfg: builtin.ArgoCDUpdateConfig{
-				Apps: []builtin.ArgoCDAppUpdate{{}},
+			stepCfg: stepconfig.ArgoCDUpdateConfig{
+				Apps: []stepconfig.ArgoCDAppUpdate{{}},
 			},
 			assertions: func(t *testing.T, res promotion.StepResult, err error) {
 				assert.Equal(t, kargoapi.PromotionStepStatusErrored, res.Status)
@@ -552,12 +552,12 @@ func Test_argoCDUpdater_run(t *testing.T) {
 				getAuthorizedApplicationsFn: func(
 					context.Context,
 					*promotion.StepContext,
-					*builtin.ArgoCDAppUpdate,
+					*stepconfig.ArgoCDAppUpdate,
 				) ([]*argocd.Application, error) {
 					return []*argocd.Application{{}}, nil
 				},
 				buildDesiredSourcesFn: func(
-					*builtin.ArgoCDAppUpdate,
+					*stepconfig.ArgoCDAppUpdate,
 					[]string,
 					*argocd.Application,
 				) (argocd.ApplicationSources, error) {
@@ -566,14 +566,14 @@ func Test_argoCDUpdater_run(t *testing.T) {
 				mustPerformUpdateFn: func(
 					context.Context,
 					*promotion.StepContext,
-					*builtin.ArgoCDAppUpdate,
+					*stepconfig.ArgoCDAppUpdate,
 					*argocd.Application,
 				) (argocd.OperationPhase, bool, error) {
 					return "", false, errors.New("something went wrong")
 				},
 			},
-			stepCfg: builtin.ArgoCDUpdateConfig{
-				Apps: []builtin.ArgoCDAppUpdate{{}},
+			stepCfg: stepconfig.ArgoCDUpdateConfig{
+				Apps: []stepconfig.ArgoCDAppUpdate{{}},
 			},
 			assertions: func(t *testing.T, res promotion.StepResult, err error) {
 				assert.Equal(t, kargoapi.PromotionStepStatusErrored, res.Status)
@@ -588,12 +588,12 @@ func Test_argoCDUpdater_run(t *testing.T) {
 				getAuthorizedApplicationsFn: func(
 					context.Context,
 					*promotion.StepContext,
-					*builtin.ArgoCDAppUpdate,
+					*stepconfig.ArgoCDAppUpdate,
 				) ([]*argocd.Application, error) {
 					return []*argocd.Application{{}}, nil
 				},
 				buildDesiredSourcesFn: func(
-					*builtin.ArgoCDAppUpdate,
+					*stepconfig.ArgoCDAppUpdate,
 					[]string,
 					*argocd.Application,
 				) (argocd.ApplicationSources, error) {
@@ -602,7 +602,7 @@ func Test_argoCDUpdater_run(t *testing.T) {
 				mustPerformUpdateFn: func(
 					context.Context,
 					*promotion.StepContext,
-					*builtin.ArgoCDAppUpdate,
+					*stepconfig.ArgoCDAppUpdate,
 					*argocd.Application,
 				) (argocd.OperationPhase, bool, error) {
 					return "", true, errors.New("something went wrong")
@@ -616,8 +616,8 @@ func Test_argoCDUpdater_run(t *testing.T) {
 					return nil
 				},
 			},
-			stepCfg: builtin.ArgoCDUpdateConfig{
-				Apps: []builtin.ArgoCDAppUpdate{{}},
+			stepCfg: stepconfig.ArgoCDUpdateConfig{
+				Apps: []stepconfig.ArgoCDAppUpdate{{}},
 			},
 			assertions: func(t *testing.T, res promotion.StepResult, err error) {
 				assert.Equal(t, kargoapi.PromotionStepStatusRunning, res.Status)
@@ -632,12 +632,12 @@ func Test_argoCDUpdater_run(t *testing.T) {
 				getAuthorizedApplicationsFn: func(
 					context.Context,
 					*promotion.StepContext,
-					*builtin.ArgoCDAppUpdate,
+					*stepconfig.ArgoCDAppUpdate,
 				) ([]*argocd.Application, error) {
 					return []*argocd.Application{{}}, nil
 				},
 				buildDesiredSourcesFn: func(
-					*builtin.ArgoCDAppUpdate,
+					*stepconfig.ArgoCDAppUpdate,
 					[]string,
 					*argocd.Application,
 				) (argocd.ApplicationSources, error) {
@@ -646,14 +646,14 @@ func Test_argoCDUpdater_run(t *testing.T) {
 				mustPerformUpdateFn: func(
 					context.Context,
 					*promotion.StepContext,
-					*builtin.ArgoCDAppUpdate,
+					*stepconfig.ArgoCDAppUpdate,
 					*argocd.Application,
 				) (argocd.OperationPhase, bool, error) {
 					return argocd.OperationRunning, false, nil
 				},
 			},
-			stepCfg: builtin.ArgoCDUpdateConfig{
-				Apps: []builtin.ArgoCDAppUpdate{{}},
+			stepCfg: stepconfig.ArgoCDUpdateConfig{
+				Apps: []stepconfig.ArgoCDAppUpdate{{}},
 			},
 			assertions: func(t *testing.T, res promotion.StepResult, err error) {
 				assert.Equal(t, kargoapi.PromotionStepStatusRunning, res.Status)
@@ -668,12 +668,12 @@ func Test_argoCDUpdater_run(t *testing.T) {
 				getAuthorizedApplicationsFn: func(
 					context.Context,
 					*promotion.StepContext,
-					*builtin.ArgoCDAppUpdate,
+					*stepconfig.ArgoCDAppUpdate,
 				) ([]*argocd.Application, error) {
 					return []*argocd.Application{{}}, nil
 				},
 				buildDesiredSourcesFn: func(
-					*builtin.ArgoCDAppUpdate,
+					*stepconfig.ArgoCDAppUpdate,
 					[]string,
 					*argocd.Application,
 				) (argocd.ApplicationSources, error) {
@@ -682,14 +682,14 @@ func Test_argoCDUpdater_run(t *testing.T) {
 				mustPerformUpdateFn: func(
 					context.Context,
 					*promotion.StepContext,
-					*builtin.ArgoCDAppUpdate,
+					*stepconfig.ArgoCDAppUpdate,
 					*argocd.Application,
 				) (argocd.OperationPhase, bool, error) {
 					return argocd.OperationRunning, false, fmt.Errorf("waiting for operation to complete")
 				},
 			},
-			stepCfg: builtin.ArgoCDUpdateConfig{
-				Apps: []builtin.ArgoCDAppUpdate{{}},
+			stepCfg: stepconfig.ArgoCDUpdateConfig{
+				Apps: []stepconfig.ArgoCDAppUpdate{{}},
 			},
 			assertions: func(t *testing.T, res promotion.StepResult, err error) {
 				assert.Equal(t, kargoapi.PromotionStepStatusRunning, res.Status)
@@ -704,28 +704,28 @@ func Test_argoCDUpdater_run(t *testing.T) {
 				getAuthorizedApplicationsFn: func(
 					context.Context,
 					*promotion.StepContext,
-					*builtin.ArgoCDAppUpdate,
+					*stepconfig.ArgoCDAppUpdate,
 				) ([]*argocd.Application, error) {
 					return []*argocd.Application{{}}, nil
 				},
 				mustPerformUpdateFn: func(
 					context.Context,
 					*promotion.StepContext,
-					*builtin.ArgoCDAppUpdate,
+					*stepconfig.ArgoCDAppUpdate,
 					*argocd.Application,
 				) (argocd.OperationPhase, bool, error) {
 					return "", true, nil
 				},
 				buildDesiredSourcesFn: func(
-					*builtin.ArgoCDAppUpdate,
+					*stepconfig.ArgoCDAppUpdate,
 					[]string,
 					*argocd.Application,
 				) (argocd.ApplicationSources, error) {
 					return nil, errors.New("something went wrong")
 				},
 			},
-			stepCfg: builtin.ArgoCDUpdateConfig{
-				Apps: []builtin.ArgoCDAppUpdate{{}},
+			stepCfg: stepconfig.ArgoCDUpdateConfig{
+				Apps: []stepconfig.ArgoCDAppUpdate{{}},
 			},
 			assertions: func(t *testing.T, res promotion.StepResult, err error) {
 				assert.Equal(t, kargoapi.PromotionStepStatusErrored, res.Status)
@@ -742,20 +742,20 @@ func Test_argoCDUpdater_run(t *testing.T) {
 				getAuthorizedApplicationsFn: func(
 					context.Context,
 					*promotion.StepContext,
-					*builtin.ArgoCDAppUpdate,
+					*stepconfig.ArgoCDAppUpdate,
 				) ([]*argocd.Application, error) {
 					return []*argocd.Application{{}}, nil
 				},
 				mustPerformUpdateFn: func(
 					context.Context,
 					*promotion.StepContext,
-					*builtin.ArgoCDAppUpdate,
+					*stepconfig.ArgoCDAppUpdate,
 					*argocd.Application,
 				) (argocd.OperationPhase, bool, error) {
 					return "", true, nil
 				},
 				buildDesiredSourcesFn: func(
-					*builtin.ArgoCDAppUpdate,
+					*stepconfig.ArgoCDAppUpdate,
 					[]string,
 					*argocd.Application,
 				) (argocd.ApplicationSources, error) {
@@ -770,8 +770,8 @@ func Test_argoCDUpdater_run(t *testing.T) {
 					return errors.New("something went wrong")
 				},
 			},
-			stepCfg: builtin.ArgoCDUpdateConfig{
-				Apps: []builtin.ArgoCDAppUpdate{{}},
+			stepCfg: stepconfig.ArgoCDUpdateConfig{
+				Apps: []stepconfig.ArgoCDAppUpdate{{}},
 			},
 			assertions: func(t *testing.T, res promotion.StepResult, err error) {
 				assert.Equal(t, kargoapi.PromotionStepStatusErrored, res.Status)
@@ -787,21 +787,21 @@ func Test_argoCDUpdater_run(t *testing.T) {
 				getAuthorizedApplicationsFn: func(
 					context.Context,
 					*promotion.StepContext,
-					*builtin.ArgoCDAppUpdate,
+					*stepconfig.ArgoCDAppUpdate,
 				) ([]*argocd.Application, error) {
 					return []*argocd.Application{{}}, nil
 				},
 				mustPerformUpdateFn: func() func(
 					context.Context,
 					*promotion.StepContext,
-					*builtin.ArgoCDAppUpdate,
+					*stepconfig.ArgoCDAppUpdate,
 					*argocd.Application,
 				) (argocd.OperationPhase, bool, error) {
 					var count uint
 					return func(
 						context.Context,
 						*promotion.StepContext,
-						*builtin.ArgoCDAppUpdate,
+						*stepconfig.ArgoCDAppUpdate,
 						*argocd.Application,
 					) (argocd.OperationPhase, bool, error) {
 						count++
@@ -812,7 +812,7 @@ func Test_argoCDUpdater_run(t *testing.T) {
 					}
 				}(),
 				buildDesiredSourcesFn: func(
-					*builtin.ArgoCDAppUpdate,
+					*stepconfig.ArgoCDAppUpdate,
 					[]string,
 					*argocd.Application,
 				) (argocd.ApplicationSources, error) {
@@ -827,8 +827,8 @@ func Test_argoCDUpdater_run(t *testing.T) {
 					return nil
 				},
 			},
-			stepCfg: builtin.ArgoCDUpdateConfig{
-				Apps: []builtin.ArgoCDAppUpdate{{}, {}},
+			stepCfg: stepconfig.ArgoCDUpdateConfig{
+				Apps: []stepconfig.ArgoCDAppUpdate{{}, {}},
 			},
 			assertions: func(t *testing.T, res promotion.StepResult, err error) {
 				assert.Equal(t, kargoapi.PromotionStepStatusErrored, res.Status)
@@ -843,12 +843,12 @@ func Test_argoCDUpdater_run(t *testing.T) {
 				getAuthorizedApplicationsFn: func(
 					context.Context,
 					*promotion.StepContext,
-					*builtin.ArgoCDAppUpdate,
+					*stepconfig.ArgoCDAppUpdate,
 				) ([]*argocd.Application, error) {
 					return []*argocd.Application{{}}, nil
 				},
 				buildDesiredSourcesFn: func(
-					*builtin.ArgoCDAppUpdate,
+					*stepconfig.ArgoCDAppUpdate,
 					[]string,
 					*argocd.Application,
 				) (argocd.ApplicationSources, error) {
@@ -857,14 +857,14 @@ func Test_argoCDUpdater_run(t *testing.T) {
 				mustPerformUpdateFn: func(
 					context.Context,
 					*promotion.StepContext,
-					*builtin.ArgoCDAppUpdate,
+					*stepconfig.ArgoCDAppUpdate,
 					*argocd.Application,
 				) (argocd.OperationPhase, bool, error) {
 					return "Unknown", false, nil
 				},
 			},
-			stepCfg: builtin.ArgoCDUpdateConfig{
-				Apps: []builtin.ArgoCDAppUpdate{{}},
+			stepCfg: stepconfig.ArgoCDUpdateConfig{
+				Apps: []stepconfig.ArgoCDAppUpdate{{}},
 			},
 			assertions: func(t *testing.T, res promotion.StepResult, err error) {
 				assert.Equal(t, kargoapi.PromotionStepStatusErrored, res.Status)
@@ -878,12 +878,12 @@ func Test_argoCDUpdater_run(t *testing.T) {
 				getAuthorizedApplicationsFn: func(
 					context.Context,
 					*promotion.StepContext,
-					*builtin.ArgoCDAppUpdate,
+					*stepconfig.ArgoCDAppUpdate,
 				) ([]*argocd.Application, error) {
 					return []*argocd.Application{{}}, nil
 				},
 				buildDesiredSourcesFn: func(
-					*builtin.ArgoCDAppUpdate,
+					*stepconfig.ArgoCDAppUpdate,
 					[]string,
 					*argocd.Application,
 				) (argocd.ApplicationSources, error) {
@@ -892,15 +892,15 @@ func Test_argoCDUpdater_run(t *testing.T) {
 				mustPerformUpdateFn: func(
 					context.Context,
 					*promotion.StepContext,
-					*builtin.ArgoCDAppUpdate,
+					*stepconfig.ArgoCDAppUpdate,
 					*argocd.Application,
 				) (argocd.OperationPhase, bool, error) {
 					return argocd.OperationSucceeded, false, nil
 				},
 				argocdClient: fake.NewFakeClient(),
 			},
-			stepCfg: builtin.ArgoCDUpdateConfig{
-				Apps: []builtin.ArgoCDAppUpdate{{}},
+			stepCfg: stepconfig.ArgoCDUpdateConfig{
+				Apps: []stepconfig.ArgoCDAppUpdate{{}},
 			},
 			assertions: func(t *testing.T, res promotion.StepResult, err error) {
 				assert.Equal(t, kargoapi.PromotionStepStatusSucceeded, res.Status)
@@ -915,7 +915,7 @@ func Test_argoCDUpdater_run(t *testing.T) {
 				getAuthorizedApplicationsFn: func(
 					context.Context,
 					*promotion.StepContext,
-					*builtin.ArgoCDAppUpdate,
+					*stepconfig.ArgoCDAppUpdate,
 				) ([]*argocd.Application, error) {
 					return []*argocd.Application{
 						{ObjectMeta: metav1.ObjectMeta{Name: "app1", Namespace: "argocd"}},
@@ -924,7 +924,7 @@ func Test_argoCDUpdater_run(t *testing.T) {
 					}, nil
 				},
 				buildDesiredSourcesFn: func(
-					*builtin.ArgoCDAppUpdate,
+					*stepconfig.ArgoCDAppUpdate,
 					[]string,
 					*argocd.Application,
 				) (argocd.ApplicationSources, error) {
@@ -933,14 +933,14 @@ func Test_argoCDUpdater_run(t *testing.T) {
 				mustPerformUpdateFn: func(
 					context.Context,
 					*promotion.StepContext,
-					*builtin.ArgoCDAppUpdate,
+					*stepconfig.ArgoCDAppUpdate,
 					*argocd.Application,
 				) (argocd.OperationPhase, bool, error) {
 					return argocd.OperationSucceeded, false, nil
 				},
 			},
-			stepCfg: builtin.ArgoCDUpdateConfig{
-				Apps: []builtin.ArgoCDAppUpdate{{}},
+			stepCfg: stepconfig.ArgoCDUpdateConfig{
+				Apps: []stepconfig.ArgoCDAppUpdate{{}},
 			},
 			assertions: func(t *testing.T, res promotion.StepResult, err error) {
 				assert.Equal(t, kargoapi.PromotionStepStatusSucceeded, res.Status)
@@ -970,7 +970,7 @@ func Test_argoCDUpdater_run(t *testing.T) {
 				getAuthorizedApplicationsFn: func(
 					context.Context,
 					*promotion.StepContext,
-					*builtin.ArgoCDAppUpdate,
+					*stepconfig.ArgoCDAppUpdate,
 				) ([]*argocd.Application, error) {
 					return []*argocd.Application{
 						{ObjectMeta: metav1.ObjectMeta{Name: "app1", Namespace: "argocd"}},
@@ -981,14 +981,14 @@ func Test_argoCDUpdater_run(t *testing.T) {
 				mustPerformUpdateFn: func() func(
 					context.Context,
 					*promotion.StepContext,
-					*builtin.ArgoCDAppUpdate,
+					*stepconfig.ArgoCDAppUpdate,
 					*argocd.Application,
 				) (argocd.OperationPhase, bool, error) {
 					var count int
 					return func(
 						_ context.Context,
 						_ *promotion.StepContext,
-						_ *builtin.ArgoCDAppUpdate,
+						_ *stepconfig.ArgoCDAppUpdate,
 						_ *argocd.Application,
 					) (argocd.OperationPhase, bool, error) {
 						count++
@@ -1001,7 +1001,7 @@ func Test_argoCDUpdater_run(t *testing.T) {
 					}
 				}(),
 				buildDesiredSourcesFn: func(
-					*builtin.ArgoCDAppUpdate,
+					*stepconfig.ArgoCDAppUpdate,
 					[]string,
 					*argocd.Application,
 				) (argocd.ApplicationSources, error) {
@@ -1019,8 +1019,8 @@ func Test_argoCDUpdater_run(t *testing.T) {
 					return nil
 				},
 			},
-			stepCfg: builtin.ArgoCDUpdateConfig{
-				Apps: []builtin.ArgoCDAppUpdate{{}},
+			stepCfg: stepconfig.ArgoCDUpdateConfig{
+				Apps: []stepconfig.ArgoCDAppUpdate{{}},
 			},
 			assertions: func(t *testing.T, res promotion.StepResult, err error) {
 				assert.Equal(t, kargoapi.PromotionStepStatusErrored, res.Status)
@@ -1037,7 +1037,7 @@ func Test_argoCDUpdater_run(t *testing.T) {
 				getAuthorizedApplicationsFn: func(
 					context.Context,
 					*promotion.StepContext,
-					*builtin.ArgoCDAppUpdate,
+					*stepconfig.ArgoCDAppUpdate,
 				) ([]*argocd.Application, error) {
 					return []*argocd.Application{
 						{ObjectMeta: metav1.ObjectMeta{Name: "app1", Namespace: "argocd"}},
@@ -1048,14 +1048,14 @@ func Test_argoCDUpdater_run(t *testing.T) {
 				mustPerformUpdateFn: func() func(
 					context.Context,
 					*promotion.StepContext,
-					*builtin.ArgoCDAppUpdate,
+					*stepconfig.ArgoCDAppUpdate,
 					*argocd.Application,
 				) (argocd.OperationPhase, bool, error) {
 					var count int
 					return func(
 						_ context.Context,
 						_ *promotion.StepContext,
-						_ *builtin.ArgoCDAppUpdate,
+						_ *stepconfig.ArgoCDAppUpdate,
 						_ *argocd.Application,
 					) (argocd.OperationPhase, bool, error) {
 						count++
@@ -1075,7 +1075,7 @@ func Test_argoCDUpdater_run(t *testing.T) {
 					}
 				}(),
 				buildDesiredSourcesFn: func(
-					*builtin.ArgoCDAppUpdate,
+					*stepconfig.ArgoCDAppUpdate,
 					[]string,
 					*argocd.Application,
 				) (argocd.ApplicationSources, error) {
@@ -1090,8 +1090,8 @@ func Test_argoCDUpdater_run(t *testing.T) {
 					return nil
 				},
 			},
-			stepCfg: builtin.ArgoCDUpdateConfig{
-				Apps: []builtin.ArgoCDAppUpdate{{}},
+			stepCfg: stepconfig.ArgoCDUpdateConfig{
+				Apps: []stepconfig.ArgoCDAppUpdate{{}},
 			},
 			assertions: func(t *testing.T, res promotion.StepResult, err error) {
 				assert.Equal(t, kargoapi.PromotionStepStatusRunning, res.Status)
@@ -1111,7 +1111,7 @@ func Test_argoCDUpdater_run(t *testing.T) {
 				getAuthorizedApplicationsFn: func(
 					context.Context,
 					*promotion.StepContext,
-					*builtin.ArgoCDAppUpdate,
+					*stepconfig.ArgoCDAppUpdate,
 				) ([]*argocd.Application, error) {
 					return []*argocd.Application{
 						{ObjectMeta: metav1.ObjectMeta{Name: "app1", Namespace: "argocd"}},
@@ -1119,13 +1119,13 @@ func Test_argoCDUpdater_run(t *testing.T) {
 					}, nil
 				},
 				buildDesiredSourcesFn: func() func(
-					*builtin.ArgoCDAppUpdate,
+					*stepconfig.ArgoCDAppUpdate,
 					[]string,
 					*argocd.Application,
 				) (argocd.ApplicationSources, error) {
 					count := 0
 					return func(
-						_ *builtin.ArgoCDAppUpdate,
+						_ *stepconfig.ArgoCDAppUpdate,
 						_ []string,
 						app *argocd.Application,
 					) (argocd.ApplicationSources, error) {
@@ -1145,9 +1145,9 @@ func Test_argoCDUpdater_run(t *testing.T) {
 					panic("syncApplicationFn should not be called when validation fails")
 				},
 			},
-			stepCfg: builtin.ArgoCDUpdateConfig{
-				Apps: []builtin.ArgoCDAppUpdate{{
-					Sources: []builtin.ArgoCDAppSourceUpdate{
+			stepCfg: stepconfig.ArgoCDUpdateConfig{
+				Apps: []stepconfig.ArgoCDAppUpdate{{
+					Sources: []stepconfig.ArgoCDAppSourceUpdate{
 						{RepoURL: "https://github.com/example/repo"},
 					},
 				}},
@@ -1166,7 +1166,7 @@ func Test_argoCDUpdater_run(t *testing.T) {
 				getAuthorizedApplicationsFn: func(
 					context.Context,
 					*promotion.StepContext,
-					*builtin.ArgoCDAppUpdate,
+					*stepconfig.ArgoCDAppUpdate,
 				) ([]*argocd.Application, error) {
 					return []*argocd.Application{
 						{ObjectMeta: metav1.ObjectMeta{Name: "app1", Namespace: "argocd"}},
@@ -1181,7 +1181,7 @@ func Test_argoCDUpdater_run(t *testing.T) {
 					}, nil
 				},
 				buildDesiredSourcesFn: func(
-					*builtin.ArgoCDAppUpdate,
+					*stepconfig.ArgoCDAppUpdate,
 					[]string,
 					*argocd.Application,
 				) (argocd.ApplicationSources, error) {
@@ -1190,14 +1190,14 @@ func Test_argoCDUpdater_run(t *testing.T) {
 				mustPerformUpdateFn: func() func(
 					context.Context,
 					*promotion.StepContext,
-					*builtin.ArgoCDAppUpdate,
+					*stepconfig.ArgoCDAppUpdate,
 					*argocd.Application,
 				) (argocd.OperationPhase, bool, error) {
 					var count int
 					return func(
 						_ context.Context,
 						_ *promotion.StepContext,
-						_ *builtin.ArgoCDAppUpdate,
+						_ *stepconfig.ArgoCDAppUpdate,
 						_ *argocd.Application,
 					) (argocd.OperationPhase, bool, error) {
 						count++
@@ -1210,8 +1210,8 @@ func Test_argoCDUpdater_run(t *testing.T) {
 					}
 				}(),
 			},
-			stepCfg: builtin.ArgoCDUpdateConfig{
-				Apps: []builtin.ArgoCDAppUpdate{{}},
+			stepCfg: stepconfig.ArgoCDUpdateConfig{
+				Apps: []stepconfig.ArgoCDAppUpdate{{}},
 			},
 			assertions: func(t *testing.T, res promotion.StepResult, err error) {
 				assert.Equal(t, kargoapi.PromotionStepStatusErrored, res.Status)
@@ -1227,13 +1227,13 @@ func Test_argoCDUpdater_run(t *testing.T) {
 				getAuthorizedApplicationsFn: func() func(
 					context.Context,
 					*promotion.StepContext,
-					*builtin.ArgoCDAppUpdate,
+					*stepconfig.ArgoCDAppUpdate,
 				) ([]*argocd.Application, error) {
 					var count int
 					return func(
 						_ context.Context,
 						_ *promotion.StepContext,
-						_ *builtin.ArgoCDAppUpdate,
+						_ *stepconfig.ArgoCDAppUpdate,
 					) ([]*argocd.Application, error) {
 						count++
 						if count == 1 {
@@ -1250,7 +1250,7 @@ func Test_argoCDUpdater_run(t *testing.T) {
 					}
 				}(),
 				buildDesiredSourcesFn: func(
-					*builtin.ArgoCDAppUpdate,
+					*stepconfig.ArgoCDAppUpdate,
 					[]string,
 					*argocd.Application,
 				) (argocd.ApplicationSources, error) {
@@ -1259,14 +1259,14 @@ func Test_argoCDUpdater_run(t *testing.T) {
 				mustPerformUpdateFn: func(
 					context.Context,
 					*promotion.StepContext,
-					*builtin.ArgoCDAppUpdate,
+					*stepconfig.ArgoCDAppUpdate,
 					*argocd.Application,
 				) (argocd.OperationPhase, bool, error) {
 					return argocd.OperationSucceeded, false, nil
 				},
 			},
-			stepCfg: builtin.ArgoCDUpdateConfig{
-				Apps: []builtin.ArgoCDAppUpdate{
+			stepCfg: stepconfig.ArgoCDUpdateConfig{
+				Apps: []stepconfig.ArgoCDAppUpdate{
 					{Name: "app-by-name"}, // Name-based
 					{},                    // Selector-based (empty for simplicity)
 				},
@@ -1300,7 +1300,7 @@ func Test_argoCDUpdater_buildDesiredSources(t *testing.T) {
 	testCases := []struct {
 		name             string
 		runner           *argocdUpdater
-		update           *builtin.ArgoCDAppUpdate
+		update           *stepconfig.ArgoCDAppUpdate
 		desiredRevisions []string
 		app              *argocd.Application
 		assertions       func(
@@ -1313,7 +1313,7 @@ func Test_argoCDUpdater_buildDesiredSources(t *testing.T) {
 			name: "applies updates to sources",
 			runner: &argocdUpdater{
 				applyArgoCDSourceUpdateFn: func(
-					update *builtin.ArgoCDAppSourceUpdate,
+					update *stepconfig.ArgoCDAppSourceUpdate,
 					_ string,
 					src argocd.ApplicationSource,
 				) (argocd.ApplicationSource, bool) {
@@ -1329,8 +1329,8 @@ func Test_argoCDUpdater_buildDesiredSources(t *testing.T) {
 					return src, false
 				},
 			},
-			update: &builtin.ArgoCDAppUpdate{
-				Sources: []builtin.ArgoCDAppSourceUpdate{
+			update: &stepconfig.ArgoCDAppUpdate{
+				Sources: []stepconfig.ArgoCDAppSourceUpdate{
 					{
 						RepoURL: "fake-chart-url",
 						Chart:   "fake-chart",
@@ -1620,9 +1620,9 @@ func Test_argoCDUpdater_mustPerformUpdate(t *testing.T) {
 				testCase.modifyApplication(app)
 			}
 
-			stepCfg := &builtin.ArgoCDUpdateConfig{
-				Apps: []builtin.ArgoCDAppUpdate{{
-					Sources: []builtin.ArgoCDAppSourceUpdate{{
+			stepCfg := &stepconfig.ArgoCDUpdateConfig{
+				Apps: []stepconfig.ArgoCDAppUpdate{{
+					Sources: []stepconfig.ArgoCDAppSourceUpdate{{
 						RepoURL:         "https://github.com/universe/42",
 						DesiredRevision: "fake-revision",
 					}},
@@ -2102,7 +2102,7 @@ func Test_argoCDUpdater_applyArgoCDSourceUpdate(t *testing.T) {
 	testCases := []struct {
 		name            string
 		source          argocd.ApplicationSource
-		update          builtin.ArgoCDAppSourceUpdate
+		update          stepconfig.ArgoCDAppSourceUpdate
 		desiredRevision string
 		assertions      func(
 			t *testing.T,
@@ -2116,7 +2116,7 @@ func Test_argoCDUpdater_applyArgoCDSourceUpdate(t *testing.T) {
 			source: argocd.ApplicationSource{
 				RepoURL: "fake-url",
 			},
-			update: builtin.ArgoCDAppSourceUpdate{
+			update: stepconfig.ArgoCDAppSourceUpdate{
 				RepoURL: "different-fake-url",
 			},
 			assertions: func(
@@ -2136,7 +2136,7 @@ func Test_argoCDUpdater_applyArgoCDSourceUpdate(t *testing.T) {
 			source: argocd.ApplicationSource{
 				RepoURL: "fake-url",
 			},
-			update: builtin.ArgoCDAppSourceUpdate{
+			update: stepconfig.ArgoCDAppSourceUpdate{
 				RepoURL:              "fake-url",
 				UpdateTargetRevision: true,
 			},
@@ -2162,7 +2162,7 @@ func Test_argoCDUpdater_applyArgoCDSourceUpdate(t *testing.T) {
 				RepoURL: "fake-url",
 				Chart:   "fake-chart",
 			},
-			update: builtin.ArgoCDAppSourceUpdate{
+			update: stepconfig.ArgoCDAppSourceUpdate{
 				RepoURL:              "fake-url",
 				Chart:                "fake-chart",
 				UpdateTargetRevision: true,
@@ -2188,10 +2188,10 @@ func Test_argoCDUpdater_applyArgoCDSourceUpdate(t *testing.T) {
 			source: argocd.ApplicationSource{
 				RepoURL: "fake-url",
 			},
-			update: builtin.ArgoCDAppSourceUpdate{
+			update: stepconfig.ArgoCDAppSourceUpdate{
 				RepoURL: "fake-url",
-				Kustomize: &builtin.ArgoCDKustomizeImageUpdates{
-					Images: []builtin.ArgoCDKustomizeImageUpdate{{
+				Kustomize: &stepconfig.ArgoCDKustomizeImageUpdates{
+					Images: []stepconfig.ArgoCDKustomizeImageUpdate{{
 						RepoURL: "fake-image-url",
 						Tag:     "fake-tag",
 					}},
@@ -2224,10 +2224,10 @@ func Test_argoCDUpdater_applyArgoCDSourceUpdate(t *testing.T) {
 			source: argocd.ApplicationSource{
 				RepoURL: "fake-url",
 			},
-			update: builtin.ArgoCDAppSourceUpdate{
+			update: stepconfig.ArgoCDAppSourceUpdate{
 				RepoURL: "fake-url",
-				Helm: &builtin.ArgoCDHelmParameterUpdates{
-					Images: []builtin.ArgoCDHelmImageUpdate{
+				Helm: &stepconfig.ArgoCDHelmParameterUpdates{
+					Images: []stepconfig.ArgoCDHelmImageUpdate{
 						{
 							Key:   "image",
 							Value: "fake-image-url:fake-tag",
@@ -2266,9 +2266,9 @@ func Test_argoCDUpdater_applyArgoCDSourceUpdate(t *testing.T) {
 
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			stepCfg := &builtin.ArgoCDUpdateConfig{
-				Apps: []builtin.ArgoCDAppUpdate{{
-					Sources: []builtin.ArgoCDAppSourceUpdate{testCase.update},
+			stepCfg := &stepconfig.ArgoCDUpdateConfig{
+				Apps: []stepconfig.ArgoCDAppUpdate{{
+					Sources: []stepconfig.ArgoCDAppSourceUpdate{testCase.update},
 				}},
 			}
 			updatedSource, updated := runner.applyArgoCDSourceUpdate(
@@ -2282,11 +2282,11 @@ func Test_argoCDUpdater_applyArgoCDSourceUpdate(t *testing.T) {
 }
 
 func Test_argoCDUpdater_buildKustomizeImagesForAppSource(t *testing.T) {
-	stepCfg := &builtin.ArgoCDUpdateConfig{
-		Apps: []builtin.ArgoCDAppUpdate{{
-			Sources: []builtin.ArgoCDAppSourceUpdate{{
-				Kustomize: &builtin.ArgoCDKustomizeImageUpdates{
-					Images: []builtin.ArgoCDKustomizeImageUpdate{
+	stepCfg := &stepconfig.ArgoCDUpdateConfig{
+		Apps: []stepconfig.ArgoCDAppUpdate{{
+			Sources: []stepconfig.ArgoCDAppSourceUpdate{{
+				Kustomize: &stepconfig.ArgoCDKustomizeImageUpdates{
+					Images: []stepconfig.ArgoCDKustomizeImageUpdate{
 						{
 							RepoURL: "yet-another-fake-url",
 							Digest:  "fake-digest",
@@ -2320,11 +2320,11 @@ func Test_argoCDUpdater_buildKustomizeImagesForAppSource(t *testing.T) {
 }
 
 func Test_argoCDUpdater_buildHelmParamChangesForAppSource(t *testing.T) {
-	stepCfg := &builtin.ArgoCDUpdateConfig{
-		Apps: []builtin.ArgoCDAppUpdate{{
-			Sources: []builtin.ArgoCDAppSourceUpdate{{
-				Helm: &builtin.ArgoCDHelmParameterUpdates{
-					Images: []builtin.ArgoCDHelmImageUpdate{
+	stepCfg := &stepconfig.ArgoCDUpdateConfig{
+		Apps: []stepconfig.ArgoCDAppUpdate{{
+			Sources: []stepconfig.ArgoCDAppSourceUpdate{{
+				Helm: &stepconfig.ArgoCDHelmParameterUpdates{
+					Images: []stepconfig.ArgoCDHelmImageUpdate{
 						{
 							Key:   "first-fake-key",
 							Value: "fake-value",
@@ -2463,7 +2463,7 @@ func Test_argoCDUpdater_getAuthorizedApplications(t *testing.T) {
 	testCases := []struct {
 		name        string
 		apps        []*argocd.Application
-		update      *builtin.ArgoCDAppUpdate
+		update      *stepconfig.ArgoCDAppUpdate
 		interceptor interceptor.Funcs
 		assertions  func(*testing.T, []*argocd.Application, error)
 	}{
@@ -2495,9 +2495,9 @@ func Test_argoCDUpdater_getAuthorizedApplications(t *testing.T) {
 					},
 				},
 			},
-			update: &builtin.ArgoCDAppUpdate{
+			update: &stepconfig.ArgoCDAppUpdate{
 				Namespace: "argocd",
-				Selector: &builtin.ArgoCDAppSelector{
+				Selector: &stepconfig.ArgoCDAppSelector{
 					MatchLabels: map[string]string{
 						"env": "prod",
 					},
@@ -2536,9 +2536,9 @@ func Test_argoCDUpdater_getAuthorizedApplications(t *testing.T) {
 					},
 				},
 			},
-			update: &builtin.ArgoCDAppUpdate{
+			update: &stepconfig.ArgoCDAppUpdate{
 				Namespace: "argocd",
-				Selector: &builtin.ArgoCDAppSelector{
+				Selector: &stepconfig.ArgoCDAppSelector{
 					MatchLabels: map[string]string{
 						"env": "prod",
 					},
@@ -2563,9 +2563,9 @@ func Test_argoCDUpdater_getAuthorizedApplications(t *testing.T) {
 					},
 				},
 			},
-			update: &builtin.ArgoCDAppUpdate{
+			update: &stepconfig.ArgoCDAppUpdate{
 				Namespace: "argocd",
-				Selector: &builtin.ArgoCDAppSelector{
+				Selector: &stepconfig.ArgoCDAppSelector{
 					MatchLabels: map[string]string{
 						"env": "prod",
 					},
@@ -2610,9 +2610,9 @@ func Test_argoCDUpdater_getAuthorizedApplications(t *testing.T) {
 					},
 				},
 			},
-			update: &builtin.ArgoCDAppUpdate{
+			update: &stepconfig.ArgoCDAppUpdate{
 				Namespace: "argocd",
-				Selector: &builtin.ArgoCDAppSelector{
+				Selector: &stepconfig.ArgoCDAppSelector{
 					MatchLabels: map[string]string{
 						"env": "prod",
 					},
@@ -2637,7 +2637,7 @@ func Test_argoCDUpdater_getAuthorizedApplications(t *testing.T) {
 					},
 				},
 			},
-			update: &builtin.ArgoCDAppUpdate{
+			update: &stepconfig.ArgoCDAppUpdate{
 				Name:      "my-app",
 				Namespace: "argocd",
 			},
@@ -2650,7 +2650,7 @@ func Test_argoCDUpdater_getAuthorizedApplications(t *testing.T) {
 		{
 			name: "name-based selection app not found",
 			apps: []*argocd.Application{},
-			update: &builtin.ArgoCDAppUpdate{
+			update: &stepconfig.ArgoCDAppUpdate{
 				Name:      "nonexistent-app",
 				Namespace: "argocd",
 			},
@@ -2670,7 +2670,7 @@ func Test_argoCDUpdater_getAuthorizedApplications(t *testing.T) {
 					},
 				},
 			},
-			update: &builtin.ArgoCDAppUpdate{
+			update: &stepconfig.ArgoCDAppUpdate{
 				Name:      "my-app",
 				Namespace: "argocd",
 			},
@@ -2681,9 +2681,9 @@ func Test_argoCDUpdater_getAuthorizedApplications(t *testing.T) {
 		},
 		{
 			name: "error listing applications",
-			update: &builtin.ArgoCDAppUpdate{
+			update: &stepconfig.ArgoCDAppUpdate{
 				Namespace: "argocd",
-				Selector: &builtin.ArgoCDAppSelector{
+				Selector: &stepconfig.ArgoCDAppSelector{
 					MatchLabels: map[string]string{
 						"env": "prod",
 					},
@@ -2743,7 +2743,7 @@ func Test_argoCDUpdater_processApplication(t *testing.T) {
 	testCases := []struct {
 		name       string
 		runner     *argocdUpdater
-		update     *builtin.ArgoCDAppUpdate
+		update     *stepconfig.ArgoCDAppUpdate
 		app        *argocd.Application
 		assertions func(*testing.T, argocd.OperationPhase, error)
 	}{
@@ -2753,13 +2753,13 @@ func Test_argoCDUpdater_processApplication(t *testing.T) {
 				mustPerformUpdateFn: func(
 					context.Context,
 					*promotion.StepContext,
-					*builtin.ArgoCDAppUpdate,
+					*stepconfig.ArgoCDAppUpdate,
 					*argocd.Application,
 				) (argocd.OperationPhase, bool, error) {
 					return "", true, nil
 				},
 				buildDesiredSourcesFn: func(
-					*builtin.ArgoCDAppUpdate,
+					*stepconfig.ArgoCDAppUpdate,
 					[]string,
 					*argocd.Application,
 				) (argocd.ApplicationSources, error) {
@@ -2774,7 +2774,7 @@ func Test_argoCDUpdater_processApplication(t *testing.T) {
 					return nil
 				},
 			},
-			update: &builtin.ArgoCDAppUpdate{},
+			update: &stepconfig.ArgoCDAppUpdate{},
 			app:    &argocd.Application{},
 			assertions: func(t *testing.T, phase argocd.OperationPhase, err error) {
 				require.NoError(t, err)
@@ -2787,13 +2787,13 @@ func Test_argoCDUpdater_processApplication(t *testing.T) {
 				mustPerformUpdateFn: func(
 					context.Context,
 					*promotion.StepContext,
-					*builtin.ArgoCDAppUpdate,
+					*stepconfig.ArgoCDAppUpdate,
 					*argocd.Application,
 				) (argocd.OperationPhase, bool, error) {
 					return argocd.OperationSucceeded, false, nil
 				},
 			},
-			update: &builtin.ArgoCDAppUpdate{},
+			update: &stepconfig.ArgoCDAppUpdate{},
 			app:    &argocd.Application{},
 			assertions: func(t *testing.T, phase argocd.OperationPhase, err error) {
 				require.NoError(t, err)
@@ -2806,13 +2806,13 @@ func Test_argoCDUpdater_processApplication(t *testing.T) {
 				mustPerformUpdateFn: func(
 					context.Context,
 					*promotion.StepContext,
-					*builtin.ArgoCDAppUpdate,
+					*stepconfig.ArgoCDAppUpdate,
 					*argocd.Application,
 				) (argocd.OperationPhase, bool, error) {
 					return argocd.OperationFailed, false, nil
 				},
 			},
-			update: &builtin.ArgoCDAppUpdate{},
+			update: &stepconfig.ArgoCDAppUpdate{},
 			app: &argocd.Application{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-app",
@@ -2837,13 +2837,13 @@ func Test_argoCDUpdater_processApplication(t *testing.T) {
 				mustPerformUpdateFn: func(
 					context.Context,
 					*promotion.StepContext,
-					*builtin.ArgoCDAppUpdate,
+					*stepconfig.ArgoCDAppUpdate,
 					*argocd.Application,
 				) (argocd.OperationPhase, bool, error) {
 					return argocd.OperationFailed, false, nil
 				},
 			},
-			update: &builtin.ArgoCDAppUpdate{},
+			update: &stepconfig.ArgoCDAppUpdate{},
 			app: &argocd.Application{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-app",
@@ -2864,20 +2864,20 @@ func Test_argoCDUpdater_processApplication(t *testing.T) {
 				mustPerformUpdateFn: func(
 					context.Context,
 					*promotion.StepContext,
-					*builtin.ArgoCDAppUpdate,
+					*stepconfig.ArgoCDAppUpdate,
 					*argocd.Application,
 				) (argocd.OperationPhase, bool, error) {
 					return "", true, nil
 				},
 				buildDesiredSourcesFn: func(
-					*builtin.ArgoCDAppUpdate,
+					*stepconfig.ArgoCDAppUpdate,
 					[]string,
 					*argocd.Application,
 				) (argocd.ApplicationSources, error) {
 					return nil, errors.New("failed to build sources")
 				},
 			},
-			update: &builtin.ArgoCDAppUpdate{},
+			update: &stepconfig.ArgoCDAppUpdate{},
 			app: &argocd.Application{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-app",
@@ -2897,13 +2897,13 @@ func Test_argoCDUpdater_processApplication(t *testing.T) {
 				mustPerformUpdateFn: func(
 					context.Context,
 					*promotion.StepContext,
-					*builtin.ArgoCDAppUpdate,
+					*stepconfig.ArgoCDAppUpdate,
 					*argocd.Application,
 				) (argocd.OperationPhase, bool, error) {
 					return "", true, nil
 				},
 				buildDesiredSourcesFn: func(
-					*builtin.ArgoCDAppUpdate,
+					*stepconfig.ArgoCDAppUpdate,
 					[]string,
 					*argocd.Application,
 				) (argocd.ApplicationSources, error) {
@@ -2918,7 +2918,7 @@ func Test_argoCDUpdater_processApplication(t *testing.T) {
 					return errors.New("sync operation failed")
 				},
 			},
-			update: &builtin.ArgoCDAppUpdate{},
+			update: &stepconfig.ArgoCDAppUpdate{},
 			app: &argocd.Application{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-app",
@@ -2938,13 +2938,13 @@ func Test_argoCDUpdater_processApplication(t *testing.T) {
 				mustPerformUpdateFn: func(
 					context.Context,
 					*promotion.StepContext,
-					*builtin.ArgoCDAppUpdate,
+					*stepconfig.ArgoCDAppUpdate,
 					*argocd.Application,
 				) (argocd.OperationPhase, bool, error) {
 					return argocd.OperationRunning, false, errors.New("operation in progress")
 				},
 			},
-			update: &builtin.ArgoCDAppUpdate{},
+			update: &stepconfig.ArgoCDAppUpdate{},
 			app:    &argocd.Application{},
 			assertions: func(t *testing.T, phase argocd.OperationPhase, err error) {
 				require.NoError(t, err)
@@ -2957,13 +2957,13 @@ func Test_argoCDUpdater_processApplication(t *testing.T) {
 				mustPerformUpdateFn: func(
 					context.Context,
 					*promotion.StepContext,
-					*builtin.ArgoCDAppUpdate,
+					*stepconfig.ArgoCDAppUpdate,
 					*argocd.Application,
 				) (argocd.OperationPhase, bool, error) {
 					return "", false, errors.New("cannot determine status")
 				},
 			},
-			update: &builtin.ArgoCDAppUpdate{},
+			update: &stepconfig.ArgoCDAppUpdate{},
 			app:    &argocd.Application{},
 			assertions: func(t *testing.T, phase argocd.OperationPhase, err error) {
 				require.ErrorContains(t, err, "cannot determine status")
@@ -2989,14 +2989,14 @@ func Test_argoCDUpdater_validateSourceUpdatesApplicable(t *testing.T) {
 	testCases := []struct {
 		name       string
 		runner     *argocdUpdater
-		update     *builtin.ArgoCDAppUpdate
+		update     *stepconfig.ArgoCDAppUpdate
 		apps       []*argocd.Application
 		assertions func(t *testing.T, err error)
 	}{
 		{
 			name:   "empty apps list returns no error",
 			runner: &argocdUpdater{},
-			update: &builtin.ArgoCDAppUpdate{},
+			update: &stepconfig.ArgoCDAppUpdate{},
 			apps:   []*argocd.Application{},
 			assertions: func(t *testing.T, err error) {
 				require.NoError(t, err)
@@ -3006,14 +3006,14 @@ func Test_argoCDUpdater_validateSourceUpdatesApplicable(t *testing.T) {
 			name: "single app with valid sources",
 			runner: &argocdUpdater{
 				buildDesiredSourcesFn: func(
-					*builtin.ArgoCDAppUpdate,
+					*stepconfig.ArgoCDAppUpdate,
 					[]string,
 					*argocd.Application,
 				) (argocd.ApplicationSources, error) {
 					return []argocd.ApplicationSource{{}}, nil
 				},
 			},
-			update: &builtin.ArgoCDAppUpdate{},
+			update: &stepconfig.ArgoCDAppUpdate{},
 			apps: []*argocd.Application{
 				{ObjectMeta: metav1.ObjectMeta{Name: "app1", Namespace: "argocd"}},
 			},
@@ -3025,14 +3025,14 @@ func Test_argoCDUpdater_validateSourceUpdatesApplicable(t *testing.T) {
 			name: "multiple apps all valid",
 			runner: &argocdUpdater{
 				buildDesiredSourcesFn: func(
-					*builtin.ArgoCDAppUpdate,
+					*stepconfig.ArgoCDAppUpdate,
 					[]string,
 					*argocd.Application,
 				) (argocd.ApplicationSources, error) {
 					return []argocd.ApplicationSource{{}}, nil
 				},
 			},
-			update: &builtin.ArgoCDAppUpdate{},
+			update: &stepconfig.ArgoCDAppUpdate{},
 			apps: []*argocd.Application{
 				{ObjectMeta: metav1.ObjectMeta{Name: "app1", Namespace: "argocd"}},
 				{ObjectMeta: metav1.ObjectMeta{Name: "app2", Namespace: "argocd"}},
@@ -3046,13 +3046,13 @@ func Test_argoCDUpdater_validateSourceUpdatesApplicable(t *testing.T) {
 			name: "one app fails validation",
 			runner: &argocdUpdater{
 				buildDesiredSourcesFn: func() func(
-					*builtin.ArgoCDAppUpdate,
+					*stepconfig.ArgoCDAppUpdate,
 					[]string,
 					*argocd.Application,
 				) (argocd.ApplicationSources, error) {
 					count := 0
 					return func(
-						_ *builtin.ArgoCDAppUpdate,
+						_ *stepconfig.ArgoCDAppUpdate,
 						_ []string,
 						_ *argocd.Application,
 					) (argocd.ApplicationSources, error) {
@@ -3064,7 +3064,7 @@ func Test_argoCDUpdater_validateSourceUpdatesApplicable(t *testing.T) {
 					}
 				}(),
 			},
-			update: &builtin.ArgoCDAppUpdate{},
+			update: &stepconfig.ArgoCDAppUpdate{},
 			apps: []*argocd.Application{
 				{ObjectMeta: metav1.ObjectMeta{Name: "app1", Namespace: "argocd"}},
 				{ObjectMeta: metav1.ObjectMeta{Name: "app2", Namespace: "argocd"}},
@@ -3081,13 +3081,13 @@ func Test_argoCDUpdater_validateSourceUpdatesApplicable(t *testing.T) {
 			name: "multiple apps fail validation - aggregates errors",
 			runner: &argocdUpdater{
 				buildDesiredSourcesFn: func() func(
-					*builtin.ArgoCDAppUpdate,
+					*stepconfig.ArgoCDAppUpdate,
 					[]string,
 					*argocd.Application,
 				) (argocd.ApplicationSources, error) {
 					count := 0
 					return func(
-						_ *builtin.ArgoCDAppUpdate,
+						_ *stepconfig.ArgoCDAppUpdate,
 						_ []string,
 						_ *argocd.Application,
 					) (argocd.ApplicationSources, error) {
@@ -3099,7 +3099,7 @@ func Test_argoCDUpdater_validateSourceUpdatesApplicable(t *testing.T) {
 					}
 				}(),
 			},
-			update: &builtin.ArgoCDAppUpdate{},
+			update: &stepconfig.ArgoCDAppUpdate{},
 			apps: []*argocd.Application{
 				{ObjectMeta: metav1.ObjectMeta{Name: "app1", Namespace: "argocd"}},
 				{ObjectMeta: metav1.ObjectMeta{Name: "app2", Namespace: "argocd"}},
@@ -3116,14 +3116,14 @@ func Test_argoCDUpdater_validateSourceUpdatesApplicable(t *testing.T) {
 			name: "many apps fail - limits error reporting to first 3",
 			runner: &argocdUpdater{
 				buildDesiredSourcesFn: func(
-					_ *builtin.ArgoCDAppUpdate,
+					_ *stepconfig.ArgoCDAppUpdate,
 					_ []string,
 					app *argocd.Application,
 				) (argocd.ApplicationSources, error) {
 					return nil, fmt.Errorf("validation error for %s", app.Name)
 				},
 			},
-			update: &builtin.ArgoCDAppUpdate{},
+			update: &stepconfig.ArgoCDAppUpdate{},
 			apps: func() []*argocd.Application {
 				apps := make([]*argocd.Application, 5)
 				for i := 0; i < 5; i++ {

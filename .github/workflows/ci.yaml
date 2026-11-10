@@ -64,7 +64,7 @@ jobs:
       run: make test-unit
     - name: Remove generated code from report
       run: |
-        for report in $(find . -maxdepth 4 -type f -name 'coverage.txt'); do
+        for report in $(find . -maxdepth 5 -type f -name 'coverage.txt'); do
           tmp_file=$(dirname $report)/coverage.tmp
           grep -v .pb.go $report | grep -v zz_ | grep -v .connect.go | grep -v 'pkg/x/client/generated/' > $tmp_file
           mv $tmp_file $report
