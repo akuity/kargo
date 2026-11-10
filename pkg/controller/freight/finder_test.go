@@ -1,6 +1,8 @@
 package freight
 
 import (
+	"context"
+	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -9,6 +11,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 )
@@ -1188,11 +1191,45 @@ func TestFindArtifact(t *testing.T) {
 			}},
 			assertions: func(
 				t *testing.T,
+				artifact *kargoapi.ArtifactReference,
+				err error,
+			) {
+				require.NoError(t, err)
+				require.Equal(t, &testArtifact1, artifact)
+			},
+		},
+		{
+			name: "metadata omitted from the reference and error getting Freight",
+			client: func() client.Client {
+				return fake.NewClientBuilder().WithScheme(scheme).WithInterceptorFuncs(
+					interceptor.Funcs{
+						Get: func(
+							context.Context,
+							client.WithWatch,
+							client.ObjectKey,
+							client.Object,
+							...client.GetOption,
+						) error {
+							return errors.New("something went wrong")
+						},
+					},
+				).Build()
+			},
+			stage: &kargoapi.Stage{
+				ObjectMeta: metav1.ObjectMeta{Namespace: testNamespace},
+			},
+			desiredOrigin: &testOrigin1,
+			freight: []kargoapi.FreightReference{{
+				Name:      "fake-freight",
+				Origin:    testOrigin1,
+				Artifacts: []kargoapi.ArtifactReference{testArtifact1},
+			}},
+			assertions: func(
+				t *testing.T,
 				_ *kargoapi.ArtifactReference,
 				err error,
 			) {
-				require.ErrorContains(t, err, "Freight")
-				require.ErrorContains(t, err, "not found in namespace")
+				require.ErrorContains(t, err, "something went wrong")
 			},
 		},
 	}

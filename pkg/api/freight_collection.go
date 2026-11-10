@@ -158,5 +158,12 @@ func GetPromotionRequestFreightRefs(
 			fmt.Errorf("freight mismatch between PromotionRequest and Promotion %q in namespace %q",
 				promo.Name, promo.Namespace)
 	}
-	return request.Status.Freight, request.Status.FreightCollection, nil
+	freightRef := *request.Status.Freight
+	freightRef.Artifacts = WithoutArtifactMetadata(freightRef.Artifacts)
+	freightCol := request.Status.FreightCollection.DeepCopy()
+	for origin, f := range freightCol.Freight {
+		f.Artifacts = WithoutArtifactMetadata(f.Artifacts)
+		freightCol.Freight[origin] = f
+	}
+	return &freightRef, freightCol, nil
 }

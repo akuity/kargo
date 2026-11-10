@@ -10,6 +10,9 @@ import (
 	"github.com/stretchr/testify/require"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	k8sruntime "k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/utils/ptr"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 )
@@ -162,6 +165,71 @@ func TestGetStageFreightRefs(t *testing.T) {
 	}
 	require.Equal(t, metadata, freight.Artifacts[0].Metadata)
 	require.Equal(t, metadata, lastCollection.Freight[other.String()].Artifacts[0].Metadata)
+}
+
+func TestGetPromotionRequestFreightRefs(t *testing.T) {
+	const namespace = "fake-namespace"
+	metadata := &apiextensionsv1.JSON{Raw: []byte(`{"key":"value"}`)}
+	origin := kargoapi.FreightOrigin{Kind: kargoapi.FreightOriginKindWarehouse, Name: "artifacts"}
+	other := kargoapi.FreightOrigin{Kind: kargoapi.FreightOriginKindWarehouse, Name: "other"}
+	targetRef := kargoapi.FreightReference{
+		Name:   "new",
+		Origin: origin,
+		Artifacts: []kargoapi.ArtifactReference{{
+			SubscriptionName: "sub",
+			Version:          "v2",
+			Metadata:         metadata,
+		}},
+	}
+	collection := &kargoapi.FreightCollection{}
+	collection.UpdateOrPush(targetRef, kargoapi.FreightReference{
+		Name:   "old",
+		Origin: other,
+		Artifacts: []kargoapi.ArtifactReference{{
+			SubscriptionName: "other-sub",
+			Version:          "v1",
+			Metadata:         metadata,
+		}},
+	})
+	request := &kargoapi.PromotionRequest{
+		ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: "fake-request"},
+		Status: kargoapi.PromotionRequestStatus{
+			Freight:           &targetRef,
+			FreightCollection: collection,
+		},
+	}
+	promo := kargoapi.Promotion{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: namespace,
+			Name:      "fake-promotion",
+			OwnerReferences: []metav1.OwnerReference{{
+				APIVersion: kargoapi.GroupVersion.String(),
+				Kind:       promotionRequestKind,
+				Name:       request.Name,
+				Controller: ptr.To(true),
+			}},
+		},
+	}
+	scheme := k8sruntime.NewScheme()
+	require.NoError(t, kargoapi.SchemeBuilder.AddToScheme(scheme))
+	c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(request).Build()
+
+	ref, col, err := GetPromotionRequestFreightRefs(
+		context.Background(),
+		c,
+		promo,
+		&kargoapi.Freight{ObjectMeta: metav1.ObjectMeta{Name: "new"}},
+	)
+	require.NoError(t, err)
+
+	require.Equal(t, "v2", ref.Artifacts[0].Version)
+	require.Nil(t, ref.Artifacts[0].Metadata)
+	require.Equal(t, collection.ID, col.ID)
+	require.Len(t, col.Freight, 2)
+	for _, f := range col.Freight {
+		require.NotEmpty(t, f.Artifacts[0].Version)
+		require.Nil(t, f.Artifacts[0].Metadata)
+	}
 }
 
 // TestGetStageFreightRefsStageStatusSize compares Stage status size with and

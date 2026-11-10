@@ -353,7 +353,7 @@ func FindArtifact(
 					return a, nil
 				}
 				// FreightReferences omit Metadata; read it from the Freight.
-				freight, err := api.GetFreight(
+				src, err := api.GetFreight(
 					ctx,
 					cl,
 					types.NamespacedName{Namespace: project, Name: f.Name},
@@ -361,15 +361,12 @@ func FindArtifact(
 				if err != nil {
 					return nil, err
 				}
-				if freight == nil {
-					// nolint:staticcheck
-					return nil, fmt.Errorf(
-						"Freight %q not found in namespace %q", f.Name, project,
-					)
+				if src == nil {
+					return a, nil
 				}
-				for k := range freight.Artifacts {
-					if freight.Artifacts[k].SubscriptionName == subName {
-						return &freight.Artifacts[k], nil
+				for k := range src.Artifacts {
+					if src.Artifacts[k].SubscriptionName == subName {
+						return &src.Artifacts[k], nil
 					}
 				}
 				return a, nil
