@@ -12,6 +12,15 @@ import { stackedIndexer, warehouseIndexer } from './node-indexer';
 import { repoSubscriptionSizer, stackSizer, stageSizer, warehouseSizer } from './node-sizer';
 import { stackNodes } from './stack-nodes';
 
+// Dagre spaces every rank alike, which leaves a subscription as far from its
+// Warehouse as one Stage is from the next. A subscription connects to nothing
+// but its Warehouse, so after layout it is moved in to sit this far short of
+// the Warehouse's left edge. It is placed from the Warehouse rather than
+// shifted by a fixed amount because it does not always sit in the first rank:
+// a Warehouse that feeds only a Stage further down is ranked just ahead of
+// that Stage, and its subscriptions just ahead of it, among other Stages.
+const subscriptionGap = 100;
+
 export const reactFlowNodeConstants = {
   STACKED_NODE: 'stacked-node',
   CUSTOM_WAREHOUSE_NODE: 'custom-warehouse-node',
@@ -116,11 +125,23 @@ export const useReactFlowPipelineGraph = (
           actualHeight = stageSizer.size().height;
         }
 
+        let x = dagreNode?.x - dagreNode?.width / 2;
+
+        const parent =
+          dagreNode?.subscriptionParent &&
+          graph.node(warehouseIndexer.index(dagreNode.subscriptionParent));
+
+        // only ever moved in towards the Warehouse, never out past dagre
+        if (dagreNode?.subscription && parent) {
+          const warehouseLeft = parent.x - parent.width / 2;
+          x = Math.max(x, warehouseLeft - subscriptionGap - dagreNode.width);
+        }
+
         reactFlowNodes.push({
           id: node,
           type: customGraphType,
           position: {
-            x: dagreNode?.x - dagreNode?.width / 2,
+            x,
             y: dagreNode?.y - actualHeight / 2
           },
           data: {
@@ -145,7 +166,11 @@ export const useReactFlowPipelineGraph = (
           type: 'default',
           sourceHandle: belongsToWarehouse,
           targetHandle: belongsToWarehouse,
-          data: { warehouseName: belongsToWarehouse },
+          data: {
+            warehouseName: belongsToWarehouse,
+            subscription: dagreEdge.subscription,
+            subscriptionWarehouse: dagreEdge.subscriptionWarehouse
+          },
           markerEnd: {
             type: MarkerType.ArrowClosed,
             color: '#777',
@@ -154,7 +179,9 @@ export const useReactFlowPipelineGraph = (
             strokeWidth: 2
           },
           style: {
-            strokeWidth: 4,
+            // a subscription only feeds its Warehouse, so its edge is drawn
+            // thinner than the edges Freight travels along
+            strokeWidth: dagreEdge.subscription ? 2 : 4,
             stroke: dagreEdge.edgeColor || '#9ca3af',
             strokeOpacity: 0.3,
             transition: 'd 0.3s ease, stroke-opacity 0.5s ease, filter 0.2s ease'
