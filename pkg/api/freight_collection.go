@@ -62,9 +62,12 @@ func ResolveFreightRefs(
 		// PromotionRequest stands behind it.
 		//
 		// A target-aware Stage records no last Promotion, so what it is on
-		// now comes from its Freight history. The children of one rollout
-		// resolve the same collection for as long as that history does not
-		// move while the rollout runs.
+		// now comes from its Freight history. Nothing records a finished
+		// rollout in that history yet, so for a Stage that requests Freight
+		// from several origins, the collection in practice holds only this
+		// Freight. A follow-up will build the full collection from the
+		// Stage's earlier rollouts, once the Freight they promoted is in the
+		// database and can be queried.
 		previous := stage.Status.FreightHistory.Current()
 		freightCol := addFreightToCollection(ctx, stage, previous, targetFreightRef)
 		return &targetFreightRef, freightCol, nil
