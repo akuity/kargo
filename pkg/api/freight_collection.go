@@ -11,53 +11,6 @@ import (
 	"github.com/akuity/kargo/pkg/logging"
 )
 
-// buildPromotionFreightCollection constructs a FreightCollection that contains all
-// FreightReferences from the previous Promotion (excepting those that are no
-// longer requested), plus a FreightReference for the provided targetFreight.
-func buildPromotionFreightCollection(
-	ctx context.Context,
-	targetFreight kargoapi.FreightReference,
-	stage *kargoapi.Stage,
-) *kargoapi.FreightCollection {
-	var base *kargoapi.FreightCollection
-	if lastPromo := stage.Status.LastPromotion; lastPromo != nil && lastPromo.Status != nil {
-		base = lastPromo.Status.FreightCollection
-	}
-	return buildFreightCollection(ctx, targetFreight, stage, base)
-}
-
-// buildFreightCollection constructs a FreightCollection that contains all
-// FreightReferences from the provided base collection (excepting those that
-// are no longer requested by the Stage), plus a FreightReference for the
-// provided targetFreight. With a nil base, the collection holds only
-// targetFreight.
-func buildFreightCollection(
-	ctx context.Context,
-	targetFreight kargoapi.FreightReference,
-	stage *kargoapi.Stage,
-	base *kargoapi.FreightCollection,
-) *kargoapi.FreightCollection {
-	logger := logging.LoggerFromContext(ctx)
-	freightCol := &kargoapi.FreightCollection{}
-
-	// We don't simply copy the base FreightCollection because we want to
-	// account for the possibility that some freight contained therein are no
-	// longer requested by the Stage.
-	if len(stage.Spec.RequestedFreight) > 1 {
-		if base != nil && base.Freight != nil {
-			for _, req := range stage.Spec.RequestedFreight {
-				if freight, ok := base.Freight[req.Origin.String()]; ok {
-					freightCol.UpdateOrPush(freight)
-				}
-			}
-		} else {
-			logger.Debug("no collection to inherit Freight from")
-		}
-	}
-	freightCol.UpdateOrPush(targetFreight)
-	return freightCol
-}
-
 // ResolveFreightRefs returns FreightReference and FreightCollection for a promotion
 // If Status.Freight and Status.FreightCollection already set, it just returns them
 // If the promotion is the child of a PromotionRollout - freight references are constructed from
@@ -98,54 +51,76 @@ func ResolveFreightRefs(
 	if promo.Status.Freight != nil && promo.Status.FreightCollection != nil {
 		return promo.Status.Freight, promo.Status.FreightCollection, nil
 	}
-	// A PromotionRollout's child is recognized by its spec, not by an owner:
-	// a rollout is not a Kubernetes resource and so owns nothing. This must
-	// be checked before the Stage is, since such a Promotion's Stage is
-	// target aware but no PromotionRequest stands behind the Promotion.
-	if promo.Spec.PromotionRollout != "" {
-		return getPromotionRolloutFreightRefs(ctx, targetFreight, stage)
-	}
-	if stage.IsTargetAware() {
+
+	targetFreightRef := newFreightReference(targetFreight)
+	switch {
+	case promo.Spec.PromotionRollout != "":
+		// A PromotionRollout's child: what the Stage is on now, plus this
+		// Freight. It is recognized by its spec, since a rollout is not a
+		// Kubernetes resource and owns nothing, and must be checked for
+		// before the next case: its Stage is target aware, but no
+		// PromotionRequest stands behind it.
+		//
+		// A target-aware Stage records no last Promotion, so what it is on
+		// now comes from its Freight history. The children of one rollout
+		// resolve the same collection for as long as that history does not
+		// move while the rollout runs.
+		previous := stage.Status.FreightHistory.Current()
+		freightCol := addFreightToCollection(ctx, stage, previous, targetFreightRef)
+		return &targetFreightRef, freightCol, nil
+	case stage.IsTargetAware():
+		// A PromotionRequest's child: the request already resolved both.
 		return GetPromotionRequestFreightRefs(ctx, cli, promo, targetFreight)
+	default:
+		// A regular Stage's Promotion: what the last Promotion left, plus
+		// this Freight.
+		previous := lastPromotionFreight(stage)
+		freightCol := addFreightToCollection(ctx, stage, previous, targetFreightRef)
+		return &targetFreightRef, freightCol, nil
 	}
-	return GetStageFreightRefs(ctx, targetFreight, stage)
 }
 
-func GetStageFreightRefs(
+// addFreightToCollection returns a new FreightCollection that contains all
+// FreightReferences from the previous collection (excepting those that are no
+// longer requested by the Stage), plus the provided FreightReference, which
+// takes the place of any other from the same origin. The previous collection
+// is not modified; when it is nil, the new collection holds only the provided
+// FreightReference.
+func addFreightToCollection(
 	ctx context.Context,
-	targetFreight *kargoapi.Freight,
 	stage *kargoapi.Stage,
-) (*kargoapi.FreightReference, *kargoapi.FreightCollection, error) {
-	targetFreightRef := newFreightReference(targetFreight)
-	freightCollection := buildPromotionFreightCollection(ctx, targetFreightRef, stage)
-	return &targetFreightRef, freightCollection, nil
+	previous *kargoapi.FreightCollection,
+	freight kargoapi.FreightReference,
+) *kargoapi.FreightCollection {
+	logger := logging.LoggerFromContext(ctx)
+	freightCol := &kargoapi.FreightCollection{}
+
+	// We don't simply copy the previous FreightCollection because we want to
+	// account for the possibility that some freight contained therein are no
+	// longer requested by the Stage.
+	if len(stage.Spec.RequestedFreight) > 1 {
+		if previous != nil && previous.Freight != nil {
+			for _, req := range stage.Spec.RequestedFreight {
+				if prevFreight, ok := previous.Freight[req.Origin.String()]; ok {
+					freightCol.UpdateOrPush(prevFreight)
+				}
+			}
+		} else {
+			logger.Debug("no previous collection to inherit Freight from")
+		}
+	}
+	freightCol.UpdateOrPush(freight)
+	return freightCol
 }
 
-// getPromotionRolloutFreightRefs returns the FreightReference and
-// FreightCollection for a Promotion that a PromotionRollout created as one
-// part of its fan-out to a Stage's Targets. The collection contains all
-// FreightReferences the Stage is currently on (excepting those that are no
-// longer requested), plus a FreightReference for the provided targetFreight.
-//
-// A rollout's child cannot inherit from the Stage's last Promotion, as a
-// regular Stage's Promotion does: a target-aware Stage never records one. It
-// inherits from the Stage's Freight history instead. Every child of one
-// rollout therefore resolves the same collection for as long as that history
-// does not move while the rollout runs, and it moves only when a round of
-// promotions to the Stage's Targets finishes.
-func getPromotionRolloutFreightRefs(
-	ctx context.Context,
-	targetFreight *kargoapi.Freight,
-	stage *kargoapi.Stage,
-) (*kargoapi.FreightReference, *kargoapi.FreightCollection, error) {
-	targetFreightRef := newFreightReference(targetFreight)
-	freightCollection := buildFreightCollection(
-		ctx,
-		targetFreightRef,
-		stage,
-		stage.Status.FreightHistory.Current(),
-	)
-	return &targetFreightRef, freightCollection, nil
+// lastPromotionFreight returns the FreightCollection that the Stage's last
+// Promotion left, or nil if the Stage records none.
+func lastPromotionFreight(stage *kargoapi.Stage) *kargoapi.FreightCollection {
+	lastPromo := stage.Status.LastPromotion
+	if lastPromo == nil || lastPromo.Status == nil {
+		return nil
+	}
+	return lastPromo.Status.FreightCollection
 }
 
 // newFreightReference returns a FreightReference to the provided Freight.
