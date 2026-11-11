@@ -2,7 +2,10 @@ package telemetry
 
 import (
 	"context"
+	"net"
+	"sync"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/otel"
@@ -42,8 +45,43 @@ func TestSetupFromEnv(t *testing.T) {
 			},
 		},
 		{
+			name: "unknown category",
+			env: map[string]string{
+				"TRACING_ENABLED":    "true",
+				"TRACING_CATEGORIES": "database,bogus",
+			},
+			assert: func(t *testing.T, shutdown func(), err error) {
+				require.ErrorContains(t, err, "error initializing tracing")
+				require.ErrorContains(t, err, `unknown tracing category "bogus"`)
+				require.Nil(t, shutdown)
+			},
+		},
+		{
+			name: "unknown category with tracing off",
+			env:  map[string]string{"TRACING_CATEGORIES": "bogus"},
+			assert: func(t *testing.T, shutdown func(), err error) {
+				require.NoError(t, err)
+				require.NotNil(t, shutdown)
+				shutdown()
+			},
+		},
+		{
+			name: "categories set but empty",
+			env: map[string]string{
+				"TRACING_ENABLED":            "true",
+				"TRACING_CATEGORIES":         "",
+				"OTEL_EXPORTER_OTLP_TIMEOUT": "100",
+			},
+			assert: func(t *testing.T, shutdown func(), err error) {
+				require.NoError(t, err)
+				require.True(t, CategoryEnabled(CategoryDatabase))
+				shutdown()
+			},
+		},
+		{
 			name: "tracing enabled",
-			env:  map[string]string{"TRACING_ENABLED": "true"},
+			// A short export timeout keeps the shutdown flush quick.
+			env: map[string]string{"TRACING_ENABLED": "true", "OTEL_EXPORTER_OTLP_TIMEOUT": "100"},
 			assert: func(t *testing.T, shutdown func(), err error) {
 				require.NoError(t, err)
 				require.NotNil(t, shutdown)
@@ -81,5 +119,79 @@ func TestSetupFromEnv(t *testing.T) {
 			)
 			testCase.assert(t, shutdown, err)
 		})
+	}
+}
+
+func TestSetupFromEnv_collectorDown(t *testing.T) {
+	// Not parallel: manipulates the environment and global state.
+	resetGlobals(t)
+	t.Setenv("TRACING_ENABLED", "true")
+	t.Setenv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://"+hangingListener(t))
+	t.Setenv("OTEL_EXPORTER_OTLP_TIMEOUT", "100")
+	t.Setenv("OTEL_BSP_MAX_QUEUE_SIZE", "8")
+	t.Setenv("OTEL_BSP_MAX_EXPORT_BATCH_SIZE", "4")
+	shutdown, err := SetupFromEnv(context.Background(), "test")
+	require.NoError(t, err)
+
+	tp, ok := otel.GetTracerProvider().(*sdktrace.TracerProvider)
+	require.True(t, ok)
+	tracer := tp.Tracer("test")
+
+	// Ending spans must not block on a collector that never responds. Blocking
+	// would wait out the export timeout for each batch: 250 s.
+	requireReturns(t, 10*time.Second, func() {
+		for range 10_000 {
+			_, span := tracer.Start(context.Background(), "test")
+			span.End()
+		}
+	})
+	// Shutting down is bounded too.
+	requireReturns(t, shutdownTimeout+10*time.Second, shutdown)
+}
+
+// hangingListener returns the address of a listener that accepts connections
+// and never responds.
+func hangingListener(t *testing.T) string {
+	t.Helper()
+	l, err := net.Listen("tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+	var (
+		mu    sync.Mutex
+		conns []net.Conn
+	)
+	go func() {
+		for {
+			c, err := l.Accept()
+			if err != nil {
+				return
+			}
+			mu.Lock()
+			conns = append(conns, c)
+			mu.Unlock()
+		}
+	}()
+	t.Cleanup(func() {
+		_ = l.Close()
+		mu.Lock()
+		defer mu.Unlock()
+		for _, c := range conns {
+			_ = c.Close()
+		}
+	})
+	return l.Addr().String()
+}
+
+// requireReturns fails t if f doesn't return within timeout.
+func requireReturns(t *testing.T, timeout time.Duration, f func()) {
+	t.Helper()
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		f()
+	}()
+	select {
+	case <-done:
+	case <-time.After(timeout):
+		t.Fatalf("did not return within %s", timeout)
 	}
 }

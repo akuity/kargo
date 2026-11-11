@@ -38,8 +38,7 @@ const (
 // span: it precedes every query, is near zero unless the pool is saturated,
 // and is better observed as a trend through the pool's statistics.
 //
-// The spans use the OpenTelemetry API only, so a pool built with one of these
-// costs next to nothing until a component enables tracing.
+// Pools get one only when database tracing is on.
 type pgxTracer struct {
 	// connAttrs describes the database every span concerns. It is built once
 	// from the pool's configuration; pgx.Conn.Config() returns a deep copy,

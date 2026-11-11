@@ -5,6 +5,8 @@ import (
 	"fmt"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+
+	"github.com/akuity/kargo/pkg/telemetry"
 )
 
 // applicationNameParam is the PostgreSQL session parameter that labels a
@@ -15,8 +17,8 @@ const applicationNameParam = "application_name"
 // be a URL or a key/value DSN, and confirms it can reach the database before
 // returning. Every connection in the pool reports applicationName to the
 // server so that its sessions can be told apart from other components' in
-// pg_stat_activity and in lock-wait logs, and every operation issued through
-// the pool records an OpenTelemetry span.
+// pg_stat_activity and in lock-wait logs. With database tracing on, every
+// operation records a span, so tracing must be set up first.
 func NewPool(
 	ctx context.Context,
 	connString string,
@@ -46,8 +48,8 @@ func newPoolFromConfig(
 	return pool, nil
 }
 
-// newPoolConfig parses connString and attaches the tracer and application
-// name. An application name already present in connString is left alone.
+// newPoolConfig parses connString and attaches the application name, unless
+// already set, and the tracer when database tracing is on.
 func newPoolConfig(
 	connString string,
 	applicationName string,
@@ -56,7 +58,10 @@ func newPoolConfig(
 	if err != nil {
 		return nil, fmt.Errorf("error parsing database connection string: %w", err)
 	}
-	cfg.ConnConfig.Tracer = newPgxTracer(cfg.ConnConfig)
+	// Unattached, the hooks are never called: no spans, at no cost.
+	if telemetry.CategoryEnabled(telemetry.CategoryDatabase) {
+		cfg.ConnConfig.Tracer = newPgxTracer(cfg.ConnConfig)
+	}
 	if cfg.ConnConfig.RuntimeParams == nil {
 		cfg.ConnConfig.RuntimeParams = map[string]string{}
 	}
