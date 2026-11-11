@@ -341,19 +341,18 @@ func TestResolveFreightRefs(t *testing.T) {
 			},
 		},
 		{
-			name:  "rollout child carries other origins over from the Freight history",
+			name:  "rollout child of a Stage with several origins holds only its own Freight",
 			promo: rolloutChild,
 			stage: func() *kargoapi.Stage {
 				stage := newTargetAwareStage("images", "config")
+				// Nothing the Stage records about earlier promotions is
+				// carried over into a rollout child's collection.
 				stage.Status.FreightHistory = kargoapi.FreightHistory{
 					collection(ref("old-images", "images"), ref("cfg", "config")),
-					collection(ref("older-images", "images"), ref("old-cfg", "config")),
 				}
-				// A target-aware Stage records no last Promotion; were it to,
-				// it is not what a rollout's child inherits from.
 				stage.Status.LastPromotion = &kargoapi.PromotionReference{
 					Status: &kargoapi.PromotionStatus{
-						FreightCollection: collection(ref("wrong-cfg", "config")),
+						FreightCollection: collection(ref("other-cfg", "config")),
 					},
 				}
 				return stage
@@ -369,61 +368,10 @@ func TestResolveFreightRefs(t *testing.T) {
 				require.Equal(t, testFreight.Name, freightRef.Name)
 				require.Equal(
 					t,
-					map[string]string{
-						"Warehouse/images": "new-images",
-						"Warehouse/config": "cfg",
-					},
-					names(freightCol),
-				)
-			},
-		},
-		{
-			name:  "rollout child drops origins no longer requested",
-			promo: rolloutChild,
-			stage: func() *kargoapi.Stage {
-				stage := newTargetAwareStage("images", "config")
-				stage.Status.FreightHistory = kargoapi.FreightHistory{collection(
-					ref("old-images", "images"),
-					ref("cfg", "config"),
-					ref("stale", "retired"),
-				)}
-				return stage
-			}(),
-			freight: testFreight,
-			assert: func(
-				t *testing.T,
-				_ *kargoapi.FreightReference,
-				freightCol *kargoapi.FreightCollection,
-				err error,
-			) {
-				require.NoError(t, err)
-				require.Equal(
-					t,
-					map[string]string{
-						"Warehouse/images": "new-images",
-						"Warehouse/config": "cfg",
-					},
-					names(freightCol),
-				)
-			},
-		},
-		{
-			name:    "rollout child of a Stage with no Freight history",
-			promo:   rolloutChild,
-			stage:   newTargetAwareStage("images", "config"),
-			freight: testFreight,
-			assert: func(
-				t *testing.T,
-				_ *kargoapi.FreightReference,
-				freightCol *kargoapi.FreightCollection,
-				err error,
-			) {
-				require.NoError(t, err)
-				require.Equal(
-					t,
 					map[string]string{"Warehouse/images": "new-images"},
 					names(freightCol),
 				)
+				require.NotEmpty(t, freightCol.ID)
 			},
 		},
 		{

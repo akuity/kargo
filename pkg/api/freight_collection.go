@@ -14,7 +14,7 @@ import (
 // ResolveFreightRefs returns FreightReference and FreightCollection for a promotion
 // If Status.Freight and Status.FreightCollection already set, it just returns them
 // If the promotion is the child of a PromotionRollout - freight references are constructed from
-// targetFreight and the stage's Freight history
+// targetFreight alone
 // If the stage is otherwise target aware - freight references are taken from PromotionRequest
 // owning the promotion
 // If it's a regular stage - freight references are constructed from targetFreight and stage status
@@ -55,30 +55,24 @@ func ResolveFreightRefs(
 	targetFreightRef := newFreightReference(targetFreight)
 	switch {
 	case promo.Spec.PromotionRollout != "":
-		// A PromotionRollout's child: what the Stage is on now, plus this
-		// Freight. It is recognized by its spec, since a rollout is not a
-		// Kubernetes resource and owns nothing, and must be checked for
-		// before the next case: its Stage is target aware, but no
-		// PromotionRequest stands behind it.
-		//
-		// A target-aware Stage records no last Promotion, so what it is on
-		// now comes from its Freight history.
+		// A PromotionRollout's child: a collection of the one piece of
+		// Freight the rollout promotes. Such a Promotion is recognized by
+		// its spec, since a rollout is not a Kubernetes resource and owns
+		// nothing, and must be checked for before the next case: its Stage
+		// is target aware, but no PromotionRequest stands behind it.
 		//
 		// Known gap: for a Stage that requests Freight from several origins,
-		// this collection is not constructed correctly yet. Nothing records
-		// a finished rollout in the Stage's Freight history, so the
-		// collection holds this Freight (and whatever a PromotionRequest
-		// last recorded there), not the Freight last promoted for each of
-		// the other origins. The collection is the Freight of the promotion
-		// context, so a step that refers to another origin's Freight, with
-		// imageFrom or commitFrom say, does not find it. A Stage that
-		// requests Freight from one origin is unaffected. Constructing it
-		// correctly means taking, for each origin, the Freight of the
+		// this collection is incomplete. It should also hold the Freight
+		// last promoted for each of the other origins. The collection is the
+		// Freight of the promotion context, so a step that refers to another
+		// origin's Freight, with imageFrom or commitFrom say, does not find
+		// it. A Stage that requests Freight from one origin is unaffected.
+		// Completing it means taking, for each origin, the Freight of the
 		// Stage's newest successful rollout, which can be queried once
 		// Freight is in the database: today the database records only the
 		// names of the Freight each Promotion promoted.
-		previous := stage.Status.FreightHistory.Current()
-		freightCol := addFreightToCollection(ctx, stage, previous, targetFreightRef)
+		freightCol := &kargoapi.FreightCollection{}
+		freightCol.UpdateOrPush(targetFreightRef)
 		return &targetFreightRef, freightCol, nil
 	case stage.IsTargetAware():
 		// A PromotionRequest's child: the request already resolved both.
