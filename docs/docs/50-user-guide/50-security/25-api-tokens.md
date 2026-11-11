@@ -88,11 +88,19 @@ API tokens can be used with many Kargo or Kubernetes clients. This includes
 tools like `kubectl` as well as any programming language client library for
 Kubernetes or Kargo.
 
+To use a token with the `kargo` CLI, set the `KARGO_API_ADDRESS` and
+`KARGO_API_TOKEN` environment variables:
+
+```shell
+export KARGO_API_ADDRESS=https://kargo.example.com
+export KARGO_API_TOKEN=<token>
+```
+
 :::note
 
-While the `kargo` CLI does not directly support specifying a token via command
-line flags, you can configure it to use a token by editing
-`~/.config/kargo/config`.
+The CLI uses these environment variables only when both `KARGO_API_ADDRESS` and
+`KARGO_API_TOKEN` are set. Otherwise, it ignores them and uses the
+configuration saved by `kargo login`.
 
 :::
 
