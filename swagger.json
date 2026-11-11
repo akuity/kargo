@@ -5729,9 +5729,6 @@
         },
         "oidcConfig": {
           "$ref": "#/definitions/OIDCConfig"
-        },
-        "skipAuth": {
-          "type": "boolean"
         }
       }
     },

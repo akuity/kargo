@@ -4392,14 +4392,11 @@ components:
           scopes:
           - scopes
           - scopes
-        skipAuth: true
       properties:
         adminAccountEnabled:
           type: boolean
         oidcConfig:
           $ref: "#/components/schemas/OIDCConfig"
-        skipAuth:
-          type: boolean
       type: object
     ResolvedLink:
       example:
