@@ -1,16 +1,10 @@
-import {
-  faBarsStaggered,
-  faCircleNotch,
-  faMinus,
-  faPlus,
-  faRefresh,
-  faWarehouse
-} from '@fortawesome/free-solid-svg-icons';
+import { faMinus, faPlus, faRefresh, faWarehouse } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { Badge, Button, Card, Flex, message, Tooltip } from 'antd';
+import { Button, Card } from 'antd';
 import classNames from 'classnames';
-import { useContext, useMemo } from 'react';
-import { generatePath, useNavigate } from 'react-router-dom';
+import { formatDistance } from 'date-fns';
+import { CSSProperties, useContext, useMemo } from 'react';
+import { generatePath, Link } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
 import { ColorContext } from '@ui/context/colors';
@@ -18,86 +12,69 @@ import { WarehouseExpanded } from '@ui/extend/types';
 import { useFreightTimelineControllerContext } from '@ui/features/project/pipelines/context/freight-timeline-controller-context';
 import { useRefreshWarehouse } from '@ui/gen/api/v2/core/core';
 
+import { useGraphContext } from '../context/graph-context';
+
 import styles from './node-size-source-of-truth.module.less';
+import warehouseStyles from './warehouse-node.module.less';
+import { getWarehouseState } from './warehouse-state';
 
 export const WarehouseNode = (props: { warehouse: WarehouseExpanded }) => {
   const colorContext = useContext(ColorContext);
-  const navigate = useNavigate();
 
   const freightTimelineControllerContext = useFreightTimelineControllerContext();
 
-  const warehouseState = useWarehouseState(props.warehouse);
+  const warehouseName = props.warehouse?.metadata?.name || '';
+  const projectName = props.warehouse?.metadata?.namespace || '';
 
-  const refreshResourceMutation = useRefreshWarehouse({
-    mutation: {
-      onSuccess: () => {
-        message.success('Warehouse successfully refreshed');
-      }
-    }
-  });
+  const state = useMemo(() => getWarehouseState(props.warehouse), [props.warehouse]);
 
-  const color = colorContext?.warehouseColorMap?.[props.warehouse?.metadata?.name || ''];
+  // No toast on success: the node itself says it is discovering.
+  const refreshResourceMutation = useRefreshWarehouse();
+
+  // Taken from the Warehouse alone, not from the request: the refresh
+  // annotation arrives by watch a moment after the click, and the node turns
+  // to discovering then. Counting the request in as well made the node flicker
+  // back to its old state between the request returning and the event landing.
+  //
+  // The graph holds a quick discovery up for a moment, for the loader and the
+  // edge animation alike, so that it does not blink.
+  const discovering =
+    useGraphContext()?.discoveringWarehouses.has(warehouseName) ?? state.phase === 'discovering';
+  const failed = !discovering && state.phase === 'failed';
+
+  const refresh = () =>
+    refreshResourceMutation.mutate({ project: projectName, warehouse: warehouseName });
+
+  // A project with a single Warehouse assigns it no color, and the tile goes
+  // grey rather than borrowing one.
+  const color = colorContext?.warehouseColorMap?.[warehouseName];
 
   const isSubscriptionHidden =
-    freightTimelineControllerContext?.preferredFilter?.hideSubscriptions?.[
-      props.warehouse?.metadata?.name || ''
-    ];
+    freightTimelineControllerContext?.preferredFilter?.hideSubscriptions?.[warehouseName];
 
-  const isWarehouseNameLong = (props.warehouse?.metadata?.name?.length || 0) > 17;
-  const warehouseNameHeader = `${props.warehouse?.metadata?.name?.slice(0, 17)}${isWarehouseNameLong ? '...' : ''}`;
-  const WarehouseNameHeader = <span className='text-xs'>{warehouseNameHeader}</span>;
+  const detailsPath = generatePath(paths.warehouse, { name: projectName, warehouseName });
 
   return (
     <Card
       size='small'
-      title={
-        <Flex justify='space-between'>
-          <Flex
-            align='center'
-            gap={16}
-            className={classNames(warehouseState.hasError && 'text-red-500')}
-          >
-            {!warehouseState.reconciling && <FontAwesomeIcon icon={faWarehouse} />}
-
-            {warehouseState.reconciling && (
-              <FontAwesomeIcon icon={faCircleNotch} title='Reconciling' spin />
-            )}
-
-            {isWarehouseNameLong ? (
-              <Tooltip title={props.warehouse?.metadata?.name}>{WarehouseNameHeader}</Tooltip>
-            ) : (
-              WarehouseNameHeader
-            )}
-
-            {warehouseState.hasError && <Badge status='error' />}
-          </Flex>
-          <Button
-            icon={<FontAwesomeIcon icon={faBarsStaggered} />}
-            size='small'
-            onClick={() =>
-              navigate(
-                generatePath(paths.warehouse, {
-                  name: props.warehouse?.metadata?.namespace,
-                  warehouseName: props.warehouse?.metadata?.name
-                })
-              )
-            }
-          />
-        </Flex>
-      }
-      className={styles['warehouse-node-size']}
-      style={{
-        border: color && `1px solid ${color}`
-      }}
+      // AntD's own card styles match these selectors, so radius and padding
+      // are set here rather than lost to a specificity tie in the stylesheet.
+      style={{ borderRadius: 10 }}
+      styles={{ body: { padding: 0 } }}
+      className={classNames(warehouseStyles.warehouseNode, styles['warehouse-node-size'], {
+        [warehouseStyles.discovering]: discovering,
+        [warehouseStyles.failed]: failed
+      })}
     >
       <Button
         size='small'
+        style={{ width: 16, height: 16 }}
+        aria-label={isSubscriptionHidden ? 'Show subscriptions' : 'Hide subscriptions'}
         icon={<FontAwesomeIcon icon={isSubscriptionHidden ? faPlus : faMinus} />}
-        className='absolute -left-3 top-[50%] translate-y-[-50%] text-[10px]'
+        className='absolute left-0 top-[50%] translate-x-[-50%] translate-y-[-50%] text-[8px] z-10'
         onClick={(e) => {
           e.stopPropagation();
 
-          const warehouseName = props.warehouse?.metadata?.name || '';
           const hiddenSubscriptions = {
             ...freightTimelineControllerContext?.preferredFilter.hideSubscriptions
           };
@@ -114,67 +91,67 @@ export const WarehouseNode = (props: { warehouse: WarehouseExpanded }) => {
           });
         }}
       />
-      <center>
+
+      <div className={warehouseStyles.header}>
+        {/* everything up to the refresh button opens the Warehouse */}
+        <Link to={detailsPath} className={warehouseStyles.title}>
+          <span
+            className={classNames(warehouseStyles.tile, !color && warehouseStyles.tileNeutral)}
+            style={color ? ({ '--warehouse-accent': color } as CSSProperties) : undefined}
+            aria-hidden
+          >
+            <FontAwesomeIcon icon={faWarehouse} />
+          </span>
+
+          <span className={warehouseStyles.name} title={warehouseName}>
+            {warehouseName}
+          </span>
+        </Link>
+
         <Button
           size='small'
+          type='text'
+          className={classNames(warehouseStyles.action, 'flex-none')}
+          aria-label='Refresh warehouse'
+          disabled={discovering}
           icon={<FontAwesomeIcon icon={faRefresh} />}
           onClick={(e) => {
             e.stopPropagation();
-            refreshResourceMutation.mutate({
-              project: props.warehouse?.metadata?.namespace || '',
-              warehouse: props.warehouse?.metadata?.name || ''
-            });
+            refresh();
           }}
-          loading={warehouseState.refreshing}
-        >
-          Refresh{warehouseState.refreshing && 'ing'}
-        </Button>
-      </center>
+        />
+      </div>
+
+      {failed ? (
+        <div className={warehouseStyles.error} role='alert'>
+          <div className='min-w-0 flex-1'>
+            <div className={warehouseStyles.errorTitle}>{state.errorTitle}</div>
+            {state.errorMessage && (
+              <div className={warehouseStyles.errorMessage} title={state.errorMessage}>
+                {state.errorMessage}
+              </div>
+            )}
+          </div>
+        </div>
+      ) : (
+        <div className={warehouseStyles.body}>
+          <div className='min-w-0 flex-1'>
+            <div className={warehouseStyles.label}>Warehouse</div>
+            {/* not a live region: the relative time changes on every render,
+                and would be read out each time it did */}
+            <div
+              className={warehouseStyles.status}
+              title={!discovering ? state.discoveredAt?.toString() : undefined}
+            >
+              {discovering
+                ? 'Discovering…'
+                : state.discoveredAt
+                  ? `Discovered ${formatDistance(state.discoveredAt, new Date(), { addSuffix: true })}`
+                  : 'Not yet discovered'}
+            </div>
+          </div>
+        </div>
+      )}
     </Card>
   );
 };
-
-const useWarehouseState = (warehouse: WarehouseExpanded) =>
-  useMemo(() => {
-    let reconciling = false;
-
-    for (const condition of warehouse?.status?.conditions || []) {
-      if (condition.type === 'Reconciling' && condition.status === 'True') {
-        reconciling = true;
-      }
-    }
-
-    let hasError = false;
-    let notReady = false;
-    let hasReconcilingCondition = false;
-
-    for (const condition of warehouse?.status?.conditions || []) {
-      if (condition.type === 'Healthy' && condition.status === 'False') {
-        hasError = true;
-      }
-
-      if (condition.type === 'Reconciling') {
-        hasReconcilingCondition = true;
-      }
-
-      if (condition.type === 'Ready' && condition.status === 'False') {
-        notReady = true;
-      }
-    }
-
-    if (notReady && !hasReconcilingCondition) {
-      hasError = true;
-    }
-
-    const refreshAnnotation = warehouse?.metadata?.annotations?.['kargo.akuity.io/refresh'];
-    const refreshing =
-      typeof refreshAnnotation === 'string' &&
-      warehouse?.metadata?.annotations?.['kargo.akuity.io/refresh'] !==
-        warehouse?.status?.lastHandledRefresh;
-
-    return {
-      refreshing,
-      reconciling,
-      hasError
-    };
-  }, [warehouse]);

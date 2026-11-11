@@ -10,7 +10,7 @@ import {
 } from '@xyflow/react';
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 
-import { WarehouseExpanded } from '@ui/extend/types';
+import { RepoSubscription, WarehouseExpanded } from '@ui/extend/types';
 import { useTheme } from '@ui/features/common/theme/use-theme';
 import { queryCache } from '@ui/features/utils/cache';
 import { Stage } from '@ui/gen/api/v2/models';
@@ -18,10 +18,13 @@ import { Stage } from '@ui/gen/api/v2/models';
 import { useFreightTimelineControllerContext } from '../context/freight-timeline-controller-context';
 import { GraphContext } from '../context/graph-context';
 import { StackedNodes } from '../nodes/stacked-nodes';
+import warehouseStyles from '../nodes/warehouse-node.module.less';
+import { getWarehouseState, isSubscriptionFailing, WarehouseState } from '../nodes/warehouse-state';
 
 import { CustomRepoSubscriptionNode, CustomStageNode, CustomWarehouseNode } from './custom-node';
 import { repoSubscriptionIndexer, stageIndexer, warehouseIndexer } from './node-indexer';
 import { useEventsWatcher } from './use-events-watcher';
+import { useHeldDiscovering } from './use-held-discovering';
 import { reactFlowNodeConstants, useReactFlowPipelineGraph } from './use-pipeline-graph';
 
 type GraphProps = {
@@ -87,7 +90,7 @@ export const Graph = (props: GraphProps) => {
     filterContext?.preferredFilter?.hideSubscriptions
   );
 
-  const [nodes, setNodes] = useNodesState(graph.nodes);
+  const [nodes, setNodes, onNodesChange] = useNodesState(graph.nodes);
 
   // useLayoutEffect fires synchronously after DOM mutations but before the browser
   // paints. This prevents the one-frame intermediate state where node content has
@@ -177,6 +180,18 @@ export const Graph = (props: GraphProps) => {
     return warehouseByName;
   }, [props.warehouses]);
 
+  const discoveringNow = useMemo(
+    () =>
+      Object.keys(warehouseByName).filter(
+        (name) => getWarehouseState(warehouseByName[name]).phase === 'discovering'
+      ),
+    [warehouseByName]
+  );
+
+  // held a moment past a quick discovery, so that its loader and edge
+  // animation do not blink
+  const discoveringWarehouses = useHeldDiscovering(discoveringNow);
+
   const [hoveredWarehouseName, setHoveredWarehouseName] = useState<string | null>(null);
 
   const distinctEdgeWarehouses = useMemo(
@@ -193,14 +208,51 @@ export const Graph = (props: GraphProps) => {
     [graph.edges, edgeType]
   );
 
+  // The layout is throttled and does not rerun as Warehouses change, so the
+  // edges into a Warehouse are drawn by its state here, from the live
+  // Warehouse, rather than baked in with the layout.
+  const discoveryEdges = useMemo(() => {
+    const stateByWarehouse: Record<string, WarehouseState> = {};
+
+    return typedEdges.map((edge) => {
+      const warehouseName = edge.data?.subscriptionWarehouse as string | undefined;
+      const subscription = edge.data?.subscription as RepoSubscription | undefined;
+
+      if (!warehouseName || !subscription) {
+        return edge;
+      }
+
+      stateByWarehouse[warehouseName] ??= getWarehouseState(warehouseByName[warehouseName]);
+      const state = stateByWarehouse[warehouseName];
+
+      if (discoveringWarehouses.has(warehouseName)) {
+        return {
+          ...edge,
+          className: warehouseStyles.edgeDiscovering,
+          style: { ...edge.style, stroke: 'var(--kargo-color-info)', strokeOpacity: 0.7 }
+        };
+      }
+
+      if (isSubscriptionFailing(state, subscription)) {
+        return {
+          ...edge,
+          className: warehouseStyles.edgeFailing,
+          style: { ...edge.style, stroke: 'var(--kargo-color-error)', strokeOpacity: 0.6 }
+        };
+      }
+
+      return edge;
+    });
+  }, [typedEdges, warehouseByName, discoveringWarehouses]);
+
   const edges = useMemo(() => {
     if (!hoveredWarehouseName || distinctEdgeWarehouses < 2) {
-      return typedEdges;
+      return discoveryEdges;
     }
 
     // Highlight edges belonging to the hovered warehouse and dim all others.
     // zIndex is used to ensure that the highlighted edges are drawn on top of the dimmed edges.
-    return typedEdges.map((edge) => {
+    return discoveryEdges.map((edge) => {
       if (edge.data?.warehouseName !== hoveredWarehouseName) {
         return { ...edge, zIndex: -1 };
       }
@@ -214,7 +266,7 @@ export const Graph = (props: GraphProps) => {
         }
       };
     });
-  }, [typedEdges, hoveredWarehouseName, distinctEdgeWarehouses]);
+  }, [discoveryEdges, hoveredWarehouseName, distinctEdgeWarehouses]);
 
   const nodesExcludingSubscriptionNodes = useMemo(() => {
     const subscriptionNodes = nodes.filter((n) => repoSubscriptionIndexer.is(n.id));
@@ -287,6 +339,7 @@ export const Graph = (props: GraphProps) => {
     <GraphContext.Provider
       value={{
         warehouseByName,
+        discoveringWarehouses,
         stackedNodesParents,
         onStack,
         onUnstack,
@@ -300,6 +353,10 @@ export const Graph = (props: GraphProps) => {
         className='kargo-pipeline-graph'
         colorMode={isDark ? 'dark' : 'light'}
         nodes={nodes}
+        // Sizes only, so that a node replaced by a watch event keeps them.
+        // Without them React Flow drops the node's handles, and its edges are
+        // drawn afresh, restarting their animation.
+        onNodesChange={(changes) => onNodesChange(changes.filter((c) => c.type === 'dimensions'))}
         edges={edges}
         nodeTypes={nodeTypes}
         fitView

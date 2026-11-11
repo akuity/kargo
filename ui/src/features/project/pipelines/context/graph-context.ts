@@ -5,6 +5,10 @@ import { WarehouseExpanded } from '@ui/extend/types';
 export type GraphContextType = {
   warehouseByName: Record<string, WarehouseExpanded>;
 
+  // the Warehouses to show as discovering, held a moment past a quick
+  // discovery, which their loaders and subscription edges both follow
+  discoveringWarehouses: Set<string>;
+
   // stacking
   stackedNodesParents: string[];
   onStack(parentNode: string): void;
