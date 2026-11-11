@@ -91,7 +91,7 @@ func (s *server) setupRESTRouter(ctx context.Context) (*gin.Engine, error) {
 	router.Use(LoggingMiddleware(s.cfg))
 	router.Use(middleware.HandleErrors())
 	router.Use(middleware.Recover())
-	if s.cfg.AdminConfig != nil || s.cfg.OIDCConfig != nil {
+	if !s.cfg.LocalMode {
 		router.Use(NewAuthMiddleware(ctx, s.cfg, s.client.InternalClient()))
 	}
 

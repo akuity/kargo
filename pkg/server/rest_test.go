@@ -132,6 +132,7 @@ func testRESTEndpoint(
 			if testCase.serverConfig != nil {
 				s.cfg = *testCase.serverConfig
 			}
+			s.cfg.LocalMode = true
 
 			if testCase.clientBuilder == nil {
 				testCase.clientBuilder = fake.NewClientBuilder()
@@ -236,6 +237,7 @@ func testRESTWatchEndpoint(
 			if testCase.serverConfig != nil {
 				s.cfg = *testCase.serverConfig
 			}
+			s.cfg.LocalMode = true
 
 			if testCase.clientBuilder == nil {
 				testCase.clientBuilder = fake.NewClientBuilder()

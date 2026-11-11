@@ -88,6 +88,7 @@ func TestSetupRESTRouter_tracing(t *testing.T) {
 			)
 			require.NoError(t, err)
 			s := &server{cfg: testCase.cfg, client: kubeClient}
+			s.cfg.LocalMode = true
 			router, err := s.setupRESTRouter(t.Context())
 			require.NoError(t, err)
 
