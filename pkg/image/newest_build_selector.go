@@ -77,8 +77,21 @@ func (n *newestBuildSelector) Select(
 	if err != nil {
 		return nil, fmt.Errorf("error retrieving images for all matched tags: %w", err)
 	}
+	if n.filterExpression != nil {
+		filtered := make([]image, 0, len(images))
+		for _, img := range images {
+			var matched bool
+			if matched, err = n.matchesFilterExpression(img); err != nil {
+				return nil, fmt.Errorf("error filtering image with tag %q: %w", img.Tag, err)
+			}
+			if matched {
+				filtered = append(filtered, img)
+			}
+		}
+		images = filtered
+	}
 	if len(images) == 0 {
-		// This shouldn't happen
+		logger.Trace("no images matched criteria")
 		return nil, nil
 	}
 

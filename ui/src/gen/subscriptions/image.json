@@ -44,6 +44,10 @@
    },
    "description": "IgnoreTagsRegexes is a list of regular expressions that can optionally be used to exclude tags from consideration when determining the newest revision of an image. This field is optional."
   },
+  "expressionFilter": {
+   "type": "string",
+   "description": "ExpressionFilter is an expression that can optionally be used to limit the images that are considered in determining the newest revision of an image based on their tags and metadata. This field is optional."
+  },
   "platform": {
    "type": "string",
    "pattern": "^\\w+/\\w+$",

@@ -138,6 +138,14 @@ func (t *tagBasedSelector) getImagesByTags(
 			)
 			continue
 		}
+		matched, err := t.matchesFilterExpression(*image)
+		if err != nil {
+			return nil, fmt.Errorf("error filtering image with tag %q: %w", tag, err)
+		}
+		if !matched {
+			logger.Trace("image did not match filter expression", "tag", tag)
+			continue
+		}
 
 		logger.Trace(
 			"discovered image",

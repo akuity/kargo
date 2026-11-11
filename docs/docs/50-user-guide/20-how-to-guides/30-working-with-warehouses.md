@@ -121,6 +121,39 @@ fields:
 - `ignoreTagsRegexes`: An optional list of regular expressions that limit
   eligibility for selection to tags that don't match any of the patterns.
 
+<a id="image-expression-filter"></a>
+
+- `expressionFilter`: An optional [expr-lang](https://expr-lang.org) expression
+  that limits eligibility for selection to images for which it evaluates to
+  `true`. It is applied after all other constraints and can use these
+  variables:
+
+  - `tag`: The image's tag
+  - `digest`: The image's digest
+  - `annotations`: The image's OCI annotations
+  - `createdAt`: The image's build time
+
+  Images that don't satisfy the expression don't count toward
+  `discoveryLimit`.
+
+  :::note
+
+  Evaluating the expression requires each candidate image's metadata, so,
+  unlike `allowTagsRegexes`, it does not reduce the number of calls made to the
+  registry. It may increase them, since more images may need to be checked
+  before `discoveryLimit` is reached.
+  :::
+
+  Example:
+
+  ```yaml
+  spec:
+    subscriptions:
+    - image:
+        repoURL: ghcr.io/example/app
+        expressionFilter: annotations['org.opencontainers.image.vendor'] == 'Example'
+  ```
+
 <a id="platform-constraint"></a>
 
 - `platform`: An optional identifier that constrains image selection to those

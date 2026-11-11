@@ -84,6 +84,15 @@ func (d *digestSelector) Select(
 		return nil, nil
 	}
 
+	matched, err := d.matchesFilterExpression(*img)
+	if err != nil {
+		return nil, fmt.Errorf("error filtering image with tag %q: %w", d.mutableTag, err)
+	}
+	if !matched {
+		logger.Trace("image with tag did not match filter expression")
+		return nil, nil
+	}
+
 	logger.Trace("found image with tag")
 	return d.imagesToAPIImages([]image{*img}, 0), nil
 }

@@ -1057,3 +1057,31 @@ func (m *mockImage) LayerByDiffID(v1.Hash) (v1.Layer, error) {
 }
 
 var errNotImplemented = errors.New("not implemented")
+
+// withFakeImages makes the repository client list the given images' tags and
+// serve each image by its tag.
+func withFakeImages(r *repositoryClient, images ...image) {
+	tags := make([]string, len(images))
+	byTag := make(map[string]image, len(images))
+	for i, img := range images {
+		tags[i] = img.Tag
+		byTag[img.Tag] = img
+	}
+	r.remoteListFn = func(name.Repository, ...remote.Option) ([]string, error) {
+		return tags, nil
+	}
+	r.remoteGetFn = func(ref name.Reference, _ ...remote.Option) (*remote.Descriptor, error) {
+		return &remote.Descriptor{
+			Descriptor: v1.Descriptor{
+				Annotations: map[string]string{"tag": ref.Identifier()},
+			},
+		}, nil
+	}
+	r.getImageFromRemoteDescFn = func(
+		_ context.Context,
+		desc *remote.Descriptor,
+	) (*image, error) {
+		img := byTag[desc.Annotations["tag"]]
+		return &img, nil
+	}
+}
