@@ -46,7 +46,7 @@
   },
   "platform": {
    "type": "string",
-   "pattern": "^\\w+/\\w+(/\\w+)?$",
+   "pattern": "^\\w+/\\w+(/[\\w-]+)?$",
    "description": "Platform is a string of the form <os>/<arch> or <os>/<arch>/<variant> that limits the tags that can be considered when searching for new versions of an image. This field is optional. When left unspecified, it is implicitly equivalent to the OS/architecture of the Kargo controller. Care should be taken to set this value correctly in cases where the image will run on a Kubernetes node with a different OS/architecture than the Kargo controller."
   },
   "insecureSkipTLSVerify": {

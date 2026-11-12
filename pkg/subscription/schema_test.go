@@ -206,6 +206,11 @@ func TestSchemas(t *testing.T) {
 			cfg:     `{"repoURL":"ghcr.io/akuity/kargo","platform":"linux/arm/v7"}`,
 		},
 		{
+			name:    "image platform with hyphenated variant",
+			subType: "image",
+			cfg:     `{"repoURL":"ghcr.io/akuity/kargo","platform":"linux/amd64/fake-variant"}`,
+		},
+		{
 			name:      "image repoURL empty",
 			subType:   "image",
 			cfg:       `{"repoURL":""}`,
