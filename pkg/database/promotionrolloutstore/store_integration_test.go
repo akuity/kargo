@@ -34,6 +34,24 @@ func (p *recordingPublisher) forProject(project string) []published {
 	return events
 }
 
+// inUTC returns the row with its times in UTC. A row read from Postgres has
+// its times in time.Local, but one decoded from an event's JSON has them in
+// UTC, so rows are compared in UTC to compare their instants, not their
+// locations.
+func inUTC(row database.PromotionRolloutRow) database.PromotionRolloutRow {
+	row.CreatedAt = row.CreatedAt.UTC()
+	row.UpdatedAt = row.UpdatedAt.UTC()
+	if row.StatusStartedAt != nil {
+		startedAt := row.StatusStartedAt.UTC()
+		row.StatusStartedAt = &startedAt
+	}
+	if row.StatusFinishedAt != nil {
+		finishedAt := row.StatusFinishedAt.UTC()
+		row.StatusFinishedAt = &finishedAt
+	}
+	return row
+}
+
 func TestStoreIntegration(t *testing.T) {
 	t.Parallel()
 	pool, _ := databasetest.IsolatedDatabase(t)
@@ -133,7 +151,11 @@ func TestStoreIntegration(t *testing.T) {
 				require.Equal(t, "akuity.platform.internal.promotionrollouts.created", published[0].subject)
 				require.Equal(t, nats.Created, published[0].event.Kind)
 				require.Equal(t, Key{Project: "create", Name: "prod.01A.abc"}, published[0].event.Key)
-				require.Equal(t, rollout.PromotionRolloutRow, *published[0].event.New)
+				require.Equal(
+					t,
+					inUTC(rollout.PromotionRolloutRow),
+					inUTC(*published[0].event.New),
+				)
 				require.Equal(t, []string{"us-east", "us-west"}, targetNames(rollout))
 				require.Equal(t, ids["us-east"], rollout.Targets[0].TargetID)
 
@@ -597,8 +619,12 @@ func TestStoreIntegration(t *testing.T) {
 				require.Equal(t, "akuity.platform.internal.promotionrollouts.updated", published[1].subject)
 				require.Equal(t, nats.Updated, published[1].event.Kind)
 				require.Equal(t, Key{Project: "update", Name: "prod.01A.abc"}, published[1].event.Key)
-				require.Equal(t, created.PromotionRolloutRow, *published[1].event.Old)
-				require.Equal(t, updated, *published[1].event.New)
+				require.Equal(
+					t,
+					inUTC(created.PromotionRolloutRow),
+					inUTC(*published[1].event.Old),
+				)
+				require.Equal(t, inUTC(updated), inUTC(*published[1].event.New))
 
 				// The version the first update was based on is now stale, and
 				// a refused update announces nothing.
