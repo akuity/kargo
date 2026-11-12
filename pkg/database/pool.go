@@ -58,7 +58,6 @@ func newPoolConfig(
 	if err != nil {
 		return nil, fmt.Errorf("error parsing database connection string: %w", err)
 	}
-	// Unattached, the hooks are never called: no spans, at no cost.
 	if telemetry.CategoryEnabled(telemetry.CategoryDatabase) {
 		cfg.ConnConfig.Tracer = newPgxTracer(cfg.ConnConfig)
 	}

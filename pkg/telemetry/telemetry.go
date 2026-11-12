@@ -1,8 +1,6 @@
 // Package telemetry wires the OpenTelemetry SDK into Kargo's long-running
 // components. Setup is called once at startup by each component, before
-// anything that records spans is built. Spans in a Category are recorded only
-// after Setup has turned that category on; other spans use the
-// OpenTelemetry API's no-op implementations until Setup installs a provider.
+// anything that records spans is built. Until then, spans are no-ops.
 package telemetry
 
 import (
@@ -97,7 +95,6 @@ func Setup(ctx context.Context, cfg Config, svc Service) (ShutdownFunc, error) {
 	otel.SetTracerProvider(tp)
 	state.Selected.Store(selection)
 	state.Enabled.Store(true)
-	// W3C trace context only; baggage would pass on whatever callers put in it.
 	otel.SetTextMapPropagator(propagation.TraceContext{})
 
 	serviceName, _ := res.Set().Value(semconv.ServiceNameKey)

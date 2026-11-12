@@ -58,7 +58,6 @@ func TestNewPool_tracing_integration(t *testing.T) {
 			batch.Queue("SELECT 1")
 			require.NoError(t, pool.SendBatch(ctx, batch).Close())
 
-			// The queries leave the caller's span as they found it.
 			ro, ok := parent.(sdktrace.ReadOnlySpan)
 			require.True(t, ok)
 			require.True(t, ro.EndTime().IsZero())

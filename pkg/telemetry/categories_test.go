@@ -125,7 +125,6 @@ func TestParseCategories(t *testing.T) {
 			},
 		},
 	}
-	// A boolean is not a category.
 	for _, b := range []string{"true", "false", "1", "0", "yes", "no"} {
 		testCases = append(testCases, parseCase{
 			name:    b,
@@ -163,7 +162,6 @@ func TestCategoryEnabled(t *testing.T) {
 	state.Enabled.Store(true)
 	require.True(t, CategoryEnabled(CategoryDatabase))
 
-	// Nothing selected.
 	state.Selected.Store(nil)
 	require.False(t, CategoryEnabled(CategoryDatabase))
 }

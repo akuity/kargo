@@ -2,6 +2,8 @@ package telemetry
 
 import (
 	"context"
+	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
 	"time"
@@ -55,7 +57,6 @@ func TestSpanLimits(t *testing.T) {
 			linkCount:   defaultLinkCountLimit,
 		},
 		{
-			// Like the SDK, an invalid span limit doesn't fall back.
 			name: "invalid span attribute limit, valid general one",
 			env: map[string]string{
 				"OTEL_SPAN_ATTRIBUTE_VALUE_LENGTH_LIMIT": "lots",
@@ -84,6 +85,16 @@ func TestSpanLimits(t *testing.T) {
 func TestSetup_spanLimits(t *testing.T) {
 	// Not parallel: changes global telemetry state.
 	resetGlobals(t)
+	for _, key := range []string{
+		"OTEL_SPAN_ATTRIBUTE_VALUE_LENGTH_LIMIT",
+		"OTEL_ATTRIBUTE_VALUE_LENGTH_LIMIT",
+		"OTEL_SPAN_LINK_COUNT_LIMIT",
+	} {
+		t.Setenv(key, "")
+	}
+	collector := httptest.NewServer(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {}))
+	t.Cleanup(collector.Close)
+	t.Setenv("OTEL_EXPORTER_OTLP_ENDPOINT", collector.URL)
 	shutdown, err := Setup(
 		context.Background(),
 		Config{Enabled: true, Protocol: ProtocolHTTPProtobuf},
@@ -93,7 +104,7 @@ func TestSetup_spanLimits(t *testing.T) {
 	t.Cleanup(func() {
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
-		_ = shutdown(ctx)
+		require.NoError(t, shutdown(ctx))
 	})
 	tp, ok := otel.GetTracerProvider().(*sdktrace.TracerProvider)
 	require.True(t, ok)

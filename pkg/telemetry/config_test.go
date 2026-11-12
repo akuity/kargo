@@ -33,7 +33,6 @@ func TestConfigFromEnv(t *testing.T) {
 				require.True(t, cfg.Enabled)
 				require.Equal(t, ProtocolGRPC, cfg.Protocol)
 				require.Equal(t, ProtocolHTTPProtobuf, cfg.TracesProtocol)
-				// Normalized when parsed, by Setup.
 				require.Equal(t, []string{"Default", " k8s"}, cfg.Categories)
 			},
 		},

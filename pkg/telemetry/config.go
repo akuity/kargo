@@ -18,11 +18,11 @@ const (
 )
 
 // Config represents configuration for a component's telemetry. Apart from the
-// Kargo-specific on/off switch and categories, it is deliberately minimal: the
-// OpenTelemetry SDK and exporters configure themselves from the standard
-// OTEL_* environment variables (OTEL_EXPORTER_OTLP_ENDPOINT,
-// OTEL_EXPORTER_OTLP_HEADERS, OTEL_TRACES_SAMPLER, OTEL_RESOURCE_ATTRIBUTES,
-// and so on), and this package intentionally does not duplicate them.
+// Kargo-specific on/off switch, it is deliberately minimal: the OpenTelemetry
+// SDK and exporters configure themselves from the standard OTEL_* environment
+// variables (OTEL_EXPORTER_OTLP_ENDPOINT, OTEL_EXPORTER_OTLP_HEADERS,
+// OTEL_TRACES_SAMPLER, OTEL_RESOURCE_ATTRIBUTES, and so on), and this package
+// intentionally does not duplicate them.
 type Config struct {
 	// Enabled indicates whether traces are exported at all. When false, the
 	// OpenTelemetry API's no-op implementations remain in place and the

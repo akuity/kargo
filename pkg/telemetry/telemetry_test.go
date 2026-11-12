@@ -68,9 +68,7 @@ func TestSetup(t *testing.T) {
 				_, ok := otel.GetTracerProvider().(*sdktrace.TracerProvider)
 				require.True(t, ok)
 				require.True(t, Enabled())
-				// Unset selects the default categories.
 				require.True(t, CategoryEnabled(CategoryDatabase))
-				// W3C trace context only: no baggage.
 				require.ElementsMatch(
 					t,
 					[]string{"traceparent", "tracestate"},
@@ -97,7 +95,6 @@ func TestSetup(t *testing.T) {
 				ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 				defer cancel()
 				require.NoError(t, shutdown(ctx))
-				// Shutting down resets the selection.
 				require.Nil(t, state.Selected.Load())
 			},
 		},

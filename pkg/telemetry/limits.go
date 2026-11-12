@@ -9,10 +9,9 @@ import (
 
 // Span limits applied unless the standard environment variables set them.
 const (
-	// defaultAttributeValueLengthLimit bounds string attributes. The SDK's
-	// default is no limit.
+	// SDK default: no limit.
 	defaultAttributeValueLengthLimit = 4096
-	// defaultLinkCountLimit bounds a span's links. The SDK's default is 128.
+	// SDK default: 128.
 	defaultLinkCountLimit = 32
 )
 

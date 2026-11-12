@@ -80,8 +80,7 @@ func TestSetupFromEnv(t *testing.T) {
 		},
 		{
 			name: "tracing enabled",
-			// A short export timeout keeps the shutdown flush quick.
-			env: map[string]string{"TRACING_ENABLED": "true", "OTEL_EXPORTER_OTLP_TIMEOUT": "100"},
+			env:  map[string]string{"TRACING_ENABLED": "true", "OTEL_EXPORTER_OTLP_TIMEOUT": "100"},
 			assert: func(t *testing.T, shutdown func(), err error) {
 				require.NoError(t, err)
 				require.NotNil(t, shutdown)
@@ -137,15 +136,13 @@ func TestSetupFromEnv_collectorDown(t *testing.T) {
 	require.True(t, ok)
 	tracer := tp.Tracer("test")
 
-	// Ending spans must not block on a collector that never responds. Blocking
-	// would wait out the export timeout for each batch: 250 s.
+	// Ending spans must not block on a collector that never responds.
 	requireReturns(t, 10*time.Second, func() {
 		for range 10_000 {
 			_, span := tracer.Start(context.Background(), "test")
 			span.End()
 		}
 	})
-	// Shutting down is bounded too.
 	requireReturns(t, shutdownTimeout+10*time.Second, shutdown)
 }
 
@@ -171,11 +168,13 @@ func hangingListener(t *testing.T) string {
 		}
 	}()
 	t.Cleanup(func() {
-		_ = l.Close()
+		require.NoError(t, l.Close())
 		mu.Lock()
 		defer mu.Unlock()
 		for _, c := range conns {
-			_ = c.Close()
+			if err := c.Close(); err != nil {
+				t.Error(err)
+			}
 		}
 	})
 	return l.Addr().String()

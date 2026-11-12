@@ -29,11 +29,9 @@ var Selected atomic.Pointer[Categories]
 // Categories is a selection of tracing categories.
 type Categories struct {
 	// all selects every category, including any not known when it was set.
-	all bool
-	// defaults selects the categories on by default.
+	all      bool
 	defaults bool
-	// names are the categories selected by name.
-	names map[string]struct{}
+	names    map[string]struct{}
 }
 
 // ParseCategories parses TRACING_CATEGORIES entries: case-insensitive, spaces
