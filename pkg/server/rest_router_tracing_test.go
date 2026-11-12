@@ -88,8 +88,6 @@ func TestSetupRESTRouter_tracing(t *testing.T) {
 			)
 			require.NoError(t, err)
 			s := &server{cfg: testCase.cfg, client: kubeClient}
-			router, err := s.setupRESTRouter(t.Context())
-			require.NoError(t, err)
 
 			w := httptest.NewRecorder()
 			req := httptest.NewRequest(
@@ -97,6 +95,7 @@ func TestSetupRESTRouter_tracing(t *testing.T) {
 				"/v1beta1/system/server-version",
 				nil,
 			)
+			router := setupRESTTestRouter(t, s, req)
 			router.ServeHTTP(w, req)
 			require.Equal(t, http.StatusOK, w.Code)
 
