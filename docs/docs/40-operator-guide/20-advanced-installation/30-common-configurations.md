@@ -742,6 +742,21 @@ For a list of resource kinds that can be configured, refer to the
 
 :::
 
+### Bounding Artifact Discovery Time
+
+Artifact discovery for each `Warehouse` subscription is bounded to 10 minutes
+by default. Discovery that runs longer fails, the `Warehouse` reports
+`Healthy=False`, and discovery is retried with backoff. Raise the bound if
+legitimate discovery (e.g. a first clone of a very large Git repository) takes
+longer, or set it to `0s` to disable it:
+
+```yaml
+controller:
+  reconcilers:
+    warehouses:
+      discoveryTimeout: 30m
+```
+
 ### Image Metadata Caching
 
 Kargo can cache container image metadata more aggressively using image tags as

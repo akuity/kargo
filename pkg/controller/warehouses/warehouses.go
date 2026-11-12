@@ -40,6 +40,7 @@ type ReconcilerConfig struct {
 	ShardName                 string        `envconfig:"SHARD_NAME"`
 	MaxConcurrentReconciles   int           `envconfig:"MAX_CONCURRENT_WAREHOUSE_RECONCILES" default:"4"`
 	MinReconciliationInterval time.Duration `envconfig:"MIN_WAREHOUSE_RECONCILIATION_INTERVAL"`
+	DiscoveryTimeout          time.Duration `envconfig:"WAREHOUSE_DISCOVERY_TIMEOUT" default:"10m"`
 }
 
 func ReconcilerConfigFromEnv() ReconcilerConfig {
@@ -625,15 +626,32 @@ func (r *reconciler) discoverArtifacts(
 			}
 			gitIdx++
 		}
-		// TODO(krancour): Discovery relies on stall detection in the underlying
-		// implementations (git's low-speed abort; ResponseHeaderTimeout on
-		// registry/repository HTTP transports) to keep a dead connection from
-		// hanging a reconcile indefinitely. Those measures bound "no progress," not
-		// total duration, so a healthy-but-slow transfer is never cut off. If they
-		// should ever prove insufficient, setting a per-subscription deadline from
-		// ctx here is the natural next step.
-		res, err := subscriber.DiscoverArtifacts(ctx, project, sub, lastResult)
+		// Stall detection in the subscribers (git's low-speed abort;
+		// ResponseHeaderTimeout on registry/repository HTTP transports) bounds
+		// "no progress"; the deadline bounds total duration.
+		subCtx, cancel := ctx, func() {}
+		if r.cfg.DiscoveryTimeout > 0 {
+			subCtx, cancel = context.WithTimeout(ctx, r.cfg.DiscoveryTimeout)
+		}
+		res, err := subscriber.DiscoverArtifacts(subCtx, project, sub, lastResult)
+		cancel()
 		if err != nil {
+			if errors.Is(subCtx.Err(), context.DeadlineExceeded) && ctx.Err() == nil {
+				id := sub.Name
+				switch {
+				case id != "":
+				case sub.Git != nil:
+					id = sub.Git.RepoURL
+				case sub.Image != nil:
+					id = sub.Image.RepoURL
+				case sub.Chart != nil:
+					id = sub.Chart.RepoURL
+				}
+				return nil, fmt.Errorf(
+					"discovery for subscription %q exceeded %s (WAREHOUSE_DISCOVERY_TIMEOUT): %w",
+					id, r.cfg.DiscoveryTimeout, err,
+				)
+			}
 			return nil, fmt.Errorf("error discovering artifacts: %w", err)
 		}
 		switch typedRes := res.(type) {
