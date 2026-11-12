@@ -29,7 +29,6 @@ type ServerConfig struct {
 	// it). Empty value means the server serves at the root.
 	BasePath                    string
 	SecretManagementEnabled     bool
-	LocalMode                   bool // LocalMode is true if the server is running as a non-containerized process
 	TLSConfig                   *TLSConfig
 	OIDCConfig                  *oidc.Config
 	AdminConfig                 *AdminConfig

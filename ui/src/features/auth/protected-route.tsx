@@ -6,14 +6,11 @@ import { withoutBasePath } from '@ui/config/base-path';
 import { paths } from '@ui/config/paths';
 import { ModalContextProvider } from '@ui/features/common/modal/modal-context-provider';
 import { PromotionDirectivesRegistryContextProvider } from '@ui/features/promotion-directives/registry/context/registry-context-provider';
-import { useGetPublicConfig } from '@ui/gen/api/v2/system/system';
 
 import { useAuthContext } from './context/use-auth-context';
 
 export const ProtectedRoute = () => {
   const { isLoggedIn } = useAuthContext();
-  const { data: response, isLoading } = useGetPublicConfig();
-  const data = response?.data;
 
   const modalRef = useRef<HTMLDivElement>(null);
   const [modalRoot, setModalRoot] = useState<HTMLDivElement | null>(null);
@@ -21,7 +18,7 @@ export const ProtectedRoute = () => {
     setModalRoot(modalRef.current);
   }, []);
 
-  if (!data?.skipAuth && !isLoading && !isLoggedIn) {
+  if (!isLoggedIn) {
     const currentPath = withoutBasePath(window.location.pathname);
     return (
       <Navigate

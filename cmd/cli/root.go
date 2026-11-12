@@ -21,7 +21,6 @@ import (
 	"github.com/akuity/kargo/pkg/cli/cmd/promote"
 	"github.com/akuity/kargo/pkg/cli/cmd/refresh"
 	"github.com/akuity/kargo/pkg/cli/cmd/revoke"
-	"github.com/akuity/kargo/pkg/cli/cmd/server"
 	"github.com/akuity/kargo/pkg/cli/cmd/update"
 	"github.com/akuity/kargo/pkg/cli/cmd/verify"
 	"github.com/akuity/kargo/pkg/cli/cmd/version"
@@ -62,7 +61,6 @@ func NewRootCommand(cfg clicfg.CLIConfig) *cobra.Command {
 	cmd.AddCommand(promote.NewCommand(cfg, streams))
 	cmd.AddCommand(verify.NewCommand(cfg))
 	cmd.AddCommand(version.NewCommand(cfg, streams))
-	cmd.AddCommand(server.NewCommand())
 
 	return cmd
 }

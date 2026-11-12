@@ -12,7 +12,6 @@ const mapToken = defaultAlgorithm(defaultSeed);
 
 export const UI_VERSION = process.env.VERSION || 'development';
 export const API_URL = process.env.API_URL || 'http://localhost:30081';
-export const BUILD_TARGET_PATH = process.env.BUILD_TARGET_PATH || 'build';
 // KARGO_BASE_PATH lets the dev server exercise a non-empty basePath end-to-end.
 // Unset (or empty) means the dev server serves at the root, matching production
 // without a basePath. When set (e.g. "/kargo"), the dev plugin below substitutes
@@ -34,7 +33,7 @@ export default defineConfig({
     tsconfigPaths: true
   },
   build: {
-    outDir: BUILD_TARGET_PATH,
+    outDir: 'build',
     sourcemap: false
   },
   css: {
