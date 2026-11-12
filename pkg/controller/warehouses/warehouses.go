@@ -249,7 +249,8 @@ func (r *reconciler) syncWarehouse(
 	// Discover the latest artifacts.
 	if shouldDiscoverArtifacts(warehouse, status.LastHandledRefresh) {
 		// As this is a long-running operation, we need to update the status
-		// conditions to reflect that we are currently reconciling.
+		// conditions to reflect that we are currently reconciling. Healthy
+		// keeps its last value until discovery finishes.
 		conditions.Set(
 			&status,
 			&metav1.Condition{
@@ -267,13 +268,6 @@ func (r *reconciler) syncWarehouse(
 				Status:             metav1.ConditionFalse,
 				Reason:             "DiscoveryInProgress",
 				Message:            "Waiting for discovery to complete",
-				ObservedGeneration: warehouse.GetGeneration(),
-			},
-			&metav1.Condition{
-				Type:               kargoapi.ConditionTypeHealthy,
-				Status:             metav1.ConditionUnknown,
-				Reason:             "Pending",
-				Message:            "Health status cannot be determined until artifact discovery is finished",
 				ObservedGeneration: warehouse.GetGeneration(),
 			},
 		)

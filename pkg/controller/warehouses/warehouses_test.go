@@ -1051,6 +1051,165 @@ func Test_syncWarehouse_existingFreight(t *testing.T) {
 	}
 }
 
+// Test_syncWarehouse_preDiscoveryPatch verifies that the status patch sent
+// before discovery marks the Warehouse as reconciling and leaves Healthy
+// unchanged, so Healthy changes at most once per poll.
+func Test_syncWarehouse_preDiscoveryPatch(t *testing.T) {
+	transitioned := metav1.NewTime(time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC))
+	testCases := []struct {
+		name          string
+		priorHealthy  *metav1.Condition
+		discoveryErr  error
+		expectHealthy metav1.ConditionStatus
+		// Healthy presence or status changes across prior, pre-discovery and
+		// final status; each enqueues the Project.
+		expectChanges int
+	}{
+		{
+			name: "healthy, discovery succeeds",
+			priorHealthy: &metav1.Condition{
+				Type:               kargoapi.ConditionTypeHealthy,
+				Status:             metav1.ConditionTrue,
+				Reason:             "ReconciliationSucceeded",
+				ObservedGeneration: 1,
+				LastTransitionTime: transitioned,
+			},
+			expectHealthy: metav1.ConditionTrue,
+			expectChanges: 0,
+		},
+		{
+			name: "healthy, discovery fails",
+			priorHealthy: &metav1.Condition{
+				Type:               kargoapi.ConditionTypeHealthy,
+				Status:             metav1.ConditionTrue,
+				Reason:             "ReconciliationSucceeded",
+				ObservedGeneration: 1,
+				LastTransitionTime: transitioned,
+			},
+			discoveryErr:  errors.New("something went wrong"),
+			expectHealthy: metav1.ConditionFalse,
+			expectChanges: 1,
+		},
+		{
+			name: "unhealthy, discovery succeeds",
+			priorHealthy: &metav1.Condition{
+				Type:               kargoapi.ConditionTypeHealthy,
+				Status:             metav1.ConditionFalse,
+				Reason:             "DiscoveryFailed",
+				ObservedGeneration: 1,
+				LastTransitionTime: transitioned,
+			},
+			expectHealthy: metav1.ConditionTrue,
+			expectChanges: 1,
+		},
+		{
+			name:          "no Healthy condition yet, discovery succeeds",
+			expectHealthy: metav1.ConditionTrue,
+			expectChanges: 1,
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			warehouse := &kargoapi.Warehouse{
+				ObjectMeta: metav1.ObjectMeta{Namespace: "fake-project", Name: "fake-warehouse", Generation: 1},
+				Status: kargoapi.WarehouseStatus{
+					ObservedGeneration:  1,
+					DiscoveredArtifacts: &kargoapi.DiscoveredArtifacts{},
+					Conditions: []metav1.Condition{
+						{
+							Type:   kargoapi.ConditionTypeFreightCreationCriteriaSatisfied,
+							Status: metav1.ConditionTrue,
+							Reason: "CriteriaSatisfied",
+						},
+						{
+							Type:   kargoapi.ConditionTypeFreightCreated,
+							Status: metav1.ConditionFalse,
+							Reason: "AlreadyExists",
+						},
+					},
+				},
+			}
+			if testCase.priorHealthy != nil {
+				warehouse.Status.Conditions = append(warehouse.Status.Conditions, *testCase.priorHealthy)
+			}
+			var patches []kargoapi.WarehouseStatus
+			r := &reconciler{
+				discoverArtifactsFn: func(
+					context.Context, string,
+					[]kargoapi.RepoSubscription,
+					*kargoapi.DiscoveredArtifacts,
+				) (*kargoapi.DiscoveredArtifacts, error) {
+					if testCase.discoveryErr != nil {
+						return nil, testCase.discoveryErr
+					}
+					return &kargoapi.DiscoveredArtifacts{
+						DiscoveredAt: metav1.Now(),
+						Git: []kargoapi.GitDiscoveryResult{{
+							RepoURL: "fake-repo",
+							Commits: []kargoapi.DiscoveredCommit{{ID: "fake-commit"}},
+						}},
+					}, nil
+				},
+				createFreightFn: func(context.Context, client.Object, ...client.CreateOption) error {
+					return nil
+				},
+				patchStatusFn: func(
+					_ context.Context,
+					wh *kargoapi.Warehouse,
+					update func(*kargoapi.WarehouseStatus),
+				) error {
+					status := *wh.Status.DeepCopy()
+					update(&status)
+					patches = append(patches, *status.DeepCopy())
+					return nil
+				},
+			}
+			r.buildFreightFromLatestArtifactsFn = r.buildFreightFromLatestArtifacts
+
+			final, err := r.syncWarehouse(t.Context(), warehouse)
+			if testCase.discoveryErr != nil {
+				require.ErrorIs(t, err, testCase.discoveryErr)
+			} else {
+				require.NoError(t, err)
+			}
+			require.Len(t, patches, 1)
+			pre := patches[0]
+
+			reconciling := conditions.Get(&pre, kargoapi.ConditionTypeReconciling)
+			require.NotNil(t, reconciling)
+			require.Equal(t, metav1.ConditionTrue, reconciling.Status)
+			require.Equal(t, "ScheduledDiscovery", reconciling.Reason)
+			require.Equal(t, int64(1), reconciling.ObservedGeneration)
+
+			ready := conditions.Get(&pre, kargoapi.ConditionTypeReady)
+			require.NotNil(t, ready)
+			require.Equal(t, metav1.ConditionFalse, ready.Status)
+			require.Equal(t, "DiscoveryInProgress", ready.Reason)
+			require.Equal(t, int64(1), ready.ObservedGeneration)
+
+			require.Nil(t, conditions.Get(&pre, kargoapi.ConditionTypeFreightCreationCriteriaSatisfied))
+			require.Nil(t, conditions.Get(&pre, kargoapi.ConditionTypeFreightCreated))
+
+			require.Equal(t, testCase.priorHealthy, conditions.Get(&pre, kargoapi.ConditionTypeHealthy))
+
+			healthy := conditions.Get(&final, kargoapi.ConditionTypeHealthy)
+			require.NotNil(t, healthy)
+			require.Equal(t, testCase.expectHealthy, healthy.Status)
+
+			statuses := []kargoapi.WarehouseStatus{warehouse.Status, pre, final}
+			var changes int
+			for i := 1; i < len(statuses); i++ {
+				prev := conditions.Get(&statuses[i-1], kargoapi.ConditionTypeHealthy)
+				next := conditions.Get(&statuses[i], kargoapi.ConditionTypeHealthy)
+				if (prev == nil) != (next == nil) || (prev != nil && prev.Status != next.Status) {
+					changes++
+				}
+			}
+			require.Equal(t, testCase.expectChanges, changes)
+		})
+	}
+}
+
 // Test_syncWarehouse_generationGate verifies that previously discovered
 // artifacts are only offered to subscribers (for short-circuiting) when the
 // spec is unchanged since that discovery, i.e. the observed generation still
