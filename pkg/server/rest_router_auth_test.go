@@ -57,12 +57,12 @@ func TestSetupRESTRouter_authentication(t *testing.T) {
 		wantBody          string
 	}{
 		{
-			name:       "both_disabled_without_token",
+			name:       "admin and OIDC disabled without token",
 			wantStatus: http.StatusUnauthorized,
 			wantBody:   "no token provided",
 		},
 		{
-			name:              "both_disabled_with_authorized_kubernetes_token",
+			name:              "admin and OIDC disabled with authorized Kubernetes token",
 			token:             kubernetesToken,
 			tokenAccepted:     true,
 			allowProjects:     true,
@@ -72,7 +72,7 @@ func TestSetupRESTRouter_authentication(t *testing.T) {
 			wantBody:          `"name":"demo"`,
 		},
 		{
-			name:              "both_disabled_with_forbidden_kubernetes_token",
+			name:              "admin and OIDC disabled with forbidden Kubernetes token",
 			token:             kubernetesToken,
 			tokenAccepted:     true,
 			wantStatus:        http.StatusForbidden,
@@ -80,41 +80,35 @@ func TestSetupRESTRouter_authentication(t *testing.T) {
 			wantAccessReviews: 1,
 		},
 		{
-			name:             "both_disabled_with_rejected_kubernetes_token",
+			name:             "admin and OIDC disabled with rejected Kubernetes token",
 			token:            kubernetesToken,
 			wantStatus:       http.StatusUnauthorized,
 			wantTokenReviews: 1,
 			wantBody:         "invalid token",
 		},
 		{
-			name:             "admin_disabled_rejects_admin_token",
+			name:             "admin disabled rejects admin token",
 			token:            adminToken,
 			wantStatus:       http.StatusUnauthorized,
 			wantTokenReviews: 1,
 			wantBody:         "invalid token",
 		},
 		{
-			name: "admin_enabled_accepts_admin_token",
-			cfg: config.ServerConfig{
-				AdminConfig: adminConfig,
-			},
+			name:       "admin enabled accepts admin token",
+			cfg:        config.ServerConfig{AdminConfig: adminConfig},
 			token:      adminToken,
 			wantStatus: http.StatusOK,
 			wantBody:   `"name":"demo"`,
 		},
 		{
-			name: "admin_enabled_without_token",
-			cfg: config.ServerConfig{
-				AdminConfig: &config.AdminConfig{TokenIssuer: "kargo-admin"},
-			},
+			name:       "admin enabled without token",
+			cfg:        config.ServerConfig{AdminConfig: &config.AdminConfig{TokenIssuer: "kargo-admin"}},
 			wantStatus: http.StatusUnauthorized,
 			wantBody:   "no token provided",
 		},
 		{
-			name: "admin_enabled_with_authorized_kubernetes_token",
-			cfg: config.ServerConfig{
-				AdminConfig: &config.AdminConfig{TokenIssuer: "kargo-admin"},
-			},
+			name:              "admin enabled with authorized Kubernetes token",
+			cfg:               config.ServerConfig{AdminConfig: &config.AdminConfig{TokenIssuer: "kargo-admin"}},
 			token:             kubernetesToken,
 			tokenAccepted:     true,
 			allowProjects:     true,
@@ -124,19 +118,19 @@ func TestSetupRESTRouter_authentication(t *testing.T) {
 			wantBody:          `"name":"demo"`,
 		},
 		{
-			name:       "local_mode_without_token",
+			name:       "local mode without token",
 			cfg:        config.ServerConfig{LocalMode: true},
 			wantStatus: http.StatusUnauthorized,
 			wantBody:   "no token provided",
 		},
 		{
-			name:       "public_config_without_token",
+			name:       "public config without token",
 			path:       "/v1beta1/system/public-server-config",
 			wantStatus: http.StatusOK,
 			wantBody:   `"skipAuth":false`,
 		},
 		{
-			name:       "disabled_admin_login_is_public",
+			name:       "disabled admin login is public",
 			method:     http.MethodPost,
 			path:       "/v1beta1/login",
 			wantStatus: http.StatusForbidden,
@@ -179,17 +173,21 @@ func TestSetupRESTRouter_authentication(t *testing.T) {
 						}
 					},
 				}).Build()
-			kubeClient, err := kubernetes.NewClient(t.Context(), &rest.Config{}, kubernetes.ClientOptions{
-				Scheme: scheme,
-				NewInternalClient: func(
-					context.Context,
-					*rest.Config,
-					*runtime.Scheme,
-					string,
-				) (client.WithWatch, error) {
-					return internalClient, nil
+			kubeClient, err := kubernetes.NewClient(
+				t.Context(),
+				&rest.Config{},
+				kubernetes.ClientOptions{
+					Scheme: scheme,
+					NewInternalClient: func(
+						context.Context,
+						*rest.Config,
+						*runtime.Scheme,
+						string,
+					) (client.WithWatch, error) {
+						return internalClient, nil
+					},
 				},
-			})
+			)
 			require.NoError(t, err)
 			s, ok := NewServer(testCase.cfg, kubeClient, nil, nil, nil).(*server)
 			require.True(t, ok)
