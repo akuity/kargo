@@ -321,8 +321,7 @@ func Test_server_createSystemAPIToken(t *testing.T) {
 					require.NoError(t, err)
 					require.Equal(t, testToken.Data, secret.Data)
 
-					// System-level tokens are recorded in Kargo's own namespace. With
-					// no authenticated caller there is nobody to attribute it to.
+					// System-level tokens are recorded in Kargo's own namespace.
 					evt := &event.APITokenCreated{}
 					requireSingleEvent(
 						t,
@@ -335,7 +334,8 @@ func Test_server_createSystemAPIToken(t *testing.T) {
 					require.Equal(t, testToken.Name, evt.Name)
 					require.Equal(t, testSA.Name, evt.RoleName)
 					require.True(t, evt.SystemLevel)
-					require.Nil(t, evt.Actor)
+					require.NotNil(t, evt.Actor)
+					require.Equal(t, "subject:test-user", *evt.Actor)
 				},
 			},
 		},

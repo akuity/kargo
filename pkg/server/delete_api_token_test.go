@@ -274,7 +274,8 @@ func Test_server_deleteSystemAPIToken(t *testing.T) {
 					require.Equal(t, testKargoNamespace, evt.Project)
 					require.Equal(t, testToken.Name, evt.Name)
 					require.True(t, evt.SystemLevel)
-					require.Nil(t, evt.Actor)
+					require.NotNil(t, evt.Actor)
+					require.Equal(t, "subject:test-user", *evt.Actor)
 				},
 			},
 		},

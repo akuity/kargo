@@ -53,7 +53,7 @@ func Test_server_listProjects(t *testing.T) {
 				},
 			},
 			{
-				name: "mine=true without user info returns empty",
+				name: "mine=true without project mappings returns empty",
 				url:  "/v1beta1/projects?mine=true",
 				clientBuilder: fake.NewClientBuilder().WithObjects(
 					&kargoapi.Project{ObjectMeta: metav1.ObjectMeta{Name: "project-a"}},

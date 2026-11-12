@@ -126,8 +126,8 @@ func TestSetupRESTRouter_authentication(t *testing.T) {
 		{
 			name:       "local_mode_without_token",
 			cfg:        config.ServerConfig{LocalMode: true},
-			wantStatus: http.StatusOK,
-			wantBody:   `"name":"demo"`,
+			wantStatus: http.StatusUnauthorized,
+			wantBody:   "no token provided",
 		},
 		{
 			name:       "public_config_without_token",
@@ -180,8 +180,7 @@ func TestSetupRESTRouter_authentication(t *testing.T) {
 					},
 				}).Build()
 			kubeClient, err := kubernetes.NewClient(t.Context(), &rest.Config{}, kubernetes.ClientOptions{
-				Scheme:            scheme,
-				SkipAuthorization: testCase.cfg.LocalMode,
+				Scheme: scheme,
 				NewInternalClient: func(
 					context.Context,
 					*rest.Config,
