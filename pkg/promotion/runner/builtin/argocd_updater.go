@@ -466,7 +466,7 @@ func (a *argocdUpdater) mustPerformUpdate(
 		// state when it requests a new one. So if the Application still carries
 		// the operation this Promotion requested, Argo CD hasn't started it yet.
 		// Requesting it again would clear the state the controller may be
-		// writing at this very moment, and make it start the sync over.
+		// writing at this very moment, which can make it start the sync over.
 		if app.Operation != nil && isOperationForPromotion(*app.Operation, stepCtx.Promotion) {
 			logger.Info("operation requested for this promotion has not started yet")
 			return argocd.OperationRunning, false, nil
