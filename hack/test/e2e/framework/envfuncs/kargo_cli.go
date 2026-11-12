@@ -3,7 +3,6 @@ package envfuncs
 import (
 	"context"
 	"encoding/json"
-	env "envs"
 	"fmt"
 	"io"
 	"os"
@@ -12,16 +11,17 @@ import (
 
 	"sigs.k8s.io/e2e-framework/pkg/envconf"
 	"sigs.k8s.io/e2e-framework/pkg/utils"
-
-	"github.com/akuity/kargo/pkg/cli/config"
 	"sigs.k8s.io/yaml"
+
+	env "github.com/akuity/kargo/hack/test/e2e/envs"
+	"github.com/akuity/kargo/pkg/cli/config"
 )
 
 const KargoConfigKey ContextKey = "kargo_config"
 
 const ConfigHomeVar string = "XDG_CONFIG_HOME"
 
-func KargoLogin(ctx context.Context, cfg *envconf.Config) (context.Context, error) {
+func KargoLogin(ctx context.Context, _ *envconf.Config) (context.Context, error) {
 	loginConfigVal, err := GetEnv(ctx, []string{"kargo_cli", "kargo_login"})
 	if err != nil {
 		fmt.Printf("Kargo login disabled, skipping \n")
@@ -67,15 +67,23 @@ func processLoginConfig(ctx context.Context, loginConfigVal any) (context.Contex
 	if loginConfig, ok := loginConfigVal.(map[string]any); ok {
 		// There are extra fields in the config
 		// Using tmpdir for config home
-		if useTmpConfigHome, ok := loginConfig["use_tmp_config_home"]; ok && useTmpConfigHome.(bool) {
+		rawUseTmpConfigHome, present := loginConfig["use_tmp_config_home"]
+		useTmpConfigHome, isBool := rawUseTmpConfigHome.(bool)
+		if present && !isBool {
+			return ctx, nil, fmt.Errorf(
+				"kargo_cli.kargo_login.use_tmp_config_home must be a boolean, got %T",
+				rawUseTmpConfigHome,
+			)
+		}
+		if useTmpConfigHome {
 			oldConfigHome := os.Getenv(ConfigHomeVar)
 
-			tempdir := ctx.Value(TmpDirKey)
-			if tempdir == nil {
-				return ctx, nil, fmt.Errorf("Temp dir is not set up. Cannot create tmp confighome")
+			tempdir, _ := ctx.Value(TmpDirKey).(string)
+			if tempdir == "" {
+				return ctx, nil, fmt.Errorf("temp dir is not set up; cannot create tmp config home")
 			}
 
-			tmpConfigHome := filepath.Join(tempdir.(string), "config")
+			tmpConfigHome := filepath.Join(tempdir, "config")
 
 			configFile := filepath.Join(tmpConfigHome, "kargo", "config")
 			ctx = context.WithValue(ctx, KargoConfigKey, configFile)
@@ -93,7 +101,7 @@ func processLoginConfig(ctx context.Context, loginConfigVal any) (context.Contex
 	return ctx, nil, nil
 }
 
-func LoadKargoConfig(ctx context.Context, cfg *envconf.Config) (context.Context, error) {
+func LoadKargoConfig(ctx context.Context, _ *envconf.Config) (context.Context, error) {
 	if kargoConfig := ctx.Value(KargoConfigKey); kargoConfig != nil {
 		// Config already set
 		if fileName, ok := kargoConfig.(string); ok {
@@ -124,7 +132,7 @@ func LoadKargoConfig(ctx context.Context, cfg *envconf.Config) (context.Context,
 		}
 	}
 
-	return ctx, fmt.Errorf("Cannot load kargo_config from env")
+	return ctx, fmt.Errorf("cannot load kargo_config from env")
 }
 
 func withKargoConfig(ctx context.Context, kargoConfig config.CLIConfig) context.Context {
@@ -148,6 +156,8 @@ func loadConfigFromFile(fileName string) (cfg config.CLIConfig, err error) {
 	var configBytes []byte
 	if strings.HasPrefix(fileName, "/") {
 		fmt.Printf("Reading kargo config from file %v\n", fileName)
+		// #nosec G703 -- The path comes from the e2e env file, chosen by the
+		// developer running the tests.
 		configBytes, err = os.ReadFile(fileName)
 	} else {
 		fmt.Printf("Reading kargo config from embedded env %v\n", fileName)

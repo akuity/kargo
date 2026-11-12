@@ -536,6 +536,132 @@ func TestLocalOrchestrator_ExecuteSteps(t *testing.T) {
 			},
 		},
 		{
+			// Regression test for https://github.com/akuity/kargo/issues/7894
+			name: "int output is usable by subsequent steps",
+			registrations: []StepRunnerRegistration{{
+				Name: "int-output-step",
+				Value: func(_ StepRunnerCapabilities) StepRunner {
+					return &MockStepRunner{
+						RunResult: StepResult{
+							Status: kargoapi.PromotionStepStatusSucceeded,
+							Output: map[string]any{"count": 2},
+						},
+					}
+				},
+			}},
+			steps: []Step{
+				{Kind: "int-output-step", Alias: "step1"},
+				{Kind: "success-step", Alias: "step2"},
+			},
+			assertions: func(t *testing.T, result Result, err error) {
+				require.NoError(t, err)
+				assert.Equal(t, kargoapi.PromotionPhaseSucceeded, result.Status)
+				assert.Empty(t, result.Message)
+				// Numbers are stored as float64, the same type they have
+				// after the state is reloaded from the Promotion's status.
+				assert.Equal(t, State{
+					"step1": map[string]any{"count": float64(2)},
+					"step2": map[string]any{"key": "value"},
+				}, result.State)
+			},
+		},
+		{
+			name: "non-JSON composite output is usable by subsequent steps",
+			registrations: []StepRunnerRegistration{{
+				Name: "composite-output-step",
+				Value: func(_ StepRunnerCapabilities) StepRunner {
+					return &MockStepRunner{
+						RunResult: StepResult{
+							Status: kargoapi.PromotionStepStatusSucceeded,
+							Output: map[string]any{
+								"labels": map[string]string{"env": "prod"},
+								"tags":   []string{"a", "b"},
+							},
+						},
+					}
+				},
+			}},
+			steps: []Step{
+				{Kind: "composite-output-step", Alias: "step1"},
+				{Kind: "success-step", Alias: "step2"},
+			},
+			assertions: func(t *testing.T, result Result, err error) {
+				require.NoError(t, err)
+				assert.Equal(t, kargoapi.PromotionPhaseSucceeded, result.Status)
+				assert.Empty(t, result.Message)
+				assert.Equal(t, State{
+					"step1": map[string]any{
+						"labels": map[string]any{"env": "prod"},
+						"tags":   []any{"a", "b"},
+					},
+					"step2": map[string]any{"key": "value"},
+				}, result.State)
+			},
+		},
+		{
+			name: "int output propagated to task namespace is usable by subsequent task steps",
+			registrations: []StepRunnerRegistration{{
+				Name: "task-level-int-output-step",
+				Value: func(_ StepRunnerCapabilities) StepRunner {
+					return &MockStepRunner{
+						RunResult: StepResult{
+							Status: kargoapi.PromotionStepStatusSucceeded,
+							Output: map[string]any{"count": 2},
+						},
+					}
+				},
+				Metadata: StepRunnerMetadata{
+					RequiredCapabilities: []StepRunnerCapability{
+						StepCapabilityTaskOutputPropagation,
+					},
+				},
+			}},
+			steps: []Step{
+				{Kind: "task-level-int-output-step", Alias: "task-1::step1"},
+				{Kind: "success-step", Alias: "task-1::step2"},
+			},
+			assertions: func(t *testing.T, result Result, err error) {
+				require.NoError(t, err)
+				assert.Equal(t, kargoapi.PromotionPhaseSucceeded, result.Status)
+				assert.Empty(t, result.Message)
+				assert.Equal(t, State{
+					"task-1::step1": map[string]any{"count": float64(2)},
+					"task-1":        map[string]any{"count": float64(2)},
+					"task-1::step2": map[string]any{"key": "value"},
+				}, result.State)
+			},
+		},
+		{
+			name: "output that cannot be marshaled to JSON errors the step",
+			registrations: []StepRunnerRegistration{{
+				Name: "unmarshalable-output-step",
+				Value: func(_ StepRunnerCapabilities) StepRunner {
+					return &MockStepRunner{
+						RunResult: StepResult{
+							Status: kargoapi.PromotionStepStatusSucceeded,
+							Output: map[string]any{"fn": func() {}},
+						},
+					}
+				},
+			}},
+			steps: []Step{{Kind: "unmarshalable-output-step", Alias: "step1"}},
+			assertions: func(t *testing.T, result Result, err error) {
+				require.NoError(t, err)
+				assert.Equal(t, kargoapi.PromotionPhaseErrored, result.Status)
+
+				require.Len(t, result.StepExecutionMetadata, 1)
+				stepExecMeta := result.StepExecutionMetadata[0]
+				assert.Equal(t, kargoapi.PromotionStepStatusErrored, stepExecMeta.Status)
+				assert.Contains(t, stepExecMeta.Message, "output")
+				assert.NotNil(t, stepExecMeta.StartedAt)
+				assert.NotNil(t, stepExecMeta.FinishedAt)
+
+				// The bad output must not reach the state, or the whole state
+				// would fail to serialize when the Promotion is saved.
+				assert.NotContains(t, result.State, "step1")
+			},
+		},
+		{
 			name: "previously failed step does not skip on retry",
 			promoCtx: Context{
 				StepExecutionMetadata: kargoapi.StepExecutionMetadataList{{

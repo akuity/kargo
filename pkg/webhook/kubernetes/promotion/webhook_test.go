@@ -1800,6 +1800,65 @@ func Test_webhook_Default(t *testing.T) {
 			},
 		},
 		{
+			name: "a PromotionRollout's child is owned by the Stage",
+			webhook: &webhook{
+				admissionRequestFromContextFn: admission.RequestFromContext,
+				getStageFn: func(
+					context.Context,
+					client.Client,
+					types.NamespacedName,
+				) (*kargoapi.Stage, error) {
+					return &kargoapi.Stage{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "fake-stage",
+							Namespace: "fake-project",
+						},
+						Spec: kargoapi.StageSpec{
+							PromotionTemplate: &kargoapi.PromotionTemplate{
+								Spec: kargoapi.PromotionTemplateSpec{
+									Steps: []kargoapi.PromotionStep{{Uses: "fake-step"}},
+								},
+							},
+						},
+					}, nil
+				},
+				isRequestFromKargoControlplaneFn: func(admission.Request) bool {
+					return true
+				},
+			},
+			req: admission.Request{
+				AdmissionRequest: admissionv1.AdmissionRequest{
+					Operation: admissionv1.Create,
+				},
+			},
+			promotion: &kargoapi.Promotion{
+				// A rollout is not a Kubernetes resource, so its child arrives
+				// with no owner at all.
+				ObjectMeta: metav1.ObjectMeta{Namespace: "fake-project"},
+				Spec: kargoapi.PromotionSpec{
+					Stage:            "fake-stage",
+					Freight:          "fake-freight",
+					Target:           "fake-target",
+					PromotionRollout: "0b9f4a3e-6c1d-4a8e-9f2b-3c4d5e6f7a8b",
+				},
+			},
+			assertions: func(t *testing.T, promo *kargoapi.Promotion, err error) {
+				require.NoError(t, err)
+				require.Len(t, promo.OwnerReferences, 1)
+				owner := metav1.GetControllerOf(promo)
+				require.NotNil(t, owner)
+				require.Equal(t, "Stage", owner.Kind)
+				require.Equal(t, "fake-stage", owner.Name)
+				// The name is a function of the rollout and the Target, with no
+				// random part, so a second create of the same child collides.
+				require.Equal(
+					t,
+					"fake-stage.fake-target.0b9f4a3e-6c1d-4a8e-9f2b-3c4d5e6f7a8b",
+					promo.Name,
+				)
+			},
+		},
+		{
 			name: "replaces a non-PromotionRequest controller reference with the Stage",
 			webhook: &webhook{
 				admissionRequestFromContextFn: admission.RequestFromContext,
@@ -1932,21 +1991,19 @@ func Test_webhook_ValidateCreate(t *testing.T) {
 					return nil
 				},
 				authorizeFn: func(context.Context, *kargoapi.Promotion, string) error {
-					return errors.New("something went wrong")
+					return apierrors.NewForbidden(
+						promotionGroupResource,
+						"fake-promotion",
+						errors.New("not permitted"),
+					)
 				},
 			},
 			promotion: &kargoapi.Promotion{
 				Spec: kargoapi.PromotionSpec{Freight: "fake-freight"},
 			},
 			assertions: func(t *testing.T, _ *fakeevent.Sender, err error) {
-				var statusErr *apierrors.StatusError
-				require.True(t, errors.As(err, &statusErr))
-				require.Equal(
-					t,
-					metav1.StatusReasonInternalError,
-					statusErr.ErrStatus.Reason,
-				)
-				require.Contains(t, statusErr.ErrStatus.Message, "something went wrong")
+				require.True(t, apierrors.IsForbidden(err))
+				require.ErrorContains(t, err, "not permitted")
 			},
 		},
 		{
@@ -2050,7 +2107,8 @@ func Test_webhook_ValidateCreate(t *testing.T) {
 				require.Contains(
 					t,
 					statusErr.ErrStatus.Message,
-					"it is promoted to with a PromotionRequest rather than a Promotion",
+					"it is promoted to with a PromotionRequest or a PromotionRollout "+
+						"rather than a Promotion",
 				)
 			},
 		},
@@ -2107,7 +2165,8 @@ func Test_webhook_ValidateCreate(t *testing.T) {
 				require.Contains(
 					t,
 					statusErr.ErrStatus.Message,
-					"a Promotion may name a Target only when created by a PromotionRequest",
+					"a Promotion may name a Target only when created by a PromotionRequest "+
+						"or a PromotionRollout",
 				)
 			},
 		},
@@ -2155,7 +2214,7 @@ func Test_webhook_ValidateCreate(t *testing.T) {
 			},
 		},
 		{
-			name: "the control plane may create a Promotion naming a PromotionRollout",
+			name: "a PromotionRollout's child may name a Target of a target-aware Stage",
 			webhook: &webhook{
 				validateProjectFn: func(
 					context.Context,
@@ -2175,6 +2234,7 @@ func Test_webhook_ValidateCreate(t *testing.T) {
 				) (*kargoapi.Stage, error) {
 					return &kargoapi.Stage{
 						Spec: kargoapi.StageSpec{
+							Targets: &kargoapi.StageTargets{},
 							RequestedFreight: []kargoapi.FreightRequest{{
 								Origin: kargoapi.FreightOrigin{
 									Kind: kargoapi.FreightOriginKindWarehouse,
@@ -2202,14 +2262,75 @@ func Test_webhook_ValidateCreate(t *testing.T) {
 				},
 			},
 			promotion: &kargoapi.Promotion{
+				ObjectMeta: metav1.ObjectMeta{
+					// A Stage owner is what defaulting gives a PromotionRollout's
+					// child: a rollout is not a resource and cannot own it.
+					OwnerReferences: []metav1.OwnerReference{{
+						APIVersion: kargoapi.GroupVersion.String(),
+						Kind:       "Stage",
+						Name:       "fake-stage",
+						Controller: ptr.To(true),
+					}},
+				},
 				Spec: kargoapi.PromotionSpec{
 					Stage:            "fake-stage",
 					Freight:          "fake-freight",
+					Target:           "fake-target",
 					PromotionRollout: "0b9f4a3e-6c1d-4a8e-9f2b-3c4d5e6f7a8b",
 				},
 			},
 			assertions: func(t *testing.T, _ *fakeevent.Sender, err error) {
 				require.NoError(t, err)
+			},
+		},
+		{
+			name: "a user forging a PromotionRollout's child is rejected by the rollout check alone",
+			webhook: &webhook{
+				validateProjectFn: func(
+					context.Context,
+					client.Client,
+					client.Object,
+				) error {
+					return nil
+				},
+				authorizeFn: func(context.Context, *kargoapi.Promotion, string) error {
+					return nil
+				},
+				admissionRequestFromContextFn: admission.RequestFromContext,
+				getStageFn: func(
+					context.Context,
+					client.Client,
+					types.NamespacedName,
+				) (*kargoapi.Stage, error) {
+					return &kargoapi.Stage{
+						Spec: kargoapi.StageSpec{Targets: &kargoapi.StageTargets{}},
+					}, nil
+				},
+				isRequestFromKargoControlplaneFn: func(admission.Request) bool {
+					return false
+				},
+			},
+			promotion: &kargoapi.Promotion{
+				Spec: kargoapi.PromotionSpec{
+					Stage:            "fake-stage",
+					Freight:          "fake-freight",
+					Target:           "fake-target",
+					PromotionRollout: "0b9f4a3e-6c1d-4a8e-9f2b-3c4d5e6f7a8b",
+				},
+			},
+			assertions: func(t *testing.T, _ *fakeevent.Sender, err error) {
+				var statusErr *apierrors.StatusError
+				require.True(t, errors.As(err, &statusErr))
+				require.Equal(t, metav1.StatusReasonInvalid, statusErr.ErrStatus.Reason)
+				// The fan-out checks take the rollout at its word, since the
+				// rollout check is what refuses a forged one. Both must not
+				// pile on: the user is told the one thing that is wrong.
+				require.Len(t, statusErr.ErrStatus.Details.Causes, 1)
+				require.Contains(
+					t,
+					statusErr.ErrStatus.Message,
+					"only the Kargo control plane may create a Promotion naming a PromotionRollout",
+				)
 			},
 		},
 		{
@@ -2539,17 +2660,15 @@ func Test_webhook_ValidateUpdate(t *testing.T) {
 				return &kargoapi.Promotion{}, &kargoapi.Promotion{}
 			},
 			authorizeFn: func(context.Context, *kargoapi.Promotion, string) error {
-				return errors.New("something went wrong")
+				return apierrors.NewForbidden(
+					promotionGroupResource,
+					"fake-promotion",
+					errors.New("not permitted"),
+				)
 			},
 			assertions: func(t *testing.T, err error) {
-				var statusErr *apierrors.StatusError
-				require.True(t, errors.As(err, &statusErr))
-				require.Equal(
-					t,
-					metav1.StatusReasonInternalError,
-					statusErr.ErrStatus.Reason,
-				)
-				require.Contains(t, statusErr.ErrStatus.Message, "something went wrong")
+				require.True(t, apierrors.IsForbidden(err))
+				require.ErrorContains(t, err, "not permitted")
 			},
 		},
 
@@ -2615,7 +2734,8 @@ func Test_webhook_ValidateUpdate(t *testing.T) {
 				require.Contains(
 					t,
 					statusErr.ErrStatus.Message,
-					"a Promotion may name a Target only when created by a PromotionRequest",
+					"a Promotion may name a Target only when created by a PromotionRequest "+
+						"or a PromotionRollout",
 				)
 			},
 		},
@@ -2656,6 +2776,43 @@ func Test_webhook_ValidateUpdate(t *testing.T) {
 			},
 		},
 
+		{
+			name: "update of a PromotionRollout's child",
+			setup: func() (*kargoapi.Promotion, *kargoapi.Promotion) {
+				oldPromo := &kargoapi.Promotion{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "fake-name",
+						Namespace: "fake-namespace",
+						OwnerReferences: []metav1.OwnerReference{{
+							APIVersion: kargoapi.GroupVersion.String(),
+							Kind:       "Stage",
+							Name:       "fake-stage",
+							Controller: ptr.To(true),
+						}},
+					},
+					Spec: kargoapi.PromotionSpec{
+						Stage:            "fake-stage",
+						Freight:          "fake-freight",
+						Target:           "fake-target",
+						PromotionRollout: "0b9f4a3e-6c1d-4a8e-9f2b-3c4d5e6f7a8b",
+					},
+				}
+				newPromo := oldPromo.DeepCopy()
+				// The link to the rollout is in spec, so there is no owner to
+				// lose. An abort must keep working all the same.
+				newPromo.OwnerReferences = nil
+				newPromo.Annotations = map[string]string{
+					kargoapi.AnnotationKeyAbort: "fake-abort-id",
+				}
+				return oldPromo, newPromo
+			},
+			authorizeFn: func(context.Context, *kargoapi.Promotion, string) error {
+				return nil
+			},
+			assertions: func(t *testing.T, err error) {
+				require.NoError(t, err)
+			},
+		},
 		{
 			name: "update without mutation",
 			setup: func() (*kargoapi.Promotion, *kargoapi.Promotion) {

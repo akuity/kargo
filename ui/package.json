@@ -8,7 +8,7 @@
     "build": "vite build",
     "lint": "eslint . --max-warnings=0",
     "lint:fix": "eslint . --fix",
-    "generate:schema": "zx hack/generate-crd-schema.mjs && node hack/generate-other-schema.mjs ../pkg/promotion/runner/builtin/schemas src/gen/directives && node hack/generate-other-schema.mjs ../pkg/subscription/schemas src/gen/subscriptions",
+    "generate:schema": "zx hack/generate-crd-schema.mjs && node hack/generate-other-schema.mjs ../pkg/x/promotion/stepconfig/schemas src/gen/directives && node hack/generate-other-schema.mjs ../pkg/subscription/schemas src/gen/subscriptions",
     "generate:api": "orval",
     "typecheck": "tsc --project ./tsconfig.json --noEmit",
     "test": "vitest"
@@ -54,7 +54,7 @@
     "vitest": "4.1.11",
     "zx": "8.8.5"
   },
-  "packageManager": "pnpm@11.13.0",
+  "packageManager": "pnpm@11.13.1",
   "dependencies": {
     "@dagrejs/dagre": "1.1.8",
     "@date-fns/tz": "1.5.0",

@@ -13,7 +13,7 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/controller/git"
 	"github.com/akuity/kargo/pkg/promotion"
-	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
+	"github.com/akuity/kargo/pkg/x/promotion/stepconfig"
 )
 
 func Test_gitTagger_convert(t *testing.T) {
@@ -175,7 +175,7 @@ func Test_gitTagger_run(t *testing.T) {
 	res, err := runner.run(
 		t.Context(),
 		newTestStepContext(t, workDir),
-		builtin.GitTagConfig{
+		stepconfig.GitTagConfig{
 			Path: "master",
 			Tag:  "v1.0.0",
 		},
@@ -204,7 +204,7 @@ func Test_gitTagger_run(t *testing.T) {
 	res, err = runner.run(
 		t.Context(),
 		newTestStepContext(t, workDir),
-		builtin.GitTagConfig{
+		stepconfig.GitTagConfig{
 			Path: "master",
 			Tag:  "v1.0.0",
 		},
@@ -216,7 +216,7 @@ func Test_gitTagger_run(t *testing.T) {
 	res, err = runner.run(
 		t.Context(),
 		newTestStepContext(t, workDir),
-		builtin.GitTagConfig{
+		stepconfig.GitTagConfig{
 			Path:  "master",
 			Tag:   "v1.0.0",
 			Force: true,
@@ -237,7 +237,7 @@ func Test_gitTagTagger_run_escapingSymlink(t *testing.T) {
 	res, err := (&gitTagTagger{}).run(
 		t.Context(),
 		newTestStepContext(t, workDir),
-		builtin.GitTagConfig{Path: "out/repo", Tag: "v1.0.0"},
+		stepconfig.GitTagConfig{Path: "out/repo", Tag: "v1.0.0"},
 	)
 	require.ErrorContains(t, err, "path escapes from parent")
 	require.Equal(t, kargoapi.PromotionStepStatusErrored, res.Status)

@@ -13,8 +13,7 @@ import {
   groupTargetRows,
   groupTitle,
   groupedRows,
-  keptRows,
-  splitKeys
+  keptRows
 } from './target-grouping';
 import { stateCounts, targetRows } from './target-rows';
 import { fleetStage, forStage, stage, target } from './test-fixtures';
@@ -205,46 +204,5 @@ describe('groupHeading() and groupTitle()', () => {
   ])('%j by %j', (target, key, heading, title) => {
     expect(groupHeading(target, key)).toBe(heading);
     expect(groupTitle(target, key)).toBe(title);
-  });
-});
-
-describe('splitKeys()', () => {
-  test('a short list all fits on the row', () => {
-    expect(splitKeys(['geo', 'cloud', 'tier'])).toEqual({
-      inline: ['geo', 'cloud', 'tier'],
-      overflow: []
-    });
-  });
-
-  test('the tail past four folds into the dropdown', () => {
-    expect(splitKeys(['geo', 'cloud', 'tier', 'env', 'stage', 'shard'])).toEqual({
-      inline: ['geo', 'cloud', 'tier', 'env'],
-      overflow: ['stage', 'shard']
-    });
-  });
-
-  test('a long key folds in however early it comes', () => {
-    expect(splitKeys(['app.kubernetes.io/part-of', 'geo', 'cloud'])).toEqual({
-      inline: ['geo', 'cloud'],
-      overflow: ['app.kubernetes.io/part-of']
-    });
-  });
-
-  test('short keys further down are promoted past it', () => {
-    expect(
-      splitKeys(['app.kubernetes.io/part-of', 'geo', 'cloud', 'tier', 'env', 'stage'])
-    ).toEqual({
-      inline: ['geo', 'cloud', 'tier', 'env'],
-      overflow: ['app.kubernetes.io/part-of', 'stage']
-    });
-  });
-
-  test('when every key is long the order stands', () => {
-    const keys = ['app.kubernetes.io/part-of', 'app.kubernetes.io/component'];
-    expect(splitKeys(keys)).toEqual({ inline: keys, overflow: [] });
-  });
-
-  test('no keys, nothing to show', () => {
-    expect(splitKeys([])).toEqual({ inline: [], overflow: [] });
   });
 });

@@ -8,6 +8,7 @@ import (
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/apimachinery/pkg/util/validation"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 )
@@ -61,6 +62,232 @@ func TestGeneratePromotionRolloutName(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 			testCase.assertions(t, GeneratePromotionRolloutName(testCase.stageName, testCase.freight))
+		})
+	}
+}
+
+func TestGenerateRolloutChildPromotionName(t *testing.T) {
+	t.Parallel()
+
+	const rolloutID = "0B9F4A3E-6c1d-4a8e-9f2b-3c4d5e6f7a8b"
+
+	// requireValidName requires that name is a valid Kubernetes resource name
+	// that ends with the rollout's id.
+	requireValidName := func(t *testing.T, name string) {
+		t.Helper()
+		require.LessOrEqual(t, len(name), 253)
+		require.Empty(t, validation.IsDNS1123Subdomain(name))
+		require.True(t, strings.HasSuffix(name, "."+strings.ToLower(rolloutID)))
+	}
+
+	testCases := []struct {
+		name       string
+		stageName  string
+		targetName string
+		rolloutID  string
+		assertions func(*testing.T, string)
+	}{
+		{
+			name:       "empty Stage name",
+			targetName: "us-east",
+			rolloutID:  rolloutID,
+			assertions: func(t *testing.T, name string) {
+				require.Empty(t, name)
+			},
+		},
+		{
+			name:      "empty Target name",
+			stageName: "prod",
+			rolloutID: rolloutID,
+			assertions: func(t *testing.T, name string) {
+				require.Empty(t, name)
+			},
+		},
+		{
+			name:       "empty rollout id",
+			stageName:  "prod",
+			targetName: "us-east",
+			assertions: func(t *testing.T, name string) {
+				require.Empty(t, name)
+			},
+		},
+		{
+			name:       "Stage, Target and rollout id, lowercased",
+			stageName:  "prod",
+			targetName: "us-east",
+			rolloutID:  rolloutID,
+			assertions: func(t *testing.T, name string) {
+				require.Equal(t, "prod.us-east."+strings.ToLower(rolloutID), name)
+			},
+		},
+		{
+			name:       "repeated calls collide",
+			stageName:  "prod",
+			targetName: "us-east",
+			rolloutID:  rolloutID,
+			assertions: func(t *testing.T, name string) {
+				require.Equal(
+					t,
+					GenerateRolloutChildPromotionName("prod", "us-east", rolloutID),
+					name,
+				)
+			},
+		},
+		{
+			name:       "another Target or rollout gives another name",
+			stageName:  "prod",
+			targetName: "us-east",
+			rolloutID:  rolloutID,
+			assertions: func(t *testing.T, name string) {
+				require.NotEqual(
+					t,
+					GenerateRolloutChildPromotionName("prod", "us-west", rolloutID),
+					name,
+				)
+				require.NotEqual(
+					t,
+					GenerateRolloutChildPromotionName(
+						"prod", "us-east", "1c8e5b4f-7d2e-4b9f-8a3c-4d5e6f7a8b9c",
+					),
+					name,
+				)
+			},
+		},
+		{
+			name:       "a name that just fits is not shortened",
+			stageName:  strings.Repeat("a", 100),
+			targetName: strings.Repeat("b", 253-len(rolloutID)-2-100),
+			rolloutID:  rolloutID,
+			assertions: func(t *testing.T, name string) {
+				require.Len(t, name, 253)
+				require.Equal(
+					t,
+					strings.Repeat("a", 100)+"."+
+						strings.Repeat("b", 253-len(rolloutID)-2-100)+"."+
+						strings.ToLower(rolloutID),
+					name,
+				)
+			},
+		},
+		{
+			name:       "an over-long name is shortened to a valid name with a hash",
+			stageName:  strings.Repeat("a", 200),
+			targetName: strings.Repeat("b", 200),
+			rolloutID:  rolloutID,
+			assertions: func(t *testing.T, name string) {
+				requireValidName(t, name)
+				// The kept part of the Stage name, then the hash, then the
+				// rollout id.
+				prefix := strings.TrimSuffix(name, "."+strings.ToLower(rolloutID))
+				hashStart := len(prefix) - rolloutChildHashLength
+				require.Equal(t, "-", prefix[hashStart-1:hashStart])
+				require.Regexp(t, "^[0-9a-f]{8}$", prefix[hashStart:])
+			},
+		},
+		{
+			name:       "an over-long name is shortened the same way every time",
+			stageName:  strings.Repeat("a", 200),
+			targetName: strings.Repeat("b", 200),
+			rolloutID:  rolloutID,
+			assertions: func(t *testing.T, name string) {
+				require.Equal(
+					t,
+					GenerateRolloutChildPromotionName(
+						strings.Repeat("a", 200),
+						strings.Repeat("b", 200),
+						rolloutID,
+					),
+					name,
+				)
+			},
+		},
+		{
+			// The expected name is written out in full, hash included, so
+			// that any change to how names are shortened -- which would
+			// rename the children of rollouts already in progress -- fails
+			// here.
+			name:       "an over-long name is shortened to exactly this name",
+			stageName:  strings.Repeat("a", 200),
+			targetName: strings.Repeat("b", 200),
+			rolloutID:  rolloutID,
+			assertions: func(t *testing.T, name string) {
+				require.Equal(
+					t,
+					strings.Repeat("a", 200)+".bbbbbb-c34b8615."+
+						"0b9f4a3e-6c1d-4a8e-9f2b-3c4d5e6f7a8b",
+					name,
+				)
+			},
+		},
+		{
+			// A Stage name this long leaves no room for any of the Target's
+			// name, so only the hash can tell the Targets apart.
+			name:       "distinct Targets of a Stage with a long name get distinct names",
+			stageName:  strings.Repeat("a", 216),
+			targetName: "us-east",
+			rolloutID:  rolloutID,
+			assertions: func(t *testing.T, name string) {
+				requireValidName(t, name)
+				other := GenerateRolloutChildPromotionName(
+					strings.Repeat("a", 216),
+					"us-west",
+					rolloutID,
+				)
+				requireValidName(t, other)
+				require.NotEqual(t, other, name)
+			},
+		},
+		{
+			name:       "long Target names that differ only past the cut get distinct names",
+			stageName:  "prod",
+			targetName: strings.Repeat("c", 240) + "-east",
+			rolloutID:  rolloutID,
+			assertions: func(t *testing.T, name string) {
+				requireValidName(t, name)
+				other := GenerateRolloutChildPromotionName(
+					"prod",
+					strings.Repeat("c", 240)+"-west",
+					rolloutID,
+				)
+				requireValidName(t, other)
+				require.NotEqual(t, other, name)
+			},
+		},
+		{
+			// The kept part is limit-9 characters long. A Stage name one
+			// shorter than that ends the kept part on the separator.
+			name: "a cut that lands on the separator drops it",
+			stageName: strings.Repeat(
+				"a",
+				253-1-len(rolloutID)-1-rolloutChildHashLength-1,
+			),
+			targetName: strings.Repeat("b", 10),
+			rolloutID:  rolloutID,
+			assertions: func(t *testing.T, name string) {
+				requireValidName(t, name)
+				require.NotContains(t, name, ".-")
+			},
+		},
+		{
+			// The Target name's hyphen falls at the very end of the kept part.
+			name:       "a cut that lands on a hyphen drops it",
+			stageName:  strings.Repeat("a", 100),
+			targetName: strings.Repeat("b", 105) + "-" + strings.Repeat("c", 50),
+			rolloutID:  rolloutID,
+			assertions: func(t *testing.T, name string) {
+				requireValidName(t, name)
+				require.NotContains(t, name, "--")
+			},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+			testCase.assertions(t, GenerateRolloutChildPromotionName(
+				testCase.stageName,
+				testCase.targetName,
+				testCase.rolloutID,
+			))
 		})
 	}
 }
@@ -269,7 +496,7 @@ func TestNewPromotionRolloutForSelectTargets(t *testing.T) {
 			testStage,
 			freight,
 			stageTargets,
-			[]kargoapi.PromotionRolloutTarget{{Name: "us-east"}},
+			[]string{"us-east"},
 			nil,
 		)
 		require.NoError(t, err)
@@ -292,7 +519,7 @@ func TestNewPromotionRolloutForSelectTargets(t *testing.T) {
 			testStage,
 			freight,
 			stageTargets,
-			[]kargoapi.PromotionRolloutTarget{{Name: "us-north"}},
+			[]string{"us-north"},
 			nil,
 		)
 		require.Error(t, err)
@@ -314,7 +541,7 @@ func TestNewPromotionRolloutForSelectTargets(t *testing.T) {
 			withStrategy,
 			freight,
 			allTargets,
-			[]kargoapi.PromotionRolloutTarget{{Name: "us-0"}},
+			[]string{"us-0"},
 			nil,
 		)
 		require.NoError(t, err)
@@ -334,7 +561,7 @@ func TestNewPromotionRolloutForSelectTargets(t *testing.T) {
 			withStrategy,
 			freight,
 			stageTargets,
-			[]kargoapi.PromotionRolloutTarget{{Name: "us-east"}},
+			[]string{"us-east"},
 			&kargoapi.TargetUpdateStrategy{
 				MaxConcurrent: new(intstr.FromInt(10)),
 				MaxFailures:   new(intstr.FromInt(10)),
@@ -363,7 +590,7 @@ func TestNewPromotionRolloutForSelectTargets(t *testing.T) {
 			testStage,
 			freight,
 			longStageTargets,
-			[]kargoapi.PromotionRolloutTarget{{Name: "us-east"}},
+			[]string{"us-east"},
 			&kargoapi.TargetUpdateStrategy{
 				MaxConcurrent: new(intstr.FromString("50%")),
 				MaxFailures:   new(intstr.FromString("20%")),
@@ -389,7 +616,7 @@ func TestNewPromotionRolloutForSelectTargets(t *testing.T) {
 			classic,
 			freight,
 			stageTargets,
-			[]kargoapi.PromotionRolloutTarget{{Name: "us-east"}},
+			[]string{"us-east"},
 			nil,
 		)
 		require.Error(t, err)

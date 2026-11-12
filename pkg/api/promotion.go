@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"slices"
 	"strings"
-	"time"
 
 	"github.com/oklog/ulid/v2"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -162,7 +161,7 @@ func RefreshPromotion(
 			Name:      namespacedName.Name,
 		},
 	}
-	if err := patchAnnotation(ctx, c, promo, kargoapi.AnnotationKeyRefresh, time.Now().Format(time.RFC3339)); err != nil {
+	if err := RefreshObject(ctx, c, promo); err != nil {
 		return nil, fmt.Errorf("refresh: %w", err)
 	}
 	return promo, nil
@@ -222,10 +221,20 @@ const promotionRequestKind = "PromotionRequest"
 // Target, so Promotions to distinct Targets run in parallel and Promotions
 // to the same Target never contend -- while the children of a queued
 // request wait for the current round of fan-out to end.
+//
+// A PromotionRollout's child is admitted as soon as it exists. The Stage
+// records nothing about rollouts: they are serialized where they live, in the
+// database, which allows one Running rollout per Stage, and the reconciler
+// that progresses them creates children only for that rollout, at most one
+// per Target, and ends it only once every child has finished. The Stage would
+// only repeat a decision that has already been made.
 func StageAwaitsPromotion(
 	stage *kargoapi.Stage,
 	promo *kargoapi.Promotion,
 ) bool {
+	if promo.Spec.PromotionRollout != "" {
+		return true
+	}
 	if promo.Spec.Target != "" {
 		owner := PromotionRequestOwner(promo)
 		return owner != "" &&

@@ -28,7 +28,7 @@ import (
 	"github.com/akuity/kargo/pkg/image/mutate"
 	intio "github.com/akuity/kargo/pkg/io"
 	"github.com/akuity/kargo/pkg/promotion"
-	builtin "github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
+	"github.com/akuity/kargo/pkg/x/promotion/stepconfig"
 )
 
 const stepKindOCIPush = "oci-push"
@@ -99,16 +99,16 @@ func (p *ociPusher) Run(
 }
 
 // convert validates the ociPusher configuration against a JSON schema and
-// converts it into a builtin.OCIPushConfig struct.
-func (p *ociPusher) convert(cfg promotion.Config) (builtin.OCIPushConfig, error) {
-	return validateAndConvert[builtin.OCIPushConfig](p.schemaLoader, cfg, stepKindOCIPush)
+// converts it into a stepconfig.OCIPushConfig struct.
+func (p *ociPusher) convert(cfg promotion.Config) (stepconfig.OCIPushConfig, error) {
+	return validateAndConvert[stepconfig.OCIPushConfig](p.schemaLoader, cfg, stepKindOCIPush)
 }
 
 // run executes the ociPusher step with the provided configuration.
 func (p *ociPusher) run(
 	ctx context.Context,
 	stepCtx *promotion.StepContext,
-	cfg builtin.OCIPushConfig,
+	cfg stepconfig.OCIPushConfig,
 ) (promotion.StepResult, error) {
 	dstRef, dstCredType, err := parseOCIReference(cfg.DestRef)
 	if err != nil {
@@ -178,7 +178,7 @@ func (p *ociPusher) run(
 func (p *ociPusher) pushRemoteArtifact(
 	ctx context.Context,
 	stepCtx *promotion.StepContext,
-	cfg builtin.OCIPushConfig,
+	cfg stepconfig.OCIPushConfig,
 	srcRef name.Reference,
 	srcCredType credentials.Type,
 	dstRef name.Reference,
@@ -226,7 +226,7 @@ const (
 // to report alongside the error.
 func (p *ociPusher) pushLocalFile(
 	stepCtx *promotion.StepContext,
-	cfg builtin.OCIPushConfig,
+	cfg stepconfig.OCIPushConfig,
 	dstRef name.Reference,
 	dstOpts []remote.Option,
 ) (v1.Hash, kargoapi.PromotionStepStatus, error) {

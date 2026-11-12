@@ -265,7 +265,7 @@ func TestPromotionsIntegration(t *testing.T) {
 			},
 		},
 		{
-			name: "a Promotion's rollout is recorded only if it is one of its Project, and then kept",
+			name: "a Promotion's rollout is recorded only if it is one of its Stage, and then kept",
 			run: func(t *testing.T) {
 				child := running
 				child.PromotionRolloutID = &rollout
@@ -298,6 +298,84 @@ func TestPromotionsIntegration(t *testing.T) {
 				unknown.PromotionRolloutID = &rollout
 				requireUpsertPromotion(t, queries, unknown)
 				require.Equal(t, &rollout, promotionRolloutID(t, queries, unknown))
+			},
+		},
+		{
+			name: "a rollout of another Stage of the Project is recorded as none, and its deletion spares the row",
+			run: func(t *testing.T) {
+				qaRollout := requireCreatePromotionRollout(t, queries, "demo", "qa", "qa.rollout")
+				crossed := running
+				crossed.PromotionRolloutID = &qaRollout
+				requireUpsertPromotion(t, queries, crossed)
+				require.Nil(t, promotionRolloutID(t, queries, crossed))
+				require.NoError(t, queries.DeleteStageByName(ctx, DeleteStageByNameParams{
+					ProjectName: "demo", Name: "qa",
+				}))
+				rows, err := queries.ListPromotionsByKey(ctx, keysOf(crossed))
+				require.NoError(t, err)
+				require.Len(t, rows, 1)
+			},
+		},
+		{
+			name: "a Promotion its Stage owns is recorded under that Stage alone",
+			run: func(t *testing.T) {
+				oldUID := "old-uid"
+				stage := UpsertStageParams{ID: oldUID, ProjectName: "recreate", Name: "dev", CreatedAt: created}
+				require.NoError(t, queries.UpsertStage(ctx, stage))
+				owned := running
+				owned.ID = "id-owned"
+				owned.ProjectName = "recreate"
+				owned.OwnerStageID = &oldUID
+				requireUpsertPromotion(t, queries, owned)
+				rows, err := queries.ListPromotionsByKey(ctx, keysOf(owned))
+				require.NoError(t, err)
+				require.Len(t, rows, 1)
+				require.Equal(t, "old-uid", rows[0].StageID)
+				// The Stage is recreated: its row is replaced, and the
+				// Promotion's row goes with the old one.
+				require.NoError(t, queries.DeleteReplacedStage(ctx, DeleteReplacedStageParams{
+					ProjectName: "recreate", Name: "dev", ID: "new-uid",
+				}))
+				stage.ID = "new-uid"
+				require.NoError(t, queries.UpsertStage(ctx, stage))
+				rows, err = queries.ListPromotionsByKey(ctx, keysOf(owned))
+				require.NoError(t, err)
+				require.Empty(t, rows)
+				// The old Stage's Promotion, synced again before Kubernetes
+				// collects it, is refused rather than recorded under the new
+				// Stage.
+				_, err = queries.UpsertPromotion(ctx, owned)
+				databasetest.RequirePGError(t, err, "23502")
+				rows, err = queries.ListPromotionsByKey(ctx, keysOf(owned))
+				require.NoError(t, err)
+				require.Empty(t, rows)
+				// One that names no owning Stage is recorded under the Stage
+				// that has its Stage's name.
+				owned.OwnerStageID = nil
+				requireUpsertPromotion(t, queries, owned)
+				rows, err = queries.ListPromotionsByKey(ctx, keysOf(owned))
+				require.NoError(t, err)
+				require.Len(t, rows, 1)
+				require.Equal(t, "new-uid", rows[0].StageID)
+			},
+		},
+		{
+			name: "a row references its Stage's row, and a Stage the mirror has not recorded is refused",
+			run: func(t *testing.T) {
+				requireUpsertPromotion(t, queries, running)
+				rows, err := queries.ListPromotionsByKey(ctx, keysOf(running))
+				require.NoError(t, err)
+				require.Len(t, rows, 1)
+				require.Equal(t, "demo-dev", rows[0].StageID)
+				unmirrored := running
+				unmirrored.ID = "id-unmirrored"
+				unmirrored.Name = "unmirrored.01abc.def456"
+				unmirrored.StageName = "unmirrored"
+				_, err = queries.UpsertPromotion(ctx, unmirrored)
+				databasetest.RequirePGError(t, err, "23502")
+				rows, err = queries.ListPromotionsByKey(ctx, keysOf(unmirrored))
+				require.NoError(t, err)
+				require.Empty(t, rows)
 			},
 		},
 	}

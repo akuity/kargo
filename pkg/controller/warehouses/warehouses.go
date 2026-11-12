@@ -23,6 +23,7 @@ import (
 	"github.com/akuity/kargo/pkg/api"
 	"github.com/akuity/kargo/pkg/conditions"
 	"github.com/akuity/kargo/pkg/controller"
+	"github.com/akuity/kargo/pkg/controller/metrics"
 	"github.com/akuity/kargo/pkg/credentials"
 	kargoEvent "github.com/akuity/kargo/pkg/event"
 	"github.com/akuity/kargo/pkg/expressions/function"
@@ -64,6 +65,8 @@ type reconciler struct {
 	cfg                ReconcilerConfig
 	shardPredicate     controller.ResponsibleFor[kargoapi.Warehouse]
 	eventSender        kargoEvent.Sender
+	// whMetrics is nil without a manager, as in tests; nothing is recorded.
+	whMetrics *metrics.WarehouseMetrics
 
 	// The following behaviors are overridable for testing purposes:
 
@@ -140,11 +143,12 @@ func newReconciler(
 			IsDefaultController: cfg.IsDefaultController,
 			ShardName:           cfg.ShardName,
 		},
-		createFreightFn: kubeClient.Create,
+		whMetrics: metrics.NewWarehouseMetrics(kubeClient),
 	}
 	r.discoverArtifactsFn = r.discoverArtifacts
 	r.buildFreightFromLatestArtifactsFn = r.buildFreightFromLatestArtifacts
 	r.patchStatusFn = r.patchStatus
+	r.createFreightFn = r.createFreightIfAbsent
 	return r
 }
 
@@ -289,12 +293,16 @@ func (r *reconciler) syncWarehouse(
 		if warehouse.Status.ObservedGeneration == warehouse.GetGeneration() {
 			lastArtifacts = warehouse.Status.DiscoveredArtifacts
 		}
+		discoveryStart := time.Now()
 		discoveredArtifacts, err := r.discoverArtifactsFn(
 			ctx,
 			warehouse.Namespace,
 			warehouse.Spec.InternalSubscriptions,
 			lastArtifacts,
 		)
+		if err == nil {
+			r.recordDiscoveryMetrics(warehouse, time.Since(discoveryStart), discoveredArtifacts)
+		}
 		if err != nil {
 			// Mark the Warehouse as unhealthy and not ready if we failed to
 			// discover artifacts.
@@ -459,6 +467,8 @@ func (r *reconciler) syncWarehouse(
 				Kind: kargoapi.FreightOriginKindWarehouse,
 				Name: warehouse.Name,
 			}
+			// The ID includes the Origin; it must match the webhook's.
+			freight.Name = api.GenerateFreightID(freight)
 
 			// Attempt to create the Freight.
 			if err = r.createFreightFn(ctx, freight); err != nil {
@@ -506,6 +516,9 @@ func (r *reconciler) syncWarehouse(
 					},
 				)
 			} else {
+				if r.whMetrics != nil {
+					r.whMetrics.FreightCreated.WithLabelValues(warehouse.Namespace).Inc()
+				}
 				logger.Debug(
 					"created Freight",
 					"freight", freight.Name,
@@ -642,6 +655,27 @@ func (r *reconciler) discoverArtifacts(
 	return discovered, nil
 }
 
+// recordDiscoveryMetrics observes a successful discovery's duration and the
+// time since the previous one, if any.
+func (r *reconciler) recordDiscoveryMetrics(
+	warehouse *kargoapi.Warehouse,
+	took time.Duration,
+	discovered *kargoapi.DiscoveredArtifacts,
+) {
+	if r.whMetrics == nil {
+		return
+	}
+	project := warehouse.Namespace
+	r.whMetrics.DiscoveryDuration.WithLabelValues(project).Observe(took.Seconds())
+	prev := warehouse.Status.DiscoveredArtifacts
+	if prev == nil || prev.DiscoveredAt.IsZero() || discovered == nil || discovered.DiscoveredAt.IsZero() {
+		return
+	}
+	r.whMetrics.DiscoveryInterval.WithLabelValues(project).Observe(
+		discovered.DiscoveredAt.Sub(prev.DiscoveredAt.Time).Seconds(),
+	)
+}
+
 func (r *reconciler) buildFreightFromLatestArtifacts(
 	namespace string,
 	artifacts *kargoapi.DiscoveredArtifacts,
@@ -714,10 +748,31 @@ func (r *reconciler) buildFreightFromLatestArtifacts(
 		)
 	}
 
-	// Generate a unique ID for the Freight based on its contents.
-	freight.Name = api.GenerateFreightID(freight)
-
 	return freight, nil
+}
+
+// createFreightIfAbsent returns AlreadyExists without an API call when the
+// cache holds the Freight; otherwise it creates it.
+// Freight deleted but still cached is re-created on the next poll.
+func (r *reconciler) createFreightIfAbsent(
+	ctx context.Context,
+	obj client.Object,
+	opts ...client.CreateOption,
+) error {
+	err := r.client.Get(ctx, client.ObjectKeyFromObject(obj), &kargoapi.Freight{})
+	if err == nil {
+		return apierrors.NewAlreadyExists(
+			kargoapi.GroupVersion.WithResource("freights").GroupResource(),
+			obj.GetName(),
+		)
+	}
+	if !apierrors.IsNotFound(err) {
+		logging.LoggerFromContext(ctx).Error(
+			err, "error checking cache for Freight; creating it",
+			"freight", obj.GetName(),
+		)
+	}
+	return r.client.Create(ctx, obj, opts...)
 }
 
 func (r *reconciler) patchStatus(

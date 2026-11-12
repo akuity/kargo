@@ -21,7 +21,6 @@ var _ MappedNullable = &PublicConfig{}
 type PublicConfig struct {
 	AdminAccountEnabled *bool `json:"adminAccountEnabled,omitempty"`
 	OidcConfig *OIDCConfig `json:"oidcConfig,omitempty"`
-	SkipAuth *bool `json:"skipAuth,omitempty"`
 }
 
 // NewPublicConfig instantiates a new PublicConfig object
@@ -105,38 +104,6 @@ func (o *PublicConfig) SetOidcConfig(v OIDCConfig) {
 	o.OidcConfig = &v
 }
 
-// GetSkipAuth returns the SkipAuth field value if set, zero value otherwise.
-func (o *PublicConfig) GetSkipAuth() bool {
-	if o == nil || IsNil(o.SkipAuth) {
-		var ret bool
-		return ret
-	}
-	return *o.SkipAuth
-}
-
-// GetSkipAuthOk returns a tuple with the SkipAuth field value if set, nil otherwise
-// and a boolean to check if the value has been set.
-func (o *PublicConfig) GetSkipAuthOk() (*bool, bool) {
-	if o == nil || IsNil(o.SkipAuth) {
-		return nil, false
-	}
-	return o.SkipAuth, true
-}
-
-// HasSkipAuth returns a boolean if a field has been set.
-func (o *PublicConfig) HasSkipAuth() bool {
-	if o != nil && !IsNil(o.SkipAuth) {
-		return true
-	}
-
-	return false
-}
-
-// SetSkipAuth gets a reference to the given bool and assigns it to the SkipAuth field.
-func (o *PublicConfig) SetSkipAuth(v bool) {
-	o.SkipAuth = &v
-}
-
 func (o PublicConfig) MarshalJSON() ([]byte, error) {
 	toSerialize,err := o.ToMap()
 	if err != nil {
@@ -152,9 +119,6 @@ func (o PublicConfig) ToMap() (map[string]interface{}, error) {
 	}
 	if !IsNil(o.OidcConfig) {
 		toSerialize["oidcConfig"] = o.OidcConfig
-	}
-	if !IsNil(o.SkipAuth) {
-		toSerialize["skipAuth"] = o.SkipAuth
 	}
 	return toSerialize, nil
 }

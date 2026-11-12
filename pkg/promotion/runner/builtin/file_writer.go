@@ -14,7 +14,7 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/promotion"
-	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
+	"github.com/akuity/kargo/pkg/x/promotion/stepconfig"
 )
 
 const stepKindFileWrite = "file-write"
@@ -57,15 +57,15 @@ func (f *fileWriter) Run(
 }
 
 // convert validates fileWriter configuration against a JSON schema and converts
-// it into a builtin.FileWriteConfig struct.
-func (f *fileWriter) convert(cfg promotion.Config) (builtin.FileWriteConfig, error) {
-	return validateAndConvert[builtin.FileWriteConfig](f.schemaLoader, cfg, stepKindFileWrite)
+// it into a stepconfig.FileWriteConfig struct.
+func (f *fileWriter) convert(cfg promotion.Config) (stepconfig.FileWriteConfig, error) {
+	return validateAndConvert[stepconfig.FileWriteConfig](f.schemaLoader, cfg, stepKindFileWrite)
 }
 
 func (f *fileWriter) run(
 	_ context.Context,
 	stepCtx *promotion.StepContext,
-	cfg builtin.FileWriteConfig,
+	cfg stepconfig.FileWriteConfig,
 ) (promotion.StepResult, error) {
 	if filepath.IsAbs(cfg.Path) {
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusFailed},

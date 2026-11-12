@@ -15,7 +15,7 @@ import (
 	"github.com/akuity/kargo/pkg/credentials"
 	intio "github.com/akuity/kargo/pkg/io"
 	"github.com/akuity/kargo/pkg/promotion"
-	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
+	"github.com/akuity/kargo/pkg/x/promotion/stepconfig"
 )
 
 const (
@@ -70,16 +70,16 @@ func (d *ociDownloader) Run(
 }
 
 // convert validates the ociDownloader configuration against a JSON schema
-// and converts it into a builtin.OCIDownloadConfig struct.
-func (d *ociDownloader) convert(cfg promotion.Config) (builtin.OCIDownloadConfig, error) {
-	return validateAndConvert[builtin.OCIDownloadConfig](d.schemaLoader, cfg, stepKindOCIDownload)
+// and converts it into a stepconfig.OCIDownloadConfig struct.
+func (d *ociDownloader) convert(cfg promotion.Config) (stepconfig.OCIDownloadConfig, error) {
+	return validateAndConvert[stepconfig.OCIDownloadConfig](d.schemaLoader, cfg, stepKindOCIDownload)
 }
 
 // run executes the ociDownloader step with the provided configuration.
 func (d *ociDownloader) run(
 	ctx context.Context,
 	stepCtx *promotion.StepContext,
-	cfg builtin.OCIDownloadConfig,
+	cfg stepconfig.OCIDownloadConfig,
 ) (promotion.StepResult, error) {
 	outPath, err := d.prepareOutputPath(stepCtx.Root, cfg.OutPath, cfg.AllowOverwrite)
 	if err != nil {
@@ -136,7 +136,7 @@ func (d *ociDownloader) checkFileOverwrite(root *os.Root, relOutPath, outPath st
 func (d *ociDownloader) resolveImage(
 	ctx context.Context,
 	stepCtx *promotion.StepContext,
-	cfg builtin.OCIDownloadConfig,
+	cfg stepconfig.OCIDownloadConfig,
 ) (v1.Image, error) {
 	ref, credType, err := parseOCIReference(cfg.ImageRef)
 	if err != nil {

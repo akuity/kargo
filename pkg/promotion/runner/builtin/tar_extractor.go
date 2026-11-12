@@ -18,7 +18,7 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/logging"
 	"github.com/akuity/kargo/pkg/promotion"
-	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
+	"github.com/akuity/kargo/pkg/x/promotion/stepconfig"
 )
 
 const (
@@ -79,15 +79,15 @@ func (t *tarExtractor) Run(
 }
 
 // convert validates the configuration against a JSON schema and converts it
-// into a builtin.UntarConfig struct.
-func (t *tarExtractor) convert(cfg promotion.Config) (builtin.UntarConfig, error) {
-	return validateAndConvert[builtin.UntarConfig](t.schemaLoader, cfg, stepKindUntar)
+// into a stepconfig.UntarConfig struct.
+func (t *tarExtractor) convert(cfg promotion.Config) (stepconfig.UntarConfig, error) {
+	return validateAndConvert[stepconfig.UntarConfig](t.schemaLoader, cfg, stepKindUntar)
 }
 
 func (t *tarExtractor) run(
 	ctx context.Context,
 	stepCtx *promotion.StepContext,
-	cfg builtin.UntarConfig,
+	cfg stepconfig.UntarConfig,
 ) (promotion.StepResult, error) {
 	logger := logging.LoggerFromContext(ctx)
 
@@ -140,7 +140,7 @@ func (t *tarExtractor) run(
 // creating it if necessary. Both paths are relative to root.
 func (t *tarExtractor) extractToDir(
 	ctx context.Context,
-	cfg builtin.UntarConfig,
+	cfg stepconfig.UntarConfig,
 	root *os.Root,
 	inPath, outPath string,
 ) (promotion.StepResult, error) {

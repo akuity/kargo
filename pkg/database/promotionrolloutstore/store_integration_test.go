@@ -4,11 +4,13 @@ package promotionrolloutstore
 
 import (
 	"context"
+	"fmt"
 	"sync"
 	"testing"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/stretchr/testify/require"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
@@ -114,6 +116,10 @@ func TestStoreIntegration(t *testing.T) {
 				fetched, err := store.Get(ctx, "create", "prod.01A.abc")
 				require.NoError(t, err)
 				require.Equal(t, rollout, fetched)
+
+				fetched, err = store.GetByNumber(ctx, "create", "prod", 1)
+				require.NoError(t, err)
+				require.Equal(t, rollout, fetched)
 			},
 		},
 		{
@@ -148,22 +154,45 @@ func TestStoreIntegration(t *testing.T) {
 			},
 		},
 		{
-			name: "a recreated Stage numbers past the rollouts of its predecessor",
+			name: "a rollout goes with its Stage, and a recreated Stage starts over",
 			run: func(t *testing.T) {
+				ids := seedTargets(t, "recreated", "us-east")
 				seedStage(t, "recreated", "prod", "old-uid")
 				for _, name := range []string{"prod.01A.abc", "prod.01B.abc"} {
-					_, err := store.Create(ctx, "recreated", newRollout("prod", name), nil)
+					_, err := store.Create(
+						ctx, "recreated", newRollout("prod", name), []uuid.UUID{ids["us-east"]},
+					)
 					require.NoError(t, err)
 				}
-				// The new Stage's row replaces the old one and starts its
-				// counter over.
+				rollouts, err := store.List(ctx, "recreated", ListOptions{})
+				require.NoError(t, err)
+				require.Len(t, rollouts, 2)
+				require.Equal(t, "old-uid", rollouts[0].StageID)
+				// The new Stage's row replaces the old one, which takes the
+				// old Stage's rollouts and their snapshots with it, so the
+				// new Stage's history begins at 1.
 				seedStage(t, "recreated", "prod", "new-uid")
+				rollouts, err = store.List(ctx, "recreated", ListOptions{})
+				require.NoError(t, err)
+				require.Empty(t, rollouts)
+				var snapshots int
+				require.NoError(t, pool.QueryRow(ctx,
+					"SELECT count(*) FROM promotion_rollout_targets WHERE target_id = $1",
+					ids["us-east"],
+				).Scan(&snapshots))
+				require.Zero(t, snapshots)
 				rollout, err := store.Create(ctx, "recreated", newRollout("prod", "prod.01C.abc"), nil)
 				require.NoError(t, err)
-				require.EqualValues(t, 3, rollout.Number)
-				rollout, err = store.Create(ctx, "recreated", newRollout("prod", "prod.01D.abc"), nil)
-				require.NoError(t, err)
-				require.EqualValues(t, 4, rollout.Number)
+				require.EqualValues(t, 1, rollout.Number)
+				require.Equal(t, "new-uid", rollout.StageID)
+				// Deleting the Stage's row, as the mirror does when the Stage
+				// is deleted, deletes the rollouts the same way.
+				require.NoError(t, queries.DeleteStageByName(ctx, database.DeleteStageByNameParams{
+					ProjectName: "recreated",
+					Name:        "prod",
+				}))
+				_, err = store.Get(ctx, "recreated", "prod.01C.abc")
+				require.ErrorIs(t, err, database.ErrNotFound)
 			},
 		},
 		{
@@ -261,26 +290,66 @@ func TestStoreIntegration(t *testing.T) {
 		{
 			name: "the database rejects bad values",
 			run: func(t *testing.T) {
+				seedStage(t, "bad", "prod", "bad/prod")
+				const insert = `INSERT INTO promotion_rollouts
+					(project_name, name, stage_id, stage_name, number, freight_name, %s)
+					VALUES ('bad', 'a', 'bad/prod', 'prod', %s, 'f', %s)`
+				for _, bad := range []struct{ column, number, value string }{
+					{column: "status_phase", number: "1", value: "'Bogus'"},
+					{column: "max_concurrent", number: "1", value: "-1"},
+					{column: "max_failures", number: "1", value: "-1"},
+					{column: "max_failures", number: "0", value: "0"},
+				} {
+					_, err := pool.Exec(ctx, fmt.Sprintf(insert, bad.column, bad.number, bad.value))
+					databasetest.RequirePGError(t, err, "23514")
+				}
+				// A rollout must reference a Stage's row, and the one it
+				// references must exist.
 				_, err := pool.Exec(ctx,
-					`INSERT INTO promotion_rollouts (project_name, name, stage_name, number, freight_name, status_phase)
-					 VALUES ('bad', 'a', 'prod', 1, 'f', 'Bogus')`,
-				)
-				databasetest.RequirePGError(t, err, "23514")
-				_, err = pool.Exec(ctx,
-					`INSERT INTO promotion_rollouts (project_name, name, stage_name, number, freight_name, max_concurrent)
-					 VALUES ('bad', 'a', 'prod', 1, 'f', -1)`,
-				)
-				databasetest.RequirePGError(t, err, "23514")
-				_, err = pool.Exec(ctx,
-					`INSERT INTO promotion_rollouts (project_name, name, stage_name, number, freight_name, max_failures)
-					 VALUES ('bad', 'a', 'prod', 1, 'f', -1)`,
-				)
-				databasetest.RequirePGError(t, err, "23514")
-				_, err = pool.Exec(ctx,
 					`INSERT INTO promotion_rollouts (project_name, name, stage_name, number, freight_name)
-					 VALUES ('bad', 'a', 'prod', 0, 'f')`,
+					 VALUES ('bad', 'a', 'prod', 1, 'f')`,
 				)
-				databasetest.RequirePGError(t, err, "23514")
+				databasetest.RequirePGError(t, err, "23502")
+				_, err = pool.Exec(ctx,
+					`INSERT INTO promotion_rollouts (project_name, name, stage_id, stage_name, number, freight_name)
+					 VALUES ('bad', 'a', 'bad/absent', 'prod', 1, 'f')`,
+				)
+				databasetest.RequirePGError(t, err, "23503")
+			},
+		},
+		{
+			name: "a Stage's row keys its rollouts' numbers and its Running one",
+			run: func(t *testing.T) {
+				seedStage(t, "keys", "prod", "keys/prod")
+				insert := func(name, stage string, number int, phase string) error {
+					_, err := pool.Exec(ctx,
+						`INSERT INTO promotion_rollouts
+						 (project_name, name, stage_id, stage_name, number, freight_name, status_phase)
+						 VALUES ('keys', $1, 'keys/prod', $2, $3, 'f', $4)`,
+						name, stage, number, phase,
+					)
+					return err
+				}
+				requireViolation := func(t *testing.T, err error, code, constraint string) {
+					t.Helper()
+					var pgErr *pgconn.PgError
+					require.ErrorAs(t, err, &pgErr)
+					require.Equal(t, code, pgErr.Code)
+					require.Equal(t, constraint, pgErr.ConstraintName)
+				}
+				require.NoError(t, insert("a", "prod", 1, "Running"))
+				// Two rollouts of the Stage's row cannot both be Running...
+				requireViolation(t, insert("b", "prod", 2, "Running"), "23505", runningConstraint)
+				// ...nor share a number.
+				requireViolation(
+					t, insert("b", "prod", 1, "Pending"), "23505", "promotion_rollouts_stage_number_key",
+				)
+				require.NoError(t, insert("b", "prod", 2, "Pending"))
+				// A rollout carries the names of the Stage whose row it
+				// references.
+				requireViolation(
+					t, insert("c", "staging", 3, "Pending"), "23503", "promotion_rollouts_stage_fkey",
+				)
 			},
 		},
 		{
@@ -544,9 +613,9 @@ func TestStoreIntegration(t *testing.T) {
 				require.NoError(t, err)
 
 				// No Target has a Promotion yet.
-				rows, err := store.ListTargetStatuses(ctx, rollout)
+				statuses, err := store.ListTargetStatuses(ctx, []Rollout{rollout, other})
 				require.NoError(t, err)
-				require.Empty(t, rows)
+				require.Empty(t, statuses)
 
 				promotion := func(name, target string, of Rollout, phase string) database.UpsertPromotionParams {
 					params := database.UpsertPromotionParams{
@@ -572,7 +641,7 @@ func TestStoreIntegration(t *testing.T) {
 					promotion("prod.us-east.01A.abc", "us-east", rollout, "Failed"),
 					// eu-west: not picked up by the controller yet.
 					promotion("prod.eu-west.01A.abc", "eu-west", rollout, ""),
-					// Ignored: to no Target, and of another rollout.
+					// Ignored: to no Target. Of another rollout: reported under it.
 					promotion("prod.01D.abc", "", rollout, "Succeeded"),
 					promotion("prod.us-east.01E.abc", "us-east", other, "Succeeded"),
 				} {
@@ -580,22 +649,53 @@ func TestStoreIntegration(t *testing.T) {
 					require.NoError(t, err)
 				}
 
-				rows, err = store.ListTargetStatuses(ctx, rollout)
+				row := func(of Rollout, target, name, phase string) database.ListPromotionRolloutTargetStatusesRow {
+					return database.ListPromotionRolloutTargetStatusesRow{
+						PromotionRolloutID: of.ID,
+						TargetName:         target,
+						PromotionName:      name,
+						Phase:              phase,
+					}
+				}
+				statuses, err = store.ListTargetStatuses(ctx, []Rollout{rollout, other})
 				require.NoError(t, err)
-				require.Equal(t, []database.ListPromotionRolloutTargetStatusesRow{
-					{TargetName: "eu-west", PromotionName: "prod.eu-west.01A.abc", Phase: "Pending"},
-					{TargetName: "us-east", PromotionName: "prod.us-east.01C.abc", Phase: "Succeeded"},
-					{TargetName: "us-west", PromotionName: "prod.us-west.01A.abc", Phase: "Running"},
-				}, rows)
-				statuses, summary := TargetStatuses(rows)
-				require.Len(t, statuses, 3)
+				require.Equal(t, map[uuid.UUID][]database.ListPromotionRolloutTargetStatusesRow{
+					rollout.ID: {
+						row(rollout, "eu-west", "prod.eu-west.01A.abc", "Pending"),
+						row(rollout, "us-east", "prod.us-east.01C.abc", "Succeeded"),
+						row(rollout, "us-west", "prod.us-west.01A.abc", "Running"),
+					},
+					other.ID: {row(other, "us-east", "prod.us-east.01E.abc", "Succeeded")},
+				}, statuses)
+
+				targetStatuses, summary := TargetStatuses(statuses[rollout.ID])
+				require.Len(t, targetStatuses, 3)
 				require.Equal(t, &kargoapi.PromotionRolloutSummary{Pending: 1, Running: 1, Succeeded: 1}, summary)
+
+				// Only the rollouts asked about are reported.
+				statuses, err = store.ListTargetStatuses(ctx, []Rollout{other})
+				require.NoError(t, err)
+				require.Len(t, statuses, 1)
+				require.Len(t, statuses[other.ID], 1)
+				statuses, err = store.ListTargetStatuses(ctx, nil)
+				require.NoError(t, err)
+				require.Empty(t, statuses)
 			},
 		},
 		{
 			name: "get reports a missing rollout",
 			run: func(t *testing.T) {
 				_, err := store.Get(ctx, "missing", "prod.01A.abc")
+				require.ErrorIs(t, err, database.ErrNotFound)
+			},
+		},
+		{
+			name: "get by number reports a number the Stage has not reached",
+			run: func(t *testing.T) {
+				_, err := store.GetByNumber(ctx, "create", "prod", 99)
+				require.ErrorIs(t, err, database.ErrNotFound)
+				// Numbers are per Stage: the other Stage has no #1.
+				_, err = store.GetByNumber(ctx, "create", "staging", 1)
 				require.ErrorIs(t, err, database.ErrNotFound)
 			},
 		},

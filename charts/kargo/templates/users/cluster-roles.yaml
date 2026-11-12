@@ -36,6 +36,7 @@ rules:
   - projects
   - projectconfigs
   - promotionrequests
+  - promotionrollouts
   - promotiontasks
   - stages
   - warehouses
@@ -227,6 +228,7 @@ rules:
   - projectconfigs
   - promotions
   - promotionrequests
+  - promotionrollouts
   - promotiontasks
   - stages
   - targets

@@ -68,7 +68,7 @@ func Test_server_getStageLinks(t *testing.T) {
 						Spec: kargoapi.ClusterConfigSpec{
 							StageLinks: []kargoapi.DeepLink{{
 								Title: "Cluster Link",
-								URL:   "https://example.com/{{ .stage.metadata.name }}",
+								URL:   "https://example.com/${{ stage.metadata.name }}",
 							}},
 						},
 					},
@@ -95,7 +95,7 @@ func Test_server_getStageLinks(t *testing.T) {
 						Spec: kargoapi.ProjectConfigSpec{
 							StageLinks: []kargoapi.DeepLink{{
 								Title: "Project Link",
-								URL:   "https://example.com/{{ .stage.metadata.name }}",
+								URL:   "https://example.com/${{ stage.metadata.name }}",
 							}},
 						},
 					},
@@ -118,7 +118,7 @@ func Test_server_getStageLinks(t *testing.T) {
 						Spec: kargoapi.ClusterConfigSpec{
 							StageLinks: []kargoapi.DeepLink{{
 								Title: "Cluster Link",
-								URL:   "https://cluster.example.com/{{ .stage.metadata.name }}",
+								URL:   "https://cluster.example.com/${{ stage.metadata.name }}",
 							}},
 						},
 					},
@@ -130,7 +130,7 @@ func Test_server_getStageLinks(t *testing.T) {
 						Spec: kargoapi.ProjectConfigSpec{
 							StageLinks: []kargoapi.DeepLink{{
 								Title: "Project Link",
-								URL:   "https://project.example.com/{{ .stage.metadata.name }}",
+								URL:   "https://project.example.com/${{ stage.metadata.name }}",
 							}},
 						},
 					},
@@ -155,7 +155,7 @@ func Test_server_getStageLinks(t *testing.T) {
 							StageLinks: []kargoapi.DeepLink{{
 								Title: "Conditional Link",
 								URL:   "https://example.com",
-								If:    `false`,
+								If:    `${{ false }}`,
 							}},
 						},
 					},
@@ -165,10 +165,11 @@ func Test_server_getStageLinks(t *testing.T) {
 					var resp getStageLinksResponse
 					require.NoError(t, json.Unmarshal(w.Body.Bytes(), &resp))
 					require.Empty(t, resp.Links)
+					require.Empty(t, resp.Errors)
 				},
 			},
 			{
-				name: "template evaluation errors are reported",
+				name: "expression evaluation errors are reported",
 				clientBuilder: fake.NewClientBuilder().WithObjects(
 					testProject,
 					testStage,
@@ -177,7 +178,7 @@ func Test_server_getStageLinks(t *testing.T) {
 						Spec: kargoapi.ClusterConfigSpec{
 							StageLinks: []kargoapi.DeepLink{{
 								Title: "Bad Template",
-								URL:   "https://example.com/{{ .stage.metadata.name",
+								URL:   "https://example.com/${{ stage.metadata.name",
 							}},
 						},
 					},

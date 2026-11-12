@@ -11,7 +11,7 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/promotion"
-	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
+	"github.com/akuity/kargo/pkg/x/promotion/stepconfig"
 )
 
 func Test_yamlMerger_convert(t *testing.T) {
@@ -83,12 +83,12 @@ func Test_YAMLMerger_run(t *testing.T) {
 	testCases := []struct {
 		name       string
 		fsFiles    map[string]string
-		cfg        builtin.YAMLMergeConfig
+		cfg        stepconfig.YAMLMergeConfig
 		assertions func(*testing.T, promotion.StepResult, error)
 	}{
 		{
 			name: "input file not found with ignoreMissingFiles false",
-			cfg: builtin.YAMLMergeConfig{
+			cfg: stepconfig.YAMLMergeConfig{
 				InFiles:            []string{"non-existent.yaml"},
 				IgnoreMissingFiles: false,
 			},
@@ -102,7 +102,7 @@ func Test_YAMLMerger_run(t *testing.T) {
 			fsFiles: map[string]string{
 				"invalid.yaml": ":",
 			},
-			cfg: builtin.YAMLMergeConfig{
+			cfg: stepconfig.YAMLMergeConfig{
 				InFiles: []string{"invalid.yaml"},
 				OutFile: "merged.yaml",
 			},
@@ -117,7 +117,7 @@ func Test_YAMLMerger_run(t *testing.T) {
 				"base.yaml":    "version: 1.0.0",
 				"overlay.yaml": "version: 2.0.0",
 			},
-			cfg: builtin.YAMLMergeConfig{
+			cfg: stepconfig.YAMLMergeConfig{
 				InFiles: []string{
 					"base.yaml",
 					"overlay.yaml",
@@ -207,7 +207,7 @@ func Test_yamlMerger_run_escapingSymlink(t *testing.T) {
 		_, err := (&yamlMerger{}).run(
 			t.Context(),
 			newTestStepContext(t, workDir),
-			builtin.YAMLMergeConfig{
+			stepconfig.YAMLMergeConfig{
 				InFiles: []string{"out/base.yaml"},
 				OutFile: "merged.yaml",
 			},
@@ -222,7 +222,7 @@ func Test_yamlMerger_run_escapingSymlink(t *testing.T) {
 		_, err := (&yamlMerger{}).run(
 			t.Context(),
 			newTestStepContext(t, workDir),
-			builtin.YAMLMergeConfig{
+			stepconfig.YAMLMergeConfig{
 				InFiles: []string{"base.yaml"},
 				OutFile: "out/merged.yaml",
 			},

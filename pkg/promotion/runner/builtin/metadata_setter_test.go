@@ -14,7 +14,7 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/promotion"
-	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
+	"github.com/akuity/kargo/pkg/x/promotion/stepconfig"
 )
 
 func Test_metadataSetter_convert(t *testing.T) {
@@ -161,13 +161,13 @@ func Test_metadataSetter_run(t *testing.T) {
 	tests := []struct {
 		name       string
 		client     client.Client
-		cfg        builtin.SetMetadataConfig
+		cfg        stepconfig.SetMetadataConfig
 		assertions func(*testing.T, promotion.StepResult, client.Client, error)
 	}{
 		{
 			name: "unsupported kind",
-			cfg: builtin.SetMetadataConfig{
-				Updates: []builtin.Update{{
+			cfg: stepconfig.SetMetadataConfig{
+				Updates: []stepconfig.Update{{
 					Kind: "UnsupportedKind",
 					Name: "test-resource",
 					// Values: map[string]any{"key": "value"},
@@ -186,8 +186,8 @@ func Test_metadataSetter_run(t *testing.T) {
 		{
 			name:   "Stage not found",
 			client: fake.NewClientBuilder().WithScheme(scheme).Build(),
-			cfg: builtin.SetMetadataConfig{
-				Updates: []builtin.Update{{
+			cfg: stepconfig.SetMetadataConfig{
+				Updates: []stepconfig.Update{{
 					Kind: "Stage",
 					Name: "nonexistent",
 				}},
@@ -213,8 +213,8 @@ func Test_metadataSetter_run(t *testing.T) {
 					},
 				},
 			).WithStatusSubresource(&kargoapi.Stage{}).Build(),
-			cfg: builtin.SetMetadataConfig{
-				Updates: []builtin.Update{{
+			cfg: stepconfig.SetMetadataConfig{
+				Updates: []stepconfig.Update{{
 					Kind:   "Stage",
 					Name:   testObjName,
 					Values: testValueUpdates,
@@ -244,8 +244,8 @@ func Test_metadataSetter_run(t *testing.T) {
 					},
 				},
 			).WithStatusSubresource(&kargoapi.Stage{}).Build(),
-			cfg: builtin.SetMetadataConfig{
-				Updates: []builtin.Update{{
+			cfg: stepconfig.SetMetadataConfig{
+				Updates: []stepconfig.Update{{
 					Kind:   "Stage",
 					Name:   testObjName,
 					Values: testValueUpdates,
@@ -304,8 +304,8 @@ func Test_metadataSetter_run(t *testing.T) {
 		{
 			name:   "Freight not found",
 			client: fake.NewClientBuilder().WithScheme(scheme).Build(),
-			cfg: builtin.SetMetadataConfig{
-				Updates: []builtin.Update{{
+			cfg: stepconfig.SetMetadataConfig{
+				Updates: []stepconfig.Update{{
 					Kind: "Freight",
 					Name: "nonexistent",
 				}},
@@ -331,8 +331,8 @@ func Test_metadataSetter_run(t *testing.T) {
 					},
 				},
 			).WithStatusSubresource(&kargoapi.Freight{}).Build(),
-			cfg: builtin.SetMetadataConfig{
-				Updates: []builtin.Update{{
+			cfg: stepconfig.SetMetadataConfig{
+				Updates: []stepconfig.Update{{
 					Kind:   "Freight",
 					Name:   testObjName,
 					Values: testValueUpdates,
@@ -359,8 +359,8 @@ func Test_metadataSetter_run(t *testing.T) {
 					},
 				},
 			).WithStatusSubresource(&kargoapi.Freight{}).Build(),
-			cfg: builtin.SetMetadataConfig{
-				Updates: []builtin.Update{{
+			cfg: stepconfig.SetMetadataConfig{
+				Updates: []stepconfig.Update{{
 					Kind:   "Freight",
 					Name:   testObjName,
 					Values: testValueUpdates,

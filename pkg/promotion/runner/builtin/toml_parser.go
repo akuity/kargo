@@ -11,7 +11,7 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/promotion"
-	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
+	"github.com/akuity/kargo/pkg/x/promotion/stepconfig"
 )
 
 const stepKindTOMLParse = "toml-parse"
@@ -51,15 +51,15 @@ func (tp *tomlParser) Run(
 }
 
 // convert validates tomlParser configuration against a JSON schema and
-// converts it into a builtin.TOMLParseConfig struct.
-func (tp *tomlParser) convert(cfg promotion.Config) (builtin.TOMLParseConfig, error) {
-	return validateAndConvert[builtin.TOMLParseConfig](tp.schemaLoader, cfg, stepKindTOMLParse)
+// converts it into a stepconfig.TOMLParseConfig struct.
+func (tp *tomlParser) convert(cfg promotion.Config) (stepconfig.TOMLParseConfig, error) {
+	return validateAndConvert[stepconfig.TOMLParseConfig](tp.schemaLoader, cfg, stepKindTOMLParse)
 }
 
 func (tp *tomlParser) run(
 	_ context.Context,
 	stepCtx *promotion.StepContext,
-	cfg builtin.TOMLParseConfig,
+	cfg stepconfig.TOMLParseConfig,
 ) (promotion.StepResult, error) {
 	failure := promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}
 
@@ -109,10 +109,10 @@ func (tp *tomlParser) readAndParseTOML(root *os.Root, path string) (any, error) 
 
 // extractValues returns select data extracted from the provided data by
 // evaluating it against expressions contained within the provided
-// []builtin.TOMLParse.
+// []stepconfig.TOMLParse.
 func (tp *tomlParser) extractValues(
 	data any,
-	outputs []builtin.TomlParse,
+	outputs []stepconfig.TomlParse,
 ) (map[string]any, error) {
 	results := make(map[string]any, len(outputs))
 	for _, output := range outputs {

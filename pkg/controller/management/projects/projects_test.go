@@ -2727,22 +2727,25 @@ func TestReconciler_ensureDefaultUserRoles_PromotionRequestPermissions(t *testin
 			require.Fail(t, testCase.resource+" permissions not found")
 		})
 	}
-	// PromotionRequests are readable but never writable by a user: only the
-	// Stage controller and the API server create them.
+	// PromotionRequests and PromotionRollouts are readable but never writable
+	// by a user: only the Stage controller and the API server create them.
 	for _, roleName := range []string{"kargo-admin", "kargo-promoter", "kargo-viewer"} {
-		t.Run(roleName+"/promotionrequests read-only", func(t *testing.T) {
-			role := createdRoles[roleName]
-			require.NotNil(t, role)
-			var found bool
-			for _, rule := range role.Rules {
-				if !slices.Contains(rule.Resources, "promotionrequests") {
-					continue
+		for _, resource := range []string{"promotionrequests", "promotionrollouts"} {
+			t.Run(roleName+"/"+resource+" read-only", func(t *testing.T) {
+				role := createdRoles[roleName]
+				require.NotNil(t, role)
+				var found bool
+				for _, rule := range role.Rules {
+					if !slices.Contains(rule.Resources, resource) {
+						continue
+					}
+					found = true
+					require.Equal(t, []string{kargoapi.GroupVersion.Group}, rule.APIGroups)
+					require.ElementsMatch(t, []string{"get", "list", "watch"}, rule.Verbs)
 				}
-				found = true
-				require.ElementsMatch(t, []string{"get", "list", "watch"}, rule.Verbs)
-			}
-			require.True(t, found, "no promotionrequests rule found")
-		})
+				require.True(t, found, "no "+resource+" rule found")
+			})
+		}
 	}
 	// Regression test for GHSA-rx5g-3338-f2mf: patch on freights/status let a
 	// holder write status.verifiedIn directly, bypassing verification/soak

@@ -15,21 +15,15 @@ import (
 const createPromotionRollout = `-- name: CreatePromotionRollout :one
 
 WITH stage AS (
-    UPDATE stages SET last_promotion_rollout_number = GREATEST(
-        stages.last_promotion_rollout_number,
-        (
-            SELECT COALESCE(MAX(number), 0) FROM promotion_rollouts
-            WHERE project_name = $1::text
-                AND stage_name = $2::text
-        )
-    ) + 1
+    UPDATE stages SET last_promotion_rollout_number = last_promotion_rollout_number + 1
     WHERE project_name = $1::text
         AND name = $2::text
-    RETURNING last_promotion_rollout_number AS number
+    RETURNING id AS stage_id, last_promotion_rollout_number AS number
 ), rollout AS (
     INSERT INTO promotion_rollouts (
         project_name,
         name,
+        stage_id,
         stage_name,
         number,
         freight_name,
@@ -40,6 +34,7 @@ WITH stage AS (
     SELECT
         $1::text,
         $3::text,
+        stage.stage_id,
         $2::text,
         stage.number,
         $4::text,
@@ -47,12 +42,12 @@ WITH stage AS (
         $6::bigint,
         $7::text
     FROM stage
-    RETURNING id, project_name, name, stage_name, number, freight_name, max_concurrent, max_failures, created_by, created_at, updated_at, status_phase, status_reason, status_message, status_started_at, status_finished_at
+    RETURNING id, project_name, name, stage_name, number, freight_name, max_concurrent, max_failures, created_by, created_at, updated_at, status_phase, status_reason, status_message, status_started_at, status_finished_at, stage_id
 ), targets AS (
     INSERT INTO promotion_rollout_targets (promotion_rollout_id, target_id)
     SELECT rollout.id, unnest($8::uuid[]) FROM rollout
 )
-SELECT id, project_name, name, stage_name, number, freight_name, max_concurrent, max_failures, created_by, created_at, updated_at, status_phase, status_reason, status_message, status_started_at, status_finished_at FROM rollout
+SELECT id, project_name, name, stage_name, number, freight_name, max_concurrent, max_failures, created_by, created_at, updated_at, status_phase, status_reason, status_message, status_started_at, status_finished_at, stage_id FROM rollout
 `
 
 type CreatePromotionRolloutParams struct {
@@ -83,6 +78,7 @@ type CreatePromotionRolloutRow struct {
 	StatusMessage    string
 	StatusStartedAt  *time.Time
 	StatusFinishedAt *time.Time
+	StageID          string
 }
 
 // PromotionRollouts are addressed by Project name and rollout name
@@ -91,13 +87,15 @@ type CreatePromotionRolloutRow struct {
 // number comes from the Stage row's counter, which only this query writes.
 // The UPDATE locks the row, serializing a Stage's creates, and a failure
 // anywhere in the statement rolls the increment back, so numbers are
-// gapless. The counter is also kept above MAX(number) of the name's existing
-// rollouts, because a Stage deleted and recreated gets a fresh row with the
-// counter at 0. A Stage the mirror has not recorded has no row, so nothing
-// is inserted. The targets CTE records the rollout's Targets in the same
-// statement (an INSERT in a data-modifying CTE always runs, even though the
-// outer SELECT reads only from rollout), so a Target that no longer exists
-// fails the whole create.
+// gapless. A Stage deleted and recreated gets a fresh row with the counter
+// at 0, and its predecessor's rollouts go with the old row, so the new
+// Stage's rollouts number from 1. The same locked row supplies the Stage's
+// id, which the rollout references so that it is deleted with the Stage. A
+// Stage the mirror has not recorded has no row, so nothing is inserted. The
+// targets CTE records the rollout's Targets in the same statement (an INSERT
+// in a data-modifying CTE always runs, even though the outer SELECT reads
+// only from rollout), so a Target that no longer exists fails the whole
+// create.
 func (q *Queries) CreatePromotionRollout(ctx context.Context, arg CreatePromotionRolloutParams) (CreatePromotionRolloutRow, error) {
 	row := q.db.QueryRow(ctx, createPromotionRollout,
 		arg.ProjectName,
@@ -127,12 +125,13 @@ func (q *Queries) CreatePromotionRollout(ctx context.Context, arg CreatePromotio
 		&i.StatusMessage,
 		&i.StatusStartedAt,
 		&i.StatusFinishedAt,
+		&i.StageID,
 	)
 	return i, err
 }
 
 const getPromotionRollout = `-- name: GetPromotionRollout :one
-SELECT id, project_name, name, stage_name, number, freight_name, max_concurrent, max_failures, created_by, created_at, updated_at, status_phase, status_reason, status_message, status_started_at, status_finished_at FROM promotion_rollouts
+SELECT id, project_name, name, stage_name, number, freight_name, max_concurrent, max_failures, created_by, created_at, updated_at, status_phase, status_reason, status_message, status_started_at, status_finished_at, stage_id FROM promotion_rollouts
 WHERE project_name = $1 AND name = $2
 `
 
@@ -161,27 +160,65 @@ func (q *Queries) GetPromotionRollout(ctx context.Context, arg GetPromotionRollo
 		&i.StatusMessage,
 		&i.StatusStartedAt,
 		&i.StatusFinishedAt,
+		&i.StageID,
+	)
+	return i, err
+}
+
+const getPromotionRolloutByNumber = `-- name: GetPromotionRolloutByNumber :one
+SELECT id, project_name, name, stage_name, number, freight_name, max_concurrent, max_failures, created_by, created_at, updated_at, status_phase, status_reason, status_message, status_started_at, status_finished_at, stage_id FROM promotion_rollouts
+WHERE project_name = $1
+    AND stage_name = $2
+    AND number = $3
+`
+
+type GetPromotionRolloutByNumberParams struct {
+	ProjectName string
+	StageName   string
+	Number      int64
+}
+
+// A Stage's rollout by its number, served by the Stage/number unique key.
+func (q *Queries) GetPromotionRolloutByNumber(ctx context.Context, arg GetPromotionRolloutByNumberParams) (PromotionRolloutRow, error) {
+	row := q.db.QueryRow(ctx, getPromotionRolloutByNumber, arg.ProjectName, arg.StageName, arg.Number)
+	var i PromotionRolloutRow
+	err := row.Scan(
+		&i.ID,
+		&i.ProjectName,
+		&i.Name,
+		&i.StageName,
+		&i.Number,
+		&i.FreightName,
+		&i.MaxConcurrent,
+		&i.MaxFailures,
+		&i.CreatedBy,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.StatusPhase,
+		&i.StatusReason,
+		&i.StatusMessage,
+		&i.StatusStartedAt,
+		&i.StatusFinishedAt,
+		&i.StageID,
 	)
 	return i, err
 }
 
 const listLatestPromotionRollouts = `-- name: ListLatestPromotionRollouts :many
-SELECT latest.id, latest.project_name, latest.name, latest.stage_name, latest.number, latest.freight_name, latest.max_concurrent, latest.max_failures, latest.created_by, latest.created_at, latest.updated_at, latest.status_phase, latest.status_reason, latest.status_message, latest.status_started_at, latest.status_finished_at
+SELECT latest.id, latest.project_name, latest.name, latest.stage_name, latest.number, latest.freight_name, latest.max_concurrent, latest.max_failures, latest.created_by, latest.created_at, latest.updated_at, latest.status_phase, latest.status_reason, latest.status_message, latest.status_started_at, latest.status_finished_at, latest.stage_id
 FROM stages
 CROSS JOIN LATERAL (
     (
-        SELECT id, project_name, name, stage_name, number, freight_name, max_concurrent, max_failures, created_by, created_at, updated_at, status_phase, status_reason, status_message, status_started_at, status_finished_at FROM promotion_rollouts
-        WHERE promotion_rollouts.project_name = stages.project_name
-            AND promotion_rollouts.stage_name = stages.name
+        SELECT id, project_name, name, stage_name, number, freight_name, max_concurrent, max_failures, created_by, created_at, updated_at, status_phase, status_reason, status_message, status_started_at, status_finished_at, stage_id FROM promotion_rollouts
+        WHERE promotion_rollouts.stage_id = stages.id
             AND promotion_rollouts.status_phase IN ('Pending', 'Running')
         ORDER BY promotion_rollouts.status_phase = 'Running' DESC, promotion_rollouts.number
         LIMIT 1
     )
     UNION ALL
     (
-        SELECT id, project_name, name, stage_name, number, freight_name, max_concurrent, max_failures, created_by, created_at, updated_at, status_phase, status_reason, status_message, status_started_at, status_finished_at FROM promotion_rollouts
-        WHERE promotion_rollouts.project_name = stages.project_name
-            AND promotion_rollouts.stage_name = stages.name
+        SELECT id, project_name, name, stage_name, number, freight_name, max_concurrent, max_failures, created_by, created_at, updated_at, status_phase, status_reason, status_message, status_started_at, status_finished_at, stage_id FROM promotion_rollouts
+        WHERE promotion_rollouts.stage_id = stages.id
             AND promotion_rollouts.status_phase NOT IN ('Pending', 'Running')
         ORDER BY promotion_rollouts.number DESC
         LIMIT 1
@@ -230,6 +267,7 @@ func (q *Queries) ListLatestPromotionRollouts(ctx context.Context, arg ListLates
 			&i.StatusMessage,
 			&i.StatusStartedAt,
 			&i.StatusFinishedAt,
+			&i.StageID,
 		); err != nil {
 			return nil, err
 		}
@@ -277,7 +315,7 @@ func (q *Queries) ListOpenPromotionRollouts(ctx context.Context) ([]ListOpenProm
 
 const listProjectPromotionRollouts = `-- name: ListProjectPromotionRollouts :many
 
-SELECT id, project_name, name, stage_name, number, freight_name, max_concurrent, max_failures, created_by, created_at, updated_at, status_phase, status_reason, status_message, status_started_at, status_finished_at FROM promotion_rollouts
+SELECT id, project_name, name, stage_name, number, freight_name, max_concurrent, max_failures, created_by, created_at, updated_at, status_phase, status_reason, status_message, status_started_at, status_finished_at, stage_id FROM promotion_rollouts
 WHERE project_name = $1
     AND (created_at, id) < (
         COALESCE($2::timestamptz, 'infinity'::timestamptz),
@@ -298,7 +336,9 @@ type ListProjectPromotionRolloutsParams struct {
 // lists below is unbounded: each reads a page of at most page_size rows
 // from an index, and a caller wanting more asks again from where the page
 // ended. Bounds are compared with COALESCE rather than an IS NULL test so
-// that the index serves them whether or not a bound is given.
+// that the index serves them whether or not a bound is given. A Stage's
+// rollouts are keyed by its row's id, which each list of them finds by the
+// Stage's name first; a Stage the mirror has not recorded has none.
 // A page of a Project's rollouts, newest first: those created before the
 // given rollout, or the newest when none is given.
 func (q *Queries) ListProjectPromotionRollouts(ctx context.Context, arg ListProjectPromotionRolloutsParams) ([]PromotionRolloutRow, error) {
@@ -332,6 +372,7 @@ func (q *Queries) ListProjectPromotionRollouts(ctx context.Context, arg ListProj
 			&i.StatusMessage,
 			&i.StatusStartedAt,
 			&i.StatusFinishedAt,
+			&i.StageID,
 		); err != nil {
 			return nil, err
 		}
@@ -344,24 +385,27 @@ func (q *Queries) ListProjectPromotionRollouts(ctx context.Context, arg ListProj
 }
 
 const listPromotionRolloutTargetStatuses = `-- name: ListPromotionRolloutTargetStatuses :many
-SELECT DISTINCT ON (target_name)
+SELECT DISTINCT ON (promotion_rollout_id, target_name)
+    promotion_rollout_id::uuid AS promotion_rollout_id,
     target_name::text AS target_name,
     name AS promotion_name,
     COALESCE(NULLIF(phase, ''), 'Pending')::text AS phase
 FROM promotions
-WHERE promotion_rollout_id = $1::uuid
+WHERE promotion_rollout_id = ANY($1::uuid[])
     AND target_name IS NOT NULL
-ORDER BY target_name, name DESC
+ORDER BY promotion_rollout_id, target_name, name DESC
 `
 
 type ListPromotionRolloutTargetStatusesRow struct {
-	TargetName    string
-	PromotionName string
-	Phase         string
+	PromotionRolloutID uuid.UUID
+	TargetName         string
+	PromotionName      string
+	Phase              string
 }
 
-// What has become of each Target of a rollout: the newest Promotion to it
-// and that Promotion's phase, in Target name order. Among one Target's
+// What has become of each Target of each of the rollouts: the newest
+// Promotion to it and that Promotion's phase, in rollout then Target name
+// order. One query serves a whole page of rollouts. Among one Target's
 // Promotions, name order is creation order (names embed a ULID), so the
 // newest is the greatest name. A Promotion the controller has not picked
 // up yet has no phase and is reported as Pending. Only Promotions that
@@ -371,8 +415,8 @@ type ListPromotionRolloutTargetStatusesRow struct {
 // These are the mirror's rows, so they lag the cluster by the mirror's
 // sync. From rough testing that lag is fine for what reads this: the API
 // and Project stats, which present progress rather than act on it.
-func (q *Queries) ListPromotionRolloutTargetStatuses(ctx context.Context, id uuid.UUID) ([]ListPromotionRolloutTargetStatusesRow, error) {
-	rows, err := q.db.Query(ctx, listPromotionRolloutTargetStatuses, id)
+func (q *Queries) ListPromotionRolloutTargetStatuses(ctx context.Context, ids []uuid.UUID) ([]ListPromotionRolloutTargetStatusesRow, error) {
+	rows, err := q.db.Query(ctx, listPromotionRolloutTargetStatuses, ids)
 	if err != nil {
 		return nil, err
 	}
@@ -380,7 +424,12 @@ func (q *Queries) ListPromotionRolloutTargetStatuses(ctx context.Context, id uui
 	var items []ListPromotionRolloutTargetStatusesRow
 	for rows.Next() {
 		var i ListPromotionRolloutTargetStatusesRow
-		if err := rows.Scan(&i.TargetName, &i.PromotionName, &i.Phase); err != nil {
+		if err := rows.Scan(
+			&i.PromotionRolloutID,
+			&i.TargetName,
+			&i.PromotionName,
+			&i.Phase,
+		); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
@@ -428,7 +477,7 @@ func (q *Queries) ListPromotionRolloutTargets(ctx context.Context, ids []uuid.UU
 }
 
 const listPromotionRolloutsByName = `-- name: ListPromotionRolloutsByName :many
-SELECT id, project_name, name, stage_name, number, freight_name, max_concurrent, max_failures, created_by, created_at, updated_at, status_phase, status_reason, status_message, status_started_at, status_finished_at FROM promotion_rollouts
+SELECT id, project_name, name, stage_name, number, freight_name, max_concurrent, max_failures, created_by, created_at, updated_at, status_phase, status_reason, status_message, status_started_at, status_finished_at, stage_id FROM promotion_rollouts
 WHERE project_name = $1
     AND name = ANY($2::text[])
 ORDER BY name
@@ -467,6 +516,7 @@ func (q *Queries) ListPromotionRolloutsByName(ctx context.Context, arg ListPromo
 			&i.StatusMessage,
 			&i.StatusStartedAt,
 			&i.StatusFinishedAt,
+			&i.StageID,
 		); err != nil {
 			return nil, err
 		}
@@ -479,9 +529,12 @@ func (q *Queries) ListPromotionRolloutsByName(ctx context.Context, arg ListPromo
 }
 
 const listStagePromotionRollouts = `-- name: ListStagePromotionRollouts :many
-SELECT id, project_name, name, stage_name, number, freight_name, max_concurrent, max_failures, created_by, created_at, updated_at, status_phase, status_reason, status_message, status_started_at, status_finished_at FROM promotion_rollouts
-WHERE project_name = $1
-    AND stage_name = $2
+SELECT id, project_name, name, stage_name, number, freight_name, max_concurrent, max_failures, created_by, created_at, updated_at, status_phase, status_reason, status_message, status_started_at, status_finished_at, stage_id FROM promotion_rollouts
+WHERE stage_id = (
+    SELECT id FROM stages
+    WHERE stages.project_name = $1
+        AND stages.name = $2
+)
     AND number < COALESCE($3::bigint, 9223372036854775807)
 ORDER BY number DESC
 LIMIT $4
@@ -527,6 +580,7 @@ func (q *Queries) ListStagePromotionRollouts(ctx context.Context, arg ListStageP
 			&i.StatusMessage,
 			&i.StatusStartedAt,
 			&i.StatusFinishedAt,
+			&i.StageID,
 		); err != nil {
 			return nil, err
 		}
@@ -539,9 +593,12 @@ func (q *Queries) ListStagePromotionRollouts(ctx context.Context, arg ListStageP
 }
 
 const listStagePromotionRolloutsAfter = `-- name: ListStagePromotionRolloutsAfter :many
-SELECT id, project_name, name, stage_name, number, freight_name, max_concurrent, max_failures, created_by, created_at, updated_at, status_phase, status_reason, status_message, status_started_at, status_finished_at FROM promotion_rollouts
-WHERE project_name = $1
-    AND stage_name = $2
+SELECT id, project_name, name, stage_name, number, freight_name, max_concurrent, max_failures, created_by, created_at, updated_at, status_phase, status_reason, status_message, status_started_at, status_finished_at, stage_id FROM promotion_rollouts
+WHERE stage_id = (
+    SELECT id FROM stages
+    WHERE stages.project_name = $1
+        AND stages.name = $2
+)
     AND number > $3
 ORDER BY number
 LIMIT $4
@@ -586,6 +643,7 @@ func (q *Queries) ListStagePromotionRolloutsAfter(ctx context.Context, arg ListS
 			&i.StatusMessage,
 			&i.StatusStartedAt,
 			&i.StatusFinishedAt,
+			&i.StageID,
 		); err != nil {
 			return nil, err
 		}
@@ -598,9 +656,12 @@ func (q *Queries) ListStagePromotionRolloutsAfter(ctx context.Context, arg ListS
 }
 
 const listStagePromotionRolloutsOfFreight = `-- name: ListStagePromotionRolloutsOfFreight :many
-SELECT id, project_name, name, stage_name, number, freight_name, max_concurrent, max_failures, created_by, created_at, updated_at, status_phase, status_reason, status_message, status_started_at, status_finished_at FROM promotion_rollouts
-WHERE project_name = $1
-    AND stage_name = $2
+SELECT id, project_name, name, stage_name, number, freight_name, max_concurrent, max_failures, created_by, created_at, updated_at, status_phase, status_reason, status_message, status_started_at, status_finished_at, stage_id FROM promotion_rollouts
+WHERE stage_id = (
+    SELECT id FROM stages
+    WHERE stages.project_name = $1
+        AND stages.name = $2
+)
     AND freight_name = $3
     AND number < COALESCE($4::bigint, 9223372036854775807)
 ORDER BY number DESC
@@ -649,6 +710,7 @@ func (q *Queries) ListStagePromotionRolloutsOfFreight(ctx context.Context, arg L
 			&i.StatusMessage,
 			&i.StatusStartedAt,
 			&i.StatusFinishedAt,
+			&i.StageID,
 		); err != nil {
 			return nil, err
 		}
@@ -675,7 +737,7 @@ WHERE project_name = $6
         $9::timestamptz IS NULL
         OR updated_at = $9
     )
-RETURNING id, project_name, name, stage_name, number, freight_name, max_concurrent, max_failures, created_by, created_at, updated_at, status_phase, status_reason, status_message, status_started_at, status_finished_at
+RETURNING id, project_name, name, stage_name, number, freight_name, max_concurrent, max_failures, created_by, created_at, updated_at, status_phase, status_reason, status_message, status_started_at, status_finished_at, stage_id
 `
 
 type UpdatePromotionRolloutStatusParams struct {
@@ -724,6 +786,7 @@ func (q *Queries) UpdatePromotionRolloutStatus(ctx context.Context, arg UpdatePr
 		&i.StatusMessage,
 		&i.StatusStartedAt,
 		&i.StatusFinishedAt,
+		&i.StageID,
 	)
 	return i, err
 }

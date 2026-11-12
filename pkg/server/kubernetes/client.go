@@ -44,11 +44,7 @@ type ClientOptions struct {
 	// unconditionally executed using the implementation's own internal client.
 	// This does NOT bypass authorization entirely. The Kargo API server will
 	// still be constrained by the permissions of the Kubernetes user from whose
-	// configuration the internal client was constructed. This option is useful
-	// for scenarios where the Kargo API server is executed locally on a user's
-	// system and the user wished to provide the API server with their own
-	// Kubernetes client configuration. This is used, for instance, by the
-	// `kargo server` command.
+	// configuration the internal client was constructed.
 	SkipAuthorization bool
 	// KargoNamespace is the namespace where Kargo itself is installed. Defaults
 	// to "kargo" when unspecified.

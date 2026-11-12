@@ -9,7 +9,7 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/controller/git"
 	"github.com/akuity/kargo/pkg/promotion"
-	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
+	"github.com/akuity/kargo/pkg/x/promotion/stepconfig"
 )
 
 const (
@@ -55,15 +55,15 @@ func (g *gitCommitter) Run(
 }
 
 // convert validates the configuration against a JSON schema and converts it
-// into a builtin.GitCommitConfig struct.
-func (g *gitCommitter) convert(cfg promotion.Config) (builtin.GitCommitConfig, error) {
-	return validateAndConvert[builtin.GitCommitConfig](g.schemaLoader, cfg, stepKindGitCommit)
+// into a stepconfig.GitCommitConfig struct.
+func (g *gitCommitter) convert(cfg promotion.Config) (stepconfig.GitCommitConfig, error) {
+	return validateAndConvert[stepconfig.GitCommitConfig](g.schemaLoader, cfg, stepKindGitCommit)
 }
 
 func (g *gitCommitter) run(
 	ctx context.Context,
 	stepCtx *promotion.StepContext,
-	cfg builtin.GitCommitConfig,
+	cfg stepconfig.GitCommitConfig,
 ) (promotion.StepResult, error) {
 	path, err := promotion.ExternalPath(stepCtx, cfg.Path)
 	if err != nil {

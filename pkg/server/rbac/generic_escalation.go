@@ -48,9 +48,9 @@ var (
 // namespaced even when it references a ClusterRole.)
 //
 // authz runs the "does the requester already hold this?" checks; a nil authz
-// disables verification (tests, non-authorizing local mode). resolver reads the
-// Roles and bindings needed to decide and must always be able to read them,
-// e.g. the server's internal client rather than one scoped to the requester.
+// disables verification. resolver reads the Roles and bindings needed to decide
+// and must always be able to read them, e.g. the server's internal client
+// rather than one scoped to the requester.
 // globalNamespaces matters only for the ServiceAccount case; see
 // verifyServiceAccountBindingsNotEscalating.
 func VerifyResourceNotEscalating(

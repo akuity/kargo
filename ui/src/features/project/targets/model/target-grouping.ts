@@ -20,25 +20,6 @@ export const STAGE_GROUPING = '(stage)';
 // selects it.
 export const UNGOVERNED = '(ungoverned)';
 
-// The group-by row carries this many label keys before the rest fold into a
-// dropdown.
-const maxInlineKeys = 4;
-
-// A key this long crowds that row on its own, so it folds into the dropdown
-// ahead of its turn.
-const maxKeyLength = 12;
-
-// splitKeys picks which grouping axes sit on the row and which fold into the
-// dropdown. The tail folds in, and so does a key long enough to crowd the row
-// however early it comes -- unless every key is that long, when there is
-// nothing to gain.
-export const splitKeys = (keys: string[]): { inline: string[]; overflow: string[] } => {
-  const short = keys.filter((key) => key.length <= maxKeyLength);
-  const preferred = short.length ? short : keys;
-  const inline = preferred.slice(0, maxInlineKeys);
-  return { inline, overflow: keys.filter((key) => !inline.includes(key)) };
-};
-
 export type TargetGroup = { value: string; rows: TargetRow[] };
 
 // groupedRows is every row the groups hold between them. Grouped by Stage a
