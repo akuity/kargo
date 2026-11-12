@@ -104,6 +104,18 @@ configuration saved by `kargo login`.
 
 :::
 
+To skip TLS certificate verification, also set
+`KARGO_INSECURE_SKIP_TLS_VERIFY` to `true`. A setting saved by
+`kargo login --insecure-skip-tls-verify` does not apply while the CLI is using
+these environment variables.
+
+:::warning
+
+Skipping TLS certificate verification is a security risk and should only be
+done in development environments.
+
+:::
+
 ## Auditing Tokens
 
 Anything done with a token is attributed to the role it belongs to. Promotions
