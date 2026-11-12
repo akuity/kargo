@@ -36,6 +36,10 @@ type Creator interface {
 	// identity bound to the context, if any, is recorded as the rollout's
 	// creator.
 	//
+	// A Creator built with a check asks it first whether the Stage may be
+	// promoted to at this time, and creates nothing if it says not; see
+	// NewCreator.
+	//
 	// The errors it returns carry an HTTP status where one applies, as a
 	// handler's would.
 	Create(
@@ -53,15 +57,24 @@ type creator struct {
 	store promotionrolloutstore.Store
 	// targets is where the Targets a rollout promotes to are read from.
 	targets targets.Lister
+	// check, when set, is asked before a rollout is created whether the Stage
+	// may be promoted to at this time. An error from it refuses the rollout.
+	check func(context.Context, *kargoapi.Stage) error
 }
 
 // NewCreator returns a Creator that writes rollouts to the store and reads
 // the Targets they promote to from targetLister.
+//
+// check may be nil. When it is not, it is asked before each rollout is
+// created whether the Stage may be promoted to at this time, and an error
+// from it refuses the rollout: Create returns the error as it is, so one that
+// carries an HTTP status is answered with that status and its message.
 func NewCreator(
 	store promotionrolloutstore.Store,
 	targetLister targets.Lister,
+	check func(context.Context, *kargoapi.Stage) error,
 ) Creator {
-	return &creator{store: store, targets: targetLister}
+	return &creator{store: store, targets: targetLister, check: check}
 }
 
 // Create implements Creator.
@@ -78,6 +91,14 @@ func (c *creator) Create(
 	targetNames []string,
 	updateStrategy *kargoapi.TargetUpdateStrategy,
 ) (*kargoapi.PromotionRollout, error) {
+	// The check comes before anything is read or written, so a rollout it
+	// refuses costs nothing. Its error is the answer and is not wrapped: the
+	// message is whatever the check has to say to the caller.
+	if c.check != nil {
+		if err := c.check(ctx, stage); err != nil {
+			return nil, err
+		}
+	}
 	all, err := targets.ListFromStore(ctx, c.targets, stage.Namespace)
 	if err != nil {
 		return nil, fmt.Errorf("error listing Targets in Project %q: %w", stage.Namespace, err)

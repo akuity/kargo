@@ -2,6 +2,7 @@ package promotionrollouts
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"net/http"
@@ -13,12 +14,15 @@ import (
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
 	authnv1 "k8s.io/api/authentication/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/database"
+	libhttp "github.com/akuity/kargo/pkg/http"
 	"github.com/akuity/kargo/pkg/server/auth/can"
 	"github.com/akuity/kargo/pkg/server/user"
 )
@@ -96,6 +100,17 @@ func TestCreate(t *testing.T) {
 	)}
 
 	forbiddenStore := &fakeStore{}
+	// refuse is a server's check that holds every promotion back, and
+	// checkedStages the Stages it was asked about.
+	var checkedStages []string
+	refuse := func(err error) func(context.Context, *kargoapi.Stage) error {
+		return func(_ context.Context, stage *kargoapi.Stage) error {
+			checkedStages = append(checkedStages, stage.Name)
+			return err
+		}
+	}
+	heldBackStore := &fakeStore{targets: fleet.rows}
+	uncheckedStore := &fakeStore{}
 	disabledStore := &fakeStore{targets: fleet.rows}
 	var disabledAuthorizations []can.Access
 	var authorizations []can.Access
@@ -173,6 +188,94 @@ func TestCreate(t *testing.T) {
 			assertions: func(t *testing.T, w *httptest.ResponseRecorder) {
 				require.Equal(t, http.StatusForbidden, w.Code)
 				require.Zero(t, forbiddenStore.calls)
+			},
+		},
+		{
+			// Whether a Stage may be promoted to right now is not something
+			// to tell a caller who may not promote to it at all.
+			name:      "the server's check is not asked for a caller who may not promote",
+			store:     uncheckedStore,
+			authorize: forbidEverything,
+			check: func(context.Context, *kargoapi.Stage) error {
+				return errors.New("the check must not be asked")
+			},
+			objects: objects,
+			method:  http.MethodPost,
+			url:     stageURL("prod"),
+			body:    body("fake-freight"),
+			assertions: func(t *testing.T, w *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusForbidden, w.Code)
+				require.NotContains(t, w.Body.String(), "must not be asked")
+			},
+		},
+		{
+			name:    "the server's check refuses with an HTTP status",
+			store:   heldBackStore,
+			targets: fleet,
+			check: refuse(libhttp.Error(
+				errors.New("promotion of Stage \"prod\" is not permitted at this time"),
+				http.StatusForbidden,
+			)),
+			objects: objects,
+			method:  http.MethodPost,
+			url:     stageURL("prod"),
+			body:    body("fake-freight"),
+			assertions: func(t *testing.T, w *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusForbidden, w.Code)
+				require.JSONEq(
+					t,
+					`{"error":"promotion of Stage \"prod\" is not permitted at this time"}`,
+					w.Body.String(),
+				)
+				require.Equal(t, []string{"prod"}, checkedStages)
+				// Nothing was read or written for a rollout that was refused.
+				require.Zero(t, heldBackStore.calls)
+			},
+		},
+		{
+			name:    "the server's check refuses with a Kubernetes status error",
+			store:   &fakeStore{targets: fleet.rows},
+			targets: fleet,
+			check: refuse(apierrors.NewForbidden(
+				schema.GroupResource{Group: kargoapi.GroupVersion.Group, Resource: "stages"},
+				"prod",
+				errors.New("not permitted at this time"),
+			)),
+			objects: objects,
+			method:  http.MethodPost,
+			url:     stageURL("prod"),
+			body:    body("fake-freight"),
+			assertions: func(t *testing.T, w *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusForbidden, w.Code)
+				require.Contains(t, w.Body.String(), "not permitted at this time")
+			},
+		},
+		{
+			name:    "the server's check fails",
+			store:   &fakeStore{targets: fleet.rows},
+			targets: fleet,
+			check:   refuse(errors.New("could not read the schedule")),
+			objects: objects,
+			method:  http.MethodPost,
+			url:     stageURL("prod"),
+			body:    body("fake-freight"),
+			assertions: func(t *testing.T, w *httptest.ResponseRecorder) {
+				// An error with no status is nobody's answer to the caller.
+				require.Equal(t, http.StatusInternalServerError, w.Code)
+				require.NotContains(t, w.Body.String(), "schedule")
+			},
+		},
+		{
+			name:    "the server's check allows",
+			store:   &fakeStore{targets: fleet.rows},
+			targets: fleet,
+			check:   refuse(nil),
+			objects: objects,
+			method:  http.MethodPost,
+			url:     stageURL("prod"),
+			body:    body("fake-freight"),
+			assertions: func(t *testing.T, w *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusCreated, w.Code)
 			},
 		},
 		{

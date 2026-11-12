@@ -2,6 +2,7 @@ package promotionrollouts
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"testing"
@@ -41,13 +42,16 @@ func TestCreator_Create(t *testing.T) {
 		targetRow("us-east", map[string]string{"region": "us"}),
 	}}
 	alice := user.KubernetesUser{UserInfo: authnv1.UserInfo{Username: "alice"}}
+	errRefused := libhttp.Error(errors.New("not permitted at this time"), http.StatusForbidden)
 
 	testCases := []struct {
 		name        string
 		store       *fakeStore
 		identity    user.Identity
 		targetNames []string
-		assert      func(*testing.T, *fakeStore, *kargoapi.PromotionRollout, error)
+		// check, if set, is what the Creator asks before it creates a rollout.
+		check  func(context.Context, *kargoapi.Stage) error
+		assert func(*testing.T, *fakeStore, *kargoapi.PromotionRollout, error)
 	}{
 		{
 			name:  "no identity records no creator",
@@ -95,6 +99,34 @@ func TestCreator_Create(t *testing.T) {
 			},
 		},
 		{
+			name:  "a check that refuses is the answer, and nothing is created",
+			store: &fakeStore{targets: fleet.rows},
+			check: func(context.Context, *kargoapi.Stage) error { return errRefused },
+			assert: func(t *testing.T, store *fakeStore, rollout *kargoapi.PromotionRollout, err error) {
+				require.Nil(t, rollout)
+				// The error is the check's own, not wrapped, so its status and
+				// message reach the caller as the check wrote them.
+				require.Equal(t, errRefused, err)
+				require.Zero(t, store.calls)
+			},
+		},
+		{
+			name:  "a check is asked about the Stage being promoted to",
+			store: &fakeStore{targets: fleet.rows},
+			check: func(_ context.Context, checked *kargoapi.Stage) error {
+				if checked != stage {
+					return errors.New("asked about another Stage")
+				}
+				return nil
+			},
+			assert: func(t *testing.T, store *fakeStore, rollout *kargoapi.PromotionRollout, err error) {
+				require.NoError(t, err)
+				require.Equal(t, "prod", rollout.Spec.Stage)
+				_, err = store.Get(t.Context(), testProject, rollout.Name)
+				require.NoError(t, err)
+			},
+		},
+		{
 			name:  "a store error is reported as the API reports it",
 			store: &fakeStore{err: fmt.Errorf("Target gone: %w", database.ErrConflict)},
 			assert: func(t *testing.T, _ *fakeStore, rollout *kargoapi.PromotionRollout, err error) {
@@ -110,7 +142,7 @@ func TestCreator_Create(t *testing.T) {
 			if testCase.identity != nil {
 				ctx = user.ContextWithIdentity(ctx, testCase.identity)
 			}
-			rollout, err := NewCreator(testCase.store, fleet).Create(
+			rollout, err := NewCreator(testCase.store, fleet, testCase.check).Create(
 				ctx,
 				stage,
 				freight,
