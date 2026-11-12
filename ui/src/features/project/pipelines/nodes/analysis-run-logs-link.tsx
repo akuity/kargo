@@ -1,12 +1,13 @@
-import { faExternalLink } from '@fortawesome/free-solid-svg-icons';
+import { faArrowRight } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { Tag } from 'antd';
 import classNames from 'classnames';
 import { generatePath, Link } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
 import { StageConditionType } from '@ui/features/common/stage-status/utils';
 import { Stage } from '@ui/gen/api/v2/models';
+
+import './stage-node.less';
 
 type AnalysisRunLogsLinkProps = {
   stage: Stage;
@@ -37,10 +38,14 @@ export const AnalysisRunLogsLink = (props: AnalysisRunLogsLinkProps) => {
   });
 
   return (
-    <Link to={logsLink} target='_blank' className={classNames(props.className)}>
-      <Tag color='orange' className='text-[10px]' variant='filled'>
-        Analysis Run Logs <FontAwesomeIcon icon={faExternalLink} className='ml-1' />
-      </Tag>
+    <Link
+      to={logsLink}
+      target='_blank'
+      className={classNames('stage-node__status-link', props.className)}
+      title='Analysis run logs'
+    >
+      open logs
+      <FontAwesomeIcon icon={faArrowRight} />
     </Link>
   );
 };

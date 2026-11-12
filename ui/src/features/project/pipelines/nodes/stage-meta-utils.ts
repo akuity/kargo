@@ -1,4 +1,4 @@
-import { CSSProperties, useContext, useMemo } from 'react';
+import { useContext, useMemo } from 'react';
 import { generatePath } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
@@ -6,7 +6,6 @@ import { ColorContext } from '@ui/context/colors';
 import { ColorMapHex, parseColorAnnotation } from '@ui/features/stage/utils';
 import { useGetPromotion } from '@ui/gen/api/v2/core/core';
 import { PromotionReference, PromotionRequestReference, Stage } from '@ui/gen/api/v2/models';
-import { getContrastTextColor } from '@ui/utils/get-contrast-text-color';
 
 import { IAction, useActionContext } from '../context/action-context';
 import { useDictionaryContext } from '../context/dictionary-context';
@@ -182,26 +181,18 @@ export const useHideStageIfInPromotionMode = (stage: Stage) => {
   }, [stage, actionContext?.action, dictionaryContext?.subscribersByStage]);
 };
 
-export const useStageHeaderStyle = (stage: Stage): CSSProperties => {
+// useStageAccentColor resolves the color a Stage is identified by in the
+// pipeline graph, or undefined when the user has turned colors off.
+export const useStageAccentColor = (stage: Stage): string | undefined => {
   const colorContext = useContext(ColorContext);
-  if (!useIsColorsUsed()) {
-    return {};
+  const colorsUsed = useIsColorsUsed();
+
+  if (!colorsUsed) {
+    return undefined;
   }
 
-  let stageColor =
+  const stageColor =
     parseColorAnnotation(stage) || colorContext.stageColorMap[stage?.metadata?.name || ''];
-  let stageFontColor = '';
 
-  if (stageColor && ColorMapHex[stageColor]) {
-    stageColor = ColorMapHex[stageColor];
-  }
-
-  if (stageColor) {
-    stageFontColor = getContrastTextColor(ColorMapHex[stageColor] || stageColor);
-  }
-
-  return {
-    backgroundColor: stageColor || '',
-    color: stageFontColor
-  };
+  return ColorMapHex[stageColor] || stageColor || undefined;
 };
