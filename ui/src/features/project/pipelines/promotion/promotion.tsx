@@ -15,10 +15,9 @@ import {
 } from 'antd';
 import { formatDistance } from 'date-fns';
 import { useMemo, useState } from 'react';
-import { generatePath, useNavigate } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
 import { stringify } from 'yaml';
 
-import { paths } from '@ui/config/paths';
 import { LoadingState } from '@ui/features/common';
 import YamlEditor from '@ui/features/common/code-editor/yaml-editor-lazy';
 import { ModalComponentProps } from '@ui/features/common/modal/modal-context';
@@ -41,9 +40,15 @@ import {
 import { Promotion as TPromotion } from '@ui/gen/api/v2/models';
 import { parseDate } from '@ui/utils/dates';
 
+import {
+  createdPromotionRetryDelay,
+  isCreatedPromotion,
+  shouldRetryCreatedPromotion
+} from './created-promotion';
 import { FreightDetails } from './freight-details';
 import { getPromotionActor } from './get-promotion-actor';
 import { getPromotionStage } from './get-promotion-stage';
+import { useNavigatePromotion } from './use-navigate-promotion';
 import { useWatchPromotion } from './use-watch-promotion';
 
 type PromotionProps = ModalComponentProps & {
@@ -52,7 +57,7 @@ type PromotionProps = ModalComponentProps & {
 };
 
 const Content = (props: { promotion: TPromotion; yaml: string }) => {
-  const navigate = useNavigate();
+  const navigate = useNavigatePromotion();
   const dictionaryContext = useDictionaryContext();
   const promotionDescriptions: DescriptionsProps['items'] = [];
   const [activeStepKeys, setActiveStepKeys] = useState<string[]>([]);
@@ -71,12 +76,7 @@ const Content = (props: { promotion: TPromotion; yaml: string }) => {
   const promoteMutation = usePromoteToStage({
     mutation: {
       onSuccess(data) {
-        navigate(
-          generatePath(paths.promotion, {
-            name: props.promotion?.metadata?.namespace,
-            promotionId: data.data?.metadata?.name
-          })
-        );
+        navigate(props.promotion?.metadata?.namespace, data.data?.metadata?.name);
       }
     }
   });
@@ -301,9 +301,20 @@ const Content = (props: { promotion: TPromotion; yaml: string }) => {
 };
 
 export const Promotion = (props: PromotionProps) => {
-  const getPromotionQuery = useGetPromotion(props.project, props.promotionId);
+  const location = useLocation();
+  const justCreated = isCreatedPromotion(location.state, props.promotionId);
 
-  useWatchPromotion(props.project, props.promotionId);
+  const getPromotionQuery = useGetPromotion(props.project, props.promotionId, {
+    query: justCreated
+      ? {
+          retry: shouldRetryCreatedPromotion,
+          retryDelay: createdPromotionRetryDelay,
+          meta: { silent404: true }
+        }
+      : undefined
+  });
+
+  useWatchPromotion(props.project, props.promotionId, !!getPromotionQuery.data?.data);
 
   const rawPromotionYaml = useMemo(
     () => stringify(getPromotionQuery.data?.data),

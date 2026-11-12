@@ -18,6 +18,7 @@ import {
 } from '@ui/features/project/pipelines/promotion/promotion-window';
 import { ResumeAutoPromotionDrawer } from '@ui/features/project/pipelines/promotion/resume-auto-promotion-drawer';
 import { useManualApprovalModal } from '@ui/features/project/pipelines/promotion/use-manual-approval-modal';
+import { useNavigatePromotion } from '@ui/features/project/pipelines/promotion/use-navigate-promotion';
 import { promoteToStage, queryFreightsRest } from '@ui/gen/api/v2/core/core';
 import { Stage } from '@ui/gen/api/v2/models';
 
@@ -31,6 +32,7 @@ export const useGetPromotionDropdownItems = (stage: Stage) => {
   const dictionaryContext = useDictionaryContext();
 
   const navigate = useNavigate();
+  const navigatePromotion = useNavigatePromotion();
 
   const totalSubscribersToThisStage = dictionaryContext?.subscribersByStage?.[stageName]?.size || 0;
 
@@ -113,12 +115,7 @@ export const useGetPromotionDropdownItems = (stage: Stage) => {
     mutationFn: (payload: { project: string; stage: string; freight: string }) =>
       promoteToStage(payload.project, payload.stage, { freight: payload.freight }),
     onSuccess: (response) => {
-      navigate(
-        generatePath(paths.promotion, {
-          name: projectName,
-          promotionId: response.data?.metadata?.name
-        })
-      );
+      navigatePromotion(projectName, response.data?.metadata?.name);
     }
   });
 

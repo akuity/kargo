@@ -2,13 +2,14 @@ import { faPlay } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Alert, Button, Drawer, Flex, Radio, Typography, message } from 'antd';
 import { ReactNode, useMemo, useState } from 'react';
-import { generatePath, Link, useNavigate } from 'react-router-dom';
+import { generatePath, Link } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
 import { usePromoteToStage } from '@ui/gen/api/v2/core/core';
 import type { Stage } from '@ui/gen/api/v2/models';
 
 import { AutoPromotionHoldEntry, getAutoPromotionHoldEntries, originLabel } from './auto-promotion';
+import { useNavigatePromotion } from './use-navigate-promotion';
 
 type ResumeAutoPromotionDrawerProps = {
   stage: Stage;
@@ -21,7 +22,7 @@ export const ResumeAutoPromotionDrawer = ({
   open,
   onClose
 }: ResumeAutoPromotionDrawerProps) => {
-  const navigate = useNavigate();
+  const navigate = useNavigatePromotion();
   const [selectedOriginKey, setSelectedOriginKey] = useState('');
 
   const projectName = stage?.metadata?.namespace || '';
@@ -44,12 +45,7 @@ export const ResumeAutoPromotionDrawer = ({
         onClose();
         const promotionName = response.data?.metadata?.name;
         if (promotionName) {
-          navigate(
-            generatePath(paths.promotion, {
-              name: projectName,
-              promotionId: promotionName
-            })
-          );
+          navigate(projectName, promotionName);
         }
       }
     }

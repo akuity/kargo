@@ -6,11 +6,11 @@ import { Promotion } from '@ui/gen/api/v2/models';
 
 import { readSSEStream } from '../watch-utils';
 
-export const useWatchPromotion = (project: string, promotion: string) => {
+export const useWatchPromotion = (project: string, promotion: string, enabled = true) => {
   const client = useQueryClient();
 
   useEffect(() => {
-    if (!project || !promotion) {
+    if (!enabled || !project || !promotion) {
       return;
     }
 
@@ -36,5 +36,5 @@ export const useWatchPromotion = (project: string, promotion: string) => {
     })();
 
     return () => abort.abort();
-  }, [project, promotion, client]);
+  }, [enabled, project, promotion, client]);
 };
