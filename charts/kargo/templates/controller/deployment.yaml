@@ -81,11 +81,41 @@ spec:
         {{- with (concat .Values.global.envFrom .Values.controller.envFrom) }}
           {{- tpl (toYaml .) $ | nindent 8 }}
         {{- end }}
-        {{- if .Values.controller.metrics.enabled }}
+        {{- if or .Values.controller.metrics.enabled .Values.controller.probes.enabled }}
         ports:
+        {{- if .Values.controller.metrics.enabled }}
         - containerPort: {{ .Values.controller.metrics.service.servicePort }}
           name: {{ .Values.controller.metrics.service.portName }}
           protocol: TCP
+        {{- end }}
+        {{- if .Values.controller.probes.enabled }}
+        - containerPort: {{ .Values.controller.probes.port }}
+          name: health
+          protocol: TCP
+        {{- end }}
+        {{- end }}
+        {{- if .Values.controller.probes.enabled }}
+        startupProbe:
+          httpGet:
+            path: /healthz
+            port: health
+          {{- with .Values.controller.probes.startupProbe }}
+          {{- toYaml . | nindent 10 }}
+          {{- end }}
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: health
+          {{- with .Values.controller.probes.livenessProbe }}
+          {{- toYaml . | nindent 10 }}
+          {{- end }}
+        readinessProbe:
+          httpGet:
+            path: /readyz
+            port: health
+          {{- with .Values.controller.probes.readinessProbe }}
+          {{- toYaml . | nindent 10 }}
+          {{- end }}
         {{- end }}
         volumeMounts:
         {{- include "kargo.nats.volumeMount" . | nindent 8 }}

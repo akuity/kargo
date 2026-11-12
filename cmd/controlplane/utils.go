@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"net/http"
 	stdos "os"
 
 	natsgo "github.com/nats-io/nats.go"
@@ -11,6 +12,7 @@ import (
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	"github.com/akuity/kargo/pkg/logging"
 	"github.com/akuity/kargo/pkg/nats"
@@ -94,4 +96,24 @@ func connectNATS(ctx context.Context) (*natsgo.Conn, error) {
 		"server", conn.ConnectedUrlRedacted(),
 	)
 	return conn, nil
+}
+
+// addNATSHealthChecks ties the manager's liveness and readiness probes to the
+// state of the provided NATS connection. See nats.HealthChecker for what each
+// reports.
+func addNATSHealthChecks(mgr manager.Manager, conn *natsgo.Conn) error {
+	checker := nats.NewHealthChecker(conn, nats.HealthCheckerConfigFromEnv())
+	if err := mgr.AddHealthzCheck(
+		"nats",
+		func(*http.Request) error { return checker.Live() },
+	); err != nil {
+		return fmt.Errorf("error adding NATS liveness check: %w", err)
+	}
+	if err := mgr.AddReadyzCheck(
+		"nats",
+		func(*http.Request) error { return checker.Ready() },
+	); err != nil {
+		return fmt.Errorf("error adding NATS readiness check: %w", err)
+	}
+	return nil
 }

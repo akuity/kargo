@@ -42,8 +42,9 @@ type managementControllerOptions struct {
 
 	ManageControllerRoleBindings bool
 
-	MetricsBindAddress string
-	PprofBindAddress   string
+	MetricsBindAddress     string
+	HealthProbeBindAddress string
+	PprofBindAddress       string
 
 	Logger *logging.Logger
 }
@@ -79,6 +80,7 @@ func (o *managementControllerOptions) complete() {
 	o.ManageControllerRoleBindings = types.MustParseBool(os.GetEnv("MANAGE_CONTROLLER_ROLE_BINDINGS", "true"))
 
 	o.MetricsBindAddress = os.GetEnv("METRICS_BIND_ADDRESS", "0")
+	o.HealthProbeBindAddress = os.GetEnv("HEALTH_PROBE_BIND_ADDRESS", "0")
 	o.PprofBindAddress = os.GetEnv("PPROF_BIND_ADDRESS", "")
 }
 
@@ -111,6 +113,9 @@ func (o *managementControllerOptions) run(ctx context.Context) error {
 	kargoMgr, err := o.setupManager(ctx)
 	if err != nil {
 		return fmt.Errorf("error initializing Kargo controller manager: %w", err)
+	}
+	if err = addNATSHealthChecks(kargoMgr, natsConn); err != nil {
+		return err
 	}
 
 	// One-time cleanup of a hazard left behind by the removal of the
@@ -249,7 +254,8 @@ func (o *managementControllerOptions) setupManager(
 			Metrics: server.Options{
 				BindAddress: o.MetricsBindAddress,
 			},
-			PprofBindAddress: o.PprofBindAddress,
+			HealthProbeBindAddress: o.HealthProbeBindAddress,
+			PprofBindAddress:       o.PprofBindAddress,
 			Cache: cache.Options{
 				ByObject: map[client.Object]cache.ByObject{
 					&corev1.ServiceAccount{}: {},

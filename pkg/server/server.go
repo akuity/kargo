@@ -51,6 +51,10 @@ type server struct {
 	// built from it. It is nil when the server runs without a database, in
 	// which case the endpoints for those resources respond 501.
 	db *database.Queries
+	// health decides the outcome of the liveness and readiness probes. It is
+	// nil when the server has nothing to report, in which case both always
+	// pass.
+	health HealthChecker
 
 	// The following behaviors are overridable for testing purposes:
 
@@ -171,6 +175,7 @@ func NewServer(
 	rolesDB rbac.RolesDatabase,
 	sender event.Sender,
 	db *database.Queries,
+	health HealthChecker,
 ) Server {
 	s := &server{
 		cfg:     cfg,
@@ -178,6 +183,7 @@ func NewServer(
 		rolesDB: rolesDB,
 		sender:  sender,
 		db:      db,
+		health:  health,
 	}
 
 	s.getStageFn = api.GetStage
@@ -211,7 +217,7 @@ func (s *server) Serve(ctx context.Context, l net.Listener) error {
 	logger := logging.LoggerFromContext(ctx)
 	mux := http.NewServeMux()
 
-	mux.Handle("/healthz", newHealthHandler())
+	s.handleHealth(mux)
 
 	for p, h := range s.cfg.AdditionalHandlers {
 		mux.Handle(p, h)
@@ -312,7 +318,7 @@ func (s *server) Serve(ctx context.Context, l net.Listener) error {
 // StripPrefix layer removes the basePath from each incoming URL before
 // dispatching.
 //
-// The health check endpoint stays addressable at the root in parallel with
+// The health check endpoints stay addressable at the root in parallel with
 // the basePath-wrapped routes, so liveness / readiness probes that hit the
 // Pod directly (never traversing the ingress that would otherwise prepend
 // the basePath) keep working without basePath awareness.
@@ -322,7 +328,7 @@ func wrapWithBasePath(inner http.Handler, basePath string) http.Handler {
 	}
 	stripped := http.StripPrefix(basePath, inner)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path == "/healthz" {
+		if r.URL.Path == livenessPath || r.URL.Path == readinessPath {
 			inner.ServeHTTP(w, r)
 			return
 		}
