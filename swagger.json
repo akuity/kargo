@@ -2818,7 +2818,7 @@
     },
     "/v1beta1/projects/{project}/stages/{stage}/promotions": {
       "post": {
-        "description": "Create a Promotion resource to transition a specified Stage into\nthe state represented by the specified Freight.\nA Stage that selects Targets yields a PromotionRequest, which fans\nthe Freight out to each of them, in place of a single Promotion.",
+        "description": "Create a Promotion resource to transition a specified Stage into\nthe state represented by the specified Freight.\nA Stage that selects Targets yields, in place of a single\nPromotion, something that fans the Freight out to each of\nthem: a PromotionRollout on a server that creates\nPromotionRollouts, and a PromotionRequest otherwise. Either\nway, the body's targets and updateStrategy narrow which\nTargets are promoted to and at what pace.",
         "consumes": [
           "application/json"
         ],
@@ -2858,7 +2858,7 @@
         ],
         "responses": {
           "201": {
-            "description": "Promotion resource, or a PromotionRequest for a Stage that selects Targets",
+            "description": "Promotion; a PromotionRollout or PromotionRequest for a Stage with Targets",
             "schema": {
               "$ref": "#/definitions/Promotion"
             }
@@ -2873,7 +2873,7 @@
     },
     "/v1beta1/projects/{project}/stages/{stage}/promotions/downstream": {
       "post": {
-        "description": "Creates a Promotion resource for each of a Stage's immediately\ndownstream Stages. Downstream Stages that select Targets yield a\nPromotionRequest each, returned separately under \"promotionRequests\".",
+        "description": "Creates a Promotion resource for each of a Stage's immediately\ndownstream Stages, returned under \"promotions\". Downstream\nStages that select Targets each yield, in place of a\nPromotion, a PromotionRollout on a server that creates\nPromotionRollouts, returned under \"promotionRollouts\", or a\nPromotionRequest otherwise, returned under\n\"promotionRequests\"; each key is present only when it has\nentries. Each promotes to every Target its Stage governs, at\nthe Stage's pace. A Stage that could not be promoted to is\nreported under \"errors\", with a 207 status.",
         "consumes": [
           "application/json"
         ],
@@ -5729,9 +5729,6 @@
         },
         "oidcConfig": {
           "$ref": "#/definitions/OIDCConfig"
-        },
-        "skipAuth": {
-          "type": "boolean"
         }
       }
     },
@@ -7226,7 +7223,7 @@
           "type": "string"
         },
         "if": {
-          "description": "If is an optional expression condition. When set, the link is only shown\nwhen the expression evaluates to true.\n\n+optional",
+          "description": "If is an optional expr-lang expression, offset by ${{ }}, that must\nevaluate to a boolean. When set, the link is shown only when it\nevaluates to true.\n\n+optional",
           "type": "string"
         },
         "title": {
@@ -7234,7 +7231,7 @@
           "type": "string"
         },
         "url": {
-          "description": "URL is an expression that resolves to the link's href.\n\n+kubebuilder:validation:MinLength=1",
+          "description": "URL is the link's href. It may contain expr-lang expressions offset by\n${{ }}, evaluated against the resource as freight or stage.\n\n+kubebuilder:validation:MinLength=1",
           "type": "string"
         }
       }

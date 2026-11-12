@@ -4517,8 +4517,12 @@ export const getPromoteToStageUrl = (project: string, stage: string) => {
 /**
  * Create a Promotion resource to transition a specified Stage into
  * the state represented by the specified Freight.
- * A Stage that selects Targets yields a PromotionRequest, which fans
- * the Freight out to each of them, in place of a single Promotion.
+ * A Stage that selects Targets yields, in place of a single
+ * Promotion, something that fans the Freight out to each of
+ * them: a PromotionRollout on a server that creates
+ * PromotionRollouts, and a PromotionRequest otherwise. Either
+ * way, the body's targets and updateStrategy narrow which
+ * Targets are promoted to and at what pace.
  * @summary Promote to Stage
  */
 export const promoteToStage = async (
@@ -4628,8 +4632,15 @@ export const getPromoteDownstreamUrl = (project: string, stage: string) => {
 
 /**
  * Creates a Promotion resource for each of a Stage's immediately
- * downstream Stages. Downstream Stages that select Targets yield a
- * PromotionRequest each, returned separately under "promotionRequests".
+ * downstream Stages, returned under "promotions". Downstream
+ * Stages that select Targets each yield, in place of a
+ * Promotion, a PromotionRollout on a server that creates
+ * PromotionRollouts, returned under "promotionRollouts", or a
+ * PromotionRequest otherwise, returned under
+ * "promotionRequests"; each key is present only when it has
+ * entries. Each promotes to every Target its Stage governs, at
+ * the Stage's pace. A Stage that could not be promoted to is
+ * reported under "errors", with a 207 status.
  * @summary Promote downstream
  */
 export const promoteDownstream = async (

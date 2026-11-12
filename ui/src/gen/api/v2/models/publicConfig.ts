@@ -10,5 +10,4 @@ import type { OIDCConfig } from './oIDCConfig';
 export interface PublicConfig {
   adminAccountEnabled?: boolean;
   oidcConfig?: OIDCConfig;
-  skipAuth?: boolean;
 }

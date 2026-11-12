@@ -12,7 +12,7 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/promotion"
-	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
+	"github.com/akuity/kargo/pkg/x/promotion/stepconfig"
 )
 
 func Test_jsonUpdater_convert(t *testing.T) {
@@ -107,13 +107,13 @@ func Test_jsonUpdater_updateValuesFile(t *testing.T) {
 	tests := []struct {
 		name          string
 		valuesContent string
-		changes       []builtin.JSONUpdate
+		changes       []stepconfig.JSONUpdate
 		assertions    func(*testing.T, string, error)
 	}{
 		{
 			name:          "successful update",
 			valuesContent: `{"key": "value"}`,
-			changes: []builtin.JSONUpdate{{
+			changes: []stepconfig.JSONUpdate{{
 				Key:   "key",
 				Value: "newvalue",
 			}},
@@ -133,7 +133,7 @@ func Test_jsonUpdater_updateValuesFile(t *testing.T) {
 		{
 			name:          "file does not exist",
 			valuesContent: "",
-			changes: []builtin.JSONUpdate{{
+			changes: []stepconfig.JSONUpdate{{
 				Key:   "key",
 				Value: "value",
 			}},
@@ -145,7 +145,7 @@ func Test_jsonUpdater_updateValuesFile(t *testing.T) {
 		{
 			name:          "empty changes",
 			valuesContent: `{"key": "value"}`,
-			changes:       []builtin.JSONUpdate{},
+			changes:       []stepconfig.JSONUpdate{},
 			assertions: func(t *testing.T, valuesFilePath string, err error) {
 				require.NoError(t, err)
 				require.FileExists(t, valuesFilePath)
@@ -165,7 +165,7 @@ func Test_jsonUpdater_updateValuesFile(t *testing.T) {
 					"key2": "value2"
 				}
 			}`,
-			changes: []builtin.JSONUpdate{{
+			changes: []stepconfig.JSONUpdate{{
 				Key:   "key",
 				Value: "newvalue",
 			}},
@@ -216,7 +216,7 @@ func Test_jsonUpdater_generateCommitMessage(t *testing.T) {
 	tests := []struct {
 		name       string
 		path       string
-		changes    []builtin.JSONUpdate
+		changes    []stepconfig.JSONUpdate
 		assertions func(*testing.T, string)
 	}{
 		{
@@ -229,7 +229,7 @@ func Test_jsonUpdater_generateCommitMessage(t *testing.T) {
 		{
 			name: "single change",
 			path: "values.json",
-			changes: []builtin.JSONUpdate{{
+			changes: []stepconfig.JSONUpdate{{
 				Key:   "image",
 				Value: "repo/image:tag1",
 			}},
@@ -242,7 +242,7 @@ func Test_jsonUpdater_generateCommitMessage(t *testing.T) {
 		{
 			name: "multiple changes",
 			path: "chart/values.json",
-			changes: []builtin.JSONUpdate{
+			changes: []stepconfig.JSONUpdate{
 				{
 					Key:   "image1",
 					Value: "repo1/image1:tag1",
@@ -275,7 +275,7 @@ func Test_jsonUpdater_run(t *testing.T) {
 	tests := []struct {
 		name       string
 		stepCtx    *promotion.StepContext
-		cfg        builtin.JSONUpdateConfig
+		cfg        stepconfig.JSONUpdateConfig
 		files      map[string]string
 		assertions func(*testing.T, string, promotion.StepResult, error)
 	}{
@@ -284,9 +284,9 @@ func Test_jsonUpdater_run(t *testing.T) {
 			stepCtx: &promotion.StepContext{
 				Project: "test-project",
 			},
-			cfg: builtin.JSONUpdateConfig{
+			cfg: stepconfig.JSONUpdateConfig{
 				Path: "config.json",
-				Updates: []builtin.JSONUpdate{
+				Updates: []stepconfig.JSONUpdate{
 					{Key: "app.version", Value: "1.0.1"},
 					{Key: "features.newFeature", Value: true},
 					{Key: "threshold", Value: 100},
@@ -325,9 +325,9 @@ func Test_jsonUpdater_run(t *testing.T) {
 			stepCtx: &promotion.StepContext{
 				Project: "test-project",
 			},
-			cfg: builtin.JSONUpdateConfig{
+			cfg: stepconfig.JSONUpdateConfig{
 				Path: "non-existent/config.json",
-				Updates: []builtin.JSONUpdate{
+				Updates: []stepconfig.JSONUpdate{
 					{Key: "app.version", Value: "1.0.1"},
 				},
 			},
@@ -342,9 +342,9 @@ func Test_jsonUpdater_run(t *testing.T) {
 			stepCtx: &promotion.StepContext{
 				Project: "test-project",
 			},
-			cfg: builtin.JSONUpdateConfig{
+			cfg: stepconfig.JSONUpdateConfig{
 				Path:    "config.json",
-				Updates: []builtin.JSONUpdate{},
+				Updates: []stepconfig.JSONUpdate{},
 			},
 			files: map[string]string{
 				"config.json": `{
@@ -372,9 +372,9 @@ func Test_jsonUpdater_run(t *testing.T) {
 			stepCtx: &promotion.StepContext{
 				Project: "test-project",
 			},
-			cfg: builtin.JSONUpdateConfig{
+			cfg: stepconfig.JSONUpdateConfig{
 				Path: "config.json",
-				Updates: []builtin.JSONUpdate{
+				Updates: []stepconfig.JSONUpdate{
 					{Key: "app.version", Value: "1.0.1"},
 				},
 			},
@@ -393,9 +393,9 @@ func Test_jsonUpdater_run(t *testing.T) {
 			stepCtx: &promotion.StepContext{
 				Project: "test-project",
 			},
-			cfg: builtin.JSONUpdateConfig{
+			cfg: stepconfig.JSONUpdateConfig{
 				Path: "config.json",
-				Updates: []builtin.JSONUpdate{
+				Updates: []stepconfig.JSONUpdate{
 					{Key: "settings.newKey", Value: "added"},
 				},
 			},
@@ -414,9 +414,9 @@ func Test_jsonUpdater_run(t *testing.T) {
 			stepCtx: &promotion.StepContext{
 				Project: "test-project",
 			},
-			cfg: builtin.JSONUpdateConfig{
+			cfg: stepconfig.JSONUpdateConfig{
 				Path: "config.json",
-				Updates: []builtin.JSONUpdate{
+				Updates: []stepconfig.JSONUpdate{
 					{Key: "threshold", Value: 425},
 				},
 			},
@@ -436,9 +436,9 @@ func Test_jsonUpdater_run(t *testing.T) {
 			stepCtx: &promotion.StepContext{
 				Project: "test-project",
 			},
-			cfg: builtin.JSONUpdateConfig{
+			cfg: stepconfig.JSONUpdateConfig{
 				Path: "config.json",
-				Updates: []builtin.JSONUpdate{
+				Updates: []stepconfig.JSONUpdate{
 					{Key: "features.existingFeature", Value: false},
 				},
 			},
@@ -481,9 +481,9 @@ func Test_jsonUpdater_run_escapingSymlink(t *testing.T) {
 	_, err := (&jsonUpdater{}).run(
 		t.Context(),
 		newTestStepContext(t, workDir),
-		builtin.JSONUpdateConfig{
+		stepconfig.JSONUpdateConfig{
 			Path:    "out/values.json",
-			Updates: []builtin.JSONUpdate{{Key: "key", Value: "changed"}},
+			Updates: []stepconfig.JSONUpdate{{Key: "key", Value: "changed"}},
 		},
 	)
 	require.ErrorContains(t, err, "path escapes from parent")

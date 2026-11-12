@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 
-import { batchEmitter } from './watch-utils';
+import { advanceResourceVersion, batchEmitter } from './watch-utils';
 
 type Obj = { name: string; value: number };
 
@@ -68,29 +68,71 @@ describe('batchEmitter', () => {
     expect(flush.mock.calls[1][0]).toEqual([{ name: 'b', value: 2 }]);
   });
 
-  test('cancel drops the pending batch without flushing', () => {
+  test('flush delivers the pending batch immediately and only once', () => {
     const flush = vi.fn<(items: Obj[]) => void>();
     const emitter = batchEmitter(flush, keyOf);
 
     emitter.call({ name: 'a', value: 1 });
-    emitter.cancel();
-
-    vi.runAllTimers();
-
-    expect(flush).not.toHaveBeenCalled();
-  });
-
-  test('cancel clears accumulated items so a later call starts fresh', () => {
-    const flush = vi.fn<(items: Obj[]) => void>();
-    const emitter = batchEmitter(flush, keyOf);
-
-    emitter.call({ name: 'a', value: 1 });
-    emitter.cancel();
-
     emitter.call({ name: 'b', value: 2 });
+    emitter.flush();
+
+    expect(flush).toHaveBeenCalledTimes(1);
+    expect(flush.mock.calls[0][0]).toEqual([
+      { name: 'a', value: 1 },
+      { name: 'b', value: 2 }
+    ]);
+
     vi.runAllTimers();
 
     expect(flush).toHaveBeenCalledTimes(1);
-    expect(flush.mock.calls[0][0]).toEqual([{ name: 'b', value: 2 }]);
+  });
+
+  test('flush does nothing when no batch is pending', () => {
+    const flush = vi.fn<(items: Obj[]) => void>();
+    const emitter = batchEmitter(flush, keyOf);
+
+    emitter.flush();
+
+    emitter.call({ name: 'a', value: 1 });
+    vi.runAllTimers();
+    emitter.flush();
+
+    expect(flush).toHaveBeenCalledTimes(1);
+    expect(flush.mock.calls[0][0]).toEqual([{ name: 'a', value: 1 }]);
+  });
+});
+
+describe('advanceResourceVersion', () => {
+  type List = { metadata?: { resourceVersion?: string; continue?: string }; items: string[] };
+
+  test('moves the list resourceVersion up to a newer event object', () => {
+    const list: List = { metadata: { resourceVersion: '100', continue: 'x' }, items: ['a'] };
+
+    expect(advanceResourceVersion(list, { metadata: { resourceVersion: '150' } })).toEqual({
+      metadata: { resourceVersion: '150', continue: 'x' },
+      items: ['a']
+    });
+  });
+
+  test('keeps the list resourceVersion for an older or equal event object', () => {
+    const list: List = { metadata: { resourceVersion: '100' }, items: [] };
+
+    expect(advanceResourceVersion(list, { metadata: { resourceVersion: '90' } })).toBe(list);
+    expect(advanceResourceVersion(list, { metadata: { resourceVersion: '100' } })).toBe(list);
+  });
+
+  test('keeps the list resourceVersion when the event object has none', () => {
+    const list: List = { metadata: { resourceVersion: '100' }, items: [] };
+
+    expect(advanceResourceVersion(list, {})).toBe(list);
+  });
+
+  test('sets a resourceVersion on a list that has none', () => {
+    const list: List = { items: ['a'] };
+
+    expect(advanceResourceVersion(list, { metadata: { resourceVersion: '5' } })).toEqual({
+      metadata: { resourceVersion: '5' },
+      items: ['a']
+    });
   });
 });

@@ -596,7 +596,7 @@ func (w *webhook) ValidateCreate(
 	}
 
 	if err := w.authorizeFn(ctx, promo, "create"); err != nil {
-		return nil, apierrors.NewInternalError(err)
+		return nil, err
 	}
 
 	if (promo.Spec.Freight == "") == (promo.Spec.Origin == nil) {
@@ -785,7 +785,7 @@ func (w *webhook) ValidateUpdate(
 	promo *kargoapi.Promotion,
 ) (admission.Warnings, error) {
 	if err := w.authorizeFn(ctx, promo, "update"); err != nil {
-		return nil, apierrors.NewInternalError(err)
+		return nil, err
 	}
 
 	// PromotionSpecs are meant to be immutable

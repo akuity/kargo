@@ -1315,6 +1315,31 @@ func Test_reconciler_recordTerminalMetrics(t *testing.T) {
 	}
 }
 
+func Test_reconciler_recordStartMetrics(t *testing.T) {
+	pending := prometheus.NewHistogramVec(
+		prometheus.HistogramOpts{Name: "test_pending_duration_seconds"},
+		[]string{"project"},
+	)
+	r := &reconciler{
+		promoMetrics: &metrics.PromotionMetrics{PendingDuration: pending},
+	}
+	promo := &kargoapi.Promotion{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace:         "fake-project",
+			CreationTimestamp: metav1.Time{Time: now.Add(-42 * time.Second)},
+		},
+	}
+
+	r.recordStartMetrics(promo, now.Time)
+
+	observer, ok := pending.WithLabelValues("fake-project").(prometheus.Metric)
+	require.True(t, ok)
+	var m dto.Metric
+	require.NoError(t, observer.Write(&m))
+	require.Equal(t, uint64(1), m.GetHistogram().GetSampleCount())
+	require.Equal(t, 42.0, m.GetHistogram().GetSampleSum())
+}
+
 // assertNotCalledReader returns a client.Reader that fails the test if Get is
 // called. Use it to verify that a code path exits before reaching the direct
 // API read.
@@ -1479,6 +1504,99 @@ func Test_reconciler_promote_targetContext(t *testing.T) {
 			testCase.assert(t, capturedCtx.Target)
 		})
 	}
+}
+
+// Test_reconciler_promote_rolloutChild verifies that a Promotion created by a
+// PromotionRollout resolves its Freight without a PromotionRequest: it is
+// owned by its target-aware Stage, so there is no PromotionRequest to take
+// the references from.
+func Test_reconciler_promote_rolloutChild(t *testing.T) {
+	scheme := k8sruntime.NewScheme()
+	require.NoError(t, kargoapi.SchemeBuilder.AddToScheme(scheme))
+
+	const testNamespace = "fake-namespace"
+
+	freight := &kargoapi.Freight{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "fake-freight",
+			Namespace: testNamespace,
+		},
+		Origin: kargoapi.FreightOrigin{
+			Kind: kargoapi.FreightOriginKindWarehouse,
+			Name: "fake-warehouse",
+		},
+	}
+	stage := &kargoapi.Stage{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "fake-stage",
+			Namespace: testNamespace,
+			UID:       types.UID("fake-stage-uid"),
+		},
+		Spec: kargoapi.StageSpec{
+			RequestedFreight: []kargoapi.FreightRequest{{
+				Origin:  freight.Origin,
+				Sources: kargoapi.FreightSources{Direct: true},
+			}},
+			Targets: &kargoapi.StageTargets{},
+		},
+	}
+	promo := kargoapi.Promotion{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "fake-promotion",
+			Namespace: testNamespace,
+			UID:       types.UID("promote-rollout-child"),
+			OwnerReferences: []metav1.OwnerReference{
+				*metav1.NewControllerRef(
+					stage,
+					kargoapi.GroupVersion.WithKind("Stage"),
+				),
+			},
+		},
+		Spec: kargoapi.PromotionSpec{
+			Stage:            stage.Name,
+			Freight:          freight.Name,
+			Target:           "fake-target",
+			PromotionRollout: "0193a6b0-0000-7000-8000-000000000001",
+			Steps:            []kargoapi.PromotionStep{{Uses: "fake-step"}},
+		},
+	}
+	t.Cleanup(func() {
+		require.NoError(t, os.RemoveAll(promotionWorkDir(promo.UID)))
+	})
+
+	r := &reconciler{
+		kargoClient: fake.NewClientBuilder().WithScheme(scheme).WithObjects(
+			stage,
+			freight,
+		).Build(),
+		promoEngine: &promotion.MockEngine{
+			PromoteFn: func(
+				context.Context,
+				promotion.Context,
+				[]promotion.Step,
+			) (promotion.Result, error) {
+				return promotion.Result{
+					Status: kargoapi.PromotionPhaseSucceeded,
+				}, nil
+			},
+		},
+		targets: fakeTargetGetter{
+			"fake-target": {
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "fake-target",
+					Namespace: testNamespace,
+				},
+			},
+		},
+	}
+
+	status, _, err := r.promote(context.Background(), promo, stage, freight)
+	require.NoError(t, err)
+	require.Equal(t, kargoapi.PromotionPhaseSucceeded, status.Phase)
+	require.NotNil(t, status.Freight)
+	require.Equal(t, freight.Name, status.Freight.Name)
+	require.NotNil(t, status.FreightCollection)
+	require.True(t, status.FreightCollection.Includes(freight.Name))
 }
 
 // fakeTargetGetter is a promotion.TargetGetter over a fixed set of Targets,

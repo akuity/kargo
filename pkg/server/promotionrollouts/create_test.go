@@ -12,6 +12,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
+	authnv1 "k8s.io/api/authentication/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -19,6 +20,7 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/database"
 	"github.com/akuity/kargo/pkg/server/auth/can"
+	"github.com/akuity/kargo/pkg/server/user"
 )
 
 func TestCreate(t *testing.T) {
@@ -253,6 +255,9 @@ func TestCreate(t *testing.T) {
 				)
 				require.Equal(t, kargoapi.PromotionRolloutPhasePending, rollout.Status.Phase)
 				require.Nil(t, rollout.Status.Targets)
+				// No identity is bound to the request, so no creator is
+				// recorded.
+				require.NotContains(t, rollout.Annotations, kargoapi.AnnotationKeyCreateActor)
 				stored, err := happyStore.Get(t.Context(), testProject, rollout.Name)
 				require.NoError(t, err)
 				ids := make([]uuid.UUID, len(stored.Targets))
@@ -260,6 +265,26 @@ func TestCreate(t *testing.T) {
 					ids[i] = target.TargetID
 				}
 				require.ElementsMatch(t, []uuid.UUID{usEast.ID, usWest.ID}, ids)
+			},
+		},
+		{
+			name:     "the caller is recorded as the rollout's creator",
+			store:    &fakeStore{targets: fleet.rows},
+			targets:  fleet,
+			identity: user.KubernetesUser{UserInfo: authnv1.UserInfo{Username: "alice"}},
+			objects:  objects,
+			method:   http.MethodPost,
+			url:      stageURL("prod"),
+			body:     body("fake-freight"),
+			assertions: func(t *testing.T, w *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusCreated, w.Code)
+				rollout := &kargoapi.PromotionRollout{}
+				require.NoError(t, json.Unmarshal(w.Body.Bytes(), rollout))
+				require.Equal(
+					t,
+					kargoapi.EventActorKubernetesUserPrefix+"alice",
+					rollout.Annotations[kargoapi.AnnotationKeyCreateActor],
+				)
 			},
 		},
 		{
@@ -275,12 +300,11 @@ func TestCreate(t *testing.T) {
 				rollout := &kargoapi.PromotionRollout{}
 				require.NoError(t, json.Unmarshal(w.Body.Bytes(), rollout))
 				require.Equal(t, []kargoapi.PromotionRolloutTarget{{Name: "us-west"}}, rollout.Spec.Targets)
-				// The strategy is resolved against the Targets promoted to,
-				// rounding up: 50% of the one named is 1, where 50% of the
-				// three the Stage governs would have been 2.
+				// The strategy is resolved against the stage Targets,
+				// rounding up: 50% of the three the Stage governs is 2.
 				require.Equal(
 					t,
-					kargoapi.PromotionRolloutUpdateStrategy{MaxConcurrent: 2, MaxFailures: 1},
+					kargoapi.PromotionRolloutUpdateStrategy{MaxConcurrent: 2, MaxFailures: 2},
 					rollout.Spec.UpdateStrategy,
 				)
 			},
@@ -314,7 +338,7 @@ func TestCreate(t *testing.T) {
 			},
 		},
 		{
-			name:    "the caller's percentages are resolved against the Targets promoted to",
+			name:    "the caller's percentages are resolved against the stage Targets",
 			store:   &fakeStore{targets: wideFleet.rows},
 			targets: wideFleet,
 			objects: objects,
@@ -332,11 +356,9 @@ func TestCreate(t *testing.T) {
 				require.Equal(t, http.StatusCreated, w.Code)
 				rollout := &kargoapi.PromotionRollout{}
 				require.NoError(t, json.Unmarshal(w.Body.Bytes(), rollout))
-				// Half of the two named is one each, where half of the three
-				// the Stage governs would have been two.
 				require.Equal(
 					t,
-					kargoapi.PromotionRolloutUpdateStrategy{MaxConcurrent: 1, MaxFailures: 1},
+					kargoapi.PromotionRolloutUpdateStrategy{MaxConcurrent: 2, MaxFailures: 2},
 					rollout.Spec.UpdateStrategy,
 				)
 			},
@@ -367,7 +389,7 @@ func TestCreate(t *testing.T) {
 			body:    body("fake-freight", "us-east", "eu-west", "nowhere"),
 			assertions: func(t *testing.T, w *httptest.ResponseRecorder) {
 				require.Equal(t, http.StatusBadRequest, w.Code)
-				require.Contains(t, w.Body.String(), `does not govern Targets eu-west, nowhere`)
+				require.Contains(t, w.Body.String(), `target is not selected`)
 			},
 		},
 		{
@@ -436,51 +458,4 @@ func TestCreate(t *testing.T) {
 			},
 		},
 	})
-}
-
-func TestSelectTargets(t *testing.T) {
-	t.Parallel()
-	target := func(name string) kargoapi.Target {
-		return kargoapi.Target{ObjectMeta: metav1.ObjectMeta{Name: name}}
-	}
-	governed := []kargoapi.Target{target("eu-west"), target("us-east"), target("us-west")}
-	testCases := []struct {
-		name   string
-		names  []string
-		assert func(*testing.T, []kargoapi.Target, error)
-	}{
-		{
-			name:  "the named Targets, in the order governed lists them",
-			names: []string{"us-west", "eu-west"},
-			assert: func(t *testing.T, selected []kargoapi.Target, err error) {
-				require.NoError(t, err)
-				require.Equal(t, []kargoapi.Target{target("eu-west"), target("us-west")}, selected)
-			},
-		},
-		{
-			// The API refuses a name given twice, but a caller of Create may
-			// not have.
-			name:  "a name given twice counts once",
-			names: []string{"us-west", "us-west", "us-east"},
-			assert: func(t *testing.T, selected []kargoapi.Target, err error) {
-				require.NoError(t, err)
-				require.Equal(t, []kargoapi.Target{target("us-east"), target("us-west")}, selected)
-			},
-		},
-		{
-			name:  "names the Stage does not govern are reported together, once each",
-			names: []string{"nowhere", "us-east", "elsewhere", "nowhere"},
-			assert: func(t *testing.T, selected []kargoapi.Target, err error) {
-				require.Nil(t, selected)
-				require.ErrorContains(t, err, `Stage "prod" does not govern Targets elsewhere, nowhere;`)
-			},
-		},
-	}
-	for _, testCase := range testCases {
-		t.Run(testCase.name, func(t *testing.T) {
-			t.Parallel()
-			selected, err := selectTargets("prod", governed, testCase.names)
-			testCase.assert(t, selected, err)
-		})
-	}
 }

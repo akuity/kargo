@@ -9,7 +9,12 @@ import {
 } from '@ui/gen/api/v2/core/core';
 import { Stage } from '@ui/gen/api/v2/models';
 
-import { batchEmitter, runSeededWatch, upsertOrDelete } from './watch-utils';
+import {
+  advanceResourceVersion,
+  batchEmitter,
+  runSeededWatch,
+  upsertOrDelete
+} from './watch-utils';
 
 export const useWatchStages = (
   project: string,
@@ -56,14 +61,17 @@ export const useWatchStages = (
 
     const onEvent = (type: string, stage: Stage) => {
       client.setQueriesData(
-        { exact: false, queryKey: listKey },
+        { exact: true, queryKey: listKey },
         (old: listStagesResponse | undefined) => {
           if (!old?.data) {
             return old;
           }
           return {
             ...old,
-            data: { ...old.data, items: upsertOrDelete(old.data.items ?? [], stage, type) }
+            data: {
+              ...advanceResourceVersion(old.data, stage),
+              items: upsertOrDelete(old.data.items ?? [], stage, type)
+            }
           };
         }
       );
@@ -96,7 +104,7 @@ export const useWatchStages = (
 
     return () => {
       abort.abort();
-      emitStageEvents.cancel();
+      emitStageEvents.flush();
     };
   }, [project, (warehouses || []).join(','), client]);
 };

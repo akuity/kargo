@@ -32,6 +32,13 @@ const (
 // -- so the buckets span one second to one hour.
 var durationBuckets = []float64{30, 60, 120, 300, 600, 1800, 3600}
 
+// pendingDurationBuckets are the buckets for Promotion pending time, one
+// second to one hour.
+var pendingDurationBuckets = []float64{1, 5, 10, 30, 60, 120, 300, 600, 1800, 3600}
+
+// phaseUnknown is reported for a Promotion not yet reconciled.
+const phaseUnknown = "Unknown"
+
 var (
 	metricsOnce = sync.Once{}
 	promMetrics *PromotionMetrics
@@ -49,6 +56,9 @@ type PromotionMetrics struct {
 	// terminal phase. It is additionally labeled by outcome. Promotions that
 	// end without ever having started are not observed.
 	Duration *prometheus.HistogramVec
+	// PendingDuration observes, in seconds, the time from a Promotion's
+	// creation until it started running.
+	PendingDuration *prometheus.HistogramVec
 }
 
 // NewPromotionMetrics returns PromotionMetrics whose collectors have been registered with the
@@ -92,11 +102,25 @@ func initPromotionMetrics(
 			},
 			[]string{metrics.ProjectLabel, phaseLabel},
 		),
+		PendingDuration: prometheus.NewHistogramVec(
+			prometheus.HistogramOpts{
+				Namespace: metrics.Namespace,
+				Name:      "promotion_pending_duration_seconds",
+				Help: "Time a Promotion spent waiting to run, from its creation until it " +
+					"started running.",
+				Buckets:                         pendingDurationBuckets,
+				NativeHistogramBucketFactor:     metrics.NativeHistogramBucketFactor,
+				NativeHistogramMaxBucketNumber:  metrics.NativeHistogramMaxBucketNumber,
+				NativeHistogramMinResetDuration: metrics.NativeHistogramMinResetDuration,
+			},
+			[]string{metrics.ProjectLabel},
+		),
 	}
 
-	// This one is sampled at scrape time rather than recorded, so nothing needs to hold on to it
-	// beyond registering it.
+	// These are sampled at scrape time rather than recorded, so nothing needs to hold on to them
+	// beyond registering them.
 	nonTerminalCollector := newPromotionNonTerminalCollector(c)
+	phaseCollector := newPromotionPhaseCollector(c)
 
 	// NOTE: These must be registered with the controller-runtime registry, not the default one. The
 	// manager's metrics endpoint serves only the former.
@@ -105,6 +129,7 @@ func initPromotionMetrics(
 		m.Duration,
 		nonTerminalCollector,
 	)
+	registerLifecycle(ctrlmetrics.Registry, m.PendingDuration, phaseCollector)
 	return m
 }
 
@@ -173,4 +198,115 @@ func countPromotionsByProject(promotions []kargoapi.Promotion) map[string]float6
 		counts[promotion.Namespace]++
 	}
 	return counts
+}
+
+// promotionPhaseCollector counts non-terminal Promotions by Project and phase
+// and reports each Project's oldest pending Promotion.
+type promotionPhaseCollector struct {
+	client        client.Client
+	byPhaseDesc   *prometheus.Desc
+	oldestPending *prometheus.Desc
+}
+
+func newPromotionPhaseCollector(c client.Client) *promotionPhaseCollector {
+	return &promotionPhaseCollector{
+		client: c,
+		byPhaseDesc: prometheus.NewDesc(
+			prometheus.BuildFQName(metrics.Namespace, "", "promotions_by_phase"),
+			"Number of non-terminal Promotions in each phase (Pending, Running or Unknown). "+
+				"A Promotion not yet reconciled is reported in the Unknown phase.",
+			[]string{metrics.ProjectLabel, phaseLabel},
+			nil,
+		),
+		oldestPending: prometheus.NewDesc(
+			prometheus.BuildFQName(metrics.Namespace, "", "promotion_oldest_pending_timestamp_seconds"),
+			"Creation time, as a Unix timestamp, of the oldest Promotion that has not "+
+				"started running (Pending or Unknown phase).",
+			[]string{metrics.ProjectLabel},
+			nil,
+		),
+	}
+}
+
+// Describe implements prometheus.Collector.
+func (p *promotionPhaseCollector) Describe(ch chan<- *prometheus.Desc) {
+	ch <- p.byPhaseDesc
+	ch <- p.oldestPending
+}
+
+// Collect implements prometheus.Collector.
+func (p *promotionPhaseCollector) Collect(ch chan<- prometheus.Metric) {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*2)
+	defer cancel()
+	promotions := &kargoapi.PromotionList{}
+	// Read-only, so skip the deep copy.
+	if err := p.client.List(
+		ctx,
+		promotions,
+		client.MatchingFieldsSelector{
+			Selector: fields.OneTermEqualSelector(
+				indexer.PromotionsByNonTerminalField,
+				strconv.FormatBool(true),
+			),
+		},
+		client.UnsafeDisableDeepCopy,
+	); err != nil {
+		logging.LoggerFromContext(ctx).Error(
+			err, "Error when attempting to list promotion cache during metrics scrape",
+		)
+		return
+	}
+	summary := summarizePromotions(promotions.Items)
+	for project, counts := range summary.byPhase {
+		for phase, count := range counts {
+			ch <- prometheus.MustNewConstMetric(
+				p.byPhaseDesc, prometheus.GaugeValue, count, project, phase,
+			)
+		}
+	}
+	for project, created := range summary.oldestPending {
+		ch <- prometheus.MustNewConstMetric(
+			p.oldestPending,
+			prometheus.GaugeValue,
+			float64(created.Unix()),
+			project,
+		)
+	}
+}
+
+// promotionSummary is what promotionPhaseCollector reports.
+type promotionSummary struct {
+	// byPhase counts Promotions by Project, then by phase.
+	byPhase map[string]map[string]float64
+	// oldestPending is the creation time of each Project's oldest Promotion
+	// not yet running.
+	oldestPending map[string]time.Time
+}
+
+// summarizePromotions summarizes promotions for promotionPhaseCollector.
+func summarizePromotions(promotions []kargoapi.Promotion) promotionSummary {
+	summary := promotionSummary{
+		byPhase:       make(map[string]map[string]float64),
+		oldestPending: make(map[string]time.Time),
+	}
+	for i := range promotions {
+		promo := &promotions[i]
+		phase := string(promo.Status.Phase)
+		if phase == "" {
+			phase = phaseUnknown
+		}
+		if summary.byPhase[promo.Namespace] == nil {
+			summary.byPhase[promo.Namespace] = make(map[string]float64)
+		}
+		summary.byPhase[promo.Namespace][phase]++
+
+		if promo.Status.Phase != "" && promo.Status.Phase != kargoapi.PromotionPhasePending {
+			continue
+		}
+		created := promo.CreationTimestamp.Time
+		if oldest, ok := summary.oldestPending[promo.Namespace]; !ok || created.Before(oldest) {
+			summary.oldestPending[promo.Namespace] = created
+		}
+	}
+	return summary
 }

@@ -18,7 +18,7 @@ import (
 	"github.com/akuity/kargo/pkg/io/fs"
 	"github.com/akuity/kargo/pkg/logging"
 	"github.com/akuity/kargo/pkg/promotion"
-	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
+	"github.com/akuity/kargo/pkg/x/promotion/stepconfig"
 )
 
 const stepKindCopy = "copy"
@@ -63,15 +63,15 @@ func (f *fileCopier) Run(
 }
 
 // convert validates fileCopier configuration against a JSON schema and
-// converts it into a builtin.CopyConfig struct.
-func (f *fileCopier) convert(cfg promotion.Config) (builtin.CopyConfig, error) {
-	return validateAndConvert[builtin.CopyConfig](f.schemaLoader, cfg, stepKindCopy)
+// converts it into a stepconfig.CopyConfig struct.
+func (f *fileCopier) convert(cfg promotion.Config) (stepconfig.CopyConfig, error) {
+	return validateAndConvert[stepconfig.CopyConfig](f.schemaLoader, cfg, stepKindCopy)
 }
 
 func (f *fileCopier) run(
 	ctx context.Context,
 	stepCtx *promotion.StepContext,
-	cfg builtin.CopyConfig,
+	cfg stepconfig.CopyConfig,
 ) (promotion.StepResult, error) {
 	// The copy library skips symlinks, so one at inPath is resolved first and
 	// what it points to is copied.

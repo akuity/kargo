@@ -84,6 +84,12 @@ const darkComponents: ThemeConfig['components'] = {
     itemHoverBg: 'rgba(255, 255, 255, 0.04)',
     itemSelectedColor: darkAccentWhite // else colorPrimary reads too dark
   },
+  // Dropdown menus are styled apart from Menu, and colour their selected item
+  // with colorPrimary -- the only place they use it. The primary itself reads
+  // too dim there, so borrow a brighter blue from the links.
+  Dropdown: {
+    colorPrimary: darkToken.colorLinkActive
+  },
   Layout: {
     ...sharedComponents.Layout,
     headerBg: '#1f1f1f'

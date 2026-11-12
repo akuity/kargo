@@ -11,7 +11,7 @@
  */
 
 import { authTokenKey, redirectToQueryParam, refreshTokenKey } from '@ui/config/auth';
-import { basePath, withBasePath } from '@ui/config/base-path';
+import { basePath, withBasePath, withoutBasePath } from '@ui/config/base-path';
 import { paths } from '@ui/config/paths';
 import { parseJwtPayload } from '@ui/utils/jwt-payload';
 
@@ -26,13 +26,13 @@ const logout = () => {
   localStorage.removeItem(authTokenKey);
   localStorage.removeItem(refreshTokenKey);
   window.location.replace(
-    `${withBasePath(paths.login)}?${redirectToQueryParam}=${window.location.pathname}`
+    `${withBasePath(paths.login)}?${redirectToQueryParam}=${withoutBasePath(window.location.pathname)}`
   );
 };
 
 const renewToken = () => {
   window.location.replace(
-    `${withBasePath(paths.tokenRenew)}?${redirectToQueryParam}=${window.location.pathname}`
+    `${withBasePath(paths.tokenRenew)}?${redirectToQueryParam}=${withoutBasePath(window.location.pathname)}`
   );
 };
 

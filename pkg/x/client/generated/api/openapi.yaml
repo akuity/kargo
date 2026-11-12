@@ -2093,8 +2093,12 @@ paths:
       description: |-
         Create a Promotion resource to transition a specified Stage into
         the state represented by the specified Freight.
-        A Stage that selects Targets yields a PromotionRequest, which fans
-        the Freight out to each of them, in place of a single Promotion.
+        A Stage that selects Targets yields, in place of a single
+        Promotion, something that fans the Freight out to each of
+        them: a PromotionRollout on a server that creates
+        PromotionRollouts, and a PromotionRequest otherwise. Either
+        way, the body's targets and updateStrategy narrow which
+        Targets are promoted to and at what pace.
       operationId: PromoteToStage
       parameters:
       - description: Project name
@@ -2122,8 +2126,8 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Promotion"
-          description: "Promotion resource, or a PromotionRequest for a Stage that\
-            \ selects Targets"
+          description: Promotion; a PromotionRollout or PromotionRequest for a Stage
+            with Targets
       security:
       - BearerAuth: []
       summary: Promote to Stage
@@ -2134,8 +2138,15 @@ paths:
     post:
       description: |-
         Creates a Promotion resource for each of a Stage's immediately
-        downstream Stages. Downstream Stages that select Targets yield a
-        PromotionRequest each, returned separately under "promotionRequests".
+        downstream Stages, returned under "promotions". Downstream
+        Stages that select Targets each yield, in place of a
+        Promotion, a PromotionRollout on a server that creates
+        PromotionRollouts, returned under "promotionRollouts", or a
+        PromotionRequest otherwise, returned under
+        "promotionRequests"; each key is present only when it has
+        entries. Each promotes to every Target its Stage governs, at
+        the Stage's pace. A Stage that could not be promoted to is
+        reported under "errors", with a 207 status.
       operationId: PromoteDownstream
       parameters:
       - description: Project name
@@ -4381,14 +4392,11 @@ components:
           scopes:
           - scopes
           - scopes
-        skipAuth: true
       properties:
         adminAccountEnabled:
           type: boolean
         oidcConfig:
           $ref: "#/components/schemas/OIDCConfig"
-        skipAuth:
-          type: boolean
       type: object
     ResolvedLink:
       example:
@@ -11965,8 +11973,9 @@ components:
           type: string
         if:
           description: |-
-            If is an optional expression condition. When set, the link is only shown
-            when the expression evaluates to true.
+            If is an optional expr-lang expression, offset by ${{ }}, that must
+            evaluate to a boolean. When set, the link is shown only when it
+            evaluates to true.
 
             +optional
           type: string
@@ -11978,7 +11987,8 @@ components:
           type: string
         url:
           description: |-
-            URL is an expression that resolves to the link's href.
+            URL is the link's href. It may contain expr-lang expressions offset by
+            ${{ }}, evaluated against the resource as freight or stage.
 
             +kubebuilder:validation:MinLength=1
           type: string

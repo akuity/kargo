@@ -16,7 +16,7 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/kustomize"
 	"github.com/akuity/kargo/pkg/promotion"
-	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
+	"github.com/akuity/kargo/pkg/x/promotion/stepconfig"
 )
 
 const stepKindKustomizeBuild = "kustomize-build"
@@ -60,14 +60,14 @@ func (k *kustomizeBuilder) Run(
 }
 
 // convert validates kustomizeBuilder configuration against a JSON schema and
-// converts it into a builtin.KustomizeBuildConfig struct.
-func (k *kustomizeBuilder) convert(cfg promotion.Config) (builtin.KustomizeBuildConfig, error) {
-	return validateAndConvert[builtin.KustomizeBuildConfig](k.schemaLoader, cfg, stepKindKustomizeBuild)
+// converts it into a stepconfig.KustomizeBuildConfig struct.
+func (k *kustomizeBuilder) convert(cfg promotion.Config) (stepconfig.KustomizeBuildConfig, error) {
+	return validateAndConvert[stepconfig.KustomizeBuildConfig](k.schemaLoader, cfg, stepKindKustomizeBuild)
 }
 
 func (k *kustomizeBuilder) run(
 	stepCtx *promotion.StepContext,
-	cfg builtin.KustomizeBuildConfig,
+	cfg stepconfig.KustomizeBuildConfig,
 ) (promotion.StepResult, error) {
 	// Create a "chrooted" filesystem for the kustomize build.
 	diskFS, err := securefs.MakeFsOnDiskSecureBuild(stepCtx.WorkDir)
@@ -111,7 +111,7 @@ func (k *kustomizeBuilder) writeResult(
 	root *os.Root,
 	rm kustomize.ResMap,
 	outPath string,
-	outputFmt *builtin.OutputFormat,
+	outputFmt *stepconfig.OutputFormat,
 ) error {
 	if ext := filepath.Ext(outPath); ext == ".yaml" || ext == ".yml" {
 		if err := root.MkdirAll(filepath.Dir(outPath), 0o700); err != nil {
@@ -130,14 +130,14 @@ func (k *kustomizeBuilder) writeResult(
 	}
 
 	// Write to the directory based on the configured format.
-	format := builtin.Kargo
+	format := stepconfig.Kargo
 	if outputFmt != nil {
 		format = *outputFmt
 	}
 	switch format {
-	case builtin.Kargo:
+	case stepconfig.Kargo:
 		return k.writeIndividualFiles(root, outPath, rm, k.fileNameKargo)
-	case builtin.Kustomize:
+	case stepconfig.Kustomize:
 		return k.writeIndividualFiles(root, outPath, rm, k.fileNameKustomize)
 	default:
 		return fmt.Errorf("unsupported output format: %v", format)
@@ -152,7 +152,7 @@ func kustomizeBuild(
 	kusFS filesys.FileSystem,
 	root *os.Root,
 	path string,
-	pluginCfg *builtin.Plugin,
+	pluginCfg *stepconfig.Plugin,
 	use func(kustomize.ResMap) error,
 ) error {
 	// Disable plugins (i.e. "function based" plugins), but enable builtins

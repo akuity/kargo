@@ -13,7 +13,7 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/promotion"
-	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
+	"github.com/akuity/kargo/pkg/x/promotion/stepconfig"
 )
 
 const stepKindDelete = "delete"
@@ -54,15 +54,15 @@ func (f *fileDeleter) Run(
 }
 
 // convert validates fileDeleter configuration against a JSON schema and
-// converts it into a builtin.DeleteConfig struct.
-func (f *fileDeleter) convert(cfg promotion.Config) (builtin.DeleteConfig, error) {
-	return validateAndConvert[builtin.DeleteConfig](f.schemaLoader, cfg, stepKindDelete)
+// converts it into a stepconfig.DeleteConfig struct.
+func (f *fileDeleter) convert(cfg promotion.Config) (stepconfig.DeleteConfig, error) {
+	return validateAndConvert[stepconfig.DeleteConfig](f.schemaLoader, cfg, stepKindDelete)
 }
 
 func (f *fileDeleter) run(
 	_ context.Context,
 	stepCtx *promotion.StepContext,
-	cfg builtin.DeleteConfig,
+	cfg stepconfig.DeleteConfig,
 ) (promotion.StepResult, error) {
 	paths := cfg.Paths
 	if cfg.Path != "" {

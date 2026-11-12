@@ -11,7 +11,7 @@ import (
 	"github.com/akuity/kargo/pkg/credentials"
 	"github.com/akuity/kargo/pkg/helm"
 	"github.com/akuity/kargo/pkg/promotion"
-	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
+	"github.com/akuity/kargo/pkg/x/promotion/stepconfig"
 )
 
 const stepKindHelmUpdateChart = "helm-update-chart"
@@ -61,15 +61,15 @@ func (h *helmChartUpdater) Run(
 }
 
 // convert validates helmChartUpdater configuration against a JSON schema and
-// converts it into a builtin.HelmUpdateChartConfig struct.
-func (h *helmChartUpdater) convert(cfg promotion.Config) (builtin.HelmUpdateChartConfig, error) {
-	return validateAndConvert[builtin.HelmUpdateChartConfig](h.schemaLoader, cfg, stepKindHelmUpdateChart)
+// converts it into a stepconfig.HelmUpdateChartConfig struct.
+func (h *helmChartUpdater) convert(cfg promotion.Config) (stepconfig.HelmUpdateChartConfig, error) {
+	return validateAndConvert[stepconfig.HelmUpdateChartConfig](h.schemaLoader, cfg, stepKindHelmUpdateChart)
 }
 
 func (h *helmChartUpdater) run(
 	ctx context.Context,
 	stepCtx *promotion.StepContext,
-	cfg builtin.HelmUpdateChartConfig,
+	cfg stepconfig.HelmUpdateChartConfig,
 ) (promotion.StepResult, error) {
 	// The dependency manager reads and writes the chart directory by path and
 	// follows symlinks while doing so, so nothing beneath it may lead outside

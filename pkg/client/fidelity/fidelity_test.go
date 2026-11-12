@@ -1,5 +1,6 @@
 // Package fidelity proves (or disproves) wire compatibility between the
-// openapi-generator-generated Go client (../generated) and the canonical
+// openapi-generator-generated Go client
+// (github.com/akuity/kargo/pkg/x/client/generated) and the canonical
 // serialization produced by the real Kargo/Kubernetes API types.
 //
 // Method: construct richly-populated resources using the canonical types
@@ -311,6 +312,179 @@ func TestWarehouseRoundTrip(t *testing.T) {
 		},
 	}
 	roundTrip(t, warehouse, &gen.Warehouse{})
+}
+
+func testWebhookReceiverConfigs() []kargoapi.WebhookReceiverConfig {
+	return []kargoapi.WebhookReceiverConfig{
+		{
+			Name: "my-github-receiver",
+			GitHub: &kargoapi.GitHubWebhookReceiverConfig{
+				SecretRef: corev1.LocalObjectReference{Name: "my-github-secret"},
+			},
+		},
+		{
+			Name: "my-artifactory-receiver",
+			Artifactory: &kargoapi.ArtifactoryWebhookReceiverConfig{
+				SecretRef: corev1.LocalObjectReference{
+					Name: "my-artifactory-secret",
+				},
+				VirtualRepoName: "my-virtual-repo",
+			},
+		},
+		{
+			Name: "my-generic-receiver",
+			Generic: &kargoapi.GenericWebhookReceiverConfig{
+				SecretRef: corev1.LocalObjectReference{Name: "my-generic-secret"},
+				Actions: []kargoapi.GenericWebhookAction{{
+					ActionType:     kargoapi.GenericWebhookActionTypeRefresh,
+					WhenExpression: "request.header('X-Event') == 'push'",
+					Parameters:     map[string]string{"repo": "${{ request.body.repo }}"},
+					TargetSelectionCriteria: []kargoapi.GenericWebhookTargetSelectionCriteria{{
+						Kind: kargoapi.GenericWebhookTargetKindWarehouse,
+						Name: "my-warehouse",
+						LabelSelector: metav1.LabelSelector{
+							MatchLabels: map[string]string{"tier": "web"},
+						},
+						IndexSelector: kargoapi.IndexSelector{
+							MatchIndices: []kargoapi.IndexSelectorRequirement{{
+								Key:      "subscribedURLs",
+								Operator: kargoapi.IndexSelectorOperatorEqual,
+								Value:    "${{ request.body.repo }}",
+							}},
+						},
+					}},
+				}},
+			},
+		},
+	}
+}
+
+func testDeepLinks(kind string) []kargoapi.DeepLink {
+	return []kargoapi.DeepLink{{
+		Title:       kind + " dashboard",
+		URL:         "https://dashboards.example.com/" + kind,
+		Description: "Metrics for this " + kind,
+		If:          "true",
+	}}
+}
+
+func testPromotionWindows() []kargoapi.PromotionWindow {
+	return []kargoapi.PromotionWindow{{
+		Name:        "weekend-freeze",
+		Description: "No promotions on weekends",
+		Disabled:    true,
+		StageSelector: &kargoapi.PromotionPolicySelector{
+			Name: "glob:prod-*",
+			LabelSelector: &metav1.LabelSelector{
+				MatchLabels: map[string]string{"tier": "prod"},
+			},
+		},
+		ProjectSelector: &kargoapi.PromotionPolicySelector{Name: "kargo-demo"},
+		Kind:            kargoapi.PromotionWindowKindDeny,
+		RRule:           "FREQ=WEEKLY;BYDAY=SA,SU",
+		DTStart:         "2026-07-18T00:00:00Z",
+		DTEnd:           "2026-07-20T00:00:00Z",
+	}}
+}
+
+func testConfigConditions(message string) []metav1.Condition {
+	return []metav1.Condition{{
+		Type:               "Ready",
+		Status:             metav1.ConditionTrue,
+		ObservedGeneration: 7,
+		LastTransitionTime: testTime,
+		Reason:             "Synced",
+		Message:            message,
+	}}
+}
+
+func testWebhookReceiverDetails() []kargoapi.WebhookReceiverDetails {
+	return []kargoapi.WebhookReceiverDetails{{
+		Name: "my-github-receiver",
+		Path: "/webhook/github/2f3e0a",
+		URL:  "https://kargo.example.com/webhook/github/2f3e0a",
+	}}
+}
+
+func TestProjectConfigRoundTrip(t *testing.T) {
+	projectConfig := &kargoapi.ProjectConfig{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: kargoapi.GroupVersion.String(),
+			Kind:       "ProjectConfig",
+		},
+		ObjectMeta: testObjectMeta("kargo-demo"),
+		Spec: kargoapi.ProjectConfigSpec{
+			PromotionPolicies: []kargoapi.PromotionPolicy{
+				{
+					Stage:                "test",
+					AutoPromotionEnabled: true,
+					AutoRollback: &kargoapi.AutoRollbackConfig{
+						OnPromotion: []kargoapi.PromotionPhase{
+							kargoapi.PromotionPhaseErrored,
+						},
+						OnVerification: []kargoapi.VerificationPhase{
+							kargoapi.VerificationPhaseFailed,
+						},
+					},
+				},
+				{
+					StageSelector: &kargoapi.PromotionPolicySelector{
+						Name: "regex:^uat-.*$",
+						LabelSelector: &metav1.LabelSelector{
+							MatchLabels: map[string]string{"tier": "uat"},
+							MatchExpressions: []metav1.LabelSelectorRequirement{{
+								Key:      "region",
+								Operator: metav1.LabelSelectorOpIn,
+								Values:   []string{"east", "west"},
+							}},
+						},
+					},
+					AutoPromotionEnabled: true,
+				},
+			},
+			WebhookReceivers: testWebhookReceiverConfigs(),
+			FreightLinks:     testDeepLinks("freight"),
+			StageLinks:       testDeepLinks("stage"),
+			PromotionWindows: testPromotionWindows(),
+		},
+		Status: kargoapi.ProjectConfigStatus{
+			Conditions:         testConfigConditions("ProjectConfig is synced"),
+			ObservedGeneration: 7,
+			LastHandledRefresh: "2026-07-16T12:30:45Z",
+			WebhookReceivers:   testWebhookReceiverDetails(),
+		},
+	}
+	roundTrip(t, projectConfig, &gen.ProjectConfig{})
+}
+
+func TestClusterConfigRoundTrip(t *testing.T) {
+	clusterConfig := &kargoapi.ClusterConfig{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: kargoapi.GroupVersion.String(),
+			Kind:       "ClusterConfig",
+		},
+		ObjectMeta: testObjectMeta("cluster"),
+		Spec: kargoapi.ClusterConfigSpec{
+			WebhookReceivers: testWebhookReceiverConfigs(),
+			GitClient: &kargoapi.GitClientConfig{
+				Name:  "Kargo",
+				Email: "kargo@example.com",
+				SigningKeySecret: &corev1.LocalObjectReference{
+					Name: "git-signing-key",
+				},
+			},
+			FreightLinks:     testDeepLinks("freight"),
+			StageLinks:       testDeepLinks("stage"),
+			PromotionWindows: testPromotionWindows(),
+		},
+		Status: kargoapi.ClusterConfigStatus{
+			Conditions:         testConfigConditions("ClusterConfig is synced"),
+			ObservedGeneration: 7,
+			LastHandledRefresh: "2026-07-16T12:30:45Z",
+			WebhookReceivers:   testWebhookReceiverDetails(),
+		},
+	}
+	roundTrip(t, clusterConfig, &gen.ClusterConfig{})
 }
 
 func TestConfigMapRoundTrip(t *testing.T) {

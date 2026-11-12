@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"net/http"
 	"net/http/httptest"
@@ -19,6 +20,7 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/event"
 	fakeevent "github.com/akuity/kargo/pkg/event/fake"
+	libhttp "github.com/akuity/kargo/pkg/http"
 	"github.com/akuity/kargo/pkg/server/config"
 )
 
@@ -151,6 +153,21 @@ func Test_server_promoteToStage(t *testing.T) {
 		}
 	}
 
+	// A server that creates PromotionRollouts promotes to a target-aware
+	// Stage through one, in place of a PromotionRequest.
+	rolloutsEnabled := &config.ServerConfig{PromotionRolloutsEnabled: true}
+	promoteWithRollouts := func(creator *fakeRolloutCreator) func(*testing.T, *server) {
+		return func(t *testing.T, s *server) {
+			authorizeAllStagesPromote(t, s)
+			s.rolloutCreator = creator
+		}
+	}
+	happyCreator := &fakeRolloutCreator{}
+	forwardingCreator := &fakeRolloutCreator{}
+	untouchedCreator := &fakeRolloutCreator{}
+	classicCreator := &fakeRolloutCreator{}
+	disabledCreator := &fakeRolloutCreator{}
+
 	testRESTEndpoint(
 		t, &config.ServerConfig{},
 		http.MethodPost, "/v1beta1/projects/"+testProject.Name+"/stages/"+testStage.Name+"/promotions",
@@ -171,6 +188,177 @@ func Test_server_promoteToStage(t *testing.T) {
 					reqs := &kargoapi.PromotionRequestList{}
 					require.NoError(t, c.List(t.Context(), reqs, client.InNamespace(testProject.Name)))
 					require.Empty(t, reqs.Items)
+				},
+			},
+			{
+				name: "rollouts enabled: Target-aware Stage without a database",
+				clientBuilder: fake.NewClientBuilder().WithObjects(
+					testProject,
+					testTargetAwareStage,
+					testFreight,
+				),
+				serverConfig: rolloutsEnabled,
+				serverSetup:  authorizeAllStagesPromote,
+				body: mustJSONBody(promoteToStageRequest{
+					Freight: testFreight.Name,
+				}),
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, c client.Client) {
+					require.Equal(t, http.StatusNotImplemented, w.Code)
+					require.Contains(t, w.Body.String(), "database is not configured")
+					reqs := &kargoapi.PromotionRequestList{}
+					require.NoError(t, c.List(t.Context(), reqs, client.InNamespace(testProject.Name)))
+					require.Empty(t, reqs.Items)
+				},
+			},
+			{
+				name: "rollouts enabled: Target-aware Stage yields a PromotionRollout",
+				clientBuilder: fake.NewClientBuilder().WithObjects(
+					testProject,
+					testTargetAwareStage,
+					testFreight,
+				),
+				serverConfig: rolloutsEnabled,
+				serverSetup:  promoteWithRollouts(happyCreator),
+				body: mustJSONBody(promoteToStageRequest{
+					Freight: testFreight.Name,
+				}),
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, c client.Client) {
+					require.Equal(t, http.StatusCreated, w.Code)
+					// The response is the rollout, not a Promotion or a
+					// PromotionRequest, and neither of those was created.
+					rollout := &kargoapi.PromotionRollout{}
+					require.NoError(t, json.Unmarshal(w.Body.Bytes(), rollout))
+					require.Equal(t, testStage.Name, rollout.Spec.Stage)
+					require.Equal(t, testFreight.Name, rollout.Spec.Freight)
+					require.Equal(t, kargoapi.PromotionRolloutPhasePending, rollout.Status.Phase)
+					promos := &kargoapi.PromotionList{}
+					require.NoError(t, c.List(t.Context(), promos, client.InNamespace(testProject.Name)))
+					require.Empty(t, promos.Items)
+					reqs := &kargoapi.PromotionRequestList{}
+					require.NoError(t, c.List(t.Context(), reqs, client.InNamespace(testProject.Name)))
+					require.Empty(t, reqs.Items)
+					// Nothing narrowed the rollout: every Target the Stage
+					// governs, at the Stage's pace.
+					require.Equal(t, []rolloutCreation{{
+						stage:   testStage.Name,
+						freight: testFreight.Name,
+					}}, happyCreator.creations)
+				},
+			},
+			{
+				name: "rollouts enabled: the Targets and pace asked for are forwarded",
+				clientBuilder: fake.NewClientBuilder().WithObjects(
+					testProject,
+					testTargetAwareStage,
+					testFreight,
+				),
+				serverConfig: rolloutsEnabled,
+				serverSetup:  promoteWithRollouts(forwardingCreator),
+				body: mustJSONBody(promoteToStageRequest{
+					Freight: testFreight.Name,
+					Targets: []string{"us-east"},
+					UpdateStrategy: &kargoapi.TargetUpdateStrategy{
+						MaxConcurrent: new(intstr.FromInt32(1)),
+						MaxFailures:   new(intstr.FromString("50%")),
+					},
+				}),
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
+					require.Equal(t, http.StatusCreated, w.Code)
+					rollout := &kargoapi.PromotionRollout{}
+					require.NoError(t, json.Unmarshal(w.Body.Bytes(), rollout))
+					require.Equal(t, []kargoapi.PromotionRolloutTarget{{Name: "us-east"}}, rollout.Spec.Targets)
+					require.Equal(t, []rolloutCreation{{
+						stage:   testStage.Name,
+						freight: testFreight.Name,
+						targets: []string{"us-east"},
+						updateStrategy: &kargoapi.TargetUpdateStrategy{
+							MaxConcurrent: new(intstr.FromInt32(1)),
+							MaxFailures:   new(intstr.FromString("50%")),
+						},
+					}}, forwardingCreator.creations)
+				},
+			},
+			{
+				name: "rollouts enabled: an empty target list is refused",
+				clientBuilder: fake.NewClientBuilder().WithObjects(
+					testProject,
+					testTargetAwareStage,
+					testFreight,
+				),
+				serverConfig: rolloutsEnabled,
+				serverSetup:  promoteWithRollouts(untouchedCreator),
+				// An explicitly empty list; omitempty would drop it from a
+				// marshaled request.
+				body: strings.NewReader(`{"freight": "` + testFreight.Name + `", "targets": []}`),
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
+					require.Equal(t, http.StatusBadRequest, w.Code)
+					require.Contains(t, w.Body.String(), "target list cannot be empty")
+					require.Empty(t, untouchedCreator.creations)
+				},
+			},
+			{
+				name: "rollouts enabled: a rollout that cannot be created is reported",
+				clientBuilder: fake.NewClientBuilder().WithObjects(
+					testProject,
+					testTargetAwareStage,
+					testFreight,
+				),
+				serverConfig: rolloutsEnabled,
+				serverSetup: promoteWithRollouts(&fakeRolloutCreator{
+					errs: map[string]error{
+						testStage.Name: libhttp.ErrorStr("does not govern Targets eu-west", http.StatusBadRequest),
+					},
+				}),
+				body: mustJSONBody(promoteToStageRequest{
+					Freight: testFreight.Name,
+					Targets: []string{"eu-west"},
+				}),
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
+					require.Equal(t, http.StatusBadRequest, w.Code)
+					require.Contains(t, w.Body.String(), "does not govern Targets eu-west")
+				},
+			},
+			{
+				name: "rollouts enabled: a Stage that does not select Targets still yields a Promotion",
+				clientBuilder: fake.NewClientBuilder().WithObjects(
+					testProject,
+					testStage,
+					testFreight,
+				),
+				serverConfig: rolloutsEnabled,
+				serverSetup:  promoteWithRollouts(classicCreator),
+				body: mustJSONBody(promoteToStageRequest{
+					Freight: testFreight.Name,
+				}),
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, c client.Client) {
+					require.Equal(t, http.StatusCreated, w.Code)
+					promos := &kargoapi.PromotionList{}
+					require.NoError(t, c.List(t.Context(), promos, client.InNamespace(testProject.Name)))
+					require.Len(t, promos.Items, 1)
+					require.Equal(t, testStage.Name, promos.Items[0].Spec.Stage)
+					require.Empty(t, classicCreator.creations)
+				},
+			},
+			{
+				name: "rollouts disabled: Target-aware Stage yields a PromotionRequest even with a creator",
+				clientBuilder: fake.NewClientBuilder().WithObjects(
+					testProject,
+					testTargetAwareStage,
+					testFreight,
+				),
+				serverSetup: func(t *testing.T, s *server) {
+					promoteWithTargets(t, s)
+					s.rolloutCreator = disabledCreator
+				},
+				body: mustJSONBody(promoteToStageRequest{
+					Freight: testFreight.Name,
+				}),
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, c client.Client) {
+					require.Equal(t, http.StatusCreated, w.Code)
+					reqs := &kargoapi.PromotionRequestList{}
+					require.NoError(t, c.List(t.Context(), reqs, client.InNamespace(testProject.Name)))
+					require.Len(t, reqs.Items, 1)
+					require.Empty(t, disabledCreator.creations)
 				},
 			},
 			{

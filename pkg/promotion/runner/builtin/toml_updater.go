@@ -11,7 +11,7 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/promotion"
 	inttoml "github.com/akuity/kargo/pkg/toml"
-	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
+	"github.com/akuity/kargo/pkg/x/promotion/stepconfig"
 )
 
 const stepKindTOMLUpdate = "toml-update"
@@ -52,15 +52,15 @@ func (t *tomlUpdater) Run(
 }
 
 // convert validates tomlUpdater configuration against a JSON schema and
-// converts it into a builtin.TOMLUpdateConfig struct.
-func (t *tomlUpdater) convert(cfg promotion.Config) (builtin.TOMLUpdateConfig, error) {
-	return validateAndConvert[builtin.TOMLUpdateConfig](t.schemaLoader, cfg, stepKindTOMLUpdate)
+// converts it into a stepconfig.TOMLUpdateConfig struct.
+func (t *tomlUpdater) convert(cfg promotion.Config) (stepconfig.TOMLUpdateConfig, error) {
+	return validateAndConvert[stepconfig.TOMLUpdateConfig](t.schemaLoader, cfg, stepKindTOMLUpdate)
 }
 
 func (t *tomlUpdater) run(
 	_ context.Context,
 	stepCtx *promotion.StepContext,
-	cfg builtin.TOMLUpdateConfig,
+	cfg stepconfig.TOMLUpdateConfig,
 ) (promotion.StepResult, error) {
 	updates := make([]inttoml.Update, len(cfg.Updates))
 	for i, update := range cfg.Updates {
@@ -105,7 +105,7 @@ func (t *tomlUpdater) updateFile(root *os.Root, path string, updates []inttoml.U
 	return nil
 }
 
-func (t *tomlUpdater) generateCommitMessage(path string, updates []builtin.TomlUpdate) string {
+func (t *tomlUpdater) generateCommitMessage(path string, updates []stepconfig.TomlUpdate) string {
 	if len(updates) == 0 {
 		return ""
 	}

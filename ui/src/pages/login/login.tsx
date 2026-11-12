@@ -23,10 +23,6 @@ export const Login = () => {
   const redirectTo = params.get(redirectToQueryParam);
   const safeRedirectTo = isSafeRedirectPath(redirectTo) ? redirectTo : null;
 
-  if (data?.skipAuth) {
-    return <Navigate to={paths.home} replace />;
-  }
-
   const isOIDCCallback = params.has('code') && params.has('state');
 
   if (isLoggedIn && !isOIDCCallback) {

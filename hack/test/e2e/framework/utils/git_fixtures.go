@@ -14,7 +14,7 @@ import (
 	"sigs.k8s.io/e2e-framework/klient/decoder"
 	"sigs.k8s.io/e2e-framework/klient/k8s"
 
-	"github.com/akuity/kargo/hack/test/e2e/envfuncs"
+	"github.com/akuity/kargo/hack/test/e2e/framework/envfuncs"
 	"github.com/akuity/kargo/pkg/gitprovider"
 
 	// Git provider registrations

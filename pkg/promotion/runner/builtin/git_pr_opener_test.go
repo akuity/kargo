@@ -19,7 +19,7 @@ import (
 	"github.com/akuity/kargo/pkg/credentials"
 	"github.com/akuity/kargo/pkg/gitprovider"
 	"github.com/akuity/kargo/pkg/promotion"
-	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
+	"github.com/akuity/kargo/pkg/x/promotion/stepconfig"
 )
 
 func Test_gitPROpener_convert(t *testing.T) {
@@ -252,11 +252,11 @@ func Test_gitPROpener_run(t *testing.T) {
 				Stage:   "fake-stage",
 				WorkDir: workDir,
 			},
-			builtin.GitOpenPRConfig{
+			stepconfig.GitOpenPRConfig{
 				RepoURL:      testRepoURL,
 				SourceBranch: testSourceBranch,
 				TargetBranch: testTargetBranch,
-				Provider:     ptr.To(builtin.Provider(fakeGitProviderName)),
+				Provider:     ptr.To(stepconfig.Provider(fakeGitProviderName)),
 			},
 		)
 		require.Error(t, err)
@@ -282,11 +282,11 @@ func Test_gitPROpener_run(t *testing.T) {
 				Stage:   "fake-stage",
 				WorkDir: workDir,
 			},
-			builtin.GitOpenPRConfig{
+			stepconfig.GitOpenPRConfig{
 				RepoURL:      testRepoURL,
 				SourceBranch: testSourceBranch,
 				TargetBranch: testTargetBranch,
-				Provider:     ptr.To(builtin.Provider(fakeGitProviderName)),
+				Provider:     ptr.To(stepconfig.Provider(fakeGitProviderName)),
 			},
 		)
 		require.NoError(t, err)
@@ -313,11 +313,11 @@ func Test_gitPROpener_run(t *testing.T) {
 				Stage:   "fake-stage",
 				WorkDir: workDir,
 			},
-			builtin.GitOpenPRConfig{
+			stepconfig.GitOpenPRConfig{
 				RepoURL:      testRepoURL,
 				SourceBranch: testSourceBranch,
 				TargetBranch: testTargetBranch,
-				Provider:     ptr.To(builtin.Provider(fakeGitProviderName)),
+				Provider:     ptr.To(stepconfig.Provider(fakeGitProviderName)),
 				Title:        "kargo",
 				Description:  "kargo description",
 			},

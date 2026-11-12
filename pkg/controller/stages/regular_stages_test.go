@@ -2691,6 +2691,11 @@ func TestRegularStageReconciler_syncFreight(t *testing.T) {
 	}{
 		{
 			name: "error listing Freight",
+			// Freight in use is synced first, so it must exist for the list to run.
+			objects: []client.Object{
+				&kargoapi.Freight{ObjectMeta: metav1.ObjectMeta{Namespace: testProject, Name: "fake-freight-1"}},
+				&kargoapi.Freight{ObjectMeta: metav1.ObjectMeta{Namespace: testProject, Name: "fake-freight-2"}},
+			},
 			interceptor: interceptor.Funcs{
 				List: func(context.Context, client.WithWatch, client.ObjectList, ...client.ListOption) error {
 					return fmt.Errorf("something went wrong")
@@ -3398,6 +3403,212 @@ func TestRegularStageReconciler_assessHealth(t *testing.T) {
 
 			status := r.assessHealth(t.Context(), tt.stage)
 			tt.assertions(t, status)
+		})
+	}
+}
+
+// TestRegularStageReconciler_syncFreight_writesPerPromotion counts Freight
+// status writes for one promotion: one to the Freight coming into the Stage,
+// carrying both currentlyIn and verifiedIn, then one to the Freight leaving it.
+func TestRegularStageReconciler_syncFreight_writesPerPromotion(t *testing.T) {
+	const project = "fake-project"
+	finished := metav1.NewTime(time.Now().Add(-time.Minute).Truncate(time.Second))
+	since := metav1.NewTime(time.Now().Add(-time.Hour).Truncate(time.Second))
+
+	newStage := func(hs kargoapi.HealthState) *kargoapi.Stage {
+		return &kargoapi.Stage{
+			ObjectMeta: metav1.ObjectMeta{Namespace: project, Name: "fake-stage"},
+			Status: kargoapi.StageStatus{
+				Health: &kargoapi.Health{Status: hs},
+				FreightHistory: kargoapi.FreightHistory{{
+					Freight: map[string]kargoapi.FreightReference{
+						"fake-warehouse": {Name: "new-freight"},
+					},
+					VerificationHistory: []kargoapi.VerificationInfo{{
+						Phase:      kargoapi.VerificationPhaseSuccessful,
+						FinishTime: &finished,
+					}},
+				}},
+			},
+		}
+	}
+
+	scheme := runtime.NewScheme()
+	require.NoError(t, kargoapi.AddToScheme(scheme))
+
+	// newClient returns a client holding the Freight leaving and the Freight
+	// entering the Stage, which records each Freight status write in order.
+	newClient := func(patched *[]string) client.Client {
+		return fake.NewClientBuilder().
+			WithScheme(scheme).
+			WithObjects(
+				&kargoapi.Freight{
+					ObjectMeta: metav1.ObjectMeta{Namespace: project, Name: "new-freight"},
+				},
+				&kargoapi.Freight{
+					ObjectMeta: metav1.ObjectMeta{Namespace: project, Name: "old-freight"},
+					Status: kargoapi.FreightStatus{
+						CurrentlyIn: map[string]kargoapi.CurrentStage{"fake-stage": {Since: &since}},
+						VerifiedIn:  map[string]kargoapi.VerifiedStage{"fake-stage": {}},
+					},
+				},
+			).
+			WithIndex(
+				&kargoapi.Freight{},
+				indexer.FreightByCurrentStagesField,
+				indexer.FreightByCurrentStages,
+			).
+			WithStatusSubresource(&kargoapi.Freight{}).
+			WithInterceptorFuncs(interceptor.Funcs{
+				SubResourcePatch: func(
+					ctx context.Context,
+					c client.Client,
+					sub string,
+					obj client.Object,
+					p client.Patch,
+					opts ...client.SubResourcePatchOption,
+				) error {
+					*patched = append(*patched, obj.GetName())
+					return c.SubResource(sub).Patch(ctx, obj, p, opts...)
+				},
+			}).
+			Build()
+	}
+
+	getFreight := func(t *testing.T, c client.Client, name string) *kargoapi.Freight {
+		f := &kargoapi.Freight{}
+		require.NoError(t, c.Get(t.Context(), types.NamespacedName{Namespace: project, Name: name}, f))
+		return f
+	}
+
+	t.Run("verified in the same pass: two writes, not three", func(t *testing.T) {
+		var patched []string
+		c := newClient(&patched)
+		r := &RegularStageReconciler{client: c}
+
+		require.NoError(t, r.syncFreight(t.Context(), newStage(kargoapi.HealthStateHealthy)))
+		// The Freight downstream Stages wait on is written first.
+		require.Equal(t, []string{"new-freight", "old-freight"}, patched)
+
+		f := getFreight(t, c, "new-freight")
+		require.Contains(t, f.Status.CurrentlyIn, "fake-stage")
+		require.Contains(t, f.Status.VerifiedIn, "fake-stage")
+		require.Equal(t, finished.Unix(), f.Status.VerifiedIn["fake-stage"].VerifiedAt.Unix())
+		require.NotContains(t, getFreight(t, c, "old-freight").Status.CurrentlyIn, "fake-stage")
+
+		// Nothing left to write.
+		patched = nil
+		require.NoError(t, r.syncFreight(t.Context(), newStage(kargoapi.HealthStateHealthy)))
+		require.Empty(t, patched)
+	})
+
+	t.Run("verified in a later pass: currentlyIn first, verifiedIn after", func(t *testing.T) {
+		var patched []string
+		c := newClient(&patched)
+		r := &RegularStageReconciler{client: c}
+
+		require.NoError(t, r.syncFreight(t.Context(), newStage(kargoapi.HealthStateProgressing)))
+		require.Equal(t, []string{"new-freight", "old-freight"}, patched)
+		f := getFreight(t, c, "new-freight")
+		require.Contains(t, f.Status.CurrentlyIn, "fake-stage")
+		require.NotContains(t, f.Status.VerifiedIn, "fake-stage")
+		firstSince := f.Status.CurrentlyIn["fake-stage"].Since
+
+		patched = nil
+		require.NoError(t, r.syncFreight(t.Context(), newStage(kargoapi.HealthStateHealthy)))
+		require.Equal(t, []string{"new-freight"}, patched)
+		f = getFreight(t, c, "new-freight")
+		require.Contains(t, f.Status.VerifiedIn, "fake-stage")
+		// The existing currentlyIn entry is left alone.
+		require.Equal(t, firstSince.Unix(), f.Status.CurrentlyIn["fake-stage"].Since.Unix())
+	})
+
+	t.Run("verified without a finish time: verifiedAt falls back to now", func(t *testing.T) {
+		var patched []string
+		c := newClient(&patched)
+		r := &RegularStageReconciler{client: c}
+
+		stage := newStage(kargoapi.HealthStateHealthy)
+		stage.Status.FreightHistory[0].VerificationHistory[0].FinishTime = nil
+		before := time.Now().Truncate(time.Second)
+		require.NoError(t, r.syncFreight(t.Context(), stage))
+		f := getFreight(t, c, "new-freight")
+		require.Contains(t, f.Status.VerifiedIn, "fake-stage")
+		require.False(t, f.Status.VerifiedIn["fake-stage"].VerifiedAt.Time.Before(before))
+	})
+}
+
+func Test_freightVerifiedAt(t *testing.T) {
+	finished := metav1.NewTime(time.Now().Truncate(time.Second))
+	healthy := &kargoapi.Health{Status: kargoapi.HealthStateHealthy}
+	withVerifications := func(h *kargoapi.Health, vis ...kargoapi.VerificationInfo) *kargoapi.Stage {
+		return &kargoapi.Stage{
+			Status: kargoapi.StageStatus{
+				Health: h,
+				FreightHistory: kargoapi.FreightHistory{{
+					Freight: map[string]kargoapi.FreightReference{
+						"fake-warehouse": {Name: "fake-freight"},
+					},
+					VerificationHistory: vis,
+				}},
+			},
+		}
+	}
+	successful := kargoapi.VerificationInfo{
+		Phase:      kargoapi.VerificationPhaseSuccessful,
+		FinishTime: &finished,
+	}
+
+	testCases := []struct {
+		name     string
+		stage    *kargoapi.Stage
+		verified bool
+		at       time.Time
+	}{
+		{
+			name:  "nil health",
+			stage: withVerifications(nil, successful),
+		},
+		{
+			name:  "unhealthy",
+			stage: withVerifications(&kargoapi.Health{Status: kargoapi.HealthStateUnhealthy}, successful),
+		},
+		{
+			name:  "no current Freight",
+			stage: &kargoapi.Stage{Status: kargoapi.StageStatus{Health: healthy}},
+		},
+		{
+			name:  "no verification yet",
+			stage: withVerifications(healthy),
+		},
+		{
+			name:  "verification running",
+			stage: withVerifications(healthy, kargoapi.VerificationInfo{Phase: kargoapi.VerificationPhaseRunning}),
+		},
+		{
+			name:  "verification failed",
+			stage: withVerifications(healthy, kargoapi.VerificationInfo{Phase: kargoapi.VerificationPhaseFailed}),
+		},
+		{
+			name:     "healthy and verified",
+			stage:    withVerifications(healthy, successful),
+			verified: true,
+			at:       finished.Time,
+		},
+		{
+			name: "verified without a finish time",
+			stage: withVerifications(
+				healthy,
+				kargoapi.VerificationInfo{Phase: kargoapi.VerificationPhaseSuccessful},
+			),
+			verified: true,
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			at, ok := freightVerifiedAt(testCase.stage)
+			require.Equal(t, testCase.verified, ok)
+			require.Equal(t, testCase.at.Unix(), at.Unix())
 		})
 	}
 }
@@ -4250,434 +4461,6 @@ func TestRegularStageReconciler_verifyStageFreight(t *testing.T) {
 
 			status, err := r.verifyStageFreight(t.Context(), tt.stage, startTime, fixedEndTime)
 			tt.assertions(t, c, recorder, status, err)
-		})
-	}
-}
-
-func TestRegularStageReconciler_markFreightVerifiedForStage(t *testing.T) {
-	scheme := runtime.NewScheme()
-	require.NoError(t, kargoapi.AddToScheme(scheme))
-
-	endTime := metav1.Now()
-
-	tests := []struct {
-		name       string
-		stage      *kargoapi.Stage
-		objects    []client.Object
-		assertions func(*testing.T, client.Client, kargoapi.StageStatus, error)
-	}{
-		{
-			name: "skips verification when unhealthy",
-			stage: &kargoapi.Stage{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "fake-project",
-					Name:      "test-stage",
-				},
-				Status: kargoapi.StageStatus{
-					Health: &kargoapi.Health{
-						Status: kargoapi.HealthStateUnhealthy,
-					},
-					FreightHistory: kargoapi.FreightHistory{
-						{
-							ID: "test-collection",
-							Freight: map[string]kargoapi.FreightReference{
-								"warehouse": {Name: "test-freight"},
-							},
-							VerificationHistory: []kargoapi.VerificationInfo{
-								{
-									Phase: kargoapi.VerificationPhaseSuccessful,
-								},
-							},
-						},
-					},
-				},
-			},
-			assertions: func(t *testing.T, _ client.Client, status kargoapi.StageStatus, err error) {
-				require.NoError(t, err)
-				// Status should remain unchanged
-				assert.Equal(t, kargoapi.HealthStateUnhealthy, status.Health.Status)
-			},
-		},
-		{
-			name: "skips verification when no current freight",
-			stage: &kargoapi.Stage{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "fake-project",
-					Name:      "test-stage",
-				},
-				Status: kargoapi.StageStatus{
-					Health: &kargoapi.Health{
-						Status: kargoapi.HealthStateHealthy,
-					},
-				},
-			},
-			assertions: func(t *testing.T, _ client.Client, _ kargoapi.StageStatus, err error) {
-				require.NoError(t, err)
-			},
-		},
-		{
-			name: "skips verification when non-terminal verification exists",
-			stage: &kargoapi.Stage{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "fake-project",
-					Name:      "test-stage",
-				},
-				Status: kargoapi.StageStatus{
-					Health: &kargoapi.Health{
-						Status: kargoapi.HealthStateHealthy,
-					},
-					FreightHistory: kargoapi.FreightHistory{
-						{
-							ID: "test-collection",
-							Freight: map[string]kargoapi.FreightReference{
-								"warehouse": {Name: "test-freight"},
-							},
-							VerificationHistory: []kargoapi.VerificationInfo{
-								{
-									Phase: kargoapi.VerificationPhaseRunning,
-								},
-							},
-						},
-					},
-				},
-			},
-			assertions: func(t *testing.T, _ client.Client, _ kargoapi.StageStatus, err error) {
-				require.NoError(t, err)
-			},
-		},
-		{
-			name: "skips verification when last verification is not successful",
-			stage: &kargoapi.Stage{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "fake-project",
-					Name:      "test-stage",
-				},
-				Status: kargoapi.StageStatus{
-					Health: &kargoapi.Health{
-						Status: kargoapi.HealthStateHealthy,
-					},
-					FreightHistory: kargoapi.FreightHistory{
-						{
-							ID: "test-collection",
-							Freight: map[string]kargoapi.FreightReference{
-								"warehouse": {Name: "test-freight"},
-							},
-							VerificationHistory: []kargoapi.VerificationInfo{
-								{
-									Phase: kargoapi.VerificationPhaseFailed,
-								},
-							},
-						},
-					},
-				},
-			},
-			assertions: func(t *testing.T, _ client.Client, _ kargoapi.StageStatus, err error) {
-				require.NoError(t, err)
-			},
-		},
-		{
-			name: "handles freight not found",
-			stage: &kargoapi.Stage{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "fake-project",
-					Name:      "test-stage",
-				},
-				Status: kargoapi.StageStatus{
-					Health: &kargoapi.Health{
-						Status: kargoapi.HealthStateHealthy,
-					},
-					FreightHistory: kargoapi.FreightHistory{
-						{
-							ID: "test-collection",
-							Freight: map[string]kargoapi.FreightReference{
-								"warehouse": {Name: "missing-freight"},
-							},
-							VerificationHistory: []kargoapi.VerificationInfo{
-								{
-									Phase: kargoapi.VerificationPhaseSuccessful,
-								},
-							},
-						},
-					},
-				},
-			},
-			assertions: func(t *testing.T, _ client.Client, _ kargoapi.StageStatus, err error) {
-				require.ErrorContains(t, err, "error getting Freight")
-			},
-		},
-		{
-			name: "marks freight as verified when not already verified",
-			stage: &kargoapi.Stage{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "fake-project",
-					Name:      "test-stage",
-				},
-				Status: kargoapi.StageStatus{
-					Health: &kargoapi.Health{
-						Status: kargoapi.HealthStateHealthy,
-					},
-					FreightHistory: kargoapi.FreightHistory{
-						{
-							ID: "test-collection",
-							Freight: map[string]kargoapi.FreightReference{
-								"warehouse": {Name: "test-freight"},
-							},
-							VerificationHistory: []kargoapi.VerificationInfo{
-								{
-									Phase:      kargoapi.VerificationPhaseSuccessful,
-									FinishTime: endTime.DeepCopy(),
-								},
-							},
-						},
-					},
-				},
-			},
-			objects: []client.Object{
-				&kargoapi.Freight{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "fake-project",
-						Name:      "test-freight",
-					},
-				},
-			},
-			assertions: func(t *testing.T, c client.Client, _ kargoapi.StageStatus, err error) {
-				require.NoError(t, err)
-
-				// Check if freight was properly marked as verified
-				freight := &kargoapi.Freight{}
-				require.NoError(t, c.Get(t.Context(), client.ObjectKey{
-					Namespace: "fake-project",
-					Name:      "test-freight",
-				}, freight))
-
-				verifiedStage, ok := freight.Status.VerifiedIn["test-stage"]
-				require.True(t, ok)
-				assert.Equal(t, endTime.Unix(), verifiedStage.VerifiedAt.Unix())
-			},
-		},
-		{
-			name: "skips already verified freight",
-			stage: &kargoapi.Stage{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "fake-project",
-					Name:      "test-stage",
-				},
-				Status: kargoapi.StageStatus{
-					Health: &kargoapi.Health{
-						Status: kargoapi.HealthStateHealthy,
-					},
-					FreightHistory: kargoapi.FreightHistory{
-						{
-							ID: "test-collection",
-							Freight: map[string]kargoapi.FreightReference{
-								"warehouse": {Name: "test-freight"},
-							},
-							VerificationHistory: []kargoapi.VerificationInfo{
-								{
-									Phase: kargoapi.VerificationPhaseSuccessful,
-								},
-							},
-						},
-					},
-				},
-			},
-			objects: []client.Object{
-				&kargoapi.Freight{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "fake-project",
-						Name:      "test-freight",
-					},
-					Status: kargoapi.FreightStatus{
-						VerifiedIn: map[string]kargoapi.VerifiedStage{
-							"test-stage": {},
-						},
-					},
-				},
-			},
-			assertions: func(t *testing.T, c client.Client, _ kargoapi.StageStatus, err error) {
-				require.NoError(t, err)
-
-				// Verify no changes were made to the freight
-				freight := &kargoapi.Freight{}
-				require.NoError(t, c.Get(t.Context(), client.ObjectKey{
-					Namespace: "fake-project",
-					Name:      "test-freight",
-				}, freight))
-				assert.Len(t, freight.Status.VerifiedIn, 1)
-			},
-		},
-		{
-			name: "handles multiple freight references",
-			stage: &kargoapi.Stage{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "fake-project",
-					Name:      "test-stage",
-				},
-				Status: kargoapi.StageStatus{
-					Health: &kargoapi.Health{
-						Status: kargoapi.HealthStateHealthy,
-					},
-					FreightHistory: kargoapi.FreightHistory{
-						{
-							ID: "test-collection",
-							Freight: map[string]kargoapi.FreightReference{
-								"warehouse1": {Name: "freight-1"},
-								"warehouse2": {Name: "freight-2"},
-							},
-							VerificationHistory: []kargoapi.VerificationInfo{
-								{
-									Phase:      kargoapi.VerificationPhaseSuccessful,
-									FinishTime: ptr.To(endTime.Rfc3339Copy()),
-								},
-							},
-						},
-					},
-				},
-			},
-			objects: []client.Object{
-				&kargoapi.Freight{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "fake-project",
-						Name:      "freight-1",
-					},
-					Status: kargoapi.FreightStatus{},
-				},
-				&kargoapi.Freight{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "fake-project",
-						Name:      "freight-2",
-					},
-					Status: kargoapi.FreightStatus{},
-				},
-			},
-			assertions: func(t *testing.T, c client.Client, _ kargoapi.StageStatus, err error) {
-				require.NoError(t, err)
-
-				// Check both freight objects were marked as verified
-				for _, name := range []string{"freight-1", "freight-2"} {
-					freight := &kargoapi.Freight{}
-					require.NoError(t, c.Get(t.Context(), client.ObjectKey{
-						Namespace: "fake-project",
-						Name:      name,
-					}, freight))
-
-					verifiedStage, ok := freight.Status.VerifiedIn["test-stage"]
-					require.True(t, ok, "freight %s should be verified", name)
-					assert.Equal(t, endTime.Unix(), verifiedStage.VerifiedAt.Unix())
-				}
-			},
-		},
-		{
-			name: "handles patch error",
-			stage: &kargoapi.Stage{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "fake-project",
-					Name:      "test-stage",
-				},
-				Status: kargoapi.StageStatus{
-					Health: &kargoapi.Health{
-						Status: kargoapi.HealthStateHealthy,
-					},
-					FreightHistory: kargoapi.FreightHistory{
-						{
-							ID: "test-collection",
-							Freight: map[string]kargoapi.FreightReference{
-								"warehouse": {Name: "test-freight"},
-							},
-							VerificationHistory: []kargoapi.VerificationInfo{
-								{
-									Phase:      kargoapi.VerificationPhaseSuccessful,
-									FinishTime: &metav1.Time{Time: endTime.Time},
-								},
-							},
-						},
-					},
-				},
-			},
-			objects: []client.Object{
-				&kargoapi.Freight{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace:       "fake-project",
-						Name:            "test-freight",
-						ResourceVersion: "invalid", // This will cause patch to fail
-					},
-				},
-			},
-			assertions: func(t *testing.T, _ client.Client, _ kargoapi.StageStatus, err error) {
-				require.ErrorContains(t, err, "error marking Freight")
-			},
-		},
-		{
-			name: "empty verification history skips verification",
-			stage: &kargoapi.Stage{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "fake-project",
-					Name:      "test-stage",
-				},
-				Status: kargoapi.StageStatus{
-					Health: &kargoapi.Health{
-						Status: kargoapi.HealthStateHealthy,
-					},
-					FreightHistory: kargoapi.FreightHistory{
-						{
-							ID: "test-collection",
-							Freight: map[string]kargoapi.FreightReference{
-								"warehouse": {Name: "test-freight"},
-							},
-							VerificationHistory: []kargoapi.VerificationInfo{},
-						},
-					},
-				},
-			},
-			assertions: func(t *testing.T, _ client.Client, _ kargoapi.StageStatus, err error) {
-				require.NoError(t, err)
-			},
-		},
-		{
-			name: "nil health status skips verification",
-			stage: &kargoapi.Stage{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "fake-project",
-					Name:      "test-stage",
-				},
-				Status: kargoapi.StageStatus{
-					Health: nil,
-					FreightHistory: kargoapi.FreightHistory{
-						{
-							ID: "test-collection",
-							Freight: map[string]kargoapi.FreightReference{
-								"warehouse": {Name: "test-freight"},
-							},
-							VerificationHistory: []kargoapi.VerificationInfo{
-								{
-									Phase: kargoapi.VerificationPhaseSuccessful,
-								},
-							},
-						},
-					},
-				},
-			},
-			assertions: func(t *testing.T, _ client.Client, _ kargoapi.StageStatus, err error) {
-				require.NoError(t, err)
-			},
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			c := fake.NewClientBuilder().
-				WithScheme(scheme).
-				WithObjects(tt.objects...).
-				WithStatusSubresource(&kargoapi.Stage{}, &kargoapi.Freight{}).
-				Build()
-
-			r := &RegularStageReconciler{
-				client:        c,
-				healthChecker: &health.MockAggregatingChecker{},
-			}
-
-			status, err := r.markFreightVerifiedForStage(t.Context(), tt.stage)
-			tt.assertions(t, c, status, err)
 		})
 	}
 }

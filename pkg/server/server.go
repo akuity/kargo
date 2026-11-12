@@ -34,6 +34,7 @@ import (
 	"github.com/akuity/kargo/pkg/server/config"
 	"github.com/akuity/kargo/pkg/server/dex"
 	"github.com/akuity/kargo/pkg/server/kubernetes"
+	"github.com/akuity/kargo/pkg/server/promotionrollouts"
 	"github.com/akuity/kargo/pkg/server/rbac"
 	"github.com/akuity/kargo/pkg/server/targets"
 )
@@ -147,6 +148,13 @@ type server struct {
 	// when the server runs without one.
 	listTargetsFn func(context.Context, string) ([]kargoapi.Target, error)
 
+	// rolloutCreator creates the PromotionRollouts the promote endpoints
+	// yield for a target-aware Stage when this server creates rollouts; see
+	// config.ServerConfig.PromotionRolloutsEnabled. It is nil when the server
+	// does not, or runs without a database. The PromotionRollout endpoints
+	// share it.
+	rolloutCreator promotionrollouts.Creator
+
 	// Special authorizations:
 	authorizeFn func(
 		ctx context.Context,
@@ -197,6 +205,9 @@ func NewServer(
 	if store := s.targetStore(); store != nil {
 		s.listTargetsFn = func(ctx context.Context, project string) ([]kargoapi.Target, error) {
 			return targets.ListFromStore(ctx, store, project)
+		}
+		if cfg.PromotionRolloutsEnabled {
+			s.rolloutCreator = promotionrollouts.NewCreator(s.rolloutStore(), store)
 		}
 	}
 	s.getAnalysisTemplateFn = rollouts.GetAnalysisTemplate

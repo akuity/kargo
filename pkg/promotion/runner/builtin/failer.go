@@ -8,7 +8,7 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/promotion"
-	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
+	"github.com/akuity/kargo/pkg/x/promotion/stepconfig"
 )
 
 const stepKindFail = "fail"
@@ -51,7 +51,7 @@ func (f *failer) Run(
 }
 
 func (f *failer) run(
-	cfg builtin.FailConfig,
+	cfg stepconfig.FailConfig,
 ) (promotion.StepResult, error) {
 	err := fmt.Errorf("failed")
 	if cfg.Message != "" {
@@ -62,6 +62,6 @@ func (f *failer) run(
 		&promotion.TerminalError{Err: err}
 }
 
-func (f *failer) convert(cfg promotion.Config) (builtin.FailConfig, error) {
-	return validateAndConvert[builtin.FailConfig](f.schemaLoader, cfg, stepKindFail)
+func (f *failer) convert(cfg promotion.Config) (stepconfig.FailConfig, error) {
+	return validateAndConvert[stepconfig.FailConfig](f.schemaLoader, cfg, stepKindFail)
 }
