@@ -461,6 +461,16 @@ func (a *argocdUpdater) mustPerformUpdate(
 
 	status := app.Status.OperationState
 	if status == nil {
+		// Argo CD records an operation's state only once its controller starts
+		// the operation, and syncApplication clears the previous operation's
+		// state when it requests a new one. So if the Application still carries
+		// the operation this Promotion requested, Argo CD hasn't started it yet.
+		// Requesting it again would clear the state the controller may be
+		// writing at this very moment, which can make it start the sync over.
+		if app.Operation != nil && isOperationForPromotion(*app.Operation, stepCtx.Promotion) {
+			logger.Info("operation requested for this promotion has not started yet")
+			return argocd.OperationRunning, false, nil
+		}
 		// The application has no operation.
 		logger.Info("no current operation found")
 		return "", true, nil
@@ -492,14 +502,7 @@ func (a *argocdUpdater) mustPerformUpdate(
 
 	// Deal with the possibility that the operation was not initiated for the
 	// current freight collection. i.e. Not related to the current promotion.
-	var correctPromotionIDFound bool
-	for _, info := range status.Operation.Info {
-		if info.Name == promotionInfoKey {
-			correctPromotionIDFound = info.Value == stepCtx.Promotion
-			break
-		}
-	}
-	if !correctPromotionIDFound {
+	if !isOperationForPromotion(status.Operation, stepCtx.Promotion) {
 		logger.Info("current operation was not initiated for this promotion")
 		// The operation was not initiated for the current Promotion.
 		if !status.Phase.Completed() {
@@ -569,6 +572,18 @@ func (a *argocdUpdater) mustPerformUpdate(
 
 	// The operation has completed.
 	return status.Phase, false, nil
+}
+
+// isOperationForPromotion returns true if the given operation was initiated by
+// Kargo for the given Promotion, based on the info key we set on all Kargo
+// initiated operations.
+func isOperationForPromotion(op argocd.Operation, promotionName string) bool {
+	for _, info := range op.Info {
+		if info != nil && info.Name == promotionInfoKey {
+			return info.Value == promotionName
+		}
+	}
+	return false
 }
 
 // isKargoInitiatedOperation returns true if the given operation was initiated
