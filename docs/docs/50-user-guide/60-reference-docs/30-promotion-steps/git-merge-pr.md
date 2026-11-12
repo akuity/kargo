@@ -55,6 +55,10 @@ attempting a merge, so Kargo cannot determine in advance whether a PR is blocked
 by conflicts, failing checks, or other conditions. As a result, Kargo will
 attempt the merge regardless, which may fail unexpectedly.
 
+When Bitbucket Cloud accepts a merge but completes it in the background, the
+step reports the PR as not yet merged instead of failing. With `wait: true`,
+it picks up the completed merge on its next attempt.
+
 :::
 
 ### Merge Method
