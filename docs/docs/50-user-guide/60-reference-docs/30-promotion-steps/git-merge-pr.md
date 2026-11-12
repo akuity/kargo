@@ -56,8 +56,9 @@ by conflicts, failing checks, or other conditions. As a result, Kargo will
 attempt the merge regardless, which may fail unexpectedly.
 
 When Bitbucket Cloud accepts a merge but completes it in the background, the
-step reports the PR as not yet merged instead of failing. With `wait: true`,
-it picks up the completed merge on its next attempt.
+PR is treated as not yet merged. With `wait: true`, the step keeps running and
+picks up the completed merge on its next attempt. Without it, the step fails,
+as it does for any PR that isn't merged yet.
 
 :::
 

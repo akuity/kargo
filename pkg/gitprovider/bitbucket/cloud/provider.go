@@ -350,14 +350,16 @@ func (p *provider) MergePullRequest(
 	// request as merged if it already is, or as not merged yet, so that a
 	// caller that waits (e.g. git-merge-pr with wait: true) checks again later.
 	if mergeResp.StatusCode() == http.StatusAccepted {
-		recheckResp, err := p.client.GetRepositoriesWorkspaceRepoSlugPullrequestsPullRequestIdWithResponse(
+		recheckResp, recheckErr := p.client.GetRepositoriesWorkspaceRepoSlugPullrequestsPullRequestIdWithResponse(
 			ctx,
 			p.owner,
 			p.repoSlug,
 			prID,
 		)
-		if err != nil {
-			return nil, false, fmt.Errorf("error getting pull request %d after merging: %w", id, err)
+		if recheckErr != nil {
+			return nil, false, fmt.Errorf(
+				"error getting pull request %d after merging: %w", id, recheckErr,
+			)
 		}
 		if recheckResp.JSON200 != nil && recheckResp.JSON200.State != nil &&
 			*recheckResp.JSON200.State == PullrequestStateMERGED {
