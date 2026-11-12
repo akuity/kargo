@@ -16,6 +16,63 @@ import (
 	libConfig "github.com/akuity/kargo/pkg/cli/config"
 )
 
+func TestNewCommand_loginMethodRequirement(t *testing.T) {
+	const errMethodRequired = "at least one of the flags in the group [admin sso] is required"
+	testCases := []struct {
+		name   string
+		config libConfig.CLIConfig
+		args   []string
+		assert func(*testing.T, error)
+	}{
+		{
+			name: "server specified",
+			config: libConfig.CLIConfig{
+				APIAddress: "https://kargo.example.com",
+				AuthMethod: authMethodSSO,
+			},
+			args: []string{"https://kargo.example.com"},
+			assert: func(t *testing.T, err error) {
+				require.ErrorContains(t, err, errMethodRequired)
+			},
+		},
+		{
+			name:   "no server specified and no stored method",
+			config: libConfig.CLIConfig{APIAddress: "https://kargo.example.com"},
+			assert: func(t *testing.T, err error) {
+				require.ErrorContains(t, err, errMethodRequired)
+			},
+		},
+		{
+			name: "no server specified and an unrecognized stored method",
+			config: libConfig.CLIConfig{
+				APIAddress: "https://kargo.example.com",
+				AuthMethod: "kubeconfig",
+			},
+			assert: func(t *testing.T, err error) {
+				require.ErrorContains(t, err, errMethodRequired)
+			},
+		},
+		{
+			name: "no server specified and a recognized stored method",
+			config: libConfig.CLIConfig{
+				APIAddress: "https://kargo.example.com",
+				AuthMethod: authMethodAdmin,
+			},
+			assert: func(t *testing.T, err error) {
+				require.NoError(t, err)
+			},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+			cmd := NewCommand(testCase.config)
+			require.NoError(t, cmd.PreRunE(cmd, testCase.args))
+			testCase.assert(t, cmd.ValidateFlagGroups())
+		})
+	}
+}
+
 func Test_loginOptions_complete(t *testing.T) {
 	testCases := []struct {
 		name   string
