@@ -155,6 +155,26 @@ fields:
         expressionFilter: annotations['org.opencontainers.image.vendor'] == 'Example'
   ```
 
+  :::warning
+
+  If an image lacks an annotation, `annotations['<key>']` evaluates to an empty
+  string. Comparisons such as `==` and `matches` handle that without error, but
+  functions that convert the value, such as `date()` or `int()`, fail on an
+  empty string. Any error while evaluating the expression stops discovery for
+  the entire Warehouse, so check that an annotation exists before converting it:
+
+  ```yaml
+  spec:
+    subscriptions:
+    - image:
+        repoURL: ghcr.io/example/app
+        expressionFilter: >-
+          'org.opencontainers.image.created' in annotations &&
+          date(annotations['org.opencontainers.image.created']) > date('2025-01-01')
+  ```
+
+  :::
+
 <a id="platform-constraint"></a>
 
 - `platform`: An optional identifier that constrains image selection to those
