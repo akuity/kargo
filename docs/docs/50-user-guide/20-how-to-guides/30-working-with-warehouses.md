@@ -141,7 +141,8 @@ fields:
   Evaluating the expression requires each candidate image's metadata, so,
   unlike `allowTagsRegexes`, it does not reduce the number of calls made to the
   registry. It may increase them, since more images may need to be checked
-  before `discoveryLimit` is reached.
+  before `discoveryLimit` is reached. If your tags are immutable, enabling
+  [`cacheByTag`](#cacheByTag) can significantly reduce these calls.
   :::
 
   Example:
