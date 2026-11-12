@@ -34,6 +34,16 @@ func TestNewBaseSelector(t *testing.T) {
 			},
 		},
 		{
+			name: "unknown variable in filter expression",
+			sub: kargoapi.ImageSubscription{
+				RepoURL:          "example/image",
+				ExpressionFilter: "annotation == 'approved'",
+			},
+			assertions: func(t *testing.T, _ *baseSelector, err error) {
+				require.ErrorContains(t, err, "error compiling filter expression")
+			},
+		},
+		{
 			name: "error creating repository client",
 			sub:  kargoapi.ImageSubscription{}, // No RepoURL
 			assertions: func(t *testing.T, _ *baseSelector, err error) {
@@ -118,7 +128,7 @@ func Test_baseSelector_imagesToAPIImages(t *testing.T) {
 	)
 }
 
-func Test_baseSelector_matchesFilterExpression(t *testing.T) {
+func Test_matchesFilterExpression(t *testing.T) {
 	createdAt := time.Date(2025, 6, 1, 0, 0, 0, 0, time.UTC)
 	img := image{
 		Tag:         "v1.0.0",
@@ -182,7 +192,7 @@ func Test_baseSelector_matchesFilterExpression(t *testing.T) {
 				false,
 			)
 			require.NoError(t, err)
-			matched, err := s.matchesFilterExpression(img)
+			matched, err := matchesFilterExpression(s.filterExpression, img, nil)
 			testCase.assertions(t, matched, err)
 		})
 	}

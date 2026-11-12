@@ -3,6 +3,7 @@ package image
 import (
 	"fmt"
 	"strconv"
+	"time"
 
 	"github.com/expr-lang/expr"
 	"github.com/expr-lang/expr/vm"
@@ -37,7 +38,15 @@ func newBaseSelector(
 		}
 	}
 	if sub.ExpressionFilter != "" {
-		if s.filterExpression, err = expr.Compile(sub.ExpressionFilter); err != nil {
+		if s.filterExpression, err = expr.Compile(
+			sub.ExpressionFilter,
+			expr.Env(map[string]any{
+				"tag":         "",
+				"digest":      "",
+				"annotations": map[string]string{},
+				"createdAt":   (*time.Time)(nil),
+			}),
+		); err != nil {
 			return nil, fmt.Errorf("error compiling filter expression: %w", err)
 		}
 	}
@@ -67,22 +76,26 @@ func (b *baseSelector) getLoggerContext() []any {
 	}
 }
 
-// matchesFilterExpression evaluates the selector's filter expression, if any,
+// matchesFilterExpression evaluates the provided filter expression, if any,
 // against the provided image's tag, digest, annotations, and creation time. If
 // the expression does not evaluate to a boolean, the result is converted to a
 // boolean using strconv.ParseBool. If the conversion fails, an error is
 // returned.
-func (b *baseSelector) matchesFilterExpression(img image) (bool, error) {
-	if b.filterExpression == nil {
+func matchesFilterExpression(
+	filter *vm.Program,
+	img image,
+	pc *platformConstraint,
+) (bool, error) {
+	if filter == nil {
 		return true, nil
 	}
 	env := map[string]any{
 		"tag":         img.Tag,
 		"digest":      img.Digest,
-		"annotations": img.getAnnotations(b.platformConstraint),
+		"annotations": img.getAnnotations(pc),
 		"createdAt":   img.CreatedAt,
 	}
-	result, err := expr.Run(b.filterExpression, env)
+	result, err := expr.Run(filter, env)
 	if err != nil {
 		return false, fmt.Errorf("error evaluating filter expression: %w", err)
 	}

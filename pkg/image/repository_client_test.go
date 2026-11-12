@@ -233,6 +233,7 @@ func Test_repositoryClient_getImageByTag(t *testing.T) {
 				t.Context(),
 				testTag,
 				testCase.platformConstraint,
+				nil,
 			)
 			testCase.assertions(t, img, err)
 		})

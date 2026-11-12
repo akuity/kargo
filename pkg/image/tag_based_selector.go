@@ -127,23 +127,15 @@ func (t *tagBasedSelector) getImagesByTags(
 			break
 		}
 
-		image, err := t.repoClient.getImageByTag(ctx, tag, t.platformConstraint)
+		image, err := t.repoClient.getImageByTag(ctx, tag, t.platformConstraint, t.filterExpression)
 		if err != nil {
 			return nil, fmt.Errorf("error retrieving image with tag %q: %w", tag, err)
 		}
 		if image == nil {
 			logger.Trace(
-				"image was found, but did not match platform constraint",
+				"image was found, but did not match platform constraint or filter expression",
 				"tag", tag,
 			)
-			continue
-		}
-		matched, err := t.matchesFilterExpression(*image)
-		if err != nil {
-			return nil, fmt.Errorf("error filtering image with tag %q: %w", tag, err)
-		}
-		if !matched {
-			logger.Trace("image did not match filter expression", "tag", tag)
 			continue
 		}
 
