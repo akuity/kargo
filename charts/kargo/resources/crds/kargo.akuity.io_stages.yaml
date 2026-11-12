@@ -3502,6 +3502,41 @@ spec:
                 required:
                 - name
                 type: object
+              lastPromotionRollout:
+                description: |-
+                  LastPromotionRollout is a reference to the last PromotionRollout whose
+                  outcome this Stage has recorded. It is absent for a Stage that governs no
+                  Targets, and only ever moves forward: its number marks how far through
+                  its PromotionRollouts the Stage has read.
+                properties:
+                  finishedAt:
+                    description: FinishedAt is the time at which the PromotionRollout
+                      completed.
+                    format: date-time
+                    type: string
+                  message:
+                    description: |-
+                      Message is a human-readable description of how the PromotionRollout
+                      ended.
+                    type: string
+                  name:
+                    description: Name is the name of the PromotionRollout.
+                    type: string
+                  number:
+                    description: |-
+                      Number is the PromotionRollout's position among its Stage's rollouts,
+                      counting from 1.
+                    format: int64
+                    minimum: 1
+                    type: integer
+                  phase:
+                    description: Phase is a high-level summary of the PromotionRollout's
+                      lifecycle.
+                    type: string
+                required:
+                - name
+                - number
+                type: object
               metadata:
                 additionalProperties:
                   x-kubernetes-preserve-unknown-fields: true

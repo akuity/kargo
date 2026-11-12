@@ -151,6 +151,7 @@ export * from './promotionRequestUpdateStrategy';
 export * from './promotionRollout';
 export * from './promotionRolloutList';
 export * from './promotionRolloutPhase';
+export * from './promotionRolloutReference';
 export * from './promotionRolloutSpec';
 export * from './promotionRolloutStatus';
 export * from './promotionRolloutSummary';
