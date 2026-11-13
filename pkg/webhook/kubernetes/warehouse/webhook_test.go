@@ -718,12 +718,11 @@ func Test_webhook_ValidateUpdate(t *testing.T) {
 			},
 		},
 		{
-			// For example, a refresh. The old object predates defaults that the new
-			// one has been given.
+			// For example, a refresh
 			name:    "invalid spec kept by update that changes only metadata",
 			webhook: &webhook{},
 			oldRaw: `{"spec":{"subscriptions":[
-				{"chart":{"repoURL":"bogus","constraint":"<1.1.0"}}
+				{"chart":{"repoURL":"bogus","discoveryLimit":20,"constraint":"<1.1.0"}}
 			]}}`,
 			newRaw: `{"metadata":{"annotations":{"foo":"bar"}},"spec":{"subscriptions":[
 				{"chart":{"repoURL":"bogus","discoveryLimit":20,"constraint":"<1.1.0"}}

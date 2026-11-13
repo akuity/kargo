@@ -8,8 +8,6 @@ import (
 	"reflect"
 	"strings"
 
-	jsonpatchapply "github.com/evanphx/json-patch/v5"
-	jsonpatch "gomodules.xyz/jsonpatch/v2"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	k8sValidation "k8s.io/apimachinery/pkg/util/validation"
@@ -154,69 +152,21 @@ func (w *webhook) ValidateDelete(
 // specChanged reports whether the update in the admission request in ctx
 // changes the Warehouse's spec. The raw objects are compared, because decoding
 // a Warehouse silently drops subscription fields that aren't defined by the
-// subscription's type. The old object is first given the defaults that the
-// defaulting webhook has already given the new one, so that defaults
-// introduced since the old object was last written don't count as changes. If
-// ctx carries no admission request, or the old object can't be defaulted, the
-// spec is assumed to have changed.
+// subscription's type. If ctx carries no admission request, or either object
+// can't be decoded, the spec is assumed to have changed.
 func (w *webhook) specChanged(ctx context.Context) bool {
 	req, err := admission.RequestFromContext(ctx)
-	if err != nil {
-		return true
-	}
-	oldRaw, err := w.defaultRaw(ctx, req.OldObject.Raw)
 	if err != nil {
 		return true
 	}
 	var oldObj, newObj struct {
 		Spec any `json:"spec"`
 	}
-	if json.Unmarshal(oldRaw, &oldObj) != nil ||
+	if json.Unmarshal(req.OldObject.Raw, &oldObj) != nil ||
 		json.Unmarshal(req.Object.Raw, &newObj) != nil {
 		return true
 	}
 	return !reflect.DeepEqual(oldObj.Spec, newObj.Spec)
-}
-
-// defaultRaw applies Default() to the raw, JSON-encoded Warehouse the same way
-// the defaulting webhook does: by patching the raw Warehouse with the
-// difference that Default() makes to the decoded one. Fields that decoding
-// drops are left intact.
-func (w *webhook) defaultRaw(ctx context.Context, raw []byte) ([]byte, error) {
-	warehouse := &kargoapi.Warehouse{}
-	if err := json.Unmarshal(raw, warehouse); err != nil {
-		return nil, fmt.Errorf("error decoding Warehouse: %w", err)
-	}
-	before, err := json.Marshal(warehouse)
-	if err != nil {
-		return nil, fmt.Errorf("error encoding Warehouse: %w", err)
-	}
-	if err = w.Default(ctx, warehouse); err != nil {
-		return nil, fmt.Errorf("error defaulting Warehouse: %w", err)
-	}
-	after, err := json.Marshal(warehouse)
-	if err != nil {
-		return nil, fmt.Errorf("error encoding defaulted Warehouse: %w", err)
-	}
-	ops, err := jsonpatch.CreatePatch(before, after)
-	if err != nil {
-		return nil, fmt.Errorf("error computing defaults patch: %w", err)
-	}
-	if len(ops) == 0 {
-		return raw, nil
-	}
-	opsJSON, err := json.Marshal(ops)
-	if err != nil {
-		return nil, fmt.Errorf("error encoding defaults patch: %w", err)
-	}
-	patch, err := jsonpatchapply.DecodePatch(opsJSON)
-	if err != nil {
-		return nil, fmt.Errorf("error decoding defaults patch: %w", err)
-	}
-	if raw, err = patch.Apply(raw); err != nil {
-		return nil, fmt.Errorf("error applying defaults patch: %w", err)
-	}
-	return raw, nil
 }
 
 func (w *webhook) validateSpec(
