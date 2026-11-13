@@ -211,6 +211,11 @@ func TestSchemas(t *testing.T) {
 			cfg:     `{"repoURL":"ghcr.io/akuity/kargo","platform":"linux/amd64/fake-variant"}`,
 		},
 		{
+			name:    "image platform with dotted variant",
+			subType: "image",
+			cfg:     `{"repoURL":"ghcr.io/akuity/kargo","platform":"linux/arm64/v8.1"}`,
+		},
+		{
 			name:      "image repoURL empty",
 			subType:   "image",
 			cfg:       `{"repoURL":""}`,
