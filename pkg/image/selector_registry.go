@@ -20,6 +20,7 @@ type (
 	// selectorFactor is a function that returns an implementation of Selector.
 	selectorFactory = func(
 		kargoapi.ImageSubscription,
+		int,
 		*Credentials,
 	) (Selector, error)
 

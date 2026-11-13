@@ -23,7 +23,6 @@ func Test_imageSubscriber_ApplySubscriptionDefaults(t *testing.T) {
 		require.Equal(t, kargoapi.ImageSelectionStrategySemVer, sub.Image.ImageSelectionStrategy)
 		require.NotNil(t, sub.Image.StrictSemvers)
 		require.True(t, *sub.Image.StrictSemvers)
-		require.Equal(t, int64(20), sub.Image.DiscoveryLimit)
 	})
 
 	t.Run("preserves non-zero values", func(t *testing.T) {
@@ -172,17 +171,14 @@ func Test_imageSubscriber_ValidateSubscription(t *testing.T) {
 			},
 		},
 		{
-			name: "DiscoveryLimit too small",
+			name: "DiscoveryLimit lower bound is not validated",
 			sub: kargoapi.ImageSubscription{
 				RepoURL:        "ghcr.io/akuity/kargo",
 				CacheByTag:     true,
 				DiscoveryLimit: 0,
 			},
 			assertions: func(t *testing.T, errs field.ErrorList) {
-				require.NotNil(t, errs)
-				require.True(t, len(errs) > 0)
-				require.Equal(t, "image.discoveryLimit", errs[0].Field)
-				require.Equal(t, field.ErrorTypeInvalid, errs[0].Type)
+				require.Nil(t, errs)
 			},
 		},
 		{
@@ -291,6 +287,7 @@ func Test_imageSubscriber_DiscoverArtifacts(t *testing.T) {
 				newSelectorFn: func(
 					_ context.Context,
 					_ kargoapi.ImageSubscription,
+					_ int,
 					creds *image.Credentials,
 				) (image.Selector, error) {
 					require.NotNil(t, creds)
@@ -317,6 +314,7 @@ func Test_imageSubscriber_DiscoverArtifacts(t *testing.T) {
 				newSelectorFn: func(
 					_ context.Context,
 					_ kargoapi.ImageSubscription,
+					_ int,
 					creds *image.Credentials,
 				) (image.Selector, error) {
 					require.Nil(t, creds)
@@ -342,6 +340,7 @@ func Test_imageSubscriber_DiscoverArtifacts(t *testing.T) {
 				newSelectorFn: func(
 					_ context.Context,
 					sub kargoapi.ImageSubscription,
+					_ int,
 					_ *image.Credentials,
 				) (image.Selector, error) {
 					require.False(t, sub.CacheByTag)
@@ -368,6 +367,7 @@ func Test_imageSubscriber_DiscoverArtifacts(t *testing.T) {
 				newSelectorFn: func(
 					_ context.Context,
 					sub kargoapi.ImageSubscription,
+					_ int,
 					_ *image.Credentials,
 				) (image.Selector, error) {
 					require.True(t, sub.CacheByTag)
@@ -406,6 +406,7 @@ func Test_imageSubscriber_DiscoverArtifacts(t *testing.T) {
 				newSelectorFn: func(
 					_ context.Context,
 					sub kargoapi.ImageSubscription,
+					_ int,
 					_ *image.Credentials,
 				) (image.Selector, error) {
 					require.True(t, sub.CacheByTag)
@@ -434,6 +435,7 @@ func Test_imageSubscriber_DiscoverArtifacts(t *testing.T) {
 				newSelectorFn: func(
 					_ context.Context,
 					sub kargoapi.ImageSubscription,
+					_ int,
 					_ *image.Credentials,
 				) (image.Selector, error) {
 					require.True(t, sub.CacheByTag)
@@ -456,6 +458,7 @@ func Test_imageSubscriber_DiscoverArtifacts(t *testing.T) {
 				newSelectorFn: func(
 					context.Context,
 					kargoapi.ImageSubscription,
+					int,
 					*image.Credentials,
 				) (image.Selector, error) {
 					return nil, errors.New("something went wrong")
@@ -475,6 +478,7 @@ func Test_imageSubscriber_DiscoverArtifacts(t *testing.T) {
 				newSelectorFn: func(
 					context.Context,
 					kargoapi.ImageSubscription,
+					int,
 					*image.Credentials,
 				) (image.Selector, error) {
 					return &fakeImageSelector{
@@ -498,6 +502,7 @@ func Test_imageSubscriber_DiscoverArtifacts(t *testing.T) {
 				newSelectorFn: func(
 					context.Context,
 					kargoapi.ImageSubscription,
+					int,
 					*image.Credentials,
 				) (image.Selector, error) {
 					return &fakeImageSelector{
@@ -535,6 +540,7 @@ func Test_imageSubscriber_DiscoverArtifacts(t *testing.T) {
 				newSelectorFn: func(
 					context.Context,
 					kargoapi.ImageSubscription,
+					int,
 					*image.Credentials,
 				) (image.Selector, error) {
 					return &fakeImageSelector{

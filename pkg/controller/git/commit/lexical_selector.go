@@ -30,9 +30,10 @@ type lexicalSelector struct {
 
 func newLexicalSelector(
 	sub kargoapi.GitSubscription,
+	discoveryLimit int,
 	creds *git.RepoCredentials,
 ) (Selector, error) {
-	tagBased, err := newTagBasedSelector(sub, creds)
+	tagBased, err := newTagBasedSelector(sub, discoveryLimit, creds)
 	if err != nil {
 		return nil, fmt.Errorf("error building tag based selector: %w", err)
 	}
