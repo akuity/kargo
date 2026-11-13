@@ -49,12 +49,14 @@ func TestNewServer(t *testing.T) {
 		),
 		testSender,
 		nil,
+		nil,
 	).(*server)
 
 	require.True(t, ok)
 	require.NotNil(t, s)
 	require.Same(t, testClient, s.client)
 	require.Nil(t, s.db)
+	require.Nil(t, s.events)
 	require.NotNil(t, testClient, s.rolesDB)
 	require.Same(t, testSender, s.sender)
 	require.Equal(t, testServerConfig, s.cfg)
@@ -114,7 +116,14 @@ func TestNewServer_rolloutCreator(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			s, ok := NewServer(testCase.cfg, testClient, nil, nil, testCase.db).(*server)
+			s, ok := NewServer(
+				testCase.cfg,
+				testClient,
+				nil,
+				nil,
+				testCase.db,
+				nil,
+			).(*server)
 			require.True(t, ok)
 			require.Equal(t, testCase.db != nil, s.listTargetsFn != nil)
 			require.Equal(t, testCase.wired, s.rolloutCreator != nil)
