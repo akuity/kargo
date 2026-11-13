@@ -788,6 +788,8 @@ controller:
       maxConcurrentReconciles:
       ## @param controller.reconcilers.warehouses.minReconciliationInterval optionally sets the minimum reconciliation interval for Warehouse resources. Accepts duration format (e.g., "5m", "1h", "30s"). If a Warehouse specifies an interval lower than this minimum, the minimum value will be enforced instead. If not set, no minimum is enforced.
       minReconciliationInterval: "5m0s"
+      ## @param controller.reconcilers.warehouses.discoveryTimeout bounds artifact discovery for each Warehouse subscription. Accepts duration format (e.g., "10m", "1h"). Discovery that runs longer fails and is retried with backoff. "0s" disables the bound.
+      discoveryTimeout: "10m0s"
 
   gitClient:
     ## @param controller.gitClient.name Specifies the name of the Kargo controller (used when authoring Git commits).

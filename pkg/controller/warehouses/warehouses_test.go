@@ -1163,6 +1163,134 @@ func TestDiscoverArtifacts(t *testing.T) {
 			},
 		},
 		{
+			name: "subscription exceeds discovery timeout",
+			reconciler: &reconciler{
+				cfg: ReconcilerConfig{DiscoveryTimeout: 10 * time.Millisecond},
+				subscriberRegistry: subscription.MustNewSubscriberRegistry(
+					subscription.SubscriberRegistration{
+						Predicate: func(
+							context.Context,
+							kargoapi.RepoSubscription,
+						) (bool, error) {
+							return true, nil
+						},
+						Value: func(
+							context.Context,
+							credentials.Database,
+						) (subscription.Subscriber, error) {
+							return &subscription.MockSubscriber{
+								DiscoverArtifactsFn: func(
+									ctx context.Context,
+									_ string,
+									_ kargoapi.RepoSubscription,
+									_ any,
+								) (any, error) {
+									select {
+									case <-ctx.Done():
+										return nil, ctx.Err()
+									case <-time.After(time.Second):
+										return nil, errors.New("subscriber context not canceled")
+									}
+								},
+							}, nil
+						},
+					},
+				),
+			},
+			assertions: func(
+				t *testing.T,
+				discoveredArtifacts *kargoapi.DiscoveredArtifacts,
+				err error,
+			) {
+				require.ErrorIs(t, err, context.DeadlineExceeded)
+				require.ErrorContains(t, err, "exceeded 10ms (WAREHOUSE_DISCOVERY_TIMEOUT)")
+				require.Nil(t, discoveredArtifacts)
+			},
+		},
+		{
+			name: "subscription completes within discovery timeout",
+			reconciler: &reconciler{
+				cfg: ReconcilerConfig{DiscoveryTimeout: time.Minute},
+				subscriberRegistry: subscription.MustNewSubscriberRegistry(
+					subscription.SubscriberRegistration{
+						Predicate: func(
+							context.Context,
+							kargoapi.RepoSubscription,
+						) (bool, error) {
+							return true, nil
+						},
+						Value: func(
+							context.Context,
+							credentials.Database,
+						) (subscription.Subscriber, error) {
+							return &subscription.MockSubscriber{
+								DiscoverArtifactsFn: func(
+									ctx context.Context,
+									_ string,
+									_ kargoapi.RepoSubscription,
+									_ any,
+								) (any, error) {
+									if _, ok := ctx.Deadline(); !ok {
+										return nil, errors.New("subscriber context has no deadline")
+									}
+									return kargoapi.GitDiscoveryResult{}, nil
+								},
+							}, nil
+						},
+					},
+				),
+			},
+			assertions: func(
+				t *testing.T,
+				discoveredArtifacts *kargoapi.DiscoveredArtifacts,
+				err error,
+			) {
+				require.NoError(t, err)
+				require.Len(t, discoveredArtifacts.Git, 1)
+			},
+		},
+		{
+			name: "discovery timeout disabled",
+			reconciler: &reconciler{
+				subscriberRegistry: subscription.MustNewSubscriberRegistry(
+					subscription.SubscriberRegistration{
+						Predicate: func(
+							context.Context,
+							kargoapi.RepoSubscription,
+						) (bool, error) {
+							return true, nil
+						},
+						Value: func(
+							context.Context,
+							credentials.Database,
+						) (subscription.Subscriber, error) {
+							return &subscription.MockSubscriber{
+								DiscoverArtifactsFn: func(
+									ctx context.Context,
+									_ string,
+									_ kargoapi.RepoSubscription,
+									_ any,
+								) (any, error) {
+									if _, ok := ctx.Deadline(); ok {
+										return nil, errors.New("subscriber context has a deadline")
+									}
+									return kargoapi.GitDiscoveryResult{}, nil
+								},
+							}, nil
+						},
+					},
+				),
+			},
+			assertions: func(
+				t *testing.T,
+				discoveredArtifacts *kargoapi.DiscoveredArtifacts,
+				err error,
+			) {
+				require.NoError(t, err)
+				require.Len(t, discoveredArtifacts.Git, 1)
+			},
+		},
+		{
 			name: "success -- chart",
 			reconciler: &reconciler{
 				subscriberRegistry: subscription.MustNewSubscriberRegistry(
