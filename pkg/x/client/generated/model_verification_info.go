@@ -31,6 +31,8 @@ type VerificationInfo struct {
 	Message *string `json:"message,omitempty"`
 	// Phase describes the current phase of the Verification process. Generally, this will be a reflection of the underlying AnalysisRun's phase, however, there are exceptions to this, such as in the case where an AnalysisRun cannot be launched successfully.
 	Phase *string `json:"phase,omitempty"`
+	// PromotionName is an optional name of promotion which triggered verification
+	PromotionName *string `json:"promotionName,omitempty"`
 	// StartTime is the time at which the Verification process was started.
 	StartTime *string `json:"startTime,omitempty"`
 }
@@ -244,6 +246,38 @@ func (o *VerificationInfo) SetPhase(v string) {
 	o.Phase = &v
 }
 
+// GetPromotionName returns the PromotionName field value if set, zero value otherwise.
+func (o *VerificationInfo) GetPromotionName() string {
+	if o == nil || IsNil(o.PromotionName) {
+		var ret string
+		return ret
+	}
+	return *o.PromotionName
+}
+
+// GetPromotionNameOk returns a tuple with the PromotionName field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *VerificationInfo) GetPromotionNameOk() (*string, bool) {
+	if o == nil || IsNil(o.PromotionName) {
+		return nil, false
+	}
+	return o.PromotionName, true
+}
+
+// HasPromotionName returns a boolean if a field has been set.
+func (o *VerificationInfo) HasPromotionName() bool {
+	if o != nil && !IsNil(o.PromotionName) {
+		return true
+	}
+
+	return false
+}
+
+// SetPromotionName gets a reference to the given string and assigns it to the PromotionName field.
+func (o *VerificationInfo) SetPromotionName(v string) {
+	o.PromotionName = &v
+}
+
 // GetStartTime returns the StartTime field value if set, zero value otherwise.
 func (o *VerificationInfo) GetStartTime() string {
 	if o == nil || IsNil(o.StartTime) {
@@ -303,6 +337,9 @@ func (o VerificationInfo) ToMap() (map[string]interface{}, error) {
 	}
 	if !IsNil(o.Phase) {
 		toSerialize["phase"] = o.Phase
+	}
+	if !IsNil(o.PromotionName) {
+		toSerialize["promotionName"] = o.PromotionName
 	}
 	if !IsNil(o.StartTime) {
 		toSerialize["startTime"] = o.StartTime
