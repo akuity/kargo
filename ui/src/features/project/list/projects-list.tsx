@@ -1,14 +1,18 @@
 import { faStar, faUser } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { keepPreviousData } from '@tanstack/react-query';
 import { Empty, Flex, Pagination, Space, Tag, Tooltip } from 'antd';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 
 import { LoadingState } from '@ui/features/common';
 import { useListProjects } from '@ui/gen/api/v2/core/core';
 
 import { useLocalStorage } from '../../../utils/use-local-storage';
 
+import { buildLabelSelector } from './label-selector';
 import { ProjectItem } from './project-item/project-item';
+import { ProjectLabelFilter } from './project-label-filter';
 import { ProjectListFilter } from './project-list-filter';
 import * as styles from './projects-list.module.less';
 import { useStarProjects } from './use-star-projects';
@@ -17,9 +21,14 @@ const PAGE_SIZE_KEY = 'projects-page-size';
 const PAGE_NUMBER_KEY = 'projects-page-number';
 
 export const ProjectsList = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [pageSize, setPageSize] = useLocalStorage(PAGE_SIZE_KEY, 10);
   const [page, setPage] = useLocalStorage(PAGE_NUMBER_KEY, 1);
   const [filter, setFilter] = useState('');
+
+  // The selected "key=value" label pairs are stored in the URL (one `label`
+  // query param per pair) so the filter is shareable and applied on load.
+  const selectedLabels = useMemo(() => searchParams.getAll('label'), [searchParams]);
   const [starredProjectsView, setStarredProjectsView] = useLocalStorage(
     'starred-projects-view',
     false
@@ -28,13 +37,21 @@ export const ProjectsList = () => {
 
   const [starred, toggleStar] = useStarProjects();
 
-  const { data, isLoading } = useListProjects({
-    pageSize,
-    page: page - 1,
-    filter,
-    uid: starredProjectsView ? starred : undefined,
-    mine: myProjectsView || undefined
-  });
+  const labelSelector = buildLabelSelector(selectedLabels);
+
+  // Keep the current list on screen while a changed filter, search or page
+  // loads, instead of swapping the whole page (filters included) for a spinner.
+  const { data, isLoading, isPlaceholderData } = useListProjects(
+    {
+      pageSize,
+      page: page - 1,
+      filter,
+      labelSelector: labelSelector || undefined,
+      uid: starredProjectsView ? starred : undefined,
+      mine: myProjectsView || undefined
+    },
+    { query: { placeholderData: keepPreviousData } }
+  );
 
   const projects = data?.data?.items ?? [];
   const total = data?.data?.total ?? 0;
@@ -55,6 +72,16 @@ export const ProjectsList = () => {
     setPage(1);
   };
 
+  const handleLabelChange = (pairs: string[]) => {
+    const nextParams = new URLSearchParams(searchParams);
+    nextParams.delete('label');
+    for (const pair of pairs) {
+      nextParams.append('label', pair);
+    }
+    setSearchParams(nextParams);
+    setPage(1);
+  };
+
   if (isLoading) return <LoadingState />;
 
   const isEmpty = projects.length === 0;
@@ -64,6 +91,7 @@ export const ProjectsList = () => {
       <>
         <Flex align='center' className='mb-20' gap={8}>
           <ProjectListFilter onChange={handleFilterChange} init={filter} />
+          <ProjectLabelFilter value={selectedLabels} onChange={handleLabelChange} />
           <Space className='ml-auto'>
             <Tooltip title='Shows projects you have been explicitly granted access to. Broad system-level permissions (e.g. kargo-admin) do not qualify.'>
               <Tag.CheckableTag
@@ -104,6 +132,7 @@ export const ProjectsList = () => {
     <>
       <Flex align='center' className='mb-6' gap={8}>
         <ProjectListFilter onChange={handleFilterChange} init={filter} />
+        <ProjectLabelFilter value={selectedLabels} onChange={handleLabelChange} />
         <Space className='ml-auto'>
           <Tooltip title='Shows projects you have been explicitly granted access to. Broad system-level permissions (e.g. kargo-admin) do not qualify.'>
             <Tag.CheckableTag
@@ -129,13 +158,23 @@ export const ProjectsList = () => {
           </Tag.CheckableTag>
         </Space>
       </Flex>
-      <div className={styles.list}>
+      <div
+        className={styles.list}
+        style={{ opacity: isPlaceholderData ? 0.5 : 1, transition: 'opacity 0.2s' }}
+      >
         {projects.map((proj) => (
           <ProjectItem
             key={proj?.metadata?.name}
             project={proj}
             starred={starred.includes(proj?.metadata?.uid || '')}
             onToggleStar={(id) => toggleStar(id)}
+            onLabelClick={(key, value) => {
+              // Adds the label to the filter (OR'd with other values of its key).
+              const pair = `${key}=${value}`;
+              if (!selectedLabels.includes(pair)) {
+                handleLabelChange([...selectedLabels, pair]);
+              }
+            }}
           />
         ))}
       </div>

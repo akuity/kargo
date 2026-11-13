@@ -8,15 +8,18 @@ import { DESCRIPTION_ANNOTATION_KEY } from '@ui/features/common/utils';
 import type { Project } from '@ui/gen/api/v2/models';
 
 import * as styles from './project-item.module.less';
+import { ProjectLabels } from './project-labels';
 
 export const ProjectItem = ({
   project,
   starred,
-  onToggleStar
+  onToggleStar,
+  onLabelClick
 }: {
   project?: Project;
   starred: boolean;
   onToggleStar: (id: string) => void;
+  onLabelClick?: (key: string, value: string) => void;
 }) => {
   const stagesStats = project?.status?.stats?.stages;
   const warehousesStats = project?.status?.stats?.warehouses;
@@ -30,13 +33,14 @@ export const ProjectItem = ({
       to={generatePath(paths.project, { name: project?.metadata?.name })}
     >
       <Flex align='start' justify='space-between' gap={2}>
-        <div>
+        <div className='min-w-0 flex-1'>
           <Typography.Title level={4} className='!mb-1'>
             {project?.metadata?.name}
           </Typography.Title>
           <Typography.Paragraph type='secondary' className='!mb-0'>
             {project?.metadata?.annotations?.[DESCRIPTION_ANNOTATION_KEY]}
           </Typography.Paragraph>
+          <ProjectLabels labels={project?.metadata?.labels} onLabelClick={onLabelClick} />
         </div>
 
         <Button
