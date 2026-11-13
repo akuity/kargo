@@ -133,23 +133,28 @@ export const Verifications = ({ verifications, images }: Props) => {
         />
         <Table.Column<(typeof verifications)[number]>
           title='Freight'
-          render={(val, verification) => {
-            const freights = verification?.freight?.items;
-            const freight = Object.values(freights || {})?.[0];
+          render={(_, verification) => {
+            const namespace = verification?.analysisRun?.namespace;
+            // A Stage fed by several Warehouses verifies one Freight per Warehouse at once.
+            const freightNames = Object.values(verification?.freight?.items || {})
+              .map((freight) => freight?.name)
+              .filter((name): name is string => !!name);
 
-            if (!verification?.analysisRun?.namespace || !freight?.name) {
+            if (!namespace || freightNames.length === 0) {
               return null;
             }
 
             return (
-              <ReactRouterLink
-                to={generatePath(paths.freight, {
-                  name: verification?.analysisRun?.namespace,
-                  freightName: freight?.name
-                })}
-              >
-                {getShortFreightLabel(freight.name, getAlias(freightMap[freight.name]))}
-              </ReactRouterLink>
+              <Flex vertical>
+                {freightNames.map((freightName) => (
+                  <ReactRouterLink
+                    key={freightName}
+                    to={generatePath(paths.freight, { name: namespace, freightName })}
+                  >
+                    {getShortFreightLabel(freightName, getAlias(freightMap[freightName]))}
+                  </ReactRouterLink>
+                ))}
+              </Flex>
             );
           }}
         />
