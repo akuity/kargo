@@ -38,12 +38,20 @@ var ErrInvalidToken = libhttp.ErrorStr("invalid token", http.StatusUnauthorized)
 // issuer into a token, so it only says which Authenticator should verify the
 // token, never that the token is valid.
 func unverifiedIssuer(rawToken string) (string, bool) {
+	claims, ok := unverifiedClaims(rawToken)
+	return claims.Issuer, ok
+}
+
+// unverifiedClaims returns the registered claims of a JWT without verifying
+// the token, and false if the token is not a JWT at all. Nothing in them is
+// to be trusted until the token has been verified.
+func unverifiedClaims(rawToken string) (jwt.RegisteredClaims, bool) {
 	claims := jwt.RegisteredClaims{}
 	if _, _, err := jwt.NewParser(jwt.WithoutClaimsValidation()).
 		ParseUnverified(rawToken, &claims); err != nil {
-		return "", false
+		return jwt.RegisteredClaims{}, false
 	}
-	return claims.Issuer, true
+	return claims, true
 }
 
 // Authenticator resolves tokens of one kind to the identity behind them.
