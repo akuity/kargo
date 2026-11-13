@@ -21,9 +21,8 @@ const (
 	defaultUsername = "Kargo"
 	defaultEmail    = "no-reply@kargo.io"
 
-	repoDirConfigKey         = "kargo.repoDir"
-	repoHomeDirConfigKey     = "kargo.repoHomeDir"
-	repoOriginalURLConfigKey = "kargo.repoOriginalURL"
+	repoDirConfigKey     = "kargo.repoDir"
+	repoHomeDirConfigKey = "kargo.repoHomeDir"
 
 	// cmdWaitDelay is the grace period between context cancellation and
 	// forcible termination of a command. It also bounds how long Wait can
@@ -51,11 +50,7 @@ type baseRepo struct {
 	creds   *RepoCredentials
 	dir     string
 	homeDir string
-	// Store the URL two ways:
-	// 1. Exactly as it was originally provided
-	// 2. Modified in ways required for internal use by this type's methods
-	originalURL string
-	accessURL   string
+	url     string
 }
 
 // ClientOptions represents options for a repository-specific Git client.
@@ -76,7 +71,7 @@ func (b *baseRepo) setupDirs(ctx context.Context, baseDir string) error {
 	if b.homeDir, err = os.MkdirTemp(baseDir, "repo-"); err != nil {
 		return fmt.Errorf(
 			"error creating home directory for repo %q: %w",
-			b.originalURL, err,
+			b.url, err,
 		)
 	}
 	resolvedHomeDir, err := filepath.EvalSymlinks(b.homeDir)
@@ -303,14 +298,14 @@ func (b *baseRepo) setupAuth() error {
 	// credentials take precedence. Given a username without a password, git's
 	// HTTP client would first try an empty password, which servers record as a
 	// failed login...
-	lowerURL := strings.ToLower(b.accessURL)
+	lowerURL := strings.ToLower(b.url)
 	if strings.HasPrefix(lowerURL, "http://") || strings.HasPrefix(lowerURL, "https://") {
-		u, err := url.Parse(b.accessURL)
+		u, err := url.Parse(b.url)
 		if err != nil {
-			return fmt.Errorf("error parsing URL %q: %w", b.accessURL, err)
+			return fmt.Errorf("error parsing URL %q: %w", b.url, err)
 		}
 		u.User = nil
-		b.accessURL = u.String()
+		b.url = u.String()
 	}
 
 	return nil
@@ -330,18 +325,6 @@ func (b *baseRepo) saveDirs(ctx context.Context) error {
 		ctx, "config", repoHomeDirConfigKey, b.homeDir,
 	)); err != nil {
 		return fmt.Errorf("error saving repo home dir as config: %w", err)
-	}
-	return nil
-}
-
-// saveOriginalURL saves the original URL of the repository to the repository's
-// configuration. This is useful for reliably determining this information when
-// an existing repository or working tree is loaded from the file system.
-func (b *baseRepo) saveOriginalURL(ctx context.Context) error {
-	if _, err := libExec.Exec(b.buildGitCommand(
-		ctx, "config", repoOriginalURLConfigKey, b.originalURL,
-	)); err != nil {
-		return fmt.Errorf("error saving original URL as config: %w", err)
 	}
 	return nil
 }
@@ -442,24 +425,17 @@ func (b *baseRepo) reconcileGPGState(ctx context.Context) {
 	})
 }
 
-// loadURLs restores the repository's original and access URLs from the
-// repository's configuration. This is useful for reliably determining this
-// information when an existing repository or working tree is loaded from the
-// file system.
-func (b *baseRepo) loadURLs(ctx context.Context) error {
+// loadURL restores the repository's URL from the repository's configuration.
+// This is useful for reliably determining this information when an existing
+// repository or working tree is loaded from the file system.
+func (b *baseRepo) loadURL(ctx context.Context) error {
 	res, err := libExec.Exec(b.buildGitCommand(
-		ctx, "config", repoOriginalURLConfigKey,
+		ctx, "config", "remote.origin.url",
 	))
 	if err != nil {
-		return fmt.Errorf(`error getting original URL of remote "origin": %w`, err)
-	}
-	b.originalURL = strings.TrimSpace(string(res))
-	if res, err = libExec.Exec(b.buildGitCommand(
-		ctx, "config", "remote.origin.url",
-	)); err != nil {
 		return fmt.Errorf(`error getting URL of remote "origin": %w`, err)
 	}
-	b.accessURL = strings.TrimSpace(string(res))
+	b.url = strings.TrimSpace(string(res))
 	return nil
 }
 
@@ -533,7 +509,7 @@ func (b *baseRepo) RemoteBranchExists(
 		"ls-remote",
 		"--heads",
 		"--exit-code", // Return 2 if not found
-		b.accessURL,
+		b.url,
 		"refs/heads/"+branch,
 	))
 	var exitErr *libExec.ExitError
@@ -545,7 +521,7 @@ func (b *baseRepo) RemoteBranchExists(
 		return false, fmt.Errorf(
 			"error checking for existence of branch %q in remote repo %q: %w",
 			branch,
-			b.originalURL,
+			b.url,
 			err,
 		)
 	}
@@ -553,7 +529,7 @@ func (b *baseRepo) RemoteBranchExists(
 }
 
 func (b *baseRepo) URL() string {
-	return b.originalURL
+	return b.url
 }
 
 // setUltimateTrust sets ultimate trust (level 6) on a GPG key so that

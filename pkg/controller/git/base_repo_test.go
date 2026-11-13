@@ -315,53 +315,53 @@ func TestSetupAuth(t *testing.T) {
 		Password: "pass",
 	}
 	testCases := []struct {
-		name      string
-		accessURL string
-		creds     *RepoCredentials
-		assert    func(*testing.T, string, error)
+		name   string
+		url    string
+		creds  *RepoCredentials
+		assert func(*testing.T, string, error)
 	}{
 		{
-			name:      "no credentials",
-			accessURL: testURLWithCreds,
-			assert: func(t *testing.T, accessURL string, err error) {
+			name: "no credentials",
+			url:  testURLWithCreds,
+			assert: func(t *testing.T, url string, err error) {
 				require.NoError(t, err)
-				require.Equal(t, testURLWithCreds, accessURL)
+				require.Equal(t, testURLWithCreds, url)
 			},
 		},
 		{
-			name:      "no password",
-			accessURL: testURLWithCreds,
-			creds:     &RepoCredentials{Username: "user"},
-			assert: func(t *testing.T, accessURL string, err error) {
+			name:  "no password",
+			url:   testURLWithCreds,
+			creds: &RepoCredentials{Username: "user"},
+			assert: func(t *testing.T, url string, err error) {
 				require.NoError(t, err)
-				require.Equal(t, testURLWithCreds, accessURL)
+				require.Equal(t, testURLWithCreds, url)
 			},
 		},
 		{
-			name:      "no credentials in URL",
-			accessURL: testURLWithoutCreds,
-			creds:     testCreds,
-			assert: func(t *testing.T, accessURL string, err error) {
+			name:  "no credentials in URL",
+			url:   testURLWithoutCreds,
+			creds: testCreds,
+			assert: func(t *testing.T, url string, err error) {
 				require.NoError(t, err)
-				require.Equal(t, testURLWithoutCreds, accessURL)
+				require.Equal(t, testURLWithoutCreds, url)
 			},
 		},
 		{
-			name:      "username in URL",
-			accessURL: "https://bob@example.com/repo.git",
-			creds:     testCreds,
-			assert: func(t *testing.T, accessURL string, err error) {
+			name:  "username in URL",
+			url:   "https://bob@example.com/repo.git",
+			creds: testCreds,
+			assert: func(t *testing.T, url string, err error) {
 				require.NoError(t, err)
-				require.Equal(t, testURLWithoutCreds, accessURL)
+				require.Equal(t, testURLWithoutCreds, url)
 			},
 		},
 		{
-			name:      "username and password in URL",
-			accessURL: testURLWithCreds,
-			creds:     testCreds,
-			assert: func(t *testing.T, accessURL string, err error) {
+			name:  "username and password in URL",
+			url:   testURLWithCreds,
+			creds: testCreds,
+			assert: func(t *testing.T, url string, err error) {
 				require.NoError(t, err)
-				require.Equal(t, testURLWithoutCreds, accessURL)
+				require.Equal(t, testURLWithoutCreds, url)
 			},
 		},
 	}
@@ -369,11 +369,11 @@ func TestSetupAuth(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 			b := &baseRepo{
-				accessURL: testCase.accessURL,
-				creds:     testCase.creds,
+				url:   testCase.url,
+				creds: testCase.creds,
 			}
 			err := b.setupAuth()
-			testCase.assert(t, b.accessURL, err)
+			testCase.assert(t, b.url, err)
 		})
 	}
 }
@@ -421,7 +421,7 @@ func TestGitHTTPAuthNeverSendsEmptyPassword(t *testing.T) {
 	t.Cleanup(testServer.Close)
 
 	b := &baseRepo{
-		accessURL: testServer.URL + "/repo.git",
+		url: testServer.URL + "/repo.git",
 		creds: &RepoCredentials{
 			Username: testUsername,
 			Password: testPassword,
@@ -431,7 +431,7 @@ func TestGitHTTPAuthNeverSendsEmptyPassword(t *testing.T) {
 	}
 	require.NoError(t, b.setupAuth())
 
-	cmd := b.buildGitCommand(t.Context(), "ls-remote", b.accessURL)
+	cmd := b.buildGitCommand(t.Context(), "ls-remote", b.url)
 	cmd.Env = append(
 		cmd.Env,
 		// When a key repeats in Env, the last value wins

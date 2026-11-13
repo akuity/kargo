@@ -30,8 +30,7 @@ func TestBareRepo(t *testing.T) {
 	require.True(t, ok)
 
 	t.Run("can clone", func(t *testing.T) {
-		require.Equal(t, testRepoURL, r.originalURL)
-		require.Equal(t, testRepoURL, r.accessURL)
+		require.Equal(t, testRepoURL, r.url)
 		require.NotEmpty(t, r.homeDir)
 		var fi os.FileInfo
 		fi, err = os.Stat(r.homeDir)
@@ -44,7 +43,7 @@ func TestBareRepo(t *testing.T) {
 	})
 
 	t.Run("can get the repo url", func(t *testing.T) {
-		require.Equal(t, r.originalURL, r.URL())
+		require.Equal(t, r.url, r.URL())
 	})
 
 	t.Run("can get the home dir", func(t *testing.T) {

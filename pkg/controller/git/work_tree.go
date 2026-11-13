@@ -171,7 +171,7 @@ func LoadWorkTree(
 	if err = w.loadHomeDir(ctx); err != nil {
 		return nil, fmt.Errorf("error reading repo home dir from config: %w", err)
 	}
-	if err = w.loadURLs(ctx); err != nil {
+	if err = w.loadURL(ctx); err != nil {
 		return nil,
 			fmt.Errorf(`error reading URL of remote "origin" from config: %w`, err)
 	}
@@ -246,7 +246,7 @@ func (w *workTree) Checkout(ctx context.Context, branch string) error {
 	)); err != nil {
 		return fmt.Errorf(
 			"error checking out branch %q from repo %q: %w",
-			branch, w.originalURL, err,
+			branch, w.url, err,
 		)
 	}
 	return nil
@@ -348,7 +348,7 @@ func (w *workTree) CreateChildBranch(ctx context.Context, branch string) error {
 	)); err != nil {
 		return fmt.Errorf(
 			"error creating new branch %q for repo %q: %w",
-			branch, w.originalURL, err,
+			branch, w.url, err,
 		)
 	}
 	return nil
@@ -360,7 +360,7 @@ func (w *workTree) CreateOrphanedBranch(ctx context.Context, branch string) erro
 	)); err != nil {
 		return fmt.Errorf(
 			"error creating orphaned branch %q for repo %q: %w",
-			branch, w.originalURL, err,
+			branch, w.url, err,
 		)
 	}
 	return w.Clean(ctx)
@@ -396,7 +396,7 @@ func (w *workTree) CurrentBranch(ctx context.Context) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf(
 			"error checking current branch for repo %q: %w",
-			w.originalURL, err,
+			w.url, err,
 		)
 	}
 	return strings.TrimSpace(string(res)), nil
@@ -406,7 +406,7 @@ func (w *workTree) DeleteBranch(ctx context.Context, branch string) error {
 	if _, err := libExec.Exec(w.buildGitCommand(
 		ctx, "branch", "--delete", "--force", branch,
 	)); err != nil {
-		return fmt.Errorf("error deleting branch %q for repo %q: %w", branch, w.accessURL, err)
+		return fmt.Errorf("error deleting branch %q for repo %q: %w", branch, w.url, err)
 	}
 	return nil
 }
@@ -440,7 +440,7 @@ func (w *workTree) Fetch(ctx context.Context, opts *FetchOptions) error {
 	}
 	if _, err := libExec.Exec(w.buildGitCommand(ctx, args...)); err != nil {
 		return fmt.Errorf(
-			"error fetching from repo %q: %w", w.originalURL, err,
+			"error fetching from repo %q: %w", w.url, err,
 		)
 	}
 	return nil
@@ -591,7 +591,7 @@ func (w *workTree) ListCommits(
 	if err != nil {
 		return nil, fmt.Errorf(
 			"error listing commits for repo %q: %w",
-			w.originalURL, err,
+			w.url, err,
 		)
 	}
 
@@ -682,7 +682,7 @@ func (w *workTree) ListTags(ctx context.Context) ([]TagMetadata, error) {
 	)); err != nil {
 		return nil, fmt.Errorf(
 			"error fetching tags from repo %q: %w",
-			w.originalURL, err,
+			w.url, err,
 		)
 	}
 
@@ -722,7 +722,7 @@ func (w *workTree) ListTags(ctx context.Context) ([]TagMetadata, error) {
 	if err != nil {
 		return nil, fmt.Errorf(
 			"error listing tags for repo %q: %w",
-			w.originalURL, err,
+			w.url, err,
 		)
 	}
 
