@@ -937,6 +937,80 @@ func TestMergePullRequest(t *testing.T) {
 			},
 			expectedMerged: true,
 		},
+		{
+			// Bitbucket answers 202 when it finishes the merge in the background.
+			name:     "merge accepted asynchronously and already merged on re-read",
+			prNumber: 1234,
+			mockClient: func() *mockClient {
+				gets := 0
+				return &mockClient{
+					getPRFunc: func(
+						_ context.Context,
+						_, _ string,
+						_ int,
+						_ ...RequestEditorFn,
+					) (*GetRepositoriesWorkspaceRepoSlugPullrequestsPullRequestIdResponse, error) {
+						gets++
+						if gets == 1 {
+							return &GetRepositoriesWorkspaceRepoSlugPullrequestsPullRequestIdResponse{
+								JSON200: &Pullrequest{Id: intPtr(1234), State: statePtr(PullrequestStateOPEN)},
+							}, nil
+						}
+						return &GetRepositoriesWorkspaceRepoSlugPullrequestsPullRequestIdResponse{
+							JSON200: &Pullrequest{
+								Id:    intPtr(1234),
+								State: statePtr(PullrequestStateMERGED),
+								MergeCommit: &struct {
+									Hash *string `json:"hash,omitempty"`
+								}{Hash: strPtr("merge_sha")},
+							},
+						}, nil
+					},
+					mergePRFunc: func(
+						_ context.Context,
+						_, _ string,
+						_ int,
+						_ *PostRepositoriesWorkspaceRepoSlugPullrequestsPullRequestIdMergeParams,
+						_ PostRepositoriesWorkspaceRepoSlugPullrequestsPullRequestIdMergeJSONRequestBody,
+						_ ...RequestEditorFn,
+					) (*PostRepositoriesWorkspaceRepoSlugPullrequestsPullRequestIdMergeResponse, error) {
+						return &PostRepositoriesWorkspaceRepoSlugPullrequestsPullRequestIdMergeResponse{
+							HTTPResponse: &http.Response{StatusCode: http.StatusAccepted},
+						}, nil
+					},
+				}
+			}(),
+			expectedMerged: true,
+		},
+		{
+			name:     "merge accepted asynchronously and still in progress",
+			prNumber: 1234,
+			mockClient: &mockClient{
+				getPRFunc: func(
+					_ context.Context,
+					_, _ string,
+					_ int,
+					_ ...RequestEditorFn,
+				) (*GetRepositoriesWorkspaceRepoSlugPullrequestsPullRequestIdResponse, error) {
+					return &GetRepositoriesWorkspaceRepoSlugPullrequestsPullRequestIdResponse{
+						JSON200: &Pullrequest{Id: intPtr(1234), State: statePtr(PullrequestStateOPEN)},
+					}, nil
+				},
+				mergePRFunc: func(
+					_ context.Context,
+					_, _ string,
+					_ int,
+					_ *PostRepositoriesWorkspaceRepoSlugPullrequestsPullRequestIdMergeParams,
+					_ PostRepositoriesWorkspaceRepoSlugPullrequestsPullRequestIdMergeJSONRequestBody,
+					_ ...RequestEditorFn,
+				) (*PostRepositoriesWorkspaceRepoSlugPullrequestsPullRequestIdMergeResponse, error) {
+					return &PostRepositoriesWorkspaceRepoSlugPullrequestsPullRequestIdMergeResponse{
+						HTTPResponse: &http.Response{StatusCode: http.StatusAccepted},
+					}, nil
+				},
+			},
+			expectedMerged: false,
+		},
 	}
 
 	for _, tc := range testCases {

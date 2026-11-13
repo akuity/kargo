@@ -345,10 +345,27 @@ func (p *provider) MergePullRequest(
 		return nil, false, fmt.Errorf("error merging pull request %d: %w", id, err)
 	}
 
+	// Bitbucket answers 202 when the merge takes longer than its threshold and
+	// finishes it in the background. That is not a failure: report the pull
+	// request as merged if it already is, or as not merged yet, so that a
+	// caller that waits (e.g. git-merge-pr with wait: true) checks again later.
 	if mergeResp.StatusCode() == http.StatusAccepted {
-		return nil, false, fmt.Errorf(
-			"pull request %d merge was accepted asynchronously and cannot be awaited", id,
+		recheckResp, recheckErr := p.client.GetRepositoriesWorkspaceRepoSlugPullrequestsPullRequestIdWithResponse(
+			ctx,
+			p.owner,
+			p.repoSlug,
+			prID,
 		)
+		if recheckErr != nil {
+			return nil, false, fmt.Errorf(
+				"error getting pull request %d after merging: %w", id, recheckErr,
+			)
+		}
+		if recheckResp.JSON200 != nil && recheckResp.JSON200.State != nil &&
+			*recheckResp.JSON200.State == PullrequestStateMERGED {
+			return toProviderPR(recheckResp.JSON200), true, nil
+		}
+		return nil, false, nil
 	}
 
 	if mergeResp.JSON200 == nil {
