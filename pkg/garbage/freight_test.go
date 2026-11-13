@@ -94,6 +94,7 @@ func TestCleanProjectFreight(t *testing.T) {
 }
 
 func TestCleanWarehouseFreight(t *testing.T) {
+	var deleted []string
 	testCases := []struct {
 		name       string
 		collector  *collector
@@ -263,6 +264,59 @@ func TestCleanWarehouseFreight(t *testing.T) {
 			},
 			assertions: func(t *testing.T, err error) {
 				require.NoError(t, err)
+			},
+		},
+		{
+			name: "same-second Freight ordered by discovered-at annotation",
+			collector: &collector{
+				cfg: CollectorConfig{
+					MaxRetainedFreight:    1,
+					MinFreightDeletionAge: time.Minute,
+				},
+				listFreightFn: func(
+					_ context.Context,
+					objList client.ObjectList,
+					_ ...client.ListOption,
+				) error {
+					freight, ok := objList.(*kargoapi.FreightList)
+					require.True(t, ok)
+					sec := time.Now().Add(-time.Hour).Truncate(time.Second)
+					newFreight := func(name string, at time.Time) kargoapi.Freight {
+						return kargoapi.Freight{
+							ObjectMeta: metav1.ObjectMeta{
+								Name: name,
+								Annotations: map[string]string{
+									kargoapi.AnnotationKeyDiscoveredAt: at.Format(time.RFC3339Nano),
+								},
+							},
+							DiscoveredAt: &metav1.Time{Time: sec},
+						}
+					}
+					freight.Items = []kargoapi.Freight{
+						newFreight("older", sec.Add(100*time.Millisecond)),
+						newFreight("newer", sec.Add(900*time.Millisecond)),
+					}
+					return nil
+				},
+				listStagesFn: func(
+					context.Context,
+					client.ObjectList,
+					...client.ListOption,
+				) error {
+					return nil
+				},
+				deleteFreightFn: func(
+					_ context.Context,
+					obj client.Object,
+					_ ...client.DeleteOption,
+				) error {
+					deleted = append(deleted, obj.GetName())
+					return nil
+				},
+			},
+			assertions: func(t *testing.T, err error) {
+				require.NoError(t, err)
+				require.Equal(t, []string{"older"}, deleted)
 			},
 		},
 	}

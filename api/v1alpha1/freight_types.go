@@ -59,11 +59,22 @@ func (f *Freight) GetStatus() *FreightStatus {
 // EffectiveDiscoveredAt returns DiscoveredAt if set, falling back to
 // CreationTimestamp. Use this instead of CreationTimestamp directly whenever
 // the intent is to know when the Freight was first discovered.
+// AnnotationKeyDiscoveredAt supplies sub-second precision when it falls in the
+// same second.
 func (f *Freight) EffectiveDiscoveredAt() time.Time {
+	discoveredAt := f.CreationTimestamp.Time
 	if f.DiscoveredAt != nil {
-		return f.DiscoveredAt.Time
+		discoveredAt = f.DiscoveredAt.Time
 	}
-	return f.CreationTimestamp.Time
+	precise, err := time.Parse(
+		time.RFC3339Nano,
+		f.Annotations[AnnotationKeyDiscoveredAt],
+	)
+	if err == nil &&
+		precise.Truncate(time.Second).Equal(discoveredAt.Truncate(time.Second)) {
+		return precise
+	}
+	return discoveredAt
 }
 
 // GitCommit describes a specific commit from a specific Git repository.

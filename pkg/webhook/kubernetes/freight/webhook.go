@@ -140,6 +140,12 @@ func (w *webhook) Default(ctx context.Context, freight *kargoapi.Freight) error 
 			freight.DiscoveredAt = &freight.CreationTimestamp
 		} else {
 			freight.DiscoveredAt = new(metav1.Now())
+			// DiscoveredAt serializes to whole seconds.
+			if freight.Annotations == nil {
+				freight.Annotations = make(map[string]string, 1)
+			}
+			freight.Annotations[kargoapi.AnnotationKeyDiscoveredAt] =
+				freight.DiscoveredAt.UTC().Format(time.RFC3339Nano)
 		}
 	}
 
