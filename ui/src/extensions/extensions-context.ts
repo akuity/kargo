@@ -26,6 +26,8 @@ export const useExtensionsContext = () => {
     argoCDExtension:
       ctx?.extensions.filter((extension) => extension.type === 'argocdExtension')[0] || null,
     promotionStepExtensions:
-      ctx?.extensions.filter((extension) => extension.type === 'promotionStep') || []
+      ctx?.extensions.filter((extension) => extension.type === 'promotionStep') || [],
+    analysisRunExtension:
+      ctx?.extensions.filter((extension) => extension.type === 'analysisRun')[0] || null
   };
 };

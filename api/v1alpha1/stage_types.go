@@ -170,14 +170,21 @@ func (s *Stage) PromotionInProgress() bool {
 	return s != nil && (s.Status.CurrentPromotion != nil || s.Status.CurrentPromotionRequest != nil)
 }
 
-// LastPromotionName returns a name of last promotion or promotion request.
-// Empty if stage is nil or there is no last promotion or request.
+// LastPromotionName returns a name of last promotion, promotion rollout or
+// promotion request. Empty if stage is nil or there is no last promotion,
+// rollout or request.
 func (s *Stage) LastPromotionName() string {
 	if s == nil {
 		return ""
 	}
 	if s.Status.LastPromotion != nil {
 		return s.Status.LastPromotion.Name
+	}
+	// A Stage that fans out through PromotionRollouts may still carry the
+	// reference of a PromotionRequest from before it did, so the rollout comes
+	// first.
+	if s.Status.LastPromotionRollout != nil {
+		return s.Status.LastPromotionRollout.Name
 	}
 	if s.Status.LastPromotionRequest != nil {
 		return s.Status.LastPromotionRequest.Name
@@ -279,6 +286,11 @@ type StageSpec struct {
 	Targets *StageTargets `json:"targets,omitempty"`
 }
 
+type VerificationRunMode string
+
+const VerificationRunModePerStage = "PerStage"
+const VerificationRunModePerTarget = "PerTarget"
+
 // StageTargets describes the Targets a Stage governs.
 type StageTargets struct {
 	// Selectors select the Targets that the Stage governs, matching Targets by
@@ -293,7 +305,19 @@ type StageTargets struct {
 	// +listType=atomic
 	// +kubebuilder:validation:Required
 	Selectors []metav1.LabelSelector `json:"selectors"`
-	// UpdateStrategy configures the pace of updating the targets
+	// UpdateStrategy configures the pace of promoting the targets
+	// +optional
+	UpdateStrategy TargetUpdateStrategy `json:"updateStrategy,omitempty"`
+	// Verification configures mode and pace of target promotion verifications
+	// +optional
+	Verification *TargetVerificaitonSpec `json:"verification,omitempty"`
+}
+
+type TargetVerificaitonSpec struct {
+	// VerificationRunMode controls whether verifications run per-target or per-stage
+	// +optional
+	VerificationRunMode VerificationRunMode `json:"runMode,omitempty"`
+	// UpdateStrategy configures the pace of verification runs
 	// +optional
 	UpdateStrategy TargetUpdateStrategy `json:"updateStrategy,omitempty"`
 }
@@ -535,6 +559,13 @@ type StageStatus struct {
 	//
 	// +optional
 	LastPromotionRequest *PromotionRequestReference `json:"lastPromotionRequest,omitempty"`
+	// LastPromotionRollout is a reference to the last PromotionRollout whose
+	// outcome this Stage has recorded. It is absent for a Stage that governs no
+	// Targets, and only ever moves forward: its number marks how far through
+	// its PromotionRollouts the Stage has read.
+	//
+	// +optional
+	LastPromotionRollout *PromotionRolloutReference `json:"lastPromotionRollout,omitempty"`
 	// AutoPromotionEnabled indicates whether automatic promotion is enabled
 	// for the Stage based on the ProjectConfig.
 	AutoPromotionEnabled bool `json:"autoPromotionEnabled,omitempty"`
@@ -917,6 +948,27 @@ type PromotionRequestReference struct {
 	FinishedAt *metav1.Time `json:"finishedAt,omitempty"`
 }
 
+// PromotionRolloutReference contains the relevant information about a
+// PromotionRollout as observed by a Stage. A PromotionRollout is not a
+// Kubernetes resource, so the reference is how a reader of the Stage sees how
+// its last round of fan-out ended without asking the API server.
+type PromotionRolloutReference struct {
+	// Name is the name of the PromotionRollout.
+	Name string `json:"name"`
+	// Number is the PromotionRollout's position among its Stage's rollouts,
+	// counting from 1.
+	//
+	// +kubebuilder:validation:Minimum=1
+	Number int64 `json:"number"`
+	// Phase is a high-level summary of the PromotionRollout's lifecycle.
+	Phase PromotionRolloutPhase `json:"phase,omitempty"`
+	// Message is a human-readable description of how the PromotionRollout
+	// ended.
+	Message string `json:"message,omitempty"`
+	// FinishedAt is the time at which the PromotionRollout completed.
+	FinishedAt *metav1.Time `json:"finishedAt,omitempty"`
+}
+
 // Verification describes how to verify that a Promotion has been successful
 // using Argo Rollouts AnalysisTemplates.
 type Verification struct {
@@ -990,6 +1042,8 @@ type VerificationInfo struct {
 	AnalysisRun *AnalysisRunReference `json:"analysisRun,omitempty"`
 	// FinishTime is the time at which the Verification process finished.
 	FinishTime *metav1.Time `json:"finishTime,omitempty"`
+	// PromotionName is an optional name of promotion which triggered verification
+	PromotionName string `json:"promotionName,omitempty"`
 }
 
 // HasAnalysisRun returns a bool indicating whether the VerificationInfo has an
@@ -1039,6 +1093,11 @@ func (v *VerificationInfoStack) UpdateOrPush(info ...VerificationInfo) {
 	}
 }
 
+type AnalysisRunKind string
+
+const AnalysisRunKindRun = "argoproj.io/v1alpha1, Kind=AnalysisRun"
+const AnalysisRunKindLegacy = ""
+
 // AnalysisRunReference is a reference to an AnalysisRun.
 type AnalysisRunReference struct {
 	// Namespace is the namespace of the AnalysisRun.
@@ -1047,4 +1106,7 @@ type AnalysisRunReference struct {
 	Name string `json:"name"`
 	// Phase is the last observed phase of the AnalysisRun referenced by Name.
 	Phase string `json:"phase"`
+	// Kind is a string representation of GroupVersionKind describing this run
+	// For classic analysis run it is AnalysisRunKindRun or AnalysisRunKindLegacy (empty)
+	Kind AnalysisRunKind `json:"kind,omitempty"`
 }

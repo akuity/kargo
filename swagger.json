@@ -6840,6 +6840,10 @@
     "AnalysisRunReference": {
       "type": "object",
       "properties": {
+        "kind": {
+          "description": "Kind is a string representation of GroupVersionKind describing this run\nFor classic analysis run it is AnalysisRunKindRun or AnalysisRunKindLegacy (empty)",
+          "type": "string"
+        },
         "name": {
           "description": "Name is the name of the AnalysisRun.",
           "type": "string"
@@ -8712,6 +8716,35 @@
         "PromotionRolloutPhaseAborted"
       ]
     },
+    "PromotionRolloutReference": {
+      "type": "object",
+      "properties": {
+        "finishedAt": {
+          "description": "FinishedAt is the time at which the PromotionRollout completed.",
+          "type": "string"
+        },
+        "message": {
+          "description": "Message is a human-readable description of how the PromotionRollout\nended.",
+          "type": "string"
+        },
+        "name": {
+          "description": "Name is the name of the PromotionRollout.",
+          "type": "string"
+        },
+        "number": {
+          "description": "Number is the PromotionRollout's position among its Stage's rollouts,\ncounting from 1.\n\n+kubebuilder:validation:Minimum=1",
+          "type": "integer"
+        },
+        "phase": {
+          "description": "Phase is a high-level summary of the PromotionRollout's lifecycle.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/PromotionRolloutPhase"
+            }
+          ]
+        }
+      }
+    },
     "PromotionRolloutSpec": {
       "type": "object",
       "properties": {
@@ -9462,6 +9495,14 @@
             }
           ]
         },
+        "lastPromotionRollout": {
+          "description": "LastPromotionRollout is a reference to the last PromotionRollout whose\noutcome this Stage has recorded. It is absent for a Stage that governs no\nTargets, and only ever moves forward: its number marks how far through\nits PromotionRollouts the Stage has read.\n\n+optional",
+          "allOf": [
+            {
+              "$ref": "#/definitions/PromotionRolloutReference"
+            }
+          ]
+        },
         "metadata": {
           "description": "Metadata is a map of arbitrary metadata associated with the Stage.\nThis is useful for storing additional information about the Stage\nthat can be shared across promotions, verifications, or other processes.",
           "type": "object",
@@ -9492,10 +9533,18 @@
           }
         },
         "updateStrategy": {
-          "description": "UpdateStrategy configures the pace of updating the targets\n+optional",
+          "description": "UpdateStrategy configures the pace of promoting the targets\n+optional",
           "allOf": [
             {
               "$ref": "#/definitions/TargetUpdateStrategy"
+            }
+          ]
+        },
+        "verification": {
+          "description": "Verification configures mode and pace of target promotion verifications\n+optional",
+          "allOf": [
+            {
+              "$ref": "#/definitions/TargetVerificaitonSpec"
             }
           ]
         }
@@ -9657,6 +9706,23 @@
         }
       }
     },
+    "TargetVerificaitonSpec": {
+      "type": "object",
+      "properties": {
+        "runMode": {
+          "description": "VerificationRunMode controls whether verifications run per-target or per-stage\n+optional",
+          "type": "string"
+        },
+        "updateStrategy": {
+          "description": "UpdateStrategy configures the pace of verification runs\n+optional",
+          "allOf": [
+            {
+              "$ref": "#/definitions/TargetUpdateStrategy"
+            }
+          ]
+        }
+      }
+    },
     "Verification": {
       "type": "object",
       "properties": {
@@ -9713,6 +9779,10 @@
         },
         "phase": {
           "description": "Phase describes the current phase of the Verification process. Generally,\nthis will be a reflection of the underlying AnalysisRun's phase, however,\nthere are exceptions to this, such as in the case where an AnalysisRun\ncannot be launched successfully.",
+          "type": "string"
+        },
+        "promotionName": {
+          "description": "PromotionName is an optional name of promotion which triggered verification",
           "type": "string"
         },
         "startTime": {

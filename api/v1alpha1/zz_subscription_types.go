@@ -107,6 +107,10 @@ type ImageSubscription struct {
 	// the AllowTagsRegexes and IgnoreTagsRegexes fields. When left unspecified, the field is
 	// implicitly treated as if its value were "20". The upper limit for this field is 100.
 	DiscoveryLimit int64 `json:"discoveryLimit,omitempty"`
+	// ExpressionFilter is an expression that can optionally be used to limit the images that
+	// are considered in determining the newest image of interest based on their tags and
+	// metadata.
+	ExpressionFilter string `json:"expressionFilter,omitempty"`
 	// IgnoreTagsRegexes is a list of regular expressions that can optionally be used to exclude
 	// tags from consideration when determining the newest revision of an image. This field is
 	// optional.

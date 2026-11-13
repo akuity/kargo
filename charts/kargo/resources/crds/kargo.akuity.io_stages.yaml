@@ -456,7 +456,7 @@ spec:
                     type: array
                     x-kubernetes-list-type: atomic
                   updateStrategy:
-                    description: UpdateStrategy configures the pace of updating the
+                    description: UpdateStrategy configures the pace of promoting the
                       targets
                     properties:
                       maxConcurrent:
@@ -480,6 +480,41 @@ spec:
                           Value can be an absolute number (e.g.: 5) or a percentage of targets selected by the stage (e.g.: 10%).
                           Absolute number is calculated from percentage by rounding up to a minimum of 1. Default value is 0.
                         x-kubernetes-int-or-string: true
+                    type: object
+                  verification:
+                    description: Verification configures mode and pace of target promotion
+                      verifications
+                    properties:
+                      runMode:
+                        description: VerificationRunMode controls whether verifications
+                          run per-target or per-stage
+                        type: string
+                      updateStrategy:
+                        description: UpdateStrategy configures the pace of verification
+                          runs
+                        properties:
+                          maxConcurrent:
+                            anyOf:
+                            - type: integer
+                            - type: string
+                            description: |-
+                              MaxConcurrent specifies a number of targets which can be promoted to at the same time
+                              Value can be an absolute number (e.g.: 5) or a percentage of targets selected by the stage (e.g.: 10%).
+                              Absolute number is calculated from percentage by rounding up to a minimum of 1.
+                              Percentage value cannot be 0%. Number value cannot be 0.
+                              If omitted or empty string, no limit is applied (default).
+                            x-kubernetes-int-or-string: true
+                          maxFailures:
+                            anyOf:
+                            - type: integer
+                            - type: string
+                            description: |-
+                              MaxFailures specifies a number of target promotions which can fail before PromotionRequest is considered failed.
+                              Specifies a tolerable number, N failing promotions with maxFailures: N is a success, N+1 is a failure.
+                              Value can be an absolute number (e.g.: 5) or a percentage of targets selected by the stage (e.g.: 10%).
+                              Absolute number is calculated from percentage by rounding up to a minimum of 1. Default value is 0.
+                            x-kubernetes-int-or-string: true
+                        type: object
                     type: object
                 required:
                 - selectors
@@ -1313,6 +1348,11 @@ spec:
                                     AnalysisRun is a reference to the Argo Rollouts AnalysisRun that implements
                                     the Verification process.
                                   properties:
+                                    kind:
+                                      description: |-
+                                        Kind is a string representation of GroupVersionKind describing this run
+                                        For classic analysis run it is AnalysisRunKindRun or AnalysisRunKindLegacy (empty)
+                                      type: string
                                     name:
                                       description: Name is the name of the AnalysisRun.
                                       type: string
@@ -1349,6 +1389,10 @@ spec:
                                     this will be a reflection of the underlying AnalysisRun's phase, however,
                                     there are exceptions to this, such as in the case where an AnalysisRun
                                     cannot be launched successfully.
+                                  type: string
+                                promotionName:
+                                  description: PromotionName is an optional name of
+                                    promotion which triggered verification
                                   type: string
                                 startTime:
                                   description: StartTime is the time at which the
@@ -1866,6 +1910,11 @@ spec:
                                 AnalysisRun is a reference to the Argo Rollouts AnalysisRun that implements
                                 the Verification process.
                               properties:
+                                kind:
+                                  description: |-
+                                    Kind is a string representation of GroupVersionKind describing this run
+                                    For classic analysis run it is AnalysisRunKindRun or AnalysisRunKindLegacy (empty)
+                                  type: string
                                 name:
                                   description: Name is the name of the AnalysisRun.
                                   type: string
@@ -1901,6 +1950,10 @@ spec:
                                 this will be a reflection of the underlying AnalysisRun's phase, however,
                                 there are exceptions to this, such as in the case where an AnalysisRun
                                 cannot be launched successfully.
+                              type: string
+                            promotionName:
+                              description: PromotionName is an optional name of promotion
+                                which triggered verification
                               type: string
                             startTime:
                               description: StartTime is the time at which the Verification
@@ -2203,6 +2256,11 @@ spec:
                               AnalysisRun is a reference to the Argo Rollouts AnalysisRun that implements
                               the Verification process.
                             properties:
+                              kind:
+                                description: |-
+                                  Kind is a string representation of GroupVersionKind describing this run
+                                  For classic analysis run it is AnalysisRunKindRun or AnalysisRunKindLegacy (empty)
+                                type: string
                               name:
                                 description: Name is the name of the AnalysisRun.
                                 type: string
@@ -2238,6 +2296,10 @@ spec:
                               this will be a reflection of the underlying AnalysisRun's phase, however,
                               there are exceptions to this, such as in the case where an AnalysisRun
                               cannot be launched successfully.
+                            type: string
+                          promotionName:
+                            description: PromotionName is an optional name of promotion
+                              which triggered verification
                             type: string
                           startTime:
                             description: StartTime is the time at which the Verification
@@ -2893,6 +2955,11 @@ spec:
                                     AnalysisRun is a reference to the Argo Rollouts AnalysisRun that implements
                                     the Verification process.
                                   properties:
+                                    kind:
+                                      description: |-
+                                        Kind is a string representation of GroupVersionKind describing this run
+                                        For classic analysis run it is AnalysisRunKindRun or AnalysisRunKindLegacy (empty)
+                                      type: string
                                     name:
                                       description: Name is the name of the AnalysisRun.
                                       type: string
@@ -2929,6 +2996,10 @@ spec:
                                     this will be a reflection of the underlying AnalysisRun's phase, however,
                                     there are exceptions to this, such as in the case where an AnalysisRun
                                     cannot be launched successfully.
+                                  type: string
+                                promotionName:
+                                  description: PromotionName is an optional name of
+                                    promotion which triggered verification
                                   type: string
                                 startTime:
                                   description: StartTime is the time at which the
@@ -3442,6 +3513,11 @@ spec:
                                 AnalysisRun is a reference to the Argo Rollouts AnalysisRun that implements
                                 the Verification process.
                               properties:
+                                kind:
+                                  description: |-
+                                    Kind is a string representation of GroupVersionKind describing this run
+                                    For classic analysis run it is AnalysisRunKindRun or AnalysisRunKindLegacy (empty)
+                                  type: string
                                 name:
                                   description: Name is the name of the AnalysisRun.
                                   type: string
@@ -3478,6 +3554,10 @@ spec:
                                 there are exceptions to this, such as in the case where an AnalysisRun
                                 cannot be launched successfully.
                               type: string
+                            promotionName:
+                              description: PromotionName is an optional name of promotion
+                                which triggered verification
+                              type: string
                             startTime:
                               description: StartTime is the time at which the Verification
                                 process was started.
@@ -3501,6 +3581,41 @@ spec:
                     type: string
                 required:
                 - name
+                type: object
+              lastPromotionRollout:
+                description: |-
+                  LastPromotionRollout is a reference to the last PromotionRollout whose
+                  outcome this Stage has recorded. It is absent for a Stage that governs no
+                  Targets, and only ever moves forward: its number marks how far through
+                  its PromotionRollouts the Stage has read.
+                properties:
+                  finishedAt:
+                    description: FinishedAt is the time at which the PromotionRollout
+                      completed.
+                    format: date-time
+                    type: string
+                  message:
+                    description: |-
+                      Message is a human-readable description of how the PromotionRollout
+                      ended.
+                    type: string
+                  name:
+                    description: Name is the name of the PromotionRollout.
+                    type: string
+                  number:
+                    description: |-
+                      Number is the PromotionRollout's position among its Stage's rollouts,
+                      counting from 1.
+                    format: int64
+                    minimum: 1
+                    type: integer
+                  phase:
+                    description: Phase is a high-level summary of the PromotionRollout's
+                      lifecycle.
+                    type: string
+                required:
+                - name
+                - number
                 type: object
               metadata:
                 additionalProperties:

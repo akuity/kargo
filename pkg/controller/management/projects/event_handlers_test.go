@@ -260,6 +260,62 @@ func Test_projectStageHealthEnqueuer_Update_promotionRequestChanged(t *testing.T
 	}
 }
 
+func Test_projectStageHealthEnqueuer_Update_promotionRolloutChanged(t *testing.T) {
+	stageWith := func(last string) *kargoapi.Stage {
+		stage := &kargoapi.Stage{
+			ObjectMeta: metav1.ObjectMeta{Namespace: "fake-project"},
+			Status: kargoapi.StageStatus{
+				Conditions: []metav1.Condition{{
+					Type:   kargoapi.ConditionTypeHealthy,
+					Status: metav1.ConditionTrue,
+				}},
+			},
+		}
+		if last != "" {
+			stage.Status.LastPromotionRollout = &kargoapi.PromotionRolloutReference{Name: last}
+		}
+		return stage
+	}
+	project := []reconcile.Request{{NamespacedName: types.NamespacedName{Name: "fake-project"}}}
+
+	tests := []struct {
+		name             string
+		oldStage         *kargoapi.Stage
+		newStage         *kargoapi.Stage
+		expectedRequests []reconcile.Request
+	}{
+		{
+			name:     "same rollout and same health",
+			oldStage: stageWith("last"),
+			newStage: stageWith("last"),
+		},
+		{
+			name:             "first rollout is recorded",
+			oldStage:         stageWith(""),
+			newStage:         stageWith("new"),
+			expectedRequests: project,
+		},
+		{
+			name:             "last rollout moves forward",
+			oldStage:         stageWith("old"),
+			newStage:         stageWith("new"),
+			expectedRequests: project,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			enqueuer := &projectStageHealthEnqueuer[*kargoapi.Stage]{}
+			queue := &controllertest.Queue{TypedInterface: workqueue.NewTyped[reconcile.Request]()}
+			enqueuer.Update(
+				t.Context(),
+				event.TypedUpdateEvent[*kargoapi.Stage]{ObjectOld: tt.oldStage, ObjectNew: tt.newStage},
+				queue,
+			)
+			require.ElementsMatch(t, tt.expectedRequests, drainQueue(queue))
+		})
+	}
+}
+
 // drainQueue returns every request on the queue, marking each done.
 func drainQueue(queue *controllertest.Queue) []reconcile.Request {
 	var reqs []reconcile.Request

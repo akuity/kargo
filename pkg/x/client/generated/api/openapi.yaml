@@ -11243,6 +11243,11 @@ components:
       type: object
     AnalysisRunReference:
       properties:
+        kind:
+          description: |-
+            Kind is a string representation of GroupVersionKind describing this run
+            For classic analysis run it is AnalysisRunKindRun or AnalysisRunKindLegacy (empty)
+          type: string
         name:
           description: Name is the name of the AnalysisRun.
           type: string
@@ -14399,6 +14404,32 @@ components:
       - PromotionRolloutPhaseFailed
       - PromotionRolloutPhaseErrored
       - PromotionRolloutPhaseAborted
+    PromotionRolloutReference:
+      properties:
+        finishedAt:
+          description: FinishedAt is the time at which the PromotionRollout completed.
+          type: string
+        message:
+          description: |-
+            Message is a human-readable description of how the PromotionRollout
+            ended.
+          type: string
+        name:
+          description: Name is the name of the PromotionRollout.
+          type: string
+        number:
+          description: |-
+            Number is the PromotionRollout's position among its Stage's rollouts,
+            counting from 1.
+
+            +kubebuilder:validation:Minimum=1
+          type: integer
+        phase:
+          allOf:
+          - $ref: "#/components/schemas/PromotionRolloutPhase"
+          description: Phase is a high-level summary of the PromotionRollout's lifecycle.
+          type: object
+      type: object
     PromotionRolloutSpec:
       properties:
         freight:
@@ -15678,6 +15709,17 @@ components:
 
             +optional
           type: object
+        lastPromotionRollout:
+          allOf:
+          - $ref: "#/components/schemas/PromotionRolloutReference"
+          description: |-
+            LastPromotionRollout is a reference to the last PromotionRollout whose
+            outcome this Stage has recorded. It is absent for a Stage that governs no
+            Targets, and only ever moves forward: its number marks how far through
+            its PromotionRollouts the Stage has read.
+
+            +optional
+          type: object
         metadata:
           additionalProperties:
             type: object
@@ -15726,7 +15768,14 @@ components:
           allOf:
           - $ref: "#/components/schemas/TargetUpdateStrategy"
           description: |-
-            UpdateStrategy configures the pace of updating the targets
+            UpdateStrategy configures the pace of promoting the targets
+            +optional
+          type: object
+        verification:
+          allOf:
+          - $ref: "#/components/schemas/TargetVerificaitonSpec"
+          description: |-
+            Verification configures mode and pace of target promotion verifications
             +optional
           type: object
       required:
@@ -16080,6 +16129,21 @@ components:
             Absolute number is calculated from percentage by rounding up to a minimum of 1. Default value is 0.
           type: object
       type: object
+    TargetVerificaitonSpec:
+      properties:
+        runMode:
+          description: |-
+            VerificationRunMode controls whether verifications run per-target or per-stage
+            +optional
+          type: string
+        updateStrategy:
+          allOf:
+          - $ref: "#/components/schemas/TargetUpdateStrategy"
+          description: |-
+            UpdateStrategy configures the pace of verification runs
+            +optional
+          type: object
+      type: object
     Verification:
       properties:
         analysisRunMetadata:
@@ -16134,6 +16198,10 @@ components:
             this will be a reflection of the underlying AnalysisRun's phase, however,
             there are exceptions to this, such as in the case where an AnalysisRun
             cannot be launched successfully.
+          type: string
+        promotionName:
+          description: PromotionName is an optional name of promotion which triggered
+            verification
           type: string
         startTime:
           description: StartTime is the time at which the Verification process was
