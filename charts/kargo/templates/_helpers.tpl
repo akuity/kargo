@@ -257,6 +257,9 @@ OTEL_TRACES_SAMPLER: {{ quote .sampler }}
 {{- if .samplerArg }}
 OTEL_TRACES_SAMPLER_ARG: {{ quote .samplerArg }}
 {{- end }}
+{{- with .categories }}
+TRACING_CATEGORIES: {{ join "," . | quote }}
+{{- end }}
 {{- end }}
 {{- end }}
 {{- end -}}

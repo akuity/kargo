@@ -1,8 +1,6 @@
 // Package telemetry wires the OpenTelemetry SDK into Kargo's long-running
-// components. Setup is called once at startup by each component; code that
-// records spans uses the OpenTelemetry API directly and works whether or not
-// Setup was ever called, since the API's no-op implementations are in effect
-// until it is.
+// components. Setup is called once at startup by each component, before
+// anything that records spans is built. Until then, spans are no-ops.
 package telemetry
 
 import (
@@ -20,6 +18,7 @@ import (
 	semconv "go.opentelemetry.io/otel/semconv/v1.43.0"
 
 	"github.com/akuity/kargo/pkg/logging"
+	"github.com/akuity/kargo/pkg/telemetry/internal/state"
 	"github.com/akuity/kargo/pkg/x/version"
 )
 
@@ -40,6 +39,11 @@ type Service struct {
 	Attributes []attribute.KeyValue
 }
 
+// Enabled returns whether this process exports traces.
+func Enabled() bool {
+	return state.Enabled.Load()
+}
+
 // ShutdownFunc flushes any telemetry not yet exported and releases the
 // resources held by the SDK. It should be called once, at shutdown.
 type ShutdownFunc func(context.Context) error
@@ -47,7 +51,7 @@ type ShutdownFunc func(context.Context) error
 // Setup configures the global OpenTelemetry tracer provider and propagators
 // according to cfg and returns a ShutdownFunc. When tracing is disabled, the
 // global no-op implementations are left in place and the returned ShutdownFunc
-// does nothing.
+// does nothing. When it is enabled, an invalid cfg.Categories is an error.
 //
 // The exporter is configured from the standard OTEL_EXPORTER_OTLP_* environment
 // variables, the sampler from OTEL_TRACES_SAMPLER and OTEL_TRACES_SAMPLER_ARG,
@@ -58,6 +62,10 @@ func Setup(ctx context.Context, cfg Config, svc Service) (ShutdownFunc, error) {
 	}
 
 	if err := cfg.validate(); err != nil {
+		return nil, err
+	}
+	selection, err := parseCategories(cfg.Categories)
+	if err != nil {
 		return nil, err
 	}
 
@@ -71,9 +79,12 @@ func Setup(ctx context.Context, cfg Config, svc Service) (ShutdownFunc, error) {
 		return nil, fmt.Errorf("error building telemetry resource: %w", err)
 	}
 
+	// Never blocks: the batch processor drops spans past
+	// OTEL_BSP_MAX_QUEUE_SIZE.
 	tp := sdktrace.NewTracerProvider(
 		sdktrace.WithBatcher(exporter),
 		sdktrace.WithResource(res),
+		sdktrace.WithRawSpanLimits(spanLimits()),
 	)
 
 	logger := logging.LoggerFromContext(ctx).WithoutStackTraces()
@@ -82,14 +93,24 @@ func Setup(ctx context.Context, cfg Config, svc Service) (ShutdownFunc, error) {
 		logger.Error(err, "OpenTelemetry error")
 	}))
 	otel.SetTracerProvider(tp)
-	otel.SetTextMapPropagator(
-		propagation.NewCompositeTextMapPropagator(
-			propagation.TraceContext{},
-			propagation.Baggage{},
-		),
+	state.Selected.Store(selection)
+	state.Enabled.Store(true)
+	otel.SetTextMapPropagator(propagation.TraceContext{})
+
+	serviceName, _ := res.Set().Value(semconv.ServiceNameKey)
+	logger.Info(
+		"tracing is enabled",
+		"protocol", cfg.EffectiveTracesProtocol(),
+		"service", serviceName.AsString(),
 	)
 
-	return tp.Shutdown, nil
+	return func(ctx context.Context) error {
+		// A later Setup's selection is left alone.
+		if state.Selected.CompareAndSwap(selection, nil) {
+			state.Enabled.Store(false)
+		}
+		return tp.Shutdown(ctx)
+	}, nil
 }
 
 // SetupFromEnv configures tracing for the named Kargo component (for example
@@ -101,6 +122,8 @@ func Setup(ctx context.Context, cfg Config, svc Service) (ShutdownFunc, error) {
 //
 // Any attrs are attached to the component's resource, in addition to its
 // service name and version.
+//
+// The returned function flushes for at most shutdownTimeout.
 func SetupFromEnv(
 	ctx context.Context,
 	component string,
@@ -120,12 +143,6 @@ func SetupFromEnv(
 		return nil, fmt.Errorf("error initializing tracing: %w", err)
 	}
 	logger := logging.LoggerFromContext(ctx)
-	if cfg.Enabled {
-		logger.Info(
-			"tracing is enabled",
-			"protocol", cfg.EffectiveTracesProtocol(),
-		)
-	}
 	return func() {
 		ctx, cancel := context.WithTimeout(context.Background(), shutdownTimeout)
 		defer cancel()

@@ -16,10 +16,13 @@ import (
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 	semconv "go.opentelemetry.io/otel/semconv/v1.43.0"
 	"go.opentelemetry.io/otel/trace"
+
+	"github.com/akuity/kargo/pkg/telemetry"
 )
 
 var (
 	spanRecorder     = tracetest.NewSpanRecorder()
+	spanProvider     = sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(spanRecorder))
 	spanRecorderOnce sync.Once
 )
 
@@ -29,13 +32,35 @@ var (
 // package-level and binds to the first provider the global sees.
 func installSpanRecorder(t *testing.T) *tracetest.SpanRecorder {
 	t.Helper()
-	spanRecorderOnce.Do(func() {
-		otel.SetTracerProvider(sdktrace.NewTracerProvider(
-			sdktrace.WithSpanProcessor(spanRecorder),
-		))
-	})
+	spanRecorderOnce.Do(func() { otel.SetTracerProvider(spanProvider) })
 	spanRecorder.Reset()
 	return spanRecorder
+}
+
+// enableTracing turns tracing on, with the TRACING_CATEGORIES entries given,
+// until t ends.
+func enableTracing(t *testing.T, categories ...string) {
+	t.Helper()
+	installSpanRecorder(t)
+	prevProvider := otel.GetTracerProvider()
+	prevPropagator := otel.GetTextMapPropagator()
+	prevErrorHandler := otel.GetErrorHandler()
+	shutdown, err := telemetry.Setup(
+		context.Background(),
+		telemetry.Config{
+			Enabled:    true,
+			Protocol:   telemetry.ProtocolHTTPProtobuf,
+			Categories: categories,
+		},
+		telemetry.Service{Name: "kargo-test"},
+	)
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		require.NoError(t, shutdown(context.Background()))
+		otel.SetTracerProvider(prevProvider)
+		otel.SetTextMapPropagator(prevPropagator)
+		otel.SetErrorHandler(prevErrorHandler)
+	})
 }
 
 // attributesOf returns a span's attributes keyed by name for easy lookup.
