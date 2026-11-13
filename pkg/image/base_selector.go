@@ -2,7 +2,11 @@ package image
 
 import (
 	"fmt"
+	"strconv"
+	"time"
 
+	"github.com/expr-lang/expr"
+	"github.com/expr-lang/expr/vm"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
@@ -15,6 +19,7 @@ import (
 type baseSelector struct {
 	platformConstraint *platformConstraint
 	repoClient         *repositoryClient
+	filterExpression   *vm.Program
 }
 
 func newBaseSelector(
@@ -30,6 +35,19 @@ func newBaseSelector(
 				"error parsing platform constraint %q: %w",
 				sub.Platform, err,
 			)
+		}
+	}
+	if sub.ExpressionFilter != "" {
+		if s.filterExpression, err = expr.Compile(
+			sub.ExpressionFilter,
+			expr.Env(map[string]any{
+				"tag":         "",
+				"digest":      "",
+				"annotations": map[string]string{},
+				"createdAt":   (*time.Time)(nil),
+			}),
+		); err != nil {
+			return nil, fmt.Errorf("error compiling filter expression: %w", err)
 		}
 	}
 	repoURL := urls.NormalizeImage(sub.RepoURL)
@@ -55,6 +73,41 @@ func (b *baseSelector) getLoggerContext() []any {
 		"registry", b.repoClient.registry.name,
 		"image", b.repoClient.repoURL,
 		"platformConstrained", b.platformConstraint != nil,
+	}
+}
+
+// matchesFilterExpression evaluates the provided filter expression, if any,
+// against the provided image's tag, digest, annotations, and creation time. If
+// the expression does not evaluate to a boolean, the result is converted to a
+// boolean using strconv.ParseBool. If the conversion fails, an error is
+// returned.
+func matchesFilterExpression(
+	filter *vm.Program,
+	img image,
+	pc *platformConstraint,
+) (bool, error) {
+	if filter == nil {
+		return true, nil
+	}
+	env := map[string]any{
+		"tag":         img.Tag,
+		"digest":      img.Digest,
+		"annotations": img.getAnnotations(pc),
+		"createdAt":   img.CreatedAt,
+	}
+	result, err := expr.Run(filter, env)
+	if err != nil {
+		return false, fmt.Errorf("error evaluating filter expression: %w", err)
+	}
+	switch result := result.(type) {
+	case bool:
+		return result, nil
+	default:
+		parsedBool, err := strconv.ParseBool(fmt.Sprintf("%v", result))
+		if err != nil {
+			return false, fmt.Errorf("error evaluating filter expression: %w", err)
+		}
+		return parsedBool, nil
 	}
 }
 
