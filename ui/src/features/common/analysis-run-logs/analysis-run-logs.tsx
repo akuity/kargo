@@ -11,7 +11,7 @@ import { paths } from '@ui/config/paths';
 import { useTheme } from '@ui/features/common/theme/use-theme';
 import { RolloutsAnalysisRun } from '@ui/gen/api/v2/models';
 
-import { extractFilters } from './extract-analysis-run';
+import { extractFilters, resolveSelection } from './extract-analysis-run';
 import {
   monacoEditorLogLanguage,
   monacoEditorLogLanguageTheme,
@@ -38,24 +38,18 @@ export const AnalysisRunLogs = (props: {
 
   useMonacoEditorLogLanguage();
 
-  const [filters, setFilters] = useState(() => {
-    const selectedJob = props.defaultFilters?.selectedJob || filterableItems?.jobNames?.[0];
-
-    const selectedContainer =
-      props.defaultFilters?.selectedContainer ||
-      filterableItems?.containerNames?.[selectedJob]?.[0];
-
-    return { selectedJob, selectedContainer };
+  const [requestedFilters, setRequestedFilters] = useState({
+    selectedJob: props.defaultFilters?.selectedJob,
+    selectedContainer: props.defaultFilters?.selectedContainer
   });
 
-  const onSelectJob = (jobName: string) => {
-    const containerName = filterableItems?.containerNames?.[jobName]?.[0];
+  const filters = resolveSelection(filterableItems, requestedFilters);
 
-    setFilters({ selectedContainer: containerName, selectedJob: jobName });
-  };
+  const onSelectJob = (jobName: string) =>
+    setRequestedFilters({ selectedJob: jobName, selectedContainer: undefined });
 
   const onSelectContainer = (containerName: string) =>
-    setFilters({ ...filters, selectedContainer: containerName });
+    setRequestedFilters({ ...filters, selectedContainer: containerName });
 
   const triggerMonacoEditorSearch = (search: string) => {
     if (!search) {
@@ -81,10 +75,6 @@ export const AnalysisRunLogs = (props: {
   const analysisRunId = props.analysisRun?.metadata?.name;
   const stage = props.analysisRun?.metadata?.labels?.['kargo.akuity.io/stage'];
 
-  const validSelection = filterableItems?.containerNames?.[filters.selectedJob]?.includes(
-    filters.selectedContainer
-  );
-
   const {
     logs,
     isLoading: logsInitLoading,
@@ -92,7 +82,7 @@ export const AnalysisRunLogs = (props: {
   } = useWatchAnalysisRunLogs(
     project,
     analysisRunId,
-    validSelection
+    filters.selectedJob && filters.selectedContainer
       ? { metricName: filters.selectedJob, containerName: filters.selectedContainer }
       : undefined
   );
@@ -101,6 +91,17 @@ export const AnalysisRunLogs = (props: {
 
   const [showLineNumbers, setShowLineNumbers] = useState(true);
   const [search, setSearch] = useState(props.defaultFilters?.search || '');
+
+  const fullScreenParams = new URLSearchParams();
+  if (filters.selectedJob) {
+    fullScreenParams.set('job', filters.selectedJob);
+  }
+  if (filters.selectedContainer) {
+    fullScreenParams.set('container', filters.selectedContainer);
+  }
+  if (search) {
+    fullScreenParams.set('search', search);
+  }
 
   if (!filterableItems?.jobNames?.length) {
     return (
@@ -163,7 +164,7 @@ export const AnalysisRunLogs = (props: {
               name: project,
               stageName: stage,
               analysisRunId: analysisRunId
-            })}?job=${filters.selectedJob}&container=${filters.selectedContainer}&search=${search}`}
+            })}?${fullScreenParams}`}
             className='ml-auto'
             target='_blank'
           >
