@@ -41,7 +41,7 @@ export const ProjectListFilter = ({
   };
 
   return (
-    <div className='flex items-center w-2/3'>
+    <div className='flex items-center w-1/3'>
       <AutoComplete
         placeholder='Search...'
         options={filteredProjects?.map((p) => ({ value: p.metadata?.name }))}
