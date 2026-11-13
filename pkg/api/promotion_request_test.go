@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -562,14 +563,24 @@ func TestGenerateChildPromotionNameOrdering(t *testing.T) {
 	t.Run("same Target: lex order is creation order", func(t *testing.T) {
 		t.Parallel()
 
-		// ulid.Make draws from a process-wide monotonic entropy source, so ULIDs
-		// minted within one millisecond still increase. Enough names to be sure
-		// of landing several in the same millisecond.
-		const n = 50
+		// Concurrent callers must not reorder names minted within one
+		// millisecond. Enough names to span several milliseconds.
+		ctx, cancel := context.WithCancel(t.Context())
+		var wg sync.WaitGroup
+		for range 4 {
+			wg.Go(func() {
+				for ctx.Err() == nil {
+					_ = GenerateChildPromotionName(stage, "us-west", freight)
+				}
+			})
+		}
+		const n = 10000
 		names := make([]string, n)
 		for i := range names {
 			names[i] = GenerateChildPromotionName(stage, "us-east", freight)
 		}
+		cancel()
+		wg.Wait()
 		for i := 1; i < n; i++ {
 			require.Less(
 				t, names[i-1], names[i],
