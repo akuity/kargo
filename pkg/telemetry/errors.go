@@ -3,6 +3,7 @@ package telemetry
 import (
 	"errors"
 	"fmt"
+	"reflect"
 	"unicode/utf8"
 
 	"go.opentelemetry.io/otel/codes"
@@ -39,7 +40,7 @@ func RecordError(span trace.Span, err error) {
 // stops at the first other type, such as *url.Error.
 func errorType(err error) string {
 	for {
-		t := fmt.Sprintf("%T", err)
+		t := typeName(err)
 		next := errors.Unwrap(err)
 		if t != fmtWrapErrorType || next == nil {
 			return t
@@ -48,5 +49,14 @@ func errorType(err error) string {
 	}
 }
 
+// typeName returns err's type as the OTel SDK's RecordError names it.
+func typeName(err error) string {
+	t := reflect.TypeOf(err)
+	if t.PkgPath() == "" && t.Name() == "" {
+		return t.String()
+	}
+	return t.PkgPath() + "." + t.Name()
+}
+
 // fmtWrapErrorType is the type of an error fmt.Errorf returns for a single %w.
-var fmtWrapErrorType = fmt.Sprintf("%T", fmt.Errorf("%w", errors.New("")))
+var fmtWrapErrorType = typeName(fmt.Errorf("%w", errors.New("")))

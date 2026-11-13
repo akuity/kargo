@@ -184,7 +184,7 @@ func TestRecordError_exceptionType(t *testing.T) {
 	require.Contains(
 		t,
 		recorder.Ended()[0].Events()[0].Attributes,
-		semconv.ExceptionType("telemetry.testError"),
+		semconv.ExceptionType("github.com/akuity/kargo/pkg/telemetry.testError"),
 	)
 }
 
@@ -198,12 +198,17 @@ func TestErrorType(t *testing.T) {
 		{
 			name: "unwrapped",
 			err:  testError{},
-			want: "telemetry.testError",
+			want: "github.com/akuity/kargo/pkg/telemetry.testError",
+		},
+		{
+			name: "pointer",
+			err:  &testError{},
+			want: "*telemetry.testError",
 		},
 		{
 			name: "through fmt.Errorf wrapping",
 			err:  fmt.Errorf("outer: %w", fmt.Errorf("inner: %w", testError{})),
-			want: "telemetry.testError",
+			want: "github.com/akuity/kargo/pkg/telemetry.testError",
 		},
 		{
 			name: "stops at a typed wrapper",
@@ -218,6 +223,41 @@ func TestErrorType(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 			require.Equal(t, testCase.want, errorType(testCase.err))
+		})
+	}
+}
+
+func TestTypeName_matchesSDK(t *testing.T) {
+	t.Parallel()
+	testCases := []struct {
+		name string
+		err  error
+	}{
+		{
+			name: "named value",
+			err:  testError{},
+		},
+		{
+			name: "pointer",
+			err:  &testError{},
+		},
+		{
+			name: "stdlib pointer",
+			err:  &url.Error{Op: "Get", URL: "https://host", Err: testError{}},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+			tracer, recorder := recordingTracer()
+			_, span := tracer.Start(context.Background(), "test")
+			span.RecordError(testCase.err)
+			span.End()
+			require.Contains(
+				t,
+				recorder.Ended()[0].Events()[0].Attributes,
+				semconv.ExceptionType(typeName(testCase.err)),
+			)
 		})
 	}
 }
