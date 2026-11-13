@@ -3,7 +3,7 @@ export const warehouseSizer = {
 };
 
 export const repoSubscriptionSizer = {
-  size: () => ({ width: 250, height: 100 })
+  size: () => ({ width: 250, height: 60 })
 };
 
 export const stageSizer = {
