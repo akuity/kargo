@@ -426,6 +426,7 @@ func fetchMain(t *testing.T, cfg RepoConfig, repo git.Repo) {
 		os.Environ(),
 		fmt.Sprintf("HOME=%s", repo.HomeDir()),
 		"GIT_ASKPASS=/usr/local/bin/credential-helper",
+		fmt.Sprintf("GIT_USERNAME=%s", cfg.GitUsername),
 		fmt.Sprintf("GIT_PASSWORD=%s", cfg.Token),
 	)
 	out, err := cmd.CombinedOutput()

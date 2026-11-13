@@ -2,7 +2,6 @@ package git
 
 import (
 	"fmt"
-	"net/url"
 	"os"
 	"testing"
 
@@ -27,12 +26,7 @@ func TestRepo(t *testing.T) {
 	require.True(t, ok)
 
 	t.Run("can clone", func(t *testing.T) {
-		require.Equal(t, testRepoURL, r.originalURL)
-		var accessURL *url.URL
-		accessURL, err = url.Parse(r.accessURL)
-		require.NoError(t, err)
-		accessURL.User = nil
-		require.Equal(t, testRepoURL, accessURL.String())
+		require.Equal(t, testRepoURL, r.url)
 		require.NotEmpty(t, r.homeDir)
 		var fi os.FileInfo
 		fi, err = os.Stat(r.homeDir)
@@ -45,7 +39,7 @@ func TestRepo(t *testing.T) {
 	})
 
 	t.Run("can get the repo url", func(t *testing.T) {
-		require.Equal(t, r.originalURL, r.URL())
+		require.Equal(t, r.url, r.URL())
 	})
 
 	t.Run("can get the home dir", func(t *testing.T) {
