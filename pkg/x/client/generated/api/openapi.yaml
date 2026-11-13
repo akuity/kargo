@@ -14399,6 +14399,32 @@ components:
       - PromotionRolloutPhaseFailed
       - PromotionRolloutPhaseErrored
       - PromotionRolloutPhaseAborted
+    PromotionRolloutReference:
+      properties:
+        finishedAt:
+          description: FinishedAt is the time at which the PromotionRollout completed.
+          type: string
+        message:
+          description: |-
+            Message is a human-readable description of how the PromotionRollout
+            ended.
+          type: string
+        name:
+          description: Name is the name of the PromotionRollout.
+          type: string
+        number:
+          description: |-
+            Number is the PromotionRollout's position among its Stage's rollouts,
+            counting from 1.
+
+            +kubebuilder:validation:Minimum=1
+          type: integer
+        phase:
+          allOf:
+          - $ref: "#/components/schemas/PromotionRolloutPhase"
+          description: Phase is a high-level summary of the PromotionRollout's lifecycle.
+          type: object
+      type: object
     PromotionRolloutSpec:
       properties:
         freight:
@@ -15675,6 +15701,17 @@ components:
             LastPromotionRequest is a reference to the last PromotionRequest to reach a
             terminal phase. It is absent for a Stage that governs no Targets, and only
             ever moves forward, so it outlives the PromotionRequest it refers to.
+
+            +optional
+          type: object
+        lastPromotionRollout:
+          allOf:
+          - $ref: "#/components/schemas/PromotionRolloutReference"
+          description: |-
+            LastPromotionRollout is a reference to the last PromotionRollout whose
+            outcome this Stage has recorded. It is absent for a Stage that governs no
+            Targets, and only ever moves forward: its number marks how far through
+            its PromotionRollouts the Stage has read.
 
             +optional
           type: object

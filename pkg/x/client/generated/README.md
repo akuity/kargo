@@ -314,6 +314,7 @@ Class | Method | HTTP request | Description
  - [PromotionRollout](docs/PromotionRollout.md)
  - [PromotionRolloutList](docs/PromotionRolloutList.md)
  - [PromotionRolloutPhase](docs/PromotionRolloutPhase.md)
+ - [PromotionRolloutReference](docs/PromotionRolloutReference.md)
  - [PromotionRolloutSpec](docs/PromotionRolloutSpec.md)
  - [PromotionRolloutStatus](docs/PromotionRolloutStatus.md)
  - [PromotionRolloutSummary](docs/PromotionRolloutSummary.md)

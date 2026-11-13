@@ -123,6 +123,7 @@ model_promotion_request_update_strategy.go
 model_promotion_rollout.go
 model_promotion_rollout_list.go
 model_promotion_rollout_phase.go
+model_promotion_rollout_reference.go
 model_promotion_rollout_spec.go
 model_promotion_rollout_status.go
 model_promotion_rollout_summary.go
