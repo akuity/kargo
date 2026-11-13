@@ -2,7 +2,6 @@ package git
 
 import (
 	"fmt"
-	"net/url"
 	"os"
 	"path/filepath"
 	"testing"
@@ -32,11 +31,7 @@ func TestBareRepo(t *testing.T) {
 
 	t.Run("can clone", func(t *testing.T) {
 		require.Equal(t, testRepoURL, r.originalURL)
-		var accessURL *url.URL
-		accessURL, err = url.Parse(r.accessURL)
-		require.NoError(t, err)
-		accessURL.User = nil
-		require.Equal(t, testRepoURL, accessURL.String())
+		require.Equal(t, testRepoURL, r.accessURL)
 		require.NotEmpty(t, r.homeDir)
 		var fi os.FileInfo
 		fi, err = os.Stat(r.homeDir)

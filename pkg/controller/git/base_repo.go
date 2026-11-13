@@ -297,14 +297,19 @@ func (b *baseRepo) setupAuth() error {
 		return nil
 	}
 
-	// Add username@ to the URL that will be used internally...
+	// Nothing guarantees the URL was normalized, which would have removed any
+	// credentials embedded in it, so remove them here. git then asks
+	// GIT_ASKPASS for both the username and the password, so the configured
+	// credentials take precedence. Given a username without a password, git's
+	// HTTP client would first try an empty password, which servers record as a
+	// failed login...
 	lowerURL := strings.ToLower(b.accessURL)
 	if strings.HasPrefix(lowerURL, "http://") || strings.HasPrefix(lowerURL, "https://") {
 		u, err := url.Parse(b.accessURL)
 		if err != nil {
 			return fmt.Errorf("error parsing URL %q: %w", b.accessURL, err)
 		}
-		u.User = url.User(b.creds.Username)
+		u.User = nil
 		b.accessURL = u.String()
 	}
 
@@ -495,6 +500,7 @@ func (b *baseRepo) buildGitCommand(
 		cmd.Env = append(
 			cmd.Env,
 			"GIT_ASKPASS=/usr/local/bin/credential-helper",
+			fmt.Sprintf("GIT_USERNAME=%s", b.creds.Username),
 			fmt.Sprintf("GIT_PASSWORD=%s", b.creds.Password),
 		)
 	}
