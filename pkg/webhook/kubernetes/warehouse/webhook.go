@@ -5,10 +5,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"slices"
+	"reflect"
 	"strings"
 
-	"k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	k8sValidation "k8s.io/apimachinery/pkg/util/validation"
@@ -112,10 +111,9 @@ func (w *webhook) ValidateCreate(
 		}
 		errs = append(errs, fieldErr)
 	}
-	errs = append(errs, w.validateSpec(ctx, field.NewPath("spec"), &warehouse.Spec)...)
 	if errs = append(
 		errs,
-		validateRemovedSubFields(ctx, field.NewPath("spec", "subscriptions"))...,
+		w.validateSpec(ctx, field.NewPath("spec"), &warehouse.Spec)...,
 	); len(errs) > 0 {
 		return nil, apierrors.NewInvalid(warehouseGroupKind, warehouse.Name, errs)
 	}
@@ -124,18 +122,19 @@ func (w *webhook) ValidateCreate(
 
 func (w *webhook) ValidateUpdate(
 	ctx context.Context,
-	oldWarehouse *kargoapi.Warehouse,
+	_ *kargoapi.Warehouse,
 	warehouse *kargoapi.Warehouse,
 ) (admission.Warnings, error) {
-	errs := w.validateSpec(ctx, field.NewPath("spec"), &warehouse.Spec)
-	if errs = append(
-		errs,
-		w.validateRemovedSubFieldsOnUpdate(
-			ctx,
-			field.NewPath("spec", "subscriptions"),
-			oldWarehouse,
-			warehouse,
-		)...,
+	// An update that changes only metadata (e.g. a refresh annotation) is
+	// permitted even if the spec is invalid. Any other update must leave the
+	// spec valid.
+	if !w.specChanged(ctx) {
+		return nil, nil
+	}
+	if errs := w.validateSpec(
+		ctx,
+		field.NewPath("spec"),
+		&warehouse.Spec,
 	); len(errs) > 0 {
 		return nil, apierrors.NewInvalid(warehouseGroupKind, warehouse.Name, errs)
 	}
@@ -150,6 +149,26 @@ func (w *webhook) ValidateDelete(
 	return nil, nil
 }
 
+// specChanged reports whether the update in the admission request in ctx
+// changes the Warehouse's spec. The raw objects are compared, because decoding
+// a Warehouse silently drops subscription fields that aren't defined by the
+// subscription's type. If ctx carries no admission request, or either object
+// can't be decoded, the spec is assumed to have changed.
+func (w *webhook) specChanged(ctx context.Context) bool {
+	req, err := admission.RequestFromContext(ctx)
+	if err != nil {
+		return true
+	}
+	var oldObj, newObj struct {
+		Spec any `json:"spec"`
+	}
+	if json.Unmarshal(req.OldObject.Raw, &oldObj) != nil ||
+		json.Unmarshal(req.Object.Raw, &newObj) != nil {
+		return true
+	}
+	return !reflect.DeepEqual(oldObj.Spec, newObj.Spec)
+}
+
 func (w *webhook) validateSpec(
 	ctx context.Context,
 	f *field.Path,
@@ -158,120 +177,44 @@ func (w *webhook) validateSpec(
 	if spec == nil { // nil spec is caught by declarative validations
 		return nil
 	}
-	return w.validateSubs(ctx, f.Child("subscriptions"), spec.InternalSubscriptions)
+	return w.validateSubs(
+		ctx,
+		f.Child("subscriptions"),
+		spec.InternalSubscriptions,
+		rawSubscriptions(ctx),
+	)
 }
 
-// removedSubFields lists fields that have been removed from the original
-// subscription types, keyed by subscription type. Decoding a Warehouse
-// silently drops unknown fields, so these would otherwise be ignored without
-// any indication that the tag filtering they once provided no longer applies.
-var removedSubFields = []struct {
-	subType string
-	fields  []string
-}{
-	{subType: "git", fields: []string{"allowTags", "ignoreTags"}},
-	{subType: "image", fields: []string{"allowTags", "ignoreTags"}},
-}
-
-// validateRemovedSubFields rejects subscriptions that still use any of the
-// removedSubFields. Because the typed Warehouse has already lost those fields,
-// this inspects the raw object from the admission request in ctx. If ctx
-// carries no admission request, there is nothing to inspect and no errors are
-// returned.
-func validateRemovedSubFields(ctx context.Context, f *field.Path) field.ErrorList {
+// rawSubscriptions returns the raw, JSON-encoded subscriptions of the
+// Warehouse in the admission request in ctx, keyed by their top-level fields.
+// Decoding a Warehouse silently drops subscription fields that aren't defined
+// by the subscription's type, so only the raw subscriptions can be fully
+// validated. If ctx carries no admission request, or its object is malformed
+// (which decoding the Warehouse would already have caught), nil is returned.
+func rawSubscriptions(ctx context.Context) []map[string]json.RawMessage {
 	req, err := admission.RequestFromContext(ctx)
 	if err != nil {
 		return nil
 	}
-	return removedSubFieldErrs(req.Object.Raw, f)
-}
-
-// validateRemovedSubFieldsOnUpdate is like validateRemovedSubFields, but
-// permits an update that leaves the spec unchanged (e.g. a refresh annotation)
-// to keep removed fields that oldWarehouse already used, so that a Warehouse
-// that has yet to be migrated can still be refreshed. Any other update must
-// also remove them.
-func (w *webhook) validateRemovedSubFieldsOnUpdate(
-	ctx context.Context,
-	f *field.Path,
-	oldWarehouse *kargoapi.Warehouse,
-	warehouse *kargoapi.Warehouse,
-) field.ErrorList {
-	errs := validateRemovedSubFields(ctx, f)
-	if len(errs) == 0 || !w.specUnchanged(ctx, oldWarehouse, warehouse) {
-		return errs
-	}
-	// errs is only non-empty if ctx carries an admission request
-	req, _ := admission.RequestFromContext(ctx)
-	oldErrs := removedSubFieldErrs(req.OldObject.Raw, f)
-	for _, err := range errs {
-		// Typed specs don't include removed fields, so an update that adds one
-		// still leaves the spec "unchanged." Such an update is rejected.
-		if !slices.ContainsFunc(oldErrs, func(oldErr *field.Error) bool {
-			return oldErr.Field == err.Field
-		}) {
-			return errs
-		}
-	}
-	return nil
-}
-
-// specUnchanged reports whether an update leaves the Warehouse's spec as it
-// was. oldWarehouse is defaulted first, just as the defaulting webhook has
-// already defaulted warehouse, so that defaults introduced since oldWarehouse
-// was last written don't count as changes.
-func (w *webhook) specUnchanged(
-	ctx context.Context,
-	oldWarehouse *kargoapi.Warehouse,
-	warehouse *kargoapi.Warehouse,
-) bool {
-	if oldWarehouse == nil {
-		return false
-	}
-	old := oldWarehouse.DeepCopy()
-	if err := w.Default(ctx, old); err != nil {
-		return false
-	}
-	// Default() only updates InternalSubscriptions, so the raw Subscriptions,
-	// which aren't defaulted, are left out of the comparison.
-	oldSpec, newSpec := old.Spec, warehouse.Spec
-	oldSpec.Subscriptions, newSpec.Subscriptions = nil, nil
-	return equality.Semantic.DeepEqual(oldSpec, newSpec)
-}
-
-// removedSubFieldErrs returns an error for each of the removedSubFields used
-// by a subscription of the raw, JSON-encoded Warehouse. Malformed input is
-// caught when decoding the Warehouse, so it yields no errors here.
-func removedSubFieldErrs(raw []byte, f *field.Path) field.ErrorList {
 	var obj struct {
 		Spec struct {
-			Subscriptions []map[string]any `json:"subscriptions"`
+			Subscriptions []map[string]json.RawMessage `json:"subscriptions"`
 		} `json:"spec"`
 	}
-	if err := json.Unmarshal(raw, &obj); err != nil {
+	if err = json.Unmarshal(req.Object.Raw, &obj); err != nil {
 		return nil
 	}
-	var errs field.ErrorList
-	for i, sub := range obj.Spec.Subscriptions {
-		for _, removed := range removedSubFields {
-			cfg, _ := sub[removed.subType].(map[string]any)
-			for _, name := range removed.fields {
-				if _, ok := cfg[name]; ok {
-					errs = append(errs, field.Forbidden(
-						f.Index(i).Child(removed.subType, name),
-						fmt.Sprintf("%s has been removed; use %sRegexes instead", name, name),
-					))
-				}
-			}
-		}
-	}
-	return errs
+	return obj.Spec.Subscriptions
 }
 
+// validateSubs validates subs, the typed subscriptions of a Warehouse.
+// rawSubs, if non-nil, are the same subscriptions as raw, JSON-encoded objects
+// keyed by their top-level fields.
 func (w *webhook) validateSubs(
 	ctx context.Context,
 	f *field.Path,
 	subs []kargoapi.RepoSubscription,
+	rawSubs []map[string]json.RawMessage,
 ) field.ErrorList {
 	if len(subs) == 0 {
 		return nil
@@ -280,7 +223,11 @@ func (w *webhook) validateSubs(
 	seen := make(uniqueSubSet, len(subs))
 	seenNames := make(map[string]*field.Path, len(subs))
 	for i, sub := range subs {
-		errs = append(errs, w.validateSub(ctx, f.Index(i), sub, seen)...)
+		var rawSub map[string]json.RawMessage
+		if i < len(rawSubs) {
+			rawSub = rawSubs[i]
+		}
+		errs = append(errs, w.validateSub(ctx, f.Index(i), sub, rawSub, seen)...)
 		namePath := f.Index(i).Child("name")
 		// Generic subscriptions are identified by name alone, so, unlike the
 		// original three subscription types, a name is required.
@@ -309,25 +256,31 @@ func (w *webhook) validateSubs(
 	return errs
 }
 
+// validateSub validates sub, a typed subscription. rawSub, if non-nil, is the
+// same subscription as a raw, JSON-encoded object keyed by its top-level
+// fields.
 func (w *webhook) validateSub(
 	ctx context.Context,
 	f *field.Path,
 	sub kargoapi.RepoSubscription,
+	rawSub map[string]json.RawMessage,
 	seen uniqueSubSet,
 ) field.ErrorList {
 	// A small bit of special-casing is required here because, unlike generic
 	// subscriptions, the original three subscription types do not have a field
 	// that indicates their type.
+	var subType string
 	switch {
 	case sub.Chart != nil:
-		f = f.Child("chart")
+		subType = "chart"
 	case sub.Git != nil:
-		f = f.Child("git")
+		subType = "git"
 	case sub.Image != nil:
-		f = f.Child("image")
+		subType = "image"
 	case sub.Subscription != nil:
-		f = f.Child(sub.Subscription.SubscriptionType)
+		subType = sub.Subscription.SubscriptionType
 	}
+	f = f.Child(subType)
 
 	subReg, err := w.subscriberRegistry.Get(ctx, sub)
 	if err != nil {
@@ -349,12 +302,18 @@ func (w *webhook) validateSub(
 
 	var errs field.ErrorList
 
+	// Validate the raw subscription against the subscriber's schema, if it has
+	// one. This catches fields that decoding the subscription dropped.
+	if subSchema := subReg.Metadata.Schema; subSchema != nil && rawSub[subType] != nil {
+		errs = append(errs, subSchema.Validate(f, rawSub[subType])...)
+	}
+
 	// Validate the common elements of generic subscriptions
 	if sub.Subscription != nil {
 		errs = append(errs, w.validateGenericSub(f, *sub.Subscription)...)
 	}
 
-	// Subscriber-specific validation
+	// Subscriber-specific validation of what the schema can't express
 	errs = append(errs, subscriber.ValidateSubscription(ctx, f, sub)...)
 
 	// Validate uniqueness

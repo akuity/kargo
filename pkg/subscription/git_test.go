@@ -3,7 +3,6 @@ package subscription
 import (
 	"context"
 	"errors"
-	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -376,7 +375,7 @@ func Test_gitSubscriber_ApplySubscriptionDefaults(t *testing.T) {
 	})
 }
 
-func Test_gitURLRegex(t *testing.T) {
+func Test_gitSchema_repoURL(t *testing.T) {
 	cases := map[string]bool{
 		"":             false,
 		":":            false,
@@ -420,12 +419,12 @@ func Test_gitURLRegex(t *testing.T) {
 	}
 	for input, expected := range cases {
 		t.Run(input, func(t *testing.T) {
-			require.Equal(t, expected, gitURLRegex.MatchString(input))
+			require.Equal(t, expected, schemaAccepts(t, "git", "repoURL", input))
 		})
 	}
 }
 
-func Test_branchRegex(t *testing.T) {
+func Test_gitSchema_branch(t *testing.T) {
 	cases := map[string]bool{
 		"":             false,
 		"foo/bar":      true,
@@ -440,7 +439,7 @@ func Test_branchRegex(t *testing.T) {
 	}
 	for input, expected := range cases {
 		t.Run(input, func(t *testing.T) {
-			require.Equal(t, expected, branchRegex.MatchString(input))
+			require.Equal(t, expected, schemaAccepts(t, "git", "branch", input))
 		})
 	}
 }
@@ -452,129 +451,25 @@ func Test_gitSubscriber_ValidateSubscription(t *testing.T) {
 		assertions func(*testing.T, field.ErrorList)
 	}{
 		{
-			name: "RepoURL empty",
-			sub: kargoapi.GitSubscription{
-				RepoURL: "",
-			},
-			assertions: func(t *testing.T, errs field.ErrorList) {
-				require.NotNil(t, errs)
-				require.True(t, len(errs) > 0)
-				require.Equal(t, "git.repoURL", errs[0].Field)
-				require.Equal(t, field.ErrorTypeInvalid, errs[0].Type)
-			},
-		},
-		{
-			name: "RepoURL invalid format",
-			sub: kargoapi.GitSubscription{
-				RepoURL: "bogus",
-			},
-			assertions: func(t *testing.T, errs field.ErrorList) {
-				require.NotNil(t, errs)
-				require.True(t, len(errs) > 0)
-				require.Equal(t, "git.repoURL", errs[0].Field)
-				require.Equal(t, field.ErrorTypeInvalid, errs[0].Type)
-			},
-		},
-		{
-			name: "RepoURL is an SSH URL",
-			sub: kargoapi.GitSubscription{
-				RepoURL: "git@github.com:akuity/kargo.git",
-			},
-			assertions: func(t *testing.T, errs field.ErrorList) {
-				require.NotEmpty(t, errs)
-				require.Equal(t, "git.repoURL", errs[0].Field)
-				require.Contains(t, errs[0].Detail, "only HTTP(S) URLs are supported")
-			},
-		},
-		{
-			name: "Branch too long",
-			sub: kargoapi.GitSubscription{
-				RepoURL: "https://github.com/akuity/kargo.git",
-				Branch:  "a" + strings.Repeat("b", 255),
-			},
-			assertions: func(t *testing.T, errs field.ErrorList) {
-				require.NotNil(t, errs)
-				require.True(t, len(errs) > 0)
-				require.Equal(t, "git.branch", errs[0].Field)
-				require.Equal(t, field.ErrorTypeInvalid, errs[0].Type)
-			},
-		},
-		{
-			name: "Branch invalid pattern",
-			sub: kargoapi.GitSubscription{
-				RepoURL: "https://github.com/akuity/kargo.git",
-				Branch:  "-invalid",
-			},
-			assertions: func(t *testing.T, errs field.ErrorList) {
-				require.NotNil(t, errs)
-				require.True(t, len(errs) > 0)
-				require.Equal(t, "git.branch", errs[0].Field)
-				require.Equal(t, field.ErrorTypeInvalid, errs[0].Type)
-			},
-		},
-		{
-			name: "CommitSelectionStrategy invalid",
-			sub: kargoapi.GitSubscription{
-				RepoURL:                 "https://github.com/akuity/kargo.git",
-				CommitSelectionStrategy: "InvalidStrategy",
-			},
-			assertions: func(t *testing.T, errs field.ErrorList) {
-				require.NotNil(t, errs)
-				require.True(t, len(errs) > 0)
-				require.Equal(t, "git.commitSelectionStrategy", errs[0].Field)
-				require.Equal(t, field.ErrorTypeNotSupported, errs[0].Type)
-			},
-		},
-		{
 			name: "invalid semverConstraint",
 			sub: kargoapi.GitSubscription{
 				RepoURL:          "https://github.com/akuity/kargo.git",
 				SemverConstraint: "bogus",
 			},
 			assertions: func(t *testing.T, errs field.ErrorList) {
-				require.NotNil(t, errs)
-				require.True(t, len(errs) > 0)
+				require.Len(t, errs, 1)
 				require.Equal(t, "git.semverConstraint", errs[0].Field)
-				require.Equal(t, field.ErrorTypeInvalid, errs[0].Type)
-			},
-		},
-		{
-			name: "DiscoveryLimit too small",
-			sub: kargoapi.GitSubscription{
-				RepoURL:        "https://github.com/akuity/kargo.git",
-				DiscoveryLimit: 0,
-			},
-			assertions: func(t *testing.T, errs field.ErrorList) {
-				require.NotNil(t, errs)
-				require.True(t, len(errs) > 0)
-				require.Equal(t, "git.discoveryLimit", errs[0].Field)
-				require.Equal(t, field.ErrorTypeInvalid, errs[0].Type)
-			},
-		},
-		{
-			name: "DiscoveryLimit too large",
-			sub: kargoapi.GitSubscription{
-				RepoURL:        "https://github.com/akuity/kargo.git",
-				DiscoveryLimit: 101,
-			},
-			assertions: func(t *testing.T, errs field.ErrorList) {
-				require.NotNil(t, errs)
-				require.True(t, len(errs) > 0)
-				require.Equal(t, "git.discoveryLimit", errs[0].Field)
 				require.Equal(t, field.ErrorTypeInvalid, errs[0].Type)
 			},
 		},
 		{
 			name: "valid",
 			sub: kargoapi.GitSubscription{
-				RepoURL:                 "https://github.com/akuity/kargo.git",
-				Branch:                  "main",
-				CommitSelectionStrategy: kargoapi.CommitSelectionStrategyNewestFromBranch,
-				SemverConstraint:        "^1.0.0",
-				DiscoveryLimit:          20,
+				RepoURL:          "https://github.com/akuity/kargo.git",
+				SemverConstraint: "^1.0.0",
 			},
 			assertions: func(t *testing.T, errs field.ErrorList) {
-				require.Nil(t, errs)
+				require.Empty(t, errs)
 			},
 		},
 	}

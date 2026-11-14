@@ -50,8 +50,8 @@
   },
   "platform": {
    "type": "string",
-   "pattern": "^\\w+/\\w+$",
-   "description": "Platform is a string of the form <os>/<arch> that limits the tags that can be considered when searching for new versions of an image. This field is optional. When left unspecified, it is implicitly equivalent to the OS/architecture of the Kargo controller. Care should be taken to set this value correctly in cases where the image will run on a Kubernetes node with a different OS/architecture than the Kargo controller."
+   "pattern": "^\\w+/\\w+(/[\\w.-]+)?$",
+   "description": "Platform is a string of the form <os>/<arch> or <os>/<arch>/<variant> that limits the tags that can be considered when searching for new versions of an image. This field is optional. When left unspecified, it is implicitly equivalent to the OS/architecture of the Kargo controller. Care should be taken to set this value correctly in cases where the image will run on a Kubernetes node with a different OS/architecture than the Kargo controller."
   },
   "insecureSkipTLSVerify": {
    "type": "boolean",
@@ -70,5 +70,19 @@
    "description": "CacheByTag specifies whether to cache image metadata by tag. This can improve performance but may lead to stale data if mutable tags are used."
   }
  },
- "additionalProperties": false
+ "additionalProperties": false,
+ "if": {
+  "properties": {
+   "imageSelectionStrategy": {
+    "const": "Digest"
+   }
+  }
+ },
+ "then": {
+  "properties": {
+   "constraint": {
+    "minLength": 1
+   }
+  }
+ }
 }

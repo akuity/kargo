@@ -49,7 +49,7 @@ func Test_imageSubscriber_ApplySubscriptionDefaults(t *testing.T) {
 	})
 }
 
-func Test_imageRepoURLRegex(t *testing.T) {
+func Test_imageSchema_repoURL(t *testing.T) {
 	cases := map[string]bool{
 		"":                              false,
 		"repo":                          true,
@@ -70,7 +70,7 @@ func Test_imageRepoURLRegex(t *testing.T) {
 	}
 	for input, expected := range cases {
 		t.Run(input, func(t *testing.T) {
-			require.Equal(t, expected, imageRepoURLRegex.MatchString(input))
+			require.Equal(t, expected, schemaAccepts(t, "image", "repoURL", input))
 		})
 	}
 }
@@ -82,121 +82,63 @@ func Test_imageSubscriber_ValidateSubscription(t *testing.T) {
 		assertions func(*testing.T, field.ErrorList)
 	}{
 		{
-			name: "RepoURL empty",
-			sub: kargoapi.ImageSubscription{
-				RepoURL: "",
-			},
-			assertions: func(t *testing.T, errs field.ErrorList) {
-				require.NotNil(t, errs)
-				require.True(t, len(errs) > 0)
-				require.Equal(t, "image.repoURL", errs[0].Field)
-				require.Equal(t, field.ErrorTypeInvalid, errs[0].Type)
-			},
-		},
-		{
-			name: "RepoURL invalid format",
-			sub: kargoapi.ImageSubscription{
-				RepoURL: "bogus invalid",
-			},
-			assertions: func(t *testing.T, errs field.ErrorList) {
-				require.NotNil(t, errs)
-				require.True(t, len(errs) > 0)
-				require.Equal(t, "image.repoURL", errs[0].Field)
-				require.Equal(t, field.ErrorTypeInvalid, errs[0].Type)
-			},
-		},
-		{
-			name: "ImageSelectionStrategy invalid",
-			sub: kargoapi.ImageSubscription{
-				RepoURL:                "ghcr.io/akuity/kargo",
-				ImageSelectionStrategy: "InvalidStrategy",
-			},
-			assertions: func(t *testing.T, errs field.ErrorList) {
-				require.NotNil(t, errs)
-				require.True(t, len(errs) > 0)
-				require.Equal(t, "image.imageSelectionStrategy", errs[0].Field)
-				require.Equal(t, field.ErrorTypeNotSupported, errs[0].Type)
-			},
-		},
-		{
-			name: "Digest strategy missing constraint",
-			sub: kargoapi.ImageSubscription{
-				RepoURL:                "ghcr.io/akuity/kargo",
-				ImageSelectionStrategy: kargoapi.ImageSelectionStrategyDigest,
-				Constraint:             "",
-			},
-			assertions: func(t *testing.T, errs field.ErrorList) {
-				require.NotNil(t, errs)
-				require.True(t, len(errs) > 0)
-				require.Equal(t, "image.constraint", errs[0].Field)
-				require.Equal(t, field.ErrorTypeInvalid, errs[0].Type)
-			},
-		},
-		{
 			name: "invalid constraint for SemVer",
 			sub: kargoapi.ImageSubscription{
 				RepoURL:                "ghcr.io/akuity/kargo",
 				ImageSelectionStrategy: kargoapi.ImageSelectionStrategySemVer,
 				Constraint:             "bogus",
+				CacheByTag:             true,
 			},
 			assertions: func(t *testing.T, errs field.ErrorList) {
-				require.NotNil(t, errs)
-				require.True(t, len(errs) > 0)
+				require.Len(t, errs, 1)
 				require.Equal(t, "image.constraint", errs[0].Field)
 				require.Equal(t, field.ErrorTypeInvalid, errs[0].Type)
 			},
 		},
 		{
-			name: "Platform invalid format",
+			// An unspecified strategy is SemVer by default
+			name: "invalid constraint for unspecified strategy",
 			sub: kargoapi.ImageSubscription{
-				RepoURL:  "ghcr.io/akuity/kargo",
-				Platform: "bogus",
+				RepoURL:    "ghcr.io/akuity/kargo",
+				Constraint: "bogus",
+				CacheByTag: true,
 			},
 			assertions: func(t *testing.T, errs field.ErrorList) {
-				require.NotNil(t, errs)
-				require.True(t, len(errs) > 0)
-				require.Equal(t, "image.platform", errs[0].Field)
-				require.Equal(t, field.ErrorTypeInvalid, errs[0].Type)
+				require.Len(t, errs, 1)
+				require.Equal(t, "image.constraint", errs[0].Field)
+			},
+		},
+		{
+			name: "constraint for other strategy",
+			sub: kargoapi.ImageSubscription{
+				RepoURL:                "ghcr.io/akuity/kargo",
+				ImageSelectionStrategy: kargoapi.ImageSelectionStrategyLexical,
+				Constraint:             "^v1",
+				CacheByTag:             true,
+			},
+			assertions: func(t *testing.T, errs field.ErrorList) {
+				require.Empty(t, errs)
 			},
 		},
 		{
 			name: "caching by tag required but not set",
-			sub: kargoapi.ImageSubscription{
-				RepoURL: "ghcr.io/akuity/kargo",
-			},
+			sub:  kargoapi.ImageSubscription{RepoURL: "ghcr.io/akuity/kargo"},
 			assertions: func(t *testing.T, errs field.ErrorList) {
-				require.NotNil(t, errs)
-				require.True(t, len(errs) > 0)
+				require.Len(t, errs, 1)
 				require.Equal(t, "image.cacheByTag", errs[0].Field)
 				require.Equal(t, field.ErrorTypeInvalid, errs[0].Type)
 			},
 		},
 		{
-			name: "DiscoveryLimit too small",
+			// Digests are immutable, so caching by tag doesn't apply
+			name: "caching by tag required but not set for Digest strategy",
 			sub: kargoapi.ImageSubscription{
-				RepoURL:        "ghcr.io/akuity/kargo",
-				CacheByTag:     true,
-				DiscoveryLimit: 0,
+				RepoURL:                "ghcr.io/akuity/kargo",
+				ImageSelectionStrategy: kargoapi.ImageSelectionStrategyDigest,
+				Constraint:             "latest",
 			},
 			assertions: func(t *testing.T, errs field.ErrorList) {
-				require.NotNil(t, errs)
-				require.True(t, len(errs) > 0)
-				require.Equal(t, "image.discoveryLimit", errs[0].Field)
-				require.Equal(t, field.ErrorTypeInvalid, errs[0].Type)
-			},
-		},
-		{
-			name: "DiscoveryLimit too large",
-			sub: kargoapi.ImageSubscription{
-				RepoURL:        "ghcr.io/akuity/kargo",
-				CacheByTag:     true,
-				DiscoveryLimit: 101,
-			},
-			assertions: func(t *testing.T, errs field.ErrorList) {
-				require.NotNil(t, errs)
-				require.True(t, len(errs) > 0)
-				require.Equal(t, "image.discoveryLimit", errs[0].Field)
-				require.Equal(t, field.ErrorTypeInvalid, errs[0].Type)
+				require.Empty(t, errs)
 			},
 		},
 		{
@@ -205,12 +147,10 @@ func Test_imageSubscriber_ValidateSubscription(t *testing.T) {
 				RepoURL:                "ghcr.io/akuity/kargo",
 				ImageSelectionStrategy: kargoapi.ImageSelectionStrategySemVer,
 				Constraint:             "^1.0.0",
-				Platform:               "linux/amd64",
 				CacheByTag:             true,
-				DiscoveryLimit:         20,
 			},
 			assertions: func(t *testing.T, errs field.ErrorList) {
-				require.Nil(t, errs)
+				require.Empty(t, errs)
 			},
 		},
 	}
