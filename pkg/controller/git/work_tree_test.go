@@ -433,7 +433,9 @@ func TestGetDiffPathsForCommitWithSpecialCharacters(t *testing.T) {
 	)
 	require.NoError(t, err)
 	require.NotNil(t, rep)
-	defer rep.Close(t.Context())
+	defer func() {
+		require.NoError(t, rep.Close(t.Context()))
+	}()
 
 	wt := internalWorkTree(t, rep)
 	_, err = libExec.Exec(wt.buildGitCommand(
