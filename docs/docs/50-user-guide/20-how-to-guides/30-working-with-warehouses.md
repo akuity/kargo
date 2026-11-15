@@ -142,7 +142,8 @@ fields:
   unlike `allowTagsRegexes`, it does not reduce the number of calls made to the
   registry. It may increase them, since more images may need to be checked
   before `discoveryLimit` is reached. If your tags are immutable, enabling
-  [`cacheByTag`](#cacheByTag) can significantly reduce these calls.
+  [`cacheByTag`](#container-image-subscriptions) can significantly reduce these
+  calls.
   :::
 
   Example:
