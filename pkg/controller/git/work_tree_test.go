@@ -421,6 +421,46 @@ func TestGetDiffPathsForMergeCommit(t *testing.T) {
 	require.Equal(t, []string{"foo/file1.txt"}, paths)
 }
 
+func TestGetDiffPathsForCommitWithSpecialCharacters(t *testing.T) {
+	testServer, testRepoURL, testRepoCreds := setupRemoteRepo(t)
+	defer testServer.Close()
+
+	rep, err := Clone(
+		t.Context(),
+		testRepoURL,
+		&ClientOptions{Credentials: &testRepoCreds},
+		nil,
+	)
+	require.NoError(t, err)
+	require.NotNil(t, rep)
+	defer rep.Close(t.Context())
+
+	wt := internalWorkTree(t, rep)
+	_, err = libExec.Exec(wt.buildGitCommand(
+		t.Context(), "config", "core.quotePath", "true",
+	))
+	require.NoError(t, err)
+
+	wantPaths := []string{
+		"apps/café/values.yaml",
+		`apps/with space/a"b.yaml`,
+		"apps/plain/values.yaml",
+	}
+	for _, path := range wantPaths {
+		fullPath := filepath.Join(rep.Dir(), path)
+		require.NoError(t, os.MkdirAll(filepath.Dir(fullPath), 0o755))
+		require.NoError(t, os.WriteFile(fullPath, []byte("value: test"), 0o600))
+	}
+	require.NoError(t, rep.AddAllAndCommit(t.Context(), "add special paths", nil))
+
+	commitID, err := rep.LastCommitID(t.Context())
+	require.NoError(t, err)
+
+	paths, err := rep.GetDiffPathsForCommitID(t.Context(), commitID)
+	require.NoError(t, err)
+	require.ElementsMatch(t, wantPaths, paths)
+}
+
 func TestGetDiffPathsForMovedFile(t *testing.T) {
 	testServer, testRepoURL, testRepoCreds := setupRemoteRepo(t)
 	defer testServer.Close()

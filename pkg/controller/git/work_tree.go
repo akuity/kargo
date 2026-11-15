@@ -452,32 +452,30 @@ func (w *workTree) GetDiffPathsForCommitID(
 ) ([]string, error) {
 	resBytes, err := libExec.Exec(w.buildGitCommand(
 		ctx,
-		"show", "--pretty=", "--name-status", "--no-renames", "--first-parent", commitID,
+		"show", "--pretty=", "--name-status", "-z", "--no-renames", "--first-parent", commitID,
 	))
 	if err != nil {
 		return nil, fmt.Errorf("error getting diff paths for commit %q: %w", commitID, err)
 	}
 	var paths []string
-	scanner := bufio.NewScanner(bytes.NewReader(resBytes))
-	for scanner.Scan() {
-		line := scanner.Text()
-		if line == "" {
-			continue
-		}
-		// With --no-renames, a moved file is reported as a delete of the old
-		// path and an add of the new path rather than a single rename record,
-		// so --name-status output is always tab-separated as <status>\t<path>.
-		// This naturally surfaces both sides of a move without invoking git's
-		// rename detection, which can warn and fail on commits that change too
-		// many files at once.
-		parts := strings.SplitN(line, "\t", 2)
-		if len(parts) != 2 {
+	parts := strings.Split(string(resBytes), "\x00")
+	if parts[len(parts)-1] == "" {
+		parts = parts[:len(parts)-1]
+	}
+	// With --no-renames, a moved file is reported as a delete of the old
+	// path and an add of the new path rather than a single rename record,
+	// so --name-status -z output is always paired as <status>\0<path>\0.
+	// This naturally surfaces both sides of a move without invoking git's
+	// rename detection, which can warn and fail on commits that change too
+	// many files at once. With -z, paths are not quoted or escaped.
+	for i := 0; i < len(parts); i += 2 {
+		if i+1 >= len(parts) || parts[i] == "" {
 			return nil, fmt.Errorf(
 				"unexpected output from git show for commit %q: %q",
-				commitID, line,
+				commitID, resBytes,
 			)
 		}
-		paths = append(paths, parts[1])
+		paths = append(paths, parts[i+1])
 	}
 	return paths, nil
 }
