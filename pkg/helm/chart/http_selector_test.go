@@ -63,7 +63,7 @@ func TestNewHTTPSelector(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			s, err := newHTTPSelector(testCase.sub, testCase.creds)
+			s, err := newHTTPSelector(testCase.sub, 20, testCase.creds)
 			testCase.assertions(t, s, err)
 		})
 	}

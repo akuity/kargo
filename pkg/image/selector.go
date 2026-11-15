@@ -23,6 +23,7 @@ type Selector interface {
 func NewSelector(
 	ctx context.Context,
 	sub kargoapi.ImageSubscription,
+	discoveryLimit int,
 	creds *Credentials,
 ) (Selector, error) {
 	// Pick an appropriate Selector implementation based on the subscription
@@ -32,5 +33,5 @@ func NewSelector(
 		return nil, fmt.Errorf("error getting selector factory")
 	}
 	factory := reg.Value
-	return factory(sub, creds)
+	return factory(sub, discoveryLimit, creds)
 }

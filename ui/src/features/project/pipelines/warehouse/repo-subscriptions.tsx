@@ -45,12 +45,12 @@ export const RepoSubscriptions = ({ subscriptions }: Props) => {
                 </Typography.Link>
               </Descriptions.Item>
 
-              {!!subscription?.chart?.discoveryLimit && (
+              {(!!subscription?.discoveryLimit || !!subscription?.chart?.discoveryLimit) && (
                 <Descriptions.Item
                   label='discovery limit'
                   styles={{ label: DescriptionsLabelStyle }}
                 >
-                  {subscription?.chart?.discoveryLimit}
+                  {subscription?.discoveryLimit || subscription?.chart?.discoveryLimit}
                 </Descriptions.Item>
               )}
 
@@ -82,12 +82,12 @@ export const RepoSubscriptions = ({ subscriptions }: Props) => {
                 </Typography.Link>
               </Descriptions.Item>
 
-              {!!subscription?.git?.discoveryLimit && (
+              {(!!subscription?.discoveryLimit || !!subscription?.git?.discoveryLimit) && (
                 <Descriptions.Item
                   label='discovery limit'
                   styles={{ label: DescriptionsLabelStyle }}
                 >
-                  {subscription?.git?.discoveryLimit}
+                  {subscription?.discoveryLimit || subscription?.git?.discoveryLimit}
                 </Descriptions.Item>
               )}
 
@@ -138,12 +138,12 @@ export const RepoSubscriptions = ({ subscriptions }: Props) => {
                 </Typography.Link>
               </Descriptions.Item>
 
-              {!!subscription?.image?.discoveryLimit && (
+              {(!!subscription?.discoveryLimit || !!subscription?.image?.discoveryLimit) && (
                 <Descriptions.Item
                   label='discovery limit'
                   styles={{ label: DescriptionsLabelStyle }}
                 >
-                  {subscription?.image?.discoveryLimit}
+                  {subscription?.discoveryLimit || subscription?.image?.discoveryLimit}
                 </Descriptions.Item>
               )}
 
@@ -180,7 +180,7 @@ export const RepoSubscriptions = ({ subscriptions }: Props) => {
                 {subscription.subscription.subscriptionType}
               </Descriptions.Item>
               <Descriptions.Item label='discovery limit'>
-                {subscription.subscription.discoveryLimit}
+                {subscription?.discoveryLimit || subscription?.subscription?.discoveryLimit}
               </Descriptions.Item>
             </Descriptions>
           )}

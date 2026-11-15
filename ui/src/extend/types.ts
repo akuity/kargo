@@ -49,6 +49,7 @@ export type Subscription = {
 
 export type RepoSubscription = {
   name?: string;
+  discoveryLimit?: number;
   git?: GitSubscription;
   image?: ImageSubscription;
   chart?: ChartSubscription;

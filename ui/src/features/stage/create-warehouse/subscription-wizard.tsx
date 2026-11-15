@@ -3,7 +3,7 @@ import { faEye, faTrash, IconDefinition } from '@fortawesome/free-solid-svg-icon
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import Form from '@rjsf/antd';
 import validator from '@rjsf/validator-ajv8';
-import { Button, Card, Collapse, Input, Modal, Select, Tag, Typography } from 'antd';
+import { Button, Card, Collapse, Input, InputNumber, Modal, Select, Tag, Typography } from 'antd';
 import AntdFormLabel from 'antd/es/form/FormItemLabel';
 import classNames from 'classnames';
 import { JSONSchema7 } from 'json-schema';
@@ -33,6 +33,8 @@ export const SubscriptionWizard = (props: {
   );
 
   const [name, setName] = useState('');
+
+  const [discoveryLimit, setDiscoveryLimit] = useState<number | null>(null);
 
   return (
     <>
@@ -75,6 +77,21 @@ export const SubscriptionWizard = (props: {
               placeholder='Optional'
             />
           </div>
+          <div>
+            <AntdFormLabel
+              prefixCls=''
+              label='Discovery Limit'
+              htmlFor='subscription-discovery-limit'
+            />
+            <InputNumber
+              id='subscription-discovery-limit'
+              className='mt-2 w-full'
+              min={1}
+              value={discoveryLimit}
+              onChange={(value) => setDiscoveryLimit(value)}
+              placeholder='Optional'
+            />
+          </div>
           <Collapse
             items={[
               {
@@ -104,10 +121,12 @@ export const SubscriptionWizard = (props: {
                         ...props.subscriptions,
                         {
                           ...(name ? { name } : {}),
+                          ...(discoveryLimit ? { discoveryLimit } : {}),
                           [selectedNewSubscription]: data.formData
                         }
                       ]);
                       setName('');
+                      setDiscoveryLimit(null);
                     }}
                   >
                     <Button htmlType='submit' icon={<IconSetByKargoTerminology.subscription />}>
@@ -132,8 +151,9 @@ SubscriptionWizard.Subscription = (props: {
   let icon: IconDefinition | null = null;
 
   // one of git, image or chart
-  const subscriptionType = (Object.keys(props.subscription).filter((k) => k !== 'name')[0] ||
-    '') as keyof RepoSubscription | '';
+  const subscriptionType = (Object.keys(props.subscription).filter(
+    (k) => k !== 'name' && k !== 'discoveryLimit'
+  )[0] || '') as keyof RepoSubscription | '';
 
   if (subscriptionType === '') {
     return <Tag color='red'>Corrupt Subscription! Please Check YAML</Tag>;

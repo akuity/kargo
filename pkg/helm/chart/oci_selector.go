@@ -23,9 +23,10 @@ type ociSelector struct {
 func newOCISelector(
 	ctx context.Context,
 	sub kargoapi.ChartSubscription,
+	discoveryLimit int,
 	creds *helm.Credentials,
 ) (Selector, error) {
-	base, err := newBaseSelector(sub)
+	base, err := newBaseSelector(sub, discoveryLimit)
 	if err != nil {
 		return nil, fmt.Errorf("error building base selector: %w", err)
 	}
