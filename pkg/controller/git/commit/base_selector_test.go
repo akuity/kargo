@@ -82,26 +82,6 @@ func TestNewBaseSelector(t *testing.T) {
 	}
 }
 
-func TestCompileFilterExpression(t *testing.T) {
-	testCases := map[string]bool{ // expression -> valid
-		"(1 + 2": false, // Syntax error
-		// No environment is used, so variables are not checked
-		"!(subject contains 'skip-ci')": true,
-		"tag startsWith 'v1.'":          true,
-	}
-	for expression, valid := range testCases {
-		t.Run(expression, func(t *testing.T) {
-			program, err := CompileFilterExpression(expression)
-			if !valid {
-				require.Error(t, err)
-				return
-			}
-			require.NoError(t, err)
-			require.NotNil(t, program)
-		})
-	}
-}
-
 func TestBaseSelector_MatchesPaths(t *testing.T) {
 	const (
 		regexpPrefix = "regexp:"

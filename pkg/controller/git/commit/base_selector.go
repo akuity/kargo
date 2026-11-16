@@ -55,7 +55,7 @@ func newBaseSelector(
 	}
 	var err error
 	if sub.ExpressionFilter != "" {
-		s.filterExpression, err = CompileFilterExpression(sub.ExpressionFilter)
+		s.filterExpression, err = expr.Compile(sub.ExpressionFilter)
 		if err != nil {
 			return nil, fmt.Errorf("error compiling filter expression: %w", err)
 		}
@@ -67,15 +67,6 @@ func newBaseSelector(
 		return nil, fmt.Errorf("error parsing exclude path selectors: %w", err)
 	}
 	return s, nil
-}
-
-// CompileFilterExpression compiles the provided Git subscription filter
-// expression. The variables available to it differ by commit selection
-// strategy, so it is compiled without an environment and only syntax is
-// checked. It is exported so that admission can reject expressions that would
-// fail here.
-func CompileFilterExpression(expression string) (*vm.Program, error) {
-	return expr.Compile(expression)
 }
 
 // MatchesPaths implements Selector.
