@@ -214,6 +214,14 @@ func Test_webhook_ValidateCreate(t *testing.T) {
 					},
 				).Build(),
 			},
+			req: &admission.Request{
+				AdmissionRequest: admissionv1.AdmissionRequest{
+					Operation: admissionv1.Create,
+					Object: runtime.RawExtension{
+						Raw: []byte(`{"spec":{"subscriptions":[{"git":{"repoURL":"bogus"}}]}}`),
+					},
+				},
+			},
 			warehouse: &kargoapi.Warehouse{
 				ObjectMeta: metav1.ObjectMeta{Namespace: testProject},
 				Spec: kargoapi.WarehouseSpec{
@@ -417,6 +425,122 @@ func Test_webhook_ValidateCreate(t *testing.T) {
 				require.Contains(t, err.Error(), "spec.subscriptions[0].image.allowTags")
 			},
 		},
+		{
+			name: "unknown subscription fields",
+			webhook: &webhook{
+				client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
+					&corev1.Namespace{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: testProject,
+							Labels: map[string]string{
+								kargoapi.LabelKeyProject: kargoapi.LabelValueTrue,
+							},
+						},
+					},
+				).Build(),
+			},
+			req: &admission.Request{
+				AdmissionRequest: admissionv1.AdmissionRequest{
+					Operation: admissionv1.Create,
+					Object: runtime.RawExtension{
+						Raw: []byte(`{"spec":{"subscriptions":[
+							{"chart":{"repoURL":"oci://example.com/chart","constraint":"<1.1.0"}}
+						]}}`),
+					},
+				},
+			},
+			warehouse: &kargoapi.Warehouse{
+				ObjectMeta: metav1.ObjectMeta{Namespace: testProject},
+				Spec: kargoapi.WarehouseSpec{
+					InternalSubscriptions: []kargoapi.RepoSubscription{{
+						Chart: &kargoapi.ChartSubscription{
+							RepoURL:        "oci://example.com/chart",
+							DiscoveryLimit: 20,
+						},
+					}},
+				},
+			},
+			assertions: func(t *testing.T, err error) {
+				require.Error(t, err)
+				require.Contains(t, err.Error(), "spec.subscriptions[0].chart.constraint")
+				require.Contains(t, err.Error(), "unknown field")
+			},
+		},
+		{
+			// Subscribers validate only what their schemas can't express
+			name: "schema violations are reported once",
+			webhook: &webhook{
+				client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
+					&corev1.Namespace{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: testProject,
+							Labels: map[string]string{
+								kargoapi.LabelKeyProject: kargoapi.LabelValueTrue,
+							},
+						},
+					},
+				).Build(),
+			},
+			req: &admission.Request{
+				AdmissionRequest: admissionv1.AdmissionRequest{
+					Operation: admissionv1.Create,
+					Object: runtime.RawExtension{
+						Raw: []byte(`{"spec":{"subscriptions":[
+							{"chart":{"repoURL":"bogus-url","discoveryLimit":101}},
+							{"image":{"repoURL":"fake-url","platform":"bogus","discoveryLimit":20}},
+							{"git":{"repoURL":"bogus","branch":"-invalid","discoveryLimit":20}}
+						]}}`),
+					},
+				},
+			},
+			warehouse: &kargoapi.Warehouse{
+				ObjectMeta: metav1.ObjectMeta{Namespace: testProject},
+				Spec: kargoapi.WarehouseSpec{
+					InternalSubscriptions: []kargoapi.RepoSubscription{
+						{
+							Chart: &kargoapi.ChartSubscription{
+								RepoURL:        "bogus-url",
+								DiscoveryLimit: 101,
+							},
+						},
+						{
+							Image: &kargoapi.ImageSubscription{
+								RepoURL:        "fake-url",
+								Platform:       "bogus",
+								DiscoveryLimit: 20,
+								CacheByTag:     true,
+							},
+						},
+						{
+							Git: &kargoapi.GitSubscription{
+								RepoURL:        "bogus",
+								Branch:         "-invalid",
+								DiscoveryLimit: 20,
+							},
+						},
+					},
+				},
+			},
+			assertions: func(t *testing.T, err error) {
+				var statusErr *apierrors.StatusError
+				require.True(t, errors.As(err, &statusErr))
+				fields := make([]string, len(statusErr.ErrStatus.Details.Causes))
+				for i, cause := range statusErr.ErrStatus.Details.Causes {
+					fields[i] = cause.Field
+				}
+				require.ElementsMatch(
+					t,
+					[]string{
+						"spec.subscriptions[0].chart.repoURL",
+						"spec.subscriptions[0].chart.discoveryLimit",
+						"spec.subscriptions[1].image.platform",
+						"spec.subscriptions[2].git.repoURL",
+						"spec.subscriptions[2].git.branch",
+					},
+					fields,
+				)
+			},
+		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
@@ -467,14 +591,9 @@ func Test_webhook_ValidateUpdate(t *testing.T) {
 					},
 				).Build(),
 			},
-			warehouse: &kargoapi.Warehouse{
-				ObjectMeta: metav1.ObjectMeta{Namespace: testProject},
-				Spec: kargoapi.WarehouseSpec{
-					InternalSubscriptions: []kargoapi.RepoSubscription{{
-						Git: &kargoapi.GitSubscription{RepoURL: "bogus"},
-					}},
-				},
-			},
+			newRaw: `{"metadata":{"namespace":"fake-project"},"spec":{"subscriptions":[
+				{"git":{"repoURL":"bogus"}}
+			]}}`,
 			assertions: func(t *testing.T, err error) {
 				var statusErr *apierrors.StatusError
 				require.True(t, errors.As(err, &statusErr))
@@ -547,61 +666,69 @@ func Test_webhook_ValidateUpdate(t *testing.T) {
 			},
 		},
 		{
-			name:    "removed subscription fields",
+			name:    "unknown subscription field",
 			webhook: &webhook{},
 			newRaw:  `{"spec":{"subscriptions":[{"image":{"repoURL":"fake-url","allowTags":"^v1"}}]}}`,
 			assertions: func(t *testing.T, err error) {
 				require.Error(t, err)
 				require.Contains(t, err.Error(), "spec.subscriptions[0].image.allowTags")
+				require.Contains(t, err.Error(), "unknown field")
 			},
 		},
 		{
-			name:    "removed subscription fields kept by update that changes the spec",
+			name:    "unknown subscription field added by update",
 			webhook: &webhook{},
-			oldRaw:  `{"spec":{"subscriptions":[{"image":{"repoURL":"fake-url","allowTags":"^v1"}}]}}`,
-			newRaw: `{"spec":{"interval":"10m","subscriptions":[
-				{"image":{"repoURL":"fake-url","allowTags":"^v1"}}
+			oldRaw:  `{"spec":{"subscriptions":[{"chart":{"repoURL":"oci://example.com/chart"}}]}}`,
+			newRaw: `{"spec":{"subscriptions":[
+				{"chart":{"repoURL":"oci://example.com/chart","discoveryLimit":20,"constraint":"<1.1.0"}}
 			]}}`,
 			assertions: func(t *testing.T, err error) {
 				require.Error(t, err)
-				require.Contains(t, err.Error(), "spec.subscriptions[0].image.allowTags")
+				require.Contains(t, err.Error(), "spec.subscriptions[0].chart.constraint")
 			},
 		},
 		{
-			// The old object predates defaults that the new one has been given
-			name:    "removed subscription fields kept by update that leaves the spec unchanged",
+			// An existing Warehouse that's invalid isn't doing what its owner
+			// intended, so any change to its spec must also fix it
+			name:    "unknown subscription field kept by update that changes the spec",
 			webhook: &webhook{},
 			oldRaw: `{"spec":{"subscriptions":[
-				{"image":{"repoURL":"fake-url","ignoreTags":["v1.0.0"]}}
+				{"chart":{"repoURL":"oci://example.com/chart","constraint":"<1.1.0"}}
 			]}}`,
-			newRaw: `{"metadata":{"annotations":{"foo":"bar"}},"spec":{"subscriptions":[{"image":{
-				"repoURL":"fake-url","ignoreTags":["v1.0.0"],"discoveryLimit":20,
-				"imageSelectionStrategy":"SemVer","strictSemvers":true
-			}}]}}`,
-			assertions: func(t *testing.T, err error) {
-				require.NoError(t, err)
-			},
-		},
-		{
-			// Changes to the values of removed fields are inconsequential
-			name:    "removed subscription field changed by update that leaves the spec unchanged",
-			webhook: &webhook{},
-			oldRaw:  `{"spec":{"subscriptions":[{"image":{"repoURL":"fake-url","ignoreTags":["v1.0.0"]}}]}}`,
-			newRaw:  `{"spec":{"subscriptions":[{"image":{"repoURL":"fake-url","ignoreTags":["v2.0.0"]}}]}}`,
-			assertions: func(t *testing.T, err error) {
-				require.NoError(t, err)
-			},
-		},
-		{
-			name:    "removed subscription field added by update that leaves the spec unchanged",
-			webhook: &webhook{},
-			oldRaw:  `{"spec":{"subscriptions":[{"image":{"repoURL":"fake-url","ignoreTags":["v1.0.0"]}}]}}`,
-			newRaw: `{"spec":{"subscriptions":[
-				{"image":{"repoURL":"fake-url","allowTags":"^v1","ignoreTags":["v1.0.0"]}}
+			newRaw: `{"spec":{"interval":"10m","subscriptions":[
+				{"chart":{"repoURL":"oci://example.com/chart","discoveryLimit":20,"constraint":"<1.1.0"}}
 			]}}`,
 			assertions: func(t *testing.T, err error) {
 				require.Error(t, err)
-				require.Contains(t, err.Error(), "spec.subscriptions[0].image.allowTags")
+				require.Contains(t, err.Error(), "spec.subscriptions[0].chart.constraint")
+			},
+		},
+		{
+			name:    "unknown subscription field changed by update",
+			webhook: &webhook{},
+			oldRaw: `{"spec":{"subscriptions":[
+				{"chart":{"repoURL":"oci://example.com/chart","discoveryLimit":20,"constraint":"<1.1.0"}}
+			]}}`,
+			newRaw: `{"spec":{"subscriptions":[
+				{"chart":{"repoURL":"oci://example.com/chart","discoveryLimit":20,"constraint":"<1.2.0"}}
+			]}}`,
+			assertions: func(t *testing.T, err error) {
+				require.Error(t, err)
+				require.Contains(t, err.Error(), "spec.subscriptions[0].chart.constraint")
+			},
+		},
+		{
+			// For example, a refresh
+			name:    "invalid spec kept by update that changes only metadata",
+			webhook: &webhook{},
+			oldRaw: `{"spec":{"subscriptions":[
+				{"chart":{"repoURL":"bogus","discoveryLimit":20,"constraint":"<1.1.0"}}
+			]}}`,
+			newRaw: `{"metadata":{"annotations":{"foo":"bar"}},"spec":{"subscriptions":[
+				{"chart":{"repoURL":"bogus","discoveryLimit":20,"constraint":"<1.1.0"}}
+			]}}`,
+			assertions: func(t *testing.T, err error) {
+				require.NoError(t, err)
 			},
 		},
 	}
@@ -796,94 +923,6 @@ func Test_webhook_Handle_PreservesUnrelatedDurationFormatting(t *testing.T) {
 				return p.Path == testCase.path
 			})
 			require.Equalf(t, testCase.present, got, "patches: %+v", resp.Patches)
-		})
-	}
-}
-
-func Test_validateRemovedSubFields(t *testing.T) {
-	const removedSpec = `{"spec":{"subscriptions":[
-		{"git":{"repoURL":"fake-git-url","allowTags":"^v1","ignoreTags":["v1.0.0"]}},
-		{"chart":{"repoURL":"fake-chart-url"}},
-		{"name":"img","image":{"repoURL":"fake-image-url","ignoreTags":["v1.0.0"]}}
-	]}}`
-	testCases := []struct {
-		name       string
-		req        *admission.Request
-		assertions func(*testing.T, field.ErrorList)
-	}{
-		{
-			name: "no admission request in context",
-			assertions: func(t *testing.T, errs field.ErrorList) {
-				require.Empty(t, errs)
-			},
-		},
-		{
-			name: "malformed object",
-			req: &admission.Request{
-				AdmissionRequest: admissionv1.AdmissionRequest{
-					Operation: admissionv1.Create,
-					Object:    runtime.RawExtension{Raw: []byte(`{`)},
-				},
-			},
-			assertions: func(t *testing.T, errs field.ErrorList) {
-				require.Empty(t, errs)
-			},
-		},
-		{
-			name: "no removed fields",
-			req: &admission.Request{
-				AdmissionRequest: admissionv1.AdmissionRequest{
-					Operation: admissionv1.Create,
-					Object: runtime.RawExtension{
-						Raw: []byte(`{"spec":{"subscriptions":[
-							{"image":{"repoURL":"fake-url","allowTagsRegexes":["^v1"]}}
-						]}}`),
-					},
-				},
-			},
-			assertions: func(t *testing.T, errs field.ErrorList) {
-				require.Empty(t, errs)
-			},
-		},
-		{
-			name: "removed fields on create",
-			req: &admission.Request{
-				AdmissionRequest: admissionv1.AdmissionRequest{
-					Operation: admissionv1.Create,
-					Object:    runtime.RawExtension{Raw: []byte(removedSpec)},
-				},
-			},
-			assertions: func(t *testing.T, errs field.ErrorList) {
-				require.Len(t, errs, 3)
-				paths := make([]string, len(errs))
-				for i, err := range errs {
-					require.Equal(t, field.ErrorTypeForbidden, err.Type)
-					paths[i] = err.Field
-				}
-				require.Equal(
-					t,
-					[]string{
-						"spec.subscriptions[0].git.allowTags",
-						"spec.subscriptions[0].git.ignoreTags",
-						"spec.subscriptions[2].image.ignoreTags",
-					},
-					paths,
-				)
-				require.Contains(t, errs[0].Detail, "use allowTagsRegexes instead")
-				require.Contains(t, errs[1].Detail, "use ignoreTagsRegexes instead")
-			},
-		},
-	}
-	for _, testCase := range testCases {
-		t.Run(testCase.name, func(t *testing.T) {
-			ctx := t.Context()
-			if testCase.req != nil {
-				ctx = admission.NewContextWithRequest(ctx, *testCase.req)
-			}
-			testCase.assertions(
-				t,
-				validateRemovedSubFields(ctx, field.NewPath("spec", "subscriptions")),
-			)
 		})
 	}
 }

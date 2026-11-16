@@ -5,7 +5,7 @@ import { generatePath, Link } from 'react-router-dom';
 import { paths } from '@ui/config/paths';
 import {
   isStageControlFlow,
-  useStageHeaderStyle
+  useStageAccentColor
 } from '@ui/features/project/pipelines/nodes/stage-meta-utils';
 import { Stage } from '@ui/gen/api/v2/models';
 
@@ -13,9 +13,7 @@ export const stageColumn = (): ColumnType<Stage> => ({
   title: 'Stage',
   width: '20%',
   render: (_, stage) => {
-    const stageHeader = useStageHeaderStyle(stage);
-
-    const background = stageHeader?.backgroundColor;
+    const background = useStageAccentColor(stage);
 
     return (
       <Link

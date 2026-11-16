@@ -3,8 +3,6 @@ package subscription
 import (
 	"context"
 	"fmt"
-	"regexp"
-	"strings"
 
 	"k8s.io/apimachinery/pkg/util/validation/field"
 
@@ -24,7 +22,8 @@ func init() {
 		) (bool, error) {
 			return sub.Chart != nil, nil
 		},
-		Value: newChartSubscriber,
+		Value:    newChartSubscriber,
+		Metadata: SubscriberMetadata{Schema: mustLoadSchema("chart")},
 	})
 }
 
@@ -68,71 +67,20 @@ func (c *chartSubscriber) ApplySubscriptionDefaults(
 	return nil
 }
 
-var helmRepoURLRegex = regexp.MustCompile(`^(((https?)|(oci))://)([\w\d\.\-]+)(:[\d]+)?(/.*)*$`)
-
-// ValidateSubscription implements Subscriber.
+// ValidateSubscription implements Subscriber. The subscription's schema
+// covers everything else.
 func (c *chartSubscriber) ValidateSubscription(
 	_ context.Context,
 	f *field.Path,
 	s kargoapi.RepoSubscription,
 ) field.ErrorList {
-	// TODO(krancour): Longer term, we might want to start doing this with JSON
-	// schema.
-
-	sub := s.Chart
-	var errs field.ErrorList
-
-	// Validate RepoURL: MinLength=1, Pattern (Helm repo URL regex)
-	if err := validation.MinLength(f.Child("repoURL"), sub.RepoURL, 1); err != nil {
-		errs = append(errs, err)
-	}
-	if !helmRepoURLRegex.MatchString(sub.RepoURL) {
-		errs = append(errs, field.Invalid(
-			f.Child("repoURL"),
-			sub.RepoURL,
-			"must be a valid Helm repository URL",
-		))
-	}
-
-	// Validate Name based on RepoURL
-	if strings.HasPrefix(sub.RepoURL, "oci://") && sub.Name != "" {
-		errs = append(
-			errs,
-			field.Invalid(
-				f.Child("name"),
-				sub.Name,
-				"must be empty if repoURL starts with oci://",
-			),
-		)
-	}
-	isHTTP := strings.HasPrefix(sub.RepoURL, "http://") || strings.HasPrefix(sub.RepoURL, "https://")
-	if isHTTP && sub.Name == "" {
-		errs = append(
-			errs,
-			field.Invalid(
-				f.Child("name"),
-				sub.Name,
-				"must be non-empty if repoURL starts with http:// or https://",
-			),
-		)
-	}
-
-	// Validate SemverConstraint
 	if err := validation.SemverConstraint(
 		f.Child("semverConstraint"),
-		sub.SemverConstraint,
+		s.Chart.SemverConstraint,
 	); err != nil {
-		errs = append(errs, err)
+		return field.ErrorList{err}
 	}
-
-	// Validate DiscoveryLimit: Minimum=1, Maximum=100
-	if sub.DiscoveryLimit < 1 {
-		errs = append(errs, field.Invalid(f.Child("discoveryLimit"), sub.DiscoveryLimit, "must be >= 1"))
-	} else if sub.DiscoveryLimit > 100 {
-		errs = append(errs, field.Invalid(f.Child("discoveryLimit"), sub.DiscoveryLimit, "must be <= 100"))
-	}
-
-	return errs
+	return nil
 }
 
 // DiscoverArtifacts implement Subscriber.

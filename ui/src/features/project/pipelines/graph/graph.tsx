@@ -308,7 +308,7 @@ export const Graph = (props: GraphProps) => {
           padding: fitViewPadding
         }}
         proOptions={{ hideAttribution: true }}
-        minZoom={nodes.length > 100 ? 0.4 : 0.1}
+        minZoom={nodes.length > 100 ? 0.4 : 0.2}
         maxZoom={1.4}
         onlyRenderVisibleElements
         panOnDrag
