@@ -23,16 +23,23 @@ type (
 		kargoapi.RepoSubscription, // Arg to the predicate function
 		SubscriberPredicate,       // Predicate function
 		SubscriberFactory,         // Factory function
-		struct{},                  // This registry uses no metadata
+		SubscriberMetadata,        // Metadata
 	]
 
 	SubscriberRegistry = component.PredicateBasedRegistry[
 		kargoapi.RepoSubscription, // Arg to the predicate function
 		SubscriberPredicate,       // Predicate function
 		SubscriberFactory,         // Factory function
-		struct{},                  // This registry uses no metadata
+		SubscriberMetadata,        // Metadata
 	]
 )
+
+// SubscriberMetadata describes the subscriptions that a Subscriber handles.
+type SubscriberMetadata struct {
+	// Schema, if non-nil, is the JSON schema that the raw configuration of each
+	// subscription handled by the Subscriber must conform to.
+	Schema *Schema
+}
 
 func MustNewSubscriberRegistry(
 	registrations ...SubscriberRegistration,

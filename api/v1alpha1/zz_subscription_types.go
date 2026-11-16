@@ -123,11 +123,12 @@ type ImageSubscription struct {
 	// InsecureSkipTLSVerify specifies whether certificate verification errors should be ignored
 	// when connecting to the repository. This should be enabled only with great caution.
 	InsecureSkipTLSVerify bool `json:"insecureSkipTLSVerify,omitempty"`
-	// Platform is a string of the form <os>/<arch> that limits the tags that can be considered
-	// when searching for new versions of an image. This field is optional. When left
-	// unspecified, it is implicitly equivalent to the OS/architecture of the Kargo controller.
-	// Care should be taken to set this value correctly in cases where the image will run on a
-	// Kubernetes node with a different OS/architecture than the Kargo controller.
+	// Platform is a string of the form <os>/<arch> or <os>/<arch>/<variant> that limits the
+	// tags that can be considered when searching for new versions of an image. This field is
+	// optional. When left unspecified, it is implicitly equivalent to the OS/architecture of
+	// the Kargo controller. Care should be taken to set this value correctly in cases where the
+	// image will run on a Kubernetes node with a different OS/architecture than the Kargo
+	// controller.
 	Platform string `json:"platform,omitempty"`
 	// RepoURL specifies the URL of the image repository to subscribe to. The value in this
 	// field MUST NOT include an image tag. This field is required.

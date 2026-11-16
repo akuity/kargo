@@ -3,8 +3,6 @@ package subscription
 import (
 	"context"
 	"fmt"
-	"regexp"
-	"slices"
 
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/utils/ptr"
@@ -25,7 +23,8 @@ func init() {
 		) (bool, error) {
 			return sub.Git != nil, nil
 		},
-		Value: newGitSubscriber,
+		Value:    newGitSubscriber,
+		Metadata: SubscriberMetadata{Schema: mustLoadSchema("git")},
 	})
 }
 
@@ -55,19 +54,6 @@ func newGitSubscriber(
 	}, nil
 }
 
-var (
-	// nolint: lll
-	gitURLRegex = regexp.MustCompile(`^https?://(?:([\w-]+)(:(.+))?@)?([\w-]+(?:\.[\w-]+)*)(?::(\d{1,5}))?(/.*)$`)
-	branchRegex = regexp.MustCompile(`^[a-zA-Z0-9]([a-zA-Z0-9._\/-]*[a-zA-Z0-9_-])?$`)
-
-	validCommitSelectionStrategies = []kargoapi.CommitSelectionStrategy{
-		kargoapi.CommitSelectionStrategyLexical,
-		kargoapi.CommitSelectionStrategyNewestFromBranch,
-		kargoapi.CommitSelectionStrategyNewestTag,
-		kargoapi.CommitSelectionStrategySemVer,
-	}
-)
-
 // ApplySubscriptionDefaults implements Subscriber.
 func (g *gitSubscriber) ApplySubscriptionDefaults(
 	_ context.Context,
@@ -88,94 +74,18 @@ func (g *gitSubscriber) ApplySubscriptionDefaults(
 	return nil
 }
 
-// ValidateSubscription implements Subscriber.
+// ValidateSubscription implements Subscriber. The subscription's schema
+// covers everything else.
 func (g *gitSubscriber) ValidateSubscription(
 	_ context.Context,
 	f *field.Path,
 	s kargoapi.RepoSubscription,
 ) field.ErrorList {
-	// TODO(krancour): Longer term, we might want to start doing this with JSON
-	// schema.
-
-	sub := s.Git
-	var errs field.ErrorList
-
-	// Validate RepoURL: MinLength=1, Pattern (Git URL regex)
-	if err := validation.MinLength(f.Child("repoURL"), sub.RepoURL, 1); err != nil {
-		errs = append(errs, err)
-	}
-	if !gitURLRegex.MatchString(sub.RepoURL) {
-		errs = append(errs, field.Invalid(
-			f.Child("repoURL"),
-			sub.RepoURL,
-			"must be a valid Git repository URL; only HTTP(S) URLs are supported",
-		))
-	}
-
-	// Validate Branch: MinLength=1, MaxLength=255, Pattern
-	if sub.Branch != "" {
-		if err := validation.MinLength(f.Child("branch"), sub.Branch, 1); err != nil {
-			errs = append(errs, err)
-		}
-		if err := validation.MaxLength(f.Child("branch"), sub.Branch, 255); err != nil {
-			errs = append(errs, err)
-		}
-		if !branchRegex.MatchString(sub.Branch) {
-			errs = append(errs, field.Invalid(
-				f.Child("branch"),
-				sub.Branch,
-				"must be a valid branch name",
-			))
-		}
-	}
-
-	// Validate CommitSelectionStrategy is one of the allowed values
-	if sub.CommitSelectionStrategy != "" {
-		if err := validateCommitSelectionStrategy(
-			f.Child("commitSelectionStrategy"),
-			sub.CommitSelectionStrategy,
-		); err != nil {
-			errs = append(errs, err)
-		}
-	}
-
-	// Validate SemverConstraint
 	if err := validation.SemverConstraint(
 		f.Child("semverConstraint"),
-		sub.SemverConstraint,
+		s.Git.SemverConstraint,
 	); err != nil {
-		errs = append(errs, err)
-	}
-
-	// Validate DiscoveryLimit: Minimum=1, Maximum=100
-	if sub.DiscoveryLimit < 1 {
-		errs = append(errs, field.Invalid(
-			f.Child("discoveryLimit"),
-			sub.DiscoveryLimit,
-			"must be >= 1",
-		))
-	} else if sub.DiscoveryLimit > 100 {
-		errs = append(errs, field.Invalid(
-			f.Child("discoveryLimit"),
-			sub.DiscoveryLimit,
-			"must be <= 100",
-		))
-	}
-
-	return errs
-}
-
-func validateCommitSelectionStrategy(
-	f *field.Path,
-	strategy kargoapi.CommitSelectionStrategy,
-) *field.Error {
-	if !slices.Contains(validCommitSelectionStrategies, strategy) {
-		return field.NotSupported(f, strategy, []string{
-			string(kargoapi.CommitSelectionStrategyLexical),
-			string(kargoapi.CommitSelectionStrategyNewestFromBranch),
-			string(kargoapi.CommitSelectionStrategyNewestTag),
-			string(kargoapi.CommitSelectionStrategySemVer),
-		})
+		return field.ErrorList{err}
 	}
 	return nil
 }
