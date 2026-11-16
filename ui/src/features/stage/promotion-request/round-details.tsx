@@ -25,6 +25,7 @@ import {
 import { ApiError } from '@ui/lib/api/custom-fetch';
 import { parseDate } from '@ui/utils/dates';
 
+import { RoundIdentityLabel } from '../round-identity-label';
 import { RoundKind, roundWords } from '../round-words';
 import { useGetFreightMap } from '../tabs/freight-history/use-get-freight-map';
 import { isPromotionRequestFailed, isPromotionRequestRetryable } from '../utils/promotion-request';
@@ -74,6 +75,7 @@ export const RoundDetails = ({
   stageName,
   kind,
   identifier,
+  identifierHint,
   round,
   isLoading,
   error
@@ -87,6 +89,8 @@ export const RoundDetails = ({
   // What the round is known by, shown beneath the title: a request's name, a
   // rollout's number. It too comes from the route, ahead of the round.
   identifier: string;
+  // More than the identifier says, for whoever hovers it: a rollout's name.
+  identifierHint?: string;
   round?: Round;
   isLoading: boolean;
   // Why the round could not be read, when it could not.
@@ -234,9 +238,7 @@ export const RoundDetails = ({
               {phase}
             </Tag>
           </Flex>
-          <Typography.Text type='secondary' className='text-xs font-mono'>
-            {identifier}
-          </Typography.Text>
+          <RoundIdentityLabel label={identifier} hint={identifierHint} />
         </div>
         {retryable && (
           <Dropdown

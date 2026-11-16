@@ -44,14 +44,14 @@ export const PromotionRolloutDetails = ({
 
   const rollout = rolloutQuery.data?.data;
   const round = useMemo(() => rollout && rolloutToRound(rollout), [rollout]);
-  const name = rollout?.metadata?.name;
 
   return (
     <RoundDetails
       project={project}
       stageName={stageName}
       kind='rollout'
-      identifier={name ? `#${number} · ${name}` : `#${number}`}
+      identifier={`#${number}`}
+      identifierHint={rollout?.metadata?.name}
       round={round}
       isLoading={rolloutQuery.isLoading}
       error={rolloutQuery.error}

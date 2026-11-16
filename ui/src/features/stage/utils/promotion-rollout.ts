@@ -58,6 +58,20 @@ export const rolloutToRound = (rollout: PromotionRollout): Round => ({
 export const isRolloutRound = (round?: Round): round is Round & { number: number } =>
   round?.kind === promotionRolloutKind && typeof round.number === 'number';
 
+// RoundIdentity is what a round is known by where it is listed or opened: a
+// short label, and a hint for whoever wants more than the label says.
+export type RoundIdentity = { label: string; hint?: string };
+
+// roundIdentity names a round the way a reader would refer to it. A rollout
+// is known by its number among its Stage's rollouts, which is also what it is
+// read back by; its name identifies nothing a reader can follow, so it is
+// kept as a hint, for matching the rollout to a Stage's status or a log line.
+// A PromotionRequest has only its name.
+export const roundIdentity = (round?: Round): RoundIdentity =>
+  isRolloutRound(round)
+    ? { label: `#${round.number}`, hint: round.metadata?.name }
+    : { label: round?.metadata?.name || '' };
+
 export const rolloutPath = (project: string, stageName: string, number: number) =>
   generatePath(paths.promotionRollout, {
     name: project,

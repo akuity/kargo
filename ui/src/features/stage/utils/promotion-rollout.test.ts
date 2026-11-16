@@ -15,6 +15,7 @@ import {
   rolloutRound,
   rolloutRounds,
   rolloutToRound,
+  roundIdentity,
   roundPath,
   shouldPollRollouts,
   stageUsesRollouts
@@ -145,6 +146,27 @@ describe('isRolloutRound()', () => {
 
   test('nor is a rollout with no number to read it back by', () => {
     expect(isRolloutRound(rolloutToRound({ spec: { stage: 'prod' } }))).toBe(false);
+  });
+});
+
+describe('roundIdentity()', () => {
+  test('a rollout is known by its number, with its name as a hint', () => {
+    expect(roundIdentity(rolloutToRound(rollout(12)))).toEqual({
+      label: '#12',
+      hint: 'prod.rollout-12'
+    });
+  });
+
+  test('a PromotionRequest is known by its name', () => {
+    const request = {
+      metadata: { name: 'prod.01abc.deadbeef' },
+      spec: { stage: 'prod', freight: 'abc', targets: [] }
+    } as PromotionRequest;
+    expect(roundIdentity(request)).toEqual({ label: 'prod.01abc.deadbeef' });
+  });
+
+  test('no round, nothing to call it', () => {
+    expect(roundIdentity(undefined)).toEqual({ label: '' });
   });
 });
 

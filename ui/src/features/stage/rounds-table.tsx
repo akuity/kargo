@@ -15,6 +15,7 @@ import { getAlias } from '@ui/features/common/utils';
 import { getPromotionActor } from '@ui/features/project/pipelines/promotion/get-promotion-actor';
 import { parseDate } from '@ui/utils/dates';
 
+import { RoundIdentityLabel } from './round-identity-label';
 import { RoundKind, roundWords } from './round-words';
 import { useGetFreightMap } from './tabs/freight-history/use-get-freight-map';
 import {
@@ -26,7 +27,7 @@ import {
   roundSummary,
   targetsTally
 } from './utils/promotion-request-list';
-import { Round, isRolloutRound } from './utils/promotion-rollout';
+import { Round, roundIdentity } from './utils/promotion-rollout';
 import { formatStepDuration } from './utils/step-duration';
 
 const roundsPagination = { hideOnSinglePage: true, pageSize: 10, showSizeChanger: false };
@@ -160,11 +161,7 @@ export const RoundsTable = ({ project, kind, rounds, loading, pathOf, footer }: 
                 )}
               </span>
             </Tooltip>
-            <Typography.Text type='secondary' className='text-xs font-mono'>
-              {/* A rollout is known by its number among its Stage's rollouts. */}
-              {isRolloutRound(round) && `#${round.number} · `}
-              {round?.metadata?.name}
-            </Typography.Text>
+            <RoundIdentityLabel {...roundIdentity(round)} className='self-start' />
             {message && (
               <Typography.Text type={failed ? 'danger' : 'secondary'} className='text-xs'>
                 {message}
