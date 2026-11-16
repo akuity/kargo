@@ -129,6 +129,18 @@ func (i *imageSubscriber) ValidateSubscription(
 		}
 	}
 
+	if sub.ExpressionFilter != "" {
+		if _, err := image.CompileFilterExpression(
+			sub.ExpressionFilter,
+		); err != nil {
+			errs = append(errs, field.Invalid(
+				f.Child("expressionFilter"),
+				sub.ExpressionFilter,
+				err.Error(),
+			))
+		}
+	}
+
 	// Validate cache settings
 	if sub.ImageSelectionStrategy != kargoapi.ImageSelectionStrategyDigest &&
 		!sub.CacheByTag &&

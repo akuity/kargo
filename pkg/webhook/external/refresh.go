@@ -133,13 +133,16 @@ func refreshWarehouses(
 			if len(qualifiers) > 0 {
 				shouldRefresh, err := shouldRefresh(ctx, wh, repoURL, changedFiles, qualifiers...)
 				if err != nil {
-					logger.Error(
+					// Skip this Warehouse rather than failing the request, so that
+					// one misconfigured Warehouse can't prevent others (possibly
+					// in other Projects) from being refreshed.
+					repoLogger.Error(
 						err,
-						"failed to evaluate if warehouse needs refresh",
+						"failed to evaluate if Warehouse needs refresh; skipping",
+						"namespace", wh.Namespace,
 						"warehouse", wh.Name,
 					)
-					xhttp.WriteErrorJSON(w, err)
-					return
+					continue
 				}
 				if shouldRefresh {
 					toRefresh[whKey] = &wh

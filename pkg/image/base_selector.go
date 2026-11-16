@@ -38,14 +38,8 @@ func newBaseSelector(
 		}
 	}
 	if sub.ExpressionFilter != "" {
-		if s.filterExpression, err = expr.Compile(
+		if s.filterExpression, err = CompileFilterExpression(
 			sub.ExpressionFilter,
-			expr.Env(map[string]any{
-				"tag":         "",
-				"digest":      "",
-				"annotations": map[string]string{},
-				"createdAt":   (*time.Time)(nil),
-			}),
 		); err != nil {
 			return nil, fmt.Errorf("error compiling filter expression: %w", err)
 		}
@@ -64,6 +58,21 @@ func newBaseSelector(
 		)
 	}
 	return s, nil
+}
+
+// CompileFilterExpression compiles the provided image subscription filter
+// expression against the variables available to it when it is evaluated. It
+// is exported so that admission can reject expressions that would fail here.
+func CompileFilterExpression(expression string) (*vm.Program, error) {
+	return expr.Compile(
+		expression,
+		expr.Env(map[string]any{
+			"tag":         "",
+			"digest":      "",
+			"annotations": map[string]string{},
+			"createdAt":   (*time.Time)(nil),
+		}),
+	)
 }
 
 // getLoggerContext returns key/value pairs that can be used by any selector to

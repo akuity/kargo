@@ -81,13 +81,25 @@ func (g *gitSubscriber) ValidateSubscription(
 	f *field.Path,
 	s kargoapi.RepoSubscription,
 ) field.ErrorList {
+	var errs field.ErrorList
 	if err := validation.SemverConstraint(
 		f.Child("semverConstraint"),
 		s.Git.SemverConstraint,
 	); err != nil {
-		return field.ErrorList{err}
+		errs = append(errs, err)
 	}
-	return nil
+	if s.Git.ExpressionFilter != "" {
+		if _, err := commit.CompileFilterExpression(
+			s.Git.ExpressionFilter,
+		); err != nil {
+			errs = append(errs, field.Invalid(
+				f.Child("expressionFilter"),
+				s.Git.ExpressionFilter,
+				err.Error(),
+			))
+		}
+	}
+	return errs
 }
 
 // DiscoverArtifacts implements Subscriber.

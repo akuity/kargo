@@ -83,6 +83,27 @@ func TestNewBaseSelector(t *testing.T) {
 	}
 }
 
+func TestCompileFilterExpression(t *testing.T) {
+	testCases := map[string]bool{ // expression -> valid
+		"(1 + 2":                               false, // Syntax error
+		"annotation == 'approved'":             false, // Unknown variable
+		"tag + 1":                              false, // Type mismatch
+		"annotations['approved'] == 'true'":    true,
+		"tag startsWith 'v1.' && digest != ''": true,
+	}
+	for expression, valid := range testCases {
+		t.Run(expression, func(t *testing.T) {
+			program, err := CompileFilterExpression(expression)
+			if !valid {
+				require.Error(t, err)
+				return
+			}
+			require.NoError(t, err)
+			require.NotNil(t, program)
+		})
+	}
+}
+
 func Test_baseSelector_imagesToAPIImages(t *testing.T) {
 	now := time.Now()
 	apiImages := (&baseSelector{}).imagesToAPIImages(
