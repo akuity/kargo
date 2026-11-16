@@ -149,7 +149,9 @@ export const RoundsTable = ({ project, kind, rounds, loading, pathOf, footer }: 
         return (
           <Flex vertical gap={2} className='min-w-0'>
             <span>
-              {numbered && <RoundIdentityLabel {...roundIdentity(round)} className='mr-2' />}
+              {numbered && (
+                <RoundIdentityLabel {...roundIdentity(round)} className='text-xs mr-2' />
+              )}
               <Tooltip title={freightName}>
                 <span>
                   {path ? (
@@ -167,7 +169,9 @@ export const RoundsTable = ({ project, kind, rounds, loading, pathOf, footer }: 
                 </span>
               </Tooltip>
             </span>
-            {!numbered && <RoundIdentityLabel {...roundIdentity(round)} className='self-start' />}
+            {!numbered && (
+              <RoundIdentityLabel {...roundIdentity(round)} className='text-xs self-start' />
+            )}
             {message && (
               <Typography.Text type={failed ? 'danger' : 'secondary'} className='text-xs'>
                 {message}

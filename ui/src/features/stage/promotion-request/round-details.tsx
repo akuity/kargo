@@ -86,8 +86,8 @@ export const RoundDetails = ({
   stageName: string;
   // Which of the two the round is, for what the view calls it.
   kind: RoundKind;
-  // What the round is known by, shown beneath the title: a request's name, a
-  // rollout's number. It too comes from the route, ahead of the round.
+  // What the round is known by: a request's name, a rollout's number. It too
+  // comes from the route, ahead of the round.
   identifier: string;
   // More than the identifier says, for whoever hovers it: a rollout's name.
   identifierHint?: string;
@@ -100,6 +100,10 @@ export const RoundDetails = ({
   const confirm = useConfirmModal();
   const queryClient = useQueryClient();
   const words = roundWords[kind];
+  // A rollout's number leads the title, set back like the version that ends
+  // it, as it leads its row in the list. A request's name is too long for
+  // that and keeps the line beneath.
+  const numbered = kind === 'rollout';
   const request = round;
 
   const promotionsQuery = useListPromotions(
@@ -217,6 +221,13 @@ export const RoundDetails = ({
             {/* The Stage is named in the drawer's own header, right above, so
                 the title says only what this round promotes. */}
             <Typography.Title level={4} style={{ margin: 0 }}>
+              {numbered && (
+                <RoundIdentityLabel
+                  label={identifier}
+                  hint={identifierHint}
+                  className='text-sm mr-2'
+                />
+              )}
               {freightName ? (
                 <>
                   Promote {getAlias(freight) || freightName.slice(0, 7)}
@@ -238,7 +249,7 @@ export const RoundDetails = ({
               {phase}
             </Tag>
           </Flex>
-          <RoundIdentityLabel label={identifier} hint={identifierHint} />
+          {!numbered && <RoundIdentityLabel label={identifier} hint={identifierHint} />}
         </div>
         {retryable && (
           <Dropdown
