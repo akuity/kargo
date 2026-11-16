@@ -37,39 +37,6 @@ func TestPlatformConstraintString(t *testing.T) {
 	}
 }
 
-func TestValidatePlatformConstraint(t *testing.T) {
-	testCases := []struct {
-		name        string
-		platformStr string
-		valid       bool
-	}{
-		{
-			name:        "invalid",
-			platformStr: "invalid",
-			valid:       false,
-		},
-		{
-			name:        "valid without variant",
-			platformStr: "linux/amd64",
-			valid:       true,
-		},
-		{
-			name:        "valid with variant",
-			platformStr: "linux/amd64/fake-variant",
-			valid:       true,
-		},
-	}
-	for _, testCase := range testCases {
-		t.Run(testCase.name, func(t *testing.T) {
-			require.Equal(
-				t,
-				testCase.valid,
-				ValidatePlatformConstraint(testCase.platformStr),
-			)
-		})
-	}
-}
-
 func TestParsePlatformConstraint(t *testing.T) {
 	testCases := []struct {
 		name        string

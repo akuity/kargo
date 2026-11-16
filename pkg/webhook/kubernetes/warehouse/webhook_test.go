@@ -2,6 +2,7 @@ package warehouse
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"slices"
 	"strings"
@@ -178,6 +179,7 @@ func Test_webhook_ValidateCreate(t *testing.T) {
 	testCases := []struct {
 		name       string
 		webhook    *webhook
+		req        *admission.Request
 		warehouse  *kargoapi.Warehouse
 		assertions func(*testing.T, error)
 	}{
@@ -211,6 +213,14 @@ func Test_webhook_ValidateCreate(t *testing.T) {
 						},
 					},
 				).Build(),
+			},
+			req: &admission.Request{
+				AdmissionRequest: admissionv1.AdmissionRequest{
+					Operation: admissionv1.Create,
+					Object: runtime.RawExtension{
+						Raw: []byte(`{"spec":{"subscriptions":[{"git":{"repoURL":"bogus"}}]}}`),
+					},
+				},
 			},
 			warehouse: &kargoapi.Warehouse{
 				ObjectMeta: metav1.ObjectMeta{Namespace: testProject},
@@ -380,12 +390,167 @@ func Test_webhook_ValidateCreate(t *testing.T) {
 				require.Contains(t, err.Error(), "Required value")
 			},
 		},
+		{
+			// allowTags and ignoreTags are deprecated, but still supported
+			name: "deprecated subscription fields",
+			webhook: &webhook{
+				client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
+					&corev1.Namespace{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: testProject,
+							Labels: map[string]string{
+								kargoapi.LabelKeyProject: kargoapi.LabelValueTrue,
+							},
+						},
+					},
+				).Build(),
+			},
+			req: &admission.Request{
+				AdmissionRequest: admissionv1.AdmissionRequest{
+					Operation: admissionv1.Create,
+					Object: runtime.RawExtension{
+						Raw: []byte(`{"spec":{"subscriptions":[{"image":{"repoURL":"fake-url","allowTags":"^v1"}}]}}`),
+					},
+				},
+			},
+			warehouse: &kargoapi.Warehouse{
+				ObjectMeta: metav1.ObjectMeta{Namespace: testProject},
+				Spec: kargoapi.WarehouseSpec{
+					InternalSubscriptions: []kargoapi.RepoSubscription{{
+						Image: &kargoapi.ImageSubscription{RepoURL: "fake-url"},
+					}},
+				},
+			},
+			assertions: func(t *testing.T, err error) {
+				require.NoError(t, err)
+			},
+		},
+		{
+			name: "unknown subscription fields",
+			webhook: &webhook{
+				client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
+					&corev1.Namespace{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: testProject,
+							Labels: map[string]string{
+								kargoapi.LabelKeyProject: kargoapi.LabelValueTrue,
+							},
+						},
+					},
+				).Build(),
+			},
+			req: &admission.Request{
+				AdmissionRequest: admissionv1.AdmissionRequest{
+					Operation: admissionv1.Create,
+					Object: runtime.RawExtension{
+						Raw: []byte(`{"spec":{"subscriptions":[
+							{"chart":{"repoURL":"oci://example.com/chart","constraint":"<1.1.0"}}
+						]}}`),
+					},
+				},
+			},
+			warehouse: &kargoapi.Warehouse{
+				ObjectMeta: metav1.ObjectMeta{Namespace: testProject},
+				Spec: kargoapi.WarehouseSpec{
+					InternalSubscriptions: []kargoapi.RepoSubscription{{
+						Chart: &kargoapi.ChartSubscription{
+							RepoURL:        "oci://example.com/chart",
+							DiscoveryLimit: 20,
+						},
+					}},
+				},
+			},
+			assertions: func(t *testing.T, err error) {
+				require.Error(t, err)
+				require.Contains(t, err.Error(), "spec.subscriptions[0].chart.constraint")
+				require.Contains(t, err.Error(), "unknown field")
+			},
+		},
+		{
+			// Subscribers validate only what their schemas can't express
+			name: "schema violations are reported once",
+			webhook: &webhook{
+				client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
+					&corev1.Namespace{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: testProject,
+							Labels: map[string]string{
+								kargoapi.LabelKeyProject: kargoapi.LabelValueTrue,
+							},
+						},
+					},
+				).Build(),
+			},
+			req: &admission.Request{
+				AdmissionRequest: admissionv1.AdmissionRequest{
+					Operation: admissionv1.Create,
+					Object: runtime.RawExtension{
+						Raw: []byte(`{"spec":{"subscriptions":[
+							{"chart":{"repoURL":"bogus-url","discoveryLimit":101}},
+							{"image":{"repoURL":"fake-url","platform":"bogus","discoveryLimit":20}},
+							{"git":{"repoURL":"bogus","branch":"-invalid","discoveryLimit":20}}
+						]}}`),
+					},
+				},
+			},
+			warehouse: &kargoapi.Warehouse{
+				ObjectMeta: metav1.ObjectMeta{Namespace: testProject},
+				Spec: kargoapi.WarehouseSpec{
+					InternalSubscriptions: []kargoapi.RepoSubscription{
+						{
+							Chart: &kargoapi.ChartSubscription{
+								RepoURL:        "bogus-url",
+								DiscoveryLimit: 101,
+							},
+						},
+						{
+							Image: &kargoapi.ImageSubscription{
+								RepoURL:        "fake-url",
+								Platform:       "bogus",
+								DiscoveryLimit: 20,
+								CacheByTag:     true,
+							},
+						},
+						{
+							Git: &kargoapi.GitSubscription{
+								RepoURL:        "bogus",
+								Branch:         "-invalid",
+								DiscoveryLimit: 20,
+							},
+						},
+					},
+				},
+			},
+			assertions: func(t *testing.T, err error) {
+				var statusErr *apierrors.StatusError
+				require.True(t, errors.As(err, &statusErr))
+				fields := make([]string, len(statusErr.ErrStatus.Details.Causes))
+				for i, cause := range statusErr.ErrStatus.Details.Causes {
+					fields[i] = cause.Field
+				}
+				require.ElementsMatch(
+					t,
+					[]string{
+						"spec.subscriptions[0].chart.repoURL",
+						"spec.subscriptions[0].chart.discoveryLimit",
+						"spec.subscriptions[1].image.platform",
+						"spec.subscriptions[2].git.repoURL",
+						"spec.subscriptions[2].git.branch",
+					},
+					fields,
+				)
+			},
+		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			testCase.webhook.subscriberRegistry = subscription.DefaultSubscriberRegistry
+			ctx := t.Context()
+			if testCase.req != nil {
+				ctx = admission.NewContextWithRequest(ctx, *testCase.req)
+			}
 			_, err := testCase.webhook.ValidateCreate(
-				t.Context(),
+				ctx,
 				testCase.warehouse,
 			)
 			testCase.assertions(t, err)
@@ -403,9 +568,13 @@ func Test_webhook_ValidateUpdate(t *testing.T) {
 	require.NoError(t, err)
 
 	testCases := []struct {
-		name       string
-		webhook    *webhook
-		warehouse  *kargoapi.Warehouse
+		name      string
+		webhook   *webhook
+		warehouse *kargoapi.Warehouse
+		// oldRaw and newRaw, when set, are the raw old and new objects of the
+		// admission request. newRaw then also takes the place of warehouse.
+		oldRaw     string
+		newRaw     string
 		assertions func(*testing.T, error)
 	}{
 		{
@@ -422,14 +591,9 @@ func Test_webhook_ValidateUpdate(t *testing.T) {
 					},
 				).Build(),
 			},
-			warehouse: &kargoapi.Warehouse{
-				ObjectMeta: metav1.ObjectMeta{Namespace: testProject},
-				Spec: kargoapi.WarehouseSpec{
-					InternalSubscriptions: []kargoapi.RepoSubscription{{
-						Git: &kargoapi.GitSubscription{RepoURL: "bogus"},
-					}},
-				},
-			},
+			newRaw: `{"metadata":{"namespace":"fake-project"},"spec":{"subscriptions":[
+				{"git":{"repoURL":"bogus"}}
+			]}}`,
 			assertions: func(t *testing.T, err error) {
 				var statusErr *apierrors.StatusError
 				require.True(t, errors.As(err, &statusErr))
@@ -501,14 +665,99 @@ func Test_webhook_ValidateUpdate(t *testing.T) {
 				require.NotContains(t, err.Error(), ".image.name")
 			},
 		},
+		{
+			name:    "unknown subscription field",
+			webhook: &webhook{},
+			newRaw:  `{"spec":{"subscriptions":[{"image":{"repoURL":"fake-url","bogus":true}}]}}`,
+			assertions: func(t *testing.T, err error) {
+				require.Error(t, err)
+				require.Contains(t, err.Error(), "spec.subscriptions[0].image.bogus")
+				require.Contains(t, err.Error(), "unknown field")
+			},
+		},
+		{
+			name:    "unknown subscription field added by update",
+			webhook: &webhook{},
+			oldRaw:  `{"spec":{"subscriptions":[{"chart":{"repoURL":"oci://example.com/chart"}}]}}`,
+			newRaw: `{"spec":{"subscriptions":[
+				{"chart":{"repoURL":"oci://example.com/chart","discoveryLimit":20,"constraint":"<1.1.0"}}
+			]}}`,
+			assertions: func(t *testing.T, err error) {
+				require.Error(t, err)
+				require.Contains(t, err.Error(), "spec.subscriptions[0].chart.constraint")
+			},
+		},
+		{
+			// An existing Warehouse that's invalid isn't doing what its owner
+			// intended, so any change to its spec must also fix it
+			name:    "unknown subscription field kept by update that changes the spec",
+			webhook: &webhook{},
+			oldRaw: `{"spec":{"subscriptions":[
+				{"chart":{"repoURL":"oci://example.com/chart","constraint":"<1.1.0"}}
+			]}}`,
+			newRaw: `{"spec":{"interval":"10m","subscriptions":[
+				{"chart":{"repoURL":"oci://example.com/chart","discoveryLimit":20,"constraint":"<1.1.0"}}
+			]}}`,
+			assertions: func(t *testing.T, err error) {
+				require.Error(t, err)
+				require.Contains(t, err.Error(), "spec.subscriptions[0].chart.constraint")
+			},
+		},
+		{
+			name:    "unknown subscription field changed by update",
+			webhook: &webhook{},
+			oldRaw: `{"spec":{"subscriptions":[
+				{"chart":{"repoURL":"oci://example.com/chart","discoveryLimit":20,"constraint":"<1.1.0"}}
+			]}}`,
+			newRaw: `{"spec":{"subscriptions":[
+				{"chart":{"repoURL":"oci://example.com/chart","discoveryLimit":20,"constraint":"<1.2.0"}}
+			]}}`,
+			assertions: func(t *testing.T, err error) {
+				require.Error(t, err)
+				require.Contains(t, err.Error(), "spec.subscriptions[0].chart.constraint")
+			},
+		},
+		{
+			// For example, a refresh
+			name:    "invalid spec kept by update that changes only metadata",
+			webhook: &webhook{},
+			oldRaw: `{"spec":{"subscriptions":[
+				{"chart":{"repoURL":"bogus","discoveryLimit":20,"constraint":"<1.1.0"}}
+			]}}`,
+			newRaw: `{"metadata":{"annotations":{"foo":"bar"}},"spec":{"subscriptions":[
+				{"chart":{"repoURL":"bogus","discoveryLimit":20,"constraint":"<1.1.0"}}
+			]}}`,
+			assertions: func(t *testing.T, err error) {
+				require.NoError(t, err)
+			},
+		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			testCase.webhook.subscriberRegistry = subscription.DefaultSubscriberRegistry
+			ctx := t.Context()
+			warehouse := testCase.warehouse
+			var oldWarehouse *kargoapi.Warehouse
+			if testCase.newRaw != "" {
+				// By the time it's validated, the new object has been defaulted
+				warehouse = decodeTestWarehouse(t, testCase.newRaw)
+				require.NoError(t, testCase.webhook.Default(ctx, warehouse))
+				req := admission.Request{
+					AdmissionRequest: admissionv1.AdmissionRequest{
+						Operation: admissionv1.Update,
+						Object:    runtime.RawExtension{Raw: []byte(testCase.newRaw)},
+					},
+				}
+				if testCase.oldRaw != "" {
+					oldWarehouse = decodeTestWarehouse(t, testCase.oldRaw)
+					req.OldObject = runtime.RawExtension{Raw: []byte(testCase.oldRaw)}
+				}
+				ctx = admission.NewContextWithRequest(ctx, req)
+			}
 			_, err := testCase.webhook.ValidateUpdate(
-				t.Context(),
-				nil,
-				testCase.warehouse,
+				ctx,
+				oldWarehouse,
+				warehouse,
 			)
 			testCase.assertions(t, err)
 		})
@@ -676,4 +925,13 @@ func Test_webhook_Handle_PreservesUnrelatedDurationFormatting(t *testing.T) {
 			require.Equalf(t, testCase.present, got, "patches: %+v", resp.Patches)
 		})
 	}
+}
+
+// decodeTestWarehouse decodes the raw, JSON-encoded Warehouse the same way the
+// webhook's decoder would.
+func decodeTestWarehouse(t *testing.T, raw string) *kargoapi.Warehouse {
+	t.Helper()
+	warehouse := &kargoapi.Warehouse{}
+	require.NoError(t, json.Unmarshal([]byte(raw), warehouse))
+	return warehouse
 }
