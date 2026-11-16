@@ -247,10 +247,24 @@ func TestToAPI(t *testing.T) {
 				require.Nil(t, rollout.Status.StartedAt)
 				require.Nil(t, rollout.Status.FinishedAt)
 				require.Equal(t, []metav1.Condition{{
-					Type:   kargoapi.ConditionTypeReady,
-					Status: metav1.ConditionUnknown,
-					Reason: "Pending",
+					Type:               kargoapi.ConditionTypeReady,
+					Status:             metav1.ConditionFalse,
+					Reason:             "Pending",
+					LastTransitionTime: metav1.NewTime(created),
 				}}, rollout.Status.Conditions)
+			},
+		},
+		{
+			name: "a running rollout is not yet Ready, and has been so since it was created",
+			row: func() database.PromotionRolloutRow {
+				row := base
+				row.StatusPhase = "Running"
+				row.StatusStartedAt = &updated
+				return row
+			},
+			assert: func(t *testing.T, rollout *kargoapi.PromotionRollout) {
+				require.Equal(t, metav1.ConditionFalse, rollout.Status.Conditions[0].Status)
+				require.True(t, rollout.Status.Conditions[0].LastTransitionTime.Time.Equal(created))
 			},
 		},
 		{
@@ -268,24 +282,27 @@ func TestToAPI(t *testing.T) {
 				require.True(t, rollout.Status.FinishedAt.Time.Equal(finished))
 				require.Equal(t, metav1.ConditionTrue, rollout.Status.Conditions[0].Status)
 				require.Equal(t, "Succeeded", rollout.Status.Conditions[0].Reason)
+				require.True(t, rollout.Status.Conditions[0].LastTransitionTime.Time.Equal(finished))
 			},
 		},
 		{
-			name: "an errored rollout is not Ready, with its reason and message",
+			name: "an errored rollout is not Ready, as it was not before, with its reason and message",
 			row: func() database.PromotionRolloutRow {
 				row := base
 				row.StatusPhase = "Errored"
 				row.StatusReason = "EnterpriseOnlyFeature"
 				row.StatusMessage = "nope"
+				row.StatusFinishedAt = &finished
 				return row
 			},
 			assert: func(t *testing.T, rollout *kargoapi.PromotionRollout) {
 				require.Equal(t, "nope", rollout.Status.Message)
 				require.Equal(t, []metav1.Condition{{
-					Type:    kargoapi.ConditionTypeReady,
-					Status:  metav1.ConditionFalse,
-					Reason:  "EnterpriseOnlyFeature",
-					Message: "nope",
+					Type:               kargoapi.ConditionTypeReady,
+					Status:             metav1.ConditionFalse,
+					Reason:             "EnterpriseOnlyFeature",
+					Message:            "nope",
+					LastTransitionTime: metav1.NewTime(created),
 				}}, rollout.Status.Conditions)
 			},
 		},
