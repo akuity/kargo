@@ -21,13 +21,6 @@ func (p *platformConstraint) String() string {
 	return fmt.Sprintf("%s/%s/%s", p.os, p.arch, p.variant)
 }
 
-// ValidatePlatformConstraint returns a boolean indicating whether the provided
-// platform constraint string is valid.
-func ValidatePlatformConstraint(platformStr string) bool {
-	_, err := parsePlatformConstraint(platformStr)
-	return err == nil
-}
-
 // parsePlatformConstraint parses the provided platform constraint string
 // and returns a platformConstraint struct.
 func parsePlatformConstraint(platformStr string) (*platformConstraint, error) {
