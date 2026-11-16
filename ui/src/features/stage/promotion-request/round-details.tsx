@@ -35,7 +35,7 @@ import {
   requestPhase,
   targetsTally
 } from '../utils/promotion-request-list';
-import { Round, isRolloutRound, promotedRoundPath } from '../utils/promotion-rollout';
+import { Round, isRolloutRound, promotedRoundPath, roundMessage } from '../utils/promotion-rollout';
 import { formatStepDuration } from '../utils/step-duration';
 
 import { ChildPromotions } from './child-promotions';
@@ -355,9 +355,9 @@ export const RoundDetails = ({
               </Flex>
               <RoundProgressBar summary={summary} size='full' />
               <RoundGrid rows={children} />
-              {request.status?.message && (
+              {roundMessage(round) && (
                 <Typography.Text type={failed ? 'danger' : 'secondary'} className='text-xs'>
-                  {request.status.message}
+                  {roundMessage(round)}
                 </Typography.Text>
               )}
               {failure && (

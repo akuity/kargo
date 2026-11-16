@@ -27,7 +27,7 @@ import {
   roundSummary,
   targetsTally
 } from './utils/promotion-request-list';
-import { Round, roundIdentity } from './utils/promotion-rollout';
+import { Round, isRolloutRound, roundIdentity, roundMessage } from './utils/promotion-rollout';
 import { formatStepDuration } from './utils/step-duration';
 
 const roundsPagination = { hideOnSinglePage: true, pageSize: 10, showSizeChanger: false };
@@ -136,32 +136,38 @@ export const RoundsTable = ({ project, kind, rounds, loading, pathOf, footer }: 
         const freight = freightMap[freightName];
         const version = freightVersion(freight);
         // A round that did not succeed explains itself in status.message, and
-        // that explanation is the reason a reader opened the tab. One that did
-        // succeed says so just as plainly, so the message is shown either way
-        // and only its color changes.
-        const message = round?.status?.message;
+        // that explanation is the reason a reader opened the tab. Whether one
+        // that did succeed has anything to add is roundMessage's call.
+        const message = roundMessage(round);
+        // A rollout's number leads the line, set back like the version that
+        // ends it: "#4 vigilant-numbat 1.27.2". A request's name is too long
+        // for that and keeps a line of its own.
+        const numbered = isRolloutRound(round);
         const failed = ['Failed', 'Errored'].includes(requestPhase(round));
         const path = pathOf(round);
         const label = getAlias(freight) || freightName.slice(0, 7);
         return (
           <Flex vertical gap={2} className='min-w-0'>
-            <Tooltip title={freightName}>
-              <span>
-                {path ? (
-                  <Link className='font-semibold' to={path}>
-                    {label}
-                  </Link>
-                ) : (
-                  <span className='font-semibold'>{label}</span>
-                )}
-                {version && (
-                  <Typography.Text type='secondary' className='ml-2 text-xs font-mono'>
-                    {version}
-                  </Typography.Text>
-                )}
-              </span>
-            </Tooltip>
-            <RoundIdentityLabel {...roundIdentity(round)} className='self-start' />
+            <span>
+              {numbered && <RoundIdentityLabel {...roundIdentity(round)} className='mr-2' />}
+              <Tooltip title={freightName}>
+                <span>
+                  {path ? (
+                    <Link className='font-semibold' to={path}>
+                      {label}
+                    </Link>
+                  ) : (
+                    <span className='font-semibold'>{label}</span>
+                  )}
+                  {version && (
+                    <Typography.Text type='secondary' className='ml-2 text-xs font-mono'>
+                      {version}
+                    </Typography.Text>
+                  )}
+                </span>
+              </Tooltip>
+            </span>
+            {!numbered && <RoundIdentityLabel {...roundIdentity(round)} className='self-start' />}
             {message && (
               <Typography.Text type={failed ? 'danger' : 'secondary'} className='text-xs'>
                 {message}

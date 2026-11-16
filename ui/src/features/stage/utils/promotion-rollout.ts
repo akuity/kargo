@@ -72,6 +72,16 @@ export const roundIdentity = (round?: Round): RoundIdentity =>
     ? { label: `#${round.number}`, hint: round.metadata?.name }
     : { label: round?.metadata?.name || '' };
 
+// roundMessage is what a round has to say for itself beyond its phase and its
+// tally of Targets. A rollout that succeeded has nothing to add: its message
+// only counts the Promotions that succeeded, which the tally beside it already
+// does. Any other rollout's message says what it is waiting on or why it did
+// not succeed, and a PromotionRequest's is shown whatever its phase.
+export const roundMessage = (round?: Round): string | undefined => {
+  const message = round?.status?.message || undefined;
+  return isRolloutRound(round) && round.status?.phase === 'Succeeded' ? undefined : message;
+};
+
 export const rolloutPath = (project: string, stageName: string, number: number) =>
   generatePath(paths.promotionRollout, {
     name: project,

@@ -16,6 +16,7 @@ import {
   rolloutRounds,
   rolloutToRound,
   roundIdentity,
+  roundMessage,
   roundPath,
   shouldPollRollouts,
   stageUsesRollouts
@@ -167,6 +168,37 @@ describe('roundIdentity()', () => {
 
   test('no round, nothing to call it', () => {
     expect(roundIdentity(undefined)).toEqual({ label: '' });
+  });
+});
+
+describe('roundMessage()', () => {
+  const withMessage = (phase: string, message?: string) =>
+    rolloutToRound(rollout(1, phase, { status: { phase, message } } as Partial<PromotionRollout>));
+
+  test('a rollout that succeeded has nothing to add to its tally', () => {
+    expect(roundMessage(withMessage('Succeeded', 'All 3 Promotions succeeded'))).toBeUndefined();
+  });
+
+  test.each(['Pending', 'Running', 'Failed', 'Errored', 'Aborted'])(
+    'a rollout that is %s says why',
+    (phase) => {
+      expect(roundMessage(withMessage(phase, 'something to say'))).toBe('something to say');
+    }
+  );
+
+  test('a PromotionRequest keeps its message whatever its phase', () => {
+    const request = {
+      metadata: { name: 'prod.01abc.deadbeef' },
+      spec: { stage: 'prod', freight: 'abc', targets: [] },
+      status: { phase: 'Succeeded', message: 'All 3 Promotions succeeded' }
+    } as PromotionRequest;
+    expect(roundMessage(request)).toBe('All 3 Promotions succeeded');
+  });
+
+  test('no message, nothing to show', () => {
+    expect(roundMessage(withMessage('Failed'))).toBeUndefined();
+    expect(roundMessage(withMessage('Failed', ''))).toBeUndefined();
+    expect(roundMessage(undefined)).toBeUndefined();
   });
 });
 
