@@ -248,14 +248,14 @@ func TestToAPI(t *testing.T) {
 				require.Nil(t, rollout.Status.FinishedAt)
 				require.Equal(t, []metav1.Condition{{
 					Type:               kargoapi.ConditionTypeReady,
-					Status:             metav1.ConditionUnknown,
+					Status:             metav1.ConditionFalse,
 					Reason:             "Pending",
 					LastTransitionTime: metav1.NewTime(created),
 				}}, rollout.Status.Conditions)
 			},
 		},
 		{
-			name: "a running rollout's Ready condition has not changed since it was created",
+			name: "a running rollout is not yet Ready, and has been so since it was created",
 			row: func() database.PromotionRolloutRow {
 				row := base
 				row.StatusPhase = "Running"
@@ -263,7 +263,7 @@ func TestToAPI(t *testing.T) {
 				return row
 			},
 			assert: func(t *testing.T, rollout *kargoapi.PromotionRollout) {
-				require.Equal(t, metav1.ConditionUnknown, rollout.Status.Conditions[0].Status)
+				require.Equal(t, metav1.ConditionFalse, rollout.Status.Conditions[0].Status)
 				require.True(t, rollout.Status.Conditions[0].LastTransitionTime.Time.Equal(created))
 			},
 		},
@@ -286,7 +286,7 @@ func TestToAPI(t *testing.T) {
 			},
 		},
 		{
-			name: "an errored rollout is not Ready, with its reason and message",
+			name: "an errored rollout is not Ready, as it was not before, with its reason and message",
 			row: func() database.PromotionRolloutRow {
 				row := base
 				row.StatusPhase = "Errored"
@@ -302,7 +302,7 @@ func TestToAPI(t *testing.T) {
 					Status:             metav1.ConditionFalse,
 					Reason:             "EnterpriseOnlyFeature",
 					Message:            "nope",
-					LastTransitionTime: metav1.NewTime(finished),
+					LastTransitionTime: metav1.NewTime(created),
 				}}, rollout.Status.Conditions)
 			},
 		},

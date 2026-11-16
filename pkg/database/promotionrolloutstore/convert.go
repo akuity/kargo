@@ -112,33 +112,30 @@ func FromSpec(name string, spec kargoapi.PromotionRolloutSpec) database.Promotio
 }
 
 // readyCondition states the rollout's phase, reason and message as a Ready
-// condition: True once the rollout succeeded, False with the reason it did
-// not, and Unknown while it is still in progress.
+// condition. It tracks whether the rollout has finished well: True once it
+// succeeded, and False otherwise, both while it is still in progress and once
+// it has ended without succeeding. The reason tells those apart.
 //
 // No transition time is stored, so it is derived from the times that are. The
-// condition is Unknown from the rollout's creation until it finishes, when it
-// becomes True or False, so it last changed when the rollout finished, or,
-// for one that has not, when it was created. A condition must carry one:
+// condition is False from the rollout's creation, and changes only if the
+// rollout succeeds, so it last changed when a succeeded rollout finished, or,
+// for any other, when the rollout was created. A condition must carry one:
 // without it the time is served as null, which clients that read the field as
 // a required date-time fail to decode.
 func readyCondition(row database.PromotionRolloutRow) metav1.Condition {
 	phase := kargoapi.PromotionRolloutPhase(row.StatusPhase)
-	transitioned := row.CreatedAt
-	if row.StatusFinishedAt != nil {
-		transitioned = *row.StatusFinishedAt
-	}
 	cond := metav1.Condition{
 		Type:               kargoapi.ConditionTypeReady,
-		Status:             metav1.ConditionUnknown,
+		Status:             metav1.ConditionFalse,
 		Reason:             row.StatusReason,
 		Message:            row.StatusMessage,
-		LastTransitionTime: metav1.NewTime(transitioned),
+		LastTransitionTime: metav1.NewTime(row.CreatedAt),
 	}
-	switch {
-	case phase == kargoapi.PromotionRolloutPhaseSucceeded:
+	if phase == kargoapi.PromotionRolloutPhaseSucceeded {
 		cond.Status = metav1.ConditionTrue
-	case phase.IsTerminal():
-		cond.Status = metav1.ConditionFalse
+		if row.StatusFinishedAt != nil {
+			cond.LastTransitionTime = metav1.NewTime(*row.StatusFinishedAt)
+		}
 	}
 	if cond.Reason == "" {
 		cond.Reason = string(phase)
