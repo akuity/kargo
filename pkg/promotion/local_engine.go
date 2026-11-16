@@ -8,7 +8,6 @@ import (
 
 	gocache "github.com/patrickmn/go-cache"
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/trace"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -88,10 +87,7 @@ func (e *LocalEngine) Promote(
 		),
 	)
 	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, err.Error())
-		}
+		telemetry.RecordError(span, err)
 		span.End()
 	}()
 
