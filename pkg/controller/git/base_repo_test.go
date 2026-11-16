@@ -310,7 +310,7 @@ func TestSetupAuth(t *testing.T) {
 				url:   testCase.url,
 				creds: testCase.creds,
 			}
-			err := b.setupAuth()
+			err := b.setupAuth(b.homeDir)
 			testCase.assert(t, b.url, err)
 		})
 	}
@@ -367,7 +367,7 @@ func TestGitHTTPAuthNeverSendsEmptyPassword(t *testing.T) {
 		dir:     t.TempDir(),
 		homeDir: t.TempDir(),
 	}
-	require.NoError(t, b.setupAuth())
+	require.NoError(t, b.setupAuth(b.homeDir))
 
 	cmd := b.buildGitCommand(t.Context(), "ls-remote", b.url)
 	cmd.Env = append(
