@@ -1,5 +1,3 @@
-import { faCircleNotch } from '@fortawesome/free-solid-svg-icons';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Link } from 'react-router-dom';
 
 import { StageConditionIcon } from '@ui/features/common/stage-status/stage-condition-icon';
@@ -37,29 +35,25 @@ export const StageNodePhase = (props: { stage: Stage }) => {
     );
   }
 
-  // A promotion in flight is the one phase that is still moving, so it says so
-  // with a spinner. This is the only place the node reports it: the footer used
-  // to say it again underneath.
+  // A promotion in flight is the one phase with somewhere to go: the word
+  // leads to the Promotion. This is the only place the node reports it; the
+  // footer used to say it again underneath.
   const isPromoting = stagePhase === 'Promoting';
 
   const Phase = (
     <span className='stage-node__status-value' style={{ color }}>
-      {isPromoting ? (
-        <FontAwesomeIcon icon={faCircleNotch} spin className='text-[9px]' />
-      ) : (
-        /* the tooltip would otherwise repeat the word next to it; it earns
-           its place only when there is more to say than the word. A dead
-           controller is that case without a message: getStageStatus leaves
-           the reason to the icon, which names the controller itself. */
-        <StageConditionIcon
-          className='text-[9px]'
-          stage={props.stage}
-          hideColor
-          noTooltip={!message && !isControllerDead}
-          isControllerDead={isControllerDead}
-          controllerName={controllerName}
-        />
-      )}
+      {/* the tooltip would otherwise repeat the word next to it; it earns its
+          place only when there is more to say than the word. A dead
+          controller is that case without a message: getStageStatus leaves
+          the reason to the icon, which names the controller itself. */}
+      <StageConditionIcon
+        className='text-[9px]'
+        stage={props.stage}
+        hideColor
+        noTooltip={!message && !isControllerDead}
+        isControllerDead={isControllerDead}
+        controllerName={controllerName}
+      />
       {stagePhase}
     </span>
   );

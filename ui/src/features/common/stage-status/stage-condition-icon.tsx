@@ -1,6 +1,7 @@
 import {
   faCircle,
   faCircleMinus,
+  faCircleNotch,
   faMagnifyingGlass,
   faTimesCircle,
   faSync,
@@ -15,20 +16,25 @@ import { useToneColor } from '@ui/features/common/status-tone';
 import { Stage } from '@ui/gen/api/v2/models';
 
 import styles from './styles.module.less';
-import { TruckIcon } from './truck-icon/truck-icon';
 import { getStageStatus, phaseTone, StagePhase } from './utils';
 
-// The mark for each phase. The two that describe work under way say so by
-// moving. Promoting's entry is never drawn -- it gets the truck below -- but
-// the map stays total so a new phase cannot be added without a mark.
-const phaseMark: Record<StagePhase, { icon: IconDefinition; animation?: string }> = {
-  Promoting: { icon: faCircleMinus },
-  Verifying: { icon: faMagnifyingGlass, animation: styles.magnifyingGlass },
-  Reconciling: { icon: faSync, animation: styles.rotate },
-  Failed: { icon: faTimesCircle },
-  Ready: { icon: faCircle },
-  Unknown: { icon: faCircleMinus }
-};
+// The mark for each phase. The phases that describe work under way say so by
+// moving.
+//
+// Promoting is a plain spinner rather than the animated truck it used to be.
+// The truck already marks the Promote action in the node's menu, so the state
+// and the action now read as two different things; and a spinner holds its
+// shape at the 9-10px the pipeline sets it in, where the truck's own line
+// height and drifting exhaust did not.
+const phaseMark: Record<StagePhase, { icon: IconDefinition; spin?: boolean; animation?: string }> =
+  {
+    Promoting: { icon: faCircleNotch, spin: true },
+    Verifying: { icon: faMagnifyingGlass, animation: styles.magnifyingGlass },
+    Reconciling: { icon: faSync, animation: styles.rotate },
+    Failed: { icon: faTimesCircle },
+    Ready: { icon: faCircle },
+    Unknown: { icon: faCircleMinus }
+  };
 
 // StageConditionIcon is the mark beside a Stage's phase -- or, where there is
 // no room for the word, in place of it. It states the phase getStageStatus
@@ -65,16 +71,14 @@ export const StageConditionIcon = memo(
 
     const mark = phaseMark[phase];
 
-    const Icon =
-      phase === 'Promoting' ? (
-        <TruckIcon className={className} />
-      ) : (
-        <FontAwesomeIcon
-          icon={mark.icon}
-          className={classNames(className, mark.animation)}
-          style={{ color: hideColor ? undefined : toneColor }}
-        />
-      );
+    const Icon = (
+      <FontAwesomeIcon
+        icon={mark.icon}
+        spin={mark.spin}
+        className={classNames(className, mark.animation)}
+        style={{ color: hideColor ? undefined : toneColor }}
+      />
+    );
 
     if (noTooltip) {
       return Icon;
