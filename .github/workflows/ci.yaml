@@ -207,8 +207,35 @@ jobs:
     - name: Check nothing has changed
       run: git diff --exit-code -- .
 
+  build-docs:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Harden the runner (Audit all outbound calls)
+      uses: step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a # v2.22.4
+      with:
+        egress-policy: audit
+
+    - name: Checkout code
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+    - name: Install pnpm
+      uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0
+      with:
+        package_json_file: docs/package.json
+    - name: Install nodejs
+      uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+      with:
+        node-version: "22.23.1"
+        cache: "pnpm"
+        cache-dependency-path: "docs/**/pnpm-lock.yaml"
+    - name: Install nodejs dependencies
+      run: pnpm install
+      working-directory: ./docs
+    - name: Build docs
+      run: pnpm build
+      working-directory: ./docs
+
   build-image:
-    needs: [test-unit, lint-go, lint-charts, lint-and-typecheck-ui, check-codegen]
+    needs: [test-unit, lint-go, lint-charts, lint-and-typecheck-ui, check-codegen, build-docs]
     runs-on: ubuntu-latest
     services:
       registry:
@@ -265,7 +292,7 @@ jobs:
       run: ./hack/cve-scan.sh "registry:localhost:5000/kargo:scan"
 
   build-cli:
-    needs: [test-unit, lint-go, lint-charts, lint-and-typecheck-ui, check-codegen]
+    needs: [test-unit, lint-go, lint-charts, lint-and-typecheck-ui, check-codegen, build-docs]
     runs-on: ubuntu-latest
     steps:
     - name: Harden the runner (Audit all outbound calls)
