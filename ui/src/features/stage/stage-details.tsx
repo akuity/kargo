@@ -58,7 +58,15 @@ enum TabsTypes {
 }
 
 export const StageDetails = ({ stage }: { stage: Stage }) => {
-  const { name: projectName, stageName, promotionRequestName } = useParams();
+  const {
+    name: projectName,
+    stageName,
+    promotionRequestName,
+    promotionRolloutNumber
+  } = useParams();
+  // The round the route names, if it names one: a PromotionRequest by name or
+  // a PromotionRollout by number.
+  const openRound = promotionRequestName || promotionRolloutNumber;
   const navigate = useNavigate();
 
   const images = useImages([stage]);
@@ -98,7 +106,7 @@ export const StageDetails = ({ stage }: { stage: Stage }) => {
   // the round is read in.
   const [pickedTab, setActiveTab] = useState<TabsTypes>();
   const targetAware = isStageTargetAware(stage);
-  const defaultTab = targetAware && !promotionRequestName ? TabsTypes.TARGETS : TabsTypes.PROMOTION;
+  const defaultTab = targetAware && !openRound ? TabsTypes.TARGETS : TabsTypes.PROMOTION;
   const activeTab = pickedTab ?? defaultTab;
 
   // Opening a round counts as picking the Promotions tab, so stepping back out
@@ -107,10 +115,10 @@ export const StageDetails = ({ stage }: { stage: Stage }) => {
   // leaving the round would drop a target-aware Stage back to its Targets tab --
   // somewhere they have never been.
   useEffect(() => {
-    if (promotionRequestName) {
+    if (openRound) {
       setActiveTab(TabsTypes.PROMOTION);
     }
-  }, [promotionRequestName]);
+  }, [openRound]);
 
   // When a target-aware Stage's latest round cannot progress, say so once,
   // above the tabs, so the Targets and Promotions tabs both sit under the
@@ -200,7 +208,7 @@ export const StageDetails = ({ stage }: { stage: Stage }) => {
                 setActiveTab(newActiveTab as TabsTypes);
                 // Leaving the Promotions tab leaves the round that was open in
                 // it, so the URL stops naming one it is no longer showing.
-                if (promotionRequestName && newActiveTab !== TabsTypes.PROMOTION) {
+                if (openRound && newActiveTab !== TabsTypes.PROMOTION) {
                   navigate(generatePath(paths.stage, { name: projectName, stageName }));
                 }
               }}

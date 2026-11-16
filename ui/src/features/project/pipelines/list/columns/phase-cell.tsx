@@ -5,12 +5,13 @@ import { StageConditionIcon } from '@ui/features/common/stage-status/stage-condi
 import { useStageControllerStatus } from '@ui/features/common/stage-status/use-stage-controller-status';
 import { getStagePhase } from '@ui/features/common/stage-status/utils';
 import { getCurrentFreight } from '@ui/features/common/utils';
-import { getCurrentPromotionRef } from '@ui/features/project/pipelines/nodes/stage-meta-utils';
+import { useCurrentPromotionRef } from '@ui/features/stage/use-promotion-rollouts';
 import { Stage } from '@ui/gen/api/v2/models';
 
 export const PhaseCell = ({ stage }: { stage: Stage }) => {
   const { controllerName, isControllerDead } = useStageControllerStatus(stage);
   const stagePhase = getStagePhase(stage, isControllerDead);
+  const currentPromotionPath = useCurrentPromotionRef(stage)?.path;
 
   if (getCurrentFreight(stage).length === 0) {
     return <>-</>;
@@ -28,8 +29,6 @@ export const PhaseCell = ({ stage }: { stage: Stage }) => {
       />
     </Flex>
   );
-
-  const currentPromotionPath = getCurrentPromotionRef(stage)?.path;
 
   if (stagePhase === 'Promoting' && currentPromotionPath) {
     return <Link to={currentPromotionPath}>{Comp}</Link>;

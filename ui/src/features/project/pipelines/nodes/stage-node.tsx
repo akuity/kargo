@@ -17,6 +17,7 @@ import { paths } from '@ui/config/paths';
 import { useStageControllerStatus } from '@ui/features/common/stage-status/use-stage-controller-status';
 import { IAction, useActionContext } from '@ui/features/project/pipelines/context/action-context';
 import { useArgoCDMenuItems } from '@ui/features/project/pipelines/nodes/use-argocd-links';
+import { useCurrentPromotionRef } from '@ui/features/stage/use-promotion-rollouts';
 import { useApproveFreight } from '@ui/gen/api/v2/core/core';
 import { Stage } from '@ui/gen/api/v2/models';
 
@@ -32,7 +33,6 @@ import style from './node-size-source-of-truth.module.less';
 import { useGetPromotionDropdownItems } from './promotion/use-get-promotion-dropdown-items';
 import { StageFreight } from './stage-freight';
 import {
-  getCurrentPromotionRef,
   getLastPromotionDate,
   getLastPromotionRef,
   isStageControlFlow,
@@ -116,7 +116,7 @@ export const StageNode = (props: { stage: Stage }) => {
     ...promotionItems
   ];
 
-  const currentPromotion = getCurrentPromotionRef(props.stage);
+  const currentPromotion = useCurrentPromotionRef(props.stage);
 
   // What, if anything, has stopped this Stage's promotion and is waiting on a
   // person to deal with it.
