@@ -134,8 +134,6 @@ export const StageDetails = ({ stage }: { stage: Stage }) => {
 
   const { stageTabs } = useExtensionsContext();
 
-  const stageConditions = useMemo(() => stage.status?.conditions || [], [stage.status?.conditions]);
-
   const { controllerName, isControllerDead } = useStageControllerStatus(stage);
 
   return (
@@ -152,7 +150,7 @@ export const StageDetails = ({ stage }: { stage: Stage }) => {
               </Typography.Title>
               <Flex gap={4}>
                 <StageConditionIcon
-                  conditions={stageConditions}
+                  stage={stage}
                   isControllerDead={isControllerDead}
                   controllerName={controllerName}
                 />
