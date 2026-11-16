@@ -14,6 +14,7 @@ import { CSSProperties, useMemo } from 'react';
 import { generatePath, Link } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
+import { useStageControllerStatus } from '@ui/features/common/stage-status/use-stage-controller-status';
 import { IAction, useActionContext } from '@ui/features/project/pipelines/context/action-context';
 import { useArgoCDMenuItems } from '@ui/features/project/pipelines/nodes/use-argocd-links';
 import { useApproveFreight } from '@ui/gen/api/v2/core/core';
@@ -121,7 +122,13 @@ export const StageNode = (props: { stage: Stage }) => {
   // person to deal with it.
   const waiting = useStageWaiting(props.stage);
 
-  const isPromoting = Boolean(currentPromotion);
+  // A dead controller leaves the promotion it was running recorded on the
+  // Stage, so the Stage looks mid-promotion -- or parked on a step -- for good.
+  // Status reports it as Failed, and neither the glow nor a waiting label
+  // should say otherwise.
+  const { isControllerDead } = useStageControllerStatus(props.stage);
+
+  const isPromoting = Boolean(currentPromotion) && !isControllerDead;
 
   const lastPromotion = getLastPromotionDate(props.stage);
   const lastPromotionPath = getLastPromotionRef(props.stage)?.path;
@@ -251,7 +258,7 @@ export const StageNode = (props: { stage: Stage }) => {
               {/* the gaps are the stylesheet's: a numeric `gap` here would be
                   written inline and take the rows with it */}
               <Flex align='center' wrap className={classNames(styles.statusLine, 'min-w-0')}>
-                {waiting ? (
+                {waiting && !isControllerDead ? (
                   <StageNodeWaiting waiting={waiting} />
                 ) : (
                   <>
