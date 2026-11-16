@@ -44,9 +44,8 @@ func LsRemote(
 		clientOpts = &ClientOptions{}
 	}
 	b := &baseRepo{
-		creds:       clientOpts.Credentials,
-		originalURL: repoURL,
-		accessURL:   repoURL,
+		creds: clientOpts.Credentials,
+		url:   repoURL,
 	}
 	// setupDirs creates a temporary home directory that holds the ephemeral
 	// client configuration (and any SSH key material) needed to authenticate.
@@ -67,7 +66,7 @@ func LsRemote(
 	// HEAD, which ListRefs queries to resolve a subscription's implicit default
 	// branch. Annotated tags' peeled entries are instead dropped in
 	// parseLsRemoteOutput.
-	args := append([]string{"ls-remote", b.accessURL}, patterns...)
+	args := append([]string{"ls-remote", b.url}, patterns...)
 	cmd := b.buildGitCommand(ctx, args...)
 	// Override the cmd.Dir that's set by buildGitCommand(). It's normally the
 	// repository's path, which does not exist here because nothing was cloned.
@@ -75,7 +74,7 @@ func LsRemote(
 	out, err := libExec.Exec(cmd)
 	if err != nil {
 		return nil, fmt.Errorf(
-			"error listing refs in remote repo %q: %w", b.originalURL, err,
+			"error listing refs in remote repo %q: %w", b.url, err,
 		)
 	}
 	return parseLsRemoteOutput(out)
