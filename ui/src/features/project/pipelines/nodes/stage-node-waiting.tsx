@@ -6,8 +6,7 @@ import { Link } from 'react-router-dom';
 
 import { useToneColor } from '@ui/features/common/status-tone';
 
-import './stage-node.less';
-
+import styles from './stage-node.module.less';
 import { StageWaiting } from './use-stage-waiting';
 
 // StageNodeWaiting states what a Stage is waiting on in place of its phase.
@@ -32,6 +31,8 @@ const labelSize = (label: string) => {
   return label.length <= 20 ? 'sm' : 'xs';
 };
 
+const sizeClass = { sm: styles.statusTextSm, xs: styles.statusTextXs };
+
 export const StageNodeWaiting = (props: { waiting: StageWaiting }) => {
   const { waiting } = props;
 
@@ -39,14 +40,13 @@ export const StageNodeWaiting = (props: { waiting: StageWaiting }) => {
   const color = useToneColor('processing');
 
   const label = (
-    <span className='stage-node__status-value min-w-0' style={{ color }} title={waiting.title}>
+    <span
+      className={classNames(styles.statusValue, 'min-w-0')}
+      style={{ color }}
+      title={waiting.title}
+    >
       <FontAwesomeIcon icon={waiting.icon} className='text-[9px]' />
-      <span
-        className={classNames(
-          'stage-node__status-text',
-          size && `stage-node__status-text--${size}`
-        )}
-      >
+      <span className={classNames(styles.statusText, size && sizeClass[size])}>
         {waiting.label}
       </span>
     </span>
@@ -55,7 +55,7 @@ export const StageNodeWaiting = (props: { waiting: StageWaiting }) => {
   return (
     <>
       {waiting.to ? (
-        <Link to={waiting.to} className='stage-node__status-value-link'>
+        <Link to={waiting.to} className={styles.statusValueLink}>
           {label}
         </Link>
       ) : (
@@ -65,7 +65,7 @@ export const StageNodeWaiting = (props: { waiting: StageWaiting }) => {
       {/* a second line only for somewhere outside Kargo to go */}
       {waiting.href && (
         <Typography.Link
-          className='stage-node__status-link stage-node__status-link--own-line'
+          className={classNames(styles.statusLink, styles.statusLinkOwnLine)}
           href={waiting.href}
           target='_blank'
           rel='noreferrer'

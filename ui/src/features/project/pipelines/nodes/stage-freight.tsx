@@ -1,6 +1,7 @@
 import { faChevronLeft, faChevronRight, faPause } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Button, Flex, Tooltip } from 'antd';
+import classNames from 'classnames';
 import { useEffect, useMemo, useState } from 'react';
 
 import {
@@ -19,8 +20,6 @@ import {
 import { useGetFreightCreation } from '@ui/features/project/pipelines/freight/use-get-freight-creation';
 import { ArtifactReference, Chart, GitCommit, Image, Stage } from '@ui/gen/api/v2/models';
 
-import './stage-node.less';
-
 import { useDictionaryContext } from '../context/dictionary-context';
 import { useFreightTimelineControllerContext } from '../context/freight-timeline-controller-context';
 import { ArtifactIcon } from '../freight/artifact-icon';
@@ -36,6 +35,7 @@ import {
   selectPreviousArtifact
 } from './artifact-selector-utils';
 import { getLastPromotionRef } from './stage-meta-utils';
+import styles from './stage-node.module.less';
 
 export const StageFreight = (props: { stage: Stage }) => {
   const dictionaryContext = useDictionaryContext();
@@ -149,9 +149,9 @@ export const StageFreight = (props: { stage: Stage }) => {
     // keeping out of view. Telling the reader it has none would be a lie, so
     // the two absences are named apart.
     return (
-      <div className='stage-node__freight min-w-0'>
-        <div className='stage-node__section-label'>Current Freight</div>
-        <div className='stage-node__freight-empty'>
+      <div className={classNames(styles.freight, 'min-w-0')}>
+        <div className={styles.sectionLabel}>Current Freight</div>
+        <div className={styles.freightEmpty}>
           {allFreight?.length ? 'No freight from selected warehouses' : 'No freight yet'}
         </div>
       </div>
@@ -173,9 +173,9 @@ export const StageFreight = (props: { stage: Stage }) => {
     (showFreightAlias && selectedFreightAlias) || getShortFreightLabel(selectedFreight?.name);
 
   return (
-    <Flex vertical gap={5} className='stage-node__freight min-w-0'>
+    <Flex vertical gap={5} className={classNames(styles.freight, 'min-w-0')}>
       <Flex align='center' justify='space-between' gap={8} className='min-w-0'>
-        <span className='stage-node__section-label'>Current Freight</span>
+        <span className={styles.sectionLabel}>Current Freight</span>
 
         {warehouses?.length > 1 && (
           <Pager
@@ -196,13 +196,13 @@ export const StageFreight = (props: { stage: Stage }) => {
             </Tooltip>
           )}
 
-          <span className='stage-node__freight-alias' title={freightLabel}>
+          <span className={styles.freightAlias} title={freightLabel}>
             {freightLabel}
           </span>
         </Flex>
 
         {!!freightCreation?.relative && (
-          <span className='stage-node__freight-age' title={freightCreation?.abs?.toString()}>
+          <span className={styles.freightAge} title={freightCreation?.abs?.toString()}>
             {freightCreation.relative} old
           </span>
         )}
@@ -211,7 +211,7 @@ export const StageFreight = (props: { stage: Stage }) => {
       <Flex align='center' gap={2} className='min-w-0'>
         {totalArtifacts > 1 && (
           <Button
-            className='stage-node__pager-button'
+            className={styles.pagerButton}
             icon={<FontAwesomeIcon icon={faChevronLeft} />}
             size='small'
             type='text'
@@ -224,7 +224,7 @@ export const StageFreight = (props: { stage: Stage }) => {
 
         {totalArtifacts > 1 && (
           <Button
-            className='stage-node__pager-button'
+            className={styles.pagerButton}
             icon={<FontAwesomeIcon icon={faChevronRight} />}
             size='small'
             type='text'
@@ -241,9 +241,9 @@ export const StageFreight = (props: { stage: Stage }) => {
 // list would be an artifact of how the Freight history serializes, and the
 // name is the only part a reader can act on.
 const Pager = (props: { label?: string; onPrevious: () => void; onNext: () => void }) => (
-  <span className='stage-node__pager'>
+  <span className={styles.pager}>
     <Button
-      className='stage-node__pager-button'
+      className={styles.pagerButton}
       icon={<FontAwesomeIcon icon={faChevronLeft} />}
       size='small'
       type='text'
@@ -251,12 +251,12 @@ const Pager = (props: { label?: string; onPrevious: () => void; onNext: () => vo
       onClick={props.onPrevious}
     />
 
-    <span className='stage-node__pager-label' title={props.label}>
+    <span className={styles.pagerLabel} title={props.label}>
       {props.label}
     </span>
 
     <Button
-      className='stage-node__pager-button'
+      className={styles.pagerButton}
       icon={<FontAwesomeIcon icon={faChevronRight} />}
       size='small'
       type='text'
@@ -281,10 +281,10 @@ const ArtifactTile = (props: {
   href?: string;
 }) => {
   const tile = (
-    <div className='stage-node__artifact' title={props.title}>
-      <ArtifactIcon artifact={props.artifact} className='stage-node__artifact-icon' />
-      <span className='stage-node__artifact-name'>{props.name}</span>
-      <span className='stage-node__artifact-version'>{props.version}</span>
+    <div className={styles.artifact} title={props.title}>
+      <ArtifactIcon artifact={props.artifact} className={styles.artifactIcon} />
+      <span className={styles.artifactName}>{props.name}</span>
+      <span className={styles.artifactVersion}>{props.version}</span>
     </div>
   );
 
@@ -294,7 +294,7 @@ const ArtifactTile = (props: {
 
   return (
     <a
-      className='stage-node__artifact-link'
+      className={styles.artifactLink}
       href={props.href}
       target='_blank'
       rel='noreferrer'
@@ -307,7 +307,7 @@ const ArtifactTile = (props: {
 
 const Artifact = (props: { artifact: string | GitCommit | Chart | Image | ArtifactReference }) => {
   if (typeof props.artifact === 'string') {
-    return <div className='stage-node__artifact stage-node__artifact--empty'>Empty Freight</div>;
+    return <div className={classNames(styles.artifact, styles.artifactEmpty)}>Empty Freight</div>;
   }
 
   const artifact = props.artifact;

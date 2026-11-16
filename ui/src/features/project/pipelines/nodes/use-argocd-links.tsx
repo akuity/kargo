@@ -13,8 +13,7 @@ import { Health, Stage } from '@ui/gen/api/v2/models';
 import { useDictionaryContext } from '../context/dictionary-context';
 
 import { ArgoCDContext, argoCDAppKey, parseArgoCDContext } from './argocd-link-utils';
-
-import './stage-node.less';
+import styles from './stage-node.module.less';
 
 // useArgoCDLinks answers where the Argo CD Applications behind a Stage live
 // and how to open them, so a button and a menu entry elsewhere can both be
@@ -108,7 +107,7 @@ export const useArgoCDMenuItems = (stage: Stage): ItemType[] => {
 
   const link = (app: ArgoCDContext, label: React.ReactNode) => (
     <a
-      className='stage-node__menu-link'
+      className={styles.menuLink}
       href={href(app)}
       target={isExtensionArgoCD ? undefined : '_blank'}
       rel={isExtensionArgoCD ? undefined : 'noopener noreferrer'}
@@ -119,7 +118,7 @@ export const useArgoCDMenuItems = (stage: Stage): ItemType[] => {
   );
 
   const icon = (
-    <span className='stage-node__menu-icon'>
+    <span className={styles.menuIcon}>
       <img src={withBasePath('/argo-logo.svg')} alt='' style={{ width: '12px' }} />
     </span>
   );

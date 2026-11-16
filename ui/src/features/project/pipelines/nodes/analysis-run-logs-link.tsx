@@ -7,7 +7,7 @@ import { paths } from '@ui/config/paths';
 import { StageConditionType } from '@ui/features/common/stage-status/utils';
 import { Stage } from '@ui/gen/api/v2/models';
 
-import './stage-node.less';
+import styles from './stage-node.module.less';
 
 type AnalysisRunLogsLinkProps = {
   stage: Stage;
@@ -41,7 +41,7 @@ export const AnalysisRunLogsLink = (props: AnalysisRunLogsLinkProps) => {
     <Link
       to={logsLink}
       target='_blank'
-      className={classNames('stage-node__status-link', props.className)}
+      className={classNames(styles.statusLink, props.className)}
       title='Analysis run logs'
     >
       open logs

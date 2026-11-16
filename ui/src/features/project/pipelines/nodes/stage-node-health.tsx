@@ -3,9 +3,8 @@ import { healthTone } from '@ui/features/common/health-status/utils';
 import { useToneColor } from '@ui/features/common/status-tone';
 import { Stage } from '@ui/gen/api/v2/models';
 
-import './stage-node.less';
-
 import { getStageHealth } from './stage-meta-utils';
+import styles from './stage-node.module.less';
 
 // StageNodeHealth states the health a Stage reports, as one column of the
 // node's status band. The icon takes the column's color rather than its own,
@@ -22,7 +21,7 @@ export const StageNodeHealth = (props: { stage: Stage }) => {
   if (!health?.status) {
     return (
       <span
-        className='stage-node__status-value'
+        className={styles.statusValue}
         style={{ color, fontWeight: 400 }}
         title='No health reported'
       >
@@ -32,7 +31,7 @@ export const StageNodeHealth = (props: { stage: Stage }) => {
   }
 
   return (
-    <span className='stage-node__status-value' style={{ color }}>
+    <span className={styles.statusValue} style={{ color }}>
       {/* the tooltip would otherwise repeat the word next to it; it earns its
           place only when the Stage reported issues to go with the status */}
       <HealthStatusIcon

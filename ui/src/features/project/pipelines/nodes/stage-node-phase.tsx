@@ -6,9 +6,8 @@ import { getStageStatus, phaseTone } from '@ui/features/common/stage-status/util
 import { useToneColor } from '@ui/features/common/status-tone';
 import { Stage } from '@ui/gen/api/v2/models';
 
-import './stage-node.less';
-
 import { getCurrentPromotionRef } from './stage-meta-utils';
+import styles from './stage-node.module.less';
 
 export const StageNodePhase = (props: { stage: Stage }) => {
   const { controllerName, isControllerDead } = useStageControllerStatus(props.stage);
@@ -26,7 +25,7 @@ export const StageNodePhase = (props: { stage: Stage }) => {
   if (stagePhase === 'Unknown') {
     return (
       <span
-        className='stage-node__status-value'
+        className={styles.statusValue}
         style={{ color, fontWeight: 400 }}
         title='No status reported'
       >
@@ -41,7 +40,7 @@ export const StageNodePhase = (props: { stage: Stage }) => {
   const isPromoting = stagePhase === 'Promoting';
 
   const Phase = (
-    <span className='stage-node__status-value' style={{ color }}>
+    <span className={styles.statusValue} style={{ color }}>
       {/* the tooltip would otherwise repeat the word next to it; it earns its
           place only when there is more to say than the word. A dead
           controller is that case without a message: getStageStatus leaves

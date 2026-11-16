@@ -41,9 +41,8 @@ import {
 import { StageNodeHealth } from './stage-node-health';
 import { StageNodePhase } from './stage-node-phase';
 import { StageNodeWaiting } from './stage-node-waiting';
+import styles from './stage-node.module.less';
 import { useStageWaiting } from './use-stage-waiting';
-
-import './stage-node.less';
 
 export const StageNode = (props: { stage: Stage }) => {
   const stageName = props.stage?.metadata?.name || '';
@@ -97,7 +96,7 @@ export const StageNode = (props: { stage: Stage }) => {
           {
             key: 'promote-menu',
             icon: (
-              <span className='stage-node__menu-icon'>
+              <span className={styles.menuIcon}>
                 <FontAwesomeIcon icon={faTruckArrowRight} className='text-[11px]' />
               </span>
             ),
@@ -180,26 +179,26 @@ export const StageNode = (props: { stage: Stage }) => {
             position: 'relative'
           }
         }}
-        className={classNames('stage-node', style['stage-node-size'], {
+        className={classNames(styles.node, style['stage-node-size'], {
           'opacity-40': hideStage,
-          'stage-node--control-flow': controlFlow,
+          [styles.controlFlow]: controlFlow,
           // no color to band the header with, so it is ruled off instead
-          'stage-node--uncolored': !accentBorder,
-          'stage-node--promoting': isPromoting,
-          'stage-node--search-match': isSearchMatch
+          [styles.uncolored]: !accentBorder,
+          [styles.promoting]: isPromoting,
+          [styles.searchMatch]: isSearchMatch
         })}
         size='small'
       >
         <DropOverlay isOver={isOver} stage={props.stage} />
 
-        <Flex align='center' gap={8} className='stage-node__header min-w-0'>
+        <Flex align='center' gap={8} className={classNames(styles.header, 'min-w-0')}>
           {/* everything up to the action buttons opens the Stage */}
-          <Link to={stagePath} className='stage-node__title'>
+          <Link to={stagePath} className={styles.title}>
             {controlFlow ? (
-              <span className='stage-node__dot stage-node__dot--muted' />
+              <span className={classNames(styles.dot, styles.dotMuted)} />
             ) : (
               accentColor && (
-                <span className='stage-node__dot' style={{ backgroundColor: accentColor }} />
+                <span className={styles.dot} style={{ backgroundColor: accentColor }} />
               )
             )}
 
@@ -209,7 +208,7 @@ export const StageNode = (props: { stage: Stage }) => {
                   stage={props.stage}
                   autoPromotionEnabled={Boolean(autoPromotionMode)}
                 />
-                <span className='stage-node__name' title={stageName}>
+                <span className={styles.name} title={stageName}>
                   {stageName}
                 </span>
               </Flex>
@@ -220,7 +219,7 @@ export const StageNode = (props: { stage: Stage }) => {
             <Button
               size='small'
               type='text'
-              className='stage-node__action flex-none'
+              className={classNames(styles.action, 'flex-none')}
               title='Actions'
               icon={<FontAwesomeIcon icon={faEllipsisVertical} />}
             />
@@ -230,16 +229,16 @@ export const StageNode = (props: { stage: Stage }) => {
         {/* a control flow Stage has no steps of its own, so the label is all
             the card has to say below its header */}
         {controlFlow && (
-          <div className='stage-node__control-flow-label'>
-            <FontAwesomeIcon icon={faShareNodes} className='stage-node__control-flow-icon' />
+          <div className={styles.controlFlowLabel}>
+            <FontAwesomeIcon icon={faShareNodes} className={styles.controlFlowIcon} />
             Control flow
           </div>
         )}
 
         {!controlFlow && (
-          <div className='stage-node__status-grid'>
-            <div className='stage-node__status-cell'>
-              <div className='stage-node__status-label'>Status</div>
+          <div className={styles.statusGrid}>
+            <div className={styles.statusCell}>
+              <div className={styles.statusLabel}>Status</div>
 
               {/* A promotion stopped on a step says so here rather than in a
                   tag below: "Promoting" is true but useless once something is
@@ -251,11 +250,7 @@ export const StageNode = (props: { stage: Stage }) => {
                   rather than off with the other links. */}
               {/* the gaps are the stylesheet's: a numeric `gap` here would be
                   written inline and take the rows with it */}
-              <Flex
-                align='center'
-                wrap
-                className='stage-node__status stage-node__status-line min-w-0'
-              >
+              <Flex align='center' wrap className={classNames(styles.statusLine, 'min-w-0')}>
                 {waiting ? (
                   <StageNodeWaiting waiting={waiting} />
                 ) : (
@@ -270,8 +265,8 @@ export const StageNode = (props: { stage: Stage }) => {
               </Flex>
             </div>
 
-            <div className='stage-node__status-cell'>
-              <div className='stage-node__status-label'>Health</div>
+            <div className={styles.statusCell}>
+              <div className={styles.statusLabel}>Health</div>
               <StageNodeHealth stage={props.stage} />
             </div>
           </div>
@@ -279,7 +274,7 @@ export const StageNode = (props: { stage: Stage }) => {
 
         {actionContext?.action?.type === IAction.MANUALLY_APPROVE ? (
           <Button
-            className='success'
+            className={styles.success}
             size='small'
             loading={manualApproveActionMutation.isPending}
             onClick={() => {
@@ -299,16 +294,16 @@ export const StageNode = (props: { stage: Stage }) => {
         )}
 
         {!controlFlow && showFooter && (
-          <div className='stage-node__footer mt-2 min-w-0'>
+          <div className={classNames(styles.footer, 'mt-2 min-w-0')}>
             {/* the last thing the Stage did. What it is doing now -- and what
                 it is waiting on -- is stated once, by the Status above. */}
             <Link
               to={lastPromotionPath!}
-              className='stage-node__footer-link'
+              className={styles.footerLink}
               title={lastPromotion!.toString()}
             >
               Promoted{' '}
-              <span className='stage-node__footer-time'>
+              <span className={styles.footerTime}>
                 {formatDistance(lastPromotion!, new Date(), { addSuffix: true })}
               </span>
             </Link>
