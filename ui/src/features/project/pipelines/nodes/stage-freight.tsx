@@ -10,7 +10,7 @@ import {
   isArtifactImage
 } from '@ui/features/assemble-freight/artifact-type-guards';
 import { PromotionStatusPhase } from '@ui/features/common/promotion-status/utils';
-import { getCurrentFreight } from '@ui/features/common/utils';
+import { getCurrentFreight, getShortFreightLabel } from '@ui/features/common/utils';
 import {
   getGitCommitURL,
   getImageBuiltDate,
@@ -166,10 +166,11 @@ export const StageFreight = (props: { stage: Stage }) => {
   const totalArtifacts =
     noOfContainerImages + noOfGitCommits + noOfHelmReleases + noOfGenericArtifacts;
 
-  // The alias is what a user recognizes a piece of freight by. With aliases
-  // turned off, the head of the generated name is the next best handle.
+  // The alias is what a user recognizes a piece of freight by, so on the node
+  // it stands alone; the head of the generated name takes its place when
+  // aliases are turned off or the freight has none.
   const freightLabel =
-    (showFreightAlias && selectedFreightAlias) || selectedFreight?.name?.slice(0, 7) || '';
+    (showFreightAlias && selectedFreightAlias) || getShortFreightLabel(selectedFreight?.name);
 
   return (
     <Flex vertical gap={5} className='stage-node__freight min-w-0'>
