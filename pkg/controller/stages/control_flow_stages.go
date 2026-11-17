@@ -3,6 +3,7 @@ package stages
 import (
 	"context"
 	"fmt"
+	"slices"
 	"time"
 
 	"go.opentelemetry.io/otel/trace"
@@ -267,7 +268,17 @@ func (r *ControlFlowStageReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		}
 		return ctrl.Result{}, fmt.Errorf("failed to update Stage status: %w", err)
 	}
-	return ctrl.Result{}, reconcileErr
+	if reconcileErr != nil {
+		return ctrl.Result{}, reconcileErr
+	}
+	// Revisit periodically because requiredSoakTime can make Freight available
+	// without changing any of the resources watched by this controller.
+	if slices.ContainsFunc(stage.Spec.RequestedFreight, func(fr kargoapi.FreightRequest) bool {
+		return !fr.Sources.Direct && fr.Sources.RequiredSoakTime != nil && fr.Sources.RequiredSoakTime.Duration > 0
+	}) {
+		return ctrl.Result{RequeueAfter: 5 * time.Minute}, nil
+	}
+	return ctrl.Result{}, nil
 }
 
 // reconcile reconciles the given control flow Stage. It verifies the (newly)

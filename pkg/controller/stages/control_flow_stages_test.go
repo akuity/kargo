@@ -205,14 +205,80 @@ func TestControlFlowStageReconciler_Reconcile(t *testing.T) {
 			},
 		},
 		{
+			name: "requeues when upstream Freight has a required soak",
+			req:  ctrl.Request{NamespacedName: testStage},
+			stage: &kargoapi.Stage{
+				ObjectMeta: testStageMeta,
+				Spec: kargoapi.StageSpec{
+					RequestedFreight: []kargoapi.FreightRequest{{
+						Origin: testWarehouseOrigin,
+						Sources: kargoapi.FreightSources{
+							Stages:           []string{"upstream-stage"},
+							RequiredSoakTime: &metav1.Duration{Duration: time.Hour},
+						},
+					}},
+				},
+			},
+			objects: []client.Object{testWarehouse},
+			assertions: func(t *testing.T, _ client.Client, result ctrl.Result, err error) {
+				require.NoError(t, err)
+				assert.Equal(t, 5*time.Minute, result.RequeueAfter)
+			},
+		},
+		{
+			name: "does not requeue for a zero soak",
+			req:  ctrl.Request{NamespacedName: testStage},
+			stage: &kargoapi.Stage{
+				ObjectMeta: testStageMeta,
+				Spec: kargoapi.StageSpec{
+					RequestedFreight: []kargoapi.FreightRequest{{
+						Origin: testWarehouseOrigin,
+						Sources: kargoapi.FreightSources{
+							Stages:           []string{"upstream-stage"},
+							RequiredSoakTime: &metav1.Duration{},
+						},
+					}},
+				},
+			},
+			objects: []client.Object{testWarehouse},
+			assertions: func(t *testing.T, _ client.Client, result ctrl.Result, err error) {
+				require.NoError(t, err)
+				assert.Equal(t, ctrl.Result{}, result)
+			},
+		},
+		{
+			name: "does not requeue for direct Freight",
+			req:  ctrl.Request{NamespacedName: testStage},
+			stage: &kargoapi.Stage{
+				ObjectMeta: testStageMeta,
+				Spec: kargoapi.StageSpec{
+					RequestedFreight: []kargoapi.FreightRequest{{
+						Origin: testWarehouseOrigin,
+						Sources: kargoapi.FreightSources{
+							Direct:           true,
+							RequiredSoakTime: &metav1.Duration{Duration: time.Hour},
+						},
+					}},
+				},
+			},
+			objects: []client.Object{testWarehouse},
+			assertions: func(t *testing.T, _ client.Client, result ctrl.Result, err error) {
+				require.NoError(t, err)
+				assert.Equal(t, ctrl.Result{}, result)
+			},
+		},
+		{
 			name: "reconcile error",
 			req:  ctrl.Request{NamespacedName: testStage},
 			stage: &kargoapi.Stage{
 				ObjectMeta: testStageMeta,
 				Spec: kargoapi.StageSpec{
 					RequestedFreight: []kargoapi.FreightRequest{{
-						Origin:  testWarehouseOrigin,
-						Sources: kargoapi.FreightSources{Direct: true},
+						Origin: testWarehouseOrigin,
+						Sources: kargoapi.FreightSources{
+							Stages:           []string{"upstream-stage"},
+							RequiredSoakTime: &metav1.Duration{Duration: time.Hour},
+						},
 					}},
 				},
 			},
