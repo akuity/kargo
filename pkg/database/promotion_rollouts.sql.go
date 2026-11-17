@@ -130,6 +130,56 @@ func (q *Queries) CreatePromotionRollout(ctx context.Context, arg CreatePromotio
 	return i, err
 }
 
+const getPreviousPromotionRollout = `-- name: GetPreviousPromotionRollout :one
+SELECT previous.id, previous.project_name, previous.name, previous.stage_name, previous.number, previous.freight_name, previous.max_concurrent, previous.max_failures, previous.created_by, previous.created_at, previous.updated_at, previous.status_phase, previous.status_reason, previous.status_message, previous.status_started_at, previous.status_finished_at, previous.stage_id
+FROM promotion_rollouts AS rollout
+JOIN promotion_rollouts AS previous ON previous.stage_id = rollout.stage_id
+WHERE rollout.project_name = $1
+    AND rollout.name = $2
+    AND previous.number < rollout.number
+    AND previous.status_phase = 'Succeeded'
+ORDER BY previous.number DESC
+LIMIT 1
+`
+
+type GetPreviousPromotionRolloutParams struct {
+	ProjectName string
+	Name        string
+}
+
+// The rollout whose FreightCollection the named rollout carries forward
+// when it starts: the same Stage's newest rollout, numbered below it, that
+// Succeeded. This query is the whole of that choice. A rollout that Failed,
+// Errored or was Aborted is passed over, however much of it was promoted,
+// so what is carried forward is what the Stage's Targets were last all
+// brought to. Whether a rollout that promoted to only some of its Targets
+// should count is an open question; to change the answer, change the
+// predicate here.
+func (q *Queries) GetPreviousPromotionRollout(ctx context.Context, arg GetPreviousPromotionRolloutParams) (PromotionRolloutRow, error) {
+	row := q.db.QueryRow(ctx, getPreviousPromotionRollout, arg.ProjectName, arg.Name)
+	var i PromotionRolloutRow
+	err := row.Scan(
+		&i.ID,
+		&i.ProjectName,
+		&i.Name,
+		&i.StageName,
+		&i.Number,
+		&i.FreightName,
+		&i.MaxConcurrent,
+		&i.MaxFailures,
+		&i.CreatedBy,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.StatusPhase,
+		&i.StatusReason,
+		&i.StatusMessage,
+		&i.StatusStartedAt,
+		&i.StatusFinishedAt,
+		&i.StageID,
+	)
+	return i, err
+}
+
 const getPromotionRollout = `-- name: GetPromotionRollout :one
 SELECT id, project_name, name, stage_name, number, freight_name, max_concurrent, max_failures, created_by, created_at, updated_at, status_phase, status_reason, status_message, status_started_at, status_finished_at, stage_id FROM promotion_rollouts
 WHERE project_name = $1 AND name = $2
@@ -373,6 +423,40 @@ func (q *Queries) ListProjectPromotionRollouts(ctx context.Context, arg ListProj
 			&i.StatusStartedAt,
 			&i.StatusFinishedAt,
 			&i.StageID,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listPromotionRolloutFreight = `-- name: ListPromotionRolloutFreight :many
+SELECT promotion_rollout_id, origin_kind, origin_name, freight_name, reference FROM promotion_rollout_freight
+WHERE promotion_rollout_id = $1
+ORDER BY origin_kind, origin_name
+`
+
+// A rollout's FreightCollection, one row per origin, in origin order. A
+// rollout started before collections were recorded has no rows.
+func (q *Queries) ListPromotionRolloutFreight(ctx context.Context, promotionRolloutID uuid.UUID) ([]PromotionRolloutFreightRow, error) {
+	rows, err := q.db.Query(ctx, listPromotionRolloutFreight, promotionRolloutID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []PromotionRolloutFreightRow
+	for rows.Next() {
+		var i PromotionRolloutFreightRow
+		if err := rows.Scan(
+			&i.PromotionRolloutID,
+			&i.OriginKind,
+			&i.OriginName,
+			&i.FreightName,
+			&i.Reference,
 		); err != nil {
 			return nil, err
 		}
@@ -723,40 +807,135 @@ func (q *Queries) ListStagePromotionRolloutsOfFreight(ctx context.Context, arg L
 }
 
 const updatePromotionRolloutStatus = `-- name: UpdatePromotionRolloutStatus :one
-UPDATE promotion_rollouts SET
-    status_phase = $1::text,
-    status_reason = $2::text,
-    status_message = $3::text,
-    status_started_at = $4::timestamptz,
-    status_finished_at = $5::timestamptz,
-    updated_at = GREATEST(clock_timestamp(), updated_at + interval '1 microsecond')
-WHERE project_name = $6
-    AND name = $7
-    AND ($8::uuid IS NULL OR id = $8)
-    AND (
-        $9::timestamptz IS NULL
-        OR updated_at = $9
+WITH rollout AS (
+    UPDATE promotion_rollouts SET
+        status_phase = $1::text,
+        status_reason = $2::text,
+        status_message = $3::text,
+        status_started_at = $4::timestamptz,
+        status_finished_at = $5::timestamptz,
+        updated_at = GREATEST(clock_timestamp(), updated_at + interval '1 microsecond')
+    WHERE project_name = $6
+        AND name = $7
+        AND ($8::uuid IS NULL OR id = $8)
+        AND (
+            $9::timestamptz IS NULL
+            OR updated_at = $9
+        )
+        AND (
+            NOT $10::boolean
+            OR (status_phase = 'Pending' AND freight_name = $11::text)
+        )
+    RETURNING id, project_name, name, stage_name, number, freight_name, max_concurrent, max_failures, created_by, created_at, updated_at, status_phase, status_reason, status_message, status_started_at, status_finished_at, stage_id
+), freight AS (
+    INSERT INTO promotion_rollout_freight (
+        promotion_rollout_id,
+        origin_kind,
+        origin_name,
+        freight_name,
+        reference
     )
-RETURNING id, project_name, name, stage_name, number, freight_name, max_concurrent, max_failures, created_by, created_at, updated_at, status_phase, status_reason, status_message, status_started_at, status_finished_at, stage_id
+    SELECT
+        rollout.id,
+        collected.origin_kind,
+        collected.origin_name,
+        collected.freight_name,
+        collected.reference
+    FROM rollout
+    CROSS JOIN LATERAL (
+        SELECT
+            $12::text AS origin_kind,
+            $13::text AS origin_name,
+            $11::text AS freight_name,
+            $14::jsonb AS reference
+        UNION ALL
+        SELECT
+            previous.origin_kind,
+            previous.origin_name,
+            previous.freight_name,
+            previous.reference
+        FROM promotion_rollout_freight AS previous
+        WHERE previous.promotion_rollout_id = $15::uuid
+            -- Set-returning functions in one select list advance together,
+            -- which zips the arrays.
+            AND (previous.origin_kind, previous.origin_name) IN (
+                SELECT
+                    unnest($16::text[]),
+                    unnest($17::text[])
+            )
+            AND (previous.origin_kind, previous.origin_name)
+                <> ($12::text, $13::text)
+    ) AS collected
+    WHERE $10::boolean
+        AND NOT EXISTS (
+            SELECT 1 FROM promotion_rollout_freight AS existing
+            WHERE existing.promotion_rollout_id = rollout.id
+        )
+)
+SELECT id, project_name, name, stage_name, number, freight_name, max_concurrent, max_failures, created_by, created_at, updated_at, status_phase, status_reason, status_message, status_started_at, status_finished_at, stage_id FROM rollout
 `
 
 type UpdatePromotionRolloutStatusParams struct {
+	StatusPhase          string
+	StatusReason         string
+	StatusMessage        string
+	StatusStartedAt      *time.Time
+	StatusFinishedAt     *time.Time
+	ProjectName          string
+	Name                 string
+	ID                   *uuid.UUID
+	UpdatedAt            *time.Time
+	Start                bool
+	FreightName          string
+	OriginKind           string
+	OriginName           string
+	Reference            []byte
+	PreviousID           *uuid.UUID
+	RequestedOriginKinds []string
+	RequestedOriginNames []string
+}
+
+type UpdatePromotionRolloutStatusRow struct {
+	ID               uuid.UUID
+	ProjectName      string
+	Name             string
+	StageName        string
+	Number           int64
+	FreightName      string
+	MaxConcurrent    int64
+	MaxFailures      int64
+	CreatedBy        string
+	CreatedAt        time.Time
+	UpdatedAt        time.Time
 	StatusPhase      string
 	StatusReason     string
 	StatusMessage    string
 	StatusStartedAt  *time.Time
 	StatusFinishedAt *time.Time
-	ProjectName      string
-	Name             string
-	ID               *uuid.UUID
-	UpdatedAt        *time.Time
+	StageID          string
 }
 
 // updated_at doubles as the row's version, so it must grow with every write
 // to a row even across a clock step or two writes in one microsecond. A
 // non-null id or updated_at is a precondition; a row that fails one is left
 // alone and nothing is returned.
-func (q *Queries) UpdatePromotionRolloutStatus(ctx context.Context, arg UpdatePromotionRolloutStatusParams) (PromotionRolloutRow, error) {
+//
+// With start set, the statement starts the rollout rather than only
+// rewriting its status, and has two more preconditions: the rollout is
+// Pending, and the Freight it promotes is the one named. The rollout's
+// FreightCollection is recorded in the same statement, so a rollout that
+// starts has one and no other write can give it one: a row for the Freight
+// being promoted, given whole, and a copy of the previous rollout's row,
+// contents included, for each other origin among those given as two arrays
+// of equal length, which are the origins the Stage requests Freight from
+// now. The database does not know those, and an origin the Stage no longer
+// requests is left behind. The previous rollout is given by id, from
+// GetPreviousPromotionRollout, or is NULL when there is none. No Freight is
+// read: the Freight an earlier rollout promoted may be gone by now, and
+// what that rollout recorded is a copy of it. A collection is recorded
+// once. A rollout that has rows already keeps them as they are, though a
+// Pending rollout should have none.
+func (q *Queries) UpdatePromotionRolloutStatus(ctx context.Context, arg UpdatePromotionRolloutStatusParams) (UpdatePromotionRolloutStatusRow, error) {
 	row := q.db.QueryRow(ctx, updatePromotionRolloutStatus,
 		arg.StatusPhase,
 		arg.StatusReason,
@@ -767,8 +946,16 @@ func (q *Queries) UpdatePromotionRolloutStatus(ctx context.Context, arg UpdatePr
 		arg.Name,
 		arg.ID,
 		arg.UpdatedAt,
+		arg.Start,
+		arg.FreightName,
+		arg.OriginKind,
+		arg.OriginName,
+		arg.Reference,
+		arg.PreviousID,
+		arg.RequestedOriginKinds,
+		arg.RequestedOriginNames,
 	)
-	var i PromotionRolloutRow
+	var i UpdatePromotionRolloutStatusRow
 	err := row.Scan(
 		&i.ID,
 		&i.ProjectName,

@@ -4,14 +4,17 @@ package promotionrolloutstore
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"sync"
 	"testing"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/stretchr/testify/require"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/database"
@@ -709,6 +712,522 @@ func rolloutNames(rollouts []Rollout) []string {
 	names := make([]string, len(rollouts))
 	for i, rollout := range rollouts {
 		names[i] = rollout.Name
+	}
+	return names
+}
+
+func TestStoreFreightIntegration(t *testing.T) {
+	t.Parallel()
+	pool, _ := databasetest.IsolatedDatabase(t)
+	queries := database.New(pool)
+	store := New(queries)
+	ctx := context.Background()
+
+	origin := func(name string) kargoapi.FreightOrigin {
+		return kargoapi.FreightOrigin{Kind: kargoapi.FreightOriginKindWarehouse, Name: name}
+	}
+	images, config, charts := origin("images"), origin("config"), origin("charts")
+	// freight returns a piece of Freight from the origin with contents of
+	// every kind, all of them particular to it.
+	freight := func(name string, from kargoapi.FreightOrigin) kargoapi.FreightReference {
+		return kargoapi.FreightReference{
+			Name:   name,
+			Origin: from,
+			Commits: []kargoapi.GitCommit{{
+				RepoURL: "https://example.com/" + from.Name + ".git",
+				ID:      "commit-of-" + name,
+				Branch:  "main",
+				Message: "a commit\n\nwith a body, \"quotes\" and a snowman ☃",
+			}},
+			Images: []kargoapi.Image{{
+				RepoURL:     "example.com/" + from.Name,
+				Tag:         name,
+				Digest:      "sha256:" + name,
+				Annotations: map[string]string{"org.opencontainers.image.source": "example.com"},
+			}},
+			Charts: []kargoapi.Chart{{
+				RepoURL: "oci://example.com/charts",
+				Name:    from.Name,
+				Version: "1.0.0+" + name,
+			}},
+			Artifacts: []kargoapi.ArtifactReference{{
+				ArtifactType:     "application/vnd.example",
+				SubscriptionName: "sub",
+				Version:          name,
+				Metadata:         &apiextensionsv1.JSON{Raw: []byte(`{"size":42,"labels":{"b":"2","a":"1"}}`)},
+			}},
+		}
+	}
+	// requireCollection requires the rollout's collection to hold exactly the
+	// given Freight, contents included. The contents are compared as JSON,
+	// since the database keeps them as JSONB, which does not keep the
+	// spacing or key order of an artifact's opaque metadata.
+	requireCollection := func(t *testing.T, rollout Rollout, refs ...kargoapi.FreightReference) {
+		t.Helper()
+		got, err := store.GetFreightCollection(ctx, rollout.ID)
+		require.NoError(t, err)
+		want := &kargoapi.FreightCollection{}
+		if len(refs) > 0 {
+			want.UpdateOrPush(refs...)
+		}
+		require.Equal(t, want.ID, got.ID)
+		require.Len(t, got.Freight, len(refs))
+		wantJSON, err := json.Marshal(want)
+		require.NoError(t, err)
+		gotJSON, err := json.Marshal(got)
+		require.NoError(t, err)
+		require.JSONEq(t, string(wantJSON), string(gotJSON))
+	}
+	countRows := func(t *testing.T, rollout Rollout) int {
+		t.Helper()
+		var count int
+		require.NoError(t, pool.QueryRow(ctx,
+			"SELECT count(*) FROM promotion_rollout_freight WHERE promotion_rollout_id = $1",
+			rollout.ID,
+		).Scan(&count))
+		return count
+	}
+	seedStage := func(t *testing.T, project, name string) {
+		t.Helper()
+		require.NoError(t, queries.UpsertStage(ctx, database.UpsertStageParams{
+			ID:          project + "/" + name,
+			ProjectName: project,
+			Name:        name,
+			CreatedAt:   time.Now(),
+		}))
+	}
+	// create creates a rollout of the Freight for the Project's Stage.
+	create := func(t *testing.T, project, stage, name string, ref kargoapi.FreightReference) Rollout {
+		t.Helper()
+		rollout, err := store.Create(ctx, project, database.PromotionRolloutRow{
+			Name:        name,
+			StageName:   stage,
+			FreightName: ref.Name,
+		}, nil)
+		require.NoError(t, err)
+		return rollout
+	}
+	// finish moves the rollout to the phase it ends in.
+	finish := func(t *testing.T, rollout Rollout, phase kargoapi.PromotionRolloutPhase) {
+		t.Helper()
+		_, err := store.UpdateStatus(ctx, rollout.ProjectName, database.PromotionRolloutRow{
+			Name:        rollout.Name,
+			StatusPhase: string(phase),
+		})
+		require.NoError(t, err)
+	}
+	// promote creates a rollout of the Freight for the Project's prod Stage,
+	// starts it while the Stage requests Freight from the given origins, and
+	// finishes it in the given phase.
+	promote := func(
+		t *testing.T,
+		project, name string,
+		ref kargoapi.FreightReference,
+		phase kargoapi.PromotionRolloutPhase,
+		requested ...kargoapi.FreightOrigin,
+	) Rollout {
+		t.Helper()
+		rollout := create(t, project, "prod", name, ref)
+		_, err := store.Start(ctx, project, rollout.PromotionRolloutRow, ref, requested)
+		require.NoError(t, err)
+		finish(t, rollout, phase)
+		return rollout
+	}
+	const succeeded = kargoapi.PromotionRolloutPhaseSucceeded
+
+	testCases := []struct {
+		name string
+		run  func(*testing.T)
+	}{
+		{
+			name: "a Stage's first rollout records the Freight it promotes as it starts",
+			run: func(t *testing.T) {
+				const project = "first"
+				seedStage(t, project, "prod")
+				ref := freight("images-1", images)
+				rollout := create(t, project, "prod", "prod.01A", ref)
+				// A rollout that has not started has no collection yet.
+				requireCollection(t, rollout)
+
+				now := time.Now().UTC().Truncate(time.Microsecond)
+				row := rollout.PromotionRolloutRow
+				row.StatusReason = "Started"
+				row.StatusMessage = "promoting"
+				row.StatusStartedAt = &now
+				// Whatever phase the argument carries, a start is to Running.
+				row.StatusPhase = "Bogus"
+				started, err := store.Start(ctx, project, row, ref, []kargoapi.FreightOrigin{images, config})
+				require.NoError(t, err)
+				require.Equal(t, rollout.ID, started.ID)
+				require.Equal(t, "Running", started.StatusPhase)
+				require.Equal(t, "Started", started.StatusReason)
+				require.Equal(t, "promoting", started.StatusMessage)
+				require.True(t, started.StatusStartedAt.Equal(now))
+				require.Nil(t, started.StatusFinishedAt)
+				require.True(t, started.UpdatedAt.After(rollout.UpdatedAt))
+				fetched, err := store.Get(ctx, project, "prod.01A")
+				require.NoError(t, err)
+				require.Equal(t, started, fetched.PromotionRolloutRow)
+
+				requireCollection(t, rollout, ref)
+				// The origin and the Freight's name are columns as well.
+				var kind, name, freightName string
+				require.NoError(t, pool.QueryRow(ctx,
+					`SELECT origin_kind, origin_name, freight_name FROM promotion_rollout_freight
+					 WHERE promotion_rollout_id = $1`,
+					rollout.ID,
+				).Scan(&kind, &name, &freightName))
+				require.Equal(t, []string{"Warehouse", "images", "images-1"}, []string{kind, name, freightName})
+				// Without an artifact's metadata, which JSONB reformats, what
+				// is read is what was written, field for field.
+				collection, err := store.GetFreightCollection(ctx, rollout.ID)
+				require.NoError(t, err)
+				got := collection.Freight[images.String()]
+				want := ref
+				got.Artifacts, want.Artifacts = nil, nil
+				require.Equal(t, want, got)
+			},
+		},
+		{
+			name: "a rollout of another origin carries the first forward, contents intact",
+			run: func(t *testing.T) {
+				const project = "second"
+				seedStage(t, project, "prod")
+				first := promote(t, project, "prod.01A", freight("images-1", images), succeeded, images, config)
+				second := promote(t, project, "prod.01B", freight("config-1", config), succeeded, images, config)
+				requireCollection(t, second, freight("images-1", images), freight("config-1", config))
+				// The row carried forward is a copy of the one it came from.
+				var same bool
+				require.NoError(t, pool.QueryRow(ctx,
+					`SELECT copied.reference = original.reference AND copied.freight_name = original.freight_name
+					 FROM promotion_rollout_freight AS copied, promotion_rollout_freight AS original
+					 WHERE copied.promotion_rollout_id = $1 AND original.promotion_rollout_id = $2
+					 	AND copied.origin_name = 'images' AND original.origin_name = 'images'`,
+					second.ID, first.ID,
+				).Scan(&same))
+				require.True(t, same)
+				// Read again, it is the same collection in the same order.
+				once, err := store.GetFreightCollection(ctx, second.ID)
+				require.NoError(t, err)
+				again, err := store.GetFreightCollection(ctx, second.ID)
+				require.NoError(t, err)
+				require.Equal(t, once, again)
+				require.Equal(t, []string{"config-1", "images-1"}, freightNames(once))
+			},
+		},
+		{
+			name: "an origin promoted again is replaced in the new rollout and kept in the old ones",
+			run: func(t *testing.T) {
+				const project = "again"
+				seedStage(t, project, "prod")
+				first := promote(t, project, "prod.01A", freight("images-1", images), succeeded, images, config)
+				second := promote(t, project, "prod.01B", freight("config-1", config), succeeded, images, config)
+				third := promote(t, project, "prod.01C", freight("images-2", images), succeeded, images, config)
+				requireCollection(t, third, freight("images-2", images), freight("config-1", config))
+				requireCollection(t, second, freight("images-1", images), freight("config-1", config))
+				requireCollection(t, first, freight("images-1", images))
+			},
+		},
+		{
+			name: "an origin the Stage no longer requests is not carried forward",
+			run: func(t *testing.T) {
+				const project = "unrequested"
+				seedStage(t, project, "prod")
+				promote(t, project, "prod.01A", freight("images-1", images), succeeded, images, config)
+				promote(t, project, "prod.01B", freight("config-1", config), succeeded, images, config)
+				// The Stage has swapped images for charts.
+				third := promote(t, project, "prod.01C", freight("charts-1", charts), succeeded, config, charts)
+				requireCollection(t, third, freight("config-1", config), freight("charts-1", charts))
+				// What a rollout promotes is recorded whether or not its
+				// origin is among those given, and with none given nothing
+				// else is.
+				fourth := promote(t, project, "prod.01D", freight("images-2", images), succeeded)
+				requireCollection(t, fourth, freight("images-2", images))
+				// An origin missing from the previous rollout stays missing,
+				// though an older rollout recorded it.
+				fifth := promote(
+					t, project, "prod.01E", freight("images-3", images), succeeded, images, config, charts,
+				)
+				requireCollection(t, fifth, freight("images-3", images))
+			},
+		},
+		{
+			name: "a rollout that did not succeed is passed over for the newest that did",
+			run: func(t *testing.T) {
+				const project = "previous"
+				seedStage(t, project, "prod")
+				seedStage(t, project, "staging")
+				all := []kargoapi.FreightOrigin{images, config, charts}
+				promote(t, project, "prod.01A", freight("images-1", images), succeeded, all...)
+				promote(t, project, "prod.01B", freight("config-1", config), succeeded, all...)
+				failed := promote(
+					t, project, "prod.01C", freight("config-2", config), kargoapi.PromotionRolloutPhaseFailed, all...,
+				)
+				// The failed rollout recorded what it set out to promote.
+				requireCollection(t, failed, freight("images-1", images), freight("config-2", config))
+				promote(
+					t, project, "prod.01D", freight("config-3", config), kargoapi.PromotionRolloutPhaseErrored, all...,
+				)
+				// Aborted before it started, so it recorded nothing.
+				aborted := create(t, project, "prod", "prod.01E", freight("charts-1", charts))
+				finish(t, aborted, kargoapi.PromotionRolloutPhaseAborted)
+				requireCollection(t, aborted)
+				// Another Stage's rollouts are not this Stage's history.
+				staging := create(t, project, "staging", "staging.01A", freight("charts-2", charts))
+				_, err := store.Start(ctx, project, staging.PromotionRolloutRow, freight("charts-2", charts), all)
+				require.NoError(t, err)
+				finish(t, staging, succeeded)
+				requireCollection(t, staging, freight("charts-2", charts))
+
+				next := promote(t, project, "prod.01F", freight("images-2", images), succeeded, all...)
+				requireCollection(t, next, freight("images-2", images), freight("config-1", config))
+
+				// The choice is one query's: the Stage's newest rollout
+				// numbered below the given one that Succeeded.
+				for name, want := range map[string]string{
+					"prod.01B": "prod.01A",
+					"prod.01C": "prod.01B",
+					"prod.01D": "prod.01B",
+					"prod.01E": "prod.01B",
+					"prod.01F": "prod.01B",
+				} {
+					previous, previousErr := queries.GetPreviousPromotionRollout(
+						ctx, database.GetPreviousPromotionRolloutParams{ProjectName: project, Name: name},
+					)
+					require.NoError(t, previousErr, name)
+					require.Equal(t, want, previous.Name, name)
+				}
+				for _, name := range []string{"prod.01A", "staging.01A", "missing"} {
+					_, previousErr := queries.GetPreviousPromotionRollout(
+						ctx, database.GetPreviousPromotionRolloutParams{ProjectName: project, Name: name},
+					)
+					require.ErrorIs(t, previousErr, pgx.ErrNoRows, name)
+				}
+			},
+		},
+		{
+			name: "a rollout's collection is deleted with it",
+			run: func(t *testing.T) {
+				const project = "deleted"
+				seedStage(t, project, "prod")
+				first := promote(t, project, "prod.01A", freight("images-1", images), succeeded, images, config)
+				second := promote(t, project, "prod.01B", freight("config-1", config), succeeded, images, config)
+				require.Equal(t, 1, countRows(t, first))
+				require.Equal(t, 2, countRows(t, second))
+				// Deleting a rollout takes its rows and leaves the copies
+				// another rollout made of them.
+				_, err := pool.Exec(ctx, "DELETE FROM promotion_rollouts WHERE id = $1", first.ID)
+				require.NoError(t, err)
+				require.Zero(t, countRows(t, first))
+				requireCollection(t, second, freight("images-1", images), freight("config-1", config))
+				// A Stage's deletion deletes its rollouts, and so their rows.
+				require.NoError(t, queries.DeleteStageByName(ctx, database.DeleteStageByNameParams{
+					ProjectName: project,
+					Name:        "prod",
+				}))
+				require.Zero(t, countRows(t, second))
+				requireCollection(t, second)
+			},
+		},
+		{
+			name: "a rollout is started once, and its collection is never rewritten",
+			run: func(t *testing.T) {
+				const project = "twice"
+				seedStage(t, project, "prod")
+				promote(t, project, "prod.01A", freight("images-1", images), succeeded, images, config)
+				ref := freight("config-1", config)
+				rollout := create(t, project, "prod", "prod.01B", ref)
+				started, err := store.Start(
+					ctx, project, rollout.PromotionRolloutRow, ref, []kargoapi.FreightOrigin{config},
+				)
+				require.NoError(t, err)
+				requireCollection(t, rollout, ref)
+
+				// A second start is refused, with or without preconditions,
+				// and changes nothing.
+				other := ref
+				other.Images = nil
+				for _, row := range []database.PromotionRolloutRow{started, {Name: rollout.Name}} {
+					_, err = store.Start(ctx, project, row, other, []kargoapi.FreightOrigin{images, config})
+					require.ErrorIs(t, err, database.ErrConflict)
+					require.ErrorContains(t, err, "is Running, not Pending")
+				}
+				requireCollection(t, rollout, ref)
+				fetched, err := store.Get(ctx, project, rollout.Name)
+				require.NoError(t, err)
+				require.Equal(t, started, fetched.PromotionRolloutRow)
+
+				// Even a rollout written back to Pending, which nothing
+				// should do, keeps the collection it has when started again.
+				finish(t, rollout, kargoapi.PromotionRolloutPhasePending)
+				_, err = store.Start(
+					ctx, project, database.PromotionRolloutRow{Name: rollout.Name}, other,
+					[]kargoapi.FreightOrigin{images, config},
+				)
+				require.NoError(t, err)
+				requireCollection(t, rollout, ref)
+				require.Equal(t, 1, countRows(t, rollout))
+			},
+		},
+		{
+			name: "concurrent starts of one rollout record one collection",
+			run: func(t *testing.T) {
+				const project = "concurrent"
+				seedStage(t, project, "prod")
+				ref := freight("images-1", images)
+				rollout := create(t, project, "prod", "prod.01A", ref)
+				const n = 8
+				var wg sync.WaitGroup
+				errs := make([]error, n)
+				for i := range n {
+					wg.Go(func() {
+						_, errs[i] = store.Start(
+							ctx, project, database.PromotionRolloutRow{Name: rollout.Name}, ref,
+							[]kargoapi.FreightOrigin{images},
+						)
+					})
+				}
+				wg.Wait()
+				var started int
+				for _, err := range errs {
+					if err == nil {
+						started++
+						continue
+					}
+					require.ErrorIs(t, err, database.ErrConflict)
+				}
+				require.Equal(t, 1, started)
+				requireCollection(t, rollout, ref)
+			},
+		},
+		{
+			name: "a rollout with no rows has an empty collection",
+			run: func(t *testing.T) {
+				const project = "none"
+				seedStage(t, project, "prod")
+				// As a rollout started before collections were recorded: moved
+				// to Running by a status update, which records no Freight.
+				old := create(t, project, "prod", "prod.01A", freight("images-1", images))
+				finish(t, old, kargoapi.PromotionRolloutPhaseRunning)
+				collection, err := store.GetFreightCollection(ctx, old.ID)
+				require.NoError(t, err)
+				require.Equal(t, &kargoapi.FreightCollection{}, collection)
+				finish(t, old, succeeded)
+				require.Zero(t, countRows(t, old))
+				// An id that is no rollout's reads the same way.
+				collection, err = store.GetFreightCollection(ctx, uuid.New())
+				require.NoError(t, err)
+				require.Equal(t, &kargoapi.FreightCollection{}, collection)
+				// The next rollout has nothing to carry forward from it.
+				next := promote(t, project, "prod.01B", freight("config-1", config), succeeded, images, config)
+				requireCollection(t, next, freight("config-1", config))
+			},
+		},
+		{
+			name: "a start that is refused writes nothing",
+			run: func(t *testing.T) {
+				const project = "refused"
+				seedStage(t, project, "prod")
+				ref := freight("images-1", images)
+				rollout := create(t, project, "prod", "prod.01A", ref)
+				requirePending := func(t *testing.T, rollout Rollout) {
+					t.Helper()
+					fetched, err := store.Get(ctx, project, rollout.Name)
+					require.NoError(t, err)
+					require.Equal(t, rollout.PromotionRolloutRow, fetched.PromotionRolloutRow)
+					require.Zero(t, countRows(t, rollout))
+				}
+
+				_, err := store.Start(ctx, project, database.PromotionRolloutRow{Name: "missing"}, ref, nil)
+				require.ErrorIs(t, err, database.ErrNotFound)
+
+				// Not the Freight the rollout promotes.
+				_, err = store.Start(ctx, project, rollout.PromotionRolloutRow, freight("images-2", images), nil)
+				require.ErrorIs(t, err, database.ErrInvalid)
+				require.ErrorContains(t, err, `promotes Freight "images-1", not "images-2"`)
+				requirePending(t, rollout)
+
+				// Freight that names no origin: the row is refused, and the
+				// rollout's move to Running with it.
+				noOrigin := ref
+				noOrigin.Origin = kargoapi.FreightOrigin{}
+				_, err = store.Start(ctx, project, rollout.PromotionRolloutRow, noOrigin, nil)
+				require.ErrorIs(t, err, database.ErrInvalid)
+				requirePending(t, rollout)
+
+				// Preconditions the row does not meet.
+				stale := rollout.PromotionRolloutRow
+				stale.UpdatedAt = stale.UpdatedAt.Add(-time.Second)
+				_, err = store.Start(ctx, project, stale, ref, nil)
+				require.ErrorIs(t, err, database.ErrConflict)
+				require.ErrorContains(t, err, "modified")
+				replaced := rollout.PromotionRolloutRow
+				replaced.ID = uuid.New()
+				_, err = store.Start(ctx, project, replaced, ref, nil)
+				require.ErrorIs(t, err, database.ErrConflict)
+				require.ErrorContains(t, err, "recreated")
+				requirePending(t, rollout)
+
+				// Another rollout of the Stage is Running.
+				running := create(t, project, "prod", "prod.01B", freight("config-1", config))
+				_, err = store.Start(ctx, project, running.PromotionRolloutRow, freight("config-1", config), nil)
+				require.NoError(t, err)
+				_, err = store.Start(ctx, project, rollout.PromotionRolloutRow, ref, nil)
+				require.ErrorIs(t, err, database.ErrConflict)
+				require.ErrorContains(t, err, "another PromotionRollout of the Stage is Running")
+				requirePending(t, rollout)
+
+				// Once that one finishes, the start goes through. The rollout
+				// that ran meanwhile is numbered above this one, so it is not
+				// the one before it and nothing is carried forward from it.
+				finish(t, running, succeeded)
+				_, err = store.Start(
+					ctx, project, rollout.PromotionRolloutRow, ref, []kargoapi.FreightOrigin{images, config},
+				)
+				require.NoError(t, err)
+				requireCollection(t, rollout, ref)
+			},
+		},
+		{
+			name: "the database rejects bad rows",
+			run: func(t *testing.T) {
+				const project = "bad"
+				seedStage(t, project, "prod")
+				rollout := create(t, project, "prod", "prod.01A", freight("images-1", images))
+				insert := func(id uuid.UUID, kind, name, freightName, reference string) error {
+					_, err := pool.Exec(ctx,
+						`INSERT INTO promotion_rollout_freight
+						 (promotion_rollout_id, origin_kind, origin_name, freight_name, reference)
+						 VALUES ($1, $2, $3, $4, $5::jsonb)`,
+						id, kind, name, freightName, reference,
+					)
+					return err
+				}
+				databasetest.RequirePGError(t, insert(rollout.ID, "", "images", "f", "{}"), "23514")
+				databasetest.RequirePGError(t, insert(rollout.ID, "Warehouse", "", "f", "{}"), "23514")
+				databasetest.RequirePGError(t, insert(rollout.ID, "Warehouse", "images", "", "{}"), "23514")
+				databasetest.RequirePGError(t, insert(rollout.ID, "Warehouse", "images", "f", "[]"), "23514")
+				databasetest.RequirePGError(t, insert(rollout.ID, "Warehouse", "images", "f", "null"), "23514")
+				// A row belongs to a rollout that exists, and an origin has
+				// one row per rollout.
+				databasetest.RequirePGError(t, insert(uuid.New(), "Warehouse", "images", "f", "{}"), "23503")
+				require.NoError(t, insert(rollout.ID, "Warehouse", "images", "f", "{}"))
+				databasetest.RequirePGError(t, insert(rollout.ID, "Warehouse", "images", "g", "{}"), "23505")
+			},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, testCase.run)
+	}
+}
+
+// freightNames returns the names of the collection's Freight in the order
+// the collection gives its references.
+func freightNames(collection *kargoapi.FreightCollection) []string {
+	refs := collection.References()
+	names := make([]string, len(refs))
+	for i, ref := range refs {
+		names[i] = ref.Name
 	}
 	return names
 }
