@@ -233,7 +233,8 @@ upstream Stage verifies it, without a verification of their own.
 | `kargo_warehouse_discovery_failures_total` | How often discovery fails, and against which kind of repository. A discovery stops at its first failed subscription, so each failed discovery counts once. |
 | `kargo_warehouse_freight_created_total` | How much Freight Warehouses produce. |
 
-The failure ratio per Project, including Projects where every discovery fails:
+The failure ratio per Project, with native or classic histograms, including
+Projects where every discovery fails:
 
 ```
 sum by (project) (rate(kargo_warehouse_discovery_failures_total[5m]))
@@ -241,7 +242,8 @@ sum by (project) (rate(kargo_warehouse_discovery_failures_total[5m]))
 (
   sum by (project) (rate(kargo_warehouse_discovery_failures_total[5m]))
   + (
-    sum by (project) (rate(kargo_warehouse_discovery_duration_seconds_count[5m]))
+    sum by (project) (histogram_count(rate(kargo_warehouse_discovery_duration_seconds[5m])))
+    or sum by (project) (rate(kargo_warehouse_discovery_duration_seconds_count[5m]))
     or 0 * sum by (project) (rate(kargo_warehouse_discovery_failures_total[5m]))
   )
 )
