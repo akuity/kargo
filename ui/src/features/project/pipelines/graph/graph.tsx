@@ -19,7 +19,12 @@ import { useFreightTimelineControllerContext } from '../context/freight-timeline
 import { GraphContext } from '../context/graph-context';
 import { StackedNodes } from '../nodes/stacked-nodes';
 import warehouseStyles from '../nodes/warehouse-node.module.less';
-import { getWarehouseState, isSubscriptionFailing, WarehouseState } from '../nodes/warehouse-state';
+import {
+  getWarehouseState,
+  isSubscriptionFailing,
+  keepFailureThroughRetry,
+  WarehouseState
+} from '../nodes/warehouse-state';
 
 import { CustomRepoSubscriptionNode, CustomStageNode, CustomWarehouseNode } from './custom-node';
 import { repoSubscriptionIndexer, stageIndexer, warehouseIndexer } from './node-indexer';
@@ -170,13 +175,18 @@ export const Graph = (props: GraphProps) => {
     filterContext?.preferredFilter?.warehouses || []
   );
 
+  // the Warehouses as last shown, which a failed one's retries leave in place
+  const shownWarehouses = useRef<Record<string, WarehouseExpanded>>({});
+
   const warehouseByName = useMemo(() => {
     const warehouseByName: Record<string, WarehouseExpanded> = {};
 
     for (const warehouse of props.warehouses) {
-      warehouseByName[warehouse.metadata?.name || ''] = warehouse;
+      const name = warehouse.metadata?.name || '';
+      warehouseByName[name] = keepFailureThroughRetry(shownWarehouses.current[name], warehouse);
     }
 
+    shownWarehouses.current = warehouseByName;
     return warehouseByName;
   }, [props.warehouses]);
 

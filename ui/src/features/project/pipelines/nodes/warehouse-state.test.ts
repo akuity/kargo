@@ -3,7 +3,11 @@ import { describe, expect, test } from 'vitest';
 import { WarehouseExpanded } from '@ui/extend/types';
 import { V1Condition } from '@ui/gen/api/v2/models';
 
-import { getWarehouseState, isSubscriptionFailing } from './warehouse-state';
+import {
+  getWarehouseState,
+  isSubscriptionFailing,
+  keepFailureThroughRetry
+} from './warehouse-state';
 
 const condition = (type: string, status: string, reason = '', message = ''): V1Condition => ({
   type,
@@ -218,5 +222,72 @@ describe('isSubscriptionFailing()', () => {
         image: { repoURL: 'ghcr.io/nginxinc/nginx-unprivileged' }
       })
     ).toBe(false);
+  });
+});
+
+describe('keepFailureThroughRetry()', () => {
+  const as = (w: WarehouseExpanded, metadata: { uid?: string; generation?: number } = {}) =>
+    ({
+      ...w,
+      metadata: { ...w.metadata, uid: 'uid-1', generation: 1, ...metadata }
+    }) as WarehouseExpanded;
+
+  const failed = as(
+    warehouse({
+      conditions: [
+        condition('Reconciling', 'True', 'ScheduledDiscovery'),
+        condition('Healthy', 'False', 'DiscoveryFailed', discoveryError)
+      ]
+    })
+  );
+
+  const retryConditions = [
+    condition('Reconciling', 'True', 'ScheduledDiscovery'),
+    condition('Ready', 'False', 'DiscoveryInProgress'),
+    condition('Healthy', 'Unknown', 'Pending')
+  ];
+
+  const retrying = as(warehouse({ conditions: retryConditions }));
+
+  test('a retry of a failed discovery keeps the failure shown', () => {
+    expect(keepFailureThroughRetry(failed, retrying)).toBe(failed);
+  });
+
+  test('what the retry comes to is shown', () => {
+    const ready = as(warehouse({ conditions: [condition('Healthy', 'True')] }));
+    const failedAgain = as(failed);
+
+    expect(keepFailureThroughRetry(failed, ready)).toBe(ready);
+    expect(keepFailureThroughRetry(failed, failedAgain)).toBe(failedAgain);
+  });
+
+  test('a refresh the user asked for is shown as discovering', () => {
+    const refreshing = as(
+      warehouse({
+        conditions: retryConditions,
+        annotations: { 'kargo.akuity.io/refresh': 'token' }
+      })
+    );
+
+    expect(keepFailureThroughRetry(failed, refreshing)).toBe(refreshing);
+  });
+
+  test('a change to the Warehouse is shown as discovering', () => {
+    const changed = as(retrying, { generation: 2 });
+
+    expect(keepFailureThroughRetry(failed, changed)).toBe(changed);
+  });
+
+  test('a Warehouse made again under the same name is shown as it is', () => {
+    const remade = as(retrying, { uid: 'uid-2' });
+
+    expect(keepFailureThroughRetry(failed, remade)).toBe(remade);
+  });
+
+  test('a discovery after no failure is shown as discovering', () => {
+    const ready = as(warehouse({ conditions: [condition('Healthy', 'True')] }));
+
+    expect(keepFailureThroughRetry(undefined, retrying)).toBe(retrying);
+    expect(keepFailureThroughRetry(ready, retrying)).toBe(retrying);
   });
 });

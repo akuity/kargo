@@ -38,16 +38,21 @@ const trimMessage = (message: string) => {
   return trimmed;
 };
 
+// A refresh has been asked for and the controller has not finished it yet. It
+// marks a refresh handled only once the discovery it started is over.
+const isRefreshPending = (warehouse?: WarehouseExpanded) => {
+  const refreshToken = warehouse?.metadata?.annotations?.[refreshAnnotation];
+
+  return typeof refreshToken === 'string' && refreshToken !== warehouse?.status?.lastHandledRefresh;
+};
+
 export const getWarehouseState = (warehouse?: WarehouseExpanded): WarehouseState => {
   const conditions = warehouse?.status?.conditions || [];
 
   const reconciling = conditions.some((c) => c.type === 'Reconciling' && c.status === 'True');
   const hasReconcilingCondition = conditions.some((c) => c.type === 'Reconciling');
 
-  // A refresh has been asked for and the controller has not got to it yet.
-  const refreshToken = warehouse?.metadata?.annotations?.[refreshAnnotation];
-  const refreshing =
-    typeof refreshToken === 'string' && refreshToken !== warehouse?.status?.lastHandledRefresh;
+  const refreshing = isRefreshPending(warehouse);
 
   const discoveredAtValue = warehouse?.status?.discoveredArtifacts?.discoveredAt;
   const discoveredAt = discoveredAtValue ? new Date(discoveredAtValue) : undefined;
@@ -84,6 +89,25 @@ export const getWarehouseState = (warehouse?: WarehouseExpanded): WarehouseState
     discoveredAt
   };
 };
+
+// The controller retries a failed discovery by itself, quickly at first, and
+// each attempt clears the failure until it fails again. Shown as it is, the
+// Warehouse would flip between failed and discovering on every attempt, so
+// `previous`, the Warehouse as last shown, stands in for `next` while the
+// retry is under way. A refresh the user asks for, or a change to the
+// Warehouse, is shown as the discovery it is.
+export const keepFailureThroughRetry = (
+  previous: WarehouseExpanded | undefined,
+  next: WarehouseExpanded
+): WarehouseExpanded =>
+  previous &&
+  previous.metadata?.uid === next.metadata?.uid &&
+  previous.metadata?.generation === next.metadata?.generation &&
+  getWarehouseState(previous).phase === 'failed' &&
+  getWarehouseState(next).phase === 'discovering' &&
+  !isRefreshPending(next)
+    ? previous
+    : next;
 
 // The least time the loader and the edge animation are shown for, so that a
 // quick discovery does not blink.
