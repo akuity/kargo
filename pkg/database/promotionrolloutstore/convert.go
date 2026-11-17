@@ -1,6 +1,8 @@
 package promotionrolloutstore
 
 import (
+	"encoding/json"
+	"fmt"
 	"strconv"
 	"time"
 
@@ -105,6 +107,30 @@ func TargetStatuses(
 		}
 	}
 	return statuses, summary
+}
+
+// freightCollection presents the rows recorded for a rollout as the
+// FreightCollection they are: each row's reference is a FreightReference as
+// the API serves it, and the collection is keyed by origin and identified
+// as any other is. No rows are an empty collection.
+func freightCollection(
+	rows []database.PromotionRolloutFreightRow,
+) (*kargoapi.FreightCollection, error) {
+	collection := &kargoapi.FreightCollection{}
+	if len(rows) == 0 {
+		return collection, nil
+	}
+	references := make([]kargoapi.FreightReference, len(rows))
+	for i, row := range rows {
+		if err := json.Unmarshal(row.Reference, &references[i]); err != nil {
+			return nil, fmt.Errorf(
+				"error decoding Freight %q from %s %q: %w",
+				row.FreightName, row.OriginKind, row.OriginName, err,
+			)
+		}
+	}
+	collection.UpdateOrPush(references...)
+	return collection, nil
 }
 
 // FromSpec takes what the database stores from a PromotionRollout's spec:

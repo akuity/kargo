@@ -67,10 +67,11 @@ func ResolveFreightRefs(
 		// Freight of the promotion context, so a step that refers to another
 		// origin's Freight, with imageFrom or commitFrom say, does not find
 		// it. A Stage that requests Freight from one origin is unaffected.
-		// Completing it means taking, for each origin, the Freight of the
-		// Stage's newest successful rollout, which can be queried once
-		// Freight is in the database: today the database records only the
-		// names of the Freight each Promotion promoted.
+		// The complete collection is the one the rollout recorded when it
+		// started, in the database's promotion_rollout_freight table: this
+		// Freight plus, for each other origin, what the Stage's previous
+		// rollout recorded. Completing this one means reading that, which
+		// nothing here does yet.
 		freightCol := &kargoapi.FreightCollection{}
 		freightCol.UpdateOrPush(targetFreightRef)
 		return &targetFreightRef, freightCol, nil

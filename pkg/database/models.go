@@ -25,6 +25,14 @@ type PromotionFreightRow struct {
 	FreightName string
 }
 
+type PromotionRolloutFreightRow struct {
+	PromotionRolloutID uuid.UUID
+	OriginKind         string
+	OriginName         string
+	FreightName        string
+	Reference          json.RawMessage
+}
+
 type PromotionRolloutRow struct {
 	ID               uuid.UUID
 	ProjectName      string
