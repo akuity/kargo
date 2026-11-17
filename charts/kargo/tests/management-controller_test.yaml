@@ -27,6 +27,48 @@ tests:
       - hasDocuments:
           count: 0
 
+  - it: mounts the chart-generated API server CA
+    template: templates/management-controller/deployment.yaml
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].volumeMounts
+          content:
+            mountPath: /etc/kargo/api-ca.crt
+            name: api-ca
+            subPath: ca.crt
+            readOnly: true
+      - contains:
+          path: spec.template.spec.volumes
+          content:
+            name: api-ca
+            secret:
+              secretName: kargo-api-cert
+              items:
+              - key: ca.crt
+                path: ca.crt
+
+  - it: mounts no API server CA when the API server serves plain HTTP
+    template: templates/management-controller/deployment.yaml
+    set:
+      api.tls.enabled: false
+    asserts:
+      - notContains:
+          path: spec.template.spec.volumes
+          content:
+            name: api-ca
+          any: true
+
+  - it: mounts no API server CA when pointed at an external API server
+    template: templates/management-controller/deployment.yaml
+    set:
+      managementController.apiServer.address: https://kargo.example.com
+    asserts:
+      - notContains:
+          path: spec.template.spec.volumes
+          content:
+            name: api-ca
+          any: true
+
   - it: declares no metrics container port by default
     template: templates/management-controller/deployment.yaml
     asserts:
@@ -184,6 +226,42 @@ tests:
       - equal:
           path: data.METRICS_BIND_ADDRESS
           value: ":9090"
+
+  - it: reaches the API server through its Service, trusting the chart's certificate
+    asserts:
+      - equal:
+          path: data.API_SERVER_ADDRESS
+          value: https://kargo-api.NAMESPACE.svc
+      - equal:
+          path: data.API_SERVER_CA_CERT_PATH
+          value: /etc/kargo/api-ca.crt
+
+  - it: reaches the API server over plain HTTP when it serves none
+    set:
+      api.tls.enabled: false
+    asserts:
+      - equal:
+          path: data.API_SERVER_ADDRESS
+          value: http://kargo-api.NAMESPACE.svc
+      - notExists:
+          path: data.API_SERVER_CA_CERT_PATH
+
+  - it: uses the operator's API server address when set
+    set:
+      managementController.apiServer.address: https://kargo.example.com
+    asserts:
+      - equal:
+          path: data.API_SERVER_ADDRESS
+          value: https://kargo.example.com
+      - notExists:
+          path: data.API_SERVER_CA_CERT_PATH
+
+  - it: omits the API server address when the API is disabled and none is set
+    set:
+      api.enabled: false
+    asserts:
+      - notExists:
+          path: data.API_SERVER_ADDRESS
 
 ---
 suite: management-controller/metrics-service.yaml

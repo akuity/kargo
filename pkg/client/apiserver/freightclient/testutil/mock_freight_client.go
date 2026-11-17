@@ -1,0 +1,71 @@
+package testutil
+
+import (
+	"context"
+	"time"
+
+	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/pkg/client/apiserver/freightclient"
+)
+
+type MockFreightClient struct {
+	ListFreightFromWarehouseFun func(
+		ctx context.Context,
+		project, warehouse string,
+		opts *freightclient.ListWarehouseFreightOptions,
+	) ([]kargoapi.Freight, error)
+	MarkFreightInStageFun func(
+		ctx context.Context,
+		project, freight, stage string,
+		verified bool,
+		verifiedAt time.Time,
+	) error
+	UnmarkFreightInStageFun      func(ctx context.Context, project, freight, stage string) error
+	ClearFreightStageStatusFun   func(ctx context.Context, project, freight, stage string) error
+	ListFreightByCurrentStageFun func(
+		ctx context.Context,
+		project, stage string,
+	) ([]kargoapi.Freight, error)
+	GetFreightFun                  func(ctx context.Context, project, nameOrAlias string) (*kargoapi.Freight, error)
+	ListFreightReferencingStageFun func(
+		ctx context.Context,
+		project, stage string,
+	) ([]kargoapi.Freight, error)
+}
+
+func (mock *MockFreightClient) ListFreightFromWarehouse(
+	ctx context.Context,
+	project, warehouse string,
+	opts *freightclient.ListWarehouseFreightOptions,
+) ([]kargoapi.Freight, error) {
+	return mock.ListFreightFromWarehouseFun(ctx, project, warehouse, opts)
+}
+func (mock *MockFreightClient) MarkFreightInStage(
+	ctx context.Context,
+	project, freight, stage string,
+	verified bool,
+	verifiedAt time.Time,
+) error {
+	return mock.MarkFreightInStageFun(ctx, project, freight, stage, verified, verifiedAt)
+}
+func (mock *MockFreightClient) UnmarkFreightInStage(ctx context.Context, project, freight, stage string) error {
+	return mock.UnmarkFreightInStageFun(ctx, project, freight, stage)
+}
+func (mock *MockFreightClient) ClearFreightStageStatus(ctx context.Context, project, freight, stage string) error {
+	return mock.ClearFreightStageStatusFun(ctx, project, freight, stage)
+}
+func (mock *MockFreightClient) ListFreightByCurrentStage(
+	ctx context.Context,
+	project, stage string,
+) ([]kargoapi.Freight, error) {
+	return mock.ListFreightByCurrentStageFun(ctx, project, stage)
+}
+func (mock *MockFreightClient) GetFreight(ctx context.Context, project, nameOrAlias string) (*kargoapi.Freight, error) {
+	return mock.GetFreightFun(ctx, project, nameOrAlias)
+}
+func (mock *MockFreightClient) ListFreightReferencingStage(
+	ctx context.Context,
+	project, stage string,
+) ([]kargoapi.Freight, error) {
+	return mock.ListFreightReferencingStageFun(ctx, project, stage)
+}

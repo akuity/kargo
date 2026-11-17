@@ -145,6 +145,34 @@ true
 {{- end -}}
 
 {{/*
+Generate the address at which the management controller reaches the API server,
+else the API server's in-cluster Service when the chart installs one. Empty when
+there is neither.
+*/}}
+{{- define "kargo.managementController.apiServerAddress" -}}
+{{- if .Values.managementController.apiServer.address -}}
+{{- .Values.managementController.apiServer.address -}}
+{{- else if .Values.api.enabled -}}
+{{- if .Values.api.tls.enabled -}}
+{{- printf "https://kargo-api.%s.svc" .Release.Namespace -}}
+{{- else -}}
+{{- printf "http://kargo-api.%s.svc" .Release.Namespace -}}
+{{- end -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
+Whether the management controller must be given the API server's self-signed CA
+to reach it in-cluster: it does when it uses the in-cluster address and the chart
+generated the certificate.
+*/}}
+{{- define "kargo.managementController.mountsAPIServerCA" -}}
+{{- if and (not .Values.managementController.apiServer.address) .Values.api.enabled .Values.api.tls.enabled .Values.api.tls.selfSignedCert -}}
+true
+{{- end -}}
+{{- end -}}
+
+{{/*
 Generate the base URL for the external webhook server. When the external
 webhooks server has its own Ingress, the URL is composed from its own host,
 TLS configuration, and basePath. When it instead piggybacks on the API

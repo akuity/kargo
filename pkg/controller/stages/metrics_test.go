@@ -1,6 +1,7 @@
 package stages
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -8,12 +9,10 @@ import (
 	dto "github.com/prometheus/client_model/go"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/pkg/client/apiserver/freightclient/testutil"
 	"github.com/akuity/kargo/pkg/controller/metrics"
-	"github.com/akuity/kargo/pkg/indexer"
 )
 
 func TestSyncFreight_metrics(t *testing.T) {
@@ -24,8 +23,6 @@ func TestSyncFreight_metrics(t *testing.T) {
 	created := time.Now().Add(-time.Hour).Truncate(time.Second)
 	verified := metav1.Time{Time: created.Add(90 * time.Second)}
 
-	scheme := runtime.NewScheme()
-	require.NoError(t, kargoapi.AddToScheme(scheme))
 	freight := &kargoapi.Freight{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace:         project,
@@ -33,10 +30,29 @@ func TestSyncFreight_metrics(t *testing.T) {
 			CreationTimestamp: metav1.Time{Time: created},
 		},
 	}
-	c := fake.NewClientBuilder().WithScheme(scheme).
-		WithObjects(freight).WithStatusSubresource(freight).
-		WithIndex(&kargoapi.Freight{}, indexer.FreightByCurrentStagesField, indexer.FreightByCurrentStages).
-		Build()
+	// verifiedFreight is the same Freight once the Stage has recorded it as
+	// verified; SyncFreight observes the lead time only on the transition.
+	verifiedFreight := freight.DeepCopy()
+	verifiedFreight.Status.VerifiedIn =
+		map[string]kargoapi.VerifiedStage{"test-stage": {}}
+
+	// getFreight returns whichever Freight the test currently wants GetFreight to
+	// yield, letting the test drive the not-yet-verified -> verified transition
+	// without the mock mutating state.
+	getFreight := freight
+	mockClient := &testutil.MockFreightClient{
+		ListFreightByCurrentStageFun: func(context.Context, string, string) ([]kargoapi.Freight, error) {
+			return nil, nil
+		},
+		GetFreightFun: func(context.Context, string, string) (*kargoapi.Freight, error) {
+			return getFreight, nil
+		},
+		MarkFreightInStageFun: func(
+			context.Context, string, string, string, bool, time.Time,
+		) error {
+			return nil
+		},
+	}
 	stage := &kargoapi.Stage{
 		ObjectMeta: metav1.ObjectMeta{Namespace: project, Name: "test-stage"},
 		Status: kargoapi.StageStatus{
@@ -62,11 +78,12 @@ func TestSyncFreight_metrics(t *testing.T) {
 		return m.GetHistogram()
 	}
 
-	require.NoError(t, SyncFreight(t.Context(), c, stage))
+	require.NoError(t, SyncFreight(t.Context(), mockClient, stage))
 	require.Equal(t, uint64(1), sample().GetSampleCount())
 	require.Equal(t, 90.0, sample().GetSampleSum())
 
 	// Freight already verified in the Stage is not observed again.
-	require.NoError(t, SyncFreight(t.Context(), c, stage))
+	getFreight = verifiedFreight
+	require.NoError(t, SyncFreight(t.Context(), mockClient, stage))
 	require.Equal(t, uint64(1), sample().GetSampleCount())
 }

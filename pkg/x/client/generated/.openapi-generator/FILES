@@ -37,6 +37,7 @@ model_cluster_promotion_task.go
 model_cluster_promotion_task_list.go
 model_create_api_token_request.go
 model_create_config_map_request.go
+model_create_freight_request.go
 model_create_generic_credentials_request.go
 model_create_or_update_resource_response.go
 model_create_or_update_resource_result.go
@@ -58,6 +59,7 @@ model_expression_variable.go
 model_freight.go
 model_freight_collection.go
 model_freight_creation_criteria.go
+model_freight_list.go
 model_freight_origin.go
 model_freight_reference.go
 model_freight_request.go
@@ -91,6 +93,7 @@ model_index_selector.go
 model_index_selector_requirement.go
 model_inflated_promotion_task.go
 model_list_projects_response.go
+model_mark_freight_in_stage_request.go
 model_oidc_config.go
 model_patch_config_map_request.go
 model_patch_generic_credentials_request.go

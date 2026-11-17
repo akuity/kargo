@@ -6,6 +6,7 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
+	"io"
 	"net"
 	"net/http"
 	"net/http/httptest"
@@ -20,6 +21,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 	authnv1 "k8s.io/api/authentication/v1"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -937,4 +939,155 @@ func TestIsForbidden(t *testing.T) {
 			require.Equal(t, testCase.expected, IsForbidden(testCase.err))
 		})
 	}
+}
+
+func TestClientListFreight(t *testing.T) {
+	t.Parallel()
+
+	writeList := func(w http.ResponseWriter, names ...string) {
+		items := make([]kargoapi.Freight, 0, len(names))
+		for _, n := range names {
+			items = append(items, kargoapi.Freight{
+				ObjectMeta: metav1.ObjectMeta{Namespace: "demo", Name: n},
+			})
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(kargoapi.FreightList{Items: items})
+	}
+
+	mux := http.NewServeMux()
+	mux.HandleFunc(
+		"GET /v1beta1/projects/{project}/freight/{freightNameOrAlias}",
+		func(w http.ResponseWriter, r *http.Request) {
+			if r.PathValue("freightNameOrAlias") == "missing" {
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(http.StatusNotFound)
+				_ = json.NewEncoder(w).Encode(map[string]string{"error": "freight not found"})
+				return
+			}
+			w.Header().Set("Content-Type", "application/json")
+			_ = json.NewEncoder(w).Encode(kargoapi.Freight{
+				ObjectMeta: metav1.ObjectMeta{Namespace: "demo", Name: r.PathValue("freightNameOrAlias")},
+			})
+		},
+	)
+	mux.HandleFunc(
+		"GET /v1beta1/projects/{project}/stages/{stage}/referencing-freight",
+		func(w http.ResponseWriter, _ *http.Request) { writeList(w, "ref-1", "ref-2") },
+	)
+	mux.HandleFunc(
+		"GET /v1beta1/projects/{project}/stages/{stage}/freight",
+		func(w http.ResponseWriter, r *http.Request) {
+			if r.PathValue("stage") == "missing" {
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(http.StatusNotFound)
+				_ = json.NewEncoder(w).Encode(map[string]string{"error": "stage not found"})
+				return
+			}
+			writeList(w, "current-1")
+		},
+	)
+	mux.HandleFunc(
+		"GET /v1beta1/projects/{project}/warehouses/{warehouse}/freight",
+		func(w http.ResponseWriter, _ *http.Request) { writeList(w, "wh-1", "wh-2", "wh-3") },
+	)
+	server := httptest.NewServer(mux)
+	t.Cleanup(server.Close)
+
+	cp := newControlPlane(t, http.StatusOK)
+	c, err := New(t.Context(), validConfig(server.URL), cp.config())
+	require.NoError(t, err)
+
+	names := func(fs []kargoapi.Freight) []string {
+		out := make([]string, len(fs))
+		for i, f := range fs {
+			out[i] = f.Name
+		}
+		return out
+	}
+
+	t.Run("by current stage", func(t *testing.T) {
+		fs, err := c.ListFreightByCurrentStage(t.Context(), "demo", "test")
+		require.NoError(t, err)
+		require.Equal(t, []string{"current-1"}, names(fs))
+	})
+	t.Run("from warehouse", func(t *testing.T) {
+		fs, err := c.ListFreightFromWarehouse(t.Context(), "demo", "wh", nil)
+		require.NoError(t, err)
+		require.Equal(t, []string{"wh-1", "wh-2", "wh-3"}, names(fs))
+	})
+	t.Run("referencing stage", func(t *testing.T) {
+		fs, err := c.ListFreightReferencingStage(t.Context(), "demo", "test")
+		require.NoError(t, err)
+		require.Equal(t, []string{"ref-1", "ref-2"}, names(fs))
+	})
+	t.Run("get freight", func(t *testing.T) {
+		f, err := c.GetFreight(t.Context(), "demo", "fr-1")
+		require.NoError(t, err)
+		require.NotNil(t, f)
+		require.Equal(t, "fr-1", f.Name)
+	})
+	t.Run("get freight returns nil when missing", func(t *testing.T) {
+		f, err := c.GetFreight(t.Context(), "demo", "missing")
+		require.NoError(t, err)
+		require.Nil(t, f)
+	})
+	t.Run("surfaces the server's error", func(t *testing.T) {
+		_, err := c.ListFreightByCurrentStage(t.Context(), "demo", "missing")
+		require.Error(t, err)
+		require.ErrorContains(t, err, "stage not found")
+	})
+}
+
+func TestClientCreateFreight(t *testing.T) {
+	t.Parallel()
+
+	var lastBody string
+	mux := http.NewServeMux()
+	mux.HandleFunc(
+		"POST /v1beta1/projects/{project}/freight",
+		func(w http.ResponseWriter, r *http.Request) {
+			var body struct {
+				Freight  kargoapi.Freight `json:"freight"`
+				Metadata map[string]any   `json:"metadata"`
+			}
+			raw, _ := io.ReadAll(r.Body)
+			lastBody = string(raw)
+			_ = json.Unmarshal(raw, &body)
+			// Echo the submitted Freight back, as the API server returns the stored
+			// resource.
+			body.Freight.Namespace = r.PathValue("project")
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusCreated)
+			_ = json.NewEncoder(w).Encode(body.Freight)
+		},
+	)
+	server := httptest.NewServer(mux)
+	t.Cleanup(server.Close)
+
+	cp := newControlPlane(t, http.StatusOK)
+	c, err := New(t.Context(), validConfig(server.URL), cp.config())
+	require.NoError(t, err)
+
+	t.Run("creates Freight with metadata", func(t *testing.T) {
+		freight := &kargoapi.Freight{
+			ObjectMeta: metav1.ObjectMeta{Name: "with-meta-1"},
+			Origin: kargoapi.FreightOrigin{
+				Kind: kargoapi.FreightOriginKindWarehouse,
+				Name: "test-warehouse",
+			},
+		}
+		metadata := map[string]apiextensionsv1.JSON{
+			"something": {Raw: []byte(`["a","b"]`)},
+		}
+		created, isNew, err := c.CreateFreight(t.Context(), "demo", freight, metadata)
+		require.NoError(t, err)
+		require.True(t, isNew)
+		require.NotNil(t, created)
+		require.Equal(t, "with-meta-1", created.Name)
+		require.Equal(t, "demo", created.Namespace)
+		// The request carried both the Freight and the metadata.
+		require.Contains(t, lastBody, "with-meta-1")
+		require.Contains(t, lastBody, "something")
+	})
 }

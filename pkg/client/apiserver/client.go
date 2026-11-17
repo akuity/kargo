@@ -38,6 +38,7 @@ import (
 	"github.com/kelseyhightower/envconfig"
 	"golang.org/x/oauth2"
 	authnv1 "k8s.io/api/authentication/v1"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -45,6 +46,7 @@ import (
 	"k8s.io/client-go/rest"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/pkg/client/apiserver/freightclient"
 	kargogen "github.com/akuity/kargo/pkg/x/client/generated"
 )
 
@@ -492,6 +494,254 @@ func (c *Client) CreatePromotionRollout(
 	return rollout, nil
 }
 
+// MarkFreightInStage records, through the API server, that the named Freight is
+// currently in use by the Stage, and -- when verified is true -- that it has
+// been verified there at verifiedAt. It updates the Freight's status in place
+// of the Stage controller writing Freight status directly.
+func (c *Client) MarkFreightInStage(
+	ctx context.Context,
+	project string,
+	freight string,
+	stage string,
+	verified bool,
+	verifiedAt time.Time,
+) error {
+	body := kargogen.MarkFreightInStageRequest{Verified: &verified}
+	if verified && !verifiedAt.IsZero() {
+		at := verifiedAt.UTC().Format(time.RFC3339)
+		body.VerifiedAt = &at
+	}
+	resp, err := c.api.CoreAPI.
+		MarkFreightInStage(ctx, project, freight, stage).
+		Body(body).
+		Execute()
+	if resp != nil {
+		_ = resp.Body.Close()
+	}
+	if err != nil {
+		return fmt.Errorf(
+			"error marking Freight %q in Stage %q in Project %q: %w",
+			freight, stage, project, ResponseError(err, resp),
+		)
+	}
+	return nil
+}
+
+// UnmarkFreightInStage records, through the API server, that the named Freight
+// is no longer in use by the Stage, removing the Stage from the Freight's
+// status.
+func (c *Client) UnmarkFreightInStage(
+	ctx context.Context,
+	project string,
+	freight string,
+	stage string,
+) error {
+	resp, err := c.api.CoreAPI.
+		UnmarkFreightInStage(ctx, project, freight, stage).
+		Execute()
+	if resp != nil {
+		_ = resp.Body.Close()
+	}
+	if err != nil {
+		return fmt.Errorf(
+			"error unmarking Freight %q from Stage %q in Project %q: %w",
+			freight, stage, project, ResponseError(err, resp),
+		)
+	}
+	return nil
+}
+
+// ClearFreightStageStatus removes, through the API server, all of the Stage's
+// entries from the Freight's status -- currentlyIn, verifiedIn, and approvedFor.
+// It is used to clean up Freight status when a Stage is deleted.
+func (c *Client) ClearFreightStageStatus(
+	ctx context.Context,
+	project string,
+	freight string,
+	stage string,
+) error {
+	resp, err := c.api.CoreAPI.
+		DeleteFreightStageStatus(ctx, project, freight, stage).
+		Execute()
+	if resp != nil {
+		_ = resp.Body.Close()
+	}
+	if err != nil {
+		return fmt.Errorf(
+			"error clearing Stage %q from Freight %q status in Project %q: %w",
+			stage, freight, project, ResponseError(err, resp),
+		)
+	}
+	return nil
+}
+
+// CreateFreight creates, through the API server, the given Freight in the
+// Project, optionally recording status metadata on it (applied fill-if-missing).
+// The operation is idempotent: creating a piece of Freight that already exists is
+// not an error. It returns the created (or pre-existing) Freight and whether it
+// was genuinely created (true) rather than already present (false).
+func (c *Client) CreateFreight(
+	ctx context.Context,
+	project string,
+	freight *kargoapi.Freight,
+	metadata map[string]apiextensionsv1.JSON,
+) (*kargoapi.Freight, bool, error) {
+	genFreight := &kargogen.Freight{}
+	if err := convert(freight, genFreight); err != nil {
+		return nil, false, fmt.Errorf("error encoding Freight for Project %q: %w", project, err)
+	}
+	body := kargogen.CreateFreightRequest{Freight: genFreight}
+	if len(metadata) > 0 {
+		md := map[string]any{}
+		if err := convert(metadata, &md); err != nil {
+			return nil, false, fmt.Errorf("error encoding Freight metadata for Project %q: %w", project, err)
+		}
+		body.Metadata = md
+	}
+	model, resp, err := c.api.CoreAPI.CreateFreight(ctx, project).Body(body).Execute()
+	if resp != nil {
+		_ = resp.Body.Close()
+	}
+	if err != nil {
+		return nil, false, fmt.Errorf(
+			"error creating Freight in Project %q: %w", project, ResponseError(err, resp),
+		)
+	}
+	created := &kargoapi.Freight{}
+	if err = convert(model, created); err != nil {
+		return nil, false, fmt.Errorf("error decoding created Freight in Project %q: %w", project, err)
+	}
+	// The API server answers 201 for a genuinely new piece of Freight and 200 when
+	// it already existed.
+	isNew := resp != nil && resp.StatusCode == http.StatusCreated
+	return created, isNew, nil
+}
+
+// GetFreight returns, through the API server, the named Freight, or nil if there
+// is no such Freight.
+func (c *Client) GetFreight(
+	ctx context.Context,
+	project string,
+	nameOrAlias string,
+) (*kargoapi.Freight, error) {
+	model, resp, err := c.api.CoreAPI.GetFreight(ctx, project, nameOrAlias).Execute()
+	if resp != nil {
+		_ = resp.Body.Close()
+	}
+	if err != nil {
+		if resp != nil && resp.StatusCode == http.StatusNotFound {
+			return nil, nil
+		}
+		return nil, fmt.Errorf(
+			"error getting Freight %q in Project %q: %w", nameOrAlias, project, ResponseError(err, resp),
+		)
+	}
+	freight := &kargoapi.Freight{}
+	if err = convert(model, freight); err != nil {
+		return nil, fmt.Errorf(
+			"error decoding Freight %q in Project %q: %w", nameOrAlias, project, err,
+		)
+	}
+	return freight, nil
+}
+
+// ListFreightReferencingStage returns, through the API server, the Freight whose
+// status records the named Stage in its verifiedIn or approvedFor map.
+func (c *Client) ListFreightReferencingStage(
+	ctx context.Context,
+	project string,
+	stage string,
+) ([]kargoapi.Freight, error) {
+	list, resp, err := c.api.CoreAPI.ListFreightReferencingStage(ctx, project, stage).Execute()
+	if resp != nil {
+		_ = resp.Body.Close()
+	}
+	if err != nil {
+		return nil, fmt.Errorf(
+			"error listing Freight referencing Stage %q in Project %q: %w",
+			stage, project, ResponseError(err, resp),
+		)
+	}
+	freight := &kargoapi.FreightList{}
+	if err = convert(list, freight); err != nil {
+		return nil, fmt.Errorf(
+			"error decoding Freight referencing Stage %q in Project %q: %w", stage, project, err,
+		)
+	}
+	return freight.Items, nil
+}
+
+// ListFreightByCurrentStage returns, through the API server, the Freight whose
+// status records it as currently in use by the named Stage.
+func (c *Client) ListFreightByCurrentStage(
+	ctx context.Context,
+	project string,
+	stage string,
+) ([]kargoapi.Freight, error) {
+	list, resp, err := c.api.CoreAPI.ListFreightByCurrentStage(ctx, project, stage).Execute()
+	if resp != nil {
+		_ = resp.Body.Close()
+	}
+	if err != nil {
+		return nil, fmt.Errorf(
+			"error listing Freight currently in Stage %q in Project %q: %w",
+			stage, project, ResponseError(err, resp),
+		)
+	}
+	freight := &kargoapi.FreightList{}
+	if err = convert(list, freight); err != nil {
+		return nil, fmt.Errorf(
+			"error decoding Freight currently in Stage %q in Project %q: %w", stage, project, err,
+		)
+	}
+	return freight.Items, nil
+}
+
+// ListFreightFromWarehouse returns, through the API server, the Freight that
+// originated from the named Warehouse, narrowed by opts (nil means all of it).
+func (c *Client) ListFreightFromWarehouse(
+	ctx context.Context,
+	project string,
+	warehouse string,
+	opts *freightclient.ListWarehouseFreightOptions,
+) ([]kargoapi.Freight, error) {
+	req := c.api.CoreAPI.ListFreightFromWarehouse(ctx, project, warehouse)
+	if opts != nil {
+		if opts.ApprovedFor != "" {
+			req = req.ApprovedFor(opts.ApprovedFor)
+		}
+		if len(opts.VerifiedIn) > 0 {
+			req = req.VerifiedIn(opts.VerifiedIn)
+		}
+		if opts.CurrentlyIn != "" {
+			req = req.CurrentlyIn(opts.CurrentlyIn)
+		}
+		if opts.AvailabilityStrategy != "" {
+			req = req.AvailabilityStrategy(string(opts.AvailabilityStrategy))
+		}
+		if opts.RequiredSoakTime != nil {
+			req = req.RequiredSoakTime(opts.RequiredSoakTime.Duration.String())
+		}
+	}
+	list, resp, err := req.Execute()
+	if resp != nil {
+		_ = resp.Body.Close()
+	}
+	if err != nil {
+		return nil, fmt.Errorf(
+			"error listing Freight from Warehouse %q in Project %q: %w",
+			warehouse, project, ResponseError(err, resp),
+		)
+	}
+	freight := &kargoapi.FreightList{}
+	if err = convert(list, freight); err != nil {
+		return nil, fmt.Errorf(
+			"error decoding Freight from Warehouse %q in Project %q: %w", warehouse, project, err,
+		)
+	}
+	return freight.Items, nil
+}
+
 // convert re-encodes a model of the generated client as the API type it was
 // generated from. The two agree on their JSON, which is the only form either
 // is ever exchanged in.
@@ -552,6 +802,13 @@ func IsRetryable(err error) bool {
 func IsForbidden(err error) bool {
 	var apiErr *APIError
 	return errors.As(err, &apiErr) && apiErr.StatusCode == http.StatusForbidden
+}
+
+// IsNotFound reports whether err is the API server reporting that the resource
+// a request targeted does not exist.
+func IsNotFound(err error) bool {
+	var apiErr *APIError
+	return errors.As(err, &apiErr) && apiErr.StatusCode == http.StatusNotFound
 }
 
 func (e *APIError) Error() string {

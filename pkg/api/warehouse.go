@@ -13,6 +13,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/pkg/client/apiserver/freightclient"
 )
 
 // GetWarehouse returns a pointer to the Warehouse resource specified by the
@@ -59,56 +60,26 @@ func RefreshWarehouse(
 	return warehouse, nil
 }
 
-// ListWarehouseFreightOptions is a struct that can be used to specify filtering
-// criteria when listing Freight resources that originated from a Warehouse.
-//
-// +protobuf=false
-// +k8s:deepcopy-gen=false
-// +k8s:openapi-gen=false
-type ListWarehouseFreightOptions struct {
-	// ApprovedFor names a Stage for which all Freight resources that have been
-	// approved for that Stage should be included in the list results.
-	//
-	// IMPORTANT: This is OR'ed with the VerifiedIn field.
-	ApprovedFor string
-	// VerifiedIn names zero or more Stages for which all Freight resources that
-	// have been verified for those Stages should be included in the list results
-	// AS long as they were verified before the VerifiedBefore time (if set).
-	//
-	// IMPORTANT: This is OR'ed with the ApprovedFor field.
-	VerifiedIn []string
-	// RequiredSoakTime optionally specifies a minimum duration that a piece of
-	// Freight must have continuously remained in a Stage at any time after being
-	// verified.
-	RequiredSoakTime *metav1.Duration
-	// AvailabilityStrategy specifies the semantics for how Freight is determined
-	// to be available. If not set, the default is to consider Freight available
-	// if it has been verified in any of the provided VerifiedIn stages.
-	// IMPORTANT: This is also applied to Freight matched using the VerifiedBefore
-	// condition.
-	AvailabilityStrategy kargoapi.FreightAvailabilityStrategy
-
-	// CurrentlyIn optionally specifies a Stage in which the Freight must
-	// currently be used in order to be included in the list results.
-	CurrentlyIn string
-}
-
 // ListFreightFromWarehouse returns a list of all Freight resources that
-// originated from a Warehouse.
+// originated from the named Warehouse in the given project (namespace). It takes
+// the Warehouse's name and project rather than a *Warehouse because those are the
+// only values it needs, which lets callers that only know the name (e.g. a
+// Freight origin) avoid fetching the Warehouse resource.
 func ListFreightFromWarehouse(
 	ctx context.Context,
 	c client.Client,
-	w *kargoapi.Warehouse,
-	opts *ListWarehouseFreightOptions,
+	project string,
+	warehouseName string,
+	opts *freightclient.ListWarehouseFreightOptions,
 ) ([]kargoapi.Freight, error) {
 	if opts == nil {
-		opts = &ListWarehouseFreightOptions{}
+		opts = &freightclient.ListWarehouseFreightOptions{}
 	}
 
 	// Common selectors we'll use a few times in the code that follows:
 
 	// Selects Freight from a specific Warehouse
-	warehouseSelector := fields.OneTermEqualSelector("warehouse", w.Name)
+	warehouseSelector := fields.OneTermEqualSelector("warehouse", warehouseName)
 
 	// Selects Freight currently used by a specific Stage
 	var currentlyInSelector fields.Selector
@@ -181,14 +152,14 @@ func ListFreightFromWarehouse(
 			ctx,
 			res,
 			&client.ListOptions{
-				Namespace:     w.Namespace,
+				Namespace:     project,
 				FieldSelector: fs,
 			},
 		); err != nil {
 			return nil, fmt.Errorf(
 				"error listing Freight for Warehouse %q in namespace %q: %w",
-				w.Name,
-				w.Namespace,
+				warehouseName,
+				project,
 				err,
 			)
 		}

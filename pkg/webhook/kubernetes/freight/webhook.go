@@ -222,12 +222,28 @@ func (w *webhook) ValidateCreate(
 		)
 	}
 
+	if freight.Origin.Kind == kargoapi.FreightOriginKindWarehouse {
+		warehouseErrs, err := w.validateWarehouse(ctx, freight)
+		if err != nil {
+			return nil, err
+		}
+		errs = append(errs, warehouseErrs...)
+	}
+
+	if len(errs) > 0 {
+		return nil, apierrors.NewInvalid(freightGroupKind, freight.Name, errs)
+	}
+	return nil, nil
+}
+
+func (w *webhook) validateWarehouse(ctx context.Context, freight *kargoapi.Freight) (field.ErrorList, error) {
+	var errs field.ErrorList
 	warehouse, err := w.getWarehouseFn(ctx, w.client, types.NamespacedName{
 		Namespace: freight.Namespace,
 		Name:      freight.Origin.Name,
 	})
 	if err != nil {
-		return nil, apierrors.NewInternalError(err)
+		return errs, apierrors.NewInternalError(err)
 	}
 	if warehouse == nil {
 		errs = append(
@@ -246,11 +262,7 @@ func (w *webhook) ValidateCreate(
 			w.validateFreightArtifactsFn(freight, warehouse)...,
 		)
 	}
-
-	if len(errs) > 0 {
-		return nil, apierrors.NewInvalid(freightGroupKind, freight.Name, errs)
-	}
-	return nil, nil
+	return errs, nil
 }
 
 func (w *webhook) ValidateUpdate(

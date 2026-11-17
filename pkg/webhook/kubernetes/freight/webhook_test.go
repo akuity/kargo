@@ -411,6 +411,10 @@ func Test_webhook_ValidateCreate(t *testing.T) {
 				},
 			},
 			freight: kargoapi.Freight{
+				Origin: kargoapi.FreightOrigin{
+					Kind: kargoapi.FreightOriginKindWarehouse,
+					Name: "fake-warehouse",
+				},
 				Commits: []kargoapi.GitCommit{{}},
 			},
 			assertions: func(t *testing.T, err error) {
@@ -452,6 +456,10 @@ func Test_webhook_ValidateCreate(t *testing.T) {
 				validateFreightArtifactsFn: validateFreightArtifacts,
 			},
 			freight: kargoapi.Freight{
+				Origin: kargoapi.FreightOrigin{
+					Kind: kargoapi.FreightOriginKindWarehouse,
+					Name: "fake-warehouse",
+				},
 				Commits: []kargoapi.GitCommit{{}},
 			},
 			assertions: func(t *testing.T, err error) {
@@ -500,6 +508,10 @@ func Test_webhook_ValidateCreate(t *testing.T) {
 				},
 			},
 			freight: kargoapi.Freight{
+				Origin: kargoapi.FreightOrigin{
+					Kind: kargoapi.FreightOriginKindWarehouse,
+					Name: "fake-warehouse",
+				},
 				Commits: []kargoapi.GitCommit{{}},
 			},
 			assertions: func(t *testing.T, err error) {
