@@ -16,6 +16,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/pkg/api"
 	"github.com/akuity/kargo/pkg/indexer"
 	"github.com/akuity/kargo/pkg/urls"
 )
@@ -24,6 +25,7 @@ func TestRefreshWarehouses(t *testing.T) {
 	// Callers are responsible for normalizing the repository URL.
 	testRepoURL := urls.NormalizeGit("https://github.com/example/repo.git")
 	testRepoURLs := []string{testRepoURL}
+	testOtherRepoURL := urls.NormalizeGit("https://github.com/example/other-repo.git")
 
 	const testProject = "fake-project"
 
@@ -34,7 +36,9 @@ func TestRefreshWarehouses(t *testing.T) {
 		name       string
 		client     client.Client
 		project    string
-		assertions func(*testing.T, *httptest.ResponseRecorder)
+		repoURLs   []string // Defaults to testRepoURLs
+		qualifiers []string
+		assertions func(*testing.T, client.Client, *httptest.ResponseRecorder)
 	}{
 		{
 			name: "error listing Warehouses",
@@ -50,7 +54,7 @@ func TestRefreshWarehouses(t *testing.T) {
 					},
 				},
 			).Build(),
-			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
+			assertions: func(t *testing.T, _ client.Client, rr *httptest.ResponseRecorder) {
 				require.Equal(t, http.StatusInternalServerError, rr.Code)
 				require.JSONEq(t, "{}", rr.Body.String())
 			},
@@ -98,7 +102,7 @@ func TestRefreshWarehouses(t *testing.T) {
 				indexer.WarehousesBySubscribedURLsField,
 				indexer.WarehousesBySubscribedURLs,
 			).Build(),
-			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
+			assertions: func(t *testing.T, _ client.Client, rr *httptest.ResponseRecorder) {
 				require.Equal(t, http.StatusInternalServerError, rr.Code)
 				require.JSONEq(t, `{"error":"failed to refresh 1 of 2 warehouses"}`, rr.Body.String())
 			},
@@ -122,7 +126,7 @@ func TestRefreshWarehouses(t *testing.T) {
 				indexer.WarehousesBySubscribedURLsField,
 				indexer.WarehousesBySubscribedURLs,
 			).Build(),
-			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
+			assertions: func(t *testing.T, _ client.Client, rr *httptest.ResponseRecorder) {
 				require.Equal(t, http.StatusOK, rr.Code)
 				require.JSONEq(t, `{"msg":"refreshed 1 warehouse(s)"}`, rr.Body.String())
 			},
@@ -171,7 +175,7 @@ func TestRefreshWarehouses(t *testing.T) {
 				indexer.WarehousesBySubscribedURLsField,
 				indexer.WarehousesBySubscribedURLs,
 			).Build(),
-			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
+			assertions: func(t *testing.T, _ client.Client, rr *httptest.ResponseRecorder) {
 				require.Equal(t, http.StatusInternalServerError, rr.Code)
 				require.JSONEq(t, `{"error":"failed to refresh 1 of 2 warehouses"}`, rr.Body.String())
 			},
@@ -196,24 +200,164 @@ func TestRefreshWarehouses(t *testing.T) {
 				indexer.WarehousesBySubscribedURLsField,
 				indexer.WarehousesBySubscribedURLs,
 			).Build(),
-			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
+			assertions: func(t *testing.T, _ client.Client, rr *httptest.ResponseRecorder) {
 				require.Equal(t, http.StatusOK, rr.Code)
 				require.JSONEq(t, `{"msg":"refreshed 1 warehouse(s)"}`, rr.Body.String())
+			},
+		},
+		{
+			// A Warehouse whose selector can't be built must not prevent other
+			// Warehouses subscribed to the same repository from being refreshed.
+			name:       "Warehouse with invalid selector is skipped",
+			project:    testProject,
+			qualifiers: []string{"refs/heads/main"},
+			client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
+				&kargoapi.Warehouse{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: testProject,
+						// Sorts first, so it is evaluated first
+						Name: "bad-warehouse",
+					},
+					Spec: kargoapi.WarehouseSpec{
+						InternalSubscriptions: []kargoapi.RepoSubscription{{
+							Git: &kargoapi.GitSubscription{
+								RepoURL:          testRepoURL,
+								Branch:           "main",
+								ExpressionFilter: "(1 + 2",
+							},
+						}},
+					},
+				},
+				&kargoapi.Warehouse{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: testProject,
+						Name:      "good-warehouse",
+					},
+					Spec: kargoapi.WarehouseSpec{
+						InternalSubscriptions: []kargoapi.RepoSubscription{{
+							Git: &kargoapi.GitSubscription{
+								RepoURL: testRepoURL,
+								Branch:  "main",
+							},
+						}},
+					},
+				},
+			).WithIndex(
+				&kargoapi.Warehouse{},
+				indexer.WarehousesBySubscribedURLsField,
+				indexer.WarehousesBySubscribedURLs,
+			).Build(),
+			assertions: func(t *testing.T, c client.Client, rr *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusOK, rr.Code)
+				require.JSONEq(
+					t,
+					`{"msg":"refreshed 1 warehouse(s); skipped 1 with an invalid subscription"}`,
+					rr.Body.String(),
+				)
+				for name, refreshed := range map[string]bool{
+					"bad-warehouse":  false,
+					"good-warehouse": true,
+				} {
+					wh := &kargoapi.Warehouse{}
+					require.NoError(t, c.Get(
+						t.Context(),
+						client.ObjectKey{Namespace: testProject, Name: name},
+						wh,
+					))
+					_, ok := api.RefreshAnnotationValue(wh.GetAnnotations())
+					require.Equal(t, refreshed, ok, name)
+				}
+			},
+		},
+		{
+			// A Warehouse subscribed to more than one of the repositories is
+			// skipped, and counted, only once. Skips are also reported when
+			// refreshing another Warehouse fails.
+			name:       "skipped Warehouse counted once and reported on failure",
+			project:    testProject,
+			repoURLs:   []string{testRepoURL, testOtherRepoURL},
+			qualifiers: []string{"refs/heads/main"},
+			client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
+				&kargoapi.Warehouse{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: testProject,
+						Name:      "bad-warehouse",
+					},
+					Spec: kargoapi.WarehouseSpec{
+						InternalSubscriptions: []kargoapi.RepoSubscription{
+							{
+								Git: &kargoapi.GitSubscription{
+									RepoURL:          testRepoURL,
+									Branch:           "main",
+									ExpressionFilter: "(1 + 2",
+								},
+							},
+							{
+								Git: &kargoapi.GitSubscription{
+									RepoURL:          testOtherRepoURL,
+									Branch:           "main",
+									ExpressionFilter: "(1 + 2",
+								},
+							},
+						},
+					},
+				},
+				&kargoapi.Warehouse{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: testProject,
+						Name:      "good-warehouse",
+					},
+					Spec: kargoapi.WarehouseSpec{
+						InternalSubscriptions: []kargoapi.RepoSubscription{{
+							Git: &kargoapi.GitSubscription{
+								RepoURL: testRepoURL,
+								Branch:  "main",
+							},
+						}},
+					},
+				},
+			).WithInterceptorFuncs(interceptor.Funcs{
+				Patch: func(
+					context.Context,
+					client.WithWatch,
+					client.Object,
+					client.Patch,
+					...client.PatchOption,
+				) error {
+					return errors.New("something went wrong")
+				},
+			}).WithIndex(
+				&kargoapi.Warehouse{},
+				indexer.WarehousesBySubscribedURLsField,
+				indexer.WarehousesBySubscribedURLs,
+			).Build(),
+			assertions: func(t *testing.T, _ client.Client, rr *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusInternalServerError, rr.Code)
+				require.JSONEq(
+					t,
+					`{"error":"failed to refresh 1 of 1 warehouses; skipped 1 with an invalid subscription"}`,
+					rr.Body.String(),
+				)
 			},
 		},
 	}
 	for _, tt := range testCases {
 		t.Run(tt.name, func(t *testing.T) {
+			repoURLs := tt.repoURLs
+			if repoURLs == nil {
+				repoURLs = testRepoURLs
+			}
 			w := httptest.NewRecorder()
 			refreshWarehouses(
 				t.Context(),
 				w,
 				tt.client,
 				tt.project,
-				testRepoURLs,
+				repoURLs,
 				nil,
+				tt.qualifiers...,
 			)
-			tt.assertions(t, w)
+			tt.assertions(t, tt.client, w)
 		})
 	}
 }

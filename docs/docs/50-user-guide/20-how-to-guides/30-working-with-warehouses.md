@@ -592,8 +592,12 @@ convert it to a boolean (e.g., `0` to `false`, `1` to `true`).
 
 :::warning
 
-Invalid expressions will cause the subscription to fail. Always test your
-expressions to ensure they evaluate correctly with your repository's data.
+A Warehouse whose expression has a syntax error is rejected when it is created
+or updated. Other mistakes are not caught then. A variable that is not
+available to the selected commit selection strategy evaluates to `nil`, which
+can quietly filter out every commit or tag, and an error while evaluating the
+expression causes the subscription to fail. Always test your expressions to
+ensure they evaluate correctly with your repository's data.
 
 :::
 

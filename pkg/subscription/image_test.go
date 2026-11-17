@@ -142,11 +142,38 @@ func Test_imageSubscriber_ValidateSubscription(t *testing.T) {
 			},
 		},
 		{
+			name: "invalid expressionFilter syntax",
+			sub: kargoapi.ImageSubscription{
+				RepoURL:          "ghcr.io/akuity/kargo",
+				ExpressionFilter: "(1 + 2",
+				CacheByTag:       true,
+			},
+			assertions: func(t *testing.T, errs field.ErrorList) {
+				require.Len(t, errs, 1)
+				require.Equal(t, "image.expressionFilter", errs[0].Field)
+				require.Equal(t, field.ErrorTypeInvalid, errs[0].Type)
+			},
+		},
+		{
+			name: "unknown variable in expressionFilter",
+			sub: kargoapi.ImageSubscription{
+				RepoURL:          "ghcr.io/akuity/kargo",
+				ExpressionFilter: "annotation == 'approved'",
+				CacheByTag:       true,
+			},
+			assertions: func(t *testing.T, errs field.ErrorList) {
+				require.Len(t, errs, 1)
+				require.Equal(t, "image.expressionFilter", errs[0].Field)
+				require.Equal(t, field.ErrorTypeInvalid, errs[0].Type)
+			},
+		},
+		{
 			name: "valid",
 			sub: kargoapi.ImageSubscription{
 				RepoURL:                "ghcr.io/akuity/kargo",
 				ImageSelectionStrategy: kargoapi.ImageSelectionStrategySemVer,
 				Constraint:             "^1.0.0",
+				ExpressionFilter:       "annotations['approved'] == 'true'",
 				CacheByTag:             true,
 			},
 			assertions: func(t *testing.T, errs field.ErrorList) {
