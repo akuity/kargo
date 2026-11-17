@@ -592,12 +592,12 @@ convert it to a boolean (e.g., `0` to `false`, `1` to `true`).
 
 :::warning
 
-A Warehouse whose expression has a syntax error is rejected when it is created
-or updated. Other mistakes are not caught then. A variable that is not
-available to the selected commit selection strategy evaluates to `nil`, which
-can quietly filter out every commit or tag, and an error while evaluating the
-expression causes the subscription to fail. Always test your expressions to
-ensure they evaluate correctly with your repository's data.
+A Warehouse is rejected when it is created or updated if an expression has a
+syntax error or uses a variable that is not
+[available](#available-expression-filtering-variables) to the selected commit
+selection strategy. An expression that passes these checks can still fail when
+evaluated, which causes the subscription to fail. Always test your expressions
+to ensure they evaluate correctly with your repository's data.
 
 :::
 
@@ -630,7 +630,7 @@ variables depend on your `commitSelectionStrategy`:
 ##### Available Expression Filtering Variables
 
 The variables available in your expression depend on the commit selection
-strategy:
+strategy. Using any other variable is an error:
 
 **For `NewestFromBranch` (commit filtering):**
 
