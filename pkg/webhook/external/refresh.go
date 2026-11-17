@@ -106,6 +106,8 @@ func refreshWarehouses(
 
 	// The distinct set of all Warehouses that should be refreshed
 	toRefresh := map[client.ObjectKey]*kargoapi.Warehouse{}
+	// The distinct set of all Warehouses that could not be evaluated
+	skipped := map[client.ObjectKey]struct{}{}
 	for _, repoURL := range repoURLs {
 		repoLogger := logger.WithValues("repositoryURL", repoURL)
 
@@ -129,19 +131,25 @@ func refreshWarehouses(
 			if _, alreadyRefreshing := toRefresh[whKey]; alreadyRefreshing {
 				continue
 			}
+			if _, alreadySkipped := skipped[whKey]; alreadySkipped {
+				continue
+			}
 
 			if len(qualifiers) > 0 {
 				shouldRefresh, err := shouldRefresh(ctx, wh, repoURL, changedFiles, qualifiers...)
 				if err != nil {
 					// Skip this Warehouse rather than failing the request, so that
 					// one misconfigured Warehouse can't prevent others (possibly
-					// in other Projects) from being refreshed.
+					// in other Projects) from being refreshed. Only a count of
+					// skipped Warehouses is reported in the response, which may be
+					// visible to anyone who can see the sender's webhook deliveries.
 					repoLogger.Error(
 						err,
 						"failed to evaluate if Warehouse needs refresh; skipping",
 						"namespace", wh.Namespace,
 						"warehouse", wh.Name,
 					)
+					skipped[whKey] = struct{}{}
 					continue
 				}
 				if shouldRefresh {
@@ -153,7 +161,11 @@ func refreshWarehouses(
 		}
 	}
 
-	logger.Debug("found Warehouses to refresh", "count", len(toRefresh))
+	logger.Debug(
+		"found Warehouses to refresh",
+		"count", len(toRefresh),
+		"skipped", len(skipped),
+	)
 
 	var failures int
 	for _, wh := range toRefresh {
@@ -169,14 +181,23 @@ func refreshWarehouses(
 		}
 	}
 
+	var skippedMsg string
+	if len(skipped) > 0 {
+		skippedMsg = fmt.Sprintf(
+			"; skipped %d with an invalid subscription",
+			len(skipped),
+		)
+	}
+
 	if failures > 0 {
 		xhttp.WriteResponseJSON(
 			w,
 			http.StatusInternalServerError,
 			map[string]string{
-				"error": fmt.Sprintf("failed to refresh %d of %d warehouses",
+				"error": fmt.Sprintf("failed to refresh %d of %d warehouses%s",
 					failures,
 					len(toRefresh),
+					skippedMsg,
 				),
 			},
 		)
@@ -186,7 +207,11 @@ func refreshWarehouses(
 		w,
 		http.StatusOK,
 		map[string]string{
-			"msg": fmt.Sprintf("refreshed %d warehouse(s)", len(toRefresh)),
+			"msg": fmt.Sprintf(
+				"refreshed %d warehouse(s)%s",
+				len(toRefresh),
+				skippedMsg,
+			),
 		},
 	)
 }
