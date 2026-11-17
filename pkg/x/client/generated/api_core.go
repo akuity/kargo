@@ -17,6 +17,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"reflect"
 )
 
 
@@ -252,6 +253,138 @@ func (a *CoreAPIService) ApproveFreightExecute(r ApiApproveFreightRequest) (*htt
 	}
 
 	return localVarHTTPResponse, nil
+}
+
+type ApiCreateFreightRequest struct {
+	ctx context.Context
+	ApiService *CoreAPIService
+	project string
+	body *CreateFreightRequest
+}
+
+// Freight to create
+func (r ApiCreateFreightRequest) Body(body CreateFreightRequest) ApiCreateFreightRequest {
+	r.body = &body
+	return r
+}
+
+func (r ApiCreateFreightRequest) Execute() (*Freight, *http.Response, error) {
+	return r.ApiService.CreateFreightExecute(r)
+}
+
+/*
+CreateFreight Create a piece of Freight
+
+Create a Freight resource, optionally recording status metadata on
+it. The operation is idempotent: creating a piece of Freight that
+already exists is not an error, and any metadata is applied
+fill-if-missing so existing metadata is preserved.
+
+ @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+ @param project Project name
+ @return ApiCreateFreightRequest
+*/
+func (a *CoreAPIService) CreateFreight(ctx context.Context, project string) ApiCreateFreightRequest {
+	return ApiCreateFreightRequest{
+		ApiService: a,
+		ctx: ctx,
+		project: project,
+	}
+}
+
+// Execute executes the request
+//  @return Freight
+func (a *CoreAPIService) CreateFreightExecute(r ApiCreateFreightRequest) (*Freight, *http.Response, error) {
+	var (
+		localVarHTTPMethod   = http.MethodPost
+		localVarPostBody     interface{}
+		formFiles            []formFile
+		localVarReturnValue  *Freight
+	)
+
+	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "CoreAPIService.CreateFreight")
+	if err != nil {
+		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
+	}
+
+	localVarPath := localBasePath + "/v1beta1/projects/{project}/freight"
+	localVarPath = strings.Replace(localVarPath, "{"+"project"+"}", url.PathEscape(parameterValueToString(r.project, "project")), -1)
+
+	localVarHeaderParams := make(map[string]string)
+	localVarQueryParams := url.Values{}
+	localVarFormParams := url.Values{}
+	if r.body == nil {
+		return localVarReturnValue, nil, reportError("body is required and must be specified")
+	}
+
+	// to determine the Content-Type header
+	localVarHTTPContentTypes := []string{"application/json"}
+
+	// set Content-Type header
+	localVarHTTPContentType := selectHeaderContentType(localVarHTTPContentTypes)
+	if localVarHTTPContentType != "" {
+		localVarHeaderParams["Content-Type"] = localVarHTTPContentType
+	}
+
+	// to determine the Accept header
+	localVarHTTPHeaderAccepts := []string{"application/json"}
+
+	// set Accept header
+	localVarHTTPHeaderAccept := selectHeaderAccept(localVarHTTPHeaderAccepts)
+	if localVarHTTPHeaderAccept != "" {
+		localVarHeaderParams["Accept"] = localVarHTTPHeaderAccept
+	}
+	// body params
+	localVarPostBody = r.body
+	if r.ctx != nil {
+		// API Key Authentication
+		if auth, ok := r.ctx.Value(ContextAPIKeys).(map[string]APIKey); ok {
+			if apiKey, ok := auth["BearerAuth"]; ok {
+				var key string
+				if apiKey.Prefix != "" {
+					key = apiKey.Prefix + " " + apiKey.Key
+				} else {
+					key = apiKey.Key
+				}
+				localVarHeaderParams["Authorization"] = key
+			}
+		}
+	}
+	req, err := a.client.prepareRequest(r.ctx, localVarPath, localVarHTTPMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, formFiles)
+	if err != nil {
+		return localVarReturnValue, nil, err
+	}
+
+	localVarHTTPResponse, err := a.client.callAPI(req)
+	if err != nil || localVarHTTPResponse == nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	localVarBody, err := io.ReadAll(localVarHTTPResponse.Body)
+	localVarHTTPResponse.Body.Close()
+	localVarHTTPResponse.Body = io.NopCloser(bytes.NewBuffer(localVarBody))
+	if err != nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	if localVarHTTPResponse.StatusCode >= 300 {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: localVarHTTPResponse.Status,
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	err = a.client.decode(&localVarReturnValue, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+	if err != nil {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: err.Error(),
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	return localVarReturnValue, localVarHTTPResponse, nil
 }
 
 type ApiCreateProjectConfigMapRequest struct {
@@ -963,6 +1096,123 @@ func (a *CoreAPIService) DeleteFreightExecute(r ApiDeleteFreightRequest) (*http.
 	localVarPath := localBasePath + "/v1beta1/projects/{project}/freight/{freight-name-or-alias}"
 	localVarPath = strings.Replace(localVarPath, "{"+"project"+"}", url.PathEscape(parameterValueToString(r.project, "project")), -1)
 	localVarPath = strings.Replace(localVarPath, "{"+"freight-name-or-alias"+"}", url.PathEscape(parameterValueToString(r.freightNameOrAlias, "freightNameOrAlias")), -1)
+
+	localVarHeaderParams := make(map[string]string)
+	localVarQueryParams := url.Values{}
+	localVarFormParams := url.Values{}
+
+	// to determine the Content-Type header
+	localVarHTTPContentTypes := []string{}
+
+	// set Content-Type header
+	localVarHTTPContentType := selectHeaderContentType(localVarHTTPContentTypes)
+	if localVarHTTPContentType != "" {
+		localVarHeaderParams["Content-Type"] = localVarHTTPContentType
+	}
+
+	// to determine the Accept header
+	localVarHTTPHeaderAccepts := []string{}
+
+	// set Accept header
+	localVarHTTPHeaderAccept := selectHeaderAccept(localVarHTTPHeaderAccepts)
+	if localVarHTTPHeaderAccept != "" {
+		localVarHeaderParams["Accept"] = localVarHTTPHeaderAccept
+	}
+	if r.ctx != nil {
+		// API Key Authentication
+		if auth, ok := r.ctx.Value(ContextAPIKeys).(map[string]APIKey); ok {
+			if apiKey, ok := auth["BearerAuth"]; ok {
+				var key string
+				if apiKey.Prefix != "" {
+					key = apiKey.Prefix + " " + apiKey.Key
+				} else {
+					key = apiKey.Key
+				}
+				localVarHeaderParams["Authorization"] = key
+			}
+		}
+	}
+	req, err := a.client.prepareRequest(r.ctx, localVarPath, localVarHTTPMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, formFiles)
+	if err != nil {
+		return nil, err
+	}
+
+	localVarHTTPResponse, err := a.client.callAPI(req)
+	if err != nil || localVarHTTPResponse == nil {
+		return localVarHTTPResponse, err
+	}
+
+	localVarBody, err := io.ReadAll(localVarHTTPResponse.Body)
+	localVarHTTPResponse.Body.Close()
+	localVarHTTPResponse.Body = io.NopCloser(bytes.NewBuffer(localVarBody))
+	if err != nil {
+		return localVarHTTPResponse, err
+	}
+
+	if localVarHTTPResponse.StatusCode >= 300 {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: localVarHTTPResponse.Status,
+		}
+		return localVarHTTPResponse, newErr
+	}
+
+	return localVarHTTPResponse, nil
+}
+
+type ApiDeleteFreightStageStatusRequest struct {
+	ctx context.Context
+	ApiService *CoreAPIService
+	project string
+	freightNameOrAlias string
+	stage string
+}
+
+func (r ApiDeleteFreightStageStatusRequest) Execute() (*http.Response, error) {
+	return r.ApiService.DeleteFreightStageStatusExecute(r)
+}
+
+/*
+DeleteFreightStageStatus Remove all of a Stage's entries from a Freight's status
+
+Remove the named Stage from every one of the Freight's status
+maps -- currentlyIn, verifiedIn, and approvedFor. This is used by
+the Stage controller to clean up Freight status when a Stage is
+deleted, in place of writing Freight status directly.
+
+ @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+ @param project Project name
+ @param freightNameOrAlias Freight name or alias
+ @param stage Stage name
+ @return ApiDeleteFreightStageStatusRequest
+*/
+func (a *CoreAPIService) DeleteFreightStageStatus(ctx context.Context, project string, freightNameOrAlias string, stage string) ApiDeleteFreightStageStatusRequest {
+	return ApiDeleteFreightStageStatusRequest{
+		ApiService: a,
+		ctx: ctx,
+		project: project,
+		freightNameOrAlias: freightNameOrAlias,
+		stage: stage,
+	}
+}
+
+// Execute executes the request
+func (a *CoreAPIService) DeleteFreightStageStatusExecute(r ApiDeleteFreightStageStatusRequest) (*http.Response, error) {
+	var (
+		localVarHTTPMethod   = http.MethodDelete
+		localVarPostBody     interface{}
+		formFiles            []formFile
+	)
+
+	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "CoreAPIService.DeleteFreightStageStatus")
+	if err != nil {
+		return nil, &GenericOpenAPIError{error: err.Error()}
+	}
+
+	localVarPath := localBasePath + "/v1beta1/projects/{project}/freight/{freight-name-or-alias}/status/stage/{stage}"
+	localVarPath = strings.Replace(localVarPath, "{"+"project"+"}", url.PathEscape(parameterValueToString(r.project, "project")), -1)
+	localVarPath = strings.Replace(localVarPath, "{"+"freight-name-or-alias"+"}", url.PathEscape(parameterValueToString(r.freightNameOrAlias, "freightNameOrAlias")), -1)
+	localVarPath = strings.Replace(localVarPath, "{"+"stage"+"}", url.PathEscape(parameterValueToString(r.stage, "stage")), -1)
 
 	localVarHeaderParams := make(map[string]string)
 	localVarQueryParams := url.Values{}
@@ -3933,6 +4183,432 @@ func (a *CoreAPIService) ListClusterPromotionTasksExecute(r ApiListClusterPromot
 	return localVarReturnValue, localVarHTTPResponse, nil
 }
 
+type ApiListFreightByCurrentStageRequest struct {
+	ctx context.Context
+	ApiService *CoreAPIService
+	project string
+	stage string
+}
+
+func (r ApiListFreightByCurrentStageRequest) Execute() (*FreightList, *http.Response, error) {
+	return r.ApiService.ListFreightByCurrentStageExecute(r)
+}
+
+/*
+ListFreightByCurrentStage List Freight currently in a Stage
+
+List the Freight whose status records it as currently in use by
+the named Stage. Returns a FreightList resource.
+
+ @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+ @param project Project name
+ @param stage Stage name
+ @return ApiListFreightByCurrentStageRequest
+*/
+func (a *CoreAPIService) ListFreightByCurrentStage(ctx context.Context, project string, stage string) ApiListFreightByCurrentStageRequest {
+	return ApiListFreightByCurrentStageRequest{
+		ApiService: a,
+		ctx: ctx,
+		project: project,
+		stage: stage,
+	}
+}
+
+// Execute executes the request
+//  @return FreightList
+func (a *CoreAPIService) ListFreightByCurrentStageExecute(r ApiListFreightByCurrentStageRequest) (*FreightList, *http.Response, error) {
+	var (
+		localVarHTTPMethod   = http.MethodGet
+		localVarPostBody     interface{}
+		formFiles            []formFile
+		localVarReturnValue  *FreightList
+	)
+
+	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "CoreAPIService.ListFreightByCurrentStage")
+	if err != nil {
+		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
+	}
+
+	localVarPath := localBasePath + "/v1beta1/projects/{project}/stages/{stage}/freight"
+	localVarPath = strings.Replace(localVarPath, "{"+"project"+"}", url.PathEscape(parameterValueToString(r.project, "project")), -1)
+	localVarPath = strings.Replace(localVarPath, "{"+"stage"+"}", url.PathEscape(parameterValueToString(r.stage, "stage")), -1)
+
+	localVarHeaderParams := make(map[string]string)
+	localVarQueryParams := url.Values{}
+	localVarFormParams := url.Values{}
+
+	// to determine the Content-Type header
+	localVarHTTPContentTypes := []string{}
+
+	// set Content-Type header
+	localVarHTTPContentType := selectHeaderContentType(localVarHTTPContentTypes)
+	if localVarHTTPContentType != "" {
+		localVarHeaderParams["Content-Type"] = localVarHTTPContentType
+	}
+
+	// to determine the Accept header
+	localVarHTTPHeaderAccepts := []string{"application/json"}
+
+	// set Accept header
+	localVarHTTPHeaderAccept := selectHeaderAccept(localVarHTTPHeaderAccepts)
+	if localVarHTTPHeaderAccept != "" {
+		localVarHeaderParams["Accept"] = localVarHTTPHeaderAccept
+	}
+	if r.ctx != nil {
+		// API Key Authentication
+		if auth, ok := r.ctx.Value(ContextAPIKeys).(map[string]APIKey); ok {
+			if apiKey, ok := auth["BearerAuth"]; ok {
+				var key string
+				if apiKey.Prefix != "" {
+					key = apiKey.Prefix + " " + apiKey.Key
+				} else {
+					key = apiKey.Key
+				}
+				localVarHeaderParams["Authorization"] = key
+			}
+		}
+	}
+	req, err := a.client.prepareRequest(r.ctx, localVarPath, localVarHTTPMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, formFiles)
+	if err != nil {
+		return localVarReturnValue, nil, err
+	}
+
+	localVarHTTPResponse, err := a.client.callAPI(req)
+	if err != nil || localVarHTTPResponse == nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	localVarBody, err := io.ReadAll(localVarHTTPResponse.Body)
+	localVarHTTPResponse.Body.Close()
+	localVarHTTPResponse.Body = io.NopCloser(bytes.NewBuffer(localVarBody))
+	if err != nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	if localVarHTTPResponse.StatusCode >= 300 {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: localVarHTTPResponse.Status,
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	err = a.client.decode(&localVarReturnValue, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+	if err != nil {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: err.Error(),
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	return localVarReturnValue, localVarHTTPResponse, nil
+}
+
+type ApiListFreightFromWarehouseRequest struct {
+	ctx context.Context
+	ApiService *CoreAPIService
+	project string
+	warehouse string
+	approvedFor *string
+	verifiedIn *[]string
+	currentlyIn *string
+	availabilityStrategy *string
+	requiredSoakTime *string
+}
+
+// Include Freight approved for this Stage
+func (r ApiListFreightFromWarehouseRequest) ApprovedFor(approvedFor string) ApiListFreightFromWarehouseRequest {
+	r.approvedFor = &approvedFor
+	return r
+}
+
+// Include Freight verified in these Stages
+func (r ApiListFreightFromWarehouseRequest) VerifiedIn(verifiedIn []string) ApiListFreightFromWarehouseRequest {
+	r.verifiedIn = &verifiedIn
+	return r
+}
+
+// Only Freight currently in this Stage
+func (r ApiListFreightFromWarehouseRequest) CurrentlyIn(currentlyIn string) ApiListFreightFromWarehouseRequest {
+	r.currentlyIn = &currentlyIn
+	return r
+}
+
+// How verifiedIn Stages are combined (OneOf or All)
+func (r ApiListFreightFromWarehouseRequest) AvailabilityStrategy(availabilityStrategy string) ApiListFreightFromWarehouseRequest {
+	r.availabilityStrategy = &availabilityStrategy
+	return r
+}
+
+// Minimum soak duration, e.g. 1h
+func (r ApiListFreightFromWarehouseRequest) RequiredSoakTime(requiredSoakTime string) ApiListFreightFromWarehouseRequest {
+	r.requiredSoakTime = &requiredSoakTime
+	return r
+}
+
+func (r ApiListFreightFromWarehouseRequest) Execute() (*FreightList, *http.Response, error) {
+	return r.ApiService.ListFreightFromWarehouseExecute(r)
+}
+
+/*
+ListFreightFromWarehouse List Freight from a Warehouse
+
+List Freight that originated from the named Warehouse, optionally
+filtered to that approved for or verified in given Stages, currently
+in a Stage, and having soaked for a minimum duration. Returns a
+FreightList resource.
+
+ @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+ @param project Project name
+ @param warehouse Warehouse name
+ @return ApiListFreightFromWarehouseRequest
+*/
+func (a *CoreAPIService) ListFreightFromWarehouse(ctx context.Context, project string, warehouse string) ApiListFreightFromWarehouseRequest {
+	return ApiListFreightFromWarehouseRequest{
+		ApiService: a,
+		ctx: ctx,
+		project: project,
+		warehouse: warehouse,
+	}
+}
+
+// Execute executes the request
+//  @return FreightList
+func (a *CoreAPIService) ListFreightFromWarehouseExecute(r ApiListFreightFromWarehouseRequest) (*FreightList, *http.Response, error) {
+	var (
+		localVarHTTPMethod   = http.MethodGet
+		localVarPostBody     interface{}
+		formFiles            []formFile
+		localVarReturnValue  *FreightList
+	)
+
+	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "CoreAPIService.ListFreightFromWarehouse")
+	if err != nil {
+		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
+	}
+
+	localVarPath := localBasePath + "/v1beta1/projects/{project}/warehouses/{warehouse}/freight"
+	localVarPath = strings.Replace(localVarPath, "{"+"project"+"}", url.PathEscape(parameterValueToString(r.project, "project")), -1)
+	localVarPath = strings.Replace(localVarPath, "{"+"warehouse"+"}", url.PathEscape(parameterValueToString(r.warehouse, "warehouse")), -1)
+
+	localVarHeaderParams := make(map[string]string)
+	localVarQueryParams := url.Values{}
+	localVarFormParams := url.Values{}
+
+	if r.approvedFor != nil {
+		parameterAddToHeaderOrQuery(localVarQueryParams, "approvedFor", r.approvedFor, "", "")
+	}
+	if r.verifiedIn != nil {
+		t := *r.verifiedIn
+		if reflect.TypeOf(t).Kind() == reflect.Slice {
+			s := reflect.ValueOf(t)
+			for i := 0; i < s.Len(); i++ {
+				parameterAddToHeaderOrQuery(localVarQueryParams, "verifiedIn", s.Index(i).Interface(), "form", "multi")
+			}
+		} else {
+			parameterAddToHeaderOrQuery(localVarQueryParams, "verifiedIn", t, "form", "multi")
+		}
+	}
+	if r.currentlyIn != nil {
+		parameterAddToHeaderOrQuery(localVarQueryParams, "currentlyIn", r.currentlyIn, "", "")
+	}
+	if r.availabilityStrategy != nil {
+		parameterAddToHeaderOrQuery(localVarQueryParams, "availabilityStrategy", r.availabilityStrategy, "", "")
+	}
+	if r.requiredSoakTime != nil {
+		parameterAddToHeaderOrQuery(localVarQueryParams, "requiredSoakTime", r.requiredSoakTime, "", "")
+	}
+	// to determine the Content-Type header
+	localVarHTTPContentTypes := []string{}
+
+	// set Content-Type header
+	localVarHTTPContentType := selectHeaderContentType(localVarHTTPContentTypes)
+	if localVarHTTPContentType != "" {
+		localVarHeaderParams["Content-Type"] = localVarHTTPContentType
+	}
+
+	// to determine the Accept header
+	localVarHTTPHeaderAccepts := []string{"application/json"}
+
+	// set Accept header
+	localVarHTTPHeaderAccept := selectHeaderAccept(localVarHTTPHeaderAccepts)
+	if localVarHTTPHeaderAccept != "" {
+		localVarHeaderParams["Accept"] = localVarHTTPHeaderAccept
+	}
+	if r.ctx != nil {
+		// API Key Authentication
+		if auth, ok := r.ctx.Value(ContextAPIKeys).(map[string]APIKey); ok {
+			if apiKey, ok := auth["BearerAuth"]; ok {
+				var key string
+				if apiKey.Prefix != "" {
+					key = apiKey.Prefix + " " + apiKey.Key
+				} else {
+					key = apiKey.Key
+				}
+				localVarHeaderParams["Authorization"] = key
+			}
+		}
+	}
+	req, err := a.client.prepareRequest(r.ctx, localVarPath, localVarHTTPMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, formFiles)
+	if err != nil {
+		return localVarReturnValue, nil, err
+	}
+
+	localVarHTTPResponse, err := a.client.callAPI(req)
+	if err != nil || localVarHTTPResponse == nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	localVarBody, err := io.ReadAll(localVarHTTPResponse.Body)
+	localVarHTTPResponse.Body.Close()
+	localVarHTTPResponse.Body = io.NopCloser(bytes.NewBuffer(localVarBody))
+	if err != nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	if localVarHTTPResponse.StatusCode >= 300 {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: localVarHTTPResponse.Status,
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	err = a.client.decode(&localVarReturnValue, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+	if err != nil {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: err.Error(),
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	return localVarReturnValue, localVarHTTPResponse, nil
+}
+
+type ApiListFreightReferencingStageRequest struct {
+	ctx context.Context
+	ApiService *CoreAPIService
+	project string
+	stage string
+}
+
+func (r ApiListFreightReferencingStageRequest) Execute() (*FreightList, *http.Response, error) {
+	return r.ApiService.ListFreightReferencingStageExecute(r)
+}
+
+/*
+ListFreightReferencingStage List Freight referencing a Stage
+
+List the Freight whose status records the named Stage in its
+verifiedIn or approvedFor map. Returns a FreightList resource.
+
+ @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+ @param project Project name
+ @param stage Stage name
+ @return ApiListFreightReferencingStageRequest
+*/
+func (a *CoreAPIService) ListFreightReferencingStage(ctx context.Context, project string, stage string) ApiListFreightReferencingStageRequest {
+	return ApiListFreightReferencingStageRequest{
+		ApiService: a,
+		ctx: ctx,
+		project: project,
+		stage: stage,
+	}
+}
+
+// Execute executes the request
+//  @return FreightList
+func (a *CoreAPIService) ListFreightReferencingStageExecute(r ApiListFreightReferencingStageRequest) (*FreightList, *http.Response, error) {
+	var (
+		localVarHTTPMethod   = http.MethodGet
+		localVarPostBody     interface{}
+		formFiles            []formFile
+		localVarReturnValue  *FreightList
+	)
+
+	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "CoreAPIService.ListFreightReferencingStage")
+	if err != nil {
+		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
+	}
+
+	localVarPath := localBasePath + "/v1beta1/projects/{project}/stages/{stage}/referencing-freight"
+	localVarPath = strings.Replace(localVarPath, "{"+"project"+"}", url.PathEscape(parameterValueToString(r.project, "project")), -1)
+	localVarPath = strings.Replace(localVarPath, "{"+"stage"+"}", url.PathEscape(parameterValueToString(r.stage, "stage")), -1)
+
+	localVarHeaderParams := make(map[string]string)
+	localVarQueryParams := url.Values{}
+	localVarFormParams := url.Values{}
+
+	// to determine the Content-Type header
+	localVarHTTPContentTypes := []string{}
+
+	// set Content-Type header
+	localVarHTTPContentType := selectHeaderContentType(localVarHTTPContentTypes)
+	if localVarHTTPContentType != "" {
+		localVarHeaderParams["Content-Type"] = localVarHTTPContentType
+	}
+
+	// to determine the Accept header
+	localVarHTTPHeaderAccepts := []string{"application/json"}
+
+	// set Accept header
+	localVarHTTPHeaderAccept := selectHeaderAccept(localVarHTTPHeaderAccepts)
+	if localVarHTTPHeaderAccept != "" {
+		localVarHeaderParams["Accept"] = localVarHTTPHeaderAccept
+	}
+	if r.ctx != nil {
+		// API Key Authentication
+		if auth, ok := r.ctx.Value(ContextAPIKeys).(map[string]APIKey); ok {
+			if apiKey, ok := auth["BearerAuth"]; ok {
+				var key string
+				if apiKey.Prefix != "" {
+					key = apiKey.Prefix + " " + apiKey.Key
+				} else {
+					key = apiKey.Key
+				}
+				localVarHeaderParams["Authorization"] = key
+			}
+		}
+	}
+	req, err := a.client.prepareRequest(r.ctx, localVarPath, localVarHTTPMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, formFiles)
+	if err != nil {
+		return localVarReturnValue, nil, err
+	}
+
+	localVarHTTPResponse, err := a.client.callAPI(req)
+	if err != nil || localVarHTTPResponse == nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	localVarBody, err := io.ReadAll(localVarHTTPResponse.Body)
+	localVarHTTPResponse.Body.Close()
+	localVarHTTPResponse.Body = io.NopCloser(bytes.NewBuffer(localVarBody))
+	if err != nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	if localVarHTTPResponse.StatusCode >= 300 {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: localVarHTTPResponse.Status,
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	err = a.client.decode(&localVarReturnValue, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+	if err != nil {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: err.Error(),
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	return localVarReturnValue, localVarHTTPResponse, nil
+}
+
 type ApiListImagesRequest struct {
 	ctx context.Context
 	ApiService *CoreAPIService
@@ -5510,6 +6186,135 @@ func (a *CoreAPIService) ListWarehousesExecute(r ApiListWarehousesRequest) (*War
 	return localVarReturnValue, localVarHTTPResponse, nil
 }
 
+type ApiMarkFreightInStageRequest struct {
+	ctx context.Context
+	ApiService *CoreAPIService
+	project string
+	freightNameOrAlias string
+	stage string
+	body *MarkFreightInStageRequest
+}
+
+// Status
+func (r ApiMarkFreightInStageRequest) Body(body MarkFreightInStageRequest) ApiMarkFreightInStageRequest {
+	r.body = &body
+	return r
+}
+
+func (r ApiMarkFreightInStageRequest) Execute() (*http.Response, error) {
+	return r.ApiService.MarkFreightInStageExecute(r)
+}
+
+/*
+MarkFreightInStage Mark Freight as currently in use by a Stage
+
+Record that the named Freight is currently in use by the Stage,
+and optionally that it has been verified there, updating the
+Freight's status (currentlyIn / verifiedIn). This is used by the
+Stage controller in place of writing Freight status directly.
+
+ @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+ @param project Project name
+ @param freightNameOrAlias Freight name or alias
+ @param stage Stage name
+ @return ApiMarkFreightInStageRequest
+*/
+func (a *CoreAPIService) MarkFreightInStage(ctx context.Context, project string, freightNameOrAlias string, stage string) ApiMarkFreightInStageRequest {
+	return ApiMarkFreightInStageRequest{
+		ApiService: a,
+		ctx: ctx,
+		project: project,
+		freightNameOrAlias: freightNameOrAlias,
+		stage: stage,
+	}
+}
+
+// Execute executes the request
+func (a *CoreAPIService) MarkFreightInStageExecute(r ApiMarkFreightInStageRequest) (*http.Response, error) {
+	var (
+		localVarHTTPMethod   = http.MethodPost
+		localVarPostBody     interface{}
+		formFiles            []formFile
+	)
+
+	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "CoreAPIService.MarkFreightInStage")
+	if err != nil {
+		return nil, &GenericOpenAPIError{error: err.Error()}
+	}
+
+	localVarPath := localBasePath + "/v1beta1/projects/{project}/freight/{freight-name-or-alias}/status/stage/{stage}"
+	localVarPath = strings.Replace(localVarPath, "{"+"project"+"}", url.PathEscape(parameterValueToString(r.project, "project")), -1)
+	localVarPath = strings.Replace(localVarPath, "{"+"freight-name-or-alias"+"}", url.PathEscape(parameterValueToString(r.freightNameOrAlias, "freightNameOrAlias")), -1)
+	localVarPath = strings.Replace(localVarPath, "{"+"stage"+"}", url.PathEscape(parameterValueToString(r.stage, "stage")), -1)
+
+	localVarHeaderParams := make(map[string]string)
+	localVarQueryParams := url.Values{}
+	localVarFormParams := url.Values{}
+	if r.body == nil {
+		return nil, reportError("body is required and must be specified")
+	}
+
+	// to determine the Content-Type header
+	localVarHTTPContentTypes := []string{"application/json"}
+
+	// set Content-Type header
+	localVarHTTPContentType := selectHeaderContentType(localVarHTTPContentTypes)
+	if localVarHTTPContentType != "" {
+		localVarHeaderParams["Content-Type"] = localVarHTTPContentType
+	}
+
+	// to determine the Accept header
+	localVarHTTPHeaderAccepts := []string{}
+
+	// set Accept header
+	localVarHTTPHeaderAccept := selectHeaderAccept(localVarHTTPHeaderAccepts)
+	if localVarHTTPHeaderAccept != "" {
+		localVarHeaderParams["Accept"] = localVarHTTPHeaderAccept
+	}
+	// body params
+	localVarPostBody = r.body
+	if r.ctx != nil {
+		// API Key Authentication
+		if auth, ok := r.ctx.Value(ContextAPIKeys).(map[string]APIKey); ok {
+			if apiKey, ok := auth["BearerAuth"]; ok {
+				var key string
+				if apiKey.Prefix != "" {
+					key = apiKey.Prefix + " " + apiKey.Key
+				} else {
+					key = apiKey.Key
+				}
+				localVarHeaderParams["Authorization"] = key
+			}
+		}
+	}
+	req, err := a.client.prepareRequest(r.ctx, localVarPath, localVarHTTPMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, formFiles)
+	if err != nil {
+		return nil, err
+	}
+
+	localVarHTTPResponse, err := a.client.callAPI(req)
+	if err != nil || localVarHTTPResponse == nil {
+		return localVarHTTPResponse, err
+	}
+
+	localVarBody, err := io.ReadAll(localVarHTTPResponse.Body)
+	localVarHTTPResponse.Body.Close()
+	localVarHTTPResponse.Body = io.NopCloser(bytes.NewBuffer(localVarBody))
+	if err != nil {
+		return localVarHTTPResponse, err
+	}
+
+	if localVarHTTPResponse.StatusCode >= 300 {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: localVarHTTPResponse.Status,
+		}
+		return localVarHTTPResponse, newErr
+	}
+
+	return localVarHTTPResponse, nil
+}
+
 type ApiPatchFreightAliasRequest struct {
 	ctx context.Context
 	ApiService *CoreAPIService
@@ -6867,6 +7672,124 @@ func (a *CoreAPIService) RefreshWarehouseExecute(r ApiRefreshWarehouseRequest) (
 	localVarPath := localBasePath + "/v1beta1/projects/{project}/warehouses/{warehouse}/refresh"
 	localVarPath = strings.Replace(localVarPath, "{"+"project"+"}", url.PathEscape(parameterValueToString(r.project, "project")), -1)
 	localVarPath = strings.Replace(localVarPath, "{"+"warehouse"+"}", url.PathEscape(parameterValueToString(r.warehouse, "warehouse")), -1)
+
+	localVarHeaderParams := make(map[string]string)
+	localVarQueryParams := url.Values{}
+	localVarFormParams := url.Values{}
+
+	// to determine the Content-Type header
+	localVarHTTPContentTypes := []string{}
+
+	// set Content-Type header
+	localVarHTTPContentType := selectHeaderContentType(localVarHTTPContentTypes)
+	if localVarHTTPContentType != "" {
+		localVarHeaderParams["Content-Type"] = localVarHTTPContentType
+	}
+
+	// to determine the Accept header
+	localVarHTTPHeaderAccepts := []string{}
+
+	// set Accept header
+	localVarHTTPHeaderAccept := selectHeaderAccept(localVarHTTPHeaderAccepts)
+	if localVarHTTPHeaderAccept != "" {
+		localVarHeaderParams["Accept"] = localVarHTTPHeaderAccept
+	}
+	if r.ctx != nil {
+		// API Key Authentication
+		if auth, ok := r.ctx.Value(ContextAPIKeys).(map[string]APIKey); ok {
+			if apiKey, ok := auth["BearerAuth"]; ok {
+				var key string
+				if apiKey.Prefix != "" {
+					key = apiKey.Prefix + " " + apiKey.Key
+				} else {
+					key = apiKey.Key
+				}
+				localVarHeaderParams["Authorization"] = key
+			}
+		}
+	}
+	req, err := a.client.prepareRequest(r.ctx, localVarPath, localVarHTTPMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, formFiles)
+	if err != nil {
+		return nil, err
+	}
+
+	localVarHTTPResponse, err := a.client.callAPI(req)
+	if err != nil || localVarHTTPResponse == nil {
+		return localVarHTTPResponse, err
+	}
+
+	localVarBody, err := io.ReadAll(localVarHTTPResponse.Body)
+	localVarHTTPResponse.Body.Close()
+	localVarHTTPResponse.Body = io.NopCloser(bytes.NewBuffer(localVarBody))
+	if err != nil {
+		return localVarHTTPResponse, err
+	}
+
+	if localVarHTTPResponse.StatusCode >= 300 {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: localVarHTTPResponse.Status,
+		}
+		return localVarHTTPResponse, newErr
+	}
+
+	return localVarHTTPResponse, nil
+}
+
+type ApiUnmarkFreightInStageRequest struct {
+	ctx context.Context
+	ApiService *CoreAPIService
+	project string
+	freightNameOrAlias string
+	stage string
+}
+
+func (r ApiUnmarkFreightInStageRequest) Execute() (*http.Response, error) {
+	return r.ApiService.UnmarkFreightInStageExecute(r)
+}
+
+/*
+UnmarkFreightInStage Mark Freight as no longer currently in use by a Stage
+
+Record that the named Freight is no longer in use by the Stage,
+updating the Freight's status (removing the Stage from
+currentlyIn and finalizing its soak time). The Stage's entries in
+verifiedIn and approvedFor are left intact. This is used by the
+Stage controller in place of writing Freight status directly.
+
+ @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+ @param project Project name
+ @param freightNameOrAlias Freight name or alias
+ @param stage Stage name
+ @return ApiUnmarkFreightInStageRequest
+*/
+func (a *CoreAPIService) UnmarkFreightInStage(ctx context.Context, project string, freightNameOrAlias string, stage string) ApiUnmarkFreightInStageRequest {
+	return ApiUnmarkFreightInStageRequest{
+		ApiService: a,
+		ctx: ctx,
+		project: project,
+		freightNameOrAlias: freightNameOrAlias,
+		stage: stage,
+	}
+}
+
+// Execute executes the request
+func (a *CoreAPIService) UnmarkFreightInStageExecute(r ApiUnmarkFreightInStageRequest) (*http.Response, error) {
+	var (
+		localVarHTTPMethod   = http.MethodPatch
+		localVarPostBody     interface{}
+		formFiles            []formFile
+	)
+
+	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "CoreAPIService.UnmarkFreightInStage")
+	if err != nil {
+		return nil, &GenericOpenAPIError{error: err.Error()}
+	}
+
+	localVarPath := localBasePath + "/v1beta1/projects/{project}/freight/{freight-name-or-alias}/status/stage/{stage}"
+	localVarPath = strings.Replace(localVarPath, "{"+"project"+"}", url.PathEscape(parameterValueToString(r.project, "project")), -1)
+	localVarPath = strings.Replace(localVarPath, "{"+"freight-name-or-alias"+"}", url.PathEscape(parameterValueToString(r.freightNameOrAlias, "freightNameOrAlias")), -1)
+	localVarPath = strings.Replace(localVarPath, "{"+"stage"+"}", url.PathEscape(parameterValueToString(r.stage, "stage")), -1)
 
 	localVarHeaderParams := make(map[string]string)
 	localVarQueryParams := url.Values{}

@@ -1265,6 +1265,10 @@ managementController:
   ## @param managementController.revisionHistoryLimit Number of old ReplicaSets the management controller Deployment retains for rollback. The management controller uses a `Recreate` rollout strategy (singleton), so `rollingUpdate.*` knobs do not apply.
   revisionHistoryLimit: 10
 
+  apiServer:
+    ## @param managementController.apiServer.address The URL at which the management controller reaches the API server, e.g. `https://kargo.example.com`. When empty and `api.enabled` is `true`, the API server's in-cluster `Service` is used, and a chart-generated API server certificate is trusted automatically. The management controller acts as its own ServiceAccount, requesting short-lived tokens for it, so it is allowed to `create` its own `token` subresource.
+    address: ""
+
   ## @skip managementController.kubeconfigSecrets
   kubeconfigSecrets: {}
     ## @param managementController.kubeconfigSecrets.kargo [nullable] Per-component override for `kubeconfigSecrets.kargo`. Lets the management controller mount its own kubeconfig secret rather than the shared one. Falls back to the chart-level value when unset.

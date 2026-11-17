@@ -15,6 +15,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/pkg/client/apiserver/freightclient"
 )
 
 // TODO(krancour): If we move our actual indexers to this package, we can use
@@ -120,7 +121,7 @@ func TestListFreightFromWarehouse(t *testing.T) {
 
 	testCases := []struct {
 		name        string
-		opts        *ListWarehouseFreightOptions
+		opts        *freightclient.ListWarehouseFreightOptions
 		objects     []client.Object
 		interceptor interceptor.Funcs
 		assertions  func(*testing.T, []kargoapi.Freight, error)
@@ -186,7 +187,7 @@ func TestListFreightFromWarehouse(t *testing.T) {
 		},
 		{
 			name: "success with VerifiedIn and RequiredSoakTime options",
-			opts: &ListWarehouseFreightOptions{
+			opts: &freightclient.ListWarehouseFreightOptions{
 				ApprovedFor:      testStage,
 				VerifiedIn:       []string{testUpstreamStage},
 				RequiredSoakTime: &metav1.Duration{Duration: time.Hour},
@@ -287,7 +288,7 @@ func TestListFreightFromWarehouse(t *testing.T) {
 		},
 		{
 			name: "success with AvailabilityStrategy set to FreightAvailabilityStrategyAll",
-			opts: &ListWarehouseFreightOptions{
+			opts: &freightclient.ListWarehouseFreightOptions{
 				AvailabilityStrategy: kargoapi.FreightAvailabilityStrategyAll,
 				ApprovedFor:          testStage,
 				VerifiedIn:           []string{testUpstreamStage, testUpstreamStage2},
@@ -387,7 +388,7 @@ func TestListFreightFromWarehouse(t *testing.T) {
 		},
 		{
 			name: "soak time elapsed in an unrelated Stage does not count",
-			opts: &ListWarehouseFreightOptions{
+			opts: &freightclient.ListWarehouseFreightOptions{
 				VerifiedIn:       []string{testUpstreamStage},
 				RequiredSoakTime: &metav1.Duration{Duration: time.Hour},
 			},
@@ -422,7 +423,7 @@ func TestListFreightFromWarehouse(t *testing.T) {
 		},
 		{
 			name: "soak time elapsed in an unrelated Stage does not prevent availability",
-			opts: &ListWarehouseFreightOptions{
+			opts: &freightclient.ListWarehouseFreightOptions{
 				AvailabilityStrategy: kargoapi.FreightAvailabilityStrategyAll,
 				VerifiedIn:           []string{testUpstreamStage},
 				RequiredSoakTime:     &metav1.Duration{Duration: time.Hour},
@@ -460,7 +461,7 @@ func TestListFreightFromWarehouse(t *testing.T) {
 		},
 		{
 			name: "success listing Freight currently in upstream Stage",
-			opts: &ListWarehouseFreightOptions{
+			opts: &freightclient.ListWarehouseFreightOptions{
 				AvailabilityStrategy: kargoapi.FreightAvailabilityStrategyAll,
 				ApprovedFor:          testStage,
 				VerifiedIn:           []string{testUpstreamStage},
@@ -528,7 +529,7 @@ func TestListFreightFromWarehouse(t *testing.T) {
 		},
 		{
 			name: "failure with invalid AvailabilityStrategy",
-			opts: &ListWarehouseFreightOptions{
+			opts: &freightclient.ListWarehouseFreightOptions{
 				AvailabilityStrategy: "Invalid",
 				ApprovedFor:          testStage,
 				VerifiedIn:           []string{testUpstreamStage, testUpstreamStage2},
@@ -556,14 +557,8 @@ func TestListFreightFromWarehouse(t *testing.T) {
 			Build()
 
 		t.Run(testCase.name, func(t *testing.T) {
-			warehouse := &kargoapi.Warehouse{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: testProject,
-					Name:      "fake-warehouse",
-				},
-			}
 			freight, err := ListFreightFromWarehouse(
-				t.Context(), c, warehouse, testCase.opts,
+				t.Context(), c, testProject, "fake-warehouse", testCase.opts,
 			)
 			testCase.assertions(t, freight, err)
 		})

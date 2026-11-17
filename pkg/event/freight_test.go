@@ -290,6 +290,49 @@ func TestNewFreightApproved(t *testing.T) {
 	)
 }
 
+func TestNewFreightCurrentlyInStage(t *testing.T) {
+	freight := &kargoapi.Freight{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:              "test-freight",
+			Namespace:         "test-project",
+			CreationTimestamp: metav1.Time{Time: time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)},
+		},
+	}
+
+	evt, err := NewFreightCurrentlyInStage("Freight currently in Stage", "test-actor", "test-stage", true, freight)
+	require.NoError(t, err)
+
+	requireCloudEvent(
+		t,
+		evt,
+		kargoapi.EventTypeFreightCurrentlyInStage,
+		"Freight",
+	)
+	require.Equal(
+		t,
+		&FreightCurrentlyInStage{
+			Common: Common{
+				Project: "test-project",
+				Actor:   ptr.To("test-actor"),
+				Message: "Freight currently in Stage",
+			},
+			Freight: Freight{
+				Name:       "test-freight",
+				StageName:  "test-stage",
+				CreateTime: freight.CreationTimestamp.Time,
+			},
+			VerifiedInStage: true,
+		},
+		dataAs[FreightCurrentlyInStage](t, evt),
+	)
+
+	// The verified flag is independent of the "currently in" transition.
+	unverified, err := NewFreightCurrentlyInStage(
+		"Freight currently in Stage", "test-actor", "test-stage", false, freight)
+	require.NoError(t, err)
+	require.False(t, dataAs[FreightCurrentlyInStage](t, unverified).VerifiedInStage)
+}
+
 func TestNewFreightCreated(t *testing.T) {
 	freight := &kargoapi.Freight{
 		ObjectMeta: metav1.ObjectMeta{

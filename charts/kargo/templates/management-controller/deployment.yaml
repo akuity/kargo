@@ -84,12 +84,18 @@ spec:
           name: {{ .Values.managementController.metrics.service.portName }}
           protocol: TCP
         {{- end }}
-        {{- if or $kc .Values.managementController.volumeMounts (include "kargo.nats.volume" .) }}
+        {{- if or $kc .Values.managementController.volumeMounts (include "kargo.nats.volume" .) (include "kargo.managementController.mountsAPIServerCA" .) }}
         volumeMounts:
         {{- include "kargo.nats.volumeMount" . | nindent 8 }}
         {{- if $kc }}
         - mountPath: /etc/kargo/kubeconfigs
           name: kubeconfigs
+          readOnly: true
+        {{- end }}
+        {{- if (include "kargo.managementController.mountsAPIServerCA" .) }}
+        - mountPath: /etc/kargo/api-ca.crt
+          name: api-ca
+          subPath: ca.crt
           readOnly: true
         {{- end }}
         {{- with .Values.managementController.volumeMounts }}
@@ -109,7 +115,7 @@ spec:
       initContainers:
       {{- toYaml . | nindent 6 }}
       {{- end }}
-      {{- if or $kc .Values.managementController.volumes (include "kargo.nats.volume" .) }}
+      {{- if or $kc .Values.managementController.volumes (include "kargo.nats.volume" .) (include "kargo.managementController.mountsAPIServerCA" .) }}
       volumes:
       {{- include "kargo.nats.volume" . | nindent 6 }}
       {{- if $kc }}
@@ -122,6 +128,14 @@ spec:
               - key: kubeconfig.yaml
                 path: kubeconfig.yaml
                 mode: 0644
+      {{- end }}
+      {{- if (include "kargo.managementController.mountsAPIServerCA" .) }}
+      - name: api-ca
+        secret:
+          secretName: {{ .Values.api.tls.secretName }}
+          items:
+          - key: ca.crt
+            path: ca.crt
       {{- end }}
       {{- with .Values.managementController.volumes }}
       {{- toYaml . | nindent 6 }}

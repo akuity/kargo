@@ -242,6 +242,8 @@ func (s *server) setupRESTRouter(ctx context.Context) (*gin.Engine, error) {
 			project.GET("/stages", s.listStages)
 			project.GET("/stages/:stage", s.getStage)
 			project.GET("/stages/:stage/links", s.getStageLinks)
+			project.GET("/stages/:stage/freight", s.listFreightByCurrentStage)
+			project.GET("/stages/:stage/referencing-freight", s.listFreightReferencingStage)
 			project.POST("/stages/:stage/refresh", s.refreshStage)
 			project.DELETE("/stages/:stage", s.deleteStage)
 			// Stage Promotions
@@ -268,16 +270,21 @@ func (s *server) setupRESTRouter(ctx context.Context) (*gin.Engine, error) {
 			// Warehouses
 			project.GET("/warehouses", s.listWarehouses)
 			project.GET("/warehouses/:warehouse", s.getWarehouse)
+			project.GET("/warehouses/:warehouse/freight", s.listFreightFromWarehouse)
 			project.POST("/warehouses/:warehouse/refresh", s.refreshWarehouse)
 			project.DELETE("/warehouses/:warehouse", s.deleteWarehouse)
 
 			// Freight
+			project.POST("/freight", s.createFreight)
 			project.GET("/freight", s.queryFreight)
 			project.GET("/freight/:freight-name-or-alias", s.getFreight)
 			project.GET("/freight/:freight-name-or-alias/links", s.getFreightLinks)
 			project.POST("/freight/:freight-name-or-alias/approve", s.approveFreight)
 			project.PATCH("/freight/:freight-name-or-alias/alias", s.patchFreightAliasHandler)
 			project.DELETE("/freight/:freight-name-or-alias", s.deleteFreight)
+			project.POST("/freight/:freight-name-or-alias/status/stage/:stage", s.markFreightInStage)
+			project.PATCH("/freight/:freight-name-or-alias/status/stage/:stage", s.unmarkFreightInStage)
+			project.DELETE("/freight/:freight-name-or-alias/status/stage/:stage", s.deleteFreightStageStatus)
 
 			// Promotions
 			project.GET("/promotions", s.listPromotions)

@@ -8,6 +8,7 @@ import (
 	"slices"
 	"strings"
 
+	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -189,21 +190,64 @@ func GetFreightByAlias(
 func ListFreightByCurrentStage(
 	ctx context.Context,
 	c client.Client,
-	stage *kargoapi.Stage,
+	project, stageName string,
 ) ([]kargoapi.Freight, error) {
 	freightList := kargoapi.FreightList{}
 	if err := c.List(
 		ctx,
 		&freightList,
-		client.InNamespace(stage.Namespace),
-		client.MatchingFields{"currentlyIn": stage.Name},
+		client.InNamespace(project),
+		client.MatchingFields{"currentlyIn": stageName},
 	); err != nil {
 		return nil, fmt.Errorf(
 			"error listing Freight in namespace %q with current stage %q: %w",
-			stage.Namespace,
-			stage.Name,
+			project,
+			stageName,
 			err,
 		)
 	}
 	return freightList.Items, nil
+}
+
+// ListFreightReferencingStage returns the Freight whose status records the named
+// Stage in its verifiedIn or approvedFor map, de-duplicated by name and ordered
+// by name. It is used to find the Freight whose status must be cleaned up when a
+// Stage is deleted.
+func ListFreightReferencingStage(
+	ctx context.Context,
+	c client.Client,
+	namespace string,
+	stage string,
+) ([]kargoapi.Freight, error) {
+	// Field names match the indexer's verifiedIn and approvedFor indexes; string
+	// literals are used, as elsewhere in this package, to avoid importing the
+	// indexer package (which depends on this one).
+	byName := make(map[string]kargoapi.Freight)
+	for _, field := range []string{"verifiedIn", "approvedFor"} {
+		list := kargoapi.FreightList{}
+		if err := c.List(
+			ctx,
+			&list,
+			client.InNamespace(namespace),
+			client.MatchingFieldsSelector{
+				Selector: fields.OneTermEqualSelector(field, stage),
+			},
+		); err != nil {
+			return nil, fmt.Errorf(
+				"error listing Freight referencing Stage %q in namespace %q: %w",
+				stage, namespace, err,
+			)
+		}
+		for _, f := range list.Items {
+			byName[f.Name] = f
+		}
+	}
+	freight := make([]kargoapi.Freight, 0, len(byName))
+	for _, f := range byName {
+		freight = append(freight, f)
+	}
+	slices.SortFunc(freight, func(lhs, rhs kargoapi.Freight) int {
+		return strings.Compare(lhs.Name, rhs.Name)
+	})
+	return freight, nil
 }

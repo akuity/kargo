@@ -8,6 +8,7 @@ import (
 	"sync"
 	"time"
 
+	natsgo "github.com/nats-io/nats.go"
 	"github.com/spf13/cobra"
 	"go.opentelemetry.io/otel/attribute"
 	coordinationv1 "k8s.io/api/coordination/v1"
@@ -206,9 +207,9 @@ func (o *controllerOptions) run(ctx context.Context) error {
 	// tokens it obtains for that ServiceAccount. Without an API server,
 	// Stages that select Targets cannot be promoted and Promotions that name
 	// a Target fail.
-	var targetClient *apiserver.Client
+	var apiClient *apiserver.Client
 	if o.APIServer.Address != "" {
-		if targetClient, err = apiserver.New(ctx, o.APIServer, kargoMgr.GetConfig()); err != nil {
+		if apiClient, err = apiserver.New(ctx, o.APIServer, kargoMgr.GetConfig()); err != nil {
 			return fmt.Errorf("error configuring access to Targets: %w", err)
 		}
 	} else {
@@ -221,8 +222,9 @@ func (o *controllerOptions) run(ctx context.Context) error {
 		argocdMgr,
 		credentialsDB,
 		stagesReconcilerCfg,
-		targetClient,
+		apiClient,
 		eventSender,
+		natsConn,
 	); err != nil {
 		return fmt.Errorf("error setting up reconcilers: %w", err)
 	}
@@ -498,8 +500,9 @@ func (o *controllerOptions) setupReconcilers(
 	kargoMgr, argocdMgr manager.Manager,
 	credentialsDB credentials.Database,
 	stagesReconcilerCfg stages.ReconcilerConfig,
-	targetClient *apiserver.Client,
+	apiClient *apiserver.Client,
 	eventSender event.Sender,
+	natsConn *natsgo.Conn,
 ) error {
 	var argoCDClient client.Client
 	if argocdMgr != nil {
@@ -509,8 +512,8 @@ func (o *controllerOptions) setupReconcilers(
 	// A nil client must reach the reconciler as a nil interface of its own
 	// type, which is what it tests for.
 	var targetGetter promotion.TargetGetter
-	if targetClient != nil {
-		targetGetter = targetClient
+	if apiClient != nil {
+		targetGetter = apiClient
 	}
 
 	healthCheckers.Initialize(argoCDClient)
@@ -557,21 +560,27 @@ func (o *controllerOptions) setupReconcilers(
 		stagesReconcilerCfg,
 		credentialsDB,
 		health.NewAggregatingChecker(),
+		apiClient,
 	).SetupWithManager(
 		ctx,
 		kargoMgr,
 		argocdMgr,
 		sharedIndexer,
 		stagesEventSender,
+		natsConn,
 	); err != nil {
 		return fmt.Errorf("error setting up regular Stages reconciler: %w", err)
 	}
 
-	if err := stages.NewControlFlowStageReconciler(stagesReconcilerCfg).SetupWithManager(
+	if err := stages.NewControlFlowStageReconciler(
+		stagesReconcilerCfg,
+		apiClient,
+	).SetupWithManager(
 		ctx,
 		kargoMgr,
 		sharedIndexer,
 		stagesEventSender,
+		natsConn,
 	); err != nil {
 		return fmt.Errorf("error setting up control flow Stages reconciler: %w", err)
 	}

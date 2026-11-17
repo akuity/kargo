@@ -47,6 +47,7 @@ const (
 	// semantically versioned and images sometimes are.
 )
 
+// FIXME: this is not used
 func (s *server) getAvailableFreightForStage(
 	ctx context.Context,
 	stage *kargoapi.Stage,

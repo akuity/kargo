@@ -250,7 +250,7 @@ func TestListFreightByCurrentStage(t *testing.T) {
 			Build()
 
 		t.Run(testCase.name, func(t *testing.T) {
-			freight, err := ListFreightByCurrentStage(t.Context(), c, testStage)
+			freight, err := ListFreightByCurrentStage(t.Context(), c, testProject, testStage.Name)
 			testCase.assertions(t, freight, err)
 		})
 	}

@@ -26,10 +26,13 @@ import type {
   ClusterPromotionTask,
   ClusterPromotionTaskList,
   CreateConfigMapRequest,
+  CreateFreightRequest,
   CreatePromotionRolloutRequest,
   Freight,
+  FreightList,
   GetFreightLinksResponse,
   GetStageLinksResponse,
+  ListFreightFromWarehouseParams,
   ListImages200,
   ListProjectsParams,
   ListProjectsResponse,
@@ -38,6 +41,7 @@ import type {
   ListPromotionsParams,
   ListStagesParams,
   ListTargetsParams,
+  MarkFreightInStageRequest,
   PatchConfigMapRequest,
   PatchFreightAliasParams,
   PkgServerQueryFreightsResponse,
@@ -1671,6 +1675,118 @@ export function useQueryFreightsRest<
   return withQueryKey(query, queryOptions.queryKey);
 }
 
+export type createFreightResponse200 = {
+  data: Freight;
+  status: 200;
+};
+
+export type createFreightResponse201 = {
+  data: Freight;
+  status: 201;
+};
+
+export type createFreightResponseSuccess = (createFreightResponse200 | createFreightResponse201) & {
+  headers: Headers;
+};
+export type createFreightResponse = createFreightResponseSuccess;
+
+export const getCreateFreightUrl = (project: string) => {
+  return `/v1beta1/projects/${project}/freight`;
+};
+
+/**
+ * Create a Freight resource, optionally recording status metadata on
+ * it. The operation is idempotent: creating a piece of Freight that
+ * already exists is not an error, and any metadata is applied
+ * fill-if-missing so existing metadata is preserved.
+ * @summary Create a piece of Freight
+ */
+export const createFreight = async (
+  project: string,
+  createFreightRequest: CreateFreightRequest,
+  options?: Parameters<typeof customFetch>[1]
+): Promise<createFreightResponse> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit['headers']>
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Array.isArray(h)) return Object.fromEntries(h);
+    return h;
+  };
+  return customFetch<createFreightResponse>(getCreateFreightUrl(project), {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(createFreightRequest)
+  });
+};
+
+export const getCreateFreightMutationKey = () => ['createFreight'] as const;
+
+export const getCreateFreightMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createFreight>>,
+    TError,
+    CreateFreightMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createFreight>>,
+  TError,
+  CreateFreightMutationVariables,
+  TContext
+> => {
+  const mutationKey = getCreateFreightMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createFreight>>,
+    CreateFreightMutationVariables
+  > = (props) => {
+    const { project, data } = props ?? {};
+
+    return createFreight(project, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateFreightMutationResult = NonNullable<Awaited<ReturnType<typeof createFreight>>>;
+export type CreateFreightMutationBody = CreateFreightRequest;
+export type CreateFreightMutationError = ErrorType<unknown>;
+export type CreateFreightMutationVariables = { project: string; data: CreateFreightRequest };
+
+/**
+ * @summary Create a piece of Freight
+ */
+export const useCreateFreight = <TError = ErrorType<unknown>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof createFreight>>,
+      TError,
+      CreateFreightMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient
+): UseMutationResult<
+  Awaited<ReturnType<typeof createFreight>>,
+  TError,
+  CreateFreightMutationVariables,
+  TContext
+> => {
+  return useMutation(getCreateFreightMutationOptions(options), queryClient);
+};
 export type getFreightResponse200 = {
   data: Freight;
   status: 200;
@@ -2282,6 +2398,352 @@ export function useGetFreightLinks<
   return withQueryKey(query, queryOptions.queryKey);
 }
 
+export type markFreightInStageResponse200 = {
+  data: void;
+  status: 200;
+};
+
+export type markFreightInStageResponseSuccess = markFreightInStageResponse200 & {
+  headers: Headers;
+};
+export type markFreightInStageResponse = markFreightInStageResponseSuccess;
+
+export const getMarkFreightInStageUrl = (
+  project: string,
+  freightNameOrAlias: string,
+  stage: string
+) => {
+  return `/v1beta1/projects/${project}/freight/${freightNameOrAlias}/status/stage/${stage}`;
+};
+
+/**
+ * Record that the named Freight is currently in use by the Stage,
+ * and optionally that it has been verified there, updating the
+ * Freight's status (currentlyIn / verifiedIn). This is used by the
+ * Stage controller in place of writing Freight status directly.
+ * @summary Mark Freight as currently in use by a Stage
+ */
+export const markFreightInStage = async (
+  project: string,
+  freightNameOrAlias: string,
+  stage: string,
+  markFreightInStageRequest: MarkFreightInStageRequest,
+  options?: Parameters<typeof customFetch>[1]
+): Promise<markFreightInStageResponse> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit['headers']>
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Array.isArray(h)) return Object.fromEntries(h);
+    return h;
+  };
+  return customFetch<markFreightInStageResponse>(
+    getMarkFreightInStageUrl(project, freightNameOrAlias, stage),
+    {
+      ...options,
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+      body: JSON.stringify(markFreightInStageRequest)
+    }
+  );
+};
+
+export const getMarkFreightInStageMutationKey = () => ['markFreightInStage'] as const;
+
+export const getMarkFreightInStageMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof markFreightInStage>>,
+    TError,
+    MarkFreightInStageMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof markFreightInStage>>,
+  TError,
+  MarkFreightInStageMutationVariables,
+  TContext
+> => {
+  const mutationKey = getMarkFreightInStageMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof markFreightInStage>>,
+    MarkFreightInStageMutationVariables
+  > = (props) => {
+    const { project, freightNameOrAlias, stage, data } = props ?? {};
+
+    return markFreightInStage(project, freightNameOrAlias, stage, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type MarkFreightInStageMutationResult = NonNullable<
+  Awaited<ReturnType<typeof markFreightInStage>>
+>;
+export type MarkFreightInStageMutationBody = MarkFreightInStageRequest;
+export type MarkFreightInStageMutationError = ErrorType<unknown>;
+export type MarkFreightInStageMutationVariables = {
+  project: string;
+  freightNameOrAlias: string;
+  stage: string;
+  data: MarkFreightInStageRequest;
+};
+
+/**
+ * @summary Mark Freight as currently in use by a Stage
+ */
+export const useMarkFreightInStage = <TError = ErrorType<unknown>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof markFreightInStage>>,
+      TError,
+      MarkFreightInStageMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient
+): UseMutationResult<
+  Awaited<ReturnType<typeof markFreightInStage>>,
+  TError,
+  MarkFreightInStageMutationVariables,
+  TContext
+> => {
+  return useMutation(getMarkFreightInStageMutationOptions(options), queryClient);
+};
+export type deleteFreightStageStatusResponse200 = {
+  data: void;
+  status: 200;
+};
+
+export type deleteFreightStageStatusResponseSuccess = deleteFreightStageStatusResponse200 & {
+  headers: Headers;
+};
+export type deleteFreightStageStatusResponse = deleteFreightStageStatusResponseSuccess;
+
+export const getDeleteFreightStageStatusUrl = (
+  project: string,
+  freightNameOrAlias: string,
+  stage: string
+) => {
+  return `/v1beta1/projects/${project}/freight/${freightNameOrAlias}/status/stage/${stage}`;
+};
+
+/**
+ * Remove the named Stage from every one of the Freight's status
+ * maps -- currentlyIn, verifiedIn, and approvedFor. This is used by
+ * the Stage controller to clean up Freight status when a Stage is
+ * deleted, in place of writing Freight status directly.
+ * @summary Remove all of a Stage's entries from a Freight's status
+ */
+export const deleteFreightStageStatus = async (
+  project: string,
+  freightNameOrAlias: string,
+  stage: string,
+  options?: Parameters<typeof customFetch>[1]
+): Promise<deleteFreightStageStatusResponse> => {
+  return customFetch<deleteFreightStageStatusResponse>(
+    getDeleteFreightStageStatusUrl(project, freightNameOrAlias, stage),
+    {
+      ...options,
+      method: 'DELETE'
+    }
+  );
+};
+
+export const getDeleteFreightStageStatusMutationKey = () => ['deleteFreightStageStatus'] as const;
+
+export const getDeleteFreightStageStatusMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteFreightStageStatus>>,
+    TError,
+    DeleteFreightStageStatusMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof deleteFreightStageStatus>>,
+  TError,
+  DeleteFreightStageStatusMutationVariables,
+  TContext
+> => {
+  const mutationKey = getDeleteFreightStageStatusMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof deleteFreightStageStatus>>,
+    DeleteFreightStageStatusMutationVariables
+  > = (props) => {
+    const { project, freightNameOrAlias, stage } = props ?? {};
+
+    return deleteFreightStageStatus(project, freightNameOrAlias, stage, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DeleteFreightStageStatusMutationResult = NonNullable<
+  Awaited<ReturnType<typeof deleteFreightStageStatus>>
+>;
+
+export type DeleteFreightStageStatusMutationError = ErrorType<unknown>;
+export type DeleteFreightStageStatusMutationVariables = {
+  project: string;
+  freightNameOrAlias: string;
+  stage: string;
+};
+
+/**
+ * @summary Remove all of a Stage's entries from a Freight's status
+ */
+export const useDeleteFreightStageStatus = <TError = ErrorType<unknown>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof deleteFreightStageStatus>>,
+      TError,
+      DeleteFreightStageStatusMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient
+): UseMutationResult<
+  Awaited<ReturnType<typeof deleteFreightStageStatus>>,
+  TError,
+  DeleteFreightStageStatusMutationVariables,
+  TContext
+> => {
+  return useMutation(getDeleteFreightStageStatusMutationOptions(options), queryClient);
+};
+export type unmarkFreightInStageResponse200 = {
+  data: void;
+  status: 200;
+};
+
+export type unmarkFreightInStageResponseSuccess = unmarkFreightInStageResponse200 & {
+  headers: Headers;
+};
+export type unmarkFreightInStageResponse = unmarkFreightInStageResponseSuccess;
+
+export const getUnmarkFreightInStageUrl = (
+  project: string,
+  freightNameOrAlias: string,
+  stage: string
+) => {
+  return `/v1beta1/projects/${project}/freight/${freightNameOrAlias}/status/stage/${stage}`;
+};
+
+/**
+ * Record that the named Freight is no longer in use by the Stage,
+ * updating the Freight's status (removing the Stage from
+ * currentlyIn and finalizing its soak time). The Stage's entries in
+ * verifiedIn and approvedFor are left intact. This is used by the
+ * Stage controller in place of writing Freight status directly.
+ * @summary Mark Freight as no longer currently in use by a Stage
+ */
+export const unmarkFreightInStage = async (
+  project: string,
+  freightNameOrAlias: string,
+  stage: string,
+  options?: Parameters<typeof customFetch>[1]
+): Promise<unmarkFreightInStageResponse> => {
+  return customFetch<unmarkFreightInStageResponse>(
+    getUnmarkFreightInStageUrl(project, freightNameOrAlias, stage),
+    {
+      ...options,
+      method: 'PATCH'
+    }
+  );
+};
+
+export const getUnmarkFreightInStageMutationKey = () => ['unmarkFreightInStage'] as const;
+
+export const getUnmarkFreightInStageMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof unmarkFreightInStage>>,
+    TError,
+    UnmarkFreightInStageMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof unmarkFreightInStage>>,
+  TError,
+  UnmarkFreightInStageMutationVariables,
+  TContext
+> => {
+  const mutationKey = getUnmarkFreightInStageMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof unmarkFreightInStage>>,
+    UnmarkFreightInStageMutationVariables
+  > = (props) => {
+    const { project, freightNameOrAlias, stage } = props ?? {};
+
+    return unmarkFreightInStage(project, freightNameOrAlias, stage, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UnmarkFreightInStageMutationResult = NonNullable<
+  Awaited<ReturnType<typeof unmarkFreightInStage>>
+>;
+
+export type UnmarkFreightInStageMutationError = ErrorType<unknown>;
+export type UnmarkFreightInStageMutationVariables = {
+  project: string;
+  freightNameOrAlias: string;
+  stage: string;
+};
+
+/**
+ * @summary Mark Freight as no longer currently in use by a Stage
+ */
+export const useUnmarkFreightInStage = <TError = ErrorType<unknown>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof unmarkFreightInStage>>,
+      TError,
+      UnmarkFreightInStageMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient
+): UseMutationResult<
+  Awaited<ReturnType<typeof unmarkFreightInStage>>,
+  TError,
+  UnmarkFreightInStageMutationVariables,
+  TContext
+> => {
+  return useMutation(getUnmarkFreightInStageMutationOptions(options), queryClient);
+};
 export type listImagesResponse200 = {
   data: ListImages200;
   status: 200;
@@ -4063,6 +4525,163 @@ export const useDeleteStage = <TError = ErrorType<unknown>, TContext = unknown>(
 > => {
   return useMutation(getDeleteStageMutationOptions(options), queryClient);
 };
+export type listFreightByCurrentStageResponse200 = {
+  data: FreightList;
+  status: 200;
+};
+
+export type listFreightByCurrentStageResponseSuccess = listFreightByCurrentStageResponse200 & {
+  headers: Headers;
+};
+export type listFreightByCurrentStageResponse = listFreightByCurrentStageResponseSuccess;
+
+export const getListFreightByCurrentStageUrl = (project: string, stage: string) => {
+  return `/v1beta1/projects/${project}/stages/${stage}/freight`;
+};
+
+/**
+ * List the Freight whose status records it as currently in use by
+ * the named Stage. Returns a FreightList resource.
+ * @summary List Freight currently in a Stage
+ */
+export const listFreightByCurrentStage = async (
+  project: string,
+  stage: string,
+  options?: Parameters<typeof customFetch>[1]
+): Promise<listFreightByCurrentStageResponse> => {
+  return customFetch<listFreightByCurrentStageResponse>(
+    getListFreightByCurrentStageUrl(project, stage),
+    {
+      ...options,
+      method: 'GET'
+    }
+  );
+};
+
+export const getListFreightByCurrentStageQueryKey = (project: string, stage: string) => {
+  return [`/v1beta1/projects/${project}/stages/${stage}/freight`] as const;
+};
+
+export const getListFreightByCurrentStageQueryOptions = <
+  TData = Awaited<ReturnType<typeof listFreightByCurrentStage>>,
+  TError = ErrorType<unknown>
+>(
+  project: string,
+  stage: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listFreightByCurrentStage>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  }
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListFreightByCurrentStageQueryKey(project, stage);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listFreightByCurrentStage>>> = () =>
+    listFreightByCurrentStage(project, stage, requestOptions);
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: project !== null && project !== undefined && stage !== null && stage !== undefined,
+    ...queryOptions
+  } as UseQueryOptions<Awaited<ReturnType<typeof listFreightByCurrentStage>>, TError, TData> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+};
+
+export type ListFreightByCurrentStageQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listFreightByCurrentStage>>
+>;
+export type ListFreightByCurrentStageQueryError = ErrorType<unknown>;
+
+export function useListFreightByCurrentStage<
+  TData = Awaited<ReturnType<typeof listFreightByCurrentStage>>,
+  TError = ErrorType<unknown>
+>(
+  project: string,
+  stage: string,
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listFreightByCurrentStage>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listFreightByCurrentStage>>,
+          TError,
+          Awaited<ReturnType<typeof listFreightByCurrentStage>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListFreightByCurrentStage<
+  TData = Awaited<ReturnType<typeof listFreightByCurrentStage>>,
+  TError = ErrorType<unknown>
+>(
+  project: string,
+  stage: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listFreightByCurrentStage>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listFreightByCurrentStage>>,
+          TError,
+          Awaited<ReturnType<typeof listFreightByCurrentStage>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListFreightByCurrentStage<
+  TData = Awaited<ReturnType<typeof listFreightByCurrentStage>>,
+  TError = ErrorType<unknown>
+>(
+  project: string,
+  stage: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listFreightByCurrentStage>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary List Freight currently in a Stage
+ */
+
+export function useListFreightByCurrentStage<
+  TData = Awaited<ReturnType<typeof listFreightByCurrentStage>>,
+  TError = ErrorType<unknown>
+>(
+  project: string,
+  stage: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listFreightByCurrentStage>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getListFreightByCurrentStageQueryOptions(project, stage, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
 export type getStageLinksResponse200 = {
   data: GetStageLinksResponse;
   status: 200;
@@ -4736,6 +5355,163 @@ export const usePromoteDownstream = <TError = ErrorType<unknown>, TContext = unk
 > => {
   return useMutation(getPromoteDownstreamMutationOptions(options), queryClient);
 };
+export type listFreightReferencingStageResponse200 = {
+  data: FreightList;
+  status: 200;
+};
+
+export type listFreightReferencingStageResponseSuccess = listFreightReferencingStageResponse200 & {
+  headers: Headers;
+};
+export type listFreightReferencingStageResponse = listFreightReferencingStageResponseSuccess;
+
+export const getListFreightReferencingStageUrl = (project: string, stage: string) => {
+  return `/v1beta1/projects/${project}/stages/${stage}/referencing-freight`;
+};
+
+/**
+ * List the Freight whose status records the named Stage in its
+ * verifiedIn or approvedFor map. Returns a FreightList resource.
+ * @summary List Freight referencing a Stage
+ */
+export const listFreightReferencingStage = async (
+  project: string,
+  stage: string,
+  options?: Parameters<typeof customFetch>[1]
+): Promise<listFreightReferencingStageResponse> => {
+  return customFetch<listFreightReferencingStageResponse>(
+    getListFreightReferencingStageUrl(project, stage),
+    {
+      ...options,
+      method: 'GET'
+    }
+  );
+};
+
+export const getListFreightReferencingStageQueryKey = (project: string, stage: string) => {
+  return [`/v1beta1/projects/${project}/stages/${stage}/referencing-freight`] as const;
+};
+
+export const getListFreightReferencingStageQueryOptions = <
+  TData = Awaited<ReturnType<typeof listFreightReferencingStage>>,
+  TError = ErrorType<unknown>
+>(
+  project: string,
+  stage: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listFreightReferencingStage>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  }
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListFreightReferencingStageQueryKey(project, stage);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listFreightReferencingStage>>> = () =>
+    listFreightReferencingStage(project, stage, requestOptions);
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: project !== null && project !== undefined && stage !== null && stage !== undefined,
+    ...queryOptions
+  } as UseQueryOptions<Awaited<ReturnType<typeof listFreightReferencingStage>>, TError, TData> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+};
+
+export type ListFreightReferencingStageQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listFreightReferencingStage>>
+>;
+export type ListFreightReferencingStageQueryError = ErrorType<unknown>;
+
+export function useListFreightReferencingStage<
+  TData = Awaited<ReturnType<typeof listFreightReferencingStage>>,
+  TError = ErrorType<unknown>
+>(
+  project: string,
+  stage: string,
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listFreightReferencingStage>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listFreightReferencingStage>>,
+          TError,
+          Awaited<ReturnType<typeof listFreightReferencingStage>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListFreightReferencingStage<
+  TData = Awaited<ReturnType<typeof listFreightReferencingStage>>,
+  TError = ErrorType<unknown>
+>(
+  project: string,
+  stage: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listFreightReferencingStage>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listFreightReferencingStage>>,
+          TError,
+          Awaited<ReturnType<typeof listFreightReferencingStage>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListFreightReferencingStage<
+  TData = Awaited<ReturnType<typeof listFreightReferencingStage>>,
+  TError = ErrorType<unknown>
+>(
+  project: string,
+  stage: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listFreightReferencingStage>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary List Freight referencing a Stage
+ */
+
+export function useListFreightReferencingStage<
+  TData = Awaited<ReturnType<typeof listFreightReferencingStage>>,
+  TError = ErrorType<unknown>
+>(
+  project: string,
+  stage: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listFreightReferencingStage>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getListFreightReferencingStageQueryOptions(project, stage, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
 export type refreshStageResponse200 = {
   data: void;
   status: 200;
@@ -5807,6 +6583,188 @@ export const useDeleteWarehouse = <TError = ErrorType<unknown>, TContext = unkno
 > => {
   return useMutation(getDeleteWarehouseMutationOptions(options), queryClient);
 };
+export type listFreightFromWarehouseResponse200 = {
+  data: FreightList;
+  status: 200;
+};
+
+export type listFreightFromWarehouseResponseSuccess = listFreightFromWarehouseResponse200 & {
+  headers: Headers;
+};
+export type listFreightFromWarehouseResponse = listFreightFromWarehouseResponseSuccess;
+
+export const getListFreightFromWarehouseUrl = (
+  project: string,
+  warehouse: string,
+  params?: ListFreightFromWarehouseParams
+) => {
+  const stringifiedParams = serializeParams(params);
+
+  return stringifiedParams.length > 0
+    ? `/v1beta1/projects/${project}/warehouses/${warehouse}/freight?${stringifiedParams}`
+    : `/v1beta1/projects/${project}/warehouses/${warehouse}/freight`;
+};
+
+/**
+ * List Freight that originated from the named Warehouse, optionally
+ * filtered to that approved for or verified in given Stages, currently
+ * in a Stage, and having soaked for a minimum duration. Returns a
+ * FreightList resource.
+ * @summary List Freight from a Warehouse
+ */
+export const listFreightFromWarehouse = async (
+  project: string,
+  warehouse: string,
+  params?: ListFreightFromWarehouseParams,
+  options?: Parameters<typeof customFetch>[1]
+): Promise<listFreightFromWarehouseResponse> => {
+  return customFetch<listFreightFromWarehouseResponse>(
+    getListFreightFromWarehouseUrl(project, warehouse, params),
+    {
+      ...options,
+      method: 'GET'
+    }
+  );
+};
+
+export const getListFreightFromWarehouseQueryKey = (
+  project: string,
+  warehouse: string,
+  params?: ListFreightFromWarehouseParams
+) => {
+  return [
+    `/v1beta1/projects/${project}/warehouses/${warehouse}/freight`,
+    ...(params ? [params] : [])
+  ] as const;
+};
+
+export const getListFreightFromWarehouseQueryOptions = <
+  TData = Awaited<ReturnType<typeof listFreightFromWarehouse>>,
+  TError = ErrorType<unknown>
+>(
+  project: string,
+  warehouse: string,
+  params?: ListFreightFromWarehouseParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listFreightFromWarehouse>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  }
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getListFreightFromWarehouseQueryKey(project, warehouse, params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listFreightFromWarehouse>>> = () =>
+    listFreightFromWarehouse(project, warehouse, params, requestOptions);
+
+  return {
+    queryKey,
+    queryFn,
+    enabled:
+      project !== null && project !== undefined && warehouse !== null && warehouse !== undefined,
+    ...queryOptions
+  } as UseQueryOptions<Awaited<ReturnType<typeof listFreightFromWarehouse>>, TError, TData> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+};
+
+export type ListFreightFromWarehouseQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listFreightFromWarehouse>>
+>;
+export type ListFreightFromWarehouseQueryError = ErrorType<unknown>;
+
+export function useListFreightFromWarehouse<
+  TData = Awaited<ReturnType<typeof listFreightFromWarehouse>>,
+  TError = ErrorType<unknown>
+>(
+  project: string,
+  warehouse: string,
+  params: undefined | ListFreightFromWarehouseParams,
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listFreightFromWarehouse>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listFreightFromWarehouse>>,
+          TError,
+          Awaited<ReturnType<typeof listFreightFromWarehouse>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListFreightFromWarehouse<
+  TData = Awaited<ReturnType<typeof listFreightFromWarehouse>>,
+  TError = ErrorType<unknown>
+>(
+  project: string,
+  warehouse: string,
+  params?: ListFreightFromWarehouseParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listFreightFromWarehouse>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listFreightFromWarehouse>>,
+          TError,
+          Awaited<ReturnType<typeof listFreightFromWarehouse>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListFreightFromWarehouse<
+  TData = Awaited<ReturnType<typeof listFreightFromWarehouse>>,
+  TError = ErrorType<unknown>
+>(
+  project: string,
+  warehouse: string,
+  params?: ListFreightFromWarehouseParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listFreightFromWarehouse>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary List Freight from a Warehouse
+ */
+
+export function useListFreightFromWarehouse<
+  TData = Awaited<ReturnType<typeof listFreightFromWarehouse>>,
+  TError = ErrorType<unknown>
+>(
+  project: string,
+  warehouse: string,
+  params?: ListFreightFromWarehouseParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listFreightFromWarehouse>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getListFreightFromWarehouseQueryOptions(project, warehouse, params, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
 export type refreshWarehouseResponse200 = {
   data: void;
   status: 200;
