@@ -4,6 +4,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/expr-lang/expr/vm"
 	"github.com/stretchr/testify/require"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -79,6 +80,53 @@ func TestNewBaseSelector(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			s, err := newBaseSelector(testCase.sub, nil, true)
 			testCase.assertions(t, s, err)
+		})
+	}
+}
+
+func TestCompileFilterExpression(t *testing.T) {
+	testCases := []struct {
+		name       string
+		expression string
+		assertions func(*testing.T, *vm.Program, error)
+	}{
+		{
+			name: "empty expression",
+			assertions: func(t *testing.T, p *vm.Program, err error) {
+				require.NoError(t, err)
+				require.Nil(t, p)
+			},
+		},
+		{
+			name:       "invalid syntax",
+			expression: "tag startsWith",
+			assertions: func(t *testing.T, p *vm.Program, err error) {
+				require.ErrorContains(t, err, "error compiling filter expression")
+				require.Nil(t, p)
+			},
+		},
+		{
+			name:       "undefined variable",
+			expression: "bogus == 'foo'",
+			assertions: func(t *testing.T, p *vm.Program, err error) {
+				require.ErrorContains(t, err, "error compiling filter expression")
+				require.Nil(t, p)
+			},
+		},
+		{
+			name:       "valid expression",
+			expression: "tag startsWith 'v' && annotations['foo'] == 'bar'",
+			assertions: func(t *testing.T, p *vm.Program, err error) {
+				require.NoError(t, err)
+				require.NotNil(t, p)
+			},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+			p, err := CompileFilterExpression(testCase.expression)
+			testCase.assertions(t, p, err)
 		})
 	}
 }

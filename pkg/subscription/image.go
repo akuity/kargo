@@ -145,6 +145,17 @@ func (i *imageSubscriber) ValidateSubscription(
 		)
 	}
 
+	// Validate the filter expression
+	if _, err := image.CompileFilterExpression(
+		sub.ExpressionFilter,
+	); err != nil {
+		errs = append(errs, field.Invalid(
+			f.Child("expressionFilter"),
+			sub.ExpressionFilter,
+			err.Error(),
+		))
+	}
+
 	return errs
 }
 

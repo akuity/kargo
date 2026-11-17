@@ -34,6 +34,7 @@ func TestRefreshWarehouses(t *testing.T) {
 		name       string
 		client     client.Client
 		project    string
+		qualifiers []string
 		assertions func(*testing.T, *httptest.ResponseRecorder)
 	}{
 		{
@@ -201,6 +202,67 @@ func TestRefreshWarehouses(t *testing.T) {
 				require.JSONEq(t, `{"msg":"refreshed 1 warehouse(s)"}`, rr.Body.String())
 			},
 		},
+		{
+			// A Warehouse whose selector cannot be built (e.g. one with an
+			// invalid filter expression admitted before admission validated
+			// it) must not stop other Warehouses from being refreshed. It is
+			// itself refreshed so that discovery surfaces the error.
+			name:       "Warehouse with invalid expressionFilter",
+			qualifiers: []string{"refs/heads/main"},
+			client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
+				&kargoapi.Warehouse{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "some-namespace",
+						Name:      "invalid-warehouse",
+					},
+					Spec: kargoapi.WarehouseSpec{
+						InternalSubscriptions: []kargoapi.RepoSubscription{{
+							Git: &kargoapi.GitSubscription{
+								RepoURL:          testRepoURL,
+								Branch:           "main",
+								ExpressionFilter: "subject contains",
+							},
+						}},
+					},
+				},
+				&kargoapi.Warehouse{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "some-other-namespace",
+						Name:      "matching-warehouse",
+					},
+					Spec: kargoapi.WarehouseSpec{
+						InternalSubscriptions: []kargoapi.RepoSubscription{{
+							Git: &kargoapi.GitSubscription{
+								RepoURL: testRepoURL,
+								Branch:  "main",
+							},
+						}},
+					},
+				},
+				&kargoapi.Warehouse{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "some-other-namespace",
+						Name:      "non-matching-warehouse",
+					},
+					Spec: kargoapi.WarehouseSpec{
+						InternalSubscriptions: []kargoapi.RepoSubscription{{
+							Git: &kargoapi.GitSubscription{
+								RepoURL: testRepoURL,
+								Branch:  "release",
+							},
+						}},
+					},
+				},
+			).WithIndex(
+				&kargoapi.Warehouse{},
+				indexer.WarehousesBySubscribedURLsField,
+				indexer.WarehousesBySubscribedURLs,
+			).Build(),
+			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusOK, rr.Code)
+				require.JSONEq(t, `{"msg":"refreshed 2 warehouse(s)"}`, rr.Body.String())
+			},
+		},
 	}
 	for _, tt := range testCases {
 		t.Run(tt.name, func(t *testing.T) {
@@ -212,6 +274,7 @@ func TestRefreshWarehouses(t *testing.T) {
 				tt.project,
 				testRepoURLs,
 				nil,
+				tt.qualifiers...,
 			)
 			tt.assertions(t, w)
 		})

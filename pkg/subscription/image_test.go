@@ -142,12 +142,44 @@ func Test_imageSubscriber_ValidateSubscription(t *testing.T) {
 			},
 		},
 		{
+			name: "expressionFilter with invalid syntax",
+			sub: kargoapi.ImageSubscription{
+				RepoURL:          "ghcr.io/akuity/kargo",
+				CacheByTag:       true,
+				ExpressionFilter: "tag startsWith",
+			},
+			assertions: func(t *testing.T, errs field.ErrorList) {
+				require.Len(t, errs, 1)
+				require.Equal(t, "image.expressionFilter", errs[0].Field)
+				require.Equal(t, field.ErrorTypeInvalid, errs[0].Type)
+				require.Contains(
+					t,
+					errs[0].Detail,
+					"error compiling filter expression",
+				)
+			},
+		},
+		{
+			name: "expressionFilter with undefined variable",
+			sub: kargoapi.ImageSubscription{
+				RepoURL:          "ghcr.io/akuity/kargo",
+				CacheByTag:       true,
+				ExpressionFilter: "bogus == 'foo'",
+			},
+			assertions: func(t *testing.T, errs field.ErrorList) {
+				require.Len(t, errs, 1)
+				require.Equal(t, "image.expressionFilter", errs[0].Field)
+				require.Equal(t, field.ErrorTypeInvalid, errs[0].Type)
+			},
+		},
+		{
 			name: "valid",
 			sub: kargoapi.ImageSubscription{
 				RepoURL:                "ghcr.io/akuity/kargo",
 				ImageSelectionStrategy: kargoapi.ImageSelectionStrategySemVer,
 				Constraint:             "^1.0.0",
 				CacheByTag:             true,
+				ExpressionFilter:       "tag startsWith 'v' && digest != ''",
 			},
 			assertions: func(t *testing.T, errs field.ErrorList) {
 				require.Empty(t, errs)

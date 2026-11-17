@@ -54,11 +54,10 @@ func newBaseSelector(
 		lsRemoteFn:            git.LsRemote,
 	}
 	var err error
-	if sub.ExpressionFilter != "" {
-		s.filterExpression, err = expr.Compile(sub.ExpressionFilter)
-		if err != nil {
-			return nil, fmt.Errorf("error compiling filter expression: %w", err)
-		}
+	if s.filterExpression, err = CompileFilterExpression(
+		sub.ExpressionFilter,
+	); err != nil {
+		return nil, err
 	}
 	if s.includePaths, err = getPathSelectors(sub.IncludePaths); err != nil {
 		return nil, fmt.Errorf("error parsing include path selectors: %w", err)
@@ -67,6 +66,21 @@ func newBaseSelector(
 		return nil, fmt.Errorf("error parsing exclude path selectors: %w", err)
 	}
 	return s, nil
+}
+
+// CompileFilterExpression compiles the provided Git subscription filter
+// expression exactly as a Selector would. It returns a nil program if the
+// expression is empty. It is exported so that admission can reject invalid
+// expressions using the same rules that apply at discovery time.
+func CompileFilterExpression(expression string) (*vm.Program, error) {
+	if expression == "" {
+		return nil, nil
+	}
+	program, err := expr.Compile(expression)
+	if err != nil {
+		return nil, fmt.Errorf("error compiling filter expression: %w", err)
+	}
+	return program, nil
 }
 
 // MatchesPaths implements Selector.

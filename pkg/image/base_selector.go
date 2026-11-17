@@ -37,18 +37,10 @@ func newBaseSelector(
 			)
 		}
 	}
-	if sub.ExpressionFilter != "" {
-		if s.filterExpression, err = expr.Compile(
-			sub.ExpressionFilter,
-			expr.Env(map[string]any{
-				"tag":         "",
-				"digest":      "",
-				"annotations": map[string]string{},
-				"createdAt":   (*time.Time)(nil),
-			}),
-		); err != nil {
-			return nil, fmt.Errorf("error compiling filter expression: %w", err)
-		}
+	if s.filterExpression, err = CompileFilterExpression(
+		sub.ExpressionFilter,
+	); err != nil {
+		return nil, err
 	}
 	repoURL := urls.NormalizeImage(sub.RepoURL)
 	if s.repoClient, err = newRepositoryClient(
@@ -64,6 +56,30 @@ func newBaseSelector(
 		)
 	}
 	return s, nil
+}
+
+// CompileFilterExpression compiles the provided image subscription filter
+// expression exactly as a Selector would, type-checking it against the
+// variables available at evaluation time. It returns a nil program if the
+// expression is empty. It is exported so that admission can reject invalid
+// expressions using the same rules that apply at discovery time.
+func CompileFilterExpression(expression string) (*vm.Program, error) {
+	if expression == "" {
+		return nil, nil
+	}
+	program, err := expr.Compile(
+		expression,
+		expr.Env(map[string]any{
+			"tag":         "",
+			"digest":      "",
+			"annotations": map[string]string{},
+			"createdAt":   (*time.Time)(nil),
+		}),
+	)
+	if err != nil {
+		return nil, fmt.Errorf("error compiling filter expression: %w", err)
+	}
+	return program, nil
 }
 
 // getLoggerContext returns key/value pairs that can be used by any selector to

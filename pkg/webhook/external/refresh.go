@@ -133,13 +133,20 @@ func refreshWarehouses(
 			if len(qualifiers) > 0 {
 				shouldRefresh, err := shouldRefresh(ctx, wh, repoURL, changedFiles, qualifiers...)
 				if err != nil {
-					logger.Error(
+					// A misconfigured Warehouse (e.g. one with an invalid filter
+					// expression that predates admission validation) must not
+					// prevent other Warehouses, possibly in other Projects, from
+					// being refreshed. We refresh it anyway rather than skipping
+					// it, so that discovery surfaces the error in its status, where
+					// its owner can see it.
+					repoLogger.Error(
 						err,
-						"failed to evaluate if warehouse needs refresh",
-						"warehouse", wh.Name,
+						"error evaluating whether Warehouse needs refresh; "+
+							"refreshing anyway",
+						"namespace", wh.Namespace,
+						"name", wh.Name,
 					)
-					xhttp.WriteErrorJSON(w, err)
-					return
+					shouldRefresh = true
 				}
 				if shouldRefresh {
 					toRefresh[whKey] = &wh

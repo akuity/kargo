@@ -463,10 +463,41 @@ func Test_gitSubscriber_ValidateSubscription(t *testing.T) {
 			},
 		},
 		{
+			name: "invalid expressionFilter",
+			sub: kargoapi.GitSubscription{
+				RepoURL:          "https://github.com/akuity/kargo.git",
+				ExpressionFilter: "subject contains",
+			},
+			assertions: func(t *testing.T, errs field.ErrorList) {
+				require.Len(t, errs, 1)
+				require.Equal(t, "git.expressionFilter", errs[0].Field)
+				require.Equal(t, field.ErrorTypeInvalid, errs[0].Type)
+				require.Contains(
+					t,
+					errs[0].Detail,
+					"error compiling filter expression",
+				)
+			},
+		},
+		{
+			name: "invalid semverConstraint and expressionFilter",
+			sub: kargoapi.GitSubscription{
+				RepoURL:          "https://github.com/akuity/kargo.git",
+				SemverConstraint: "bogus",
+				ExpressionFilter: "subject contains",
+			},
+			assertions: func(t *testing.T, errs field.ErrorList) {
+				require.Len(t, errs, 2)
+				require.Equal(t, "git.semverConstraint", errs[0].Field)
+				require.Equal(t, "git.expressionFilter", errs[1].Field)
+			},
+		},
+		{
 			name: "valid",
 			sub: kargoapi.GitSubscription{
 				RepoURL:          "https://github.com/akuity/kargo.git",
 				SemverConstraint: "^1.0.0",
+				ExpressionFilter: "!(subject contains 'skip-ci')",
 			},
 			assertions: func(t *testing.T, errs field.ErrorList) {
 				require.Empty(t, errs)

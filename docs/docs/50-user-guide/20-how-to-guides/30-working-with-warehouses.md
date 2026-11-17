@@ -136,6 +136,9 @@ fields:
   Images that don't satisfy the expression don't count toward
   `discoveryLimit`.
 
+  A Warehouse is rejected when it is created or updated if its expression has
+  a syntax error or uses a variable not listed above.
+
   :::note
 
   Evaluating the expression requires each candidate image's metadata, so,
@@ -592,8 +595,10 @@ convert it to a boolean (e.g., `0` to `false`, `1` to `true`).
 
 :::warning
 
-Invalid expressions will cause the subscription to fail. Always test your
-expressions to ensure they evaluate correctly with your repository's data.
+A Warehouse is rejected when it is created or updated if an expression has a
+syntax error. An expression with valid syntax can still fail when evaluated,
+which will cause the subscription to fail. Always test your expressions to
+ensure they evaluate correctly with your repository's data.
 
 :::
 

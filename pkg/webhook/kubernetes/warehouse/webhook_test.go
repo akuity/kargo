@@ -242,6 +242,70 @@ func Test_webhook_ValidateCreate(t *testing.T) {
 			},
 		},
 		{
+			name: "invalid expressionFilters",
+			webhook: &webhook{
+				client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
+					&corev1.Namespace{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: testProject,
+							Labels: map[string]string{
+								kargoapi.LabelKeyProject: kargoapi.LabelValueTrue,
+							},
+						},
+					},
+				).Build(),
+			},
+			req: &admission.Request{
+				AdmissionRequest: admissionv1.AdmissionRequest{
+					Operation: admissionv1.Create,
+					Object: runtime.RawExtension{
+						Raw: []byte(`{"spec":{"subscriptions":[` +
+							`{"git":{"repoURL":"https://github.com/example/repo",` +
+							`"expressionFilter":"subject contains"}},` +
+							`{"image":{"repoURL":"ghcr.io/example/image",` +
+							`"expressionFilter":"bogus == 'foo'"}}` +
+							`]}}`),
+					},
+				},
+			},
+			warehouse: &kargoapi.Warehouse{
+				ObjectMeta: metav1.ObjectMeta{Namespace: testProject},
+				Spec: kargoapi.WarehouseSpec{
+					InternalSubscriptions: []kargoapi.RepoSubscription{
+						{
+							Git: &kargoapi.GitSubscription{
+								RepoURL:          "https://github.com/example/repo",
+								ExpressionFilter: "subject contains",
+							},
+						},
+						{
+							Image: &kargoapi.ImageSubscription{
+								RepoURL:          "ghcr.io/example/image",
+								ExpressionFilter: "bogus == 'foo'",
+							},
+						},
+					},
+				},
+			},
+			assertions: func(t *testing.T, err error) {
+				var statusErr *apierrors.StatusError
+				require.True(t, errors.As(err, &statusErr))
+				require.Equal(t, metav1.StatusReasonInvalid, statusErr.ErrStatus.Reason)
+				fields := make([]string, len(statusErr.ErrStatus.Details.Causes))
+				for i, cause := range statusErr.ErrStatus.Details.Causes {
+					fields[i] = cause.Field
+				}
+				require.ElementsMatch(
+					t,
+					[]string{
+						"spec.subscriptions[0].git.expressionFilter",
+						"spec.subscriptions[1].image.expressionFilter",
+					},
+					fields,
+				)
+			},
+		},
+		{
 			name: "success",
 			webhook: &webhook{
 				client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
