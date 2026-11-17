@@ -119,6 +119,50 @@ func TestCompileFilterExpression(t *testing.T) {
 			},
 		},
 		{
+			name: "tag variable with Lexical",
+			sub: kargoapi.GitSubscription{
+				CommitSelectionStrategy: kargoapi.CommitSelectionStrategyLexical,
+				ExpressionFilter:        "tag matches '^v'",
+			},
+			assertions: func(t *testing.T, p *vm.Program, err error) {
+				require.NoError(t, err)
+				require.NotNil(t, p)
+			},
+		},
+		{
+			name: "tag variable with NewestTag",
+			sub: kargoapi.GitSubscription{
+				CommitSelectionStrategy: kargoapi.CommitSelectionStrategyNewestTag,
+				ExpressionFilter:        "creatorDate > date('2025-01-01')",
+			},
+			assertions: func(t *testing.T, p *vm.Program, err error) {
+				require.NoError(t, err)
+				require.NotNil(t, p)
+			},
+		},
+		{
+			name: "variable with wrong type",
+			sub: kargoapi.GitSubscription{
+				CommitSelectionStrategy: kargoapi.CommitSelectionStrategyNewestFromBranch,
+				ExpressionFilter:        "commitDate > '2025-01-01'",
+			},
+			assertions: func(t *testing.T, p *vm.Program, err error) {
+				require.ErrorContains(t, err, "mismatched types")
+				require.Nil(t, p)
+			},
+		},
+		{
+			name: "unknown strategy",
+			sub: kargoapi.GitSubscription{
+				CommitSelectionStrategy: "Bogus",
+				ExpressionFilter:        "true",
+			},
+			assertions: func(t *testing.T, p *vm.Program, err error) {
+				require.ErrorContains(t, err, `unknown commit selection strategy "Bogus"`)
+				require.Nil(t, p)
+			},
+		},
+		{
 			// Non-boolean results are converted to booleans at evaluation time, so
 			// they must still compile.
 			name: "non-boolean result",
@@ -195,4 +239,12 @@ func Test_tagFilterEnv(t *testing.T) {
 		},
 		env,
 	)
+	// Every declared variable must be usable in a compiled expression.
+	_, err := expr.Compile(
+		"tag != '' && id != '' && creatorDate.IsZero() == false && "+
+			"author != '' && committer != '' && subject != '' && "+
+			"tagger != '' && annotation != ''",
+		expr.Env(env),
+	)
+	require.NoError(t, err)
 }

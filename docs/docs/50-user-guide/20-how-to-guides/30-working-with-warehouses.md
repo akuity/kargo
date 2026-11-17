@@ -593,11 +593,13 @@ convert it to a boolean (e.g., `0` to `false`, `1` to `true`).
 :::warning
 
 A Warehouse is rejected when it is created or updated if an expression has a
-syntax error or uses a variable that is not
+syntax error, uses a variable that is not
 [available](#available-expression-filtering-variables) to the selected commit
-selection strategy. An expression that passes these checks can still fail when
-evaluated, which causes the subscription to fail. Always test your expressions
-to ensure they evaluate correctly with your repository's data.
+selection strategy, or uses a variable with the wrong type (for example,
+comparing `commitDate` to a string instead of a `date()`). An expression that
+passes these checks can still fail when evaluated, which causes the
+subscription to fail. Always test your expressions to ensure they evaluate
+correctly with your repository's data.
 
 :::
 
@@ -651,10 +653,10 @@ strategy. Using any other variable is an error:
 - `committer`: The committer of the commit that the tag references, in the
   format of `Name <email>`
 - `subject`: The first line of the commit message associated with the tag
-- `tagger`: The tagger of the tag, in the format of `Name <email>`. Only
-  available for annotated tags.
-- `annotation`: The first line of the tag annotation. Only available for
-  annotated tags.
+- `tagger`: The tagger of the tag, in the format of `Name <email>`. Empty for
+  lightweight tags.
+- `annotation`: The first line of the tag annotation. Empty for lightweight
+  tags.
 
 ##### Expression Filtering Examples
 

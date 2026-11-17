@@ -1,6 +1,8 @@
 package commit
 
 import (
+	"fmt"
+
 	"github.com/expr-lang/expr"
 	"github.com/expr-lang/expr/vm"
 
@@ -22,8 +24,13 @@ func CompileFilterExpression(
 		kargoapi.CommitSelectionStrategyNewestTag,
 		kargoapi.CommitSelectionStrategySemVer:
 		env = tagFilterEnv(git.TagMetadata{})
-	default:
+	case kargoapi.CommitSelectionStrategyNewestFromBranch, "":
 		env = commitFilterEnv(git.CommitMetadata{})
+	default:
+		return nil, fmt.Errorf(
+			"unknown commit selection strategy %q",
+			sub.CommitSelectionStrategy,
+		)
 	}
 	return expr.Compile(sub.ExpressionFilter, expr.Env(env))
 }
