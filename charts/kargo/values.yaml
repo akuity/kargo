@@ -1221,6 +1221,41 @@ externalWebhooksServer:
     ## @param externalWebhooksServer.service.annotations Annotations to add to the external webhook server's service. Merges with `global.annotations`, allowing you to override or add to the global annotations.
     annotations: {}
 
+  ## All settings relating to exposing the external webhooks server's Prometheus metrics.
+  metrics:
+    ## @param externalWebhooksServer.metrics.enabled Whether to expose the external webhooks server's Prometheus metrics. When enabled, the external webhooks server binds its metrics server (via `METRICS_BIND_ADDRESS`), declares a metrics container port, and a metrics `Service` is created. Metrics are served over plain HTTP.
+    enabled: false
+    service:
+      ## @param externalWebhooksServer.metrics.service.type The type of the metrics `Service`.
+      type: ClusterIP
+      ## @param externalWebhooksServer.metrics.service.clusterIP The cluster IP of the metrics `Service`. Set to `None` for a headless `Service`, which resolves directly to individual pod IPs -- useful for scrapers that perform their own endpoint discovery.
+      clusterIP: ""
+      ## @param externalWebhooksServer.metrics.service.annotations Annotations to add to the metrics `Service`.
+      annotations: {}
+      ## @param externalWebhooksServer.metrics.service.labels Additional labels to add to the metrics `Service`.
+      labels: {}
+      ## @param externalWebhooksServer.metrics.service.servicePort The port exposed by the metrics `Service`. Also used as the container port and the address the metrics server binds to.
+      servicePort: 9090
+      ## @param externalWebhooksServer.metrics.service.portName The name of the metrics port. Referenced by the `ServiceMonitor` endpoint.
+      portName: http-metrics
+    serviceMonitor:
+      ## @param externalWebhooksServer.metrics.serviceMonitor.enabled Whether to create a Prometheus Operator `ServiceMonitor` for the external webhooks server's metrics. Requires `externalWebhooksServer.metrics.enabled` to be `true` and the Prometheus Operator CRDs (`monitoring.coreos.com/v1`) to be present in the cluster; otherwise it is silently skipped.
+      enabled: false
+      ## @param externalWebhooksServer.metrics.serviceMonitor.interval The scrape interval for the `ServiceMonitor`.
+      interval: 30s
+      ## @param externalWebhooksServer.metrics.serviceMonitor.scheme The scheme to use when scraping. Defaults to `http` (metrics are served over plain HTTP).
+      scheme: ""
+      ## @param externalWebhooksServer.metrics.serviceMonitor.tlsConfig TLS configuration for the `ServiceMonitor` endpoint. Rendered as literal YAML.
+      tlsConfig: {}
+      ## @param externalWebhooksServer.metrics.serviceMonitor.relabelings Relabeling rules applied to samples before scraping. Rendered as literal YAML.
+      relabelings: []
+      ## @param externalWebhooksServer.metrics.serviceMonitor.metricRelabelings Relabeling rules applied to samples before ingestion. Rendered as literal YAML.
+      metricRelabelings: []
+      ## @param externalWebhooksServer.metrics.serviceMonitor.additionalLabels Additional labels to add to the `ServiceMonitor`. Often required to match the label selector of your Prometheus Operator instance.
+      additionalLabels: {}
+      ## @param externalWebhooksServer.metrics.serviceMonitor.namespace The namespace in which to create the `ServiceMonitor`. Defaults to the release namespace.
+      namespace: ""
+
 ## @section Management Controller
 ## All settings for the management controller component
 managementController:
