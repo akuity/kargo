@@ -378,13 +378,42 @@ func Test_gitCloner_convert(t *testing.T) {
 			expectedProblems: []string{"branches.0: Does not match pattern"},
 		},
 		{
-			name: "branches pattern has a leading plus",
+			name: "branches pattern contains plus signs",
 			config: promotion.Config{
 				"repoURL":  "https://github.com/example/repo.git",
-				"branches": []string{"+main"},
-				"checkout": []promotion.Config{{"path": "/fake/path/0"}},
+				"branches": []string{"release/1.0+build", "feature/c++", "+main"},
+				"checkout": []promotion.Config{
+					{"branch": "release/1.0+build", "path": "/fake/path/0"},
+				},
 			},
-			expectedProblems: []string{"branches.0: Does not match pattern"},
+		},
+		{
+			name: "branches pattern is not a valid branch name",
+			config: promotion.Config{
+				"repoURL":  "https://github.com/example/repo.git",
+				"branches": []string{"main", "stage/..dev"},
+				"checkout": []promotion.Config{
+					{"branch": "main", "path": "/fake/path/0"},
+				},
+			},
+			expectedProblems: []string{
+				`error validating branches[1]: "stage/..dev" is not a valid branch ` +
+					"name or pattern",
+			},
+		},
+		{
+			name: "branches pattern ends with .lock",
+			config: promotion.Config{
+				"repoURL":  "https://github.com/example/repo.git",
+				"branches": []string{"foo.lock"},
+				"checkout": []promotion.Config{
+					{"branch": "foo.lock", "path": "/fake/path/0"},
+				},
+			},
+			expectedProblems: []string{
+				`error validating branches[0]: "foo.lock" is not a valid branch name ` +
+					"or pattern",
+			},
 		},
 		{
 			name: "branches pattern has a leading dash",
@@ -604,6 +633,54 @@ func Test_gitCloner_run(t *testing.T) {
 	require.ErrorContains(t, err, "path escapes from parent")
 	require.Equal(t, kargoapi.PromotionStepStatusErrored, res.Status)
 	require.NoDirExists(t, filepath.Join(outside, "escaped"))
+}
+
+func Test_validateBranchPattern(t *testing.T) {
+	testCases := []struct {
+		name    string
+		pattern string
+		valid   bool
+	}{
+		{name: "simple name", pattern: "main", valid: true},
+		{name: "name with a slash", pattern: "stage/dev", valid: true},
+		{name: "wildcard only", pattern: "*", valid: true},
+		{name: "trailing wildcard", pattern: "stage/*", valid: true},
+		{name: "leading wildcard", pattern: "*-prod", valid: true},
+		{name: "wildcard in the middle", pattern: "st*/dev", valid: true},
+		{name: "plus in the middle", pattern: "release/1.0+build", valid: true},
+		{name: "trailing pluses", pattern: "feature/c++", valid: true},
+		{name: "leading plus", pattern: "+main", valid: true},
+		{name: "double dot", pattern: "a..b"},
+		{name: "double slash", pattern: "a//b"},
+		{name: "trailing slash", pattern: "a/"},
+		{name: "trailing dot", pattern: "a."},
+		{name: "lock suffix", pattern: "foo.lock"},
+		{name: "lock suffix in a component", pattern: "stage/foo.lock"},
+		{name: "component with a leading dot", pattern: "stage/.hidden"},
+		{name: "reflog syntax", pattern: "x@{y"},
+		{name: "control character", pattern: "a\x01b"},
+		{name: "delete character", pattern: "a\x7fb"},
+		{name: "space", pattern: "my branch"},
+		{name: "colon", pattern: "main:other"},
+		{name: "question mark", pattern: "a?b"},
+		{name: "open bracket", pattern: "a[b"},
+		{name: "backslash", pattern: `a\b`},
+		{name: "caret", pattern: "a^b"},
+		{name: "tilde", pattern: "a~b"},
+		{name: "multiple wildcards", pattern: "stage/*/*"},
+		{name: "empty", pattern: ""},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+			err := validateBranchPattern(testCase.pattern)
+			if testCase.valid {
+				require.NoError(t, err)
+				return
+			}
+			require.ErrorContains(t, err, "is not a valid branch name or pattern")
+		})
+	}
 }
 
 func Test_branchMatchesAny(t *testing.T) {

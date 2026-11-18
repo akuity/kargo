@@ -2,8 +2,10 @@ package builtin
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 
@@ -12,6 +14,7 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/controller/git"
 	"github.com/akuity/kargo/pkg/credentials"
+	libExec "github.com/akuity/kargo/pkg/exec"
 	"github.com/akuity/kargo/pkg/promotion"
 	"github.com/akuity/kargo/pkg/x/promotion/stepconfig"
 )
@@ -98,6 +101,14 @@ func (g *gitCloner) convert(cfg promotion.Config) (stepconfig.GitCloneConfig, er
 		}
 	}
 
+	// Check for invalid branch patterns that we couldn't catch with regex.
+	for i, pattern := range typedCfg.Branches {
+		if err = validateBranchPattern(pattern); err != nil {
+			return stepconfig.GitCloneConfig{},
+				fmt.Errorf("error validating branches[%d]: %w", i, err)
+		}
+	}
+
 	// If the clone is limited to specific branches, every branch to be checked
 	// out must also be among them.
 	if typedCfg.Depth != nil || len(typedCfg.Branches) > 0 {
@@ -121,6 +132,28 @@ func (g *gitCloner) convert(cfg promotion.Config) (stepconfig.GitCloneConfig, er
 	}
 
 	return typedCfg, nil
+}
+
+// validateBranchPattern returns an error if the provided string is neither a
+// valid branch name or valid pattern.
+//
+// Equivalent to:
+//
+//	git check-ref-format --refspec-pattern refs/heads/<pattern>
+func validateBranchPattern(pattern string) error {
+	// #nosec G204 -- The command is run directly, not through a shell, and the
+	// "refs/heads/" prefix means the pattern cannot be parsed as an option.
+	cmd := exec.Command(
+		"git", "check-ref-format", "--refspec-pattern", "refs/heads/"+pattern,
+	)
+	if _, err := libExec.Exec(cmd); err != nil {
+		var exitErr *libExec.ExitError
+		if errors.As(err, &exitErr) && exitErr.ExitCode == 1 {
+			return fmt.Errorf("%q is not a valid branch name or pattern", pattern)
+		}
+		return fmt.Errorf("error validating branch pattern %q: %w", pattern, err)
+	}
+	return nil
 }
 
 // branchMatchesAny returns true if the provided branch name matches any of the
