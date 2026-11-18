@@ -468,8 +468,14 @@ func (w *workTree) GetDiffPathsForCommitID(
 	// This naturally surfaces both sides of a move without invoking git's
 	// rename detection, which can warn and fail on commits that change too
 	// many files at once. With -z, paths are not quoted or escaped.
+	if len(parts)%2 != 0 {
+		return nil, fmt.Errorf(
+			"unexpected output from git show for commit %q: %q",
+			commitID, resBytes,
+		)
+	}
 	for i := 0; i < len(parts); i += 2 {
-		if i+1 >= len(parts) || parts[i] == "" {
+		if parts[i] == "" {
 			return nil, fmt.Errorf(
 				"unexpected output from git show for commit %q: %q",
 				commitID, resBytes,
