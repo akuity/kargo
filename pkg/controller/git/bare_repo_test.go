@@ -588,6 +588,21 @@ func TestBareRepo_CloneDepthAndBranches(t *testing.T) {
 			},
 		},
 		{
+			name: "wildcard with a prefix and a suffix",
+			opts: &BareCloneOptions{Branches: []string{"st*/dev"}},
+			expectedCommits: map[string]int{
+				"stage/dev": 4,
+			},
+		},
+		{
+			name: "literal overlapping a wildcard",
+			opts: &BareCloneOptions{Branches: []string{"stage/dev", "stage/*"}},
+			expectedCommits: map[string]int{
+				"stage/dev":  4,
+				"stage/prod": 4,
+			},
+		},
+		{
 			name: "depth and branches",
 			opts: &BareCloneOptions{
 				Depth:    2,

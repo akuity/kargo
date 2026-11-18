@@ -188,7 +188,7 @@ func (b *bareRepo) cloneAllBranches(
 //
 //	git init --bare <dir>
 //	git config remote.origin.url <url>
-//	git ls-remote --heads origin refs/heads/<pattern>...
+//	git ls-remote --heads origin refs/heads/<literal>...
 //	git fetch [--filter=blob:none] [--depth=<depth>] origin +<ref>:<ref>...
 func (b *bareRepo) cloneSelectBranches(
 	ctx context.Context,
@@ -210,21 +210,27 @@ func (b *bareRepo) cloneSelectBranches(
 		)
 	}
 
-	// Resolve the patterns to refs that exist on the remote
-	lsArgs := []string{"ls-remote", "--heads", "origin"}
+	// Literal names are resolved against the remote so that those that don't exist are skipped.
+	var patterns, literals []string
 	for _, branch := range branches {
-		lsArgs = append(lsArgs, "refs/heads/"+branch)
+		if strings.Contains(branch, "*") {
+			patterns = append(patterns, branch)
+		} else {
+			literals = append(literals, branch)
+		}
 	}
-	out, err := libExec.Exec(b.buildGitCommand(ctx, lsArgs...))
-	if err != nil {
-		return fmt.Errorf(
-			"error listing branches %v of repo %q: %w",
-			branches, b.url, err,
-		)
+
+	// Fully qualified refs and ref patterns to fetch
+	var refs []string
+	for _, pattern := range patterns {
+		refs = append(refs, "refs/heads/"+pattern)
 	}
-	refs, err := parseLsRemoteOutput(out)
-	if err != nil {
-		return err
+	if len(literals) > 0 {
+		existing, err := b.findRemoteBranchRefs(ctx, literals)
+		if err != nil {
+			return err
+		}
+		refs = append(refs, existing...)
 	}
 	if len(refs) == 0 {
 		return nil
@@ -239,15 +245,48 @@ func (b *bareRepo) cloneSelectBranches(
 	}
 	args = append(args, "origin")
 	for _, ref := range refs {
-		args = append(args, fmt.Sprintf("+%s:%s", ref.Name, ref.Name))
+		// Force-fetch into a local ref of the same name
+		args = append(args, fmt.Sprintf("+%s:%s", ref, ref))
 	}
-	if _, err = libExec.Exec(b.buildGitCommand(ctx, args...)); err != nil {
+	if _, err := libExec.Exec(b.buildGitCommand(ctx, args...)); err != nil {
 		return fmt.Errorf(
 			"error fetching branches %v of repo %q into %q: %w",
 			branches, b.url, b.dir, err,
 		)
 	}
 	return nil
+}
+
+// findRemoteBranchRefs returns the fully qualified refs of literal branch names
+// in the remote repository.
+//
+// Equivalent to:
+//
+//	git ls-remote --heads origin refs/heads/<name>...
+func (b *bareRepo) findRemoteBranchRefs(
+	ctx context.Context,
+	names []string,
+) ([]string, error) {
+	args := []string{"ls-remote", "--heads", "origin"}
+	for _, name := range names {
+		args = append(args, "refs/heads/"+name)
+	}
+	out, err := libExec.Exec(b.buildGitCommand(ctx, args...))
+	if err != nil {
+		return nil, fmt.Errorf(
+			"error listing branches %v of repo %q: %w",
+			names, b.url, err,
+		)
+	}
+	remoteRefs, err := parseLsRemoteOutput(out)
+	if err != nil {
+		return nil, err
+	}
+	refs := make([]string, len(remoteRefs))
+	for i, remoteRef := range remoteRefs {
+		refs[i] = remoteRef.Name
+	}
+	return refs, nil
 }
 
 type LoadBareRepoOptions struct {
