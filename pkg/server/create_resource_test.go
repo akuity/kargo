@@ -371,7 +371,7 @@ func Test_server_createResources_freightEvent(t *testing.T) {
 						"Freight",
 						evt,
 					)
-					require.Equal(t, "Freight created", evt.Message)
+					require.Equal(t, `Freight created by "subject:test-user"`, evt.Message)
 					require.Equal(t, testFreight.Name, evt.Name)
 				},
 			},

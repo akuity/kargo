@@ -14,10 +14,20 @@ import (
 )
 
 func Test_server_getPublicConfig(t *testing.T) {
+	issuer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		if err := json.NewEncoder(w).Encode(map[string]string{
+			"jwks_uri": "http://" + r.Host + "/keys",
+		}); err != nil {
+			t.Error(err)
+		}
+	}))
+	t.Cleanup(issuer.Close)
+
 	testConfig := config.ServerConfig{
 		AdminConfig: &config.AdminConfig{},
 		OIDCConfig: &oidc.Config{
-			IssuerURL:        "https://issuer.example.com",
+			IssuerURL:        issuer.URL,
 			ClientID:         "client-id",
 			CLIClientID:      "cli-client-id",
 			DefaultScopes:    []string{"openid", "profile"},
