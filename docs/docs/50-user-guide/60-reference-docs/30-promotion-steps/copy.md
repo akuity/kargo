@@ -14,8 +14,49 @@ location to another.
 |------|------|----------|-------------|
 | `inPath` | `string` | Y | Path to the file or directory to be copied. This path is relative to the temporary workspace that Kargo provisions for use by the promotion process. |
 | `outPath` | `string` | Y | Path to the destination. This path is relative to the temporary workspace that Kargo provisions for use by the promotion process. |
+| `ignore` | `string` | N | A multiline string of glob patterns to ignore when copying files. It accepts the same syntax as `.gitignore` files. |
+
+Directories are copied recursively. If the destination directory already exists,
+its contents are merged with those of the source. Existing destination files are
+overwritten.
+
+:::note
+Symlinks encountered in the source are skipped.
+
+`.git` is ignored by default. Because user-supplied `ignore` patterns are evaluated after that
+default, a negation such as `!.git/` re-includes it.
+:::
 
 ## Examples
+
+### Basic Usage
+
+Copy the contents of one directory to another:
+
+```yaml
+steps:
+- uses: copy
+  config:
+    inPath: ./src/manifests
+    outPath: ./out/manifests
+```
+
+### Ignore Patterns
+
+Copy a directory while excluding some of its contents:
+
+```yaml
+steps:
+- uses: copy
+  config:
+    inPath: ./src
+    outPath: ./out
+    ignore: |
+      # Exclude test fixtures and editor artifacts.
+      testdata/
+      *.tmp
+      .DS_Store
+```
 
 ### Common Usage
 
