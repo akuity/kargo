@@ -539,6 +539,7 @@ func (o *controllerOptions) setupReconcilers(
 		promotionsReconcilerCfg,
 		targetGetter,
 		event.NewDefaultingSender(eventSender, promotionsReconcilerCfg.Name()),
+		apiClient,
 	); err != nil {
 		return fmt.Errorf("error setting up Promotions reconciler: %w", err)
 	}
