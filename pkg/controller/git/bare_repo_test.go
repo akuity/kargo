@@ -711,3 +711,36 @@ func TestBareRepo_CloneDepthAndBranches(t *testing.T) {
 		})
 	}
 }
+
+func TestBareRepo_CloneBranchesLiteralsMatchExactly(t *testing.T) {
+	// "git ls-remote" matches patterns against the tail of a ref's name, so a
+	// literal "main" would also match "foo/refs/heads/main" if the results
+	// weren't filtered.
+	lookalike := "foo/refs/heads/main"
+	testServer, testRepoURL, testRepoCreds := setupRemoteRepo(
+		t,
+		initialMainCommit,
+		func(t *testing.T, repo WorkTree) {
+			require.NoError(t, repo.CreateChildBranch(t.Context(), lookalike))
+			require.NoError(t, repo.Push(t.Context(), nil))
+		},
+	)
+	defer testServer.Close()
+
+	rep, err := CloneBare(
+		t.Context(),
+		testRepoURL,
+		&ClientOptions{Credentials: &testRepoCreds},
+		&BareCloneOptions{Branches: []string{"main"}},
+	)
+	require.NoError(t, err)
+	defer rep.Close(t.Context())
+
+	cmd := exec.CommandContext(
+		t.Context(), "git", "for-each-ref", "--format=%(refname:short)", "refs/heads",
+	)
+	cmd.Dir = rep.Dir()
+	out, err := cmd.CombinedOutput()
+	require.NoError(t, err, string(out))
+	require.Equal(t, []string{"main"}, strings.Fields(string(out)))
+}

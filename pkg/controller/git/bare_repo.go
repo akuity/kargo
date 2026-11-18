@@ -268,9 +268,13 @@ func (b *bareRepo) findRemoteBranchRefs(
 	names []string,
 ) ([]string, error) {
 	args := []string{"ls-remote", "--heads", "origin"}
+	refs := make(map[string]struct{}, len(names))
 	for _, name := range names {
-		args = append(args, "refs/heads/"+name)
+		ref := "refs/heads/" + name
+		refs[ref] = struct{}{}
+		args = append(args, ref)
 	}
+
 	out, err := libExec.Exec(b.buildGitCommand(ctx, args...))
 	if err != nil {
 		return nil, fmt.Errorf(
@@ -282,11 +286,13 @@ func (b *bareRepo) findRemoteBranchRefs(
 	if err != nil {
 		return nil, err
 	}
-	refs := make([]string, len(remoteRefs))
-	for i, remoteRef := range remoteRefs {
-		refs[i] = remoteRef.Name
+	filteredRefs := make([]string, 0, len(remoteRefs))
+	for _, remoteRef := range remoteRefs {
+		if _, ok := refs[remoteRef.Name]; ok {
+			filteredRefs = append(filteredRefs, remoteRef.Name)
+		}
 	}
-	return refs, nil
+	return filteredRefs, nil
 }
 
 type LoadBareRepoOptions struct {
