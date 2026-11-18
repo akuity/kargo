@@ -13,6 +13,7 @@ metrics server:
 - The controller
 - The management controller
 - The (internal) webhooks server
+- The external webhooks server
 
 By default, each component's metrics server is disabled. The Kargo Helm chart
 can enable it, expose the metrics through a `Service`, and -- for users of the
@@ -34,7 +35,7 @@ Setting a component's `metrics.enabled` flag to `true` does three things:
 1. Declares a metrics container port on the component's pods.
 1. Creates a metrics `Service` that targets that port.
 
-For example, to expose metrics for all three supported components:
+For example, to expose metrics for all four supported components:
 
 ```yaml
 controller:
@@ -44,6 +45,9 @@ managementController:
   metrics:
     enabled: true
 webhooksServer:
+  metrics:
+    enabled: true
+externalWebhooksServer:
   metrics:
     enabled: true
 ```
@@ -308,6 +312,40 @@ reported by any Stage in the project produces no series at all rather than a
 zero, so use `or vector(0)` in queries that need a value when a state is empty.
 
 :::
+
+## External Webhooks Server Metrics
+
+The external webhooks server reports:
+
+| Metric | Type | Labels | Description |
+|--------|------|--------|-------------|
+| `kargo_external_webhook_requests_total` | Counter | `project`, `receiverType`, `code` | Inbound webhook requests, by response status code. |
+| `kargo_external_webhook_warehouses_skipped_total` | Counter | `project` | Warehouses a webhook did not refresh because one of their subscriptions could not be evaluated, for example an invalid `expressionFilter`. `project` is the Warehouse's. |
+
+In `kargo_external_webhook_requests_total`, `project` is the receiver's, and
+empty for receivers defined in the `ClusterConfig`. `receiverType` is the
+receiver's type (`github`, `gitlab`, ...), or `unknown` when the request matched
+no usable receiver, for example an unknown path (`404`) or a receiver whose
+`Secret` is missing (`500`).
+
+Not every non-`2xx` code is a failure. Receivers respond with `400` or `501` to
+events they do not handle, so a sender configured to send more events than
+Kargo uses produces them for each such event. `401` means a request failed
+authentication, for example on a signature mismatch, and `5xx` means a request
+could not be handled, for example when a Warehouse could not be refreshed. The
+counter counts requests, not events: some senders retry failed deliveries, for
+example Bitbucket Cloud resends a `5xx` response up to twice. Watch failures
+with, for example:
+
+```
+sum by (project, receiverType, code) (
+  rate(kargo_external_webhook_requests_total{code=~"401|5.."}[5m])
+)
+```
+
+A skipped Warehouse does not fail the request, which still responds with `200`
+when every other Warehouse is refreshed, so watch
+`kargo_external_webhook_warehouses_skipped_total` separately.
 
 ## Kubernetes API Client Metrics
 

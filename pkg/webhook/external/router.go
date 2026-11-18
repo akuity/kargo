@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strconv"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -19,6 +20,16 @@ import (
 func (s *server) route(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
+	var project string
+	receiverType := "unknown"
+	rec := &statusRecorder{ResponseWriter: w, code: http.StatusOK}
+	w = rec
+	if requests != nil {
+		defer func() {
+			requests.WithLabelValues(project, receiverType, strconv.Itoa(rec.code)).Inc()
+		}()
+	}
+
 	logger := logging.LoggerFromContext(ctx).WithValues("path", r.URL.Path)
 	ctx = logging.ContextWithLogger(ctx, logger)
 
@@ -31,7 +42,6 @@ func (s *server) route(w http.ResponseWriter, r *http.Request) {
 	// Find the config for the webhook receiver that matches the path and
 	// use that to obtain an appropriate handler to delegate the request to.
 
-	var project string
 	var secretsNamespace string
 	var receiverCfgs []kargoapi.WebhookReceiverConfig
 	var receivers []kargoapi.WebhookReceiverDetails
@@ -114,6 +124,7 @@ func (s *server) route(w http.ResponseWriter, r *http.Request) {
 		xhttp.WriteErrorJSON(w, err)
 		return
 	}
+	receiverType = receiver.getReceiverType()
 
 	// Early check of Content-Length if available
 	maxBodyBytes := receiver.getMaxRequestBodyBytes()
