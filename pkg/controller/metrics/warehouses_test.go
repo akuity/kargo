@@ -64,15 +64,17 @@ func TestNewWarehouseMetrics(t *testing.T) {
 	require.Same(t, m, NewWarehouseMetrics(nil))
 	m.DiscoveryDuration.WithLabelValues("project-a").Observe(1)
 	m.DiscoveryInterval.WithLabelValues("project-a").Observe(60)
+	m.DiscoveryFailures.WithLabelValues("project-a", "git").Inc()
 	m.FreightCreated.WithLabelValues("project-a").Inc()
 	count, err := testutil.GatherAndCount(
 		ctrlmetrics.Registry,
 		"kargo_warehouse_discovery_duration_seconds",
 		"kargo_warehouse_discovery_interval_seconds",
+		"kargo_warehouse_discovery_failures_total",
 		"kargo_warehouse_freight_created_total",
 	)
 	require.NoError(t, err)
-	require.Equal(t, 3, count)
+	require.Equal(t, 4, count)
 }
 
 func Test_warehouseDiscoveryCollector(t *testing.T) {

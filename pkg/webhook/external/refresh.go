@@ -150,6 +150,9 @@ func refreshWarehouses(
 						"warehouse", wh.Name,
 					)
 					skipped[whKey] = struct{}{}
+					if warehousesSkipped != nil {
+						warehousesSkipped.WithLabelValues(wh.Namespace).Inc()
+					}
 					continue
 				}
 				if shouldRefresh {

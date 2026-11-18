@@ -7,6 +7,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/testutil"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -38,6 +40,8 @@ func TestRefreshWarehouses(t *testing.T) {
 		project    string
 		repoURLs   []string // Defaults to testRepoURLs
 		qualifiers []string
+		// skipped is the expected skipped-Warehouse count by Project.
+		skipped    map[string]float64
 		assertions func(*testing.T, client.Client, *httptest.ResponseRecorder)
 	}{
 		{
@@ -209,6 +213,7 @@ func TestRefreshWarehouses(t *testing.T) {
 			// A Warehouse whose selector can't be built must not prevent other
 			// Warehouses subscribed to the same repository from being refreshed.
 			name:       "Warehouse with invalid selector is skipped",
+			skipped:    map[string]float64{testProject: 1},
 			project:    testProject,
 			qualifiers: []string{"refs/heads/main"},
 			client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
@@ -274,6 +279,7 @@ func TestRefreshWarehouses(t *testing.T) {
 			// skipped, and counted, only once. Skips are also reported when
 			// refreshing another Warehouse fails.
 			name:       "skipped Warehouse counted once and reported on failure",
+			skipped:    map[string]float64{testProject: 1},
 			project:    testProject,
 			repoURLs:   []string{testRepoURL, testOtherRepoURL},
 			qualifiers: []string{"refs/heads/main"},
@@ -347,6 +353,13 @@ func TestRefreshWarehouses(t *testing.T) {
 			if repoURLs == nil {
 				repoURLs = testRepoURLs
 			}
+			counter := prometheus.NewCounterVec(
+				prometheus.CounterOpts{Name: "test_warehouses_skipped_total"},
+				[]string{"project"},
+			)
+			saved := warehousesSkipped
+			warehousesSkipped = counter
+			t.Cleanup(func() { warehousesSkipped = saved })
 			w := httptest.NewRecorder()
 			refreshWarehouses(
 				t.Context(),
@@ -358,6 +371,10 @@ func TestRefreshWarehouses(t *testing.T) {
 				tt.qualifiers...,
 			)
 			tt.assertions(t, tt.client, w)
+			require.Equal(t, len(tt.skipped), testutil.CollectAndCount(counter))
+			for project, value := range tt.skipped {
+				require.Equal(t, value, testutil.ToFloat64(counter.WithLabelValues(project)))
+			}
 		})
 	}
 }

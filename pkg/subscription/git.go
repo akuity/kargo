@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/expr-lang/expr"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/utils/ptr"
 
@@ -90,10 +89,7 @@ func (g *gitSubscriber) ValidateSubscription(
 		errs = append(errs, err)
 	}
 	if s.Git.ExpressionFilter != "" {
-		// Compiled without an environment, as by the commit selectors, because
-		// the variables available to the expression depend on the commit
-		// selection strategy. Only syntax is checked.
-		if _, err := expr.Compile(s.Git.ExpressionFilter); err != nil {
+		if _, err := commit.CompileFilterExpression(*s.Git); err != nil {
 			errs = append(errs, field.Invalid(
 				f.Child("expressionFilter"),
 				s.Git.ExpressionFilter,

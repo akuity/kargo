@@ -488,6 +488,43 @@ func Test_gitSubscriber_ValidateSubscription(t *testing.T) {
 			},
 		},
 		{
+			name: "expressionFilter with misspelled variable",
+			sub: kargoapi.GitSubscription{
+				RepoURL:          "https://github.com/akuity/kargo.git",
+				ExpressionFilter: "authr == 'kent'",
+			},
+			assertions: func(t *testing.T, errs field.ErrorList) {
+				require.Len(t, errs, 1)
+				require.Equal(t, "git.expressionFilter", errs[0].Field)
+				require.Equal(t, field.ErrorTypeInvalid, errs[0].Type)
+				require.Contains(t, errs[0].Detail, "unknown name authr")
+			},
+		},
+		{
+			name: "expressionFilter with variable unavailable to strategy",
+			sub: kargoapi.GitSubscription{
+				RepoURL:                 "https://github.com/akuity/kargo.git",
+				CommitSelectionStrategy: kargoapi.CommitSelectionStrategySemVer,
+				ExpressionFilter:        "commitDate > date('2025-01-01')",
+			},
+			assertions: func(t *testing.T, errs field.ErrorList) {
+				require.Len(t, errs, 1)
+				require.Equal(t, "git.expressionFilter", errs[0].Field)
+				require.Contains(t, errs[0].Detail, "unknown name commitDate")
+			},
+		},
+		{
+			name: "valid tag-based expressionFilter",
+			sub: kargoapi.GitSubscription{
+				RepoURL:                 "https://github.com/akuity/kargo.git",
+				CommitSelectionStrategy: kargoapi.CommitSelectionStrategySemVer,
+				ExpressionFilter:        "creatorDate > date('2025-01-01')",
+			},
+			assertions: func(t *testing.T, errs field.ErrorList) {
+				require.Empty(t, errs)
+			},
+		},
+		{
 			name: "valid",
 			sub: kargoapi.GitSubscription{
 				RepoURL:          "https://github.com/akuity/kargo.git",
