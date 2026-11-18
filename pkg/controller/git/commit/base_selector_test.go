@@ -24,6 +24,17 @@ func TestNewBaseSelector(t *testing.T) {
 			},
 		},
 		{
+			name: "filter expression references unknown variable",
+			sub: kargoapi.GitSubscription{
+				CommitSelectionStrategy: kargoapi.CommitSelectionStrategySemVer,
+				ExpressionFilter:        "commitDate > date('2025-01-01')",
+			},
+			assertions: func(t *testing.T, _ *baseSelector, err error) {
+				require.ErrorContains(t, err, "error compiling filter expression")
+				require.ErrorContains(t, err, "unknown name commitDate")
+			},
+		},
+		{
 			name: "error parsing include path selectors",
 			sub: kargoapi.GitSubscription{
 				IncludePaths: []string{"regex:["}, // Bad regex
