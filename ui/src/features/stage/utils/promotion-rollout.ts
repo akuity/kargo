@@ -144,7 +144,9 @@ export type LatestRollouts = {
 export const latestRolloutsByStage = (
   rollouts: PromotionRollout[]
 ): Record<string, LatestRollouts> => {
-  const byStage: Record<string, LatestRollouts> = {};
+  // A Stage may be named for anything an object inherits, "constructor" for
+  // one, so the dictionary inherits nothing for such a name to collide with.
+  const byStage: Record<string, LatestRollouts> = Object.create(null);
   for (const rollout of [...rollouts].sort(rolloutCompareFn)) {
     const stageName = rollout.spec?.stage;
     if (!stageName) {

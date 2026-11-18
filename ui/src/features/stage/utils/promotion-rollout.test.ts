@@ -318,6 +318,16 @@ describe('latestRolloutsByStage()', () => {
   test('ignores a rollout that names no Stage', () => {
     expect(latestRolloutsByStage([{ number: 1 }])).toEqual({});
   });
+
+  test('a Stage named for something every object inherits is a Stage like any other', () => {
+    const finished = rollout(1, 'Succeeded', {
+      spec: { stage: 'constructor', freight: 'abc', targets: [] }
+    });
+    const byStage = latestRolloutsByStage([finished]);
+    expect(byStage.constructor).toEqual({ finished });
+    expect(latestRolloutsByStage([]).constructor).toBeUndefined();
+    expect(Object).not.toHaveProperty('finished');
+  });
 });
 
 describe('stageUsesRollouts()', () => {

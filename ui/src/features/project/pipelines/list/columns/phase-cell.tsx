@@ -13,7 +13,9 @@ export const PhaseCell = ({ stage }: { stage: Stage }) => {
   const stagePhase = getStagePhase(stage, isControllerDead);
   const currentPromotionPath = useCurrentPromotionRef(stage)?.path;
 
-  if (getCurrentFreight(stage).length === 0) {
+  // A Stage holding no Freight has no phase worth a cell -- unless it is being
+  // promoted to for the first time, when the promotion is all there is to show.
+  if (getCurrentFreight(stage).length === 0 && !currentPromotionPath) {
     return <>-</>;
   }
 

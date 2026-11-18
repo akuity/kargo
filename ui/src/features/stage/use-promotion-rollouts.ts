@@ -48,10 +48,14 @@ const listRollouts = async (
 
 // pollInterval is the refetchInterval of a rollout list: the poll interval
 // while the Stages reading it have something in flight, and no polling
-// otherwise. A list that fails to read is not polled either -- left on the
-// timer it would raise the global error notification on every tick.
-const pollInterval = (failed: boolean, stages: Stage[], rollouts: PromotionRollout[]) =>
-  !failed && shouldPollRollouts(stages, rollouts) ? ROLLOUTS_POLL_INTERVAL_MS : false;
+// otherwise. A list that fails to read stays on the timer, or one failed read
+// would leave a rollout in flight looking stuck where it was last seen.
+const pollInterval = (stages: Stage[], rollouts: PromotionRollout[]) =>
+  shouldPollRollouts(stages, rollouts) ? ROLLOUTS_POLL_INTERVAL_MS : false;
+
+// A list read on a timer fails on every tick for as long as whatever broke it
+// lasts. It reports that once, not once per tick.
+const polled = { notifyErrorOnce: true };
 
 // useRefetchOnRecorded reads a rollout list again whenever one of the Stages
 // records a rollout it had not recorded before. Polling stops when nothing is
@@ -91,8 +95,8 @@ export const useLatestRollouts = (
     queryKey: getListPromotionRolloutsQueryKey(project, latestParams),
     queryFn: () => listRollouts(project, latestParams),
     enabled,
-    refetchInterval: (current) =>
-      pollInterval(current.state.status === 'error', fleet, current.state.data?.data?.items || [])
+    meta: polled,
+    refetchInterval: (current) => pollInterval(fleet, current.state.data?.data?.items || [])
   });
   useRefetchOnRecorded(fleet, enabled, query.refetch);
 
@@ -139,9 +143,9 @@ export const useStageRollouts = (project: string, stage?: Stage) => {
     initialPageParam: '',
     getNextPageParam: (lastPage) => lastPage.data?.metadata?.continue || undefined,
     enabled,
+    meta: polled,
     refetchInterval: (current) =>
       pollInterval(
-        current.state.status === 'error',
         stages,
         (current.state.data?.pages || []).flatMap((page) => page.data?.items || [])
       )

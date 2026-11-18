@@ -53,6 +53,42 @@ describe('roundSummary()', () => {
   test('a request naming no Targets has nothing pending', () => {
     expect(roundSummary(request({}))).toEqual({ pending: 0 });
   });
+
+  test('a round part way through its fan-out counts the Targets it has yet to reach', () => {
+    const targets = ['a', 'b', 'c', 'd', 'e'].map((name) => ({ name }));
+    expect(
+      roundSummary(
+        request({
+          spec: { stage: 'prod-us', freight: 'abc', targets },
+          status: { summary: { succeeded: 1, running: 1 } }
+        })
+      )
+    ).toEqual({ succeeded: 1, running: 1, pending: 3 });
+  });
+
+  test('Targets yet to be reached add to the ones already pending', () => {
+    const targets = ['a', 'b', 'c'].map((name) => ({ name }));
+    expect(
+      roundSummary(
+        request({
+          spec: { stage: 'prod-us', freight: 'abc', targets },
+          status: { summary: { pending: 1, succeeded: 1 } }
+        })
+      )
+    ).toEqual({ pending: 2, succeeded: 1 });
+  });
+
+  test('a round that reached every Target it names keeps its summary as recorded', () => {
+    const summary = { succeeded: 1, failed: 1 };
+    expect(
+      roundSummary(
+        request({
+          spec: { stage: 'prod-us', freight: 'abc', targets: [{ name: 'a' }, { name: 'b' }] },
+          status: { summary }
+        })
+      )
+    ).toBe(summary);
+  });
 });
 
 describe('targetsTally()', () => {
