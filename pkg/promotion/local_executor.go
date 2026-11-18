@@ -49,8 +49,9 @@ func (e *LocalStepExecutor) ExecuteStep(
 	ctx context.Context,
 	req StepExecutionRequest,
 ) (result StepResult, err error) {
-	ctx, span := tracer.Start(
+	ctx, span := telemetry.StartSpan(
 		ctx,
+		tracer,
 		"Execute step",
 		trace.WithAttributes(
 			telemetry.ProjectKey.String(req.Context.Project),
