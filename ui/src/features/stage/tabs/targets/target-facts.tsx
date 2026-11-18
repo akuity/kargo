@@ -3,9 +3,8 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Button, Flex, Tag, Typography, theme } from 'antd';
 import { format } from 'date-fns';
 import { ReactNode } from 'react';
-import { Link, generatePath } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 
-import { paths } from '@ui/config/paths';
 import { useModal } from '@ui/features/common/modal/use-modal';
 import { TargetYamlModal } from '@ui/features/project/targets/detail/target-yaml-modal';
 import { freightByOrigin } from '@ui/features/project/targets/model/round-utils';
@@ -14,8 +13,8 @@ import { visibleLabels } from '@ui/features/project/targets/model/target-labels'
 import { TargetRow } from '@ui/features/project/targets/model/target-rows';
 import { OriginRows, Row } from '@ui/features/project/targets/shared/origin-rows';
 import { failedStepName } from '@ui/features/stage/promotion-request/round-detail';
+import { Round, isRolloutRound, roundPath } from '@ui/features/stage/utils/promotion-rollout';
 import { useGetPromotion } from '@ui/gen/api/v2/core/core';
-import { PromotionRequest } from '@ui/gen/api/v2/models';
 import { parseDate } from '@ui/utils/dates';
 
 import { childPromotionName, governing, owningTargetSet } from './summary';
@@ -83,7 +82,7 @@ export const TargetFacts = ({
   stageName: string;
   row: TargetRow;
   // The Stage's latest round, which names the child Promotion this Target got.
-  round?: PromotionRequest;
+  round?: Round;
   // Whether that round is blocked, and so reached nothing.
   blocked?: boolean;
   freightLabel: (name: string) => string;
@@ -106,6 +105,7 @@ export const TargetFacts = ({
     query: { enabled: failed && !!promotion }
   });
   const failedStep = failedStepName(promotionQuery.data?.data);
+  const roundLink = roundPath(project, stageName, round);
 
   const currentFreight = governed?.currentFreight;
   // A Target with no Freight is only shown what the Stage is on once a
@@ -193,18 +193,11 @@ export const TargetFacts = ({
             <div className='text-xs' style={{ color: token.colorError }}>
               Promoting {freightLabel(round?.spec?.freight || '')} failed
               {failedStep && ` at step ${failedStep}`}
-              {round?.metadata?.name && (
+              {roundLink && (
                 <>
                   {' · '}
-                  <Link
-                    style={{ color: token.colorError }}
-                    to={generatePath(paths.promotionRequest, {
-                      name: project,
-                      stageName,
-                      promotionRequestName: round.metadata.name
-                    })}
-                  >
-                    view request
+                  <Link style={{ color: token.colorError }} to={roundLink}>
+                    view {isRolloutRound(round) ? 'rollout' : 'request'}
                     <FontAwesomeIcon icon={faArrowRight} className='ml-1' />
                   </Link>
                 </>

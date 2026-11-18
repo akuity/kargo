@@ -19,11 +19,26 @@ export const requestPhase = (request?: PromotionRequest): PromotionPhase => {
   return isPromotionPhase(phase) ? phase : 'Pending';
 };
 
-// roundSummary is the per-phase tally of a round's child Promotions. A request
-// that has not fanned out yet has no summary, in which case every Target it
-// names is, in effect, pending.
-export const roundSummary = (request?: PromotionRequest): PromotionRequestSummary =>
-  request?.status?.summary ?? { pending: request?.spec?.targets?.length || 0 };
+// roundSummary is the per-phase tally of the Targets a round names. The
+// summary a round records counts only the Targets it has promoted to so far,
+// so the ones it has yet to reach are added here as pending: a round part way
+// through its fan-out is then tallied over every Target it names, the way its
+// detail tallies it. A round that has not fanned out at all records no
+// summary, and every Target it names is pending.
+export const roundSummary = (request?: PromotionRequest): PromotionRequestSummary => {
+  const named = request?.spec?.targets?.length || 0;
+  const recorded = request?.status?.summary;
+  if (!recorded) {
+    return { pending: named };
+  }
+  const reached = promotionPhases.reduce(
+    (sum, phase) => sum + Math.max(0, recorded[summaryKey(phase)] ?? 0),
+    0
+  );
+  return named > reached
+    ? { ...recorded, pending: (recorded.pending ?? 0) + named - reached }
+    : recorded;
+};
 
 // TargetsTally is a round's outcome as the Targets column says it: a figure per
 // phase, over how many Targets the round named.

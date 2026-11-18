@@ -12,7 +12,7 @@ import { TargetRow } from '@ui/features/project/targets/model/target-rows';
 import { surfaceClassName } from '@ui/features/project/targets/shared/surface';
 import { TargetGrid } from '@ui/features/project/targets/summary/target-grid';
 import { roundBlock } from '@ui/features/stage/utils/promotion-request';
-import { PromotionRequest } from '@ui/gen/api/v2/models';
+import { Round } from '@ui/features/stage/utils/promotion-rollout';
 import { useLocalStorage } from '@ui/utils/use-local-storage';
 
 import { MarkLegend } from './mark-visuals';
@@ -98,7 +98,7 @@ export const TargetMatrix = ({
   stageName: string;
   rows: TargetRow[];
   // The Stage's latest round, which a picked Target reads its failure from.
-  round?: PromotionRequest;
+  round?: Round;
   // The Freight the Stage itself is on: what every Target it governs is on its
   // way to, and the first colour of the Freight legend.
   stageFreight: string[];

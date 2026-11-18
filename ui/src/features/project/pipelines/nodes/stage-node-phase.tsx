@@ -4,15 +4,15 @@ import { StageConditionIcon } from '@ui/features/common/stage-status/stage-condi
 import { useStageControllerStatus } from '@ui/features/common/stage-status/use-stage-controller-status';
 import { getStageStatus, phaseTone } from '@ui/features/common/stage-status/utils';
 import { useToneColor } from '@ui/features/common/status-tone';
+import { useCurrentPromotionRef } from '@ui/features/stage/use-promotion-rollouts';
 import { Stage } from '@ui/gen/api/v2/models';
 
-import { getCurrentPromotionRef } from './stage-meta-utils';
 import styles from './stage-node.module.less';
 
 export const StageNodePhase = (props: { stage: Stage }) => {
   const { controllerName, isControllerDead } = useStageControllerStatus(props.stage);
   const { phase: stagePhase, message } = getStageStatus(props.stage, isControllerDead);
-  const currentPromotionPath = getCurrentPromotionRef(props.stage)?.path;
+  const currentPromotionPath = useCurrentPromotionRef(props.stage)?.path;
 
   // Unknown resolves to the muted tone, which is the tone the dash below
   // wants anyway.
