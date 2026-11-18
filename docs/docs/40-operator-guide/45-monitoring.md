@@ -89,6 +89,7 @@ labeled by `project`:
 | `kargo_warehouse_discovery_duration_seconds` | Histogram | Time each successful artifact discovery took, across all of a Warehouse's subscriptions. |
 | `kargo_warehouse_discovery_interval_seconds` | Histogram | Time between a Warehouse's previous successful discovery and its latest one. |
 | `kargo_warehouse_oldest_discovery_timestamp_seconds` | Gauge | Time of the least recent successful discovery among a Project's Warehouses, sampled at scrape time. |
+| `kargo_warehouse_discovery_failures_total` | Counter | Number of failed artifact discoveries, by the `subscriptionType` (`git`, `image`, `chart` or `other`) of the subscription that failed. |
 | `kargo_warehouse_freight_created_total` | Counter | Number of Freight created by Warehouses. |
 
 The lifecycle metrics -- `kargo_promotion_pending_duration_seconds`,
@@ -229,7 +230,24 @@ upstream Stage verifies it, without a verification of their own.
 | `kargo_warehouse_discovery_duration_seconds` | How long discovery takes. Failed discoveries are not observed. |
 | `kargo_warehouse_discovery_interval_seconds` | How often Warehouses are rediscovered: close to `spec.interval` when the controller keeps up, longer when it does not. |
 | `kargo_warehouse_oldest_discovery_timestamp_seconds` | Whether any Warehouse has stopped being rediscovered. Use `time() - kargo_warehouse_oldest_discovery_timestamp_seconds`. |
+| `kargo_warehouse_discovery_failures_total` | How often discovery fails, and against which kind of repository. A discovery stops at its first failed subscription, so each failed discovery counts once. |
 | `kargo_warehouse_freight_created_total` | How much Freight Warehouses produce. |
+
+The failure ratio per Project, with native or classic histograms, including
+Projects where every discovery fails:
+
+```
+sum by (project) (rate(kargo_warehouse_discovery_failures_total[5m]))
+/
+(
+  sum by (project) (rate(kargo_warehouse_discovery_failures_total[5m]))
+  + (
+    sum by (project) (histogram_count(rate(kargo_warehouse_discovery_duration_seconds[5m])))
+    or sum by (project) (rate(kargo_warehouse_discovery_duration_seconds_count[5m]))
+    or 0 * sum by (project) (rate(kargo_warehouse_discovery_failures_total[5m]))
+  )
+)
+```
 
 ### Stages by Ready Reason
 

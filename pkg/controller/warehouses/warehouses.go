@@ -608,12 +608,14 @@ func (r *reconciler) discoverArtifacts(
 	for _, sub := range subs {
 		subReg, err := r.subscriberRegistry.Get(ctx, sub)
 		if err != nil {
+			r.recordDiscoveryFailure(project, sub)
 			return nil,
 				fmt.Errorf("error finding subscriber for subscription: %w", err)
 		}
 		// The registration's value is a factory function
 		subscriber, err := subReg.Value(ctx, r.credentialsDB)
 		if err != nil {
+			r.recordDiscoveryFailure(project, sub)
 			return nil, fmt.Errorf("error instantiating subscriber: %w", err)
 		}
 		// Pair the subscription with its prior result, if any. Only Git
@@ -634,6 +636,7 @@ func (r *reconciler) discoverArtifacts(
 		// ctx here is the natural next step.
 		res, err := subscriber.DiscoverArtifacts(ctx, project, sub, lastResult)
 		if err != nil {
+			r.recordDiscoveryFailure(project, sub)
 			return nil, fmt.Errorf("error discovering artifacts: %w", err)
 		}
 		switch typedRes := res.(type) {
@@ -646,6 +649,7 @@ func (r *reconciler) discoverArtifacts(
 		case kargoapi.DiscoveryResult:
 			discovered.Results = append(discovered.Results, typedRes)
 		default:
+			r.recordDiscoveryFailure(project, sub)
 			return nil, fmt.Errorf(
 				"subscriber returned unrecognized result type %T", typedRes,
 			)
@@ -674,6 +678,23 @@ func (r *reconciler) recordDiscoveryMetrics(
 	r.whMetrics.DiscoveryInterval.WithLabelValues(project).Observe(
 		discovered.DiscoveredAt.Sub(prev.DiscoveredAt.Time).Seconds(),
 	)
+}
+
+// recordDiscoveryFailure counts a failed discovery of sub.
+func (r *reconciler) recordDiscoveryFailure(project string, sub kargoapi.RepoSubscription) {
+	if r.whMetrics == nil {
+		return
+	}
+	subType := "other"
+	switch {
+	case sub.Git != nil:
+		subType = "git"
+	case sub.Image != nil:
+		subType = "image"
+	case sub.Chart != nil:
+		subType = "chart"
+	}
+	r.whMetrics.DiscoveryFailures.WithLabelValues(project, subType).Inc()
 }
 
 func (r *reconciler) buildFreightFromLatestArtifacts(
