@@ -16,7 +16,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	"github.com/akuity/kargo/pkg/client/apiserver/freightclient"
+	"github.com/akuity/kargo/pkg/api/freightapi"
 	"github.com/akuity/kargo/pkg/client/apiserver/freightclient/testutil"
 )
 
@@ -361,39 +361,36 @@ func TestListFreightAvailableToStage(t *testing.T) {
 		Name: testWarehouse2,
 	}
 
+	freight := func(origin kargoapi.FreightOrigin, name string) kargoapi.Freight {
+		return kargoapi.Freight{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: testProject,
+				Name:      name,
+			},
+			Origin: origin,
+		}
+	}
+
 	testCases := []struct {
-		name        string
-		reqs        []kargoapi.FreightRequest
-		objects     []client.Object
-		interceptor interceptor.Funcs
-		assertions  func(*testing.T, []kargoapi.Freight, error)
+		name       string
+		reqs       []kargoapi.FreightRequest
+		lister     *fakeFreightWarehouseLister
+		assertions func(*testing.T, []kargoapi.Freight, error)
 	}{
 		{
-			// ListFreightFromWarehouse no longer resolves the Warehouse resource, so
-			// a missing Warehouse simply yields no available Freight rather than an
-			// error.
-			name: "missing Warehouse yields no Freight",
-			reqs: []kargoapi.FreightRequest{{Origin: testWarehouse1Origin}},
+			name:   "no Freight from Warehouse",
+			reqs:   []kargoapi.FreightRequest{{Origin: testWarehouse1Origin}},
+			lister: &fakeFreightWarehouseLister{},
 			assertions: func(t *testing.T, freight []kargoapi.Freight, err error) {
 				require.NoError(t, err)
 				require.Empty(t, freight)
 			},
 		},
 		{
-			name: "error listing Freight",
-			reqs: []kargoapi.FreightRequest{{Origin: testWarehouse1Origin}},
-			interceptor: interceptor.Funcs{
-				List: func(
-					context.Context,
-					client.WithWatch,
-					client.ObjectList,
-					...client.ListOption,
-				) error {
-					return errors.New("something went wrong")
-				},
-			},
+			name:   "error listing Freight",
+			reqs:   []kargoapi.FreightRequest{{Origin: testWarehouse1Origin}},
+			lister: &fakeFreightWarehouseLister{err: errors.New("something went wrong")},
 			assertions: func(t *testing.T, _ []kargoapi.Freight, err error) {
-				require.ErrorContains(t, err, "error listing Freight for Warehouse")
 				require.ErrorContains(t, err, "something went wrong")
 			},
 		},
@@ -412,97 +409,33 @@ func TestListFreightAvailableToStage(t *testing.T) {
 					},
 				},
 			},
-			objects: []client.Object{
-				&kargoapi.Warehouse{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: testProject,
-						Name:      testWarehouse1,
+			lister: &fakeFreightWarehouseLister{
+				freightByWarehouse: map[string][]kargoapi.Freight{
+					testWarehouse1: {
+						freight(testWarehouse1Origin, "fake-freight-3"),
+						freight(testWarehouse1Origin, "fake-freight-1"),
 					},
-				},
-				&kargoapi.Warehouse{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: testProject,
-						Name:      testWarehouse2,
-					},
-				},
-				&kargoapi.Freight{ // Available because Freight is requested directly from this Warehouse
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: testProject,
-						Name:      "fake-freight-1",
-					},
-					Origin: testWarehouse1Origin,
-				},
-				&kargoapi.Freight{ // Not available because Freight is not verified in upstream Stage
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: testProject,
-						Name:      "fake-freight-2",
-					},
-					Origin: testWarehouse2Origin,
-				},
-				&kargoapi.Freight{ // Not available because verification time not recorded
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: testProject,
-						Name:      "fake-freight-3",
-					},
-					Origin: testWarehouse2Origin,
-					Status: kargoapi.FreightStatus{
-						VerifiedIn: map[string]kargoapi.VerifiedStage{
-							testStage: {},
-						},
-					},
-				},
-				&kargoapi.Freight{ // Not available because soak time has not elapsed
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: testProject,
-						Name:      "fake-freight-4",
-					},
-					Origin: testWarehouse2Origin,
-					Status: kargoapi.FreightStatus{
-						VerifiedIn: map[string]kargoapi.VerifiedStage{
-							testStage: {
-								LongestCompletedSoak: &metav1.Duration{Duration: 30 * time.Minute}},
-						},
-					},
-				},
-				&kargoapi.Freight{ // Available because soak time has elapsed
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: testProject,
-						Name:      "fake-freight-5",
-					},
-					Origin: testWarehouse2Origin,
-					Status: kargoapi.FreightStatus{
-						VerifiedIn: map[string]kargoapi.VerifiedStage{
-							testStage: {
-								LongestCompletedSoak: &metav1.Duration{Duration: 2 * time.Hour},
-							},
-						},
+					testWarehouse2: {
+						freight(testWarehouse2Origin, "fake-freight-2"),
+						// Duplicate of Freight returned for the other Warehouse
+						freight(testWarehouse2Origin, "fake-freight-1"),
 					},
 				},
 			},
 			assertions: func(t *testing.T, freight []kargoapi.Freight, err error) {
 				require.NoError(t, err)
-				require.Len(t, freight, 2)
+				// Freight from all Warehouses is combined, sorted by name, and
+				// de-duped
+				require.Len(t, freight, 3)
 				require.Equal(t, "fake-freight-1", freight[0].Name)
-				require.Equal(t, "fake-freight-5", freight[1].Name)
+				require.Equal(t, "fake-freight-2", freight[1].Name)
+				require.Equal(t, "fake-freight-3", freight[2].Name)
 			},
 		},
 	}
 
-	testScheme := k8sruntime.NewScheme()
-	err := kargoapi.SchemeBuilder.AddToScheme(testScheme)
-	require.NoError(t, err)
-
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			c := fake.NewClientBuilder().WithScheme(testScheme).
-				WithScheme(testScheme).
-				WithIndex(&kargoapi.Freight{}, warehouseField, warehouseIndexer).
-				WithIndex(&kargoapi.Freight{}, approvedField, approvedForIndexer).
-				WithIndex(&kargoapi.Freight{}, verifiedInField, verifiedInIndexer).
-				WithObjects(testCase.objects...).
-				WithInterceptorFuncs(testCase.interceptor).
-				Build()
-
 			stage := &kargoapi.Stage{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: testProject,
@@ -513,11 +446,33 @@ func TestListFreightAvailableToStage(t *testing.T) {
 				},
 			}
 			freight, err := ListFreightAvailableToStage(
-				t.Context(), c, stage,
+				t.Context(),
+				testCase.lister,
+				stage,
 			)
 			testCase.assertions(t, freight, err)
 		})
 	}
+}
+
+// fakeFreightWarehouseLister is a test-only FreightWarehouseLister that returns
+// the Freight fixtures configured for each Warehouse as-is, without applying
+// any filtering.
+type fakeFreightWarehouseLister struct {
+	freightByWarehouse map[string][]kargoapi.Freight
+	err                error
+}
+
+func (f *fakeFreightWarehouseLister) ListFreightFromWarehouse(
+	_ context.Context,
+	_ string,
+	warehouse string,
+	_ *freightapi.ListWarehouseFreightOptions,
+) ([]kargoapi.Freight, error) {
+	if f.err != nil {
+		return nil, f.err
+	}
+	return f.freightByWarehouse[warehouse], nil
 }
 
 func TestReverifyStageFreight(t *testing.T) {
@@ -1032,7 +987,7 @@ func TestListFreightAvailableToStageViaClient(t *testing.T) {
 		listFreightFromWarehouseCalls := []listFreightFromWarehouseCall{}
 		mockClient := &testutil.MockFreightClient{
 			ListFreightFromWarehouseFun: func(_ context.Context, _, warehouse string,
-				opts *freightclient.ListWarehouseFreightOptions,
+				opts *freightapi.ListWarehouseFreightOptions,
 			) ([]kargoapi.Freight, error) {
 				listFreightFromWarehouseCalls = append(listFreightFromWarehouseCalls,
 					listFreightFromWarehouseCall{project, warehouse, opts})
@@ -1049,7 +1004,7 @@ func TestListFreightAvailableToStageViaClient(t *testing.T) {
 				return nil, nil
 			},
 		}
-		got, err := ListFreightAvailableToStageViaClient(t.Context(), mockClient, stage)
+		got, err := ListFreightAvailableToStage(t.Context(), mockClient, stage)
 		require.NoError(t, err)
 
 		names := make([]string, len(got))
@@ -1089,7 +1044,7 @@ func TestListFreightAvailableToStageViaClient(t *testing.T) {
 		listFreightFromWarehouseCalls := []listFreightFromWarehouseCall{}
 		mockClient := &testutil.MockFreightClient{
 			ListFreightFromWarehouseFun: func(_ context.Context, project, warehouse string,
-				opts *freightclient.ListWarehouseFreightOptions,
+				opts *freightapi.ListWarehouseFreightOptions,
 			) ([]kargoapi.Freight, error) {
 				listFreightFromWarehouseCalls = append(listFreightFromWarehouseCalls,
 					listFreightFromWarehouseCall{project, warehouse, opts})
@@ -1097,7 +1052,7 @@ func TestListFreightAvailableToStageViaClient(t *testing.T) {
 			},
 		}
 
-		_, err := ListFreightAvailableToStageViaClient(t.Context(), mockClient, matchUpstream)
+		_, err := ListFreightAvailableToStage(t.Context(), mockClient, matchUpstream)
 		require.NoError(t, err)
 		require.Len(t, listFreightFromWarehouseCalls, 1)
 		require.Equal(t, "up", listFreightFromWarehouseCalls[0].opts.CurrentlyIn)
@@ -1106,12 +1061,12 @@ func TestListFreightAvailableToStageViaClient(t *testing.T) {
 	t.Run("propagates the client error", func(t *testing.T) {
 		mockClient := &testutil.MockFreightClient{
 			ListFreightFromWarehouseFun: func(_ context.Context, _, _ string,
-				_ *freightclient.ListWarehouseFreightOptions,
+				_ *freightapi.ListWarehouseFreightOptions,
 			) ([]kargoapi.Freight, error) {
 				return nil, errors.New("boom")
 			},
 		}
-		_, err := ListFreightAvailableToStageViaClient(t.Context(), mockClient, stage)
+		_, err := ListFreightAvailableToStage(t.Context(), mockClient, stage)
 		require.ErrorContains(t, err, "boom")
 	})
 }
@@ -1119,5 +1074,5 @@ func TestListFreightAvailableToStageViaClient(t *testing.T) {
 type listFreightFromWarehouseCall struct {
 	project   string
 	warehouse string
-	opts      *freightclient.ListWarehouseFreightOptions
+	opts      *freightapi.ListWarehouseFreightOptions
 }

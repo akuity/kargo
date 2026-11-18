@@ -45,6 +45,42 @@ tests:
       - hasDocuments:
           count: 0
 
+  - it: mounts the chart-generated API server CA
+    template: templates/garbage-collector/cron-job.yaml
+    asserts:
+      - contains:
+          path: spec.jobTemplate.spec.template.spec.containers[0].volumeMounts
+          content:
+            mountPath: /etc/kargo/api-ca.crt
+            name: api-ca
+            subPath: ca.crt
+            readOnly: true
+      - contains:
+          path: spec.jobTemplate.spec.template.spec.volumes
+          content:
+            name: api-ca
+            secret:
+              secretName: kargo-api-cert
+              items:
+              - key: ca.crt
+                path: ca.crt
+
+  - it: mounts no API server CA when the API server serves plain HTTP
+    template: templates/garbage-collector/cron-job.yaml
+    set:
+      api.tls.enabled: false
+    asserts:
+      - notExists:
+          path: spec.jobTemplate.spec.template.spec.volumes
+
+  - it: mounts no API server CA when pointed at an external API server
+    template: templates/garbage-collector/cron-job.yaml
+    set:
+      garbageCollector.apiServer.address: https://kargo.example.com
+    asserts:
+      - notExists:
+          path: spec.jobTemplate.spec.template.spec.volumes
+
 ---
 suite: garbage-collector/configmap.yaml
 values:
@@ -73,3 +109,100 @@ tests:
       - equal:
           path: data.NUM_WORKERS
           value: "8"
+
+  - it: reaches the API server through its Service, trusting the chart's certificate
+    asserts:
+      - equal:
+          path: data.API_SERVER_ADDRESS
+          value: https://kargo-api.NAMESPACE.svc
+      - equal:
+          path: data.API_SERVER_CA_CERT_PATH
+          value: /etc/kargo/api-ca.crt
+
+  - it: reaches the API server over plain HTTP when it serves none
+    set:
+      api.tls.enabled: false
+    asserts:
+      - equal:
+          path: data.API_SERVER_ADDRESS
+          value: http://kargo-api.NAMESPACE.svc
+      - notExists:
+          path: data.API_SERVER_CA_CERT_PATH
+
+  - it: uses the operator's API server address when set
+    set:
+      garbageCollector.apiServer.address: https://kargo.example.com
+    asserts:
+      - equal:
+          path: data.API_SERVER_ADDRESS
+          value: https://kargo.example.com
+      - notExists:
+          path: data.API_SERVER_CA_CERT_PATH
+
+  - it: omits the API server address when the API is disabled and none is set
+    set:
+      api.enabled: false
+    asserts:
+      - notExists:
+          path: data.API_SERVER_ADDRESS
+
+---
+suite: garbage-collector/token-requester-role.yaml
+values:
+  - ../test/values-unittest.yaml
+templates:
+  - templates/garbage-collector/token-requester-role.yaml
+tests:
+  - it: lets the garbage collector request tokens for its own ServiceAccount
+    asserts:
+      - isKind:
+          of: Role
+      - equal:
+          path: metadata.name
+          value: kargo-garbage-collector-token-requester
+      - equal:
+          path: rules
+          value:
+            - apiGroups:
+                - ""
+              resources:
+                - serviceaccounts/token
+              resourceNames:
+                - kargo-garbage-collector
+              verbs:
+                - create
+
+  - it: is not rendered when the garbage collector is disabled
+    set:
+      garbageCollector.enabled: false
+    asserts:
+      - hasDocuments:
+          count: 0
+
+---
+suite: garbage-collector/token-requester-role-binding.yaml
+values:
+  - ../test/values-unittest.yaml
+templates:
+  - templates/garbage-collector/token-requester-role-binding.yaml
+tests:
+  - it: binds the garbage collector's ServiceAccount to its token-requester Role
+    asserts:
+      - isKind:
+          of: RoleBinding
+      - equal:
+          path: roleRef.name
+          value: kargo-garbage-collector-token-requester
+      - contains:
+          path: subjects
+          content:
+            kind: ServiceAccount
+            namespace: NAMESPACE
+            name: kargo-garbage-collector
+
+  - it: is not rendered when the garbage collector is disabled
+    set:
+      garbageCollector.enabled: false
+    asserts:
+      - hasDocuments:
+          count: 0

@@ -14,6 +14,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/pkg/client/apiserver"
+	"github.com/akuity/kargo/pkg/client/apiserver/freightclient"
 )
 
 // CollectorConfig is configuration for the garbage collector.
@@ -61,6 +63,8 @@ type Collector interface {
 // collector is an implementation of the Collector interface.
 type collector struct {
 	cfg CollectorConfig
+
+	freightClient freightclient.FreightClient
 
 	// The following behaviors are overridable for testing purposes:
 	cleanProjectsFn func(
@@ -114,11 +118,10 @@ type collector struct {
 		warehouse string,
 	) error
 
-	listFreightFn func(
+	listFreightFromWarehouseFn func(
 		context.Context,
-		client.ObjectList,
-		...client.ListOption,
-	) error
+		string, string,
+	) ([]kargoapi.Freight, error)
 
 	listStagesFn func(
 		context.Context,
@@ -128,16 +131,20 @@ type collector struct {
 
 	deleteFreightFn func(
 		context.Context,
-		client.Object,
-		...client.DeleteOption,
+		string, string,
 	) error
 }
 
 // NewCollector initializes and returns an implementation of the Collector
 // interface.
-func NewCollector(kubeClient client.Client, cfg CollectorConfig) Collector {
+func NewCollector(
+	kubeClient client.Client,
+	cfg CollectorConfig,
+	apiClient *apiserver.Client,
+) Collector {
 	c := &collector{
-		cfg: cfg,
+		cfg:           cfg,
+		freightClient: apiClient,
 	}
 	c.cleanProjectsFn = c.cleanProjects
 	c.cleanProjectFn = c.cleanProject
@@ -149,9 +156,9 @@ func NewCollector(kubeClient client.Client, cfg CollectorConfig) Collector {
 	c.cleanProjectFreightFn = c.cleanProjectFreight
 	c.listWarehousesFn = kubeClient.List
 	c.cleanWarehouseFreightFn = c.cleanWarehouseFreight
-	c.listFreightFn = kubeClient.List
+	c.listFreightFromWarehouseFn = c.listFreightFromWarehouse
 	c.listStagesFn = kubeClient.List
-	c.deleteFreightFn = kubeClient.Delete
+	c.deleteFreightFn = c.deleteFreight
 	return c
 }
 

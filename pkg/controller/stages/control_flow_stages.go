@@ -365,7 +365,7 @@ func (r *ControlFlowStageReconciler) listAvailableFreight(
 	ctx context.Context,
 	stage *kargoapi.Stage,
 ) ([]kargoapi.Freight, error) {
-	return api.ListFreightAvailableToStageViaClient(ctx, r.freightClient, stage)
+	return api.ListFreightAvailableToStage(ctx, r.freightClient, stage)
 }
 
 // initializeStatus initializes the status of the given Stage with the values
@@ -498,7 +498,7 @@ func (r *ControlFlowStageReconciler) handleDelete(ctx context.Context, stage *ka
 	return HandleDelete(ctx, r.newVerifier(), r.client, r.freightClient, stage)
 }
 
-// Instatinate verifier similar to regular stages in case stage transitions from regular to control flow.
+// Instantiate verifier similar to regular stages in case stage transitions from regular to control flow.
 func (r *ControlFlowStageReconciler) newVerifier() verification.Verifier {
 	analysisRunners := map[kargoapi.AnalysisRunKind]verification.AnalysisRunner{
 		kargoapi.AnalysisRunKindRun: verification.NewAnalysisRunnerRollouts(

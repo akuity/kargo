@@ -9,8 +9,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	"github.com/akuity/kargo/pkg/api"
-	"github.com/akuity/kargo/pkg/client/apiserver/freightclient"
+	"github.com/akuity/kargo/pkg/api/freightapi"
 	libhttp "github.com/akuity/kargo/pkg/http"
 )
 
@@ -30,7 +29,7 @@ func (s *server) listFreightByCurrentStage(c *gin.Context) {
 	project := c.Param("project")
 	stageName := c.Param("stage")
 
-	freight, err := api.ListFreightByCurrentStage(ctx, s.client, project, stageName)
+	freight, err := freightapi.ListFreightByCurrentStage(ctx, s.client, project, stageName)
 	if err != nil {
 		_ = c.Error(fmt.Errorf("list Freight currently in Stage %q: %w", stageName, err))
 		return
@@ -54,7 +53,7 @@ func (s *server) listFreightReferencingStage(c *gin.Context) {
 	project := c.Param("project")
 	stageName := c.Param("stage")
 
-	freight, err := api.ListFreightReferencingStage(ctx, s.client, project, stageName)
+	freight, err := freightapi.ListFreightReferencingStage(ctx, s.client, project, stageName)
 	if err != nil {
 		_ = c.Error(fmt.Errorf("list Freight referencing Stage %q: %w", stageName, err))
 		return
@@ -91,7 +90,7 @@ func (s *server) listFreightFromWarehouse(c *gin.Context) {
 		return
 	}
 
-	freight, err := api.ListFreightFromWarehouse(ctx, s.client, project, warehouseName, opts)
+	freight, err := freightapi.ListFreightFromWarehouse(ctx, s.client, project, warehouseName, opts)
 	if err != nil {
 		_ = c.Error(fmt.Errorf("list Freight from Warehouse %q: %w", warehouseName, err))
 		return
@@ -101,8 +100,8 @@ func (s *server) listFreightFromWarehouse(c *gin.Context) {
 
 // warehouseFreightOptionsFromQuery builds ListWarehouseFreightOptions from the
 // request's query parameters, returning nil options when none are set.
-func warehouseFreightOptionsFromQuery(c *gin.Context) (*freightclient.ListWarehouseFreightOptions, error) {
-	opts := &freightclient.ListWarehouseFreightOptions{
+func warehouseFreightOptionsFromQuery(c *gin.Context) (*freightapi.ListWarehouseFreightOptions, error) {
+	opts := &freightapi.ListWarehouseFreightOptions{
 		ApprovedFor:          c.Query("approvedFor"),
 		VerifiedIn:           c.QueryArray("verifiedIn"),
 		CurrentlyIn:          c.Query("currentlyIn"),

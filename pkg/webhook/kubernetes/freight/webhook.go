@@ -78,6 +78,7 @@ type webhook struct {
 	isRequestFromKargoControlplaneFn libWebhook.IsRequestFromKargoControlplaneFn
 }
 
+// TODO: freight webhook will be removed and adopted for DB.
 func SetupWebhookWithManager(
 	cfg libWebhook.Config,
 	mgr ctrl.Manager,

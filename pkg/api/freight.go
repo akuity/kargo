@@ -8,7 +8,6 @@ import (
 	"slices"
 	"strings"
 
-	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -111,6 +110,7 @@ func artifactHashPart(ref kargoapi.ArtifactReference) string {
 // GetFreightByNameOrAlias returns a pointer to the Freight resource specified
 // by the project, and name OR alias arguments. If no such resource is found,
 // nil is returned instead.
+// FIXME: Deprecated. This function should be removed in favor of using apiserver,
 func GetFreightByNameOrAlias(
 	ctx context.Context,
 	c client.Client,
@@ -134,6 +134,7 @@ func GetFreightByNameOrAlias(
 // GetFreight returns a pointer to the Freight resource specified by the
 // namespacedName argument. If no such resource is found, nil is returned
 // instead.
+// FIXME: Deprecated. This function should be removed in favor of using apiserver,
 func GetFreight(
 	ctx context.Context,
 	c client.Client,
@@ -157,6 +158,7 @@ func GetFreight(
 // GetFreightByAlias returns a pointer to the Freight resource specified by the
 // project and alias arguments. If no such resource is found, nil is returned
 // instead.
+// FIXME: Deprecated. This function should be removed in favor of using apiserver,
 func GetFreightByAlias(
 	ctx context.Context,
 	c client.Client,
@@ -183,71 +185,4 @@ func GetFreightByAlias(
 		return nil, nil
 	}
 	return &freightList.Items[0], nil
-}
-
-// ListFreightByCurrentStage returns a list of Freight resources that think
-// they're currently in use by the Stage specified.
-func ListFreightByCurrentStage(
-	ctx context.Context,
-	c client.Client,
-	project, stageName string,
-) ([]kargoapi.Freight, error) {
-	freightList := kargoapi.FreightList{}
-	if err := c.List(
-		ctx,
-		&freightList,
-		client.InNamespace(project),
-		client.MatchingFields{"currentlyIn": stageName},
-	); err != nil {
-		return nil, fmt.Errorf(
-			"error listing Freight in namespace %q with current stage %q: %w",
-			project,
-			stageName,
-			err,
-		)
-	}
-	return freightList.Items, nil
-}
-
-// ListFreightReferencingStage returns the Freight whose status records the named
-// Stage in its verifiedIn or approvedFor map, de-duplicated by name and ordered
-// by name. It is used to find the Freight whose status must be cleaned up when a
-// Stage is deleted.
-func ListFreightReferencingStage(
-	ctx context.Context,
-	c client.Client,
-	namespace string,
-	stage string,
-) ([]kargoapi.Freight, error) {
-	// Field names match the indexer's verifiedIn and approvedFor indexes; string
-	// literals are used, as elsewhere in this package, to avoid importing the
-	// indexer package (which depends on this one).
-	byName := make(map[string]kargoapi.Freight)
-	for _, field := range []string{"verifiedIn", "approvedFor"} {
-		list := kargoapi.FreightList{}
-		if err := c.List(
-			ctx,
-			&list,
-			client.InNamespace(namespace),
-			client.MatchingFieldsSelector{
-				Selector: fields.OneTermEqualSelector(field, stage),
-			},
-		); err != nil {
-			return nil, fmt.Errorf(
-				"error listing Freight referencing Stage %q in namespace %q: %w",
-				stage, namespace, err,
-			)
-		}
-		for _, f := range list.Items {
-			byName[f.Name] = f
-		}
-	}
-	freight := make([]kargoapi.Freight, 0, len(byName))
-	for _, f := range byName {
-		freight = append(freight, f)
-	}
-	slices.SortFunc(freight, func(lhs, rhs kargoapi.Freight) int {
-		return strings.Compare(lhs.Name, rhs.Name)
-	})
-	return freight, nil
 }

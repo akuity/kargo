@@ -89,20 +89,6 @@ type server struct {
 		client.ObjectList,
 		...client.ListOption,
 	) error
-	getAvailableFreightForStageFn func(
-		context.Context,
-		*kargoapi.Stage,
-	) ([]kargoapi.Freight, error)
-	getFreightFromWarehousesFn func(
-		ctx context.Context,
-		project string,
-		warehouses []string,
-	) ([]kargoapi.Freight, error)
-	getVerifiedFreightFn func(
-		ctx context.Context,
-		project string,
-		upstreams []string,
-	) ([]kargoapi.Freight, error)
 
 	// Freight aliasing:
 	patchFreightAliasFn func(
@@ -186,9 +172,6 @@ func NewServer(
 	s.createPromotionFn = kubeClient.Create
 	s.findDownstreamStagesFn = s.findDownstreamStages
 	s.listFreightFn = kubeClient.List
-	s.getAvailableFreightForStageFn = s.getAvailableFreightForStage
-	s.getFreightFromWarehousesFn = s.getFreightFromWarehouses
-	s.getVerifiedFreightFn = s.getVerifiedFreight
 	s.patchFreightAliasFn = s.patchFreightAlias
 	s.patchFreightStatusFn = s.patchFreightStatus
 	s.authorizeFn = kubeClient.Authorize

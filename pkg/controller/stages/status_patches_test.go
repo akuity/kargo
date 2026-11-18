@@ -16,7 +16,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	"github.com/akuity/kargo/pkg/client/apiserver/freightclient"
+	"github.com/akuity/kargo/pkg/api/freightapi"
 	"github.com/akuity/kargo/pkg/client/apiserver/freightclient/testutil"
 	fakeevent "github.com/akuity/kargo/pkg/event/fake"
 	"github.com/akuity/kargo/pkg/health"
@@ -109,7 +109,7 @@ func TestRegularStageReconciler_Reconcile_statusPatchesPerPass(t *testing.T) {
 		ListFreightFromWarehouseFun: func(
 			context.Context,
 			string, string,
-			*freightclient.ListWarehouseFreightOptions,
+			*freightapi.ListWarehouseFreightOptions,
 		) ([]kargoapi.Freight, error) {
 			return nil, nil
 		},

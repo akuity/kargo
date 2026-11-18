@@ -24,7 +24,7 @@ import (
 	rolloutsapi "github.com/akuity/kargo/api/stubs/rollouts/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/api"
-	"github.com/akuity/kargo/pkg/client/apiserver/freightclient"
+	"github.com/akuity/kargo/pkg/api/freightapi"
 	"github.com/akuity/kargo/pkg/client/apiserver/freightclient/testutil"
 	"github.com/akuity/kargo/pkg/conditions"
 	kargoEvent "github.com/akuity/kargo/pkg/event"
@@ -530,7 +530,7 @@ func TestRegularStageReconciler_Reconcile(t *testing.T) {
 				ListFreightFromWarehouseFun: func(
 					_ context.Context,
 					_, warehouse string,
-					_ *freightclient.ListWarehouseFreightOptions,
+					_ *freightapi.ListWarehouseFreightOptions,
 				) ([]kargoapi.Freight, error) {
 					var out []kargoapi.Freight
 					for _, f := range freight {
@@ -766,7 +766,7 @@ func TestRegularStagesReconciler_reconcile(t *testing.T) {
 				ListFreightFromWarehouseFun: func(
 					_ context.Context,
 					_, warehouse string,
-					_ *freightclient.ListWarehouseFreightOptions,
+					_ *freightapi.ListWarehouseFreightOptions,
 				) ([]kargoapi.Freight, error) {
 					var out []kargoapi.Freight
 					for _, f := range freight {
@@ -917,7 +917,7 @@ func TestRegularStageReconciler_Reconcile_concurrentStatusMetadata(t *testing.T)
 		ListFreightFromWarehouseFun: func(
 			context.Context,
 			string, string,
-			*freightclient.ListWarehouseFreightOptions,
+			*freightapi.ListWarehouseFreightOptions,
 		) ([]kargoapi.Freight, error) {
 			return nil, nil
 		},
@@ -6438,7 +6438,7 @@ func TestRegularStageReconciler_autoPromoteFreight(t *testing.T) {
 				ListFreightFromWarehouseFun: func(
 					_ context.Context,
 					_, warehouse string,
-					_ *freightclient.ListWarehouseFreightOptions,
+					_ *freightapi.ListWarehouseFreightOptions,
 				) ([]kargoapi.Freight, error) {
 					var out []kargoapi.Freight
 					for _, f := range available {

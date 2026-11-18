@@ -66,15 +66,8 @@ func (c *collector) cleanWarehouseFreight(
 		"warehouse", warehouse,
 	)
 
-	freight := kargoapi.FreightList{}
-	if err := c.listFreightFn(
-		ctx,
-		&freight,
-		client.InNamespace(project),
-		client.MatchingFields{
-			indexer.FreightByWarehouseField: warehouse,
-		},
-	); err != nil {
+	list, err := c.listFreightFromWarehouse(ctx, project, warehouse)
+	if err != nil {
 		return fmt.Errorf(
 			"error listing Freight from Warehouse %q in Project %q: %w",
 			warehouse,
@@ -83,18 +76,18 @@ func (c *collector) cleanWarehouseFreight(
 		)
 	}
 
-	if len(freight.Items) <= c.cfg.MaxRetainedFreight {
+	if len(list) <= c.cfg.MaxRetainedFreight {
 		return nil // Done
 	}
 
 	// Sort by discovery/creation timestamp descending
-	slices.SortFunc(freight.Items, func(lhs, rhs kargoapi.Freight) int {
+	slices.SortFunc(list, func(lhs, rhs kargoapi.Freight) int {
 		return rhs.EffectiveDiscoveredAt().Compare(lhs.EffectiveDiscoveredAt())
 	})
 
 	// Step through all Freight and find the oldest that is still in use
 	oldestInUseIndex := -1
-	for i, f := range freight.Items {
+	for i, f := range list {
 		stages := kargoapi.StageList{}
 		if err := c.listStagesFn(
 			ctx,
@@ -121,18 +114,18 @@ func (c *collector) cleanWarehouseFreight(
 	}
 
 	firstToDeleteIndex := oldestInUseIndex + c.cfg.MaxRetainedFreight + 1
-	if firstToDeleteIndex >= len(freight.Items) {
+	if firstToDeleteIndex >= len(list) {
 		return nil // Done
 	}
 
 	var deleteErrCount int
-	for i := firstToDeleteIndex; i < len(freight.Items); i++ {
-		f := freight.Items[i]
+	for i := firstToDeleteIndex; i < len(list); i++ {
+		f := list[i]
 		if time.Since(f.EffectiveDiscoveredAt()) < c.cfg.MinFreightDeletionAge {
 			continue // Not old enough
 		}
 		freightLogger := logger.WithValues("freight", f.Name)
-		if err := c.deleteFreightFn(ctx, &f); err != nil {
+		if err := c.deleteFreightFn(ctx, project, f.Name); err != nil {
 			freightLogger.Error(err, "error deleting Freight")
 			deleteErrCount++
 		} else {
@@ -149,4 +142,12 @@ func (c *collector) cleanWarehouseFreight(
 	}
 
 	return nil
+}
+
+func (c *collector) listFreightFromWarehouse(ctx context.Context, project, warehouse string) ([]kargoapi.Freight, error) {
+	return c.freightClient.ListFreightFromWarehouse(ctx, project, warehouse, nil)
+}
+
+func (c *collector) deleteFreight(ctx context.Context, project, nameOrAlias string) error {
+	return c.freightClient.DeleteFreight(ctx, project, nameOrAlias)
 }

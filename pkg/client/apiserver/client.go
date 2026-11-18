@@ -46,7 +46,7 @@ import (
 	"k8s.io/client-go/rest"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	"github.com/akuity/kargo/pkg/client/apiserver/freightclient"
+	"github.com/akuity/kargo/pkg/api/freightapi"
 	kargogen "github.com/akuity/kargo/pkg/x/client/generated"
 )
 
@@ -645,6 +645,27 @@ func (c *Client) GetFreight(
 	return freight, nil
 }
 
+// DeleteFreight deletes a freight through the apiServer
+func (c *Client) DeleteFreight(
+	ctx context.Context,
+	project string,
+	nameOrAlias string,
+) error {
+	resp, err := c.api.CoreAPI.DeleteFreight(ctx, project, nameOrAlias).Execute()
+	if resp != nil {
+		_ = resp.Body.Close()
+	}
+	if err != nil {
+		if resp != nil && resp.StatusCode == http.StatusNotFound {
+			return nil
+		}
+		return fmt.Errorf(
+			"error deleting Freight %q in Project %q: %w", nameOrAlias, project, ResponseError(err, resp),
+		)
+	}
+	return nil
+}
+
 // ListFreightReferencingStage returns, through the API server, the Freight whose
 // status records the named Stage in its verifiedIn or approvedFor map.
 func (c *Client) ListFreightReferencingStage(
@@ -703,7 +724,7 @@ func (c *Client) ListFreightFromWarehouse(
 	ctx context.Context,
 	project string,
 	warehouse string,
-	opts *freightclient.ListWarehouseFreightOptions,
+	opts *freightapi.ListWarehouseFreightOptions,
 ) ([]kargoapi.Freight, error) {
 	req := c.api.CoreAPI.ListFreightFromWarehouse(ctx, project, warehouse)
 	if opts != nil {
