@@ -14,12 +14,11 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
-	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/api"
+	"github.com/akuity/kargo/pkg/client/apiserver/freightclient/testutil"
 	"github.com/akuity/kargo/pkg/conditions"
 	"github.com/akuity/kargo/pkg/controller"
 	"github.com/akuity/kargo/pkg/credentials"
@@ -38,6 +37,7 @@ func TestNewReconciler(t *testing.T) {
 		&credentials.FakeDB{},
 		subscription.MustNewSubscriberRegistry(),
 		ReconcilerConfig{MinReconciliationInterval: minReconciliationInterval},
+		nil,
 		nil,
 	)
 	require.NotNil(t, e.client)
@@ -280,10 +280,9 @@ func TestSyncWarehouse(t *testing.T) {
 				},
 				createFreightFn: func(
 					context.Context,
-					client.Object,
-					...client.CreateOption,
-				) error {
-					return apierrors.NewAlreadyExists(
+					*kargoapi.Freight,
+				) (*kargoapi.Freight, error) {
+					return nil, apierrors.NewAlreadyExists(
 						schema.GroupResource{
 							Group:    kargoapi.GroupVersion.Group,
 							Resource: "Warehouse",
@@ -362,10 +361,9 @@ func TestSyncWarehouse(t *testing.T) {
 				},
 				createFreightFn: func(
 					context.Context,
-					client.Object,
-					...client.CreateOption,
-				) error {
-					return errors.New("something went wrong")
+					*kargoapi.Freight,
+				) (*kargoapi.Freight, error) {
+					return nil, errors.New("something went wrong")
 				},
 				patchStatusFn: func(context.Context, *kargoapi.Warehouse, func(*kargoapi.WarehouseStatus)) error {
 					return nil
@@ -448,11 +446,10 @@ func TestSyncWarehouse(t *testing.T) {
 					}, nil
 				},
 				createFreightFn: func(
-					context.Context,
-					client.Object,
-					...client.CreateOption,
-				) error {
-					return nil
+					_ context.Context,
+					freight *kargoapi.Freight,
+				) (*kargoapi.Freight, error) {
+					return freight, nil
 				},
 				patchStatusFn: func(context.Context, *kargoapi.Warehouse, func(*kargoapi.WarehouseStatus)) error {
 					return nil
@@ -532,11 +529,10 @@ func TestSyncWarehouse(t *testing.T) {
 					}, nil
 				},
 				createFreightFn: func(
-					context.Context,
-					client.Object,
-					...client.CreateOption,
-				) error {
-					return nil
+					_ context.Context,
+					freight *kargoapi.Freight,
+				) (*kargoapi.Freight, error) {
+					return freight, nil
 				},
 				patchStatusFn: func(context.Context, *kargoapi.Warehouse, func(*kargoapi.WarehouseStatus)) error {
 					return nil
@@ -608,11 +604,10 @@ func TestSyncWarehouse(t *testing.T) {
 					}, nil
 				},
 				createFreightFn: func(
-					context.Context,
-					client.Object,
-					...client.CreateOption,
-				) error {
-					return nil
+					_ context.Context,
+					freight *kargoapi.Freight,
+				) (*kargoapi.Freight, error) {
+					return freight, nil
 				},
 				patchStatusFn: func(context.Context, *kargoapi.Warehouse, func(*kargoapi.WarehouseStatus)) error {
 					return nil
@@ -661,11 +656,10 @@ func TestSyncWarehouse(t *testing.T) {
 					}, nil
 				},
 				createFreightFn: func(
-					context.Context,
-					client.Object,
-					...client.CreateOption,
-				) error {
-					return nil
+					_ context.Context,
+					freight *kargoapi.Freight,
+				) (*kargoapi.Freight, error) {
+					return freight, nil
 				},
 				patchStatusFn: func(context.Context, *kargoapi.Warehouse, func(*kargoapi.WarehouseStatus)) error {
 					return nil
@@ -868,8 +862,10 @@ func TestSyncWarehouse(t *testing.T) {
 	}
 }
 
-// Test_syncWarehouse_existingFreight verifies Freight in the cache is not
-// re-created, and that deleted Freight is.
+// Test_syncWarehouse_existingFreight verifies that Freight is always created
+// through the API server, and that whether the API server reports it as new
+// determines the FreightCreated condition. Detecting already-existing Freight
+// is the API server's responsibility, so it is mocked here.
 func Test_syncWarehouse_existingFreight(t *testing.T) {
 	testScheme := runtime.NewScheme()
 	require.NoError(t, kargoapi.AddToScheme(testScheme))
@@ -896,116 +892,75 @@ func Test_syncWarehouse_existingFreight(t *testing.T) {
 	expected.Name = api.GenerateFreightID(expected)
 
 	testCases := []struct {
-		name    string
-		objects []client.Object
-		getErr  error
-		polls   int
-		// deleteAfter deletes the Freight after that poll; staleGets is how
-		// many polls after the delete the cache still holds it.
-		deleteAfter   int
-		staleGets     int
-		expectCreates int
-		expectStatus  metav1.ConditionStatus
-		expectReason  string
+		name       string
+		isNew      bool
+		createErr  error
+		assertions func(*testing.T, kargoapi.WarehouseStatus, error)
 	}{
 		{
-			name:          "Freight in cache: no create",
-			objects:       []client.Object{expected.DeepCopy()},
-			expectCreates: 0,
-			expectStatus:  metav1.ConditionFalse,
-			expectReason:  "AlreadyExists",
+			name:  "new Freight",
+			isNew: true,
+			assertions: func(t *testing.T, status kargoapi.WarehouseStatus, err error) {
+				require.NoError(t, err)
+				require.Equal(t, expected.Name, status.LastFreightID)
+				createdCondition := conditions.Get(&status, kargoapi.ConditionTypeFreightCreated)
+				require.NotNil(t, createdCondition)
+				require.Equal(t, metav1.ConditionTrue, createdCondition.Status)
+				require.Equal(t, "NewFreight", createdCondition.Reason)
+			},
 		},
 		{
-			name:          "Freight not in cache: create",
-			expectCreates: 1,
-			expectStatus:  metav1.ConditionTrue,
-			expectReason:  "NewFreight",
+			name:  "existing Freight",
+			isNew: false,
+			assertions: func(t *testing.T, status kargoapi.WarehouseStatus, err error) {
+				require.NoError(t, err)
+				require.Equal(t, expected.Name, status.LastFreightID)
+				createdCondition := conditions.Get(&status, kargoapi.ConditionTypeFreightCreated)
+				require.NotNil(t, createdCondition)
+				require.Equal(t, metav1.ConditionFalse, createdCondition.Status)
+				require.Equal(t, "AlreadyExists", createdCondition.Reason)
+			},
 		},
 		{
-			name:    "stale cache: create returns AlreadyExists",
-			objects: []client.Object{expected.DeepCopy()},
-			getErr: apierrors.NewNotFound(
-				kargoapi.GroupVersion.WithResource("freights").GroupResource(),
-				expected.Name,
-			),
-			expectCreates: 1,
-			expectStatus:  metav1.ConditionFalse,
-			expectReason:  "AlreadyExists",
-		},
-		{
-			name:          "cache error: create",
-			getErr:        errors.New("something went wrong"),
-			expectCreates: 1,
-			expectStatus:  metav1.ConditionTrue,
-			expectReason:  "NewFreight",
-		},
-		{
-			name:          "second poll: no create",
-			polls:         2,
-			expectCreates: 1,
-			expectStatus:  metav1.ConditionFalse,
-			expectReason:  "AlreadyExists",
-		},
-		{
-			name:          "deleted Freight: re-created on the next poll",
-			polls:         2,
-			deleteAfter:   1,
-			expectCreates: 2,
-			expectStatus:  metav1.ConditionTrue,
-			expectReason:  "NewFreight",
-		},
-		{
-			name:          "deleted Freight still cached: re-created a poll later",
-			polls:         3,
-			deleteAfter:   1,
-			staleGets:     1,
-			expectCreates: 2,
-			expectStatus:  metav1.ConditionTrue,
-			expectReason:  "NewFreight",
+			name:      "error creating Freight",
+			createErr: errors.New("something went wrong"),
+			assertions: func(t *testing.T, status kargoapi.WarehouseStatus, err error) {
+				require.ErrorContains(t, err, "error creating Freight")
+				require.ErrorContains(t, err, "something went wrong")
+				readyCondition := conditions.Get(&status, kargoapi.ConditionTypeReady)
+				require.NotNil(t, readyCondition)
+				require.Equal(t, metav1.ConditionFalse, readyCondition.Status)
+				require.Equal(t, "FreightCreationFailure", readyCondition.Reason)
+			},
 		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			creates := 0
-			getErr := testCase.getErr
-			stale := false
-			kubeClient := fake.NewClientBuilder().
-				WithScheme(testScheme).
-				WithObjects(testCase.objects...).
-				WithInterceptorFuncs(interceptor.Funcs{
-					Get: func(
-						ctx context.Context,
-						c client.WithWatch,
-						key client.ObjectKey,
-						obj client.Object,
-						opts ...client.GetOption,
-					) error {
-						if getErr != nil {
-							return getErr
-						}
-						if _, ok := obj.(*kargoapi.Freight); ok && stale {
-							return nil // the cache's copy of a deleted Freight
-						}
-						return c.Get(ctx, key, obj, opts...)
-					},
-					Create: func(
-						ctx context.Context,
-						c client.WithWatch,
-						obj client.Object,
-						opts ...client.CreateOption,
-					) error {
-						creates++
-						return c.Create(ctx, obj, opts...)
-					},
-				}).
-				Build()
 			r := newReconciler(
-				kubeClient,
+				fake.NewClientBuilder().WithScheme(testScheme).Build(),
 				&credentials.FakeDB{},
 				subscription.MustNewSubscriberRegistry(),
 				ReconcilerConfig{},
 				nil,
+				nil,
 			)
+			r.freightClient = &testutil.MockFreightClient{
+				CreateFreightFun: func(
+					_ context.Context,
+					project string,
+					freight *kargoapi.Freight,
+					_ map[string]v1.JSON,
+				) (*kargoapi.Freight, bool, error) {
+					creates++
+					require.Equal(t, warehouse.Namespace, project)
+					require.Equal(t, expected.Name, freight.Name)
+					if testCase.createErr != nil {
+						return nil, false, testCase.createErr
+					}
+					return freight, testCase.isNew, nil
+				},
+			}
 			r.discoverArtifactsFn = func(
 				context.Context, string,
 				[]kargoapi.RepoSubscription,
@@ -1019,34 +974,10 @@ func Test_syncWarehouse_existingFreight(t *testing.T) {
 				}, nil
 			}
 
-			var status kargoapi.WarehouseStatus
-			// Each poll starts from the status the previous one returned.
-			current := warehouse.DeepCopy()
-			for poll := 1; poll <= max(testCase.polls, 1); poll++ {
-				// Read by the Get interceptor during this poll.
-				stale = testCase.deleteAfter > 0 && poll > testCase.deleteAfter &&
-					poll <= testCase.deleteAfter+testCase.staleGets
-				var err error
-				status, err = r.syncWarehouse(t.Context(), current)
-				require.NoError(t, err)
-				current.Status = status
-				if poll == testCase.deleteAfter {
-					require.NoError(t, kubeClient.Delete(t.Context(), expected.DeepCopy()))
-				}
-			}
-			require.Equal(t, testCase.expectCreates, creates)
-			require.Equal(t, expected.Name, status.LastFreightID)
-			// The check below reads the store, not the interceptor's view.
-			getErr, stale = nil, false
-			require.NoError(t, kubeClient.Get(
-				t.Context(),
-				client.ObjectKeyFromObject(expected),
-				&kargoapi.Freight{},
-			))
-			createdCondition := conditions.Get(&status, kargoapi.ConditionTypeFreightCreated)
-			require.NotNil(t, createdCondition)
-			require.Equal(t, testCase.expectStatus, createdCondition.Status)
-			require.Equal(t, testCase.expectReason, createdCondition.Reason)
+			status, err := r.syncWarehouse(t.Context(), warehouse.DeepCopy())
+			// Freight is always created through the API server.
+			require.Equal(t, 1, creates)
+			testCase.assertions(t, status, err)
 		})
 	}
 }
@@ -1862,11 +1793,10 @@ func TestReconcile(t *testing.T) {
 						return &kargoapi.Freight{}, nil
 					},
 					createFreightFn: func(
-						context.Context,
-						client.Object,
-						...client.CreateOption,
-					) error {
-						return nil
+						_ context.Context,
+						freight *kargoapi.Freight,
+					) (*kargoapi.Freight, error) {
+						return freight, nil
 					},
 					patchStatusFn: func(
 						context.Context,

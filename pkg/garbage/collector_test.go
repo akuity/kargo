@@ -28,7 +28,7 @@ func TestNewCollector(t *testing.T) {
 	require.NotNil(t, c.cleanProjectFreightFn)
 	require.NotNil(t, c.listWarehousesFn)
 	require.NotNil(t, c.cleanWarehouseFreightFn)
-	require.NotNil(t, c.listFreightFn)
+	require.NotNil(t, c.listFreightFromWarehouseFn)
 	require.NotNil(t, c.listStagesFn)
 	require.NotNil(t, c.deleteFreightFn)
 }

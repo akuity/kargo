@@ -102,12 +102,11 @@ func TestCleanWarehouseFreight(t *testing.T) {
 		{
 			name: "error listing Freight",
 			collector: &collector{
-				listFreightFn: func(
+				listFreightFromWarehouseFn: func(
 					context.Context,
-					client.ObjectList,
-					...client.ListOption,
-				) error {
-					return errors.New("something went wrong")
+					string, string,
+				) ([]kargoapi.Freight, error) {
+					return nil, errors.New("something went wrong")
 				},
 			},
 			assertions: func(t *testing.T, err error) {
@@ -121,15 +120,11 @@ func TestCleanWarehouseFreight(t *testing.T) {
 				cfg: CollectorConfig{
 					MaxRetainedFreight: 2,
 				},
-				listFreightFn: func(
-					_ context.Context,
-					objList client.ObjectList,
-					_ ...client.ListOption,
-				) error {
-					freight, ok := objList.(*kargoapi.FreightList)
-					require.True(t, ok)
-					freight.Items = []kargoapi.Freight{{}}
-					return nil
+				listFreightFromWarehouseFn: func(
+					context.Context,
+					string, string,
+				) ([]kargoapi.Freight, error) {
+					return []kargoapi.Freight{{}}, nil
 				},
 			},
 			assertions: func(t *testing.T, err error) {
@@ -142,15 +137,11 @@ func TestCleanWarehouseFreight(t *testing.T) {
 				cfg: CollectorConfig{
 					MaxRetainedFreight: 1,
 				},
-				listFreightFn: func(
-					_ context.Context,
-					objList client.ObjectList,
-					_ ...client.ListOption,
-				) error {
-					freight, ok := objList.(*kargoapi.FreightList)
-					require.True(t, ok)
-					freight.Items = []kargoapi.Freight{{}, {}}
-					return nil
+				listFreightFromWarehouseFn: func(
+					context.Context,
+					string, string,
+				) ([]kargoapi.Freight, error) {
+					return []kargoapi.Freight{{}, {}}, nil
 				},
 				listStagesFn: func(
 					context.Context,
@@ -172,15 +163,12 @@ func TestCleanWarehouseFreight(t *testing.T) {
 					MaxRetainedFreight:    1,
 					MinFreightDeletionAge: time.Minute,
 				},
-				listFreightFn: func(
-					_ context.Context,
-					objList client.ObjectList,
-					_ ...client.ListOption,
-				) error {
-					freight, ok := objList.(*kargoapi.FreightList)
-					require.True(t, ok)
+				listFreightFromWarehouseFn: func(
+					context.Context,
+					string, string,
+				) ([]kargoapi.Freight, error) {
 					now := metav1.Now()
-					freight.Items = []kargoapi.Freight{
+					return []kargoapi.Freight{
 						{
 							ObjectMeta: metav1.ObjectMeta{
 								CreationTimestamp: metav1.NewTime(now.Add(-1 * time.Hour)),
@@ -191,8 +179,7 @@ func TestCleanWarehouseFreight(t *testing.T) {
 								CreationTimestamp: metav1.NewTime(now.Add(-2 * time.Hour)),
 							},
 						},
-					}
-					return nil
+					}, nil
 				},
 				listStagesFn: func(
 					context.Context,
@@ -204,8 +191,7 @@ func TestCleanWarehouseFreight(t *testing.T) {
 				},
 				deleteFreightFn: func(
 					context.Context,
-					client.Object,
-					...client.DeleteOption,
+					string, string,
 				) error {
 					return errors.New("something went wrong")
 				},
@@ -223,15 +209,12 @@ func TestCleanWarehouseFreight(t *testing.T) {
 					MaxRetainedFreight:    1,
 					MinFreightDeletionAge: time.Minute,
 				},
-				listFreightFn: func(
-					_ context.Context,
-					objList client.ObjectList,
-					_ ...client.ListOption,
-				) error {
-					freight, ok := objList.(*kargoapi.FreightList)
-					require.True(t, ok)
+				listFreightFromWarehouseFn: func(
+					context.Context,
+					string, string,
+				) ([]kargoapi.Freight, error) {
 					now := metav1.Now()
-					freight.Items = []kargoapi.Freight{
+					return []kargoapi.Freight{
 						{
 							ObjectMeta: metav1.ObjectMeta{
 								CreationTimestamp: metav1.NewTime(now.Add(-1 * time.Hour)),
@@ -242,8 +225,7 @@ func TestCleanWarehouseFreight(t *testing.T) {
 								CreationTimestamp: metav1.NewTime(now.Add(-2 * time.Hour)),
 							},
 						},
-					}
-					return nil
+					}, nil
 				},
 				listStagesFn: func(
 					context.Context,
@@ -255,8 +237,7 @@ func TestCleanWarehouseFreight(t *testing.T) {
 				},
 				deleteFreightFn: func(
 					context.Context,
-					client.Object,
-					...client.DeleteOption,
+					string, string,
 				) error {
 					return nil
 				},
