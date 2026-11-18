@@ -4,11 +4,19 @@ import (
 	"context"
 	"time"
 
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/api/freightapi"
 )
 
 type MockFreightClient struct {
+	CreateFreightFun func(
+		ctx context.Context,
+		project string,
+		freight *kargoapi.Freight,
+		metadata map[string]apiextensionsv1.JSON,
+	) (*kargoapi.Freight, bool, error)
 	ListFreightFromWarehouseFun func(
 		ctx context.Context,
 		project, warehouse string,
@@ -34,6 +42,14 @@ type MockFreightClient struct {
 	) ([]kargoapi.Freight, error)
 }
 
+func (mock *MockFreightClient) CreateFreight(
+	ctx context.Context,
+	project string,
+	freight *kargoapi.Freight,
+	metadata map[string]apiextensionsv1.JSON,
+) (*kargoapi.Freight, bool, error) {
+	return mock.CreateFreightFun(ctx, project, freight, metadata)
+}
 func (mock *MockFreightClient) ListFreightFromWarehouse(
 	ctx context.Context,
 	project, warehouse string,

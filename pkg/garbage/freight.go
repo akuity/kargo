@@ -66,7 +66,7 @@ func (c *collector) cleanWarehouseFreight(
 		"warehouse", warehouse,
 	)
 
-	list, err := c.listFreightFromWarehouse(ctx, project, warehouse)
+	list, err := c.listFreightFromWarehouseFn(ctx, project, warehouse)
 	if err != nil {
 		return fmt.Errorf(
 			"error listing Freight from Warehouse %q in Project %q: %w",
@@ -144,7 +144,11 @@ func (c *collector) cleanWarehouseFreight(
 	return nil
 }
 
-func (c *collector) listFreightFromWarehouse(ctx context.Context, project, warehouse string) ([]kargoapi.Freight, error) {
+func (c *collector) listFreightFromWarehouse(
+	ctx context.Context,
+	project string,
+	warehouse string,
+) ([]kargoapi.Freight, error) {
 	return c.freightClient.ListFreightFromWarehouse(ctx, project, warehouse, nil)
 }
 

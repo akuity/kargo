@@ -593,6 +593,7 @@ func (o *controllerOptions) setupReconcilers(
 		subscription.DefaultSubscriberRegistry,
 		warehousesReconcilerCfg,
 		event.NewDefaultingSender(eventSender, warehousesReconcilerCfg.Name()),
+		apiClient,
 	); err != nil {
 		return fmt.Errorf("error setting up Warehouses reconciler: %w", err)
 	}
