@@ -16,6 +16,7 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/cli/client"
+	"github.com/akuity/kargo/pkg/cli/completion"
 	"github.com/akuity/kargo/pkg/cli/config"
 	"github.com/akuity/kargo/pkg/cli/io"
 	"github.com/akuity/kargo/pkg/cli/kubernetes"
@@ -71,6 +72,7 @@ kargo get stages
 kargo config set-project my-project
 kargo get stage qa
 `),
+		ValidArgsFunction: completion.StageNames(cfg),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cmdOpts.complete(args)
 

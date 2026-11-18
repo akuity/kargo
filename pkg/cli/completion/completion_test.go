@@ -129,3 +129,83 @@ func newRoot(cfg config.CLIConfig) *cobra.Command {
 	root.SetErr(io.Discard)
 	return root
 }
+
+func TestStageAndWarehouseCompletion(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(
+		func(w http.ResponseWriter, r *http.Request) {
+			var body string
+			switch r.URL.Path {
+			case "/v1beta1/projects/kargo-demo/stages":
+				body = `{"items":[{"metadata":{"name":"test"},"spec":{}},{"metadata":{"name":"uat"},"spec":{}}]}`
+			case "/v1beta1/projects/kargo-demo/warehouses":
+				body = `{"items":[{"metadata":{"name":"main"},"spec":{}}]}`
+			default:
+				w.WriteHeader(http.StatusNotFound)
+				return
+			}
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(body))
+		},
+	))
+	t.Cleanup(srv.Close)
+
+	testCases := []struct {
+		name           string
+		defaultProject string
+		args           []string
+		want           string
+	}{
+		{
+			name: "stages in the project from the flag",
+			args: []string{"stages", "--project", "kargo-demo", ""},
+			want: "test\nuat\n:4\n",
+		},
+		{
+			name: "warehouses in the project from the flag",
+			args: []string{"warehouses", "--project=kargo-demo", ""},
+			want: "main\n:4\n",
+		},
+		{
+			name:           "stages in the default project",
+			defaultProject: "kargo-demo",
+			args:           []string{"stages", ""},
+			want:           "test\nuat\n:4\n",
+		},
+		{
+			name:           "flag overrides the default project",
+			defaultProject: "kargo-demo",
+			args:           []string{"stages", "--project", "other", ""},
+			want:           ":4\n",
+		},
+		{
+			name: "no project",
+			args: []string{"warehouses", ""},
+			want: ":4\n",
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			cfg := config.CLIConfig{
+				APIAddress:  srv.URL,
+				BearerToken: "test-token",
+				Project:     tc.defaultProject,
+			}
+			root := &cobra.Command{Use: "kargo"}
+			for use, complete := range map[string]cobra.CompletionFunc{
+				"stages":     StageNames(cfg),
+				"warehouses": WarehouseNames(cfg),
+			} {
+				cmd := &cobra.Command{Use: use, ValidArgsFunction: complete}
+				var project string
+				option.Project(cmd.Flags(), &project, cfg.Project, "")
+				root.AddCommand(cmd)
+			}
+			out := &bytes.Buffer{}
+			root.SetOut(out)
+			root.SetErr(io.Discard)
+			root.SetArgs(append([]string{cobra.ShellCompRequestCmd}, tc.args...))
+			require.NoError(t, root.Execute())
+			require.Equal(t, tc.want, out.String())
+		})
+	}
+}

@@ -13,6 +13,7 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/cli/client"
+	"github.com/akuity/kargo/pkg/cli/completion"
 	"github.com/akuity/kargo/pkg/cli/config"
 	"github.com/akuity/kargo/pkg/cli/io"
 	"github.com/akuity/kargo/pkg/cli/kubernetes"
@@ -53,6 +54,7 @@ kargo delete stage --project=my-project my-stage1 my-stage2
 kargo config set-project my-project
 kargo delete stage my-stage
 `),
+		ValidArgsFunction: completion.StageNames(cfg),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cmdOpts.complete(args)
 
