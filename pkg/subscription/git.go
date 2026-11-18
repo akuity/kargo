@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/expr-lang/expr"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/utils/ptr"
 
@@ -81,13 +82,26 @@ func (g *gitSubscriber) ValidateSubscription(
 	f *field.Path,
 	s kargoapi.RepoSubscription,
 ) field.ErrorList {
+	var errs field.ErrorList
 	if err := validation.SemverConstraint(
 		f.Child("semverConstraint"),
 		s.Git.SemverConstraint,
 	); err != nil {
-		return field.ErrorList{err}
+		errs = append(errs, err)
 	}
-	return nil
+	if s.Git.ExpressionFilter != "" {
+		// Compiled without an environment, as by the commit selectors, because
+		// the variables available to the expression depend on the commit
+		// selection strategy. Only syntax is checked.
+		if _, err := expr.Compile(s.Git.ExpressionFilter); err != nil {
+			errs = append(errs, field.Invalid(
+				f.Child("expressionFilter"),
+				s.Git.ExpressionFilter,
+				err.Error(),
+			))
+		}
+	}
+	return errs
 }
 
 // DiscoverArtifacts implements Subscriber.
