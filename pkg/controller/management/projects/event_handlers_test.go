@@ -261,7 +261,7 @@ func Test_projectStageHealthEnqueuer_Update_promotionRequestChanged(t *testing.T
 }
 
 func Test_projectStageHealthEnqueuer_Update_promotionRolloutChanged(t *testing.T) {
-	stageWith := func(last string) *kargoapi.Stage {
+	stageWith := func(current, last string) *kargoapi.Stage {
 		stage := &kargoapi.Stage{
 			ObjectMeta: metav1.ObjectMeta{Namespace: "fake-project"},
 			Status: kargoapi.StageStatus{
@@ -270,6 +270,9 @@ func Test_projectStageHealthEnqueuer_Update_promotionRolloutChanged(t *testing.T
 					Status: metav1.ConditionTrue,
 				}},
 			},
+		}
+		if current != "" {
+			stage.Status.CurrentPromotionRollout = &kargoapi.PromotionRolloutReference{Name: current}
 		}
 		if last != "" {
 			stage.Status.LastPromotionRollout = &kargoapi.PromotionRolloutReference{Name: last}
@@ -285,20 +288,32 @@ func Test_projectStageHealthEnqueuer_Update_promotionRolloutChanged(t *testing.T
 		expectedRequests []reconcile.Request
 	}{
 		{
-			name:     "same rollout and same health",
-			oldStage: stageWith("last"),
-			newStage: stageWith("last"),
+			name:     "same rollouts and same health",
+			oldStage: stageWith("cur", "last"),
+			newStage: stageWith("cur", "last"),
+		},
+		{
+			name:             "current rollout appears",
+			oldStage:         stageWith("", "last"),
+			newStage:         stageWith("cur", "last"),
+			expectedRequests: project,
+		},
+		{
+			name:             "current rollout clears",
+			oldStage:         stageWith("cur", "last"),
+			newStage:         stageWith("", "last"),
+			expectedRequests: project,
 		},
 		{
 			name:             "first rollout is recorded",
-			oldStage:         stageWith(""),
-			newStage:         stageWith("new"),
+			oldStage:         stageWith("", ""),
+			newStage:         stageWith("", "new"),
 			expectedRequests: project,
 		},
 		{
 			name:             "last rollout moves forward",
-			oldStage:         stageWith("old"),
-			newStage:         stageWith("new"),
+			oldStage:         stageWith("", "old"),
+			newStage:         stageWith("", "new"),
 			expectedRequests: project,
 		},
 	}

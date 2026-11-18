@@ -8,11 +8,14 @@
 import type { PromotionRolloutPhase } from './promotionRolloutPhase';
 
 export interface PromotionRolloutReference {
-  /** FinishedAt is the time at which the PromotionRollout completed. */
+  /**
+   * FinishedAt is the time at which the PromotionRollout completed. It is
+   * absent for one that has not.
+   */
   finishedAt?: string;
   /**
    * Message is a human-readable description of how the PromotionRollout
-   * ended.
+   * ended. It is empty for one that has not.
    */
   message?: string;
   /** Name is the name of the PromotionRollout. */

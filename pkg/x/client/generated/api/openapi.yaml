@@ -14407,12 +14407,14 @@ components:
     PromotionRolloutReference:
       properties:
         finishedAt:
-          description: FinishedAt is the time at which the PromotionRollout completed.
+          description: |-
+            FinishedAt is the time at which the PromotionRollout completed. It is
+            absent for one that has not.
           type: string
         message:
           description: |-
             Message is a human-readable description of how the PromotionRollout
-            ended.
+            ended. It is empty for one that has not.
           type: string
         name:
           description: Name is the name of the PromotionRollout.
@@ -15648,6 +15650,19 @@ components:
             Fanning Freight out to Targets is a Kargo Enterprise-only feature. Kargo
             OSS maintains this field all the same, but the PromotionRequest it refers
             to never gets further than being marked Errored for that reason.
+
+            +optional
+          type: object
+        currentPromotionRollout:
+          allOf:
+          - $ref: "#/components/schemas/PromotionRolloutReference"
+          description: |-
+            CurrentPromotionRollout is a reference to the PromotionRollout this Stage
+            is promoting through. A PromotionRollout does not start until its Stage
+            names it here, and the Stage names the next one only once it has recorded
+            the one before it and is not still to verify the Freight it is on. The
+            reference stays until the Stage has recorded how that PromotionRollout
+            ended. It is absent for a Stage that governs no Targets.
 
             +optional
           type: object

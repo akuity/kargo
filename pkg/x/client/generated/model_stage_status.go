@@ -29,6 +29,8 @@ type StageStatus struct {
 	CurrentPromotion *PromotionReference `json:"currentPromotion,omitempty"`
 	// CurrentPromotionRequest is a reference to the PromotionRequest currently fanning Freight out to this Stage's Targets. It is absent for a Stage that governs no Targets.  Fanning Freight out to Targets is a Kargo Enterprise-only feature. Kargo OSS maintains this field all the same, but the PromotionRequest it refers to never gets further than being marked Errored for that reason.  +optional
 	CurrentPromotionRequest *PromotionRequestReference `json:"currentPromotionRequest,omitempty"`
+	// CurrentPromotionRollout is a reference to the PromotionRollout this Stage is promoting through. A PromotionRollout does not start until its Stage names it here, and the Stage names the next one only once it has recorded the one before it and is not still to verify the Freight it is on. The reference stays until the Stage has recorded how that PromotionRollout ended. It is absent for a Stage that governs no Targets.  +optional
+	CurrentPromotionRollout *PromotionRolloutReference `json:"currentPromotionRollout,omitempty"`
 	// EffectiveAutoPromotionHolds is the set of auto-promotion holds in effect right now. It is recomputed every reconciliation from AutoPromotionHolds plus the newest in-flight Promotions, and unlike AutoPromotionHolds is not durable. Clients should read this map to reflect current hold state.
 	EffectiveAutoPromotionHolds *map[string]AutoPromotionHold `json:"effectiveAutoPromotionHolds,omitempty"`
 	// FreightHistory is a list of recent Freight selections that were deployed to the Stage. By default, the last ten Freight selections are stored. The first item in the list is the most recent Freight selection and currently deployed to the Stage, subsequent items are older selections.
@@ -228,6 +230,38 @@ func (o *StageStatus) HasCurrentPromotionRequest() bool {
 // SetCurrentPromotionRequest gets a reference to the given PromotionRequestReference and assigns it to the CurrentPromotionRequest field.
 func (o *StageStatus) SetCurrentPromotionRequest(v PromotionRequestReference) {
 	o.CurrentPromotionRequest = &v
+}
+
+// GetCurrentPromotionRollout returns the CurrentPromotionRollout field value if set, zero value otherwise.
+func (o *StageStatus) GetCurrentPromotionRollout() PromotionRolloutReference {
+	if o == nil || IsNil(o.CurrentPromotionRollout) {
+		var ret PromotionRolloutReference
+		return ret
+	}
+	return *o.CurrentPromotionRollout
+}
+
+// GetCurrentPromotionRolloutOk returns a tuple with the CurrentPromotionRollout field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *StageStatus) GetCurrentPromotionRolloutOk() (*PromotionRolloutReference, bool) {
+	if o == nil || IsNil(o.CurrentPromotionRollout) {
+		return nil, false
+	}
+	return o.CurrentPromotionRollout, true
+}
+
+// HasCurrentPromotionRollout returns a boolean if a field has been set.
+func (o *StageStatus) HasCurrentPromotionRollout() bool {
+	if o != nil && !IsNil(o.CurrentPromotionRollout) {
+		return true
+	}
+
+	return false
+}
+
+// SetCurrentPromotionRollout gets a reference to the given PromotionRolloutReference and assigns it to the CurrentPromotionRollout field.
+func (o *StageStatus) SetCurrentPromotionRollout(v PromotionRolloutReference) {
+	o.CurrentPromotionRollout = &v
 }
 
 // GetEffectiveAutoPromotionHolds returns the EffectiveAutoPromotionHolds field value if set, zero value otherwise.
@@ -606,6 +640,9 @@ func (o StageStatus) ToMap() (map[string]interface{}, error) {
 	}
 	if !IsNil(o.CurrentPromotionRequest) {
 		toSerialize["currentPromotionRequest"] = o.CurrentPromotionRequest
+	}
+	if !IsNil(o.CurrentPromotionRollout) {
+		toSerialize["currentPromotionRollout"] = o.CurrentPromotionRollout
 	}
 	if !IsNil(o.EffectiveAutoPromotionHolds) {
 		toSerialize["effectiveAutoPromotionHolds"] = o.EffectiveAutoPromotionHolds
