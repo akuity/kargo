@@ -105,6 +105,12 @@ spec:
           name: kubeconfigs
           readOnly: true
         {{- end }}
+        {{- if (include "kargo.webhooksServer.mountsAPIServerCA" .) }}
+        - mountPath: /etc/kargo/api-ca.crt
+          name: api-ca
+          subPath: ca.crt
+          readOnly: true
+        {{- end }}
         {{- with .Values.webhooksServer.volumeMounts }}
         {{- toYaml . | nindent 8 }}
         {{- end }}
@@ -132,6 +138,14 @@ spec:
         secret:
           defaultMode: 0644
           secretName: {{ $kc }}
+      {{- end }}
+      {{- if (include "kargo.webhooksServer.mountsAPIServerCA" .) }}
+      - name: api-ca
+        secret:
+          secretName: {{ .Values.api.tls.secretName }}
+          items:
+          - key: ca.crt
+            path: ca.crt
       {{- end }}
       {{- with .Values.webhooksServer.volumes }}
       {{- toYaml . | nindent 6 }}

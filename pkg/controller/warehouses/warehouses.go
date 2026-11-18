@@ -20,6 +20,8 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/api"
+	"github.com/akuity/kargo/pkg/client/apiserver"
+	"github.com/akuity/kargo/pkg/client/apiserver/freightclient"
 	"github.com/akuity/kargo/pkg/conditions"
 	"github.com/akuity/kargo/pkg/controller"
 	"github.com/akuity/kargo/pkg/controller/metrics"
@@ -59,6 +61,7 @@ func (c ReconcilerConfig) Name() string {
 // reconciler reconciles Warehouse resources.
 type reconciler struct {
 	client             client.Client
+	freightClient freightclient.FreightClient
 	credentialsDB      credentials.Database
 	subscriberRegistry subscription.SubscriberRegistry
 	cfg                ReconcilerConfig
@@ -78,7 +81,7 @@ type reconciler struct {
 
 	buildFreightFromLatestArtifactsFn func(string, *kargoapi.DiscoveredArtifacts) (*kargoapi.Freight, error)
 
-	createFreightFn func(context.Context, client.Object, ...client.CreateOption) error
+	createFreightFn func(context.Context, *kargoapi.Freight) (*kargoapi.Freight, error)
 
 	patchStatusFn func(context.Context, *kargoapi.Warehouse, func(*kargoapi.WarehouseStatus)) error
 }
@@ -92,6 +95,7 @@ func SetupReconcilerWithManager(
 	subscriberRegistry subscription.SubscriberRegistry,
 	cfg ReconcilerConfig,
 	eventSender kargoEvent.Sender,
+	apiClient *apiserver.Client,
 ) error {
 	if err := ctrl.NewControllerManagedBy(mgr).
 		For(&kargoapi.Warehouse{}).
@@ -113,6 +117,7 @@ func SetupReconcilerWithManager(
 			subscriberRegistry,
 			cfg,
 			eventSender,
+			apiClient,
 		)); err != nil {
 		return fmt.Errorf("error building Warehouse reconciler: %w", err)
 	}
@@ -131,9 +136,11 @@ func newReconciler(
 	subscriberRegistry subscription.SubscriberRegistry,
 	cfg ReconcilerConfig,
 	eventSender kargoEvent.Sender,
+	apiClient *apiserver.Client,
 ) *reconciler {
 	r := &reconciler{
 		client:             kubeClient,
+		freightClient:      apiClient,
 		credentialsDB:      credentialsDB,
 		subscriberRegistry: subscriberRegistry,
 		cfg:                cfg,
@@ -472,7 +479,8 @@ func (r *reconciler) syncWarehouse(
 			freight.Name = api.GenerateFreightID(freight)
 
 			// Attempt to create the Freight.
-			if err = r.createFreightFn(ctx, freight); err != nil {
+			createdFreight, err := r.createFreightFn(ctx, freight)
+			if err != nil {
 				if !apierrors.IsAlreadyExists(err) {
 					// Make the error visible in the status and mark the Warehouse as
 					// not ready.
@@ -522,8 +530,8 @@ func (r *reconciler) syncWarehouse(
 				}
 				logger.Debug(
 					"created Freight",
-					"freight", freight.Name,
-					"namespace", freight.Namespace,
+					"freight", createdFreight.Name,
+					"namespace", createdFreight.Namespace,
 				)
 				conditions.Set(
 					&status,
@@ -539,14 +547,14 @@ func (r *reconciler) syncWarehouse(
 					evt, err := kargoEvent.NewFreightCreated(
 						"Freight created from discovered artifacts",
 						api.FormatEventControllerActor(r.cfg.Name()),
-						freight,
+						createdFreight,
 					)
 					if err == nil {
 						err = r.eventSender.Send(ctx, evt)
 					}
 					if err != nil {
 						logger.Error(err, "failed to send FreightCreated event",
-							"freight", freight.Name)
+							"freight", createdFreight.Name)
 					}
 				}
 			}
@@ -773,28 +781,26 @@ func (r *reconciler) buildFreightFromLatestArtifacts(
 	return freight, nil
 }
 
-// createFreightIfAbsent returns AlreadyExists without an API call when the
-// cache holds the Freight; otherwise it creates it.
-// Freight deleted but still cached is re-created on the next poll.
+// createFreightIfAbsent creates a freight if the same name freight doesn't exist yet
+// Returns AlreadyExists if it does.
+// TODO: this could be backed by a separate API
 func (r *reconciler) createFreightIfAbsent(
 	ctx context.Context,
-	obj client.Object,
-	opts ...client.CreateOption,
-) error {
-	err := r.client.Get(ctx, client.ObjectKeyFromObject(obj), &kargoapi.Freight{})
-	if err == nil {
-		return apierrors.NewAlreadyExists(
+	freight *kargoapi.Freight,
+) (*kargoapi.Freight, error) {
+
+	newFreight, isCreated, err := r.freightClient.CreateFreight(ctx, freight.Namespace, freight, nil)
+	if err != nil {
+		return nil, err
+	}
+	// CreateFreight is an idempotent create, isCreated is set to false if it already exists
+	if !isCreated {
+		return nil, apierrors.NewAlreadyExists(
 			kargoapi.GroupVersion.WithResource("freights").GroupResource(),
-			obj.GetName(),
+			freight.Name,
 		)
 	}
-	if !apierrors.IsNotFound(err) {
-		logging.LoggerFromContext(ctx).Error(
-			err, "error checking cache for Freight; creating it",
-			"freight", obj.GetName(),
-		)
-	}
-	return r.client.Create(ctx, obj, opts...)
+	return newFreight, nil
 }
 
 func (r *reconciler) patchStatus(

@@ -97,11 +97,17 @@ spec:
             {{- with (concat .Values.global.envFrom .Values.garbageCollector.envFrom) }}
               {{- tpl (toYaml .) $ | nindent 12 }}
             {{- end }}
-            {{- if or $kc .Values.garbageCollector.volumeMounts }}
+            {{- if or $kc .Values.garbageCollector.volumeMounts (include "kargo.garbageCollector.mountsAPIServerCA" .) }}
             volumeMounts:
             {{- if $kc }}
             - mountPath: /etc/kargo/kubeconfigs
               name: kubeconfigs
+              readOnly: true
+            {{- end }}
+            {{- if (include "kargo.garbageCollector.mountsAPIServerCA" .) }}
+            - mountPath: /etc/kargo/api-ca.crt
+              name: api-ca
+              subPath: ca.crt
               readOnly: true
             {{- end }}
             {{- with .Values.garbageCollector.volumeMounts }}
@@ -121,7 +127,7 @@ spec:
           initContainers:
           {{- toYaml . | nindent 10 }}
           {{- end }}
-          {{- if or $kc .Values.garbageCollector.volumes }}
+          {{- if or $kc .Values.garbageCollector.volumes (include "kargo.garbageCollector.mountsAPIServerCA" .) }}
           volumes:
           {{- if $kc }}
           - name: kubeconfigs
@@ -133,6 +139,14 @@ spec:
                   - key: kubeconfig.yaml
                     path: kubeconfig.yaml
                     mode: 0644
+          {{- end }}
+          {{- if (include "kargo.garbageCollector.mountsAPIServerCA" .) }}
+          - name: api-ca
+            secret:
+              secretName: {{ .Values.api.tls.secretName }}
+              items:
+              - key: ca.crt
+                path: ca.crt
           {{- end }}
           {{- with .Values.garbageCollector.volumes }}
           {{- toYaml . | nindent 10 }}

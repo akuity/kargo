@@ -5,14 +5,14 @@ import (
 	"time"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	"github.com/akuity/kargo/pkg/client/apiserver/freightclient"
+	"github.com/akuity/kargo/pkg/api/freightapi"
 )
 
 type MockFreightClient struct {
 	ListFreightFromWarehouseFun func(
 		ctx context.Context,
 		project, warehouse string,
-		opts *freightclient.ListWarehouseFreightOptions,
+		opts *freightapi.ListWarehouseFreightOptions,
 	) ([]kargoapi.Freight, error)
 	MarkFreightInStageFun func(
 		ctx context.Context,
@@ -27,6 +27,7 @@ type MockFreightClient struct {
 		project, stage string,
 	) ([]kargoapi.Freight, error)
 	GetFreightFun                  func(ctx context.Context, project, nameOrAlias string) (*kargoapi.Freight, error)
+	DeleteFreightFun               func(ctx context.Context, project, nameOrAlias string) error
 	ListFreightReferencingStageFun func(
 		ctx context.Context,
 		project, stage string,
@@ -36,7 +37,7 @@ type MockFreightClient struct {
 func (mock *MockFreightClient) ListFreightFromWarehouse(
 	ctx context.Context,
 	project, warehouse string,
-	opts *freightclient.ListWarehouseFreightOptions,
+	opts *freightapi.ListWarehouseFreightOptions,
 ) ([]kargoapi.Freight, error) {
 	return mock.ListFreightFromWarehouseFun(ctx, project, warehouse, opts)
 }
@@ -62,6 +63,9 @@ func (mock *MockFreightClient) ListFreightByCurrentStage(
 }
 func (mock *MockFreightClient) GetFreight(ctx context.Context, project, nameOrAlias string) (*kargoapi.Freight, error) {
 	return mock.GetFreightFun(ctx, project, nameOrAlias)
+}
+func (mock *MockFreightClient) DeleteFreight(ctx context.Context, project, nameOrAlias string) error {
+	return mock.DeleteFreightFun(ctx, project, nameOrAlias)
 }
 func (mock *MockFreightClient) ListFreightReferencingStage(
 	ctx context.Context,

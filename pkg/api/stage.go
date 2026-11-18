@@ -13,7 +13,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	"github.com/akuity/kargo/pkg/client/apiserver/freightclient"
+	"github.com/akuity/kargo/pkg/api/freightapi"
 	"github.com/akuity/kargo/pkg/server/user"
 )
 
@@ -128,6 +128,14 @@ func AuthorizedStages(value string) ([]types.NamespacedName, error) {
 	return stages, nil
 }
 
+type FreightWarehouseLister interface {
+	ListFreightFromWarehouse(
+		ctx context.Context,
+		project, warehouse string,
+		opts *freightapi.ListWarehouseFreightOptions,
+	) ([]kargoapi.Freight, error)
+}
+
 // ListFreightAvailableToStage lists all Freight available to the Stage for any
 // reason. This includes:
 //
@@ -137,16 +145,16 @@ func AuthorizedStages(value string) ([]types.NamespacedName, error) {
 //  3. Any Freight that is approved for the Stage
 func ListFreightAvailableToStage(
 	ctx context.Context,
-	c client.Client,
+	lister FreightWarehouseLister,
 	s *kargoapi.Stage,
 ) ([]kargoapi.Freight, error) {
 	var availableFreight []kargoapi.Freight
 
 	for _, req := range s.Spec.RequestedFreight {
 		// Get applicable Freight from the Warehouse of origin, by name.
-		var listOpts *freightclient.ListWarehouseFreightOptions
+		var listOpts *freightapi.ListWarehouseFreightOptions
 		if !req.Sources.Direct {
-			listOpts = &freightclient.ListWarehouseFreightOptions{
+			listOpts = &freightapi.ListWarehouseFreightOptions{
 				ApprovedFor:          s.Name,
 				VerifiedIn:           req.Sources.Stages,
 				AvailabilityStrategy: req.Sources.AvailabilityStrategy,
@@ -159,55 +167,7 @@ func ListFreightAvailableToStage(
 				listOpts.CurrentlyIn = req.Sources.Stages[0]
 			}
 		}
-		freightFromWarehouse, err := ListFreightFromWarehouse(
-			ctx, c, s.Namespace, req.Origin.Name, listOpts,
-		)
-		if err != nil {
-			return nil, err
-		}
-		availableFreight = append(availableFreight, freightFromWarehouse...)
-	}
-
-	// Sort and de-dupe the available Freight
-	slices.SortFunc(availableFreight, func(lhs, rhs kargoapi.Freight) int {
-		return strings.Compare(lhs.Name, rhs.Name)
-	})
-	availableFreight = slices.CompactFunc(availableFreight, func(lhs, rhs kargoapi.Freight) bool {
-		return lhs.Name == rhs.Name
-	})
-
-	return availableFreight, nil
-}
-
-// ListFreightAvailableToStageViaClient is the API-server-client counterpart of
-// ListFreightAvailableToStage: it computes the same set of available Freight, but
-// resolves each requested Warehouse's Freight through the freightclient.FreightClient (the API
-// server) rather than the Kubernetes client. It is intended for components that
-// access Freight only through the API server.
-func ListFreightAvailableToStageViaClient(
-	ctx context.Context,
-	fc freightclient.FreightClient,
-	s *kargoapi.Stage,
-) ([]kargoapi.Freight, error) {
-	var availableFreight []kargoapi.Freight
-
-	for _, req := range s.Spec.RequestedFreight {
-		var listOpts *freightclient.ListWarehouseFreightOptions
-		if !req.Sources.Direct {
-			listOpts = &freightclient.ListWarehouseFreightOptions{
-				ApprovedFor:          s.Name,
-				VerifiedIn:           req.Sources.Stages,
-				AvailabilityStrategy: req.Sources.AvailabilityStrategy,
-				RequiredSoakTime:     req.Sources.RequiredSoakTime,
-			}
-			if req.Sources.AutoPromotionOptions != nil &&
-				req.Sources.AutoPromotionOptions.SelectionPolicy == kargoapi.AutoPromotionSelectionPolicyMatchUpstream {
-				// Validation should have ensured there is exactly one upstream Stage
-				// if this selection policy is set.
-				listOpts.CurrentlyIn = req.Sources.Stages[0]
-			}
-		}
-		freightFromWarehouse, err := fc.ListFreightFromWarehouse(
+		freightFromWarehouse, err := lister.ListFreightFromWarehouse(
 			ctx, s.Namespace, req.Origin.Name, listOpts,
 		)
 		if err != nil {

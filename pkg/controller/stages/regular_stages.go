@@ -234,7 +234,7 @@ func (r *RegularStageReconciler) SetupWithManager(
 	}
 
 	// The Freight signals this reconciler reacts to are delivered as Kargo
-	// CloudEvents over NATS and consumed via source.Channel watche.
+	// CloudEvents over NATS and consumed via source.Channel watcher.
 
 	// Watch for Freight newly verified in an upstream Stage (FreightVerifiedInStage
 	// events) and enqueue downstream Stages for reconciliation.
@@ -1052,7 +1052,7 @@ func (r *RegularStageReconciler) listAvailableFreight(
 	ctx context.Context,
 	stage *kargoapi.Stage,
 ) ([]kargoapi.Freight, error) {
-	return api.ListFreightAvailableToStageViaClient(ctx, r.freightClient, stage)
+	return api.ListFreightAvailableToStage(ctx, r.freightClient, stage)
 }
 
 // SyncFreight ensures that all Freight statuses accurately reflect whether they
@@ -1134,7 +1134,7 @@ func UnmarkUnusedFreight(
 	// through the API server rather than the Kubernetes client.
 	// This needs to happen BEFORE marking current freight, because otherwise old freight
 	// may be selected when querying freight for downstream promotion.
-	// Both new an old may be unmarked for some time, but reconciler will eventually see
+	// Both new and old may be unmarked for some time, but reconciler will eventually see
 	// correct one marked.
 	freight, err := freightClient.ListFreightByCurrentStage(ctx, stage.Namespace, stage.Name)
 	if err != nil {
