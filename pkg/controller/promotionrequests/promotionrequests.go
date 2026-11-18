@@ -7,7 +7,6 @@ import (
 
 	"github.com/kelseyhightower/envconfig"
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/trace"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -108,16 +107,18 @@ var tracer = otel.Tracer("github.com/akuity/kargo/pkg/controller/promotionreques
 func (r *reconciler) Reconcile(
 	ctx context.Context,
 	req ctrl.Request,
-) (ctrl.Result, error) {
-	ctx, span := tracer.Start(
+) (_ ctrl.Result, err error) {
+	ctx = telemetry.ContextWithAttributes(
 		ctx,
-		"Reconcile PromotionRequest",
-		trace.WithAttributes(
-			telemetry.ProjectKey.String(req.Namespace),
-			telemetry.PromotionRequestKey.String(req.Name),
-		),
+		telemetry.ProjectKey.String(req.Namespace),
+		telemetry.PromotionRequestKey.String(req.Name),
 	)
-	defer span.End()
+	ctx, span := telemetry.StartSpan(ctx, tracer, "Reconcile PromotionRequest")
+	defer func() {
+		telemetry.RecordError(span, err)
+		span.End()
+	}()
+	ctx = telemetry.ContextWithLogValues(ctx)
 
 	promotionRequest := &kargoapi.PromotionRequest{}
 	if err := r.client.Get(ctx, req.NamespacedName, promotionRequest); err != nil {
