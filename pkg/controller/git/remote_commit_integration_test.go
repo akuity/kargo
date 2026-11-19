@@ -1,8 +1,10 @@
 package git
 
 import (
+	"context"
 	"fmt"
 	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -504,6 +506,180 @@ func Test_workTree_canSafelyRebase(t *testing.T) {
 		// trust.
 		require.False(t, safe)
 	})
+
+	t.Run("full clone, remote branch rewritten", func(t *testing.T) {
+		wt := newWorkTreeWithRewrittenRemoteBranch(t, 0)
+		safe, err := wt.canSafelyRebase(t.Context(), "feature")
+		require.NoError(t, err)
+		// This should be unsafe because the rewrite leaves all three original
+		// commits to replay, two of them unsigned. With signing configured,
+		// rebasing would lend Kargo's signature to those commits.
+		require.False(t, safe)
+	})
+
+	t.Run("shallow clone, remote branch rewritten", func(t *testing.T) {
+		wt := newWorkTreeWithRewrittenRemoteBranch(t, 1)
+		safe, err := wt.canSafelyRebase(t.Context(), "feature")
+		require.NoError(t, err)
+		// This should be unsafe for the same reason as with a full clone. The
+		// shallow history hides the unsigned commits, but the remote branch no
+		// longer shares history with the local one, so the commits to replay
+		// can't be trusted to be complete.
+		require.False(t, safe)
+	})
+
+	t.Run("shallow clone, remote branch advanced", func(t *testing.T) {
+		clientOpts := &ClientOptions{Credentials: &testRepoCreds}
+
+		// This is a stand-in for whoever else is working on the remote. It
+		// uses its own branch to avoid disturbing the other cases.
+		author, err := Clone(t.Context(), testRepoURL, clientOpts, nil)
+		require.NoError(t, err)
+		defer func() { require.NoError(t, author.Close(t.Context())) }()
+		require.NoError(
+			t,
+			author.CreateChildBranch(t.Context(), "shallow-advanced"),
+		)
+		pushOpts := &PushOptions{TargetBranch: "shallow-advanced"}
+		require.NoError(t, author.Push(t.Context(), pushOpts))
+
+		bare, err := CloneBare(
+			t.Context(),
+			testRepoURL,
+			clientOpts,
+			&BareCloneOptions{
+				Depth:    1,
+				Branches: []string{"shallow-advanced"},
+			},
+		)
+		require.NoError(t, err)
+		defer func() { require.NoError(t, bare.Close(t.Context())) }()
+		checkout, err := bare.AddWorkTree(
+			t.Context(),
+			filepath.Join(bare.HomeDir(), "shallow-advanced"),
+			&AddWorkTreeOptions{Ref: "shallow-advanced"},
+		)
+		require.NoError(t, err)
+		defer func() { require.NoError(t, checkout.Close(t.Context())) }()
+		wt, ok := checkout.(*workTree)
+		require.True(t, ok, "expected *workTree, got %T", checkout)
+		enableFakeCommitSigning(t, wt, true)
+
+		// Add a signed local commit that has not been pushed.
+		require.NoError(t, os.WriteFile(
+			fmt.Sprintf("%s/local.txt", checkout.Dir()),
+			[]byte("local"),
+			0o600,
+		))
+		require.NoError(
+			t,
+			checkout.AddAllAndCommit(t.Context(), "local commit", nil),
+		)
+
+		// Advance the remote branch.
+		require.NoError(t, os.WriteFile(
+			fmt.Sprintf("%s/remote.txt", author.Dir()),
+			[]byte("remote"),
+			0o600,
+		))
+		require.NoError(
+			t,
+			author.AddAllAndCommit(t.Context(), "remote commit", nil),
+		)
+		require.NoError(t, author.Push(t.Context(), pushOpts))
+
+		safe, err := wt.canSafelyRebase(t.Context(), "shallow-advanced")
+		require.NoError(t, err)
+		// This should be safe because the local commit is signed by a trusted
+		// key and signing is configured, so Kargo can re-sign it. The remote
+		// branch only moved forward, so the shallow boundary is not in the
+		// range of commits to replay.
+		require.True(t, safe)
+	})
+}
+
+// newWorkTreeWithRewrittenRemoteBranch returns a work tree whose remote branch
+// was force-pushed after the work tree was created.
+//
+// The remote's "feature" branch starts with three commits on top of main:
+//
+//   - unsigned-1 (unsigned)
+//   - unsigned-2 (unsigned)
+//   - signed (signed with a trusted key)
+//
+// The work tree is a bare clone of that branch with signing configured. The
+// remote branch is then replaced with a single unsigned commit on top of main.
+func newWorkTreeWithRewrittenRemoteBranch(
+	t *testing.T,
+	depth uint,
+) *workTree {
+	t.Helper()
+
+	testServer, testRepoURL, testRepoCreds := setupRemoteRepo(
+		t,
+		initialMainCommit,
+	)
+	t.Cleanup(testServer.Close)
+	clientOpts := &ClientOptions{Credentials: &testRepoCreds}
+
+	// This is a stand-in for whoever else is working on the remote.
+	author, err := Clone(t.Context(), testRepoURL, clientOpts, nil)
+	require.NoError(t, err)
+	t.Cleanup(func() { require.NoError(t, author.Close(context.Background())) })
+	authorWT := internalWorkTree(t, author)
+	commit := func(name string) {
+		t.Helper()
+		require.NoError(t, os.WriteFile(
+			fmt.Sprintf("%s/%s.txt", author.Dir(), name),
+			[]byte(name),
+			0o600,
+		))
+		require.NoError(t, author.AddAllAndCommit(t.Context(), name, nil))
+	}
+
+	require.NoError(t, author.CreateChildBranch(t.Context(), "feature"))
+	commit("unsigned-1")
+	commit("unsigned-2")
+	enableFakeCommitSigning(t, authorWT, true)
+	commit("signed")
+	require.NoError(
+		t,
+		author.Push(t.Context(), &PushOptions{TargetBranch: "feature"}),
+	)
+
+	bare, err := CloneBare(
+		t.Context(),
+		testRepoURL,
+		clientOpts,
+		&BareCloneOptions{Depth: depth, Branches: []string{"feature"}},
+	)
+	require.NoError(t, err)
+	t.Cleanup(func() { require.NoError(t, bare.Close(context.Background())) })
+	checkout, err := bare.AddWorkTree(
+		t.Context(),
+		filepath.Join(bare.HomeDir(), "feature"),
+		&AddWorkTreeOptions{Ref: "feature"},
+	)
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		require.NoError(t, checkout.Close(context.Background()))
+	})
+	wt, ok := checkout.(*workTree)
+	require.True(t, ok, "expected *workTree, got %T", checkout)
+	enableFakeCommitSigning(t, wt, true)
+
+	// Rewrite the remote's feature branch so that none of its original commits
+	// remain on it.
+	disableFakeCommitSigning(t, authorWT)
+	require.NoError(t, author.Checkout(t.Context(), "main"))
+	require.NoError(t, author.CreateChildBranch(t.Context(), "rewritten"))
+	commit("rewritten")
+	require.NoError(t, author.Push(
+		t.Context(),
+		&PushOptions{TargetBranch: "feature", Force: true},
+	))
+
+	return wt
 }
 
 func Test_workTree_commitsToReplay(t *testing.T) {

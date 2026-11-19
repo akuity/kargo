@@ -2,6 +2,7 @@ package git
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -135,6 +136,19 @@ func (w *workTree) canSafelyRebase(
 	if len(commits) == 0 {
 		return true, nil
 	}
+
+	// Without a common ancestor, the list of commits may be missing history
+	// that a rebase would replay.
+	shared, err := w.hasMergeBase(ctx, targetBranch)
+	if err != nil {
+		return false, fmt.Errorf(
+			"error checking for common history: %w", err,
+		)
+	}
+	if !shared {
+		return false, nil
+	}
+
 	signing, err := w.isSigningConfigured(ctx)
 	if err != nil {
 		return false, fmt.Errorf(
@@ -186,6 +200,32 @@ func (w *workTree) commitsToReplay(
 		return nil, nil
 	}
 	return strings.Split(output, "\n"), nil
+}
+
+// hasMergeBase returns true if the current branch and the specified remote
+// branch share a common ancestor in local history.
+//
+// Equivalent to:
+//
+//	git merge-base HEAD origin/<targetBranch>
+func (w *workTree) hasMergeBase(
+	ctx context.Context,
+	targetBranch string,
+) (bool, error) {
+	_, err := libExec.Exec(w.buildGitCommand(
+		ctx,
+		"merge-base",
+		"HEAD",
+		fmt.Sprintf("origin/%s", targetBranch),
+	))
+	if err != nil {
+		var exitErr *libExec.ExitError
+		if errors.As(err, &exitErr) && exitErr.ExitCode == 1 {
+			return false, nil
+		}
+		return false, fmt.Errorf("error finding merge base: %w", err)
+	}
+	return true, nil
 }
 
 // isRebaseSafeForCommit is a pure function implementing the rebase safety
