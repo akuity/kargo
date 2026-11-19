@@ -42,6 +42,22 @@ const (
 	// (OTel semconv).
 	VCSCommitKey = semconv.VCSRefHeadRevisionKey
 
+	// NameKey is the attribute under which the name of the Kubernetes object
+	// a span concerns is recorded.
+	NameKey = attribute.Key("kargo.object.name")
+	// NamespaceKey is the attribute under which the namespace of a Kubernetes
+	// object that is not a Kargo object is recorded (OTel semconv).
+	NamespaceKey = semconv.K8SNamespaceNameKey
+	// ResourceKey is the attribute under which a Kubernetes API request's
+	// resource (e.g. "freights") is recorded.
+	ResourceKey = attribute.Key("kargo.k8s.resource")
+	// SubresourceKey is the attribute under which a Kubernetes API request's
+	// subresource (e.g. "status") is recorded.
+	SubresourceKey = attribute.Key("kargo.k8s.subresource")
+	// VerbKey is the attribute under which a Kubernetes API request's verb
+	// (e.g. "patch") is recorded.
+	VerbKey = attribute.Key("kargo.k8s.verb")
+
 	// StepAliasKey is the attribute under which a promotion step's alias is
 	// recorded.
 	StepAliasKey = attribute.Key("kargo.promotion.step.alias")

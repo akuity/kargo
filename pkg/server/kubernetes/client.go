@@ -33,6 +33,7 @@ import (
 	"github.com/akuity/kargo/pkg/indexer"
 	"github.com/akuity/kargo/pkg/logging"
 	"github.com/akuity/kargo/pkg/server/user"
+	"github.com/akuity/kargo/pkg/telemetry"
 )
 
 // ClientOptions specifies options for customizing the client returned by the
@@ -763,6 +764,9 @@ func (c *client) Watch(
 	return client.Watch(ctx, list, opts...)
 }
 
+// GetRestConfig loads the REST config at path, or the in-cluster one when path
+// is empty. With the k8s tracing category enabled, every request made through
+// it is a span.
 func GetRestConfig(ctx context.Context, path string) (*rest.Config, error) {
 	logger := logging.LoggerFromContext(ctx)
 
@@ -775,6 +779,7 @@ func GetRestConfig(ctx context.Context, path string) (*rest.Config, error) {
 		if err != nil {
 			return cfg, fmt.Errorf("error loading in-cluster REST config: %w", err)
 		}
+		telemetry.WrapRESTConfig(cfg)
 		return cfg, nil
 	}
 
@@ -786,6 +791,7 @@ func GetRestConfig(ctx context.Context, path string) (*rest.Config, error) {
 	if err != nil {
 		return cfg, fmt.Errorf("error loading REST config from %q: %w", path, err)
 	}
+	telemetry.WrapRESTConfig(cfg)
 	return cfg, nil
 }
 
