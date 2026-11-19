@@ -96,6 +96,7 @@ model_list_projects_response.go
 model_mark_freight_in_stage_request.go
 model_oidc_config.go
 model_patch_config_map_request.go
+model_patch_freight_metadata_request.go
 model_patch_generic_credentials_request.go
 model_patch_repo_credentials_request.go
 model_pkg_server_freight_group_list.go

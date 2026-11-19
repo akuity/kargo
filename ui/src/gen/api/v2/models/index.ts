@@ -127,6 +127,8 @@ export * from './oIDCConfig';
 export * from './patchConfigMapRequest';
 export * from './patchConfigMapRequestData';
 export * from './patchFreightAliasParams';
+export * from './patchFreightMetadataRequest';
+export * from './patchFreightMetadataRequestMetadata';
 export * from './patchGenericCredentialsRequest';
 export * from './patchGenericCredentialsRequestData';
 export * from './patchRepoCredentialsRequest';

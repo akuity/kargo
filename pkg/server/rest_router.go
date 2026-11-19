@@ -300,6 +300,7 @@ func (s *server) setupRESTRouter(
 			project.GET("/freight/:freight-name-or-alias/links", s.getFreightLinks)
 			project.POST("/freight/:freight-name-or-alias/approve", s.approveFreight)
 			project.PATCH("/freight/:freight-name-or-alias/alias", s.patchFreightAliasHandler)
+			project.PATCH("/freight/:freight-name-or-alias/metadata", s.patchFreightMetadata)
 			project.DELETE("/freight/:freight-name-or-alias", s.deleteFreight)
 			project.POST("/freight/:freight-name-or-alias/status/stage/:stage", s.markFreightInStage)
 			project.PATCH("/freight/:freight-name-or-alias/status/stage/:stage", s.unmarkFreightInStage)

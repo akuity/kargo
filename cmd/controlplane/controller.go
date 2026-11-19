@@ -535,6 +535,7 @@ func (o *controllerOptions) setupReconcilers(
 				promotion.GitUserFromEnv(),
 			),
 			promotion.DefaultExprDataCacheFn,
+			apiClient,
 		),
 		promotionsReconcilerCfg,
 		targetGetter,

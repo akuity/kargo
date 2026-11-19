@@ -1,15 +1,11 @@
 package api
 
 import (
-	"context"
 	"crypto/sha1" // nolint:gosec
 	"fmt"
 	"path"
 	"slices"
 	"strings"
-
-	"k8s.io/apimachinery/pkg/types"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/urls"
@@ -105,84 +101,4 @@ func artifactHashPart(ref kargoapi.ArtifactReference) string {
 		"%s:%s:%s",
 		ref.ArtifactType, ref.SubscriptionName, ref.Version,
 	)
-}
-
-// GetFreightByNameOrAlias returns a pointer to the Freight resource specified
-// by the project, and name OR alias arguments. If no such resource is found,
-// nil is returned instead.
-// FIXME: Deprecated. This function should be removed in favor of using apiserver,
-func GetFreightByNameOrAlias(
-	ctx context.Context,
-	c client.Client,
-	project string,
-	name string,
-	alias string,
-) (*kargoapi.Freight, error) {
-	if name != "" {
-		return GetFreight(
-			ctx,
-			c,
-			types.NamespacedName{
-				Namespace: project,
-				Name:      name,
-			},
-		)
-	}
-	return GetFreightByAlias(ctx, c, project, alias)
-}
-
-// GetFreight returns a pointer to the Freight resource specified by the
-// namespacedName argument. If no such resource is found, nil is returned
-// instead.
-// FIXME: Deprecated. This function should be removed in favor of using apiserver,
-func GetFreight(
-	ctx context.Context,
-	c client.Client,
-	namespacedName types.NamespacedName,
-) (*kargoapi.Freight, error) {
-	freight := kargoapi.Freight{}
-	if err := c.Get(ctx, namespacedName, &freight); err != nil {
-		if err = client.IgnoreNotFound(err); err == nil {
-			return nil, nil
-		}
-		return nil, fmt.Errorf(
-			"error getting Freight %q in namespace %q: %w",
-			namespacedName.Name,
-			namespacedName.Namespace,
-			err,
-		)
-	}
-	return &freight, nil
-}
-
-// GetFreightByAlias returns a pointer to the Freight resource specified by the
-// project and alias arguments. If no such resource is found, nil is returned
-// instead.
-// FIXME: Deprecated. This function should be removed in favor of using apiserver,
-func GetFreightByAlias(
-	ctx context.Context,
-	c client.Client,
-	project string,
-	alias string,
-) (*kargoapi.Freight, error) {
-	freightList := kargoapi.FreightList{}
-	if err := c.List(
-		ctx,
-		&freightList,
-		client.InNamespace(project),
-		client.MatchingLabels{
-			kargoapi.LabelKeyAlias: alias,
-		},
-	); err != nil {
-		return nil, fmt.Errorf(
-			"error listing Freight with alias %q in namespace %q: %w",
-			alias,
-			project,
-			err,
-		)
-	}
-	if len(freightList.Items) == 0 {
-		return nil, nil
-	}
-	return &freightList.Items[0], nil
 }

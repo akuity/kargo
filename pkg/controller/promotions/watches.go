@@ -13,6 +13,7 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/api"
+	"github.com/akuity/kargo/pkg/client/apiserver/freightclient"
 	"github.com/akuity/kargo/pkg/controller"
 	argocd "github.com/akuity/kargo/pkg/controller/argocd/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/indexer"
@@ -25,6 +26,7 @@ import (
 type UpdatedArgoCDAppHandler[T any] struct {
 	kargoClient    client.Client
 	shardPredicate controller.ResponsibleFor[kargoapi.Promotion]
+	freightClient freightclient.FreightClient
 }
 
 // Create implements TypedEventHandler.
@@ -197,7 +199,14 @@ func (u *UpdatedArgoCDAppHandler[T]) enqueueSelectorMatches(
 			if app == nil {
 				continue
 			}
-			if promotionSelectorsMatchApp(ctx, u.kargoClient, &promotion, app.Namespace, app.Labels) {
+			if promotionSelectorsMatchApp(
+				ctx,
+				u.kargoClient,
+				u.freightClient,
+				&promotion,
+				app.Namespace,
+				app.Labels,
+			) {
 				enqueue(promotion)
 				break
 			}

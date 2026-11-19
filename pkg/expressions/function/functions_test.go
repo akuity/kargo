@@ -20,6 +20,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/pkg/client/apiserver/freightclient/testutil"
 	"github.com/akuity/kargo/pkg/credentials"
 )
 
@@ -1970,9 +1971,6 @@ func Test_freightMetadata(t *testing.T) {
 	const testProject = "fake-project"
 	const testFreightName = "fake-freight"
 
-	scheme := runtime.NewScheme()
-	assert.NoError(t, kargoapi.AddToScheme(scheme))
-
 	// Sample metadata for testing
 	testMetadata := map[string]any{
 		"deployment-id": "abc123",
@@ -2002,7 +2000,8 @@ func Test_freightMetadata(t *testing.T) {
 
 	tests := []struct {
 		name       string
-		objects    []client.Object
+		freight    *kargoapi.Freight
+		getErr     error
 		args       []any
 		assertions func(t *testing.T, result any, err error)
 	}{
@@ -2039,9 +2038,18 @@ func Test_freightMetadata(t *testing.T) {
 			},
 		},
 		{
-			name:    "freight not found",
-			objects: []client.Object{}, // No freight objects
-			args:    []any{testFreightName},
+			name:   "error getting freight",
+			getErr: errors.New("something went wrong"),
+			args:   []any{testFreightName},
+			assertions: func(t *testing.T, result any, err error) {
+				assert.ErrorContains(t, err, "failed to get freight")
+				assert.ErrorContains(t, err, "something went wrong")
+				assert.Nil(t, result)
+			},
+		},
+		{
+			name: "freight not found",
+			args: []any{testFreightName},
 			assertions: func(t *testing.T, result any, err error) {
 				assert.NoError(t, err)
 				assert.Nil(t, result)
@@ -2049,14 +2057,12 @@ func Test_freightMetadata(t *testing.T) {
 		},
 		{
 			name: "freight exists but no metadata",
-			objects: []client.Object{
-				&kargoapi.Freight{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      testFreightName,
-						Namespace: testProject,
-					},
-					Status: kargoapi.FreightStatus{}, // Empty status with no metadata
+			freight: &kargoapi.Freight{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      testFreightName,
+					Namespace: testProject,
 				},
+				Status: kargoapi.FreightStatus{}, // Empty status with no metadata
 			},
 			args: []any{testFreightName},
 			assertions: func(t *testing.T, result any, err error) {
@@ -2066,7 +2072,7 @@ func Test_freightMetadata(t *testing.T) {
 		},
 		{
 			name:    "successful metadata retrieval from string map",
-			objects: []client.Object{testFreight},
+			freight: testFreight,
 			args:    []any{testFreightName},
 			assertions: func(t *testing.T, result any, err error) {
 				assert.NoError(t, err)
@@ -2077,14 +2083,19 @@ func Test_freightMetadata(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			ctx := t.Context()
+			freightClient := &testutil.MockFreightClient{
+				GetFreightFun: func(
+					_ context.Context,
+					project string,
+					nameOrAlias string,
+				) (*kargoapi.Freight, error) {
+					require.Equal(t, testProject, project)
+					require.Equal(t, testFreightName, nameOrAlias)
+					return tt.freight, tt.getErr
+				},
+			}
 
-			c := fake.NewClientBuilder().
-				WithScheme(scheme).
-				WithObjects(tt.objects...).
-				Build()
-
-			fn := freightMetadata(ctx, c, testProject)
+			fn := freightMetadata(t.Context(), freightClient, testProject)
 
 			result, err := fn(tt.args...)
 			tt.assertions(t, result, err)
@@ -2095,9 +2106,6 @@ func Test_freightMetadata(t *testing.T) {
 func Test_freightStatus(t *testing.T) {
 	const testProject = "fake-project"
 	const testFreightName = "fake-freight"
-
-	scheme := runtime.NewScheme()
-	assert.NoError(t, kargoapi.AddToScheme(scheme))
 
 	approvedAt := metav1.NewTime(time.Date(2026, 7, 24, 23, 11, 1, 0, time.UTC))
 	since := metav1.NewTime(time.Date(2026, 5, 13, 14, 42, 47, 0, time.UTC))
@@ -2138,7 +2146,8 @@ func Test_freightStatus(t *testing.T) {
 
 	tests := []struct {
 		name       string
-		objects    []client.Object
+		freight    *kargoapi.Freight
+		getErr     error
 		args       []any
 		assertions func(t *testing.T, result any, err error)
 	}{
@@ -2175,9 +2184,18 @@ func Test_freightStatus(t *testing.T) {
 			},
 		},
 		{
-			name:    "freight not found",
-			objects: []client.Object{}, // No freight objects
-			args:    []any{testFreightName},
+			name:   "error getting freight",
+			getErr: errors.New("something went wrong"),
+			args:   []any{testFreightName},
+			assertions: func(t *testing.T, result any, err error) {
+				assert.ErrorContains(t, err, "failed to get freight")
+				assert.ErrorContains(t, err, "something went wrong")
+				assert.Nil(t, result)
+			},
+		},
+		{
+			name: "freight not found",
+			args: []any{testFreightName},
 			assertions: func(t *testing.T, result any, err error) {
 				assert.NoError(t, err)
 				assert.Nil(t, result)
@@ -2185,14 +2203,12 @@ func Test_freightStatus(t *testing.T) {
 		},
 		{
 			name: "freight exists with empty status",
-			objects: []client.Object{
-				&kargoapi.Freight{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      testFreightName,
-						Namespace: testProject,
-					},
-					Status: kargoapi.FreightStatus{},
+			freight: &kargoapi.Freight{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      testFreightName,
+					Namespace: testProject,
 				},
+				Status: kargoapi.FreightStatus{},
 			},
 			args: []any{testFreightName},
 			assertions: func(t *testing.T, result any, err error) {
@@ -2202,7 +2218,7 @@ func Test_freightStatus(t *testing.T) {
 		},
 		{
 			name:    "successful status retrieval",
-			objects: []client.Object{testFreight},
+			freight: testFreight,
 			args:    []any{testFreightName},
 			assertions: func(t *testing.T, result any, err error) {
 				assert.NoError(t, err)
@@ -2213,12 +2229,19 @@ func Test_freightStatus(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			c := fake.NewClientBuilder().
-				WithScheme(scheme).
-				WithObjects(tt.objects...).
-				Build()
+			freightClient := &testutil.MockFreightClient{
+				GetFreightFun: func(
+					_ context.Context,
+					project string,
+					nameOrAlias string,
+				) (*kargoapi.Freight, error) {
+					require.Equal(t, testProject, project)
+					require.Equal(t, testFreightName, nameOrAlias)
+					return tt.freight, tt.getErr
+				},
+			}
 
-			fn := freightStatus(t.Context(), c, testProject)
+			fn := freightStatus(t.Context(), freightClient, testProject)
 			result, err := fn(tt.args...)
 			tt.assertions(t, result, err)
 		})

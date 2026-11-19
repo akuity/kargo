@@ -34,8 +34,14 @@ type MockFreightClient struct {
 		ctx context.Context,
 		project, stage string,
 	) ([]kargoapi.Freight, error)
-	GetFreightFun                  func(ctx context.Context, project, nameOrAlias string) (*kargoapi.Freight, error)
-	DeleteFreightFun               func(ctx context.Context, project, nameOrAlias string) error
+	GetFreightFun           func(ctx context.Context, project, nameOrAlias string) (*kargoapi.Freight, error)
+	DeleteFreightFun        func(ctx context.Context, project, nameOrAlias string) error
+	PatchFreightAliasFun    func(ctx context.Context, project, nameOrAlias, newAlias string) error
+	PatchFreightMetadataFun func(
+		ctx context.Context,
+		project, nameOrAlias string,
+		metadata map[string]any,
+	) error
 	ListFreightReferencingStageFun func(
 		ctx context.Context,
 		project, stage string,
@@ -82,6 +88,16 @@ func (mock *MockFreightClient) GetFreight(ctx context.Context, project, nameOrAl
 }
 func (mock *MockFreightClient) DeleteFreight(ctx context.Context, project, nameOrAlias string) error {
 	return mock.DeleteFreightFun(ctx, project, nameOrAlias)
+}
+func (mock *MockFreightClient) PatchFreightAlias(ctx context.Context, project, nameOrAlias, newAlias string) error {
+	return mock.PatchFreightAliasFun(ctx, project, nameOrAlias, newAlias)
+}
+func (mock *MockFreightClient) PatchFreightMetadata(
+	ctx context.Context,
+	project, nameOrAlias string,
+	metadata map[string]any,
+) error {
+	return mock.PatchFreightMetadataFun(ctx, project, nameOrAlias, metadata)
 }
 func (mock *MockFreightClient) ListFreightReferencingStage(
 	ctx context.Context,

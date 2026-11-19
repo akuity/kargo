@@ -666,6 +666,55 @@ func (c *Client) DeleteFreight(
 	return nil
 }
 
+// PatchFreightAlias sets, through the API server, the alias of the named
+// Freight. The API server rejects an alias already used by another piece of
+// Freight in the Project.
+func (c *Client) PatchFreightAlias(
+	ctx context.Context,
+	project string,
+	nameOrAlias string,
+	newAlias string,
+) error {
+	resp, err := c.api.CoreAPI.PatchFreightAlias(ctx, project, nameOrAlias).
+		NewAlias(newAlias).
+		Execute()
+	if resp != nil {
+		_ = resp.Body.Close()
+	}
+	if err != nil {
+		return fmt.Errorf(
+			"error setting alias of Freight %q in Project %q to %q: %w",
+			nameOrAlias, project, newAlias, ResponseError(err, resp),
+		)
+	}
+	return nil
+}
+
+// PatchFreightMetadata upserts, through the API server, keys in the status
+// metadata of the named Freight. A value already recorded under a key in
+// metadata is overwritten; other keys are left as they are.
+func (c *Client) PatchFreightMetadata(
+	ctx context.Context,
+	project string,
+	nameOrAlias string,
+	metadata map[string]any,
+) error {
+	body := kargogen.PatchFreightMetadataRequest{Metadata: metadata}
+	resp, err := c.api.CoreAPI.PatchFreightMetadata(ctx, project, nameOrAlias).
+		Body(body).
+		Execute()
+	if resp != nil {
+		_ = resp.Body.Close()
+	}
+	if err != nil {
+		return fmt.Errorf(
+			"error updating metadata of Freight %q in Project %q: %w",
+			nameOrAlias, project, ResponseError(err, resp),
+		)
+	}
+	return nil
+}
+
 // ListFreightReferencingStage returns, through the API server, the Freight whose
 // status records the named Stage in its verifiedIn or approvedFor map.
 func (c *Client) ListFreightReferencingStage(

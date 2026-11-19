@@ -47,6 +47,7 @@ import type {
   MarkFreightInStageRequest,
   PatchConfigMapRequest,
   PatchFreightAliasParams,
+  PatchFreightMetadataRequest,
   PkgServerQueryFreightsResponse,
   Project,
   ProjectConfig,
@@ -2404,6 +2405,122 @@ export function useGetFreightLinks<
   return withQueryKey(query, queryOptions.queryKey);
 }
 
+export type patchFreightMetadataResponse200 = {
+  data: void;
+  status: 200;
+};
+
+export type patchFreightMetadataResponseSuccess = patchFreightMetadataResponse200 & {
+  headers: Headers;
+};
+export type patchFreightMetadataResponse = patchFreightMetadataResponseSuccess;
+
+export const getPatchFreightMetadataUrl = (project: string, freightNameOrAlias: string) => {
+  return `/v1beta1/projects/${project}/freight/${freightNameOrAlias}/metadata`;
+};
+
+/**
+ * Upsert keys in the status metadata of a Freight resource. A value
+ * already recorded under a key named in the request is
+ * overwritten; other keys are left as they are.
+ * @summary Update a Freight resource's status metadata
+ */
+export const patchFreightMetadata = async (
+  project: string,
+  freightNameOrAlias: string,
+  patchFreightMetadataRequest: PatchFreightMetadataRequest,
+  options?: Parameters<typeof customFetch>[1]
+): Promise<patchFreightMetadataResponse> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit['headers']>
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Array.isArray(h)) return Object.fromEntries(h);
+    return h;
+  };
+  return customFetch<patchFreightMetadataResponse>(
+    getPatchFreightMetadataUrl(project, freightNameOrAlias),
+    {
+      ...options,
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+      body: JSON.stringify(patchFreightMetadataRequest)
+    }
+  );
+};
+
+export const getPatchFreightMetadataMutationKey = () => ['patchFreightMetadata'] as const;
+
+export const getPatchFreightMetadataMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof patchFreightMetadata>>,
+    TError,
+    PatchFreightMetadataMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof patchFreightMetadata>>,
+  TError,
+  PatchFreightMetadataMutationVariables,
+  TContext
+> => {
+  const mutationKey = getPatchFreightMetadataMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof patchFreightMetadata>>,
+    PatchFreightMetadataMutationVariables
+  > = (props) => {
+    const { project, freightNameOrAlias, data } = props ?? {};
+
+    return patchFreightMetadata(project, freightNameOrAlias, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type PatchFreightMetadataMutationResult = NonNullable<
+  Awaited<ReturnType<typeof patchFreightMetadata>>
+>;
+export type PatchFreightMetadataMutationBody = PatchFreightMetadataRequest;
+export type PatchFreightMetadataMutationError = ErrorType<unknown>;
+export type PatchFreightMetadataMutationVariables = {
+  project: string;
+  freightNameOrAlias: string;
+  data: PatchFreightMetadataRequest;
+};
+
+/**
+ * @summary Update a Freight resource's status metadata
+ */
+export const usePatchFreightMetadata = <TError = ErrorType<unknown>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof patchFreightMetadata>>,
+      TError,
+      PatchFreightMetadataMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient
+): UseMutationResult<
+  Awaited<ReturnType<typeof patchFreightMetadata>>,
+  TError,
+  PatchFreightMetadataMutationVariables,
+  TContext
+> => {
+  return useMutation(getPatchFreightMetadataMutationOptions(options), queryClient);
+};
 export type markFreightInStageResponse200 = {
   data: void;
   status: 200;

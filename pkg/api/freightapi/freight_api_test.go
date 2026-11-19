@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8sruntime "k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
@@ -589,6 +590,109 @@ func TestListFreightFromWarehouse(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			freight, err := ListFreightFromWarehouse(
 				t.Context(), c, testProject, "fake-warehouse", testCase.opts,
+			)
+			testCase.assertions(t, freight, err)
+		})
+	}
+}
+
+func TestGetFreight(t *testing.T) {
+	scheme := k8sruntime.NewScheme()
+	require.NoError(t, kargoapi.SchemeBuilder.AddToScheme(scheme))
+
+	testCases := []struct {
+		name       string
+		client     client.Client
+		assertions func(*testing.T, *kargoapi.Freight, error)
+	}{
+		{
+			name:   "not found",
+			client: fake.NewClientBuilder().WithScheme(scheme).Build(),
+			assertions: func(t *testing.T, freight *kargoapi.Freight, err error) {
+				require.NoError(t, err)
+				require.Nil(t, freight)
+			},
+		},
+
+		{
+			name: "found",
+			client: fake.NewClientBuilder().WithScheme(scheme).WithObjects(
+				&kargoapi.Freight{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "fake-freight",
+						Namespace: "fake-namespace",
+					},
+				},
+			).Build(),
+			assertions: func(t *testing.T, freight *kargoapi.Freight, err error) {
+				require.NoError(t, err)
+				require.Equal(t, "fake-freight", freight.Name)
+				require.Equal(t, "fake-namespace", freight.Namespace)
+			},
+		},
+	}
+
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			freight, err := GetFreight(
+				t.Context(),
+				testCase.client,
+				types.NamespacedName{
+					Namespace: "fake-namespace",
+					Name:      "fake-freight",
+				},
+			)
+			testCase.assertions(t, freight, err)
+		})
+	}
+}
+
+func TestGetFreightByAlias(t *testing.T) {
+	scheme := k8sruntime.NewScheme()
+	require.NoError(t, kargoapi.SchemeBuilder.AddToScheme(scheme))
+
+	testCases := []struct {
+		name       string
+		client     client.Client
+		assertions func(*testing.T, *kargoapi.Freight, error)
+	}{
+		{
+			name:   "not found",
+			client: fake.NewClientBuilder().WithScheme(scheme).Build(),
+			assertions: func(t *testing.T, freight *kargoapi.Freight, err error) {
+				require.NoError(t, err)
+				require.Nil(t, freight)
+			},
+		},
+
+		{
+			name: "found",
+			client: fake.NewClientBuilder().WithScheme(scheme).WithObjects(
+				&kargoapi.Freight{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "fake-freight",
+						Namespace: "fake-namespace",
+						Labels: map[string]string{
+							kargoapi.LabelKeyAlias: "fake-alias",
+						},
+					},
+				},
+			).Build(),
+			assertions: func(t *testing.T, freight *kargoapi.Freight, err error) {
+				require.NoError(t, err)
+				require.Equal(t, "fake-freight", freight.Name)
+				require.Equal(t, "fake-namespace", freight.Namespace)
+			},
+		},
+	}
+
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			freight, err := GetFreightByAlias(
+				t.Context(),
+				testCase.client,
+				"fake-namespace",
+				"fake-alias",
 			)
 			testCase.assertions(t, freight, err)
 		})

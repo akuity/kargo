@@ -80,7 +80,7 @@ func newFakeReconciler(
 
 func TestPromotionReconcilerReconcile(t *testing.T) {
 	testCases := []struct {
-		name   string
+		name    string
 		objects []client.Object
 		// apiReader, if set, overrides the reconciler's direct API reader. Use
 		// this to simulate cache/API divergence or to assert the reader is not
@@ -442,7 +442,7 @@ func TestPromotionReconcilerReconcile(t *testing.T) {
 			ctx := t.Context()
 			sender := &fakeevent.Sender{}
 			r := newFakeReconciler(t, sender, &testutil.MockFreightClient{
-				GetFreightFun: func(ctx context.Context, project, nameOrAlias string) (*kargoapi.Freight, error) {
+				GetFreightFun: func(_ context.Context, _, _ string) (*kargoapi.Freight, error) {
 					return nil, nil
 				},
 			}, tc.objects...)
@@ -807,7 +807,7 @@ func Test_reconciler_handleDeletion(t *testing.T) {
 			ctx := t.Context()
 			sender := &fakeevent.Sender{}
 			r := newFakeReconciler(t, sender, &testutil.MockFreightClient{
-				GetFreightFun: func(ctx context.Context, project, nameOrAlias string) (*kargoapi.Freight, error) {
+				GetFreightFun: func(_ context.Context, _, _ string) (*kargoapi.Freight, error) {
 					return nil, nil
 				},
 			}, tc.objects...)

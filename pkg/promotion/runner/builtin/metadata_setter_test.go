@@ -1,7 +1,9 @@
 package builtin
 
 import (
+	"context"
 	"encoding/json"
+	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -13,6 +15,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/pkg/client/apiserver/freightclient/testutil"
 	"github.com/akuity/kargo/pkg/promotion"
 	"github.com/akuity/kargo/pkg/x/promotion/stepconfig"
 )
@@ -158,11 +161,19 @@ func Test_metadataSetter_run(t *testing.T) {
 		"new":     "success!",
 	}
 
+	// freightMetadataPatch records a call to PatchFreightMetadata.
+	type freightMetadataPatch struct {
+		project     string
+		nameOrAlias string
+		metadata    map[string]any
+	}
+
 	tests := []struct {
-		name       string
-		client     client.Client
-		cfg        stepconfig.SetMetadataConfig
-		assertions func(*testing.T, promotion.StepResult, client.Client, error)
+		name            string
+		client          client.Client
+		freightPatchErr error
+		cfg             stepconfig.SetMetadataConfig
+		assertions      func(*testing.T, promotion.StepResult, client.Client, []freightMetadataPatch, error)
 	}{
 		{
 			name: "unsupported kind",
@@ -177,6 +188,7 @@ func Test_metadataSetter_run(t *testing.T) {
 				t *testing.T,
 				res promotion.StepResult,
 				_ client.Client,
+				_ []freightMetadataPatch,
 				err error,
 			) {
 				require.ErrorContains(t, err, "unsupported kind")
@@ -196,6 +208,7 @@ func Test_metadataSetter_run(t *testing.T) {
 				t *testing.T,
 				res promotion.StepResult,
 				_ client.Client,
+				_ []freightMetadataPatch,
 				err error,
 			) {
 				require.ErrorContains(t, err, "error getting Stage")
@@ -224,6 +237,7 @@ func Test_metadataSetter_run(t *testing.T) {
 				t *testing.T,
 				res promotion.StepResult,
 				_ client.Client,
+				_ []freightMetadataPatch,
 				err error,
 			) {
 				require.ErrorContains(t, err, "error patching status of Stage")
@@ -255,6 +269,7 @@ func Test_metadataSetter_run(t *testing.T) {
 				t *testing.T,
 				res promotion.StepResult,
 				c client.Client,
+				_ []freightMetadataPatch,
 				err error,
 			) {
 				require.NoError(t, err)
@@ -302,39 +317,12 @@ func Test_metadataSetter_run(t *testing.T) {
 			},
 		},
 		{
-			name:   "Freight not found",
-			client: fake.NewClientBuilder().WithScheme(scheme).Build(),
-			cfg: stepconfig.SetMetadataConfig{
-				Updates: []stepconfig.Update{{
-					Kind: "Freight",
-					Name: "nonexistent",
-				}},
-			},
-			assertions: func(
-				t *testing.T,
-				res promotion.StepResult,
-				_ client.Client,
-				err error,
-			) {
-				require.ErrorContains(t, err, "error getting Freight")
-				require.Equal(t, res.Status, kargoapi.PromotionStepStatusErrored)
-			},
-		},
-		{
-			name: "error patching Freight status",
-			client: fake.NewClientBuilder().WithScheme(scheme).WithObjects(
-				&kargoapi.Freight{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:            testObjName,
-						Namespace:       testProject,
-						ResourceVersion: "invalid", // This will force the patch to fail
-					},
-				},
-			).WithStatusSubresource(&kargoapi.Freight{}).Build(),
+			name:            "error updating Freight metadata",
+			freightPatchErr: errors.New("freight not found"),
 			cfg: stepconfig.SetMetadataConfig{
 				Updates: []stepconfig.Update{{
 					Kind:   "Freight",
-					Name:   testObjName,
+					Name:   "nonexistent",
 					Values: testValueUpdates,
 				}},
 			},
@@ -342,23 +330,17 @@ func Test_metadataSetter_run(t *testing.T) {
 				t *testing.T,
 				res promotion.StepResult,
 				_ client.Client,
+				patches []freightMetadataPatch,
 				err error,
 			) {
-				require.ErrorContains(t, err, "error patching status of Freight")
-				require.ErrorContains(t, err, "can not convert resourceVersion")
+				require.ErrorContains(t, err, "error updating metadata for Freight")
+				require.ErrorContains(t, err, "freight not found")
 				require.Equal(t, res.Status, kargoapi.PromotionStepStatusErrored)
+				require.Len(t, patches, 1)
 			},
 		},
 		{
 			name: "successful Freight metadata update",
-			client: fake.NewClientBuilder().WithScheme(scheme).WithObjects(
-				&kargoapi.Freight{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      testObjName,
-						Namespace: testProject,
-					},
-				},
-			).WithStatusSubresource(&kargoapi.Freight{}).Build(),
 			cfg: stepconfig.SetMetadataConfig{
 				Updates: []stepconfig.Update{{
 					Kind:   "Freight",
@@ -369,61 +351,49 @@ func Test_metadataSetter_run(t *testing.T) {
 			assertions: func(
 				t *testing.T,
 				res promotion.StepResult,
-				c client.Client,
+				_ client.Client,
+				patches []freightMetadataPatch,
 				err error,
 			) {
 				require.NoError(t, err)
 				require.Equal(t, res.Status, kargoapi.PromotionStepStatusSucceeded)
-
-				freight := &kargoapi.Freight{}
-				err = c.Get(
-					t.Context(),
-					types.NamespacedName{
-						Name:      testObjName,
-						Namespace: testProject,
-					},
-					freight,
-				)
-				require.NoError(t, err)
-
-				dataBytes, ok := freight.Status.Metadata["string"]
-				require.True(t, ok)
-				var data any
-				err = json.Unmarshal(dataBytes.Raw, &data)
-				require.NoError(t, err)
-				require.Equal(t, "bar", data)
-
-				dataBytes, ok = freight.Status.Metadata["num"]
-				require.True(t, ok)
-				err = json.Unmarshal(dataBytes.Raw, &data)
-				require.NoError(t, err)
-				require.Equal(t, float64(43), data)
-
-				dataBytes, ok = freight.Status.Metadata["complex"]
-				require.True(t, ok)
-				err = json.Unmarshal(dataBytes.Raw, &data)
-				require.NoError(t, err)
 				require.Equal(
 					t,
-					map[string]any{"updated": true},
-					data,
+					[]freightMetadataPatch{{
+						project:     testProject,
+						nameOrAlias: testObjName,
+						metadata:    testValueUpdates,
+					}},
+					patches,
 				)
-
-				dataBytes, ok = freight.Status.Metadata["new"]
-				require.True(t, ok)
-				err = json.Unmarshal(dataBytes.Raw, &data)
-				require.NoError(t, err)
-				require.Equal(t, "success!", data)
 			},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			setter := &metadataSetter{kargoClient: tt.client}
+			var patches []freightMetadataPatch
+			setter := &metadataSetter{
+				kargoClient: tt.client,
+				freightClient: &testutil.MockFreightClient{
+					PatchFreightMetadataFun: func(
+						_ context.Context,
+						project string,
+						nameOrAlias string,
+						metadata map[string]any,
+					) error {
+						patches = append(patches, freightMetadataPatch{
+							project:     project,
+							nameOrAlias: nameOrAlias,
+							metadata:    metadata,
+						})
+						return tt.freightPatchErr
+					},
+				},
+			}
 			stepCtx := &promotion.StepContext{Project: testProject}
 			result, err := setter.run(t.Context(), stepCtx, tt.cfg)
-			tt.assertions(t, result, tt.client, err)
+			tt.assertions(t, result, tt.client, patches, err)
 		})
 	}
 }

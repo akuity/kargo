@@ -22,6 +22,15 @@ type FreightClient interface {
 		metadata map[string]apiextensionsv1.JSON,
 	) (*kargoapi.Freight, bool, error)
 	DeleteFreight(ctx context.Context, project, nameOrAlias string) error
+	// PatchFreightAlias sets the alias of the named Freight.
+	PatchFreightAlias(ctx context.Context, project, nameOrAlias, newAlias string) error
+	// PatchFreightMetadata upserts keys in the status metadata of the named
+	// Freight, overwriting any value already recorded under the same key.
+	PatchFreightMetadata(
+		ctx context.Context,
+		project, nameOrAlias string,
+		metadata map[string]any,
+	) error
 	ListFreightFromWarehouse(
 		ctx context.Context,
 		project, warehouse string,

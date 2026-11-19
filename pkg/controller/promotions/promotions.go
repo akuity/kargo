@@ -125,6 +125,7 @@ func SetupReconcilerWithManager(
 		indexer.RunningPromotionsByArgoCDApplications(
 			ctx,
 			kargoMgr.GetClient(),
+			apiClient,
 			cfg.ShardName,
 			cfg.IsDefaultController,
 		),
@@ -226,6 +227,7 @@ func SetupReconcilerWithManager(
 						IsDefaultController: cfg.IsDefaultController,
 						ShardName:           cfg.ShardName,
 					},
+					freightClient: apiClient,
 				},
 				predicate.Or(
 					ArgoCDAppOperationCompleted[*argocd.Application]{

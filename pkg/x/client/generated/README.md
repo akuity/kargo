@@ -127,6 +127,7 @@ Class | Method | HTTP request | Description
 *CoreAPI* | [**ListWarehouses**](docs/CoreAPI.md#listwarehouses) | **Get** /v1beta1/projects/{project}/warehouses | List Warehouses
 *CoreAPI* | [**MarkFreightInStage**](docs/CoreAPI.md#markfreightinstage) | **Post** /v1beta1/projects/{project}/freight/{freight-name-or-alias}/status/stage/{stage} | Mark Freight as currently in use by a Stage
 *CoreAPI* | [**PatchFreightAlias**](docs/CoreAPI.md#patchfreightalias) | **Patch** /v1beta1/projects/{project}/freight/{freight-name-or-alias}/alias | Patch a Freight resource&#39;s alias
+*CoreAPI* | [**PatchFreightMetadata**](docs/CoreAPI.md#patchfreightmetadata) | **Patch** /v1beta1/projects/{project}/freight/{freight-name-or-alias}/metadata | Update a Freight resource&#39;s status metadata
 *CoreAPI* | [**PatchProjectConfigMap**](docs/CoreAPI.md#patchprojectconfigmap) | **Patch** /v1beta1/projects/{project}/configmaps/{configmap} | Patch a project-level ConfigMap
 *CoreAPI* | [**PatchSharedConfigMap**](docs/CoreAPI.md#patchsharedconfigmap) | **Patch** /v1beta1/shared/configmaps/{configmap} | Patch a shared ConfigMap
 *CoreAPI* | [**PatchSystemConfigMap**](docs/CoreAPI.md#patchsystemconfigmap) | **Patch** /v1beta1/system/configmaps/{configmap} | Patch a system-level ConfigMap
@@ -298,6 +299,7 @@ Class | Method | HTTP request | Description
  - [MarkFreightInStageRequest](docs/MarkFreightInStageRequest.md)
  - [OIDCConfig](docs/OIDCConfig.md)
  - [PatchConfigMapRequest](docs/PatchConfigMapRequest.md)
+ - [PatchFreightMetadataRequest](docs/PatchFreightMetadataRequest.md)
  - [PatchGenericCredentialsRequest](docs/PatchGenericCredentialsRequest.md)
  - [PatchRepoCredentialsRequest](docs/PatchRepoCredentialsRequest.md)
  - [PkgServerFreightGroupList](docs/PkgServerFreightGroupList.md)
