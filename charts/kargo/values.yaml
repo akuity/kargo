@@ -202,7 +202,7 @@ nats:
       ## @param nats.external.tokenSecret.key Key within the `Secret` specified by `nats.external.tokenSecret.name` that contains the token.
       key: token
     userPasswordSecret:
-      ## @param nats.external.userPasswordSecret.name Name of a `Secret` in the release namespace containing a username and password with which Kargo components authenticate to the NATS server specified by `nats.external.url`. The default keys match those of a `kubernetes.io/basic-auth` `Secret`. Mutually exclusive with the other `nats.external.*Secret.name` settings.
+      ## @param nats.external.userPasswordSecret.name Name of a `Secret` in the release namespace containing a username and password with which Kargo components authenticate to the NATS server specified by `nats.external.url`. The default keys match those of a `kubernetes.io/basic-auth` `Secret`. Both are mounted as files that are re-read on every reconnect, so updates to the `Secret` take effect without restarting Kargo components. Mutually exclusive with the other `nats.external.*Secret.name` settings.
       name: ""
       ## @param nats.external.userPasswordSecret.usernameKey Key within the `Secret` specified by `nats.external.userPasswordSecret.name` that contains the username.
       usernameKey: username

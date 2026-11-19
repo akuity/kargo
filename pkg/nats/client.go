@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/kelseyhightower/envconfig"
@@ -25,8 +26,8 @@ type Config struct {
 	// authenticate with the NATS server. It is optional so that a server
 	// running without authentication can be used.
 	//
-	// At most one of SeedKeyFile, CredsFile, Token, or Username/Password may
-	// be specified.
+	// At most one of SeedKeyFile, CredsFile, Token, Username/Password, or
+	// UsernameFile/PasswordFile may be specified.
 	SeedKeyFile string `envconfig:"NATS_SEED_KEY_FILE"`
 	// CredsFile is the path to a credentials file containing a user JWT and
 	// the nkey seed used to sign server challenges, as used by servers in
@@ -41,6 +42,15 @@ type Config struct {
 	// Password is the password used to authenticate with the NATS server.
 	// Username must also be specified.
 	Password string `envconfig:"NATS_PASSWORD"`
+	// UsernameFile is the path to a file containing the username used to
+	// authenticate with the NATS server. PasswordFile must also be specified.
+	// Like CredsFile, both files are re-read on every (re)connect, so the
+	// password can be rotated without a restart. Trailing newlines are not
+	// considered part of either value.
+	UsernameFile string `envconfig:"NATS_USERNAME_FILE"`
+	// PasswordFile is the path to a file containing the password used to
+	// authenticate with the NATS server. UsernameFile must also be specified.
+	PasswordFile string `envconfig:"NATS_PASSWORD_FILE"`
 	// TLSCAFile is the path to a file containing PEM-encoded CA certificates
 	// used to verify the NATS server's certificate. When unspecified, the
 	// system's root CAs are used.
@@ -104,7 +114,7 @@ func (c Config) options(ctx context.Context) ([]nats.Option, error) {
 		timeout = 2 * time.Second
 	}
 	opts := []nats.Option{nats.Timeout(timeout)}
-	authOpts, err := c.authOptions()
+	authOpts, err := c.authOptions(logger)
 	if err != nil {
 		return nil, err
 	}
@@ -128,9 +138,9 @@ func (c Config) options(ctx context.Context) ([]nats.Option, error) {
 	// twice in a row. Rotated credentials reach us through a mounted file that
 	// the kubelet refreshes only on its own sync period, which is far longer
 	// than two reconnect attempts. A rotation that drops our connection would
-	// therefore close it for good. A credentials file (CredsFile) is re-read on
-	// every attempt, so retrying lets the connection recover once the file
-	// catches up.
+	// therefore close it for good. Credentials read from files (CredsFile, or
+	// UsernameFile and PasswordFile) are re-read on every attempt, so retrying
+	// lets the connection recover once the files catch up.
 	opts = append(
 		opts,
 		nats.MaxReconnects(-1),
@@ -170,14 +180,16 @@ func (c Config) options(ctx context.Context) ([]nats.Option, error) {
 }
 
 // authOptions returns the nats.Options for authenticating with, and securing
-// the connection to, the NATS server.
-func (c Config) authOptions() ([]nats.Option, error) {
+// the connection to, the NATS server. The provided logger reports failures to
+// read credentials that happen after the connection was first established.
+func (c Config) authOptions(logger *logging.Logger) ([]nats.Option, error) {
 	var methods int
 	for _, set := range []bool{
 		c.SeedKeyFile != "",
 		c.CredsFile != "",
 		c.Token != "",
 		c.Username != "" || c.Password != "",
+		c.UsernameFile != "" || c.PasswordFile != "",
 	} {
 		if set {
 			methods++
@@ -188,12 +200,18 @@ func (c Config) authOptions() ([]nats.Option, error) {
 	if methods > 1 {
 		return nil, errors.New(
 			"at most one of NATS_SEED_KEY_FILE, NATS_CREDS_FILE, NATS_TOKEN, " +
-				"or NATS_USERNAME/NATS_PASSWORD may be specified",
+				"NATS_USERNAME/NATS_PASSWORD, or " +
+				"NATS_USERNAME_FILE/NATS_PASSWORD_FILE may be specified",
 		)
 	}
 	if (c.Username == "") != (c.Password == "") {
 		return nil, errors.New(
 			"NATS_USERNAME and NATS_PASSWORD must be specified together",
+		)
+	}
+	if (c.UsernameFile == "") != (c.PasswordFile == "") {
+		return nil, errors.New(
+			"NATS_USERNAME_FILE and NATS_PASSWORD_FILE must be specified together",
 		)
 	}
 	if (c.TLSCertFile == "") != (c.TLSKeyFile == "") {
@@ -222,6 +240,22 @@ func (c Config) authOptions() ([]nats.Option, error) {
 		opts = append(opts, nats.Token(c.Token))
 	case c.Username != "":
 		opts = append(opts, nats.UserInfo(c.Username, c.Password))
+	case c.UsernameFile != "":
+		// As with the creds file, the files are read on each connection
+		// attempt, so check them up front.
+		for _, f := range []string{c.UsernameFile, c.PasswordFile} {
+			if _, err := os.Stat(f); err != nil {
+				return nil, fmt.Errorf(
+					"error loading NATS username and password: %w", err,
+				)
+			}
+		}
+		opts = append(
+			opts,
+			nats.UserInfoHandler(
+				userInfoFromFiles(logger, c.UsernameFile, c.PasswordFile),
+			),
+		)
 	}
 	// Either of these also requires TLS for the connection.
 	if c.TLSCAFile != "" {
@@ -231,4 +265,44 @@ func (c Config) authOptions() ([]nats.Option, error) {
 		opts = append(opts, nats.ClientCert(c.TLSCertFile, c.TLSKeyFile))
 	}
 	return opts, nil
+}
+
+// userInfoFromFiles returns a nats.UserInfoCB that reads the username and
+// password from the given files each time the library calls it, which it does
+// on every connection attempt.
+//
+// The callback has no way to return an error. If either file cannot be read,
+// it logs the failure and presents no credentials. The server then refuses the
+// connection, and the reconnect options set in Config.options keep retrying
+// until the files can be read again.
+func userInfoFromFiles(
+	logger *logging.Logger,
+	usernameFile string,
+	passwordFile string,
+) nats.UserInfoCB {
+	return func() (string, string) {
+		username, err := readCredentialFile(usernameFile)
+		if err != nil {
+			logger.Error(err, "error reading NATS username file")
+			return "", ""
+		}
+		password, err := readCredentialFile(passwordFile)
+		if err != nil {
+			logger.Error(err, "error reading NATS password file")
+			return "", ""
+		}
+		return username, password
+	}
+}
+
+// readCredentialFile returns the content of the file at the given path with
+// any trailing newline removed. A value projected from a Kubernetes Secret has
+// none, but a file written by hand almost always does, and a newline is never
+// meant to be part of a username or password.
+func readCredentialFile(path string) (string, error) {
+	b, err := os.ReadFile(path)
+	if err != nil {
+		return "", err
+	}
+	return strings.TrimRight(string(b), "\r\n"), nil
 }
