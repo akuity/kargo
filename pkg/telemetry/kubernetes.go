@@ -179,25 +179,5 @@ func (req kubeRequest) attributes() []attribute.KeyValue {
 		}
 		return attrs
 	}
-	if req.namespace != "" {
-		attrs = append(attrs, ProjectKey.String(req.namespace))
-	}
-	if req.name == "" {
-		return attrs
-	}
-	switch req.resource {
-	case "freights":
-		attrs = append(attrs, FreightKey.String(req.name))
-	case "warehouses":
-		attrs = append(attrs, WarehouseKey.String(req.name))
-	case "stages":
-		attrs = append(attrs, StageKey.String(req.name))
-	case "promotions":
-		attrs = append(attrs, PromotionKey.String(req.name))
-	case "promotionrequests":
-		attrs = append(attrs, PromotionRequestKey.String(req.name))
-	case "projects":
-		attrs = append(attrs, ProjectKey.String(req.name))
-	}
-	return attrs
+	return kargoObjectAttributes(attrs, req.resource, req.namespace, req.name)
 }
