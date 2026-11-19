@@ -2,44 +2,40 @@ package promotionrolloutstore
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
-	"sync"
 	"testing"
 
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
 
 	"github.com/akuity/kargo/pkg/database"
+	"github.com/akuity/kargo/pkg/event/fake"
 	"github.com/akuity/kargo/pkg/reconciler/nats"
 )
 
-// recordingPublisher is a nats.Publisher that keeps every event published to
-// it, decoded, for a test to inspect. It is safe for the parallel cases of
-// one test to share.
-type recordingPublisher struct {
-	mu     sync.Mutex
-	events []published
-	err    error
-}
-
+// published is an event a store published, as a subscriber decodes it.
 type published struct {
 	subject string
 	event   nats.Event[Key, database.PromotionRolloutRow]
 }
 
-func (p *recordingPublisher) Publish(subject string, data []byte) error {
-	if p.err != nil {
-		return p.err
+// newRecordingSender returns a sender that records every event published
+// through it, under the subjects a real publisher would use.
+func newRecordingSender() *fake.Sender {
+	return &fake.Sender{SubjectPrefix: nats.InternalSubjectPrefix}
+}
+
+// decodePublished returns every event the sender recorded, decoded, in the
+// order they were published.
+func decodePublished(t *testing.T, sender *fake.Sender) []published {
+	t.Helper()
+	var events []published
+	for _, evt := range sender.Sent() {
+		e, err := Events.Decode(evt)
+		require.NoError(t, err)
+		events = append(events, published{subject: evt.Subject(), event: e})
 	}
-	var e nats.Event[Key, database.PromotionRolloutRow]
-	if err := json.Unmarshal(data, &e); err != nil {
-		return err
-	}
-	p.mu.Lock()
-	defer p.mu.Unlock()
-	p.events = append(p.events, published{subject: subject, event: e})
-	return nil
+	return events
 }
 
 func TestPublish(t *testing.T) {
@@ -57,20 +53,21 @@ func TestPublish(t *testing.T) {
 
 	testCases := []struct {
 		name    string
-		events  *recordingPublisher
+		sender  *fake.Sender
 		publish func(*store)
-		assert  func(*testing.T, *recordingPublisher)
+		assert  func(*testing.T, *fake.Sender)
 	}{
 		{
 			name:   "created carries the row under the rollout's key",
-			events: &recordingPublisher{},
+			sender: newRecordingSender(),
 			publish: func(s *store) {
 				s.publishCreated(context.Background(), old)
 			},
-			assert: func(t *testing.T, events *recordingPublisher) {
-				require.Len(t, events.events, 1)
-				e := events.events[0]
-				require.Equal(t, "akuity.platform.internal.promotionrollouts.created", e.subject)
+			assert: func(t *testing.T, sender *fake.Sender) {
+				events := decodePublished(t, sender)
+				require.Len(t, events, 1)
+				e := events[0]
+				require.Equal(t, "akuity.platform.internal.promotion.rollout.created", e.subject)
 				require.Equal(t, nats.Created, e.event.Kind)
 				require.Equal(t, Key{Project: "demo", Name: "prod.01A.abc"}, e.event.Key)
 				require.Nil(t, e.event.Old)
@@ -79,14 +76,15 @@ func TestPublish(t *testing.T) {
 		},
 		{
 			name:   "updated carries the row before and after",
-			events: &recordingPublisher{},
+			sender: newRecordingSender(),
 			publish: func(s *store) {
 				s.publishUpdated(context.Background(), old, updated)
 			},
-			assert: func(t *testing.T, events *recordingPublisher) {
-				require.Len(t, events.events, 1)
-				e := events.events[0]
-				require.Equal(t, "akuity.platform.internal.promotionrollouts.updated", e.subject)
+			assert: func(t *testing.T, sender *fake.Sender) {
+				events := decodePublished(t, sender)
+				require.Len(t, events, 1)
+				e := events[0]
+				require.Equal(t, "akuity.platform.internal.promotion.rollout.updated", e.subject)
 				require.Equal(t, nats.Updated, e.event.Kind)
 				require.Equal(t, Key{Project: "demo", Name: "prod.01A.abc"}, e.event.Key)
 				require.Equal(t, old, *e.event.Old)
@@ -94,14 +92,17 @@ func TestPublish(t *testing.T) {
 			},
 		},
 		{
-			name:   "a failure to publish is logged, not raised",
-			events: &recordingPublisher{err: errors.New("disconnected")},
+			name: "a failure to publish is logged, not raised",
+			sender: &fake.Sender{
+				SubjectPrefix: nats.InternalSubjectPrefix,
+				SendErr:       errors.New("disconnected"),
+			},
 			publish: func(s *store) {
 				s.publishCreated(context.Background(), old)
 				s.publishUpdated(context.Background(), old, updated)
 			},
-			assert: func(t *testing.T, events *recordingPublisher) {
-				require.Empty(t, events.events)
+			assert: func(t *testing.T, sender *fake.Sender) {
+				require.Empty(t, sender.Sent())
 			},
 		},
 		{
@@ -110,18 +111,18 @@ func TestPublish(t *testing.T) {
 				s.publishCreated(context.Background(), old)
 				s.publishUpdated(context.Background(), old, updated)
 			},
-			assert: func(*testing.T, *recordingPublisher) {},
+			assert: func(*testing.T, *fake.Sender) {},
 		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 			s := &store{}
-			if testCase.events != nil {
-				s.events = testCase.events
+			if testCase.sender != nil {
+				s.events = nats.NewPublisherWithSender(testCase.sender)
 			}
 			testCase.publish(s)
-			testCase.assert(t, testCase.events)
+			testCase.assert(t, testCase.sender)
 		})
 	}
 }

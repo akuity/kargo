@@ -105,7 +105,7 @@ type store struct {
 	queries *database.Queries
 	// events is where the store publishes an event after each committed
 	// write; see Events. It is nil when the store publishes nothing.
-	events nats.Publisher
+	events *nats.Publisher
 }
 
 // New returns a Store that runs its statements through queries. No call opens
@@ -115,7 +115,7 @@ type store struct {
 // to a transaction it then rolls back announces a write that never
 // happened. The events may be nil, in which case the store publishes
 // nothing.
-func New(queries *database.Queries, events nats.Publisher) Store {
+func New(queries *database.Queries, events *nats.Publisher) Store {
 	return &store{queries: queries, events: events}
 }
 
@@ -426,7 +426,7 @@ func (s *store) UpdateStatus(
 // subscriber's resync picks up what its events missed.
 func (s *store) publishCreated(ctx context.Context, created database.PromotionRolloutRow) {
 	key := Key{Project: created.ProjectName, Name: created.Name}
-	if err := Events.PublishCreated(s.events, key, created); err != nil {
+	if err := Events.PublishCreated(ctx, s.events, key, created); err != nil {
 		logging.LoggerFromContext(ctx).Error(
 			err, "error publishing PromotionRollout created event",
 			"project", key.Project, "promotionRollout", key.Name,
@@ -439,7 +439,7 @@ func (s *store) publishCreated(ctx context.Context, created database.PromotionRo
 // publishCreated.
 func (s *store) publishUpdated(ctx context.Context, old, updated database.PromotionRolloutRow) {
 	key := Key{Project: updated.ProjectName, Name: updated.Name}
-	if err := Events.PublishUpdated(s.events, key, old, updated); err != nil {
+	if err := Events.PublishUpdated(ctx, s.events, key, old, updated); err != nil {
 		logging.LoggerFromContext(ctx).Error(
 			err, "error publishing PromotionRollout updated event",
 			"project", key.Project, "promotionRollout", key.Name,

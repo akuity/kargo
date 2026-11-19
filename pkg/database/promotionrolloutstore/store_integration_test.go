@@ -17,16 +17,16 @@ import (
 	"github.com/akuity/kargo/pkg/database"
 	"github.com/akuity/kargo/pkg/database/databasetest"
 	"github.com/akuity/kargo/pkg/database/targetstore"
+	"github.com/akuity/kargo/pkg/event/fake"
 	"github.com/akuity/kargo/pkg/reconciler/nats"
 )
 
 // forProject returns the events published about the Project's rollouts, in
 // the order they were published.
-func (p *recordingPublisher) forProject(project string) []published {
-	p.mu.Lock()
-	defer p.mu.Unlock()
+func forProject(t *testing.T, sender *fake.Sender, project string) []published {
+	t.Helper()
 	var events []published
-	for _, e := range p.events {
+	for _, e := range decodePublished(t, sender) {
 		if e.event.Key.Project == project {
 			events = append(events, e)
 		}
@@ -56,8 +56,8 @@ func TestStoreIntegration(t *testing.T) {
 	t.Parallel()
 	pool, _ := databasetest.IsolatedDatabase(t)
 	queries := database.New(pool)
-	events := &recordingPublisher{}
-	store := New(queries, events)
+	events := newRecordingSender()
+	store := New(queries, nats.NewPublisherWithSender(events))
 	targets := targetstore.New(queries)
 	ctx := context.Background()
 
@@ -146,9 +146,9 @@ func TestStoreIntegration(t *testing.T) {
 				require.Nil(t, rollout.StatusFinishedAt)
 
 				// The creation is announced with the row as stored.
-				published := events.forProject("create")
+				published := forProject(t, events, "create")
 				require.Len(t, published, 1)
-				require.Equal(t, "akuity.platform.internal.promotionrollouts.created", published[0].subject)
+				require.Equal(t, "akuity.platform.internal.promotion.rollout.created", published[0].subject)
 				require.Equal(t, nats.Created, published[0].event.Kind)
 				require.Equal(t, Key{Project: "create", Name: "prod.01A.abc"}, published[0].event.Key)
 				require.Equal(
@@ -613,10 +613,10 @@ func TestStoreIntegration(t *testing.T) {
 				require.Equal(t, []string{"us-east"}, targetNames(fetched))
 
 				// The update is announced with the row before and after it.
-				published := events.forProject("update")
+				published := forProject(t, events, "update")
 				require.Len(t, published, 2)
 				require.Equal(t, nats.Created, published[0].event.Kind)
-				require.Equal(t, "akuity.platform.internal.promotionrollouts.updated", published[1].subject)
+				require.Equal(t, "akuity.platform.internal.promotion.rollout.updated", published[1].subject)
 				require.Equal(t, nats.Updated, published[1].event.Kind)
 				require.Equal(t, Key{Project: "update", Name: "prod.01A.abc"}, published[1].event.Key)
 				require.Equal(
@@ -631,7 +631,7 @@ func TestStoreIntegration(t *testing.T) {
 				_, err = store.UpdateStatus(ctx, "update", row)
 				require.ErrorIs(t, err, database.ErrConflict)
 				require.ErrorContains(t, err, "modified")
-				require.Len(t, events.forProject("update"), 2)
+				require.Len(t, forProject(t, events, "update"), 2)
 
 				// A different id says the rollout was replaced.
 				row = updated
@@ -647,7 +647,7 @@ func TestStoreIntegration(t *testing.T) {
 					StatusPhase: "Failed",
 				})
 				require.NoError(t, err)
-				published = events.forProject("update")
+				published = forProject(t, events, "update")
 				require.Len(t, published, 3)
 				require.Equal(t, nats.Updated, published[2].event.Kind)
 				require.Equal(t, "Errored", published[2].event.Old.StatusPhase)

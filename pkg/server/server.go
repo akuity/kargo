@@ -56,7 +56,7 @@ type server struct {
 	// write, for the controllers that drive the resources in the database.
 	// It is nil when the server runs without NATS, such as in local mode,
 	// in which case nothing is published.
-	events nats.Publisher
+	events *nats.Publisher
 
 	// The following behaviors are overridable for testing purposes:
 
@@ -179,7 +179,7 @@ func NewServer(
 	rolesDB rbac.RolesDatabase,
 	sender event.Sender,
 	db *database.Queries,
-	events nats.Publisher,
+	events *nats.Publisher,
 ) Server {
 	s := &server{
 		cfg:     cfg,

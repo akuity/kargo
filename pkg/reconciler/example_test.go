@@ -42,7 +42,7 @@ type TargetRow struct {
 // targetEvents is the topic Target events travel on. The database row is
 // the event body, so the API server publishes exactly what it committed. In
 // the real code this is declared once beside the store.
-var targetEvents = nats.NewTopic[TargetKey, TargetRow](nats.InternalSubjectPrefix + ".targets")
+var targetEvents = nats.NewTopic[TargetKey, TargetRow]("Target")
 
 // targetStore is the slice of the database queries a Target controller
 // needs.
@@ -181,10 +181,11 @@ func ExampleNew_kubernetesResource() {
 // covers it.
 func ExampleTopic_PublishUpdated() {
 	var (
-		pub           nats.Publisher
+		ctx           context.Context
+		pub           *nats.Publisher
 		before, after TargetRow
 	)
 	key := TargetKey{Project: after.Project, Name: after.Name}
-	err := targetEvents.PublishUpdated(pub, key, before, after)
+	err := targetEvents.PublishUpdated(ctx, pub, key, before, after)
 	_ = err
 }
