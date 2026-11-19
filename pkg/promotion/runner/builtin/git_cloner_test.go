@@ -279,6 +279,17 @@ func Test_gitCloner_convert(t *testing.T) {
 			},
 		},
 		{
+			name: "depth exceeds maximum",
+			config: promotion.Config{
+				"repoURL":  "https://github.com/example/repo.git",
+				"depth":    2147483648,
+				"checkout": []promotion.Config{{"branch": "main", "path": "/fake/path/0"}},
+			},
+			expectedProblems: []string{
+				"depth: Must be less than or equal to 2.147483647e+09",
+			},
+		},
+		{
 			name: "depth is valid",
 			config: promotion.Config{
 				"repoURL": "https://github.com/example/repo.git",
