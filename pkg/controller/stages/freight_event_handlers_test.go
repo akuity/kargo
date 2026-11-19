@@ -67,7 +67,7 @@ func Test_freightCreatedStageEnqueuer_Generic(t *testing.T) {
 		WithIndex(&kargoapi.Stage{}, indexer.StagesByWarehouseField, indexer.StagesByWarehouse).
 		Build()
 
-	enqueuer := &freightCreatedStageEnqueuer[*kargoapi.Freight]{kargoClient: c}
+	enqueuer := NewFreightCreatedStageEnqueuer(c, false)
 
 	t.Run("enqueues Stages subscribed to the Warehouse", func(t *testing.T) {
 		q := &controllertest.Queue{TypedInterface: workqueue.NewTyped[reconcile.Request]()}
@@ -111,7 +111,7 @@ func Test_freightVerifiedStageEnqueuer_Generic(t *testing.T) {
 		WithIndex(&kargoapi.Stage{}, indexer.StagesByUpstreamStagesField, indexer.StagesByUpstreamStages).
 		Build()
 
-	enqueuer := &freightVerifiedStageEnqueuer[*kargoapi.Freight]{kargoClient: c}
+	enqueuer := NewFreightVerifiedStageEnqueuer(c, false)
 
 	t.Run("enqueues Stages downstream of the verified Stage", func(t *testing.T) {
 		q := &controllertest.Queue{TypedInterface: workqueue.NewTyped[reconcile.Request]()}
@@ -159,7 +159,7 @@ func Test_freightCurrentlyInStageEnqueuer_Generic(t *testing.T) {
 		WithIndex(&kargoapi.Stage{}, indexer.StagesByUpstreamStagesField, indexer.StagesByUpstreamStages).
 		Build()
 
-	enqueuer := &freightCurrentlyInStageEnqueuer[*kargoapi.Freight]{kargoClient: c}
+	enqueuer := NewFreightCurrentlyInStageEnqueuer(c, false)
 
 	t.Run("enqueues downstream when current in AND verified in the Stage", func(t *testing.T) {
 		q := &controllertest.Queue{TypedInterface: workqueue.NewTyped[reconcile.Request]()}
@@ -207,11 +207,8 @@ func Test_freightCurrentlyInStageEnqueuer_Generic(t *testing.T) {
 
 func Test_freightApprovedStageEnqueuer_Generic(t *testing.T) {
 	t.Parallel()
-	scheme := runtime.NewScheme()
-	require.NoError(t, kargoapi.AddToScheme(scheme))
 
-	c := fake.NewClientBuilder().WithScheme(scheme).Build()
-	enqueuer := &freightApprovedStageEnqueuer[*kargoapi.Freight]{kargoClient: c}
+	enqueuer := NewFreightApprovedStageEnqueuer()
 
 	t.Run("enqueues the Stage the Freight was approved for", func(t *testing.T) {
 		q := &controllertest.Queue{TypedInterface: workqueue.NewTyped[reconcile.Request]()}

@@ -80,7 +80,7 @@ func (s *server) markFreightInStage(c *gin.Context) {
 
 	// The authorizing client runs a SubjectAccessReview for patch on
 	// freights/status, which is the authorization decision for this write.
-	if err := s.patchFreightStatusFn(ctx, s.client, freight, newStatus); err != nil {
+	if err = s.patchFreightStatusFn(ctx, s.client, freight, newStatus); err != nil {
 		_ = c.Error(fmt.Errorf("patch freight status: %w", err))
 		return
 	}
@@ -188,7 +188,7 @@ func (s *server) unmarkFreightInStage(c *gin.Context) {
 
 	// The authorizing client runs a SubjectAccessReview for patch on
 	// freights/status, which is the authorization decision for this write.
-	if err := s.patchFreightStatusFn(ctx, s.client, freight, newStatus); err != nil {
+	if err = s.patchFreightStatusFn(ctx, s.client, freight, newStatus); err != nil {
 		_ = c.Error(fmt.Errorf("patch freight status: %w", err))
 		return
 	}
@@ -230,7 +230,7 @@ func (s *server) deleteFreightStageStatus(c *gin.Context) {
 
 	// The authorizing client runs a SubjectAccessReview for patch on
 	// freights/status, which is the authorization decision for this write.
-	if err := s.patchFreightStatusFn(ctx, s.client, freight, newStatus); err != nil {
+	if err = s.patchFreightStatusFn(ctx, s.client, freight, newStatus); err != nil {
 		_ = c.Error(fmt.Errorf("patch freight status: %w", err))
 		return
 	}

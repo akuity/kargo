@@ -53,8 +53,9 @@ type FreightClient interface {
 		ctx context.Context,
 		project, stage string,
 	) ([]kargoapi.Freight, error)
-	// GetFreight returns the named Freight, or nil if there is no such Freight.
-	GetFreight(ctx context.Context, project, nameOrAlias string) (*kargoapi.Freight, error)
+	// GetFreight returns the Freight with the given name, or nil if there is no
+	// such Freight. The name is never matched against Freight aliases.
+	GetFreight(ctx context.Context, project, name string) (*kargoapi.Freight, error)
 	// ListFreightReferencingStage returns the Freight whose status records the
 	// Stage in its verifiedIn or approvedFor map, for cleanup on Stage deletion.
 	ListFreightReferencingStage(

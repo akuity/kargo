@@ -236,22 +236,19 @@ func NewFreightCreatedStageEnqueuer(
 	kargoClient client.Client,
 	forControlFlowStages bool,
 ) handler.TypedEventHandler[*kargoapi.Freight, reconcile.Request] {
-	return &freightCreatedStageEnqueuer[*kargoapi.Freight]{
-		kargoClient,
-		forControlFlowStages,
+	return handler.TypedFuncs[*kargoapi.Freight, reconcile.Request]{
+		GenericFunc: func(ctx context.Context, evt event.TypedGenericEvent[*kargoapi.Freight], wq workqueue.TypedRateLimitingInterface[reconcile.Request]) {
+			genericFreightCreated(ctx, evt, wq, kargoClient, forControlFlowStages)
+		},
 	}
 }
 
-type freightCreatedStageEnqueuer[T any] struct {
-	kargoClient          client.Client
-	forControlFlowStages bool
-}
-
-// Generic implements TypedEventHandler.
-func (c *freightCreatedStageEnqueuer[T]) Generic(
+func genericFreightCreated(
 	ctx context.Context,
-	evt event.TypedGenericEvent[T],
+	evt event.TypedGenericEvent[*kargoapi.Freight],
 	wq workqueue.TypedRateLimitingInterface[reconcile.Request],
+	kargoClient          client.Client,
+	forControlFlowStages bool,
 ) {
 	logger := logging.LoggerFromContext(ctx)
 
@@ -261,7 +258,7 @@ func (c *freightCreatedStageEnqueuer[T]) Generic(
 	}
 
 	stages := kargoapi.StageList{}
-	if err := c.kargoClient.List(
+	if err := kargoClient.List(
 		ctx,
 		&stages,
 		&client.ListOptions{
@@ -281,32 +278,11 @@ func (c *freightCreatedStageEnqueuer[T]) Generic(
 	}
 
 	for _, stage := range stages.Items {
-		if stage.IsControlFlow() != c.forControlFlowStages {
+		if stage.IsControlFlow() != forControlFlowStages {
 			continue
 		}
-		enqueueStage(ctx, wq, freight.Namespace, stage.Name, c.forControlFlowStages)
+		enqueueStage(ctx, wq, freight.Namespace, stage.Name, forControlFlowStages)
 	}
-}
-
-func (c *freightCreatedStageEnqueuer[T]) Create(
-	context.Context,
-	event.TypedCreateEvent[T],
-	workqueue.TypedRateLimitingInterface[reconcile.Request],
-) {
-}
-
-func (c *freightCreatedStageEnqueuer[T]) Delete(
-	context.Context,
-	event.TypedDeleteEvent[T],
-	workqueue.TypedRateLimitingInterface[reconcile.Request],
-) {
-}
-
-func (c *freightCreatedStageEnqueuer[T]) Update(
-	context.Context,
-	event.TypedUpdateEvent[T],
-	workqueue.TypedRateLimitingInterface[reconcile.Request],
-) {
 }
 
 // NewFreightVerifiedStageEnqueuer returns an event handler that, for each
@@ -318,56 +294,38 @@ func NewFreightVerifiedStageEnqueuer(
 	kargoClient client.Client,
 	forControlFlowStages bool,
 ) handler.TypedEventHandler[*kargoapi.Freight, reconcile.Request] {
-	return &freightVerifiedStageEnqueuer[*kargoapi.Freight]{
-		kargoClient,
-		forControlFlowStages,
+	return handler.TypedFuncs[*kargoapi.Freight, reconcile.Request]{
+		GenericFunc: func(
+			ctx context.Context,
+			evt event.TypedGenericEvent[*kargoapi.Freight],
+			wq workqueue.TypedRateLimitingInterface[reconcile.Request],
+		) {
+			genericFreightVerified(ctx, evt, wq, kargoClient, forControlFlowStages)
+		},
 	}
 }
 
-type freightVerifiedStageEnqueuer[T any] struct {
-	kargoClient          client.Client
-	forControlFlowStages bool
-}
-
-// Generic implements TypedEventHandler.
-func (v *freightVerifiedStageEnqueuer[T]) Generic(
+// genericFreightVerified handles a FreightVerifiedInStage event by enqueuing
+// the Stages downstream of each Stage the Freight was verified in.
+func genericFreightVerified(
 	ctx context.Context,
-	evt event.TypedGenericEvent[T],
+	evt event.TypedGenericEvent[*kargoapi.Freight],
 	wq workqueue.TypedRateLimitingInterface[reconcile.Request],
+	kargoClient client.Client,
+	forControlFlowStages bool,
 ) {
-	freight, ok := any(evt.Object).(*kargoapi.Freight)
-	if !ok {
+	freight := evt.Object
+	if freight == nil {
 		return
 	}
 	enqueueDownstreamStages(
 		ctx,
-		v.kargoClient,
+		kargoClient,
 		wq,
 		freight.Namespace,
 		slices.Sorted(maps.Keys(freight.Status.VerifiedIn)),
-		v.forControlFlowStages,
+		forControlFlowStages,
 	)
-}
-
-func (v *freightVerifiedStageEnqueuer[T]) Create(
-	context.Context,
-	event.TypedCreateEvent[T],
-	workqueue.TypedRateLimitingInterface[reconcile.Request],
-) {
-}
-
-func (v *freightVerifiedStageEnqueuer[T]) Delete(
-	context.Context,
-	event.TypedDeleteEvent[T],
-	workqueue.TypedRateLimitingInterface[reconcile.Request],
-) {
-}
-
-func (v *freightVerifiedStageEnqueuer[T]) Update(
-	context.Context,
-	event.TypedUpdateEvent[T],
-	workqueue.TypedRateLimitingInterface[reconcile.Request],
-) {
 }
 
 // NewFreightCurrentlyInStageEnqueuer returns an event handler that, for each
@@ -381,29 +339,32 @@ func NewFreightCurrentlyInStageEnqueuer(
 	kargoClient client.Client,
 	forControlFlowStages bool,
 ) handler.TypedEventHandler[*kargoapi.Freight, reconcile.Request] {
-	return &freightCurrentlyInStageEnqueuer[*kargoapi.Freight]{
-		kargoClient,
-		forControlFlowStages,
+	return handler.TypedFuncs[*kargoapi.Freight, reconcile.Request]{
+		GenericFunc: func(
+			ctx context.Context,
+			evt event.TypedGenericEvent[*kargoapi.Freight],
+			wq workqueue.TypedRateLimitingInterface[reconcile.Request],
+		) {
+			genericFreightCurrentlyInStage(ctx, evt, wq, kargoClient, forControlFlowStages)
+		},
 	}
 }
 
-type freightCurrentlyInStageEnqueuer[T any] struct {
-	kargoClient          client.Client
-	forControlFlowStages bool
-}
-
-// Generic implements TypedEventHandler. It filters the FreightCurrentlyInStage
-// event on verification -- enqueuing downstream Stages only for Stages the
-// Freight is both current in and verified in -- because downstream availability
-// (and the MatchUpstream selection policy) requires the upstream's current
-// Freight to be verified. An unverified "currently in" event enqueues nothing.
-func (c *freightCurrentlyInStageEnqueuer[T]) Generic(
+// genericFreightCurrentlyInStage handles a FreightCurrentlyInStage event. It
+// filters the event on verification -- enqueuing downstream Stages only for
+// Stages the Freight is both current in and verified in -- because downstream
+// availability (and the MatchUpstream selection policy) requires the upstream's
+// current Freight to be verified. An unverified "currently in" event enqueues
+// nothing.
+func genericFreightCurrentlyInStage(
 	ctx context.Context,
-	evt event.TypedGenericEvent[T],
+	evt event.TypedGenericEvent[*kargoapi.Freight],
 	wq workqueue.TypedRateLimitingInterface[reconcile.Request],
+	kargoClient client.Client,
+	forControlFlowStages bool,
 ) {
-	freight, ok := any(evt.Object).(*kargoapi.Freight)
-	if !ok {
+	freight := evt.Object
+	if freight == nil {
 		return
 	}
 	var verifiedCurrentStages []string
@@ -415,33 +376,12 @@ func (c *freightCurrentlyInStageEnqueuer[T]) Generic(
 	slices.Sort(verifiedCurrentStages)
 	enqueueDownstreamStages(
 		ctx,
-		c.kargoClient,
+		kargoClient,
 		wq,
 		freight.Namespace,
 		verifiedCurrentStages,
-		c.forControlFlowStages,
+		forControlFlowStages,
 	)
-}
-
-func (c *freightCurrentlyInStageEnqueuer[T]) Create(
-	context.Context,
-	event.TypedCreateEvent[T],
-	workqueue.TypedRateLimitingInterface[reconcile.Request],
-) {
-}
-
-func (c *freightCurrentlyInStageEnqueuer[T]) Delete(
-	context.Context,
-	event.TypedDeleteEvent[T],
-	workqueue.TypedRateLimitingInterface[reconcile.Request],
-) {
-}
-
-func (c *freightCurrentlyInStageEnqueuer[T]) Update(
-	context.Context,
-	event.TypedUpdateEvent[T],
-	workqueue.TypedRateLimitingInterface[reconcile.Request],
-) {
 }
 
 // NewFreightApprovedStageEnqueuer returns an event handler that, for each
@@ -449,50 +389,26 @@ func (c *freightCurrentlyInStageEnqueuer[T]) Update(
 // handles Generic events -- the kind source.Channel delivers -- while
 // Create/Update/Delete are no-ops. It is the event-driven counterpart of
 // NewStageEnqueuerForApprovedFreight.
-func NewFreightApprovedStageEnqueuer(
-	kargoClient client.Client,
-) handler.TypedEventHandler[*kargoapi.Freight, reconcile.Request] {
-	return &freightApprovedStageEnqueuer[*kargoapi.Freight]{kargoClient}
+func NewFreightApprovedStageEnqueuer() handler.TypedEventHandler[*kargoapi.Freight, reconcile.Request] {
+	return handler.TypedFuncs[*kargoapi.Freight, reconcile.Request]{
+		GenericFunc: genericFreightApproved,
+	}
 }
 
-type freightApprovedStageEnqueuer[T any] struct {
-	kargoClient client.Client
-}
-
-// Generic implements TypedEventHandler.
-func (a *freightApprovedStageEnqueuer[T]) Generic(
+// genericFreightApproved handles a FreightApproved event by enqueuing each
+// Stage the Freight was approved for.
+func genericFreightApproved(
 	ctx context.Context,
-	evt event.TypedGenericEvent[T],
+	evt event.TypedGenericEvent[*kargoapi.Freight],
 	wq workqueue.TypedRateLimitingInterface[reconcile.Request],
 ) {
-	freight, ok := any(evt.Object).(*kargoapi.Freight)
-	if !ok {
+	freight := evt.Object
+	if freight == nil {
 		return
 	}
 	for _, stage := range slices.Sorted(maps.Keys(freight.Status.ApprovedFor)) {
 		enqueueStage(ctx, wq, freight.Namespace, stage, false)
 	}
-}
-
-func (a *freightApprovedStageEnqueuer[T]) Create(
-	context.Context,
-	event.TypedCreateEvent[T],
-	workqueue.TypedRateLimitingInterface[reconcile.Request],
-) {
-}
-
-func (a *freightApprovedStageEnqueuer[T]) Delete(
-	context.Context,
-	event.TypedDeleteEvent[T],
-	workqueue.TypedRateLimitingInterface[reconcile.Request],
-) {
-}
-
-func (a *freightApprovedStageEnqueuer[T]) Update(
-	context.Context,
-	event.TypedUpdateEvent[T],
-	workqueue.TypedRateLimitingInterface[reconcile.Request],
-) {
 }
 
 // enqueueDownstreamStages enqueues the Stages downstream of each of the given

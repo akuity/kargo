@@ -1015,9 +1015,11 @@ func TestListFreightAvailableToStageViaClient(t *testing.T) {
 
 		require.Len(t, listFreightFromWarehouseCalls, 2)
 		// Direct input -> nil options.
+		require.Equal(t, project, listFreightFromWarehouseCalls[0].project)
 		require.Equal(t, "wh1", listFreightFromWarehouseCalls[0].warehouse)
 		require.Nil(t, listFreightFromWarehouseCalls[0].opts)
 		// Non-direct input -> options mirror ListFreightAvailableToStage.
+		require.Equal(t, project, listFreightFromWarehouseCalls[1].project)
 		require.Equal(t, "wh2", listFreightFromWarehouseCalls[1].warehouse)
 		require.NotNil(t, listFreightFromWarehouseCalls[1].opts)
 		require.Equal(t, stageName, listFreightFromWarehouseCalls[1].opts.ApprovedFor)

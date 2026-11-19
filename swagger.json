@@ -1061,6 +1061,12 @@
             "name": "freight-name-or-alias",
             "in": "path",
             "required": true
+          },
+          {
+            "type": "boolean",
+            "description": "Match only the Freight name, not its alias",
+            "name": "nameOnly",
+            "in": "query"
           }
         ],
         "responses": {
@@ -3222,7 +3228,7 @@
     },
     "/v1beta1/projects/{project}/stages/{stage}/referencing-freight": {
       "get": {
-        "description": "List the Freight whose status records the named Stage in its\nverifiedIn or approvedFor map. Returns a FreightList resource.",
+        "description": "List the Freight whose status records the named Stage in its\ncurrentlyIn, verifiedIn or approvedFor map. Returns a FreightList resource.",
         "produces": [
           "application/json"
         ],

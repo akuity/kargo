@@ -84,6 +84,7 @@ export * from './getConfigResponseArgocdShards';
 export * from './getControllerHeartbeatsResponse';
 export * from './getControllerHeartbeatsResponseHeartbeats';
 export * from './getFreightLinksResponse';
+export * from './getFreightParams';
 export * from './getStageLinksResponse';
 export * from './gitClientConfig';
 export * from './gitCommit';

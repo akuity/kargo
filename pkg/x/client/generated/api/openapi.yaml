@@ -842,6 +842,11 @@ paths:
         required: true
         schema:
           type: string
+      - description: "Match only the Freight name, not its alias"
+        in: query
+        name: nameOnly
+        schema:
+          type: boolean
       responses:
         "200":
           content:
@@ -2408,7 +2413,7 @@ paths:
     get:
       description: |-
         List the Freight whose status records the named Stage in its
-        verifiedIn or approvedFor map. Returns a FreightList resource.
+        currentlyIn, verifiedIn or approvedFor map. Returns a FreightList resource.
       operationId: ListFreightReferencingStage
       parameters:
       - description: Project name

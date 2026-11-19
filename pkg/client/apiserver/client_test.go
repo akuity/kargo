@@ -957,6 +957,13 @@ func TestClientListFreight(t *testing.T) {
 	mux.HandleFunc(
 		"GET /v1beta1/projects/{project}/freight/{freightNameOrAlias}",
 		func(w http.ResponseWriter, r *http.Request) {
+			// The client must never let the name match an alias.
+			if r.URL.Query().Get("nameOnly") != "true" {
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(http.StatusBadRequest)
+				_ = json.NewEncoder(w).Encode(map[string]string{"error": "nameOnly not set"})
+				return
+			}
 			if r.PathValue("freightNameOrAlias") == "missing" {
 				w.Header().Set("Content-Type", "application/json")
 				w.WriteHeader(http.StatusNotFound)

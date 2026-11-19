@@ -277,7 +277,7 @@ func (r *RegularStageReconciler) SetupWithManager(
 	if err = c.Watch(
 		source.Channel(
 			approvedCh,
-			NewFreightApprovedStageEnqueuer(kargoMgr.GetClient()),
+			NewFreightApprovedStageEnqueuer(),
 		),
 	); err != nil {
 		return fmt.Errorf("unable to watch approved Freight: %w", err)
@@ -1147,7 +1147,7 @@ func UnmarkUnusedFreight(
 	// Stage and, if they're not, patch their status to accurately reflect that.
 	for _, f := range freight {
 		if filter(f) {
-			if err := freightClient.UnmarkFreightInStage(
+			if err = freightClient.UnmarkFreightInStage(
 				ctx, stage.Namespace, f.Name, stage.Name,
 			); err != nil {
 				return fmt.Errorf(
@@ -1191,6 +1191,7 @@ func (r *RegularStageReconciler) newVerifier() verification.Verifier {
 			r.cfg.RolloutsControllerInstanceID,
 			r.backoffCfg,
 			r.client,
+			r.apiClient,
 			r.credentialsDB,
 			r.cfg.RolloutsIntegrationEnabled,
 		),
@@ -1682,7 +1683,7 @@ func clearFreightStatus(
 
 	var errs []error
 	for _, f := range freight {
-		if err := freightClient.ClearFreightStageStatus(
+		if err = freightClient.ClearFreightStageStatus(
 			ctx, stage.Namespace, f.Name, stage.Name,
 		); err != nil {
 			errs = append(errs, fmt.Errorf(

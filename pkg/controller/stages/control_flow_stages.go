@@ -505,6 +505,7 @@ func (r *ControlFlowStageReconciler) newVerifier() verification.Verifier {
 			r.cfg.RolloutsControllerInstanceID,
 			wait.Backoff{},
 			r.client,
+			r.apiClient,
 			nil,
 			r.cfg.RolloutsIntegrationEnabled,
 		),

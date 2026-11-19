@@ -101,6 +101,22 @@ func validateGenericCredentialSecret(secret *corev1.Secret) error {
 	return nil
 }
 
+// getFreightByName resolves a Freight resource by name only.
+// Errors carry an HTTP status: 404 when nothing matches.
+func (s *server) getFreightByName(
+	ctx context.Context,
+	project string,
+	nameOrAlias string,
+) (*kargoapi.Freight, error) {
+	freight := &kargoapi.Freight{}
+	err := s.client.Get(
+		ctx,
+		client.ObjectKey{Name: nameOrAlias, Namespace: project},
+		freight,
+	)
+	return freight, err
+}
+
 // getFreightByNameOrAlias resolves a Freight resource by name or, when no
 // Freight has that name, by alias. Errors carry an HTTP status: 404 when
 // nothing matches and 409 when the alias matches more than one piece of
