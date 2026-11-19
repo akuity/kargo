@@ -69,6 +69,7 @@ func TestSetup(t *testing.T) {
 				require.True(t, ok)
 				require.True(t, Enabled())
 				require.True(t, CategoryEnabled(CategoryDatabase))
+				require.False(t, CategoryEnabled(CategoryK8s))
 				require.ElementsMatch(
 					t,
 					[]string{"traceparent", "tracestate"},
@@ -108,6 +109,7 @@ func TestSetup(t *testing.T) {
 			assert: func(t *testing.T, shutdown ShutdownFunc, err error) {
 				require.NoError(t, err)
 				require.True(t, CategoryEnabled(CategoryDatabase))
+				require.True(t, CategoryEnabled(CategoryK8s))
 				ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 				defer cancel()
 				require.NoError(t, shutdown(ctx))
