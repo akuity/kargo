@@ -84,10 +84,9 @@ type BareCloneOptions struct {
 	// each fetched branch (a shallow clone). A value of 0 (the default)
 	// indicates no depth limit.
 	Depth uint
-	// Branches optionally limits the clone to remote branches matching the
-	// specified patterns. Each pattern is a branch name that may contain at most
-	// one "*" wildcard (e.g. "main" or "stage/*"). If empty, all branches are
-	// cloned. Only branches matching one of these patterns can be checked out.
+	// Branches optionally limits the clone to the specified remote branches.
+	// Branches that do not exist on the remote are skipped. If empty, all
+	// branches are cloned.
 	Branches []string
 }
 
@@ -181,14 +180,15 @@ func (b *bareRepo) cloneAllBranches(
 	return nil
 }
 
-// cloneSelectBranches produces a bare repository containing only the remote
-// branches that match the provided patterns with "git fetch".
+// cloneSelectBranches produces a bare repository containing only the specified
+// remote branches using "git fetch". Branches that do not exist on the remote
+// are skipped.
 //
 // Equivalent to:
 //
 //	git init --bare <dir>
 //	git config remote.origin.url <url>
-//	git ls-remote --heads origin refs/heads/<literal>...
+//	git ls-remote --heads origin refs/heads/<branch>...
 //	git fetch [--filter=blob:none] [--depth=<depth>] origin +<ref>:<ref>...
 func (b *bareRepo) cloneSelectBranches(
 	ctx context.Context,
@@ -210,27 +210,11 @@ func (b *bareRepo) cloneSelectBranches(
 		)
 	}
 
-	// Literal names are resolved against the remote so that those that don't exist are skipped.
-	var patterns, literals []string
-	for _, branch := range branches {
-		if strings.Contains(branch, "*") {
-			patterns = append(patterns, branch)
-		} else {
-			literals = append(literals, branch)
-		}
-	}
-
-	// Fully qualified refs and ref patterns to fetch
-	var refs []string
-	for _, pattern := range patterns {
-		refs = append(refs, "refs/heads/"+pattern)
-	}
-	if len(literals) > 0 {
-		existing, err := b.findRemoteBranchRefs(ctx, literals)
-		if err != nil {
-			return err
-		}
-		refs = append(refs, existing...)
+	// Resolve branch names against the remote so that branches that do not exist
+	// yet are skipped.
+	refs, err := b.findRemoteBranchRefs(ctx, branches)
+	if err != nil {
+		return err
 	}
 	if len(refs) == 0 {
 		return nil
@@ -257,8 +241,8 @@ func (b *bareRepo) cloneSelectBranches(
 	return nil
 }
 
-// findRemoteBranchRefs returns the fully qualified refs of literal branch names
-// in the remote repository.
+// findRemoteBranchRefs returns the fully qualified refs of branch names that
+// exist in the remote repository.
 //
 // Equivalent to:
 //
@@ -271,6 +255,9 @@ func (b *bareRepo) findRemoteBranchRefs(
 	refs := make(map[string]struct{}, len(names))
 	for _, name := range names {
 		ref := "refs/heads/" + name
+		if _, exists := refs[ref]; exists {
+			continue
+		}
 		refs[ref] = struct{}{}
 		args = append(args, ref)
 	}

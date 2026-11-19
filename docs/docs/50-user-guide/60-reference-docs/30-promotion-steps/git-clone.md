@@ -33,7 +33,6 @@ system to access the git repos.
 | `insecureSkipTLSVerify` | `boolean` | N | Whether to bypass TLS certificate verification when cloning (and for all subsequent operations involving this clone). Setting this to `true` is highly discouraged in production. |
 | `blobless` | `boolean` | N | Whether to perform a [blobless clone][] (`--filter=blob:none`). Defaults to `false`. Useful for large repositories, especially when combined with sparse checkouts. Requires that the Git server support partial clones; the clone will fail if it does not. |
 | `depth` | `integer` | N | Limits the clone to the specified number of most recent commits for each fetched branch (a [shallow clone][]). Must be at least `1`. If unset, the full history is cloned. Useful for repositories with a very long history. If specified, every `checkout` must be of a `branch`. See [Shallow Clones](#shallow-clone). |
-| `branches` | `[]string` | N | Limits the clone to remote branches matching these patterns. Each pattern is a branch name that may contain at most one `*` wildcard. If unset, all branches are cloned. If specified, every `checkout` must be of a `branch` that matches at least one pattern. See [Shallow Clones](#shallow-clone). |
 | `recurseSubmodules` | `boolean` | N | Whether to recursively initialize and update [Git submodules](https://git-scm.com/book/en/v2/Git-Tools-Submodules) for every checkout. Defaults to `false`. When `true`, the equivalent of `git submodule update --init --recursive` is run for each working tree. Any credentials provided for `repoURL` must also be valid for all submodule repositories, or the step will fail. |
 | `author` | `[]object` | N | Default authorship information for any commits made to the cloned repository. If provided, this overrides any system-level defaults. |
 | `author.name` | `string` | Y | The committer's name. |
@@ -41,7 +40,7 @@ system to access the git repos.
 | `author.signingKey` | `string` | N | The GPG signing key for the author. This field is optional. |
 | `checkout` | `[]object` | Y | The commits, branches, or tags to check out from the repository and the paths where they should be checked out. At least one must be specified. |
 | `checkout[].as` | `string` | N | Used as the key in the `commits` output map. If not specified, the value of the `path` field is used as a key instead. Providing a value for this field is useful when expressions in downstream steps may need to reference specific commits checked out by this step. |
-| `checkout[].branch` | `string` | N | A branch to check out. Mutually exclusive with `commit` and `tag`. If none of these is specified, the default branch will be checked out. If `branches` is set, must match at least one of its patterns. |
+| `checkout[].branch` | `string` | N | A branch to check out. Mutually exclusive with `commit` and `tag`. If none of these is specified, the default branch will be checked out. |
 | `checkout[].create` | `boolean` | N | In the event `branch` does not already exist on the remote, whether a new, empty, orphaned branch should be created. Default is `false`, but should commonly be set to `true` for Stage-specific branches, which may not exist yet at the time of a Stage's first promotion. |
 | `checkout[].commit` | `string` | N | A specific commit to check out. Mutually exclusive with `branch` and `tag`. If none of these is specified, the default branch will be checked out. |
 | `checkout[].path` | `string` | Y | The path for a working tree that will be created from the checked out revision. This path is relative to the temporary workspace that Kargo provisions for use by the promotion process. |
@@ -176,8 +175,7 @@ not, in which case the clone will fail.
 
 For repositories with a very long history, cloning can be slow and use a lot of
 disk space. Setting `depth` limits the clone to the most recent commits of each
-fetched branch, which can reduce clone time dramatically. Setting `branches`
-further limits the clone to only the remote branches you need.
+fetched branch, which can reduce clone time dramatically.
 
 ```yaml
 vars:
@@ -188,9 +186,6 @@ steps:
   config:
     repoURL: ${{ vars.gitRepo }}
     depth: 100
-    branches:
-    - main
-    - stage/*
     checkout:
     - branch: main
       path: ./src
@@ -199,10 +194,6 @@ steps:
       path: ./out
 # Work with the checkouts...
 ```
-
-In this example, `stage/*` matches any branch whose name starts with `stage/`,
-such as `stage/dev` or `stage/prod`. Each `checkout` of a `branch` must match
-one of the patterns in `branches`.
 
 :::note
 

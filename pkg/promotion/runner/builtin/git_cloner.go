@@ -2,19 +2,15 @@ package builtin
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
-	"strings"
 
 	"github.com/xeipuuv/gojsonschema"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/controller/git"
 	"github.com/akuity/kargo/pkg/credentials"
-	libExec "github.com/akuity/kargo/pkg/exec"
 	"github.com/akuity/kargo/pkg/promotion"
 	"github.com/akuity/kargo/pkg/x/promotion/stepconfig"
 )
@@ -101,82 +97,19 @@ func (g *gitCloner) convert(cfg promotion.Config) (stepconfig.GitCloneConfig, er
 		}
 	}
 
-	// Check for invalid branch patterns that we couldn't catch with regex.
-	for i, pattern := range typedCfg.Branches {
-		if err = validateBranchPattern(pattern); err != nil {
-			return stepconfig.GitCloneConfig{},
-				fmt.Errorf("error validating branches[%d]: %w", i, err)
-		}
-	}
-
-	// If the clone is limited to specific branches, every branch to be checked
-	// out must also be among them.
-	if typedCfg.Depth != nil || len(typedCfg.Branches) > 0 {
+	// Shallow clones only support branch checkouts.
+	if typedCfg.Depth != nil {
 		for i, checkout := range typedCfg.Checkout {
 			if checkout.Branch == "" {
 				return stepconfig.GitCloneConfig{}, fmt.Errorf(
-					"checkout[%d] must specify a branch when depth or branches is "+
-						"specified",
+					"checkout[%d] must specify a branch when depth is specified",
 					i,
-				)
-			}
-			if len(typedCfg.Branches) > 0 &&
-				!branchMatchesAny(checkout.Branch, typedCfg.Branches) {
-				return stepconfig.GitCloneConfig{}, fmt.Errorf(
-					"branch %q at checkout[%d] does not match any of the patterns "+
-						"specified by branches",
-					checkout.Branch, i,
 				)
 			}
 		}
 	}
 
 	return typedCfg, nil
-}
-
-// validateBranchPattern returns an error if the provided string is neither a
-// valid branch name or valid pattern.
-//
-// Equivalent to:
-//
-//	git check-ref-format --refspec-pattern refs/heads/<pattern>
-func validateBranchPattern(pattern string) error {
-	// #nosec G204 -- The command is run directly, not through a shell, and the
-	// "refs/heads/" prefix means the pattern cannot be parsed as an option.
-	cmd := exec.Command(
-		"git", "check-ref-format", "--refspec-pattern", "refs/heads/"+pattern,
-	)
-	if _, err := libExec.Exec(cmd); err != nil {
-		var exitErr *libExec.ExitError
-		if errors.As(err, &exitErr) && exitErr.ExitCode == 1 {
-			return fmt.Errorf("%q is not a valid branch name or pattern", pattern)
-		}
-		return fmt.Errorf("error validating branch pattern %q: %w", pattern, err)
-	}
-	return nil
-}
-
-// branchMatchesAny returns true if the provided branch name matches any of the
-// provided patterns. A pattern is a branch name that may contain at most one
-// "*" wildcard, which matches any sequence of characters, including "/".
-//
-// These are the same semantics as Git refspec patterns.
-func branchMatchesAny(branch string, patterns []string) bool {
-	for _, pattern := range patterns {
-		prefix, suffix, hasWildcard := strings.Cut(pattern, "*")
-		if !hasWildcard {
-			if branch == pattern {
-				return true
-			}
-			continue
-		}
-		if len(branch) >= len(prefix)+len(suffix) &&
-			strings.HasPrefix(branch, prefix) &&
-			strings.HasSuffix(branch, suffix) {
-			return true
-		}
-	}
-	return false
 }
 
 func (g *gitCloner) run(
@@ -222,6 +155,21 @@ func (g *gitCloner) run(
 		depth = uint(*cfg.Depth)
 	}
 
+	// If every checkout specifies a branch, limit the clone to just those
+	// branches.
+	var branches []string
+	allBranches := len(cfg.Checkout) > 0
+	for _, checkout := range cfg.Checkout {
+		if checkout.Branch == "" {
+			allBranches = false
+			break
+		}
+		branches = append(branches, checkout.Branch)
+	}
+	if !allBranches {
+		branches = nil
+	}
+
 	repo, err := git.CloneBare(
 		ctx,
 		cfg.RepoURL,
@@ -234,7 +182,7 @@ func (g *gitCloner) run(
 			BaseDir:  stepCtx.WorkDir,
 			Blobless: cfg.Blobless,
 			Depth:    depth,
-			Branches: cfg.Branches,
+			Branches: branches,
 		},
 	)
 	if err != nil {

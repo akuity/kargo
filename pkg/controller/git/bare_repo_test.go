@@ -580,33 +580,24 @@ func TestBareRepo_CloneDepthAndBranches(t *testing.T) {
 		},
 		{
 			name: "branches only",
-			opts: &BareCloneOptions{Branches: []string{"main", "stage/*"}},
+			opts: &BareCloneOptions{Branches: []string{"main", "stage/dev"}},
 			expectedCommits: map[string]int{
-				"main":       3,
-				"stage/dev":  4,
-				"stage/prod": 4,
-			},
-		},
-		{
-			name: "wildcard with a prefix and a suffix",
-			opts: &BareCloneOptions{Branches: []string{"st*/dev"}},
-			expectedCommits: map[string]int{
+				"main":      3,
 				"stage/dev": 4,
 			},
 		},
 		{
-			name: "literal overlapping a wildcard",
-			opts: &BareCloneOptions{Branches: []string{"stage/dev", "stage/*"}},
+			name: "duplicate branches",
+			opts: &BareCloneOptions{Branches: []string{"stage/dev", "stage/dev"}},
 			expectedCommits: map[string]int{
-				"stage/dev":  4,
-				"stage/prod": 4,
+				"stage/dev": 4,
 			},
 		},
 		{
 			name: "depth and branches",
 			opts: &BareCloneOptions{
 				Depth:    2,
-				Branches: []string{"stage/*"},
+				Branches: []string{"stage/dev", "stage/prod"},
 			},
 			expectedCommits: map[string]int{
 				"stage/dev":  2,
@@ -628,7 +619,7 @@ func TestBareRepo_CloneDepthAndBranches(t *testing.T) {
 			expectShallow: true,
 		},
 		{
-			name: "branches include a literal branch that does not exist",
+			name: "branches include a branch that does not exist",
 			opts: &BareCloneOptions{Branches: []string{"main", "stage/new"}},
 			expectedCommits: map[string]int{
 				"main": 3,
@@ -636,13 +627,13 @@ func TestBareRepo_CloneDepthAndBranches(t *testing.T) {
 		},
 		{
 			name: "no specified branches exist",
-			opts: &BareCloneOptions{Branches: []string{"nope", "nada/*"}},
+			opts: &BareCloneOptions{Branches: []string{"nope", "nada"}},
 		},
 		{
-			name: "wildcard matching nothing with depth",
+			name: "missing branch with depth",
 			opts: &BareCloneOptions{
 				Depth:    1,
-				Branches: []string{"main", "nada/*"},
+				Branches: []string{"main", "nada"},
 			},
 			expectedCommits: map[string]int{
 				"main": 1,
@@ -659,7 +650,9 @@ func TestBareRepo_CloneDepthAndBranches(t *testing.T) {
 				testCase.opts,
 			)
 			require.NoError(t, err)
-			defer rep.Close(t.Context())
+			defer func() {
+				require.NoError(t, rep.Close(t.Context()))
+			}()
 
 			// runGit runs a git command in the bare repository
 			runGit := func(args ...string) string {
@@ -734,7 +727,9 @@ func TestBareRepo_CloneBranchesLiteralsMatchExactly(t *testing.T) {
 		&BareCloneOptions{Branches: []string{"main"}},
 	)
 	require.NoError(t, err)
-	defer rep.Close(t.Context())
+	defer func() {
+		require.NoError(t, rep.Close(t.Context()))
+	}()
 
 	cmd := exec.CommandContext(
 		t.Context(), "git", "for-each-ref", "--format=%(refname:short)", "refs/heads",
