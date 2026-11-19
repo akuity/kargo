@@ -203,7 +203,7 @@ func Test_workTree_IntegrateRemoteChanges(t *testing.T) {
 	})
 }
 
-func Test_workTree_pullRebase(t *testing.T) {
+func Test_workTree_rebase(t *testing.T) {
 	testServer, testRepoURL, testRepoCreds := setupRemoteRepo(
 		t,
 		initialMainCommit,
@@ -220,7 +220,7 @@ func Test_workTree_pullRebase(t *testing.T) {
 			nil,
 		)
 		require.NoError(t, err)
-		defer repo.Close(t.Context())
+		defer func() { require.NoError(t, repo.Close(t.Context())) }()
 
 		// Add a conflicting local commit.
 		err = os.WriteFile(
@@ -232,12 +232,15 @@ func Test_workTree_pullRebase(t *testing.T) {
 		err = repo.AddAllAndCommit(t.Context(), "local conflict", nil)
 		require.NoError(t, err)
 
+		wt := internalWorkTree(t, repo)
+		require.NoError(t, wt.Fetch(t.Context(), &FetchOptions{Branch: "ahead"}))
+
 		// With a conflict, the rebase should have failed.
-		err = internalWorkTree(t, repo).pullRebase(t.Context(), "ahead")
+		err = wt.rebase(t.Context(), "origin/ahead")
 		require.ErrorIs(t, err, ErrMergeConflict)
 	})
 
-	t.Run("rebases succeeds", func(t *testing.T) {
+	t.Run("rebase succeeds", func(t *testing.T) {
 		repo, err := Clone(
 			t.Context(),
 			testRepoURL,
@@ -245,7 +248,7 @@ func Test_workTree_pullRebase(t *testing.T) {
 			nil,
 		)
 		require.NoError(t, err)
-		defer repo.Close(t.Context())
+		defer func() { require.NoError(t, repo.Close(t.Context())) }()
 
 		// Add a non-conflicting local commit.
 		err = os.WriteFile(
@@ -257,8 +260,11 @@ func Test_workTree_pullRebase(t *testing.T) {
 		err = repo.AddAllAndCommit(t.Context(), "local commit", nil)
 		require.NoError(t, err)
 
+		wt := internalWorkTree(t, repo)
+		require.NoError(t, wt.Fetch(t.Context(), &FetchOptions{Branch: "ahead"}))
+
 		// With no conflicts, the rebase should have succeeded.
-		err = internalWorkTree(t, repo).pullRebase(t.Context(), "ahead")
+		err = wt.rebase(t.Context(), "origin/ahead")
 		require.NoError(t, err)
 
 		// The rebase should not have created any merge commits, so the commit count
@@ -269,7 +275,7 @@ func Test_workTree_pullRebase(t *testing.T) {
 	})
 }
 
-func Test_workTree_pullMerge(t *testing.T) {
+func Test_workTree_merge(t *testing.T) {
 	testServer, testRepoURL, testRepoCreds := setupRemoteRepo(
 		t,
 		initialMainCommit,
@@ -286,7 +292,7 @@ func Test_workTree_pullMerge(t *testing.T) {
 			nil,
 		)
 		require.NoError(t, err)
-		defer repo.Close(t.Context())
+		defer func() { require.NoError(t, repo.Close(t.Context())) }()
 
 		// Add a conflicting local commit.
 		err = os.WriteFile(
@@ -298,8 +304,11 @@ func Test_workTree_pullMerge(t *testing.T) {
 		err = repo.AddAllAndCommit(t.Context(), "local conflict", nil)
 		require.NoError(t, err)
 
+		wt := internalWorkTree(t, repo)
+		require.NoError(t, wt.Fetch(t.Context(), &FetchOptions{Branch: "ahead"}))
+
 		// With a conflict, the merge should have failed.
-		err = internalWorkTree(t, repo).pullMerge(t.Context(), "ahead")
+		err = wt.merge(t.Context(), "origin/ahead")
 		require.ErrorIs(t, err, ErrMergeConflict)
 	})
 
@@ -311,7 +320,7 @@ func Test_workTree_pullMerge(t *testing.T) {
 			nil,
 		)
 		require.NoError(t, err)
-		defer repo.Close(t.Context())
+		defer func() { require.NoError(t, repo.Close(t.Context())) }()
 
 		// Add a non-conflicting local commit.
 		err = os.WriteFile(
@@ -323,11 +332,11 @@ func Test_workTree_pullMerge(t *testing.T) {
 		err = repo.AddAllAndCommit(t.Context(), "local commit", nil)
 		require.NoError(t, err)
 
+		wt := internalWorkTree(t, repo)
+		require.NoError(t, wt.Fetch(t.Context(), &FetchOptions{Branch: "ahead"}))
+
 		// With no conflicts, the merge should have succeeded.
-		require.NoError(
-			t,
-			internalWorkTree(t, repo).pullMerge(t.Context(), "ahead"),
-		)
+		require.NoError(t, wt.merge(t.Context(), "origin/ahead"))
 
 		// After a merge, the head of the local branch should be a merge commit.
 		msg, err := repo.CommitMessage(t.Context(), "HEAD")
@@ -350,7 +359,9 @@ func Test_workTree_canSafelyRebase(t *testing.T) {
 		require.NoError(t, err)
 		defer repo.Close(t.Context())
 
-		safe, err := internalWorkTree(t, repo).canSafelyRebase(t.Context(), "main")
+		wt := internalWorkTree(t, repo)
+		require.NoError(t, wt.Fetch(t.Context(), &FetchOptions{Branch: "main"}))
+		safe, err := wt.canSafelyRebase(t.Context(), "origin/main")
 		require.NoError(t, err)
 		require.True(t, safe)
 	})
@@ -375,7 +386,9 @@ func Test_workTree_canSafelyRebase(t *testing.T) {
 		err = repo.AddAllAndCommit(t.Context(), "local commit", nil)
 		require.NoError(t, err)
 
-		safe, err := internalWorkTree(t, repo).canSafelyRebase(t.Context(), "main")
+		wt := internalWorkTree(t, repo)
+		require.NoError(t, wt.Fetch(t.Context(), &FetchOptions{Branch: "main"}))
+		safe, err := wt.canSafelyRebase(t.Context(), "origin/main")
 		require.NoError(t, err)
 		// This should be safe because rebasing won't lend Kargo's signature to
 		// commits that were previously unsigned.
@@ -407,7 +420,8 @@ func Test_workTree_canSafelyRebase(t *testing.T) {
 		))
 		require.NoError(t, err)
 
-		safe, err := wt.canSafelyRebase(t.Context(), "main")
+		require.NoError(t, wt.Fetch(t.Context(), &FetchOptions{Branch: "main"}))
+		safe, err := wt.canSafelyRebase(t.Context(), "origin/main")
 		require.NoError(t, err)
 		// This should be unsafe because rebasing would lend Kargo's signature to
 		// commits that were previously unsigned.
@@ -436,7 +450,8 @@ func Test_workTree_canSafelyRebase(t *testing.T) {
 		err = repo.AddAllAndCommit(t.Context(), "signed commit", nil)
 		require.NoError(t, err)
 
-		safe, err := wt.canSafelyRebase(t.Context(), "main")
+		require.NoError(t, wt.Fetch(t.Context(), &FetchOptions{Branch: "main"}))
+		safe, err := wt.canSafelyRebase(t.Context(), "origin/main")
 		require.NoError(t, err)
 		// This should be safe because Kargo trusted the signature on commits it
 		// will re-sign during the rebase.
@@ -467,7 +482,8 @@ func Test_workTree_canSafelyRebase(t *testing.T) {
 
 		disableFakeCommitSigning(t, wt)
 
-		safe, err := wt.canSafelyRebase(t.Context(), "main")
+		require.NoError(t, wt.Fetch(t.Context(), &FetchOptions{Branch: "main"}))
+		safe, err := wt.canSafelyRebase(t.Context(), "origin/main")
 		require.NoError(t, err)
 		// This should be unsafe because rebasing would strip trusted signatures
 		// from existing commits.
@@ -497,7 +513,8 @@ func Test_workTree_canSafelyRebase(t *testing.T) {
 		require.NoError(t, err)
 
 		// Unsafe regardless — Kargo can't vouch for this commit.
-		safe, err := wt.canSafelyRebase(t.Context(), "main")
+		require.NoError(t, wt.Fetch(t.Context(), &FetchOptions{Branch: "main"}))
+		safe, err := wt.canSafelyRebase(t.Context(), "origin/main")
 		require.NoError(t, err)
 		// This should be unsafe, no matter what. If signing were not configured,
 		// rebasing would strip signatures from existing commits. Something
@@ -509,7 +526,8 @@ func Test_workTree_canSafelyRebase(t *testing.T) {
 
 	t.Run("full clone, remote branch rewritten", func(t *testing.T) {
 		wt := newWorkTreeWithRewrittenRemoteBranch(t, 0)
-		safe, err := wt.canSafelyRebase(t.Context(), "feature")
+		require.NoError(t, wt.Fetch(t.Context(), &FetchOptions{Branch: "feature"}))
+		safe, err := wt.canSafelyRebase(t.Context(), "origin/feature")
 		require.NoError(t, err)
 		// This should be unsafe because the rewrite leaves all three original
 		// commits to replay, two of them unsigned. With signing configured,
@@ -519,12 +537,13 @@ func Test_workTree_canSafelyRebase(t *testing.T) {
 
 	t.Run("shallow clone, remote branch rewritten", func(t *testing.T) {
 		wt := newWorkTreeWithRewrittenRemoteBranch(t, 1)
-		safe, err := wt.canSafelyRebase(t.Context(), "feature")
+		require.NoError(t, wt.Fetch(t.Context(), &FetchOptions{Branch: "feature"}))
+		safe, err := wt.canSafelyRebase(t.Context(), "origin/feature")
 		require.NoError(t, err)
 		// This should be unsafe for the same reason as with a full clone. The
-		// shallow history hides the unsigned commits, but the remote branch no
-		// longer shares history with the local one, so the commits to replay
-		// can't be trusted to be complete.
+		// shallow history hides the unsigned commits, so a shallow boundary
+		// remains in the symmetric difference and the commits to replay cannot
+		// be trusted to be complete.
 		require.False(t, safe)
 	})
 
@@ -535,7 +554,7 @@ func Test_workTree_canSafelyRebase(t *testing.T) {
 		// uses its own branch to avoid disturbing the other cases.
 		author, err := Clone(t.Context(), testRepoURL, clientOpts, nil)
 		require.NoError(t, err)
-		defer func() { require.NoError(t, author.Close(t.Context())) }()
+		t.Cleanup(func() { require.NoError(t, author.Close(context.Background())) })
 		require.NoError(
 			t,
 			author.CreateChildBranch(t.Context(), "shallow-advanced"),
@@ -543,59 +562,93 @@ func Test_workTree_canSafelyRebase(t *testing.T) {
 		pushOpts := &PushOptions{TargetBranch: "shallow-advanced"}
 		require.NoError(t, author.Push(t.Context(), pushOpts))
 
-		bare, err := CloneBare(
-			t.Context(),
+		wt := cloneBareWorkTree(
+			t,
 			testRepoURL,
 			clientOpts,
-			&BareCloneOptions{
-				Depth:    1,
-				Branches: []string{"shallow-advanced"},
-			},
+			&BareCloneOptions{Depth: 1, Branches: []string{"shallow-advanced"}},
+			"shallow-advanced",
 		)
-		require.NoError(t, err)
-		defer func() { require.NoError(t, bare.Close(t.Context())) }()
-		checkout, err := bare.AddWorkTree(
-			t.Context(),
-			filepath.Join(bare.HomeDir(), "shallow-advanced"),
-			&AddWorkTreeOptions{Ref: "shallow-advanced"},
-		)
-		require.NoError(t, err)
-		defer func() { require.NoError(t, checkout.Close(t.Context())) }()
-		wt, ok := checkout.(*workTree)
-		require.True(t, ok, "expected *workTree, got %T", checkout)
 		enableFakeCommitSigning(t, wt, true)
 
-		// Add a signed local commit that has not been pushed.
-		require.NoError(t, os.WriteFile(
-			fmt.Sprintf("%s/local.txt", checkout.Dir()),
-			[]byte("local"),
-			0o600,
-		))
-		require.NoError(
-			t,
-			checkout.AddAllAndCommit(t.Context(), "local commit", nil),
-		)
-
-		// Advance the remote branch.
-		require.NoError(t, os.WriteFile(
-			fmt.Sprintf("%s/remote.txt", author.Dir()),
-			[]byte("remote"),
-			0o600,
-		))
-		require.NoError(
-			t,
-			author.AddAllAndCommit(t.Context(), "remote commit", nil),
-		)
+		// Add a signed local commit and advance the remote branch.
+		commitFile(t, wt, "local")
+		commitFile(t, author, "remote")
 		require.NoError(t, author.Push(t.Context(), pushOpts))
 
-		safe, err := wt.canSafelyRebase(t.Context(), "shallow-advanced")
+		require.NoError(
+			t,
+			wt.Fetch(t.Context(), &FetchOptions{Branch: "shallow-advanced"}),
+		)
+		safe, err := wt.canSafelyRebase(t.Context(), "origin/shallow-advanced")
 		require.NoError(t, err)
 		// This should be safe because the local commit is signed by a trusted
 		// key and signing is configured, so Kargo can re-sign it. The remote
 		// branch only moved forward, so the shallow boundary is not in the
-		// range of commits to replay.
+		// symmetric difference.
 		require.True(t, safe)
 	})
+}
+
+// setupRemoteWithAuthor creates an in-process remote repository initialized
+// with an initial commit on main and returns its URL, client options, and a
+// full-clone work tree acting as another collaborator pushing to the remote.
+func setupRemoteWithAuthor(
+	t *testing.T,
+) (string, *ClientOptions, *workTree) {
+	t.Helper()
+
+	testServer, testRepoURL, testRepoCreds := setupRemoteRepo(
+		t,
+		initialMainCommit,
+	)
+	t.Cleanup(testServer.Close)
+	clientOpts := &ClientOptions{Credentials: &testRepoCreds}
+
+	author, err := Clone(t.Context(), testRepoURL, clientOpts, nil)
+	require.NoError(t, err)
+	t.Cleanup(func() { require.NoError(t, author.Close(context.Background())) })
+
+	return testRepoURL, clientOpts, internalWorkTree(t, author)
+}
+
+// commitFile writes "<name>.txt" to wt and commits it with message "<name>".
+func commitFile(t *testing.T, wt WorkTree, name string) {
+	t.Helper()
+	require.NoError(t, os.WriteFile(
+		filepath.Join(wt.Dir(), name+".txt"),
+		[]byte(name),
+		0o600,
+	))
+	require.NoError(t, wt.AddAllAndCommit(t.Context(), name, nil))
+}
+
+// cloneBareWorkTree performs a bare clone and adds a working tree for ref,
+// registering cleanups for both.
+func cloneBareWorkTree(
+	t *testing.T,
+	repoURL string,
+	clientOpts *ClientOptions,
+	cloneOpts *BareCloneOptions,
+	ref string,
+) *workTree {
+	t.Helper()
+	bare, err := CloneBare(t.Context(), repoURL, clientOpts, cloneOpts)
+	require.NoError(t, err)
+	t.Cleanup(func() { require.NoError(t, bare.Close(context.Background())) })
+
+	checkout, err := bare.AddWorkTree(
+		t.Context(),
+		filepath.Join(bare.HomeDir(), ref),
+		&AddWorkTreeOptions{Ref: ref},
+	)
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		require.NoError(t, checkout.Close(context.Background()))
+	})
+	wt, ok := checkout.(*workTree)
+	require.True(t, ok, "expected *workTree, got %T", checkout)
+	return wt
 }
 
 // newWorkTreeWithRewrittenRemoteBranch returns a work tree whose remote branch
@@ -615,65 +668,33 @@ func newWorkTreeWithRewrittenRemoteBranch(
 ) *workTree {
 	t.Helper()
 
-	testServer, testRepoURL, testRepoCreds := setupRemoteRepo(
-		t,
-		initialMainCommit,
-	)
-	t.Cleanup(testServer.Close)
-	clientOpts := &ClientOptions{Credentials: &testRepoCreds}
-
-	// This is a stand-in for whoever else is working on the remote.
-	author, err := Clone(t.Context(), testRepoURL, clientOpts, nil)
-	require.NoError(t, err)
-	t.Cleanup(func() { require.NoError(t, author.Close(context.Background())) })
-	authorWT := internalWorkTree(t, author)
-	commit := func(name string) {
-		t.Helper()
-		require.NoError(t, os.WriteFile(
-			fmt.Sprintf("%s/%s.txt", author.Dir(), name),
-			[]byte(name),
-			0o600,
-		))
-		require.NoError(t, author.AddAllAndCommit(t.Context(), name, nil))
-	}
+	repoURL, clientOpts, author := setupRemoteWithAuthor(t)
 
 	require.NoError(t, author.CreateChildBranch(t.Context(), "feature"))
-	commit("unsigned-1")
-	commit("unsigned-2")
-	enableFakeCommitSigning(t, authorWT, true)
-	commit("signed")
+	commitFile(t, author, "unsigned-1")
+	commitFile(t, author, "unsigned-2")
+	enableFakeCommitSigning(t, author, true)
+	commitFile(t, author, "signed")
 	require.NoError(
 		t,
 		author.Push(t.Context(), &PushOptions{TargetBranch: "feature"}),
 	)
 
-	bare, err := CloneBare(
-		t.Context(),
-		testRepoURL,
+	wt := cloneBareWorkTree(
+		t,
+		repoURL,
 		clientOpts,
 		&BareCloneOptions{Depth: depth, Branches: []string{"feature"}},
+		"feature",
 	)
-	require.NoError(t, err)
-	t.Cleanup(func() { require.NoError(t, bare.Close(context.Background())) })
-	checkout, err := bare.AddWorkTree(
-		t.Context(),
-		filepath.Join(bare.HomeDir(), "feature"),
-		&AddWorkTreeOptions{Ref: "feature"},
-	)
-	require.NoError(t, err)
-	t.Cleanup(func() {
-		require.NoError(t, checkout.Close(context.Background()))
-	})
-	wt, ok := checkout.(*workTree)
-	require.True(t, ok, "expected *workTree, got %T", checkout)
 	enableFakeCommitSigning(t, wt, true)
 
 	// Rewrite the remote's feature branch so that none of its original commits
 	// remain on it.
-	disableFakeCommitSigning(t, authorWT)
+	disableFakeCommitSigning(t, author)
 	require.NoError(t, author.Checkout(t.Context(), "main"))
 	require.NoError(t, author.CreateChildBranch(t.Context(), "rewritten"))
-	commit("rewritten")
+	commitFile(t, author, "rewritten")
 	require.NoError(t, author.Push(
 		t.Context(),
 		&PushOptions{TargetBranch: "feature", Force: true},
@@ -701,7 +722,9 @@ func Test_workTree_commitsToReplay(t *testing.T) {
 		require.NoError(t, err)
 		defer repo.Close(t.Context())
 
-		commits, err := internalWorkTree(t, repo).commitsToReplay(t.Context(), "main")
+		wt := internalWorkTree(t, repo)
+		require.NoError(t, wt.Fetch(t.Context(), &FetchOptions{Branch: "main"}))
+		commits, err := wt.commitsToReplay(t.Context(), "origin/main")
 		require.NoError(t, err)
 		require.Empty(t, commits)
 	})
@@ -716,8 +739,9 @@ func Test_workTree_commitsToReplay(t *testing.T) {
 		require.NoError(t, err)
 		defer repo.Close(t.Context())
 
-		commits, err := internalWorkTree(t, repo).
-			commitsToReplay(t.Context(), "ahead")
+		wt := internalWorkTree(t, repo)
+		require.NoError(t, wt.Fetch(t.Context(), &FetchOptions{Branch: "ahead"}))
+		commits, err := wt.commitsToReplay(t.Context(), "origin/ahead")
 		require.NoError(t, err)
 		require.Empty(t, commits)
 	})
@@ -749,8 +773,9 @@ func Test_workTree_commitsToReplay(t *testing.T) {
 		err = repo.AddAllAndCommit(t.Context(), "commit b", nil)
 		require.NoError(t, err)
 
-		commits, err := internalWorkTree(t, repo).
-			commitsToReplay(t.Context(), "main")
+		wt := internalWorkTree(t, repo)
+		require.NoError(t, wt.Fetch(t.Context(), &FetchOptions{Branch: "main"}))
+		commits, err := wt.commitsToReplay(t.Context(), "origin/main")
 		require.NoError(t, err)
 		// Two local commits should need to be replayed on main.
 		require.Len(t, commits, 2)
@@ -783,11 +808,323 @@ func Test_workTree_commitsToReplay(t *testing.T) {
 		err = repo.AddAllAndCommit(t.Context(), "commit b", nil)
 		require.NoError(t, err)
 
-		commits, err := internalWorkTree(t, repo).
-			commitsToReplay(t.Context(), "ahead")
+		wt := internalWorkTree(t, repo)
+		require.NoError(t, wt.Fetch(t.Context(), &FetchOptions{Branch: "ahead"}))
+		commits, err := wt.commitsToReplay(t.Context(), "origin/ahead")
 		// Two local commits should need to be replayed on ahead.
 		require.NoError(t, err)
 		require.Len(t, commits, 2)
+	})
+}
+
+func Test_workTree_IntegrateRemoteChanges_ShallowClone(t *testing.T) {
+	// Set up a single remote repo shared across the table cases:
+	//   - main:             initial -> base -> remote-1 -> remote-2
+	//   - feature-unsigned: base -> commit-1 (unsigned) -> commit-2 (unsigned) -> signed-tip (signed)
+	//   - feature-signed:   base -> signed-1 (signed)   -> signed-2 (signed)   -> signed-tip (signed)
+	repoURL, clientOpts, author := setupRemoteWithAuthor(t)
+	commitFile(t, author, "base")
+	require.NoError(t, author.Push(t.Context(), nil))
+
+	require.NoError(t, author.CreateChildBranch(t.Context(), "feature-unsigned"))
+	commitFile(t, author, "commit-1")
+	commitFile(t, author, "commit-2")
+	enableFakeCommitSigning(t, author, true)
+	commitFile(t, author, "signed-tip")
+	require.NoError(
+		t,
+		author.Push(t.Context(), &PushOptions{TargetBranch: "feature-unsigned"}),
+	)
+
+	require.NoError(t, author.Checkout(t.Context(), "main"))
+	require.NoError(t, author.CreateChildBranch(t.Context(), "feature-signed"))
+	commitFile(t, author, "signed-1")
+	commitFile(t, author, "signed-2")
+	commitFile(t, author, "signed-tip")
+	require.NoError(
+		t,
+		author.Push(t.Context(), &PushOptions{TargetBranch: "feature-signed"}),
+	)
+
+	disableFakeCommitSigning(t, author)
+	require.NoError(t, author.Checkout(t.Context(), "main"))
+	commitFile(t, author, "remote-1")
+	commitFile(t, author, "remote-2")
+	require.NoError(t, author.Push(t.Context(), nil))
+
+	cloneShallowBranch := func(t *testing.T, branch string) *workTree {
+		t.Helper()
+		wt := cloneBareWorkTree(
+			t,
+			repoURL,
+			clientOpts,
+			&BareCloneOptions{Depth: 1, Branches: []string{branch}},
+			branch,
+		)
+		enableFakeCommitSigning(t, wt, true)
+		return wt
+	}
+
+	// Creates a local branch at base (shared with main) and merges a depth-1
+	// fetch of feature-unsigned so HEAD is a signed merge commit with a valid
+	// merge-base to main, yet its 2nd parent is shallow and hides commit-1/2.
+	setupMergeWithShallowSideParent := func(t *testing.T) *workTree {
+		t.Helper()
+		wt := cloneBareWorkTree(
+			t,
+			repoURL,
+			clientOpts,
+			&BareCloneOptions{Depth: 3, Branches: []string{"main"}},
+			"main",
+		)
+		_, err := libExec.Exec(wt.buildGitCommand(
+			t.Context(), "checkout", "-b", "feat", "HEAD~2",
+		))
+		require.NoError(t, err)
+		require.NoError(
+			t,
+			wt.Fetch(
+				t.Context(),
+				&FetchOptions{Branch: "feature-unsigned", Depth: 1},
+			),
+		)
+		enableFakeCommitSigning(t, wt, true)
+		_, err = libExec.Exec(wt.buildGitCommand(
+			t.Context(),
+			"merge",
+			"--no-edit",
+			"--allow-unrelated-histories",
+			"origin/feature-unsigned",
+		))
+		require.NoError(t, err)
+		return wt
+	}
+
+	// Clones main at depth 1 (shallow target) while fetching feature-signed in
+	// full (complete HEAD). Without deepening main, origin/main..HEAD would
+	// falsely include the unsigned shared base commit.
+	setupTargetShallowCompleteHead := func(t *testing.T) *workTree {
+		t.Helper()
+		wt := cloneBareWorkTree(
+			t,
+			repoURL,
+			clientOpts,
+			&BareCloneOptions{Depth: 1, Branches: []string{"main"}},
+			"main",
+		)
+		require.NoError(
+			t,
+			wt.Fetch(t.Context(), &FetchOptions{Branch: "feature-signed"}),
+		)
+		_, err := libExec.Exec(wt.buildGitCommand(
+			t.Context(), "checkout", "-b", "feature-signed", "origin/feature-signed",
+		))
+		require.NoError(t, err)
+		enableFakeCommitSigning(t, wt, true)
+		return wt
+	}
+
+	assertRebased := func(
+		t *testing.T,
+		wt *workTree,
+		err error,
+		expectedCount int,
+		expectedLeadingSubjects ...string,
+	) {
+		t.Helper()
+		require.NoError(t, err)
+		commits, listErr := wt.ListCommits(t.Context(), nil)
+		require.NoError(t, listErr)
+		require.Len(t, commits, expectedCount)
+		for i, subject := range expectedLeadingSubjects {
+			require.Equal(t, subject, commits[i].Subject)
+		}
+	}
+
+	assertMerged := func(t *testing.T, wt *workTree, err error) {
+		t.Helper()
+		require.NoError(t, err)
+		msg, msgErr := wt.CommitMessage(t.Context(), "HEAD")
+		require.NoError(t, msgErr)
+		require.Contains(t, msg, "Merge")
+	}
+
+	testCases := []struct {
+		name         string
+		setup        func(t *testing.T) *workTree
+		targetBranch string
+		policy       PushIntegrationPolicy
+		assert       func(t *testing.T, wt *workTree, err error)
+	}{
+		{
+			name: "diverged past depth: AlwaysRebase deepens and preserves all commits",
+			setup: func(t *testing.T) *workTree {
+				return cloneShallowBranch(t, "feature-unsigned")
+			},
+			targetBranch: "main",
+			policy:       PushIntegrationPolicyAlwaysRebase,
+			assert: func(t *testing.T, wt *workTree, err error) {
+				assertRebased(
+					t, wt, err,
+					7, "signed-tip", "commit-2", "commit-1", "remote-2",
+				)
+			},
+		},
+		{
+			name: "diverged past depth with hidden unsigned commits: RebaseOrFail returns ErrRebaseUnsafe",
+			setup: func(t *testing.T) *workTree {
+				return cloneShallowBranch(t, "feature-unsigned")
+			},
+			targetBranch: "main",
+			policy:       PushIntegrationPolicyRebaseOrFail,
+			assert: func(t *testing.T, _ *workTree, err error) {
+				require.ErrorIs(t, err, ErrRebaseUnsafe)
+			},
+		},
+		{
+			name: "diverged past depth with hidden unsigned commits: RebaseOrMerge deepens and merges cleanly",
+			setup: func(t *testing.T) *workTree {
+				return cloneShallowBranch(t, "feature-unsigned")
+			},
+			targetBranch: "main",
+			policy:       PushIntegrationPolicyRebaseOrMerge,
+			assert: func(t *testing.T, wt *workTree, err error) {
+				assertMerged(t, wt, err)
+			},
+		},
+		{
+			name: "diverged past depth: AlwaysMerge deepens and merges cleanly",
+			setup: func(t *testing.T) *workTree {
+				return cloneShallowBranch(t, "feature-unsigned")
+			},
+			targetBranch: "main",
+			policy:       PushIntegrationPolicyAlwaysMerge,
+			assert: func(t *testing.T, wt *workTree, err error) {
+				assertMerged(t, wt, err)
+			},
+		},
+		{
+			name: "diverged past depth with all signed commits: RebaseOrFail deepens and rebases cleanly",
+			setup: func(t *testing.T) *workTree {
+				return cloneShallowBranch(t, "feature-signed")
+			},
+			targetBranch: "main",
+			policy:       PushIntegrationPolicyRebaseOrFail,
+			assert: func(t *testing.T, wt *workTree, err error) {
+				assertRebased(
+					t, wt, err,
+					7, "signed-tip", "signed-2", "signed-1", "remote-2",
+				)
+			},
+		},
+		{
+			name: "target branch shallow while HEAD is complete: deepens target and rebases safely",
+			setup: func(t *testing.T) *workTree {
+				return setupTargetShallowCompleteHead(t)
+			},
+			targetBranch: "main",
+			policy:       PushIntegrationPolicyRebaseOrFail,
+			assert: func(t *testing.T, wt *workTree, err error) {
+				assertRebased(
+					t, wt, err,
+					7, "signed-tip", "signed-2", "signed-1", "remote-2",
+				)
+			},
+		},
+		{
+			name: "merge commit with shallow side parent: RebaseOrFail refuses",
+			setup: func(t *testing.T) *workTree {
+				return setupMergeWithShallowSideParent(t)
+			},
+			targetBranch: "main",
+			policy:       PushIntegrationPolicyRebaseOrFail,
+			assert: func(t *testing.T, _ *workTree, err error) {
+				require.ErrorIs(t, err, ErrRebaseUnsafe)
+			},
+		},
+		{
+			name: "merge commit with shallow side parent: RebaseOrMerge falls back to merge",
+			setup: func(t *testing.T) *workTree {
+				return setupMergeWithShallowSideParent(t)
+			},
+			targetBranch: "main",
+			policy:       PushIntegrationPolicyRebaseOrMerge,
+			assert: func(t *testing.T, wt *workTree, err error) {
+				assertMerged(t, wt, err)
+			},
+		},
+		{
+			name: "remote branch rewritten: AlwaysRebase refuses incomplete shallow rebase",
+			setup: func(t *testing.T) *workTree {
+				return newWorkTreeWithRewrittenRemoteBranch(t, 1)
+			},
+			targetBranch: "feature",
+			policy:       PushIntegrationPolicyAlwaysRebase,
+			assert: func(t *testing.T, _ *workTree, err error) {
+				require.ErrorContains(t, err, "shallow clone history is incomplete")
+			},
+		},
+		{
+			name: "remote branch rewritten: RebaseOrFail returns ErrRebaseUnsafe",
+			setup: func(t *testing.T) *workTree {
+				return newWorkTreeWithRewrittenRemoteBranch(t, 1)
+			},
+			targetBranch: "feature",
+			policy:       PushIntegrationPolicyRebaseOrFail,
+			assert: func(t *testing.T, _ *workTree, err error) {
+				require.ErrorIs(t, err, ErrRebaseUnsafe)
+			},
+		},
+		{
+			name: "remote branch rewritten: RebaseOrMerge does not rebase",
+			setup: func(t *testing.T) *workTree {
+				return newWorkTreeWithRewrittenRemoteBranch(t, 1)
+			},
+			targetBranch: "feature",
+			policy:       PushIntegrationPolicyRebaseOrMerge,
+			assert: func(t *testing.T, _ *workTree, err error) {
+				require.Error(t, err)
+			},
+		},
+	}
+
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			wt := testCase.setup(t)
+			err := wt.IntegrateRemoteChanges(t.Context(), &IntegrationOptions{
+				TargetBranch:      testCase.targetBranch,
+				IntegrationPolicy: testCase.policy,
+			})
+			testCase.assert(t, wt, err)
+		})
+	}
+
+	t.Run("fast path: shallow clone with remote moving forward does not deepen", func(t *testing.T) {
+		require.NoError(t, author.CreateChildBranch(t.Context(), "fast-path"))
+		pushOpts := &PushOptions{TargetBranch: "fast-path"}
+		require.NoError(t, author.Push(t.Context(), pushOpts))
+
+		wt := cloneShallowBranch(t, "fast-path")
+
+		initialShallow, err := wt.shallowCommits(t.Context())
+		require.NoError(t, err)
+		require.Len(t, initialShallow, 1)
+
+		// Add one signed local commit and one remote commit from the same tip.
+		commitFile(t, wt, "local-signed")
+		commitFile(t, author, "remote-new")
+		require.NoError(t, author.Push(t.Context(), pushOpts))
+
+		err = wt.IntegrateRemoteChanges(t.Context(), &IntegrationOptions{
+			TargetBranch:      "fast-path",
+			IntegrationPolicy: PushIntegrationPolicyRebaseOrFail,
+		})
+		assertRebased(t, wt, err, 3, "local-signed", "remote-new")
+
+		// Shallow boundary should be completely unchanged (0 deepening fetches).
+		afterShallow, err := wt.shallowCommits(t.Context())
+		require.NoError(t, err)
+		require.Equal(t, initialShallow, afterShallow)
 	})
 }
 

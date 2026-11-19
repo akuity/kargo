@@ -199,10 +199,12 @@ steps:
 
 Keep the following in mind when choosing a value for `depth`:
 
-* When a branch is later pushed with the [`git-push`](git-push.md) step, `depth`
-  must be large enough to include the point where the branch diverged from its
-  remote counterpart. Otherwise, integrating remote changes (e.g., by rebasing)
-  will fail. Something like `100` is safer than `1`.
+* When a branch is later pushed with the [`git-push`](git-push.md) or
+  [`github-push`](github-push.md) step and the branch has diverged from its
+  remote target, Kargo will automatically deepen the shallow clone as needed
+  to safely integrate remote changes. Choosing a `depth` large enough to cover 
+  typical divergence (such as `100` rather than `1`) avoids extra deepening 
+  fetches.
 
 * If the fetched branches share history, the shared commits count toward each
   branch's `depth`. A branch can end up with more than `depth` commits in the
