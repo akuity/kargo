@@ -3,6 +3,7 @@ package server
 import (
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -40,7 +41,7 @@ func (s *server) listFreightByCurrentStage(c *gin.Context) {
 // @id ListFreightReferencingStage
 // @Summary List Freight referencing a Stage
 // @Description List the Freight whose status records the named Stage in its
-// @Description verifiedIn or approvedFor map. Returns a FreightList resource.
+// @Description currentlyIn, verifiedIn or approvedFor map. Returns a FreightList resource.
 // @Tags Core, Project-Level
 // @Security BearerAuth
 // @Produce json
@@ -92,6 +93,9 @@ func (s *server) listFreightFromWarehouse(c *gin.Context) {
 
 	freight, err := freightapi.ListFreightFromWarehouse(ctx, s.client, project, warehouseName, opts)
 	if err != nil {
+		if strings.Contains(err.Error(), "unsupported AvailabilityStrategy") {
+			err = libhttp.Error(err, http.StatusBadRequest)
+		}
 		_ = c.Error(fmt.Errorf("list Freight from Warehouse %q: %w", warehouseName, err))
 		return
 	}

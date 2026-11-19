@@ -66,13 +66,13 @@ func (c *collector) cleanWarehouseFreight(
 		"warehouse", warehouse,
 	)
 
-	list, err := c.listFreightFromWarehouseFn(ctx, project, warehouse)
-	if err != nil {
+	list, listErr := c.listFreightFromWarehouseFn(ctx, project, warehouse)
+	if listErr != nil {
 		return fmt.Errorf(
 			"error listing Freight from Warehouse %q in Project %q: %w",
 			warehouse,
 			project,
-			err,
+			listErr,
 		)
 	}
 

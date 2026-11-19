@@ -209,20 +209,25 @@ func (w *webhook) ValidateCreate(
 	); err != nil {
 		return nil, apierrors.NewInternalError(err)
 	}
-	if len(freightList.Items) > 0 {
-		errs = append(
-			errs,
-			field.Invalid(
-				field.NewPath("alias"),
-				freight.Alias,
-				fmt.Sprintf(
-					"alias already used by another piece of Freight in namespace %q",
-					freight.Namespace,
+	// Verify that other freight does not have the same alias
+	// Same freight should hit "AlreadyExists" error instead
+	for _, existing := range freightList.Items {
+		if existing.Name != freight.Name {
+			errs = append(
+				errs,
+				field.Invalid(
+					field.NewPath("alias"),
+					freight.Alias,
+					fmt.Sprintf(
+						"alias already used by another piece of Freight %q in namespace %q",
+						existing.Name,
+						freight.Namespace,
+					),
 				),
-			),
-		)
+			)
+			break
+		}
 	}
-
 	if freight.Origin.Kind == kargoapi.FreightOriginKindWarehouse {
 		warehouseErrs, err := w.validateWarehouse(ctx, freight)
 		if err != nil {

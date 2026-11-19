@@ -34,7 +34,7 @@ type MockFreightClient struct {
 		ctx context.Context,
 		project, stage string,
 	) ([]kargoapi.Freight, error)
-	GetFreightFun           func(ctx context.Context, project, nameOrAlias string) (*kargoapi.Freight, error)
+	GetFreightFun           func(ctx context.Context, project, name string) (*kargoapi.Freight, error)
 	DeleteFreightFun        func(ctx context.Context, project, nameOrAlias string) error
 	PatchFreightAliasFun    func(ctx context.Context, project, nameOrAlias, newAlias string) error
 	PatchFreightMetadataFun func(
@@ -83,8 +83,8 @@ func (mock *MockFreightClient) ListFreightByCurrentStage(
 ) ([]kargoapi.Freight, error) {
 	return mock.ListFreightByCurrentStageFun(ctx, project, stage)
 }
-func (mock *MockFreightClient) GetFreight(ctx context.Context, project, nameOrAlias string) (*kargoapi.Freight, error) {
-	return mock.GetFreightFun(ctx, project, nameOrAlias)
+func (mock *MockFreightClient) GetFreight(ctx context.Context, project, name string) (*kargoapi.Freight, error) {
+	return mock.GetFreightFun(ctx, project, name)
 }
 func (mock *MockFreightClient) DeleteFreight(ctx context.Context, project, nameOrAlias string) error {
 	return mock.DeleteFreightFun(ctx, project, nameOrAlias)

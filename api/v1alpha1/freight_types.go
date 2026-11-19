@@ -182,7 +182,9 @@ func (f *Freight) GetLongestSoak(stage string) time.Duration {
 	}
 	var current time.Duration
 	if record, isCurrent := f.Status.CurrentlyIn[stage]; isCurrent {
-		current = time.Since(record.Since.Time)
+		if record.Since != nil {
+			current = time.Since(record.Since.Time)
+		}
 	}
 	return time.Duration(max(longestCompleted.Nanoseconds(), current.Nanoseconds()))
 }

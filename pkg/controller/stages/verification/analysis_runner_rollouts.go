@@ -57,6 +57,7 @@ func NewAnalysisRunnerRollouts(
 	rolloutsControllerInstanceID string,
 	backoffCfg wait.Backoff,
 	cl client.Client,
+	freightClient freightclient.FreightClient,
 	credentialsDB credentials.Database,
 	rolloutsIntegrationEnabled bool,
 ) AnalysisRunner {
@@ -64,6 +65,7 @@ func NewAnalysisRunnerRollouts(
 		rolloutsControllerInstanceID: rolloutsControllerInstanceID,
 		backoffCfg:                   backoffCfg,
 		client:                       cl,
+		freightClient:                freightClient,
 		credentialsDB:                credentialsDB,
 		rolloutsIntegrationEnabled:   rolloutsIntegrationEnabled,
 	}

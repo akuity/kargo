@@ -621,6 +621,14 @@ func (w *webhook) ValidateCreate(
 		return nil, apierrors.NewInternalError(fmt.Errorf("get freight: %w", err))
 	}
 
+	// Refresh potentially cached stage from the api server
+	if err := w.apiReader.Get(ctx, types.NamespacedName{
+		Namespace: promo.Namespace,
+		Name:      promo.Spec.Stage,
+	}, stage); err != nil {
+		return nil, apierrors.NewInternalError(fmt.Errorf("get stage from the API server: %w", err))
+	}
+
 	if !stage.IsFreightAvailable(freight) {
 		return nil, apierrors.NewInvalid(
 			promotionGroupKind,

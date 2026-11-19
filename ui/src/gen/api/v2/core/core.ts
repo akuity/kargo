@@ -31,6 +31,7 @@ import type {
   Freight,
   FreightList,
   GetFreightLinksResponse,
+  GetFreightParams,
   GetStageLinksResponse,
   GetTargetStatusSummaryParams,
   ListFreightFromWarehouseParams,
@@ -1804,8 +1805,16 @@ export type getFreightResponseSuccess = getFreightResponse200 & {
 };
 export type getFreightResponse = getFreightResponseSuccess;
 
-export const getGetFreightUrl = (project: string, freightNameOrAlias: string) => {
-  return `/v1beta1/projects/${project}/freight/${freightNameOrAlias}`;
+export const getGetFreightUrl = (
+  project: string,
+  freightNameOrAlias: string,
+  params?: GetFreightParams
+) => {
+  const stringifiedParams = serializeParams(params);
+
+  return stringifiedParams.length > 0
+    ? `/v1beta1/projects/${project}/freight/${freightNameOrAlias}?${stringifiedParams}`
+    : `/v1beta1/projects/${project}/freight/${freightNameOrAlias}`;
 };
 
 /**
@@ -1816,16 +1825,24 @@ export const getGetFreightUrl = (project: string, freightNameOrAlias: string) =>
 export const getFreight = async (
   project: string,
   freightNameOrAlias: string,
+  params?: GetFreightParams,
   options?: Parameters<typeof customFetch>[1]
 ): Promise<getFreightResponse> => {
-  return customFetch<getFreightResponse>(getGetFreightUrl(project, freightNameOrAlias), {
+  return customFetch<getFreightResponse>(getGetFreightUrl(project, freightNameOrAlias, params), {
     ...options,
     method: 'GET'
   });
 };
 
-export const getGetFreightQueryKey = (project: string, freightNameOrAlias: string) => {
-  return [`/v1beta1/projects/${project}/freight/${freightNameOrAlias}`] as const;
+export const getGetFreightQueryKey = (
+  project: string,
+  freightNameOrAlias: string,
+  params?: GetFreightParams
+) => {
+  return [
+    `/v1beta1/projects/${project}/freight/${freightNameOrAlias}`,
+    ...(params ? [params] : [])
+  ] as const;
 };
 
 export const getGetFreightQueryOptions = <
@@ -1834,6 +1851,7 @@ export const getGetFreightQueryOptions = <
 >(
   project: string,
   freightNameOrAlias: string,
+  params?: GetFreightParams,
   options?: {
     query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getFreight>>, TError, TData>>;
     request?: SecondParameter<typeof customFetch>;
@@ -1841,10 +1859,11 @@ export const getGetFreightQueryOptions = <
 ) => {
   const { query: queryOptions, request: requestOptions } = options ?? {};
 
-  const queryKey = queryOptions?.queryKey ?? getGetFreightQueryKey(project, freightNameOrAlias);
+  const queryKey =
+    queryOptions?.queryKey ?? getGetFreightQueryKey(project, freightNameOrAlias, params);
 
   const queryFn: QueryFunction<Awaited<ReturnType<typeof getFreight>>> = () =>
-    getFreight(project, freightNameOrAlias, requestOptions);
+    getFreight(project, freightNameOrAlias, params, requestOptions);
 
   return {
     queryKey,
@@ -1869,6 +1888,7 @@ export function useGetFreight<
 >(
   project: string,
   freightNameOrAlias: string,
+  params: undefined | GetFreightParams,
   options: {
     query: Partial<UseQueryOptions<Awaited<ReturnType<typeof getFreight>>, TError, TData>> &
       Pick<
@@ -1889,6 +1909,7 @@ export function useGetFreight<
 >(
   project: string,
   freightNameOrAlias: string,
+  params?: GetFreightParams,
   options?: {
     query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getFreight>>, TError, TData>> &
       Pick<
@@ -1909,6 +1930,7 @@ export function useGetFreight<
 >(
   project: string,
   freightNameOrAlias: string,
+  params?: GetFreightParams,
   options?: {
     query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getFreight>>, TError, TData>>;
     request?: SecondParameter<typeof customFetch>;
@@ -1925,13 +1947,14 @@ export function useGetFreight<
 >(
   project: string,
   freightNameOrAlias: string,
+  params?: GetFreightParams,
   options?: {
     query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getFreight>>, TError, TData>>;
     request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
-  const queryOptions = getGetFreightQueryOptions(project, freightNameOrAlias, options);
+  const queryOptions = getGetFreightQueryOptions(project, freightNameOrAlias, params, options);
 
   const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
     queryKey: DataTag<QueryKey, TData, TError>;
@@ -5614,7 +5637,7 @@ export const getListFreightReferencingStageUrl = (project: string, stage: string
 
 /**
  * List the Freight whose status records the named Stage in its
- * verifiedIn or approvedFor map. Returns a FreightList resource.
+ * currentlyIn, verifiedIn or approvedFor map. Returns a FreightList resource.
  * @summary List Freight referencing a Stage
  */
 export const listFreightReferencingStage = async (

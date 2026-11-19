@@ -617,14 +617,17 @@ func (c *Client) CreateFreight(
 	return created, isNew, nil
 }
 
-// GetFreight returns, through the API server, the named Freight, or nil if there
-// is no such Freight.
+// GetFreight returns, through the API server, the Freight with the given name,
+// or nil if there is no such Freight. The name is never matched against
+// Freight aliases.
 func (c *Client) GetFreight(
 	ctx context.Context,
 	project string,
-	nameOrAlias string,
+	name string,
 ) (*kargoapi.Freight, error) {
-	model, resp, err := c.api.CoreAPI.GetFreight(ctx, project, nameOrAlias).Execute()
+	model, resp, err := c.api.CoreAPI.GetFreight(ctx, project, name).
+		NameOnly(true).
+		Execute()
 	if resp != nil {
 		_ = resp.Body.Close()
 	}
@@ -633,13 +636,13 @@ func (c *Client) GetFreight(
 			return nil, nil
 		}
 		return nil, fmt.Errorf(
-			"error getting Freight %q in Project %q: %w", nameOrAlias, project, ResponseError(err, resp),
+			"error getting Freight %q in Project %q: %w", name, project, ResponseError(err, resp),
 		)
 	}
 	freight := &kargoapi.Freight{}
 	if err = convert(model, freight); err != nil {
 		return nil, fmt.Errorf(
-			"error decoding Freight %q in Project %q: %w", nameOrAlias, project, err,
+			"error decoding Freight %q in Project %q: %w", name, project, err,
 		)
 	}
 	return freight, nil

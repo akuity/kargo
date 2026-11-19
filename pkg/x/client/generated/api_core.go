@@ -2389,6 +2389,13 @@ type ApiGetFreightRequest struct {
 	ApiService *CoreAPIService
 	project string
 	freightNameOrAlias string
+	nameOnly *bool
+}
+
+// Match only the Freight name, not its alias
+func (r ApiGetFreightRequest) NameOnly(nameOnly bool) ApiGetFreightRequest {
+	r.nameOnly = &nameOnly
+	return r
 }
 
 func (r ApiGetFreightRequest) Execute() (*Freight, *http.Response, error) {
@@ -2438,6 +2445,9 @@ func (a *CoreAPIService) GetFreightExecute(r ApiGetFreightRequest) (*Freight, *h
 	localVarQueryParams := url.Values{}
 	localVarFormParams := url.Values{}
 
+	if r.nameOnly != nil {
+		parameterAddToHeaderOrQuery(localVarQueryParams, "nameOnly", r.nameOnly, "", "")
+	}
 	// to determine the Content-Type header
 	localVarHTTPContentTypes := []string{}
 
@@ -4763,7 +4773,7 @@ func (r ApiListFreightReferencingStageRequest) Execute() (*FreightList, *http.Re
 ListFreightReferencingStage List Freight referencing a Stage
 
 List the Freight whose status records the named Stage in its
-verifiedIn or approvedFor map. Returns a FreightList resource.
+currentlyIn, verifiedIn or approvedFor map. Returns a FreightList resource.
 
  @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
  @param project Project name
