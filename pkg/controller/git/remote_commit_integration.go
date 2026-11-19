@@ -2,7 +2,6 @@ package git
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"maps"
 	"os"
@@ -380,29 +379,6 @@ func (w *workTree) isShallow(ctx context.Context) (bool, error) {
 		)
 	}
 	return strings.TrimSpace(string(res)) == "true", nil
-}
-
-// hasAnyRef returns true if at least one of the given fully-qualified refs
-// exists in the local repository.
-//
-// Equivalent to:
-//
-//	git show-ref --verify --quiet <ref>
-func (w *workTree) hasAnyRef(ctx context.Context, refs ...string) (bool, error) {
-	for _, ref := range refs {
-		_, err := libExec.Exec(w.buildGitCommand(
-			ctx, "show-ref", "--verify", "--quiet", ref,
-		))
-		if err == nil {
-			return true, nil
-		}
-		var exitErr *libExec.ExitError
-		if errors.As(err, &exitErr) && exitErr.ExitCode == 1 {
-			continue
-		}
-		return false, fmt.Errorf("error checking ref %q: %w", ref, err)
-	}
-	return false, nil
 }
 
 // shallowCommits returns the set of commit SHAs recorded in the repository's

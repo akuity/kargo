@@ -29,6 +29,9 @@ type BareRepo interface {
 	// HomeDir returns an absolute path to the home directory of the system user
 	// who has cloned this repo.
 	HomeDir() string
+	// LocalBranchExists returns a bool indicating if the specified branch exists
+	// in the local repository.
+	LocalBranchExists(ctx context.Context, branch string) (bool, error)
 	// RemoteBranchExists returns a bool indicating if the specified branch exists
 	// in the remote repository.
 	RemoteBranchExists(ctx context.Context, branch string) (bool, error)

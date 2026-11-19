@@ -883,3 +883,39 @@ func TestBareRepo_CloneBranchesSHA256(t *testing.T) {
 		)
 	})
 }
+
+func TestBareRepo_LocalBranchExists(t *testing.T) {
+	testServer, testRepoURL, testRepoCreds := setupRemoteRepo(
+		t,
+		initialMainCommit,
+		func(t *testing.T, repo WorkTree) {
+			require.NoError(t, repo.CreateChildBranch(t.Context(), "other"))
+			require.NoError(t, repo.Push(t.Context(), nil))
+		},
+	)
+	defer testServer.Close()
+
+	rep, err := CloneBare(
+		t.Context(),
+		testRepoURL,
+		&ClientOptions{Credentials: &testRepoCreds},
+		&BareCloneOptions{Branches: []string{"main"}},
+	)
+	require.NoError(t, err)
+	defer func() {
+		require.NoError(t, rep.Close(t.Context()))
+	}()
+
+	exists, err := rep.LocalBranchExists(t.Context(), "main")
+	require.NoError(t, err)
+	require.True(t, exists)
+
+	// "other" exists on the remote, but was excluded from this filtered clone.
+	exists, err = rep.LocalBranchExists(t.Context(), "other")
+	require.NoError(t, err)
+	require.False(t, exists)
+
+	exists, err = rep.LocalBranchExists(t.Context(), "does-not-exist")
+	require.NoError(t, err)
+	require.False(t, exists)
+}

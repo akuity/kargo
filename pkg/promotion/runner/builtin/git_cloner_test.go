@@ -678,8 +678,10 @@ func Test_gitCloner_run_with_branch_create(t *testing.T) {
 		return strings.TrimSpace(string(out)) != ""
 	}
 
+	depth := int64(1)
 	testCases := []struct {
 		name     string
+		depth    *int64
 		checkout []stepconfig.Checkout
 		assert   func(*testing.T, promotion.StepResult, error)
 	}{
@@ -709,6 +711,19 @@ func Test_gitCloner_run_with_branch_create(t *testing.T) {
 				require.True(t, remoteHasBranch(t, "stage/new"))
 			},
 		},
+		{
+			name:  "shallow clone with existing branch and missing create branch",
+			depth: &depth,
+			checkout: []stepconfig.Checkout{
+				{Branch: "main", Path: "src"},
+				{Branch: "stage/new-shallow", Path: "out", Create: true},
+			},
+			assert: func(t *testing.T, res promotion.StepResult, err error) {
+				require.NoError(t, err)
+				require.Equal(t, kargoapi.PromotionStepStatusSucceeded, res.Status)
+				require.True(t, remoteHasBranch(t, "stage/new-shallow"))
+			},
+		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
@@ -717,6 +732,7 @@ func Test_gitCloner_run_with_branch_create(t *testing.T) {
 				newTestStepContext(t, t.TempDir()),
 				stepconfig.GitCloneConfig{
 					RepoURL:  testRepoURL,
+					Depth:    testCase.depth,
 					Checkout: testCase.checkout,
 				},
 			)

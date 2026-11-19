@@ -247,11 +247,10 @@ func (g *gitCloner) run(
 	}, nil
 }
 
-// ensureRemoteBranch checks for the existence of a remote branch. If the remote
-// branch exists, no action is taken and nil is returned. If the branch does not
-// exist and create == true, an empty orphaned branch is created, using a
-// temporary working tree in root, and pushed to the remote. If the branch does
-// not exist and create == false, an error is returned.
+// ensureRemoteBranch ensures that branch exists in the repository. If the branch
+// does not exist and create == true, an empty orphaned branch is created using a
+// temporary working tree in root and pushed to the remote. If the branch does not
+// exist and create == false, an error is returned.
 func ensureRemoteBranch(
 	ctx context.Context,
 	root *os.Root,
@@ -259,10 +258,10 @@ func ensureRemoteBranch(
 	branch string,
 	create bool,
 ) error {
-	exists, err := repo.RemoteBranchExists(ctx, branch)
+	exists, err := repo.LocalBranchExists(ctx, branch)
 	if err != nil {
 		return fmt.Errorf(
-			"error checking if remote branch %q of repo %s exists: %w",
+			"error checking if branch %q of repo %s exists locally: %w",
 			branch, repo.URL(), err,
 		)
 	}
