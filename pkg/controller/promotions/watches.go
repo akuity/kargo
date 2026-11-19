@@ -13,6 +13,7 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/api"
+	"github.com/akuity/kargo/pkg/client/apiserver/freightclient"
 	"github.com/akuity/kargo/pkg/controller"
 	argocd "github.com/akuity/kargo/pkg/controller/argocd/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/indexer"
@@ -23,7 +24,8 @@ import (
 // UpdatedArgoCDAppHandler is an event handler that enqueues Promotions for
 // reconciliation when an associated ArgoCD Application is updated.
 type UpdatedArgoCDAppHandler[T any] struct {
-	kargoClient client.Client
+	kargoClient   client.Client
+	freightClient freightclient.FreightClient
 }
 
 // Create implements TypedEventHandler.
@@ -194,7 +196,14 @@ func (u *UpdatedArgoCDAppHandler[T]) enqueueSelectorMatches(
 			if app == nil {
 				continue
 			}
-			if promotionSelectorsMatchApp(ctx, u.kargoClient, &promotion, app.Namespace, app.Labels) {
+			if promotionSelectorsMatchApp(
+				ctx,
+				u.kargoClient,
+				u.freightClient,
+				&promotion,
+				app.Namespace,
+				app.Labels,
+			) {
 				enqueue(promotion)
 				break
 			}

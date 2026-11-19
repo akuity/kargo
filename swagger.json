@@ -1253,6 +1253,58 @@
         ]
       }
     },
+    "/v1beta1/projects/{project}/freight/{freight-name-or-alias}/metadata": {
+      "patch": {
+        "description": "Upsert keys in the status metadata of a Freight resource. A value\nalready recorded under a key named in the request is\noverwritten; other keys are left as they are.",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "Core",
+          "Project-Level"
+        ],
+        "summary": "Update a Freight resource's status metadata",
+        "operationId": "PatchFreightMetadata",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "Project name",
+            "name": "project",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "description": "Freight name or alias",
+            "name": "freight-name-or-alias",
+            "in": "path",
+            "required": true
+          },
+          {
+            "description": "Metadata",
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/PatchFreightMetadataRequest"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      }
+    },
     "/v1beta1/projects/{project}/freight/{freight-name-or-alias}/status/stage/{stage}": {
       "post": {
         "description": "Record that the named Freight is currently in use by the Stage,\nand optionally that it has been verified there, updating the\nFreight's status (currentlyIn / verifiedIn). This is used by the\nStage controller in place of writing Freight status directly.",
@@ -6028,6 +6080,16 @@
           "items": {
             "type": "string"
           }
+        }
+      }
+    },
+    "PatchFreightMetadataRequest": {
+      "type": "object",
+      "properties": {
+        "metadata": {
+          "description": "Metadata is the status metadata to record on the Freight. Each key is\nupserted: an existing value under the same key is overwritten, and keys\nnot named in the request are left as they are.",
+          "type": "object",
+          "additionalProperties": {}
         }
       }
     },

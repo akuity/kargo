@@ -23,6 +23,7 @@ import (
 	rolloutsapi "github.com/akuity/kargo/api/stubs/rollouts/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/api"
+	"github.com/akuity/kargo/pkg/api/freightapi"
 	rollouts "github.com/akuity/kargo/pkg/api/stubs/rollouts"
 	"github.com/akuity/kargo/pkg/database"
 	"github.com/akuity/kargo/pkg/database/promotionrolloutstore"
@@ -167,7 +168,7 @@ func NewServer(
 	}
 
 	s.getStageFn = api.GetStage
-	s.getFreightByNameOrAliasFn = api.GetFreightByNameOrAlias
+	s.getFreightByNameOrAliasFn = freightapi.GetFreightByNameOrAlias
 	s.isFreightAvailableFn = s.isFreightAvailable
 	s.createPromotionFn = kubeClient.Create
 	s.findDownstreamStagesFn = s.findDownstreamStages

@@ -9,6 +9,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/pkg/client/apiserver/freightclient"
 	"github.com/akuity/kargo/pkg/kubeclient"
 	"github.com/akuity/kargo/pkg/promotion"
 	"github.com/akuity/kargo/pkg/x/promotion/stepconfig"
@@ -33,16 +34,18 @@ func init() {
 // metadataSetter is an implementation of the promotion.StepRunner interface
 // that updates metadata on Stage or Freight resources.
 type metadataSetter struct {
-	kargoClient  client.Client
-	schemaLoader gojsonschema.JSONLoader
+	kargoClient   client.Client
+	freightClient freightclient.FreightClient
+	schemaLoader  gojsonschema.JSONLoader
 }
 
 // newMetadataSetter returns an implementation of the promotion.StepRunner
 // interface that updates metadata on Stage or Freight resources.
 func newMetadataSetter(caps promotion.StepRunnerCapabilities) promotion.StepRunner {
 	return &metadataSetter{
-		kargoClient:  caps.KargoClient,
-		schemaLoader: getConfigSchemaLoader(stepKindSetMetadata),
+		kargoClient:   caps.KargoClient,
+		freightClient: caps.APIClient,
+		schemaLoader:  getConfigSchemaLoader(stepKindSetMetadata),
 	}
 }
 
@@ -111,39 +114,19 @@ func (s *metadataSetter) run(
 			}
 
 		case "Freight":
-			freight := &kargoapi.Freight{}
-			if err := s.kargoClient.Get(
+			// The API server resolves the Freight by name or alias and upserts the
+			// values into its status metadata.
+			if err := s.freightClient.PatchFreightMetadata(
 				ctx,
-				types.NamespacedName{
-					Name:      update.Name,
-					Namespace: stepCtx.Project,
-				},
-				freight,
+				stepCtx.Project,
+				update.Name,
+				update.Values,
 			); err != nil {
-				return promotion.StepResult{
-					Status: kargoapi.PromotionStepStatusErrored,
-				}, fmt.Errorf("error getting Freight: %w", err)
-			}
-			newStatus := freight.Status.DeepCopy()
-			if err := s.upsertMetadata(newStatus, update.Values); err != nil {
 				return promotion.StepResult{
 					Status: kargoapi.PromotionStepStatusErrored,
 				}, fmt.Errorf(
 					"error updating metadata for Freight %q in namespace %q: %w",
-					freight.Name, freight.Namespace, err,
-				)
-			}
-			if err := kubeclient.PatchStatus(
-				ctx,
-				s.kargoClient,
-				freight,
-				func(status *kargoapi.FreightStatus) { *status = *newStatus },
-			); err != nil {
-				return promotion.StepResult{
-					Status: kargoapi.PromotionStepStatusErrored,
-				}, fmt.Errorf(
-					"error patching status of Freight %q in namespace %q: %w",
-					freight.Name, freight.Namespace, err,
+					update.Name, stepCtx.Project, err,
 				)
 			}
 

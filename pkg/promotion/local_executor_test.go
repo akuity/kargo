@@ -36,6 +36,7 @@ func TestNewLocalStepExecutor(t *testing.T) {
 		argoCDClient,
 		credsDB,
 		nil,
+		nil,
 	)
 
 	require.NotNil(t, executor)
@@ -193,7 +194,7 @@ func TestLocalStepExecutor_ExecuteStep(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			executor := NewLocalStepExecutor(tt.registry, nil, nil, nil, nil)
+			executor := NewLocalStepExecutor(tt.registry, nil, nil, nil, nil, nil)
 			tt.request.Context.WorkDir = t.TempDir()
 			result, err := executor.ExecuteStep(t.Context(), tt.request)
 			tt.assertions(t, result, err)
@@ -219,7 +220,7 @@ func TestLocalStepExecutor_ExecuteStep_Root(t *testing.T) {
 				}
 			},
 		})
-		executor := NewLocalStepExecutor(registry, nil, nil, nil, nil)
+		executor := NewLocalStepExecutor(registry, nil, nil, nil, nil, nil)
 		result, err := executor.ExecuteStep(t.Context(), StepExecutionRequest{
 			Context: StepContext{WorkDir: workDir},
 			Step:    Step{Kind: "test-step"},
@@ -263,7 +264,7 @@ func TestLocalStepExecutor_ExecuteStep_Root(t *testing.T) {
 		require.NoError(t, json.Unmarshal(b, &decoded))
 		require.Nil(t, decoded.Context.Root)
 
-		executor := NewLocalStepExecutor(registry, nil, nil, nil, nil)
+		executor := NewLocalStepExecutor(registry, nil, nil, nil, nil, nil)
 		result, err := executor.ExecuteStep(t.Context(), decoded)
 		require.NoError(t, err)
 		require.Equal(t, kargoapi.PromotionStepStatusSucceeded, result.Status)
@@ -283,7 +284,7 @@ func TestLocalStepExecutor_ExecuteStep_Root(t *testing.T) {
 				}
 			},
 		})
-		executor := NewLocalStepExecutor(registry, nil, nil, nil, nil)
+		executor := NewLocalStepExecutor(registry, nil, nil, nil, nil, nil)
 		result, err := executor.ExecuteStep(t.Context(), StepExecutionRequest{
 			Context: StepContext{WorkDir: filepath.Join(t.TempDir(), "missing")},
 			Step:    Step{Kind: "test-step"},

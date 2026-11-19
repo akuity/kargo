@@ -12,6 +12,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/pkg/client/apiserver"
 	"github.com/akuity/kargo/pkg/credentials"
 	"github.com/akuity/kargo/pkg/telemetry"
 )
@@ -58,6 +59,7 @@ func NewLocalEngine(
 	credsDB credentials.Database,
 	gitUserResolver GitUserResolver,
 	cacheFunc ExprDataCacheFn,
+	apiClient *apiserver.Client,
 ) *LocalEngine {
 	return &LocalEngine{
 		orchestator: NewLocalOrchestrator(
@@ -67,6 +69,7 @@ func NewLocalEngine(
 			credsDB,
 			gitUserResolver,
 			cacheFunc,
+			apiClient,
 		),
 	}
 }

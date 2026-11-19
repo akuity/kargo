@@ -950,6 +950,43 @@ paths:
       summary: Retrieve deep links for a Freight resource
       tags:
       - Core
+  /v1beta1/projects/{project}/freight/{freight-name-or-alias}/metadata:
+    patch:
+      description: |-
+        Upsert keys in the status metadata of a Freight resource. A value
+        already recorded under a key named in the request is
+        overwritten; other keys are left as they are.
+      operationId: PatchFreightMetadata
+      parameters:
+      - description: Project name
+        in: path
+        name: project
+        required: true
+        schema:
+          type: string
+      - description: Freight name or alias
+        in: path
+        name: freight-name-or-alias
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PatchFreightMetadataRequest"
+        description: Metadata
+        required: true
+      responses:
+        "200":
+          content: {}
+          description: Success
+      security:
+      - BearerAuth: []
+      summary: Update a Freight resource's status metadata
+      tags:
+      - Core
+      x-codegen-request-body-name: body
   /v1beta1/projects/{project}/freight/{freight-name-or-alias}/status/stage/{stage}:
     delete:
       description: |-
@@ -4608,6 +4645,20 @@ components:
           items:
             type: string
           type: array
+      type: object
+    PatchFreightMetadataRequest:
+      example:
+        metadata:
+          key: "{}"
+      properties:
+        metadata:
+          additionalProperties:
+            type: object
+          description: |-
+            Metadata is the status metadata to record on the Freight. Each key is
+            upserted: an existing value under the same key is overwritten, and keys
+            not named in the request are left as they are.
+          type: object
       type: object
     PatchGenericCredentialsRequest:
       example:

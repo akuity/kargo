@@ -30,12 +30,10 @@ import (
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	"github.com/akuity/kargo/pkg/promotion"
 )
 
 // The client is what the controllers consume it as.
 var (
-	_ promotion.TargetGetter = (*Client)(nil)
 	_ interface {
 		ListTargets(context.Context, string) ([]kargoapi.Target, error)
 	} = (*Client)(nil)
@@ -1036,6 +1034,90 @@ func TestClientListFreight(t *testing.T) {
 		_, err := c.ListFreightByCurrentStage(t.Context(), "demo", "missing")
 		require.Error(t, err)
 		require.ErrorContains(t, err, "stage not found")
+	})
+}
+
+func TestClientPatchFreightAlias(t *testing.T) {
+	t.Parallel()
+
+	var gotFreight, gotAlias string
+	mux := http.NewServeMux()
+	mux.HandleFunc(
+		"PATCH /v1beta1/projects/{project}/freight/{freightNameOrAlias}/alias",
+		func(w http.ResponseWriter, r *http.Request) {
+			gotFreight = r.PathValue("freightNameOrAlias")
+			gotAlias = r.URL.Query().Get("newAlias")
+			if gotAlias == "taken" {
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(http.StatusConflict)
+				_ = json.NewEncoder(w).Encode(map[string]string{"error": "alias already used"})
+				return
+			}
+			w.WriteHeader(http.StatusOK)
+		},
+	)
+	server := httptest.NewServer(mux)
+	t.Cleanup(server.Close)
+
+	cp := newControlPlane(t, http.StatusOK)
+	c, err := New(t.Context(), validConfig(server.URL), cp.config())
+	require.NoError(t, err)
+
+	t.Run("sets the alias", func(t *testing.T) {
+		err := c.PatchFreightAlias(t.Context(), "demo", "fr-1", "new-alias")
+		require.NoError(t, err)
+		require.Equal(t, "fr-1", gotFreight)
+		require.Equal(t, "new-alias", gotAlias)
+	})
+	t.Run("surfaces the server's error", func(t *testing.T) {
+		err := c.PatchFreightAlias(t.Context(), "demo", "fr-1", "taken")
+		require.Error(t, err)
+		require.ErrorContains(t, err, "alias already used")
+	})
+}
+
+func TestClientPatchFreightMetadata(t *testing.T) {
+	t.Parallel()
+
+	var gotFreight, gotBody string
+	mux := http.NewServeMux()
+	mux.HandleFunc(
+		"PATCH /v1beta1/projects/{project}/freight/{freightNameOrAlias}/metadata",
+		func(w http.ResponseWriter, r *http.Request) {
+			gotFreight = r.PathValue("freightNameOrAlias")
+			if gotFreight == "missing" {
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(http.StatusNotFound)
+				_ = json.NewEncoder(w).Encode(map[string]string{"error": "freight not found"})
+				return
+			}
+			raw, _ := io.ReadAll(r.Body)
+			gotBody = string(raw)
+			w.WriteHeader(http.StatusOK)
+		},
+	)
+	server := httptest.NewServer(mux)
+	t.Cleanup(server.Close)
+
+	cp := newControlPlane(t, http.StatusOK)
+	c, err := New(t.Context(), validConfig(server.URL), cp.config())
+	require.NoError(t, err)
+
+	t.Run("sends the metadata", func(t *testing.T) {
+		err := c.PatchFreightMetadata(
+			t.Context(),
+			"demo",
+			"fr-1",
+			map[string]any{"key": map[string]any{"nested": []int{1, 2}}},
+		)
+		require.NoError(t, err)
+		require.Equal(t, "fr-1", gotFreight)
+		require.JSONEq(t, `{"metadata":{"key":{"nested":[1,2]}}}`, gotBody)
+	})
+	t.Run("surfaces the server's error", func(t *testing.T) {
+		err := c.PatchFreightMetadata(t.Context(), "demo", "missing", map[string]any{"key": "value"})
+		require.Error(t, err)
+		require.ErrorContains(t, err, "freight not found")
 	})
 }
 
