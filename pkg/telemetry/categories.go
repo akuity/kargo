@@ -16,12 +16,15 @@ const (
 	CategoryDatabase Category = "database"
 	// CategoryK8s covers Kubernetes API request spans.
 	CategoryK8s Category = "k8s"
+	// CategoryPatch covers status patch spans.
+	CategoryPatch Category = "patch"
 )
 
 // categories maps every Category to whether it is on by default.
 var categories = map[Category]bool{
 	CategoryDatabase: true,
 	CategoryK8s:      false,
+	CategoryPatch:    false,
 }
 
 // CategoryEnabled returns whether tracing is on and c is selected by

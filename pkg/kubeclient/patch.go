@@ -3,17 +3,27 @@ package kubeclient
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"maps"
+	"slices"
 
 	jsonpatch "github.com/evanphx/json-patch/v5"
+	"go.opentelemetry.io/otel"
 	"k8s.io/apimachinery/pkg/api/equality"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	"github.com/akuity/kargo/pkg/telemetry"
 )
+
+// tracer records this package's spans.
+var tracer = otel.Tracer("github.com/akuity/kargo/pkg/kubeclient")
 
 type HasStatus[S any] interface {
 	client.Object
@@ -22,8 +32,23 @@ type HasStatus[S any] interface {
 
 // PatchStatus patches evaluate changes applied by the callback to the status of a resource
 // and patches resource status if there are any changes.
+//
+// Each call records a "PatchStatus" span.
 func PatchStatus[T HasStatus[S], S any](
-	ctx context.Context, kubeClient client.Client, resource T, update func(status S)) error {
+	ctx context.Context, kubeClient client.Client, resource T, update func(status S)) (err error) {
+
+	ctx, span := telemetry.StartSpanIn(ctx, telemetry.CategoryPatch, tracer, "PatchStatus")
+	defer func() {
+		// Callers tolerate NotFound.
+		if !apierrors.IsNotFound(err) && !errors.Is(err, context.Canceled) {
+			telemetry.RecordError(span, err)
+		}
+		span.End()
+	}()
+	recording := span.IsRecording()
+	if recording {
+		span.SetAttributes(telemetry.ObjectAttributes(resource)...)
+	}
 
 	originalJSON, err := json.Marshal(resource.GetStatus())
 	if err != nil {
@@ -39,6 +64,9 @@ func PatchStatus[T HasStatus[S], S any](
 	// Most calls change nothing. Equal statuses marshal alike, so the merge
 	// patch would be empty: skip marshaling and diffing them.
 	if equality.Semantic.DeepEqual(resource.GetStatus(), updated) {
+		if recording {
+			span.SetAttributes(telemetry.PatchNoopKey.Bool(true))
+		}
 		return nil
 	}
 
@@ -57,6 +85,9 @@ func PatchStatus[T HasStatus[S], S any](
 		return err
 	}
 	if len(patchMap) == 0 {
+		if recording {
+			span.SetAttributes(telemetry.PatchNoopKey.Bool(true))
+		}
 		return nil
 	}
 
@@ -65,6 +96,13 @@ func PatchStatus[T HasStatus[S], S any](
 	})
 	if err != nil {
 		return err
+	}
+	if recording {
+		span.SetAttributes(
+			telemetry.PatchNoopKey.Bool(false),
+			telemetry.PatchFieldsKey.StringSlice(slices.Sorted(maps.Keys(patchMap))),
+			telemetry.PatchBytesKey.Int(len(patch)),
+		)
 	}
 	return kubeClient.Status().Patch(ctx, resource, client.RawPatch(types.MergePatchType, patch))
 }

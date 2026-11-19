@@ -93,6 +93,7 @@ func TestParseCategories(t *testing.T) {
 				require.NoError(t, err)
 				require.True(t, selected(s, CategoryDatabase))
 				require.True(t, selected(s, CategoryK8s))
+				require.False(t, selected(s, CategoryPatch))
 			},
 		},
 		{
