@@ -632,6 +632,13 @@ func TestBareRepo_CloneDepthAndBranches(t *testing.T) {
 			opts: &BareCloneOptions{Branches: []string{"nope", "nada"}},
 		},
 		{
+			name: "blobless with no existing branches",
+			opts: &BareCloneOptions{
+				Blobless: true,
+				Branches: []string{"stage/new"},
+			},
+		},
+		{
 			name: "missing branch with depth",
 			opts: &BareCloneOptions{
 				Depth:    1,
@@ -684,6 +691,19 @@ func TestBareRepo_CloneDepthAndBranches(t *testing.T) {
 				fmt.Sprint(testCase.expectShallow),
 				runGit("rev-parse", "--is-shallow-repository"),
 			)
+
+			if testCase.opts.Blobless {
+				require.Equal(
+					t,
+					"true",
+					runGit("config", "--get", "remote.origin.promisor"),
+				)
+				require.Equal(
+					t,
+					"blob:none",
+					runGit("config", "--get", "remote.origin.partialclonefilter"),
+				)
+			}
 
 			for branch, expectedCount := range testCase.expectedCommits {
 				require.Equal(

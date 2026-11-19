@@ -217,6 +217,9 @@ func (b *bareRepo) cloneSelectBranches(
 		if _, err = libExec.Exec(cmd); err != nil {
 			return fmt.Errorf("error cloning repo %q into %q: %w", b.url, b.dir, err)
 		}
+		if blobless {
+			return b.configureBloblessPartialClone(ctx)
+		}
 		return nil
 	}
 
@@ -240,6 +243,9 @@ func (b *bareRepo) cloneSelectBranches(
 	}
 
 	if len(refs) == 0 {
+		if blobless {
+			return b.configureBloblessPartialClone(ctx)
+		}
 		return nil
 	}
 
@@ -260,6 +266,25 @@ func (b *bareRepo) cloneSelectBranches(
 			"error fetching branches %v of repo %q into %q: %w",
 			branches, b.url, b.dir, err,
 		)
+	}
+	return nil
+}
+
+// configureBloblessPartialClone records blobless partial-clone configuration
+// on the repository so subsequent fetches omit blobs even when no refs were
+// fetched during initial clone.
+func (b *bareRepo) configureBloblessPartialClone(ctx context.Context) error {
+	settings := [][2]string{
+		{"core.repositoryformatversion", "1"},
+		{"remote.origin.promisor", "true"},
+		{"remote.origin.partialclonefilter", "blob:none"},
+	}
+	for _, setting := range settings {
+		if _, err := libExec.Exec(b.buildGitCommand(
+			ctx, "config", setting[0], setting[1],
+		)); err != nil {
+			return fmt.Errorf("error configuring %s: %w", setting[0], err)
+		}
 	}
 	return nil
 }
