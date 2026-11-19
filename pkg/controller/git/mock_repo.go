@@ -27,6 +27,7 @@ type MockRepo struct {
 		opts *CreateTagOptions,
 	) error
 	CurrentBranchFn           func(ctx context.Context) (string, error)
+	DeepenFn                  func(ctx context.Context, depth uint, refs ...string) error
 	DeleteBranchFn            func(ctx context.Context, branch string) error
 	DirFn                     func() string
 	FetchFn                   func(ctx context.Context, opts *FetchOptions) error
@@ -124,6 +125,14 @@ func (m *MockRepo) CreateTag(
 
 func (m *MockRepo) CurrentBranch(ctx context.Context) (string, error) {
 	return m.CurrentBranchFn(ctx)
+}
+
+func (m *MockRepo) Deepen(
+	ctx context.Context,
+	depth uint,
+	refs ...string,
+) error {
+	return m.DeepenFn(ctx, depth, refs...)
 }
 
 func (m *MockRepo) DeleteBranch(ctx context.Context, branch string) error {

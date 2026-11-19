@@ -211,16 +211,10 @@ func (w *workTree) ensureCompleteIntegrationHistory(
 		}
 	}
 
-	step := initialDeepenStep
+	step := uint(initialDeepenStep)
 	for range maxDeepenIterations {
-		args := append(
-			[]string{"fetch", "--deepen", fmt.Sprint(step), "origin"},
-			deepenRefs...,
-		)
-		if _, err = libExec.Exec(w.buildGitCommand(ctx, args...)); err != nil {
-			return false, fmt.Errorf(
-				"error deepening shallow clone by %d commits: %w", step, err,
-			)
+		if err = w.Deepen(ctx, step, deepenRefs...); err != nil {
+			return false, err
 		}
 
 		var newShallow map[string]struct{}

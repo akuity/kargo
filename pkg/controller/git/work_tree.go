@@ -50,6 +50,9 @@ type WorkTree interface {
 	CreateTag(ctx context.Context, name, msg string, opts *CreateTagOptions) error
 	// CurrentBranch returns the current branch
 	CurrentBranch(ctx context.Context) (string, error)
+	// Deepen deepens a shallow repository by the specified number of commits
+	// along the given remote refs without updating local tracking refs.
+	Deepen(ctx context.Context, depth uint, refs ...string) error
 	// DeleteBranch deletes the specified branch
 	DeleteBranch(ctx context.Context, branch string) error
 	// Dir returns an absolute path to the working tree.
@@ -400,6 +403,23 @@ func (w *workTree) CurrentBranch(ctx context.Context) (string, error) {
 		)
 	}
 	return strings.TrimSpace(string(res)), nil
+}
+
+func (w *workTree) Deepen(
+	ctx context.Context,
+	depth uint,
+	refs ...string,
+) error {
+	if depth == 0 {
+		return nil
+	}
+	args := append([]string{"fetch", "--deepen", fmt.Sprint(depth), "origin"}, refs...)
+	if _, err := libExec.Exec(w.buildGitCommand(ctx, args...)); err != nil {
+		return fmt.Errorf(
+			"error deepening repo %q by %d commits: %w", w.url, depth, err,
+		)
+	}
+	return nil
 }
 
 func (w *workTree) DeleteBranch(ctx context.Context, branch string) error {

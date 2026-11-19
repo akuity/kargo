@@ -1053,6 +1053,9 @@ func Test_githubPusher_replayCommits(t *testing.T) {
 				) (*git.CommitSignatureInfo, error) {
 					return nil, errors.New("something went wrong")
 				},
+				DeepenFn: func(context.Context, uint, ...string) error {
+					return nil
+				},
 			},
 			commits: []*github.RepositoryCommit{{
 				SHA: github.Ptr("old-sha"),
@@ -1064,6 +1067,98 @@ func Test_githubPusher_replayCommits(t *testing.T) {
 			assertions: func(t *testing.T, _ string, err error) {
 				require.ErrorContains(t, err, "error getting signature info")
 				require.ErrorContains(t, err, "something went wrong")
+			},
+		},
+		{
+			name: "error deepening shallow clone for missing commit",
+			workTree: &git.MockRepo{
+				GetCommitSignatureInfoFn: func(
+					context.Context,
+					string,
+				) (*git.CommitSignatureInfo, error) {
+					return nil, errors.New("bad object")
+				},
+				DeepenFn: func(context.Context, uint, ...string) error {
+					return errors.New("deepen failed")
+				},
+			},
+			commits: []*github.RepositoryCommit{{
+				SHA: github.Ptr("old-sha"),
+				Commit: &github.Commit{
+					Message: github.Ptr("test"),
+					Tree:    &github.Tree{SHA: github.Ptr("tree-sha")},
+				},
+			}},
+			assertions: func(t *testing.T, _ string, err error) {
+				require.ErrorContains(t, err, "error deepening clone")
+				require.ErrorContains(t, err, "deepen failed")
+			},
+		},
+		{
+			name: "deepens shallow clone once when commit is missing locally",
+			workTree: func() git.WorkTree {
+				deepened := false
+				deepenCalls := 0
+				return &git.MockRepo{
+					GetCommitSignatureInfoFn: func(
+						context.Context,
+						string,
+					) (*git.CommitSignatureInfo, error) {
+						if !deepened {
+							return nil, errors.New("bad object")
+						}
+						return &git.CommitSignatureInfo{Trusted: false}, nil
+					},
+					DeepenFn: func(
+						_ context.Context,
+						depth uint,
+						refs ...string,
+					) error {
+						deepenCalls++
+						require.Equal(t, 1, deepenCalls)
+						require.Equal(t, uint(2), depth)
+						require.Equal(t, []string{"refs/kargo/staging/test"}, refs)
+						deepened = true
+						return nil
+					},
+				}
+			}(),
+			client: func() *mockGitHubPushClient {
+				callCount := 0
+				return &mockGitHubPushClient{
+					createCommitFn: func(
+						_ context.Context,
+						_, _ string,
+						_ github.Commit,
+						_ *github.CreateCommitOptions,
+					) (*github.Commit, *github.Response, error) {
+						callCount++
+						return &github.Commit{
+							SHA: github.Ptr(fmt.Sprintf("new-%d", callCount)),
+						}, nil, nil
+					},
+				}
+			}(),
+			commits: []*github.RepositoryCommit{
+				{
+					SHA: github.Ptr("old-1"),
+					Commit: &github.Commit{
+						Message: github.Ptr("first"),
+						Tree:    &github.Tree{SHA: github.Ptr("tree-1")},
+					},
+				},
+				{
+					SHA: github.Ptr("old-2"),
+					Commit: &github.Commit{
+						Message: github.Ptr("second"),
+						Tree:    &github.Tree{SHA: github.Ptr("tree-2")},
+					},
+					Parents: []*github.Commit{{SHA: github.Ptr("old-1")}},
+				},
+			},
+			assertions: func(t *testing.T, sha string, err error) {
+				require.NoError(t, err)
+				require.Equal(t, "new-2", sha)
 			},
 		},
 		{
@@ -1164,6 +1259,7 @@ func Test_githubPusher_replayCommits(t *testing.T) {
 				"repo",
 				testCase.commits,
 				"base-sha",
+				"refs/kargo/staging/test",
 				testCase.workTree,
 			)
 			testCase.assertions(t, sha, err)

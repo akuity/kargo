@@ -519,3 +519,44 @@ func TestGetDiffPathsForCommitWithManyModifiedRenames(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, paths, fileCount*2)
 }
+
+func TestWorkTree_Deepen(t *testing.T) {
+	repoURL, clientOpts, author := setupRemoteWithAuthor(t)
+	var olderCommitID string
+	for i := range 3 {
+		commitFile(t, author, fmt.Sprintf("commit-%d", i))
+		if i == 0 {
+			var err error
+			olderCommitID, err = author.LastCommitID(t.Context())
+			require.NoError(t, err)
+		}
+	}
+	require.NoError(t, author.Push(t.Context(), nil))
+
+	wt := cloneBareWorkTree(
+		t,
+		repoURL,
+		clientOpts,
+		&BareCloneOptions{Depth: 1, Branches: []string{"main"}},
+		"main",
+	)
+
+	// Push to a custom staging ref just like github-push does.
+	stagingRef := "refs/kargo/staging/test"
+	require.NoError(t, wt.Push(t.Context(), &PushOptions{
+		TargetBranch: stagingRef,
+		Force:        true,
+	}))
+
+	// Deepening by 0 is a no-op; the older commit behind the shallow boundary
+	// remains missing.
+	require.NoError(t, wt.Deepen(t.Context(), 0, stagingRef))
+	_, err := wt.GetCommitSignatureInfo(t.Context(), olderCommitID)
+	require.Error(t, err)
+
+	// Deepen via the staging ref and verify the older commit is now inspectable.
+	require.NoError(t, wt.Deepen(t.Context(), 3, stagingRef))
+	sigInfo, err := wt.GetCommitSignatureInfo(t.Context(), olderCommitID)
+	require.NoError(t, err)
+	require.NotNil(t, sigInfo)
+}
