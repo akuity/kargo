@@ -10,6 +10,8 @@ export type WarehouseState = {
   // The condition message as the controller wrote it. A failing subscription
   // is named in here, if anywhere.
   rawErrorMessage?: string;
+  // The generation of the Warehouse the failure was recorded for.
+  failedGeneration?: number;
   discoveredAt?: Date;
 };
 
@@ -86,6 +88,7 @@ export const getWarehouseState = (warehouse?: WarehouseExpanded): WarehouseState
       : 'Discovery failed',
     errorMessage: trimMessage(failure.message || ''),
     rawErrorMessage: failure.message || '',
+    failedGeneration: failure.observedGeneration,
     discoveredAt
   };
 };
@@ -94,20 +97,30 @@ export const getWarehouseState = (warehouse?: WarehouseExpanded): WarehouseState
 // each attempt clears the failure until it fails again. Shown as it is, the
 // Warehouse would flip between failed and discovering on every attempt, so
 // `previous`, the Warehouse as last shown, stands in for `next` while the
-// retry is under way. A refresh the user asks for, or a change to the
-// Warehouse, is shown as the discovery it is.
+// retry is under way. A refresh the user asks for is shown as the discovery
+// it is.
+//
+// So is the discovery of a changed spec, which may well have fixed the
+// failure. An edit reaches the graph before its discovery does, as a new
+// generation still carrying the old failure, so what tells a retry from it is
+// the generation the failure was recorded for, not the generation last shown.
 export const keepFailureThroughRetry = (
   previous: WarehouseExpanded | undefined,
   next: WarehouseExpanded
-): WarehouseExpanded =>
-  previous &&
-  previous.metadata?.uid === next.metadata?.uid &&
-  previous.metadata?.generation === next.metadata?.generation &&
-  getWarehouseState(previous).phase === 'failed' &&
-  getWarehouseState(next).phase === 'discovering' &&
-  !isRefreshPending(next)
+): WarehouseExpanded => {
+  if (!previous || previous.metadata?.uid !== next.metadata?.uid) {
+    return next;
+  }
+
+  const shown = getWarehouseState(previous);
+
+  return shown.phase === 'failed' &&
+    shown.failedGeneration === next.metadata?.generation &&
+    getWarehouseState(next).phase === 'discovering' &&
+    !isRefreshPending(next)
     ? previous
     : next;
+};
 
 // The least time the loader and the edge animation are shown for, so that a
 // quick discovery does not blink.

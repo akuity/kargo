@@ -226,68 +226,79 @@ describe('isSubscriptionFailing()', () => {
 });
 
 describe('keepFailureThroughRetry()', () => {
-  const as = (w: WarehouseExpanded, metadata: { uid?: string; generation?: number } = {}) =>
-    ({
-      ...w,
-      metadata: { ...w.metadata, uid: 'uid-1', generation: 1, ...metadata }
-    }) as WarehouseExpanded;
+  // A Warehouse at `generation`, with conditions recorded for `recordedFor`.
+  const at = (
+    generation: number,
+    conditions: V1Condition[],
+    options: { recordedFor?: number; uid?: string; annotations?: Record<string, string> } = {}
+  ): WarehouseExpanded => {
+    const { recordedFor = generation, uid = 'uid-1', annotations } = options;
+    const w = warehouse({
+      conditions: conditions.map((c) => ({ ...c, observedGeneration: recordedFor })),
+      annotations
+    });
 
-  const failed = as(
-    warehouse({
-      conditions: [
-        condition('Reconciling', 'True', 'ScheduledDiscovery'),
-        condition('Healthy', 'False', 'DiscoveryFailed', discoveryError)
-      ]
-    })
-  );
+    return { ...w, metadata: { ...w.metadata, uid, generation } } as WarehouseExpanded;
+  };
 
-  const retryConditions = [
+  const failure = [
+    condition('Reconciling', 'True', 'ScheduledDiscovery'),
+    condition('Healthy', 'False', 'DiscoveryFailed', discoveryError)
+  ];
+
+  const discovery = [
     condition('Reconciling', 'True', 'ScheduledDiscovery'),
     condition('Ready', 'False', 'DiscoveryInProgress'),
     condition('Healthy', 'Unknown', 'Pending')
   ];
 
-  const retrying = as(warehouse({ conditions: retryConditions }));
+  const success = [condition('Ready', 'True'), condition('Healthy', 'True')];
+
+  const failed = at(1, failure);
 
   test('a retry of a failed discovery keeps the failure shown', () => {
-    expect(keepFailureThroughRetry(failed, retrying)).toBe(failed);
+    expect(keepFailureThroughRetry(failed, at(1, discovery))).toBe(failed);
   });
 
   test('what the retry comes to is shown', () => {
-    const ready = as(warehouse({ conditions: [condition('Healthy', 'True')] }));
-    const failedAgain = as(failed);
+    const ready = at(1, success);
+    const failedAgain = at(1, failure);
 
     expect(keepFailureThroughRetry(failed, ready)).toBe(ready);
     expect(keepFailureThroughRetry(failed, failedAgain)).toBe(failedAgain);
   });
 
   test('a refresh the user asked for is shown as discovering', () => {
-    const refreshing = as(
-      warehouse({
-        conditions: retryConditions,
-        annotations: { 'kargo.akuity.io/refresh': 'token' }
-      })
-    );
+    const refreshing = at(1, discovery, { annotations: { 'kargo.akuity.io/refresh': 'token' } });
 
     expect(keepFailureThroughRetry(failed, refreshing)).toBe(refreshing);
   });
 
-  test('a change to the Warehouse is shown as discovering', () => {
-    const changed = as(retrying, { generation: 2 });
+  test('the discovery of a changed spec is shown, though the edit arrives first', () => {
+    // the edit, still carrying the failure recorded for the spec before it
+    const edited = at(2, failure, { recordedFor: 1 });
+    const discovering = at(2, discovery);
 
-    expect(keepFailureThroughRetry(failed, changed)).toBe(changed);
+    expect(keepFailureThroughRetry(failed, edited)).toBe(edited);
+    expect(keepFailureThroughRetry(edited, discovering)).toBe(discovering);
+  });
+
+  test('a retry after the changed spec failed as well keeps that failure shown', () => {
+    const failedAgain = at(2, failure);
+
+    expect(keepFailureThroughRetry(failedAgain, at(2, discovery))).toBe(failedAgain);
   });
 
   test('a Warehouse made again under the same name is shown as it is', () => {
-    const remade = as(retrying, { uid: 'uid-2' });
+    const remade = at(1, discovery, { uid: 'uid-2' });
 
     expect(keepFailureThroughRetry(failed, remade)).toBe(remade);
   });
 
   test('a discovery after no failure is shown as discovering', () => {
-    const ready = as(warehouse({ conditions: [condition('Healthy', 'True')] }));
+    const discovering = at(1, discovery);
 
-    expect(keepFailureThroughRetry(undefined, retrying)).toBe(retrying);
-    expect(keepFailureThroughRetry(ready, retrying)).toBe(retrying);
+    expect(keepFailureThroughRetry(undefined, discovering)).toBe(discovering);
+    expect(keepFailureThroughRetry(at(1, success), discovering)).toBe(discovering);
   });
 });
