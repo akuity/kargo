@@ -86,33 +86,7 @@ export const FreightTimelineFilters = (props: FreightTimelineFiltersProps) => {
         />
       </div>
 
-      <div className='flex mt-3 gap-2'>
-        <Checkbox
-          className='text-xs'
-          checked={props.preferredFilter?.showAlias}
-          onChange={(e) =>
-            props.onPreferredFilterChange({
-              ...props.preferredFilter,
-              showAlias: e.target.checked
-            })
-          }
-        >
-          Alias
-        </Checkbox>
-
-        <Checkbox
-          className='text-xs'
-          checked={props.preferredFilter?.showColors}
-          onChange={(e) =>
-            props.onPreferredFilterChange({
-              ...props.preferredFilter,
-              showColors: e.target.checked
-            })
-          }
-        >
-          Colors
-        </Checkbox>
-
+      <div className='mt-3'>
         <Checkbox
           className='text-xs'
           checked={props.preferredFilter?.hideUnusedFreights}
