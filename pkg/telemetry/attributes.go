@@ -42,6 +42,9 @@ const (
 	// (OTel semconv).
 	VCSCommitKey = semconv.VCSRefHeadRevisionKey
 
+	// KindKey is the attribute under which the kind of a Kubernetes object a
+	// span concerns is recorded.
+	KindKey = attribute.Key("kargo.object.kind")
 	// NameKey is the attribute under which the name of the Kubernetes object
 	// a span concerns is recorded.
 	NameKey = attribute.Key("kargo.object.name")
@@ -57,6 +60,16 @@ const (
 	// VerbKey is the attribute under which a Kubernetes API request's verb
 	// (e.g. "patch") is recorded.
 	VerbKey = attribute.Key("kargo.k8s.verb")
+
+	// PatchNoopKey is the attribute under which whether a status patch was
+	// skipped as a no-op is recorded.
+	PatchNoopKey = attribute.Key("kargo.patch.noop")
+	// PatchFieldsKey is the attribute under which the top-level status fields
+	// a status patch changes are recorded.
+	PatchFieldsKey = attribute.Key("kargo.patch.fields")
+	// PatchBytesKey is the attribute under which a status patch's size is
+	// recorded.
+	PatchBytesKey = attribute.Key("kargo.patch.bytes")
 
 	// StepAliasKey is the attribute under which a promotion step's alias is
 	// recorded.

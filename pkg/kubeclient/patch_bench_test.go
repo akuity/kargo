@@ -1,15 +1,19 @@
 package kubeclient
 
 import (
+	"context"
 	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/pkg/telemetry/telemetrytest"
 )
 
 // BenchmarkPatchStatus covers the two paths every reconciler takes through
@@ -79,4 +83,57 @@ func benchStage(historyLen int) *kargoapi.Stage {
 		stage.Status.FreightHistory.Record(col)
 	}
 	return stage
+}
+
+// BenchmarkPatchStatusTracing measures a status patch with tracing off, and on
+// and sampled. Run it with:
+//
+//	go test -run '^$' -bench PatchStatusTracing -benchtime 20000x -count 5 ./pkg/kubeclient/
+//
+// Run it without tests, "off" first: this package's tracer binds to the
+// first provider installed.
+func BenchmarkPatchStatusTracing(b *testing.B) {
+	scheme := runtime.NewScheme()
+	if err := kargoapi.AddToScheme(scheme); err != nil {
+		b.Fatal(err)
+	}
+	run := func(b *testing.B) {
+		freight := &kargoapi.Freight{
+			ObjectMeta: metav1.ObjectMeta{Namespace: "smoke", Name: "abc"},
+			Origin: kargoapi.FreightOrigin{
+				Kind: kargoapi.FreightOriginKindWarehouse,
+				Name: "wh",
+			},
+		}
+		c := fake.NewClientBuilder().
+			WithScheme(scheme).
+			WithObjects(freight).
+			WithStatusSubresource(freight).
+			Build()
+		ctx := context.Background()
+		var i int
+		b.ReportAllocs()
+		for b.Loop() {
+			// Alternate, so that every patch changes something.
+			i++
+			if err := PatchStatus(ctx, c, freight, func(s *kargoapi.FreightStatus) {
+				if i%2 == 0 {
+					s.RemoveCurrentStage("dev")
+					return
+				}
+				s.AddCurrentStage("dev", metav1.Now().Time)
+			}); err != nil {
+				b.Fatal(err)
+			}
+		}
+	}
+	b.Run("off", run)
+	b.Run("on-sampled", func(b *testing.B) {
+		tp := sdktrace.NewTracerProvider(
+			sdktrace.WithBatcher(tracetest.NewNoopExporter()),
+		)
+		b.Cleanup(func() { _ = tp.Shutdown(context.Background()) })
+		telemetrytest.UseTracerProvider(b, tp)
+		run(b)
+	})
 }
