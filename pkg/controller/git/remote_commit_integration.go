@@ -213,7 +213,7 @@ func (w *workTree) ensureCompleteIntegrationHistory(
 
 	step := uint(initialDeepenStep)
 	for range maxDeepenIterations {
-		if err = w.Deepen(ctx, step, deepenRefs...); err != nil {
+		if err = w.deepen(ctx, step, deepenRefs...); err != nil {
 			return false, err
 		}
 

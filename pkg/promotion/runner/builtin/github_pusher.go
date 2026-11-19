@@ -538,6 +538,25 @@ func (g *githubPusher) push(
 		}
 	}
 
+	if len(commits) > 0 {
+		commitIDs := make([]string, 0, len(commits))
+		for _, c := range commits {
+			if sha := c.GetSHA(); sha != "" {
+				commitIDs = append(commitIDs, sha)
+			}
+		}
+		if len(commitIDs) > 0 {
+			if err = workTree.EnsureCommits(ctx, &git.EnsureCommitsOptions{
+				CommitIDs: commitIDs,
+				Ref:       opts.stagingRef,
+			}); err != nil {
+				return fmt.Errorf(
+					"error ensuring commits are available locally: %w", err,
+				)
+			}
+		}
+	}
+
 	// Replay commits via GitHub API. The merge base is used as the initial
 	// parent so that replayed commits are correctly rooted regardless of
 	// whether the source is simply ahead or has diverged from the target.
@@ -548,7 +567,6 @@ func (g *githubPusher) push(
 		opts.repo,
 		commits,
 		mergeBase,
-		opts.stagingRef,
 		workTree,
 	)
 	if err != nil {
@@ -582,7 +600,6 @@ func (g *githubPusher) replayCommits(
 	repo string,
 	repoCommits []*github.RepositoryCommit,
 	parentSHA string,
-	stagingRef string,
 	workTree git.WorkTree,
 ) (string, error) {
 	if len(repoCommits) == 0 {
@@ -593,7 +610,6 @@ func (g *githubPusher) replayCommits(
 
 	shaMap := map[string]string{parentSHA: parentSHA}
 
-	var deepened bool
 	var lastSHA string
 	for i, repoCommit := range repoCommits {
 		if repoCommit.Commit == nil ||
@@ -604,23 +620,8 @@ func (g *githubPusher) replayCommits(
 			)
 		}
 
-		// Get signature info for trust evaluation. 
-		// 
-		// In a shallow clone, older commits in the comparison range may lie 
-		// behind the shallow boundary. Deepen and retry.
+		// Get signature info for trust evaluation.
 		sigInfo, err := workTree.GetCommitSignatureInfo(ctx, repoCommit.GetSHA())
-		if err != nil && !deepened && stagingRef != "" {
-			deepened = true
-			if deepenErr := workTree.Deepen(
-				ctx, uint(len(repoCommits)), stagingRef,
-			); deepenErr != nil {
-				return "", fmt.Errorf(
-					"error deepening clone to inspect commit %s: %w",
-					repoCommit.GetSHA(), deepenErr,
-				)
-			}
-			sigInfo, err = workTree.GetCommitSignatureInfo(ctx, repoCommit.GetSHA())
-		}
 		if err != nil {
 			return "", fmt.Errorf(
 				"error getting signature info for commit %s: %w",
@@ -654,7 +655,6 @@ func (g *githubPusher) replayCommits(
 			"new", lastSHA,
 			"merge", len(newCommit.Parents) > 1,
 			"trusted", sigInfo.Trusted,
-			"deepened", deepened,
 		)
 	}
 	return lastSHA, nil
