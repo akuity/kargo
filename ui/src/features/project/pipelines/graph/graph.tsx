@@ -186,9 +186,14 @@ export const Graph = (props: GraphProps) => {
       warehouseByName[name] = keepFailureThroughRetry(shownWarehouses.current[name], warehouse);
     }
 
-    shownWarehouses.current = warehouseByName;
     return warehouseByName;
   }, [props.warehouses]);
+
+  // Recorded once committed, so that a render React discards never becomes
+  // what the next one compares against.
+  useLayoutEffect(() => {
+    shownWarehouses.current = warehouseByName;
+  }, [warehouseByName]);
 
   const discoveringNow = useMemo(
     () =>

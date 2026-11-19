@@ -132,7 +132,7 @@ export const useReactFlowPipelineGraph = (
           graph.node(warehouseIndexer.index(dagreNode.subscriptionParent));
 
         // only ever moved in towards the Warehouse, never out past dagre
-        if (dagreNode?.subscription && parent) {
+        if (parent) {
           const warehouseLeft = parent.x - parent.width / 2;
           x = Math.max(x, warehouseLeft - subscriptionGap - dagreNode.width);
         }
