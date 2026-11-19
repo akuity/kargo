@@ -186,9 +186,9 @@ func (b *bareRepo) cloneAllBranches(
 //
 // Equivalent to:
 //
-//	git init --bare <dir>
+//	git ls-remote <url> HEAD refs/heads/<branch>...
+//	git init --bare [--object-format=sha256] <dir>
 //	git config remote.origin.url <url>
-//	git ls-remote --heads origin refs/heads/<branch>...
 //	git fetch [--filter=blob:none] [--depth=<depth>] origin +<ref>:<ref>...
 func (b *bareRepo) cloneSelectBranches(
 	ctx context.Context,
@@ -196,12 +196,41 @@ func (b *bareRepo) cloneSelectBranches(
 	blobless bool,
 	depth uint,
 ) error {
-	cmd := b.buildGitCommand(ctx, "init", "--bare", b.dir)
+	// Resolve branch names against the remote before initializing the repo so
+	// we can detect the remote's object format (SHA-1 vs SHA-256).
+	refs, objectFormat, err := b.findRemoteBranchRefs(ctx, branches)
+	if err != nil {
+		return err
+	}
+
+	// If ls-remote returned no refs at all, delegate initialization to "git clone
+	// --bare --single-branch" so Git negotiates the remote's object format via
+	// protocol capabilities without transferring any refs.
+	if objectFormat == "" {
+		args := []string{"clone", "--bare", "--single-branch"}
+		if blobless {
+			args = append(args, "--filter", "blob:none")
+		}
+		args = append(args, b.url, b.dir)
+		cmd := b.buildGitCommand(ctx, args...)
+		cmd.Dir = b.homeDir
+		if _, err = libExec.Exec(cmd); err != nil {
+			return fmt.Errorf("error cloning repo %q into %q: %w", b.url, b.dir, err)
+		}
+		return nil
+	}
+
+	initArgs := []string{"init", "--bare"}
+	if objectFormat == "sha256" {
+		initArgs = append(initArgs, "--object-format=sha256")
+	}
+	initArgs = append(initArgs, b.dir)
+	cmd := b.buildGitCommand(ctx, initArgs...)
 	cmd.Dir = b.homeDir // Override the cmd.Dir that's set by b.buildGitCommand()
-	if _, err := libExec.Exec(cmd); err != nil {
+	if _, err = libExec.Exec(cmd); err != nil {
 		return fmt.Errorf("error initializing repo in %q: %w", b.dir, err)
 	}
-	if _, err := libExec.Exec(b.buildGitCommand(
+	if _, err = libExec.Exec(b.buildGitCommand(
 		ctx, "config", "remote.origin.url", b.url,
 	)); err != nil {
 		return fmt.Errorf(
@@ -210,12 +239,6 @@ func (b *bareRepo) cloneSelectBranches(
 		)
 	}
 
-	// Resolve branch names against the remote so that branches that do not exist
-	// yet are skipped.
-	refs, err := b.findRemoteBranchRefs(ctx, branches)
-	if err != nil {
-		return err
-	}
 	if len(refs) == 0 {
 		return nil
 	}
@@ -232,7 +255,7 @@ func (b *bareRepo) cloneSelectBranches(
 		// Force-fetch into a local ref of the same name
 		args = append(args, fmt.Sprintf("+%s:%s", ref, ref))
 	}
-	if _, err := libExec.Exec(b.buildGitCommand(ctx, args...)); err != nil {
+	if _, err = libExec.Exec(b.buildGitCommand(ctx, args...)); err != nil {
 		return fmt.Errorf(
 			"error fetching branches %v of repo %q into %q: %w",
 			branches, b.url, b.dir, err,
@@ -242,16 +265,19 @@ func (b *bareRepo) cloneSelectBranches(
 }
 
 // findRemoteBranchRefs returns the fully qualified refs of branch names that
-// exist in the remote repository.
+// exist in the remote repository, along with the detected remote object format
+// ("sha1", "sha256", or "" if no refs were returned).
 //
 // Equivalent to:
 //
-//	git ls-remote --heads origin refs/heads/<name>...
+//	git ls-remote <url> HEAD refs/heads/<name>...
 func (b *bareRepo) findRemoteBranchRefs(
 	ctx context.Context,
 	names []string,
-) ([]string, error) {
-	args := []string{"ls-remote", "--heads", "origin"}
+) ([]string, string, error) {
+	// Include HEAD so we can determine the remote's object format even when
+	// none of the requested branches exist yet.
+	args := []string{"ls-remote", b.url, "HEAD"}
 	refs := make(map[string]struct{}, len(names))
 	for _, name := range names {
 		ref := "refs/heads/" + name
@@ -262,24 +288,36 @@ func (b *bareRepo) findRemoteBranchRefs(
 		args = append(args, ref)
 	}
 
-	out, err := libExec.Exec(b.buildGitCommand(ctx, args...))
+	cmd := b.buildGitCommand(ctx, args...)
+	cmd.Dir = b.homeDir
+	out, err := libExec.Exec(cmd)
 	if err != nil {
-		return nil, fmt.Errorf(
+		return nil, "", fmt.Errorf(
 			"error listing branches %v of repo %q: %w",
 			names, b.url, err,
 		)
 	}
 	remoteRefs, err := parseLsRemoteOutput(out)
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
+
+	var objectFormat string
+	if len(remoteRefs) > 0 {
+		if len(remoteRefs[0].ID) == 64 {
+			objectFormat = "sha256"
+		} else {
+			objectFormat = "sha1"
+		}
+	}
+
 	filteredRefs := make([]string, 0, len(remoteRefs))
 	for _, remoteRef := range remoteRefs {
 		if _, ok := refs[remoteRef.Name]; ok {
 			filteredRefs = append(filteredRefs, remoteRef.Name)
 		}
 	}
-	return filteredRefs, nil
+	return filteredRefs, objectFormat, nil
 }
 
 type LoadBareRepoOptions struct {

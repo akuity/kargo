@@ -2,6 +2,7 @@ package git
 
 import (
 	"fmt"
+	"net/http/httptest"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -10,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
+	"github.com/sosedoff/gitkit"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -738,4 +740,126 @@ func TestBareRepo_CloneBranchesLiteralsMatchExactly(t *testing.T) {
 	out, err := cmd.CombinedOutput()
 	require.NoError(t, err, string(out))
 	require.Equal(t, []string{"main"}, strings.Fields(string(out)))
+}
+
+func TestBareRepo_CloneBranchesSHA256(t *testing.T) {
+	reposDir := t.TempDir()
+
+	// Initialize both a populated and an empty SHA-256 bare remote.
+	initSHA256Bare := func(name string) {
+		t.Helper()
+		repoPath := filepath.Join(reposDir, name)
+		cmd := exec.CommandContext(
+			t.Context(), "git", "init", "--bare", "--object-format=sha256", repoPath,
+		)
+		out, err := cmd.CombinedOutput()
+		require.NoErrorf(t, err, "git init failed: %s", out)
+
+		cmd = exec.CommandContext(
+			t.Context(), "git", "-C", repoPath, "symbolic-ref", "HEAD", "refs/heads/main",
+		)
+		out, err = cmd.CombinedOutput()
+		require.NoErrorf(t, err, "git symbolic-ref failed: %s", out)
+	}
+	initSHA256Bare("populated.git")
+	initSHA256Bare("empty.git")
+
+	service := gitkit.New(gitkit.Config{Dir: reposDir})
+	require.NoError(t, service.Setup())
+	server := httptest.NewServer(service)
+	t.Cleanup(server.Close)
+
+	populatedURL := fmt.Sprintf("%s/populated.git", server.URL)
+	emptyURL := fmt.Sprintf("%s/empty.git", server.URL)
+
+	// Push two commits to main on populated.git.
+	author, err := Clone(t.Context(), populatedURL, nil, nil)
+	require.NoError(t, err)
+	defer func() { require.NoError(t, author.Close(t.Context())) }()
+	for i := range 2 {
+		require.NoError(t, os.WriteFile(
+			filepath.Join(author.Dir(), "file.txt"),
+			[]byte(fmt.Sprintf("v%d", i)),
+			0o600,
+		))
+		require.NoError(
+			t,
+			author.AddAllAndCommit(t.Context(), fmt.Sprintf("commit %d", i), nil),
+		)
+	}
+	require.NoError(t, author.Push(t.Context(), nil))
+
+	runGit := func(t *testing.T, dir string, args ...string) string {
+		t.Helper()
+		cmd := exec.CommandContext(t.Context(), "git", args...)
+		cmd.Dir = dir
+		out, cmdErr := cmd.CombinedOutput()
+		require.NoErrorf(t, cmdErr, "git %v failed: %s", args, out)
+		return strings.TrimSpace(string(out))
+	}
+
+	t.Run("fetches selected branch from SHA-256 remote", func(t *testing.T) {
+		rep, cloneErr := CloneBare(
+			t.Context(),
+			populatedURL,
+			nil,
+			&BareCloneOptions{Depth: 1, Branches: []string{"main"}},
+		)
+		require.NoError(t, cloneErr)
+		defer func() { require.NoError(t, rep.Close(t.Context())) }()
+
+		require.Equal(
+			t,
+			"sha256",
+			runGit(t, rep.Dir(), "config", "--get", "extensions.objectformat"),
+		)
+		require.Equal(
+			t,
+			[]string{"main"},
+			strings.Fields(runGit(
+				t, rep.Dir(), "for-each-ref", "--format=%(refname:short)", "refs/heads",
+			)),
+		)
+		require.Equal(t, "1", runGit(t, rep.Dir(), "rev-list", "--count", "main"))
+	})
+
+	t.Run("missing branch on populated SHA-256 remote adopts SHA-256", func(t *testing.T) {
+		rep, cloneErr := CloneBare(
+			t.Context(),
+			populatedURL,
+			nil,
+			&BareCloneOptions{Branches: []string{"stage/new"}},
+		)
+		require.NoError(t, cloneErr)
+		defer func() { require.NoError(t, rep.Close(t.Context())) }()
+
+		require.Equal(
+			t,
+			"sha256",
+			runGit(t, rep.Dir(), "config", "--get", "extensions.objectformat"),
+		)
+		require.Empty(
+			t,
+			runGit(
+				t, rep.Dir(), "for-each-ref", "--format=%(refname:short)", "refs/heads",
+			),
+		)
+	})
+
+	t.Run("empty SHA-256 remote adopts SHA-256", func(t *testing.T) {
+		rep, cloneErr := CloneBare(
+			t.Context(),
+			emptyURL,
+			nil,
+			&BareCloneOptions{Branches: []string{"main"}},
+		)
+		require.NoError(t, cloneErr)
+		defer func() { require.NoError(t, rep.Close(t.Context())) }()
+
+		require.Equal(
+			t,
+			"sha256",
+			runGit(t, rep.Dir(), "config", "--get", "extensions.objectformat"),
+		)
+	})
 }
