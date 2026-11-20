@@ -14,6 +14,7 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/cli/client"
+	"github.com/akuity/kargo/pkg/cli/completion"
 	"github.com/akuity/kargo/pkg/cli/config"
 	"github.com/akuity/kargo/pkg/cli/option"
 	"github.com/akuity/kargo/pkg/cli/templates"
@@ -52,6 +53,7 @@ kargo delete warehouse --project=my-project my-warehouse1 my-warehouse2
 kargo config set-project my-project
 kargo delete warehouse my-warehouse
 `),
+		ValidArgsFunction: completion.WarehouseNames(cfg),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cmdOpts.complete(args)
 
