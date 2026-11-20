@@ -375,10 +375,10 @@ func (s *store) ListTargetStatuses(
 // from now, the collection takes a copy of what the Stage's previous rollout
 // recorded for it. No Freight is read to do so, and an origin the Stage no
 // longer requests, or one the previous rollout recorded nothing for, is
-// absent. The previous rollout is the one GetPreviousPromotionRollout
-// chooses, which is read first, in a statement of its own. It cannot change
-// in between unless an older rollout of the Stage finishes meanwhile, which
-// none does when a Stage's rollouts are started oldest first.
+// absent. The previous rollout is the Stage's newest one, numbered below
+// this one, that recorded a collection, however it finished. It is chosen
+// in the same statement, by the previous CTE of UpdatePromotionRolloutStatus,
+// so the choice and the rows written from it cannot disagree.
 //
 // database.ErrConflict says the rollout is not Pending, or no longer matches
 // a precondition, or that another rollout of its Stage is Running;
@@ -406,18 +406,6 @@ func (s *store) Start(
 	args.OriginName = freight.Origin.Name
 	args.Reference = reference
 	args.RequestedOriginKinds, args.RequestedOriginNames = zipOrigins(requested)
-	previous, err := s.queries.GetPreviousPromotionRollout(
-		ctx,
-		database.GetPreviousPromotionRolloutParams{ProjectName: project, Name: rollout.Name},
-	)
-	switch {
-	case err == nil:
-		args.PreviousID = &previous.ID
-	case !errors.Is(err, pgx.ErrNoRows):
-		return database.PromotionRolloutRow{}, rolloutError(
-			fmt.Errorf("error getting previous PromotionRollout: %w", err), project, rollout.Name,
-		)
-	}
 	row, err := s.queries.UpdatePromotionRolloutStatus(ctx, args)
 	if errors.Is(err, pgx.ErrNoRows) {
 		err = s.updateMissed(ctx, project, rollout, &freight)
