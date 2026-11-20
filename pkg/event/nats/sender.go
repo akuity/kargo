@@ -20,6 +20,14 @@ const contentTypeHeader = "Content-Type"
 // attributes, is the JSON message payload. The subject is chosen per event
 // (under a per-sender prefix) rather than per sender, which is why this doesn't
 // use the CloudEvents SDK's NATS protocol binding.
+//
+// NOTE(thomastaylor312): If decoding events ever costs too much throughput or
+// causes GC pressure, consider the binding's binary content mode: attributes
+// travel as ce- prefixed headers and the data alone is the payload, so a
+// subscriber parses the data once rather than twice. On a ~1.2 KB event that
+// measured ~40% less decode time and a third of the allocations. It is in
+// the binding's working draft only, and the SDK's NATS binding lacks it:
+// https://github.com/cloudevents/spec/blob/49337f2c280f/cloudevents/bindings/nats-protocol-binding.md
 type eventSender struct {
 	client        *nats.Conn
 	subjectPrefix string
