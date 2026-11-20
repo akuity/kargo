@@ -203,6 +203,105 @@ func Test_workTree_IntegrateRemoteChanges(t *testing.T) {
 	})
 }
 
+func Test_workTree_IntegrateRemoteChanges_ForkPoint(t *testing.T) {
+	testCases := []struct {
+		name           string
+		localCommit    bool
+		commitSigned   bool
+		signingEnabled bool
+		policy         PushIntegrationPolicy
+		expectedErr    error
+	}{
+		{
+			name:        "AlwaysRebase drops rewritten upstream commit",
+			localCommit: true,
+			policy:      PushIntegrationPolicyAlwaysRebase,
+		},
+		{
+			name:           "RebaseOrFail inspects only commits after fork point",
+			localCommit:    true,
+			commitSigned:   true,
+			signingEnabled: true,
+			policy:         PushIntegrationPolicyRebaseOrFail,
+		},
+		{
+			name:           "RebaseOrFail rejects unsigned local commit after fork point",
+			localCommit:    true,
+			signingEnabled: true,
+			policy:         PushIntegrationPolicyRebaseOrFail,
+			expectedErr:    ErrRebaseUnsafe,
+		},
+		{
+			name:           "RebaseOrFail with no local commits drops rewritten upstream commit",
+			signingEnabled: true,
+			policy:         PushIntegrationPolicyRebaseOrFail,
+		},
+	}
+
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			repoURL, clientOpts, author := setupRemoteWithAuthor(t)
+
+			// Push an unsigned commit "dropped" on top of initial main.
+			commitFile(t, author, "dropped")
+			require.NoError(t, author.Push(t.Context(), nil))
+
+			// Full clone at "dropped", so origin/main's reflog records "dropped".
+			repo, err := Clone(t.Context(), repoURL, clientOpts, nil)
+			require.NoError(t, err)
+			t.Cleanup(func() { require.NoError(t, repo.Close(context.Background())) })
+
+			wt := internalWorkTree(t, repo)
+			if testCase.commitSigned {
+				enableFakeCommitSigning(t, wt, true)
+			}
+			if testCase.localCommit {
+				commitFile(t, wt, "local")
+			}
+			if testCase.signingEnabled && !testCase.commitSigned {
+				enableFakeCommitSigning(t, wt, true)
+			}
+
+			// Rewrite remote main to drop "dropped" and replace it with "replacement".
+			_, err = libExec.Exec(author.buildGitCommand(
+				t.Context(), "reset", "--hard", "HEAD~1",
+			))
+			require.NoError(t, err)
+			commitFile(t, author, "replacement")
+			require.NoError(t, author.Push(
+				t.Context(),
+				&PushOptions{TargetBranch: "main", Force: true},
+			))
+
+			err = wt.IntegrateRemoteChanges(t.Context(), &IntegrationOptions{
+				TargetBranch:      "main",
+				IntegrationPolicy: testCase.policy,
+			})
+			if testCase.expectedErr != nil {
+				require.ErrorIs(t, err, testCase.expectedErr)
+				return
+			}
+			require.NoError(t, err)
+
+			// Expect initial + replacement (+ local if committed); "dropped" must not
+			// be replayed.
+			expectedCommits := 2
+			if testCase.localCommit {
+				expectedCommits++
+			}
+			commits, err := wt.ListCommits(t.Context(), nil)
+			require.NoError(t, err)
+			require.Len(t, commits, expectedCommits)
+
+			require.FileExists(t, filepath.Join(wt.Dir(), "replacement.txt"))
+			require.NoFileExists(t, filepath.Join(wt.Dir(), "dropped.txt"))
+			if testCase.localCommit {
+				require.FileExists(t, filepath.Join(wt.Dir(), "local.txt"))
+			}
+		})
+	}
+}
+
 func Test_workTree_rebase(t *testing.T) {
 	testServer, testRepoURL, testRepoCreds := setupRemoteRepo(
 		t,

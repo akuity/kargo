@@ -2,6 +2,7 @@ package git
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"maps"
 	"os"
@@ -243,9 +244,9 @@ func (w *workTree) ensureCompleteIntegrationHistory(
 	return false, nil
 }
 
-// rebase rebases the current branch onto the specified ref.
+// rebase rebases the current branch onto the specified ref with --fork-point.
 func (w *workTree) rebase(ctx context.Context, ref string) error {
-	cmd := w.buildGitCommand(ctx, "rebase", ref)
+	cmd := w.buildGitCommand(ctx, "rebase", "--fork-point", ref)
 	if _, err := libExec.Exec(cmd); err != nil {
 		if isRebasing, rbErr := w.IsRebasing(ctx); rbErr == nil && isRebasing {
 			return ErrMergeConflict
@@ -339,19 +340,47 @@ func (w *workTree) canSafelyRebase(
 	return true, nil
 }
 
+// forkPoint returns the fork-point commit between remoteRef's reflog and HEAD,
+// or an empty string if no fork point can be determined.
+//
+// Equivalent to:
+//
+//	git merge-base --fork-point <remoteRef> HEAD
+func (w *workTree) forkPoint(
+	ctx context.Context,
+	remoteRef string,
+) (string, error) {
+	res, err := libExec.Exec(w.buildGitCommand(
+		ctx, "merge-base", "--fork-point", remoteRef, "HEAD",
+	))
+	if err != nil {
+		var exitErr *libExec.ExitError
+		if errors.As(err, &exitErr) && exitErr.ExitCode == 1 {
+			return "", nil
+		}
+		return "", fmt.Errorf(
+			"error finding fork point for %q: %w", remoteRef, err,
+		)
+	}
+	return strings.TrimSpace(string(res)), nil
+}
+
 // commitsToReplay returns the SHAs of commits that would be replayed during
 // a rebase of the current branch on top of the specified already-fetched
-// remote ref.
+// remote ref, with fork-point detection.
 func (w *workTree) commitsToReplay(
 	ctx context.Context,
 	remoteRef string,
 ) ([]string, error) {
-	res, err := libExec.Exec(w.buildGitCommand(
-		ctx,
-		"log",
-		"--format=%H",
-		fmt.Sprintf("%s..HEAD", remoteRef),
-	))
+	fp, err := w.forkPoint(ctx, remoteRef)
+	if err != nil {
+		return nil, err
+	}
+	args := []string{"log", "--format=%H", "HEAD", "^" + remoteRef}
+	if fp != "" {
+		args = append(args, "^"+fp)
+	}
+	res, err := libExec.Exec(w.buildGitCommand(ctx, args...))
 	if err != nil {
 		return nil, fmt.Errorf(
 			"error listing commits to replay: %w", err,
