@@ -1107,15 +1107,15 @@ func SyncFreight(
 			)
 		}
 		if verified {
-			if !freight.IsVerifiedIn(stage.Name) {
-				observeVerificationLeadTime(freight, verifiedAt)
-			}
 			err = freightClient.MarkFreightVerifiedInStage(ctx, stage.Namespace, freight.Name, stage.Name, verifiedAt)
 			if err != nil {
 				return fmt.Errorf(
 					"error marking Freight %q as verified in Stage %q in namespace %q: %w",
 					freight.Name, stage.Name, stage.Namespace, err,
 				)
+			}
+			if !freight.IsVerifiedIn(stage.Name) {
+				observeVerificationLeadTime(freight, verifiedAt)
 			}
 		}
 

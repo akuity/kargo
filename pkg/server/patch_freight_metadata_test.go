@@ -30,7 +30,7 @@ func Test_server_patchFreightMetadata(t *testing.T) {
 		},
 	}
 	url := "/v1beta1/projects/" + testProject.Name +
-		"/freight/" + testFreight.Name + "/metadata"
+		"/internal/freight/" + testFreight.Name + "/metadata"
 
 	testRESTEndpoint(
 		t, &config.ServerConfig{},

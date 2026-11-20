@@ -17,6 +17,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/pkg/client/apiserver/freightclient/testutil"
 	"github.com/akuity/kargo/pkg/controller"
 	"github.com/akuity/kargo/pkg/telemetry"
 	"github.com/akuity/kargo/pkg/telemetry/telemetrytest"
@@ -40,6 +41,7 @@ func TestReconcile_tracing(t *testing.T) {
 	testCases := []struct {
 		name        string
 		objects     []client.Object
+		freights    []*kargoapi.Freight
 		interceptor interceptor.Funcs
 		assert      func(*testing.T, error, sdktrace.ReadOnlySpan)
 	}{
@@ -79,8 +81,9 @@ func TestReconcile_tracing(t *testing.T) {
 		{
 			// Failing the first status patch stops the reconcile right after
 			// the Freight is found.
-			name:    "Promotion's Stage and Freight",
-			objects: []client.Object{promo.DeepCopy(), freight.DeepCopy()},
+			name:     "Promotion's Stage and Freight",
+			objects:  []client.Object{promo.DeepCopy()},
+			freights: []*kargoapi.Freight{freight.DeepCopy()},
 			interceptor: interceptor.Funcs{
 				SubResourcePatch: func(
 					context.Context,
@@ -124,6 +127,16 @@ func TestReconcile_tracing(t *testing.T) {
 			r := &reconciler{
 				kargoClient: c,
 				apiReader:   c,
+				freightClient: &testutil.MockFreightClient{
+					GetFreightFun: func(_ context.Context, _, name string) (*kargoapi.Freight, error) {
+						for _, fr := range testCase.freights {
+							if fr.Name == name {
+								return fr, nil
+							}
+						}
+						return nil, nil
+					},
+				},
 				shardPredicate: controller.ResponsibleFor[kargoapi.Promotion]{
 					IsDefaultController: true,
 				},

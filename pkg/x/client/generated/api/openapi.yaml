@@ -955,120 +955,6 @@ paths:
       summary: Retrieve deep links for a Freight resource
       tags:
       - Core
-  /v1beta1/projects/{project}/freight/{freight}/metadata:
-    patch:
-      description: |-
-        Upsert keys in the status metadata of a Freight resource. A value
-        already recorded under a key named in the request is
-        overwritten; other keys are left as they are.
-      operationId: PatchFreightMetadata
-      parameters:
-      - description: Project name
-        in: path
-        name: project
-        required: true
-        schema:
-          type: string
-      - description: Freight name
-        in: path
-        name: freight
-        required: true
-        schema:
-          type: string
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/PatchFreightMetadataRequest"
-        description: Metadata
-        required: true
-      responses:
-        "200":
-          content: {}
-          description: Success
-      security:
-      - BearerAuth: []
-      summary: Update a Freight resource's status metadata
-      tags:
-      - Core
-      x-codegen-request-body-name: body
-  /v1beta1/projects/{project}/freight/{freight}/status/stage/{stage}:
-    delete:
-      description: |-
-        Remove the named Stage from every one of the Freight's status
-        maps -- currentlyIn, verifiedIn, and approvedFor. This is used by
-        the Stage controller to clean up Freight status when a Stage is
-        deleted, in place of writing Freight status directly.
-      operationId: DeleteFreightStageStatus
-      parameters:
-      - description: Project name
-        in: path
-        name: project
-        required: true
-        schema:
-          type: string
-      - description: Freight name
-        in: path
-        name: freight
-        required: true
-        schema:
-          type: string
-      - description: Stage name
-        in: path
-        name: stage
-        required: true
-        schema:
-          type: string
-      responses:
-        "200":
-          content: {}
-          description: Success
-      security:
-      - BearerAuth: []
-      summary: Remove all of a Stage's entries from a Freight's status
-      tags:
-      - Core
-    post:
-      description: |-
-        Record that the named Freight has been verified in the Stage,
-        adding the Stage to the Freight's verifiedIn status.
-      operationId: MarkFreightVerifiedInStage
-      parameters:
-      - description: Project name
-        in: path
-        name: project
-        required: true
-        schema:
-          type: string
-      - description: Freight name
-        in: path
-        name: freight
-        required: true
-        schema:
-          type: string
-      - description: Stage name
-        in: path
-        name: stage
-        required: true
-        schema:
-          type: string
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/MarkFreightVerifiedInStageRequest"
-        description: Verification
-        required: true
-      responses:
-        "200":
-          content: {}
-          description: Success
-      security:
-      - BearerAuth: []
-      summary: Mark Freight as verified in a Stage
-      tags:
-      - Core
-      x-codegen-request-body-name: body
   /v1beta1/projects/{project}/generic-credentials:
     get:
       description: |-
@@ -1286,6 +1172,120 @@ paths:
       summary: List container images
       tags:
       - Core
+  /v1beta1/projects/{project}/internal/freight/{freight}/metadata:
+    patch:
+      description: |-
+        Upsert keys in the status metadata of a Freight resource. A value
+        already recorded under a key named in the request is
+        overwritten; other keys are left as they are.
+      operationId: PatchFreightMetadata
+      parameters:
+      - description: Project name
+        in: path
+        name: project
+        required: true
+        schema:
+          type: string
+      - description: Freight name
+        in: path
+        name: freight
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PatchFreightMetadataRequest"
+        description: Metadata
+        required: true
+      responses:
+        "200":
+          content: {}
+          description: Success
+      security:
+      - BearerAuth: []
+      summary: Update a Freight resource's status metadata
+      tags:
+      - Core
+      x-codegen-request-body-name: body
+  /v1beta1/projects/{project}/internal/freight/{freight}/status/stage/{stage}:
+    delete:
+      description: |-
+        Remove the named Stage from every one of the Freight's status
+        maps -- currentlyIn, verifiedIn, and approvedFor. This is used by
+        the Stage controller to clean up Freight status when a Stage is
+        deleted, in place of writing Freight status directly.
+      operationId: DeleteFreightStageStatus
+      parameters:
+      - description: Project name
+        in: path
+        name: project
+        required: true
+        schema:
+          type: string
+      - description: Freight name
+        in: path
+        name: freight
+        required: true
+        schema:
+          type: string
+      - description: Stage name
+        in: path
+        name: stage
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          content: {}
+          description: Success
+      security:
+      - BearerAuth: []
+      summary: Remove all of a Stage's entries from a Freight's status
+      tags:
+      - Core
+    post:
+      description: |-
+        Record that the named Freight has been verified in the Stage,
+        adding the Stage to the Freight's verifiedIn status.
+      operationId: MarkFreightVerifiedInStage
+      parameters:
+      - description: Project name
+        in: path
+        name: project
+        required: true
+        schema:
+          type: string
+      - description: Freight name
+        in: path
+        name: freight
+        required: true
+        schema:
+          type: string
+      - description: Stage name
+        in: path
+        name: stage
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MarkFreightVerifiedInStageRequest"
+        description: Verification
+        required: true
+      responses:
+        "200":
+          content: {}
+          description: Success
+      security:
+      - BearerAuth: []
+      summary: Mark Freight as verified in a Stage
+      tags:
+      - Core
+      x-codegen-request-body-name: body
   /v1beta1/projects/{project}/promotion-requests:
     get:
       description: |-

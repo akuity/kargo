@@ -142,7 +142,7 @@ type markFreightVerifiedInStageRequest struct {
 // @Param stage path string true "Stage name"
 // @Param body body markFreightVerifiedInStageRequest true "Verification"
 // @Success 200 "Success"
-// @Router /v1beta1/projects/{project}/freight/{freight}/status/stage/{stage} [post]
+// @Router /v1beta1/projects/{project}/internal/freight/{freight}/status/stage/{stage} [post]
 func (s *server) markFreightVerifiedInStage(c *gin.Context) {
 	ctx := c.Request.Context()
 
@@ -256,7 +256,7 @@ func (s *server) emitFreightCurrentlyInStage(
 // @Param freight path string true "Freight name"
 // @Param stage path string true "Stage name"
 // @Success 200 "Success"
-// @Router /v1beta1/projects/{project}/freight/{freight}/status/stage/{stage} [delete]
+// @Router /v1beta1/projects/{project}/internal/freight/{freight}/status/stage/{stage} [delete]
 func (s *server) deleteFreightStageStatus(c *gin.Context) {
 	ctx := c.Request.Context()
 

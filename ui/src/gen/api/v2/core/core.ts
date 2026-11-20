@@ -2429,348 +2429,6 @@ export function useGetFreightLinks<
   return withQueryKey(query, queryOptions.queryKey);
 }
 
-export type patchFreightMetadataResponse200 = {
-  data: void;
-  status: 200;
-};
-
-export type patchFreightMetadataResponseSuccess = patchFreightMetadataResponse200 & {
-  headers: Headers;
-};
-export type patchFreightMetadataResponse = patchFreightMetadataResponseSuccess;
-
-export const getPatchFreightMetadataUrl = (project: string, freight: string) => {
-  return `/v1beta1/projects/${project}/freight/${freight}/metadata`;
-};
-
-/**
- * Upsert keys in the status metadata of a Freight resource. A value
- * already recorded under a key named in the request is
- * overwritten; other keys are left as they are.
- * @summary Update a Freight resource's status metadata
- */
-export const patchFreightMetadata = async (
-  project: string,
-  freight: string,
-  patchFreightMetadataRequest: PatchFreightMetadataRequest,
-  options?: Parameters<typeof customFetch>[1]
-): Promise<patchFreightMetadataResponse> => {
-  const getHeaders = (
-    h?: NonNullable<RequestInit['headers']>
-  ): Record<string, string | readonly string[]> => {
-    if (!h) return {};
-    if (h instanceof Headers) return Object.fromEntries(h.entries());
-    if (Array.isArray(h)) return Object.fromEntries(h);
-    return h;
-  };
-  return customFetch<patchFreightMetadataResponse>(getPatchFreightMetadataUrl(project, freight), {
-    ...options,
-    method: 'PATCH',
-    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
-    body: JSON.stringify(patchFreightMetadataRequest)
-  });
-};
-
-export const getPatchFreightMetadataMutationKey = () => ['patchFreightMetadata'] as const;
-
-export const getPatchFreightMetadataMutationOptions = <
-  TError = ErrorType<unknown>,
-  TContext = unknown
->(options?: {
-  mutation?: UseMutationOptions<
-    Awaited<ReturnType<typeof patchFreightMetadata>>,
-    TError,
-    PatchFreightMetadataMutationVariables,
-    TContext
-  >;
-  request?: SecondParameter<typeof customFetch>;
-}): UseMutationOptions<
-  Awaited<ReturnType<typeof patchFreightMetadata>>,
-  TError,
-  PatchFreightMetadataMutationVariables,
-  TContext
-> => {
-  const mutationKey = getPatchFreightMetadataMutationKey();
-  const { mutation: mutationOptions, request: requestOptions } = options
-    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
-      ? options
-      : { ...options, mutation: { ...options.mutation, mutationKey } }
-    : { mutation: { mutationKey }, request: undefined };
-
-  const mutationFn: MutationFunction<
-    Awaited<ReturnType<typeof patchFreightMetadata>>,
-    PatchFreightMetadataMutationVariables
-  > = (props) => {
-    const { project, freight, data } = props ?? {};
-
-    return patchFreightMetadata(project, freight, data, requestOptions);
-  };
-
-  return { mutationFn, ...mutationOptions };
-};
-
-export type PatchFreightMetadataMutationResult = NonNullable<
-  Awaited<ReturnType<typeof patchFreightMetadata>>
->;
-export type PatchFreightMetadataMutationBody = PatchFreightMetadataRequest;
-export type PatchFreightMetadataMutationError = ErrorType<unknown>;
-export type PatchFreightMetadataMutationVariables = {
-  project: string;
-  freight: string;
-  data: PatchFreightMetadataRequest;
-};
-
-/**
- * @summary Update a Freight resource's status metadata
- */
-export const usePatchFreightMetadata = <TError = ErrorType<unknown>, TContext = unknown>(
-  options?: {
-    mutation?: UseMutationOptions<
-      Awaited<ReturnType<typeof patchFreightMetadata>>,
-      TError,
-      PatchFreightMetadataMutationVariables,
-      TContext
-    >;
-    request?: SecondParameter<typeof customFetch>;
-  },
-  queryClient?: QueryClient
-): UseMutationResult<
-  Awaited<ReturnType<typeof patchFreightMetadata>>,
-  TError,
-  PatchFreightMetadataMutationVariables,
-  TContext
-> => {
-  return useMutation(getPatchFreightMetadataMutationOptions(options), queryClient);
-};
-export type markFreightVerifiedInStageResponse200 = {
-  data: void;
-  status: 200;
-};
-
-export type markFreightVerifiedInStageResponseSuccess = markFreightVerifiedInStageResponse200 & {
-  headers: Headers;
-};
-export type markFreightVerifiedInStageResponse = markFreightVerifiedInStageResponseSuccess;
-
-export const getMarkFreightVerifiedInStageUrl = (
-  project: string,
-  freight: string,
-  stage: string
-) => {
-  return `/v1beta1/projects/${project}/freight/${freight}/status/stage/${stage}`;
-};
-
-/**
- * Record that the named Freight has been verified in the Stage,
- * adding the Stage to the Freight's verifiedIn status.
- * @summary Mark Freight as verified in a Stage
- */
-export const markFreightVerifiedInStage = async (
-  project: string,
-  freight: string,
-  stage: string,
-  markFreightVerifiedInStageRequest: MarkFreightVerifiedInStageRequest,
-  options?: Parameters<typeof customFetch>[1]
-): Promise<markFreightVerifiedInStageResponse> => {
-  const getHeaders = (
-    h?: NonNullable<RequestInit['headers']>
-  ): Record<string, string | readonly string[]> => {
-    if (!h) return {};
-    if (h instanceof Headers) return Object.fromEntries(h.entries());
-    if (Array.isArray(h)) return Object.fromEntries(h);
-    return h;
-  };
-  return customFetch<markFreightVerifiedInStageResponse>(
-    getMarkFreightVerifiedInStageUrl(project, freight, stage),
-    {
-      ...options,
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
-      body: JSON.stringify(markFreightVerifiedInStageRequest)
-    }
-  );
-};
-
-export const getMarkFreightVerifiedInStageMutationKey = () =>
-  ['markFreightVerifiedInStage'] as const;
-
-export const getMarkFreightVerifiedInStageMutationOptions = <
-  TError = ErrorType<unknown>,
-  TContext = unknown
->(options?: {
-  mutation?: UseMutationOptions<
-    Awaited<ReturnType<typeof markFreightVerifiedInStage>>,
-    TError,
-    MarkFreightVerifiedInStageMutationVariables,
-    TContext
-  >;
-  request?: SecondParameter<typeof customFetch>;
-}): UseMutationOptions<
-  Awaited<ReturnType<typeof markFreightVerifiedInStage>>,
-  TError,
-  MarkFreightVerifiedInStageMutationVariables,
-  TContext
-> => {
-  const mutationKey = getMarkFreightVerifiedInStageMutationKey();
-  const { mutation: mutationOptions, request: requestOptions } = options
-    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
-      ? options
-      : { ...options, mutation: { ...options.mutation, mutationKey } }
-    : { mutation: { mutationKey }, request: undefined };
-
-  const mutationFn: MutationFunction<
-    Awaited<ReturnType<typeof markFreightVerifiedInStage>>,
-    MarkFreightVerifiedInStageMutationVariables
-  > = (props) => {
-    const { project, freight, stage, data } = props ?? {};
-
-    return markFreightVerifiedInStage(project, freight, stage, data, requestOptions);
-  };
-
-  return { mutationFn, ...mutationOptions };
-};
-
-export type MarkFreightVerifiedInStageMutationResult = NonNullable<
-  Awaited<ReturnType<typeof markFreightVerifiedInStage>>
->;
-export type MarkFreightVerifiedInStageMutationBody = MarkFreightVerifiedInStageRequest;
-export type MarkFreightVerifiedInStageMutationError = ErrorType<unknown>;
-export type MarkFreightVerifiedInStageMutationVariables = {
-  project: string;
-  freight: string;
-  stage: string;
-  data: MarkFreightVerifiedInStageRequest;
-};
-
-/**
- * @summary Mark Freight as verified in a Stage
- */
-export const useMarkFreightVerifiedInStage = <TError = ErrorType<unknown>, TContext = unknown>(
-  options?: {
-    mutation?: UseMutationOptions<
-      Awaited<ReturnType<typeof markFreightVerifiedInStage>>,
-      TError,
-      MarkFreightVerifiedInStageMutationVariables,
-      TContext
-    >;
-    request?: SecondParameter<typeof customFetch>;
-  },
-  queryClient?: QueryClient
-): UseMutationResult<
-  Awaited<ReturnType<typeof markFreightVerifiedInStage>>,
-  TError,
-  MarkFreightVerifiedInStageMutationVariables,
-  TContext
-> => {
-  return useMutation(getMarkFreightVerifiedInStageMutationOptions(options), queryClient);
-};
-export type deleteFreightStageStatusResponse200 = {
-  data: void;
-  status: 200;
-};
-
-export type deleteFreightStageStatusResponseSuccess = deleteFreightStageStatusResponse200 & {
-  headers: Headers;
-};
-export type deleteFreightStageStatusResponse = deleteFreightStageStatusResponseSuccess;
-
-export const getDeleteFreightStageStatusUrl = (project: string, freight: string, stage: string) => {
-  return `/v1beta1/projects/${project}/freight/${freight}/status/stage/${stage}`;
-};
-
-/**
- * Remove the named Stage from every one of the Freight's status
- * maps -- currentlyIn, verifiedIn, and approvedFor. This is used by
- * the Stage controller to clean up Freight status when a Stage is
- * deleted, in place of writing Freight status directly.
- * @summary Remove all of a Stage's entries from a Freight's status
- */
-export const deleteFreightStageStatus = async (
-  project: string,
-  freight: string,
-  stage: string,
-  options?: Parameters<typeof customFetch>[1]
-): Promise<deleteFreightStageStatusResponse> => {
-  return customFetch<deleteFreightStageStatusResponse>(
-    getDeleteFreightStageStatusUrl(project, freight, stage),
-    {
-      ...options,
-      method: 'DELETE'
-    }
-  );
-};
-
-export const getDeleteFreightStageStatusMutationKey = () => ['deleteFreightStageStatus'] as const;
-
-export const getDeleteFreightStageStatusMutationOptions = <
-  TError = ErrorType<unknown>,
-  TContext = unknown
->(options?: {
-  mutation?: UseMutationOptions<
-    Awaited<ReturnType<typeof deleteFreightStageStatus>>,
-    TError,
-    DeleteFreightStageStatusMutationVariables,
-    TContext
-  >;
-  request?: SecondParameter<typeof customFetch>;
-}): UseMutationOptions<
-  Awaited<ReturnType<typeof deleteFreightStageStatus>>,
-  TError,
-  DeleteFreightStageStatusMutationVariables,
-  TContext
-> => {
-  const mutationKey = getDeleteFreightStageStatusMutationKey();
-  const { mutation: mutationOptions, request: requestOptions } = options
-    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
-      ? options
-      : { ...options, mutation: { ...options.mutation, mutationKey } }
-    : { mutation: { mutationKey }, request: undefined };
-
-  const mutationFn: MutationFunction<
-    Awaited<ReturnType<typeof deleteFreightStageStatus>>,
-    DeleteFreightStageStatusMutationVariables
-  > = (props) => {
-    const { project, freight, stage } = props ?? {};
-
-    return deleteFreightStageStatus(project, freight, stage, requestOptions);
-  };
-
-  return { mutationFn, ...mutationOptions };
-};
-
-export type DeleteFreightStageStatusMutationResult = NonNullable<
-  Awaited<ReturnType<typeof deleteFreightStageStatus>>
->;
-
-export type DeleteFreightStageStatusMutationError = ErrorType<unknown>;
-export type DeleteFreightStageStatusMutationVariables = {
-  project: string;
-  freight: string;
-  stage: string;
-};
-
-/**
- * @summary Remove all of a Stage's entries from a Freight's status
- */
-export const useDeleteFreightStageStatus = <TError = ErrorType<unknown>, TContext = unknown>(
-  options?: {
-    mutation?: UseMutationOptions<
-      Awaited<ReturnType<typeof deleteFreightStageStatus>>,
-      TError,
-      DeleteFreightStageStatusMutationVariables,
-      TContext
-    >;
-    request?: SecondParameter<typeof customFetch>;
-  },
-  queryClient?: QueryClient
-): UseMutationResult<
-  Awaited<ReturnType<typeof deleteFreightStageStatus>>,
-  TError,
-  DeleteFreightStageStatusMutationVariables,
-  TContext
-> => {
-  return useMutation(getDeleteFreightStageStatusMutationOptions(options), queryClient);
-};
 export type listImagesResponse200 = {
   data: ListImages200;
   status: 200;
@@ -2907,6 +2565,348 @@ export function useListImages<
   return withQueryKey(query, queryOptions.queryKey);
 }
 
+export type patchFreightMetadataResponse200 = {
+  data: void;
+  status: 200;
+};
+
+export type patchFreightMetadataResponseSuccess = patchFreightMetadataResponse200 & {
+  headers: Headers;
+};
+export type patchFreightMetadataResponse = patchFreightMetadataResponseSuccess;
+
+export const getPatchFreightMetadataUrl = (project: string, freight: string) => {
+  return `/v1beta1/projects/${project}/internal/freight/${freight}/metadata`;
+};
+
+/**
+ * Upsert keys in the status metadata of a Freight resource. A value
+ * already recorded under a key named in the request is
+ * overwritten; other keys are left as they are.
+ * @summary Update a Freight resource's status metadata
+ */
+export const patchFreightMetadata = async (
+  project: string,
+  freight: string,
+  patchFreightMetadataRequest: PatchFreightMetadataRequest,
+  options?: Parameters<typeof customFetch>[1]
+): Promise<patchFreightMetadataResponse> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit['headers']>
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Array.isArray(h)) return Object.fromEntries(h);
+    return h;
+  };
+  return customFetch<patchFreightMetadataResponse>(getPatchFreightMetadataUrl(project, freight), {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(patchFreightMetadataRequest)
+  });
+};
+
+export const getPatchFreightMetadataMutationKey = () => ['patchFreightMetadata'] as const;
+
+export const getPatchFreightMetadataMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof patchFreightMetadata>>,
+    TError,
+    PatchFreightMetadataMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof patchFreightMetadata>>,
+  TError,
+  PatchFreightMetadataMutationVariables,
+  TContext
+> => {
+  const mutationKey = getPatchFreightMetadataMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof patchFreightMetadata>>,
+    PatchFreightMetadataMutationVariables
+  > = (props) => {
+    const { project, freight, data } = props ?? {};
+
+    return patchFreightMetadata(project, freight, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type PatchFreightMetadataMutationResult = NonNullable<
+  Awaited<ReturnType<typeof patchFreightMetadata>>
+>;
+export type PatchFreightMetadataMutationBody = PatchFreightMetadataRequest;
+export type PatchFreightMetadataMutationError = ErrorType<unknown>;
+export type PatchFreightMetadataMutationVariables = {
+  project: string;
+  freight: string;
+  data: PatchFreightMetadataRequest;
+};
+
+/**
+ * @summary Update a Freight resource's status metadata
+ */
+export const usePatchFreightMetadata = <TError = ErrorType<unknown>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof patchFreightMetadata>>,
+      TError,
+      PatchFreightMetadataMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient
+): UseMutationResult<
+  Awaited<ReturnType<typeof patchFreightMetadata>>,
+  TError,
+  PatchFreightMetadataMutationVariables,
+  TContext
+> => {
+  return useMutation(getPatchFreightMetadataMutationOptions(options), queryClient);
+};
+export type markFreightVerifiedInStageResponse200 = {
+  data: void;
+  status: 200;
+};
+
+export type markFreightVerifiedInStageResponseSuccess = markFreightVerifiedInStageResponse200 & {
+  headers: Headers;
+};
+export type markFreightVerifiedInStageResponse = markFreightVerifiedInStageResponseSuccess;
+
+export const getMarkFreightVerifiedInStageUrl = (
+  project: string,
+  freight: string,
+  stage: string
+) => {
+  return `/v1beta1/projects/${project}/internal/freight/${freight}/status/stage/${stage}`;
+};
+
+/**
+ * Record that the named Freight has been verified in the Stage,
+ * adding the Stage to the Freight's verifiedIn status.
+ * @summary Mark Freight as verified in a Stage
+ */
+export const markFreightVerifiedInStage = async (
+  project: string,
+  freight: string,
+  stage: string,
+  markFreightVerifiedInStageRequest: MarkFreightVerifiedInStageRequest,
+  options?: Parameters<typeof customFetch>[1]
+): Promise<markFreightVerifiedInStageResponse> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit['headers']>
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Array.isArray(h)) return Object.fromEntries(h);
+    return h;
+  };
+  return customFetch<markFreightVerifiedInStageResponse>(
+    getMarkFreightVerifiedInStageUrl(project, freight, stage),
+    {
+      ...options,
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+      body: JSON.stringify(markFreightVerifiedInStageRequest)
+    }
+  );
+};
+
+export const getMarkFreightVerifiedInStageMutationKey = () =>
+  ['markFreightVerifiedInStage'] as const;
+
+export const getMarkFreightVerifiedInStageMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof markFreightVerifiedInStage>>,
+    TError,
+    MarkFreightVerifiedInStageMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof markFreightVerifiedInStage>>,
+  TError,
+  MarkFreightVerifiedInStageMutationVariables,
+  TContext
+> => {
+  const mutationKey = getMarkFreightVerifiedInStageMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof markFreightVerifiedInStage>>,
+    MarkFreightVerifiedInStageMutationVariables
+  > = (props) => {
+    const { project, freight, stage, data } = props ?? {};
+
+    return markFreightVerifiedInStage(project, freight, stage, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type MarkFreightVerifiedInStageMutationResult = NonNullable<
+  Awaited<ReturnType<typeof markFreightVerifiedInStage>>
+>;
+export type MarkFreightVerifiedInStageMutationBody = MarkFreightVerifiedInStageRequest;
+export type MarkFreightVerifiedInStageMutationError = ErrorType<unknown>;
+export type MarkFreightVerifiedInStageMutationVariables = {
+  project: string;
+  freight: string;
+  stage: string;
+  data: MarkFreightVerifiedInStageRequest;
+};
+
+/**
+ * @summary Mark Freight as verified in a Stage
+ */
+export const useMarkFreightVerifiedInStage = <TError = ErrorType<unknown>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof markFreightVerifiedInStage>>,
+      TError,
+      MarkFreightVerifiedInStageMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient
+): UseMutationResult<
+  Awaited<ReturnType<typeof markFreightVerifiedInStage>>,
+  TError,
+  MarkFreightVerifiedInStageMutationVariables,
+  TContext
+> => {
+  return useMutation(getMarkFreightVerifiedInStageMutationOptions(options), queryClient);
+};
+export type deleteFreightStageStatusResponse200 = {
+  data: void;
+  status: 200;
+};
+
+export type deleteFreightStageStatusResponseSuccess = deleteFreightStageStatusResponse200 & {
+  headers: Headers;
+};
+export type deleteFreightStageStatusResponse = deleteFreightStageStatusResponseSuccess;
+
+export const getDeleteFreightStageStatusUrl = (project: string, freight: string, stage: string) => {
+  return `/v1beta1/projects/${project}/internal/freight/${freight}/status/stage/${stage}`;
+};
+
+/**
+ * Remove the named Stage from every one of the Freight's status
+ * maps -- currentlyIn, verifiedIn, and approvedFor. This is used by
+ * the Stage controller to clean up Freight status when a Stage is
+ * deleted, in place of writing Freight status directly.
+ * @summary Remove all of a Stage's entries from a Freight's status
+ */
+export const deleteFreightStageStatus = async (
+  project: string,
+  freight: string,
+  stage: string,
+  options?: Parameters<typeof customFetch>[1]
+): Promise<deleteFreightStageStatusResponse> => {
+  return customFetch<deleteFreightStageStatusResponse>(
+    getDeleteFreightStageStatusUrl(project, freight, stage),
+    {
+      ...options,
+      method: 'DELETE'
+    }
+  );
+};
+
+export const getDeleteFreightStageStatusMutationKey = () => ['deleteFreightStageStatus'] as const;
+
+export const getDeleteFreightStageStatusMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteFreightStageStatus>>,
+    TError,
+    DeleteFreightStageStatusMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof deleteFreightStageStatus>>,
+  TError,
+  DeleteFreightStageStatusMutationVariables,
+  TContext
+> => {
+  const mutationKey = getDeleteFreightStageStatusMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof deleteFreightStageStatus>>,
+    DeleteFreightStageStatusMutationVariables
+  > = (props) => {
+    const { project, freight, stage } = props ?? {};
+
+    return deleteFreightStageStatus(project, freight, stage, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DeleteFreightStageStatusMutationResult = NonNullable<
+  Awaited<ReturnType<typeof deleteFreightStageStatus>>
+>;
+
+export type DeleteFreightStageStatusMutationError = ErrorType<unknown>;
+export type DeleteFreightStageStatusMutationVariables = {
+  project: string;
+  freight: string;
+  stage: string;
+};
+
+/**
+ * @summary Remove all of a Stage's entries from a Freight's status
+ */
+export const useDeleteFreightStageStatus = <TError = ErrorType<unknown>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof deleteFreightStageStatus>>,
+      TError,
+      DeleteFreightStageStatusMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient
+): UseMutationResult<
+  Awaited<ReturnType<typeof deleteFreightStageStatus>>,
+  TError,
+  DeleteFreightStageStatusMutationVariables,
+  TContext
+> => {
+  return useMutation(getDeleteFreightStageStatusMutationOptions(options), queryClient);
+};
 export type listPromotionRequestsResponse200 = {
   data: PromotionRequestList;
   status: 200;
