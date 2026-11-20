@@ -1338,6 +1338,110 @@ func Test_stageEnqueuerForAnalysisRuns_Update(t *testing.T) {
 			expectedRequests: nil,
 		},
 		{
+			name: "phase changed - index miss falls back to Stage label",
+			oldAnalysisRun: &rollouts.AnalysisRun{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "default",
+					Name:      "test-analysis",
+				},
+				Status: rollouts.AnalysisRunStatus{
+					Phase: "Running",
+				},
+			},
+			newAnalysisRun: &rollouts.AnalysisRun{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "default",
+					Name:      "test-analysis",
+					Labels: map[string]string{
+						kargoapi.LabelKeyStage: "test-stage",
+					},
+				},
+				Status: rollouts.AnalysisRunStatus{
+					Phase: "Successful",
+				},
+			},
+			objects: []client.Object{
+				&kargoapi.Stage{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "default",
+						Name:      "test-stage",
+					},
+					Spec: kargoapi.StageSpec{
+						PromotionTemplate: &kargoapi.PromotionTemplate{
+							Spec: kargoapi.PromotionTemplateSpec{
+								Steps: []kargoapi.PromotionStep{{}},
+							},
+						},
+					},
+				},
+			},
+			expectedRequests: []reconcile.Request{
+				{
+					NamespacedName: types.NamespacedName{
+						Namespace: "default",
+						Name:      "test-stage",
+					},
+				},
+			},
+		},
+		{
+			name: "phase changed - index miss prefers full Stage name annotation",
+			oldAnalysisRun: &rollouts.AnalysisRun{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "default",
+					Name:      "test-analysis",
+				},
+				Status: rollouts.AnalysisRunStatus{
+					Phase: "Running",
+				},
+			},
+			newAnalysisRun: &rollouts.AnalysisRun{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "default",
+					Name:      "test-analysis",
+					Labels: map[string]string{
+						kargoapi.LabelKeyStage: "shortened-test-stage",
+					},
+					Annotations: map[string]string{
+						kargoapi.AnnotationKeyStage: "test-stage",
+					},
+				},
+				Status: rollouts.AnalysisRunStatus{
+					Phase: "Successful",
+				},
+			},
+			expectedRequests: []reconcile.Request{
+				{
+					NamespacedName: types.NamespacedName{
+						Namespace: "default",
+						Name:      "test-stage",
+					},
+				},
+			},
+		},
+		{
+			name: "phase changed - index miss and no Stage reference enqueues nothing",
+			oldAnalysisRun: &rollouts.AnalysisRun{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "default",
+					Name:      "test-analysis",
+				},
+				Status: rollouts.AnalysisRunStatus{
+					Phase: "Running",
+				},
+			},
+			newAnalysisRun: &rollouts.AnalysisRun{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "default",
+					Name:      "test-analysis",
+				},
+				Status: rollouts.AnalysisRunStatus{
+					Phase: "Successful",
+				},
+			},
+			expectedRequests: nil,
+		},
+		{
 			name: "handles list error",
 			oldAnalysisRun: &rollouts.AnalysisRun{
 				ObjectMeta: metav1.ObjectMeta{
