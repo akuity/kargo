@@ -170,7 +170,7 @@ func Test_httpSelector_Select(t *testing.T) {
 			repoURL: fmt.Sprintf("%s/bad-repo", testServer.URL),
 			chart:   "fake-chart",
 			assertions: func(t *testing.T, _ []string, err error) {
-				require.ErrorContains(t, err, "error unmarshaling repository index")
+				require.ErrorContains(t, err, "response is not a repository index")
 			},
 		},
 		{
