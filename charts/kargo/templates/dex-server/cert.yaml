@@ -1,4 +1,34 @@
 {{- if and .Values.workloads.install .Values.api.enabled .Values.api.oidc.enabled .Values.api.oidc.dex.enabled .Values.api.oidc.dex.tls.selfSignedCert }}
+{{- /*
+The Kargo API server trusts Dex's cert via the ca.crt key of the Secret below.
+Issuing Dex's cert directly from a SelfSigned Issuer would make ca.crt the Dex
+cert itself, so every renewal would replace the trust anchor. Issuing it from a
+long-lived CA instead keeps ca.crt stable across renewals of the Dex cert.
+*/}}
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: kargo-dex-ca
+  namespace: {{ .Release.Namespace }}
+spec:
+  isCA: true
+  commonName: kargo-dex-ca
+  duration: 87600h
+  issuerRef:
+    group: cert-manager.io
+    kind: Issuer
+    name: kargo-selfsigned-cert-issuer
+  secretName: kargo-dex-ca
+---
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: kargo-dex-ca-issuer
+  namespace: {{ .Release.Namespace }}
+spec:
+  ca:
+    secretName: kargo-dex-ca
+---
 apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
@@ -10,6 +40,6 @@ spec:
   issuerRef:
     group: cert-manager.io
     kind: Issuer
-    name: kargo-selfsigned-cert-issuer
+    name: kargo-dex-ca-issuer
   secretName: {{ .Values.api.oidc.dex.tls.secretName }}
 {{- end }}
