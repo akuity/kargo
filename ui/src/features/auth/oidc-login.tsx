@@ -14,7 +14,7 @@ import {
   allowInsecureRequests
 } from 'oauth4webapi';
 import React from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 
 import { isSafeRedirectPath, redirectToQueryParam } from '@ui/config/auth';
 import { withBasePath } from '@ui/config/base-path';
@@ -38,6 +38,7 @@ type Props = {
 
 export const OIDCLogin = ({ oidcConfig }: Props) => {
   const location = useLocation();
+  const navigate = useNavigate();
   const redirectURI = window.location.origin + window.location.pathname;
   const { login: onLogin } = useAuthContext();
 
@@ -166,6 +167,7 @@ export const OIDCLogin = ({ oidcConfig }: Props) => {
             withBasePath(isSafeRedirectPath(redirectTo) ? redirectTo : paths.home)
         );
       } catch (err) {
+        navigate(location.pathname, { replace: true }); // leave the callback URL so the login form is shown again
         if (err instanceof AuthorizationResponseError) {
           notification.error({
             message: 'OIDC: Validation Auth Response error',
