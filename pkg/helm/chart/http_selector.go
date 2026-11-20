@@ -15,6 +15,7 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/helm"
+	xhttp "github.com/akuity/kargo/pkg/http"
 )
 
 // responseHeaderTimeout bounds how long a request to a chart repository may
@@ -23,6 +24,10 @@ import (
 // effectively dead. This bounds only time-to-first-header per request and
 // imposes no limit on the total duration of a response transfer.
 const responseHeaderTimeout = 30 * time.Second
+
+// responseBodyIdleTimeout bounds how long a response body may go without
+// yielding data. It imposes no limit on a transfer that is progressing.
+const responseBodyIdleTimeout = 30 * time.Second
 
 // httpSelector is an implementation of Selector that interacts with classic
 // (http/s-based) Helm chart repositories.
@@ -62,14 +67,9 @@ func (h *httpSelector) Select(ctx context.Context) ([]string, error) {
 	if h.creds != nil {
 		req.SetBasicAuth(h.creds.Username, h.creds.Password)
 	}
-	httpTransport := cleanhttp.DefaultTransport()
-	httpTransport.ResponseHeaderTimeout = responseHeaderTimeout
-	if h.insecureSkipTLSVerify {
-		httpTransport.TLSClientConfig = &tls.Config{
-			InsecureSkipVerify: true, // #nosec G402 -- explicitly allowed by insecureSkipTLSVerify
-		}
+	httpClient := &http.Client{
+		Transport: newHTTPTransport(h.insecureSkipTLSVerify),
 	}
-	httpClient := &http.Client{Transport: httpTransport}
 	res, err := httpClient.Do(req) // #nosec G704 -- SSRF mitigated: no method/header control, no response access
 	if err != nil {
 		return nil,
@@ -113,4 +113,16 @@ func (h *httpSelector) Select(ctx context.Context) ([]string, error) {
 	semvers = h.filterSemvers(semvers)
 	h.sort(semvers)
 	return h.semversToVersionStrings(semvers), nil
+}
+
+// newHTTPTransport returns the transport for requests to a chart repository.
+func newHTTPTransport(insecureSkipTLSVerify bool) http.RoundTripper {
+	httpTransport := cleanhttp.DefaultTransport()
+	httpTransport.ResponseHeaderTimeout = responseHeaderTimeout
+	if insecureSkipTLSVerify {
+		httpTransport.TLSClientConfig = &tls.Config{
+			InsecureSkipVerify: true, // #nosec G402 -- explicitly allowed by insecureSkipTLSVerify
+		}
+	}
+	return xhttp.NewIdleTimeoutTransport(httpTransport, responseBodyIdleTimeout)
 }

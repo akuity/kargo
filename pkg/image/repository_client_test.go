@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
 	"testing"
 	"time"
 
@@ -34,6 +35,27 @@ func TestNewRepositoryClient(t *testing.T) {
 	require.NotNil(t, client.getImageFromV1ImageFn)
 	require.NotNil(t, client.remoteListFn)
 	require.NotNil(t, client.remoteGetFn)
+}
+
+func TestNewRepositoryTransport(t *testing.T) {
+	for _, insecure := range []bool{false, true} {
+		t.Run(fmt.Sprintf("insecure=%t", insecure), func(t *testing.T) {
+			t.Parallel()
+			wrapper, ok := newRepositoryTransport(insecure).(interface {
+				WrappedRoundTripper() http.RoundTripper
+			})
+			require.True(t, ok, "expected idle timeout transport")
+			httpTransport, ok := wrapper.WrappedRoundTripper().(*http.Transport)
+			require.True(t, ok, "expected *http.Transport beneath")
+			require.Equal(t, responseHeaderTimeout, httpTransport.ResponseHeaderTimeout)
+			require.Equal(
+				t,
+				insecure,
+				httpTransport.TLSClientConfig != nil &&
+					httpTransport.TLSClientConfig.InsecureSkipVerify,
+			)
+		})
+	}
 }
 
 func Test_repositoryClient_getImageByTag(t *testing.T) {

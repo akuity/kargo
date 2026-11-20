@@ -69,6 +69,27 @@ func TestNewHTTPSelector(t *testing.T) {
 	}
 }
 
+func TestNewHTTPTransport(t *testing.T) {
+	for _, insecure := range []bool{false, true} {
+		t.Run(fmt.Sprintf("insecure=%t", insecure), func(t *testing.T) {
+			t.Parallel()
+			wrapper, ok := newHTTPTransport(insecure).(interface {
+				WrappedRoundTripper() http.RoundTripper
+			})
+			require.True(t, ok, "expected idle timeout transport")
+			httpTransport, ok := wrapper.WrappedRoundTripper().(*http.Transport)
+			require.True(t, ok, "expected *http.Transport beneath")
+			require.Equal(t, responseHeaderTimeout, httpTransport.ResponseHeaderTimeout)
+			require.Equal(
+				t,
+				insecure,
+				httpTransport.TLSClientConfig != nil &&
+					httpTransport.TLSClientConfig.InsecureSkipVerify,
+			)
+		})
+	}
+}
+
 func Test_httpSelector_Select_insecureTLS(t *testing.T) {
 	// Use a TLS test server with a self-signed certificate to verify that
 	// insecureSkipTLSVerify controls whether TLS errors are ignored.
