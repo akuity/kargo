@@ -11,6 +11,7 @@ import (
 	"github.com/kelseyhightower/envconfig"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/trace"
+	"go.opentelemetry.io/otel/trace/noop"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
@@ -477,11 +478,11 @@ func (r *RegularStageReconciler) reconcile(
 	var requestRequeue bool
 	subReconcilers := []struct {
 		name      string
-		reconcile func() (kargoapi.StageStatus, error)
+		reconcile func(context.Context) (kargoapi.StageStatus, error)
 	}{
 		{
 			name: "syncing Promotions",
-			reconcile: func() (kargoapi.StageStatus, error) {
+			reconcile: func(ctx context.Context) (kargoapi.StageStatus, error) {
 				status, hasPendingPromotions, err := r.syncPromotions(
 					ctx,
 					working,
@@ -501,7 +502,7 @@ func (r *RegularStageReconciler) reconcile(
 		},
 		{
 			name: "assessing health",
-			reconcile: func() (kargoapi.StageStatus, error) {
+			reconcile: func(ctx context.Context) (kargoapi.StageStatus, error) {
 				status := r.assessHealth(ctx, working)
 				// Unknown health is a normal, expected transient state (e.g. waiting
 				// for Argo CD to reconcile after an operation). The Application watcher
@@ -513,7 +514,7 @@ func (r *RegularStageReconciler) reconcile(
 		},
 		{
 			name: "verifying Stage Freight",
-			reconcile: func() (kargoapi.StageStatus, error) {
+			reconcile: func(ctx context.Context) (kargoapi.StageStatus, error) {
 				status, err := r.verifyStageFreight(ctx, working, startTime, time.Now)
 				if err != nil {
 					err = fmt.Errorf("failed to verify Stage Freight: %w", err)
@@ -537,7 +538,7 @@ func (r *RegularStageReconciler) reconcile(
 			// Runs after verification so that one write per Freight records the
 			// Stage in both currentlyIn and verifiedIn.
 			name: "syncing Freight",
-			reconcile: func() (kargoapi.StageStatus, error) {
+			reconcile: func(ctx context.Context) (kargoapi.StageStatus, error) {
 				if err := r.syncFreight(ctx, working); err != nil {
 					return working.Status, fmt.Errorf("failed to sync Freight: %w", err)
 				}
@@ -551,7 +552,7 @@ func (r *RegularStageReconciler) reconcile(
 			// reads. Inserting a step between the two would let the effective
 			// holds go stale relative to the decision.
 			name: "computing effective auto-promotion holds",
-			reconcile: func() (kargoapi.StageStatus, error) {
+			reconcile: func(ctx context.Context) (kargoapi.StageStatus, error) {
 				status := *working.Status.DeepCopy()
 				holds, err := r.computeEffectiveAutoPromotionHolds(
 					ctx,
@@ -569,7 +570,7 @@ func (r *RegularStageReconciler) reconcile(
 		},
 		{
 			name: "auto-promoting Freight",
-			reconcile: func() (kargoapi.StageStatus, error) {
+			reconcile: func(ctx context.Context) (kargoapi.StageStatus, error) {
 				status, err := r.autoPromoteFreight(ctx, working, autoPromotionEnabled)
 				if err != nil {
 					err = fmt.Errorf("failed to auto-promote Freight: %w", err)
@@ -581,9 +582,12 @@ func (r *RegularStageReconciler) reconcile(
 	for _, subR := range subReconcilers {
 		logger.Debug(subR.name)
 
-		// Reconcile the Stage with the sub-reconciler.
+		// Reconcile the Stage with the sub-reconciler, in its own span.
 		var err error
-		newStatus, err = subR.reconcile()
+		subCtx, span := startSubReconcilerSpan(ctx, subR.name)
+		newStatus, err = subR.reconcile(subCtx)
+		telemetry.RecordErrorCtx(subCtx, span, err)
+		span.End()
 
 		// Summarize the conditions after each sub-reconciler to ensure that
 		// we have a consistent view of the Stage status.
@@ -1396,7 +1400,7 @@ func (r *RegularStageReconciler) autoPromoteFreight(
 		// Promotion. The defaulting webhook fills in the rest from the Stage's
 		// PromotionTemplate.
 		promotion := api.NewMinimalPromotion(stage, candidate.Name)
-		if err = r.client.Create(ctx, promotion); err != nil {
+		if err = r.createAutoPromotion(ctx, promotion, &candidate); err != nil {
 			// An admission webhook may deny the create. Tolerate this as a
 			// non-error: nothing is persisted, so this reconcile moves on, and a
 			// later one re-derives and re-attempts the auto-promotion once the
@@ -1442,6 +1446,43 @@ func (r *RegularStageReconciler) autoPromoteFreight(
 	}
 
 	return newStatus, nil
+}
+
+// startSubReconcilerSpan starts the span for the sub-reconciler named name.
+func startSubReconcilerSpan(
+	ctx context.Context,
+	name string,
+) (context.Context, trace.Span) {
+	if !telemetry.CategoryEnabled(telemetry.CategoryStage) {
+		return ctx, noop.Span{}
+	}
+	return telemetry.StartSpan(ctx, tracer, "Stage: "+name)
+}
+
+// createAutoPromotion creates an auto-promotion in a span. An admission
+// webhook denial, which autoPromoteFreight handles, and a canceled context
+// are not the span's error.
+func (r *RegularStageReconciler) createAutoPromotion(
+	ctx context.Context,
+	promotion *kargoapi.Promotion,
+	candidate *kargoapi.Freight,
+) (err error) {
+	ctx, span := telemetry.StartSpanIn(ctx, telemetry.CategoryStage, tracer, "Create Promotion")
+	defer func() {
+		if !apierrors.IsForbidden(err) {
+			telemetry.RecordErrorCtx(ctx, span, err)
+		}
+		span.End()
+	}()
+	if span.IsRecording() {
+		span.SetAttributes(telemetry.FreightKey.String(candidate.Name))
+		span.SetAttributes(telemetry.FreightDetailAttributes(candidate)...)
+	}
+	if err = r.client.Create(ctx, promotion); err != nil {
+		return err
+	}
+	span.SetAttributes(telemetry.PromotionKey.String(promotion.Name))
+	return nil
 }
 
 // stageAwaitingFreightForOrigin reports whether this reconcile pass has already

@@ -21,6 +21,10 @@ const (
 	// CategoryDiscovery covers artifact discovery, container registry request
 	// and Freight creation spans.
 	CategoryDiscovery Category = "discovery"
+	// CategoryStage covers Stage sub-reconciler and auto-promotion spans.
+	CategoryStage Category = "stage"
+	// CategoryRefresh covers refresh request spans.
+	CategoryRefresh Category = "refresh"
 )
 
 // categories maps every Category to whether it is on by default.
@@ -29,6 +33,8 @@ var categories = map[Category]bool{
 	CategoryK8s:       false,
 	CategoryPatch:     false,
 	CategoryDiscovery: false,
+	CategoryStage:     false,
+	CategoryRefresh:   false,
 }
 
 // CategoryEnabled returns whether tracing is on and c is selected by
