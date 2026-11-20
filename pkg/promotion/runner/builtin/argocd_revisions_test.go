@@ -77,6 +77,17 @@ func Test_argoCDUpdater_getDesiredRevisions(t *testing.T) {
 			},
 			want: []string{"", "", "another-fake-version", "", "another-fake-commit"},
 		},
+		{
+			name: "git repoURL written differently than in the update",
+			app: &argocdapi.Application{
+				Spec: argocdapi.ApplicationSpec{
+					Source: &argocdapi.ApplicationSource{
+						RepoURL: "https://github.com/Another-Universe/42.git",
+					},
+				},
+			},
+			want: []string{"another-fake-commit"},
+		},
 	}
 
 	runner := &argocdUpdater{}
