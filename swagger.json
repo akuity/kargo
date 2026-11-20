@@ -1259,7 +1259,7 @@
         ]
       }
     },
-    "/v1beta1/projects/{project}/freight/{freight-name-or-alias}/metadata": {
+    "/v1beta1/projects/{project}/freight/{freight}/metadata": {
       "patch": {
         "description": "Upsert keys in the status metadata of a Freight resource. A value\nalready recorded under a key named in the request is\noverwritten; other keys are left as they are.",
         "consumes": [
@@ -1284,8 +1284,8 @@
           },
           {
             "type": "string",
-            "description": "Freight name or alias",
-            "name": "freight-name-or-alias",
+            "description": "Freight name",
+            "name": "freight",
             "in": "path",
             "required": true
           },
@@ -1311,9 +1311,9 @@
         ]
       }
     },
-    "/v1beta1/projects/{project}/freight/{freight-name-or-alias}/status/stage/{stage}": {
+    "/v1beta1/projects/{project}/freight/{freight}/status/stage/{stage}": {
       "post": {
-        "description": "Record that the named Freight is currently in use by the Stage,\nand optionally that it has been verified there, updating the\nFreight's status (currentlyIn / verifiedIn). This is used by the\nStage controller in place of writing Freight status directly.",
+        "description": "Record that the named Freight has been verified in the Stage,\nadding the Stage to the Freight's verifiedIn status.",
         "consumes": [
           "application/json"
         ],
@@ -1324,8 +1324,8 @@
           "Core",
           "Project-Level"
         ],
-        "summary": "Mark Freight as currently in use by a Stage",
-        "operationId": "MarkFreightInStage",
+        "summary": "Mark Freight as verified in a Stage",
+        "operationId": "MarkFreightVerifiedInStage",
         "parameters": [
           {
             "type": "string",
@@ -1336,8 +1336,8 @@
           },
           {
             "type": "string",
-            "description": "Freight name or alias",
-            "name": "freight-name-or-alias",
+            "description": "Freight name",
+            "name": "freight",
             "in": "path",
             "required": true
           },
@@ -1349,12 +1349,12 @@
             "required": true
           },
           {
-            "description": "Status",
+            "description": "Verification",
             "name": "body",
             "in": "body",
             "required": true,
             "schema": {
-              "$ref": "#/definitions/MarkFreightInStageRequest"
+              "$ref": "#/definitions/MarkFreightVerifiedInStageRequest"
             }
           }
         ],
@@ -1390,53 +1390,8 @@
           },
           {
             "type": "string",
-            "description": "Freight name or alias",
-            "name": "freight-name-or-alias",
-            "in": "path",
-            "required": true
-          },
-          {
-            "type": "string",
-            "description": "Stage name",
-            "name": "stage",
-            "in": "path",
-            "required": true
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Success"
-          }
-        },
-        "security": [
-          {
-            "BearerAuth": []
-          }
-        ]
-      },
-      "patch": {
-        "description": "Record that the named Freight is no longer in use by the Stage,\nupdating the Freight's status (removing the Stage from\ncurrentlyIn and finalizing its soak time). The Stage's entries in\nverifiedIn and approvedFor are left intact. This is used by the\nStage controller in place of writing Freight status directly.",
-        "produces": [
-          "application/json"
-        ],
-        "tags": [
-          "Core",
-          "Project-Level"
-        ],
-        "summary": "Mark Freight as no longer currently in use by a Stage",
-        "operationId": "UnmarkFreightInStage",
-        "parameters": [
-          {
-            "type": "string",
-            "description": "Project name",
-            "name": "project",
-            "in": "path",
-            "required": true
-          },
-          {
-            "type": "string",
-            "description": "Freight name or alias",
-            "name": "freight-name-or-alias",
+            "description": "Freight name",
+            "name": "freight",
             "in": "path",
             "required": true
           },
@@ -2960,6 +2915,56 @@
             "schema": {
               "$ref": "#/definitions/FreightList"
             }
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      },
+      "post": {
+        "description": "Record that the named Freight is currently in use by the Stage,\nadding the Stage to the Freight's currentlyIn status. The\nrequest's origin must match the Freight's origin. Any other\nFreight from that origin that is recorded as currently in the\nStage has the Stage removed from its currentlyIn.",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "Core",
+          "Project-Level"
+        ],
+        "summary": "Mark Freight as currently in use by a Stage",
+        "operationId": "MarkFreightCurrentlyInStage",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "Project name",
+            "name": "project",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "description": "Stage name",
+            "name": "stage",
+            "in": "path",
+            "required": true
+          },
+          {
+            "description": "Freight",
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/MarkFreightCurrentlyInStageRequest"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
           }
         },
         "security": [
@@ -6036,15 +6041,28 @@
         }
       }
     },
-    "MarkFreightInStageRequest": {
+    "MarkFreightCurrentlyInStageRequest": {
       "type": "object",
       "properties": {
-        "verified": {
-          "description": "Verified indicates the Freight has been verified in the Stage, so that its\nstatus should also record it as verified there.",
-          "type": "boolean"
+        "freight": {
+          "description": "Freight is the name of the Freight now currently in use by the Stage.",
+          "type": "string"
         },
+        "origin": {
+          "description": "Origin is the origin of the Freight. It must match the Freight's own\norigin. Any other Freight from this origin that is recorded as currently\nin the Stage is unmarked.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/FreightOrigin"
+            }
+          ]
+        }
+      }
+    },
+    "MarkFreightVerifiedInStageRequest": {
+      "type": "object",
+      "properties": {
         "verifiedAt": {
-          "description": "VerifiedAt is the time at which the Freight was verified in the Stage. It\nis ignored unless Verified is true, and defaults to the time the request is\nhandled.",
+          "description": "VerifiedAt is the time at which the Freight was verified in the Stage. It\ndefaults to the time the request is handled.",
           "type": "string"
         }
       }

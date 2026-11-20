@@ -10,73 +10,167 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/pkg/api/freightapi"
 	"github.com/akuity/kargo/pkg/event"
+	libhttp "github.com/akuity/kargo/pkg/http"
 	"github.com/akuity/kargo/pkg/logging"
 	"github.com/akuity/kargo/pkg/server/request"
 	"github.com/akuity/kargo/pkg/server/user"
 )
 
-// markFreightInStageRequest is the request body for recording that Freight is
-// currently in use by a Stage.
-type markFreightInStageRequest struct {
-	// Verified indicates the Freight has been verified in the Stage, so that its
-	// status should also record it as verified there.
-	Verified bool `json:"verified"`
-	// VerifiedAt is the time at which the Freight was verified in the Stage. It
-	// is ignored unless Verified is true, and defaults to the time the request is
-	// handled.
-	VerifiedAt *metav1.Time `json:"verifiedAt,omitempty"`
-} // @name MarkFreightInStageRequest
+// markFreightCurrentlyInStageRequest is the request body for recording which
+// Freight is currently in use by a Stage.
+type markFreightCurrentlyInStageRequest struct {
+	// Freight is the name of the Freight now currently in use by the Stage.
+	Freight string `json:"freight"`
+	// Origin is the origin of the Freight. It must match the Freight's own
+	// origin. Any other Freight from this origin that is recorded as currently
+	// in the Stage is unmarked.
+	Origin kargoapi.FreightOrigin `json:"origin"`
+} // @name MarkFreightCurrentlyInStageRequest
 
-// @id MarkFreightInStage
+// @id MarkFreightCurrentlyInStage
 // @Summary Mark Freight as currently in use by a Stage
 // @Description Record that the named Freight is currently in use by the Stage,
-// @Description and optionally that it has been verified there, updating the
-// @Description Freight's status (currentlyIn / verifiedIn). This is used by the
-// @Description Stage controller in place of writing Freight status directly.
+// @Description adding the Stage to the Freight's currentlyIn status. The
+// @Description request's origin must match the Freight's origin. Any other
+// @Description Freight from that origin that is recorded as currently in the
+// @Description Stage has the Stage removed from its currentlyIn.
 // @Tags Core, Project-Level
 // @Security BearerAuth
 // @Accept json
 // @Produce json
 // @Param project path string true "Project name"
-// @Param freight-name-or-alias path string true "Freight name or alias"
 // @Param stage path string true "Stage name"
-// @Param body body markFreightInStageRequest true "Status"
+// @Param body body markFreightCurrentlyInStageRequest true "Freight"
 // @Success 200 "Success"
-// @Router /v1beta1/projects/{project}/freight/{freight-name-or-alias}/status/stage/{stage} [post]
-func (s *server) markFreightInStage(c *gin.Context) {
+// @Router /v1beta1/projects/{project}/stages/{stage}/freight [post]
+func (s *server) markFreightCurrentlyInStage(c *gin.Context) {
 	ctx := c.Request.Context()
 
 	project := c.Param("project")
-	freightNameOrAlias := c.Param("freight-name-or-alias")
 	stageName := c.Param("stage")
 
-	var req markFreightInStageRequest
+	var req markFreightCurrentlyInStageRequest
+	if !request.BindJSON(c, &req) {
+		return
+	}
+	if req.Freight == "" {
+		_ = c.Error(libhttp.ErrorStr("freight is required", http.StatusBadRequest))
+		return
+	}
+	if req.Origin.Kind == "" || req.Origin.Name == "" {
+		_ = c.Error(libhttp.ErrorStr("origin kind and name are required", http.StatusBadRequest))
+		return
+	}
+
+	freight, err := s.getFreightByName(ctx, project, req.Freight)
+	if err != nil {
+		_ = c.Error(err)
+		return
+	}
+	if !freight.Origin.Equals(&req.Origin) {
+		_ = c.Error(libhttp.ErrorStr(
+			fmt.Sprintf(
+				"freight %q has origin %q, not %q",
+				freight.Name, freight.Origin.String(), req.Origin.String(),
+			),
+			http.StatusBadRequest,
+		))
+		return
+	}
+
+	// Unmark other Freight from the same origin before marking the new one.
+	// Only one freight should be Current at a time.
+	current, err := freightapi.ListFreightByCurrentStage(ctx, s.client, project, stageName)
+	if err != nil {
+		_ = c.Error(err)
+		return
+	}
+	for i := range current {
+		other := &current[i]
+		if other.Name == freight.Name || !other.Origin.Equals(&req.Origin) {
+			continue
+		}
+		newStatus := *other.Status.DeepCopy()
+		newStatus.RemoveCurrentStage(stageName)
+		// The authorizing client runs a SubjectAccessReview for patch on
+		// freights/status, which is the authorization decision for this write.
+		if err = s.patchFreightStatusFn(ctx, s.client, other, newStatus); err != nil {
+			_ = c.Error(fmt.Errorf("patch status of freight %q: %w", other.Name, err))
+			return
+		}
+	}
+
+	// Evaluated before the patch so the event is emitted only on the first
+	// transition, not on every re-mark.
+	newlyCurrentlyIn := !freight.IsCurrentlyIn(stageName)
+
+	newStatus := *freight.Status.DeepCopy()
+	newStatus.AddCurrentStage(stageName, time.Now())
+	if err = s.patchFreightStatusFn(ctx, s.client, freight, newStatus); err != nil {
+		_ = c.Error(fmt.Errorf("patch status of freight %q: %w", freight.Name, err))
+		return
+	}
+
+	if newlyCurrentlyIn {
+		// Include verifiedIn information in the CurrentlyIn event
+		s.emitFreightCurrentlyInStage(ctx, freight, stageName, freight.IsVerifiedIn(stageName))
+	}
+
+	c.Status(http.StatusOK)
+}
+
+// markFreightVerifiedInStageRequest is the request body for recording that
+// Freight has been verified in a Stage.
+type markFreightVerifiedInStageRequest struct {
+	// VerifiedAt is the time at which the Freight was verified in the Stage. It
+	// defaults to the time the request is handled.
+	VerifiedAt *metav1.Time `json:"verifiedAt,omitempty"`
+} // @name MarkFreightVerifiedInStageRequest
+
+// @id MarkFreightVerifiedInStage
+// @Summary Mark Freight as verified in a Stage
+// @Description Record that the named Freight has been verified in the Stage,
+// @Description adding the Stage to the Freight's verifiedIn status.
+// @Tags Core, Project-Level
+// @Security BearerAuth
+// @Accept json
+// @Produce json
+// @Param project path string true "Project name"
+// @Param freight path string true "Freight name"
+// @Param stage path string true "Stage name"
+// @Param body body markFreightVerifiedInStageRequest true "Verification"
+// @Success 200 "Success"
+// @Router /v1beta1/projects/{project}/freight/{freight}/status/stage/{stage} [post]
+func (s *server) markFreightVerifiedInStage(c *gin.Context) {
+	ctx := c.Request.Context()
+
+	project := c.Param("project")
+	freightName := c.Param("freight")
+	stageName := c.Param("stage")
+
+	var req markFreightVerifiedInStageRequest
 	if !request.BindJSON(c, &req) {
 		return
 	}
 
-	freight, err := s.getFreightByNameOrAlias(ctx, project, freightNameOrAlias)
+	freight, err := s.getFreightByName(ctx, project, freightName)
 	if err != nil {
 		_ = c.Error(err)
 		return
 	}
 
-	// These are evaluated before the patch so each event is emitted only on the
-	// first transition, not on every re-mark.
-	newlyVerified := req.Verified && !freight.IsVerifiedIn(stageName)
-	newlyCurrentlyIn := !freight.IsCurrentlyIn(stageName)
+	// Evaluated before the patch so the event is emitted only on the first
+	// transition, not on every re-mark.
+	newlyVerified := !freight.IsVerifiedIn(stageName)
 
-	now := time.Now()
-	newStatus := *freight.Status.DeepCopy()
-	newStatus.AddCurrentStage(stageName, now)
-	if req.Verified {
-		verifiedAt := now
-		if req.VerifiedAt != nil {
-			verifiedAt = req.VerifiedAt.Time
-		}
-		newStatus.AddVerifiedStage(stageName, verifiedAt)
+	verifiedAt := time.Now()
+	if req.VerifiedAt != nil {
+		verifiedAt = req.VerifiedAt.Time
 	}
+	newStatus := *freight.Status.DeepCopy()
+	newStatus.AddVerifiedStage(stageName, verifiedAt)
 
 	// The authorizing client runs a SubjectAccessReview for patch on
 	// freights/status, which is the authorization decision for this write.
@@ -87,12 +181,6 @@ func (s *server) markFreightInStage(c *gin.Context) {
 
 	if newlyVerified {
 		s.emitFreightVerifiedInStage(ctx, freight, stageName)
-	}
-
-	if newlyCurrentlyIn {
-		// Include verifiedIn information in the CurrentlyIn event
-		_, verifiedInStage := newStatus.VerifiedIn[stageName]
-		s.emitFreightCurrentlyInStage(ctx, freight, stageName, verifiedInStage)
 	}
 
 	c.Status(http.StatusOK)
@@ -155,47 +243,6 @@ func (s *server) emitFreightCurrentlyInStage(
 	}
 }
 
-// @id UnmarkFreightInStage
-// @Summary Mark Freight as no longer currently in use by a Stage
-// @Description Record that the named Freight is no longer in use by the Stage,
-// @Description updating the Freight's status (removing the Stage from
-// @Description currentlyIn and finalizing its soak time). The Stage's entries in
-// @Description verifiedIn and approvedFor are left intact. This is used by the
-// @Description Stage controller in place of writing Freight status directly.
-// @Tags Core, Project-Level
-// @Security BearerAuth
-// @Produce json
-// @Param project path string true "Project name"
-// @Param freight-name-or-alias path string true "Freight name or alias"
-// @Param stage path string true "Stage name"
-// @Success 200 "Success"
-// @Router /v1beta1/projects/{project}/freight/{freight-name-or-alias}/status/stage/{stage} [patch]
-func (s *server) unmarkFreightInStage(c *gin.Context) {
-	ctx := c.Request.Context()
-
-	project := c.Param("project")
-	freightNameOrAlias := c.Param("freight-name-or-alias")
-	stageName := c.Param("stage")
-
-	freight, err := s.getFreightByNameOrAlias(ctx, project, freightNameOrAlias)
-	if err != nil {
-		_ = c.Error(err)
-		return
-	}
-
-	newStatus := *freight.Status.DeepCopy()
-	newStatus.RemoveCurrentStage(stageName)
-
-	// The authorizing client runs a SubjectAccessReview for patch on
-	// freights/status, which is the authorization decision for this write.
-	if err = s.patchFreightStatusFn(ctx, s.client, freight, newStatus); err != nil {
-		_ = c.Error(fmt.Errorf("patch freight status: %w", err))
-		return
-	}
-
-	c.Status(http.StatusOK)
-}
-
 // @id DeleteFreightStageStatus
 // @Summary Remove all of a Stage's entries from a Freight's status
 // @Description Remove the named Stage from every one of the Freight's status
@@ -206,18 +253,18 @@ func (s *server) unmarkFreightInStage(c *gin.Context) {
 // @Security BearerAuth
 // @Produce json
 // @Param project path string true "Project name"
-// @Param freight-name-or-alias path string true "Freight name or alias"
+// @Param freight path string true "Freight name"
 // @Param stage path string true "Stage name"
 // @Success 200 "Success"
-// @Router /v1beta1/projects/{project}/freight/{freight-name-or-alias}/status/stage/{stage} [delete]
+// @Router /v1beta1/projects/{project}/freight/{freight}/status/stage/{stage} [delete]
 func (s *server) deleteFreightStageStatus(c *gin.Context) {
 	ctx := c.Request.Context()
 
 	project := c.Param("project")
-	freightNameOrAlias := c.Param("freight-name-or-alias")
+	freightName := c.Param("freight")
 	stageName := c.Param("stage")
 
-	freight, err := s.getFreightByNameOrAlias(ctx, project, freightNameOrAlias)
+	freight, err := s.getFreightByName(ctx, project, freightName)
 	if err != nil {
 		_ = c.Error(err)
 		return

@@ -1,9 +1,11 @@
 package server
 
 import (
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -16,39 +18,67 @@ import (
 	"github.com/akuity/kargo/pkg/server/config"
 )
 
-func Test_server_markFreightInStage(t *testing.T) {
+func Test_server_markFreightCurrentlyInStage(t *testing.T) {
 	const stageName = "fake-stage"
 	testProject := &kargoapi.Project{
 		ObjectMeta: metav1.ObjectMeta{Name: "fake-project"},
 	}
-	testFreight := &kargoapi.Freight{
-		ObjectMeta: metav1.ObjectMeta{Namespace: testProject.Name, Name: "fake-freight"},
+	whOrigin := kargoapi.FreightOrigin{Kind: kargoapi.FreightOriginKindWarehouse, Name: "wh"}
+	otherOrigin := kargoapi.FreightOrigin{Kind: kargoapi.FreightOriginKindWarehouse, Name: "other-wh"}
+	// Whole seconds, since metav1.Time serializes at second precision.
+	since := metav1.NewTime(time.Now().Add(-time.Hour).Truncate(time.Second))
+
+	// The Freight being marked current.
+	newFreight := &kargoapi.Freight{
+		ObjectMeta: metav1.ObjectMeta{Namespace: testProject.Name, Name: "new-freight"},
+		Origin:     whOrigin,
 	}
-	// Freight already verified in the Stage (but not current), so a re-mark is not
-	// "newly verified" -- but it is "newly current".
-	testFreightAlreadyVerified := &kargoapi.Freight{
-		ObjectMeta: metav1.ObjectMeta{Namespace: testProject.Name, Name: "fake-freight"},
+	// Previously current Freight from the same origin, verified in the Stage, so
+	// unmarking it finalizes its soak time.
+	oldFreight := &kargoapi.Freight{
+		ObjectMeta: metav1.ObjectMeta{Namespace: testProject.Name, Name: "old-freight"},
+		Origin:     whOrigin,
+		Status: kargoapi.FreightStatus{
+			CurrentlyIn: map[string]kargoapi.CurrentStage{stageName: {Since: &since}},
+			VerifiedIn:  map[string]kargoapi.VerifiedStage{stageName: {}},
+		},
+	}
+	// Current Freight from a different origin, which must be left alone.
+	otherOriginFreight := &kargoapi.Freight{
+		ObjectMeta: metav1.ObjectMeta{Namespace: testProject.Name, Name: "other-origin-freight"},
+		Origin:     otherOrigin,
+		Status: kargoapi.FreightStatus{
+			CurrentlyIn: map[string]kargoapi.CurrentStage{stageName: {Since: &since}},
+		},
+	}
+	// The Freight being marked, already verified in the Stage.
+	newFreightVerified := &kargoapi.Freight{
+		ObjectMeta: metav1.ObjectMeta{Namespace: testProject.Name, Name: "new-freight"},
+		Origin:     whOrigin,
 		Status: kargoapi.FreightStatus{
 			VerifiedIn: map[string]kargoapi.VerifiedStage{stageName: {}},
 		},
 	}
-	// Freight already verified in AND current in the Stage, so a re-mark is neither
-	// newly verified nor newly current.
-	testFreightAlreadyVerifiedAndCurrent := &kargoapi.Freight{
-		ObjectMeta: metav1.ObjectMeta{Namespace: testProject.Name, Name: "fake-freight"},
+	// The Freight being marked, already current in the Stage.
+	newFreightCurrent := &kargoapi.Freight{
+		ObjectMeta: metav1.ObjectMeta{Namespace: testProject.Name, Name: "new-freight"},
+		Origin:     whOrigin,
 		Status: kargoapi.FreightStatus{
-			CurrentlyIn: map[string]kargoapi.CurrentStage{stageName: {}},
-			VerifiedIn:  map[string]kargoapi.VerifiedStage{stageName: {}},
+			CurrentlyIn: map[string]kargoapi.CurrentStage{stageName: {Since: &since}},
 		},
 	}
-	url := "/v1beta1/projects/" + testProject.Name +
-		"/freight/" + testFreight.Name + "/status/stage/" + stageName
+	url := "/v1beta1/projects/" + testProject.Name + "/stages/" + stageName + "/freight"
+	body := func() io.Reader {
+		return mustJSONBody(markFreightCurrentlyInStageRequest{
+			Freight: newFreight.Name,
+			Origin:  whOrigin,
+		})
+	}
 
 	// Senders captured per case so assertions can inspect what was emitted.
-	verifiedSender := &eventfake.Sender{}
 	unverifiedSender := &eventfake.Sender{}
-	reverifiedSender := &eventfake.Sender{}
-	newlyCurrentSender := &eventfake.Sender{}
+	verifiedSender := &eventfake.Sender{}
+	alreadyCurrentSender := &eventfake.Sender{}
 
 	sentTypes := func(s *eventfake.Sender) []string {
 		var types []string
@@ -68,6 +98,11 @@ func Test_server_markFreightInStage(t *testing.T) {
 		t.Fatal("no FreightCurrentlyInStage event was sent")
 		return false
 	}
+	getFreight := func(t *testing.T, c client.Client, f *kargoapi.Freight) *kargoapi.Freight {
+		got := &kargoapi.Freight{}
+		require.NoError(t, c.Get(t.Context(), client.ObjectKeyFromObject(f), got))
+		return got
+	}
 
 	testRESTEndpoint(
 		t, &config.ServerConfig{},
@@ -75,74 +110,91 @@ func Test_server_markFreightInStage(t *testing.T) {
 		[]restTestCase{
 			{
 				name:          "Project not found",
-				body:          mustJSONBody(markFreightInStageRequest{}),
-				clientBuilder: fake.NewClientBuilder(),
+				body:          body(),
+				clientBuilder: freightWithIndexes(t),
 				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
 					require.Equal(t, http.StatusNotFound, w.Code)
+				},
+			},
+			{
+				name:          "Freight name missing",
+				body:          mustJSONBody(markFreightCurrentlyInStageRequest{Origin: whOrigin}),
+				clientBuilder: freightWithIndexes(t).WithObjects(testProject),
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
+					require.Equal(t, http.StatusBadRequest, w.Code)
+					require.Contains(t, w.Body.String(), "freight is required")
+				},
+			},
+			{
+				name: "origin incomplete",
+				body: mustJSONBody(markFreightCurrentlyInStageRequest{
+					Freight: newFreight.Name,
+					Origin:  kargoapi.FreightOrigin{Name: "wh"},
+				}),
+				clientBuilder: freightWithIndexes(t).WithObjects(testProject),
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
+					require.Equal(t, http.StatusBadRequest, w.Code)
+					require.Contains(t, w.Body.String(), "origin kind and name are required")
 				},
 			},
 			{
 				name:          "Freight not found",
-				body:          mustJSONBody(markFreightInStageRequest{}),
-				clientBuilder: fake.NewClientBuilder().WithObjects(testProject),
+				body:          body(),
+				clientBuilder: freightWithIndexes(t).WithObjects(testProject),
 				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
 					require.Equal(t, http.StatusNotFound, w.Code)
 				},
 			},
 			{
-				name: "marks Freight currently in Stage",
-				body: mustJSONBody(markFreightInStageRequest{}),
-				clientBuilder: fake.NewClientBuilder().
-					WithObjects(testProject, testFreight).
-					WithStatusSubresource(testFreight),
+				name: "origin does not match the Freight's",
+				body: mustJSONBody(markFreightCurrentlyInStageRequest{
+					Freight: newFreight.Name,
+					Origin:  otherOrigin,
+				}),
+				clientBuilder: freightWithIndexes(t).
+					WithObjects(testProject, newFreight, otherOriginFreight).
+					WithStatusSubresource(newFreight, otherOriginFreight),
 				assertions: func(t *testing.T, w *httptest.ResponseRecorder, c client.Client) {
-					require.Equal(t, http.StatusOK, w.Code)
-
-					freight := &kargoapi.Freight{}
-					require.NoError(t, c.Get(t.Context(), client.ObjectKeyFromObject(testFreight), freight))
-					require.True(t, freight.IsCurrentlyIn(stageName))
-					require.False(t, freight.IsVerifiedIn(stageName))
+					require.Equal(t, http.StatusBadRequest, w.Code)
+					require.Contains(t, w.Body.String(), "has origin")
+					// Nothing is written.
+					require.False(t, getFreight(t, c, newFreight).IsCurrentlyIn(stageName))
+					require.True(t, getFreight(t, c, otherOriginFreight).IsCurrentlyIn(stageName))
 				},
 			},
 			{
-				name: "marks Freight verified in Stage and emits events",
-				body: mustJSONBody(markFreightInStageRequest{Verified: true}),
-				clientBuilder: fake.NewClientBuilder().
-					WithObjects(testProject, testFreight).
-					WithStatusSubresource(testFreight),
-				serverSetup: func(_ *testing.T, s *server) {
-					s.sender = verifiedSender
-				},
+				name: "marks Freight current and unmarks other Freight from the same origin",
+				body: body(),
+				clientBuilder: freightWithIndexes(t).
+					WithObjects(testProject, newFreight, oldFreight, otherOriginFreight).
+					WithStatusSubresource(newFreight, oldFreight, otherOriginFreight),
 				assertions: func(t *testing.T, w *httptest.ResponseRecorder, c client.Client) {
 					require.Equal(t, http.StatusOK, w.Code)
 
-					freight := &kargoapi.Freight{}
-					require.NoError(t, c.Get(t.Context(), client.ObjectKeyFromObject(testFreight), freight))
-					require.True(t, freight.IsCurrentlyIn(stageName))
-					require.True(t, freight.IsVerifiedIn(stageName))
+					got := getFreight(t, c, newFreight)
+					require.True(t, got.IsCurrentlyIn(stageName))
+					require.False(t, got.IsVerifiedIn(stageName))
 
-					// Newly verified AND newly current, so both events are emitted, and
-					// the currentlyIn event reports the Freight as verified.
-					require.ElementsMatch(t, []string{
-						string(kargoapi.EventTypeFreightVerifiedInStage),
-						string(kargoapi.EventTypeFreightCurrentlyInStage),
-					}, sentTypes(verifiedSender))
-					require.True(t, currentlyInVerified(t, verifiedSender))
+					old := getFreight(t, c, oldFreight)
+					require.False(t, old.IsCurrentlyIn(stageName))
+					require.True(t, old.IsVerifiedIn(stageName))
+					require.NotNil(t, old.Status.VerifiedIn[stageName].LongestCompletedSoak)
+
+					other := getFreight(t, c, otherOriginFreight)
+					require.True(t, other.IsCurrentlyIn(stageName))
 				},
 			},
 			{
-				name: "emits an unverified currentlyIn event when not verified",
-				body: mustJSONBody(markFreightInStageRequest{}),
-				clientBuilder: fake.NewClientBuilder().
-					WithObjects(testProject, testFreight).
-					WithStatusSubresource(testFreight),
+				name: "emits an unverified currentlyIn event when newly current",
+				body: body(),
+				clientBuilder: freightWithIndexes(t).
+					WithObjects(testProject, newFreight).
+					WithStatusSubresource(newFreight),
 				serverSetup: func(_ *testing.T, s *server) {
 					s.sender = unverifiedSender
 				},
 				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
 					require.Equal(t, http.StatusOK, w.Code)
-					// Newly current but not verified: a currentlyIn event fires on the
-					// transition, flagged unverified; no verifiedIn event.
 					require.Equal(t,
 						[]string{string(kargoapi.EventTypeFreightCurrentlyInStage)},
 						sentTypes(unverifiedSender),
@@ -151,80 +203,129 @@ func Test_server_markFreightInStage(t *testing.T) {
 				},
 			},
 			{
-				name: "emits only a currentlyIn event when already verified but newly current",
-				body: mustJSONBody(markFreightInStageRequest{Verified: true}),
-				clientBuilder: fake.NewClientBuilder().
-					WithObjects(testProject, testFreightAlreadyVerified).
-					WithStatusSubresource(testFreightAlreadyVerified),
+				name: "emits a verified currentlyIn event when already verified",
+				body: body(),
+				clientBuilder: freightWithIndexes(t).
+					WithObjects(testProject, newFreightVerified).
+					WithStatusSubresource(newFreightVerified),
 				serverSetup: func(_ *testing.T, s *server) {
-					s.sender = newlyCurrentSender
+					s.sender = verifiedSender
 				},
 				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
 					require.Equal(t, http.StatusOK, w.Code)
 					require.Equal(t,
 						[]string{string(kargoapi.EventTypeFreightCurrentlyInStage)},
-						sentTypes(newlyCurrentSender),
+						sentTypes(verifiedSender),
 					)
-					require.True(t, currentlyInVerified(t, newlyCurrentSender))
+					require.True(t, currentlyInVerified(t, verifiedSender))
 				},
 			},
 			{
-				name: "does not emit events when already verified and current",
-				body: mustJSONBody(markFreightInStageRequest{Verified: true}),
-				clientBuilder: fake.NewClientBuilder().
-					WithObjects(testProject, testFreightAlreadyVerifiedAndCurrent).
-					WithStatusSubresource(testFreightAlreadyVerifiedAndCurrent),
+				name: "does not emit events when already current",
+				body: body(),
+				clientBuilder: freightWithIndexes(t).
+					WithObjects(testProject, newFreightCurrent).
+					WithStatusSubresource(newFreightCurrent),
 				serverSetup: func(_ *testing.T, s *server) {
-					s.sender = reverifiedSender
+					s.sender = alreadyCurrentSender
 				},
-				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, c client.Client) {
 					require.Equal(t, http.StatusOK, w.Code)
-					require.Empty(t, reverifiedSender.Sent())
+					require.Empty(t, alreadyCurrentSender.Sent())
+					// The original "since" is kept.
+					got := getFreight(t, c, newFreightCurrent)
+					require.True(t, got.Status.CurrentlyIn[stageName].Since.Equal(&since))
 				},
 			},
 		},
 	)
 }
 
-func Test_server_unmarkFreightInStage(t *testing.T) {
+func Test_server_markFreightVerifiedInStage(t *testing.T) {
 	const stageName = "fake-stage"
 	testProject := &kargoapi.Project{
 		ObjectMeta: metav1.ObjectMeta{Name: "fake-project"},
 	}
-	// Freight that currently records it is in use by the Stage.
 	testFreight := &kargoapi.Freight{
 		ObjectMeta: metav1.ObjectMeta{Namespace: testProject.Name, Name: "fake-freight"},
+	}
+	earlier := metav1.NewTime(time.Date(2026, 1, 2, 3, 4, 5, 0, time.UTC))
+	testFreightAlreadyVerified := &kargoapi.Freight{
+		ObjectMeta: metav1.ObjectMeta{Namespace: testProject.Name, Name: "fake-freight"},
 		Status: kargoapi.FreightStatus{
-			CurrentlyIn: map[string]kargoapi.CurrentStage{
-				stageName: {Since: &metav1.Time{Time: metav1.Now().Time}},
-			},
+			VerifiedIn: map[string]kargoapi.VerifiedStage{stageName: {VerifiedAt: &earlier}},
 		},
 	}
+	verifiedAt := metav1.NewTime(time.Date(2026, 11, 20, 10, 0, 0, 0, time.UTC))
 	url := "/v1beta1/projects/" + testProject.Name +
 		"/freight/" + testFreight.Name + "/status/stage/" + stageName
 
+	newlyVerifiedSender := &eventfake.Sender{}
+	reverifiedSender := &eventfake.Sender{}
+
+	getFreight := func(t *testing.T, c client.Client) *kargoapi.Freight {
+		got := &kargoapi.Freight{}
+		require.NoError(t, c.Get(t.Context(), client.ObjectKeyFromObject(testFreight), got))
+		return got
+	}
+
 	testRESTEndpoint(
 		t, &config.ServerConfig{},
-		http.MethodPatch, url,
+		http.MethodPost, url,
 		[]restTestCase{
 			{
+				name:          "Project not found",
+				body:          mustJSONBody(markFreightVerifiedInStageRequest{}),
+				clientBuilder: fake.NewClientBuilder(),
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
+					require.Equal(t, http.StatusNotFound, w.Code)
+				},
+			},
+			{
 				name:          "Freight not found",
+				body:          mustJSONBody(markFreightVerifiedInStageRequest{}),
 				clientBuilder: fake.NewClientBuilder().WithObjects(testProject),
 				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
 					require.Equal(t, http.StatusNotFound, w.Code)
 				},
 			},
 			{
-				name: "removes Stage from Freight currentlyIn",
+				name: "marks Freight verified without touching currentlyIn and emits an event",
+				body: mustJSONBody(markFreightVerifiedInStageRequest{VerifiedAt: &verifiedAt}),
 				clientBuilder: fake.NewClientBuilder().
 					WithObjects(testProject, testFreight).
 					WithStatusSubresource(testFreight),
+				serverSetup: func(_ *testing.T, s *server) {
+					s.sender = newlyVerifiedSender
+				},
 				assertions: func(t *testing.T, w *httptest.ResponseRecorder, c client.Client) {
 					require.Equal(t, http.StatusOK, w.Code)
 
-					freight := &kargoapi.Freight{}
-					require.NoError(t, c.Get(t.Context(), client.ObjectKeyFromObject(testFreight), freight))
-					require.False(t, freight.IsCurrentlyIn(stageName))
+					got := getFreight(t, c)
+					require.True(t, got.IsVerifiedIn(stageName))
+					require.False(t, got.IsCurrentlyIn(stageName))
+					require.True(t, got.Status.VerifiedIn[stageName].VerifiedAt.Equal(&verifiedAt))
+
+					require.Len(t, newlyVerifiedSender.Sent(), 1)
+					require.Equal(t,
+						string(kargoapi.EventTypeFreightVerifiedInStage),
+						newlyVerifiedSender.Sent()[0].Type(),
+					)
+				},
+			},
+			{
+				name: "keeps the original verification and emits nothing when already verified",
+				body: mustJSONBody(markFreightVerifiedInStageRequest{VerifiedAt: &verifiedAt}),
+				clientBuilder: fake.NewClientBuilder().
+					WithObjects(testProject, testFreightAlreadyVerified).
+					WithStatusSubresource(testFreightAlreadyVerified),
+				serverSetup: func(_ *testing.T, s *server) {
+					s.sender = reverifiedSender
+				},
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, c client.Client) {
+					require.Equal(t, http.StatusOK, w.Code)
+					require.True(t, getFreight(t, c).Status.VerifiedIn[stageName].VerifiedAt.Equal(&earlier))
+					require.Empty(t, reverifiedSender.Sent())
 				},
 			},
 		},

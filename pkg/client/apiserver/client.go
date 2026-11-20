@@ -494,25 +494,26 @@ func (c *Client) CreatePromotionRollout(
 	return rollout, nil
 }
 
-// MarkFreightInStage records, through the API server, that the named Freight is
-// currently in use by the Stage, and -- when verified is true -- that it has
-// been verified there at verifiedAt. It updates the Freight's status in place
-// of the Stage controller writing Freight status directly.
-func (c *Client) MarkFreightInStage(
+// MarkFreightCurrentlyInStage records, through the API server, that the named
+// Freight, which must have the given origin, is currently in use by the Stage.
+// The API server also records that any other Freight from that origin is no
+// longer in use by the Stage.
+func (c *Client) MarkFreightCurrentlyInStage(
 	ctx context.Context,
 	project string,
 	freight string,
+	origin kargoapi.FreightOrigin,
 	stage string,
-	verified bool,
-	verifiedAt time.Time,
 ) error {
-	body := kargogen.MarkFreightInStageRequest{Verified: &verified}
-	if verified && !verifiedAt.IsZero() {
-		at := verifiedAt.UTC().Format(time.RFC3339)
-		body.VerifiedAt = &at
+	body := kargogen.MarkFreightCurrentlyInStageRequest{
+		Freight: &freight,
+		Origin: &kargogen.FreightOrigin{
+			Kind: string(origin.Kind),
+			Name: origin.Name,
+		},
 	}
 	resp, err := c.api.CoreAPI.
-		MarkFreightInStage(ctx, project, freight, stage).
+		MarkFreightCurrentlyInStage(ctx, project, stage).
 		Body(body).
 		Execute()
 	if resp != nil {
@@ -520,31 +521,38 @@ func (c *Client) MarkFreightInStage(
 	}
 	if err != nil {
 		return fmt.Errorf(
-			"error marking Freight %q in Stage %q in Project %q: %w",
+			"error marking Freight %q as currently in Stage %q in Project %q: %w",
 			freight, stage, project, ResponseError(err, resp),
 		)
 	}
 	return nil
 }
 
-// UnmarkFreightInStage records, through the API server, that the named Freight
-// is no longer in use by the Stage, removing the Stage from the Freight's
-// status.
-func (c *Client) UnmarkFreightInStage(
+// MarkFreightVerifiedInStage records, through the API server, that the named
+// Freight has been verified in the Stage at verifiedAt. A zero verifiedAt lets
+// the API server use the time it handles the request.
+func (c *Client) MarkFreightVerifiedInStage(
 	ctx context.Context,
 	project string,
 	freight string,
 	stage string,
+	verifiedAt time.Time,
 ) error {
+	body := kargogen.MarkFreightVerifiedInStageRequest{}
+	if !verifiedAt.IsZero() {
+		at := verifiedAt.UTC().Format(time.RFC3339)
+		body.VerifiedAt = &at
+	}
 	resp, err := c.api.CoreAPI.
-		UnmarkFreightInStage(ctx, project, freight, stage).
+		MarkFreightVerifiedInStage(ctx, project, freight, stage).
+		Body(body).
 		Execute()
 	if resp != nil {
 		_ = resp.Body.Close()
 	}
 	if err != nil {
 		return fmt.Errorf(
-			"error unmarking Freight %q from Stage %q in Project %q: %w",
+			"error marking Freight %q as verified in Stage %q in Project %q: %w",
 			freight, stage, project, ResponseError(err, resp),
 		)
 	}
@@ -618,8 +626,7 @@ func (c *Client) CreateFreight(
 }
 
 // GetFreight returns, through the API server, the Freight with the given name,
-// or nil if there is no such Freight. The name is never matched against
-// Freight aliases.
+// or nil if there is no such Freight. Freight is matched explicitly by name.
 func (c *Client) GetFreight(
 	ctx context.Context,
 	project string,
@@ -652,9 +659,9 @@ func (c *Client) GetFreight(
 func (c *Client) DeleteFreight(
 	ctx context.Context,
 	project string,
-	nameOrAlias string,
+	freightNameOrAlias string,
 ) error {
-	resp, err := c.api.CoreAPI.DeleteFreight(ctx, project, nameOrAlias).Execute()
+	resp, err := c.api.CoreAPI.DeleteFreight(ctx, project, freightNameOrAlias).Execute()
 	if resp != nil {
 		_ = resp.Body.Close()
 	}
@@ -663,7 +670,7 @@ func (c *Client) DeleteFreight(
 			return nil
 		}
 		return fmt.Errorf(
-			"error deleting Freight %q in Project %q: %w", nameOrAlias, project, ResponseError(err, resp),
+			"error deleting Freight %q in Project %q: %w", freightNameOrAlias, project, ResponseError(err, resp),
 		)
 	}
 	return nil
@@ -675,10 +682,10 @@ func (c *Client) DeleteFreight(
 func (c *Client) PatchFreightAlias(
 	ctx context.Context,
 	project string,
-	nameOrAlias string,
+	freightNameOrAlias string,
 	newAlias string,
 ) error {
-	resp, err := c.api.CoreAPI.PatchFreightAlias(ctx, project, nameOrAlias).
+	resp, err := c.api.CoreAPI.PatchFreightAlias(ctx, project, freightNameOrAlias).
 		NewAlias(newAlias).
 		Execute()
 	if resp != nil {
@@ -687,7 +694,7 @@ func (c *Client) PatchFreightAlias(
 	if err != nil {
 		return fmt.Errorf(
 			"error setting alias of Freight %q in Project %q to %q: %w",
-			nameOrAlias, project, newAlias, ResponseError(err, resp),
+			freightNameOrAlias, project, newAlias, ResponseError(err, resp),
 		)
 	}
 	return nil
@@ -699,11 +706,11 @@ func (c *Client) PatchFreightAlias(
 func (c *Client) PatchFreightMetadata(
 	ctx context.Context,
 	project string,
-	nameOrAlias string,
+	freightName string,
 	metadata map[string]any,
 ) error {
 	body := kargogen.PatchFreightMetadataRequest{Metadata: metadata}
-	resp, err := c.api.CoreAPI.PatchFreightMetadata(ctx, project, nameOrAlias).
+	resp, err := c.api.CoreAPI.PatchFreightMetadata(ctx, project, freightName).
 		Body(body).
 		Execute()
 	if resp != nil {
@@ -712,14 +719,14 @@ func (c *Client) PatchFreightMetadata(
 	if err != nil {
 		return fmt.Errorf(
 			"error updating metadata of Freight %q in Project %q: %w",
-			nameOrAlias, project, ResponseError(err, resp),
+			freightName, project, ResponseError(err, resp),
 		)
 	}
 	return nil
 }
 
 // ListFreightReferencingStage returns, through the API server, the Freight whose
-// status records the named Stage in its verifiedIn or approvedFor map.
+// status records the named Stage in its currentlyIn, verifiedIn or approvedFor map.
 func (c *Client) ListFreightReferencingStage(
 	ctx context.Context,
 	project string,

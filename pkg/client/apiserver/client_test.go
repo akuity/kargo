@@ -1128,6 +1128,100 @@ func TestClientPatchFreightMetadata(t *testing.T) {
 	})
 }
 
+func TestClientMarkFreightCurrentlyInStage(t *testing.T) {
+	t.Parallel()
+
+	origin := kargoapi.FreightOrigin{Kind: kargoapi.FreightOriginKindWarehouse, Name: "wh"}
+
+	var gotStage, gotBody string
+	mux := http.NewServeMux()
+	mux.HandleFunc(
+		"POST /v1beta1/projects/{project}/stages/{stage}/freight",
+		func(w http.ResponseWriter, r *http.Request) {
+			gotStage = r.PathValue("stage")
+			raw, _ := io.ReadAll(r.Body)
+			gotBody = string(raw)
+			if gotStage == "missing" {
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(http.StatusNotFound)
+				_ = json.NewEncoder(w).Encode(map[string]string{"error": "freight not found"})
+				return
+			}
+			w.WriteHeader(http.StatusOK)
+		},
+	)
+	server := httptest.NewServer(mux)
+	t.Cleanup(server.Close)
+
+	cp := newControlPlane(t, http.StatusOK)
+	c, err := New(t.Context(), validConfig(server.URL), cp.config())
+	require.NoError(t, err)
+
+	t.Run("sends the Freight for the Stage", func(t *testing.T) {
+		err := c.MarkFreightCurrentlyInStage(t.Context(), "demo", "fr-1", origin, "test")
+		require.NoError(t, err)
+		require.Equal(t, "test", gotStage)
+		require.JSONEq(
+			t,
+			`{"freight":"fr-1","origin":{"kind":"Warehouse","name":"wh"}}`,
+			gotBody,
+		)
+	})
+	t.Run("surfaces the server's error", func(t *testing.T) {
+		err := c.MarkFreightCurrentlyInStage(t.Context(), "demo", "fr-1", origin, "missing")
+		require.Error(t, err)
+		require.ErrorContains(t, err, "freight not found")
+	})
+}
+
+func TestClientMarkFreightVerifiedInStage(t *testing.T) {
+	t.Parallel()
+
+	var gotFreight, gotStage, gotBody string
+	mux := http.NewServeMux()
+	mux.HandleFunc(
+		"POST /v1beta1/projects/{project}/freight/{freightNameOrAlias}/status/stage/{stage}",
+		func(w http.ResponseWriter, r *http.Request) {
+			gotFreight = r.PathValue("freightNameOrAlias")
+			gotStage = r.PathValue("stage")
+			raw, _ := io.ReadAll(r.Body)
+			gotBody = string(raw)
+			if gotFreight == "missing" {
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(http.StatusNotFound)
+				_ = json.NewEncoder(w).Encode(map[string]string{"error": "freight not found"})
+				return
+			}
+			w.WriteHeader(http.StatusOK)
+		},
+	)
+	server := httptest.NewServer(mux)
+	t.Cleanup(server.Close)
+
+	cp := newControlPlane(t, http.StatusOK)
+	c, err := New(t.Context(), validConfig(server.URL), cp.config())
+	require.NoError(t, err)
+
+	t.Run("sends the verification time", func(t *testing.T) {
+		verifiedAt := time.Date(2026, 11, 20, 10, 0, 0, 0, time.UTC)
+		err := c.MarkFreightVerifiedInStage(t.Context(), "demo", "fr-1", "test", verifiedAt)
+		require.NoError(t, err)
+		require.Equal(t, "fr-1", gotFreight)
+		require.Equal(t, "test", gotStage)
+		require.JSONEq(t, `{"verifiedAt":"2026-11-20T10:00:00Z"}`, gotBody)
+	})
+	t.Run("omits a zero verification time", func(t *testing.T) {
+		err := c.MarkFreightVerifiedInStage(t.Context(), "demo", "fr-1", "test", time.Time{})
+		require.NoError(t, err)
+		require.JSONEq(t, `{}`, gotBody)
+	})
+	t.Run("surfaces the server's error", func(t *testing.T) {
+		err := c.MarkFreightVerifiedInStage(t.Context(), "demo", "missing", "test", time.Time{})
+		require.Error(t, err)
+		require.ErrorContains(t, err, "freight not found")
+	})
+}
+
 func TestClientCreateFreight(t *testing.T) {
 	t.Parallel()
 

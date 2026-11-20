@@ -4,10 +4,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
+	"strings"
 	"time"
 
 	"github.com/nats-io/nats.go"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	kerrors "k8s.io/apimachinery/pkg/util/errors"
 	"k8s.io/apimachinery/pkg/util/wait"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -295,14 +298,6 @@ func (r *ControlFlowStageReconciler) reconcile(
 		return newStatus, err
 	}
 
-	err = UnmarkUnusedFreight(ctx, r.freightClient, stage, func(fr kargoapi.Freight) bool {
-		for _, available := range freight {
-			if available.Name == fr.Name {
-				return false
-			}
-		}
-		return true
-	})
 	if err != nil {
 		conditions.Set(
 			&newStatus,
@@ -346,6 +341,26 @@ func (r *ControlFlowStageReconciler) reconcile(
 			)
 			return newStatus, err
 		}
+
+		err = r.markFreightAsCurrentForStage(ctx, stage, freight)
+		if err != nil {
+			conditions.Set(
+				&newStatus,
+				&metav1.Condition{
+					Type:    kargoapi.ConditionTypeReconciling,
+					Status:  metav1.ConditionTrue,
+					Reason:  "RetryAfterMarkCurrentFailed",
+					Message: err.Error(),
+				},
+				&metav1.Condition{
+					Type:    kargoapi.ConditionTypeReady,
+					Status:  metav1.ConditionFalse,
+					Reason:  "FreightMarkCurrentFailed",
+					Message: err.Error(),
+				},
+			)
+			return newStatus, err
+		}
 	}
 
 	// Mark the Stage as Ready and remove any reconciling condition.
@@ -357,6 +372,52 @@ func (r *ControlFlowStageReconciler) reconcile(
 	conditions.Delete(&newStatus, kargoapi.ConditionTypeReconciling)
 
 	return newStatus, nil
+}
+
+// markFreightAsCurrentForStage marks one freight per origin as currentlyIn for stage.
+// All other freights will be unmarked from that stage.
+// This is necessary for MatchUpstream to work with control flow stages.
+func (r *ControlFlowStageReconciler) markFreightAsCurrentForStage(
+	ctx context.Context,
+	stage *kargoapi.Stage,
+	freight []kargoapi.Freight,
+) error {
+	freightByOrigin := make(map[string][]kargoapi.Freight)
+	for _, f := range freight {
+		origin := f.Origin.String()
+		freightByOrigin[origin] = append(freightByOrigin[origin], f)
+	}
+
+	var errs []error
+	for _, freight := range freightByOrigin {
+		// Select the newest available Freight for each origin. This uses the same
+		// ordering as the upstream matching in SelectAutoPromotionCandidates, so both
+		// agree on which Freight is "current" for an origin.
+
+		slices.SortFunc(freight, func(lhs, rhs kargoapi.Freight) int {
+			if cmp := rhs.EffectiveDiscoveredAt().Compare(lhs.EffectiveDiscoveredAt()); cmp != 0 {
+				return cmp
+			}
+			return strings.Compare(rhs.Name, lhs.Name)
+		})
+		current := freight[0]
+
+		err := r.freightClient.MarkFreightCurrentlyInStage(
+			ctx,
+			stage.Namespace,
+			current.Name,
+			current.Origin,
+			stage.Name)
+
+		if err != nil {
+			errs = append(errs, fmt.Errorf(
+				"error adding Stage %q to currentlyIn status of Freight %q in namespace %q: %w",
+				stage.Name, current.Name, current.Namespace, err,
+			))
+		}
+	}
+
+	return kerrors.NewAggregate(errs)
 }
 
 // listAvailableFreight lists the Freight available to the Stage, reading through
@@ -434,12 +495,8 @@ func (r *ControlFlowStageReconciler) markFreightVerifiedForStage(
 			continue
 		}
 
-		// Mark the Freight as verified in the Stage through the API server rather
-		// than writing Freight status directly. verified=true records it in both
-		// currentlyIn and verifiedIn and makes the API server emit the
-		// corresponding events.
-		if err := r.freightClient.MarkFreightInStage(
-			ctx, stage.Namespace, f.Name, stage.Name, true, finishTime,
+		if err := r.freightClient.MarkFreightVerifiedInStage(
+			ctx, stage.Namespace, f.Name, stage.Name, finishTime,
 		); err != nil {
 			// Freight deleted out from under us is not a failure; it simply no
 			// longer needs verifying.
