@@ -8,12 +8,13 @@ import { Round, roundPath } from '@ui/features/stage/utils/promotion-rollout';
 import { queuedRoundWords } from './summary';
 
 /**
- * QueuedRound names the round waiting to start on a Stage, on one line above
- * everything the tab says about the Targets.
+ * QueuedRound says, in one short line above everything the tab says about the
+ * Targets, that a round is waiting to start on the Stage.
  *
  * A queued round has attempted no Target, so the tiles and the squares go on
- * describing the last round that ran. This line is what tells a reader that
- * they do, and what is coming next.
+ * describing the last round that ran. This line stands where a Pending row
+ * stands in a classic Stage's list of Promotions: a status, with the round one
+ * click away, and no more said about it than that.
  */
 export const QueuedRound = ({
   project,
@@ -32,8 +33,7 @@ export const QueuedRound = ({
   return (
     <Typography.Text type='secondary' className='text-xs'>
       <FontAwesomeIcon icon={faHourglassStart} className='mr-2' />
-      {subject} is queued and has not started. The Targets below are shown as the last round to run
-      left them.
+      {subject} is pending
       {link && (
         <>
           {' · '}

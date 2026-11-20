@@ -6,7 +6,6 @@ import {
   faCircleUp,
   faGear,
   faHistory,
-  faHourglassStart,
   faPlay
 } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
@@ -121,12 +120,13 @@ export const StageDetails = ({ stage }: { stage: Stage }) => {
     }
   }, [openRound]);
 
-  // When a target-aware Stage's latest round has not fanned out, say why
-  // once, above the tabs, so the Targets and Promotions tabs both sit under
-  // the explanation rather than each hinting at it. A round that is only
-  // queued behind the Stage is news, not trouble, and is drawn as a notice.
+  // When a target-aware Stage's latest round cannot progress, say so once,
+  // above the tabs, so the Targets and Promotions tabs both sit under the
+  // explanation rather than each hinting at it. A round that is only queued
+  // is not in trouble and gets no such notice, as a Pending Promotion to a
+  // classic Stage gets none: it shows as Pending where rounds are listed.
   const { round, queued } = useStageRounds(projectName || '', stage);
-  const block = roundBlock(queued ?? round, stage);
+  const block = roundBlock(queued ?? round);
 
   useEffect(() => {
     if (activeTab === TabsTypes.LIVE_MANIFEST) {
@@ -194,13 +194,9 @@ export const StageDetails = ({ stage }: { stage: Stage }) => {
             <AutoPromotionHolds stage={stage} />
             {block && (
               <Alert
-                type={block.severity}
+                type='warning'
                 showIcon
-                icon={
-                  <FontAwesomeIcon
-                    icon={block.severity === 'info' ? faHourglassStart : faCircleExclamation}
-                  />
-                }
+                icon={<FontAwesomeIcon icon={faCircleExclamation} />}
                 title={block.title}
                 description={block.description}
               />

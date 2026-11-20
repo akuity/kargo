@@ -13,7 +13,7 @@ import {
   targetRows,
   worstState
 } from './target-rows';
-import { fleetStage, forStage, round, stage, target } from './test-fixtures';
+import { awaitingStage, fleetStage, forStage, round, stage, target } from './test-fixtures';
 
 describe('worstState()', () => {
   test('takes the worst of several Stages', () => {
@@ -209,6 +209,20 @@ describe('targetRows()', () => {
       ]
     } as Partial<PromotionRequest['status']>);
     expect(targetRows([t], [us], { 'us-stage': blocked })[0].state).toBe('Behind');
+  });
+
+  test('a round waiting for its Stage to let it start leaves its Targets alone', () => {
+    const t = target(
+      't',
+      { region: 'us' },
+      { status: { stages: { 'us-stage': forStage('abc', 'Healthy') } } }
+    );
+    const waiting = round('us-stage', ['t'], awaitingStage('us-stage'));
+    const [row] = targetRows([t], [us], { 'us-stage': waiting });
+    // It names the Target and has attempted nothing, which is not the same
+    // as a promotion to the Target being under way.
+    expect(row.stages[0].phase).toBeUndefined();
+    expect(row.state).toBe('Healthy');
   });
 
   test('a Target the round never named is left alone', () => {

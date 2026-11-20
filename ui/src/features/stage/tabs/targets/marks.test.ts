@@ -10,7 +10,7 @@ import {
   round,
   target
 } from '../../../project/targets/model/test-fixtures';
-import { roundBlock } from '../../utils/promotion-request';
+import { isRoundAwaitingStage, roundBlock } from '../../utils/promotion-request';
 import { rolloutStageRounds } from '../../utils/promotion-rollout';
 
 import {
@@ -107,7 +107,8 @@ describe('promotionMarking()', () => {
     });
     // The grid is drawn as blocked only when the round it reads is, and the
     // round it reads is the one that ran, not the one still queued.
-    expect(roundBlock(queued)?.severity).toBe('info');
+    expect(isRoundAwaitingStage(queued)).toBe(true);
+    expect(roundBlock(queued)).toBeUndefined();
     expect(roundBlock(lastRun)).toBeUndefined();
     const fleet = rows(
       [governed('won', stageStatus('current', undefined, 'freight-new')), governed('lost')],

@@ -9,6 +9,7 @@ import {
   isPromotionRequestFailed,
   isPromotionRequestPhaseTerminal,
   isPromotionRequestRetryable,
+  isRoundAwaitingStage,
   isRoundQueued,
   promotionRequestCompareFn,
   roundBlock,
@@ -223,68 +224,24 @@ describe('roundBlock()', () => {
     const block = roundBlock(
       blocked('EnterpriseOnlyFeature', 'PromotionRequests are a Kargo Enterprise-only feature')
     );
-    expect(block?.severity).toBe('warning');
     expect(block?.title).toBe('Fleet management is a Kargo Enterprise feature');
     expect(block?.description).toContain('does not support');
   });
 
   test('passes any other reason through under a general heading', () => {
     const block = roundBlock(blocked('TargetsMissing', 'Target us-east-1 not found'));
-    expect(block?.severity).toBe('warning');
     expect(block?.title).toBe('Promotion to this Stage cannot progress');
     expect(block?.description).toBe('Target us-east-1 not found');
   });
 
-  describe('a round waiting for its Stage to let it start', () => {
+  test('a round waiting for its Stage to let it start is not blocked', () => {
+    // Its Ready condition is False for as long as it waits, with a message,
+    // which is all it would take to be read as a round that cannot progress.
     const waiting = blocked(
       'AwaitingStage',
       'Waiting for Stage "prod" to let this PromotionRollout start'
     );
-    const stageVerifying = (...phases: string[]) =>
-      ({
-        metadata: { name: 'prod' },
-        status: {
-          freightHistory: [
-            { id: 'current', verificationHistory: phases.map((phase) => ({ phase })) },
-            { id: 'previous', verificationHistory: [{ phase: 'Running' }] }
-          ]
-        }
-      }) as Stage;
-
-    test('is a notice that it is queued, not a round that cannot progress', () => {
-      const block = roundBlock(waiting);
-      expect(block?.severity).toBe('info');
-      expect(block?.title).toBe('Next promotion queued');
-      expect(block?.title).not.toBe('Promotion to this Stage cannot progress');
-      expect(block?.description).toBe(
-        'The next promotion to this Stage is queued and will start once the Stage lets it.'
-      );
-      // The condition's own message is written for operators and is not shown.
-      expect(block?.description).not.toContain('PromotionRollout');
-    });
-
-    test.each(['Pending', 'Running'])(
-      "says it is waiting for a %s verification of the Stage's current Freight",
-      (phase) => {
-        const block = roundBlock(waiting, stageVerifying(phase));
-        expect(block?.severity).toBe('info');
-        expect(block?.description).toContain('waiting for verification');
-      }
-    );
-
-    test('does not blame a verification that has finished, or one of older Freight', () => {
-      // The Stage's previous Freight still has a verification on record as
-      // Running, which says nothing of the Freight the Stage is on now.
-      expect(roundBlock(waiting, stageVerifying('Successful'))?.description).not.toContain(
-        'verification'
-      );
-      expect(roundBlock(waiting, stageVerifying())?.description).not.toContain('verification');
-    });
-
-    test('needs no message on the condition to be recognized', () => {
-      const silent = blocked('AwaitingStage', '');
-      expect(roundBlock(silent)?.severity).toBe('info');
-    });
+    expect(roundBlock(waiting)).toBeUndefined();
   });
 
   test('is not a block once the round has fanned out, even with failed children', () => {
@@ -383,6 +340,42 @@ describe('currentRounds()', () => {
 
   test('a Stage with no name is left out', () => {
     expect(currentRounds([{} as Stage], requests)).toEqual({});
+  });
+});
+
+describe('isRoundAwaitingStage()', () => {
+  const ready = (status: string, reason: string) => [
+    { type: 'Ready', status, reason, message: 'm', lastTransitionTime: '2026-11-20T00:00:00Z' }
+  ];
+
+  test('reads the reason its Ready condition is False for', () => {
+    expect(
+      isRoundAwaitingStage(request({ status: { conditions: ready('False', 'AwaitingStage') } }))
+    ).toBe(true);
+  });
+
+  test('any other reason is not a wait for the Stage', () => {
+    expect(
+      isRoundAwaitingStage(request({ status: { conditions: ready('False', 'TargetsMissing') } }))
+    ).toBe(false);
+    expect(
+      isRoundAwaitingStage(request({ status: { conditions: ready('True', 'AwaitingStage') } }))
+    ).toBe(false);
+    expect(isRoundAwaitingStage(request({}))).toBe(false);
+    expect(isRoundAwaitingStage(undefined)).toBe(false);
+  });
+
+  test('a round that has attempted a Target is no longer waiting', () => {
+    expect(
+      isRoundAwaitingStage(
+        request({
+          status: {
+            conditions: ready('False', 'AwaitingStage'),
+            targets: [{ name: 'eu', promotion: 'p' }]
+          }
+        })
+      )
+    ).toBe(false);
   });
 });
 
