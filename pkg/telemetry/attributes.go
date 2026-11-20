@@ -45,6 +45,16 @@ const (
 	// made a new Freight is recorded.
 	FreightCreatedKey = attribute.Key("kargo.freight.created")
 
+	// KindKey is the attribute under which the kind of a Kubernetes object a
+	// span concerns is recorded.
+	KindKey = attribute.Key("kargo.object.kind")
+	// NameKey is the attribute under which the name of the Kubernetes object
+	// a span concerns is recorded.
+	NameKey = attribute.Key("kargo.object.name")
+	// NamespaceKey is the attribute under which the namespace of a Kubernetes
+	// object that is not a Kargo object is recorded (OTel semconv).
+	NamespaceKey = semconv.K8SNamespaceNameKey
+
 	// SubscriptionsKey is the attribute under which the number of a
 	// Warehouse's subscriptions is recorded.
 	SubscriptionsKey = attribute.Key("kargo.subscriptions")
