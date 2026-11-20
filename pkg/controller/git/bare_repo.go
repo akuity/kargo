@@ -144,14 +144,9 @@ func (b *bareRepo) clone(ctx context.Context, opts *BareCloneOptions) error {
 		opts = &BareCloneOptions{}
 	}
 	if len(opts.Branches) > 0 {
-		return b.cloneSelectBranches(
-			ctx,
-			opts.Branches,
-			opts.Blobless,
-			opts.Depth,
-		)
+		return b.cloneSelectBranches(ctx, opts)
 	}
-	return b.cloneAllBranches(ctx, opts.Blobless, opts.Depth)
+	return b.cloneAllBranches(ctx, opts)
 }
 
 // cloneAllBranches produces a bare repository containing all of the remote
@@ -162,17 +157,19 @@ func (b *bareRepo) clone(ctx context.Context, opts *BareCloneOptions) error {
 //	git clone --bare [--filter=blob:none] [--depth=<depth> --no-single-branch] <url> <dir>
 func (b *bareRepo) cloneAllBranches(
 	ctx context.Context,
-	blobless bool,
-	depth uint,
+	opts *BareCloneOptions,
 ) error {
+	if opts == nil {
+		opts = &BareCloneOptions{}
+	}
 	args := []string{"clone", "--bare"}
-	if blobless {
+	if opts.Blobless {
 		args = append(args, "--filter", "blob:none")
 	}
-	if depth > 0 {
+	if opts.Depth > 0 {
 		// --depth implies --single-branch, which would fetch only the remote's
 		// default branch, thus --no-single-branch overrides it.
-		args = append(args, "--depth", fmt.Sprint(depth), "--no-single-branch")
+		args = append(args, "--depth", fmt.Sprint(opts.Depth), "--no-single-branch")
 	}
 	args = append(args, b.url, b.dir)
 	cmd := b.buildGitCommand(ctx, args...)
@@ -195,13 +192,14 @@ func (b *bareRepo) cloneAllBranches(
 //	git fetch [--filter=blob:none] [--depth=<depth>] origin +<ref>:<ref>...
 func (b *bareRepo) cloneSelectBranches(
 	ctx context.Context,
-	branches []string,
-	blobless bool,
-	depth uint,
+	opts *BareCloneOptions,
 ) error {
+	if opts == nil {
+		opts = &BareCloneOptions{}
+	}
 	// Resolve branch names against the remote before initializing the repo so
 	// we can detect the remote's object format (SHA-1 vs SHA-256).
-	refs, objectFormat, err := b.findRemoteBranchRefs(ctx, branches)
+	refs, objectFormat, err := b.findRemoteBranchRefs(ctx, opts.Branches)
 	if err != nil {
 		return err
 	}
@@ -211,7 +209,7 @@ func (b *bareRepo) cloneSelectBranches(
 	// protocol capabilities without transferring any refs.
 	if objectFormat == "" {
 		args := []string{"clone", "--bare", "--single-branch"}
-		if blobless {
+		if opts.Blobless {
 			args = append(args, "--filter", "blob:none")
 		}
 		args = append(args, b.url, b.dir)
@@ -220,7 +218,7 @@ func (b *bareRepo) cloneSelectBranches(
 		if _, err = libExec.Exec(cmd); err != nil {
 			return fmt.Errorf("error cloning repo %q into %q: %w", b.url, b.dir, err)
 		}
-		if blobless {
+		if opts.Blobless {
 			return b.configureBloblessPartialClone(ctx)
 		}
 		return nil
@@ -246,18 +244,18 @@ func (b *bareRepo) cloneSelectBranches(
 	}
 
 	if len(refs) == 0 {
-		if blobless {
+		if opts.Blobless {
 			return b.configureBloblessPartialClone(ctx)
 		}
 		return nil
 	}
 
 	args := []string{"fetch"}
-	if blobless {
+	if opts.Blobless {
 		args = append(args, "--filter", "blob:none")
 	}
-	if depth > 0 {
-		args = append(args, "--depth", fmt.Sprint(depth))
+	if opts.Depth > 0 {
+		args = append(args, "--depth", fmt.Sprint(opts.Depth))
 	}
 	args = append(args, "origin")
 	for _, ref := range refs {
@@ -267,7 +265,7 @@ func (b *bareRepo) cloneSelectBranches(
 	if _, err = libExec.Exec(b.buildGitCommand(ctx, args...)); err != nil {
 		return fmt.Errorf(
 			"error fetching branches %v of repo %q into %q: %w",
-			branches, b.url, b.dir, err,
+			opts.Branches, b.url, b.dir, err,
 		)
 	}
 	return nil
