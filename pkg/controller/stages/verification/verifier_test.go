@@ -20,6 +20,7 @@ import (
 
 	rolloutsapi "github.com/akuity/kargo/api/stubs/rollouts/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/pkg/conditions"
 	"github.com/akuity/kargo/pkg/credentials"
 	kargoEvent "github.com/akuity/kargo/pkg/event"
 	fakeevent "github.com/akuity/kargo/pkg/event/fake"
@@ -1940,4 +1941,66 @@ func requireOneSentEvent(
 	require.NoError(t, err)
 	require.Equal(t, expectedSubject, sent[0].Subject())
 	return sent[0]
+}
+
+func TestVerifier_VerifyStageFreight_unhealthyBeforeVerification(t *testing.T) {
+	testCases := []struct {
+		name   string
+		health *kargoapi.Health
+		assert func(*testing.T, kargoapi.StageStatus)
+	}{
+		{
+			name:   "no health yet leaves verification pending",
+			health: nil,
+			assert: func(t *testing.T, s kargoapi.StageStatus) {
+				require.Nil(t, conditions.Get(&s, kargoapi.ConditionTypeVerified))
+			},
+		},
+		{
+			name: "unhealthy stage fails verification",
+			health: &kargoapi.Health{
+				Status: kargoapi.HealthStateUnhealthy,
+			},
+			assert: func(t *testing.T, s kargoapi.StageStatus) {
+				cond := conditions.Get(&s, kargoapi.ConditionTypeVerified)
+				require.NotNil(t, cond)
+				require.Equal(t, metav1.ConditionFalse, cond.Status)
+				require.Equal(t, "StageUnhealthy", cond.Reason)
+			},
+		},
+		{
+			name: "progressing stage keeps verification pending",
+			health: &kargoapi.Health{
+				Status: kargoapi.HealthStateProgressing,
+			},
+			assert: func(t *testing.T, s kargoapi.StageStatus) {
+				require.Nil(t, conditions.Get(&s, kargoapi.ConditionTypeVerified))
+			},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			stage := &kargoapi.Stage{
+				Status: kargoapi.StageStatus{
+					Health: testCase.health,
+					FreightHistory: kargoapi.FreightHistory{
+						{
+							Freight: map[string]kargoapi.FreightReference{
+								"fake-warehouse": {Name: "fake-freight"},
+							},
+						},
+					},
+				},
+			}
+			ver := NewVerifier("", nil, nil, nil, nil)
+			newStatus, err := ver.VerifyStageFreight(
+				context.Background(),
+				stage,
+				time.Now(),
+				time.Now,
+			)
+			require.NoError(t, err)
+			testCase.assert(t, newStatus)
+		})
+	}
 }

@@ -215,6 +215,19 @@ func (ver Verifier) VerifyStageFreight(
 	// verify the Freight.
 	if stage.Status.Health == nil || stage.Status.Health.Status != kargoapi.HealthStateHealthy {
 		logger.Debug("Stage has not passed health checks: skipping verification")
+		// If the Stage has become unhealthy, verification can never proceed
+		// from here. Mark the Freight as failed verification rather than
+		// leaving the Verified condition Unknown, which would show the Stage
+		// as "Verifying" indefinitely.
+		if stage.Status.Health != nil && stage.Status.Health.Status == kargoapi.HealthStateUnhealthy {
+			conditions.Set(&newStatus, &metav1.Condition{
+				Type:               kargoapi.ConditionTypeVerified,
+				Status:             metav1.ConditionFalse,
+				Reason:             "StageUnhealthy",
+				Message:            "Stage is unhealthy: verification cannot be performed",
+				ObservedGeneration: stage.Generation,
+			})
+		}
 		return newStatus, nil
 	}
 
