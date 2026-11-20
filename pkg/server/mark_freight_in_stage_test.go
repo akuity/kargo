@@ -258,7 +258,7 @@ func Test_server_markFreightVerifiedInStage(t *testing.T) {
 	}
 	verifiedAt := metav1.NewTime(time.Date(2026, 11, 20, 10, 0, 0, 0, time.UTC))
 	url := "/v1beta1/projects/" + testProject.Name +
-		"/freight/" + testFreight.Name + "/status/stage/" + stageName
+		"/internal/freight/" + testFreight.Name + "/status/stage/" + stageName
 
 	newlyVerifiedSender := &eventfake.Sender{}
 	reverifiedSender := &eventfake.Sender{}
@@ -349,7 +349,7 @@ func Test_server_deleteFreightStageStatus(t *testing.T) {
 		},
 	}
 	url := "/v1beta1/projects/" + testProject.Name +
-		"/freight/" + testFreight.Name + "/status/stage/" + stageName
+		"/internal/freight/" + testFreight.Name + "/status/stage/" + stageName
 
 	testRESTEndpoint(
 		t, &config.ServerConfig{},

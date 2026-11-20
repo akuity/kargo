@@ -285,9 +285,9 @@ func (s *server) setupRESTRouter(ctx context.Context) (*gin.Engine, error) {
 			project.DELETE("/freight/:freight-name-or-alias", s.deleteFreight)
 
 			// Freight internal APIs, only addressible by name
-			project.PATCH("/freight/:freight/metadata", s.patchFreightMetadata)
-			project.POST("/freight/:freight/status/stage/:stage", s.markFreightVerifiedInStage)
-			project.DELETE("/freight/:freight/status/stage/:stage", s.deleteFreightStageStatus)
+			project.PATCH("/internal/freight/:freight/metadata", s.patchFreightMetadata)
+			project.POST("/internal/freight/:freight/status/stage/:stage", s.markFreightVerifiedInStage)
+			project.DELETE("/internal/freight/:freight/status/stage/:stage", s.deleteFreightStageStatus)
 
 			// Promotions
 			project.GET("/promotions", s.listPromotions)

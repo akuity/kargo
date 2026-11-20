@@ -65,6 +65,13 @@ type webhook struct {
 		types.NamespacedName,
 	) (*kargoapi.Stage, error)
 
+	getStageNoCacheFn func(
+		context.Context,
+		client.ObjectKey,
+		client.Object,
+		...client.GetOption,
+	) error
+
 	validateProjectFn func(
 		context.Context,
 		client.Client,
@@ -113,6 +120,7 @@ func SetupWebhookWithManager(
 		sender,
 	)
 	w.apiReader = mgr.GetAPIReader()
+	w.getStageNoCacheFn = w.apiReader.Get
 	return libWebhook.SetupValidatingAndDefaultingWebhook(mgr, &kargoapi.Promotion{}, w)
 }
 
@@ -622,7 +630,7 @@ func (w *webhook) ValidateCreate(
 	}
 
 	// Refresh potentially cached stage from the api server
-	if err := w.apiReader.Get(ctx, types.NamespacedName{
+	if err := w.getStageNoCacheFn(ctx, types.NamespacedName{
 		Namespace: promo.Namespace,
 		Name:      promo.Spec.Stage,
 	}, stage); err != nil {

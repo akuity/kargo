@@ -1089,9 +1089,9 @@ func TestClientPatchFreightMetadata(t *testing.T) {
 	var gotFreight, gotBody string
 	mux := http.NewServeMux()
 	mux.HandleFunc(
-		"PATCH /v1beta1/projects/{project}/freight/{freightNameOrAlias}/metadata",
+		"PATCH /v1beta1/projects/{project}/internal/freight/{freightName}/metadata",
 		func(w http.ResponseWriter, r *http.Request) {
-			gotFreight = r.PathValue("freightNameOrAlias")
+			gotFreight = r.PathValue("freightName")
 			if gotFreight == "missing" {
 				w.Header().Set("Content-Type", "application/json")
 				w.WriteHeader(http.StatusNotFound)
@@ -1180,9 +1180,9 @@ func TestClientMarkFreightVerifiedInStage(t *testing.T) {
 	var gotFreight, gotStage, gotBody string
 	mux := http.NewServeMux()
 	mux.HandleFunc(
-		"POST /v1beta1/projects/{project}/freight/{freightNameOrAlias}/status/stage/{stage}",
+		"POST /v1beta1/projects/{project}/internal/freight/{freightName}/status/stage/{stage}",
 		func(w http.ResponseWriter, r *http.Request) {
-			gotFreight = r.PathValue("freightNameOrAlias")
+			gotFreight = r.PathValue("freightName")
 			gotStage = r.PathValue("stage")
 			raw, _ := io.ReadAll(r.Body)
 			gotBody = string(raw)

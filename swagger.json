@@ -1259,162 +1259,6 @@
         ]
       }
     },
-    "/v1beta1/projects/{project}/freight/{freight}/metadata": {
-      "patch": {
-        "description": "Upsert keys in the status metadata of a Freight resource. A value\nalready recorded under a key named in the request is\noverwritten; other keys are left as they are.",
-        "consumes": [
-          "application/json"
-        ],
-        "produces": [
-          "application/json"
-        ],
-        "tags": [
-          "Core",
-          "Project-Level"
-        ],
-        "summary": "Update a Freight resource's status metadata",
-        "operationId": "PatchFreightMetadata",
-        "parameters": [
-          {
-            "type": "string",
-            "description": "Project name",
-            "name": "project",
-            "in": "path",
-            "required": true
-          },
-          {
-            "type": "string",
-            "description": "Freight name",
-            "name": "freight",
-            "in": "path",
-            "required": true
-          },
-          {
-            "description": "Metadata",
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/PatchFreightMetadataRequest"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Success"
-          }
-        },
-        "security": [
-          {
-            "BearerAuth": []
-          }
-        ]
-      }
-    },
-    "/v1beta1/projects/{project}/freight/{freight}/status/stage/{stage}": {
-      "post": {
-        "description": "Record that the named Freight has been verified in the Stage,\nadding the Stage to the Freight's verifiedIn status.",
-        "consumes": [
-          "application/json"
-        ],
-        "produces": [
-          "application/json"
-        ],
-        "tags": [
-          "Core",
-          "Project-Level"
-        ],
-        "summary": "Mark Freight as verified in a Stage",
-        "operationId": "MarkFreightVerifiedInStage",
-        "parameters": [
-          {
-            "type": "string",
-            "description": "Project name",
-            "name": "project",
-            "in": "path",
-            "required": true
-          },
-          {
-            "type": "string",
-            "description": "Freight name",
-            "name": "freight",
-            "in": "path",
-            "required": true
-          },
-          {
-            "type": "string",
-            "description": "Stage name",
-            "name": "stage",
-            "in": "path",
-            "required": true
-          },
-          {
-            "description": "Verification",
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/MarkFreightVerifiedInStageRequest"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Success"
-          }
-        },
-        "security": [
-          {
-            "BearerAuth": []
-          }
-        ]
-      },
-      "delete": {
-        "description": "Remove the named Stage from every one of the Freight's status\nmaps -- currentlyIn, verifiedIn, and approvedFor. This is used by\nthe Stage controller to clean up Freight status when a Stage is\ndeleted, in place of writing Freight status directly.",
-        "produces": [
-          "application/json"
-        ],
-        "tags": [
-          "Core",
-          "Project-Level"
-        ],
-        "summary": "Remove all of a Stage's entries from a Freight's status",
-        "operationId": "DeleteFreightStageStatus",
-        "parameters": [
-          {
-            "type": "string",
-            "description": "Project name",
-            "name": "project",
-            "in": "path",
-            "required": true
-          },
-          {
-            "type": "string",
-            "description": "Freight name",
-            "name": "freight",
-            "in": "path",
-            "required": true
-          },
-          {
-            "type": "string",
-            "description": "Stage name",
-            "name": "stage",
-            "in": "path",
-            "required": true
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Success"
-          }
-        },
-        "security": [
-          {
-            "BearerAuth": []
-          }
-        ]
-      }
-    },
     "/v1beta1/projects/{project}/generic-credentials": {
       "get": {
         "description": "List project-level generic credentials. Returns a Kubernetes\nSecretList resource containing heavily redacted Secrets.",
@@ -1717,6 +1561,162 @@
                 "$ref": "#/definitions/TagMap"
               }
             }
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      }
+    },
+    "/v1beta1/projects/{project}/internal/freight/{freight}/metadata": {
+      "patch": {
+        "description": "Upsert keys in the status metadata of a Freight resource. A value\nalready recorded under a key named in the request is\noverwritten; other keys are left as they are.",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "Core",
+          "Project-Level"
+        ],
+        "summary": "Update a Freight resource's status metadata",
+        "operationId": "PatchFreightMetadata",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "Project name",
+            "name": "project",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "description": "Freight name",
+            "name": "freight",
+            "in": "path",
+            "required": true
+          },
+          {
+            "description": "Metadata",
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/PatchFreightMetadataRequest"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      }
+    },
+    "/v1beta1/projects/{project}/internal/freight/{freight}/status/stage/{stage}": {
+      "post": {
+        "description": "Record that the named Freight has been verified in the Stage,\nadding the Stage to the Freight's verifiedIn status.",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "Core",
+          "Project-Level"
+        ],
+        "summary": "Mark Freight as verified in a Stage",
+        "operationId": "MarkFreightVerifiedInStage",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "Project name",
+            "name": "project",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "description": "Freight name",
+            "name": "freight",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "description": "Stage name",
+            "name": "stage",
+            "in": "path",
+            "required": true
+          },
+          {
+            "description": "Verification",
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/MarkFreightVerifiedInStageRequest"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      },
+      "delete": {
+        "description": "Remove the named Stage from every one of the Freight's status\nmaps -- currentlyIn, verifiedIn, and approvedFor. This is used by\nthe Stage controller to clean up Freight status when a Stage is\ndeleted, in place of writing Freight status directly.",
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "Core",
+          "Project-Level"
+        ],
+        "summary": "Remove all of a Stage's entries from a Freight's status",
+        "operationId": "DeleteFreightStageStatus",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "Project name",
+            "name": "project",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "description": "Freight name",
+            "name": "freight",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "description": "Stage name",
+            "name": "stage",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
           }
         },
         "security": [

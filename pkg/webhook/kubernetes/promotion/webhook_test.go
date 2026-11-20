@@ -1936,6 +1936,26 @@ func Test_webhook_Default(t *testing.T) {
 	}
 }
 
+// stageNoCacheFixture returns a getStageNoCacheFn that stands in for an
+// uncached read from the API server: it fills the requested Stage with the
+// given one, or returns the given error.
+func stageNoCacheFixture(
+	stage kargoapi.Stage,
+	err error,
+) func(context.Context, client.ObjectKey, client.Object, ...client.GetOption) error {
+	return func(_ context.Context, _ client.ObjectKey, obj client.Object, _ ...client.GetOption) error {
+		if err != nil {
+			return err
+		}
+		s, ok := obj.(*kargoapi.Stage)
+		if !ok {
+			return errors.New("expected a *kargoapi.Stage")
+		}
+		*s = stage
+		return nil
+	}
+}
+
 func Test_webhook_ValidateCreate(t *testing.T) {
 	const testWarehouse = "fake-warehouse"
 
@@ -2234,6 +2254,18 @@ func Test_webhook_ValidateCreate(t *testing.T) {
 						},
 					}, nil
 				},
+				getStageNoCacheFn: stageNoCacheFixture(kargoapi.Stage{
+					Spec: kargoapi.StageSpec{
+						Targets: &kargoapi.StageTargets{},
+						RequestedFreight: []kargoapi.FreightRequest{{
+							Origin: kargoapi.FreightOrigin{
+								Kind: kargoapi.FreightOriginKindWarehouse,
+								Name: testWarehouse,
+							},
+							Sources: kargoapi.FreightSources{Direct: true},
+						}},
+					},
+				}, nil),
 				freightClient: &testutil.MockFreightClient{
 					GetFreightFun: func(context.Context, string, string) (*kargoapi.Freight, error) {
 						return &kargoapi.Freight{
@@ -2352,6 +2384,18 @@ func Test_webhook_ValidateCreate(t *testing.T) {
 						},
 					}, nil
 				},
+				getStageNoCacheFn: stageNoCacheFixture(kargoapi.Stage{
+					Spec: kargoapi.StageSpec{
+						Targets: &kargoapi.StageTargets{},
+						RequestedFreight: []kargoapi.FreightRequest{{
+							Origin: kargoapi.FreightOrigin{
+								Kind: kargoapi.FreightOriginKindWarehouse,
+								Name: testWarehouse,
+							},
+							Sources: kargoapi.FreightSources{Direct: true},
+						}},
+					},
+				}, nil),
 				freightClient: &testutil.MockFreightClient{
 					GetFreightFun: func(context.Context, string, string) (*kargoapi.Freight, error) {
 						return &kargoapi.Freight{
@@ -2427,6 +2471,52 @@ func Test_webhook_ValidateCreate(t *testing.T) {
 			},
 		},
 		{
+			name: "error getting Stage from the API server",
+			webhook: &webhook{
+				validateProjectFn: func(
+					context.Context,
+					client.Client,
+					client.Object,
+				) error {
+					return nil
+				},
+				authorizeFn: func(context.Context, *kargoapi.Promotion, string) error {
+					return nil
+				},
+				admissionRequestFromContextFn: admission.RequestFromContext,
+				getStageFn: func(
+					context.Context,
+					client.Client,
+					types.NamespacedName,
+				) (*kargoapi.Stage, error) {
+					return &kargoapi.Stage{}, nil
+				},
+				getStageNoCacheFn: stageNoCacheFixture(
+					kargoapi.Stage{},
+					errors.New("something went wrong"),
+				),
+				freightClient: &testutil.MockFreightClient{
+					GetFreightFun: func(context.Context, string, string) (*kargoapi.Freight, error) {
+						return &kargoapi.Freight{}, nil
+					},
+				},
+			},
+			promotion: &kargoapi.Promotion{
+				Spec: kargoapi.PromotionSpec{Freight: "fake-freight"},
+			},
+			assertions: func(t *testing.T, _ *fakeevent.Sender, err error) {
+				var statusErr *apierrors.StatusError
+				require.True(t, errors.As(err, &statusErr))
+				require.Equal(
+					t,
+					metav1.StatusReasonInternalError,
+					statusErr.ErrStatus.Reason,
+				)
+				require.Contains(t, statusErr.ErrStatus.Message, "get stage from the API server")
+				require.Contains(t, statusErr.ErrStatus.Message, "something went wrong")
+			},
+		},
+		{
 			name: "Freight is not available to Stage",
 			webhook: &webhook{
 				validateProjectFn: func(
@@ -2447,6 +2537,7 @@ func Test_webhook_ValidateCreate(t *testing.T) {
 				) (*kargoapi.Stage, error) {
 					return &kargoapi.Stage{}, nil
 				},
+				getStageNoCacheFn: stageNoCacheFixture(kargoapi.Stage{}, nil),
 				freightClient: &testutil.MockFreightClient{
 					GetFreightFun: func(context.Context, string, string) (*kargoapi.Freight, error) {
 						return &kargoapi.Freight{}, nil
@@ -2498,6 +2589,17 @@ func Test_webhook_ValidateCreate(t *testing.T) {
 						},
 					}, nil
 				},
+				getStageNoCacheFn: stageNoCacheFixture(kargoapi.Stage{
+					Spec: kargoapi.StageSpec{
+						RequestedFreight: []kargoapi.FreightRequest{{
+							Origin: kargoapi.FreightOrigin{
+								Kind: kargoapi.FreightOriginKindWarehouse,
+								Name: testWarehouse,
+							},
+							Sources: kargoapi.FreightSources{Direct: true},
+						}},
+					},
+				}, nil),
 				freightClient: &testutil.MockFreightClient{
 					GetFreightFun: func(context.Context, string, string) (*kargoapi.Freight, error) {
 						return &kargoapi.Freight{
@@ -2573,6 +2675,17 @@ func Test_webhook_ValidateCreate(t *testing.T) {
 						},
 					}, nil
 				},
+				getStageNoCacheFn: stageNoCacheFixture(kargoapi.Stage{
+					Spec: kargoapi.StageSpec{
+						RequestedFreight: []kargoapi.FreightRequest{{
+							Origin: kargoapi.FreightOrigin{
+								Kind: kargoapi.FreightOriginKindWarehouse,
+								Name: "fake-warehouse",
+							},
+							Sources: kargoapi.FreightSources{Direct: true},
+						}},
+					},
+				}, nil),
 				freightClient: &testutil.MockFreightClient{
 					GetFreightFun: func(context.Context, string, string) (*kargoapi.Freight, error) {
 						return &kargoapi.Freight{

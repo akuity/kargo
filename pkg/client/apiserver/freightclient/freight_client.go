@@ -18,19 +18,19 @@ type FreightClient interface {
 	// GetFreight returns the Freight with the given name, or nil if there is no
 	// such Freight. Matched by name.
 	GetFreight(ctx context.Context, project, name string) (*kargoapi.Freight, error)
-	
+
 	CreateFreight(
 		ctx context.Context,
 		project string,
 		freight *kargoapi.Freight,
 		metadata map[string]apiextensionsv1.JSON,
 	) (*kargoapi.Freight, bool, error)
-	
+
 	DeleteFreight(ctx context.Context, project, nameOrAlias string) error
-	
+
 	// PatchFreightAlias sets the alias of the named Freight.
 	PatchFreightAlias(ctx context.Context, project, nameOrAlias, newAlias string) error
-	
+
 	// PatchFreightMetadata upserts keys in the status metadata of the named
 	// Freight, overwriting any value already recorded under the same key.
 	PatchFreightMetadata(
@@ -38,13 +38,13 @@ type FreightClient interface {
 		project, freightName string,
 		metadata map[string]any,
 	) error
-	
+
 	ListFreightFromWarehouse(
 		ctx context.Context,
 		project, warehouse string,
 		opts *freightapi.ListWarehouseFreightOptions,
 	) ([]kargoapi.Freight, error)
-	
+
 	// ListFreightByCurrentStage returns the Freight whose status records it as
 	// currently in use by the Stage.
 	ListFreightByCurrentStage(

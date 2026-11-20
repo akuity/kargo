@@ -1209,7 +1209,7 @@ func (a *CoreAPIService) DeleteFreightStageStatusExecute(r ApiDeleteFreightStage
 		return nil, &GenericOpenAPIError{error: err.Error()}
 	}
 
-	localVarPath := localBasePath + "/v1beta1/projects/{project}/freight/{freight}/status/stage/{stage}"
+	localVarPath := localBasePath + "/v1beta1/projects/{project}/internal/freight/{freight}/status/stage/{stage}"
 	localVarPath = strings.Replace(localVarPath, "{"+"project"+"}", url.PathEscape(parameterValueToString(r.project, "project")), -1)
 	localVarPath = strings.Replace(localVarPath, "{"+"freight"+"}", url.PathEscape(parameterValueToString(r.freight, "freight")), -1)
 	localVarPath = strings.Replace(localVarPath, "{"+"stage"+"}", url.PathEscape(parameterValueToString(r.stage, "stage")), -1)
@@ -6376,7 +6376,7 @@ func (a *CoreAPIService) MarkFreightVerifiedInStageExecute(r ApiMarkFreightVerif
 		return nil, &GenericOpenAPIError{error: err.Error()}
 	}
 
-	localVarPath := localBasePath + "/v1beta1/projects/{project}/freight/{freight}/status/stage/{stage}"
+	localVarPath := localBasePath + "/v1beta1/projects/{project}/internal/freight/{freight}/status/stage/{stage}"
 	localVarPath = strings.Replace(localVarPath, "{"+"project"+"}", url.PathEscape(parameterValueToString(r.project, "project")), -1)
 	localVarPath = strings.Replace(localVarPath, "{"+"freight"+"}", url.PathEscape(parameterValueToString(r.freight, "freight")), -1)
 	localVarPath = strings.Replace(localVarPath, "{"+"stage"+"}", url.PathEscape(parameterValueToString(r.stage, "stage")), -1)
@@ -6622,7 +6622,7 @@ func (a *CoreAPIService) PatchFreightMetadataExecute(r ApiPatchFreightMetadataRe
 		return nil, &GenericOpenAPIError{error: err.Error()}
 	}
 
-	localVarPath := localBasePath + "/v1beta1/projects/{project}/freight/{freight}/metadata"
+	localVarPath := localBasePath + "/v1beta1/projects/{project}/internal/freight/{freight}/metadata"
 	localVarPath = strings.Replace(localVarPath, "{"+"project"+"}", url.PathEscape(parameterValueToString(r.project, "project")), -1)
 	localVarPath = strings.Replace(localVarPath, "{"+"freight"+"}", url.PathEscape(parameterValueToString(r.freight, "freight")), -1)
 

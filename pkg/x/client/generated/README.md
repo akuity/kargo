@@ -80,7 +80,7 @@ Class | Method | HTTP request | Description
 *CoreAPI* | [**CreateSystemConfigMap**](docs/CoreAPI.md#createsystemconfigmap) | **Post** /v1beta1/system/configmaps | Create a system-level ConfigMap
 *CoreAPI* | [**CreateTarget**](docs/CoreAPI.md#createtarget) | **Post** /v1beta1/projects/{project}/targets | Create a Target
 *CoreAPI* | [**DeleteFreight**](docs/CoreAPI.md#deletefreight) | **Delete** /v1beta1/projects/{project}/freight/{freight-name-or-alias} | Delete a Freight resource
-*CoreAPI* | [**DeleteFreightStageStatus**](docs/CoreAPI.md#deletefreightstagestatus) | **Delete** /v1beta1/projects/{project}/freight/{freight}/status/stage/{stage} | Remove all of a Stage&#39;s entries from a Freight&#39;s status
+*CoreAPI* | [**DeleteFreightStageStatus**](docs/CoreAPI.md#deletefreightstagestatus) | **Delete** /v1beta1/projects/{project}/internal/freight/{freight}/status/stage/{stage} | Remove all of a Stage&#39;s entries from a Freight&#39;s status
 *CoreAPI* | [**DeleteProject**](docs/CoreAPI.md#deleteproject) | **Delete** /v1beta1/projects/{project} | Delete a Project
 *CoreAPI* | [**DeleteProjectConfig**](docs/CoreAPI.md#deleteprojectconfig) | **Delete** /v1beta1/projects/{project}/config | Delete a ProjectConfig resource
 *CoreAPI* | [**DeleteProjectConfigMap**](docs/CoreAPI.md#deleteprojectconfigmap) | **Delete** /v1beta1/projects/{project}/configmaps/{configmap} | Delete a project-level ConfigMap
@@ -122,9 +122,9 @@ Class | Method | HTTP request | Description
 *CoreAPI* | [**ListTargets**](docs/CoreAPI.md#listtargets) | **Get** /v1beta1/projects/{project}/targets | List Targets
 *CoreAPI* | [**ListWarehouses**](docs/CoreAPI.md#listwarehouses) | **Get** /v1beta1/projects/{project}/warehouses | List Warehouses
 *CoreAPI* | [**MarkFreightCurrentlyInStage**](docs/CoreAPI.md#markfreightcurrentlyinstage) | **Post** /v1beta1/projects/{project}/stages/{stage}/freight | Mark Freight as currently in use by a Stage
-*CoreAPI* | [**MarkFreightVerifiedInStage**](docs/CoreAPI.md#markfreightverifiedinstage) | **Post** /v1beta1/projects/{project}/freight/{freight}/status/stage/{stage} | Mark Freight as verified in a Stage
+*CoreAPI* | [**MarkFreightVerifiedInStage**](docs/CoreAPI.md#markfreightverifiedinstage) | **Post** /v1beta1/projects/{project}/internal/freight/{freight}/status/stage/{stage} | Mark Freight as verified in a Stage
 *CoreAPI* | [**PatchFreightAlias**](docs/CoreAPI.md#patchfreightalias) | **Patch** /v1beta1/projects/{project}/freight/{freight-name-or-alias}/alias | Patch a Freight resource&#39;s alias
-*CoreAPI* | [**PatchFreightMetadata**](docs/CoreAPI.md#patchfreightmetadata) | **Patch** /v1beta1/projects/{project}/freight/{freight}/metadata | Update a Freight resource&#39;s status metadata
+*CoreAPI* | [**PatchFreightMetadata**](docs/CoreAPI.md#patchfreightmetadata) | **Patch** /v1beta1/projects/{project}/internal/freight/{freight}/metadata | Update a Freight resource&#39;s status metadata
 *CoreAPI* | [**PatchProjectConfigMap**](docs/CoreAPI.md#patchprojectconfigmap) | **Patch** /v1beta1/projects/{project}/configmaps/{configmap} | Patch a project-level ConfigMap
 *CoreAPI* | [**PatchSharedConfigMap**](docs/CoreAPI.md#patchsharedconfigmap) | **Patch** /v1beta1/shared/configmaps/{configmap} | Patch a shared ConfigMap
 *CoreAPI* | [**PatchSystemConfigMap**](docs/CoreAPI.md#patchsystemconfigmap) | **Patch** /v1beta1/system/configmaps/{configmap} | Patch a system-level ConfigMap
