@@ -53,7 +53,7 @@ export const TargetTiles = ({
   project: string;
   stageName: string;
   rows: TargetRow[];
-  // The Stage's latest round, when it has had one.
+  // The Stage's latest round to have started, when it has had one.
   round?: Round;
   // The Freight vocabulary, shared with the grid's Freight colouring so a
   // piece of Freight is the same colour in both.

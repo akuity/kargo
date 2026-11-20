@@ -97,7 +97,8 @@ export const TargetMatrix = ({
   project: string;
   stageName: string;
   rows: TargetRow[];
-  // The Stage's latest round, which a picked Target reads its failure from.
+  // The Stage's latest round to have started, which a picked Target reads its
+  // failure from.
   round?: Round;
   // The Freight the Stage itself is on: what every Target it governs is on its
   // way to, and the first colour of the Freight legend.

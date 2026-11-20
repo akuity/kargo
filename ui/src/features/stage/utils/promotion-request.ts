@@ -101,34 +101,103 @@ export const blockingMessage = (promotionRequest?: PromotionRequest) => {
 // of Kargo Enterprise.
 const enterpriseOnlyReason = 'EnterpriseOnlyFeature';
 
-export type RoundBlock = { title: string; description: string };
+// The Ready condition reason a round carries while it waits for its Stage to
+// let it start. A Stage holds its next round for as long as the Freight it is
+// on is still being verified, so a round may wait as long as a verification
+// runs -- which is the round working as intended, not one in trouble.
+const awaitingStageReason = 'AwaitingStage';
+
+// RoundBlock explains a round that has not fanned out. Its severity tells a
+// round that is only waiting its turn ('info') from one that is not going to
+// progress as things stand ('warning').
+export type RoundBlock = {
+  severity: 'info' | 'warning';
+  title: string;
+  description: string;
+};
+
+// hasFannedOut reports whether a round got as far as its Targets: it recorded
+// one, or a tally of them.
+const hasFannedOut = (promotionRequest?: PromotionRequest): boolean =>
+  !!promotionRequest?.status?.targets?.length || !!promotionRequest?.status?.summary;
+
+// isVerifying reports whether the Freight a Stage is on has a verification
+// that has yet to finish.
+const isVerifying = (stage?: Stage): boolean =>
+  (stage?.status?.freightHistory?.[0]?.verificationHistory || []).some(
+    ({ phase }) => phase === 'Pending' || phase === 'Running'
+  );
 
 // roundBlock explains, in words meant for a person, why a PromotionRequest
-// never fanned out. A round that did fan out and then had children fail is
+// has not fanned out. A round that did fan out and then had children fail is
 // not blocked -- its Targets show the outcome -- so a request that recorded
 // any Target or summary yields nothing even if its Ready condition is False.
-// The Ready message is written for operators; the one case a user is likely
-// to meet -- fan-out being an Enterprise feature -- gets plain language, and
-// any other reason is passed through under a general heading.
-export const roundBlock = (promotionRequest?: PromotionRequest): RoundBlock | undefined => {
-  if (promotionRequest?.status?.targets?.length || promotionRequest?.status?.summary) {
+//
+// A round waiting for its Stage to let it start is queued, not stuck, and is
+// said to be so as a notice rather than as a warning. Given the Stage, the
+// notice also says when what the round is waiting for is a verification of
+// the Freight the Stage is on.
+//
+// Every other reason is a round that cannot progress. The Ready message is
+// written for operators; the one case a user is likely to meet -- fan-out
+// being an Enterprise feature -- gets plain language, and any other reason is
+// passed through under a general heading.
+export const roundBlock = (
+  promotionRequest?: PromotionRequest,
+  stage?: Stage
+): RoundBlock | undefined => {
+  if (hasFannedOut(promotionRequest)) {
     return undefined;
   }
   const ready = promotionRequest?.status?.conditions?.find(
     (condition) => condition.type === 'Ready'
   );
-  if (ready?.status !== 'False' || !ready.message) {
+  if (ready?.status !== 'False') {
+    return undefined;
+  }
+  if (ready.reason === awaitingStageReason) {
+    return {
+      severity: 'info',
+      title: 'Next promotion queued',
+      description: isVerifying(stage)
+        ? 'The next promotion to this Stage is queued. It is waiting for verification of the ' +
+          "Stage's current Freight to finish, and will start once the Stage lets it."
+        : 'The next promotion to this Stage is queued and will start once the Stage lets it.'
+    };
+  }
+  if (!ready.message) {
     return undefined;
   }
   if (ready.reason === enterpriseOnlyReason) {
     return {
+      severity: 'warning',
       title: 'Fleet management is a Kargo Enterprise feature',
       description:
         'This Stage promotes to Targets, which this installation of Kargo does not support. ' +
         'Freight promoted to this Stage will not reach its Targets.'
     };
   }
-  return { title: 'Promotion to this Stage cannot progress', description: ready.message };
+  return {
+    severity: 'warning',
+    title: 'Promotion to this Stage cannot progress',
+    description: ready.message
+  };
+};
+
+// isRoundQueued reports whether a round has yet to start: it is Pending, has
+// attempted no Target, and nothing stands in its way but its turn. Such a
+// round has nothing to say about any Target yet, so what is known of the
+// Targets is still what the round before it left. A round that cannot
+// progress is not queued; it is blocked, and is shown as that.
+export const isRoundQueued = (promotionRequest?: PromotionRequest): boolean => {
+  if (!promotionRequest || hasFannedOut(promotionRequest)) {
+    return false;
+  }
+  const phase = promotionRequest.status?.phase;
+  if (phase && phase !== 'Pending') {
+    return false;
+  }
+  return roundBlock(promotionRequest)?.severity !== 'warning';
 };
 
 type PromotionRequestTargetRow = {

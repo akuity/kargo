@@ -11,6 +11,7 @@ import { useListTargets } from '@ui/gen/api/v2/core/core';
 import { Stage } from '@ui/gen/api/v2/models';
 
 import { freightMarking } from './marks';
+import { QueuedRound } from './queued-round';
 import { TargetMatrix } from './target-matrix';
 import { TargetTiles } from './tiles';
 import { useMarkColors } from './use-mark-colors';
@@ -21,10 +22,15 @@ type Props = {
   // keys each Target's per-Stage status; its current Freight collection is
   // what a Target is compared against to be called behind.
   stage: Stage;
-  // The Stage's latest round, resolved once by the drawer, which also uses it
-  // to explain a blocked round above the tabs. Passing it in keeps one read
-  // of the Stage's rounds per drawer rather than one per tab.
+  // The Stage's latest round to have started, resolved once by the drawer,
+  // which also uses it to explain a blocked round above the tabs. Passing it
+  // in keeps one read of the Stage's rounds per drawer rather than one per
+  // tab.
   round?: Round;
+  // A newer round still waiting to start, when there is one. It has attempted
+  // no Target, so it is named on a line of its own and changes nothing else
+  // the tab says.
+  queued?: Round;
 };
 
 /**
@@ -39,10 +45,11 @@ type Props = {
  * Governance comes from the API's `stage` filter, which evaluates the Stage's
  * selectors exactly as the controller does. Freight and health per Target come
  * from the Target's own status for this Stage; the round's outcome comes from
- * the Stage's current round, which the drawer resolves once and
- * passes in.
+ * the Stage's latest round to have started, which the drawer resolves once and
+ * passes in. A round queued behind it has done nothing to any Target yet, and
+ * is only named.
  */
-export const StageTargets = ({ projectName, stage, round }: Props) => {
+export const StageTargets = ({ projectName, stage, round, queued }: Props) => {
   const stageName = stage.metadata?.name || '';
 
   // Targets live in the database, which offers no watch; the list is polled.
@@ -86,6 +93,14 @@ export const StageTargets = ({ projectName, stage, round }: Props) => {
 
   return (
     <Flex vertical gap={16}>
+      {queued && (
+        <QueuedRound
+          project={projectName}
+          stageName={stageName}
+          queued={queued}
+          freightLabel={freightLabel}
+        />
+      )}
       <TargetTiles
         project={projectName}
         stageName={stageName}

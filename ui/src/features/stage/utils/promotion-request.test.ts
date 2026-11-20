@@ -9,6 +9,7 @@ import {
   isPromotionRequestFailed,
   isPromotionRequestPhaseTerminal,
   isPromotionRequestRetryable,
+  isRoundQueued,
   promotionRequestCompareFn,
   roundBlock,
   targetRows
@@ -222,14 +223,68 @@ describe('roundBlock()', () => {
     const block = roundBlock(
       blocked('EnterpriseOnlyFeature', 'PromotionRequests are a Kargo Enterprise-only feature')
     );
+    expect(block?.severity).toBe('warning');
     expect(block?.title).toBe('Fleet management is a Kargo Enterprise feature');
     expect(block?.description).toContain('does not support');
   });
 
   test('passes any other reason through under a general heading', () => {
     const block = roundBlock(blocked('TargetsMissing', 'Target us-east-1 not found'));
+    expect(block?.severity).toBe('warning');
     expect(block?.title).toBe('Promotion to this Stage cannot progress');
     expect(block?.description).toBe('Target us-east-1 not found');
+  });
+
+  describe('a round waiting for its Stage to let it start', () => {
+    const waiting = blocked(
+      'AwaitingStage',
+      'Waiting for Stage "prod" to let this PromotionRollout start'
+    );
+    const stageVerifying = (...phases: string[]) =>
+      ({
+        metadata: { name: 'prod' },
+        status: {
+          freightHistory: [
+            { id: 'current', verificationHistory: phases.map((phase) => ({ phase })) },
+            { id: 'previous', verificationHistory: [{ phase: 'Running' }] }
+          ]
+        }
+      }) as Stage;
+
+    test('is a notice that it is queued, not a round that cannot progress', () => {
+      const block = roundBlock(waiting);
+      expect(block?.severity).toBe('info');
+      expect(block?.title).toBe('Next promotion queued');
+      expect(block?.title).not.toBe('Promotion to this Stage cannot progress');
+      expect(block?.description).toBe(
+        'The next promotion to this Stage is queued and will start once the Stage lets it.'
+      );
+      // The condition's own message is written for operators and is not shown.
+      expect(block?.description).not.toContain('PromotionRollout');
+    });
+
+    test.each(['Pending', 'Running'])(
+      "says it is waiting for a %s verification of the Stage's current Freight",
+      (phase) => {
+        const block = roundBlock(waiting, stageVerifying(phase));
+        expect(block?.severity).toBe('info');
+        expect(block?.description).toContain('waiting for verification');
+      }
+    );
+
+    test('does not blame a verification that has finished, or one of older Freight', () => {
+      // The Stage's previous Freight still has a verification on record as
+      // Running, which says nothing of the Freight the Stage is on now.
+      expect(roundBlock(waiting, stageVerifying('Successful'))?.description).not.toContain(
+        'verification'
+      );
+      expect(roundBlock(waiting, stageVerifying())?.description).not.toContain('verification');
+    });
+
+    test('needs no message on the condition to be recognized', () => {
+      const silent = blocked('AwaitingStage', '');
+      expect(roundBlock(silent)?.severity).toBe('info');
+    });
   });
 
   test('is not a block once the round has fanned out, even with failed children', () => {
@@ -328,5 +383,57 @@ describe('currentRounds()', () => {
 
   test('a Stage with no name is left out', () => {
     expect(currentRounds([{} as Stage], requests)).toEqual({});
+  });
+});
+
+describe('isRoundQueued()', () => {
+  const ready = (reason: string, message: string) => [
+    { type: 'Ready', status: 'False', reason, message, lastTransitionTime: '2026-11-20T00:00:00Z' }
+  ];
+
+  test('a Pending round waiting for its Stage is queued', () => {
+    expect(
+      isRoundQueued(
+        request({
+          status: { phase: 'Pending', conditions: ready('AwaitingStage', 'Waiting for Stage') }
+        })
+      )
+    ).toBe(true);
+  });
+
+  test('so is a round nothing has picked up yet', () => {
+    expect(isRoundQueued(request({}))).toBe(true);
+    expect(isRoundQueued(request({ status: { phase: 'Pending' } }))).toBe(true);
+  });
+
+  test('a round that cannot progress is blocked, not queued', () => {
+    expect(
+      isRoundQueued(
+        request({
+          status: { phase: 'Pending', conditions: ready('TargetsMissing', 'Target not found') }
+        })
+      )
+    ).toBe(false);
+  });
+
+  test('a round that has started or finished is not queued', () => {
+    expect(isRoundQueued(request({ status: { phase: 'Running' } }))).toBe(false);
+    expect(isRoundQueued(request({ status: { phase: 'Succeeded' } }))).toBe(false);
+    expect(isRoundQueued(request({ status: { phase: 'Failed' } }))).toBe(false);
+  });
+
+  test('nor is one that has attempted a Target, whatever its phase says', () => {
+    expect(
+      isRoundQueued(
+        request({ status: { phase: 'Pending', targets: [{ name: 'eu', promotion: 'p' }] } })
+      )
+    ).toBe(false);
+    expect(isRoundQueued(request({ status: { phase: 'Pending', summary: { pending: 1 } } }))).toBe(
+      false
+    );
+  });
+
+  test('no round is not a queued round', () => {
+    expect(isRoundQueued(undefined)).toBe(false);
   });
 });

@@ -6,6 +6,7 @@ import {
   faCircleUp,
   faGear,
   faHistory,
+  faHourglassStart,
   faPlay
 } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
@@ -43,7 +44,7 @@ import { FreightHistory } from './tabs/freight-history/freight-history';
 import { useGetFreightMap } from './tabs/freight-history/use-get-freight-map';
 import { StageSettings } from './tabs/settings/stage-settings';
 import { StageTargets } from './tabs/targets/targets';
-import { useCurrentRound } from './use-current-round';
+import { useStageRounds } from './use-current-round';
 import { useImages } from './use-images';
 import { roundBlock } from './utils/promotion-request';
 import { Verifications } from './verifications';
@@ -120,11 +121,12 @@ export const StageDetails = ({ stage }: { stage: Stage }) => {
     }
   }, [openRound]);
 
-  // When a target-aware Stage's latest round cannot progress, say so once,
-  // above the tabs, so the Targets and Promotions tabs both sit under the
-  // explanation rather than each hinting at it.
-  const round = useCurrentRound(projectName || '', stage);
-  const block = roundBlock(round);
+  // When a target-aware Stage's latest round has not fanned out, say why
+  // once, above the tabs, so the Targets and Promotions tabs both sit under
+  // the explanation rather than each hinting at it. A round that is only
+  // queued behind the Stage is news, not trouble, and is drawn as a notice.
+  const { round, queued } = useStageRounds(projectName || '', stage);
+  const block = roundBlock(queued ?? round, stage);
 
   useEffect(() => {
     if (activeTab === TabsTypes.LIVE_MANIFEST) {
@@ -192,9 +194,13 @@ export const StageDetails = ({ stage }: { stage: Stage }) => {
             <AutoPromotionHolds stage={stage} />
             {block && (
               <Alert
-                type='warning'
+                type={block.severity}
                 showIcon
-                icon={<FontAwesomeIcon icon={faCircleExclamation} />}
+                icon={
+                  <FontAwesomeIcon
+                    icon={block.severity === 'info' ? faHourglassStart : faCircleExclamation}
+                  />
+                }
                 title={block.title}
                 description={block.description}
               />
@@ -224,6 +230,7 @@ export const StageDetails = ({ stage }: { stage: Stage }) => {
                             projectName={projectName || ''}
                             stage={stage}
                             round={round}
+                            queued={queued}
                           />
                         )
                       }
