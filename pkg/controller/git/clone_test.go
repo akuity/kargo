@@ -111,6 +111,13 @@ func TestClone(t *testing.T) {
 			},
 		},
 		{
+			name: "missing tag checkout without refs",
+			opts: &CloneOptions{Checkout: "refs/tags/missing"},
+			assert: func(t *testing.T, _ *repo, err error) {
+				require.ErrorContains(t, err, "invalid reference: refs/tags/missing")
+			},
+		},
+		{
 			name: "tag checkout without refs clones all branches and tags",
 			opts: &CloneOptions{Checkout: "refs/tags/v1.0.0"},
 			assert: func(t *testing.T, r *repo, err error) {

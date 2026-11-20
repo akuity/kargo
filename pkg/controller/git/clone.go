@@ -144,6 +144,9 @@ func (b *baseRepo) clone(
 	if _, err = libExec.Exec(b.buildGitCommand(
 		ctx,
 		"checkout", "--detach", plan.detachAt,
+		// The next argument makes it clear to git that plan.detachAt is a ref
+		// and not a path
+		"--",
 	)); err != nil {
 		return fmt.Errorf("error checking out %q: %w", plan.detachAt, err)
 	}
