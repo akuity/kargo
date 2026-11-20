@@ -217,64 +217,6 @@ func (q *Queries) CreatePromotionRollout(ctx context.Context, arg CreatePromotio
 	return i, err
 }
 
-const getPreviousPromotionRollout = `-- name: GetPreviousPromotionRollout :one
-SELECT previous.id, previous.project_name, previous.name, previous.stage_name, previous.number, previous.freight_name, previous.max_concurrent, previous.max_failures, previous.created_by, previous.created_at, previous.updated_at, previous.status_phase, previous.status_reason, previous.status_message, previous.status_started_at, previous.status_finished_at, previous.stage_id, previous.abort_requested_at, previous.abort_requested_by
-FROM promotion_rollouts AS rollout
-JOIN promotion_rollouts AS previous ON previous.stage_id = rollout.stage_id
-WHERE rollout.project_name = $1
-    AND rollout.name = $2
-    AND previous.number < rollout.number
-    AND previous.status_phase NOT IN ('Pending', 'Running')
-    AND EXISTS (
-        SELECT 1 FROM promotion_rollout_freight AS recorded
-        WHERE recorded.promotion_rollout_id = previous.id
-    )
-ORDER BY previous.number DESC
-LIMIT 1
-`
-
-type GetPreviousPromotionRolloutParams struct {
-	ProjectName string
-	Name        string
-}
-
-// The rollout whose FreightCollection the named rollout carries forward
-// when it starts: the same Stage's newest rollout, numbered below it, that
-// has finished and recorded a collection. This query is the whole of that
-// choice. How the rollout finished does not matter: one that Failed or
-// Errored counts as one that Succeeded does, so the Freight it set out to
-// promote is carried forward, as a Stage's next Promotion carries forward
-// what its last one rendered, whatever became of it. A rollout that recorded
-// nothing -- one Aborted before it started, or started before collections
-// were recorded -- is passed over for the one before it, so that it does not
-// make the Stage forget what was collected until then.
-func (q *Queries) GetPreviousPromotionRollout(ctx context.Context, arg GetPreviousPromotionRolloutParams) (PromotionRolloutRow, error) {
-	row := q.db.QueryRow(ctx, getPreviousPromotionRollout, arg.ProjectName, arg.Name)
-	var i PromotionRolloutRow
-	err := row.Scan(
-		&i.ID,
-		&i.ProjectName,
-		&i.Name,
-		&i.StageName,
-		&i.Number,
-		&i.FreightName,
-		&i.MaxConcurrent,
-		&i.MaxFailures,
-		&i.CreatedBy,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-		&i.StatusPhase,
-		&i.StatusReason,
-		&i.StatusMessage,
-		&i.StatusStartedAt,
-		&i.StatusFinishedAt,
-		&i.StageID,
-		&i.AbortRequestedAt,
-		&i.AbortRequestedBy,
-	)
-	return i, err
-}
-
 const getPromotionRollout = `-- name: GetPromotionRollout :one
 SELECT id, project_name, name, stage_name, number, freight_name, max_concurrent, max_failures, created_by, created_at, updated_at, status_phase, status_reason, status_message, status_started_at, status_finished_at, stage_id, abort_requested_at, abort_requested_by FROM promotion_rollouts
 WHERE project_name = $1 AND name = $2
@@ -926,18 +868,33 @@ WITH rollout AS (
         status_started_at = $4::timestamptz,
         status_finished_at = $5::timestamptz,
         updated_at = GREATEST(clock_timestamp(), updated_at + interval '1 microsecond')
-    WHERE project_name = $6
-        AND name = $7
-        AND ($8::uuid IS NULL OR id = $8)
+    WHERE promotion_rollouts.project_name = $6
+        AND promotion_rollouts.name = $7
+        AND ($8::uuid IS NULL OR promotion_rollouts.id = $8)
         AND (
             $9::timestamptz IS NULL
-            OR updated_at = $9
+            OR promotion_rollouts.updated_at = $9
         )
         AND (
             NOT $10::boolean
-            OR (status_phase = 'Pending' AND freight_name = $11::text)
+            OR (
+                promotion_rollouts.status_phase = 'Pending'
+                AND promotion_rollouts.freight_name = $11::text
+            )
         )
     RETURNING id, project_name, name, stage_name, number, freight_name, max_concurrent, max_failures, created_by, created_at, updated_at, status_phase, status_reason, status_message, status_started_at, status_finished_at, stage_id, abort_requested_at, abort_requested_by
+), previous AS (
+    SELECT earlier.id
+    FROM rollout
+    JOIN promotion_rollouts AS earlier ON earlier.stage_id = rollout.stage_id
+    WHERE $10::boolean
+        AND earlier.number < rollout.number
+        AND EXISTS (
+            SELECT 1 FROM promotion_rollout_freight AS recorded
+            WHERE recorded.promotion_rollout_id = earlier.id
+        )
+    ORDER BY earlier.number DESC
+    LIMIT 1
 ), freight AS (
     INSERT INTO promotion_rollout_freight (
         promotion_rollout_id,
@@ -961,20 +918,20 @@ WITH rollout AS (
             $14::jsonb AS reference
         UNION ALL
         SELECT
-            previous.origin_kind,
-            previous.origin_name,
-            previous.freight_name,
-            previous.reference
-        FROM promotion_rollout_freight AS previous
-        WHERE previous.promotion_rollout_id = $15::uuid
+            carried.origin_kind,
+            carried.origin_name,
+            carried.freight_name,
+            carried.reference
+        FROM promotion_rollout_freight AS carried
+        WHERE carried.promotion_rollout_id = (SELECT previous.id FROM previous)
             -- Set-returning functions in one select list advance together,
             -- which zips the arrays.
-            AND (previous.origin_kind, previous.origin_name) IN (
+            AND (carried.origin_kind, carried.origin_name) IN (
                 SELECT
-                    unnest($16::text[]),
-                    unnest($17::text[])
+                    unnest($15::text[]),
+                    unnest($16::text[])
             )
-            AND (previous.origin_kind, previous.origin_name)
+            AND (carried.origin_kind, carried.origin_name)
                 <> ($12::text, $13::text)
     ) AS collected
     WHERE $10::boolean
@@ -1001,7 +958,6 @@ type UpdatePromotionRolloutStatusParams struct {
 	OriginKind           string
 	OriginName           string
 	Reference            []byte
-	PreviousID           *uuid.UUID
 	RequestedOriginKinds []string
 	RequestedOriginNames []string
 }
@@ -1042,12 +998,27 @@ type UpdatePromotionRolloutStatusRow struct {
 // contents included, for each other origin among those given as two arrays
 // of equal length, which are the origins the Stage requests Freight from
 // now. The database does not know those, and an origin the Stage no longer
-// requests is left behind. The previous rollout is given by id, from
-// GetPreviousPromotionRollout, or is NULL when there is none. No Freight is
-// read: the Freight an earlier rollout promoted may be gone by now, and
-// what that rollout recorded is a copy of it. A collection is recorded
-// once. A rollout that has rows already keeps them as they are, though a
-// Pending rollout should have none.
+// requests is left behind. No Freight is read: the Freight an earlier
+// rollout promoted may be gone by now, and what that rollout recorded is a
+// copy of it. A collection is recorded once. A rollout that has rows already
+// keeps them as they are, though a Pending rollout should have none.
+//
+// The previous CTE is the whole of the choice of which rollout that is: the
+// same Stage's newest rollout, numbered below this one, that recorded a
+// collection. To change the rule, change that CTE. How the rollout finished
+// does not matter: one that Failed or Errored counts as one that Succeeded
+// does, so the Freight it set out to promote is carried forward, as a
+// Stage's next Promotion carries forward what its last one rendered,
+// whatever became of it. A rollout that recorded nothing -- one Aborted
+// before it started, or started before collections were recorded -- is
+// passed over for the one before it, so that it does not make the Stage
+// forget what was collected until then. The choice is made in this
+// statement so that it cannot be stale by the time the rows are written,
+// and it does not test the earlier rollout's phase for the same reason:
+// this statement may not see that rollout's last write. It does not need
+// to. A rollout has rows only once it has started, its rows never change,
+// and one Running rollout per Stage means this one starts only if that one
+// has finished.
 func (q *Queries) UpdatePromotionRolloutStatus(ctx context.Context, arg UpdatePromotionRolloutStatusParams) (UpdatePromotionRolloutStatusRow, error) {
 	row := q.db.QueryRow(ctx, updatePromotionRolloutStatus,
 		arg.StatusPhase,
@@ -1064,7 +1035,6 @@ func (q *Queries) UpdatePromotionRolloutStatus(ctx context.Context, arg UpdatePr
 		arg.OriginKind,
 		arg.OriginName,
 		arg.Reference,
-		arg.PreviousID,
 		arg.RequestedOriginKinds,
 		arg.RequestedOriginNames,
 	)

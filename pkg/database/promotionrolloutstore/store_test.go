@@ -163,7 +163,6 @@ func TestStatusArgs(t *testing.T) {
 				require.False(t, args.Start)
 				require.Empty(t, args.FreightName)
 				require.Nil(t, args.Reference)
-				require.Nil(t, args.PreviousID)
 			},
 		},
 	}

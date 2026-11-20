@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/stretchr/testify/require"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
@@ -1139,7 +1138,7 @@ func TestStoreFreightIntegration(t *testing.T) {
 			},
 		},
 		{
-			name: "the rollout before is the newest that finished with a collection, however it finished",
+			name: "the rollout before is the newest that recorded a collection, however it finished",
 			run: func(t *testing.T) {
 				const project = "previous"
 				seedStage(t, project, "prod")
@@ -1179,37 +1178,11 @@ func TestStoreFreightIntegration(t *testing.T) {
 					freight("images-2", images), freight("config-2", config), freight("charts-1", charts),
 				)
 
-				// A rollout still in progress is not the one before any
-				// other, though it has recorded its collection.
-				running := create(t, project, "prod", "prod.01G", freight("config-3", config))
-				_, err = store.Start(ctx, project, running.PromotionRolloutRow, freight("config-3", config), all)
+				// Each took the rollout numbered just below it but for the
+				// one after the rollout that recorded nothing.
+				second, err := store.Get(ctx, project, "prod.01B")
 				require.NoError(t, err)
-				create(t, project, "prod", "prod.01H", freight("images-3", images))
-
-				// The choice is one query's: the Stage's newest rollout
-				// numbered below the given one that has finished, in any
-				// phase, and recorded a collection.
-				for name, want := range map[string]string{
-					"prod.01B": "prod.01A",
-					"prod.01C": "prod.01B",
-					"prod.01D": "prod.01C",
-					"prod.01E": "prod.01D",
-					"prod.01F": "prod.01D",
-					"prod.01G": "prod.01F",
-					"prod.01H": "prod.01F",
-				} {
-					previous, previousErr := queries.GetPreviousPromotionRollout(
-						ctx, database.GetPreviousPromotionRolloutParams{ProjectName: project, Name: name},
-					)
-					require.NoError(t, previousErr, name)
-					require.Equal(t, want, previous.Name, name)
-				}
-				for _, name := range []string{"prod.01A", "staging.01A", "missing"} {
-					_, previousErr := queries.GetPreviousPromotionRollout(
-						ctx, database.GetPreviousPromotionRolloutParams{ProjectName: project, Name: name},
-					)
-					require.ErrorIs(t, previousErr, pgx.ErrNoRows, name)
-				}
+				requireCollection(t, second, freight("images-1", images), freight("config-1", config))
 			},
 		},
 		{
