@@ -137,6 +137,12 @@ func Test_webhook_Default(t *testing.T) {
 				require.NoError(t, err)
 				require.NotNil(t, freight.DiscoveredAt)
 				require.False(t, freight.DiscoveredAt.IsZero())
+				precise, parseErr := time.Parse(
+					time.RFC3339Nano,
+					freight.Annotations[kargoapi.AnnotationKeyDiscoveredAt],
+				)
+				require.NoError(t, parseErr)
+				require.True(t, precise.Equal(freight.DiscoveredAt.Time))
 			},
 		},
 		{
@@ -154,6 +160,7 @@ func Test_webhook_Default(t *testing.T) {
 				require.NoError(t, err)
 				require.NotNil(t, freight.DiscoveredAt)
 				require.Equal(t, time.Unix(1000, 0), freight.DiscoveredAt.Time)
+				require.NotContains(t, freight.Annotations, kargoapi.AnnotationKeyDiscoveredAt)
 			},
 		},
 		{
@@ -170,6 +177,7 @@ func Test_webhook_Default(t *testing.T) {
 				require.NoError(t, err)
 				require.NotNil(t, freight.DiscoveredAt)
 				require.Equal(t, time.Unix(1000, 0), freight.DiscoveredAt.Time)
+				require.NotContains(t, freight.Annotations, kargoapi.AnnotationKeyDiscoveredAt)
 			},
 		},
 		{

@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -350,4 +351,48 @@ func Test_server_queryFreight_watch(t *testing.T) {
 			},
 		},
 	)
+}
+
+func Test_sortFreightSlice(t *testing.T) {
+	sec := time.Date(2026, time.January, 1, 0, 0, 0, 0, time.UTC)
+	newFreight := func(name string, at time.Time) *kargoapi.Freight {
+		return &kargoapi.Freight{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: name,
+				Annotations: map[string]string{
+					kargoapi.AnnotationKeyDiscoveredAt: at.Format(time.RFC3339Nano),
+				},
+			},
+			DiscoveredAt: &metav1.Time{Time: sec},
+		}
+	}
+	testCases := []struct {
+		name    string
+		reverse bool
+		want    []string
+	}{
+		{
+			name: "same-second Freight ordered by discovered-at annotation",
+			want: []string{"older", "newer"},
+		},
+		{
+			name:    "same-second Freight ordered by discovered-at annotation, reversed",
+			reverse: true,
+			want:    []string{"newer", "older"},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			freight := []*kargoapi.Freight{
+				newFreight("newer", sec.Add(900*time.Millisecond)),
+				newFreight("older", sec.Add(100*time.Millisecond)),
+			}
+			sortFreightSlice(OrderByFirstSeen, testCase.reverse, freight)
+			names := make([]string, len(freight))
+			for i, f := range freight {
+				names[i] = f.Name
+			}
+			require.Equal(t, testCase.want, names)
+		})
+	}
 }
