@@ -3,6 +3,7 @@ package promotionrequests
 import (
 	"context"
 	"errors"
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -53,6 +54,26 @@ func TestReconcile_tracing(t *testing.T) {
 						telemetry.PromotionRequestKey.String("x"),
 					},
 				)
+			},
+		},
+		{
+			// A canceled context is not the span's error.
+			name: "canceled",
+			interceptor: interceptor.Funcs{
+				Get: func(
+					context.Context,
+					client.WithWatch,
+					client.ObjectKey,
+					client.Object,
+					...client.GetOption,
+				) error {
+					return fmt.Errorf("error getting PromotionRequest: %w", context.Canceled)
+				},
+			},
+			assert: func(t *testing.T, err error, span sdktrace.ReadOnlySpan) {
+				require.ErrorIs(t, err, context.Canceled)
+				require.Equal(t, codes.Unset, span.Status().Code)
+				require.Empty(t, span.Events())
 			},
 		},
 		{

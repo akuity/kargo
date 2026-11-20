@@ -57,6 +57,7 @@ func TestLocalEngine_Promote_tracing(t *testing.T) {
 	testCases := []struct {
 		name         string
 		orchestrator Orchestrator
+		cancel       bool
 		assert       func(*testing.T, Result, error, sdktrace.ReadOnlySpan)
 	}{
 		{
@@ -87,13 +88,35 @@ func TestLocalEngine_Promote_tracing(t *testing.T) {
 				require.Equal(t, codes.Error, span.Status().Code)
 			},
 		},
+		{
+			// A command killed on cancellation fails without wrapping
+			// context.Canceled: not the span's error.
+			name: "canceled",
+			orchestrator: &fakeOrchestrator{
+				executeStepsFn: func(context.Context, Context, []Step) (Result, error) {
+					return Result{Status: kargoapi.PromotionPhaseErrored},
+						errors.New("signal: terminated")
+				},
+			},
+			cancel: true,
+			assert: func(t *testing.T, _ Result, err error, span sdktrace.ReadOnlySpan) {
+				require.Error(t, err)
+				require.Equal(t, codes.Unset, span.Status().Code)
+				require.Empty(t, span.Events())
+			},
+		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			recorder := installSpanRecorder(t)
 			engine := &LocalEngine{orchestator: testCase.orchestrator}
+			ctx, cancel := context.WithCancel(context.Background())
+			defer cancel()
+			if testCase.cancel {
+				cancel()
+			}
 			res, err := engine.Promote(
-				context.Background(),
+				ctx,
 				Context{
 					WorkDir:   t.TempDir(),
 					Project:   "fake-project",
@@ -125,6 +148,7 @@ func TestLocalStepExecutor_ExecuteStep_tracing(t *testing.T) {
 	testCases := []struct {
 		name   string
 		runner StepRunner
+		cancel bool
 		assert func(*testing.T, StepResult, error, sdktrace.ReadOnlySpan)
 	}{
 		{
@@ -166,6 +190,23 @@ func TestLocalStepExecutor_ExecuteStep_tracing(t *testing.T) {
 				require.Equal(t, codes.Error, span.Status().Code)
 			},
 		},
+		{
+			// A command killed on cancellation fails without wrapping
+			// context.Canceled: not the span's error.
+			name: "canceled",
+			runner: &MockStepRunner{
+				RunFunc: func(context.Context, *StepContext) (StepResult, error) {
+					return StepResult{Status: kargoapi.PromotionStepStatusErrored},
+						errors.New("signal: terminated")
+				},
+			},
+			cancel: true,
+			assert: func(t *testing.T, _ StepResult, err error, span sdktrace.ReadOnlySpan) {
+				require.Error(t, err)
+				require.Equal(t, codes.Unset, span.Status().Code)
+				require.Empty(t, span.Events())
+			},
+		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
@@ -182,8 +223,13 @@ func TestLocalStepExecutor_ExecuteStep_tracing(t *testing.T) {
 				nil,
 				nil,
 			)
+			ctx, cancel := context.WithCancel(context.Background())
+			defer cancel()
+			if testCase.cancel {
+				cancel()
+			}
 			res, err := executor.ExecuteStep(
-				context.Background(),
+				ctx,
 				StepExecutionRequest{
 					Context: StepContext{WorkDir: t.TempDir(), Project: "fake-project"},
 					Step:    Step{Kind: "fake-step", Alias: "fake-alias"},
