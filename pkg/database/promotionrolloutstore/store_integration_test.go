@@ -1139,7 +1139,7 @@ func TestStoreFreightIntegration(t *testing.T) {
 			},
 		},
 		{
-			name: "a rollout that did not succeed is passed over for the newest that did",
+			name: "the rollout before is the newest that finished with a collection, however it finished",
 			run: func(t *testing.T) {
 				const project = "previous"
 				seedStage(t, project, "prod")
@@ -1147,36 +1147,56 @@ func TestStoreFreightIntegration(t *testing.T) {
 				all := []kargoapi.FreightOrigin{images, config, charts}
 				promote(t, project, "prod.01A", freight("images-1", images), succeeded, all...)
 				promote(t, project, "prod.01B", freight("config-1", config), succeeded, all...)
+				// A rollout that fails recorded what it set out to promote,
+				// and the next rollout carries that forward, as a Stage's
+				// next Promotion does after one that failed.
 				failed := promote(
 					t, project, "prod.01C", freight("config-2", config), kargoapi.PromotionRolloutPhaseFailed, all...,
 				)
-				// The failed rollout recorded what it set out to promote.
 				requireCollection(t, failed, freight("images-1", images), freight("config-2", config))
-				promote(
-					t, project, "prod.01D", freight("config-3", config), kargoapi.PromotionRolloutPhaseErrored, all...,
+				afterFailed := promote(
+					t, project, "prod.01D", freight("charts-1", charts), kargoapi.PromotionRolloutPhaseErrored, all...,
 				)
-				// Aborted before it started, so it recorded nothing.
-				aborted := create(t, project, "prod", "prod.01E", freight("charts-1", charts))
+				requireCollection(
+					t, afterFailed,
+					freight("images-1", images), freight("config-2", config), freight("charts-1", charts),
+				)
+				// Aborted before it started, so it recorded nothing, and it
+				// is passed over for the one before it.
+				aborted := create(t, project, "prod", "prod.01E", freight("charts-2", charts))
 				finish(t, aborted, kargoapi.PromotionRolloutPhaseAborted)
 				requireCollection(t, aborted)
 				// Another Stage's rollouts are not this Stage's history.
-				staging := create(t, project, "staging", "staging.01A", freight("charts-2", charts))
-				_, err := store.Start(ctx, project, staging.PromotionRolloutRow, freight("charts-2", charts), all)
+				staging := create(t, project, "staging", "staging.01A", freight("charts-3", charts))
+				_, err := store.Start(ctx, project, staging.PromotionRolloutRow, freight("charts-3", charts), all)
 				require.NoError(t, err)
 				finish(t, staging, succeeded)
-				requireCollection(t, staging, freight("charts-2", charts))
+				requireCollection(t, staging, freight("charts-3", charts))
 
 				next := promote(t, project, "prod.01F", freight("images-2", images), succeeded, all...)
-				requireCollection(t, next, freight("images-2", images), freight("config-1", config))
+				requireCollection(
+					t, next,
+					freight("images-2", images), freight("config-2", config), freight("charts-1", charts),
+				)
+
+				// A rollout still in progress is not the one before any
+				// other, though it has recorded its collection.
+				running := create(t, project, "prod", "prod.01G", freight("config-3", config))
+				_, err = store.Start(ctx, project, running.PromotionRolloutRow, freight("config-3", config), all)
+				require.NoError(t, err)
+				create(t, project, "prod", "prod.01H", freight("images-3", images))
 
 				// The choice is one query's: the Stage's newest rollout
-				// numbered below the given one that Succeeded.
+				// numbered below the given one that has finished, in any
+				// phase, and recorded a collection.
 				for name, want := range map[string]string{
 					"prod.01B": "prod.01A",
 					"prod.01C": "prod.01B",
-					"prod.01D": "prod.01B",
-					"prod.01E": "prod.01B",
-					"prod.01F": "prod.01B",
+					"prod.01D": "prod.01C",
+					"prod.01E": "prod.01D",
+					"prod.01F": "prod.01D",
+					"prod.01G": "prod.01F",
+					"prod.01H": "prod.01F",
 				} {
 					previous, previousErr := queries.GetPreviousPromotionRollout(
 						ctx, database.GetPreviousPromotionRolloutParams{ProjectName: project, Name: name},
@@ -1288,7 +1308,7 @@ func TestStoreFreightIntegration(t *testing.T) {
 			},
 		},
 		{
-			name: "a rollout with no rows has an empty collection",
+			name: "a rollout with no rows has an empty collection and is passed over",
 			run: func(t *testing.T) {
 				const project = "none"
 				seedStage(t, project, "prod")
@@ -1305,9 +1325,17 @@ func TestStoreFreightIntegration(t *testing.T) {
 				collection, err = store.GetFreightCollection(ctx, uuid.New())
 				require.NoError(t, err)
 				require.Equal(t, &kargoapi.FreightCollection{}, collection)
-				// The next rollout has nothing to carry forward from it.
+				// The next rollout has nothing to carry forward: no rollout
+				// before it recorded anything.
 				next := promote(t, project, "prod.01B", freight("config-1", config), succeeded, images, config)
 				requireCollection(t, next, freight("config-1", config))
+				// Another rollout with no rows does not come between that one
+				// and the one after it.
+				old = create(t, project, "prod", "prod.01C", freight("images-2", images))
+				finish(t, old, kargoapi.PromotionRolloutPhaseRunning)
+				finish(t, old, succeeded)
+				after := promote(t, project, "prod.01D", freight("images-3", images), succeeded, images, config)
+				requireCollection(t, after, freight("images-3", images), freight("config-1", config))
 			},
 		},
 		{
