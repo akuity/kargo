@@ -228,7 +228,7 @@ In the example above, the promotion policy applies to all `Stage`s with the
 `example.org/allow-auto-promotion: "true"` label and names matching the
 `glob:prod-*` pattern.
 
-#### Auto-Rollback
+### Auto-Rollback
 
 <Enterprise />
 <Beta />
@@ -238,7 +238,7 @@ When verification fails on a `Stage`, Kargo can automatically promote that
 without manual intervention. This reduces mean time to recovery (MTTR) by
 eliminating the need for a human to notice, decide, and trigger a rollback.
 
-##### How it works
+#### How it works
 
 Each time `Freight` is successfully verified in a `Stage`, the Freight name 
 is recorded into the `Stage`'s metadata as its *stable Freight*, the 
@@ -267,7 +267,7 @@ spec:
     autoRollback: {}
 ```
 
-##### Stable Freight
+#### Stable Freight
 
 Kargo tracks a *stable Freight* for each `Warehouse` a `Stage` subscribes to.
 The stable Freight is updated whenever `Freight` passes verification in that 
@@ -282,7 +282,7 @@ status:
       Warehouse/my-warehouse: abc1234...
 ```
 
-##### Rollback Promotions
+#### Rollback Promotions
 
 A rollback `Promotion` is functionally identical to a normal `Promotion` and
 follows the same promotion steps. It is distinguishable from regular promotions
@@ -302,27 +302,21 @@ steps:
     message: "${{ ctx.stage }} was rolled back to ${{ ctx.targetFreight.name }}"
 ```
 
-`autoRollback` has two sub-fields that control which terminal phases trigger a
-rollback:
+#### Rollback Triggers
+
+`autoRollback` has two sub-fields that choose which outcomes trigger a
+rollback. `onVerification` covers verifications and `onPromotion` covers
+promotions:
 
 | Field | Accepted values | Default |
 |---|---|---|
 | `onVerification` | `Failed`, `Error` | `[Failed]` |
 | `onPromotion` | `Failed`, `Errored` | `[]` |
 
-`Failed` means the process ran to completion and produced a definitive negative
-result. For example, an `AnalysisRun` metric that exceeded its failure
-threshold. `Error`/`Errored` means the process was unable to complete due to a
-transient or unknown problem. For example, a network timeout, a missing secret,
-or invalid auth credentials. Whether to roll back on errors is a judgment call:
-the `Freight` itself may be fine, and retrying the promotion or verification
-might succeed.
-
 :::warning
 
-The spelling difference between `Errored` (promotion) and `Error`
-(verification) is intentional — the latter draws from `AnalysisRun` phase
-enums.
+The values are spelled differently: verifications use `Error`, promotions use
+`Errored`. Verification phases come from Argo Rollouts `AnalysisRun` phases.
 
 :::
 
@@ -352,16 +346,54 @@ spec:
       - Errored
 ```
 
-:::note
+##### Failed vs. Error
 
+`Failed` means the verification or promotion ran to completion and produced a
+definitive negative result. `Error`/`Errored` means it was unable to complete.
+Whether to roll back on errors is a judgment call: the `Freight` itself may be
+fine, and retrying the promotion or verification might succeed.
+
+Which value a given problem produces depends on where it happens:
+
+##### Verification Phases
+
+| Phase | Produced when |
+|---|---|
+| `Failed` | An `AnalysisRun` metric exceeded its `failureLimit`, *or* a user aborted the verification. |
+| `Error` | An `AnalysisRun` metric exceeded its `consecutiveErrorLimit` (for example, the metrics provider was unreachable or a query was invalid), or Kargo could not create or read the `AnalysisRun`. |
+
+##### Promotion Phases
+
+A `Promotion`'s phase is the most severe status among its steps, where
+`Errored` ranks above `Failed`. Steps with `continueOnError: true` don't count.
 `onPromotion` defaults to `[]` because promotions can fail for infrastructure
-reasons entirely unrelated to the `Freight` — for example, an expired
-credential or a network timeout. Enable it only when promotion failures
-reliably reflect a problem with the `Freight` itself.
+reasons entirely unrelated to the `Freight`. Enable it only when promotion
+failures reliably reflect a problem with the `Freight` itself.
+
+| Phase | Produced when |
+|---|---|
+| `Failed` | A step reported failure: the `fail` step, an `http` step whose `failureExpression` matched, a pull request closed without being merged, a merge conflict on push, or an invalid step configuration. Some steps also report infrastructure problems as `Failed`. For example, `git-merge-pr` does this for authentication and network errors. |
+| `Errored` | A step ran out of retries, **timed out**, or hit an unexpected error, or the controller itself hit an error. Timeouts always produce `Errored`, even when the step was reporting failure. |
+
+:::info
+
+The `argocd-update` and `argocd-wait` steps report a failed sync or a
+degraded Application as `Errored`, not `Failed`. If those steps are how your
+promotions detect a bad deployment, include `Errored` in `onPromotion`.
 
 :::
 
-##### Auto-Rollback with Auto-Promotion
+:::note
+
+Verification only starts once the `Stage` is `Healthy`. If a deployment
+syncs but the application never becomes healthy (for example, it is
+crash-looping), no verification result is ever recorded, so `onVerification`
+cannot trigger a rollback. To catch this case, add an `argocd-wait` step to
+your promotion and configure `onPromotion` as described above.
+
+:::
+
+#### Auto-Rollback with Auto-Promotion
 
 A rollback `Promotion` is subject to the same
 [auto-promotion hold](./40-working-with-stages.md#auto-promotion) mechanism as
@@ -377,7 +409,7 @@ To resume auto-promotion for the affected freight request, promote that
 freight request's current candidate `Freight`. See
 [Lifting a hold](./40-working-with-stages.md#auto-promotion).
 
-##### Settled state
+#### Settled state
 
 An automated rollback Promotion will only be created when the `Stage` is in
 a "settled" state, meaning there are no `Promotion`s currently Running or
@@ -385,7 +417,7 @@ Pending. This allows for the queued Promotions to run and potentially resolve
 the verification failure, preventing unnecessary rollbacks and avoids
 conflicts with in-flight manual or automated promotions.
 
-##### Multi-Origin Stages
+#### Multi-Origin Stages
 
 Stages that request Freight from multiple origins have a stable Freight
 recorded for each origin individually. When a verification fails, auto-rollback
@@ -403,7 +435,7 @@ deviated (promoted) from their stable Freight until either (a) verification
 passes again, or (b) every origin has been rolled back to its stable Freight,
 whichever comes first.
 
-##### Other Considerations
+#### Other Considerations
 
 - **Maximum failure age:** automated rollbacks ignores failed verifications
   or promotions whose completion time is older than 20 minutes. This prevents
