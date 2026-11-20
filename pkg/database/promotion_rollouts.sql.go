@@ -137,7 +137,11 @@ JOIN promotion_rollouts AS previous ON previous.stage_id = rollout.stage_id
 WHERE rollout.project_name = $1
     AND rollout.name = $2
     AND previous.number < rollout.number
-    AND previous.status_phase = 'Succeeded'
+    AND previous.status_phase NOT IN ('Pending', 'Running')
+    AND EXISTS (
+        SELECT 1 FROM promotion_rollout_freight AS recorded
+        WHERE recorded.promotion_rollout_id = previous.id
+    )
 ORDER BY previous.number DESC
 LIMIT 1
 `
@@ -149,12 +153,14 @@ type GetPreviousPromotionRolloutParams struct {
 
 // The rollout whose FreightCollection the named rollout carries forward
 // when it starts: the same Stage's newest rollout, numbered below it, that
-// Succeeded. This query is the whole of that choice. A rollout that Failed,
-// Errored or was Aborted is passed over, however much of it was promoted,
-// so what is carried forward is what the Stage's Targets were last all
-// brought to. Whether a rollout that promoted to only some of its Targets
-// should count is an open question; to change the answer, change the
-// predicate here.
+// has finished and recorded a collection. This query is the whole of that
+// choice. How the rollout finished does not matter: one that Failed or
+// Errored counts as one that Succeeded does, so the Freight it set out to
+// promote is carried forward, as a Stage's next Promotion carries forward
+// what its last one rendered, whatever became of it. A rollout that recorded
+// nothing -- one Aborted before it started, or started before collections
+// were recorded -- is passed over for the one before it, so that it does not
+// make the Stage forget what was collected until then.
 func (q *Queries) GetPreviousPromotionRollout(ctx context.Context, arg GetPreviousPromotionRolloutParams) (PromotionRolloutRow, error) {
 	row := q.db.QueryRow(ctx, getPreviousPromotionRollout, arg.ProjectName, arg.Name)
 	var i PromotionRolloutRow
