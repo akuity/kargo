@@ -48,6 +48,7 @@ type PromotionRolloutRow struct {
 type PromotionRolloutTargetRow struct {
 	PromotionRolloutID uuid.UUID
 	TargetID           uuid.UUID
+	ProjectName        string
 }
 
 type PromotionRow struct {

@@ -234,6 +234,41 @@ func (q *Queries) ListTargets(ctx context.Context, projectName string) ([]Target
 	return items, nil
 }
 
+const listTargetsOutsideProject = `-- name: ListTargetsOutsideProject :many
+SELECT id FROM targets
+WHERE id = ANY($1::uuid[])
+    AND project_name <> $2
+ORDER BY id
+`
+
+type ListTargetsOutsideProjectParams struct {
+	Ids         []uuid.UUID
+	ProjectName string
+}
+
+// Those of the given Targets that belong to a Project other than the named
+// one. It explains a write the schema refused for naming a Target that is
+// not the Project's; it enforces nothing itself.
+func (q *Queries) ListTargetsOutsideProject(ctx context.Context, arg ListTargetsOutsideProjectParams) ([]uuid.UUID, error) {
+	rows, err := q.db.Query(ctx, listTargetsOutsideProject, arg.Ids, arg.ProjectName)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []uuid.UUID
+	for rows.Next() {
+		var id uuid.UUID
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		items = append(items, id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const updateTarget = `-- name: UpdateTarget :one
 UPDATE targets SET
     labels = $1::jsonb,

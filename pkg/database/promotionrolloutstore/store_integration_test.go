@@ -63,7 +63,7 @@ func TestStoreIntegration(t *testing.T) {
 	// these Stages in a Project of its own.
 	for _, project := range []string{
 		"create", "numbers", "concurrent", "empty", "unique-a", "unique-b",
-		"vanished", "cascade", "list", "latest", "many", "open", "running", "update",
+		"vanished", "foreign", "mixed", "cascade", "list", "latest", "many", "open", "running", "update",
 		"statuses",
 	} {
 		for _, stage := range []string{"prod", "staging"} {
@@ -268,6 +268,145 @@ func TestStoreIntegration(t *testing.T) {
 				require.NoError(t, err)
 				require.EqualValues(t, 1, rollout.Number)
 				require.Equal(t, []string{"us-east"}, targetNames(rollout))
+			},
+		},
+		{
+			name: "a Target of another Project is refused and nothing is written",
+			run: func(t *testing.T) {
+				// The other Project's Target has the name of one of this
+				// Project's, as Targets of different Projects may.
+				ids := seedTargets(t, "foreign", "us-east")
+				otherIDs := seedTargets(t, "foreign-other", "us-east")
+				_, err := store.Create(
+					ctx,
+					"foreign",
+					newRollout("prod", "prod.01A.abc"),
+					[]uuid.UUID{otherIDs["us-east"]},
+				)
+				require.ErrorIs(t, err, ErrForeignTarget)
+				require.ErrorIs(t, err, database.ErrInvalid)
+				require.NotErrorIs(t, err, database.ErrConflict)
+				require.ErrorContains(t, err, otherIDs["us-east"].String())
+				require.NotContains(t, err.Error(), "foreign-other")
+				_, err = store.Get(ctx, "foreign", "prod.01A.abc")
+				require.ErrorIs(t, err, database.ErrNotFound)
+				var snapshots int
+				require.NoError(t, pool.QueryRow(ctx,
+					"SELECT count(*) FROM promotion_rollout_targets WHERE target_id = $1",
+					otherIDs["us-east"],
+				).Scan(&snapshots))
+				require.Zero(t, snapshots)
+				// The number is not used up either, so a second attempt,
+				// with the Project's own Target, is the Stage's first.
+				rollout, err := store.Create(
+					ctx,
+					"foreign",
+					newRollout("prod", "prod.01A.abc"),
+					[]uuid.UUID{ids["us-east"]},
+				)
+				require.NoError(t, err)
+				require.EqualValues(t, 1, rollout.Number)
+				require.Equal(t, []string{"us-east"}, targetNames(rollout))
+				require.Equal(t, ids["us-east"], rollout.Targets[0].TargetID)
+			},
+		},
+		{
+			name: "Targets of this Project and another are refused as a whole",
+			run: func(t *testing.T) {
+				ids := seedTargets(t, "mixed", "us-east", "us-west")
+				otherIDs := seedTargets(t, "mixed-other", "eu-west", "eu-north")
+				_, err := store.Create(
+					ctx,
+					"mixed",
+					newRollout("prod", "prod.01A.abc"),
+					[]uuid.UUID{
+						ids["us-east"],
+						otherIDs["eu-west"],
+						ids["us-west"],
+						otherIDs["eu-north"],
+					},
+				)
+				require.ErrorIs(t, err, ErrForeignTarget)
+				// Every Target of another Project is named, and none of
+				// this Project's.
+				require.ErrorContains(t, err, otherIDs["eu-west"].String())
+				require.ErrorContains(t, err, otherIDs["eu-north"].String())
+				require.NotContains(t, err.Error(), ids["us-east"].String())
+				require.NotContains(t, err.Error(), ids["us-west"].String())
+				// The Project's own Targets are not recorded without the
+				// others: there is no rollout for them to be recorded with.
+				_, err = store.Get(ctx, "mixed", "prod.01A.abc")
+				require.ErrorIs(t, err, database.ErrNotFound)
+				var snapshots int
+				require.NoError(t, pool.QueryRow(ctx,
+					"SELECT count(*) FROM promotion_rollout_targets WHERE project_name = 'mixed'",
+				).Scan(&snapshots))
+				require.Zero(t, snapshots)
+				// A Target that is gone and one of another Project are
+				// reported as the latter, which no retry can cure.
+				_, err = store.Create(
+					ctx,
+					"mixed",
+					newRollout("prod", "prod.01A.abc"),
+					[]uuid.UUID{ids["us-east"], uuid.New(), otherIDs["eu-west"]},
+				)
+				require.ErrorIs(t, err, ErrForeignTarget)
+				// The same Targets without the other Project's are accepted,
+				// as the Stage's first rollout.
+				rollout, err := store.Create(
+					ctx,
+					"mixed",
+					newRollout("prod", "prod.01A.abc"),
+					[]uuid.UUID{ids["us-east"], ids["us-west"]},
+				)
+				require.NoError(t, err)
+				require.EqualValues(t, 1, rollout.Number)
+				require.Equal(t, []string{"us-east", "us-west"}, targetNames(rollout))
+			},
+		},
+		{
+			name: "the database holds a rollout's Targets to its Project",
+			run: func(t *testing.T) {
+				seedStage(t, "held", "prod", "held/prod")
+				ids := seedTargets(t, "held", "us-east")
+				otherIDs := seedTargets(t, "held-other", "us-east")
+				rollout, err := store.Create(ctx, "held", newRollout("prod", "prod.01A.abc"), nil)
+				require.NoError(t, err)
+				const insert = `INSERT INTO promotion_rollout_targets
+					(promotion_rollout_id, project_name, target_id) VALUES ($1, $2, $3)`
+				// Whoever writes the row, its Project must be both the
+				// rollout's and the Target's.
+				for _, bad := range []struct {
+					project    string
+					target     uuid.UUID
+					constraint string
+				}{
+					{
+						project:    "held",
+						target:     otherIDs["us-east"],
+						constraint: targetConstraint,
+					},
+					{
+						project:    "held-other",
+						target:     otherIDs["us-east"],
+						constraint: "promotion_rollout_targets_promotion_rollout_fkey",
+					},
+				} {
+					_, err = pool.Exec(ctx, insert, rollout.ID, bad.project, bad.target)
+					databasetest.RequirePGError(t, err, "23503")
+					var pgErr *pgconn.PgError
+					require.ErrorAs(t, err, &pgErr)
+					require.Equal(t, bad.constraint, pgErr.ConstraintName)
+				}
+				_, err = pool.Exec(ctx, insert, rollout.ID, "held", ids["us-east"])
+				require.NoError(t, err)
+				// Nor can a Target leave its Project while a rollout
+				// records it.
+				_, err = pool.Exec(ctx,
+					"UPDATE targets SET project_name = 'held-other-2' WHERE id = $1",
+					ids["us-east"],
+				)
+				databasetest.RequirePGError(t, err, "23503")
 			},
 		},
 		{
