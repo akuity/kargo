@@ -2802,6 +2802,11 @@ func (in *StageStatus) DeepCopyInto(out *StageStatus) {
 		*out = new(PromotionRequestReference)
 		(*in).DeepCopyInto(*out)
 	}
+	if in.CurrentPromotionRollout != nil {
+		in, out := &in.CurrentPromotionRollout, &out.CurrentPromotionRollout
+		*out = new(PromotionRolloutReference)
+		(*in).DeepCopyInto(*out)
+	}
 	if in.LastPromotionRollout != nil {
 		in, out := &in.LastPromotionRollout, &out.LastPromotionRollout
 		*out = new(PromotionRolloutReference)

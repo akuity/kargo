@@ -8720,11 +8720,11 @@
       "type": "object",
       "properties": {
         "finishedAt": {
-          "description": "FinishedAt is the time at which the PromotionRollout completed.",
+          "description": "FinishedAt is the time at which the PromotionRollout completed. It is\nabsent for one that has not.",
           "type": "string"
         },
         "message": {
-          "description": "Message is a human-readable description of how the PromotionRollout\nended.",
+          "description": "Message is a human-readable description of how the PromotionRollout\nended. It is empty for one that has not.",
           "type": "string"
         },
         "name": {
@@ -9446,6 +9446,14 @@
           "allOf": [
             {
               "$ref": "#/definitions/PromotionRequestReference"
+            }
+          ]
+        },
+        "currentPromotionRollout": {
+          "description": "CurrentPromotionRollout is a reference to the PromotionRollout this Stage\nis promoting through. A PromotionRollout does not start until its Stage\nnames it here, and the Stage names the next one only once it has recorded\nthe one before it and is not still to verify the Freight it is on. The\nreference stays until the Stage has recorded how that PromotionRollout\nended. It is absent for a Stage that governs no Targets.\n\n+optional",
+          "allOf": [
+            {
+              "$ref": "#/definitions/PromotionRolloutReference"
             }
           ]
         },

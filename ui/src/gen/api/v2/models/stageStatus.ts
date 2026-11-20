@@ -56,6 +56,17 @@ export interface StageStatus {
    */
   currentPromotionRequest?: PromotionRequestReference;
   /**
+   * CurrentPromotionRollout is a reference to the PromotionRollout this Stage
+   * is promoting through. A PromotionRollout does not start until its Stage
+   * names it here, and the Stage names the next one only once it has recorded
+   * the one before it and is not still to verify the Freight it is on. The
+   * reference stays until the Stage has recorded how that PromotionRollout
+   * ended. It is absent for a Stage that governs no Targets.
+   *
+   * +optional
+   */
+  currentPromotionRollout?: PromotionRolloutReference;
+  /**
    * EffectiveAutoPromotionHolds is the set of auto-promotion holds in effect
    * right now. It is recomputed every reconciliation from AutoPromotionHolds
    * plus the newest in-flight Promotions, and unlike AutoPromotionHolds is not

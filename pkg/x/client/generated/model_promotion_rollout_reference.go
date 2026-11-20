@@ -19,9 +19,9 @@ var _ MappedNullable = &PromotionRolloutReference{}
 
 // PromotionRolloutReference struct for PromotionRolloutReference
 type PromotionRolloutReference struct {
-	// FinishedAt is the time at which the PromotionRollout completed.
+	// FinishedAt is the time at which the PromotionRollout completed. It is absent for one that has not.
 	FinishedAt *string `json:"finishedAt,omitempty"`
-	// Message is a human-readable description of how the PromotionRollout ended.
+	// Message is a human-readable description of how the PromotionRollout ended. It is empty for one that has not.
 	Message *string `json:"message,omitempty"`
 	// Name is the name of the PromotionRollout.
 	Name *string `json:"name,omitempty"`
