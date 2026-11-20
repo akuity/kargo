@@ -4,6 +4,7 @@ import { generatePath, useNavigate, useParams, useSearchParams } from 'react-rou
 import { paths } from '@ui/config/paths';
 import { LoadingState } from '@ui/features/common';
 import { AnalysisRunLogs } from '@ui/features/common/analysis-run-logs/analysis-run-logs';
+import { refetchWhileJobPending } from '@ui/features/common/analysis-run-logs/extract-analysis-run';
 import { useDocumentTitle } from '@ui/features/common/document-title/use-document-title';
 import { useGetAnalysisRun } from '@ui/gen/api/v2/verifications/verifications';
 
@@ -13,7 +14,9 @@ export const AnalysisRunLogsPage = () => {
   const [searchParams] = useSearchParams();
   useDocumentTitle([analysisRunId && `Logs: ${analysisRunId}`, stageName, name]);
 
-  const getAnalysisRunQuery = useGetAnalysisRun(name || '', analysisRunId || '');
+  const getAnalysisRunQuery = useGetAnalysisRun(name || '', analysisRunId || '', {
+    query: { refetchInterval: refetchWhileJobPending }
+  });
 
   if (!name || !stageName || !analysisRunId) {
     return <>Not found</>;
