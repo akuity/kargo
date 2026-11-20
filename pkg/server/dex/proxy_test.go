@@ -1,13 +1,18 @@
 package dex
 
 import (
-	"crypto/x509"
+	"io"
+	"log"
+	"net/http"
+	"net/http/httptest"
 	"net/http/httputil"
 	"os"
 	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/require"
+
+	"github.com/akuity/kargo/pkg/server/dex/dextest"
 )
 
 // This is self-signed and completely useless CA cert just for testing purposes.
@@ -101,33 +106,33 @@ func TestNewProxy(t *testing.T) {
 	}
 }
 
-func TestBuildCACertPool(t *testing.T) {
-	testCases := []struct {
-		name        string
-		caCertBytes []byte
-		assertions  func(*testing.T, *x509.CertPool, error)
-	}{
-		{
-			name:        "invalid cert bytes provided",
-			caCertBytes: []byte("junk"),
-			assertions: func(t *testing.T, _ *x509.CertPool, err error) {
-				require.Error(t, err)
-				require.Equal(t, "invalid CA cert data", err.Error())
-			},
-		},
-		{
-			name:        "valid cert bytes provided",
-			caCertBytes: dummyCACertBytes,
-			assertions: func(t *testing.T, caCertPool *x509.CertPool, err error) {
-				require.NoError(t, err)
-				require.NotNil(t, caCertPool)
-			},
-		},
+func TestNewProxyCACertReload(t *testing.T) {
+	t.Parallel()
+	dexSrv, certPEM := dextest.NewRotatingTLSServer(t, okHandler())
+	caCertPath := filepath.Join(t.TempDir(), "ca.crt")
+	dextest.ReplaceFile(t, caCertPath, certPEM)
+	proxy, err := NewProxy(ProxyConfig{
+		ServerAddr: dexSrv.URL,
+		CACertPath: caCertPath,
+	})
+	require.NoError(t, err)
+	proxy.ErrorLog = log.New(io.Discard, "", 0)
+
+	serve := func() int {
+		rec := httptest.NewRecorder()
+		proxy.ServeHTTP(
+			rec,
+			httptest.NewRequest(http.MethodGet, "/dex/.well-known/openid-configuration", nil),
+		)
+		return rec.Code
 	}
-	for _, testCase := range testCases {
-		t.Run(testCase.name, func(t *testing.T) {
-			caCertPool, err := buildCACertPool(testCase.caCertBytes)
-			testCase.assertions(t, caCertPool, err)
-		})
-	}
+
+	require.Equal(t, http.StatusOK, serve())
+	// cert-manager reissues Dex's cert; the kubelet has not yet updated the
+	// mounted CA cert file.
+	newCertPEM := dexSrv.Rotate(t)
+	require.Equal(t, http.StatusBadGateway, serve())
+	// The kubelet updates the mounted CA cert file.
+	dextest.ReplaceFile(t, caCertPath, newCertPEM)
+	require.Equal(t, http.StatusOK, serve())
 }

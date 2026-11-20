@@ -17,6 +17,7 @@ import (
 
 	"github.com/akuity/kargo/pkg/server/config"
 	"github.com/akuity/kargo/pkg/server/dex"
+	"github.com/akuity/kargo/pkg/server/dex/dextest"
 	libOIDC "github.com/akuity/kargo/pkg/server/oidc"
 	"github.com/akuity/kargo/pkg/server/user"
 )
@@ -168,6 +169,53 @@ func TestGetKeySet(t *testing.T) {
 			require.NotNil(t, keyset)
 		})
 	}
+}
+
+func TestGetKeySetCACertReload(t *testing.T) {
+	t.Parallel()
+	mux := http.NewServeMux()
+	dexSrv, certPEM := dextest.NewRotatingTLSServer(t, mux)
+	issuerURL := dexSrv.URL + "/dex"
+	mux.HandleFunc(
+		"/dex/.well-known/openid-configuration",
+		func(w http.ResponseWriter, _ *http.Request) {
+			_, err := w.Write([]byte(`{
+				"issuer": "` + issuerURL + `",
+				"jwks_uri": "` + issuerURL + `/keys"
+			}`))
+			require.NoError(t, err)
+		},
+	)
+	// No keys, so every verification refetches them.
+	mux.HandleFunc("/dex/keys", func(w http.ResponseWriter, _ *http.Request) {
+		_, err := w.Write([]byte(`{"keys":[]}`))
+		require.NoError(t, err)
+	})
+	caCertPath := filepath.Join(t.TempDir(), "ca.crt")
+	dextest.ReplaceFile(t, caCertPath, certPEM)
+
+	keyset, err := getKeySet(
+		t.Context(),
+		config.ServerConfig{
+			DexProxyConfig: &dex.ProxyConfig{
+				ServerAddr: dexSrv.URL,
+				CACertPath: caCertPath,
+			},
+			OIDCConfig: &libOIDC.Config{IssuerURL: issuerURL},
+		},
+	)
+	require.NoError(t, err)
+
+	// A well-formed JWS whose signature no key will verify. Verifying it
+	// makes the key set fetch keys from Dex.
+	const jws = "eyJhbGciOiJSUzI1NiJ9.e30.c2ln" // {"alg":"RS256"}.{}.sig
+
+	// cert-manager reissues Dex's cert and the kubelet updates the mounted
+	// CA cert file.
+	dextest.ReplaceFile(t, caCertPath, dexSrv.Rotate(t))
+	_, err = keyset.VerifySignature(t.Context(), jws)
+	// Keys were fetched over a trusted connection; only the signature failed.
+	require.EqualError(t, err, "failed to verify id token signature")
 }
 
 func TestGetKeySet_UnusableDiscoveryResponse(t *testing.T) {
