@@ -12,13 +12,12 @@ RUN apt update && apt install -y ca-certificates curl gnupg unzip \
     && echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_$NODE_MAJOR.x nodistro main" | tee /etc/apt/sources.list.d/nodesource.list \
     && apt-get update && apt-get install nodejs openjdk-${JAVA_MAJOR}-jre-headless -y \
     && npm install --global pnpm@${PNPM_VERSION} \
-    # Install Git from "trixie" repository to get a more recent version than
-    # the one available in "stable". This can be removed once the version in
-    # "stable" is updated to >= 2.42.0 (which supports `--orphan` for `git
-    # worktree add`).
-    && echo "deb http://deb.debian.org/debian trixie main" > /etc/apt/sources.list.d/trixie.list \
+    # Install Git from the "forky" (testing) repository because Kargo requires
+    # Git >= 2.49.0 (which supports `--revision` for `git clone`), and the
+    # version available in "trixie" is older.
+    && echo "deb http://deb.debian.org/debian forky main" > /etc/apt/sources.list.d/forky.list \
     && apt update \
-    && apt install -y -t trixie git \
+    && apt install -y -t forky git \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
