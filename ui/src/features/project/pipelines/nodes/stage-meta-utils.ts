@@ -3,6 +3,10 @@ import { generatePath } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
 import { ColorContext } from '@ui/context/colors';
+import {
+  createdPromotionRetryDelay,
+  shouldRetryCreatedPromotion
+} from '@ui/features/project/pipelines/promotion/created-promotion';
 import { ColorMapHex, parseColorAnnotation } from '@ui/features/stage/utils';
 import { isStagePromoting, rolloutPath } from '@ui/features/stage/utils/promotion-rollout';
 import { useGetPromotion } from '@ui/gen/api/v2/core/core';
@@ -199,7 +203,10 @@ export const useCurrentPromotion = (stage: Stage) => {
     query: {
       enabled: !!currentPromotion,
       staleTime: 10 * 1000,
-      gcTime: 10 * 1000
+      gcTime: 10 * 1000,
+      retry: shouldRetryCreatedPromotion,
+      retryDelay: createdPromotionRetryDelay,
+      meta: { silent404: true }
     }
   });
 
