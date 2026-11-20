@@ -847,6 +847,7 @@ func TestLocalOrchestrator_ExecuteSteps(t *testing.T) {
 				nil,
 				nil,
 				nil,
+				nil,
 			)
 
 			tt.promoCtx.WorkDir = t.TempDir()

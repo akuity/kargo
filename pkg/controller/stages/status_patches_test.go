@@ -3,6 +3,7 @@ package stages
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -15,6 +16,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/pkg/api/freightapi"
+	"github.com/akuity/kargo/pkg/client/apiserver/freightclient/testutil"
 	fakeevent "github.com/akuity/kargo/pkg/event/fake"
 	"github.com/akuity/kargo/pkg/health"
 	"github.com/akuity/kargo/pkg/indexer"
@@ -69,10 +72,6 @@ func TestRegularStageReconciler_Reconcile_statusPatchesPerPass(t *testing.T) {
 		WithObjects(stage, freight, promo).
 		WithStatusSubresource(&kargoapi.Stage{}, &kargoapi.Freight{}, &kargoapi.Promotion{}).
 		WithIndex(&kargoapi.Promotion{}, indexer.PromotionsByStageField, indexer.PromotionsByStage).
-		WithIndex(&kargoapi.Freight{}, indexer.FreightByWarehouseField, indexer.FreightByWarehouse).
-		WithIndex(&kargoapi.Freight{}, indexer.FreightByCurrentStagesField, indexer.FreightByCurrentStages).
-		WithIndex(&kargoapi.Freight{}, indexer.FreightByVerifiedStagesField, indexer.FreightByVerifiedStages).
-		WithIndex(&kargoapi.Freight{}, indexer.FreightApprovedForStagesField, indexer.FreightApprovedForStages).
 		WithIndex(
 			&kargoapi.Promotion{},
 			indexer.PromotionsByStageAndFreightField,
@@ -100,11 +99,39 @@ func TestRegularStageReconciler_Reconcile_statusPatchesPerPass(t *testing.T) {
 		}).
 		Build()
 
+	// Freight reads go through the API server client; SyncFreight's status writes
+	// are no-ops here because this test only counts Stage status patches.
+	// Auto-promotion is not exercised, so the Warehouse resolves to no Freight.
+	mockClient := &testutil.MockFreightClient{
+		ListFreightFromWarehouseFun: func(
+			context.Context,
+			string, string,
+			*freightapi.ListWarehouseFreightOptions,
+		) ([]kargoapi.Freight, error) {
+			return nil, nil
+		},
+		GetFreightFun: func(context.Context, string, string) (*kargoapi.Freight, error) {
+			return freight, nil
+		},
+		MarkFreightCurrentlyInStageFun: func(
+			context.Context,
+			string, string,
+			kargoapi.FreightOrigin,
+			string,
+		) error {
+			return nil
+		},
+		MarkFreightVerifiedInStageFun: func(context.Context, string, string, string, time.Time) error {
+			return nil
+		},
+	}
+
 	r := &RegularStageReconciler{
 		client:        c,
 		apiReader:     c,
 		eventSender:   &fakeevent.Sender{},
 		healthChecker: &health.MockAggregatingChecker{},
+		freightClient: mockClient,
 	}
 
 	setPhase := func(phase kargoapi.PromotionPhase) {

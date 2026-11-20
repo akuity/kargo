@@ -15,6 +15,7 @@ import (
 	rbacapi "github.com/akuity/kargo/api/rbac/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	libargocd "github.com/akuity/kargo/pkg/argocd"
+	"github.com/akuity/kargo/pkg/client/apiserver/freightclient"
 	"github.com/akuity/kargo/pkg/expressions"
 	"github.com/akuity/kargo/pkg/logging"
 	"github.com/akuity/kargo/pkg/promotion"
@@ -145,6 +146,7 @@ func PromotionsByNonTerminal(obj client.Object) []string {
 func RunningPromotionsByArgoCDApplications(
 	ctx context.Context,
 	cl client.Client,
+	freightClient freightclient.FreightClient,
 	shardName string,
 	isDefaultController bool,
 ) client.IndexerFunc {
@@ -220,7 +222,7 @@ func RunningPromotionsByArgoCDApplications(
 				Config: rawConfig,
 			}
 
-			evaluator := promotion.NewStepEvaluator(cl, nil, nil)
+			evaluator := promotion.NewStepEvaluator(cl, freightClient, nil, nil)
 
 			// As step-level variables are allowed to reference to output, we
 			// need to provide the state.

@@ -92,6 +92,42 @@ tests:
           path: data.METRICS_BIND_ADDRESS
           value: ":9090"
 
+  - it: reaches the API server through its Service, trusting the chart's certificate
+    asserts:
+      - equal:
+          path: data.API_SERVER_ADDRESS
+          value: https://kargo-api.NAMESPACE.svc
+      - equal:
+          path: data.API_SERVER_CA_CERT_PATH
+          value: /etc/kargo/api-ca.crt
+
+  - it: reaches the API server over plain HTTP when it serves none
+    set:
+      api.tls.enabled: false
+    asserts:
+      - equal:
+          path: data.API_SERVER_ADDRESS
+          value: http://kargo-api.NAMESPACE.svc
+      - notExists:
+          path: data.API_SERVER_CA_CERT_PATH
+
+  - it: uses the operator's API server address when set
+    set:
+      webhooksServer.apiServer.address: https://kargo.example.com
+    asserts:
+      - equal:
+          path: data.API_SERVER_ADDRESS
+          value: https://kargo.example.com
+      - notExists:
+          path: data.API_SERVER_CA_CERT_PATH
+
+  - it: omits the API server address when the API is disabled and none is set
+    set:
+      api.enabled: false
+    asserts:
+      - notExists:
+          path: data.API_SERVER_ADDRESS
+
 ---
 suite: kubernetes-webhooks-server/deployment.yaml
 values:
@@ -143,6 +179,48 @@ tests:
             containerPort: 9090
             name: http-metrics
             protocol: TCP
+
+  - it: mounts the chart-generated API server CA
+    template: templates/kubernetes-webhooks-server/deployment.yaml
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].volumeMounts
+          content:
+            mountPath: /etc/kargo/api-ca.crt
+            name: api-ca
+            subPath: ca.crt
+            readOnly: true
+      - contains:
+          path: spec.template.spec.volumes
+          content:
+            name: api-ca
+            secret:
+              secretName: kargo-api-cert
+              items:
+              - key: ca.crt
+                path: ca.crt
+
+  - it: mounts no API server CA when the API server serves plain HTTP
+    template: templates/kubernetes-webhooks-server/deployment.yaml
+    set:
+      api.tls.enabled: false
+    asserts:
+      - notContains:
+          path: spec.template.spec.volumes
+          content:
+            name: api-ca
+          any: true
+
+  - it: mounts no API server CA when pointed at an external API server
+    template: templates/kubernetes-webhooks-server/deployment.yaml
+    set:
+      webhooksServer.apiServer.address: https://kargo.example.com
+    asserts:
+      - notContains:
+          path: spec.template.spec.volumes
+          content:
+            name: api-ca
+          any: true
 
 ---
 suite: kubernetes-webhooks-server/metrics-service.yaml
@@ -216,3 +294,64 @@ tests:
       - equal:
           path: spec.selector.matchLabels["app.kubernetes.io/component"]
           value: kubernetes-webhooks-server
+
+---
+suite: kubernetes-webhooks-server/token-requester-role.yaml
+values:
+  - ../test/values-unittest.yaml
+templates:
+  - templates/kubernetes-webhooks-server/token-requester-role.yaml
+tests:
+  - it: lets the webhooks server request tokens for its own ServiceAccount
+    asserts:
+      - isKind:
+          of: Role
+      - equal:
+          path: metadata.name
+          value: kargo-webhooks-server-token-requester
+      - equal:
+          path: rules
+          value:
+            - apiGroups:
+                - ""
+              resources:
+                - serviceaccounts/token
+              resourceNames:
+                - kargo-webhooks-server
+              verbs:
+                - create
+
+  - it: is not rendered when the webhooks server is disabled
+    set:
+      webhooksServer.enabled: false
+    asserts:
+      - hasDocuments:
+          count: 0
+
+---
+suite: kubernetes-webhooks-server/token-requester-role-binding.yaml
+values:
+  - ../test/values-unittest.yaml
+templates:
+  - templates/kubernetes-webhooks-server/token-requester-role-binding.yaml
+tests:
+  - it: binds the webhooks server's ServiceAccount to its token-requester Role
+    asserts:
+      - isKind:
+          of: RoleBinding
+      - equal:
+          path: roleRef.name
+          value: kargo-webhooks-server-token-requester
+      - contains:
+          path: subjects
+          content:
+            kind: ServiceAccount
+            namespace: NAMESPACE
+            name: kargo-webhooks-server
+
+  - it: is not rendered when the webhooks server is disabled
+    set:
+      webhooksServer.enabled: false
+    asserts:
+      - hasDocuments:
+          count: 0

@@ -24,6 +24,8 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/client/apiserver"
+	"github.com/akuity/kargo/pkg/client/apiserver/freightclient"
+	"github.com/akuity/kargo/pkg/client/apiserver/freightclient/testutil"
 	"github.com/akuity/kargo/pkg/controller/metrics"
 	"github.com/akuity/kargo/pkg/event"
 	fakeevent "github.com/akuity/kargo/pkg/event/fake"
@@ -44,6 +46,7 @@ func TestNewPromotionReconciler(t *testing.T) {
 		&promotion.MockEngine{},
 		ReconcilerConfig{},
 		nil,
+		&testutil.MockFreightClient{},
 	)
 	require.NotNil(t, r.kargoClient)
 	require.Nil(t, r.targets)
@@ -57,6 +60,7 @@ func TestNewPromotionReconciler(t *testing.T) {
 func newFakeReconciler(
 	t *testing.T,
 	sender *fakeevent.Sender,
+	freightClient freightclient.FreightClient,
 	objects ...client.Object,
 ) *reconciler {
 	scheme := k8sruntime.NewScheme()
@@ -70,13 +74,14 @@ func newFakeReconciler(
 		&promotion.MockEngine{},
 		ReconcilerConfig{},
 		nil,
+		freightClient,
 	)
 }
 
-func TestReconcile(t *testing.T) {
+func TestPromotionReconcilerReconcile(t *testing.T) {
 	testCases := []struct {
-		name   string
-		promos []client.Object
+		name    string
+		objects []client.Object
 		// apiReader, if set, overrides the reconciler's direct API reader. Use
 		// this to simulate cache/API divergence or to assert the reader is not
 		// called (e.g. wrap with an interceptor that calls t.Error on Get).
@@ -102,7 +107,7 @@ func TestReconcile(t *testing.T) {
 			expectedPhase:         kargoapi.PromotionPhaseSucceeded,
 			expectedEventRecorded: true,
 			expectedEventType:     kargoapi.EventTypePromotionSucceeded,
-			promos: []client.Object{
+			objects: []client.Object{
 				&kargoapi.Stage{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "fake-stage",
@@ -130,7 +135,7 @@ func TestReconcile(t *testing.T) {
 			expectedPhase:         kargoapi.PromotionPhaseErrored,
 			expectedEventRecorded: false,
 			expectedEventType:     kargoapi.EventTypePromotionErrored,
-			promos: []client.Object{
+			objects: []client.Object{
 				newPromo("fake-namespace", "fake-promo", "fake-stage", kargoapi.PromotionPhaseErrored, now),
 			},
 			apiReader: assertNotCalledReader(t),
@@ -140,7 +145,7 @@ func TestReconcile(t *testing.T) {
 			expectPromoteFnCalled: false,
 			expectedPhase:         kargoapi.PromotionPhasePending,
 			expectedEventRecorded: false,
-			promos: []client.Object{
+			objects: []client.Object{
 				&kargoapi.Promotion{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "fake-promo",
@@ -162,7 +167,7 @@ func TestReconcile(t *testing.T) {
 			expectedPhase:         kargoapi.PromotionPhaseSucceeded,
 			expectedEventRecorded: true,
 			expectedEventType:     kargoapi.EventTypePromotionSucceeded,
-			promos: []client.Object{
+			objects: []client.Object{
 				&kargoapi.Stage{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "fake-stage",
@@ -183,7 +188,7 @@ func TestReconcile(t *testing.T) {
 			expectPromoteFnCalled: false,
 			promoToReconcile:      &types.NamespacedName{Namespace: "fake-namespace", Name: "fake-promo2"},
 			expectedPhase:         kargoapi.PromotionPhasePending,
-			promos: []client.Object{
+			objects: []client.Object{
 				&kargoapi.Stage{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "fake-stage",
@@ -206,7 +211,7 @@ func TestReconcile(t *testing.T) {
 			expectedPhase:         kargoapi.PromotionPhaseSucceeded,
 			expectedEventRecorded: true,
 			expectedEventType:     kargoapi.EventTypePromotionSucceeded,
-			promos: []client.Object{
+			objects: []client.Object{
 				&kargoapi.Stage{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "fake-stage",
@@ -228,7 +233,7 @@ func TestReconcile(t *testing.T) {
 			promoToReconcile:      &types.NamespacedName{Namespace: "fake-namespace", Name: "fake-promo"},
 			expectedPhase:         kargoapi.PromotionPhasePending,
 			expectedEventRecorded: false,
-			promos: []client.Object{
+			objects: []client.Object{
 				&kargoapi.Stage{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "fake-stage",
@@ -249,7 +254,7 @@ func TestReconcile(t *testing.T) {
 			promoToReconcile:      &types.NamespacedName{Namespace: "fake-namespace", Name: "fake-promo"},
 			expectedErr:           "get stage: expected stage lookup error",
 			expectedPhase:         kargoapi.PromotionPhaseSucceeded,
-			promos: []client.Object{
+			objects: []client.Object{
 				&kargoapi.Stage{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "fake-stage",
@@ -294,7 +299,7 @@ func TestReconcile(t *testing.T) {
 			expectedPhase:         kargoapi.PromotionPhaseErrored,
 			expectedEventRecorded: true,
 			expectedEventType:     kargoapi.EventTypePromotionErrored,
-			promos: []client.Object{
+			objects: []client.Object{
 				&kargoapi.Stage{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "fake-stage",
@@ -323,7 +328,7 @@ func TestReconcile(t *testing.T) {
 			expectedPhase:         kargoapi.PromotionPhaseErrored,
 			expectedEventRecorded: true,
 			expectedEventType:     kargoapi.EventTypePromotionErrored,
-			promos: []client.Object{
+			objects: []client.Object{
 				&kargoapi.Stage{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "fake-stage",
@@ -357,7 +362,7 @@ func TestReconcile(t *testing.T) {
 			expectedPhase:         kargoapi.PromotionPhaseSucceeded,
 			expectedEventRecorded: true,
 			expectedEventType:     kargoapi.EventTypePromotionSucceeded,
-			promos: []client.Object{
+			objects: []client.Object{
 				&kargoapi.Stage{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "fake-stage",
@@ -404,7 +409,7 @@ func TestReconcile(t *testing.T) {
 			// between the two reads. The reconciler must not proceed.
 			name:                  "promo terminal in API but active in cache",
 			expectPromoteFnCalled: false,
-			promos: []client.Object{
+			objects: []client.Object{
 				newPromo("fake-namespace", "fake-promo", "fake-stage", kargoapi.PromotionPhaseRunning, now),
 			},
 			apiReader: fakeReaderWithObjects(t,
@@ -413,7 +418,7 @@ func TestReconcile(t *testing.T) {
 		},
 		{
 			name: "terminates promotion on request",
-			promos: []client.Object{
+			objects: []client.Object{
 				func() *kargoapi.Promotion {
 					p := newPromo(
 						"fake-namespace",
@@ -436,7 +441,11 @@ func TestReconcile(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			ctx := t.Context()
 			sender := &fakeevent.Sender{}
-			r := newFakeReconciler(t, sender, tc.promos...)
+			r := newFakeReconciler(t, sender, &testutil.MockFreightClient{
+				GetFreightFun: func(_ context.Context, _, _ string) (*kargoapi.Freight, error) {
+					return nil, nil
+				},
+			}, tc.objects...)
 			if tc.apiReader != nil {
 				r.apiReader = tc.apiReader
 			}
@@ -482,8 +491,8 @@ func TestReconcile(t *testing.T) {
 				req = ctrl.Request{NamespacedName: *tc.promoToReconcile}
 			} else {
 				req = ctrl.Request{NamespacedName: types.NamespacedName{
-					Namespace: tc.promos[0].GetNamespace(),
-					Name:      tc.promos[0].GetName(),
+					Namespace: tc.objects[0].GetNamespace(),
+					Name:      tc.objects[0].GetName(),
 				}}
 			}
 
@@ -797,7 +806,11 @@ func Test_reconciler_handleDeletion(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			ctx := t.Context()
 			sender := &fakeevent.Sender{}
-			r := newFakeReconciler(t, sender, tc.objects...)
+			r := newFakeReconciler(t, sender, &testutil.MockFreightClient{
+				GetFreightFun: func(_ context.Context, _, _ string) (*kargoapi.Freight, error) {
+					return nil, nil
+				},
+			}, tc.objects...)
 
 			cleanupCalled := false
 			r.cleanupWorkDirFn = func(context.Context, types.UID) {

@@ -23,6 +23,7 @@ import (
 	rolloutsapi "github.com/akuity/kargo/api/stubs/rollouts/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/api"
+	"github.com/akuity/kargo/pkg/api/freightapi"
 	rollouts "github.com/akuity/kargo/pkg/api/stubs/rollouts"
 	"github.com/akuity/kargo/pkg/database"
 	"github.com/akuity/kargo/pkg/database/promotionrolloutstore"
@@ -89,20 +90,6 @@ type server struct {
 		client.ObjectList,
 		...client.ListOption,
 	) error
-	getAvailableFreightForStageFn func(
-		context.Context,
-		*kargoapi.Stage,
-	) ([]kargoapi.Freight, error)
-	getFreightFromWarehousesFn func(
-		ctx context.Context,
-		project string,
-		warehouses []string,
-	) ([]kargoapi.Freight, error)
-	getVerifiedFreightFn func(
-		ctx context.Context,
-		project string,
-		upstreams []string,
-	) ([]kargoapi.Freight, error)
 
 	// Freight aliasing:
 	patchFreightAliasFn func(
@@ -181,14 +168,11 @@ func NewServer(
 	}
 
 	s.getStageFn = api.GetStage
-	s.getFreightByNameOrAliasFn = api.GetFreightByNameOrAlias
+	s.getFreightByNameOrAliasFn = freightapi.GetFreightByNameOrAlias
 	s.isFreightAvailableFn = s.isFreightAvailable
 	s.createPromotionFn = kubeClient.Create
 	s.findDownstreamStagesFn = s.findDownstreamStages
 	s.listFreightFn = kubeClient.List
-	s.getAvailableFreightForStageFn = s.getAvailableFreightForStage
-	s.getFreightFromWarehousesFn = s.getFreightFromWarehouses
-	s.getVerifiedFreightFn = s.getVerifiedFreight
 	s.patchFreightAliasFn = s.patchFreightAlias
 	s.patchFreightStatusFn = s.patchFreightStatus
 	s.authorizeFn = kubeClient.Authorize

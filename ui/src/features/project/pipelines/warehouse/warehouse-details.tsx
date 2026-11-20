@@ -48,7 +48,7 @@ export const WarehouseDetails = ({
     [getWarehouseQuery.data?.data]
   );
 
-  const freightQuery = useGetFreight(projectName || '', cloneFreight || '', {
+  const freightQuery = useGetFreight(projectName || '', cloneFreight || '', undefined, {
     query: { enabled: !!cloneFreight && tab === 'create-freight' }
   });
 

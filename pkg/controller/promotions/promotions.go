@@ -25,6 +25,7 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/api"
 	"github.com/akuity/kargo/pkg/client/apiserver"
+	"github.com/akuity/kargo/pkg/client/apiserver/freightclient"
 	"github.com/akuity/kargo/pkg/controller"
 	argocd "github.com/akuity/kargo/pkg/controller/argocd/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/controller/metrics"
@@ -65,6 +66,7 @@ type reconciler struct {
 	kargoClient    client.Client
 	promoEngine    promotion.Engine
 	apiReader      client.Reader
+	freightClient  freightclient.FreightClient
 	shardPredicate controller.ResponsibleFor[kargoapi.Promotion]
 	// targets resolves the Target a Promotion promotes to, through the API
 	// server. It is nil when the controller has no API server to read from,
@@ -113,6 +115,7 @@ func SetupReconcilerWithManager(
 	cfg ReconcilerConfig,
 	targets promotion.TargetGetter,
 	sender event.Sender,
+	apiClient *apiserver.Client,
 ) error {
 	// Index running Promotions by Argo CD Applications
 	if err := kargoMgr.GetFieldIndexer().IndexField(
@@ -122,6 +125,7 @@ func SetupReconcilerWithManager(
 		indexer.RunningPromotionsByArgoCDApplications(
 			ctx,
 			kargoMgr.GetClient(),
+			apiClient,
 			cfg.ShardName,
 			cfg.IsDefaultController,
 		),
@@ -163,6 +167,7 @@ func SetupReconcilerWithManager(
 		promoEngine,
 		cfg,
 		targets,
+		apiClient,
 	)
 
 	c, err := ctrl.NewControllerManagedBy(kargoMgr).
@@ -217,7 +222,8 @@ func SetupReconcilerWithManager(
 				argocdMgr.GetCache(),
 				&argocd.Application{},
 				&UpdatedArgoCDAppHandler[*argocd.Application]{
-					kargoClient: kargoMgr.GetClient(),
+					kargoClient:   kargoMgr.GetClient(),
+					freightClient: apiClient,
 				},
 				predicate.Or(
 					ArgoCDAppOperationCompleted[*argocd.Application]{
@@ -258,15 +264,17 @@ func newReconciler(
 	promoEngine promotion.Engine,
 	cfg ReconcilerConfig,
 	targets promotion.TargetGetter,
+	freightClient freightclient.FreightClient,
 ) *reconciler {
 	r := &reconciler{
-		kargoClient:  kargoClient,
-		apiReader:    apiReader,
-		promoEngine:  promoEngine,
-		sender:       sender,
-		promoMetrics: metrics.NewPromotionMetrics(kargoClient),
-		cfg:          cfg,
-		targets:      targets,
+		kargoClient:   kargoClient,
+		apiReader:     apiReader,
+		freightClient: freightClient,
+		promoEngine:   promoEngine,
+		sender:        sender,
+		promoMetrics:  metrics.NewPromotionMetrics(kargoClient),
+		cfg:           cfg,
+		targets:       targets,
 		shardPredicate: controller.ResponsibleFor[kargoapi.Promotion]{
 			IsDefaultController: cfg.IsDefaultController,
 			ShardName:           cfg.ShardName,
@@ -355,10 +363,8 @@ func (r *reconciler) Reconcile(
 	}
 
 	// Find the Freight
-	freight, err := api.GetFreight(ctx, r.kargoClient, types.NamespacedName{
-		Namespace: promo.Namespace,
-		Name:      promo.Spec.Freight,
-	})
+	freight, err := r.freightClient.GetFreight(ctx, promo.Namespace, promo.Spec.Freight)
+
 	if err != nil {
 		return ctrl.Result{}, fmt.Errorf(
 			"error finding Freight %q in namespace %q: %w",

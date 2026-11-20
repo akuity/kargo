@@ -16,7 +16,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
-	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -25,6 +24,8 @@ import (
 	rolloutsapi "github.com/akuity/kargo/api/stubs/rollouts/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/api"
+	"github.com/akuity/kargo/pkg/api/freightapi"
+	"github.com/akuity/kargo/pkg/client/apiserver/freightclient/testutil"
 	"github.com/akuity/kargo/pkg/conditions"
 	kargoEvent "github.com/akuity/kargo/pkg/event"
 	fakeevent "github.com/akuity/kargo/pkg/event/fake"
@@ -32,6 +33,19 @@ import (
 	"github.com/akuity/kargo/pkg/indexer"
 	"github.com/akuity/kargo/pkg/kubeclient"
 )
+
+// freightFromObjects returns the Freight among the given objects, for seeding a
+// mock Freight API server client from the same fixtures a test puts in its
+// Kubernetes client.
+func freightFromObjects(objs ...client.Object) []kargoapi.Freight {
+	var out []kargoapi.Freight
+	for _, o := range objs {
+		if f, ok := o.(*kargoapi.Freight); ok {
+			out = append(out, *f)
+		}
+	}
+	return out
+}
 
 func TestRegularStageReconciler_Reconcile(t *testing.T) {
 	scheme := runtime.NewScheme()
@@ -43,6 +57,9 @@ func TestRegularStageReconciler_Reconcile(t *testing.T) {
 		stage       *kargoapi.Stage
 		objects     []client.Object
 		interceptor interceptor.Funcs
+		// freightClientErr, when set, makes the mock API server client fail its
+		// Freight reads, standing in for an error from the control plane.
+		freightClientErr error
 		// apiReader, when set, returns the uncached reader to use in place of
 		// the cached client.
 		apiReader  func(*testing.T) client.Reader
@@ -248,11 +265,7 @@ func TestRegularStageReconciler_Reconcile(t *testing.T) {
 					},
 				},
 			},
-			interceptor: interceptor.Funcs{
-				List: func(context.Context, client.WithWatch, client.ObjectList, ...client.ListOption) error {
-					return fmt.Errorf("something went wrong")
-				},
-			},
+			freightClientErr: fmt.Errorf("something went wrong"),
 			assertions: func(t *testing.T, _ client.Client, result ctrl.Result, err error) {
 				require.ErrorContains(t, err, "something went wrong")
 				assert.Equal(t, ctrl.Result{}, result)
@@ -483,26 +496,6 @@ func TestRegularStageReconciler_Reconcile(t *testing.T) {
 					indexer.PromotionsByStage,
 				).
 				WithIndex(
-					&kargoapi.Freight{},
-					indexer.FreightByWarehouseField,
-					indexer.FreightByWarehouse,
-				).
-				WithIndex(
-					&kargoapi.Freight{},
-					indexer.FreightByCurrentStagesField,
-					indexer.FreightByCurrentStages,
-				).
-				WithIndex(
-					&kargoapi.Freight{},
-					indexer.FreightByVerifiedStagesField,
-					indexer.FreightByVerifiedStages,
-				).
-				WithIndex(
-					&kargoapi.Freight{},
-					indexer.FreightApprovedForStagesField,
-					indexer.FreightApprovedForStages,
-				).
-				WithIndex(
 					&kargoapi.Promotion{},
 					indexer.PromotionsByStageAndFreightField,
 					indexer.PromotionsByStageAndFreight,
@@ -510,10 +503,55 @@ func TestRegularStageReconciler_Reconcile(t *testing.T) {
 				WithInterceptorFuncs(tt.interceptor).
 				Build()
 
+			// Freight reads go through the API server client; SyncFreight and
+			// HandleDelete only collaborate with it here, so its status writes are
+			// no-ops and this test asserts on the Kubernetes client instead.
+			freight := freightFromObjects(objects...)
+			byName := make(map[string]*kargoapi.Freight, len(freight))
+			for i := range freight {
+				byName[freight[i].Name] = &freight[i]
+			}
+			mockClient := &testutil.MockFreightClient{
+				ListFreightReferencingStageFun: func(context.Context, string, string) ([]kargoapi.Freight, error) {
+					return freight, tt.freightClientErr
+				},
+				ListFreightFromWarehouseFun: func(
+					_ context.Context,
+					_, warehouse string,
+					_ *freightapi.ListWarehouseFreightOptions,
+				) ([]kargoapi.Freight, error) {
+					var out []kargoapi.Freight
+					for _, f := range freight {
+						if f.Origin.Name == warehouse {
+							out = append(out, f)
+						}
+					}
+					return out, nil
+				},
+				GetFreightFun: func(_ context.Context, _, name string) (*kargoapi.Freight, error) {
+					return byName[name], nil
+				},
+				MarkFreightCurrentlyInStageFun: func(
+					context.Context,
+					string, string,
+					kargoapi.FreightOrigin,
+					string,
+				) error {
+					return nil
+				},
+				MarkFreightVerifiedInStageFun: func(context.Context, string, string, string, time.Time) error {
+					return nil
+				},
+				ClearFreightStageStatusFun: func(context.Context, string, string, string) error {
+					return nil
+				},
+			}
+
 			r := &RegularStageReconciler{
-				client:      c,
-				apiReader:   c,
-				eventSender: &fakeevent.Sender{},
+				client:        c,
+				apiReader:     c,
+				eventSender:   &fakeevent.Sender{},
+				freightClient: mockClient,
 			}
 			if tt.apiReader != nil {
 				r.apiReader = tt.apiReader(t)
@@ -700,26 +738,6 @@ func TestRegularStagesReconciler_reconcile(t *testing.T) {
 					indexer.PromotionsByStage,
 				).
 				WithIndex(
-					&kargoapi.Freight{},
-					indexer.FreightByWarehouseField,
-					indexer.FreightByWarehouse,
-				).
-				WithIndex(
-					&kargoapi.Freight{},
-					indexer.FreightByCurrentStagesField,
-					indexer.FreightByCurrentStages,
-				).
-				WithIndex(
-					&kargoapi.Freight{},
-					indexer.FreightByVerifiedStagesField,
-					indexer.FreightByVerifiedStages,
-				).
-				WithIndex(
-					&kargoapi.Freight{},
-					indexer.FreightApprovedForStagesField,
-					indexer.FreightApprovedForStages,
-				).
-				WithIndex(
 					&kargoapi.Promotion{},
 					indexer.PromotionsByStageAndFreightField,
 					indexer.PromotionsByStageAndFreight,
@@ -727,10 +745,48 @@ func TestRegularStagesReconciler_reconcile(t *testing.T) {
 				WithInterceptorFuncs(tt.interceptor).
 				Build()
 
+			// Freight reads go through the API server client; SyncFreight only
+			// collaborates with it here, so its status writes are no-ops.
+			freight := freightFromObjects(tt.objects...)
+			byName := make(map[string]*kargoapi.Freight, len(freight))
+			for i := range freight {
+				byName[freight[i].Name] = &freight[i]
+			}
+			mockClient := &testutil.MockFreightClient{
+				ListFreightFromWarehouseFun: func(
+					_ context.Context,
+					_, warehouse string,
+					_ *freightapi.ListWarehouseFreightOptions,
+				) ([]kargoapi.Freight, error) {
+					var out []kargoapi.Freight
+					for _, f := range freight {
+						if f.Origin.Name == warehouse {
+							out = append(out, f)
+						}
+					}
+					return out, nil
+				},
+				GetFreightFun: func(_ context.Context, _, name string) (*kargoapi.Freight, error) {
+					return byName[name], nil
+				},
+				MarkFreightCurrentlyInStageFun: func(
+					context.Context,
+					string, string,
+					kargoapi.FreightOrigin,
+					string,
+				) error {
+					return nil
+				},
+				MarkFreightVerifiedInStageFun: func(context.Context, string, string, string, time.Time) error {
+					return nil
+				},
+			}
+
 			r := &RegularStageReconciler{
 				client:        c,
 				eventSender:   &fakeevent.Sender{},
 				healthChecker: &health.MockAggregatingChecker{},
+				freightClient: mockClient,
 			}
 
 			status, requeue, err := r.reconcile(t.Context(), tt.stage, now)
@@ -813,26 +869,6 @@ func TestRegularStageReconciler_Reconcile_concurrentStatusMetadata(t *testing.T)
 			indexer.PromotionsByStage,
 		).
 		WithIndex(
-			&kargoapi.Freight{},
-			indexer.FreightByWarehouseField,
-			indexer.FreightByWarehouse,
-		).
-		WithIndex(
-			&kargoapi.Freight{},
-			indexer.FreightByCurrentStagesField,
-			indexer.FreightByCurrentStages,
-		).
-		WithIndex(
-			&kargoapi.Freight{},
-			indexer.FreightByVerifiedStagesField,
-			indexer.FreightByVerifiedStages,
-		).
-		WithIndex(
-			&kargoapi.Freight{},
-			indexer.FreightApprovedForStagesField,
-			indexer.FreightApprovedForStages,
-		).
-		WithIndex(
 			&kargoapi.Promotion{},
 			indexer.PromotionsByStageAndFreightField,
 			indexer.PromotionsByStageAndFreight,
@@ -866,11 +902,24 @@ func TestRegularStageReconciler_Reconcile_concurrentStatusMetadata(t *testing.T)
 		}).
 		Build()
 
+	// The Stage has no current or requested Freight, so SyncFreight reads nothing
+	// and writes nothing, and no Warehouse is resolved; a near-empty mock with no
+	// available Freight suffices.
+	mockClient := &testutil.MockFreightClient{
+		ListFreightFromWarehouseFun: func(
+			context.Context,
+			string, string,
+			*freightapi.ListWarehouseFreightOptions,
+		) ([]kargoapi.Freight, error) {
+			return nil, nil
+		},
+	}
 	r := &RegularStageReconciler{
 		client:        c,
 		apiReader:     c,
 		eventSender:   &fakeevent.Sender{},
 		healthChecker: &health.MockAggregatingChecker{},
+		freightClient: mockClient,
 	}
 
 	_, err := r.Reconcile(t.Context(), ctrl.Request{
@@ -2666,496 +2715,177 @@ func TestRegularStageReconciler_syncPromotions_partitionsTargetPromotions(t *tes
 
 func TestRegularStageReconciler_syncFreight(t *testing.T) {
 	testProject := "fake-project"
+	origin1 := kargoapi.FreightOrigin{
+		Kind: kargoapi.FreightOriginKindWarehouse,
+		Name: "fake-warehouse-1",
+	}
+	origin2 := kargoapi.FreightOrigin{
+		Kind: kargoapi.FreightOriginKindWarehouse,
+		Name: "fake-warehouse-2",
+	}
+	origins := map[string]kargoapi.FreightOrigin{
+		"fake-freight-1": origin1,
+		"fake-freight-2": origin2,
+	}
+	finished := metav1.NewTime(time.Now().Add(-time.Minute).Truncate(time.Second))
 
-	testStage := &kargoapi.Stage{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: testProject,
-			Name:      "fake-stage",
-		},
-		Status: kargoapi.StageStatus{
-			FreightHistory: kargoapi.FreightHistory{{
-				Freight: map[string]kargoapi.FreightReference{
-					"fake-warehouse-1": {Name: "fake-freight-1"},
-					"fake-warehouse-2": {Name: "fake-freight-2"},
-				},
-			}},
-		},
+	// newStage builds a Stage using fake-freight-1 and fake-freight-2. When
+	// verified is true, the Stage is healthy and its verification succeeded.
+	// Unmarking Freight no longer in use is the API server's responsibility when
+	// handling MarkFreightCurrentlyInStage, not SyncFreight's.
+	newStage := func(verified bool) *kargoapi.Stage {
+		stage := &kargoapi.Stage{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: testProject,
+				Name:      "fake-stage",
+			},
+			Status: kargoapi.StageStatus{
+				FreightHistory: kargoapi.FreightHistory{{
+					Freight: map[string]kargoapi.FreightReference{
+						"fake-warehouse-1": {Name: "fake-freight-1"},
+						"fake-warehouse-2": {Name: "fake-freight-2"},
+					},
+				}},
+			},
+		}
+		if verified {
+			stage.Status.Health = &kargoapi.Health{Status: kargoapi.HealthStateHealthy}
+			stage.Status.FreightHistory[0].VerificationHistory = []kargoapi.VerificationInfo{{
+				Phase:      kargoapi.VerificationPhaseSuccessful,
+				FinishTime: &finished,
+			}}
+		}
+		return stage
 	}
 
 	testCases := []struct {
-		name        string
-		objects     []client.Object
-		interceptor interceptor.Funcs
-		assertions  func(*testing.T, client.Client, error)
+		name            string
+		stage           *kargoapi.Stage
+		getFreightErr   error
+		freightNotFound bool
+		markErr         error
+		markVerifiedErr error
+		assertions      func(*testing.T, []markCall, []markVerifiedCall, error)
 	}{
 		{
-			name: "error listing Freight",
-			// Freight in use is synced first, so it must exist for the list to run.
-			objects: []client.Object{
-				&kargoapi.Freight{ObjectMeta: metav1.ObjectMeta{Namespace: testProject, Name: "fake-freight-1"}},
-				&kargoapi.Freight{ObjectMeta: metav1.ObjectMeta{Namespace: testProject, Name: "fake-freight-2"}},
-			},
-			interceptor: interceptor.Funcs{
-				List: func(context.Context, client.WithWatch, client.ObjectList, ...client.ListOption) error {
-					return fmt.Errorf("something went wrong")
-				},
-			},
-			assertions: func(t *testing.T, _ client.Client, err error) {
-				require.Error(t, err)
-				require.Contains(t, err.Error(), "error listing Freight in namespace")
-				require.Contains(t, err.Error(), "something went wrong")
-			},
-		},
-		{
-			name: "error getting Freight",
-			interceptor: interceptor.Funcs{
-				Get: func(context.Context, client.WithWatch, client.ObjectKey, client.Object, ...client.GetOption) error {
-					return fmt.Errorf("something went wrong")
-				},
-			},
-			assertions: func(t *testing.T, _ client.Client, err error) {
+			name:          "error getting Freight",
+			stage:         newStage(false),
+			getFreightErr: fmt.Errorf("something went wrong"),
+			assertions: func(t *testing.T, markCalls []markCall, markVerifiedCalls []markVerifiedCall, err error) {
 				require.Error(t, err)
 				require.Contains(t, err.Error(), "error getting Freight")
 				require.Contains(t, err.Error(), "something went wrong")
+				require.Empty(t, markCalls)
+				require.Empty(t, markVerifiedCalls)
 			},
 		},
 		{
-			name: "successful sync",
-			objects: []client.Object{
-				&kargoapi.Freight{ // The Stage is using this, but the Freight doesn't know it.
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: testProject,
-						Name:      "fake-freight-1",
-					},
-				},
-				&kargoapi.Freight{ // The Stage is using this, but the Freight doesn't know it.
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: testProject,
-						Name:      "fake-freight-2",
-					},
-				},
-				&kargoapi.Freight{ // The Freight thinks the Stage is using this, but it's not.
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: testProject,
-						Name:      "fake-freight-3",
-					},
-					Status: kargoapi.FreightStatus{
-						CurrentlyIn: map[string]kargoapi.CurrentStage{testStage.Name: {}},
-					},
-				},
-				&kargoapi.Freight{ // The Freight thinks the Stage is using this, but it's not.
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: testProject,
-						Name:      "fake-freight-4",
-					},
-					Status: kargoapi.FreightStatus{
-						CurrentlyIn: map[string]kargoapi.CurrentStage{testStage.Name: {}},
-					},
-				},
-			},
-			assertions: func(t *testing.T, c client.Client, err error) {
-				require.NoError(t, err)
-				freight := &kargoapi.Freight{}
-				err = c.Get(
-					t.Context(),
-					types.NamespacedName{Namespace: testProject, Name: "fake-freight-1"},
-					freight,
-				)
-				require.NoError(t, err)
-				require.Contains(t, freight.Status.CurrentlyIn, testStage.Name)
-				err = c.Get(
-					t.Context(),
-					types.NamespacedName{Namespace: testProject, Name: "fake-freight-2"},
-					freight,
-				)
-				require.NoError(t, err)
-				require.Contains(t, freight.Status.CurrentlyIn, testStage.Name)
-				err = c.Get(
-					t.Context(),
-					types.NamespacedName{Namespace: testProject, Name: "fake-freight-3"},
-					freight,
-				)
-				require.NoError(t, err)
-				require.NotContains(t, freight.Status.CurrentlyIn, testStage.Name)
-				err = c.Get(
-					t.Context(),
-					types.NamespacedName{Namespace: testProject, Name: "fake-freight-4"},
-					freight,
-				)
-				require.NoError(t, err)
-				require.NotContains(t, freight.Status.CurrentlyIn, testStage.Name)
+			name:            "Freight not found",
+			stage:           newStage(false),
+			freightNotFound: true,
+			assertions: func(t *testing.T, markCalls []markCall, markVerifiedCalls []markVerifiedCall, err error) {
+				require.Error(t, err)
+				require.Contains(t, err.Error(), "not found in namespace")
+				require.Empty(t, markCalls)
+				require.Empty(t, markVerifiedCalls)
 			},
 		},
 		{
-			name: "removes verified freight and updates soak time when current soak is longer",
-			objects: []client.Object{
-				&kargoapi.Freight{ // The Stage is using this, and the Freight knows it.
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: testProject,
-						Name:      "fake-freight-1",
-					},
-					Status: kargoapi.FreightStatus{
-						CurrentlyIn: map[string]kargoapi.CurrentStage{testStage.Name: {}},
-					},
-				},
-				&kargoapi.Freight{ // The Stage is using this, and the Freight knows it.
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: testProject,
-						Name:      "fake-freight-2",
-					},
-					Status: kargoapi.FreightStatus{
-						CurrentlyIn: map[string]kargoapi.CurrentStage{testStage.Name: {}},
-					},
-				},
-				&kargoapi.Freight{ // Verified freight that should have soak time updated
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: testProject,
-						Name:      "verified-freight",
-					},
-					Status: kargoapi.FreightStatus{
-						CurrentlyIn: map[string]kargoapi.CurrentStage{
-							testStage.Name: {
-								Since: ptr.To(metav1.NewTime(time.Now().Add(-2 * time.Hour))), // In stage for 2 hours
-							},
-						},
-						VerifiedIn: map[string]kargoapi.VerifiedStage{
-							testStage.Name: {
-								LongestCompletedSoak: &metav1.Duration{Duration: 30 * time.Minute}, // Previous soak was 30 min
-							},
-						},
-					},
-				},
-			},
-			assertions: func(t *testing.T, c client.Client, err error) {
-				require.NoError(t, err)
-
-				// Check that expected freight remain in CurrentlyIn (they're in the stage's FreightHistory)
-				freight := &kargoapi.Freight{}
-				err = c.Get(
-					t.Context(),
-					types.NamespacedName{Namespace: testProject, Name: "fake-freight-1"},
-					freight,
-				)
-				require.NoError(t, err)
-				require.Contains(t, freight.Status.CurrentlyIn, testStage.Name)
-
-				err = c.Get(
-					t.Context(),
-					types.NamespacedName{Namespace: testProject, Name: "fake-freight-2"},
-					freight,
-				)
-				require.NoError(t, err)
-				require.Contains(t, freight.Status.CurrentlyIn, testStage.Name)
-
-				// Check verified freight - should be removed from CurrentlyIn and soak time updated
-				err = c.Get(
-					t.Context(),
-					types.NamespacedName{Namespace: testProject, Name: "verified-freight"},
-					freight,
-				)
-				require.NoError(t, err)
-				require.NotContains(t, freight.Status.CurrentlyIn, testStage.Name)
-				require.Contains(t, freight.Status.VerifiedIn, testStage.Name)
-				// Soak time should be updated since 2 hours > 30 minutes
-				assert.True(t, freight.Status.VerifiedIn[testStage.Name].LongestCompletedSoak.Duration > 30*time.Minute)
-				assert.True(t, freight.Status.VerifiedIn[testStage.Name].LongestCompletedSoak.Duration >= time.Hour)
+			name:    "error marking Freight currently in Stage",
+			stage:   newStage(true),
+			markErr: fmt.Errorf("something went wrong"),
+			assertions: func(t *testing.T, markCalls []markCall, markVerifiedCalls []markVerifiedCall, err error) {
+				require.Error(t, err)
+				require.Contains(t, err.Error(), "error marking Freight")
+				require.Contains(t, err.Error(), "something went wrong")
+				require.Len(t, markCalls, 1)
+				require.Empty(t, markVerifiedCalls)
 			},
 		},
 		{
-			name: "removes unverified freight without affecting verification status",
-			objects: []client.Object{
-				&kargoapi.Freight{ // The Stage is using this, and the Freight knows it.
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: testProject,
-						Name:      "fake-freight-1",
-					},
-					Status: kargoapi.FreightStatus{
-						CurrentlyIn: map[string]kargoapi.CurrentStage{testStage.Name: {}},
-					},
-				},
-				&kargoapi.Freight{ // The Stage is using this, and the Freight knows it.
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: testProject,
-						Name:      "fake-freight-2",
-					},
-					Status: kargoapi.FreightStatus{
-						CurrentlyIn: map[string]kargoapi.CurrentStage{testStage.Name: {}},
-					},
-				},
-				&kargoapi.Freight{ // Unverified freight that should just be removed
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: testProject,
-						Name:      "unverified-freight",
-					},
-					Status: kargoapi.FreightStatus{
-						CurrentlyIn: map[string]kargoapi.CurrentStage{
-							testStage.Name: {
-								Since: ptr.To(metav1.NewTime(time.Now().Add(-1 * time.Hour))),
-							},
-						},
-					},
-				},
-			},
-			assertions: func(t *testing.T, c client.Client, err error) {
-				require.NoError(t, err)
-
-				// Check unverified freight - should just be removed from CurrentlyIn
-				freight := &kargoapi.Freight{}
-				err = c.Get(
-					t.Context(),
-					types.NamespacedName{Namespace: testProject, Name: "unverified-freight"},
-					freight,
-				)
-				require.NoError(t, err)
-				require.NotContains(t, freight.Status.CurrentlyIn, testStage.Name)
-				require.NotContains(t, freight.Status.VerifiedIn, testStage.Name)
+			name:            "error marking Freight verified in Stage",
+			stage:           newStage(true),
+			markVerifiedErr: fmt.Errorf("something went wrong"),
+			assertions: func(t *testing.T, markCalls []markCall, markVerifiedCalls []markVerifiedCall, err error) {
+				require.Error(t, err)
+				require.Contains(t, err.Error(), "error marking Freight")
+				require.Contains(t, err.Error(), "as verified in Stage")
+				require.Contains(t, err.Error(), "something went wrong")
+				require.Len(t, markCalls, 1)
+				require.Len(t, markVerifiedCalls, 1)
 			},
 		},
 		{
-			name: "preserves longer existing soak time for verified freight",
-			objects: []client.Object{
-				&kargoapi.Freight{ // The Stage is using this, and the Freight knows it.
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: testProject,
-						Name:      "fake-freight-1",
-					},
-					Status: kargoapi.FreightStatus{
-						CurrentlyIn: map[string]kargoapi.CurrentStage{testStage.Name: {}},
-					},
-				},
-				&kargoapi.Freight{ // The Stage is using this, and the Freight knows it.
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: testProject,
-						Name:      "fake-freight-2",
-					},
-					Status: kargoapi.FreightStatus{
-						CurrentlyIn: map[string]kargoapi.CurrentStage{testStage.Name: {}},
-					},
-				},
-				&kargoapi.Freight{ // Verified freight with longer existing soak time
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: testProject,
-						Name:      "longer-soak-freight",
-					},
-					Status: kargoapi.FreightStatus{
-						CurrentlyIn: map[string]kargoapi.CurrentStage{
-							testStage.Name: {
-								Since: ptr.To(metav1.NewTime(time.Now().Add(-1 * time.Hour))), // In stage for 1 hour
-							},
-						},
-						VerifiedIn: map[string]kargoapi.VerifiedStage{
-							testStage.Name: {
-								LongestCompletedSoak: &metav1.Duration{Duration: 3 * time.Hour}, // Previous soak was 3 hours
-							},
-						},
-					},
-				},
-			},
-			assertions: func(t *testing.T, c client.Client, err error) {
+			name:  "marks in-use Freight currently in Stage while not yet verified",
+			stage: newStage(false),
+			assertions: func(t *testing.T, markCalls []markCall, markVerifiedCalls []markVerifiedCall, err error) {
 				require.NoError(t, err)
-
-				// Check longer soak freight - should be removed but soak time should not be updated
-				freight := &kargoapi.Freight{}
-				err = c.Get(
-					t.Context(),
-					types.NamespacedName{Namespace: testProject, Name: "longer-soak-freight"},
-					freight,
-				)
-				require.NoError(t, err)
-				require.NotContains(t, freight.Status.CurrentlyIn, testStage.Name)
-				require.Contains(t, freight.Status.VerifiedIn, testStage.Name)
-				// Soak time should remain 3 hours since it's longer than the current 1 hour
-				assert.Equal(t, 3*time.Hour, freight.Status.VerifiedIn[testStage.Name].LongestCompletedSoak.Duration)
+				// Every Freight the Stage is using is marked with its origin.
+				require.Equal(t, []markCall{
+					{testProject, "fake-freight-1", origin1, "fake-stage"},
+					{testProject, "fake-freight-2", origin2, "fake-stage"},
+				}, markCalls)
+				// The Stage has no successful verification, so nothing is marked
+				// verified.
+				require.Empty(t, markVerifiedCalls)
 			},
 		},
 		{
-			name: "handles freight with nil Since field gracefully",
-			objects: []client.Object{
-				&kargoapi.Freight{ // The Stage is using this, and the Freight knows it.
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: testProject,
-						Name:      "fake-freight-1",
-					},
-					Status: kargoapi.FreightStatus{
-						CurrentlyIn: map[string]kargoapi.CurrentStage{
-							testStage.Name: {
-								Since: ptr.To(metav1.NewTime(time.Now())),
-							},
-						},
-					},
-				},
-				&kargoapi.Freight{ // The Stage is using this, and the Freight knows it.
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: testProject,
-						Name:      "fake-freight-2",
-					},
-					Status: kargoapi.FreightStatus{
-						CurrentlyIn: map[string]kargoapi.CurrentStage{
-							testStage.Name: {
-								Since: ptr.To(metav1.NewTime(time.Now())),
-							},
-						},
-					},
-				},
-				&kargoapi.Freight{ // Freight with nil Since field - should not panic
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: testProject,
-						Name:      "nil-since-freight",
-					},
-					Status: kargoapi.FreightStatus{
-						CurrentlyIn: map[string]kargoapi.CurrentStage{
-							testStage.Name: {
-								Since: nil,
-							},
-						},
-						VerifiedIn: map[string]kargoapi.VerifiedStage{
-							testStage.Name: {
-								LongestCompletedSoak: &metav1.Duration{Duration: 1 * time.Hour},
-							},
-						},
-					},
-				},
-			},
-			assertions: func(t *testing.T, c client.Client, err error) {
+			name:  "marks in-use Freight currently in and verified in Stage",
+			stage: newStage(true),
+			assertions: func(t *testing.T, markCalls []markCall, markVerifiedCalls []markVerifiedCall, err error) {
 				require.NoError(t, err)
-
-				// Check that expected freight remains in CurrentlyIn (they're in the stage's FreightHistory)
-				freight := &kargoapi.Freight{}
-				err = c.Get(
-					t.Context(),
-					types.NamespacedName{Namespace: testProject, Name: "fake-freight-1"},
-					freight,
-				)
-				require.NoError(t, err)
-				require.Contains(t, freight.Status.CurrentlyIn, testStage.Name)
-
-				err = c.Get(
-					t.Context(),
-					types.NamespacedName{Namespace: testProject, Name: "fake-freight-2"},
-					freight,
-				)
-				require.NoError(t, err)
-				require.Contains(t, freight.Status.CurrentlyIn, testStage.Name)
-
-				// Should handle nil Since field gracefully without panic
-				err = c.Get(
-					t.Context(),
-					types.NamespacedName{Namespace: testProject, Name: "nil-since-freight"},
-					freight,
-				)
-				require.NoError(t, err)
-				require.NotContains(t, freight.Status.CurrentlyIn, testStage.Name)
-				require.Contains(t, freight.Status.VerifiedIn, testStage.Name)
-				// Soak time should remain unchanged as Since was nil
-				assert.Equal(t, 1*time.Hour, freight.Status.VerifiedIn[testStage.Name].LongestCompletedSoak.Duration)
-			},
-		},
-		{
-			name: "handles freight with nil LongestCompletedSoak gracefully",
-			objects: []client.Object{
-				&kargoapi.Freight{ // The Stage is using this, and the Freight knows it.
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: testProject,
-						Name:      "fake-freight-1",
-					},
-					Status: kargoapi.FreightStatus{
-						CurrentlyIn: map[string]kargoapi.CurrentStage{
-							testStage.Name: {
-								Since: ptr.To(metav1.NewTime(time.Now())),
-							},
-						},
-					},
-				},
-				&kargoapi.Freight{ // The Stage is using this, and the Freight knows it.
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: testProject,
-						Name:      "fake-freight-2",
-					},
-					Status: kargoapi.FreightStatus{
-						CurrentlyIn: map[string]kargoapi.CurrentStage{
-							testStage.Name: {
-								Since: ptr.To(metav1.NewTime(time.Now())),
-							},
-						},
-					},
-				},
-				&kargoapi.Freight{ // Freight with nil LongestCompletedSoak
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: testProject,
-						Name:      "nil-soak-freight",
-					},
-					Status: kargoapi.FreightStatus{
-						CurrentlyIn: map[string]kargoapi.CurrentStage{
-							testStage.Name: {
-								Since: ptr.To(metav1.NewTime(time.Now().Add(-2 * time.Hour))),
-							},
-						},
-						VerifiedIn: map[string]kargoapi.VerifiedStage{
-							testStage.Name: {
-								LongestCompletedSoak: nil,
-							},
-						},
-					},
-				},
-			},
-			assertions: func(t *testing.T, c client.Client, err error) {
-				require.NoError(t, err)
-
-				// Check that expected freight remains in CurrentlyIn (they're in the stage's FreightHistory)
-				freight := &kargoapi.Freight{}
-				err = c.Get(
-					t.Context(),
-					types.NamespacedName{Namespace: testProject, Name: "fake-freight-1"},
-					freight,
-				)
-				require.NoError(t, err)
-				require.Contains(t, freight.Status.CurrentlyIn, testStage.Name)
-
-				err = c.Get(
-					t.Context(),
-					types.NamespacedName{Namespace: testProject, Name: "fake-freight-2"},
-					freight,
-				)
-				require.NoError(t, err)
-				require.Contains(t, freight.Status.CurrentlyIn, testStage.Name)
-
-				// Should handle nil LongestCompletedSoak gracefully
-				err = c.Get(
-					t.Context(),
-					types.NamespacedName{Namespace: testProject, Name: "nil-soak-freight"},
-					freight,
-				)
-				require.NoError(t, err)
-				require.NotContains(t, freight.Status.CurrentlyIn, testStage.Name)
-				require.Contains(t, freight.Status.VerifiedIn, testStage.Name)
-				// Should have created a new LongestCompletedSoak since the original was nil
-				require.NotNil(t, freight.Status.VerifiedIn[testStage.Name].LongestCompletedSoak)
-				assert.True(t, freight.Status.VerifiedIn[testStage.Name].LongestCompletedSoak.Duration >= time.Hour)
+				require.Equal(t, []markCall{
+					{testProject, "fake-freight-1", origin1, "fake-stage"},
+					{testProject, "fake-freight-2", origin2, "fake-stage"},
+				}, markCalls)
+				// Verified at the verification finish time.
+				require.Equal(t, []markVerifiedCall{
+					{testProject, "fake-freight-1", "fake-stage", finished.Time},
+					{testProject, "fake-freight-2", "fake-stage", finished.Time},
+				}, markVerifiedCalls)
 			},
 		},
 	}
 
-	scheme := runtime.NewScheme()
-	require.NoError(t, kargoapi.AddToScheme(scheme))
-
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			c := fake.NewClientBuilder().
-				WithScheme(scheme).
-				WithObjects(testCase.objects...).
-				WithIndex(
-					&kargoapi.Freight{},
-					indexer.FreightByCurrentStagesField,
-					indexer.FreightByCurrentStages,
-				).
-				WithStatusSubresource(&kargoapi.Stage{}, &kargoapi.Freight{}).
-				WithInterceptorFuncs(testCase.interceptor).
-				Build()
+			var markCalls []markCall
+			var markVerifiedCalls []markVerifiedCall
+			mockClient := &testutil.MockFreightClient{
+				GetFreightFun: func(_ context.Context, project, name string) (*kargoapi.Freight, error) {
+					if testCase.getFreightErr != nil || testCase.freightNotFound {
+						return nil, testCase.getFreightErr
+					}
+					return &kargoapi.Freight{
+						ObjectMeta: metav1.ObjectMeta{Namespace: project, Name: name},
+						Origin:     origins[name],
+					}, nil
+				},
+				MarkFreightCurrentlyInStageFun: func(
+					_ context.Context,
+					project, freight string,
+					origin kargoapi.FreightOrigin,
+					stage string,
+				) error {
+					markCalls = append(markCalls, markCall{project, freight, origin, stage})
+					return testCase.markErr
+				},
+				MarkFreightVerifiedInStageFun: func(
+					_ context.Context,
+					project, freight, stage string,
+					verifiedAt time.Time,
+				) error {
+					markVerifiedCalls = append(
+						markVerifiedCalls,
+						markVerifiedCall{project, freight, stage, verifiedAt},
+					)
+					return testCase.markVerifiedErr
+				},
+			}
 
-			r := &RegularStageReconciler{client: c}
-
-			err := r.syncFreight(t.Context(), testStage)
-			testCase.assertions(t, c, err)
+			err := SyncFreight(t.Context(), mockClient, testCase.stage)
+			testCase.assertions(t, markCalls, markVerifiedCalls, err)
 		})
 	}
 }
@@ -3406,15 +3136,21 @@ func TestRegularStageReconciler_assessHealth(t *testing.T) {
 	}
 }
 
-// TestRegularStageReconciler_syncFreight_writesPerPromotion counts Freight
-// status writes for one promotion: one to the Freight coming into the Stage,
-// carrying both currentlyIn and verifiedIn, then one to the Freight leaving it.
+// TestRegularStageReconciler_syncFreight_writesPerPromotion checks the Freight
+// status writes for one promotion: the Freight coming into the Stage is marked
+// currently in it (which, on the API server, also unmarks the departing Freight
+// from the same origin) and then, once verified, marked verified in it.
 func TestRegularStageReconciler_syncFreight_writesPerPromotion(t *testing.T) {
 	const project = "fake-project"
 	finished := metav1.NewTime(time.Now().Add(-time.Minute).Truncate(time.Second))
-	since := metav1.NewTime(time.Now().Add(-time.Hour).Truncate(time.Second))
+	origin := kargoapi.FreightOrigin{
+		Kind: kargoapi.FreightOriginKindWarehouse,
+		Name: "fake-warehouse",
+	}
 
-	newStage := func(hs kargoapi.HealthState) *kargoapi.Stage {
+	// newStage builds a Stage using new-freight, with the given health and
+	// verification finish time (nil for a verification that has not finished).
+	newStage := func(hs kargoapi.HealthState, finishTime *metav1.Time) *kargoapi.Stage {
 		return &kargoapi.Stage{
 			ObjectMeta: metav1.ObjectMeta{Namespace: project, Name: "fake-stage"},
 			Status: kargoapi.StageStatus{
@@ -3425,115 +3161,94 @@ func TestRegularStageReconciler_syncFreight_writesPerPromotion(t *testing.T) {
 					},
 					VerificationHistory: []kargoapi.VerificationInfo{{
 						Phase:      kargoapi.VerificationPhaseSuccessful,
-						FinishTime: &finished,
+						FinishTime: finishTime,
 					}},
 				}},
 			},
 		}
 	}
 
-	scheme := runtime.NewScheme()
-	require.NoError(t, kargoapi.AddToScheme(scheme))
-
-	// newClient returns a client holding the Freight leaving and the Freight
-	// entering the Stage, which records each Freight status write in order.
-	newClient := func(patched *[]string) client.Client {
-		return fake.NewClientBuilder().
-			WithScheme(scheme).
-			WithObjects(
-				&kargoapi.Freight{
-					ObjectMeta: metav1.ObjectMeta{Namespace: project, Name: "new-freight"},
-				},
-				&kargoapi.Freight{
-					ObjectMeta: metav1.ObjectMeta{Namespace: project, Name: "old-freight"},
-					Status: kargoapi.FreightStatus{
-						CurrentlyIn: map[string]kargoapi.CurrentStage{"fake-stage": {Since: &since}},
-						VerifiedIn:  map[string]kargoapi.VerifiedStage{"fake-stage": {}},
-					},
-				},
-			).
-			WithIndex(
-				&kargoapi.Freight{},
-				indexer.FreightByCurrentStagesField,
-				indexer.FreightByCurrentStages,
-			).
-			WithStatusSubresource(&kargoapi.Freight{}).
-			WithInterceptorFuncs(interceptor.Funcs{
-				SubResourcePatch: func(
-					ctx context.Context,
-					c client.Client,
-					sub string,
-					obj client.Object,
-					p client.Patch,
-					opts ...client.SubResourcePatchOption,
-				) error {
-					*patched = append(*patched, obj.GetName())
-					return c.SubResource(sub).Patch(ctx, obj, p, opts...)
-				},
-			}).
-			Build()
+	// newRecordingMock returns a mock that records the order of mark calls,
+	// along with the arguments of each, without mutating any state.
+	newRecordingMock := func(
+		order *[]string,
+		markCalls *[]markCall,
+		markVerifiedCalls *[]markVerifiedCall,
+	) *testutil.MockFreightClient {
+		return &testutil.MockFreightClient{
+			GetFreightFun: func(_ context.Context, p, name string) (*kargoapi.Freight, error) {
+				return &kargoapi.Freight{
+					ObjectMeta: metav1.ObjectMeta{Namespace: p, Name: name},
+					Origin:     origin,
+				}, nil
+			},
+			MarkFreightCurrentlyInStageFun: func(
+				_ context.Context,
+				p, f string,
+				o kargoapi.FreightOrigin,
+				s string,
+			) error {
+				*order = append(*order, "current:"+f)
+				*markCalls = append(*markCalls, markCall{p, f, o, s})
+				return nil
+			},
+			MarkFreightVerifiedInStageFun: func(
+				_ context.Context,
+				p, f, s string,
+				at time.Time,
+			) error {
+				*order = append(*order, "verified:"+f)
+				*markVerifiedCalls = append(*markVerifiedCalls, markVerifiedCall{p, f, s, at})
+				return nil
+			},
+		}
 	}
 
-	getFreight := func(t *testing.T, c client.Client, name string) *kargoapi.Freight {
-		f := &kargoapi.Freight{}
-		require.NoError(t, c.Get(t.Context(), types.NamespacedName{Namespace: project, Name: name}, f))
-		return f
-	}
+	t.Run("marks current Freight currently in, then verified in, the Stage", func(t *testing.T) {
+		var order []string
+		var markCalls []markCall
+		var markVerifiedCalls []markVerifiedCall
+		mockClient := newRecordingMock(&order, &markCalls, &markVerifiedCalls)
 
-	t.Run("verified in the same pass: two writes, not three", func(t *testing.T) {
-		var patched []string
-		c := newClient(&patched)
-		r := &RegularStageReconciler{client: c}
+		require.NoError(t, SyncFreight(t.Context(), mockClient, newStage(kargoapi.HealthStateHealthy, &finished)))
 
-		require.NoError(t, r.syncFreight(t.Context(), newStage(kargoapi.HealthStateHealthy)))
-		// The Freight downstream Stages wait on is written first.
-		require.Equal(t, []string{"new-freight", "old-freight"}, patched)
-
-		f := getFreight(t, c, "new-freight")
-		require.Contains(t, f.Status.CurrentlyIn, "fake-stage")
-		require.Contains(t, f.Status.VerifiedIn, "fake-stage")
-		require.Equal(t, finished.Unix(), f.Status.VerifiedIn["fake-stage"].VerifiedAt.Unix())
-		require.NotContains(t, getFreight(t, c, "old-freight").Status.CurrentlyIn, "fake-stage")
-
-		// Nothing left to write.
-		patched = nil
-		require.NoError(t, r.syncFreight(t.Context(), newStage(kargoapi.HealthStateHealthy)))
-		require.Empty(t, patched)
+		require.Equal(t, []string{"current:new-freight", "verified:new-freight"}, order)
+		require.Equal(t, []markCall{{project, "new-freight", origin, "fake-stage"}}, markCalls)
+		// The current Freight is marked verified at the verification finish time.
+		require.Equal(
+			t,
+			[]markVerifiedCall{{project, "new-freight", "fake-stage", finished.Time}},
+			markVerifiedCalls,
+		)
 	})
 
-	t.Run("verified in a later pass: currentlyIn first, verifiedIn after", func(t *testing.T) {
-		var patched []string
-		c := newClient(&patched)
-		r := &RegularStageReconciler{client: c}
+	t.Run("does not mark current Freight verified while the Stage is not yet verified", func(t *testing.T) {
+		var order []string
+		var markCalls []markCall
+		var markVerifiedCalls []markVerifiedCall
+		mockClient := newRecordingMock(&order, &markCalls, &markVerifiedCalls)
 
-		require.NoError(t, r.syncFreight(t.Context(), newStage(kargoapi.HealthStateProgressing)))
-		require.Equal(t, []string{"new-freight", "old-freight"}, patched)
-		f := getFreight(t, c, "new-freight")
-		require.Contains(t, f.Status.CurrentlyIn, "fake-stage")
-		require.NotContains(t, f.Status.VerifiedIn, "fake-stage")
-		firstSince := f.Status.CurrentlyIn["fake-stage"].Since
+		require.NoError(t, SyncFreight(t.Context(), mockClient, newStage(kargoapi.HealthStateProgressing, &finished)))
 
-		patched = nil
-		require.NoError(t, r.syncFreight(t.Context(), newStage(kargoapi.HealthStateHealthy)))
-		require.Equal(t, []string{"new-freight"}, patched)
-		f = getFreight(t, c, "new-freight")
-		require.Contains(t, f.Status.VerifiedIn, "fake-stage")
-		// The existing currentlyIn entry is left alone.
-		require.Equal(t, firstSince.Unix(), f.Status.CurrentlyIn["fake-stage"].Since.Unix())
+		require.Equal(t, []string{"current:new-freight"}, order)
+		require.Equal(t, []markCall{{project, "new-freight", origin, "fake-stage"}}, markCalls)
+		// The Stage is not healthy, so the current Freight is not marked verified.
+		require.Empty(t, markVerifiedCalls)
 	})
 
-	t.Run("verified without a finish time: verifiedAt falls back to now", func(t *testing.T) {
-		var patched []string
-		c := newClient(&patched)
-		r := &RegularStageReconciler{client: c}
+	t.Run("falls back to now for verifiedAt when the verification has no finish time", func(t *testing.T) {
+		var order []string
+		var markCalls []markCall
+		var markVerifiedCalls []markVerifiedCall
+		mockClient := newRecordingMock(&order, &markCalls, &markVerifiedCalls)
 
-		stage := newStage(kargoapi.HealthStateHealthy)
-		stage.Status.FreightHistory[0].VerificationHistory[0].FinishTime = nil
 		before := time.Now().Truncate(time.Second)
-		require.NoError(t, r.syncFreight(t.Context(), stage))
-		f := getFreight(t, c, "new-freight")
-		require.Contains(t, f.Status.VerifiedIn, "fake-stage")
-		require.False(t, f.Status.VerifiedIn["fake-stage"].VerifiedAt.Time.Before(before))
+		require.NoError(t, SyncFreight(t.Context(), mockClient, newStage(kargoapi.HealthStateHealthy, nil)))
+
+		require.Len(t, markVerifiedCalls, 1)
+		require.Equal(t, "new-freight", markVerifiedCalls[0].freight)
+		// With no finish time, verifiedAt falls back to now.
+		require.False(t, markVerifiedCalls[0].verifiedAt.Before(before))
 	})
 }
 
@@ -4443,8 +4158,22 @@ func TestRegularStageReconciler_verifyStageFreight(t *testing.T) {
 
 			recorder := &fakeevent.Sender{}
 
+			// The Verifier reads Freight through the API server client; the mock
+			// returns the seeded Freight by name.
+			freight := freightFromObjects(tt.objects...)
+			byName := make(map[string]*kargoapi.Freight, len(freight))
+			for i := range freight {
+				byName[freight[i].Name] = &freight[i]
+			}
+			mockClient := &testutil.MockFreightClient{
+				GetFreightFun: func(_ context.Context, _, name string) (*kargoapi.Freight, error) {
+					return byName[name], nil
+				},
+			}
+
 			r := &RegularStageReconciler{
-				client: c,
+				client:        c,
+				freightClient: mockClient,
 				cfg: ReconcilerConfig{
 					RolloutsIntegrationEnabled: !tt.rolloutsDisabled,
 				},
@@ -4654,8 +4383,14 @@ func TestRegularStageReconciler_autoPromoteFreight(t *testing.T) {
 		autoPromotionEnabled bool
 		stage                *kargoapi.Stage
 		objects              []client.Object
-		interceptor          interceptor.Funcs
-		assertions           func(*testing.T, *fakeevent.Sender, client.Client, kargoapi.StageStatus, error)
+		// available overrides the Freight the mock API server reports as available
+		// to the Stage. When nil, the mock returns the seeded Freight matching the
+		// requested Warehouse. Set it when the server would return a filtered subset
+		// (verified/approved/soak/currentlyIn) -- that filtering is the server's
+		// job and is tested with the API server, not here.
+		available   []kargoapi.Freight
+		interceptor interceptor.Funcs
+		assertions  func(*testing.T, *fakeevent.Sender, client.Client, kargoapi.StageStatus, error)
 	}{
 		{
 			name:                 "no requested freight",
@@ -5700,28 +5435,25 @@ func TestRegularStageReconciler_autoPromoteFreight(t *testing.T) {
 					},
 				},
 			},
+			// The API server returns only the Freight whose soak time has elapsed;
+			// that filtering is the server's job, so the mock reports just the
+			// available Freight.
+			available: []kargoapi.Freight{{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace:         "fake-project",
+					Name:              "test-freight-2",
+					CreationTimestamp: metav1.Time{Time: now.Add(-2 * time.Hour)},
+				},
+				Origin: kargoapi.FreightOrigin{
+					Kind: kargoapi.FreightOriginKindWarehouse,
+					Name: "test-warehouse",
+				},
+			}},
 			objects: []client.Object{
 				&kargoapi.Warehouse{
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: "fake-project",
 						Name:      "test-warehouse",
-					},
-				},
-				&kargoapi.Freight{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace:         "fake-project",
-						Name:              "test-freight-1",
-						CreationTimestamp: metav1.Time{Time: now},
-					},
-					Origin: kargoapi.FreightOrigin{
-						Kind: kargoapi.FreightOriginKindWarehouse,
-						Name: "test-warehouse",
-					},
-					Status: kargoapi.FreightStatus{
-						VerifiedIn: map[string]kargoapi.VerifiedStage{
-							// Ignored because it does not have a timestamp.
-							"upstream-stage": {},
-						},
 					},
 				},
 				&kargoapi.Freight{
@@ -5733,29 +5465,6 @@ func TestRegularStageReconciler_autoPromoteFreight(t *testing.T) {
 					Origin: kargoapi.FreightOrigin{
 						Kind: kargoapi.FreightOriginKindWarehouse,
 						Name: "test-warehouse",
-					},
-					Status: kargoapi.FreightStatus{
-						VerifiedIn: map[string]kargoapi.VerifiedStage{
-							"upstream-stage": {
-								// Should be selected because the soak time has elapsed
-								LongestCompletedSoak: &metav1.Duration{Duration: 2 * time.Hour},
-							},
-						},
-					},
-				},
-				&kargoapi.Freight{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace:         "fake-project",
-						Name:              "test-freight-3",
-						CreationTimestamp: metav1.Time{Time: now.Add(-40 * time.Minute)},
-					},
-					Status: kargoapi.FreightStatus{
-						VerifiedIn: map[string]kargoapi.VerifiedStage{
-							"upstream-stage": {
-								// Should be ignored because it is too recent.
-								VerifiedAt: &metav1.Time{Time: now.Add(-39 * time.Minute)},
-							},
-						},
 					},
 				},
 			},
@@ -6638,6 +6347,27 @@ func TestRegularStageReconciler_autoPromoteFreight(t *testing.T) {
 					}},
 				},
 			},
+			// freight-old is no longer in the upstream Stage, so the API server's
+			// currentlyIn filter leaves only freight-new available.
+			available: []kargoapi.Freight{{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace:         "fake-project",
+					Name:              "freight-new",
+					CreationTimestamp: metav1.Time{Time: now},
+				},
+				Origin: kargoapi.FreightOrigin{
+					Kind: kargoapi.FreightOriginKindWarehouse,
+					Name: "test-warehouse",
+				},
+				Status: kargoapi.FreightStatus{
+					CurrentlyIn: map[string]kargoapi.CurrentStage{
+						"upstream-stage": {},
+					},
+					VerifiedIn: map[string]kargoapi.VerifiedStage{
+						"upstream-stage": {},
+					},
+				},
+			}},
 			objects: []client.Object{
 				&kargoapi.Warehouse{
 					ObjectMeta: metav1.ObjectMeta{
@@ -6743,33 +6473,38 @@ func TestRegularStageReconciler_autoPromoteFreight(t *testing.T) {
 					&kargoapi.Promotion{},
 					indexer.PromotionsByTerminalField,
 					indexer.PromotionsByTerminal,
-				).
-				WithIndex(
-					&kargoapi.Freight{},
-					indexer.FreightByWarehouseField,
-					indexer.FreightByWarehouse,
-				).
-				WithIndex(
-					&kargoapi.Freight{},
-					indexer.FreightByVerifiedStagesField,
-					indexer.FreightByVerifiedStages,
-				).
-				WithIndex(
-					&kargoapi.Freight{},
-					indexer.FreightByCurrentStagesField,
-					indexer.FreightByCurrentStages,
-				).
-				WithIndex(
-					&kargoapi.Freight{},
-					indexer.FreightApprovedForStagesField,
-					indexer.FreightApprovedForStages,
 				)
 			c := builder.Build()
 			recorder := &fakeevent.Sender{}
 
+			// Available Freight is read through the API server client. The mock
+			// stands in for the API server and returns the available Freight for the
+			// requested Warehouse as-is; computing availability (verified/approved/
+			// soak/currentlyIn filtering) is the server's job, not this reconciler's.
+			available := tt.available
+			if available == nil {
+				available = freightFromObjects(objects...)
+			}
+			mockClient := &testutil.MockFreightClient{
+				ListFreightFromWarehouseFun: func(
+					_ context.Context,
+					_, warehouse string,
+					_ *freightapi.ListWarehouseFreightOptions,
+				) ([]kargoapi.Freight, error) {
+					var out []kargoapi.Freight
+					for _, f := range available {
+						if f.Origin.Name == warehouse {
+							out = append(out, f)
+						}
+					}
+					return out, nil
+				},
+			}
+
 			r := &RegularStageReconciler{
-				client:      c,
-				eventSender: recorder,
+				client:        c,
+				eventSender:   recorder,
+				freightClient: mockClient,
 			}
 
 			status, err := r.autoPromoteFreight(t.Context(), tt.stage, tt.autoPromotionEnabled)

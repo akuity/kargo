@@ -966,6 +966,10 @@ garbageCollector:
     ## @param garbageCollector.kubeconfigSecrets.kargo [nullable] Per-component override for `kubeconfigSecrets.kargo`. Lets the garbage collector mount its own kubeconfig secret rather than the shared one. Falls back to the chart-level value when unset.
     # kargo: ""
 
+  apiServer:
+    ## @param garbageCollector.apiServer.address The URL at which the garbage collector reaches the API server, e.g. `https://kargo.example.com`. When empty and `api.enabled` is `true`, the API server's in-cluster `Service` is used, and a chart-generated API server certificate is trusted automatically. The garbage collector requires an API server, through which it collects Freight, so this must be set when `api.enabled` is `false`. The garbage collector acts as its own ServiceAccount, requesting short-lived tokens for it, so it is allowed to `create` its own `token` subresource.
+    address: ""
+
   ## @param garbageCollector.logLevel The log level for the garbage collector. Valid options are ERROR, INFO, DEBUG, and TRACE (case insensitive). Note that INFO level messages are written during startup regardless of the selected level.
   logLevel: INFO
   ## @param garbageCollector.logFormat The format of logs from the garbage collector. Valid options are CONSOLE or JSON (case insensitive).
@@ -1265,6 +1269,10 @@ managementController:
   ## @param managementController.revisionHistoryLimit Number of old ReplicaSets the management controller Deployment retains for rollback. The management controller uses a `Recreate` rollout strategy (singleton), so `rollingUpdate.*` knobs do not apply.
   revisionHistoryLimit: 10
 
+  apiServer:
+    ## @param managementController.apiServer.address The URL at which the management controller reaches the API server, e.g. `https://kargo.example.com`. When empty and `api.enabled` is `true`, the API server's in-cluster `Service` is used, and a chart-generated API server certificate is trusted automatically. The management controller acts as its own ServiceAccount, requesting short-lived tokens for it, so it is allowed to `create` its own `token` subresource.
+    address: ""
+
   ## @skip managementController.kubeconfigSecrets
   kubeconfigSecrets: {}
     ## @param managementController.kubeconfigSecrets.kargo [nullable] Per-component override for `kubeconfigSecrets.kargo`. Lets the management controller mount its own kubeconfig secret rather than the shared one. Falls back to the chart-level value when unset.
@@ -1400,6 +1408,10 @@ webhooksServer:
 
   ## @param webhooksServer.revisionHistoryLimit Number of old ReplicaSets the webhooks server Deployment retains for rollback.
   revisionHistoryLimit: 10
+
+  apiServer:
+    ## @param webhooksServer.apiServer.address The URL at which the webhooks server reaches the API server, e.g. `https://kargo.example.com`. When empty and `api.enabled` is `true`, the API server's in-cluster `Service` is used, and a chart-generated API server certificate is trusted automatically. The webhooks server requires an API server, from which the Promotion webhook reads Freight, so this must be set when `api.enabled` is `false`. The webhooks server acts as its own ServiceAccount, requesting short-lived tokens for it, so it is allowed to `create` its own `token` subresource.
+    address: ""
 
   ## @param webhooksServer.rollingUpdate Values merged into the chart-built `strategy.rollingUpdate` for the webhooks server Deployment. Typically used to tune `maxSurge` and `maxUnavailable` (each an absolute number or a percentage). Default empty map — Kubernetes defaults (25% / 25%) apply.
   rollingUpdate: {}

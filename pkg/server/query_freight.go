@@ -1,7 +1,6 @@
 package server
 
 import (
-	"context"
 	"fmt"
 	"net/http"
 	"path"
@@ -12,13 +11,12 @@ import (
 	"github.com/Masterminds/semver/v3"
 	"github.com/gin-gonic/gin"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/fields"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/api"
+	"github.com/akuity/kargo/pkg/api/freightapi"
 	libhttp "github.com/akuity/kargo/pkg/http"
-	"github.com/akuity/kargo/pkg/indexer"
 	"github.com/akuity/kargo/pkg/logging"
 )
 
@@ -46,86 +44,6 @@ const (
 	// TODO: KR: Maybe we should add OrderBySemVer since charts are always
 	// semantically versioned and images sometimes are.
 )
-
-func (s *server) getAvailableFreightForStage(
-	ctx context.Context,
-	stage *kargoapi.Stage,
-) ([]kargoapi.Freight, error) {
-	return api.ListFreightAvailableToStage(ctx, s.client, stage)
-}
-
-func (s *server) getFreightFromWarehouses(
-	ctx context.Context,
-	project string,
-	warehouses []string,
-) ([]kargoapi.Freight, error) {
-	var allFreight []kargoapi.Freight
-	for _, warehouse := range warehouses {
-		var freight kargoapi.FreightList
-		if err := s.listFreightFn(
-			ctx,
-			&freight,
-			&client.ListOptions{
-				Namespace: project,
-				FieldSelector: fields.OneTermEqualSelector(
-					indexer.FreightByWarehouseField,
-					warehouse,
-				),
-			},
-		); err != nil {
-			return nil, fmt.Errorf(
-				"error listing Freight for Warehouse %q in namespace %q: %w",
-				warehouse,
-				project,
-				err,
-			)
-		}
-		allFreight = append(allFreight, freight.Items...)
-	}
-	return allFreight, nil
-}
-
-func (s *server) getVerifiedFreight(
-	ctx context.Context,
-	project string,
-	upstreams []string,
-) ([]kargoapi.Freight, error) {
-	var verifiedFreight []kargoapi.Freight
-	for _, upstream := range upstreams {
-		var freight kargoapi.FreightList
-		if err := s.listFreightFn(
-			ctx,
-			&freight,
-			&client.ListOptions{
-				Namespace: project,
-				FieldSelector: fields.OneTermEqualSelector(
-					indexer.FreightByVerifiedStagesField,
-					upstream,
-				),
-			},
-		); err != nil {
-			return nil, fmt.Errorf(
-				"error listing Freight verified in Stage %q in namespace %q: %w",
-				upstream,
-				project,
-				err,
-			)
-		}
-		verifiedFreight = append(verifiedFreight, freight.Items...)
-	}
-	if len(verifiedFreight) == 0 {
-		return nil, nil
-	}
-	// De-dupe the verified Freight
-	slices.SortFunc(verifiedFreight, func(lhs, rhs kargoapi.Freight) int {
-		return strings.Compare(lhs.Name, rhs.Name)
-	})
-	verifiedFreight = slices.CompactFunc(verifiedFreight, func(lhs, rhs kargoapi.Freight) bool {
-		return lhs.Name == rhs.Name
-	})
-
-	return verifiedFreight, nil
-}
 
 // groupFreightByImageRepo groups freight by image repository URL.
 func groupFreightByImageRepo(
@@ -299,7 +217,9 @@ func (s *server) queryFreight(c *gin.Context) {
 			_ = c.Error(err)
 			return
 		}
-		freight, err = api.ListFreightAvailableToStage(ctx, s.client, stage)
+		// TODO: this needs to move to a DB lister
+		freight, err = api.ListFreightAvailableToStage(
+			ctx, &freightapi.K8sFreightWarehouseLister{Client: s.client}, stage)
 		if err != nil {
 			_ = c.Error(fmt.Errorf("get available freight for stage: %w", err))
 			return

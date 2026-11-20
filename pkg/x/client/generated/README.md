@@ -73,12 +73,14 @@ Class | Method | HTTP request | Description
 ------------ | ------------- | ------------- | -------------
 *CoreAPI* | [**AbortPromotion**](docs/CoreAPI.md#abortpromotion) | **Post** /v1beta1/projects/{project}/promotions/{promotion}/abort | Abort a Promotion
 *CoreAPI* | [**ApproveFreight**](docs/CoreAPI.md#approvefreight) | **Post** /v1beta1/projects/{project}/freight/{freight-name-or-alias}/approve | Approve Freight for promotion to a Stage
+*CoreAPI* | [**CreateFreight**](docs/CoreAPI.md#createfreight) | **Post** /v1beta1/projects/{project}/freight | Create a piece of Freight
 *CoreAPI* | [**CreateProjectConfigMap**](docs/CoreAPI.md#createprojectconfigmap) | **Post** /v1beta1/projects/{project}/configmaps | Create a project-level ConfigMap
 *CoreAPI* | [**CreatePromotionRollout**](docs/CoreAPI.md#createpromotionrollout) | **Post** /v1beta1/projects/{project}/stages/{stage}/promotion-rollouts | Create a PromotionRollout
 *CoreAPI* | [**CreateSharedConfigMap**](docs/CoreAPI.md#createsharedconfigmap) | **Post** /v1beta1/shared/configmaps | Create a shared ConfigMap
 *CoreAPI* | [**CreateSystemConfigMap**](docs/CoreAPI.md#createsystemconfigmap) | **Post** /v1beta1/system/configmaps | Create a system-level ConfigMap
 *CoreAPI* | [**CreateTarget**](docs/CoreAPI.md#createtarget) | **Post** /v1beta1/projects/{project}/targets | Create a Target
 *CoreAPI* | [**DeleteFreight**](docs/CoreAPI.md#deletefreight) | **Delete** /v1beta1/projects/{project}/freight/{freight-name-or-alias} | Delete a Freight resource
+*CoreAPI* | [**DeleteFreightStageStatus**](docs/CoreAPI.md#deletefreightstagestatus) | **Delete** /v1beta1/projects/{project}/internal/freight/{freight}/status/stage/{stage} | Remove all of a Stage&#39;s entries from a Freight&#39;s status
 *CoreAPI* | [**DeleteProject**](docs/CoreAPI.md#deleteproject) | **Delete** /v1beta1/projects/{project} | Delete a Project
 *CoreAPI* | [**DeleteProjectConfig**](docs/CoreAPI.md#deleteprojectconfig) | **Delete** /v1beta1/projects/{project}/config | Delete a ProjectConfig resource
 *CoreAPI* | [**DeleteProjectConfigMap**](docs/CoreAPI.md#deleteprojectconfigmap) | **Delete** /v1beta1/projects/{project}/configmaps/{configmap} | Delete a project-level ConfigMap
@@ -104,6 +106,9 @@ Class | Method | HTTP request | Description
 *CoreAPI* | [**GetTarget**](docs/CoreAPI.md#gettarget) | **Get** /v1beta1/projects/{project}/targets/{target-name} | Retrieve a Target
 *CoreAPI* | [**GetWarehouse**](docs/CoreAPI.md#getwarehouse) | **Get** /v1beta1/projects/{project}/warehouses/{warehouse} | Retrieve a Warehouse
 *CoreAPI* | [**ListClusterPromotionTasks**](docs/CoreAPI.md#listclusterpromotiontasks) | **Get** /v1beta1/shared/cluster-promotion-tasks | List ClusterPromotionTasks
+*CoreAPI* | [**ListFreightByCurrentStage**](docs/CoreAPI.md#listfreightbycurrentstage) | **Get** /v1beta1/projects/{project}/stages/{stage}/freight | List Freight currently in a Stage
+*CoreAPI* | [**ListFreightFromWarehouse**](docs/CoreAPI.md#listfreightfromwarehouse) | **Get** /v1beta1/projects/{project}/warehouses/{warehouse}/freight | List Freight from a Warehouse
+*CoreAPI* | [**ListFreightReferencingStage**](docs/CoreAPI.md#listfreightreferencingstage) | **Get** /v1beta1/projects/{project}/stages/{stage}/referencing-freight | List Freight referencing a Stage
 *CoreAPI* | [**ListImages**](docs/CoreAPI.md#listimages) | **Get** /v1beta1/projects/{project}/images | List container images
 *CoreAPI* | [**ListProjectConfigMaps**](docs/CoreAPI.md#listprojectconfigmaps) | **Get** /v1beta1/projects/{project}/configmaps | List project-level ConfigMaps
 *CoreAPI* | [**ListProjects**](docs/CoreAPI.md#listprojects) | **Get** /v1beta1/projects | List projects
@@ -116,7 +121,10 @@ Class | Method | HTTP request | Description
 *CoreAPI* | [**ListSystemConfigMaps**](docs/CoreAPI.md#listsystemconfigmaps) | **Get** /v1beta1/system/configmaps | List system-level ConfigMaps
 *CoreAPI* | [**ListTargets**](docs/CoreAPI.md#listtargets) | **Get** /v1beta1/projects/{project}/targets | List Targets
 *CoreAPI* | [**ListWarehouses**](docs/CoreAPI.md#listwarehouses) | **Get** /v1beta1/projects/{project}/warehouses | List Warehouses
+*CoreAPI* | [**MarkFreightCurrentlyInStage**](docs/CoreAPI.md#markfreightcurrentlyinstage) | **Post** /v1beta1/projects/{project}/stages/{stage}/freight | Mark Freight as currently in use by a Stage
+*CoreAPI* | [**MarkFreightVerifiedInStage**](docs/CoreAPI.md#markfreightverifiedinstage) | **Post** /v1beta1/projects/{project}/internal/freight/{freight}/status/stage/{stage} | Mark Freight as verified in a Stage
 *CoreAPI* | [**PatchFreightAlias**](docs/CoreAPI.md#patchfreightalias) | **Patch** /v1beta1/projects/{project}/freight/{freight-name-or-alias}/alias | Patch a Freight resource&#39;s alias
+*CoreAPI* | [**PatchFreightMetadata**](docs/CoreAPI.md#patchfreightmetadata) | **Patch** /v1beta1/projects/{project}/internal/freight/{freight}/metadata | Update a Freight resource&#39;s status metadata
 *CoreAPI* | [**PatchProjectConfigMap**](docs/CoreAPI.md#patchprojectconfigmap) | **Patch** /v1beta1/projects/{project}/configmaps/{configmap} | Patch a project-level ConfigMap
 *CoreAPI* | [**PatchSharedConfigMap**](docs/CoreAPI.md#patchsharedconfigmap) | **Patch** /v1beta1/shared/configmaps/{configmap} | Patch a shared ConfigMap
 *CoreAPI* | [**PatchSystemConfigMap**](docs/CoreAPI.md#patchsystemconfigmap) | **Patch** /v1beta1/system/configmaps/{configmap} | Patch a system-level ConfigMap
@@ -228,6 +236,7 @@ Class | Method | HTTP request | Description
  - [ClusterPromotionTaskList](docs/ClusterPromotionTaskList.md)
  - [CreateAPITokenRequest](docs/CreateAPITokenRequest.md)
  - [CreateConfigMapRequest](docs/CreateConfigMapRequest.md)
+ - [CreateFreightRequest](docs/CreateFreightRequest.md)
  - [CreateGenericCredentialsRequest](docs/CreateGenericCredentialsRequest.md)
  - [CreateOrUpdateResourceResponse](docs/CreateOrUpdateResourceResponse.md)
  - [CreateOrUpdateResourceResult](docs/CreateOrUpdateResourceResult.md)
@@ -249,6 +258,7 @@ Class | Method | HTTP request | Description
  - [Freight](docs/Freight.md)
  - [FreightCollection](docs/FreightCollection.md)
  - [FreightCreationCriteria](docs/FreightCreationCriteria.md)
+ - [FreightList](docs/FreightList.md)
  - [FreightOrigin](docs/FreightOrigin.md)
  - [FreightReference](docs/FreightReference.md)
  - [FreightRequest](docs/FreightRequest.md)
@@ -282,8 +292,11 @@ Class | Method | HTTP request | Description
  - [IndexSelectorRequirement](docs/IndexSelectorRequirement.md)
  - [InflatedPromotionTask](docs/InflatedPromotionTask.md)
  - [ListProjectsResponse](docs/ListProjectsResponse.md)
+ - [MarkFreightCurrentlyInStageRequest](docs/MarkFreightCurrentlyInStageRequest.md)
+ - [MarkFreightVerifiedInStageRequest](docs/MarkFreightVerifiedInStageRequest.md)
  - [OIDCConfig](docs/OIDCConfig.md)
  - [PatchConfigMapRequest](docs/PatchConfigMapRequest.md)
+ - [PatchFreightMetadataRequest](docs/PatchFreightMetadataRequest.md)
  - [PatchGenericCredentialsRequest](docs/PatchGenericCredentialsRequest.md)
  - [PatchRepoCredentialsRequest](docs/PatchRepoCredentialsRequest.md)
  - [PkgServerFreightGroupList](docs/PkgServerFreightGroupList.md)

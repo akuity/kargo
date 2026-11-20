@@ -13,6 +13,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/pkg/api/freightapi"
 	"github.com/akuity/kargo/pkg/server/user"
 )
 
@@ -127,6 +128,14 @@ func AuthorizedStages(value string) ([]types.NamespacedName, error) {
 	return stages, nil
 }
 
+type FreightWarehouseLister interface {
+	ListFreightFromWarehouse(
+		ctx context.Context,
+		project, warehouse string,
+		opts *freightapi.ListWarehouseFreightOptions,
+	) ([]kargoapi.Freight, error)
+}
+
 // ListFreightAvailableToStage lists all Freight available to the Stage for any
 // reason. This includes:
 //
@@ -136,36 +145,16 @@ func AuthorizedStages(value string) ([]types.NamespacedName, error) {
 //  3. Any Freight that is approved for the Stage
 func ListFreightAvailableToStage(
 	ctx context.Context,
-	c client.Client,
+	lister FreightWarehouseLister,
 	s *kargoapi.Stage,
 ) ([]kargoapi.Freight, error) {
 	var availableFreight []kargoapi.Freight
 
 	for _, req := range s.Spec.RequestedFreight {
-		// Get the Warehouse of origin
-		warehouse, err := GetWarehouse(
-			ctx,
-			c,
-			types.NamespacedName{
-				Namespace: s.Namespace,
-				Name:      req.Origin.Name,
-			},
-		)
-		if err != nil {
-			return nil, err
-		}
-		if warehouse == nil {
-			// nolint:staticcheck
-			return nil, fmt.Errorf(
-				"Warehouse %q not found in namespace %q",
-				req.Origin.Name,
-				s.Namespace,
-			)
-		}
-		// Get applicable Freight from the Warehouse
-		var listOpts *ListWarehouseFreightOptions
+		// Get applicable Freight from the Warehouse of origin, by name.
+		var listOpts *freightapi.ListWarehouseFreightOptions
 		if !req.Sources.Direct {
-			listOpts = &ListWarehouseFreightOptions{
+			listOpts = &freightapi.ListWarehouseFreightOptions{
 				ApprovedFor:          s.Name,
 				VerifiedIn:           req.Sources.Stages,
 				AvailabilityStrategy: req.Sources.AvailabilityStrategy,
@@ -178,8 +167,8 @@ func ListFreightAvailableToStage(
 				listOpts.CurrentlyIn = req.Sources.Stages[0]
 			}
 		}
-		freightFromWarehouse, err := ListFreightFromWarehouse(
-			ctx, c, warehouse, listOpts,
+		freightFromWarehouse, err := lister.ListFreightFromWarehouse(
+			ctx, s.Namespace, req.Origin.Name, listOpts,
 		)
 		if err != nil {
 			return nil, err

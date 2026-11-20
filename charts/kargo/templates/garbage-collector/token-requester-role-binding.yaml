@@ -1,0 +1,19 @@
+{{- if and .Values.workloads.install .Values.garbageCollector.enabled }}
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: kargo-garbage-collector-token-requester
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "kargo.labels" . | nindent 4 }}
+    {{- include "kargo.garbageCollector.labels" . | nindent 4 }}
+  {{- include "kargo.annotations" (dict "root" . "annotations" .Values.garbageCollector.annotations) | nindent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: kargo-garbage-collector-token-requester
+subjects:
+- kind: ServiceAccount
+  namespace: {{ .Release.Namespace }}
+  name: kargo-garbage-collector
+{{- end }}
