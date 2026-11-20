@@ -4,9 +4,6 @@ description: An overview of Kargo notifications concepts and components.
 
 # Key Concepts
 
-<span class="tag professional"></span>
-<span class="tag beta"></span>
-
 :::info
 
 This set of features are only available in Kargo on the [Akuity

@@ -21,7 +21,7 @@ export const TargetsPage = () => {
       <BaseHeader>
         <Breadcrumb separator='>' items={[...projectBreadcrumbs, { title: 'Targets' }]} />
       </BaseHeader>
-      <Targets />
+      <Targets key={name} />
     </Flex>
   );
 };

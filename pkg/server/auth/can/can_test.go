@@ -100,12 +100,30 @@ func TestAccess(t *testing.T) {
 			},
 		},
 		{
+			name:   "PromotionRollout",
+			access: Get().PromotionRollout("kargo-demo", "uat.abc123"),
+			expected: Access{
+				Verb:     "get",
+				Resource: kargoResource("promotionrollouts"),
+				Key:      types.NamespacedName{Namespace: "kargo-demo", Name: "uat.abc123"},
+			},
+		},
+		{
 			name:   "Warehouse",
 			access: Get().Warehouse("kargo-demo", "images"),
 			expected: Access{
 				Verb:     "get",
 				Resource: kargoResource("warehouses"),
 				Key:      types.NamespacedName{Namespace: "kargo-demo", Name: "images"},
+			},
+		},
+		{
+			name:   "Target",
+			access: Update().Target("kargo-demo", "us-east-1"),
+			expected: Access{
+				Verb:     "update",
+				Resource: kargoResource("targets"),
+				Key:      types.NamespacedName{Namespace: "kargo-demo", Name: "us-east-1"},
 			},
 		},
 		{

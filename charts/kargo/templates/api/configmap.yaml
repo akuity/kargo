@@ -20,6 +20,7 @@ data:
   {{- with (include "kargo.tracing.configMapData" .) }}
   {{- . | nindent 2 }}
   {{- end }}
+  {{- include "kargo.nats.configMapData" . | nindent 2 }}
   {{- if .Values.api.basePath }}
   API_BASE_PATH: {{ quote .Values.api.basePath }}
   {{- end }}

@@ -2,6 +2,8 @@ import { isAfter } from 'date-fns';
 
 import { Freight } from '@ui/gen/api/v2/models';
 
+import { getFreightDiscoveredAt } from './get-freight-discovered-at';
+
 export const catalogueFreights = (freights: Freight[]) => {
   const catalogue = {
     images: new Set<string>(),
@@ -105,11 +107,11 @@ export const filterFreightByAlias = (alias: string[]) => (freight: Freight) =>
   alias?.includes(freight?.alias || '');
 
 export const filterFreightByTimerange = (till: Date) => (freight: Freight) => {
-  if (!freight?.metadata?.creationTimestamp) {
+  const discoveredAt = getFreightDiscoveredAt(freight);
+
+  if (!discoveredAt) {
     return false;
   }
 
-  const creationTimestamp = new Date(freight.metadata?.creationTimestamp);
-
-  return isAfter(creationTimestamp, till);
+  return isAfter(discoveredAt, till);
 };

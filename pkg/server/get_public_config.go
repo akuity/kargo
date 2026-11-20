@@ -9,7 +9,6 @@ import (
 type publicConfig struct {
 	AdminAccountEnabled bool        `json:"adminAccountEnabled"`
 	OIDCConfig          *oidcConfig `json:"oidcConfig,omitempty"`
-	SkipAuth            bool        `json:"skipAuth"`
 } // @name PublicConfig
 
 type oidcConfig struct {
@@ -41,7 +40,6 @@ func (s *server) getPublicConfig(c *gin.Context) {
 	resp := publicConfig{
 		AdminAccountEnabled: s.cfg.AdminConfig != nil,
 		OIDCConfig:          oidcCfg,
-		SkipAuth:            s.cfg.LocalMode,
 	}
 	c.JSON(http.StatusOK, resp)
 }

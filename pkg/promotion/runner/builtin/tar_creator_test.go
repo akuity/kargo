@@ -2,6 +2,7 @@ package builtin
 
 import (
 	"archive/tar"
+	"bytes"
 	"compress/gzip"
 	"context"
 	"fmt"
@@ -10,13 +11,14 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/promotion"
-	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
+	"github.com/akuity/kargo/pkg/x/promotion/stepconfig"
 )
 
 func Test_tarConfig_convert(t *testing.T) {
@@ -45,6 +47,28 @@ func Test_tarConfig_convert(t *testing.T) {
 			},
 			expectedProblems: []string{
 				"(root): outPath is required",
+			},
+		},
+		{
+			name: "fileMode and dirMode are not octal modes",
+			config: promotion.Config{
+				"inPath":   "source_dir/",
+				"outPath":  "archive.tar",
+				"fileMode": "644",
+				"dirMode":  "0758",
+			},
+			expectedProblems: []string{
+				"fileMode: Does not match pattern",
+				"dirMode: Does not match pattern",
+			},
+		},
+		{
+			name: "valid fileMode and dirMode",
+			config: promotion.Config{
+				"inPath":   "source_dir/",
+				"outPath":  "archive.tar",
+				"fileMode": "0644",
+				"dirMode":  "0755",
 			},
 		},
 		{
@@ -84,6 +108,36 @@ func Test_tarConfig_convert(t *testing.T) {
 			},
 		},
 		{
+			name: "mtime is not a timestamp",
+			config: promotion.Config{
+				"inPath":  "source_dir/",
+				"outPath": "archive.tar.gz",
+				"mtime":   "yesterday",
+			},
+			expectedProblems: []string{
+				"mtime: Does not match format 'date-time'",
+			},
+		},
+		{
+			name: "mtime is not a real date",
+			config: promotion.Config{
+				"inPath":  "source_dir/",
+				"outPath": "archive.tar.gz",
+				"mtime":   "2026-02-30T00:00:00Z",
+			},
+			expectedProblems: []string{
+				"mtime: Does not match format 'date-time'",
+			},
+		},
+		{
+			name: "valid config with mtime",
+			config: promotion.Config{
+				"inPath":  "source_dir/",
+				"outPath": "archive.tar.gz",
+				"mtime":   "1970-01-01T00:00:00Z",
+			},
+		},
+		{
 			name: "valid config with ignore patterns",
 			config: promotion.Config{
 				"inPath":  "source_dir/",
@@ -105,7 +159,7 @@ func Test_tarCreator_run(t *testing.T) {
 	tests := []struct {
 		name       string
 		setupFiles func(*testing.T) string
-		cfg        builtin.TarConfig
+		cfg        stepconfig.TarConfig
 		assertions func(*testing.T, string, promotion.StepResult, error)
 	}{
 		{
@@ -120,7 +174,7 @@ func Test_tarCreator_run(t *testing.T) {
 
 				return tmpDir
 			},
-			cfg: builtin.TarConfig{
+			cfg: stepconfig.TarConfig{
 				InPath:  "source",
 				OutPath: "archive.tar",
 				Gzip:    false,
@@ -146,7 +200,7 @@ func Test_tarCreator_run(t *testing.T) {
 
 				return tmpDir
 			},
-			cfg: builtin.TarConfig{
+			cfg: stepconfig.TarConfig{
 				InPath:  "source",
 				OutPath: filepath.Join("nested", "archive.tar"),
 				Gzip:    false,
@@ -175,7 +229,7 @@ func Test_tarCreator_run(t *testing.T) {
 
 				return tmpDir
 			},
-			cfg: builtin.TarConfig{
+			cfg: stepconfig.TarConfig{
 				InPath:  "source",
 				OutPath: "archive.tar",
 				Gzip:    false,
@@ -203,7 +257,7 @@ func Test_tarCreator_run(t *testing.T) {
 			setupFiles: func(t *testing.T) string {
 				return t.TempDir()
 			},
-			cfg: builtin.TarConfig{
+			cfg: stepconfig.TarConfig{
 				InPath:  "nonexistent_source",
 				OutPath: "archive.tar",
 			},
@@ -228,7 +282,7 @@ func Test_tarCreator_run(t *testing.T) {
 
 				return tmpDir
 			},
-			cfg: builtin.TarConfig{
+			cfg: stepconfig.TarConfig{
 				InPath:  "source",
 				OutPath: filepath.Join("nested", "archive.tar"),
 				Gzip:    false,
@@ -237,6 +291,67 @@ func Test_tarCreator_run(t *testing.T) {
 				assert.Error(t, err)
 				assert.Equal(t, kargoapi.PromotionStepStatusErrored, result.Status)
 				assert.ErrorContains(t, err, "failed to create output directory")
+			},
+		},
+		{
+			name: "records the given mtime",
+			setupFiles: func(t *testing.T) string {
+				tmpDir := t.TempDir()
+
+				inDir := filepath.Join(tmpDir, "source")
+				require.NoError(t, os.Mkdir(inDir, 0o750))
+				require.NoError(t, os.WriteFile(filepath.Join(inDir, "file.txt"), []byte("test content"), 0o600))
+
+				return tmpDir
+			},
+			cfg: stepconfig.TarConfig{
+				InPath:  "source",
+				OutPath: "archive.tar",
+				Mtime:   "1970-01-01T00:00:00Z",
+			},
+			assertions: func(t *testing.T, workDir string, result promotion.StepResult, err error) {
+				assert.NoError(t, err)
+				assert.Equal(t, kargoapi.PromotionStepStatusSucceeded, result.Status)
+
+				f, err := os.Open(filepath.Join(workDir, "archive.tar"))
+				require.NoError(t, err)
+				defer f.Close()
+
+				expected := time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC)
+				tr := tar.NewReader(f)
+				var entries int
+				for {
+					h, err := tr.Next()
+					if err == io.EOF {
+						break
+					}
+					require.NoError(t, err)
+					assert.True(t, h.ModTime.Equal(expected), h.Name)
+					entries++
+				}
+				assert.NotZero(t, entries)
+			},
+		},
+		{
+			name: "fails with an invalid mtime",
+			setupFiles: func(t *testing.T) string {
+				tmpDir := t.TempDir()
+
+				inDir := filepath.Join(tmpDir, "source")
+				require.NoError(t, os.Mkdir(inDir, 0o750))
+				require.NoError(t, os.WriteFile(filepath.Join(inDir, "file.txt"), []byte("test content"), 0o600))
+
+				return tmpDir
+			},
+			cfg: stepconfig.TarConfig{
+				InPath:  "source",
+				OutPath: "archive.tar",
+				Mtime:   "not-a-time",
+			},
+			assertions: func(t *testing.T, _ string, result promotion.StepResult, err error) {
+				assert.Error(t, err)
+				assert.Equal(t, kargoapi.PromotionStepStatusErrored, result.Status)
+				assert.ErrorContains(t, err, "invalid mtime")
 			},
 		},
 	}
@@ -249,7 +364,7 @@ func Test_tarCreator_run(t *testing.T) {
 			workDir := tt.setupFiles(t)
 			result, err := runner.run(
 				context.Background(),
-				&promotion.StepContext{WorkDir: workDir},
+				newTestStepContext(t, workDir),
 				tt.cfg,
 			)
 			tt.assertions(t, workDir, result, err)
@@ -531,18 +646,312 @@ func Test_tarCreator_createTarball(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			_, inPath, outPath := tt.setupFiles(t)
+			workDir, inPath, outPath := tt.setupFiles(t)
+			relInPath, err := filepath.Rel(workDir, inPath)
+			require.NoError(t, err)
+			relOutPath, err := filepath.Rel(workDir, outPath)
+			require.NoError(t, err)
 
 			result, err := runner.createTarball(
-				inPath,
-				outPath,
+				newTestRoot(t, workDir),
+				relInPath,
+				relOutPath,
 				tt.gzip,
 				tt.ignore,
+				nil,
+				nil,
+				nil,
 			)
 
 			tt.assertions(t, outPath, result, err)
 		})
 	}
+}
+
+func Test_tarCreator_createTarball_mtime(t *testing.T) {
+	t.Parallel()
+
+	// writeTree writes the same files every time under "in" in a new
+	// directory, owned by whoever runs the test, with the given modification
+	// time, and returns the new directory.
+	writeTree := func(t *testing.T, mtime time.Time) string {
+		dir := t.TempDir()
+		require.NoError(t, os.MkdirAll(filepath.Join(dir, "in", "dev"), 0o750))
+		files := map[string]string{
+			"in/dev/deployment.yaml": "kind: Deployment\n",
+			"in/dev/service.yaml":    "kind: Service\n",
+		}
+		for name, content := range files {
+			path := filepath.Join(dir, name)
+			require.NoError(t, os.WriteFile(path, []byte(content), 0o600))
+			require.NoError(t, os.Chtimes(path, mtime, mtime))
+		}
+		require.NoError(t, os.Chtimes(filepath.Join(dir, "in", "dev"), mtime, mtime))
+		return dir
+	}
+
+	written := []time.Time{
+		time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
+		time.Date(2025, 6, 15, 12, 30, 0, 0, time.UTC),
+	}
+
+	// pack archives the same content written at each of the times above and
+	// returns the archives.
+	pack := func(t *testing.T, gzipped bool, mtime *time.Time) [][]byte {
+		runner := &tarCreator{}
+		var archives [][]byte
+		for _, w := range written {
+			workDir := writeTree(t, w)
+			result, err := runner.createTarball(
+				newTestRoot(t, workDir),
+				"in",
+				"archive.tar",
+				gzipped,
+				"",
+				mtime,
+				nil,
+				nil,
+			)
+			require.NoError(t, err)
+			require.Equal(t, kargoapi.PromotionStepStatusSucceeded, result.Status)
+			data, err := os.ReadFile(filepath.Join(workDir, "archive.tar"))
+			require.NoError(t, err)
+			archives = append(archives, data)
+		}
+		return archives
+	}
+
+	// headers returns the headers of every entry in an archive.
+	headers := func(t *testing.T, gzipped bool, archive []byte) []*tar.Header {
+		var r io.Reader = bytes.NewReader(archive)
+		if gzipped {
+			gr, err := gzipReader(archive)
+			require.NoError(t, err)
+			r = gr
+		}
+		tr := tar.NewReader(r)
+		var hs []*tar.Header
+		for {
+			h, err := tr.Next()
+			if err == io.EOF {
+				return hs
+			}
+			require.NoError(t, err)
+			hs = append(hs, h)
+		}
+	}
+
+	fixed := time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC)
+
+	for _, gzipped := range []bool{false, true} {
+		t.Run(fmt.Sprintf("gzip=%t", gzipped), func(t *testing.T) {
+			t.Parallel()
+
+			// Without mtime, each file's own time is recorded, so the
+			// archives differ. The owner is never recorded.
+			archives := pack(t, gzipped, nil)
+			assert.NotEqual(t, archives[0], archives[1], "without mtime, file times are recorded")
+			for i, archive := range archives {
+				for _, h := range headers(t, gzipped, archive) {
+					assert.True(t, h.ModTime.Equal(written[i]), h.Name)
+					assert.Zero(t, h.Uid, h.Name)
+					assert.Zero(t, h.Gid, h.Name)
+					assert.Empty(t, h.Uname, h.Name)
+					assert.Empty(t, h.Gname, h.Name)
+				}
+			}
+
+			// With mtime, identical content gives an identical archive, and
+			// every entry carries that time and keeps its permissions.
+			archives = pack(t, gzipped, &fixed)
+			assert.Equal(t, archives[0], archives[1], "with mtime, identical content gives an identical archive")
+			for _, h := range headers(t, gzipped, archives[1]) {
+				assert.True(t, h.ModTime.Equal(fixed), h.Name)
+				assert.Zero(t, h.Uid, h.Name)
+				assert.Empty(t, h.Uname, h.Name)
+				if h.Typeflag == tar.TypeDir {
+					assert.Equal(t, int64(0o750), h.Mode, h.Name)
+				} else {
+					assert.Equal(t, int64(0o600), h.Mode, h.Name)
+				}
+			}
+		})
+	}
+}
+
+// Test that fileMode and dirMode replace the recorded modes of regular files
+// and directories, and that each defaults to the entry's own mode.
+func Test_tarCreator_run_modes(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name     string
+		fileMode string
+		dirMode  string
+		wantFile int64
+		wantDir  int64
+	}{
+		{name: "own modes by default", wantFile: 0o600, wantDir: 0o700},
+		{name: "fileMode only", fileMode: "0644", wantFile: 0o644, wantDir: 0o700},
+		{name: "dirMode only", dirMode: "0755", wantFile: 0o600, wantDir: 0o755},
+		{name: "both", fileMode: "0644", dirMode: "0755", wantFile: 0o644, wantDir: 0o755},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			workDir := t.TempDir()
+			dir := filepath.Join(workDir, "in", "dev")
+			require.NoError(t, os.MkdirAll(dir, 0o700))
+			// MkdirAll's mode is subject to the umask, so set it explicitly.
+			require.NoError(t, os.Chmod(dir, 0o700))
+			require.NoError(t, os.WriteFile(
+				filepath.Join(dir, "health.lua"),
+				[]byte("return {}\n"),
+				0o600,
+			))
+			require.NoError(t, os.Symlink("health.lua", filepath.Join(dir, "link.lua")))
+			linkInfo, err := os.Lstat(filepath.Join(dir, "link.lua"))
+			require.NoError(t, err)
+
+			result, err := (&tarCreator{}).run(
+				t.Context(),
+				newTestStepContext(t, workDir),
+				stepconfig.TarConfig{
+					InPath:   "in",
+					OutPath:  "archive.tar",
+					FileMode: tt.fileMode,
+					DirMode:  tt.dirMode,
+				},
+			)
+			require.NoError(t, err)
+			require.Equal(t, kargoapi.PromotionStepStatusSucceeded, result.Status)
+
+			f, err := os.Open(filepath.Join(workDir, "archive.tar"))
+			require.NoError(t, err)
+			t.Cleanup(func() { require.NoError(t, f.Close()) })
+			tr := tar.NewReader(f)
+			seen := map[byte]bool{}
+			for {
+				h, err := tr.Next()
+				if err == io.EOF {
+					break
+				}
+				require.NoError(t, err)
+				seen[h.Typeflag] = true
+				switch h.Typeflag {
+				case tar.TypeReg:
+					require.Equal(t, tt.wantFile, h.Mode, h.Name)
+				case tar.TypeDir:
+					require.Equal(t, tt.wantDir, h.Mode, h.Name)
+				case tar.TypeSymlink:
+					// Symlink modes are meaningless and left alone.
+					require.Equal(t, int64(linkInfo.Mode().Perm()), h.Mode, h.Name)
+				}
+			}
+			require.True(t, seen[tar.TypeReg] && seen[tar.TypeDir] && seen[tar.TypeSymlink])
+		})
+	}
+}
+
+// Test that run reports which mode is invalid.
+func Test_tarCreator_run_invalidModes(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name    string
+		cfg     stepconfig.TarConfig
+		wantErr string
+	}{
+		{
+			name:    "fileMode",
+			cfg:     stepconfig.TarConfig{FileMode: "0666"},
+			wantErr: "invalid fileMode",
+		},
+		{
+			name:    "dirMode",
+			cfg:     stepconfig.TarConfig{DirMode: "0777"},
+			wantErr: "invalid dirMode",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			workDir := t.TempDir()
+			require.NoError(t, os.Mkdir(filepath.Join(workDir, "in"), 0o700))
+			tt.cfg.InPath, tt.cfg.OutPath = "in", "archive.tar"
+
+			result, err := (&tarCreator{}).run(
+				t.Context(),
+				newTestStepContext(t, workDir),
+				tt.cfg,
+			)
+			require.ErrorContains(t, err, tt.wantErr)
+			require.True(t, promotion.IsTerminal(err))
+			require.Equal(t, kargoapi.PromotionStepStatusFailed, result.Status)
+		})
+	}
+}
+
+func Test_parseTarMode(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name   string
+		mode   string
+		assert func(*testing.T, *int64, error)
+	}{
+		{
+			name: "empty",
+			assert: func(t *testing.T, mode *int64, err error) {
+				require.NoError(t, err)
+				require.Nil(t, mode)
+			},
+		},
+		{
+			name: "not octal",
+			mode: "0x1",
+			assert: func(t *testing.T, _ *int64, err error) {
+				require.ErrorContains(t, err, "failed to parse octal mode")
+			},
+		},
+		{
+			name: "special bits",
+			mode: "04755",
+			assert: func(t *testing.T, _ *int64, err error) {
+				require.ErrorContains(t, err, "must be between 0000 and 0777")
+			},
+		},
+		{
+			name: "negative",
+			mode: "-4",
+			assert: func(t *testing.T, _ *int64, err error) {
+				require.ErrorContains(t, err, "must be between 0000 and 0777")
+			},
+		},
+		{
+			name: "world-writable",
+			mode: "0666",
+			assert: func(t *testing.T, _ *int64, err error) {
+				require.ErrorContains(t, err, "must not be world-writable")
+			},
+		},
+		{
+			name: "valid",
+			mode: "0755",
+			assert: func(t *testing.T, mode *int64, err error) {
+				require.NoError(t, err)
+				require.Equal(t, int64(0o755), *mode)
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			mode, err := parseTarMode(tt.mode)
+			tt.assert(t, mode, err)
+		})
+	}
+}
+
+func gzipReader(data []byte) (io.Reader, error) {
+	return gzip.NewReader(bytes.NewReader(data))
 }
 
 func Test_tarCreator_prepareInputPath(t *testing.T) {
@@ -561,20 +970,21 @@ func Test_tarCreator_prepareInputPath(t *testing.T) {
 		{"valid file path", "real.txt", ""},
 		{"valid dir path", "real_dir", ""},
 		{"non-existent path", "fake.txt", "does not exist"},
-		{"path traversal attempt", "../outside.txt", "does not exist"},
-		{"fails to secure join", string([]byte{0}), "failed to secure join input path"},
+		{"path traversal attempt", "../outside.txt", "outside the working directory"},
+		{"invalid path", string([]byte{0}), "failed to stat input path"},
 	}
 
+	root := newTestRoot(t, workDir)
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			absPath, err := runner.prepareInputPath(workDir, tt.inPath)
+			relPath, err := runner.prepareInputPath(root, tt.inPath)
 			if tt.expectedError != "" {
 				assert.ErrorContains(t, err, tt.expectedError)
-				assert.Empty(t, absPath)
+				assert.Empty(t, relPath)
 			} else {
 				assert.NoError(t, err)
-				assert.True(t, strings.HasSuffix(absPath, tt.inPath))
+				assert.Equal(t, tt.inPath, relPath)
 			}
 		})
 	}
@@ -589,49 +999,20 @@ func Test_tarCreator_prepareOutputPath(t *testing.T) {
 		workDir := t.TempDir()
 		nestedOutPath := "deeply/nested/archive.tar"
 
-		absPath, err := runner.prepareOutputPath(workDir, nestedOutPath)
+		relPath, err := runner.prepareOutputPath(newTestRoot(t, workDir), nestedOutPath)
 		assert.NoError(t, err)
-		assert.True(t, strings.HasSuffix(absPath, nestedOutPath))
+		assert.Equal(t, nestedOutPath, relPath)
 
 		// Check the directory exists.
-		dirInfo, statErr := os.Stat(filepath.Dir(absPath))
-		assert.NoError(t, statErr)
-		assert.True(t, dirInfo.IsDir())
+		assert.DirExists(t, filepath.Join(workDir, filepath.Dir(nestedOutPath)))
 	})
 
-	t.Run("fails to secure join", func(t *testing.T) {
+	t.Run("path climbs out of the working directory", func(t *testing.T) {
 		t.Parallel()
 		workDir := t.TempDir()
 
-		_, err := runner.prepareOutputPath(workDir, string([]byte{0}))
-		assert.ErrorContains(t, err, "failed to secure join output path")
-	})
-}
-
-func Test_tarCreator_createTempFile(t *testing.T) {
-	t.Parallel()
-	runner := &tarCreator{}
-
-	t.Run("succeeds to create temp file", func(t *testing.T) {
-		t.Parallel()
-		workDir := t.TempDir()
-
-		f, path, err := runner.createTempFile(filepath.Join(workDir, "out.tar"))
-		assert.NoError(t, err)
-		assert.NotNil(t, f)
-		assert.NotEmpty(t, path)
-
-		f.Close()
-	})
-
-	t.Run("fails to create temp file", func(t *testing.T) {
-		t.Parallel()
-		workDir := t.TempDir()
-
-		f, path, err := runner.createTempFile(filepath.Join(workDir, "non_existent_dir", "out.tar"))
-		assert.ErrorContains(t, err, "failed to create temporary file")
-		assert.Nil(t, f)
-		assert.Empty(t, path)
+		_, err := runner.prepareOutputPath(newTestRoot(t, workDir), "../archive.tar")
+		assert.ErrorContains(t, err, "outside the working directory")
 	})
 }
 
@@ -743,4 +1124,53 @@ func verifyNoTempFiles(t *testing.T, dir string) {
 		assert.False(t, !entry.IsDir() && strings.HasSuffix(entry.Name(), ".tmp"),
 			"No temporary files should remain: %s", entry.Name())
 	}
+}
+
+func Test_tarCreator_run_escapingSymlink(t *testing.T) {
+	t.Run("input path", func(t *testing.T) {
+		workDir, outside := escapingWorkspace(t)
+		require.NoError(t, os.WriteFile(filepath.Join(outside, "secret.txt"), []byte("x"), 0o600))
+		result, err := (&tarCreator{}).run(
+			t.Context(),
+			newTestStepContext(t, workDir),
+			stepconfig.TarConfig{InPath: "out", OutPath: "archive.tar"},
+		)
+		require.ErrorContains(t, err, "path escapes from parent")
+		require.Equal(t, kargoapi.PromotionStepStatusErrored, result.Status)
+		require.NoFileExists(t, filepath.Join(workDir, "archive.tar"))
+	})
+	t.Run("output path", func(t *testing.T) {
+		workDir, outside := escapingWorkspace(t)
+		require.NoError(t, os.Mkdir(filepath.Join(workDir, "source"), 0o750))
+		require.NoError(t, os.WriteFile(filepath.Join(workDir, "source", "a.txt"), []byte("x"), 0o600))
+		result, err := (&tarCreator{}).run(
+			t.Context(),
+			newTestStepContext(t, workDir),
+			stepconfig.TarConfig{InPath: "source", OutPath: "out/archive.tar"},
+		)
+		require.ErrorContains(t, err, "path escapes from parent")
+		require.Equal(t, kargoapi.PromotionStepStatusErrored, result.Status)
+		entries, err := os.ReadDir(outside)
+		require.NoError(t, err)
+		require.Empty(t, entries)
+	})
+}
+
+func Test_tarCreator_run_symlinkedOutPath(t *testing.T) {
+	workDir := t.TempDir()
+	require.NoError(t, os.Mkdir(filepath.Join(workDir, "source"), 0o750))
+	require.NoError(t, os.WriteFile(filepath.Join(workDir, "source", "a.txt"), []byte("x"), 0o600))
+	require.NoError(t, os.WriteFile(filepath.Join(workDir, "target.tar"), []byte("old"), 0o600))
+	require.NoError(t, os.Symlink("target.tar", filepath.Join(workDir, "link.tar")))
+	result, err := (&tarCreator{}).run(
+		t.Context(),
+		newTestStepContext(t, workDir),
+		stepconfig.TarConfig{InPath: "source", OutPath: "link.tar"},
+	)
+	require.NoError(t, err)
+	require.Equal(t, kargoapi.PromotionStepStatusSucceeded, result.Status)
+	verifyTarContents(t, filepath.Join(workDir, "target.tar"), false, map[string]string{"a.txt": "x"})
+	fi, err := os.Lstat(filepath.Join(workDir, "link.tar"))
+	require.NoError(t, err)
+	require.NotZero(t, fi.Mode()&os.ModeSymlink)
 }

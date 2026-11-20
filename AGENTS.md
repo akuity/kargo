@@ -12,7 +12,7 @@ domain is needed.
 
 | Path | Description |
 |------|-------------|
-| `api/v1alpha1/` | CRD types (Warehouse, Freight, Stage, Promotion, Project, etc.). Separate Go module |
+| `api/v1alpha1/` | CRD types (Warehouse, Freight, Stage, Promotion, Project, etc.) |
 | `cmd/controlplane/` | Back end entry point -- single binary with subcommands: `api`, `controller`, `management-controller`, `kubernetes-webhooks`, `external-webhooks`, `garbage-collector` |
 | `cmd/cli/` | CLI entry point |
 | `pkg/server/` | API server handlers, exposing Kargo's REST API (used by both the CLI and UI). |
@@ -51,6 +51,7 @@ make lint-go              # Lint Go code (golangci-lint)
 make lint                 # Lint everything (Go, charts, UI)
 make format-go            # Auto-format Go code
 make test-unit            # Run unit tests (with -race)
+make test-db              # Run PostgreSQL integration tests against DATABASE_URL (defaults to the dev database)
 make build-cli            # Build CLI binary
 make codegen              # Run all code generation
 make hack-build-dev-tools # Build dev container with all tools

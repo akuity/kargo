@@ -3,6 +3,7 @@ package builtin
 import (
 	"os"
 	"path"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -11,7 +12,7 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/promotion"
 	inttoml "github.com/akuity/kargo/pkg/toml"
-	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
+	"github.com/akuity/kargo/pkg/x/promotion/stepconfig"
 )
 
 func Test_tomlUpdater_convert(t *testing.T) {
@@ -84,16 +85,16 @@ func Test_tomlUpdater_run(t *testing.T) {
 	tests := []struct {
 		name       string
 		stepCtx    *promotion.StepContext
-		cfg        builtin.TOMLUpdateConfig
+		cfg        stepconfig.TOMLUpdateConfig
 		files      map[string]string
 		assertions func(*testing.T, string, promotion.StepResult, error)
 	}{
 		{
 			name:    "successful run with updates",
 			stepCtx: &promotion.StepContext{Project: "test-project"},
-			cfg: builtin.TOMLUpdateConfig{
+			cfg: stepconfig.TOMLUpdateConfig{
 				Path: "config.toml",
-				Updates: []builtin.TomlUpdate{
+				Updates: []stepconfig.TomlUpdate{
 					{Key: "package.version", Value: "1.0.1"},
 					{Key: "features.newFeature", Value: true},
 					{Key: "threshold", Value: 100},
@@ -123,9 +124,9 @@ func Test_tomlUpdater_run(t *testing.T) {
 		{
 			name:    "failed to update file",
 			stepCtx: &promotion.StepContext{Project: "test-project"},
-			cfg: builtin.TOMLUpdateConfig{
+			cfg: stepconfig.TOMLUpdateConfig{
 				Path:    "non-existent/config.toml",
-				Updates: []builtin.TomlUpdate{{Key: "package.version", Value: "1.0.1"}},
+				Updates: []stepconfig.TomlUpdate{{Key: "package.version", Value: "1.0.1"}},
 			},
 			assertions: func(t *testing.T, _ string, result promotion.StepResult, err error) {
 				assert.Error(t, err)
@@ -136,7 +137,7 @@ func Test_tomlUpdater_run(t *testing.T) {
 		{
 			name:    "no updates provided",
 			stepCtx: &promotion.StepContext{Project: "test-project"},
-			cfg:     builtin.TOMLUpdateConfig{Path: "config.toml", Updates: []builtin.TomlUpdate{}},
+			cfg:     stepconfig.TOMLUpdateConfig{Path: "config.toml", Updates: []stepconfig.TomlUpdate{}},
 			files:   map[string]string{"config.toml": "[package]\nversion = \"1.0.0\"\n"},
 			assertions: func(t *testing.T, workDir string, result promotion.StepResult, err error) {
 				assert.NoError(t, err)
@@ -154,6 +155,7 @@ func Test_tomlUpdater_run(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			stepCtx := tt.stepCtx
 			stepCtx.WorkDir = t.TempDir()
+			stepCtx.Root = newTestRoot(t, stepCtx.WorkDir)
 			for p, c := range tt.files {
 				require.NoError(t, os.MkdirAll(path.Join(stepCtx.WorkDir, path.Dir(p)), 0o700))
 				require.NoError(t, os.WriteFile(path.Join(stepCtx.WorkDir, p), []byte(c), 0o600))
@@ -217,7 +219,7 @@ func Test_tomlUpdater_updateFile(t *testing.T) {
 				require.NoError(t, err)
 			}
 
-			err := runner.updateFile(workDir, path.Base(valuesFile), tt.updates)
+			err := runner.updateFile(newTestRoot(t, workDir), path.Base(valuesFile), tt.updates)
 			tt.assertions(t, valuesFile, err)
 		})
 	}
@@ -227,7 +229,7 @@ func Test_tomlUpdater_generateCommitMessage(t *testing.T) {
 	tests := []struct {
 		name       string
 		path       string
-		updates    []builtin.TomlUpdate
+		updates    []stepconfig.TomlUpdate
 		assertions func(*testing.T, string)
 	}{
 		{
@@ -240,7 +242,7 @@ func Test_tomlUpdater_generateCommitMessage(t *testing.T) {
 		{
 			name:    "single change",
 			path:    "values.toml",
-			updates: []builtin.TomlUpdate{{Key: "package.version", Value: "1.2.3"}},
+			updates: []stepconfig.TomlUpdate{{Key: "package.version", Value: "1.2.3"}},
 			assertions: func(t *testing.T, result string) {
 				assert.Equal(t, "Updated values.toml\n\n- package.version: '1.2.3'", result)
 			},
@@ -248,7 +250,7 @@ func Test_tomlUpdater_generateCommitMessage(t *testing.T) {
 		{
 			name: "multiple changes",
 			path: "Cargo.toml",
-			updates: []builtin.TomlUpdate{
+			updates: []stepconfig.TomlUpdate{
 				{Key: "package.version", Value: "1.2.3"},
 				{Key: "features.enabled", Value: true},
 				{Key: "threshold", Value: 42},
@@ -271,4 +273,22 @@ func Test_tomlUpdater_generateCommitMessage(t *testing.T) {
 			tt.assertions(t, result)
 		})
 	}
+}
+
+func Test_tomlUpdater_run_escapingSymlink(t *testing.T) {
+	workDir, outside := escapingWorkspace(t)
+	target := filepath.Join(outside, "values.toml")
+	require.NoError(t, os.WriteFile(target, []byte("title = \"value\"\n"), 0o600))
+	_, err := (&tomlUpdater{}).run(
+		t.Context(),
+		newTestStepContext(t, workDir),
+		stepconfig.TOMLUpdateConfig{
+			Path:    "out/values.toml",
+			Updates: []stepconfig.TomlUpdate{{Key: "title", Value: "changed"}},
+		},
+	)
+	require.ErrorContains(t, err, "path escapes from parent")
+	content, err := os.ReadFile(target)
+	require.NoError(t, err)
+	require.Equal(t, "title = \"value\"\n", string(content))
 }

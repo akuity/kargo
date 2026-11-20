@@ -74,8 +74,10 @@ Class | Method | HTTP request | Description
 *CoreAPI* | [**AbortPromotion**](docs/CoreAPI.md#abortpromotion) | **Post** /v1beta1/projects/{project}/promotions/{promotion}/abort | Abort a Promotion
 *CoreAPI* | [**ApproveFreight**](docs/CoreAPI.md#approvefreight) | **Post** /v1beta1/projects/{project}/freight/{freight-name-or-alias}/approve | Approve Freight for promotion to a Stage
 *CoreAPI* | [**CreateProjectConfigMap**](docs/CoreAPI.md#createprojectconfigmap) | **Post** /v1beta1/projects/{project}/configmaps | Create a project-level ConfigMap
+*CoreAPI* | [**CreatePromotionRollout**](docs/CoreAPI.md#createpromotionrollout) | **Post** /v1beta1/projects/{project}/stages/{stage}/promotion-rollouts | Create a PromotionRollout
 *CoreAPI* | [**CreateSharedConfigMap**](docs/CoreAPI.md#createsharedconfigmap) | **Post** /v1beta1/shared/configmaps | Create a shared ConfigMap
 *CoreAPI* | [**CreateSystemConfigMap**](docs/CoreAPI.md#createsystemconfigmap) | **Post** /v1beta1/system/configmaps | Create a system-level ConfigMap
+*CoreAPI* | [**CreateTarget**](docs/CoreAPI.md#createtarget) | **Post** /v1beta1/projects/{project}/targets | Create a Target
 *CoreAPI* | [**DeleteFreight**](docs/CoreAPI.md#deletefreight) | **Delete** /v1beta1/projects/{project}/freight/{freight-name-or-alias} | Delete a Freight resource
 *CoreAPI* | [**DeleteProject**](docs/CoreAPI.md#deleteproject) | **Delete** /v1beta1/projects/{project} | Delete a Project
 *CoreAPI* | [**DeleteProjectConfig**](docs/CoreAPI.md#deleteprojectconfig) | **Delete** /v1beta1/projects/{project}/config | Delete a ProjectConfig resource
@@ -83,6 +85,7 @@ Class | Method | HTTP request | Description
 *CoreAPI* | [**DeleteSharedConfigMap**](docs/CoreAPI.md#deletesharedconfigmap) | **Delete** /v1beta1/shared/configmaps/{configmap} | Delete a shared ConfigMap
 *CoreAPI* | [**DeleteStage**](docs/CoreAPI.md#deletestage) | **Delete** /v1beta1/projects/{project}/stages/{stage} | Delete a Stage
 *CoreAPI* | [**DeleteSystemConfigMap**](docs/CoreAPI.md#deletesystemconfigmap) | **Delete** /v1beta1/system/configmaps/{configmap} | Delete a system-level ConfigMap
+*CoreAPI* | [**DeleteTarget**](docs/CoreAPI.md#deletetarget) | **Delete** /v1beta1/projects/{project}/targets/{target-name} | Delete a Target
 *CoreAPI* | [**DeleteWarehouse**](docs/CoreAPI.md#deletewarehouse) | **Delete** /v1beta1/projects/{project}/warehouses/{warehouse} | Delete a Warehouse
 *CoreAPI* | [**GetClusterPromotionTask**](docs/CoreAPI.md#getclusterpromotiontask) | **Get** /v1beta1/shared/cluster-promotion-tasks/{cluster-promotion-task} | Retrieve a ClusterPromotionTask
 *CoreAPI* | [**GetFreight**](docs/CoreAPI.md#getfreight) | **Get** /v1beta1/projects/{project}/freight/{freight-name-or-alias} | Retrieve a Freight resource
@@ -92,18 +95,20 @@ Class | Method | HTTP request | Description
 *CoreAPI* | [**GetProjectConfigMap**](docs/CoreAPI.md#getprojectconfigmap) | **Get** /v1beta1/projects/{project}/configmaps/{configmap} | Retrieve a project-level ConfigMap
 *CoreAPI* | [**GetPromotion**](docs/CoreAPI.md#getpromotion) | **Get** /v1beta1/projects/{project}/promotions/{promotion} | Retrieve a Promotion
 *CoreAPI* | [**GetPromotionRequest**](docs/CoreAPI.md#getpromotionrequest) | **Get** /v1beta1/projects/{project}/promotion-requests/{promotion-request} | Retrieve a PromotionRequest
+*CoreAPI* | [**GetPromotionRollout**](docs/CoreAPI.md#getpromotionrollout) | **Get** /v1beta1/projects/{project}/stages/{stage}/promotion-rollouts/{number} | Retrieve a PromotionRollout
 *CoreAPI* | [**GetPromotionTask**](docs/CoreAPI.md#getpromotiontask) | **Get** /v1beta1/projects/{project}/promotion-tasks/{promotion-task} | Retrieve a PromotionTask
 *CoreAPI* | [**GetSharedConfigMap**](docs/CoreAPI.md#getsharedconfigmap) | **Get** /v1beta1/shared/configmaps/{configmap} | Retrieve a shared ConfigMap
 *CoreAPI* | [**GetStage**](docs/CoreAPI.md#getstage) | **Get** /v1beta1/projects/{project}/stages/{stage} | Retrieve a Stage
 *CoreAPI* | [**GetStageLinks**](docs/CoreAPI.md#getstagelinks) | **Get** /v1beta1/projects/{project}/stages/{stage}/links | Retrieve deep links for a Stage resource
 *CoreAPI* | [**GetSystemConfigMap**](docs/CoreAPI.md#getsystemconfigmap) | **Get** /v1beta1/system/configmaps/{configmap} | Retrieve a system-level ConfigMap
-*CoreAPI* | [**GetTarget**](docs/CoreAPI.md#gettarget) | **Get** /v1beta1/projects/{project}/targets/{target} | Retrieve a Target
+*CoreAPI* | [**GetTarget**](docs/CoreAPI.md#gettarget) | **Get** /v1beta1/projects/{project}/targets/{target-name} | Retrieve a Target
 *CoreAPI* | [**GetWarehouse**](docs/CoreAPI.md#getwarehouse) | **Get** /v1beta1/projects/{project}/warehouses/{warehouse} | Retrieve a Warehouse
 *CoreAPI* | [**ListClusterPromotionTasks**](docs/CoreAPI.md#listclusterpromotiontasks) | **Get** /v1beta1/shared/cluster-promotion-tasks | List ClusterPromotionTasks
 *CoreAPI* | [**ListImages**](docs/CoreAPI.md#listimages) | **Get** /v1beta1/projects/{project}/images | List container images
 *CoreAPI* | [**ListProjectConfigMaps**](docs/CoreAPI.md#listprojectconfigmaps) | **Get** /v1beta1/projects/{project}/configmaps | List project-level ConfigMaps
 *CoreAPI* | [**ListProjects**](docs/CoreAPI.md#listprojects) | **Get** /v1beta1/projects | List projects
 *CoreAPI* | [**ListPromotionRequests**](docs/CoreAPI.md#listpromotionrequests) | **Get** /v1beta1/projects/{project}/promotion-requests | List PromotionRequests
+*CoreAPI* | [**ListPromotionRollouts**](docs/CoreAPI.md#listpromotionrollouts) | **Get** /v1beta1/projects/{project}/promotion-rollouts | List PromotionRollouts
 *CoreAPI* | [**ListPromotionTasks**](docs/CoreAPI.md#listpromotiontasks) | **Get** /v1beta1/projects/{project}/promotion-tasks | List PromotionTasks
 *CoreAPI* | [**ListPromotions**](docs/CoreAPI.md#listpromotions) | **Get** /v1beta1/projects/{project}/promotions | List Promotions
 *CoreAPI* | [**ListSharedConfigMaps**](docs/CoreAPI.md#listsharedconfigmaps) | **Get** /v1beta1/shared/configmaps | List shared ConfigMaps
@@ -125,6 +130,7 @@ Class | Method | HTTP request | Description
 *CoreAPI* | [**UpdateProjectConfigMap**](docs/CoreAPI.md#updateprojectconfigmap) | **Put** /v1beta1/projects/{project}/configmaps/{configmap} | Replace a project-level ConfigMap
 *CoreAPI* | [**UpdateSharedConfigMap**](docs/CoreAPI.md#updatesharedconfigmap) | **Put** /v1beta1/shared/configmaps/{configmap} | Replace a shared ConfigMap
 *CoreAPI* | [**UpdateSystemConfigMap**](docs/CoreAPI.md#updatesystemconfigmap) | **Put** /v1beta1/system/configmaps/{configmap} | Replace a system-level ConfigMap
+*CoreAPI* | [**UpdateTarget**](docs/CoreAPI.md#updatetarget) | **Put** /v1beta1/projects/{project}/targets/{target-name} | Update a Target
 *CredentialsAPI* | [**CreateProjectGenericCredentials**](docs/CredentialsAPI.md#createprojectgenericcredentials) | **Post** /v1beta1/projects/{project}/generic-credentials | Create project-level generic credentials
 *CredentialsAPI* | [**CreateProjectRepoCredentials**](docs/CredentialsAPI.md#createprojectrepocredentials) | **Post** /v1beta1/projects/{project}/repo-credentials | Create project-level repository credentials
 *CredentialsAPI* | [**CreateSharedGenericCredentials**](docs/CredentialsAPI.md#createsharedgenericcredentials) | **Post** /v1beta1/shared/generic-credentials | Create shared generic credentials
@@ -225,6 +231,7 @@ Class | Method | HTTP request | Description
  - [CreateGenericCredentialsRequest](docs/CreateGenericCredentialsRequest.md)
  - [CreateOrUpdateResourceResponse](docs/CreateOrUpdateResourceResponse.md)
  - [CreateOrUpdateResourceResult](docs/CreateOrUpdateResourceResult.md)
+ - [CreatePromotionRolloutRequest](docs/CreatePromotionRolloutRequest.md)
  - [CreateRepoCredentialsRequest](docs/CreateRepoCredentialsRequest.md)
  - [CreateResourceResponse](docs/CreateResourceResponse.md)
  - [CreateResourceResult](docs/CreateResourceResult.md)
@@ -273,6 +280,7 @@ Class | Method | HTTP request | Description
  - [ImageStageMap](docs/ImageStageMap.md)
  - [IndexSelector](docs/IndexSelector.md)
  - [IndexSelectorRequirement](docs/IndexSelectorRequirement.md)
+ - [InflatedPromotionTask](docs/InflatedPromotionTask.md)
  - [ListProjectsResponse](docs/ListProjectsResponse.md)
  - [OIDCConfig](docs/OIDCConfig.md)
  - [PatchConfigMapRequest](docs/PatchConfigMapRequest.md)
@@ -302,6 +310,17 @@ Class | Method | HTTP request | Description
  - [PromotionRequestSummary](docs/PromotionRequestSummary.md)
  - [PromotionRequestTarget](docs/PromotionRequestTarget.md)
  - [PromotionRequestTargetStatus](docs/PromotionRequestTargetStatus.md)
+ - [PromotionRequestUpdateStrategy](docs/PromotionRequestUpdateStrategy.md)
+ - [PromotionRollout](docs/PromotionRollout.md)
+ - [PromotionRolloutList](docs/PromotionRolloutList.md)
+ - [PromotionRolloutPhase](docs/PromotionRolloutPhase.md)
+ - [PromotionRolloutReference](docs/PromotionRolloutReference.md)
+ - [PromotionRolloutSpec](docs/PromotionRolloutSpec.md)
+ - [PromotionRolloutStatus](docs/PromotionRolloutStatus.md)
+ - [PromotionRolloutSummary](docs/PromotionRolloutSummary.md)
+ - [PromotionRolloutTarget](docs/PromotionRolloutTarget.md)
+ - [PromotionRolloutTargetStatus](docs/PromotionRolloutTargetStatus.md)
+ - [PromotionRolloutUpdateStrategy](docs/PromotionRolloutUpdateStrategy.md)
  - [PromotionSpec](docs/PromotionSpec.md)
  - [PromotionStatus](docs/PromotionStatus.md)
  - [PromotionStep](docs/PromotionStep.md)
@@ -382,6 +401,7 @@ Class | Method | HTTP request | Description
  - [TargetStats](docs/TargetStats.md)
  - [TargetStatus](docs/TargetStatus.md)
  - [TargetUpdateStrategy](docs/TargetUpdateStrategy.md)
+ - [TargetVerificaitonSpec](docs/TargetVerificaitonSpec.md)
  - [UpdateConfigMapRequest](docs/UpdateConfigMapRequest.md)
  - [UpdateGenericCredentialsRequest](docs/UpdateGenericCredentialsRequest.md)
  - [UpdateRepoCredentialsRequest](docs/UpdateRepoCredentialsRequest.md)

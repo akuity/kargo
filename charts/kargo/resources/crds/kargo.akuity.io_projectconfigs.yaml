@@ -59,9 +59,10 @@ spec:
                 items:
                   description: |-
                     DeepLink defines a configurable external link that is rendered in the UI
-                    when viewing a Freight or Stage resource. The URL is an expression evaluated
-                    against the resource. The optional If field is an expression condition;
-                    when set, the link is only shown when the expression evaluates to true.
+                    when viewing a Freight or Stage resource. The URL may contain expr-lang
+                    expressions offset by ${{ }}, evaluated against the resource. The optional
+                    If field is a ${{ }} expression that must evaluate to a boolean; when set,
+                    the link is only shown when it evaluates to true.
                   properties:
                     description:
                       description: |-
@@ -70,16 +71,18 @@ spec:
                       type: string
                     if:
                       description: |-
-                        If is an optional expression condition. When set, the link is only shown
-                        when the expression evaluates to true.
+                        If is an optional expr-lang expression, offset by ${{ }}, that must
+                        evaluate to a boolean. When set, the link is shown only when it
+                        evaluates to true.
                       type: string
                     title:
                       description: Title is the display label for the link.
                       minLength: 1
                       type: string
                     url:
-                      description: URL is an expression that resolves to the link's
-                        href.
+                      description: |-
+                        URL is the link's href. It may contain expr-lang expressions offset by
+                        ${{ }}, evaluated against the resource as freight or stage.
                       minLength: 1
                       type: string
                   required:
@@ -456,9 +459,10 @@ spec:
                 items:
                   description: |-
                     DeepLink defines a configurable external link that is rendered in the UI
-                    when viewing a Freight or Stage resource. The URL is an expression evaluated
-                    against the resource. The optional If field is an expression condition;
-                    when set, the link is only shown when the expression evaluates to true.
+                    when viewing a Freight or Stage resource. The URL may contain expr-lang
+                    expressions offset by ${{ }}, evaluated against the resource. The optional
+                    If field is a ${{ }} expression that must evaluate to a boolean; when set,
+                    the link is only shown when it evaluates to true.
                   properties:
                     description:
                       description: |-
@@ -467,16 +471,18 @@ spec:
                       type: string
                     if:
                       description: |-
-                        If is an optional expression condition. When set, the link is only shown
-                        when the expression evaluates to true.
+                        If is an optional expr-lang expression, offset by ${{ }}, that must
+                        evaluate to a boolean. When set, the link is shown only when it
+                        evaluates to true.
                       type: string
                     title:
                       description: Title is the display label for the link.
                       minLength: 1
                       type: string
                     url:
-                      description: URL is an expression that resolves to the link's
-                        href.
+                      description: |-
+                        URL is the link's href. It may contain expr-lang expressions offset by
+                        ${{ }}, evaluated against the resource as freight or stage.
                       minLength: 1
                       type: string
                   required:

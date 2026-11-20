@@ -1,7 +1,7 @@
 import { faPencil, faPlus, faQuestionCircle, faTrash } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { useMutation } from '@tanstack/react-query';
-import { Button, Card, Popover, Space, Table, Tag, Typography } from 'antd';
+import { Button, Card, Flex, Popover, Space, Table, Tag, Typography } from 'antd';
 import React from 'react';
 
 import { useConfirmModal } from '@ui/features/common/confirm-modal/use-confirm-modal';
@@ -100,11 +100,15 @@ export const GenericCredentialsList = ({ project = '', description }: Props) => 
                 return <Tag color='red'>It looks like this secret is empty.</Tag>;
               }
 
-              return secretsKeys.map((secretKey) => (
-                <Tag key={secretKey} color='blue'>
-                  {secretKey}
-                </Tag>
-              ));
+              return (
+                <Flex gap={4} wrap>
+                  {secretsKeys.map((secretKey) => (
+                    <Tag key={secretKey} color='blue'>
+                      {secretKey}
+                    </Tag>
+                  ))}
+                </Flex>
+              );
             }
           },
           {

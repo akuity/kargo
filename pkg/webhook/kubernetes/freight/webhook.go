@@ -21,9 +21,7 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/api"
 	"github.com/akuity/kargo/pkg/event"
-	k8sevent "github.com/akuity/kargo/pkg/event/kubernetes"
 	"github.com/akuity/kargo/pkg/indexer"
-	libEvent "github.com/akuity/kargo/pkg/kubernetes/event"
 	"github.com/akuity/kargo/pkg/logging"
 	"github.com/akuity/kargo/pkg/namer"
 	"github.com/akuity/kargo/pkg/urls"
@@ -81,15 +79,11 @@ type webhook struct {
 }
 
 func SetupWebhookWithManager(
-	ctx context.Context,
 	cfg libWebhook.Config,
 	mgr ctrl.Manager,
+	sender event.Sender,
 ) error {
-	w, err := newWebhook(
-		cfg,
-		mgr.GetClient(),
-		k8sevent.NewEventSender(libEvent.NewRecorder(ctx, mgr.GetScheme(), mgr.GetClient(), "freight-webhook")),
-	)
+	w, err := newWebhook(cfg, mgr.GetClient(), sender)
 	if err != nil {
 		return err
 	}
@@ -363,11 +357,14 @@ func (w *webhook) recordFreightApprovedEvent(
 	stageName string,
 ) {
 	actor := api.FormatEventKubernetesUserActor(req.UserInfo)
-	evt := event.NewFreightApproved(fmt.Sprintf("Freight approved for Stage %q by %q",
+	evt, err := event.NewFreightApproved(fmt.Sprintf("Freight approved for Stage %q by %q",
 		stageName,
 		actor,
 	), actor, stageName, f)
-	if err := w.sender.Send(ctx, evt); err != nil {
+	if err == nil {
+		err = w.sender.Send(ctx, evt)
+	}
+	if err != nil {
 		logging.LoggerFromContext(ctx).Error(err,
 			"error sending Freight approved event")
 	}

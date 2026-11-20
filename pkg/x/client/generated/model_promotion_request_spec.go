@@ -28,7 +28,7 @@ type PromotionRequestSpec struct {
 	// Targets names the Targets to which this PromotionRequest promotes Freight. Each Target MUST be in the same namespace as the PromotionRequest. The list may be empty, which records that the governing Stage governed no Targets when the PromotionRequest was created -- distinct from the field being absent, which asks for it to be resolved.  This is a resolved list, not a selector: the Stage's target selectors are evaluated once, at creation, and the result recorded here. The membership of the PromotionRequest is therefore a snapshot of what the Stage governed at that moment, and its threshold and terminal state are computed against it rather than against a selector that could match differently later.  This is the only mutable field in the spec. The governing Stage owns it, and may add Targets to an in-flight PromotionRequest so that Targets discovered after creation can still receive the Freight. Target names MUST be unique; this is enforced by the validating webhook rather than by the schema, since a list-map's per-item ownership tracking would roughly double the storage cost of every entry.  +listType=atomic +kubebuilder:validation:Required
 	Targets []PromotionRequestTarget `json:"targets"`
 	// UpdateStrategy configures the pace of updating the targets +optional +kubebuilder:validation:XValidation:rule=\"self == oldSelf\"
-	UpdateStrategy *TargetUpdateStrategy `json:"updateStrategy,omitempty"`
+	UpdateStrategy *PromotionRequestUpdateStrategy `json:"updateStrategy,omitempty"`
 }
 
 type _PromotionRequestSpec PromotionRequestSpec
@@ -126,9 +126,9 @@ func (o *PromotionRequestSpec) SetTargets(v []PromotionRequestTarget) {
 }
 
 // GetUpdateStrategy returns the UpdateStrategy field value if set, zero value otherwise.
-func (o *PromotionRequestSpec) GetUpdateStrategy() TargetUpdateStrategy {
+func (o *PromotionRequestSpec) GetUpdateStrategy() PromotionRequestUpdateStrategy {
 	if o == nil || IsNil(o.UpdateStrategy) {
-		var ret TargetUpdateStrategy
+		var ret PromotionRequestUpdateStrategy
 		return ret
 	}
 	return *o.UpdateStrategy
@@ -136,7 +136,7 @@ func (o *PromotionRequestSpec) GetUpdateStrategy() TargetUpdateStrategy {
 
 // GetUpdateStrategyOk returns a tuple with the UpdateStrategy field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *PromotionRequestSpec) GetUpdateStrategyOk() (*TargetUpdateStrategy, bool) {
+func (o *PromotionRequestSpec) GetUpdateStrategyOk() (*PromotionRequestUpdateStrategy, bool) {
 	if o == nil || IsNil(o.UpdateStrategy) {
 		return nil, false
 	}
@@ -152,8 +152,8 @@ func (o *PromotionRequestSpec) HasUpdateStrategy() bool {
 	return false
 }
 
-// SetUpdateStrategy gets a reference to the given TargetUpdateStrategy and assigns it to the UpdateStrategy field.
-func (o *PromotionRequestSpec) SetUpdateStrategy(v TargetUpdateStrategy) {
+// SetUpdateStrategy gets a reference to the given PromotionRequestUpdateStrategy and assigns it to the UpdateStrategy field.
+func (o *PromotionRequestSpec) SetUpdateStrategy(v PromotionRequestUpdateStrategy) {
 	o.UpdateStrategy = &v
 }
 

@@ -1,6 +1,9 @@
 package v1alpha1
 
 import (
+	"go/ast"
+	"go/parser"
+	"go/token"
 	"testing"
 	"time"
 
@@ -249,4 +252,51 @@ func TestStepExecutionMetadataList_HasFailures(t *testing.T) {
 			require.Equal(t, tt.expected, tt.metadata.HasFailures())
 		})
 	}
+}
+
+// TestPromotionStep_DescriptionValidation guards the admission rules on
+// PromotionStep.Description. They are enforced by the generated CRDs, so this
+// asserts on the markers that generate them, in the same style as
+// TestPromotionRequestSpec_Immutability: dropping or loosening one is a test
+// failure rather than a silent behavior change.
+//
+// The length cap is a CEL rule and deliberately not MaxLength. The API server's
+// built-in maxLength error says "bytes", although the limit counts characters.
+func TestPromotionStep_DescriptionValidation(t *testing.T) {
+	t.Parallel()
+
+	fset := token.NewFileSet()
+	f, err := parser.ParseFile(fset, "promotion_types.go", nil, parser.ParseComments)
+	require.NoError(t, err)
+
+	var doc string
+	ast.Inspect(f, func(n ast.Node) bool {
+		typeSpec, ok := n.(*ast.TypeSpec)
+		if !ok || typeSpec.Name.Name != "PromotionStep" {
+			return true
+		}
+		structType, ok := typeSpec.Type.(*ast.StructType)
+		if !ok {
+			return false
+		}
+		for _, field := range structType.Fields.List {
+			if len(field.Names) > 0 && field.Names[0].Name == "Description" && field.Doc != nil {
+				doc = field.Doc.Text()
+			}
+		}
+		return false
+	})
+	require.NotEmpty(t, doc, "PromotionStep.Description has no doc comment")
+
+	for _, marker := range []string{
+		`+kubebuilder:validation:Optional`,
+		// An empty description is rejected; wizards omit the key when blank.
+		`+kubebuilder:validation:MinLength=1`,
+		`+kubebuilder:validation:XValidation:` +
+			`message="description must be 256 characters or fewer",` +
+			`rule="self.size() <= 256"`,
+	} {
+		require.Contains(t, doc, marker)
+	}
+	require.NotContains(t, doc, "validation:MaxLength")
 }

@@ -16,6 +16,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/pkg/event"
+	natsevent "github.com/akuity/kargo/pkg/event/nats"
 	"github.com/akuity/kargo/pkg/indexer"
 	"github.com/akuity/kargo/pkg/logging"
 	"github.com/akuity/kargo/pkg/os"
@@ -108,6 +110,17 @@ func (o *kubernetesWebhooksServerOptions) run(ctx context.Context) error {
 
 	webhookCfg := libWebhook.ConfigFromEnv()
 
+	natsConn, err := connectNATS(logging.ContextWithLogger(ctx, o.Logger))
+	if err != nil {
+		return err
+	}
+	defer natsConn.Close()
+
+	// The webhooks share one sender for user-facing events. Each wraps it to
+	// stamp its own source on the events it sends.
+	eventSender := natsevent.NewEventSender(natsConn, event.EventsSubjectPrefix)
+	defer eventSender.Shutdown()
+
 	restCfg, err := kubernetes.GetRestConfig(ctx, o.KubeConfig)
 	if err != nil {
 		return fmt.Errorf("error getting REST config: %w", err)
@@ -185,7 +198,11 @@ func (o *kubernetesWebhooksServerOptions) run(ctx context.Context) error {
 	if err = clusterpromotiontask.SetupWebhookWithManager(mgr); err != nil {
 		return fmt.Errorf("setup ClusterPromotionTask webhook: %w", err)
 	}
-	if err = freight.SetupWebhookWithManager(ctx, webhookCfg, mgr); err != nil {
+	if err = freight.SetupWebhookWithManager(
+		webhookCfg,
+		mgr,
+		event.NewDefaultingSender(eventSender, "freight-webhook"),
+	); err != nil {
 		return fmt.Errorf("setup Freight webhook: %w", err)
 	}
 	if err = project.SetupWebhookWithManager(mgr, webhookCfg); err != nil {
@@ -194,7 +211,11 @@ func (o *kubernetesWebhooksServerOptions) run(ctx context.Context) error {
 	if err = projectconfig.SetupWebhookWithManager(mgr); err != nil {
 		return fmt.Errorf("setup ProjectConfig webhook: %w", err)
 	}
-	if err = promotion.SetupWebhookWithManager(ctx, webhookCfg, mgr); err != nil {
+	if err = promotion.SetupWebhookWithManager(
+		webhookCfg,
+		mgr,
+		event.NewDefaultingSender(eventSender, "promotion-webhook"),
+	); err != nil {
 		return fmt.Errorf("setup Promotion webhook: %w", err)
 	}
 	if err = promotionrequest.SetupWebhookWithManager(mgr); err != nil {

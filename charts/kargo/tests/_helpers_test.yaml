@@ -37,6 +37,8 @@ tests:
           value: parentbased_always_on
       - notExists:
           path: data.OTEL_TRACES_SAMPLER_ARG
+      - notExists:
+          path: data.TRACING_CATEGORIES
 
   - it: passes the endpoint, protocol, and sampler through when set
     set:
@@ -58,6 +60,22 @@ tests:
       - equal:
           path: data.OTEL_TRACES_SAMPLER_ARG
           value: "0.25"
+
+  - it: joins the categories into TRACING_CATEGORIES
+    set:
+      global.tracing.enabled: true
+      global.tracing.categories: [default, database]
+    asserts:
+      - equal:
+          path: data.TRACING_CATEGORIES
+          value: default,database
+
+  - it: ignores the categories when tracing is disabled
+    set:
+      global.tracing.categories: [all]
+    asserts:
+      - notExists:
+          path: data.TRACING_CATEGORIES
 
 ---
 suite: _helpers.tpl/kargo.image

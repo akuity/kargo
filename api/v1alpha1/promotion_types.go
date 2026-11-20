@@ -160,6 +160,7 @@ func (p *Promotion) GetStatus() *PromotionStatus {
 // specific Freight.
 //
 // +kubebuilder:validation:XValidation:message="exactly one of freight or origin must be set",rule="has(self.freight) != has(self.origin)"
+// +kubebuilder:validation:XValidation:message="target must be set when promotionRollout is set",rule="!has(self.promotionRollout) || has(self.target)"
 type PromotionSpec struct {
 	// Stage specifies the name of the Stage to which this Promotion
 	// applies. The Stage referenced by this field MUST be in the same
@@ -203,6 +204,21 @@ type PromotionSpec struct {
 	// +kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`
 	// +akuity:test-kubebuilder-pattern=KubernetesName
 	Target string `json:"target,omitempty"`
+	// PromotionRollout optionally holds the id of the PromotionRollout this
+	// Promotion was created by, as one part of that rollout's fan-out to
+	// Targets. The id is the UID the API serves the rollout with. A
+	// PromotionRollout is not a Kubernetes resource, so it cannot own the
+	// Promotion; this field is the link in place of an owner reference, and
+	// the one the database's record of the Promotion is linked by.
+	//
+	// When empty (the default), the Promotion was not created by a
+	// PromotionRollout. When set, Target must be set too, and only the Kargo
+	// control plane may set it.
+	//
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:Pattern=`^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$`
+	// +akuity:test-kubebuilder-pattern=UUID
+	PromotionRollout string `json:"promotionRollout,omitempty"`
 	// Vars is a list of variables that can be referenced by expressions in
 	// promotion steps.
 	Vars []ExpressionVariable `json:"vars,omitempty"`
@@ -214,6 +230,13 @@ type PromotionSpec struct {
 	// +kubebuilder:validation:MinItems=1
 	// +kubebuilder:validation:items:XValidation:message="Promotion step must have uses set and must not reference a task",rule="has(self.uses) && !has(self.task)"
 	Steps []PromotionStep `json:"steps"`
+	// InflatedTasks records each step of the Stage's PromotionTemplate that
+	// referenced a (Cluster)PromotionTask and was inflated into Steps. It is
+	// set by Kargo when the Promotion is created and any value supplied by
+	// users is discarded.
+	//
+	// +kubebuilder:validation:Optional
+	InflatedTasks []InflatedPromotionTask `json:"inflatedTasks,omitempty"`
 }
 
 // PromotionTaskReference describes a reference to a PromotionTask.
@@ -233,6 +256,29 @@ type PromotionTaskReference struct {
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:validation:Enum=PromotionTask;ClusterPromotionTask
 	Kind string `json:"kind,omitempty"`
+}
+
+// InflatedPromotionTask records a step of a Stage's PromotionTemplate that
+// referenced a (Cluster)PromotionTask and was inflated into the steps of a
+// Promotion.
+type InflatedPromotionTask struct {
+	// Alias is the alias of the step that referenced the task. The aliases of
+	// the steps inflated from the task are prefixed with it.
+	Alias string `json:"alias"`
+	// Task is the (Cluster)PromotionTask that was inflated.
+	Task PromotionTaskReference `json:"task"`
+	// Description is the description of the step that referenced the task.
+	//
+	// +kubebuilder:validation:Optional
+	Description string `json:"description,omitempty"`
+	// Vars are the variables the task was inflated with: the task's defaults
+	// and the variables set by the step that referenced the task.
+	//
+	// +kubebuilder:validation:Optional
+	Vars []ExpressionVariable `json:"vars,omitempty"`
+	// Steps are the aliases of the Promotion's steps that were inflated from
+	// the task, in order.
+	Steps []string `json:"steps"`
 }
 
 // PromotionStepRetry describes the retry policy for a PromotionStep.
@@ -303,6 +349,12 @@ type PromotionStep struct {
 	Task *PromotionTaskReference `json:"task,omitempty"`
 	// As is the alias this step can be referred to as.
 	As string `json:"as,omitempty"`
+	// Description is a detail of the step's purpose.
+	//
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:XValidation:message="description must be 256 characters or fewer",rule="self.size() <= 256"
+	Description string `json:"description,omitempty"`
 	// If is an optional expression that, if present, must evaluate to a boolean
 	// value. If the expression evaluates to false, the step will be skipped.
 	// If the expression does not evaluate to a boolean value, the step will be

@@ -31,10 +31,10 @@ describe('customFetch', () => {
   let fetchMock: ReturnType<typeof vi.fn>;
   let replaceMock: ReturnType<typeof vi.fn>;
 
-  const stubWindow = (pathname: string) => {
+  const stubWindow = (pathname: string, base = '') => {
     replaceMock = vi.fn();
     vi.stubGlobal('window', {
-      __KARGO_BASE_PATH__: '',
+      __KARGO_BASE_PATH__: base,
       location: { origin: 'http://localhost:3333', pathname, replace: replaceMock }
     });
   };
@@ -127,5 +127,14 @@ describe('customFetch', () => {
     await expect(customFetch('/v1beta1/projects')).rejects.toMatchObject({ status: 401 });
     expect(localStorage.getItem(authTokenKey)).toBeNull();
     expect(replaceMock).toHaveBeenCalledWith('/login?redirectTo=/');
+  });
+
+  test('leaves the base path out of redirectTo', async () => {
+    stubWindow('/kargo/project/foo', '/kargo');
+    localStorage.setItem(authTokenKey, jwt(-60));
+    localStorage.setItem(refreshTokenKey, 'refresh-1');
+
+    await expect(customFetch('/v1beta1/projects')).rejects.toMatchObject({ status: 401 });
+    expect(replaceMock).toHaveBeenCalledWith('/kargo/token-renew?redirectTo=/project/foo');
   });
 });

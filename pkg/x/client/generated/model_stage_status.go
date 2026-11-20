@@ -43,6 +43,8 @@ type StageStatus struct {
 	LastPromotion *PromotionReference `json:"lastPromotion,omitempty"`
 	// LastPromotionRequest is a reference to the last PromotionRequest to reach a terminal phase. It is absent for a Stage that governs no Targets, and only ever moves forward, so it outlives the PromotionRequest it refers to.  +optional
 	LastPromotionRequest *PromotionRequestReference `json:"lastPromotionRequest,omitempty"`
+	// LastPromotionRollout is a reference to the last PromotionRollout whose outcome this Stage has recorded. It is absent for a Stage that governs no Targets, and only ever moves forward: its number marks how far through its PromotionRollouts the Stage has read.  +optional
+	LastPromotionRollout *PromotionRolloutReference `json:"lastPromotionRollout,omitempty"`
 	// Metadata is a map of arbitrary metadata associated with the Stage. This is useful for storing additional information about the Stage that can be shared across promotions, verifications, or other processes.
 	Metadata map[string]any `json:"metadata,omitempty"`
 	// ObservedGeneration represents the .metadata.generation that this Stage status was reconciled against.
@@ -452,6 +454,38 @@ func (o *StageStatus) SetLastPromotionRequest(v PromotionRequestReference) {
 	o.LastPromotionRequest = &v
 }
 
+// GetLastPromotionRollout returns the LastPromotionRollout field value if set, zero value otherwise.
+func (o *StageStatus) GetLastPromotionRollout() PromotionRolloutReference {
+	if o == nil || IsNil(o.LastPromotionRollout) {
+		var ret PromotionRolloutReference
+		return ret
+	}
+	return *o.LastPromotionRollout
+}
+
+// GetLastPromotionRolloutOk returns a tuple with the LastPromotionRollout field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *StageStatus) GetLastPromotionRolloutOk() (*PromotionRolloutReference, bool) {
+	if o == nil || IsNil(o.LastPromotionRollout) {
+		return nil, false
+	}
+	return o.LastPromotionRollout, true
+}
+
+// HasLastPromotionRollout returns a boolean if a field has been set.
+func (o *StageStatus) HasLastPromotionRollout() bool {
+	if o != nil && !IsNil(o.LastPromotionRollout) {
+		return true
+	}
+
+	return false
+}
+
+// SetLastPromotionRollout gets a reference to the given PromotionRolloutReference and assigns it to the LastPromotionRollout field.
+func (o *StageStatus) SetLastPromotionRollout(v PromotionRolloutReference) {
+	o.LastPromotionRollout = &v
+}
+
 // GetMetadata returns the Metadata field value if set, zero value otherwise.
 func (o *StageStatus) GetMetadata() map[string]any {
 	if o == nil || IsNil(o.Metadata) {
@@ -593,6 +627,9 @@ func (o StageStatus) ToMap() (map[string]interface{}, error) {
 	}
 	if !IsNil(o.LastPromotionRequest) {
 		toSerialize["lastPromotionRequest"] = o.LastPromotionRequest
+	}
+	if !IsNil(o.LastPromotionRollout) {
+		toSerialize["lastPromotionRollout"] = o.LastPromotionRollout
 	}
 	if !IsNil(o.Metadata) {
 		toSerialize["metadata"] = o.Metadata

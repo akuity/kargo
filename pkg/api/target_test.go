@@ -1,92 +1,14 @@
 package api
 
 import (
-	"context"
-	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
-	k8sruntime "k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/types"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/client/fake"
-	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 )
-
-func TestGetTarget(t *testing.T) {
-	scheme := k8sruntime.NewScheme()
-	require.NoError(t, kargoapi.SchemeBuilder.AddToScheme(scheme))
-
-	testCases := []struct {
-		name       string
-		client     client.Client
-		assertions func(*testing.T, *kargoapi.Target, error)
-	}{
-		{
-			name:   "not found",
-			client: fake.NewClientBuilder().WithScheme(scheme).Build(),
-			assertions: func(t *testing.T, target *kargoapi.Target, err error) {
-				require.NoError(t, err)
-				require.Nil(t, target)
-			},
-		},
-		{
-			name: "error getting Target",
-			client: fake.NewClientBuilder().WithScheme(scheme).WithInterceptorFuncs(
-				interceptor.Funcs{
-					Get: func(
-						context.Context,
-						client.WithWatch,
-						client.ObjectKey,
-						client.Object,
-						...client.GetOption,
-					) error {
-						return errors.New("something went wrong")
-					},
-				},
-			).Build(),
-			assertions: func(t *testing.T, target *kargoapi.Target, err error) {
-				require.ErrorContains(t, err, "something went wrong")
-				require.ErrorContains(t, err, "error getting Target")
-				require.Nil(t, target)
-			},
-		},
-		{
-			name: "success",
-			client: fake.NewClientBuilder().WithScheme(scheme).WithObjects(
-				&kargoapi.Target{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "fake-target",
-						Namespace: "fake-namespace",
-					},
-				},
-			).Build(),
-			assertions: func(t *testing.T, target *kargoapi.Target, err error) {
-				require.NoError(t, err)
-				require.Equal(t, "fake-target", target.Name)
-				require.Equal(t, "fake-namespace", target.Namespace)
-			},
-		},
-	}
-	for _, testCase := range testCases {
-		t.Run(testCase.name, func(t *testing.T) {
-			t.Parallel()
-			target, err := GetTarget(
-				context.Background(),
-				testCase.client,
-				types.NamespacedName{
-					Namespace: "fake-namespace",
-					Name:      "fake-target",
-				},
-			)
-			testCase.assertions(t, target, err)
-		})
-	}
-}
 
 func TestTargetSelectorsForStage(t *testing.T) {
 	testCases := []struct {
@@ -207,6 +129,124 @@ func TestAnySelectorMatches(t *testing.T) {
 				testCase.expected,
 				AnySelectorMatches(testCase.selectors, testCase.labels),
 			)
+		})
+	}
+}
+
+func TestFilterTargetsForStage(t *testing.T) {
+	t.Parallel()
+
+	newTarget := func(name string, lbls map[string]string) kargoapi.Target {
+		return kargoapi.Target{
+			ObjectMeta: metav1.ObjectMeta{Namespace: "fake-project", Name: name, Labels: lbls},
+		}
+	}
+	newStage := func(selectors ...metav1.LabelSelector) *kargoapi.Stage {
+		stage := &kargoapi.Stage{
+			ObjectMeta: metav1.ObjectMeta{Namespace: "fake-project", Name: "fake-stage"},
+		}
+		if selectors != nil {
+			stage.Spec.Targets = &kargoapi.StageTargets{Selectors: selectors}
+		}
+		return stage
+	}
+	usEast := newTarget("us-east", map[string]string{"region": "us"})
+	usWest := newTarget("us-west", map[string]string{"region": "us", "tier": "prod"})
+	euWest := newTarget("eu-west", map[string]string{"region": "eu"})
+	names := func(targets []kargoapi.Target) []string {
+		out := make([]string, len(targets))
+		for i, target := range targets {
+			out[i] = target.Name
+		}
+		return out
+	}
+
+	testCases := []struct {
+		name    string
+		stage   *kargoapi.Stage
+		targets []kargoapi.Target
+		assert  func(*testing.T, []kargoapi.Target, error)
+	}{
+		{
+			name:    "a classic Stage governs nothing",
+			stage:   newStage(),
+			targets: []kargoapi.Target{usEast},
+			assert: func(t *testing.T, targets []kargoapi.Target, err error) {
+				require.NoError(t, err)
+				require.Nil(t, targets)
+			},
+		},
+		{
+			name:    "selectors matching nothing yield an empty list, not nil",
+			stage:   newStage(metav1.LabelSelector{MatchLabels: map[string]string{"region": "ap"}}),
+			targets: []kargoapi.Target{usEast, euWest},
+			assert: func(t *testing.T, targets []kargoapi.Target, err error) {
+				require.NoError(t, err)
+				require.NotNil(t, targets)
+				require.Empty(t, targets)
+			},
+		},
+		{
+			name:    "matching Targets, sorted by name",
+			stage:   newStage(metav1.LabelSelector{MatchLabels: map[string]string{"region": "us"}}),
+			targets: []kargoapi.Target{usWest, euWest, usEast},
+			assert: func(t *testing.T, targets []kargoapi.Target, err error) {
+				require.NoError(t, err)
+				require.Equal(t, []string{"us-east", "us-west"}, names(targets))
+			},
+		},
+		{
+			name: "selectors describe a union",
+			stage: newStage(
+				metav1.LabelSelector{MatchLabels: map[string]string{"region": "us"}},
+				metav1.LabelSelector{MatchLabels: map[string]string{"region": "eu"}},
+			),
+			targets: []kargoapi.Target{usEast, euWest},
+			assert: func(t *testing.T, targets []kargoapi.Target, err error) {
+				require.NoError(t, err)
+				require.Equal(t, []string{"eu-west", "us-east"}, names(targets))
+			},
+		},
+		{
+			name: "a Target matching two selectors, or listed twice, appears once",
+			stage: newStage(
+				metav1.LabelSelector{MatchLabels: map[string]string{"region": "us"}},
+				metav1.LabelSelector{MatchLabels: map[string]string{"tier": "prod"}},
+			),
+			targets: []kargoapi.Target{usWest, usWest},
+			assert: func(t *testing.T, targets []kargoapi.Target, err error) {
+				require.NoError(t, err)
+				require.Equal(t, []string{"us-west"}, names(targets))
+			},
+		},
+		{
+			name:    "an empty selector selects everything",
+			stage:   newStage(metav1.LabelSelector{}),
+			targets: []kargoapi.Target{euWest, usEast},
+			assert: func(t *testing.T, targets []kargoapi.Target, err error) {
+				require.NoError(t, err)
+				require.Equal(t, []string{"eu-west", "us-east"}, names(targets))
+			},
+		},
+		{
+			name: "invalid selector",
+			stage: newStage(metav1.LabelSelector{
+				MatchExpressions: []metav1.LabelSelectorRequirement{{
+					Key:      "region",
+					Operator: "NotAnOperator",
+				}},
+			}),
+			targets: []kargoapi.Target{usEast},
+			assert: func(t *testing.T, _ []kargoapi.Target, err error) {
+				require.ErrorContains(t, err, "error parsing target selector 0")
+			},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+			targets, err := FilterTargetsForStage(testCase.stage, testCase.targets)
+			testCase.assert(t, targets, err)
 		})
 	}
 }

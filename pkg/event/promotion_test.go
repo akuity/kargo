@@ -1,9 +1,11 @@
 package event
 
 import (
+	"strconv"
 	"testing"
 	"time"
 
+	cloudevents "github.com/cloudevents/sdk-go/v2/event"
 	"github.com/stretchr/testify/require"
 	v1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -12,36 +14,6 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 )
-
-func TestPromotionSucceeded(t *testing.T) {
-	evt := &PromotionSucceeded{}
-	require.Equal(t, kargoapi.EventTypePromotionSucceeded, evt.Type())
-}
-
-func TestPromotionFailed(t *testing.T) {
-	evt := &PromotionFailed{}
-	require.Equal(t, kargoapi.EventTypePromotionFailed, evt.Type())
-}
-
-func TestPromotionErrored(t *testing.T) {
-	evt := &PromotionErrored{}
-	require.Equal(t, kargoapi.EventTypePromotionErrored, evt.Type())
-}
-
-func TestPromotionAborted(t *testing.T) {
-	evt := &PromotionAborted{}
-	require.Equal(t, kargoapi.EventTypePromotionAborted, evt.Type())
-}
-
-func TestPromotionDiscarded(t *testing.T) {
-	evt := &PromotionDiscarded{}
-	require.Equal(t, kargoapi.EventTypePromotionDiscarded, evt.Type())
-}
-
-func TestPromotionCreated(t *testing.T) {
-	evt := &PromotionCreated{}
-	require.Equal(t, kargoapi.EventTypePromotionCreated, evt.Type())
-}
 
 func TestNewPromotionCommon(t *testing.T) {
 	testCases := map[string]struct {
@@ -131,8 +103,6 @@ func TestNewPromotionCommon(t *testing.T) {
 }
 
 func TestPromotionConstructors(t *testing.T) {
-	// NOTE(thomastaylor312): I'm including these for now as we might need to test more edge cases
-	// if we expand events. If this test isn't adding any value in the future, we can remove
 	promotion := &kargoapi.Promotion{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "test-promotion",
@@ -153,62 +123,125 @@ func TestPromotionConstructors(t *testing.T) {
 			},
 		},
 	}
+	expectedCommon := Common{
+		Project: "test-project",
+		Actor:   ptr.To("test-actor"),
+		Message: "test message",
+	}
+	expectedPromotion := newPromotion(promotion, freight)
 
-	testCases := map[string]struct {
-		constructor  func() Meta
+	testCases := []struct {
+		name         string
+		constructor  func() (cloudevents.Event, error)
 		expectedType kargoapi.EventType
+		assert       func(*testing.T, cloudevents.Event)
 	}{
-		"succeeded": {
-			constructor: func() Meta {
-				return NewPromotionSucceeded("Success message", "test-actor", promotion, freight)
+		{
+			name: "succeeded",
+			constructor: func() (cloudevents.Event, error) {
+				return NewPromotionSucceeded("test message", "test-actor", promotion, freight, true)
 			},
 			expectedType: kargoapi.EventTypePromotionSucceeded,
+			assert: func(t *testing.T, evt cloudevents.Event) {
+				require.Equal(
+					t,
+					&PromotionSucceeded{
+						Common:              expectedCommon,
+						Promotion:           expectedPromotion,
+						VerificationPending: ptr.To(true),
+					},
+					dataAs[PromotionSucceeded](t, evt),
+				)
+			},
 		},
-		"failed": {
-			constructor: func() Meta {
-				return NewPromotionFailed("Failed message", "test-actor", promotion, freight)
+		{
+			name: "failed",
+			constructor: func() (cloudevents.Event, error) {
+				return NewPromotionFailed("test message", "test-actor", promotion, freight)
 			},
 			expectedType: kargoapi.EventTypePromotionFailed,
+			assert: func(t *testing.T, evt cloudevents.Event) {
+				require.Equal(
+					t,
+					&PromotionFailed{Common: expectedCommon, Promotion: expectedPromotion},
+					dataAs[PromotionFailed](t, evt),
+				)
+			},
 		},
-		"errored": {
-			constructor: func() Meta {
-				return NewPromotionErrored("Error message", "test-actor", promotion, freight)
+		{
+			name: "errored",
+			constructor: func() (cloudevents.Event, error) {
+				return NewPromotionErrored("test message", "test-actor", promotion, freight)
 			},
 			expectedType: kargoapi.EventTypePromotionErrored,
+			assert: func(t *testing.T, evt cloudevents.Event) {
+				require.Equal(
+					t,
+					&PromotionErrored{Common: expectedCommon, Promotion: expectedPromotion},
+					dataAs[PromotionErrored](t, evt),
+				)
+			},
 		},
-		"aborted": {
-			constructor: func() Meta {
-				return NewPromotionAborted("Aborted message", "test-actor", promotion, freight)
+		{
+			name: "aborted",
+			constructor: func() (cloudevents.Event, error) {
+				return NewPromotionAborted("test message", "test-actor", promotion, freight)
 			},
 			expectedType: kargoapi.EventTypePromotionAborted,
+			assert: func(t *testing.T, evt cloudevents.Event) {
+				require.Equal(
+					t,
+					&PromotionAborted{Common: expectedCommon, Promotion: expectedPromotion},
+					dataAs[PromotionAborted](t, evt),
+				)
+			},
 		},
-		"discarded": {
-			constructor: func() Meta {
-				return NewPromotionDiscarded("Discarded message", "test-actor", promotion, freight)
+		{
+			name: "discarded",
+			constructor: func() (cloudevents.Event, error) {
+				return NewPromotionDiscarded("test message", "test-actor", promotion, freight)
 			},
 			expectedType: kargoapi.EventTypePromotionDiscarded,
+			assert: func(t *testing.T, evt cloudevents.Event) {
+				require.Equal(
+					t,
+					&PromotionDiscarded{Common: expectedCommon, Promotion: expectedPromotion},
+					dataAs[PromotionDiscarded](t, evt),
+				)
+			},
 		},
-		"created": {
-			constructor: func() Meta {
-				return NewPromotionCreated("Created message", "test-actor", promotion, freight)
+		{
+			name: "created",
+			constructor: func() (cloudevents.Event, error) {
+				return NewPromotionCreated("test message", "test-actor", promotion, freight)
 			},
 			expectedType: kargoapi.EventTypePromotionCreated,
+			assert: func(t *testing.T, evt cloudevents.Event) {
+				require.Equal(
+					t,
+					&PromotionCreated{Common: expectedCommon, Promotion: expectedPromotion},
+					dataAs[PromotionCreated](t, evt),
+				)
+			},
 		},
 	}
 
-	for name, tc := range testCases {
-		t.Run(name, func(t *testing.T) {
-			event := tc.constructor()
-
-			require.Equal(t, tc.expectedType, event.Type())
-			require.Equal(t, "test-project", event.GetProject())
-			require.Equal(t, "test-promotion", event.GetName())
-			require.Equal(t, "Promotion", event.Kind())
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			evt, err := testCase.constructor()
+			require.NoError(t, err)
+			requireCloudEvent(
+				t,
+				evt,
+				testCase.expectedType,
+				"Promotion",
+			)
+			testCase.assert(t, evt)
 		})
 	}
 }
 
-func TestPromotionSucceeded_VerificationPending(t *testing.T) {
+func TestNewPromotionSucceeded_VerificationPending(t *testing.T) {
 	promotion := &kargoapi.Promotion{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "test-promotion",
@@ -218,299 +251,18 @@ func TestPromotionSucceeded_VerificationPending(t *testing.T) {
 			Stage: "test-stage",
 		},
 	}
-
-	event := NewPromotionSucceeded("Success message", "test-actor", promotion, nil)
-
-	// Test that VerificationPending is initially nil
-	require.Nil(t, event.VerificationPending)
-
-	// Test marshaling without VerificationPending
-	annotations := event.MarshalAnnotations()
-	require.NotContains(t, annotations, kargoapi.AnnotationKeyEventVerificationPending)
-
-	// Test setting VerificationPending to true
-	event.VerificationPending = ptr.To(true)
-	annotations = event.MarshalAnnotations()
-	require.Equal(t, "true", annotations[kargoapi.AnnotationKeyEventVerificationPending])
-
-	// Test setting VerificationPending to false
-	event.VerificationPending = ptr.To(false)
-	annotations = event.MarshalAnnotations()
-	require.Equal(t, "false", annotations[kargoapi.AnnotationKeyEventVerificationPending])
-}
-
-func TestPromotionEventMarshalAnnotations(t *testing.T) {
-	promotion := &kargoapi.Promotion{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-promotion",
-			Namespace: "test-project",
-			CreationTimestamp: metav1.Time{
-				Time: time.Date(2024, 1, 1, 12, 0, 0, 0, time.UTC),
-			},
-		},
-		Spec: kargoapi.PromotionSpec{
-			Stage: "test-stage",
-		},
-	}
-	freight := &kargoapi.Freight{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "test-freight",
-			CreationTimestamp: metav1.Time{
-				Time: time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
-			},
-		},
-		Alias: "v1.0.0",
-	}
-
-	testCases := map[string]struct {
-		event    AnnotationMarshaler
-		expected map[string]string
-	}{
-		"promotion succeeded": {
-			event: NewPromotionSucceeded("Success message", "test-actor", promotion, freight),
-			expected: map[string]string{
-				kargoapi.AnnotationKeyEventProject:             "test-project",
-				kargoapi.AnnotationKeyEventActor:               "test-actor",
-				kargoapi.AnnotationKeyEventPromotionName:       "test-promotion",
-				kargoapi.AnnotationKeyEventStageName:           "test-stage",
-				kargoapi.AnnotationKeyEventPromotionCreateTime: "2024-01-01T12:00:00Z",
-				kargoapi.AnnotationKeyEventFreightName:         "test-freight",
-				kargoapi.AnnotationKeyEventFreightCreateTime:   "2024-01-01T00:00:00Z",
-				kargoapi.AnnotationKeyEventFreightAlias:        "v1.0.0",
-			},
-		},
-		"promotion failed": {
-			event: NewPromotionFailed("Failed message", "test-actor", promotion, nil),
-			expected: map[string]string{
-				kargoapi.AnnotationKeyEventProject:             "test-project",
-				kargoapi.AnnotationKeyEventActor:               "test-actor",
-				kargoapi.AnnotationKeyEventPromotionName:       "test-promotion",
-				kargoapi.AnnotationKeyEventStageName:           "test-stage",
-				kargoapi.AnnotationKeyEventPromotionCreateTime: "2024-01-01T12:00:00Z",
-			},
-		},
-	}
-
-	for name, tc := range testCases {
-		t.Run(name, func(t *testing.T) {
-			annotations := tc.event.MarshalAnnotations()
-			require.Equal(t, tc.expected, annotations)
-		})
-	}
-}
-
-func TestPromotionEventUnmarshalAnnotations(t *testing.T) {
-	testCases := map[string]struct {
-		annotations   map[string]string
-		unmarshalFunc func(map[string]string) (Meta, error)
-		expectedType  Meta
-		expectError   bool
-		errorMessage  string
-	}{
-		"promotion succeeded": {
-			annotations: map[string]string{
-				kargoapi.AnnotationKeyEventProject:             "test-project",
-				kargoapi.AnnotationKeyEventPromotionName:       "test-promotion",
-				kargoapi.AnnotationKeyEventStageName:           "test-stage",
-				kargoapi.AnnotationKeyEventPromotionCreateTime: "2024-01-01T12:00:00Z",
-				kargoapi.AnnotationKeyEventVerificationPending: "true",
-			},
-			unmarshalFunc: func(annotations map[string]string) (Meta, error) {
-				return UnmarshalPromotionSucceededAnnotations("event-id", annotations)
-			},
-			expectedType: &PromotionSucceeded{
-				Common: Common{
-					Project: "test-project",
-					ID:      "event-id",
-				},
-				Promotion: Promotion{
-					Name:       "test-promotion",
-					StageName:  "test-stage",
-					CreateTime: time.Date(2024, 1, 1, 12, 0, 0, 0, time.UTC),
-				},
-				VerificationPending: ptr.To(true),
-			},
-		},
-		"promotion failed": {
-			annotations: map[string]string{
-				kargoapi.AnnotationKeyEventProject:             "test-project",
-				kargoapi.AnnotationKeyEventPromotionName:       "test-promotion",
-				kargoapi.AnnotationKeyEventStageName:           "test-stage",
-				kargoapi.AnnotationKeyEventPromotionCreateTime: "2024-01-01T12:00:00Z",
-			},
-			unmarshalFunc: func(annotations map[string]string) (Meta, error) {
-				return UnmarshalPromotionFailedAnnotations("event-id", annotations)
-			},
-			expectedType: &PromotionFailed{
-				Common: Common{
-					Project: "test-project",
-					ID:      "event-id",
-				},
-				Promotion: Promotion{
-					Name:       "test-promotion",
-					StageName:  "test-stage",
-					CreateTime: time.Date(2024, 1, 1, 12, 0, 0, 0, time.UTC),
-				},
-			},
-		},
-		"promotion errored": {
-			annotations: map[string]string{
-				kargoapi.AnnotationKeyEventProject:             "test-project",
-				kargoapi.AnnotationKeyEventPromotionName:       "test-promotion",
-				kargoapi.AnnotationKeyEventStageName:           "test-stage",
-				kargoapi.AnnotationKeyEventPromotionCreateTime: "2024-01-01T12:00:00Z",
-			},
-			unmarshalFunc: func(annotations map[string]string) (Meta, error) {
-				return UnmarshalPromotionErroredAnnotations("event-id", annotations)
-			},
-			expectedType: &PromotionErrored{
-				Common: Common{
-					Project: "test-project",
-					ID:      "event-id",
-				},
-				Promotion: Promotion{
-					Name:       "test-promotion",
-					StageName:  "test-stage",
-					CreateTime: time.Date(2024, 1, 1, 12, 0, 0, 0, time.UTC),
-				},
-			},
-		},
-		"promotion aborted": {
-			annotations: map[string]string{
-				kargoapi.AnnotationKeyEventProject:             "test-project",
-				kargoapi.AnnotationKeyEventPromotionName:       "test-promotion",
-				kargoapi.AnnotationKeyEventStageName:           "test-stage",
-				kargoapi.AnnotationKeyEventPromotionCreateTime: "2024-01-01T12:00:00Z",
-			},
-			unmarshalFunc: func(annotations map[string]string) (Meta, error) {
-				return UnmarshalPromotionAbortedAnnotations("event-id", annotations)
-			},
-			expectedType: &PromotionAborted{
-				Common: Common{
-					Project: "test-project",
-					ID:      "event-id",
-				},
-				Promotion: Promotion{
-					Name:       "test-promotion",
-					StageName:  "test-stage",
-					CreateTime: time.Date(2024, 1, 1, 12, 0, 0, 0, time.UTC),
-				},
-			},
-		},
-		"promotion discarded": {
-			annotations: map[string]string{
-				kargoapi.AnnotationKeyEventProject:             "test-project",
-				kargoapi.AnnotationKeyEventPromotionName:       "test-promotion",
-				kargoapi.AnnotationKeyEventStageName:           "test-stage",
-				kargoapi.AnnotationKeyEventPromotionCreateTime: "2024-01-01T12:00:00Z",
-			},
-			unmarshalFunc: func(annotations map[string]string) (Meta, error) {
-				return UnmarshalPromotionDiscardedAnnotations("event-id", annotations)
-			},
-			expectedType: &PromotionDiscarded{
-				Common: Common{
-					Project: "test-project",
-					ID:      "event-id",
-				},
-				Promotion: Promotion{
-					Name:       "test-promotion",
-					StageName:  "test-stage",
-					CreateTime: time.Date(2024, 1, 1, 12, 0, 0, 0, time.UTC),
-				},
-			},
-		},
-		"promotion created": {
-			annotations: map[string]string{
-				kargoapi.AnnotationKeyEventProject:             "test-project",
-				kargoapi.AnnotationKeyEventPromotionName:       "test-promotion",
-				kargoapi.AnnotationKeyEventStageName:           "test-stage",
-				kargoapi.AnnotationKeyEventPromotionCreateTime: "2024-01-01T12:00:00Z",
-			},
-			unmarshalFunc: func(annotations map[string]string) (Meta, error) {
-				return UnmarshalPromotionCreatedAnnotations("event-id", annotations)
-			},
-			expectedType: &PromotionCreated{
-				Common: Common{
-					Project: "test-project",
-					ID:      "event-id",
-				},
-				Promotion: Promotion{
-					Name:       "test-promotion",
-					StageName:  "test-stage",
-					CreateTime: time.Date(2024, 1, 1, 12, 0, 0, 0, time.UTC),
-				},
-			},
-		},
-		"invalid promotion annotations": {
-			annotations: map[string]string{
-				kargoapi.AnnotationKeyEventPromotionCreateTime: "invalid-time",
-			},
-			unmarshalFunc: func(annotations map[string]string) (Meta, error) {
-				return UnmarshalPromotionSucceededAnnotations("event-id", annotations)
-			},
-			expectError:  true,
-			errorMessage: "failed to parse promotion create time",
-		},
-	}
-
-	for name, tc := range testCases {
-		t.Run(name, func(t *testing.T) {
-			result, err := tc.unmarshalFunc(tc.annotations)
-
-			if tc.expectError {
-				require.Error(t, err)
-				require.Contains(t, err.Error(), tc.errorMessage)
-				return
-			}
-
+	for _, pending := range []bool{true, false} {
+		t.Run(strconv.FormatBool(pending), func(t *testing.T) {
+			evt, err := NewPromotionSucceeded("test message", "test-actor", promotion, nil, pending)
 			require.NoError(t, err)
-
-			require.Equal(t, tc.expectedType, result, "oh noes, types don't match!")
-		})
-	}
-}
-
-func TestPromotionSucceeded_UnmarshalVerificationPending(t *testing.T) {
-	testCases := map[string]struct {
-		annotations map[string]string
-		expected    *bool
-	}{
-		"verification pending true": {
-			annotations: map[string]string{
-				kargoapi.AnnotationKeyEventProject:             "test-project",
-				kargoapi.AnnotationKeyEventPromotionName:       "test-promotion",
-				kargoapi.AnnotationKeyEventStageName:           "test-stage",
-				kargoapi.AnnotationKeyEventPromotionCreateTime: "2024-01-01T12:00:00Z",
-				kargoapi.AnnotationKeyEventVerificationPending: "true",
-			},
-			expected: ptr.To(true),
-		},
-		"verification pending false": {
-			annotations: map[string]string{
-				kargoapi.AnnotationKeyEventProject:             "test-project",
-				kargoapi.AnnotationKeyEventPromotionName:       "test-promotion",
-				kargoapi.AnnotationKeyEventStageName:           "test-stage",
-				kargoapi.AnnotationKeyEventPromotionCreateTime: "2024-01-01T12:00:00Z",
-				kargoapi.AnnotationKeyEventVerificationPending: "false",
-			},
-			expected: ptr.To(false),
-		},
-		"verification pending missing": {
-			annotations: map[string]string{
-				kargoapi.AnnotationKeyEventProject:             "test-project",
-				kargoapi.AnnotationKeyEventPromotionName:       "test-promotion",
-				kargoapi.AnnotationKeyEventStageName:           "test-stage",
-				kargoapi.AnnotationKeyEventPromotionCreateTime: "2024-01-01T12:00:00Z",
-			},
-			expected: nil,
-		},
-	}
-
-	for name, tc := range testCases {
-		t.Run(name, func(t *testing.T) {
-			result, err := UnmarshalPromotionSucceededAnnotations("event-id", tc.annotations)
-			require.NoError(t, err)
-			require.Equal(t, tc.expected, result.VerificationPending)
+			// The field must be present even when false so consumers can tell
+			// "no verification" apart from "unknown"
+			require.Contains(t, string(evt.Data()), `"verificationPending":`+strconv.FormatBool(pending))
+			require.Equal(
+				t,
+				&pending,
+				dataAs[PromotionSucceeded](t, evt).VerificationPending,
+			)
 		})
 	}
 }
@@ -553,34 +305,6 @@ func TestNewPromotion_Rollback(t *testing.T) {
 			require.Equal(t, tc.expected, evt.Rollback)
 		})
 	}
-}
-
-func TestPromotionEventMarshalAnnotations_Rollback(t *testing.T) {
-	promotion := Promotion{
-		Name:      "test-promotion",
-		StageName: "test-stage",
-		Rollback:  true,
-	}
-	annotations := map[string]string{}
-	promotion.MarshalAnnotationsTo(annotations)
-	require.Equal(t, kargoapi.AnnotationValueTrue, annotations[kargoapi.AnnotationKeyEventRollback])
-
-	promotion.Rollback = false
-	annotations = map[string]string{}
-	promotion.MarshalAnnotationsTo(annotations)
-	require.NotContains(t, annotations, kargoapi.AnnotationKeyEventRollback)
-}
-
-func TestUnmarshalPromotionAnnotations_Rollback(t *testing.T) {
-	annotations := map[string]string{
-		kargoapi.AnnotationKeyEventPromotionName:       "test-promotion",
-		kargoapi.AnnotationKeyEventStageName:           "test-stage",
-		kargoapi.AnnotationKeyEventPromotionCreateTime: "2024-01-01T12:00:00Z",
-		kargoapi.AnnotationKeyEventRollback:            "true",
-	}
-	evt, err := UnmarshalPromotionAnnotations(annotations)
-	require.NoError(t, err)
-	require.True(t, evt.Rollback)
 }
 
 func TestCalculatePromotionVars(t *testing.T) {

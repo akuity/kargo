@@ -19,8 +19,9 @@ type Repo interface {
 	// HomeDir returns an absolute path to the home directory of the system user
 	// who has cloned this repo.
 	HomeDir() string
-	// URL returns the remote URL of the repository as it was originally provided
-	// when the repository was cloned.
+	// URL returns the remote URL of the repository as it was provided when the
+	// repository was cloned, except that any credentials embedded in it are
+	// removed when the repository was cloned with credentials of its own.
 	URL() string
 	WorkTree
 }
@@ -67,8 +68,8 @@ func Clone(
 	repoURL string,
 	clientOpts *ClientOptions,
 	cloneOpts *CloneOptions,
-) (Repo, error) {
-	if err := validateRepoURL(repoURL); err != nil {
+) (_ Repo, err error) {
+	if err = validateRepoURL(repoURL); err != nil {
 		return nil, err
 	}
 	if clientOpts == nil {
@@ -78,9 +79,8 @@ func Clone(
 		cloneOpts = &CloneOptions{}
 	}
 	baseRepo := &baseRepo{
-		creds:       clientOpts.Credentials,
-		originalURL: repoURL,
-		accessURL:   repoURL,
+		creds: clientOpts.Credentials,
+		url:   repoURL,
 	}
 	r := &repo{
 		baseRepo: baseRepo,
@@ -88,19 +88,21 @@ func Clone(
 			baseRepo: baseRepo,
 		},
 	}
-	if err := r.setupDirs(ctx, cloneOpts.BaseDir); err != nil {
+	defer func() {
+		if err != nil {
+			_ = os.RemoveAll(r.homeDir)
+		}
+	}()
+	if err = r.setupDirs(ctx, cloneOpts.BaseDir); err != nil {
 		return nil, err
 	}
-	if err := r.setupClient(ctx, clientOpts); err != nil {
+	if err = r.setupClient(ctx, clientOpts); err != nil {
 		return nil, err
 	}
-	if err := r.clone(ctx, cloneOpts); err != nil {
+	if err = r.clone(ctx, cloneOpts); err != nil {
 		return nil, err
 	}
-	if err := r.saveDirs(ctx); err != nil {
-		return nil, err
-	}
-	if err := r.saveOriginalURL(ctx); err != nil {
+	if err = r.saveDirs(ctx); err != nil {
 		return nil, err
 	}
 	return r, nil
@@ -123,11 +125,11 @@ func (r *repo) clone(ctx context.Context, opts *CloneOptions) error {
 	if opts.Blobless {
 		args = append(args, "--filter", "blob:none")
 	}
-	args = append(args, r.accessURL, r.dir)
+	args = append(args, r.url, r.dir)
 	cmd := r.buildGitCommand(ctx, args...)
 	cmd.Dir = r.homeDir // Override the cmd.Dir that's set by r.buildGitCommand()
 	if _, err := libExec.Exec(cmd); err != nil {
-		return fmt.Errorf("error cloning repo %q into %q: %w", r.originalURL, r.dir, err)
+		return fmt.Errorf("error cloning repo %q into %q: %w", r.url, r.dir, err)
 	}
 	return nil
 }
@@ -157,7 +159,7 @@ func LoadRepo(
 	if err := r.loadHomeDir(ctx); err != nil {
 		return nil, fmt.Errorf("error reading repo home dir from config: %w", err)
 	}
-	if err := r.loadURLs(ctx); err != nil {
+	if err := r.loadURL(ctx); err != nil {
 		return nil,
 			fmt.Errorf(`error reading URL of remote "origin" from config: %w`, err)
 	}

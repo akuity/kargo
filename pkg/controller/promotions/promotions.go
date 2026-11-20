@@ -7,15 +7,15 @@ import (
 	"path/filepath"
 	"time"
 
+	cloudevents "github.com/cloudevents/sdk-go/v2/event"
 	"github.com/kelseyhightower/envconfig"
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/trace"
+	"go.opentelemetry.io/otel/attribute"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	toolscache "k8s.io/client-go/tools/cache"
-	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -24,15 +24,14 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/api"
+	"github.com/akuity/kargo/pkg/client/apiserver"
 	"github.com/akuity/kargo/pkg/controller"
 	argocd "github.com/akuity/kargo/pkg/controller/argocd/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/controller/metrics"
 	"github.com/akuity/kargo/pkg/event"
-	k8sevent "github.com/akuity/kargo/pkg/event/kubernetes"
 	"github.com/akuity/kargo/pkg/indexer"
 	"github.com/akuity/kargo/pkg/kargo"
 	"github.com/akuity/kargo/pkg/kubeclient"
-	libEvent "github.com/akuity/kargo/pkg/kubernetes/event"
 	"github.com/akuity/kargo/pkg/logging"
 	intpredicate "github.com/akuity/kargo/pkg/predicate"
 	"github.com/akuity/kargo/pkg/promotion"
@@ -67,6 +66,11 @@ type reconciler struct {
 	promoEngine    promotion.Engine
 	apiReader      client.Reader
 	shardPredicate controller.ResponsibleFor[kargoapi.Promotion]
+	// targets resolves the Target a Promotion promotes to, through the API
+	// server. It is nil when the controller has no API server to read from,
+	// which is usual for a shard installed without one; a Promotion that
+	// names a Target then fails, saying so.
+	targets promotion.TargetGetter
 
 	cfg ReconcilerConfig
 
@@ -107,6 +111,8 @@ func SetupReconcilerWithManager(
 	argocdMgr manager.Manager,
 	promoEngine promotion.Engine,
 	cfg ReconcilerConfig,
+	targets promotion.TargetGetter,
+	sender event.Sender,
 ) error {
 	// Index running Promotions by Argo CD Applications
 	if err := kargoMgr.GetFieldIndexer().IndexField(
@@ -153,11 +159,10 @@ func SetupReconcilerWithManager(
 	reconciler := newReconciler(
 		kargoMgr.GetClient(),
 		kargoMgr.GetAPIReader(),
-		k8sevent.NewEventSender(
-			libEvent.NewRecorder(ctx, kargoMgr.GetScheme(), kargoMgr.GetClient(), cfg.Name()),
-		),
+		sender,
 		promoEngine,
 		cfg,
+		targets,
 	)
 
 	c, err := ctrl.NewControllerManagedBy(kargoMgr).
@@ -252,6 +257,7 @@ func newReconciler(
 	sender event.Sender,
 	promoEngine promotion.Engine,
 	cfg ReconcilerConfig,
+	targets promotion.TargetGetter,
 ) *reconciler {
 	r := &reconciler{
 		kargoClient:  kargoClient,
@@ -260,6 +266,7 @@ func newReconciler(
 		sender:       sender,
 		promoMetrics: metrics.NewPromotionMetrics(kargoClient),
 		cfg:          cfg,
+		targets:      targets,
 		shardPredicate: controller.ResponsibleFor[kargoapi.Promotion]{
 			IsDefaultController: cfg.IsDefaultController,
 			ShardName:           cfg.ShardName,
@@ -281,16 +288,18 @@ var tracer = otel.Tracer("github.com/akuity/kargo/pkg/controller/promotions")
 func (r *reconciler) Reconcile(
 	ctx context.Context,
 	req ctrl.Request,
-) (ctrl.Result, error) {
-	ctx, span := tracer.Start(
+) (_ ctrl.Result, err error) {
+	ctx = telemetry.ContextWithAttributes(
 		ctx,
-		"Reconcile Promotion",
-		trace.WithAttributes(
-			telemetry.ProjectKey.String(req.Namespace),
-			telemetry.PromotionKey.String(req.Name),
-		),
+		telemetry.ProjectKey.String(req.Namespace),
+		telemetry.PromotionKey.String(req.Name),
 	)
-	defer span.End()
+	ctx, span := telemetry.StartSpan(ctx, tracer, "Reconcile Promotion")
+	defer func() {
+		telemetry.RecordError(span, err)
+		span.End()
+	}()
+	ctx = telemetry.ContextWithLogValues(ctx)
 
 	logger := logging.LoggerFromContext(ctx).WithValues(
 		"namespace", req.Namespace,
@@ -304,6 +313,15 @@ func (r *reconciler) Reconcile(
 	cachedPromo, err := api.GetPromotion(ctx, r.kargoClient, req.NamespacedName)
 	if err != nil {
 		return ctrl.Result{}, err
+	}
+	if cachedPromo != nil && telemetry.Enabled() {
+		// Spans under this one carry the Promotion's Stage and Freight.
+		attrs := []attribute.KeyValue{
+			telemetry.StageKey.String(cachedPromo.Spec.Stage),
+			telemetry.FreightKey.String(cachedPromo.Spec.Freight),
+		}
+		span.SetAttributes(attrs...)
+		ctx = telemetry.ContextWithAttributes(ctx, attrs...)
 	}
 	if cachedPromo == nil || cachedPromo.Status.Phase.IsTerminal() {
 		// Ignore if not found or already finished. cachedPromo might be nil if
@@ -356,6 +374,12 @@ func (r *reconciler) Reconcile(
 		"stage", promo.Spec.Stage,
 		"freight", promo.Spec.Freight,
 	)
+	if freight != nil && telemetry.Enabled() {
+		// The Freight's name is already on the span.
+		attrs := telemetry.FreightDetailAttributes(freight)
+		span.SetAttributes(attrs...)
+		ctx = telemetry.ContextWithAttributes(ctx, attrs...)
+	}
 
 	// Terminate the Promotion if requested by the user.
 	if req, ok := api.AbortPromotionAnnotationValue(
@@ -404,7 +428,9 @@ func (r *reconciler) Reconcile(
 	// decides it is the next Promotion to run. A Promotion to one of the
 	// Stage's Targets is admitted by the Stage's current PromotionRequest
 	// instead, so all of one request's children -- at most one per Target --
-	// run in parallel while consecutive requests remain serialized.
+	// run in parallel while consecutive requests remain serialized. A
+	// PromotionRollout's child is admitted outright: rollouts are serialized
+	// by the database and the reconciler that progresses them.
 	if !api.StageAwaitsPromotion(stage, promo) {
 		// The watch on the Stage will requeue the Promotion if the Stage
 		// acknowledges it.
@@ -415,13 +441,15 @@ func (r *reconciler) Reconcile(
 	// Update promo status as Running to give visibility in UI. Also, a promo which
 	// has already entered Running status will be allowed to continue to reconcile.
 	if promo.Status.Phase != kargoapi.PromotionPhaseRunning {
+		startedAt := metav1.Now()
 		if err = kubeclient.PatchStatus(ctx, r.kargoClient, promo, func(status *kargoapi.PromotionStatus) {
 			status.Phase = kargoapi.PromotionPhaseRunning
-			status.StartedAt = &metav1.Time{Time: time.Now()}
+			status.StartedAt = &startedAt
 		}); err != nil {
 			return ctrl.Result{}, err
 		}
 		logger.Info("began promotion")
+		r.recordStartMetrics(promo, startedAt.Time)
 	} else {
 		logger.Debug("continuing Promotion")
 	}
@@ -529,20 +557,20 @@ func (r *reconciler) Reconcile(
 			msg += fmt.Sprintf(": %s", newStatus.Message)
 		}
 
-		var evt event.Meta
+		var evt cloudevents.Event
+		var sendErr error
 		actor := api.FormatEventControllerActor(r.cfg.Name())
 		switch newStatus.Phase {
 		case kargoapi.PromotionPhaseSucceeded:
-			e := event.NewPromotionSucceeded(
+			evt, sendErr = event.NewPromotionSucceeded(
 				msg,
 				actor,
 				promo,
 				freight,
+				stage.Spec.Verification != nil,
 			)
-			e.VerificationPending = ptr.To(stage.Spec.Verification != nil)
-			evt = e
 		case kargoapi.PromotionPhaseFailed:
-			evt = event.NewPromotionFailed(
+			evt, sendErr = event.NewPromotionFailed(
 				msg,
 				actor,
 				promo,
@@ -550,7 +578,7 @@ func (r *reconciler) Reconcile(
 			)
 
 		case kargoapi.PromotionPhaseErrored:
-			evt = event.NewPromotionErrored(
+			evt, sendErr = event.NewPromotionErrored(
 				msg,
 				actor,
 				promo,
@@ -558,7 +586,10 @@ func (r *reconciler) Reconcile(
 			)
 		}
 
-		if sendErr := r.sender.Send(ctx, evt); sendErr != nil {
+		if sendErr == nil {
+			sendErr = r.sender.Send(ctx, evt)
+		}
+		if sendErr != nil {
 			logger.Error(sendErr, "error sending promotion event")
 		}
 	}
@@ -615,9 +646,20 @@ func (r *reconciler) promote(
 	// single Stage's promotion process to behave differently per destination.
 	// Promotions that name no Target promote to the Stage itself and carry no
 	// target context, exactly as they did before Targets existed.
-	targetCtx, targetErr := promotion.ResolveTargetContext(ctx, r.kargoClient, &promo)
+	targetCtx, targetErr := promotion.ResolveTargetContext(ctx, r.targets, &promo)
 	if targetErr != nil {
-		return nil, nil, targetErr
+		// A Target that does not exist, a controller with no API server to
+		// read Targets from, or an answer the API server will keep giving (a
+		// credential it refuses, a body that cannot be decoded) ends the
+		// Promotion: retrying cannot change the outcome. Only a failure to
+		// reach the API server, a timeout or a 5xx say, leaves the Promotion
+		// Running so that the error backs off instead of ending it.
+		if !apiserver.IsRetryable(targetErr) {
+			return nil, nil, targetErr
+		}
+		running := promo.Status.DeepCopy()
+		running.Phase = kargoapi.PromotionPhaseRunning
+		return running, nil, targetErr
 	}
 
 	// Prepare promotion steps and vars for the promotion execution engine.
@@ -763,13 +805,23 @@ func (r *reconciler) terminatePromotion(
 	// Best-effort cleanup of working directory.
 	r.cleanupWorkDirFn(ctx, promo.UID)
 
-	evt := event.NewPromotionAborted(newStatus.Message, actor, promo, freight)
-
-	if err := r.sender.Send(ctx, evt); err != nil {
+	evt, err := event.NewPromotionAborted(newStatus.Message, actor, promo, freight)
+	if err == nil {
+		err = r.sender.Send(ctx, evt)
+	}
+	if err != nil {
 		logger.Error(err, "error sending Promotion aborted event")
 	}
 
 	return nil
+}
+
+// recordStartMetrics observes how long promo waited before starting at
+// startedAt.
+func (r *reconciler) recordStartMetrics(promo *kargoapi.Promotion, startedAt time.Time) {
+	r.promoMetrics.PendingDuration.WithLabelValues(promo.Namespace).Observe(
+		startedAt.Sub(promo.CreationTimestamp.Time).Seconds(),
+	)
 }
 
 // recordTerminalMetrics counts the Promotion described by the given terminal
@@ -876,6 +928,11 @@ var defaultRequeueInterval = 5 * time.Minute
 // -- now or in the future -- can drive a pathologically short interval.
 var minSuggestedRequeueInterval = 10 * time.Second
 
+// minTimeoutRequeueInterval is the shortest interval used to requeue a
+// Promotion so that a step's timeout deadline is checked promptly. It
+// guarantees the interval is always positive.
+const minTimeoutRequeueInterval = time.Second
+
 func calculateRequeueInterval(
 	ctx context.Context,
 	p *kargoapi.Promotion,
@@ -921,7 +978,9 @@ func calculateRequeueInterval(
 	md := p.Status.StepExecutionMetadata[p.Status.CurrentStep]
 	targetTimeout := md.StartedAt.Add(timeout)
 	if targetTimeout.Before(time.Now().Add(requeueInterval)) {
-		return time.Until(targetTimeout)
+		// controller-runtime only requeues when RequeueAfter is positive, so
+		// never return a non-positive interval if the deadline has just passed.
+		return max(time.Until(targetTimeout), minTimeoutRequeueInterval)
 	}
 	return requeueInterval
 }

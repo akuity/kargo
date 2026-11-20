@@ -70,6 +70,13 @@
               "maximum": 9223372036854776000,
               "minimum": -9223372036854776000,
               "type": "integer"
+            },
+            "maxFailures": {
+              "description": "MaxFailures specifies a number of target promotions which can fail before PromotionRequest is considered failed.\nSpecifies a tolerable number, N failing promotions with maxFailures: N is a success, N+1 is a failure.\nDefaults to 0, meaning no failures tolerated.",
+              "format": "int64",
+              "maximum": 9223372036854776000,
+              "minimum": 0,
+              "type": "integer"
             }
           },
           "type": "object",
@@ -508,6 +515,10 @@
                   "analysisRun": {
                     "description": "AnalysisRun is a reference to the Argo Rollouts AnalysisRun that implements\nthe Verification process.",
                     "properties": {
+                      "kind": {
+                        "description": "Kind is a string representation of GroupVersionKind describing this run\nFor classic analysis run it is AnalysisRunKindRun or AnalysisRunKindLegacy (empty)",
+                        "type": "string"
+                      },
                       "name": {
                         "description": "Name is the name of the AnalysisRun.",
                         "type": "string"
@@ -543,6 +554,10 @@
                   },
                   "phase": {
                     "description": "Phase describes the current phase of the Verification process. Generally,\nthis will be a reflection of the underlying AnalysisRun's phase, however,\nthere are exceptions to this, such as in the case where an AnalysisRun\ncannot be launched successfully.",
+                    "type": "string"
+                  },
+                  "promotionName": {
+                    "description": "PromotionName is an optional name of promotion which triggered verification",
                     "type": "string"
                   },
                   "startTime": {

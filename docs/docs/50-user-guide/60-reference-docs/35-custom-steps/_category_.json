@@ -1,0 +1,9 @@
+{
+  "label": "Custom Steps",
+  "link": {
+    "type": "doc",
+    "id": "index"
+  },
+  "collapsible": true,
+  "collapsed": true
+}

@@ -56,11 +56,15 @@ export const ConfigMaps = ({ project = '' }: Props) => {
               return <Tag color='red'>It looks like this configmap is empty.</Tag>;
             }
 
-            return configMapKeys.map((key) => (
-              <Tag key={key} color='blue'>
-                {key}
-              </Tag>
-            ));
+            return (
+              <Flex gap={4} wrap>
+                {configMapKeys.map((key) => (
+                  <Tag key={key} color='blue'>
+                    {key}
+                  </Tag>
+                ))}
+              </Flex>
+            );
           }}
         />
         <Table.Column<V1ConfigMap>

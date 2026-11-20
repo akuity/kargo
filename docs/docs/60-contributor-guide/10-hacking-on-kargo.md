@@ -508,8 +508,82 @@ this.
 Tilt runs the PostgreSQL bundled with the Helm chart, configured by the
 `database.postgres` values in `hack/tilt/values.dev.yaml`, and forwards
 `127.0.0.1:15432` to its port `5432`. The database, username, and password are all `kargo`. Inside the
-cluster, the address is `kargo-postgres.kargo.svc:5432`. Kargo's application
-components do not use this database yet.
+cluster, the address is `kargo-postgres.kargo.svc:5432`.
+
+Two kinds of data live in it. The management controller mirrors Projects,
+Stages, and Promotions from Kubernetes, which remains their source of truth.
+Project and Stage rows record identities and follow their objects, including
+out of existence. A Stage row also records the selectors by which the Stage
+governs Targets (NULL for a classic Stage), and carries the number last given
+to one of its PromotionRollouts, which the mirror never writes. Promotion rows record what each Promotion did, its Stage,
+Freight, Target if any, phase, and timing, along with the Freight of the
+whole collection it rendered, one row per origin (`promotion_freight`), and
+are never deleted: Kubernetes retains only a
+bounded number of recent Promotions per Stage, and the database keeps them
+all as a history. A Promotion deleted before it finished is recorded as
+`Aborted` as of its deletion, so no row claims a Promotion is running that
+no longer exists. Targets, on the other hand, exist only in the database: the API server serves them
+through `/v1beta1/projects/{project}/targets`, and Target is no longer a
+custom resource at all. The chart installs no CRD for it, `kubectl` does not
+see Targets, and the Go type keeps the shape of a Kubernetes resource without
+being one (no `apiVersion` or `kind`, no scheme registration), so that
+clients and the UI can treat it like one. Target custom resources from
+earlier versions are not migrated; a chart upgrade removes the CRD and them
+with it. A Target names its Project rather than referencing the mirrored
+row, so writing one never waits for the mirror. Deleting a Project does not
+yet remove its Targets.
+
+Only control plane components open the database. The controller may run far
+from the control plane, on infrastructure where the database is not
+reachable, so it resolves the Targets a Stage governs and the Target a
+Promotion promotes to by calling the API server at `API_SERVER_ADDRESS`. It
+acts as the ServiceAccount of the control plane that its Kubernetes
+credential for the control plane resolves to. At startup it asks the control
+plane who it is, with a SelfSubjectReview, and refuses to start if the answer
+is not a ServiceAccount; from then on it requests short-lived tokens for that
+ServiceAccount through the Kubernetes TokenRequest API and sends them to the
+API server, which verifies each with a TokenReview and authorizes each
+request against the ServiceAccount's RBAC, which grants `list` and `get` on
+`targets`. client-go authenticates the identity check and the token
+requests however the credential says, so the projected ServiceAccount token
+of an in-cluster controller, a token in a shard's kubeconfig, a client
+certificate or an exec plugin all serve, and nothing configures the
+ServiceAccount. The ServiceAccount must be allowed to `create` its own
+`token` subresource: the chart grants that to the in-cluster controller, and
+a shard's operator grants it to the ServiceAccount of the control plane they
+issued the shard a credential for, bound to the `kargo-controller`
+ClusterRole. Each token lives for `API_SERVER_TOKEN_LIFETIME` (an hour by
+default) and is replaced once most of that has passed.
+
+The chart points a controller installed beside the API server at the API
+server's `Service` and, when it generated the API server's certificate, hands
+the controller its CA (`API_SERVER_CA_CERT_PATH`). A controller installed
+elsewhere, such as a shard in another cluster, is given the address at which
+it reaches the API server through `controller.apiServer.address`. Each
+request is bounded by `API_SERVER_TIMEOUT` (30 seconds by default), so an
+API server that accepts a connection and then hangs cannot hold a reconcile
+open indefinitely.
+
+Every component that uses the database finds it through the same settings
+(`DATABASE_URL`, or `DATABASE_HOST` and its companions), which Tilt sets from
+the chart. A component without them runs with the database features off: the
+API server answers Target requests with `501 Not Implemented`. A component
+with them waits, for up to `DATABASE_CONNECT_TIMEOUT`, for the database to
+accept connections and for the schema to reach the version it expects, since
+the migrations usually run alongside it; it refuses to serve against an older
+schema. A controller without `API_SERVER_ADDRESS` (the
+chart leaves it unset when the API server is disabled) reports a Stage that
+selects Targets as `Stalled` instead of promoting to it, and a Promotion that
+names a Target fails.
+
+Targets are created, replaced and deleted through `POST`, `PUT` and
+`DELETE` on the same path, with a `Target` resource as the body; the generic
+`/v1beta1/resources` endpoints refuse `kind: Target`, so `kargo apply` of a
+Target manifest fails with a pointer to those endpoints. A `PUT` that carries
+the `metadata.resourceVersion` or `metadata.uid` it read is refused with
+`409 Conflict` if the Target changed in between. There is no watch on
+Targets: the database offers no change feed, so the UI polls the list every
+few seconds instead.
 
 To open a `psql` session against it:
 
@@ -524,7 +598,7 @@ locally and the client always matches the server.
 
 Migrations are embedded in the control plane binary and applied by its
 `migrate` subcommand, which waits for the database to accept a connection,
-takes a database-level lock so concurrent runners serialize, and applies
+takes a lock on the schema so concurrent runners serialize, and applies
 whatever is pending. The chart's migration Job runs it on every install and
 upgrade, and Tilt runs that same Job as the `db-migrate` resource, so the Job
 and its connection wiring are exercised in development too. Like the other
@@ -632,7 +706,7 @@ this database as disposable development data.
 Connection pools created with `database.NewPool` record an OpenTelemetry span
 for every query and batch, using the same tracing setup as the rest of the
 control plane. Spans are named after the sqlc query
-that produced them, for example `GetProjectByName`, and carry the operation,
+that produced them, for example `UpsertProject`, and carry the operation,
 the number of rows returned, and the server's SQLSTATE code when a query
 fails. For sqlc queries, which are always parameterized, the query text is
 recorded as well; parameters never are. Lock timeouts, deadlocks, and serialization
@@ -666,6 +740,17 @@ make codegen-db
 
 `make codegen` also runs this step. Commit the generated code together with the
 SQL that produced it.
+
+### Database integration tests
+
+Tests in `pkg/database` that need a real database are tagged `integration` and
+run against a disposable schema that they create and drop, so existing tables
+are left untouched. They require a database user allowed to create schemas
+and target `DATABASE_URL`, which defaults to the development database:
+
+```shell
+make test-db
+```
 
 ## Contributing to Documentation
 

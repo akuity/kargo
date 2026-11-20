@@ -18,6 +18,7 @@ func TestConfigFromEnv(t *testing.T) {
 				require.False(t, cfg.Enabled)
 				require.Equal(t, ProtocolHTTPProtobuf, cfg.Protocol)
 				require.Empty(t, cfg.TracesProtocol)
+				require.Empty(t, cfg.Categories)
 			},
 		},
 		{
@@ -26,11 +27,13 @@ func TestConfigFromEnv(t *testing.T) {
 				"TRACING_ENABLED":                    "true",
 				"OTEL_EXPORTER_OTLP_PROTOCOL":        "grpc",
 				"OTEL_EXPORTER_OTLP_TRACES_PROTOCOL": "http/protobuf",
+				"TRACING_CATEGORIES":                 "Default, k8s",
 			},
 			assert: func(t *testing.T, cfg Config) {
 				require.True(t, cfg.Enabled)
 				require.Equal(t, ProtocolGRPC, cfg.Protocol)
 				require.Equal(t, ProtocolHTTPProtobuf, cfg.TracesProtocol)
+				require.Equal(t, []string{"Default", " k8s"}, cfg.Categories)
 			},
 		},
 	}

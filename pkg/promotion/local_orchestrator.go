@@ -2,6 +2,7 @@ package promotion
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"maps"
 	"slices"
@@ -169,7 +170,13 @@ func (o *LocalOrchestrator) ExecuteSteps(
 		})
 
 		// Propagate the step output to the state.
-		o.propagateStepOutput(promoCtx, step, reg.Metadata, result)
+		if outputErr := o.propagateStepOutput(promoCtx, step, reg.Metadata, result); outputErr != nil {
+			meta.WithStatus(kargoapi.PromotionStepStatusErrored).WithMessagef(
+				"step %q returned invalid output: %s", step.Alias, outputErr,
+			).Finished()
+			o.recordStepDuration(promoCtx.Project, step, meta)
+			continue
+		}
 
 		// Confirm the step has a valid status.
 		if !result.Status.Valid() {
@@ -250,9 +257,14 @@ func (o *LocalOrchestrator) propagateStepOutput(
 	step Step,
 	stepMeta StepRunnerMetadata,
 	result StepResult,
-) {
+) error {
+	output, err := normalizeStepOutput(result.Output)
+	if err != nil {
+		return err
+	}
+
 	// Update the state with the output of the step.
-	promoCtx.State[step.Alias] = result.Output
+	promoCtx.State[step.Alias] = output
 
 	// If the step instructs that the output should be propagated to the
 	// task namespace, do so.
@@ -262,9 +274,34 @@ func (o *LocalOrchestrator) propagateStepOutput(
 				promoCtx.State[aliasNamespace] = make(map[string]any)
 			}
 			// nolint: forcetypeassert
-			maps.Copy(promoCtx.State[aliasNamespace].(map[string]any), result.Output)
+			maps.Copy(promoCtx.State[aliasNamespace].(map[string]any), output)
 		}
 	}
+	return nil
+}
+
+// normalizeStepOutput converts a step's output to the types produced by
+// decoding JSON (e.g. any number becomes a float64, a map[string]string
+// becomes a map[string]any) by round-tripping it through JSON.
+//
+// Step runners may return arbitrary Go types, but the shared State is deep
+// copied with runtime.DeepCopyJSON, which panics on non-JSON types, and is
+// persisted to and reloaded from the Promotion's status as JSON. Normalizing
+// here keeps the State safe to copy and gives subsequent steps the same
+// types whether or not the State was reloaded in between.
+func normalizeStepOutput(output map[string]any) (map[string]any, error) {
+	if output == nil {
+		return nil, nil
+	}
+	b, err := json.Marshal(output)
+	if err != nil {
+		return nil, fmt.Errorf("error marshaling step output to JSON: %w", err)
+	}
+	var normalized map[string]any
+	if err = json.Unmarshal(b, &normalized); err != nil {
+		return nil, fmt.Errorf("error unmarshaling step output from JSON: %w", err)
+	}
+	return normalized, nil
 }
 
 func (o *LocalOrchestrator) reconcileResultWithMetadata(

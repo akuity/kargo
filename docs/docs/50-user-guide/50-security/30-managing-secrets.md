@@ -208,10 +208,12 @@ your Kargo Projects and also leveraging additional tools such as
 
 ### Creating Credentials
 
-The following example creates credentials for a specific Git repository:
+Repository credentials are created using the `kargo create repo-credentials`
+command. The following example creates credentials for a specific Git
+repository:
 
 ```shell
-kargo create credentials \
+kargo create repo-credentials \
   --project kargo-demo my-credentials \
   --git \
   --repo-url https://github.com/example/kargo-demo.git \
@@ -231,12 +233,27 @@ case the CLI will prompt you to enter the password interactively.
 
 :::
 
-### Listing / Viewing Credentials
-
-Credentials can be listed or viewed with `kargo get credentials`:
+Generic credentials are created using the `kargo create generic-credentials`
+command. Each key/value pair is specified using the `--set` flag:
 
 ```shell
-kargo get credentials --project kargo-demo my-credentials
+kargo create generic-credentials \
+  --project kargo-demo my-api-credentials \
+  --set API_KEY=my-api-key \
+  --set API_SECRET=my-api-secret
+```
+
+```shell
+secret/my-api-credentials created
+```
+
+### Listing / Viewing Credentials
+
+Repository credentials can be listed or viewed with
+`kargo get repo-credentials`:
+
+```shell
+kargo get repo-credentials --project kargo-demo my-credentials
 ```
 
 ```shell
@@ -252,7 +269,7 @@ redacted, however. Values of arbitrarily named data fields are also redacted
 because Kargo cannot infer their sensitivity.
 
 ```shell
-kargo get credentials --project kargo-demo my-credentials -o yaml
+kargo get repo-credentials --project kargo-demo my-credentials -o yaml
 ```
 
 ```shell
@@ -274,32 +291,56 @@ stringData:
 type: Opaque
 ```
 
+Generic credentials can similarly be listed or viewed with
+`kargo get generic-credentials`:
+
+```shell
+kargo get generic-credentials --project kargo-demo
+```
+
 ### Updating Credentials
 
-Credentials can be updated using the `kargo update credentials` command and
-the flags corresponding to attributes of the credentials that you wish to
-modify. Other attributes of the credentials will remain unchanged.
+Repository credentials can be updated using the
+`kargo update repo-credentials` command and the flags corresponding to
+attributes of the credentials that you wish to modify. Other attributes of the
+credentials will remain unchanged.
 
 The following example updates `my-credentials` with a regular expression for the
 repository URL:
 
 ```shell
-kargo update credentials \
+kargo update repo-credentials \
   --project kargo-demo my-credentials \
   --repo-url '^https://github.com/' \
   --regex
 ```
 
 ```shell
-secret/my-credentials updated
+secret/my-credentials
+```
+
+Generic credentials can be updated using the
+`kargo update generic-credentials` command. Use `--set` to add or modify keys
+and `--unset` to remove them. Keys that are not specified remain unchanged:
+
+```shell
+kargo update generic-credentials \
+  --project kargo-demo my-api-credentials \
+  --set API_KEY=my-new-api-key \
+  --unset API_SECRET
+```
+
+```shell
+secret/my-api-credentials
 ```
 
 ### Deleting Credentials
 
-Credentials can, of course, be deleted with `kargo delete credentials`:
+Credentials can, of course, be deleted with `kargo delete repo-credentials` or
+`kargo delete generic-credentials`:
 
 ```shell
-kargo delete credentials --project kargo-demo my-credentials
+kargo delete repo-credentials --project kargo-demo my-credentials
 ```
 
 ```shell
@@ -442,9 +483,9 @@ create or install a GitHub App.
 
     :::note
 
-    The `kargo create/update credentials` commands do not support creating or
-    updating non username/password credentials. To create or update a `Secret`
-    such as the one shown above, use GitOps instead, or the
+    The `kargo create/update repo-credentials` commands do not support creating
+    or updating non username/password credentials. To create or update a
+    `Secret` such as the one shown above, use GitOps instead, or the
     `kargo apply --project <project> -f <filename>` command.
     :::
 
@@ -539,9 +580,9 @@ stringData:
 
 :::note
 
-The `kargo create/update credentials` commands do not support creating or
-updating non username/password credentials. To create or update a `Secret` such
-as the one shown above, use GitOps instead, or the
+The `kargo create/update repo-credentials` commands do not support creating
+or updating non username/password credentials. To create or update a `Secret`
+such as the one shown above, use GitOps instead, or the
 `kargo apply --project <project> -f <filename>` command.
 
 :::

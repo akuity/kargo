@@ -3,9 +3,6 @@ description: Learn how to set up workload identity for promotion pods
 sidebar_label: Promotion Pod Identity
 ---
 
-<span class="tag professional"></span>
-<span class="tag beta"></span>
-
 :::info
 
 This document describes how to set workload identity for promotions run by

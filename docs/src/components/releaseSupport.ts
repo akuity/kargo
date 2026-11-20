@@ -13,7 +13,8 @@ export type Release = {
 // A snapshot of the live data below, rendered server-side and used whenever the
 // fetch cannot complete -- no JavaScript, an offline reader, a GitHub Pages
 // outage. It only needs to be accurate enough to be useful in those cases;
-// refresh it with `go run ./hack/best-releases` from the repository root.
+// refresh it from the _site/best-releases.json that
+// `go run ./hack/best-releases` writes in the repository root.
 export const fallbackReleases: Release[] = [
   {minor: '1.11', released: '2026-07-24', latestPatch: 'v1.11.5'},
   {minor: '1.10', released: '2026-04-17', latestPatch: 'v1.10.13'},

@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/gin-gonic/gin"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -100,16 +99,6 @@ func validateGenericCredentialSecret(secret *corev1.Secret) error {
 		)
 	}
 	return nil
-}
-
-// bindJSONOrError binds JSON from the request body to the target.
-// Returns true if successful, or false if an error was added to the gin context.
-func bindJSONOrError(c *gin.Context, target any) bool {
-	if err := c.ShouldBindJSON(target); err != nil {
-		_ = c.Error(libhttp.Error(err, http.StatusBadRequest))
-		return false
-	}
-	return true
 }
 
 // getFreightByNameOrAlias resolves a Freight resource by name or, when no

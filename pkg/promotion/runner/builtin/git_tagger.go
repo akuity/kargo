@@ -4,13 +4,12 @@ import (
 	"context"
 	"fmt"
 
-	securejoin "github.com/cyphar/filepath-securejoin"
 	"github.com/xeipuuv/gojsonschema"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/controller/git"
 	"github.com/akuity/kargo/pkg/promotion"
-	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
+	"github.com/akuity/kargo/pkg/x/promotion/stepconfig"
 )
 
 const stepKindGitTag = "git-tag"
@@ -51,22 +50,19 @@ func (g *gitTagTagger) Run(
 }
 
 // convert validates the configuration against a JSON schema and converts it
-// into a builtin.GitTagConfig struct.
-func (g *gitTagTagger) convert(cfg promotion.Config) (builtin.GitTagConfig, error) {
-	return validateAndConvert[builtin.GitTagConfig](g.schemaLoader, cfg, stepKindGitTag)
+// into a stepconfig.GitTagConfig struct.
+func (g *gitTagTagger) convert(cfg promotion.Config) (stepconfig.GitTagConfig, error) {
+	return validateAndConvert[stepconfig.GitTagConfig](g.schemaLoader, cfg, stepKindGitTag)
 }
 
 func (g *gitTagTagger) run(
 	ctx context.Context,
 	stepCtx *promotion.StepContext,
-	cfg builtin.GitTagConfig,
+	cfg stepconfig.GitTagConfig,
 ) (promotion.StepResult, error) {
-	path, err := securejoin.SecureJoin(stepCtx.WorkDir, cfg.Path)
+	path, err := promotion.ExternalPath(stepCtx, cfg.Path)
 	if err != nil {
-		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, fmt.Errorf(
-			"error joining path %s with work dir %s: %w",
-			cfg.Path, stepCtx.WorkDir, err,
-		)
+		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, err
 	}
 	workTree, err := git.LoadWorkTree(ctx, path, nil)
 	if err != nil {

@@ -28,6 +28,8 @@ import (
 	"github.com/akuity/kargo/pkg/api"
 	"github.com/akuity/kargo/pkg/conditions"
 	"github.com/akuity/kargo/pkg/controller"
+	"github.com/akuity/kargo/pkg/database"
+	"github.com/akuity/kargo/pkg/kargo"
 	"github.com/akuity/kargo/pkg/kubeclient"
 	"github.com/akuity/kargo/pkg/kubernetes"
 	"github.com/akuity/kargo/pkg/logging"
@@ -55,10 +57,20 @@ func ReconcilerConfigFromEnv() ReconcilerConfig {
 
 var errProjectNamespaceExists = errors.New("namespace already exists and is not labeled as a Project namespace")
 
+// TargetCounter counts a Project's Targets, which live in the database: all
+// of them, and the healthy ones among them.
+type TargetCounter interface {
+	Count(ctx context.Context, project string) (database.CountTargetsRow, error)
+}
+
 // reconciler reconciles Project resources.
 type reconciler struct {
 	cfg    ReconcilerConfig
 	client client.Client
+	// targets counts the Targets whose stats a Project reports. It is nil
+	// when the controller runs without a database, and then no Target stats
+	// are reported.
+	targets TargetCounter
 
 	// The following behaviors are overridable for testing purposes:
 
@@ -162,14 +174,22 @@ type reconciler struct {
 }
 
 // SetupReconcilerWithManager initializes a reconciler for Project resources and
-// registers it with the provided Manager.
+// registers it with the provided Manager. The targets counter may be nil; see
+// the reconciler's targets field.
 func SetupReconcilerWithManager(
 	ctx context.Context,
 	kargoMgr manager.Manager,
 	cfg ReconcilerConfig,
+	targets TargetCounter,
 ) error {
 	c, err := ctrl.NewControllerManagedBy(kargoMgr).
 		For(&kargoapi.Project{}).
+		WithEventFilter(
+			predicate.Or(
+				predicate.GenerationChangedPredicate{},
+				kargo.RefreshRequested{},
+			),
+		).
 		WithEventFilter(
 			predicate.Funcs{
 				DeleteFunc: func(event.DeleteEvent) bool {
@@ -179,7 +199,7 @@ func SetupReconcilerWithManager(
 			},
 		).
 		WithOptions(controller.CommonOptions(cfg.MaxConcurrentReconciles)).
-		Build(newReconciler(kargoMgr.GetClient(), cfg))
+		Build(newReconciler(kargoMgr.GetClient(), cfg, targets))
 	if err != nil {
 		return fmt.Errorf("error creating Project reconciler: %w", err)
 	}
@@ -214,10 +234,15 @@ func SetupReconcilerWithManager(
 	return err
 }
 
-func newReconciler(kubeClient client.Client, cfg ReconcilerConfig) *reconciler {
+func newReconciler(
+	kubeClient client.Client,
+	cfg ReconcilerConfig,
+	targets TargetCounter,
+) *reconciler {
 	r := &reconciler{
-		cfg:    cfg,
-		client: kubeClient,
+		cfg:     cfg,
+		client:  kubeClient,
+		targets: targets,
 	}
 	r.getProjectFn = api.GetProject
 	r.reconcileFn = r.reconcile
@@ -894,27 +919,40 @@ func (r *reconciler) ensureDefaultUserRoles(
 					Verbs:     []string{"*"},
 				},
 				{ // Full access to all mutable Kargo resource types
-					// PromotionRequests are deliberately absent here: only the
-					// Stage controller creates them, so no user needs to write
-					// one. Read access is granted separately, below.
+					// PromotionRequests, PromotionRollouts and Targets are
+					// deliberately absent here: only the Stage controller and
+					// the API server create a PromotionRequest or a
+					// PromotionRollout, and only the controller that manages
+					// Targets creates, updates or deletes one, so no user
+					// needs to write any of them. Read access is granted
+					// separately, below.
 					APIGroups: []string{kargoapi.GroupVersion.Group},
 					Resources: []string{
 						"freights",
 						"projectconfigs",
 						"promotiontasks",
 						"stages",
-						"targets",
 						"warehouses",
 					},
 					Verbs: []string{"*"},
 				},
-				{ // Read-only access to PromotionRequests
-					// A user cannot create, edit, or delete a PromotionRequest --
-					// the Stage controller and the API server own that. They can
-					// read one, because when a target-aware Stage stops promoting,
-					// the PromotionRequest's status is where the reason lives.
+				{ // Read-only access to Targets
+					// Targets are written through the API server by the
+					// controller that manages them, with permissions of its
+					// own. A user reads them to see what a Stage promotes to.
 					APIGroups: []string{kargoapi.GroupVersion.Group},
-					Resources: []string{"promotionrequests"},
+					Resources: []string{"targets"},
+					Verbs:     []string{"get", "list", "watch"},
+				},
+				{ // Read-only access to PromotionRequests and PromotionRollouts
+					// A user cannot create, edit, or delete either -- the Stage
+					// controller and the API server own that, and a promotion
+					// to a target-aware Stage is authorized by the promote verb
+					// on the Stage. They can read one, because when a
+					// target-aware Stage stops promoting, its status is where
+					// the reason lives.
+					APIGroups: []string{kargoapi.GroupVersion.Group},
+					Resources: []string{"promotionrequests", "promotionrollouts"},
 					Verbs:     []string{"get", "list", "watch"},
 				},
 				{ // Promote permission on all stages
@@ -965,6 +1003,7 @@ func (r *reconciler) ensureDefaultUserRoles(
 						"freights",
 						"projectconfigs",
 						"promotionrequests",
+						"promotionrollouts",
 						"promotions",
 						"stages",
 						"targets",
@@ -1004,6 +1043,7 @@ func (r *reconciler) ensureDefaultUserRoles(
 						"freights",
 						"projectconfigs",
 						"promotionrequests",
+						"promotionrollouts",
 						"stages",
 						"targets",
 						"warehouses",

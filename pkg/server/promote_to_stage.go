@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 
@@ -16,6 +17,7 @@ import (
 	libhttp "github.com/akuity/kargo/pkg/http"
 	"github.com/akuity/kargo/pkg/logging"
 	"github.com/akuity/kargo/pkg/server/auth/can"
+	"github.com/akuity/kargo/pkg/server/request"
 	"github.com/akuity/kargo/pkg/server/user"
 )
 
@@ -38,8 +40,11 @@ func (s *server) recordPromotionCreatedEvent(
 		msg += fmt.Sprintf(" by %q", actor)
 	}
 
-	evt := event.NewPromotionCreated(msg, actor, p, f)
-	if err := s.sender.Send(ctx, evt); err != nil {
+	evt, err := event.NewPromotionCreated(msg, actor, p, f)
+	if err == nil {
+		err = s.sender.Send(ctx, evt)
+	}
+	if err != nil {
 		logging.LoggerFromContext(ctx).Error(err, "Error when publishing new promotion event")
 	}
 }
@@ -52,6 +57,13 @@ type promoteToStageRequest struct {
 	// set, the promotion webhook resolves it to the current auto-promotion
 	// candidate. Exactly one of Freight, FreightAlias, or Origin must be set.
 	Origin string `json:"origin,omitempty"`
+	// Targets is a list of target names to promote to. If set to `nil` - selects all targets for the stage.
+	// If non-nil, should be a subset of targets selected by the stage, empty list is an error.
+	Targets []string `json:"targets,omitempty"`
+	// UpdateStrategy configures overrides for maxConcurrent and maxErrors for this request.
+	// Percentage values are calculated based on the total stage targets and not just ones selected for promotion
+	// If nil - calculated from the stages updateStrategy based on the number of stage targets.
+	UpdateStrategy *kargoapi.TargetUpdateStrategy `json:"updateStrategy,omitempty"`
 } // @name PromoteToStageRequest
 
 // @id PromoteToStage
@@ -65,9 +77,13 @@ type promoteToStageRequest struct {
 // @Param project path string true "Project name"
 // @Param stage path string true "Stage name"
 // @Param body body promoteToStageRequest true "Promote request"
-// @Description A Stage that selects Targets yields a PromotionRequest, which fans
-// @Description the Freight out to each of them, in place of a single Promotion.
-// @Success 201 {object} kargoapi.Promotion "Promotion resource, or a PromotionRequest for a Stage that selects Targets"
+// @Description A Stage that selects Targets yields, in place of a single
+// @Description Promotion, something that fans the Freight out to each of
+// @Description them: a PromotionRollout on a server that creates
+// @Description PromotionRollouts, and a PromotionRequest otherwise. Either
+// @Description way, the body's targets and updateStrategy narrow which
+// @Description Targets are promoted to and at what pace.
+// @Success 201 {object} kargoapi.Promotion "Promotion; a PromotionRollout or PromotionRequest for a Stage with Targets"
 // @Router /v1beta1/projects/{project}/stages/{stage}/promotions [post]
 func (s *server) promoteToStage(c *gin.Context) {
 	ctx := c.Request.Context()
@@ -75,7 +91,7 @@ func (s *server) promoteToStage(c *gin.Context) {
 	stageName := c.Param("stage")
 
 	var req promoteToStageRequest
-	if !bindJSONOrError(c, &req) {
+	if !request.BindJSON(c, &req) {
 		return
 	}
 
@@ -92,7 +108,6 @@ func (s *server) promoteToStage(c *gin.Context) {
 		))
 		return
 	}
-
 	stage, err := s.getStageFn(
 		ctx,
 		s.client,
@@ -200,50 +215,128 @@ func (s *server) promoteToStage(c *gin.Context) {
 		return
 	}
 
-	// A Stage that selects Targets fans Freight out to them via a PromotionRequest
-	// rather than promoting to itself with a single Promotion.
+	// A Stage that selects Targets fans Freight out to them via a
+	// PromotionRollout, or a PromotionRequest on a server that does not
+	// create rollouts, rather than promoting to itself with a single
+	// Promotion.
 	if stage.IsTargetAware() {
-		// Both the Target lookup and the create go through the internal client.
-		// PromotionRequests are system-owned, and the promote-verb check above
-		// IS the authorization decision for this request; which Targets the
-		// Stage governs is a detail of carrying it out. Resolving as the user
-		// would also break the kargo-promoter role, which holds the promote
-		// verb but no permission to list Targets.
-		promotionRequest, prErr := api.NewPromotionRequest(
-			ctx, s.client.InternalClient(), stage, freight.Name,
-		)
-		if prErr != nil {
-			_ = c.Error(prErr)
+		// We explicitly request all targets if req.Targets is nil
+		// TODO: split up API functions to avoid confusion between nil argument and empty argument
+		allTargets := req.Targets == nil
+		if !allTargets && len(req.Targets) == 0 {
+			_ = c.Error(libhttp.Error(fmt.Errorf("target list cannot be empty"), http.StatusBadRequest))
 			return
 		}
-		if u, ok := user.IdentityFromContext(ctx); ok {
-			api.SetCreateActorAnnotation(promotionRequest, u.Actor())
-		}
-		if err = s.client.InternalClient().Create(ctx, promotionRequest); err != nil {
-			_ = c.Error(err)
+		// TODO(promotion-requests): a server that does not create rollouts
+		// falls back to a PromotionRequest. Remove this check, and the
+		// fallback below it, along with PromotionRequests.
+		if s.cfg.PromotionRolloutsEnabled {
+			rollout, rolloutErr := s.createPromotionRollout(
+				ctx, stage, freight, req.Targets, req.UpdateStrategy,
+			)
+			if rolloutErr != nil {
+				_ = c.Error(rolloutErr)
+				return
+			}
+			c.JSON(http.StatusCreated, rollout)
 			return
 		}
-		// No event is recorded: Kargo's promotion events carry a Promotion, and
-		// a PromotionRequest has none of its own.
-		c.JSON(http.StatusCreated, promotionRequest)
+		newPromoReq, promoErr := s.createPromotionRequest(
+			ctx, stage, freight, allTargets, req.Targets, req.UpdateStrategy)
+		if promoErr != nil {
+			if errors.Is(promoErr, api.ErrTargetNotSelected) {
+				_ = c.Error(libhttp.Error(promoErr, http.StatusBadRequest))
+			} else {
+				_ = c.Error(promoErr)
+			}
+			return
+		}
+		c.JSON(http.StatusCreated, newPromoReq)
 		return
 	}
 
 	// Create the Promotion. The defaulting webhook fills in the rest from
 	// the Stage's PromotionTemplate.
-	promotion := api.NewMinimalPromotion(stage, freight.Name)
-	if u, ok := user.IdentityFromContext(ctx); ok {
-		api.SetCreateActorAnnotation(promotion, u.Actor())
-	}
-
-	if err := s.createPromotionFn(ctx, promotion); err != nil {
+	newPromo, err := s.createPromotion(ctx, stage, freight)
+	if err != nil {
 		_ = c.Error(err)
 		return
 	}
 
+	c.JSON(http.StatusCreated, newPromo)
+}
+
+func (s *server) createPromotion(
+	ctx context.Context,
+	stage *kargoapi.Stage,
+	freight *kargoapi.Freight,
+) (*kargoapi.Promotion, error) {
+	newPromo := api.NewMinimalPromotion(stage, freight.Name)
+
+	var actor string
+	if u, ok := user.IdentityFromContext(ctx); ok {
+		actor = u.Actor()
+	}
+	if actor != "" {
+		api.SetCreateActorAnnotation(newPromo, actor)
+	}
+	// FIXME: resolve name conflict
+	if err := s.createPromotionFn(ctx, newPromo); err != nil {
+		return nil, err
+	}
 	if s.sender != nil {
-		s.recordPromotionCreatedEvent(ctx, promotion, freight)
+		s.recordPromotionCreatedEvent(ctx, newPromo, freight)
+	}
+	return newPromo, nil
+}
+
+func (s *server) createPromotionRequest(
+	ctx context.Context,
+	stage *kargoapi.Stage,
+	freight *kargoapi.Freight,
+	allTargets bool,
+	targets []string,
+	updateStrategy *kargoapi.TargetUpdateStrategy,
+) (*kargoapi.PromotionRequest, error) {
+	// The create goes through the internal client: PromotionRequests are
+	// system-owned, and the promote-verb check above IS the authorization
+	// decision for this request. The Targets come from the database
+	// without a check of their own for the same reason.
+
+	listTargetsFn, err := s.getListTargetsFn()
+	if err != nil {
+		return nil, err
 	}
 
-	c.JSON(http.StatusCreated, promotion)
+	var newPromoReq *kargoapi.PromotionRequest
+	if allTargets {
+		newPromoReq, err = api.NewPromotionRequestForAllTargets(
+			ctx, stage, freight.Name, listTargetsFn, updateStrategy)
+	} else {
+		// Build promotionRequestTargets from targets arg.
+		// If allTargets is false deliberately builds an empty list.
+		promotionRequestTargets := make([]kargoapi.PromotionRequestTarget, len(targets))
+		for i, targetName := range targets {
+			promotionRequestTargets[i] = kargoapi.PromotionRequestTarget{Name: targetName}
+		}
+		newPromoReq, err = api.NewPromotionRequestForSelectTargets(
+			ctx, stage, freight.Name, listTargetsFn, updateStrategy, promotionRequestTargets)
+	}
+
+	if err != nil {
+		return nil, err
+	}
+
+	if u, ok := user.IdentityFromContext(ctx); ok {
+		api.SetCreateActorAnnotation(newPromoReq, u.Actor())
+	}
+	if err = s.client.InternalClient().Create(ctx, newPromoReq); err != nil {
+		return nil, err
+	}
+
+	// No event is recorded: Kargo's promotion events carry a Promotion, and
+	// a PromotionRequest has none of its own.
+	// TODO: 1125 record events here
+
+	return newPromoReq, nil
 }

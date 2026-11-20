@@ -11,7 +11,7 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/api"
 	"github.com/akuity/kargo/pkg/promotion"
-	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
+	"github.com/akuity/kargo/pkg/x/promotion/stepconfig"
 )
 
 const stepKindSetFreightAlias = "set-freight-alias"
@@ -38,9 +38,9 @@ type freightAliasSetter struct {
 }
 
 // convert validates the configuration against a JSON schema and converts it
-// into a builtin.SetFreightAliasConfig struct.
-func (s *freightAliasSetter) convert(cfg promotion.Config) (builtin.SetFreightAliasConfig, error) {
-	return validateAndConvert[builtin.SetFreightAliasConfig](s.schemaLoader, cfg, stepKindSetFreightAlias)
+// into a stepconfig.SetFreightAliasConfig struct.
+func (s *freightAliasSetter) convert(cfg promotion.Config) (stepconfig.SetFreightAliasConfig, error) {
+	return validateAndConvert[stepconfig.SetFreightAliasConfig](s.schemaLoader, cfg, stepKindSetFreightAlias)
 }
 
 // newSetFreightAlias returns an implementation of the promotion.StepRunner
@@ -70,7 +70,7 @@ func (s *freightAliasSetter) Run(
 func (s *freightAliasSetter) run(
 	ctx context.Context,
 	stepCtx *promotion.StepContext,
-	cfg builtin.SetFreightAliasConfig,
+	cfg stepconfig.SetFreightAliasConfig,
 ) (promotion.StepResult, error) {
 	freight, err := api.GetFreight(
 		ctx,

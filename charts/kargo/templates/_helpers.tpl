@@ -117,6 +117,34 @@ Generate the base URL for the API service.
 {{- end -}}
 
 {{/*
+Generate the address at which the controller reaches the API server, from
+which it reads Targets: the operator's, else the API server's in-cluster
+Service when the chart installs one. Empty when there is neither.
+*/}}
+{{- define "kargo.controller.apiServerAddress" -}}
+{{- if .Values.controller.apiServer.address -}}
+{{- .Values.controller.apiServer.address -}}
+{{- else if .Values.api.enabled -}}
+{{- if .Values.api.tls.enabled -}}
+{{- printf "https://kargo-api.%s.svc" .Release.Namespace -}}
+{{- else -}}
+{{- printf "http://kargo-api.%s.svc" .Release.Namespace -}}
+{{- end -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
+Whether the controller must be given the API server's self-signed CA to reach
+it in-cluster: it does when it uses the in-cluster address and the chart
+generated the certificate.
+*/}}
+{{- define "kargo.controller.mountsAPIServerCA" -}}
+{{- if and (not .Values.controller.apiServer.address) .Values.api.enabled .Values.api.tls.enabled .Values.api.tls.selfSignedCert -}}
+true
+{{- end -}}
+{{- end -}}
+
+{{/*
 Generate the base URL for the external webhook server. When the external
 webhooks server has its own Ingress, the URL is composed from its own host,
 TLS configuration, and basePath. When it instead piggybacks on the API
@@ -229,6 +257,9 @@ OTEL_TRACES_SAMPLER: {{ quote .sampler }}
 {{- if .samplerArg }}
 OTEL_TRACES_SAMPLER_ARG: {{ quote .samplerArg }}
 {{- end }}
+{{- with .categories }}
+TRACING_CATEGORIES: {{ join "," . | quote }}
+{{- end }}
 {{- end }}
 {{- end }}
 {{- end -}}
@@ -268,6 +299,19 @@ Takes a dict with "root" (the root context) and "labels" (the component's).
 {{- range $key, $value := . }}
 {{ $key }}: {{ $value | quote }}
 {{- end }}
+{{- end }}
+{{- end -}}
+
+{{/*
+Pod labels for bundled components whose images don't track Kargo's version:
+kargo.labels without helm.sh/chart or app.kubernetes.io/version, so that a
+Kargo upgrade doesn't restart these pods.
+*/}}
+{{- define "kargo.bundledPodLabels" -}}
+{{ include "kargo.selectorLabels" . }}
+app.kubernetes.io/managed-by: {{ .Release.Service }}
+{{- with .Values.global.labels }}
+{{ toYaml . }}
 {{- end }}
 {{- end -}}
 
@@ -369,32 +413,7 @@ spec:
     command: ["/sbin/tini", "--", "/usr/local/bin/kargo"]
     args: ["migrate"]
     env:
-    {{- if .Values.database.postgres.enabled }}
-    # The bundled database: the binary composes the connection string from
-    # these parts, escaping the password, which a $(VAR) reference could
-    # not.
-    - name: DATABASE_HOST
-      value: kargo-postgres.{{ .Release.Namespace }}.svc
-    - name: DATABASE_PORT
-      value: "5432"
-    - name: DATABASE_NAME
-      value: kargo
-    - name: DATABASE_USER
-      value: kargo
-    - name: DATABASE_PASSWORD
-      valueFrom:
-        secretKeyRef:
-          name: {{ include "kargo.postgres.secretName" . }}
-          key: password
-    - name: DATABASE_SSL_MODE
-      value: disable
-    {{- else }}
-    - name: DATABASE_URL
-      valueFrom:
-        secretKeyRef:
-          name: {{ .Values.database.external.secretName }}
-          key: {{ .Values.database.external.secretKey }}
-    {{- end }}
+    {{- include "kargo.database.env" . | nindent 4 }}
     {{- with (concat .Values.global.env .Values.database.migrations.env) }}
     {{- tpl (toYaml .) $ | nindent 4 }}
     {{- end }}
@@ -443,6 +462,41 @@ external database are configured, since only one can be the database.
 {{- end }}
 {{- if and .Values.database.postgres.password .Values.database.postgres.existingSecret }}
 {{- fail "database.postgres.password and database.postgres.existingSecret cannot both be set." }}
+{{- end }}
+{{- end -}}
+
+{{/*
+kargo.database.env renders the environment variables that point a component
+at the database, for every component that uses one: the bundled PostgreSQL
+when it is enabled, otherwise the external database's connection string.
+For the bundled database the binary composes the connection string from
+these parts, escaping the password, which a $(VAR) reference could not.
+Renders nothing when no database is configured, which leaves database
+features disabled.
+*/}}
+{{- define "kargo.database.env" -}}
+{{- if .Values.database.postgres.enabled }}
+- name: DATABASE_HOST
+  value: kargo-postgres.{{ .Release.Namespace }}.svc
+- name: DATABASE_PORT
+  value: "5432"
+- name: DATABASE_NAME
+  value: kargo
+- name: DATABASE_USER
+  value: kargo
+- name: DATABASE_PASSWORD
+  valueFrom:
+    secretKeyRef:
+      name: {{ include "kargo.postgres.secretName" . }}
+      key: password
+- name: DATABASE_SSL_MODE
+  value: disable
+{{- else if .Values.database.external.secretName }}
+- name: DATABASE_URL
+  valueFrom:
+    secretKeyRef:
+      name: {{ .Values.database.external.secretName }}
+      key: {{ .Values.database.external.secretKey }}
 {{- end }}
 {{- end -}}
 
@@ -565,5 +619,175 @@ Usage:
 {{- if or .configMapName .secretName -}}
 - name: certs
   emptyDir: {}
+{{- end -}}
+{{- end -}}
+
+{{/*
+kargo.nats.url returns the URL Kargo components use to connect to NATS. When
+the NATS subchart is enabled, the URL of its client Service is derived from the
+subchart's values. Otherwise, nats.external.url is used, and rendering fails
+if it has not been set, since the components that use NATS require it.
+*/}}
+{{- define "kargo.nats.url" -}}
+{{- if .Values.nats.enabled -}}
+{{- $namespace := .Values.nats.namespaceOverride | default .Release.Namespace -}}
+{{- $port := dig "config" "nats" "port" 4222 .Values.nats -}}
+{{- printf "nats://%s.%s.svc.cluster.local:%v" .Values.nats.fullnameOverride $namespace $port -}}
+{{- else if .Values.nats.external.url -}}
+{{- .Values.nats.external.url -}}
+{{- else -}}
+{{- fail "nats.external.url must be set when nats.enabled is false: the API server, controller, management controller, and Kubernetes webhooks server require a NATS server to connect to" -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
+kargo.nats.validateAuth fails rendering if the settings for authenticating
+with an external NATS server conflict. Renders nothing otherwise.
+Authentication is only supported with an external NATS server; the NATS
+installed by this chart does not require it, so these settings are ignored
+when nats.enabled is true.
+*/}}
+{{- define "kargo.nats.validateAuth" -}}
+{{- if not .Values.nats.enabled -}}
+{{- $set := list -}}
+{{- range list "nkeySeedSecret" "credsSecret" "tokenSecret" "userPasswordSecret" -}}
+{{- if dig . "name" "" $.Values.nats.external -}}
+{{- $set = append $set (printf "nats.external.%s.name" .) -}}
+{{- end -}}
+{{- end -}}
+{{- if gt (len $set) 1 -}}
+{{- fail (printf "only one of nats.external.nkeySeedSecret.name, nats.external.credsSecret.name, nats.external.tokenSecret.name, or nats.external.userPasswordSecret.name may be set, but %s are all set" (join ", " $set)) -}}
+{{- end -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
+kargo.nats.secretFiles returns, as a YAML list, the Secret keys that Kargo
+components read from files to authenticate with, and secure their connection
+to, an external NATS server. Each entry names the Secret and key, the filename
+it is projected to under /etc/kargo/nats, and the environment variable that
+points pkg/nats.ConfigFromEnv at that file. The list is empty when nats.enabled
+is true.
+
+Credentials that can be rotated belong here rather than in kargo.nats.env.
+Kargo re-reads these files on every reconnect, and the kubelet updates them
+when the Secret changes, so a rotation reaches running Pods without a restart.
+An environment variable is fixed for the life of the container.
+*/}}
+{{- define "kargo.nats.secretFiles" -}}
+{{- include "kargo.nats.validateAuth" . -}}
+{{- $files := list -}}
+{{- if not .Values.nats.enabled -}}
+{{- $ext := .Values.nats.external -}}
+{{- with dig "nkeySeedSecret" "name" "" $ext -}}
+{{- $files = append $files (dict "env" "NATS_SEED_KEY_FILE" "path" "seed.nk" "secretName" . "key" $ext.nkeySeedSecret.key) -}}
+{{- end -}}
+{{- with dig "credsSecret" "name" "" $ext -}}
+{{- $files = append $files (dict "env" "NATS_CREDS_FILE" "path" "user.creds" "secretName" . "key" $ext.credsSecret.key) -}}
+{{- end -}}
+{{- with dig "userPasswordSecret" "name" "" $ext -}}
+{{- $files = append $files (dict "env" "NATS_USERNAME_FILE" "path" "username" "secretName" . "key" $ext.userPasswordSecret.usernameKey) -}}
+{{- $files = append $files (dict "env" "NATS_PASSWORD_FILE" "path" "password" "secretName" . "key" $ext.userPasswordSecret.passwordKey) -}}
+{{- end -}}
+{{- with dig "tls" "caSecret" "name" "" $ext -}}
+{{- $files = append $files (dict "env" "NATS_TLS_CA_FILE" "path" "ca.crt" "secretName" . "key" $ext.tls.caSecret.key) -}}
+{{- end -}}
+{{- with dig "tls" "clientCertSecret" "name" "" $ext -}}
+{{- $files = append $files (dict "env" "NATS_TLS_CERT_FILE" "path" "tls.crt" "secretName" . "key" "tls.crt") -}}
+{{- $files = append $files (dict "env" "NATS_TLS_KEY_FILE" "path" "tls.key" "secretName" . "key" "tls.key") -}}
+{{- end -}}
+{{- end -}}
+{{- toYaml $files -}}
+{{- end -}}
+
+{{/*
+kargo.nats.configMapData renders the ConfigMap entries consumed by
+pkg/nats.ConfigFromEnv. File paths must agree with the mount path used by
+kargo.nats.volumeMount.
+
+Usage:
+  data:
+  {{- include "kargo.nats.configMapData" . | nindent 2 }}
+*/}}
+{{- define "kargo.nats.configMapData" -}}
+NATS_SERVER_URL: {{ include "kargo.nats.url" . | quote }}
+{{- range fromYamlArray (include "kargo.nats.secretFiles" .) }}
+{{ .env }}: /etc/kargo/nats/{{ .path }}
+{{- end }}
+{{- end -}}
+
+{{/*
+kargo.nats.env renders the NATS environment variables that cannot come from a
+ConfigMap, either because they differ per pod or because they are secret.
+NATS_CLIENT_NAME is the pod name so that connections reported by the NATS
+server identify an exact replica.
+
+Usage:
+  env:
+  {{- include "kargo.nats.env" . | nindent 8 }}
+*/}}
+{{- define "kargo.nats.env" -}}
+{{- include "kargo.nats.validateAuth" . -}}
+- name: NATS_CLIENT_NAME
+  valueFrom:
+    fieldRef:
+      fieldPath: metadata.name
+{{- if not .Values.nats.enabled }}
+{{- with .Values.nats.external.tokenSecret }}
+{{- if .name }}
+- name: NATS_TOKEN
+  valueFrom:
+    secretKeyRef:
+      name: {{ .name }}
+      key: {{ .key }}
+{{- end }}
+{{- end }}
+{{- end }}
+{{- end -}}
+
+{{/*
+kargo.nats.volumeMount renders the volumeMount for files used to connect to
+NATS, if applicable. Empty otherwise. Pair with kargo.nats.volume.
+
+The volume is mounted as a directory. Do not mount its files individually with
+subPath: the kubelet never updates a subPath mount, so rotated credentials
+would not reach the Pod.
+
+Usage:
+  volumeMounts:
+  ...
+  {{- include "kargo.nats.volumeMount" . | nindent 8 }}
+*/}}
+{{- define "kargo.nats.volumeMount" -}}
+{{- if fromYamlArray (include "kargo.nats.secretFiles" .) -}}
+- mountPath: /etc/kargo/nats
+  name: nats
+  readOnly: true
+{{- end -}}
+{{- end -}}
+
+{{/*
+kargo.nats.volume renders the volume containing files used to connect to NATS,
+if applicable. Empty otherwise. Each Secret key is projected to the fixed
+filename that kargo.nats.configMapData points the corresponding environment
+variable at.
+
+Usage:
+  volumes:
+  ...
+  {{- include "kargo.nats.volume" . | nindent 6 }}
+*/}}
+{{- define "kargo.nats.volume" -}}
+{{- with fromYamlArray (include "kargo.nats.secretFiles" .) -}}
+- name: nats
+  projected:
+    sources:
+    {{- range . }}
+    - secret:
+        name: {{ .secretName }}
+        items:
+        - key: {{ .key }}
+          path: {{ .path }}
+    {{- end }}
 {{- end -}}
 {{- end -}}

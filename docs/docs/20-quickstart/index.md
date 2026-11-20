@@ -205,14 +205,47 @@ Any approach you select should only:
 
 ## Set Up Your Demo Repository
 
+Kargo promotes changes by committing them to Git, so it needs a repository it
+can push to. For this quickstart, that will be your own fork of
+[kargo-demo](https://github.com/akuity/kargo-demo), a sample repository holding
+the demo application's configuration (e.g. Kubernetes manifests). (In a real
+setup, you would create your own configuration repository from scratch.) You'll
+fork it, then give Kargo a token that can push to your fork.
+
+No GitHub CLI? Use the <Hlt>Web UI</Hlt> tab.
+
+<Tabs groupId="github-setup">
+<TabItem value="gh-cli" label="GitHub CLI (recommended)" default>
+
+With the [GitHub CLI](https://cli.github.com/) installed and logged in
+(`gh auth login`):
+
+```shell
+gh repo fork akuity/kargo-demo --clone=false
+
+export GITHUB_USERNAME=$(gh api user --jq .login)
+
+export GITHUB_TOKEN=$(gh auth token)
+
+export GITOPS_REPO_URL=https://github.com/${GITHUB_USERNAME}/kargo-demo
+```
+
+:::note
+
+The GitHub CLI's token can write to _all_ of your repositories, so use it only
+with a local cluster like this one; anywhere else, use a token scoped to a
+single repository, as in the <Hlt>Web UI</Hlt> tab.
+
+:::
+
+</TabItem>
+<TabItem value="web-ui" label="Web UI">
+
 1. Fork the sample repository:
 
     Go to
     [https://github.com/akuity/kargo-demo](https://github.com/akuity/kargo-demo)
-    and click <Hlt>Fork</Hlt>. This repository contains application
-    configurations (e.g. Kubernetes manifests) and is the source of truth for
-    our demo cluster. In a real setup, you would create your own configuration
-    repository from scratch.
+    and click <Hlt>Fork</Hlt>.
 
 1. Get a GitHub personal access token (PAT):  
 
@@ -245,8 +278,11 @@ Any approach you select should only:
 
     export GITHUB_USERNAME=<your github username>
 
-    export GITHUB_PAT=<your personal access token>
+    export GITHUB_TOKEN=<your personal access token>
     ```
+
+</TabItem>
+</Tabs>
 
 :::info Why Kargo writes to Git
 
@@ -359,7 +395,7 @@ metadata:
 stringData:
   repoURL: ${GITOPS_REPO_URL}
   username: ${GITHUB_USERNAME}
-  password: ${GITHUB_PAT}
+  password: ${GITHUB_TOKEN}
 ---
 apiVersion: kargo.akuity.io/v1alpha1
 kind: Warehouse
@@ -532,7 +568,7 @@ metadata:
 stringData:
   repoURL: ${GITOPS_REPO_URL}
   username: ${GITHUB_USERNAME}
-  password: ${GITHUB_PAT}
+  password: ${GITHUB_TOKEN}
 ---
 apiVersion: kargo.akuity.io/v1alpha1
 kind: Warehouse

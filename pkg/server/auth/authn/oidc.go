@@ -338,6 +338,16 @@ func getKeySet(ctx context.Context, cfg config.ServerConfig) (oidc.KeySet, error
 		return nil, fmt.Errorf("error making discovery request to OpenID Connect identity provider: %w", err)
 	}
 	defer discoResp.Body.Close()
+	// An identity provider that is starting up or briefly unhealthy may answer
+	// with an error status and a JSON error body. Treating that as a discovery
+	// document would leave an empty jwks_uri behind and break every token
+	// verification until restart, so return an error and let the caller retry.
+	if discoResp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf(
+			"discovery request to OpenID Connect identity provider returned unexpected status %d",
+			discoResp.StatusCode,
+		)
+	}
 	bodyBytes, err := io.ReadAll(discoResp.Body)
 	if err != nil {
 		return nil, fmt.Errorf("error reading discovery request response body: %w", err)
@@ -347,6 +357,11 @@ func getKeySet(ctx context.Context, cfg config.ServerConfig) (oidc.KeySet, error
 	}{}
 	if err = json.Unmarshal(bodyBytes, &providerCfg); err != nil {
 		return nil, fmt.Errorf("error unmarshaling discovery request response body: %w", err)
+	}
+	if providerCfg.KeysURL == "" {
+		return nil, errors.New(
+			"discovery document from OpenID Connect identity provider has no jwks_uri",
+		)
 	}
 
 	keysURL := providerCfg.KeysURL

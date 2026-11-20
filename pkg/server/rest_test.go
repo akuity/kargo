@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -18,6 +19,7 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -242,6 +244,10 @@ func testRESTWatchEndpoint(
 				WithScheme(testScheme).
 				WithRESTMapper(testRESTMapper(testScheme)).
 				Build()
+			watching := &watchStartedClient{
+				WithWatch: internalClient,
+				started:   make(chan struct{}),
+			}
 			var err error
 			s.client, err = kubernetes.NewClient(
 				t.Context(),
@@ -254,7 +260,7 @@ func testRESTWatchEndpoint(
 						*runtime.Scheme,
 						string,
 					) (client.WithWatch, error) {
-						return internalClient, nil
+						return watching, nil
 					},
 				},
 			)
@@ -276,19 +282,32 @@ func testRESTWatchEndpoint(
 				req.Header.Set(key, value)
 			}
 
-			// Create a context with timeout to prevent hanging on watch endpoints
-			ctx, cancel := context.WithTimeout(t.Context(), 100*time.Millisecond)
+			// A watch handler streams until its request is canceled. Operations
+			// run only once the handler has started its watch, so that the watch
+			// sees them however long routing took, and the request is then given
+			// a fixed window to stream the events. A handler that fails before
+			// watching returns on its own; the fallback stops one that neither
+			// watches nor returns.
+			ctx, cancel := context.WithCancel(t.Context())
 			defer cancel()
 			req = req.WithContext(ctx)
-
-			// If operations are provided, run them asynchronously after a small delay
-			// to allow the watch to be established first
-			if testCase.operations != nil {
-				go func() {
-					time.Sleep(10 * time.Millisecond)
+			go func() {
+				defer cancel()
+				select {
+				case <-watching.started:
+				case <-time.After(watchStartTimeout):
+					return
+				case <-ctx.Done():
+					return
+				}
+				if testCase.operations != nil {
 					testCase.operations(ctx, internalClient)
-				}()
-			}
+				}
+				select {
+				case <-time.After(watchStreamWindow):
+				case <-ctx.Done():
+				}
+			}()
 
 			router, err := s.setupRESTRouter(t.Context())
 			require.NoError(t, err)
@@ -297,6 +316,34 @@ func testRESTWatchEndpoint(
 			testCase.assertions(t, w, internalClient)
 		})
 	}
+}
+
+const (
+	// watchStartTimeout bounds how long a watch test waits for the handler
+	// to start watching before it cancels the request.
+	watchStartTimeout = 5 * time.Second
+	// watchStreamWindow is how long a watch test lets the handler stream
+	// after its operations have run.
+	watchStreamWindow = 100 * time.Millisecond
+)
+
+// watchStartedClient closes started once the handler under test has
+// registered its first watch, so that a test's operations are never made
+// before the watch can observe them.
+type watchStartedClient struct {
+	client.WithWatch
+	once    sync.Once
+	started chan struct{}
+}
+
+func (c *watchStartedClient) Watch(
+	ctx context.Context,
+	list client.ObjectList,
+	opts ...client.ListOption,
+) (watch.Interface, error) {
+	w, err := c.WithWatch.Watch(ctx, list, opts...)
+	c.once.Do(func() { close(c.started) })
+	return w, err
 }
 
 // mustJSONBody marshals the given value to JSON and returns it as an io.Reader.

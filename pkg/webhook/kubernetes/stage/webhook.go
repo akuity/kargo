@@ -8,6 +8,7 @@ import (
 	admissionv1 "k8s.io/api/admission/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -45,18 +46,31 @@ type webhook struct {
 		[]kargoapi.PromotionStep,
 	) field.ErrorList
 
+	validatePromotionTemplateFn func(*field.Path, *kargoapi.PromotionTemplate) field.ErrorList
+	validateTargetsFn           func(*field.Path, *kargoapi.StageTargets) field.ErrorList
+
 	isRequestFromKargoControlplaneFn libWebhook.IsRequestFromKargoControlplaneFn
+}
+
+type Option func(*webhook)
+
+func WithTargetStages(w *webhook) {
+	w.validateTargetsFn = w.validateTargets
 }
 
 func SetupWebhookWithManager(
 	cfg libWebhook.Config,
 	mgr ctrl.Manager,
+	options ...Option,
 ) error {
 	w := newWebhook(
 		cfg,
 		mgr.GetClient(),
 		admission.NewDecoder(mgr.GetScheme()),
 	)
+	for _, option := range options {
+		option(w)
+	}
 	return libWebhook.SetupValidatingAndDefaultingWebhook(mgr, &kargoapi.Stage{}, w)
 }
 
@@ -75,6 +89,8 @@ func newWebhook(
 	w.validatePromotionStepTaskRefsFn = w.validatePromotionStepTaskRefs
 	w.isRequestFromKargoControlplaneFn =
 		libWebhook.IsRequestFromKargoControlplane(cfg.ControlplaneUserRegex)
+	w.validateTargetsFn = w.validateNoTargets
+	w.validatePromotionTemplateFn = w.validatePromotionTemplate
 	return w
 }
 
@@ -104,6 +120,9 @@ func (w *webhook) Default(ctx context.Context, stage *kargoapi.Stage) error {
 	}
 
 	if req.Operation == admissionv1.Create || req.Operation == admissionv1.Update {
+		if stage.IsTargetAware() {
+			w.targetAwareDefaults(stage)
+		}
 		if verReq, ok := api.ReverifyAnnotationValue(stage.Annotations); ok {
 			var oldVerReq *kargoapi.VerificationRequest
 			if oldStage != nil {
@@ -143,6 +162,13 @@ func (w *webhook) Default(ctx context.Context, stage *kargoapi.Stage) error {
 		}
 	}
 	return nil
+}
+
+func (w *webhook) targetAwareDefaults(stage *kargoapi.Stage) {
+	// Set verification mode to PerStage
+	if stage.Spec.Targets.Verification != nil && stage.Spec.Targets.Verification.VerificationRunMode == "" {
+		stage.Spec.Targets.Verification.VerificationRunMode = kargoapi.VerificationRunModePerStage
+	}
 }
 
 func (w *webhook) ValidateCreate(
@@ -195,27 +221,120 @@ func (w *webhook) validateSpec(
 ) field.ErrorList {
 	errs := w.validateRequestedFreight(f.Child("requestedFreight"), spec.RequestedFreight)
 
-	if spec.PromotionTemplate == nil {
+	errs = append(
+		errs,
+		w.validatePromotionTemplate(f.Child("promotionTemplate"),
+			spec.PromotionTemplate,
+		)...,
+	)
+
+	errs = append(
+		errs,
+		w.validateTargetsFn(f.Child("targets"),
+			spec.Targets,
+		)...,
+	)
+
+	return errs
+}
+
+func (w *webhook) validatePromotionTemplate(
+	path *field.Path,
+	promotionTemplate *kargoapi.PromotionTemplate,
+) field.ErrorList {
+	errs := field.ErrorList{}
+
+	if promotionTemplate == nil {
 		return errs
 	}
 
 	errs = append(
 		errs,
 		libWebhook.ValidatePromotionSteps(
-			f.Child("promotionTemplate").Child("spec").Child("steps"),
-			spec.PromotionTemplate.Spec.Steps,
+			path.Child("spec").Child("steps"),
+			promotionTemplate.Spec.Steps,
 		)...,
 	)
 
 	errs = append(
 		errs,
 		w.validatePromotionStepTaskRefsFn(
-			f.Child("promotionTemplate").Child("spec").Child("steps"),
-			spec.PromotionTemplate.Spec.Steps,
+			path.Child("spec").Child("steps"),
+			promotionTemplate.Spec.Steps,
 		)...,
 	)
-
 	return errs
+}
+
+func (w *webhook) validateNoTargets(path *field.Path, targets *kargoapi.StageTargets) field.ErrorList {
+	errs := field.ErrorList{}
+	if targets == nil {
+		return errs
+	}
+	errs = append(errs, field.Invalid(
+		path,
+		targets,
+		"per-target stages are not supported, targets should not be set",
+	))
+	return errs
+}
+
+func (w *webhook) validateTargets(path *field.Path, targets *kargoapi.StageTargets) field.ErrorList {
+	errs := field.ErrorList{}
+	if targets == nil {
+		return errs
+	}
+	errs = append(errs, w.validateUpdateStrategy(path.Child("updateStrategy"), targets.UpdateStrategy)...)
+	return errs
+}
+
+func (w *webhook) validateUpdateStrategy(
+	path *field.Path,
+	updateStrategy kargoapi.TargetUpdateStrategy,
+) field.ErrorList {
+	errs := field.ErrorList{}
+	if updateStrategy.MaxConcurrent != nil {
+		// maxConcurrent cannot be below 1 or 1%
+		err := w.validateUpdateStrategyValue(
+			path.Child("maxConcurrent"),
+			updateStrategy.MaxConcurrent, 1)
+		if err != nil {
+			errs = append(errs, err)
+		}
+	}
+	if updateStrategy.MaxFailures != nil {
+		err := w.validateUpdateStrategyValue(
+			path.Child("maxFailures"),
+			updateStrategy.MaxFailures, 0)
+		if err != nil {
+			errs = append(errs, err)
+		}
+	}
+	return errs
+}
+
+func (w *webhook) validateUpdateStrategyValue(
+	valuePath *field.Path,
+	intOrStrValue *intstr.IntOrString,
+	allowedValueMin int,
+) *field.Error {
+	numberValue, err := intstr.GetScaledValueFromIntOrPercent(intOrStrValue, 100, true)
+	if err != nil {
+		return field.Invalid(
+			valuePath,
+			intOrStrValue,
+			err.Error(),
+		)
+	}
+
+	if numberValue < allowedValueMin {
+		return field.Invalid(
+			valuePath,
+			intOrStrValue,
+			fmt.Sprintf("value cannot be below %v", allowedValueMin),
+		)
+	}
+	return nil
 }
 
 func (w *webhook) validateRequestedFreight(

@@ -5,10 +5,13 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// +kubebuilder:object:root=true
-// +kubebuilder:resource:scope=Namespaced
-// +kubebuilder:subresource:status
-// +kubebuilder:printcolumn:name=Age,type=date,JSONPath=`.metadata.creationTimestamp`
+// Target is not a Kubernetes resource. It lives in Kargo's database and is
+// served by the Kargo API server, which is why this file carries no CRD
+// markers and the type is not registered with the scheme. It keeps the shape
+// of a Kubernetes resource, metadata and all, so that clients and the UI can
+// treat it like one. It deliberately embeds no TypeMeta: controller-gen takes
+// any type with both TypeMeta and ObjectMeta for a kind and would emit a CRD
+// for it.
 
 // Target represents a single destination -- a cluster, for instance -- that
 // Stages promote Freight to. A Target is descriptive: it holds target-specific
@@ -17,7 +20,6 @@ import (
 // effect any promotion itself. Its status records, per governing Stage, what
 // Freight was last promoted to it and how that Freight is faring there.
 type Target struct {
-	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 	// Spec describes the Target.
 	Spec TargetSpec `json:"spec,omitempty"`
@@ -31,6 +33,10 @@ func (t *Target) GetStatus() *TargetStatus {
 
 // TargetSpec describes a Target.
 type TargetSpec struct {
+	// TargetSet names the TargetSet that manages this Target. Every Target is
+	// created by one, which owns its lifecycle, so this is required and does
+	// not change for as long as the Target exists.
+	TargetSet string `json:"targetSet"`
 	// Params is a map of arbitrary, target-specific values. Values may be any
 	// valid JSON -- including nested objects and arrays -- so promotion steps
 	// can reference deeply nested data. Promotion steps of Stages that govern
@@ -126,11 +132,8 @@ func (s *TargetStatus) RemoveStatusForStage(stage string) {
 	delete(s.Stages, stage)
 }
 
-// +kubebuilder:object:root=true
-
 // TargetList is a list of Target resources.
 type TargetList struct {
-	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []Target `json:"items"`
 }

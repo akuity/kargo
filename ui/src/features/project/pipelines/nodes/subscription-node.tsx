@@ -59,7 +59,7 @@ export const SubscriptionNode = (props: { subscription: RepoSubscription }) => {
     >
       {!!repoURL && (
         <Link href={link} target='_blank'>
-          <Tag className='text-[9px] text-wrap' color='blue' bordered={false}>
+          <Tag className='text-[9px] text-wrap' color='blue' variant='filled'>
             {base}
 
             <FontAwesomeIcon icon={faExternalLink} className='ml-1' />
@@ -68,7 +68,7 @@ export const SubscriptionNode = (props: { subscription: RepoSubscription }) => {
       )}
 
       {!!props.subscription?.subscription?.subscriptionType && (
-        <Tag color='blue' className='text-[9px] text-wrap' bordered={false}>
+        <Tag color='blue' className='text-[9px] text-wrap' variant='filled'>
           kind: {props.subscription.subscription?.subscriptionType}
         </Tag>
       )}

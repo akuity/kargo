@@ -264,15 +264,7 @@ func (n *newestFromBranchSelector) evaluateCommitExpression(
 		return true, nil
 	}
 
-	env := map[string]any{
-		"id":         commit.ID,
-		"commitDate": commit.CommitDate,
-		"author":     commit.Author,
-		"committer":  commit.Committer,
-		"subject":    commit.Subject,
-	}
-
-	result, err := expr.Run(n.filterExpression, env)
+	result, err := expr.Run(n.filterExpression, commitFilterEnv(commit))
 	if err != nil {
 		return false, err
 	}

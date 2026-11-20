@@ -19,11 +19,7 @@ var _ MappedNullable = &TargetList{}
 
 // TargetList struct for TargetList
 type TargetList struct {
-	// APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources +optional
-	ApiVersion *string `json:"apiVersion,omitempty"`
 	Items []Target `json:"items,omitempty"`
-	// Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds +optional
-	Kind *string `json:"kind,omitempty"`
 	Metadata *V1ListMeta `json:"metadata,omitempty"`
 }
 
@@ -42,38 +38,6 @@ func NewTargetList() *TargetList {
 func NewTargetListWithDefaults() *TargetList {
 	this := TargetList{}
 	return &this
-}
-
-// GetApiVersion returns the ApiVersion field value if set, zero value otherwise.
-func (o *TargetList) GetApiVersion() string {
-	if o == nil || IsNil(o.ApiVersion) {
-		var ret string
-		return ret
-	}
-	return *o.ApiVersion
-}
-
-// GetApiVersionOk returns a tuple with the ApiVersion field value if set, nil otherwise
-// and a boolean to check if the value has been set.
-func (o *TargetList) GetApiVersionOk() (*string, bool) {
-	if o == nil || IsNil(o.ApiVersion) {
-		return nil, false
-	}
-	return o.ApiVersion, true
-}
-
-// HasApiVersion returns a boolean if a field has been set.
-func (o *TargetList) HasApiVersion() bool {
-	if o != nil && !IsNil(o.ApiVersion) {
-		return true
-	}
-
-	return false
-}
-
-// SetApiVersion gets a reference to the given string and assigns it to the ApiVersion field.
-func (o *TargetList) SetApiVersion(v string) {
-	o.ApiVersion = &v
 }
 
 // GetItems returns the Items field value if set, zero value otherwise.
@@ -106,38 +70,6 @@ func (o *TargetList) HasItems() bool {
 // SetItems gets a reference to the given []Target and assigns it to the Items field.
 func (o *TargetList) SetItems(v []Target) {
 	o.Items = v
-}
-
-// GetKind returns the Kind field value if set, zero value otherwise.
-func (o *TargetList) GetKind() string {
-	if o == nil || IsNil(o.Kind) {
-		var ret string
-		return ret
-	}
-	return *o.Kind
-}
-
-// GetKindOk returns a tuple with the Kind field value if set, nil otherwise
-// and a boolean to check if the value has been set.
-func (o *TargetList) GetKindOk() (*string, bool) {
-	if o == nil || IsNil(o.Kind) {
-		return nil, false
-	}
-	return o.Kind, true
-}
-
-// HasKind returns a boolean if a field has been set.
-func (o *TargetList) HasKind() bool {
-	if o != nil && !IsNil(o.Kind) {
-		return true
-	}
-
-	return false
-}
-
-// SetKind gets a reference to the given string and assigns it to the Kind field.
-func (o *TargetList) SetKind(v string) {
-	o.Kind = &v
 }
 
 // GetMetadata returns the Metadata field value if set, zero value otherwise.
@@ -182,14 +114,8 @@ func (o TargetList) MarshalJSON() ([]byte, error) {
 
 func (o TargetList) ToMap() (map[string]interface{}, error) {
 	toSerialize := map[string]interface{}{}
-	if !IsNil(o.ApiVersion) {
-		toSerialize["apiVersion"] = o.ApiVersion
-	}
 	if !IsNil(o.Items) {
 		toSerialize["items"] = o.Items
-	}
-	if !IsNil(o.Kind) {
-		toSerialize["kind"] = o.Kind
 	}
 	if !IsNil(o.Metadata) {
 		toSerialize["metadata"] = o.Metadata

@@ -31,7 +31,8 @@ func newMigrateCommand() *cobra.Command {
 		Short: "Apply pending database schema migrations and exit",
 		Long: `Apply every database schema migration embedded in this binary that the
 database has not yet seen, then exit. Concurrent invocations serialize on a
-database-level lock, so running more than one at a time is safe.
+lock keyed on the schema being migrated, so running more than one at a time
+is safe.
 
 The database is described by DATABASE_URL, or by DATABASE_HOST and its
 companions. While the database is unreachable or still starting, connection

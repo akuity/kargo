@@ -221,18 +221,7 @@ func (t *tagBasedSelector) filterTagsByExpression(
 
 	filteredTags := make([]git.TagMetadata, 0, len(tags))
 	for _, tag := range tags {
-		env := map[string]any{
-			"tag":         tag.Tag,
-			"id":          tag.CommitID,
-			"creatorDate": tag.CreatorDate,
-			"author":      tag.Author,
-			"committer":   tag.Committer,
-			"subject":     tag.Subject,
-			"tagger":      tag.Tagger,
-			"annotation":  tag.Annotation,
-		}
-
-		result, err := expr.Run(t.filterExpression, env)
+		result, err := expr.Run(t.filterExpression, tagFilterEnv(tag))
 		if err != nil {
 			return nil, fmt.Errorf("error evaluating tag filter expression: %w", err)
 		}

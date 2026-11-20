@@ -309,6 +309,66 @@ func TestStage_IsFreightAvailable(t *testing.T) {
 	}
 }
 
+func TestStage_LastPromotionName(t *testing.T) {
+	testCases := []struct {
+		name     string
+		stage    *Stage
+		expected string
+	}{
+		{
+			name: "stage is nil",
+		},
+		{
+			name:  "nothing recorded",
+			stage: &Stage{},
+		},
+		{
+			name: "last Promotion",
+			stage: &Stage{
+				Status: StageStatus{
+					LastPromotion:        &PromotionReference{Name: "fake-promotion"},
+					LastPromotionRollout: &PromotionRolloutReference{Name: "fake-rollout"},
+					LastPromotionRequest: &PromotionRequestReference{Name: "fake-request"},
+				},
+			},
+			expected: "fake-promotion",
+		},
+		{
+			name: "last PromotionRollout",
+			stage: &Stage{
+				Status: StageStatus{
+					LastPromotionRollout: &PromotionRolloutReference{Name: "fake-rollout"},
+				},
+			},
+			expected: "fake-rollout",
+		},
+		{
+			name: "last PromotionRollout comes before last PromotionRequest",
+			stage: &Stage{
+				Status: StageStatus{
+					LastPromotionRollout: &PromotionRolloutReference{Name: "fake-rollout"},
+					LastPromotionRequest: &PromotionRequestReference{Name: "fake-request"},
+				},
+			},
+			expected: "fake-rollout",
+		},
+		{
+			name: "last PromotionRequest",
+			stage: &Stage{
+				Status: StageStatus{
+					LastPromotionRequest: &PromotionRequestReference{Name: "fake-request"},
+				},
+			},
+			expected: "fake-request",
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			require.Equal(t, testCase.expected, testCase.stage.LastPromotionName())
+		})
+	}
+}
+
 func TestStage_RequestsFreightFromOrigin(t *testing.T) {
 	testOrigin := FreightOrigin{
 		Kind: FreightOriginKindWarehouse,

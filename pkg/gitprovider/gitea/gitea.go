@@ -280,7 +280,7 @@ func (p *provider) ListPullRequests(
 			return nil, err
 		}
 		for _, giteaPR := range giteaPRs {
-			if opts.HeadCommit == "" || giteaPR.Head.Sha == opts.HeadCommit {
+			if opts.HeadCommit == "" || (giteaPR.Head != nil && giteaPR.Head.Sha == opts.HeadCommit) {
 				prs = append(prs, convertGiteaPR(*giteaPR))
 			}
 		}

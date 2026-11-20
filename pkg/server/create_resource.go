@@ -123,6 +123,11 @@ func (s *server) createResource(
 			Error: errSecretManagementDisabled.Error(),
 		}, errSecretManagementDisabled
 	}
+	if obj.GroupVersionKind() == targetGVK {
+		return createResourceResult{
+			Error: errTargetNotKubernetesResource.Error(),
+		}, errTargetNotKubernetesResource
+	}
 
 	// Enforce authorization checks the authorizing client cannot perform
 	// implicitly (e.g. the "promote" verb required to create a Promotion).
@@ -185,8 +190,11 @@ func (s *server) createResource(
 				actor = u.Actor()
 				eventMsg += fmt.Sprintf(" by %q", actor)
 			}
-			evt := event.NewFreightCreated(eventMsg, actor, &freight)
-			if sendErr := s.sender.Send(ctx, evt); sendErr != nil {
+			evt, sendErr := event.NewFreightCreated(eventMsg, actor, &freight)
+			if sendErr == nil {
+				sendErr = s.sender.Send(ctx, evt)
+			}
+			if sendErr != nil {
 				logging.LoggerFromContext(ctx).Error(
 					sendErr, "error sending FreightCreated event")
 			}

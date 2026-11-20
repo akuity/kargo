@@ -52,7 +52,7 @@ export const FreightDetails = ({
     <Drawer
       open={!!freight}
       onClose={onClose}
-      width='80%'
+      size='80%'
       title={alias || freight?.metadata?.name}
       extra={
         freight && (

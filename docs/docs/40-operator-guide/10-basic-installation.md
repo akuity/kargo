@@ -38,6 +38,9 @@ You will need:
 
 - [Helm](https://helm.sh/docs/): These instructions were tested with v3.13.1.
 
+- The [Kargo CLI](../50-user-guide/05-cli/10-installation.md), to hash the
+  admin account's password.
+
 - A Kubernetes cluster with [cert-manager](https://cert-manager.io/)
   pre-installed.
 
@@ -89,7 +92,7 @@ These instructions were tested with:
     ```console
     pass=$(openssl rand -base64 48 | tr -d "=+/" | head -c 32)
     echo "Password: $pass"
-    hashed_pass=$(htpasswd -bnBC 10 "" $pass | tr -d ':\n')
+    hashed_pass=$(kargo hash-password --password "$pass")
     signing_key=$(openssl rand -base64 48 | tr -d "=+/" | head -c 32)
     db_pass=$(openssl rand -base64 48 | tr -d "=+/" | head -c 32)
     ```
@@ -134,8 +137,8 @@ On every install and upgrade, the chart runs a Job that applies any pending
 database schema migrations. The migrations are embedded in the Kargo image,
 and the Job applies them with that image's `migrate` subcommand, so the
 schema it produces is the one the installed version expects. It waits for the
-database to accept connections, serializes with any other runner on a
-database-level lock, and leaves its Pod in place after finishing so that its
+database to accept connections, serializes with any other runner against the
+same schema on a lock, and leaves its Pod in place after finishing so that its
 logs can be inspected. The next upgrade replaces the Job, and the previous
 one is pruned with it.
 

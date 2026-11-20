@@ -76,7 +76,7 @@ func CreateKindCluster(ctx context.Context, cfg *envconf.Config) (context.Contex
 
 	tempdir := ctx.Value(TmpDirKey)
 	if tempdir == nil {
-		return ctx, fmt.Errorf("Temp dir is not set up. Cannot create kubeconfig")
+		return ctx, fmt.Errorf("temp dir is not set up; cannot create kubeconfig")
 	}
 
 	kubeconfig := filepath.Join(tempdir.(string), "kubeconfig.yaml")
@@ -259,7 +259,11 @@ func InstallArgoRollouts(ctx context.Context, cfg *envconf.Config) (context.Cont
 		namespace:   optionalString(ctx, []string{"argo-rollouts", "namespace"}, "argo-rollouts"),
 		version:     optionalString(ctx, []string{"argo-rollouts", "version"}, ""),
 		repoName:    optionalString(ctx, []string{"argo-rollouts", "chart_repo_name"}, "argo"),
-		repoURL:     optionalString(ctx, []string{"argo-rollouts", "chart_repo_url"}, "https://argoproj.github.io/argo-helm"),
+		repoURL: optionalString(
+			ctx,
+			[]string{"argo-rollouts", "chart_repo_url"},
+			"https://argoproj.github.io/argo-helm",
+		),
 		timeout:     optionalString(ctx, []string{"argo-rollouts", "timeout"}, "10m"),
 		valuesFiles: expandHomeAll(optionalStringSlice(ctx, []string{"argo-rollouts", "values_files"})),
 		setValues:   optionalStringSlice(ctx, []string{"argo-rollouts", "set"}),
@@ -279,7 +283,7 @@ func portForward(ctx context.Context, kubeconfig, namespace, service string, out
 	// FIXME: replace that with goroutine and error channels?
 	// FIXME: implement forwarding to an non-predefined port
 	cmd := fmt.Sprintf("sh -c \"kubectl port-forward --kubeconfig %s --namespace %s %s %d:%d > /dev/null 2>&1 &\"",
-		 kubeconfig, namespace, service, outport, inport)
+		kubeconfig, namespace, service, outport, inport)
 
 	fmt.Printf("Port forwarding %s to %d\n", service, outport)
 

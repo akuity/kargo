@@ -27,4 +27,7 @@ data:
   TLS_CERT_PATH: /etc/kargo/tls.crt
   TLS_KEY_PATH: /etc/kargo/tls.key
   {{- end }}
+  {{- if .Values.externalWebhooksServer.metrics.enabled }}
+  METRICS_BIND_ADDRESS: ":{{ .Values.externalWebhooksServer.metrics.service.servicePort }}"
+  {{- end }}
 {{- end }}

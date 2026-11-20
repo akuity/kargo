@@ -17,7 +17,7 @@ import (
 	"github.com/akuity/kargo/pkg/api"
 	argocd "github.com/akuity/kargo/pkg/controller/argocd/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/promotion"
-	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
+	"github.com/akuity/kargo/pkg/x/promotion/stepconfig"
 )
 
 // argocdScheme is a runtime scheme with Argo CD types registered, used for
@@ -134,7 +134,7 @@ func Test_argocdWaiter_run(t *testing.T) {
 		name       string
 		runner     *argocdWaiter
 		stepCtx    *promotion.StepContext
-		stepCfg    builtin.ArgoCDWaitConfig
+		stepCfg    stepconfig.ArgoCDWaitConfig
 		assertions func(*testing.T, promotion.StepResult, error)
 	}{
 		{
@@ -143,8 +143,8 @@ func Test_argocdWaiter_run(t *testing.T) {
 				argocdClient: nil,
 			},
 			stepCtx: &promotion.StepContext{},
-			stepCfg: builtin.ArgoCDWaitConfig{
-				Apps: []builtin.ArgoCDAppWait{{Name: "my-app"}},
+			stepCfg: stepconfig.ArgoCDWaitConfig{
+				Apps: []stepconfig.ArgoCDAppWait{{Name: "my-app"}},
 			},
 			assertions: func(t *testing.T, res promotion.StepResult, err error) {
 				assert.Equal(t, kargoapi.PromotionStepStatusErrored, res.Status)
@@ -157,14 +157,14 @@ func Test_argocdWaiter_run(t *testing.T) {
 				argocdClient: fake.NewFakeClient(),
 				getApplicationsFn: func(
 					context.Context, client.Client,
-					string, string, *builtin.ArgoCDAppSelector,
+					string, string, *stepconfig.ArgoCDAppSelector,
 				) ([]*argocd.Application, error) {
 					return nil, errors.New("something went wrong")
 				},
 			},
 			stepCtx: &promotion.StepContext{},
-			stepCfg: builtin.ArgoCDWaitConfig{
-				Apps: []builtin.ArgoCDAppWait{{Name: "my-app"}},
+			stepCfg: stepconfig.ArgoCDWaitConfig{
+				Apps: []stepconfig.ArgoCDAppWait{{Name: "my-app"}},
 			},
 			assertions: func(t *testing.T, res promotion.StepResult, err error) {
 				assert.Equal(t, kargoapi.PromotionStepStatusErrored, res.Status)
@@ -180,7 +180,7 @@ func Test_argocdWaiter_run(t *testing.T) {
 				}),
 				checkAppReadinessFn: func(
 					context.Context, *argocd.Application,
-					[]builtin.WaitFor, string,
+					[]stepconfig.WaitFor, string,
 				) (bool, string, error) {
 					return false, "", &promotion.TerminalError{
 						Err: errors.New("bad condition"),
@@ -188,8 +188,8 @@ func Test_argocdWaiter_run(t *testing.T) {
 				},
 			},
 			stepCtx: &promotion.StepContext{},
-			stepCfg: builtin.ArgoCDWaitConfig{
-				Apps: []builtin.ArgoCDAppWait{{Name: "my-app"}},
+			stepCfg: stepconfig.ArgoCDWaitConfig{
+				Apps: []stepconfig.ArgoCDAppWait{{Name: "my-app"}},
 			},
 			assertions: func(t *testing.T, res promotion.StepResult, err error) {
 				assert.Equal(t, kargoapi.PromotionStepStatusErrored, res.Status)
@@ -214,14 +214,14 @@ func Test_argocdWaiter_run(t *testing.T) {
 				}),
 				checkAppReadinessFn: func(
 					context.Context, *argocd.Application,
-					[]builtin.WaitFor, string,
+					[]stepconfig.WaitFor, string,
 				) (bool, string, error) {
 					return false, "Progressing", nil
 				},
 			},
 			stepCtx: &promotion.StepContext{},
-			stepCfg: builtin.ArgoCDWaitConfig{
-				Apps: []builtin.ArgoCDAppWait{{Name: "my-app"}},
+			stepCfg: stepconfig.ArgoCDWaitConfig{
+				Apps: []stepconfig.ArgoCDAppWait{{Name: "my-app"}},
 			},
 			assertions: func(t *testing.T, res promotion.StepResult, err error) {
 				require.NoError(t, err)
@@ -237,20 +237,20 @@ func Test_argocdWaiter_run(t *testing.T) {
 				argocdClient: fake.NewFakeClient(),
 				getApplicationsFn: func(
 					_ context.Context, _ client.Client,
-					name, _ string, _ *builtin.ArgoCDAppSelector,
+					name, _ string, _ *stepconfig.ArgoCDAppSelector,
 				) ([]*argocd.Application, error) {
 					return []*argocd.Application{{ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: "argocd"}}}, nil
 				},
 				checkAppReadinessFn: func(
 					_ context.Context, app *argocd.Application,
-					_ []builtin.WaitFor, _ string,
+					_ []stepconfig.WaitFor, _ string,
 				) (bool, string, error) {
 					return app.Name == "app-a", "", nil
 				},
 			},
 			stepCtx: &promotion.StepContext{},
-			stepCfg: builtin.ArgoCDWaitConfig{
-				Apps: []builtin.ArgoCDAppWait{{Name: "app-a"}, {Name: "app-b"}},
+			stepCfg: stepconfig.ArgoCDWaitConfig{
+				Apps: []stepconfig.ArgoCDAppWait{{Name: "app-a"}, {Name: "app-b"}},
 			},
 			assertions: func(t *testing.T, res promotion.StepResult, err error) {
 				require.NoError(t, err)
@@ -275,14 +275,14 @@ func Test_argocdWaiter_run(t *testing.T) {
 				}),
 				checkAppReadinessFn: func(
 					context.Context, *argocd.Application,
-					[]builtin.WaitFor, string,
+					[]stepconfig.WaitFor, string,
 				) (bool, string, error) {
 					return true, "Healthy", nil
 				},
 			},
 			stepCtx: &promotion.StepContext{},
-			stepCfg: builtin.ArgoCDWaitConfig{
-				Apps: []builtin.ArgoCDAppWait{{Name: "my-app"}},
+			stepCfg: stepconfig.ArgoCDWaitConfig{
+				Apps: []stepconfig.ArgoCDAppWait{{Name: "my-app"}},
 			},
 			assertions: func(t *testing.T, res promotion.StepResult, err error) {
 				require.NoError(t, err)
@@ -305,7 +305,7 @@ func Test_argocdWaiter_run(t *testing.T) {
 				}),
 				checkAppReadinessFn: func(
 					_ context.Context, _ *argocd.Application,
-					_ []builtin.WaitFor, prevStatus string,
+					_ []stepconfig.WaitFor, prevStatus string,
 				) (bool, string, error) {
 					assert.Equal(t, "Progressing", prevStatus)
 					return true, "Healthy", nil
@@ -321,8 +321,8 @@ func Test_argocdWaiter_run(t *testing.T) {
 					},
 				},
 			},
-			stepCfg: builtin.ArgoCDWaitConfig{
-				Apps: []builtin.ArgoCDAppWait{{Name: "my-app"}},
+			stepCfg: stepconfig.ArgoCDWaitConfig{
+				Apps: []stepconfig.ArgoCDAppWait{{Name: "my-app"}},
 			},
 			assertions: func(t *testing.T, res promotion.StepResult, err error) {
 				require.NoError(t, err)
@@ -359,7 +359,7 @@ func Test_argocdWaiter_checkAppReadiness(t *testing.T) {
 		name             string
 		app              *argocd.Application
 		storedApp        *argocd.Application // pre-loaded into fake client for refresh patch
-		waitFor          []builtin.WaitFor
+		waitFor          []stepconfig.WaitFor
 		prevHealthStatus string
 		assertions       func(*testing.T, bool, string, error)
 	}{
@@ -511,7 +511,7 @@ func Test_argocdWaiter_checkAppReadiness(t *testing.T) {
 					Sync:   argocd.SyncStatus{Status: argocd.SyncStatusCodeSynced},
 				},
 			},
-			waitFor: []builtin.WaitFor{builtin.Sync},
+			waitFor: []stepconfig.WaitFor{stepconfig.Sync},
 			assertions: func(t *testing.T, ready bool, _ string, err error) {
 				assert.True(t, ready)
 				require.NoError(t, err)
@@ -525,7 +525,7 @@ func Test_argocdWaiter_checkAppReadiness(t *testing.T) {
 					Sync:   argocd.SyncStatus{Status: argocd.SyncStatusCodeSynced},
 				},
 			},
-			waitFor: []builtin.WaitFor{builtin.Health, builtin.Suspended},
+			waitFor: []stepconfig.WaitFor{stepconfig.Health, stepconfig.Suspended},
 			assertions: func(t *testing.T, ready bool, _ string, err error) {
 				assert.True(t, ready)
 				require.NoError(t, err)
@@ -573,7 +573,7 @@ func Test_argocdWaiter_checkAppReadiness(t *testing.T) {
 					},
 				},
 			},
-			waitFor: []builtin.WaitFor{builtin.Operation},
+			waitFor: []stepconfig.WaitFor{stepconfig.Operation},
 			assertions: func(t *testing.T, ready bool, _ string, err error) {
 				assert.True(t, ready)
 				require.NoError(t, err)
@@ -608,11 +608,11 @@ func Test_argocdWaiter_checkAppReadiness(t *testing.T) {
 // given applications.
 func appsFn(apps ...*argocd.Application) func(
 	context.Context, client.Client,
-	string, string, *builtin.ArgoCDAppSelector,
+	string, string, *stepconfig.ArgoCDAppSelector,
 ) ([]*argocd.Application, error) {
 	return func(
 		context.Context, client.Client,
-		string, string, *builtin.ArgoCDAppSelector,
+		string, string, *stepconfig.ArgoCDAppSelector,
 	) ([]*argocd.Application, error) {
 		return apps, nil
 	}

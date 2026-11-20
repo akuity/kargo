@@ -25,6 +25,8 @@ type PromotionStep struct {
 	Config any `json:"config,omitempty"`
 	// ContinueOnError is a boolean value that, if set to true, will cause the Promotion to continue executing the next step even if this step fails. It also will not permit this failure to impact the overall status of the Promotion.
 	ContinueOnError *bool `json:"continueOnError,omitempty"`
+	// Description is a detail of the step's purpose.  +kubebuilder:validation:Optional +kubebuilder:validation:MinLength=1 +kubebuilder:validation:XValidation:message=\"description must be 256 characters or fewer\",rule=\"self.size() <= 256\"
+	Description *string `json:"description,omitempty"`
 	// If is an optional expression that, if present, must evaluate to a boolean value. If the expression evaluates to false, the step will be skipped. If the expression does not evaluate to a boolean value, the step will be considered to have failed.
 	If *string `json:"if,omitempty"`
 	// Retry is the retry policy for this step.
@@ -148,6 +150,38 @@ func (o *PromotionStep) HasContinueOnError() bool {
 // SetContinueOnError gets a reference to the given bool and assigns it to the ContinueOnError field.
 func (o *PromotionStep) SetContinueOnError(v bool) {
 	o.ContinueOnError = &v
+}
+
+// GetDescription returns the Description field value if set, zero value otherwise.
+func (o *PromotionStep) GetDescription() string {
+	if o == nil || IsNil(o.Description) {
+		var ret string
+		return ret
+	}
+	return *o.Description
+}
+
+// GetDescriptionOk returns a tuple with the Description field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *PromotionStep) GetDescriptionOk() (*string, bool) {
+	if o == nil || IsNil(o.Description) {
+		return nil, false
+	}
+	return o.Description, true
+}
+
+// HasDescription returns a boolean if a field has been set.
+func (o *PromotionStep) HasDescription() bool {
+	if o != nil && !IsNil(o.Description) {
+		return true
+	}
+
+	return false
+}
+
+// SetDescription gets a reference to the given string and assigns it to the Description field.
+func (o *PromotionStep) SetDescription(v string) {
+	o.Description = &v
 }
 
 // GetIf returns the If field value if set, zero value otherwise.
@@ -328,6 +362,9 @@ func (o PromotionStep) ToMap() (map[string]interface{}, error) {
 	}
 	if !IsNil(o.ContinueOnError) {
 		toSerialize["continueOnError"] = o.ContinueOnError
+	}
+	if !IsNil(o.Description) {
+		toSerialize["description"] = o.Description
 	}
 	if !IsNil(o.If) {
 		toSerialize["if"] = o.If

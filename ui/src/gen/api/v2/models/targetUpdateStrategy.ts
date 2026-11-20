@@ -9,7 +9,17 @@
 export interface TargetUpdateStrategy {
   /**
    * MaxConcurrent specifies a number of targets which can be promoted to at the same time
-   * Zero means there is no limit (default)
+   * Value can be an absolute number (e.g.: 5) or a percentage of targets selected by the stage (e.g.: 10%).
+   * Absolute number is calculated from percentage by rounding up to a minimum of 1.
+   * Percentage value cannot be 0%. Number value cannot be 0.
+   * If omitted or empty string, no limit is applied (default).
    */
-  maxConcurrent?: number;
+  maxConcurrent?: unknown;
+  /**
+   * MaxFailures specifies a number of target promotions which can fail before PromotionRequest is considered failed.
+   * Specifies a tolerable number, N failing promotions with maxFailures: N is a success, N+1 is a failure.
+   * Value can be an absolute number (e.g.: 5) or a percentage of targets selected by the stage (e.g.: 10%).
+   * Absolute number is calculated from percentage by rounding up to a minimum of 1. Default value is 0.
+   */
+  maxFailures?: unknown;
 }

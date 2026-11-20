@@ -39,6 +39,17 @@
                         "description": "ContinueOnError is a boolean value that, if set to true, will cause the\nPromotion to continue executing the next step even if this step fails. It\nalso will not permit this failure to impact the overall status of the\nPromotion.",
                         "type": "boolean"
                       },
+                      "description": {
+                        "description": "Description is a detail of the step's purpose.",
+                        "minLength": 1,
+                        "type": "string",
+                        "x-kubernetes-validations": [
+                          {
+                            "message": "description must be 256 characters or fewer",
+                            "rule": "self.size() <= 256"
+                          }
+                        ]
+                      },
                       "if": {
                         "description": "If is an optional expression that, if present, must evaluate to a boolean\nvalue. If the expression evaluates to false, the step will be skipped.\nIf the expression does not evaluate to a boolean value, the step will be\nconsidered to have failed.",
                         "type": "string"
@@ -303,14 +314,71 @@
               "x-kubernetes-list-type": "atomic"
             },
             "updateStrategy": {
-              "description": "UpdateStrategy configures the pace of updating the targets",
+              "description": "UpdateStrategy configures the pace of promoting the targets",
               "properties": {
                 "maxConcurrent": {
-                  "description": "MaxConcurrent specifies a number of targets which can be promoted to at the same time\nZero means there is no limit (default)",
-                  "format": "int64",
-                  "maximum": 9223372036854776000,
-                  "minimum": -9223372036854776000,
-                  "type": "integer"
+                  "anyOf": [
+                    {
+                      "type": "integer"
+                    },
+                    {
+                      "type": "string"
+                    }
+                  ],
+                  "description": "MaxConcurrent specifies a number of targets which can be promoted to at the same time\nValue can be an absolute number (e.g.: 5) or a percentage of targets selected by the stage (e.g.: 10%).\nAbsolute number is calculated from percentage by rounding up to a minimum of 1.\nPercentage value cannot be 0%. Number value cannot be 0.\nIf omitted or empty string, no limit is applied (default).",
+                  "x-kubernetes-int-or-string": true
+                },
+                "maxFailures": {
+                  "anyOf": [
+                    {
+                      "type": "integer"
+                    },
+                    {
+                      "type": "string"
+                    }
+                  ],
+                  "description": "MaxFailures specifies a number of target promotions which can fail before PromotionRequest is considered failed.\nSpecifies a tolerable number, N failing promotions with maxFailures: N is a success, N+1 is a failure.\nValue can be an absolute number (e.g.: 5) or a percentage of targets selected by the stage (e.g.: 10%).\nAbsolute number is calculated from percentage by rounding up to a minimum of 1. Default value is 0.",
+                  "x-kubernetes-int-or-string": true
+                }
+              },
+              "type": "object"
+            },
+            "verification": {
+              "description": "Verification configures mode and pace of target promotion verifications",
+              "properties": {
+                "runMode": {
+                  "description": "VerificationRunMode controls whether verifications run per-target or per-stage",
+                  "type": "string"
+                },
+                "updateStrategy": {
+                  "description": "UpdateStrategy configures the pace of verification runs",
+                  "properties": {
+                    "maxConcurrent": {
+                      "anyOf": [
+                        {
+                          "type": "integer"
+                        },
+                        {
+                          "type": "string"
+                        }
+                      ],
+                      "description": "MaxConcurrent specifies a number of targets which can be promoted to at the same time\nValue can be an absolute number (e.g.: 5) or a percentage of targets selected by the stage (e.g.: 10%).\nAbsolute number is calculated from percentage by rounding up to a minimum of 1.\nPercentage value cannot be 0%. Number value cannot be 0.\nIf omitted or empty string, no limit is applied (default).",
+                      "x-kubernetes-int-or-string": true
+                    },
+                    "maxFailures": {
+                      "anyOf": [
+                        {
+                          "type": "integer"
+                        },
+                        {
+                          "type": "string"
+                        }
+                      ],
+                      "description": "MaxFailures specifies a number of target promotions which can fail before PromotionRequest is considered failed.\nSpecifies a tolerable number, N failing promotions with maxFailures: N is a success, N+1 is a failure.\nValue can be an absolute number (e.g.: 5) or a percentage of targets selected by the stage (e.g.: 10%).\nAbsolute number is calculated from percentage by rounding up to a minimum of 1. Default value is 0.",
+                      "x-kubernetes-int-or-string": true
+                    }
+                  },
+                  "type": "object"
                 }
               },
               "type": "object"
@@ -1087,6 +1155,10 @@
                           "analysisRun": {
                             "description": "AnalysisRun is a reference to the Argo Rollouts AnalysisRun that implements\nthe Verification process.",
                             "properties": {
+                              "kind": {
+                                "description": "Kind is a string representation of GroupVersionKind describing this run\nFor classic analysis run it is AnalysisRunKindRun or AnalysisRunKindLegacy (empty)",
+                                "type": "string"
+                              },
                               "name": {
                                 "description": "Name is the name of the AnalysisRun.",
                                 "type": "string"
@@ -1122,6 +1194,10 @@
                           },
                           "phase": {
                             "description": "Phase describes the current phase of the Verification process. Generally,\nthis will be a reflection of the underlying AnalysisRun's phase, however,\nthere are exceptions to this, such as in the case where an AnalysisRun\ncannot be launched successfully.",
+                            "type": "string"
+                          },
+                          "promotionName": {
+                            "description": "PromotionName is an optional name of promotion which triggered verification",
                             "type": "string"
                           },
                           "startTime": {
@@ -1596,6 +1672,10 @@
                       "analysisRun": {
                         "description": "AnalysisRun is a reference to the Argo Rollouts AnalysisRun that implements\nthe Verification process.",
                         "properties": {
+                          "kind": {
+                            "description": "Kind is a string representation of GroupVersionKind describing this run\nFor classic analysis run it is AnalysisRunKindRun or AnalysisRunKindLegacy (empty)",
+                            "type": "string"
+                          },
                           "name": {
                             "description": "Name is the name of the AnalysisRun.",
                             "type": "string"
@@ -1631,6 +1711,10 @@
                       },
                       "phase": {
                         "description": "Phase describes the current phase of the Verification process. Generally,\nthis will be a reflection of the underlying AnalysisRun's phase, however,\nthere are exceptions to this, such as in the case where an AnalysisRun\ncannot be launched successfully.",
+                        "type": "string"
+                      },
+                      "promotionName": {
+                        "description": "PromotionName is an optional name of promotion which triggered verification",
                         "type": "string"
                       },
                       "startTime": {
@@ -1909,6 +1993,10 @@
                     "analysisRun": {
                       "description": "AnalysisRun is a reference to the Argo Rollouts AnalysisRun that implements\nthe Verification process.",
                       "properties": {
+                        "kind": {
+                          "description": "Kind is a string representation of GroupVersionKind describing this run\nFor classic analysis run it is AnalysisRunKindRun or AnalysisRunKindLegacy (empty)",
+                          "type": "string"
+                        },
                         "name": {
                           "description": "Name is the name of the AnalysisRun.",
                           "type": "string"
@@ -1944,6 +2032,10 @@
                     },
                     "phase": {
                       "description": "Phase describes the current phase of the Verification process. Generally,\nthis will be a reflection of the underlying AnalysisRun's phase, however,\nthere are exceptions to this, such as in the case where an AnalysisRun\ncannot be launched successfully.",
+                      "type": "string"
+                    },
+                    "promotionName": {
+                      "description": "PromotionName is an optional name of promotion which triggered verification",
                       "type": "string"
                     },
                     "startTime": {
@@ -2542,6 +2634,10 @@
                           "analysisRun": {
                             "description": "AnalysisRun is a reference to the Argo Rollouts AnalysisRun that implements\nthe Verification process.",
                             "properties": {
+                              "kind": {
+                                "description": "Kind is a string representation of GroupVersionKind describing this run\nFor classic analysis run it is AnalysisRunKindRun or AnalysisRunKindLegacy (empty)",
+                                "type": "string"
+                              },
                               "name": {
                                 "description": "Name is the name of the AnalysisRun.",
                                 "type": "string"
@@ -2577,6 +2673,10 @@
                           },
                           "phase": {
                             "description": "Phase describes the current phase of the Verification process. Generally,\nthis will be a reflection of the underlying AnalysisRun's phase, however,\nthere are exceptions to this, such as in the case where an AnalysisRun\ncannot be launched successfully.",
+                            "type": "string"
+                          },
+                          "promotionName": {
+                            "description": "PromotionName is an optional name of promotion which triggered verification",
                             "type": "string"
                           },
                           "startTime": {
@@ -3051,6 +3151,10 @@
                       "analysisRun": {
                         "description": "AnalysisRun is a reference to the Argo Rollouts AnalysisRun that implements\nthe Verification process.",
                         "properties": {
+                          "kind": {
+                            "description": "Kind is a string representation of GroupVersionKind describing this run\nFor classic analysis run it is AnalysisRunKindRun or AnalysisRunKindLegacy (empty)",
+                            "type": "string"
+                          },
                           "name": {
                             "description": "Name is the name of the AnalysisRun.",
                             "type": "string"
@@ -3088,6 +3192,10 @@
                         "description": "Phase describes the current phase of the Verification process. Generally,\nthis will be a reflection of the underlying AnalysisRun's phase, however,\nthere are exceptions to this, such as in the case where an AnalysisRun\ncannot be launched successfully.",
                         "type": "string"
                       },
+                      "promotionName": {
+                        "description": "PromotionName is an optional name of promotion which triggered verification",
+                        "type": "string"
+                      },
                       "startTime": {
                         "description": "StartTime is the time at which the Verification process was started.",
                         "format": "date-time",
@@ -3119,6 +3227,40 @@
           },
           "required": [
             "name"
+          ],
+          "type": "object"
+        },
+        "lastPromotionRollout": {
+          "description": "LastPromotionRollout is a reference to the last PromotionRollout whose\noutcome this Stage has recorded. It is absent for a Stage that governs no\nTargets, and only ever moves forward: its number marks how far through\nits PromotionRollouts the Stage has read.",
+          "properties": {
+            "finishedAt": {
+              "description": "FinishedAt is the time at which the PromotionRollout completed.",
+              "format": "date-time",
+              "type": "string"
+            },
+            "message": {
+              "description": "Message is a human-readable description of how the PromotionRollout\nended.",
+              "type": "string"
+            },
+            "name": {
+              "description": "Name is the name of the PromotionRollout.",
+              "type": "string"
+            },
+            "number": {
+              "description": "Number is the PromotionRollout's position among its Stage's rollouts,\ncounting from 1.",
+              "format": "int64",
+              "maximum": 9223372036854776000,
+              "minimum": 1,
+              "type": "integer"
+            },
+            "phase": {
+              "description": "Phase is a high-level summary of the PromotionRollout's lifecycle.",
+              "type": "string"
+            }
+          },
+          "required": [
+            "name",
+            "number"
           ],
           "type": "object"
         },

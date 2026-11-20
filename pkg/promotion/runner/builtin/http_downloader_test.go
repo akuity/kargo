@@ -17,7 +17,7 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/promotion"
-	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
+	"github.com/akuity/kargo/pkg/x/promotion/stepconfig"
 )
 
 func Test_httpDownloader_validate(t *testing.T) {
@@ -194,14 +194,14 @@ func Test_httpDownloader_validate(t *testing.T) {
 func Test_httpDownloader_run(t *testing.T) {
 	tests := []struct {
 		name       string
-		cfg        builtin.HTTPDownloadConfig
+		cfg        stepconfig.HTTPDownloadConfig
 		handler    http.HandlerFunc
 		setupFile  func(t *testing.T, workDir, outPath string)           // Setup existing file if needed
 		assertions func(*testing.T, promotion.StepResult, error, string) // workDir passed for file checks
 	}{
 		{
 			name: "successful download",
-			cfg: builtin.HTTPDownloadConfig{
+			cfg: stepconfig.HTTPDownloadConfig{
 				OutPath: "test-file.txt",
 			},
 			handler: func(w http.ResponseWriter, _ *http.Request) {
@@ -220,7 +220,7 @@ func Test_httpDownloader_run(t *testing.T) {
 		},
 		{
 			name: "successful download with nested path",
-			cfg: builtin.HTTPDownloadConfig{
+			cfg: stepconfig.HTTPDownloadConfig{
 				OutPath: "nested/dir/test-file.txt",
 			},
 			handler: func(w http.ResponseWriter, _ *http.Request) {
@@ -239,7 +239,7 @@ func Test_httpDownloader_run(t *testing.T) {
 		},
 		{
 			name: "file already exists and overwrite not allowed",
-			cfg: builtin.HTTPDownloadConfig{
+			cfg: stepconfig.HTTPDownloadConfig{
 				OutPath:        "existing-file.txt",
 				AllowOverwrite: false,
 			},
@@ -264,7 +264,7 @@ func Test_httpDownloader_run(t *testing.T) {
 		},
 		{
 			name: "file already exists and overwrite allowed",
-			cfg: builtin.HTTPDownloadConfig{
+			cfg: stepconfig.HTTPDownloadConfig{
 				OutPath:        "existing-file.txt",
 				AllowOverwrite: true,
 			},
@@ -288,7 +288,7 @@ func Test_httpDownloader_run(t *testing.T) {
 		},
 		{
 			name: "HTTP error response",
-			cfg: builtin.HTTPDownloadConfig{
+			cfg: stepconfig.HTTPDownloadConfig{
 				OutPath: "test-file.txt",
 			},
 			handler: func(w http.ResponseWriter, _ *http.Request) {
@@ -305,7 +305,7 @@ func Test_httpDownloader_run(t *testing.T) {
 		},
 		{
 			name: "download exceeds size limit via Content-Length",
-			cfg: builtin.HTTPDownloadConfig{
+			cfg: stepconfig.HTTPDownloadConfig{
 				OutPath: "large-file.txt",
 			},
 			handler: func(w http.ResponseWriter, _ *http.Request) {
@@ -321,13 +321,13 @@ func Test_httpDownloader_run(t *testing.T) {
 		},
 		{
 			name: "download with custom headers and query params",
-			cfg: builtin.HTTPDownloadConfig{
+			cfg: stepconfig.HTTPDownloadConfig{
 				OutPath: "test-file.txt",
-				Headers: []builtin.HTTPDownloadConfigHeader{{
+				Headers: []stepconfig.HTTPDownloadConfigHeader{{
 					Name:  "Authorization",
 					Value: "Bearer token123",
 				}},
-				QueryParams: []builtin.HTTPDownloadConfigQueryParam{{
+				QueryParams: []stepconfig.HTTPDownloadConfigQueryParam{{
 					Name:  "version",
 					Value: "latest",
 				}},
@@ -366,10 +366,7 @@ func Test_httpDownloader_run(t *testing.T) {
 			t.Cleanup(srv.Close)
 			tt.cfg.URL = srv.URL
 
-			// Create step context
-			stepCtx := &promotion.StepContext{
-				WorkDir: workDir,
-			}
+			stepCtx := newTestStepContext(t, workDir)
 
 			// Run the downloader
 			d := &httpDownloader{}
@@ -381,13 +378,13 @@ func Test_httpDownloader_run(t *testing.T) {
 
 func Test_httpDownloader_buildRequest(t *testing.T) {
 	d := &httpDownloader{}
-	req, err := d.buildRequest(builtin.HTTPDownloadConfig{
+	req, err := d.buildRequest(stepconfig.HTTPDownloadConfig{
 		URL: "http://example.com/file.txt",
-		Headers: []builtin.HTTPDownloadConfigHeader{{
+		Headers: []stepconfig.HTTPDownloadConfigHeader{{
 			Name:  "Authorization",
 			Value: "Bearer token123",
 		}},
-		QueryParams: []builtin.HTTPDownloadConfigQueryParam{{
+		QueryParams: []stepconfig.HTTPDownloadConfigQueryParam{{
 			Name:  "version",
 			Value: "some value", // We want to be sure this gets url-encoded
 		}},
@@ -401,7 +398,7 @@ func Test_httpDownloader_buildRequest(t *testing.T) {
 func Test_httpDownloader_buildHTTPClient(t *testing.T) {
 	tests := []struct {
 		name       string
-		cfg        builtin.HTTPDownloadConfig
+		cfg        stepconfig.HTTPDownloadConfig
 		assertions func(*testing.T, *http.Client, error)
 	}{
 		{
@@ -417,7 +414,7 @@ func Test_httpDownloader_buildHTTPClient(t *testing.T) {
 		},
 		{
 			name: "with insecureSkipTLSVerify",
-			cfg: builtin.HTTPDownloadConfig{
+			cfg: stepconfig.HTTPDownloadConfig{
 				InsecureSkipTLSVerify: true,
 			},
 			assertions: func(t *testing.T, client *http.Client, err error) {
@@ -431,7 +428,7 @@ func Test_httpDownloader_buildHTTPClient(t *testing.T) {
 		},
 		{
 			name: "with custom timeout",
-			cfg: builtin.HTTPDownloadConfig{
+			cfg: stepconfig.HTTPDownloadConfig{
 				Timeout: "30s",
 			},
 			assertions: func(t *testing.T, client *http.Client, err error) {
@@ -442,7 +439,7 @@ func Test_httpDownloader_buildHTTPClient(t *testing.T) {
 		},
 		{
 			name: "with invalid timeout",
-			cfg: builtin.HTTPDownloadConfig{
+			cfg: stepconfig.HTTPDownloadConfig{
 				Timeout: "invalid",
 			},
 			assertions: func(t *testing.T, _ *http.Client, err error) {
@@ -524,7 +521,7 @@ func Test_httpDownloader_downloadToFile(t *testing.T) {
 
 			// Download the file
 			d := &httpDownloader{}
-			err := d.downloadToFile(t.Context(), resp, outPath)
+			err := d.downloadToFile(t.Context(), resp, newTestRoot(t, tempDir), "downloaded-file.txt")
 			tt.assertions(t, err, outPath)
 		})
 	}
@@ -562,7 +559,7 @@ func Test_httpDownloader_downloadToFile_contextCancellation(t *testing.T) {
 	}()
 
 	d := &httpDownloader{}
-	err := d.downloadToFile(ctx, resp, outPath)
+	err := d.downloadToFile(ctx, resp, newTestRoot(t, tempDir), "interrupted-file.txt")
 
 	require.ErrorContains(t, err, "download canceled")
 
@@ -591,7 +588,7 @@ func Test_httpDownloader_downloadToFile_sizeExceeded(t *testing.T) {
 	outPath := filepath.Join(tempDir, "large-file.txt")
 
 	d := &httpDownloader{}
-	err := d.downloadToFile(t.Context(), resp, outPath)
+	err := d.downloadToFile(t.Context(), resp, newTestRoot(t, tempDir), "large-file.txt")
 
 	require.ErrorContains(t, err, "download exceeds limit")
 
@@ -622,4 +619,43 @@ func (sr *slowReader) Read(p []byte) (n int, err error) {
 	}
 
 	return 0, nil
+}
+
+func Test_httpDownloader_run_escapingSymlink(t *testing.T) {
+	workDir, outside := escapingWorkspace(t)
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write([]byte("content"))
+	}))
+	t.Cleanup(srv.Close)
+	res, err := (&httpDownloader{}).run(
+		t.Context(),
+		newTestStepContext(t, workDir),
+		stepconfig.HTTPDownloadConfig{URL: srv.URL, OutPath: "out/file.txt"},
+	)
+	require.ErrorContains(t, err, "path escapes from parent")
+	require.Equal(t, kargoapi.PromotionStepStatusErrored, res.Status)
+	require.NoFileExists(t, filepath.Join(outside, "file.txt"))
+}
+
+func Test_httpDownloader_run_symlinkedOutPath(t *testing.T) {
+	workDir := t.TempDir()
+	require.NoError(t, os.WriteFile(filepath.Join(workDir, "target.txt"), []byte("old"), 0o600))
+	require.NoError(t, os.Symlink("target.txt", filepath.Join(workDir, "link.txt")))
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write([]byte("new"))
+	}))
+	t.Cleanup(srv.Close)
+	res, err := (&httpDownloader{}).run(
+		t.Context(),
+		newTestStepContext(t, workDir),
+		stepconfig.HTTPDownloadConfig{URL: srv.URL, OutPath: "link.txt", AllowOverwrite: true},
+	)
+	require.NoError(t, err)
+	require.Equal(t, kargoapi.PromotionStepStatusSucceeded, res.Status)
+	b, err := os.ReadFile(filepath.Join(workDir, "target.txt"))
+	require.NoError(t, err)
+	require.Equal(t, "new", string(b))
+	fi, err := os.Lstat(filepath.Join(workDir, "link.txt"))
+	require.NoError(t, err)
+	require.NotZero(t, fi.Mode()&os.ModeSymlink)
 }

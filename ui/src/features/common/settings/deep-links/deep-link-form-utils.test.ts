@@ -10,7 +10,7 @@ import { deepLinkKinds } from './deep-link-kinds';
 
 const values = (overrides: Partial<DeepLinkFormValues> = {}): DeepLinkFormValues => ({
   title: 'Runbook',
-  url: 'https://example.com/{{ .stage.metadata.name }}',
+  url: 'https://example.com/${{ stage.metadata.name }}',
   description: '',
   if: '',
   ...overrides
@@ -28,26 +28,51 @@ describe('deepLinkFormSchema', () => {
     expect(issuePaths(values({ title: '', url: '' }))).toEqual([['title'], ['url']]);
   });
 
-  test('rejects a URL whose template delimiters do not pair up', () => {
+  test('rejects a URL whose expression delimiters do not pair up', () => {
     // the server drops a link it cannot parse, so the typo is invisible later
-    expect(issuePaths(values({ url: 'https://example.com/{{ .stage.metadata.name' }))).toEqual([
+    expect(issuePaths(values({ url: 'https://example.com/${{ stage.metadata.name' }))).toEqual([
       ['url']
     ]);
   });
 
-  test('accepts a URL with several template expressions', () => {
-    const url = 'https://example.com/{{ .stage.metadata.namespace }}/{{ .stage.metadata.name }}';
+  test('rejects a URL written with Go template syntax', () => {
+    expect(issuePaths(values({ url: 'https://example.com/{{ .stage.metadata.name }}' }))).toEqual([
+      ['url']
+    ]);
+  });
+
+  test('rejects Go template syntax at the start of a URL', () => {
+    expect(issuePaths(values({ url: '{{ .stage.metadata.name }}' }))).toEqual([['url']]);
+  });
+
+  test('rejects Go template syntax next to a valid expression', () => {
+    expect(issuePaths(values({ url: 'https://x/${{ stage.metadata.name }}/{{ .y }}' }))).toEqual([
+      ['url']
+    ]);
+  });
+
+  test('accepts a URL with several expressions', () => {
+    const url = 'https://example.com/${{ stage.metadata.namespace }}/${{ stage.metadata.name }}';
 
     expect(deepLinkFormSchema.safeParse(values({ url })).success).toBe(true);
   });
 
-  test('rejects a condition written as a template', () => {
+  test('accepts a URL with no expressions', () => {
+    expect(deepLinkFormSchema.safeParse(values({ url: 'https://example.com' })).success).toBe(true);
+  });
+
+  test('rejects a condition without ${{ }} around it', () => {
+    expect(issuePaths(values({ if: 'stage.spec.verification != nil' }))).toEqual([['if']]);
+  });
+
+  test('rejects a condition written as a Go template', () => {
     expect(issuePaths(values({ if: '{{ .stage.metadata.name }}' }))).toEqual([['if']]);
   });
 
-  test('accepts a condition written as an expression', () => {
+  test('accepts a condition wrapped in ${{ }}', () => {
     expect(
-      deepLinkFormSchema.safeParse(values({ if: 'stage.spec.verification != nil' })).success
+      deepLinkFormSchema.safeParse(values({ if: '  ${{ stage.spec.verification != nil }}  ' }))
+        .success
     ).toBe(true);
   });
 });
@@ -63,13 +88,13 @@ describe('formValuesFromDeepLink', () => {
         title: 'Runbook',
         url: 'https://example.com',
         description: 'How to operate this',
-        if: 'stage.metadata.name != ""'
+        if: '${{ stage.metadata.name != "" }}'
       })
     ).toEqual({
       title: 'Runbook',
       url: 'https://example.com',
       description: 'How to operate this',
-      if: 'stage.metadata.name != ""'
+      if: '${{ stage.metadata.name != "" }}'
     });
   });
 });
@@ -78,7 +103,7 @@ describe('deepLinkFromFormValues', () => {
   test('omits the optional fields when they are blank', () => {
     expect(deepLinkFromFormValues(values())).toEqual({
       title: 'Runbook',
-      url: 'https://example.com/{{ .stage.metadata.name }}'
+      url: 'https://example.com/${{ stage.metadata.name }}'
     });
   });
 
@@ -89,21 +114,21 @@ describe('deepLinkFromFormValues', () => {
           title: '  Runbook  ',
           url: '  https://example.com  ',
           description: '  How to operate this  ',
-          if: '  stage.metadata.name != ""  '
+          if: '  ${{ stage.metadata.name != "" }}  '
         })
       )
     ).toEqual({
       title: 'Runbook',
       url: 'https://example.com',
       description: 'How to operate this',
-      if: 'stage.metadata.name != ""'
+      if: '${{ stage.metadata.name != "" }}'
     });
   });
 
   test('drops optional fields that hold only whitespace', () => {
     expect(deepLinkFromFormValues(values({ description: '   ', if: '  ' }))).toEqual({
       title: 'Runbook',
-      url: 'https://example.com/{{ .stage.metadata.name }}'
+      url: 'https://example.com/${{ stage.metadata.name }}'
     });
   });
 });
@@ -124,10 +149,11 @@ describe('the examples the form offers', () => {
   });
 
   // the context is the resource as JSON, so an unset `omitempty` field is
-  // absent rather than null. `index`, `[...]` and `len()` raise on an absent
+  // absent rather than null. `[...]` and a bare `len()` raise on an absent
   // field, and the server drops the whole link when they do, which is
   // invisible in the UI. An example has to hold for a resource with none of
-  // its optional fields set, so it reaches them with `get` or `?.` instead.
+  // its optional fields set, so it reaches them with `?.` and defaults them
+  // with `??` instead.
   test.each(kinds)('%s examples avoid constructs that raise on an unset field', (_, kind) => {
     for (const example of [...kind.urlExamples, ...kind.conditionExamples]) {
       expect(example).not.toMatch(/\bindex\b|\blen\(|\["/);

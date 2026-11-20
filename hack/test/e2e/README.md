@@ -32,7 +32,7 @@ work. This project mostly focuses on defining callbacks and helpers which can be
 
 ## Writing tests
 
-This module is using `sigs.k8s.io/e2e-framework` to configure and run tests.
+These tests use `sigs.k8s.io/e2e-framework` to configure and run tests.
 
 We recommend organizing each feature into its own package.
 
@@ -97,12 +97,6 @@ By default the tests run against an already-running Kargo instance (see `home_co
 
 These env functions will be called for each test, but require env configuration with `cluster`, `cert_manager`, `argocd` and `kargo` keys to instruct the functions to actually set up envorinments.
 **See envs/kind_config.yaml file for configuration reference**
-
-## Dependency modules
-
-This folder contains the main e2e test module `github.com/akuity/kargo/hack/test/e2e` and a few helper packages, each in its own module: `envs`, `envfuncs`, `funcsloader`.
-
-The purpose of that is to be able to override `envs` and `funcsloader` in dependent `e2e` test modules to provide different environment configuration and setup/teardown functions to test in more environments than this package provides.
 
 ## TODO
 

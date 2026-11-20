@@ -194,6 +194,9 @@ export const PromotionWindowModal = ({
                     value={field.value}
                     onBlur={field.onBlur}
                     onChange={(date) => {
+                      if (!date) {
+                        return;
+                      }
                       field.onChange(combine(date, field.value));
                       if (!spansMultipleDays) {
                         setEndTo(date);
@@ -206,7 +209,11 @@ export const PromotionWindowModal = ({
                   <TimePicker
                     value={field.value}
                     onBlur={field.onBlur}
-                    onChange={(time) => field.onChange(combine(field.value, time))}
+                    onChange={(time) => {
+                      if (time) {
+                        field.onChange(combine(field.value, time));
+                      }
+                    }}
                     format='HH:mm'
                     minuteStep={15}
                     allowClear={false}
@@ -225,7 +232,11 @@ export const PromotionWindowModal = ({
                     <DatePicker
                       value={field.value}
                       onBlur={field.onBlur}
-                      onChange={(date) => field.onChange(combine(date, field.value))}
+                      onChange={(date) => {
+                        if (date) {
+                          field.onChange(combine(date, field.value));
+                        }
+                      }}
                       allowClear={false}
                       className='flex-1'
                       minDate={startDate}
@@ -235,7 +246,11 @@ export const PromotionWindowModal = ({
                   <TimePicker
                     value={field.value}
                     onBlur={field.onBlur}
-                    onChange={(time) => field.onChange(combine(field.value, time))}
+                    onChange={(time) => {
+                      if (time) {
+                        field.onChange(combine(field.value, time));
+                      }
+                    }}
                     format='HH:mm'
                     minuteStep={15}
                     allowClear={false}

@@ -1597,6 +1597,79 @@
         ]
       }
     },
+    "/v1beta1/projects/{project}/promotion-rollouts": {
+      "get": {
+        "description": "List a project's PromotionRollouts, one page at a time, as\na PromotionRolloutList resource. A Project or a Stage may\nhave had any number of rollouts, so a list is never more\nthan one page, newest first: the Project's, or a Stage's,\nor a Stage's of one piece of Freight. When a page is full,\nthe list's metadata.continue names where the next page\nstarts; pass it as continue to read on. With after, a\nStage's rollouts numbered above it are listed oldest first\ninstead. With latest, the list is instead each Stage's\nlatest rollouts -- the one it is promoting through, if any,\nand the newest that has finished, if any -- which is what a\nreader of a Stage's state wants without reading its history.",
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "Core",
+          "Project-Level"
+        ],
+        "summary": "List PromotionRollouts",
+        "operationId": "ListPromotionRollouts",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "Project name",
+            "name": "project",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "description": "Only PromotionRollouts of this Stage",
+            "name": "stage",
+            "in": "query"
+          },
+          {
+            "type": "string",
+            "description": "Only PromotionRollouts of this Freight; requires stage",
+            "name": "freight",
+            "in": "query"
+          },
+          {
+            "type": "boolean",
+            "description": "Each Stage's latest rollouts, or the named Stage's; takes only stage besides",
+            "name": "latest",
+            "in": "query"
+          },
+          {
+            "type": "integer",
+            "format": "int64",
+            "description": "Only the Stage's PromotionRollouts numbered above this, oldest first; requires stage",
+            "name": "after",
+            "in": "query"
+          },
+          {
+            "type": "string",
+            "description": "Previous page's metadata.continue; with stage, one of the Stage's; resend after",
+            "name": "continue",
+            "in": "query"
+          },
+          {
+            "type": "integer",
+            "description": "The page size, at most 500; 50 if omitted",
+            "name": "limit",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "PromotionRolloutList resource",
+            "schema": {
+              "$ref": "#/definitions/PromotionRolloutList"
+            }
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      }
+    },
     "/v1beta1/projects/{project}/promotion-tasks": {
       "get": {
         "description": "List PromotionTask resources from a project's namespace. Returns\na PromotionTaskList resource.",
@@ -2637,9 +2710,115 @@
         ]
       }
     },
+    "/v1beta1/projects/{project}/stages/{stage}/promotion-rollouts": {
+      "post": {
+        "description": "Create a PromotionRollout, which promotes the Freight named\nin the body to each of the Targets the Stage governs, or to\nthe ones the body names among them. PromotionRollouts are\nmanaged through this API rather than as Kubernetes\nresources. The Stage must select Targets: its selectors are\nresolved against the project's Targets as the rollout is\ncreated, narrowed to the Targets named if any are, and its\nupdate strategy, or the one the body gives in its place, is\nresolved against how many that leaves; both are recorded\nwith the rollout for good. A Target the Stage does not\ngovern is refused. Everything else about the rollout is\nassigned by the server.\nThis is a promotion: it requires the promote verb on the\nStage. A server that does not create PromotionRollouts\nresponds 501.",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "Core",
+          "Project-Level"
+        ],
+        "summary": "Create a PromotionRollout",
+        "operationId": "CreatePromotionRollout",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "Project name",
+            "name": "project",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "description": "Stage name",
+            "name": "stage",
+            "in": "path",
+            "required": true
+          },
+          {
+            "description": "Create request",
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/CreatePromotionRolloutRequest"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "PromotionRollout resource",
+            "schema": {
+              "$ref": "#/definitions/PromotionRollout"
+            }
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      }
+    },
+    "/v1beta1/projects/{project}/stages/{stage}/promotion-rollouts/{number}": {
+      "get": {
+        "description": "Retrieve one of a Stage's PromotionRollouts by its number\namong them.",
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "Core",
+          "Project-Level"
+        ],
+        "summary": "Retrieve a PromotionRollout",
+        "operationId": "GetPromotionRollout",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "Project name",
+            "name": "project",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "description": "Stage name",
+            "name": "stage",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "integer",
+            "format": "int64",
+            "description": "PromotionRollout number",
+            "name": "number",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "PromotionRollout resource",
+            "schema": {
+              "$ref": "#/definitions/PromotionRollout"
+            }
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      }
+    },
     "/v1beta1/projects/{project}/stages/{stage}/promotions": {
       "post": {
-        "description": "Create a Promotion resource to transition a specified Stage into\nthe state represented by the specified Freight.\nA Stage that selects Targets yields a PromotionRequest, which fans\nthe Freight out to each of them, in place of a single Promotion.",
+        "description": "Create a Promotion resource to transition a specified Stage into\nthe state represented by the specified Freight.\nA Stage that selects Targets yields, in place of a single\nPromotion, something that fans the Freight out to each of\nthem: a PromotionRollout on a server that creates\nPromotionRollouts, and a PromotionRequest otherwise. Either\nway, the body's targets and updateStrategy narrow which\nTargets are promoted to and at what pace.",
         "consumes": [
           "application/json"
         ],
@@ -2679,7 +2858,7 @@
         ],
         "responses": {
           "201": {
-            "description": "Promotion resource, or a PromotionRequest for a Stage that selects Targets",
+            "description": "Promotion; a PromotionRollout or PromotionRequest for a Stage with Targets",
             "schema": {
               "$ref": "#/definitions/Promotion"
             }
@@ -2694,7 +2873,7 @@
     },
     "/v1beta1/projects/{project}/stages/{stage}/promotions/downstream": {
       "post": {
-        "description": "Creates a Promotion resource for each of a Stage's immediately\ndownstream Stages. Downstream Stages that select Targets yield a\nPromotionRequest each, returned separately under \"promotionRequests\".",
+        "description": "Creates a Promotion resource for each of a Stage's immediately\ndownstream Stages, returned under \"promotions\". Downstream\nStages that select Targets each yield, in place of a\nPromotion, a PromotionRollout on a server that creates\nPromotionRollouts, returned under \"promotionRollouts\", or a\nPromotionRequest otherwise, returned under\n\"promotionRequests\"; each key is present only when it has\nentries. Each promotes to every Target its Stage governs, at\nthe Stage's pace. A Stage that could not be promoted to is\nreported under \"errors\", with a 207 status.",
         "consumes": [
           "application/json"
         ],
@@ -2867,7 +3046,7 @@
     },
     "/v1beta1/projects/{project}/targets": {
       "get": {
-        "description": "List Target resources from a project's namespace, optionally\nnarrowed to those a particular Stage governs or those matching a\nlabel selector. Returns a TargetList resource.",
+        "description": "List a project's Targets, optionally narrowed to those a\nparticular Stage governs or those matching a label selector.\nReturns a TargetList resource.",
         "produces": [
           "application/json"
         ],
@@ -2900,7 +3079,7 @@
         ],
         "responses": {
           "200": {
-            "description": "TargetList custom resource",
+            "description": "TargetList resource",
             "schema": {
               "$ref": "#/definitions/TargetList"
             }
@@ -2911,11 +3090,57 @@
             "BearerAuth": []
           }
         ]
+      },
+      "post": {
+        "description": "Create a Target in a project. Targets are managed through\nthis API rather than as Kubernetes resources. The body's\nmetadata.name is required; its metadata.namespace, if given,\nmust be the project. Status and server-managed metadata are\nignored.",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "Core",
+          "Project-Level"
+        ],
+        "summary": "Create a Target",
+        "operationId": "CreateTarget",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "Project name",
+            "name": "project",
+            "in": "path",
+            "required": true
+          },
+          {
+            "description": "Target resource",
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/Target"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Target resource",
+            "schema": {
+              "$ref": "#/definitions/Target"
+            }
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
       }
     },
-    "/v1beta1/projects/{project}/targets/{target}": {
+    "/v1beta1/projects/{project}/targets/{target-name}": {
       "get": {
-        "description": "Retrieve a Target resource from a project's namespace.",
+        "description": "Retrieve one of a project's Targets.",
         "produces": [
           "application/json"
         ],
@@ -2936,17 +3161,105 @@
           {
             "type": "string",
             "description": "Target name",
-            "name": "target",
+            "name": "target-name",
             "in": "path",
             "required": true
           }
         ],
         "responses": {
           "200": {
-            "description": "Target custom resource",
+            "description": "Target resource",
             "schema": {
               "$ref": "#/definitions/Target"
             }
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      },
+      "put": {
+        "description": "Replace a Target's labels and params. The body's metadata.name,\nif given, must match the name in the URL, and its spec.targetSet\nmust name the TargetSet that manages the Target, which cannot\nchange. A metadata.uid or metadata.resourceVersion in the body\nis a precondition: the update is refused if the Target no\nlonger matches it.",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "Core",
+          "Project-Level"
+        ],
+        "summary": "Update a Target",
+        "operationId": "UpdateTarget",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "Project name",
+            "name": "project",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "description": "Target name",
+            "name": "target-name",
+            "in": "path",
+            "required": true
+          },
+          {
+            "description": "Target resource",
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/Target"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Target resource",
+            "schema": {
+              "$ref": "#/definitions/Target"
+            }
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      },
+      "delete": {
+        "description": "Delete one of a project's Targets.",
+        "tags": [
+          "Core",
+          "Project-Level"
+        ],
+        "summary": "Delete a Target",
+        "operationId": "DeleteTarget",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "Project name",
+            "name": "project",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "description": "Target name",
+            "name": "target-name",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Deleted successfully"
           }
         },
         "security": [
@@ -5038,6 +5351,30 @@
         }
       }
     },
+    "CreatePromotionRolloutRequest": {
+      "type": "object",
+      "properties": {
+        "freight": {
+          "description": "Freight is the name of the Freight to promote.",
+          "type": "string"
+        },
+        "targets": {
+          "description": "Targets names the Targets to promote to, each of which the Stage must\ngovern. Omitted, the rollout promotes to every Target the Stage\ngoverns. Naming a few is how a canary is run or a failed rollout is\nretried for only the Targets that failed.",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "updateStrategy": {
+          "description": "UpdateStrategy paces this rollout in place of the Stage's update\nstrategy. Omitted, the Stage's applies. Either way, a percentage is\nresolved against the Targets the rollout promotes to, and the numbers\nthat gives are recorded with the rollout for good.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/TargetUpdateStrategy"
+            }
+          ]
+        }
+      }
+    },
     "CreateRepoCredentialsRequest": {
       "type": "object",
       "properties": {
@@ -5366,6 +5703,21 @@
         "origin": {
           "description": "Origin is the canonical Freight origin key (e.g. \"Warehouse/foo\"). When\nset, the promotion webhook resolves it to the current auto-promotion\ncandidate. Exactly one of Freight, FreightAlias, or Origin must be set.",
           "type": "string"
+        },
+        "targets": {
+          "description": "Targets is a list of target names to promote to. If set to `nil` - selects all targets for the stage.\nIf non-nil, should be a subset of targets selected by the stage, empty list is an error.",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "updateStrategy": {
+          "description": "UpdateStrategy configures overrides for maxConcurrent and maxErrors for this request.\nPercentage values are calculated based on the total stage targets and not just ones selected for promotion\nIf nil - calculated from the stages updateStrategy based on the number of stage targets.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/TargetUpdateStrategy"
+            }
+          ]
         }
       }
     },
@@ -5377,9 +5729,6 @@
         },
         "oidcConfig": {
           "$ref": "#/definitions/OIDCConfig"
-        },
-        "skipAuth": {
-          "type": "boolean"
         }
       }
     },
@@ -6491,6 +6840,10 @@
     "AnalysisRunReference": {
       "type": "object",
       "properties": {
+        "kind": {
+          "description": "Kind is a string representation of GroupVersionKind describing this run\nFor classic analysis run it is AnalysisRunKindRun or AnalysisRunKindLegacy (empty)",
+          "type": "string"
+        },
         "name": {
           "description": "Name is the name of the AnalysisRun.",
           "type": "string"
@@ -6874,7 +7227,7 @@
           "type": "string"
         },
         "if": {
-          "description": "If is an optional expression condition. When set, the link is only shown\nwhen the expression evaluates to true.\n\n+optional",
+          "description": "If is an optional expr-lang expression, offset by ${{ }}, that must\nevaluate to a boolean. When set, the link is shown only when it\nevaluates to true.\n\n+optional",
           "type": "string"
         },
         "title": {
@@ -6882,7 +7235,7 @@
           "type": "string"
         },
         "url": {
-          "description": "URL is an expression that resolves to the link's href.\n\n+kubebuilder:validation:MinLength=1",
+          "description": "URL is the link's href. It may contain expr-lang expressions offset by\n${{ }}, evaluated against the resource as freight or stage.\n\n+kubebuilder:validation:MinLength=1",
           "type": "string"
         }
       }
@@ -7664,6 +8017,41 @@
         }
       }
     },
+    "InflatedPromotionTask": {
+      "type": "object",
+      "properties": {
+        "alias": {
+          "description": "Alias is the alias of the step that referenced the task. The aliases of\nthe steps inflated from the task are prefixed with it.",
+          "type": "string"
+        },
+        "description": {
+          "description": "Description is the description of the step that referenced the task.\n\n+kubebuilder:validation:Optional",
+          "type": "string"
+        },
+        "steps": {
+          "description": "Steps are the aliases of the Promotion's steps that were inflated from\nthe task, in order.",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "task": {
+          "description": "Task is the (Cluster)PromotionTask that was inflated.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/PromotionTaskReference"
+            }
+          ]
+        },
+        "vars": {
+          "description": "Vars are the variables the task was inflated with: the task's defaults\nand the variables set by the step that referenced the task.\n\n+kubebuilder:validation:Optional",
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/ExpressionVariable"
+          }
+        }
+      }
+    },
     "Project": {
       "type": "object",
       "properties": {
@@ -8113,7 +8501,7 @@
           "description": "UpdateStrategy configures the pace of updating the targets\n+optional\n+kubebuilder:validation:XValidation:rule=\"self == oldSelf\"",
           "allOf": [
             {
-              "$ref": "#/definitions/TargetUpdateStrategy"
+              "$ref": "#/definitions/PromotionRequestUpdateStrategy"
             }
           ]
         }
@@ -8252,12 +8640,267 @@
         "name"
       ]
     },
+    "PromotionRequestUpdateStrategy": {
+      "type": "object",
+      "properties": {
+        "maxConcurrent": {
+          "description": "MaxConcurrent specifies a number of targets which can be promoted to at the same time\nZero means there is no limit (default)",
+          "type": "integer",
+          "minimum": 0
+        },
+        "maxFailures": {
+          "description": "MaxFailures specifies a number of target promotions which can fail before PromotionRequest is considered failed.\nSpecifies a tolerable number, N failing promotions with maxFailures: N is a success, N+1 is a failure.\nDefaults to 0, meaning no failures tolerated.\n+kubebuilder:validation:Minimum=0",
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "PromotionRollout": {
+      "type": "object",
+      "properties": {
+        "metadata": {
+          "$ref": "#/definitions/V1ObjectMeta"
+        },
+        "number": {
+          "description": "Number is the rollout's position among its Stage's rollouts, counting\nfrom 1. It is assigned when the rollout is created and never changes.",
+          "type": "integer"
+        },
+        "spec": {
+          "description": "Spec describes the Stage, the Freight, and the Targets of the\nPromotionRollout.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/PromotionRolloutSpec"
+            }
+          ]
+        },
+        "status": {
+          "description": "Status describes the per-Target progress and the aggregate state of the\nPromotionRollout's Promotions.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/PromotionRolloutStatus"
+            }
+          ]
+        }
+      }
+    },
+    "PromotionRolloutList": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/PromotionRollout"
+          }
+        },
+        "metadata": {
+          "$ref": "#/definitions/V1ListMeta"
+        }
+      }
+    },
+    "PromotionRolloutPhase": {
+      "type": "string",
+      "enum": [
+        "Pending",
+        "Running",
+        "Succeeded",
+        "Failed",
+        "Errored",
+        "Aborted"
+      ],
+      "x-enum-varnames": [
+        "PromotionRolloutPhasePending",
+        "PromotionRolloutPhaseRunning",
+        "PromotionRolloutPhaseSucceeded",
+        "PromotionRolloutPhaseFailed",
+        "PromotionRolloutPhaseErrored",
+        "PromotionRolloutPhaseAborted"
+      ]
+    },
+    "PromotionRolloutReference": {
+      "type": "object",
+      "properties": {
+        "finishedAt": {
+          "description": "FinishedAt is the time at which the PromotionRollout completed.",
+          "type": "string"
+        },
+        "message": {
+          "description": "Message is a human-readable description of how the PromotionRollout\nended.",
+          "type": "string"
+        },
+        "name": {
+          "description": "Name is the name of the PromotionRollout.",
+          "type": "string"
+        },
+        "number": {
+          "description": "Number is the PromotionRollout's position among its Stage's rollouts,\ncounting from 1.\n\n+kubebuilder:validation:Minimum=1",
+          "type": "integer"
+        },
+        "phase": {
+          "description": "Phase is a high-level summary of the PromotionRollout's lifecycle.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/PromotionRolloutPhase"
+            }
+          ]
+        }
+      }
+    },
+    "PromotionRolloutSpec": {
+      "type": "object",
+      "properties": {
+        "freight": {
+          "description": "Freight specifies the piece of Freight promoted by the Stage. The\nFreight is in the same Project as the PromotionRollout.",
+          "type": "string"
+        },
+        "stage": {
+          "description": "Stage specifies the name of the Stage that promotes the Freight. The\nStage is in the same Project as the PromotionRollout.",
+          "type": "string"
+        },
+        "targets": {
+          "description": "Targets names the Targets to which this PromotionRollout promotes\nFreight. Each Target is in the same Project as the PromotionRollout.\n\nThis is a resolved list, not a selector: the Stage's target selectors\nare evaluated once, when the rollout is created, and the result\nrecorded here. The list may be empty, which records that the governing\nStage governed no Targets at that moment.",
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/PromotionRolloutTarget"
+          }
+        },
+        "updateStrategy": {
+          "description": "UpdateStrategy configures the pace of updating the Targets.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/PromotionRolloutUpdateStrategy"
+            }
+          ]
+        }
+      }
+    },
+    "PromotionRolloutStatus": {
+      "type": "object",
+      "properties": {
+        "conditions": {
+          "description": "Conditions contains the last observations of the PromotionRollout's\ncurrent state.",
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/V1Condition"
+          }
+        },
+        "finishedAt": {
+          "description": "FinishedAt is the time at which the PromotionRollout completed.",
+          "type": "string"
+        },
+        "message": {
+          "description": "Message is a display message explaining the current Phase: what the\nPromotionRollout is waiting on, how far its fan-out has progressed, or\nwhy it did not succeed.",
+          "type": "string"
+        },
+        "phase": {
+          "description": "Phase is a high-level summary of the PromotionRollout's lifecycle.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/PromotionRolloutPhase"
+            }
+          ]
+        },
+        "startedAt": {
+          "description": "StartedAt is the time at which the PromotionRollout started.",
+          "type": "string"
+        },
+        "summary": {
+          "description": "Summary tallies the entries of Targets by phase.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/PromotionRolloutSummary"
+            }
+          ]
+        },
+        "targets": {
+          "description": "Targets records progress against spec.targets: one entry per Target\nthat has been promoted to, naming the latest Promotion promoting the\nFreight to it and that Promotion's phase. A Target promoted to more\nthan once within the rollout, for instance after a retry, reports its\nnewest Promotion.",
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/PromotionRolloutTargetStatus"
+          }
+        }
+      }
+    },
+    "PromotionRolloutSummary": {
+      "type": "object",
+      "properties": {
+        "aborted": {
+          "description": "Aborted is the number of Targets whose Promotion was Aborted.",
+          "type": "integer"
+        },
+        "errored": {
+          "description": "Errored is the number of Targets whose Promotion Errored.",
+          "type": "integer"
+        },
+        "failed": {
+          "description": "Failed is the number of Targets whose Promotion Failed.",
+          "type": "integer"
+        },
+        "pending": {
+          "description": "Pending is the number of Targets whose Promotion is Pending.",
+          "type": "integer"
+        },
+        "running": {
+          "description": "Running is the number of Targets whose Promotion is Running.",
+          "type": "integer"
+        },
+        "succeeded": {
+          "description": "Succeeded is the number of Targets whose Promotion Succeeded.",
+          "type": "integer"
+        }
+      }
+    },
+    "PromotionRolloutTarget": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "description": "Name is the name of the Target.",
+          "type": "string"
+        }
+      }
+    },
+    "PromotionRolloutTargetStatus": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "description": "Name is the name of the Target.",
+          "type": "string"
+        },
+        "phase": {
+          "description": "Phase is the phase of that Promotion.",
+          "type": "string"
+        },
+        "promotion": {
+          "description": "Promotion is the name of the newest Promotion promoting the Freight to\nthis Target.",
+          "type": "string"
+        }
+      }
+    },
+    "PromotionRolloutUpdateStrategy": {
+      "type": "object",
+      "properties": {
+        "maxConcurrent": {
+          "description": "MaxConcurrent specifies a number of Targets which can be promoted to at\nthe same time. Zero means there is no limit (default).\n\n+optional",
+          "type": "integer"
+        },
+        "maxFailures": {
+          "description": "MaxFailures specifies a number of Target promotions which can fail\nbefore the PromotionRollout is considered failed: N failing promotions\nwith maxFailures: N is a success, N+1 is a failure. Defaults to 0,\nmeaning no failures tolerated.\n\n+optional",
+          "type": "integer"
+        }
+      }
+    },
     "PromotionSpec": {
       "type": "object",
       "properties": {
         "freight": {
           "description": "Freight specifies the piece of Freight to be promoted into the Stage.\nExactly one of Freight or Origin must be set.\n\n+kubebuilder:validation:Optional\n+kubebuilder:validation:MinLength=1\n+kubebuilder:validation:MaxLength=253\n+kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`\n+akuity:test-kubebuilder-pattern=KubernetesName",
           "type": "string"
+        },
+        "inflatedTasks": {
+          "description": "InflatedTasks records each step of the Stage's PromotionTemplate that\nreferenced a (Cluster)PromotionTask and was inflated into Steps. It is\nset by Kargo when the Promotion is created and any value supplied by\nusers is discarded.\n\n+kubebuilder:validation:Optional",
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/InflatedPromotionTask"
+          }
         },
         "origin": {
           "description": "Origin, when set, identifies the FreightOrigin whose auto-promotion\ncandidate should be promoted. The mutating webhook resolves this to the\ncandidate Freight for that origin and fills Freight before the Promotion\nis persisted. Exactly one of Freight or Origin must be set.\n\n+kubebuilder:validation:Optional",
@@ -8266,6 +8909,10 @@
               "$ref": "#/definitions/FreightOrigin"
             }
           ]
+        },
+        "promotionRollout": {
+          "description": "PromotionRollout optionally holds the id of the PromotionRollout this\nPromotion was created by, as one part of that rollout's fan-out to\nTargets. The id is the UID the API serves the rollout with. A\nPromotionRollout is not a Kubernetes resource, so it cannot own the\nPromotion; this field is the link in place of an owner reference, and\nthe one the database's record of the Promotion is linked by.\n\nWhen empty (the default), the Promotion was not created by a\nPromotionRollout. When set, Target must be set too, and only the Kargo\ncontrol plane may set it.\n\n+kubebuilder:validation:Optional\n+kubebuilder:validation:Pattern=`^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$`\n+akuity:test-kubebuilder-pattern=UUID",
+          "type": "string"
         },
         "stage": {
           "description": "Stage specifies the name of the Stage to which this Promotion\napplies. The Stage referenced by this field MUST be in the same\nnamespace as the Promotion.\n\n+kubebuilder:validation:Required\n+kubebuilder:validation:MinLength=1\n+kubebuilder:validation:MaxLength=253\n+kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`\n+akuity:test-kubebuilder-pattern=KubernetesName",
@@ -8370,6 +9017,10 @@
         "continueOnError": {
           "description": "ContinueOnError is a boolean value that, if set to true, will cause the\nPromotion to continue executing the next step even if this step fails. It\nalso will not permit this failure to impact the overall status of the\nPromotion.",
           "type": "boolean"
+        },
+        "description": {
+          "description": "Description is a detail of the step's purpose.\n\n+kubebuilder:validation:Optional\n+kubebuilder:validation:MinLength=1\n+kubebuilder:validation:XValidation:message=\"description must be 256 characters or fewer\",rule=\"self.size() <= 256\"",
+          "type": "string"
         },
         "if": {
           "description": "If is an optional expression that, if present, must evaluate to a boolean\nvalue. If the expression evaluates to false, the step will be skipped.\nIf the expression does not evaluate to a boolean value, the step will be\nconsidered to have failed.",
@@ -8844,6 +9495,14 @@
             }
           ]
         },
+        "lastPromotionRollout": {
+          "description": "LastPromotionRollout is a reference to the last PromotionRollout whose\noutcome this Stage has recorded. It is absent for a Stage that governs no\nTargets, and only ever moves forward: its number marks how far through\nits PromotionRollouts the Stage has read.\n\n+optional",
+          "allOf": [
+            {
+              "$ref": "#/definitions/PromotionRolloutReference"
+            }
+          ]
+        },
         "metadata": {
           "description": "Metadata is a map of arbitrary metadata associated with the Stage.\nThis is useful for storing additional information about the Stage\nthat can be shared across promotions, verifications, or other processes.",
           "type": "object",
@@ -8874,10 +9533,18 @@
           }
         },
         "updateStrategy": {
-          "description": "UpdateStrategy configures the pace of updating the targets\n+optional",
+          "description": "UpdateStrategy configures the pace of promoting the targets\n+optional",
           "allOf": [
             {
               "$ref": "#/definitions/TargetUpdateStrategy"
+            }
+          ]
+        },
+        "verification": {
+          "description": "Verification configures mode and pace of target promotion verifications\n+optional",
+          "allOf": [
+            {
+              "$ref": "#/definitions/TargetVerificaitonSpec"
             }
           ]
         }
@@ -8922,14 +9589,6 @@
     "Target": {
       "type": "object",
       "properties": {
-        "apiVersion": {
-          "description": "APIVersion defines the versioned schema of this representation of an object.\nServers should convert recognized schemas to the latest internal value, and\nmay reject unrecognized values.\nMore info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources\n+optional",
-          "type": "string"
-        },
-        "kind": {
-          "description": "Kind is a string value representing the REST resource this object represents.\nServers may infer this from the endpoint the client submits requests to.\nCannot be updated.\nIn CamelCase.\nMore info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds\n+optional",
-          "type": "string"
-        },
         "metadata": {
           "$ref": "#/definitions/V1ObjectMeta"
         },
@@ -8954,19 +9613,11 @@
     "TargetList": {
       "type": "object",
       "properties": {
-        "apiVersion": {
-          "description": "APIVersion defines the versioned schema of this representation of an object.\nServers should convert recognized schemas to the latest internal value, and\nmay reject unrecognized values.\nMore info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources\n+optional",
-          "type": "string"
-        },
         "items": {
           "type": "array",
           "items": {
             "$ref": "#/definitions/Target"
           }
-        },
-        "kind": {
-          "description": "Kind is a string value representing the REST resource this object represents.\nServers may infer this from the endpoint the client submits requests to.\nCannot be updated.\nIn CamelCase.\nMore info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds\n+optional",
-          "type": "string"
         },
         "metadata": {
           "$ref": "#/definitions/V1ListMeta"
@@ -8980,6 +9631,10 @@
           "description": "Params is a map of arbitrary, target-specific values. Values may be any\nvalid JSON -- including nested objects and arrays -- so promotion steps\ncan reference deeply nested data. Promotion steps of Stages that govern\nthis Target may reference these values by key in their expressions (for\nexample, target.params.branch or target.params.cluster.region).\n\n+optional",
           "type": "object",
           "additionalProperties": {}
+        },
+        "targetSet": {
+          "description": "TargetSet names the TargetSet that manages this Target. Every Target is\ncreated by one, which owns its lifecycle, so this is required and does\nnot change for as long as the Target exists.",
+          "type": "string"
         }
       }
     },
@@ -9044,8 +9699,27 @@
       "type": "object",
       "properties": {
         "maxConcurrent": {
-          "description": "MaxConcurrent specifies a number of targets which can be promoted to at the same time\nZero means there is no limit (default)",
-          "type": "integer"
+          "description": "MaxConcurrent specifies a number of targets which can be promoted to at the same time\nValue can be an absolute number (e.g.: 5) or a percentage of targets selected by the stage (e.g.: 10%).\nAbsolute number is calculated from percentage by rounding up to a minimum of 1.\nPercentage value cannot be 0%. Number value cannot be 0.\nIf omitted or empty string, no limit is applied (default)."
+        },
+        "maxFailures": {
+          "description": "MaxFailures specifies a number of target promotions which can fail before PromotionRequest is considered failed.\nSpecifies a tolerable number, N failing promotions with maxFailures: N is a success, N+1 is a failure.\nValue can be an absolute number (e.g.: 5) or a percentage of targets selected by the stage (e.g.: 10%).\nAbsolute number is calculated from percentage by rounding up to a minimum of 1. Default value is 0."
+        }
+      }
+    },
+    "TargetVerificaitonSpec": {
+      "type": "object",
+      "properties": {
+        "runMode": {
+          "description": "VerificationRunMode controls whether verifications run per-target or per-stage\n+optional",
+          "type": "string"
+        },
+        "updateStrategy": {
+          "description": "UpdateStrategy configures the pace of verification runs\n+optional",
+          "allOf": [
+            {
+              "$ref": "#/definitions/TargetUpdateStrategy"
+            }
+          ]
         }
       }
     },
@@ -9105,6 +9779,10 @@
         },
         "phase": {
           "description": "Phase describes the current phase of the Verification process. Generally,\nthis will be a reflection of the underlying AnalysisRun's phase, however,\nthere are exceptions to this, such as in the case where an AnalysisRun\ncannot be launched successfully.",
+          "type": "string"
+        },
+        "promotionName": {
+          "description": "PromotionName is an optional name of promotion which triggered verification",
           "type": "string"
         },
         "startTime": {

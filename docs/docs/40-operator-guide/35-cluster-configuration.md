@@ -251,8 +251,8 @@ step.
 
 ## Cluster Message Channels
 
-<span class="tag professional"></span>
-<span class="tag beta"></span>
+<Enterprise />
+<Beta />
 
 `ClusterMessageChannel` resources are cluster-scoped analogs to
 [`MessageChannel`](../50-user-guide/20-how-to-guides/20-working-with-projects.md#message-channels).
@@ -287,8 +287,8 @@ documentation for
 
 ## Promotion Windows
 
-<span class="tag professional"></span>
-<span class="tag beta"></span>
+<Enterprise />
+<Beta />
 
 A `ClusterConfig` can define `promotionWindows` that gate _when_ `Promotion`s
 may be created, applied _across Projects_. This is the cluster-scoped analog to the
@@ -328,3 +328,23 @@ spec:
 For the full field reference, scheduling syntax, allow/deny precedence, and the
 `Stage` status Kargo publishes for a freeze, see the
 [Promotion Windows](../50-user-guide/20-how-to-guides/45-promotion-windows.md) guide.
+
+## Deep Links
+
+`ClusterConfig` accepts the same `freightLinks` and `stageLinks` fields as a
+`ProjectConfig`. Links defined here are shown on `Freight` and `Stage`s in
+every Project, before any links the Project defines itself.
+
+```yaml
+apiVersion: kargo.akuity.io/v1alpha1
+kind: ClusterConfig
+metadata:
+  name: cluster
+spec:
+  stageLinks:
+  - title: Logs
+    url: https://logs.example.com/search?project=${{ stage.metadata.namespace }}&stage=${{ stage.metadata.name }}
+```
+
+For the available fields and expression syntax, see
+[Deep Links](../50-user-guide/20-how-to-guides/20-working-with-projects.md#deep-links).

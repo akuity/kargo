@@ -7,9 +7,10 @@ import (
 	"testing"
 	"time"
 
+	cloudevents "github.com/cloudevents/sdk-go/v2/event"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	corev1 "k8s.io/api/core/v1"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -25,11 +26,11 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/api"
 	"github.com/akuity/kargo/pkg/conditions"
-	"github.com/akuity/kargo/pkg/credentials"
-	k8sevent "github.com/akuity/kargo/pkg/event/kubernetes"
+	kargoEvent "github.com/akuity/kargo/pkg/event"
+	fakeevent "github.com/akuity/kargo/pkg/event/fake"
 	"github.com/akuity/kargo/pkg/health"
 	"github.com/akuity/kargo/pkg/indexer"
-	fakeevent "github.com/akuity/kargo/pkg/kubernetes/event/fake"
+	"github.com/akuity/kargo/pkg/kubeclient"
 )
 
 func TestRegularStageReconciler_Reconcile(t *testing.T) {
@@ -42,7 +43,10 @@ func TestRegularStageReconciler_Reconcile(t *testing.T) {
 		stage       *kargoapi.Stage
 		objects     []client.Object
 		interceptor interceptor.Funcs
-		assertions  func(*testing.T, client.Client, ctrl.Result, error)
+		// apiReader, when set, returns the uncached reader to use in place of
+		// the cached client.
+		apiReader  func(*testing.T) client.Reader
+		assertions func(*testing.T, client.Client, ctrl.Result, error)
 	}{
 		{
 			name: "stage not found",
@@ -98,8 +102,8 @@ func TestRegularStageReconciler_Reconcile(t *testing.T) {
 				},
 				Spec: kargoapi.StageSpec{
 					Shard: "correct-shard",
-					// Specify some minimal promotion process to get this Stage past the
-					// logic that verifies this is not a control flow Stage.
+					// Minimal promotion process; enough to get this Stage past the
+					// control flow Stage check.
 					PromotionTemplate: &kargoapi.PromotionTemplate{
 						Spec: kargoapi.PromotionTemplateSpec{
 							Steps: []kargoapi.PromotionStep{{}, {}},
@@ -110,6 +114,92 @@ func TestRegularStageReconciler_Reconcile(t *testing.T) {
 			assertions: func(t *testing.T, _ client.Client, result ctrl.Result, err error) {
 				require.NoError(t, err)
 				assert.True(t, result.IsZero())
+			},
+		},
+		{
+			name: "stage not found through API reader",
+			req: ctrl.Request{
+				NamespacedName: types.NamespacedName{
+					Namespace: "default",
+					Name:      "test-stage",
+				},
+			},
+			// The Stage is still in the cache, but has been deleted.
+			stage: &kargoapi.Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "default",
+					Name:      "test-stage",
+				},
+				Spec: kargoapi.StageSpec{
+					PromotionTemplate: &kargoapi.PromotionTemplate{
+						Spec: kargoapi.PromotionTemplateSpec{
+							Steps: []kargoapi.PromotionStep{{}, {}},
+						},
+					},
+				},
+			},
+			apiReader: func(*testing.T) client.Reader {
+				return fake.NewClientBuilder().WithScheme(scheme).Build()
+			},
+			assertions: func(t *testing.T, c client.Client, result ctrl.Result, err error) {
+				require.NoError(t, err)
+				assert.Equal(t, ctrl.Result{}, result)
+
+				// Verify the Stage was not reconciled
+				stage := &kargoapi.Stage{}
+				require.NoError(t, c.Get(t.Context(), types.NamespacedName{
+					Namespace: "default",
+					Name:      "test-stage",
+				}, stage))
+				assert.NotContains(t, stage.Finalizers, kargoapi.FinalizerName)
+			},
+		},
+		{
+			name: "reconciles Stage read through API reader",
+			req: ctrl.Request{
+				NamespacedName: types.NamespacedName{
+					Namespace: "default",
+					Name:      "test-stage",
+				},
+			},
+			// The cached Stage predates the addition of the finalizer.
+			stage: &kargoapi.Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "default",
+					Name:      "test-stage",
+				},
+				Spec: kargoapi.StageSpec{
+					PromotionTemplate: &kargoapi.PromotionTemplate{
+						Spec: kargoapi.PromotionTemplateSpec{
+							Steps: []kargoapi.PromotionStep{{}, {}},
+						},
+					},
+				},
+			},
+			apiReader: func(*testing.T) client.Reader {
+				return fake.NewClientBuilder().
+					WithScheme(scheme).
+					WithObjects(&kargoapi.Stage{
+						ObjectMeta: metav1.ObjectMeta{
+							Namespace:  "default",
+							Name:       "test-stage",
+							Finalizers: []string{kargoapi.FinalizerName},
+						},
+						Spec: kargoapi.StageSpec{
+							PromotionTemplate: &kargoapi.PromotionTemplate{
+								Spec: kargoapi.PromotionTemplateSpec{
+									Steps: []kargoapi.PromotionStep{{}, {}},
+								},
+							},
+						},
+					}).
+					Build()
+			},
+			assertions: func(t *testing.T, _ client.Client, result ctrl.Result, err error) {
+				require.NoError(t, err)
+				// The finalizer seen through the API reader means the Stage is
+				// reconciled rather than requeued to add the finalizer.
+				assert.Equal(t, ctrl.Result{RequeueAfter: 5 * time.Minute}, result)
 			},
 		},
 		{
@@ -422,7 +512,11 @@ func TestRegularStageReconciler_Reconcile(t *testing.T) {
 
 			r := &RegularStageReconciler{
 				client:      c,
-				eventSender: k8sevent.NewEventSender(fakeevent.NewEventRecorder(10)),
+				apiReader:   c,
+				eventSender: &fakeevent.Sender{},
+			}
+			if tt.apiReader != nil {
+				r.apiReader = tt.apiReader(t)
 			}
 
 			result, err := r.Reconcile(t.Context(), tt.req)
@@ -635,7 +729,7 @@ func TestRegularStagesReconciler_reconcile(t *testing.T) {
 
 			r := &RegularStageReconciler{
 				client:        c,
-				eventSender:   k8sevent.NewEventSender(fakeevent.NewEventRecorder(10)),
+				eventSender:   &fakeevent.Sender{},
 				healthChecker: &health.MockAggregatingChecker{},
 			}
 
@@ -643,6 +737,174 @@ func TestRegularStagesReconciler_reconcile(t *testing.T) {
 			tt.assertions(t, status, requeue, err)
 		})
 	}
+}
+
+func upsertStageStatusMetadata(
+	ctx context.Context,
+	c client.Client,
+	objKey client.ObjectKey,
+	values map[string]any,
+) error {
+	stage := &kargoapi.Stage{}
+	if err := c.Get(ctx, objKey, stage); err != nil {
+		return err
+	}
+	newStatus := stage.Status.DeepCopy()
+	for k, v := range values {
+		if err := newStatus.UpsertMetadata(k, v); err != nil {
+			return err
+		}
+	}
+	return kubeclient.PatchStatus(ctx, c, stage, func(status *kargoapi.StageStatus) {
+		*status = *newStatus
+	})
+}
+
+// TestRegularStageReconciler_Reconcile_concurrentStatusMetadata runs a real
+// Reconcile whose status patches are interrupted by a concurrent write to
+// status.metadata, as a set-metadata promotion step would perform. Neither the
+// updated value nor the key introduced by that write may be reverted or
+// deleted by any later patch of the same pass.
+func TestRegularStageReconciler_Reconcile_concurrentStatusMetadata(t *testing.T) {
+	t.Parallel()
+
+	const (
+		testProject   = "test-project"
+		testStage     = "test-stage"
+		existingKey   = "lastPromotedAt"
+		existingValue = "2024-01-01T00:00:00Z"
+		updatedValue  = "2024-06-01T00:00:00Z"
+		addedKey      = "firstPromotedAt"
+		addedValue    = "2024-03-01T00:00:00Z"
+	)
+
+	scheme := runtime.NewScheme()
+	require.NoError(t, kargoapi.AddToScheme(scheme))
+
+	objKey := client.ObjectKey{Namespace: testProject, Name: testStage}
+
+	var stagePatches []string
+
+	c := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(&kargoapi.Stage{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace:  testProject,
+				Name:       testStage,
+				Finalizers: []string{kargoapi.FinalizerName},
+			},
+			Spec: kargoapi.StageSpec{
+				PromotionTemplate: &kargoapi.PromotionTemplate{
+					Spec: kargoapi.PromotionTemplateSpec{
+						Steps: []kargoapi.PromotionStep{{}, {}},
+					},
+				},
+			},
+			Status: kargoapi.StageStatus{
+				Metadata: map[string]apiextensionsv1.JSON{
+					existingKey: {Raw: []byte(`"` + existingValue + `"`)},
+				},
+			},
+		}).
+		WithStatusSubresource(&kargoapi.Stage{}, &kargoapi.Freight{}).
+		WithIndex(
+			&kargoapi.Promotion{},
+			indexer.PromotionsByStageField,
+			indexer.PromotionsByStage,
+		).
+		WithIndex(
+			&kargoapi.Freight{},
+			indexer.FreightByWarehouseField,
+			indexer.FreightByWarehouse,
+		).
+		WithIndex(
+			&kargoapi.Freight{},
+			indexer.FreightByCurrentStagesField,
+			indexer.FreightByCurrentStages,
+		).
+		WithIndex(
+			&kargoapi.Freight{},
+			indexer.FreightByVerifiedStagesField,
+			indexer.FreightByVerifiedStages,
+		).
+		WithIndex(
+			&kargoapi.Freight{},
+			indexer.FreightApprovedForStagesField,
+			indexer.FreightApprovedForStages,
+		).
+		WithIndex(
+			&kargoapi.Promotion{},
+			indexer.PromotionsByStageAndFreightField,
+			indexer.PromotionsByStageAndFreight,
+		).
+		WithInterceptorFuncs(interceptor.Funcs{
+			SubResourcePatch: func(
+				ctx context.Context,
+				c client.Client,
+				subResourceName string,
+				obj client.Object,
+				patch client.Patch,
+				opts ...client.SubResourcePatchOption,
+			) error {
+				data, err := patch.Data(obj)
+				if err != nil {
+					return err
+				}
+				if _, ok := obj.(*kargoapi.Stage); ok {
+					stagePatches = append(stagePatches, string(data))
+					// Write status.metadata between two of this pass's status
+					// patches, the way a set-metadata promotion step would.
+					if err = upsertStageStatusMetadata(ctx, c, objKey, map[string]any{
+						existingKey: updatedValue,
+						addedKey:    addedValue,
+					}); err != nil {
+						return err
+					}
+				}
+				return c.SubResource(subResourceName).Patch(ctx, obj, patch, opts...)
+			},
+		}).
+		Build()
+
+	r := &RegularStageReconciler{
+		client:        c,
+		apiReader:     c,
+		eventSender:   &fakeevent.Sender{},
+		healthChecker: &health.MockAggregatingChecker{},
+	}
+
+	_, err := r.Reconcile(t.Context(), ctrl.Request{
+		NamespacedName: types.NamespacedName{
+			Namespace: testProject,
+			Name:      testStage,
+		},
+	})
+	require.NoError(t, err)
+
+	// A pass with no new current Promotion writes its status once, at the end;
+	// that patch must still leave the concurrent status.metadata write alone.
+	require.Len(t, stagePatches, 1)
+	for _, stagePatch := range stagePatches {
+		assert.NotContains(t, stagePatch, "metadata", stagePatch)
+	}
+
+	stage := &kargoapi.Stage{}
+	require.NoError(t, c.Get(t.Context(), objKey, stage))
+
+	data, ok := stage.Status.Metadata[addedKey]
+	require.True(t, ok, "status.metadata[%s] was deleted", addedKey)
+	assert.JSONEq(t, `"`+addedValue+`"`, string(data.Raw))
+
+	data, ok = stage.Status.Metadata[existingKey]
+	require.True(t, ok, "status.metadata[%s] was deleted", existingKey)
+	assert.JSONEq(t, `"`+updatedValue+`"`, string(data.Raw))
+
+	readyCond := conditions.Get(&stage.Status, kargoapi.ConditionTypeReady)
+	require.NotNil(t, readyCond)
+	assert.Equal(t, metav1.ConditionFalse, readyCond.Status)
+	assert.Equal(t, "NoFreight", readyCond.Reason)
+	assert.Equal(t, "0/0 Fulfilled", stage.Status.FreightSummary)
+	assert.Nil(t, conditions.Get(&stage.Status, kargoapi.ConditionTypeReconciling))
 }
 
 // releaseHoldAnnotations returns the annotations set on a release-intent Promotion.
@@ -2270,7 +2532,7 @@ func TestRegularStageReconciler_syncPromotions(t *testing.T) {
 
 			r := &RegularStageReconciler{
 				client:      c,
-				eventSender: k8sevent.NewEventSender(fakeevent.NewEventRecorder(10)),
+				eventSender: &fakeevent.Sender{},
 			}
 
 			status, requeue, err := r.syncPromotions(t.Context(), tt.stage, tt.autoPromotionEnabled)
@@ -2393,7 +2655,7 @@ func TestRegularStageReconciler_syncPromotions_partitionsTargetPromotions(t *tes
 
 			r := &RegularStageReconciler{
 				client:      c,
-				eventSender: k8sevent.NewEventSender(fakeevent.NewEventRecorder(10)),
+				eventSender: &fakeevent.Sender{},
 			}
 
 			status, hasPendingPromotions, err := r.syncPromotions(t.Context(), tt.stage, false)
@@ -2428,6 +2690,11 @@ func TestRegularStageReconciler_syncFreight(t *testing.T) {
 	}{
 		{
 			name: "error listing Freight",
+			// Freight in use is synced first, so it must exist for the list to run.
+			objects: []client.Object{
+				&kargoapi.Freight{ObjectMeta: metav1.ObjectMeta{Namespace: testProject, Name: "fake-freight-1"}},
+				&kargoapi.Freight{ObjectMeta: metav1.ObjectMeta{Namespace: testProject, Name: "fake-freight-2"}},
+			},
 			interceptor: interceptor.Funcs{
 				List: func(context.Context, client.WithWatch, client.ObjectList, ...client.ListOption) error {
 					return fmt.Errorf("something went wrong")
@@ -3139,6 +3406,212 @@ func TestRegularStageReconciler_assessHealth(t *testing.T) {
 	}
 }
 
+// TestRegularStageReconciler_syncFreight_writesPerPromotion counts Freight
+// status writes for one promotion: one to the Freight coming into the Stage,
+// carrying both currentlyIn and verifiedIn, then one to the Freight leaving it.
+func TestRegularStageReconciler_syncFreight_writesPerPromotion(t *testing.T) {
+	const project = "fake-project"
+	finished := metav1.NewTime(time.Now().Add(-time.Minute).Truncate(time.Second))
+	since := metav1.NewTime(time.Now().Add(-time.Hour).Truncate(time.Second))
+
+	newStage := func(hs kargoapi.HealthState) *kargoapi.Stage {
+		return &kargoapi.Stage{
+			ObjectMeta: metav1.ObjectMeta{Namespace: project, Name: "fake-stage"},
+			Status: kargoapi.StageStatus{
+				Health: &kargoapi.Health{Status: hs},
+				FreightHistory: kargoapi.FreightHistory{{
+					Freight: map[string]kargoapi.FreightReference{
+						"fake-warehouse": {Name: "new-freight"},
+					},
+					VerificationHistory: []kargoapi.VerificationInfo{{
+						Phase:      kargoapi.VerificationPhaseSuccessful,
+						FinishTime: &finished,
+					}},
+				}},
+			},
+		}
+	}
+
+	scheme := runtime.NewScheme()
+	require.NoError(t, kargoapi.AddToScheme(scheme))
+
+	// newClient returns a client holding the Freight leaving and the Freight
+	// entering the Stage, which records each Freight status write in order.
+	newClient := func(patched *[]string) client.Client {
+		return fake.NewClientBuilder().
+			WithScheme(scheme).
+			WithObjects(
+				&kargoapi.Freight{
+					ObjectMeta: metav1.ObjectMeta{Namespace: project, Name: "new-freight"},
+				},
+				&kargoapi.Freight{
+					ObjectMeta: metav1.ObjectMeta{Namespace: project, Name: "old-freight"},
+					Status: kargoapi.FreightStatus{
+						CurrentlyIn: map[string]kargoapi.CurrentStage{"fake-stage": {Since: &since}},
+						VerifiedIn:  map[string]kargoapi.VerifiedStage{"fake-stage": {}},
+					},
+				},
+			).
+			WithIndex(
+				&kargoapi.Freight{},
+				indexer.FreightByCurrentStagesField,
+				indexer.FreightByCurrentStages,
+			).
+			WithStatusSubresource(&kargoapi.Freight{}).
+			WithInterceptorFuncs(interceptor.Funcs{
+				SubResourcePatch: func(
+					ctx context.Context,
+					c client.Client,
+					sub string,
+					obj client.Object,
+					p client.Patch,
+					opts ...client.SubResourcePatchOption,
+				) error {
+					*patched = append(*patched, obj.GetName())
+					return c.SubResource(sub).Patch(ctx, obj, p, opts...)
+				},
+			}).
+			Build()
+	}
+
+	getFreight := func(t *testing.T, c client.Client, name string) *kargoapi.Freight {
+		f := &kargoapi.Freight{}
+		require.NoError(t, c.Get(t.Context(), types.NamespacedName{Namespace: project, Name: name}, f))
+		return f
+	}
+
+	t.Run("verified in the same pass: two writes, not three", func(t *testing.T) {
+		var patched []string
+		c := newClient(&patched)
+		r := &RegularStageReconciler{client: c}
+
+		require.NoError(t, r.syncFreight(t.Context(), newStage(kargoapi.HealthStateHealthy)))
+		// The Freight downstream Stages wait on is written first.
+		require.Equal(t, []string{"new-freight", "old-freight"}, patched)
+
+		f := getFreight(t, c, "new-freight")
+		require.Contains(t, f.Status.CurrentlyIn, "fake-stage")
+		require.Contains(t, f.Status.VerifiedIn, "fake-stage")
+		require.Equal(t, finished.Unix(), f.Status.VerifiedIn["fake-stage"].VerifiedAt.Unix())
+		require.NotContains(t, getFreight(t, c, "old-freight").Status.CurrentlyIn, "fake-stage")
+
+		// Nothing left to write.
+		patched = nil
+		require.NoError(t, r.syncFreight(t.Context(), newStage(kargoapi.HealthStateHealthy)))
+		require.Empty(t, patched)
+	})
+
+	t.Run("verified in a later pass: currentlyIn first, verifiedIn after", func(t *testing.T) {
+		var patched []string
+		c := newClient(&patched)
+		r := &RegularStageReconciler{client: c}
+
+		require.NoError(t, r.syncFreight(t.Context(), newStage(kargoapi.HealthStateProgressing)))
+		require.Equal(t, []string{"new-freight", "old-freight"}, patched)
+		f := getFreight(t, c, "new-freight")
+		require.Contains(t, f.Status.CurrentlyIn, "fake-stage")
+		require.NotContains(t, f.Status.VerifiedIn, "fake-stage")
+		firstSince := f.Status.CurrentlyIn["fake-stage"].Since
+
+		patched = nil
+		require.NoError(t, r.syncFreight(t.Context(), newStage(kargoapi.HealthStateHealthy)))
+		require.Equal(t, []string{"new-freight"}, patched)
+		f = getFreight(t, c, "new-freight")
+		require.Contains(t, f.Status.VerifiedIn, "fake-stage")
+		// The existing currentlyIn entry is left alone.
+		require.Equal(t, firstSince.Unix(), f.Status.CurrentlyIn["fake-stage"].Since.Unix())
+	})
+
+	t.Run("verified without a finish time: verifiedAt falls back to now", func(t *testing.T) {
+		var patched []string
+		c := newClient(&patched)
+		r := &RegularStageReconciler{client: c}
+
+		stage := newStage(kargoapi.HealthStateHealthy)
+		stage.Status.FreightHistory[0].VerificationHistory[0].FinishTime = nil
+		before := time.Now().Truncate(time.Second)
+		require.NoError(t, r.syncFreight(t.Context(), stage))
+		f := getFreight(t, c, "new-freight")
+		require.Contains(t, f.Status.VerifiedIn, "fake-stage")
+		require.False(t, f.Status.VerifiedIn["fake-stage"].VerifiedAt.Time.Before(before))
+	})
+}
+
+func Test_freightVerifiedAt(t *testing.T) {
+	finished := metav1.NewTime(time.Now().Truncate(time.Second))
+	healthy := &kargoapi.Health{Status: kargoapi.HealthStateHealthy}
+	withVerifications := func(h *kargoapi.Health, vis ...kargoapi.VerificationInfo) *kargoapi.Stage {
+		return &kargoapi.Stage{
+			Status: kargoapi.StageStatus{
+				Health: h,
+				FreightHistory: kargoapi.FreightHistory{{
+					Freight: map[string]kargoapi.FreightReference{
+						"fake-warehouse": {Name: "fake-freight"},
+					},
+					VerificationHistory: vis,
+				}},
+			},
+		}
+	}
+	successful := kargoapi.VerificationInfo{
+		Phase:      kargoapi.VerificationPhaseSuccessful,
+		FinishTime: &finished,
+	}
+
+	testCases := []struct {
+		name     string
+		stage    *kargoapi.Stage
+		verified bool
+		at       time.Time
+	}{
+		{
+			name:  "nil health",
+			stage: withVerifications(nil, successful),
+		},
+		{
+			name:  "unhealthy",
+			stage: withVerifications(&kargoapi.Health{Status: kargoapi.HealthStateUnhealthy}, successful),
+		},
+		{
+			name:  "no current Freight",
+			stage: &kargoapi.Stage{Status: kargoapi.StageStatus{Health: healthy}},
+		},
+		{
+			name:  "no verification yet",
+			stage: withVerifications(healthy),
+		},
+		{
+			name:  "verification running",
+			stage: withVerifications(healthy, kargoapi.VerificationInfo{Phase: kargoapi.VerificationPhaseRunning}),
+		},
+		{
+			name:  "verification failed",
+			stage: withVerifications(healthy, kargoapi.VerificationInfo{Phase: kargoapi.VerificationPhaseFailed}),
+		},
+		{
+			name:     "healthy and verified",
+			stage:    withVerifications(healthy, successful),
+			verified: true,
+			at:       finished.Time,
+		},
+		{
+			name: "verified without a finish time",
+			stage: withVerifications(
+				healthy,
+				kargoapi.VerificationInfo{Phase: kargoapi.VerificationPhaseSuccessful},
+			),
+			verified: true,
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			at, ok := freightVerifiedAt(testCase.stage)
+			require.Equal(t, testCase.verified, ok)
+			require.Equal(t, testCase.at.Unix(), at.Unix())
+		})
+	}
+}
+
 func TestRegularStageReconciler_verifyStageFreight(t *testing.T) {
 	scheme := runtime.NewScheme()
 	require.NoError(t, kargoapi.AddToScheme(scheme))
@@ -3152,7 +3625,7 @@ func TestRegularStageReconciler_verifyStageFreight(t *testing.T) {
 		name             string
 		stage            *kargoapi.Stage
 		objects          []client.Object
-		assertions       func(*testing.T, client.Client, *fakeevent.EventRecorder, kargoapi.StageStatus, error)
+		assertions       func(*testing.T, client.Client, *fakeevent.Sender, kargoapi.StageStatus, error)
 		rolloutsDisabled bool
 	}{
 		{
@@ -3169,13 +3642,13 @@ func TestRegularStageReconciler_verifyStageFreight(t *testing.T) {
 			assertions: func(
 				t *testing.T,
 				_ client.Client,
-				recorder *fakeevent.EventRecorder,
+				recorder *fakeevent.Sender,
 				status kargoapi.StageStatus,
 				err error,
 			) {
 				require.NoError(t, err)
 
-				assert.Len(t, recorder.Events, 0)
+				assert.Len(t, recorder.Sent(), 0)
 
 				verifiedCond := conditions.Get(&status, kargoapi.ConditionTypeVerified)
 				require.NotNil(t, verifiedCond)
@@ -3207,13 +3680,13 @@ func TestRegularStageReconciler_verifyStageFreight(t *testing.T) {
 			assertions: func(
 				t *testing.T,
 				_ client.Client,
-				recorder *fakeevent.EventRecorder,
+				recorder *fakeevent.Sender,
 				status kargoapi.StageStatus,
 				err error,
 			) {
 				require.NoError(t, err)
 
-				assert.Len(t, recorder.Events, 0)
+				assert.Len(t, recorder.Sent(), 0)
 
 				verifiedCond := conditions.Get(&status, kargoapi.ConditionTypeVerified)
 				assert.Nil(t, verifiedCond)
@@ -3261,13 +3734,13 @@ func TestRegularStageReconciler_verifyStageFreight(t *testing.T) {
 			assertions: func(
 				t *testing.T,
 				_ client.Client,
-				recorder *fakeevent.EventRecorder,
+				recorder *fakeevent.Sender,
 				status kargoapi.StageStatus,
 				err error,
 			) {
 				require.NoError(t, err)
 
-				require.Len(t, recorder.Events, 2)
+				require.Len(t, recorder.Sent(), 2)
 
 				curFreight := status.FreightHistory.Current()
 				require.NotNil(t, curFreight)
@@ -3310,7 +3783,7 @@ func TestRegularStageReconciler_verifyStageFreight(t *testing.T) {
 			assertions: func(
 				t *testing.T,
 				_ client.Client,
-				_ *fakeevent.EventRecorder,
+				_ *fakeevent.Sender,
 				status kargoapi.StageStatus,
 				err error,
 			) {
@@ -3351,7 +3824,7 @@ func TestRegularStageReconciler_verifyStageFreight(t *testing.T) {
 			assertions: func(
 				t *testing.T,
 				_ client.Client,
-				_ *fakeevent.EventRecorder,
+				_ *fakeevent.Sender,
 				status kargoapi.StageStatus,
 				err error,
 			) {
@@ -3401,13 +3874,13 @@ func TestRegularStageReconciler_verifyStageFreight(t *testing.T) {
 			assertions: func(
 				t *testing.T,
 				_ client.Client,
-				recorder *fakeevent.EventRecorder,
+				recorder *fakeevent.Sender,
 				status kargoapi.StageStatus,
 				err error,
 			) {
 				require.NoError(t, err)
 
-				assert.Len(t, recorder.Events, 1)
+				assert.Len(t, recorder.Sent(), 1)
 
 				curFreight := status.FreightHistory.Current()
 				require.NotNil(t, curFreight)
@@ -3475,13 +3948,13 @@ func TestRegularStageReconciler_verifyStageFreight(t *testing.T) {
 			assertions: func(
 				t *testing.T,
 				c client.Client,
-				recorder *fakeevent.EventRecorder,
+				recorder *fakeevent.Sender,
 				status kargoapi.StageStatus,
 				err error,
 			) {
 				require.NoError(t, err)
 
-				assert.Len(t, recorder.Events, 1)
+				assert.Len(t, recorder.Sent(), 1)
 
 				curFreight := status.FreightHistory.Current()
 				require.NotNil(t, curFreight)
@@ -3553,13 +4026,13 @@ func TestRegularStageReconciler_verifyStageFreight(t *testing.T) {
 			assertions: func(
 				t *testing.T,
 				c client.Client,
-				recorder *fakeevent.EventRecorder,
+				recorder *fakeevent.Sender,
 				status kargoapi.StageStatus,
 				err error,
 			) {
 				require.NoError(t, err)
 
-				assert.Len(t, recorder.Events, 0)
+				assert.Len(t, recorder.Sent(), 0)
 
 				curFreight := status.FreightHistory.Current()
 				require.NotNil(t, curFreight)
@@ -3635,13 +4108,13 @@ func TestRegularStageReconciler_verifyStageFreight(t *testing.T) {
 			assertions: func(
 				t *testing.T,
 				_ client.Client,
-				recorder *fakeevent.EventRecorder,
+				recorder *fakeevent.Sender,
 				status kargoapi.StageStatus,
 				err error,
 			) {
 				require.NoError(t, err)
 
-				assert.Len(t, recorder.Events, 0)
+				assert.Len(t, recorder.Sent(), 0)
 
 				curFreight := status.FreightHistory.Current()
 				require.NotNil(t, curFreight)
@@ -3705,13 +4178,13 @@ func TestRegularStageReconciler_verifyStageFreight(t *testing.T) {
 			assertions: func(
 				t *testing.T,
 				_ client.Client,
-				recorder *fakeevent.EventRecorder,
+				recorder *fakeevent.Sender,
 				status kargoapi.StageStatus,
 				err error,
 			) {
 				require.True(t, apierrors.IsNotFound(err))
 
-				assert.Len(t, recorder.Events, 1)
+				assert.Len(t, recorder.Sent(), 1)
 
 				curFreight := status.FreightHistory.Current()
 				require.NotNil(t, curFreight)
@@ -3777,13 +4250,13 @@ func TestRegularStageReconciler_verifyStageFreight(t *testing.T) {
 			assertions: func(
 				t *testing.T,
 				_ client.Client,
-				recorder *fakeevent.EventRecorder,
+				recorder *fakeevent.Sender,
 				status kargoapi.StageStatus,
 				err error,
 			) {
 				require.NoError(t, err)
 
-				assert.Len(t, recorder.Events, 1)
+				assert.Len(t, recorder.Sent(), 1)
 
 				curFreight := status.FreightHistory.Current()
 				require.NotNil(t, curFreight)
@@ -3850,7 +4323,7 @@ func TestRegularStageReconciler_verifyStageFreight(t *testing.T) {
 			assertions: func(
 				t *testing.T,
 				_ client.Client,
-				_ *fakeevent.EventRecorder,
+				_ *fakeevent.Sender,
 				status kargoapi.StageStatus,
 				err error,
 			) {
@@ -3933,13 +4406,13 @@ func TestRegularStageReconciler_verifyStageFreight(t *testing.T) {
 			assertions: func(
 				t *testing.T,
 				_ client.Client,
-				recorder *fakeevent.EventRecorder,
+				recorder *fakeevent.Sender,
 				status kargoapi.StageStatus,
 				err error,
 			) {
 				require.NoError(t, err)
 
-				require.Len(t, recorder.Events, 1)
+				require.Len(t, recorder.Sent(), 1)
 
 				curFreight := status.FreightHistory.Current()
 				require.NotNil(t, curFreight)
@@ -3968,14 +4441,14 @@ func TestRegularStageReconciler_verifyStageFreight(t *testing.T) {
 				WithStatusSubresource(&kargoapi.Stage{}).
 				Build()
 
-			recorder := fakeevent.NewEventRecorder(10)
+			recorder := &fakeevent.Sender{}
 
 			r := &RegularStageReconciler{
 				client: c,
 				cfg: ReconcilerConfig{
 					RolloutsIntegrationEnabled: !tt.rolloutsDisabled,
 				},
-				eventSender: k8sevent.NewEventSender(recorder),
+				eventSender: recorder,
 				backoffCfg: wait.Backoff{
 					Duration: 1 * time.Second,
 					Factor:   2,
@@ -3987,2207 +4460,6 @@ func TestRegularStageReconciler_verifyStageFreight(t *testing.T) {
 
 			status, err := r.verifyStageFreight(t.Context(), tt.stage, startTime, fixedEndTime)
 			tt.assertions(t, c, recorder, status, err)
-		})
-	}
-}
-
-func TestRegularStageReconciler_markFreightVerifiedForStage(t *testing.T) {
-	scheme := runtime.NewScheme()
-	require.NoError(t, kargoapi.AddToScheme(scheme))
-
-	endTime := metav1.Now()
-
-	tests := []struct {
-		name       string
-		stage      *kargoapi.Stage
-		objects    []client.Object
-		assertions func(*testing.T, client.Client, kargoapi.StageStatus, error)
-	}{
-		{
-			name: "skips verification when unhealthy",
-			stage: &kargoapi.Stage{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "fake-project",
-					Name:      "test-stage",
-				},
-				Status: kargoapi.StageStatus{
-					Health: &kargoapi.Health{
-						Status: kargoapi.HealthStateUnhealthy,
-					},
-					FreightHistory: kargoapi.FreightHistory{
-						{
-							ID: "test-collection",
-							Freight: map[string]kargoapi.FreightReference{
-								"warehouse": {Name: "test-freight"},
-							},
-							VerificationHistory: []kargoapi.VerificationInfo{
-								{
-									Phase: kargoapi.VerificationPhaseSuccessful,
-								},
-							},
-						},
-					},
-				},
-			},
-			assertions: func(t *testing.T, _ client.Client, status kargoapi.StageStatus, err error) {
-				require.NoError(t, err)
-				// Status should remain unchanged
-				assert.Equal(t, kargoapi.HealthStateUnhealthy, status.Health.Status)
-			},
-		},
-		{
-			name: "skips verification when no current freight",
-			stage: &kargoapi.Stage{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "fake-project",
-					Name:      "test-stage",
-				},
-				Status: kargoapi.StageStatus{
-					Health: &kargoapi.Health{
-						Status: kargoapi.HealthStateHealthy,
-					},
-				},
-			},
-			assertions: func(t *testing.T, _ client.Client, _ kargoapi.StageStatus, err error) {
-				require.NoError(t, err)
-			},
-		},
-		{
-			name: "skips verification when non-terminal verification exists",
-			stage: &kargoapi.Stage{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "fake-project",
-					Name:      "test-stage",
-				},
-				Status: kargoapi.StageStatus{
-					Health: &kargoapi.Health{
-						Status: kargoapi.HealthStateHealthy,
-					},
-					FreightHistory: kargoapi.FreightHistory{
-						{
-							ID: "test-collection",
-							Freight: map[string]kargoapi.FreightReference{
-								"warehouse": {Name: "test-freight"},
-							},
-							VerificationHistory: []kargoapi.VerificationInfo{
-								{
-									Phase: kargoapi.VerificationPhaseRunning,
-								},
-							},
-						},
-					},
-				},
-			},
-			assertions: func(t *testing.T, _ client.Client, _ kargoapi.StageStatus, err error) {
-				require.NoError(t, err)
-			},
-		},
-		{
-			name: "skips verification when last verification is not successful",
-			stage: &kargoapi.Stage{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "fake-project",
-					Name:      "test-stage",
-				},
-				Status: kargoapi.StageStatus{
-					Health: &kargoapi.Health{
-						Status: kargoapi.HealthStateHealthy,
-					},
-					FreightHistory: kargoapi.FreightHistory{
-						{
-							ID: "test-collection",
-							Freight: map[string]kargoapi.FreightReference{
-								"warehouse": {Name: "test-freight"},
-							},
-							VerificationHistory: []kargoapi.VerificationInfo{
-								{
-									Phase: kargoapi.VerificationPhaseFailed,
-								},
-							},
-						},
-					},
-				},
-			},
-			assertions: func(t *testing.T, _ client.Client, _ kargoapi.StageStatus, err error) {
-				require.NoError(t, err)
-			},
-		},
-		{
-			name: "handles freight not found",
-			stage: &kargoapi.Stage{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "fake-project",
-					Name:      "test-stage",
-				},
-				Status: kargoapi.StageStatus{
-					Health: &kargoapi.Health{
-						Status: kargoapi.HealthStateHealthy,
-					},
-					FreightHistory: kargoapi.FreightHistory{
-						{
-							ID: "test-collection",
-							Freight: map[string]kargoapi.FreightReference{
-								"warehouse": {Name: "missing-freight"},
-							},
-							VerificationHistory: []kargoapi.VerificationInfo{
-								{
-									Phase: kargoapi.VerificationPhaseSuccessful,
-								},
-							},
-						},
-					},
-				},
-			},
-			assertions: func(t *testing.T, _ client.Client, _ kargoapi.StageStatus, err error) {
-				require.ErrorContains(t, err, "error getting Freight")
-			},
-		},
-		{
-			name: "marks freight as verified when not already verified",
-			stage: &kargoapi.Stage{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "fake-project",
-					Name:      "test-stage",
-				},
-				Status: kargoapi.StageStatus{
-					Health: &kargoapi.Health{
-						Status: kargoapi.HealthStateHealthy,
-					},
-					FreightHistory: kargoapi.FreightHistory{
-						{
-							ID: "test-collection",
-							Freight: map[string]kargoapi.FreightReference{
-								"warehouse": {Name: "test-freight"},
-							},
-							VerificationHistory: []kargoapi.VerificationInfo{
-								{
-									Phase:      kargoapi.VerificationPhaseSuccessful,
-									FinishTime: endTime.DeepCopy(),
-								},
-							},
-						},
-					},
-				},
-			},
-			objects: []client.Object{
-				&kargoapi.Freight{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "fake-project",
-						Name:      "test-freight",
-					},
-				},
-			},
-			assertions: func(t *testing.T, c client.Client, _ kargoapi.StageStatus, err error) {
-				require.NoError(t, err)
-
-				// Check if freight was properly marked as verified
-				freight := &kargoapi.Freight{}
-				require.NoError(t, c.Get(t.Context(), client.ObjectKey{
-					Namespace: "fake-project",
-					Name:      "test-freight",
-				}, freight))
-
-				verifiedStage, ok := freight.Status.VerifiedIn["test-stage"]
-				require.True(t, ok)
-				assert.Equal(t, endTime.Unix(), verifiedStage.VerifiedAt.Unix())
-			},
-		},
-		{
-			name: "skips already verified freight",
-			stage: &kargoapi.Stage{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "fake-project",
-					Name:      "test-stage",
-				},
-				Status: kargoapi.StageStatus{
-					Health: &kargoapi.Health{
-						Status: kargoapi.HealthStateHealthy,
-					},
-					FreightHistory: kargoapi.FreightHistory{
-						{
-							ID: "test-collection",
-							Freight: map[string]kargoapi.FreightReference{
-								"warehouse": {Name: "test-freight"},
-							},
-							VerificationHistory: []kargoapi.VerificationInfo{
-								{
-									Phase: kargoapi.VerificationPhaseSuccessful,
-								},
-							},
-						},
-					},
-				},
-			},
-			objects: []client.Object{
-				&kargoapi.Freight{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "fake-project",
-						Name:      "test-freight",
-					},
-					Status: kargoapi.FreightStatus{
-						VerifiedIn: map[string]kargoapi.VerifiedStage{
-							"test-stage": {},
-						},
-					},
-				},
-			},
-			assertions: func(t *testing.T, c client.Client, _ kargoapi.StageStatus, err error) {
-				require.NoError(t, err)
-
-				// Verify no changes were made to the freight
-				freight := &kargoapi.Freight{}
-				require.NoError(t, c.Get(t.Context(), client.ObjectKey{
-					Namespace: "fake-project",
-					Name:      "test-freight",
-				}, freight))
-				assert.Len(t, freight.Status.VerifiedIn, 1)
-			},
-		},
-		{
-			name: "handles multiple freight references",
-			stage: &kargoapi.Stage{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "fake-project",
-					Name:      "test-stage",
-				},
-				Status: kargoapi.StageStatus{
-					Health: &kargoapi.Health{
-						Status: kargoapi.HealthStateHealthy,
-					},
-					FreightHistory: kargoapi.FreightHistory{
-						{
-							ID: "test-collection",
-							Freight: map[string]kargoapi.FreightReference{
-								"warehouse1": {Name: "freight-1"},
-								"warehouse2": {Name: "freight-2"},
-							},
-							VerificationHistory: []kargoapi.VerificationInfo{
-								{
-									Phase:      kargoapi.VerificationPhaseSuccessful,
-									FinishTime: ptr.To(endTime.Rfc3339Copy()),
-								},
-							},
-						},
-					},
-				},
-			},
-			objects: []client.Object{
-				&kargoapi.Freight{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "fake-project",
-						Name:      "freight-1",
-					},
-					Status: kargoapi.FreightStatus{},
-				},
-				&kargoapi.Freight{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "fake-project",
-						Name:      "freight-2",
-					},
-					Status: kargoapi.FreightStatus{},
-				},
-			},
-			assertions: func(t *testing.T, c client.Client, _ kargoapi.StageStatus, err error) {
-				require.NoError(t, err)
-
-				// Check both freight objects were marked as verified
-				for _, name := range []string{"freight-1", "freight-2"} {
-					freight := &kargoapi.Freight{}
-					require.NoError(t, c.Get(t.Context(), client.ObjectKey{
-						Namespace: "fake-project",
-						Name:      name,
-					}, freight))
-
-					verifiedStage, ok := freight.Status.VerifiedIn["test-stage"]
-					require.True(t, ok, "freight %s should be verified", name)
-					assert.Equal(t, endTime.Unix(), verifiedStage.VerifiedAt.Unix())
-				}
-			},
-		},
-		{
-			name: "handles patch error",
-			stage: &kargoapi.Stage{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "fake-project",
-					Name:      "test-stage",
-				},
-				Status: kargoapi.StageStatus{
-					Health: &kargoapi.Health{
-						Status: kargoapi.HealthStateHealthy,
-					},
-					FreightHistory: kargoapi.FreightHistory{
-						{
-							ID: "test-collection",
-							Freight: map[string]kargoapi.FreightReference{
-								"warehouse": {Name: "test-freight"},
-							},
-							VerificationHistory: []kargoapi.VerificationInfo{
-								{
-									Phase:      kargoapi.VerificationPhaseSuccessful,
-									FinishTime: &metav1.Time{Time: endTime.Time},
-								},
-							},
-						},
-					},
-				},
-			},
-			objects: []client.Object{
-				&kargoapi.Freight{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace:       "fake-project",
-						Name:            "test-freight",
-						ResourceVersion: "invalid", // This will cause patch to fail
-					},
-				},
-			},
-			assertions: func(t *testing.T, _ client.Client, _ kargoapi.StageStatus, err error) {
-				require.ErrorContains(t, err, "error marking Freight")
-			},
-		},
-		{
-			name: "empty verification history skips verification",
-			stage: &kargoapi.Stage{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "fake-project",
-					Name:      "test-stage",
-				},
-				Status: kargoapi.StageStatus{
-					Health: &kargoapi.Health{
-						Status: kargoapi.HealthStateHealthy,
-					},
-					FreightHistory: kargoapi.FreightHistory{
-						{
-							ID: "test-collection",
-							Freight: map[string]kargoapi.FreightReference{
-								"warehouse": {Name: "test-freight"},
-							},
-							VerificationHistory: []kargoapi.VerificationInfo{},
-						},
-					},
-				},
-			},
-			assertions: func(t *testing.T, _ client.Client, _ kargoapi.StageStatus, err error) {
-				require.NoError(t, err)
-			},
-		},
-		{
-			name: "nil health status skips verification",
-			stage: &kargoapi.Stage{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "fake-project",
-					Name:      "test-stage",
-				},
-				Status: kargoapi.StageStatus{
-					Health: nil,
-					FreightHistory: kargoapi.FreightHistory{
-						{
-							ID: "test-collection",
-							Freight: map[string]kargoapi.FreightReference{
-								"warehouse": {Name: "test-freight"},
-							},
-							VerificationHistory: []kargoapi.VerificationInfo{
-								{
-									Phase: kargoapi.VerificationPhaseSuccessful,
-								},
-							},
-						},
-					},
-				},
-			},
-			assertions: func(t *testing.T, _ client.Client, _ kargoapi.StageStatus, err error) {
-				require.NoError(t, err)
-			},
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			c := fake.NewClientBuilder().
-				WithScheme(scheme).
-				WithObjects(tt.objects...).
-				WithStatusSubresource(&kargoapi.Stage{}, &kargoapi.Freight{}).
-				Build()
-
-			r := &RegularStageReconciler{
-				client:        c,
-				healthChecker: &health.MockAggregatingChecker{},
-			}
-
-			status, err := r.markFreightVerifiedForStage(t.Context(), tt.stage)
-			tt.assertions(t, c, status, err)
-		})
-	}
-}
-
-func TestRegularStageReconciler_recordFreightVerificationEvent(t *testing.T) {
-	scheme := runtime.NewScheme()
-	require.NoError(t, kargoapi.AddToScheme(scheme))
-	require.NoError(t, rolloutsapi.AddToScheme(scheme))
-
-	now := metav1.Now()
-	startTime := metav1.NewTime(now.Add(-1 * time.Hour))
-	finishTime := metav1.NewTime(now.Add(-30 * time.Minute))
-
-	baseStage := &kargoapi.Stage{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-stage",
-			Namespace: "test-project",
-		},
-	}
-
-	baseFreight := &kargoapi.Freight{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:              "test-freight",
-			Namespace:         "test-project",
-			CreationTimestamp: now,
-		},
-		Alias: "test-alias",
-	}
-
-	baseFreightRef := kargoapi.FreightReference{
-		Name: "test-freight",
-	}
-
-	tests := []struct {
-		name       string
-		stage      *kargoapi.Stage
-		freightRef kargoapi.FreightReference
-		vi         *kargoapi.VerificationInfo
-		objects    []client.Object
-		assertions func(*testing.T, *fakeevent.EventRecorder)
-	}{
-		{
-			name:       "successful verification",
-			stage:      baseStage,
-			freightRef: baseFreightRef,
-			vi: &kargoapi.VerificationInfo{
-				Phase:      kargoapi.VerificationPhaseSuccessful,
-				StartTime:  &startTime,
-				FinishTime: &finishTime,
-			},
-			objects: []client.Object{baseFreight},
-			assertions: func(t *testing.T, recorder *fakeevent.EventRecorder) {
-				require.Len(t, recorder.Events, 1)
-
-				event := <-recorder.Events
-				assert.Equal(t, corev1.EventTypeNormal, event.EventType)
-				assert.Equal(t, string(kargoapi.EventTypeFreightVerificationSucceeded), event.Reason)
-				assert.Equal(t, "Freight verification succeeded", event.Message)
-
-				assert.Equal(t, baseStage.Name, event.Annotations[kargoapi.AnnotationKeyEventStageName])
-				assert.Equal(t, baseFreight.Alias, event.Annotations[kargoapi.AnnotationKeyEventFreightAlias])
-				assert.Equal(
-					t,
-					startTime.Format(time.RFC3339),
-					event.Annotations[kargoapi.AnnotationKeyEventVerificationStartTime],
-				)
-				assert.Equal(
-					t,
-					finishTime.Format(time.RFC3339),
-					event.Annotations[kargoapi.AnnotationKeyEventVerificationFinishTime],
-				)
-			},
-		},
-		{
-			name:       "failed verification",
-			stage:      baseStage,
-			freightRef: baseFreightRef,
-			vi: &kargoapi.VerificationInfo{
-				Phase:   kargoapi.VerificationPhaseFailed,
-				Message: "verification failed due to metrics",
-			},
-			objects: []client.Object{baseFreight},
-			assertions: func(t *testing.T, recorder *fakeevent.EventRecorder) {
-				require.Len(t, recorder.Events, 1)
-
-				event := <-recorder.Events
-				assert.Equal(t, string(kargoapi.EventTypeFreightVerificationFailed), event.Reason)
-				assert.Equal(t, "verification failed due to metrics", event.Message)
-			},
-		},
-		{
-			name:       "verification with analysis run and promotion",
-			stage:      baseStage,
-			freightRef: baseFreightRef,
-			vi: &kargoapi.VerificationInfo{
-				Phase: kargoapi.VerificationPhaseSuccessful,
-				AnalysisRun: &kargoapi.AnalysisRunReference{
-					Name:      "test-analysis",
-					Namespace: "test-project",
-				},
-			},
-			objects: []client.Object{
-				baseFreight,
-				&rolloutsapi.AnalysisRun{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-analysis",
-						Namespace: "test-project",
-						Annotations: map[string]string{
-							kargoapi.AnnotationKeyPromotion: "test-promotion",
-						},
-					},
-				},
-			},
-			assertions: func(t *testing.T, recorder *fakeevent.EventRecorder) {
-				require.Len(t, recorder.Events, 1)
-
-				event := <-recorder.Events
-				assert.Equal(t, "test-analysis", event.Annotations[kargoapi.AnnotationKeyEventAnalysisRunName])
-				assert.Equal(t, "test-promotion", event.Annotations[kargoapi.AnnotationKeyEventPromotionName])
-			},
-		},
-		{
-			name:       "verification with manual actor override",
-			stage:      baseStage,
-			freightRef: baseFreightRef,
-			vi: &kargoapi.VerificationInfo{
-				Phase: kargoapi.VerificationPhaseSuccessful,
-				Actor: "manual-user",
-			},
-			objects: []client.Object{baseFreight},
-			assertions: func(t *testing.T, recorder *fakeevent.EventRecorder) {
-				require.Len(t, recorder.Events, 1)
-
-				event := <-recorder.Events
-				assert.Equal(t, "manual-user", event.Annotations[kargoapi.AnnotationKeyEventActor])
-			},
-		},
-		{
-			name:       "freight not found",
-			stage:      baseStage,
-			freightRef: baseFreightRef,
-			vi: &kargoapi.VerificationInfo{
-				Phase: kargoapi.VerificationPhaseSuccessful,
-			},
-			objects: []client.Object{
-				// Freight does not exist
-			},
-			assertions: func(t *testing.T, recorder *fakeevent.EventRecorder) {
-				// No events should be recorded
-				assert.Len(t, recorder.Events, 0)
-			},
-		},
-		{
-			name:       "analysis run not found",
-			stage:      baseStage,
-			freightRef: baseFreightRef,
-			vi: &kargoapi.VerificationInfo{
-				Phase: kargoapi.VerificationPhaseSuccessful,
-				AnalysisRun: &kargoapi.AnalysisRunReference{
-					Name:      "missing-analysis",
-					Namespace: "test-project",
-				},
-			},
-			objects: []client.Object{baseFreight},
-			assertions: func(t *testing.T, recorder *fakeevent.EventRecorder) {
-				require.Len(t, recorder.Events, 1)
-
-				event := <-recorder.Events
-				assert.Equal(t, "missing-analysis", event.Annotations[kargoapi.AnnotationKeyEventAnalysisRunName])
-				// Should still record event even though analysis run wasn't found
-				assert.NotContains(t, event.Annotations, kargoapi.AnnotationKeyEventPromotionName)
-			},
-		},
-		{
-			name:       "errored verification",
-			stage:      baseStage,
-			freightRef: baseFreightRef,
-			vi: &kargoapi.VerificationInfo{
-				Phase:   kargoapi.VerificationPhaseError,
-				Message: "internal error occurred",
-			},
-			objects: []client.Object{baseFreight},
-			assertions: func(t *testing.T, recorder *fakeevent.EventRecorder) {
-				require.Len(t, recorder.Events, 1)
-
-				event := <-recorder.Events
-				assert.Equal(t, string(kargoapi.EventTypeFreightVerificationErrored), event.Reason)
-				assert.Equal(t, "internal error occurred", event.Message)
-			},
-		},
-		{
-			name:       "aborted verification",
-			stage:      baseStage,
-			freightRef: baseFreightRef,
-			vi: &kargoapi.VerificationInfo{
-				Phase:   kargoapi.VerificationPhaseAborted,
-				Message: "verification was canceled",
-			},
-			objects: []client.Object{baseFreight},
-			assertions: func(t *testing.T, recorder *fakeevent.EventRecorder) {
-				require.Len(t, recorder.Events, 1)
-
-				event := <-recorder.Events
-				assert.Equal(t, string(kargoapi.EventTypeFreightVerificationAborted), event.Reason)
-				assert.Equal(t, "verification was canceled", event.Message)
-			},
-		},
-		{
-			name:       "inconclusive verification",
-			stage:      baseStage,
-			freightRef: baseFreightRef,
-			vi: &kargoapi.VerificationInfo{
-				Phase:   kargoapi.VerificationPhaseInconclusive,
-				Message: "results were inconclusive",
-			},
-			objects: []client.Object{baseFreight},
-			assertions: func(t *testing.T, recorder *fakeevent.EventRecorder) {
-				require.Len(t, recorder.Events, 1)
-
-				event := <-recorder.Events
-				assert.Equal(t, string(kargoapi.EventTypeFreightVerificationInconclusive), event.Reason)
-				assert.Equal(t, "results were inconclusive", event.Message)
-			},
-		},
-		{
-			name:       "unknown phase",
-			stage:      baseStage,
-			freightRef: baseFreightRef,
-			vi: &kargoapi.VerificationInfo{
-				Phase:   "invalid-phase",
-				Message: "custom message",
-			},
-			objects: []client.Object{baseFreight},
-			assertions: func(t *testing.T, recorder *fakeevent.EventRecorder) {
-				require.Len(t, recorder.Events, 1)
-
-				event := <-recorder.Events
-				assert.Equal(t, string(kargoapi.EventTypeFreightVerificationUnknown), event.Reason)
-				assert.Equal(t, "custom message", event.Message)
-			},
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			c := fake.NewClientBuilder().
-				WithScheme(scheme).
-				WithObjects(tt.objects...).
-				Build()
-
-			recorder := fakeevent.NewEventRecorder(10)
-			ver := verifier{
-				client:      c,
-				eventSender: k8sevent.NewEventSender(recorder),
-			}
-
-			ver.recordFreightVerificationEvent(tt.stage, tt.freightRef, tt.vi)
-			tt.assertions(t, recorder)
-		})
-	}
-}
-
-func TestRegularStageReconciler_startVerification(t *testing.T) {
-	scheme := runtime.NewScheme()
-	require.NoError(t, kargoapi.AddToScheme(scheme))
-	require.NoError(t, rolloutsapi.AddToScheme(scheme))
-
-	startTime := time.Now()
-	endTime := startTime.Add(5 * time.Minute)
-	fixedEndTime := func() time.Time { return endTime }
-
-	tests := []struct {
-		name             string
-		stage            *kargoapi.Stage
-		freightCol       kargoapi.FreightCollection
-		req              *kargoapi.VerificationRequest
-		objects          []client.Object
-		credsDB          credentials.Database
-		rolloutsDisabled bool
-		assertions       func(*testing.T, client.Client, *kargoapi.VerificationInfo, error)
-	}{
-		{
-			name: "rollouts integration disabled",
-			stage: &kargoapi.Stage{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "fake-project",
-					Name:      "test-stage",
-				},
-				Spec: kargoapi.StageSpec{
-					Verification: &kargoapi.Verification{},
-				},
-			},
-			freightCol: kargoapi.FreightCollection{
-				ID: "test-collection",
-				Freight: map[string]kargoapi.FreightReference{
-					"warehouse": {Name: "test-freight"},
-				},
-			},
-			rolloutsDisabled: true,
-			assertions: func(t *testing.T, _ client.Client, vi *kargoapi.VerificationInfo, err error) {
-				require.NoError(t, err)
-
-				require.NotNil(t, vi)
-				assert.NotEmpty(t, vi.ID)
-				assert.Equal(t, kargoapi.VerificationPhaseError, vi.Phase)
-				assert.Contains(t, vi.Message, "Rollouts integration is disabled")
-				assert.Equal(t, startTime, vi.StartTime.Time)
-				require.NotNil(t, vi.FinishTime)
-				assert.Equal(t, endTime.Unix(), vi.FinishTime.Unix())
-			},
-		},
-		{
-			name: "finds existing analysis run",
-			stage: &kargoapi.Stage{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "fake-project",
-					Name:      "test-stage",
-				},
-				Spec: kargoapi.StageSpec{
-					Verification: &kargoapi.Verification{},
-				},
-			},
-			freightCol: kargoapi.FreightCollection{
-				ID: "test-collection",
-				Freight: map[string]kargoapi.FreightReference{
-					"warehouse": {Name: "test-freight"},
-				},
-			},
-			objects: []client.Object{
-				&rolloutsapi.AnalysisRun{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "existing-analysis",
-						Namespace: "fake-project",
-						Labels: map[string]string{
-							kargoapi.LabelKeyStage:             "test-stage",
-							kargoapi.LabelKeyFreightCollection: "test-collection",
-						},
-					},
-					Status: rolloutsapi.AnalysisRunStatus{
-						Phase:   "Successful",
-						Message: "Analysis completed successfully",
-					},
-				},
-			},
-			assertions: func(t *testing.T, _ client.Client, vi *kargoapi.VerificationInfo, err error) {
-				require.NoError(t, err)
-
-				require.NotNil(t, vi)
-				assert.NotEmpty(t, vi.ID)
-				assert.Equal(t, kargoapi.VerificationPhaseSuccessful, vi.Phase)
-				assert.Equal(t, "existing-analysis", vi.AnalysisRun.Name)
-				// StartTime is the injected reconciliation time; FinishTime is
-				// the injected end time stamped when the result is recorded.
-				require.NotNil(t, vi.StartTime)
-				require.NotNil(t, vi.FinishTime)
-				assert.Equal(t, startTime.Unix(), vi.StartTime.Unix())
-				assert.Equal(t, endTime.Unix(), vi.FinishTime.Unix())
-			},
-		},
-		{
-			name: "finds existing analysis run with stage name exceeding max label length",
-			stage: &kargoapi.Stage{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "fake-project",
-					Name:      "this-is-a-very-long-stage-name-that-exceeds-the-label-length-and-should-be-truncated",
-				},
-				Spec: kargoapi.StageSpec{
-					Verification: &kargoapi.Verification{},
-				},
-			},
-			freightCol: kargoapi.FreightCollection{
-				ID: "test-collection",
-				Freight: map[string]kargoapi.FreightReference{
-					"warehouse": {Name: "test-freight"},
-				},
-			},
-			objects: []client.Object{
-				&rolloutsapi.AnalysisRun{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "existing-analysis",
-						Namespace: "fake-project",
-						Labels: map[string]string{
-							kargoapi.LabelKeyStage:             "this-is-a-very-long-stage-name-that-exceeds-the-label-1c0a17e1",
-							kargoapi.LabelKeyFreightCollection: "test-collection",
-						},
-						Annotations: map[string]string{
-							kargoapi.AnnotationKeyStage: "this-is-a-very-long-stage-name-that-exceeds-the-label-length-and-should-be-truncated", // nolint:lll
-						},
-					},
-					Status: rolloutsapi.AnalysisRunStatus{
-						Phase:   "Successful",
-						Message: "Analysis completed successfully",
-					},
-				},
-			},
-			assertions: func(t *testing.T, _ client.Client, vi *kargoapi.VerificationInfo, err error) {
-				require.NoError(t, err)
-
-				require.NotNil(t, vi)
-				assert.NotEmpty(t, vi.ID)
-				assert.Equal(t, kargoapi.VerificationPhaseSuccessful, vi.Phase)
-				assert.Equal(t, "existing-analysis", vi.AnalysisRun.Name)
-				require.NotNil(t, vi.StartTime)
-				require.NotNil(t, vi.FinishTime)
-				assert.Equal(t, startTime.Unix(), vi.StartTime.Unix())
-				assert.Equal(t, endTime.Unix(), vi.FinishTime.Unix())
-			},
-		},
-		{
-			name: "creates new analysis run",
-			stage: &kargoapi.Stage{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "fake-project",
-					Name:      "test-stage",
-				},
-				Spec: kargoapi.StageSpec{
-					Verification: &kargoapi.Verification{},
-				},
-			},
-			freightCol: kargoapi.FreightCollection{
-				ID: "test-collection",
-				Freight: map[string]kargoapi.FreightReference{
-					"warehouse": {Name: "test-freight"},
-				},
-			},
-			objects: []client.Object{
-				&kargoapi.Freight{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-freight",
-						Namespace: "fake-project",
-					},
-				},
-			},
-			assertions: func(t *testing.T, c client.Client, vi *kargoapi.VerificationInfo, err error) {
-				require.NoError(t, err)
-
-				require.NotNil(t, vi)
-				assert.NotEmpty(t, vi.ID)
-				assert.Equal(t, kargoapi.VerificationPhasePending, vi.Phase)
-				assert.NotNil(t, vi.AnalysisRun)
-
-				// Verify analysis run was created
-				ar := &rolloutsapi.AnalysisRun{}
-				require.NoError(t, c.Get(t.Context(), types.NamespacedName{
-					Namespace: vi.AnalysisRun.Namespace,
-					Name:      vi.AnalysisRun.Name,
-				}, ar))
-
-				// Verify stage label is not shortened since stage name is short
-				assert.Equal(t, "test-stage", ar.Labels[kargoapi.LabelKeyStage])
-
-				// Verify no annotation is added since stage name doesn't need shortening
-				_, hasAnnotation := ar.Annotations[kargoapi.AnnotationKeyStage]
-				assert.False(t, hasAnnotation, "Stage annotation should not be present when stage name doesn't need shortening")
-			},
-		},
-		{
-			name: "creates new analysis run with stage name exceeding max label length",
-			stage: &kargoapi.Stage{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "fake-project",
-					Name:      "this-is-a-very-long-stage-name-that-exceeds-the-label-length-and-should-be-truncated",
-				},
-				Spec: kargoapi.StageSpec{
-					Verification: &kargoapi.Verification{},
-				},
-			},
-			freightCol: kargoapi.FreightCollection{
-				ID: "test-collection",
-				Freight: map[string]kargoapi.FreightReference{
-					"warehouse": {Name: "test-freight"},
-				},
-			},
-			objects: []client.Object{
-				&kargoapi.Freight{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-freight",
-						Namespace: "fake-project",
-					},
-				},
-			},
-			assertions: func(t *testing.T, c client.Client, vi *kargoapi.VerificationInfo, err error) {
-				require.NoError(t, err)
-
-				require.NotNil(t, vi)
-				assert.NotEmpty(t, vi.ID)
-				assert.Equal(t, kargoapi.VerificationPhasePending, vi.Phase)
-				assert.NotNil(t, vi.AnalysisRun)
-
-				// Verify analysis run was created
-				ar := &rolloutsapi.AnalysisRun{}
-				require.NoError(t, c.Get(t.Context(), types.NamespacedName{
-					Namespace: vi.AnalysisRun.Namespace,
-					Name:      vi.AnalysisRun.Name,
-				}, ar))
-
-				// Verify stage label was truncated correctly
-				assert.Equal(
-					t,
-					"this-is-a-very-long-stage-name-that-exceeds-the-label-1c0a17e1",
-					ar.Labels[kargoapi.LabelKeyStage],
-				)
-
-				// Verify annotation contains the full stage name
-				fullStageName, hasAnnotation := ar.Annotations[kargoapi.AnnotationKeyStage]
-				assert.True(t, hasAnnotation)
-				assert.Equal(
-					t,
-					"this-is-a-very-long-stage-name-that-exceeds-the-label-length-and-should-be-truncated",
-					fullStageName,
-				)
-			},
-		},
-		{
-			name: "handles reverification with control plane actor",
-			stage: &kargoapi.Stage{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "fake-project",
-					Name:      "test-stage",
-				},
-				Spec: kargoapi.StageSpec{
-					Verification: &kargoapi.Verification{},
-				},
-				Status: kargoapi.StageStatus{
-					LastPromotion: &kargoapi.PromotionReference{
-						Name: "test-promotion",
-					},
-				},
-			},
-			freightCol: kargoapi.FreightCollection{
-				ID: "test-collection",
-				Freight: map[string]kargoapi.FreightReference{
-					"warehouse": {Name: "test-freight"},
-				},
-				VerificationHistory: []kargoapi.VerificationInfo{
-					{
-						ID: "prev-verification",
-					},
-				},
-			},
-			objects: []client.Object{
-				&kargoapi.Freight{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "fake-project",
-						Name:      "test-freight",
-					},
-				},
-			},
-			req: &kargoapi.VerificationRequest{
-				ID:           "prev-verification",
-				Actor:        "test-user",
-				ControlPlane: true,
-			},
-			assertions: func(t *testing.T, c client.Client, vi *kargoapi.VerificationInfo, err error) {
-				require.NoError(t, err)
-
-				require.NotNil(t, vi)
-				assert.NotEmpty(t, vi.ID)
-				assert.Equal(t, "test-user", vi.Actor)
-
-				// Verify promotion annotation was added
-				ar := &rolloutsapi.AnalysisRun{}
-				require.NoError(t, c.Get(t.Context(), types.NamespacedName{
-					Namespace: vi.AnalysisRun.Namespace,
-					Name:      vi.AnalysisRun.Name,
-				}, ar))
-				assert.Equal(t, "test-promotion", ar.Annotations[kargoapi.AnnotationKeyPromotion])
-
-				// Verify no stage annotation is added since stage name doesn't need shortening
-				_, hasStageAnnotation := ar.Annotations[kargoapi.AnnotationKeyStage]
-				assert.False(t, hasStageAnnotation)
-			},
-		},
-		{
-			name: "handles reverification with control plane actor and long stage name",
-			stage: &kargoapi.Stage{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "fake-project",
-					Name:      "this-is-a-very-long-stage-name-that-exceeds-the-label-length-and-should-be-truncated",
-				},
-				Spec: kargoapi.StageSpec{
-					Verification: &kargoapi.Verification{},
-				},
-				Status: kargoapi.StageStatus{
-					LastPromotion: &kargoapi.PromotionReference{
-						Name: "test-promotion",
-					},
-				},
-			},
-			freightCol: kargoapi.FreightCollection{
-				ID: "test-collection",
-				Freight: map[string]kargoapi.FreightReference{
-					"warehouse": {Name: "test-freight"},
-				},
-				VerificationHistory: []kargoapi.VerificationInfo{
-					{
-						ID: "prev-verification",
-					},
-				},
-			},
-			objects: []client.Object{
-				&kargoapi.Freight{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "fake-project",
-						Name:      "test-freight",
-					},
-				},
-			},
-			req: &kargoapi.VerificationRequest{
-				ID:           "prev-verification",
-				Actor:        "test-user",
-				ControlPlane: true,
-			},
-			assertions: func(t *testing.T, c client.Client, vi *kargoapi.VerificationInfo, err error) {
-				require.NoError(t, err)
-
-				require.NotNil(t, vi)
-				assert.NotEmpty(t, vi.ID)
-				assert.Equal(t, "test-user", vi.Actor)
-
-				// Verify analysis run was created
-				ar := &rolloutsapi.AnalysisRun{}
-				require.NoError(t, c.Get(t.Context(), types.NamespacedName{
-					Namespace: vi.AnalysisRun.Namespace,
-					Name:      vi.AnalysisRun.Name,
-				}, ar))
-
-				// Verify both promotion and stage annotations are present
-				assert.Equal(t, "test-promotion", ar.Annotations[kargoapi.AnnotationKeyPromotion])
-				fullStageName, hasStageAnnotation := ar.Annotations[kargoapi.AnnotationKeyStage]
-				assert.True(t, hasStageAnnotation)
-				assert.Equal(
-					t,
-					"this-is-a-very-long-stage-name-that-exceeds-the-label-length-and-should-be-truncated",
-					fullStageName,
-				)
-
-				// Verify stage label was truncated correctly
-				assert.Equal(t,
-					"this-is-a-very-long-stage-name-that-exceeds-the-label-1c0a17e1",
-					ar.Labels[kargoapi.LabelKeyStage],
-				)
-			},
-		},
-		{
-			name: "resolves repoCredentials() in verification arguments",
-			stage: &kargoapi.Stage{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "fake-project",
-					Name:      "test-stage",
-				},
-				Spec: kargoapi.StageSpec{
-					Verification: &kargoapi.Verification{
-						AnalysisTemplates: []kargoapi.AnalysisTemplateReference{
-							{Name: "test-template"},
-						},
-						Args: []kargoapi.AnalysisRunArgument{
-							{
-								Name: "token",
-								Value: "${{ repoCredentials(" +
-									"'https://github.com/example/repo.git', 'git'" +
-									").Password }}",
-							},
-						},
-					},
-				},
-			},
-			freightCol: kargoapi.FreightCollection{
-				ID: "test-collection",
-				Freight: map[string]kargoapi.FreightReference{
-					"warehouse": {Name: "test-freight"},
-				},
-			},
-			objects: []client.Object{
-				&kargoapi.Freight{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-freight",
-						Namespace: "fake-project",
-					},
-				},
-				&rolloutsapi.AnalysisTemplate{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-template",
-						Namespace: "fake-project",
-					},
-					Spec: rolloutsapi.AnalysisTemplateSpec{
-						Args: []rolloutsapi.Argument{{Name: "token"}},
-					},
-				},
-			},
-			credsDB: &credentials.FakeDB{
-				GetFn: func(
-					context.Context,
-					string,
-					credentials.Type,
-					string,
-				) (*credentials.Credentials, error) {
-					return &credentials.Credentials{Password: "s3cr3t"}, nil
-				},
-			},
-			assertions: func(t *testing.T, c client.Client, vi *kargoapi.VerificationInfo, err error) {
-				require.NoError(t, err)
-
-				require.NotNil(t, vi)
-				assert.Equal(t, kargoapi.VerificationPhasePending, vi.Phase)
-				require.NotNil(t, vi.AnalysisRun)
-
-				ar := &rolloutsapi.AnalysisRun{}
-				require.NoError(t, c.Get(t.Context(), types.NamespacedName{
-					Namespace: vi.AnalysisRun.Namespace,
-					Name:      vi.AnalysisRun.Name,
-				}, ar))
-
-				require.Len(t, ar.Spec.Args, 1)
-				assert.Equal(t, "token", ar.Spec.Args[0].Name)
-				require.NotNil(t, ar.Spec.Args[0].Value)
-				assert.Equal(t, "s3cr3t", *ar.Spec.Args[0].Value)
-			},
-		},
-		{
-			name: "surfaces error when repoCredentials() is unavailable",
-			stage: &kargoapi.Stage{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "fake-project",
-					Name:      "test-stage",
-				},
-				Spec: kargoapi.StageSpec{
-					Verification: &kargoapi.Verification{
-						AnalysisTemplates: []kargoapi.AnalysisTemplateReference{
-							{Name: "test-template"},
-						},
-						Args: []kargoapi.AnalysisRunArgument{
-							{
-								Name: "token",
-								Value: "${{ repoCredentials(" +
-									"'https://github.com/example/repo.git', 'git'" +
-									").Password }}",
-							},
-						},
-					},
-				},
-			},
-			freightCol: kargoapi.FreightCollection{
-				ID: "test-collection",
-				Freight: map[string]kargoapi.FreightReference{
-					"warehouse": {Name: "test-freight"},
-				},
-			},
-			objects: []client.Object{
-				&kargoapi.Freight{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-freight",
-						Namespace: "fake-project",
-					},
-				},
-				&rolloutsapi.AnalysisTemplate{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-template",
-						Namespace: "fake-project",
-					},
-					Spec: rolloutsapi.AnalysisTemplateSpec{
-						Args: []rolloutsapi.Argument{{Name: "token"}},
-					},
-				},
-			},
-			// credsDB intentionally left nil.
-			assertions: func(t *testing.T, _ client.Client, vi *kargoapi.VerificationInfo, err error) {
-				require.NoError(t, err)
-
-				require.NotNil(t, vi)
-				assert.Equal(t, kargoapi.VerificationPhaseError, vi.Phase)
-				assert.Contains(t, vi.Message, "error building AnalysisRun")
-				assert.Contains(t, vi.Message, "repoCredentials is not available")
-			},
-		},
-		{
-			name: "handles analysis run build error",
-			stage: &kargoapi.Stage{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "fake-project",
-					Name:      "test-stage",
-				},
-				Spec: kargoapi.StageSpec{
-					Verification: &kargoapi.Verification{},
-				},
-			},
-			freightCol: kargoapi.FreightCollection{
-				ID: "test-collection",
-				Freight: map[string]kargoapi.FreightReference{
-					"warehouse": {Name: "test-freight"},
-				},
-			},
-			objects: []client.Object{
-				// Missing Freight object for owner reference
-			},
-			assertions: func(t *testing.T, _ client.Client, vi *kargoapi.VerificationInfo, err error) {
-				require.NoError(t, err)
-
-				require.NotNil(t, vi)
-				assert.Equal(t, kargoapi.VerificationPhaseError, vi.Phase)
-				assert.Contains(t, vi.Message, "error building AnalysisRun")
-			},
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			c := fake.NewClientBuilder().
-				WithScheme(scheme).
-				WithObjects(tt.objects...).
-				WithStatusSubresource(&kargoapi.Stage{}, &kargoapi.Freight{}, &rolloutsapi.AnalysisRun{}).
-				Build()
-
-			ver := verifier{
-				client:        c,
-				credentialsDB: tt.credsDB,
-				cfg: ReconcilerConfig{
-					RolloutsIntegrationEnabled:   !tt.rolloutsDisabled,
-					RolloutsControllerInstanceID: "test-instance",
-				},
-			}
-
-			vi, err := ver.startVerification(t.Context(), tt.stage, tt.freightCol, tt.req, startTime, fixedEndTime)
-			tt.assertions(t, c, vi, err)
-		})
-	}
-}
-
-func TestRegularStageReconciler_getVerificationResult(t *testing.T) {
-	scheme := runtime.NewScheme()
-	require.NoError(t, kargoapi.AddToScheme(scheme))
-	require.NoError(t, rolloutsapi.AddToScheme(scheme))
-
-	now := time.Now()
-	endTime := now.Add(5 * time.Minute)
-	fixedEndTime := func() time.Time { return endTime }
-
-	tests := []struct {
-		name             string
-		freight          kargoapi.FreightCollection
-		objects          []client.Object
-		rolloutsDisabled bool
-		assertions       func(*testing.T, *kargoapi.VerificationInfo, error)
-	}{
-		{
-			name: "error when no current verification info",
-			freight: kargoapi.FreightCollection{
-				ID: "test-collection",
-				Freight: map[string]kargoapi.FreightReference{
-					"warehouse": {Name: "test-freight"},
-				},
-				VerificationHistory: []kargoapi.VerificationInfo{},
-			},
-			assertions: func(t *testing.T, vi *kargoapi.VerificationInfo, err error) {
-				require.ErrorContains(t, err, "no current verification info")
-				assert.Nil(t, vi)
-			},
-		},
-		{
-			name: "error when no analysis run reference",
-			freight: kargoapi.FreightCollection{
-				ID: "test-collection",
-				Freight: map[string]kargoapi.FreightReference{
-					"warehouse": {Name: "test-freight"},
-				},
-				VerificationHistory: []kargoapi.VerificationInfo{
-					{
-						ID:        "test-verification",
-						Phase:     kargoapi.VerificationPhaseRunning,
-						StartTime: &metav1.Time{Time: now},
-					},
-				},
-			},
-			assertions: func(t *testing.T, vi *kargoapi.VerificationInfo, err error) {
-				require.ErrorContains(t, err, "no AnalysisRun reference")
-				assert.Nil(t, vi)
-			},
-		},
-		{
-			name: "error when rollouts integration disabled",
-			freight: kargoapi.FreightCollection{
-				ID: "test-collection",
-				Freight: map[string]kargoapi.FreightReference{
-					"warehouse": {Name: "test-freight"},
-				},
-				VerificationHistory: []kargoapi.VerificationInfo{
-					{
-						ID:        "test-verification",
-						Phase:     kargoapi.VerificationPhaseRunning,
-						StartTime: &metav1.Time{Time: now},
-						AnalysisRun: &kargoapi.AnalysisRunReference{
-							Name:      "test-analysis",
-							Namespace: "fake-project",
-						},
-					},
-				},
-			},
-			rolloutsDisabled: true,
-			assertions: func(t *testing.T, vi *kargoapi.VerificationInfo, err error) {
-				require.NoError(t, err)
-
-				require.NotNil(t, vi)
-				assert.Equal(t, kargoapi.VerificationPhaseError, vi.Phase)
-				assert.Equal(t, "test-verification", vi.ID)
-				assert.Contains(t, vi.Message, "Rollouts integration is disabled")
-				require.NotNil(t, vi.FinishTime)
-				assert.Equal(t, endTime.Unix(), vi.FinishTime.Unix())
-			},
-		},
-		{
-			name: "error when analysis run not found",
-			freight: kargoapi.FreightCollection{
-				ID: "test-collection",
-				Freight: map[string]kargoapi.FreightReference{
-					"warehouse": {Name: "test-freight"},
-				},
-				VerificationHistory: []kargoapi.VerificationInfo{
-					{
-						ID:        "test-verification",
-						Phase:     kargoapi.VerificationPhaseRunning,
-						StartTime: &metav1.Time{Time: now},
-						AnalysisRun: &kargoapi.AnalysisRunReference{
-							Name:      "missing-analysis",
-							Namespace: "fake-project",
-						},
-					},
-				},
-			},
-			assertions: func(t *testing.T, vi *kargoapi.VerificationInfo, err error) {
-				require.True(t, apierrors.IsNotFound(err))
-
-				require.NotNil(t, vi)
-				assert.Equal(t, kargoapi.VerificationPhaseError, vi.Phase)
-				assert.Equal(t, "test-verification", vi.ID)
-				assert.Contains(t, vi.Message, "error getting AnalysisRun")
-				assert.NotNil(t, vi.AnalysisRun)
-				assert.Equal(t, "missing-analysis", vi.AnalysisRun.Name)
-			},
-		},
-		{
-			name: "preserves actor in verification info",
-			freight: kargoapi.FreightCollection{
-				ID: "test-collection",
-				Freight: map[string]kargoapi.FreightReference{
-					"warehouse": {Name: "test-freight"},
-				},
-				VerificationHistory: []kargoapi.VerificationInfo{
-					{
-						ID:        "test-verification",
-						Phase:     kargoapi.VerificationPhaseRunning,
-						StartTime: &metav1.Time{Time: now},
-						Actor:     "test-user",
-						AnalysisRun: &kargoapi.AnalysisRunReference{
-							Name:      "test-analysis",
-							Namespace: "fake-project",
-						},
-					},
-				},
-			},
-			objects: []client.Object{
-				&rolloutsapi.AnalysisRun{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-analysis",
-						Namespace: "fake-project",
-					},
-					Status: rolloutsapi.AnalysisRunStatus{
-						Phase:   "Running",
-						Message: "Analysis in progress",
-					},
-				},
-			},
-			assertions: func(t *testing.T, vi *kargoapi.VerificationInfo, err error) {
-				require.NoError(t, err)
-
-				require.NotNil(t, vi)
-				assert.Equal(t, "test-verification", vi.ID)
-				assert.Equal(t, "test-user", vi.Actor)
-				assert.Equal(t, kargoapi.VerificationPhaseRunning, vi.Phase)
-			},
-		},
-		{
-			name: "handles successful analysis run",
-			freight: kargoapi.FreightCollection{
-				ID: "test-collection",
-				Freight: map[string]kargoapi.FreightReference{
-					"warehouse": {Name: "test-freight"},
-				},
-				VerificationHistory: []kargoapi.VerificationInfo{
-					{
-						ID:        "test-verification",
-						Phase:     kargoapi.VerificationPhaseRunning,
-						StartTime: &metav1.Time{Time: now},
-						AnalysisRun: &kargoapi.AnalysisRunReference{
-							Name:      "test-analysis",
-							Namespace: "fake-project",
-						},
-					},
-				},
-			},
-			objects: []client.Object{
-				&rolloutsapi.AnalysisRun{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-analysis",
-						Namespace: "fake-project",
-					},
-					Status: rolloutsapi.AnalysisRunStatus{
-						Phase:       rolloutsapi.AnalysisPhaseSuccessful,
-						Message:     "Analysis completed successfully",
-						CompletedAt: &metav1.Time{Time: endTime},
-						MetricResults: []rolloutsapi.MetricResult{
-							{
-								Measurements: []rolloutsapi.Measurement{
-									{
-										FinishedAt: &metav1.Time{Time: endTime},
-									},
-								},
-							},
-						},
-					},
-				},
-			},
-			assertions: func(t *testing.T, vi *kargoapi.VerificationInfo, err error) {
-				require.NoError(t, err)
-
-				require.NotNil(t, vi)
-				assert.Equal(t, kargoapi.VerificationPhaseSuccessful, vi.Phase)
-				assert.Equal(t, "test-verification", vi.ID)
-				assert.Equal(t, "Analysis completed successfully", vi.Message)
-				require.NotNil(t, vi.FinishTime)
-				assert.Equal(t, endTime.Unix(), vi.FinishTime.Unix())
-			},
-		},
-		{
-			name: "handles failed analysis run",
-			freight: kargoapi.FreightCollection{
-				ID: "test-collection",
-				Freight: map[string]kargoapi.FreightReference{
-					"warehouse": {Name: "test-freight"},
-				},
-				VerificationHistory: []kargoapi.VerificationInfo{
-					{
-						ID:        "test-verification",
-						Phase:     kargoapi.VerificationPhaseRunning,
-						StartTime: &metav1.Time{Time: now},
-						AnalysisRun: &kargoapi.AnalysisRunReference{
-							Name:      "test-analysis",
-							Namespace: "fake-project",
-						},
-					},
-				},
-			},
-			objects: []client.Object{
-				&rolloutsapi.AnalysisRun{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-analysis",
-						Namespace: "fake-project",
-					},
-					Status: rolloutsapi.AnalysisRunStatus{
-						Phase:       "Failed",
-						Message:     "Something went wrong",
-						CompletedAt: &metav1.Time{Time: endTime},
-						MetricResults: []rolloutsapi.MetricResult{
-							{
-								Measurements: []rolloutsapi.Measurement{
-									{
-										FinishedAt: &metav1.Time{Time: endTime},
-									},
-								},
-							},
-						},
-					},
-				},
-			},
-			assertions: func(t *testing.T, vi *kargoapi.VerificationInfo, err error) {
-				require.NoError(t, err)
-
-				require.NotNil(t, vi)
-				assert.Equal(t, kargoapi.VerificationPhaseFailed, vi.Phase)
-				assert.Equal(t, "test-verification", vi.ID)
-				assert.Equal(t, "Something went wrong", vi.Message)
-				require.NotNil(t, vi.FinishTime)
-				assert.Equal(t, endTime.Unix(), vi.FinishTime.Unix())
-				assert.Equal(t, string(rolloutsapi.AnalysisPhaseFailed), vi.AnalysisRun.Phase)
-			},
-		},
-		{
-			name: "handles error analysis run",
-			freight: kargoapi.FreightCollection{
-				ID: "test-collection",
-				Freight: map[string]kargoapi.FreightReference{
-					"warehouse": {Name: "test-freight"},
-				},
-				VerificationHistory: []kargoapi.VerificationInfo{
-					{
-						ID:        "test-verification",
-						Phase:     kargoapi.VerificationPhaseRunning,
-						StartTime: &metav1.Time{Time: now},
-						AnalysisRun: &kargoapi.AnalysisRunReference{
-							Name:      "test-analysis",
-							Namespace: "fake-project",
-						},
-					},
-				},
-			},
-			objects: []client.Object{
-				&rolloutsapi.AnalysisRun{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-analysis",
-						Namespace: "fake-project",
-					},
-					Status: rolloutsapi.AnalysisRunStatus{
-						Phase:       rolloutsapi.AnalysisPhaseError,
-						Message:     "Something went wrong",
-						CompletedAt: &metav1.Time{Time: endTime},
-						MetricResults: []rolloutsapi.MetricResult{
-							{
-								Measurements: []rolloutsapi.Measurement{
-									{
-										FinishedAt: &metav1.Time{Time: endTime},
-									},
-								},
-							},
-						},
-					},
-				},
-			},
-			assertions: func(t *testing.T, vi *kargoapi.VerificationInfo, err error) {
-				require.NoError(t, err)
-
-				require.NotNil(t, vi)
-				assert.Equal(t, kargoapi.VerificationPhaseError, vi.Phase)
-				assert.Equal(t, "test-verification", vi.ID)
-				assert.Equal(t, "Something went wrong", vi.Message)
-				require.NotNil(t, vi.FinishTime)
-				assert.Equal(t, endTime.Unix(), vi.FinishTime.Unix())
-				assert.Equal(t, string(rolloutsapi.AnalysisPhaseError), vi.AnalysisRun.Phase)
-			},
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			c := fake.NewClientBuilder().
-				WithScheme(scheme).
-				WithObjects(tt.objects...).
-				WithStatusSubresource(&kargoapi.Stage{}, &kargoapi.Freight{}, &rolloutsapi.AnalysisRun{}).
-				Build()
-
-			ver := verifier{
-				client: c,
-				cfg: ReconcilerConfig{
-					RolloutsIntegrationEnabled: !tt.rolloutsDisabled,
-				},
-				backoffCfg: wait.Backoff{
-					Duration: 1 * time.Second,
-					Factor:   2,
-					Steps:    2,
-					Cap:      1 * time.Second,
-					Jitter:   0.1,
-				},
-			}
-
-			vi, err := ver.getVerificationResult(t.Context(), tt.freight, fixedEndTime)
-			tt.assertions(t, vi, err)
-		})
-	}
-}
-
-func TestRegularStageReconciler_abortVerification(t *testing.T) {
-	scheme := runtime.NewScheme()
-	require.NoError(t, kargoapi.AddToScheme(scheme))
-	require.NoError(t, rolloutsapi.AddToScheme(scheme))
-
-	now := time.Now()
-	endTime := now.Add(5 * time.Minute)
-	fixedEndTime := func() time.Time { return endTime }
-
-	tests := []struct {
-		name             string
-		freightCol       kargoapi.FreightCollection
-		req              *kargoapi.VerificationRequest
-		objects          []client.Object
-		rolloutsDisabled bool
-		interceptor      interceptor.Funcs
-		assertions       func(*testing.T, client.Client, *kargoapi.VerificationInfo, error)
-	}{
-		{
-			name: "error when no current verification info",
-			freightCol: kargoapi.FreightCollection{
-				ID: "test-collection",
-				Freight: map[string]kargoapi.FreightReference{
-					"warehouse": {Name: "test-freight"},
-				},
-				VerificationHistory: []kargoapi.VerificationInfo{},
-			},
-			assertions: func(t *testing.T, _ client.Client, vi *kargoapi.VerificationInfo, err error) {
-				require.ErrorContains(t, err, "no current verification info")
-				assert.Nil(t, vi)
-			},
-		},
-		{
-			name: "error when no analysis run reference",
-			freightCol: kargoapi.FreightCollection{
-				ID: "test-collection",
-				Freight: map[string]kargoapi.FreightReference{
-					"warehouse": {Name: "test-freight"},
-				},
-				VerificationHistory: []kargoapi.VerificationInfo{
-					{
-						ID:        "test-verification",
-						Phase:     kargoapi.VerificationPhaseRunning,
-						StartTime: &metav1.Time{Time: now},
-					},
-				},
-			},
-			assertions: func(t *testing.T, _ client.Client, vi *kargoapi.VerificationInfo, err error) {
-				require.ErrorContains(t, err, "no AnalysisRun reference")
-				assert.Nil(t, vi)
-			},
-		},
-		{
-			name: "returns current verification if already terminal",
-			freightCol: kargoapi.FreightCollection{
-				ID: "test-collection",
-				Freight: map[string]kargoapi.FreightReference{
-					"warehouse": {Name: "test-freight"},
-				},
-				VerificationHistory: []kargoapi.VerificationInfo{
-					{
-						ID:        "test-verification",
-						Phase:     kargoapi.VerificationPhaseSuccessful,
-						StartTime: &metav1.Time{Time: now},
-						AnalysisRun: &kargoapi.AnalysisRunReference{
-							Name:      "test-analysis",
-							Namespace: "fake-project",
-						},
-					},
-				},
-			},
-			assertions: func(t *testing.T, _ client.Client, vi *kargoapi.VerificationInfo, err error) {
-				require.NoError(t, err)
-
-				require.NotNil(t, vi)
-				assert.Equal(t, kargoapi.VerificationPhaseSuccessful, vi.Phase)
-				assert.Equal(t, "test-verification", vi.ID)
-			},
-		},
-		{
-			name: "error when rollouts integration disabled",
-			freightCol: kargoapi.FreightCollection{
-				ID: "test-collection",
-				Freight: map[string]kargoapi.FreightReference{
-					"warehouse": {Name: "test-freight"},
-				},
-				VerificationHistory: []kargoapi.VerificationInfo{
-					{
-						ID:        "test-verification",
-						Phase:     kargoapi.VerificationPhaseRunning,
-						StartTime: &metav1.Time{Time: now},
-						AnalysisRun: &kargoapi.AnalysisRunReference{
-							Name:      "test-analysis",
-							Namespace: "fake-project",
-						},
-					},
-				},
-			},
-			rolloutsDisabled: true,
-			assertions: func(t *testing.T, _ client.Client, vi *kargoapi.VerificationInfo, err error) {
-				require.NoError(t, err)
-
-				require.NotNil(t, vi)
-				assert.Equal(t, kargoapi.VerificationPhaseError, vi.Phase)
-				assert.Contains(t, vi.Message, "Rollouts integration is disabled")
-				assert.Equal(t, "test-verification", vi.ID)
-				assert.NotNil(t, vi.StartTime)
-				require.NotNil(t, vi.FinishTime)
-				assert.Equal(t, endTime.Unix(), vi.FinishTime.Unix())
-			},
-		},
-		{
-			name: "handles patch error",
-			freightCol: kargoapi.FreightCollection{
-				ID: "test-collection",
-				Freight: map[string]kargoapi.FreightReference{
-					"warehouse": {Name: "test-freight"},
-				},
-				VerificationHistory: []kargoapi.VerificationInfo{
-					{
-						ID:        "test-verification",
-						Phase:     kargoapi.VerificationPhaseRunning,
-						StartTime: &metav1.Time{Time: now},
-						AnalysisRun: &kargoapi.AnalysisRunReference{
-							Name:      "test-analysis",
-							Namespace: "fake-project",
-						},
-					},
-				},
-			},
-			interceptor: interceptor.Funcs{
-				Patch: func(
-					context.Context,
-					client.WithWatch,
-					client.Object,
-					client.Patch,
-					...client.PatchOption,
-				) error {
-					return fmt.Errorf("something went wrong")
-				},
-			},
-			assertions: func(t *testing.T, _ client.Client, vi *kargoapi.VerificationInfo, err error) {
-				require.NoError(t, err) // Error is captured in verification info
-				require.NotNil(t, vi)
-				assert.Equal(t, kargoapi.VerificationPhaseError, vi.Phase)
-				assert.Contains(t, vi.Message, "error terminating AnalysisRun")
-			},
-		},
-		{
-			name: "successfully aborts verification",
-			freightCol: kargoapi.FreightCollection{
-				ID: "test-collection",
-				Freight: map[string]kargoapi.FreightReference{
-					"warehouse": {Name: "test-freight"},
-				},
-				VerificationHistory: []kargoapi.VerificationInfo{
-					{
-						ID:        "test-verification",
-						Phase:     kargoapi.VerificationPhaseRunning,
-						StartTime: &metav1.Time{Time: now},
-						AnalysisRun: &kargoapi.AnalysisRunReference{
-							Name:      "test-analysis",
-							Namespace: "fake-project",
-						},
-					},
-				},
-			},
-			objects: []client.Object{
-				&rolloutsapi.AnalysisRun{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-analysis",
-						Namespace: "fake-project",
-					},
-					Spec: rolloutsapi.AnalysisRunSpec{
-						Metrics: []rolloutsapi.Metric{
-							{Name: "test-metric"},
-						},
-					},
-					Status: rolloutsapi.AnalysisRunStatus{
-						Phase:   "Running",
-						Message: "Analysis in progress",
-					},
-				},
-			},
-			assertions: func(t *testing.T, c client.Client, vi *kargoapi.VerificationInfo, err error) {
-				require.NoError(t, err)
-
-				require.NotNil(t, vi)
-				assert.Equal(t, kargoapi.VerificationPhaseFailed, vi.Phase)
-				assert.Equal(t, "Verification aborted by user", vi.Message)
-				assert.Equal(t, "test-verification", vi.ID)
-				assert.NotNil(t, vi.StartTime)
-				require.NotNil(t, vi.FinishTime)
-				assert.Equal(t, endTime.Unix(), vi.FinishTime.Unix())
-				assert.Equal(t, "test-analysis", vi.AnalysisRun.Name)
-
-				// Verify analysis run was patched with terminate = true
-				ar := &rolloutsapi.AnalysisRun{}
-				require.NoError(t, c.Get(t.Context(), types.NamespacedName{
-					Namespace: "fake-project",
-					Name:      "test-analysis",
-				}, ar))
-				assert.True(t, ar.Spec.Terminate)
-			},
-		},
-		{
-			name: "handles already terminated analysis run",
-			freightCol: kargoapi.FreightCollection{
-				ID: "test-collection",
-				Freight: map[string]kargoapi.FreightReference{
-					"warehouse": {Name: "test-freight"},
-				},
-				VerificationHistory: []kargoapi.VerificationInfo{
-					{
-						ID:        "test-verification",
-						Phase:     kargoapi.VerificationPhaseRunning,
-						StartTime: &metav1.Time{Time: now},
-						AnalysisRun: &kargoapi.AnalysisRunReference{
-							Name:      "test-analysis",
-							Namespace: "fake-project",
-						},
-					},
-				},
-			},
-			objects: []client.Object{
-				&rolloutsapi.AnalysisRun{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-analysis",
-						Namespace: "fake-project",
-					},
-					Spec: rolloutsapi.AnalysisRunSpec{
-						Terminate: true,
-						Metrics: []rolloutsapi.Metric{
-							{Name: "test-metric"},
-						},
-					},
-					Status: rolloutsapi.AnalysisRunStatus{
-						Phase:   "Successful",
-						Message: "Analysis completed",
-					},
-				},
-			},
-			assertions: func(t *testing.T, _ client.Client, vi *kargoapi.VerificationInfo, err error) {
-				require.NoError(t, err)
-
-				require.NotNil(t, vi)
-				assert.Equal(t, kargoapi.VerificationPhaseFailed, vi.Phase)
-				assert.Equal(t, "Verification aborted by user", vi.Message)
-				assert.Equal(t, "test-verification", vi.ID)
-				assert.NotNil(t, vi.StartTime)
-				require.NotNil(t, vi.FinishTime)
-				assert.Equal(t, endTime.Unix(), vi.FinishTime.Unix())
-				assert.Equal(t, "test-analysis", vi.AnalysisRun.Name)
-			},
-		},
-		{
-			name: "sets actor in verification info",
-			freightCol: kargoapi.FreightCollection{
-				ID: "test-collection",
-				Freight: map[string]kargoapi.FreightReference{
-					"warehouse": {Name: "test-freight"},
-				},
-				VerificationHistory: []kargoapi.VerificationInfo{
-					{
-						ID:        "test-verification",
-						Phase:     kargoapi.VerificationPhaseRunning,
-						StartTime: &metav1.Time{Time: now},
-						AnalysisRun: &kargoapi.AnalysisRunReference{
-							Name:      "test-analysis",
-							Namespace: "fake-project",
-						},
-					},
-				},
-			},
-			req: &kargoapi.VerificationRequest{
-				ID:    "test-verification",
-				Actor: "test-user",
-			},
-			objects: []client.Object{
-				&rolloutsapi.AnalysisRun{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-analysis",
-						Namespace: "fake-project",
-					},
-				},
-			},
-			assertions: func(t *testing.T, _ client.Client, vi *kargoapi.VerificationInfo, err error) {
-				require.NoError(t, err)
-
-				require.NotNil(t, vi)
-				assert.Equal(t, "test-user", vi.Actor)
-				assert.Equal(t, kargoapi.VerificationPhaseFailed, vi.Phase)
-			},
-		},
-		{
-			name: "handles analysis run not found",
-			freightCol: kargoapi.FreightCollection{
-				ID: "test-collection",
-				Freight: map[string]kargoapi.FreightReference{
-					"warehouse": {Name: "test-freight"},
-				},
-				VerificationHistory: []kargoapi.VerificationInfo{
-					{
-						ID:        "test-verification",
-						Phase:     kargoapi.VerificationPhaseRunning,
-						StartTime: &metav1.Time{Time: now},
-						AnalysisRun: &kargoapi.AnalysisRunReference{
-							Name:      "missing-analysis",
-							Namespace: "fake-project",
-						},
-					},
-				},
-			},
-			assertions: func(t *testing.T, _ client.Client, vi *kargoapi.VerificationInfo, err error) {
-				require.NoError(t, err)
-
-				require.NotNil(t, vi)
-				assert.Equal(t, kargoapi.VerificationPhaseError, vi.Phase)
-				assert.Contains(t, vi.Message, "error terminating AnalysisRun")
-			},
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			builder := fake.NewClientBuilder().
-				WithScheme(scheme).
-				WithObjects(tt.objects...).
-				WithStatusSubresource(&kargoapi.Stage{}, &kargoapi.Freight{}, &rolloutsapi.AnalysisRun{})
-
-			if tt.interceptor.Patch != nil {
-				builder = builder.WithInterceptorFuncs(tt.interceptor)
-			}
-
-			c := builder.Build()
-
-			ver := verifier{
-				client: c,
-				cfg: ReconcilerConfig{
-					RolloutsIntegrationEnabled: !tt.rolloutsDisabled,
-				},
-			}
-
-			vi, err := ver.abortVerification(t.Context(), tt.freightCol, tt.req, fixedEndTime)
-			tt.assertions(t, c, vi, err)
-		})
-	}
-}
-
-func TestRegularStageReconciler_findExistingAnalysisRun(t *testing.T) {
-	scheme := runtime.NewScheme()
-	require.NoError(t, kargoapi.AddToScheme(scheme))
-	require.NoError(t, rolloutsapi.AddToScheme(scheme))
-
-	now := time.Now()
-	hourAgo := now.Add(-time.Hour)
-	twoHoursAgo := now.Add(-2 * time.Hour)
-
-	tests := []struct {
-		name         string
-		stage        types.NamespacedName
-		freightColID string
-		objects      []client.Object
-		interceptor  interceptor.Funcs
-		assertions   func(*testing.T, *rolloutsapi.AnalysisRun, error)
-	}{
-		{
-			name: "no analysis runs found",
-			stage: types.NamespacedName{
-				Namespace: "fake-project",
-				Name:      "test-stage",
-			},
-			freightColID: "test-collection",
-			assertions: func(t *testing.T, ar *rolloutsapi.AnalysisRun, err error) {
-				require.NoError(t, err)
-				assert.Nil(t, ar)
-			},
-		},
-		{
-			name: "handles list error",
-			stage: types.NamespacedName{
-				Namespace: "fake-project",
-				Name:      "test-stage",
-			},
-			freightColID: "test-collection",
-			interceptor: interceptor.Funcs{
-				List: func(
-					context.Context,
-					client.WithWatch,
-					client.ObjectList,
-					...client.ListOption,
-				) error {
-					return fmt.Errorf("list error")
-				},
-			},
-			assertions: func(t *testing.T, ar *rolloutsapi.AnalysisRun, err error) {
-				require.ErrorContains(t, err, "error listing AnalysisRuns")
-				assert.Nil(t, ar)
-			},
-		},
-		{
-			name: "finds most recent analysis run",
-			stage: types.NamespacedName{
-				Namespace: "fake-project",
-				Name:      "test-stage",
-			},
-			freightColID: "test-collection",
-			objects: []client.Object{
-				&rolloutsapi.AnalysisRun{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:              "older-analysis",
-						Namespace:         "fake-project",
-						CreationTimestamp: metav1.Time{Time: twoHoursAgo},
-						Labels: map[string]string{
-							kargoapi.LabelKeyStage:             "test-stage",
-							kargoapi.LabelKeyFreightCollection: "test-collection",
-						},
-					},
-					Status: rolloutsapi.AnalysisRunStatus{
-						Phase: "Successful",
-					},
-				},
-				&rolloutsapi.AnalysisRun{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:              "newer-analysis",
-						Namespace:         "fake-project",
-						CreationTimestamp: metav1.Time{Time: hourAgo},
-						Labels: map[string]string{
-							kargoapi.LabelKeyStage:             "test-stage",
-							kargoapi.LabelKeyFreightCollection: "test-collection",
-						},
-					},
-					Status: rolloutsapi.AnalysisRunStatus{
-						Phase: "Failed",
-					},
-				},
-			},
-			assertions: func(t *testing.T, ar *rolloutsapi.AnalysisRun, err error) {
-				require.NoError(t, err)
-
-				require.NotNil(t, ar)
-				assert.Equal(t, "newer-analysis", ar.Name)
-				assert.Equal(t, hourAgo.Unix(), ar.CreationTimestamp.Unix())
-			},
-		},
-		{
-			name: "filters by correct stage",
-			stage: types.NamespacedName{
-				Namespace: "fake-project",
-				Name:      "test-stage",
-			},
-			freightColID: "test-collection",
-			objects: []client.Object{
-				&rolloutsapi.AnalysisRun{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:              "other-stage-analysis",
-						Namespace:         "fake-project",
-						CreationTimestamp: metav1.Time{Time: hourAgo},
-						Labels: map[string]string{
-							kargoapi.LabelKeyStage:             "other-stage",
-							kargoapi.LabelKeyFreightCollection: "test-collection",
-						},
-					},
-				},
-				&rolloutsapi.AnalysisRun{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:              "correct-stage-analysis",
-						Namespace:         "fake-project",
-						CreationTimestamp: metav1.Time{Time: twoHoursAgo},
-						Labels: map[string]string{
-							kargoapi.LabelKeyStage:             "test-stage",
-							kargoapi.LabelKeyFreightCollection: "test-collection",
-						},
-					},
-				},
-			},
-			assertions: func(t *testing.T, ar *rolloutsapi.AnalysisRun, err error) {
-				require.NoError(t, err)
-
-				require.NotNil(t, ar)
-				assert.Equal(t, "correct-stage-analysis", ar.Name)
-			},
-		},
-		{
-			name: "filters by correct freight collection",
-			stage: types.NamespacedName{
-				Namespace: "fake-project",
-				Name:      "test-stage",
-			},
-			freightColID: "test-collection",
-			objects: []client.Object{
-				&rolloutsapi.AnalysisRun{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:              "other-freight-analysis",
-						Namespace:         "fake-project",
-						CreationTimestamp: metav1.Time{Time: hourAgo},
-						Labels: map[string]string{
-							kargoapi.LabelKeyStage:             "test-stage",
-							kargoapi.LabelKeyFreightCollection: "other-collection",
-						},
-					},
-				},
-				&rolloutsapi.AnalysisRun{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:              "correct-freight-analysis",
-						Namespace:         "fake-project",
-						CreationTimestamp: metav1.Time{Time: twoHoursAgo},
-						Labels: map[string]string{
-							kargoapi.LabelKeyStage:             "test-stage",
-							kargoapi.LabelKeyFreightCollection: "test-collection",
-						},
-					},
-				},
-			},
-			assertions: func(t *testing.T, ar *rolloutsapi.AnalysisRun, err error) {
-				require.NoError(t, err)
-
-				require.NotNil(t, ar)
-				assert.Equal(t, "correct-freight-analysis", ar.Name)
-			},
-		},
-		{
-			name: "handles multiple namespaces correctly",
-			stage: types.NamespacedName{
-				Namespace: "test-namespace",
-				Name:      "test-stage",
-			},
-			freightColID: "test-collection",
-			objects: []client.Object{
-				&rolloutsapi.AnalysisRun{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:              "wrong-namespace-analysis",
-						Namespace:         "fake-project",
-						CreationTimestamp: metav1.Time{Time: hourAgo},
-						Labels: map[string]string{
-							kargoapi.LabelKeyStage:             "test-stage",
-							kargoapi.LabelKeyFreightCollection: "test-collection",
-						},
-					},
-				},
-				&rolloutsapi.AnalysisRun{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:              "correct-namespace-analysis",
-						Namespace:         "test-namespace",
-						CreationTimestamp: metav1.Time{Time: twoHoursAgo},
-						Labels: map[string]string{
-							kargoapi.LabelKeyStage:             "test-stage",
-							kargoapi.LabelKeyFreightCollection: "test-collection",
-						},
-					},
-				},
-			},
-			assertions: func(t *testing.T, ar *rolloutsapi.AnalysisRun, err error) {
-				require.NoError(t, err)
-
-				require.NotNil(t, ar)
-				assert.Equal(t, "test-namespace", ar.Namespace)
-				assert.Equal(t, "correct-namespace-analysis", ar.Name)
-			},
-		},
-		{
-			name: "empty freight collection ID",
-			stage: types.NamespacedName{
-				Namespace: "fake-project",
-				Name:      "test-stage",
-			},
-			freightColID: "",
-			objects: []client.Object{
-				&rolloutsapi.AnalysisRun{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-analysis",
-						Namespace: "fake-project",
-						Labels: map[string]string{
-							kargoapi.LabelKeyStage:             "test-stage",
-							kargoapi.LabelKeyFreightCollection: "",
-						},
-					},
-				},
-			},
-			assertions: func(t *testing.T, ar *rolloutsapi.AnalysisRun, err error) {
-				require.NoError(t, err)
-
-				require.NotNil(t, ar)
-				assert.Equal(t, "test-analysis", ar.Name)
-			},
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			builder := fake.NewClientBuilder().
-				WithScheme(scheme).
-				WithObjects(tt.objects...).
-				WithStatusSubresource(&rolloutsapi.AnalysisRun{})
-
-			if tt.interceptor.List != nil {
-				builder = builder.WithInterceptorFuncs(tt.interceptor)
-			}
-
-			c := builder.Build()
-
-			ver := verifier{client: c}
-
-			ar, err := ver.findExistingAnalysisRun(t.Context(), tt.stage, tt.freightColID)
-			tt.assertions(t, ar, err)
 		})
 	}
 }
@@ -6383,7 +4655,7 @@ func TestRegularStageReconciler_autoPromoteFreight(t *testing.T) {
 		stage                *kargoapi.Stage
 		objects              []client.Object
 		interceptor          interceptor.Funcs
-		assertions           func(*testing.T, *fakeevent.EventRecorder, client.Client, kargoapi.StageStatus, error)
+		assertions           func(*testing.T, *fakeevent.Sender, client.Client, kargoapi.StageStatus, error)
 	}{
 		{
 			name:                 "no requested freight",
@@ -6399,7 +4671,7 @@ func TestRegularStageReconciler_autoPromoteFreight(t *testing.T) {
 			},
 			assertions: func(
 				t *testing.T,
-				_ *fakeevent.EventRecorder,
+				_ *fakeevent.Sender,
 				c client.Client,
 				_ kargoapi.StageStatus,
 				err error,
@@ -6433,7 +4705,7 @@ func TestRegularStageReconciler_autoPromoteFreight(t *testing.T) {
 			},
 			assertions: func(
 				t *testing.T,
-				_ *fakeevent.EventRecorder,
+				_ *fakeevent.Sender,
 				c client.Client,
 				status kargoapi.StageStatus,
 				err error,
@@ -6511,7 +4783,7 @@ func TestRegularStageReconciler_autoPromoteFreight(t *testing.T) {
 			},
 			assertions: func(
 				t *testing.T,
-				_ *fakeevent.EventRecorder,
+				_ *fakeevent.Sender,
 				c client.Client,
 				status kargoapi.StageStatus,
 				err error,
@@ -6592,7 +4864,7 @@ func TestRegularStageReconciler_autoPromoteFreight(t *testing.T) {
 			},
 			assertions: func(
 				t *testing.T,
-				_ *fakeevent.EventRecorder,
+				_ *fakeevent.Sender,
 				c client.Client,
 				status kargoapi.StageStatus,
 				err error,
@@ -6670,7 +4942,7 @@ func TestRegularStageReconciler_autoPromoteFreight(t *testing.T) {
 			},
 			assertions: func(
 				t *testing.T,
-				_ *fakeevent.EventRecorder,
+				_ *fakeevent.Sender,
 				c client.Client,
 				status kargoapi.StageStatus,
 				err error,
@@ -6739,7 +5011,7 @@ func TestRegularStageReconciler_autoPromoteFreight(t *testing.T) {
 			},
 			assertions: func(
 				t *testing.T,
-				_ *fakeevent.EventRecorder,
+				_ *fakeevent.Sender,
 				c client.Client,
 				status kargoapi.StageStatus,
 				err error,
@@ -6810,7 +5082,7 @@ func TestRegularStageReconciler_autoPromoteFreight(t *testing.T) {
 			},
 			assertions: func(
 				t *testing.T,
-				_ *fakeevent.EventRecorder,
+				_ *fakeevent.Sender,
 				c client.Client,
 				status kargoapi.StageStatus,
 				err error,
@@ -6892,7 +5164,7 @@ func TestRegularStageReconciler_autoPromoteFreight(t *testing.T) {
 			},
 			assertions: func(
 				t *testing.T,
-				_ *fakeevent.EventRecorder,
+				_ *fakeevent.Sender,
 				c client.Client,
 				status kargoapi.StageStatus,
 				err error,
@@ -6978,7 +5250,7 @@ func TestRegularStageReconciler_autoPromoteFreight(t *testing.T) {
 			},
 			assertions: func(
 				t *testing.T,
-				_ *fakeevent.EventRecorder,
+				_ *fakeevent.Sender,
 				c client.Client,
 				status kargoapi.StageStatus,
 				err error,
@@ -7060,7 +5332,7 @@ func TestRegularStageReconciler_autoPromoteFreight(t *testing.T) {
 			},
 			assertions: func(
 				t *testing.T,
-				_ *fakeevent.EventRecorder,
+				_ *fakeevent.Sender,
 				c client.Client,
 				status kargoapi.StageStatus,
 				err error,
@@ -7105,7 +5377,7 @@ func TestRegularStageReconciler_autoPromoteFreight(t *testing.T) {
 			),
 			assertions: func(
 				t *testing.T,
-				_ *fakeevent.EventRecorder,
+				_ *fakeevent.Sender,
 				c client.Client,
 				status kargoapi.StageStatus,
 				err error,
@@ -7157,7 +5429,7 @@ func TestRegularStageReconciler_autoPromoteFreight(t *testing.T) {
 			),
 			assertions: func(
 				t *testing.T,
-				_ *fakeevent.EventRecorder,
+				_ *fakeevent.Sender,
 				c client.Client,
 				status kargoapi.StageStatus,
 				err error,
@@ -7210,7 +5482,7 @@ func TestRegularStageReconciler_autoPromoteFreight(t *testing.T) {
 			),
 			assertions: func(
 				t *testing.T,
-				_ *fakeevent.EventRecorder,
+				_ *fakeevent.Sender,
 				c client.Client,
 				status kargoapi.StageStatus,
 				err error,
@@ -7283,7 +5555,7 @@ func TestRegularStageReconciler_autoPromoteFreight(t *testing.T) {
 			},
 			assertions: func(
 				t *testing.T,
-				_ *fakeevent.EventRecorder,
+				_ *fakeevent.Sender,
 				c client.Client,
 				status kargoapi.StageStatus,
 				err error,
@@ -7380,7 +5652,7 @@ func TestRegularStageReconciler_autoPromoteFreight(t *testing.T) {
 			},
 			assertions: func(
 				t *testing.T,
-				_ *fakeevent.EventRecorder,
+				_ *fakeevent.Sender,
 				c client.Client,
 				status kargoapi.StageStatus,
 				err error,
@@ -7489,7 +5761,7 @@ func TestRegularStageReconciler_autoPromoteFreight(t *testing.T) {
 			},
 			assertions: func(
 				t *testing.T,
-				_ *fakeevent.EventRecorder,
+				_ *fakeevent.Sender,
 				c client.Client,
 				_ kargoapi.StageStatus,
 				err error,
@@ -7557,7 +5829,7 @@ func TestRegularStageReconciler_autoPromoteFreight(t *testing.T) {
 			},
 			assertions: func(
 				t *testing.T,
-				_ *fakeevent.EventRecorder,
+				_ *fakeevent.Sender,
 				c client.Client,
 				_ kargoapi.StageStatus,
 				err error,
@@ -7651,7 +5923,7 @@ func TestRegularStageReconciler_autoPromoteFreight(t *testing.T) {
 			},
 			assertions: func(
 				t *testing.T,
-				_ *fakeevent.EventRecorder,
+				_ *fakeevent.Sender,
 				c client.Client,
 				_ kargoapi.StageStatus,
 				err error,
@@ -7726,7 +5998,7 @@ func TestRegularStageReconciler_autoPromoteFreight(t *testing.T) {
 			},
 			assertions: func(
 				t *testing.T,
-				e *fakeevent.EventRecorder,
+				e *fakeevent.Sender,
 				c client.Client,
 				_ kargoapi.StageStatus,
 				err error,
@@ -7735,13 +6007,25 @@ func TestRegularStageReconciler_autoPromoteFreight(t *testing.T) {
 				promoList := &kargoapi.PromotionList{}
 				require.NoError(t, c.List(t.Context(), promoList, client.InNamespace("fake-project")))
 				require.Len(t, promoList.Items, 1)
-				require.Len(t, e.Events, 1)
+				evt := requireOneSentEvent(
+					t,
+					e,
+					kargoapi.EventTypePromotionCreated,
+				)
+				assert.Equal(t, "Promotion", kargoEvent.KindOf(evt))
+				assert.Equal(
+					t,
+					"akuity.kargo.events.promotion.created",
+					evt.Subject(),
+				)
 
-				event := <-e.Events
-				assert.Equal(t, corev1.EventTypeNormal, event.EventType)
-				assert.Equal(t, "PromotionCreated", event.Reason)
-				assert.Contains(t, event.Message, "Automatically promoted Freight")
-				assert.NotEmpty(t, event.Annotations)
+				var data kargoEvent.PromotionCreated
+				require.NoError(t, evt.DataAs(&data))
+				assert.Contains(t, data.Message, "Automatically promoted Freight")
+				assert.Equal(t, "fake-project", data.Project)
+				assert.Equal(t, "test-stage", data.StageName)
+				require.NotNil(t, data.Freight)
+				assert.Equal(t, "test-freight", data.Freight.Name)
 			},
 		},
 		{
@@ -7804,7 +6088,7 @@ func TestRegularStageReconciler_autoPromoteFreight(t *testing.T) {
 			},
 			assertions: func(
 				t *testing.T,
-				_ *fakeevent.EventRecorder,
+				_ *fakeevent.Sender,
 				c client.Client,
 				_ kargoapi.StageStatus,
 				err error,
@@ -7875,7 +6159,7 @@ func TestRegularStageReconciler_autoPromoteFreight(t *testing.T) {
 			},
 			assertions: func(
 				t *testing.T,
-				_ *fakeevent.EventRecorder,
+				_ *fakeevent.Sender,
 				_ client.Client,
 				_ kargoapi.StageStatus,
 				err error,
@@ -7952,7 +6236,7 @@ func TestRegularStageReconciler_autoPromoteFreight(t *testing.T) {
 			},
 			assertions: func(
 				t *testing.T,
-				recorder *fakeevent.EventRecorder,
+				recorder *fakeevent.Sender,
 				c client.Client,
 				_ kargoapi.StageStatus,
 				err error,
@@ -7967,7 +6251,7 @@ func TestRegularStageReconciler_autoPromoteFreight(t *testing.T) {
 				// Nor is anything recorded. A denial is a condition that persists
 				// across reconciles, not an occurrence, so an event per attempt
 				// would report the same thing indefinitely.
-				assert.Empty(t, recorder.Events)
+				assert.Empty(t, recorder.Sent())
 			},
 		},
 		{
@@ -8025,7 +6309,7 @@ func TestRegularStageReconciler_autoPromoteFreight(t *testing.T) {
 			},
 			assertions: func(
 				t *testing.T,
-				_ *fakeevent.EventRecorder,
+				_ *fakeevent.Sender,
 				c client.Client,
 				status kargoapi.StageStatus,
 				err error,
@@ -8101,7 +6385,7 @@ func TestRegularStageReconciler_autoPromoteFreight(t *testing.T) {
 			},
 			assertions: func(
 				t *testing.T,
-				_ *fakeevent.EventRecorder,
+				_ *fakeevent.Sender,
 				c client.Client,
 				_ kargoapi.StageStatus,
 				err error,
@@ -8194,7 +6478,7 @@ func TestRegularStageReconciler_autoPromoteFreight(t *testing.T) {
 			},
 			assertions: func(
 				t *testing.T,
-				_ *fakeevent.EventRecorder,
+				_ *fakeevent.Sender,
 				c client.Client,
 				status kargoapi.StageStatus,
 				err error,
@@ -8294,7 +6578,7 @@ func TestRegularStageReconciler_autoPromoteFreight(t *testing.T) {
 			},
 			assertions: func(
 				t *testing.T,
-				_ *fakeevent.EventRecorder,
+				_ *fakeevent.Sender,
 				c client.Client,
 				status kargoapi.StageStatus,
 				err error,
@@ -8414,7 +6698,7 @@ func TestRegularStageReconciler_autoPromoteFreight(t *testing.T) {
 			},
 			assertions: func(
 				t *testing.T,
-				_ *fakeevent.EventRecorder,
+				_ *fakeevent.Sender,
 				c client.Client,
 				status kargoapi.StageStatus,
 				err error,
@@ -8481,11 +6765,11 @@ func TestRegularStageReconciler_autoPromoteFreight(t *testing.T) {
 					indexer.FreightApprovedForStages,
 				)
 			c := builder.Build()
-			recorder := fakeevent.NewEventRecorder(5)
+			recorder := &fakeevent.Sender{}
 
 			r := &RegularStageReconciler{
 				client:      c,
-				eventSender: k8sevent.NewEventSender(recorder),
+				eventSender: recorder,
 			}
 
 			status, err := r.autoPromoteFreight(t.Context(), tt.stage, tt.autoPromotionEnabled)
@@ -8559,7 +6843,7 @@ func terminalPromotionOrderingObjects(
 	}
 }
 
-func Test_summarizeConditions(t *testing.T) {
+func TestSummarizeConditions(t *testing.T) {
 	tests := []struct {
 		name       string
 		stage      *kargoapi.Stage
@@ -8926,7 +7210,7 @@ func Test_summarizeConditions(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			ready := summarizeConditions(tt.stage, tt.status, tt.err)
+			ready := SummarizeConditions(tt.stage, tt.status, tt.err)
 			tt.assertions(t, tt.status, ready)
 		})
 	}
@@ -8976,23 +7260,20 @@ func Test_buildFreightSummary(t *testing.T) {
 	}
 }
 
-// testOrigin returns the origin of Freight from the named Warehouse.
-func testOrigin(warehouse string) kargoapi.FreightOrigin {
-	return kargoapi.FreightOrigin{
-		Kind: kargoapi.FreightOriginKindWarehouse,
-		Name: warehouse,
-	}
-}
-
-// testFreight returns a piece of Freight in the test project, produced by the
-// named Warehouse.
-// nolint:unparam
-func testFreight(name, warehouse string) *kargoapi.Freight {
-	return &kargoapi.Freight{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: "fake-project",
-			Name:      name,
-		},
-		Origin: testOrigin(warehouse),
-	}
+// requireOneSentEvent requires that exactly one event, of the given type, was
+// sent with the given Sender under the Kargo events subject prefix and returns
+// it.
+func requireOneSentEvent(
+	t *testing.T,
+	sender *fakeevent.Sender,
+	eventType kargoapi.EventType,
+) cloudevents.Event {
+	t.Helper()
+	sent := sender.Sent()
+	require.Len(t, sent, 1)
+	require.Equal(t, string(eventType), sent[0].Type())
+	expectedSubject, err := kargoEvent.NewEventSubject(string(eventType))
+	require.NoError(t, err)
+	require.Equal(t, expectedSubject, sent[0].Subject())
+	return sent[0]
 }

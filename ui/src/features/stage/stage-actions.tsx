@@ -76,7 +76,7 @@ export const StageActions = ({
           externalLinksOnly
           buttonProps={{
             type: 'link',
-            iconPosition: 'end',
+            iconPlacement: 'end',
             icon: <FontAwesomeIcon icon={faExternalLink} size='sm' />
           }}
         >

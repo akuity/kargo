@@ -21,6 +21,7 @@ import { zodValidators } from '@ui/utils/validators';
 import { CreateStageWizard, StageWizardState } from './create-stage-wizard';
 import { getStageYAMLExample } from './get-stage-yaml-example';
 import { usePromotionWizardStepsState } from './promotion-steps-wizard/use-promotion-wizard-steps-state';
+import { stepDescriptionForManifest } from './promotion-steps-wizard/utils';
 
 const formSchema = z.object({
   value: zodValidators.requiredString
@@ -86,6 +87,7 @@ export const CreateStage = ({
     (promotionWizardStepsState.state ?? []).map((step) => ({
       uses: step?.identifier,
       as: step?.as || '',
+      description: stepDescriptionForManifest(step?.description),
       if: '',
       continueOnError: step?.continueOnError || false,
       // step.state is type 'object' and it is safe to fake JSON type because it
@@ -111,7 +113,7 @@ export const CreateStage = ({
   return (
     <Drawer
       open={!!project}
-      width={'80%'}
+      size='80%'
       onClose={close}
       title='Create Stage'
       extra={

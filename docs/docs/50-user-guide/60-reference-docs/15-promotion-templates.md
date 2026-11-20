@@ -358,7 +358,15 @@ preventing it from accessing the status or outputs of previous steps.
 When a step fails for any reason, it can be retried instead of immediately
 failing the entire `Promotion`. An _error threshold_ specifies the number of
 _consecutive_ failures required for retry attempts to be abandoned and the
-`Promotion` to fail.
+`Promotion` to fail. Retries begin almost immediately and back off
+progressively, the same way errors are handled in any Kubernetes controller.
+
+Retries are strictly about recovering from _errors_. Some steps, such as
+[`git-wait-for-pr`](30-promotion-steps/git-wait-for-pr.md), poll an external
+system while waiting for some condition to be met. Finding that the condition
+has not been met _yet_ is an anticipated outcome and not an error. The step
+reports a `Running` status and is checked again later. These checks are not
+retries and do not count toward the error threshold.
 
 Independent of the error threshold, steps are also subject to a _timeout_. Any
 step that doesn't achieve its goal within that interval will cause the
@@ -368,23 +376,39 @@ timeout can cause a `Promotion` to fail with no _other_ failure having occurred.
 System-wide, the default error threshold is 1 and the default timeout is
 indefinite. Thus, default behavior is effectively no retries when a step fails
 for any reason and steps with any kind of polling behavior will poll
-indefinitely _as long a no other failure occurs._
+indefinitely _as long as no other failure occurs._
 
 The implementations of individual steps can override these defaults. Users also
-may override these defaults through configuration. In the following example, the
-`git-wait-for-pr` step is configured not to fail the `Promotion` until three
-consecutive failed attempts to execute it. It is also configured to wait a
-maximum of 48 hours for the step to complete successfully (i.e. for the PR to be
-merged).
+may override these defaults through configuration.
+
+In the following example, the `git-push` step is configured not to fail the
+`Promotion` until three consecutive failed attempts to execute it. This can
+help a `Promotion` ride out a Git server that is briefly unavailable. Errors
+that no number of retries will fix, such as a merge conflict, still fail the
+`Promotion` immediately.
 
 ```yaml
 steps:
 # ...
-- uses: wait-for-pr
+- uses: git-push
   retry:
     errorThreshold: 3
+  config:
+    path: ./out
+```
+
+In the following example, the `git-wait-for-pr` step is configured to wait a
+maximum of 48 hours for the PR to be merged. If the PR is still open after
+that, the `Promotion` fails.
+
+```yaml
+steps:
+# ...
+- uses: git-wait-for-pr
+  retry:
     timeout: 48h
   config:
+    repoURL: https://github.com/example/repo.git
     prNumber: ${{ outputs['open-pr'].pr.id }}
 ```
 

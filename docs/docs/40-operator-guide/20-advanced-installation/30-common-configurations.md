@@ -809,9 +809,26 @@ section of the user guide.
 
 ## Database Configuration
 
-Kargo's components do not use a database yet. The chart provisions one ahead of
-that, either the minimal PostgreSQL bundled with the chart or a reference to an
-external one.
+Kargo keeps some of its state in a PostgreSQL database. The management
+controller mirrors Projects, Stages, and Promotions into it, with Kubernetes
+remaining their source of truth; Promotion rows are kept as a history after
+the Promotions themselves are garbage collected, and a Promotion deleted
+before it finished is recorded as aborted. Targets live only there,
+managed through Kargo's API rather than as Kubernetes resources. The chart provides that database, either
+the minimal PostgreSQL bundled with the chart or a reference to an external
+one, and points the components that use it at whichever is configured.
+
+:::note
+A Target belongs to the Project it is named under. Deleting a Project does not
+yet delete its Targets, so a Project re-created under the same name has the
+Targets of the one it replaced. Back up the database together with the
+cluster, since Targets live only in the database.
+
+Target is no longer a custom resource, and the chart no longer installs a CRD
+for it. Upgrading removes the `targets.kargo.akuity.io` CRD and, with it, any
+Target custom resources created by earlier versions; they are not migrated.
+Recreate the Targets you still need through the API after upgrading.
+:::
 
 ### Bundled PostgreSQL
 
@@ -879,11 +896,12 @@ recommended and should only be done with caution.
 
 ### Scheduling the Garbage Collection
 
-By default, the garbage collector runs every 24 hours. This can be configured
+By default, the garbage collector runs hourly. This can be configured
 using a cron expression:
 
 ```yaml
 garbageCollector:
+  # Changes garbage collection to run every 24 hours at midnight
   schedule: "0 0 * * *"
 ```
 

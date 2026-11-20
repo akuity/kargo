@@ -25,6 +25,7 @@ export type ImageSubscription = {
   constraint?: string;
   allowTagsRegexes?: string[];
   ignoreTagsRegexes?: string[];
+  expressionFilter?: string;
   platform?: string;
   discoveryLimit?: number;
   insecureSkipTLSVerify?: boolean;

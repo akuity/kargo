@@ -47,20 +47,20 @@ func LsRemote(
 		clientOpts = &ClientOptions{}
 	}
 	b := &baseRepo{
-		creds:       clientOpts.Credentials,
-		originalURL: repoURL,
-		accessURL:   repoURL,
+		creds: clientOpts.Credentials,
+		url:   repoURL,
 	}
 	// setupDirs creates a temporary home directory that holds the ephemeral
 	// client configuration needed to authenticate.
 	// There is no working tree or clone -- only the home directory -- so cleanup
-	// is a single RemoveAll.
-	if err := b.setupDirs(ctx, ""); err != nil {
-		return nil, err
-	}
+	// is a single RemoveAll. It's deferred before setupDirs runs because
+	// setupDirs can fail after creating the directory.
 	defer func() {
 		_ = os.RemoveAll(b.homeDir)
 	}()
+	if err := b.setupDirs(ctx, ""); err != nil {
+		return nil, err
+	}
 	if err := b.setupClient(ctx, clientOpts); err != nil {
 		return nil, err
 	}
@@ -69,7 +69,7 @@ func LsRemote(
 	// HEAD, which ListRefs queries to resolve a subscription's implicit default
 	// branch. Annotated tags' peeled entries are instead dropped in
 	// parseLsRemoteOutput.
-	args := append([]string{"ls-remote", b.accessURL}, patterns...)
+	args := append([]string{"ls-remote", b.url}, patterns...)
 	cmd := b.buildGitCommand(ctx, args...)
 	// Override the cmd.Dir that's set by buildGitCommand(). It's normally the
 	// repository's path, which does not exist here because nothing was cloned.
@@ -77,7 +77,7 @@ func LsRemote(
 	out, err := libExec.Exec(cmd)
 	if err != nil {
 		return nil, fmt.Errorf(
-			"error listing refs in remote repo %q: %w", b.originalURL, err,
+			"error listing refs in remote repo %q: %w", b.url, err,
 		)
 	}
 	return parseLsRemoteOutput(out)

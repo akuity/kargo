@@ -6,13 +6,12 @@ import (
 	"fmt"
 	"os"
 
-	securejoin "github.com/cyphar/filepath-securejoin"
 	"github.com/expr-lang/expr"
 	"github.com/xeipuuv/gojsonschema"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/promotion"
-	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
+	"github.com/akuity/kargo/pkg/x/promotion/stepconfig"
 )
 
 const stepKindJSONParse = "json-parse"
@@ -52,15 +51,15 @@ func (jp *jsonParser) Run(
 }
 
 // convert validates jsonParser configuration against a JSON schema and
-// converts it into a builtin.JSONParseConfig struct.
-func (jp *jsonParser) convert(cfg promotion.Config) (builtin.JSONParseConfig, error) {
-	return validateAndConvert[builtin.JSONParseConfig](jp.schemaLoader, cfg, stepKindJSONParse)
+// converts it into a stepconfig.JSONParseConfig struct.
+func (jp *jsonParser) convert(cfg promotion.Config) (stepconfig.JSONParseConfig, error) {
+	return validateAndConvert[stepconfig.JSONParseConfig](jp.schemaLoader, cfg, stepKindJSONParse)
 }
 
 func (jp *jsonParser) run(
 	_ context.Context,
 	stepCtx *promotion.StepContext,
-	cfg builtin.JSONParseConfig,
+	cfg stepconfig.JSONParseConfig,
 ) (promotion.StepResult, error) {
 	failure := promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}
 
@@ -72,7 +71,7 @@ func (jp *jsonParser) run(
 		return failure, fmt.Errorf("invalid %s config: outputs is required", stepKindJSONParse)
 	}
 
-	data, err := jp.readAndParseJSON(stepCtx.WorkDir, cfg.Path)
+	data, err := jp.readAndParseJSON(stepCtx.Root, cfg.Path)
 	if err != nil {
 		return failure, err
 	}
@@ -90,16 +89,16 @@ func (jp *jsonParser) run(
 
 // readAndParseJSON reads and unmarshals a JSON document and returns the result.
 func (jp *jsonParser) readAndParseJSON(
-	workDir string,
+	root *os.Root,
 	path string,
 ) (any, error) {
-	absFilePath, err := securejoin.SecureJoin(workDir, path)
+	relPath, err := promotion.WorkspacePath(path)
 	if err != nil {
-		return nil, fmt.Errorf("error joining path %q: %w", path, err)
+		return nil, err
 	}
-	jsonData, err := os.ReadFile(absFilePath)
+	jsonData, err := root.ReadFile(relPath)
 	if err != nil {
-		return nil, fmt.Errorf("error reading JSON file %q: %w", absFilePath, err)
+		return nil, fmt.Errorf("error reading JSON file %q: %w", path, err)
 	}
 	var data any
 	if err := json.Unmarshal(jsonData, &data); err != nil {
@@ -110,10 +109,10 @@ func (jp *jsonParser) readAndParseJSON(
 
 // extractValues returns select data extracted from the provided data by
 // evaluating it against expressions contained within the provided
-// []builtin.JSONParse.
+// []stepconfig.JSONParse.
 func (jp *jsonParser) extractValues(
 	data any,
-	outputs []builtin.JSONParse,
+	outputs []stepconfig.JSONParse,
 ) (map[string]any, error) {
 	results := make(map[string]any, len(outputs))
 	for _, output := range outputs {

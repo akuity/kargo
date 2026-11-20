@@ -33,7 +33,7 @@ export const PromotionWindowAlert = ({
     <Alert
       className={className}
       type='warning'
-      message={
+      title={
         <span className='text-sm'>
           <Typography.Text strong className='mr-2'>
             Promotions frozen

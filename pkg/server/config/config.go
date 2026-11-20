@@ -1,6 +1,7 @@
 package config
 
 import (
+	"context"
 	"fmt"
 	"io/fs"
 	"net/http"
@@ -9,6 +10,7 @@ import (
 
 	"github.com/kelseyhightower/envconfig"
 
+	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/os"
 	"github.com/akuity/kargo/pkg/server/dex"
 	"github.com/akuity/kargo/pkg/server/oidc"
@@ -29,7 +31,6 @@ type ServerConfig struct {
 	// it). Empty value means the server serves at the root.
 	BasePath                    string
 	SecretManagementEnabled     bool
-	LocalMode                   bool // LocalMode is true if the server is running as a non-containerized process
 	TLSConfig                   *TLSConfig
 	OIDCConfig                  *oidc.Config
 	AdminConfig                 *AdminConfig
@@ -37,8 +38,23 @@ type ServerConfig struct {
 	ArgoCDConfig                ArgoCDConfig
 	PermissiveCORSPolicyEnabled bool
 	RolloutsIntegrationEnabled  bool
-	AnalysisRunLogURLTemplate   string
-	AnalysisRunLogToken         string
+	// PromotionRolloutsEnabled indicates whether the server creates
+	// PromotionRollouts. Only a build that reconciles them sets it; without
+	// that, a rollout would never progress, so it is deliberately not read
+	// from the environment. When false, creating one is refused with 501.
+	PromotionRolloutsEnabled bool
+	// PromotionRolloutCheck, when set, is asked before a PromotionRollout is
+	// created whether the Stage may be promoted to at this time. An error
+	// from it refuses the rollout, and is what the caller is answered with:
+	// one carrying a client-facing status (libhttp.HTTPError, or a Kubernetes
+	// status error) is answered with that status and its message. This
+	// permits downstream consumers to hold promotions to a Stage back, on a
+	// schedule for example. It is asked for every rollout the server creates,
+	// whichever endpoint the request came through, and is not read from the
+	// environment.
+	PromotionRolloutCheck     func(context.Context, *kargoapi.Stage) error
+	AnalysisRunLogURLTemplate string
+	AnalysisRunLogToken       string
 	// AnalysisRunLogForwardUserToken indicates whether a user's own bearer token
 	// should be available as a value in an authentication header for requests to
 	// the AnalysisRun log service in cases where AnalysisRunLogToken is not set.
@@ -193,7 +209,8 @@ func TLSConfigFromEnv() TLSConfig {
 
 // AdminConfig represents configuration for an admin account.
 type AdminConfig struct {
-	// HashedPassword is a bcrypt hash of the password for the admin account.
+	// HashedPassword is a PBKDF2-HMAC-SHA256 or bcrypt hash of the password for
+	// the admin account.
 	HashedPassword string `envconfig:"ADMIN_ACCOUNT_PASSWORD_HASH" required:"true"`
 	// TokenIssuer is the value to be used in the ISS claim of ID tokens issued for
 	// the admin account.

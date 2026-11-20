@@ -9,7 +9,27 @@ import {
 } from '@ui/gen/api/v2/core/core';
 import { Warehouse } from '@ui/gen/api/v2/models';
 
-import { batchEmitter, runSeededWatch, upsertOrDelete } from './watch-utils';
+import {
+  advanceResourceVersion,
+  batchEmitter,
+  runSeededWatch,
+  upsertOrDelete
+} from './watch-utils';
+
+// A Warehouse is refreshing while it has a refresh request it has not handled.
+const isRefreshing = (warehouse: Warehouse) => {
+  const refreshRequest = warehouse.metadata?.annotations?.['kargo.akuity.io/refresh'];
+  return refreshRequest !== undefined && refreshRequest !== warehouse.status?.lastHandledRefresh;
+};
+
+// pendingRefreshes marks the Warehouses already refreshing when a watch opens.
+// A reopened watch resumes after the last event it saw, so it never redelivers
+// the event that started a refresh; without this, the one that ends it would
+// not be recognized as a completion.
+export const pendingRefreshes = (warehouses: Warehouse[]): Record<string, boolean> =>
+  Object.fromEntries(
+    warehouses.filter(isRefreshing).map((warehouse) => [warehouse.metadata?.name || '', true])
+  );
 
 export const useWatchWarehouses = (
   project: string,
@@ -27,7 +47,9 @@ export const useWatchWarehouses = (
 
     const abort = new AbortController();
     const listKey = getListWarehousesQueryKey(project);
-    const pendingRefresh: Record<string, boolean> = {};
+    const pendingRefresh = pendingRefreshes(
+      (client.getQueryData(listKey) as listWarehousesResponse | undefined)?.data?.items ?? []
+    );
 
     // Batch bursts of warehouse events so the graph applies them all at once
     // rather than once per event. Keying by name keeps every distinct
@@ -67,7 +89,7 @@ export const useWatchWarehouses = (
           return {
             ...old,
             data: {
-              ...old.data,
+              ...advanceResourceVersion(old.data, warehouse),
               items: upsertOrDelete(old.data.items ?? [], warehouse, type)
             }
           };
@@ -98,11 +120,7 @@ export const useWatchWarehouses = (
               : old
         );
 
-        const refreshRequest = warehouse.metadata?.annotations?.['kargo.akuity.io/refresh'];
-        const refreshStatus = warehouse.status?.lastHandledRefresh;
-        const isRefreshing = refreshRequest !== undefined && refreshRequest !== refreshStatus;
-
-        if (isRefreshing) {
+        if (isRefreshing(warehouse)) {
           pendingRefresh[name] = true;
         } else if (pendingRefresh[name]) {
           delete pendingRefresh[name];
@@ -123,7 +141,7 @@ export const useWatchWarehouses = (
 
     return () => {
       abort.abort();
-      emitWarehouseEvents.cancel();
+      emitWarehouseEvents.flush();
     };
   }, [project, client]);
 };

@@ -11,7 +11,7 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/kubeclient"
 	"github.com/akuity/kargo/pkg/promotion"
-	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
+	"github.com/akuity/kargo/pkg/x/promotion/stepconfig"
 )
 
 const stepKindSetMetadata = "set-metadata"
@@ -61,15 +61,15 @@ func (s *metadataSetter) Run(
 }
 
 // convert validates the configuration against a JSON schema and converts it
-// into a builtin.SetMetadataConfig struct.
-func (s *metadataSetter) convert(cfg promotion.Config) (builtin.SetMetadataConfig, error) {
-	return validateAndConvert[builtin.SetMetadataConfig](s.schemaLoader, cfg, stepKindSetMetadata)
+// into a stepconfig.SetMetadataConfig struct.
+func (s *metadataSetter) convert(cfg promotion.Config) (stepconfig.SetMetadataConfig, error) {
+	return validateAndConvert[stepconfig.SetMetadataConfig](s.schemaLoader, cfg, stepKindSetMetadata)
 }
 
 func (s *metadataSetter) run(
 	ctx context.Context,
 	stepCtx *promotion.StepContext,
-	cfg builtin.SetMetadataConfig,
+	cfg stepconfig.SetMetadataConfig,
 ) (promotion.StepResult, error) {
 	for _, update := range cfg.Updates {
 		switch update.Kind {

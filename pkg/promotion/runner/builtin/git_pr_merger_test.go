@@ -15,7 +15,7 @@ import (
 	"github.com/akuity/kargo/pkg/credentials"
 	"github.com/akuity/kargo/pkg/gitprovider"
 	"github.com/akuity/kargo/pkg/promotion"
-	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
+	"github.com/akuity/kargo/pkg/x/promotion/stepconfig"
 )
 
 func Test_gitPRMerger_convert(t *testing.T) {
@@ -168,7 +168,7 @@ func Test_gitPRMerger_run(t *testing.T) {
 	testCases := []struct {
 		name       string
 		provider   gitprovider.Interface
-		config     builtin.GitMergePRConfig
+		config     stepconfig.GitMergePRConfig
 		assertions func(*testing.T, promotion.StepResult, error)
 	}{
 		{
@@ -182,7 +182,7 @@ func Test_gitPRMerger_run(t *testing.T) {
 					return nil, false, errors.New("500 Internal Server Error")
 				},
 			},
-			config: builtin.GitMergePRConfig{PRNumber: 42},
+			config: stepconfig.GitMergePRConfig{PRNumber: 42},
 			assertions: func(t *testing.T, res promotion.StepResult, err error) {
 				require.ErrorContains(t, err, "error merging pull request 42")
 				require.ErrorContains(t, err, "500 Internal Server Error")
@@ -201,7 +201,7 @@ func Test_gitPRMerger_run(t *testing.T) {
 					return nil, false, gitprovider.ErrPullRequestNotFound
 				},
 			},
-			config: builtin.GitMergePRConfig{PRNumber: 42},
+			config: stepconfig.GitMergePRConfig{PRNumber: 42},
 			assertions: func(t *testing.T, res promotion.StepResult, err error) {
 				var termErr *promotion.TerminalError
 				require.ErrorAs(t, err, &termErr)
@@ -223,7 +223,7 @@ func Test_gitPRMerger_run(t *testing.T) {
 					)
 				},
 			},
-			config: builtin.GitMergePRConfig{PRNumber: 42},
+			config: stepconfig.GitMergePRConfig{PRNumber: 42},
 			assertions: func(t *testing.T, res promotion.StepResult, err error) {
 				var termErr *promotion.TerminalError
 				require.ErrorAs(t, err, &termErr)
@@ -245,7 +245,7 @@ func Test_gitPRMerger_run(t *testing.T) {
 					)
 				},
 			},
-			config: builtin.GitMergePRConfig{PRNumber: 42},
+			config: stepconfig.GitMergePRConfig{PRNumber: 42},
 			assertions: func(t *testing.T, res promotion.StepResult, err error) {
 				var termErr *promotion.TerminalError
 				require.ErrorAs(t, err, &termErr)
@@ -268,7 +268,7 @@ func Test_gitPRMerger_run(t *testing.T) {
 					)
 				},
 			},
-			config: builtin.GitMergePRConfig{PRNumber: 42},
+			config: stepconfig.GitMergePRConfig{PRNumber: 42},
 			assertions: func(t *testing.T, res promotion.StepResult, err error) {
 				var termErr *promotion.TerminalError
 				require.ErrorAs(t, err, &termErr)
@@ -287,7 +287,7 @@ func Test_gitPRMerger_run(t *testing.T) {
 					return nil, false, nil
 				},
 			},
-			config: builtin.GitMergePRConfig{
+			config: stepconfig.GitMergePRConfig{
 				PRNumber: 42,
 				Wait:     true,
 			},
@@ -311,7 +311,7 @@ func Test_gitPRMerger_run(t *testing.T) {
 					return nil, false, nil
 				},
 			},
-			config: builtin.GitMergePRConfig{
+			config: stepconfig.GitMergePRConfig{
 				PRNumber:     42,
 				Wait:         true,
 				PollInterval: "45s",
@@ -334,7 +334,7 @@ func Test_gitPRMerger_run(t *testing.T) {
 					return nil, false, nil
 				},
 			},
-			config: builtin.GitMergePRConfig{
+			config: stepconfig.GitMergePRConfig{
 				PRNumber: 42,
 				Wait:     false,
 			},
@@ -358,7 +358,7 @@ func Test_gitPRMerger_run(t *testing.T) {
 					}, true, nil
 				},
 			},
-			config: builtin.GitMergePRConfig{
+			config: stepconfig.GitMergePRConfig{
 				PRNumber: 123,
 			},
 			assertions: func(t *testing.T, res promotion.StepResult, err error) {
@@ -380,7 +380,7 @@ func Test_gitPRMerger_run(t *testing.T) {
 					}, true, nil
 				},
 			},
-			config: builtin.GitMergePRConfig{
+			config: stepconfig.GitMergePRConfig{
 				PRNumber: 42,
 			},
 			assertions: func(t *testing.T, res promotion.StepResult, err error) {
@@ -402,7 +402,7 @@ func Test_gitPRMerger_run(t *testing.T) {
 					}, true, nil
 				},
 			},
-			config: builtin.GitMergePRConfig{
+			config: stepconfig.GitMergePRConfig{
 				PRNumber: 42,
 			},
 			assertions: func(t *testing.T, res promotion.StepResult, err error) {
@@ -425,7 +425,7 @@ func Test_gitPRMerger_run(t *testing.T) {
 					}, true, nil
 				},
 			},
-			config: builtin.GitMergePRConfig{
+			config: stepconfig.GitMergePRConfig{
 				PRNumber:    42,
 				MergeMethod: "squash",
 			},
@@ -453,7 +453,7 @@ func Test_gitPRMerger_run(t *testing.T) {
 					return nil
 				},
 			},
-			config: builtin.GitMergePRConfig{
+			config: stepconfig.GitMergePRConfig{
 				PRNumber: 42,
 			},
 			assertions: func(t *testing.T, res promotion.StepResult, err error) {
@@ -480,7 +480,7 @@ func Test_gitPRMerger_run(t *testing.T) {
 					return nil
 				},
 			},
-			config: builtin.GitMergePRConfig{
+			config: stepconfig.GitMergePRConfig{
 				PRNumber:           42,
 				DeleteSourceBranch: true,
 			},
@@ -508,7 +508,7 @@ func Test_gitPRMerger_run(t *testing.T) {
 					return errors.New("something went wrong")
 				},
 			},
-			config: builtin.GitMergePRConfig{
+			config: stepconfig.GitMergePRConfig{
 				PRNumber:           42,
 				DeleteSourceBranch: true,
 			},
@@ -542,7 +542,7 @@ func Test_gitPRMerger_run(t *testing.T) {
 					return nil
 				},
 			},
-			config: builtin.GitMergePRConfig{
+			config: stepconfig.GitMergePRConfig{
 				PRNumber:           42,
 				DeleteSourceBranch: true,
 			},
@@ -580,7 +580,7 @@ func Test_gitPRMerger_run(t *testing.T) {
 			)
 
 			cfg := testCase.config
-			cfg.Provider = ptr.To(builtin.Provider(testGitProviderName))
+			cfg.Provider = ptr.To(stepconfig.Provider(testGitProviderName))
 			cfg.RepoURL = "https://github.com/example/repo.git"
 
 			res, err := runner.run(

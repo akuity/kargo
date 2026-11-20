@@ -141,7 +141,11 @@ export const RecurrenceFields = ({ value, onChange, startDate }: RecurrenceField
               <DatePicker
                 allowClear={false}
                 value={until}
-                onChange={(date) => patch({ until: utcEndOfDay(date) })}
+                onChange={(date) => {
+                  if (date) {
+                    patch({ until: utcEndOfDay(date) });
+                  }
+                }}
                 format="EEEE, MMM d, yyyy 'UTC'"
                 className='flex-1'
               />

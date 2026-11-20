@@ -166,7 +166,7 @@ const RepoCredentialCard = ({ cred, onChange, onRemove }: CredentialCardProps) =
           <Alert
             type='info'
             showIcon
-            message={
+            title={
               <>
                 This credential uses <strong>{authLabels[cred.auth]}</strong> authentication,
                 configured through the YAML editor. Edit it there.

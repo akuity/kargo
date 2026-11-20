@@ -2,15 +2,15 @@
 
 set -x
 
-argo_cd_chart_version=9.4.3
-argo_rollouts_chart_version=2.40.6
-cert_manager_chart_version=1.19.3
+argo_cd_chart_version=10.10.5
+argo_rollouts_chart_version=2.43.8
+cert_manager_chart_version=1.21.2
 
 k3d cluster create kargo-quickstart \
   --no-lb \
   --k3s-arg '--disable=traefik@server:0' \
-  -p '31080-31082:31080-31082@servers:0:direct' \
-  -p '32080-32082:32080-32082@servers:0:direct' \
+  -p '127.0.0.1:31080-31082:31080-31082@servers:0:direct' \
+  -p '127.0.0.1:32080-32082:32080-32082@servers:0:direct' \
   --wait
 
 helm install cert-manager cert-manager \
@@ -32,10 +32,6 @@ helm install argocd argo-cd \
   --set server.service.type=NodePort \
   --set server.service.nodePortHttp=31080 \
   --set 'server.extraArgs={--insecure}' \
-  --set server.extensions.enabled=true \
-  --set 'server.extensions.extensionList[0].name=argo-rollouts' \
-  --set 'server.extensions.extensionList[0].env[0].name=EXTENSION_URL' \
-  --set 'server.extensions.extensionList[0].env[0].value=https://github.com/argoproj-labs/rollout-extension/releases/download/v0.3.7/extension.tar' \
   --wait
 
 helm install argo-rollouts argo-rollouts \
@@ -53,7 +49,7 @@ helm install kargo \
   --set api.service.type=NodePort \
   --set api.service.nodePort=31081 \
   --set api.tls.enabled=false \
-  --set api.adminAccount.passwordHash='$2a$10$Zrhhie4vLz5ygtVSaif6o.qN36jgs6vjtMBdM6yrU1FOeiAAMMxOm' \
+  --set api.adminAccount.passwordHash='$pbkdf2-sha256$600000$Fc8fnFyUR9wjfx7Mu0BuEA$IIOU/KwMqEZuFpq0uAGwJTLTgrI0Ep8g7p.XRgId3Ks' \
   --set api.adminAccount.tokenSigningKey=iwishtowashmyirishwristwatch \
   --set database.postgres.password=kargo \
   --set externalWebhooksServer.service.type=NodePort \

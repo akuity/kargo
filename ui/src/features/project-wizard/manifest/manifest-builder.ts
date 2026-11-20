@@ -3,6 +3,7 @@ import { z } from 'zod';
 
 import { CredentialTypeLabelKey } from '@ui/features/common/settings/secrets/types';
 import { DESCRIPTION_ANNOTATION_KEY } from '@ui/features/common/utils';
+import { stepDescriptionForManifest } from '@ui/features/stage/promotion-steps-wizard/utils';
 import {
   Project,
   ProjectConfig,
@@ -182,6 +183,7 @@ export const stageManifest = (draft: StageDraft, project: string): Manifest<Stag
   const steps = draft.steps.map((s) => ({
     uses: s.identifier,
     as: s.as || '',
+    description: stepDescriptionForManifest(s.description),
     continueOnError: s.continueOnError || false,
     // Always an object: a null/omitted config fails backend validation with a
     // confusing root-type error rather than a useful "field required" one.

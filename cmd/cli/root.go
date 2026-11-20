@@ -14,13 +14,13 @@ import (
 	"github.com/akuity/kargo/pkg/cli/cmd/delete"
 	"github.com/akuity/kargo/pkg/cli/cmd/get"
 	"github.com/akuity/kargo/pkg/cli/cmd/grant"
+	"github.com/akuity/kargo/pkg/cli/cmd/hashpassword"
 	"github.com/akuity/kargo/pkg/cli/cmd/login"
 	"github.com/akuity/kargo/pkg/cli/cmd/logout"
 	"github.com/akuity/kargo/pkg/cli/cmd/logs"
 	"github.com/akuity/kargo/pkg/cli/cmd/promote"
 	"github.com/akuity/kargo/pkg/cli/cmd/refresh"
 	"github.com/akuity/kargo/pkg/cli/cmd/revoke"
-	"github.com/akuity/kargo/pkg/cli/cmd/server"
 	"github.com/akuity/kargo/pkg/cli/cmd/update"
 	"github.com/akuity/kargo/pkg/cli/cmd/verify"
 	"github.com/akuity/kargo/pkg/cli/cmd/version"
@@ -50,6 +50,7 @@ func NewRootCommand(cfg clicfg.CLIConfig) *cobra.Command {
 	cmd.AddCommand(delete.NewCommand(cfg, streams))
 	cmd.AddCommand(get.NewCommand(cfg, streams))
 	cmd.AddCommand(grant.NewCommand(cfg, streams))
+	cmd.AddCommand(hashpassword.NewCommand(streams))
 	cmd.AddCommand(login.NewCommand(cfg))
 	cmd.AddCommand(logs.NewCommand(cfg, streams))
 	cmd.AddCommand(logout.NewCommand())
@@ -60,7 +61,6 @@ func NewRootCommand(cfg clicfg.CLIConfig) *cobra.Command {
 	cmd.AddCommand(promote.NewCommand(cfg, streams))
 	cmd.AddCommand(verify.NewCommand(cfg))
 	cmd.AddCommand(version.NewCommand(cfg, streams))
-	cmd.AddCommand(server.NewCommand())
 
 	return cmd
 }

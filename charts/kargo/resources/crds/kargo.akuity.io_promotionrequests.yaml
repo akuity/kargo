@@ -127,6 +127,14 @@ spec:
                       Zero means there is no limit (default)
                     format: int64
                     type: integer
+                  maxFailures:
+                    description: |-
+                      MaxFailures specifies a number of target promotions which can fail before PromotionRequest is considered failed.
+                      Specifies a tolerable number, N failing promotions with maxFailures: N is a success, N+1 is a failure.
+                      Defaults to 0, meaning no failures tolerated.
+                    format: int64
+                    minimum: 0
+                    type: integer
                 type: object
                 x-kubernetes-validations:
                 - rule: self == oldSelf
@@ -599,6 +607,11 @@ spec:
                             AnalysisRun is a reference to the Argo Rollouts AnalysisRun that implements
                             the Verification process.
                           properties:
+                            kind:
+                              description: |-
+                                Kind is a string representation of GroupVersionKind describing this run
+                                For classic analysis run it is AnalysisRunKindRun or AnalysisRunKindLegacy (empty)
+                              type: string
                             name:
                               description: Name is the name of the AnalysisRun.
                               type: string
@@ -633,6 +646,10 @@ spec:
                             this will be a reflection of the underlying AnalysisRun's phase, however,
                             there are exceptions to this, such as in the case where an AnalysisRun
                             cannot be launched successfully.
+                          type: string
+                        promotionName:
+                          description: PromotionName is an optional name of promotion
+                            which triggered verification
                           type: string
                         startTime:
                           description: StartTime is the time at which the Verification

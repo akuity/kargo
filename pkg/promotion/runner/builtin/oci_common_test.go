@@ -188,6 +188,18 @@ func Test_ociHTTPTransport(t *testing.T) {
 				assert.True(t, transport.TLSClientConfig.InsecureSkipVerify)
 			},
 		},
+		{
+			name: "link-local addresses blocked",
+			assertions: func(t *testing.T, transport *http.Transport) {
+				require.NotNil(t, transport)
+				_, err := transport.DialContext(
+					t.Context(),
+					"tcp",
+					"169.254.169.254:80",
+				)
+				require.ErrorContains(t, err, "not permitted")
+			},
+		},
 	}
 
 	for _, tt := range tests {

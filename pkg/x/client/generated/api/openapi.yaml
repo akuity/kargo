@@ -1186,6 +1186,75 @@ paths:
       summary: Retrieve a PromotionRequest
       tags:
       - Core
+  /v1beta1/projects/{project}/promotion-rollouts:
+    get:
+      description: |-
+        List a project's PromotionRollouts, one page at a time, as
+        a PromotionRolloutList resource. A Project or a Stage may
+        have had any number of rollouts, so a list is never more
+        than one page, newest first: the Project's, or a Stage's,
+        or a Stage's of one piece of Freight. When a page is full,
+        the list's metadata.continue names where the next page
+        starts; pass it as continue to read on. With after, a
+        Stage's rollouts numbered above it are listed oldest first
+        instead. With latest, the list is instead each Stage's
+        latest rollouts -- the one it is promoting through, if any,
+        and the newest that has finished, if any -- which is what a
+        reader of a Stage's state wants without reading its history.
+      operationId: ListPromotionRollouts
+      parameters:
+      - description: Project name
+        in: path
+        name: project
+        required: true
+        schema:
+          type: string
+      - description: Only PromotionRollouts of this Stage
+        in: query
+        name: stage
+        schema:
+          type: string
+      - description: Only PromotionRollouts of this Freight; requires stage
+        in: query
+        name: freight
+        schema:
+          type: string
+      - description: "Each Stage's latest rollouts, or the named Stage's; takes only\
+          \ stage besides"
+        in: query
+        name: latest
+        schema:
+          type: boolean
+      - description: "Only the Stage's PromotionRollouts numbered above this, oldest\
+          \ first; requires stage"
+        in: query
+        name: after
+        schema:
+          format: int64
+          type: integer
+      - description: "Previous page's metadata.continue; with stage, one of the Stage's;\
+          \ resend after"
+        in: query
+        name: continue
+        schema:
+          type: string
+      - description: "The page size, at most 500; 50 if omitted"
+        in: query
+        name: limit
+        schema:
+          type: integer
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PromotionRolloutList"
+          description: PromotionRolloutList resource
+      security:
+      - BearerAuth: []
+      summary: List PromotionRollouts
+      tags:
+      - Core
   /v1beta1/projects/{project}/promotion-tasks:
     get:
       description: |-
@@ -1929,13 +1998,107 @@ paths:
       summary: Retrieve deep links for a Stage resource
       tags:
       - Core
+  /v1beta1/projects/{project}/stages/{stage}/promotion-rollouts:
+    post:
+      description: |-
+        Create a PromotionRollout, which promotes the Freight named
+        in the body to each of the Targets the Stage governs, or to
+        the ones the body names among them. PromotionRollouts are
+        managed through this API rather than as Kubernetes
+        resources. The Stage must select Targets: its selectors are
+        resolved against the project's Targets as the rollout is
+        created, narrowed to the Targets named if any are, and its
+        update strategy, or the one the body gives in its place, is
+        resolved against how many that leaves; both are recorded
+        with the rollout for good. A Target the Stage does not
+        govern is refused. Everything else about the rollout is
+        assigned by the server.
+        This is a promotion: it requires the promote verb on the
+        Stage. A server that does not create PromotionRollouts
+        responds 501.
+      operationId: CreatePromotionRollout
+      parameters:
+      - description: Project name
+        in: path
+        name: project
+        required: true
+        schema:
+          type: string
+      - description: Stage name
+        in: path
+        name: stage
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreatePromotionRolloutRequest"
+        description: Create request
+        required: true
+      responses:
+        "201":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PromotionRollout"
+          description: PromotionRollout resource
+      security:
+      - BearerAuth: []
+      summary: Create a PromotionRollout
+      tags:
+      - Core
+      x-codegen-request-body-name: body
+  /v1beta1/projects/{project}/stages/{stage}/promotion-rollouts/{number}:
+    get:
+      description: |-
+        Retrieve one of a Stage's PromotionRollouts by its number
+        among them.
+      operationId: GetPromotionRollout
+      parameters:
+      - description: Project name
+        in: path
+        name: project
+        required: true
+        schema:
+          type: string
+      - description: Stage name
+        in: path
+        name: stage
+        required: true
+        schema:
+          type: string
+      - description: PromotionRollout number
+        in: path
+        name: number
+        required: true
+        schema:
+          format: int64
+          type: integer
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PromotionRollout"
+          description: PromotionRollout resource
+      security:
+      - BearerAuth: []
+      summary: Retrieve a PromotionRollout
+      tags:
+      - Core
   /v1beta1/projects/{project}/stages/{stage}/promotions:
     post:
       description: |-
         Create a Promotion resource to transition a specified Stage into
         the state represented by the specified Freight.
-        A Stage that selects Targets yields a PromotionRequest, which fans
-        the Freight out to each of them, in place of a single Promotion.
+        A Stage that selects Targets yields, in place of a single
+        Promotion, something that fans the Freight out to each of
+        them: a PromotionRollout on a server that creates
+        PromotionRollouts, and a PromotionRequest otherwise. Either
+        way, the body's targets and updateStrategy narrow which
+        Targets are promoted to and at what pace.
       operationId: PromoteToStage
       parameters:
       - description: Project name
@@ -1963,8 +2126,8 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Promotion"
-          description: "Promotion resource, or a PromotionRequest for a Stage that\
-            \ selects Targets"
+          description: Promotion; a PromotionRollout or PromotionRequest for a Stage
+            with Targets
       security:
       - BearerAuth: []
       summary: Promote to Stage
@@ -1975,8 +2138,15 @@ paths:
     post:
       description: |-
         Creates a Promotion resource for each of a Stage's immediately
-        downstream Stages. Downstream Stages that select Targets yield a
-        PromotionRequest each, returned separately under "promotionRequests".
+        downstream Stages, returned under "promotions". Downstream
+        Stages that select Targets each yield, in place of a
+        Promotion, a PromotionRollout on a server that creates
+        PromotionRollouts, returned under "promotionRollouts", or a
+        PromotionRequest otherwise, returned under
+        "promotionRequests"; each key is present only when it has
+        entries. Each promotes to every Target its Stage governs, at
+        the Stage's pace. A Stage that could not be promoted to is
+        reported under "errors", with a 207 status.
       operationId: PromoteDownstream
       parameters:
       - description: Project name
@@ -2097,9 +2267,9 @@ paths:
   /v1beta1/projects/{project}/targets:
     get:
       description: |-
-        List Target resources from a project's namespace, optionally
-        narrowed to those a particular Stage governs or those matching a
-        label selector. Returns a TargetList resource.
+        List a project's Targets, optionally narrowed to those a
+        particular Stage governs or those matching a label selector.
+        Returns a TargetList resource.
       operationId: ListTargets
       parameters:
       - description: Project name
@@ -2124,15 +2294,75 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/TargetList"
-          description: TargetList custom resource
+          description: TargetList resource
       security:
       - BearerAuth: []
       summary: List Targets
       tags:
       - Core
-  /v1beta1/projects/{project}/targets/{target}:
+    post:
+      description: |-
+        Create a Target in a project. Targets are managed through
+        this API rather than as Kubernetes resources. The body's
+        metadata.name is required; its metadata.namespace, if given,
+        must be the project. Status and server-managed metadata are
+        ignored.
+      operationId: CreateTarget
+      parameters:
+      - description: Project name
+        in: path
+        name: project
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Target"
+        description: Target resource
+        required: true
+      responses:
+        "201":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Target"
+          description: Target resource
+      security:
+      - BearerAuth: []
+      summary: Create a Target
+      tags:
+      - Core
+      x-codegen-request-body-name: body
+  /v1beta1/projects/{project}/targets/{target-name}:
+    delete:
+      description: Delete one of a project's Targets.
+      operationId: DeleteTarget
+      parameters:
+      - description: Project name
+        in: path
+        name: project
+        required: true
+        schema:
+          type: string
+      - description: Target name
+        in: path
+        name: target-name
+        required: true
+        schema:
+          type: string
+      responses:
+        "204":
+          content: {}
+          description: Deleted successfully
+      security:
+      - BearerAuth: []
+      summary: Delete a Target
+      tags:
+      - Core
     get:
-      description: Retrieve a Target resource from a project's namespace.
+      description: Retrieve one of a project's Targets.
       operationId: GetTarget
       parameters:
       - description: Project name
@@ -2143,7 +2373,7 @@ paths:
           type: string
       - description: Target name
         in: path
-        name: target
+        name: target-name
         required: true
         schema:
           type: string
@@ -2153,12 +2383,54 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Target"
-          description: Target custom resource
+          description: Target resource
       security:
       - BearerAuth: []
       summary: Retrieve a Target
       tags:
       - Core
+    put:
+      description: |-
+        Replace a Target's labels and params. The body's metadata.name,
+        if given, must match the name in the URL, and its spec.targetSet
+        must name the TargetSet that manages the Target, which cannot
+        change. A metadata.uid or metadata.resourceVersion in the body
+        is a precondition: the update is refused if the Target no
+        longer matches it.
+      operationId: UpdateTarget
+      parameters:
+      - description: Project name
+        in: path
+        name: project
+        required: true
+        schema:
+          type: string
+      - description: Target name
+        in: path
+        name: target-name
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Target"
+        description: Target resource
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Target"
+          description: Target resource
+      security:
+      - BearerAuth: []
+      summary: Update a Target
+      tags:
+      - Core
+      x-codegen-request-body-name: body
   /v1beta1/projects/{project}/warehouses:
     get:
       description: |-
@@ -3593,6 +3865,36 @@ components:
             type: object
           type: object
       type: object
+    CreatePromotionRolloutRequest:
+      example:
+        freight: freight
+        targets:
+        - targets
+        - targets
+        updateStrategy: "{}"
+      properties:
+        freight:
+          description: Freight is the name of the Freight to promote.
+          type: string
+        targets:
+          description: |-
+            Targets names the Targets to promote to, each of which the Stage must
+            govern. Omitted, the rollout promotes to every Target the Stage
+            governs. Naming a few is how a canary is run or a failed rollout is
+            retried for only the Targets that failed.
+          items:
+            type: string
+          type: array
+        updateStrategy:
+          allOf:
+          - $ref: "#/components/schemas/TargetUpdateStrategy"
+          description: |-
+            UpdateStrategy paces this rollout in place of the Stage's update
+            strategy. Omitted, the Stage's applies. Either way, a percentage is
+            resolved against the Targets the rollout promotes to, and the numbers
+            that gives are recorded with the rollout for good.
+          type: object
+      type: object
     CreateRepoCredentialsRequest:
       example:
         description: description
@@ -4049,6 +4351,10 @@ components:
         freight: freight
         freightAlias: freightAlias
         origin: origin
+        targets:
+        - targets
+        - targets
+        updateStrategy: "{}"
       properties:
         freight:
           type: string
@@ -4060,6 +4366,21 @@ components:
             set, the promotion webhook resolves it to the current auto-promotion
             candidate. Exactly one of Freight, FreightAlias, or Origin must be set.
           type: string
+        targets:
+          description: |-
+            Targets is a list of target names to promote to. If set to `nil` - selects all targets for the stage.
+            If non-nil, should be a subset of targets selected by the stage, empty list is an error.
+          items:
+            type: string
+          type: array
+        updateStrategy:
+          allOf:
+          - $ref: "#/components/schemas/TargetUpdateStrategy"
+          description: |-
+            UpdateStrategy configures overrides for maxConcurrent and maxErrors for this request.
+            Percentage values are calculated based on the total stage targets and not just ones selected for promotion
+            If nil - calculated from the stages updateStrategy based on the number of stage targets.
+          type: object
       type: object
     PublicConfig:
       example:
@@ -4071,14 +4392,11 @@ components:
           scopes:
           - scopes
           - scopes
-        skipAuth: true
       properties:
         adminAccountEnabled:
           type: boolean
         oidcConfig:
           $ref: "#/components/schemas/OIDCConfig"
-        skipAuth:
-          type: boolean
       type: object
     ResolvedLink:
       example:
@@ -10925,6 +11243,11 @@ components:
       type: object
     AnalysisRunReference:
       properties:
+        kind:
+          description: |-
+            Kind is a string representation of GroupVersionKind describing this run
+            For classic analysis run it is AnalysisRunKindRun or AnalysisRunKindLegacy (empty)
+          type: string
         name:
           description: Name is the name of the AnalysisRun.
           type: string
@@ -11655,8 +11978,9 @@ components:
           type: string
         if:
           description: |-
-            If is an optional expression condition. When set, the link is only shown
-            when the expression evaluates to true.
+            If is an optional expr-lang expression, offset by ${{ }}, that must
+            evaluate to a boolean. When set, the link is shown only when it
+            evaluates to true.
 
             +optional
           type: string
@@ -11668,7 +11992,8 @@ components:
           type: string
         url:
           description: |-
-            URL is an expression that resolves to the link's href.
+            URL is the link's href. It may contain expr-lang expressions offset by
+            ${{ }}, evaluated against the resource as freight or stage.
 
             +kubebuilder:validation:MinLength=1
           type: string
@@ -12717,6 +13042,41 @@ components:
             kubebuilder:validation:Required
           type: string
       type: object
+    InflatedPromotionTask:
+      properties:
+        alias:
+          description: |-
+            Alias is the alias of the step that referenced the task. The aliases of
+            the steps inflated from the task are prefixed with it.
+          type: string
+        description:
+          description: |-
+            Description is the description of the step that referenced the task.
+
+            +kubebuilder:validation:Optional
+          type: string
+        steps:
+          description: |-
+            Steps are the aliases of the Promotion's steps that were inflated from
+            the task, in order.
+          items:
+            type: string
+          type: array
+        task:
+          allOf:
+          - $ref: "#/components/schemas/PromotionTaskReference"
+          description: Task is the (Cluster)PromotionTask that was inflated.
+          type: object
+        vars:
+          description: |-
+            Vars are the variables the task was inflated with: the task's defaults
+            and the variables set by the step that referenced the task.
+
+            +kubebuilder:validation:Optional
+          items:
+            $ref: "#/components/schemas/ExpressionVariable"
+          type: array
+      type: object
     Project:
       example:
         apiVersion: apiVersion
@@ -13661,7 +14021,7 @@ components:
           type: array
         updateStrategy:
           allOf:
-          - $ref: "#/components/schemas/TargetUpdateStrategy"
+          - $ref: "#/components/schemas/PromotionRequestUpdateStrategy"
           description: |-
             UpdateStrategy configures the pace of updating the targets
             +optional
@@ -13822,6 +14182,386 @@ components:
       required:
       - name
       type: object
+    PromotionRequestUpdateStrategy:
+      properties:
+        maxConcurrent:
+          description: |-
+            MaxConcurrent specifies a number of targets which can be promoted to at the same time
+            Zero means there is no limit (default)
+          minimum: 0
+          type: integer
+        maxFailures:
+          description: |-
+            MaxFailures specifies a number of target promotions which can fail before PromotionRequest is considered failed.
+            Specifies a tolerable number, N failing promotions with maxFailures: N is a success, N+1 is a failure.
+            Defaults to 0, meaning no failures tolerated.
+            +kubebuilder:validation:Minimum=0
+          minimum: 0
+          type: integer
+      type: object
+    PromotionRollout:
+      example:
+        metadata:
+          annotations:
+            key: annotations
+          creationTimestamp: creationTimestamp
+          deletionGracePeriodSeconds: 0
+          deletionTimestamp: deletionTimestamp
+          finalizers:
+          - finalizers
+          - finalizers
+          generateName: generateName
+          generation: 6
+          labels:
+            key: labels
+          managedFields:
+          - apiVersion: apiVersion
+            fieldsType: fieldsType
+            fieldsV1: "{}"
+            manager: manager
+            operation: operation
+            subresource: subresource
+            time: time
+          - apiVersion: apiVersion
+            fieldsType: fieldsType
+            fieldsV1: "{}"
+            manager: manager
+            operation: operation
+            subresource: subresource
+            time: time
+          name: name
+          namespace: namespace
+          ownerReferences:
+          - apiVersion: apiVersion
+            blockOwnerDeletion: true
+            controller: true
+            kind: kind
+            name: name
+            uid: uid
+          - apiVersion: apiVersion
+            blockOwnerDeletion: true
+            controller: true
+            kind: kind
+            name: name
+            uid: uid
+          resourceVersion: resourceVersion
+          selfLink: selfLink
+          uid: uid
+        number: 0
+        spec: "{}"
+        status: "{}"
+      properties:
+        metadata:
+          $ref: "#/components/schemas/V1ObjectMeta"
+        number:
+          description: |-
+            Number is the rollout's position among its Stage's rollouts, counting
+            from 1. It is assigned when the rollout is created and never changes.
+          type: integer
+        spec:
+          allOf:
+          - $ref: "#/components/schemas/PromotionRolloutSpec"
+          description: |-
+            Spec describes the Stage, the Freight, and the Targets of the
+            PromotionRollout.
+          type: object
+        status:
+          allOf:
+          - $ref: "#/components/schemas/PromotionRolloutStatus"
+          description: |-
+            Status describes the per-Target progress and the aggregate state of the
+            PromotionRollout's Promotions.
+          type: object
+      type: object
+    PromotionRolloutList:
+      example:
+        items:
+        - metadata:
+            annotations:
+              key: annotations
+            creationTimestamp: creationTimestamp
+            deletionGracePeriodSeconds: 0
+            deletionTimestamp: deletionTimestamp
+            finalizers:
+            - finalizers
+            - finalizers
+            generateName: generateName
+            generation: 6
+            labels:
+              key: labels
+            managedFields:
+            - apiVersion: apiVersion
+              fieldsType: fieldsType
+              fieldsV1: "{}"
+              manager: manager
+              operation: operation
+              subresource: subresource
+              time: time
+            - apiVersion: apiVersion
+              fieldsType: fieldsType
+              fieldsV1: "{}"
+              manager: manager
+              operation: operation
+              subresource: subresource
+              time: time
+            name: name
+            namespace: namespace
+            ownerReferences:
+            - apiVersion: apiVersion
+              blockOwnerDeletion: true
+              controller: true
+              kind: kind
+              name: name
+              uid: uid
+            - apiVersion: apiVersion
+              blockOwnerDeletion: true
+              controller: true
+              kind: kind
+              name: name
+              uid: uid
+            resourceVersion: resourceVersion
+            selfLink: selfLink
+            uid: uid
+          number: 0
+          spec: "{}"
+          status: "{}"
+        - metadata:
+            annotations:
+              key: annotations
+            creationTimestamp: creationTimestamp
+            deletionGracePeriodSeconds: 0
+            deletionTimestamp: deletionTimestamp
+            finalizers:
+            - finalizers
+            - finalizers
+            generateName: generateName
+            generation: 6
+            labels:
+              key: labels
+            managedFields:
+            - apiVersion: apiVersion
+              fieldsType: fieldsType
+              fieldsV1: "{}"
+              manager: manager
+              operation: operation
+              subresource: subresource
+              time: time
+            - apiVersion: apiVersion
+              fieldsType: fieldsType
+              fieldsV1: "{}"
+              manager: manager
+              operation: operation
+              subresource: subresource
+              time: time
+            name: name
+            namespace: namespace
+            ownerReferences:
+            - apiVersion: apiVersion
+              blockOwnerDeletion: true
+              controller: true
+              kind: kind
+              name: name
+              uid: uid
+            - apiVersion: apiVersion
+              blockOwnerDeletion: true
+              controller: true
+              kind: kind
+              name: name
+              uid: uid
+            resourceVersion: resourceVersion
+            selfLink: selfLink
+            uid: uid
+          number: 0
+          spec: "{}"
+          status: "{}"
+        metadata:
+          continue: continue
+          remainingItemCount: 0
+          resourceVersion: resourceVersion
+          selfLink: selfLink
+          shardInfo: "{}"
+      properties:
+        items:
+          items:
+            $ref: "#/components/schemas/PromotionRollout"
+          type: array
+        metadata:
+          $ref: "#/components/schemas/V1ListMeta"
+      type: object
+    PromotionRolloutPhase:
+      enum:
+      - Pending
+      - Running
+      - Succeeded
+      - Failed
+      - Errored
+      - Aborted
+      type: string
+      x-enum-varnames:
+      - PromotionRolloutPhasePending
+      - PromotionRolloutPhaseRunning
+      - PromotionRolloutPhaseSucceeded
+      - PromotionRolloutPhaseFailed
+      - PromotionRolloutPhaseErrored
+      - PromotionRolloutPhaseAborted
+    PromotionRolloutReference:
+      properties:
+        finishedAt:
+          description: FinishedAt is the time at which the PromotionRollout completed.
+          type: string
+        message:
+          description: |-
+            Message is a human-readable description of how the PromotionRollout
+            ended.
+          type: string
+        name:
+          description: Name is the name of the PromotionRollout.
+          type: string
+        number:
+          description: |-
+            Number is the PromotionRollout's position among its Stage's rollouts,
+            counting from 1.
+
+            +kubebuilder:validation:Minimum=1
+          type: integer
+        phase:
+          allOf:
+          - $ref: "#/components/schemas/PromotionRolloutPhase"
+          description: Phase is a high-level summary of the PromotionRollout's lifecycle.
+          type: object
+      type: object
+    PromotionRolloutSpec:
+      properties:
+        freight:
+          description: |-
+            Freight specifies the piece of Freight promoted by the Stage. The
+            Freight is in the same Project as the PromotionRollout.
+          type: string
+        stage:
+          description: |-
+            Stage specifies the name of the Stage that promotes the Freight. The
+            Stage is in the same Project as the PromotionRollout.
+          type: string
+        targets:
+          description: |-
+            Targets names the Targets to which this PromotionRollout promotes
+            Freight. Each Target is in the same Project as the PromotionRollout.
+
+            This is a resolved list, not a selector: the Stage's target selectors
+            are evaluated once, when the rollout is created, and the result
+            recorded here. The list may be empty, which records that the governing
+            Stage governed no Targets at that moment.
+          items:
+            $ref: "#/components/schemas/PromotionRolloutTarget"
+          type: array
+        updateStrategy:
+          allOf:
+          - $ref: "#/components/schemas/PromotionRolloutUpdateStrategy"
+          description: UpdateStrategy configures the pace of updating the Targets.
+          type: object
+      type: object
+    PromotionRolloutStatus:
+      properties:
+        conditions:
+          description: |-
+            Conditions contains the last observations of the PromotionRollout's
+            current state.
+          items:
+            $ref: "#/components/schemas/V1Condition"
+          type: array
+        finishedAt:
+          description: FinishedAt is the time at which the PromotionRollout completed.
+          type: string
+        message:
+          description: |-
+            Message is a display message explaining the current Phase: what the
+            PromotionRollout is waiting on, how far its fan-out has progressed, or
+            why it did not succeed.
+          type: string
+        phase:
+          allOf:
+          - $ref: "#/components/schemas/PromotionRolloutPhase"
+          description: Phase is a high-level summary of the PromotionRollout's lifecycle.
+          type: object
+        startedAt:
+          description: StartedAt is the time at which the PromotionRollout started.
+          type: string
+        summary:
+          allOf:
+          - $ref: "#/components/schemas/PromotionRolloutSummary"
+          description: Summary tallies the entries of Targets by phase.
+          type: object
+        targets:
+          description: |-
+            Targets records progress against spec.targets: one entry per Target
+            that has been promoted to, naming the latest Promotion promoting the
+            Freight to it and that Promotion's phase. A Target promoted to more
+            than once within the rollout, for instance after a retry, reports its
+            newest Promotion.
+          items:
+            $ref: "#/components/schemas/PromotionRolloutTargetStatus"
+          type: array
+      type: object
+    PromotionRolloutSummary:
+      properties:
+        aborted:
+          description: Aborted is the number of Targets whose Promotion was Aborted.
+          type: integer
+        errored:
+          description: Errored is the number of Targets whose Promotion Errored.
+          type: integer
+        failed:
+          description: Failed is the number of Targets whose Promotion Failed.
+          type: integer
+        pending:
+          description: Pending is the number of Targets whose Promotion is Pending.
+          type: integer
+        running:
+          description: Running is the number of Targets whose Promotion is Running.
+          type: integer
+        succeeded:
+          description: Succeeded is the number of Targets whose Promotion Succeeded.
+          type: integer
+      type: object
+    PromotionRolloutTarget:
+      properties:
+        name:
+          description: Name is the name of the Target.
+          type: string
+      type: object
+    PromotionRolloutTargetStatus:
+      properties:
+        name:
+          description: Name is the name of the Target.
+          type: string
+        phase:
+          description: Phase is the phase of that Promotion.
+          type: string
+        promotion:
+          description: |-
+            Promotion is the name of the newest Promotion promoting the Freight to
+            this Target.
+          type: string
+      type: object
+    PromotionRolloutUpdateStrategy:
+      properties:
+        maxConcurrent:
+          description: |-
+            MaxConcurrent specifies a number of Targets which can be promoted to at
+            the same time. Zero means there is no limit (default).
+
+            +optional
+          type: integer
+        maxFailures:
+          description: |-
+            MaxFailures specifies a number of Target promotions which can fail
+            before the PromotionRollout is considered failed: N failing promotions
+            with maxFailures: N is a success, N+1 is a failure. Defaults to 0,
+            meaning no failures tolerated.
+
+            +optional
+          type: integer
+      type: object
     PromotionSpec:
       properties:
         freight:
@@ -13835,6 +14575,17 @@ components:
             +kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`
             +akuity:test-kubebuilder-pattern=KubernetesName
           type: string
+        inflatedTasks:
+          description: |-
+            InflatedTasks records each step of the Stage's PromotionTemplate that
+            referenced a (Cluster)PromotionTask and was inflated into Steps. It is
+            set by Kargo when the Promotion is created and any value supplied by
+            users is discarded.
+
+            +kubebuilder:validation:Optional
+          items:
+            $ref: "#/components/schemas/InflatedPromotionTask"
+          type: array
         origin:
           allOf:
           - $ref: "#/components/schemas/FreightOrigin"
@@ -13846,6 +14597,23 @@ components:
 
             +kubebuilder:validation:Optional
           type: object
+        promotionRollout:
+          description: |-
+            PromotionRollout optionally holds the id of the PromotionRollout this
+            Promotion was created by, as one part of that rollout's fan-out to
+            Targets. The id is the UID the API serves the rollout with. A
+            PromotionRollout is not a Kubernetes resource, so it cannot own the
+            Promotion; this field is the link in place of an owner reference, and
+            the one the database's record of the Promotion is linked by.
+
+            When empty (the default), the Promotion was not created by a
+            PromotionRollout. When set, Target must be set too, and only the Kargo
+            control plane may set it.
+
+            +kubebuilder:validation:Optional
+            +kubebuilder:validation:Pattern=`^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$`
+            +akuity:test-kubebuilder-pattern=UUID
+          type: string
         stage:
           description: |-
             Stage specifies the name of the Stage to which this Promotion
@@ -13983,6 +14751,14 @@ components:
             also will not permit this failure to impact the overall status of the
             Promotion.
           type: boolean
+        description:
+          description: |-
+            Description is a detail of the step's purpose.
+
+            +kubebuilder:validation:Optional
+            +kubebuilder:validation:MinLength=1
+            +kubebuilder:validation:XValidation:message="description must be 256 characters or fewer",rule="self.size() <= 256"
+          type: string
         if:
           description: |-
             If is an optional expression that, if present, must evaluate to a boolean
@@ -14933,6 +15709,17 @@ components:
 
             +optional
           type: object
+        lastPromotionRollout:
+          allOf:
+          - $ref: "#/components/schemas/PromotionRolloutReference"
+          description: |-
+            LastPromotionRollout is a reference to the last PromotionRollout whose
+            outcome this Stage has recorded. It is absent for a Stage that governs no
+            Targets, and only ever moves forward: its number marks how far through
+            its PromotionRollouts the Stage has read.
+
+            +optional
+          type: object
         metadata:
           additionalProperties:
             type: object
@@ -14981,7 +15768,14 @@ components:
           allOf:
           - $ref: "#/components/schemas/TargetUpdateStrategy"
           description: |-
-            UpdateStrategy configures the pace of updating the targets
+            UpdateStrategy configures the pace of promoting the targets
+            +optional
+          type: object
+        verification:
+          allOf:
+          - $ref: "#/components/schemas/TargetVerificaitonSpec"
+          description: |-
+            Verification configures mode and pace of target promotion verifications
             +optional
           type: object
       required:
@@ -15023,8 +15817,6 @@ components:
       type: object
     Target:
       example:
-        apiVersion: apiVersion
-        kind: kind
         metadata:
           annotations:
             key: annotations
@@ -15074,23 +15866,6 @@ components:
         spec: "{}"
         status: "{}"
       properties:
-        apiVersion:
-          description: |-
-            APIVersion defines the versioned schema of this representation of an object.
-            Servers should convert recognized schemas to the latest internal value, and
-            may reject unrecognized values.
-            More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
-            +optional
-          type: string
-        kind:
-          description: |-
-            Kind is a string value representing the REST resource this object represents.
-            Servers may infer this from the endpoint the client submits requests to.
-            Cannot be updated.
-            In CamelCase.
-            More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
-            +optional
-          type: string
         metadata:
           $ref: "#/components/schemas/V1ObjectMeta"
         spec:
@@ -15106,11 +15881,8 @@ components:
       type: object
     TargetList:
       example:
-        apiVersion: apiVersion
         items:
-        - apiVersion: apiVersion
-          kind: kind
-          metadata:
+        - metadata:
             annotations:
               key: annotations
             creationTimestamp: creationTimestamp
@@ -15158,9 +15930,7 @@ components:
             uid: uid
           spec: "{}"
           status: "{}"
-        - apiVersion: apiVersion
-          kind: kind
-          metadata:
+        - metadata:
             annotations:
               key: annotations
             creationTimestamp: creationTimestamp
@@ -15208,7 +15978,6 @@ components:
             uid: uid
           spec: "{}"
           status: "{}"
-        kind: kind
         metadata:
           continue: continue
           remainingItemCount: 0
@@ -15216,27 +15985,10 @@ components:
           selfLink: selfLink
           shardInfo: "{}"
       properties:
-        apiVersion:
-          description: |-
-            APIVersion defines the versioned schema of this representation of an object.
-            Servers should convert recognized schemas to the latest internal value, and
-            may reject unrecognized values.
-            More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
-            +optional
-          type: string
         items:
           items:
             $ref: "#/components/schemas/Target"
           type: array
-        kind:
-          description: |-
-            Kind is a string value representing the REST resource this object represents.
-            Servers may infer this from the endpoint the client submits requests to.
-            Cannot be updated.
-            In CamelCase.
-            More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
-            +optional
-          type: string
         metadata:
           $ref: "#/components/schemas/V1ListMeta"
       type: object
@@ -15254,6 +16006,12 @@ components:
 
             +optional
           type: object
+        targetSet:
+          description: |-
+            TargetSet names the TargetSet that manages this Target. Every Target is
+            created by one, which owns its lifecycle, so this is required and does
+            not change for as long as the Target exists.
+          type: string
       type: object
     TargetStageStatus:
       properties:
@@ -15358,8 +16116,33 @@ components:
         maxConcurrent:
           description: |-
             MaxConcurrent specifies a number of targets which can be promoted to at the same time
-            Zero means there is no limit (default)
-          type: integer
+            Value can be an absolute number (e.g.: 5) or a percentage of targets selected by the stage (e.g.: 10%).
+            Absolute number is calculated from percentage by rounding up to a minimum of 1.
+            Percentage value cannot be 0%. Number value cannot be 0.
+            If omitted or empty string, no limit is applied (default).
+          type: object
+        maxFailures:
+          description: |-
+            MaxFailures specifies a number of target promotions which can fail before PromotionRequest is considered failed.
+            Specifies a tolerable number, N failing promotions with maxFailures: N is a success, N+1 is a failure.
+            Value can be an absolute number (e.g.: 5) or a percentage of targets selected by the stage (e.g.: 10%).
+            Absolute number is calculated from percentage by rounding up to a minimum of 1. Default value is 0.
+          type: object
+      type: object
+    TargetVerificaitonSpec:
+      properties:
+        runMode:
+          description: |-
+            VerificationRunMode controls whether verifications run per-target or per-stage
+            +optional
+          type: string
+        updateStrategy:
+          allOf:
+          - $ref: "#/components/schemas/TargetUpdateStrategy"
+          description: |-
+            UpdateStrategy configures the pace of verification runs
+            +optional
+          type: object
       type: object
     Verification:
       properties:
@@ -15415,6 +16198,10 @@ components:
             this will be a reflection of the underlying AnalysisRun's phase, however,
             there are exceptions to this, such as in the case where an AnalysisRun
             cannot be launched successfully.
+          type: string
+        promotionName:
+          description: PromotionName is an optional name of promotion which triggered
+            verification
           type: string
         startTime:
           description: StartTime is the time at which the Verification process was

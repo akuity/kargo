@@ -7,7 +7,6 @@ import (
 	"sync"
 	"time"
 
-	securejoin "github.com/cyphar/filepath-securejoin"
 	"github.com/kelseyhightower/envconfig"
 	"github.com/xeipuuv/gojsonschema"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -19,7 +18,7 @@ import (
 	"github.com/akuity/kargo/pkg/gitprovider"
 	"github.com/akuity/kargo/pkg/logging"
 	"github.com/akuity/kargo/pkg/promotion"
-	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
+	"github.com/akuity/kargo/pkg/x/promotion/stepconfig"
 )
 
 const (
@@ -110,26 +109,23 @@ func (g *gitPushPusher) Run(
 }
 
 // validate validates gitPusher configuration against a JSON schema.
-func (g *gitPushPusher) convert(cfg promotion.Config) (builtin.GitPushConfig, error) {
-	return validateAndConvert[builtin.GitPushConfig](g.schemaLoader, cfg, stepKindGitPush)
+func (g *gitPushPusher) convert(cfg promotion.Config) (stepconfig.GitPushConfig, error) {
+	return validateAndConvert[stepconfig.GitPushConfig](g.schemaLoader, cfg, stepKindGitPush)
 }
 
 func (g *gitPushPusher) run(
 	ctx context.Context,
 	stepCtx *promotion.StepContext,
-	cfg builtin.GitPushConfig,
+	cfg stepconfig.GitPushConfig,
 ) (promotion.StepResult, error) {
 	logger := logging.LoggerFromContext(ctx)
 
 	// This is kind of hacky, but we needed to load the working tree to get the
 	// URL of the repository. With that in hand, we can look for applicable
 	// credentials and, if found, reload the work tree with the credentials.
-	path, err := securejoin.SecureJoin(stepCtx.WorkDir, cfg.Path)
+	path, err := promotion.ExternalPath(stepCtx, cfg.Path)
 	if err != nil {
-		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, fmt.Errorf(
-			"error joining path %s with work dir %s: %w",
-			cfg.Path, stepCtx.WorkDir, err,
-		)
+		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, err
 	}
 	loadOpts := &git.LoadWorkTreeOptions{}
 	workTree, err := git.LoadWorkTree(ctx, path, loadOpts)
@@ -293,21 +289,22 @@ func (g *gitPushPusher) push(
 	workTree git.WorkTree,
 	pushOpts *git.PushOptions,
 ) error {
-	branchKey := g.getBranchKey(workTree.URL(), pushOpts.TargetBranch)
-	if _, exists := g.branchMus[branchKey]; !exists {
-		g.masterMu.Lock()
-		// Double-check to make sure it wasn't created while we were waiting for the
-		// lock.
-		if _, exists = g.branchMus[branchKey]; !exists {
-			g.branchMus[branchKey] = &sync.Mutex{}
-		}
-		g.masterMu.Unlock()
-	}
-	g.branchMus[branchKey].Lock()
-	defer g.branchMus[branchKey].Unlock()
+	branchMu := g.getBranchMu(workTree.URL(), pushOpts.TargetBranch)
+	branchMu.Lock()
+	defer branchMu.Unlock()
 	return workTree.Push(ctx, pushOpts)
 }
 
-func (g *gitPushPusher) getBranchKey(repoURL, branch string) string {
-	return fmt.Sprintf("%s:%s", repoURL, branch)
+// getBranchMu returns the mutex for the given repo + branch, creating it if
+// necessary. masterMu guards the map itself.
+func (g *gitPushPusher) getBranchMu(repoURL, branch string) *sync.Mutex {
+	key := fmt.Sprintf("%s:%s", repoURL, branch)
+	g.masterMu.Lock()
+	defer g.masterMu.Unlock()
+	mu, exists := g.branchMus[key]
+	if !exists {
+		mu = &sync.Mutex{}
+		g.branchMus[key] = mu
+	}
+	return mu
 }

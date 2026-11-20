@@ -18,4 +18,10 @@ export interface TargetSpec {
    * +optional
    */
   params?: TargetSpecParams;
+  /**
+   * TargetSet names the TargetSet that manages this Target. Every Target is
+   * created by one, which owns its lifecycle, so this is required and does
+   * not change for as long as the Target exists.
+   */
+  targetSet?: string;
 }

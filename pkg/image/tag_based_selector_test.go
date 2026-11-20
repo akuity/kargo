@@ -4,6 +4,8 @@ import (
 	"regexp"
 	"testing"
 
+	"github.com/google/go-containerregistry/pkg/name"
+	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/stretchr/testify/require"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
@@ -143,4 +145,71 @@ func Test_tagBasedSelector_filterTags(t *testing.T) {
 		"v2.0.0", // Not allowed
 	})
 	require.Equal(t, []string{"v1.1.0"}, filtered)
+}
+
+func Test_tagBasedSelector_getImagesByTags(t *testing.T) {
+	approved := map[string]string{"approved": "true"}
+	images := []image{
+		{Tag: "v3.0.0"},
+		{Tag: "v2.0.0", Annotations: approved},
+		{Tag: "v1.0.0", Annotations: approved},
+	}
+	testCases := []struct {
+		name       string
+		expression string
+		assertions func(t *testing.T, fetched []string, imgs []image, err error)
+	}{
+		{
+			name: "no filter expression",
+			assertions: func(t *testing.T, fetched []string, imgs []image, err error) {
+				require.NoError(t, err)
+				require.Equal(t, []string{"v3.0.0"}, fetched)
+				require.Equal(t, images[:1], imgs)
+			},
+		},
+		{
+			name:       "filter expression skips images until limit is reached",
+			expression: `annotations["approved"] == "true"`,
+			assertions: func(t *testing.T, fetched []string, imgs []image, err error) {
+				require.NoError(t, err)
+				require.Equal(t, []string{"v3.0.0", "v2.0.0"}, fetched)
+				require.Equal(t, images[1:2], imgs)
+			},
+		},
+		{
+			name:       "error evaluating filter expression",
+			expression: `"foo"`,
+			assertions: func(t *testing.T, _ []string, _ []image, err error) {
+				require.ErrorContains(t, err, "error evaluating filter expression")
+			},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			s, err := newTagBasedSelector(
+				kargoapi.ImageSubscription{
+					RepoURL:          "example/image",
+					ExpressionFilter: testCase.expression,
+					DiscoveryLimit:   1,
+				},
+				nil,
+			)
+			require.NoError(t, err)
+			withFakeImages(s.repoClient, images...)
+			var fetched []string
+			getFn := s.repoClient.remoteGetFn
+			s.repoClient.remoteGetFn = func(
+				ref name.Reference,
+				opts ...remote.Option,
+			) (*remote.Descriptor, error) {
+				fetched = append(fetched, ref.Identifier())
+				return getFn(ref, opts...)
+			}
+			imgs, err := s.getImagesByTags(
+				t.Context(),
+				[]string{"v3.0.0", "v2.0.0", "v1.0.0"},
+			)
+			testCase.assertions(t, fetched, imgs, err)
+		})
+	}
 }

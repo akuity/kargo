@@ -5,8 +5,6 @@ description: Pushes committed changes to a GitHub repository using the GitHub AP
 
 # `github-push`
 
-<span class="tag beta"></span>
-
 `github-push` pushes committed changes from a specified working tree to a GitHub
 repository using the GitHub REST API. It is a drop-in replacement for the
 [`git-push`](git-push.md) step.

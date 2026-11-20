@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/expr-lang/expr"
 	"github.com/expr-lang/expr/vm"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
@@ -55,7 +54,7 @@ func newBaseSelector(
 	}
 	var err error
 	if sub.ExpressionFilter != "" {
-		s.filterExpression, err = expr.Compile(sub.ExpressionFilter)
+		s.filterExpression, err = CompileFilterExpression(sub)
 		if err != nil {
 			return nil, fmt.Errorf("error compiling filter expression: %w", err)
 		}

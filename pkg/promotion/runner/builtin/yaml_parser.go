@@ -5,14 +5,13 @@ import (
 	"fmt"
 	"os"
 
-	securejoin "github.com/cyphar/filepath-securejoin"
 	"github.com/expr-lang/expr"
 	"github.com/xeipuuv/gojsonschema"
 	"sigs.k8s.io/yaml"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/promotion"
-	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
+	"github.com/akuity/kargo/pkg/x/promotion/stepconfig"
 )
 
 const stepKindYAMLParse = "yaml-parse"
@@ -52,15 +51,15 @@ func (yp *yamlParser) Run(
 }
 
 // convert validates yamlParser configuration against a YAML schema and
-// converts it into a builtin.YAMLParseConfig struct.
-func (yp *yamlParser) convert(cfg promotion.Config) (builtin.YAMLParseConfig, error) {
-	return validateAndConvert[builtin.YAMLParseConfig](yp.schemaLoader, cfg, stepKindYAMLParse)
+// converts it into a stepconfig.YAMLParseConfig struct.
+func (yp *yamlParser) convert(cfg promotion.Config) (stepconfig.YAMLParseConfig, error) {
+	return validateAndConvert[stepconfig.YAMLParseConfig](yp.schemaLoader, cfg, stepKindYAMLParse)
 }
 
 func (yp *yamlParser) run(
 	_ context.Context,
 	stepCtx *promotion.StepContext,
-	cfg builtin.YAMLParseConfig,
+	cfg stepconfig.YAMLParseConfig,
 ) (promotion.StepResult, error) {
 	failure := promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}
 
@@ -72,7 +71,7 @@ func (yp *yamlParser) run(
 		return failure, fmt.Errorf("invalid %s config: outputs is required", stepKindYAMLParse)
 	}
 
-	data, err := yp.readAndParseYAML(stepCtx.WorkDir, cfg.Path)
+	data, err := yp.readAndParseYAML(stepCtx.Root, cfg.Path)
 	if err != nil {
 		return failure, err
 	}
@@ -90,19 +89,19 @@ func (yp *yamlParser) run(
 
 // readAndParseYAML reads and unmarshals a YAML document and returns the result.
 func (yp *yamlParser) readAndParseYAML(
-	workDir string,
+	root *os.Root,
 	path string,
 ) (any, error) {
-	absFilePath, err := securejoin.SecureJoin(workDir, path)
+	relPath, err := promotion.WorkspacePath(path)
 	if err != nil {
-		return nil, fmt.Errorf("error joining path %q: %w", path, err)
+		return nil, err
 	}
-	yamlData, err := os.ReadFile(absFilePath)
+	yamlData, err := root.ReadFile(relPath)
 	if err != nil {
-		return nil, fmt.Errorf("error reading YAML file %q: %w", absFilePath, err)
+		return nil, fmt.Errorf("error reading YAML file %q: %w", path, err)
 	}
 	if len(yamlData) == 0 {
-		return nil, fmt.Errorf("could not parse empty YAML file: %q", absFilePath)
+		return nil, fmt.Errorf("could not parse empty YAML file: %q", path)
 	}
 	var data any
 	if err := yaml.Unmarshal(yamlData, &data); err != nil {
@@ -113,10 +112,10 @@ func (yp *yamlParser) readAndParseYAML(
 
 // extractValues returns select data extracted from the provided data by
 // evaluating it against expressions contained within the provided
-// []builtin.YAMLParse.
+// []stepconfig.YAMLParse.
 func (yp *yamlParser) extractValues(
 	data any,
-	outputs []builtin.YAMLParse,
+	outputs []stepconfig.YAMLParse,
 ) (map[string]any, error) {
 	results := make(map[string]any, len(outputs))
 	for _, output := range outputs {

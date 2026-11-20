@@ -17,6 +17,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	"github.com/akuity/kargo/pkg/reconciler"
@@ -60,6 +61,20 @@ func Keyed[object client.Object, K comparable](
 	predicates ...predicate.TypedPredicate[object],
 ) reconciler.Source[K] {
 	return Kind(c, obj, handler.TypedEnqueueRequestsFromMapFunc(keys), predicates...)
+}
+
+// Objects returns a Kind source for a controller keyed by the objects it
+// watches: it pushes the key of every object of obj's kind at startup and
+// whenever one changes. It drops the informer's periodic resync events, whose
+// objects have not changed; a controller that relies on those should use
+// Kind.
+func Objects[object client.Object](c cache.Cache, obj object) reconciler.Source[reconcile.Request] {
+	return Kind(
+		c,
+		obj,
+		&handler.TypedEnqueueRequestForObject[object]{},
+		predicate.TypedResourceVersionChangedPredicate[object]{},
+	)
 }
 
 // Start implements reconciler.Source. It starts the informer-backed source

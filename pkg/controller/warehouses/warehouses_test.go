@@ -16,30 +16,18 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/pkg/api"
 	"github.com/akuity/kargo/pkg/conditions"
 	"github.com/akuity/kargo/pkg/controller"
 	"github.com/akuity/kargo/pkg/credentials"
 	kargoEvent "github.com/akuity/kargo/pkg/event"
-	k8sevent "github.com/akuity/kargo/pkg/event/kubernetes"
-	fakeevent "github.com/akuity/kargo/pkg/kubernetes/event/fake"
+	fakeevent "github.com/akuity/kargo/pkg/event/fake"
 	"github.com/akuity/kargo/pkg/logging"
 	"github.com/akuity/kargo/pkg/subscription"
 )
-
-type testEventSender struct {
-	sendFn func(context.Context, kargoEvent.Meta) error
-}
-
-func (s *testEventSender) Send(ctx context.Context, evt kargoEvent.Meta) error {
-	if s.sendFn != nil {
-		return s.sendFn(ctx, evt)
-	}
-	return nil
-}
-
-func (s *testEventSender) Shutdown() {}
 
 func TestNewReconciler(t *testing.T) {
 	kubeClient := fake.NewClientBuilder().Build()
@@ -90,7 +78,7 @@ func TestReconcilerConfigName(t *testing.T) {
 }
 
 func TestSyncWarehouse(t *testing.T) {
-	fakeRecorder := fakeevent.NewEventRecorder(1)
+	fakeSender := &fakeevent.Sender{}
 
 	testCases := []struct {
 		name       string
@@ -433,7 +421,7 @@ func TestSyncWarehouse(t *testing.T) {
 			name: "automatic Freight creation",
 			reconciler: &reconciler{
 				cfg:         ReconcilerConfig{},
-				eventSender: k8sevent.NewEventSender(fakeevent.NewEventRecorder(10)),
+				eventSender: &fakeevent.Sender{},
 				discoverArtifactsFn: func(
 					context.Context, string,
 					[]kargoapi.RepoSubscription,
@@ -517,7 +505,7 @@ func TestSyncWarehouse(t *testing.T) {
 			name: "sends FreightCreated event on successful freight creation",
 			reconciler: &reconciler{
 				cfg:         ReconcilerConfig{},
-				eventSender: k8sevent.NewEventSender(fakeRecorder),
+				eventSender: fakeSender,
 				discoverArtifactsFn: func(
 					context.Context, string,
 					[]kargoapi.RepoSubscription,
@@ -562,12 +550,28 @@ func TestSyncWarehouse(t *testing.T) {
 			},
 			assertions: func(t *testing.T, _ kargoapi.WarehouseStatus, err error) {
 				require.NoError(t, err)
-				select {
-				case evt := <-fakeRecorder.Events:
-					require.Equal(t, string(kargoapi.EventTypeFreightCreated), evt.Reason)
-				default:
-					t.Fatal("expected FreightCreated event to be sent but got none")
-				}
+				sent := fakeSender.Sent()
+				require.Len(t, sent, 1)
+				evt := sent[0]
+				require.Equal(t, string(kargoapi.EventTypeFreightCreated), evt.Type())
+				require.Equal(t, "Freight", kargoEvent.KindOf(evt))
+				require.Equal(
+					t,
+					"akuity.kargo.events.freight.created",
+					evt.Subject(),
+				)
+				var data kargoEvent.FreightCreated
+				require.NoError(t, evt.DataAs(&data))
+				require.Equal(
+					t,
+					api.GenerateFreightID(&kargoapi.Freight{
+						Origin: kargoapi.FreightOrigin{
+							Kind: kargoapi.FreightOriginKindWarehouse,
+						},
+					}),
+					data.Name,
+				)
+				require.Equal(t, "fake-namespace", data.Project)
 			},
 		},
 
@@ -575,10 +579,8 @@ func TestSyncWarehouse(t *testing.T) {
 			name: "event send error does not fail reconciliation",
 			reconciler: &reconciler{
 				cfg: ReconcilerConfig{},
-				eventSender: &testEventSender{
-					sendFn: func(context.Context, kargoEvent.Meta) error {
-						return errors.New("failed to send event")
-					},
+				eventSender: &fakeevent.Sender{
+					SendErr: errors.New("failed to send event"),
 				},
 				discoverArtifactsFn: func(
 					context.Context, string,
@@ -862,6 +864,189 @@ func TestSyncWarehouse(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			status, err := testCase.reconciler.syncWarehouse(t.Context(), testCase.warehouse)
 			testCase.assertions(t, status, err)
+		})
+	}
+}
+
+// Test_syncWarehouse_existingFreight verifies Freight in the cache is not
+// re-created, and that deleted Freight is.
+func Test_syncWarehouse_existingFreight(t *testing.T) {
+	testScheme := runtime.NewScheme()
+	require.NoError(t, kargoapi.AddToScheme(testScheme))
+
+	warehouse := &kargoapi.Warehouse{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:       "fake-warehouse",
+			Namespace:  "fake-namespace",
+			Generation: 1,
+		},
+		Spec: kargoapi.WarehouseSpec{
+			FreightCreationPolicy: kargoapi.FreightCreationPolicyAutomatic,
+		},
+	}
+
+	expected := &kargoapi.Freight{
+		ObjectMeta: metav1.ObjectMeta{Namespace: warehouse.Namespace},
+		Origin: kargoapi.FreightOrigin{
+			Kind: kargoapi.FreightOriginKindWarehouse,
+			Name: warehouse.Name,
+		},
+		Commits: []kargoapi.GitCommit{{RepoURL: "fake-repo", ID: "fake-commit"}},
+	}
+	expected.Name = api.GenerateFreightID(expected)
+
+	testCases := []struct {
+		name    string
+		objects []client.Object
+		getErr  error
+		polls   int
+		// deleteAfter deletes the Freight after that poll; staleGets is how
+		// many polls after the delete the cache still holds it.
+		deleteAfter   int
+		staleGets     int
+		expectCreates int
+		expectStatus  metav1.ConditionStatus
+		expectReason  string
+	}{
+		{
+			name:          "Freight in cache: no create",
+			objects:       []client.Object{expected.DeepCopy()},
+			expectCreates: 0,
+			expectStatus:  metav1.ConditionFalse,
+			expectReason:  "AlreadyExists",
+		},
+		{
+			name:          "Freight not in cache: create",
+			expectCreates: 1,
+			expectStatus:  metav1.ConditionTrue,
+			expectReason:  "NewFreight",
+		},
+		{
+			name:    "stale cache: create returns AlreadyExists",
+			objects: []client.Object{expected.DeepCopy()},
+			getErr: apierrors.NewNotFound(
+				kargoapi.GroupVersion.WithResource("freights").GroupResource(),
+				expected.Name,
+			),
+			expectCreates: 1,
+			expectStatus:  metav1.ConditionFalse,
+			expectReason:  "AlreadyExists",
+		},
+		{
+			name:          "cache error: create",
+			getErr:        errors.New("something went wrong"),
+			expectCreates: 1,
+			expectStatus:  metav1.ConditionTrue,
+			expectReason:  "NewFreight",
+		},
+		{
+			name:          "second poll: no create",
+			polls:         2,
+			expectCreates: 1,
+			expectStatus:  metav1.ConditionFalse,
+			expectReason:  "AlreadyExists",
+		},
+		{
+			name:          "deleted Freight: re-created on the next poll",
+			polls:         2,
+			deleteAfter:   1,
+			expectCreates: 2,
+			expectStatus:  metav1.ConditionTrue,
+			expectReason:  "NewFreight",
+		},
+		{
+			name:          "deleted Freight still cached: re-created a poll later",
+			polls:         3,
+			deleteAfter:   1,
+			staleGets:     1,
+			expectCreates: 2,
+			expectStatus:  metav1.ConditionTrue,
+			expectReason:  "NewFreight",
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			creates := 0
+			getErr := testCase.getErr
+			stale := false
+			kubeClient := fake.NewClientBuilder().
+				WithScheme(testScheme).
+				WithObjects(testCase.objects...).
+				WithInterceptorFuncs(interceptor.Funcs{
+					Get: func(
+						ctx context.Context,
+						c client.WithWatch,
+						key client.ObjectKey,
+						obj client.Object,
+						opts ...client.GetOption,
+					) error {
+						if getErr != nil {
+							return getErr
+						}
+						if _, ok := obj.(*kargoapi.Freight); ok && stale {
+							return nil // the cache's copy of a deleted Freight
+						}
+						return c.Get(ctx, key, obj, opts...)
+					},
+					Create: func(
+						ctx context.Context,
+						c client.WithWatch,
+						obj client.Object,
+						opts ...client.CreateOption,
+					) error {
+						creates++
+						return c.Create(ctx, obj, opts...)
+					},
+				}).
+				Build()
+			r := newReconciler(
+				kubeClient,
+				&credentials.FakeDB{},
+				subscription.MustNewSubscriberRegistry(),
+				ReconcilerConfig{},
+				nil,
+			)
+			r.discoverArtifactsFn = func(
+				context.Context, string,
+				[]kargoapi.RepoSubscription,
+				*kargoapi.DiscoveredArtifacts,
+			) (*kargoapi.DiscoveredArtifacts, error) {
+				return &kargoapi.DiscoveredArtifacts{
+					Git: []kargoapi.GitDiscoveryResult{{
+						RepoURL: "fake-repo",
+						Commits: []kargoapi.DiscoveredCommit{{ID: "fake-commit"}},
+					}},
+				}, nil
+			}
+
+			var status kargoapi.WarehouseStatus
+			// Each poll starts from the status the previous one returned.
+			current := warehouse.DeepCopy()
+			for poll := 1; poll <= max(testCase.polls, 1); poll++ {
+				// Read by the Get interceptor during this poll.
+				stale = testCase.deleteAfter > 0 && poll > testCase.deleteAfter &&
+					poll <= testCase.deleteAfter+testCase.staleGets
+				var err error
+				status, err = r.syncWarehouse(t.Context(), current)
+				require.NoError(t, err)
+				current.Status = status
+				if poll == testCase.deleteAfter {
+					require.NoError(t, kubeClient.Delete(t.Context(), expected.DeepCopy()))
+				}
+			}
+			require.Equal(t, testCase.expectCreates, creates)
+			require.Equal(t, expected.Name, status.LastFreightID)
+			// The check below reads the store, not the interceptor's view.
+			getErr, stale = nil, false
+			require.NoError(t, kubeClient.Get(
+				t.Context(),
+				client.ObjectKeyFromObject(expected),
+				&kargoapi.Freight{},
+			))
+			createdCondition := conditions.Get(&status, kargoapi.ConditionTypeFreightCreated)
+			require.NotNil(t, createdCondition)
+			require.Equal(t, testCase.expectStatus, createdCondition.Status)
+			require.Equal(t, testCase.expectReason, createdCondition.Reason)
 		})
 	}
 }
@@ -1905,7 +2090,7 @@ func Test_freightCreationCriteriaSatisfied(t *testing.T) {
 		{
 			name: "success - chart versions match with repo URL and optional name",
 			freightCreationCriteria: &kargoapi.FreightCreationCriteria{
-				Expression: `chartFrom('site/repo/frontend', 'some-name').Version == 
+				Expression: `chartFrom('site/repo/frontend', 'some-name').Version ==
 				chartFrom('site/repo/backend', 'some-other-name').Version`,
 			},
 			artifacts: &kargoapi.DiscoveredArtifacts{
@@ -1982,5 +2167,4 @@ func Test_freightCreationCriteriaSatisfied(t *testing.T) {
 			require.NoError(t, err)
 		})
 	}
-
 }

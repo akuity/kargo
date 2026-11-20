@@ -3,7 +3,6 @@ package api
 import (
 	"context"
 	"fmt"
-	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -46,13 +45,7 @@ func RefreshClusterConfig(
 			Name: ClusterConfigName,
 		},
 	}
-	if err := patchAnnotation(
-		ctx,
-		c,
-		config,
-		kargoapi.AnnotationKeyRefresh,
-		time.Now().Format(time.RFC3339),
-	); err != nil {
+	if err := RefreshObject(ctx, c, config); err != nil {
 		return nil, fmt.Errorf("refresh: %w", err)
 	}
 	return config, nil

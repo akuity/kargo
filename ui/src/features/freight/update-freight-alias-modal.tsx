@@ -22,7 +22,14 @@ const formSchema = z.object({
   value: zodValidators.requiredString
 });
 
-export const UpdateFreightAliasModal = ({ freight, project, onSubmit, hide, ...props }: Props) => {
+export const UpdateFreightAliasModal = ({
+  freight,
+  project,
+  onSubmit,
+  hide,
+  visible,
+  ...props
+}: Props) => {
   const { control, handleSubmit } = useForm({
     defaultValues: {
       value: ''
@@ -44,6 +51,7 @@ export const UpdateFreightAliasModal = ({ freight, project, onSubmit, hide, ...p
   return (
     <Modal
       {...props}
+      open={visible}
       title={
         <>
           <FontAwesomeIcon icon={faPencil} className='mr-2' />
