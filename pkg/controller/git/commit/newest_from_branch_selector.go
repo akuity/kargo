@@ -158,7 +158,7 @@ func (n *newestFromBranchSelector) Select(ctx context.Context) (
 		&git.CloneOptions{
 			Refs:     []string{cloneRef},
 			Blobless: n.blobless,
-			Branch:   n.branch,
+			Checkout: cloneRef,
 		},
 	)
 	if err != nil {

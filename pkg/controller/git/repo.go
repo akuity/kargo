@@ -35,10 +35,11 @@ type repo struct {
 // working tree.
 type CloneOptions struct {
 	BaseCloneOptions
-	// Branch is the name of the branch to check out. It is cloned whether or not
-	// Refs includes it. If not specified, the remote's default branch is checked
-	// out.
-	Branch string
+	// Checkout optionally specifies what to check out, in any of the forms that
+	// Refs accepts. It is cloned whether or not Refs includes it. Checking out a
+	// tag or commit leaves HEAD detached. If not specified, the remote's default
+	// branch is checked out.
+	Checkout string
 }
 
 // Clone produces a local clone of the remote git repository at the specified
@@ -85,7 +86,7 @@ func Clone(
 	if err = r.clone(
 		ctx,
 		cloneOpts.BaseCloneOptions,
-		cloneOpts.Branch,
+		cloneOpts.Checkout,
 		false,
 	); err != nil {
 		return nil, err
