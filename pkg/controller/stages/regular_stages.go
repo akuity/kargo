@@ -1072,13 +1072,6 @@ func SyncFreight(
 	curFreight := stage.Status.FreightHistory.Current()
 	verifiedAt, verified := freightVerifiedAt(stage)
 
-	err := UnmarkUnusedFreight(ctx, freightClient, stage, func(fr kargoapi.Freight) bool {
-		return !curFreight.Includes(fr.Name)
-	})
-	if err != nil {
-		return err
-	}
-
 	// Iterate over every piece of Freight that the Stage is actually using to
 	// make sure that their status accurately reflects that.
 	//
@@ -1093,70 +1086,41 @@ func SyncFreight(
 		verifiedAt = now
 	}
 	for _, fr := range curFreight.References() {
-		f, err := freightClient.GetFreight(ctx, stage.Namespace, fr.Name)
+		freight, err := freightClient.GetFreight(ctx, stage.Namespace, fr.Name)
 		if err != nil {
 			return fmt.Errorf(
 				"error getting Freight %q in namespace %q: %w",
 				fr.Name, stage.Namespace, err,
 			)
 		}
-		if f == nil {
+		if freight == nil {
 			// nolint:staticcheck
 			return fmt.Errorf("Freight %q not found in namespace %q", fr.Name, stage.Namespace)
 		}
-		// The API server applies AddCurrentStage, and AddVerifiedStage when
-		// verified, so an existing entry is left alone and nothing is written when
-		// neither is new.
-		newlyVerified := verified && !f.IsVerifiedIn(stage.Name)
-		if err = freightClient.MarkFreightInStage(
-			ctx, stage.Namespace, f.Name, stage.Name, verified, verifiedAt,
-		); err != nil {
+		// Marking freight as verified for origin will unmark all other freights of the same origin which
+		// have this stage marked at the moment. This ensures only one freight per origin is currentlyIn stage.
+		err = freightClient.MarkFreightCurrentlyInStage(ctx, stage.Namespace, freight.Name, freight.Origin, stage.Name)
+		if err != nil {
 			return fmt.Errorf(
 				"error marking Freight %q in Stage %q in namespace %q: %w",
-				f.Name, stage.Name, stage.Namespace, err,
+				freight.Name, stage.Name, stage.Namespace, err,
 			)
 		}
-		if newlyVerified {
-			observeVerificationLeadTime(f, verifiedAt)
-		}
-	}
-
-	return nil
-}
-
-func UnmarkUnusedFreight(
-	ctx context.Context,
-	freightClient freightclient.FreightClient,
-	stage *kargoapi.Stage,
-	filter func(kargoapi.Freight) bool,
-) error {
-	// Find all Freight that think they're currently in use by this Stage, read
-	// through the API server rather than the Kubernetes client.
-	// This needs to happen BEFORE marking current freight, because otherwise old freight
-	// may be selected when querying freight for downstream promotion.
-	// Both new and old may be unmarked for some time, but reconciler will eventually see
-	// correct one marked.
-	freight, err := freightClient.ListFreightByCurrentStage(ctx, stage.Namespace, stage.Name)
-	if err != nil {
-		return fmt.Errorf(
-			"error listing Freight in namespace %q currently in Stage %q: %w",
-			stage.Namespace, stage.Name, err,
-		)
-	}
-	// Step through all the Freight that think they're currently used by this
-	// Stage and, if they're not, patch their status to accurately reflect that.
-	for _, f := range freight {
-		if filter(f) {
-			if err = freightClient.UnmarkFreightInStage(
-				ctx, stage.Namespace, f.Name, stage.Name,
-			); err != nil {
+		if verified {
+			if !freight.IsVerifiedIn(stage.Name) {
+				observeVerificationLeadTime(freight, verifiedAt)
+			}
+			err = freightClient.MarkFreightVerifiedInStage(ctx, stage.Namespace, freight.Name, stage.Name, verifiedAt)
+			if err != nil {
 				return fmt.Errorf(
-					"error unmarking Freight %q from Stage %q in namespace %q: %w",
-					f.Name, stage.Name, stage.Namespace, err,
+					"error marking Freight %q as verified in Stage %q in namespace %q: %w",
+					freight.Name, stage.Name, stage.Namespace, err,
 				)
 			}
 		}
+
 	}
+
 	return nil
 }
 

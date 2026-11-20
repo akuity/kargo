@@ -237,7 +237,11 @@ func NewFreightCreatedStageEnqueuer(
 	forControlFlowStages bool,
 ) handler.TypedEventHandler[*kargoapi.Freight, reconcile.Request] {
 	return handler.TypedFuncs[*kargoapi.Freight, reconcile.Request]{
-		GenericFunc: func(ctx context.Context, evt event.TypedGenericEvent[*kargoapi.Freight], wq workqueue.TypedRateLimitingInterface[reconcile.Request]) {
+		GenericFunc: func(
+			ctx context.Context,
+			evt event.TypedGenericEvent[*kargoapi.Freight],
+			wq workqueue.TypedRateLimitingInterface[reconcile.Request],
+		) {
 			genericFreightCreated(ctx, evt, wq, kargoClient, forControlFlowStages)
 		},
 	}
@@ -247,7 +251,7 @@ func genericFreightCreated(
 	ctx context.Context,
 	evt event.TypedGenericEvent[*kargoapi.Freight],
 	wq workqueue.TypedRateLimitingInterface[reconcile.Request],
-	kargoClient          client.Client,
+	kargoClient client.Client,
 	forControlFlowStages bool,
 ) {
 	logger := logging.LoggerFromContext(ctx)

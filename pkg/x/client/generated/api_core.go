@@ -1289,7 +1289,7 @@ type ApiDeleteFreightStageStatusRequest struct {
 	ctx context.Context
 	ApiService *CoreAPIService
 	project string
-	freightNameOrAlias string
+	freight string
 	stage string
 }
 
@@ -1307,16 +1307,16 @@ deleted, in place of writing Freight status directly.
 
  @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
  @param project Project name
- @param freightNameOrAlias Freight name or alias
+ @param freight Freight name
  @param stage Stage name
  @return ApiDeleteFreightStageStatusRequest
 */
-func (a *CoreAPIService) DeleteFreightStageStatus(ctx context.Context, project string, freightNameOrAlias string, stage string) ApiDeleteFreightStageStatusRequest {
+func (a *CoreAPIService) DeleteFreightStageStatus(ctx context.Context, project string, freight string, stage string) ApiDeleteFreightStageStatusRequest {
 	return ApiDeleteFreightStageStatusRequest{
 		ApiService: a,
 		ctx: ctx,
 		project: project,
-		freightNameOrAlias: freightNameOrAlias,
+		freight: freight,
 		stage: stage,
 	}
 }
@@ -1334,9 +1334,9 @@ func (a *CoreAPIService) DeleteFreightStageStatusExecute(r ApiDeleteFreightStage
 		return nil, &GenericOpenAPIError{error: err.Error()}
 	}
 
-	localVarPath := localBasePath + "/v1beta1/projects/{project}/freight/{freight-name-or-alias}/status/stage/{stage}"
+	localVarPath := localBasePath + "/v1beta1/projects/{project}/freight/{freight}/status/stage/{stage}"
 	localVarPath = strings.Replace(localVarPath, "{"+"project"+"}", url.PathEscape(parameterValueToString(r.project, "project")), -1)
-	localVarPath = strings.Replace(localVarPath, "{"+"freight-name-or-alias"+"}", url.PathEscape(parameterValueToString(r.freightNameOrAlias, "freightNameOrAlias")), -1)
+	localVarPath = strings.Replace(localVarPath, "{"+"freight"+"}", url.PathEscape(parameterValueToString(r.freight, "freight")), -1)
 	localVarPath = strings.Replace(localVarPath, "{"+"stage"+"}", url.PathEscape(parameterValueToString(r.stage, "stage")), -1)
 
 	localVarHeaderParams := make(map[string]string)
@@ -6808,65 +6808,189 @@ func (a *CoreAPIService) ListWarehousesExecute(r ApiListWarehousesRequest) (*War
 	return localVarReturnValue, localVarHTTPResponse, nil
 }
 
-type ApiMarkFreightInStageRequest struct {
+type ApiMarkFreightCurrentlyInStageRequest struct {
 	ctx context.Context
 	ApiService *CoreAPIService
 	project string
-	freightNameOrAlias string
 	stage string
-	body *MarkFreightInStageRequest
+	body *MarkFreightCurrentlyInStageRequest
 }
 
-// Status
-func (r ApiMarkFreightInStageRequest) Body(body MarkFreightInStageRequest) ApiMarkFreightInStageRequest {
+// Freight
+func (r ApiMarkFreightCurrentlyInStageRequest) Body(body MarkFreightCurrentlyInStageRequest) ApiMarkFreightCurrentlyInStageRequest {
 	r.body = &body
 	return r
 }
 
-func (r ApiMarkFreightInStageRequest) Execute() (*http.Response, error) {
-	return r.ApiService.MarkFreightInStageExecute(r)
+func (r ApiMarkFreightCurrentlyInStageRequest) Execute() (*http.Response, error) {
+	return r.ApiService.MarkFreightCurrentlyInStageExecute(r)
 }
 
 /*
-MarkFreightInStage Mark Freight as currently in use by a Stage
+MarkFreightCurrentlyInStage Mark Freight as currently in use by a Stage
 
 Record that the named Freight is currently in use by the Stage,
-and optionally that it has been verified there, updating the
-Freight's status (currentlyIn / verifiedIn). This is used by the
-Stage controller in place of writing Freight status directly.
+adding the Stage to the Freight's currentlyIn status. The
+request's origin must match the Freight's origin. Any other
+Freight from that origin that is recorded as currently in the
+Stage has the Stage removed from its currentlyIn.
 
  @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
  @param project Project name
- @param freightNameOrAlias Freight name or alias
  @param stage Stage name
- @return ApiMarkFreightInStageRequest
+ @return ApiMarkFreightCurrentlyInStageRequest
 */
-func (a *CoreAPIService) MarkFreightInStage(ctx context.Context, project string, freightNameOrAlias string, stage string) ApiMarkFreightInStageRequest {
-	return ApiMarkFreightInStageRequest{
+func (a *CoreAPIService) MarkFreightCurrentlyInStage(ctx context.Context, project string, stage string) ApiMarkFreightCurrentlyInStageRequest {
+	return ApiMarkFreightCurrentlyInStageRequest{
 		ApiService: a,
 		ctx: ctx,
 		project: project,
-		freightNameOrAlias: freightNameOrAlias,
 		stage: stage,
 	}
 }
 
 // Execute executes the request
-func (a *CoreAPIService) MarkFreightInStageExecute(r ApiMarkFreightInStageRequest) (*http.Response, error) {
+func (a *CoreAPIService) MarkFreightCurrentlyInStageExecute(r ApiMarkFreightCurrentlyInStageRequest) (*http.Response, error) {
 	var (
 		localVarHTTPMethod   = http.MethodPost
 		localVarPostBody     interface{}
 		formFiles            []formFile
 	)
 
-	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "CoreAPIService.MarkFreightInStage")
+	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "CoreAPIService.MarkFreightCurrentlyInStage")
 	if err != nil {
 		return nil, &GenericOpenAPIError{error: err.Error()}
 	}
 
-	localVarPath := localBasePath + "/v1beta1/projects/{project}/freight/{freight-name-or-alias}/status/stage/{stage}"
+	localVarPath := localBasePath + "/v1beta1/projects/{project}/stages/{stage}/freight"
 	localVarPath = strings.Replace(localVarPath, "{"+"project"+"}", url.PathEscape(parameterValueToString(r.project, "project")), -1)
-	localVarPath = strings.Replace(localVarPath, "{"+"freight-name-or-alias"+"}", url.PathEscape(parameterValueToString(r.freightNameOrAlias, "freightNameOrAlias")), -1)
+	localVarPath = strings.Replace(localVarPath, "{"+"stage"+"}", url.PathEscape(parameterValueToString(r.stage, "stage")), -1)
+
+	localVarHeaderParams := make(map[string]string)
+	localVarQueryParams := url.Values{}
+	localVarFormParams := url.Values{}
+	if r.body == nil {
+		return nil, reportError("body is required and must be specified")
+	}
+
+	// to determine the Content-Type header
+	localVarHTTPContentTypes := []string{"application/json"}
+
+	// set Content-Type header
+	localVarHTTPContentType := selectHeaderContentType(localVarHTTPContentTypes)
+	if localVarHTTPContentType != "" {
+		localVarHeaderParams["Content-Type"] = localVarHTTPContentType
+	}
+
+	// to determine the Accept header
+	localVarHTTPHeaderAccepts := []string{}
+
+	// set Accept header
+	localVarHTTPHeaderAccept := selectHeaderAccept(localVarHTTPHeaderAccepts)
+	if localVarHTTPHeaderAccept != "" {
+		localVarHeaderParams["Accept"] = localVarHTTPHeaderAccept
+	}
+	// body params
+	localVarPostBody = r.body
+	if r.ctx != nil {
+		// API Key Authentication
+		if auth, ok := r.ctx.Value(ContextAPIKeys).(map[string]APIKey); ok {
+			if apiKey, ok := auth["BearerAuth"]; ok {
+				var key string
+				if apiKey.Prefix != "" {
+					key = apiKey.Prefix + " " + apiKey.Key
+				} else {
+					key = apiKey.Key
+				}
+				localVarHeaderParams["Authorization"] = key
+			}
+		}
+	}
+	req, err := a.client.prepareRequest(r.ctx, localVarPath, localVarHTTPMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, formFiles)
+	if err != nil {
+		return nil, err
+	}
+
+	localVarHTTPResponse, err := a.client.callAPI(req)
+	if err != nil || localVarHTTPResponse == nil {
+		return localVarHTTPResponse, err
+	}
+
+	localVarBody, err := io.ReadAll(localVarHTTPResponse.Body)
+	localVarHTTPResponse.Body.Close()
+	localVarHTTPResponse.Body = io.NopCloser(bytes.NewBuffer(localVarBody))
+	if err != nil {
+		return localVarHTTPResponse, err
+	}
+
+	if localVarHTTPResponse.StatusCode >= 300 {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: localVarHTTPResponse.Status,
+		}
+		return localVarHTTPResponse, newErr
+	}
+
+	return localVarHTTPResponse, nil
+}
+
+type ApiMarkFreightVerifiedInStageRequest struct {
+	ctx context.Context
+	ApiService *CoreAPIService
+	project string
+	freight string
+	stage string
+	body *MarkFreightVerifiedInStageRequest
+}
+
+// Verification
+func (r ApiMarkFreightVerifiedInStageRequest) Body(body MarkFreightVerifiedInStageRequest) ApiMarkFreightVerifiedInStageRequest {
+	r.body = &body
+	return r
+}
+
+func (r ApiMarkFreightVerifiedInStageRequest) Execute() (*http.Response, error) {
+	return r.ApiService.MarkFreightVerifiedInStageExecute(r)
+}
+
+/*
+MarkFreightVerifiedInStage Mark Freight as verified in a Stage
+
+Record that the named Freight has been verified in the Stage,
+adding the Stage to the Freight's verifiedIn status.
+
+ @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+ @param project Project name
+ @param freight Freight name
+ @param stage Stage name
+ @return ApiMarkFreightVerifiedInStageRequest
+*/
+func (a *CoreAPIService) MarkFreightVerifiedInStage(ctx context.Context, project string, freight string, stage string) ApiMarkFreightVerifiedInStageRequest {
+	return ApiMarkFreightVerifiedInStageRequest{
+		ApiService: a,
+		ctx: ctx,
+		project: project,
+		freight: freight,
+		stage: stage,
+	}
+}
+
+// Execute executes the request
+func (a *CoreAPIService) MarkFreightVerifiedInStageExecute(r ApiMarkFreightVerifiedInStageRequest) (*http.Response, error) {
+	var (
+		localVarHTTPMethod   = http.MethodPost
+		localVarPostBody     interface{}
+		formFiles            []formFile
+	)
+
+	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "CoreAPIService.MarkFreightVerifiedInStage")
+	if err != nil {
+		return nil, &GenericOpenAPIError{error: err.Error()}
+	}
+
+	localVarPath := localBasePath + "/v1beta1/projects/{project}/freight/{freight}/status/stage/{stage}"
+	localVarPath = strings.Replace(localVarPath, "{"+"project"+"}", url.PathEscape(parameterValueToString(r.project, "project")), -1)
+	localVarPath = strings.Replace(localVarPath, "{"+"freight"+"}", url.PathEscape(parameterValueToString(r.freight, "freight")), -1)
 	localVarPath = strings.Replace(localVarPath, "{"+"stage"+"}", url.PathEscape(parameterValueToString(r.stage, "stage")), -1)
 
 	localVarHeaderParams := make(map[string]string)
@@ -7062,7 +7186,7 @@ type ApiPatchFreightMetadataRequest struct {
 	ctx context.Context
 	ApiService *CoreAPIService
 	project string
-	freightNameOrAlias string
+	freight string
 	body *PatchFreightMetadataRequest
 }
 
@@ -7085,15 +7209,15 @@ overwritten; other keys are left as they are.
 
  @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
  @param project Project name
- @param freightNameOrAlias Freight name or alias
+ @param freight Freight name
  @return ApiPatchFreightMetadataRequest
 */
-func (a *CoreAPIService) PatchFreightMetadata(ctx context.Context, project string, freightNameOrAlias string) ApiPatchFreightMetadataRequest {
+func (a *CoreAPIService) PatchFreightMetadata(ctx context.Context, project string, freight string) ApiPatchFreightMetadataRequest {
 	return ApiPatchFreightMetadataRequest{
 		ApiService: a,
 		ctx: ctx,
 		project: project,
-		freightNameOrAlias: freightNameOrAlias,
+		freight: freight,
 	}
 }
 
@@ -7110,9 +7234,9 @@ func (a *CoreAPIService) PatchFreightMetadataExecute(r ApiPatchFreightMetadataRe
 		return nil, &GenericOpenAPIError{error: err.Error()}
 	}
 
-	localVarPath := localBasePath + "/v1beta1/projects/{project}/freight/{freight-name-or-alias}/metadata"
+	localVarPath := localBasePath + "/v1beta1/projects/{project}/freight/{freight}/metadata"
 	localVarPath = strings.Replace(localVarPath, "{"+"project"+"}", url.PathEscape(parameterValueToString(r.project, "project")), -1)
-	localVarPath = strings.Replace(localVarPath, "{"+"freight-name-or-alias"+"}", url.PathEscape(parameterValueToString(r.freightNameOrAlias, "freightNameOrAlias")), -1)
+	localVarPath = strings.Replace(localVarPath, "{"+"freight"+"}", url.PathEscape(parameterValueToString(r.freight, "freight")), -1)
 
 	localVarHeaderParams := make(map[string]string)
 	localVarQueryParams := url.Values{}
@@ -8423,124 +8547,6 @@ func (a *CoreAPIService) RefreshWarehouseExecute(r ApiRefreshWarehouseRequest) (
 	localVarPath := localBasePath + "/v1beta1/projects/{project}/warehouses/{warehouse}/refresh"
 	localVarPath = strings.Replace(localVarPath, "{"+"project"+"}", url.PathEscape(parameterValueToString(r.project, "project")), -1)
 	localVarPath = strings.Replace(localVarPath, "{"+"warehouse"+"}", url.PathEscape(parameterValueToString(r.warehouse, "warehouse")), -1)
-
-	localVarHeaderParams := make(map[string]string)
-	localVarQueryParams := url.Values{}
-	localVarFormParams := url.Values{}
-
-	// to determine the Content-Type header
-	localVarHTTPContentTypes := []string{}
-
-	// set Content-Type header
-	localVarHTTPContentType := selectHeaderContentType(localVarHTTPContentTypes)
-	if localVarHTTPContentType != "" {
-		localVarHeaderParams["Content-Type"] = localVarHTTPContentType
-	}
-
-	// to determine the Accept header
-	localVarHTTPHeaderAccepts := []string{}
-
-	// set Accept header
-	localVarHTTPHeaderAccept := selectHeaderAccept(localVarHTTPHeaderAccepts)
-	if localVarHTTPHeaderAccept != "" {
-		localVarHeaderParams["Accept"] = localVarHTTPHeaderAccept
-	}
-	if r.ctx != nil {
-		// API Key Authentication
-		if auth, ok := r.ctx.Value(ContextAPIKeys).(map[string]APIKey); ok {
-			if apiKey, ok := auth["BearerAuth"]; ok {
-				var key string
-				if apiKey.Prefix != "" {
-					key = apiKey.Prefix + " " + apiKey.Key
-				} else {
-					key = apiKey.Key
-				}
-				localVarHeaderParams["Authorization"] = key
-			}
-		}
-	}
-	req, err := a.client.prepareRequest(r.ctx, localVarPath, localVarHTTPMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, formFiles)
-	if err != nil {
-		return nil, err
-	}
-
-	localVarHTTPResponse, err := a.client.callAPI(req)
-	if err != nil || localVarHTTPResponse == nil {
-		return localVarHTTPResponse, err
-	}
-
-	localVarBody, err := io.ReadAll(localVarHTTPResponse.Body)
-	localVarHTTPResponse.Body.Close()
-	localVarHTTPResponse.Body = io.NopCloser(bytes.NewBuffer(localVarBody))
-	if err != nil {
-		return localVarHTTPResponse, err
-	}
-
-	if localVarHTTPResponse.StatusCode >= 300 {
-		newErr := &GenericOpenAPIError{
-			body:  localVarBody,
-			error: localVarHTTPResponse.Status,
-		}
-		return localVarHTTPResponse, newErr
-	}
-
-	return localVarHTTPResponse, nil
-}
-
-type ApiUnmarkFreightInStageRequest struct {
-	ctx context.Context
-	ApiService *CoreAPIService
-	project string
-	freightNameOrAlias string
-	stage string
-}
-
-func (r ApiUnmarkFreightInStageRequest) Execute() (*http.Response, error) {
-	return r.ApiService.UnmarkFreightInStageExecute(r)
-}
-
-/*
-UnmarkFreightInStage Mark Freight as no longer currently in use by a Stage
-
-Record that the named Freight is no longer in use by the Stage,
-updating the Freight's status (removing the Stage from
-currentlyIn and finalizing its soak time). The Stage's entries in
-verifiedIn and approvedFor are left intact. This is used by the
-Stage controller in place of writing Freight status directly.
-
- @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
- @param project Project name
- @param freightNameOrAlias Freight name or alias
- @param stage Stage name
- @return ApiUnmarkFreightInStageRequest
-*/
-func (a *CoreAPIService) UnmarkFreightInStage(ctx context.Context, project string, freightNameOrAlias string, stage string) ApiUnmarkFreightInStageRequest {
-	return ApiUnmarkFreightInStageRequest{
-		ApiService: a,
-		ctx: ctx,
-		project: project,
-		freightNameOrAlias: freightNameOrAlias,
-		stage: stage,
-	}
-}
-
-// Execute executes the request
-func (a *CoreAPIService) UnmarkFreightInStageExecute(r ApiUnmarkFreightInStageRequest) (*http.Response, error) {
-	var (
-		localVarHTTPMethod   = http.MethodPatch
-		localVarPostBody     interface{}
-		formFiles            []formFile
-	)
-
-	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "CoreAPIService.UnmarkFreightInStage")
-	if err != nil {
-		return nil, &GenericOpenAPIError{error: err.Error()}
-	}
-
-	localVarPath := localBasePath + "/v1beta1/projects/{project}/freight/{freight-name-or-alias}/status/stage/{stage}"
-	localVarPath = strings.Replace(localVarPath, "{"+"project"+"}", url.PathEscape(parameterValueToString(r.project, "project")), -1)
-	localVarPath = strings.Replace(localVarPath, "{"+"freight-name-or-alias"+"}", url.PathEscape(parameterValueToString(r.freightNameOrAlias, "freightNameOrAlias")), -1)
-	localVarPath = strings.Replace(localVarPath, "{"+"stage"+"}", url.PathEscape(parameterValueToString(r.stage, "stage")), -1)
 
 	localVarHeaderParams := make(map[string]string)
 	localVarQueryParams := url.Values{}

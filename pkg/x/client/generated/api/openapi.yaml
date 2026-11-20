@@ -955,7 +955,7 @@ paths:
       summary: Retrieve deep links for a Freight resource
       tags:
       - Core
-  /v1beta1/projects/{project}/freight/{freight-name-or-alias}/metadata:
+  /v1beta1/projects/{project}/freight/{freight}/metadata:
     patch:
       description: |-
         Upsert keys in the status metadata of a Freight resource. A value
@@ -969,9 +969,9 @@ paths:
         required: true
         schema:
           type: string
-      - description: Freight name or alias
+      - description: Freight name
         in: path
-        name: freight-name-or-alias
+        name: freight
         required: true
         schema:
           type: string
@@ -992,7 +992,7 @@ paths:
       tags:
       - Core
       x-codegen-request-body-name: body
-  /v1beta1/projects/{project}/freight/{freight-name-or-alias}/status/stage/{stage}:
+  /v1beta1/projects/{project}/freight/{freight}/status/stage/{stage}:
     delete:
       description: |-
         Remove the named Stage from every one of the Freight's status
@@ -1007,9 +1007,9 @@ paths:
         required: true
         schema:
           type: string
-      - description: Freight name or alias
+      - description: Freight name
         in: path
-        name: freight-name-or-alias
+        name: freight
         required: true
         schema:
           type: string
@@ -1028,49 +1028,11 @@ paths:
       summary: Remove all of a Stage's entries from a Freight's status
       tags:
       - Core
-    patch:
-      description: |-
-        Record that the named Freight is no longer in use by the Stage,
-        updating the Freight's status (removing the Stage from
-        currentlyIn and finalizing its soak time). The Stage's entries in
-        verifiedIn and approvedFor are left intact. This is used by the
-        Stage controller in place of writing Freight status directly.
-      operationId: UnmarkFreightInStage
-      parameters:
-      - description: Project name
-        in: path
-        name: project
-        required: true
-        schema:
-          type: string
-      - description: Freight name or alias
-        in: path
-        name: freight-name-or-alias
-        required: true
-        schema:
-          type: string
-      - description: Stage name
-        in: path
-        name: stage
-        required: true
-        schema:
-          type: string
-      responses:
-        "200":
-          content: {}
-          description: Success
-      security:
-      - BearerAuth: []
-      summary: Mark Freight as no longer currently in use by a Stage
-      tags:
-      - Core
     post:
       description: |-
-        Record that the named Freight is currently in use by the Stage,
-        and optionally that it has been verified there, updating the
-        Freight's status (currentlyIn / verifiedIn). This is used by the
-        Stage controller in place of writing Freight status directly.
-      operationId: MarkFreightInStage
+        Record that the named Freight has been verified in the Stage,
+        adding the Stage to the Freight's verifiedIn status.
+      operationId: MarkFreightVerifiedInStage
       parameters:
       - description: Project name
         in: path
@@ -1078,9 +1040,9 @@ paths:
         required: true
         schema:
           type: string
-      - description: Freight name or alias
+      - description: Freight name
         in: path
-        name: freight-name-or-alias
+        name: freight
         required: true
         schema:
           type: string
@@ -1094,8 +1056,8 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/MarkFreightInStageRequest"
-        description: Status
+              $ref: "#/components/schemas/MarkFreightVerifiedInStageRequest"
+        description: Verification
         required: true
       responses:
         "200":
@@ -1103,7 +1065,7 @@ paths:
           description: Success
       security:
       - BearerAuth: []
-      summary: Mark Freight as currently in use by a Stage
+      summary: Mark Freight as verified in a Stage
       tags:
       - Core
       x-codegen-request-body-name: body
@@ -2194,6 +2156,44 @@ paths:
       summary: List Freight currently in a Stage
       tags:
       - Core
+    post:
+      description: |-
+        Record that the named Freight is currently in use by the Stage,
+        adding the Stage to the Freight's currentlyIn status. The
+        request's origin must match the Freight's origin. Any other
+        Freight from that origin that is recorded as currently in the
+        Stage has the Stage removed from its currentlyIn.
+      operationId: MarkFreightCurrentlyInStage
+      parameters:
+      - description: Project name
+        in: path
+        name: project
+        required: true
+        schema:
+          type: string
+      - description: Stage name
+        in: path
+        name: stage
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MarkFreightCurrentlyInStageRequest"
+        description: Freight
+        required: true
+      responses:
+        "200":
+          content: {}
+          description: Success
+      security:
+      - BearerAuth: []
+      summary: Mark Freight as currently in use by a Stage
+      tags:
+      - Core
+      x-codegen-request-body-name: body
   /v1beta1/projects/{project}/stages/{stage}/links:
     get:
       description: |-
@@ -4820,21 +4820,32 @@ components:
         total:
           type: integer
       type: object
-    MarkFreightInStageRequest:
+    MarkFreightCurrentlyInStageRequest:
       example:
-        verified: true
+        freight: freight
+        origin: "{}"
+      properties:
+        freight:
+          description: Freight is the name of the Freight now currently in use by
+            the Stage.
+          type: string
+        origin:
+          allOf:
+          - $ref: "#/components/schemas/FreightOrigin"
+          description: |-
+            Origin is the origin of the Freight. It must match the Freight's own
+            origin. Any other Freight from this origin that is recorded as currently
+            in the Stage is unmarked.
+          type: object
+      type: object
+    MarkFreightVerifiedInStageRequest:
+      example:
         verifiedAt: verifiedAt
       properties:
-        verified:
-          description: |-
-            Verified indicates the Freight has been verified in the Stage, so that its
-            status should also record it as verified there.
-          type: boolean
         verifiedAt:
           description: |-
             VerifiedAt is the time at which the Freight was verified in the Stage. It
-            is ignored unless Verified is true, and defaults to the time the request is
-            handled.
+            defaults to the time the request is handled.
           type: string
       type: object
     OIDCConfig:

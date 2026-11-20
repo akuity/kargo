@@ -47,8 +47,13 @@ func TestSyncFreight_metrics(t *testing.T) {
 		GetFreightFun: func(context.Context, string, string) (*kargoapi.Freight, error) {
 			return getFreight, nil
 		},
-		MarkFreightInStageFun: func(
-			context.Context, string, string, string, bool, time.Time,
+		MarkFreightCurrentlyInStageFun: func(
+			context.Context, string, string, kargoapi.FreightOrigin, string,
+		) error {
+			return nil
+		},
+		MarkFreightVerifiedInStageFun: func(
+			context.Context, string, string, string, time.Time,
 		) error {
 			return nil
 		},

@@ -30,15 +30,15 @@ type patchFreightMetadataRequest struct {
 // @Accept json
 // @Produce json
 // @Param project path string true "Project name"
-// @Param freight-name-or-alias path string true "Freight name or alias"
+// @Param freight path string true "Freight name"
 // @Param body body patchFreightMetadataRequest true "Metadata"
 // @Success 200 "Success"
-// @Router /v1beta1/projects/{project}/freight/{freight-name-or-alias}/metadata [patch]
+// @Router /v1beta1/projects/{project}/freight/{freight}/metadata [patch]
 func (s *server) patchFreightMetadata(c *gin.Context) {
 	ctx := c.Request.Context()
 
 	project := c.Param("project")
-	freightNameOrAlias := c.Param("freight-name-or-alias")
+	freightName := c.Param("freight")
 
 	var req patchFreightMetadataRequest
 	if !request.BindJSON(c, &req) {
@@ -53,7 +53,7 @@ func (s *server) patchFreightMetadata(c *gin.Context) {
 		return
 	}
 
-	freight, err := s.getFreightByNameOrAlias(ctx, project, freightNameOrAlias)
+	freight, err := s.getFreightByName(ctx, project, freightName)
 	if err != nil {
 		_ = c.Error(err)
 		return

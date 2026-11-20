@@ -103,9 +103,6 @@ func TestRegularStageReconciler_Reconcile_statusPatchesPerPass(t *testing.T) {
 	// are no-ops here because this test only counts Stage status patches.
 	// Auto-promotion is not exercised, so the Warehouse resolves to no Freight.
 	mockClient := &testutil.MockFreightClient{
-		ListFreightByCurrentStageFun: func(context.Context, string, string) ([]kargoapi.Freight, error) {
-			return nil, nil
-		},
 		ListFreightFromWarehouseFun: func(
 			context.Context,
 			string, string,
@@ -116,9 +113,15 @@ func TestRegularStageReconciler_Reconcile_statusPatchesPerPass(t *testing.T) {
 		GetFreightFun: func(context.Context, string, string) (*kargoapi.Freight, error) {
 			return freight, nil
 		},
-		MarkFreightInStageFun: func(
-			context.Context, string, string, string, bool, time.Time,
+		MarkFreightCurrentlyInStageFun: func(
+			context.Context,
+			string, string,
+			kargoapi.FreightOrigin,
+			string,
 		) error {
+			return nil
+		},
+		MarkFreightVerifiedInStageFun: func(context.Context, string, string, string, time.Time) error {
 			return nil
 		},
 	}
