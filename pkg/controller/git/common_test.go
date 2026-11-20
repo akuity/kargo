@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http/httptest"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"testing"
 
@@ -33,8 +34,16 @@ func setupRemoteRepo(
 	if s := os.Getenv("TEST_GIT_CLIENT_WITH_AUTH"); s != "" {
 		useAuth = types.MustParseBool(s)
 	}
+	serviceDir := t.TempDir()
+	// Create the repository before gitkit can, so its default branch is main
+	// regardless of the Git configuration of the machine running the tests.
+	_, err := libExec.Exec(exec.Command(
+		"git", "init", "--bare", "--initial-branch=main",
+		filepath.Join(serviceDir, "test.git"),
+	))
+	require.NoError(t, err)
 	service := gitkit.New(gitkit.Config{
-		Dir:        t.TempDir(),
+		Dir:        serviceDir,
 		AutoCreate: true,
 		Auth:       useAuth,
 	})
