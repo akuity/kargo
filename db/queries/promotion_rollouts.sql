@@ -203,19 +203,123 @@ ORDER BY promotion_rollout_id, target_name, name DESC;
 -- to a row even across a clock step or two writes in one microsecond. A
 -- non-null id or updated_at is a precondition; a row that fails one is left
 -- alone and nothing is returned.
+--
+-- With start set, the statement starts the rollout rather than only
+-- rewriting its status, and has two more preconditions: the rollout is
+-- Pending, and the Freight it promotes is the one named. The rollout's
+-- FreightCollection is recorded in the same statement, so a rollout that
+-- starts has one and no other write can give it one: a row for the Freight
+-- being promoted, given whole, and a copy of the previous rollout's row,
+-- contents included, for each other origin among those given as two arrays
+-- of equal length, which are the origins the Stage requests Freight from
+-- now. The database does not know those, and an origin the Stage no longer
+-- requests is left behind. No Freight is read: the Freight an earlier
+-- rollout promoted may be gone by now, and what that rollout recorded is a
+-- copy of it. A collection is recorded once. A rollout that has rows already
+-- keeps them as they are, though a Pending rollout should have none.
+--
+-- The previous CTE is the whole of the choice of which rollout that is: the
+-- same Stage's newest rollout, numbered below this one, that recorded a
+-- collection. To change the rule, change that CTE. How the rollout finished
+-- does not matter: one that Failed or Errored counts as one that Succeeded
+-- does, so the Freight it set out to promote is carried forward, as a
+-- Stage's next Promotion carries forward what its last one rendered,
+-- whatever became of it. A rollout that recorded nothing -- one Aborted
+-- before it started, or started before collections were recorded -- is
+-- passed over for the one before it, so that it does not make the Stage
+-- forget what was collected until then. The choice is made in this
+-- statement so that it cannot be stale by the time the rows are written,
+-- and it does not test the earlier rollout's phase for the same reason:
+-- this statement may not see that rollout's last write. It does not need
+-- to. A rollout has rows only once it has started, its rows never change,
+-- and one Running rollout per Stage means this one starts only if that one
+-- has finished.
 -- name: UpdatePromotionRolloutStatus :one
-UPDATE promotion_rollouts SET
-    status_phase = sqlc.arg(status_phase)::text,
-    status_reason = sqlc.arg(status_reason)::text,
-    status_message = sqlc.arg(status_message)::text,
-    status_started_at = sqlc.narg(status_started_at)::timestamptz,
-    status_finished_at = sqlc.narg(status_finished_at)::timestamptz,
-    updated_at = GREATEST(clock_timestamp(), updated_at + interval '1 microsecond')
-WHERE project_name = sqlc.arg(project_name)
-    AND name = sqlc.arg(name)
-    AND (sqlc.narg(id)::uuid IS NULL OR id = sqlc.narg(id))
-    AND (
-        sqlc.narg(updated_at)::timestamptz IS NULL
-        OR updated_at = sqlc.narg(updated_at)
+WITH rollout AS (
+    UPDATE promotion_rollouts SET
+        status_phase = sqlc.arg(status_phase)::text,
+        status_reason = sqlc.arg(status_reason)::text,
+        status_message = sqlc.arg(status_message)::text,
+        status_started_at = sqlc.narg(status_started_at)::timestamptz,
+        status_finished_at = sqlc.narg(status_finished_at)::timestamptz,
+        updated_at = GREATEST(clock_timestamp(), updated_at + interval '1 microsecond')
+    WHERE promotion_rollouts.project_name = sqlc.arg(project_name)
+        AND promotion_rollouts.name = sqlc.arg(name)
+        AND (sqlc.narg(id)::uuid IS NULL OR promotion_rollouts.id = sqlc.narg(id))
+        AND (
+            sqlc.narg(updated_at)::timestamptz IS NULL
+            OR promotion_rollouts.updated_at = sqlc.narg(updated_at)
+        )
+        AND (
+            NOT sqlc.arg(start)::boolean
+            OR (
+                promotion_rollouts.status_phase = 'Pending'
+                AND promotion_rollouts.freight_name = sqlc.arg(freight_name)::text
+            )
+        )
+    RETURNING *
+), previous AS (
+    SELECT earlier.id
+    FROM rollout
+    JOIN promotion_rollouts AS earlier ON earlier.stage_id = rollout.stage_id
+    WHERE sqlc.arg(start)::boolean
+        AND earlier.number < rollout.number
+        AND EXISTS (
+            SELECT 1 FROM promotion_rollout_freight AS recorded
+            WHERE recorded.promotion_rollout_id = earlier.id
+        )
+    ORDER BY earlier.number DESC
+    LIMIT 1
+), freight AS (
+    INSERT INTO promotion_rollout_freight (
+        promotion_rollout_id,
+        origin_kind,
+        origin_name,
+        freight_name,
+        reference
     )
-RETURNING *;
+    SELECT
+        rollout.id,
+        collected.origin_kind,
+        collected.origin_name,
+        collected.freight_name,
+        collected.reference
+    FROM rollout
+    CROSS JOIN LATERAL (
+        SELECT
+            sqlc.arg(origin_kind)::text AS origin_kind,
+            sqlc.arg(origin_name)::text AS origin_name,
+            sqlc.arg(freight_name)::text AS freight_name,
+            sqlc.narg(reference)::jsonb AS reference
+        UNION ALL
+        SELECT
+            carried.origin_kind,
+            carried.origin_name,
+            carried.freight_name,
+            carried.reference
+        FROM promotion_rollout_freight AS carried
+        WHERE carried.promotion_rollout_id = (SELECT previous.id FROM previous)
+            -- Set-returning functions in one select list advance together,
+            -- which zips the arrays.
+            AND (carried.origin_kind, carried.origin_name) IN (
+                SELECT
+                    unnest(sqlc.arg(requested_origin_kinds)::text[]),
+                    unnest(sqlc.arg(requested_origin_names)::text[])
+            )
+            AND (carried.origin_kind, carried.origin_name)
+                <> (sqlc.arg(origin_kind)::text, sqlc.arg(origin_name)::text)
+    ) AS collected
+    WHERE sqlc.arg(start)::boolean
+        AND NOT EXISTS (
+            SELECT 1 FROM promotion_rollout_freight AS existing
+            WHERE existing.promotion_rollout_id = rollout.id
+        )
+)
+SELECT * FROM rollout;
+
+-- A rollout's FreightCollection, one row per origin, in origin order. A
+-- rollout started before collections were recorded has no rows.
+-- name: ListPromotionRolloutFreight :many
+SELECT * FROM promotion_rollout_freight
+WHERE promotion_rollout_id = sqlc.arg(promotion_rollout_id)
+ORDER BY origin_kind, origin_name;
