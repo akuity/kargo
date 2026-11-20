@@ -85,7 +85,7 @@ func (w *workTree) IntegrateRemoteChanges(
 		)
 	}
 
-	remoteRef := fmt.Sprintf("origin/%s", targetBranch)
+	remoteRef := "refs/remotes/origin/" + targetBranch
 
 	switch integrationPolicy {
 	case PushIntegrationPolicyAlwaysRebase:
@@ -178,7 +178,7 @@ func (w *workTree) ensureCompleteIntegrationHistory(
 	ctx context.Context,
 	targetBranch string,
 ) (bool, error) {
-	remoteRef := fmt.Sprintf("origin/%s", targetBranch)
+	remoteRef := "refs/remotes/origin/" + targetBranch
 
 	shallow, err := w.shallowCommits(ctx)
 	if err != nil {

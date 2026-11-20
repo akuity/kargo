@@ -703,6 +703,25 @@ func TestBareRepo_CloneDepthAndBranches(t *testing.T) {
 					"blob:none",
 					runGit("config", "--get", "remote.origin.partialclonefilter"),
 				)
+				for branch := range testCase.expectedCommits {
+					blobID := runGit("ls-tree", "--object-only", branch, "main.txt")
+					require.NotEmpty(t, blobID)
+					cmd := exec.CommandContext(
+						t.Context(), "git", "cat-file", "--batch-check=%(objecttype)",
+					)
+					cmd.Dir = rep.Dir()
+					cmd.Env = append(os.Environ(), "GIT_NO_LAZY_FETCH=1")
+					cmd.Stdin = strings.NewReader(blobID + "\n")
+					out, cmdErr := cmd.CombinedOutput()
+					require.NoErrorf(t, cmdErr, "git cat-file failed: %s", out)
+					require.Equal(
+						t,
+						blobID+" missing",
+						strings.TrimSpace(string(out)),
+						"expected blob %s on branch %q to be omitted before checkout",
+						blobID, branch,
+					)
+				}
 			}
 
 			for branch, expectedCount := range testCase.expectedCommits {

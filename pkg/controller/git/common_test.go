@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http/httptest"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"testing"
 
@@ -33,8 +34,9 @@ func setupRemoteRepo(
 	if s := os.Getenv("TEST_GIT_CLIENT_WITH_AUTH"); s != "" {
 		useAuth = types.MustParseBool(s)
 	}
+	repoDir := t.TempDir()
 	service := gitkit.New(gitkit.Config{
-		Dir:        t.TempDir(),
+		Dir:        repoDir,
 		AutoCreate: true,
 		Auth:       useAuth,
 	})
@@ -59,6 +61,18 @@ func setupRemoteRepo(
 	require.NoError(t, err)
 	require.NotNil(t, repo)
 	defer repo.Close(t.Context())
+
+	for _, key := range []string{
+		"uploadpack.allowFilter",
+		"uploadpack.allowAnySHA1InWant",
+	} {
+		_, err = libExec.Exec(exec.CommandContext(
+			t.Context(),
+			"git", "-C", filepath.Join(repoDir, "test.git"),
+			"config", key, "true",
+		))
+		require.NoError(t, err)
+	}
 
 	for _, initFn := range initFns {
 		initFn(t, repo)

@@ -1175,14 +1175,15 @@ func Test_workTree_IntegrateRemoteChanges_ShallowClone(t *testing.T) {
 			},
 		},
 		{
-			name: "remote branch rewritten: RebaseOrMerge does not rebase",
+			name: "remote branch rewritten: RebaseOrMerge falls back to merge",
 			setup: func(t *testing.T) *workTree {
 				return newWorkTreeWithRewrittenRemoteBranch(t, 1)
 			},
 			targetBranch: "feature",
 			policy:       PushIntegrationPolicyRebaseOrMerge,
 			assert: func(t *testing.T, _ *workTree, err error) {
-				require.Error(t, err)
+				require.ErrorContains(t, err, "error merging")
+				require.ErrorContains(t, err, "unrelated histories")
 			},
 		},
 	}
@@ -1190,11 +1191,21 @@ func Test_workTree_IntegrateRemoteChanges_ShallowClone(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			wt := testCase.setup(t)
-			err := wt.IntegrateRemoteChanges(t.Context(), &IntegrationOptions{
+			headBefore, err := wt.LastCommitID(t.Context())
+			require.NoError(t, err)
+			err = wt.IntegrateRemoteChanges(t.Context(), &IntegrationOptions{
 				TargetBranch:      testCase.targetBranch,
 				IntegrationPolicy: testCase.policy,
 			})
 			testCase.assert(t, wt, err)
+			if err != nil {
+				headAfter, headErr := wt.LastCommitID(t.Context())
+				require.NoError(t, headErr)
+				require.Equal(t, headBefore, headAfter)
+				rebasing, rbErr := wt.IsRebasing(t.Context())
+				require.NoError(t, rbErr)
+				require.False(t, rebasing)
+			}
 		})
 	}
 
