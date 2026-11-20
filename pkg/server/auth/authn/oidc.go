@@ -2,15 +2,12 @@ package authn
 
 import (
 	"context"
-	"crypto/tls"
-	"crypto/x509"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"net/url"
-	"os"
 	"strings"
 	"sync"
 
@@ -25,6 +22,7 @@ import (
 	"github.com/akuity/kargo/pkg/indexer"
 	"github.com/akuity/kargo/pkg/logging"
 	"github.com/akuity/kargo/pkg/server/config"
+	"github.com/akuity/kargo/pkg/server/dex"
 	"github.com/akuity/kargo/pkg/server/user"
 )
 
@@ -311,23 +309,11 @@ func getKeySet(ctx context.Context, cfg config.ServerConfig) (oidc.KeySet, error
 			)
 		}
 		if cfg.DexProxyConfig.CACertPath != "" {
-			var caCertBytes []byte
-			// #nosec G703 -- Contextually, this was an operator-specified path;
-			// typically having been specified by the chart, and without even a
-			// an option for specifying an alternate path.
-			if caCertBytes, err = os.ReadFile(cfg.DexProxyConfig.CACertPath); err != nil {
-				return nil, fmt.Errorf("error reading CA cert file %q: %w", cfg.DexProxyConfig.CACertPath, err)
+			// The key set refetches keys for as long as the process runs, so
+			// it needs a transport that picks up a reissued Dex CA cert.
+			if httpClient.Transport, err = dex.NewTransport(*cfg.DexProxyConfig); err != nil {
+				return nil, fmt.Errorf("error creating Dex transport: %w", err)
 			}
-			caCertPool := x509.NewCertPool()
-			if ok := caCertPool.AppendCertsFromPEM(caCertBytes); !ok {
-				return nil, errors.New("invalid CA cert data")
-			}
-			transport := cleanhttp.DefaultTransport()
-			transport.TLSClientConfig = &tls.Config{
-				MinVersion: tls.VersionTLS12,
-				RootCAs:    caCertPool,
-			}
-			httpClient.Transport = transport
 		}
 	}
 
