@@ -87,6 +87,30 @@ func TestClone(t *testing.T) {
 			},
 		},
 		{
+			name: "branches that are not checked out can be checked out later",
+			opts: &CloneOptions{
+				Refs: []string{headRef, "refs/heads/a"},
+			},
+			assert: func(t *testing.T, r *repo, err error) {
+				require.NoError(t, err)
+				require.NoError(t, r.Checkout(t.Context(), "a"))
+				requireCurrentBranch(t, r, "a")
+			},
+		},
+		{
+			name: "branches can be checked out later after checking out a tag",
+			opts: &CloneOptions{
+				Refs:     []string{"refs/heads/a"},
+				Checkout: "refs/tags/v1.0.0",
+			},
+			assert: func(t *testing.T, r *repo, err error) {
+				require.NoError(t, err)
+				requireCurrentBranch(t, r, "")
+				require.NoError(t, r.Checkout(t.Context(), "a"))
+				requireCurrentBranch(t, r, "a")
+			},
+		},
+		{
 			name: "tag checkout without refs clones all branches and tags",
 			opts: &CloneOptions{Checkout: "refs/tags/v1.0.0"},
 			assert: func(t *testing.T, r *repo, err error) {
