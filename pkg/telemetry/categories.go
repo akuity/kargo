@@ -18,13 +18,17 @@ const (
 	CategoryK8s Category = "k8s"
 	// CategoryPatch covers status patch spans.
 	CategoryPatch Category = "patch"
+	// CategoryDiscovery covers artifact discovery, container registry request
+	// and Freight creation spans.
+	CategoryDiscovery Category = "discovery"
 )
 
 // categories maps every Category to whether it is on by default.
 var categories = map[Category]bool{
-	CategoryDatabase: true,
-	CategoryK8s:      false,
-	CategoryPatch:    false,
+	CategoryDatabase:  true,
+	CategoryK8s:       false,
+	CategoryPatch:     false,
+	CategoryDiscovery: false,
 }
 
 // CategoryEnabled returns whether tracing is on and c is selected by

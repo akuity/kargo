@@ -6,12 +6,18 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/codes"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/controller/git"
 	"github.com/akuity/kargo/pkg/controller/git/commit"
 	"github.com/akuity/kargo/pkg/credentials"
+	libExec "github.com/akuity/kargo/pkg/exec"
+	"github.com/akuity/kargo/pkg/telemetry"
+	"github.com/akuity/kargo/pkg/telemetry/telemetrytest"
 )
 
 // fakeSelector is a manual fake implementation of commit.Selector for testing
@@ -265,6 +271,186 @@ func Test_gitSubscriber_DiscoverArtifacts(t *testing.T) {
 				testCase.last,
 			)
 			testCase.assertions(t, res, err)
+		})
+	}
+}
+
+func Test_gitSubscriber_DiscoverArtifacts_tracing(t *testing.T) {
+	const repoURL = "https://example.com/repo"
+	observed := &kargoapi.GitDiscoveryRefs{BranchHead: "abc"}
+	last := kargoapi.GitDiscoveryResult{RepoURL: repoURL, ObservedRefs: observed}
+	newSubscriber := func(listRefsErr, selectErr error) *gitSubscriber {
+		return &gitSubscriber{
+			credentialsDB: &credentials.FakeDB{},
+			newSelectorFn: func(
+				context.Context,
+				kargoapi.GitSubscription,
+				*git.RepoCredentials,
+			) (commit.Selector, error) {
+				return &fakeSelector{
+					listRefsFn: func(context.Context) (*kargoapi.GitDiscoveryRefs, error) {
+						return observed, listRefsErr
+					},
+					selectFn: func(context.Context) ([]kargoapi.DiscoveredCommit, error) {
+						return nil, selectErr
+					},
+				}, nil
+			},
+		}
+	}
+	testCases := []struct {
+		name       string
+		subscriber *gitSubscriber
+		last       any
+		cancel     bool
+		wantErr    bool
+		assert     func(*testing.T, []sdktrace.ReadOnlySpan)
+	}{
+		{
+			name:       "refs unchanged",
+			subscriber: newSubscriber(nil, nil),
+			last:       last,
+			assert: func(t *testing.T, spans []sdktrace.ReadOnlySpan) {
+				telemetrytest.EndedSpan(t, spans, "Git ls-remote")
+				for _, s := range spans {
+					require.NotEqual(t, "Git select commits", s.Name())
+				}
+				require.Contains(
+					t,
+					telemetrytest.EndedSpan(t, spans, "parent").Attributes(),
+					telemetry.CloneSkippedKey.Bool(true),
+				)
+			},
+		},
+		{
+			name:       "refs changed",
+			subscriber: newSubscriber(nil, nil),
+			assert: func(t *testing.T, spans []sdktrace.ReadOnlySpan) {
+				telemetrytest.EndedSpan(t, spans, "Git select commits")
+				require.Contains(
+					t,
+					telemetrytest.EndedSpan(t, spans, "parent").Attributes(),
+					telemetry.CloneSkippedKey.Bool(false),
+				)
+			},
+		},
+		{
+			// A failed ls-remote falls back to cloning: not the span's error.
+			name:       "ls-remote fails",
+			subscriber: newSubscriber(errors.New("something went wrong"), nil),
+			last:       last,
+			assert: func(t *testing.T, spans []sdktrace.ReadOnlySpan) {
+				lsRemote := telemetrytest.EndedSpan(t, spans, "Git ls-remote")
+				require.Equal(t, codes.Unset, lsRemote.Status().Code)
+				require.Empty(t, lsRemote.Events())
+				telemetrytest.EndedSpan(t, spans, "Git select commits")
+			},
+		},
+		{
+			// A git killed on cancellation fails with an ExitError.
+			name:       "select canceled",
+			subscriber: newSubscriber(nil, &libExec.ExitError{ExitCode: 143}),
+			cancel:     true,
+			wantErr:    true,
+			assert: func(t *testing.T, spans []sdktrace.ReadOnlySpan) {
+				span := telemetrytest.EndedSpan(t, spans, "Git select commits")
+				require.Equal(t, codes.Unset, span.Status().Code)
+				require.Empty(t, span.Events())
+			},
+		},
+		{
+			name:       "select fails",
+			subscriber: newSubscriber(nil, errors.New("something went wrong")),
+			wantErr:    true,
+			assert: func(t *testing.T, spans []sdktrace.ReadOnlySpan) {
+				span := telemetrytest.EndedSpan(t, spans, "Git select commits")
+				require.Equal(t, codes.Error, span.Status().Code)
+			},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			// Not parallel: installs a global tracer provider.
+			ended := telemetrytest.RecordSpans(t)
+			ctx, parent := otel.Tracer("test").Start(t.Context(), "parent")
+			ctx, cancel := context.WithCancel(ctx)
+			defer cancel()
+			if testCase.cancel {
+				cancel()
+			}
+			_, err := testCase.subscriber.DiscoverArtifacts(
+				ctx,
+				"fake-project",
+				kargoapi.RepoSubscription{
+					Name: "fake-sub",
+					Git:  &kargoapi.GitSubscription{RepoURL: repoURL},
+				},
+				testCase.last,
+			)
+			if testCase.wantErr {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
+			}
+			parent.End()
+			testCase.assert(t, ended())
+		})
+	}
+}
+
+func Test_gitSubscriber_DiscoverArtifacts_categoryNotEnabled(t *testing.T) {
+	const repoURL = "https://example.com/repo"
+	observed := &kargoapi.GitDiscoveryRefs{BranchHead: "abc"}
+	subscriber := &gitSubscriber{
+		credentialsDB: &credentials.FakeDB{},
+		newSelectorFn: func(
+			context.Context,
+			kargoapi.GitSubscription,
+			*git.RepoCredentials,
+		) (commit.Selector, error) {
+			return &fakeSelector{
+				listRefsFn: func(context.Context) (*kargoapi.GitDiscoveryRefs, error) {
+					return observed, nil
+				},
+				selectFn: func(context.Context) ([]kargoapi.DiscoveredCommit, error) {
+					return nil, nil
+				},
+			}, nil
+		},
+	}
+	testCases := []struct {
+		name string
+		last any
+	}{
+		{
+			name: "refs unchanged",
+			last: kargoapi.GitDiscoveryResult{RepoURL: repoURL, ObservedRefs: observed},
+		},
+		{name: "refs changed"},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			// Not parallel: installs a global tracer provider.
+			ended := telemetrytest.RecordSpans(t)
+			// discovery is off by default.
+			telemetrytest.SetCategories(t, "default")
+			ctx, parent := otel.Tracer("test").Start(t.Context(), "parent")
+			_, err := subscriber.DiscoverArtifacts(
+				ctx,
+				"fake-project",
+				kargoapi.RepoSubscription{
+					Name: "fake-sub",
+					Git:  &kargoapi.GitSubscription{RepoURL: repoURL},
+				},
+				testCase.last,
+			)
+			require.NoError(t, err)
+			parent.End()
+			// No spans of its own, and nothing on the caller's span.
+			spans := ended()
+			require.Len(t, spans, 1)
+			require.Equal(t, "parent", spans[0].Name())
+			require.Empty(t, spans[0].Attributes())
 		})
 	}
 }

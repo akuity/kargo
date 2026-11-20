@@ -11,6 +11,9 @@ import (
 	"github.com/expr-lang/expr"
 	"github.com/kelseyhightower/envconfig"
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
+	"go.opentelemetry.io/otel/trace/noop"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -168,7 +171,7 @@ func (r *reconciler) Reconcile(
 	)
 	ctx, span := telemetry.StartSpan(ctx, tracer, "Reconcile Warehouse")
 	defer func() {
-		telemetry.RecordError(span, err)
+		telemetry.RecordErrorCtx(ctx, span, err)
 		span.End()
 	}()
 	ctx = telemetry.ContextWithLogValues(ctx)
@@ -295,12 +298,25 @@ func (r *reconciler) syncWarehouse(
 			lastArtifacts = warehouse.Status.DiscoveredArtifacts
 		}
 		discoveryStart := time.Now()
-		discoveredArtifacts, err := r.discoverArtifactsFn(
+		discoverCtx, discoverSpan := telemetry.StartSpanIn(
 			ctx,
+			telemetry.CategoryDiscovery,
+			tracer,
+			"Discover artifacts",
+		)
+		if discoverSpan.IsRecording() {
+			discoverSpan.SetAttributes(
+				telemetry.SubscriptionsKey.Int(len(warehouse.Spec.InternalSubscriptions)),
+			)
+		}
+		discoveredArtifacts, err := r.discoverArtifactsFn(
+			discoverCtx,
 			warehouse.Namespace,
 			warehouse.Spec.InternalSubscriptions,
 			lastArtifacts,
 		)
+		telemetry.RecordErrorCtx(discoverCtx, discoverSpan, err)
+		discoverSpan.End()
 		if err == nil {
 			r.recordDiscoveryMetrics(warehouse, time.Since(discoveryStart), discoveredArtifacts)
 		}
@@ -471,8 +487,32 @@ func (r *reconciler) syncWarehouse(
 			// The ID includes the Origin; it must match the webhook's.
 			freight.Name = api.GenerateFreightID(freight)
 
-			// Attempt to create the Freight.
-			if err = r.createFreightFn(ctx, freight); err != nil {
+			// Attempt to create the Freight, as a span. Its attributes on the
+			// reconcile span are part of that span's work.
+			var createOpts []trace.SpanStartOption
+			if span := trace.SpanFromContext(ctx); span.IsRecording() &&
+				telemetry.CategoryEnabled(telemetry.CategoryDiscovery) {
+				freightAttrs := append(
+					[]attribute.KeyValue{telemetry.FreightKey.String(freight.Name)},
+					telemetry.FreightDetailAttributes(freight)...,
+				)
+				span.SetAttributes(freightAttrs...)
+				createOpts = append(createOpts, trace.WithAttributes(freightAttrs...))
+			}
+			createCtx, createSpan := telemetry.StartSpanIn(
+				ctx,
+				telemetry.CategoryDiscovery,
+				tracer,
+				"Create Freight",
+				createOpts...,
+			)
+			err = r.createFreightFn(createCtx, freight)
+			createSpan.SetAttributes(telemetry.FreightCreatedKey.Bool(err == nil))
+			if !apierrors.IsAlreadyExists(err) {
+				telemetry.RecordErrorCtx(createCtx, createSpan, err)
+			}
+			createSpan.End()
+			if err != nil {
 				if !apierrors.IsAlreadyExists(err) {
 					// Make the error visible in the status and mark the Warehouse as
 					// not ready.
@@ -635,7 +675,9 @@ func (r *reconciler) discoverArtifacts(
 		// total duration, so a healthy-but-slow transfer is never cut off. If they
 		// should ever prove insufficient, setting a per-subscription deadline from
 		// ctx here is the natural next step.
-		res, err := subscriber.DiscoverArtifacts(ctx, project, sub, lastResult)
+		subCtx, span := startDiscoverySpan(ctx, sub)
+		res, err := subscriber.DiscoverArtifacts(subCtx, project, sub, lastResult)
+		endDiscoverySpan(subCtx, span, res, err)
 		if err != nil {
 			r.recordDiscoveryFailure(project, sub)
 			return nil, fmt.Errorf("error discovering artifacts: %w", err)
@@ -696,6 +738,74 @@ func (r *reconciler) recordDiscoveryFailure(project string, sub kargoapi.RepoSub
 		subType = "chart"
 	}
 	r.whMetrics.DiscoveryFailures.WithLabelValues(project, subType).Inc()
+}
+
+// startDiscoverySpan starts the span for one subscription's discovery.
+func startDiscoverySpan(
+	ctx context.Context,
+	sub kargoapi.RepoSubscription,
+) (context.Context, trace.Span) {
+	if !telemetry.CategoryEnabled(telemetry.CategoryDiscovery) {
+		return ctx, noop.Span{}
+	}
+	kind, repo := "other", ""
+	switch {
+	case sub.Git != nil:
+		kind, repo = "git", sub.Git.RepoURL
+	case sub.Image != nil:
+		kind, repo = "image", sub.Image.RepoURL
+	case sub.Chart != nil:
+		kind, repo = "chart", sub.Chart.RepoURL
+	}
+	return telemetry.StartSpan(
+		ctx,
+		tracer,
+		"Discover "+kind,
+		trace.WithAttributes(
+			telemetry.SubscriptionKindKey.String(kind),
+			telemetry.SubscriptionRepoKey.String(telemetry.SanitizeURL(repo)),
+		),
+	)
+}
+
+// endDiscoverySpan records what a subscription discovered, newest first, and
+// ends its span.
+func endDiscoverySpan(
+	ctx context.Context,
+	span trace.Span,
+	res any,
+	err error,
+) {
+	defer span.End()
+	if err != nil {
+		telemetry.RecordErrorCtx(ctx, span, err)
+		return
+	}
+	if !span.IsRecording() {
+		return
+	}
+	switch r := res.(type) {
+	case kargoapi.GitDiscoveryResult:
+		span.SetAttributes(telemetry.DiscoveredKey.Int(len(r.Commits)))
+		if len(r.Commits) > 0 {
+			span.SetAttributes(
+				telemetry.VCSCommitKey.String(r.Commits[0].ID),
+				telemetry.DiscoveredNewestKey.String(r.Commits[0].ID),
+			)
+		}
+	case kargoapi.ImageDiscoveryResult:
+		span.SetAttributes(telemetry.DiscoveredKey.Int(len(r.References)))
+		if len(r.References) > 0 {
+			span.SetAttributes(telemetry.DiscoveredNewestKey.String(r.References[0].Tag))
+		}
+	case kargoapi.ChartDiscoveryResult:
+		span.SetAttributes(telemetry.DiscoveredKey.Int(len(r.Versions)))
+		if len(r.Versions) > 0 {
+			span.SetAttributes(telemetry.DiscoveredNewestKey.String(r.Versions[0]))
+		}
+	case kargoapi.DiscoveryResult:
+		span.SetAttributes(telemetry.DiscoveredKey.Int(len(r.ArtifactReferences)))
+	}
 }
 
 func (r *reconciler) buildFreightFromLatestArtifacts(
