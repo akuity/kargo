@@ -163,6 +163,13 @@ func Test_server_promoteDownstream(t *testing.T) {
 			testTargetAwareDownstreamStage3.Name: errors.New("something went wrong"),
 		},
 	}
+	// Two Stages govern no Targets, so neither can be given a rollout.
+	noTargetsCreator := &fakeRolloutCreator{
+		errs: map[string]error{
+			testTargetAwareDownstreamStage2.Name: errNoTargets,
+			testTargetAwareDownstreamStage3.Name: errNoTargets,
+		},
+	}
 	disabledCreator := &fakeRolloutCreator{}
 
 	testRESTEndpoint(
@@ -425,6 +432,40 @@ func Test_server_promoteDownstream(t *testing.T) {
 					require.Contains(t, res.Errors, "something went wrong")
 					require.Len(t, res.Promotions, 1)
 					require.Equal(t, []string{testTargetAwareDownstreamStage2.Name}, stagesOf(res.PromotionRollouts))
+				},
+			},
+			{
+				name: "rollouts enabled: Stages governing no Targets do not hold the rest back",
+				clientBuilder: fake.NewClientBuilder().WithObjects(
+					testProject,
+					testStage,
+					testDownstreamStage,
+					testTargetAwareDownstreamStage2,
+					testTargetAwareDownstreamStage3,
+					testFreight,
+				),
+				serverConfig: rolloutsEnabled,
+				serverSetup:  promoteWithRollouts(noTargetsCreator),
+				body: mustJSONBody(promoteDownstreamRequest{
+					Freight: testFreight.Name,
+				}),
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, c client.Client) {
+					// The refusals are reported, not answered with their own
+					// status: the request as a whole did not fail.
+					require.Equal(t, http.StatusMultiStatus, w.Code)
+					res := decode(t, w)
+					require.Contains(t, res.Errors, "governs no Targets right now")
+					require.Empty(t, res.PromotionRollouts)
+					// The Stage without Targets of its own to select was
+					// promoted to all the same.
+					require.Len(t, res.Promotions, 1)
+					require.Equal(t, testDownstreamStage.Name, res.Promotions[0].Spec.Stage)
+					promos := &kargoapi.PromotionList{}
+					require.NoError(t, c.List(t.Context(), promos, client.InNamespace(testProject.Name)))
+					require.Len(t, promos.Items, 1)
+					// Both Stages were tried: the first refusal did not end
+					// the request.
+					require.Len(t, noTargetsCreator.creations, 2)
 				},
 			},
 			{

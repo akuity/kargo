@@ -36,6 +36,12 @@ type Creator interface {
 	// identity bound to the context, if any, is recorded as the rollout's
 	// creator.
 	//
+	// A rollout to no Targets is refused: when the Stage governs none at this
+	// time, nothing is created and the error is an ErrNoTargets. A rollout
+	// with nothing to promote to would otherwise finish at once, leaving the
+	// Stage to count Freight as promoted that reached no Target, including
+	// any Target the Stage comes to govern later.
+	//
 	// A Creator built with a check asks it first whether the Stage may be
 	// promoted to at this time, and creates nothing if it says not; see
 	// NewCreator.
@@ -118,6 +124,12 @@ func (c *creator) Create(
 
 	if err != nil {
 		return nil, libhttp.Error(err, http.StatusBadRequest)
+	}
+	// This comes after the rollout is built so that a request that could
+	// never be honored is refused as such first. Naming Targets cannot lead
+	// here: each name is one the Stage governs, or was refused above.
+	if len(rollout.Spec.Targets) == 0 {
+		return nil, newNoTargetsError(stage.Name)
 	}
 
 	targetIds, err := getTargetIds(rollout, governed)
