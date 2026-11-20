@@ -22,6 +22,18 @@ func TestGet(t *testing.T) {
 	}
 	forbiddenStore := newStore()
 	promotionsForbiddenStore := newStore()
+	// A rollout that tolerated no failure: it failed on its first Target and
+	// ended with the other two never given a Promotion.
+	newCutShortStore := func() *fakeStore {
+		store := &fakeStore{}
+		store.add(
+			testProject, "prod.01A.abc", "prod", kargoapi.PromotionRolloutPhaseFailed,
+			"eu-west", "us-east", "us-west",
+		)
+		return store.withPromotions(
+			child("prod.eu-west.01A.abc", "prod.01A.abc", "eu-west", kargoapi.PromotionPhaseFailed),
+		)
+	}
 
 	runTestCases(t, []testCase{
 		{
@@ -106,6 +118,42 @@ func TestGet(t *testing.T) {
 				require.Equal(t, &kargoapi.PromotionRolloutSummary{Running: 1}, rollout.Status.Summary)
 				require.Len(t, rollout.Status.Conditions, 1)
 				require.Equal(t, kargoapi.ConditionTypeReady, rollout.Status.Conditions[0].Type)
+			},
+		},
+		{
+			// A Target the rollout never promoted to is named by the spec
+			// and by nothing in the status: it has no entry, and the summary
+			// counts it under no phase, Pending included. Whoever reads the
+			// rollout tells such a Target by its absence, so nothing here may
+			// stand in for it.
+			name:   "a rollout that ended short of some Targets says nothing of them",
+			store:  newCutShortStore(),
+			method: http.MethodGet,
+			url:    stageURL("prod") + "/1",
+			assertions: func(t *testing.T, w *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusOK, w.Code)
+				rollout := &kargoapi.PromotionRollout{}
+				require.NoError(t, json.Unmarshal(w.Body.Bytes(), rollout))
+				require.Equal(t, kargoapi.PromotionRolloutPhaseFailed, rollout.Status.Phase)
+				require.Equal(
+					t,
+					[]kargoapi.PromotionRolloutTarget{
+						{Name: "eu-west"},
+						{Name: "us-east"},
+						{Name: "us-west"},
+					},
+					rollout.Spec.Targets,
+				)
+				require.Equal(
+					t,
+					[]kargoapi.PromotionRolloutTargetStatus{{
+						Name:      "eu-west",
+						Promotion: "prod.eu-west.01A.abc",
+						Phase:     kargoapi.PromotionPhaseFailed,
+					}},
+					rollout.Status.Targets,
+				)
+				require.Equal(t, &kargoapi.PromotionRolloutSummary{Failed: 1}, rollout.Status.Summary)
 			},
 		},
 		{

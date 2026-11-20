@@ -1,6 +1,8 @@
 import {
   PromotionPhase,
-  promotionPhases
+  notAttempted,
+  promotionPhases,
+  roundTargetPhaseLabel
 } from '@ui/features/common/promotion-status/promotion-phase';
 import { TargetRow } from '@ui/features/project/targets/model/target-rows';
 import { TargetState } from '@ui/features/project/targets/model/target-state';
@@ -52,8 +54,19 @@ export type MarkColors = {
 
 const notInRound = 'NotInRound';
 const neverPromotedKey = 'NeverPromoted';
-const notAttempted = 'NotAttempted';
 const noFreight = 'NoFreight';
+
+// notAttemptedMark is the category for a Target the round named and did
+// nothing to: every Target of a round that never fanned out, and the Targets
+// a round that fanned out ended before it reached. It is painted as neither
+// an outcome nor something still to come.
+const notAttemptedMark = (colors: MarkColors, order: number): Mark => ({
+  key: notAttempted,
+  label: roundTargetPhaseLabel(notAttempted),
+  short: roundTargetPhaseLabel(notAttempted).toLowerCase(),
+  color: colors.state.Unknown,
+  order
+});
 
 // lookup indexes a legend by category key. Each marking supplies its own
 // fallback for what the vocabulary does not name, since what to fall back to
@@ -69,13 +82,7 @@ export const promotionMarking = (colors: MarkColors, blocked = false): Marking =
   // even to the ones it names. One category for the whole fleet, matching
   // what the Last round tile says above it.
   if (blocked) {
-    const mark: Mark = {
-      key: notAttempted,
-      label: 'Not attempted',
-      short: 'not attempted',
-      color: colors.state.Unknown,
-      order: 0
-    };
+    const mark = notAttemptedMark(colors, 0);
     return { legend: [mark], mark: () => mark };
   }
 
@@ -88,12 +95,15 @@ export const promotionMarking = (colors: MarkColors, blocked = false): Marking =
       attention: phase === 'Failed' || phase === 'Errored',
       order: index
     })),
+    // What the round reports for a Target it named and ended without
+    // promoting to, which is a phase of the round's and not of any Promotion.
+    notAttemptedMark(colors, promotionPhases.length),
     {
       key: notInRound,
       label: 'Not in round',
       short: 'not in round',
       color: colors.state.Unknown,
-      order: promotionPhases.length
+      order: promotionPhases.length + 1
     },
     {
       key: neverPromotedKey,
@@ -101,7 +111,7 @@ export const promotionMarking = (colors: MarkColors, blocked = false): Marking =
       short: 'never promoted',
       color: colors.state.NotPromoted,
       hollow: true,
-      order: promotionPhases.length + 1
+      order: promotionPhases.length + 2
     }
   ];
   const byKey = lookup(legend);

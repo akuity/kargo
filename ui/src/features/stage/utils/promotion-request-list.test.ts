@@ -78,6 +78,42 @@ describe('roundSummary()', () => {
     ).toEqual({ pending: 2, succeeded: 1 });
   });
 
+  describe('a round that ended before it reached every Target it names', () => {
+    const targets = ['a', 'b', 'c', 'd', 'e'].map((name) => ({ name }));
+    const spec = { stage: 'prod-us', freight: 'abc', targets };
+
+    test.each(['Failed', 'Errored', 'Aborted'])(
+      '%s: the Targets it never reached were not attempted, and are not pending',
+      (phase) => {
+        expect(
+          roundSummary(request({ spec, status: { phase, summary: { succeeded: 1, failed: 1 } } }))
+        ).toEqual({ succeeded: 1, failed: 1, notAttempted: 3 });
+      }
+    );
+
+    test('Promotions still pending when it ended are counted apart from them', () => {
+      expect(
+        roundSummary(
+          request({ spec, status: { phase: 'Failed', summary: { failed: 1, pending: 1 } } })
+        )
+      ).toEqual({ failed: 1, pending: 1, notAttempted: 3 });
+    });
+
+    test('ending without fanning out at all attempted none of them', () => {
+      expect(roundSummary(request({ spec, status: { phase: 'Errored' } }))).toEqual({
+        notAttempted: 5
+      });
+    });
+
+    test('while it is still running, the same Targets are pending', () => {
+      expect(
+        roundSummary(
+          request({ spec, status: { phase: 'Running', summary: { succeeded: 1, failed: 1 } } })
+        )
+      ).toEqual({ succeeded: 1, failed: 1, pending: 3 });
+    });
+  });
+
   test('a round that reached every Target it names keeps its summary as recorded', () => {
     const summary = { succeeded: 1, failed: 1 };
     expect(
@@ -106,6 +142,17 @@ describe('targetsTally()', () => {
     expect(describeTargets(targetsTally({ succeeded: 40, running: 20, pending: 76 }))).toBe(
       '40 succeeded · 20 running · 76 pending / 136'
     );
+  });
+
+  test('a round cut short says what it did not attempt', () => {
+    const tally = targetsTally({ succeeded: 1, failed: 1, notAttempted: 8 });
+    expect(tally.total).toBe(10);
+    expect(tally.parts).toEqual([
+      { phase: 'Succeeded', count: 1 },
+      { phase: 'Failed', count: 1 },
+      { phase: 'NotAttempted', count: 8 }
+    ]);
+    expect(describeTargets(tally)).toBe('1 succeeded · 1 failed · 8 not attempted / 10');
   });
 
   test('succeeded is kept at zero so every row reads alike', () => {

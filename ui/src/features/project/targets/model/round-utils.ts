@@ -1,10 +1,11 @@
-import { isPromotionRequestPhaseTerminal } from '@ui/features/stage/utils/promotion-request';
+import { unreachedPhase } from '@ui/features/common/promotion-status/promotion-phase';
 import { FreightCollection, FreightReference, PromotionRequest } from '@ui/gen/api/v2/models';
 
 // roundPhase is the phase a round reports for one Target: the child Promotion's
-// when there is one, the round's own when it ended before a child could be
-// created, and Pending while the round has yet to reach the Target. A Target
-// the round never named has no phase -- the round says nothing about it.
+// when there is one, and otherwise what unreachedPhase makes of a Target with
+// none -- Pending while the round has yet to reach it, and not attempted once
+// the round has ended without doing so. A Target the round never named has no
+// phase: the round says nothing about it.
 export const roundPhase = (
   request: PromotionRequest | undefined,
   target: string | undefined
@@ -18,8 +19,7 @@ export const roundPhase = (
     // Pending in every sense that matters here.
     return status.phase || 'Pending';
   }
-  const requestPhase = request?.status?.phase;
-  return isPromotionRequestPhaseTerminal(requestPhase) ? requestPhase : 'Pending';
+  return unreachedPhase(request?.status?.phase);
 };
 
 // collectionUpToDate compares what a Target runs for a Stage against what the

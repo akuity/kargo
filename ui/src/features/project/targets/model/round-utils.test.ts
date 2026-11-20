@@ -27,17 +27,32 @@ describe('roundPhase()', () => {
   });
 
   test.each([
-    // A round that ended before creating a child ended its Targets with it.
+    // A round that succeeded promoted to every Target it names.
     ['Succeeded', 'Succeeded'],
-    ['Failed', 'Failed'],
-    ['Errored', 'Errored'],
-    // Aborted is terminal too, mirroring PromotionRequestPhase.IsTerminal:
-    // reading it as Pending would leave the fleet looking mid-promotion.
-    ['Aborted', 'Aborted'],
+    // A round that ended without succeeding never promoted to the Target. It
+    // did not fail there, and reading it as Pending would leave the Target
+    // looking mid-promotion for good.
+    ['Failed', 'NotAttempted'],
+    ['Errored', 'NotAttempted'],
+    ['Aborted', 'NotAttempted'],
+    // A round still under way has yet to reach it.
     ['Running', 'Pending'],
     [undefined, 'Pending']
   ])('a round in %s with no child reports %s', (phase, expected) => {
     expect(roundPhase(request(['t'], { phase }), 't')).toBe(expected);
+  });
+
+  test('a failed round reports what it did to a Target, and what it never got to', () => {
+    const round = request(['won', 'lost', 'left'], {
+      phase: 'Failed',
+      targets: [
+        { name: 'won', phase: 'Succeeded' },
+        { name: 'lost', phase: 'Failed' }
+      ]
+    });
+    expect(roundPhase(round, 'won')).toBe('Succeeded');
+    expect(roundPhase(round, 'lost')).toBe('Failed');
+    expect(roundPhase(round, 'left')).toBe('NotAttempted');
   });
 });
 

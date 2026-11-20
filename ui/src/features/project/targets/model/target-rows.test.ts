@@ -106,6 +106,51 @@ describe('targetRows()', () => {
       expect(row.behind).toBe(true);
     });
 
+    describe('a Target the latest round ended without promoting to', () => {
+      // The round tolerated no failure: it failed on one Target and stopped
+      // before the turn of the other came.
+      const cutShort = round('us-stage', ['lost', 'left'], {
+        phase: 'Failed',
+        targets: [{ name: 'lost', phase: 'Failed' }]
+      });
+      const rowFor = (status?: ReturnType<typeof forStage>) => {
+        const left = target(
+          'left',
+          { region: 'us' },
+          status ? { status: { stages: { 'us-stage': status } } } : {}
+        );
+        const [row] = targetRows([left], [us], { 'us-stage': cutShort });
+        return row;
+      };
+
+      test('was not attempted, which is not a promotion under way or one that failed', () => {
+        const row = rowFor();
+        expect(row.stages[0].phase).toBe('NotAttempted');
+        expect(row.state).not.toBe('Progressing');
+        expect(row.state).not.toBe('Unhealthy');
+      });
+
+      test('is not behind for it: a failed round does not move its Stage on', () => {
+        // The Stage is still on the collection the Target runs.
+        const row = rowFor(forStage('abc'));
+        expect(row.state).toBe('Healthy');
+        expect(row.behind).toBe(false);
+        expect(row.stages[0].upToDate).toBe(true);
+      });
+
+      test('stays behind when it already was', () => {
+        const row = rowFor(forStage('old'));
+        expect(row.state).toBe('Behind');
+        expect(row.behind).toBe(true);
+      });
+
+      test('has still never been promoted to when nothing reached it before', () => {
+        const row = rowFor();
+        expect(row.state).toBe('NotPromoted');
+        expect(row.behind).toBe(false);
+      });
+    });
+
     test('a Target with Freight on it is healthy without a round at all', () => {
       const t = target(
         't',

@@ -1,16 +1,15 @@
 import {
   PhaseFilter,
   PromotionPhase,
+  RoundTargetPhase,
   isPromotionPhase,
-  promotionPhases
+  roundTargetPhaseLabel,
+  roundTargetPhases,
+  unreachedPhase
 } from '@ui/features/common/promotion-status/promotion-phase';
-import { Freight, PromotionRequest, PromotionRequestSummary } from '@ui/gen/api/v2/models';
+import { RoundSummary, summaryKey } from '@ui/features/common/promotion-status/round-progress';
+import { Freight, PromotionRequest } from '@ui/gen/api/v2/models';
 import { parseDate } from '@ui/utils/dates';
-
-// summaryKey maps a phase to its counter on PromotionRequestSummary, whose
-// fields are the phases in lower case.
-const summaryKey = (phase: PromotionPhase) =>
-  phase.toLowerCase() as Lowercase<PromotionPhase> & keyof PromotionRequestSummary;
 
 // requestPhase is the phase a PromotionRequest is in. A request the reconciler
 // has not acted on yet records none, and is in effect Pending.
@@ -19,24 +18,26 @@ export const requestPhase = (request?: PromotionRequest): PromotionPhase => {
   return isPromotionPhase(phase) ? phase : 'Pending';
 };
 
-// roundSummary is the per-phase tally of the Targets a round names. The
-// summary a round records counts only the Targets it has promoted to so far,
-// so the ones it has yet to reach are added here as pending: a round part way
-// through its fan-out is then tallied over every Target it names, the way its
-// detail tallies it. A round that has not fanned out at all records no
-// summary, and every Target it names is pending.
-export const roundSummary = (request?: PromotionRequest): PromotionRequestSummary => {
+// roundSummary is the tally of the Targets a round names. The summary a round
+// records counts only the Targets it has promoted to, so the rest are added
+// here as what unreachedPhase makes of them: pending while the round is still
+// fanning out, and not attempted once it has ended without getting to them. A
+// round is then tallied over every Target it names, the way its detail
+// tallies it. A round that has not fanned out at all records no summary, and
+// every Target it names is counted that way.
+export const roundSummary = (request?: PromotionRequest): RoundSummary => {
   const named = request?.spec?.targets?.length || 0;
-  const recorded = request?.status?.summary;
+  const recorded: RoundSummary | undefined = request?.status?.summary;
+  const unreached = summaryKey(unreachedPhase(request?.status?.phase));
   if (!recorded) {
-    return { pending: named };
+    return { [unreached]: named };
   }
-  const reached = promotionPhases.reduce(
+  const reached = roundTargetPhases.reduce(
     (sum, phase) => sum + Math.max(0, recorded[summaryKey(phase)] ?? 0),
     0
   );
   return named > reached
-    ? { ...recorded, pending: (recorded.pending ?? 0) + named - reached }
+    ? { ...recorded, [unreached]: (recorded[unreached] ?? 0) + named - reached }
     : recorded;
 };
 
@@ -44,7 +45,7 @@ export const roundSummary = (request?: PromotionRequest): PromotionRequestSummar
 // phase, over how many Targets the round named.
 export type TargetsTally = {
   total: number;
-  parts: { phase: PromotionPhase; count: number }[];
+  parts: { phase: RoundTargetPhase; count: number }[];
 };
 
 // targetsTally reads "130 succeeded · 6 failed / 136" once rendered. Succeeded
@@ -52,8 +53,8 @@ export type TargetsTally = {
 // zero so the column reads the same from row to row. Every other non-empty
 // phase follows in presentation order, so a round still fanning out shows how
 // far it has got rather than only what has succeeded.
-export const targetsTally = (summary: PromotionRequestSummary): TargetsTally => {
-  const counts = promotionPhases.map((phase) => ({
+export const targetsTally = (summary: RoundSummary): TargetsTally => {
+  const counts = roundTargetPhases.map((phase) => ({
     phase,
     count: Math.max(0, summary[summaryKey(phase)] ?? 0)
   }));
@@ -69,7 +70,9 @@ export const describeTargets = (tally: TargetsTally): string => {
   if (!tally.total) {
     return 'no Targets';
   }
-  const parts = tally.parts.map(({ phase, count }) => `${count} ${phase.toLowerCase()}`);
+  const parts = tally.parts.map(
+    ({ phase, count }) => `${count} ${roundTargetPhaseLabel(phase).toLowerCase()}`
+  );
   return `${parts.join(' · ')} / ${tally.total}`;
 };
 

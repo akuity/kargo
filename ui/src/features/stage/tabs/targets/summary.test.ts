@@ -15,6 +15,7 @@ import {
   governing,
   healthTally,
   neverPromoted,
+  notAttemptedCount,
   owningTargetSet,
   roundTally
 } from './summary';
@@ -63,6 +64,45 @@ describe('roundTally()', () => {
         )
       )
     ).toEqual({ inRound: 5, succeeded: 1, failed: 2, inFlight: 1, aborted: 1, notInRound: 0 });
+  });
+
+  describe('a round that ended before it reached every Target it names', () => {
+    const names = ['a', 'b', 'c', 'd', 'e'];
+    // The round tolerated no failure: b failed, and it stopped fanning out
+    // with c, d and e still to come.
+    const cutShort = (phase: string) =>
+      rows(
+        names.map((name) => governed(name)),
+        round('prod', names, {
+          phase,
+          targets: [
+            { name: 'a', phase: 'Succeeded' },
+            { name: 'b', phase: 'Failed' }
+          ]
+        })
+      );
+
+    test.each(['Failed', 'Errored', 'Aborted'])(
+      '%s: the Targets it never reached are in the round, neither failed nor in flight',
+      (phase) => {
+        const fleet = cutShort(phase);
+        expect(roundTally(fleet)).toEqual({
+          inRound: 5,
+          succeeded: 1,
+          failed: 1,
+          inFlight: 0,
+          aborted: 0,
+          notInRound: 0
+        });
+        expect(notAttemptedCount(fleet)).toBe(3);
+      }
+    );
+
+    test('while it is still running, the same Targets are in flight', () => {
+      const fleet = cutShort('Running');
+      expect(roundTally(fleet)).toMatchObject({ inRound: 5, failed: 1, inFlight: 3 });
+      expect(notAttemptedCount(fleet)).toBe(0);
+    });
   });
 
   test('a Target the round never named joined the Stage after it began', () => {
@@ -133,6 +173,25 @@ describe('neverPromoted()', () => {
         ])
       )
     ).toBe(1);
+  });
+});
+
+describe('notAttemptedCount()', () => {
+  test('is zero for a round that promoted to every Target it names', () => {
+    const request = round('prod', ['a', 'b'], {
+      phase: 'Failed',
+      targets: [
+        { name: 'a', phase: 'Succeeded' },
+        { name: 'b', phase: 'Failed' }
+      ]
+    });
+    expect(notAttemptedCount(rows([governed('a'), governed('b'), governed('late')], request))).toBe(
+      0
+    );
+  });
+
+  test('is zero with no round at all', () => {
+    expect(notAttemptedCount(rows([governed('a')]))).toBe(0);
   });
 });
 

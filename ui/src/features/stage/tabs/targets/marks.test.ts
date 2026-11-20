@@ -98,9 +98,80 @@ describe('promotionMarking()', () => {
       'Failed',
       'Errored',
       'Aborted',
+      'NotAttempted',
       'NotInRound',
       'NeverPromoted'
     ]);
+  });
+
+  describe('a round that ended before it reached every Target it names', () => {
+    // The round tolerated no failure: it failed on one Target and stopped
+    // fanning out with two still to come, one of them on Freight from an
+    // earlier round and one never promoted to.
+    const cutShort = (phase: string) =>
+      round('prod', ['won', 'lost', 'left', 'new'], {
+        phase,
+        targets: [
+          { name: 'won', phase: 'Succeeded' },
+          { name: 'lost', phase: 'Failed' }
+        ]
+      });
+    const fleet = (phase: string) =>
+      rows(
+        [
+          governed('won', stageStatus('current', undefined, 'freight-new')),
+          governed('lost', stageStatus('old', undefined, 'freight-old')),
+          governed('left', stageStatus('old', undefined, 'freight-old')),
+          governed('new')
+        ],
+        cutShort(phase)
+      );
+    const keys = (phase: string) =>
+      tally(fleet(phase), marks).map(({ mark, count }) => [mark.key, count]);
+
+    test.each(['Failed', 'Errored', 'Aborted'])(
+      '%s: the Targets it never reached are not attempted',
+      (phase) => {
+        expect(keys(phase)).toEqual([
+          ['Succeeded', 1],
+          ['Failed', 1],
+          ['NotAttempted', 2]
+        ]);
+      }
+    );
+
+    test('while it is still running, the same Targets are Pending', () => {
+      expect(keys('Running')).toEqual([
+        ['Succeeded', 1],
+        ['Pending', 2],
+        ['Failed', 1]
+      ]);
+    });
+
+    test('they are painted the way a blocked round paints its whole fleet', () => {
+      const left = fleet('Failed').find((row) => row.target.metadata?.name === 'left');
+      const blocked = promotionMarking(colors, true).legend[0];
+      // One category in both legends, differing only in where it is listed.
+      expect(left && marks.mark(left)).toEqual({ ...blocked, order: 6 });
+      expect(blocked).toMatchObject({
+        key: 'NotAttempted',
+        label: 'Not attempted',
+        short: 'not attempted',
+        color: 'state-unknown'
+      });
+    });
+
+    test('they draw no attention away from what failed', () => {
+      const failed = fleet('Failed');
+      expect(attentionTally(failed, marks)).toMatchObject({ mark: { key: 'Failed' }, count: 1 });
+      // What failed leads the grid; what was left out follows what succeeded.
+      expect([...failed].sort(byMark(marks)).map((row) => row.target.metadata?.name)).toEqual([
+        'lost',
+        'won',
+        'left',
+        'new'
+      ]);
+    });
   });
 });
 

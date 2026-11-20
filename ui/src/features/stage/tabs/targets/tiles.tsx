@@ -10,7 +10,7 @@ import { Round, isRolloutRound, roundPath } from '@ui/features/stage/utils/promo
 
 import { MarkBar, MarkDot } from './mark-visuals';
 import { Marking, tally } from './marks';
-import { healthTally, neverPromoted, roundTally } from './summary';
+import { healthTally, neverPromoted, notAttemptedCount, roundTally } from './summary';
 
 const tileClassName = `flex-1 min-w-[180px] px-4 py-3 ${surfaceClassName}`;
 
@@ -64,6 +64,7 @@ export const TargetTiles = ({
 
   const freight = useMemo(() => tally(rows, freightMarks), [rows, freightMarks]);
   const promoted = useMemo(() => roundTally(rows), [rows]);
+  const unattempted = useMemo(() => notAttemptedCount(rows), [rows]);
   const health = useMemo(() => healthTally(rows), [rows]);
   const never = useMemo(() => neverPromoted(rows), [rows]);
 
@@ -72,6 +73,20 @@ export const TargetTiles = ({
   // A round that never reached a Target -- blocked, or still being admitted --
   // has nothing to report per Target. The drawer explains why above the tabs.
   const reached = promoted.inRound > 0;
+  // With nothing failed, the one thing worth saying of the Targets the round
+  // promoted to: that some are still moving, that some were cancelled, or
+  // that every Target went well -- which is not said of a round that left
+  // any Target unattempted.
+  const outcome =
+    promoted.failed > 0
+      ? undefined
+      : promoted.inFlight > 0
+        ? `${promoted.inFlight} in flight`
+        : promoted.aborted > 0
+          ? `${promoted.aborted} aborted`
+          : unattempted === 0
+            ? 'all succeeded'
+            : undefined;
 
   return (
     <Flex gap={12} wrap>
@@ -104,10 +119,11 @@ export const TargetTiles = ({
               {promoted.failed > 0 && (
                 <span style={{ color: token.colorError }}>{promoted.failed} failed</span>
               )}
-              {promoted.failed === 0 && promoted.inFlight > 0 && `${promoted.inFlight} in flight`}
-              {promoted.failed === 0 &&
-                promoted.inFlight === 0 &&
-                (promoted.aborted > 0 ? `${promoted.aborted} aborted` : 'all succeeded')}
+              {outcome}
+              {/* Targets the round ended without promoting to are said apart
+                  from the ones it failed on: nothing ran against them. */}
+              {unattempted > 0 &&
+                `${promoted.failed > 0 || outcome ? ' · ' : ''}${unattempted} not attempted`}
               {promoted.notInRound > 0 && ` · ${promoted.notInRound} joined later`}
             </>
           )}

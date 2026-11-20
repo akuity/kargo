@@ -6,6 +6,10 @@ import { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 
 import { useModal } from '@ui/features/common/modal/use-modal';
+import {
+  notAttempted,
+  roundTargetPhaseLabel
+} from '@ui/features/common/promotion-status/promotion-phase';
 import { TargetYamlModal } from '@ui/features/project/targets/detail/target-yaml-modal';
 import { freightByOrigin } from '@ui/features/project/targets/model/round-utils';
 import { flattenParams } from '@ui/features/project/targets/model/target-details-utils';
@@ -38,9 +42,10 @@ type Headline = { text: string; color: 'default' | 'processing' | 'success' | 'e
 // the grid happens to be coloured by: a reader who picked a square wants the
 // Target's story, not a restatement of the colour they clicked.
 const headline = (phase: string | undefined, promoted: boolean, blocked: boolean): Headline => {
-  // A blocked round never fanned out, so it did nothing here either way.
-  if (blocked) {
-    return { text: 'Not attempted', color: 'default' };
+  // A blocked round never fanned out, so it did nothing here either way. Nor
+  // did a round that fanned out and ended before it reached this Target.
+  if (blocked || phase === notAttempted) {
+    return { text: roundTargetPhaseLabel(notAttempted), color: 'default' };
   }
   switch (phase) {
     case 'Failed':

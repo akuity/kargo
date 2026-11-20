@@ -1,4 +1,5 @@
 import { HealthStatus, healthStatusToEnum } from '@ui/features/common/health-status/utils';
+import { notAttempted } from '@ui/features/common/promotion-status/promotion-phase';
 import { GoverningStage, TargetRow } from '@ui/features/project/targets/model/target-rows';
 import { Round } from '@ui/features/stage/utils/promotion-rollout';
 import { Target } from '@ui/gen/api/v2/models';
@@ -9,7 +10,9 @@ import { Target } from '@ui/gen/api/v2/models';
 export const governing = (row: TargetRow): GoverningStage | undefined => row.stages[0];
 
 export type RoundTally = {
-  // Targets the latest round named, and how it went for each of them.
+  // Targets the latest round named, and how it went for each of them it
+  // promoted to. The ones it ended without promoting to are among those it
+  // named and are counted by notAttemptedCount.
   inRound: number;
   succeeded: number;
   failed: number;
@@ -51,12 +54,22 @@ export const roundTally = (rows: TargetRow[]): RoundTally => {
         tally.inRound++;
         tally.aborted++;
         break;
+      case notAttempted:
+        tally.inRound++;
+        break;
       default:
         tally.notInRound++;
     }
   }
   return tally;
 };
+
+// notAttemptedCount counts the Targets the latest round named and ended
+// without promoting to: the round exceeded the failures it tolerates, or was
+// aborted, before their turn came. They did not fail and are not in flight,
+// so the tile says of them only that they were left out.
+export const notAttemptedCount = (rows: TargetRow[]): number =>
+  rows.filter((row) => governing(row)?.phase === notAttempted).length;
 
 export type HealthTally = {
   // Targets something has actually assessed. Targets are not health-checked
