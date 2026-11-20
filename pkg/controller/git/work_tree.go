@@ -426,7 +426,9 @@ func (w *workTree) Fetch(ctx context.Context, opts *FetchOptions) error {
 		opts = &FetchOptions{}
 	}
 	args := []string{"fetch", "origin"}
+	ref := branchRefPrefix + "*"
 	if opts.Branch != "" {
+		ref = branchRefPrefix + opts.Branch
 		args = append(args,
 			fmt.Sprintf("+refs/heads/%s:refs/remotes/origin/%s",
 				opts.Branch, opts.Branch,
@@ -443,7 +445,7 @@ func (w *workTree) Fetch(ctx context.Context, opts *FetchOptions) error {
 			"error fetching from repo %q: %w", w.url, err,
 		)
 	}
-	return nil
+	return w.trackBranches(ctx, []string{ref})
 }
 
 func (w *workTree) GetDiffPathsForCommitID(

@@ -1,6 +1,7 @@
 package git
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -177,6 +178,125 @@ func Test_workTree_Pull(t *testing.T) {
 		err = repo.Pull(t.Context(), nil)
 		require.NoError(t, err)
 	})
+}
+
+func Test_workTree_Fetch(t *testing.T) {
+	testServer, testRepoURL, testRepoCreds := setupRemoteRepo(
+		t,
+		initMultipleBranches,
+	)
+	t.Cleanup(testServer.Close)
+
+	testCases := []struct {
+		name   string
+		opts   *FetchOptions
+		assert func(*testing.T, *repo, error)
+	}{
+		{
+			name: "fetched branch can be checked out by name",
+			opts: &FetchOptions{Branch: "a"},
+			assert: func(t *testing.T, r *repo, err error) {
+				require.NoError(t, err)
+				require.NoError(t, r.Checkout(t.Context(), "a"))
+				requireCurrentBranch(t, r, "a")
+			},
+		},
+		{
+			name: "fetching a branch again does not track it twice",
+			opts: &FetchOptions{Branch: "a"},
+			assert: func(t *testing.T, r *repo, err error) {
+				require.NoError(t, err)
+				require.NoError(t, r.Fetch(t.Context(), &FetchOptions{Branch: "a"}))
+				refspecs, err := r.fetchRefspecs(t.Context())
+				require.NoError(t, err)
+				require.Equal(
+					t,
+					[]string{
+						"+refs/heads/main:refs/remotes/origin/main",
+						"+refs/heads/a:refs/remotes/origin/a",
+					},
+					refspecs,
+				)
+			},
+		},
+		{
+			name: "all fetched branches can be checked out by name",
+			assert: func(t *testing.T, r *repo, err error) {
+				require.NoError(t, err)
+				require.NoError(t, r.Checkout(t.Context(), "b"))
+				requireCurrentBranch(t, r, "b")
+			},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+			// A single-branch clone, whose configured fetch refspecs cover only
+			// the default branch
+			rep, err := Clone(
+				t.Context(),
+				testRepoURL,
+				&ClientOptions{Credentials: &testRepoCreds},
+				&CloneOptions{Refs: []string{headRef}},
+			)
+			require.NoError(t, err)
+			t.Cleanup(func() { require.NoError(t, rep.Close(context.Background())) })
+			r, ok := rep.(*repo)
+			require.True(t, ok)
+			testCase.assert(t, r, r.Fetch(t.Context(), testCase.opts))
+		})
+	}
+}
+
+func Test_isTracked(t *testing.T) {
+	testCases := []struct {
+		name     string
+		refspecs []string
+		branch   string
+		tracked  bool
+	}{
+		{
+			name:   "no refspecs",
+			branch: "main",
+		},
+		{
+			name:     "refspec for this branch",
+			refspecs: []string{"+refs/heads/main:refs/remotes/origin/main"},
+			branch:   "main",
+			tracked:  true,
+		},
+		{
+			name:     "refspec for this branch without +",
+			refspecs: []string{"refs/heads/main:refs/remotes/origin/main"},
+			branch:   "main",
+			tracked:  true,
+		},
+		{
+			name:     "refspec for all branches",
+			refspecs: []string{"+refs/heads/*:refs/remotes/origin/*"},
+			branch:   "main",
+			tracked:  true,
+		},
+		{
+			name:     "refspec for another branch",
+			refspecs: []string{"+refs/heads/main:refs/remotes/origin/main"},
+			branch:   "a",
+		},
+		{
+			name:     "all branches requested but only one tracked",
+			refspecs: []string{"+refs/heads/main:refs/remotes/origin/main"},
+			branch:   "*",
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			require.Equal(
+				t,
+				testCase.tracked,
+				isTracked(testCase.refspecs, testCase.branch),
+			)
+		})
+	}
 }
 
 func Test_parseTagMetadataLine(t *testing.T) {

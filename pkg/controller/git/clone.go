@@ -339,35 +339,6 @@ func (b *baseRepo) fetchAdditionalRefs(
 	return nil
 }
 
-// trackBranches adds any fully qualified branch refs among the specified refs
-// to the "origin" remote's configured fetch refspecs. Git treats a
-// remote-tracking branch as one only if a configured refspec covers it, so
-// without this, a branch fetched after cloning could not be checked out by
-// name, and later fetches would not update it.
-//
-// Equivalent to:
-//
-//	git remote set-branches --add origin <branch>...
-func (b *baseRepo) trackBranches(ctx context.Context, refs []string) error {
-	var branches []string
-	for _, ref := range refs {
-		if branch, ok := strings.CutPrefix(ref, branchRefPrefix); ok {
-			branches = append(branches, branch)
-		}
-	}
-	if len(branches) == 0 {
-		return nil
-	}
-	args := append([]string{"remote", "set-branches", "--add", "origin"}, branches...)
-	if _, err := libExec.Exec(b.buildGitCommand(ctx, args...)); err != nil {
-		return fmt.Errorf(
-			"error tracking branches %v of repo %q: %w",
-			branches, b.url, err,
-		)
-	}
-	return nil
-}
-
 // explainCommitFetchError adds an explanation to err if it reports that the
 // server refused to serve a commit requested by ID.
 func explainCommitFetchError(err error) error {

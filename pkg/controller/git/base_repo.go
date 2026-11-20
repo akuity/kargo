@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"strings"
 	"syscall"
 	"time"
@@ -530,6 +531,79 @@ func (b *baseRepo) RemoteBranchExists(
 
 func (b *baseRepo) URL() string {
 	return b.url
+}
+
+// trackBranches adds any fully qualified branch refs among the specified refs
+// to the "origin" remote's configured fetch refspecs, unless a configured
+// refspec already covers them. "refs/heads/*" stands for all branches. Git
+// treats a remote-tracking branch as one only if a configured refspec covers
+// it, so without this, a branch fetched with an explicit refspec could not be
+// checked out by name, and later fetches would not update it.
+//
+// Equivalent to:
+//
+//	git remote set-branches --add origin <branch>...
+func (b *baseRepo) trackBranches(ctx context.Context, refs []string) error {
+	refspecs, err := b.fetchRefspecs(ctx)
+	if err != nil {
+		return err
+	}
+	var branches []string
+	for _, ref := range refs {
+		branch, ok := strings.CutPrefix(ref, branchRefPrefix)
+		if ok && !isTracked(refspecs, branch) && !slices.Contains(branches, branch) {
+			branches = append(branches, branch)
+		}
+	}
+	if len(branches) == 0 {
+		return nil
+	}
+	args := append([]string{"remote", "set-branches", "--add", "origin"}, branches...)
+	if _, err = libExec.Exec(b.buildGitCommand(ctx, args...)); err != nil {
+		return fmt.Errorf(
+			"error tracking branches %v of repo %q: %w",
+			branches, b.url, err,
+		)
+	}
+	return nil
+}
+
+// fetchRefspecs returns the "origin" remote's configured fetch refspecs.
+//
+// Equivalent to:
+//
+//	git config --get-all remote.origin.fetch
+func (b *baseRepo) fetchRefspecs(ctx context.Context) ([]string, error) {
+	out, err := libExec.Exec(b.buildGitCommand(
+		ctx,
+		"config", "--get-all", "remote.origin.fetch",
+	))
+	if err != nil {
+		var exitErr *libExec.ExitError
+		if errors.As(err, &exitErr) && exitErr.ExitCode == 1 {
+			// None are configured
+			return nil, nil
+		}
+		return nil, fmt.Errorf(
+			"error reading fetch refspecs of repo %q: %w", b.url, err,
+		)
+	}
+	return strings.Fields(string(out)), nil
+}
+
+// isTracked returns true if any of the specified fetch refspecs stores the
+// specified branch as the corresponding remote-tracking branch of the "origin"
+// remote.
+func isTracked(refspecs []string, branch string) bool {
+	allBranches := branchRefPrefix + "*:" + remoteBranchRefPrefix + "*"
+	thisBranch := branchRefPrefix + branch + ":" + remoteBranchRefPrefix + branch
+	for _, refspec := range refspecs {
+		switch strings.TrimPrefix(refspec, "+") {
+		case allBranches, thisBranch:
+			return true
+		}
+	}
+	return false
 }
 
 // setUltimateTrust sets ultimate trust (level 6) on a GPG key so that
