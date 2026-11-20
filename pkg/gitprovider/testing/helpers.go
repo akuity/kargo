@@ -246,7 +246,7 @@ func ensureMainBranch(t *testing.T, cfg RepoConfig) {
 		t.Context(),
 		cfg.RepoURL,
 		cfg.clientOpts(),
-		&git.CloneOptions{Branch: "main", SingleBranch: true},
+		&git.CloneOptions{Refs: []string{"refs/heads/main"}, Branch: "main"},
 	); err == nil {
 		return // main exists
 	}
@@ -287,7 +287,7 @@ func cloneAndPush(
 		t.Context(),
 		cfg.RepoURL,
 		cfg.clientOpts(),
-		&git.CloneOptions{Branch: "main", SingleBranch: true},
+		&git.CloneOptions{Refs: []string{"refs/heads/main"}, Branch: "main"},
 	)
 	require.NoError(t, err)
 	require.NoError(t, repo.CreateChildBranch(t.Context(), branchName))
@@ -311,7 +311,7 @@ func cloneMain(t *testing.T, cfg RepoConfig) git.Repo {
 		t.Context(),
 		cfg.RepoURL,
 		cfg.clientOpts(),
-		&git.CloneOptions{Branch: "main", SingleBranch: true},
+		&git.CloneOptions{Refs: []string{"refs/heads/main"}, Branch: "main"},
 	)
 	require.NoError(t, err)
 	return repo

@@ -128,6 +128,7 @@ func (g *gitPROpener) run(
 			InsecureSkipTLSVerify: cfg.InsecureSkipTLSVerify,
 		},
 		&git.CloneOptions{
+			Refs:   []string{"refs/heads/" + sourceBranch},
 			Depth:  1,
 			Branch: sourceBranch,
 		},

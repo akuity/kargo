@@ -144,6 +144,10 @@ func (n *newestFromBranchSelector) Select(ctx context.Context) (
 	ctx = logging.ContextWithLogger(ctx, logger)
 
 	logger.Debug("cloning repository")
+	cloneRef := headRef
+	if n.branch != "" {
+		cloneRef = branchPrefix + n.branch
+	}
 	repo, err := n.gitCloneFn(
 		ctx,
 		n.repoURL,
@@ -152,9 +156,9 @@ func (n *newestFromBranchSelector) Select(ctx context.Context) (
 			InsecureSkipTLSVerify: n.insecureSkipTLSVerify,
 		},
 		&git.CloneOptions{
-			Branch:       n.branch,
-			SingleBranch: true,
-			Blobless:     n.blobless,
+			Refs:     []string{cloneRef},
+			Blobless: n.blobless,
+			Branch:   n.branch,
 		},
 	)
 	if err != nil {

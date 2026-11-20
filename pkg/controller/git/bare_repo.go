@@ -63,23 +63,10 @@ type workTreeInfo struct {
 }
 
 // BareCloneOptions represents options for cloning a Git repository without a
-// working tree.
+// working tree. If Refs is specified, but none of the refs exist in the remote,
+// the remote's default branch is cloned.
 type BareCloneOptions struct {
-	// BaseDir is an existing directory within which all other directories created
-	// and managed by the BareRepo implementation will be created. If not
-	// specified, the operating system's temporary directory will be used.
-	// Overriding that default is useful under certain circumstances.
-	BaseDir string
-	// InsecureSkipTLSVerify specifies whether certificate verification errors
-	// should be ignored when cloning the repository. The setting will be
-	// remembered for subsequent interactions with the remote repository.
-	InsecureSkipTLSVerify bool
-	// Blobless enables blobless cloning (--filter=blob:none). When set, the
-	// initial clone downloads all commits and trees but defers blob downloads
-	// until checkout. Combine with sparse checkout to minimize disk usage on
-	// large repositories. The server must support partial clones; if it does
-	// not, the clone will fail.
-	Blobless bool
+	BaseCloneOptions
 }
 
 // CloneBare produces a local, bare clone of the remote Git repository at the
@@ -119,30 +106,13 @@ func CloneBare(
 	if err = b.setupClient(ctx, clientOpts); err != nil {
 		return nil, err
 	}
-	if err = b.clone(ctx, cloneOpts); err != nil {
+	if err = b.clone(ctx, cloneOpts.BaseCloneOptions, "", true); err != nil {
 		return nil, err
 	}
 	if err = b.saveDirs(ctx); err != nil {
 		return nil, err
 	}
 	return b, nil
-}
-
-func (b *bareRepo) clone(ctx context.Context, opts *BareCloneOptions) error {
-	if opts == nil {
-		opts = &BareCloneOptions{}
-	}
-	args := []string{"clone", "--bare"}
-	if opts.Blobless {
-		args = append(args, "--filter", "blob:none")
-	}
-	args = append(args, b.url, b.dir)
-	cmd := b.buildGitCommand(ctx, args...)
-	cmd.Dir = b.homeDir // Override the cmd.Dir that's set by r.buildGitCommand()
-	if _, err := libExec.Exec(cmd); err != nil {
-		return fmt.Errorf("error cloning repo %q into %q: %w", b.url, b.dir, err)
-	}
-	return nil
 }
 
 type LoadBareRepoOptions struct {

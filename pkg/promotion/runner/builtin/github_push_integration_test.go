@@ -812,7 +812,7 @@ func ensureMainBranch(
 	// If main already exists, nothing to do.
 	if repo, err := git.Clone(
 		t.Context(), repoURL, clientOpts,
-		&git.CloneOptions{Branch: "main", SingleBranch: true},
+		&git.CloneOptions{Refs: []string{"refs/heads/main"}, Branch: "main"},
 	); err == nil {
 		repo.Close(t.Context())
 		return
@@ -857,7 +857,10 @@ func setupLocalBehindTarget(
 			},
 			User: &git.User{Name: "Remote Author", Email: "remote@author.com"},
 		},
-		&git.CloneOptions{Branch: targetBranch, SingleBranch: true},
+		&git.CloneOptions{
+			Refs:   []string{"refs/heads/" + targetBranch},
+			Branch: targetBranch,
+		},
 	)
 	require.NoError(t, err)
 	defer repo.Close(t.Context())
@@ -890,7 +893,7 @@ func setupLocalAheadOfTarget(
 			},
 			User: &git.User{Name: "Test", Email: "test@test.com"},
 		},
-		&git.CloneOptions{Branch: "main", SingleBranch: true},
+		&git.CloneOptions{Refs: []string{"refs/heads/main"}, Branch: "main"},
 	)
 	require.NoError(t, err)
 	defer repo.Close(t.Context())
@@ -922,7 +925,10 @@ func setupLocalDivergedFromTarget(
 			},
 			User: &git.User{Name: "Remote Author", Email: "remote@author.com"},
 		},
-		&git.CloneOptions{Branch: targetBranch, SingleBranch: true},
+		&git.CloneOptions{
+			Refs:   []string{"refs/heads/" + targetBranch},
+			Branch: targetBranch,
+		},
 	)
 	require.NoError(t, err)
 	defer repo.Close(t.Context())

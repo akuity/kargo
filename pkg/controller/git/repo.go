@@ -4,8 +4,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-
-	libExec "github.com/akuity/kargo/pkg/exec"
 )
 
 // Repo is an interface for interacting with a Git repository with a single
@@ -36,26 +34,11 @@ type repo struct {
 // CloneOptions represents options for cloning a Git repository with a single
 // working tree.
 type CloneOptions struct {
-	// BaseDir is an existing directory within which all other directories created
-	// and managed by the Repo implementation will be created. If not specified,
-	// the operating system's temporary directory will be used. Overriding that
-	// default is useful under certain circumstances.
-	BaseDir string
-	// Branch is the name of the branch to clone. If not specified, the default
-	// branch will be cloned. This option is ignored if Bare is true.
+	BaseCloneOptions
+	// Branch is the name of the branch to check out. It is cloned whether or not
+	// Refs includes it. If not specified, the remote's default branch is checked
+	// out.
 	Branch string
-	// Depth is the number of commits to fetch from the remote repository. If
-	// zero, all commits will be fetched. This option is ignored if Bare is true.
-	Depth uint
-	// Blobless enables blobless cloning (--filter=blob:none). When set, the
-	// initial clone downloads all commits and trees but defers blob downloads
-	// until checkout. Combine with sparse checkout to minimize disk usage on
-	// large repositories. The server must support partial clones; if it does
-	// not, the clone will fail.
-	Blobless bool
-	// SingleBranch indicates whether the clone should be a single-branch clone.
-	// This option is ignored if Bare is true.
-	SingleBranch bool
 }
 
 // Clone produces a local clone of the remote git repository at the specified
@@ -99,39 +82,18 @@ func Clone(
 	if err = r.setupClient(ctx, clientOpts); err != nil {
 		return nil, err
 	}
-	if err = r.clone(ctx, cloneOpts); err != nil {
+	if err = r.clone(
+		ctx,
+		cloneOpts.BaseCloneOptions,
+		cloneOpts.Branch,
+		false,
+	); err != nil {
 		return nil, err
 	}
 	if err = r.saveDirs(ctx); err != nil {
 		return nil, err
 	}
 	return r, nil
-}
-
-func (r *repo) clone(ctx context.Context, opts *CloneOptions) error {
-	if opts == nil {
-		opts = &CloneOptions{}
-	}
-	args := []string{"clone", "--no-tags"}
-	if opts.Branch != "" {
-		args = append(args, "--branch", opts.Branch)
-	}
-	if opts.SingleBranch {
-		args = append(args, "--single-branch")
-	}
-	if opts.Depth > 0 {
-		args = append(args, "--depth", fmt.Sprint(opts.Depth))
-	}
-	if opts.Blobless {
-		args = append(args, "--filter", "blob:none")
-	}
-	args = append(args, r.url, r.dir)
-	cmd := r.buildGitCommand(ctx, args...)
-	cmd.Dir = r.homeDir // Override the cmd.Dir that's set by r.buildGitCommand()
-	if _, err := libExec.Exec(cmd); err != nil {
-		return fmt.Errorf("error cloning repo %q into %q: %w", r.url, r.dir, err)
-	}
-	return nil
 }
 
 type LoadRepoOptions struct {
