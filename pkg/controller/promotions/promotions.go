@@ -218,6 +218,10 @@ func SetupReconcilerWithManager(
 				&argocd.Application{},
 				&UpdatedArgoCDAppHandler[*argocd.Application]{
 					kargoClient: kargoMgr.GetClient(),
+					shardPredicate: controller.ResponsibleFor[kargoapi.Promotion]{
+						IsDefaultController: cfg.IsDefaultController,
+						ShardName:           cfg.ShardName,
+					},
 				},
 				predicate.Or(
 					ArgoCDAppOperationCompleted[*argocd.Application]{
