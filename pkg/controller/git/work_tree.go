@@ -6,6 +6,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"maps"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -54,6 +55,10 @@ type WorkTree interface {
 	DeleteBranch(ctx context.Context, branch string) error
 	// Dir returns an absolute path to the working tree.
 	Dir() string
+	// EnsureCommits ensures that the specified commits are available locally in
+	// a shallow repository by deepening history along the configured ref as
+	// needed. It is a no-op for non-shallow repositories.
+	EnsureCommits(ctx context.Context, opts *EnsureCommitsOptions) error
 	// Fetch fetches updates from the remote repository.
 	Fetch(ctx context.Context, opts *FetchOptions) error
 	// HasDiffs returns a bool indicating whether the working tree currently
@@ -400,6 +405,158 @@ func (w *workTree) CurrentBranch(ctx context.Context) (string, error) {
 		)
 	}
 	return strings.TrimSpace(string(res)), nil
+}
+
+// EnsureCommitsOptions represents options for ensuring commits are available
+// locally in a shallow working tree.
+type EnsureCommitsOptions struct {
+	// CommitIDs are the commit SHAs that must be present in the local repository.
+	CommitIDs []string
+	// Ref optionally specifies the remote ref along which to deepen a shallow
+	// repository if any of the requested commits are not yet present locally. If
+	// empty, the current branch is used.
+	Ref string
+}
+
+func (w *workTree) EnsureCommits(
+	ctx context.Context,
+	opts *EnsureCommitsOptions,
+) error {
+	if opts == nil || len(opts.CommitIDs) == 0 {
+		return nil
+	}
+	shallow, err := w.isShallow(ctx)
+	if err != nil {
+		return err
+	}
+	if !shallow {
+		return nil
+	}
+	present, err := w.hasCommits(ctx, opts.CommitIDs)
+	if err != nil {
+		return err
+	}
+	if present {
+		return nil
+	}
+
+	var refs []string
+	if opts.Ref != "" {
+		refs = []string{opts.Ref}
+	} else {
+		var currentBranch string
+		if currentBranch, err = w.CurrentBranch(ctx); err != nil {
+			return err
+		}
+		if currentBranch != "" {
+			refs = []string{"refs/heads/" + currentBranch}
+		}
+	}
+	if len(refs) == 0 {
+		return fmt.Errorf(
+			"cannot deepen repo %q without a target ref or active branch",
+			w.url,
+		)
+	}
+
+	shallowSet, err := w.shallowCommits(ctx)
+	if err != nil {
+		return err
+	}
+
+	step := max(uint(len(opts.CommitIDs)), initialDeepenStep)
+	for range maxDeepenIterations {
+		if err = w.deepen(ctx, step, refs...); err != nil {
+			return err
+		}
+		present, err = w.hasCommits(ctx, opts.CommitIDs)
+		if err != nil {
+			return err
+		}
+		if present {
+			return nil
+		}
+		var newShallow map[string]struct{}
+		newShallow, err = w.shallowCommits(ctx)
+		if err != nil {
+			return err
+		}
+		if len(newShallow) == 0 || maps.Equal(newShallow, shallowSet) {
+			break
+		}
+		shallowSet = newShallow
+		step *= 2
+	}
+
+	return fmt.Errorf(
+		"commits %v not available locally after deepening repo %q",
+		opts.CommitIDs, w.url,
+	)
+}
+
+// deepen deepens a shallow repository by the specified number of commits along
+// the given remote refs without updating local tracking refs. It is a no-op if
+// depth is 0 or the repository is not shallow.
+func (w *workTree) deepen(
+	ctx context.Context,
+	depth uint,
+	refs ...string,
+) error {
+	if depth == 0 {
+		return nil
+	}
+	shallow, err := w.isShallow(ctx)
+	if err != nil {
+		return err
+	}
+	if !shallow {
+		return nil
+	}
+	args := append(
+		[]string{"fetch", "--deepen", fmt.Sprint(depth), "origin"},
+		refs...,
+	)
+	if _, err = libExec.Exec(w.buildGitCommand(ctx, args...)); err != nil {
+		return fmt.Errorf(
+			"error deepening repo %q by %d commits: %w", w.url, depth, err,
+		)
+	}
+	return nil
+}
+
+// hasCommits returns true if all specified commit IDs exist as commit objects
+// in the local object store without triggering lazy fetches on partial clones.
+//
+// Equivalent to:
+//
+//	GIT_NO_LAZY_FETCH=1 git cat-file --batch-check=%(objecttype)
+func (w *workTree) hasCommits(
+	ctx context.Context,
+	commitIDs []string,
+) (bool, error) {
+	if len(commitIDs) == 0 {
+		return true, nil
+	}
+	var stdin strings.Builder
+	for _, id := range commitIDs {
+		stdin.WriteString(id)
+		stdin.WriteByte('\n')
+	}
+	cmd := w.buildGitCommand(ctx, "cat-file", "--batch-check=%(objecttype)")
+	cmd.Env = append(cmd.Env, "GIT_NO_LAZY_FETCH=1")
+	cmd.Stdin = strings.NewReader(stdin.String())
+	out, err := libExec.Exec(cmd)
+	if err != nil {
+		return false, fmt.Errorf("error checking local commit presence: %w", err)
+	}
+	count := 0
+	for line := range strings.SplitSeq(strings.TrimRight(string(out), "\n"), "\n") {
+		if line != "commit" {
+			return false, nil
+		}
+		count++
+	}
+	return count == len(commitIDs), nil
 }
 
 func (w *workTree) DeleteBranch(ctx context.Context, branch string) error {

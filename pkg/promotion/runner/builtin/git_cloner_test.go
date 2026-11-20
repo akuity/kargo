@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/sosedoff/gitkit"
@@ -256,6 +257,98 @@ func Test_gitCloner_convert(t *testing.T) {
 			// No expected problems because signingKey is optional and empty is valid
 		},
 		{
+			name: "depth is zero",
+			config: promotion.Config{
+				"repoURL":  "https://github.com/example/repo.git",
+				"depth":    0,
+				"checkout": []promotion.Config{{"path": "/fake/path/0"}},
+			},
+			expectedProblems: []string{
+				"depth: Must be greater than or equal to 1",
+			},
+		},
+		{
+			name: "depth is negative",
+			config: promotion.Config{
+				"repoURL":  "https://github.com/example/repo.git",
+				"depth":    -1,
+				"checkout": []promotion.Config{{"path": "/fake/path/0"}},
+			},
+			expectedProblems: []string{
+				"depth: Must be greater than or equal to 1",
+			},
+		},
+		{
+			name: "depth exceeds maximum",
+			config: promotion.Config{
+				"repoURL":  "https://github.com/example/repo.git",
+				"depth":    2147483648,
+				"checkout": []promotion.Config{{"branch": "main", "path": "/fake/path/0"}},
+			},
+			expectedProblems: []string{
+				"depth: Must be less than or equal to 2.147483647e+09",
+			},
+		},
+		{
+			name: "depth is valid",
+			config: promotion.Config{
+				"repoURL": "https://github.com/example/repo.git",
+				"depth":   100,
+				"checkout": []promotion.Config{{
+					"branch": "main",
+					"path":   "/fake/path/0",
+				}},
+			},
+		},
+		{
+			name: "depth with a commit checkout",
+			config: promotion.Config{
+				"repoURL": "https://github.com/example/repo.git",
+				"depth":   100,
+				"checkout": []promotion.Config{
+					{"branch": "main", "path": "/fake/path/0"},
+					{"commit": "fake-commit", "path": "/fake/path/1"},
+				},
+			},
+			expectedProblems: []string{
+				"checkout[1] must specify a branch when depth is specified",
+			},
+		},
+		{
+			name: "depth with a tag checkout",
+			config: promotion.Config{
+				"repoURL": "https://github.com/example/repo.git",
+				"depth":   100,
+				"checkout": []promotion.Config{
+					{"tag": "fake-tag", "path": "/fake/path/0"},
+				},
+			},
+			expectedProblems: []string{
+				"checkout[0] must specify a branch when depth is specified",
+			},
+		},
+		{
+			name: "depth with a default branch checkout",
+			config: promotion.Config{
+				"repoURL":  "https://github.com/example/repo.git",
+				"depth":    100,
+				"checkout": []promotion.Config{{"path": "/fake/path/0"}},
+			},
+			expectedProblems: []string{
+				"checkout[0] must specify a branch when depth is specified",
+			},
+		},
+		{
+			name: "commit checkouts are fine without depth",
+			config: promotion.Config{
+				"repoURL": "https://github.com/example/repo.git",
+				"checkout": []promotion.Config{
+					{"commit": "fake-commit", "path": "/fake/path/0"},
+					{"tag": "fake-tag", "path": "/fake/path/1"},
+				},
+			},
+		},
+		{
 			name: "valid kitchen sink",
 			config: promotion.Config{
 				"repoURL": "https://github.com/example/repo.git",
@@ -428,6 +521,224 @@ func Test_gitCloner_run(t *testing.T) {
 	require.ErrorContains(t, err, "path escapes from parent")
 	require.Equal(t, kargoapi.PromotionStepStatusErrored, res.Status)
 	require.NoDirExists(t, filepath.Join(outside, "escaped"))
+}
+
+func Test_gitCloner_run_with_branch_checkouts(t *testing.T) {
+	// Set up a test Git server in-process
+	service := gitkit.New(
+		gitkit.Config{
+			Dir:        t.TempDir(),
+			AutoCreate: true,
+		},
+	)
+	require.NoError(t, service.Setup())
+	server := httptest.NewServer(service)
+	t.Cleanup(server.Close)
+
+	testRepoURL := fmt.Sprintf("%s/test.git", server.URL)
+
+	// Create a main branch with three commits and two other branches that each
+	// add one commit on top of main.
+	repo, err := git.Clone(t.Context(), testRepoURL, nil, nil)
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		require.NoError(t, repo.Close(context.Background()))
+	})
+	for i := range 3 {
+		err = os.WriteFile(
+			filepath.Join(repo.Dir(), "test.txt"),
+			[]byte(fmt.Sprintf("commit %d", i)),
+			0600,
+		)
+		require.NoError(t, err)
+		err = repo.AddAllAndCommit(t.Context(), fmt.Sprintf("commit %d", i), nil)
+		require.NoError(t, err)
+	}
+	err = repo.Push(t.Context(), nil)
+	require.NoError(t, err)
+	for _, branch := range []string{"stage/dev", "feature/foo"} {
+		err = repo.Checkout(t.Context(), "main")
+		require.NoError(t, err)
+		err = repo.CreateChildBranch(t.Context(), branch)
+		require.NoError(t, err)
+		err = repo.AddAllAndCommit(
+			t.Context(),
+			fmt.Sprintf("%s commit", branch),
+			&git.CommitOptions{AllowEmpty: true},
+		)
+		require.NoError(t, err)
+		err = repo.Push(t.Context(), nil)
+		require.NoError(t, err)
+	}
+
+	r := newGitCloner(promotion.StepRunnerCapabilities{
+		CredsDB:         &credentials.FakeDB{},
+		GitUserResolver: &fakeGitUserResolver{},
+	})
+	runner, ok := r.(*gitCloner)
+	require.True(t, ok)
+
+	depth := int64(2)
+	testCases := []struct {
+		name                string
+		depth               *int64
+		expectedCommitCount string
+	}{
+		{
+			name:                "without depth limits clone to checkout branches",
+			expectedCommitCount: "4",
+		},
+		{
+			name:                "with depth limits history and clone to checkout branches",
+			depth:               &depth,
+			expectedCommitCount: "2",
+		},
+	}
+
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			stepCtx := newTestStepContext(t, t.TempDir())
+			res, runErr := runner.run(
+				t.Context(),
+				stepCtx,
+				stepconfig.GitCloneConfig{
+					RepoURL:  testRepoURL,
+					Depth:    testCase.depth,
+					Checkout: []stepconfig.Checkout{{Branch: "stage/dev", Path: "out"}},
+				},
+			)
+			require.NoError(t, runErr)
+			require.Equal(t, kargoapi.PromotionStepStatusSucceeded, res.Status)
+
+			outDir := filepath.Join(stepCtx.WorkDir, "out")
+			require.FileExists(t, filepath.Join(outDir, "test.txt"))
+
+			cmd := exec.CommandContext(
+				t.Context(), "git", "rev-list", "--count", "HEAD",
+			)
+			cmd.Dir = outDir
+			out, cmdErr := cmd.CombinedOutput()
+			require.NoErrorf(t, cmdErr, "git rev-list failed: %s", out)
+			require.Equal(t, testCase.expectedCommitCount, strings.TrimSpace(string(out)))
+
+			// Only the checked-out branch should have been fetched.
+			cmd = exec.CommandContext(
+				t.Context(),
+				"git", "for-each-ref", "--format=%(refname:short)", "refs/heads",
+			)
+			cmd.Dir = outDir
+			out, cmdErr = cmd.CombinedOutput()
+			require.NoErrorf(t, cmdErr, "git for-each-ref failed: %s", out)
+			require.Equal(t, []string{"stage/dev"}, strings.Fields(string(out)))
+		})
+	}
+}
+
+func Test_gitCloner_run_with_branch_create(t *testing.T) {
+	// Set up a test Git server in-process
+	service := gitkit.New(
+		gitkit.Config{
+			Dir:        t.TempDir(),
+			AutoCreate: true,
+		},
+	)
+	require.NoError(t, service.Setup())
+	server := httptest.NewServer(service)
+	t.Cleanup(server.Close)
+
+	testRepoURL := fmt.Sprintf("%s/test.git", server.URL)
+
+	// Push some content to the remote's main branch
+	repo, err := git.Clone(t.Context(), testRepoURL, nil, nil)
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		require.NoError(t, repo.Close(context.Background()))
+	})
+	err = os.WriteFile(filepath.Join(repo.Dir(), "test.txt"), []byte("foo"), 0600)
+	require.NoError(t, err)
+	err = repo.AddAllAndCommit(t.Context(), "Initial commit", nil)
+	require.NoError(t, err)
+	err = repo.Push(t.Context(), nil)
+	require.NoError(t, err)
+
+	r := newGitCloner(promotion.StepRunnerCapabilities{
+		CredsDB:         &credentials.FakeDB{},
+		GitUserResolver: &fakeGitUserResolver{},
+	})
+	runner, ok := r.(*gitCloner)
+	require.True(t, ok)
+
+	remoteHasBranch := func(t *testing.T, branch string) bool {
+		cmd := exec.CommandContext(
+			t.Context(),
+			"git", "ls-remote", "--heads", testRepoURL, "refs/heads/"+branch,
+		)
+		out, cmdErr := cmd.CombinedOutput()
+		require.NoErrorf(t, cmdErr, "git ls-remote failed: %s", out)
+		return strings.TrimSpace(string(out)) != ""
+	}
+
+	depth := int64(1)
+	testCases := []struct {
+		name     string
+		depth    *int64
+		checkout []stepconfig.Checkout
+		assert   func(*testing.T, promotion.StepResult, error)
+	}{
+		{
+			name: "branch does not exist and create is false",
+			checkout: []stepconfig.Checkout{
+				{Branch: "main", Path: "src"},
+				{Branch: "stage/new", Path: "out", Create: false},
+			},
+			assert: func(t *testing.T, res promotion.StepResult, err error) {
+				require.ErrorContains(t, err, "does not exist")
+				require.ErrorContains(t, err, "create=true")
+				require.Equal(t, kargoapi.PromotionStepStatusErrored, res.Status)
+				require.False(t, remoteHasBranch(t, "stage/new"))
+			},
+		},
+		{
+			name: "only checked-out branch does not exist and create is true",
+			checkout: []stepconfig.Checkout{{
+				Branch: "stage/new",
+				Path:   "out",
+				Create: true,
+			}},
+			assert: func(t *testing.T, res promotion.StepResult, err error) {
+				require.NoError(t, err)
+				require.Equal(t, kargoapi.PromotionStepStatusSucceeded, res.Status)
+				require.True(t, remoteHasBranch(t, "stage/new"))
+			},
+		},
+		{
+			name:  "shallow clone with existing branch and missing create branch",
+			depth: &depth,
+			checkout: []stepconfig.Checkout{
+				{Branch: "main", Path: "src"},
+				{Branch: "stage/new-shallow", Path: "out", Create: true},
+			},
+			assert: func(t *testing.T, res promotion.StepResult, err error) {
+				require.NoError(t, err)
+				require.Equal(t, kargoapi.PromotionStepStatusSucceeded, res.Status)
+				require.True(t, remoteHasBranch(t, "stage/new-shallow"))
+			},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			res, err := runner.run(
+				t.Context(),
+				newTestStepContext(t, t.TempDir()),
+				stepconfig.GitCloneConfig{
+					RepoURL:  testRepoURL,
+					Depth:    testCase.depth,
+					Checkout: testCase.checkout,
+				},
+			)
+			testCase.assert(t, res, err)
+		})
+	}
 }
 
 func Test_gitCloner_run_with_submodules(t *testing.T) {

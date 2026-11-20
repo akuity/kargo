@@ -29,6 +29,9 @@ type BareRepo interface {
 	// HomeDir returns an absolute path to the home directory of the system user
 	// who has cloned this repo.
 	HomeDir() string
+	// LocalBranchExists returns a bool indicating if the specified branch exists
+	// in the local repository.
+	LocalBranchExists(ctx context.Context, branch string) (bool, error)
 	// RemoteBranchExists returns a bool indicating if the specified branch exists
 	// in the remote repository.
 	RemoteBranchExists(ctx context.Context, branch string) (bool, error)
@@ -80,6 +83,14 @@ type BareCloneOptions struct {
 	// large repositories. The server must support partial clones; if it does
 	// not, the clone will fail.
 	Blobless bool
+	// Depth optionally limits the clone to the specified number of commits for
+	// each fetched branch (a shallow clone). A value of 0 (the default)
+	// indicates no depth limit.
+	Depth uint
+	// Branches optionally limits the clone to the specified remote branches.
+	// Branches that do not exist on the remote are skipped. If empty, all
+	// branches are cloned.
+	Branches []string
 }
 
 // CloneBare produces a local, bare clone of the remote Git repository at the
@@ -119,7 +130,7 @@ func CloneBare(
 	if err = b.setupClient(ctx, clientOpts); err != nil {
 		return nil, err
 	}
-	if err = b.clone(ctx, cloneOpts); err != nil {
+	if err = b.clone(ctx, *cloneOpts); err != nil {
 		return nil, err
 	}
 	if err = b.saveDirs(ctx); err != nil {
@@ -128,21 +139,202 @@ func CloneBare(
 	return b, nil
 }
 
-func (b *bareRepo) clone(ctx context.Context, opts *BareCloneOptions) error {
-	if opts == nil {
-		opts = &BareCloneOptions{}
+func (b *bareRepo) clone(ctx context.Context, opts BareCloneOptions) error {
+	if len(opts.Branches) > 0 {
+		return b.cloneSelectBranches(ctx, opts)
 	}
+	return b.cloneAllBranches(ctx, opts)
+}
+
+// cloneAllBranches produces a bare repository containing all of the remote
+// repository's branches using "git clone".
+//
+// Equivalent to:
+//
+//	git clone --bare [--filter=blob:none] [--depth=<depth> --no-single-branch] <url> <dir>
+func (b *bareRepo) cloneAllBranches(
+	ctx context.Context,
+	opts BareCloneOptions,
+) error {
 	args := []string{"clone", "--bare"}
 	if opts.Blobless {
 		args = append(args, "--filter", "blob:none")
 	}
+	if opts.Depth > 0 {
+		// --depth implies --single-branch, which would fetch only the remote's
+		// default branch, thus --no-single-branch overrides it.
+		args = append(args, "--depth", fmt.Sprint(opts.Depth), "--no-single-branch")
+	}
 	args = append(args, b.url, b.dir)
 	cmd := b.buildGitCommand(ctx, args...)
-	cmd.Dir = b.homeDir // Override the cmd.Dir that's set by r.buildGitCommand()
+	cmd.Dir = b.homeDir // Override the cmd.Dir that's set by b.buildGitCommand()
 	if _, err := libExec.Exec(cmd); err != nil {
 		return fmt.Errorf("error cloning repo %q into %q: %w", b.url, b.dir, err)
 	}
 	return nil
+}
+
+// cloneSelectBranches produces a bare repository containing only the specified
+// remote branches using "git fetch". Branches that do not exist on the remote
+// are skipped.
+//
+// Equivalent to:
+//
+//	git ls-remote <url> HEAD refs/heads/<branch>...
+//	git init --bare [--object-format=sha256] <dir>
+//	git config remote.origin.url <url>
+//	git fetch [--filter=blob:none] [--depth=<depth>] origin +<ref>:<ref>...
+func (b *bareRepo) cloneSelectBranches(
+	ctx context.Context,
+	opts BareCloneOptions,
+) error {
+	// Resolve branch names against the remote before initializing the repo so
+	// we can detect the remote's object format (SHA-1 vs SHA-256).
+	refs, objectFormat, err := b.findRemoteBranchRefs(ctx, opts.Branches)
+	if err != nil {
+		return err
+	}
+
+	// If ls-remote returned no refs at all, delegate initialization to "git clone
+	// --bare --single-branch" so Git negotiates the remote's object format via
+	// protocol capabilities without transferring any refs.
+	if objectFormat == "" {
+		args := []string{"clone", "--bare", "--single-branch"}
+		if opts.Blobless {
+			args = append(args, "--filter", "blob:none")
+		}
+		args = append(args, b.url, b.dir)
+		cmd := b.buildGitCommand(ctx, args...)
+		cmd.Dir = b.homeDir
+		if _, err = libExec.Exec(cmd); err != nil {
+			return fmt.Errorf("error cloning repo %q into %q: %w", b.url, b.dir, err)
+		}
+		if opts.Blobless {
+			return b.configureBloblessPartialClone(ctx)
+		}
+		return nil
+	}
+
+	initArgs := []string{"init", "--bare"}
+	if objectFormat == "sha256" {
+		initArgs = append(initArgs, "--object-format=sha256")
+	}
+	initArgs = append(initArgs, b.dir)
+	cmd := b.buildGitCommand(ctx, initArgs...)
+	cmd.Dir = b.homeDir // Override the cmd.Dir that's set by b.buildGitCommand()
+	if _, err = libExec.Exec(cmd); err != nil {
+		return fmt.Errorf("error initializing repo in %q: %w", b.dir, err)
+	}
+	if _, err = libExec.Exec(b.buildGitCommand(
+		ctx, "config", "remote.origin.url", b.url,
+	)); err != nil {
+		return fmt.Errorf(
+			"error setting URL of remote \"origin\" for repo %q: %w",
+			b.url, err,
+		)
+	}
+
+	if len(refs) == 0 {
+		if opts.Blobless {
+			return b.configureBloblessPartialClone(ctx)
+		}
+		return nil
+	}
+
+	args := []string{"fetch"}
+	if opts.Blobless {
+		args = append(args, "--filter", "blob:none")
+	}
+	if opts.Depth > 0 {
+		args = append(args, "--depth", fmt.Sprint(opts.Depth))
+	}
+	args = append(args, "origin")
+	for _, ref := range refs {
+		// Force-fetch into a local ref of the same name
+		args = append(args, fmt.Sprintf("+%s:%s", ref, ref))
+	}
+	if _, err = libExec.Exec(b.buildGitCommand(ctx, args...)); err != nil {
+		return fmt.Errorf(
+			"error fetching branches %v of repo %q into %q: %w",
+			opts.Branches, b.url, b.dir, err,
+		)
+	}
+	return nil
+}
+
+// configureBloblessPartialClone records blobless partial-clone configuration
+// on the repository so subsequent fetches omit blobs even when no refs were
+// fetched during initial clone.
+func (b *bareRepo) configureBloblessPartialClone(ctx context.Context) error {
+	settings := [][2]string{
+		{"core.repositoryformatversion", "1"},
+		{"remote.origin.promisor", "true"},
+		{"remote.origin.partialclonefilter", "blob:none"},
+	}
+	for _, setting := range settings {
+		if _, err := libExec.Exec(b.buildGitCommand(
+			ctx, "config", setting[0], setting[1],
+		)); err != nil {
+			return fmt.Errorf("error configuring %s: %w", setting[0], err)
+		}
+	}
+	return nil
+}
+
+// findRemoteBranchRefs returns the fully qualified refs of branch names that
+// exist in the remote repository, along with the detected remote object format
+// ("sha1", "sha256", or "" if no refs were returned).
+//
+// Equivalent to:
+//
+//	git ls-remote <url> HEAD refs/heads/<name>...
+func (b *bareRepo) findRemoteBranchRefs(
+	ctx context.Context,
+	names []string,
+) ([]string, string, error) {
+	// Include HEAD so we can determine the remote's object format even when
+	// none of the requested branches exist yet.
+	args := []string{"ls-remote", b.url, "HEAD"}
+	refs := make(map[string]struct{}, len(names))
+	for _, name := range names {
+		ref := "refs/heads/" + name
+		if _, exists := refs[ref]; exists {
+			continue
+		}
+		refs[ref] = struct{}{}
+		args = append(args, ref)
+	}
+
+	cmd := b.buildGitCommand(ctx, args...)
+	cmd.Dir = b.homeDir
+	out, err := libExec.Exec(cmd)
+	if err != nil {
+		return nil, "", fmt.Errorf(
+			"error listing branches %v of repo %q: %w",
+			names, b.url, err,
+		)
+	}
+	remoteRefs, err := parseLsRemoteOutput(out)
+	if err != nil {
+		return nil, "", err
+	}
+
+	var objectFormat string
+	if len(remoteRefs) > 0 {
+		if len(remoteRefs[0].ID) == 64 {
+			objectFormat = "sha256"
+		} else {
+			objectFormat = "sha1"
+		}
+	}
+
+	filteredRefs := make([]string, 0, len(remoteRefs))
+	for _, remoteRef := range remoteRefs {
+		if _, ok := refs[remoteRef.Name]; ok {
+			filteredRefs = append(filteredRefs, remoteRef.Name)
+		}
+	}
+	return filteredRefs, objectFormat, nil
 }
 
 type LoadBareRepoOptions struct {

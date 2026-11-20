@@ -500,6 +500,36 @@ func (b *baseRepo) HomeDir() string {
 	return b.homeDir
 }
 
+func (b *baseRepo) LocalBranchExists(
+	ctx context.Context,
+	branch string,
+) (bool, error) {
+	return b.hasAnyRef(ctx, "refs/heads/"+branch)
+}
+
+// hasAnyRef returns true if at least one of the given fully-qualified refs
+// exists in the local repository.
+//
+// Equivalent to:
+//
+//	git show-ref --verify --quiet <ref>
+func (b *baseRepo) hasAnyRef(ctx context.Context, refs ...string) (bool, error) {
+	for _, ref := range refs {
+		_, err := libExec.Exec(b.buildGitCommand(
+			ctx, "show-ref", "--verify", "--quiet", ref,
+		))
+		if err == nil {
+			return true, nil
+		}
+		var exitErr *libExec.ExitError
+		if errors.As(err, &exitErr) && exitErr.ExitCode == 1 {
+			continue
+		}
+		return false, fmt.Errorf("error checking ref %q: %w", ref, err)
+	}
+	return false, nil
+}
+
 func (b *baseRepo) RemoteBranchExists(
 	ctx context.Context,
 	branch string,

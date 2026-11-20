@@ -538,6 +538,25 @@ func (g *githubPusher) push(
 		}
 	}
 
+	if len(commits) > 0 {
+		commitIDs := make([]string, 0, len(commits))
+		for _, c := range commits {
+			if sha := c.GetSHA(); sha != "" {
+				commitIDs = append(commitIDs, sha)
+			}
+		}
+		if len(commitIDs) > 0 {
+			if err = workTree.EnsureCommits(ctx, &git.EnsureCommitsOptions{
+				CommitIDs: commitIDs,
+				Ref:       opts.stagingRef,
+			}); err != nil {
+				return fmt.Errorf(
+					"error ensuring commits are available locally: %w", err,
+				)
+			}
+		}
+	}
+
 	// Replay commits via GitHub API. The merge base is used as the initial
 	// parent so that replayed commits are correctly rooted regardless of
 	// whether the source is simply ahead or has diverged from the target.

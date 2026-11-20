@@ -929,7 +929,10 @@ func Test_githubPusher_push(t *testing.T) {
 			},
 		},
 		{
-			name: "source branch is ahead or branches have diverged; success",
+			name: "error ensuring commits are available locally",
+			cfg: githubPushConfig{
+				stagingRef: "refs/kargo/staging/test",
+			},
 			workTree: &git.MockRepo{
 				URLFn: func() string {
 					return testRepoURL
@@ -948,6 +951,89 @@ func Test_githubPusher_push(t *testing.T) {
 				},
 				RemoteBranchExistsFn: func(context.Context, string) (bool, error) {
 					return true, nil
+				},
+				EnsureCommitsFn: func(
+					_ context.Context,
+					opts *git.EnsureCommitsOptions,
+				) error {
+					require.Equal(t, []string{"old-1", "old-2"}, opts.CommitIDs)
+					require.Equal(t, "refs/kargo/staging/test", opts.Ref)
+					return errors.New("ensure failed")
+				},
+			},
+			client: &mockGitHubPushClient{
+				getRefFn: func(
+					context.Context,
+					string,
+					string,
+					string,
+				) (*github.Reference, *github.Response, error) {
+					return &github.Reference{}, nil, nil
+				},
+				compareCommitsFn: func(
+					context.Context,
+					string,
+					string,
+					string,
+					string,
+					*github.ListOptions,
+				) (*github.CommitsComparison, *github.Response, error) {
+					return &github.CommitsComparison{
+						Status:          ptr.To("ahead"),
+						MergeBaseCommit: &github.RepositoryCommit{SHA: ptr.To("fake-merge-base")},
+						Commits: []*github.RepositoryCommit{
+							{
+								SHA: ptr.To("old-1"),
+								Commit: &github.Commit{
+									Tree: &github.Tree{SHA: ptr.To("tree-1")},
+								},
+							},
+							{
+								SHA: ptr.To("old-2"),
+								Commit: &github.Commit{
+									Tree: &github.Tree{SHA: ptr.To("tree-2")},
+								},
+							},
+						},
+					}, nil, nil
+				},
+			},
+			assertions: func(t *testing.T, err error) {
+				require.ErrorContains(t, err, "error ensuring commits are available locally")
+				require.ErrorContains(t, err, "ensure failed")
+			},
+		},
+		{
+			name: "source branch is ahead or branches have diverged; success",
+			cfg: githubPushConfig{
+				stagingRef: "refs/kargo/staging/test",
+			},
+			workTree: &git.MockRepo{
+				URLFn: func() string {
+					return testRepoURL
+				},
+				IntegrateRemoteChangesFn: func(
+					context.Context,
+					*git.IntegrationOptions,
+				) error {
+					return nil
+				},
+				PushFn: func(context.Context, *git.PushOptions) error {
+					return nil
+				},
+				LastCommitIDFn: func(_ context.Context) (string, error) {
+					return "fake-source-head", nil
+				},
+				RemoteBranchExistsFn: func(context.Context, string) (bool, error) {
+					return true, nil
+				},
+				EnsureCommitsFn: func(
+					_ context.Context,
+					opts *git.EnsureCommitsOptions,
+				) error {
+					require.Equal(t, []string{"old-1"}, opts.CommitIDs)
+					require.Equal(t, "refs/kargo/staging/test", opts.Ref)
+					return nil
 				},
 				GetCommitSignatureInfoFn: func(
 					context.Context,
@@ -977,6 +1063,7 @@ func Test_githubPusher_push(t *testing.T) {
 						Status:          ptr.To("ahead"),
 						MergeBaseCommit: &github.RepositoryCommit{SHA: ptr.To("fake-merge-base")},
 						Commits: []*github.RepositoryCommit{{
+							SHA: ptr.To("old-1"),
 							Commit: &github.Commit{
 								Tree: &github.Tree{SHA: ptr.To("fake-commit")},
 							},

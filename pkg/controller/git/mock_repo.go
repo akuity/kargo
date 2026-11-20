@@ -29,6 +29,7 @@ type MockRepo struct {
 	CurrentBranchFn           func(ctx context.Context) (string, error)
 	DeleteBranchFn            func(ctx context.Context, branch string) error
 	DirFn                     func() string
+	EnsureCommitsFn           func(ctx context.Context, opts *EnsureCommitsOptions) error
 	FetchFn                   func(ctx context.Context, opts *FetchOptions) error
 	HasDiffsFn                func(ctx context.Context) (bool, error)
 	HomeDirFn                 func() string
@@ -132,6 +133,16 @@ func (m *MockRepo) DeleteBranch(ctx context.Context, branch string) error {
 
 func (m *MockRepo) Dir() string {
 	return m.DirFn()
+}
+
+func (m *MockRepo) EnsureCommits(
+	ctx context.Context,
+	opts *EnsureCommitsOptions,
+) error {
+	if m.EnsureCommitsFn == nil {
+		return nil
+	}
+	return m.EnsureCommitsFn(ctx, opts)
 }
 
 func (m *MockRepo) Fetch(ctx context.Context, opts *FetchOptions) error {

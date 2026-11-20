@@ -97,6 +97,18 @@ func (g *gitCloner) convert(cfg promotion.Config) (stepconfig.GitCloneConfig, er
 		}
 	}
 
+	// Shallow clones only support branch checkouts.
+	if typedCfg.Depth != nil {
+		for i, checkout := range typedCfg.Checkout {
+			if checkout.Branch == "" {
+				return stepconfig.GitCloneConfig{}, fmt.Errorf(
+					"checkout[%d] must specify a branch when depth is specified",
+					i,
+				)
+			}
+		}
+	}
+
 	return typedCfg, nil
 }
 
@@ -138,6 +150,26 @@ func (g *gitCloner) run(
 		}
 	}
 
+	var depth uint
+	if cfg.Depth != nil && *cfg.Depth > 0 {
+		depth = uint(*cfg.Depth)
+	}
+
+	// If every checkout specifies a branch, limit the clone to just those
+	// branches.
+	var branches []string
+	allBranches := len(cfg.Checkout) > 0
+	for _, checkout := range cfg.Checkout {
+		if checkout.Branch == "" {
+			allBranches = false
+			break
+		}
+		branches = append(branches, checkout.Branch)
+	}
+	if !allBranches {
+		branches = nil
+	}
+
 	repo, err := git.CloneBare(
 		ctx,
 		cfg.RepoURL,
@@ -149,6 +181,8 @@ func (g *gitCloner) run(
 		&git.BareCloneOptions{
 			BaseDir:  stepCtx.WorkDir,
 			Blobless: cfg.Blobless,
+			Depth:    depth,
+			Branches: branches,
 		},
 	)
 	if err != nil {
@@ -213,11 +247,10 @@ func (g *gitCloner) run(
 	}, nil
 }
 
-// ensureRemoteBranch checks for the existence of a remote branch. If the remote
-// branch exists, no action is taken and nil is returned. If the branch does not
-// exist and create == true, an empty orphaned branch is created, using a
-// temporary working tree in root, and pushed to the remote. If the branch does
-// not exist and create == false, an error is returned.
+// ensureRemoteBranch ensures that branch exists in the repository. If the branch
+// does not exist and create == true, an empty orphaned branch is created using a
+// temporary working tree in root and pushed to the remote. If the branch does not
+// exist and create == false, an error is returned.
 func ensureRemoteBranch(
 	ctx context.Context,
 	root *os.Root,
@@ -225,10 +258,10 @@ func ensureRemoteBranch(
 	branch string,
 	create bool,
 ) error {
-	exists, err := repo.RemoteBranchExists(ctx, branch)
+	exists, err := repo.LocalBranchExists(ctx, branch)
 	if err != nil {
 		return fmt.Errorf(
-			"error checking if remote branch %q of repo %s exists: %w",
+			"error checking if branch %q of repo %s exists locally: %w",
 			branch, repo.URL(), err,
 		)
 	}
