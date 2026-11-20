@@ -49,7 +49,10 @@ system to access the git repos.
 
 :::note
 
-When every `checkout` specifies a `branch`, Kargo limits the clone to only those branches. Only tags pointing to commits within the fetched history are fetched locally. Tags that exist on other branches (or beyond `depth` for shallow clones) are not fetched.
+When every `checkout` specifies a `branch`, Kargo limits the clone to only
+those branches. Only tags pointing to commits within the fetched history are
+fetched locally. Tags that exist on other branches (or beyond `depth` for
+shallow clones) are not fetched.
 
 :::
 
@@ -209,10 +212,13 @@ Keep the following in mind when choosing a value for `depth`:
 
 * When a branch is later pushed with the [`git-push`](git-push.md) or
   [`github-push`](github-push.md) step and the branch has diverged from its
-  remote target, Kargo will attempt to automatically deepen the shallow clone (at most six times) to safely integrate remote changes. If a push fails due to incomplete shallow history, increase `depth` or remove it and rerun the promotion. 
-  
-* Choosing a `depth` large enough to cover typical divergence (such as `100` rather
-  than `1`) avoids extra deepening fetches.
+  remote target, Kargo will attempt to automatically deepen the shallow clone
+  (at most six times) to safely integrate remote changes. If a push fails due
+  to incomplete shallow history, increase `depth` or remove it and rerun the
+  promotion.
+
+* Choosing a `depth` large enough to cover typical divergence (such as `100`
+  rather than `1`) avoids extra deepening fetches.
 
 * If the fetched branches share history, the shared commits count toward each
   branch's `depth`. A branch can end up with more than `depth` commits in the
