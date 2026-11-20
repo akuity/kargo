@@ -80,3 +80,75 @@ tests:
       - equal:
           path: metadata.name
           value: kargo-dex-server
+
+---
+suite: dex-server/cert.yaml
+values:
+  - ../test/values-unittest.yaml
+templates:
+  - templates/dex-server/cert.yaml
+set:
+  api.oidc.enabled: true
+  api.oidc.dex.enabled: true
+tests:
+  - it: is not rendered when Dex uses a provided cert
+    set:
+      api.oidc.dex.tls.selfSignedCert: false
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: renders a long-lived CA and a CA Issuer for Dex
+    asserts:
+      - hasDocuments:
+          count: 3
+      - documentSelector:
+          path: metadata.name
+          value: kargo-dex-ca
+        isKind:
+          of: Certificate
+      - documentSelector:
+          path: metadata.name
+          value: kargo-dex-ca
+        equal:
+          path: spec.isCA
+          value: true
+      - documentSelector:
+          path: metadata.name
+          value: kargo-dex-ca
+        equal:
+          path: spec.duration
+          value: 87600h
+      - documentSelector:
+          path: metadata.name
+          value: kargo-dex-ca
+        equal:
+          path: spec.issuerRef.name
+          value: kargo-selfsigned-cert-issuer
+      - documentSelector:
+          path: metadata.name
+          value: kargo-dex-ca-issuer
+        isKind:
+          of: Issuer
+      - documentSelector:
+          path: metadata.name
+          value: kargo-dex-ca-issuer
+        equal:
+          path: spec.ca.secretName
+          value: kargo-dex-ca
+
+  # Issuing the Dex cert from a CA keeps the ca.crt that kargo-api trusts the
+  # same across renewals of the Dex cert.
+  - it: issues the Dex cert from the CA Issuer
+    documentSelector:
+      path: metadata.name
+      value: kargo-dex-server
+    asserts:
+      - isKind:
+          of: Certificate
+      - equal:
+          path: spec.issuerRef.name
+          value: kargo-dex-ca-issuer
+      - equal:
+          path: spec.secretName
+          value: kargo-dex-server-cert
