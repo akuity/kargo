@@ -3,11 +3,14 @@ import { describe, expect, test } from 'vitest';
 import { PromotionRequest, Target } from '../../../../gen/api/v2/models';
 import { targetRows } from '../../../project/targets/model/target-rows';
 import {
+  awaitingStage,
   fleetStage,
   forStage as stageStatus,
+  rollout,
   round,
   target
 } from '../../../project/targets/model/test-fixtures';
+import { rolloutStageRounds, rolloutToRound } from '../../utils/promotion-rollout';
 
 import {
   assessedHealth,
@@ -16,6 +19,7 @@ import {
   healthTally,
   neverPromoted,
   owningTargetSet,
+  queuedRoundWords,
   roundTally
 } from './summary';
 
@@ -79,6 +83,77 @@ describe('roundTally()', () => {
       inRound: 0,
       notInRound: 2
     });
+  });
+});
+
+describe('a Stage whose latest rollout is waiting to start', () => {
+  const names = ['a', 'b', 'c'];
+  // Rollout 3 promoted every Target; rollout 4 is held by the Stage while the
+  // Freight rollout 3 left is verified.
+  const { round: lastRun, queued } = rolloutStageRounds({
+    unfinished: rollout('prod', 4, 'freight-next', names, awaitingStage('prod')),
+    finished: rollout('prod', 3, 'freight-new', names, {
+      phase: 'Succeeded',
+      summary: { succeeded: 3 },
+      targets: names.map((name) => ({ name, phase: 'Succeeded', promotion: `prod.03.${name}` }))
+    })
+  });
+  const promoted = names.map((name) =>
+    governed(name, stageStatus('current', undefined, 'freight-new'))
+  );
+
+  test('the tab goes on reading its Targets by the last rollout that ran', () => {
+    expect(lastRun).toMatchObject({ number: 3, spec: { freight: 'freight-new' } });
+    const fleet = rows(promoted, lastRun);
+    expect(roundTally(fleet)).toEqual({
+      inRound: 3,
+      succeeded: 3,
+      failed: 0,
+      inFlight: 0,
+      aborted: 0,
+      notInRound: 0
+    });
+    expect(neverPromoted(fleet)).toBe(0);
+    expect(fleet.map(({ freight }) => freight)).toEqual([
+      ['freight-new'],
+      ['freight-new'],
+      ['freight-new']
+    ]);
+    expect(childPromotionName(lastRun, 'a')).toBe('prod.03.a');
+  });
+
+  test('the waiting rollout is kept apart, as what is queued', () => {
+    expect(queued).toMatchObject({ number: 4, spec: { freight: 'freight-next' } });
+  });
+
+  // What the tab used to show: read by the waiting rollout, no Target had
+  // been attempted, and the round before it was nowhere to be seen.
+  test('read by the waiting rollout instead, nothing would have been attempted', () => {
+    expect(roundTally(rows(promoted, queued))).toMatchObject({ inRound: 0, notInRound: 3 });
+  });
+});
+
+describe('queuedRoundWords()', () => {
+  const label = (name: string) => name.replace('freight-', '');
+
+  test('names a rollout by its number and the Freight it is waiting to promote', () => {
+    const queued = rolloutToRound(rollout('prod', 4, 'freight-next', ['a'], awaitingStage('prod')));
+    expect(queuedRoundWords(queued, label)).toEqual({
+      subject: 'Rollout #4 of Freight next',
+      kind: 'rollout'
+    });
+  });
+
+  test('names a PromotionRequest without its name, which is too long to read', () => {
+    expect(queuedRoundWords(round('prod', ['a']), label)).toEqual({
+      subject: 'A promotion request of Freight new',
+      kind: 'request'
+    });
+  });
+
+  test('leaves the Freight out when the round names none', () => {
+    const queued = rolloutToRound(rollout('prod', 4, '', ['a']));
+    expect(queuedRoundWords(queued, label).subject).toBe('Rollout #4');
   });
 });
 

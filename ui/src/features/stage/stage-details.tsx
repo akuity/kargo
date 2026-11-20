@@ -43,7 +43,7 @@ import { FreightHistory } from './tabs/freight-history/freight-history';
 import { useGetFreightMap } from './tabs/freight-history/use-get-freight-map';
 import { StageSettings } from './tabs/settings/stage-settings';
 import { StageTargets } from './tabs/targets/targets';
-import { useCurrentRound } from './use-current-round';
+import { useStageRounds } from './use-current-round';
 import { useImages } from './use-images';
 import { roundBlock } from './utils/promotion-request';
 import { Verifications } from './verifications';
@@ -122,9 +122,11 @@ export const StageDetails = ({ stage }: { stage: Stage }) => {
 
   // When a target-aware Stage's latest round cannot progress, say so once,
   // above the tabs, so the Targets and Promotions tabs both sit under the
-  // explanation rather than each hinting at it.
-  const round = useCurrentRound(projectName || '', stage);
-  const block = roundBlock(round);
+  // explanation rather than each hinting at it. A round that is only queued
+  // is not in trouble and gets no such notice, as a Pending Promotion to a
+  // classic Stage gets none: it shows as Pending where rounds are listed.
+  const { round, queued } = useStageRounds(projectName || '', stage);
+  const block = roundBlock(queued ?? round);
 
   useEffect(() => {
     if (activeTab === TabsTypes.LIVE_MANIFEST) {
@@ -224,6 +226,7 @@ export const StageDetails = ({ stage }: { stage: Stage }) => {
                             projectName={projectName || ''}
                             stage={stage}
                             round={round}
+                            queued={queued}
                           />
                         )
                       }

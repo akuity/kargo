@@ -3,11 +3,15 @@ import { describe, expect, test } from 'vitest';
 import { PromotionRequest, Target } from '../../../../gen/api/v2/models';
 import { targetRows } from '../../../project/targets/model/target-rows';
 import {
+  awaitingStage,
   fleetStage,
   forStage as stageStatus,
+  rollout,
   round,
   target
 } from '../../../project/targets/model/test-fixtures';
+import { isRoundAwaitingStage, roundBlock } from '../../utils/promotion-request';
+import { rolloutStageRounds } from '../../utils/promotion-rollout';
 
 import {
   MarkColors,
@@ -88,6 +92,32 @@ describe('promotionMarking()', () => {
     const [row] = rows([governed('a', stageStatus('current', undefined, 'freight-new'))]);
     expect(blockedMarks.legend.map(({ key }) => key)).toEqual(['NotAttempted']);
     expect(blockedMarks.mark(row)).toMatchObject({ key: 'NotAttempted', label: 'Not attempted' });
+  });
+
+  test('a rollout waiting to start leaves the squares on the last one that ran', () => {
+    const { round: lastRun, queued } = rolloutStageRounds({
+      unfinished: rollout('prod', 4, 'freight-next', ['won', 'lost'], awaitingStage('prod')),
+      finished: rollout('prod', 3, 'freight-new', ['won', 'lost'], {
+        phase: 'Failed',
+        targets: [
+          { name: 'won', phase: 'Succeeded' },
+          { name: 'lost', phase: 'Failed' }
+        ]
+      })
+    });
+    // The grid is drawn as blocked only when the round it reads is, and the
+    // round it reads is the one that ran, not the one still queued.
+    expect(isRoundAwaitingStage(queued)).toBe(true);
+    expect(roundBlock(queued)).toBeUndefined();
+    expect(roundBlock(lastRun)).toBeUndefined();
+    const fleet = rows(
+      [governed('won', stageStatus('current', undefined, 'freight-new')), governed('lost')],
+      lastRun
+    );
+    expect(tally(fleet, marks).map(({ mark, count }) => [mark.key, count])).toEqual([
+      ['Succeeded', 1],
+      ['Failed', 1]
+    ]);
   });
 
   test('the legend leads with what went well and ends with what was never tried', () => {

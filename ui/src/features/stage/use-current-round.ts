@@ -7,17 +7,25 @@ import { Stage } from '@ui/gen/api/v2/models';
 import { useLatestRollouts, useStageLatestRollouts } from './use-promotion-rollouts';
 import { useWatchPromotionRequests } from './use-watch-promotion-requests';
 import { currentRound, currentRounds } from './utils/promotion-request';
-import { Round, rolloutRound, rolloutRounds, stageUsesRollouts } from './utils/promotion-rollout';
+import {
+  Round,
+  StageRounds,
+  rolloutRounds,
+  rolloutStageRounds,
+  stageUsesRollouts
+} from './utils/promotion-rollout';
 
-// useCurrentRound resolves the round that best describes what a target-aware
-// Stage is doing right now. It returns nothing for a classic Stage, which has
-// no rounds.
+// useStageRounds resolves where a target-aware Stage stands with its rounds:
+// the round its Targets are read by, and a newer one still queued behind it,
+// if there is one. It returns neither for a classic Stage, which has no
+// rounds.
 //
-// The round is a PromotionRollout for a Stage that fans out through rollouts
-// and a PromotionRequest for any other; see stageUsesRollouts. The lists it
-// reads are the ones the Promotions tab and the pipeline read, under the same
-// query keys, so they share their fetches.
-export const useCurrentRound = (project: string, stage?: Stage): Round | undefined => {
+// The rounds are PromotionRollouts for a Stage that fans out through rollouts
+// and PromotionRequests for any other; see stageUsesRollouts. Only a rollout
+// waits for its Stage to let it start, so only a Stage on rollouts ever has a
+// round queued. The lists read here are the ones the Promotions tab and the
+// pipeline read, under the same query keys, so they share their fetches.
+export const useStageRounds = (project: string, stage?: Stage): StageRounds => {
   const stageName = stage?.metadata?.name || '';
   const targetAware = isStageTargetAware(stage);
 
@@ -35,11 +43,11 @@ export const useCurrentRound = (project: string, stage?: Stage): Round | undefin
 
   return useMemo(() => {
     if (!targetAware) {
-      return undefined;
+      return {};
     }
     return usesRollouts
-      ? rolloutRound(latest)
-      : currentRound(stage, listQuery.data?.data?.items || []);
+      ? rolloutStageRounds(latest)
+      : { round: currentRound(stage, listQuery.data?.data?.items || []) };
   }, [targetAware, usesRollouts, latest, stage, listQuery.data]);
 };
 

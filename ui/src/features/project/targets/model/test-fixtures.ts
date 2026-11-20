@@ -1,5 +1,6 @@
 import {
   PromotionRequest,
+  PromotionRollout,
   Stage,
   Target,
   TargetStageStatus,
@@ -52,4 +53,33 @@ export const round = (
   metadata: { name: `${stageName}.01` },
   spec: { stage: stageName, freight: 'freight-new', targets: targets.map((name) => ({ name })) },
   status: partial
+});
+
+// rollout builds one of a Stage's PromotionRollouts, known by its number.
+export const rollout = (
+  stageName: string,
+  number: number,
+  freight: string,
+  targets: string[],
+  status: PromotionRollout['status'] = {}
+): PromotionRollout => ({
+  metadata: { name: `${stageName}.rollout-${number}` },
+  number,
+  spec: { stage: stageName, freight, targets: targets.map((name) => ({ name })) },
+  status
+});
+
+// awaitingStage is the status of a PromotionRollout its Stage has yet to let
+// start: Pending, with no Target attempted and no tally of them.
+export const awaitingStage = (stageName: string): PromotionRollout['status'] => ({
+  phase: 'Pending',
+  conditions: [
+    {
+      type: 'Ready',
+      status: 'False',
+      reason: 'AwaitingStage',
+      message: `Waiting for Stage "${stageName}" to let this PromotionRollout start`,
+      lastTransitionTime: '2026-11-20T00:00:00Z'
+    }
+  ]
 });

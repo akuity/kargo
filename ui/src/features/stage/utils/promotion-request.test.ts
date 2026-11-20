@@ -9,6 +9,8 @@ import {
   isPromotionRequestFailed,
   isPromotionRequestPhaseTerminal,
   isPromotionRequestRetryable,
+  isRoundAwaitingStage,
+  isRoundQueued,
   promotionRequestCompareFn,
   roundBlock,
   targetRows
@@ -232,6 +234,16 @@ describe('roundBlock()', () => {
     expect(block?.description).toBe('Target us-east-1 not found');
   });
 
+  test('a round waiting for its Stage to let it start is not blocked', () => {
+    // Its Ready condition is False for as long as it waits, with a message,
+    // which is all it would take to be read as a round that cannot progress.
+    const waiting = blocked(
+      'AwaitingStage',
+      'Waiting for Stage "prod" to let this PromotionRollout start'
+    );
+    expect(roundBlock(waiting)).toBeUndefined();
+  });
+
   test('is not a block once the round has fanned out, even with failed children', () => {
     const failedRound = blocked('PromotionsFailed', '1 of 3 Promotions did not succeed');
     failedRound.status = {
@@ -328,5 +340,93 @@ describe('currentRounds()', () => {
 
   test('a Stage with no name is left out', () => {
     expect(currentRounds([{} as Stage], requests)).toEqual({});
+  });
+});
+
+describe('isRoundAwaitingStage()', () => {
+  const ready = (status: string, reason: string) => [
+    { type: 'Ready', status, reason, message: 'm', lastTransitionTime: '2026-11-20T00:00:00Z' }
+  ];
+
+  test('reads the reason its Ready condition is False for', () => {
+    expect(
+      isRoundAwaitingStage(request({ status: { conditions: ready('False', 'AwaitingStage') } }))
+    ).toBe(true);
+  });
+
+  test('any other reason is not a wait for the Stage', () => {
+    expect(
+      isRoundAwaitingStage(request({ status: { conditions: ready('False', 'TargetsMissing') } }))
+    ).toBe(false);
+    expect(
+      isRoundAwaitingStage(request({ status: { conditions: ready('True', 'AwaitingStage') } }))
+    ).toBe(false);
+    expect(isRoundAwaitingStage(request({}))).toBe(false);
+    expect(isRoundAwaitingStage(undefined)).toBe(false);
+  });
+
+  test('a round that has attempted a Target is no longer waiting', () => {
+    expect(
+      isRoundAwaitingStage(
+        request({
+          status: {
+            conditions: ready('False', 'AwaitingStage'),
+            targets: [{ name: 'eu', promotion: 'p' }]
+          }
+        })
+      )
+    ).toBe(false);
+  });
+});
+
+describe('isRoundQueued()', () => {
+  const ready = (reason: string, message: string) => [
+    { type: 'Ready', status: 'False', reason, message, lastTransitionTime: '2026-11-20T00:00:00Z' }
+  ];
+
+  test('a Pending round waiting for its Stage is queued', () => {
+    expect(
+      isRoundQueued(
+        request({
+          status: { phase: 'Pending', conditions: ready('AwaitingStage', 'Waiting for Stage') }
+        })
+      )
+    ).toBe(true);
+  });
+
+  test('so is a round nothing has picked up yet', () => {
+    expect(isRoundQueued(request({}))).toBe(true);
+    expect(isRoundQueued(request({ status: { phase: 'Pending' } }))).toBe(true);
+  });
+
+  test('a round that cannot progress is blocked, not queued', () => {
+    expect(
+      isRoundQueued(
+        request({
+          status: { phase: 'Pending', conditions: ready('TargetsMissing', 'Target not found') }
+        })
+      )
+    ).toBe(false);
+  });
+
+  test('a round that has started or finished is not queued', () => {
+    expect(isRoundQueued(request({ status: { phase: 'Running' } }))).toBe(false);
+    expect(isRoundQueued(request({ status: { phase: 'Succeeded' } }))).toBe(false);
+    expect(isRoundQueued(request({ status: { phase: 'Failed' } }))).toBe(false);
+  });
+
+  test('nor is one that has attempted a Target, whatever its phase says', () => {
+    expect(
+      isRoundQueued(
+        request({ status: { phase: 'Pending', targets: [{ name: 'eu', promotion: 'p' }] } })
+      )
+    ).toBe(false);
+    expect(isRoundQueued(request({ status: { phase: 'Pending', summary: { pending: 1 } } }))).toBe(
+      false
+    );
+  });
+
+  test('no round is not a queued round', () => {
+    expect(isRoundQueued(undefined)).toBe(false);
   });
 });

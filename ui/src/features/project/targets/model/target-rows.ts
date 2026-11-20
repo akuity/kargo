@@ -1,5 +1,5 @@
 import { HealthStatus, healthStatusToEnum } from '@ui/features/common/health-status/utils';
-import { roundBlock } from '@ui/features/stage/utils/promotion-request';
+import { isRoundAwaitingStage, roundBlock } from '@ui/features/stage/utils/promotion-request';
 import { Round } from '@ui/features/stage/utils/promotion-rollout';
 import { FreightCollection, Health, Stage, Target } from '@ui/gen/api/v2/models';
 
@@ -137,12 +137,14 @@ export const targetRows = (
   rounds: Rounds = {}
 ): TargetRow[] => {
   const governing = targetAwareStages(stages);
-  // A round that never fanned out reached no Target. Settled once per Stage,
-  // since the answer does not vary by Target.
+  // A round that never fanned out reached no Target, whether it is blocked or
+  // only waiting for its Stage to let it start. Settled once per Stage, since
+  // the answer does not vary by Target.
   const reaching = new Map(
     governing.map((stage) => {
       const round = rounds[stage.metadata?.name || ''];
-      return [stage.metadata?.name || '', round && !roundBlock(round) ? round : undefined];
+      const reached = round && !roundBlock(round) && !isRoundAwaitingStage(round);
+      return [stage.metadata?.name || '', reached ? round : undefined];
     })
   );
   return [...targets].sort(byName).map((target) => {

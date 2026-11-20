@@ -1,6 +1,7 @@
 import { HealthStatus, healthStatusToEnum } from '@ui/features/common/health-status/utils';
 import { GoverningStage, TargetRow } from '@ui/features/project/targets/model/target-rows';
-import { Round } from '@ui/features/stage/utils/promotion-rollout';
+import { roundWords } from '@ui/features/stage/round-words';
+import { Round, isRolloutRound, roundIdentity } from '@ui/features/stage/utils/promotion-rollout';
 import { Target } from '@ui/gen/api/v2/models';
 
 // governing is what the one Stage this tab is about observes of a Target.
@@ -109,6 +110,24 @@ export const neverPromoted = (rows: TargetRow[]): number =>
 // logs of its own promotion rather than the round's summary of them.
 export const childPromotionName = (round: Round | undefined, target: string): string | undefined =>
   round?.status?.targets?.find(({ name }) => name === target)?.promotion;
+
+// queuedRoundWords is how a round waiting to start is spoken of: what it is
+// and the Freight it is waiting to promote, as the subject of a sentence, and
+// the word for its kind. A rollout is known by its number; a PromotionRequest
+// has only a name, which is too long to read in passing and is left out.
+export const queuedRoundWords = (
+  queued: Round,
+  freightLabel: (name: string) => string
+): { subject: string; kind: string } => {
+  const rollout = isRolloutRound(queued);
+  const kind = roundWords[rollout ? 'rollout' : 'request'].short;
+  const identity = rollout ? `Rollout ${roundIdentity(queued).label}` : 'A promotion request';
+  const freight = queued.spec?.freight;
+  return {
+    subject: freight ? `${identity} of Freight ${freightLabel(freight)}` : identity,
+    kind
+  };
+};
 
 // owningTargetSet names the TargetSet a Target was generated from. Targets may
 // also be written by hand, and then nothing owns them.

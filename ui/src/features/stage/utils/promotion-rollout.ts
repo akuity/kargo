@@ -12,6 +12,8 @@ import {
 } from '@ui/features/common/stage-status/utils';
 import { PromotionRequest, PromotionRollout, Stage } from '@ui/gen/api/v2/models';
 
+import { isRoundQueued } from './promotion-request';
+
 // Round is one fan-out of a Stage's promotion across the Targets it governs,
 // in the one shape every round view takes: the list of rounds, a round's
 // detail, the Targets tab, the progress bar.
@@ -181,6 +183,29 @@ export const currentRollout = (latest?: LatestRollouts): PromotionRollout | unde
 export const rolloutRound = (latest?: LatestRollouts): Round | undefined => {
   const rollout = currentRollout(latest);
   return rollout && rolloutToRound(rollout);
+};
+
+// StageRounds is where a Stage stands with its rounds, as its Targets are read:
+// the round that last did something to them, and a newer one that has yet to.
+export type StageRounds = {
+  // The newest round that has started. Each Target's last promotion is read
+  // from this one.
+  round?: Round;
+  // A newer round still waiting to start. It has attempted no Target, so it
+  // is shown beside what the Targets are known by rather than in its place.
+  queued?: Round;
+};
+
+// rolloutStageRounds reads a Stage's rollouts as StageRounds. A rollout is
+// created Pending and stays so until its Stage lets it start, which may be as
+// long as a verification of the Stage's Freight runs. Until then the newest
+// rollout that finished is still the last word on every Target.
+export const rolloutStageRounds = (latest?: LatestRollouts): StageRounds => {
+  const current = rolloutRound(latest);
+  if (!isRoundQueued(current)) {
+    return { round: current };
+  }
+  return { round: latest?.finished && rolloutToRound(latest.finished), queued: current };
 };
 
 // rolloutRounds resolves that round for each of the Stages that fan out

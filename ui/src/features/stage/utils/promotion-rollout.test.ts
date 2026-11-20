@@ -14,6 +14,7 @@ import {
   rolloutPath,
   rolloutRound,
   rolloutRounds,
+  rolloutStageRounds,
   rolloutToRound,
   roundIdentity,
   roundMessage,
@@ -393,6 +394,94 @@ describe('rolloutRound()', () => {
 
   test('nothing for a Stage with no rollout to show', () => {
     expect(rolloutRound(undefined)).toBeUndefined();
+  });
+});
+
+describe('rolloutStageRounds()', () => {
+  const awaitingStage = {
+    phase: 'Pending',
+    conditions: [
+      {
+        type: 'Ready',
+        status: 'False',
+        reason: 'AwaitingStage',
+        message: 'Waiting for Stage "prod" to let this PromotionRollout start',
+        lastTransitionTime: '2026-11-20T00:00:00Z'
+      }
+    ]
+  } as PromotionRollout['status'];
+
+  test('a rollout waiting for its Stage is queued behind the last that finished', () => {
+    const rounds = rolloutStageRounds({
+      unfinished: rollout(4, 'Pending', { status: awaitingStage }),
+      finished: rollout(3, 'Succeeded')
+    });
+    expect(rounds.round).toMatchObject({ number: 3, status: { phase: 'Succeeded' } });
+    expect(rounds.queued).toMatchObject({ number: 4, status: { phase: 'Pending' } });
+  });
+
+  test('so is one nothing has picked up yet', () => {
+    const rounds = rolloutStageRounds({
+      unfinished: rollout(4),
+      finished: rollout(3, 'Failed')
+    });
+    expect(rounds.round).toMatchObject({ number: 3 });
+    expect(rounds.queued).toMatchObject({ number: 4 });
+  });
+
+  test("a Stage's first rollout, while queued, leaves no round to read Targets by", () => {
+    const rounds = rolloutStageRounds({ unfinished: rollout(1, 'Pending') });
+    expect(rounds.round).toBeUndefined();
+    expect(rounds.queued).toMatchObject({ number: 1 });
+  });
+
+  test('a rollout that has started is the round, with nothing queued', () => {
+    const rounds = rolloutStageRounds({
+      unfinished: rollout(4, 'Running'),
+      finished: rollout(3, 'Succeeded')
+    });
+    expect(rounds.round).toMatchObject({ number: 4 });
+    expect(rounds.queued).toBeUndefined();
+  });
+
+  test('a Pending rollout that has reached a Target has started', () => {
+    const rounds = rolloutStageRounds({
+      unfinished: rollout(4, 'Pending', {
+        status: { phase: 'Pending', targets: [{ name: 'east', promotion: 'p' }] }
+      }),
+      finished: rollout(3, 'Succeeded')
+    });
+    expect(rounds.round).toMatchObject({ number: 4 });
+    expect(rounds.queued).toBeUndefined();
+  });
+
+  test('a rollout that cannot progress stays the round, to be shown as blocked', () => {
+    const rounds = rolloutStageRounds({
+      unfinished: rollout(4, 'Pending', {
+        status: {
+          phase: 'Pending',
+          conditions: [
+            {
+              type: 'Ready',
+              status: 'False',
+              reason: 'TargetsMissing',
+              message: 'Target east not found',
+              lastTransitionTime: '2026-11-20T00:00:00Z'
+            }
+          ]
+        }
+      }),
+      finished: rollout(3, 'Succeeded')
+    });
+    expect(rounds.round).toMatchObject({ number: 4 });
+    expect(rounds.queued).toBeUndefined();
+  });
+
+  test('with nothing in flight, the newest that finished is the round', () => {
+    expect(rolloutStageRounds({ finished: rollout(3, 'Succeeded') })).toMatchObject({
+      round: { number: 3 }
+    });
+    expect(rolloutStageRounds(undefined)).toEqual({ round: undefined });
   });
 });
 
