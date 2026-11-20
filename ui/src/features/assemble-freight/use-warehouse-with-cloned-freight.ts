@@ -86,6 +86,12 @@ export const useWarehouseWithClonedFreight = (
 
       if (!subscription?.versions?.find((v) => v === chart.version)) {
         subscription?.versions?.unshift(chart.version || '');
+        if (chart.version && chart.annotations) {
+          subscription.annotations = {
+            ...subscription.annotations,
+            [chart.version]: chart.annotations
+          };
+        }
       }
     }
 

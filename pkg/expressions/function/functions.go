@@ -898,9 +898,10 @@ func getChartFromDiscoveredArtifacts(artifacts *kargoapi.DiscoveredArtifacts) ex
 			}
 			if len(ca.Versions) > 0 {
 				return kargoapi.Chart{
-					RepoURL: repoURL,
-					Name:    ca.Name,
-					Version: ca.Versions[0],
+					RepoURL:     repoURL,
+					Name:        ca.Name,
+					Version:     ca.Versions[0],
+					Annotations: ca.Annotations[ca.Versions[0]],
 				}, nil
 			}
 		}

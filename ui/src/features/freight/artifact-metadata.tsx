@@ -14,7 +14,7 @@ import { TableSource } from './flatten-freight-origin-utils';
 
 export const ArtifactMetadata = (props: TableSource) => {
   const [showOnlyOci, setShowOnlyOci] = useState(true);
-  if (props.type === 'image') {
+  if (props.type === 'image' || props.type === 'helm') {
     const artifactSource = getImageSource(props?.annotations || {});
     const artifactBuildDate = getImageBuiltDate(props?.annotations || {});
     const { ociPrefixedAnnotations, restAnnotations } = splitOciPrefixedAnnotations(
