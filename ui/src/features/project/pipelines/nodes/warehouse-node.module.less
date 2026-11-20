@@ -1,0 +1,274 @@
+// The Warehouse and subscription nodes stand on the same surface as a Stage --
+// the card, its border and its lift -- but never take a Stage's color band. A
+// Warehouse's color is its identity, stated once in the tile beside its name,
+// and the card around it stays neutral so the states below can use the border.
+.warehouseNode,
+.subscriptionNode {
+  box-shadow: var(--stage-node-shadow, none);
+  transition: border-color 0.2s ease;
+}
+
+// The ink the tile's icon is mixed toward: darker than the Warehouse's color
+// on a light card, lighter on a dark one, so that every color in the palette
+// clears 4.5:1 against its own tile.
+.warehouseNode {
+  --warehouse-tile-ink: black;
+
+  // AntD sizes small buttons from a single class, so these rules are scoped
+  // to the card to outrank it rather than tie with it
+  .action {
+    width: 22px;
+    min-width: 22px;
+    height: 22px;
+    padding: 0;
+    font-size: 11px;
+    color: var(--kargo-color-text-secondary);
+  }
+}
+
+:root[data-theme='dark'] .warehouseNode {
+  --warehouse-tile-ink: white;
+}
+
+// The states take the border, which is the one part of the card the identity
+// color does not use. Doubled to outrank AntD's own .ant-card-bordered.
+.warehouseNode.discovering {
+  border-color: color-mix(in srgb, var(--kargo-color-info) 50%, transparent);
+}
+
+.warehouseNode.failed,
+.subscriptionNode.failing {
+  border-color: color-mix(in srgb, var(--kargo-color-error) 50%, transparent);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding-right: 8px;
+}
+
+// Everything in the header short of the refresh button is the way into the
+// Warehouse's details. It reads as a title rather than a link: no color of its
+// own, and nothing changes under the pointer. It carries the header's padding
+// itself, so the whole band answers a click rather than just the text. AntD's
+// own a:hover ties with a plain class, hence the `a`.
+a.title,
+a.title:hover,
+a.title:active {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  padding: 10px 0 10px 12px;
+  border-radius: 9px 0 0 0;
+  color: inherit;
+  text-decoration: none;
+}
+
+a.title:focus-visible {
+  outline: 2px solid var(--kargo-color-link);
+  outline-offset: -2px;
+}
+
+// A rule under the header, where the body below it is plain text. A failed
+// Warehouse sets its error in a box of its own, which closes the header by
+// itself.
+.warehouseNode:not(.failed) .header {
+  border-bottom: 1px solid var(--kargo-color-border-secondary);
+}
+
+.tile {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
+  font-size: 12px;
+  color: color-mix(in srgb, var(--warehouse-accent) 55%, var(--warehouse-tile-ink));
+  background: color-mix(in srgb, var(--warehouse-accent) 18%, transparent);
+}
+
+// A project with one Warehouse colors none of them, so the tile is grey.
+.tileNeutral {
+  color: var(--kargo-color-text-secondary);
+  background: var(--kargo-color-fill-secondary);
+}
+
+.name {
+  flex: 1;
+  min-width: 0;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 18px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.body {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px 10px;
+}
+
+// The same caption a Stage sets over its Current Freight, so the two nodes
+// label their contents alike.
+.label {
+  margin-bottom: 2px;
+  font-size: 10px;
+  font-weight: 400;
+  line-height: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--kargo-color-text-tertiary);
+}
+
+.status {
+  font-size: 11px;
+  line-height: 15px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.discovering .status {
+  color: var(--kargo-color-info-text);
+}
+
+.error {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 10px 10px;
+  padding: 7px 10px;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--kargo-color-error) 12%, transparent);
+}
+
+.errorTitle {
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 16px;
+  color: var(--kargo-color-error-text);
+}
+
+.errorMessage {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  font-size: 11px;
+  line-height: 14px;
+  color: var(--kargo-color-text-secondary);
+}
+
+.subscriptionRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.subscriptionIcon {
+  flex: none;
+  font-size: 12px;
+  color: var(--kargo-color-link);
+}
+
+.subscriptionName {
+  flex: 1;
+  min-width: 0;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 18px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.subscriptionKind {
+  flex: none;
+  max-width: 40%;
+  font-size: 10px;
+  font-weight: 500;
+  line-height: 18px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--kargo-color-text-secondary);
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.subscriptionFailingLabel {
+  flex: none;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 18px;
+  color: var(--kargo-color-error-text);
+}
+
+.subscriptionURL {
+  display: block;
+  margin-top: 4px;
+  font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace;
+  font-size: 11px;
+  line-height: 16px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+// AntD colors both `a` and `a:hover`, so the states are pinned here
+a.subscriptionURL,
+a.subscriptionURL:hover {
+  color: var(--kargo-color-link);
+}
+
+a.subscriptionURL:hover {
+  text-decoration: underline;
+}
+
+a.subscriptionURL:focus-visible {
+  outline: 2px solid var(--kargo-color-link);
+  outline-offset: 1px;
+  border-radius: 3px;
+}
+
+.subscriptionURLPlain {
+  color: var(--kargo-color-text-secondary);
+}
+
+// The edges from a Warehouse's subscriptions say what its discovery is doing:
+// a running discovery draws them as dashes flowing into the Warehouse, and the
+// subscription it failed on as dashes standing still. The colors are set on
+// the edge itself, alongside the rest of its style. React Flow puts the class
+// on the edge's group, and draws the line in a path of its own inside it.
+.edgeDiscovering :global(.react-flow__edge-path),
+.edgeFailing :global(.react-flow__edge-path) {
+  stroke-dasharray: 8 6;
+}
+
+.edgeDiscovering :global(.react-flow__edge-path) {
+  animation: edge-flow 0.8s linear infinite;
+}
+
+// One dash and one gap, so the loop is seamless.
+@keyframes edge-flow {
+  to {
+    stroke-dashoffset: -14;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .edgeDiscovering :global(.react-flow__edge-path) {
+    animation: none;
+  }
+}
