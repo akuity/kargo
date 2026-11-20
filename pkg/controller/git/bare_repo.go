@@ -130,7 +130,7 @@ func CloneBare(
 	if err = b.setupClient(ctx, clientOpts); err != nil {
 		return nil, err
 	}
-	if err = b.clone(ctx, cloneOpts); err != nil {
+	if err = b.clone(ctx, *cloneOpts); err != nil {
 		return nil, err
 	}
 	if err = b.saveDirs(ctx); err != nil {
@@ -139,10 +139,7 @@ func CloneBare(
 	return b, nil
 }
 
-func (b *bareRepo) clone(ctx context.Context, opts *BareCloneOptions) error {
-	if opts == nil {
-		opts = &BareCloneOptions{}
-	}
+func (b *bareRepo) clone(ctx context.Context, opts BareCloneOptions) error {
 	if len(opts.Branches) > 0 {
 		return b.cloneSelectBranches(ctx, opts)
 	}
@@ -157,11 +154,8 @@ func (b *bareRepo) clone(ctx context.Context, opts *BareCloneOptions) error {
 //	git clone --bare [--filter=blob:none] [--depth=<depth> --no-single-branch] <url> <dir>
 func (b *bareRepo) cloneAllBranches(
 	ctx context.Context,
-	opts *BareCloneOptions,
+	opts BareCloneOptions,
 ) error {
-	if opts == nil {
-		opts = &BareCloneOptions{}
-	}
 	args := []string{"clone", "--bare"}
 	if opts.Blobless {
 		args = append(args, "--filter", "blob:none")
@@ -192,11 +186,8 @@ func (b *bareRepo) cloneAllBranches(
 //	git fetch [--filter=blob:none] [--depth=<depth>] origin +<ref>:<ref>...
 func (b *bareRepo) cloneSelectBranches(
 	ctx context.Context,
-	opts *BareCloneOptions,
+	opts BareCloneOptions,
 ) error {
-	if opts == nil {
-		opts = &BareCloneOptions{}
-	}
 	// Resolve branch names against the remote before initializing the repo so
 	// we can detect the remote's object format (SHA-1 vs SHA-256).
 	refs, objectFormat, err := b.findRemoteBranchRefs(ctx, opts.Branches)
