@@ -23,7 +23,8 @@ import (
 // UpdatedArgoCDAppHandler is an event handler that enqueues Promotions for
 // reconciliation when an associated ArgoCD Application is updated.
 type UpdatedArgoCDAppHandler[T any] struct {
-	kargoClient client.Client
+	kargoClient    client.Client
+	shardPredicate controller.ResponsibleFor[kargoapi.Promotion]
 }
 
 // Create implements TypedEventHandler.
@@ -120,6 +121,8 @@ func (u *UpdatedArgoCDAppHandler[T]) Update(
 		enqueue(promotion)
 	}
 
+	u.enqueueAuthorizedStageTargetPromotions(ctx, enqueue, newApp)
+
 	// Promotions that target this Application by label selector cannot be found
 	// via the name-based index, because a selector's match set depends on the
 	// Application's labels. We test both the old and new label sets so a
@@ -197,6 +200,59 @@ func (u *UpdatedArgoCDAppHandler[T]) enqueueSelectorMatches(
 			if promotionSelectorsMatchApp(ctx, u.kargoClient, &promotion, app.Namespace, app.Labels) {
 				enqueue(promotion)
 				break
+			}
+		}
+	}
+}
+
+// enqueueAuthorizedStageTargetPromotions enqueues the running Promotions to a
+// Target of each Stage the Application authorizes. Their app names may
+// reference target.*, which the name-based index cannot evaluate, so they are
+// found through the Application's authorized-stage annotation instead. This
+// wakes every running Promotion to a Target of such a Stage, at most one per
+// Target.
+func (u *UpdatedArgoCDAppHandler[T]) enqueueAuthorizedStageTargetPromotions(
+	ctx context.Context,
+	enqueue func(kargoapi.Promotion),
+	app *argocd.Application,
+) {
+	stageRef, ok := app.Annotations[kargoapi.AnnotationKeyAuthorizedStage]
+	if !ok {
+		return
+	}
+	logger := logging.LoggerFromContext(ctx)
+	stages, err := api.AuthorizedStages(stageRef)
+	if err != nil {
+		logger.Debug(
+			"ignoring unparseable authorized Stages of Application",
+			"app", app.Name,
+			"namespace", app.Namespace,
+			"error", err.Error(),
+		)
+		return
+	}
+	for _, stage := range stages {
+		promotions := &kargoapi.PromotionList{}
+		if err := u.kargoClient.List(
+			ctx,
+			promotions,
+			client.InNamespace(stage.Namespace),
+			client.MatchingLabels{kargoapi.LabelKeyStage: kubernetes.ShortenLabelValue(stage.Name)},
+		); err != nil {
+			logger.Error(
+				err, "error listing Promotions for Stage",
+				"namespace", stage.Namespace,
+				"stage", stage.Name,
+				"app", app.Name,
+			)
+			continue
+		}
+		for _, promo := range promotions.Items {
+			if promo.Spec.Stage == stage.Name &&
+				promo.Spec.Target != "" &&
+				promo.Status.Phase == kargoapi.PromotionPhaseRunning &&
+				u.shardPredicate.IsResponsible(&promo) {
+				enqueue(promo)
 			}
 		}
 	}
