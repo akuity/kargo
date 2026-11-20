@@ -32,7 +32,7 @@ system to access the git repos.
 | `repoURL` | `string` | Y | The URL of a remote Git repository to clone. Only HTTP(S) URLs are supported. |
 | `insecureSkipTLSVerify` | `boolean` | N | Whether to bypass TLS certificate verification when cloning (and for all subsequent operations involving this clone). Setting this to `true` is highly discouraged in production. |
 | `blobless` | `boolean` | N | Whether to perform a [blobless clone][] (`--filter=blob:none`). Defaults to `false`. Useful for large repositories, especially when combined with sparse checkouts. Requires that the Git server support partial clones; the clone will fail if it does not. |
-| `depth` | `integer` | N | Limits the clone to the specified number of most recent commits for each fetched branch (a [shallow clone][]). Must be at least `1`. If unset, the full history is cloned. Useful for repositories with a very long history. If specified, every `checkout` must specify a `branch`. See [Shallow Clone](#shallow-clone). |
+| `depth` | `integer` | N | Limits the clone to the specified number of most recent commits for each fetched branch (a [shallow clone][]). Must be at least `1`. If unset, the full history of each fetched branch is cloned. Useful for repositories with a very long history. If specified, every `checkout` must specify a `branch`. See [Shallow Clone](#shallow-clone). |
 | `recurseSubmodules` | `boolean` | N | Whether to recursively initialize and update [Git submodules](https://git-scm.com/book/en/v2/Git-Tools-Submodules) for every checkout. Defaults to `false`. When `true`, the equivalent of `git submodule update --init --recursive` is run for each working tree. Any credentials provided for `repoURL` must also be valid for all submodule repositories, or the step will fail. |
 | `author` | `[]object` | N | Default authorship information for any commits made to the cloned repository. If provided, this overrides any system-level defaults. |
 | `author.name` | `string` | Y | The committer's name. |
@@ -40,12 +40,18 @@ system to access the git repos.
 | `author.signingKey` | `string` | N | The GPG signing key for the author. This field is optional. |
 | `checkout` | `[]object` | Y | The commits, branches, or tags to check out from the repository and the paths where they should be checked out. At least one must be specified. |
 | `checkout[].as` | `string` | N | Used as the key in the `commits` output map. If not specified, the value of the `path` field is used as a key instead. Providing a value for this field is useful when expressions in downstream steps may need to reference specific commits checked out by this step. |
-| `checkout[].branch` | `string` | N | A branch to check out. Mutually exclusive with `commit` and `tag`. Required when `depth` is set. If none of `branch`, `commit`, or `tag` is specified, the default branch will be checked out. |
+| `checkout[].branch` | `string` | N | A branch to check out. Mutually exclusive with `commit` and `tag`. Required when `depth` is set. When `depth` is unset, if none of `branch`, `commit`, or `tag` is specified, the default branch will be checked out. |
 | `checkout[].create` | `boolean` | N | In the event `branch` does not already exist on the remote, whether a new, empty, orphaned branch should be created. Default is `false`, but should commonly be set to `true` for Stage-specific branches, which may not exist yet at the time of a Stage's first promotion. |
-| `checkout[].commit` | `string` | N | A specific commit to check out. Mutually exclusive with `branch` and `tag`. Cannot be used when `depth` is set. If none of `branch`, `commit`, or `tag` is specified, the default branch will be checked out. |
+| `checkout[].commit` | `string` | N | A specific commit to check out. Mutually exclusive with `branch` and `tag`. Cannot be used when `depth` is set. When `depth` is unset, if none of `branch`, `commit`, or `tag` is specified, the default branch will be checked out. |
 | `checkout[].path` | `string` | Y | The path for a working tree that will be created from the checked out revision. This path is relative to the temporary workspace that Kargo provisions for use by the promotion process. |
-| `checkout[].tag` | `string` | N | A tag to check out. Mutually exclusive with `branch` and `commit`. Cannot be used when `depth` is set. If none of `branch`, `commit`, or `tag` is specified, the default branch will be checked out. |
+| `checkout[].tag` | `string` | N | A tag to check out. Mutually exclusive with `branch` and `commit`. Cannot be used when `depth` is set. When `depth` is unset, if none of `branch`, `commit`, or `tag` is specified, the default branch will be checked out. |
 | `checkout[].sparse` | `[]string` | N | Directory paths for sparse checkout. Only the specified directories (and their contents) will be checked out. Paths must be relative to the repository root (e.g., `src/app`, `configs/prod`). Glob patterns are not supported. |
+
+:::note
+
+When every `checkout` specifies a `branch`, Kargo limits the clone to only those branches. Only tags pointing to commits within the fetched history are fetched locally. Tags that exist on other branches (or beyond `depth` for shallow clones) are not fetched.
+
+:::
 
 ## Output
 
@@ -175,8 +181,9 @@ not, in which case the clone will fail.
 
 For repositories with a very long history, cloning can be slow and use a lot of
 disk space. Setting `depth` limits the clone to the most recent commits of each
-fetched branch, which can reduce clone time dramatically. Furthermore, when every 
-`checkout` specifies a `branch`, only those branches are fetched from the remote.
+fetched branch, which can reduce clone time dramatically. Because `depth`
+requires every `checkout` to specify a `branch`, only those branches are fetched
+from the remote.
 
 ```yaml
 vars:
@@ -202,15 +209,18 @@ Keep the following in mind when choosing a value for `depth`:
 
 * When a branch is later pushed with the [`git-push`](git-push.md) or
   [`github-push`](github-push.md) step and the branch has diverged from its
-  remote target, Kargo will automatically deepen the shallow clone as needed
-  to safely integrate remote changes. Choosing a `depth` large enough to cover 
-  typical divergence (such as `100` rather than `1`) avoids extra deepening 
-  fetches.
+  remote target, Kargo will attempt to automatically deepen the shallow clone (at most six times) to safely integrate remote changes. If a push fails due to incomplete shallow history, increase `depth` or remove it and rerun the promotion. 
+  
+* Choosing a `depth` large enough to cover typical divergence (such as `100` rather
+  than `1`) avoids extra deepening fetches.
 
 * If the fetched branches share history, the shared commits count toward each
   branch's `depth`. A branch can end up with more than `depth` commits in the
-  clone as a result. For example, if `main` and `stage/dev` are both fetched,
-  the parent of the `main` tip is included in the history of both branches.
+  clone as a result. For example, if `main` is ahead of `release` by one commit
+  and both are fetched with `depth: 1`, the tip of `release` is also the parent
+  of `main`, so `main` will have two commits in the clone.
+
+* Only tags pointing to commits within the fetched depth are included locally.
 
 :::
 
