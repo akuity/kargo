@@ -3,9 +3,11 @@ package azure
 import (
 	"context"
 	"errors"
+	"net/http"
 	"testing"
 
 	"github.com/google/uuid"
+	"github.com/microsoft/azure-devops-go-api/azuredevops/v7"
 	adogit "github.com/microsoft/azure-devops-go-api/azuredevops/v7/git"
 	"github.com/stretchr/testify/require"
 	"k8s.io/utils/ptr"
@@ -89,6 +91,7 @@ func TestMergePullRequest(t *testing.T) {
 		expectedMerged bool
 		expectError    bool
 		errorContains  string
+		errorIs        error
 	}{
 		{
 			name:     "error getting PR",
@@ -104,6 +107,38 @@ func TestMergePullRequest(t *testing.T) {
 			errorContains: "error getting pull request",
 		},
 		{
+			name:     "404 getting PR",
+			prNumber: 404,
+			mockClient: &mockAzureGitClient{
+				getPullRequestFn: func(
+					context.Context, adogit.GetPullRequestArgs,
+				) (*adogit.GitPullRequest, error) {
+					return nil, azuredevops.WrappedError{
+						StatusCode: ptr.To(http.StatusNotFound),
+					}
+				},
+			},
+			expectError:   true,
+			errorContains: "pull request not found",
+			errorIs:       gitprovider.ErrPullRequestNotFound,
+		},
+		{
+			name:     "404 getting PR (pointer error)",
+			prNumber: 404,
+			mockClient: &mockAzureGitClient{
+				getPullRequestFn: func(
+					context.Context, adogit.GetPullRequestArgs,
+				) (*adogit.GitPullRequest, error) {
+					return nil, &azuredevops.WrappedError{
+						StatusCode: ptr.To(http.StatusNotFound),
+					}
+				},
+			},
+			expectError:   true,
+			errorContains: "pull request not found",
+			errorIs:       gitprovider.ErrPullRequestNotFound,
+		},
+		{
 			name:     "nil PR returned",
 			prNumber: 404,
 			mockClient: &mockAzureGitClient{
@@ -114,7 +149,8 @@ func TestMergePullRequest(t *testing.T) {
 				},
 			},
 			expectError:   true,
-			errorContains: "pull request 404 not found",
+			errorContains: "pull request not found",
+			errorIs:       gitprovider.ErrPullRequestNotFound,
 		},
 		{
 			name:     "PR already completed",
@@ -156,6 +192,7 @@ func TestMergePullRequest(t *testing.T) {
 			},
 			expectError:   true,
 			errorContains: "is abandoned",
+			errorIs:       gitprovider.ErrPullRequestClosedUnmerged,
 		},
 		{
 			name:     "PR is draft",
@@ -227,7 +264,8 @@ func TestMergePullRequest(t *testing.T) {
 				},
 			},
 			expectError:   true,
-			errorContains: `unsupported merge method "bogus"`,
+			errorContains: `merge method "bogus": unsupported merge method`,
+			errorIs:       gitprovider.ErrUnsupportedMergeMethod,
 		},
 		{
 			name:     "merge operation fails",
@@ -407,6 +445,9 @@ func TestMergePullRequest(t *testing.T) {
 			if tc.expectError {
 				require.Error(t, err)
 				require.Contains(t, err.Error(), tc.errorContains)
+				if tc.errorIs != nil {
+					require.ErrorIs(t, err, tc.errorIs)
+				}
 				require.False(t, merged)
 				require.Nil(t, pr)
 				return
