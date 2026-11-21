@@ -448,8 +448,9 @@ func (w *workTree) FetchCommits(ctx context.Context, commitIDs []string) error {
 }
 
 // deepen deepens a shallow repository by the specified number of commits along
-// the given remote refs without updating local tracking refs. It is a no-op if
-// depth is 0 or the repository is not shallow.
+// the given remote refs. Any remote-tracking branch that a configured fetch
+// refspec covers is updated to the remote's current tip as well. It is a no-op
+// if depth is 0 or the repository is not shallow.
 func (w *workTree) deepen(
 	ctx context.Context,
 	depth uint,

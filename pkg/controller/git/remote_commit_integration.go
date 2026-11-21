@@ -401,7 +401,7 @@ func (w *workTree) canSafelyRebase(
 			)
 		}
 
-		// never approve a rebase if a shallow boundary lies within the symmetric
+		// Never approve a rebase if a shallow boundary lies within the symmetric
 		// difference between HEAD and remoteRef, since commitsToReplay could omit
 		// hidden ancestors or misclassify shared ones.
 		if setsOverlap(diff, shallow) {
@@ -505,7 +505,7 @@ func (w *workTree) isShallow(ctx context.Context) (bool, error) {
 //
 // Equivalent to:
 //
-//	git rev-parse --git-path shallow
+//	cat $(git rev-parse --git-path shallow)
 func (w *workTree) shallowCommits(
 	ctx context.Context,
 ) (map[string]struct{}, error) {

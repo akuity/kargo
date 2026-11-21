@@ -2,8 +2,8 @@ package git
 
 // PushIntegrationPolicy controls how remote changes are integrated into the
 // local branch before pushing. The four options form a spectrum from least
-// conservative (AlwaysRebase) to most conservative (AlwaysMerge). Under every
-// policy, integration fails with ErrShallowHistoryIncomplete if a shallow
+// conservative (AlwaysRebase) to most conservative (AlwaysMerge). Under any
+// of the four, integration fails with ErrShallowHistoryIncomplete if a shallow
 // clone cannot be deepened enough to integrate safely.
 type PushIntegrationPolicy string
 
