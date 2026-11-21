@@ -636,7 +636,7 @@ func (w *workTree) IsRebasing(ctx context.Context) (bool, error) {
 	if err != nil {
 		return false, fmt.Errorf("error determining rebase status: %w", err)
 	}
-	rebaseMerge := filepath.Join(w.dir, strings.TrimSpace(string(res)))
+	rebaseMerge := w.absGitPath(strings.TrimSpace(string(res)))
 	if _, err = os.Stat(rebaseMerge); !os.IsNotExist(err) {
 		if err != nil {
 			return false, err
@@ -648,7 +648,7 @@ func (w *workTree) IsRebasing(ctx context.Context) (bool, error) {
 	)); err != nil {
 		return false, fmt.Errorf("error determining rebase status: %w", err)
 	}
-	rebaseApply := filepath.Join(w.dir, strings.TrimSpace(string(res)))
+	rebaseApply := w.absGitPath(strings.TrimSpace(string(res)))
 	if _, err = os.Stat(rebaseApply); !os.IsNotExist(err) {
 		if err != nil {
 			return false, err
@@ -656,6 +656,16 @@ func (w *workTree) IsRebasing(ctx context.Context) (bool, error) {
 		return true, nil
 	}
 	return false, nil
+}
+
+// absGitPath returns the absolute form of a path printed by
+// git rev-parse --git-path, which is relative to the working tree in a main
+// working tree but already absolute in a linked one.
+func (w *workTree) absGitPath(gitPath string) string {
+	if filepath.IsAbs(gitPath) {
+		return gitPath
+	}
+	return filepath.Join(w.dir, gitPath)
 }
 
 func (w *workTree) LastCommitID(ctx context.Context) (string, error) {

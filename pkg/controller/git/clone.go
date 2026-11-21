@@ -130,6 +130,11 @@ func (b *baseRepo) clone(
 			b.url, b.dir, explainCommitFetchError(err),
 		)
 	}
+	if isBranchRef(plan.primary) {
+		if err = b.requireHEAD(ctx, plan.primary); err != nil {
+			return err
+		}
+	}
 	if err = b.fetchAdditionalRefs(ctx, opts, bare, plan.fetch); err != nil {
 		return err
 	}
@@ -318,6 +323,33 @@ func existingRefs(
 		}
 	}
 	return existing, nil
+}
+
+// requireHEAD returns an error unless HEAD of a freshly cloned repository is the
+// specified fully qualified branch ref. git clone --branch falls back to a tag
+// of the same name when the branch does not exist, which leaves HEAD detached.
+//
+// Equivalent to:
+//
+//	git symbolic-ref -q HEAD
+func (b *baseRepo) requireHEAD(ctx context.Context, branchRef string) error {
+	res, err := libExec.Exec(b.buildGitCommand(
+		ctx, "symbolic-ref", "-q", headRef,
+	))
+	if err != nil {
+		var exitErr *libExec.ExitError
+		if !errors.As(err, &exitErr) || exitErr.ExitCode != 1 {
+			return fmt.Errorf("error reading HEAD of repo %q: %w", b.url, err)
+		}
+		// HEAD is detached
+	}
+	if strings.TrimSpace(string(res)) != branchRef {
+		return fmt.Errorf(
+			"branch %q does not exist in remote repo %q",
+			strings.TrimPrefix(branchRef, branchRefPrefix), b.url,
+		)
+	}
+	return nil
 }
 
 // fetchAdditionalRefs fetches the specified fully qualified refs and commit

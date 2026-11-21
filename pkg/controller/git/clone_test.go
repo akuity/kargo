@@ -129,6 +129,13 @@ func TestClone(t *testing.T) {
 			},
 		},
 		{
+			name: "branch checkout does not fall back to a tag of the same name",
+			opts: &CloneOptions{Checkout: "refs/heads/v1.0.0"},
+			assert: func(t *testing.T, _ *repo, err error) {
+				require.ErrorContains(t, err, `branch "v1.0.0" does not exist`)
+			},
+		},
+		{
 			name: "tag checkout is not mistaken for a branch of the same name",
 			opts: &CloneOptions{
 				Refs:     []string{"refs/tags/b"},

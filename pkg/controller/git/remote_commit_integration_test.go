@@ -341,6 +341,36 @@ func Test_workTree_rebase(t *testing.T) {
 		require.ErrorIs(t, err, ErrMergeConflict)
 	})
 
+	t.Run("rebase fails with merge conflicts in a bare clone's work tree", func(t *testing.T) {
+		wt := cloneBareWorkTree(
+			t,
+			testRepoURL,
+			&ClientOptions{Credentials: &testRepoCreds},
+			nil,
+			"main",
+		)
+
+		// Add a conflicting local commit.
+		require.NoError(t, os.WriteFile(
+			filepath.Join(wt.Dir(), "remote.txt"),
+			[]byte("from-local"),
+			0o600,
+		))
+		require.NoError(t, wt.AddAllAndCommit(t.Context(), "local conflict", nil))
+		require.NoError(t, wt.Fetch(t.Context(), &FetchOptions{Branch: "ahead"}))
+
+		// git reports a linked work tree's rebase state at an absolute path
+		err := wt.rebase(t.Context(), "origin/ahead")
+		require.ErrorIs(t, err, ErrMergeConflict)
+		rebasing, err := wt.IsRebasing(t.Context())
+		require.NoError(t, err)
+		require.True(t, rebasing)
+
+		// Leave the work tree clean enough to be removed
+		_, err = libExec.Exec(wt.buildGitCommand(t.Context(), "rebase", "--abort"))
+		require.NoError(t, err)
+	})
+
 	t.Run("rebase succeeds", func(t *testing.T) {
 		repo, err := Clone(
 			t.Context(),
@@ -459,8 +489,17 @@ func Test_workTree_IntegrateRemoteChanges_CrissCross(t *testing.T) {
 			// reconcile the two merge bases without a.
 			name:  "shallow clone hiding the merge bases' common ancestor",
 			depth: 3,
-			assert: func(t *testing.T, _ *workTree, err error) {
+			assert: func(t *testing.T, wt *workTree, err error) {
 				require.ErrorIs(t, err, ErrShallowHistoryIncomplete)
+				// The error must come from the merge base check, not from the
+				// earlier check of the history on either side
+				complete, err := wt.ensureCompleteIntegrationHistory(t.Context(), "main")
+				require.NoError(t, err)
+				require.True(t, complete)
+				mergeBases := strings.Fields(gitOutput(
+					t, wt.baseRepo, "merge-base", "--all", "HEAD", "refs/remotes/origin/main",
+				))
+				require.Len(t, mergeBases, 2)
 			},
 		},
 		{

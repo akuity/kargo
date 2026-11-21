@@ -516,6 +516,9 @@ func (w *workTree) commitsToReplay(
 	if fp != "" {
 		args = append(args, "^"+fp)
 	}
+	// The next argument makes it clear to git that the preceding arguments are
+	// revisions and not paths
+	args = append(args, "--")
 	res, err := libExec.Exec(w.buildGitCommand(ctx, args...))
 	if err != nil {
 		return nil, fmt.Errorf(
@@ -590,13 +593,13 @@ func (w *workTree) shallowCommits(
 //
 // Equivalent to:
 //
-//	git rev-list HEAD...<remoteRef>
+//	git rev-list HEAD...<remoteRef> --
 func (w *workTree) symmetricDiff(
 	ctx context.Context,
 	remoteRef string,
 ) (map[string]struct{}, error) {
 	res, err := libExec.Exec(w.buildGitCommand(
-		ctx, "rev-list", fmt.Sprintf("HEAD...%s", remoteRef),
+		ctx, "rev-list", fmt.Sprintf("HEAD...%s", remoteRef), "--",
 	))
 	if err != nil {
 		return nil, fmt.Errorf(
