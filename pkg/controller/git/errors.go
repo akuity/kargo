@@ -5,8 +5,7 @@ import (
 )
 
 // ErrRebaseUnsafe is returned when the PushIntegrationPolicyRebaseOrFail
-// policy is in effect and the signature-trust decision matrix determines that
-// rebasing is not safe.
+// policy is in effect and rebasing is not safe.
 var ErrRebaseUnsafe = errors.New(
 	"rebase is unsafe and policy prohibits merge fallback",
 )

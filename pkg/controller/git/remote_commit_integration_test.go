@@ -536,6 +536,162 @@ func Test_workTree_IntegrateRemoteChanges_CrissCross(t *testing.T) {
 	}
 }
 
+func Test_workTree_IntegrateRemoteChanges_MergeAroundShallowBoundary(t *testing.T) {
+	// feature merges y, which reaches x without passing through s. main reaches
+	// x only through s, and later undoes x in r:
+	//
+	//   initial -- x -- s -- r -- r1 -- r2 -- r3 -- r4    main
+	//               \    \
+	//                \    c1 -- c2 -- c3 -- c4 -- m       feature
+	//                 \                          /
+	//                  y ------------------------
+	repoURL, clientOpts, author := setupRemoteWithAuthor(t)
+	run := func(args ...string) {
+		_, err := libExec.Exec(author.buildGitCommand(t.Context(), args...))
+		require.NoError(t, err)
+	}
+	commitFile(t, author, "x")
+	xID, err := author.LastCommitID(t.Context())
+	require.NoError(t, err)
+	require.NoError(t, author.CreateChildBranch(t.Context(), "side"))
+	commitFile(t, author, "y")
+	require.NoError(t, author.Checkout(t.Context(), "main"))
+	commitFile(t, author, "s")
+	require.NoError(t, author.CreateChildBranch(t.Context(), "feature"))
+	for _, name := range []string{"c1", "c2", "c3", "c4"} {
+		commitFile(t, author, name)
+	}
+	run("merge", "--no-edit", "--no-ff", "side")
+	require.NoError(t, author.Push(t.Context(), nil))
+	require.NoError(t, author.Checkout(t.Context(), "main"))
+	run("revert", "--no-edit", xID)
+	for _, name := range []string{"r1", "r2", "r3", "r4"} {
+		commitFile(t, author, name)
+	}
+	require.NoError(t, author.Push(t.Context(), nil))
+
+	// requireUndoKept asserts that x, which main undid, has not come back
+	requireUndoKept := func(t *testing.T, wt *workTree) {
+		t.Helper()
+		_, err := os.Stat(filepath.Join(wt.Dir(), "x.txt"))
+		require.ErrorIs(t, err, os.ErrNotExist)
+	}
+	requireMerged := func(t *testing.T, wt *workTree, err error) {
+		t.Helper()
+		require.NoError(t, err)
+		// rev-list --parents lists HEAD, then its parents
+		commits := strings.Fields(gitOutput(
+			t, wt.baseRepo, "rev-list", "--parents", "-n", "1", "HEAD",
+		))
+		require.Len(t, commits, 3)
+		require.Equal(
+			t,
+			revParse(t, wt.baseRepo, "refs/remotes/origin/main"),
+			commits[2],
+		)
+		requireUndoKept(t, wt)
+	}
+	// At depth 6, s is the only shallow boundary. It is common to both
+	// branches, so history counts as complete, yet it hides x from main.
+	requireMisjudgedHistory := func(t *testing.T, wt *workTree) {
+		t.Helper()
+		shallow, err := wt.shallowCommits(t.Context())
+		require.NoError(t, err)
+		require.Len(t, shallow, 1)
+		complete, err := wt.ensureCompleteIntegrationHistory(t.Context(), "main")
+		require.NoError(t, err)
+		require.True(t, complete)
+		mayReplayShared, err := wt.mayReplaySharedCommits(
+			t.Context(),
+			"refs/remotes/origin/main",
+		)
+		require.NoError(t, err)
+		require.True(t, mayReplayShared)
+	}
+
+	testCases := []struct {
+		name   string
+		depth  uint
+		policy PushIntegrationPolicy
+		assert func(*testing.T, *workTree, error)
+	}{
+		{
+			name:   "shallow clone: AlwaysRebase fails on incomplete history",
+			depth:  6,
+			policy: PushIntegrationPolicyAlwaysRebase,
+			assert: func(t *testing.T, wt *workTree, err error) {
+				require.ErrorIs(t, err, ErrShallowHistoryIncomplete)
+				requireMisjudgedHistory(t, wt)
+			},
+		},
+		{
+			name:   "shallow clone: RebaseOrFail returns ErrRebaseUnsafe",
+			depth:  6,
+			policy: PushIntegrationPolicyRebaseOrFail,
+			assert: func(t *testing.T, wt *workTree, err error) {
+				require.ErrorIs(t, err, ErrRebaseUnsafe)
+				requireMisjudgedHistory(t, wt)
+			},
+		},
+		{
+			name:   "shallow clone: RebaseOrMerge merges",
+			depth:  6,
+			policy: PushIntegrationPolicyRebaseOrMerge,
+			assert: requireMerged,
+		},
+		{
+			name:   "shallow clone: AlwaysMerge merges",
+			depth:  6,
+			policy: PushIntegrationPolicyAlwaysMerge,
+			assert: requireMerged,
+		},
+		{
+			name:   "full clone: RebaseOrFail rebases",
+			policy: PushIntegrationPolicyRebaseOrFail,
+			assert: func(t *testing.T, wt *workTree, err error) {
+				require.NoError(t, err)
+				_, err = libExec.Exec(wt.buildGitCommand(
+					t.Context(),
+					"merge-base", "--is-ancestor", "refs/remotes/origin/main", "HEAD",
+				))
+				require.NoError(t, err)
+				require.Empty(t, gitOutput(
+					t, wt.baseRepo,
+					"rev-list", "--merges", "HEAD", "^refs/remotes/origin/main", "--",
+				))
+				requireUndoKept(t, wt)
+			},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			wt := cloneBareWorkTree(
+				t,
+				repoURL,
+				clientOpts,
+				&BareCloneOptions{
+					Depth: testCase.depth,
+					Refs:  []string{"refs/heads/feature", "refs/heads/main"},
+				},
+				"feature",
+			)
+			commitFile(t, wt, "local")
+			headBefore, err := wt.LastCommitID(t.Context())
+			require.NoError(t, err)
+			err = wt.IntegrateRemoteChanges(t.Context(), &IntegrationOptions{
+				TargetBranch:      "main",
+				IntegrationPolicy: testCase.policy,
+			})
+			testCase.assert(t, wt, err)
+			if err != nil {
+				headAfter, headErr := wt.LastCommitID(t.Context())
+				require.NoError(t, headErr)
+				require.Equal(t, headBefore, headAfter)
+			}
+		})
+	}
+}
+
 func Test_workTree_merge(t *testing.T) {
 	testServer, testRepoURL, testRepoCreds := setupRemoteRepo(
 		t,

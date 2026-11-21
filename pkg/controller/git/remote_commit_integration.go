@@ -96,6 +96,15 @@ func (w *workTree) IntegrateRemoteChanges(
 
 	switch integrationPolicy {
 	case PushIntegrationPolicyAlwaysRebase:
+		var mayReplayShared bool
+		mayReplayShared, err = w.mayReplaySharedCommits(ctx, remoteRef)
+		if err != nil {
+			return fmt.Errorf("error checking commits to replay: %w", err)
+		}
+		if mayReplayShared {
+			logger.Trace("shallow clone history is insufficient for rebasing")
+			return ErrShallowHistoryIncomplete
+		}
 		logger.Trace("integrating remote changes via rebase (always)")
 		return w.rebase(ctx, remoteRef)
 	case PushIntegrationPolicyAlwaysMerge:
@@ -211,8 +220,8 @@ func (w *workTree) remoteBranchTip(
 // until no shallow boundary commit appears in HEAD...origin/<targetBranch>.
 //
 // This ensures every ancestor hidden behind a shallow boundary is common to both
-// HEAD and origin/<targetBranch>, so both commitsToReplay and merge bases are
-// exact.
+// HEAD and origin/<targetBranch>. Git can still misjudge commits it can see. See
+// mayReplaySharedCommits and checkMergeBases.
 //
 // Returns false if deepening stops making progress or hits the bound.
 func (w *workTree) ensureCompleteIntegrationHistory(
@@ -418,6 +427,9 @@ func (w *workTree) pullMergeMessage(
 //   - Signed with untrusted key: always unsafe (Kargo can't vouch for it)
 //   - Unsigned + signing configured: unsafe (would fabricate a signature)
 //   - Unsigned + signing not configured: safe (stays unsigned)
+//
+// Rebasing is also unsafe in a shallow repository whenever git may not know
+// exactly which commits a rebase would replay.
 func (w *workTree) canSafelyRebase(
 	ctx context.Context,
 	remoteRef string,
@@ -430,6 +442,13 @@ func (w *workTree) canSafelyRebase(
 	}
 	if len(commits) == 0 {
 		return true, nil
+	}
+	mayReplayShared, err := w.mayReplaySharedCommits(ctx, remoteRef)
+	if err != nil {
+		return false, fmt.Errorf("error checking commits to replay: %w", err)
+	}
+	if mayReplayShared {
+		return false, nil
 	}
 	shallow, err := w.shallowCommits(ctx)
 	if err != nil {
@@ -508,14 +527,11 @@ func (w *workTree) commitsToReplay(
 	ctx context.Context,
 	remoteRef string,
 ) ([]string, error) {
-	fp, err := w.forkPoint(ctx, remoteRef)
+	revs, err := w.replayRange(ctx, remoteRef)
 	if err != nil {
 		return nil, err
 	}
-	args := []string{"log", "--format=%H", "HEAD", "^" + remoteRef}
-	if fp != "" {
-		args = append(args, "^"+fp)
-	}
+	args := append([]string{"log", "--format=%H"}, revs...)
 	// The next argument makes it clear to git that the preceding arguments are
 	// revisions and not paths
 	args = append(args, "--")
@@ -530,6 +546,64 @@ func (w *workTree) commitsToReplay(
 		return nil, nil
 	}
 	return strings.Split(output, "\n"), nil
+}
+
+// mayReplaySharedCommits returns true if the repository is shallow and a rebase
+// of the current branch onto the specified already-fetched remote ref would
+// replay a merge commit. Through one side of such a merge, HEAD can reach a
+// commit that remoteRef reaches only through a shallow boundary, which hides
+// the commit from it. Git then believes remoteRef lacks the commit, and a
+// rebase would replay it even though remoteRef has it. Without a merge to
+// replay, this cannot happen, provided no shallow boundary lies within
+// HEAD...remoteRef.
+//
+// In a shallow repository, equivalent to:
+//
+//	git rev-list --merges -n 1 HEAD ^<remoteRef> [^<fork point>] --
+func (w *workTree) mayReplaySharedCommits(
+	ctx context.Context,
+	remoteRef string,
+) (bool, error) {
+	shallow, err := w.isShallow(ctx)
+	if err != nil {
+		return false, err
+	}
+	if !shallow {
+		return false, nil
+	}
+	revs, err := w.replayRange(ctx, remoteRef)
+	if err != nil {
+		return false, err
+	}
+	args := append([]string{"rev-list", "--merges", "-n", "1"}, revs...)
+	// The next argument makes it clear to git that the preceding arguments are
+	// revisions and not paths
+	args = append(args, "--")
+	res, err := libExec.Exec(w.buildGitCommand(ctx, args...))
+	if err != nil {
+		return false, fmt.Errorf(
+			"error listing merge commits to replay: %w", err,
+		)
+	}
+	return strings.TrimSpace(string(res)) != "", nil
+}
+
+// replayRange returns the revisions selecting the commits that a rebase of the
+// current branch onto the specified already-fetched remote ref would replay,
+// with fork-point detection.
+func (w *workTree) replayRange(
+	ctx context.Context,
+	remoteRef string,
+) ([]string, error) {
+	fp, err := w.forkPoint(ctx, remoteRef)
+	if err != nil {
+		return nil, err
+	}
+	revs := []string{"HEAD", "^" + remoteRef}
+	if fp != "" {
+		revs = append(revs, "^"+fp)
+	}
+	return revs, nil
 }
 
 // isShallow returns true if the repository is a shallow clone.
