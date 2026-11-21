@@ -1,6 +1,7 @@
 package git
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -177,6 +178,125 @@ func Test_workTree_Pull(t *testing.T) {
 		err = repo.Pull(t.Context(), nil)
 		require.NoError(t, err)
 	})
+}
+
+func Test_workTree_Fetch(t *testing.T) {
+	testServer, testRepoURL, testRepoCreds := setupRemoteRepo(
+		t,
+		initMultipleBranches,
+	)
+	t.Cleanup(testServer.Close)
+
+	testCases := []struct {
+		name   string
+		opts   *FetchOptions
+		assert func(*testing.T, *repo, error)
+	}{
+		{
+			name: "fetched branch can be checked out by name",
+			opts: &FetchOptions{Branch: "a"},
+			assert: func(t *testing.T, r *repo, err error) {
+				require.NoError(t, err)
+				require.NoError(t, r.Checkout(t.Context(), "a"))
+				requireCurrentBranch(t, r, "a")
+			},
+		},
+		{
+			name: "fetching a branch again does not track it twice",
+			opts: &FetchOptions{Branch: "a"},
+			assert: func(t *testing.T, r *repo, err error) {
+				require.NoError(t, err)
+				require.NoError(t, r.Fetch(t.Context(), &FetchOptions{Branch: "a"}))
+				refspecs, err := r.fetchRefspecs(t.Context())
+				require.NoError(t, err)
+				require.Equal(
+					t,
+					[]string{
+						"+refs/heads/main:refs/remotes/origin/main",
+						"+refs/heads/a:refs/remotes/origin/a",
+					},
+					refspecs,
+				)
+			},
+		},
+		{
+			name: "all fetched branches can be checked out by name",
+			assert: func(t *testing.T, r *repo, err error) {
+				require.NoError(t, err)
+				require.NoError(t, r.Checkout(t.Context(), "b"))
+				requireCurrentBranch(t, r, "b")
+			},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+			// A single-branch clone, whose configured fetch refspecs cover only
+			// the default branch
+			rep, err := Clone(
+				t.Context(),
+				testRepoURL,
+				&ClientOptions{Credentials: &testRepoCreds},
+				&CloneOptions{Refs: []string{headRef}},
+			)
+			require.NoError(t, err)
+			t.Cleanup(func() { require.NoError(t, rep.Close(context.Background())) })
+			r, ok := rep.(*repo)
+			require.True(t, ok)
+			testCase.assert(t, r, r.Fetch(t.Context(), testCase.opts))
+		})
+	}
+}
+
+func Test_isTracked(t *testing.T) {
+	testCases := []struct {
+		name     string
+		refspecs []string
+		branch   string
+		tracked  bool
+	}{
+		{
+			name:   "no refspecs",
+			branch: "main",
+		},
+		{
+			name:     "refspec for this branch",
+			refspecs: []string{"+refs/heads/main:refs/remotes/origin/main"},
+			branch:   "main",
+			tracked:  true,
+		},
+		{
+			name:     "refspec for this branch without +",
+			refspecs: []string{"refs/heads/main:refs/remotes/origin/main"},
+			branch:   "main",
+			tracked:  true,
+		},
+		{
+			name:     "refspec for all branches",
+			refspecs: []string{"+refs/heads/*:refs/remotes/origin/*"},
+			branch:   "main",
+			tracked:  true,
+		},
+		{
+			name:     "refspec for another branch",
+			refspecs: []string{"+refs/heads/main:refs/remotes/origin/main"},
+			branch:   "a",
+		},
+		{
+			name:     "all branches requested but only one tracked",
+			refspecs: []string{"+refs/heads/main:refs/remotes/origin/main"},
+			branch:   "*",
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			require.Equal(
+				t,
+				testCase.tracked,
+				isTracked(testCase.refspecs, testCase.branch),
+			)
+		})
+	}
 }
 
 func Test_parseTagMetadataLine(t *testing.T) {
@@ -560,4 +680,187 @@ func TestGetDiffPathsForCommitWithManyModifiedRenames(t *testing.T) {
 	paths, err := rep.GetDiffPathsForCommitID(ctx, commitID)
 	require.NoError(t, err)
 	require.Len(t, paths, fileCount*2)
+}
+
+func TestWorkTree_FetchCommits(t *testing.T) {
+	// main: initial -> commit-0 -> commit-1 -> commit-2
+	// other: initial -> other
+	repoURL, clientOpts, author := setupRemoteWithAuthor(t)
+	commitIDs := make([]string, 3)
+	for i := range commitIDs {
+		commitFile(t, author, fmt.Sprintf("commit-%d", i))
+		var err error
+		commitIDs[i], err = author.LastCommitID(t.Context())
+		require.NoError(t, err)
+	}
+	olderCommitID, middleCommitID := commitIDs[0], commitIDs[1]
+	require.NoError(t, author.Push(t.Context(), nil))
+	latestCommitID, err := author.LastCommitID(t.Context())
+	require.NoError(t, err)
+	require.NoError(t, author.CreateChildBranch(t.Context(), "other"))
+	commitFile(t, author, "other")
+	require.NoError(t, author.Push(t.Context(), nil))
+	// A server that does not allow fetching arbitrary commits by ID will still
+	// serve this one, because a branch points to it.
+	otherCommitID, err := author.LastCommitID(t.Context())
+	require.NoError(t, err)
+
+	cloneMain := func(t *testing.T, depth uint) *workTree {
+		return cloneBareWorkTree(
+			t,
+			repoURL,
+			clientOpts,
+			&BareCloneOptions{Depth: depth, Refs: []string{"refs/heads/main"}},
+			"main",
+		)
+	}
+
+	testCases := []struct {
+		name      string
+		depth     uint
+		commitIDs []string
+		assert    func(*testing.T, *workTree, map[string]struct{}, error)
+	}{
+		{
+			name:      "not a full commit ID",
+			commitIDs: []string{"abc1234"},
+			assert: func(t *testing.T, _ *workTree, _ map[string]struct{}, err error) {
+				require.ErrorContains(t, err, `"abc1234" is not a full commit ID`)
+			},
+		},
+		{
+			name:      "commits already present in a full clone",
+			commitIDs: []string{olderCommitID, latestCommitID},
+			assert: func(t *testing.T, wt *workTree, _ map[string]struct{}, err error) {
+				require.NoError(t, err)
+				shallow, err := wt.isShallow(t.Context())
+				require.NoError(t, err)
+				require.False(t, shallow)
+			},
+		},
+		{
+			name:      "missing commit fetched into a full clone with its history",
+			commitIDs: []string{otherCommitID},
+			assert: func(t *testing.T, wt *workTree, _ map[string]struct{}, err error) {
+				require.NoError(t, err)
+				missing, err := wt.missingCommits(t.Context(), []string{otherCommitID})
+				require.NoError(t, err)
+				require.Empty(t, missing)
+				shallow, err := wt.isShallow(t.Context())
+				require.NoError(t, err)
+				require.False(t, shallow)
+			},
+		},
+		{
+			// commit-1 is present but not a shallow boundary. Fetching it without its
+			// history would wrongly make it one.
+			name:      "commit already present in a shallow clone",
+			depth:     2,
+			commitIDs: []string{middleCommitID},
+			assert: func(
+				t *testing.T,
+				wt *workTree,
+				shallowBefore map[string]struct{},
+				err error,
+			) {
+				require.NoError(t, err)
+				shallowAfter, err := wt.shallowCommits(t.Context())
+				require.NoError(t, err)
+				require.Equal(t, shallowBefore, shallowAfter)
+			},
+		},
+		{
+			name:      "missing commit fetched into a shallow clone without its history",
+			depth:     1,
+			commitIDs: []string{latestCommitID, otherCommitID},
+			assert: func(t *testing.T, wt *workTree, _ map[string]struct{}, err error) {
+				require.NoError(t, err)
+				sigInfo, err := wt.GetCommitSignatureInfo(t.Context(), otherCommitID)
+				require.NoError(t, err)
+				require.NotNil(t, sigInfo)
+				shallowAfter, err := wt.shallowCommits(t.Context())
+				require.NoError(t, err)
+				require.Equal(
+					t,
+					map[string]struct{}{latestCommitID: {}, otherCommitID: {}},
+					shallowAfter,
+				)
+			},
+		},
+		{
+			name:      "commit the server will not serve by ID",
+			depth:     1,
+			commitIDs: []string{olderCommitID},
+			assert: func(t *testing.T, _ *workTree, _ map[string]struct{}, err error) {
+				require.ErrorContains(
+					t, err, "server does not support fetching commits by ID",
+				)
+			},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			wt := cloneMain(t, testCase.depth)
+			shallowBefore, err := wt.shallowCommits(t.Context())
+			require.NoError(t, err)
+			testCase.assert(
+				t,
+				wt,
+				shallowBefore,
+				wt.FetchCommits(t.Context(), testCase.commitIDs),
+			)
+		})
+	}
+}
+
+func TestWorkTree_deepen(t *testing.T) {
+	repoURL, clientOpts, author := setupRemoteWithAuthor(t)
+	for i := range 3 {
+		commitFile(t, author, fmt.Sprintf("commit-%d", i))
+	}
+	require.NoError(t, author.Push(t.Context(), nil))
+
+	t.Run("no-op for a full clone", func(t *testing.T) {
+		wt := cloneBareWorkTree(
+			t,
+			repoURL,
+			clientOpts,
+			&BareCloneOptions{Refs: []string{"refs/heads/main"}},
+			"main",
+		)
+		require.NoError(t, wt.deepen(t.Context(), 1, "refs/heads/main"))
+		// deepen must never turn a full clone into a shallow one
+		shallow, err := wt.isShallow(t.Context())
+		require.NoError(t, err)
+		require.False(t, shallow)
+	})
+
+	t.Run("deepens a shallow clone", func(t *testing.T) {
+		wt := cloneBareWorkTree(
+			t,
+			repoURL,
+			clientOpts,
+			&BareCloneOptions{Depth: 1, Refs: []string{"refs/heads/main"}},
+			"main",
+		)
+		require.Equal(t, 1, commitCount(t, wt.baseRepo, "HEAD"))
+		require.NoError(t, wt.deepen(t.Context(), 2, "refs/heads/main"))
+		require.Equal(t, 3, commitCount(t, wt.baseRepo, "HEAD"))
+	})
+
+	t.Run("no-op for a depth of zero", func(t *testing.T) {
+		wt := cloneBareWorkTree(
+			t,
+			repoURL,
+			clientOpts,
+			&BareCloneOptions{Depth: 1, Refs: []string{"refs/heads/main"}},
+			"main",
+		)
+		shallowBefore, err := wt.shallowCommits(t.Context())
+		require.NoError(t, err)
+		require.NoError(t, wt.deepen(t.Context(), 0, "refs/heads/main"))
+		shallowAfter, err := wt.shallowCommits(t.Context())
+		require.NoError(t, err)
+		require.Equal(t, shallowBefore, shallowAfter)
+	})
 }

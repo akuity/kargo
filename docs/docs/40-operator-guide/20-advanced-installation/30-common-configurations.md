@@ -454,15 +454,15 @@ policy controls how this integration is performed.
 
 Four options are available, forming a spectrum from least to most conservative:
 
-- `AlwaysRebase`: Unconditionally uses `pull --rebase` to integrate remote
-  changes. This preserves linear history but may re-sign commits that Kargo did
+- `AlwaysRebase`: Unconditionally rebases local commits onto the remote
+  branch. This preserves linear history but may re-sign commits that Kargo did
   not author or strip existing signatures from commits.
 
-- `RebaseOrMerge`: Uses `pull --rebase` when a signature-trust analysis
+- `RebaseOrMerge`: Rebases local commits when a signature-trust analysis
   determines it is safe, and falls back to a merge commit otherwise. This
   preserves linear history when possible without undermining trust.
 
-- `RebaseOrFail`: Uses `pull --rebase` when the signature-trust analysis
+- `RebaseOrFail`: Rebases local commits when the signature-trust analysis
   determines it is safe, and fails the push step otherwise. This puts
   constraints on promotion process design and treats the failure scenario as
   worthy of human investigation.

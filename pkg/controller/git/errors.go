@@ -17,6 +17,19 @@ func IsRebaseUnsafe(err error) bool {
 	return errors.Is(err, ErrRebaseUnsafe)
 }
 
+// ErrShallowHistoryIncomplete is returned when a shallow clone cannot be
+// deepened enough to integrate remote changes safely.
+var ErrShallowHistoryIncomplete = errors.New(
+	"shallow clone history is insufficient for integrating remote changes; " +
+		"clone with a greater depth or with no depth limit",
+)
+
+// IsShallowHistoryIncomplete returns true if the error is a
+// shallow-history-incomplete error or wraps one and false otherwise.
+func IsShallowHistoryIncomplete(err error) bool {
+	return errors.Is(err, ErrShallowHistoryIncomplete)
+}
+
 // ErrMergeConflict is returned when a merge conflict occurs.
 var ErrMergeConflict = errors.New("merge conflict")
 

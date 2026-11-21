@@ -1,6 +1,7 @@
 package builtin
 
 import (
+	"errors"
 	"fmt"
 	"math"
 	"net/http/httptest"
@@ -355,4 +356,50 @@ func Test_gitPushPusher_getBranchMu(t *testing.T) {
 
 	require.Len(t, pusher.branchMus, 10)
 	require.Same(t, pusher.getBranchMu("repo", "branch-0"), pusher.getBranchMu("repo", "branch-0"))
+}
+
+func Test_pushFailureResult(t *testing.T) {
+	requireTerminal := func(t *testing.T, res promotion.StepResult, err error) {
+		require.Equal(t, kargoapi.PromotionStepStatusFailed, res.Status)
+		var terminalErr *promotion.TerminalError
+		require.ErrorAs(t, err, &terminalErr)
+	}
+	testCases := []struct {
+		name   string
+		err    error
+		assert func(*testing.T, promotion.StepResult, error)
+	}{
+		{
+			name:   "merge conflict",
+			err:    fmt.Errorf("error integrating: %w", git.ErrMergeConflict),
+			assert: requireTerminal,
+		},
+		{
+			name:   "unsafe rebase",
+			err:    fmt.Errorf("error integrating: %w", git.ErrRebaseUnsafe),
+			assert: requireTerminal,
+		},
+		{
+			name:   "insufficient shallow clone history",
+			err:    fmt.Errorf("error integrating: %w", git.ErrShallowHistoryIncomplete),
+			assert: requireTerminal,
+		},
+		{
+			name: "any other error",
+			err:  errors.New("something went wrong"),
+			assert: func(t *testing.T, res promotion.StepResult, err error) {
+				require.Equal(t, kargoapi.PromotionStepStatusErrored, res.Status)
+				require.ErrorContains(t, err, "error pushing commits to remote")
+				require.ErrorContains(t, err, "something went wrong")
+				var terminalErr *promotion.TerminalError
+				require.False(t, errors.As(err, &terminalErr))
+			},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			res, err := pushFailureResult(testCase.err)
+			testCase.assert(t, res, err)
+		})
+	}
 }

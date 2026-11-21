@@ -324,20 +324,7 @@ func (g *githubPusher) run(
 			return g.push(ctx, workTree, pushClient, pushCfg)
 		},
 	); err != nil {
-		if git.IsMergeConflict(err) {
-			// A merge conflict requires manual resolution and no amount of retries
-			// will fix that.
-			return promotion.StepResult{Status: kargoapi.PromotionStepStatusFailed},
-				&promotion.TerminalError{Err: err}
-		}
-		if errors.Is(err, git.ErrRebaseUnsafe) {
-			// The integration policy prohibits merge fallback and rebase is unsafe.
-			// No amount of retries will fix this.
-			return promotion.StepResult{Status: kargoapi.PromotionStepStatusFailed},
-				&promotion.TerminalError{Err: err}
-		}
-		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
-			fmt.Errorf("error pushing commits to remote: %w", err)
+		return pushFailureResult(err)
 	}
 
 	// Sync the local branch with the remote after API replay, since the
@@ -536,6 +523,16 @@ func (g *githubPusher) push(
 				mergeBase, sourceHead, len(commits), g.cfg.MaxRevisions,
 			),
 		}
+	}
+
+	// Replay reads each commit's signature from the local repository. A shallow
+	// clone may lack some of them, so fetch any that are missing.
+	commitIDs := make([]string, len(commits))
+	for i, commit := range commits {
+		commitIDs[i] = commit.GetSHA()
+	}
+	if err = workTree.FetchCommits(ctx, commitIDs); err != nil {
+		return fmt.Errorf("error fetching commits to replay: %w", err)
 	}
 
 	// Replay commits via GitHub API. The merge base is used as the initial
