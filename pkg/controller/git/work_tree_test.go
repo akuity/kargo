@@ -835,6 +835,19 @@ func TestWorkTree_deepen(t *testing.T) {
 		require.False(t, shallow)
 	})
 
+	t.Run("deepens a shallow clone", func(t *testing.T) {
+		wt := cloneBareWorkTree(
+			t,
+			repoURL,
+			clientOpts,
+			&BareCloneOptions{Depth: 1, Refs: []string{"refs/heads/main"}},
+			"main",
+		)
+		require.Equal(t, 1, commitCount(t, wt.baseRepo, "HEAD"))
+		require.NoError(t, wt.deepen(t.Context(), 2, "refs/heads/main"))
+		require.Equal(t, 3, commitCount(t, wt.baseRepo, "HEAD"))
+	})
+
 	t.Run("no-op for a depth of zero", func(t *testing.T) {
 		wt := cloneBareWorkTree(
 			t,

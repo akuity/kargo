@@ -376,6 +376,41 @@ func Test_workTree_rebase(t *testing.T) {
 	})
 }
 
+func Test_workTree_IntegrateRemoteChanges_TargetTipAlreadyPresent(t *testing.T) {
+	// main:    initial -> c0 -> c1 -> c2 -> c3
+	// release: initial -> c0 -> c1
+	repoURL, clientOpts, author := setupRemoteWithAuthor(t)
+	commitFile(t, author, "c0")
+	commitFile(t, author, "c1")
+	require.NoError(t, author.Push(t.Context(), nil))
+	require.NoError(
+		t,
+		author.Push(t.Context(), &PushOptions{TargetBranch: "release"}),
+	)
+	commitFile(t, author, "c2")
+	commitFile(t, author, "c3")
+	require.NoError(t, author.Push(t.Context(), nil))
+
+	// A shallow clone of main alone holds c0 through c3, so it already has the
+	// tip of release, but no ref for it.
+	wt := cloneBareWorkTree(
+		t,
+		repoURL,
+		clientOpts,
+		&BareCloneOptions{Depth: 4, Refs: []string{"refs/heads/main"}},
+		"main",
+	)
+	require.Equal(t, 4, commitCount(t, wt.baseRepo, "HEAD"))
+
+	require.NoError(t, wt.IntegrateRemoteChanges(t.Context(), &IntegrationOptions{
+		TargetBranch:      "release",
+		IntegrationPolicy: PushIntegrationPolicyRebaseOrMerge,
+	}))
+
+	// Fetching the tip of release must not cut the history beneath it short
+	require.Equal(t, 4, commitCount(t, wt.baseRepo, "HEAD"))
+}
+
 func Test_workTree_IntegrateRemoteChanges_CrissCross(t *testing.T) {
 	// Each branch merges the other's side of a fork, so HEAD and main have two
 	// merge bases, b and c, whose common ancestor is a:
@@ -1134,12 +1169,29 @@ func Test_workTree_IntegrateRemoteChanges_ShallowClone(t *testing.T) {
 		}
 	}
 
+	// assertMerged asserts that HEAD is a new merge commit that merged main into
+	// the current branch, with the message git pull would have given it.
 	assertMerged := func(t *testing.T, wt *workTree, err error) {
 		t.Helper()
 		require.NoError(t, err)
+		// rev-list --parents lists HEAD, then its parents
+		commits := strings.Fields(gitOutput(
+			t, wt.baseRepo, "rev-list", "--parents", "-n", "1", "HEAD",
+		))
+		require.Len(t, commits, 3)
+		require.Equal(t, revParse(t, wt.baseRepo, "refs/remotes/origin/main"), commits[2])
+		currentBranch, branchErr := wt.CurrentBranch(t.Context())
+		require.NoError(t, branchErr)
 		msg, msgErr := wt.CommitMessage(t.Context(), "HEAD")
 		require.NoError(t, msgErr)
-		require.Contains(t, msg, "Merge")
+		require.Equal(
+			t,
+			fmt.Sprintf(
+				"Merge branch 'main' of %s into %s",
+				strings.TrimSuffix(repoURL, ".git"), currentBranch,
+			),
+			strings.TrimSpace(msg),
+		)
 	}
 
 	testCases := []struct {

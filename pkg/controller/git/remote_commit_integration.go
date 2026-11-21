@@ -152,13 +152,59 @@ func (w *workTree) fetchForIntegration(
 		return false, err
 	}
 	if !hasLocalRef {
-		fetchOpts.Depth = 1
+		// Fetching a branch never fetched before without a depth could pull in
+		// its entire history, so fetch only its tip. But if that commit is
+		// already present, fetching it at depth 1 would make it a shallow
+		// boundary and hide the history beneath it, so don't.
+		var tip string
+		if tip, err = w.remoteBranchTip(ctx, targetBranch); err != nil {
+			return false, err
+		}
+		var missing []string
+		if missing, err = w.missingCommits(ctx, []string{tip}); err != nil {
+			return false, err
+		}
+		if len(missing) > 0 {
+			fetchOpts.Depth = 1
+		}
 	}
 	if err = w.Fetch(ctx, fetchOpts); err != nil {
 		return false, err
 	}
 
 	return w.ensureCompleteIntegrationHistory(ctx, targetBranch)
+}
+
+// remoteBranchTip returns the ID of the commit at the tip of the specified
+// branch in the remote repository.
+//
+// Equivalent to:
+//
+//	git ls-remote <url> refs/heads/<branch>
+func (w *workTree) remoteBranchTip(
+	ctx context.Context,
+	branch string,
+) (string, error) {
+	ref := branchRefPrefix + branch
+	res, err := libExec.Exec(w.buildGitCommand(ctx, "ls-remote", w.url, ref))
+	if err != nil {
+		return "", fmt.Errorf(
+			"error finding tip of branch %q in remote repo %q: %w",
+			branch, w.url, err,
+		)
+	}
+	refs, err := parseLsRemoteOutput(res)
+	if err != nil {
+		return "", err
+	}
+	for _, remoteRef := range refs {
+		if remoteRef.Name == ref {
+			return remoteRef.ID, nil
+		}
+	}
+	return "", fmt.Errorf(
+		"branch %q does not exist in remote repo %q", branch, w.url,
+	)
 }
 
 // ensureCompleteIntegrationHistory incrementally deepens a shallow repository
