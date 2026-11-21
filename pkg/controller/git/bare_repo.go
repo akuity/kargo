@@ -63,8 +63,9 @@ type workTreeInfo struct {
 }
 
 // BareCloneOptions represents options for cloning a Git repository without a
-// working tree. If Refs is specified, but none of the refs exist in the remote,
-// the remote's default branch is cloned.
+// working tree. If Refs is specified, the repository's HEAD points to the first
+// of the refs that exists in the remote. If none of them exist, the remote's
+// default branch is cloned instead, and HEAD points to it.
 type BareCloneOptions struct {
 	BaseCloneOptions
 }

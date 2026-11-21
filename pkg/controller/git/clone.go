@@ -273,12 +273,38 @@ func (b *baseRepo) findRemoteRefs(
 	if err != nil {
 		return nil, "", err
 	}
+	existing, err := existingRefs(refs, remoteRefs, defaultBranch)
+	if err != nil {
+		return nil, "", fmt.Errorf(
+			"error resolving refs in remote repo %q: %w", b.url, err,
+		)
+	}
+	return existing, defaultBranch, nil
+}
+
+// existingRefs returns, in the order requested, those of the specified refs
+// that appear among the specified remote refs, with HEAD replaced by the
+// specified default branch and commit IDs returned as they are. It returns an
+// error if HEAD is requested and the remote has refs but no default branch was
+// reported, since HEAD then cannot be resolved.
+func existingRefs(
+	refs []string,
+	remoteRefs map[string]struct{},
+	defaultBranch string,
+) ([]string, error) {
 	existing := make([]string, 0, len(refs))
 	for _, ref := range refs {
 		switch {
 		case ref == headRef:
 			if defaultBranch == "" {
-				continue
+				if len(remoteRefs) == 0 {
+					// The remote is empty, so it has no default branch
+					continue
+				}
+				return nil, errors.New(
+					"cannot determine the default branch: the server did not report " +
+						"which branch HEAD points to",
+				)
 			}
 			ref = defaultBranch
 		case isCommitID(ref):
@@ -291,7 +317,7 @@ func (b *baseRepo) findRemoteRefs(
 			existing = append(existing, ref)
 		}
 	}
-	return existing, defaultBranch, nil
+	return existing, nil
 }
 
 // fetchAdditionalRefs fetches the specified fully qualified refs and commit

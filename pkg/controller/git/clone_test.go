@@ -523,6 +523,75 @@ func Test_validateCloneRefs(t *testing.T) {
 	}
 }
 
+func Test_existingRefs(t *testing.T) {
+	commitID := strings.Repeat("a", 40)
+	testCases := []struct {
+		name          string
+		refs          []string
+		remoteRefs    map[string]struct{}
+		defaultBranch string
+		assert        func(*testing.T, []string, error)
+	}{
+		{
+			name: "existing refs in order, missing refs skipped, commits kept",
+			refs: []string{
+				"refs/tags/v1.0.0",
+				"refs/heads/missing",
+				commitID,
+				"refs/heads/a",
+			},
+			remoteRefs: map[string]struct{}{
+				"refs/heads/a":     {},
+				"refs/tags/v1.0.0": {},
+			},
+			assert: func(t *testing.T, existing []string, err error) {
+				require.NoError(t, err)
+				require.Equal(
+					t,
+					[]string{"refs/tags/v1.0.0", commitID, "refs/heads/a"},
+					existing,
+				)
+			},
+		},
+		{
+			name:          "HEAD resolved to the default branch, once",
+			refs:          []string{headRef, "refs/heads/main"},
+			remoteRefs:    map[string]struct{}{"refs/heads/main": {}},
+			defaultBranch: "refs/heads/main",
+			assert: func(t *testing.T, existing []string, err error) {
+				require.NoError(t, err)
+				require.Equal(t, []string{"refs/heads/main"}, existing)
+			},
+		},
+		{
+			name: "HEAD in an empty remote",
+			refs: []string{headRef},
+			assert: func(t *testing.T, existing []string, err error) {
+				require.NoError(t, err)
+				require.Empty(t, existing)
+			},
+		},
+		{
+			name:       "HEAD with no default branch reported",
+			refs:       []string{"refs/heads/a", headRef},
+			remoteRefs: map[string]struct{}{"refs/heads/a": {}},
+			assert: func(t *testing.T, _ []string, err error) {
+				require.ErrorContains(t, err, "cannot determine the default branch")
+			},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			existing, err := existingRefs(
+				testCase.refs,
+				testCase.remoteRefs,
+				testCase.defaultBranch,
+			)
+			testCase.assert(t, existing, err)
+		})
+	}
+}
+
 func Test_uniqueRefs(t *testing.T) {
 	require.Equal(
 		t,
