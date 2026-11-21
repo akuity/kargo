@@ -2,7 +2,9 @@ package git
 
 // PushIntegrationPolicy controls how remote changes are integrated into the
 // local branch before pushing. The four options form a spectrum from least
-// conservative (AlwaysRebase) to most conservative (AlwaysMerge).
+// conservative (AlwaysRebase) to most conservative (AlwaysMerge). Under every
+// policy, integration fails with ErrShallowHistoryIncomplete if a shallow
+// clone cannot be deepened enough to integrate safely.
 type PushIntegrationPolicy string
 
 const (
@@ -11,18 +13,18 @@ const (
 	// or force pushes).
 	PushIntegrationPolicyNone PushIntegrationPolicy = "None"
 
-	// PushIntegrationPolicyAlwaysRebase unconditionally uses pull --rebase to
-	// integrate remote changes. This is the least secure option because it may
+	// PushIntegrationPolicyAlwaysRebase unconditionally rebases local commits
+	// onto the remote branch. This is the least secure option because it may
 	// re-sign commits that Kargo did not author or strip existing signatures.
 	PushIntegrationPolicyAlwaysRebase PushIntegrationPolicy = "AlwaysRebase"
 
-	// PushIntegrationPolicyRebaseOrMerge uses pull --rebase when the
+	// PushIntegrationPolicyRebaseOrMerge rebases local commits when the
 	// signature-trust decision matrix determines it is safe, and falls back to
 	// a merge commit otherwise. This preserves linear history when possible
 	// without undermining trust.
 	PushIntegrationPolicyRebaseOrMerge PushIntegrationPolicy = "RebaseOrMerge"
 
-	// PushIntegrationPolicyRebaseOrFail uses pull --rebase when the
+	// PushIntegrationPolicyRebaseOrFail rebases local commits when the
 	// signature-trust decision matrix determines it is safe, and fails the
 	// push otherwise. This puts constraints on promotion process design and
 	// treats the failure scenario as worthy of human investigation.

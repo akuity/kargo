@@ -56,6 +56,12 @@ type WorkTree interface {
 	Dir() string
 	// Fetch fetches updates from the remote repository.
 	Fetch(ctx context.Context, opts *FetchOptions) error
+	// FetchCommits fetches those of the specified commits, given by full commit
+	// IDs, that are not already present in the repository. In a shallow
+	// repository, each is fetched without its history. The remote repository's
+	// server must allow fetching commits by ID; if it refuses, FetchCommits
+	// returns an error saying so.
+	FetchCommits(ctx context.Context, commitIDs []string) error
 	// HasDiffs returns a bool indicating whether the working tree currently
 	// contains any differences from what's already at the head of the current
 	// branch.
@@ -400,6 +406,116 @@ func (w *workTree) CurrentBranch(ctx context.Context) (string, error) {
 		)
 	}
 	return strings.TrimSpace(string(res)), nil
+}
+
+// FetchCommits implements WorkTree.
+//
+// Equivalent to:
+//
+//	git fetch --no-tags [--depth=1] origin <commit ID>...
+func (w *workTree) FetchCommits(ctx context.Context, commitIDs []string) error {
+	for _, id := range commitIDs {
+		if !isCommitID(id) {
+			return fmt.Errorf("%q is not a full commit ID", id)
+		}
+	}
+	missing, err := w.missingCommits(ctx, commitIDs)
+	if err != nil {
+		return err
+	}
+	if len(missing) == 0 {
+		return nil
+	}
+	shallow, err := w.isShallow(ctx)
+	if err != nil {
+		return err
+	}
+	args := []string{"fetch", "--no-tags"}
+	if shallow {
+		// Fetching a commit's history into a shallow repository could pull in far
+		// more than was asked for.
+		args = append(args, "--depth", "1")
+	}
+	args = append(args, "origin")
+	args = append(args, missing...)
+	if _, err = libExec.Exec(w.buildGitCommand(ctx, args...)); err != nil {
+		return fmt.Errorf(
+			"error fetching commits %v from repo %q: %w",
+			missing, w.url, explainCommitFetchError(err),
+		)
+	}
+	return nil
+}
+
+// deepen deepens a shallow repository by the specified number of commits along
+// the given remote refs without updating local tracking refs. It is a no-op if
+// depth is 0 or the repository is not shallow.
+func (w *workTree) deepen(
+	ctx context.Context,
+	depth uint,
+	refs ...string,
+) error {
+	if depth == 0 {
+		return nil
+	}
+	shallow, err := w.isShallow(ctx)
+	if err != nil {
+		return err
+	}
+	if !shallow {
+		return nil
+	}
+	args := append(
+		[]string{"fetch", "--deepen", fmt.Sprint(depth), "origin"},
+		refs...,
+	)
+	if _, err = libExec.Exec(w.buildGitCommand(ctx, args...)); err != nil {
+		return fmt.Errorf(
+			"error deepening repo %q by %d commits: %w", w.url, depth, err,
+		)
+	}
+	return nil
+}
+
+// missingCommits returns those of the specified commit IDs that do not exist
+// as commit objects in the local repository. It does not trigger the lazy
+// fetches a partial clone would otherwise make for missing objects.
+//
+// Equivalent to:
+//
+//	GIT_NO_LAZY_FETCH=1 git cat-file --batch-check="%(objectname) %(objecttype)"
+func (w *workTree) missingCommits(
+	ctx context.Context,
+	commitIDs []string,
+) ([]string, error) {
+	if len(commitIDs) == 0 {
+		return nil, nil
+	}
+	var stdin strings.Builder
+	for _, id := range commitIDs {
+		stdin.WriteString(id)
+		stdin.WriteByte('\n')
+	}
+	cmd := w.buildGitCommand(
+		ctx,
+		"cat-file", "--batch-check=%(objectname) %(objecttype)",
+	)
+	cmd.Env = append(cmd.Env, "GIT_NO_LAZY_FETCH=1")
+	cmd.Stdin = strings.NewReader(stdin.String())
+	out, err := libExec.Exec(cmd)
+	if err != nil {
+		return nil, fmt.Errorf("error checking local commit presence: %w", err)
+	}
+	// git prints one line per ID: "<ID> <object type>" if the object exists, or
+	// "<ID> missing" if it does not.
+	var missing []string
+	for line := range strings.Lines(string(out)) {
+		id, objectType, _ := strings.Cut(strings.TrimSpace(line), " ")
+		if objectType != "commit" {
+			missing = append(missing, id)
+		}
+	}
+	return missing, nil
 }
 
 func (w *workTree) DeleteBranch(ctx context.Context, branch string) error {
