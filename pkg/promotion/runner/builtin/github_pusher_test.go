@@ -9,6 +9,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"slices"
 	"sync"
 	"testing"
 
@@ -560,6 +561,9 @@ func Test_githubPusher_push(t *testing.T) {
 				RemoteBranchExistsFn: func(context.Context, string) (bool, error) {
 					return true, nil
 				},
+				FetchCommitsFn: func(context.Context, []string) error {
+					return nil
+				},
 			},
 			client: &mockGitHubPushClient{
 				getRefFn: func(
@@ -800,6 +804,62 @@ func Test_githubPusher_push(t *testing.T) {
 			},
 		},
 		{
+			name: "source branch is ahead or branches have diverged; error fetching commits to replay",
+			workTree: &git.MockRepo{
+				URLFn: func() string {
+					return testRepoURL
+				},
+				IntegrateRemoteChangesFn: func(
+					context.Context,
+					*git.IntegrationOptions,
+				) error {
+					return nil
+				},
+				PushFn: func(context.Context, *git.PushOptions) error {
+					return nil
+				},
+				LastCommitIDFn: func(_ context.Context) (string, error) {
+					return "fake-source-head", nil
+				},
+				RemoteBranchExistsFn: func(context.Context, string) (bool, error) {
+					return true, nil
+				},
+				FetchCommitsFn: func(context.Context, []string) error {
+					return errors.New("something went wrong")
+				},
+			},
+			client: &mockGitHubPushClient{
+				getRefFn: func(
+					context.Context,
+					string,
+					string,
+					string,
+				) (*github.Reference, *github.Response, error) {
+					return &github.Reference{}, nil, nil
+				},
+				compareCommitsFn: func(
+					context.Context,
+					string,
+					string,
+					string,
+					string,
+					*github.ListOptions,
+				) (*github.CommitsComparison, *github.Response, error) {
+					return &github.CommitsComparison{
+						Status:          ptr.To("ahead"),
+						MergeBaseCommit: &github.RepositoryCommit{SHA: ptr.To("fake-merge-base")},
+						Commits: []*github.RepositoryCommit{{
+							SHA: ptr.To("fake-sha"),
+						}},
+					}, nil, nil
+				},
+			},
+			assertions: func(t *testing.T, err error) {
+				require.ErrorContains(t, err, "error fetching commits to replay")
+				require.ErrorContains(t, err, "something went wrong")
+			},
+		},
+		{
 			name: "source branch is ahead or branches have diverged; error replaying commits",
 			workTree: &git.MockRepo{
 				URLFn: func() string {
@@ -819,6 +879,9 @@ func Test_githubPusher_push(t *testing.T) {
 				},
 				RemoteBranchExistsFn: func(context.Context, string) (bool, error) {
 					return true, nil
+				},
+				FetchCommitsFn: func(context.Context, []string) error {
+					return nil
 				},
 			},
 			client: &mockGitHubPushClient{
@@ -872,6 +935,9 @@ func Test_githubPusher_push(t *testing.T) {
 				},
 				RemoteBranchExistsFn: func(context.Context, string) (bool, error) {
 					return true, nil
+				},
+				FetchCommitsFn: func(context.Context, []string) error {
+					return nil
 				},
 				GetCommitSignatureInfoFn: func(context.Context, string) (*git.CommitSignatureInfo, error) {
 					return &git.CommitSignatureInfo{}, nil
@@ -949,6 +1015,12 @@ func Test_githubPusher_push(t *testing.T) {
 				RemoteBranchExistsFn: func(context.Context, string) (bool, error) {
 					return true, nil
 				},
+				FetchCommitsFn: func(_ context.Context, ids []string) error {
+					if !slices.Equal(ids, []string{"fake-sha"}) {
+						return fmt.Errorf("unexpected commit IDs %v", ids)
+					}
+					return nil
+				},
 				GetCommitSignatureInfoFn: func(
 					context.Context,
 					string,
@@ -977,6 +1049,7 @@ func Test_githubPusher_push(t *testing.T) {
 						Status:          ptr.To("ahead"),
 						MergeBaseCommit: &github.RepositoryCommit{SHA: ptr.To("fake-merge-base")},
 						Commits: []*github.RepositoryCommit{{
+							SHA: ptr.To("fake-sha"),
 							Commit: &github.Commit{
 								Tree: &github.Tree{SHA: ptr.To("fake-commit")},
 							},
