@@ -256,6 +256,9 @@ func (w *workTree) rebase(ctx context.Context, ref string) error {
 // would give it.
 func (w *workTree) merge(ctx context.Context, targetBranch string) error {
 	ref := remoteBranchRefPrefix + targetBranch
+	if err := w.checkMergeBases(ctx, ref); err != nil {
+		return err
+	}
 	args := []string{"merge", "--no-edit"}
 	msg, err := w.pullMergeMessage(ctx, targetBranch)
 	if err != nil {
@@ -274,6 +277,39 @@ func (w *workTree) merge(ctx context.Context, targetBranch string) error {
 			return ErrMergeConflict
 		}
 		return fmt.Errorf("error merging %q into branch: %w", ref, err)
+	}
+	return nil
+}
+
+// checkMergeBases returns ErrShallowHistoryIncomplete if the repository is
+// shallow and HEAD and the specified ref have more than one merge base. To
+// merge, git first reconciles multiple merge bases using the history beneath
+// them, which a shallow clone may lack.
+//
+// Equivalent to:
+//
+//	git merge-base --all HEAD <ref>
+func (w *workTree) checkMergeBases(ctx context.Context, ref string) error {
+	shallow, err := w.isShallow(ctx)
+	if err != nil {
+		return err
+	}
+	if !shallow {
+		return nil
+	}
+	res, err := libExec.Exec(w.buildGitCommand(
+		ctx, "merge-base", "--all", "HEAD", ref,
+	))
+	if err != nil {
+		var exitErr *libExec.ExitError
+		if errors.As(err, &exitErr) && exitErr.ExitCode == 1 {
+			// There is no merge base, so there is nothing to reconcile
+			return nil
+		}
+		return fmt.Errorf("error finding merge bases of HEAD and %q: %w", ref, err)
+	}
+	if len(strings.Fields(string(res))) > 1 {
+		return ErrShallowHistoryIncomplete
 	}
 	return nil
 }

@@ -376,6 +376,92 @@ func Test_workTree_rebase(t *testing.T) {
 	})
 }
 
+func Test_workTree_IntegrateRemoteChanges_CrissCross(t *testing.T) {
+	// Each branch merges the other's side of a fork, so HEAD and main have two
+	// merge bases, b and c, whose common ancestor is a:
+	//
+	//   a -- b ------- m1 -- l    feature
+	//    \     \     /
+	//     \      \ /
+	//      \     / \
+	//       \  /     \
+	//        c ------- m2 -- r    main
+	repoURL, clientOpts, author := setupRemoteWithAuthor(t)
+	merge := func(branch string) {
+		_, err := libExec.Exec(author.buildGitCommand(
+			t.Context(), "merge", "--no-edit", "--no-ff", branch,
+		))
+		require.NoError(t, err)
+	}
+	commitFile(t, author, "a")
+	require.NoError(t, author.Push(t.Context(), nil))
+	require.NoError(t, author.CreateChildBranch(t.Context(), "side-b"))
+	commitFile(t, author, "b")
+	require.NoError(t, author.Checkout(t.Context(), "main"))
+	require.NoError(t, author.CreateChildBranch(t.Context(), "side-c"))
+	commitFile(t, author, "c")
+	require.NoError(t, author.Checkout(t.Context(), "side-b"))
+	require.NoError(t, author.CreateChildBranch(t.Context(), "feature"))
+	merge("side-c")
+	commitFile(t, author, "l")
+	require.NoError(t, author.Push(t.Context(), nil))
+	require.NoError(t, author.Checkout(t.Context(), "side-c"))
+	merge("side-b")
+	commitFile(t, author, "r")
+	require.NoError(
+		t,
+		author.Push(t.Context(), &PushOptions{TargetBranch: "main", Force: true}),
+	)
+
+	testCases := []struct {
+		name   string
+		depth  uint
+		assert func(*testing.T, *workTree, error)
+	}{
+		{
+			// At depth 3, b and c are shallow boundaries hiding a. Neither lies on
+			// only one side, so history counts as complete, but git cannot
+			// reconcile the two merge bases without a.
+			name:  "shallow clone hiding the merge bases' common ancestor",
+			depth: 3,
+			assert: func(t *testing.T, _ *workTree, err error) {
+				require.ErrorIs(t, err, ErrShallowHistoryIncomplete)
+			},
+		},
+		{
+			name: "full clone",
+			assert: func(t *testing.T, wt *workTree, err error) {
+				require.NoError(t, err)
+				msg, err := wt.CommitMessage(t.Context(), "HEAD")
+				require.NoError(t, err)
+				require.True(t, strings.HasPrefix(msg, "Merge branch 'main' of "))
+			},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			wt := cloneBareWorkTree(
+				t,
+				repoURL,
+				clientOpts,
+				&BareCloneOptions{
+					Depth: testCase.depth,
+					Refs:  []string{"refs/heads/feature", "refs/heads/main"},
+				},
+				"feature",
+			)
+			testCase.assert(
+				t,
+				wt,
+				wt.IntegrateRemoteChanges(t.Context(), &IntegrationOptions{
+					TargetBranch:      "main",
+					IntegrationPolicy: PushIntegrationPolicyAlwaysMerge,
+				}),
+			)
+		})
+	}
+}
+
 func Test_workTree_merge(t *testing.T) {
 	testServer, testRepoURL, testRepoCreds := setupRemoteRepo(
 		t,
