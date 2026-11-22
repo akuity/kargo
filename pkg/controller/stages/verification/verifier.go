@@ -140,6 +140,19 @@ func (ver Verifier) VerifyStageFreight(
 					ObservedGeneration: stage.Generation,
 				})
 			case kargoapi.VerificationPhaseInconclusive:
+				// Stage health takes precedence when verification is blocked by
+				// an unhealthy Stage. In particular, a matching re-verification
+				// request must not replace StageUnhealthy with this historical
+				// inconclusive result.
+				verifiedCondition := conditions.Get(
+					&newStatus,
+					kargoapi.ConditionTypeVerified,
+				)
+				if verifiedCondition != nil &&
+					verifiedCondition.Status == metav1.ConditionFalse &&
+					verifiedCondition.Reason == "StageUnhealthy" {
+					return
+				}
 				conditions.Set(&newStatus, &metav1.Condition{
 					Type:               kargoapi.ConditionTypeVerified,
 					Status:             metav1.ConditionUnknown,
@@ -227,6 +240,25 @@ func (ver Verifier) VerifyStageFreight(
 				Message:            "Stage is unhealthy: verification cannot be performed",
 				ObservedGeneration: stage.Generation,
 			})
+		} else {
+			// If a previous health check failed, but health is now unknown or
+			// progressing, verification is pending again. Do not clear failures
+			// caused by verification itself.
+			verifiedCondition := conditions.Get(
+				&newStatus,
+				kargoapi.ConditionTypeVerified,
+			)
+			if verifiedCondition != nil &&
+				verifiedCondition.Status == metav1.ConditionFalse &&
+				verifiedCondition.Reason == "StageUnhealthy" {
+				conditions.Set(&newStatus, &metav1.Condition{
+					Type:               kargoapi.ConditionTypeVerified,
+					Status:             metav1.ConditionUnknown,
+					Reason:             "VerificationPending",
+					Message:            "Freight is pending verification",
+					ObservedGeneration: stage.Generation,
+				})
+			}
 		}
 		return newStatus, nil
 	}

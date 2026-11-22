@@ -2004,3 +2004,168 @@ func TestVerifier_VerifyStageFreight_unhealthyBeforeVerification(t *testing.T) {
 		})
 	}
 }
+
+func TestVerifier_VerifyStageFreight_healthTransitionClearsStageUnhealthy(t *testing.T) {
+	testCases := []struct {
+		name       string
+		health     *kargoapi.Health
+		condition  metav1.Condition
+		wantStatus metav1.ConditionStatus
+		wantReason string
+	}{
+		{
+			name: "health is unknown",
+			condition: metav1.Condition{
+				Type:   kargoapi.ConditionTypeVerified,
+				Status: metav1.ConditionFalse,
+				Reason: "StageUnhealthy",
+			},
+			wantStatus: metav1.ConditionUnknown,
+			wantReason: "VerificationPending",
+		},
+		{
+			name: "health is progressing",
+			health: &kargoapi.Health{
+				Status: kargoapi.HealthStateProgressing,
+			},
+			condition: metav1.Condition{
+				Type:   kargoapi.ConditionTypeVerified,
+				Status: metav1.ConditionFalse,
+				Reason: "StageUnhealthy",
+			},
+			wantStatus: metav1.ConditionUnknown,
+			wantReason: "VerificationPending",
+		},
+		{
+			name: "preserves verification failure",
+			health: &kargoapi.Health{
+				Status: kargoapi.HealthStateProgressing,
+			},
+			condition: metav1.Condition{
+				Type:   kargoapi.ConditionTypeVerified,
+				Status: metav1.ConditionFalse,
+				Reason: "VerificationFailed",
+			},
+			wantStatus: metav1.ConditionFalse,
+			wantReason: "VerificationFailed",
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			stage := &kargoapi.Stage{
+				Status: kargoapi.StageStatus{
+					Health: testCase.health,
+					FreightHistory: kargoapi.FreightHistory{{
+						Freight: map[string]kargoapi.FreightReference{
+							"fake-warehouse": {Name: "fake-freight"},
+						},
+					}},
+					Conditions: []metav1.Condition{testCase.condition},
+				},
+			}
+			ver := NewVerifier("", nil, nil, nil, nil)
+			newStatus, err := ver.VerifyStageFreight(
+				context.Background(),
+				stage,
+				time.Now(),
+				time.Now,
+			)
+			require.NoError(t, err)
+			verified := conditions.Get(&newStatus, kargoapi.ConditionTypeVerified)
+			require.NotNil(t, verified)
+			assert.Equal(t, testCase.wantStatus, verified.Status)
+			assert.Equal(t, testCase.wantReason, verified.Reason)
+		})
+	}
+}
+
+func TestVerifier_VerifyStageFreight_inconclusiveReverificationPreservesStageUnhealthy(t *testing.T) {
+	testCases := []struct {
+		name                string
+		health              *kargoapi.Health
+		verificationHistory []kargoapi.VerificationInfo
+		wantStatus          metav1.ConditionStatus
+		wantReason          string
+	}{
+		{
+			name: "stage unhealthy takes precedence over inconclusive re-verification",
+			health: &kargoapi.Health{
+				Status: kargoapi.HealthStateUnhealthy,
+			},
+			verificationHistory: []kargoapi.VerificationInfo{{
+				ID:    "verification-id",
+				Phase: kargoapi.VerificationPhaseInconclusive,
+			}},
+			wantStatus: metav1.ConditionFalse,
+			wantReason: "StageUnhealthy",
+		},
+		{
+			name: "historical success remains verified",
+			health: &kargoapi.Health{
+				Status: kargoapi.HealthStateUnhealthy,
+			},
+			verificationHistory: []kargoapi.VerificationInfo{
+				{
+					ID:    "verification-id",
+					Phase: kargoapi.VerificationPhaseInconclusive,
+				},
+				{
+					ID:    "successful-verification",
+					Phase: kargoapi.VerificationPhaseSuccessful,
+				},
+			},
+			wantStatus: metav1.ConditionTrue,
+			wantReason: "Verified",
+		},
+		{
+			name: "inconclusive remains unknown when health is progressing",
+			health: &kargoapi.Health{
+				Status: kargoapi.HealthStateProgressing,
+			},
+			verificationHistory: []kargoapi.VerificationInfo{{
+				ID:    "verification-id",
+				Phase: kargoapi.VerificationPhaseInconclusive,
+			}},
+			wantStatus: metav1.ConditionUnknown,
+			wantReason: "VerificationInconclusive",
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			stage := &kargoapi.Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Generation: 1,
+					Annotations: map[string]string{
+						kargoapi.AnnotationKeyReverify: "verification-id",
+					},
+				},
+				Status: kargoapi.StageStatus{
+					Health: testCase.health,
+					FreightHistory: kargoapi.FreightHistory{{
+						Freight: map[string]kargoapi.FreightReference{
+							"fake-warehouse": {Name: "fake-freight"},
+						},
+						VerificationHistory: testCase.verificationHistory,
+					}},
+				},
+			}
+			ver := NewVerifier("", nil, nil, nil, nil)
+			newStatus, err := ver.VerifyStageFreight(
+				context.Background(),
+				stage,
+				time.Now(),
+				time.Now,
+			)
+			require.NoError(t, err)
+			verified := conditions.Get(&newStatus, kargoapi.ConditionTypeVerified)
+			require.NotNil(t, verified)
+			assert.Equal(t, testCase.wantStatus, verified.Status)
+			assert.Equal(t, testCase.wantReason, verified.Reason)
+			assert.Equal(
+				t,
+				kargoapi.VerificationPhaseInconclusive,
+				newStatus.FreightHistory.Current().VerificationHistory.Current().Phase,
+			)
+		})
+	}
+}
