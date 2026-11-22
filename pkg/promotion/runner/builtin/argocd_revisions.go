@@ -2,6 +2,7 @@ package builtin
 
 import (
 	argocd "github.com/akuity/kargo/pkg/controller/argocd/api/v1alpha1"
+	"github.com/akuity/kargo/pkg/urls"
 	"github.com/akuity/kargo/pkg/x/promotion/stepconfig"
 )
 
@@ -46,9 +47,23 @@ func (a *argocdUpdater) findSourceUpdate(
 ) *stepconfig.ArgoCDAppSourceUpdate {
 	for i := range update.Sources {
 		sourceUpdate := &update.Sources[i]
-		if sourceUpdate.RepoURL == src.RepoURL && sourceUpdate.Chart == src.Chart {
+		if sourceUpdateApplies(sourceUpdate, src) {
 			return sourceUpdate
 		}
 	}
 	return nil
+}
+
+// sourceUpdateApplies reports whether the given source update targets the
+// given Application source. Git repo URLs are normalized before comparison so
+// that differences in case, trailing slashes, or a .git suffix are ignored.
+// Helm chart repositories and chart names must match exactly.
+func sourceUpdateApplies(
+	sourceUpdate *stepconfig.ArgoCDAppSourceUpdate,
+	src argocd.ApplicationSource,
+) bool {
+	if src.Chart != "" || sourceUpdate.Chart != "" {
+		return src.RepoURL == sourceUpdate.RepoURL && src.Chart == sourceUpdate.Chart
+	}
+	return urls.NormalizeGit(src.RepoURL) == urls.NormalizeGit(sourceUpdate.RepoURL)
 }

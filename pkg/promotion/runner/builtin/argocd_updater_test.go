@@ -1632,6 +1632,35 @@ func Test_argoCDUpdater_mustPerformUpdate(t *testing.T) {
 			},
 		},
 		{
+			name: "desired revision is checked when repoURL differs only by .git suffix",
+			modifyApplication: func(app *argocd.Application) {
+				app.Spec.Source = &argocd.ApplicationSource{
+					RepoURL: "https://github.com/universe/42.git",
+				}
+				app.Status.OperationState = &argocd.OperationState{
+					Phase: argocd.OperationSucceeded,
+					Operation: argocd.Operation{
+						InitiatedBy: argocd.OperationInitiator{
+							Username: applicationOperationInitiator,
+						},
+						Info: []*argocd.Info{{
+							Name:  promotionInfoKey,
+							Value: testPromotionID,
+						}},
+					},
+					SyncResult: &argocd.SyncOperationResult{
+						Revision: "old-revision",
+					},
+				}
+			},
+			assertions: func(t *testing.T, phase argocd.OperationPhase, mustUpdate bool, err error) {
+				require.ErrorContains(t, err, "sync result revisions")
+				require.ErrorContains(t, err, "do not match desired revisions")
+				assert.Empty(t, phase)
+				assert.True(t, mustUpdate)
+			},
+		},
+		{
 			name: "operation completed",
 			modifyApplication: func(app *argocd.Application) {
 				app.Spec.Source = &argocd.ApplicationSource{
@@ -2208,6 +2237,28 @@ func Test_argoCDUpdater_applyArgoCDSourceUpdate(t *testing.T) {
 				// Everything else should be unchanged
 				updatedSource.TargetRevision = originalSource.TargetRevision
 				assert.Equal(t, originalSource, updatedSource)
+			},
+		},
+
+		{
+			name: "update target revision (git repoURL with .git suffix)",
+			source: argocd.ApplicationSource{
+				RepoURL:        "https://github.com/example/repo.git",
+				TargetRevision: "old-commit",
+			},
+			update: stepconfig.ArgoCDAppSourceUpdate{
+				RepoURL:              "https://github.com/example/repo",
+				UpdateTargetRevision: true,
+			},
+			desiredRevision: "new-commit",
+			assertions: func(
+				t *testing.T,
+				originalSource argocd.ApplicationSource,
+				updated bool,
+				updatedSource argocd.ApplicationSource,
+			) {
+				assert.True(t, updated)
+				assert.Equal(t, "new-commit", updatedSource.TargetRevision)
 			},
 		},
 

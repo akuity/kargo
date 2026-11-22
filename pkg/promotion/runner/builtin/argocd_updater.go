@@ -26,7 +26,6 @@ import (
 	"github.com/akuity/kargo/pkg/kubeclient"
 	"github.com/akuity/kargo/pkg/logging"
 	"github.com/akuity/kargo/pkg/promotion"
-	"github.com/akuity/kargo/pkg/urls"
 	"github.com/akuity/kargo/pkg/x/promotion/stepconfig"
 )
 
@@ -1036,29 +1035,12 @@ func (a *argocdUpdater) applyArgoCDSourceUpdate(
 	desiredRevision string,
 	source argocd.ApplicationSource,
 ) (argocd.ApplicationSource, bool) {
-	if source.Chart != "" || update.Chart != "" {
-		if source.RepoURL != update.RepoURL || source.Chart != update.Chart {
-			// The update is not applicable to this source.
-			return source, false
-		}
-		// If we get to here, we have confirmed that this update is applicable to
-		// this source.
-		if update.UpdateTargetRevision && desiredRevision != "" {
-			source.TargetRevision = desiredRevision
-		}
-	} else {
-		// We're dealing with a git repo, so we should normalize the repo URLs
-		// before comparing them.
-		sourceRepoURL := urls.NormalizeGit(source.RepoURL)
-		if sourceRepoURL != urls.NormalizeGit(update.RepoURL) {
-			// The update is not applicable to this source.
-			return source, false
-		}
-		// If we get to here, we have confirmed that this update is applicable to
-		// this source.
-		if update.UpdateTargetRevision && desiredRevision != "" {
-			source.TargetRevision = desiredRevision
-		}
+	if !sourceUpdateApplies(update, source) {
+		// The update is not applicable to this source.
+		return source, false
+	}
+	if update.UpdateTargetRevision && desiredRevision != "" {
+		source.TargetRevision = desiredRevision
 	}
 
 	if update.Kustomize != nil && len(update.Kustomize.Images) > 0 {

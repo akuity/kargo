@@ -11,9 +11,10 @@ import (
 
 func Test_argoCDUpdater_getDesiredRevisions(t *testing.T) {
 	testCases := []struct {
-		name string
-		app  *argocdapi.Application
-		want []string
+		name          string
+		app           *argocdapi.Application
+		sourceUpdates []stepconfig.ArgoCDAppSourceUpdate
+		want          []string
 	}{
 		{
 			name: "no application",
@@ -75,7 +76,48 @@ func Test_argoCDUpdater_getDesiredRevisions(t *testing.T) {
 					},
 				},
 			},
+			sourceUpdates: []stepconfig.ArgoCDAppSourceUpdate{
+				{
+					RepoURL:         "https://example.com",
+					Chart:           "another-fake-chart",
+					DesiredRevision: "another-fake-version",
+				},
+				{
+					RepoURL:         "https://github.com/another-universe/42",
+					DesiredRevision: "another-fake-commit",
+				},
+			},
 			want: []string{"", "", "another-fake-version", "", "another-fake-commit"},
+		},
+		{
+			name: "git source repoURL with .git suffix",
+			app: &argocdapi.Application{
+				Spec: argocdapi.ApplicationSpec{
+					Source: &argocdapi.ApplicationSource{
+						RepoURL: "https://github.com/example/repo.git",
+					},
+				},
+			},
+			sourceUpdates: []stepconfig.ArgoCDAppSourceUpdate{{
+				RepoURL:         "https://github.com/example/repo",
+				DesiredRevision: "new-commit",
+			}},
+			want: []string{"new-commit"},
+		},
+		{
+			name: "git source repoURL differing in case and trailing slash",
+			app: &argocdapi.Application{
+				Spec: argocdapi.ApplicationSpec{
+					Source: &argocdapi.ApplicationSource{
+						RepoURL: "https://GitHub.com/example/repo/",
+					},
+				},
+			},
+			sourceUpdates: []stepconfig.ArgoCDAppSourceUpdate{{
+				RepoURL:         "https://github.com/example/repo",
+				DesiredRevision: "new-commit",
+			}},
+			want: []string{"new-commit"},
 		},
 	}
 
@@ -84,19 +126,7 @@ func Test_argoCDUpdater_getDesiredRevisions(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			revisions := runner.getDesiredRevisions(
-				&stepconfig.ArgoCDAppUpdate{
-					Sources: []stepconfig.ArgoCDAppSourceUpdate{
-						{
-							RepoURL:         "https://example.com",
-							Chart:           "another-fake-chart",
-							DesiredRevision: "another-fake-version",
-						},
-						{
-							RepoURL:         "https://github.com/another-universe/42",
-							DesiredRevision: "another-fake-commit",
-						},
-					},
-				},
+				&stepconfig.ArgoCDAppUpdate{Sources: testCase.sourceUpdates},
 				testCase.app,
 			)
 			require.Equal(t, testCase.want, revisions)
