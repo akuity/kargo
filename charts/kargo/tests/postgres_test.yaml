@@ -194,6 +194,22 @@ tests:
       - failedTemplate:
           errorPattern: cannot both be set
 
+  - it: does not mount a service account token in the pod by default
+    template: templates/postgres/statefulset.yaml
+    asserts:
+      - equal:
+          path: spec.template.spec.automountServiceAccountToken
+          value: false
+
+  - it: mounts a service account token in the pod when database.postgres.automountServiceAccountToken is true
+    template: templates/postgres/statefulset.yaml
+    set:
+      database.postgres.automountServiceAccountToken: true
+    asserts:
+      - equal:
+          path: spec.template.spec.automountServiceAccountToken
+          value: true
+
 ---
 suite: postgres/service-account.yaml
 values:
@@ -228,6 +244,22 @@ tests:
       - equal:
           path: metadata.annotations["example.com/role"]
           value: db
+
+  - it: disables token automounting on the ServiceAccount by default
+    template: templates/postgres/service-account.yaml
+    asserts:
+      - equal:
+          path: automountServiceAccountToken
+          value: false
+
+  - it: enables token automounting on the ServiceAccount when database.postgres.serviceAccount.automountServiceAccountToken is true
+    template: templates/postgres/service-account.yaml
+    set:
+      database.postgres.serviceAccount.automountServiceAccountToken: true
+    asserts:
+      - equal:
+          path: automountServiceAccountToken
+          value: true
 
 ---
 suite: postgres/service.yaml

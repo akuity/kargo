@@ -172,6 +172,22 @@ tests:
           path: spec.template.spec.nodeSelector.disk
           value: ssd
 
+  - it: does not mount a service account token in the pod by default
+    template: templates/migrations/job.yaml
+    asserts:
+      - equal:
+          path: spec.template.spec.automountServiceAccountToken
+          value: false
+
+  - it: mounts a service account token in the pod when database.migrations.automountServiceAccountToken is true
+    template: templates/migrations/job.yaml
+    set:
+      database.migrations.automountServiceAccountToken: true
+    asserts:
+      - equal:
+          path: spec.template.spec.automountServiceAccountToken
+          value: true
+
 ---
 suite: migrations/configmap.yaml
 values:
@@ -253,3 +269,19 @@ tests:
     asserts:
       - hasDocuments:
           count: 0
+
+  - it: disables token automounting on the ServiceAccount by default
+    template: templates/migrations/service-account.yaml
+    asserts:
+      - equal:
+          path: automountServiceAccountToken
+          value: false
+
+  - it: enables token automounting on the ServiceAccount when database.migrations.serviceAccount.automountServiceAccountToken is true
+    template: templates/migrations/service-account.yaml
+    set:
+      database.migrations.serviceAccount.automountServiceAccountToken: true
+    asserts:
+      - equal:
+          path: automountServiceAccountToken
+          value: true
