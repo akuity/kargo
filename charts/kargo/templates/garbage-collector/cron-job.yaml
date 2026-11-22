@@ -47,6 +47,7 @@ spec:
           {{- end }}
         spec:
           serviceAccountName: kargo-garbage-collector
+          automountServiceAccountToken: {{ .Values.garbageCollector.automountServiceAccountToken }}
           {{- with .Values.garbageCollector.affinity | default .Values.global.affinity }}
           affinity:
             {{- toYaml . | nindent 12 }}

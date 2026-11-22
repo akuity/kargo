@@ -45,6 +45,22 @@ tests:
       - hasDocuments:
           count: 0
 
+  - it: mounts a service account token in the pod by default
+    template: templates/garbage-collector/cron-job.yaml
+    asserts:
+      - equal:
+          path: spec.jobTemplate.spec.template.spec.automountServiceAccountToken
+          value: true
+
+  - it: does not mount a service account token in the pod when garbageCollector.automountServiceAccountToken is false
+    template: templates/garbage-collector/cron-job.yaml
+    set:
+      garbageCollector.automountServiceAccountToken: false
+    asserts:
+      - equal:
+          path: spec.jobTemplate.spec.template.spec.automountServiceAccountToken
+          value: false
+
 ---
 suite: garbage-collector/configmap.yaml
 values:
@@ -73,3 +89,24 @@ tests:
       - equal:
           path: data.NUM_WORKERS
           value: "8"
+
+---
+suite: garbage-collector/service-account.yaml
+values:
+  - ../test/values-unittest.yaml
+templates:
+  - templates/garbage-collector/service-account.yaml
+tests:
+  - it: enables token automounting on the ServiceAccount by default
+    asserts:
+      - equal:
+          path: automountServiceAccountToken
+          value: true
+
+  - it: disables token automounting on the ServiceAccount when garbageCollector.serviceAccount.automountServiceAccountToken is false
+    set:
+      garbageCollector.serviceAccount.automountServiceAccountToken: false
+    asserts:
+      - equal:
+          path: automountServiceAccountToken
+          value: false

@@ -144,6 +144,22 @@ tests:
             name: http-metrics
             protocol: TCP
 
+  - it: mounts a service account token in the pod by default
+    template: templates/kubernetes-webhooks-server/deployment.yaml
+    asserts:
+      - equal:
+          path: spec.template.spec.automountServiceAccountToken
+          value: true
+
+  - it: does not mount a service account token in the pod when webhooksServer.automountServiceAccountToken is false
+    template: templates/kubernetes-webhooks-server/deployment.yaml
+    set:
+      webhooksServer.automountServiceAccountToken: false
+    asserts:
+      - equal:
+          path: spec.template.spec.automountServiceAccountToken
+          value: false
+
 ---
 suite: kubernetes-webhooks-server/metrics-service.yaml
 values:
@@ -216,3 +232,24 @@ tests:
       - equal:
           path: spec.selector.matchLabels["app.kubernetes.io/component"]
           value: kubernetes-webhooks-server
+
+---
+suite: kubernetes-webhooks-server/service-account.yaml
+values:
+  - ../test/values-unittest.yaml
+templates:
+  - templates/kubernetes-webhooks-server/service-account.yaml
+tests:
+  - it: enables token automounting on the ServiceAccount by default
+    asserts:
+      - equal:
+          path: automountServiceAccountToken
+          value: true
+
+  - it: disables token automounting on the ServiceAccount when webhooksServer.serviceAccount.automountServiceAccountToken is false
+    set:
+      webhooksServer.serviceAccount.automountServiceAccountToken: false
+    asserts:
+      - equal:
+          path: automountServiceAccountToken
+          value: false

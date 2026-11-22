@@ -46,6 +46,22 @@ tests:
             name: http-metrics
             protocol: TCP
 
+  - it: mounts a service account token in the pod by default
+    template: templates/external-webhooks-server/deployment.yaml
+    asserts:
+      - equal:
+          path: spec.template.spec.automountServiceAccountToken
+          value: true
+
+  - it: does not mount a service account token in the pod when externalWebhooksServer.automountServiceAccountToken is false
+    template: templates/external-webhooks-server/deployment.yaml
+    set:
+      externalWebhooksServer.automountServiceAccountToken: false
+    asserts:
+      - equal:
+          path: spec.template.spec.automountServiceAccountToken
+          value: false
+
 ---
 suite: external-webhooks-server/configmap.yaml
 values:
@@ -182,3 +198,24 @@ tests:
       - equal:
           path: spec.selector.matchLabels["app.kubernetes.io/component"]
           value: external-webhooks-server
+
+---
+suite: external-webhooks-server/service-account.yaml
+values:
+  - ../test/values-unittest.yaml
+templates:
+  - templates/external-webhooks-server/service-account.yaml
+tests:
+  - it: enables token automounting on the ServiceAccount by default
+    asserts:
+      - equal:
+          path: automountServiceAccountToken
+          value: true
+
+  - it: disables token automounting on the ServiceAccount when externalWebhooksServer.serviceAccount.automountServiceAccountToken is false
+    set:
+      externalWebhooksServer.serviceAccount.automountServiceAccountToken: false
+    asserts:
+      - equal:
+          path: automountServiceAccountToken
+          value: false

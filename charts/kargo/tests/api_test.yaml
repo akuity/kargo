@@ -154,6 +154,22 @@ tests:
       - notExists:
           path: spec.template.spec.containers[0].livenessProbe.httpsGet
 
+  - it: mounts a service account token in the pod by default
+    template: templates/api/deployment.yaml
+    asserts:
+      - equal:
+          path: spec.template.spec.automountServiceAccountToken
+          value: true
+
+  - it: does not mount a service account token in the pod when api.automountServiceAccountToken is false
+    template: templates/api/deployment.yaml
+    set:
+      api.automountServiceAccountToken: false
+    asserts:
+      - equal:
+          path: spec.template.spec.automountServiceAccountToken
+          value: false
+
 ---
 suite: api/configmap.yaml
 values:
@@ -421,3 +437,24 @@ tests:
     asserts:
       - hasDocuments:
           count: 0
+
+---
+suite: api/service-account.yaml
+values:
+  - ../test/values-unittest.yaml
+templates:
+  - templates/api/service-account.yaml
+tests:
+  - it: enables token automounting on the ServiceAccount by default
+    asserts:
+      - equal:
+          path: automountServiceAccountToken
+          value: true
+
+  - it: disables token automounting on the ServiceAccount when api.serviceAccount.automountServiceAccountToken is false
+    set:
+      api.serviceAccount.automountServiceAccountToken: false
+    asserts:
+      - equal:
+          path: automountServiceAccountToken
+          value: false
