@@ -210,6 +210,15 @@ tests:
           path: spec.template.spec.automountServiceAccountToken
           value: true
 
+  - it: does not mount a token when database.postgres.automountServiceAccountToken is missing, as with --reuse-values from an older release
+    template: templates/postgres/statefulset.yaml
+    set:
+      database.postgres.automountServiceAccountToken: null
+    asserts:
+      - equal:
+          path: spec.template.spec.automountServiceAccountToken
+          value: false
+
 ---
 suite: postgres/service-account.yaml
 values:
@@ -260,6 +269,14 @@ tests:
       - equal:
           path: automountServiceAccountToken
           value: true
+
+  - it: does not mount a token when database.postgres.serviceAccount.automountServiceAccountToken is missing, as with --reuse-values from an older release
+    set:
+      database.postgres.serviceAccount.automountServiceAccountToken: null
+    asserts:
+      - equal:
+          path: automountServiceAccountToken
+          value: false
 
 ---
 suite: postgres/service.yaml

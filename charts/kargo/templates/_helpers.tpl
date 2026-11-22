@@ -395,7 +395,7 @@ spec:
   # Each attempt gets a fresh Pod whose logs survive for inspection.
   restartPolicy: Never
   serviceAccountName: kargo-migrate
-  automountServiceAccountToken: {{ .Values.database.migrations.automountServiceAccountToken }}
+  automountServiceAccountToken: {{ .Values.database.migrations.automountServiceAccountToken | default false }}
   {{- with .Values.database.migrations.affinity | default .Values.global.affinity }}
   affinity:
     {{- toYaml . | nindent 4 }}

@@ -188,6 +188,15 @@ tests:
           path: spec.template.spec.automountServiceAccountToken
           value: true
 
+  - it: does not mount a token when database.migrations.automountServiceAccountToken is missing, as with --reuse-values from an older release
+    template: templates/migrations/job.yaml
+    set:
+      database.migrations.automountServiceAccountToken: null
+    asserts:
+      - equal:
+          path: spec.template.spec.automountServiceAccountToken
+          value: false
+
 ---
 suite: migrations/configmap.yaml
 values:
@@ -285,3 +294,11 @@ tests:
       - equal:
           path: automountServiceAccountToken
           value: true
+
+  - it: does not mount a token when database.migrations.serviceAccount.automountServiceAccountToken is missing, as with --reuse-values from an older release
+    set:
+      database.migrations.serviceAccount.automountServiceAccountToken: null
+    asserts:
+      - equal:
+          path: automountServiceAccountToken
+          value: false

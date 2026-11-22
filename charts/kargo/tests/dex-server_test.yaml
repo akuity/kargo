@@ -77,6 +77,17 @@ tests:
           path: spec.template.spec.automountServiceAccountToken
           value: true
 
+  - it: does not mount a token when api.oidc.dex.automountServiceAccountToken is missing, as with --reuse-values from an older release
+    template: templates/dex-server/deployment.yaml
+    set:
+      api.oidc.enabled: true
+      api.oidc.dex.enabled: true
+      api.oidc.dex.automountServiceAccountToken: null
+    asserts:
+      - equal:
+          path: spec.template.spec.automountServiceAccountToken
+          value: false
+
 ---
 suite: dex-server/secret.yaml
 values:
@@ -132,3 +143,13 @@ tests:
       - equal:
           path: automountServiceAccountToken
           value: true
+
+  - it: does not mount a token when api.oidc.dex.serviceAccount.automountServiceAccountToken is missing, as with --reuse-values from an older release
+    set:
+      api.oidc.enabled: true
+      api.oidc.dex.enabled: true
+      api.oidc.dex.serviceAccount.automountServiceAccountToken: null
+    asserts:
+      - equal:
+          path: automountServiceAccountToken
+          value: false
