@@ -63,11 +63,6 @@ func TestToAPI(t *testing.T) {
 			name:   "full row",
 			config: newConfig,
 			assert: func(t *testing.T, _ Config, cfg *kargoapi.ProjectConfig) {
-				require.Equal(t, metav1.TypeMeta{
-					APIVersion: kargoapi.GroupVersion.String(),
-					Kind:       "ProjectConfig",
-				}, cfg.TypeMeta)
-				require.Equal(t, "kargo.akuity.io/v1alpha1", cfg.APIVersion)
 				require.Equal(t, "my-project", cfg.Name)
 				require.Equal(t, "my-project", cfg.Namespace)
 				require.Equal(t, types.UID(id.String()), cfg.UID)

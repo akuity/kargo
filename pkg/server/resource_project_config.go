@@ -147,7 +147,9 @@ func (s *server) upsertProjectConfig(
 	if err != nil {
 		return nil, false, err
 	}
-	manifest, err := runtime.DefaultUnstructuredConverter.ToUnstructured(out)
+	manifest, err := runtime.DefaultUnstructuredConverter.ToUnstructured(
+		projectconfigs.ResponseBody(out),
+	)
 	if err != nil {
 		return nil, false, fmt.Errorf("error converting ProjectConfig: %w", err)
 	}

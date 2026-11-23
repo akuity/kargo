@@ -16,6 +16,7 @@ import (
 	"github.com/akuity/kargo/pkg/cli/kubernetes"
 	"github.com/akuity/kargo/pkg/cli/option"
 	"github.com/akuity/kargo/pkg/cli/templates"
+	"github.com/akuity/kargo/pkg/server/projectconfigs"
 )
 
 type deleteProjectConfigOptions struct {
@@ -97,12 +98,14 @@ func (o *deleteProjectConfigOptions) run(ctx context.Context) error {
 	}
 
 	if err = printer.PrintObj(
-		&kargoapi.ProjectConfig{
+		projectconfigs.ResponseBody(&kargoapi.ProjectConfig{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      o.Project,
 				Namespace: o.Project,
 			},
-		}, o.Out); err != nil {
+		}),
+		o.Out,
+	); err != nil {
 		return fmt.Errorf("print project configuration: %w", err)
 	}
 

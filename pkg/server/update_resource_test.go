@@ -678,6 +678,18 @@ func Test_server_updateResources_projectConfig(t *testing.T) {
 				},
 			},
 			{
+				name:          "upsert does not re-create a stale ProjectConfig",
+				url:           "/v1beta1/resources?upsert=true",
+				clientBuilder: fake.NewClientBuilder().WithObjects(existingProject),
+				serverSetup:   withProjectConfigStore(&fakeProjectConfigStore{}, &store, nil),
+				body:          mustJSONBody(staleResourceProjectConfig(existingProject.Name)),
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
+					require.Equal(t, http.StatusConflict, w.Code)
+					require.Contains(t, w.Body.String(), "no longer exists")
+					require.Empty(t, store.configs)
+				},
+			},
+			{
 				name:        "Project does not exist",
 				url:         "/v1beta1/resources?upsert=true",
 				serverSetup: withProjectConfigStore(&fakeProjectConfigStore{}, &store, nil),

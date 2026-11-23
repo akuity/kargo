@@ -35,6 +35,8 @@ func TestPut(t *testing.T) {
 	updatedStore := newStore()
 	racedStore := &fakeStore{raceOnCreate: true}
 	refreshStore := newStore()
+	staleRVStore := &fakeStore{}
+	staleUIDStore := &fakeStore{}
 	var createAuthz, updateAuthz, raceAuthz []can.Access
 
 	runTestCases(t, []testCase{
@@ -199,6 +201,36 @@ func TestPut(t *testing.T) {
 			},
 		},
 		{
+			name:   "a resource version does not re-create a deleted ProjectConfig",
+			store:  staleRVStore,
+			method: http.MethodPut,
+			url:    configURL(""),
+			body: body(`{
+				"metadata": {"name": "` + testProject + `", "resourceVersion": "7"},
+				"spec": {}
+			}`),
+			assertions: func(t *testing.T, w *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusConflict, w.Code)
+				require.Contains(t, w.Body.String(), "no longer exists")
+				require.Empty(t, staleRVStore.configs)
+			},
+		},
+		{
+			name:   "a uid does not re-create a deleted ProjectConfig",
+			store:  staleUIDStore,
+			method: http.MethodPut,
+			url:    configURL(""),
+			body: body(`{
+				"metadata": {"name": "` + testProject + `", "uid": "gone"},
+				"spec": {}
+			}`),
+			assertions: func(t *testing.T, w *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusConflict, w.Code)
+				require.Contains(t, w.Body.String(), "no longer exists")
+				require.Empty(t, staleUIDStore.configs)
+			},
+		},
+		{
 			name:   "the refresh annotation is not stored",
 			store:  refreshStore,
 			method: http.MethodPut,
@@ -218,9 +250,9 @@ func TestPut(t *testing.T) {
 	})
 }
 
-func decodeConfig(t *testing.T, w *httptest.ResponseRecorder) *kargoapi.ProjectConfig {
+func decodeConfig(t *testing.T, w *httptest.ResponseRecorder) *Resource {
 	t.Helper()
-	cfg := &kargoapi.ProjectConfig{}
+	cfg := &Resource{}
 	require.NoError(t, json.Unmarshal(w.Body.Bytes(), cfg))
 	return cfg
 }

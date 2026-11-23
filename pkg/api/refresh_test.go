@@ -84,15 +84,6 @@ func TestRefreshHelpers(t *testing.T) {
 			},
 		},
 		{
-			name: "ProjectConfig",
-			obj: &kargoapi.ProjectConfig{
-				ObjectMeta: metav1.ObjectMeta{Namespace: project, Name: project},
-			},
-			refresh: func(ctx context.Context, c client.Client) (client.Object, error) {
-				return RefreshProjectConfig(ctx, c, project)
-			},
-		},
-		{
 			name: "ClusterConfig",
 			obj: &kargoapi.ClusterConfig{
 				ObjectMeta: metav1.ObjectMeta{Name: ClusterConfigName},

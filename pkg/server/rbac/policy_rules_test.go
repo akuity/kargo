@@ -286,8 +286,8 @@ func TestNormalizePolicyRules(t *testing.T) {
 func TestNewRESTMapperGroupResolver(t *testing.T) {
 	t.Parallel()
 	// A mapper that knows one served resource and nothing else, standing in
-	// for discovery: Targets and PromotionRollouts have no API resource for
-	// it to find.
+	// for discovery: Targets, PromotionRollouts and ProjectConfigs have no
+	// API resource for it to find.
 	mapper := meta.NewDefaultRESTMapper(nil)
 	mapper.Add(kargoapi.GroupVersion.WithKind("Stage"), meta.RESTScopeNamespace)
 	resolve := newRESTMapperGroupResolver(mapper)
@@ -307,6 +307,14 @@ func TestNewRESTMapperGroupResolver(t *testing.T) {
 		{
 			name:     "a database-served resource resolves without discovery",
 			resource: "targets",
+			assert: func(t *testing.T, group string, err error) {
+				require.NoError(t, err)
+				require.Equal(t, kargoapi.GroupVersion.Group, group)
+			},
+		},
+		{
+			name:     "ProjectConfigs resolve without discovery",
+			resource: "projectconfigs",
 			assert: func(t *testing.T, group string, err error) {
 				require.NoError(t, err)
 				require.Equal(t, kargoapi.GroupVersion.Group, group)

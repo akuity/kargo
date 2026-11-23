@@ -16,6 +16,7 @@ import (
 	"github.com/akuity/kargo/pkg/cli/config"
 	"github.com/akuity/kargo/pkg/cli/option"
 	"github.com/akuity/kargo/pkg/cli/templates"
+	"github.com/akuity/kargo/pkg/server/projectconfigs"
 )
 
 type getOptions struct {
@@ -119,7 +120,7 @@ func PrintObjects[T runtime.Object](
 		printObj = newFreightTable(list)
 	case *kargoapi.Project:
 		printObj = newProjectTable(list)
-	case *kargoapi.ProjectConfig:
+	case *projectconfigs.Resource:
 		printObj = newProjectConfigTable(list)
 	case *kargoapi.Promotion:
 		printObj = newPromotionTable(list)

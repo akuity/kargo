@@ -156,6 +156,7 @@ func TestGet_watch(t *testing.T) {
 	require.Equal(t, "ADDED", e.Type)
 	require.Equal(t, testProject, e.Object.Name)
 	require.Equal(t, "ProjectConfig", e.Object.Kind)
+	require.Equal(t, "kargo.akuity.io/v1alpha1", e.Object.APIVersion)
 	require.Equal(t, "first", e.Object.Spec.FreightLinks[0].Title)
 
 	// A change announced on the topic is sent as the store now holds it.
@@ -172,6 +173,7 @@ func TestGet_watch(t *testing.T) {
 	))
 	e = nextWatchEvent(t, events)
 	require.Equal(t, "MODIFIED", e.Type)
+	require.Equal(t, "ProjectConfig", e.Object.Kind)
 	require.Equal(t, "second", e.Object.Spec.FreightLinks[0].Title)
 	require.Equal(t, projectconfigstore.ToAPI(updated).ResourceVersion, e.Object.ResourceVersion)
 
@@ -185,6 +187,7 @@ func TestGet_watch(t *testing.T) {
 	e = nextWatchEvent(t, events)
 	require.Equal(t, "DELETED", e.Type)
 	require.Equal(t, testProject, e.Object.Name)
+	require.Equal(t, "ProjectConfig", e.Object.Kind)
 	select {
 	case e, ok := <-events:
 		require.False(t, ok, "unexpected event %+v", e)
@@ -216,8 +219,8 @@ func connectNATS(t *testing.T) *natsgo.Conn {
 }
 
 type watchEvent struct {
-	Type   string                  `json:"type"`
-	Object *kargoapi.ProjectConfig `json:"object"`
+	Type   string    `json:"type"`
+	Object *Resource `json:"object"`
 }
 
 // readWatchEvents decodes the events of an SSE stream until it ends.
