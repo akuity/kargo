@@ -19,6 +19,7 @@ import (
 	"github.com/akuity/kargo/pkg/server"
 	"github.com/akuity/kargo/pkg/server/config"
 	"github.com/akuity/kargo/pkg/server/kubernetes"
+	"github.com/akuity/kargo/pkg/server/projectconfigs"
 	"github.com/akuity/kargo/pkg/server/rbac"
 	"github.com/akuity/kargo/pkg/telemetry"
 	"github.com/akuity/kargo/pkg/types"
@@ -181,6 +182,20 @@ func (o *apiOptions) run(ctx context.Context) error {
 		return err
 	}
 	defer pool.Close()
+	configStore := projectconfigstore.New(pool, natsConn)
+
+	// ProjectConfigs used to be Kubernetes resources. Copy any that exist
+	// into the database, once, before anything can read or write the
+	// database's. The import bypasses Kargo's RBAC: it acts for no user and
+	// reads only ProjectConfig resources, Projects and one policy binding.
+	if err = projectconfigs.NewImporter(
+		pool,
+		configStore,
+		kubeClient.APIReader(),
+		kubeClient.RESTMapper(),
+	).Run(logging.ContextWithLogger(ctx, o.Logger)); err != nil {
+		return fmt.Errorf("error importing ProjectConfig resources: %w", err)
+	}
 
 	srv := server.NewServer(
 		serverCfg,
@@ -192,7 +207,7 @@ func (o *apiOptions) run(ctx context.Context) error {
 		),
 		sender,
 		database.New(pool),
-		projectconfigstore.New(pool, natsConn),
+		configStore,
 		natsConn,
 	)
 	l, err := net.Listen("tcp", fmt.Sprintf("%s:%s", o.BindAddress, o.Port))

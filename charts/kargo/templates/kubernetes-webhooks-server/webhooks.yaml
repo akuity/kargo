@@ -174,24 +174,6 @@ webhooks:
     resources: ["projects"]
     operations: ["CREATE", "UPDATE"]
   failurePolicy: Fail
-- name: projectconfig.kargo.akuity.io
-  admissionReviewVersions: ["v1"]
-  sideEffects: NoneOnDryRun
-  clientConfig:
-    service:
-      namespace: {{ .Release.Namespace }}
-      name: kargo-webhooks-server
-      path: /validate-kargo-akuity-io-v1alpha1-projectconfig
-    {{- if and (not .Values.webhooksServer.tls.selfSignedCert) .Values.webhooksServer.tls.caBundle }}
-    caBundle: {{ .Values.webhooksServer.tls.caBundle | b64enc }}
-    {{- end }}
-  rules:
-    - scope: Namespaced
-      apiGroups: ["kargo.akuity.io"]
-      apiVersions: ["v1alpha1"]
-      resources: ["projectconfigs"]
-      operations: ["CREATE", "UPDATE"]
-  failurePolicy: Fail
 - name: promotion.kargo.akuity.io
   admissionReviewVersions: ["v1"]
   sideEffects: None

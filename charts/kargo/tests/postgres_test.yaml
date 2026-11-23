@@ -11,6 +11,7 @@ tests:
     template: templates/postgres/statefulset.yaml
     set:
       database.postgres.enabled: false
+      database.external.secretName: external-db
     asserts:
       - hasDocuments:
           count: 0
@@ -204,6 +205,7 @@ tests:
   - it: is not rendered when the bundled database is disabled
     set:
       database.postgres.enabled: false
+      database.external.secretName: external-db
     asserts:
       - hasDocuments:
           count: 0
@@ -239,6 +241,7 @@ tests:
   - it: is not rendered when the bundled database is disabled
     set:
       database.postgres.enabled: false
+      database.external.secretName: external-db
     asserts:
       - hasDocuments:
           count: 0
@@ -275,6 +278,7 @@ tests:
   - it: is not rendered when the bundled database is disabled
     set:
       database.postgres.enabled: false
+      database.external.secretName: external-db
     asserts:
       - hasDocuments:
           count: 0

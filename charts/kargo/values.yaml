@@ -676,13 +676,15 @@ api:
   probes:
     ## @param api.probes.enabled Whether startup, liveness, and readiness probes should be included in the API server deployment. It is sometimes advantageous to disable these during local development.
     enabled: true
-    ## @param api.probes.startupProbe [object] Values merged into the chart-built `startupProbe` for the API server. Typically used to tune timing fields like `initialDelaySeconds`, `periodSeconds`, `timeoutSeconds`, `successThreshold`, and `failureThreshold`.
+    ## @param api.probes.startupProbe [object] Values merged into the chart-built `startupProbe` for the API server. Typically used to tune timing fields like `initialDelaySeconds`, `periodSeconds`, `timeoutSeconds`, `successThreshold`, and `failureThreshold`. The default allows about 15 minutes, because on the first start after an upgrade from a release that kept ProjectConfigs as Kubernetes resources, the API server imports them into the database before it serves, and an install with many Projects needs headroom for that.
     startupProbe:
       initialDelaySeconds: 10
       # periodSeconds: 10
       # timeoutSeconds: 1
       # successThreshold: 1
-      failureThreshold: 30
+      # 10s + 90 failures x 10s (the default period) is about 15 minutes,
+      # enough for the one-time import of ProjectConfig resources on upgrade.
+      failureThreshold: 90
     ## @param api.probes.livenessProbe [object] Values merged into the chart-built `livenessProbe` for the API server. Default is an empty map, so the chart's `livenessProbe` renders with Kubernetes-default timings.
     livenessProbe: {}
       # initialDelaySeconds: 0
@@ -1067,7 +1069,7 @@ externalWebhooksServer:
   ## external webhooks server finds the one that owns a receiver's URL path
   ## through the API server.
   apiServer:
-    ## @param externalWebhooksServer.apiServer.address The URL at which the external webhooks server reaches the API server, e.g. `https://kargo.example.com`. When empty and `api.enabled` is `true`, the API server's in-cluster `Service` is used, and a chart-generated API server certificate is trusted automatically. The external webhooks server requires an API server: without one, it does not start. It acts as the ServiceAccount of the control plane that its control plane credential resolves to, requesting short-lived tokens for it; an external webhooks server installed apart from the control plane must therefore be given a credential for a ServiceAccount there, allowed to `list` ProjectConfigs and to `create` its own `token` subresource.
+    ## @param externalWebhooksServer.apiServer.address The URL at which the external webhooks server reaches the API server, e.g. `https://kargo.example.com`. When empty and `api.enabled` is `true`, the API server's in-cluster `Service` is used, and a chart-generated API server certificate is trusted automatically. When `api.tls.enabled` is `true` and `api.tls.selfSignedCert` is `false`, that address is `https://kargo-api.<namespace>.svc`, and the operator-provided API server certificate must include `kargo-api.<namespace>.svc` as a subject alternative name and be signed by a certificate authority the external webhooks server already trusts, as it has no setting for adding one; otherwise, set this to an address whose certificate it does trust. The external webhooks server requires an API server: without one, it does not start. It acts as the ServiceAccount of the control plane that its control plane credential resolves to, requesting short-lived tokens for it; an external webhooks server installed apart from the control plane must therefore be given a credential for a ServiceAccount there, allowed to `list` ProjectConfigs and to `create` its own `token` subresource.
     address: ""
 
   ## @param externalWebhooksServer.replicas The number of external webhooks server pods.
@@ -1287,7 +1289,7 @@ managementController:
   ## ProjectConfigs live in the control plane's database and the management
   ## controller writes their status through the API server.
   apiServer:
-    ## @param managementController.apiServer.address The URL at which the management controller reaches the API server, e.g. `https://kargo.example.com`. When empty and `api.enabled` is `true`, the API server's in-cluster `Service` is used, and a chart-generated API server certificate is trusted automatically. The management controller requires an API server: without one, it does not start. It acts as the ServiceAccount of the control plane that its control plane credential resolves to, requesting short-lived tokens for it; a management controller installed apart from the control plane must therefore be given a credential for a ServiceAccount there, bound to the `kargo-management-controller` ClusterRole and allowed to `create` its own `token` subresource.
+    ## @param managementController.apiServer.address The URL at which the management controller reaches the API server, e.g. `https://kargo.example.com`. When empty and `api.enabled` is `true`, the API server's in-cluster `Service` is used, and a chart-generated API server certificate is trusted automatically. When `api.tls.enabled` is `true` and `api.tls.selfSignedCert` is `false`, that address is `https://kargo-api.<namespace>.svc`, and the operator-provided API server certificate must include `kargo-api.<namespace>.svc` as a subject alternative name and be signed by a certificate authority the management controller already trusts, as it has no setting for adding one; otherwise, set this to an address whose certificate it does trust. The management controller requires an API server: without one, it does not start. It acts as the ServiceAccount of the control plane that its control plane credential resolves to, requesting short-lived tokens for it; a management controller installed apart from the control plane must therefore be given a credential for a ServiceAccount there, bound to the `kargo-management-controller` ClusterRole and allowed to `create` its own `token` subresource.
     address: ""
 
   ## Reconciler-specific settings
@@ -1414,7 +1416,7 @@ webhooksServer:
   ## ProjectConfigs live in the control plane's database and the Promotion
   ## webhook reads them through the API server.
   apiServer:
-    ## @param webhooksServer.apiServer.address The URL at which the webhooks server reaches the API server, e.g. `https://kargo.example.com`. When empty and `api.enabled` is `true`, the API server's in-cluster `Service` is used, and a chart-generated API server certificate is trusted automatically. The webhooks server requires an API server: without one, it does not start. It acts as the ServiceAccount of the control plane that its control plane credential resolves to, requesting short-lived tokens for it; a webhooks server installed apart from the control plane must therefore be given a credential for a ServiceAccount there, allowed to `get` ProjectConfigs and to `create` its own `token` subresource.
+    ## @param webhooksServer.apiServer.address The URL at which the webhooks server reaches the API server, e.g. `https://kargo.example.com`. When empty and `api.enabled` is `true`, the API server's in-cluster `Service` is used, and a chart-generated API server certificate is trusted automatically. When `api.tls.enabled` is `true` and `api.tls.selfSignedCert` is `false`, that address is `https://kargo-api.<namespace>.svc`, and the operator-provided API server certificate must include `kargo-api.<namespace>.svc` as a subject alternative name and be signed by a certificate authority the webhooks server already trusts, as it has no setting for adding one; otherwise, set this to an address whose certificate it does trust. The webhooks server requires an API server: without one, it does not start. It acts as the ServiceAccount of the control plane that its control plane credential resolves to, requesting short-lived tokens for it; a webhooks server installed apart from the control plane must therefore be given a credential for a ServiceAccount there, allowed to `get` ProjectConfigs and to `create` its own `token` subresource.
     address: ""
 
   ## @param webhooksServer.replicas The number of webhooks server pods.
