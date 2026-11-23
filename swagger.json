@@ -3269,6 +3269,67 @@
         ]
       }
     },
+    "/v1beta1/projects/{project}/targets/{target-name}/promotions": {
+      "get": {
+        "description": "List the Promotions to one of a project's Targets, newest\nfirst, one page at a time: those of every Stage, or of one.\nThey are read from the database's record of Promotions,\nwhich outlives the Promotions themselves, so the list\nreaches further back than the project's Promotions do. A\nTarget is recorded by name, so this is the history of the\nname: a Target that has had no Promotion, or that does not\nexist, has an empty one.",
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "Core",
+          "Project-Level"
+        ],
+        "summary": "List a Target's Promotions",
+        "operationId": "ListTargetPromotions",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "Project name",
+            "name": "project",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "description": "Target name",
+            "name": "target-name",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "description": "Only Promotions of this Stage",
+            "name": "stage",
+            "in": "query"
+          },
+          {
+            "type": "string",
+            "description": "The previous page's continue, to read the page after it; resend stage",
+            "name": "continue",
+            "in": "query"
+          },
+          {
+            "type": "integer",
+            "description": "The page size, at most 500; 100 if omitted",
+            "name": "limit",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A page of the Target's Promotions",
+            "schema": {
+              "$ref": "#/definitions/TargetPromotionList"
+            }
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      }
+    },
     "/v1beta1/projects/{project}/warehouses": {
       "get": {
         "description": "List Warehouse resources from a project's namespace. Returns a\nWarehouseList resource.",
@@ -5792,6 +5853,55 @@
           "type": "object",
           "additionalProperties": {
             "$ref": "#/definitions/ImageStageMap"
+          }
+        }
+      }
+    },
+    "TargetPromotion": {
+      "type": "object",
+      "properties": {
+        "createdAt": {
+          "description": "CreatedAt is when the Promotion was created.",
+          "type": "string"
+        },
+        "finishedAt": {
+          "description": "FinishedAt is when the Promotion finished. It is absent until it has.",
+          "type": "string"
+        },
+        "freight": {
+          "description": "Freight is the name of the Freight promoted.",
+          "type": "string"
+        },
+        "name": {
+          "description": "Name is the Promotion's name.",
+          "type": "string"
+        },
+        "phase": {
+          "description": "Phase is the Promotion's phase. One that has yet to be picked up is\nPending.",
+          "type": "string"
+        },
+        "rollout": {
+          "description": "Rollout is the number, among the Stage's, of the PromotionRollout that\ncreated the Promotion. It is absent for one created on its own.",
+          "type": "integer"
+        },
+        "stage": {
+          "description": "Stage is the name of the Stage that promoted.",
+          "type": "string"
+        }
+      }
+    },
+    "TargetPromotionList": {
+      "type": "object",
+      "properties": {
+        "continue": {
+          "description": "Continue is set when there may be more: pass it as continue to read\nthe next page.",
+          "type": "string"
+        },
+        "items": {
+          "description": "Items are the Promotions, newest first.",
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/TargetPromotion"
           }
         }
       }

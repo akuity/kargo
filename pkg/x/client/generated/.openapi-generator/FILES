@@ -205,6 +205,8 @@ model_step_execution_metadata.go
 model_tag_map.go
 model_target.go
 model_target_list.go
+model_target_promotion.go
+model_target_promotion_list.go
 model_target_spec.go
 model_target_stage_status.go
 model_target_stats.go

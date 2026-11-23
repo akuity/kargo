@@ -2438,6 +2438,59 @@ paths:
       tags:
       - Core
       x-codegen-request-body-name: body
+  /v1beta1/projects/{project}/targets/{target-name}/promotions:
+    get:
+      description: |-
+        List the Promotions to one of a project's Targets, newest
+        first, one page at a time: those of every Stage, or of one.
+        They are read from the database's record of Promotions,
+        which outlives the Promotions themselves, so the list
+        reaches further back than the project's Promotions do. A
+        Target is recorded by name, so this is the history of the
+        name: a Target that has had no Promotion, or that does not
+        exist, has an empty one.
+      operationId: ListTargetPromotions
+      parameters:
+      - description: Project name
+        in: path
+        name: project
+        required: true
+        schema:
+          type: string
+      - description: Target name
+        in: path
+        name: target-name
+        required: true
+        schema:
+          type: string
+      - description: Only Promotions of this Stage
+        in: query
+        name: stage
+        schema:
+          type: string
+      - description: "The previous page's continue, to read the page after it; resend\
+          \ stage"
+        in: query
+        name: continue
+        schema:
+          type: string
+      - description: "The page size, at most 500; 100 if omitted"
+        in: query
+        name: limit
+        schema:
+          type: integer
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TargetPromotionList"
+          description: A page of the Target's Promotions
+      security:
+      - BearerAuth: []
+      summary: List a Target's Promotions
+      tags:
+      - Core
   /v1beta1/projects/{project}/warehouses:
     get:
       description: |-
@@ -4475,6 +4528,73 @@ components:
           additionalProperties:
             $ref: "#/components/schemas/ImageStageMap"
           type: object
+      type: object
+    TargetPromotion:
+      example:
+        createdAt: createdAt
+        finishedAt: finishedAt
+        freight: freight
+        name: name
+        phase: phase
+        rollout: 0
+        stage: stage
+      properties:
+        createdAt:
+          description: CreatedAt is when the Promotion was created.
+          type: string
+        finishedAt:
+          description: FinishedAt is when the Promotion finished. It is absent until
+            it has.
+          type: string
+        freight:
+          description: Freight is the name of the Freight promoted.
+          type: string
+        name:
+          description: Name is the Promotion's name.
+          type: string
+        phase:
+          description: |-
+            Phase is the Promotion's phase. One that has yet to be picked up is
+            Pending.
+          type: string
+        rollout:
+          description: |-
+            Rollout is the number, among the Stage's, of the PromotionRollout that
+            created the Promotion. It is absent for one created on its own.
+          type: integer
+        stage:
+          description: Stage is the name of the Stage that promoted.
+          type: string
+      type: object
+    TargetPromotionList:
+      example:
+        continue: continue
+        items:
+        - createdAt: createdAt
+          finishedAt: finishedAt
+          freight: freight
+          name: name
+          phase: phase
+          rollout: 0
+          stage: stage
+        - createdAt: createdAt
+          finishedAt: finishedAt
+          freight: freight
+          name: name
+          phase: phase
+          rollout: 0
+          stage: stage
+      properties:
+        continue:
+          description: |-
+            Continue is set when there may be more: pass it as continue to read
+            the next page.
+          type: string
+        items:
+          description: "Items are the Promotions, newest first."
+          items:
+            $ref: "#/components/schemas/TargetPromotion"
+          type: array
       type: object
     UpdateConfigMapRequest:
       example:

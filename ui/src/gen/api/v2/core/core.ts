@@ -37,6 +37,7 @@ import type {
   ListPromotionRolloutsParams,
   ListPromotionsParams,
   ListStagesParams,
+  ListTargetPromotionsParams,
   ListTargetsParams,
   PatchConfigMapRequest,
   PatchFreightAliasParams,
@@ -58,6 +59,7 @@ import type {
   StageList,
   Target,
   TargetList,
+  TargetPromotionList,
   UpdateConfigMapRequest,
   V1ConfigMap,
   V1ConfigMapList,
@@ -5440,6 +5442,192 @@ export const useDeleteTarget = <TError = ErrorType<unknown>, TContext = unknown>
 > => {
   return useMutation(getDeleteTargetMutationOptions(options), queryClient);
 };
+export type listTargetPromotionsResponse200 = {
+  data: TargetPromotionList;
+  status: 200;
+};
+
+export type listTargetPromotionsResponseSuccess = listTargetPromotionsResponse200 & {
+  headers: Headers;
+};
+export type listTargetPromotionsResponse = listTargetPromotionsResponseSuccess;
+
+export const getListTargetPromotionsUrl = (
+  project: string,
+  targetName: string,
+  params?: ListTargetPromotionsParams
+) => {
+  const stringifiedParams = serializeParams(params);
+
+  return stringifiedParams.length > 0
+    ? `/v1beta1/projects/${project}/targets/${targetName}/promotions?${stringifiedParams}`
+    : `/v1beta1/projects/${project}/targets/${targetName}/promotions`;
+};
+
+/**
+ * List the Promotions to one of a project's Targets, newest
+ * first, one page at a time: those of every Stage, or of one.
+ * They are read from the database's record of Promotions,
+ * which outlives the Promotions themselves, so the list
+ * reaches further back than the project's Promotions do. A
+ * Target is recorded by name, so this is the history of the
+ * name: a Target that has had no Promotion, or that does not
+ * exist, has an empty one.
+ * @summary List a Target's Promotions
+ */
+export const listTargetPromotions = async (
+  project: string,
+  targetName: string,
+  params?: ListTargetPromotionsParams,
+  options?: Parameters<typeof customFetch>[1]
+): Promise<listTargetPromotionsResponse> => {
+  return customFetch<listTargetPromotionsResponse>(
+    getListTargetPromotionsUrl(project, targetName, params),
+    {
+      ...options,
+      method: 'GET'
+    }
+  );
+};
+
+export const getListTargetPromotionsQueryKey = (
+  project: string,
+  targetName: string,
+  params?: ListTargetPromotionsParams
+) => {
+  return [
+    `/v1beta1/projects/${project}/targets/${targetName}/promotions`,
+    ...(params ? [params] : [])
+  ] as const;
+};
+
+export const getListTargetPromotionsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listTargetPromotions>>,
+  TError = ErrorType<unknown>
+>(
+  project: string,
+  targetName: string,
+  params?: ListTargetPromotionsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listTargetPromotions>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  }
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getListTargetPromotionsQueryKey(project, targetName, params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listTargetPromotions>>> = () =>
+    listTargetPromotions(project, targetName, params, requestOptions);
+
+  return {
+    queryKey,
+    queryFn,
+    enabled:
+      project !== null && project !== undefined && targetName !== null && targetName !== undefined,
+    ...queryOptions
+  } as UseQueryOptions<Awaited<ReturnType<typeof listTargetPromotions>>, TError, TData> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+};
+
+export type ListTargetPromotionsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listTargetPromotions>>
+>;
+export type ListTargetPromotionsQueryError = ErrorType<unknown>;
+
+export function useListTargetPromotions<
+  TData = Awaited<ReturnType<typeof listTargetPromotions>>,
+  TError = ErrorType<unknown>
+>(
+  project: string,
+  targetName: string,
+  params: undefined | ListTargetPromotionsParams,
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listTargetPromotions>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listTargetPromotions>>,
+          TError,
+          Awaited<ReturnType<typeof listTargetPromotions>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListTargetPromotions<
+  TData = Awaited<ReturnType<typeof listTargetPromotions>>,
+  TError = ErrorType<unknown>
+>(
+  project: string,
+  targetName: string,
+  params?: ListTargetPromotionsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listTargetPromotions>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listTargetPromotions>>,
+          TError,
+          Awaited<ReturnType<typeof listTargetPromotions>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListTargetPromotions<
+  TData = Awaited<ReturnType<typeof listTargetPromotions>>,
+  TError = ErrorType<unknown>
+>(
+  project: string,
+  targetName: string,
+  params?: ListTargetPromotionsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listTargetPromotions>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary List a Target's Promotions
+ */
+
+export function useListTargetPromotions<
+  TData = Awaited<ReturnType<typeof listTargetPromotions>>,
+  TError = ErrorType<unknown>
+>(
+  project: string,
+  targetName: string,
+  params?: ListTargetPromotionsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listTargetPromotions>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getListTargetPromotionsQueryOptions(project, targetName, params, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
 export type listWarehousesResponse200 = {
   data: WarehouseList;
   status: 200;
