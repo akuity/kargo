@@ -181,7 +181,7 @@ func TestProjectConfigQueries(t *testing.T) {
 		{
 			name: "status rejected for stale generation or token",
 			run: func(t *testing.T, q *Queries) {
-				insert(t, q, "p", "uid", `{"a":1}`)
+				inserted := insert(t, q, "p", "uid", `{"a":1}`)
 				updated, err := q.UpdateProjectConfigSpec(ctx, specParams(`{"a":2}`))
 				require.NoError(t, err)
 				status := func(
@@ -195,6 +195,7 @@ func TestProjectConfigQueries(t *testing.T) {
 							StatusObservedGeneration: generation,
 							StatusLastHandledRefresh: observedToken,
 							ProjectName:              "p",
+							ID:                       inserted.ID,
 							ObservedGeneration:       generation,
 							ObservedRefreshToken:     observedToken,
 						},

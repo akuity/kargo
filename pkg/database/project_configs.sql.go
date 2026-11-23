@@ -12,6 +12,46 @@ import (
 	"github.com/google/uuid"
 )
 
+const adoptProjectConfig = `-- name: AdoptProjectConfig :one
+UPDATE project_configs SET
+    project_uid = $1::text,
+    updated_at = GREATEST(clock_timestamp(), updated_at + interval '1 microsecond')
+WHERE project_name = $2
+    AND id = $3
+    AND project_uid <> $1::text
+RETURNING id, project_name, project_uid, labels, annotations, spec, generation, refresh_token, status_conditions, status_observed_generation, status_last_handled_refresh, created_at, updated_at
+`
+
+type AdoptProjectConfigParams struct {
+	ProjectUID  string
+	ProjectName string
+	ID          uuid.UUID
+}
+
+// Rebinds a row to the Project of the same name that now holds the name,
+// keeping everything else. It matches only the row read just before, and only
+// while it belongs to another Project UID.
+func (q *Queries) AdoptProjectConfig(ctx context.Context, arg AdoptProjectConfigParams) (ProjectConfigRow, error) {
+	row := q.db.QueryRow(ctx, adoptProjectConfig, arg.ProjectUID, arg.ProjectName, arg.ID)
+	var i ProjectConfigRow
+	err := row.Scan(
+		&i.ID,
+		&i.ProjectName,
+		&i.ProjectUID,
+		&i.Labels,
+		&i.Annotations,
+		&i.Spec,
+		&i.Generation,
+		&i.RefreshToken,
+		&i.StatusConditions,
+		&i.StatusObservedGeneration,
+		&i.StatusLastHandledRefresh,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const deleteProjectConfigByID = `-- name: DeleteProjectConfigByID :one
 DELETE FROM project_configs
 WHERE id = $1
@@ -56,10 +96,11 @@ SELECT id, project_name, project_uid, labels, annotations, spec, generation, ref
 WHERE project_name = $1
 `
 
-// A ProjectConfig is addressed by Project name. A row is a leftover from a
-// deleted Project when the mirrored projects table holds a different UID for
-// its name; queries that cannot be told the current UID hide such rows. A
-// Project that is not mirrored yet hides nothing.
+// A ProjectConfig is addressed by Project name. A row belongs to an earlier
+// Project of the same name when the mirrored projects table holds a different
+// UID for its name; queries that cannot be told the current UID hide such rows
+// until the row is adopted by the current Project. A Project that is not
+// mirrored yet hides nothing.
 // Reads by name alone; the store applies the caller's Project UID.
 func (q *Queries) GetProjectConfig(ctx context.Context, projectName string) (ProjectConfigRow, error) {
 	row := q.db.QueryRow(ctx, getProjectConfig, projectName)
@@ -92,6 +133,68 @@ WHERE r.path = $1
 
 func (q *Queries) GetProjectConfigByWebhookReceiverPath(ctx context.Context, path string) (ProjectConfigRow, error) {
 	row := q.db.QueryRow(ctx, getProjectConfigByWebhookReceiverPath, path)
+	var i ProjectConfigRow
+	err := row.Scan(
+		&i.ID,
+		&i.ProjectName,
+		&i.ProjectUID,
+		&i.Labels,
+		&i.Annotations,
+		&i.Spec,
+		&i.Generation,
+		&i.RefreshToken,
+		&i.StatusConditions,
+		&i.StatusObservedGeneration,
+		&i.StatusLastHandledRefresh,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const importProjectConfig = `-- name: ImportProjectConfig :one
+INSERT INTO project_configs (
+    project_name,
+    project_uid,
+    labels,
+    annotations,
+    spec,
+    status_conditions
+)
+VALUES (
+    $1::text,
+    $2::text,
+    $3::jsonb,
+    $4::jsonb,
+    $5::jsonb,
+    $6::jsonb
+)
+ON CONFLICT (project_name) DO NOTHING
+RETURNING id, project_name, project_uid, labels, annotations, spec, generation, refresh_token, status_conditions, status_observed_generation, status_last_handled_refresh, created_at, updated_at
+`
+
+type ImportProjectConfigParams struct {
+	ProjectName      string
+	ProjectUID       string
+	Labels           []byte
+	Annotations      []byte
+	Spec             []byte
+	StatusConditions []byte
+}
+
+// Imports a config from its Kubernetes resource along with the conditions
+// of its last reconcile. The observed generation is left NULL so that the
+// reconciler verifies the config again. An existing row is never
+// overwritten: no row returned means one exists for the Project.
+func (q *Queries) ImportProjectConfig(ctx context.Context, arg ImportProjectConfigParams) (ProjectConfigRow, error) {
+	row := q.db.QueryRow(ctx, importProjectConfig,
+		arg.ProjectName,
+		arg.ProjectUID,
+		arg.Labels,
+		arg.Annotations,
+		arg.Spec,
+		arg.StatusConditions,
+	)
 	var i ProjectConfigRow
 	err := row.Scan(
 		&i.ID,
@@ -177,7 +280,7 @@ VALUES (
     $3::text,
     $4::text
 )
-ON CONFLICT (path) DO NOTHING
+ON CONFLICT DO NOTHING
 RETURNING name
 `
 
@@ -188,8 +291,9 @@ type InsertProjectConfigWebhookReceiverParams struct {
 	URL             string
 }
 
-// No row returned means the path already belongs to another ProjectConfig
-// and this receiver was skipped.
+// No row returned means this receiver was skipped: its path already belongs
+// to another ProjectConfig, or this ProjectConfig already has a receiver of
+// that name.
 func (q *Queries) InsertProjectConfigWebhookReceiver(ctx context.Context, arg InsertProjectConfigWebhookReceiverParams) (string, error) {
 	row := q.db.QueryRow(ctx, insertProjectConfigWebhookReceiver,
 		arg.ProjectConfigID,
@@ -210,6 +314,37 @@ ORDER BY name
 
 func (q *Queries) ListProjectConfigWebhookReceivers(ctx context.Context, projectConfigID uuid.UUID) ([]ProjectConfigWebhookReceiverRow, error) {
 	rows, err := q.db.Query(ctx, listProjectConfigWebhookReceivers, projectConfigID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ProjectConfigWebhookReceiverRow
+	for rows.Next() {
+		var i ProjectConfigWebhookReceiverRow
+		if err := rows.Scan(
+			&i.ProjectConfigID,
+			&i.Name,
+			&i.Path,
+			&i.URL,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listProjectConfigWebhookReceiversByIDs = `-- name: ListProjectConfigWebhookReceiversByIDs :many
+SELECT project_config_id, name, path, url FROM project_config_webhook_receivers
+WHERE project_config_id = ANY($1::uuid[])
+ORDER BY project_config_id, name
+`
+
+func (q *Queries) ListProjectConfigWebhookReceiversByIDs(ctx context.Context, projectConfigIds []uuid.UUID) ([]ProjectConfigWebhookReceiverRow, error) {
+	rows, err := q.db.Query(ctx, listProjectConfigWebhookReceiversByIDs, projectConfigIds)
 	if err != nil {
 		return nil, err
 	}
@@ -377,8 +512,9 @@ UPDATE project_configs SET
     status_last_handled_refresh = $3::text,
     updated_at = GREATEST(clock_timestamp(), updated_at + interval '1 microsecond')
 WHERE project_name = $4
-    AND generation = $5::bigint
-    AND refresh_token IS NOT DISTINCT FROM $6::text
+    AND id = $5
+    AND generation = $6::bigint
+    AND refresh_token IS NOT DISTINCT FROM $7::text
 RETURNING id, project_name, project_uid, labels, annotations, spec, generation, refresh_token, status_conditions, status_observed_generation, status_last_handled_refresh, created_at, updated_at
 `
 
@@ -387,19 +523,21 @@ type UpdateProjectConfigStatusParams struct {
 	StatusObservedGeneration int64
 	StatusLastHandledRefresh *string
 	ProjectName              string
+	ID                       uuid.UUID
 	ObservedGeneration       int64
 	ObservedRefreshToken     *string
 }
 
-// A status write is a reconcile of a particular generation and refresh token.
-// If either has moved on since the reconcile read them, nothing is written
-// and nothing is returned.
+// A status write is a reconcile of a particular row, generation and refresh
+// token. If the row has been replaced, or either has moved on since the
+// reconcile read them, nothing is written and nothing is returned.
 func (q *Queries) UpdateProjectConfigStatus(ctx context.Context, arg UpdateProjectConfigStatusParams) (ProjectConfigRow, error) {
 	row := q.db.QueryRow(ctx, updateProjectConfigStatus,
 		arg.StatusConditions,
 		arg.StatusObservedGeneration,
 		arg.StatusLastHandledRefresh,
 		arg.ProjectName,
+		arg.ID,
 		arg.ObservedGeneration,
 		arg.ObservedRefreshToken,
 	)
