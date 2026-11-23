@@ -115,13 +115,13 @@ tests:
       - hasDocuments:
           count: 0
 
-  - it: is not rendered when there is no database
+  - it: fails when there is no database
     set:
       database.postgres.enabled: false
     template: templates/migrations/job.yaml
     asserts:
-      - hasDocuments:
-          count: 0
+      - failedTemplate:
+          errorPattern: A database is required
 
   - it: is not rendered when workloads are not installed
     set:

@@ -1,0 +1,34 @@
+{{- /*
+Rendered whenever the API server is (its one-time import of ProjectConfig
+resources blocks startup until the binding exists) or the ProjectConfig CRD is
+installed, so a CRD is never left writable. The name is fixed because the API
+server looks the binding up by name. This is deliberately not a Helm hook so
+that the chart still works with `helm template` and GitOps tools.
+*/ -}}
+{{- if or (and .Values.workloads.install .Values.api.enabled) (and .Values.dataPlane.install .Values.crds.install) }}
+{{- include "kargo.validateKubeVersion" . }}
+{{- include "kargo.database.validate" . }}
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: kargo-projectconfigs-read-only
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    resourceRules:
+    - apiGroups: ["kargo.akuity.io"]
+      apiVersions: ["v1alpha1"]
+      resources: ["projectconfigs"]
+      operations: ["CREATE", "UPDATE"]
+  validations:
+  - expression: "false"
+    message: ProjectConfig is no longer a Kubernetes resource. Manage it with the Kargo CLI, UI or API (for example, kargo apply -f).
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: kargo-projectconfigs-read-only
+spec:
+  policyName: kargo-projectconfigs-read-only
+  validationActions: ["Deny"]
+{{- end }}

@@ -1,0 +1,97 @@
+suite: api/projectconfigs-read-only-policy.yaml
+values:
+- ../test/values-unittest.yaml
+capabilities:
+  majorVersion: 1
+  minorVersion: 30
+templates:
+- templates/api/projectconfigs-read-only-policy.yaml
+tests:
+- it: renders the policy and binding by default
+  asserts:
+  - hasDocuments:
+      count: 2
+  - documentIndex: 0
+    isKind:
+      of: ValidatingAdmissionPolicy
+  - documentIndex: 0
+    equal:
+      path: metadata.name
+      value: kargo-projectconfigs-read-only
+  - documentIndex: 0
+    equal:
+      path: spec.matchConstraints.resourceRules[0].operations
+      value: ["CREATE", "UPDATE"]
+  - documentIndex: 0
+    equal:
+      path: spec.matchConstraints.resourceRules[0].resources
+      value: ["projectconfigs"]
+  - documentIndex: 0
+    equal:
+      path: spec.validations[0].message
+      value: ProjectConfig is no longer a Kubernetes resource. Manage it with the Kargo CLI, UI or API (for example, kargo apply -f).
+  - documentIndex: 1
+    isKind:
+      of: ValidatingAdmissionPolicyBinding
+  - documentIndex: 1
+    equal:
+      path: metadata.name
+      value: kargo-projectconfigs-read-only
+  - documentIndex: 1
+    equal:
+      path: spec.policyName
+      value: kargo-projectconfigs-read-only
+  - documentIndex: 1
+    equal:
+      path: spec.validationActions
+      value: ["Deny"]
+
+# The API server's importer blocks startup until the binding exists, so it must
+# render whenever the API Deployment does, even without the CRDs.
+- it: renders the binding whenever the API Deployment renders
+  set:
+    crds.install: false
+  asserts:
+  - hasDocuments:
+      count: 2
+  - documentIndex: 1
+    isKind:
+      of: ValidatingAdmissionPolicyBinding
+
+- it: renders when only the CRDs are installed
+  set:
+    api.enabled: false
+  asserts:
+  - hasDocuments:
+      count: 2
+
+- it: does not render when neither the API server nor the CRDs are
+  set:
+    api.enabled: false
+    crds.install: false
+  asserts:
+  - hasDocuments:
+      count: 0
+
+- it: fails on Kubernetes older than 1.30
+  capabilities:
+    majorVersion: 1
+    minorVersion: 29
+  asserts:
+  - failedTemplate:
+      errorPattern: Kargo requires Kubernetes 1.30 or later
+
+- it: fails when no database is configured
+  set:
+    database.postgres.enabled: false
+  asserts:
+  - failedTemplate:
+      errorPattern: A database is required
+
+- it: renders with an external database
+  set:
+    database.postgres.enabled: false
+    database.external.secretName: my-db
+  asserts:
+  - hasDocuments:
+      count: 2

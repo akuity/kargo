@@ -540,10 +540,27 @@ kargo-migrate-{{ include "kargo.migrations.podTemplate" . | sha256sum | trunc 10
 {{- end -}}
 
 {{/*
-kargo.database.validate fails the render if both the bundled PostgreSQL and an
-external database are configured, since only one can be the database.
+kargo.validateKubeVersion fails the render on Kubernetes older than 1.30, where
+the ValidatingAdmissionPolicy that makes ProjectConfig resources read-only is
+not GA. Helm enforces Chart.yaml's kubeVersion on install and upgrade, but
+`helm template` and GitOps renders use Helm's built-in default version, so this
+check covers the cases where they are given an explicit one.
+*/}}
+{{- define "kargo.validateKubeVersion" -}}
+{{- if semverCompare "<1.30.0-0" .Capabilities.KubeVersion.Version }}
+{{- fail (printf "Kargo requires Kubernetes 1.30 or later, but the target cluster is %s" .Capabilities.KubeVersion.Version) }}
+{{- end }}
+{{- end -}}
+
+{{/*
+kargo.database.validate fails the render if neither the bundled PostgreSQL nor
+an external database is configured, since a database is required, or if both
+are, since only one can be the database.
 */}}
 {{- define "kargo.database.validate" -}}
+{{- if not (or .Values.database.postgres.enabled .Values.database.external.secretName) }}
+{{- fail "A database is required. Enable the bundled PostgreSQL (database.postgres.enabled) or set database.external.secretName to use an external database." }}
+{{- end }}
 {{- if and .Values.database.postgres.enabled .Values.database.external.secretName }}
 {{- fail "database.postgres.enabled and database.external.secretName cannot both be set. Disable the bundled PostgreSQL to use an external database." }}
 {{- end }}
