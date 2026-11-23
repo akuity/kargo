@@ -7,8 +7,15 @@ import (
 	"strings"
 
 	"github.com/expr-lang/expr"
+	"github.com/expr-lang/expr/vm"
+	lru "github.com/hashicorp/golang-lru/v2"
 	"go.yaml.in/yaml/v3"
 )
+
+// programs holds compiled expressions evaluated without caller options. A
+// program keeps the functions it was compiled with, so calls with options
+// always compile.
+var programs, _ = lru.New[string, *vm.Program](1024)
 
 type supportedDelimiterSet struct {
 	start string
@@ -129,6 +136,7 @@ func EvaluateTemplate(template string, env map[string]any, exprOpts ...expr.Opti
 		return template, nil
 	}
 
+	cacheable := len(exprOpts) == 0
 	if exprOpts == nil {
 		exprOpts = make([]expr.Option, 0, 4)
 	}
@@ -156,7 +164,7 @@ func EvaluateTemplate(template string, env map[string]any, exprOpts ...expr.Opti
 		),
 	)
 
-	result, err := evaluateTemplate(template, env, exprOpts...)
+	result, err := evaluateTemplate(template, env, cacheable, exprOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -213,6 +221,7 @@ func EvaluateTemplate(template string, env map[string]any, exprOpts ...expr.Opti
 func evaluateTemplate(
 	template string,
 	env map[string]any,
+	cacheable bool,
 	exprOpts ...expr.Option,
 ) (string, error) {
 	var result strings.Builder
@@ -231,7 +240,7 @@ func evaluateTemplate(
 			break
 		}
 
-		evaluated, err := evaluateExpression(expression, env, exprOpts...)
+		evaluated, err := evaluateExpression(expression, env, cacheable, exprOpts...)
 		if err != nil {
 			return "", err
 		}
@@ -279,11 +288,27 @@ func nextExpression(template string) (string, string, string, error) {
 }
 
 // evaluateExpression evaluates input as a single expr-lang expression with the
-// provided map as the environment.
-func evaluateExpression(expression string, env map[string]any, exprOpts ...expr.Option) (string, error) {
-	program, err := expr.Compile(expression, exprOpts...)
-	if err != nil {
-		return "", err
+// provided map as the environment. With cacheable, it reuses the compiled
+// program from programs.
+func evaluateExpression(
+	expression string,
+	env map[string]any,
+	cacheable bool,
+	exprOpts ...expr.Option,
+) (string, error) {
+	var program *vm.Program
+	var cached bool
+	if cacheable {
+		program, cached = programs.Get(expression)
+	}
+	if !cached {
+		var err error
+		if program, err = expr.Compile(expression, exprOpts...); err != nil {
+			return "", err
+		}
+		if cacheable {
+			programs.Add(expression, program)
+		}
 	}
 	result, err := expr.Run(program, env)
 	if err != nil {
