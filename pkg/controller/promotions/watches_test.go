@@ -359,6 +359,69 @@ func TestUpdatedArgoCDAppHandler_Update(t *testing.T) {
 				}, item)
 			},
 		},
+		{
+			name: "Application authorizes a Stage with a running Promotion to a Target",
+			applications: []client.Object{
+				targetPromotion("target-promotion", "fake-stage", "fake-target", kargoapi.PromotionPhaseRunning),
+				targetPromotion("finished-promotion", "fake-stage", "fake-target", kargoapi.PromotionPhaseSucceeded),
+				targetPromotion("untargeted-promotion", "fake-stage", "", kargoapi.PromotionPhaseRunning),
+				targetPromotion("other-stage-promotion", "other-stage", "fake-target", kargoapi.PromotionPhaseRunning),
+				func() client.Object {
+					promo := targetPromotion("other-shard-promotion", "fake-stage", "fake-target", kargoapi.PromotionPhaseRunning)
+					promo.Labels[kargoapi.LabelKeyShard] = "other-shard"
+					return promo
+				}(),
+			},
+			// The app name references target.*, so the name-based index misses it.
+			indexer: func(client.Object) []string { return nil },
+			e: event.TypedUpdateEvent[*argocd.Application]{
+				ObjectOld: &argocd.Application{},
+				ObjectNew: authorizedApp("fake-project:fake-stage"),
+			},
+			assertions: func(t *testing.T, wq workqueue.TypedRateLimitingInterface[reconcile.Request]) {
+				require.Equal(t, 1, wq.Len())
+				item, _ := wq.Get()
+				require.Equal(t, reconcile.Request{
+					NamespacedName: types.NamespacedName{
+						Namespace: "fake-project",
+						Name:      "target-promotion",
+					},
+				}, item)
+			},
+		},
+		{
+			name: "Application without an authorized-stage annotation",
+			applications: []client.Object{
+				targetPromotion("target-promotion", "fake-stage", "fake-target", kargoapi.PromotionPhaseRunning),
+			},
+			indexer: func(client.Object) []string { return nil },
+			e: event.TypedUpdateEvent[*argocd.Application]{
+				ObjectOld: &argocd.Application{},
+				ObjectNew: &argocd.Application{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "fake-application-name",
+						Namespace: "fake-application-namespace",
+					},
+				},
+			},
+			assertions: func(t *testing.T, wq workqueue.TypedRateLimitingInterface[reconcile.Request]) {
+				require.Equal(t, 0, wq.Len())
+			},
+		},
+		{
+			name: "Application with a malformed authorized-stage annotation",
+			applications: []client.Object{
+				targetPromotion("target-promotion", "fake-stage", "fake-target", kargoapi.PromotionPhaseRunning),
+			},
+			indexer: func(client.Object) []string { return nil },
+			e: event.TypedUpdateEvent[*argocd.Application]{
+				ObjectOld: &argocd.Application{},
+				ObjectNew: authorizedApp("fake-stage"),
+			},
+			assertions: func(t *testing.T, wq workqueue.TypedRateLimitingInterface[reconcile.Request]) {
+				require.Equal(t, 0, wq.Len())
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -394,6 +457,39 @@ func TestUpdatedArgoCDAppHandler_Update(t *testing.T) {
 
 			tt.assertions(t, wq)
 		})
+	}
+}
+
+// targetPromotion returns a Promotion of the Stage in fake-project, labeled as
+// the Promotion webhook labels it.
+func targetPromotion(name, stage, target string, phase kargoapi.PromotionPhase) *kargoapi.Promotion {
+	return &kargoapi.Promotion{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: "fake-project",
+			Labels: map[string]string{
+				kargoapi.LabelKeyStage: kubernetes.ShortenLabelValue(stage),
+			},
+		},
+		Spec: kargoapi.PromotionSpec{
+			Stage:  stage,
+			Target: target,
+		},
+		Status: kargoapi.PromotionStatus{Phase: phase},
+	}
+}
+
+// authorizedApp returns an Application with the given authorized-stage
+// annotation value.
+func authorizedApp(stages string) *argocd.Application {
+	return &argocd.Application{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "fake-application-name",
+			Namespace: "fake-application-namespace",
+			Annotations: map[string]string{
+				kargoapi.AnnotationKeyAuthorizedStage: stages,
+			},
+		},
 	}
 }
 
