@@ -66,6 +66,18 @@ Users can be granted permission to modify project configurations via
 `ProjectConfig` resources without necessarily having broader access to `Project`
 resources themselves.
 
+:::note
+
+`ProjectConfig` is not a Kubernetes resource. Kargo stores it in its own
+database, so `kubectl get projectconfigs` no longer reflects the live
+configuration (it can show only leftovers from before Kargo v2.0), and GitOps
+agents such as Argo CD cannot sync it to a cluster. Manage
+`ProjectConfig`s with the Kargo CLI, UI, or API. For example, use
+`kargo apply -f` to create or update one from a manifest like those in this
+guide, and `kargo get projectconfig --project <project>` to read it.
+
+:::
+
 ### Promotion Policies
 
 A `ProjectConfig` resource can contain multiple promotion policies. Each policy
@@ -711,6 +723,9 @@ created by Kargo or adopted from an existing setup.
 To achieve this, you can apply the following annotation to the `Namespace` or
 the corresponding `Project` resource with
 `kargo.akuity.io/keep-namespace: "true"`.
+
+When a `Project` is deleted this way, its `Namespace` is retained, but its
+`ProjectConfig` is deleted along with it.
 
 ## Interacting with Projects
 

@@ -830,6 +830,22 @@ Target custom resources created by earlier versions; they are not migrated.
 Recreate the Targets you still need through the API after upgrading.
 :::
 
+:::note
+`ProjectConfig`s also live only in the database, so back them up with it.
+A `ProjectConfig` follows its `Project` by name. Restoring or rebuilding a
+cluster gives its `Project`s new UIDs (backup tools such as Velero do not
+preserve them). If you do that while keeping the existing database, each
+`ProjectConfig` is carried over to the restored `Project` of the same name,
+and its webhook receivers keep their URLs as long as the `Secret`s they
+reference are restored unchanged.
+
+A `ProjectConfig` is deleted only when Kargo observes its `Project` being
+deleted. A `Project` that is deleted and recreated under the same name while
+the management controller is not running, or before it has processed the
+deletion, therefore inherits the previous `Project`'s `ProjectConfig`. Delete
+that `ProjectConfig` if it is not wanted.
+:::
+
 ### Bundled PostgreSQL
 
 By default, the chart runs a single, unreplicated PostgreSQL instance with no

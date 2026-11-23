@@ -77,8 +77,8 @@ Kargo will generate a hard-to-guess URL from the receiver's configuration. This
 URL can be obtained using a command such as the following:
 
 ```shell
-kubectl get projectconfigs kargo-demo \
-  -n kargo-demo \
+kargo get projectconfig \
+  --project=kargo-demo \
   -o=jsonpath='{.status.webhookReceivers}'
 ```
 
