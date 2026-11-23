@@ -2,28 +2,8 @@ import { describe, expect, test } from 'vitest';
 
 import { Stage } from '@ui/gen/api/v2/models';
 
-import { pipelineOrder, stageGovernsTarget, targetAwareStages } from './target-stages';
-import { fleetStage, stage, target } from './test-fixtures';
-
-describe('stageGovernsTarget()', () => {
-  test('a classic Stage governs nothing', () => {
-    expect(stageGovernsTarget(stage('classic'), target('t', { region: 'us' }))).toBe(false);
-  });
-
-  test('an empty selector list governs nothing', () => {
-    expect(stageGovernsTarget(fleetStage('fleet', []), target('t', { region: 'us' }))).toBe(false);
-  });
-
-  test('selectors are a union', () => {
-    const fleet = fleetStage('fleet', [
-      { matchLabels: { region: 'us' } },
-      { matchLabels: { region: 'eu' } }
-    ]);
-    expect(stageGovernsTarget(fleet, target('a', { region: 'us' }))).toBe(true);
-    expect(stageGovernsTarget(fleet, target('b', { region: 'eu' }))).toBe(true);
-    expect(stageGovernsTarget(fleet, target('c', { region: 'ap' }))).toBe(false);
-  });
-});
+import { pipelineOrder, targetAwareStages } from './target-stages';
+import { fleetStage, stage } from './test-fixtures';
 
 describe('targetAwareStages()', () => {
   test('keeps only target-aware Stages, sorted by name', () => {

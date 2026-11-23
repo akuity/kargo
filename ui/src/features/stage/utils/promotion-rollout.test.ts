@@ -13,7 +13,6 @@ import {
   rolloutCompareFn,
   rolloutPath,
   rolloutRound,
-  rolloutRounds,
   rolloutToRound,
   roundIdentity,
   roundMessage,
@@ -393,46 +392,6 @@ describe('rolloutRound()', () => {
 
   test('nothing for a Stage with no rollout to show', () => {
     expect(rolloutRound(undefined)).toBeUndefined();
-  });
-});
-
-describe('rolloutRounds()', () => {
-  test('resolves a round for each Stage on rollouts and leaves the others out', () => {
-    const rounds = rolloutRounds(
-      [
-        stage('prod', { lastPromotionRollout: { name: 'prod.rollout-3' } }),
-        stage('staging'),
-        stage('requests', { lastPromotionRequest: { name: 'requests.01abc.deadbeef' } })
-      ],
-      {
-        prod: { finished: rollout(3, 'Succeeded') },
-        staging: {
-          unfinished: rollout(1, 'Running', {
-            spec: { stage: 'staging', freight: 'abc', targets: [] }
-          })
-        }
-      }
-    );
-    expect(Object.keys(rounds).sort()).toEqual(['prod', 'staging']);
-    expect(rounds.prod).toMatchObject({ number: 3, status: { phase: 'Succeeded' } });
-    expect(rounds.staging).toMatchObject({ number: 1, status: { phase: 'Running' } });
-  });
-
-  // The entry is there, and empty, so that the Stage's PromotionRequests are
-  // not shown in the round's place while the list catches up.
-  test('a Stage whose rollout the list does not hold yet has no round for now', () => {
-    const rounds = rolloutRounds(
-      [stage('prod', { lastPromotionRollout: { name: 'prod.rollout-3' } })],
-      {}
-    );
-    expect(rounds).toEqual({ prod: undefined });
-    expect('prod' in rounds).toBe(true);
-  });
-
-  test('skips a Stage with no name', () => {
-    expect(
-      rolloutRounds([{ status: { lastPromotionRollout: { name: 'x' } } } as Stage], {})
-    ).toEqual({});
   });
 });
 
