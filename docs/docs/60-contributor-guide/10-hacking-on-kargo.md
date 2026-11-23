@@ -585,6 +585,12 @@ the `metadata.resourceVersion` or `metadata.uid` it read is refused with
 Targets: the database offers no change feed, so the UI polls the list every
 few seconds instead.
 
+The Promotions to one Target are served newest first, a page at a time, at
+`/v1beta1/projects/{project}/targets/{target}/promotions`. They are read from
+the mirrored Promotion rows rather than from Kubernetes, so the list reaches
+back past the Promotions Kubernetes still has, and showing one Target's
+history does not take loading every Promotion in the Project.
+
 To open a `psql` session against it:
 
 ```shell
