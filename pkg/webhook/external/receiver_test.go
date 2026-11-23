@@ -121,6 +121,34 @@ func TestNewReceiver(t *testing.T) {
 	}
 }
 
+func Test_buildWebhookPath_golden(t *testing.T) {
+	t.Parallel()
+	const hash = "579e5b667d31d5087cbb7dda7ce9b3f3824970976f38670aca2e6177c1373aae"
+	testCases := []struct {
+		name     string
+		basePath string
+		want     string
+	}{
+		{name: "empty base path", basePath: "", want: "/github/" + hash},
+		{name: "root base path", basePath: "/", want: "/github/" + hash},
+		{name: "nested base path", basePath: "/kargo", want: "/kargo/github/" + hash},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+			got, err := buildWebhookPath(
+				testCase.basePath,
+				"kargo-demo",
+				"github",
+				"smart-receiver",
+				"AbC123", "xYz",
+			)
+			require.NoError(t, err)
+			require.Equal(t, testCase.want, got)
+		})
+	}
+}
+
 func TestGetDetails(t *testing.T) {
 	testCases := []struct {
 		baseURL            string
