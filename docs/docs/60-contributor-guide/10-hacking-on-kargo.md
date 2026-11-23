@@ -585,11 +585,30 @@ the `metadata.resourceVersion` or `metadata.uid` it read is refused with
 Targets: the database offers no change feed, so the UI polls the list every
 few seconds instead.
 
-The Promotions to one Target are served newest first, a page at a time, at
-`/v1beta1/projects/{project}/targets/{target}/promotions`. They are read from
-the mirrored Promotion rows rather than from Kubernetes, so the list reaches
-back past the Promotions Kubernetes still has, and showing one Target's
-history does not take loading every Promotion in the Project.
+Where a Target stands with each Stage that governs it is not recorded
+anywhere. The API server derives it on request, from the mirrored Promotions
+and the PromotionRollouts, and serves it read-only for pages that show a
+whole fleet:
+
+- `/v1beta1/projects/{project}/target-statuses` lists one entry per Target
+  and governing Stage, a page at a time: its state, the last Promotion to
+  it, the Freight it is on per origin, and whether it is behind the Stage.
+- `/v1beta1/projects/{project}/target-statuses/summary` counts those entries
+  by state, per Stage and per Target.
+- `/v1beta1/projects/{project}/targets/{target}/promotions` lists the
+  Promotions to one Target, newest first, a page at a time. The mirrored
+  rows are kept past their Promotions' deletion, so the list reaches back
+  past the Promotions Kubernetes still has.
+
+Which Stages govern a Target is not recorded either: each request matches the
+Stages' selectors against the Targets' labels, as creating a PromotionRollout
+does. A Stage's current Freight, which a Target is behind when it is on
+anything else, is read from the Stage's status, since the database does not
+hold it. The state of an entry is derived in one place, the
+`ListTargetStatuses` query in `db/queries/target_statuses.sql`, which also
+does the counting, so a count and the entries it counts cannot disagree; its
+vocabulary is `targetstatusstore.State`. Target health is not recorded, so no
+state speaks of it.
 
 To open a `psql` session against it:
 
