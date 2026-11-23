@@ -2,6 +2,7 @@ package promotionrollouts
 
 import (
 	"errors"
+	"net/http"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -23,4 +24,20 @@ func TestStoreError(t *testing.T) {
 	require.Equal(t, 503, httpErr.Code())
 	other := errors.New("boom")
 	require.Same(t, other, storeError(other, "x"))
+}
+
+func TestNoTargetsError(t *testing.T) {
+	t.Parallel()
+	err := newNoTargetsError("prod")
+	require.ErrorIs(t, err, ErrNoTargets)
+	var httpErr *libhttp.HTTPError
+	require.ErrorAs(t, err, &httpErr)
+	require.Equal(t, http.StatusConflict, httpErr.Code())
+	// The message is the one the API answers with.
+	require.Equal(t, httpErr.Error(), err.Error())
+	require.ErrorContains(t, err, `Stage "prod" governs no Targets right now`)
+	// Wrapped by a caller, it is still recognized as both.
+	wrapped := errors.Join(errors.New("another Stage failed"), err)
+	require.ErrorIs(t, wrapped, ErrNoTargets)
+	require.ErrorAs(t, wrapped, &httpErr)
 }

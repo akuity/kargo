@@ -61,7 +61,10 @@ type promoteDownstreamRequest struct {
 // @Description "promotionRequests"; each key is present only when it has
 // @Description entries. Each promotes to every Target its Stage governs, at
 // @Description the Stage's pace. A Stage that could not be promoted to is
-// @Description reported under "errors", with a 207 status.
+// @Description reported under "errors", with a 207 status, and the rest
+// @Description are still promoted to. On a server that creates
+// @Description PromotionRollouts, that includes a Stage that governs no
+// @Description Targets.
 // @Tags Core, Project-Level
 // @Security BearerAuth
 // @Accept json

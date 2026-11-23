@@ -49,6 +49,9 @@ func TestCreator_Create(t *testing.T) {
 		store       *fakeStore
 		identity    user.Identity
 		targetNames []string
+		// targets, if set, is where the Creator reads the Project's Targets
+		// from, in place of the fleet.
+		targets *fakeTargets
 		// check, if set, is what the Creator asks before it creates a rollout.
 		check  func(context.Context, *kargoapi.Stage) error
 		assert func(*testing.T, *fakeStore, *kargoapi.PromotionRollout, error)
@@ -95,6 +98,35 @@ func TestCreator_Create(t *testing.T) {
 				require.ErrorAs(t, err, &httpErr)
 				require.Equal(t, http.StatusBadRequest, httpErr.Code())
 				require.ErrorContains(t, err, "eu-west")
+				require.NotErrorIs(t, err, ErrNoTargets)
+				require.Zero(t, store.calls)
+			},
+		},
+		{
+			name:    "a Stage governing no Targets is refused, and nothing is created",
+			store:   &fakeStore{},
+			targets: &fakeTargets{},
+			assert: func(t *testing.T, store *fakeStore, rollout *kargoapi.PromotionRollout, err error) {
+				require.Nil(t, rollout)
+				// A caller holding the Creator can tell this refusal from any
+				// other, and the API answers it as a conflict.
+				require.ErrorIs(t, err, ErrNoTargets)
+				var httpErr *libhttp.HTTPError
+				require.ErrorAs(t, err, &httpErr)
+				require.Equal(t, http.StatusConflict, httpErr.Code())
+				require.ErrorContains(t, err, `Stage "prod" governs no Targets right now`)
+				require.Zero(t, store.calls)
+			},
+		},
+		{
+			name:  "a Stage governing none of the Project's Targets is refused",
+			store: &fakeStore{},
+			targets: &fakeTargets{rows: []database.TargetRow{
+				targetRow("eu-west", map[string]string{"region": "eu"}),
+			}},
+			assert: func(t *testing.T, store *fakeStore, rollout *kargoapi.PromotionRollout, err error) {
+				require.Nil(t, rollout)
+				require.ErrorIs(t, err, ErrNoTargets)
 				require.Zero(t, store.calls)
 			},
 		},
@@ -142,7 +174,11 @@ func TestCreator_Create(t *testing.T) {
 			if testCase.identity != nil {
 				ctx = user.ContextWithIdentity(ctx, testCase.identity)
 			}
-			rollout, err := NewCreator(testCase.store, fleet, testCase.check).Create(
+			targets := fleet
+			if testCase.targets != nil {
+				targets = *testCase.targets
+			}
+			rollout, err := NewCreator(testCase.store, targets, testCase.check).Create(
 				ctx,
 				stage,
 				freight,

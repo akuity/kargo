@@ -4231,8 +4231,10 @@ export const getCreatePromotionRolloutUrl = (project: string, stage: string) => 
  * update strategy, or the one the body gives in its place, is
  * resolved against how many that leaves; both are recorded
  * with the rollout for good. A Target the Stage does not
- * govern is refused. Everything else about the rollout is
- * assigned by the server.
+ * govern is refused. So is a rollout to no Targets: while the
+ * Stage governs none, the response is a 409, and the same
+ * request succeeds once its selectors match a Target.
+ * Everything else about the rollout is assigned by the server.
  * This is a promotion: it requires the promote verb on the
  * Stage. A server that does not create PromotionRollouts
  * responds 501.
@@ -4522,7 +4524,9 @@ export const getPromoteToStageUrl = (project: string, stage: string) => {
  * them: a PromotionRollout on a server that creates
  * PromotionRollouts, and a PromotionRequest otherwise. Either
  * way, the body's targets and updateStrategy narrow which
- * Targets are promoted to and at what pace.
+ * Targets are promoted to and at what pace. A PromotionRollout
+ * is not created for a Stage that governs no Targets: the
+ * response is a 409 until its selectors match one.
  * @summary Promote to Stage
  */
 export const promoteToStage = async (
@@ -4640,7 +4644,10 @@ export const getPromoteDownstreamUrl = (project: string, stage: string) => {
  * "promotionRequests"; each key is present only when it has
  * entries. Each promotes to every Target its Stage governs, at
  * the Stage's pace. A Stage that could not be promoted to is
- * reported under "errors", with a 207 status.
+ * reported under "errors", with a 207 status, and the rest
+ * are still promoted to. On a server that creates
+ * PromotionRollouts, that includes a Stage that governs no
+ * Targets.
  * @summary Promote downstream
  */
 export const promoteDownstream = async (
