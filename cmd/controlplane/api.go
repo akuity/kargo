@@ -193,6 +193,7 @@ func (o *apiOptions) run(ctx context.Context) error {
 		sender,
 		database.New(pool),
 		projectconfigstore.New(pool, natsConn),
+		natsConn,
 	)
 	l, err := net.Listen("tcp", fmt.Sprintf("%s:%s", o.BindAddress, o.Port))
 	if err != nil {

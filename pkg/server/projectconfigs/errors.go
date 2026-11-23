@@ -16,19 +16,16 @@ import (
 // kind is the Kind ProjectConfigs are served and reported as.
 const kind = "ProjectConfig"
 
-// errWatchNotImplemented answers a request to watch a ProjectConfig, which
-// the database-backed store cannot serve yet.
-var errWatchNotImplemented = libhttp.ErrorStr(
-	"watching a ProjectConfig is not implemented",
-	http.StatusNotImplemented,
-)
+// projectConfigsResource is the group and resource ProjectConfigs are
+// reported as in errors.
+var projectConfigsResource = kargoapi.GroupVersion.WithResource("projectconfigs").GroupResource()
 
 // storeError translates what the store reports into the error a
 // Kubernetes-backed handler would have produced for the same situation, so
 // that clients see the same status codes whichever store backs the resource.
 // A ProjectConfig is named after its Project.
 func storeError(err error, project string) error {
-	gr := kargoapi.GroupVersion.WithResource("projectconfigs").GroupResource()
+	gr := projectConfigsResource
 	switch {
 	case errors.Is(err, database.ErrNotFound):
 		return apierrors.NewNotFound(gr, project)
@@ -51,3 +48,16 @@ func invalid(project string, errs field.ErrorList) error {
 		errs,
 	)
 }
+
+// translatedError is an error from the store together with what storeError
+// translated it to. It reads as the translation, which is what the client
+// is answered with, and unwraps to both, so that code which looks for the
+// store's sentinel errors, such as a watch, still finds them.
+type translatedError struct {
+	translated error
+	cause      error
+}
+
+func (e *translatedError) Error() string { return e.translated.Error() }
+
+func (e *translatedError) Unwrap() []error { return []error{e.translated, e.cause} }

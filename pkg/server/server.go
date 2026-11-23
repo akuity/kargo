@@ -31,6 +31,7 @@ import (
 	"github.com/akuity/kargo/pkg/event"
 	httputil "github.com/akuity/kargo/pkg/http"
 	"github.com/akuity/kargo/pkg/logging"
+	natsrec "github.com/akuity/kargo/pkg/reconciler/nats"
 	"github.com/akuity/kargo/pkg/server/config"
 	"github.com/akuity/kargo/pkg/server/dex"
 	"github.com/akuity/kargo/pkg/server/kubernetes"
@@ -56,6 +57,10 @@ type server struct {
 	// projectConfigs holds the ProjectConfigs. Unlike db, it is required:
 	// the API server does not start without a database.
 	projectConfigs projectconfigstore.Store
+	// natsConn is the NATS connection watches of resources that live in the
+	// database subscribe through, to the topics their stores announce writes
+	// on.
+	natsConn natsrec.Subscriber
 
 	// The following behaviors are overridable for testing purposes:
 
@@ -170,7 +175,8 @@ type Server interface {
 
 // NewServer returns a Server. The db may be nil, in which case the resources
 // that live in the database are unavailable; see the server's db field. The
-// projectConfigs store may not be nil.
+// projectConfigs store may not be nil. Watches of resources that live in the
+// database subscribe through natsConn.
 func NewServer(
 	cfg config.ServerConfig,
 	kubeClient kubernetes.Client,
@@ -178,6 +184,7 @@ func NewServer(
 	sender event.Sender,
 	db *database.Queries,
 	projectConfigs projectconfigstore.Store,
+	natsConn natsrec.Subscriber,
 ) Server {
 	s := &server{
 		cfg:            cfg,
@@ -186,6 +193,7 @@ func NewServer(
 		sender:         sender,
 		db:             db,
 		projectConfigs: projectConfigs,
+		natsConn:       natsConn,
 	}
 
 	s.getStageFn = api.GetStage

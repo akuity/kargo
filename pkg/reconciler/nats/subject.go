@@ -149,13 +149,9 @@ func (s *Source[K, T, request]) Start(ctx context.Context, out chan<- request) e
 		if ctx.Err() != nil {
 			return
 		}
-		var e Event[K, T]
-		if err := json.Unmarshal(msg.Data, &e); err != nil {
-			logger.Error(err, "dropping message that is not an event", "messageSubject", msg.Subject)
-			return
-		}
-		if err := e.Validate(); err != nil {
-			logger.Error(err, "dropping invalid event", "messageSubject", msg.Subject)
+		e, err := decodeEvent[K, T](msg)
+		if err != nil {
+			logger.Error(err, "dropping message", "messageSubject", msg.Subject)
 			return
 		}
 		if !s.allow(e) {
@@ -188,4 +184,49 @@ func (s *Source[K, T, request]) Start(ctx context.Context, out chan<- request) e
 		}
 	}()
 	return nil
+}
+
+// Subscribe calls fn with each event on the topic until the returned
+// subscription is unsubscribed. It is for consumers that are not
+// controllers, such as an API server streaming changes to one resource to a
+// client, which hold the subscription themselves rather than handing a
+// Source to a reconciler.
+//
+// fn runs on the subscription's delivery goroutine, so it should be quick. A
+// message that is not a valid event never reaches it; like any lost
+// message, it is for the consumer to recover from, by reading the resource
+// again from time to time.
+func (t Topic[K, T]) Subscribe(conn Subscriber, fn func(Event[K, T])) (*natsgo.Subscription, error) {
+	if conn == nil {
+		return nil, errors.New("a NATS connection is required")
+	}
+	if t.prefix == "" {
+		return nil, errors.New("a topic is required")
+	}
+	if fn == nil {
+		return nil, errors.New("a callback is required")
+	}
+	subject := t.Subject()
+	sub, err := conn.Subscribe(subject, func(msg *natsgo.Msg) {
+		if e, err := decodeEvent[K, T](msg); err == nil {
+			fn(e)
+		}
+	})
+	if err != nil {
+		return nil, fmt.Errorf("error subscribing to %q: %w", subject, err)
+	}
+	return sub, nil
+}
+
+// decodeEvent decodes a message as an event, reporting an error if it is not
+// one or lacks what its kind requires.
+func decodeEvent[K comparable, T any](msg *natsgo.Msg) (Event[K, T], error) {
+	var e Event[K, T]
+	if err := json.Unmarshal(msg.Data, &e); err != nil {
+		return e, fmt.Errorf("message is not an event: %w", err)
+	}
+	if err := e.Validate(); err != nil {
+		return e, fmt.Errorf("invalid event: %w", err)
+	}
+	return e, nil
 }

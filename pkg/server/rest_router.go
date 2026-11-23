@@ -230,8 +230,8 @@ func (s *server) setupRESTRouter(ctx context.Context) (*gin.Engine, error) {
 			// Project Configuration
 			// ProjectConfigs live in the database; their handlers authorize
 			// each request themselves, since no Kubernetes client does it for
-			// them.
-			projectconfigs.New(s.projectConfigs, s.authorize).Register(project)
+			// them, and watch them over NATS.
+			projectconfigs.New(s.projectConfigs, s.authorize, s.natsConn).Register(project)
 
 			// Events
 			project.GET("/events", s.listProjectEvents)

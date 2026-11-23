@@ -26,6 +26,7 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/database"
 	"github.com/akuity/kargo/pkg/database/projectconfigstore"
+	natsrec "github.com/akuity/kargo/pkg/reconciler/nats"
 	"github.com/akuity/kargo/pkg/server/auth/can"
 	"github.com/akuity/kargo/pkg/server/middleware"
 )
@@ -276,9 +277,12 @@ func forbid(verb can.Verb) func(context.Context, can.Access) error {
 // testCase drives one request through a Handler mounted the way the API
 // server mounts it, under /v1beta1/projects/:project.
 type testCase struct {
-	name       string
-	store      *fakeStore
-	authorize  func(context.Context, can.Access) error
+	name      string
+	store     *fakeStore
+	authorize func(context.Context, can.Access) error
+	// conn is the NATS connection watches subscribe through. Only tests
+	// that watch need one.
+	conn       natsrec.Subscriber
 	method     string
 	url        string
 	body       io.Reader
@@ -294,11 +298,12 @@ func TestMain(m *testing.M) {
 
 // newRouter mounts a Handler the way the API server mounts it, under
 // /v1beta1/projects/:project, behind the same error handling and the same
-// Project lookup. The test Project exists.
+// Project lookup. The test Project exists. Watches subscribe through conn.
 func newRouter(
 	t *testing.T,
 	store projectconfigstore.Store,
 	authorize func(context.Context, can.Access) error,
+	conn natsrec.Subscriber,
 ) *gin.Engine {
 	scheme := runtime.NewScheme()
 	require.NoError(t, kargoapi.AddToScheme(scheme))
@@ -312,7 +317,7 @@ func newRouter(
 	router.Use(middleware.HandleErrors(), middleware.Recover())
 	project := router.Group("/v1beta1/projects/:project")
 	project.Use(middleware.RequireProject(kube))
-	New(store, authorize).Register(project)
+	New(store, authorize, conn).Register(project)
 	return router
 }
 
@@ -332,7 +337,7 @@ func runTestCases(t *testing.T, cases []testCase) {
 			if tc.body != nil {
 				req.Header.Set("Content-Type", "application/json")
 			}
-			newRouter(t, store, authorize).ServeHTTP(w, req)
+			newRouter(t, store, authorize, tc.conn).ServeHTTP(w, req)
 			tc.assertions(t, w)
 		})
 	}
@@ -347,7 +352,7 @@ func TestRequire(t *testing.T) {
 	t.Run("no authorizer fails closed", func(t *testing.T) {
 		t.Parallel()
 		w := httptest.NewRecorder()
-		newRouter(t, &fakeStore{}, nil).ServeHTTP(
+		newRouter(t, &fakeStore{}, nil, nil).ServeHTTP(
 			w, httptest.NewRequest(http.MethodGet, configURL(""), nil),
 		)
 		require.Equal(t, http.StatusInternalServerError, w.Code)
@@ -356,7 +361,7 @@ func TestRequire(t *testing.T) {
 		t.Parallel()
 		store := &fakeStore{}
 		w := httptest.NewRecorder()
-		newRouter(t, store, recordAuthorizations(&[]can.Access{})).ServeHTTP(
+		newRouter(t, store, recordAuthorizations(&[]can.Access{}), nil).ServeHTTP(
 			w, httptest.NewRequest(http.MethodGet, "/v1beta1/projects/other/config", nil),
 		)
 		require.Equal(t, http.StatusNotFound, w.Code)

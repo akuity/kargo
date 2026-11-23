@@ -3,12 +3,14 @@ package projectconfigs
 import (
 	"context"
 	"errors"
+	"time"
 
 	"github.com/gin-gonic/gin"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/database/projectconfigstore"
 	"github.com/akuity/kargo/pkg/logging"
+	natsrec "github.com/akuity/kargo/pkg/reconciler/nats"
 	"github.com/akuity/kargo/pkg/server/auth/can"
 	"github.com/akuity/kargo/pkg/server/middleware"
 	"github.com/akuity/kargo/pkg/server/user"
@@ -23,14 +25,23 @@ type Handler struct {
 	// through the Kubernetes client, so every operation runs it before it
 	// reaches the store.
 	authorize func(context.Context, can.Access) error
+	// conn is the NATS connection watches subscribe through, to the topic the
+	// store announces its writes on.
+	conn natsrec.Subscriber
 }
 
-// New returns a Handler.
+// watchKeepalive is how often a watch writes a keepalive, as every other
+// watch of the API server does, and re-reads the ProjectConfig. It bounds
+// how long a lost event delays a change reaching a watcher.
+const watchKeepalive = 30 * time.Second
+
+// New returns a Handler. Watches subscribe through conn.
 func New(
 	store projectconfigstore.Store,
 	authorize func(context.Context, can.Access) error,
+	conn natsrec.Subscriber,
 ) *Handler {
-	return &Handler{store: store, authorize: authorize}
+	return &Handler{store: store, authorize: authorize, conn: conn}
 }
 
 // paramProject is the route parameter that names the Project.

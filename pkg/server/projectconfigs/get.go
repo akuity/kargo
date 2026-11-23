@@ -1,18 +1,17 @@
 package projectconfigs
 
 import (
+	"context"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/pkg/database"
 	"github.com/akuity/kargo/pkg/database/projectconfigstore"
+	natsrec "github.com/akuity/kargo/pkg/reconciler/nats"
+	"github.com/akuity/kargo/pkg/server/natswatch"
 )
-
-// This keeps the kargoapi import above in scope for the @Success annotation
-// on get, which documents the response type without constructing one
-// directly (projectconfigstore.ToAPI produces it).
-var _ kargoapi.ProjectConfig
 
 // @id GetProjectConfig
 // @Summary Retrieve ProjectConfig
@@ -24,18 +23,53 @@ var _ kargoapi.ProjectConfig
 // @Success 200 {object} kargoapi.ProjectConfig "ProjectConfig resource"
 // @Router /v1beta1/projects/{project}/config [get]
 func (h *Handler) get(c *gin.Context) {
-	if c.Query("watch") == "true" {
-		_ = c.Error(errWatchNotImplemented)
-		return
-	}
 	project, ok := projectOf(c)
 	if !ok {
 		return
 	}
-	cfg, err := h.store.Get(c.Request.Context(), project.Name, string(project.UID))
-	if err != nil {
-		_ = c.Error(storeError(err, project.Name))
+	if c.Query("watch") == "true" {
+		h.watch(c, project)
 		return
 	}
-	c.JSON(http.StatusOK, projectconfigstore.ToAPI(cfg))
+	cfg, err := h.load(c.Request.Context(), project)
+	if err != nil {
+		_ = c.Error(err)
+		return
+	}
+	c.JSON(http.StatusOK, cfg)
+}
+
+// watch streams the Project's ProjectConfig: as it is now, then again after
+// every change the store announces for the Project, until it is deleted or
+// the client goes away.
+func (h *Handler) watch(c *gin.Context, project *kargoapi.Project) {
+	natswatch.Serve(
+		c,
+		h.conn,
+		projectconfigstore.Events,
+		func(e natsrec.Event[projectconfigstore.Key, database.ProjectConfigRow]) bool {
+			return e.Key.Project == project.Name
+		},
+		func(ctx context.Context) (*kargoapi.ProjectConfig, error) {
+			return h.load(ctx, project)
+		},
+		func(cfg *kargoapi.ProjectConfig) string { return cfg.ResourceVersion },
+		watchKeepalive,
+	)
+}
+
+// load reads the Project's ProjectConfig as it is served. Like the store, it
+// does not find a ProjectConfig left over from an earlier Project of the same
+// name. Its error is the one a Kubernetes-backed handler would have reported,
+// still wrapping the store's, so that a watch can tell the ProjectConfig is
+// gone.
+func (h *Handler) load(ctx context.Context, project *kargoapi.Project) (*kargoapi.ProjectConfig, error) {
+	cfg, err := h.store.Get(ctx, project.Name, string(project.UID))
+	if err != nil {
+		return nil, &translatedError{
+			translated: storeError(err, project.Name),
+			cause:      err,
+		}
+	}
+	return projectconfigstore.ToAPI(cfg), nil
 }
