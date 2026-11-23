@@ -18,6 +18,16 @@ rules:
   - exempt
   verbs:
   - get
+# Lets the one-time import of ProjectConfig resources wait until the policy
+# that makes them read-only is bound, so that no write to one is lost.
+- apiGroups:
+  - admissionregistration.k8s.io
+  resources:
+  - validatingadmissionpolicybindings
+  resourceNames:
+  - kargo-projectconfigs-read-only
+  verbs:
+  - get
 - apiGroups:
   - ""
   resources:

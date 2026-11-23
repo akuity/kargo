@@ -22,6 +22,7 @@ sql:
         project_uid: ProjectUID
         project_config: ProjectConfigRow
         project_config_webhook_receiver: ProjectConfigWebhookReceiverRow
+        data_import: DataImportRow
       overrides:
       # Labels are a string map and params an object of opaque JSON values,
       # both enforced by the schema. pgx encodes and decodes JSONB through

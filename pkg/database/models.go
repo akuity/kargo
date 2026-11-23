@@ -11,6 +11,11 @@ import (
 	"github.com/google/uuid"
 )
 
+type DataImportRow struct {
+	Name        string
+	CompletedAt time.Time
+}
+
 type ProjectConfigRow struct {
 	ID                       uuid.UUID
 	ProjectName              string

@@ -34,6 +34,25 @@ tests:
           path: spec.template.spec.containers[0].envFrom[1].secretRef.name
           value: kargo-api
 
+  - it: gives the startup probe headroom for the ProjectConfig import
+    template: templates/api/deployment.yaml
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].startupProbe.failureThreshold
+          value: 90
+      - equal:
+          path: spec.template.spec.containers[0].startupProbe.httpGet.path
+          value: /healthz
+
+  - it: lets the startup probe's failure threshold be overridden
+    template: templates/api/deployment.yaml
+    set:
+      api.probes.startupProbe.failureThreshold: 200
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].startupProbe.failureThreshold
+          value: 200
+
   - it: points at the bundled PostgreSQL by default
     template: templates/api/deployment.yaml
     asserts:
@@ -378,6 +397,22 @@ tests:
               - promotionrequests
             verbs:
               - "*"
+  - it: grants read access to the ProjectConfig read-only policy binding
+    documentSelector:
+      path: metadata.name
+      value: kargo-api
+    asserts:
+      - contains:
+          path: rules
+          content:
+            apiGroups:
+              - admissionregistration.k8s.io
+            resources:
+              - validatingadmissionpolicybindings
+            resourceNames:
+              - kargo-projectconfigs-read-only
+            verbs:
+              - get
   - it: grants read access to RBAC resources
     documentSelector:
       path: metadata.name
