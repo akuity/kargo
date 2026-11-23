@@ -17,6 +17,7 @@ import (
 	"github.com/akuity/kargo/pkg/controller/management/dbsync/promotions"
 	"github.com/akuity/kargo/pkg/controller/management/dbsync/stages"
 	"github.com/akuity/kargo/pkg/database"
+	"github.com/akuity/kargo/pkg/database/projectconfigstore"
 	"github.com/akuity/kargo/pkg/logging"
 	"github.com/akuity/kargo/pkg/reconciler"
 	"github.com/akuity/kargo/pkg/reconciler/kube"
@@ -33,12 +34,17 @@ const (
 
 // SetupWithManager registers one controller per mirrored kind with the
 // manager. The caller owns the database pool behind queries and its lifetime.
-func SetupWithManager(ctx context.Context, mgr manager.Manager, queries *database.Queries) error {
+func SetupWithManager(
+	ctx context.Context,
+	mgr manager.Manager,
+	queries *database.Queries,
+	projectConfigs projectconfigstore.Store,
+) error {
 	reader := mgr.GetAPIReader()
 	// Syncers list from the manager's cache. Add a kind by appending its
 	// syncer here.
 	syncers := []syncapi.Syncer{
-		projects.NewSyncer(mgr.GetClient(), queries),
+		projects.NewSyncer(mgr.GetClient(), queries, projectConfigs),
 		stages.NewSyncer(mgr.GetClient(), queries),
 		promotions.NewSyncer(mgr.GetClient(), queries),
 	}

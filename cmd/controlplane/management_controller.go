@@ -222,7 +222,7 @@ func (o *managementControllerOptions) run(ctx context.Context) error {
 		return fmt.Errorf("error setting up shared ConfigMap replication reconciler: %w", err)
 	}
 
-	if err := dbsync.SetupWithManager(ctx, kargoMgr, db); err != nil {
+	if err := dbsync.SetupWithManager(ctx, kargoMgr, db, projectConfigs); err != nil {
 		return err
 	}
 

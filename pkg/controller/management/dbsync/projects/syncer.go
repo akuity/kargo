@@ -2,8 +2,10 @@ package projects
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
+	"github.com/jackc/pgx/v5"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -20,17 +22,33 @@ type projectStore interface {
 	UpsertProject(context.Context, database.UpsertProjectParams) error
 	DeleteProjectByName(context.Context, string) error
 	ListProjects(context.Context) ([]database.ProjectRow, error)
+	GetProjectByName(context.Context, string) (database.ProjectRow, error)
+}
+
+// configStore keeps a Project's ProjectConfig row in step with the Project.
+// A database row does not disappear with the Project's namespace the way the
+// old custom resource did, so the syncer deletes it when it sees the Project
+// deleted, and otherwise rebinds it to a Project of the same name with a new
+// UID.
+type configStore interface {
+	AdoptForProject(ctx context.Context, project, newUID string) (bool, error)
+	DeleteForProject(ctx context.Context, project, projectUID string) error
 }
 
 type syncer struct {
-	reader client.Reader
-	store  projectStore
+	reader  client.Reader
+	store   projectStore
+	configs configStore
 }
 
 // NewSyncer creates a Project syncer. Diff lists Projects through reader,
 // which may be the manager's cached client; see syncapi.Syncer.
-func NewSyncer(reader client.Reader, store projectStore) syncapi.Syncer {
-	return &syncer{reader: reader, store: store}
+func NewSyncer(
+	reader client.Reader,
+	store projectStore,
+	configs configStore,
+) syncapi.Syncer {
+	return &syncer{reader: reader, store: store, configs: configs}
 }
 
 func (*syncer) NewObject() client.Object { return &kargoapi.Project{} }
@@ -50,11 +68,17 @@ func (s *syncer) Sync(ctx context.Context, obj client.Object) error {
 	if err != nil {
 		return err
 	}
-	// A Project recreated under the same name leaves its predecessor's row
-	// behind if its deletion was never seen. Deleting that row first takes
-	// everything that belonged to the old Project with it. The two writes
-	// need no transaction: if the upsert fails, the key is retried and the
-	// row inserted, and the old Project is gone either way.
+	// A Project of the same name with a new UID leaves its predecessor's row
+	// behind if its deletion was never seen. Deleting that row takes
+	// everything that belonged to the old Project with it, except for the
+	// ProjectConfig row, which is adopted by the new Project first instead:
+	// a cluster restored from a backup gives every Project a new UID, and
+	// the ProjectConfig lives only in the database. The writes need no
+	// transaction: each is its own statement, and if any fails the key is
+	// retried.
+	if _, err = s.configs.AdoptForProject(ctx, params.Name, params.ID); err != nil {
+		return fmt.Errorf("error adopting project config: %w", err)
+	}
 	if err = s.store.DeleteReplacedProject(ctx, database.DeleteReplacedProjectParams{
 		Name: params.Name,
 		ID:   params.ID,
@@ -68,7 +92,20 @@ func (s *syncer) Sync(ctx context.Context, obj client.Object) error {
 }
 
 func (s *syncer) Delete(ctx context.Context, key client.ObjectKey) error {
-	if err := s.store.DeleteProjectByName(ctx, key.Name); err != nil {
+	// The mirrored row holds the UID of the Project being deleted, which is
+	// what identifies its ProjectConfig row. With no mirror there is no
+	// config to delete. If the config delete fails, the project row stays so
+	// the retried key can find the UID again.
+	row, err := s.store.GetProjectByName(ctx, key.Name)
+	switch {
+	case err == nil:
+		if err = s.configs.DeleteForProject(ctx, key.Name, row.ID); err != nil {
+			return fmt.Errorf("error deleting project config: %w", err)
+		}
+	case !errors.Is(err, pgx.ErrNoRows):
+		return fmt.Errorf("error getting project row: %w", err)
+	}
+	if err = s.store.DeleteProjectByName(ctx, key.Name); err != nil {
 		return fmt.Errorf("error deleting project row: %w", err)
 	}
 	return nil
