@@ -1,55 +1,44 @@
-import { Flex, Modal, Table, Tooltip, Typography } from 'antd';
+import { Button, Flex, Modal, Table, Tooltip, Typography } from 'antd';
 import { ColumnsType } from 'antd/es/table';
-import { formatDistanceToNow } from 'date-fns';
-import { useMemo } from 'react';
 import { Link, generatePath } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
 import { ModalComponentProps } from '@ui/features/common/modal/modal-context';
 import { PromotionStatusIcon } from '@ui/features/common/promotion-status/promotion-status-icon';
-import { useListPromotions } from '@ui/gen/api/v2/core/core';
-import { Promotion } from '@ui/gen/api/v2/models';
-import { parseDate } from '@ui/utils/dates';
+import { rolloutPath } from '@ui/features/stage/utils/promotion-rollout';
+import { TargetPromotion } from '@ui/gen/api/v2/models';
 
+import { promotionWhen } from '../model/target-details-utils';
 import { FreightLink } from '../shared/freight-link';
 import { useFreightLabel } from '../shared/use-freight-label';
+import { useTargetPromotions } from '../use-target-promotions';
 
 const pagination = { pageSize: 10, hideOnSinglePage: true, showSizeChanger: false };
 
-const startedAt = (promotion: Promotion): number =>
-  parseDate(promotion.status?.startedAt)?.getTime() ??
-  parseDate(promotion.metadata?.creationTimestamp)?.getTime() ??
-  0;
-
 /**
- * TargetPromotions lists every Promotion that named this Target, newest first.
+ * TargetPromotions lists every Promotion to this Target, newest first, from
+ * every Stage that has promoted to it.
  *
- * A Promotion records the Target it promoted to in its spec, but the API offers
- * no filter for it, so this reads the Project's Promotions and picks out the
- * Target's own. That is why it lives behind a button rather than on the row:
- * the list is fetched only when someone asks for it.
+ * The server keeps the history and reads it a page at a time, so a Target
+ * promoted to hundreds of times costs no more to open than one promoted to
+ * once; older pages are read when asked for.
  */
 const TargetPromotions = ({ project, target }: { project: string; target: string }) => {
-  const query = useListPromotions(project, undefined);
+  const { promotions, isLoading, hasMore, isLoadingMore, loadMore } = useTargetPromotions(
+    project,
+    target
+  );
   const freightLabel = useFreightLabel(project);
 
-  const promotions = useMemo(
-    () =>
-      (query.data?.data?.items || [])
-        .filter((promotion) => promotion.spec?.target === target)
-        .sort((lhs, rhs) => startedAt(rhs) - startedAt(lhs)),
-    [query.data, target]
-  );
-
-  const columns: ColumnsType<Promotion> = [
+  const columns: ColumnsType<TargetPromotion> = [
     {
       title: 'Phase',
       key: 'phase',
       width: 130,
       render: (_, promotion) => (
         <Flex gap={8} align='center'>
-          <PromotionStatusIcon status={promotion.status} />
-          <span className='text-xs'>{promotion.status?.phase || 'Pending'}</span>
+          <PromotionStatusIcon status={{ phase: promotion.phase }} />
+          <span className='text-xs'>{promotion.phase || 'Pending'}</span>
         </Flex>
       )
     },
@@ -59,34 +48,49 @@ const TargetPromotions = ({ project, target }: { project: string; target: string
       render: (_, promotion) => (
         <Link
           className='text-xs font-mono'
-          to={generatePath(paths.promotion, {
-            name: project,
-            promotionId: promotion.metadata?.name || ''
-          })}
+          to={generatePath(paths.promotion, { name: project, promotionId: promotion.name || '' })}
         >
-          {promotion.metadata?.name}
+          {promotion.name}
         </Link>
       )
     },
     {
       title: 'Stage',
       key: 'stage',
-      width: 140,
+      width: 120,
       render: (_, promotion) => (
         <Link
           className='text-xs'
-          to={generatePath(paths.stage, { name: project, stageName: promotion.spec?.stage || '' })}
+          to={generatePath(paths.stage, { name: project, stageName: promotion.stage || '' })}
         >
-          {promotion.spec?.stage}
+          {promotion.stage}
         </Link>
       )
+    },
+    {
+      title: 'Rollout',
+      key: 'rollout',
+      width: 90,
+      render: (_, promotion) =>
+        promotion.rollout ? (
+          <Link
+            className='text-xs'
+            to={rolloutPath(project, promotion.stage || '', promotion.rollout)}
+          >
+            #{promotion.rollout}
+          </Link>
+        ) : (
+          <Typography.Text type='secondary' className='text-xs'>
+            none
+          </Typography.Text>
+        )
     },
     {
       title: 'Freight',
       key: 'freight',
       width: 140,
       render: (_, promotion) => {
-        const freight = promotion.spec?.freight || '';
+        const freight = promotion.freight || '';
         return freight ? (
           <FreightLink
             project={project}
@@ -104,17 +108,13 @@ const TargetPromotions = ({ project, target }: { project: string; target: string
     {
       title: 'When',
       key: 'when',
-      width: 150,
+      width: 170,
       render: (_, promotion) => {
-        const finished = parseDate(promotion.status?.finishedAt);
-        const started = parseDate(promotion.status?.startedAt);
-        const when = finished || started;
+        const { text, date } = promotionWhen(promotion);
         return (
-          <Tooltip title={when?.toLocaleString()}>
+          <Tooltip title={date?.toLocaleString()}>
             <Typography.Text type='secondary' className='text-xs'>
-              {when
-                ? `${finished ? 'finished' : 'started'} ${formatDistanceToNow(when, { addSuffix: true })}`
-                : 'not yet'}
+              {text || 'not yet'}
             </Typography.Text>
           </Tooltip>
         );
@@ -123,21 +123,33 @@ const TargetPromotions = ({ project, target }: { project: string; target: string
   ];
 
   return (
-    <Table
-      dataSource={promotions}
-      columns={columns}
-      size='small'
-      loading={query.isLoading}
-      pagination={pagination}
-      rowKey={(promotion) => promotion.metadata?.name || ''}
-      locale={{ emptyText: 'No Promotion has named this Target' }}
-    />
+    <Flex vertical gap={8}>
+      <Table
+        dataSource={promotions}
+        columns={columns}
+        size='small'
+        loading={isLoading}
+        pagination={pagination}
+        rowKey={(promotion) => promotion.name || ''}
+        locale={{ emptyText: 'No Promotion has named this Target' }}
+      />
+      {hasMore && (
+        <Button
+          size='small'
+          className='self-center'
+          loading={isLoadingMore}
+          onClick={() => loadMore()}
+        >
+          Load older Promotions
+        </Button>
+      )}
+    </Flex>
   );
 };
 
 /**
  * TargetPromotionsModal wraps that list for the modal stack. It is handed only
- * the Project and the Target's name, so the list fetches its own Promotions and
+ * the Project and the Target's name, so the list reads its own history and
  * stays live for as long as it is open.
  */
 export const TargetPromotionsModal = ({
