@@ -2,6 +2,7 @@ package server
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -17,7 +18,7 @@ import (
 
 func Test_server_getStageLinks(t *testing.T) {
 	testProject := &kargoapi.Project{
-		ObjectMeta: metav1.ObjectMeta{Name: "fake-project"},
+		ObjectMeta: metav1.ObjectMeta{Name: "fake-project", UID: "fake-project-uid"},
 	}
 	testStage := &kargoapi.Stage{
 		ObjectMeta: metav1.ObjectMeta{
@@ -87,25 +88,57 @@ func Test_server_getStageLinks(t *testing.T) {
 				clientBuilder: fake.NewClientBuilder().WithObjects(
 					testProject,
 					testStage,
-					&kargoapi.ProjectConfig{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      testProject.Name,
-							Namespace: testProject.Name,
-						},
-						Spec: kargoapi.ProjectConfigSpec{
-							StageLinks: []kargoapi.DeepLink{{
-								Title: "Project Link",
-								URL:   "https://example.com/${{ stage.metadata.name }}",
-							}},
-						},
-					},
 				),
+				serverSetup: withProjectConfig(testProject, kargoapi.ProjectConfigSpec{
+					StageLinks: []kargoapi.DeepLink{{
+						Title: "Project Link",
+						URL:   "https://example.com/${{ stage.metadata.name }}",
+					}},
+				}),
 				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
 					require.Equal(t, http.StatusOK, w.Code)
 					var resp getStageLinksResponse
 					require.NoError(t, json.Unmarshal(w.Body.Bytes(), &resp))
 					require.Len(t, resp.Links, 1)
 					require.Equal(t, "Project Link", resp.Links[0].Title)
+				},
+			},
+			{
+				name: "a leftover config of a deleted Project of the same name is ignored",
+				clientBuilder: fake.NewClientBuilder().WithObjects(
+					testProject,
+					testStage,
+				),
+				serverSetup: withProjectConfig(
+					&kargoapi.Project{ObjectMeta: metav1.ObjectMeta{
+						Name: testProject.Name,
+						UID:  "deleted-project-uid",
+					}},
+					kargoapi.ProjectConfigSpec{
+						StageLinks: []kargoapi.DeepLink{{
+							Title: "Leftover Link",
+							URL:   "https://example.com",
+						}},
+					},
+				),
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
+					require.Equal(t, http.StatusOK, w.Code)
+					var resp getStageLinksResponse
+					require.NoError(t, json.Unmarshal(w.Body.Bytes(), &resp))
+					require.Empty(t, resp.Links)
+				},
+			},
+			{
+				name: "a failure to read the project config is reported",
+				clientBuilder: fake.NewClientBuilder().WithObjects(
+					testProject,
+					testStage,
+				),
+				serverSetup: func(_ *testing.T, s *server) {
+					s.projectConfigs = &fakeProjectConfigStore{err: errors.New("boom")}
+				},
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
+					require.Equal(t, http.StatusInternalServerError, w.Code)
 				},
 			},
 			{
@@ -122,19 +155,13 @@ func Test_server_getStageLinks(t *testing.T) {
 							}},
 						},
 					},
-					&kargoapi.ProjectConfig{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      testProject.Name,
-							Namespace: testProject.Name,
-						},
-						Spec: kargoapi.ProjectConfigSpec{
-							StageLinks: []kargoapi.DeepLink{{
-								Title: "Project Link",
-								URL:   "https://project.example.com/${{ stage.metadata.name }}",
-							}},
-						},
-					},
 				),
+				serverSetup: withProjectConfig(testProject, kargoapi.ProjectConfigSpec{
+					StageLinks: []kargoapi.DeepLink{{
+						Title: "Project Link",
+						URL:   "https://project.example.com/${{ stage.metadata.name }}",
+					}},
+				}),
 				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
 					require.Equal(t, http.StatusOK, w.Code)
 					var resp getStageLinksResponse

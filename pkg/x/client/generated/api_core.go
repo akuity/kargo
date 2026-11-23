@@ -1146,8 +1146,7 @@ func (r ApiDeleteProjectConfigRequest) Execute() (*http.Response, error) {
 /*
 DeleteProjectConfig Delete a ProjectConfig resource
 
-Delete the single ProjectConfig resource from a project's
-namespace.
+Delete a project's ProjectConfig.
 
  @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
  @param project Project name
@@ -2384,8 +2383,7 @@ func (r ApiGetProjectConfigRequest) Execute() (*ProjectConfig, *http.Response, e
 /*
 GetProjectConfig Retrieve ProjectConfig
 
-Retrieve the single ProjectConfig resource from a project's
-namespace.
+Retrieve a project's ProjectConfig.
 
  @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
  @param project Project name
@@ -6493,16 +6491,17 @@ type ApiRefreshProjectConfigRequest struct {
 	project string
 }
 
-func (r ApiRefreshProjectConfigRequest) Execute() (*http.Response, error) {
+func (r ApiRefreshProjectConfigRequest) Execute() (*RefreshProjectConfigResponse, *http.Response, error) {
 	return r.ApiService.RefreshProjectConfigExecute(r)
 }
 
 /*
 RefreshProjectConfig Refresh ProjectConfig
 
-Refresh the single ProjectConfig resource in a project's
-namespace. Refreshing enqueues the resource for reconciliation
-by its corresponding controller.
+Request a reconcile of a project's ProjectConfig. The response
+carries a token, which the ProjectConfig's
+status.lastHandledRefresh reports once the refresh has been
+handled.
 
  @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
  @param project Project name
@@ -6517,16 +6516,18 @@ func (a *CoreAPIService) RefreshProjectConfig(ctx context.Context, project strin
 }
 
 // Execute executes the request
-func (a *CoreAPIService) RefreshProjectConfigExecute(r ApiRefreshProjectConfigRequest) (*http.Response, error) {
+//  @return RefreshProjectConfigResponse
+func (a *CoreAPIService) RefreshProjectConfigExecute(r ApiRefreshProjectConfigRequest) (*RefreshProjectConfigResponse, *http.Response, error) {
 	var (
 		localVarHTTPMethod   = http.MethodPost
 		localVarPostBody     interface{}
 		formFiles            []formFile
+		localVarReturnValue  *RefreshProjectConfigResponse
 	)
 
 	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "CoreAPIService.RefreshProjectConfig")
 	if err != nil {
-		return nil, &GenericOpenAPIError{error: err.Error()}
+		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
 	}
 
 	localVarPath := localBasePath + "/v1beta1/projects/{project}/config/refresh"
@@ -6546,7 +6547,7 @@ func (a *CoreAPIService) RefreshProjectConfigExecute(r ApiRefreshProjectConfigRe
 	}
 
 	// to determine the Accept header
-	localVarHTTPHeaderAccepts := []string{}
+	localVarHTTPHeaderAccepts := []string{"application/json"}
 
 	// set Accept header
 	localVarHTTPHeaderAccept := selectHeaderAccept(localVarHTTPHeaderAccepts)
@@ -6569,19 +6570,19 @@ func (a *CoreAPIService) RefreshProjectConfigExecute(r ApiRefreshProjectConfigRe
 	}
 	req, err := a.client.prepareRequest(r.ctx, localVarPath, localVarHTTPMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, formFiles)
 	if err != nil {
-		return nil, err
+		return localVarReturnValue, nil, err
 	}
 
 	localVarHTTPResponse, err := a.client.callAPI(req)
 	if err != nil || localVarHTTPResponse == nil {
-		return localVarHTTPResponse, err
+		return localVarReturnValue, localVarHTTPResponse, err
 	}
 
 	localVarBody, err := io.ReadAll(localVarHTTPResponse.Body)
 	localVarHTTPResponse.Body.Close()
 	localVarHTTPResponse.Body = io.NopCloser(bytes.NewBuffer(localVarBody))
 	if err != nil {
-		return localVarHTTPResponse, err
+		return localVarReturnValue, localVarHTTPResponse, err
 	}
 
 	if localVarHTTPResponse.StatusCode >= 300 {
@@ -6589,10 +6590,19 @@ func (a *CoreAPIService) RefreshProjectConfigExecute(r ApiRefreshProjectConfigRe
 			body:  localVarBody,
 			error: localVarHTTPResponse.Status,
 		}
-		return localVarHTTPResponse, newErr
+		return localVarReturnValue, localVarHTTPResponse, newErr
 	}
 
-	return localVarHTTPResponse, nil
+	err = a.client.decode(&localVarReturnValue, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+	if err != nil {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: err.Error(),
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	return localVarReturnValue, localVarHTTPResponse, nil
 }
 
 type ApiRefreshPromotionRequest struct {
@@ -6931,6 +6941,141 @@ func (a *CoreAPIService) RefreshWarehouseExecute(r ApiRefreshWarehouseRequest) (
 	return localVarHTTPResponse, nil
 }
 
+type ApiUpdateProjectConfigRequest struct {
+	ctx context.Context
+	ApiService *CoreAPIService
+	project string
+	body *ProjectConfig
+}
+
+// ProjectConfig resource
+func (r ApiUpdateProjectConfigRequest) Body(body ProjectConfig) ApiUpdateProjectConfigRequest {
+	r.body = &body
+	return r
+}
+
+func (r ApiUpdateProjectConfigRequest) Execute() (*ProjectConfig, *http.Response, error) {
+	return r.ApiService.UpdateProjectConfigExecute(r)
+}
+
+/*
+UpdateProjectConfig Create or update ProjectConfig
+
+Create a project's ProjectConfig, or replace its labels,
+annotations and spec if it exists. The body's metadata.name
+and metadata.namespace, if given, must be the project. A
+metadata.uid or metadata.resourceVersion in the body is a
+precondition of an update: it is refused if the ProjectConfig
+no longer matches it. Status, the refresh annotation and other
+server-managed metadata are ignored.
+
+ @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+ @param project Project name
+ @return ApiUpdateProjectConfigRequest
+*/
+func (a *CoreAPIService) UpdateProjectConfig(ctx context.Context, project string) ApiUpdateProjectConfigRequest {
+	return ApiUpdateProjectConfigRequest{
+		ApiService: a,
+		ctx: ctx,
+		project: project,
+	}
+}
+
+// Execute executes the request
+//  @return ProjectConfig
+func (a *CoreAPIService) UpdateProjectConfigExecute(r ApiUpdateProjectConfigRequest) (*ProjectConfig, *http.Response, error) {
+	var (
+		localVarHTTPMethod   = http.MethodPut
+		localVarPostBody     interface{}
+		formFiles            []formFile
+		localVarReturnValue  *ProjectConfig
+	)
+
+	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "CoreAPIService.UpdateProjectConfig")
+	if err != nil {
+		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
+	}
+
+	localVarPath := localBasePath + "/v1beta1/projects/{project}/config"
+	localVarPath = strings.Replace(localVarPath, "{"+"project"+"}", url.PathEscape(parameterValueToString(r.project, "project")), -1)
+
+	localVarHeaderParams := make(map[string]string)
+	localVarQueryParams := url.Values{}
+	localVarFormParams := url.Values{}
+	if r.body == nil {
+		return localVarReturnValue, nil, reportError("body is required and must be specified")
+	}
+
+	// to determine the Content-Type header
+	localVarHTTPContentTypes := []string{"application/json"}
+
+	// set Content-Type header
+	localVarHTTPContentType := selectHeaderContentType(localVarHTTPContentTypes)
+	if localVarHTTPContentType != "" {
+		localVarHeaderParams["Content-Type"] = localVarHTTPContentType
+	}
+
+	// to determine the Accept header
+	localVarHTTPHeaderAccepts := []string{"application/json"}
+
+	// set Accept header
+	localVarHTTPHeaderAccept := selectHeaderAccept(localVarHTTPHeaderAccepts)
+	if localVarHTTPHeaderAccept != "" {
+		localVarHeaderParams["Accept"] = localVarHTTPHeaderAccept
+	}
+	// body params
+	localVarPostBody = r.body
+	if r.ctx != nil {
+		// API Key Authentication
+		if auth, ok := r.ctx.Value(ContextAPIKeys).(map[string]APIKey); ok {
+			if apiKey, ok := auth["BearerAuth"]; ok {
+				var key string
+				if apiKey.Prefix != "" {
+					key = apiKey.Prefix + " " + apiKey.Key
+				} else {
+					key = apiKey.Key
+				}
+				localVarHeaderParams["Authorization"] = key
+			}
+		}
+	}
+	req, err := a.client.prepareRequest(r.ctx, localVarPath, localVarHTTPMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, formFiles)
+	if err != nil {
+		return localVarReturnValue, nil, err
+	}
+
+	localVarHTTPResponse, err := a.client.callAPI(req)
+	if err != nil || localVarHTTPResponse == nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	localVarBody, err := io.ReadAll(localVarHTTPResponse.Body)
+	localVarHTTPResponse.Body.Close()
+	localVarHTTPResponse.Body = io.NopCloser(bytes.NewBuffer(localVarBody))
+	if err != nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	if localVarHTTPResponse.StatusCode >= 300 {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: localVarHTTPResponse.Status,
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	err = a.client.decode(&localVarReturnValue, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+	if err != nil {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: err.Error(),
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	return localVarReturnValue, localVarHTTPResponse, nil
+}
+
 type ApiUpdateProjectConfigMapRequest struct {
 	ctx context.Context
 	ApiService *CoreAPIService
@@ -6987,6 +7132,141 @@ func (a *CoreAPIService) UpdateProjectConfigMapExecute(r ApiUpdateProjectConfigM
 	localVarPath := localBasePath + "/v1beta1/projects/{project}/configmaps/{configmap}"
 	localVarPath = strings.Replace(localVarPath, "{"+"project"+"}", url.PathEscape(parameterValueToString(r.project, "project")), -1)
 	localVarPath = strings.Replace(localVarPath, "{"+"configmap"+"}", url.PathEscape(parameterValueToString(r.configmap, "configmap")), -1)
+
+	localVarHeaderParams := make(map[string]string)
+	localVarQueryParams := url.Values{}
+	localVarFormParams := url.Values{}
+	if r.body == nil {
+		return localVarReturnValue, nil, reportError("body is required and must be specified")
+	}
+
+	// to determine the Content-Type header
+	localVarHTTPContentTypes := []string{"application/json"}
+
+	// set Content-Type header
+	localVarHTTPContentType := selectHeaderContentType(localVarHTTPContentTypes)
+	if localVarHTTPContentType != "" {
+		localVarHeaderParams["Content-Type"] = localVarHTTPContentType
+	}
+
+	// to determine the Accept header
+	localVarHTTPHeaderAccepts := []string{"application/json"}
+
+	// set Accept header
+	localVarHTTPHeaderAccept := selectHeaderAccept(localVarHTTPHeaderAccepts)
+	if localVarHTTPHeaderAccept != "" {
+		localVarHeaderParams["Accept"] = localVarHTTPHeaderAccept
+	}
+	// body params
+	localVarPostBody = r.body
+	if r.ctx != nil {
+		// API Key Authentication
+		if auth, ok := r.ctx.Value(ContextAPIKeys).(map[string]APIKey); ok {
+			if apiKey, ok := auth["BearerAuth"]; ok {
+				var key string
+				if apiKey.Prefix != "" {
+					key = apiKey.Prefix + " " + apiKey.Key
+				} else {
+					key = apiKey.Key
+				}
+				localVarHeaderParams["Authorization"] = key
+			}
+		}
+	}
+	req, err := a.client.prepareRequest(r.ctx, localVarPath, localVarHTTPMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, formFiles)
+	if err != nil {
+		return localVarReturnValue, nil, err
+	}
+
+	localVarHTTPResponse, err := a.client.callAPI(req)
+	if err != nil || localVarHTTPResponse == nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	localVarBody, err := io.ReadAll(localVarHTTPResponse.Body)
+	localVarHTTPResponse.Body.Close()
+	localVarHTTPResponse.Body = io.NopCloser(bytes.NewBuffer(localVarBody))
+	if err != nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	if localVarHTTPResponse.StatusCode >= 300 {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: localVarHTTPResponse.Status,
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	err = a.client.decode(&localVarReturnValue, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+	if err != nil {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: err.Error(),
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	return localVarReturnValue, localVarHTTPResponse, nil
+}
+
+type ApiUpdateProjectConfigStatusRequest struct {
+	ctx context.Context
+	ApiService *CoreAPIService
+	project string
+	body *UpdateProjectConfigStatusRequest
+}
+
+// Observed status
+func (r ApiUpdateProjectConfigStatusRequest) Body(body UpdateProjectConfigStatusRequest) ApiUpdateProjectConfigStatusRequest {
+	r.body = &body
+	return r
+}
+
+func (r ApiUpdateProjectConfigStatusRequest) Execute() (*UpdateProjectConfigStatusResponse, *http.Response, error) {
+	return r.ApiService.UpdateProjectConfigStatusExecute(r)
+}
+
+/*
+UpdateProjectConfigStatus Update ProjectConfig status
+
+Record the outcome of a reconcile of a project's
+ProjectConfig. The status is refused if the ProjectConfig,
+its generation or its refresh token is no longer the one the
+reconcile observed. Webhook receivers whose paths another
+ProjectConfig owns are not recorded, and are named in the
+response. Only the management controller is meant to call
+this; it requires update on projectconfigs/status.
+
+ @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+ @param project Project name
+ @return ApiUpdateProjectConfigStatusRequest
+*/
+func (a *CoreAPIService) UpdateProjectConfigStatus(ctx context.Context, project string) ApiUpdateProjectConfigStatusRequest {
+	return ApiUpdateProjectConfigStatusRequest{
+		ApiService: a,
+		ctx: ctx,
+		project: project,
+	}
+}
+
+// Execute executes the request
+//  @return UpdateProjectConfigStatusResponse
+func (a *CoreAPIService) UpdateProjectConfigStatusExecute(r ApiUpdateProjectConfigStatusRequest) (*UpdateProjectConfigStatusResponse, *http.Response, error) {
+	var (
+		localVarHTTPMethod   = http.MethodPut
+		localVarPostBody     interface{}
+		formFiles            []formFile
+		localVarReturnValue  *UpdateProjectConfigStatusResponse
+	)
+
+	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "CoreAPIService.UpdateProjectConfigStatus")
+	if err != nil {
+		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
+	}
+
+	localVarPath := localBasePath + "/v1beta1/projects/{project}/config/status"
+	localVarPath = strings.Replace(localVarPath, "{"+"project"+"}", url.PathEscape(parameterValueToString(r.project, "project")), -1)
 
 	localVarHeaderParams := make(map[string]string)
 	localVarQueryParams := url.Values{}

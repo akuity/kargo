@@ -114,6 +114,15 @@ func (v Verb) ProjectConfig(project string) Access {
 	return v.kargo("projectconfigs", project, project)
 }
 
+// ProjectConfigStatus returns the Verb on the status subresource of the
+// Project's ProjectConfig. RBAC rules grant it apart from the ProjectConfig
+// itself, so that a rule on "projectconfigs" does not cover it.
+func (v Verb) ProjectConfigStatus(project string) Access {
+	access := v.ProjectConfig(project)
+	access.Subresource = "status"
+	return access
+}
+
 // ClusterConfig returns the Verb on the named, cluster-scoped ClusterConfig.
 func (v Verb) ClusterConfig(name string) Access {
 	return v.kargo("clusterconfigs", "", name)

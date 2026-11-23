@@ -146,6 +146,7 @@ model_promotion_window_status.go
 model_public_config.go
 model_quay_webhook_receiver_config.go
 model_rbac_role.go
+model_refresh_project_config_response.go
 model_resolved_link.go
 model_resource_details.go
 model_resource_error_response.go
@@ -213,6 +214,8 @@ model_target_update_strategy.go
 model_target_verificaiton_spec.go
 model_update_config_map_request.go
 model_update_generic_credentials_request.go
+model_update_project_config_status_request.go
+model_update_project_config_status_response.go
 model_update_repo_credentials_request.go
 model_user_claims.go
 model_v1_affinity.go

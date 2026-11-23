@@ -7,6 +7,7 @@ import (
 	"go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin"
 
 	"github.com/akuity/kargo/pkg/server/middleware"
+	"github.com/akuity/kargo/pkg/server/projectconfigs"
 	"github.com/akuity/kargo/pkg/server/promotionrollouts"
 	"github.com/akuity/kargo/pkg/server/targets"
 )
@@ -227,9 +228,10 @@ func (s *server) setupRESTRouter(ctx context.Context) (*gin.Engine, error) {
 			project.DELETE("", s.deleteProject)
 
 			// Project Configuration
-			project.GET("/config", s.getProjectConfig)
-			project.POST("/config/refresh", s.refreshProjectConfig)
-			project.DELETE("/config", s.deleteProjectConfig)
+			// ProjectConfigs live in the database; their handlers authorize
+			// each request themselves, since no Kubernetes client does it for
+			// them.
+			projectconfigs.New(s.projectConfigs, s.authorize).Register(project)
 
 			// Events
 			project.GET("/events", s.listProjectEvents)

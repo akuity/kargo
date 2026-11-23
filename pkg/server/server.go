@@ -25,6 +25,7 @@ import (
 	"github.com/akuity/kargo/pkg/api"
 	rollouts "github.com/akuity/kargo/pkg/api/stubs/rollouts"
 	"github.com/akuity/kargo/pkg/database"
+	"github.com/akuity/kargo/pkg/database/projectconfigstore"
 	"github.com/akuity/kargo/pkg/database/promotionrolloutstore"
 	"github.com/akuity/kargo/pkg/database/targetstore"
 	"github.com/akuity/kargo/pkg/event"
@@ -33,6 +34,7 @@ import (
 	"github.com/akuity/kargo/pkg/server/config"
 	"github.com/akuity/kargo/pkg/server/dex"
 	"github.com/akuity/kargo/pkg/server/kubernetes"
+	"github.com/akuity/kargo/pkg/server/middleware"
 	"github.com/akuity/kargo/pkg/server/promotionrollouts"
 	"github.com/akuity/kargo/pkg/server/rbac"
 	"github.com/akuity/kargo/pkg/server/targets"
@@ -51,6 +53,9 @@ type server struct {
 	// built from it. It is nil when the server runs without a database, in
 	// which case the endpoints for those resources respond 501.
 	db *database.Queries
+	// projectConfigs holds the ProjectConfigs. Unlike db, it is required:
+	// the API server does not start without a database.
+	projectConfigs projectconfigstore.Store
 
 	// The following behaviors are overridable for testing purposes:
 
@@ -164,20 +169,23 @@ type Server interface {
 }
 
 // NewServer returns a Server. The db may be nil, in which case the resources
-// that live in the database are unavailable; see the server's db field.
+// that live in the database are unavailable; see the server's db field. The
+// projectConfigs store may not be nil.
 func NewServer(
 	cfg config.ServerConfig,
 	kubeClient kubernetes.Client,
 	rolesDB rbac.RolesDatabase,
 	sender event.Sender,
 	db *database.Queries,
+	projectConfigs projectconfigstore.Store,
 ) Server {
 	s := &server{
-		cfg:     cfg,
-		client:  kubeClient,
-		rolesDB: rolesDB,
-		sender:  sender,
-		db:      db,
+		cfg:            cfg,
+		client:         kubeClient,
+		rolesDB:        rolesDB,
+		sender:         sender,
+		db:             db,
+		projectConfigs: projectConfigs,
 	}
 
 	s.getStageFn = api.GetStage
@@ -469,4 +477,22 @@ func (s *server) rolloutStore() promotionrolloutstore.Store {
 		return nil
 	}
 	return promotionrolloutstore.New(s.db)
+}
+
+// projectConfig returns the ProjectConfig of the Project that
+// middleware.RequireProject fetched for the request, or nil if the Project
+// has none.
+func (s *server) projectConfig(ctx context.Context) (*kargoapi.ProjectConfig, error) {
+	project, ok := middleware.ProjectFromContext(ctx)
+	if !ok {
+		return nil, errors.New("the request carries no Project")
+	}
+	cfg, err := s.projectConfigs.Get(ctx, project.Name, string(project.UID))
+	if errors.Is(err, database.ErrNotFound) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("error getting ProjectConfig of Project %q: %w", project.Name, err)
+	}
+	return projectconfigstore.ToAPI(cfg), nil
 }

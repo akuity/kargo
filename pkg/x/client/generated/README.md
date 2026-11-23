@@ -127,7 +127,9 @@ Class | Method | HTTP request | Description
 *CoreAPI* | [**RefreshPromotion**](docs/CoreAPI.md#refreshpromotion) | **Post** /v1beta1/projects/{project}/promotions/{promotion}/refresh | Refresh a Promotion
 *CoreAPI* | [**RefreshStage**](docs/CoreAPI.md#refreshstage) | **Post** /v1beta1/projects/{project}/stages/{stage}/refresh | Refresh a Stage
 *CoreAPI* | [**RefreshWarehouse**](docs/CoreAPI.md#refreshwarehouse) | **Post** /v1beta1/projects/{project}/warehouses/{warehouse}/refresh | Refresh a Warehouse
+*CoreAPI* | [**UpdateProjectConfig**](docs/CoreAPI.md#updateprojectconfig) | **Put** /v1beta1/projects/{project}/config | Create or update ProjectConfig
 *CoreAPI* | [**UpdateProjectConfigMap**](docs/CoreAPI.md#updateprojectconfigmap) | **Put** /v1beta1/projects/{project}/configmaps/{configmap} | Replace a project-level ConfigMap
+*CoreAPI* | [**UpdateProjectConfigStatus**](docs/CoreAPI.md#updateprojectconfigstatus) | **Put** /v1beta1/projects/{project}/config/status | Update ProjectConfig status
 *CoreAPI* | [**UpdateSharedConfigMap**](docs/CoreAPI.md#updatesharedconfigmap) | **Put** /v1beta1/shared/configmaps/{configmap} | Replace a shared ConfigMap
 *CoreAPI* | [**UpdateSystemConfigMap**](docs/CoreAPI.md#updatesystemconfigmap) | **Put** /v1beta1/system/configmaps/{configmap} | Replace a system-level ConfigMap
 *CoreAPI* | [**UpdateTarget**](docs/CoreAPI.md#updatetarget) | **Put** /v1beta1/projects/{project}/targets/{target-name} | Update a Target
@@ -337,6 +339,7 @@ Class | Method | HTTP request | Description
  - [PublicConfig](docs/PublicConfig.md)
  - [QuayWebhookReceiverConfig](docs/QuayWebhookReceiverConfig.md)
  - [RbacRole](docs/RbacRole.md)
+ - [RefreshProjectConfigResponse](docs/RefreshProjectConfigResponse.md)
  - [ResolvedLink](docs/ResolvedLink.md)
  - [ResourceDetails](docs/ResourceDetails.md)
  - [ResourceErrorResponse](docs/ResourceErrorResponse.md)
@@ -404,6 +407,8 @@ Class | Method | HTTP request | Description
  - [TargetVerificaitonSpec](docs/TargetVerificaitonSpec.md)
  - [UpdateConfigMapRequest](docs/UpdateConfigMapRequest.md)
  - [UpdateGenericCredentialsRequest](docs/UpdateGenericCredentialsRequest.md)
+ - [UpdateProjectConfigStatusRequest](docs/UpdateProjectConfigStatusRequest.md)
+ - [UpdateProjectConfigStatusResponse](docs/UpdateProjectConfigStatusResponse.md)
  - [UpdateRepoCredentialsRequest](docs/UpdateRepoCredentialsRequest.md)
  - [UserClaims](docs/UserClaims.md)
  - [V1AWSElasticBlockStoreVolumeSource](docs/V1AWSElasticBlockStoreVolumeSource.md)

@@ -65,15 +65,12 @@ func (s *server) getStageLinks(c *gin.Context) {
 		linkDefs = append(linkDefs, clusterCfg.Spec.StageLinks...)
 	}
 
-	projectCfg := &kargoapi.ProjectConfig{}
-	if err := s.client.InternalClient().Get(
-		ctx, client.ObjectKey{Name: project, Namespace: project}, projectCfg,
-	); err != nil {
-		if !apierrors.IsNotFound(err) {
-			_ = c.Error(err)
-			return
-		}
-	} else {
+	projectCfg, err := s.projectConfig(ctx)
+	if err != nil {
+		_ = c.Error(err)
+		return
+	}
+	if projectCfg != nil {
 		linkDefs = append(linkDefs, projectCfg.Spec.StageLinks...)
 	}
 

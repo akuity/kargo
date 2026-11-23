@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net"
 	"runtime"
@@ -9,6 +10,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/akuity/kargo/pkg/database"
+	"github.com/akuity/kargo/pkg/database/projectconfigstore"
 	"github.com/akuity/kargo/pkg/event"
 	natsevent "github.com/akuity/kargo/pkg/event/nats"
 	"github.com/akuity/kargo/pkg/logging"
@@ -81,6 +83,15 @@ func (o *apiOptions) complete() {
 }
 
 func (o *apiOptions) run(ctx context.Context) error {
+	// The database holds ProjectConfigs, which the API server cannot serve
+	// without it.
+	if !o.Database.Configured() {
+		return errors.New(
+			"no database is configured: the API server requires one; " +
+				"set DATABASE_URL or DATABASE_HOST",
+		)
+	}
+
 	shutdownTelemetry, err := telemetry.SetupFromEnv(
 		logging.ContextWithLogger(ctx, o.Logger),
 		"api",
@@ -163,19 +174,13 @@ func (o *apiOptions) run(ctx context.Context) error {
 	)
 	defer sender.Shutdown()
 
-	// The database holds Targets. It is optional: without it, the endpoints
-	// that serve them respond 501.
-	var db *database.Queries
-	if o.Database.Configured() {
-		pool, poolErr := database.Open(ctx, o.Database, "kargo-api")
-		if poolErr != nil {
-			return poolErr
-		}
-		defer pool.Close()
-		db = database.New(pool)
-	} else {
-		o.Logger.Info("no database is configured; Targets are unavailable")
+	// The database holds Targets and ProjectConfigs. ProjectConfig writes
+	// are announced over NATS.
+	pool, err := database.Open(ctx, o.Database, "kargo-api")
+	if err != nil {
+		return err
 	}
+	defer pool.Close()
 
 	srv := server.NewServer(
 		serverCfg,
@@ -186,7 +191,8 @@ func (o *apiOptions) run(ctx context.Context) error {
 			rbac.RolesDatabaseConfigFromEnv(),
 		),
 		sender,
-		db,
+		database.New(pool),
+		projectconfigstore.New(pool, natsConn),
 	)
 	l, err := net.Listen("tcp", fmt.Sprintf("%s:%s", o.BindAddress, o.Port))
 	if err != nil {
