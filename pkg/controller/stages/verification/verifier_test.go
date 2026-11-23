@@ -2005,6 +2005,52 @@ func TestVerifier_VerifyStageFreight_unhealthyBeforeVerification(t *testing.T) {
 	}
 }
 
+func TestVerifier_VerifyStageFreight_healthTransitionClearsStageUnhealthyAcrossCalls(t *testing.T) {
+	stage := &kargoapi.Stage{
+		Status: kargoapi.StageStatus{
+			Health: &kargoapi.Health{
+				Status: kargoapi.HealthStateUnhealthy,
+			},
+			FreightHistory: kargoapi.FreightHistory{{
+				Freight: map[string]kargoapi.FreightReference{
+					"fake-warehouse": {Name: "fake-freight"},
+				},
+			}},
+		},
+	}
+	ver := NewVerifier("", nil, nil, nil, nil)
+
+	statusAfterUnhealthyCall, err := ver.VerifyStageFreight(
+		context.Background(),
+		stage,
+		time.Now(),
+		time.Now,
+	)
+	require.NoError(t, err)
+	verified := conditions.Get(&statusAfterUnhealthyCall, kargoapi.ConditionTypeVerified)
+	require.NotNil(t, verified)
+	require.Equal(t, metav1.ConditionFalse, verified.Status)
+	require.Equal(t, "StageUnhealthy", verified.Reason)
+
+	// Persist the first call's status, then model the Stage health controller
+	// reporting Progressing on the next reconciliation.
+	stage.Status = statusAfterUnhealthyCall
+	stage.Status.Health = &kargoapi.Health{
+		Status: kargoapi.HealthStateProgressing,
+	}
+	statusAfterProgressingCall, err := ver.VerifyStageFreight(
+		context.Background(),
+		stage,
+		time.Now(),
+		time.Now,
+	)
+	require.NoError(t, err)
+	verified = conditions.Get(&statusAfterProgressingCall, kargoapi.ConditionTypeVerified)
+	require.NotNil(t, verified)
+	require.Equal(t, metav1.ConditionUnknown, verified.Status)
+	require.Equal(t, "VerificationPending", verified.Reason)
+}
+
 func TestVerifier_VerifyStageFreight_healthTransitionClearsStageUnhealthy(t *testing.T) {
 	testCases := []struct {
 		name       string
