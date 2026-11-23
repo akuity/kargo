@@ -74,6 +74,7 @@ func ReconcilerConfigFromEnv() ReconcilerConfig {
 type RegularStageReconciler struct {
 	cfg            ReconcilerConfig
 	client         client.Client
+	projectConfigs api.ProjectConfigGetter
 	apiReader      client.Reader
 	credentialsDB  credentials.Database
 	eventSender    kargoEvent.Sender
@@ -88,11 +89,13 @@ func NewRegularStageReconciler(
 	cfg ReconcilerConfig,
 	credentialsDB credentials.Database,
 	healthChecker health.AggregatingChecker,
+	projectConfigs api.ProjectConfigGetter,
 ) *RegularStageReconciler {
 	return &RegularStageReconciler{
-		cfg:           cfg,
-		credentialsDB: credentialsDB,
-		healthChecker: healthChecker,
+		cfg:            cfg,
+		credentialsDB:  credentialsDB,
+		healthChecker:  healthChecker,
+		projectConfigs: projectConfigs,
 		shardPredicate: controller.ResponsibleFor[kargoapi.Stage]{
 			IsDefaultController: cfg.IsDefaultController,
 			ShardName:           cfg.ShardName,
@@ -465,7 +468,7 @@ func (r *RegularStageReconciler) reconcile(
 	// different points as the underlying ProjectConfig changes.
 	autoPromotionEnabled, err := api.IsAutoPromotionEnabled(
 		ctx,
-		api.KubernetesProjectConfigGetter(r.client),
+		r.projectConfigs,
 		stage.ObjectMeta,
 	)
 	if err != nil {

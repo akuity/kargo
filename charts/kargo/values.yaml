@@ -908,11 +908,11 @@ controller:
   ## @param controller.securityContext Security context for controller pods. Defaults to `global.securityContext`.
   securityContext: {}
 
-  ## Settings for how the controller reaches the Kargo API server. Targets live
-  ## in the control plane's database and the controller, which may run far from
-  ## it, reads them through the API server.
+  ## Settings for how the controller reaches the Kargo API server. Targets and
+  ## ProjectConfigs live in the control plane's database and the controller,
+  ## which may run far from it, reads them through the API server.
   apiServer:
-    ## @param controller.apiServer.address The URL at which the controller reaches the API server, e.g. `https://kargo.example.com`. When empty and `api.enabled` is `true`, the API server's in-cluster `Service` is used, and a chart-generated API server certificate is trusted automatically. Set this for a controller installed apart from the API server, such as a shard in another cluster; a certificate the controller does not already trust can be added through `controller.cabundle`. Without an API server the controller cannot promote to Targets. The controller acts as the ServiceAccount of the control plane that its control plane credential resolves to, requesting short-lived tokens for it; a controller installed apart from the control plane must therefore be given a credential for a ServiceAccount there, bound to the `kargo-controller` ClusterRole and allowed to `create` its own `token` subresource.
+    ## @param controller.apiServer.address The URL at which the controller reaches the API server, e.g. `https://kargo.example.com`. When empty and `api.enabled` is `true`, the API server's in-cluster `Service` is used, and a chart-generated API server certificate is trusted automatically. Set this for a controller installed apart from the API server, such as a shard in another cluster; a certificate the controller does not already trust can be added through `controller.cabundle`. The controller requires an API server: it reads Targets and each Project's ProjectConfig (for auto-promotion) through it, and without one it does not start. The controller acts as the ServiceAccount of the control plane that its control plane credential resolves to, requesting short-lived tokens for it; a controller installed apart from the control plane must therefore be given a credential for a ServiceAccount there, bound to the `kargo-controller` ClusterRole and allowed to `create` its own `token` subresource.
     address: ""
 
   cabundle:
@@ -1401,6 +1401,13 @@ webhooksServer:
   kubeconfigSecrets: {}
     ## @param webhooksServer.kubeconfigSecrets.kargo [nullable] Per-component override for `kubeconfigSecrets.kargo`. Lets the webhooks server mount its own kubeconfig secret rather than the shared one. Falls back to the chart-level value when unset.
     # kargo: ""
+
+  ## Settings for how the webhooks server reaches the Kargo API server.
+  ## ProjectConfigs live in the control plane's database and the Promotion
+  ## webhook reads them through the API server.
+  apiServer:
+    ## @param webhooksServer.apiServer.address The URL at which the webhooks server reaches the API server, e.g. `https://kargo.example.com`. When empty and `api.enabled` is `true`, the API server's in-cluster `Service` is used, and a chart-generated API server certificate is trusted automatically. The webhooks server requires an API server: without one, it does not start. It acts as the ServiceAccount of the control plane that its control plane credential resolves to, requesting short-lived tokens for it; a webhooks server installed apart from the control plane must therefore be given a credential for a ServiceAccount there, allowed to `get` ProjectConfigs and to `create` its own `token` subresource.
+    address: ""
 
   ## @param webhooksServer.replicas The number of webhooks server pods.
   replicas: 1

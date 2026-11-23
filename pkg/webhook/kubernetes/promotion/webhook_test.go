@@ -31,14 +31,26 @@ import (
 	libWebhook "github.com/akuity/kargo/pkg/webhook/kubernetes"
 )
 
+type fakeProjectConfigGetter struct{}
+
+func (*fakeProjectConfigGetter) Get(
+	context.Context,
+	string,
+) (*kargoapi.ProjectConfig, error) {
+	return nil, nil
+}
+
 func TestNewWebhook(t *testing.T) {
 	kubeClient := fake.NewClientBuilder().Build()
+	getter := &fakeProjectConfigGetter{}
 	w := newWebhook(
 		libWebhook.Config{},
 		kubeClient,
 		admission.NewDecoder(kubeClient.Scheme()),
 		&fakeevent.Sender{},
+		getter,
 	)
+	require.Same(t, getter, w.projectConfigs)
 	// Assert that all overridable behaviors were initialized to a default:
 	require.NotNil(t, w.getFreightFn)
 	require.NotNil(t, w.listFreightAvailableToStageFn)
@@ -52,6 +64,7 @@ func TestNewWebhook(t *testing.T) {
 }
 
 func Test_webhook_Default(t *testing.T) {
+	injectedGetter := &fakeProjectConfigGetter{}
 	scheme := runtime.NewScheme()
 	require.NoError(t, kargoapi.AddToScheme(scheme))
 
@@ -1420,11 +1433,14 @@ func Test_webhook_Default(t *testing.T) {
 				isRequestFromKargoControlplaneFn: func(admission.Request) bool {
 					return false
 				},
+				projectConfigs: injectedGetter,
 				isAutoPromotionEnabledFn: func(
 					_ context.Context,
-					_ api.ProjectConfigGetter,
+					g api.ProjectConfigGetter,
 					_ metav1.ObjectMeta,
 				) (bool, error) {
+					// The webhook reads ProjectConfig through its injected getter.
+					require.Same(t, injectedGetter, g)
 					return false, nil
 				},
 				getStageFn: func(
@@ -3070,6 +3086,7 @@ func Test_webhook_Handle_PreservesUnrelatedDurationFormatting(t *testing.T) {
 		kubeClient,
 		admission.NewDecoder(scheme),
 		&fakeevent.Sender{},
+		&fakeProjectConfigGetter{},
 	)
 	wh, err := libWebhook.NewDefaultingWebhook(scheme, &kargoapi.Promotion{}, w)
 	require.NoError(t, err)

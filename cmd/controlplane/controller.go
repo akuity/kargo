@@ -149,6 +149,14 @@ func (o *controllerOptions) run(ctx context.Context) error {
 		)
 	}
 
+	// Targets and ProjectConfigs are read through the API server.
+	if o.APIServer.Address == "" {
+		return errors.New(
+			"no API server is configured: the controller requires one; " +
+				"set API_SERVER_ADDRESS",
+		)
+	}
+
 	// A controller with no shard name is the default controller regardless of
 	// IS_DEFAULT_CONTROLLER; a named controller is the default only when
 	// explicitly designated.
@@ -199,20 +207,15 @@ func (o *controllerOptions) run(ctx context.Context) error {
 		credsdb.DatabaseConfigFromEnv(),
 	)
 
-	// Targets live in the control plane's database and are served by the API
-	// server. The controller may run far from both, so it reads Targets
-	// through the API server, acting as the ServiceAccount of the control
-	// plane that its credential for the control plane resolves to, with
-	// tokens it obtains for that ServiceAccount. Without an API server,
-	// Stages that select Targets cannot be promoted and Promotions that name
-	// a Target fail.
-	var targetClient *apiserver.Client
-	if o.APIServer.Address != "" {
-		if targetClient, err = apiserver.New(ctx, o.APIServer, kargoMgr.GetConfig()); err != nil {
-			return fmt.Errorf("error configuring access to Targets: %w", err)
-		}
-	} else {
-		o.Logger.Info("API_SERVER_ADDRESS is not set; promotion to Targets is unavailable")
+	// Targets and ProjectConfigs live in the control plane's database and are
+	// served by the API server. The controller may run far from both, so it
+	// reads them through the API server, acting as the ServiceAccount of the
+	// control plane that its credential for the control plane resolves to,
+	// with tokens it obtains for that ServiceAccount. Without an API server,
+	// auto-promotion cannot be evaluated, so the controller requires one.
+	apiClient, err := apiserver.New(ctx, o.APIServer, kargoMgr.GetConfig())
+	if err != nil {
+		return fmt.Errorf("error configuring access to the API server: %w", err)
 	}
 
 	if err := o.setupReconcilers(
@@ -221,7 +224,7 @@ func (o *controllerOptions) run(ctx context.Context) error {
 		argocdMgr,
 		credentialsDB,
 		stagesReconcilerCfg,
-		targetClient,
+		apiClient,
 		eventSender,
 	); err != nil {
 		return fmt.Errorf("error setting up reconcilers: %w", err)
@@ -498,19 +501,12 @@ func (o *controllerOptions) setupReconcilers(
 	kargoMgr, argocdMgr manager.Manager,
 	credentialsDB credentials.Database,
 	stagesReconcilerCfg stages.ReconcilerConfig,
-	targetClient *apiserver.Client,
+	apiClient *apiserver.Client,
 	eventSender event.Sender,
 ) error {
 	var argoCDClient client.Client
 	if argocdMgr != nil {
 		argoCDClient = argocdMgr.GetClient()
-	}
-
-	// A nil client must reach the reconciler as a nil interface of its own
-	// type, which is what it tests for.
-	var targetGetter promotion.TargetGetter
-	if targetClient != nil {
-		targetGetter = targetClient
 	}
 
 	healthCheckers.Initialize(argoCDClient)
@@ -534,7 +530,7 @@ func (o *controllerOptions) setupReconcilers(
 			promotion.DefaultExprDataCacheFn,
 		),
 		promotionsReconcilerCfg,
-		targetGetter,
+		apiClient,
 		event.NewDefaultingSender(eventSender, promotionsReconcilerCfg.Name()),
 	); err != nil {
 		return fmt.Errorf("error setting up Promotions reconciler: %w", err)
@@ -557,6 +553,7 @@ func (o *controllerOptions) setupReconcilers(
 		stagesReconcilerCfg,
 		credentialsDB,
 		health.NewAggregatingChecker(),
+		apiClient.ProjectConfigGetter(),
 	).SetupWithManager(
 		ctx,
 		kargoMgr,

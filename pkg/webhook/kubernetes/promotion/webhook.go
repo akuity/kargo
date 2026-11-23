@@ -87,6 +87,8 @@ type webhook struct {
 		...client.CreateOption,
 	) error
 
+	projectConfigs api.ProjectConfigGetter
+
 	isAutoPromotionEnabledFn func(
 		context.Context,
 		api.ProjectConfigGetter,
@@ -105,12 +107,14 @@ func SetupWebhookWithManager(
 	cfg libWebhook.Config,
 	mgr ctrl.Manager,
 	sender kargoEvent.Sender,
+	projectConfigs api.ProjectConfigGetter,
 ) error {
 	w := newWebhook(
 		cfg,
 		mgr.GetClient(),
 		admission.NewDecoder(mgr.GetScheme()),
 		sender,
+		projectConfigs,
 	)
 	w.apiReader = mgr.GetAPIReader()
 	return libWebhook.SetupValidatingAndDefaultingWebhook(mgr, &kargoapi.Promotion{}, w)
@@ -147,11 +151,13 @@ func newWebhook(
 	kubeClient client.Client,
 	decoder admission.Decoder,
 	sender kargoEvent.Sender,
+	projectConfigs api.ProjectConfigGetter,
 ) *webhook {
 	w := &webhook{
-		client:  kubeClient,
-		decoder: decoder,
-		sender:  sender,
+		client:         kubeClient,
+		decoder:        decoder,
+		sender:         sender,
+		projectConfigs: projectConfigs,
 	}
 	w.getFreightFn = api.GetFreight
 	w.listFreightAvailableToStageFn = api.ListFreightAvailableToStage
@@ -529,7 +535,7 @@ func (w *webhook) syncHoldAnnotations(
 	// which may lag behind ProjectConfig changes.
 	enabled, err := w.isAutoPromotionEnabledFn(
 		ctx,
-		api.KubernetesProjectConfigGetter(w.client),
+		w.projectConfigs,
 		stage.ObjectMeta,
 	)
 	if err != nil {
