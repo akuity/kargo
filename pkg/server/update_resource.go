@@ -12,6 +12,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	sigyaml "sigs.k8s.io/yaml"
 
+	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	libhttp "github.com/akuity/kargo/pkg/http"
 )
 
@@ -70,24 +71,22 @@ func (s *server) updateResources(c *gin.Context) {
 		return
 	}
 
-	createdProjects := map[string]struct{}{}
+	// createdProjects holds the Projects created in the course of this API
+	// call, keyed by name, as their creates returned them.
+	createdProjects := map[string]*kargoapi.Project{}
 
 	results := make([]createOrUpdateResourceResult, 0, len(resources))
 	for _, r := range resources {
 		resource := r // Avoid implicit memory aliasing
-		var cl client.Client = s.client
-		if _, ok := createdProjects[resource.GetNamespace()]; ok {
-			// Kubernetes ignores metadata.namespace for a cluster-scoped kind, so a
-			// spoofed value could bypass authorization there. Confirm real scope via
-			// the RESTMapper before trusting it.
-			if namespaced, err := s.client.IsObjectNamespaced(&resource); err == nil && namespaced {
-				// Creating the Project made the user its owner/admin, but RBAC for it
-				// is wired up asynchronously by the management controller. Use the API
-				// server's own permissions here so this isn't blocked by that race.
-				cl = s.client.InternalClient()
-			}
+		var result createOrUpdateResourceResult
+		var err error
+		if resource.GroupVersionKind() == projectConfigGVK {
+			// ProjectConfigs live in the database, not in Kubernetes.
+			result, err = s.updateProjectConfig(ctx, &resource, createdProjects, upsert)
+		} else {
+			cl := s.resourceClient(&resource, createdProjects)
+			result, err = s.updateResource(ctx, cl, &resource, upsert)
 		}
-		result, err := s.updateResource(ctx, cl, &resource, upsert)
 		if err != nil && len(resources) == 1 {
 			_ = c.Error(err)
 			return
@@ -95,7 +94,7 @@ func (s *server) updateResources(c *gin.Context) {
 		// If we just created a Project successfully, keep track of this Project
 		// being one that was created in the course of this API call.
 		if err == nil && result.CreatedResourceManifest != nil && resource.GroupVersionKind() == projectGVK {
-			createdProjects[resource.GetName()] = struct{}{}
+			recordCreatedProject(ctx, &resource, createdProjects)
 		}
 		results = append(results, result)
 	}

@@ -53,7 +53,13 @@ func (h *Handler) put(c *gin.Context) {
 			cfg.Namespace = project.Name
 		}
 	}
-	out, created, err := h.upsert(c.Request.Context(), project, cfg, decodeErrs)
+	out, created, err := h.upsert(
+		c.Request.Context(),
+		project,
+		cfg,
+		decodeErrs,
+		UpsertOptions{},
+	)
 	if err != nil {
 		_ = c.Error(err)
 		return
@@ -75,51 +81,118 @@ func (h *Handler) Upsert(
 	project *kargoapi.Project,
 	cfg *kargoapi.ProjectConfig,
 ) (out *kargoapi.ProjectConfig, created bool, err error) {
-	return h.upsert(ctx, project, cfg, nil)
+	if cfg == nil {
+		return nil, false, errNoProjectConfig
+	}
+	return h.upsert(ctx, project, cfg, nil, UpsertOptions{})
 }
 
-// upsert is Upsert for a ProjectConfig in which decoding found decodeErrs. A
-// ProjectConfig that could not be decoded at all is nil. The errors are
-// reported, with those validation finds, only once the caller is known to
-// be authorized, so that no one learns anything of a ProjectConfig they may
-// not write.
+// errNoProjectConfig reports a call to Upsert without a ProjectConfig.
+var errNoProjectConfig = errors.New("no ProjectConfig to write")
+
+// UpsertOptions adjusts UpsertObject to the semantics of the endpoint a
+// ProjectConfig arrived through. The zero value is the semantics of PUT on
+// the ProjectConfig's own route. At most one of CreateOnly and MustExist may
+// be set.
+type UpsertOptions struct {
+	// CreateOnly refuses to write a ProjectConfig that exists, as creating a
+	// Kubernetes resource that exists is refused, with an AlreadyExists
+	// error.
+	CreateOnly bool
+	// MustExist refuses to create a ProjectConfig that does not exist, with a
+	// NotFound error.
+	MustExist bool
+	// SkipUserAuthorization writes the ProjectConfig without checking that
+	// the caller may, using the API server's own authority instead.
+	//
+	// This is security-sensitive. It exists only for a Project the caller
+	// created earlier in the same request to the generic resources
+	// endpoints, as the project wizard does. Creating the Project made the
+	// caller its owner, but the management controller grants the
+	// corresponding RBAC asynchronously, so the caller's own permissions
+	// cannot be relied on yet. This mirrors the existing exception that
+	// writes other resources in such a Project with the internal Kubernetes
+	// client. It must never be set for any other Project. Validation still
+	// applies.
+	SkipUserAuthorization bool
+}
+
+// UpsertObject is Upsert for a ProjectConfig not yet decoded from the
+// generic map encoding/json produces. It decodes the ProjectConfig with
+// Decode, so that it is checked exactly as PUT on the ProjectConfig's own
+// route checks it, and writes it as opts direct.
+func (h *Handler) UpsertObject(
+	ctx context.Context,
+	project *kargoapi.Project,
+	obj map[string]any,
+	opts UpsertOptions,
+) (out *kargoapi.ProjectConfig, created bool, err error) {
+	cfg, decodeErrs := Decode(obj)
+	return h.upsert(ctx, project, cfg, decodeErrs, opts)
+}
+
+// upsert is UpsertObject for a ProjectConfig in which decoding found
+// decodeErrs. A ProjectConfig that could not be decoded at all is nil. The
+// errors are reported, with those validation finds, only once the caller is
+// known to be authorized, so that no one learns anything of a ProjectConfig
+// they may not write.
 func (h *Handler) upsert(
 	ctx context.Context,
 	project *kargoapi.Project,
 	cfg *kargoapi.ProjectConfig,
 	decodeErrs field.ErrorList,
+	opts UpsertOptions,
 ) (*kargoapi.ProjectConfig, bool, error) {
-	if err := h.authorize(ctx, can.Get().ProjectConfig(project.Name)); err != nil {
+	authorize := h.authorizerFor(opts)
+	if err := authorize(ctx, can.Get().ProjectConfig(project.Name)); err != nil {
 		return nil, false, err
 	}
 	_, err := h.store.Get(ctx, project.Name, string(project.UID))
 	switch {
 	case errors.Is(err, database.ErrNotFound):
-		return h.create(ctx, project, cfg, decodeErrs)
+		if opts.MustExist {
+			return nil, false, storeError(err, project.Name)
+		}
+		return h.create(ctx, authorize, project, cfg, decodeErrs, opts)
 	case err != nil:
 		return nil, false, storeError(err, project.Name)
+	case opts.CreateOnly:
+		return nil, false, storeError(database.ErrAlreadyExists, project.Name)
 	}
-	out, err := h.update(ctx, project, cfg, decodeErrs)
+	out, err := h.update(ctx, authorize, project, cfg, decodeErrs)
 	return out, false, err
 }
 
+// authorizerFor returns the function that checks the caller may write a
+// ProjectConfig as opts direct: the Handler's own, unless opts skip the
+// caller's authorization.
+func (h *Handler) authorizerFor(opts UpsertOptions) func(context.Context, can.Access) error {
+	if opts.SkipUserAuthorization {
+		return func(context.Context, can.Access) error { return nil }
+	}
+	return h.authorize
+}
+
 // create creates the Project's ProjectConfig. If another request created it
-// first, it is updated instead, provided the caller may update it.
+// first, it is updated instead, provided the caller may update it, unless
+// opts allow only a create.
 func (h *Handler) create(
 	ctx context.Context,
+	authorize func(context.Context, can.Access) error,
 	project *kargoapi.Project,
 	cfg *kargoapi.ProjectConfig,
 	decodeErrs field.ErrorList,
+	opts UpsertOptions,
 ) (*kargoapi.ProjectConfig, bool, error) {
-	if err := h.authorize(ctx, can.Create().ProjectConfig(project.Name)); err != nil {
+	if err := authorize(ctx, can.Create().ProjectConfig(project.Name)); err != nil {
 		return nil, false, err
 	}
 	if err := check(ctx, project.Name, cfg, decodeErrs, true); err != nil {
 		return nil, false, err
 	}
 	stored, err := h.store.Create(ctx, withoutRefresh(cfg), string(project.UID))
-	if errors.Is(err, database.ErrAlreadyExists) {
-		out, updateErr := h.update(ctx, project, cfg, nil)
+	if errors.Is(err, database.ErrAlreadyExists) && !opts.CreateOnly {
+		out, updateErr := h.update(ctx, authorize, project, cfg, nil)
 		return out, false, updateErr
 	}
 	if err != nil {
@@ -133,11 +206,12 @@ func (h *Handler) create(
 // ProjectConfig.
 func (h *Handler) update(
 	ctx context.Context,
+	authorize func(context.Context, can.Access) error,
 	project *kargoapi.Project,
 	cfg *kargoapi.ProjectConfig,
 	decodeErrs field.ErrorList,
 ) (*kargoapi.ProjectConfig, error) {
-	if err := h.authorize(ctx, can.Update().ProjectConfig(project.Name)); err != nil {
+	if err := authorize(ctx, can.Update().ProjectConfig(project.Name)); err != nil {
 		return nil, err
 	}
 	if err := check(ctx, project.Name, cfg, decodeErrs, false); err != nil {

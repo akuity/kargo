@@ -577,3 +577,260 @@ func Test_server_createResources_clusterScopedNamespaceSpoofing(t *testing.T) {
 		},
 	)
 }
+
+func Test_server_createResources_projectConfig(t *testing.T) {
+	existingProject := testResourceProject("existing-project", "existing-uid")
+	newProject := testResourceProject("new-project", "")
+
+	// store is reassigned by each serverSetup before assertions reads it.
+	// Test cases are run sequentially, so this is safe.
+	var store *fakeProjectConfigStore
+
+	testRESTEndpoint(
+		t, nil,
+		http.MethodPost, "/v1beta1/resources",
+		[]restTestCase{
+			{
+				name:          "creates a ProjectConfig in the database",
+				clientBuilder: fake.NewClientBuilder().WithObjects(existingProject),
+				serverSetup:   withProjectConfigStore(&fakeProjectConfigStore{}, &store, nil),
+				body:          mustJSONBody(testResourceProjectConfig(existingProject.Name)),
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, c client.Client) {
+					require.Equal(t, http.StatusCreated, w.Code)
+					var res createResourceResponse
+					require.NoError(t, json.Unmarshal(w.Body.Bytes(), &res))
+					require.Len(t, res.Results, 1)
+					require.Empty(t, res.Results[0].Error)
+					manifest := res.Results[0].CreatedResourceManifest
+					require.Equal(t, kargoapi.GroupVersion.String(), manifest["apiVersion"])
+					require.Equal(t, "ProjectConfig", manifest["kind"])
+					meta := manifest["metadata"].(map[string]any) // nolint: forcetypeassert
+					require.Equal(t, existingProject.Name, meta["name"])
+					require.Equal(t, existingProject.Name, meta["namespace"])
+
+					stored, ok := store.configs[existingProject.Name]
+					require.True(t, ok)
+					require.Equal(t, string(existingProject.UID), stored.ProjectUID)
+					requireNoProjectConfigInKubernetes(t, c, existingProject.Name)
+				},
+			},
+			{
+				name:          "ProjectConfig already exists",
+				clientBuilder: fake.NewClientBuilder().WithObjects(existingProject),
+				serverSetup:   withProjectConfigStore(storeHolding(existingProject), &store, nil),
+				body:          mustJSONBody(testResourceProjectConfig(existingProject.Name)),
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
+					require.Equal(t, http.StatusConflict, w.Code)
+					require.Contains(
+						t,
+						w.Body.String(),
+						`projectconfigs.kargo.akuity.io \"existing-project\" already exists`,
+					)
+					require.Equal(t, int64(1), store.configs[existingProject.Name].Generation)
+				},
+			},
+			{
+				name:          "ProjectConfig already exists among several resources",
+				clientBuilder: fake.NewClientBuilder().WithObjects(existingProject),
+				serverSetup:   withProjectConfigStore(storeHolding(existingProject), &store, nil),
+				body: mustJSONArrayBody(
+					testResourceProjectConfig(existingProject.Name),
+					testResourceProjectConfig(existingProject.Name),
+				),
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
+					require.Equal(t, http.StatusCreated, w.Code)
+					var res createResourceResponse
+					require.NoError(t, json.Unmarshal(w.Body.Bytes(), &res))
+					require.Len(t, res.Results, 2)
+					require.Equal(
+						t,
+						`create resource: projectconfigs.kargo.akuity.io "existing-project" already exists`,
+						res.Results[0].Error,
+					)
+				},
+			},
+			{
+				name:        "Project does not exist",
+				serverSetup: withProjectConfigStore(&fakeProjectConfigStore{}, &store, nil),
+				body:        mustJSONBody(testResourceProjectConfig(existingProject.Name)),
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
+					require.Equal(t, http.StatusNotFound, w.Code)
+					require.Empty(t, store.configs)
+				},
+			},
+			{
+				name:          "invalid ProjectConfig",
+				clientBuilder: fake.NewClientBuilder().WithObjects(existingProject),
+				serverSetup:   withProjectConfigStore(&fakeProjectConfigStore{}, &store, nil),
+				body: mustJSONBody(map[string]any{
+					"apiVersion": kargoapi.GroupVersion.String(),
+					"kind":       "ProjectConfig",
+					"metadata": map[string]any{
+						"name":      existingProject.Name,
+						"namespace": existingProject.Name,
+					},
+					"spec": map[string]any{
+						"freightLinks": []any{map[string]any{"title": "t"}},
+					},
+				}),
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
+					require.Equal(t, http.StatusUnprocessableEntity, w.Code)
+					require.Contains(t, w.Body.String(), "spec.freightLinks[0].url")
+					require.Empty(t, store.configs)
+				},
+			},
+			{
+				name:          "not authorized",
+				clientBuilder: fake.NewClientBuilder().WithObjects(existingProject),
+				serverSetup: withProjectConfigStore(
+					&fakeProjectConfigStore{},
+					&store,
+					forbidProjectConfigs,
+				),
+				body: mustJSONBody(testResourceProjectConfig(existingProject.Name)),
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
+					require.Equal(t, http.StatusForbidden, w.Code)
+					require.Empty(t, store.configs)
+				},
+			},
+			{
+				name: "caller with no access to Projects creates a ProjectConfig",
+				serverSetup: withClientForbiddingProjects(
+					&fakeProjectConfigStore{},
+					&store,
+					existingProject,
+				),
+				ctxSetup: asProjectScopedUser,
+				body:     mustJSONBody(testResourceProjectConfig(existingProject.Name)),
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
+					require.Equal(t, http.StatusCreated, w.Code)
+					stored, ok := store.configs[existingProject.Name]
+					require.True(t, ok)
+					require.Equal(t, string(existingProject.UID), stored.ProjectUID)
+				},
+			},
+			{
+				name:          "not authorized to write an invalid ProjectConfig",
+				clientBuilder: fake.NewClientBuilder().WithObjects(existingProject),
+				serverSetup: withProjectConfigStore(
+					&fakeProjectConfigStore{},
+					&store,
+					forbidProjectConfigs,
+				),
+				body: mustJSONBody(map[string]any{
+					"apiVersion": kargoapi.GroupVersion.String(),
+					"kind":       "ProjectConfig",
+					"metadata": map[string]any{
+						"name":      existingProject.Name,
+						"namespace": existingProject.Name,
+					},
+					// Undecodable: spec must be an object.
+					"spec": "not an object",
+				}),
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
+					require.Equal(t, http.StatusForbidden, w.Code)
+					require.Empty(t, store.configs)
+				},
+			},
+			{
+				name:          "wizard exception does not let a spoofed namespace name another Project",
+				clientBuilder: assigningProjectUIDs(existingProject),
+				serverSetup: withProjectConfigStore(
+					&fakeProjectConfigStore{},
+					&store,
+					forbidProjectConfigs,
+				),
+				body: mustJSONArrayBody(
+					newProject,
+					&kargoapi.ProjectConfig{
+						TypeMeta: metav1.TypeMeta{
+							APIVersion: kargoapi.GroupVersion.String(),
+							Kind:       "ProjectConfig",
+						},
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      existingProject.Name,
+							Namespace: newProject.Name,
+						},
+					},
+				),
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
+					require.Equal(t, http.StatusCreated, w.Code)
+					var res createResourceResponse
+					require.NoError(t, json.Unmarshal(w.Body.Bytes(), &res))
+					require.Len(t, res.Results, 2)
+					require.Empty(t, res.Results[0].Error)
+					require.Contains(t, res.Results[1].Error, "is invalid")
+					require.Contains(t, res.Results[1].Error, "metadata.name")
+					require.Empty(t, store.configs)
+				},
+			},
+			{
+				name:          "wizard creates a Project and its ProjectConfig",
+				clientBuilder: assigningProjectUIDs(),
+				// The caller has no permissions on ProjectConfigs yet: the
+				// management controller grants them asynchronously.
+				serverSetup: withProjectConfigStore(
+					&fakeProjectConfigStore{},
+					&store,
+					forbidProjectConfigs,
+				),
+				body: mustJSONArrayBody(newProject, testResourceProjectConfig(newProject.Name)),
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, c client.Client) {
+					require.Equal(t, http.StatusCreated, w.Code)
+					var res createResourceResponse
+					require.NoError(t, json.Unmarshal(w.Body.Bytes(), &res))
+					require.Len(t, res.Results, 2)
+					require.Empty(t, res.Results[0].Error)
+					require.Empty(t, res.Results[1].Error)
+					require.Equal(t, "ProjectConfig", res.Results[1].CreatedResourceManifest["kind"])
+
+					stored, ok := store.configs[newProject.Name]
+					require.True(t, ok)
+					require.Equal(t, createdProjectUID, stored.ProjectUID)
+					requireNoProjectConfigInKubernetes(t, c, newProject.Name)
+				},
+			},
+			{
+				name:          "wizard exception does not cover a Project that already existed",
+				clientBuilder: assigningProjectUIDs(existingProject),
+				serverSetup: withProjectConfigStore(
+					&fakeProjectConfigStore{},
+					&store,
+					forbidProjectConfigs,
+				),
+				body: mustJSONArrayBody(newProject, testResourceProjectConfig(existingProject.Name)),
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
+					require.Equal(t, http.StatusCreated, w.Code)
+					var res createResourceResponse
+					require.NoError(t, json.Unmarshal(w.Body.Bytes(), &res))
+					require.Len(t, res.Results, 2)
+					require.Empty(t, res.Results[0].Error)
+					require.Contains(t, res.Results[1].Error, "forbidden")
+					require.Empty(t, store.configs)
+				},
+			},
+			{
+				name:          "wizard exception does not cover a Project that failed to create",
+				clientBuilder: fake.NewClientBuilder().WithObjects(existingProject),
+				serverSetup: withProjectConfigStore(
+					&fakeProjectConfigStore{},
+					&store,
+					forbidProjectConfigs,
+				),
+				body: mustJSONArrayBody(
+					existingProject, // Already exists
+					testResourceProjectConfig(existingProject.Name),
+				),
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
+					require.Equal(t, http.StatusCreated, w.Code)
+					var res createResourceResponse
+					require.NoError(t, json.Unmarshal(w.Body.Bytes(), &res))
+					require.Len(t, res.Results, 2)
+					require.Contains(t, res.Results[0].Error, "already exists")
+					require.Contains(t, res.Results[1].Error, "forbidden")
+					require.Empty(t, store.configs)
+				},
+			},
+		},
+	)
+}

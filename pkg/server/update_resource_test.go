@@ -611,3 +611,161 @@ func Test_server_updateResources_clusterScopedNamespaceSpoofing(t *testing.T) {
 		},
 	)
 }
+
+func Test_server_updateResources_projectConfig(t *testing.T) {
+	existingProject := testResourceProject("existing-project", "existing-uid")
+	newProject := testResourceProject("new-project", "")
+
+	// store is reassigned by each serverSetup before assertions reads it.
+	// Test cases are run sequentially, so this is safe.
+	var store *fakeProjectConfigStore
+
+	testRESTEndpoint(
+		t, nil,
+		http.MethodPut, "/v1beta1/resources",
+		[]restTestCase{
+			{
+				name:          "updates a ProjectConfig in the database",
+				clientBuilder: fake.NewClientBuilder().WithObjects(existingProject),
+				serverSetup:   withProjectConfigStore(storeHolding(existingProject), &store, nil),
+				body:          mustJSONBody(testResourceProjectConfig(existingProject.Name)),
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, c client.Client) {
+					require.Equal(t, http.StatusOK, w.Code)
+					var res createOrUpdateResourceResponse
+					require.NoError(t, json.Unmarshal(w.Body.Bytes(), &res))
+					require.Len(t, res.Results, 1)
+					require.Empty(t, res.Results[0].Error)
+					require.Nil(t, res.Results[0].CreatedResourceManifest)
+					manifest := res.Results[0].UpdatedResourceManifest
+					require.Equal(t, kargoapi.GroupVersion.String(), manifest["apiVersion"])
+					require.Equal(t, "ProjectConfig", manifest["kind"])
+
+					stored := store.configs[existingProject.Name]
+					require.Equal(t, int64(2), stored.Generation)
+					require.Contains(t, string(stored.Spec), "https://example.com")
+					requireNoProjectConfigInKubernetes(t, c, existingProject.Name)
+				},
+			},
+			{
+				name:          "ProjectConfig does not exist",
+				clientBuilder: fake.NewClientBuilder().WithObjects(existingProject),
+				serverSetup:   withProjectConfigStore(&fakeProjectConfigStore{}, &store, nil),
+				body:          mustJSONBody(testResourceProjectConfig(existingProject.Name)),
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
+					require.Equal(t, http.StatusNotFound, w.Code)
+					require.Empty(t, store.configs)
+				},
+			},
+			{
+				name:          "upsert creates a ProjectConfig in the database",
+				url:           "/v1beta1/resources?upsert=true",
+				clientBuilder: fake.NewClientBuilder().WithObjects(existingProject),
+				serverSetup:   withProjectConfigStore(&fakeProjectConfigStore{}, &store, nil),
+				body:          mustYAMLBody(testResourceProjectConfig(existingProject.Name)),
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, c client.Client) {
+					require.Equal(t, http.StatusOK, w.Code)
+					var res createOrUpdateResourceResponse
+					require.NoError(t, json.Unmarshal(w.Body.Bytes(), &res))
+					require.Len(t, res.Results, 1)
+					require.Empty(t, res.Results[0].Error)
+					require.Nil(t, res.Results[0].UpdatedResourceManifest)
+					require.Equal(t, "ProjectConfig", res.Results[0].CreatedResourceManifest["kind"])
+
+					stored, ok := store.configs[existingProject.Name]
+					require.True(t, ok)
+					require.Equal(t, string(existingProject.UID), stored.ProjectUID)
+					requireNoProjectConfigInKubernetes(t, c, existingProject.Name)
+				},
+			},
+			{
+				name:        "Project does not exist",
+				url:         "/v1beta1/resources?upsert=true",
+				serverSetup: withProjectConfigStore(&fakeProjectConfigStore{}, &store, nil),
+				body:        mustJSONBody(testResourceProjectConfig(existingProject.Name)),
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
+					require.Equal(t, http.StatusNotFound, w.Code)
+					require.Empty(t, store.configs)
+				},
+			},
+			{
+				name:          "not authorized",
+				url:           "/v1beta1/resources?upsert=true",
+				clientBuilder: fake.NewClientBuilder().WithObjects(existingProject),
+				serverSetup: withProjectConfigStore(
+					storeHolding(existingProject),
+					&store,
+					forbidProjectConfigs,
+				),
+				body: mustJSONBody(testResourceProjectConfig(existingProject.Name)),
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
+					require.Equal(t, http.StatusForbidden, w.Code)
+					require.Equal(t, int64(1), store.configs[existingProject.Name].Generation)
+				},
+			},
+			{
+				name: "caller with no access to Projects updates a ProjectConfig",
+				serverSetup: withClientForbiddingProjects(
+					storeHolding(existingProject),
+					&store,
+					existingProject,
+				),
+				ctxSetup: asProjectScopedUser,
+				body:     mustJSONBody(testResourceProjectConfig(existingProject.Name)),
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
+					require.Equal(t, http.StatusOK, w.Code)
+					require.Equal(t, int64(2), store.configs[existingProject.Name].Generation)
+				},
+			},
+			{
+				name:          "wizard upserts a Project and its ProjectConfig",
+				url:           "/v1beta1/resources?upsert=true",
+				clientBuilder: assigningProjectUIDs(),
+				// The caller has no permissions on ProjectConfigs yet: the
+				// management controller grants them asynchronously.
+				serverSetup: withProjectConfigStore(
+					&fakeProjectConfigStore{},
+					&store,
+					forbidProjectConfigs,
+				),
+				body: mustJSONArrayBody(newProject, testResourceProjectConfig(newProject.Name)),
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
+					require.Equal(t, http.StatusOK, w.Code)
+					var res createOrUpdateResourceResponse
+					require.NoError(t, json.Unmarshal(w.Body.Bytes(), &res))
+					require.Len(t, res.Results, 2)
+					require.Empty(t, res.Results[0].Error)
+					require.Empty(t, res.Results[1].Error)
+
+					stored, ok := store.configs[newProject.Name]
+					require.True(t, ok)
+					require.Equal(t, createdProjectUID, stored.ProjectUID)
+				},
+			},
+			{
+				name:          "wizard exception does not cover a Project that already existed",
+				url:           "/v1beta1/resources?upsert=true",
+				clientBuilder: fake.NewClientBuilder().WithObjects(existingProject),
+				serverSetup: withProjectConfigStore(
+					&fakeProjectConfigStore{},
+					&store,
+					forbidProjectConfigs,
+				),
+				// Updating the existing Project does not create it.
+				body: mustJSONArrayBody(
+					existingProject,
+					testResourceProjectConfig(existingProject.Name),
+				),
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
+					require.Equal(t, http.StatusOK, w.Code)
+					var res createOrUpdateResourceResponse
+					require.NoError(t, json.Unmarshal(w.Body.Bytes(), &res))
+					require.Len(t, res.Results, 2)
+					require.Empty(t, res.Results[0].Error)
+					require.NotNil(t, res.Results[0].UpdatedResourceManifest)
+					require.Contains(t, res.Results[1].Error, "forbidden")
+					require.Empty(t, store.configs)
+				},
+			},
+		},
+	)
+}

@@ -87,6 +87,10 @@ func (s *server) deleteResource(
 			Error: errTargetNotKubernetesResource.Error(),
 		}, errTargetNotKubernetesResource
 	}
+	if obj.GroupVersionKind() == projectConfigGVK {
+		// ProjectConfigs live in the database, not in Kubernetes.
+		return s.deleteProjectConfig(ctx, obj)
+	}
 	if err := s.client.Delete(ctx, obj); err != nil {
 		return deleteResourceResult{
 			Error: fmt.Errorf("delete resource: %w", err).Error(),

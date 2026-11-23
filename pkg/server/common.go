@@ -86,6 +86,8 @@ var (
 		Kind:    "Target",
 	}
 
+	projectConfigGVK = kargoapi.GroupVersion.WithKind("ProjectConfig")
+
 	errSecretManagementDisabled = libhttp.ErrorStr(
 		"secret management is not enabled",
 		http.StatusNotImplemented,
