@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"net/http"
+	"slices"
 	"testing"
 	"time"
 
@@ -22,7 +22,6 @@ import (
 	rollouts "github.com/akuity/kargo/api/stubs/rollouts/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/api/freightapi"
-	"github.com/akuity/kargo/pkg/client/apiserver"
 	"github.com/akuity/kargo/pkg/client/apiserver/freightclient/testutil"
 	"github.com/akuity/kargo/pkg/conditions"
 	"github.com/akuity/kargo/pkg/controller"
@@ -30,20 +29,29 @@ import (
 	fakeevent "github.com/akuity/kargo/pkg/event/fake"
 )
 
-// markCall records the arguments of a single MarkFreightInStage call, so tests
-// can assert on how the code under test drove the Freight API server client.
+// markCall records the arguments of a single MarkFreightsCurrentlyInStage
+// call, so tests can assert on how the code under test drove the Freight API
+// server client. Freight names are recorded sorted, since the order in which
+// they are sent carries no meaning.
 type markCall struct {
 	project string
-	freight string
-	origin  kargoapi.FreightOrigin
 	stage   string
+	freight []string
 }
 
+// markVerifiedCall records the arguments of a single
+// MarkFreightsVerifiedInStage call.
 type markVerifiedCall struct {
 	project    string
-	freight    string
 	stage      string
+	freight    []string
 	verifiedAt time.Time
+}
+
+// clearStageCall records the arguments of a single ClearStageFreights call.
+type clearStageCall struct {
+	project string
+	stage   string
 }
 
 func TestControlFlowStageReconciler_Reconcile(t *testing.T) {
@@ -68,13 +76,13 @@ func TestControlFlowStageReconciler_Reconcile(t *testing.T) {
 	}
 
 	tests := []struct {
-		name                    string
-		req                     ctrl.Request
-		stage                   *kargoapi.Stage
-		interceptor             interceptor.Funcs
-		listErr                 error
-		listReferencingStageErr error
-		assertions              func(*testing.T, client.Client, ctrl.Result, error)
+		name        string
+		req         ctrl.Request
+		stage       *kargoapi.Stage
+		interceptor interceptor.Funcs
+		listErr     error
+		clearErr    error
+		assertions  func(*testing.T, client.Client, ctrl.Result, error)
 	}{
 		{
 			name: "stage not found",
@@ -157,9 +165,9 @@ func TestControlFlowStageReconciler_Reconcile(t *testing.T) {
 					},
 				},
 			},
-			// The deletion cleanup lists Freight referencing the Stage through the
+			// The deletion cleanup clears the Stage from Freight status through the
 			// API server, so failing that surfaces the error.
-			listReferencingStageErr: errors.New("something went wrong"),
+			clearErr: errors.New("something went wrong"),
 			assertions: func(t *testing.T, _ client.Client, result ctrl.Result, err error) {
 				require.ErrorContains(t, err, "something went wrong")
 				assert.Equal(t, ctrl.Result{}, result)
@@ -331,26 +339,27 @@ func TestControlFlowStageReconciler_Reconcile(t *testing.T) {
 			// Available Freight is resolved through the same client; tt.listErr
 			// simulates the server failing that lookup.
 			mockClient := &testutil.MockFreightClient{
-				ListFreightByCurrentStageFun: func(context.Context, string, string) ([]kargoapi.Freight, error) {
-					return nil, nil
-				},
-				ListFreightReferencingStageFun: func(context.Context, string, string) ([]kargoapi.Freight, error) {
-					return nil, tt.listReferencingStageErr
-				},
-				ListFreightFromWarehouseFun: func(
+				ListFreightFromOriginFun: func(
 					context.Context,
-					string, string,
-					*freightapi.ListWarehouseFreightOptions,
+					string,
+					kargoapi.FreightOrigin,
+					*freightapi.ListFreightFromOriginOptions,
 				) ([]kargoapi.Freight, error) {
 					return nil, tt.listErr
 				},
-				MarkFreightCurrentlyInStageFun: func(
-					context.Context, string, string, kargoapi.FreightOrigin, string,
+				MarkFreightsCurrentlyInStageFun: func(context.Context, string, string, []string) error {
+					return nil
+				},
+				MarkFreightsVerifiedInStageFun: func(
+					context.Context,
+					string, string,
+					[]string,
+					time.Time,
 				) error {
 					return nil
 				},
-				ClearFreightStageStatusFun: func(context.Context, string, string, string) error {
-					return nil
+				ClearStageFreightsFun: func(context.Context, string, string) error {
+					return tt.clearErr
 				},
 			}
 
@@ -383,14 +392,42 @@ func TestControlFlowStageReconciler_reconcile(t *testing.T) {
 		Name: testWarehouseName,
 	}
 
+	otherWarehouseOrigin := kargoapi.FreightOrigin{
+		Kind: kargoapi.FreightOriginKindWarehouse,
+		Name: "other-warehouse",
+	}
+	directFrom := func(origins ...kargoapi.FreightOrigin) []kargoapi.FreightRequest {
+		reqs := make([]kargoapi.FreightRequest, len(origins))
+		for i, o := range origins {
+			reqs[i] = kargoapi.FreightRequest{
+				Sources: kargoapi.FreightSources{Direct: true},
+				Origin:  o,
+			}
+		}
+		return reqs
+	}
+	newFreight := func(
+		name string,
+		origin kargoapi.FreightOrigin,
+		discoveredAt time.Time,
+		verified bool,
+	) kargoapi.Freight {
+		f := kargoapi.Freight{
+			ObjectMeta:   metav1.ObjectMeta{Namespace: testProject, Name: name},
+			Origin:       origin,
+			DiscoveredAt: &metav1.Time{Time: discoveredAt},
+		}
+		if verified {
+			f.Status.VerifiedIn = map[string]kargoapi.VerifiedStage{testStage: {}}
+		}
+		return f
+	}
+	now := time.Now()
+
 	tests := []struct {
-		name      string
-		stage     *kargoapi.Stage
-		available []kargoapi.Freight
-		// currentlyIn is what the API server reports as currently in the Stage. Any
-		// of these no longer available to the Stage is unmarked (its CurrentlyIn
-		// cleared).
-		currentlyIn     []kargoapi.Freight
+		name            string
+		stage           *kargoapi.Stage
+		available       []kargoapi.Freight
 		listErr         error
 		markErr         error
 		markVerifiedErr error
@@ -400,16 +437,21 @@ func TestControlFlowStageReconciler_reconcile(t *testing.T) {
 			name: "no available Freight",
 			stage: &kargoapi.Stage{
 				ObjectMeta: testStageMeta,
-				Spec: kargoapi.StageSpec{
-					RequestedFreight: []kargoapi.FreightRequest{{
-						Sources: kargoapi.FreightSources{Direct: true},
-						Origin:  testWarehouseOrigin,
-					}},
-				},
+				Spec:       kargoapi.StageSpec{RequestedFreight: directFrom(testWarehouseOrigin)},
 			},
 			// No Freight available from this Warehouse.
-			assertions: func(t *testing.T, status kargoapi.StageStatus, _ []markCall, _ []markVerifiedCall, err error) {
+			assertions: func(
+				t *testing.T,
+				status kargoapi.StageStatus,
+				markCalls []markCall,
+				markVerifiedCalls []markVerifiedCall,
+				err error,
+			) {
 				require.NoError(t, err)
+
+				// With nothing available, Freight status is left untouched.
+				require.Empty(t, markCalls)
+				require.Empty(t, markVerifiedCalls)
 
 				require.Len(t, status.Conditions, 1)
 				readyCond := conditions.Get(&status, kargoapi.ConditionTypeReady)
@@ -421,20 +463,11 @@ func TestControlFlowStageReconciler_reconcile(t *testing.T) {
 			name: "available Freight not yet marked as verified",
 			stage: &kargoapi.Stage{
 				ObjectMeta: testStageMeta,
-				Spec: kargoapi.StageSpec{
-					RequestedFreight: []kargoapi.FreightRequest{{
-						Sources: kargoapi.FreightSources{Direct: true},
-						Origin:  testWarehouseOrigin,
-					}},
-				},
+				Spec:       kargoapi.StageSpec{RequestedFreight: directFrom(testWarehouseOrigin)},
 			},
-			available: []kargoapi.Freight{{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: testProject,
-					Name:      "fake-freight",
-				},
-				Origin: testWarehouseOrigin,
-			}},
+			available: []kargoapi.Freight{
+				newFreight("fake-freight", testWarehouseOrigin, now, false),
+			},
 			assertions: func(
 				t *testing.T,
 				status kargoapi.StageStatus,
@@ -444,22 +477,53 @@ func TestControlFlowStageReconciler_reconcile(t *testing.T) {
 			) {
 				require.NoError(t, err)
 
-				// One available freight
 				require.Len(t, markVerifiedCalls, 1)
-				verifyCall := markVerifiedCalls[0]
-				require.Equal(t, testProject, verifyCall.project)
-				require.Equal(t, "fake-freight", verifyCall.freight)
-				require.Equal(t, testStage, verifyCall.stage)
+				require.Equal(t, testProject, markVerifiedCalls[0].project)
+				require.Equal(t, testStage, markVerifiedCalls[0].stage)
+				require.Equal(t, []string{"fake-freight"}, markVerifiedCalls[0].freight)
 
-				// One available freight
-				require.Len(t, markCalls, 1)
-				oneMarkCall := markCalls[0]
-				require.Equal(t, testProject, oneMarkCall.project)
-				require.Equal(t, "fake-freight", oneMarkCall.freight)
-				require.Equal(t, testStage, oneMarkCall.stage)
-				require.Equal(t, testWarehouseOrigin, oneMarkCall.origin)
+				require.Equal(t, []markCall{{testProject, testStage, []string{"fake-freight"}}}, markCalls)
 
 				require.Len(t, status.Conditions, 1)
+				readyCond := conditions.Get(&status, kargoapi.ConditionTypeReady)
+				require.NotNil(t, readyCond)
+				assert.Equal(t, metav1.ConditionTrue, readyCond.Status)
+			},
+		},
+		{
+			name: "marks all unverified Freight verified and the newest per origin current",
+			stage: &kargoapi.Stage{
+				ObjectMeta: testStageMeta,
+				Spec: kargoapi.StageSpec{
+					RequestedFreight: directFrom(testWarehouseOrigin, otherWarehouseOrigin),
+				},
+			},
+			available: []kargoapi.Freight{
+				newFreight("wh-old", testWarehouseOrigin, now.Add(-time.Hour), false),
+				newFreight("wh-new", testWarehouseOrigin, now, false),
+				newFreight("other-verified", otherWarehouseOrigin, now.Add(-time.Hour), true),
+				newFreight("other-new", otherWarehouseOrigin, now, false),
+			},
+			assertions: func(
+				t *testing.T,
+				status kargoapi.StageStatus,
+				markCalls []markCall,
+				markVerifiedCalls []markVerifiedCall,
+				err error,
+			) {
+				require.NoError(t, err)
+
+				// A single request verifies all available Freight not yet verified.
+				require.Len(t, markVerifiedCalls, 1)
+				require.Equal(t, []string{"other-new", "wh-new", "wh-old"}, markVerifiedCalls[0].freight)
+
+				// A single request marks the newest Freight from each origin as
+				// current; the API server unmarks any other Freight.
+				require.Equal(t,
+					[]markCall{{testProject, testStage, []string{"other-new", "wh-new"}}},
+					markCalls,
+				)
+
 				readyCond := conditions.Get(&status, kargoapi.ConditionTypeReady)
 				require.NotNil(t, readyCond)
 				assert.Equal(t, metav1.ConditionTrue, readyCond.Status)
@@ -469,12 +533,7 @@ func TestControlFlowStageReconciler_reconcile(t *testing.T) {
 			name: "error listing available Freight",
 			stage: &kargoapi.Stage{
 				ObjectMeta: testStageMeta,
-				Spec: kargoapi.StageSpec{
-					RequestedFreight: []kargoapi.FreightRequest{{
-						Sources: kargoapi.FreightSources{Direct: true},
-						Origin:  testWarehouseOrigin,
-					}},
-				},
+				Spec:       kargoapi.StageSpec{RequestedFreight: directFrom(testWarehouseOrigin)},
 			},
 			listErr: errors.New("something went wrong"),
 			assertions: func(t *testing.T, status kargoapi.StageStatus, _ []markCall, _ []markVerifiedCall, err error) {
@@ -499,23 +558,23 @@ func TestControlFlowStageReconciler_reconcile(t *testing.T) {
 			name: "error marking Freight as verified",
 			stage: &kargoapi.Stage{
 				ObjectMeta: testStageMeta,
-				Spec: kargoapi.StageSpec{
-					RequestedFreight: []kargoapi.FreightRequest{{
-						Sources: kargoapi.FreightSources{Direct: true},
-						Origin:  testWarehouseOrigin,
-					}},
-				},
+				Spec:       kargoapi.StageSpec{RequestedFreight: directFrom(testWarehouseOrigin)},
 			},
-			available: []kargoapi.Freight{{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: testProject,
-					Name:      "fake-freight",
-				},
-				Origin: testWarehouseOrigin,
-			}},
+			available: []kargoapi.Freight{
+				newFreight("fake-freight", testWarehouseOrigin, now, false),
+			},
 			markVerifiedErr: errors.New("something went wrong"),
-			assertions: func(t *testing.T, status kargoapi.StageStatus, _ []markCall, _ []markVerifiedCall, err error) {
-				require.ErrorContains(t, err, "failed to verify 1 Freight")
+			assertions: func(
+				t *testing.T,
+				status kargoapi.StageStatus,
+				markCalls []markCall,
+				_ []markVerifiedCall,
+				err error,
+			) {
+				require.ErrorContains(t, err, "failed to verify Freights")
+
+				// Marking current is not attempted after verification fails.
+				require.Empty(t, markCalls)
 
 				require.Len(t, status.Conditions, 2)
 
@@ -523,43 +582,67 @@ func TestControlFlowStageReconciler_reconcile(t *testing.T) {
 				require.NotNil(t, readyCond)
 				assert.Equal(t, metav1.ConditionFalse, readyCond.Status)
 				assert.Equal(t, "FreightVerificationFailed", readyCond.Reason)
-				assert.Contains(t, readyCond.Message, "failed to verify 1 Freight")
+				assert.Contains(t, readyCond.Message, "failed to verify Freights")
 
 				recCond := conditions.Get(&status, kargoapi.ConditionTypeReconciling)
 				require.NotNil(t, recCond)
 				assert.Equal(t, metav1.ConditionTrue, recCond.Status)
 				assert.Equal(t, "RetryAfterVerificationFailed", recCond.Reason)
-				assert.Contains(t, recCond.Message, "failed to verify 1 Freight")
+				assert.Contains(t, recCond.Message, "failed to verify Freights")
+			},
+		},
+		{
+			name: "error marking Freight as current",
+			stage: &kargoapi.Stage{
+				ObjectMeta: testStageMeta,
+				Spec:       kargoapi.StageSpec{RequestedFreight: directFrom(testWarehouseOrigin)},
+			},
+			available: []kargoapi.Freight{
+				newFreight("fake-freight", testWarehouseOrigin, now, false),
+			},
+			markErr: errors.New("something went wrong"),
+			assertions: func(t *testing.T, status kargoapi.StageStatus, _ []markCall, _ []markVerifiedCall, err error) {
+				require.ErrorContains(t, err, "something went wrong")
+
+				require.Len(t, status.Conditions, 2)
+
+				readyCond := conditions.Get(&status, kargoapi.ConditionTypeReady)
+				require.NotNil(t, readyCond)
+				assert.Equal(t, metav1.ConditionFalse, readyCond.Status)
+				assert.Equal(t, "FreightMarkCurrentFailed", readyCond.Reason)
+				assert.Contains(t, readyCond.Message, "something went wrong")
+
+				recCond := conditions.Get(&status, kargoapi.ConditionTypeReconciling)
+				require.NotNil(t, recCond)
+				assert.Equal(t, metav1.ConditionTrue, recCond.Status)
+				assert.Equal(t, "RetryAfterMarkCurrentFailed", recCond.Reason)
+				assert.Contains(t, recCond.Message, "something went wrong")
 			},
 		},
 		{
 			name: "already verified freight",
 			stage: &kargoapi.Stage{
 				ObjectMeta: testStageMeta,
-				Spec: kargoapi.StageSpec{
-					RequestedFreight: []kargoapi.FreightRequest{{
-						Sources: kargoapi.FreightSources{Direct: true},
-						Origin:  testWarehouseOrigin,
-					}},
-				},
+				Spec:       kargoapi.StageSpec{RequestedFreight: directFrom(testWarehouseOrigin)},
 			},
-			available: []kargoapi.Freight{{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: testProject,
-					Name:      "fake-freight",
-				},
-				Origin: testWarehouseOrigin,
-				Status: kargoapi.FreightStatus{
-					VerifiedIn: map[string]kargoapi.VerifiedStage{
-						testStage: {},
-					},
-				},
-			}},
-			// A guard: already-verified Freight must be skipped, so MarkFreightVerifiedInStage
-			// must not be called. If it were, this error would surface.
-			markVerifiedErr: errors.New("should not be called"),
-			assertions: func(t *testing.T, status kargoapi.StageStatus, _ []markCall, _ []markVerifiedCall, err error) {
+			available: []kargoapi.Freight{
+				newFreight("fake-freight", testWarehouseOrigin, now, true),
+			},
+			assertions: func(
+				t *testing.T,
+				status kargoapi.StageStatus,
+				markCalls []markCall,
+				markVerifiedCalls []markVerifiedCall,
+				err error,
+			) {
 				require.NoError(t, err)
+
+				// Already-verified Freight is not sent to be verified again.
+				for _, c := range markVerifiedCalls {
+					require.Empty(t, c.freight)
+				}
+				// It is still marked as current.
+				require.Equal(t, []markCall{{testProject, testStage, []string{"fake-freight"}}}, markCalls)
 
 				require.Len(t, status.Conditions, 1)
 
@@ -632,26 +715,38 @@ func TestControlFlowStageReconciler_reconcile(t *testing.T) {
 			var markCalls []markCall
 			var markVerifiedCalls []markVerifiedCall
 			mockClient := &testutil.MockFreightClient{
-				ListFreightFromWarehouseFun: func(
-					context.Context,
-					string, string,
-					*freightapi.ListWarehouseFreightOptions,
-				) ([]kargoapi.Freight, error) {
-					return tt.available, tt.listErr
-				},
-				MarkFreightCurrentlyInStageFun: func(
+				ListFreightFromOriginFun: func(
 					_ context.Context,
-					project, freight string, origin kargoapi.FreightOrigin, stage string,
+					_ string,
+					origin kargoapi.FreightOrigin,
+					_ *freightapi.ListFreightFromOriginOptions,
+				) ([]kargoapi.Freight, error) {
+					var out []kargoapi.Freight
+					for _, f := range tt.available {
+						if f.Origin == origin {
+							out = append(out, f)
+						}
+					}
+					return out, tt.listErr
+				},
+				MarkFreightsCurrentlyInStageFun: func(
+					_ context.Context,
+					project, stage string,
+					freight []string,
 				) error {
-					markCalls = append(markCalls, markCall{project, freight, origin, stage})
+					markCalls = append(markCalls, markCall{project, stage, slices.Sorted(slices.Values(freight))})
 					return tt.markErr
 				},
-				MarkFreightVerifiedInStageFun: func(
+				MarkFreightsVerifiedInStageFun: func(
 					_ context.Context,
-					project, freight, stage string,
+					project, stage string,
+					freight []string,
 					verifiedAt time.Time,
 				) error {
-					markVerifiedCalls = append(markVerifiedCalls, markVerifiedCall{project, freight, stage, verifiedAt})
+					markVerifiedCalls = append(
+						markVerifiedCalls,
+						markVerifiedCall{project, stage, slices.Sorted(slices.Values(freight)), verifiedAt},
+					)
 					return tt.markVerifiedErr
 				},
 			}
@@ -767,112 +862,137 @@ func TestControlFlowStageReconciler_markFreightVerifiedForStage(t *testing.T) {
 	oneHourAgo := justNow.Add(-time.Hour)
 	oneMinuteAgo := justNow.Add(-time.Minute)
 
+	testStage := &kargoapi.Stage{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: "default",
+			Name:      "test-stage",
+		},
+	}
+	unverified := func(name string) kargoapi.Freight {
+		return kargoapi.Freight{
+			ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: name},
+		}
+	}
+	verified := func(name string) kargoapi.Freight {
+		f := unverified(name)
+		f.Status.VerifiedIn = map[string]kargoapi.VerifiedStage{"test-stage": {}}
+		return f
+	}
+
 	tests := []struct {
-		name          string
-		stage         *kargoapi.Stage
-		freight       []kargoapi.Freight
-		startTime     time.Time
-		finishTime    time.Time
-		markErrByName map[string]error
-		assertions    func(*testing.T, []markVerifiedCall, *fakeevent.Sender, error)
+		name       string
+		freight    []kargoapi.Freight
+		startTime  time.Time
+		finishTime time.Time
+		markErr    error
+		assertions func(*testing.T, []markVerifiedCall, *fakeevent.Sender, int, error)
 	}{
 		{
-			name: "no freight to verify",
-			stage: &kargoapi.Stage{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "default",
-					Name:      "test-stage",
-				},
-			},
+			name:    "no freight to verify",
 			freight: nil,
-			assertions: func(t *testing.T, _ []markVerifiedCall, recorder *fakeevent.Sender, err error) {
+			assertions: func(
+				t *testing.T,
+				markCalls []markVerifiedCall,
+				recorder *fakeevent.Sender,
+				count int,
+				err error,
+			) {
 				require.NoError(t, err)
-				assert.Len(t, recorder.Sent(), 0)
+				require.Zero(t, count)
+				for _, c := range markCalls {
+					require.Empty(t, c.freight)
+				}
+				assert.Empty(t, recorder.Sent())
 			},
 		},
 		{
-			name: "freight has already been verified",
-			stage: &kargoapi.Stage{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "default",
-					Name:      "test-stage",
-				},
-			},
-			freight: []kargoapi.Freight{
-				{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "default",
-						Name:      "freight-1",
-					},
-					Status: kargoapi.FreightStatus{
-						VerifiedIn: map[string]kargoapi.VerifiedStage{
-							"test-stage": {},
-						},
-					},
-				},
-			},
-			assertions: func(t *testing.T, _ []markVerifiedCall, recorder *fakeevent.Sender, err error) {
+			name:    "freight has already been verified",
+			freight: []kargoapi.Freight{verified("freight-1")},
+			assertions: func(
+				t *testing.T,
+				markCalls []markVerifiedCall,
+				recorder *fakeevent.Sender,
+				count int,
+				err error,
+			) {
 				require.NoError(t, err)
-				assert.Len(t, recorder.Sent(), 0)
+				require.Zero(t, count)
+				for _, c := range markCalls {
+					require.Empty(t, c.freight)
+				}
+				assert.Empty(t, recorder.Sent())
 			},
 		},
 		{
-			name: "verifies freight",
-			stage: &kargoapi.Stage{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "default",
-					Name:      "test-stage",
-				},
-			},
-			freight: []kargoapi.Freight{
-				{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "default",
-						Name:      "freight-1",
-					},
-				},
-				{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "default",
-						Name:      "freight-2",
-					},
-				},
-			},
+			name:       "verifies all freight in a single request",
+			freight:    []kargoapi.Freight{unverified("freight-1"), unverified("freight-2")},
 			finishTime: justNow,
-			assertions: func(t *testing.T, markCalls []markVerifiedCall, recorder *fakeevent.Sender, err error) {
+			assertions: func(
+				t *testing.T,
+				markCalls []markVerifiedCall,
+				recorder *fakeevent.Sender,
+				count int,
+				err error,
+			) {
 				require.NoError(t, err)
+				require.Equal(t, 2, count)
 				assert.Len(t, recorder.Sent(), 2)
 
 				// Both Freight are marked verified in the Stage at the finish time.
-				require.Equal(t, []markVerifiedCall{
-					{"default", "freight-1", "test-stage", justNow},
-					{"default", "freight-2", "test-stage", justNow},
-				}, markCalls)
+				require.Equal(t, []markVerifiedCall{{
+					project:    "default",
+					stage:      "test-stage",
+					freight:    []string{"freight-1", "freight-2"},
+					verifiedAt: justNow,
+				}}, markCalls)
+			},
+		},
+		{
+			name: "skips freight that has already been verified",
+			freight: []kargoapi.Freight{
+				verified("freight-1"),
+				unverified("freight-2"),
+			},
+			finishTime: justNow,
+			assertions: func(
+				t *testing.T,
+				markCalls []markVerifiedCall,
+				recorder *fakeevent.Sender,
+				count int,
+				err error,
+			) {
+				require.NoError(t, err)
+				require.Equal(t, 1, count)
+				require.Len(t, markCalls, 1)
+				require.Equal(t, []string{"freight-2"}, markCalls[0].freight)
+
+				require.Len(t, recorder.Sent(), 1)
+				var data kargoEvent.FreightVerificationSucceeded
+				require.NoError(t, recorder.Sent()[0].DataAs(&data))
+				assert.Equal(t, "freight-2", data.Name)
 			},
 		},
 		{
 			name: "records event for verified freight",
-			stage: &kargoapi.Stage{
+			freight: []kargoapi.Freight{{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "default",
-					Name:      "test-stage",
-				},
-			},
-			freight: []kargoapi.Freight{
-				{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "default",
-						Name:      "freight-1",
-						CreationTimestamp: metav1.Time{
-							Time: oneHourAgo,
-						},
+					Name:      "freight-1",
+					CreationTimestamp: metav1.Time{
+						Time: oneHourAgo,
 					},
-					Alias: "fake-alias",
 				},
-			},
+				Alias: "fake-alias",
+			}},
 			startTime:  oneMinuteAgo,
 			finishTime: justNow,
-			assertions: func(t *testing.T, _ []markVerifiedCall, recorder *fakeevent.Sender, err error) {
+			assertions: func(
+				t *testing.T,
+				_ []markVerifiedCall,
+				recorder *fakeevent.Sender,
+				_ int,
+				err error,
+			) {
 				require.NoError(t, err)
 				require.Len(t, recorder.Sent(), 1)
 
@@ -919,57 +1039,24 @@ func TestControlFlowStageReconciler_markFreightVerifiedForStage(t *testing.T) {
 			},
 		},
 		{
-			name: "continues on patch error for freight",
-			stage: &kargoapi.Stage{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "default",
-					Name:      "test-stage",
-				},
-			},
-			freight: []kargoapi.Freight{
-				{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "default",
-						Name:      "freight-1",
-					},
-				},
-				{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "default",
-						Name:      "freight-2",
-					},
-				},
-				{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "default",
-						Name:      "freight-3",
-					},
-				},
-				{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "default",
-						Name:      "freight-4",
-					},
-				},
-			},
-			// freight-2 fails with a generic error (counted), freight-4 fails with a
-			// NotFound (tolerated, not counted, because the Freight is gone).
-			markErrByName: map[string]error{
-				"freight-2": errors.New("something went wrong"),
-				"freight-4": &apiserver.APIError{StatusCode: http.StatusNotFound},
-			},
-			assertions: func(t *testing.T, markCalls []markVerifiedCall, recorder *fakeevent.Sender, err error) {
-				require.ErrorContains(t, err, "failed to verify 1 Freight")
+			name:    "error marking freight verified",
+			freight: []kargoapi.Freight{unverified("freight-1"), unverified("freight-2")},
+			markErr: errors.New("something went wrong"),
+			assertions: func(
+				t *testing.T,
+				markCalls []markVerifiedCall,
+				recorder *fakeevent.Sender,
+				count int,
+				err error,
+			) {
+				require.ErrorContains(t, err, "failed to verify Freights")
+				require.Zero(t, count)
 
-				assert.Len(t, recorder.Sent(), 2)
-
-				// Every Freight is attempted, in order. freight-2 and freight-4 fail
-				// their mark (so send no event); freight-1 and freight-3 succeed.
-				names := make([]string, len(markCalls))
-				for i, c := range markCalls {
-					names[i] = c.freight
-				}
-				assert.Equal(t, []string{"freight-1", "freight-2", "freight-3", "freight-4"}, names)
+				// The whole batch is attempted in one request; when it fails, no
+				// Freight counts as verified and no events are sent.
+				require.Len(t, markCalls, 1)
+				require.Equal(t, []string{"freight-1", "freight-2"}, markCalls[0].freight)
+				assert.Empty(t, recorder.Sent())
 			},
 		},
 	}
@@ -978,13 +1065,17 @@ func TestControlFlowStageReconciler_markFreightVerifiedForStage(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			var markCalls []markVerifiedCall
 			mockClient := &testutil.MockFreightClient{
-				MarkFreightVerifiedInStageFun: func(
+				MarkFreightsVerifiedInStageFun: func(
 					_ context.Context,
-					project, freight, stage string,
+					project, stage string,
+					freight []string,
 					verifiedAt time.Time,
 				) error {
-					markCalls = append(markCalls, markVerifiedCall{project, freight, stage, verifiedAt})
-					return tt.markErrByName[freight]
+					markCalls = append(
+						markCalls,
+						markVerifiedCall{project, stage, slices.Sorted(slices.Values(freight)), verifiedAt},
+					)
+					return tt.markErr
 				},
 			}
 			recorder := &fakeevent.Sender{}
@@ -994,8 +1085,14 @@ func TestControlFlowStageReconciler_markFreightVerifiedForStage(t *testing.T) {
 				freightClient: mockClient,
 			}
 
-			_, err := r.markFreightVerifiedForStage(t.Context(), tt.stage, tt.freight, tt.startTime, tt.finishTime)
-			tt.assertions(t, markCalls, recorder, err)
+			count, err := r.markFreightVerifiedForStage(
+				t.Context(),
+				testStage,
+				tt.freight,
+				tt.startTime,
+				tt.finishTime,
+			)
+			tt.assertions(t, markCalls, recorder, count, err)
 		})
 	}
 }
@@ -1005,12 +1102,11 @@ func TestControlFlowStageReconciler_handleDelete(t *testing.T) {
 	require.NoError(t, kargoapi.AddToScheme(scheme))
 
 	tests := []struct {
-		name                    string
-		stage                   *kargoapi.Stage
-		freight                 []*kargoapi.Freight
-		interceptor             interceptor.Funcs
-		listReferencingStageErr error
-		assertions              func(*testing.T, []clearCall, *kargoapi.Stage, error)
+		name        string
+		stage       *kargoapi.Stage
+		interceptor interceptor.Funcs
+		clearErr    error
+		assertions  func(*testing.T, []clearStageCall, *kargoapi.Stage, error)
 	}{
 		{
 			name: "finalizer already removed",
@@ -1022,13 +1118,14 @@ func TestControlFlowStageReconciler_handleDelete(t *testing.T) {
 			},
 			// A guard: with no finalizer, handleDelete returns before clearing any
 			// Freight status, so this error must not surface.
-			listReferencingStageErr: errors.New("unexpected call to clear Freight status"),
-			assertions: func(t *testing.T, _ []clearCall, _ *kargoapi.Stage, err error) {
+			clearErr: errors.New("unexpected call to clear Freight status"),
+			assertions: func(t *testing.T, clearCalls []clearStageCall, _ *kargoapi.Stage, err error) {
 				require.NoError(t, err)
+				require.Empty(t, clearCalls)
 			},
 		},
 		{
-			name: "removes finalizer",
+			name: "clears Freight status in a single request and removes finalizer",
 			stage: &kargoapi.Stage{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:       "test-stage",
@@ -1036,43 +1133,13 @@ func TestControlFlowStageReconciler_handleDelete(t *testing.T) {
 					Finalizers: []string{kargoapi.FinalizerName},
 				},
 			},
-			assertions: func(t *testing.T, _ []clearCall, stage *kargoapi.Stage, err error) {
-				require.NoError(t, err)
-				assert.False(t, controllerutil.ContainsFinalizer(stage, kargoapi.FinalizerName))
-			},
-		},
-		{
-			name: "clears Freight status and removes finalizer",
-			stage: &kargoapi.Stage{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:       "test-stage",
-					Namespace:  "default",
-					Finalizers: []string{kargoapi.FinalizerName},
-				},
-			},
-			freight: []*kargoapi.Freight{
-				{
-					ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "verified"},
-					Status: kargoapi.FreightStatus{
-						VerifiedIn: map[string]kargoapi.VerifiedStage{"test-stage": {}},
-					},
-				},
-				{
-					ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "approved"},
-					Status: kargoapi.FreightStatus{
-						ApprovedFor: map[string]kargoapi.ApprovedStage{"test-stage": {}},
-					},
-				},
-			},
-			assertions: func(t *testing.T, clearCalls []clearCall, stage *kargoapi.Stage, err error) {
+			assertions: func(t *testing.T, clearCalls []clearStageCall, stage *kargoapi.Stage, err error) {
 				require.NoError(t, err)
 				assert.False(t, controllerutil.ContainsFinalizer(stage, kargoapi.FinalizerName))
 
-				// Each referencing Freight is cleared of the Stage.
-				assert.Equal(t, []clearCall{
-					{"default", "verified", "test-stage"},
-					{"default", "approved", "test-stage"},
-				}, clearCalls)
+				// Selecting the Freight that reference the Stage is the API
+				// server's job; the reconciler asks for the Stage to be cleared once.
+				require.Equal(t, []clearStageCall{{"default", "test-stage"}}, clearCalls)
 			},
 		},
 		{
@@ -1084,8 +1151,9 @@ func TestControlFlowStageReconciler_handleDelete(t *testing.T) {
 					Finalizers: []string{kargoapi.FinalizerName},
 				},
 			},
-			listReferencingStageErr: errors.New("something went wrong"),
-			assertions: func(t *testing.T, _ []clearCall, stage *kargoapi.Stage, err error) {
+			clearErr: errors.New("something went wrong"),
+			assertions: func(t *testing.T, _ []clearStageCall, stage *kargoapi.Stage, err error) {
+				require.ErrorContains(t, err, "error clearing Stage")
 				require.ErrorContains(t, err, "something went wrong")
 				assert.True(t, controllerutil.ContainsFinalizer(stage, kargoapi.FinalizerName))
 			},
@@ -1110,7 +1178,7 @@ func TestControlFlowStageReconciler_handleDelete(t *testing.T) {
 					return fmt.Errorf("failed to remove finalizer")
 				},
 			},
-			assertions: func(t *testing.T, _ []clearCall, _ *kargoapi.Stage, err error) {
+			assertions: func(t *testing.T, _ []clearStageCall, _ *kargoapi.Stage, err error) {
 				require.ErrorContains(t, err, "failed to remove finalizer")
 			},
 		},
@@ -1124,18 +1192,11 @@ func TestControlFlowStageReconciler_handleDelete(t *testing.T) {
 				WithInterceptorFuncs(tt.interceptor).
 				Build()
 
-			referencing := make([]kargoapi.Freight, len(tt.freight))
-			for i, f := range tt.freight {
-				referencing[i] = *f
-			}
-			var clearCalls []clearCall
+			var clearCalls []clearStageCall
 			mockClient := &testutil.MockFreightClient{
-				ListFreightReferencingStageFun: func(context.Context, string, string) ([]kargoapi.Freight, error) {
-					return referencing, tt.listReferencingStageErr
-				},
-				ClearFreightStageStatusFun: func(_ context.Context, project, freight, stage string) error {
-					clearCalls = append(clearCalls, clearCall{project, freight, stage})
-					return nil
+				ClearStageFreightsFun: func(_ context.Context, project, stage string) error {
+					clearCalls = append(clearCalls, clearStageCall{project, stage})
+					return tt.clearErr
 				},
 			}
 

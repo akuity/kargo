@@ -455,7 +455,7 @@ func TestListFreightAvailableToStage(t *testing.T) {
 	}
 }
 
-// fakeFreightWarehouseLister is a test-only FreightWarehouseLister that returns
+// fakeFreightWarehouseLister is a test-only FreightLister that returns
 // the Freight fixtures configured for each Warehouse as-is, without applying
 // any filtering.
 type fakeFreightWarehouseLister struct {
@@ -463,16 +463,16 @@ type fakeFreightWarehouseLister struct {
 	err                error
 }
 
-func (f *fakeFreightWarehouseLister) ListFreightFromWarehouse(
+func (f *fakeFreightWarehouseLister) ListFreightFromOrigin(
 	_ context.Context,
 	_ string,
-	warehouse string,
-	_ *freightapi.ListWarehouseFreightOptions,
+	origin kargoapi.FreightOrigin,
+	_ *freightapi.ListFreightFromOriginOptions,
 ) ([]kargoapi.Freight, error) {
 	if f.err != nil {
 		return nil, f.err
 	}
-	return f.freightByWarehouse[warehouse], nil
+	return f.freightByWarehouse[origin.Name], nil
 }
 
 func TestReverifyStageFreight(t *testing.T) {
@@ -984,19 +984,22 @@ func TestListFreightAvailableToStageViaClient(t *testing.T) {
 	}
 
 	t.Run("resolves each Warehouse via the client and combines, de-duped", func(t *testing.T) {
-		listFreightFromWarehouseCalls := []listFreightFromWarehouseCall{}
+		listFreightFromOriginCalls := []listFreightFromOriginCall{}
 		mockClient := &testutil.MockFreightClient{
-			ListFreightFromWarehouseFun: func(_ context.Context, _, warehouse string,
-				opts *freightapi.ListWarehouseFreightOptions,
+			ListFreightFromOriginFun: func(
+				_ context.Context,
+				_ string,
+				origin kargoapi.FreightOrigin,
+				opts *freightapi.ListFreightFromOriginOptions,
 			) ([]kargoapi.Freight, error) {
-				listFreightFromWarehouseCalls = append(listFreightFromWarehouseCalls,
-					listFreightFromWarehouseCall{project, warehouse, opts})
-				if warehouse == "wh1" {
+				listFreightFromOriginCalls = append(listFreightFromOriginCalls,
+					listFreightFromOriginCall{project, origin, opts})
+				if origin.Name == "wh1" {
 					return []kargoapi.Freight{
 						freight("wh1", "f1"), freight("wh1", "shared"),
 					}, nil
 				}
-				if warehouse == "wh2" {
+				if origin.Name == "wh2" {
 					return []kargoapi.Freight{
 						freight("wh2", "f2"), freight("wh2", "shared"),
 					}, nil
@@ -1013,18 +1016,24 @@ func TestListFreightAvailableToStageViaClient(t *testing.T) {
 		}
 		require.Equal(t, []string{"f1", "f2", "shared"}, names)
 
-		require.Len(t, listFreightFromWarehouseCalls, 2)
+		require.Len(t, listFreightFromOriginCalls, 2)
 		// Direct input -> nil options.
-		require.Equal(t, project, listFreightFromWarehouseCalls[0].project)
-		require.Equal(t, "wh1", listFreightFromWarehouseCalls[0].warehouse)
-		require.Nil(t, listFreightFromWarehouseCalls[0].opts)
+		require.Equal(t, project, listFreightFromOriginCalls[0].project)
+		require.Equal(t,
+			kargoapi.FreightOrigin{Kind: kargoapi.FreightOriginKindWarehouse, Name: "wh1"},
+			listFreightFromOriginCalls[0].origin,
+		)
+		require.Nil(t, listFreightFromOriginCalls[0].opts)
 		// Non-direct input -> options mirror ListFreightAvailableToStage.
-		require.Equal(t, project, listFreightFromWarehouseCalls[1].project)
-		require.Equal(t, "wh2", listFreightFromWarehouseCalls[1].warehouse)
-		require.NotNil(t, listFreightFromWarehouseCalls[1].opts)
-		require.Equal(t, stageName, listFreightFromWarehouseCalls[1].opts.ApprovedFor)
-		require.Equal(t, []string{"up"}, listFreightFromWarehouseCalls[1].opts.VerifiedIn)
-		require.Equal(t, time.Hour, listFreightFromWarehouseCalls[1].opts.RequiredSoakTime.Duration)
+		require.Equal(t, project, listFreightFromOriginCalls[1].project)
+		require.Equal(t,
+			kargoapi.FreightOrigin{Kind: kargoapi.FreightOriginKindWarehouse, Name: "wh2"},
+			listFreightFromOriginCalls[1].origin,
+		)
+		require.NotNil(t, listFreightFromOriginCalls[1].opts)
+		require.Equal(t, stageName, listFreightFromOriginCalls[1].opts.ApprovedFor)
+		require.Equal(t, []string{"up"}, listFreightFromOriginCalls[1].opts.VerifiedIn)
+		require.Equal(t, time.Hour, listFreightFromOriginCalls[1].opts.RequiredSoakTime.Duration)
 	})
 
 	t.Run("sets CurrentlyIn for the MatchUpstream selection policy", func(t *testing.T) {
@@ -1043,27 +1052,33 @@ func TestListFreightAvailableToStageViaClient(t *testing.T) {
 			},
 		}
 
-		listFreightFromWarehouseCalls := []listFreightFromWarehouseCall{}
+		listFreightFromOriginCalls := []listFreightFromOriginCall{}
 		mockClient := &testutil.MockFreightClient{
-			ListFreightFromWarehouseFun: func(_ context.Context, project, warehouse string,
-				opts *freightapi.ListWarehouseFreightOptions,
+			ListFreightFromOriginFun: func(
+				_ context.Context,
+				project string,
+				origin kargoapi.FreightOrigin,
+				opts *freightapi.ListFreightFromOriginOptions,
 			) ([]kargoapi.Freight, error) {
-				listFreightFromWarehouseCalls = append(listFreightFromWarehouseCalls,
-					listFreightFromWarehouseCall{project, warehouse, opts})
+				listFreightFromOriginCalls = append(listFreightFromOriginCalls,
+					listFreightFromOriginCall{project, origin, opts})
 				return nil, nil
 			},
 		}
 
 		_, err := ListFreightAvailableToStage(t.Context(), mockClient, matchUpstream)
 		require.NoError(t, err)
-		require.Len(t, listFreightFromWarehouseCalls, 1)
-		require.Equal(t, "up", listFreightFromWarehouseCalls[0].opts.CurrentlyIn)
+		require.Len(t, listFreightFromOriginCalls, 1)
+		require.Equal(t, "up", listFreightFromOriginCalls[0].opts.CurrentlyIn)
 	})
 
 	t.Run("propagates the client error", func(t *testing.T) {
 		mockClient := &testutil.MockFreightClient{
-			ListFreightFromWarehouseFun: func(_ context.Context, _, _ string,
-				_ *freightapi.ListWarehouseFreightOptions,
+			ListFreightFromOriginFun: func(
+				context.Context,
+				string,
+				kargoapi.FreightOrigin,
+				*freightapi.ListFreightFromOriginOptions,
 			) ([]kargoapi.Freight, error) {
 				return nil, errors.New("boom")
 			},
@@ -1073,8 +1088,8 @@ func TestListFreightAvailableToStageViaClient(t *testing.T) {
 	})
 }
 
-type listFreightFromWarehouseCall struct {
-	project   string
-	warehouse string
-	opts      *freightapi.ListWarehouseFreightOptions
+type listFreightFromOriginCall struct {
+	project string
+	origin  kargoapi.FreightOrigin
+	opts    *freightapi.ListFreightFromOriginOptions
 }

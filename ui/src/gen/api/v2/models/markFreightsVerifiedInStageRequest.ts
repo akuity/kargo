@@ -6,7 +6,9 @@
  * OpenAPI spec version: v1alpha1
  */
 
-export interface MarkFreightVerifiedInStageRequest {
+export interface MarkFreightsVerifiedInStageRequest {
+  /** FreightNames is a list of names of freights to be marked as verified in stage */
+  freightNames?: string[];
   /**
    * VerifiedAt is the time at which the Freight was verified in the Stage. It
    * defaults to the time the request is handled.

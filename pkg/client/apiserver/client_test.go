@@ -30,6 +30,7 @@ import (
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/pkg/api/freightapi"
 )
 
 // The client is what the controllers consume it as.
@@ -953,6 +954,8 @@ func TestClientListFreight(t *testing.T) {
 		_ = json.NewEncoder(w).Encode(kargoapi.FreightList{Items: items})
 	}
 
+	var gotOriginKind, gotOriginName string
+	var gotQuery url.Values
 	mux := http.NewServeMux()
 	mux.HandleFunc(
 		"GET /v1beta1/projects/{project}/freight/{freightNameOrAlias}",
@@ -977,24 +980,19 @@ func TestClientListFreight(t *testing.T) {
 		},
 	)
 	mux.HandleFunc(
-		"GET /v1beta1/projects/{project}/stages/{stage}/referencing-freight",
-		func(w http.ResponseWriter, _ *http.Request) { writeList(w, "ref-1", "ref-2") },
-	)
-	mux.HandleFunc(
-		"GET /v1beta1/projects/{project}/stages/{stage}/freight",
+		"GET /v1beta1/projects/{project}/internal/origin/{originKind}/{originName}/freight",
 		func(w http.ResponseWriter, r *http.Request) {
-			if r.PathValue("stage") == "missing" {
+			gotOriginKind = r.PathValue("originKind")
+			gotOriginName = r.PathValue("originName")
+			gotQuery = r.URL.Query()
+			if gotOriginKind != string(kargoapi.FreightOriginKindWarehouse) {
 				w.Header().Set("Content-Type", "application/json")
-				w.WriteHeader(http.StatusNotFound)
-				_ = json.NewEncoder(w).Encode(map[string]string{"error": "stage not found"})
+				w.WriteHeader(http.StatusBadRequest)
+				_ = json.NewEncoder(w).Encode(map[string]string{"error": "unsupported origin kind"})
 				return
 			}
-			writeList(w, "current-1")
+			writeList(w, "wh-1", "wh-2", "wh-3")
 		},
-	)
-	mux.HandleFunc(
-		"GET /v1beta1/projects/{project}/warehouses/{warehouse}/freight",
-		func(w http.ResponseWriter, _ *http.Request) { writeList(w, "wh-1", "wh-2", "wh-3") },
 	)
 	server := httptest.NewServer(mux)
 	t.Cleanup(server.Close)
@@ -1010,21 +1008,55 @@ func TestClientListFreight(t *testing.T) {
 		}
 		return out
 	}
+	origin := kargoapi.FreightOrigin{Kind: kargoapi.FreightOriginKindWarehouse, Name: "wh"}
 
-	t.Run("by current stage", func(t *testing.T) {
-		fs, err := c.ListFreightByCurrentStage(t.Context(), "demo", "test")
-		require.NoError(t, err)
-		require.Equal(t, []string{"current-1"}, names(fs))
-	})
-	t.Run("from warehouse", func(t *testing.T) {
-		fs, err := c.ListFreightFromWarehouse(t.Context(), "demo", "wh", nil)
+	t.Run("from origin without options", func(t *testing.T) {
+		fs, err := c.ListFreightFromOrigin(t.Context(), "demo", origin, nil)
 		require.NoError(t, err)
 		require.Equal(t, []string{"wh-1", "wh-2", "wh-3"}, names(fs))
+		require.Equal(t, "Warehouse", gotOriginKind)
+		require.Equal(t, "wh", gotOriginName)
+		require.Empty(t, gotQuery)
 	})
-	t.Run("referencing stage", func(t *testing.T) {
-		fs, err := c.ListFreightReferencingStage(t.Context(), "demo", "test")
+	t.Run("from origin with empty options", func(t *testing.T) {
+		_, err := c.ListFreightFromOrigin(
+			t.Context(),
+			"demo",
+			origin,
+			&freightapi.ListFreightFromOriginOptions{},
+		)
 		require.NoError(t, err)
-		require.Equal(t, []string{"ref-1", "ref-2"}, names(fs))
+		require.Empty(t, gotQuery)
+	})
+	t.Run("from origin sends options as query parameters", func(t *testing.T) {
+		_, err := c.ListFreightFromOrigin(
+			t.Context(),
+			"demo",
+			origin,
+			&freightapi.ListFreightFromOriginOptions{
+				ApprovedFor:          "downstream",
+				VerifiedIn:           []string{"up-a", "up-b"},
+				CurrentlyIn:          "up-a",
+				AvailabilityStrategy: kargoapi.FreightAvailabilityStrategyAll,
+				RequiredSoakTime:     &metav1.Duration{Duration: 90 * time.Minute},
+			},
+		)
+		require.NoError(t, err)
+		require.Equal(t, "downstream", gotQuery.Get("approvedFor"))
+		require.Equal(t, []string{"up-a", "up-b"}, gotQuery["verifiedIn"])
+		require.Equal(t, "up-a", gotQuery.Get("currentlyIn"))
+		require.Equal(t, "All", gotQuery.Get("availabilityStrategy"))
+		require.Equal(t, "1h30m0s", gotQuery.Get("requiredSoakTime"))
+	})
+	t.Run("from origin surfaces the server's error", func(t *testing.T) {
+		_, err := c.ListFreightFromOrigin(
+			t.Context(),
+			"demo",
+			kargoapi.FreightOrigin{Kind: "Bogus", Name: "wh"},
+			nil,
+		)
+		require.Error(t, err)
+		require.ErrorContains(t, err, "unsupported origin kind")
 	})
 	t.Run("get freight", func(t *testing.T) {
 		f, err := c.GetFreight(t.Context(), "demo", "fr-1")
@@ -1036,11 +1068,6 @@ func TestClientListFreight(t *testing.T) {
 		f, err := c.GetFreight(t.Context(), "demo", "missing")
 		require.NoError(t, err)
 		require.Nil(t, f)
-	})
-	t.Run("surfaces the server's error", func(t *testing.T) {
-		_, err := c.ListFreightByCurrentStage(t.Context(), "demo", "missing")
-		require.Error(t, err)
-		require.ErrorContains(t, err, "stage not found")
 	})
 }
 
@@ -1128,15 +1155,13 @@ func TestClientPatchFreightMetadata(t *testing.T) {
 	})
 }
 
-func TestClientMarkFreightCurrentlyInStage(t *testing.T) {
+func TestClientMarkFreightsCurrentlyInStage(t *testing.T) {
 	t.Parallel()
-
-	origin := kargoapi.FreightOrigin{Kind: kargoapi.FreightOriginKindWarehouse, Name: "wh"}
 
 	var gotStage, gotBody string
 	mux := http.NewServeMux()
 	mux.HandleFunc(
-		"POST /v1beta1/projects/{project}/stages/{stage}/freight",
+		"POST /v1beta1/projects/{project}/internal/stage-freight/{stage}/current",
 		func(w http.ResponseWriter, r *http.Request) {
 			gotStage = r.PathValue("stage")
 			raw, _ := io.ReadAll(r.Body)
@@ -1144,7 +1169,7 @@ func TestClientMarkFreightCurrentlyInStage(t *testing.T) {
 			if gotStage == "missing" {
 				w.Header().Set("Content-Type", "application/json")
 				w.WriteHeader(http.StatusNotFound)
-				_ = json.NewEncoder(w).Encode(map[string]string{"error": "freight not found"})
+				_ = json.NewEncoder(w).Encode(map[string]string{"error": "project not found"})
 				return
 			}
 			w.WriteHeader(http.StatusOK)
@@ -1157,68 +1182,125 @@ func TestClientMarkFreightCurrentlyInStage(t *testing.T) {
 	c, err := New(t.Context(), validConfig(server.URL), cp.config())
 	require.NoError(t, err)
 
-	t.Run("sends the Freight for the Stage", func(t *testing.T) {
-		err := c.MarkFreightCurrentlyInStage(t.Context(), "demo", "fr-1", origin, "test")
+	t.Run("sends the Freight names for the Stage", func(t *testing.T) {
+		err := c.MarkFreightsCurrentlyInStage(t.Context(), "demo", "test", []string{"fr-1", "fr-2"})
+		require.NoError(t, err)
+		require.Equal(t, "test", gotStage)
+		require.JSONEq(t, `{"freightNames":["fr-1","fr-2"]}`, gotBody)
+	})
+	t.Run("sends an empty request for no Freight", func(t *testing.T) {
+		// An empty list asks the API server to unmark all Freight currently in
+		// the Stage.
+		err := c.MarkFreightsCurrentlyInStage(t.Context(), "demo", "test", nil)
+		require.NoError(t, err)
+		require.Equal(t, "test", gotStage)
+		require.JSONEq(t, `{}`, gotBody)
+	})
+	t.Run("surfaces the server's error", func(t *testing.T) {
+		err := c.MarkFreightsCurrentlyInStage(t.Context(), "demo", "missing", []string{"fr-1"})
+		require.Error(t, err)
+		require.ErrorContains(t, err, "project not found")
+	})
+}
+
+func TestClientClearStageFreights(t *testing.T) {
+	t.Parallel()
+
+	var gotProject, gotStage string
+	mux := http.NewServeMux()
+	mux.HandleFunc(
+		"DELETE /v1beta1/projects/{project}/internal/stage-freight/{stage}",
+		func(w http.ResponseWriter, r *http.Request) {
+			gotProject = r.PathValue("project")
+			gotStage = r.PathValue("stage")
+			if gotStage == "missing" {
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(http.StatusNotFound)
+				_ = json.NewEncoder(w).Encode(map[string]string{"error": "project not found"})
+				return
+			}
+			w.WriteHeader(http.StatusOK)
+		},
+	)
+	server := httptest.NewServer(mux)
+	t.Cleanup(server.Close)
+
+	cp := newControlPlane(t, http.StatusOK)
+	c, err := New(t.Context(), validConfig(server.URL), cp.config())
+	require.NoError(t, err)
+
+	t.Run("addresses the Stage by path", func(t *testing.T) {
+		err := c.ClearStageFreights(t.Context(), "demo", "test")
+		require.NoError(t, err)
+		require.Equal(t, "demo", gotProject)
+		require.Equal(t, "test", gotStage)
+	})
+	t.Run("surfaces the server's error", func(t *testing.T) {
+		err := c.ClearStageFreights(t.Context(), "demo", "missing")
+		require.Error(t, err)
+		require.ErrorContains(t, err, "project not found")
+	})
+}
+
+func TestClientMarkFreightsVerifiedInStage(t *testing.T) {
+	t.Parallel()
+
+	var gotStage, gotBody string
+	mux := http.NewServeMux()
+	mux.HandleFunc(
+		"POST /v1beta1/projects/{project}/internal/stage-freight/{stage}/verified",
+		func(w http.ResponseWriter, r *http.Request) {
+			gotStage = r.PathValue("stage")
+			raw, _ := io.ReadAll(r.Body)
+			gotBody = string(raw)
+			if gotStage == "missing" {
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(http.StatusNotFound)
+				_ = json.NewEncoder(w).Encode(map[string]string{"error": "project not found"})
+				return
+			}
+			w.WriteHeader(http.StatusOK)
+		},
+	)
+	server := httptest.NewServer(mux)
+	t.Cleanup(server.Close)
+
+	cp := newControlPlane(t, http.StatusOK)
+	c, err := New(t.Context(), validConfig(server.URL), cp.config())
+	require.NoError(t, err)
+
+	t.Run("sends the Freight names and verification time", func(t *testing.T) {
+		verifiedAt := time.Date(2026, 11, 20, 10, 0, 0, 0, time.UTC)
+		err := c.MarkFreightsVerifiedInStage(
+			t.Context(),
+			"demo",
+			"test",
+			[]string{"fr-1", "fr-2"},
+			verifiedAt,
+		)
 		require.NoError(t, err)
 		require.Equal(t, "test", gotStage)
 		require.JSONEq(
 			t,
-			`{"freight":"fr-1","origin":{"kind":"Warehouse","name":"wh"}}`,
+			`{"freightNames":["fr-1","fr-2"],"verifiedAt":"2026-11-20T10:00:00Z"}`,
 			gotBody,
 		)
 	})
-	t.Run("surfaces the server's error", func(t *testing.T) {
-		err := c.MarkFreightCurrentlyInStage(t.Context(), "demo", "fr-1", origin, "missing")
-		require.Error(t, err)
-		require.ErrorContains(t, err, "freight not found")
-	})
-}
-
-func TestClientMarkFreightVerifiedInStage(t *testing.T) {
-	t.Parallel()
-
-	var gotFreight, gotStage, gotBody string
-	mux := http.NewServeMux()
-	mux.HandleFunc(
-		"POST /v1beta1/projects/{project}/internal/freight/{freightName}/status/stage/{stage}",
-		func(w http.ResponseWriter, r *http.Request) {
-			gotFreight = r.PathValue("freightName")
-			gotStage = r.PathValue("stage")
-			raw, _ := io.ReadAll(r.Body)
-			gotBody = string(raw)
-			if gotFreight == "missing" {
-				w.Header().Set("Content-Type", "application/json")
-				w.WriteHeader(http.StatusNotFound)
-				_ = json.NewEncoder(w).Encode(map[string]string{"error": "freight not found"})
-				return
-			}
-			w.WriteHeader(http.StatusOK)
-		},
-	)
-	server := httptest.NewServer(mux)
-	t.Cleanup(server.Close)
-
-	cp := newControlPlane(t, http.StatusOK)
-	c, err := New(t.Context(), validConfig(server.URL), cp.config())
-	require.NoError(t, err)
-
-	t.Run("sends the verification time", func(t *testing.T) {
-		verifiedAt := time.Date(2026, 11, 20, 10, 0, 0, 0, time.UTC)
-		err := c.MarkFreightVerifiedInStage(t.Context(), "demo", "fr-1", "test", verifiedAt)
+	t.Run("sends the verification time in UTC", func(t *testing.T) {
+		verifiedAt := time.Date(2026, 11, 20, 12, 0, 0, 0, time.FixedZone("UTC+2", 2*60*60))
+		err := c.MarkFreightsVerifiedInStage(t.Context(), "demo", "test", []string{"fr-1"}, verifiedAt)
 		require.NoError(t, err)
-		require.Equal(t, "fr-1", gotFreight)
-		require.Equal(t, "test", gotStage)
-		require.JSONEq(t, `{"verifiedAt":"2026-11-20T10:00:00Z"}`, gotBody)
+		require.JSONEq(t, `{"freightNames":["fr-1"],"verifiedAt":"2026-11-20T10:00:00Z"}`, gotBody)
 	})
 	t.Run("omits a zero verification time", func(t *testing.T) {
-		err := c.MarkFreightVerifiedInStage(t.Context(), "demo", "fr-1", "test", time.Time{})
+		err := c.MarkFreightsVerifiedInStage(t.Context(), "demo", "test", []string{"fr-1"}, time.Time{})
 		require.NoError(t, err)
-		require.JSONEq(t, `{}`, gotBody)
+		require.JSONEq(t, `{"freightNames":["fr-1"]}`, gotBody)
 	})
 	t.Run("surfaces the server's error", func(t *testing.T) {
-		err := c.MarkFreightVerifiedInStage(t.Context(), "demo", "missing", "test", time.Time{})
+		err := c.MarkFreightsVerifiedInStage(t.Context(), "demo", "missing", []string{"fr-1"}, time.Time{})
 		require.Error(t, err)
-		require.ErrorContains(t, err, "freight not found")
+		require.ErrorContains(t, err, "project not found")
 	})
 }
 

@@ -41,19 +41,14 @@ func TestSyncFreight_metrics(t *testing.T) {
 	// without the mock mutating state.
 	getFreight := freight
 	mockClient := &testutil.MockFreightClient{
-		ListFreightByCurrentStageFun: func(context.Context, string, string) ([]kargoapi.Freight, error) {
-			return nil, nil
-		},
 		GetFreightFun: func(context.Context, string, string) (*kargoapi.Freight, error) {
 			return getFreight, nil
 		},
-		MarkFreightCurrentlyInStageFun: func(
-			context.Context, string, string, kargoapi.FreightOrigin, string,
-		) error {
+		MarkFreightsCurrentlyInStageFun: func(context.Context, string, string, []string) error {
 			return nil
 		},
-		MarkFreightVerifiedInStageFun: func(
-			context.Context, string, string, string, time.Time,
+		MarkFreightsVerifiedInStageFun: func(
+			context.Context, string, string, []string, time.Time,
 		) error {
 			return nil
 		},

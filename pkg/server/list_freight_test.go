@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -19,7 +20,6 @@ import (
 const (
 	listFreightTestProject   = "fake-project"
 	listFreightTestWarehouse = "fake-warehouse"
-	listFreightTestStage     = "fake-stage"
 )
 
 // freightWithIndexes returns a client builder seeded with the Freight field
@@ -45,142 +45,113 @@ func freightFromWarehouse(name, warehouse string) *kargoapi.Freight {
 	}
 }
 
-// freightListNames decodes a FreightList response body and returns the set of
-// Freight names it contains.
-func freightListNames(t *testing.T, w *httptest.ResponseRecorder) map[string]struct{} {
+// freightListNames decodes a FreightList response body and returns the names
+// of the Freight it contains, in response order.
+func freightListNames(t *testing.T, w *httptest.ResponseRecorder) []string {
 	t.Helper()
 	list := &kargoapi.FreightList{}
 	require.NoError(t, json.Unmarshal(w.Body.Bytes(), list))
-	names := make(map[string]struct{}, len(list.Items))
+	names := make([]string, 0, len(list.Items))
 	for _, f := range list.Items {
-		names[f.Name] = struct{}{}
+		names = append(names, f.Name)
 	}
 	return names
 }
 
-func Test_server_listFreightByCurrentStage(t *testing.T) {
-	project := &kargoapi.Project{ObjectMeta: metav1.ObjectMeta{Name: listFreightTestProject}}
-	stage := &kargoapi.Stage{
-		ObjectMeta: metav1.ObjectMeta{Namespace: listFreightTestProject, Name: listFreightTestStage},
-	}
-	freightIn := &kargoapi.Freight{
-		ObjectMeta: metav1.ObjectMeta{Namespace: listFreightTestProject, Name: "in-stage"},
-		Status: kargoapi.FreightStatus{
-			CurrentlyIn: map[string]kargoapi.CurrentStage{listFreightTestStage: {}},
-		},
-	}
-	freightElsewhere := &kargoapi.Freight{
-		ObjectMeta: metav1.ObjectMeta{Namespace: listFreightTestProject, Name: "in-other-stage"},
-		Status: kargoapi.FreightStatus{
-			CurrentlyIn: map[string]kargoapi.CurrentStage{"other-stage": {}},
-		},
-	}
-	url := "/v1beta1/projects/" + listFreightTestProject + "/stages/" + listFreightTestStage + "/freight"
-
-	testRESTEndpoint(
-		t, &config.ServerConfig{},
-		http.MethodGet, url,
-		[]restTestCase{
-			{
-				// The endpoint no longer resolves the Stage resource, so a
-				// missing Stage yields an empty list rather than a 404.
-				name:          "missing Stage yields an empty list",
-				clientBuilder: freightWithIndexes(t).WithObjects(project),
-				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
-					require.Equal(t, http.StatusOK, w.Code)
-					require.Empty(t, freightListNames(t, w))
-				},
-			},
-			{
-				name: "returns only Freight currently in the Stage",
-				clientBuilder: freightWithIndexes(t).
-					WithObjects(project, stage, freightIn, freightElsewhere),
-				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
-					require.Equal(t, http.StatusOK, w.Code)
-					names := freightListNames(t, w)
-					require.Contains(t, names, "in-stage")
-					require.NotContains(t, names, "in-other-stage")
-				},
-			},
-		},
+func Test_server_listFreightFromOrigin(t *testing.T) {
+	const (
+		downstreamStage = "downstream"
+		upstreamA       = "up-a"
+		upstreamB       = "up-b"
 	)
-}
-
-func Test_server_listFreightReferencingStage(t *testing.T) {
 	project := &kargoapi.Project{ObjectMeta: metav1.ObjectMeta{Name: listFreightTestProject}}
-	stage := &kargoapi.Stage{
-		ObjectMeta: metav1.ObjectMeta{Namespace: listFreightTestProject, Name: listFreightTestStage},
+
+	plain := freightFromWarehouse("plain", listFreightTestWarehouse)
+
+	approved := freightFromWarehouse("approved", listFreightTestWarehouse)
+	approved.Status.ApprovedFor = map[string]kargoapi.ApprovedStage{downstreamStage: {}}
+
+	verifiedA := freightFromWarehouse("verified-a", listFreightTestWarehouse)
+	verifiedA.Status.VerifiedIn = map[string]kargoapi.VerifiedStage{upstreamA: {}}
+
+	verifiedAB := freightFromWarehouse("verified-ab", listFreightTestWarehouse)
+	verifiedAB.Status.VerifiedIn = map[string]kargoapi.VerifiedStage{
+		upstreamA: {},
+		upstreamB: {},
 	}
-	verified := &kargoapi.Freight{
-		ObjectMeta: metav1.ObjectMeta{Namespace: listFreightTestProject, Name: "verified"},
-		Status: kargoapi.FreightStatus{
-			VerifiedIn: map[string]kargoapi.VerifiedStage{listFreightTestStage: {}},
-		},
+
+	// Verified in and currently in upstream A, but only just arrived, so it has
+	// not soaked for any meaningful length of time.
+	now := metav1.Now()
+	currentA := freightFromWarehouse("current-a", listFreightTestWarehouse)
+	currentA.Status.VerifiedIn = map[string]kargoapi.VerifiedStage{upstreamA: {}}
+	currentA.Status.CurrentlyIn = map[string]kargoapi.CurrentStage{upstreamA: {Since: &now}}
+
+	soakedA := freightFromWarehouse("soaked-a", listFreightTestWarehouse)
+	soakedA.Status.VerifiedIn = map[string]kargoapi.VerifiedStage{
+		upstreamA: {LongestCompletedSoak: &metav1.Duration{Duration: 2 * time.Hour}},
 	}
-	approved := &kargoapi.Freight{
-		ObjectMeta: metav1.ObjectMeta{Namespace: listFreightTestProject, Name: "approved"},
-		Status: kargoapi.FreightStatus{
-			ApprovedFor: map[string]kargoapi.ApprovedStage{listFreightTestStage: {}},
-		},
+
+	// Matches every filter, but originates from another Warehouse.
+	elsewhere := freightFromWarehouse("elsewhere", "other-warehouse")
+	elsewhere.Status.ApprovedFor = map[string]kargoapi.ApprovedStage{downstreamStage: {}}
+	elsewhere.Status.VerifiedIn = map[string]kargoapi.VerifiedStage{upstreamA: {}}
+
+	allFreight := func() *fake.ClientBuilder {
+		return freightWithIndexes(t).WithObjects(
+			project, plain, approved, verifiedA, verifiedAB, currentA, soakedA, elsewhere,
+		)
 	}
-	unrelated := &kargoapi.Freight{
-		ObjectMeta: metav1.ObjectMeta{Namespace: listFreightTestProject, Name: "unrelated"},
-		Status: kargoapi.FreightStatus{
-			VerifiedIn: map[string]kargoapi.VerifiedStage{"other-stage": {}},
-		},
-	}
-	url := "/v1beta1/projects/" + listFreightTestProject +
-		"/stages/" + listFreightTestStage + "/referencing-freight"
+
+	baseURL := "/v1beta1/projects/" + listFreightTestProject +
+		"/internal/origin/" + string(kargoapi.FreightOriginKindWarehouse) +
+		"/" + listFreightTestWarehouse + "/freight"
 
 	testRESTEndpoint(
 		t, &config.ServerConfig{},
-		http.MethodGet, url,
+		http.MethodGet, baseURL,
 		[]restTestCase{
 			{
-				// The endpoint no longer resolves the Stage resource, so a
-				// missing Stage yields an empty list rather than a 404.
-				name:          "missing Stage yields an empty list",
-				clientBuilder: freightWithIndexes(t).WithObjects(project),
+				name:          "Project not found",
+				clientBuilder: freightWithIndexes(t),
 				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
-					require.Equal(t, http.StatusOK, w.Code)
-					require.Empty(t, freightListNames(t, w))
+					require.Equal(t, http.StatusNotFound, w.Code)
 				},
 			},
 			{
-				name: "returns Freight verified in or approved for the Stage",
-				clientBuilder: freightWithIndexes(t).
-					WithObjects(project, stage, verified, approved, unrelated),
+				name: "unknown origin kind",
+				url: "/v1beta1/projects/" + listFreightTestProject +
+					"/internal/origin/Bogus/" + listFreightTestWarehouse + "/freight",
+				clientBuilder: allFreight(),
 				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
-					require.Equal(t, http.StatusOK, w.Code)
-					names := freightListNames(t, w)
-					require.Contains(t, names, "verified")
-					require.Contains(t, names, "approved")
-					require.NotContains(t, names, "unrelated")
+					require.Equal(t, http.StatusBadRequest, w.Code)
 				},
 			},
-		},
-	)
-}
-
-func Test_server_listFreightFromWarehouse(t *testing.T) {
-	project := &kargoapi.Project{ObjectMeta: metav1.ObjectMeta{Name: listFreightTestProject}}
-	warehouse := &kargoapi.Warehouse{
-		ObjectMeta: metav1.ObjectMeta{Namespace: listFreightTestProject, Name: listFreightTestWarehouse},
-	}
-	f1 := freightFromWarehouse("f1", listFreightTestWarehouse)
-	f2 := freightFromWarehouse("f2", listFreightTestWarehouse)
-	other := freightFromWarehouse("other", "other-warehouse")
-	url := "/v1beta1/projects/" + listFreightTestProject +
-		"/warehouses/" + listFreightTestWarehouse + "/freight"
-
-	testRESTEndpoint(
-		t, &config.ServerConfig{},
-		http.MethodGet, url,
-		[]restTestCase{
 			{
-				// The endpoint no longer resolves the Warehouse resource, so a
+				name:          "invalid requiredSoakTime",
+				url:           baseURL + "?verifiedIn=" + upstreamA + "&requiredSoakTime=nope",
+				clientBuilder: allFreight(),
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
+					require.Equal(t, http.StatusBadRequest, w.Code)
+					require.Contains(t, w.Body.String(), "invalid requiredSoakTime")
+				},
+			},
+			{
+				name:          "unsupported availabilityStrategy",
+				url:           baseURL + "?verifiedIn=" + upstreamA + "&availabilityStrategy=Bogus",
+				clientBuilder: allFreight(),
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
+					require.Equal(t, http.StatusBadRequest, w.Code)
+					require.Contains(t, w.Body.String(), "unsupported AvailabilityStrategy")
+				},
+			},
+			{
+				// The endpoint does not resolve the Warehouse resource, so a
 				// missing Warehouse yields an empty list rather than a 404.
-				name:          "missing Warehouse yields an empty list",
+				name: "missing Warehouse yields an empty list",
+				url: "/v1beta1/projects/" + listFreightTestProject +
+					"/internal/origin/" + string(kargoapi.FreightOriginKindWarehouse) +
+					"/missing-warehouse/freight",
 				clientBuilder: freightWithIndexes(t).WithObjects(project),
 				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
 					require.Equal(t, http.StatusOK, w.Code)
@@ -188,15 +159,72 @@ func Test_server_listFreightFromWarehouse(t *testing.T) {
 				},
 			},
 			{
-				name: "returns only Freight from the Warehouse",
-				clientBuilder: freightWithIndexes(t).
-					WithObjects(project, warehouse, f1, f2, other),
+				name:          "no filters returns all Freight from the origin",
+				clientBuilder: allFreight(),
 				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
 					require.Equal(t, http.StatusOK, w.Code)
-					names := freightListNames(t, w)
-					require.Contains(t, names, "f1")
-					require.Contains(t, names, "f2")
-					require.NotContains(t, names, "other")
+					require.Equal(t,
+						[]string{"approved", "current-a", "plain", "soaked-a", "verified-a", "verified-ab"},
+						freightListNames(t, w),
+					)
+				},
+			},
+			{
+				name:          "approvedFor",
+				url:           baseURL + "?approvedFor=" + downstreamStage,
+				clientBuilder: allFreight(),
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
+					require.Equal(t, http.StatusOK, w.Code)
+					require.Equal(t, []string{"approved"}, freightListNames(t, w))
+				},
+			},
+			{
+				name:          "approvedFor is OR'ed with verifiedIn",
+				url:           baseURL + "?approvedFor=" + downstreamStage + "&verifiedIn=" + upstreamB,
+				clientBuilder: allFreight(),
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
+					require.Equal(t, http.StatusOK, w.Code)
+					require.Equal(t, []string{"approved", "verified-ab"}, freightListNames(t, w))
+				},
+			},
+			{
+				name:          "repeated verifiedIn defaults to OneOf",
+				url:           baseURL + "?verifiedIn=" + upstreamA + "&verifiedIn=" + upstreamB,
+				clientBuilder: allFreight(),
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
+					require.Equal(t, http.StatusOK, w.Code)
+					require.Equal(t,
+						[]string{"current-a", "soaked-a", "verified-a", "verified-ab"},
+						freightListNames(t, w),
+					)
+				},
+			},
+			{
+				name: "repeated verifiedIn with the All availabilityStrategy",
+				url: baseURL + "?verifiedIn=" + upstreamA + "&verifiedIn=" + upstreamB +
+					"&availabilityStrategy=" + string(kargoapi.FreightAvailabilityStrategyAll),
+				clientBuilder: allFreight(),
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
+					require.Equal(t, http.StatusOK, w.Code)
+					require.Equal(t, []string{"verified-ab"}, freightListNames(t, w))
+				},
+			},
+			{
+				name:          "currentlyIn",
+				url:           baseURL + "?verifiedIn=" + upstreamA + "&currentlyIn=" + upstreamA,
+				clientBuilder: allFreight(),
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
+					require.Equal(t, http.StatusOK, w.Code)
+					require.Equal(t, []string{"current-a"}, freightListNames(t, w))
+				},
+			},
+			{
+				name:          "requiredSoakTime",
+				url:           baseURL + "?verifiedIn=" + upstreamA + "&requiredSoakTime=1h",
+				clientBuilder: allFreight(),
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
+					require.Equal(t, http.StatusOK, w.Code)
+					require.Equal(t, []string{"soaked-a"}, freightListNames(t, w))
 				},
 			},
 		},

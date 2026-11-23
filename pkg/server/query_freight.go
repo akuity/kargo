@@ -219,7 +219,7 @@ func (s *server) queryFreight(c *gin.Context) {
 		}
 		// TODO: this needs to move to a DB lister
 		freight, err = api.ListFreightAvailableToStage(
-			ctx, &freightapi.K8sFreightWarehouseLister{Client: s.client}, stage)
+			ctx, &freightapi.K8sFreightLister{Client: s.client}, stage)
 		if err != nil {
 			_ = c.Error(fmt.Errorf("get available freight for stage: %w", err))
 			return

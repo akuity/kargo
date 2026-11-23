@@ -16,23 +16,36 @@ import (
 )
 
 // TODO: this will be removed when moving freights to DB
-type K8sFreightWarehouseLister struct{ Client client.Client }
+type K8sFreightLister struct{ Client client.Client }
 
-func (lister *K8sFreightWarehouseLister) ListFreightFromWarehouse(
+func (lister *K8sFreightLister) ListFreightFromOrigin(
 	ctx context.Context,
-	project, warehouse string,
-	opts *ListWarehouseFreightOptions,
+	project string,
+	origin kargoapi.FreightOrigin,
+	opts *ListFreightFromOriginOptions,
 ) ([]kargoapi.Freight, error) {
-	return ListFreightFromWarehouse(ctx, lister.Client, project, warehouse, opts)
+	return ListFreightFromOrigin(ctx, lister.Client, project, origin, opts)
 }
 
-// ListWarehouseFreightOptions is a struct that can be used to specify filtering
+type FreightLister interface {
+	ListFreightFromOrigin(
+		ctx context.Context,
+		project string,
+		origin kargoapi.FreightOrigin,
+		opts *ListFreightFromOriginOptions,
+	) ([]kargoapi.Freight, error)
+}
+
+var _ FreightLister = (*K8sFreightLister)(nil)
+
+// FIXME: rename Warehouse to Origin
+// ListFreightFromOriginOptions is a struct that can be used to specify filtering
 // criteria when listing Freight resources that originated from a Warehouse.
 //
 // +protobuf=false
 // +k8s:deepcopy-gen=false
 // +k8s:openapi-gen=false
-type ListWarehouseFreightOptions struct {
+type ListFreightFromOriginOptions struct {
 	// ApprovedFor names a Stage for which all Freight resources that have been
 	// approved for that Stage should be included in the list results.
 	//
@@ -40,7 +53,6 @@ type ListWarehouseFreightOptions struct {
 	ApprovedFor string
 	// VerifiedIn names zero or more Stages for which all Freight resources that
 	// have been verified for those Stages should be included in the list results
-	// AS long as they were verified before the VerifiedBefore time (if set).
 	//
 	// IMPORTANT: This is OR'ed with the ApprovedFor field.
 	VerifiedIn []string
@@ -51,8 +63,6 @@ type ListWarehouseFreightOptions struct {
 	// AvailabilityStrategy specifies the semantics for how Freight is determined
 	// to be available. If not set, the default is to consider Freight available
 	// if it has been verified in any of the provided VerifiedIn stages.
-	// IMPORTANT: This is also applied to Freight matched using the VerifiedBefore
-	// condition.
 	AvailabilityStrategy kargoapi.FreightAvailabilityStrategy
 
 	// CurrentlyIn optionally specifies a Stage in which the Freight must
@@ -204,26 +214,27 @@ func ListFreightReferencingStage(
 	return freight, nil
 }
 
-// ListFreightFromWarehouse returns a list of all Freight resources that
-// originated from the named Warehouse in the given project (namespace). It takes
-// the Warehouse's name and project rather than a *Warehouse because those are the
-// only values it needs, which lets callers that only know the name (e.g. a
-// Freight origin) avoid fetching the Warehouse resource.
-func ListFreightFromWarehouse(
+// ListFreightFromOrigin returns a list of all Freight resources that
+// originated from the origin in the given project (namespace).
+func ListFreightFromOrigin(
 	ctx context.Context,
 	c client.Client,
 	project string,
-	warehouseName string,
-	opts *ListWarehouseFreightOptions,
+	origin kargoapi.FreightOrigin,
+	opts *ListFreightFromOriginOptions,
 ) ([]kargoapi.Freight, error) {
 	if opts == nil {
-		opts = &ListWarehouseFreightOptions{}
+		opts = &ListFreightFromOriginOptions{}
 	}
 
 	// Common selectors we'll use a few times in the code that follows:
 
-	// Selects Freight from a specific Warehouse
-	warehouseSelector := fields.OneTermEqualSelector("warehouse", warehouseName)
+	var originSelector fields.Selector
+	if origin.Kind != kargoapi.FreightOriginKindWarehouse {
+		// TODO: handle other origins when implemened
+		return nil, fmt.Errorf("unsupported origin kind %q", origin.Kind)
+	}
+	originSelector = fields.OneTermEqualSelector("warehouse", origin.Name)
 
 	// Selects Freight currently used by a specific Stage
 	var currentlyInSelector fields.Selector
@@ -235,9 +246,9 @@ func ListFreightFromWarehouse(
 	// results we will merge and de-dupe.
 	fieldSelectors := make([]fields.Selector, 0)
 	if opts.ApprovedFor == "" && len(opts.VerifiedIn) == 0 {
-		// Just list all Freight resources that originated from the Warehouse
+		// Just list all Freight resources that originated from the Origin
 		sels := make([]fields.Selector, 1, 2)
-		sels[0] = warehouseSelector
+		sels[0] = originSelector
 		if currentlyInSelector != nil {
 			sels = append(sels, currentlyInSelector)
 		}
@@ -246,7 +257,7 @@ func ListFreightFromWarehouse(
 	if opts.ApprovedFor != "" {
 		// List all Freight resources that are approved for the specified Stage
 		sels := make([]fields.Selector, 2, 3)
-		sels[0] = warehouseSelector
+		sels[0] = originSelector
 		sels[1] = fields.OneTermEqualSelector("approvedFor", opts.ApprovedFor)
 		if currentlyInSelector != nil {
 			sels = append(sels, currentlyInSelector)
@@ -260,7 +271,7 @@ func ListFreightFromWarehouse(
 	case kargoapi.FreightAvailabilityStrategyAll:
 		// Query for Freight that is verified in ALL the VerifiedIn stages.
 		sels := make([]fields.Selector, 1, len(opts.VerifiedIn)+2)
-		sels[0] = warehouseSelector
+		sels[0] = originSelector
 		for _, stage := range opts.VerifiedIn {
 			sels = append(
 				sels,
@@ -275,7 +286,7 @@ func ListFreightFromWarehouse(
 		// Query for Freight that is verified in ANY of the VerifiedIn stages.
 		for _, stage := range opts.VerifiedIn {
 			sels := make([]fields.Selector, 2, 3)
-			sels[0] = warehouseSelector
+			sels[0] = originSelector
 			sels[1] = fields.OneTermEqualSelector("verifiedIn", stage)
 			if currentlyInSelector != nil {
 				sels = append(sels, currentlyInSelector)
@@ -301,8 +312,8 @@ func ListFreightFromWarehouse(
 			},
 		); err != nil {
 			return nil, fmt.Errorf(
-				"error listing Freight for Warehouse %q in namespace %q: %w",
-				warehouseName,
+				"error listing Freight for Origin %v in namespace %q: %w",
+				origin,
 				project,
 				err,
 			)

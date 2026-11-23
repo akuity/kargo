@@ -14,57 +14,9 @@ import (
 	libhttp "github.com/akuity/kargo/pkg/http"
 )
 
-// @id ListFreightByCurrentStage
-// @Summary List Freight currently in a Stage
-// @Description List the Freight whose status records it as currently in use by
-// @Description the named Stage. Returns a FreightList resource.
-// @Tags Core, Project-Level
-// @Security BearerAuth
-// @Produce json
-// @Param project path string true "Project name"
-// @Param stage path string true "Stage name"
-// @Success 200 {object} kargoapi.FreightList "FreightList custom resource"
-// @Router /v1beta1/projects/{project}/stages/{stage}/freight [get]
-func (s *server) listFreightByCurrentStage(c *gin.Context) {
-	ctx := c.Request.Context()
-	project := c.Param("project")
-	stageName := c.Param("stage")
-
-	freight, err := freightapi.ListFreightByCurrentStage(ctx, s.client, project, stageName)
-	if err != nil {
-		_ = c.Error(fmt.Errorf("list Freight currently in Stage %q: %w", stageName, err))
-		return
-	}
-	c.JSON(http.StatusOK, &kargoapi.FreightList{Items: freight})
-}
-
-// @id ListFreightReferencingStage
-// @Summary List Freight referencing a Stage
-// @Description List the Freight whose status records the named Stage in its
-// @Description currentlyIn, verifiedIn or approvedFor map. Returns a FreightList resource.
-// @Tags Core, Project-Level
-// @Security BearerAuth
-// @Produce json
-// @Param project path string true "Project name"
-// @Param stage path string true "Stage name"
-// @Success 200 {object} kargoapi.FreightList "FreightList custom resource"
-// @Router /v1beta1/projects/{project}/stages/{stage}/referencing-freight [get]
-func (s *server) listFreightReferencingStage(c *gin.Context) {
-	ctx := c.Request.Context()
-	project := c.Param("project")
-	stageName := c.Param("stage")
-
-	freight, err := freightapi.ListFreightReferencingStage(ctx, s.client, project, stageName)
-	if err != nil {
-		_ = c.Error(fmt.Errorf("list Freight referencing Stage %q: %w", stageName, err))
-		return
-	}
-	c.JSON(http.StatusOK, &kargoapi.FreightList{Items: freight})
-}
-
-// @id ListFreightFromWarehouse
-// @Summary List Freight from a Warehouse
-// @Description List Freight that originated from the named Warehouse, optionally
+// @id ListFreightFromOrigin
+// @Summary List Freight from an Origin
+// @Description List Freight that originated from the named Origin, optionally
 // @Description filtered to that approved for or verified in given Stages, currently
 // @Description in a Stage, and having soaked for a minimum duration. Returns a
 // @Description FreightList resource.
@@ -72,40 +24,53 @@ func (s *server) listFreightReferencingStage(c *gin.Context) {
 // @Security BearerAuth
 // @Produce json
 // @Param project path string true "Project name"
-// @Param warehouse path string true "Warehouse name"
+// @Param origin-kind path string true "Origin kind"
+// @Param origin-name path string true "Origin name"
 // @Param approvedFor query string false "Include Freight approved for this Stage"
 // @Param verifiedIn query []string false "Include Freight verified in these Stages" collectionFormat(multi)
 // @Param currentlyIn query string false "Only Freight currently in this Stage"
 // @Param availabilityStrategy query string false "How verifiedIn Stages are combined (OneOf or All)"
 // @Param requiredSoakTime query string false "Minimum soak duration, e.g. 1h"
 // @Success 200 {object} kargoapi.FreightList "FreightList custom resource"
-// @Router /v1beta1/projects/{project}/warehouses/{warehouse}/freight [get]
-func (s *server) listFreightFromWarehouse(c *gin.Context) {
+// @Router /v1beta1/projects/{project}/internal/origin/{origin-kind}/{origin-name}/freight [get]
+func (s *server) listFreightFromOrigin(c *gin.Context) {
 	ctx := c.Request.Context()
 	project := c.Param("project")
-	warehouseName := c.Param("warehouse")
+	originKind := c.Param("origin-kind")
+	originName := c.Param("origin-name")
 
-	opts, err := warehouseFreightOptionsFromQuery(c)
+	opts, err := originFreightOptionsFromQuery(c)
 	if err != nil {
 		_ = c.Error(libhttp.ErrorStr(err.Error(), http.StatusBadRequest))
 		return
 	}
 
-	freight, err := freightapi.ListFreightFromWarehouse(ctx, s.client, project, warehouseName, opts)
+	kind, err := kargoapi.ParseFreightOriginKind(originKind)
+	if err != nil {
+		_ = c.Error(libhttp.ErrorStr(err.Error(), http.StatusBadRequest))
+		return
+	}
+
+	origin := kargoapi.FreightOrigin{
+		Kind: kind,
+		Name: originName,
+	}
+
+	freight, err := freightapi.ListFreightFromOrigin(ctx, s.client, project, origin, opts)
 	if err != nil {
 		if strings.Contains(err.Error(), "unsupported AvailabilityStrategy") {
 			err = libhttp.Error(err, http.StatusBadRequest)
 		}
-		_ = c.Error(fmt.Errorf("list Freight from Warehouse %q: %w", warehouseName, err))
+		_ = c.Error(fmt.Errorf("list Freight from Origin %v: %w", origin, err))
 		return
 	}
 	c.JSON(http.StatusOK, &kargoapi.FreightList{Items: freight})
 }
 
-// warehouseFreightOptionsFromQuery builds ListWarehouseFreightOptions from the
+// originFreightOptionsFromQuery builds ListFreightFromOriginOptions from the
 // request's query parameters, returning nil options when none are set.
-func warehouseFreightOptionsFromQuery(c *gin.Context) (*freightapi.ListWarehouseFreightOptions, error) {
-	opts := &freightapi.ListWarehouseFreightOptions{
+func originFreightOptionsFromQuery(c *gin.Context) (*freightapi.ListFreightFromOriginOptions, error) {
+	opts := &freightapi.ListFreightFromOriginOptions{
 		ApprovedFor:          c.Query("approvedFor"),
 		VerifiedIn:           c.QueryArray("verifiedIn"),
 		CurrentlyIn:          c.Query("currentlyIn"),

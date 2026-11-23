@@ -6,7 +6,7 @@
  * OpenAPI spec version: v1alpha1
  */
 
-export type ListFreightFromWarehouseParams = {
+export type ListFreightFromOriginParams = {
   /**
    * Include Freight approved for this Stage
    */

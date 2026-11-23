@@ -20,6 +20,7 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/api"
+	"github.com/akuity/kargo/pkg/api/freightapi"
 	"github.com/akuity/kargo/pkg/client/apiserver"
 	"github.com/akuity/kargo/pkg/client/apiserver/freightclient"
 	kargoEvent "github.com/akuity/kargo/pkg/event"
@@ -55,7 +56,7 @@ type webhook struct {
 
 	listFreightAvailableToStageFn func(
 		context.Context,
-		api.FreightWarehouseLister,
+		freightapi.FreightLister,
 		*kargoapi.Stage,
 	) ([]kargoapi.Freight, error)
 

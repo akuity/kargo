@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"maps"
 	"slices"
 	"strings"
 	"time"
@@ -382,39 +383,42 @@ func (r *ControlFlowStageReconciler) markFreightAsCurrentForStage(
 	stage *kargoapi.Stage,
 	freight []kargoapi.Freight,
 ) error {
-	freightByOrigin := make(map[string][]kargoapi.Freight)
+
+	freightsByOrigin := make(map[string][]kargoapi.Freight)
 	for _, f := range freight {
 		origin := f.Origin.String()
-		freightByOrigin[origin] = append(freightByOrigin[origin], f)
+		freightsByOrigin[origin] = append(freightsByOrigin[origin], f)
 	}
 
 	var errs []error
-	for _, freight := range freightByOrigin {
+	currentFreightNamesByOrigin := make(map[string]string)
+	for origin, freights := range freightsByOrigin {
 		// Select the newest available Freight for each origin. This uses the same
 		// ordering as the upstream matching in SelectAutoPromotionCandidates, so both
 		// agree on which Freight is "current" for an origin.
 
-		slices.SortFunc(freight, func(lhs, rhs kargoapi.Freight) int {
+		slices.SortFunc(freights, func(lhs, rhs kargoapi.Freight) int {
 			if cmp := rhs.EffectiveDiscoveredAt().Compare(lhs.EffectiveDiscoveredAt()); cmp != 0 {
 				return cmp
 			}
 			return strings.Compare(rhs.Name, lhs.Name)
 		})
-		current := freight[0]
+		currentFreightNamesByOrigin[origin] = freights[0].Name
+	}
 
-		err := r.freightClient.MarkFreightCurrentlyInStage(
-			ctx,
-			stage.Namespace,
-			current.Name,
-			current.Origin,
-			stage.Name)
+	freightNames := slices.Collect(maps.Values(currentFreightNamesByOrigin))
+	err := r.freightClient.MarkFreightsCurrentlyInStage(
+		ctx,
+		stage.Namespace,
+		stage.Name,
+		freightNames,
+	)
 
-		if err != nil {
-			errs = append(errs, fmt.Errorf(
-				"error adding Stage %q to currentlyIn status of Freight %q in namespace %q: %w",
-				stage.Name, current.Name, current.Namespace, err,
-			))
-		}
+	if err != nil {
+		errs = append(errs, fmt.Errorf(
+			"error adding Stage %q to currentlyIn status of Freights %v in namespace %q: %w",
+			stage.Name, freightNames, stage.Namespace, err,
+		))
 	}
 
 	return kerrors.NewAggregate(errs)
@@ -481,8 +485,8 @@ func (r *ControlFlowStageReconciler) markFreightVerifiedForStage(
 ) (int, error) {
 	logger := logging.LoggerFromContext(ctx)
 
-	var newlyVerified int
-	var failures int
+	verifiedFreightNames := []string{}
+	verifiedFreights := map[string]kargoapi.Freight{}
 	for _, f := range freight {
 		// Skip Freight that has already been verified in this Stage.
 		//
@@ -494,26 +498,23 @@ func (r *ControlFlowStageReconciler) markFreightVerifiedForStage(
 		if f.IsVerifiedIn(stage.Name) {
 			continue
 		}
+		verifiedFreightNames = append(verifiedFreightNames, f.Name)
+		verifiedFreights[f.Name] = f
+	}
 
-		if err := r.freightClient.MarkFreightVerifiedInStage(
-			ctx, stage.Namespace, f.Name, stage.Name, finishTime,
-		); err != nil {
-			// Freight deleted out from under us is not a failure; it simply no
-			// longer needs verifying.
-			if apiserver.IsNotFound(err) {
-				continue
-			}
-			logger.Error(
-				err,
-				"failed to mark Freight as verified in Stage",
-				"freight", f.Name,
-			)
-			failures++
-			continue
-		}
+	if err := r.freightClient.MarkFreightsVerifiedInStage(
+		ctx, stage.Namespace, stage.Name, verifiedFreightNames, finishTime,
+	); err != nil {
+		logger.Error(
+			err,
+			"failed to mark Freights as verified in Stage",
+			"freights", verifiedFreightNames,
+		)
+		return 0, fmt.Errorf("failed to verify Freights")
+	}
 
-		newlyVerified++
-
+	for _, freightName := range verifiedFreightNames {
+		f := verifiedFreights[freightName]
 		evt, err := event.NewFreightVerification(
 			api.FormatEventControllerActor(r.cfg.Name()),
 			stage.Name,
@@ -536,12 +537,7 @@ func (r *ControlFlowStageReconciler) markFreightVerifiedForStage(
 		}
 	}
 
-	if failures > 0 {
-		// Return an error if any of the verifications failed.
-		// This will cause the Stage to be requeued.
-		return newlyVerified, fmt.Errorf("failed to verify %d Freight", failures)
-	}
-	return newlyVerified, nil
+	return len(verifiedFreightNames), nil
 }
 
 // handleDelete handles the deletion of the given control flow Stage. It clears

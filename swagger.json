@@ -1622,12 +1622,9 @@
         ]
       }
     },
-    "/v1beta1/projects/{project}/internal/freight/{freight}/status/stage/{stage}": {
-      "post": {
-        "description": "Record that the named Freight has been verified in the Stage,\nadding the Stage to the Freight's verifiedIn status.",
-        "consumes": [
-          "application/json"
-        ],
+    "/v1beta1/projects/{project}/internal/origin/{origin-kind}/{origin-name}/freight": {
+      "get": {
+        "description": "List Freight that originated from the named Origin, optionally\nfiltered to that approved for or verified in given Stages, currently\nin a Stage, and having soaked for a minimum duration. Returns a\nFreightList resource.",
         "produces": [
           "application/json"
         ],
@@ -1635,8 +1632,8 @@
           "Core",
           "Project-Level"
         ],
-        "summary": "Mark Freight as verified in a Stage",
-        "operationId": "MarkFreightVerifiedInStage",
+        "summary": "List Freight from an Origin",
+        "operationId": "ListFreightFromOrigin",
         "parameters": [
           {
             "type": "string",
@@ -1647,8 +1644,179 @@
           },
           {
             "type": "string",
-            "description": "Freight name",
-            "name": "freight",
+            "description": "Origin kind",
+            "name": "origin-kind",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "description": "Origin name",
+            "name": "origin-name",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "description": "Include Freight approved for this Stage",
+            "name": "approvedFor",
+            "in": "query"
+          },
+          {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "collectionFormat": "multi",
+            "description": "Include Freight verified in these Stages",
+            "name": "verifiedIn",
+            "in": "query"
+          },
+          {
+            "type": "string",
+            "description": "Only Freight currently in this Stage",
+            "name": "currentlyIn",
+            "in": "query"
+          },
+          {
+            "type": "string",
+            "description": "How verifiedIn Stages are combined (OneOf or All)",
+            "name": "availabilityStrategy",
+            "in": "query"
+          },
+          {
+            "type": "string",
+            "description": "Minimum soak duration, e.g. 1h",
+            "name": "requiredSoakTime",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "FreightList custom resource",
+            "schema": {
+              "$ref": "#/definitions/FreightList"
+            }
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      }
+    },
+    "/v1beta1/projects/{project}/internal/stage-freight/{stage}": {
+      "delete": {
+        "description": "Remove the named Stage from all Freights which reference it. This is used by\nthe Stage controller to clean up Freight status when a Stage is deleted.",
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "Core",
+          "Project-Level"
+        ],
+        "summary": "Remove all of a Stage's entries from any Freight's status",
+        "operationId": "ClearStageFreights",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "Project name",
+            "name": "project",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "description": "Stage name",
+            "name": "stage",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      }
+    },
+    "/v1beta1/projects/{project}/internal/stage-freight/{stage}/current": {
+      "post": {
+        "description": "Record that the named Freights are currently in use by the Stage,\nadding the Stage to the Freight's currentlyIn status. Any other\nFreights will have this Stage removed from their currentlyIn.",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "Core",
+          "Project-Level"
+        ],
+        "summary": "Mark a set of Freights as currently in use by a Stage",
+        "operationId": "MarkFreightsCurrentlyInStage",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "Project name",
+            "name": "project",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "description": "Stage name",
+            "name": "stage",
+            "in": "path",
+            "required": true
+          },
+          {
+            "description": "CurrentlyIn",
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/MarkFreightsCurrentlyInStageRequest"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      }
+    },
+    "/v1beta1/projects/{project}/internal/stage-freight/{stage}/verified": {
+      "post": {
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "Core",
+          "Project-Level"
+        ],
+        "summary": "Mark a set of Freights as verified in a Stage, adding to verifiedIn",
+        "operationId": "MarkFreightsVerifiedInStage",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "Project name",
+            "name": "project",
             "in": "path",
             "required": true
           },
@@ -1665,53 +1833,8 @@
             "in": "body",
             "required": true,
             "schema": {
-              "$ref": "#/definitions/MarkFreightVerifiedInStageRequest"
+              "$ref": "#/definitions/MarkFreightsVerifiedInStageRequest"
             }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Success"
-          }
-        },
-        "security": [
-          {
-            "BearerAuth": []
-          }
-        ]
-      },
-      "delete": {
-        "description": "Remove the named Stage from every one of the Freight's status\nmaps -- currentlyIn, verifiedIn, and approvedFor. This is used by\nthe Stage controller to clean up Freight status when a Stage is\ndeleted, in place of writing Freight status directly.",
-        "produces": [
-          "application/json"
-        ],
-        "tags": [
-          "Core",
-          "Project-Level"
-        ],
-        "summary": "Remove all of a Stage's entries from a Freight's status",
-        "operationId": "DeleteFreightStageStatus",
-        "parameters": [
-          {
-            "type": "string",
-            "description": "Project name",
-            "name": "project",
-            "in": "path",
-            "required": true
-          },
-          {
-            "type": "string",
-            "description": "Freight name",
-            "name": "freight",
-            "in": "path",
-            "required": true
-          },
-          {
-            "type": "string",
-            "description": "Stage name",
-            "name": "stage",
-            "in": "path",
-            "required": true
           }
         ],
         "responses": {
@@ -2881,99 +3004,6 @@
         ]
       }
     },
-    "/v1beta1/projects/{project}/stages/{stage}/freight": {
-      "get": {
-        "description": "List the Freight whose status records it as currently in use by\nthe named Stage. Returns a FreightList resource.",
-        "produces": [
-          "application/json"
-        ],
-        "tags": [
-          "Core",
-          "Project-Level"
-        ],
-        "summary": "List Freight currently in a Stage",
-        "operationId": "ListFreightByCurrentStage",
-        "parameters": [
-          {
-            "type": "string",
-            "description": "Project name",
-            "name": "project",
-            "in": "path",
-            "required": true
-          },
-          {
-            "type": "string",
-            "description": "Stage name",
-            "name": "stage",
-            "in": "path",
-            "required": true
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "FreightList custom resource",
-            "schema": {
-              "$ref": "#/definitions/FreightList"
-            }
-          }
-        },
-        "security": [
-          {
-            "BearerAuth": []
-          }
-        ]
-      },
-      "post": {
-        "description": "Record that the named Freight is currently in use by the Stage,\nadding the Stage to the Freight's currentlyIn status. The\nrequest's origin must match the Freight's origin. Any other\nFreight from that origin that is recorded as currently in the\nStage has the Stage removed from its currentlyIn.",
-        "consumes": [
-          "application/json"
-        ],
-        "produces": [
-          "application/json"
-        ],
-        "tags": [
-          "Core",
-          "Project-Level"
-        ],
-        "summary": "Mark Freight as currently in use by a Stage",
-        "operationId": "MarkFreightCurrentlyInStage",
-        "parameters": [
-          {
-            "type": "string",
-            "description": "Project name",
-            "name": "project",
-            "in": "path",
-            "required": true
-          },
-          {
-            "type": "string",
-            "description": "Stage name",
-            "name": "stage",
-            "in": "path",
-            "required": true
-          },
-          {
-            "description": "Freight",
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/MarkFreightCurrentlyInStageRequest"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Success"
-          }
-        },
-        "security": [
-          {
-            "BearerAuth": []
-          }
-        ]
-      }
-    },
     "/v1beta1/projects/{project}/stages/{stage}/links": {
       "get": {
         "description": "Retrieve evaluated deep links for a Stage resource, combining\ncluster-level links from ClusterConfig and project-level links\nfrom ProjectConfig.",
@@ -3267,49 +3297,6 @@
           "201": {
             "description": "Promotions created",
             "schema": {}
-          }
-        },
-        "security": [
-          {
-            "BearerAuth": []
-          }
-        ]
-      }
-    },
-    "/v1beta1/projects/{project}/stages/{stage}/referencing-freight": {
-      "get": {
-        "description": "List the Freight whose status records the named Stage in its\ncurrentlyIn, verifiedIn or approvedFor map. Returns a FreightList resource.",
-        "produces": [
-          "application/json"
-        ],
-        "tags": [
-          "Core",
-          "Project-Level"
-        ],
-        "summary": "List Freight referencing a Stage",
-        "operationId": "ListFreightReferencingStage",
-        "parameters": [
-          {
-            "type": "string",
-            "description": "Project name",
-            "name": "project",
-            "in": "path",
-            "required": true
-          },
-          {
-            "type": "string",
-            "description": "Stage name",
-            "name": "stage",
-            "in": "path",
-            "required": true
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "FreightList custom resource",
-            "schema": {
-              "$ref": "#/definitions/FreightList"
-            }
           }
         },
         "security": [
@@ -3945,83 +3932,6 @@
         "responses": {
           "204": {
             "description": "Deleted successfully"
-          }
-        },
-        "security": [
-          {
-            "BearerAuth": []
-          }
-        ]
-      }
-    },
-    "/v1beta1/projects/{project}/warehouses/{warehouse}/freight": {
-      "get": {
-        "description": "List Freight that originated from the named Warehouse, optionally\nfiltered to that approved for or verified in given Stages, currently\nin a Stage, and having soaked for a minimum duration. Returns a\nFreightList resource.",
-        "produces": [
-          "application/json"
-        ],
-        "tags": [
-          "Core",
-          "Project-Level"
-        ],
-        "summary": "List Freight from a Warehouse",
-        "operationId": "ListFreightFromWarehouse",
-        "parameters": [
-          {
-            "type": "string",
-            "description": "Project name",
-            "name": "project",
-            "in": "path",
-            "required": true
-          },
-          {
-            "type": "string",
-            "description": "Warehouse name",
-            "name": "warehouse",
-            "in": "path",
-            "required": true
-          },
-          {
-            "type": "string",
-            "description": "Include Freight approved for this Stage",
-            "name": "approvedFor",
-            "in": "query"
-          },
-          {
-            "type": "array",
-            "items": {
-              "type": "string"
-            },
-            "collectionFormat": "multi",
-            "description": "Include Freight verified in these Stages",
-            "name": "verifiedIn",
-            "in": "query"
-          },
-          {
-            "type": "string",
-            "description": "Only Freight currently in this Stage",
-            "name": "currentlyIn",
-            "in": "query"
-          },
-          {
-            "type": "string",
-            "description": "How verifiedIn Stages are combined (OneOf or All)",
-            "name": "availabilityStrategy",
-            "in": "query"
-          },
-          {
-            "type": "string",
-            "description": "Minimum soak duration, e.g. 1h",
-            "name": "requiredSoakTime",
-            "in": "query"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "FreightList custom resource",
-            "schema": {
-              "$ref": "#/definitions/FreightList"
-            }
           }
         },
         "security": [
@@ -6262,26 +6172,28 @@
         }
       }
     },
-    "MarkFreightCurrentlyInStageRequest": {
+    "MarkFreightsCurrentlyInStageRequest": {
       "type": "object",
       "properties": {
-        "freight": {
-          "description": "Freight is the name of the Freight now currently in use by the Stage.",
-          "type": "string"
-        },
-        "origin": {
-          "description": "Origin is the origin of the Freight. It must match the Freight's own\norigin. Any other Freight from this origin that is recorded as currently\nin the Stage is unmarked.",
-          "allOf": [
-            {
-              "$ref": "#/definitions/FreightOrigin"
-            }
-          ]
+        "freightNames": {
+          "description": "FreightNames is a list of names of freights to be marked as current in stage",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
         }
       }
     },
-    "MarkFreightVerifiedInStageRequest": {
+    "MarkFreightsVerifiedInStageRequest": {
       "type": "object",
       "properties": {
+        "freightNames": {
+          "description": "FreightNames is a list of names of freights to be marked as verified in stage",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
         "verifiedAt": {
           "description": "VerifiedAt is the time at which the Freight was verified in the Stage. It\ndefaults to the time the request is handled.",
           "type": "string"

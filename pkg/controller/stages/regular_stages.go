@@ -1085,6 +1085,10 @@ func SyncFreight(
 	if verified && verifiedAt.IsZero() {
 		verifiedAt = now
 	}
+
+	currentFreightNames := []string{}
+	verifiedFreightNames := []string{}
+	verifiedFreights := []*kargoapi.Freight{}
 	for _, fr := range curFreight.References() {
 		freight, err := freightClient.GetFreight(ctx, stage.Namespace, fr.Name)
 		if err != nil {
@@ -1097,28 +1101,39 @@ func SyncFreight(
 			// nolint:staticcheck
 			return fmt.Errorf("Freight %q not found in namespace %q", fr.Name, stage.Namespace)
 		}
-		// Marking freight as verified for origin will unmark all other freights of the same origin which
-		// have this stage marked at the moment. This ensures only one freight per origin is currentlyIn stage.
-		err = freightClient.MarkFreightCurrentlyInStage(ctx, stage.Namespace, freight.Name, freight.Origin, stage.Name)
+		currentFreightNames = append(currentFreightNames, freight.Name)
+		if verified {
+			verifiedFreightNames = append(verifiedFreightNames, freight.Name)
+			verifiedFreights = append(verifiedFreights, freight)
+		}
+	}
+
+	// NOTE: if currentFreightNames are empty somehow, all currentlyIn will be cleaned up, matching previous behavior
+	// This is mostly safe, because curFreight should only be empty
+	// if the stage has no history or all freights were deleted
+	err := freightClient.MarkFreightsCurrentlyInStage(ctx, stage.Namespace, stage.Name, currentFreightNames)
+	if err != nil {
+		return fmt.Errorf(
+			"error marking Freights %v in Stage %q in namespace %q: %w",
+			currentFreightNames, stage.Name, stage.Namespace, err,
+		)
+	}
+
+	// Optimization: save an API call if there are no verified freights
+	if len(verifiedFreightNames) > 0 {
+		err = freightClient.MarkFreightsVerifiedInStage(ctx, stage.Namespace, stage.Name, verifiedFreightNames, verifiedAt)
 		if err != nil {
 			return fmt.Errorf(
-				"error marking Freight %q in Stage %q in namespace %q: %w",
-				freight.Name, stage.Name, stage.Namespace, err,
+				"error marking Freights %v as verified in Stage %q in namespace %q: %w",
+				verifiedFreightNames, stage.Name, stage.Namespace, err,
 			)
 		}
-		if verified {
-			err = freightClient.MarkFreightVerifiedInStage(ctx, stage.Namespace, freight.Name, stage.Name, verifiedAt)
-			if err != nil {
-				return fmt.Errorf(
-					"error marking Freight %q as verified in Stage %q in namespace %q: %w",
-					freight.Name, stage.Name, stage.Namespace, err,
-				)
-			}
-			if !freight.IsVerifiedIn(stage.Name) {
-				observeVerificationLeadTime(freight, verifiedAt)
+
+		for _, verifiedFreight := range verifiedFreights {
+			if !verifiedFreight.IsVerifiedIn(stage.Name) {
+				observeVerificationLeadTime(verifiedFreight, verifiedAt)
 			}
 		}
-
 	}
 
 	return nil
@@ -1637,26 +1652,14 @@ func clearFreightStatus(
 	freightClient freightclient.FreightClient,
 	stage *kargoapi.Stage,
 ) error {
-	freight, err := freightClient.ListFreightReferencingStage(ctx, stage.Namespace, stage.Name)
-	if err != nil {
-		return fmt.Errorf(
-			"error listing Freight referencing Stage %q in namespace %q: %w",
-			stage.Name, stage.Namespace, err,
-		)
-	}
 
-	var errs []error
-	for _, f := range freight {
-		if err = freightClient.ClearFreightStageStatus(
-			ctx, stage.Namespace, f.Name, stage.Name,
-		); err != nil {
-			errs = append(errs, fmt.Errorf(
-				"error clearing Stage %q from Freight %q status in namespace %q: %w",
-				stage.Name, f.Name, stage.Namespace, err,
-			))
-		}
+	if err := freightClient.ClearStageFreights(
+		ctx, stage.Namespace, stage.Name,
+	); err != nil {
+		return fmt.Errorf("error clearing Stage %q from Freights status in namespace %q: %w",
+			stage.Name, stage.Namespace, err)
 	}
-	return kerrors.NewAggregate(errs)
+	return nil
 }
 
 // clearAnalysisRuns clears all AnalysisRuns that are associated with the given Stage.

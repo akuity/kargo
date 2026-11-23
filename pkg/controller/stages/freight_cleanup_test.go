@@ -15,7 +15,7 @@ import (
 	"github.com/akuity/kargo/pkg/controller/stages/verification"
 )
 
-func TestHandleDelete_clearsFreightStatusThroughUpdater(t *testing.T) {
+func TestHandleDelete_clearsFreightStatusThroughAPIServer(t *testing.T) {
 	const project = "fake-project"
 	const stageName = "fake-stage"
 
@@ -30,29 +30,19 @@ func TestHandleDelete_clearsFreightStatusThroughUpdater(t *testing.T) {
 		},
 	}
 
-	// The Freight that the API server reports as referencing the Stage. Selecting
-	// which Freight reference the Stage is the API server's job, so the mock
-	// returns these as-is and the test asserts only that each is cleared.
-	referencing := []kargoapi.Freight{
-		{ObjectMeta: metav1.ObjectMeta{Namespace: project, Name: "verified"}},
-		{ObjectMeta: metav1.ObjectMeta{Namespace: project, Name: "both"}},
-		{ObjectMeta: metav1.ObjectMeta{Namespace: project, Name: "approved"}},
-	}
-
 	// The Stage lives in the Kubernetes client (its finalizer is removed there);
-	// Freight reads and status writes go through the API server client.
+	// Freight status writes go through the API server client.
 	c := fake.NewClientBuilder().
 		WithScheme(scheme).
 		WithObjects(stage).
 		Build()
 
-	var clearCalls []clearCall
+	// Selecting which Freight reference the Stage is the API server's job, so
+	// the test asserts only that the Stage is cleared in a single request.
+	var clearCalls []clearStageCall
 	mockClient := &testutil.MockFreightClient{
-		ListFreightReferencingStageFun: func(context.Context, string, string) ([]kargoapi.Freight, error) {
-			return referencing, nil
-		},
-		ClearFreightStageStatusFun: func(_ context.Context, project, freight, stage string) error {
-			clearCalls = append(clearCalls, clearCall{project, freight, stage})
+		ClearStageFreightsFun: func(_ context.Context, project, stage string) error {
+			clearCalls = append(clearCalls, clearStageCall{project, stage})
 			return nil
 		},
 	}
@@ -66,22 +56,10 @@ func TestHandleDelete_clearsFreightStatusThroughUpdater(t *testing.T) {
 		stage,
 	))
 
-	// Every referencing Freight is cleared of the Stage.
-	require.Equal(t, []clearCall{
-		{project, "verified", stageName},
-		{project, "both", stageName},
-		{project, "approved", stageName},
-	}, clearCalls)
+	require.Equal(t, []clearStageCall{{project, stageName}}, clearCalls)
 
 	// The finalizer is removed from the Stage.
 	gotStage := &kargoapi.Stage{}
 	require.NoError(t, c.Get(t.Context(), client.ObjectKeyFromObject(stage), gotStage))
 	require.NotContains(t, gotStage.Finalizers, kargoapi.FinalizerName)
-}
-
-// clearCall records the arguments of a single ClearFreightStageStatus call.
-type clearCall struct {
-	project string
-	freight string
-	stage   string
 }

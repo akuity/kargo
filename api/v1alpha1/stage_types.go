@@ -368,6 +368,15 @@ type FreightOrigin struct {
 	Name string `json:"name"`
 }
 
+func ParseFreightOriginKind(kind string) (FreightOriginKind, error) {
+	switch FreightOriginKind(kind) {
+	case FreightOriginKindWarehouse:
+		return FreightOriginKindWarehouse, nil
+	default:
+		return "", fmt.Errorf("invalid origin kind: %q", kind)
+	}
+}
+
 func (f *FreightOrigin) String() string {
 	if f == nil {
 		return ""

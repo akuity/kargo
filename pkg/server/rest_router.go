@@ -252,9 +252,6 @@ func (s *server) setupRESTRouter(
 			project.GET("/stages", s.listStages)
 			project.GET("/stages/:stage", s.getStage)
 			project.GET("/stages/:stage/links", s.getStageLinks)
-			project.GET("/stages/:stage/freight", s.listFreightByCurrentStage)
-			project.POST("/stages/:stage/freight", s.markFreightCurrentlyInStage)
-			project.GET("/stages/:stage/referencing-freight", s.listFreightReferencingStage)
 			project.POST("/stages/:stage/refresh", s.refreshStage)
 			project.DELETE("/stages/:stage", s.deleteStage)
 			// Stage Promotions
@@ -290,7 +287,6 @@ func (s *server) setupRESTRouter(
 			// Warehouses
 			project.GET("/warehouses", s.listWarehouses)
 			project.GET("/warehouses/:warehouse", s.getWarehouse)
-			project.GET("/warehouses/:warehouse/freight", s.listFreightFromWarehouse)
 			project.POST("/warehouses/:warehouse/refresh", s.refreshWarehouse)
 			project.DELETE("/warehouses/:warehouse", s.deleteWarehouse)
 
@@ -302,11 +298,6 @@ func (s *server) setupRESTRouter(
 			project.POST("/freight/:freight-name-or-alias/approve", s.approveFreight)
 			project.PATCH("/freight/:freight-name-or-alias/alias", s.patchFreightAliasHandler)
 			project.DELETE("/freight/:freight-name-or-alias", s.deleteFreight)
-
-			// Freight internal APIs, only addressible by name
-			project.PATCH("/internal/freight/:freight/metadata", s.patchFreightMetadata)
-			project.POST("/internal/freight/:freight/status/stage/:stage", s.markFreightVerifiedInStage)
-			project.DELETE("/internal/freight/:freight/status/stage/:stage", s.deleteFreightStageStatus)
 
 			// Promotions
 			project.GET("/promotions", s.listPromotions)
@@ -388,6 +379,17 @@ func (s *server) setupRESTRouter(
 			project.GET("/api-tokens", s.listProjectAPITokens)
 			project.GET("/api-tokens/:apitoken", s.getProjectAPIToken)
 			project.DELETE("/api-tokens/:apitoken", s.deleteProjectAPIToken)
+
+			// -----------------------------------------------------------------
+			// Freight internal APIs
+			// -----------------------------------------------------------------
+
+			project.PATCH("/internal/freight/:freight/metadata", s.patchFreightMetadata)
+			project.GET("/internal/origin/:origin-kind/:origin-name/freight", s.listFreightFromOrigin)
+
+			project.POST("/internal/stage-freight/:stage/current", s.markFreightsCurrentlyInStage)
+			project.POST("/internal/stage-freight/:stage/verified", s.markFreightsVerifiedInStage)
+			project.DELETE("/internal/stage-freight/:stage", s.clearStageFreights)
 		}
 	}
 

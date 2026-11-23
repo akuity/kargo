@@ -14,6 +14,7 @@ import (
 // availability can be computed from a component that reaches Freight only
 // through the API server rather than the Kubernetes client. *apiserver.Client
 // satisfies it.
+
 type FreightClient interface {
 	// GetFreight returns the Freight with the given name, or nil if there is no
 	// such Freight. Matched by name.
@@ -39,45 +40,33 @@ type FreightClient interface {
 		metadata map[string]any,
 	) error
 
-	ListFreightFromWarehouse(
+	ListFreightFromOrigin(
 		ctx context.Context,
-		project, warehouse string,
-		opts *freightapi.ListWarehouseFreightOptions,
-	) ([]kargoapi.Freight, error)
-
-	// ListFreightByCurrentStage returns the Freight whose status records it as
-	// currently in use by the Stage.
-	ListFreightByCurrentStage(
-		ctx context.Context,
-		project, stage string,
-	) ([]kargoapi.Freight, error)
-
-	// ListFreightReferencingStage returns the Freight whose status records the
-	// Stage in its verifiedIn or approvedFor map, for cleanup on Stage deletion.
-	ListFreightReferencingStage(
-		ctx context.Context,
-		project, stage string,
-	) ([]kargoapi.Freight, error)
-
-	// MarkFreightCurrentlyInStage records that the named Freight, which must
-	// have the given origin, is currently in use by the Stage, and that any
-	// other Freight from that origin no longer is.
-	MarkFreightCurrentlyInStage(
-		ctx context.Context,
-		project, freight string,
+		project string,
 		origin kargoapi.FreightOrigin,
-		stage string,
-	) error
-	// MarkFreightVerifiedInStage records that the named Freight has been
-	// verified in the Stage at verifiedAt (or, if zero, when the API server
-	// handles the request).
-	MarkFreightVerifiedInStage(
+		opts *freightapi.ListFreightFromOriginOptions,
+	) ([]kargoapi.Freight, error)
+
+	// MarkFreightsCurrentlyInStage records that the set of Freights are currently in use by the Stage,
+	// and that any other Freights no longer are.
+	MarkFreightsCurrentlyInStage(
 		ctx context.Context,
-		project, freight, stage string,
+		project, stage string,
+		freights []string,
+	) error
+
+	// MarkFreightsVerifiedInStage records that the set of Freights are verified in Stage.
+	MarkFreightsVerifiedInStage(
+		ctx context.Context,
+		project, stage string,
+		freights []string,
 		verifiedAt time.Time,
 	) error
-	// ClearFreightStageStatus removes the Stage from every one of the Freight's
-	// status maps (currentlyIn, verifiedIn, approvedFor), for cleanup when the
-	// Stage is deleted.
-	ClearFreightStageStatus(ctx context.Context, project, freight, stage string) error
+
+	// ClearStageFreights removes references to stage (currentlyIn, approvedFor, verifiedIn)
+	// from all freights referencing it.
+	ClearStageFreights(
+		ctx context.Context,
+		project, stage string,
+	) error
 }

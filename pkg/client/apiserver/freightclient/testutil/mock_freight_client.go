@@ -8,37 +8,19 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/api/freightapi"
+	"github.com/akuity/kargo/pkg/client/apiserver/freightclient"
 )
 
+var _ freightclient.FreightClient = &MockFreightClient{}
+
 type MockFreightClient struct {
+	GetFreightFun    func(ctx context.Context, project, name string) (*kargoapi.Freight, error)
 	CreateFreightFun func(
 		ctx context.Context,
 		project string,
 		freight *kargoapi.Freight,
 		metadata map[string]apiextensionsv1.JSON,
 	) (*kargoapi.Freight, bool, error)
-	ListFreightFromWarehouseFun func(
-		ctx context.Context,
-		project, warehouse string,
-		opts *freightapi.ListWarehouseFreightOptions,
-	) ([]kargoapi.Freight, error)
-	MarkFreightCurrentlyInStageFun func(
-		ctx context.Context,
-		project, freight string,
-		origin kargoapi.FreightOrigin,
-		stage string,
-	) error
-	MarkFreightVerifiedInStageFun func(
-		ctx context.Context,
-		project, freight, stage string,
-		verifiedAt time.Time,
-	) error
-	ClearFreightStageStatusFun   func(ctx context.Context, project, freight, stage string) error
-	ListFreightByCurrentStageFun func(
-		ctx context.Context,
-		project, stage string,
-	) ([]kargoapi.Freight, error)
-	GetFreightFun           func(ctx context.Context, project, name string) (*kargoapi.Freight, error)
 	DeleteFreightFun        func(ctx context.Context, project, nameOrAlias string) error
 	PatchFreightAliasFun    func(ctx context.Context, project, nameOrAlias, newAlias string) error
 	PatchFreightMetadataFun func(
@@ -46,12 +28,29 @@ type MockFreightClient struct {
 		project, freightName string,
 		metadata map[string]any,
 	) error
-	ListFreightReferencingStageFun func(
+	ListFreightFromOriginFun func(
+		ctx context.Context,
+		project string,
+		origin kargoapi.FreightOrigin,
+		opts *freightapi.ListFreightFromOriginOptions,
+	) ([]kargoapi.Freight, error)
+	MarkFreightsCurrentlyInStageFun func(
 		ctx context.Context,
 		project, stage string,
-	) ([]kargoapi.Freight, error)
+		freights []string,
+	) error
+	MarkFreightsVerifiedInStageFun func(
+		ctx context.Context,
+		project, stage string,
+		freights []string,
+		verifiedAt time.Time,
+	) error
+	ClearStageFreightsFun func(ctx context.Context, project, stage string) error
 }
 
+func (mock *MockFreightClient) GetFreight(ctx context.Context, project, name string) (*kargoapi.Freight, error) {
+	return mock.GetFreightFun(ctx, project, name)
+}
 func (mock *MockFreightClient) CreateFreight(
 	ctx context.Context,
 	project string,
@@ -59,40 +58,6 @@ func (mock *MockFreightClient) CreateFreight(
 	metadata map[string]apiextensionsv1.JSON,
 ) (*kargoapi.Freight, bool, error) {
 	return mock.CreateFreightFun(ctx, project, freight, metadata)
-}
-func (mock *MockFreightClient) ListFreightFromWarehouse(
-	ctx context.Context,
-	project, warehouse string,
-	opts *freightapi.ListWarehouseFreightOptions,
-) ([]kargoapi.Freight, error) {
-	return mock.ListFreightFromWarehouseFun(ctx, project, warehouse, opts)
-}
-func (mock *MockFreightClient) MarkFreightCurrentlyInStage(
-	ctx context.Context,
-	project, freight string,
-	origin kargoapi.FreightOrigin,
-	stage string,
-) error {
-	return mock.MarkFreightCurrentlyInStageFun(ctx, project, freight, origin, stage)
-}
-func (mock *MockFreightClient) MarkFreightVerifiedInStage(
-	ctx context.Context,
-	project, freight, stage string,
-	verifiedAt time.Time,
-) error {
-	return mock.MarkFreightVerifiedInStageFun(ctx, project, freight, stage, verifiedAt)
-}
-func (mock *MockFreightClient) ClearFreightStageStatus(ctx context.Context, project, freight, stage string) error {
-	return mock.ClearFreightStageStatusFun(ctx, project, freight, stage)
-}
-func (mock *MockFreightClient) ListFreightByCurrentStage(
-	ctx context.Context,
-	project, stage string,
-) ([]kargoapi.Freight, error) {
-	return mock.ListFreightByCurrentStageFun(ctx, project, stage)
-}
-func (mock *MockFreightClient) GetFreight(ctx context.Context, project, name string) (*kargoapi.Freight, error) {
-	return mock.GetFreightFun(ctx, project, name)
 }
 func (mock *MockFreightClient) DeleteFreight(ctx context.Context, project, nameOrAlias string) error {
 	return mock.DeleteFreightFun(ctx, project, nameOrAlias)
@@ -107,9 +72,29 @@ func (mock *MockFreightClient) PatchFreightMetadata(
 ) error {
 	return mock.PatchFreightMetadataFun(ctx, project, freightName, metadata)
 }
-func (mock *MockFreightClient) ListFreightReferencingStage(
+func (mock *MockFreightClient) ListFreightFromOrigin(
+	ctx context.Context,
+	project string,
+	origin kargoapi.FreightOrigin,
+	opts *freightapi.ListFreightFromOriginOptions,
+) ([]kargoapi.Freight, error) {
+	return mock.ListFreightFromOriginFun(ctx, project, origin, opts)
+}
+func (mock *MockFreightClient) MarkFreightsCurrentlyInStage(
 	ctx context.Context,
 	project, stage string,
-) ([]kargoapi.Freight, error) {
-	return mock.ListFreightReferencingStageFun(ctx, project, stage)
+	freights []string,
+) error {
+	return mock.MarkFreightsCurrentlyInStageFun(ctx, project, stage, freights)
+}
+func (mock *MockFreightClient) MarkFreightsVerifiedInStage(
+	ctx context.Context,
+	project, stage string,
+	freights []string,
+	verifiedAt time.Time,
+) error {
+	return mock.MarkFreightsVerifiedInStageFun(ctx, project, stage, freights, verifiedAt)
+}
+func (mock *MockFreightClient) ClearStageFreights(ctx context.Context, project, stage string) error {
+	return mock.ClearStageFreightsFun(ctx, project, stage)
 }
