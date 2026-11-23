@@ -1,0 +1,19 @@
+# want: valid
+# unknown fields are pruned today and ignored by the new validator
+apiVersion: kargo.akuity.io/v1alpha1
+kind: ProjectConfig
+metadata:
+  name: kargo-demo
+  namespace: kargo-demo
+spec:
+  bogus: true
+  promotionPolicies:
+  - stage: test
+    bogus: 1
+  webhookReceivers:
+  - name: gh
+    bogus: x
+    github:
+      secretRef:
+        name: s
+        bogus: y

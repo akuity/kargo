@@ -1,0 +1,11 @@
+# want: invalid
+# window name pattern
+apiVersion: kargo.akuity.io/v1alpha1
+kind: ProjectConfig
+metadata:
+  name: kargo-demo
+  namespace: kargo-demo
+spec:
+  promotionWindows:
+  - name: Bad_Name
+    kind: Allow

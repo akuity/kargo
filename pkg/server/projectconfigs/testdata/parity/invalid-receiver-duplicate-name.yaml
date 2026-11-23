@@ -1,0 +1,17 @@
+# want: invalid
+# duplicate receiver names
+apiVersion: kargo.akuity.io/v1alpha1
+kind: ProjectConfig
+metadata:
+  name: kargo-demo
+  namespace: kargo-demo
+spec:
+  webhookReceivers:
+  - name: dup
+    github:
+      secretRef:
+        name: s
+  - name: dup
+    gitlab:
+      secretRef:
+        name: s

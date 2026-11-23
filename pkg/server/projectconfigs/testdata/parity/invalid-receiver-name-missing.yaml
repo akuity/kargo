@@ -1,0 +1,12 @@
+# want: invalid
+# receiver name required
+apiVersion: kargo.akuity.io/v1alpha1
+kind: ProjectConfig
+metadata:
+  name: kargo-demo
+  namespace: kargo-demo
+spec:
+  webhookReceivers:
+  - github:
+      secretRef:
+        name: s

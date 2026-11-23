@@ -1,0 +1,14 @@
+# want: invalid
+# onPromotion[1] not Failed or Errored
+apiVersion: kargo.akuity.io/v1alpha1
+kind: ProjectConfig
+metadata:
+  name: kargo-demo
+  namespace: kargo-demo
+spec:
+  promotionPolicies:
+  - stage: test
+    autoRollback:
+      onPromotion:
+      - Failed
+      - Error

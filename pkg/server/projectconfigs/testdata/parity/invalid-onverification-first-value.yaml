@@ -1,0 +1,13 @@
+# want: invalid
+# onVerification[0] not Failed or Error
+apiVersion: kargo.akuity.io/v1alpha1
+kind: ProjectConfig
+metadata:
+  name: kargo-demo
+  namespace: kargo-demo
+spec:
+  promotionPolicies:
+  - stage: test
+    autoRollback:
+      onVerification:
+      - Errored

@@ -1,0 +1,11 @@
+# want: invalid
+# stageSelector regex does not parse
+apiVersion: kargo.akuity.io/v1alpha1
+kind: ProjectConfig
+metadata:
+  name: kargo-demo
+  namespace: kargo-demo
+spec:
+  promotionPolicies:
+  - stageSelector:
+      name: "regex:["

@@ -1,0 +1,13 @@
+# want: invalid
+# promotionWindows listType=map unique names
+apiVersion: kargo.akuity.io/v1alpha1
+kind: ProjectConfig
+metadata:
+  name: kargo-demo
+  namespace: kargo-demo
+spec:
+  promotionWindows:
+  - name: w
+    kind: Allow
+  - name: w
+    kind: Deny

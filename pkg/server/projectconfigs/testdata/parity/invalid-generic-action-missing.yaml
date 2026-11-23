@@ -1,0 +1,17 @@
+# want: invalid
+# generic action required
+apiVersion: kargo.akuity.io/v1alpha1
+kind: ProjectConfig
+metadata:
+  name: kargo-demo
+  namespace: kargo-demo
+spec:
+  webhookReceivers:
+  - name: gen
+    generic:
+      secretRef:
+        name: s
+      actions:
+      - targetSelectionCriteria:
+        - kind: Warehouse
+          name: w

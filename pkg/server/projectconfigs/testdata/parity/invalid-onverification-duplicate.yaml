@@ -1,0 +1,14 @@
+# want: invalid
+# onVerification is listType=set
+apiVersion: kargo.akuity.io/v1alpha1
+kind: ProjectConfig
+metadata:
+  name: kargo-demo
+  namespace: kargo-demo
+spec:
+  promotionPolicies:
+  - stage: test
+    autoRollback:
+      onVerification:
+      - Error
+      - Error

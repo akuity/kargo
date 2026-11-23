@@ -1,0 +1,13 @@
+# want: valid
+# empty onPromotion and onVerification lists
+apiVersion: kargo.akuity.io/v1alpha1
+kind: ProjectConfig
+metadata:
+  name: kargo-demo
+  namespace: kargo-demo
+spec:
+  promotionPolicies:
+  - stage: test
+    autoRollback:
+      onPromotion: []
+      onVerification: []

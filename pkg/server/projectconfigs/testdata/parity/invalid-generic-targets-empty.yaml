@@ -1,0 +1,16 @@
+# want: invalid
+# targetSelectionCriteria MinItems=1
+apiVersion: kargo.akuity.io/v1alpha1
+kind: ProjectConfig
+metadata:
+  name: kargo-demo
+  namespace: kargo-demo
+spec:
+  webhookReceivers:
+  - name: gen
+    generic:
+      secretRef:
+        name: s
+      actions:
+      - action: Refresh
+        targetSelectionCriteria: []

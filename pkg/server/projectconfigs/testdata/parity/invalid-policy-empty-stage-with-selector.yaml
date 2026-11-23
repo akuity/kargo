@@ -1,0 +1,12 @@
+# want: invalid
+# explicit empty stage alongside stageSelector
+apiVersion: kargo.akuity.io/v1alpha1
+kind: ProjectConfig
+metadata:
+  name: kargo-demo
+  namespace: kargo-demo
+spec:
+  promotionPolicies:
+  - stage: ""
+    stageSelector:
+      name: test

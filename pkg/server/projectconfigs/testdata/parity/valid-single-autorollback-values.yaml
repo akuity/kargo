@@ -1,0 +1,15 @@
+# want: valid
+# single allowed values in onPromotion and onVerification
+apiVersion: kargo.akuity.io/v1alpha1
+kind: ProjectConfig
+metadata:
+  name: kargo-demo
+  namespace: kargo-demo
+spec:
+  promotionPolicies:
+  - stage: test
+    autoRollback:
+      onPromotion:
+      - Errored
+      onVerification:
+      - Error
