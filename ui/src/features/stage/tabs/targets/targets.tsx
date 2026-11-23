@@ -3,9 +3,14 @@ import { useMemo } from 'react';
 
 import { LoadingState } from '@ui/features/common/loading-state';
 import { TARGETS_POLL_INTERVAL_MS } from '@ui/features/project/targets/constants';
-import { freightNames } from '@ui/features/project/targets/model/round-utils';
+import { freightNames } from '@ui/features/project/targets/model/target-freight';
 import { targetRows } from '@ui/features/project/targets/model/target-rows';
-import { useFreightLabel } from '@ui/features/project/targets/shared/use-freight-label';
+import { stageFigures } from '@ui/features/project/targets/model/target-status';
+import {
+  useFreightLabel,
+  useFreightReference
+} from '@ui/features/project/targets/shared/use-freight-label';
+import { useTargetStatuses } from '@ui/features/project/targets/use-target-statuses';
 import { Round } from '@ui/features/stage/utils/promotion-rollout';
 import { useListTargets } from '@ui/gen/api/v2/core/core';
 import { Stage } from '@ui/gen/api/v2/models';
@@ -17,13 +22,12 @@ import { useMarkColors } from './use-mark-colors';
 
 type Props = {
   projectName: string;
-  // The Stage whose Targets are shown. Its name scopes the Target list and
-  // keys each Target's per-Stage status; its current Freight collection is
-  // what a Target is compared against to be called behind.
+  // The Stage whose Targets are shown. Its name scopes the statuses; its
+  // current Freight collection is what a Target is compared against, origin
+  // by origin, to be called behind on one.
   stage: Stage;
   // The Stage's latest round, resolved once by the drawer, which also uses it
-  // to explain a blocked round above the tabs. Passing it in keeps one read
-  // of the Stage's rounds per drawer rather than one per tab.
+  // to explain a blocked round above the tabs. Here it is only linked to.
   round?: Round;
 };
 
@@ -36,15 +40,17 @@ type Props = {
  * Target as a square, sliced along whichever label the reader picks. Picking a
  * square answers for that one Target, under the grid.
  *
- * Governance comes from the API's `stage` filter, which evaluates the Stage's
- * selectors exactly as the controller does. Freight and health per Target come
- * from the Target's own status for this Stage; the round's outcome comes from
- * the Stage's current round, which the drawer resolves once and
- * passes in.
+ * Which Targets the Stage governs, and where each stands with it, comes from
+ * the server's Target statuses for this Stage, derived from every Promotion
+ * and PromotionRollout on record -- not only the latest round, so a Target a
+ * retry left out keeps the state it had. The Targets themselves fill in their
+ * params, owner and any recorded health.
  */
 export const StageTargets = ({ projectName, stage, round }: Props) => {
   const stageName = stage.metadata?.name || '';
+  const stages = useMemo(() => [stage], [stage]);
 
+  const statuses = useTargetStatuses(projectName, stages, stageName);
   // Targets live in the database, which offers no watch; the list is polled.
   const targetsQuery = useListTargets(
     projectName,
@@ -53,14 +59,24 @@ export const StageTargets = ({ projectName, stage, round }: Props) => {
   );
 
   const freightLabel = useFreightLabel(projectName);
+  const resolveFreight = useFreightReference(projectName);
   const colors = useMarkColors();
 
   const targets = useMemo(() => targetsQuery.data?.data?.items || [], [targetsQuery.data]);
-  // Rows are built against this Stage alone, so every state on the tab is the
-  // Target as this Stage sees it, not as the fleet at large does.
+  // Rows are built from this Stage's statuses alone, so every state on the
+  // tab is the Target as this Stage sees it, not as the fleet at large does.
+  // A Target the list holds and the statuses do not -- one whose labels have
+  // just changed -- waits for the statuses to catch up.
   const rows = useMemo(
-    () => targetRows(targets, [stage], { [stageName]: round }),
-    [targets, stage, stageName, round]
+    () =>
+      targetRows(targets, statuses.entries || [], stages, resolveFreight).filter(
+        (row) => row.stages.length > 0
+      ),
+    [targets, statuses.entries, stages, resolveFreight]
+  );
+  const figures = useMemo(
+    () => stageFigures(statuses.summary, stageName),
+    [statuses.summary, stageName]
   );
 
   const stageFreight = useMemo(() => freightNames(stage.status?.freightHistory?.[0]), [stage]);
@@ -71,7 +87,7 @@ export const StageTargets = ({ projectName, stage, round }: Props) => {
     [rows, stageFreight, colors, freightLabel]
   );
 
-  if (targetsQuery.isLoading) {
+  if (statuses.isLoading || targetsQuery.isLoading) {
     return <LoadingState />;
   }
 
@@ -90,7 +106,9 @@ export const StageTargets = ({ projectName, stage, round }: Props) => {
         project={projectName}
         stageName={stageName}
         rows={rows}
+        figures={figures}
         round={round}
+        stageFreight={stageFreight}
         freightMarks={freightMarks}
         freightLabel={freightLabel}
       />
@@ -98,7 +116,6 @@ export const StageTargets = ({ projectName, stage, round }: Props) => {
         project={projectName}
         stageName={stageName}
         rows={rows}
-        round={round}
         stageFreight={stageFreight}
         freightLabel={freightLabel}
       />

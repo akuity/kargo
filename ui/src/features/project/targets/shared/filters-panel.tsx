@@ -13,7 +13,7 @@ import {
   toggleFacet,
   truncateFacetValues
 } from '../model/target-facets';
-import { StateCounts, stateDisplayOrder, targetStatePresentations } from '../model/target-state';
+import { StateCounts, stateOrder, targetStatePresentations } from '../model/target-state';
 
 import { StateDot } from './state-visuals';
 
@@ -106,7 +106,7 @@ export const FiltersPanel = ({
       </Flex>
 
       <Flex vertical gap={6}>
-        {stateDisplayOrder
+        {stateOrder
           // A picked state keeps its box even once its tally is zero --
           // another facet may have emptied it, and it is still filtering.
           .filter((state) => states[state] || facets.states.includes(state))

@@ -9,10 +9,11 @@ import { useModal } from '@ui/features/common/modal/use-modal';
 import { SmallLabel } from '@ui/features/common/small-label';
 import { parseDate } from '@ui/utils/dates';
 
-import { freightByOrigin } from '../model/round-utils';
 import { flattenParams } from '../model/target-details-utils';
+import { freightByOrigin } from '../model/target-freight';
 import { GoverningStage, TargetRow } from '../model/target-rows';
 import { targetStatePresentations } from '../model/target-state';
+import { LastPromotion } from '../shared/last-promotion';
 import { OriginRows, Row } from '../shared/origin-rows';
 import { StateDot } from '../shared/state-visuals';
 
@@ -26,8 +27,9 @@ const cardClassName =
 /**
  * StageCard is what one Stage has put on a Target and what has become of it:
  * the Freight the Stage landed here, what the Stage itself has moved on to when
- * the two differ, the artifacts that Freight carries, and the Target's health
- * under that Stage, one line per origin the Freight comes from.
+ * the two differ, the artifacts that Freight carries, one line per origin the
+ * Freight comes from, then the Stage's last Promotion to the Target and the
+ * Target's health under that Stage when anything has assessed it.
  */
 const StageCard = ({
   project,
@@ -40,10 +42,10 @@ const StageCard = ({
 }) => {
   const stageName = governing.stage.metadata?.name || '';
   // A Target with no Freight is only shown what the Stage is on once a
-  // promotion to it has failed. Until then it has simply not been promoted to,
-  // and is not behind on anything.
+  // promotion to it has been tried. Until then it has simply not been promoted
+  // to, and is not behind on anything.
   const origins =
-    governing.currentFreight || governing.upToDate === false
+    governing.currentFreight || governing.state === 'Failed' || governing.state === 'NotAttempted'
       ? freightByOrigin(governing.currentFreight, governing.stage.status?.freightHistory?.[0])
       : [];
   const anyBehind = origins.some(({ behind }) => behind);
@@ -71,6 +73,9 @@ const StageCard = ({
             </Typography.Text>
           </Row>
         )}
+        <Row label='Last promotion'>
+          <LastPromotion project={project} entry={governing.entry} freightLabel={freightLabel} />
+        </Row>
         <Row label='Health'>
           {governing.health?.status ? (
             governing.health.status
@@ -84,7 +89,7 @@ const StageCard = ({
 
       {/* Each origin's own line says when it is behind. A Stage that has moved
           on with no origin to show for it still needs saying somewhere. */}
-      {governing.upToDate === false && !anyBehind && (
+      {governing.behind && !anyBehind && (
         <Typography.Text type='warning' className='text-xs block mt-2'>
           Behind: Stage is on other Freight
         </Typography.Text>

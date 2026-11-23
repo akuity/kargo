@@ -1,13 +1,8 @@
 import { describe, expect, test } from 'vitest';
 
-import { PromotionRequest, Target } from '../../../../gen/api/v2/models';
+import { TargetStatusEntry } from '../../../../gen/api/v2/models';
 import { targetRows } from '../../../project/targets/model/target-rows';
-import {
-  fleetStage,
-  forStage as stageStatus,
-  round,
-  target
-} from '../../../project/targets/model/test-fixtures';
+import { entry, fleetStage, health, target } from '../../../project/targets/model/test-fixtures';
 
 import {
   MarkColors,
@@ -15,90 +10,91 @@ import {
   byMark,
   freightMarking,
   healthMarking,
-  promotionMarking,
+  statusMarking,
   tally
 } from './marks';
 
 // Colours are named rather than real, so a case says which vocabulary painted
 // a square without turning into a hex comparison.
 const colors: MarkColors = {
-  phase: {
-    Succeeded: 'phase-succeeded',
-    Running: 'phase-running',
-    Pending: 'phase-pending',
-    Failed: 'phase-failed',
-    Errored: 'phase-errored',
-    Aborted: 'phase-aborted'
-  },
   state: {
-    Healthy: 'state-healthy',
+    UpToDate: 'state-up-to-date',
     Behind: 'state-behind',
-    Progressing: 'state-progressing',
-    Unhealthy: 'state-unhealthy',
-    Unknown: 'state-unknown',
-    NotPromoted: 'state-not-promoted'
+    Promoting: 'state-promoting',
+    Pending: 'state-pending',
+    Failed: 'state-failed',
+    NotAttempted: 'state-not-attempted',
+    NeverPromoted: 'state-never-promoted'
+  },
+  health: {
+    Healthy: 'health-healthy',
+    Progressing: 'health-progressing',
+    Unhealthy: 'health-unhealthy',
+    Unknown: 'health-unknown'
   },
   freight: ['freight-1', 'freight-2', 'freight-3']
 };
 
-const stage = fleetStage('prod', [{ matchLabels: { env: 'prod' } }], 'current');
+const stage = fleetStage('prod', [{ matchLabels: { env: 'prod' } }], 'freight-new');
 
-const rows = (targets: Target[], request?: PromotionRequest) =>
-  targetRows(targets, [stage], { prod: request });
-
-const governed = (name: string, status?: ReturnType<typeof stageStatus>) =>
-  target(name, { env: 'prod' }, status ? { status: { stages: { prod: status } } } : {});
+// rows builds the tab's rows the way the tab does: from this one Stage's
+// statuses.
+const rows = (entries: TargetStatusEntry[], healths: Record<string, string> = {}) =>
+  targetRows(
+    entries.map(({ target: name = '' }) =>
+      target(
+        name,
+        { env: 'prod' },
+        healths[name] ? { status: { stages: { prod: health(healths[name]) } } } : {}
+      )
+    ),
+    entries,
+    [stage]
+  );
 
 // freightLabel stands in for the alias a piece of Freight is named by.
 const freightLabel = (name: string) => name.replace('freight-', '');
 
-describe('promotionMarking()', () => {
-  const marks = promotionMarking(colors);
+describe('statusMarking()', () => {
+  const marks = statusMarking(colors);
 
-  test('paints a Target by what the round did to it', () => {
-    const request = round('prod', ['won', 'lost'], {
-      targets: [
-        { name: 'won', phase: 'Succeeded' },
-        { name: 'lost', phase: 'Failed' }
-      ]
-    });
-    const [lost, won] = rows([governed('won'), governed('lost')], request);
-    expect(marks.mark(won)).toMatchObject({ key: 'Succeeded', color: 'phase-succeeded' });
-    expect(marks.mark(lost)).toMatchObject({
+  test('paints a Target by where it stands with the Stage, in the shared words', () => {
+    const [failed, left, never, waiting] = rows([
+      entry('a', 'prod', 'Failed'),
+      entry('b', 'prod', 'NotAttempted'),
+      entry('c', 'prod', 'NeverPromoted'),
+      entry('d', 'prod', 'Pending')
+    ]);
+    expect(marks.mark(failed)).toMatchObject({
       key: 'Failed',
-      color: 'phase-failed',
+      label: 'Failed',
+      color: 'state-failed',
       attention: true
     });
-  });
-
-  test('a Target the round never named is read by whether it has Freight', () => {
-    const request = round('prod', ['named'], { targets: [{ name: 'named', phase: 'Succeeded' }] });
-    const [late, never] = rows(
-      [governed('late', stageStatus('old', undefined, 'freight-old')), governed('never')],
-      request
-    );
-    expect(marks.mark(late).key).toBe('NotInRound');
+    expect(marks.mark(left)).toMatchObject({
+      key: 'NotAttempted',
+      label: 'Not attempted',
+      color: 'state-not-attempted'
+    });
     expect(marks.mark(never)).toMatchObject({ key: 'NeverPromoted', hollow: true });
+    expect(marks.mark(waiting)).toMatchObject({ key: 'Pending', label: 'Pending' });
   });
 
-  test('a blocked round did nothing to anything, and says so once', () => {
-    // roundBlock fires on a round that cannot fan out at all, so targetRows
-    // leaves every Target phaseless -- which must not read as "never named".
-    const blockedMarks = promotionMarking(colors, true);
-    const [row] = rows([governed('a', stageStatus('current', undefined, 'freight-new'))]);
-    expect(blockedMarks.legend.map(({ key }) => key)).toEqual(['NotAttempted']);
-    expect(blockedMarks.mark(row)).toMatchObject({ key: 'NotAttempted', label: 'Not attempted' });
+  test('a Target a retry left out keeps the state the rollout before left it in', () => {
+    // Not "never promoted", and not "not in round": the server reads the
+    // whole history, not the latest round.
+    const [row] = rows([entry('a', 'prod', 'NotAttempted', { rollout: 3, freightName: 'f-old' })]);
+    expect(marks.mark(row).key).toBe('NotAttempted');
   });
 
-  test('the legend leads with what went well and ends with what was never tried', () => {
+  test('the legend leads with what is settled and ends with what nothing reached', () => {
     expect(marks.legend.map(({ key }) => key)).toEqual([
-      'Succeeded',
-      'Running',
+      'UpToDate',
+      'Behind',
+      'Promoting',
       'Pending',
       'Failed',
-      'Errored',
-      'Aborted',
-      'NotInRound',
+      'NotAttempted',
       'NeverPromoted'
     ]);
   });
@@ -108,27 +104,27 @@ describe('healthMarking()', () => {
   const marks = healthMarking(colors);
 
   test('paints a Target by its health for this Stage', () => {
-    const [healthy, sick] = rows([
-      governed('a', stageStatus('current', 'Healthy')),
-      governed('b', stageStatus('current', 'Unhealthy'))
-    ]);
-    expect(marks.mark(healthy)).toMatchObject({ key: 'Healthy', color: 'state-healthy' });
+    const [healthy, sick] = rows([entry('a', 'prod', 'UpToDate'), entry('b', 'prod', 'UpToDate')], {
+      a: 'Healthy',
+      b: 'Unhealthy'
+    });
+    expect(marks.mark(healthy)).toMatchObject({ key: 'Healthy', color: 'health-healthy' });
     expect(marks.mark(sick)).toMatchObject({ key: 'Unhealthy', attention: true });
   });
 
   test('a Target nothing has assessed is Unknown', () => {
-    const [row] = rows([governed('a')]);
-    expect(marks.mark(row)).toMatchObject({ key: 'Unknown', color: 'state-unknown' });
+    const [row] = rows([entry('a', 'prod', 'UpToDate')]);
+    expect(marks.mark(row)).toMatchObject({ key: 'Unknown', color: 'health-unknown' });
   });
 });
 
 describe('freightMarking()', () => {
   const fleet = () =>
     rows([
-      governed('a', stageStatus('current', undefined, 'freight-new')),
-      governed('b', stageStatus('current', undefined, 'freight-new')),
-      governed('c', stageStatus('old', undefined, 'freight-old')),
-      governed('d')
+      entry('a', 'prod', 'UpToDate', { freightName: 'freight-new' }),
+      entry('b', 'prod', 'UpToDate', { freightName: 'freight-new' }),
+      entry('c', 'prod', 'Behind', { freightName: 'freight-old' }),
+      entry('d', 'prod', 'NeverPromoted')
     ]);
 
   test("the Stage's own Freight leads, and everything else is a Target left behind", () => {
@@ -143,7 +139,7 @@ describe('freightMarking()', () => {
     ).toEqual([
       { key: 'freight-new', label: 'new', color: 'freight-1', attention: false },
       { key: 'freight-old', label: 'old', color: 'freight-2', attention: true },
-      { key: 'NoFreight', label: 'none', color: 'state-not-promoted', attention: undefined }
+      { key: 'NoFreight', label: 'none', color: 'state-never-promoted', attention: undefined }
     ]);
   });
 
@@ -162,54 +158,43 @@ describe('freightMarking()', () => {
 });
 
 describe('tally()', () => {
-  const request = round('prod', ['a', 'b', 'c'], {
-    targets: [
-      { name: 'a', phase: 'Succeeded' },
-      { name: 'b', phase: 'Succeeded' },
-      { name: 'c', phase: 'Failed' }
-    ]
-  });
   const fleet = () =>
-    rows(
-      ['a', 'b', 'c'].map((name) => governed(name)),
-      request
-    );
+    rows([
+      entry('a', 'prod', 'UpToDate'),
+      entry('b', 'prod', 'UpToDate'),
+      entry('c', 'prod', 'Failed')
+    ]);
 
   test('counts in legend order, leaving out what nothing is in', () => {
     expect(
-      tally(fleet(), promotionMarking(colors)).map(({ mark, count }) => [mark.key, count])
+      tally(fleet(), statusMarking(colors)).map(({ mark, count }) => [mark.key, count])
     ).toEqual([
-      ['Succeeded', 2],
+      ['UpToDate', 2],
       ['Failed', 1]
     ]);
   });
 
   test('attentionTally is the largest category worth looking at', () => {
-    expect(attentionTally(fleet(), promotionMarking(colors))).toMatchObject({ count: 1 });
+    expect(attentionTally(fleet(), statusMarking(colors))).toMatchObject({ count: 1 });
   });
 
   test('a fleet with nothing wrong has nothing to draw attention to', () => {
-    const clean = round('prod', ['a'], { targets: [{ name: 'a', phase: 'Succeeded' }] });
-    expect(attentionTally(rows([governed('a')], clean), promotionMarking(colors))).toBeUndefined();
+    expect(
+      attentionTally(rows([entry('a', 'prod', 'UpToDate')]), statusMarking(colors))
+    ).toBeUndefined();
   });
 });
 
 describe('byMark()', () => {
   test('orders trouble first, then by the legend, then by name', () => {
-    const request = round('prod', ['won', 'also-won', 'lost', 'waiting'], {
-      targets: [
-        { name: 'won', phase: 'Succeeded' },
-        { name: 'also-won', phase: 'Succeeded' },
-        { name: 'lost', phase: 'Failed' },
-        { name: 'waiting', phase: 'Pending' }
-      ]
-    });
-    const fleet = rows(
-      ['won', 'also-won', 'lost', 'waiting'].map((name) => governed(name)),
-      request
-    );
+    const fleet = rows([
+      entry('won', 'prod', 'UpToDate'),
+      entry('also-won', 'prod', 'UpToDate'),
+      entry('lost', 'prod', 'Failed'),
+      entry('waiting', 'prod', 'Pending')
+    ]);
     expect(
-      [...fleet].sort(byMark(promotionMarking(colors))).map((row) => row.target.metadata?.name)
+      [...fleet].sort(byMark(statusMarking(colors))).map((row) => row.target.metadata?.name)
     ).toEqual(['lost', 'also-won', 'won', 'waiting']);
   });
 });

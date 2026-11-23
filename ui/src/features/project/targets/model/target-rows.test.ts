@@ -1,398 +1,212 @@
 import { describe, expect, test } from 'vitest';
 
-import { PromotionRequest, Stage } from '@ui/gen/api/v2/models';
-
 import {
-  Rounds,
   aheadFreight,
   behindCount,
   byWorstState,
   freightTally,
+  inFlight,
   scopeToStage,
   stateCounts,
-  targetRows,
-  worstState
+  targetRows
 } from './target-rows';
-import { fleetStage, forStage, round, stage, target } from './test-fixtures';
-
-describe('worstState()', () => {
-  test('takes the worst of several Stages', () => {
-    expect(worstState(['Healthy', 'Unhealthy', 'Behind'])).toBe('Unhealthy');
-    expect(worstState(['Healthy', 'Behind'])).toBe('Behind');
-    expect(worstState(['Unhealthy', 'Progressing'])).toBe('Progressing');
-  });
-
-  test('no governing Stage means never promoted', () => {
-    expect(worstState([])).toBe('NotPromoted');
-  });
-});
+import { entry, fleetStage, health, target } from './test-fixtures';
 
 describe('targetRows()', () => {
-  const us = fleetStage('us-stage', [{ matchLabels: { region: 'us' } }], 'abc');
-  const all = fleetStage('all-stage', [{}], 'abc');
-  const classic = stage('classic');
+  const us = fleetStage('us-stage', [{ matchLabels: { region: 'us' } }], 'f-new');
+  const all = fleetStage('all-stage', [{}], 'f-new');
 
   test('one row per Target with its governing Stages, both sorted by name', () => {
     const rows = targetRows(
       [target('us-west-2', { region: 'us' }), target('eu-central-1', { region: 'eu' })],
-      [us, classic, all]
+      [
+        entry('eu-central-1', 'all-stage', 'UpToDate'),
+        entry('us-west-2', 'us-stage', 'UpToDate'),
+        entry('us-west-2', 'all-stage', 'UpToDate')
+      ],
+      [us, all]
     );
     expect(rows.map((r) => r.target.metadata?.name)).toEqual(['eu-central-1', 'us-west-2']);
     expect(rows[0].stages.map((s) => s.stage.metadata?.name)).toEqual(['all-stage']);
     expect(rows[1].stages.map((s) => s.stage.metadata?.name)).toEqual(['all-stage', 'us-stage']);
   });
 
+  test("reads each Stage's state from the server, and the worst across them", () => {
+    const [row] = targetRows(
+      [target('t', { region: 'us' })],
+      [entry('t', 'all-stage', 'UpToDate'), entry('t', 'us-stage', 'NotAttempted')],
+      [us, all]
+    );
+    expect(row.stages.map((s) => s.state)).toEqual(['UpToDate', 'NotAttempted']);
+    expect(row.state).toBe('NotAttempted');
+  });
+
   test('an ungoverned Target has never been promoted', () => {
-    const [row] = targetRows([target('orphan')], [us]);
+    const [row] = targetRows([target('orphan')], [], [us]);
     expect(row.stages).toEqual([]);
-    expect(row.state).toBe('NotPromoted');
+    expect(row.state).toBe('NeverPromoted');
     expect(row.behind).toBe(false);
     expect(row.freight).toEqual([]);
   });
 
-  test('carries the Target health recorded for each Stage', () => {
-    const t = target(
-      't',
-      { region: 'us' },
-      { status: { stages: { 'us-stage': forStage('abc', 'Unhealthy') } } }
-    );
-    const [row] = targetRows([t], [us, all]);
-    const byStage = Object.fromEntries(row.stages.map((s) => [s.stage.metadata?.name, s.health]));
-    expect(byStage['us-stage']?.status).toBe('Unhealthy');
-    expect(byStage['all-stage']).toBeUndefined();
-  });
-
-  test.each([
-    ['governed but never promoted to', undefined, 'NotPromoted', false],
-    ['on the latest Freight and healthy', forStage('abc', 'Healthy'), 'Healthy', false],
-    ['healthy on older Freight', forStage('old', 'Healthy'), 'Behind', true],
-    ['unhealthy', forStage('abc', 'Unhealthy'), 'Unhealthy', false],
-    ['degraded', forStage('abc', 'Degraded'), 'Unhealthy', false],
-    ['reported as unknown', forStage('abc', 'Unknown'), 'Unknown', false],
-    ['unhealthy and behind', forStage('old', 'Unhealthy'), 'Unhealthy', true]
-  ])('a Target %s is %s', (_name, status, state, behind) => {
-    const t = target('t', { region: 'us' }, { status: { stages: { 'us-stage': status } } });
-    const [row] = targetRows([t], [us]);
-    expect(row.state).toBe(state);
-    expect(row.behind).toBe(behind);
-  });
-
-  // Targets carry no recorded health yet, so for most fleets the state comes
-  // from how the Stage's latest round went. These cases are the ordinary ones.
-  describe('with no health recorded', () => {
-    const succeeded = (name: string) =>
-      round('us-stage', [name], {
-        phase: 'Succeeded',
-        targets: [{ name, phase: 'Succeeded' }]
-      });
-
-    test('a Target the latest round landed on is healthy, even with no status', () => {
-      const t = target('t', { region: 'us' });
-      const [row] = targetRows([t], [us], { 'us-stage': succeeded('t') });
-      expect(row.state).toBe('Healthy');
-      expect(row.behind).toBe(false);
-      // Nothing to compare collections with, so the round stands in for it.
-      expect(row.stages[0].upToDate).toBe(true);
-    });
-
-    test('a Target the latest round failed on is unhealthy and behind', () => {
-      const t = target('t', { region: 'us' });
-      const failed = round('us-stage', ['t'], {
-        phase: 'Failed',
-        targets: [{ name: 't', phase: 'Failed' }]
-      });
-      const [row] = targetRows([t], [us], { 'us-stage': failed });
-      expect(row.state).toBe('Unhealthy');
-      expect(row.behind).toBe(true);
-    });
-
-    test('a Target with Freight on it is healthy without a round at all', () => {
-      const t = target(
-        't',
-        { region: 'us' },
-        { status: { stages: { 'us-stage': forStage('abc') } } }
-      );
-      expect(targetRows([t], [us])[0].state).toBe('Healthy');
-    });
-
-    test('a Target left on older Freight is behind, not healthy', () => {
-      const t = target(
-        't',
-        { region: 'us' },
-        { status: { stages: { 'us-stage': forStage('old') } } }
-      );
-      const [row] = targetRows([t], [us]);
-      expect(row.state).toBe('Behind');
-      expect(row.behind).toBe(true);
-    });
-
-    test('a Target no round and no Freight reaches has not been promoted to', () => {
-      const t = target('t', { region: 'us' });
-      expect(targetRows([t], [us], { 'us-stage': round('us-stage', ['other']) })[0].state).toBe(
-        'NotPromoted'
-      );
-    });
-
-    test('recorded health outranks the round it fell back to', () => {
-      const t = target(
-        't',
-        { region: 'us' },
-        { status: { stages: { 'us-stage': forStage('abc', 'Unhealthy') } } }
-      );
-      expect(targetRows([t], [us], { 'us-stage': succeeded('t') })[0].state).toBe('Unhealthy');
-    });
-  });
-
-  test("the Freight a Target runs comes from every Stage's collection", () => {
-    const t = target(
-      't',
-      { region: 'us' },
-      {
-        status: {
-          stages: {
-            'us-stage': forStage('abc', 'Healthy', 'freight-a'),
-            'all-stage': forStage('old', 'Healthy', 'freight-b')
-          }
-        }
-      }
-    );
-    expect(targetRows([t], [us, all])[0].freight).toEqual(['freight-b', 'freight-a']);
-  });
-
-  test('a Target the governing Stage is promoting to is Progressing', () => {
-    const t = target(
-      't',
-      { region: 'us' },
-      { status: { stages: { 'us-stage': forStage('old') } } }
-    );
-    const rounds: Rounds = {
-      'us-stage': round('us-stage', ['t'], { targets: [{ name: 't', phase: 'Running' }] })
-    };
-    expect(targetRows([t], [us], rounds)[0].state).toBe('Progressing');
-  });
-
-  test('a Target the round has yet to reach is Progressing', () => {
-    const t = target(
-      't',
-      { region: 'us' },
-      { status: { stages: { 'us-stage': forStage('old') } } }
-    );
-    expect(targetRows([t], [us], { 'us-stage': round('us-stage', ['t']) })[0].state).toBe(
-      'Progressing'
-    );
-  });
-
-  test('a round that has ended leaves its Targets as their status says', () => {
-    const t = target(
-      't',
-      { region: 'us' },
-      { status: { stages: { 'us-stage': forStage('abc', 'Healthy') } } }
-    );
-    const rounds: Rounds = {
-      'us-stage': round('us-stage', ['t'], {
-        phase: 'Succeeded',
-        targets: [{ name: 't', phase: 'Succeeded' }]
-      })
-    };
-    expect(targetRows([t], [us], rounds)[0].state).toBe('Healthy');
-  });
-
-  test('a round that never fanned out leaves its Targets alone', () => {
-    const t = target(
-      't',
-      { region: 'us' },
-      { status: { stages: { 'us-stage': forStage('old') } } }
-    );
-    const blocked = round('us-stage', ['t'], {
-      conditions: [
-        { type: 'Ready', status: 'False', reason: 'EnterpriseOnlyFeature', message: 'nope' }
-      ]
-    } as Partial<PromotionRequest['status']>);
-    expect(targetRows([t], [us], { 'us-stage': blocked })[0].state).toBe('Behind');
-  });
-
-  test('a Target the round never named is left alone', () => {
-    const t = target(
-      't',
-      { region: 'us' },
-      { status: { stages: { 'us-stage': forStage('abc', 'Healthy') } } }
-    );
-    expect(targetRows([t], [us], { 'us-stage': round('us-stage', ['other']) })[0].state).toBe(
-      'Healthy'
-    );
-  });
-});
-
-describe('stateCounts() and behindCount()', () => {
-  const us = fleetStage('us-stage', [{ matchLabels: { region: 'us' } }], 'abc');
-  const rows = targetRows(
-    [
-      target(
-        'a',
-        { region: 'us' },
-        { status: { stages: { 'us-stage': forStage('abc', 'Healthy') } } }
-      ),
-      target(
-        'b',
-        { region: 'us' },
-        { status: { stages: { 'us-stage': forStage('old', 'Healthy') } } }
-      ),
-      target(
-        'c',
-        { region: 'us' },
-        { status: { stages: { 'us-stage': forStage('old', 'Unhealthy') } } }
-      ),
-      target('d', { region: 'us' })
-    ],
-    [us]
-  );
-
-  test('every state is tallied, including the empty ones', () => {
-    expect(stateCounts(rows)).toEqual({
-      Healthy: 1,
-      Behind: 1,
-      Progressing: 0,
-      Unhealthy: 1,
-      Unknown: 0,
-      NotPromoted: 1
-    });
-  });
-
-  test('the five tiles partition the rows', () => {
-    const counts = stateCounts(rows);
-    expect(
-      counts.Healthy +
-        counts.Behind +
-        counts.Progressing +
-        counts.Unhealthy +
-        counts.Unknown +
-        counts.NotPromoted
-    ).toBe(rows.length);
-  });
-
-  test('behind cuts across the states', () => {
-    expect(behindCount(rows)).toBe(2);
-  });
-});
-
-describe('freightTally()', () => {
-  const us = fleetStage('us-stage', [{}], 'abc');
-  test('counts the Targets on each piece of Freight, commonest first', () => {
-    const rows = targetRows(
+  test('behind is any governing Stage having left the Target behind, whatever its state', () => {
+    const [row] = targetRows(
+      [target('t')],
       [
-        target('a', {}, { status: { stages: { 'us-stage': forStage('abc', 'Healthy', 'new') } } }),
-        target('b', {}, { status: { stages: { 'us-stage': forStage('old', 'Healthy', 'old') } } }),
-        target('c', {}, { status: { stages: { 'us-stage': forStage('abc', 'Healthy', 'new') } } }),
-        target('d')
+        entry('t', 'all-stage', 'UpToDate'),
+        entry('t', 'us-stage', 'Failed', { behind: true, freightName: 'f-old' })
+      ],
+      [us, all]
+    );
+    expect(row.behind).toBe(true);
+    expect(row.stages.map((s) => s.behind)).toEqual([false, true]);
+  });
+
+  test('collects the Freight the Target is on across its Stages', () => {
+    const [row] = targetRows(
+      [target('t')],
+      [
+        entry('t', 'all-stage', 'UpToDate', { freightName: 'f-new' }),
+        entry('t', 'us-stage', 'Behind', { freightName: 'f-old' })
+      ],
+      [us, all]
+    );
+    expect(row.freight).toEqual(['f-new', 'f-old']);
+    expect(row.stages[1].currentFreight?.items?.['Warehouse/w']?.name).toBe('f-old');
+  });
+
+  test('fills in what the Freight carries when it can be resolved', () => {
+    const images = [{ repoURL: 'ghcr.io/example/web', tag: '1.0.0' }];
+    const [row] = targetRows(
+      [target('t')],
+      [entry('t', 'us-stage', 'UpToDate', { freightName: 'f-new' })],
+      [us],
+      (name) => ({ name, images })
+    );
+    expect(row.stages[0].currentFreight?.items?.['Warehouse/w']?.images).toEqual(images);
+  });
+
+  test('carries the Target health recorded for each Stage', () => {
+    const [row] = targetRows(
+      [target('t', {}, { status: { stages: { 'us-stage': health('Unhealthy') } } })],
+      [entry('t', 'all-stage', 'UpToDate'), entry('t', 'us-stage', 'UpToDate')],
+      [us, all]
+    );
+    expect(row.stages.map((s) => s.health?.status)).toEqual([undefined, 'Unhealthy']);
+    // Health is shown beside the state, never folded into it.
+    expect(row.state).toBe('UpToDate');
+  });
+
+  test('a Target the list has not caught up with is drawn from its entries', () => {
+    const [row] = targetRows(
+      [],
+      [entry('new', 'us-stage', 'Pending', { labels: { region: 'us' } })],
+      [us]
+    );
+    expect(row.target.metadata).toEqual({ name: 'new', labels: { region: 'us' } });
+    expect(row.state).toBe('Pending');
+  });
+
+  test('an entry for a Stage not loaded yet stands in a Stage of that name', () => {
+    const [row] = targetRows([target('t')], [entry('t', 'new-stage', 'Pending')], []);
+    expect(row.stages[0].stage.metadata?.name).toBe('new-stage');
+  });
+
+  test('a later rollout naming only some Targets leaves the rest as they were', () => {
+    // The server reads every Promotion and rollout on record, so a retry of
+    // the failed Targets says nothing of the others: they keep the state the
+    // rollout before it left them in.
+    const rows = targetRows(
+      [target('retried'), target('left-out'), target('done')],
+      [
+        entry('done', 'us-stage', 'UpToDate', { freightName: 'f-new' }),
+        entry('left-out', 'us-stage', 'NotAttempted', {
+          behind: true,
+          rollout: 3,
+          freightName: 'f-old'
+        }),
+        entry('retried', 'us-stage', 'UpToDate', { freightName: 'f-new' })
       ],
       [us]
     );
-    expect(freightTally(rows)).toEqual([
-      { name: 'new', count: 2 },
-      { name: 'old', count: 1 }
+    expect(rows.map((r) => [r.target.metadata?.name, r.state])).toEqual([
+      ['done', 'UpToDate'],
+      ['left-out', 'NotAttempted'],
+      ['retried', 'UpToDate']
     ]);
   });
 });
 
 describe('scopeToStage()', () => {
-  const us = fleetStage('us-stage', [{ matchLabels: { region: 'us' } }], 'new');
-  const all = fleetStage('all-stage', [{}], 'new');
+  const dev = fleetStage('dev', [{}], 'f-new');
+  const prod = fleetStage('prod', [{}], 'f-new');
+  const [row] = targetRows(
+    [target('t')],
+    [
+      entry('t', 'dev', 'UpToDate', { freightName: 'f-new' }),
+      entry('t', 'prod', 'Behind', { freightName: 'f-old' })
+    ],
+    [dev, prod]
+  );
 
-  test('reads the row as one Stage sees it', () => {
-    const [row] = targetRows(
-      [
-        target(
-          'a',
-          { region: 'us' },
-          {
-            status: {
-              stages: {
-                'all-stage': forStage('old', 'Healthy', 'f-old'),
-                'us-stage': forStage('new', 'Unhealthy', 'f-new')
-              }
-            }
-          }
-        )
-      ],
-      [us, all]
-    );
-    expect(row.state).toBe('Unhealthy');
-    expect(row.behind).toBe(true);
-
-    const [allStage, usStage] = row.stages;
-    const scoped = scopeToStage(row, allStage);
-    expect(scoped.scopedTo).toBe(allStage);
-    expect(scoped.state).toBe('Behind');
-    expect(scoped.behind).toBe(true);
-    expect(scoped.freight).toEqual(['f-old']);
-
-    const other = scopeToStage(row, usStage);
-    expect(other.state).toBe('Unhealthy');
-    expect(other.behind).toBe(false);
-    expect(other.freight).toEqual(['f-new']);
-    expect(other.target).toBe(row.target);
+  test('reads the row as one Stage sees it, keeping every Stage that governs it', () => {
+    const scoped = scopeToStage(row, row.stages[0]);
+    expect(scoped.state).toBe('UpToDate');
+    expect(scoped.behind).toBe(false);
+    expect(scoped.freight).toEqual(['f-new']);
+    expect(scoped.scopedTo).toBe(row.stages[0]);
+    expect(scoped.stages).toHaveLength(2);
   });
 
-  test('leaves the governing Stages whole, so the detail views keep them', () => {
-    const [row] = targetRows([target('a', { region: 'us' })], [us, all]);
-    expect(scopeToStage(row, row.stages[0]).stages).toBe(row.stages);
-  });
-
-  // Keeping every governing Stage on the row means anything reading them has
-  // to say which Stage it is answering for. aheadFreight is the one that does.
-  test('aheadFreight answers for the scoped Stage alone', () => {
-    // The Stages need Freight of their own, since that is what a "behind" tag
-    // names: what the Stage has moved on to.
-    const onLatest = (stage: Stage, freight: string): Stage => ({
-      ...stage,
-      status: { freightHistory: [{ id: 'new', items: { 'Warehouse/w': { name: freight } } }] }
-    });
-    const [row] = targetRows(
-      [
-        target(
-          'a',
-          { region: 'us' },
-          {
-            status: {
-              stages: {
-                // Behind: the Stage is on 'new', the Target still on 'old'.
-                'all-stage': forStage('old', 'Healthy', 'f-old'),
-                // Up to date.
-                'us-stage': forStage('new', 'Healthy', 'f-new')
-              }
-            }
-          }
-        )
-      ],
-      [onLatest(us, 'us-latest'), onLatest(all, 'all-latest')]
-    );
-    const [allStage, usStage] = row.stages;
-
-    // Unscoped, the row speaks for every Stage, and all-stage is behind.
-    expect(aheadFreight(row)).toEqual(['all-latest']);
-    // Scoped to all-stage, which is the Stage that is behind.
-    expect(aheadFreight(scopeToStage(row, allStage))).toEqual(['all-latest']);
-    // Scoped to us-stage, which is up to date: no "behind" tag belongs on a
-    // row this very view calls Healthy.
-    expect(aheadFreight(scopeToStage(row, usStage))).toEqual([]);
+  test("aheadFreight names what a behind Stage has moved on to, for the row's own Stage", () => {
+    expect(aheadFreight(row)).toEqual(['f-new']);
+    expect(aheadFreight(scopeToStage(row, row.stages[0]))).toEqual([]);
+    expect(aheadFreight(scopeToStage(row, row.stages[1]))).toEqual(['f-new']);
   });
 });
 
-describe('byWorstState()', () => {
-  const us = fleetStage('us-stage', [{}], 'abc');
-  test('puts trouble first and ties break by name', () => {
-    const rows = targetRows(
-      [
-        target('zed', {}, { status: { stages: { 'us-stage': forStage('abc', 'Healthy') } } }),
-        target('ann', {}, { status: { stages: { 'us-stage': forStage('abc', 'Healthy') } } }),
-        target('bob', {}, { status: { stages: { 'us-stage': forStage('abc', 'Unhealthy') } } })
-      ],
-      [us]
-    );
-    expect(byWorstState(rows).map((row) => row.target.metadata?.name)).toEqual([
-      'bob',
-      'ann',
-      'zed'
+describe('tallies', () => {
+  const s = fleetStage('s', [{}], 'f-new');
+  const rows = targetRows(
+    [target('a'), target('b'), target('c'), target('d')],
+    [
+      entry('a', 's', 'UpToDate', { freightName: 'f-new' }),
+      entry('b', 's', 'Failed', { behind: true, freightName: 'f-old' }),
+      entry('c', 's', 'Promoting', { freightName: 'f-old', behind: true }),
+      entry('d', 's', 'UpToDate', { freightName: 'f-new' })
+    ],
+    [s]
+  );
+
+  test('stateCounts has every state, counted once per row', () => {
+    expect(stateCounts(rows)).toEqual({
+      UpToDate: 2,
+      Behind: 0,
+      Promoting: 1,
+      Pending: 0,
+      Failed: 1,
+      NotAttempted: 0,
+      NeverPromoted: 0
+    });
+  });
+
+  test('behindCount cuts across the states', () => {
+    expect(behindCount(rows)).toBe(2);
+  });
+
+  test('freightTally counts Targets per Freight, commonest first', () => {
+    expect(freightTally(rows)).toEqual([
+      { name: 'f-new', count: 2 },
+      { name: 'f-old', count: 2 }
     ]);
+  });
+
+  test('byWorstState puts what is moving, then what went wrong, first', () => {
+    expect(byWorstState(rows).map((r) => r.target.metadata?.name)).toEqual(['c', 'b', 'a', 'd']);
+  });
+
+  test('inFlight is any entry with a promotion on its way', () => {
+    expect(inFlight([entry('a', 's', 'UpToDate')])).toBe(false);
+    expect(inFlight([entry('a', 's', 'UpToDate'), entry('b', 's', 'Pending')])).toBe(true);
   });
 });

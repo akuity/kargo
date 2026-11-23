@@ -16,7 +16,7 @@ import {
   keptRows
 } from './target-grouping';
 import { stateCounts, targetRows } from './target-rows';
-import { fleetStage, forStage, stage, target } from './test-fixtures';
+import { entry, fleetStage, stage, target } from './test-fixtures';
 
 describe('groupTargetRows()', () => {
   const rows = targetRows(
@@ -26,6 +26,7 @@ describe('groupTargetRows()', () => {
       target('orphan'),
       target('us-east-1', { region: 'us' })
     ],
+    [],
     []
   );
 
@@ -43,6 +44,7 @@ describe('groupTargetRows()', () => {
   test('an empty label value groups with the unlabeled, not into a blank group', () => {
     const withEmpty = targetRows(
       [target('a', { region: '' }), target('b', { region: 'us' }), target('c')],
+      [],
       []
     );
     const groups = groupTargetRows(withEmpty, 'region');
@@ -69,20 +71,10 @@ describe('groupTargetRows() by Stage', () => {
     }
   };
   const rows = targetRows(
+    [target('shared', { tier: 'all' }), target('orphan')],
     [
-      target(
-        'shared',
-        { tier: 'all' },
-        {
-          status: {
-            stages: {
-              dev: forStage('new', 'Healthy', 'f-new'),
-              prod: forStage('old', 'Unhealthy', 'f-old')
-            }
-          }
-        }
-      ),
-      target('orphan')
+      entry('shared', 'dev', 'UpToDate', { freightName: 'f-new' }),
+      entry('shared', 'prod', 'Failed', { freightName: 'f-old' })
     ],
     [prod, dev]
   );
@@ -95,11 +87,11 @@ describe('groupTargetRows() by Stage', () => {
   });
 
   test('each group reads the Target as its own Stage sees it', () => {
-    // Across both Stages the Target is Unhealthy; dev alone sees it Healthy.
-    expect(rows[1].state).toBe('Unhealthy');
-    expect(groups[0].rows[0].state).toBe('Healthy');
+    // Across both Stages the Target has Failed; dev alone sees it up to date.
+    expect(rows[1].state).toBe('Failed');
+    expect(groups[0].rows[0].state).toBe('UpToDate');
     expect(groups[0].rows[0].freight).toEqual(['f-new']);
-    expect(groups[1].rows[0].state).toBe('Unhealthy');
+    expect(groups[1].rows[0].state).toBe('Failed');
     expect(groups[1].rows[0].freight).toEqual(['f-old']);
   });
 
@@ -118,7 +110,11 @@ describe('groupTargetRows() by Stage', () => {
 
   test('a Stage no row is governed by gets no group', () => {
     const idle = fleetStage('idle', [{ matchLabels: { tier: 'none' } }]);
-    const withIdle = targetRows([target('a', { tier: 'all' })], [dev, idle]);
+    const withIdle = targetRows(
+      [target('a', { tier: 'all' })],
+      [entry('a', 'dev', 'UpToDate')],
+      [dev, idle]
+    );
     expect(groupTargetRows(withIdle, STAGE_GROUPING, [dev, idle]).map((g) => g.value)).toEqual([
       'dev'
     ]);
@@ -134,28 +130,28 @@ describe('groupTargetRows() by Stage', () => {
     const facetedGroups = (states: Facets['states']) =>
       filterGroupedRows(groups, (row) => matchesFacets(row, { labels: {}, states }));
 
-    test('ticking Healthy keeps the Stage that sees the Target healthy', () => {
-      const healthy = facetedGroups(['Healthy']);
+    test('ticking Up to date keeps the Stage that sees the Target up to date', () => {
+      const healthy = facetedGroups(['UpToDate']);
       expect(healthy.map((g) => g.value)).toEqual(['dev']);
       expect(healthy[0].rows.map((r) => r.target.metadata?.name)).toEqual(['shared']);
     });
 
-    test('ticking Unhealthy keeps only the Stage that sees it unhealthy', () => {
-      const unhealthy = facetedGroups(['Unhealthy']);
+    test('ticking Failed keeps only the Stage that sees it failed', () => {
+      const unhealthy = facetedGroups(['Failed']);
       expect(unhealthy.map((g) => g.value)).toEqual(['prod']);
-      expect(unhealthy[0].rows[0].state).toBe('Unhealthy');
+      expect(unhealthy[0].rows[0].state).toBe('Failed');
     });
 
     test('the facet counts agree with what each group shows', () => {
-      expect(stateFacet(groupedRows(groups), { labels: {}, states: [] }).Healthy).toBe(
-        stateCounts(groups[0].rows).Healthy
+      expect(stateFacet(groupedRows(groups), { labels: {}, states: [] }).UpToDate).toBe(
+        stateCounts(groups[0].rows).UpToDate
       );
     });
 
     test('the summary counts the readings the groups hold between them', () => {
       const counts = stateCounts(groupedRows(groups));
-      expect(counts.Healthy).toBe(1);
-      expect(counts.Unhealthy).toBe(1);
+      expect(counts.UpToDate).toBe(1);
+      expect(counts.Failed).toBe(1);
       expect(groupedRows(groups)).toHaveLength(3);
     });
 
@@ -167,10 +163,10 @@ describe('groupTargetRows() by Stage', () => {
     });
 
     test('keptRows keeps a Target any one of its Stages kept, read across them all', () => {
-      // Only dev sees it Healthy, but the fleet figures read it Unhealthy.
-      const kept = keptRows(rows, facetedGroups(['Healthy']));
+      // Only dev sees it up to date, but the fleet figures read it Failed.
+      const kept = keptRows(rows, facetedGroups(['UpToDate']));
       expect(kept.map((r) => r.target.metadata?.name)).toEqual(['shared']);
-      expect(kept[0].state).toBe('Unhealthy');
+      expect(kept[0].state).toBe('Failed');
       expect(kept[0].scopedTo).toBeUndefined();
     });
 

@@ -1,6 +1,11 @@
 import { describe, expect, test } from 'vitest';
 
-import { artifactSummary, describeArtifact, flattenParams } from './target-details-utils';
+import {
+  artifactSummary,
+  describeArtifact,
+  flattenParams,
+  promotionWhen
+} from './target-details-utils';
 
 describe('flattenParams()', () => {
   test('nests into dotted keys and sorts them', () => {
@@ -77,5 +82,26 @@ describe('artifactSummary()', () => {
   test('nothing to carry, nothing to say', () => {
     expect(artifactSummary(undefined)).toBe('');
     expect(artifactSummary({ name: '0123456789abcdef' })).toBe('');
+  });
+});
+
+describe('promotionWhen()', () => {
+  test('says when a finished Promotion finished', () => {
+    const { text, date } = promotionWhen({
+      createdAt: '2026-01-01T00:00:00Z',
+      finishedAt: '2026-01-02T00:00:00Z'
+    });
+    expect(text).toMatch(/^finished .+ ago$/);
+    expect(date?.toISOString()).toBe('2026-01-02T00:00:00.000Z');
+  });
+
+  test('says when one that has yet to finish was created', () => {
+    const { text, date } = promotionWhen({ createdAt: '2026-01-01T00:00:00Z' });
+    expect(text).toMatch(/^created .+ ago$/);
+    expect(date?.toISOString()).toBe('2026-01-01T00:00:00.000Z');
+  });
+
+  test('says nothing of one with no times', () => {
+    expect(promotionWhen({})).toEqual({ text: '', date: undefined });
   });
 });

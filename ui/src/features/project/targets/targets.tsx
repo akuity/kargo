@@ -5,7 +5,6 @@ import { useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
 
 import { LoadingState } from '@ui/features/common/loading-state';
-import { useCurrentRounds } from '@ui/features/stage/use-current-round';
 import { useListStages, useListTargets } from '@ui/gen/api/v2/core/core';
 import { useLocalStorage } from '@ui/utils/use-local-storage';
 
@@ -13,7 +12,14 @@ import { useWatchStages } from '../pipelines/use-watch-stages';
 
 import { TARGETS_POLL_INTERVAL_MS } from './constants';
 import { TargetsList } from './list/targets-list';
-import { Facets, labelFacets, matchesFacets, noFacets, stateFacet } from './model/target-facets';
+import {
+  Facets,
+  facetSelections,
+  labelFacets,
+  matchesFacets,
+  noFacets,
+  stateFacet
+} from './model/target-facets';
 import {
   NO_GROUPING,
   STAGE_GROUPING,
@@ -27,11 +33,13 @@ import { labelKeys } from './model/target-labels';
 import { behindCount, stateCounts, targetRows } from './model/target-rows';
 import { matchesSearch } from './model/target-search';
 import { targetAwareStages } from './model/target-stages';
+import { fleetFigures } from './model/target-status';
 import { FiltersPanel } from './shared/filters-panel';
 import { GroupByFilter } from './shared/group-by-filter';
-import { useFreightLabel } from './shared/use-freight-label';
+import { useFreightLabel, useFreightReference } from './shared/use-freight-label';
 import { TargetGroupCard } from './summary/group-card';
 import { StatTiles } from './summary/stat-tiles';
+import { useTargetStatuses } from './use-target-statuses';
 
 const plural = (count: number) => (count === 1 ? '' : 's');
 
@@ -57,10 +65,11 @@ const views = [
  * region, tier, cloud, whatever the Targets happen to carry -- and drawing
  * each slice as one card. Opening a card lists its Targets.
  *
- * Governance is evaluated from each Stage's selectors, mirroring the
- * controller. What a Target runs and how healthy it is comes from its own
- * status, scoped per Stage; what is moving right now comes from each Stage's
- * current round of fan-out.
+ * Which Stages govern a Target, and where it stands with each, comes from
+ * the server's Target statuses, derived from every Promotion and
+ * PromotionRollout on record. The Targets themselves fill in what the
+ * statuses do not carry -- params, health when something records it -- and
+ * the Targets no Stage governs, which have no status.
  */
 export const Targets = () => {
   const { name: project = '' } = useParams();
@@ -75,9 +84,10 @@ export const Targets = () => {
   const allStages = useMemo(() => stagesQuery.data?.data?.items || [], [stagesQuery.data]);
   const stages = useMemo(() => targetAwareStages(allStages), [allStages]);
   const targets = useMemo(() => targetsQuery.data?.data?.items || [], [targetsQuery.data]);
-  const rounds = useCurrentRounds(project, stages);
+  const statuses = useTargetStatuses(project, stages);
 
   const freightLabel = useFreightLabel(project);
+  const resolveFreight = useFreightReference(project);
 
   // Which view and which grouping a reader prefers outlive the visit. The
   // search and the filters do not: a filter still in force from last week would
@@ -95,7 +105,10 @@ export const Targets = () => {
   const [storedGroupBy, setGroupBy] = useLocalStorage<string>(groupByKey(project), NO_GROUPING);
   const keys = useMemo(() => labelKeys(targets), [targets]);
 
-  const allRows = useMemo(() => targetRows(targets, stages, rounds), [targets, stages, rounds]);
+  const allRows = useMemo(
+    () => targetRows(targets, statuses.entries || [], allStages, resolveFreight),
+    [targets, statuses.entries, allStages, resolveFreight]
+  );
 
   // A remembered key that this project's Targets do not carry would group
   // everything into one unlabeled bucket, which says less than not grouping at
@@ -142,10 +155,20 @@ export const Targets = () => {
   // grouped.
   const shownRows = useMemo(() => keptRows(rows, groups), [rows, groups]);
   // Fleet figures, one row per Target however the page is grouped. See
-  // StatTiles for why these and the per-Stage cards differ.
-  const counts = useMemo(() => stateCounts(shownRows), [shownRows]);
+  // StatTiles for why these and the per-Stage cards differ. With nothing
+  // searched or filtered they are the server's own count of the fleet; the
+  // server cannot count a searched or filtered set of Targets, so then they
+  // are tallied from the rows left, which are read by the same rules.
+  const narrowed = !!search.trim() || facetSelections(facets) > 0;
+  const figures = useMemo(
+    () =>
+      narrowed || !statuses.summary
+        ? { counts: stateCounts(shownRows), behind: behindCount(shownRows) }
+        : fleetFigures(statuses.summary),
+    [narrowed, statuses.summary, shownRows]
+  );
 
-  const loading = stagesQuery.isLoading || targetsQuery.isLoading;
+  const loading = stagesQuery.isLoading || targetsQuery.isLoading || statuses.isLoading;
 
   return (
     <div className='p-6 flex flex-col gap-4 overflow-auto h-full'>
@@ -223,8 +246,8 @@ export const Targets = () => {
                 <StatTiles
                   shown={shownRows.length}
                   total={targets.length}
-                  counts={counts}
-                  behind={behindCount(shownRows)}
+                  counts={figures.counts}
+                  behind={figures.behind}
                 />
 
                 {groups.length === 0 ? (

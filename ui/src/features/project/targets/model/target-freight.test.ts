@@ -1,58 +1,6 @@
 import { describe, expect, test } from 'vitest';
 
-import { PromotionRequest } from '@ui/gen/api/v2/models';
-
-import { collectionUpToDate, freightByOrigin, freightNames, roundPhase } from './round-utils';
-
-const request = (targets: string[], status?: PromotionRequest['status']): PromotionRequest => ({
-  metadata: { name: 'prod.01a.x' },
-  spec: { stage: 'prod', freight: 'f1', targets: targets.map((t) => ({ name: t })) },
-  status
-});
-
-describe('roundPhase()', () => {
-  test('a Target the round never named has no phase', () => {
-    expect(roundPhase(request(['other']), 't')).toBeUndefined();
-    expect(roundPhase(undefined, 't')).toBeUndefined();
-  });
-
-  test("takes the child Promotion's phase when there is one", () => {
-    const round = request(['t'], { targets: [{ name: 't', phase: 'Running' }] });
-    expect(roundPhase(round, 't')).toBe('Running');
-  });
-
-  test('a child without a phase yet is Pending', () => {
-    const round = request(['t'], { targets: [{ name: 't' }] });
-    expect(roundPhase(round, 't')).toBe('Pending');
-  });
-
-  test.each([
-    // A round that ended before creating a child ended its Targets with it.
-    ['Succeeded', 'Succeeded'],
-    ['Failed', 'Failed'],
-    ['Errored', 'Errored'],
-    // Aborted is terminal too, mirroring PromotionRequestPhase.IsTerminal:
-    // reading it as Pending would leave the fleet looking mid-promotion.
-    ['Aborted', 'Aborted'],
-    ['Running', 'Pending'],
-    [undefined, 'Pending']
-  ])('a round in %s with no child reports %s', (phase, expected) => {
-    expect(roundPhase(request(['t'], { phase }), 't')).toBe(expected);
-  });
-});
-
-describe('collectionUpToDate()', () => {
-  test.each([
-    [{ id: 'abc' }, 'abc', true],
-    [{ id: 'old' }, 'abc', false],
-    // Nothing to compare: the question is open, not answered false.
-    [undefined, 'abc', undefined],
-    [{ id: 'abc' }, undefined, undefined],
-    [{}, 'abc', undefined]
-  ])('%j against %j -> %s', (collection, collectionID, expected) => {
-    expect(collectionUpToDate(collection, collectionID)).toBe(expected);
-  });
-});
+import { entryCollection, freightByOrigin, freightNames } from './target-freight';
 
 describe('freightNames()', () => {
   test('lists each origin Freight by name, sorted', () => {
@@ -120,5 +68,35 @@ describe('freightByOrigin()', () => {
 
   test('nothing on either side, no origins', () => {
     expect(freightByOrigin(undefined, undefined)).toEqual([]);
+  });
+});
+
+describe('entryCollection()', () => {
+  const origin = { kind: 'Warehouse', name: 'web' };
+
+  test('keys each piece of Freight by its origin, as a Stage keys its own', () => {
+    expect(entryCollection([{ name: 'f1', origin }])).toEqual({
+      items: { 'Warehouse/web': { name: 'f1', origin } }
+    });
+  });
+
+  test('fills in what the Freight carries when it can be resolved', () => {
+    const images = [{ repoURL: 'ghcr.io/example/web', tag: '1.0.0' }];
+    const collection = entryCollection([{ name: 'f1', origin }], (name) =>
+      name === 'f1' ? { name, images } : undefined
+    );
+    expect(collection?.items?.['Warehouse/web']).toEqual({ name: 'f1', origin, images });
+  });
+
+  test('pairs with the Stage origin by origin', () => {
+    const stage = { items: { 'Warehouse/web': { name: 'f2', origin } } };
+    expect(freightByOrigin(entryCollection([{ name: 'f1', origin }]), stage)).toMatchObject([
+      { origin: 'web', behind: true }
+    ]);
+  });
+
+  test('a Target with no Freight has no collection', () => {
+    expect(entryCollection([])).toBeUndefined();
+    expect(entryCollection(undefined)).toBeUndefined();
   });
 });

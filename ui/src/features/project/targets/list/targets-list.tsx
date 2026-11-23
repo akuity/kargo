@@ -36,9 +36,9 @@ const GroupHeader = ({ group, groupKey }: { group: TargetGroup; groupKey?: strin
           against group, and bars of different lengths cannot be compared. It
           still shrinks when the row runs out of room. */}
       <StateBar counts={counts} className='w-[220px] min-w-[80px]' />
-      {counts.Unhealthy > 0 && (
+      {counts.Failed > 0 && (
         <Tag color='error' className='m-0 text-xs shrink-0'>
-          {counts.Unhealthy} {targetStatePresentations.Unhealthy.short}
+          {counts.Failed} {targetStatePresentations.Failed.short}
         </Tag>
       )}
     </Flex>
@@ -150,7 +150,7 @@ export const TargetsList = ({
             : `Showing ${shown} of ${total} Targets`}
         </Typography.Text>
         <Typography.Text type='secondary' className='text-xs'>
-          Sorted worst health first
+          Sorted worst first
         </Typography.Text>
       </Flex>
       {groups.length === 0 ? (

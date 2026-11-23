@@ -13,42 +13,24 @@ import {
   truncateFacetValues
 } from './target-facets';
 import { targetRows } from './target-rows';
-import { fleetStage, forStage, target } from './test-fixtures';
+import { entry, fleetStage, target } from './test-fixtures';
 
 describe('facets', () => {
-  const us = fleetStage('us-stage', [{}], 'abc');
+  const us = fleetStage('us-stage', [{}], 'f1');
   const fleet = () =>
     targetRows(
       [
-        target(
-          'a',
-          { geo: 'us', tier: 'primary' },
-          {
-            status: { stages: { 'us-stage': forStage('abc', 'Healthy') } }
-          }
-        ),
-        target(
-          'b',
-          { geo: 'us', tier: 'secondary' },
-          {
-            status: { stages: { 'us-stage': forStage('abc', 'Unhealthy') } }
-          }
-        ),
-        target(
-          'c',
-          { geo: 'eu', tier: 'primary' },
-          {
-            status: { stages: { 'us-stage': forStage('abc', 'Healthy') } }
-          }
-        ),
+        target('a', { geo: 'us', tier: 'primary' }),
+        target('b', { geo: 'us', tier: 'secondary' }),
+        target('c', { geo: 'eu', tier: 'primary' }),
         // Carries no tier at all.
-        target(
-          'd',
-          { geo: 'eu' },
-          {
-            status: { stages: { 'us-stage': forStage('abc', 'Healthy') } }
-          }
-        )
+        target('d', { geo: 'eu' })
+      ],
+      [
+        entry('a', 'us-stage', 'UpToDate', { freightName: 'f1' }),
+        entry('b', 'us-stage', 'Failed'),
+        entry('c', 'us-stage', 'UpToDate', { freightName: 'f1' }),
+        entry('d', 'us-stage', 'UpToDate', { freightName: 'f1' })
       ],
       [us]
     );
@@ -82,7 +64,7 @@ describe('facets', () => {
   });
 
   test('a picked state narrows the fleet to it', () => {
-    expect(names(toggleFacet(noFacets(), STATE_FACET, 'Unhealthy'))).toEqual(['b']);
+    expect(names(toggleFacet(noFacets(), STATE_FACET, 'Failed'))).toEqual(['b']);
   });
 
   test('toggling the same value twice unpicks it', () => {
@@ -91,7 +73,7 @@ describe('facets', () => {
   });
 
   test('facetSelections counts every pick', () => {
-    const facets = toggleFacet(toggleFacet(noFacets(), 'geo', 'eu'), STATE_FACET, 'Healthy');
+    const facets = toggleFacet(toggleFacet(noFacets(), 'geo', 'eu'), STATE_FACET, 'UpToDate');
     expect(facetSelections(noFacets())).toBe(0);
     expect(facetSelections(facets)).toBe(2);
   });
@@ -134,14 +116,15 @@ describe('facets', () => {
   });
 
   test('the state tally ignores the picked states but honours the label picks', () => {
-    const facets = toggleFacet(toggleFacet(noFacets(), 'geo', 'us'), STATE_FACET, 'Healthy');
+    const facets = toggleFacet(toggleFacet(noFacets(), 'geo', 'us'), STATE_FACET, 'UpToDate');
     expect(stateFacet(fleet(), facets)).toEqual({
-      Healthy: 1,
+      UpToDate: 1,
       Behind: 0,
-      Progressing: 0,
-      Unhealthy: 1,
-      Unknown: 0,
-      NotPromoted: 0
+      Promoting: 0,
+      Pending: 0,
+      Failed: 1,
+      NotAttempted: 0,
+      NeverPromoted: 0
     });
   });
 });

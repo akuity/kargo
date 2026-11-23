@@ -1,8 +1,11 @@
+import { formatDistanceToNow } from 'date-fns';
+
 import {
   TableSource,
   flattenFreightOrigin
 } from '@ui/features/freight/flatten-freight-origin-utils';
-import { FreightReference } from '@ui/gen/api/v2/models';
+import { FreightReference, TargetPromotion } from '@ui/gen/api/v2/models';
+import { parseDate } from '@ui/utils/dates';
 
 export type Param = { key: string; value: string };
 
@@ -70,3 +73,17 @@ export const artifactSummary = (reference?: FreightReference): string =>
   referenceArtifacts(reference)
     .map(({ text }) => text)
     .join(', ');
+
+// promotionWhen says when a Promotion last did something: when it finished,
+// or when it was created if it has yet to.
+export const promotionWhen = (promotion: TargetPromotion): { text: string; date?: Date } => {
+  const finished = parseDate(promotion.finishedAt);
+  const created = parseDate(promotion.createdAt);
+  const date = finished || created;
+  return {
+    date,
+    text: date
+      ? `${finished ? 'finished' : 'created'} ${formatDistanceToNow(date, { addSuffix: true })}`
+      : ''
+  };
+};

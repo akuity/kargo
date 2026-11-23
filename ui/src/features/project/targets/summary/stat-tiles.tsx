@@ -38,15 +38,17 @@ const share = (count: number, total: number): string =>
 /**
  * StatTiles summarizes the Targets the page is showing.
  *
- * Healthy, Progressing, Unhealthy, Unknown and Not promoted partition the
- * fleet and so sum to its size. Behind Stage cuts across them: a Target left on
- * older Freight than its Stage may be perfectly healthy on it, and both
- * readings matter -- which is why it is counted again rather than taken out of
- * the Healthy figure.
+ * Up to date, In flight, Failed, Not attempted and Never promoted, together
+ * with the Targets whose last Promotion succeeded on Freight the Stage has
+ * since moved on from, partition the fleet and so sum to its size. Behind
+ * Stage cuts across them: a Target whose last Promotion failed, or that a
+ * rollout never attempted, is usually on older Freight than its Stage too, and
+ * both readings matter -- which is why it is counted again rather than taken
+ * out of another figure.
  *
- * Targets are not health-checked yet, so for most fleets these figures come
- * from how each Stage's latest round of promotion went rather than from
- * recorded health. See governingStageState.
+ * None of these is health. They say how promotion to each Target went, which
+ * is all that is recorded; a Target whose last Promotion succeeded is up to
+ * date, not known to be healthy.
  *
  * These stay fleet figures however the page is grouped: a Target governed by
  * several Stages counts once, under its worst state, while the cards below
@@ -64,7 +66,7 @@ export const StatTiles = ({
   counts: StateCounts;
   behind: number;
 }): ReactNode => {
-  const healthy = counts.Healthy + counts.Behind;
+  const inFlight = counts.Promoting + counts.Pending;
   return (
     <Flex gap={12} wrap>
       <div className={tileClassName}>
@@ -75,33 +77,37 @@ export const StatTiles = ({
         </Typography.Text>
       </div>
       <Tile
-        heading={targetStatePresentations.Healthy.label}
-        dot='Healthy'
-        value={healthy}
-        caption={share(healthy, shown)}
+        heading={targetStatePresentations.UpToDate.label}
+        dot='UpToDate'
+        value={counts.UpToDate}
+        caption={share(counts.UpToDate, shown)}
       />
       <Tile
-        heading={targetStatePresentations.Progressing.label}
-        dot='Progressing'
-        value={counts.Progressing}
-        caption='promotion in flight'
+        heading='In flight'
+        dot='Promoting'
+        value={inFlight}
+        caption={
+          inFlight
+            ? `${counts.Promoting} promoting · ${counts.Pending} pending`
+            : 'no promotion in flight'
+        }
       />
       <Tile
-        heading={targetStatePresentations.Unhealthy.label}
-        dot='Unhealthy'
-        value={counts.Unhealthy}
-        caption={share(counts.Unhealthy, shown)}
+        heading={targetStatePresentations.Failed.label}
+        dot='Failed'
+        value={counts.Failed}
+        caption='last promotion failed'
       />
       <Tile
-        heading={targetStatePresentations.Unknown.label}
-        dot='Unknown'
-        value={counts.Unknown}
-        caption='health undetermined'
+        heading={targetStatePresentations.NotAttempted.label}
+        dot='NotAttempted'
+        value={counts.NotAttempted}
+        caption='left out by a rollout'
       />
       <Tile
-        heading={targetStatePresentations.NotPromoted.label}
-        dot='NotPromoted'
-        value={counts.NotPromoted}
+        heading={targetStatePresentations.NeverPromoted.label}
+        dot='NeverPromoted'
+        value={counts.NeverPromoted}
         caption='no Freight yet'
       />
       <Tile

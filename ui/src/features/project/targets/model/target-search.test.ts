@@ -2,7 +2,7 @@ import { describe, expect, test } from 'vitest';
 
 import { targetRows } from './target-rows';
 import { matchesSearch, parseSelector } from './target-search';
-import { fleetStage, target } from './test-fixtures';
+import { entry, fleetStage, target } from './test-fixtures';
 
 describe('parseSelector()', () => {
   test('reads comma-separated equality terms', () => {
@@ -36,7 +36,11 @@ describe('parseSelector()', () => {
 
 describe('matchesSearch()', () => {
   const us = fleetStage('prod-us', [{ matchLabels: { region: 'us' } }]);
-  const [row] = targetRows([target('us-east-1', { region: 'us', tier: 'canary' })], [us]);
+  const [row] = targetRows(
+    [target('us-east-1', { region: 'us', tier: 'canary' })],
+    [entry('us-east-1', 'prod-us', 'UpToDate')],
+    [us]
+  );
 
   test.each([
     ['', true],
@@ -52,6 +56,7 @@ describe('matchesSearch()', () => {
   test('free text never matches on a label the page hides', () => {
     const [hidden] = targetRows(
       [target('us-east-1', { 'targetset.kargo.akuity.io/owner': 'eks-fleet' })],
+      [],
       []
     );
     expect(matchesSearch(hidden, 'eks-fleet')).toBe(false);
@@ -60,6 +65,7 @@ describe('matchesSearch()', () => {
   test('a selector naming a hidden key in full still reaches it', () => {
     const [hidden] = targetRows(
       [target('us-east-1', { 'targetset.kargo.akuity.io/owner': 'eks-fleet' })],
+      [],
       []
     );
     expect(matchesSearch(hidden, 'targetset.kargo.akuity.io/owner=eks-fleet')).toBe(true);
