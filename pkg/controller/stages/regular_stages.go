@@ -465,7 +465,7 @@ func (r *RegularStageReconciler) reconcile(
 	// different points as the underlying ProjectConfig changes.
 	autoPromotionEnabled, err := api.IsAutoPromotionEnabled(
 		ctx,
-		r.client,
+		api.KubernetesProjectConfigGetter(r.client),
 		stage.ObjectMeta,
 	)
 	if err != nil {

@@ -432,7 +432,7 @@ func Test_webhook_Default(t *testing.T) {
 				},
 				isAutoPromotionEnabledFn: func(
 					_ context.Context,
-					_ client.Client,
+					_ api.ProjectConfigGetter,
 					_ metav1.ObjectMeta,
 				) (bool, error) {
 					return true, nil
@@ -1137,7 +1137,7 @@ func Test_webhook_Default(t *testing.T) {
 				},
 				isAutoPromotionEnabledFn: func(
 					_ context.Context,
-					_ client.Client,
+					_ api.ProjectConfigGetter,
 					_ metav1.ObjectMeta,
 				) (bool, error) {
 					return true, nil
@@ -1278,7 +1278,7 @@ func Test_webhook_Default(t *testing.T) {
 				},
 				isAutoPromotionEnabledFn: func(
 					_ context.Context,
-					_ client.Client,
+					_ api.ProjectConfigGetter,
 					_ metav1.ObjectMeta,
 				) (bool, error) {
 					return true, nil
@@ -1422,7 +1422,7 @@ func Test_webhook_Default(t *testing.T) {
 				},
 				isAutoPromotionEnabledFn: func(
 					_ context.Context,
-					_ client.Client,
+					_ api.ProjectConfigGetter,
 					_ metav1.ObjectMeta,
 				) (bool, error) {
 					return false, nil
@@ -1478,7 +1478,7 @@ func Test_webhook_Default(t *testing.T) {
 				},
 				isAutoPromotionEnabledFn: func(
 					_ context.Context,
-					_ client.Client,
+					_ api.ProjectConfigGetter,
 					_ metav1.ObjectMeta,
 				) (bool, error) {
 					return true, nil
@@ -1568,7 +1568,7 @@ func Test_webhook_Default(t *testing.T) {
 				},
 				isAutoPromotionEnabledFn: func(
 					_ context.Context,
-					_ client.Client,
+					_ api.ProjectConfigGetter,
 					_ metav1.ObjectMeta,
 				) (bool, error) {
 					return true, nil

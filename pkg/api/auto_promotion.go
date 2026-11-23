@@ -6,36 +6,32 @@ import (
 	"slices"
 	"strings"
 
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/apimachinery/pkg/types"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/logging"
 	"github.com/akuity/kargo/pkg/pattern"
 )
 
-// findMatchingPromotionPolicy returns the first PromotionPolicy in the
+// FindMatchingPromotionPolicy returns the first PromotionPolicy in the
 // Project's ProjectConfig whose stage selector matches the supplied Stage
 // metadata. Policies are evaluated in order and the first match wins, even
 // when a later policy also matches. It returns nil when the Project has no
 // ProjectConfig or no policy matches.
-func findMatchingPromotionPolicy(
+func FindMatchingPromotionPolicy(
 	ctx context.Context,
-	c client.Client,
+	getter ProjectConfigGetter,
 	stage metav1.ObjectMeta,
 ) (*kargoapi.PromotionPolicy, error) {
-	projectCfg := &kargoapi.ProjectConfig{}
-	if err := c.Get(ctx, types.NamespacedName{
-		Name:      stage.Namespace,
-		Namespace: stage.Namespace,
-	}, projectCfg); err != nil {
-		if apierrors.IsNotFound(err) {
-			return nil, nil
-		}
-		return nil, fmt.Errorf("error getting ProjectConfig for Project %q: %w", stage.Namespace, err)
+	projectCfg, err := getter.Get(ctx, stage.Namespace)
+	if err != nil {
+		return nil, fmt.Errorf(
+			"error getting ProjectConfig for Project %q: %w", stage.Namespace, err,
+		)
+	}
+	if projectCfg == nil {
+		return nil, nil
 	}
 
 	for _, policy := range projectCfg.Spec.PromotionPolicies {
@@ -77,10 +73,10 @@ func findMatchingPromotionPolicy(
 // auto-promotion for the supplied Stage metadata.
 func IsAutoPromotionEnabled(
 	ctx context.Context,
-	c client.Client,
+	getter ProjectConfigGetter,
 	stage metav1.ObjectMeta,
 ) (bool, error) {
-	policy, err := findMatchingPromotionPolicy(ctx, c, stage)
+	policy, err := FindMatchingPromotionPolicy(ctx, getter, stage)
 	if err != nil {
 		return false, err
 	}

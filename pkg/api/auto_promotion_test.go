@@ -8,27 +8,39 @@ import (
 
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/client/fake"
-	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 )
 
-func Test_findMatchingPromotionPolicy(t *testing.T) {
-	scheme := runtime.NewScheme()
-	require.NoError(t, kargoapi.AddToScheme(scheme))
+// fakeGetter is a ProjectConfigGetter backed by a map keyed by Project name.
+type fakeGetter map[string]*kargoapi.ProjectConfig
 
+func (f fakeGetter) Get(
+	_ context.Context,
+	project string,
+) (*kargoapi.ProjectConfig, error) {
+	return f[project], nil
+}
+
+// errGetter is a ProjectConfigGetter that always fails.
+type errGetter struct{}
+
+func (errGetter) Get(
+	context.Context,
+	string,
+) (*kargoapi.ProjectConfig, error) {
+	return nil, errors.New("something went wrong")
+}
+
+func TestFindMatchingPromotionPolicy(t *testing.T) {
 	stageMeta := metav1.ObjectMeta{
 		Name:      "fake-stage",
 		Namespace: "fake-project",
 	}
 	testCases := []struct {
-		name        string
-		objects     []runtime.Object
-		interceptor interceptor.Funcs
-		assert      func(*testing.T, *kargoapi.PromotionPolicy, error)
+		name   string
+		getter ProjectConfigGetter
+		assert func(*testing.T, *kargoapi.PromotionPolicy, error)
 	}{
 		{
 			name: "nil without ProjectConfig",
@@ -38,18 +50,8 @@ func Test_findMatchingPromotionPolicy(t *testing.T) {
 			},
 		},
 		{
-			name: "error getting ProjectConfig",
-			interceptor: interceptor.Funcs{
-				Get: func(
-					context.Context,
-					client.WithWatch,
-					client.ObjectKey,
-					client.Object,
-					...client.GetOption,
-				) error {
-					return errors.New("something went wrong")
-				},
-			},
+			name:   "error getting ProjectConfig",
+			getter: errGetter{},
 			assert: func(t *testing.T, policy *kargoapi.PromotionPolicy, err error) {
 				require.ErrorContains(t, err, "something went wrong")
 				require.Nil(t, policy)
@@ -57,8 +59,8 @@ func Test_findMatchingPromotionPolicy(t *testing.T) {
 		},
 		{
 			name: "nil when no policy matches",
-			objects: []runtime.Object{
-				&kargoapi.ProjectConfig{
+			getter: fakeGetter{
+				"fake-project": &kargoapi.ProjectConfig{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "fake-project",
 						Namespace: "fake-project",
@@ -77,8 +79,8 @@ func Test_findMatchingPromotionPolicy(t *testing.T) {
 		},
 		{
 			name: "returns first matching policy even when a later one also matches",
-			objects: []runtime.Object{
-				&kargoapi.ProjectConfig{
+			getter: fakeGetter{
+				"fake-project": &kargoapi.ProjectConfig{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "fake-project",
 						Namespace: "fake-project",
@@ -109,8 +111,8 @@ func Test_findMatchingPromotionPolicy(t *testing.T) {
 		},
 		{
 			name: "matches by deprecated Stage field",
-			objects: []runtime.Object{
-				&kargoapi.ProjectConfig{
+			getter: fakeGetter{
+				"fake-project": &kargoapi.ProjectConfig{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "fake-project",
 						Namespace: "fake-project",
@@ -130,21 +132,16 @@ func Test_findMatchingPromotionPolicy(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			c := fake.NewClientBuilder().
-				WithScheme(scheme).
-				WithRuntimeObjects(testCase.objects...).
-				WithInterceptorFuncs(testCase.interceptor).
-				Build()
-			policy, err := findMatchingPromotionPolicy(t.Context(), c, stageMeta)
+			if testCase.getter == nil {
+				testCase.getter = fakeGetter{}
+			}
+			policy, err := FindMatchingPromotionPolicy(t.Context(), testCase.getter, stageMeta)
 			testCase.assert(t, policy, err)
 		})
 	}
 }
 
 func TestIsAutoPromotionEnabled(t *testing.T) {
-	scheme := runtime.NewScheme()
-	require.NoError(t, kargoapi.AddToScheme(scheme))
-
 	stageMeta := metav1.ObjectMeta{
 		Name:      "fake-stage",
 		Namespace: "fake-project",
@@ -153,10 +150,9 @@ func TestIsAutoPromotionEnabled(t *testing.T) {
 		},
 	}
 	testCases := []struct {
-		name        string
-		objects     []runtime.Object
-		interceptor interceptor.Funcs
-		assert      func(*testing.T, bool, error)
+		name   string
+		getter ProjectConfigGetter
+		assert func(*testing.T, bool, error)
 	}{
 		{
 			name: "disabled without ProjectConfig",
@@ -166,18 +162,8 @@ func TestIsAutoPromotionEnabled(t *testing.T) {
 			},
 		},
 		{
-			name: "error getting ProjectConfig",
-			interceptor: interceptor.Funcs{
-				Get: func(
-					context.Context,
-					client.WithWatch,
-					client.ObjectKey,
-					client.Object,
-					...client.GetOption,
-				) error {
-					return errors.New("something went wrong")
-				},
-			},
+			name:   "error getting ProjectConfig",
+			getter: errGetter{},
 			assert: func(t *testing.T, enabled bool, err error) {
 				require.ErrorContains(t, err, "something went wrong")
 				require.False(t, enabled)
@@ -185,8 +171,8 @@ func TestIsAutoPromotionEnabled(t *testing.T) {
 		},
 		{
 			name: "disabled with empty promotion policies",
-			objects: []runtime.Object{
-				&kargoapi.ProjectConfig{
+			getter: fakeGetter{
+				"fake-project": &kargoapi.ProjectConfig{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "fake-project",
 						Namespace: "fake-project",
@@ -203,8 +189,8 @@ func TestIsAutoPromotionEnabled(t *testing.T) {
 		},
 		{
 			name: "enabled by deprecated Stage field",
-			objects: []runtime.Object{
-				&kargoapi.ProjectConfig{
+			getter: fakeGetter{
+				"fake-project": &kargoapi.ProjectConfig{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "fake-project",
 						Namespace: "fake-project",
@@ -224,8 +210,8 @@ func TestIsAutoPromotionEnabled(t *testing.T) {
 		},
 		{
 			name: "returns first matching policy for the Stage",
-			objects: []runtime.Object{
-				&kargoapi.ProjectConfig{
+			getter: fakeGetter{
+				"fake-project": &kargoapi.ProjectConfig{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "fake-project",
 						Namespace: "fake-project",
@@ -255,8 +241,8 @@ func TestIsAutoPromotionEnabled(t *testing.T) {
 		},
 		{
 			name: "enabled by matching name selector",
-			objects: []runtime.Object{
-				&kargoapi.ProjectConfig{
+			getter: fakeGetter{
+				"fake-project": &kargoapi.ProjectConfig{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "fake-project",
 						Namespace: "fake-project",
@@ -276,8 +262,8 @@ func TestIsAutoPromotionEnabled(t *testing.T) {
 		},
 		{
 			name: "enabled by matching label selector",
-			objects: []runtime.Object{
-				&kargoapi.ProjectConfig{
+			getter: fakeGetter{
+				"fake-project": &kargoapi.ProjectConfig{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "fake-project",
 						Namespace: "fake-project",
@@ -301,8 +287,8 @@ func TestIsAutoPromotionEnabled(t *testing.T) {
 		},
 		{
 			name: "disabled by non-matching selector",
-			objects: []runtime.Object{
-				&kargoapi.ProjectConfig{
+			getter: fakeGetter{
+				"fake-project": &kargoapi.ProjectConfig{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "fake-project",
 						Namespace: "fake-project",
@@ -323,12 +309,10 @@ func TestIsAutoPromotionEnabled(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			c := fake.NewClientBuilder().
-				WithScheme(scheme).
-				WithRuntimeObjects(testCase.objects...).
-				WithInterceptorFuncs(testCase.interceptor).
-				Build()
-			enabled, err := IsAutoPromotionEnabled(t.Context(), c, stageMeta)
+			if testCase.getter == nil {
+				testCase.getter = fakeGetter{}
+			}
+			enabled, err := IsAutoPromotionEnabled(t.Context(), testCase.getter, stageMeta)
 			testCase.assert(t, enabled, err)
 		})
 	}
