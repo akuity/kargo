@@ -20,7 +20,7 @@ import (
 // @Security BearerAuth
 // @Param project path string true "Project name"
 // @Produce json
-// @Success 200 {object} kargoapi.ProjectConfig "ProjectConfig resource"
+// @Success 200 {object} Resource "ProjectConfig resource"
 // @Router /v1beta1/projects/{project}/config [get]
 func (h *Handler) get(c *gin.Context) {
 	project, ok := projectOf(c)
@@ -36,7 +36,7 @@ func (h *Handler) get(c *gin.Context) {
 		_ = c.Error(err)
 		return
 	}
-	c.JSON(http.StatusOK, cfg)
+	c.JSON(http.StatusOK, ResponseBody(cfg))
 }
 
 // watch streams the Project's ProjectConfig: as it is now, then again after
@@ -50,10 +50,14 @@ func (h *Handler) watch(c *gin.Context, project *kargoapi.Project) {
 		func(e natsrec.Event[projectconfigstore.Key, database.ProjectConfigRow]) bool {
 			return e.Key.Project == project.Name
 		},
-		func(ctx context.Context) (*kargoapi.ProjectConfig, error) {
-			return h.load(ctx, project)
+		func(ctx context.Context) (*Resource, error) {
+			cfg, err := h.load(ctx, project)
+			if err != nil {
+				return nil, err
+			}
+			return ResponseBody(cfg), nil
 		},
-		func(cfg *kargoapi.ProjectConfig) string { return cfg.ResourceVersion },
+		func(r *Resource) string { return r.ResourceVersion },
 		watchKeepalive,
 	)
 }

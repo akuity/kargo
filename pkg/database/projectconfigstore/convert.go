@@ -16,9 +16,6 @@ import (
 	"github.com/akuity/kargo/pkg/database"
 )
 
-// kind is the Kind a ProjectConfig is served as.
-const kind = "ProjectConfig"
-
 // ToAPI presents a stored ProjectConfig as the resource the API serves. Its
 // name and namespace are both the Project's name, the row's id is the UID and
 // its last update, which every write advances, the resource version. A
@@ -32,10 +29,6 @@ const kind = "ProjectConfig"
 // served as empty rather than failing the read.
 func ToAPI(cfg Config) *kargoapi.ProjectConfig {
 	out := &kargoapi.ProjectConfig{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: kargoapi.GroupVersion.String(),
-			Kind:       kind,
-		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:              cfg.ProjectName,
 			Namespace:         cfg.ProjectName,

@@ -227,6 +227,7 @@ type groupResolver func(resource string) (group string, err error)
 var databaseResources = map[string]struct{}{
 	"targets":           {},
 	"promotionrollouts": {},
+	"projectconfigs":    {},
 }
 
 // newRESTMapperGroupResolver returns a groupResolver backed by a RESTMapper. The

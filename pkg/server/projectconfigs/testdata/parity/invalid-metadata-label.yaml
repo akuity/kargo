@@ -1,0 +1,9 @@
+# want: invalid
+# metadata.labels has a key that is not a qualified name
+apiVersion: kargo.akuity.io/v1alpha1
+kind: ProjectConfig
+metadata:
+  name: kargo-demo
+  namespace: kargo-demo
+  labels:
+    "not a valid key!": value

@@ -12,6 +12,7 @@ import (
 	authv1 "k8s.io/api/authorization/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
@@ -24,6 +25,7 @@ import (
 	"github.com/akuity/kargo/pkg/database"
 	"github.com/akuity/kargo/pkg/database/projectconfigstore"
 	"github.com/akuity/kargo/pkg/server/kubernetes"
+	"github.com/akuity/kargo/pkg/server/projectconfigs"
 	"github.com/akuity/kargo/pkg/server/user"
 )
 
@@ -152,12 +154,8 @@ func testResourceProject(name, uid string) *kargoapi.Project {
 
 // testResourceProjectConfig returns a valid ProjectConfig manifest for the
 // Project with the given name.
-func testResourceProjectConfig(project string) *kargoapi.ProjectConfig {
-	return &kargoapi.ProjectConfig{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: kargoapi.GroupVersion.String(),
-			Kind:       "ProjectConfig",
-		},
+func testResourceProjectConfig(project string) *projectconfigs.Resource {
+	return projectconfigs.ResponseBody(&kargoapi.ProjectConfig{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      project,
 			Namespace: project,
@@ -168,7 +166,16 @@ func testResourceProjectConfig(project string) *kargoapi.ProjectConfig {
 				URL:   "https://example.com",
 			}},
 		},
-	}
+	})
+}
+
+// staleResourceProjectConfig returns the resource a client that read the
+// Project's ProjectConfig before it was deleted would write back.
+func staleResourceProjectConfig(project string) *projectconfigs.Resource {
+	res := testResourceProjectConfig(project)
+	res.UID = "deleted-uid"
+	res.ResourceVersion = "7"
+	return res
 }
 
 // storeHolding returns a store holding a ProjectConfig for each of the given
@@ -253,12 +260,16 @@ func assigningProjectUIDs(objs ...client.Object) *fake.ClientBuilder {
 // the named Project reached Kubernetes.
 func requireNoProjectConfigInKubernetes(t *testing.T, c client.Client, project string) {
 	t.Helper()
+	// The ProjectConfig kind is not registered with any scheme, so it is
+	// read as an unstructured object.
+	obj := &unstructured.Unstructured{}
+	obj.SetGroupVersionKind(kargoapi.GroupVersion.WithKind("ProjectConfig"))
 	err := c.Get(
 		t.Context(),
 		client.ObjectKey{Namespace: project, Name: project},
-		&kargoapi.ProjectConfig{},
+		obj,
 	)
-	require.True(t, apierrors.IsNotFound(err))
+	require.True(t, apierrors.IsNotFound(err), "unexpected error: %v", err)
 }
 
 // projectScopedUser is an identity whose access comes only from

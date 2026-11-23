@@ -7,6 +7,7 @@ import (
 	"slices"
 
 	"github.com/gin-gonic/gin"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
@@ -30,9 +31,9 @@ import (
 // @Accept json
 // @Produce json
 // @Param project path string true "Project name"
-// @Param body body kargoapi.ProjectConfig true "ProjectConfig resource"
-// @Success 200 {object} kargoapi.ProjectConfig "Updated ProjectConfig resource"
-// @Success 201 {object} kargoapi.ProjectConfig "Created ProjectConfig resource"
+// @Param body body Resource true "ProjectConfig resource"
+// @Success 200 {object} Resource "Updated ProjectConfig resource"
+// @Success 201 {object} Resource "Created ProjectConfig resource"
 // @Router /v1beta1/projects/{project}/config [put]
 func (h *Handler) put(c *gin.Context) {
 	project, ok := projectOf(c)
@@ -68,7 +69,7 @@ func (h *Handler) put(c *gin.Context) {
 	if created {
 		code = http.StatusCreated
 	}
-	c.JSON(code, out)
+	c.JSON(code, ResponseBody(out))
 }
 
 // Upsert creates the Project's ProjectConfig, or updates it if it exists,
@@ -89,6 +90,12 @@ func (h *Handler) Upsert(
 
 // errNoProjectConfig reports a call to Upsert without a ProjectConfig.
 var errNoProjectConfig = errors.New("no ProjectConfig to write")
+
+// errNoLongerExists reports a write carrying a uid or resourceVersion of a
+// ProjectConfig that does not exist.
+var errNoLongerExists = errors.New(
+	"the ProjectConfig no longer exists; reload it and try again",
+)
 
 // UpsertOptions adjusts UpsertObject to the semantics of the endpoint a
 // ProjectConfig arrived through. The zero value is the semantics of PUT on
@@ -184,6 +191,17 @@ func (h *Handler) create(
 	decodeErrs field.ErrorList,
 	opts UpsertOptions,
 ) (*kargoapi.ProjectConfig, bool, error) {
+	// A uid or resourceVersion is a precondition on a ProjectConfig the
+	// client read earlier. If it no longer exists, the client's copy is
+	// stale, and writing it would silently re-create what someone deleted.
+	// The caller already holds the get verb, so this discloses nothing.
+	if cfg != nil && (cfg.UID != "" || cfg.ResourceVersion != "") {
+		return nil, false, apierrors.NewConflict(
+			projectConfigsResource,
+			project.Name,
+			errNoLongerExists,
+		)
+	}
 	if err := authorize(ctx, can.Create().ProjectConfig(project.Name)); err != nil {
 		return nil, false, err
 	}

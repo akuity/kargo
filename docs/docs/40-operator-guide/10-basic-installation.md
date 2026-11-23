@@ -73,7 +73,7 @@ pre-installed in your Kubernetes cluster:
 
 These instructions were tested with:
 
-- Kubernetes: v1.29.3
+- Kubernetes: v1.30.0 or later (v1.30 is the minimum supported version)
 - cert-manager: v1.16.1
 - Argo CD: v2.13.0
 - Argo Rollouts: v1.7.2

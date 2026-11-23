@@ -5,17 +5,18 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// +kubebuilder:object:root=true
-// +kubebuilder:resource:scope=Namespaced
-// +kubebuilder:subresource:status
-// +kubebuilder:printcolumn:name="Ready",type="string",JSONPath=".status.conditions[?(@.type==\"Ready\")].status"
-// +kubebuilder:printcolumn:name="Status",type="string",JSONPath=".status.conditions[?(@.type==\"Ready\")].message"
-// +kubebuilder:printcolumn:name=Age,type=date,JSONPath=`.metadata.creationTimestamp`
+// ProjectConfig is not a Kubernetes resource. It lives in Kargo's database
+// and is served by the Kargo API server, which is why this file carries no
+// CRD markers and the type is not registered with the scheme. It keeps the
+// shape of a Kubernetes resource, metadata and all, so that clients and the
+// UI can treat it like one. It deliberately embeds no TypeMeta:
+// controller-gen takes any type with both TypeMeta and ObjectMeta for a kind
+// and would emit a CRD for it. The API server adds apiVersion and kind to
+// what it serves.
 
 // ProjectConfig is a resource type that describes the configuration of a
 // Project.
 type ProjectConfig struct {
-	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 	// Spec describes the configuration of a Project.
 	Spec ProjectConfigSpec `json:"spec,omitempty"`
@@ -616,13 +617,4 @@ type PromotionPolicySelector struct {
 	// the selector, potentially enabling unauthorized auto-promotion.
 	// For sensitive environments, exact Name matching provides tighter control.
 	*metav1.LabelSelector `json:",inline"`
-}
-
-// +kubebuilder:object:root=true
-
-// ProjectConfigList is a list of ProjectConfig resources.
-type ProjectConfigList struct {
-	metav1.TypeMeta `json:",inline"`
-	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []ProjectConfig `json:"items"`
 }

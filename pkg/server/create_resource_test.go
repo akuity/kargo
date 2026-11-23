@@ -25,6 +25,7 @@ import (
 	"github.com/akuity/kargo/pkg/event"
 	fakeevent "github.com/akuity/kargo/pkg/event/fake"
 	"github.com/akuity/kargo/pkg/server/kubernetes"
+	"github.com/akuity/kargo/pkg/server/projectconfigs"
 	"github.com/akuity/kargo/pkg/server/user"
 )
 
@@ -650,6 +651,17 @@ func Test_server_createResources_projectConfig(t *testing.T) {
 				},
 			},
 			{
+				name:          "stale ProjectConfig is not re-created",
+				clientBuilder: fake.NewClientBuilder().WithObjects(existingProject),
+				serverSetup:   withProjectConfigStore(&fakeProjectConfigStore{}, &store, nil),
+				body:          mustJSONBody(staleResourceProjectConfig(existingProject.Name)),
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
+					require.Equal(t, http.StatusConflict, w.Code)
+					require.Contains(t, w.Body.String(), "no longer exists")
+					require.Empty(t, store.configs)
+				},
+			},
+			{
 				name:        "Project does not exist",
 				serverSetup: withProjectConfigStore(&fakeProjectConfigStore{}, &store, nil),
 				body:        mustJSONBody(testResourceProjectConfig(existingProject.Name)),
@@ -742,16 +754,12 @@ func Test_server_createResources_projectConfig(t *testing.T) {
 				),
 				body: mustJSONArrayBody(
 					newProject,
-					&kargoapi.ProjectConfig{
-						TypeMeta: metav1.TypeMeta{
-							APIVersion: kargoapi.GroupVersion.String(),
-							Kind:       "ProjectConfig",
-						},
+					projectconfigs.ResponseBody(&kargoapi.ProjectConfig{
 						ObjectMeta: metav1.ObjectMeta{
 							Name:      existingProject.Name,
 							Namespace: newProject.Name,
 						},
-					},
+					}),
 				),
 				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
 					require.Equal(t, http.StatusCreated, w.Code)

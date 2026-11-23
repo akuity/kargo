@@ -53,10 +53,15 @@ kargo refresh projectconfig
 	return cmd
 }
 
+// waitForProjectConfig waits until the ProjectConfig's
+// status.lastHandledRefresh equals the refresh token returned by the refresh
+// endpoint. If token is empty (an older server that does not return one), it
+// falls back to comparing against the refresh annotation on the object.
 func waitForProjectConfig(
 	ctx context.Context,
 	watchClient *watch.Client,
 	project string,
+	token string,
 ) error {
 	eventCh, errCh := watchClient.WatchProjectConfig(ctx, project)
 	for {
@@ -75,14 +80,21 @@ func waitForProjectConfig(
 			if event.Object == nil {
 				return errors.New("unexpected response")
 			}
-			token, ok := api.RefreshAnnotationValue(event.Object.Metadata.GetAnnotations())
-			if !ok {
-				return fmt.Errorf(
-					"ProjectConfig %q has no %q annotation",
-					event.Object.Metadata.GetName(), kargoapi.AnnotationKeyRefresh,
+			want := token
+			if want == "" {
+				var found bool
+				want, found = api.RefreshAnnotationValue(
+					event.Object.Metadata.GetAnnotations(),
 				)
+				if !found {
+					return fmt.Errorf(
+						"ProjectConfig %q has no %q annotation",
+						event.Object.Metadata.GetName(),
+						kargoapi.AnnotationKeyRefresh,
+					)
+				}
 			}
-			if event.Object.Status.GetLastHandledRefresh() == token {
+			if event.Object.Status.GetLastHandledRefresh() == want {
 				return nil
 			}
 		case err := <-errCh:

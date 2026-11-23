@@ -19,6 +19,7 @@ import (
 	"github.com/akuity/kargo/pkg/cli/kubernetes"
 	"github.com/akuity/kargo/pkg/cli/option"
 	"github.com/akuity/kargo/pkg/cli/templates"
+	"github.com/akuity/kargo/pkg/server/projectconfigs"
 )
 
 type getProjectConfigOptions struct {
@@ -99,20 +100,7 @@ func (o *getProjectConfigOptions) run(ctx context.Context) error {
 		return fmt.Errorf("get project configuration: %w", client.APIError(err))
 	}
 	if res != nil {
-		var configJSON []byte
-		if configJSON, err = json.Marshal(res); err != nil {
-			return err
-		}
-		var cfg *kargoapi.ProjectConfig
-		if err = json.Unmarshal(configJSON, &cfg); err != nil {
-			return err
-		}
-		if err = PrintObjects(
-			[]*kargoapi.ProjectConfig{cfg},
-			o.PrintFlags,
-			o.IOStreams,
-			o.NoHeaders,
-		); err != nil {
+		if err = o.print(res); err != nil {
 			return fmt.Errorf("print project configuration: %w", err)
 		}
 	}
@@ -120,10 +108,31 @@ func (o *getProjectConfigOptions) run(ctx context.Context) error {
 	return nil
 }
 
+// print prints the ProjectConfig the API server returned, as the model the
+// generated client decoded it into.
+func (o *getProjectConfigOptions) print(model any) error {
+	configJSON, err := json.Marshal(model)
+	if err != nil {
+		return fmt.Errorf("encode project configuration: %w", err)
+	}
+	var cfg *kargoapi.ProjectConfig
+	if err = json.Unmarshal(configJSON, &cfg); err != nil {
+		return fmt.Errorf("decode project configuration: %w", err)
+	}
+	// The ProjectConfig type carries no apiVersion or kind, which printing
+	// it as a resource requires.
+	return PrintObjects(
+		[]*projectconfigs.Resource{projectconfigs.ResponseBody(cfg)},
+		o.PrintFlags,
+		o.IOStreams,
+		o.NoHeaders,
+	)
+}
+
 func newProjectConfigTable(list *metav1.List) *metav1.Table {
 	rows := make([]metav1.TableRow, len(list.Items))
 	for i, item := range list.Items {
-		cfg := item.Object.(*kargoapi.ProjectConfig) // nolint: forcetypeassert
+		cfg := item.Object.(*projectconfigs.Resource) // nolint: forcetypeassert
 
 		rows[i] = metav1.TableRow{
 			Cells: []any{

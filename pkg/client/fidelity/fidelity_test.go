@@ -408,10 +408,6 @@ func testWebhookReceiverDetails() []kargoapi.WebhookReceiverDetails {
 
 func TestProjectConfigRoundTrip(t *testing.T) {
 	projectConfig := &kargoapi.ProjectConfig{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: kargoapi.GroupVersion.String(),
-			Kind:       "ProjectConfig",
-		},
 		ObjectMeta: testObjectMeta("kargo-demo"),
 		Spec: kargoapi.ProjectConfigSpec{
 			PromotionPolicies: []kargoapi.PromotionPolicy{

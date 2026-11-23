@@ -76,7 +76,6 @@ func TestUpsertObject(t *testing.T) {
 			assert: func(t *testing.T, store *fakeStore, out *kargoapi.ProjectConfig, created bool, err error) {
 				require.NoError(t, err)
 				require.True(t, created)
-				require.Equal(t, kind, out.Kind)
 				require.Len(t, out.Spec.FreightLinks, 1)
 				require.Equal(t, testProjectUID, store.configs[testProject].ProjectUID)
 			},
@@ -125,6 +124,32 @@ func TestUpsertObject(t *testing.T) {
 				require.NoError(t, err)
 				require.True(t, created)
 				require.Contains(t, store.configs, testProject)
+			},
+		},
+		{
+			name: "create only refuses a ProjectConfig that no longer exists",
+			obj: func() map[string]any {
+				obj := validObj()
+				obj["metadata"].(map[string]any)["resourceVersion"] = "7" // nolint: forcetypeassert
+				return obj
+			}(),
+			opts: UpsertOptions{CreateOnly: true},
+			assert: func(t *testing.T, store *fakeStore, _ *kargoapi.ProjectConfig, _ bool, err error) {
+				require.True(t, apierrors.IsConflict(err))
+				require.ErrorContains(t, err, "no longer exists")
+				require.Empty(t, store.configs)
+			},
+		},
+		{
+			name: "upsert refuses a ProjectConfig that no longer exists",
+			obj: func() map[string]any {
+				obj := validObj()
+				obj["metadata"].(map[string]any)["uid"] = "gone" // nolint: forcetypeassert
+				return obj
+			}(),
+			assert: func(t *testing.T, store *fakeStore, _ *kargoapi.ProjectConfig, _ bool, err error) {
+				require.True(t, apierrors.IsConflict(err))
+				require.Empty(t, store.configs)
 			},
 		},
 		{
