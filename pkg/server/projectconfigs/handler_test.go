@@ -229,6 +229,25 @@ func (s *fakeStore) UpdateStatus(
 	return s.skipped, nil
 }
 
+// GetByWebhookReceiverPath returns the ProjectConfig whose receivers include
+// the path, as the real store does, or database.ErrNotFound.
+func (s *fakeStore) GetByWebhookReceiverPath(_ context.Context, path string) (projectconfigstore.Config, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.calls++
+	if s.err != nil {
+		return projectconfigstore.Config{}, s.err
+	}
+	for _, cfg := range s.configs {
+		for _, r := range cfg.Receivers {
+			if r.Path == path {
+				return cfg, nil
+			}
+		}
+	}
+	return projectconfigstore.Config{}, fmt.Errorf("webhook receiver path %q: %w", path, database.ErrNotFound)
+}
+
 func (s *fakeStore) RequestRefresh(_ context.Context, project, projectUID string) (string, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()

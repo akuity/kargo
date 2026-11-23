@@ -144,6 +144,9 @@ func (s *server) setupRESTRouter(ctx context.Context) (*gin.Engine, error) {
 			// Controller heartbeats
 			system.GET("/controller-heartbeats", s.getControllerHeartbeats)
 
+			// Webhook receivers
+			projectconfigs.New(s.projectConfigs, s.authorize, s.natsConn).RegisterSystem(system)
+
 			// Roles
 			system.GET("/roles", s.listSystemRoles)
 			system.GET("/roles/:role", s.getSystemRole)

@@ -3823,6 +3823,33 @@ paths:
       summary: Retrieve API Server version information
       tags:
       - System
+  /v1beta1/system/webhook-receivers:
+    get:
+      description: |-
+        Find the webhook receiver that owns a path, and the Project
+        whose ProjectConfig configures it. Only the external webhooks
+        server is meant to call this; it requires list on
+        projectconfigs across the cluster.
+      operationId: LookupWebhookReceiver
+      parameters:
+      - description: Webhook receiver path
+        in: query
+        name: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookReceiverLookup"
+          description: Webhook receiver
+      security:
+      - BearerAuth: []
+      summary: Look up a webhook receiver by path
+      tags:
+      - System
 components:
   schemas:
     AdminLoginResponse:
@@ -4736,6 +4763,27 @@ components:
         version:
           description: Version is a human-friendly version string.
           type: string
+      type: object
+    WebhookReceiverLookup:
+      example:
+        config: "{}"
+        project: project
+        receiver: "{}"
+      properties:
+        config:
+          allOf:
+          - $ref: "#/components/schemas/WebhookReceiverConfig"
+          description: Config is the receiver's configuration from the ProjectConfig's
+            spec.
+          type: object
+        project:
+          description: Project is the name of the Project that owns the receiver.
+          type: string
+        receiver:
+          allOf:
+          - $ref: "#/components/schemas/WebhookReceiverDetails"
+          description: "Receiver is the receiver's recorded name, path and URL."
+          type: object
       type: object
     RbacRole:
       example:

@@ -40,3 +40,15 @@ type StatusResponse struct {
 	// has their names.
 	SkippedReceivers []string `json:"skippedReceivers,omitempty"`
 } // @name UpdateProjectConfigStatusResponse
+
+// WebhookReceiverLookup is the response body of
+// GET /v1beta1/system/webhook-receivers: the webhook receiver that owns a
+// path, with the Project whose ProjectConfig configures it.
+type WebhookReceiverLookup struct {
+	// Project is the name of the Project that owns the receiver.
+	Project string `json:"project"`
+	// Config is the receiver's configuration from the ProjectConfig's spec.
+	Config kargoapi.WebhookReceiverConfig `json:"config"`
+	// Receiver is the receiver's recorded name, path and URL.
+	Receiver kargoapi.WebhookReceiverDetails `json:"receiver"`
+} // @name WebhookReceiverLookup
