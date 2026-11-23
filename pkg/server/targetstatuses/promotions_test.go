@@ -161,6 +161,17 @@ func TestListPromotions(t *testing.T) {
 			},
 		},
 		{
+			// Read as a cursor, {} names no place: it would read an empty
+			// page indistinguishable from a Target with no history.
+			name:  "a continue token naming no place is refused",
+			store: newStore(),
+			url:   projectURL("/targets/us-east-1/promotions?continue=" + encodeRaw(`{}`)),
+			assertions: func(t *testing.T, w *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusBadRequest, w.Code)
+				require.Contains(t, w.Body.String(), "invalid continue token")
+			},
+		},
+		{
 			name:  "the store failing fails the request",
 			store: failingStore,
 			url:   projectURL("/targets/us-east-1/promotions"),

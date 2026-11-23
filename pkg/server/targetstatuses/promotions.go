@@ -98,7 +98,13 @@ func (h *Handler) listPromotions(c *gin.Context) {
 	// A full page may have more after it; a short page is the last.
 	if len(promotions) > 0 && len(promotions) == int(limit) {
 		last := promotions[len(promotions)-1]
-		list.Continue = encodeToken(promotionCursor{CreatedAt: last.CreatedAt.UTC(), ID: last.ID})
+		if list.Continue, err = encodeToken(&promotionCursor{
+			CreatedAt: last.CreatedAt.UTC(),
+			ID:        last.ID,
+		}); err != nil {
+			_ = c.Error(err)
+			return
+		}
 	}
 	c.JSON(http.StatusOK, list)
 }
@@ -108,6 +114,10 @@ func (h *Handler) listPromotions(c *gin.Context) {
 type promotionCursor struct {
 	CreatedAt time.Time `json:"createdAt"`
 	ID        string    `json:"id"`
+}
+
+func (p *promotionCursor) complete() bool {
+	return !p.CreatedAt.IsZero() && p.ID != ""
 }
 
 // presentPromotion returns a stored Promotion as the API serves it. Times
