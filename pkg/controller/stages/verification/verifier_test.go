@@ -2215,3 +2215,38 @@ func TestVerifier_VerifyStageFreight_inconclusiveReverificationPreservesStageUnh
 		})
 	}
 }
+
+func TestVerifier_VerifyStageFreight_inconclusiveDoesNotPreserveStageUnhealthyAfterRecovery(t *testing.T) {
+	stage := &kargoapi.Stage{
+		Status: kargoapi.StageStatus{
+			Health: &kargoapi.Health{Status: kargoapi.HealthStateHealthy},
+			Conditions: []metav1.Condition{{
+				Type:   kargoapi.ConditionTypeVerified,
+				Status: metav1.ConditionFalse,
+				Reason: "StageUnhealthy",
+			}},
+			FreightHistory: kargoapi.FreightHistory{{
+				Freight: map[string]kargoapi.FreightReference{
+					"fake-warehouse": {Name: "fake-freight"},
+				},
+				VerificationHistory: []kargoapi.VerificationInfo{{
+					ID:    "verification-id",
+					Phase: kargoapi.VerificationPhaseInconclusive,
+				}},
+			}},
+		},
+	}
+
+	ver := NewVerifier("", nil, nil, nil, nil)
+	newStatus, err := ver.VerifyStageFreight(
+		context.Background(),
+		stage,
+		time.Now(),
+		time.Now,
+	)
+	require.NoError(t, err)
+	verified := conditions.Get(&newStatus, kargoapi.ConditionTypeVerified)
+	require.NotNil(t, verified)
+	assert.Equal(t, metav1.ConditionUnknown, verified.Status)
+	assert.Equal(t, "VerificationInconclusive", verified.Reason)
+}

@@ -150,7 +150,9 @@ func (ver Verifier) VerifyStageFreight(
 				)
 				if verifiedCondition != nil &&
 					verifiedCondition.Status == metav1.ConditionFalse &&
-					verifiedCondition.Reason == "StageUnhealthy" {
+					verifiedCondition.Reason == "StageUnhealthy" &&
+					stage.Status.Health != nil &&
+					stage.Status.Health.Status == kargoapi.HealthStateUnhealthy {
 					return
 				}
 				conditions.Set(&newStatus, &metav1.Condition{
