@@ -182,3 +182,191 @@ tests:
       - equal:
           path: spec.selector.matchLabels["app.kubernetes.io/component"]
           value: external-webhooks-server
+---
+suite: external-webhooks-server/api-server-access
+values:
+  - ../test/values-unittest.yaml
+templates:
+  - templates/external-webhooks-server/configmap.yaml
+  - templates/external-webhooks-server/deployment.yaml
+tests:
+  - it: reaches the API server through its Service, trusting the chart's certificate
+    template: templates/external-webhooks-server/configmap.yaml
+    asserts:
+      - equal:
+          path: data.API_SERVER_ADDRESS
+          value: https://kargo-api.NAMESPACE.svc
+      - equal:
+          path: data.API_SERVER_CA_CERT_PATH
+          value: /etc/kargo/api-ca.crt
+
+  - it: reaches the API server over plain HTTP when it serves none
+    template: templates/external-webhooks-server/configmap.yaml
+    set:
+      api.tls.enabled: false
+    asserts:
+      - equal:
+          path: data.API_SERVER_ADDRESS
+          value: http://kargo-api.NAMESPACE.svc
+      - notExists:
+          path: data.API_SERVER_CA_CERT_PATH
+
+  - it: does not supply a CA for a certificate the chart did not generate
+    template: templates/external-webhooks-server/configmap.yaml
+    set:
+      api.tls.selfSignedCert: false
+    asserts:
+      - equal:
+          path: data.API_SERVER_ADDRESS
+          value: https://kargo-api.NAMESPACE.svc
+      - notExists:
+          path: data.API_SERVER_CA_CERT_PATH
+
+  - it: reaches the API server at the configured address
+    template: templates/external-webhooks-server/configmap.yaml
+    set:
+      externalWebhooksServer.apiServer.address: https://kargo.example.com
+    asserts:
+      - equal:
+          path: data.API_SERVER_ADDRESS
+          value: https://kargo.example.com
+      - notExists:
+          path: data.API_SERVER_CA_CERT_PATH
+
+  - it: has no API server address when the API is disabled
+    template: templates/external-webhooks-server/configmap.yaml
+    set:
+      api.enabled: false
+    asserts:
+      - notExists:
+          path: data.API_SERVER_ADDRESS
+      - notExists:
+          path: data.API_SERVER_CA_CERT_PATH
+
+  - it: mounts the chart-generated API server CA
+    template: templates/external-webhooks-server/deployment.yaml
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].volumeMounts
+          content:
+            mountPath: /etc/kargo
+            name: config
+            readOnly: true
+      - contains:
+          path: spec.template.spec.volumes[0].projected.sources
+          content:
+            secret:
+              name: kargo-api-cert
+              items:
+              - key: ca.crt
+                path: api-ca.crt
+
+  - it: mounts no API server CA when the API server serves plain HTTP
+    template: templates/external-webhooks-server/deployment.yaml
+    set:
+      api.tls.enabled: false
+    asserts:
+      - notContains:
+          path: spec.template.spec.volumes[0].projected.sources
+          content:
+            secret:
+              name: kargo-api-cert
+              items:
+              - key: ca.crt
+                path: api-ca.crt
+
+  - it: mounts no API server CA when the server is pointed elsewhere
+    template: templates/external-webhooks-server/deployment.yaml
+    set:
+      externalWebhooksServer.apiServer.address: https://kargo.example.com
+    asserts:
+      - notContains:
+          path: spec.template.spec.volumes[0].projected.sources
+          content:
+            secret:
+              name: kargo-api-cert
+              items:
+              - key: ca.crt
+                path: api-ca.crt
+---
+suite: external-webhooks-server/token-requester-role.yaml
+values:
+  - ../test/values-unittest.yaml
+templates:
+  - templates/external-webhooks-server/token-requester-role.yaml
+tests:
+  # The external webhooks server acts as its own ServiceAccount toward the API
+  # server, with tokens it requests for it, so it may create that
+  # ServiceAccount's tokens and no other's.
+  - it: lets the server request tokens for its own ServiceAccount
+    asserts:
+      - isKind:
+          of: Role
+      - equal:
+          path: metadata.name
+          value: kargo-external-webhooks-server-token-requester
+      - equal:
+          path: rules
+          value:
+            - apiGroups:
+                - ""
+              resources:
+                - serviceaccounts/token
+              resourceNames:
+                - kargo-external-webhooks-server
+              verbs:
+                - create
+
+  - it: is not rendered when the external webhooks server is disabled
+    set:
+      externalWebhooksServer.enabled: false
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: is not rendered when workloads are not installed
+    set:
+      workloads.install: false
+    asserts:
+      - hasDocuments:
+          count: 0
+---
+suite: external-webhooks-server/token-requester-role-binding.yaml
+values:
+  - ../test/values-unittest.yaml
+templates:
+  - templates/external-webhooks-server/token-requester-role-binding.yaml
+tests:
+  - it: binds the server's ServiceAccount to its token-requester Role
+    asserts:
+      - isKind:
+          of: RoleBinding
+      - equal:
+          path: metadata.name
+          value: kargo-external-webhooks-server-token-requester
+      - equal:
+          path: roleRef
+          value:
+            apiGroup: rbac.authorization.k8s.io
+            kind: Role
+            name: kargo-external-webhooks-server-token-requester
+      - equal:
+          path: subjects
+          value:
+            - kind: ServiceAccount
+              namespace: NAMESPACE
+              name: kargo-external-webhooks-server
+
+  - it: is not rendered when the external webhooks server is disabled
+    set:
+      externalWebhooksServer.enabled: false
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: is not rendered when workloads are not installed
+    set:
+      workloads.install: false
+    asserts:
+      - hasDocuments:
+          count: 0

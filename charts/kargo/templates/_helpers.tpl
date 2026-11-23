@@ -203,6 +203,35 @@ true
 {{- end -}}
 
 {{/*
+Generate the address at which the external webhooks server reaches the API
+server, through which it finds the ProjectConfig that owns a webhook receiver:
+the operator's, else the API server's in-cluster Service when the chart
+installs one. Empty when there is neither.
+*/}}
+{{- define "kargo.externalWebhooksServer.apiServerAddress" -}}
+{{- if .Values.externalWebhooksServer.apiServer.address -}}
+{{- .Values.externalWebhooksServer.apiServer.address -}}
+{{- else if .Values.api.enabled -}}
+{{- if .Values.api.tls.enabled -}}
+{{- printf "https://kargo-api.%s.svc" .Release.Namespace -}}
+{{- else -}}
+{{- printf "http://kargo-api.%s.svc" .Release.Namespace -}}
+{{- end -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
+Whether the external webhooks server must be given the API server's
+self-signed CA to reach it in-cluster: it does when it uses the in-cluster
+address and the chart generated the certificate.
+*/}}
+{{- define "kargo.externalWebhooksServer.mountsAPIServerCA" -}}
+{{- if and (not .Values.externalWebhooksServer.apiServer.address) .Values.api.enabled .Values.api.tls.enabled .Values.api.tls.selfSignedCert -}}
+true
+{{- end -}}
+{{- end -}}
+
+{{/*
 Generate the base URL for the external webhook server. When the external
 webhooks server has its own Ingress, the URL is composed from its own host,
 TLS configuration, and basePath. When it instead piggybacks on the API

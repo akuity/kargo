@@ -11,6 +11,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/akuity/kargo/pkg/logging"
+	"github.com/akuity/kargo/pkg/server/projectconfigs/wire"
 )
 
 // webhookSpanName is the name of the server span recorded for each inbound
@@ -19,9 +20,19 @@ import (
 // attribute instead.
 const webhookSpanName = "Receive webhook"
 
+// receiverLookup finds the ProjectConfig that owns a webhook receiver's URL
+// path, by asking the Kargo API. It returns nil, nil when no ProjectConfig does.
+type receiverLookup interface {
+	LookupWebhookReceiver(
+		ctx context.Context,
+		path string,
+	) (*wire.WebhookReceiverLookup, error)
+}
+
 type server struct {
 	cfg    ServerConfig
 	client client.Client
+	lookup receiverLookup
 	// project scoped secrets are not cached so we need to query the api-server directly
 	apiReader client.Reader
 }
@@ -30,12 +41,18 @@ type Server interface {
 	Serve(ctx context.Context, l net.Listener) error
 }
 
-func NewServer(cfg ServerConfig, cl client.Client, r client.Reader) Server {
+func NewServer(
+	cfg ServerConfig,
+	cl client.Client,
+	r client.Reader,
+	lookup receiverLookup,
+) Server {
 	registerMetrics()
 	return &server{
 		apiReader: r,
 		cfg:       cfg,
 		client:    cl,
+		lookup:    lookup,
 	}
 }
 

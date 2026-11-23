@@ -1,5 +1,6 @@
 {{- if and .Values.workloads.install .Values.externalWebhooksServer.enabled }}
 {{- $kc := .Values.externalWebhooksServer.kubeconfigSecrets.kargo | default .Values.kubeconfigSecrets.kargo }}
+{{- $mountsCA := include "kargo.externalWebhooksServer.mountsAPIServerCA" . }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -125,9 +126,9 @@ spec:
           {{- toYaml . | nindent 10 }}
           {{- end }}
         {{- end }}
-        {{- if or $kc .Values.externalWebhooksServer.tls.enabled .Values.externalWebhooksServer.volumeMounts }}
+        {{- if or $kc .Values.externalWebhooksServer.tls.enabled $mountsCA .Values.externalWebhooksServer.volumeMounts }}
         volumeMounts:
-        {{- if or $kc .Values.externalWebhooksServer.tls.enabled }}
+        {{- if or $kc .Values.externalWebhooksServer.tls.enabled $mountsCA }}
         - mountPath: /etc/kargo
           name: config
           readOnly: true
@@ -149,9 +150,9 @@ spec:
       initContainers:
       {{- toYaml . | nindent 6 }}
       {{- end }}
-      {{- if or $kc .Values.externalWebhooksServer.tls.enabled .Values.externalWebhooksServer.volumes }}
+      {{- if or $kc .Values.externalWebhooksServer.tls.enabled $mountsCA .Values.externalWebhooksServer.volumes }}
       volumes:
-      {{- if or $kc .Values.externalWebhooksServer.tls.enabled }}
+      {{- if or $kc .Values.externalWebhooksServer.tls.enabled $mountsCA }}
       - name: config
         projected:
           sources:
@@ -171,6 +172,13 @@ spec:
                   path: tls.crt
                 - key: tls.key
                   path: tls.key
+            {{- end }}
+            {{- if $mountsCA }}
+            - secret:
+                name: {{ .Values.api.tls.secretName }}
+                items:
+                - key: ca.crt
+                  path: api-ca.crt
             {{- end }}
       {{- end }}
       {{- with .Values.externalWebhooksServer.volumes }}
