@@ -62,15 +62,16 @@ rules:
   resources:
   - clusterconfigs/status
   - projects/status
-  - projectconfigs/status
   verbs:
   - patch
+# ProjectConfig status is written through the API server, which checks that
+# the management controller may update it.
 - apiGroups:
   - kargo.akuity.io
   resources:
-  - projectconfigs
+  - projectconfigs/status
   verbs:
-  - create
+  - update
 - apiGroups:
   - kargo.akuity.io
   resources:
@@ -79,7 +80,6 @@ rules:
   - promotions
   - stages
   - warehouses
-  - projectconfigs
   verbs:
   - get
   - list

@@ -15,12 +15,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 	semconv "go.opentelemetry.io/otel/semconv/v1.43.0"
 	"go.opentelemetry.io/otel/trace"
-	"k8s.io/apimachinery/pkg/runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
-	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
-
-	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 )
 
 func TestServer_Serve_tracing(t *testing.T) {
@@ -32,26 +27,16 @@ func TestServer_Serve_tracing(t *testing.T) {
 		sdktrace.WithSpanProcessor(recorder),
 	))
 
-	testScheme := runtime.NewScheme()
-	require.NoError(t, kargoapi.AddToScheme(testScheme))
-	// A client that fails every list makes the route handler answer quickly
-	// with a server error, which is all this test needs of it.
-	testClient := fake.NewClientBuilder().WithScheme(testScheme).
-		WithInterceptorFuncs(interceptor.Funcs{
-			List: func(
-				context.Context,
-				client.WithWatch,
-				client.ObjectList,
-				...client.ListOption,
-			) error {
-				return errors.New("something went wrong")
-			},
-		}).Build()
+	// A lookup that fails makes the route handler answer quickly with a server
+	// error, which is all this test needs of it.
+	testClient := fake.NewClientBuilder().Build()
+	lookup := &fakeLookup{err: errors.New("something went wrong")}
 
 	s, ok := NewServer(
 		ServerConfig{TracingEnabled: true},
 		testClient,
 		testClient,
+		lookup,
 	).(*server)
 	require.True(t, ok)
 

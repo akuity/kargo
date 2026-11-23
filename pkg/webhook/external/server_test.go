@@ -17,14 +17,21 @@ func TestNewServer(t *testing.T) {
 	testClient := fake.NewFakeClient()
 	// we pass the same client for both the client and api-reader since the
 	// fake client doesn't use the cache at all.
-	s, ok := NewServer(ServerConfig{}, testClient, testClient).(*server)
+	testLookup := &fakeLookup{}
+	s, ok := NewServer(
+		ServerConfig{},
+		testClient,
+		testClient,
+		testLookup,
+	).(*server)
 	require.True(t, ok)
 	require.Equal(t, testCfg, s.cfg)
 	require.Same(t, testClient, s.client)
+	require.Same(t, testLookup, s.lookup)
 }
 
 func TestServer_Healthz(t *testing.T) {
-	s, ok := NewServer(ServerConfig{}, nil, nil).(*server)
+	s, ok := NewServer(ServerConfig{}, nil, nil, nil).(*server)
 	require.True(t, ok)
 	l, err := net.Listen("tcp", "127.0.0.1:0")
 	require.NoError(t, err)

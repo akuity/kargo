@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -53,7 +54,8 @@ func TestSync(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 			store := &fakeStore{replaceErr: testCase.replaceErr, writeErr: testCase.storeErr}
-			s := NewSyncer(nil, store)
+			configs := &fakeConfigs{calls: &store.calls}
+			s := NewSyncer(nil, store, configs)
 			require.IsType(t, &kargoapi.Project{}, s.NewObject())
 			require.Len(t, s.Sources(nil), 1)
 			for range 2 {
@@ -72,28 +74,106 @@ func TestSync(t *testing.T) {
 			if testCase.writes {
 				require.Equal(t, []database.UpsertProjectParams{upserted, upserted}, store.upserts)
 				// Each upsert follows the deletion of the row it replaces.
-				require.Equal(t, []string{"replace", "upsert", "replace", "upsert"}, store.calls)
+				require.Equal(
+					t,
+					[]string{"configs", "replace", "upsert", "configs", "replace", "upsert"},
+					store.calls,
+				)
 			} else {
 				require.Empty(t, store.upserts)
 			}
 			require.Empty(t, store.deletes)
+			if testCase.writes {
+				require.Equal(
+					t,
+					[]configCall{{project: "demo", uid: "opaque-id"}, {project: "demo", uid: "opaque-id"}},
+					configs.adopted,
+				)
+			}
+			// Sync never deletes a ProjectConfig: only an observed deletion
+			// does.
+			require.Empty(t, configs.deleted)
 		})
 	}
 }
 
+func TestSyncConfigAdopt(t *testing.T) {
+	t.Parallel()
+	created := time.Date(2026, 9, 23, 12, 0, 0, 0, time.UTC)
+	store := &fakeStore{}
+	configs := &fakeConfigs{calls: &store.calls, adoptErr: errors.New("offline")}
+	s := NewSyncer(nil, store, configs)
+	err := s.Sync(context.Background(), testProject("new-id", created))
+	require.ErrorContains(t, err, "error adopting project config")
+	require.Equal(
+		t,
+		[]configCall{{project: "demo", uid: "new-id"}},
+		configs.adopted,
+	)
+	require.Empty(t, configs.deleted)
+	require.Empty(t, store.replaced)
+	require.Empty(t, store.upserts)
+}
+
 func TestDelete(t *testing.T) {
 	t.Parallel()
-	for _, fail := range []bool{false, true} {
-		t.Run(map[bool]string{false: "success", true: "storage failure"}[fail], func(t *testing.T) {
+	offline := errors.New("offline")
+	testCases := []struct {
+		name        string
+		store       *fakeStore
+		configs     *fakeConfigs
+		wantErr     error
+		wantConfigs []configCall
+		wantDeletes []string
+	}{
+		{
+			name:        "success",
+			store:       &fakeStore{byName: database.ProjectRow{ID: "opaque-id"}},
+			configs:     &fakeConfigs{},
+			wantConfigs: []configCall{{project: "demo", uid: "opaque-id"}},
+			wantDeletes: []string{"demo"},
+		},
+		{
+			name:        "mirror missing",
+			store:       &fakeStore{getErr: pgx.ErrNoRows},
+			configs:     &fakeConfigs{},
+			wantDeletes: []string{"demo"},
+		},
+		{
+			name:    "mirror lookup failure",
+			store:   &fakeStore{getErr: offline},
+			configs: &fakeConfigs{},
+			wantErr: offline,
+		},
+		{
+			name:        "config delete failure skips project delete",
+			store:       &fakeStore{byName: database.ProjectRow{ID: "opaque-id"}},
+			configs:     &fakeConfigs{err: offline},
+			wantErr:     offline,
+			wantConfigs: []configCall{{project: "demo", uid: "opaque-id"}},
+		},
+		{
+			name:        "storage failure",
+			store:       &fakeStore{byName: database.ProjectRow{ID: "opaque-id"}, writeErr: offline},
+			configs:     &fakeConfigs{},
+			wantErr:     offline,
+			wantConfigs: []configCall{{project: "demo", uid: "opaque-id"}},
+			wantDeletes: []string{"demo"},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
-			store := &fakeStore{}
-			if fail {
-				store.writeErr = errors.New("offline")
-			}
-			s := NewSyncer(nil, store)
+			testCase.configs.calls = &testCase.store.calls
+			s := NewSyncer(nil, testCase.store, testCase.configs)
 			err := s.Delete(context.Background(), client.ObjectKey{Name: "demo"})
-			require.ErrorIs(t, err, store.writeErr)
-			require.Equal(t, []string{"demo"}, store.deletes)
+			if testCase.wantErr != nil {
+				require.ErrorIs(t, err, testCase.wantErr)
+			} else {
+				require.NoError(t, err)
+			}
+			require.Equal(t, testCase.wantConfigs, testCase.configs.deleted)
+			require.Equal(t, testCase.wantDeletes, testCase.store.deletes)
 		})
 	}
 }
@@ -106,6 +186,8 @@ func testProject(uid string, created time.Time) *kargoapi.Project {
 
 type fakeStore struct {
 	rows       []database.ProjectRow
+	byName     database.ProjectRow
+	getErr     error
 	replaced   []database.DeleteReplacedProjectParams
 	upserts    []database.UpsertProjectParams
 	deletes    []string
@@ -134,4 +216,33 @@ func (s *fakeStore) DeleteProjectByName(_ context.Context, name string) error {
 
 func (s *fakeStore) ListProjects(context.Context) ([]database.ProjectRow, error) {
 	return slices.Clone(s.rows), s.listErr
+}
+
+func (s *fakeStore) GetProjectByName(context.Context, string) (database.ProjectRow, error) {
+	return s.byName, s.getErr
+}
+
+type configCall struct {
+	project string
+	uid     string
+}
+
+type fakeConfigs struct {
+	adopted  []configCall
+	deleted  []configCall
+	calls    *[]string
+	adoptErr error
+	err      error
+}
+
+func (f *fakeConfigs) AdoptForProject(_ context.Context, project, newUID string) (bool, error) {
+	f.adopted = append(f.adopted, configCall{project: project, uid: newUID})
+	*f.calls = append(*f.calls, "configs")
+	return f.adoptErr == nil, f.adoptErr
+}
+
+func (f *fakeConfigs) DeleteForProject(_ context.Context, project, projectUID string) error {
+	f.deleted = append(f.deleted, configCall{project: project, uid: projectUID})
+	*f.calls = append(*f.calls, "configs")
+	return f.err
 }

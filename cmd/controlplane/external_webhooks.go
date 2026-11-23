@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net"
 	"runtime"
@@ -14,6 +15,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/pkg/client/apiserver"
 	"github.com/akuity/kargo/pkg/indexer"
 	"github.com/akuity/kargo/pkg/logging"
 	"github.com/akuity/kargo/pkg/os"
@@ -33,6 +35,10 @@ type externalWebhooksServerOptions struct {
 	Port        string
 
 	MetricsBindAddress string
+
+	// APIServer configures the client used to resolve webhook receivers
+	// through the API server.
+	APIServer apiserver.ClientConfig
 
 	Logger *logging.Logger
 }
@@ -78,12 +84,22 @@ func (o *externalWebhooksServerOptions) complete() {
 
 	o.MetricsBindAddress = os.GetEnv("METRICS_BIND_ADDRESS", "0")
 
+	o.APIServer = apiserver.ClientConfigFromEnv()
+
 	logLevel, logFormat := getLogVars()
 
 	o.Logger = logging.NewLoggerOrDie(logLevel, logFormat)
 }
 
 func (o *externalWebhooksServerOptions) run(ctx context.Context) error {
+	// Webhook receivers are resolved through the API server.
+	if o.APIServer.Address == "" {
+		return errors.New(
+			"no API server is configured: the external webhooks server " +
+				"requires one; set API_SERVER_ADDRESS",
+		)
+	}
+
 	shutdownTelemetry, err := telemetry.SetupFromEnv(
 		logging.ContextWithLogger(ctx, o.Logger),
 		"external-webhooks-server",
@@ -133,16 +149,6 @@ func (o *externalWebhooksServerOptions) run(ctx context.Context) error {
 
 	err = cluster.GetFieldIndexer().IndexField(
 		ctx,
-		&kargoapi.ProjectConfig{},
-		indexer.ProjectConfigsByWebhookReceiverPathsField,
-		indexer.ProjectConfigsByWebhookReceiverPaths,
-	)
-	if err != nil {
-		return fmt.Errorf("error registering project configs by webhook receiver path indexer: %w", err)
-	}
-
-	err = cluster.GetFieldIndexer().IndexField(
-		ctx,
 		&kargoapi.Promotion{},
 		indexer.RunningPromotionsByPullRequestURLField,
 		indexer.RunningPromotionsByPullRequestURL,
@@ -170,7 +176,20 @@ func (o *externalWebhooksServerOptions) run(ctx context.Context) error {
 		return fmt.Errorf("error creating metrics server: %w", err)
 	}
 
-	srv := external.NewServer(serverCfg, cluster.GetClient(), cluster.GetAPIReader())
+	// The ProjectConfig that owns a webhook receiver's path is found through
+	// the API server, acting as the ServiceAccount the server's credential
+	// resolves to, with tokens it obtains for that ServiceAccount.
+	apiClient, err := apiserver.New(ctx, o.APIServer, restCfg)
+	if err != nil {
+		return fmt.Errorf("error configuring access to the API server: %w", err)
+	}
+
+	srv := external.NewServer(
+		serverCfg,
+		cluster.GetClient(),
+		cluster.GetAPIReader(),
+		apiClient,
+	)
 	l, err := net.Listen("tcp", fmt.Sprintf("%s:%s", o.BindAddress, o.Port))
 	if err != nil {
 		return fmt.Errorf("error creating listener: %w", err)

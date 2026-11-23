@@ -21,8 +21,24 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	"github.com/akuity/kargo/pkg/indexer"
+	"github.com/akuity/kargo/pkg/server/projectconfigs/wire"
 )
+
+// fakeLookup is a receiverLookup returning a canned result, recording the
+// paths it was asked for.
+type fakeLookup struct {
+	res   *wire.WebhookReceiverLookup
+	err   error
+	paths []string
+}
+
+func (f *fakeLookup) LookupWebhookReceiver(
+	_ context.Context,
+	path string,
+) (*wire.WebhookReceiverLookup, error) {
+	f.paths = append(f.paths, path)
+	return f.res, f.err
+}
 
 func TestServer_route(t *testing.T) {
 	const testPath = "/nonsense"
@@ -36,30 +52,10 @@ func TestServer_route(t *testing.T) {
 	require.NoError(t, corev1.AddToScheme(testScheme))
 	require.NoError(t, kargoapi.AddToScheme(testScheme))
 
-	// projectReceiverClient returns a client with a ProjectConfig defining a
-	// GitHub receiver at testPath.
+	// projectReceiverClient returns a client holding the Secret of a GitHub
+	// receiver of testProjectName.
 	projectReceiverClient := func() client.Client {
 		return fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
-			&kargoapi.ProjectConfig{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: testProjectName,
-					Name:      testProjectName,
-				},
-				Spec: kargoapi.ProjectConfigSpec{
-					WebhookReceivers: []kargoapi.WebhookReceiverConfig{{
-						Name: testReceiverName,
-						GitHub: &kargoapi.GitHubWebhookReceiverConfig{
-							SecretRef: corev1.LocalObjectReference{Name: "fake-secret"},
-						},
-					}},
-				},
-				Status: kargoapi.ProjectConfigStatus{
-					WebhookReceivers: []kargoapi.WebhookReceiverDetails{{
-						Name: testReceiverName,
-						Path: testPath,
-					}},
-				},
-			},
 			&corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: testProjectName,
@@ -67,12 +63,24 @@ func TestServer_route(t *testing.T) {
 				},
 				Data: map[string][]byte{GithubSecretDataKey: []byte(testSigningKey)},
 			},
-		).WithIndex(
-			&kargoapi.ProjectConfig{},
-			indexer.ProjectConfigsByWebhookReceiverPathsField,
-			indexer.ProjectConfigsByWebhookReceiverPaths,
 		).Build()
 	}
+
+	// projectReceiverLookup returns a lookup resolving testPath to the GitHub
+	// receiver of testProjectName.
+	projectReceiverLookup := &fakeLookup{res: &wire.WebhookReceiverLookup{
+		Project: testProjectName,
+		Config: kargoapi.WebhookReceiverConfig{
+			Name: testReceiverName,
+			GitHub: &kargoapi.GitHubWebhookReceiverConfig{
+				SecretRef: corev1.LocalObjectReference{Name: "fake-secret"},
+			},
+		},
+		Receiver: kargoapi.WebhookReceiverDetails{
+			Name: testReceiverName,
+			Path: testPath,
+		},
+	}}
 
 	testCases := []struct {
 		name          string
@@ -83,18 +91,22 @@ func TestServer_route(t *testing.T) {
 		assertions func(*testing.T, *httptest.ResponseRecorder)
 	}{
 		{
-			name:          "error listing ProjectConfigs",
+			name:          "error looking up the receiver",
 			requestLabels: []string{"", "unknown", "500"},
 			server: &server{
+				lookup: &fakeLookup{err: errors.New("something went wrong")},
+				// ClusterConfig must not be consulted when the lookup fails.
 				client: fake.NewClientBuilder().WithScheme(testScheme).
 					WithInterceptorFuncs(interceptor.Funcs{
-						List: func(
+						Get: func(
 							context.Context,
 							client.WithWatch,
-							client.ObjectList,
-							...client.ListOption,
+							client.ObjectKey,
+							client.Object,
+							...client.GetOption,
 						) error {
-							return errors.New("something went wrong")
+							t.Error("ClusterConfig read after a failed lookup")
+							return nil
 						},
 					}).Build(),
 			},
@@ -107,6 +119,7 @@ func TestServer_route(t *testing.T) {
 			name:          "error getting ClusterConfig",
 			requestLabels: []string{"", "unknown", "500"},
 			server: &server{
+				lookup: &fakeLookup{},
 				client: fake.NewClientBuilder().WithScheme(testScheme).WithInterceptorFuncs(
 					interceptor.Funcs{
 						Get: func(
@@ -119,10 +132,6 @@ func TestServer_route(t *testing.T) {
 							return errors.New("something went wrong")
 						},
 					},
-				).WithIndex(
-					&kargoapi.ProjectConfig{},
-					indexer.ProjectConfigsByWebhookReceiverPathsField,
-					indexer.ProjectConfigsByWebhookReceiverPaths,
 				).Build(),
 			},
 			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
@@ -134,11 +143,8 @@ func TestServer_route(t *testing.T) {
 			name:          "no ClusterConfig found",
 			requestLabels: []string{"", "unknown", "404"},
 			server: &server{
-				client: fake.NewClientBuilder().WithScheme(testScheme).WithIndex(
-					&kargoapi.ProjectConfig{},
-					indexer.ProjectConfigsByWebhookReceiverPathsField,
-					indexer.ProjectConfigsByWebhookReceiverPaths,
-				).Build(),
+				lookup: &fakeLookup{},
+				client: fake.NewClientBuilder().WithScheme(testScheme).Build(),
 			},
 			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
 				require.Equal(t, http.StatusNotFound, rr.Result().StatusCode)
@@ -149,26 +155,16 @@ func TestServer_route(t *testing.T) {
 			name:          "error getting receiver config",
 			requestLabels: []string{testProjectName, "unknown", "404"},
 			server: &server{
-				client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
-					&kargoapi.ProjectConfig{
-						ObjectMeta: metav1.ObjectMeta{
-							Namespace: testProjectName,
-							Name:      testProjectName,
-						},
-						// There is no config matching the receiver in the status
-						Spec: kargoapi.ProjectConfigSpec{},
-						Status: kargoapi.ProjectConfigStatus{
-							WebhookReceivers: []kargoapi.WebhookReceiverDetails{{
-								Name: testReceiverName,
-								Path: testPath,
-							}},
-						},
+				// The config does not match the receiver details.
+				lookup: &fakeLookup{res: &wire.WebhookReceiverLookup{
+					Project: testProjectName,
+					Config:  kargoapi.WebhookReceiverConfig{Name: "other"},
+					Receiver: kargoapi.WebhookReceiverDetails{
+						Name: testReceiverName,
+						Path: testPath,
 					},
-				).WithIndex(
-					&kargoapi.ProjectConfig{},
-					indexer.ProjectConfigsByWebhookReceiverPathsField,
-					indexer.ProjectConfigsByWebhookReceiverPaths,
-				).Build(),
+				}},
+				client: fake.NewClientBuilder().WithScheme(testScheme).Build(),
 			},
 			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
 				require.Equal(t, http.StatusNotFound, rr.Result().StatusCode)
@@ -179,6 +175,7 @@ func TestServer_route(t *testing.T) {
 			name:          "success with ProjectConfig",
 			requestLabels: []string{testProjectName, github, "400"},
 			server: &server{
+				lookup: projectReceiverLookup,
 				client: projectReceiverClient(),
 			},
 			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
@@ -186,12 +183,16 @@ func TestServer_route(t *testing.T) {
 				// request, it means we successfully routed the request to the a
 				// gitHubWebhookReceiver.
 				require.Equal(t, http.StatusBadRequest, rr.Result().StatusCode)
+				require.Contains(t, projectReceiverLookup.paths, testPath)
 			},
 		},
 		{
 			name:          "GitHub ping",
 			requestLabels: []string{testProjectName, github, "200"},
-			server:        &server{client: projectReceiverClient()},
+			server: &server{
+				lookup: projectReceiverLookup,
+				client: projectReceiverClient(),
+			},
 			req: func() *http.Request {
 				body := []byte("{}")
 				req := httptest.NewRequest(http.MethodPost, testURL, bytes.NewReader(body))
@@ -206,7 +207,10 @@ func TestServer_route(t *testing.T) {
 		{
 			name:          "GitHub invalid signature",
 			requestLabels: []string{testProjectName, github, "401"},
-			server:        &server{client: projectReceiverClient()},
+			server: &server{
+				lookup: projectReceiverLookup,
+				client: projectReceiverClient(),
+			},
 			req: func() *http.Request {
 				req := httptest.NewRequest(http.MethodPost, testURL, bytes.NewReader([]byte("{}")))
 				req.Header.Set(gh.EventTypeHeader, githubEventTypePing)
@@ -221,6 +225,7 @@ func TestServer_route(t *testing.T) {
 			name:          "success with ClusterConfig",
 			requestLabels: []string{"", github, "400"},
 			server: &server{
+				lookup: &fakeLookup{},
 				cfg: ServerConfig{
 					SystemResourcesNamespace: "fake-namespace",
 				},
@@ -251,10 +256,6 @@ func TestServer_route(t *testing.T) {
 						},
 						Data: map[string][]byte{GithubSecretDataKey: []byte("my-super-secret-token")},
 					},
-				).WithIndex(
-					&kargoapi.ProjectConfig{},
-					indexer.ProjectConfigsByWebhookReceiverPathsField,
-					indexer.ProjectConfigsByWebhookReceiverPaths,
 				).Build(),
 			},
 			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {

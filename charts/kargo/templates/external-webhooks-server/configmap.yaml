@@ -11,6 +11,12 @@ metadata:
     {{- include "kargo.externalWebhooksServer.labels" . | nindent 4 }}
   {{- include "kargo.annotations" (dict "root" . "annotations" .Values.externalWebhooksServer.annotations) | nindent 2 }}
 data:
+  {{- with (include "kargo.externalWebhooksServer.apiServerAddress" .) }}
+  API_SERVER_ADDRESS: {{ quote . }}
+  {{- end }}
+  {{- if (include "kargo.externalWebhooksServer.mountsAPIServerCA" .) }}
+  API_SERVER_CA_CERT_PATH: /etc/kargo/api-ca.crt
+  {{- end }}
   EXTERNAL_WEBHOOK_SERVER_BASE_URL: {{ include "kargo.externalWebhooksServer.baseURL" . }}
   KARGO_NAMESPACE: {{ include "kargo.dataNamespace" . }}
   SYSTEM_RESOURCES_NAMESPACE: {{ quote .Values.global.systemResources.namespace }}

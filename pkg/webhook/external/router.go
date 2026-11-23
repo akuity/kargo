@@ -6,12 +6,9 @@ import (
 	"net/http"
 	"strconv"
 
-	"sigs.k8s.io/controller-runtime/pkg/client"
-
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/api"
 	xhttp "github.com/akuity/kargo/pkg/http"
-	"github.com/akuity/kargo/pkg/indexer"
 	"github.com/akuity/kargo/pkg/io"
 	"github.com/akuity/kargo/pkg/logging"
 )
@@ -46,33 +43,28 @@ func (s *server) route(w http.ResponseWriter, r *http.Request) {
 	var receiverCfgs []kargoapi.WebhookReceiverConfig
 	var receivers []kargoapi.WebhookReceiverDetails
 
-	projectConfigs := kargoapi.ProjectConfigList{}
-	if err := s.client.List(
-		ctx,
-		&projectConfigs,
-		client.MatchingFields{
-			indexer.ProjectConfigsByWebhookReceiverPathsField: r.URL.Path,
-		},
-	); err != nil {
-		logger.Error(err, "error listing ProjectConfigs")
+	res, err := s.lookup.LookupWebhookReceiver(ctx, r.URL.Path)
+	if err != nil {
+		logger.Error(err, "error looking up the webhook receiver")
 		xhttp.WriteErrorJSON(w, err)
 		return
 	}
 
-	// At most one ProjectConfig should match the path
-	if len(projectConfigs.Items) == 1 {
-		project = projectConfigs.Items[0].Namespace
+	// The API returns at most one owner of the path.
+	if res != nil {
+		project = res.Project
 		logger.Debug("found ProjectConfig", "project", project)
 		secretsNamespace = project
-		receiverCfgs = projectConfigs.Items[0].Spec.WebhookReceivers
-		receivers = projectConfigs.Items[0].Status.WebhookReceivers
+		receiverCfgs = []kargoapi.WebhookReceiverConfig{res.Config}
+		receivers = []kargoapi.WebhookReceiverDetails{res.Receiver}
 	} else {
 		logger.Debug(
 			"no ProjectConfigs define a WebhookReceiver for the path; "+
 				"will check ClusterConfig",
 			"path", r.URL.Path,
 		)
-		clusterCfg, err := api.GetClusterConfig(ctx, s.client)
+		var clusterCfg *kargoapi.ClusterConfig
+		clusterCfg, err = api.GetClusterConfig(ctx, s.client)
 		if err != nil {
 			logger.Error(err, "error getting ClusterConfig")
 			xhttp.WriteErrorJSON(w, err)

@@ -511,9 +511,10 @@ func TestRegularStageReconciler_Reconcile(t *testing.T) {
 				Build()
 
 			r := &RegularStageReconciler{
-				client:      c,
-				apiReader:   c,
-				eventSender: &fakeevent.Sender{},
+				client:         c,
+				apiReader:      c,
+				eventSender:    &fakeevent.Sender{},
+				projectConfigs: &fakeProjectConfigGetter{},
 			}
 			if tt.apiReader != nil {
 				r.apiReader = tt.apiReader(t)
@@ -537,8 +538,24 @@ func TestRegularStagesReconciler_reconcile(t *testing.T) {
 		stage       *kargoapi.Stage
 		objects     []client.Object
 		interceptor interceptor.Funcs
+		getter      api.ProjectConfigGetter
 		assertions  func(*testing.T, kargoapi.StageStatus, bool, error)
 	}{
+		{
+			name: "ProjectConfig read error fails the reconcile",
+			stage: &kargoapi.Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace:  "test-project",
+					Name:       "test-stage",
+					Generation: 1,
+				},
+			},
+			getter: &fakeProjectConfigGetter{err: errors.New("api down")},
+			assertions: func(t *testing.T, _ kargoapi.StageStatus, _ bool, err error) {
+				require.ErrorContains(t, err, "error checking auto-promotion policy")
+				require.ErrorContains(t, err, "api down")
+			},
+		},
 		{
 			name: "subreconciler error preserves reconciling condition",
 			stage: &kargoapi.Stage{
@@ -728,9 +745,14 @@ func TestRegularStagesReconciler_reconcile(t *testing.T) {
 				Build()
 
 			r := &RegularStageReconciler{
-				client:        c,
-				eventSender:   &fakeevent.Sender{},
-				healthChecker: &health.MockAggregatingChecker{},
+				client:         c,
+				eventSender:    &fakeevent.Sender{},
+				healthChecker:  &health.MockAggregatingChecker{},
+				projectConfigs: tt.getter,
+			}
+			if r.projectConfigs == nil {
+				// No ProjectConfig: auto-promotion is disabled.
+				r.projectConfigs = &fakeProjectConfigGetter{}
 			}
 
 			status, requeue, err := r.reconcile(t.Context(), tt.stage, now)
@@ -867,10 +889,11 @@ func TestRegularStageReconciler_Reconcile_concurrentStatusMetadata(t *testing.T)
 		Build()
 
 	r := &RegularStageReconciler{
-		client:        c,
-		apiReader:     c,
-		eventSender:   &fakeevent.Sender{},
-		healthChecker: &health.MockAggregatingChecker{},
+		client:         c,
+		apiReader:      c,
+		eventSender:    &fakeevent.Sender{},
+		healthChecker:  &health.MockAggregatingChecker{},
+		projectConfigs: &fakeProjectConfigGetter{},
 	}
 
 	_, err := r.Reconcile(t.Context(), ctrl.Request{
@@ -7276,4 +7299,18 @@ func requireOneSentEvent(
 	require.NoError(t, err)
 	require.Equal(t, expectedSubject, sent[0].Subject())
 	return sent[0]
+}
+
+// fakeProjectConfigGetter is a ProjectConfigGetter that returns a canned
+// ProjectConfig (nil for none) and error.
+type fakeProjectConfigGetter struct {
+	cfg *kargoapi.ProjectConfig
+	err error
+}
+
+func (f *fakeProjectConfigGetter) Get(
+	context.Context,
+	string,
+) (*kargoapi.ProjectConfig, error) {
+	return f.cfg, f.err
 }

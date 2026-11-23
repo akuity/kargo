@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	stdruntime "runtime"
 
@@ -16,6 +17,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/pkg/client/apiserver"
 	"github.com/akuity/kargo/pkg/event"
 	natsevent "github.com/akuity/kargo/pkg/event/nats"
 	"github.com/akuity/kargo/pkg/indexer"
@@ -43,6 +45,10 @@ type kubernetesWebhooksServerOptions struct {
 	KubeConfig string
 	QPS        float32
 	Burst      int
+
+	// APIServer configures the client the Promotion webhook uses to read
+	// ProjectConfigs, which live behind the API server.
+	APIServer apiserver.ClientConfig
 
 	WebhookServerPort int
 
@@ -88,6 +94,8 @@ func (o *kubernetesWebhooksServerOptions) complete() {
 	o.QPS = types.MustParseFloat32(os.GetEnv("KUBE_API_QPS", "50.0"))
 	o.Burst = types.MustParseInt(os.GetEnv("KUBE_API_BURST", "300"))
 
+	o.APIServer = apiserver.ClientConfigFromEnv()
+
 	o.WebhookServerPort = types.MustParseInt(os.GetEnv("WEBHOOK_SERVER_PORT", "9443"))
 
 	o.MetricsBindAddress = os.GetEnv("METRICS_BIND_ADDRESS", "0")
@@ -99,6 +107,14 @@ func (o *kubernetesWebhooksServerOptions) complete() {
 }
 
 func (o *kubernetesWebhooksServerOptions) run(ctx context.Context) error {
+	// The Promotion webhook reads ProjectConfigs through the API server.
+	if o.APIServer.Address == "" {
+		return errors.New(
+			"no API server is configured: the Kubernetes webhooks server " +
+				"requires one; set API_SERVER_ADDRESS",
+		)
+	}
+
 	shutdownTelemetry, err := telemetry.SetupFromEnv(
 		logging.ContextWithLogger(ctx, o.Logger),
 		"kubernetes-webhooks-server",
@@ -126,6 +142,14 @@ func (o *kubernetesWebhooksServerOptions) run(ctx context.Context) error {
 		return fmt.Errorf("error getting REST config: %w", err)
 	}
 	kubernetes.ConfigureQPSBurst(ctx, restCfg, o.QPS, o.Burst)
+
+	// ProjectConfigs are read through the API server, acting as the
+	// ServiceAccount the webhooks server's credential resolves to, with
+	// tokens it obtains for that ServiceAccount.
+	apiClient, err := apiserver.New(ctx, o.APIServer, restCfg)
+	if err != nil {
+		return fmt.Errorf("error configuring access to the API server: %w", err)
+	}
 
 	scheme := runtime.NewScheme()
 	if err = corev1.AddToScheme(scheme); err != nil {
@@ -215,6 +239,7 @@ func (o *kubernetesWebhooksServerOptions) run(ctx context.Context) error {
 		webhookCfg,
 		mgr,
 		event.NewDefaultingSender(eventSender, "promotion-webhook"),
+		apiClient.ProjectConfigGetter(),
 	); err != nil {
 		return fmt.Errorf("setup Promotion webhook: %w", err)
 	}

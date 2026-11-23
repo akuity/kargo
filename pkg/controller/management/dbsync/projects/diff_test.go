@@ -88,7 +88,7 @@ func TestDiff(t *testing.T) {
 			if testCase.insert {
 				reader.insertInto = store
 			}
-			changes, err := NewSyncer(reader, store).Diff(context.Background())
+			changes, err := NewSyncer(reader, store, nil).Diff(context.Background())
 			if testCase.wantErr != "" {
 				require.ErrorContains(t, err, testCase.wantErr)
 			} else {

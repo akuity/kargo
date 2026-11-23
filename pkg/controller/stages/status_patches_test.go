@@ -101,10 +101,11 @@ func TestRegularStageReconciler_Reconcile_statusPatchesPerPass(t *testing.T) {
 		Build()
 
 	r := &RegularStageReconciler{
-		client:        c,
-		apiReader:     c,
-		eventSender:   &fakeevent.Sender{},
-		healthChecker: &health.MockAggregatingChecker{},
+		client:         c,
+		apiReader:      c,
+		eventSender:    &fakeevent.Sender{},
+		healthChecker:  &health.MockAggregatingChecker{},
+		projectConfigs: &fakeProjectConfigGetter{},
 	}
 
 	setPhase := func(phase kargoapi.PromotionPhase) {

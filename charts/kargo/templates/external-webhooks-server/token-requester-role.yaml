@@ -1,0 +1,23 @@
+{{- if and .Values.workloads.install .Values.externalWebhooksServer.enabled }}
+# The external webhooks server acts as its own ServiceAccount toward the API
+# server, with short-lived tokens it requests for it, so it may create that
+# ServiceAccount's tokens and no other's.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: kargo-external-webhooks-server-token-requester
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "kargo.labels" . | nindent 4 }}
+    {{- include "kargo.externalWebhooksServer.labels" . | nindent 4 }}
+  {{- include "kargo.annotations" (dict "root" . "annotations" .Values.externalWebhooksServer.annotations) | nindent 2 }}
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - serviceaccounts/token
+  resourceNames:
+  - kargo-external-webhooks-server
+  verbs:
+  - create
+{{- end }}
