@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	stdruntime "runtime"
 
@@ -16,6 +17,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/pkg/client/apiserver"
 	"github.com/akuity/kargo/pkg/controller/management/clusterconfigs"
 	"github.com/akuity/kargo/pkg/controller/management/dbsync"
 	"github.com/akuity/kargo/pkg/controller/management/legacysecrets"
@@ -25,6 +27,7 @@ import (
 	"github.com/akuity/kargo/pkg/controller/management/replication"
 	"github.com/akuity/kargo/pkg/controller/management/serviceaccounts"
 	"github.com/akuity/kargo/pkg/database"
+	"github.com/akuity/kargo/pkg/database/projectconfigstore"
 	"github.com/akuity/kargo/pkg/database/targetstore"
 	"github.com/akuity/kargo/pkg/logging"
 	"github.com/akuity/kargo/pkg/os"
@@ -35,6 +38,7 @@ import (
 )
 
 type managementControllerOptions struct {
+	APIServer  apiserver.ClientConfig
 	Database   database.Config
 	KubeConfig string
 	QPS        float32
@@ -71,6 +75,7 @@ func newManagementControllerCommand() *cobra.Command {
 }
 
 func (o *managementControllerOptions) complete() {
+	o.APIServer = apiserver.ClientConfigFromEnv()
 	o.Database = database.ConfigFromEnv()
 	o.KubeConfig = os.GetEnv("KUBECONFIG", "")
 	o.QPS = types.MustParseFloat32(os.GetEnv("KUBE_API_QPS", "50.0"))
@@ -83,6 +88,22 @@ func (o *managementControllerOptions) complete() {
 }
 
 func (o *managementControllerOptions) run(ctx context.Context) error {
+	// The database holds ProjectConfigs, which the management controller
+	// reconciles, and the mirrors of Projects, Stages, and Promotions.
+	if !o.Database.Configured() {
+		return errors.New(
+			"no database is configured: the management controller requires one; " +
+				"set DATABASE_URL or DATABASE_HOST",
+		)
+	}
+	// ProjectConfig status is written through the API server.
+	if o.APIServer.Address == "" {
+		return errors.New(
+			"no API server is configured: the management controller requires one; " +
+				"set API_SERVER_ADDRESS",
+		)
+	}
+
 	version := versionpkg.GetVersion()
 
 	o.Logger.Info(
@@ -116,7 +137,7 @@ func (o *managementControllerOptions) run(ctx context.Context) error {
 	// One-time cleanup of a hazard left behind by the removal of the
 	// automatic Secret migration reconciler. See the package doc comment
 	// on legacysecrets for details.
-	if err := legacysecrets.RemoveOrphanedFinalizers(
+	if err = legacysecrets.RemoveOrphanedFinalizers(
 		ctx,
 		kargoMgr.GetAPIReader(),
 		kargoMgr.GetClient(),
@@ -126,7 +147,7 @@ func (o *managementControllerOptions) run(ctx context.Context) error {
 		return fmt.Errorf("error cleaning up orphaned Secret finalizers: %w", err)
 	}
 
-	if err := clusterconfigs.SetupReconcilerWithManager(
+	if err = clusterconfigs.SetupReconcilerWithManager(
 		ctx,
 		kargoMgr,
 		clusterconfigs.ReconcilerConfigFromEnv(),
@@ -134,7 +155,7 @@ func (o *managementControllerOptions) run(ctx context.Context) error {
 		return fmt.Errorf("error setting up ClusterConfigs reconciler: %w", err)
 	}
 
-	if err := namespaces.SetupReconcilerWithManager(
+	if err = namespaces.SetupReconcilerWithManager(
 		ctx,
 		kargoMgr,
 		namespaces.ReconcilerConfigFromEnv(),
@@ -142,35 +163,39 @@ func (o *managementControllerOptions) run(ctx context.Context) error {
 		return fmt.Errorf("error setting up Namespaces reconciler: %w", err)
 	}
 
-	// The database holds Targets, whose stats Projects report, and the
-	// mirrors of Projects, Stages, and Promotions. It is optional: without
-	// it, neither happens.
-	var db *database.Queries
-	if o.Database.Configured() {
-		pool, err := database.Open(ctx, o.Database, "kargo-management-controller")
-		if err != nil {
-			return err
-		}
-		defer pool.Close()
-		db = database.New(pool)
+	// The database holds ProjectConfigs, Targets, whose stats Projects
+	// report, and the mirrors of Projects, Stages, and Promotions.
+	pool, err := database.Open(ctx, o.Database, "kargo-management-controller")
+	if err != nil {
+		return err
 	}
-	var targets projects.TargetCounter
-	if db != nil {
-		targets = targetstore.New(db)
+	defer pool.Close()
+	db := database.New(pool)
+	projectConfigs := projectconfigstore.New(pool, natsConn)
+
+	// ProjectConfig status is written through the API server, acting as the
+	// ServiceAccount the management controller's credential for the control
+	// plane resolves to, with tokens it obtains for that ServiceAccount.
+	apiClient, err := apiserver.New(ctx, o.APIServer, kargoMgr.GetConfig())
+	if err != nil {
+		return fmt.Errorf("error configuring access to the API server: %w", err)
 	}
 
 	if err := projects.SetupReconcilerWithManager(
 		ctx,
 		kargoMgr,
 		projects.ReconcilerConfigFromEnv(),
-		targets,
+		targetstore.New(db),
 	); err != nil {
 		return fmt.Errorf("error setting up Projects reconciler: %w", err)
 	}
 
-	if err := projectconfigs.SetupReconcilerWithManager(
+	if err := projectconfigs.SetupReconciler(
 		ctx,
 		kargoMgr,
+		natsConn,
+		projectConfigs,
+		apiClient,
 		projectconfigs.ReconcilerConfigFromEnv(),
 	); err != nil {
 		return fmt.Errorf("error setting up ProjectConfigs reconciler: %w", err)
@@ -197,10 +222,8 @@ func (o *managementControllerOptions) run(ctx context.Context) error {
 		return fmt.Errorf("error setting up shared ConfigMap replication reconciler: %w", err)
 	}
 
-	if db != nil {
-		if err := dbsync.SetupWithManager(ctx, kargoMgr, db); err != nil {
-			return err
-		}
+	if err := dbsync.SetupWithManager(ctx, kargoMgr, db); err != nil {
+		return err
 	}
 
 	if err := kargoMgr.Start(ctx); err != nil {
