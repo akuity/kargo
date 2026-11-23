@@ -99,6 +99,9 @@ func (o *refreshOptions) run(ctx context.Context) error {
 		return fmt.Errorf("get client from config: %w", err)
 	}
 
+	// Only ProjectConfig refreshes return a token to wait on.
+	var projectConfigToken string
+
 	// Call the appropriate refresh endpoint based on resource type
 	switch o.ResourceType {
 	case server.RefreshResourceTypeClusterConfig:
@@ -110,13 +113,14 @@ func (o *refreshOptions) run(ctx context.Context) error {
 			return fmt.Errorf("refresh %s: %w", o.ResourceType, client.APIError(refreshErr))
 		}
 	case server.RefreshResourceTypeProjectConfig:
-		_, httpRes, refreshErr := apiClient.CoreAPI.RefreshProjectConfig(ctx, o.Project).Execute()
+		res, httpRes, refreshErr := apiClient.CoreAPI.RefreshProjectConfig(ctx, o.Project).Execute()
 		if httpRes != nil {
 			_ = httpRes.Body.Close()
 		}
 		if refreshErr != nil {
 			return fmt.Errorf("refresh %s: %w", o.ResourceType, client.APIError(refreshErr))
 		}
+		projectConfigToken = res.GetToken()
 	case server.RefreshResourceTypeStage:
 		httpRes, refreshErr := apiClient.CoreAPI.RefreshStage(ctx, o.Project, o.Name).Execute()
 		if httpRes != nil {
@@ -146,7 +150,9 @@ func (o *refreshOptions) run(ctx context.Context) error {
 		case server.RefreshResourceTypeClusterConfig:
 			err = waitForClusterConfig(ctx, watchClient)
 		case server.RefreshResourceTypeProjectConfig:
-			err = waitForProjectConfig(ctx, watchClient, o.Project)
+			err = waitForProjectConfig(
+				ctx, watchClient, o.Project, projectConfigToken,
+			)
 		case server.RefreshResourceTypeStage:
 			err = waitForStage(ctx, watchClient, o.Project, o.Name)
 		case server.RefreshResourceTypeWarehouse:
