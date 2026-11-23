@@ -104,7 +104,13 @@ func (h *Handler) list(c *gin.Context) {
 	// A full page may have more after it; a short page is the last.
 	if len(entries) > 0 && len(entries) == int(limit) {
 		last := list.Items[len(list.Items)-1]
-		list.Continue = encodeToken(entryCursor{Target: last.Target, Stage: last.Stage})
+		if list.Continue, err = encodeToken(entryCursor{
+			Target: last.Target,
+			Stage:  last.Stage,
+		}); err != nil {
+			_ = c.Error(err)
+			return
+		}
 	}
 	c.JSON(http.StatusOK, list)
 }
@@ -147,6 +153,12 @@ func present(fleet *fleet, stored targetstatusstore.Entry) Entry {
 type entryCursor struct {
 	Target string `json:"target"`
 	Stage  string `json:"stage"`
+}
+
+// complete reports whether the cursor names an entry. Every Target and
+// Stage has a name, so a cursor without both would start the list over.
+func (c entryCursor) complete() bool {
+	return c.Target != "" && c.Stage != ""
 }
 
 // search returns how many of the fleet's pairs are at or before the cursor:

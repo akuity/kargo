@@ -303,6 +303,18 @@ func TestList(t *testing.T) {
 			},
 		},
 		{
+			// A cursor without a Stage names no entry: it would start the list
+			// over rather than continue it.
+			name:    "a continue token naming no entry is refused",
+			store:   newStore(),
+			objects: newStages(),
+			url:     projectURL("/target-statuses?continue=" + encodeRaw(`{"target":"a"}`)),
+			assertions: func(t *testing.T, w *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusBadRequest, w.Code)
+				require.Contains(t, w.Body.String(), "invalid continue token")
+			},
+		},
+		{
 			name:    "the store failing fails the request",
 			store:   failingStore,
 			objects: newStages(),
