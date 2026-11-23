@@ -110,7 +110,7 @@ func (o *refreshOptions) run(ctx context.Context) error {
 			return fmt.Errorf("refresh %s: %w", o.ResourceType, client.APIError(refreshErr))
 		}
 	case server.RefreshResourceTypeProjectConfig:
-		httpRes, refreshErr := apiClient.CoreAPI.RefreshProjectConfig(ctx, o.Project).Execute()
+		_, httpRes, refreshErr := apiClient.CoreAPI.RefreshProjectConfig(ctx, o.Project).Execute()
 		if httpRes != nil {
 			_ = httpRes.Body.Close()
 		}

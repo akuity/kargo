@@ -127,7 +127,9 @@ Class | Method | HTTP request | Description
 *CoreAPI* | [**RefreshPromotion**](docs/CoreAPI.md#refreshpromotion) | **Post** /v1beta1/projects/{project}/promotions/{promotion}/refresh | Refresh a Promotion
 *CoreAPI* | [**RefreshStage**](docs/CoreAPI.md#refreshstage) | **Post** /v1beta1/projects/{project}/stages/{stage}/refresh | Refresh a Stage
 *CoreAPI* | [**RefreshWarehouse**](docs/CoreAPI.md#refreshwarehouse) | **Post** /v1beta1/projects/{project}/warehouses/{warehouse}/refresh | Refresh a Warehouse
+*CoreAPI* | [**UpdateProjectConfig**](docs/CoreAPI.md#updateprojectconfig) | **Put** /v1beta1/projects/{project}/config | Create or update ProjectConfig
 *CoreAPI* | [**UpdateProjectConfigMap**](docs/CoreAPI.md#updateprojectconfigmap) | **Put** /v1beta1/projects/{project}/configmaps/{configmap} | Replace a project-level ConfigMap
+*CoreAPI* | [**UpdateProjectConfigStatus**](docs/CoreAPI.md#updateprojectconfigstatus) | **Put** /v1beta1/projects/{project}/config/status | Update ProjectConfig status
 *CoreAPI* | [**UpdateSharedConfigMap**](docs/CoreAPI.md#updatesharedconfigmap) | **Put** /v1beta1/shared/configmaps/{configmap} | Replace a shared ConfigMap
 *CoreAPI* | [**UpdateSystemConfigMap**](docs/CoreAPI.md#updatesystemconfigmap) | **Put** /v1beta1/system/configmaps/{configmap} | Replace a system-level ConfigMap
 *CoreAPI* | [**UpdateTarget**](docs/CoreAPI.md#updatetarget) | **Put** /v1beta1/projects/{project}/targets/{target-name} | Update a Target
@@ -189,6 +191,7 @@ Class | Method | HTTP request | Description
 *SystemAPI* | [**GetControllerHeartbeats**](docs/SystemAPI.md#getcontrollerheartbeats) | **Get** /v1beta1/system/controller-heartbeats | Get controller heartbeats
 *SystemAPI* | [**GetPublicConfig**](docs/SystemAPI.md#getpublicconfig) | **Get** /v1beta1/system/public-server-config | Retrieve public server configuration
 *SystemAPI* | [**GetVersionInfo**](docs/SystemAPI.md#getversioninfo) | **Get** /v1beta1/system/server-version | Retrieve API Server version information
+*SystemAPI* | [**LookupWebhookReceiver**](docs/SystemAPI.md#lookupwebhookreceiver) | **Get** /v1beta1/system/webhook-receivers | Look up a webhook receiver by path
 *SystemAPI* | [**RefreshClusterConfig**](docs/SystemAPI.md#refreshclusterconfig) | **Post** /v1beta1/system/cluster-config/refresh | Refresh the ClusterConfig
 *VerificationsAPI* | [**AbortVerification**](docs/VerificationsAPI.md#abortverification) | **Post** /v1beta1/projects/{project}/stages/{stage}/verification/abort | Abort a running Verification process
 *VerificationsAPI* | [**DeleteAnalysisTemplate**](docs/VerificationsAPI.md#deleteanalysistemplate) | **Delete** /v1beta1/projects/{project}/analysis-templates/{analysis-template} | Delete an AnalysisTemplate
@@ -337,6 +340,7 @@ Class | Method | HTTP request | Description
  - [PublicConfig](docs/PublicConfig.md)
  - [QuayWebhookReceiverConfig](docs/QuayWebhookReceiverConfig.md)
  - [RbacRole](docs/RbacRole.md)
+ - [RefreshProjectConfigResponse](docs/RefreshProjectConfigResponse.md)
  - [ResolvedLink](docs/ResolvedLink.md)
  - [ResourceDetails](docs/ResourceDetails.md)
  - [ResourceErrorResponse](docs/ResourceErrorResponse.md)
@@ -404,6 +408,8 @@ Class | Method | HTTP request | Description
  - [TargetVerificaitonSpec](docs/TargetVerificaitonSpec.md)
  - [UpdateConfigMapRequest](docs/UpdateConfigMapRequest.md)
  - [UpdateGenericCredentialsRequest](docs/UpdateGenericCredentialsRequest.md)
+ - [UpdateProjectConfigStatusRequest](docs/UpdateProjectConfigStatusRequest.md)
+ - [UpdateProjectConfigStatusResponse](docs/UpdateProjectConfigStatusResponse.md)
  - [UpdateRepoCredentialsRequest](docs/UpdateRepoCredentialsRequest.md)
  - [UserClaims](docs/UserClaims.md)
  - [V1AWSElasticBlockStoreVolumeSource](docs/V1AWSElasticBlockStoreVolumeSource.md)
@@ -561,6 +567,7 @@ Class | Method | HTTP request | Description
  - [WarehouseStatus](docs/WarehouseStatus.md)
  - [WebhookReceiverConfig](docs/WebhookReceiverConfig.md)
  - [WebhookReceiverDetails](docs/WebhookReceiverDetails.md)
+ - [WebhookReceiverLookup](docs/WebhookReceiverLookup.md)
 
 
 ## Documentation For Authorization

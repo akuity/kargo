@@ -15,24 +15,17 @@ import (
 	"k8s.io/apimachinery/pkg/watch"
 
 	"github.com/akuity/kargo/pkg/logging"
+	"github.com/akuity/kargo/pkg/server/sse"
 )
 
 // SetSSEHeaders configures the standard headers for Server-Sent Events (SSE)
-// streaming on a gin context.
+// streaming on a gin context. See sse.SetHeaders.
 func SetSSEHeaders(c *gin.Context) {
-	c.Header("Content-Type", "text/event-stream")
-	c.Header("Cache-Control", "no-cache")
-	c.Header("Connection", "keep-alive")
-	c.Header("X-Accel-Buffering", "no") // Disable proxy buffering
-	c.Writer.Flush()
+	sse.SetHeaders(c)
 }
 
-// WatchEvent represents a watch event in an SSE stream. It contains the event
-// type (ADDED, MODIFIED, DELETED) and the object that was affected.
-type WatchEvent[T any] struct {
-	Type   string `json:"type"`
-	Object T      `json:"object"`
-}
+// WatchEvent represents a watch event in an SSE stream. See sse.WatchEvent.
+type WatchEvent[T any] = sse.WatchEvent[T]
 
 // ConvertWatchEventObject converts a watch event's object to the target type.
 // It handles both unstructured objects (from real clients) and typed objects
@@ -193,39 +186,14 @@ func FilteredWatchEventType(eventType watch.EventType, matches bool) (watch.Even
 
 // SendSSEWatchEvent sends an object as an SSE watch event. Returns true if
 // the caller should continue processing, false if the watch should be
-// terminated (write failure).
+// terminated (write failure). See sse.SendWatchEvent.
 func SendSSEWatchEvent[T any](c *gin.Context, eventType watch.EventType, obj T) bool {
-	logger := logging.LoggerFromContext(c.Request.Context())
-
-	event := WatchEvent[T]{
-		Type:   string(eventType),
-		Object: obj,
-	}
-
-	data, err := json.Marshal(event)
-	if err != nil {
-		logger.Error(err, "failed to marshal event")
-		return true // continue processing, don't terminate watch
-	}
-
-	// Write as SSE event (format: data: <json>\n\n)
-	if _, err := fmt.Fprintf(c.Writer, "data: %s\n\n", data); err != nil {
-		logger.Debug("failed to write event", "error", err)
-		return false // terminate watch
-	}
-
-	c.Writer.Flush()
-	return true // continue processing
+	return sse.SendWatchEvent(c, eventType, obj)
 }
 
 // WriteSSEKeepalive writes a keepalive comment to keep the SSE connection
-// alive. Returns true if successful, false if the write failed.
+// alive. Returns true if successful, false if the write failed. See
+// sse.WriteKeepalive.
 func WriteSSEKeepalive(c *gin.Context) bool {
-	if _, err := c.Writer.Write([]byte(": keepalive\n\n")); err != nil {
-		logger := logging.LoggerFromContext(c.Request.Context())
-		logger.Debug("failed to write keepalive", "error", err)
-		return false
-	}
-	c.Writer.Flush()
-	return true
+	return sse.WriteKeepalive(c)
 }

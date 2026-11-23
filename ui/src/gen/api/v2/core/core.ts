@@ -54,11 +54,14 @@ import type {
   PromotionTask,
   PromotionTaskList,
   QueryFreightsRestParams,
+  RefreshProjectConfigResponse,
   Stage,
   StageList,
   Target,
   TargetList,
   UpdateConfigMapRequest,
+  UpdateProjectConfigStatusRequest,
+  UpdateProjectConfigStatusResponse,
   V1ConfigMap,
   V1ConfigMapList,
   Warehouse,
@@ -468,8 +471,7 @@ export const getGetProjectConfigUrl = (project: string) => {
 };
 
 /**
- * Retrieve the single ProjectConfig resource from a project's
- * namespace.
+ * Retrieve a project's ProjectConfig.
  * @summary Retrieve ProjectConfig
  */
 export const getProjectConfig = async (
@@ -589,6 +591,125 @@ export function useGetProjectConfig<
   return withQueryKey(query, queryOptions.queryKey);
 }
 
+export type updateProjectConfigResponse200 = {
+  data: ProjectConfig;
+  status: 200;
+};
+
+export type updateProjectConfigResponse201 = {
+  data: ProjectConfig;
+  status: 201;
+};
+
+export type updateProjectConfigResponseSuccess = (
+  updateProjectConfigResponse200 | updateProjectConfigResponse201
+) & {
+  headers: Headers;
+};
+export type updateProjectConfigResponse = updateProjectConfigResponseSuccess;
+
+export const getUpdateProjectConfigUrl = (project: string) => {
+  return `/v1beta1/projects/${project}/config`;
+};
+
+/**
+ * Create a project's ProjectConfig, or replace its labels,
+ * annotations and spec if it exists. The body's metadata.name
+ * and metadata.namespace, if given, must be the project. A
+ * metadata.uid or metadata.resourceVersion in the body is a
+ * precondition of an update: it is refused if the ProjectConfig
+ * no longer matches it. Status, the refresh annotation and other
+ * server-managed metadata are ignored.
+ * @summary Create or update ProjectConfig
+ */
+export const updateProjectConfig = async (
+  project: string,
+  projectConfig: ProjectConfig,
+  options?: Parameters<typeof customFetch>[1]
+): Promise<updateProjectConfigResponse> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit['headers']>
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Array.isArray(h)) return Object.fromEntries(h);
+    return h;
+  };
+  return customFetch<updateProjectConfigResponse>(getUpdateProjectConfigUrl(project), {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(projectConfig)
+  });
+};
+
+export const getUpdateProjectConfigMutationKey = () => ['updateProjectConfig'] as const;
+
+export const getUpdateProjectConfigMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateProjectConfig>>,
+    TError,
+    UpdateProjectConfigMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateProjectConfig>>,
+  TError,
+  UpdateProjectConfigMutationVariables,
+  TContext
+> => {
+  const mutationKey = getUpdateProjectConfigMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateProjectConfig>>,
+    UpdateProjectConfigMutationVariables
+  > = (props) => {
+    const { project, data } = props ?? {};
+
+    return updateProjectConfig(project, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateProjectConfigMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updateProjectConfig>>
+>;
+export type UpdateProjectConfigMutationBody = ProjectConfig;
+export type UpdateProjectConfigMutationError = ErrorType<unknown>;
+export type UpdateProjectConfigMutationVariables = { project: string; data: ProjectConfig };
+
+/**
+ * @summary Create or update ProjectConfig
+ */
+export const useUpdateProjectConfig = <TError = ErrorType<unknown>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof updateProjectConfig>>,
+      TError,
+      UpdateProjectConfigMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient
+): UseMutationResult<
+  Awaited<ReturnType<typeof updateProjectConfig>>,
+  TError,
+  UpdateProjectConfigMutationVariables,
+  TContext
+> => {
+  return useMutation(getUpdateProjectConfigMutationOptions(options), queryClient);
+};
 export type deleteProjectConfigResponse204 = {
   data: void;
   status: 204;
@@ -604,8 +725,7 @@ export const getDeleteProjectConfigUrl = (project: string) => {
 };
 
 /**
- * Delete the single ProjectConfig resource from a project's
- * namespace.
+ * Delete a project's ProjectConfig.
  * @summary Delete a ProjectConfig resource
  */
 export const deleteProjectConfig = async (
@@ -686,7 +806,7 @@ export const useDeleteProjectConfig = <TError = ErrorType<unknown>, TContext = u
   return useMutation(getDeleteProjectConfigMutationOptions(options), queryClient);
 };
 export type refreshProjectConfigResponse200 = {
-  data: void;
+  data: RefreshProjectConfigResponse;
   status: 200;
 };
 
@@ -700,9 +820,10 @@ export const getRefreshProjectConfigUrl = (project: string) => {
 };
 
 /**
- * Refresh the single ProjectConfig resource in a project's
- * namespace. Refreshing enqueues the resource for reconciliation
- * by its corresponding controller.
+ * Request a reconcile of a project's ProjectConfig. The response
+ * carries a token, which the ProjectConfig's
+ * status.lastHandledRefresh reports once the refresh has been
+ * handled.
  * @summary Refresh ProjectConfig
  */
 export const refreshProjectConfig = async (
@@ -781,6 +902,121 @@ export const useRefreshProjectConfig = <TError = ErrorType<unknown>, TContext = 
   TContext
 > => {
   return useMutation(getRefreshProjectConfigMutationOptions(options), queryClient);
+};
+export type updateProjectConfigStatusResponse200 = {
+  data: UpdateProjectConfigStatusResponse;
+  status: 200;
+};
+
+export type updateProjectConfigStatusResponseSuccess = updateProjectConfigStatusResponse200 & {
+  headers: Headers;
+};
+export type updateProjectConfigStatusResponse = updateProjectConfigStatusResponseSuccess;
+
+export const getUpdateProjectConfigStatusUrl = (project: string) => {
+  return `/v1beta1/projects/${project}/config/status`;
+};
+
+/**
+ * Record the outcome of a reconcile of a project's
+ * ProjectConfig. The status is refused if the ProjectConfig,
+ * its generation or its refresh token is no longer the one the
+ * reconcile observed. Webhook receivers whose paths another
+ * ProjectConfig owns are not recorded, and are named in the
+ * response. Only the management controller is meant to call
+ * this; it requires update on projectconfigs/status.
+ * @summary Update ProjectConfig status
+ */
+export const updateProjectConfigStatus = async (
+  project: string,
+  updateProjectConfigStatusRequest: UpdateProjectConfigStatusRequest,
+  options?: Parameters<typeof customFetch>[1]
+): Promise<updateProjectConfigStatusResponse> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit['headers']>
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Array.isArray(h)) return Object.fromEntries(h);
+    return h;
+  };
+  return customFetch<updateProjectConfigStatusResponse>(getUpdateProjectConfigStatusUrl(project), {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(updateProjectConfigStatusRequest)
+  });
+};
+
+export const getUpdateProjectConfigStatusMutationKey = () => ['updateProjectConfigStatus'] as const;
+
+export const getUpdateProjectConfigStatusMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateProjectConfigStatus>>,
+    TError,
+    UpdateProjectConfigStatusMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateProjectConfigStatus>>,
+  TError,
+  UpdateProjectConfigStatusMutationVariables,
+  TContext
+> => {
+  const mutationKey = getUpdateProjectConfigStatusMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateProjectConfigStatus>>,
+    UpdateProjectConfigStatusMutationVariables
+  > = (props) => {
+    const { project, data } = props ?? {};
+
+    return updateProjectConfigStatus(project, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateProjectConfigStatusMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updateProjectConfigStatus>>
+>;
+export type UpdateProjectConfigStatusMutationBody = UpdateProjectConfigStatusRequest;
+export type UpdateProjectConfigStatusMutationError = ErrorType<unknown>;
+export type UpdateProjectConfigStatusMutationVariables = {
+  project: string;
+  data: UpdateProjectConfigStatusRequest;
+};
+
+/**
+ * @summary Update ProjectConfig status
+ */
+export const useUpdateProjectConfigStatus = <TError = ErrorType<unknown>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof updateProjectConfigStatus>>,
+      TError,
+      UpdateProjectConfigStatusMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient
+): UseMutationResult<
+  Awaited<ReturnType<typeof updateProjectConfigStatus>>,
+  TError,
+  UpdateProjectConfigStatusMutationVariables,
+  TContext
+> => {
+  return useMutation(getUpdateProjectConfigStatusMutationOptions(options), queryClient);
 };
 export type listProjectConfigMapsResponse200 = {
   data: V1ConfigMapList;

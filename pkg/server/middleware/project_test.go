@@ -23,12 +23,12 @@ func TestRequireProject(t *testing.T) {
 	testCases := []struct {
 		name    string
 		objects []client.Object
-		assert  func(*testing.T, []*gin.Error, bool)
+		assert  func(*testing.T, []*gin.Error, *kargoapi.Project)
 	}{
 		{
 			name: "Project does not exist",
-			assert: func(t *testing.T, errs []*gin.Error, reached bool) {
-				require.False(t, reached)
+			assert: func(t *testing.T, errs []*gin.Error, seen *kargoapi.Project) {
+				require.Nil(t, seen)
 				require.Len(t, errs, 1)
 				require.True(t, apierrors.IsNotFound(errs[0].Err))
 			},
@@ -36,11 +36,17 @@ func TestRequireProject(t *testing.T) {
 		{
 			name: "Project exists",
 			objects: []client.Object{
-				&kargoapi.Project{ObjectMeta: metav1.ObjectMeta{Name: "fake-project"}},
+				&kargoapi.Project{ObjectMeta: metav1.ObjectMeta{
+					Name: "fake-project",
+					UID:  "fake-uid",
+				}},
 			},
-			assert: func(t *testing.T, errs []*gin.Error, reached bool) {
-				require.True(t, reached)
+			assert: func(t *testing.T, errs []*gin.Error, seen *kargoapi.Project) {
 				require.Empty(t, errs)
+				// The handler sees the Project the middleware fetched.
+				require.NotNil(t, seen)
+				require.Equal(t, "fake-project", seen.Name)
+				require.Equal(t, "fake-uid", string(seen.UID))
 			},
 		},
 	}
@@ -57,12 +63,14 @@ func TestRequireProject(t *testing.T) {
 				c.Next()
 				reported = c.Errors
 			})
-			reached := false
+			var seen *kargoapi.Project
 			router.GET(
 				"/projects/:project",
 				RequireProject(cl),
 				func(c *gin.Context) {
-					reached = true
+					project, ok := ProjectFromContext(c.Request.Context())
+					require.True(t, ok)
+					seen = project
 					c.Status(http.StatusOK)
 				},
 			)
@@ -70,7 +78,18 @@ func TestRequireProject(t *testing.T) {
 				httptest.NewRecorder(),
 				httptest.NewRequest(http.MethodGet, "/projects/fake-project", nil),
 			)
-			testCase.assert(t, reported, reached)
+			testCase.assert(t, reported, seen)
 		})
 	}
+}
+
+func TestProjectFromContext(t *testing.T) {
+	t.Parallel()
+	_, ok := ProjectFromContext(t.Context())
+	require.False(t, ok)
+
+	project := &kargoapi.Project{ObjectMeta: metav1.ObjectMeta{Name: "fake-project"}}
+	got, ok := ProjectFromContext(contextWithProject(t.Context(), project))
+	require.True(t, ok)
+	require.Same(t, project, got)
 }

@@ -7,6 +7,7 @@ import (
 	"go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin"
 
 	"github.com/akuity/kargo/pkg/server/middleware"
+	"github.com/akuity/kargo/pkg/server/projectconfigs"
 	"github.com/akuity/kargo/pkg/server/promotionrollouts"
 	"github.com/akuity/kargo/pkg/server/targets"
 )
@@ -143,6 +144,9 @@ func (s *server) setupRESTRouter(ctx context.Context) (*gin.Engine, error) {
 			// Controller heartbeats
 			system.GET("/controller-heartbeats", s.getControllerHeartbeats)
 
+			// Webhook receivers
+			projectconfigs.New(s.projectConfigs, s.authorize, s.natsConn).RegisterSystem(system)
+
 			// Roles
 			system.GET("/roles", s.listSystemRoles)
 			system.GET("/roles/:role", s.getSystemRole)
@@ -227,9 +231,10 @@ func (s *server) setupRESTRouter(ctx context.Context) (*gin.Engine, error) {
 			project.DELETE("", s.deleteProject)
 
 			// Project Configuration
-			project.GET("/config", s.getProjectConfig)
-			project.POST("/config/refresh", s.refreshProjectConfig)
-			project.DELETE("/config", s.deleteProjectConfig)
+			// ProjectConfigs live in the database; their handlers authorize
+			// each request themselves, since no Kubernetes client does it for
+			// them, and watch them over NATS.
+			projectconfigs.New(s.projectConfigs, s.authorize, s.natsConn).Register(project)
 
 			// Events
 			project.GET("/events", s.listProjectEvents)

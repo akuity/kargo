@@ -167,6 +167,7 @@ func testRESTEndpoint(
 			s.createPromotionFn = s.client.Create
 			s.getStageFn = api.GetStage
 			s.patchFreightStatusFn = s.patchFreightStatus
+			s.projectConfigs = &fakeProjectConfigStore{}
 
 			if testCase.serverSetup != nil {
 				testCase.serverSetup(t, s)

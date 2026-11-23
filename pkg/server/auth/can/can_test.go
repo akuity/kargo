@@ -136,6 +136,16 @@ func TestAccess(t *testing.T) {
 			},
 		},
 		{
+			name:   "ProjectConfig status is a subresource",
+			access: Update().ProjectConfigStatus("kargo-demo"),
+			expected: Access{
+				Verb:        "update",
+				Resource:    kargoResource("projectconfigs"),
+				Subresource: "status",
+				Key:         types.NamespacedName{Namespace: "kargo-demo", Name: "kargo-demo"},
+			},
+		},
+		{
 			name:   "ClusterConfig is cluster-scoped",
 			access: Get().ClusterConfig("cluster"),
 			expected: Access{

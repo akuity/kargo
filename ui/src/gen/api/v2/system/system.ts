@@ -26,8 +26,10 @@ import type {
   ClusterConfig,
   GetConfigResponse,
   GetControllerHeartbeatsResponse,
+  LookupWebhookReceiverParams,
   PublicConfig,
-  VersionInfo
+  VersionInfo,
+  WebhookReceiverLookup
 } from '../models';
 
 import { customFetch } from '../../../../lib/api/custom-fetch';
@@ -915,6 +917,157 @@ export function useGetVersionInfo<
   queryClient?: QueryClient
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
   const queryOptions = getGetVersionInfoQueryOptions(options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export type lookupWebhookReceiverResponse200 = {
+  data: WebhookReceiverLookup;
+  status: 200;
+};
+
+export type lookupWebhookReceiverResponseSuccess = lookupWebhookReceiverResponse200 & {
+  headers: Headers;
+};
+export type lookupWebhookReceiverResponse = lookupWebhookReceiverResponseSuccess;
+
+export const getLookupWebhookReceiverUrl = (params: LookupWebhookReceiverParams) => {
+  const stringifiedParams = serializeParams(params);
+
+  return stringifiedParams.length > 0
+    ? `/v1beta1/system/webhook-receivers?${stringifiedParams}`
+    : `/v1beta1/system/webhook-receivers`;
+};
+
+/**
+ * Find the webhook receiver that owns a path, and the Project
+ * whose ProjectConfig configures it. Only the external webhooks
+ * server is meant to call this; it requires list on
+ * projectconfigs across the cluster.
+ * @summary Look up a webhook receiver by path
+ */
+export const lookupWebhookReceiver = async (
+  params: LookupWebhookReceiverParams,
+  options?: Parameters<typeof customFetch>[1]
+): Promise<lookupWebhookReceiverResponse> => {
+  return customFetch<lookupWebhookReceiverResponse>(getLookupWebhookReceiverUrl(params), {
+    ...options,
+    method: 'GET'
+  });
+};
+
+export const getLookupWebhookReceiverQueryKey = (params?: LookupWebhookReceiverParams) => {
+  return [`/v1beta1/system/webhook-receivers`, ...(params ? [params] : [])] as const;
+};
+
+export const getLookupWebhookReceiverQueryOptions = <
+  TData = Awaited<ReturnType<typeof lookupWebhookReceiver>>,
+  TError = ErrorType<unknown>
+>(
+  params: LookupWebhookReceiverParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof lookupWebhookReceiver>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  }
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getLookupWebhookReceiverQueryKey(params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof lookupWebhookReceiver>>> = () =>
+    lookupWebhookReceiver(params, requestOptions);
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof lookupWebhookReceiver>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type LookupWebhookReceiverQueryResult = NonNullable<
+  Awaited<ReturnType<typeof lookupWebhookReceiver>>
+>;
+export type LookupWebhookReceiverQueryError = ErrorType<unknown>;
+
+export function useLookupWebhookReceiver<
+  TData = Awaited<ReturnType<typeof lookupWebhookReceiver>>,
+  TError = ErrorType<unknown>
+>(
+  params: LookupWebhookReceiverParams,
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof lookupWebhookReceiver>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof lookupWebhookReceiver>>,
+          TError,
+          Awaited<ReturnType<typeof lookupWebhookReceiver>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useLookupWebhookReceiver<
+  TData = Awaited<ReturnType<typeof lookupWebhookReceiver>>,
+  TError = ErrorType<unknown>
+>(
+  params: LookupWebhookReceiverParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof lookupWebhookReceiver>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof lookupWebhookReceiver>>,
+          TError,
+          Awaited<ReturnType<typeof lookupWebhookReceiver>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useLookupWebhookReceiver<
+  TData = Awaited<ReturnType<typeof lookupWebhookReceiver>>,
+  TError = ErrorType<unknown>
+>(
+  params: LookupWebhookReceiverParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof lookupWebhookReceiver>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Look up a webhook receiver by path
+ */
+
+export function useLookupWebhookReceiver<
+  TData = Awaited<ReturnType<typeof lookupWebhookReceiver>>,
+  TError = ErrorType<unknown>
+>(
+  params: LookupWebhookReceiverParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof lookupWebhookReceiver>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getLookupWebhookReceiverQueryOptions(params, options);
 
   const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
     queryKey: DataTag<QueryKey, TData, TError>;

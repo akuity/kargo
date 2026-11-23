@@ -195,3 +195,80 @@ func Test_server_deleteResources(t *testing.T) {
 		},
 	)
 }
+
+func Test_server_deleteResources_projectConfig(t *testing.T) {
+	existingProject := testResourceProject("existing-project", "existing-uid")
+
+	// store is reassigned by each serverSetup before assertions reads it.
+	// Test cases are run sequentially, so this is safe.
+	var store *fakeProjectConfigStore
+
+	testRESTEndpoint(
+		t, nil,
+		http.MethodDelete, "/v1beta1/resources",
+		[]restTestCase{
+			{
+				name:          "deletes a ProjectConfig from the database",
+				clientBuilder: fake.NewClientBuilder().WithObjects(existingProject),
+				serverSetup:   withProjectConfigStore(storeHolding(existingProject), &store, nil),
+				body:          mustJSONBody(testResourceProjectConfig(existingProject.Name)),
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
+					require.Equal(t, http.StatusOK, w.Code)
+					var res deleteResourceResponse
+					require.NoError(t, json.Unmarshal(w.Body.Bytes(), &res))
+					require.Len(t, res.Results, 1)
+					require.Empty(t, res.Results[0].Error)
+					manifest := res.Results[0].DeletedResourceManifest
+					require.Equal(t, "ProjectConfig", manifest["kind"])
+					require.Empty(t, store.configs)
+				},
+			},
+			{
+				name:          "ProjectConfig does not exist",
+				clientBuilder: fake.NewClientBuilder().WithObjects(existingProject),
+				serverSetup:   withProjectConfigStore(&fakeProjectConfigStore{}, &store, nil),
+				body:          mustJSONBody(testResourceProjectConfig(existingProject.Name)),
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
+					require.Equal(t, http.StatusNotFound, w.Code)
+				},
+			},
+			{
+				name:        "Project does not exist",
+				serverSetup: withProjectConfigStore(storeHolding(existingProject), &store, nil),
+				body:        mustJSONBody(testResourceProjectConfig(existingProject.Name)),
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
+					require.Equal(t, http.StatusNotFound, w.Code)
+					require.Contains(t, store.configs, existingProject.Name)
+				},
+			},
+			{
+				name: "caller with no access to Projects deletes a ProjectConfig",
+				serverSetup: withClientForbiddingProjects(
+					storeHolding(existingProject),
+					&store,
+					existingProject,
+				),
+				ctxSetup: asProjectScopedUser,
+				body:     mustJSONBody(testResourceProjectConfig(existingProject.Name)),
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
+					require.Equal(t, http.StatusOK, w.Code)
+					require.Empty(t, store.configs)
+				},
+			},
+			{
+				name:          "not authorized",
+				clientBuilder: fake.NewClientBuilder().WithObjects(existingProject),
+				serverSetup: withProjectConfigStore(
+					storeHolding(existingProject),
+					&store,
+					forbidProjectConfigs,
+				),
+				body: mustJSONBody(testResourceProjectConfig(existingProject.Name)),
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
+					require.Equal(t, http.StatusForbidden, w.Code)
+					require.Contains(t, store.configs, existingProject.Name)
+				},
+			},
+		},
+	)
+}

@@ -419,9 +419,7 @@ paths:
       - Rbac
   /v1beta1/projects/{project}/config:
     delete:
-      description: |-
-        Delete the single ProjectConfig resource from a project's
-        namespace.
+      description: Delete a project's ProjectConfig.
       operationId: DeleteProjectConfig
       parameters:
       - description: Project name
@@ -440,9 +438,7 @@ paths:
       tags:
       - Core
     get:
-      description: |-
-        Retrieve the single ProjectConfig resource from a project's
-        namespace.
+      description: Retrieve a project's ProjectConfig.
       operationId: GetProjectConfig
       parameters:
       - description: Project name
@@ -457,18 +453,62 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ProjectConfig"
-          description: ProjectConfig custom resource
+          description: ProjectConfig resource
       security:
       - BearerAuth: []
       summary: Retrieve ProjectConfig
       tags:
       - Core
+    put:
+      description: |-
+        Create a project's ProjectConfig, or replace its labels,
+        annotations and spec if it exists. The body's metadata.name
+        and metadata.namespace, if given, must be the project. A
+        metadata.uid or metadata.resourceVersion in the body is a
+        precondition of an update: it is refused if the ProjectConfig
+        no longer matches it. Status, the refresh annotation and other
+        server-managed metadata are ignored.
+      operationId: UpdateProjectConfig
+      parameters:
+      - description: Project name
+        in: path
+        name: project
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProjectConfig"
+        description: ProjectConfig resource
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProjectConfig"
+          description: Updated ProjectConfig resource
+        "201":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProjectConfig"
+          description: Created ProjectConfig resource
+      security:
+      - BearerAuth: []
+      summary: Create or update ProjectConfig
+      tags:
+      - Core
+      x-codegen-request-body-name: body
   /v1beta1/projects/{project}/config/refresh:
     post:
       description: |-
-        Refresh the single ProjectConfig resource in a project's
-        namespace. Refreshing enqueues the resource for reconciliation
-        by its corresponding controller.
+        Request a reconcile of a project's ProjectConfig. The response
+        carries a token, which the ProjectConfig's
+        status.lastHandledRefresh reports once the refresh has been
+        handled.
       operationId: RefreshProjectConfig
       parameters:
       - description: Project name
@@ -479,13 +519,54 @@ paths:
           type: string
       responses:
         "200":
-          content: {}
-          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RefreshProjectConfigResponse"
+          description: Refresh requested
       security:
       - BearerAuth: []
       summary: Refresh ProjectConfig
       tags:
       - Core
+  /v1beta1/projects/{project}/config/status:
+    put:
+      description: |-
+        Record the outcome of a reconcile of a project's
+        ProjectConfig. The status is refused if the ProjectConfig,
+        its generation or its refresh token is no longer the one the
+        reconcile observed. Webhook receivers whose paths another
+        ProjectConfig owns are not recorded, and are named in the
+        response. Only the management controller is meant to call
+        this; it requires update on projectconfigs/status.
+      operationId: UpdateProjectConfigStatus
+      parameters:
+      - description: Project name
+        in: path
+        name: project
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateProjectConfigStatusRequest"
+        description: Observed status
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UpdateProjectConfigStatusResponse"
+          description: Status recorded
+      security:
+      - BearerAuth: []
+      summary: Update ProjectConfig status
+      tags:
+      - Core
+      x-codegen-request-body-name: body
   /v1beta1/projects/{project}/configmaps:
     get:
       description: |-
@@ -3742,6 +3823,33 @@ paths:
       summary: Retrieve API Server version information
       tags:
       - System
+  /v1beta1/system/webhook-receivers:
+    get:
+      description: |-
+        Find the webhook receiver that owns a path, and the Project
+        whose ProjectConfig configures it. Only the external webhooks
+        server is meant to call this; it requires list on
+        projectconfigs across the cluster.
+      operationId: LookupWebhookReceiver
+      parameters:
+      - description: Webhook receiver path
+        in: query
+        name: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookReceiverLookup"
+          description: Webhook receiver
+      security:
+      - BearerAuth: []
+      summary: Look up a webhook receiver by path
+      tags:
+      - System
 components:
   schemas:
     AdminLoginResponse:
@@ -4398,6 +4506,16 @@ components:
         oidcConfig:
           $ref: "#/components/schemas/OIDCConfig"
       type: object
+    RefreshProjectConfigResponse:
+      example:
+        token: token
+      properties:
+        token:
+          description: |-
+            Token identifies the refresh. The ProjectConfig's
+            status.lastHandledRefresh reports it once the refresh has been handled.
+          type: string
+      type: object
     ResolvedLink:
       example:
         description: description
@@ -4501,6 +4619,71 @@ components:
         replicate:
           type: boolean
       type: object
+    UpdateProjectConfigStatusRequest:
+      example:
+        conditions:
+        - lastTransitionTime: lastTransitionTime
+          message: message
+          observedGeneration: 0
+          reason: reason
+          status: status
+          type: type
+        - lastTransitionTime: lastTransitionTime
+          message: message
+          observedGeneration: 0
+          reason: reason
+          status: status
+          type: type
+        observedGeneration: 6
+        observedRefreshToken: observedRefreshToken
+        observedUID: observedUID
+        webhookReceivers:
+        - name: name
+          path: path
+          url: url
+        - name: name
+          path: path
+          url: url
+      properties:
+        conditions:
+          items:
+            $ref: "#/components/schemas/V1Condition"
+          type: array
+        observedGeneration:
+          description: |-
+            ObservedGeneration is the metadata.generation of the ProjectConfig the
+            reconcile read.
+          type: integer
+        observedRefreshToken:
+          description: "ObservedRefreshToken is the refresh token the reconcile read,\
+            \ if any."
+          type: string
+        observedUID:
+          description: |-
+            ObservedUID is the metadata.uid of the ProjectConfig the reconcile
+            read. A ProjectConfig deleted and recreated since does not take the
+            status.
+          type: string
+        webhookReceivers:
+          items:
+            $ref: "#/components/schemas/WebhookReceiverDetails"
+          type: array
+      type: object
+    UpdateProjectConfigStatusResponse:
+      example:
+        skippedReceivers:
+        - skippedReceivers
+        - skippedReceivers
+      properties:
+        skippedReceivers:
+          description: |-
+            SkippedReceivers names the webhook receivers that were not recorded
+            because another ProjectConfig owns their paths, or an earlier receiver
+            has their names.
+          items:
+            type: string
+          type: array
+      type: object
     UpdateRepoCredentialsRequest:
       example:
         description: description
@@ -4580,6 +4763,27 @@ components:
         version:
           description: Version is a human-friendly version string.
           type: string
+      type: object
+    WebhookReceiverLookup:
+      example:
+        config: "{}"
+        project: project
+        receiver: "{}"
+      properties:
+        config:
+          allOf:
+          - $ref: "#/components/schemas/WebhookReceiverConfig"
+          description: Config is the receiver's configuration from the ProjectConfig's
+            spec.
+          type: object
+        project:
+          description: Project is the name of the Project that owns the receiver.
+          type: string
+        receiver:
+          allOf:
+          - $ref: "#/components/schemas/WebhookReceiverDetails"
+          description: "Receiver is the receiver's recorded name, path and URL."
+          type: object
       type: object
     RbacRole:
       example:
@@ -16655,6 +16859,10 @@ components:
       - name
       type: object
     WebhookReceiverDetails:
+      example:
+        name: name
+        path: path
+        url: url
       properties:
         name:
           description: Name is the name of the webhook receiver.
@@ -17632,6 +17840,13 @@ components:
       - NonIndexedCompletion
       - IndexedCompletion
     V1Condition:
+      example:
+        lastTransitionTime: lastTransitionTime
+        message: message
+        observedGeneration: 0
+        reason: reason
+        status: status
+        type: type
       properties:
         lastTransitionTime:
           description: |-

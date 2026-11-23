@@ -498,7 +498,7 @@
     },
     "/v1beta1/projects/{project}/config": {
       "get": {
-        "description": "Retrieve the single ProjectConfig resource from a project's\nnamespace.",
+        "description": "Retrieve a project's ProjectConfig.",
         "produces": [
           "application/json"
         ],
@@ -521,7 +521,61 @@
         ],
         "responses": {
           "200": {
-            "description": "ProjectConfig custom resource",
+            "description": "ProjectConfig resource",
+            "schema": {
+              "$ref": "#/definitions/ProjectConfig"
+            }
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      },
+      "put": {
+        "description": "Create a project's ProjectConfig, or replace its labels,\nannotations and spec if it exists. The body's metadata.name\nand metadata.namespace, if given, must be the project. A\nmetadata.uid or metadata.resourceVersion in the body is a\nprecondition of an update: it is refused if the ProjectConfig\nno longer matches it. Status, the refresh annotation and other\nserver-managed metadata are ignored.",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "Core",
+          "Project-Level",
+          "Config",
+          "Singleton"
+        ],
+        "summary": "Create or update ProjectConfig",
+        "operationId": "UpdateProjectConfig",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "Project name",
+            "name": "project",
+            "in": "path",
+            "required": true
+          },
+          {
+            "description": "ProjectConfig resource",
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/ProjectConfig"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Updated ProjectConfig resource",
+            "schema": {
+              "$ref": "#/definitions/ProjectConfig"
+            }
+          },
+          "201": {
+            "description": "Created ProjectConfig resource",
             "schema": {
               "$ref": "#/definitions/ProjectConfig"
             }
@@ -534,7 +588,7 @@
         ]
       },
       "delete": {
-        "description": "Delete the single ProjectConfig resource from a project's\nnamespace.",
+        "description": "Delete a project's ProjectConfig.",
         "tags": [
           "Core",
           "Project-Level",
@@ -566,7 +620,7 @@
     },
     "/v1beta1/projects/{project}/config/refresh": {
       "post": {
-        "description": "Refresh the single ProjectConfig resource in a project's\nnamespace. Refreshing enqueues the resource for reconciliation\nby its corresponding controller.",
+        "description": "Request a reconcile of a project's ProjectConfig. The response\ncarries a token, which the ProjectConfig's\nstatus.lastHandledRefresh reports once the refresh has been\nhandled.",
         "produces": [
           "application/json"
         ],
@@ -589,7 +643,60 @@
         ],
         "responses": {
           "200": {
-            "description": "Success"
+            "description": "Refresh requested",
+            "schema": {
+              "$ref": "#/definitions/RefreshProjectConfigResponse"
+            }
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      }
+    },
+    "/v1beta1/projects/{project}/config/status": {
+      "put": {
+        "description": "Record the outcome of a reconcile of a project's\nProjectConfig. The status is refused if the ProjectConfig,\nits generation or its refresh token is no longer the one the\nreconcile observed. Webhook receivers whose paths another\nProjectConfig owns are not recorded, and are named in the\nresponse. Only the management controller is meant to call\nthis; it requires update on projectconfigs/status.",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "Core",
+          "Project-Level",
+          "Config",
+          "Singleton"
+        ],
+        "summary": "Update ProjectConfig status",
+        "operationId": "UpdateProjectConfigStatus",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "Project name",
+            "name": "project",
+            "in": "path",
+            "required": true
+          },
+          {
+            "description": "Observed status",
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/UpdateProjectConfigStatusRequest"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Status recorded",
+            "schema": {
+              "$ref": "#/definitions/UpdateProjectConfigStatusResponse"
+            }
           }
         },
         "security": [
@@ -5236,6 +5343,42 @@
           }
         ]
       }
+    },
+    "/v1beta1/system/webhook-receivers": {
+      "get": {
+        "description": "Find the webhook receiver that owns a path, and the Project\nwhose ProjectConfig configures it. Only the external webhooks\nserver is meant to call this; it requires list on\nprojectconfigs across the cluster.",
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "System",
+          "Config"
+        ],
+        "summary": "Look up a webhook receiver by path",
+        "operationId": "LookupWebhookReceiver",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "Webhook receiver path",
+            "name": "path",
+            "in": "query",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Webhook receiver",
+            "schema": {
+              "$ref": "#/definitions/WebhookReceiverLookup"
+            }
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      }
     }
   },
   "definitions": {
@@ -5732,6 +5875,15 @@
         }
       }
     },
+    "RefreshProjectConfigResponse": {
+      "type": "object",
+      "properties": {
+        "token": {
+          "description": "Token identifies the refresh. The ProjectConfig's\nstatus.lastHandledRefresh reports it once the refresh has been handled.",
+          "type": "string"
+        }
+      }
+    },
     "ResolvedLink": {
       "type": "object",
       "properties": {
@@ -5830,6 +5982,47 @@
         }
       }
     },
+    "UpdateProjectConfigStatusRequest": {
+      "type": "object",
+      "properties": {
+        "conditions": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/V1Condition"
+          }
+        },
+        "observedGeneration": {
+          "description": "ObservedGeneration is the metadata.generation of the ProjectConfig the\nreconcile read.",
+          "type": "integer"
+        },
+        "observedRefreshToken": {
+          "description": "ObservedRefreshToken is the refresh token the reconcile read, if any.",
+          "type": "string"
+        },
+        "observedUID": {
+          "description": "ObservedUID is the metadata.uid of the ProjectConfig the reconcile\nread. A ProjectConfig deleted and recreated since does not take the\nstatus.",
+          "type": "string"
+        },
+        "webhookReceivers": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/WebhookReceiverDetails"
+          }
+        }
+      }
+    },
+    "UpdateProjectConfigStatusResponse": {
+      "type": "object",
+      "properties": {
+        "skippedReceivers": {
+          "description": "SkippedReceivers names the webhook receivers that were not recorded\nbecause another ProjectConfig owns their paths, or an earlier receiver\nhas their names.",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
     "UpdateRepoCredentialsRequest": {
       "type": "object",
       "properties": {
@@ -5895,6 +6088,31 @@
         "version": {
           "description": "Version is a human-friendly version string.",
           "type": "string"
+        }
+      }
+    },
+    "WebhookReceiverLookup": {
+      "type": "object",
+      "properties": {
+        "config": {
+          "description": "Config is the receiver's configuration from the ProjectConfig's spec.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/WebhookReceiverConfig"
+            }
+          ]
+        },
+        "project": {
+          "description": "Project is the name of the Project that owns the receiver.",
+          "type": "string"
+        },
+        "receiver": {
+          "description": "Receiver is the receiver's recorded name, path and URL.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/WebhookReceiverDetails"
+            }
+          ]
         }
       }
     },

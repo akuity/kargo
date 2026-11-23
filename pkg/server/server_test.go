@@ -8,6 +8,7 @@ import (
 	"testing"
 	"testing/fstest"
 
+	natsgo "github.com/nats-io/nats.go"
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/rest"
@@ -40,6 +41,8 @@ func TestNewServer(t *testing.T) {
 	)
 	require.NoError(t, err)
 	testSender := &fakeevent.Sender{}
+	testProjectConfigs := &fakeProjectConfigStore{}
+	testNATSConn := &natsgo.Conn{}
 
 	s, ok := NewServer(
 		testServerConfig,
@@ -51,6 +54,8 @@ func TestNewServer(t *testing.T) {
 		),
 		testSender,
 		nil,
+		testProjectConfigs,
+		testNATSConn,
 	).(*server)
 
 	require.True(t, ok)
@@ -59,6 +64,8 @@ func TestNewServer(t *testing.T) {
 	require.Nil(t, s.db)
 	require.NotNil(t, testClient, s.rolesDB)
 	require.Same(t, testSender, s.sender)
+	require.Same(t, testProjectConfigs, s.projectConfigs)
+	require.Same(t, testNATSConn, s.natsConn)
 	require.Equal(t, testServerConfig, s.cfg)
 	require.NotNil(t, s.getStageFn)
 	require.NotNil(t, s.getFreightByNameOrAliasFn)
@@ -129,7 +136,7 @@ func TestNewServer_rolloutCreator(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			s, ok := NewServer(testCase.cfg, testClient, nil, nil, testCase.db).(*server)
+			s, ok := NewServer(testCase.cfg, testClient, nil, nil, testCase.db, nil, nil).(*server)
 			require.True(t, ok)
 			require.Equal(t, testCase.db != nil, s.listTargetsFn != nil)
 			require.Equal(t, testCase.wired, s.rolloutCreator != nil)
