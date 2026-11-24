@@ -807,6 +807,111 @@ func Test_webhook_Default(t *testing.T) {
 				}).String(), v)
 			},
 		},
+		{
+			name: "target-aware stage defaults empty verification run mode to PerStage",
+			webhook: &webhook{
+				admissionRequestFromContextFn: admission.RequestFromContext,
+				isRequestFromKargoControlplaneFn: func(admission.Request) bool {
+					return true
+				},
+			},
+			req: admission.Request{
+				AdmissionRequest: admissionv1.AdmissionRequest{
+					Operation: admissionv1.Create,
+				},
+			},
+			stage: &kargoapi.Stage{
+				Spec: kargoapi.StageSpec{
+					Targets: &kargoapi.StageTargets{
+						Verification: &kargoapi.TargetVerificaitonSpec{},
+					},
+				},
+			},
+			assertions: func(t *testing.T, stage *kargoapi.Stage, err error) {
+				require.NoError(t, err)
+				require.Equal(
+					t,
+					kargoapi.VerificationRunMode(kargoapi.VerificationRunModePerStage),
+					stage.Spec.Targets.Verification.VerificationRunMode,
+				)
+			},
+		},
+		{
+			name: "target-aware stage preserves explicit verification run mode",
+			webhook: &webhook{
+				admissionRequestFromContextFn: admission.RequestFromContext,
+				isRequestFromKargoControlplaneFn: func(admission.Request) bool {
+					return true
+				},
+			},
+			req: admission.Request{
+				AdmissionRequest: admissionv1.AdmissionRequest{
+					Operation: admissionv1.Update,
+					OldObject: runtime.RawExtension{
+						Object: &kargoapi.Stage{},
+					},
+				},
+			},
+			stage: &kargoapi.Stage{
+				Spec: kargoapi.StageSpec{
+					Targets: &kargoapi.StageTargets{
+						Verification: &kargoapi.TargetVerificaitonSpec{
+							VerificationRunMode: kargoapi.VerificationRunModePerTarget,
+						},
+					},
+				},
+			},
+			assertions: func(t *testing.T, stage *kargoapi.Stage, err error) {
+				require.NoError(t, err)
+				require.Equal(
+					t,
+					kargoapi.VerificationRunMode(kargoapi.VerificationRunModePerTarget),
+					stage.Spec.Targets.Verification.VerificationRunMode,
+				)
+			},
+		},
+		{
+			name: "target-aware stage with nil verification is left untouched",
+			webhook: &webhook{
+				admissionRequestFromContextFn: admission.RequestFromContext,
+				isRequestFromKargoControlplaneFn: func(admission.Request) bool {
+					return true
+				},
+			},
+			req: admission.Request{
+				AdmissionRequest: admissionv1.AdmissionRequest{
+					Operation: admissionv1.Create,
+				},
+			},
+			stage: &kargoapi.Stage{
+				Spec: kargoapi.StageSpec{
+					Targets: &kargoapi.StageTargets{},
+				},
+			},
+			assertions: func(t *testing.T, stage *kargoapi.Stage, err error) {
+				require.NoError(t, err)
+				require.Nil(t, stage.Spec.Targets.Verification)
+			},
+		},
+		{
+			name: "non-target-aware stage is not affected by target-aware defaults",
+			webhook: &webhook{
+				admissionRequestFromContextFn: admission.RequestFromContext,
+				isRequestFromKargoControlplaneFn: func(admission.Request) bool {
+					return true
+				},
+			},
+			req: admission.Request{
+				AdmissionRequest: admissionv1.AdmissionRequest{
+					Operation: admissionv1.Create,
+				},
+			},
+			stage: &kargoapi.Stage{},
+			assertions: func(t *testing.T, stage *kargoapi.Stage, err error) {
+				require.NoError(t, err)
+				require.Nil(t, stage.Spec.Targets)
+			},
+		},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {

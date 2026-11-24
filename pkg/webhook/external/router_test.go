@@ -1,6 +1,7 @@
 package external
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"net/http"
@@ -8,6 +9,9 @@ import (
 	"net/url"
 	"testing"
 
+	gh "github.com/google/go-github/v76/github"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/testutil"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -32,13 +36,55 @@ func TestServer_route(t *testing.T) {
 	require.NoError(t, corev1.AddToScheme(testScheme))
 	require.NoError(t, kargoapi.AddToScheme(testScheme))
 
+	// projectReceiverClient returns a client with a ProjectConfig defining a
+	// GitHub receiver at testPath.
+	projectReceiverClient := func() client.Client {
+		return fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
+			&kargoapi.ProjectConfig{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: testProjectName,
+					Name:      testProjectName,
+				},
+				Spec: kargoapi.ProjectConfigSpec{
+					WebhookReceivers: []kargoapi.WebhookReceiverConfig{{
+						Name: testReceiverName,
+						GitHub: &kargoapi.GitHubWebhookReceiverConfig{
+							SecretRef: corev1.LocalObjectReference{Name: "fake-secret"},
+						},
+					}},
+				},
+				Status: kargoapi.ProjectConfigStatus{
+					WebhookReceivers: []kargoapi.WebhookReceiverDetails{{
+						Name: testReceiverName,
+						Path: testPath,
+					}},
+				},
+			},
+			&corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: testProjectName,
+					Name:      "fake-secret",
+				},
+				Data: map[string][]byte{GithubSecretDataKey: []byte(testSigningKey)},
+			},
+		).WithIndex(
+			&kargoapi.ProjectConfig{},
+			indexer.ProjectConfigsByWebhookReceiverPathsField,
+			indexer.ProjectConfigsByWebhookReceiverPaths,
+		).Build()
+	}
+
 	testCases := []struct {
-		name       string
-		server     *server
+		name          string
+		server        *server
+		requestLabels []string
+		// req defaults to an empty POST to testURL.
+		req        func() *http.Request
 		assertions func(*testing.T, *httptest.ResponseRecorder)
 	}{
 		{
-			name: "error listing ProjectConfigs",
+			name:          "error listing ProjectConfigs",
+			requestLabels: []string{"", "unknown", "500"},
 			server: &server{
 				client: fake.NewClientBuilder().WithScheme(testScheme).
 					WithInterceptorFuncs(interceptor.Funcs{
@@ -58,7 +104,8 @@ func TestServer_route(t *testing.T) {
 			},
 		},
 		{
-			name: "error getting ClusterConfig",
+			name:          "error getting ClusterConfig",
+			requestLabels: []string{"", "unknown", "500"},
 			server: &server{
 				client: fake.NewClientBuilder().WithScheme(testScheme).WithInterceptorFuncs(
 					interceptor.Funcs{
@@ -84,7 +131,8 @@ func TestServer_route(t *testing.T) {
 			},
 		},
 		{
-			name: "no ClusterConfig found",
+			name:          "no ClusterConfig found",
+			requestLabels: []string{"", "unknown", "404"},
 			server: &server{
 				client: fake.NewClientBuilder().WithScheme(testScheme).WithIndex(
 					&kargoapi.ProjectConfig{},
@@ -98,7 +146,8 @@ func TestServer_route(t *testing.T) {
 			},
 		},
 		{
-			name: "error getting receiver config",
+			name:          "error getting receiver config",
+			requestLabels: []string{testProjectName, "unknown", "404"},
 			server: &server{
 				client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
 					&kargoapi.ProjectConfig{
@@ -127,41 +176,10 @@ func TestServer_route(t *testing.T) {
 			},
 		},
 		{
-			name: "success with ProjectConfig",
+			name:          "success with ProjectConfig",
+			requestLabels: []string{testProjectName, github, "400"},
 			server: &server{
-				client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
-					&kargoapi.ProjectConfig{
-						ObjectMeta: metav1.ObjectMeta{
-							Namespace: testProjectName,
-							Name:      testProjectName,
-						},
-						Spec: kargoapi.ProjectConfigSpec{
-							WebhookReceivers: []kargoapi.WebhookReceiverConfig{{
-								Name: testReceiverName,
-								GitHub: &kargoapi.GitHubWebhookReceiverConfig{
-									SecretRef: corev1.LocalObjectReference{Name: "fake-secret"},
-								},
-							}},
-						},
-						Status: kargoapi.ProjectConfigStatus{
-							WebhookReceivers: []kargoapi.WebhookReceiverDetails{{
-								Name: testReceiverName,
-								Path: testPath,
-							}},
-						},
-					},
-					&corev1.Secret{
-						ObjectMeta: metav1.ObjectMeta{
-							Namespace: testProjectName,
-							Name:      "fake-secret",
-						},
-						Data: map[string][]byte{GithubSecretDataKey: []byte("my-super-secret-token")},
-					},
-				).WithIndex(
-					&kargoapi.ProjectConfig{},
-					indexer.ProjectConfigsByWebhookReceiverPathsField,
-					indexer.ProjectConfigsByWebhookReceiverPaths,
-				).Build(),
+				client: projectReceiverClient(),
 			},
 			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
 				// The X-GitHub-Event header is not set. If we get back a 400 bad
@@ -171,7 +189,37 @@ func TestServer_route(t *testing.T) {
 			},
 		},
 		{
-			name: "success with ClusterConfig",
+			name:          "GitHub ping",
+			requestLabels: []string{testProjectName, github, "200"},
+			server:        &server{client: projectReceiverClient()},
+			req: func() *http.Request {
+				body := []byte("{}")
+				req := httptest.NewRequest(http.MethodPost, testURL, bytes.NewReader(body))
+				req.Header.Set(gh.EventTypeHeader, githubEventTypePing)
+				req.Header.Set(gh.SHA256SignatureHeader, sign(body))
+				return req
+			},
+			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusOK, rr.Result().StatusCode)
+			},
+		},
+		{
+			name:          "GitHub invalid signature",
+			requestLabels: []string{testProjectName, github, "401"},
+			server:        &server{client: projectReceiverClient()},
+			req: func() *http.Request {
+				req := httptest.NewRequest(http.MethodPost, testURL, bytes.NewReader([]byte("{}")))
+				req.Header.Set(gh.EventTypeHeader, githubEventTypePing)
+				req.Header.Set(gh.SHA256SignatureHeader, "totally-invalid-signature")
+				return req
+			},
+			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusUnauthorized, rr.Result().StatusCode)
+			},
+		},
+		{
+			name:          "success with ClusterConfig",
+			requestLabels: []string{"", github, "400"},
 			server: &server{
 				cfg: ServerConfig{
 					SystemResourcesNamespace: "fake-namespace",
@@ -223,11 +271,25 @@ func TestServer_route(t *testing.T) {
 			// succinct way of setting the apiReader to the same fake client
 			// since the fake client doesn't use the cache at all.
 			testCase.server.apiReader = testCase.server.client
-			testCase.server.route(
-				rr,
-				httptest.NewRequest(http.MethodPost, testURL, nil),
+			counter := prometheus.NewCounterVec(
+				prometheus.CounterOpts{Name: "test_requests_total"},
+				[]string{"project", "receiverType", "code"},
 			)
+			saved := requests
+			requests = counter
+			t.Cleanup(func() { requests = saved })
+			req := httptest.NewRequest(http.MethodPost, testURL, nil)
+			if testCase.req != nil {
+				req = testCase.req()
+			}
+			testCase.server.route(rr, req)
 			testCase.assertions(t, rr)
+			require.Equal(t, 1, testutil.CollectAndCount(counter))
+			require.Equal(
+				t,
+				1.0,
+				testutil.ToFloat64(counter.WithLabelValues(testCase.requestLabels...)),
+			)
 		})
 	}
 }

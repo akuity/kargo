@@ -26,6 +26,7 @@ import (
 	rollouts "github.com/akuity/kargo/pkg/api/stubs/rollouts"
 	"github.com/akuity/kargo/pkg/database"
 	"github.com/akuity/kargo/pkg/database/promotionrolloutstore"
+	"github.com/akuity/kargo/pkg/database/targetstatusstore"
 	"github.com/akuity/kargo/pkg/database/targetstore"
 	"github.com/akuity/kargo/pkg/event"
 	httputil "github.com/akuity/kargo/pkg/http"
@@ -197,7 +198,11 @@ func NewServer(
 			return targets.ListFromStore(ctx, store, project)
 		}
 		if cfg.PromotionRolloutsEnabled {
-			s.rolloutCreator = promotionrollouts.NewCreator(s.rolloutStore(), store)
+			s.rolloutCreator = promotionrollouts.NewCreator(
+				s.rolloutStore(),
+				store,
+				cfg.PromotionRolloutCheck,
+			)
 		}
 	}
 	s.getAnalysisTemplateFn = rollouts.GetAnalysisTemplate
@@ -465,4 +470,13 @@ func (s *server) rolloutStore() promotionrolloutstore.Store {
 		return nil
 	}
 	return promotionrolloutstore.New(s.db)
+}
+
+// targetStatusStore returns the store that reads what is on record about
+// promotion to Targets, or nil when the server runs without a database.
+func (s *server) targetStatusStore() targetstatusstore.Store {
+	if s.db == nil {
+		return nil
+	}
+	return targetstatusstore.New(s.db)
 }

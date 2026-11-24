@@ -31,6 +31,7 @@ type Server interface {
 }
 
 func NewServer(cfg ServerConfig, cl client.Client, r client.Reader) Server {
+	registerMetrics()
 	return &server{
 		apiReader: r,
 		cfg:       cfg,

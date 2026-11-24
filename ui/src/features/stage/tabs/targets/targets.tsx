@@ -6,8 +6,9 @@ import { TARGETS_POLL_INTERVAL_MS } from '@ui/features/project/targets/constants
 import { freightNames } from '@ui/features/project/targets/model/round-utils';
 import { targetRows } from '@ui/features/project/targets/model/target-rows';
 import { useFreightLabel } from '@ui/features/project/targets/shared/use-freight-label';
+import { Round } from '@ui/features/stage/utils/promotion-rollout';
 import { useListTargets } from '@ui/gen/api/v2/core/core';
-import { PromotionRequest, Stage } from '@ui/gen/api/v2/models';
+import { Stage } from '@ui/gen/api/v2/models';
 
 import { freightMarking } from './marks';
 import { TargetMatrix } from './target-matrix';
@@ -21,9 +22,9 @@ type Props = {
   // what a Target is compared against to be called behind.
   stage: Stage;
   // The Stage's latest round, resolved once by the drawer, which also uses it
-  // to explain a blocked round above the tabs. Passing it in keeps one
-  // PromotionRequest fetch and watch per drawer rather than one per tab.
-  round?: PromotionRequest;
+  // to explain a blocked round above the tabs. Passing it in keeps one read
+  // of the Stage's rounds per drawer rather than one per tab.
+  round?: Round;
 };
 
 /**
@@ -38,7 +39,7 @@ type Props = {
  * Governance comes from the API's `stage` filter, which evaluates the Stage's
  * selectors exactly as the controller does. Freight and health per Target come
  * from the Target's own status for this Stage; the round's outcome comes from
- * the Stage's current PromotionRequest, which the drawer resolves once and
+ * the Stage's current round, which the drawer resolves once and
  * passes in.
  */
 export const StageTargets = ({ projectName, stage, round }: Props) => {

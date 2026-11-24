@@ -3,7 +3,7 @@ ARG BASE_IMAGE=kargo-base
 ####################################################################################################
 # ui-builder
 ####################################################################################################
-FROM --platform=$BUILDPLATFORM docker.io/library/node:26.13.0 AS ui-builder
+FROM --platform=$BUILDPLATFORM docker.io/library/node:26.13.1 AS ui-builder
 
 ARG PNPM_VERSION=11.13.0
 RUN npm install --global pnpm@${PNPM_VERSION}
@@ -20,7 +20,7 @@ RUN --mount=type=cache,target=/root/.local/share/pnpm/store NODE_ENV='production
 ####################################################################################################
 # back-end-builder
 ####################################################################################################
-FROM --platform=$BUILDPLATFORM golang:1.27.3-trixie AS back-end-builder
+FROM --platform=$BUILDPLATFORM golang:1.27.4-trixie AS back-end-builder
 
 ARG TARGETOS
 ARG TARGETARCH
@@ -86,7 +86,7 @@ WORKDIR /kargo/bin
 #
 # Source comes from the Go module proxy, so it is checksum-verified against
 # sum.golang.org rather than trusted from a tarball download.
-FROM --platform=$BUILDPLATFORM golang:1.27.3-trixie AS helm-builder
+FROM --platform=$BUILDPLATFORM golang:1.27.4-trixie AS helm-builder
 
 ARG TARGETOS
 ARG TARGETARCH
@@ -151,7 +151,7 @@ CMD ["/usr/local/bin/kargo"]
 # - supports development
 # - not used for official image builds
 ####################################################################################################
-FROM --platform=$BUILDPLATFORM docker.io/library/node:26.13.0 AS ui-dev
+FROM --platform=$BUILDPLATFORM docker.io/library/node:26.13.1 AS ui-dev
 
 ARG PNPM_VERSION=11.13.0
 RUN npm install --global pnpm@${PNPM_VERSION}

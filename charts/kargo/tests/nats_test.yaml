@@ -36,6 +36,12 @@ tests:
       - notExists:
           path: data.NATS_TLS_CERT_FILE
         template: templates/api/configmap.yaml
+      - notExists:
+          path: data.NATS_USERNAME_FILE
+        template: templates/api/configmap.yaml
+      - notExists:
+          path: data.NATS_PASSWORD_FILE
+        template: templates/api/configmap.yaml
       - notContains:
           path: spec.template.spec.containers[0].env
           content:
@@ -173,29 +179,61 @@ tests:
             name: nats
           any: true
 
-  - it: passes a username and password through the environment
-    template: templates/api/deployment.yaml
+  # A username and password must be mounted, not passed through the
+  # environment, so that a rotated password reaches running Pods. The mount is
+  # a whole directory because the kubelet never updates a subPath mount.
+  - it: mounts a username and password
     set:
       nats.enabled: false
       nats.external.url: nats://nats.example.com:4222
       nats.external.userPasswordSecret.name: nats-user
+      nats.external.userPasswordSecret.usernameKey: my-user
+      nats.external.userPasswordSecret.passwordKey: my-password
     asserts:
+      - equal:
+          path: data.NATS_USERNAME_FILE
+          value: /etc/kargo/nats/username
+        template: templates/api/configmap.yaml
+      - equal:
+          path: data.NATS_PASSWORD_FILE
+          value: /etc/kargo/nats/password
+        template: templates/api/configmap.yaml
       - contains:
+          path: spec.template.spec.containers[0].volumeMounts
+          content:
+            mountPath: /etc/kargo/nats
+            name: nats
+            readOnly: true
+        template: templates/api/deployment.yaml
+      - contains:
+          path: spec.template.spec.volumes
+          content:
+            name: nats
+            projected:
+              sources:
+              - secret:
+                  name: nats-user
+                  items:
+                  - key: my-user
+                    path: username
+              - secret:
+                  name: nats-user
+                  items:
+                  - key: my-password
+                    path: password
+        template: templates/api/deployment.yaml
+      - notContains:
           path: spec.template.spec.containers[0].env
           content:
             name: NATS_USERNAME
-            valueFrom:
-              secretKeyRef:
-                name: nats-user
-                key: username
-      - contains:
+          any: true
+        template: templates/api/deployment.yaml
+      - notContains:
           path: spec.template.spec.containers[0].env
           content:
             name: NATS_PASSWORD
-            valueFrom:
-              secretKeyRef:
-                name: nats-user
-                key: password
+          any: true
+        template: templates/api/deployment.yaml
 
   - it: fails when more than one kind of external NATS credentials is set
     template: templates/api/deployment.yaml

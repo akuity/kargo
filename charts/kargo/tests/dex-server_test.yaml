@@ -56,6 +56,38 @@ tests:
           path: metadata.name
           value: kargo-dex-server
 
+  - it: does not mount a service account token in the pod by default
+    template: templates/dex-server/deployment.yaml
+    set:
+      api.oidc.enabled: true
+      api.oidc.dex.enabled: true
+    asserts:
+      - equal:
+          path: spec.template.spec.automountServiceAccountToken
+          value: false
+
+  - it: mounts a service account token in the pod when api.oidc.dex.automountServiceAccountToken is true
+    template: templates/dex-server/deployment.yaml
+    set:
+      api.oidc.enabled: true
+      api.oidc.dex.enabled: true
+      api.oidc.dex.automountServiceAccountToken: true
+    asserts:
+      - equal:
+          path: spec.template.spec.automountServiceAccountToken
+          value: true
+
+  - it: does not mount a token when api.oidc.dex.automountServiceAccountToken is missing, as with --reuse-values from an older release
+    template: templates/dex-server/deployment.yaml
+    set:
+      api.oidc.enabled: true
+      api.oidc.dex.enabled: true
+      api.oidc.dex.automountServiceAccountToken: null
+    asserts:
+      - equal:
+          path: spec.template.spec.automountServiceAccountToken
+          value: false
+
 ---
 suite: dex-server/secret.yaml
 values:
@@ -80,3 +112,44 @@ tests:
       - equal:
           path: metadata.name
           value: kargo-dex-server
+
+---
+suite: dex-server/service-account.yaml
+values:
+  - ../test/values-unittest.yaml
+templates:
+  - templates/dex-server/service-account.yaml
+tests:
+  - it: is not rendered when Dex is disabled (default)
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: disables token automounting on the ServiceAccount by default
+    set:
+      api.oidc.enabled: true
+      api.oidc.dex.enabled: true
+    asserts:
+      - equal:
+          path: automountServiceAccountToken
+          value: false
+
+  - it: enables token automounting on the ServiceAccount when api.oidc.dex.automountServiceAccountToken is true
+    set:
+      api.oidc.enabled: true
+      api.oidc.dex.enabled: true
+      api.oidc.dex.automountServiceAccountToken: true
+    asserts:
+      - equal:
+          path: automountServiceAccountToken
+          value: true
+
+  - it: does not mount a token when api.oidc.dex.automountServiceAccountToken is missing, as with --reuse-values from an older release
+    set:
+      api.oidc.enabled: true
+      api.oidc.dex.enabled: true
+      api.oidc.dex.automountServiceAccountToken: null
+    asserts:
+      - equal:
+          path: automountServiceAccountToken
+          value: false

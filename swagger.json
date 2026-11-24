@@ -2712,7 +2712,7 @@
     },
     "/v1beta1/projects/{project}/stages/{stage}/promotion-rollouts": {
       "post": {
-        "description": "Create a PromotionRollout, which promotes the Freight named\nin the body to each of the Targets the Stage governs, or to\nthe ones the body names among them. PromotionRollouts are\nmanaged through this API rather than as Kubernetes\nresources. The Stage must select Targets: its selectors are\nresolved against the project's Targets as the rollout is\ncreated, narrowed to the Targets named if any are, and its\nupdate strategy, or the one the body gives in its place, is\nresolved against how many that leaves; both are recorded\nwith the rollout for good. A Target the Stage does not\ngovern is refused. Everything else about the rollout is\nassigned by the server.\nThis is a promotion: it requires the promote verb on the\nStage. A server that does not create PromotionRollouts\nresponds 501.",
+        "description": "Create a PromotionRollout, which promotes the Freight named\nin the body to each of the Targets the Stage governs, or to\nthe ones the body names among them. PromotionRollouts are\nmanaged through this API rather than as Kubernetes\nresources. The Stage must select Targets: its selectors are\nresolved against the project's Targets as the rollout is\ncreated, narrowed to the Targets named if any are, and its\nupdate strategy, or the one the body gives in its place, is\nresolved against how many that leaves; both are recorded\nwith the rollout for good. A Target the Stage does not\ngovern is refused. So is a rollout to no Targets: while the\nStage governs none, the response is a 409, and the same\nrequest succeeds once its selectors match a Target.\nEverything else about the rollout is assigned by the server.\nThis is a promotion: it requires the promote verb on the\nStage. A server that does not create PromotionRollouts\nresponds 501.",
         "consumes": [
           "application/json"
         ],
@@ -2818,7 +2818,7 @@
     },
     "/v1beta1/projects/{project}/stages/{stage}/promotions": {
       "post": {
-        "description": "Create a Promotion resource to transition a specified Stage into\nthe state represented by the specified Freight.\nA Stage that selects Targets yields, in place of a single\nPromotion, something that fans the Freight out to each of\nthem: a PromotionRollout on a server that creates\nPromotionRollouts, and a PromotionRequest otherwise. Either\nway, the body's targets and updateStrategy narrow which\nTargets are promoted to and at what pace.",
+        "description": "Create a Promotion resource to transition a specified Stage into\nthe state represented by the specified Freight.\nA Stage that selects Targets yields, in place of a single\nPromotion, something that fans the Freight out to each of\nthem: a PromotionRollout on a server that creates\nPromotionRollouts, and a PromotionRequest otherwise. Either\nway, the body's targets and updateStrategy narrow which\nTargets are promoted to and at what pace. A PromotionRollout\nis not created for a Stage that governs no Targets: the\nresponse is a 409 until its selectors match one.",
         "consumes": [
           "application/json"
         ],
@@ -2873,7 +2873,7 @@
     },
     "/v1beta1/projects/{project}/stages/{stage}/promotions/downstream": {
       "post": {
-        "description": "Creates a Promotion resource for each of a Stage's immediately\ndownstream Stages, returned under \"promotions\". Downstream\nStages that select Targets each yield, in place of a\nPromotion, a PromotionRollout on a server that creates\nPromotionRollouts, returned under \"promotionRollouts\", or a\nPromotionRequest otherwise, returned under\n\"promotionRequests\"; each key is present only when it has\nentries. Each promotes to every Target its Stage governs, at\nthe Stage's pace. A Stage that could not be promoted to is\nreported under \"errors\", with a 207 status.",
+        "description": "Creates a Promotion resource for each of a Stage's immediately\ndownstream Stages, returned under \"promotions\". Downstream\nStages that select Targets each yield, in place of a\nPromotion, a PromotionRollout on a server that creates\nPromotionRollouts, returned under \"promotionRollouts\", or a\nPromotionRequest otherwise, returned under\n\"promotionRequests\"; each key is present only when it has\nentries. Each promotes to every Target its Stage governs, at\nthe Stage's pace. A Stage that could not be promoted to is\nreported under \"errors\", with a 207 status, and the rest\nare still promoted to. On a server that creates\nPromotionRollouts, that includes a Stage that governs no\nTargets.",
         "consumes": [
           "application/json"
         ],
@@ -3035,6 +3035,121 @@
         "responses": {
           "200": {
             "description": "Success"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      }
+    },
+    "/v1beta1/projects/{project}/target-statuses": {
+      "get": {
+        "description": "List where a project's Targets stand with the Stages that\ngovern them, one page at a time: one entry per Target and\ngoverning Stage, ordered by Target name and then Stage name.\nNothing records a Target's status. Each entry is derived, on\nrequest, from the Promotions and PromotionRollouts on record,\nand which Stages govern a Target from the Stages' selectors\nas they are now. A Target no Stage governs has no entry.\n\nEach entry has one state, the first of these that holds:\nPromoting -- the last Promotion to the Target is running.\nPending -- the last Promotion has yet to start, or a\nPromotionRollout that has not finished names the Target and\nhas not reached it yet.\nNotAttempted -- a PromotionRollout that names the Target\nended, without succeeding, before creating a Promotion to it,\nand there has been no Promotion to it since. A later rollout\nthat does not name the Target changes nothing.\nNeverPromoted -- there has never been a Promotion to the\nTarget.\nFailed -- the last Promotion failed, errored or was aborted.\nBehind -- the last Promotion succeeded, and the Freight it\nleft on the Target is not the Stage's current Freight.\nUpToDate -- the last Promotion succeeded and the Target is\nnot known to be behind.\n\nA state says how promotion went, not how the Target is\ndoing: Target health is not recorded, so nothing here\nreports it. Entries are read from the database's mirror of\nPromotions, so they trail the cluster by its sync.",
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "Core",
+          "Project-Level"
+        ],
+        "summary": "List Target statuses",
+        "operationId": "ListTargetStatuses",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "Project name",
+            "name": "project",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "description": "Only entries for this Stage",
+            "name": "stage",
+            "in": "query"
+          },
+          {
+            "type": "array",
+            "items": {
+              "enum": [
+                "Promoting",
+                "Pending",
+                "Failed",
+                "NotAttempted",
+                "NeverPromoted",
+                "Behind",
+                "UpToDate"
+              ],
+              "type": "string"
+            },
+            "collectionFormat": "csv",
+            "description": "Only entries in one of these states; repeat to give several",
+            "name": "state",
+            "in": "query"
+          },
+          {
+            "type": "string",
+            "description": "The previous page's continue, to read the page after it; resend stage and state",
+            "name": "continue",
+            "in": "query"
+          },
+          {
+            "type": "integer",
+            "description": "The page size, at most 500; 100 if omitted",
+            "name": "limit",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A page of Target statuses",
+            "schema": {
+              "$ref": "#/definitions/TargetStatusList"
+            }
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      }
+    },
+    "/v1beta1/projects/{project}/target-statuses/summary": {
+      "get": {
+        "description": "Count a project's Targets by where they stand with the\nStages that govern them: for each Stage, how many of the\nTargets it governs are in each state; and for the project,\nhow many Targets are in each state, a Target governed by\nseveral Stages counted once, under the worst state any of\nthem reports. The states and the entries counted are those\nthe Target status list serves, and are counted in the\ndatabase rather than read. Targets behind their Stage's\ncurrent Freight are counted as well, whatever their state.\nTarget health is not recorded, so nothing here reports it.",
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "Core",
+          "Project-Level"
+        ],
+        "summary": "Summarize Target statuses",
+        "operationId": "GetTargetStatusSummary",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "Project name",
+            "name": "project",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "description": "Only count the Targets this Stage governs",
+            "name": "stage",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Counts of Targets by state",
+            "schema": {
+              "$ref": "#/definitions/TargetStatusSummary"
+            }
           }
         },
         "security": [
@@ -3260,6 +3375,67 @@
         "responses": {
           "204": {
             "description": "Deleted successfully"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      }
+    },
+    "/v1beta1/projects/{project}/targets/{target-name}/promotions": {
+      "get": {
+        "description": "List the Promotions to one of a project's Targets, newest\nfirst, one page at a time: those of every Stage, or of one.\nThey are read from the database's record of Promotions,\nwhich outlives the Promotions themselves, so the list\nreaches further back than the project's Promotions do. A\nTarget is recorded by name, so this is the history of the\nname: a Target that has had no Promotion, or that does not\nexist, has an empty one.",
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "Core",
+          "Project-Level"
+        ],
+        "summary": "List a Target's Promotions",
+        "operationId": "ListTargetPromotions",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "Project name",
+            "name": "project",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "description": "Target name",
+            "name": "target-name",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "description": "Only Promotions of this Stage",
+            "name": "stage",
+            "in": "query"
+          },
+          {
+            "type": "string",
+            "description": "The previous page's continue, to read the page after it; resend stage",
+            "name": "continue",
+            "in": "query"
+          },
+          {
+            "type": "integer",
+            "description": "The page size, at most 500; 100 if omitted",
+            "name": "limit",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A page of the Target's Promotions",
+            "schema": {
+              "$ref": "#/definitions/TargetPromotionList"
+            }
           }
         },
         "security": [
@@ -5729,9 +5905,6 @@
         },
         "oidcConfig": {
           "$ref": "#/definitions/OIDCConfig"
-        },
-        "skipAuth": {
-          "type": "boolean"
         }
       }
     },
@@ -5796,6 +5969,213 @@
           "additionalProperties": {
             "$ref": "#/definitions/ImageStageMap"
           }
+        }
+      }
+    },
+    "TargetFreight": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "description": "Name is the Freight's name.",
+          "type": "string"
+        },
+        "origin": {
+          "description": "Origin is where the Freight comes from.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/FreightOrigin"
+            }
+          ]
+        }
+      }
+    },
+    "TargetPromotion": {
+      "type": "object",
+      "properties": {
+        "createdAt": {
+          "description": "CreatedAt is when the Promotion was created.",
+          "type": "string"
+        },
+        "finishedAt": {
+          "description": "FinishedAt is when the Promotion finished. It is absent until it has.",
+          "type": "string"
+        },
+        "freight": {
+          "description": "Freight is the name of the Freight promoted.",
+          "type": "string"
+        },
+        "name": {
+          "description": "Name is the Promotion's name.",
+          "type": "string"
+        },
+        "phase": {
+          "description": "Phase is the Promotion's phase. One that has yet to be picked up is\nPending.",
+          "type": "string"
+        },
+        "rollout": {
+          "description": "Rollout is the number, among the Stage's, of the PromotionRollout that\ncreated the Promotion. It is absent for one created on its own.",
+          "type": "integer"
+        },
+        "stage": {
+          "description": "Stage is the name of the Stage that promoted.",
+          "type": "string"
+        }
+      }
+    },
+    "TargetPromotionList": {
+      "type": "object",
+      "properties": {
+        "continue": {
+          "description": "Continue is set when there may be more: pass it as continue to read\nthe next page.",
+          "type": "string"
+        },
+        "items": {
+          "description": "Items are the Promotions, newest first.",
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/TargetPromotion"
+          }
+        }
+      }
+    },
+    "TargetState": {
+      "type": "string",
+      "enum": [
+        "Promoting",
+        "Pending",
+        "Failed",
+        "NotAttempted",
+        "NeverPromoted",
+        "Behind",
+        "UpToDate"
+      ],
+      "x-enum-varnames": [
+        "StatePromoting",
+        "StatePending",
+        "StateFailed",
+        "StateNotAttempted",
+        "StateNeverPromoted",
+        "StateBehind",
+        "StateUpToDate"
+      ]
+    },
+    "TargetStatusEntry": {
+      "type": "object",
+      "properties": {
+        "behind": {
+          "description": "Behind is whether the Freight the Target is on is not the Stage's\ncurrent Freight. It cuts across State: a Target whose last Promotion\nfailed, or that a rollout never attempted, is usually behind as well.\nIt is false while either side is unknown, as for a Target nothing has\nbeen promoted to.",
+          "type": "boolean"
+        },
+        "freight": {
+          "description": "Freight is what the Target is on for the Stage, one piece per origin,\nordered by origin: what the newest Promotion to succeed left there. It\nis empty until one has succeeded.",
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/TargetFreight"
+          }
+        },
+        "inFlight": {
+          "description": "InFlight is whether a promotion to the Target is on its way or under\nway: a Promotion to it is pending or running, or a PromotionRollout\nthat has not finished names it and has not reached it yet.",
+          "type": "boolean"
+        },
+        "labels": {
+          "description": "Labels are the Target's labels.",
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "lastPromotion": {
+          "description": "LastPromotion is the Stage's newest Promotion to the Target, whatever\nits phase. It is absent until there has been one.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/TargetPromotion"
+            }
+          ]
+        },
+        "rollout": {
+          "description": "Rollout is the number, among the Stage's, of the PromotionRollout the\nState comes from when no Promotion says it: the one a Pending Target is\nwaiting for, or the one that did not attempt a NotAttempted Target. It\nis absent otherwise.",
+          "type": "integer"
+        },
+        "stage": {
+          "description": "Stage is the name of the Stage that governs the Target.",
+          "type": "string"
+        },
+        "state": {
+          "description": "State is the one word for where the Target stands with the Stage.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/TargetState"
+            }
+          ]
+        },
+        "target": {
+          "description": "Target is the Target's name.",
+          "type": "string"
+        }
+      }
+    },
+    "TargetStatusList": {
+      "type": "object",
+      "properties": {
+        "continue": {
+          "description": "Continue is set when there may be more: pass it as continue to read\nthe next page.",
+          "type": "string"
+        },
+        "items": {
+          "description": "Items are the entries, ordered by Target name and then Stage name.",
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/TargetStatusEntry"
+          }
+        }
+      }
+    },
+    "TargetStatusStageSummary": {
+      "type": "object",
+      "properties": {
+        "behind": {
+          "description": "Behind is how many of those Targets are behind the Stage, whatever\ntheir State.",
+          "type": "integer"
+        },
+        "stage": {
+          "description": "Stage is the Stage's name.",
+          "type": "string"
+        },
+        "states": {
+          "description": "States counts the Targets the Stage governs, by State. Every State is\npresent, and the counts add up to the number of Targets it governs.",
+          "type": "object",
+          "additionalProperties": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      }
+    },
+    "TargetStatusSummary": {
+      "type": "object",
+      "properties": {
+        "behind": {
+          "description": "Behind is how many of those Targets are behind any Stage that governs\nthem, whatever their State.",
+          "type": "integer"
+        },
+        "stages": {
+          "description": "Stages holds the same counts for each Stage that governs Targets,\nordered by Stage name.",
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/TargetStatusStageSummary"
+          }
+        },
+        "states": {
+          "description": "States counts the Targets some Stage governs, by State. Every State is\npresent. A Target governed by several Stages is counted once, under\nthe worst State any of them reports, in the order Promoting, Pending,\nFailed, NotAttempted, NeverPromoted, Behind, UpToDate. The counts add\nup to the number of governed Targets.",
+          "type": "object",
+          "additionalProperties": {
+            "type": "integer",
+            "format": "int64"
+          }
+        },
+        "targets": {
+          "description": "Targets is how many Targets the Project has, including any that no\nStage governs.",
+          "type": "integer"
         }
       }
     },
@@ -6843,6 +7223,10 @@
     "AnalysisRunReference": {
       "type": "object",
       "properties": {
+        "kind": {
+          "description": "Kind is a string representation of GroupVersionKind describing this run\nFor classic analysis run it is AnalysisRunKindRun or AnalysisRunKindLegacy (empty)",
+          "type": "string"
+        },
         "name": {
           "description": "Name is the name of the AnalysisRun.",
           "type": "string"
@@ -8715,6 +9099,35 @@
         "PromotionRolloutPhaseAborted"
       ]
     },
+    "PromotionRolloutReference": {
+      "type": "object",
+      "properties": {
+        "finishedAt": {
+          "description": "FinishedAt is the time at which the PromotionRollout completed. It is\nabsent for one that has not.",
+          "type": "string"
+        },
+        "message": {
+          "description": "Message is a human-readable description of how the PromotionRollout\nended. It is empty for one that has not.",
+          "type": "string"
+        },
+        "name": {
+          "description": "Name is the name of the PromotionRollout.",
+          "type": "string"
+        },
+        "number": {
+          "description": "Number is the PromotionRollout's position among its Stage's rollouts,\ncounting from 1.\n\n+kubebuilder:validation:Minimum=1",
+          "type": "integer"
+        },
+        "phase": {
+          "description": "Phase is a high-level summary of the PromotionRollout's lifecycle.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/PromotionRolloutPhase"
+            }
+          ]
+        }
+      }
+    },
     "PromotionRolloutSpec": {
       "type": "object",
       "properties": {
@@ -9419,6 +9832,14 @@
             }
           ]
         },
+        "currentPromotionRollout": {
+          "description": "CurrentPromotionRollout is a reference to the PromotionRollout this Stage\nis promoting through. A PromotionRollout does not start until its Stage\nnames it here, and the Stage names the next one only once it has recorded\nthe one before it and is not still to verify the Freight it is on. The\nreference stays until the Stage has recorded how that PromotionRollout\nended. It is absent for a Stage that governs no Targets.\n\n+optional",
+          "allOf": [
+            {
+              "$ref": "#/definitions/PromotionRolloutReference"
+            }
+          ]
+        },
         "effectiveAutoPromotionHolds": {
           "description": "EffectiveAutoPromotionHolds is the set of auto-promotion holds in effect\nright now. It is recomputed every reconciliation from AutoPromotionHolds\nplus the newest in-flight Promotions, and unlike AutoPromotionHolds is not\ndurable. Clients should read this map to reflect current hold state.",
           "type": "object",
@@ -9465,6 +9886,14 @@
             }
           ]
         },
+        "lastPromotionRollout": {
+          "description": "LastPromotionRollout is a reference to the last PromotionRollout whose\noutcome this Stage has recorded. It is absent for a Stage that governs no\nTargets, and only ever moves forward: its number marks how far through\nits PromotionRollouts the Stage has read.\n\n+optional",
+          "allOf": [
+            {
+              "$ref": "#/definitions/PromotionRolloutReference"
+            }
+          ]
+        },
         "metadata": {
           "description": "Metadata is a map of arbitrary metadata associated with the Stage.\nThis is useful for storing additional information about the Stage\nthat can be shared across promotions, verifications, or other processes.",
           "type": "object",
@@ -9495,10 +9924,18 @@
           }
         },
         "updateStrategy": {
-          "description": "UpdateStrategy configures the pace of updating the targets\n+optional",
+          "description": "UpdateStrategy configures the pace of promoting the targets\n+optional",
           "allOf": [
             {
               "$ref": "#/definitions/TargetUpdateStrategy"
+            }
+          ]
+        },
+        "verification": {
+          "description": "Verification configures mode and pace of target promotion verifications\n+optional",
+          "allOf": [
+            {
+              "$ref": "#/definitions/TargetVerificaitonSpec"
             }
           ]
         }
@@ -9660,6 +10097,23 @@
         }
       }
     },
+    "TargetVerificaitonSpec": {
+      "type": "object",
+      "properties": {
+        "runMode": {
+          "description": "VerificationRunMode controls whether verifications run per-target or per-stage\n+optional",
+          "type": "string"
+        },
+        "updateStrategy": {
+          "description": "UpdateStrategy configures the pace of verification runs\n+optional",
+          "allOf": [
+            {
+              "$ref": "#/definitions/TargetUpdateStrategy"
+            }
+          ]
+        }
+      }
+    },
     "Verification": {
       "type": "object",
       "properties": {
@@ -9716,6 +10170,10 @@
         },
         "phase": {
           "description": "Phase describes the current phase of the Verification process. Generally,\nthis will be a reflection of the underlying AnalysisRun's phase, however,\nthere are exceptions to this, such as in the case where an AnalysisRun\ncannot be launched successfully.",
+          "type": "string"
+        },
+        "promotionName": {
+          "description": "PromotionName is an optional name of promotion which triggered verification",
           "type": "string"
         },
         "startTime": {

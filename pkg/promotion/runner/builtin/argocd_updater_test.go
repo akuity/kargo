@@ -1394,6 +1394,61 @@ func Test_argoCDUpdater_mustPerformUpdate(t *testing.T) {
 			},
 		},
 		{
+			name: "operation requested for this Promotion not yet started",
+			modifyApplication: func(app *argocd.Application) {
+				// syncApplication requested this operation and cleared the previous
+				// operation's state, and Argo CD has yet to start it
+				app.Operation = &argocd.Operation{
+					InitiatedBy: argocd.OperationInitiator{
+						Username: applicationOperationInitiator,
+					},
+					Info: []*argocd.Info{{
+						Name:  promotionInfoKey,
+						Value: testPromotionID,
+					}},
+				}
+			},
+			assertions: func(t *testing.T, phase argocd.OperationPhase, mustUpdate bool, err error) {
+				require.NoError(t, err)
+				assert.Equal(t, argocd.OperationRunning, phase)
+				assert.False(t, mustUpdate)
+			},
+		},
+		{
+			name: "operation requested for another Promotion not yet started",
+			modifyApplication: func(app *argocd.Application) {
+				app.Operation = &argocd.Operation{
+					InitiatedBy: argocd.OperationInitiator{
+						Username: applicationOperationInitiator,
+					},
+					Info: []*argocd.Info{{
+						Name:  promotionInfoKey,
+						Value: "another-promotion",
+					}},
+				}
+			},
+			assertions: func(t *testing.T, phase argocd.OperationPhase, mustUpdate bool, err error) {
+				require.NoError(t, err)
+				assert.Empty(t, phase)
+				assert.True(t, mustUpdate)
+			},
+		},
+		{
+			name: "operation requested by someone else not yet started",
+			modifyApplication: func(app *argocd.Application) {
+				app.Operation = &argocd.Operation{
+					InitiatedBy: argocd.OperationInitiator{
+						Username: "someone-else",
+					},
+				}
+			},
+			assertions: func(t *testing.T, phase argocd.OperationPhase, mustUpdate bool, err error) {
+				require.NoError(t, err)
+				assert.Empty(t, phase)
+				assert.True(t, mustUpdate)
+			},
+		},
+		{
 			name: "running operation initiated by different user",
 			modifyApplication: func(app *argocd.Application) {
 				app.Status.OperationState = &argocd.OperationState{

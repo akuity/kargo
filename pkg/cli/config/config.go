@@ -45,13 +45,11 @@ type CLIConfig struct {
 	// APIAddress is the address of the Kargo API server.
 	APIAddress string `json:"apiAddress,omitempty"`
 	// BearerToken is used to authenticate with the Kargo API server. This could
-	// be any of the following:
+	// be either of the following:
 	//   1. An identity token issued by an OIDC identity provider
 	//   2. An identity token issued by the Kargo API server itself
-	//   3. An opaque token for the Kubernetes API server that the Kargo API
-	//      server will communicate with
 	// This token will be sent in the Authorization header of all requests to the
-	// Kargo API server. The Kargo API server will ascertain which of the three
+	// Kargo API server. The Kargo API server will ascertain which of the two
 	// cases above applies and will act accordingly.
 	//
 	// #nosec G117 -- This struct represents configuration stored client-side that

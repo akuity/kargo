@@ -34,6 +34,8 @@ type Config struct {
 	Protocol Protocol `envconfig:"OTEL_EXPORTER_OTLP_PROTOCOL" default:"http/protobuf"`
 	// TracesProtocol, when set, overrides Protocol for traces specifically.
 	TracesProtocol Protocol `envconfig:"OTEL_EXPORTER_OTLP_TRACES_PROTOCOL"`
+	// Categories selects the span categories to record.
+	Categories []string `envconfig:"TRACING_CATEGORIES"`
 }
 
 // ConfigFromEnv returns a Config populated from environment variables.

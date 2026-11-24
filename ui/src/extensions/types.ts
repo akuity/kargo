@@ -107,6 +107,18 @@ export type PromotionStepExtension = {
   };
 };
 
+export type AnalysisRunComponentProps = {
+  analysisName: string;
+  images: string[];
+  visible: boolean;
+  hide: () => void;
+};
+
+export type AnalysisRunExtension = {
+  type: 'analysisRun';
+  component: (props: AnalysisRunComponentProps) => React.ReactNode;
+};
+
 export type Extension =
   | StageTab
   | FreightTab
@@ -117,4 +129,5 @@ export type Extension =
   | SettingsExtension
   | ProjectSettingsExtension
   | ArgoCDExtension
-  | PromotionStepExtension;
+  | PromotionStepExtension
+  | AnalysisRunExtension;

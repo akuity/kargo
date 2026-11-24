@@ -13,6 +13,7 @@ metrics server:
 - The controller
 - The management controller
 - The (internal) webhooks server
+- The external webhooks server
 
 By default, each component's metrics server is disabled. The Kargo Helm chart
 can enable it, expose the metrics through a `Service`, and -- for users of the
@@ -34,7 +35,7 @@ Setting a component's `metrics.enabled` flag to `true` does three things:
 1. Declares a metrics container port on the component's pods.
 1. Creates a metrics `Service` that targets that port.
 
-For example, to expose metrics for all three supported components:
+For example, to expose metrics for all four supported components:
 
 ```yaml
 controller:
@@ -44,6 +45,9 @@ managementController:
   metrics:
     enabled: true
 webhooksServer:
+  metrics:
+    enabled: true
+externalWebhooksServer:
   metrics:
     enabled: true
 ```
@@ -89,6 +93,7 @@ labeled by `project`:
 | `kargo_warehouse_discovery_duration_seconds` | Histogram | Time each successful artifact discovery took, across all of a Warehouse's subscriptions. |
 | `kargo_warehouse_discovery_interval_seconds` | Histogram | Time between a Warehouse's previous successful discovery and its latest one. |
 | `kargo_warehouse_oldest_discovery_timestamp_seconds` | Gauge | Time of the least recent successful discovery among a Project's Warehouses, sampled at scrape time. |
+| `kargo_warehouse_discovery_failures_total` | Counter | Number of failed artifact discoveries, by the `subscriptionType` (`git`, `image`, `chart` or `other`) of the subscription that failed. |
 | `kargo_warehouse_freight_created_total` | Counter | Number of Freight created by Warehouses. |
 
 The lifecycle metrics -- `kargo_promotion_pending_duration_seconds`,
@@ -229,7 +234,24 @@ upstream Stage verifies it, without a verification of their own.
 | `kargo_warehouse_discovery_duration_seconds` | How long discovery takes. Failed discoveries are not observed. |
 | `kargo_warehouse_discovery_interval_seconds` | How often Warehouses are rediscovered: close to `spec.interval` when the controller keeps up, longer when it does not. |
 | `kargo_warehouse_oldest_discovery_timestamp_seconds` | Whether any Warehouse has stopped being rediscovered. Use `time() - kargo_warehouse_oldest_discovery_timestamp_seconds`. |
+| `kargo_warehouse_discovery_failures_total` | How often discovery fails, and against which kind of repository. A discovery stops at its first failed subscription, so each failed discovery counts once. |
 | `kargo_warehouse_freight_created_total` | How much Freight Warehouses produce. |
+
+The failure ratio per Project, with native or classic histograms, including
+Projects where every discovery fails:
+
+```
+sum by (project) (rate(kargo_warehouse_discovery_failures_total[5m]))
+/
+(
+  sum by (project) (rate(kargo_warehouse_discovery_failures_total[5m]))
+  + (
+    sum by (project) (histogram_count(rate(kargo_warehouse_discovery_duration_seconds[5m])))
+    or sum by (project) (rate(kargo_warehouse_discovery_duration_seconds_count[5m]))
+    or 0 * sum by (project) (rate(kargo_warehouse_discovery_failures_total[5m]))
+  )
+)
+```
 
 ### Stages by Ready Reason
 
@@ -290,6 +312,40 @@ reported by any Stage in the project produces no series at all rather than a
 zero, so use `or vector(0)` in queries that need a value when a state is empty.
 
 :::
+
+## External Webhooks Server Metrics
+
+The external webhooks server reports:
+
+| Metric | Type | Labels | Description |
+|--------|------|--------|-------------|
+| `kargo_external_webhook_requests_total` | Counter | `project`, `receiverType`, `code` | Inbound webhook requests, by response status code. |
+| `kargo_external_webhook_warehouses_skipped_total` | Counter | `project` | Warehouses a webhook did not refresh because one of their subscriptions could not be evaluated, for example an invalid `expressionFilter`. `project` is the Warehouse's. |
+
+In `kargo_external_webhook_requests_total`, `project` is the receiver's, and
+empty for receivers defined in the `ClusterConfig`. `receiverType` is the
+receiver's type (`github`, `gitlab`, ...), or `unknown` when the request matched
+no usable receiver, for example an unknown path (`404`) or a receiver whose
+`Secret` is missing (`500`).
+
+Not every non-`2xx` code is a failure. Receivers respond with `400` or `501` to
+events they do not handle, so a sender configured to send more events than
+Kargo uses produces them for each such event. `401` means a request failed
+authentication, for example on a signature mismatch, and `5xx` means a request
+could not be handled, for example when a Warehouse could not be refreshed. The
+counter counts requests, not events: some senders retry failed deliveries, for
+example Bitbucket Cloud resends a `5xx` response up to twice. Watch failures
+with, for example:
+
+```
+sum by (project, receiverType, code) (
+  rate(kargo_external_webhook_requests_total{code=~"401|5.."}[5m])
+)
+```
+
+A skipped Warehouse does not fail the request, which still responds with `200`
+when every other Warehouse is refreshed, so watch
+`kargo_external_webhook_warehouses_skipped_total` separately.
 
 ## Kubernetes API Client Metrics
 

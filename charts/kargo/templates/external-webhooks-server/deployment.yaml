@@ -41,6 +41,7 @@ spec:
       {{- end }}
     spec:
       serviceAccountName: kargo-external-webhooks-server
+      automountServiceAccountToken: {{ .Values.externalWebhooksServer.automountServiceAccountToken }}
       {{- with .Values.externalWebhooksServer.affinity | default .Values.global.affinity }}
       affinity:
         {{- toYaml . | nindent 8 }}
@@ -88,6 +89,11 @@ spec:
         - containerPort: 8080
           name: {{ if .Values.externalWebhooksServer.tls.enabled }}"https"{{ else }}"http"{{ end }}
           protocol: TCP
+        {{- if .Values.externalWebhooksServer.metrics.enabled }}
+        - containerPort: {{ .Values.externalWebhooksServer.metrics.service.servicePort }}
+          name: {{ .Values.externalWebhooksServer.metrics.service.portName }}
+          protocol: TCP
+        {{- end }}
         {{- if .Values.externalWebhooksServer.probes.enabled }}
         startupProbe:
           httpGet:

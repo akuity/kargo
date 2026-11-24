@@ -121,6 +121,61 @@ fields:
 - `ignoreTagsRegexes`: An optional list of regular expressions that limit
   eligibility for selection to tags that don't match any of the patterns.
 
+<a id="image-expression-filter"></a>
+
+- `expressionFilter`: An optional [expr-lang](https://expr-lang.org) expression
+  that limits eligibility for selection to images for which it evaluates to
+  `true`. It is applied after all other constraints and can use these
+  variables:
+
+  - `tag`: The image's tag
+  - `digest`: The image's digest
+  - `annotations`: The image's OCI annotations
+  - `createdAt`: The image's build time
+
+  Images that don't satisfy the expression don't count toward
+  `discoveryLimit`.
+
+  :::note
+
+  Evaluating the expression requires each candidate image's metadata, so,
+  unlike `allowTagsRegexes`, it does not reduce the number of calls made to the
+  registry. It may increase them, since more images may need to be checked
+  before `discoveryLimit` is reached. If your tags are immutable, enabling
+  [`cacheByTag`](#container-image-subscriptions) can significantly reduce these
+  calls.
+  :::
+
+  Example:
+
+  ```yaml
+  spec:
+    subscriptions:
+    - image:
+        repoURL: ghcr.io/example/app
+        expressionFilter: annotations['org.opencontainers.image.vendor'] == 'Example'
+  ```
+
+  :::warning
+
+  If an image lacks an annotation, `annotations['<key>']` evaluates to an empty
+  string. Comparisons such as `==` and `matches` handle that without error, but
+  functions that convert the value, such as `date()` or `int()`, fail on an
+  empty string. Any error while evaluating the expression stops discovery for
+  the entire Warehouse, so check that an annotation exists before converting it:
+
+  ```yaml
+  spec:
+    subscriptions:
+    - image:
+        repoURL: ghcr.io/example/app
+        expressionFilter: >-
+          'org.opencontainers.image.created' in annotations &&
+          date(annotations['org.opencontainers.image.created']) > date('2025-01-01')
+  ```
+
+  :::
+
 <a id="platform-constraint"></a>
 
 - `platform`: An optional identifier that constrains image selection to those
@@ -537,8 +592,14 @@ convert it to a boolean (e.g., `0` to `false`, `1` to `true`).
 
 :::warning
 
-Invalid expressions will cause the subscription to fail. Always test your
-expressions to ensure they evaluate correctly with your repository's data.
+A Warehouse is rejected when it is created or updated if an expression has a
+syntax error, uses a variable that is not
+[available](#available-expression-filtering-variables) to the selected commit
+selection strategy, or uses a variable with the wrong type (for example,
+comparing `commitDate` to a string instead of a `date()`). An expression that
+passes these checks can still fail when evaluated, which causes the
+subscription to fail. Always test your expressions to ensure they evaluate
+correctly with your repository's data.
 
 :::
 
@@ -571,7 +632,7 @@ variables depend on your `commitSelectionStrategy`:
 ##### Available Expression Filtering Variables
 
 The variables available in your expression depend on the commit selection
-strategy:
+strategy. Using any other variable is an error:
 
 **For `NewestFromBranch` (commit filtering):**
 
@@ -592,10 +653,10 @@ strategy:
 - `committer`: The committer of the commit that the tag references, in the
   format of `Name <email>`
 - `subject`: The first line of the commit message associated with the tag
-- `tagger`: The tagger of the tag, in the format of `Name <email>`. Only
-  available for annotated tags.
-- `annotation`: The first line of the tag annotation. Only available for
-  annotated tags.
+- `tagger`: The tagger of the tag, in the format of `Name <email>`. Empty for
+  lightweight tags.
+- `annotation`: The first line of the tag annotation. Empty for lightweight
+  tags.
 
 ##### Expression Filtering Examples
 

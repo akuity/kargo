@@ -22,6 +22,10 @@ var discoveryDurationBuckets = []float64{0.1, 0.5, 1, 2, 5, 10, 30, 60, 120, 300
 // discoveries, half a minute to an hour.
 var discoveryIntervalBuckets = []float64{30, 60, 120, 300, 450, 600, 900, 1800, 3600}
 
+// subscriptionTypeLabel is the label under which a subscription's type is
+// recorded: git, image, chart or other.
+const subscriptionTypeLabel = "subscriptionType"
+
 var (
 	warehouseMetricsOnce = sync.Once{}
 	warehouseMetrics     *WarehouseMetrics
@@ -34,6 +38,9 @@ type WarehouseMetrics struct {
 	// DiscoveryInterval observes, in seconds, the time since a Warehouse's
 	// previous successful discovery.
 	DiscoveryInterval *prometheus.HistogramVec
+	// DiscoveryFailures counts failed discoveries, by the type of the
+	// subscription that failed.
+	DiscoveryFailures *prometheus.CounterVec
 	// FreightCreated counts the Freight created by Warehouses.
 	FreightCreated *prometheus.CounterVec
 }
@@ -73,6 +80,14 @@ func initWarehouseMetrics(c client.Client) *WarehouseMetrics {
 			"Time between a Warehouse's previous successful artifact discovery and its latest one.",
 			discoveryIntervalBuckets,
 		),
+		DiscoveryFailures: prometheus.NewCounterVec(
+			prometheus.CounterOpts{
+				Namespace: metrics.Namespace,
+				Name:      "warehouse_discovery_failures_total",
+				Help:      "Number of failed Warehouse artifact discoveries, by the type of the subscription that failed.",
+			},
+			[]string{metrics.ProjectLabel, subscriptionTypeLabel},
+		),
 		FreightCreated: prometheus.NewCounterVec(
 			prometheus.CounterOpts{
 				Namespace: metrics.Namespace,
@@ -86,6 +101,7 @@ func initWarehouseMetrics(c client.Client) *WarehouseMetrics {
 		ctrlmetrics.Registry,
 		m.DiscoveryDuration,
 		m.DiscoveryInterval,
+		m.DiscoveryFailures,
 		m.FreightCreated,
 		newWarehouseDiscoveryCollector(c),
 	)

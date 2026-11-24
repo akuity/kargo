@@ -1,14 +1,15 @@
 import { HealthStatus, healthStatusToEnum } from '@ui/features/common/health-status/utils';
 import { roundBlock } from '@ui/features/stage/utils/promotion-request';
-import { FreightCollection, Health, PromotionRequest, Stage, Target } from '@ui/gen/api/v2/models';
+import { Round } from '@ui/features/stage/utils/promotion-rollout';
+import { FreightCollection, Health, Stage, Target } from '@ui/gen/api/v2/models';
 
 import { collectionUpToDate, freightNames, roundPhase } from './round-utils';
 import { byName, stageGovernsTarget, targetAwareStages } from './target-stages';
 import { StateCounts, TargetState, emptyStateCounts, statePrecedence } from './target-state';
 
-// Rounds is the PromotionRequest each target-aware Stage is running now, keyed
-// by Stage name. A Stage with no round in flight simply has no entry.
-export type Rounds = Record<string, PromotionRequest | undefined>;
+// Rounds is the round each target-aware Stage is running now -- its
+// PromotionRollout or PromotionRequest -- keyed by Stage name. A Stage with no round in flight simply has no entry.
+export type Rounds = Record<string, Round | undefined>;
 
 // GoverningStage is one Stage that governs a Target, with everything that
 // Stage observes about it. All of it is scoped to the Stage: a Target governed

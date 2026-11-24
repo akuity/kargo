@@ -248,18 +248,6 @@ build-nightly-cli:
 
 
 ################################################################################
-# Used to build the CLI with the UI embedded                                   #
-################################################################################
-
-.PHONY: build-ui
-build-ui:
-	cd ui && NODE_ENV=production BUILD_TARGET_PATH=../pkg/server/ui pnpm run build --emptyOutDir
-	touch pkg/server/ui/.keep
-
-.PHONY: build-cli-with-ui
-build-cli-with-ui: build-ui build-cli
-
-################################################################################
 # Code generation: To be run after modifications to API types                  #
 ################################################################################
 

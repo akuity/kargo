@@ -8,6 +8,16 @@ metadata:
     {{- include "kargo.controller.labels" . | nindent 4 }}
   {{- include "kargo.annotations" (dict "root" . "annotations" .Values.controller.annotations) | nindent 2 }}
 rules:
+# Lets the component tell whether PriorityAndFairness exempts it, to decide
+# whether to keep client-side QPS and burst limits.
+- apiGroups:
+  - flowcontrol.apiserver.k8s.io
+  resources:
+  - prioritylevelconfigurations
+  resourceNames:
+  - exempt
+  verbs:
+  - get
 - apiGroups:
   - ""
   resources:
