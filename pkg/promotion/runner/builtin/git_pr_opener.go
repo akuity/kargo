@@ -251,7 +251,7 @@ func (g *gitPROpener) run(
 		}
 	}
 
-	if stepCtx.UIBaseURL != "" {
+	if stepCtx.UIBaseURL != "" && !cfg.DisableFooter {
 		description = fmt.Sprintf(
 			"%s\n\n[View in Kargo UI](%s/project/%s/stage/%s)",
 			description,
