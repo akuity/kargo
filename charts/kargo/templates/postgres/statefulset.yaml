@@ -40,6 +40,10 @@ spec:
     spec:
       serviceAccountName: kargo-postgres
       automountServiceAccountToken: {{ .Values.database.postgres.automountServiceAccountToken | default false }}
+      {{- /* Makes the data volume writable by the image's postgres group. */}}
+      securityContext:
+        fsGroup: 999
+        fsGroupChangePolicy: OnRootMismatch
       {{- with .Values.database.postgres.affinity | default .Values.global.affinity }}
       affinity:
         {{- toYaml . | nindent 8 }}
