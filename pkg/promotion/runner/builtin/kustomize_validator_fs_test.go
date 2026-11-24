@@ -418,6 +418,65 @@ func Test_kustomizeValidatorFS_ReadFile_helmInflation(t *testing.T) {
 			},
 		},
 		{
+			name:     "chart name that helm would parse as a flag",
+			fileName: "kustomization.yaml",
+			content:  "helmCharts:\n- name: --post-renderer=sh\n",
+			assert: func(t *testing.T, err error) {
+				require.ErrorContains(t, err, `chart name "--post-renderer=sh" must not start with '-'`)
+			},
+		},
+		{
+			name:     "release name that helm would parse as a flag",
+			fileName: "kustomization.yaml",
+			content:  "helmCharts:\n- name: foo\n  releaseName: --post-renderer=sh\n",
+			assert: func(t *testing.T, err error) {
+				require.ErrorContains(t, err, `release name "--post-renderer=sh" must not start with '-'`)
+			},
+		},
+		{
+			name:     "release name starting with '-' after leading whitespace",
+			fileName: "kustomization.yaml",
+			content:  "helmCharts:\n- name: foo\n  releaseName: \" \\t--post-renderer=sh\"\n",
+			assert: func(t *testing.T, err error) {
+				require.ErrorContains(t, err, "must not start with '-'")
+			},
+		},
+		{
+			name:     "chart name starting with '-' after leading whitespace",
+			fileName: "kustomization.yaml",
+			content:  "helmCharts:\n- name: \" --post-renderer=sh\"\n",
+			assert: func(t *testing.T, err error) {
+				require.ErrorContains(t, err, "must not start with '-'")
+			},
+		},
+		{
+			// The whole value reaches helm as a single argument, which helm
+			// does not parse as a flag because it does not start with '-'.
+			name:     "release name with an embedded flag-like value",
+			fileName: "kustomization.yaml",
+			content:  "helmCharts:\n- name: foo\n  releaseName: my-release --post-renderer=sh\n",
+			assert: func(t *testing.T, err error) {
+				require.NoError(t, err)
+			},
+		},
+		{
+			name:     "release name that helm would parse as a flag in the legacy field",
+			fileName: "Kustomization",
+			content:  "helmChartInflationGenerator:\n- chartName: foo\n  releaseName: --post-renderer=sh\n",
+			assert: func(t *testing.T, err error) {
+				require.ErrorContains(t, err, "must not start with '-'")
+			},
+		},
+		{
+			name:     "release name that helm would parse as a flag in a generator configuration",
+			fileName: "helm.yaml",
+			content: "apiVersion: builtin\nkind: HelmChartInflationGenerator\n" +
+				"name: foo\nreleaseName: --post-renderer=sh\n",
+			assert: func(t *testing.T, err error) {
+				require.ErrorContains(t, err, "must not start with '-'")
+			},
+		},
+		{
 			name:     "legacy field",
 			fileName: "Kustomization",
 			content:  "helmChartInflationGenerator:\n- chartName: foo\n  chartHome: /srv/charts\n",

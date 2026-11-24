@@ -571,6 +571,48 @@ metadata:
 		})
 		require.ErrorContains(t, build(t, workDir), "must be a plain name")
 	})
+	// flagInjection writes a local chart and a post-renderer script that leaves
+	// a marker file behind if helm ever runs it, and returns the script's path
+	// and the marker's path.
+	flagInjection := func(t *testing.T, workDir string) (string, string) {
+		t.Helper()
+		for _, chartDir := range []string{"charts/demo", "base/charts/demo"} {
+			writeFiles(t, workDir, map[string]string{
+				chartDir + "/Chart.yaml":        "apiVersion: v2\nname: demo\nversion: 0.1.0\n",
+				chartDir + "/values.yaml":       "{}\n",
+				chartDir + "/templates/cm.yaml": "apiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: demo\n",
+			})
+		}
+		marker := filepath.Join(workDir, "pwned")
+		script := filepath.Join(workDir, "post-renderer.sh")
+		require.NoError(t, os.WriteFile(
+			script,
+			[]byte("#!/bin/sh\ntouch '"+marker+"'\ncat\n"),
+			0o700,
+		))
+		return script, marker
+	}
+	t.Run("release name that helm would parse as a flag", func(t *testing.T) {
+		workDir := t.TempDir()
+		script, marker := flagInjection(t, workDir)
+		writeFiles(t, workDir, map[string]string{
+			"kustomization.yaml": "helmCharts:\n- name: demo\n  releaseName: --post-renderer=" + script + "\n",
+		})
+		err := build(t, workDir)
+		require.NoFileExists(t, marker)
+		require.ErrorContains(t, err, "must not start with '-'")
+	})
+	t.Run("release name that helm would parse as a flag in a nested kustomization", func(t *testing.T) {
+		workDir := t.TempDir()
+		script, marker := flagInjection(t, workDir)
+		writeFiles(t, workDir, map[string]string{
+			"kustomization.yaml":      "resources:\n- base\n",
+			"base/kustomization.yaml": "helmCharts:\n- name: demo\n  releaseName: --post-renderer=" + script + "\n",
+		})
+		err := build(t, workDir)
+		require.NoFileExists(t, marker)
+		require.ErrorContains(t, err, "must not start with '-'")
+	})
 	t.Run("no helm charts builds", func(t *testing.T) {
 		workDir := t.TempDir()
 		writeFiles(t, workDir, map[string]string{

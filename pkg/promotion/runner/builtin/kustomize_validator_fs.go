@@ -79,7 +79,8 @@ func newKustomizeValidatorFS(fileSystem filesys.FileSystem, root *os.Root) (*kus
 const helmInflationGeneratorKind = "HelmChartInflationGenerator"
 
 // helmInflationGeneratorConfig is the subset of a HelmChartInflationGenerator
-// configuration that names directories or files.
+// configuration that names directories or files, or that is passed to helm as
+// a bare argument.
 type helmInflationGeneratorConfig struct {
 	Kind string `json:"kind"`
 	kustypes.HelmGlobals
@@ -177,6 +178,9 @@ func (r *kustomizeValidatorFS) validateHelmInflationGenerators(path string, cont
 // working directory: a chart home or config home that is absolute or resolves
 // outside, a symlink beneath either that leads outside, or a chart name or
 // version with a path separator, which Kustomize joins onto the chart home.
+// It also returns an error for a chart name or release name starting with '-',
+// which helm would parse as a flag. Kustomize rejects these itself from
+// sigs.k8s.io/kustomize/api v0.21.2, but Kargo pins an earlier version.
 func (r *kustomizeValidatorFS) validateHelmInflation(
 	path string,
 	globals *kustypes.HelmGlobals,
@@ -199,6 +203,23 @@ func (r *kustomizeValidatorFS) validateHelmInflation(
 		}
 	}
 	for _, chart := range charts {
+		// Kustomize runs helm via exec, not a shell, passing the chart name and
+		// release name each as a single bare argument. Helm's flag parser
+		// treats an argument as a flag only if it starts with '-', so a value
+		// starting with '-' (e.g. --post-renderer=sh) can make helm run
+		// arbitrary commands. A value with '-' anywhere else (e.g.
+		// "foo --post-renderer=sh") stays a single positional argument and
+		// cannot inject a flag. Leading whitespace is trimmed before the check
+		// so that its safety does not depend on how helm treats such values.
+		if strings.HasPrefix(strings.TrimSpace(chart.Name), "-") {
+			return fmt.Errorf("error validating %s: chart name %q must not start with '-'", path, chart.Name)
+		}
+		if strings.HasPrefix(strings.TrimSpace(chart.ReleaseName), "-") {
+			return fmt.Errorf(
+				"error validating %s: release name %q must not start with '-'",
+				path, chart.ReleaseName,
+			)
+		}
 		if !isPlainName(chart.Name) {
 			return fmt.Errorf("error validating %s: chart name %q must be a plain name", path, chart.Name)
 		}
