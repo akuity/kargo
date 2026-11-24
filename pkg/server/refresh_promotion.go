@@ -8,6 +8,7 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/api"
+	"github.com/akuity/kargo/pkg/server/auth/can"
 )
 
 // @id RefreshPromotion
@@ -27,6 +28,11 @@ func (s *server) refreshPromotion(c *gin.Context) {
 
 	project := c.Param("project")
 	promotionName := c.Param("promotion")
+
+	if err := s.authorize(ctx, can.Get().Promotion(project, promotionName)); err != nil {
+		_ = c.Error(err)
+		return
+	}
 
 	obj := &kargoapi.Promotion{
 		ObjectMeta: metav1.ObjectMeta{Name: promotionName, Namespace: project},

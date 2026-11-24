@@ -10,17 +10,21 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	corev1 "k8s.io/api/core/v1"
+	authnv1 "k8s.io/api/authentication/v1"
+	authv1 "k8s.io/api/authorization/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/event"
-	k8sevent "github.com/akuity/kargo/pkg/event/kubernetes"
-	fakeevent "github.com/akuity/kargo/pkg/kubernetes/event/fake"
+	fakeevent "github.com/akuity/kargo/pkg/event/fake"
+	"github.com/akuity/kargo/pkg/server/kubernetes"
 	"github.com/akuity/kargo/pkg/server/user"
 )
 
@@ -65,6 +69,21 @@ func Test_server_createResources(t *testing.T) {
 				body: bytes.NewBufferString("invalid: [unclosed sequence"),
 				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
 					require.Equal(t, http.StatusBadRequest, w.Code)
+				},
+			},
+			{
+				name: "Targets are not Kubernetes resources",
+				// A Target manifest, as a user would hand to kargo apply; the Go
+				// type carries no TypeMeta since Targets are not custom resources.
+				body: mustJSONBody(map[string]any{
+					"apiVersion": kargoapi.GroupVersion.String(),
+					"kind":       "Target",
+					"metadata":   map[string]any{"namespace": testProject.Name, "name": "us-east-1"},
+				}),
+				clientBuilder: fake.NewClientBuilder().WithObjects(testProject),
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
+					require.Equal(t, http.StatusBadRequest, w.Code)
+					require.Contains(t, w.Body.String(), "/v1beta1/projects/{project}/targets")
 				},
 			},
 			{
@@ -287,11 +306,6 @@ func Test_server_createResources(t *testing.T) {
 	)
 }
 
-type errSender struct{ err error }
-
-func (s *errSender) Send(_ context.Context, _ event.Meta) error { return s.err }
-func (s *errSender) Shutdown()                                  {}
-
 func Test_server_createResources_freightEvent(t *testing.T) {
 	testFreight := &kargoapi.Freight{
 		TypeMeta: metav1.TypeMeta{
@@ -304,9 +318,9 @@ func Test_server_createResources_freightEvent(t *testing.T) {
 		},
 	}
 
-	// recorder is reassigned by each serverSetup before assertions reads it.
+	// sender is reassigned by each serverSetup before assertions reads it.
 	// Test cases are run sequentially so this is safe.
-	var recorder *fakeevent.EventRecorder
+	var sender *fakeevent.Sender
 
 	testRESTEndpoint(
 		t, nil,
@@ -315,8 +329,8 @@ func Test_server_createResources_freightEvent(t *testing.T) {
 			{
 				name: "non-Freight resource does not send event",
 				serverSetup: func(_ *testing.T, s *server) {
-					recorder = fakeevent.NewEventRecorder(1)
-					s.sender = k8sevent.NewEventSender(recorder)
+					sender = &fakeevent.Sender{}
+					s.sender = sender
 				},
 				body: mustJSONBody(&kargoapi.Warehouse{
 					TypeMeta: metav1.TypeMeta{
@@ -330,7 +344,7 @@ func Test_server_createResources_freightEvent(t *testing.T) {
 				}),
 				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
 					require.Equal(t, http.StatusCreated, w.Code)
-					require.Empty(t, recorder.Events)
+					require.Empty(t, sender.Sent())
 				},
 			},
 			{
@@ -343,23 +357,28 @@ func Test_server_createResources_freightEvent(t *testing.T) {
 			{
 				name: "Freight with sender sends FreightCreated event",
 				serverSetup: func(_ *testing.T, s *server) {
-					recorder = fakeevent.NewEventRecorder(1)
-					s.sender = k8sevent.NewEventSender(recorder)
+					sender = &fakeevent.Sender{}
+					s.sender = sender
 				},
 				body: mustJSONBody(testFreight),
 				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
 					require.Equal(t, http.StatusCreated, w.Code)
-					require.Len(t, recorder.Events, 1)
-					evt := <-recorder.Events
-					require.Equal(t, corev1.EventTypeNormal, evt.EventType)
-					require.Equal(t, string(kargoapi.EventTypeFreightCreated), evt.Reason)
-					require.Equal(t, "Freight created", evt.Message)
+					evt := &event.FreightCreated{}
+					requireSingleEvent(
+						t,
+						sender,
+						kargoapi.EventTypeFreightCreated,
+						"Freight",
+						evt,
+					)
+					require.Equal(t, `Freight created by "subject:test-user"`, evt.Message)
+					require.Equal(t, testFreight.Name, evt.Name)
 				},
 			},
 			{
 				name: "Freight with sender error still succeeds",
 				serverSetup: func(_ *testing.T, s *server) {
-					s.sender = &errSender{err: errors.New("send failed")}
+					s.sender = &fakeevent.Sender{SendErr: errors.New("send failed")}
 				},
 				body: mustJSONBody(testFreight),
 				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
@@ -369,19 +388,190 @@ func Test_server_createResources_freightEvent(t *testing.T) {
 			{
 				name: "Freight with user context includes actor in event message",
 				serverSetup: func(_ *testing.T, s *server) {
-					recorder = fakeevent.NewEventRecorder(1)
-					s.sender = k8sevent.NewEventSender(recorder)
+					sender = &fakeevent.Sender{}
+					s.sender = sender
 				},
 				ctxSetup: func(ctx context.Context) context.Context {
-					return user.ContextWithInfo(ctx, user.Info{IsAdmin: true})
+					return user.ContextWithIdentity(ctx, user.Admin{})
 				},
 				body: mustJSONBody(testFreight),
 				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
 					require.Equal(t, http.StatusCreated, w.Code)
-					require.Len(t, recorder.Events, 1)
-					evt := <-recorder.Events
-					require.Equal(t, string(kargoapi.EventTypeFreightCreated), evt.Reason)
+					evt := &event.FreightCreated{}
+					requireSingleEvent(
+						t,
+						sender,
+						kargoapi.EventTypeFreightCreated,
+						"Freight",
+						evt,
+					)
 					require.Contains(t, evt.Message, kargoapi.EventActorAdmin)
+					require.NotNil(t, evt.Actor)
+					require.Equal(t, kargoapi.EventActorAdmin, *evt.Actor)
+				},
+			},
+		},
+	)
+}
+
+// newProjectCreatorClient builds a kubernetes.Client that enforces real
+// authorization, unlike the harness's SkipAuthorization: true default. It
+// answers SubjectAccessReviews like the chart's kargo-project-creator
+// ClusterRole: full access to Project, read-only on
+// ClusterConfig/ClusterPromotionTask. Also returns the raw store so the
+// caller can inspect it afterward.
+func newProjectCreatorClient(
+	t *testing.T,
+	store *fake.ClientBuilder,
+) (kubernetes.Client, client.WithWatch) {
+	t.Helper()
+	scheme := newTestScheme(t)
+	require.NoError(t, authv1.AddToScheme(scheme))
+	internalClient := store.
+		WithScheme(scheme).
+		WithRESTMapper(testRESTMapper(scheme)).
+		WithInterceptorFuncs(interceptor.Funcs{
+			Create: func(
+				ctx context.Context,
+				c client.WithWatch,
+				obj client.Object,
+				opts ...client.CreateOption,
+			) error {
+				review, ok := obj.(*authv1.SubjectAccessReview)
+				if !ok {
+					return c.Create(ctx, obj, opts...)
+				}
+				ra := review.Spec.ResourceAttributes
+				switch {
+				case ra.Group == kargoapi.GroupVersion.Group && ra.Resource == "projects":
+					review.Status.Allowed = true
+				case ra.Group == kargoapi.GroupVersion.Group &&
+					(ra.Resource == "clusterconfigs" || ra.Resource == "clusterpromotiontasks") &&
+					(ra.Verb == "get" || ra.Verb == "list" || ra.Verb == "watch"):
+					review.Status.Allowed = true
+				}
+				return nil
+			},
+		}).
+		Build()
+	c, err := kubernetes.NewClient(
+		t.Context(),
+		&rest.Config{},
+		kubernetes.ClientOptions{
+			NewInternalClient: func(
+				context.Context,
+				*rest.Config,
+				*runtime.Scheme,
+				string,
+			) (client.WithWatch, error) {
+				return internalClient, nil
+			},
+		},
+	)
+	require.NoError(t, err)
+	return c, internalClient
+}
+
+// Test_server_createResources_clusterScopedNamespaceSpoofing is a regression
+// test: a principal who could only create Projects could spoof a
+// cluster-scoped resource's metadata.namespace to a just-created Project's
+// name and get it created anyway, since Kubernetes ignores metadata.namespace
+// for cluster-scoped kinds.
+func Test_server_createResources_clusterScopedNamespaceSpoofing(t *testing.T) {
+	const projectName = "ghsa-mmqq-repro"
+
+	// projectCreatorUser mirrors the identity a real bearer token resolves to
+	// via TokenReview when it belongs to the kargo-project-creator
+	// ServiceAccount the chart provisions.
+	projectCreatorUser := user.KubernetesUser{
+		UserInfo: authnv1.UserInfo{
+			Username: "system:serviceaccount:kargo:kargo-project-creator",
+		},
+	}
+
+	// capturedClient is reassigned by each serverSetup before assertions reads
+	// it. Test cases are run sequentially, so this is safe (see the same
+	// pattern in Test_server_createResources_freightEvent above).
+	var capturedClient client.WithWatch
+
+	testRESTEndpoint(
+		t, nil,
+		http.MethodPost, "/v1beta1/resources",
+		[]restTestCase{
+			{
+				name: "control: direct create of a cluster-scoped resource is denied",
+				serverSetup: func(t *testing.T, s *server) {
+					s.client, capturedClient = newProjectCreatorClient(t, fake.NewClientBuilder())
+					s.authorizeFn = s.client.Authorize
+				},
+				ctxSetup: func(ctx context.Context) context.Context {
+					return user.ContextWithIdentity(ctx, projectCreatorUser)
+				},
+				body: mustJSONBody(&kargoapi.ClusterPromotionTask{
+					TypeMeta: metav1.TypeMeta{
+						APIVersion: kargoapi.GroupVersion.String(),
+						Kind:       "ClusterPromotionTask",
+					},
+					ObjectMeta: metav1.ObjectMeta{Name: "control-task"},
+					Spec: kargoapi.PromotionTaskSpec{
+						Steps: []kargoapi.PromotionStep{{Uses: "fail"}},
+					},
+				}),
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
+					require.Equal(t, http.StatusForbidden, w.Code)
+				},
+			},
+			{
+				name: "exploit: ClusterPromotionTask namespace spoofed to a just-created Project is still denied",
+				serverSetup: func(t *testing.T, s *server) {
+					s.client, capturedClient = newProjectCreatorClient(t, fake.NewClientBuilder())
+					s.authorizeFn = s.client.Authorize
+				},
+				ctxSetup: func(ctx context.Context) context.Context {
+					return user.ContextWithIdentity(ctx, projectCreatorUser)
+				},
+				body: mustJSONArrayBody(
+					&kargoapi.Project{
+						TypeMeta: metav1.TypeMeta{
+							APIVersion: kargoapi.GroupVersion.String(),
+							Kind:       "Project",
+						},
+						ObjectMeta: metav1.ObjectMeta{Name: projectName},
+					},
+					&kargoapi.ClusterPromotionTask{
+						TypeMeta: metav1.TypeMeta{
+							APIVersion: kargoapi.GroupVersion.String(),
+							Kind:       "ClusterPromotionTask",
+						},
+						ObjectMeta: metav1.ObjectMeta{
+							Name: "exploit-task",
+							// The exploit: meaningless to Kubernetes for a cluster-scoped kind.
+							Namespace: projectName,
+						},
+						Spec: kargoapi.PromotionTaskSpec{
+							Steps: []kargoapi.PromotionStep{{Uses: "fail"}},
+						},
+					},
+				),
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
+					require.Equal(t, http.StatusCreated, w.Code)
+
+					var res createResourceResponse
+					require.NoError(t, json.Unmarshal(w.Body.Bytes(), &res))
+					require.Len(t, res.Results, 2)
+					require.Empty(t, res.Results[0].Error, "Project creation should succeed")
+					require.NotEmpty(
+						t, res.Results[1].Error,
+						"ClusterPromotionTask creation must be denied, not silently bypassed via a spoofed namespace",
+					)
+					require.Contains(t, res.Results[1].Error, "forbidden")
+
+					err := capturedClient.Get(
+						t.Context(),
+						client.ObjectKey{Name: "exploit-task"},
+						&kargoapi.ClusterPromotionTask{},
+					)
+					require.True(t, apierrors.IsNotFound(err), "ClusterPromotionTask must not have been persisted")
 				},
 			},
 		},

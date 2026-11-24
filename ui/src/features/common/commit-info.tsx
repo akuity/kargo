@@ -6,6 +6,12 @@ export const CommitInfo = ({ commit }: { commit: GitCommit }) => (
     <div>
       <a href={commit.repoURL}>{commit.repoURL}</a>
     </div>
+    {commit.subscriptionName && (
+      <>
+        <div>Subscription:</div>
+        <div>{commit.subscriptionName}</div>
+      </>
+    )}
     {commit.branch ? (
       <>
         <div>Branch:</div>

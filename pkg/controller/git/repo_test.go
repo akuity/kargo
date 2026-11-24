@@ -2,7 +2,6 @@ package git
 
 import (
 	"fmt"
-	"net/url"
 	"os"
 	"testing"
 
@@ -27,12 +26,7 @@ func TestRepo(t *testing.T) {
 	require.True(t, ok)
 
 	t.Run("can clone", func(t *testing.T) {
-		require.Equal(t, testRepoURL, r.originalURL)
-		var accessURL *url.URL
-		accessURL, err = url.Parse(r.accessURL)
-		require.NoError(t, err)
-		accessURL.User = nil
-		require.Equal(t, testRepoURL, accessURL.String())
+		require.Equal(t, testRepoURL, r.url)
 		require.NotEmpty(t, r.homeDir)
 		var fi os.FileInfo
 		fi, err = os.Stat(r.homeDir)
@@ -45,7 +39,7 @@ func TestRepo(t *testing.T) {
 	})
 
 	t.Run("can get the repo url", func(t *testing.T) {
-		require.Equal(t, r.originalURL, r.URL())
+		require.Equal(t, r.url, r.URL())
 	})
 
 	t.Run("can get the home dir", func(t *testing.T) {
@@ -173,4 +167,52 @@ with a body
 		require.True(t, os.IsNotExist(err))
 	})
 
+}
+
+func TestCloneRemovesHomeDirOnFailure(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name  string
+		clone func(t *testing.T, baseDir string) error
+	}{
+		{
+			name: "Clone of a missing branch",
+			clone: func(t *testing.T, baseDir string) error {
+				testServer, testRepoURL, testRepoCreds := setupRemoteRepo(t)
+				defer testServer.Close()
+				_, err := Clone(
+					t.Context(),
+					testRepoURL,
+					&ClientOptions{Credentials: &testRepoCreds},
+					&CloneOptions{BaseDir: baseDir, Branch: "does-not-exist"},
+				)
+				return err
+			},
+		},
+		{
+			name: "CloneBare from an unreachable server",
+			clone: func(t *testing.T, baseDir string) error {
+				testServer, testRepoURL, testRepoCreds := setupRemoteRepo(t)
+				testServer.Close()
+				_, err := CloneBare(
+					t.Context(),
+					testRepoURL,
+					&ClientOptions{Credentials: &testRepoCreds},
+					&BareCloneOptions{BaseDir: baseDir},
+				)
+				return err
+			},
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			baseDir := t.TempDir()
+			require.Error(t, tc.clone(t, baseDir))
+			entries, err := os.ReadDir(baseDir)
+			require.NoError(t, err)
+			require.Empty(t, entries)
+		})
+	}
 }

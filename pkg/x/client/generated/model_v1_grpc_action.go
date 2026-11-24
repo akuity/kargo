@@ -19,6 +19,8 @@ var _ MappedNullable = &V1GRPCAction{}
 
 // V1GRPCAction struct for V1GRPCAction
 type V1GRPCAction struct {
+	// mode specifies the connection mode for the gRPC health probe. Set to \"TLS\" to use TLS without certificate verification. Set to \"Plaintext\" to use a plaintext (insecure) connection explicitly. If not specified, the probe uses a plaintext (insecure) connection. +featureGate=GRPCContainerProbeTLS +optional
+	Mode *V1GRPCProbeMode `json:"mode,omitempty"`
 	// Port number of the gRPC service. Number must be in the range 1 to 65535.
 	Port *int32 `json:"port,omitempty"`
 	// Service is the name of the service to place in the gRPC HealthCheckRequest (see https://github.com/grpc/grpc/blob/master/doc/health-checking.md).  If this is not specified, the default behavior is defined by gRPC. +optional +default=\"\"
@@ -40,6 +42,38 @@ func NewV1GRPCAction() *V1GRPCAction {
 func NewV1GRPCActionWithDefaults() *V1GRPCAction {
 	this := V1GRPCAction{}
 	return &this
+}
+
+// GetMode returns the Mode field value if set, zero value otherwise.
+func (o *V1GRPCAction) GetMode() V1GRPCProbeMode {
+	if o == nil || IsNil(o.Mode) {
+		var ret V1GRPCProbeMode
+		return ret
+	}
+	return *o.Mode
+}
+
+// GetModeOk returns a tuple with the Mode field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *V1GRPCAction) GetModeOk() (*V1GRPCProbeMode, bool) {
+	if o == nil || IsNil(o.Mode) {
+		return nil, false
+	}
+	return o.Mode, true
+}
+
+// HasMode returns a boolean if a field has been set.
+func (o *V1GRPCAction) HasMode() bool {
+	if o != nil && !IsNil(o.Mode) {
+		return true
+	}
+
+	return false
+}
+
+// SetMode gets a reference to the given V1GRPCProbeMode and assigns it to the Mode field.
+func (o *V1GRPCAction) SetMode(v V1GRPCProbeMode) {
+	o.Mode = &v
 }
 
 // GetPort returns the Port field value if set, zero value otherwise.
@@ -116,6 +150,9 @@ func (o V1GRPCAction) MarshalJSON() ([]byte, error) {
 
 func (o V1GRPCAction) ToMap() (map[string]interface{}, error) {
 	toSerialize := map[string]interface{}{}
+	if !IsNil(o.Mode) {
+		toSerialize["mode"] = o.Mode
+	}
 	if !IsNil(o.Port) {
 		toSerialize["port"] = o.Port
 	}

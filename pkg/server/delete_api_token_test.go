@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -14,7 +15,10 @@ import (
 
 	rbacapi "github.com/akuity/kargo/api/rbac/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/pkg/event"
+	fakeevent "github.com/akuity/kargo/pkg/event/fake"
 	"github.com/akuity/kargo/pkg/server/config"
+	"github.com/akuity/kargo/pkg/server/user"
 )
 
 func Test_server_deleteProjectAPIToken(t *testing.T) {
@@ -35,6 +39,7 @@ func Test_server_deleteProjectAPIToken(t *testing.T) {
 		},
 		Type: corev1.SecretTypeServiceAccountToken,
 	}
+	sender := &fakeevent.Sender{}
 	testRESTEndpoint(
 		t, &config.ServerConfig{},
 		http.MethodDelete, "/v1beta1/projects/"+testProject.Name+"/api-tokens/"+testToken.Name,
@@ -114,6 +119,12 @@ func Test_server_deleteProjectAPIToken(t *testing.T) {
 					testProject,
 					testToken,
 				),
+				serverSetup: func(_ *testing.T, s *server) {
+					s.sender = sender
+				},
+				ctxSetup: func(ctx context.Context) context.Context {
+					return user.ContextWithIdentity(ctx, user.Admin{})
+				},
 				assertions: func(t *testing.T, w *httptest.ResponseRecorder, c client.Client) {
 					require.Equal(t, http.StatusNoContent, w.Code)
 
@@ -126,6 +137,27 @@ func Test_server_deleteProjectAPIToken(t *testing.T) {
 					)
 					require.Error(t, err)
 					require.True(t, apierrors.IsNotFound(err))
+
+					// Deleting a token is recorded as an event attributed to the caller
+					evt := &event.APITokenDeleted{}
+					requireSingleEvent(
+						t,
+						sender,
+						kargoapi.EventTypeAPITokenDeleted,
+						"Secret",
+						evt,
+					)
+					require.Equal(t, testProject.Name, evt.Project)
+					require.Equal(t, testToken.Name, evt.Name)
+					require.Equal(t, "fake-service-account", evt.RoleName)
+					require.False(t, evt.SystemLevel)
+					require.NotNil(t, evt.Actor)
+					require.Equal(t, kargoapi.EventActorAdmin, *evt.Actor)
+					require.Equal(
+						t,
+						`API token "fake-token" deleted from Role "fake-service-account" by "admin"`,
+						evt.Message,
+					)
 				},
 			},
 		},
@@ -148,6 +180,7 @@ func Test_server_deleteSystemAPIToken(t *testing.T) {
 		Type: corev1.SecretTypeServiceAccountToken,
 	}
 
+	sender := &fakeevent.Sender{}
 	testRESTEndpoint(
 		t, &config.ServerConfig{},
 		http.MethodDelete, "/v1beta1/system/api-tokens/"+testToken.Name,
@@ -215,6 +248,9 @@ func Test_server_deleteSystemAPIToken(t *testing.T) {
 				clientBuilder: fake.NewClientBuilder().WithObjects(
 					testToken,
 				),
+				serverSetup: func(_ *testing.T, s *server) {
+					s.sender = sender
+				},
 				assertions: func(t *testing.T, w *httptest.ResponseRecorder, c client.Client) {
 					require.Equal(t, http.StatusNoContent, w.Code)
 
@@ -226,6 +262,20 @@ func Test_server_deleteSystemAPIToken(t *testing.T) {
 					)
 					require.Error(t, err)
 					require.True(t, apierrors.IsNotFound(err))
+
+					evt := &event.APITokenDeleted{}
+					requireSingleEvent(
+						t,
+						sender,
+						kargoapi.EventTypeAPITokenDeleted,
+						"Secret",
+						evt,
+					)
+					require.Equal(t, testKargoNamespace, evt.Project)
+					require.Equal(t, testToken.Name, evt.Name)
+					require.True(t, evt.SystemLevel)
+					require.NotNil(t, evt.Actor)
+					require.Equal(t, "subject:test-user", *evt.Actor)
 				},
 			},
 		},

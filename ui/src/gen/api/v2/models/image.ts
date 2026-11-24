@@ -10,16 +10,22 @@ import type { ImageAnnotations } from './imageAnnotations';
 export interface Image {
   /** Annotations is a map of arbitrary metadata for the image. */
   annotations?: ImageAnnotations;
-  /** Digest identifies a specific version of the image in the repository
-specified by RepoURL. This is a more precise identifier than Tag. */
+  /**
+   * Digest identifies a specific version of the image in the repository
+   * specified by RepoURL. This is a more precise identifier than Tag.
+   */
   digest?: string;
   /** RepoURL describes the repository in which the image can be found. */
   repoURL?: string;
-  /** SubscriptionName is the name of the subscription that discovered this
-image. This field is only populated if the subscription was assigned
-a name. */
+  /**
+   * SubscriptionName is the name of the subscription that discovered this
+   * image. This field is only populated if the subscription was assigned
+   * a name.
+   */
   subscriptionName?: string;
-  /** Tag identifies a specific version of the image in the repository specified
-by RepoURL. */
+  /**
+   * Tag identifies a specific version of the image in the repository specified
+   * by RepoURL.
+   */
   tag?: string;
 }

@@ -13,10 +13,10 @@ jobs:
     permissions:
       contents: write
       pull-requests: write
-    if: github.repository_owner == 'akuity' && github.event.pull_request.merged && (github.event_name != 'labeled' || startsWith('backport/', github.event.label.name))
+    if: github.repository_owner == 'akuity' && github.event.pull_request.merged && (github.event.action != 'labeled' || startsWith(github.event.label.name, 'backport/'))
     steps:
     - name: Harden the runner (Audit all outbound calls)
-      uses: step-security/harden-runner@b09bb98e06d4d774595224525879c09bc6e98c40 # v2.20.1
+      uses: step-security/harden-runner@aebdcf6156ab6691adf63218240e476564a1ed4c # v2.23.0
       with:
         egress-policy: audit
 
@@ -25,7 +25,7 @@ jobs:
       with:
         allow-unsafe-pr-checkout: true
     - name: Create backport PRs
-      uses: korthout/backport-action@2e830a1d0b8269505846ddd407a70876913ad1f8 # v4.6.0
+      uses: korthout/backport-action@ad272ff24e4a8593bf18a951a154ae6af93b26b8 # v5.0.0
       # xref: https://github.com/korthout/backport-action#inputs
       with:
         # Use token to allow workflows to be triggered for the created PR

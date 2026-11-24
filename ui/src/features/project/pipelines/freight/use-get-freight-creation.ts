@@ -3,16 +3,18 @@ import { useMemo } from 'react';
 
 import { Freight } from '@ui/gen/api/v2/models';
 
+import { getFreightDiscoveredAt } from './get-freight-discovered-at';
+
 export const useGetFreightCreation = (freight?: Freight) =>
   useMemo(() => {
-    if (!freight?.metadata?.creationTimestamp) {
+    const creationDate = getFreightDiscoveredAt(freight);
+
+    if (!creationDate) {
       return {
         relative: '',
         abs: null
       };
     }
-
-    const creationDate = new Date(freight?.metadata?.creationTimestamp);
 
     return {
       relative: formatDistance(creationDate, new Date(), { addSuffix: false })?.replace(

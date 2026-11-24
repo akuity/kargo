@@ -5,9 +5,6 @@ description: Deletes a comment from a GitHub issue or pull request, typically us
 
 # `gh-issue-delete-comment`
 
-<span class="tag professional"></span>
-<span class="tag beta"></span>
-
 :::info
 This promotion step is only available in Kargo on the
 [Akuity Platform](https://akuity.io/akuity-platform), versions v1.11.0 and above.

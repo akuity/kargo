@@ -171,11 +171,11 @@ func LoadWorkTree(
 	if err = w.loadHomeDir(ctx); err != nil {
 		return nil, fmt.Errorf("error reading repo home dir from config: %w", err)
 	}
-	if err = w.loadURLs(ctx); err != nil {
+	if err = w.loadURL(ctx); err != nil {
 		return nil,
 			fmt.Errorf(`error reading URL of remote "origin" from config: %w`, err)
 	}
-	if err = w.setupAuth(w.homeDir); err != nil {
+	if err = w.setupAuth(); err != nil {
 		return nil, fmt.Errorf("error configuring the credentials: %w", err)
 	}
 	br, err := LoadBareRepo(ctx, repoPath, &LoadBareRepoOptions{
@@ -246,7 +246,7 @@ func (w *workTree) Checkout(ctx context.Context, branch string) error {
 	)); err != nil {
 		return fmt.Errorf(
 			"error checking out branch %q from repo %q: %w",
-			branch, w.originalURL, err,
+			branch, w.url, err,
 		)
 	}
 	return nil
@@ -293,6 +293,9 @@ func (w *workTree) Commit(
 			return fmt.Errorf(
 				"error setting up author + committer information for commit command: %w", err,
 			)
+		}
+		if err = w.disableAutoMaintenance(ctx, homeDir); err != nil {
+			return err
 		}
 	}
 
@@ -345,7 +348,7 @@ func (w *workTree) CreateChildBranch(ctx context.Context, branch string) error {
 	)); err != nil {
 		return fmt.Errorf(
 			"error creating new branch %q for repo %q: %w",
-			branch, w.originalURL, err,
+			branch, w.url, err,
 		)
 	}
 	return nil
@@ -357,7 +360,7 @@ func (w *workTree) CreateOrphanedBranch(ctx context.Context, branch string) erro
 	)); err != nil {
 		return fmt.Errorf(
 			"error creating orphaned branch %q for repo %q: %w",
-			branch, w.originalURL, err,
+			branch, w.url, err,
 		)
 	}
 	return w.Clean(ctx)
@@ -393,7 +396,7 @@ func (w *workTree) CurrentBranch(ctx context.Context) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf(
 			"error checking current branch for repo %q: %w",
-			w.originalURL, err,
+			w.url, err,
 		)
 	}
 	return strings.TrimSpace(string(res)), nil
@@ -403,7 +406,7 @@ func (w *workTree) DeleteBranch(ctx context.Context, branch string) error {
 	if _, err := libExec.Exec(w.buildGitCommand(
 		ctx, "branch", "--delete", "--force", branch,
 	)); err != nil {
-		return fmt.Errorf("error deleting branch %q for repo %q: %w", branch, w.accessURL, err)
+		return fmt.Errorf("error deleting branch %q for repo %q: %w", branch, w.url, err)
 	}
 	return nil
 }
@@ -437,7 +440,7 @@ func (w *workTree) Fetch(ctx context.Context, opts *FetchOptions) error {
 	}
 	if _, err := libExec.Exec(w.buildGitCommand(ctx, args...)); err != nil {
 		return fmt.Errorf(
-			"error fetching from repo %q: %w", w.originalURL, err,
+			"error fetching from repo %q: %w", w.url, err,
 		)
 	}
 	return nil
@@ -449,32 +452,36 @@ func (w *workTree) GetDiffPathsForCommitID(
 ) ([]string, error) {
 	resBytes, err := libExec.Exec(w.buildGitCommand(
 		ctx,
-		"show", "--pretty=", "--name-status", "--no-renames", "--first-parent", commitID,
+		"show", "--pretty=", "--name-status", "-z", "--no-renames", "--first-parent", commitID,
 	))
 	if err != nil {
 		return nil, fmt.Errorf("error getting diff paths for commit %q: %w", commitID, err)
 	}
 	var paths []string
-	scanner := bufio.NewScanner(bytes.NewReader(resBytes))
-	for scanner.Scan() {
-		line := scanner.Text()
-		if line == "" {
-			continue
-		}
-		// With --no-renames, a moved file is reported as a delete of the old
-		// path and an add of the new path rather than a single rename record,
-		// so --name-status output is always tab-separated as <status>\t<path>.
-		// This naturally surfaces both sides of a move without invoking git's
-		// rename detection, which can warn and fail on commits that change too
-		// many files at once.
-		parts := strings.SplitN(line, "\t", 2)
-		if len(parts) != 2 {
+	parts := strings.Split(string(resBytes), "\x00")
+	if parts[len(parts)-1] == "" {
+		parts = parts[:len(parts)-1]
+	}
+	// With --no-renames, a moved file is reported as a delete of the old
+	// path and an add of the new path rather than a single rename record,
+	// so --name-status -z output is always paired as <status>\0<path>\0.
+	// This naturally surfaces both sides of a move without invoking git's
+	// rename detection, which can warn and fail on commits that change too
+	// many files at once. With -z, paths are not quoted or escaped.
+	if len(parts)%2 != 0 {
+		return nil, fmt.Errorf(
+			"unexpected output from git show for commit %q: %q",
+			commitID, resBytes,
+		)
+	}
+	for i := 0; i < len(parts); i += 2 {
+		if parts[i] == "" {
 			return nil, fmt.Errorf(
 				"unexpected output from git show for commit %q: %q",
-				commitID, line,
+				commitID, resBytes,
 			)
 		}
-		paths = append(paths, parts[1])
+		paths = append(paths, parts[i+1])
 	}
 	return paths, nil
 }
@@ -588,7 +595,7 @@ func (w *workTree) ListCommits(
 	if err != nil {
 		return nil, fmt.Errorf(
 			"error listing commits for repo %q: %w",
-			w.originalURL, err,
+			w.url, err,
 		)
 	}
 
@@ -679,7 +686,7 @@ func (w *workTree) ListTags(ctx context.Context) ([]TagMetadata, error) {
 	)); err != nil {
 		return nil, fmt.Errorf(
 			"error fetching tags from repo %q: %w",
-			w.originalURL, err,
+			w.url, err,
 		)
 	}
 
@@ -719,7 +726,7 @@ func (w *workTree) ListTags(ctx context.Context) ([]TagMetadata, error) {
 	if err != nil {
 		return nil, fmt.Errorf(
 			"error listing tags for repo %q: %w",
-			w.originalURL, err,
+			w.url, err,
 		)
 	}
 

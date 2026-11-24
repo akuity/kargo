@@ -23,6 +23,7 @@ import (
 	"github.com/akuity/kargo/pkg/controller"
 	argocd "github.com/akuity/kargo/pkg/controller/argocd/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/indexer"
+	"github.com/akuity/kargo/pkg/kubernetes"
 )
 
 func TestUpdatedArgoCDAppHandler_Update(t *testing.T) {
@@ -358,6 +359,69 @@ func TestUpdatedArgoCDAppHandler_Update(t *testing.T) {
 				}, item)
 			},
 		},
+		{
+			name: "Application authorizes a Stage with a running Promotion to a Target",
+			applications: []client.Object{
+				targetPromotion("target-promotion", "fake-stage", "fake-target", kargoapi.PromotionPhaseRunning),
+				targetPromotion("finished-promotion", "fake-stage", "fake-target", kargoapi.PromotionPhaseSucceeded),
+				targetPromotion("untargeted-promotion", "fake-stage", "", kargoapi.PromotionPhaseRunning),
+				targetPromotion("other-stage-promotion", "other-stage", "fake-target", kargoapi.PromotionPhaseRunning),
+				func() client.Object {
+					promo := targetPromotion("other-shard-promotion", "fake-stage", "fake-target", kargoapi.PromotionPhaseRunning)
+					promo.Labels[kargoapi.LabelKeyShard] = "other-shard"
+					return promo
+				}(),
+			},
+			// The app name references target.*, so the name-based index misses it.
+			indexer: func(client.Object) []string { return nil },
+			e: event.TypedUpdateEvent[*argocd.Application]{
+				ObjectOld: &argocd.Application{},
+				ObjectNew: authorizedApp("fake-project:fake-stage"),
+			},
+			assertions: func(t *testing.T, wq workqueue.TypedRateLimitingInterface[reconcile.Request]) {
+				require.Equal(t, 1, wq.Len())
+				item, _ := wq.Get()
+				require.Equal(t, reconcile.Request{
+					NamespacedName: types.NamespacedName{
+						Namespace: "fake-project",
+						Name:      "target-promotion",
+					},
+				}, item)
+			},
+		},
+		{
+			name: "Application without an authorized-stage annotation",
+			applications: []client.Object{
+				targetPromotion("target-promotion", "fake-stage", "fake-target", kargoapi.PromotionPhaseRunning),
+			},
+			indexer: func(client.Object) []string { return nil },
+			e: event.TypedUpdateEvent[*argocd.Application]{
+				ObjectOld: &argocd.Application{},
+				ObjectNew: &argocd.Application{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "fake-application-name",
+						Namespace: "fake-application-namespace",
+					},
+				},
+			},
+			assertions: func(t *testing.T, wq workqueue.TypedRateLimitingInterface[reconcile.Request]) {
+				require.Equal(t, 0, wq.Len())
+			},
+		},
+		{
+			name: "Application with a malformed authorized-stage annotation",
+			applications: []client.Object{
+				targetPromotion("target-promotion", "fake-stage", "fake-target", kargoapi.PromotionPhaseRunning),
+			},
+			indexer: func(client.Object) []string { return nil },
+			e: event.TypedUpdateEvent[*argocd.Application]{
+				ObjectOld: &argocd.Application{},
+				ObjectNew: authorizedApp("fake-stage"),
+			},
+			assertions: func(t *testing.T, wq workqueue.TypedRateLimitingInterface[reconcile.Request]) {
+				require.Equal(t, 0, wq.Len())
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -396,10 +460,72 @@ func TestUpdatedArgoCDAppHandler_Update(t *testing.T) {
 	}
 }
 
+// targetPromotion returns a Promotion of the Stage in fake-project, labeled as
+// the Promotion webhook labels it.
+func targetPromotion(name, stage, target string, phase kargoapi.PromotionPhase) *kargoapi.Promotion {
+	return &kargoapi.Promotion{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: "fake-project",
+			Labels: map[string]string{
+				kargoapi.LabelKeyStage: kubernetes.ShortenLabelValue(stage),
+			},
+		},
+		Spec: kargoapi.PromotionSpec{
+			Stage:  stage,
+			Target: target,
+		},
+		Status: kargoapi.PromotionStatus{Phase: phase},
+	}
+}
+
+// authorizedApp returns an Application with the given authorized-stage
+// annotation value.
+func authorizedApp(stages string) *argocd.Application {
+	return &argocd.Application{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "fake-application-name",
+			Namespace: "fake-application-namespace",
+			Annotations: map[string]string{
+				kargoapi.AnnotationKeyAuthorizedStage: stages,
+			},
+		},
+	}
+}
+
 func TestPromotionAcknowledgedByStageHandler_Update(t *testing.T) {
+	scheme := runtime.NewScheme()
+	require.NoError(t, kargoapi.AddToScheme(scheme))
+
+	controllerTrue := true
+	// Longer than the 63 characters a label value may hold.
+	longStageName := strings.Repeat("a", 70)
+	require.Greater(t, len(longStageName), 63)
+	newRequestChild := func(name, target, request string, phase kargoapi.PromotionPhase) *kargoapi.Promotion {
+		return &kargoapi.Promotion{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: "fake-project",
+				Name:      name,
+				Labels:    map[string]string{kargoapi.LabelKeyStage: "fake-stage"},
+				OwnerReferences: []metav1.OwnerReference{{
+					APIVersion: kargoapi.GroupVersion.String(),
+					Kind:       "PromotionRequest",
+					Name:       request,
+					Controller: &controllerTrue,
+				}},
+			},
+			Spec: kargoapi.PromotionSpec{
+				Stage:  "fake-stage",
+				Target: target,
+			},
+			Status: kargoapi.PromotionStatus{Phase: phase},
+		}
+	}
+
 	testCases := []struct {
 		name           string
 		shardPredicate controller.ResponsibleFor[kargoapi.Stage]
+		objects        []client.Object
 		e              event.TypedUpdateEvent[*kargoapi.Stage]
 		assertions     func(
 			*testing.T,
@@ -517,10 +643,150 @@ func TestPromotionAcknowledgedByStageHandler_Update(t *testing.T) {
 				}, item)
 			},
 		},
+		{
+			name: "children of a newly current PromotionRequest are all enqueued",
+			shardPredicate: controller.ResponsibleFor[kargoapi.Stage]{
+				IsDefaultController: true,
+				ShardName:           "fake-shard",
+			},
+			objects: []client.Object{
+				newRequestChild("blue-promotion", "blue", "current-request", kargoapi.PromotionPhasePending),
+				newRequestChild("green-promotion", "green", "current-request", kargoapi.PromotionPhasePending),
+				// Terminal children and children of other requests are not
+				// enqueued.
+				newRequestChild("red-promotion", "red", "current-request", kargoapi.PromotionPhaseErrored),
+				newRequestChild("queued-promotion", "blue", "queued-request", kargoapi.PromotionPhasePending),
+			},
+			e: event.TypedUpdateEvent[*kargoapi.Stage]{
+				ObjectOld: &kargoapi.Stage{},
+				ObjectNew: &kargoapi.Stage{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "fake-project",
+						Name:      "fake-stage",
+					},
+					Status: kargoapi.StageStatus{
+						CurrentPromotionRequest: &kargoapi.PromotionRequestReference{
+							Name: "current-request",
+						},
+					},
+				},
+			},
+			assertions: func(
+				t *testing.T,
+				wq workqueue.TypedRateLimitingInterface[reconcile.Request],
+			) {
+				require.Equal(t, 2, wq.Len())
+				enqueued := make([]string, 0, 2)
+				for range 2 {
+					item, _ := wq.Get()
+					require.Equal(t, "fake-project", item.Namespace)
+					enqueued = append(enqueued, item.Name)
+				}
+				require.ElementsMatch(
+					t,
+					[]string{"blue-promotion", "green-promotion"},
+					enqueued,
+				)
+			},
+		},
+		{
+			// The Promotion webhook shortens the Stage label to fit the 63
+			// character limit on label values, so children must be found by the
+			// shortened value, not the raw Stage name.
+			name: "children are found by the shortened Stage label",
+			shardPredicate: controller.ResponsibleFor[kargoapi.Stage]{
+				IsDefaultController: true,
+				ShardName:           "fake-shard",
+			},
+			objects: []client.Object{
+				&kargoapi.Promotion{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "fake-project",
+						Name:      "blue-promotion",
+						Labels: map[string]string{
+							kargoapi.LabelKeyStage: kubernetes.ShortenLabelValue(longStageName),
+						},
+						OwnerReferences: []metav1.OwnerReference{{
+							APIVersion: kargoapi.GroupVersion.String(),
+							Kind:       "PromotionRequest",
+							Name:       "current-request",
+							Controller: &controllerTrue,
+						}},
+					},
+					Spec: kargoapi.PromotionSpec{
+						Stage:  longStageName,
+						Target: "blue",
+					},
+					Status: kargoapi.PromotionStatus{Phase: kargoapi.PromotionPhasePending},
+				},
+			},
+			e: event.TypedUpdateEvent[*kargoapi.Stage]{
+				ObjectOld: &kargoapi.Stage{},
+				ObjectNew: &kargoapi.Stage{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "fake-project",
+						Name:      longStageName,
+					},
+					Status: kargoapi.StageStatus{
+						CurrentPromotionRequest: &kargoapi.PromotionRequestReference{
+							Name: "current-request",
+						},
+					},
+				},
+			},
+			assertions: func(
+				t *testing.T,
+				wq workqueue.TypedRateLimitingInterface[reconcile.Request],
+			) {
+				require.Equal(t, 1, wq.Len())
+				item, _ := wq.Get()
+				require.Equal(t, "blue-promotion", item.Name)
+			},
+		},
+		{
+			name: "an unchanged current PromotionRequest enqueues nothing",
+			shardPredicate: controller.ResponsibleFor[kargoapi.Stage]{
+				IsDefaultController: true,
+				ShardName:           "fake-shard",
+			},
+			objects: []client.Object{
+				newRequestChild("blue-promotion", "blue", "current-request", kargoapi.PromotionPhasePending),
+			},
+			e: event.TypedUpdateEvent[*kargoapi.Stage]{
+				ObjectOld: &kargoapi.Stage{
+					Status: kargoapi.StageStatus{
+						CurrentPromotionRequest: &kargoapi.PromotionRequestReference{
+							Name: "current-request",
+						},
+					},
+				},
+				ObjectNew: &kargoapi.Stage{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "fake-project",
+						Name:      "fake-stage",
+					},
+					Status: kargoapi.StageStatus{
+						CurrentPromotionRequest: &kargoapi.PromotionRequestReference{
+							Name: "current-request",
+						},
+					},
+				},
+			},
+			assertions: func(
+				t *testing.T,
+				wq workqueue.TypedRateLimitingInterface[reconcile.Request],
+			) {
+				require.Equal(t, 0, wq.Len())
+			},
+		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			p := &PromotionAcknowledgedByStageHandler[*kargoapi.Stage]{
+				kargoClient: fake.NewClientBuilder().
+					WithScheme(scheme).
+					WithObjects(testCase.objects...).
+					Build(),
 				shardPredicate: testCase.shardPredicate,
 			}
 

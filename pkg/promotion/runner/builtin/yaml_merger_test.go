@@ -3,6 +3,7 @@ package builtin
 import (
 	"os"
 	"path"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -10,7 +11,7 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/promotion"
-	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
+	"github.com/akuity/kargo/pkg/x/promotion/stepconfig"
 )
 
 func Test_yamlMerger_convert(t *testing.T) {
@@ -82,12 +83,12 @@ func Test_YAMLMerger_run(t *testing.T) {
 	testCases := []struct {
 		name       string
 		fsFiles    map[string]string
-		cfg        builtin.YAMLMergeConfig
+		cfg        stepconfig.YAMLMergeConfig
 		assertions func(*testing.T, promotion.StepResult, error)
 	}{
 		{
 			name: "input file not found with ignoreMissingFiles false",
-			cfg: builtin.YAMLMergeConfig{
+			cfg: stepconfig.YAMLMergeConfig{
 				InFiles:            []string{"non-existent.yaml"},
 				IgnoreMissingFiles: false,
 			},
@@ -101,7 +102,7 @@ func Test_YAMLMerger_run(t *testing.T) {
 			fsFiles: map[string]string{
 				"invalid.yaml": ":",
 			},
-			cfg: builtin.YAMLMergeConfig{
+			cfg: stepconfig.YAMLMergeConfig{
 				InFiles: []string{"invalid.yaml"},
 				OutFile: "merged.yaml",
 			},
@@ -116,7 +117,7 @@ func Test_YAMLMerger_run(t *testing.T) {
 				"base.yaml":    "version: 1.0.0",
 				"overlay.yaml": "version: 2.0.0",
 			},
-			cfg: builtin.YAMLMergeConfig{
+			cfg: stepconfig.YAMLMergeConfig{
 				InFiles: []string{
 					"base.yaml",
 					"overlay.yaml",
@@ -149,8 +150,7 @@ func Test_YAMLMerger_run(t *testing.T) {
 				)
 				require.NoError(t, err)
 			}
-			stepCtx := &promotion.StepContext{WorkDir: workDir}
-			result, err := runner.run(t.Context(), stepCtx, testCase.cfg)
+			result, err := runner.run(t.Context(), newTestStepContext(t, workDir), testCase.cfg)
 			testCase.assertions(t, result, err)
 		})
 	}
@@ -196,4 +196,38 @@ func Test_YAMLMerger_generateCommitMessage(t *testing.T) {
 			assert.Equal(t, testCase.expected, result)
 		})
 	}
+}
+
+func Test_yamlMerger_run_escapingSymlink(t *testing.T) {
+	t.Run("input file", func(t *testing.T) {
+		workDir, outside := escapingWorkspace(t)
+		require.NoError(t, os.WriteFile(
+			filepath.Join(outside, "base.yaml"), []byte("k: v\n"), 0o600,
+		))
+		_, err := (&yamlMerger{}).run(
+			t.Context(),
+			newTestStepContext(t, workDir),
+			stepconfig.YAMLMergeConfig{
+				InFiles: []string{"out/base.yaml"},
+				OutFile: "merged.yaml",
+			},
+		)
+		require.ErrorContains(t, err, "path escapes from parent")
+	})
+	t.Run("output file", func(t *testing.T) {
+		workDir, outside := escapingWorkspace(t)
+		require.NoError(t, os.WriteFile(
+			filepath.Join(workDir, "base.yaml"), []byte("k: v\n"), 0o600,
+		))
+		_, err := (&yamlMerger{}).run(
+			t.Context(),
+			newTestStepContext(t, workDir),
+			stepconfig.YAMLMergeConfig{
+				InFiles: []string{"base.yaml"},
+				OutFile: "out/merged.yaml",
+			},
+		)
+		require.ErrorContains(t, err, "path escapes from parent")
+		require.NoFileExists(t, filepath.Join(outside, "merged.yaml"))
+	})
 }

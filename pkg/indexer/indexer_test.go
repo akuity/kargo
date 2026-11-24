@@ -928,6 +928,19 @@ func TestPromotionRequestsByStageAndFreight(t *testing.T) {
 	})
 }
 
+func TestPromotionRequestsByStage(t *testing.T) {
+	t.Run("PromotionRequest", func(t *testing.T) {
+		promotionRequest := &kargoapi.PromotionRequest{
+			Spec: kargoapi.PromotionRequestSpec{Stage: "fake-stage"},
+		}
+		require.Equal(t, []string{"fake-stage"}, PromotionRequestsByStage(promotionRequest))
+	})
+
+	t.Run("not a PromotionRequest", func(t *testing.T) {
+		require.Nil(t, PromotionRequestsByStage(&kargoapi.Promotion{}))
+	})
+}
+
 func TestFreightByWarehouse(t *testing.T) {
 	testCases := []struct {
 		name     string
@@ -1283,6 +1296,29 @@ func TestServiceAccountsByOIDCClaims(t *testing.T) {
 			},
 		},
 		{
+			name: "ServiceAccount has OIDC claims JSON with scalar values",
+			sa: &corev1.ServiceAccount{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						rbacapi.AnnotationKeyOIDCClaims: `{"groups": "kargo-admins", "sub": ["alice"]}`,
+					},
+				},
+			},
+			expected: []string{"groups/kargo-admins", "sub/alice"},
+		},
+		{
+			name: "ServiceAccount has OIDC claims with blank values",
+			sa: &corev1.ServiceAccount{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						rbacapi.AnnotationKeyOIDCClaimNamePrefix + "email": " , foo@bar.com, ",
+						rbacapi.AnnotationKeyOIDCClaims:                    `{"groups": ["", " devops "]}`,
+					},
+				},
+			},
+			expected: []string{"email/foo@bar.com", "groups/devops"},
+		},
+		{
 			name: "ServiceAccount has OIDC claims JSON with empty JSON object",
 			sa: &corev1.ServiceAccount{
 				ObjectMeta: metav1.ObjectMeta{
@@ -1299,6 +1335,18 @@ func TestServiceAccountsByOIDCClaims(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{
 					Annotations: map[string]string{
 						rbacapi.AnnotationKeyOIDCClaims: "invalid-input",
+					},
+				},
+			},
+			expected: nil,
+		},
+		{
+			name: "ServiceAccount has OIDC invalid input alongside old style claims",
+			sa: &corev1.ServiceAccount{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						rbacapi.AnnotationKeyOIDCClaimNamePrefix + "email": "foo@bar.com",
+						rbacapi.AnnotationKeyOIDCClaims:                    "invalid-input",
 					},
 				},
 			},

@@ -11,6 +11,7 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	libCreds "github.com/akuity/kargo/pkg/credentials"
 	libhttp "github.com/akuity/kargo/pkg/http"
+	"github.com/akuity/kargo/pkg/server/request"
 )
 
 // updateRepoCredentialsRequest is the request body for replacing repository credentials.
@@ -40,16 +41,12 @@ type updateRepoCredentialsRequest struct {
 // @Success 200 {object} corev1.Secret "Secret resource (k8s.io/api/core/v1.Secret)"
 // @Router /v1beta1/projects/{project}/repo-credentials/{repo-credentials} [put]
 func (s *server) updateProjectRepoCredentials(c *gin.Context) {
-	if !s.requireSecretManagement(c) {
-		return
-	}
-
 	ctx := c.Request.Context()
 	project := c.Param("project")
 	name := c.Param("repo-credentials")
 
 	var req updateRepoCredentialsRequest
-	if !bindJSONOrError(c, &req) {
+	if !request.BindJSON(c, &req) {
 		return
 	}
 
@@ -96,15 +93,11 @@ func (s *server) updateProjectRepoCredentials(c *gin.Context) {
 // @Success 200 {object} corev1.Secret "Secret resource (k8s.io/api/core/v1.Secret)"
 // @Router /v1beta1/shared/repo-credentials/{repo-credentials} [put]
 func (s *server) updateSharedRepoCredentials(c *gin.Context) {
-	if !s.requireSecretManagement(c) {
-		return
-	}
-
 	ctx := c.Request.Context()
 	name := c.Param("repo-credentials")
 
 	var req updateRepoCredentialsRequest
-	if !bindJSONOrError(c, &req) {
+	if !request.BindJSON(c, &req) {
 		return
 	}
 

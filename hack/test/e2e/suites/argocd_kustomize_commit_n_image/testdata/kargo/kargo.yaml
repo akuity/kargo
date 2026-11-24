@@ -1,0 +1,100 @@
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Project
+metadata:
+  name: kargo-argocd-kustomize-commit-image
+---
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Warehouse
+metadata:
+  name: kargo-demo
+  namespace: kargo-argocd-kustomize-commit-image
+spec:
+  subscriptions:
+  - git:
+      repoURL: https://github.com/<github-username>/kargo-demo-gitops.git
+      # Watch this branch instead of main. This is the "trunk" for this example.
+      branch: kustomize
+  - image:
+      repoURL: public.ecr.aws/nginx/nginx # Watch for new versions of this image
+      semverConstraint: ^1.24.0
+---
+apiVersion: kargo.akuity.io/v1alpha1
+kind: PromotionTask
+metadata:
+  name: promo-process
+  namespace: kargo-argocd-kustomize-commit-image
+spec:
+  vars:
+  - name: gitRepo
+    value: https://github.com/<github-username>/kargo-demo-gitops.git
+  - name: imageRepo
+    value: public.ecr.aws/nginx/nginx
+  steps:
+  - uses: argocd-update
+    config:
+      apps:
+      - name: ${{ ctx.project }}-${{ ctx.stage }}
+        sources:
+        - repoURL: ${{ vars.gitRepo }}
+          desiredRevision: ${{ commitFrom(vars.gitRepo).ID }}
+          updateTargetRevision: true
+          kustomize:
+            images:
+            - repoURL: ${{ vars.imageRepo }}
+              tag: ${{ imageFrom(vars.imageRepo).Tag }}
+---
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+metadata:
+  name: test
+  namespace: kargo-argocd-kustomize-commit-image
+spec:
+  requestedFreight:
+  - origin:
+      kind: Warehouse
+      name: kargo-demo
+    sources:
+      direct: true
+  promotionTemplate:
+    spec:
+      steps:
+      - task:
+          name: promo-process
+---
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+metadata:
+  name: uat
+  namespace: kargo-argocd-kustomize-commit-image
+spec:
+  requestedFreight:
+  - origin:
+      kind: Warehouse
+      name: kargo-demo
+    sources:
+      stages:
+      - test
+  promotionTemplate:
+    spec:
+      steps:
+      - task:
+          name: promo-process
+---
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+metadata:
+  name: prod
+  namespace: kargo-argocd-kustomize-commit-image
+spec:
+  requestedFreight:
+  - origin:
+      kind: Warehouse
+      name: kargo-demo
+    sources:
+      stages:
+      - uat
+  promotionTemplate:
+    spec:
+      steps:
+      - task:
+          name: promo-process

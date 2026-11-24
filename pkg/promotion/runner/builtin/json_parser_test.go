@@ -11,7 +11,7 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/promotion"
-	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
+	"github.com/akuity/kargo/pkg/x/promotion/stepconfig"
 )
 
 func Test_jsonParser_convert(t *testing.T) {
@@ -129,7 +129,7 @@ func Test_jsonParser_run(t *testing.T) {
 	tests := []struct {
 		name       string
 		stepCtx    *promotion.StepContext
-		cfg        builtin.JSONParseConfig
+		cfg        stepconfig.JSONParseConfig
 		files      map[string]string
 		assertions func(*testing.T, string, promotion.StepResult, error)
 	}{
@@ -138,9 +138,9 @@ func Test_jsonParser_run(t *testing.T) {
 			stepCtx: &promotion.StepContext{
 				Project: "test-project",
 			},
-			cfg: builtin.JSONParseConfig{
+			cfg: stepconfig.JSONParseConfig{
 				Path: "config.json",
-				Outputs: []builtin.JSONParse{
+				Outputs: []stepconfig.JSONParse{
 					{Name: "appVersion", FromExpression: "app.version"},
 					{Name: "featureStatus", FromExpression: "features.newFeature"},
 				},
@@ -172,9 +172,9 @@ func Test_jsonParser_run(t *testing.T) {
 			stepCtx: &promotion.StepContext{
 				Project: "test-project",
 			},
-			cfg: builtin.JSONParseConfig{
+			cfg: stepconfig.JSONParseConfig{
 				Path: "config.json",
-				Outputs: []builtin.JSONParse{
+				Outputs: []stepconfig.JSONParse{
 					{Name: "invalidField", FromExpression: "nonexistent.path"},
 				},
 			},
@@ -190,9 +190,9 @@ func Test_jsonParser_run(t *testing.T) {
 			stepCtx: &promotion.StepContext{
 				Project: "test-project",
 			},
-			cfg: builtin.JSONParseConfig{
+			cfg: stepconfig.JSONParseConfig{
 				Path:    "config.json",
-				Outputs: []builtin.JSONParse{},
+				Outputs: []stepconfig.JSONParse{},
 			},
 			files: map[string]string{
 				"config.json": `{
@@ -214,9 +214,9 @@ func Test_jsonParser_run(t *testing.T) {
 			stepCtx: &promotion.StepContext{
 				Project: "test-project",
 			},
-			cfg: builtin.JSONParseConfig{
+			cfg: stepconfig.JSONParseConfig{
 				Path: "config.json",
-				Outputs: []builtin.JSONParse{
+				Outputs: []stepconfig.JSONParse{
 					{Name: "key", FromExpression: "app.key"},
 				},
 			},
@@ -232,9 +232,9 @@ func Test_jsonParser_run(t *testing.T) {
 		{
 			name:    "path is empty",
 			stepCtx: &promotion.StepContext{Project: "test-project"},
-			cfg: builtin.JSONParseConfig{
+			cfg: stepconfig.JSONParseConfig{
 				Path:    "",
-				Outputs: []builtin.JSONParse{{Name: "key", FromExpression: "app.key"}},
+				Outputs: []stepconfig.JSONParse{{Name: "key", FromExpression: "app.key"}},
 			},
 			files: map[string]string{},
 			assertions: func(t *testing.T, _ string, result promotion.StepResult, err error) {
@@ -246,8 +246,8 @@ func Test_jsonParser_run(t *testing.T) {
 		{
 			name:    "path is a directory instead of a file",
 			stepCtx: &promotion.StepContext{Project: "test-project"},
-			cfg: builtin.JSONParseConfig{
-				Path: "config", Outputs: []builtin.JSONParse{{Name: "key", FromExpression: "app.key"}},
+			cfg: stepconfig.JSONParseConfig{
+				Path: "config", Outputs: []stepconfig.JSONParse{{Name: "key", FromExpression: "app.key"}},
 			},
 			files: map[string]string{},
 			assertions: func(t *testing.T, _ string, result promotion.StepResult, err error) {
@@ -261,9 +261,9 @@ func Test_jsonParser_run(t *testing.T) {
 			stepCtx: &promotion.StepContext{
 				Project: "test-project",
 			},
-			cfg: builtin.JSONParseConfig{
+			cfg: stepconfig.JSONParseConfig{
 				Path: "config.json",
-				Outputs: []builtin.JSONParse{
+				Outputs: []stepconfig.JSONParse{
 					{Name: "appVersion", FromExpression: "app.version"},
 					{Name: "isEnabled", FromExpression: "features.enabled"},
 					{Name: "threshold", FromExpression: "config.threshold"},
@@ -302,6 +302,7 @@ func Test_jsonParser_run(t *testing.T) {
 			stepCtx := tt.stepCtx
 
 			stepCtx.WorkDir = t.TempDir()
+			stepCtx.Root = newTestRoot(t, stepCtx.WorkDir)
 			for p, c := range tt.files {
 				require.NoError(t, os.MkdirAll(path.Join(stepCtx.WorkDir, path.Dir(p)), 0o700))
 				require.NoError(t, os.WriteFile(path.Join(stepCtx.WorkDir, p), []byte(c), 0o600))
@@ -412,7 +413,7 @@ func Test_jsonParser_readAndParseJSON(t *testing.T) {
 			err := os.WriteFile(filePath, []byte(tt.content), 0600)
 			require.NoError(t, err)
 
-			result, err := jp.readAndParseJSON(tempDir, "test.json")
+			result, err := jp.readAndParseJSON(newTestRoot(t, tempDir), "test.json")
 
 			if tt.expectedErrMsg != "" {
 				assert.Error(t, err)
@@ -431,14 +432,14 @@ func Test_jsonParser_extractValues(t *testing.T) {
 	tests := []struct {
 		name           string
 		data           any
-		outputs        []builtin.JSONParse
+		outputs        []stepconfig.JSONParse
 		expected       map[string]any
 		expectedErrMsg string
 	}{
 		{
 			name: "valid expression",
 			data: map[string]any{"key": "value"},
-			outputs: []builtin.JSONParse{
+			outputs: []stepconfig.JSONParse{
 				{Name: "result", FromExpression: "key"},
 			},
 			expected: map[string]any{"result": "value"},
@@ -446,7 +447,7 @@ func Test_jsonParser_extractValues(t *testing.T) {
 		{
 			name: "root list - access by index",
 			data: []any{"first", "second", "third"},
-			outputs: []builtin.JSONParse{
+			outputs: []stepconfig.JSONParse{
 				{Name: "result", FromExpression: "$env[0]"},
 			},
 			expected: map[string]any{"result": "first"},
@@ -454,7 +455,7 @@ func Test_jsonParser_extractValues(t *testing.T) {
 		{
 			name: "root list - get length",
 			data: []any{"first", "second", "third"},
-			outputs: []builtin.JSONParse{
+			outputs: []stepconfig.JSONParse{
 				{Name: "result", FromExpression: "len($env)"},
 			},
 			expected: map[string]any{"result": 3},
@@ -465,7 +466,7 @@ func Test_jsonParser_extractValues(t *testing.T) {
 				map[string]any{"name": "item1", "value": 10},
 				map[string]any{"name": "item2", "value": 20},
 			},
-			outputs: []builtin.JSONParse{
+			outputs: []stepconfig.JSONParse{
 				{Name: "result", FromExpression: "$env[1].name"},
 			},
 			expected: map[string]any{"result": "item2"},
@@ -473,7 +474,7 @@ func Test_jsonParser_extractValues(t *testing.T) {
 		{
 			name: "expression points to missing key",
 			data: map[string]any{"key": "value"},
-			outputs: []builtin.JSONParse{
+			outputs: []stepconfig.JSONParse{
 				{Name: "result", FromExpression: "missingKey"},
 			},
 			expected: map[string]any{"result": nil},
@@ -481,7 +482,7 @@ func Test_jsonParser_extractValues(t *testing.T) {
 		{
 			name: "expression evaluates to a nested object",
 			data: map[string]any{"nested": map[string]any{"key": "value"}},
-			outputs: []builtin.JSONParse{
+			outputs: []stepconfig.JSONParse{
 				{Name: "result", FromExpression: "nested"},
 			},
 			expected: map[string]any{"result": map[string]any{"key": "value"}},
@@ -489,7 +490,7 @@ func Test_jsonParser_extractValues(t *testing.T) {
 		{
 			name: "expression evaluates to an array",
 			data: map[string]any{"array": []any{1, 2, 3}},
-			outputs: []builtin.JSONParse{
+			outputs: []stepconfig.JSONParse{
 				{Name: "result", FromExpression: "array"},
 			},
 			expected: map[string]any{"result": []any{1, 2, 3}},
@@ -497,7 +498,7 @@ func Test_jsonParser_extractValues(t *testing.T) {
 		{
 			name: "expression evaluates to a string",
 			data: map[string]any{"key": "value"},
-			outputs: []builtin.JSONParse{
+			outputs: []stepconfig.JSONParse{
 				{Name: "result", FromExpression: "key"},
 			},
 			expected: map[string]any{"result": "value"},
@@ -505,7 +506,7 @@ func Test_jsonParser_extractValues(t *testing.T) {
 		{
 			name: "expression evaluates to an integer",
 			data: map[string]any{"number": 42},
-			outputs: []builtin.JSONParse{
+			outputs: []stepconfig.JSONParse{
 				{Name: "result", FromExpression: "number"},
 			},
 			expected: map[string]any{"result": 42},
@@ -513,7 +514,7 @@ func Test_jsonParser_extractValues(t *testing.T) {
 		{
 			name: "expression compilation error",
 			data: map[string]any{"key": "value"},
-			outputs: []builtin.JSONParse{
+			outputs: []stepconfig.JSONParse{
 				{Name: "result", FromExpression: "(1 + 2"},
 			},
 			expectedErrMsg: "error compiling expression",
@@ -533,4 +534,20 @@ func Test_jsonParser_extractValues(t *testing.T) {
 			}
 		})
 	}
+}
+
+func Test_jsonParser_run_escapingSymlink(t *testing.T) {
+	workDir, outside := escapingWorkspace(t)
+	require.NoError(t, os.WriteFile(
+		filepath.Join(outside, "secret.json"), []byte(`{"k": "v"}`), 0o600,
+	))
+	_, err := (&jsonParser{}).run(
+		t.Context(),
+		newTestStepContext(t, workDir),
+		stepconfig.JSONParseConfig{
+			Path:    "out/secret.json",
+			Outputs: []stepconfig.JSONParse{{Name: "k", FromExpression: "k"}},
+		},
+	)
+	require.ErrorContains(t, err, "path escapes from parent")
 }

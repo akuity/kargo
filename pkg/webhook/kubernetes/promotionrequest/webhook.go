@@ -125,17 +125,7 @@ func (w *webhook) validateSpec(
 	if err != nil {
 		return nil, err
 	}
-	errs = append(errs, stageErrs...)
-
-	targetErrs, err := w.validateTargetsExist(
-		ctx,
-		f.Child("targets"),
-		promotionRequest,
-	)
-	if err != nil {
-		return nil, err
-	}
-	return append(errs, targetErrs...), nil
+	return append(errs, stageErrs...), nil
 }
 
 // validateTargetsUnique enforces the uniqueness of Target names.
@@ -209,54 +199,4 @@ func (w *webhook) validateStage(
 		}, nil
 	}
 	return nil, nil
-}
-
-// validateTargetsExist confirms that every named Target exists in the
-// PromotionRequest's own Project.
-//
-// It deliberately does not check that each Target still matches the Stage's
-// selectors. spec.targets is a snapshot of what the Stage governed when the
-// request was created, and a Target's labels changing afterwards must not
-// retroactively invalidate a request that is already in flight.
-func (w *webhook) validateTargetsExist(
-	ctx context.Context,
-	f *field.Path,
-	promotionRequest *kargoapi.PromotionRequest,
-) (field.ErrorList, error) {
-	if len(promotionRequest.Spec.Targets) == 0 {
-		return nil, nil
-	}
-
-	// One List beats one Get per Target: a fleet PromotionRequest may name
-	// thousands, and this runs on every admission.
-	list := kargoapi.TargetList{}
-	if err := w.client.List(
-		ctx,
-		&list,
-		client.InNamespace(promotionRequest.Namespace),
-	); err != nil {
-		return nil, fmt.Errorf(
-			"error listing Targets in namespace %q: %w",
-			promotionRequest.Namespace, err,
-		)
-	}
-	existing := make(map[string]struct{}, len(list.Items))
-	for _, target := range list.Items {
-		existing[target.Name] = struct{}{}
-	}
-
-	var errs field.ErrorList
-	for i, target := range promotionRequest.Spec.Targets {
-		if _, ok := existing[target.Name]; !ok {
-			errs = append(errs, field.Invalid(
-				f.Index(i).Child("name"),
-				target.Name,
-				fmt.Sprintf(
-					"Target %q not found in namespace %q",
-					target.Name, promotionRequest.Namespace,
-				),
-			))
-		}
-	}
-	return errs, nil
 }

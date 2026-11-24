@@ -8,7 +8,7 @@
 
 /**
  * volumeAttributes stores driver-specific properties that are passed to the CSI
-driver. Consult your driver's documentation for supported values.
-+optional
+ * driver. Consult your driver's documentation for supported values.
+ * +optional
  */
 export type V1CSIVolumeSourceVolumeAttributes = { [key: string]: string };

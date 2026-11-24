@@ -6,32 +6,42 @@
  * OpenAPI spec version: v1alpha1
  */
 import type { ChartDiscoveryResult } from './chartDiscoveryResult';
+import type { DiscoveryResult } from './discoveryResult';
 import type { GitDiscoveryResult } from './gitDiscoveryResult';
 import type { ImageDiscoveryResult } from './imageDiscoveryResult';
-import type { DiscoveryResult } from './discoveryResult';
 
 export interface DiscoveredArtifacts {
-  /** Charts holds the charts discovered by the Warehouse for the chart
-subscriptions.
-
-+optional */
+  /**
+   * Charts holds the charts discovered by the Warehouse for the chart
+   * subscriptions.
+   *
+   * +optional
+   */
   charts?: ChartDiscoveryResult[];
-  /** DiscoveredAt is the time at which the Warehouse discovered the artifacts.
-
-+optional */
+  /**
+   * DiscoveredAt is the time at which the Warehouse discovered the artifacts.
+   *
+   * +optional
+   */
   discoveredAt?: string;
-  /** Git holds the commits discovered by the Warehouse for the Git
-subscriptions.
-
-+optional */
+  /**
+   * Git holds the commits discovered by the Warehouse for the Git
+   * subscriptions.
+   *
+   * +optional
+   */
   git?: GitDiscoveryResult[];
-  /** Images holds the image references discovered by the Warehouse for the
-image subscriptions.
-
-+optional */
+  /**
+   * Images holds the image references discovered by the Warehouse for the
+   * image subscriptions.
+   *
+   * +optional
+   */
   images?: ImageDiscoveryResult[];
-  /** Results holds the artifact references discovered by the Warehouse.
-
-+optional */
+  /**
+   * Results holds the artifact references discovered by the Warehouse.
+   *
+   * +optional
+   */
   results?: DiscoveryResult[];
 }

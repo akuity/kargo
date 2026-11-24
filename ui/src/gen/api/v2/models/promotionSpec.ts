@@ -5,62 +5,101 @@
  * REST API for Kargo
  * OpenAPI spec version: v1alpha1
  */
-import type { FreightOrigin } from './freightOrigin';
-import type { PromotionStep } from './promotionStep';
 import type { ExpressionVariable } from './expressionVariable';
+import type { FreightOrigin } from './freightOrigin';
+import type { InflatedPromotionTask } from './inflatedPromotionTask';
+import type { PromotionStep } from './promotionStep';
 
 export interface PromotionSpec {
-  /** Freight specifies the piece of Freight to be promoted into the Stage.
-Exactly one of Freight or Origin must be set.
-
-+kubebuilder:validation:Optional
-+kubebuilder:validation:MinLength=1
-+kubebuilder:validation:MaxLength=253
-+kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`
-+akuity:test-kubebuilder-pattern=KubernetesName */
+  /**
+   * Freight specifies the piece of Freight to be promoted into the Stage.
+   * Exactly one of Freight or Origin must be set.
+   *
+   * +kubebuilder:validation:Optional
+   * +kubebuilder:validation:MinLength=1
+   * +kubebuilder:validation:MaxLength=253
+   * +kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`
+   * +akuity:test-kubebuilder-pattern=KubernetesName
+   */
   freight?: string;
-  /** Origin, when set, identifies the FreightOrigin whose auto-promotion
-candidate should be promoted. The mutating webhook resolves this to the
-candidate Freight for that origin and fills Freight before the Promotion
-is persisted. Exactly one of Freight or Origin must be set.
-
-+kubebuilder:validation:Optional */
+  /**
+   * InflatedTasks records each step of the Stage's PromotionTemplate that
+   * referenced a (Cluster)PromotionTask and was inflated into Steps. It is
+   * set by Kargo when the Promotion is created and any value supplied by
+   * users is discarded.
+   *
+   * +kubebuilder:validation:Optional
+   */
+  inflatedTasks?: InflatedPromotionTask[];
+  /**
+   * Origin, when set, identifies the FreightOrigin whose auto-promotion
+   * candidate should be promoted. The mutating webhook resolves this to the
+   * candidate Freight for that origin and fills Freight before the Promotion
+   * is persisted. Exactly one of Freight or Origin must be set.
+   *
+   * +kubebuilder:validation:Optional
+   */
   origin?: FreightOrigin;
-  /** Stage specifies the name of the Stage to which this Promotion
-applies. The Stage referenced by this field MUST be in the same
-namespace as the Promotion.
-
-+kubebuilder:validation:Required
-+kubebuilder:validation:MinLength=1
-+kubebuilder:validation:MaxLength=253
-+kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`
-+akuity:test-kubebuilder-pattern=KubernetesName */
+  /**
+   * PromotionRollout optionally holds the id of the PromotionRollout this
+   * Promotion was created by, as one part of that rollout's fan-out to
+   * Targets. The id is the UID the API serves the rollout with. A
+   * PromotionRollout is not a Kubernetes resource, so it cannot own the
+   * Promotion; this field is the link in place of an owner reference, and
+   * the one the database's record of the Promotion is linked by.
+   *
+   * When empty (the default), the Promotion was not created by a
+   * PromotionRollout. When set, Target must be set too, and only the Kargo
+   * control plane may set it.
+   *
+   * +kubebuilder:validation:Optional
+   * +kubebuilder:validation:Pattern=`^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$`
+   * +akuity:test-kubebuilder-pattern=UUID
+   */
+  promotionRollout?: string;
+  /**
+   * Stage specifies the name of the Stage to which this Promotion
+   * applies. The Stage referenced by this field MUST be in the same
+   * namespace as the Promotion.
+   *
+   * +kubebuilder:validation:Required
+   * +kubebuilder:validation:MinLength=1
+   * +kubebuilder:validation:MaxLength=253
+   * +kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`
+   * +akuity:test-kubebuilder-pattern=KubernetesName
+   */
   stage: string;
-  /** Steps specifies the directives to be executed as part of this Promotion.
-The order in which the directives are executed is the order in which they
-are listed in this field.
-
-+kubebuilder:validation:Required
-+kubebuilder:validation:MinItems=1
-+kubebuilder:validation:items:XValidation:message="Promotion step must have uses set and must not reference a task",rule="has(self.uses) && !has(self.task)" */
+  /**
+   * Steps specifies the directives to be executed as part of this Promotion.
+   * The order in which the directives are executed is the order in which they
+   * are listed in this field.
+   *
+   * +kubebuilder:validation:Required
+   * +kubebuilder:validation:MinItems=1
+   * +kubebuilder:validation:items:XValidation:message="Promotion step must have uses set and must not reference a task",rule="has(self.uses) && !has(self.task)"
+   */
   steps: PromotionStep[];
-  /** Target optionally names the Target, within the Promotion's own Project
-(namespace), that this Promotion promotes Freight to. Targets allow a
-single Stage to govern -- and promote Freight to -- multiple destinations.
-When set, the named Target must be one that the referenced Stage governs,
-i.e. one selected by the Stage's targets.selectors.
-
-When empty (the default), the Promotion promotes to the Stage itself. This
-preserves the behavior of Promotions created before Targets existed:
-classic Stages -- those without a targets block -- govern no Targets, so
-their Promotions leave this field empty.
-
-+kubebuilder:validation:Optional
-+kubebuilder:validation:MaxLength=253
-+kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`
-+akuity:test-kubebuilder-pattern=KubernetesName */
+  /**
+   * Target optionally names the Target, within the Promotion's own Project
+   * (namespace), that this Promotion promotes Freight to. Targets allow a
+   * single Stage to govern -- and promote Freight to -- multiple destinations.
+   * When set, the named Target must be one that the referenced Stage governs,
+   * i.e. one selected by the Stage's targets.selectors.
+   *
+   * When empty (the default), the Promotion promotes to the Stage itself. This
+   * preserves the behavior of Promotions created before Targets existed:
+   * classic Stages -- those without a targets block -- govern no Targets, so
+   * their Promotions leave this field empty.
+   *
+   * +kubebuilder:validation:Optional
+   * +kubebuilder:validation:MaxLength=253
+   * +kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`
+   * +akuity:test-kubebuilder-pattern=KubernetesName
+   */
   target?: string;
-  /** Vars is a list of variables that can be referenced by expressions in
-promotion steps. */
+  /**
+   * Vars is a list of variables that can be referenced by expressions in
+   * promotion steps.
+   */
   vars?: ExpressionVariable[];
 }

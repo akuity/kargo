@@ -43,7 +43,6 @@ steps:
   as: open-pr
   config:
     repoURL: ${{ vars.repoURL }}
-    createTargetBranch: true
     sourceBranch: ${{ task.outputs.push.branch }}
     targetBranch: stage/${{ ctx.stage }}
 - uses: compose-output

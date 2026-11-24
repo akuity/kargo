@@ -20,6 +20,9 @@ const (
 	// PromotionRequestPhaseErrored denotes a PromotionRequest with Promotions that
 	// encountered technical errors.
 	PromotionRequestPhaseErrored PromotionRequestPhase = "Errored"
+	// PromotionRequestPhaseRunning denotes a PromotionRequest that is creating or
+	// monitoring Promotions.
+	PromotionRequestPhaseAborted PromotionRequestPhase = "Aborted"
 )
 
 // PromotionRequestPhase is a high-level summary of a PromotionRequest's lifecycle.
@@ -30,7 +33,8 @@ func (p *PromotionRequestPhase) IsTerminal() bool {
 	switch *p {
 	case PromotionRequestPhaseSucceeded,
 		PromotionRequestPhaseFailed,
-		PromotionRequestPhaseErrored:
+		PromotionRequestPhaseErrored,
+		PromotionRequestPhaseAborted:
 		return true
 	default:
 		return false
@@ -119,6 +123,22 @@ type PromotionRequestSpec struct {
 	// +listType=atomic
 	// +kubebuilder:validation:Required
 	Targets []PromotionRequestTarget `json:"targets"`
+
+	// UpdateStrategy configures the pace of updating the targets
+	// +optional
+	// +kubebuilder:validation:XValidation:rule="self == oldSelf"
+	UpdateStrategy PromotionRequestUpdateStrategy `json:"updateStrategy,omitempty"`
+}
+
+type PromotionRequestUpdateStrategy struct {
+	// MaxConcurrent specifies a number of targets which can be promoted to at the same time
+	// Zero means there is no limit (default)
+	MaxConcurrent int64 `json:"maxConcurrent,omitempty" minimum:"0"`
+	// MaxFailures specifies a number of target promotions which can fail before PromotionRequest is considered failed.
+	// Specifies a tolerable number, N failing promotions with maxFailures: N is a success, N+1 is a failure.
+	// Defaults to 0, meaning no failures tolerated.
+	// +kubebuilder:validation:Minimum=0
+	MaxFailures int64 `json:"maxFailures,omitempty" minimum:"0"`
 }
 
 // PromotionRequestTarget names a Target that a PromotionRequest promotes
@@ -151,6 +171,14 @@ type PromotionRequestStatus struct {
 	// +kubebuilder:validation:Optional
 	Phase PromotionRequestPhase `json:"phase,omitempty"`
 
+	// Message is a display message explaining the current Phase: what the
+	// PromotionRequest is waiting on, how far its fan-out has progressed, or
+	// why it did not succeed. i.e. If the Phase field has a value of Failed or
+	// Errored, this field can be expected to explain why.
+	//
+	// +kubebuilder:validation:Optional
+	Message string `json:"message,omitempty"`
+
 	// Targets records progress against spec.targets: one entry per Target, with
 	// the child Promotion promoting to it and that Promotion's phase. Entries
 	// appear as the reconciler acts on each Target in spec.targets.
@@ -181,6 +209,14 @@ type PromotionRequestStatus struct {
 
 	// FinishedAt is the time at which the PromotionRequest completed.
 	FinishedAt *metav1.Time `json:"finishedAt,omitempty"`
+
+	// Freight is the detail of the piece of freight that was referenced by this promotion.
+	Freight *FreightReference `json:"freight,omitempty"`
+
+	// FreightCollection contains the details of the piece of Freight referenced
+	// by this Promotion as well as any additional Freight that is carried over
+	// from the target Stage's current state.
+	FreightCollection *FreightCollection `json:"freightCollection,omitempty"`
 }
 
 // PromotionRequestTargetStatus records the state of a single Target selected
@@ -207,8 +243,8 @@ type PromotionRequestTargetStatus struct {
 	Phase PromotionPhase `json:"phase,omitempty"`
 }
 
-// PromotionRequestSummary aggregates the phases of a PromotionRequest's child
-// Promotions.
+// PromotionRequestSummary tallies a PromotionRequest's child Promotions by
+// phase.
 type PromotionRequestSummary struct {
 	// Pending is the number of child Promotions in the Pending phase.
 	Pending int32 `json:"pending,omitempty"`

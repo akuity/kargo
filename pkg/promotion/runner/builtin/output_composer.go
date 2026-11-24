@@ -8,7 +8,7 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/promotion"
-	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
+	"github.com/akuity/kargo/pkg/x/promotion/stepconfig"
 )
 
 const stepKindComposeOutput = "compose-output"
@@ -74,12 +74,12 @@ func (c *outputComposer) Run(
 	return c.run(cfg)
 }
 
-func (c *outputComposer) convert(cfg promotion.Config) (builtin.ComposeOutput, error) {
-	return validateAndConvert[builtin.ComposeOutput](c.schemaLoader, cfg, stepKindComposeOutput)
+func (c *outputComposer) convert(cfg promotion.Config) (stepconfig.ComposeOutput, error) {
+	return validateAndConvert[stepconfig.ComposeOutput](c.schemaLoader, cfg, stepKindComposeOutput)
 }
 
 func (c *outputComposer) run(
-	cfg builtin.ComposeOutput,
+	cfg stepconfig.ComposeOutput,
 ) (promotion.StepResult, error) {
 	return promotion.StepResult{
 		Status: kargoapi.PromotionStepStatusSucceeded,

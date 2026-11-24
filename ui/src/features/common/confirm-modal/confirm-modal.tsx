@@ -5,6 +5,7 @@ export interface ConfirmProps {
   title: string | React.ReactNode;
   onOk: () => Promise<unknown> | void;
   hide?: () => void;
+  visible?: boolean;
   content?: string | React.ReactNode;
 }
 
@@ -14,6 +15,7 @@ export const ConfirmModal = ({
   title = 'Are you sure?',
   content,
   hide,
+  visible,
   ...props
 }: ConfirmProps & ModalFuncProps) => {
   const [loading, setLoading] = React.useState(false);
@@ -37,12 +39,13 @@ export const ConfirmModal = ({
 
   return (
     <Modal
+      open={visible}
       onCancel={cancel}
       okText='Confirm'
       onOk={confirm}
       title={title}
-      okButtonProps={{ loading }}
       {...props}
+      okButtonProps={{ ...props.okButtonProps, loading }}
     >
       {content}
     </Modal>

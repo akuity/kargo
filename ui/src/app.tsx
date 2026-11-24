@@ -1,6 +1,5 @@
 import { QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
-import { ConfigProvider } from 'antd';
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
 
 import { Project } from '@ui/pages/project';
@@ -8,7 +7,6 @@ import { Project } from '@ui/pages/project';
 import { basePath } from './config/base-path';
 import { paths } from './config/paths';
 import { queryClient } from './config/query-client';
-import { themeConfig } from './config/themeConfig';
 import { AppExtensions } from './extensions/pages/app-extensions';
 import { ArgoCDExtension } from './extensions/pages/argocd-extension';
 import { ProjectExtensions } from './extensions/pages/project-extensions';
@@ -16,8 +14,10 @@ import { AuthContextProvider } from './features/auth/context/auth-context-provid
 import { ProtectedRoute } from './features/auth/protected-route';
 import { TokenRenew } from './features/auth/token-renew';
 import { MainLayout } from './features/common/layout/main-layout';
+import { ThemeContextProvider } from './features/common/theme/theme-context-provider';
 import { Events } from './features/project/events/events';
 import { ProjectSettings } from './features/project/settings/project-settings';
+import { TargetsPage } from './features/project/targets/targets-page';
 import { ProjectWizard } from './features/project-wizard/project-wizard';
 import { AnalysisRunLogsPage } from './pages/analysis-run-logs';
 import { Downloads } from './pages/downloads/downloads';
@@ -31,7 +31,7 @@ import 'antd/dist/reset.css';
 
 export const App = () => (
   <QueryClientProvider client={queryClient}>
-    <ConfigProvider theme={themeConfig}>
+    <ThemeContextProvider>
       <AuthContextProvider>
         <BrowserRouter basename={basePath()}>
           <Routes>
@@ -41,8 +41,11 @@ export const App = () => (
                 <Route path={paths.createProjectGuided} element={<ProjectWizard />} />
                 <Route path={paths.project} element={<Project />} />
                 <Route path={paths.projectEvents} element={<Events />} />
+                <Route path={paths.projectTargets} element={<TargetsPage />} />
                 <Route path={paths.stage} element={<Project />} />
                 <Route path={paths.promotion} element={<Project />} />
+                <Route path={paths.promotionRequest} element={<Project />} />
+                <Route path={paths.promotionRollout} element={<Project />} />
                 <Route path={paths.promote} element={<Project />} />
                 <Route path={paths.freight} element={<Project />} />
                 <Route path={paths.warehouse} element={<Project />} />
@@ -81,7 +84,7 @@ export const App = () => (
           </Routes>
         </BrowserRouter>
       </AuthContextProvider>
-    </ConfigProvider>
+    </ThemeContextProvider>
     <ReactQueryDevtools buttonPosition='bottom-left' />
   </QueryClientProvider>
 );

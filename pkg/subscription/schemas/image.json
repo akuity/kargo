@@ -26,29 +26,24 @@
             "type": "string",
             "description": "Constraint specifies ImageSelectionStrategy-specific constraints on what new image revisions are permissible. Acceptable values for this field vary contextually by ImageSelectionStrategy. The field is optional for some strategies. Others either require it or ignore it. For strategies that treat this field as optional, specifying no value means \"no constraints.\""
         },
-        "allowTags": {
-            "type": "string",
-            "description": "AllowTags is a regular expression that can optionally be used to limit the image tags that are considered in determining the newest version of an image. This field is optional. Deprecated: Use allowTagsRegexes instead. Beginning in v1.11.0, artifact discovery will FAIL if this field is non-empty. This field will be removed in v1.13.0."
-        },
         "allowTagsRegexes": {
             "type": "array",
             "items": {"type": "string"},
             "description": "AllowTagsRegexes is a list of regular expressions that can optionally be used to limit the image tags that are considered in determining the newest revision of an image. This field is optional."
-        },
-        "ignoreTags": {
-            "type": "array",
-            "items": {"type": "string"},
-            "description": "IgnoreTags is a list of tags that must be ignored when determining the newest version of an image. No regular expressions or glob patterns are supported yet. This field is optional. Deprecated: Use ignoreTagsRegexes instead. Beginning in v1.11.0, artifact discovery will FAIL if this field is non-empty. This field will be removed in v1.13.0."
         },
         "ignoreTagsRegexes": {
             "type": "array",
             "items": {"type": "string"},
             "description": "IgnoreTagsRegexes is a list of regular expressions that can optionally be used to exclude tags from consideration when determining the newest revision of an image. This field is optional."
         },
+        "expressionFilter": {
+            "type": "string",
+            "description": "ExpressionFilter is an expression that can optionally be used to limit the images that are considered in determining the newest image of interest based on their tags and metadata."
+        },
         "platform": {
             "type": "string",
-            "pattern": "^\\w+/\\w+$",
-            "description": "Platform is a string of the form <os>/<arch> that limits the tags that can be considered when searching for new versions of an image. This field is optional. When left unspecified, it is implicitly equivalent to the OS/architecture of the Kargo controller. Care should be taken to set this value correctly in cases where the image will run on a Kubernetes node with a different OS/architecture than the Kargo controller."
+            "pattern": "^\\w+/\\w+(/[\\w.-]+)?$",
+            "description": "Platform is a string of the form <os>/<arch> or <os>/<arch>/<variant> that limits the tags that can be considered when searching for new versions of an image. This field is optional. When left unspecified, it is implicitly equivalent to the OS/architecture of the Kargo controller. Care should be taken to set this value correctly in cases where the image will run on a Kubernetes node with a different OS/architecture than the Kargo controller."
         },
         "insecureSkipTLSVerify": {
             "type": "boolean",
@@ -67,5 +62,13 @@
             "description": "CacheByTag specifies whether to cache image metadata by tag. This can improve performance but may lead to stale data if mutable tags are used."
         }
     },
-    "additionalProperties": false
+    "additionalProperties": false,
+    "if": {
+        "required": ["imageSelectionStrategy"],
+        "properties": {"imageSelectionStrategy": {"const": "Digest"}}
+    },
+    "then": {
+        "required": ["constraint"],
+        "properties": {"constraint": {"minLength": 1}}
+    }
 }

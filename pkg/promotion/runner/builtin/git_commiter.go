@@ -4,13 +4,12 @@ import (
 	"context"
 	"fmt"
 
-	securejoin "github.com/cyphar/filepath-securejoin"
 	"github.com/xeipuuv/gojsonschema"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/controller/git"
 	"github.com/akuity/kargo/pkg/promotion"
-	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
+	"github.com/akuity/kargo/pkg/x/promotion/stepconfig"
 )
 
 const (
@@ -56,22 +55,19 @@ func (g *gitCommitter) Run(
 }
 
 // convert validates the configuration against a JSON schema and converts it
-// into a builtin.GitCommitConfig struct.
-func (g *gitCommitter) convert(cfg promotion.Config) (builtin.GitCommitConfig, error) {
-	return validateAndConvert[builtin.GitCommitConfig](g.schemaLoader, cfg, stepKindGitCommit)
+// into a stepconfig.GitCommitConfig struct.
+func (g *gitCommitter) convert(cfg promotion.Config) (stepconfig.GitCommitConfig, error) {
+	return validateAndConvert[stepconfig.GitCommitConfig](g.schemaLoader, cfg, stepKindGitCommit)
 }
 
 func (g *gitCommitter) run(
 	ctx context.Context,
 	stepCtx *promotion.StepContext,
-	cfg builtin.GitCommitConfig,
+	cfg stepconfig.GitCommitConfig,
 ) (promotion.StepResult, error) {
-	path, err := securejoin.SecureJoin(stepCtx.WorkDir, cfg.Path)
+	path, err := promotion.ExternalPath(stepCtx, cfg.Path)
 	if err != nil {
-		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, fmt.Errorf(
-			"error joining path %s with work dir %s: %w",
-			cfg.Path, stepCtx.WorkDir, err,
-		)
+		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, err
 	}
 	workTree, err := git.LoadWorkTree(ctx, path, nil)
 	if err != nil {
@@ -90,15 +86,7 @@ func (g *gitCommitter) run(
 
 	// Only commit if diffs have been found
 	if hasDiffs {
-		commitOpts := &git.CommitOptions{}
-		if cfg.Author != nil {
-			commitOpts.Author = &git.User{
-				Name:       cfg.Author.Name,
-				Email:      cfg.Author.Email,
-				SigningKey: cfg.Author.SigningKey,
-			}
-		}
-		if err = workTree.Commit(ctx, cfg.Message, commitOpts); err != nil {
+		if err = workTree.Commit(ctx, cfg.Message, nil); err != nil {
 			return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 				fmt.Errorf("error committing to working tree: %w", err)
 		}

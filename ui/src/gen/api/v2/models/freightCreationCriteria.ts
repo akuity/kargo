@@ -7,7 +7,9 @@
  */
 
 export interface FreightCreationCriteria {
-  /** Expression is an expr-lang expression that must evaluate to true for
-Freight to be created automatically from new artifacts following discovery. */
+  /**
+   * Expression is an expr-lang expression that must evaluate to true for
+   * Freight to be created automatically from new artifacts following discovery.
+   */
   expression?: string;
 }

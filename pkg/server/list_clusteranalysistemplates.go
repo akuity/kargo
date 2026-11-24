@@ -21,11 +21,6 @@ import (
 // @Success 200 {object} rollouts.ClusterAnalysisTemplateList "ClusterAnalysisTemplateList custom resource (github.com/argoproj/argo-rollouts/pkg/apis/rollouts/v1alpha1.ClusterAnalysisTemplateList)"
 // @Router /v1beta1/shared/cluster-analysis-templates [get]
 func (s *server) listClusterAnalysisTemplates(c *gin.Context) {
-	if !s.cfg.RolloutsIntegrationEnabled {
-		_ = c.Error(errArgoRolloutsIntegrationDisabled)
-		return
-	}
-
 	ctx := c.Request.Context()
 
 	list := &rollouts.ClusterAnalysisTemplateList{}

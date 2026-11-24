@@ -57,6 +57,27 @@ type ProjectStats struct {
 	Warehouses WarehouseStats `json:"warehouses,omitempty"`
 	// Stages contains a summary of the collective state of the Project's Stages.
 	Stages StageStats `json:"stages,omitempty"`
+	// Targets contains a summary of the collective state of the Project's
+	// Targets. It is absent for a Project with no Targets.
+	//
+	// +optional
+	Targets *TargetStats `json:"targets,omitempty"`
+}
+
+// TargetStats contains a summary of the collective state of a Project's
+// Targets, in the same shape as the summaries of its Stages and Warehouses.
+type TargetStats struct {
+	// Count contains the total number of Targets in the Project.
+	Count int64 `json:"count,omitempty"`
+	// Health contains a summary of the collective health of a Project's
+	// Targets.
+	//
+	// Until Target status records health, a Target is counted as healthy when
+	// at least one Stage has promoted to it and the latest promotion to it from
+	// every Stage that did so succeeded. Once Target health is recorded, a
+	// Target is counted as healthy when it is healthy with respect to every
+	// Stage that governs it.
+	Health HealthStats `json:"health,omitempty"`
 }
 
 // WarehouseStats contains a summary of the collective state of a Project's

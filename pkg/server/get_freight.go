@@ -23,8 +23,9 @@ func (s *server) getFreight(c *gin.Context) {
 	project := c.Param("project")
 	nameOrAlias := c.Param("freight-name-or-alias")
 
-	freight := s.getFreightByNameOrAliasForGin(c, project, nameOrAlias)
-	if freight == nil {
+	freight, err := s.getFreightByNameOrAlias(c.Request.Context(), project, nameOrAlias)
+	if err != nil {
+		_ = c.Error(err)
 		return
 	}
 
@@ -34,5 +35,5 @@ func (s *server) getFreight(c *gin.Context) {
 // This keeps the kargoapi import above in scope for the @Success annotation
 // on getFreight, which documents the response type without constructing one
 // directly (the actual response is produced by the shared
-// getFreightByNameOrAliasForGin helper).
+// getFreightByNameOrAlias helper).
 var _ kargoapi.Freight

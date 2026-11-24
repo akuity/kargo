@@ -38,6 +38,9 @@ You will need:
 
 - [Helm](https://helm.sh/docs/): These instructions were tested with v3.13.1.
 
+- The [Kargo CLI](../50-user-guide/05-cli/10-installation.md), to hash the
+  admin account's password.
+
 - A Kubernetes cluster with [cert-manager](https://cert-manager.io/)
   pre-installed.
 
@@ -77,23 +80,25 @@ These instructions were tested with:
 
 ## Installation Steps
 
-1. Generate a password and a signing key.
+1. Generate a password, a signing key, and a database password.
 
-    There are no default values for these two fields, so you _must_ provide your
-    own.
+    There are no default values for these three fields, so you _must_ provide
+    your own.
 
-    Recommended commands for generating a complex password and signing key, and
-    for hashing the password as required are:
+    Recommended commands for generating a complex password and signing key, for
+    hashing the password as required, and for generating a password for the
+    bundled database are:
 
     ```console
     pass=$(openssl rand -base64 48 | tr -d "=+/" | head -c 32)
     echo "Password: $pass"
-    hashed_pass=$(htpasswd -bnBC 10 "" $pass | tr -d ':\n')
+    hashed_pass=$(kargo hash-password --password "$pass")
     signing_key=$(openssl rand -base64 48 | tr -d "=+/" | head -c 32)
+    db_pass=$(openssl rand -base64 48 | tr -d "=+/" | head -c 32)
     ```
 
-    The above commands will leave you with values assigned to `$hashed_pass` and
-    `$signing_key`. These will be used in the next step.
+    The above commands will leave you with values assigned to `$hashed_pass`,
+    `$signing_key`, and `$db_pass`. These will be used in the next step.
 
 1. Install Kargo with default configuration and your chosen admin account
    password:
@@ -105,8 +110,59 @@ These instructions were tested with:
       --create-namespace \
       --set api.adminAccount.passwordHash=$hashed_pass \
       --set api.adminAccount.tokenSigningKey=$signing_key \
+      --set database.postgres.password=$db_pass \
       --wait
     ```
+
+## Database
+
+The chart installs a minimal PostgreSQL instance alongside Kargo. It runs as
+a single, unreplicated instance with no backups or tuning and is meant for
+evaluation and development. To use your own database instead, set
+`database.postgres.enabled` to `false` and point `database.external.secretName`
+at a Secret holding its connection string.
+
+The bundled instance's `kargo` user is protected by the password you provide
+as `database.postgres.password`, as in the installation steps above. Like the
+admin account's token signing key, it is stored in plaintext. To keep it out of
+your values, create a Secret in Kargo's namespace holding the password under
+the key `password` and set `database.postgres.existingSecret` to its name; the
+chart then stores no password itself. This is the recommended approach when
+installing with a GitOps tool such as
+[Argo CD](./20-advanced-installation/20-advanced-with-argocd.md#database-password).
+
+### Schema migrations
+
+On every install and upgrade, the chart runs a Job that applies any pending
+database schema migrations. The migrations are embedded in the Kargo image,
+and the Job applies them with that image's `migrate` subcommand, so the
+schema it produces is the one the installed version expects. It waits for the
+database to accept connections, serializes with any other runner against the
+same schema on a lock, and leaves its Pod in place after finishing so that its
+logs can be inspected. The next upgrade replaces the Job, and the previous
+one is pruned with it.
+
+The Job is an ordinary resource rather than a Helm hook, so it also works
+when the chart is rendered with `helm template`, as GitOps tools do. Ordering
+does not matter: the Job waits for the database, and Kargo's components
+refuse to serve against a schema that is behind the version they expect.
+
+To apply migrations yourself, for example from a pipeline that manages schema
+changes with its own approvals, set `database.migrations.enabled` to `false`
+and run the same subcommand from the Kargo image against your database:
+
+```shell
+docker run --rm -e DATABASE_URL='postgres://...' ghcr.io/akuity/kargo:<version> migrate
+```
+
+:::note
+The `migrate` subcommand belongs to the control plane binary in the Kargo
+image, not to the `kargo` CLI you install locally.
+:::
+
+Migrations are forward-only and each release's schema remains compatible with
+the previous release's code, so a rollback of Kargo does not require a
+rollback of the schema.
 
 ## Troubleshooting
 

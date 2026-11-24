@@ -8,7 +8,7 @@
 
 /**
  * Metadata is a map of arbitrary metadata associated with the Freight.
-This is useful for storing additional information about the Freight
-or Promotion that can be shared across steps or stages.
+ * This is useful for storing additional information about the Freight
+ * or Promotion that can be shared across steps or stages.
  */
 export type FreightStatusMetadata = { [key: string]: unknown };

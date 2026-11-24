@@ -10,17 +10,26 @@ import {
 } from '@xyflow/react';
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 
-import { WarehouseExpanded } from '@ui/extend/types';
+import { RepoSubscription, WarehouseExpanded } from '@ui/extend/types';
+import { useTheme } from '@ui/features/common/theme/use-theme';
 import { queryCache } from '@ui/features/utils/cache';
 import { Stage } from '@ui/gen/api/v2/models';
 
 import { useFreightTimelineControllerContext } from '../context/freight-timeline-controller-context';
 import { GraphContext } from '../context/graph-context';
 import { StackedNodes } from '../nodes/stacked-nodes';
+import warehouseStyles from '../nodes/warehouse-node.module.less';
+import {
+  getWarehouseState,
+  isSubscriptionFailing,
+  keepFailureThroughRetry,
+  WarehouseState
+} from '../nodes/warehouse-state';
 
 import { CustomRepoSubscriptionNode, CustomStageNode, CustomWarehouseNode } from './custom-node';
 import { repoSubscriptionIndexer, stageIndexer, warehouseIndexer } from './node-indexer';
 import { useEventsWatcher } from './use-events-watcher';
+import { useHeldDiscovering } from './use-held-discovering';
 import { reactFlowNodeConstants, useReactFlowPipelineGraph } from './use-pipeline-graph';
 
 type GraphProps = {
@@ -36,7 +45,12 @@ const nodeTypes = {
   [reactFlowNodeConstants.CUSTOM_REPO_SUBSCRIPTION_NODE]: CustomRepoSubscriptionNode
 };
 
+// Keep fitted nodes clear of the filters and buttons floating over the top of
+// the graph. Horizontal padding matches React Flow's default.
+const fitViewPadding = { top: '80px', bottom: '60px', x: 0.1 } as const;
+
 export const Graph = (props: GraphProps) => {
+  const { isDark } = useTheme();
   const reactFlowInstance = useRef<ReactFlowInstance | null>(null);
   const filterContext = useFreightTimelineControllerContext();
 
@@ -81,7 +95,7 @@ export const Graph = (props: GraphProps) => {
     filterContext?.preferredFilter?.hideSubscriptions
   );
 
-  const [nodes, setNodes] = useNodesState(graph.nodes);
+  const [nodes, setNodes, onNodesChange] = useNodesState(graph.nodes);
 
   // useLayoutEffect fires synchronously after DOM mutations but before the browser
   // paints. This prevents the one-frame intermediate state where node content has
@@ -161,15 +175,37 @@ export const Graph = (props: GraphProps) => {
     filterContext?.preferredFilter?.warehouses || []
   );
 
+  // the Warehouses as last shown, which a failed one's retries leave in place
+  const shownWarehouses = useRef<Record<string, WarehouseExpanded>>({});
+
   const warehouseByName = useMemo(() => {
     const warehouseByName: Record<string, WarehouseExpanded> = {};
 
     for (const warehouse of props.warehouses) {
-      warehouseByName[warehouse.metadata?.name || ''] = warehouse;
+      const name = warehouse.metadata?.name || '';
+      warehouseByName[name] = keepFailureThroughRetry(shownWarehouses.current[name], warehouse);
     }
 
     return warehouseByName;
   }, [props.warehouses]);
+
+  // Recorded once committed, so that a render React discards never becomes
+  // what the next one compares against.
+  useLayoutEffect(() => {
+    shownWarehouses.current = warehouseByName;
+  }, [warehouseByName]);
+
+  const discoveringNow = useMemo(
+    () =>
+      Object.keys(warehouseByName).filter(
+        (name) => getWarehouseState(warehouseByName[name]).phase === 'discovering'
+      ),
+    [warehouseByName]
+  );
+
+  // held a moment past a quick discovery, so that its loader and edge
+  // animation do not blink
+  const discoveringWarehouses = useHeldDiscovering(discoveringNow);
 
   const [hoveredWarehouseName, setHoveredWarehouseName] = useState<string | null>(null);
 
@@ -187,14 +223,51 @@ export const Graph = (props: GraphProps) => {
     [graph.edges, edgeType]
   );
 
+  // The layout is throttled and does not rerun as Warehouses change, so the
+  // edges into a Warehouse are drawn by its state here, from the live
+  // Warehouse, rather than baked in with the layout.
+  const discoveryEdges = useMemo(() => {
+    const stateByWarehouse: Record<string, WarehouseState> = {};
+
+    return typedEdges.map((edge) => {
+      const warehouseName = edge.data?.subscriptionWarehouse as string | undefined;
+      const subscription = edge.data?.subscription as RepoSubscription | undefined;
+
+      if (!warehouseName || !subscription) {
+        return edge;
+      }
+
+      stateByWarehouse[warehouseName] ??= getWarehouseState(warehouseByName[warehouseName]);
+      const state = stateByWarehouse[warehouseName];
+
+      if (discoveringWarehouses.has(warehouseName)) {
+        return {
+          ...edge,
+          className: warehouseStyles.edgeDiscovering,
+          style: { ...edge.style, stroke: 'var(--kargo-color-info)', strokeOpacity: 0.7 }
+        };
+      }
+
+      if (isSubscriptionFailing(state, subscription)) {
+        return {
+          ...edge,
+          className: warehouseStyles.edgeFailing,
+          style: { ...edge.style, stroke: 'var(--kargo-color-error)', strokeOpacity: 0.6 }
+        };
+      }
+
+      return edge;
+    });
+  }, [typedEdges, warehouseByName, discoveringWarehouses]);
+
   const edges = useMemo(() => {
     if (!hoveredWarehouseName || distinctEdgeWarehouses < 2) {
-      return typedEdges;
+      return discoveryEdges;
     }
 
     // Highlight edges belonging to the hovered warehouse and dim all others.
     // zIndex is used to ensure that the highlighted edges are drawn on top of the dimmed edges.
-    return typedEdges.map((edge) => {
+    return discoveryEdges.map((edge) => {
       if (edge.data?.warehouseName !== hoveredWarehouseName) {
         return { ...edge, zIndex: -1 };
       }
@@ -208,12 +281,12 @@ export const Graph = (props: GraphProps) => {
         }
       };
     });
-  }, [typedEdges, hoveredWarehouseName, distinctEdgeWarehouses]);
+  }, [discoveryEdges, hoveredWarehouseName, distinctEdgeWarehouses]);
 
   const nodesExcludingSubscriptionNodes = useMemo(() => {
     const subscriptionNodes = nodes.filter((n) => repoSubscriptionIndexer.is(n.id));
 
-    if (subscriptionNodes?.length > 5) {
+    if (subscriptionNodes?.length > 8) {
       return nodes.filter((n) => !repoSubscriptionIndexer.is(n.id));
     }
 
@@ -222,7 +295,7 @@ export const Graph = (props: GraphProps) => {
 
   useEffect(() => {
     requestAnimationFrame(() => {
-      reactFlowInstance.current?.fitView();
+      reactFlowInstance.current?.fitView({ padding: fitViewPadding });
     });
   }, [filterContext?.preferredFilter?.hideSubscriptions]);
 
@@ -281,6 +354,7 @@ export const Graph = (props: GraphProps) => {
     <GraphContext.Provider
       value={{
         warehouseByName,
+        discoveringWarehouses,
         stackedNodesParents,
         onStack,
         onUnstack,
@@ -291,15 +365,22 @@ export const Graph = (props: GraphProps) => {
       }}
     >
       <ReactFlow
+        className='kargo-pipeline-graph'
+        colorMode={isDark ? 'dark' : 'light'}
         nodes={nodes}
+        // Sizes only, so that a node replaced by a watch event keeps them.
+        // Without them React Flow drops the node's handles, and its edges are
+        // drawn afresh, restarting their animation.
+        onNodesChange={(changes) => onNodesChange(changes.filter((c) => c.type === 'dimensions'))}
         edges={edges}
         nodeTypes={nodeTypes}
         fitView
         fitViewOptions={{
-          nodes: nodesExcludingSubscriptionNodes
+          nodes: nodesExcludingSubscriptionNodes,
+          padding: fitViewPadding
         }}
         proOptions={{ hideAttribution: true }}
-        minZoom={nodes.length > 100 ? 0.4 : 0.1}
+        minZoom={nodes.length > 100 ? 0.4 : 0.2}
         maxZoom={1.4}
         onlyRenderVisibleElements
         panOnDrag
@@ -307,12 +388,19 @@ export const Graph = (props: GraphProps) => {
       >
         {filterContext?.preferredFilter?.showMinimap && (
           <MiniMap
-            style={{ background: 'white', border: '1px solid lightblue', borderRadius: '5px' }}
+            style={{
+              width: 140,
+              height: 100,
+              background: 'var(--kargo-color-bg-container, white)',
+              border: '1px solid var(--kargo-color-border, lightblue)',
+              borderRadius: '5px'
+            }}
             pannable
           />
         )}
         <Controls
           showInteractive={false}
+          fitViewOptions={{ padding: fitViewPadding }}
           onFitView={() => {
             setRedraw(!redraw);
           }}

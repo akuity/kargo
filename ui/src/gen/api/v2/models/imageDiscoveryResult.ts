@@ -8,25 +8,33 @@
 import type { DiscoveredImageReference } from './discoveredImageReference';
 
 export interface ImageDiscoveryResult {
-  /** Platform is the target platform constraint of the ImageSubscription
-for which references were discovered. This field is optional, and
-only populated if the ImageSubscription specifies a Platform. */
+  /**
+   * Platform is the target platform constraint of the ImageSubscription
+   * for which references were discovered. This field is optional, and
+   * only populated if the ImageSubscription specifies a Platform.
+   */
   platform?: string;
-  /** References is a list of image references discovered by the Warehouse for
-the ImageSubscription. An empty list indicates that the discovery
-operation was successful, but no images matching the ImageSubscription
-criteria were found.
-
-+optional */
+  /**
+   * References is a list of image references discovered by the Warehouse for
+   * the ImageSubscription. An empty list indicates that the discovery
+   * operation was successful, but no images matching the ImageSubscription
+   * criteria were found.
+   *
+   * +optional
+   */
   references?: DiscoveredImageReference[];
-  /** RepoURL is the repository URL of the image, as specified in the
-ImageSubscription.
-
-+kubebuilder:validation:MinLength=1 */
+  /**
+   * RepoURL is the repository URL of the image, as specified in the
+   * ImageSubscription.
+   *
+   * +kubebuilder:validation:MinLength=1
+   */
   repoURL?: string;
-  /** SubscriptionName is the optional human-readable name of the subscription
-that produced this discovery result.
-
-+optional */
+  /**
+   * SubscriptionName is the optional human-readable name of the subscription
+   * that produced this discovery result.
+   *
+   * +optional
+   */
   subscriptionName?: string;
 }

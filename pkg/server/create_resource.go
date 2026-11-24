@@ -17,10 +17,10 @@ import (
 	sigyaml "sigs.k8s.io/yaml"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	"github.com/akuity/kargo/pkg/api"
 	"github.com/akuity/kargo/pkg/event"
 	libhttp "github.com/akuity/kargo/pkg/http"
 	"github.com/akuity/kargo/pkg/logging"
+	"github.com/akuity/kargo/pkg/server/middleware"
 	"github.com/akuity/kargo/pkg/server/user"
 )
 
@@ -35,13 +35,14 @@ type createResourceResult struct {
 	Error                   string         `json:"error,omitempty"`
 } // @name CreateResourceResult
 
-// resourceErrorResponse is the name errorResponse was first published under,
-// and the name the spec has to keep: renaming the schema would rename the
-// corresponding type in every generated client. This operation is the only one
-// that documents an error body, and it refers to this alias rather than to
-// errorResponse, which is what makes swag honor the name below.
+// resourceErrorResponse is the name middleware.ErrorResponse was first
+// published under, and the name the spec has to keep: renaming the schema
+// would rename the corresponding type in every generated client. This
+// operation is the only one that documents an error body, and it refers to
+// this alias rather than to the type itself, which is what makes swag honor
+// the name below.
 // nolint: unused
-type resourceErrorResponse = errorResponse // @name ResourceErrorResponse
+type resourceErrorResponse = middleware.ErrorResponse // @name ResourceErrorResponse
 
 // @id CreateResource
 // @Summary Create resources
@@ -87,15 +88,15 @@ func (s *server) createResources(c *gin.Context) {
 		resource := r // Avoid implicit memory aliasing
 		var cl client.Client = s.client
 		if _, ok := createdProjects[resource.GetNamespace()]; ok {
-			// This resource belongs to a Project we created previously in this API
-			// call. The user had sufficient permissions to accomplish that and having
-			// done so makes them automatically the "owner" of the Project and an
-			// admin. Most of those permissions are wrangled into place asynchronously
-			// by the management controller, so in order to proceed with synchronously
-			// creating resources within the Project at this time, we will use the API
-			// server's own permissions to accomplish that. We accomplish that using
-			// s.client's internal client for creation of this resource.
-			cl = s.client.InternalClient()
+			// Kubernetes ignores metadata.namespace for a cluster-scoped kind, so a
+			// spoofed value could bypass authorization there. Confirm real scope via
+			// the RESTMapper before trusting it.
+			if namespaced, err := s.client.IsObjectNamespaced(&resource); err == nil && namespaced {
+				// Creating the Project made the user its owner/admin, but RBAC for it
+				// is wired up asynchronously by the management controller. Use the API
+				// server's own permissions here so this isn't blocked by that race.
+				cl = s.client.InternalClient()
+			}
 		}
 		result, err := s.createResource(ctx, cl, &resource)
 		if err != nil && len(resources) == 1 {
@@ -121,6 +122,11 @@ func (s *server) createResource(
 		return createResourceResult{
 			Error: errSecretManagementDisabled.Error(),
 		}, errSecretManagementDisabled
+	}
+	if obj.GroupVersionKind() == targetGVK {
+		return createResourceResult{
+			Error: errTargetNotKubernetesResource.Error(),
+		}, errTargetNotKubernetesResource
 	}
 
 	// Enforce authorization checks the authorizing client cannot perform
@@ -180,12 +186,15 @@ func (s *server) createResource(
 		); convertErr == nil {
 			var actor string
 			eventMsg := "Freight created"
-			if u, ok := user.InfoFromContext(ctx); ok {
-				actor = api.FormatEventUserActor(u)
+			if u, ok := user.IdentityFromContext(ctx); ok {
+				actor = u.Actor()
 				eventMsg += fmt.Sprintf(" by %q", actor)
 			}
-			evt := event.NewFreightCreated(eventMsg, actor, &freight)
-			if sendErr := s.sender.Send(ctx, evt); sendErr != nil {
+			evt, sendErr := event.NewFreightCreated(eventMsg, actor, &freight)
+			if sendErr == nil {
+				sendErr = s.sender.Send(ctx, evt)
+			}
+			if sendErr != nil {
 				logging.LoggerFromContext(ctx).Error(
 					sendErr, "error sending FreightCreated event")
 			}

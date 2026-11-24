@@ -16,13 +16,14 @@ or scheduled for removal.
 
 | Feature | Deprecated In | Removed In | Replacement/Notes |
 |---------|---------------|------------|-------------------|
-| `git-commit` step `author` field | [v1.10.0](./89-v1.10.0.md) | Scheduled for v1.12.0 | Configure authorship and signing in the `git-clone` step or via `ClusterConfig`. See [git-commit docs](https://docs.kargo.io/user-guide/reference-docs/promotion-steps/git-commit). |
-| `git-push` default integration policy (`AlwaysRebase`) | [v1.10.0](./89-v1.10.0.md) | Default changes in v1.12.0 | The default `git-push` push integration policy will change from `AlwaysRebase` to `RebaseOrMerge` in v1.12.0. Set [`controller.gitClient.pushIntegrationPolicy`](https://docs.kargo.io/operator-guide/advanced-installation/common-configurations#push-integration-policy) explicitly if you rely on unconditional rebase. |
-| SSH URLs and SSH private keys for Git repositories | v1.10.0 | Scheduled for v1.13.0 | Use HTTPS URLs with a personal access token or equivalent. SSH keys cannot authenticate to git provider APIs, forcing users to maintain two sets of credentials. See [#5858](https://github.com/akuity/kargo/issues/5858) for details. |
-| The `createTargetBranch` option in the `git-open-pr` promotion step | [v1.10.0](./89-v1.10.0.md) | Scheduled for v1.12.0 | The `createTargetBranch` option has been deprecated as the feature never worked. See [#5847](https://github.com/akuity/kargo/issues/5847) for details. |
-| The Connect-based (gRPC) API | [v1.9.0](./90-v1.9.0.md) | Scheduled for v1.12.0 | Replaced by a new, RESTful API. The UI [completed its migration to the REST API in v1.11.0](./88-v1.11.0.md#deprecations), so the legacy API no longer has any first-party consumers. Upgrade the CLI alongside the back end, and migrate any custom integrations to the REST API before v1.12.0. |
-| "global credentials namespace(s)" | [v1.9.0](./90-v1.9.0.md) | Scheduled for v1.12.0 | Replaced with "shared secrets namespace." See [release notes](./90-v1.9.0.md#the-secret-shuffle) and [docs](../40-operator-guide/40-security/40-managing-secrets.md#transitioning) for details. |
-| "cluster secrets namespace" | [v1.9.0](./90-v1.9.0.md) | Scheduled for v1.12.0 | Replaced with "system resources namespace." See [release notes](./90-v1.9.0.md#the-secret-shuffle) and [docs](../40-operator-guide/40-security/40-managing-secrets.md#transitioning) for details. |
+| `git-commit` step `author` field | [v1.10.0](./89-v1.10.0.md) | [v1.12.0](./87-v1.12.0.md) | Configure authorship and signing in the `git-clone` step or via `ClusterConfig`. See [git-commit docs](https://docs.kargo.io/user-guide/reference-docs/promotion-steps/git-commit). |
+| `git-push` default integration policy (`AlwaysRebase`) | [v1.10.0](./89-v1.10.0.md) | [v1.12.0](./87-v1.12.0.md) | The default `git-push`/`github-push` push integration policy changed from `AlwaysRebase` to `RebaseOrMerge`. Set [`controller.gitClient.pushIntegrationPolicy`](https://docs.kargo.io/operator-guide/advanced-installation/common-configurations#push-integration-policy) explicitly if you rely on unconditional rebase. |
+| SSH URLs and SSH private keys for Git repositories | [v1.10.0](./89-v1.10.0.md) | v2.0.0 | Use HTTP(S) URLs with a personal access token, GitHub App, or equivalent. SSH keys cannot authenticate to Git provider APIs, forcing users to maintain two sets of credentials. Creating or updating a `Warehouse` that subscribes to an SSH or SCP-style URL is rejected, and `Secret`s containing only an `sshPrivateKey` are ignored. See [Breaking Changes](#breaking-changes) and [#5858](https://github.com/akuity/kargo/issues/5858) for details. |
+| The `createTargetBranch` option in the `git-open-pr` promotion step | [v1.10.0](./89-v1.10.0.md) | [v1.12.0](./87-v1.12.0.md) | The `createTargetBranch` option has been removed as the feature never worked. See [#5847](https://github.com/akuity/kargo/issues/5847) for details. |
+| `Warehouse` Git and container image subscriptions' `allowTags` and `ignoreTags` fields | [v1.9.0](./90-v1.9.0.md) | v2.0.0 | Use `allowTagsRegexes` and `ignoreTagsRegexes`. Artifact discovery has failed when either field is set since [v1.11.0](./88-v1.11.0.md). As of v2.0.0, creating a `Warehouse` with either field, or changing the spec of one that still has them, is rejected. Artifact discovery for a `Warehouse` already stored with either field stops failing, but runs without that tag filtering. [Find affected `Warehouse`s](#finding-warehouses-that-use-allowtags-or-ignoretags) before upgrading. |
+| The Connect-based (gRPC) API | [v1.9.0](./90-v1.9.0.md) | [v1.12.0](./87-v1.12.0.md) | Replaced by a new, RESTful API. The UI [completed its migration to the REST API in v1.11.0](./88-v1.11.0.md#deprecations), so the legacy API no longer had any first-party consumers. Upgrade the CLI alongside the back end, and migrate any custom integrations to the REST API before upgrading. |
+| "global credentials namespace(s)" (`controller.globalCredentials.namespaces`) | [v1.9.0](./90-v1.9.0.md) | [v1.12.0](./87-v1.12.0.md) | Replaced with "shared resources namespace" (`global.sharedResources.namespace`). The automatic migration of `Secret`s has been removed; upgrading to v1.12.0 or later will fail if this setting remains defined. See [release notes](./90-v1.9.0.md#the-secret-shuffle) and [docs](../40-operator-guide/40-security/40-managing-secrets.md#transitioning) for details. |
+| "cluster secrets namespace" (`global.clusterSecretsNamespace`) | [v1.9.0](./90-v1.9.0.md) | [v1.12.0](./87-v1.12.0.md) | Replaced with "system resources namespace" (`global.systemResources.namespace`). The automatic migration of `Secret`s has been removed; upgrading to v1.12.0 or later will fail if this setting remains defined. See [release notes](./90-v1.9.0.md#the-secret-shuffle) and [docs](../40-operator-guide/40-security/40-managing-secrets.md#transitioning) for details. |
 | `Warehouse`'s container image subscription's `semverConstraint` field | [v1.7.0](./92-v1.7.0.md#new-deprecations) | [v1.9.0](./90-v1.9.0.md) | Users should migrate to using the [`constraint`](https://docs.kargo.io/user-guide/how-to-guides/working-with-warehouses/#image-selection-strategies) field which, accepts the same value but is named to better indicate it can also be used for tag selection (e.g. `latest`) when the image selection strategy is set to `Digest`. |
 | `freightMetadata` functions optional second argument for the key name | [v1.8.0](./91-v1.8.0.md#new-deprecations) | [v1.10.0](./89-v1.10.0.md#breaking-changes) | Users should migrate to either dot notation (`freightMetadata(freightName).keyName`) or map access syntax (`freightMetadata(freightName)['key-name']`) to access specific values instead of using the optional second argument. |
 | `Project` specification | [v1.5.0](./94-v1.5.0.md#new-deprecations) | [v1.7.0](./92-v1.7.0.md#breaking-changes) | Users should migrate to the dedicated [`ProjectConfig` resource](../50-user-guide/20-how-to-guides/20-working-with-projects.md#project-configuration). This resource kind accepts a `.spec` identitical to the `Project`, but allows for fine-grain permissions. |
@@ -33,6 +34,24 @@ or scheduled for removal.
 | `helm-update-image` step | [v1.1.0](./98-v1.1.0.md#new-and-updated-promotion-steps) | [v1.3.0](./96-v1.3.0.md#breaking-changes) | Use the more flexible `yaml-update` step. [more info](./98-v1.1.0.md#new-and-updated-promotion-steps) |
 | Legacy Promotion Mechanisms | v0.9.0 | [v1.0.0](./99-v1.0.0.md#breaking-changes) | Migrate to promotion steps. [more info](./99-v1.0.0.md#breaking-changes) |
 
+### Finding `Warehouse`s that use `allowTags` or `ignoreTags`
+
+Before upgrading to v2.0.0, find any `Warehouse`s whose Git or container image
+subscriptions still set `allowTags` or `ignoreTags`:
+
+```shell
+kubectl get warehouses -A -o json | jq -r '
+  .items[]
+  | select(any(.spec.subscriptions[]; (.git // .image // {}) | has("allowTags") or has("ignoreTags")))
+  | "\(.metadata.namespace)/\(.metadata.name)"'
+```
+
+Migrate each one to `allowTagsRegexes` and `ignoreTagsRegexes`. `allowTags`
+was already a regular expression, so it carries over unchanged as the sole
+entry in `allowTagsRegexes`. `ignoreTags` matched tags exactly, so escape and
+anchor each value when converting it to a regular expression. For example,
+`v1.0.0` becomes `^v1\.0\.0$`.
+
 ## Breaking Changes
 
 This section summarizes significant changes that create potential for disruption
@@ -41,4 +60,6 @@ absolute minimum.__
 
 | Change | Version | Impact | Migration Path |
 |--------|---------|--------|----------------|
+| SSH URLs and SSH private keys removed | v2.0.0 | Creating or updating a `Warehouse` that subscribes to an `ssh://` or SCP-style (`git@host:path`) URL is rejected, including refreshing it or changing its labels or annotations. It can still be deleted. Artifact discovery for a `Warehouse` already stored with such a URL fails. Promotion steps that are given such a URL fail. `Secret`s that contain only an `sshPrivateKey` yield no credentials. `argocd-update` no longer treats differently spelled SSH URLs (e.g. with and without `.git`) as the same repository. On clusters older than Kubernetes v1.30, which lack CRD validation ratcheting, status updates for a `Warehouse` whose last discovered artifacts came from an SSH URL may be rejected. | Switch `repoURL`s in `Warehouse`s, promotion steps, and credential `Secret`s to HTTP(S) URLs, and replace `sshPrivateKey` with `username` and `password` (e.g. a personal access token) or GitHub App credentials, before upgrading. |
+| `allowTags` and `ignoreTags` subscription fields removed | v2.0.0 | Creating a `Warehouse` that uses these fields, or changing the spec of one that does, is rejected. Artifact discovery for a `Warehouse` already stored with them runs without that tag filtering. | [Find affected `Warehouse`s](#finding-warehouses-that-use-allowtags-or-ignoretags) and migrate them to `allowTagsRegexes` and `ignoreTagsRegexes` before upgrading. |
 | Global Credential Store Changes | [v1.0.0](./99-v1.0.0.md#breaking-changes) | Affects installations using `controller.globalCredentials.namespaces` | Manually create a `RoleBinding`s to permit controller access to "global" credential namespaces _or_ set `controller.serviceAccount.clusterWideSecretReadingEnabled` to `true` at install time (not recommended). [more info](./99-v1.0.0.md#breaking-changes) |

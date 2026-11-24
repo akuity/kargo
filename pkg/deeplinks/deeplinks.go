@@ -1,29 +1,23 @@
 package deeplinks
 
 import (
-	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
-	"text/template"
-
-	"github.com/Masterminds/sprig/v3"
-	"github.com/expr-lang/expr"
+	"regexp"
+	"strings"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/pkg/expressions"
 )
 
-var sprigFuncMap template.FuncMap
+// legacyTemplateRegex matches a "{{" that does not open a "${{" expression,
+// which means it is left over from the Go template syntax deep links used
+// before.
+var legacyTemplateRegex = regexp.MustCompile(`(^|[^$]){{`)
 
-func init() {
-	sprigFuncMap = sprig.GenericFuncMap()
-	// Prevent templates from reading host environment or performing DNS lookups.
-	delete(sprigFuncMap, "env")
-	delete(sprigFuncMap, "expandenv")
-	delete(sprigFuncMap, "getHostByName")
-}
-
-// ResolvedLink is a DeepLink whose URL template has been evaluated against a
-// specific resource.
+// ResolvedLink is a DeepLink whose URL expressions have been evaluated against
+// a specific resource.
 type ResolvedLink struct {
 	Title       string `json:"title"`
 	URL         string `json:"url"`
@@ -31,10 +25,14 @@ type ResolvedLink struct {
 } // @name ResolvedLink
 
 // EvaluateLinks evaluates each DeepLink against ctx, applying any If
-// conditions and resolving URL templates. Links whose conditions evaluate to
-// false are silently omitted. Non-fatal evaluation errors are collected and
-// returned alongside resolved links so callers can surface them without
-// aborting the whole response.
+// conditions and evaluating expressions in URLs. Links whose conditions
+// evaluate to false are silently omitted. Non-fatal evaluation errors are
+// collected and returned alongside resolved links so callers can surface them
+// without aborting the whole response.
+//
+// Expressions are evaluated with no Kargo-specific functions. In particular,
+// functions that read Secrets must never be made available here: resolved
+// links are shown to anyone who can view the resource.
 func EvaluateLinks(
 	links []kargoapi.DeepLink,
 	ctx map[string]any,
@@ -43,35 +41,28 @@ func EvaluateLinks(
 	var errs []string
 
 	for _, link := range links {
-		if link.If != "" {
-			out, err := expr.Eval(link.If, ctx)
-			if err != nil {
-				errs = append(errs, fmt.Sprintf(
-					"error evaluating condition for link %q: %v", link.Title, err,
-				))
-				continue
-			}
-			condResult, ok := out.(bool)
-			if !ok {
-				errs = append(errs, fmt.Sprintf(
-					"condition for link %q evaluated to non-boolean value", link.Title,
-				))
-				continue
-			}
-			if !condResult {
-				continue
-			}
-		}
-
-		t, err := template.New("").Funcs(sprigFuncMap).Parse(link.URL)
-		if err != nil {
+		// Check for legacy syntax before the condition so that a link that was
+		// only partially migrated still fails loudly when its condition is false.
+		if err := checkLegacyURLTemplate(link.URL); err != nil {
 			errs = append(errs, fmt.Sprintf(
-				"error parsing URL template for link %q: %v", link.Title, err,
+				"invalid URL template for link %q: %v", link.Title, err,
 			))
 			continue
 		}
-		var buf bytes.Buffer
-		if err = t.Execute(&buf, ctx); err != nil {
+
+		show, err := evaluateCondition(link.If, ctx)
+		if err != nil {
+			errs = append(errs, fmt.Sprintf(
+				"error evaluating condition for link %q: %v", link.Title, err,
+			))
+			continue
+		}
+		if !show {
+			continue
+		}
+
+		url, err := evaluateURLTemplate(link.URL, ctx)
+		if err != nil {
 			errs = append(errs, fmt.Sprintf(
 				"error evaluating URL template for link %q: %v", link.Title, err,
 			))
@@ -80,7 +71,7 @@ func EvaluateLinks(
 
 		resolved = append(resolved, ResolvedLink{
 			Title:       link.Title,
-			URL:         buf.String(),
+			URL:         url,
 			Description: link.Description,
 		})
 	}
@@ -88,13 +79,77 @@ func EvaluateLinks(
 	return resolved, errs
 }
 
-// FreightContext converts a Freight resource into a template context map with
+// checkLegacyURLTemplate returns an error if tmpl contains Go template syntax.
+// Without this check, such a template contains no expressions and would be
+// returned verbatim, braces and all. Under the old engine every "{{" in a URL
+// template was a template action, so this rejects nothing that used to work.
+func checkLegacyURLTemplate(tmpl string) error {
+	if legacyTemplateRegex.MatchString(tmpl) {
+		return errors.New(
+			"URL template uses Go template syntax " +
+				"(e.g. {{ .freight.metadata.name }}), which is no longer " +
+				"supported; use expr-lang expressions offset by ${{ }} instead " +
+				"(e.g. ${{ freight.metadata.name }})",
+		)
+	}
+	return nil
+}
+
+// evaluateCondition evaluates cond against ctx. An empty condition is true.
+func evaluateCondition(cond string, ctx map[string]any) (bool, error) {
+	// Text around an expression is kept in the result, so surrounding
+	// whitespace would turn a boolean into a string.
+	cond = strings.TrimSpace(cond)
+	if cond == "" {
+		return true, nil
+	}
+	out, err := expressions.EvaluateTemplate(cond, ctx)
+	if err != nil {
+		return false, err
+	}
+	switch res := out.(type) {
+	case bool:
+		return res, nil
+	case string:
+		if !strings.Contains(cond, "${{") {
+			// A condition with no expression in it comes back unevaluated.
+			return false, errors.New(
+				"condition must be a ${{ }} expression that evaluates to a boolean",
+			)
+		}
+		return false, fmt.Errorf(
+			"condition must evaluate to a boolean, got string %q", res,
+		)
+	default:
+		return false, fmt.Errorf(
+			"condition must evaluate to a boolean, got %T", out,
+		)
+	}
+}
+
+// evaluateURLTemplate evaluates any expressions in tmpl against ctx and
+// returns the resulting URL.
+func evaluateURLTemplate(tmpl string, ctx map[string]any) (string, error) {
+	out, err := expressions.EvaluateTemplate(tmpl, ctx)
+	if err != nil {
+		return "", err
+	}
+	res, ok := out.(string)
+	if !ok {
+		// A URL template made of a single expression can evaluate to a number,
+		// bool, list or object, none of which is a usable href.
+		return "", fmt.Errorf("URL template evaluated to %T, not a string", out)
+	}
+	return res, nil
+}
+
+// FreightContext converts a Freight resource into an expression context map with
 // a single "freight" key for use with EvaluateLinks.
 func FreightContext(freight *kargoapi.Freight) (map[string]any, error) {
 	return toContextMap("freight", freight)
 }
 
-// StageContext converts a Stage resource into a template context map with a
+// StageContext converts a Stage resource into an expression context map with a
 // single "stage" key for use with EvaluateLinks.
 func StageContext(stage *kargoapi.Stage) (map[string]any, error) {
 	return toContextMap("stage", stage)

@@ -19,7 +19,7 @@ export const ArtifactMenuGroup = ({
 }) =>
   items?.length > 0 && (
     <div className='mb-5'>
-      <div className='flex items-center text-gray-400 font-medium uppercase text-xs mb-2'>
+      <div className='flex items-center text-gray-400 dark:text-neutral-500 font-medium uppercase text-xs mb-2'>
         {icon && <FontAwesomeIcon icon={icon} className='mr-2' />}
         <span>{label}</span>
       </div>

@@ -22,6 +22,7 @@ spec:
     - {{ .Release.Namespace }}
   endpoints:
   - port: {{ $svc.portName }}
+    path: /metrics
     interval: {{ $sm.interval }}
     {{- with $sm.scheme }}
     scheme: {{ . }}

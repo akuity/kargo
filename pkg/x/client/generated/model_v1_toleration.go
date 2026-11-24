@@ -21,7 +21,7 @@ var _ MappedNullable = &V1Toleration{}
 type V1Toleration struct {
 	// Effect indicates the taint effect to match. Empty means match all taint effects. When specified, allowed values are NoSchedule, PreferNoSchedule and NoExecute. +optional
 	Effect *string `json:"effect,omitempty"`
-	// Key is the taint key that the toleration applies to. Empty means match all taint keys. If the key is empty, operator must be Exists; this combination means to match all values and all keys. +optional
+	// Key is the taint key that the toleration applies to. Empty means match all taint keys. If the key is empty, operator must be Exists; this combination means to match all values and all keys. +optional +k8s:alpha(since: \"1.37\")=+k8s:optional +k8s:alpha(since: \"1.37\")=+k8s:format=k8s-label-key
 	Key *string `json:"key,omitempty"`
 	// Operator represents a key's relationship to the value. Valid operators are Exists, Equal, Lt, and Gt. Defaults to Equal. Exists is equivalent to wildcard for value, so that a pod can tolerate all taints of a particular category. Lt and Gt perform numeric comparisons (requires feature gate TaintTolerationComparisonOperators). +optional
 	Operator *string `json:"operator,omitempty"`

@@ -43,7 +43,10 @@ export const StepBasics = ({ value, onChange }: StepBasicsProps) => {
 
   return (
     <div className='flex flex-col gap-4'>
-      <Card title='Identity' extra={<span className='text-xs text-gray-400'>kind: Project</span>}>
+      <Card
+        title='Identity'
+        extra={<span className='text-xs text-gray-400 dark:text-neutral-500'>kind: Project</span>}
+      >
         <FieldContainer
           control={control}
           name='name'

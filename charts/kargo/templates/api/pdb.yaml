@@ -5,13 +5,8 @@ metadata:
   name: kargo-api
   namespace: {{ .Release.Namespace }}
   labels:
-    {{- include "kargo.labels" . | nindent 4 }}
+    {{- include "kargo.componentLabels" (dict "root" . "labels" .Values.api.labels) | nindent 4 }}
     {{- include "kargo.api.labels" . | nindent 4 }}
-  {{- with (mergeOverwrite (deepCopy .Values.global.labels) .Values.api.labels) }}
-    {{- range $key, $value := . }}
-    {{ $key }}: {{ $value | quote }}
-    {{- end }}
-  {{- end }}
   {{- include "kargo.annotations" (dict "root" . "annotations" .Values.api.annotations) | nindent 2 }}
 spec:
   {{- if .Values.api.podDisruptionBudget.maxUnavailable }}

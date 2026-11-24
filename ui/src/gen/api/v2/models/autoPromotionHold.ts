@@ -10,15 +10,21 @@ import type { FreightOrigin } from './freightOrigin';
 export interface AutoPromotionHold {
   /** Actor identifies the user who triggered the hold. */
   actor?: string;
-  /** CreatedAt is the creation timestamp of the Promotion that established this
-hold. */
+  /**
+   * CreatedAt is the creation timestamp of the Promotion that established this
+   * hold.
+   */
   createdAt?: string;
   /** FreightName is the name of the Freight selected when the hold was created. */
   freightName?: string;
-  /** Origin describes the FreightOrigin pinned by this hold. It matches the
-enclosing map key. */
+  /**
+   * Origin describes the FreightOrigin pinned by this hold. It matches the
+   * enclosing map key.
+   */
   origin?: FreightOrigin;
-  /** PromotionName is the name of the Promotion that established this hold.
-Stored here as a paper trail that survives Promotion garbage collection. */
+  /**
+   * PromotionName is the name of the Promotion that established this hold.
+   * Stored here as a paper trail that survives Promotion garbage collection.
+   */
   promotionName?: string;
 }

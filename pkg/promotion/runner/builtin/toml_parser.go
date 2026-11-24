@@ -5,14 +5,13 @@ import (
 	"fmt"
 	"os"
 
-	securejoin "github.com/cyphar/filepath-securejoin"
 	"github.com/expr-lang/expr"
 	tomlv2 "github.com/pelletier/go-toml/v2"
 	"github.com/xeipuuv/gojsonschema"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/promotion"
-	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
+	"github.com/akuity/kargo/pkg/x/promotion/stepconfig"
 )
 
 const stepKindTOMLParse = "toml-parse"
@@ -52,15 +51,15 @@ func (tp *tomlParser) Run(
 }
 
 // convert validates tomlParser configuration against a JSON schema and
-// converts it into a builtin.TOMLParseConfig struct.
-func (tp *tomlParser) convert(cfg promotion.Config) (builtin.TOMLParseConfig, error) {
-	return validateAndConvert[builtin.TOMLParseConfig](tp.schemaLoader, cfg, stepKindTOMLParse)
+// converts it into a stepconfig.TOMLParseConfig struct.
+func (tp *tomlParser) convert(cfg promotion.Config) (stepconfig.TOMLParseConfig, error) {
+	return validateAndConvert[stepconfig.TOMLParseConfig](tp.schemaLoader, cfg, stepKindTOMLParse)
 }
 
 func (tp *tomlParser) run(
 	_ context.Context,
 	stepCtx *promotion.StepContext,
-	cfg builtin.TOMLParseConfig,
+	cfg stepconfig.TOMLParseConfig,
 ) (promotion.StepResult, error) {
 	failure := promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}
 
@@ -72,7 +71,7 @@ func (tp *tomlParser) run(
 		return failure, fmt.Errorf("invalid %s config: outputs is required", stepKindTOMLParse)
 	}
 
-	data, err := tp.readAndParseTOML(stepCtx.WorkDir, cfg.Path)
+	data, err := tp.readAndParseTOML(stepCtx.Root, cfg.Path)
 	if err != nil {
 		return failure, err
 	}
@@ -89,17 +88,17 @@ func (tp *tomlParser) run(
 }
 
 // readAndParseTOML reads and unmarshals a TOML document and returns the result.
-func (tp *tomlParser) readAndParseTOML(workDir string, path string) (any, error) {
-	absFilePath, err := securejoin.SecureJoin(workDir, path)
+func (tp *tomlParser) readAndParseTOML(root *os.Root, path string) (any, error) {
+	relPath, err := promotion.WorkspacePath(path)
 	if err != nil {
-		return nil, fmt.Errorf("error joining path %q: %w", path, err)
+		return nil, err
 	}
-	tomlData, err := os.ReadFile(absFilePath)
+	tomlData, err := root.ReadFile(relPath)
 	if err != nil {
-		return nil, fmt.Errorf("error reading TOML file %q: %w", absFilePath, err)
+		return nil, fmt.Errorf("error reading TOML file %q: %w", path, err)
 	}
 	if len(tomlData) == 0 {
-		return nil, fmt.Errorf("could not parse empty TOML file: %q", absFilePath)
+		return nil, fmt.Errorf("could not parse empty TOML file: %q", path)
 	}
 	var data any
 	if err := tomlv2.Unmarshal(tomlData, &data); err != nil {
@@ -110,10 +109,10 @@ func (tp *tomlParser) readAndParseTOML(workDir string, path string) (any, error)
 
 // extractValues returns select data extracted from the provided data by
 // evaluating it against expressions contained within the provided
-// []builtin.TOMLParse.
+// []stepconfig.TOMLParse.
 func (tp *tomlParser) extractValues(
 	data any,
-	outputs []builtin.TomlParse,
+	outputs []stepconfig.TomlParse,
 ) (map[string]any, error) {
 	results := make(map[string]any, len(outputs))
 	for _, output := range outputs {

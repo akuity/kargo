@@ -1,10 +1,14 @@
 package promotion
 
 import (
+	"context"
+	"errors"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
 
@@ -843,6 +847,179 @@ func TestContext_DeepCopy(t *testing.T) {
 	}
 }
 
+func TestNewTargetContext(t *testing.T) {
+	testCases := []struct {
+		name   string
+		target *kargoapi.Target
+		assert func(*testing.T, *TargetContext, error)
+	}{
+		{
+			name:   "nil Target yields nil context",
+			target: nil,
+			assert: func(t *testing.T, targetCtx *TargetContext, err error) {
+				require.NoError(t, err)
+				require.Nil(t, targetCtx)
+			},
+		},
+		{
+			name:   "Target without params or labels",
+			target: &kargoapi.Target{ObjectMeta: metav1.ObjectMeta{Name: "east"}},
+			assert: func(t *testing.T, targetCtx *TargetContext, err error) {
+				require.NoError(t, err)
+				require.NotNil(t, targetCtx)
+				require.Nil(t, targetCtx.Params)
+				require.Nil(t, targetCtx.Labels)
+			},
+		},
+		{
+			name: "labels are copied",
+			target: &kargoapi.Target{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:   "east",
+					Labels: map[string]string{"region": "us-east-1"},
+				},
+			},
+			assert: func(t *testing.T, targetCtx *TargetContext, err error) {
+				require.NoError(t, err)
+				require.Equal(t, map[string]string{"region": "us-east-1"}, targetCtx.Labels)
+			},
+		},
+		{
+			name: "scalar params are decoded",
+			target: &kargoapi.Target{
+				ObjectMeta: metav1.ObjectMeta{Name: "east"},
+				Spec: kargoapi.TargetSpec{
+					Params: map[string]apiextensionsv1.JSON{
+						"branch":   {Raw: []byte(`"env/prod-use1"`)},
+						"replicas": {Raw: []byte(`5`)},
+						"canary":   {Raw: []byte(`true`)},
+					},
+				},
+			},
+			assert: func(t *testing.T, targetCtx *TargetContext, err error) {
+				require.NoError(t, err)
+				require.Equal(
+					t,
+					map[string]any{
+						"branch":   "env/prod-use1",
+						"replicas": float64(5),
+						"canary":   true,
+					},
+					targetCtx.Params,
+				)
+			},
+		},
+		{
+			name: "nested params are decoded",
+			target: &kargoapi.Target{
+				ObjectMeta: metav1.ObjectMeta{Name: "east"},
+				Spec: kargoapi.TargetSpec{
+					Params: map[string]apiextensionsv1.JSON{
+						"ingress": {Raw: []byte(`{"host":"use1.example.com","tls":true}`)},
+						"zones":   {Raw: []byte(`["a","b"]`)},
+					},
+				},
+			},
+			assert: func(t *testing.T, targetCtx *TargetContext, err error) {
+				require.NoError(t, err)
+				require.Equal(
+					t,
+					map[string]any{
+						"ingress": map[string]any{
+							"host": "use1.example.com",
+							"tls":  true,
+						},
+						"zones": []any{"a", "b"},
+					},
+					targetCtx.Params,
+				)
+			},
+		},
+		{
+			name: "malformed param",
+			target: &kargoapi.Target{
+				ObjectMeta: metav1.ObjectMeta{Name: "east"},
+				Spec: kargoapi.TargetSpec{
+					Params: map[string]apiextensionsv1.JSON{
+						"branch": {Raw: []byte(`{not json`)},
+					},
+				},
+			},
+			assert: func(t *testing.T, targetCtx *TargetContext, err error) {
+				require.ErrorContains(t, err, `error decoding param "branch" of Target "east"`)
+				require.Nil(t, targetCtx)
+			},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+			targetCtx, err := NewTargetContext(testCase.target)
+			testCase.assert(t, targetCtx, err)
+		})
+	}
+
+	t.Run("decoded params survive a deep copy", func(t *testing.T) {
+		t.Parallel()
+		targetCtx, err := NewTargetContext(&kargoapi.Target{
+			ObjectMeta: metav1.ObjectMeta{Name: "east"},
+			Spec: kargoapi.TargetSpec{
+				Params: map[string]apiextensionsv1.JSON{
+					"ingress": {Raw: []byte(`{"host":"use1.example.com"}`)},
+				},
+			},
+		})
+		require.NoError(t, err)
+		// DeepCopy relies on runtime.DeepCopyJSON, which panics on values that
+		// are not plain JSON types. This guards the decode against ever
+		// producing anything else.
+		require.Equal(t, targetCtx.Params, targetCtx.DeepCopy().Params)
+	})
+
+	t.Run("labels do not alias the Target", func(t *testing.T) {
+		t.Parallel()
+		target := &kargoapi.Target{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:   "east",
+				Labels: map[string]string{"region": "us-east-1"},
+			},
+		}
+		targetCtx, err := NewTargetContext(target)
+		require.NoError(t, err)
+
+		targetCtx.Labels["region"] = "eu-west-1"
+		require.Equal(t, "us-east-1", target.Labels["region"])
+	})
+}
+
+func TestWithTarget(t *testing.T) {
+	t.Parallel()
+
+	t.Run("nil leaves the Context target-less", func(t *testing.T) {
+		t.Parallel()
+		promoCtx := NewContext(
+			&kargoapi.Promotion{},
+			&kargoapi.Stage{},
+			WithTarget(nil),
+		)
+		assert.Nil(t, promoCtx.Target)
+	})
+
+	t.Run("sets the Target of the Context", func(t *testing.T) {
+		t.Parallel()
+		targetCtx := &TargetContext{
+			Params: map[string]any{"cluster": "east"},
+			Labels: map[string]string{"region": "us-east-1"},
+		}
+		promoCtx := NewContext(
+			&kargoapi.Promotion{},
+			&kargoapi.Stage{},
+			WithTarget(targetCtx),
+		)
+		assert.Same(t, targetCtx, promoCtx.Target)
+	})
+}
+
 func TestTargetContext_DeepCopy(t *testing.T) {
 	t.Run("nil receiver returns nil", func(t *testing.T) {
 		var tc *TargetContext
@@ -873,5 +1050,158 @@ func TestTargetContext_DeepCopy(t *testing.T) {
 
 		assert.Equal(t, "east", original.Params["cluster"])
 		assert.Equal(t, "prod", original.Labels["env"])
+	})
+}
+
+// fakeTargetGetter is a TargetGetter over a fixed set of Targets, or a fixed
+// error.
+type fakeTargetGetter struct {
+	targets map[string]*kargoapi.Target
+	err     error
+	calls   int
+}
+
+func (f *fakeTargetGetter) GetTarget(_ context.Context, _, name string) (*kargoapi.Target, error) {
+	f.calls++
+	if f.err != nil {
+		return nil, f.err
+	}
+	return f.targets[name], nil
+}
+
+func TestResolveTargetContext(t *testing.T) {
+	testTarget := &kargoapi.Target{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "fake-target",
+			Namespace: "fake-namespace",
+			Labels:    map[string]string{"region": "us-east-1"},
+		},
+		Spec: kargoapi.TargetSpec{
+			Params: map[string]apiextensionsv1.JSON{
+				"branch": {Raw: []byte(`"env/prod-use1"`)},
+			},
+		},
+	}
+	promoTo := func(target string) *kargoapi.Promotion {
+		return &kargoapi.Promotion{
+			ObjectMeta: metav1.ObjectMeta{Namespace: "fake-namespace", Name: "fake-promo"},
+			Spec:       kargoapi.PromotionSpec{Target: target},
+		}
+	}
+
+	testCases := []struct {
+		name    string
+		promo   *kargoapi.Promotion
+		targets *fakeTargetGetter
+		assert  func(*testing.T, *fakeTargetGetter, *TargetContext, error)
+	}{
+		{
+			name:    "no Target named",
+			promo:   promoTo(""),
+			targets: &fakeTargetGetter{},
+			assert: func(t *testing.T, targets *fakeTargetGetter, targetCtx *TargetContext, err error) {
+				require.NoError(t, err)
+				require.Nil(t, targetCtx)
+				// A Promotion that names no Target must not read a Target at all.
+				require.Zero(t, targets.calls)
+			},
+		},
+		{
+			name:  "Targets are unavailable",
+			promo: promoTo("fake-target"),
+			assert: func(t *testing.T, _ *fakeTargetGetter, targetCtx *TargetContext, err error) {
+				require.ErrorIs(t, err, ErrTargetsUnavailable)
+				require.ErrorContains(t, err, "no API server to read them from")
+				require.Nil(t, targetCtx)
+			},
+		},
+		{
+			name:    "Target not found",
+			promo:   promoTo("fake-target"),
+			targets: &fakeTargetGetter{},
+			assert: func(t *testing.T, _ *fakeTargetGetter, targetCtx *TargetContext, err error) {
+				require.ErrorIs(t, err, ErrTargetNotFound)
+				require.ErrorContains(t, err, `Target "fake-target"`)
+				require.Nil(t, targetCtx)
+			},
+		},
+		{
+			name:    "error getting Target",
+			promo:   promoTo("fake-target"),
+			targets: &fakeTargetGetter{err: errors.New("something went wrong")},
+			assert: func(t *testing.T, _ *fakeTargetGetter, targetCtx *TargetContext, err error) {
+				require.ErrorContains(t, err, "error finding Target")
+				require.ErrorContains(t, err, "something went wrong")
+				require.NotErrorIs(t, err, ErrTargetNotFound)
+				require.Nil(t, targetCtx)
+			},
+		},
+		{
+			name:  "malformed Target params",
+			promo: promoTo("fake-target"),
+			targets: &fakeTargetGetter{targets: map[string]*kargoapi.Target{
+				"fake-target": {
+					ObjectMeta: metav1.ObjectMeta{Name: "fake-target"},
+					Spec: kargoapi.TargetSpec{
+						Params: map[string]apiextensionsv1.JSON{
+							"branch": {Raw: []byte(`{not json`)},
+						},
+					},
+				},
+			}},
+			assert: func(t *testing.T, _ *fakeTargetGetter, targetCtx *TargetContext, err error) {
+				require.ErrorContains(t, err, "error building context for Target")
+				require.Nil(t, targetCtx)
+			},
+		},
+		{
+			name:    "success",
+			promo:   promoTo("fake-target"),
+			targets: &fakeTargetGetter{targets: map[string]*kargoapi.Target{"fake-target": testTarget}},
+			assert: func(t *testing.T, _ *fakeTargetGetter, targetCtx *TargetContext, err error) {
+				require.NoError(t, err)
+				require.NotNil(t, targetCtx)
+				require.Equal(
+					t,
+					map[string]any{"branch": "env/prod-use1"},
+					targetCtx.Params,
+				)
+				require.Equal(
+					t,
+					map[string]string{"region": "us-east-1"},
+					targetCtx.Labels,
+				)
+				require.Equal(t, "fake-target", targetCtx.Name)
+			},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			// A nil *fakeTargetGetter must reach ResolveTargetContext as a nil
+			// interface, which is how a controller without an API server presents.
+			var targets TargetGetter
+			if testCase.targets != nil {
+				targets = testCase.targets
+			}
+			targetCtx, err := ResolveTargetContext(context.Background(), targets, testCase.promo)
+			testCase.assert(t, testCase.targets, targetCtx, err)
+		})
+	}
+}
+
+func TestTargetContext_Name(t *testing.T) {
+	t.Run("NewTargetContext carries the Target's name", func(t *testing.T) {
+		targetCtx, err := NewTargetContext(&kargoapi.Target{
+			ObjectMeta: metav1.ObjectMeta{Name: "us-east-1"},
+		})
+		require.NoError(t, err)
+		require.NotNil(t, targetCtx)
+		assert.Equal(t, "us-east-1", targetCtx.Name)
+	})
+	t.Run("DeepCopy carries the name", func(t *testing.T) {
+		original := &TargetContext{Name: "us-east-1"}
+		cp := original.DeepCopy()
+		require.NotSame(t, original, cp)
+		assert.Equal(t, "us-east-1", cp.Name)
 	})
 }

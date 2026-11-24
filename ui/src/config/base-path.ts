@@ -37,4 +37,12 @@ export const withBasePath = (path: string): string => {
   return `${base}/${path}`;
 };
 
+export const withoutBasePath = (path: string): string => {
+  const base = basePath();
+  if (!base) return path;
+  if (path === base) return '/';
+  if (path.startsWith(`${base}/`)) return path.slice(base.length);
+  return path;
+};
+
 export {};

@@ -10,16 +10,16 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
+	"time"
 
-	securejoin "github.com/cyphar/filepath-securejoin"
 	"github.com/go-git/go-git/v5/plumbing/format/gitignore"
 	"github.com/xeipuuv/gojsonschema"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	intfs "github.com/akuity/kargo/pkg/io/fs"
 	"github.com/akuity/kargo/pkg/promotion"
-	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
+	"github.com/akuity/kargo/pkg/x/promotion/stepconfig"
 )
 
 const (
@@ -69,26 +69,56 @@ func (t *tarCreator) Run(
 }
 
 // convert validates the configuration against a JSON schema and converts it
-// into a builtin.TarConfig struct.
-func (t *tarCreator) convert(cfg promotion.Config) (builtin.TarConfig, error) {
-	return validateAndConvert[builtin.TarConfig](t.schemaLoader, cfg, stepKindTar)
+// into a stepconfig.TarConfig struct.
+func (t *tarCreator) convert(cfg promotion.Config) (stepconfig.TarConfig, error) {
+	return validateAndConvert[stepconfig.TarConfig](t.schemaLoader, cfg, stepKindTar)
 }
 
 func (t *tarCreator) run(
 	_ context.Context,
 	stepCtx *promotion.StepContext,
-	cfg builtin.TarConfig,
+	cfg stepconfig.TarConfig,
 ) (promotion.StepResult, error) {
-	absInPath, err := t.prepareInputPath(stepCtx.WorkDir, cfg.InPath)
+	fileMode, err := parseTarMode(cfg.FileMode)
+	if err != nil {
+		return promotion.StepResult{Status: kargoapi.PromotionStepStatusFailed},
+			&promotion.TerminalError{Err: fmt.Errorf("invalid fileMode: %w", err)}
+	}
+	dirMode, err := parseTarMode(cfg.DirMode)
+	if err != nil {
+		return promotion.StepResult{Status: kargoapi.PromotionStepStatusFailed},
+			&promotion.TerminalError{Err: fmt.Errorf("invalid dirMode: %w", err)}
+	}
+
+	inPath, err := t.prepareInputPath(stepCtx.Root, cfg.InPath)
 	if err != nil {
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, err
 	}
-	absOutPath, err := t.prepareOutputPath(stepCtx.WorkDir, cfg.OutPath)
+	outPath, err := t.prepareOutputPath(stepCtx.Root, cfg.OutPath)
 	if err != nil {
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, err
 	}
 
-	result, err := t.createTarball(absInPath, absOutPath, cfg.Gzip, cfg.Ignore)
+	var mtime *time.Time
+	if cfg.Mtime != "" {
+		parsed, parseErr := time.Parse(time.RFC3339, cfg.Mtime)
+		if parseErr != nil {
+			return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
+				fmt.Errorf("invalid mtime %q: %w", cfg.Mtime, parseErr)
+		}
+		mtime = &parsed
+	}
+
+	result, err := t.createTarball(
+		stepCtx.Root,
+		inPath,
+		outPath,
+		cfg.Gzip,
+		cfg.Ignore,
+		mtime,
+		fileMode,
+		dirMode,
+	)
 	if err != nil {
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 			fmt.Errorf("failed to create the tar archive %q: %w", cfg.OutPath, err)
@@ -97,75 +127,60 @@ func (t *tarCreator) run(
 	return result, nil
 }
 
-// prepareInputPath validates the input path.
-func (t *tarCreator) prepareInputPath(
-	workDir, inPath string,
-) (string, error) {
-	absInPath, err := securejoin.SecureJoin(workDir, inPath)
+// prepareInputPath validates the input path and returns it relative to root.
+func (t *tarCreator) prepareInputPath(root *os.Root, inPath string) (string, error) {
+	relInPath, err := promotion.WorkspacePath(inPath)
 	if err != nil {
-		return "", fmt.Errorf("failed to secure join input path %q: %w", inPath, err)
+		return "", err
 	}
 
-	_, err = os.Stat(absInPath)
-	if err != nil {
+	if _, err = root.Stat(relInPath); err != nil {
 		if errors.Is(err, fs.ErrNotExist) {
 			return "", fmt.Errorf("input path %q does not exist: %w", inPath, err)
 		}
 		return "", fmt.Errorf("failed to stat input path %q: %w", inPath, err)
 	}
 
-	return absInPath, nil
+	return relInPath, nil
 }
 
-// prepareOutputPath validates and prepares the output path.
-func (t *tarCreator) prepareOutputPath(
-	workDir, outPath string,
-) (string, error) {
-	absOutPath, err := securejoin.SecureJoin(workDir, outPath)
+// prepareOutputPath validates and prepares the output path and returns it
+// relative to root.
+func (t *tarCreator) prepareOutputPath(root *os.Root, outPath string) (string, error) {
+	relOutPath, err := promotion.WorkspacePath(outPath)
 	if err != nil {
-		return "", fmt.Errorf("failed to secure join output path %q: %w", outPath, err)
+		return "", err
 	}
 
-	absOutPathDir := filepath.Dir(absOutPath)
-	err = os.MkdirAll(absOutPathDir, 0o750)
-	if err != nil {
+	if err = root.MkdirAll(filepath.Dir(relOutPath), 0o750); err != nil {
 		return "", fmt.Errorf("failed to create output directory for %q: %w", outPath, err)
 	}
 
-	return absOutPath, nil
+	return relOutPath, nil
 }
 
-// createTempFile creates a temporary file.
-func (t *tarCreator) createTempFile(
-	absOutPath string,
-) (*os.File, string, error) {
-	destDir := filepath.Dir(absOutPath)
-	baseFile := filepath.Base(absOutPath)
-
-	tempFile, err := os.CreateTemp(destDir, baseFile+".tmp")
-	if err != nil {
-		return nil, "", fmt.Errorf("failed to create temporary file in %q: %w", destDir, err)
-	}
-
-	return tempFile, tempFile.Name(), nil
-}
-
-// createTarball walks the input path and writes its contents to a tar archive.
+// createTarball walks the input path, which is relative to root, and writes its
+// contents to a tar archive at the output path, which is also relative to root.
 func (t *tarCreator) createTarball(
-	absInPath, absOutPath string,
+	root *os.Root,
+	inPath, outPath string,
 	shouldGzip bool,
 	ignore string,
+	mtime *time.Time,
+	fileMode *int64,
+	dirMode *int64,
 ) (promotion.StepResult, error) {
 	matcher := t.buildIgnoreMatcher(ignore)
 
-	tempFile, tempFilePath, err := t.createTempFile(absOutPath)
+	tempFile, tempFilePath, err := createTempFile(root, filepath.Dir(outPath), filepath.Base(outPath)+".tmp")
 	if err != nil {
-		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, err
+		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
+			fmt.Errorf("failed to create temporary file in %q: %w", filepath.Dir(outPath), err)
 	}
 
 	defer func() {
 		_ = tempFile.Close()
-		_ = os.Remove(tempFilePath)
+		_ = root.Remove(tempFilePath)
 	}()
 
 	var (
@@ -181,7 +196,7 @@ func (t *tarCreator) createTarball(
 		tw = tar.NewWriter(tempFile)
 	}
 
-	err = filepath.WalkDir(absInPath, func(path string, d fs.DirEntry, err error) error {
+	err = fs.WalkDir(root.FS(), inPath, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
@@ -193,7 +208,7 @@ func (t *tarCreator) createTarball(
 
 		// Tar header's relative path.
 		var relPath string
-		if path == absInPath {
+		if path == inPath {
 			if info.IsDir() {
 				// Skip root dir to avoid a "." entry.
 				return nil
@@ -201,7 +216,7 @@ func (t *tarCreator) createTarball(
 			relPath = filepath.Base(path)
 		} else {
 			var relErr error
-			relPath, relErr = filepath.Rel(absInPath, path)
+			relPath, relErr = filepath.Rel(inPath, path)
 			if relErr != nil {
 				return fmt.Errorf("failed to calculate relative path for %q: %w", path, relErr)
 			}
@@ -227,12 +242,13 @@ func (t *tarCreator) createTarball(
 			}
 		}
 
+		// The tar header name uses forward slashes.
 		relPath = filepath.ToSlash(relPath)
 
 		// Read its target if it's a symlink.
 		var linkTarget string
 		if info.Mode()&os.ModeSymlink != 0 {
-			linkTarget, err = os.Readlink(path)
+			linkTarget, err = root.Readlink(path)
 			if err != nil {
 				return fmt.Errorf("failed to read symlink target for %q: %w", path, err)
 			}
@@ -248,13 +264,27 @@ func (t *tarCreator) createTarball(
 			relPath += "/"
 		}
 		header.Name = relPath
+		// Who owned the files on the controller is meaningless to anyone
+		// extracting the archive, so it is never recorded.
+		header.Uid, header.Gid = 0, 0
+		header.Uname, header.Gname = "", ""
+		switch {
+		case header.Typeflag == tar.TypeReg && fileMode != nil:
+			header.Mode = *fileMode
+		case header.Typeflag == tar.TypeDir && dirMode != nil:
+			header.Mode = *dirMode
+		}
+		if mtime != nil {
+			header.ModTime = *mtime
+			header.AccessTime, header.ChangeTime = time.Time{}, time.Time{}
+		}
 
 		if err := tw.WriteHeader(header); err != nil {
 			return fmt.Errorf("failed to write tar header for %q: %w", path, err)
 		}
 
 		if info.Mode().IsRegular() {
-			srcFile, err := os.Open(path)
+			srcFile, err := root.Open(path)
 			if err != nil {
 				return fmt.Errorf("failed to open source file %q: %w", path, err)
 			}
@@ -295,12 +325,31 @@ func (t *tarCreator) createTarball(
 			fmt.Errorf("failed to close temporary file: %w", err)
 	}
 
-	if err = intfs.SimpleAtomicMove(tempFilePath, absOutPath); err != nil {
+	if err = replace(root, tempFilePath, outPath); err != nil {
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 			fmt.Errorf("failed to move temporary file to output path: %w", err)
 	}
 
 	return promotion.StepResult{Status: kargoapi.PromotionStepStatusSucceeded}, nil
+}
+
+// parseTarMode parses an optional octal mode. It returns nil when mode is
+// empty, meaning each entry keeps its own mode.
+func parseTarMode(mode string) (*int64, error) {
+	if mode == "" {
+		return nil, nil
+	}
+	parsed, err := strconv.ParseInt(mode, 8, 64)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse octal mode: %w", err)
+	}
+	if parsed < 0 || parsed > 0o777 {
+		return nil, fmt.Errorf("mode %q must be between 0000 and 0777", mode)
+	}
+	if parsed&0o002 != 0 {
+		return nil, fmt.Errorf("mode %q must not be world-writable", mode)
+	}
+	return &parsed, nil
 }
 
 // buildIgnoreMatcher parses a multiline string of gitignore-style patterns

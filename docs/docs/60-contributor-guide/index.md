@@ -48,6 +48,7 @@ automatically converted to a draft until the issue is unblocked.
 
 | Label | Meaning |
 | ----- | ------- |
+| `needs/kind` | Not yet triaged by a maintainer. |
 | `kind/proposal` | Feature request under consideration. Not yet unblocked. |
 | `needs discussion` | Needs further discussion before any work begins. |
 | `needs research` | Needs investigation or research before work begins. |

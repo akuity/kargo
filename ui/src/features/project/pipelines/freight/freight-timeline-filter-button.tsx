@@ -16,6 +16,9 @@ type Props = {
   freights: Freight[];
 };
 
+// These narrow the freight timeline only, not the graph beside it.
+const label = 'Freight timeline filters';
+
 const isFilterActive = (
   preferredFilter: FreightTimelineControllerContextType['preferredFilter']
 ): boolean =>
@@ -36,6 +39,7 @@ export const FreightTimelineFilterButton = (props: Props) => {
     <Popover
       trigger='click'
       placement='bottomRight'
+      title={label}
       content={
         <FreightTimelineFilters
           preferredFilter={ctx.preferredFilter}
@@ -46,6 +50,8 @@ export const FreightTimelineFilterButton = (props: Props) => {
     >
       <Badge dot={active} offset={[-4, 4]}>
         <Button
+          aria-label={label}
+          title={label}
           className={classNames(props.className)}
           icon={<FontAwesomeIcon icon={faFilter} />}
         />

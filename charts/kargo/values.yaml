@@ -17,13 +17,6 @@ image:
 
 ## @section Global Parameters
 global:
-  ## @param global.clusterSecretsNamespace **Deprecated in favor of `systemResources.namespace`.** Designates a namespace to contain Secrets associated with cluster-scoped resources. For example, ClusterConfig is a cluster-scoped resource. Cluster-scoped webhook receivers, defined as part of that resource, each must reference a Secret, however, no such thing as a cluster-scoped Secret exists within Kubernetes. To work around that, all Secrets referenced by a ClusterConfig resource must be located in a designated namespace. NOTE: The namespace designated for this purpose is NOT the place to put Secrets that you want to share across all Projects. This namespace is strictly for Secrets that must be referenced by cluster-scoped resources. **Again, this is deprecated in favor of `systemResources.namespace`.** The name of the setting _and_ its default value are both changing to better reflect the intent to use the namespace not only for Secrets, but for _all_ types of namespaced resources that lack a cluster-scoped analog. Kargo versions >= v1.9.0 and < v1.12.0 will automatically sync Secrets from the namespace specified by `clusterSecretsNamespace` to the namespace specified by `clusterSecretsNamespace` (if they are different). That migration utility will be removed from v1.12.0, by which time operators who GitOps their ClusterConfig will need to have updated their manifests accordingly. Upgrades to v1.12.0 will FAIL if `clusterSecretsNamespace` remains defined.
-  clusterSecretsNamespace: kargo-cluster-secrets
-  ## @param global.createClusterSecretsNamespace **Deprecated, as it is directly related to `clusterSecretsNamespace`, which also is deprecated. See docs for `clusterSecretsNamespace` for more details.** Indicates whether the namespace specified by `clusterSecretsNamespace` should be created when installing the chart.
-  createClusterSecretsNamespace: true
-  ## @param global.createClusterSecretsRBAC **Deprecated, as it is directly related to `clusterSecretsNamespace`, which also is deprecated. See docs for `clusterSecretsNamespace` for more details.** Indicates whether the Roles/RoleBindings in the namespace specified by `clusterSecretsNamespace` should be created when installing the chart.
-  createClusterSecretsRBAC: true
-
   systemResources:
     ## @param global.systemResources.namespace Designates a namespace to contain resources associated with cluster-scoped resources and for which no cluster-scoped analog exists. For example, ClusterConfig is a cluster-scoped resource. Cluster-scoped webhook receivers, defined as part of that resource, each must reference a Secret, however, no such thing as a cluster-scoped Secret exists within Kubernetes. To work around that, all Secrets referenced by a ClusterConfig resource must be located in a designated namespace. NOTE: The namespace designated for this purpose is NOT the place to put resources that you want to share across all Projects. This namespace is strictly for namespaced resources that must be referenced by other, cluster-scoped resources.
     namespace: kargo-system-resources
@@ -99,6 +92,22 @@ global:
       ## @param global.securityContext.seccompProfile.type Seccomp profile applied to containers.
       type: RuntimeDefault
 
+  ## Distributed tracing settings shared by all Kargo components.
+  tracing:
+    ## @param global.tracing.enabled Whether Kargo's components export traces using OpenTelemetry. When enabled, every component sets `TRACING_ENABLED` and exports spans over OTLP to the configured endpoint. Further OpenTelemetry settings not covered below (headers, TLS, resource attributes, and so on) can be supplied as standard `OTEL_*` environment variables via `global.env`.
+    enabled: false
+    otlp:
+      ## @param global.tracing.otlp.endpoint The OTLP endpoint traces are exported to (sets `OTEL_EXPORTER_OTLP_ENDPOINT`), for example `http://otel-collector.observability.svc:4318`. When empty, the OpenTelemetry SDK's default of `localhost:4318` (for `http/protobuf`) or `localhost:4317` (for `grpc`) applies, which suits a collector running as a sidecar or as a DaemonSet with host networking.
+      endpoint: ""
+      ## @param global.tracing.otlp.protocol The OTLP transport used to export traces (sets `OTEL_EXPORTER_OTLP_PROTOCOL`). Valid options are `http/protobuf` and `grpc`.
+      protocol: http/protobuf
+    ## @param global.tracing.sampler The sampler that decides which traces are recorded (sets `OTEL_TRACES_SAMPLER`). Valid options are `always_on`, `always_off`, `traceidratio`, `parentbased_always_on`, `parentbased_always_off`, and `parentbased_traceidratio`.
+    sampler: parentbased_always_on
+    ## @param global.tracing.samplerArg An argument for the sampler (sets `OTEL_TRACES_SAMPLER_ARG`). For the `traceidratio` samplers, this is the fraction of traces to record, for example `0.1`.
+    samplerArg: ""
+    ## @param global.tracing.categories The span categories to record (sets `TRACING_CATEGORIES`): category names and the keywords `default` (the categories on by default), `all` and `none`. When empty, the default categories are recorded. A list without `default` replaces the default categories; include `default` to add to them. An unknown name stops each component at startup.
+    categories: []
+
 ## @section Workloads
 workloads:
   ## @param workloads.install Whether to install workload-bearing resources (Deployments, CronJobs, etc.) and their supporting resources.
@@ -106,7 +115,7 @@ workloads:
 
 ## @section Data Plane
 dataPlane:
-  ## @param dataPlane.install Coarse switch that, when `false`, suppresses every data-plane resource — even where finer-grained flags (`crds.install`, `rbac.installClusterRoles`, `rbac.installClusterRoleBindings`, `webhooks.register`, `global.createClusterSecretsNamespace`, `global.sharedResources.createNamespace`, `global.systemResources.createNamespace`) would otherwise install them. Note: Argo CD data-plane RBAC is governed separately by `argocd.dataPlane.install`.
+  ## @param dataPlane.install Coarse switch that, when `false`, suppresses every data-plane resource — even where finer-grained flags (`crds.install`, `rbac.installClusterRoles`, `rbac.installClusterRoleBindings`, `webhooks.register`, `global.sharedResources.createNamespace`, `global.systemResources.createNamespace`) would otherwise install them. Note: Argo CD data-plane RBAC is governed separately by `argocd.dataPlane.install`.
   install: true
 
   controller:
@@ -164,6 +173,92 @@ kubeconfigSecrets: {}
   ## @param kubeconfigSecrets.argocd [nullable] Kubernetes `Secret` name containing kubeconfig for a remote Kubernetes cluster hosting Argo CD resources. Used by Kargo controller(s) only.
   # argocd: ""
 
+## @section NATS
+## @descriptionStart
+## The API server, controller, management controller, and Kubernetes webhooks
+## server connect to a NATS server at startup. By default, this chart installs a NATS cluster using the
+## upstream NATS chart. Any setting supported by that chart may be specified
+## under `nats`. See
+## https://github.com/nats-io/k8s/tree/main/helm/charts/nats for details.
+##
+## To use an existing NATS server instead, set `nats.enabled` to `false` and
+## configure `nats.external`.
+## @descriptionEnd
+nats:
+  ## @param nats.enabled Whether to install NATS as part of this chart. When `false`, `nats.external.url` must be set.
+  enabled: true
+  ## @param nats.fullnameOverride Name of the NATS resources. Kargo components derive the URL of the NATS server from it.
+  fullnameOverride: kargo-nats
+  # Settings for connecting to a NATS server not installed by this chart. These
+  # are Kargo's own; the NATS chart ignores them.
+  external:
+    ## @param nats.external.url URL of an existing NATS server for Kargo components to connect to (e.g. `nats://nats.example.com:4222`). Multiple, comma-separated URLs may be specified. Only used, and then required, when `nats.enabled` is `false`.
+    url: ""
+    # Credentials with which Kargo components authenticate to the server. At
+    # most one of the following may be set. Leave all unset if the server does
+    # not require authentication.
+    nkeySeedSecret:
+      ## @param nats.external.nkeySeedSecret.name Name of a `Secret` in the release namespace containing an nkey seed with which Kargo components authenticate to the NATS server specified by `nats.external.url`. Mutually exclusive with the other `nats.external.*Secret.name` settings.
+      name: ""
+      ## @param nats.external.nkeySeedSecret.key Key within the `Secret` specified by `nats.external.nkeySeedSecret.name` that contains the nkey seed.
+      key: seed.nk
+    credsSecret:
+      ## @param nats.external.credsSecret.name Name of a `Secret` in the release namespace containing a NATS credentials (`.creds`) file, holding a user JWT and nkey seed, with which Kargo components authenticate to the NATS server specified by `nats.external.url`. Used with servers in decentralized (operator) mode. The file is re-read on every reconnect, so updates to the `Secret` take effect without restarting Kargo components. Mutually exclusive with the other `nats.external.*Secret.name` settings.
+      name: ""
+      ## @param nats.external.credsSecret.key Key within the `Secret` specified by `nats.external.credsSecret.name` that contains the credentials file.
+      key: user.creds
+    tokenSecret:
+      ## @param nats.external.tokenSecret.name Name of a `Secret` in the release namespace containing a token with which Kargo components authenticate to the NATS server specified by `nats.external.url`. Mutually exclusive with the other `nats.external.*Secret.name` settings.
+      name: ""
+      ## @param nats.external.tokenSecret.key Key within the `Secret` specified by `nats.external.tokenSecret.name` that contains the token.
+      key: token
+    userPasswordSecret:
+      ## @param nats.external.userPasswordSecret.name Name of a `Secret` in the release namespace containing a username and password with which Kargo components authenticate to the NATS server specified by `nats.external.url`. The default keys match those of a `kubernetes.io/basic-auth` `Secret`. Both are mounted as files that are re-read on every reconnect, so updates to the `Secret` take effect without restarting Kargo components. Mutually exclusive with the other `nats.external.*Secret.name` settings.
+      name: ""
+      ## @param nats.external.userPasswordSecret.usernameKey Key within the `Secret` specified by `nats.external.userPasswordSecret.name` that contains the username.
+      usernameKey: username
+      ## @param nats.external.userPasswordSecret.passwordKey Key within the `Secret` specified by `nats.external.userPasswordSecret.name` that contains the password.
+      passwordKey: password
+    # TLS settings for the connection to the server. These may be combined with
+    # any of the credentials above. Setting either secret requires the server
+    # to use TLS.
+    tls:
+      caSecret:
+        ## @param nats.external.tls.caSecret.name Name of a `Secret` in the release namespace containing PEM-encoded CA certificates with which Kargo components verify the certificate of the NATS server specified by `nats.external.url`. Leave empty to use the system's root CAs.
+        name: ""
+        ## @param nats.external.tls.caSecret.key Key within the `Secret` specified by `nats.external.tls.caSecret.name` that contains the CA certificates.
+        key: ca.crt
+      clientCertSecret:
+        ## @param nats.external.tls.clientCertSecret.name Name of a `kubernetes.io/tls` `Secret` in the release namespace containing a client certificate (`tls.crt`) and private key (`tls.key`) that Kargo components present to the NATS server specified by `nats.external.url`. Required by servers that verify client certificates, including those that authenticate clients by them.
+        name: ""
+  ## @skip nats.config
+  config:
+    cluster:
+      enabled: true
+      replicas: 3
+    jetstream:
+      enabled: true
+      # Without a memory store, JetStream refuses to create in-memory streams,
+      # such as one holding a short-lived history of Kargo events.
+      memoryStore:
+        enabled: true
+        maxSize: 256Mi
+  ## @skip nats.container
+  container:
+    # Requests and limits are equal (Guaranteed QoS) so that NATS is neither
+    # CPU-throttled nor evicted ahead of other workloads under node pressure.
+    resources:
+      requests:
+        cpu: "1"
+        memory: 2Gi
+      limits:
+        cpu: "1"
+        memory: 2Gi
+  ## @skip nats.natsBox
+  natsBox:
+    # A debugging aid only. Enable if a NATS CLI inside the cluster is needed.
+    enabled: false
+
 ## @section API
 api:
   ## @param api.enabled Whether the API server is enabled.
@@ -202,6 +297,17 @@ api:
   ## @param api.permissiveCORSPolicyEnabled Whether to enable a permissive CORS (Cross Origin Resource Sharing) policy. This is sometimes advantageous during local development, but otherwise, should generally be left disabled.
   permissiveCORSPolicyEnabled: false
 
+  ## @param api.trustedProxies IP addresses or CIDRs of proxies (e.g. an ingress controller or load balancer) in front of the API server. When a request arrives from one of these, the client's IP address is taken from `api.clientIPHeader`, or else from the rightmost `X-Forwarded-For` entry that is not a trusted proxy. When empty, the client's IP address is always the address the request arrived from.
+  trustedProxies: []
+  ## @param api.clientIPHeader A header that every trusted proxy sets to the client's IP address, e.g. `CF-Connecting-IP` or `X-Real-IP`. Only honored on requests arriving from a trusted proxy.
+  clientIPHeader: ""
+
+  requestLog:
+    ## @param api.requestLog.allEnabled Whether to log every API request at INFO level. By default, only refused requests (401 and 403) are logged at INFO level and server errors at ERROR level, while all other requests are logged at DEBUG level.
+    allEnabled: false
+    ## @param api.requestLog.sourceIPEnabled Whether to include the IP address each request came from in the API server's logs. IP addresses may be considered personal data, so this is disabled by default.
+    sourceIPEnabled: false
+
   secret:
     ## @param api.secret.name Specifies the name of an existing Secret which contains the `ADMIN_ACCOUNT_PASSWORD_HASH` and `ADMIN_ACCOUNT_TOKEN_SIGNING_KEY` values. By setting this, the Secret will **not** be generated by Helm.
     name: ""
@@ -209,7 +315,7 @@ api:
   adminAccount:
     ## @param api.adminAccount.enabled Whether to enable the admin account.
     enabled: true
-    ## @param api.adminAccount.passwordHash Bcrypt password hash for the admin account. A value **must** be provided for this field unless `api.secret.name` is specified.
+    ## @param api.adminAccount.passwordHash Password hash for the admin account, as generated by `kargo hash-password`. bcrypt hashes are also accepted. A value **must** be provided for this field unless `api.secret.name` is specified.
     passwordHash: ""
     ## @param api.adminAccount.tokenSigningKey Key used to sign ID tokens (JWTs) for the admin account. It is suggested that you generate this using a password manager or a command like: `openssl rand -base64 29 \| tr -d "=+/" \| cut`. A value **must** be provided for this field, unless `api.secret.name` is specified.
     tokenSigningKey: ""
@@ -332,7 +438,7 @@ api:
         ## @param api.oidc.dex.image.repository Image repository of Dex
         repository: ghcr.io/dexidp/dex
         ## @param api.oidc.dex.image.tag Image tag for Dex.
-        tag: v2.44.0
+        tag: v2.46.0
         ## @param api.oidc.dex.image.pullPolicy Image pull policy for Dex.
         pullPolicy: IfNotPresent
         ## @param api.oidc.dex.image.pullSecrets List of imagePullSecrets.
@@ -377,6 +483,9 @@ api:
       #     clientSecret: "$CLIENT_SECRET"
       #     redirectURI: <http(s)>://<api.host>/dex/callback
       #     tenant: <tenant ID>
+
+      ## @param api.oidc.dex.automountServiceAccountToken Whether to mount a Kubernetes API token in Dex server pods. Applies to both the pods and their ServiceAccount. Dex keeps its state in memory and reads its configuration from a mounted Secret, so it does not need one.
+      automountServiceAccountToken: false
 
       ## ServiceAccount specific settings
       serviceAccount:
@@ -504,6 +613,9 @@ api:
   podLabels: {}
   ## @param api.podAnnotations Optional annotations to add to pods. Merges with `global.podAnnotations`, allowing you to override or add to the global annotations.
   podAnnotations: {}
+
+  ## @param api.automountServiceAccountToken Whether to mount a Kubernetes API token in API server pods. Applies to both the pods and their ServiceAccount. The API server uses it to reach the Kubernetes API unless a kubeconfig Secret is configured. Set this to false only if those kubeconfigs authenticate without the mounted token (a kubeconfig can still reference the ServiceAccount token path).
+  automountServiceAccountToken: true
 
   ## ServiceAccount specific settings
   serviceAccount:
@@ -669,11 +781,6 @@ controller:
   ## @param controller.shardName [nullable] When running multiple controllers backed by a single underlying control plane, specifying a shard name will cause this controller to operate **only** on resources with a matching shard name. Leaving this field undefined will designate this controller as the default controller that is responsible for resources that are not assigned to a specific shard **regardless** of the value of `controller.isDefault` (as that was the behavior prior to the introduction of `controller.isDefault`). If this field is defined, this controller will not be considered the default **unless, additionally** `controller.isDefault` is `true`. i.e. A controller is effectively considered the default if `or (not controller.shardName) controller.isDefault`. If this field is defined **and** `controller.isDefault` is true, this controller will operate **both** on resources explicitly assigned to it **as well as** those not assigned to a specific shard.
   # shardName:
 
-  ## **Deprecated in favor of `global.sharedResources`.**. All settings relating to shared credentials (used across multiple kargo projects).
-  globalCredentials:
-    ## @param controller.globalCredentials.namespaces **Deprecated in favor of `global.sharedResources.namespace`.** List of namespaces to look for shared credentials. Note that as of v1.0.0, the Kargo controller does not have cluster-wide access to Secrets. The controller receives read-only permission for Secrets on a per-Project basis as Projects are created. If you designate some namespaces as homes for "global" credentials, you will need to manually grant the controller permission to read Secrets in those namespaces.
-    namespaces: []
-
   ## @param controller.allowCredentialsOverHTTP Specifies whether the controller should allow credentials (for Git repositories, etc.) to be retrieved and used for operations over HTTP. This is generally discouraged, as it can expose sensitive information. When set to `false`, the controller will only allow credentials to be used over HTTPS (or other secure protocols).
   allowCredentialsOverHTTP: false
 
@@ -704,8 +811,8 @@ controller:
     name: "Kargo"
     ## @param controller.gitClient.email Specifies the email of the Kargo controller (used when authoring Git commits).
     email: "no-reply@kargo.io"
-    ## @param controller.gitClient.pushIntegrationPolicy Controls how remote changes are integrated before pushing. Options: AlwaysRebase (unconditionally rebase), RebaseOrMerge (rebase when safe, merge otherwise), RebaseOrFail (rebase when safe, fail otherwise), AlwaysMerge (unconditionally merge). The default will change from AlwaysRebase to RebaseOrMerge in v1.12.0.
-    pushIntegrationPolicy: "AlwaysRebase"
+    ## @param controller.gitClient.pushIntegrationPolicy Controls how remote changes are integrated before pushing. Options: AlwaysRebase (unconditionally rebase), RebaseOrMerge (rebase when safe, merge otherwise), RebaseOrFail (rebase when safe, fail otherwise), AlwaysMerge (unconditionally merge).
+    pushIntegrationPolicy: "RebaseOrMerge"
 
     signingKeySecret:
       ## @param controller.gitClient.signingKeySecret.name Specifies the name of an existing `Secret` which contains the Git user's signing key. The value should be accessible under `.data.signingKey` in the same namespace as Kargo. When the signing key is a GPG key, the GPG key's name and email address identity must match the values defined for `controller.gitClient.name` and `controller.gitClient.email`.
@@ -729,7 +836,7 @@ controller:
       ## @param controller.images.cache.maxEntries specifies the maximum number of entries in the internal image metadata cache.
       maxEntries: 100000
     push:
-      ## @param controller.images.push.maxArtifactSize The maximum size (in bytes) for cross-repository OCI artifact pushes. Defaults to 1 GiB (1073741824). Set to 0 to block all cross-repo pushes, or -1 to disable the limit.
+      ## @param controller.images.push.maxArtifactSize The maximum size (in bytes) for OCI artifact pushes that transfer blobs (cross-repository copies and local file pushes). Defaults to 1 GiB (1073741824). Set to 0 to block such pushes entirely, or -1 to disable the limit.
       maxArtifactSize: 1073741824
 
   ## All settings relating to the Argo CD control plane this controller might
@@ -758,6 +865,9 @@ controller:
   podLabels: {}
   ## @param controller.podAnnotations Optional annotations to add to pods. Merges with `global.podAnnotations`, allowing you to override or add to the global annotations.
   podAnnotations: {}
+
+  ## @param controller.automountServiceAccountToken Whether to mount a Kubernetes API token in controller pods. Applies to both the pods and their ServiceAccount. The controller uses it to reach the Kubernetes API, and Argo CD, unless kubeconfig Secrets are configured for both. Set this to false only if those kubeconfigs authenticate without the mounted token (a kubeconfig can still reference the ServiceAccount token path).
+  automountServiceAccountToken: true
 
   ## All settings relating to the service account for the controller
   serviceAccount:
@@ -818,6 +928,13 @@ controller:
   ## @param controller.securityContext Security context for controller pods. Defaults to `global.securityContext`.
   securityContext: {}
 
+  ## Settings for how the controller reaches the Kargo API server. Targets live
+  ## in the control plane's database and the controller, which may run far from
+  ## it, reads them through the API server.
+  apiServer:
+    ## @param controller.apiServer.address The URL at which the controller reaches the API server, e.g. `https://kargo.example.com`. When empty and `api.enabled` is `true`, the API server's in-cluster `Service` is used, and a chart-generated API server certificate is trusted automatically. Set this for a controller installed apart from the API server, such as a shard in another cluster; a certificate the controller does not already trust can be added through `controller.cabundle`. Without an API server the controller cannot promote to Targets. The controller acts as the ServiceAccount of the control plane that its control plane credential resolves to, requesting short-lived tokens for it; a controller installed apart from the control plane must therefore be given a credential for a ServiceAccount there, bound to the `kargo-controller` ClusterRole and allowed to `create` its own `token` subresource.
+    address: ""
+
   cabundle:
     ## @param controller.cabundle.configMapName Specifies the name of an optional ConfigMap containing CA certs that is managed "out of band." Values in the ConfigMap named here should each contain a single PEM-encoded CA cert. If secretName is also defined, it will take precedence over this field.
     configMapName: ""
@@ -876,6 +993,10 @@ garbageCollector:
 
   ## @param garbageCollector.schedule When to run the garbage collector.
   schedule: "0 * * * *"
+  ## @param garbageCollector.timeZone [nullable] IANA time zone for the garbage collector schedule. When empty, Kubernetes uses the time zone of the controller manager.
+  timeZone: ""
+  ## @param garbageCollector.startingDeadlineSeconds [nullable] Maximum number of seconds after a missed schedule when the garbage collector Job may still start. When empty, Kubernetes applies no starting deadline.
+  startingDeadlineSeconds:
 
   ## @param garbageCollector.suspend Whether to suspend the garbage collector CronJob. When `true`, the CronJob remains in place but stops launching new Jobs.
   suspend: false
@@ -885,6 +1006,10 @@ garbageCollector:
   failedJobsHistoryLimit: 1
   ## @param garbageCollector.ttlSecondsAfterFinished Optional automatic cleanup delay (in seconds) for completed garbage collector Jobs. Each Job will be eligible for deletion this many seconds after it finishes. Leave empty/unset to retain Jobs indefinitely (subject to the `*JobsHistoryLimit` knobs).
   ttlSecondsAfterFinished:
+  ## @param garbageCollector.activeDeadlineSeconds [nullable] Maximum duration in seconds of the complete garbage collector Job, including retries. When empty, Kubernetes applies no active deadline.
+  activeDeadlineSeconds:
+  ## @param garbageCollector.backoffLimit Number of failed garbage collector Job retries before Kubernetes marks the Job failed. Defaults to the Kubernetes Job default of `6`.
+  backoffLimit: 6
 
   ## @param garbageCollector.workers The number of concurrent workers to run. Tuning this too low will result in slow garbage collection. Tuning this too high will result in too many API calls and may result in throttling.
   workers: 3
@@ -905,6 +1030,9 @@ garbageCollector:
   podLabels: {}
   ## @param garbageCollector.podAnnotations Optional annotations to add to pods. Merges with `global.podAnnotations`, allowing you to override or add to the global annotations.
   podAnnotations: {}
+
+  ## @param garbageCollector.automountServiceAccountToken Whether to mount a Kubernetes API token in garbage collector pods. Applies to both the pods and their ServiceAccount. The garbage collector uses it to reach the Kubernetes API unless a kubeconfig Secret is configured. Set this to false only if those kubeconfigs authenticate without the mounted token (a kubeconfig can still reference the ServiceAccount token path).
+  automountServiceAccountToken: true
 
   ## ServiceAccount specific settings
   serviceAccount:
@@ -995,6 +1123,9 @@ externalWebhooksServer:
   podLabels: {}
   ## @param externalWebhooksServer.podAnnotations Optional annotations to add to the external webhook server pods. Merges with `global.podAnnotations`, allowing you to override or add to the global annotations.
   podAnnotations: {}
+
+  ## @param externalWebhooksServer.automountServiceAccountToken Whether to mount a Kubernetes API token in external webhooks server pods. Applies to both the pods and their ServiceAccount. The external webhooks server uses it to reach the Kubernetes API unless a kubeconfig Secret is configured. Set this to false only if those kubeconfigs authenticate without the mounted token (a kubeconfig can still reference the ServiceAccount token path).
+  automountServiceAccountToken: true
 
   ## ServiceAccount specific settings
   serviceAccount:
@@ -1124,6 +1255,41 @@ externalWebhooksServer:
     ## @param externalWebhooksServer.service.annotations Annotations to add to the external webhook server's service. Merges with `global.annotations`, allowing you to override or add to the global annotations.
     annotations: {}
 
+  ## All settings relating to exposing the external webhooks server's Prometheus metrics.
+  metrics:
+    ## @param externalWebhooksServer.metrics.enabled Whether to expose the external webhooks server's Prometheus metrics. When enabled, the external webhooks server binds its metrics server (via `METRICS_BIND_ADDRESS`), declares a metrics container port, and a metrics `Service` is created. Metrics are served over plain HTTP.
+    enabled: false
+    service:
+      ## @param externalWebhooksServer.metrics.service.type The type of the metrics `Service`.
+      type: ClusterIP
+      ## @param externalWebhooksServer.metrics.service.clusterIP The cluster IP of the metrics `Service`. Set to `None` for a headless `Service`, which resolves directly to individual pod IPs -- useful for scrapers that perform their own endpoint discovery.
+      clusterIP: ""
+      ## @param externalWebhooksServer.metrics.service.annotations Annotations to add to the metrics `Service`.
+      annotations: {}
+      ## @param externalWebhooksServer.metrics.service.labels Additional labels to add to the metrics `Service`.
+      labels: {}
+      ## @param externalWebhooksServer.metrics.service.servicePort The port exposed by the metrics `Service`. Also used as the container port and the address the metrics server binds to.
+      servicePort: 9090
+      ## @param externalWebhooksServer.metrics.service.portName The name of the metrics port. Referenced by the `ServiceMonitor` endpoint.
+      portName: http-metrics
+    serviceMonitor:
+      ## @param externalWebhooksServer.metrics.serviceMonitor.enabled Whether to create a Prometheus Operator `ServiceMonitor` for the external webhooks server's metrics. Requires `externalWebhooksServer.metrics.enabled` to be `true` and the Prometheus Operator CRDs (`monitoring.coreos.com/v1`) to be present in the cluster; otherwise it is silently skipped.
+      enabled: false
+      ## @param externalWebhooksServer.metrics.serviceMonitor.interval The scrape interval for the `ServiceMonitor`.
+      interval: 30s
+      ## @param externalWebhooksServer.metrics.serviceMonitor.scheme The scheme to use when scraping. Defaults to `http` (metrics are served over plain HTTP).
+      scheme: ""
+      ## @param externalWebhooksServer.metrics.serviceMonitor.tlsConfig TLS configuration for the `ServiceMonitor` endpoint. Rendered as literal YAML.
+      tlsConfig: {}
+      ## @param externalWebhooksServer.metrics.serviceMonitor.relabelings Relabeling rules applied to samples before scraping. Rendered as literal YAML.
+      relabelings: []
+      ## @param externalWebhooksServer.metrics.serviceMonitor.metricRelabelings Relabeling rules applied to samples before ingestion. Rendered as literal YAML.
+      metricRelabelings: []
+      ## @param externalWebhooksServer.metrics.serviceMonitor.additionalLabels Additional labels to add to the `ServiceMonitor`. Often required to match the label selector of your Prometheus Operator instance.
+      additionalLabels: {}
+      ## @param externalWebhooksServer.metrics.serviceMonitor.namespace The namespace in which to create the `ServiceMonitor`. Defaults to the release namespace.
+      namespace: ""
+
 ## @section Management Controller
 ## All settings for the management controller component
 managementController:
@@ -1168,6 +1334,9 @@ managementController:
   podLabels: {}
   ## @param managementController.podAnnotations Optional annotations to add to pods. Merges with `global.podAnnotations`, allowing you to override or add to the global annotations.
   podAnnotations: {}
+
+  ## @param managementController.automountServiceAccountToken Whether to mount a Kubernetes API token in management controller pods. Applies to both the pods and their ServiceAccount. The management controller uses it to reach the Kubernetes API unless a kubeconfig Secret is configured. Set this to false only if those kubeconfigs authenticate without the mounted token (a kubeconfig can still reference the ServiceAccount token path).
+  automountServiceAccountToken: true
 
   ## ServiceAccount specific settings
   serviceAccount:
@@ -1291,6 +1460,9 @@ webhooksServer:
   ## @param webhooksServer.podAnnotations Optional annotations to add to the webhook server pods. Merges with `global.podAnnotations`, allowing you to override or add to the global annotations.
   podAnnotations: {}
 
+  ## @param webhooksServer.automountServiceAccountToken Whether to mount a Kubernetes API token in webhooks server pods. Applies to both the pods and their ServiceAccount. The webhooks server uses it to reach the Kubernetes API unless a kubeconfig Secret is configured. Set this to false only if those kubeconfigs authenticate without the mounted token (a kubeconfig can still reference the ServiceAccount token path).
+  automountServiceAccountToken: true
+
   ## ServiceAccount specific settings
   serviceAccount:
     ## @param webhooksServer.serviceAccount.labels Additional labels to add to the webhooks server ServiceAccount.
@@ -1404,6 +1576,166 @@ webhooksServer:
     #   -----BEGIN CERTIFICATE-----
     #   ...
     #   -----END CERTIFICATE-----
+
+## @section Database
+## Kargo's API server and management controller use a PostgreSQL database:
+## Targets live in it and Project identities are mirrored into it. These
+## settings provide that database, either the minimal PostgreSQL bundled with
+## the chart or a reference to an external one, and point the components that
+## use it at whichever is configured.
+database:
+  migrations:
+    ## @param database.migrations.enabled Whether to run a Job that applies pending database schema migrations on every install and upgrade. It runs the Kargo image's `migrate` subcommand against whichever database is configured below, waits for the database to accept connections, and serializes with any concurrent runner against the same schema on a lock keyed on that schema. It is an ordinary Job rather than a Helm hook so that it also works when the chart is rendered with `helm template`, for example by Argo CD. Disable it to apply migrations some other way, for example from a pipeline that manages schema changes with its own approvals; Kargo's components refuse to serve against a schema that is behind the version they expect.
+    enabled: true
+    ## @param database.migrations.backoffLimit Number of times a failed migration Job is retried. A migration that fails should be investigated, not retried indefinitely.
+    backoffLimit: 3
+    ## @param database.migrations.ttlSecondsAfterFinished Optional automatic cleanup delay (in seconds) for the finished migration Job and its Pod. Leave empty to keep them until the next upgrade replaces the Job, which is what GitOps agents expect: a Job that Kubernetes deletes on its own looks like drift to them, and they recreate it. Set it when nothing else prunes old Jobs.
+    ttlSecondsAfterFinished:
+    ## @param database.migrations.connectTimeout How long the Job keeps retrying its first connection before giving up, since the database may still be starting when the Job does (sets `DATABASE_CONNECT_TIMEOUT`).
+    connectTimeout: 5m
+    ## @param database.migrations.lockTimeout How long the Job waits for another migration run to release the lock on the schema before giving up (sets `DATABASE_MIGRATION_LOCK_TIMEOUT`). Must exceed the slowest migration, since that is what a waiting run is waiting on.
+    lockTimeout: 1h
+    ## @param database.migrations.logLevel The log level for the migration Job. Valid options are ERROR, INFO, DEBUG, and TRACE (case insensitive).
+    logLevel: INFO
+    ## @param database.migrations.logFormat The format of logs from the migration Job. Valid options are CONSOLE or JSON (case insensitive).
+    logFormat: CONSOLE
+
+    ## @param database.migrations.labels Labels to add to the migration Job resources. Merges with `global.labels`, allowing you to override or add to the global labels.
+    labels: {}
+    ## @param database.migrations.annotations Annotations to add to the migration Job resources. Merges with `global.annotations`, allowing you to override or add to the global annotations.
+    annotations: {}
+    ## @param database.migrations.podLabels Optional labels to add to the migration Job's pod. Merges with `global.podLabels`, allowing you to override or add to the global labels.
+    podLabels: {}
+    ## @param database.migrations.podAnnotations Optional annotations to add to the migration Job's pod. Merges with `global.podAnnotations`, allowing you to override or add to the global annotations.
+    podAnnotations: {}
+
+    ## @param database.migrations.automountServiceAccountToken Whether to mount a Kubernetes API token in the migration Job's pod. Applies to both the pod and its ServiceAccount. The Job only talks to the database, so it does not need one.
+    automountServiceAccountToken: false
+
+    serviceAccount:
+      ## @param database.migrations.serviceAccount.labels Additional labels to add to the migration Job's ServiceAccount.
+      labels: {}
+      ## @param database.migrations.serviceAccount.annotations Additional annotations to add to the migration Job's ServiceAccount.
+      annotations: {}
+
+    ## @param database.migrations.env Environment variables to add to the migration Job's pod.
+    env: []
+    #  - name: name
+    #    value: value
+    ## @param database.migrations.envFrom Environment variables to add to the migration Job's pod from ConfigMaps or Secrets.
+    envFrom: []
+    #  - configMapRef:
+    #      name: config-map-name
+    #  - secretRef:
+    #      name: secret-name
+
+    ## @param database.migrations.resources Resources limits and requests for the migration Job's container.
+    resources: {}
+      # limits:
+      #   cpu: 100m
+      #   memory: 128Mi
+      # requests:
+      #   cpu: 100m
+      #   memory: 128Mi
+
+    ## @param database.migrations.nodeSelector Node selector for the migration Job's pod. Defaults to `global.nodeSelector`.
+    nodeSelector: {}
+    ## @param database.migrations.tolerations Tolerations for the migration Job's pod. Defaults to `global.tolerations`.
+    tolerations: []
+    ## @param database.migrations.affinity Specifies pod affinity for the migration Job's pod. Defaults to `global.affinity`.
+    affinity: {}
+    # priorityClassName:
+    ## @param database.migrations.securityContext Security context for the migration Job's container. Defaults to `global.securityContext`.
+    securityContext: {}
+  postgres:
+    ## @param database.postgres.enabled Whether to run the PostgreSQL bundled with the chart: a single, minimally configurable instance meant for evaluation and development. It has no replication, backups, or tuning and is not suitable for production. Disable it and set `database.external.secretName` to use your own database.
+    enabled: true
+    image:
+      ## @param database.postgres.image.repository Image repository of the bundled PostgreSQL.
+      repository: postgres
+      ## @param database.postgres.image.tag Image tag of the bundled PostgreSQL.
+      tag: "18.6"
+      ## @param database.postgres.image.pullPolicy Image pull policy of the bundled PostgreSQL.
+      pullPolicy: IfNotPresent
+      ## @param database.postgres.image.pullSecrets List of imagePullSecrets for the bundled PostgreSQL.
+      pullSecrets: []
+    ## @param database.postgres.password Password of the bundled PostgreSQL's `kargo` user. A value **must** be provided for this field unless `database.postgres.existingSecret` is specified. It is suggested that you generate this using a password manager or a command like: `openssl rand -base64 48 \| tr -d "=+/" \| head -c 32`. Like `api.adminAccount.tokenSigningKey`, this is stored in plaintext; to keep it out of your values, use `database.postgres.existingSecret` instead.
+    password: ""
+    ## @param database.postgres.existingSecret Name of an existing Secret in Kargo's namespace holding the bundled PostgreSQL's `kargo` user password under the key `password`. When set, the chart stores no password itself. This is the recommended way to run the bundled PostgreSQL from a GitOps tool such as Argo CD. Cannot be combined with `database.postgres.password`.
+    existingSecret: ""
+    ## @param database.postgres.extraArgs Additional server settings for the bundled PostgreSQL, as `name=value` pairs passed to `postgres` as `-c` flags. For example, `log_lock_waits=on`.
+    extraArgs: []
+    persistence:
+      ## @param database.postgres.persistence.enabled Whether the bundled PostgreSQL stores its data on a PersistentVolumeClaim. When `false`, data is kept on an emptyDir and lost whenever the Pod is replaced.
+      enabled: true
+      ## @param database.postgres.persistence.size Size of the bundled PostgreSQL's PersistentVolumeClaim.
+      size: 1Gi
+      ## @param database.postgres.persistence.storageClass StorageClass of the bundled PostgreSQL's PersistentVolumeClaim. When empty, the cluster's default StorageClass is used.
+      storageClass: ""
+    resources:
+      requests:
+        ## @param database.postgres.resources.requests.cpu CPU request for the bundled PostgreSQL container.
+        cpu: 100m
+        ## @param database.postgres.resources.requests.memory Memory request for the bundled PostgreSQL container.
+        memory: 128Mi
+      limits:
+        ## @param database.postgres.resources.limits.memory Memory limit for the bundled PostgreSQL container.
+        memory: 512Mi
+    ## @param database.postgres.revisionHistoryLimit Number of old revisions of the bundled PostgreSQL StatefulSet to retain.
+    revisionHistoryLimit: 10
+
+    ## @param database.postgres.labels Labels to add to the bundled PostgreSQL resources. Merges with `global.labels`, allowing you to override or add to the global labels.
+    labels: {}
+    ## @param database.postgres.annotations Annotations to add to the bundled PostgreSQL resources. Merges with `global.annotations`, allowing you to override or add to the global annotations.
+    annotations: {}
+    ## @param database.postgres.podLabels Optional labels to add to the bundled PostgreSQL pod. Merges with `global.podLabels`, allowing you to override or add to the global labels.
+    podLabels: {}
+    ## @param database.postgres.podAnnotations Optional annotations to add to the bundled PostgreSQL pod. Merges with `global.podAnnotations`, allowing you to override or add to the global annotations.
+    podAnnotations: {}
+
+    ## @param database.postgres.automountServiceAccountToken Whether to mount a Kubernetes API token in the bundled PostgreSQL pod. Applies to both the pod and its ServiceAccount. PostgreSQL does not call the Kubernetes API, so it does not need one.
+    automountServiceAccountToken: false
+
+    serviceAccount:
+      ## @param database.postgres.serviceAccount.labels Additional labels to add to the bundled PostgreSQL ServiceAccount.
+      labels: {}
+      ## @param database.postgres.serviceAccount.annotations Additional annotations to add to the bundled PostgreSQL ServiceAccount.
+      annotations: {}
+
+    ## @param database.postgres.env Environment variables to add to the bundled PostgreSQL pod.
+    env: []
+    #  - name: name
+    #    value: value
+    ## @param database.postgres.envFrom Environment variables to add to the bundled PostgreSQL pod from ConfigMaps or Secrets.
+    envFrom: []
+    #  - configMapRef:
+    #      name: config-map-name
+    #  - secretRef:
+    #      name: secret-name
+
+    ## @param database.postgres.containers Additional sidecar containers to add to the bundled PostgreSQL pod. Rendered as literal YAML.
+    containers: []
+    ## @param database.postgres.initContainers Additional init containers to add to the bundled PostgreSQL pod. Rendered as literal YAML.
+    initContainers: []
+    ## @param database.postgres.volumes Additional pod-level volumes for the bundled PostgreSQL pod. Rendered as literal YAML.
+    volumes: []
+    ## @param database.postgres.volumeMounts Additional volume mounts for the bundled PostgreSQL container. Rendered as literal YAML.
+    volumeMounts: []
+
+    ## @param database.postgres.nodeSelector Node selector for the bundled PostgreSQL pod. Defaults to `global.nodeSelector`.
+    nodeSelector: {}
+    ## @param database.postgres.tolerations Tolerations for the bundled PostgreSQL pod. Defaults to `global.tolerations`.
+    tolerations: []
+    ## @param database.postgres.affinity Specifies pod affinity for the bundled PostgreSQL pod. Defaults to `global.affinity`.
+    affinity: {}
+    # priorityClassName:
+    ## @param database.postgres.securityContext Security context for the bundled PostgreSQL container. Defaults to `global.securityContext`.
+    securityContext: {}
+  external:
+    ## @param database.external.secretName Name of an existing Secret in Kargo's namespace that holds the connection string of an external PostgreSQL database under the key named by `database.external.secretKey`. Cannot be combined with `database.postgres.enabled`.
+    secretName: ""
+    ## @param database.external.secretKey Key within the Secret named by `database.external.secretName` that holds the connection string.
+    secretKey: connectionString
 
 ## @param extraObjects An array describing additional, arbitrary Kubernetes resources to include when rendering this chart. Items in the array may be YAML objects or strings. Either may be templated. Templates will be evaluated against the same set of values as the rest of the chart.
 extraObjects: []

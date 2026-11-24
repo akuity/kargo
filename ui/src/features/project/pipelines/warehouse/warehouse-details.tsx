@@ -60,13 +60,17 @@ export const WarehouseDetails = ({
     <Drawer
       open={!!warehouse}
       onClose={onClose}
-      width={'80%'}
+      size='80%'
       title={
         <Flex justify='space-between' className='font-normal'>
           <div>
             <Flex gap={16} align='center'>
               <Typography.Title level={2} style={{ margin: 0 }}>
-                <FontAwesomeIcon icon={faBuilding} size='xs' className='mr-1 text-gray-400' />{' '}
+                <FontAwesomeIcon
+                  icon={faBuilding}
+                  size='xs'
+                  className='mr-1 text-gray-400 dark:text-neutral-500'
+                />{' '}
                 {warehouse.metadata?.name}
               </Typography.Title>
             </Flex>
@@ -80,7 +84,7 @@ export const WarehouseDetails = ({
       {warehouse && (
         <div className='flex flex-col h-full'>
           {warehouseErrorMessage && (
-            <Alert className='mb-6' message={warehouseErrorMessage} type='error' closable />
+            <Alert className='mb-6' title={warehouseErrorMessage} type='error' closable />
           )}
 
           <Tabs

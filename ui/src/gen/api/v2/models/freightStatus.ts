@@ -11,18 +11,24 @@ import type { FreightStatusMetadata } from './freightStatusMetadata';
 import type { FreightStatusVerifiedIn } from './freightStatusVerifiedIn';
 
 export interface FreightStatus {
-  /** ApprovedFor describes the Stages for which this Freight has been approved
-preemptively/manually by a user. This is useful for hotfixes, where one
-might wish to promote a piece of Freight to a given Stage without
-transiting the entire pipeline. */
+  /**
+   * ApprovedFor describes the Stages for which this Freight has been approved
+   * preemptively/manually by a user. This is useful for hotfixes, where one
+   * might wish to promote a piece of Freight to a given Stage without
+   * transiting the entire pipeline.
+   */
   approvedFor?: FreightStatusApprovedFor;
   /** CurrentlyIn describes the Stages in which this Freight is currently in use. */
   currentlyIn?: FreightStatusCurrentlyIn;
-  /** Metadata is a map of arbitrary metadata associated with the Freight.
-This is useful for storing additional information about the Freight
-or Promotion that can be shared across steps or stages. */
+  /**
+   * Metadata is a map of arbitrary metadata associated with the Freight.
+   * This is useful for storing additional information about the Freight
+   * or Promotion that can be shared across steps or stages.
+   */
   metadata?: FreightStatusMetadata;
-  /** VerifiedIn describes the Stages in which this Freight has been verified
-through promotion and subsequent health checks. */
+  /**
+   * VerifiedIn describes the Stages in which this Freight has been verified
+   * through promotion and subsequent health checks.
+   */
   verifiedIn?: FreightStatusVerifiedIn;
 }

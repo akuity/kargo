@@ -7,22 +7,32 @@
  */
 
 export interface DeepLink {
-  /** Description is an optional human-readable summary shown alongside the
-link.
-
-+optional */
+  /**
+   * Description is an optional human-readable summary shown alongside the
+   * link.
+   *
+   * +optional
+   */
   description?: string;
-  /** If is an optional expression condition. When set, the link is only shown
-when the expression evaluates to true.
-
-+optional */
+  /**
+   * If is an optional expr-lang expression, offset by ${{ }}, that must
+   * evaluate to a boolean. When set, the link is shown only when it
+   * evaluates to true.
+   *
+   * +optional
+   */
   if?: string;
-  /** Title is the display label for the link.
-
-+kubebuilder:validation:MinLength=1 */
+  /**
+   * Title is the display label for the link.
+   *
+   * +kubebuilder:validation:MinLength=1
+   */
   title?: string;
-  /** URL is an expression that resolves to the link's href.
-
-+kubebuilder:validation:MinLength=1 */
+  /**
+   * URL is the link's href. It may contain expr-lang expressions offset by
+   * ${{ }}, evaluated against the resource as freight or stage.
+   *
+   * +kubebuilder:validation:MinLength=1
+   */
   url?: string;
 }

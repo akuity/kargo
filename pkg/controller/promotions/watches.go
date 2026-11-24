@@ -12,16 +12,19 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/pkg/api"
 	"github.com/akuity/kargo/pkg/controller"
 	argocd "github.com/akuity/kargo/pkg/controller/argocd/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/indexer"
+	"github.com/akuity/kargo/pkg/kubernetes"
 	"github.com/akuity/kargo/pkg/logging"
 )
 
 // UpdatedArgoCDAppHandler is an event handler that enqueues Promotions for
 // reconciliation when an associated ArgoCD Application is updated.
 type UpdatedArgoCDAppHandler[T any] struct {
-	kargoClient client.Client
+	kargoClient    client.Client
+	shardPredicate controller.ResponsibleFor[kargoapi.Promotion]
 }
 
 // Create implements TypedEventHandler.
@@ -118,6 +121,8 @@ func (u *UpdatedArgoCDAppHandler[T]) Update(
 		enqueue(promotion)
 	}
 
+	u.enqueueAuthorizedStageTargetPromotions(ctx, enqueue, newApp)
+
 	// Promotions that target this Application by label selector cannot be found
 	// via the name-based index, because a selector's match set depends on the
 	// Application's labels. We test both the old and new label sets so a
@@ -200,20 +205,80 @@ func (u *UpdatedArgoCDAppHandler[T]) enqueueSelectorMatches(
 	}
 }
 
+// enqueueAuthorizedStageTargetPromotions enqueues the running Promotions to a
+// Target of each Stage the Application authorizes. Their app names may
+// reference target.*, which the name-based index cannot evaluate, so they are
+// found through the Application's authorized-stage annotation instead. This
+// wakes every running Promotion to a Target of such a Stage, at most one per
+// Target.
+func (u *UpdatedArgoCDAppHandler[T]) enqueueAuthorizedStageTargetPromotions(
+	ctx context.Context,
+	enqueue func(kargoapi.Promotion),
+	app *argocd.Application,
+) {
+	stageRef, ok := app.Annotations[kargoapi.AnnotationKeyAuthorizedStage]
+	if !ok {
+		return
+	}
+	logger := logging.LoggerFromContext(ctx)
+	stages, err := api.AuthorizedStages(stageRef)
+	if err != nil {
+		logger.Debug(
+			"ignoring unparseable authorized Stages of Application",
+			"app", app.Name,
+			"namespace", app.Namespace,
+			"error", err.Error(),
+		)
+		return
+	}
+	for _, stage := range stages {
+		promotions := &kargoapi.PromotionList{}
+		if err := u.kargoClient.List(
+			ctx,
+			promotions,
+			client.InNamespace(stage.Namespace),
+			client.MatchingLabels{kargoapi.LabelKeyStage: kubernetes.ShortenLabelValue(stage.Name)},
+		); err != nil {
+			logger.Error(
+				err, "error listing Promotions for Stage",
+				"namespace", stage.Namespace,
+				"stage", stage.Name,
+				"app", app.Name,
+			)
+			continue
+		}
+		for _, promo := range promotions.Items {
+			if promo.Spec.Stage == stage.Name &&
+				promo.Spec.Target != "" &&
+				promo.Status.Phase == kargoapi.PromotionPhaseRunning &&
+				u.shardPredicate.IsResponsible(&promo) {
+				enqueue(promo)
+			}
+		}
+	}
+}
+
 // NewPromotionAcknowledgedByStageHandler creates a new
-// PromotionAcknowledgedByStageHandler with the given shard predicate.
+// PromotionAcknowledgedByStageHandler with the given client and shard
+// predicate.
 func NewPromotionAcknowledgedByStageHandler[T any](
+	kargoClient client.Client,
 	shardPredicate controller.ResponsibleFor[kargoapi.Stage],
 ) *PromotionAcknowledgedByStageHandler[T] {
 	return &PromotionAcknowledgedByStageHandler[T]{
+		kargoClient:    kargoClient,
 		shardPredicate: shardPredicate,
 	}
 }
 
 // PromotionAcknowledgedByStageHandler is an event handler that enqueues a
 // Promotion for reconciliation when it has been acknowledged by the Stage\
-// it is for.
+// it is for. That is the Stage's current Promotion when one changes, and
+// every child of the Stage's current PromotionRequest when that changes: the
+// children of a newly current request -- at most one per Target -- are all
+// admitted at once.
 type PromotionAcknowledgedByStageHandler[T any] struct {
+	kargoClient    client.Client
 	shardPredicate controller.ResponsibleFor[kargoapi.Stage]
 }
 
@@ -272,23 +337,78 @@ func (p *PromotionAcknowledgedByStageHandler[T]) Update(
 		return
 	}
 
-	if newStage.Status.CurrentPromotion == nil {
+	if current := newStage.Status.CurrentPromotion; current != nil {
+		if oldStage.Status.CurrentPromotion == nil ||
+			oldStage.Status.CurrentPromotion.Name != current.Name {
+			wq.Add(reconcile.Request{
+				NamespacedName: types.NamespacedName{
+					Namespace: newStage.Namespace,
+					Name:      current.Name,
+				},
+			})
+			logger.Debug(
+				"enqueued Promotion for reconciliation",
+				"namespace", newStage.Namespace,
+				"promotion", current.Name,
+				"stage", newStage.Name,
+			)
+		}
+	}
+
+	if current := newStage.Status.CurrentPromotionRequest; current != nil {
+		if oldStage.Status.CurrentPromotionRequest == nil ||
+			oldStage.Status.CurrentPromotionRequest.Name != current.Name {
+			p.enqueueChildrenOf(ctx, newStage, current.Name, wq)
+		}
+	}
+}
+
+// enqueueChildrenOf enqueues every non-terminal child Promotion of the named
+// PromotionRequest for reconciliation. It lists the Stage's Promotions by
+// label, since a child carries the Stage label but is owned by the
+// PromotionRequest that created it.
+func (p *PromotionAcknowledgedByStageHandler[T]) enqueueChildrenOf(
+	ctx context.Context,
+	stage *kargoapi.Stage,
+	request string,
+	wq workqueue.TypedRateLimitingInterface[reconcile.Request],
+) {
+	logger := logging.LoggerFromContext(ctx)
+
+	promotions := &kargoapi.PromotionList{}
+	if err := p.kargoClient.List(
+		ctx,
+		promotions,
+		client.InNamespace(stage.Namespace),
+		client.MatchingLabels{kargoapi.LabelKeyStage: kubernetes.ShortenLabelValue(stage.Name)},
+	); err != nil {
+		logger.Error(
+			err, "error listing Promotions for Stage",
+			"namespace", stage.Namespace,
+			"stage", stage.Name,
+		)
 		return
 	}
 
-	if oldStage.Status.CurrentPromotion == nil ||
-		oldStage.Status.CurrentPromotion.Name != newStage.Status.CurrentPromotion.Name {
+	for i := range promotions.Items {
+		promo := &promotions.Items[i]
+		if promo.Status.Phase.IsTerminal() {
+			continue
+		}
+		if api.PromotionRequestOwner(promo) != request {
+			continue
+		}
 		wq.Add(reconcile.Request{
 			NamespacedName: types.NamespacedName{
-				Namespace: newStage.Namespace,
-				Name:      newStage.Status.CurrentPromotion.Name,
+				Namespace: promo.Namespace,
+				Name:      promo.Name,
 			},
 		})
 		logger.Debug(
 			"enqueued Promotion for reconciliation",
-			"namespace", newStage.Namespace,
-			"promotion", newStage.Status.CurrentPromotion.Name,
-			"stage", newStage.Name,
+			"namespace", promo.Namespace,
+			"promotion", promo.Name,
+			"stage", stage.Name,
 		)
 	}
 }

@@ -11,16 +11,22 @@ export interface VersionInfo {
   buildDate?: string;
   /** Compiler indicates what Go compiler was used for the build. */
   compiler?: string;
-  /** GitCommit is the ID (sha) of the last commit to the application's source
-code that is included in this build. */
+  /**
+   * GitCommit is the ID (sha) of the last commit to the application's source
+   * code that is included in this build.
+   */
   gitCommit?: string;
-  /** GitTreeDirty is true if the application's source code contained
-uncommitted changes at the time it was built; otherwise it is false. */
+  /**
+   * GitTreeDirty is true if the application's source code contained
+   * uncommitted changes at the time it was built; otherwise it is false.
+   */
   gitTreeDirty?: boolean;
   /** GoVersion is the version of Go that was used to build the application. */
   goVersion?: string;
-  /** Platform indicates the OS and CPU architecture for which the application
-was built. */
+  /**
+   * Platform indicates the OS and CPU architecture for which the application
+   * was built.
+   */
   platform?: string;
   /** Version is a human-friendly version string. */
   version?: string;

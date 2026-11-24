@@ -12,7 +12,7 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/promotion"
-	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
+	"github.com/akuity/kargo/pkg/x/promotion/stepconfig"
 )
 
 func Test_setFreightAlias_convert(t *testing.T) {
@@ -105,13 +105,13 @@ func Test_setFreightAlias_run(t *testing.T) {
 	tests := []struct {
 		name       string
 		client     client.Client
-		cfg        builtin.SetFreightAliasConfig
+		cfg        stepconfig.SetFreightAliasConfig
 		assertions func(t2 *testing.T, result promotion.StepResult, client2 client.Client, err error)
 	}{
 		{
 			name:   "freight not found",
 			client: fake.NewClientBuilder().WithScheme(scheme).Build(),
-			cfg: builtin.SetFreightAliasConfig{
+			cfg: stepconfig.SetFreightAliasConfig{
 				Name:  testFreight,
 				Alias: alias,
 			},
@@ -136,7 +136,7 @@ func Test_setFreightAlias_run(t *testing.T) {
 					},
 				).
 				Build(),
-			cfg: builtin.SetFreightAliasConfig{
+			cfg: stepconfig.SetFreightAliasConfig{
 				Name:  testFreight,
 				Alias: alias,
 			},
@@ -163,7 +163,7 @@ func Test_setFreightAlias_run(t *testing.T) {
 					},
 				).
 				Build(),
-			cfg: builtin.SetFreightAliasConfig{
+			cfg: stepconfig.SetFreightAliasConfig{
 				Name:  testFreight,
 				Alias: alias,
 			},

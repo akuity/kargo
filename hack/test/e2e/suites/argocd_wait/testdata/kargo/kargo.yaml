@@ -1,0 +1,106 @@
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Project
+metadata:
+  name: kargo-argocd-wait
+---
+apiVersion: v1
+kind: Secret
+type: Opaque
+metadata:
+  name: manifests
+  namespace: kargo-argocd-wait
+  labels:
+    kargo.akuity.io/cred-type: git
+stringData:
+  # repoURL, username and password are substituted at runtime from the test env.
+  repoURL: https://github.com/<github-username>/kargo-demo-gitops.git
+  username: <github-username>
+  password: <github-pat>
+---
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Warehouse
+metadata:
+  name: kargo-demo
+  namespace: kargo-argocd-wait
+spec:
+  subscriptions:
+  - image:
+      repoURL: public.ecr.aws/nginx/nginx # Watch for new versions of this image
+      semverConstraint: ^1.24.0
+---
+apiVersion: kargo.akuity.io/v1alpha1
+kind: PromotionTask
+metadata:
+  name: base-promo-process
+  namespace: kargo-argocd-wait
+spec:
+  vars:
+  - name: gitRepo
+  - name: targetBranch
+  - name: outPath
+  - name: imageRepo
+    value: public.ecr.aws/nginx/nginx
+  steps:
+  # The targetBranch already exists (created in test setup and tracked by Argo
+  # CD), so it is simply checked out -- no branch creation here.
+  - uses: git-clone
+    config:
+      repoURL: ${{ vars.gitRepo }}
+      checkout:
+      - branch: ${{ vars.targetBranch }}
+        path: ${{ vars.outPath }}
+  # Set the image to the freight's tag in place; Argo CD renders stages/<stage>,
+  # which references base, so this changes the rendered image.
+  - uses: kustomize-set-image
+    as: update-image
+    config:
+      path: ${{ vars.outPath }}/base
+      images:
+      - image: public.ecr.aws/nginx/nginx
+        tag: ${{ imageFrom(vars.imageRepo).Tag }}
+  - uses: git-commit
+    as: commit
+    config:
+      path: ${{ vars.outPath }}
+      message: ${{ task.outputs['update-image'].commitMessage }}
+  - uses: compose-output
+    config:
+      commit: ${{ task.outputs.commit.commit }}
+---
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+metadata:
+  name: test
+  namespace: kargo-argocd-wait
+spec:
+  requestedFreight:
+  - origin:
+      kind: Warehouse
+      name: kargo-demo
+    sources:
+      direct: true
+  promotionTemplate:
+    spec:
+      vars:
+      - name: gitRepo
+        value: https://github.com/<github-username>/kargo-demo-gitops.git
+      # Substituted at runtime with the branch created per test run.
+      - name: targetBranch
+        value: placeholder
+      - name: outPath
+        value: ./out
+      steps:
+      - task:
+          name: base-promo-process
+        as: base
+      # Push the change to the branch Argo CD tracks and auto-syncs.
+      - uses: git-push
+        config:
+          path: ${{ vars.outPath }}
+      # Wait for Argo CD to reconcile the pushed change (Healthy + Synced). The
+      # sync is triggered by Argo CD's own auto-sync, not by an argocd-update
+      # step, which is exactly what argocd-wait is for.
+      - uses: argocd-wait
+        config:
+          apps:
+          - name: ${{ ctx.project }}-${{ ctx.stage }}

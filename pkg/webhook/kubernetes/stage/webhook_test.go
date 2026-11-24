@@ -4,15 +4,18 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"slices"
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	jsonpatch "gomodules.xyz/jsonpatch/v2"
 	admissionv1 "k8s.io/api/admission/v1"
 	authnv1 "k8s.io/api/authentication/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -804,6 +807,111 @@ func Test_webhook_Default(t *testing.T) {
 				}).String(), v)
 			},
 		},
+		{
+			name: "target-aware stage defaults empty verification run mode to PerStage",
+			webhook: &webhook{
+				admissionRequestFromContextFn: admission.RequestFromContext,
+				isRequestFromKargoControlplaneFn: func(admission.Request) bool {
+					return true
+				},
+			},
+			req: admission.Request{
+				AdmissionRequest: admissionv1.AdmissionRequest{
+					Operation: admissionv1.Create,
+				},
+			},
+			stage: &kargoapi.Stage{
+				Spec: kargoapi.StageSpec{
+					Targets: &kargoapi.StageTargets{
+						Verification: &kargoapi.TargetVerificaitonSpec{},
+					},
+				},
+			},
+			assertions: func(t *testing.T, stage *kargoapi.Stage, err error) {
+				require.NoError(t, err)
+				require.Equal(
+					t,
+					kargoapi.VerificationRunMode(kargoapi.VerificationRunModePerStage),
+					stage.Spec.Targets.Verification.VerificationRunMode,
+				)
+			},
+		},
+		{
+			name: "target-aware stage preserves explicit verification run mode",
+			webhook: &webhook{
+				admissionRequestFromContextFn: admission.RequestFromContext,
+				isRequestFromKargoControlplaneFn: func(admission.Request) bool {
+					return true
+				},
+			},
+			req: admission.Request{
+				AdmissionRequest: admissionv1.AdmissionRequest{
+					Operation: admissionv1.Update,
+					OldObject: runtime.RawExtension{
+						Object: &kargoapi.Stage{},
+					},
+				},
+			},
+			stage: &kargoapi.Stage{
+				Spec: kargoapi.StageSpec{
+					Targets: &kargoapi.StageTargets{
+						Verification: &kargoapi.TargetVerificaitonSpec{
+							VerificationRunMode: kargoapi.VerificationRunModePerTarget,
+						},
+					},
+				},
+			},
+			assertions: func(t *testing.T, stage *kargoapi.Stage, err error) {
+				require.NoError(t, err)
+				require.Equal(
+					t,
+					kargoapi.VerificationRunMode(kargoapi.VerificationRunModePerTarget),
+					stage.Spec.Targets.Verification.VerificationRunMode,
+				)
+			},
+		},
+		{
+			name: "target-aware stage with nil verification is left untouched",
+			webhook: &webhook{
+				admissionRequestFromContextFn: admission.RequestFromContext,
+				isRequestFromKargoControlplaneFn: func(admission.Request) bool {
+					return true
+				},
+			},
+			req: admission.Request{
+				AdmissionRequest: admissionv1.AdmissionRequest{
+					Operation: admissionv1.Create,
+				},
+			},
+			stage: &kargoapi.Stage{
+				Spec: kargoapi.StageSpec{
+					Targets: &kargoapi.StageTargets{},
+				},
+			},
+			assertions: func(t *testing.T, stage *kargoapi.Stage, err error) {
+				require.NoError(t, err)
+				require.Nil(t, stage.Spec.Targets.Verification)
+			},
+		},
+		{
+			name: "non-target-aware stage is not affected by target-aware defaults",
+			webhook: &webhook{
+				admissionRequestFromContextFn: admission.RequestFromContext,
+				isRequestFromKargoControlplaneFn: func(admission.Request) bool {
+					return true
+				},
+			},
+			req: admission.Request{
+				AdmissionRequest: admissionv1.AdmissionRequest{
+					Operation: admissionv1.Create,
+				},
+			},
+			stage: &kargoapi.Stage{},
+			assertions: func(t *testing.T, stage *kargoapi.Stage, err error) {
+				require.NoError(t, err)
+				require.Nil(t, stage.Spec.Targets)
+			},
+		},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -1055,6 +1163,8 @@ func Test_webhook_ValidateSpec(t *testing.T) {
 	}
 	w := &webhook{}
 	w.validatePromotionStepTaskRefsFn = w.validatePromotionStepTaskRefs
+	w.validatePromotionTemplateFn = w.validatePromotionTemplate
+	w.validateTargetsFn = w.validateTargets
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			testCase.assertions(
@@ -1479,6 +1589,240 @@ func Test_webhook_validatePromotionStepTaskRefs(t *testing.T) {
 				w.validatePromotionStepTaskRefs(
 					field.NewPath("steps"),
 					testCase.steps,
+				),
+			)
+		})
+	}
+}
+
+// Test_webhook_Handle_PreservesUnrelatedDurationFormatting is a regression
+// test for https://github.com/akuityio/akuity-platform/issues/12384: a
+// hand-written duration like "1h" was rewritten to its canonical form
+// ("1h0m0s") in the admission patch even though Default() never touched it,
+// causing perpetual Argo CD drift.
+func Test_webhook_Handle_PreservesUnrelatedDurationFormatting(t *testing.T) {
+	scheme := runtime.NewScheme()
+	require.NoError(t, kargoapi.AddToScheme(scheme))
+
+	kubeClient := fake.NewClientBuilder().WithScheme(scheme).Build()
+	w := newWebhook(
+		libWebhook.Config{},
+		kubeClient,
+		admission.NewDecoder(scheme),
+	)
+	wh, err := libWebhook.NewDefaultingWebhook(scheme, &kargoapi.Stage{}, w)
+	require.NoError(t, err)
+
+	// spec.shard is set so Default() makes a real mutation (the shard
+	// label), verified below as a sanity check.
+	rawStage := []byte(`{
+		"apiVersion": "kargo.akuity.io/v1alpha1",
+		"kind": "Stage",
+		"metadata": {"name": "drift-stage", "namespace": "dur-drift-repro"},
+		"spec": {
+			"shard": "us-east-01a",
+			"requestedFreight": [{
+				"origin": {"kind": "Warehouse", "name": "drift-wh"},
+				"sources": {"direct": true, "requiredSoakTime": "2h"}
+			}],
+			"promotionTemplate": {
+				"spec": {
+					"steps": [{"uses": "git-clone", "retry": {"timeout": "1h"}}]
+				}
+			}
+		}
+	}`)
+
+	req := admission.Request{
+		AdmissionRequest: admissionv1.AdmissionRequest{
+			Operation: admissionv1.Create,
+			Object:    runtime.RawExtension{Raw: rawStage},
+		},
+	}
+
+	resp := wh.Handle(admission.NewContextWithRequest(context.Background(), req), req)
+	require.True(t, resp.Allowed)
+
+	testCases := []struct {
+		name    string
+		path    string
+		present bool
+	}{
+		{
+			// Sanity check: this mutation must still appear, or the test
+			// below would pass by suppressing every patch, not just the
+			// spurious ones.
+			name:    "shard label is patched",
+			path:    "/metadata/labels",
+			present: true,
+		},
+		{
+			name:    "untouched retry timeout is not rewritten",
+			path:    "/spec/promotionTemplate/spec/steps/0/retry/timeout",
+			present: false,
+		},
+		{
+			name:    "untouched required soak time is not rewritten",
+			path:    "/spec/requestedFreight/0/sources/requiredSoakTime",
+			present: false,
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			got := slices.ContainsFunc(resp.Patches, func(p jsonpatch.JsonPatchOperation) bool {
+				return p.Path == testCase.path
+			})
+			require.Equalf(t, testCase.present, got, "patches: %+v", resp.Patches)
+		})
+	}
+}
+
+func Test_webhook_validateNoTargets(t *testing.T) {
+	testCases := []struct {
+		name       string
+		targets    *kargoapi.StageTargets
+		assertions func(*testing.T, field.ErrorList)
+	}{
+		{
+			name:    "nil targets is valid",
+			targets: nil,
+			assertions: func(t *testing.T, errs field.ErrorList) {
+				require.Empty(t, errs)
+			},
+		},
+
+		{
+			name:    "targets set is invalid",
+			targets: &kargoapi.StageTargets{},
+			assertions: func(t *testing.T, errs field.ErrorList) {
+				require.Len(t, errs, 1)
+				require.Equal(t, field.ErrorTypeInvalid, errs[0].Type)
+				require.Equal(t, "targets", errs[0].Field)
+				require.Equal(t, "per-target stages are not supported, targets should not be set", errs[0].Detail)
+			},
+		},
+	}
+
+	w := &webhook{}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			testCase.assertions(
+				t,
+				w.validateNoTargets(
+					field.NewPath("targets"),
+					testCase.targets,
+				),
+			)
+		})
+	}
+}
+
+func Test_webhook_validateTargets(t *testing.T) {
+	testCases := []struct {
+		name       string
+		targets    *kargoapi.StageTargets
+		assertions func(*testing.T, field.ErrorList)
+	}{
+		{
+			name:    "nil targets is valid",
+			targets: nil,
+			assertions: func(t *testing.T, errs field.ErrorList) {
+				require.Empty(t, errs)
+			},
+		},
+		{
+			name:    "empty updateStrategy is valid",
+			targets: &kargoapi.StageTargets{},
+			assertions: func(t *testing.T, errs field.ErrorList) {
+				require.Empty(t, errs)
+			},
+		},
+		{
+			name: "integers updateStrategy is valid",
+			targets: &kargoapi.StageTargets{UpdateStrategy: kargoapi.TargetUpdateStrategy{
+				MaxConcurrent: new(intstr.FromInt(10)),
+				MaxFailures:   new(intstr.FromInt(10)),
+			}},
+			assertions: func(t *testing.T, errs field.ErrorList) {
+				require.Empty(t, errs)
+			},
+		},
+		{
+			name: "percentage strings updateStrategy is valid",
+			targets: &kargoapi.StageTargets{UpdateStrategy: kargoapi.TargetUpdateStrategy{
+				MaxConcurrent: new(intstr.FromString("20%")),
+				MaxFailures:   new(intstr.FromString("20%")),
+			}},
+			assertions: func(t *testing.T, errs field.ErrorList) {
+				require.Empty(t, errs)
+			},
+		},
+		{
+			name: "number below allowed is invalid",
+			targets: &kargoapi.StageTargets{UpdateStrategy: kargoapi.TargetUpdateStrategy{
+				MaxConcurrent: new(intstr.FromInt(0)),
+				MaxFailures:   new(intstr.FromInt(-1)),
+			}},
+			assertions: func(t *testing.T, errs field.ErrorList) {
+				require.Len(t, errs, 2)
+				require.Equal(t, field.ErrorTypeInvalid, errs[0].Type)
+				require.Equal(t, "targets.updateStrategy.maxConcurrent", errs[0].Field)
+				require.Equal(t, "value cannot be below 1", errs[0].Detail)
+
+				require.Equal(t, field.ErrorTypeInvalid, errs[1].Type)
+				require.Equal(t, "targets.updateStrategy.maxFailures", errs[1].Field)
+				require.Equal(t, "value cannot be below 0", errs[1].Detail)
+
+			},
+		},
+		{
+			name: "percentage below allowed is invalid",
+			targets: &kargoapi.StageTargets{UpdateStrategy: kargoapi.TargetUpdateStrategy{
+				MaxConcurrent: new(intstr.FromString("0%")),
+				MaxFailures:   new(intstr.FromString("-1%")),
+			}},
+			assertions: func(t *testing.T, errs field.ErrorList) {
+				require.Len(t, errs, 2)
+				require.Equal(t, field.ErrorTypeInvalid, errs[0].Type)
+				require.Equal(t, "targets.updateStrategy.maxConcurrent", errs[0].Field)
+				require.Equal(t, "value cannot be below 1", errs[0].Detail)
+
+				require.Equal(t, field.ErrorTypeInvalid, errs[1].Type)
+				require.Equal(t, "targets.updateStrategy.maxFailures", errs[1].Field)
+				require.Equal(t, "value cannot be below 0", errs[1].Detail)
+			},
+		},
+		{
+			name: "invalid percentage string",
+			targets: &kargoapi.StageTargets{UpdateStrategy: kargoapi.TargetUpdateStrategy{
+				MaxConcurrent: new(intstr.FromString("something")),
+				MaxFailures:   new(intstr.FromString("-1")),
+			}},
+			assertions: func(t *testing.T, errs field.ErrorList) {
+				require.Len(t, errs, 2)
+				require.Equal(t, field.ErrorTypeInvalid, errs[0].Type)
+				require.Equal(t, "targets.updateStrategy.maxConcurrent", errs[0].Field)
+				require.Equal(t,
+					"invalid value for IntOrString: invalid type: string is not a percentage",
+					errs[0].Detail)
+
+				require.Equal(t, field.ErrorTypeInvalid, errs[1].Type)
+				require.Equal(t, "targets.updateStrategy.maxFailures", errs[1].Field)
+				require.Equal(t,
+					"invalid value for IntOrString: invalid type: string is not a percentage",
+					errs[1].Detail)
+
+			},
+		},
+	}
+	w := &webhook{}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			testCase.assertions(
+				t,
+				w.validateTargets(
+					field.NewPath("targets"),
+					testCase.targets,
 				),
 			)
 		})

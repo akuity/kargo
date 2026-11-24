@@ -24,7 +24,7 @@ spec:
   template:
     metadata:
       labels:
-        {{- include "kargo.labels" . | nindent 8 }}
+        {{- include "kargo.bundledPodLabels" . | nindent 8 }}
         {{- include "kargo.dexServer.labels" . | nindent 8 }}
       annotations:
         secret/checksum: {{ pick ( include (print $.Template.BasePath "/dex-server/secret.yaml") . | fromYaml ) "stringData" | toYaml | sha256sum }}
@@ -35,6 +35,7 @@ spec:
       {{- end }}
     spec:
       serviceAccountName: kargo-dex-server
+      automountServiceAccountToken: {{ .Values.api.oidc.dex.automountServiceAccountToken | default false }}
       {{- with .Values.api.oidc.dex.affinity | default .Values.global.affinity }}
       affinity:
         {{- toYaml . | nindent 8 }}

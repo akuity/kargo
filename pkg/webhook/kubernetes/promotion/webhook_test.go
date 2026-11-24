@@ -5,10 +5,12 @@ import (
 	"encoding/json"
 	"errors"
 	"regexp"
+	"slices"
 	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	jsonpatch "gomodules.xyz/jsonpatch/v2"
 	admissionv1 "k8s.io/api/admission/v1"
 	authnv1 "k8s.io/api/authentication/v1"
 	authzv1 "k8s.io/api/authorization/v1"
@@ -24,8 +26,8 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/api"
-	k8sevent "github.com/akuity/kargo/pkg/event/kubernetes"
-	fakeevent "github.com/akuity/kargo/pkg/kubernetes/event/fake"
+	"github.com/akuity/kargo/pkg/event"
+	fakeevent "github.com/akuity/kargo/pkg/event/fake"
 	libWebhook "github.com/akuity/kargo/pkg/webhook/kubernetes"
 )
 
@@ -35,7 +37,7 @@ func TestNewWebhook(t *testing.T) {
 		libWebhook.Config{},
 		kubeClient,
 		admission.NewDecoder(kubeClient.Scheme()),
-		k8sevent.NewEventSender(&fakeevent.EventRecorder{}),
+		&fakeevent.Sender{},
 	)
 	// Assert that all overridable behaviors were initialized to a default:
 	require.NotNil(t, w.getFreightFn)
@@ -268,6 +270,11 @@ func Test_webhook_Default(t *testing.T) {
 					Vars: []kargoapi.ExpressionVariable{
 						{Name: "user-var", Value: "user-val"},
 					},
+					InflatedTasks: []kargoapi.InflatedPromotionTask{{
+						Alias: "from-user",
+						Task:  kargoapi.PromotionTaskReference{Name: "user-task"},
+						Steps: []string{"from-user"},
+					}},
 				},
 			},
 			assertions: func(t *testing.T, promo *kargoapi.Promotion, err error) {
@@ -282,6 +289,7 @@ func Test_webhook_Default(t *testing.T) {
 					{Name: "stage-var", Value: "stage-val"},
 					{Name: "tmpl-var", Value: "tmpl-val"},
 				}, promo.Spec.Vars)
+				require.Nil(t, promo.Spec.InflatedTasks)
 				// Caller-supplied name was overwritten with one Kargo
 				// generated.
 				require.NotEqual(t, "user-supplied-name", promo.Name)
@@ -1792,6 +1800,65 @@ func Test_webhook_Default(t *testing.T) {
 			},
 		},
 		{
+			name: "a PromotionRollout's child is owned by the Stage",
+			webhook: &webhook{
+				admissionRequestFromContextFn: admission.RequestFromContext,
+				getStageFn: func(
+					context.Context,
+					client.Client,
+					types.NamespacedName,
+				) (*kargoapi.Stage, error) {
+					return &kargoapi.Stage{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "fake-stage",
+							Namespace: "fake-project",
+						},
+						Spec: kargoapi.StageSpec{
+							PromotionTemplate: &kargoapi.PromotionTemplate{
+								Spec: kargoapi.PromotionTemplateSpec{
+									Steps: []kargoapi.PromotionStep{{Uses: "fake-step"}},
+								},
+							},
+						},
+					}, nil
+				},
+				isRequestFromKargoControlplaneFn: func(admission.Request) bool {
+					return true
+				},
+			},
+			req: admission.Request{
+				AdmissionRequest: admissionv1.AdmissionRequest{
+					Operation: admissionv1.Create,
+				},
+			},
+			promotion: &kargoapi.Promotion{
+				// A rollout is not a Kubernetes resource, so its child arrives
+				// with no owner at all.
+				ObjectMeta: metav1.ObjectMeta{Namespace: "fake-project"},
+				Spec: kargoapi.PromotionSpec{
+					Stage:            "fake-stage",
+					Freight:          "fake-freight",
+					Target:           "fake-target",
+					PromotionRollout: "0b9f4a3e-6c1d-4a8e-9f2b-3c4d5e6f7a8b",
+				},
+			},
+			assertions: func(t *testing.T, promo *kargoapi.Promotion, err error) {
+				require.NoError(t, err)
+				require.Len(t, promo.OwnerReferences, 1)
+				owner := metav1.GetControllerOf(promo)
+				require.NotNil(t, owner)
+				require.Equal(t, "Stage", owner.Kind)
+				require.Equal(t, "fake-stage", owner.Name)
+				// The name is a function of the rollout and the Target, with no
+				// random part, so a second create of the same child collides.
+				require.Equal(
+					t,
+					"fake-stage.fake-target.0b9f4a3e-6c1d-4a8e-9f2b-3c4d5e6f7a8b",
+					promo.Name,
+				)
+			},
+		},
+		{
 			name: "replaces a non-PromotionRequest controller reference with the Stage",
 			webhook: &webhook{
 				admissionRequestFromContextFn: admission.RequestFromContext,
@@ -1886,7 +1953,7 @@ func Test_webhook_ValidateCreate(t *testing.T) {
 		webhook    *webhook
 		userInfo   *authnv1.UserInfo
 		promotion  *kargoapi.Promotion
-		assertions func(*testing.T, *fakeevent.EventRecorder, error)
+		assertions func(*testing.T, *fakeevent.Sender, error)
 	}{
 		{
 			name: "error validating project",
@@ -1902,7 +1969,7 @@ func Test_webhook_ValidateCreate(t *testing.T) {
 			promotion: &kargoapi.Promotion{
 				Spec: kargoapi.PromotionSpec{Freight: "fake-freight"},
 			},
-			assertions: func(t *testing.T, _ *fakeevent.EventRecorder, err error) {
+			assertions: func(t *testing.T, _ *fakeevent.Sender, err error) {
 				var statusErr *apierrors.StatusError
 				require.True(t, errors.As(err, &statusErr))
 				require.Equal(
@@ -1924,21 +1991,19 @@ func Test_webhook_ValidateCreate(t *testing.T) {
 					return nil
 				},
 				authorizeFn: func(context.Context, *kargoapi.Promotion, string) error {
-					return errors.New("something went wrong")
+					return apierrors.NewForbidden(
+						promotionGroupResource,
+						"fake-promotion",
+						errors.New("not permitted"),
+					)
 				},
 			},
 			promotion: &kargoapi.Promotion{
 				Spec: kargoapi.PromotionSpec{Freight: "fake-freight"},
 			},
-			assertions: func(t *testing.T, _ *fakeevent.EventRecorder, err error) {
-				var statusErr *apierrors.StatusError
-				require.True(t, errors.As(err, &statusErr))
-				require.Equal(
-					t,
-					metav1.StatusReasonInternalError,
-					statusErr.ErrStatus.Reason,
-				)
-				require.Contains(t, statusErr.ErrStatus.Message, "something went wrong")
+			assertions: func(t *testing.T, _ *fakeevent.Sender, err error) {
+				require.True(t, apierrors.IsForbidden(err))
+				require.ErrorContains(t, err, "not permitted")
 			},
 		},
 		{
@@ -1958,7 +2023,7 @@ func Test_webhook_ValidateCreate(t *testing.T) {
 			promotion: &kargoapi.Promotion{
 				Spec: kargoapi.PromotionSpec{},
 			},
-			assertions: func(t *testing.T, _ *fakeevent.EventRecorder, err error) {
+			assertions: func(t *testing.T, _ *fakeevent.Sender, err error) {
 				var statusErr *apierrors.StatusError
 				require.True(t, errors.As(err, &statusErr))
 				require.Equal(t, metav1.StatusReasonInvalid, statusErr.ErrStatus.Reason)
@@ -1994,7 +2059,7 @@ func Test_webhook_ValidateCreate(t *testing.T) {
 			promotion: &kargoapi.Promotion{
 				Spec: kargoapi.PromotionSpec{Freight: "fake-freight"},
 			},
-			assertions: func(t *testing.T, _ *fakeevent.EventRecorder, err error) {
+			assertions: func(t *testing.T, _ *fakeevent.Sender, err error) {
 				var statusErr *apierrors.StatusError
 				require.True(t, errors.As(err, &statusErr))
 				require.Equal(
@@ -2035,14 +2100,15 @@ func Test_webhook_ValidateCreate(t *testing.T) {
 					Freight: "fake-freight",
 				},
 			},
-			assertions: func(t *testing.T, _ *fakeevent.EventRecorder, err error) {
+			assertions: func(t *testing.T, _ *fakeevent.Sender, err error) {
 				var statusErr *apierrors.StatusError
 				require.True(t, errors.As(err, &statusErr))
 				require.Equal(t, metav1.StatusReasonInvalid, statusErr.ErrStatus.Reason)
 				require.Contains(
 					t,
 					statusErr.ErrStatus.Message,
-					"it is promoted to with a PromotionRequest rather than a Promotion",
+					"it is promoted to with a PromotionRequest or a PromotionRollout "+
+						"rather than a Promotion",
 				)
 			},
 		},
@@ -2092,14 +2158,178 @@ func Test_webhook_ValidateCreate(t *testing.T) {
 					Target:  "fake-target",
 				},
 			},
-			assertions: func(t *testing.T, _ *fakeevent.EventRecorder, err error) {
+			assertions: func(t *testing.T, _ *fakeevent.Sender, err error) {
 				var statusErr *apierrors.StatusError
 				require.True(t, errors.As(err, &statusErr))
 				require.Equal(t, metav1.StatusReasonInvalid, statusErr.ErrStatus.Reason)
 				require.Contains(
 					t,
 					statusErr.ErrStatus.Message,
-					"a Promotion may name a Target only when created by a PromotionRequest",
+					"a Promotion may name a Target only when created by a PromotionRequest "+
+						"or a PromotionRollout",
+				)
+			},
+		},
+		{
+			name: "Promotion naming a PromotionRollout created by a user is rejected",
+			webhook: &webhook{
+				validateProjectFn: func(
+					context.Context,
+					client.Client,
+					client.Object,
+				) error {
+					return nil
+				},
+				authorizeFn: func(context.Context, *kargoapi.Promotion, string) error {
+					return nil
+				},
+				admissionRequestFromContextFn: admission.RequestFromContext,
+				getStageFn: func(
+					context.Context,
+					client.Client,
+					types.NamespacedName,
+				) (*kargoapi.Stage, error) {
+					return &kargoapi.Stage{}, nil
+				},
+				isRequestFromKargoControlplaneFn: func(admission.Request) bool {
+					return false
+				},
+			},
+			promotion: &kargoapi.Promotion{
+				Spec: kargoapi.PromotionSpec{
+					Stage:            "fake-stage",
+					Freight:          "fake-freight",
+					PromotionRollout: "0b9f4a3e-6c1d-4a8e-9f2b-3c4d5e6f7a8b",
+				},
+			},
+			assertions: func(t *testing.T, _ *fakeevent.Sender, err error) {
+				var statusErr *apierrors.StatusError
+				require.True(t, errors.As(err, &statusErr))
+				require.Equal(t, metav1.StatusReasonInvalid, statusErr.ErrStatus.Reason)
+				require.Contains(
+					t,
+					statusErr.ErrStatus.Message,
+					"only the Kargo control plane may create a Promotion naming a PromotionRollout",
+				)
+			},
+		},
+		{
+			name: "a PromotionRollout's child may name a Target of a target-aware Stage",
+			webhook: &webhook{
+				validateProjectFn: func(
+					context.Context,
+					client.Client,
+					client.Object,
+				) error {
+					return nil
+				},
+				authorizeFn: func(context.Context, *kargoapi.Promotion, string) error {
+					return nil
+				},
+				admissionRequestFromContextFn: admission.RequestFromContext,
+				getStageFn: func(
+					context.Context,
+					client.Client,
+					types.NamespacedName,
+				) (*kargoapi.Stage, error) {
+					return &kargoapi.Stage{
+						Spec: kargoapi.StageSpec{
+							Targets: &kargoapi.StageTargets{},
+							RequestedFreight: []kargoapi.FreightRequest{{
+								Origin: kargoapi.FreightOrigin{
+									Kind: kargoapi.FreightOriginKindWarehouse,
+									Name: testWarehouse,
+								},
+								Sources: kargoapi.FreightSources{Direct: true},
+							}},
+						},
+					}, nil
+				},
+				getFreightFn: func(
+					context.Context,
+					client.Client,
+					types.NamespacedName,
+				) (*kargoapi.Freight, error) {
+					return &kargoapi.Freight{
+						Origin: kargoapi.FreightOrigin{
+							Kind: kargoapi.FreightOriginKindWarehouse,
+							Name: testWarehouse,
+						},
+					}, nil
+				},
+				isRequestFromKargoControlplaneFn: func(admission.Request) bool {
+					return true
+				},
+			},
+			promotion: &kargoapi.Promotion{
+				ObjectMeta: metav1.ObjectMeta{
+					// A Stage owner is what defaulting gives a PromotionRollout's
+					// child: a rollout is not a resource and cannot own it.
+					OwnerReferences: []metav1.OwnerReference{{
+						APIVersion: kargoapi.GroupVersion.String(),
+						Kind:       "Stage",
+						Name:       "fake-stage",
+						Controller: ptr.To(true),
+					}},
+				},
+				Spec: kargoapi.PromotionSpec{
+					Stage:            "fake-stage",
+					Freight:          "fake-freight",
+					Target:           "fake-target",
+					PromotionRollout: "0b9f4a3e-6c1d-4a8e-9f2b-3c4d5e6f7a8b",
+				},
+			},
+			assertions: func(t *testing.T, _ *fakeevent.Sender, err error) {
+				require.NoError(t, err)
+			},
+		},
+		{
+			name: "a user forging a PromotionRollout's child is rejected by the rollout check alone",
+			webhook: &webhook{
+				validateProjectFn: func(
+					context.Context,
+					client.Client,
+					client.Object,
+				) error {
+					return nil
+				},
+				authorizeFn: func(context.Context, *kargoapi.Promotion, string) error {
+					return nil
+				},
+				admissionRequestFromContextFn: admission.RequestFromContext,
+				getStageFn: func(
+					context.Context,
+					client.Client,
+					types.NamespacedName,
+				) (*kargoapi.Stage, error) {
+					return &kargoapi.Stage{
+						Spec: kargoapi.StageSpec{Targets: &kargoapi.StageTargets{}},
+					}, nil
+				},
+				isRequestFromKargoControlplaneFn: func(admission.Request) bool {
+					return false
+				},
+			},
+			promotion: &kargoapi.Promotion{
+				Spec: kargoapi.PromotionSpec{
+					Stage:            "fake-stage",
+					Freight:          "fake-freight",
+					Target:           "fake-target",
+					PromotionRollout: "0b9f4a3e-6c1d-4a8e-9f2b-3c4d5e6f7a8b",
+				},
+			},
+			assertions: func(t *testing.T, _ *fakeevent.Sender, err error) {
+				var statusErr *apierrors.StatusError
+				require.True(t, errors.As(err, &statusErr))
+				require.Equal(t, metav1.StatusReasonInvalid, statusErr.ErrStatus.Reason)
+				// The fan-out checks take the rollout at its word, since the
+				// rollout check is what refuses a forged one. Both must not
+				// pile on: the user is told the one thing that is wrong.
+				require.Len(t, statusErr.ErrStatus.Details.Causes, 1)
+				require.Contains(
+					t,
+					statusErr.ErrStatus.Message,
+					"only the Kargo control plane may create a Promotion naming a PromotionRollout",
 				)
 			},
 		},
@@ -2166,7 +2396,7 @@ func Test_webhook_ValidateCreate(t *testing.T) {
 					Target:  "fake-target",
 				},
 			},
-			assertions: func(t *testing.T, _ *fakeevent.EventRecorder, err error) {
+			assertions: func(t *testing.T, _ *fakeevent.Sender, err error) {
 				require.NoError(t, err)
 			},
 		},
@@ -2202,7 +2432,7 @@ func Test_webhook_ValidateCreate(t *testing.T) {
 			promotion: &kargoapi.Promotion{
 				Spec: kargoapi.PromotionSpec{Freight: "fake-freight"},
 			},
-			assertions: func(t *testing.T, _ *fakeevent.EventRecorder, err error) {
+			assertions: func(t *testing.T, _ *fakeevent.Sender, err error) {
 				var statusErr *apierrors.StatusError
 				require.True(t, errors.As(err, &statusErr))
 				require.Equal(
@@ -2245,7 +2475,7 @@ func Test_webhook_ValidateCreate(t *testing.T) {
 			promotion: &kargoapi.Promotion{
 				Spec: kargoapi.PromotionSpec{Freight: "fake-freight"},
 			},
-			assertions: func(t *testing.T, _ *fakeevent.EventRecorder, err error) {
+			assertions: func(t *testing.T, _ *fakeevent.Sender, err error) {
 				var statusErr *apierrors.StatusError
 				require.True(t, errors.As(err, &statusErr))
 				require.Equal(t, metav1.StatusReasonInvalid, statusErr.ErrStatus.Reason)
@@ -2312,11 +2542,26 @@ func Test_webhook_ValidateCreate(t *testing.T) {
 					Steps:   []kargoapi.PromotionStep{{Uses: "fake-step"}},
 				},
 			},
-			assertions: func(t *testing.T, r *fakeevent.EventRecorder, err error) {
+			assertions: func(t *testing.T, r *fakeevent.Sender, err error) {
 				require.NoError(t, err)
-				require.Len(t, r.Events, 1)
-				event := <-r.Events
-				require.Equal(t, string(kargoapi.EventTypePromotionCreated), event.Reason)
+				sent := r.Sent()
+				require.Len(t, sent, 1)
+				evt := sent[0]
+				require.Equal(t, string(kargoapi.EventTypePromotionCreated), evt.Type())
+				require.Equal(
+					t,
+					"akuity.kargo.events.promotion.created",
+					evt.Subject(),
+				)
+				data := &event.PromotionCreated{}
+				require.NoError(t, evt.DataAs(data))
+				require.NotNil(t, data.Actor)
+				require.Equal(t, "kubernetes:fake-user", *data.Actor)
+				require.Equal(
+					t,
+					`Promotion created for Stage "" by "kubernetes:fake-user"`,
+					data.Message,
+				)
 			},
 		},
 		{
@@ -2375,16 +2620,16 @@ func Test_webhook_ValidateCreate(t *testing.T) {
 					Steps:   []kargoapi.PromotionStep{{Uses: "fake-step"}},
 				},
 			},
-			assertions: func(t *testing.T, r *fakeevent.EventRecorder, err error) {
+			assertions: func(t *testing.T, r *fakeevent.Sender, err error) {
 				require.NoError(t, err)
-				require.Empty(t, r.Events)
+				require.Empty(t, r.Sent())
 			},
 		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			recorder := fakeevent.NewEventRecorder(1)
-			testCase.webhook.sender = k8sevent.NewEventSender(recorder)
+			sender := &fakeevent.Sender{}
+			testCase.webhook.sender = sender
 
 			var req admission.Request
 			if testCase.userInfo != nil {
@@ -2393,7 +2638,7 @@ func Test_webhook_ValidateCreate(t *testing.T) {
 			ctx := admission.NewContextWithRequest(t.Context(), req)
 
 			_, err := testCase.webhook.ValidateCreate(ctx, testCase.promotion)
-			testCase.assertions(t, recorder, err)
+			testCase.assertions(t, sender, err)
 		})
 	}
 }
@@ -2415,17 +2660,15 @@ func Test_webhook_ValidateUpdate(t *testing.T) {
 				return &kargoapi.Promotion{}, &kargoapi.Promotion{}
 			},
 			authorizeFn: func(context.Context, *kargoapi.Promotion, string) error {
-				return errors.New("something went wrong")
+				return apierrors.NewForbidden(
+					promotionGroupResource,
+					"fake-promotion",
+					errors.New("not permitted"),
+				)
 			},
 			assertions: func(t *testing.T, err error) {
-				var statusErr *apierrors.StatusError
-				require.True(t, errors.As(err, &statusErr))
-				require.Equal(
-					t,
-					metav1.StatusReasonInternalError,
-					statusErr.ErrStatus.Reason,
-				)
-				require.Contains(t, statusErr.ErrStatus.Message, "something went wrong")
+				require.True(t, apierrors.IsForbidden(err))
+				require.ErrorContains(t, err, "not permitted")
 			},
 		},
 
@@ -2491,7 +2734,8 @@ func Test_webhook_ValidateUpdate(t *testing.T) {
 				require.Contains(
 					t,
 					statusErr.ErrStatus.Message,
-					"a Promotion may name a Target only when created by a PromotionRequest",
+					"a Promotion may name a Target only when created by a PromotionRequest "+
+						"or a PromotionRollout",
 				)
 			},
 		},
@@ -2532,6 +2776,43 @@ func Test_webhook_ValidateUpdate(t *testing.T) {
 			},
 		},
 
+		{
+			name: "update of a PromotionRollout's child",
+			setup: func() (*kargoapi.Promotion, *kargoapi.Promotion) {
+				oldPromo := &kargoapi.Promotion{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "fake-name",
+						Namespace: "fake-namespace",
+						OwnerReferences: []metav1.OwnerReference{{
+							APIVersion: kargoapi.GroupVersion.String(),
+							Kind:       "Stage",
+							Name:       "fake-stage",
+							Controller: ptr.To(true),
+						}},
+					},
+					Spec: kargoapi.PromotionSpec{
+						Stage:            "fake-stage",
+						Freight:          "fake-freight",
+						Target:           "fake-target",
+						PromotionRollout: "0b9f4a3e-6c1d-4a8e-9f2b-3c4d5e6f7a8b",
+					},
+				}
+				newPromo := oldPromo.DeepCopy()
+				// The link to the rollout is in spec, so there is no owner to
+				// lose. An abort must keep working all the same.
+				newPromo.OwnerReferences = nil
+				newPromo.Annotations = map[string]string{
+					kargoapi.AnnotationKeyAbort: "fake-abort-id",
+				}
+				return oldPromo, newPromo
+			},
+			authorizeFn: func(context.Context, *kargoapi.Promotion, string) error {
+				return nil
+			},
+			assertions: func(t *testing.T, err error) {
+				require.NoError(t, err)
+			},
+		},
 		{
 			name: "update without mutation",
 			setup: func() (*kargoapi.Promotion, *kargoapi.Promotion) {
@@ -2765,6 +3046,149 @@ func Test_webhook_Authorize(t *testing.T) {
 					"create",
 				),
 			)
+		})
+	}
+}
+
+// Test_webhook_Handle_PreservesUnrelatedDurationFormatting is a regression
+// test for https://github.com/akuityio/akuity-platform/issues/12384: a
+// hand-written duration like "1h" was rewritten to its canonical form
+// ("1h0m0s") in the admission patch even though Default() never touched it.
+// On Update, Default() doesn't rewrite spec.steps (only Create does, from
+// the Stage's PromotionTemplate), so a step's retry timeout must survive
+// untouched even though syncing the shard label forces a real mutation.
+func Test_webhook_Handle_PreservesUnrelatedDurationFormatting(t *testing.T) {
+	scheme := runtime.NewScheme()
+	require.NoError(t, kargoapi.AddToScheme(scheme))
+
+	kubeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(&kargoapi.Stage{
+		ObjectMeta: metav1.ObjectMeta{Name: "fake-stage", Namespace: "fake-project"},
+		Spec:       kargoapi.StageSpec{Shard: "fake-shard"},
+	}).Build()
+	w := newWebhook(
+		libWebhook.Config{},
+		kubeClient,
+		admission.NewDecoder(scheme),
+		&fakeevent.Sender{},
+	)
+	wh, err := libWebhook.NewDefaultingWebhook(scheme, &kargoapi.Promotion{}, w)
+	require.NoError(t, err)
+
+	rawPromo := []byte(`{
+		"apiVersion": "kargo.akuity.io/v1alpha1",
+		"kind": "Promotion",
+		"metadata": {"name": "fake-promo", "namespace": "fake-project"},
+		"spec": {
+			"stage": "fake-stage",
+			"freight": "abc1234567",
+			"steps": [{"uses": "git-clone", "retry": {"timeout": "1h"}}]
+		}
+	}`)
+
+	req := admission.Request{
+		AdmissionRequest: admissionv1.AdmissionRequest{
+			Operation: admissionv1.Update,
+			Object:    runtime.RawExtension{Raw: rawPromo},
+			OldObject: runtime.RawExtension{Raw: rawPromo},
+		},
+	}
+
+	resp := wh.Handle(admission.NewContextWithRequest(context.Background(), req), req)
+	require.True(t, resp.Allowed)
+
+	testCases := []struct {
+		name    string
+		path    string
+		present bool
+	}{
+		{
+			// Sanity check: this mutation must still appear, or the test
+			// below would pass by suppressing every patch, not just the
+			// spurious ones.
+			name:    "shard label is patched",
+			path:    "/metadata/labels",
+			present: true,
+		},
+		{
+			name:    "untouched retry timeout is not rewritten",
+			path:    "/spec/steps/0/retry/timeout",
+			present: false,
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			got := slices.ContainsFunc(resp.Patches, func(p jsonpatch.JsonPatchOperation) bool {
+				return p.Path == testCase.path
+			})
+			require.Equalf(t, testCase.present, got, "patches: %+v", resp.Patches)
+		})
+	}
+}
+
+// Test_webhook_ValidateCreate_CacheMiss: a Freight the cache doesn't show as
+// available is confirmed against the API server (apiReader) before the
+// Promotion is refused.
+func Test_webhook_ValidateCreate_CacheMiss(t *testing.T) {
+	scheme := runtime.NewScheme()
+	require.NoError(t, kargoapi.AddToScheme(scheme))
+	origin := kargoapi.FreightOrigin{Kind: kargoapi.FreightOriginKindWarehouse, Name: "fake-warehouse"}
+	stage := &kargoapi.Stage{
+		ObjectMeta: metav1.ObjectMeta{Namespace: "fake-project", Name: "fake-stage"},
+		Spec: kargoapi.StageSpec{
+			RequestedFreight: []kargoapi.FreightRequest{{Origin: origin, Sources: kargoapi.FreightSources{Direct: true}}},
+		},
+	}
+	freight := &kargoapi.Freight{
+		ObjectMeta: metav1.ObjectMeta{Namespace: "fake-project", Name: "fake-freight"},
+		Origin:     origin,
+	}
+	promo := &kargoapi.Promotion{
+		ObjectMeta: metav1.ObjectMeta{Namespace: "fake-project"},
+		Spec: kargoapi.PromotionSpec{
+			Stage:   "fake-stage",
+			Freight: "fake-freight",
+			Steps:   []kargoapi.PromotionStep{{Uses: "fake-step"}},
+		},
+	}
+	for _, testCase := range []struct {
+		name    string
+		objects []client.Object
+		invalid bool
+	}{
+		{name: "available on the API server", objects: []client.Object{stage, freight}},
+		{name: "not on the API server either", objects: []client.Object{stage}, invalid: true},
+		// No Stage on the API server makes the confirm read fail: the cached refusal stands.
+		{name: "API server read fails", objects: nil, invalid: true},
+	} {
+		t.Run(testCase.name, func(t *testing.T) {
+			w := &webhook{
+				apiReader: fake.NewClientBuilder().WithScheme(scheme).WithObjects(testCase.objects...).Build(),
+				validateProjectFn: func(context.Context, client.Client, client.Object) error {
+					return nil
+				},
+				authorizeFn: func(context.Context, *kargoapi.Promotion, string) error {
+					return nil
+				},
+				admissionRequestFromContextFn: admission.RequestFromContext,
+				// The cache hasn't seen the Freight yet.
+				getStageFn: func(context.Context, client.Client, types.NamespacedName) (*kargoapi.Stage, error) {
+					return stage.DeepCopy(), nil
+				},
+				getFreightFn: func(context.Context, client.Client, types.NamespacedName) (*kargoapi.Freight, error) {
+					return nil, nil
+				},
+				isRequestFromKargoControlplaneFn: func(admission.Request) bool { return true },
+			}
+			w.sender = &fakeevent.Sender{}
+			ctx := admission.NewContextWithRequest(t.Context(), admission.Request{})
+			_, err := w.ValidateCreate(ctx, promo)
+			if !testCase.invalid {
+				require.NoError(t, err)
+				return
+			}
+			var statusErr *apierrors.StatusError
+			require.True(t, errors.As(err, &statusErr))
+			require.Equal(t, metav1.StatusReasonInvalid, statusErr.ErrStatus.Reason)
 		})
 	}
 }

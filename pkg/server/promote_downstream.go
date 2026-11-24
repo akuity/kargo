@@ -6,16 +6,14 @@ import (
 	"fmt"
 	"net/http"
 
-	"connectrpc.com/connect"
 	"github.com/gin-gonic/gin"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	"github.com/akuity/kargo/pkg/api"
 	libhttp "github.com/akuity/kargo/pkg/http"
-	"github.com/akuity/kargo/pkg/server/user"
+	"github.com/akuity/kargo/pkg/server/auth/can"
+	"github.com/akuity/kargo/pkg/server/request"
 )
 
 // findDownstreamStages returns a list of Stages that are immediately downstream
@@ -28,7 +26,7 @@ func (s *server) findDownstreamStages(
 ) ([]kargoapi.Stage, error) {
 	var allStages kargoapi.StageList
 	if err := s.client.List(ctx, &allStages, client.InNamespace(stage.Namespace)); err != nil {
-		return nil, connect.NewError(connect.CodeInternal, err)
+		return nil, fmt.Errorf("error listing Stages: %w", err)
 	}
 	var downstreams []kargoapi.Stage
 	for _, s := range allStages.Items {
@@ -55,8 +53,18 @@ type promoteDownstreamRequest struct {
 // @id PromoteDownstream
 // @Summary Promote downstream
 // @Description Creates a Promotion resource for each of a Stage's immediately
-// @Description downstream Stages. Downstream Stages that select Targets yield a
-// @Description PromotionRequest each, returned separately under "promotionRequests".
+// @Description downstream Stages, returned under "promotions". Downstream
+// @Description Stages that select Targets each yield, in place of a
+// @Description Promotion, a PromotionRollout on a server that creates
+// @Description PromotionRollouts, returned under "promotionRollouts", or a
+// @Description PromotionRequest otherwise, returned under
+// @Description "promotionRequests"; each key is present only when it has
+// @Description entries. Each promotes to every Target its Stage governs, at
+// @Description the Stage's pace. A Stage that could not be promoted to is
+// @Description reported under "errors", with a 207 status, and the rest
+// @Description are still promoted to. On a server that creates
+// @Description PromotionRollouts, that includes a Stage that governs no
+// @Description Targets.
 // @Tags Core, Project-Level
 // @Security BearerAuth
 // @Accept json
@@ -72,7 +80,7 @@ func (s *server) promoteDownstream(c *gin.Context) {
 	stageName := c.Param("stage")
 
 	var req promoteDownstreamRequest
-	if !bindJSONOrError(c, &req) {
+	if !request.BindJSON(c, &req) {
 		return
 	}
 
@@ -115,25 +123,11 @@ func (s *server) promoteDownstream(c *gin.Context) {
 			return
 		}
 	} else {
-		// Search by alias
-		list := &kargoapi.FreightList{}
-		if err := s.client.List(
-			ctx,
-			list,
-			client.InNamespace(project),
-			client.MatchingLabels{kargoapi.LabelKeyAlias: req.FreightAlias},
-		); err != nil {
+		var err error
+		if freight, err = s.getFreightByAlias(ctx, project, req.FreightAlias); err != nil {
 			_ = c.Error(err)
 			return
 		}
-		if len(list.Items) == 0 {
-			_ = c.Error(libhttp.ErrorStr(
-				fmt.Sprintf("Freight with alias %q not found in project %q", req.FreightAlias, project),
-				http.StatusNotFound,
-			))
-			return
-		}
-		freight = &list.Items[0]
 	}
 
 	// Find downstream stages
@@ -152,15 +146,9 @@ func (s *server) promoteDownstream(c *gin.Context) {
 	}
 
 	for _, downstream := range downstreams {
-		if err := s.authorizeFn(
+		if err := s.authorize(
 			ctx,
-			"promote",
-			kargoapi.GroupVersion.WithResource("stages"),
-			"",
-			types.NamespacedName{
-				Namespace: downstream.Namespace,
-				Name:      downstream.Name,
-			},
+			can.Promote().Stage(downstream.Namespace, downstream.Name),
 		); err != nil {
 			_ = c.Error(err)
 			return
@@ -178,15 +166,10 @@ func (s *server) promoteDownstream(c *gin.Context) {
 		}
 	}
 
-	// Create promotions for all downstream stages
-	var actor string
-	if u, ok := user.InfoFromContext(ctx); ok {
-		actor = api.FormatEventUserActor(u)
-	}
-
 	promoteErrs := make([]error, 0, len(downstreams))
 	createdPromos := make([]*kargoapi.Promotion, 0, len(downstreams))
 	createdPromoReqs := make([]*kargoapi.PromotionRequest, 0, len(downstreams))
+	createdRollouts := make([]*kargoapi.PromotionRollout, 0, len(downstreams))
 
 	for _, downstream := range downstreams {
 		// Skip "control flow" stages with no promotion steps
@@ -196,44 +179,37 @@ func (s *server) promoteDownstream(c *gin.Context) {
 		}
 
 		// A downstream Stage that selects Targets fans Freight out to them via
-		// a PromotionRequest rather than promoting to itself with a Promotion.
-		if api.IsTargetAware(&downstream) {
-			// Both the Target lookup and the create go through the internal
-			// client. PromotionRequests are system-owned, and the promote-verb
-			// check above IS the authorization decision for this downstream
-			// Stage; which Targets it governs is a detail of carrying it out.
-			newPromoReq, err := api.NewPromotionRequest(
-				ctx, s.client.InternalClient(), &downstream, freight.Name,
-			)
+		// a PromotionRollout, or a PromotionRequest on a server that does not
+		// create rollouts, rather than promoting to itself with a Promotion.
+		// Promote downstream never names Targets or an update strategy: it
+		// promotes to every Target the Stage governs, at the Stage's pace.
+		if downstream.IsTargetAware() {
+			// TODO(promotion-requests): a server that does not create
+			// rollouts falls back to a PromotionRequest. Remove this check,
+			// and the fallback below it, along with PromotionRequests.
+			if s.cfg.PromotionRolloutsEnabled {
+				rollout, err := s.createPromotionRollout(ctx, &downstream, freight, nil, nil)
+				if err != nil {
+					promoteErrs = append(promoteErrs, err)
+					continue
+				}
+				createdRollouts = append(createdRollouts, rollout)
+				continue
+			}
+			newPromoReq, err := s.createPromotionRequest(ctx, &downstream, freight, true, nil, nil)
 			if err != nil {
 				promoteErrs = append(promoteErrs, err)
 				continue
 			}
-			if actor != "" {
-				api.SetCreateActorAnnotation(newPromoReq, actor)
-			}
-			if err = s.client.InternalClient().Create(ctx, newPromoReq); err != nil {
-				promoteErrs = append(promoteErrs, err)
-				continue
-			}
-			// No event is recorded: Kargo's promotion events carry a Promotion,
-			// and a PromotionRequest has none of its own.
+
 			createdPromoReqs = append(createdPromoReqs, newPromoReq)
 			continue
 		}
 
-		newPromo := api.NewMinimalPromotion(&downstream, freight.Name)
-		if actor != "" {
-			api.SetCreateActorAnnotation(newPromo, actor)
-		}
-
-		if err := s.client.Create(ctx, newPromo); err != nil {
+		newPromo, err := s.createPromotion(ctx, &downstream, freight)
+		if err != nil {
 			promoteErrs = append(promoteErrs, err)
 			continue
-		}
-
-		if s.sender != nil {
-			s.recordPromotionCreatedEvent(ctx, newPromo, freight)
 		}
 		createdPromos = append(createdPromos, newPromo)
 	}
@@ -241,6 +217,9 @@ func (s *server) promoteDownstream(c *gin.Context) {
 	response := gin.H{"promotions": createdPromos}
 	if len(createdPromoReqs) > 0 {
 		response["promotionRequests"] = createdPromoReqs
+	}
+	if len(createdRollouts) > 0 {
+		response["promotionRollouts"] = createdRollouts
 	}
 	if len(promoteErrs) > 0 {
 		response["errors"] = errors.Join(promoteErrs...).Error()

@@ -6,6 +6,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"sync"
 	"testing"
 
 	"github.com/google/uuid"
@@ -13,12 +14,18 @@ import (
 	"github.com/stretchr/testify/require"
 	"k8s.io/utils/ptr"
 
+	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/controller/git"
 	"github.com/akuity/kargo/pkg/credentials"
 	"github.com/akuity/kargo/pkg/gitprovider"
 	"github.com/akuity/kargo/pkg/promotion"
-	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
+	"github.com/akuity/kargo/pkg/x/promotion/stepconfig"
 )
+
+func Test_gitPusherConfigFromEnv(t *testing.T) {
+	cfg := gitPusherConfigFromEnv()
+	require.Equal(t, git.PushIntegrationPolicyRebaseOrMerge, cfg.PushIntegrationPolicy)
+}
 
 func Test_gitPusher_convert(t *testing.T) {
 	tests := []validationTestCase{
@@ -271,11 +278,12 @@ func Test_gitPusher_run(t *testing.T) {
 				Stage:     "fake-stage",
 				Promotion: "fake-promotion",
 				WorkDir:   workDir,
+				Root:      newTestRoot(t, workDir),
 			},
-			builtin.GitPushConfig{
+			stepconfig.GitPushConfig{
 				Path:                 "master",
 				GenerateTargetBranch: true,
-				Provider:             ptr.To(builtin.Provider(fakeGitProviderName)),
+				Provider:             ptr.To(stepconfig.Provider(fakeGitProviderName)),
 			},
 		)
 		require.NoError(t, err)
@@ -299,8 +307,9 @@ func Test_gitPusher_run(t *testing.T) {
 				Stage:     "fake-stage",
 				Promotion: "fake-promotion",
 				WorkDir:   workDir,
+				Root:      newTestRoot(t, workDir),
 			},
-			builtin.GitPushConfig{
+			stepconfig.GitPushConfig{
 				Path: "master",
 				Tag:  "v1.0.0",
 			},
@@ -316,4 +325,34 @@ func Test_gitPusher_run(t *testing.T) {
 		actualCommitURL := res.Output[stateKeyCommitURL]
 		require.Equal(t, expectedCommitURL, actualCommitURL)
 	})
+}
+
+func Test_gitPushPusher_run_escapingSymlink(t *testing.T) {
+	workDir, _ := escapingWorkspace(t)
+	res, err := (&gitPushPusher{}).run(
+		t.Context(),
+		newTestStepContext(t, workDir),
+		stepconfig.GitPushConfig{Path: "out/repo"},
+	)
+	require.ErrorContains(t, err, "path escapes from parent")
+	require.Equal(t, kargoapi.PromotionStepStatusErrored, res.Status)
+}
+
+func Test_gitPushPusher_getBranchMu(t *testing.T) {
+	pusher := &gitPushPusher{branchMus: map[string]*sync.Mutex{}}
+
+	// Concurrent lookups of new and existing keys must not race on the map
+	// (run with -race).
+	var wg sync.WaitGroup
+	for i := range 50 {
+		wg.Go(func() {
+			mu := pusher.getBranchMu("repo", fmt.Sprintf("branch-%d", i%10))
+			mu.Lock()
+			defer mu.Unlock()
+		})
+	}
+	wg.Wait()
+
+	require.Len(t, pusher.branchMus, 10)
+	require.Same(t, pusher.getBranchMu("repo", "branch-0"), pusher.getBranchMu("repo", "branch-0"))
 }

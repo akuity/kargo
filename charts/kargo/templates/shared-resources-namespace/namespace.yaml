@@ -1,14 +1,10 @@
 {{- if and .Values.dataPlane.install .Values.global.sharedResources.createNamespace }}
+{{- include "kargo.validateNoLegacySecretNamespaces" . }}
 apiVersion: v1
 kind: Namespace
 metadata:
   name: {{ quote .Values.global.sharedResources.namespace }}
   labels:
-    {{- include "kargo.labels" . | nindent 4 }}
-  {{- with (mergeOverwrite (deepCopy .Values.global.labels) .Values.global.sharedResources.extraNamespaceLabels) }}
-    {{- range $key, $value := . }}
-    {{ $key }}: {{ $value | quote }}
-    {{- end }}
-  {{- end }}
+    {{- include "kargo.componentLabels" (dict "root" . "labels" .Values.global.sharedResources.extraNamespaceLabels) | nindent 4 }}
   {{- include "kargo.annotations" (dict "root" . "annotations" .Values.global.sharedResources.extraNamespaceAnnotations) | nindent 2 }}
 {{- end }}

@@ -11,14 +11,16 @@ import (
 	"github.com/akuity/kargo/pkg/controller/git"
 	"github.com/akuity/kargo/pkg/credentials"
 	"github.com/akuity/kargo/pkg/gitprovider"
+	"github.com/akuity/kargo/pkg/logging"
 	"github.com/akuity/kargo/pkg/promotion"
-	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
+	"github.com/akuity/kargo/pkg/x/promotion/stepconfig"
 
-	_ "github.com/akuity/kargo/pkg/gitprovider/azure"           // Azure provider registration
-	_ "github.com/akuity/kargo/pkg/gitprovider/bitbucket/cloud" // Bitbucket Cloud provider registration
-	_ "github.com/akuity/kargo/pkg/gitprovider/gitea"           // Gitea provider registration
-	_ "github.com/akuity/kargo/pkg/gitprovider/github"          // GitHub provider registration
-	_ "github.com/akuity/kargo/pkg/gitprovider/gitlab"          // GitLab provider registration
+	_ "github.com/akuity/kargo/pkg/gitprovider/azure"                // Azure provider registration
+	_ "github.com/akuity/kargo/pkg/gitprovider/bitbucket/cloud"      // Bitbucket Cloud provider registration
+	_ "github.com/akuity/kargo/pkg/gitprovider/bitbucket/datacenter" // Bitbucket Data Center provider registration
+	_ "github.com/akuity/kargo/pkg/gitprovider/gitea"                // Gitea provider registration
+	_ "github.com/akuity/kargo/pkg/gitprovider/github"               // GitHub provider registration
+	_ "github.com/akuity/kargo/pkg/gitprovider/gitlab"               // GitLab provider registration
 )
 
 const stepKindGitMergePR = "git-merge-pr"
@@ -75,15 +77,15 @@ func (g *gitPRMerger) Run(
 }
 
 // convert validates the configuration against a JSON schema and converts it
-// into a builtin.GitMergePRConfig struct.
-func (g *gitPRMerger) convert(cfg promotion.Config) (builtin.GitMergePRConfig, error) {
-	return validateAndConvert[builtin.GitMergePRConfig](g.schemaLoader, cfg, stepKindGitMergePR)
+// into a stepconfig.GitMergePRConfig struct.
+func (g *gitPRMerger) convert(cfg promotion.Config) (stepconfig.GitMergePRConfig, error) {
+	return validateAndConvert[stepconfig.GitMergePRConfig](g.schemaLoader, cfg, stepKindGitMergePR)
 }
 
 func (g *gitPRMerger) run(
 	ctx context.Context,
 	stepCtx *promotion.StepContext,
-	cfg builtin.GitMergePRConfig,
+	cfg stepconfig.GitMergePRConfig,
 ) (promotion.StepResult, error) {
 	var repoCreds *git.RepoCredentials
 	creds, err := g.credsDB.Get(
@@ -98,9 +100,8 @@ func (g *gitPRMerger) run(
 	}
 	if creds != nil {
 		repoCreds = &git.RepoCredentials{
-			Username:      creds.Username,
-			Password:      creds.Password,
-			SSHPrivateKey: creds.SSHPrivateKey,
+			Username: creds.Username,
+			Password: creds.Password,
 		}
 	}
 
@@ -162,8 +163,50 @@ func (g *gitPRMerger) run(
 			}
 	}
 
-	return promotion.StepResult{
+	res := promotion.StepResult{
 		Status: kargoapi.PromotionStepStatusSucceeded,
 		Output: map[string]any{stateKeyCommit: mergedPR.MergeCommitSHA},
-	}, nil
+	}
+
+	if cfg.DeleteSourceBranch {
+		// Deleting the source branch is housekeeping. The merge, which is this
+		// step's actual job, has already succeeded, and subsequent steps need its
+		// output, so a failure here is reported rather than allowed to fail or
+		// stall the step. Providers treat a branch that is already gone as
+		// success, which keeps this safe to re-run.
+		if delErr := g.deleteSourceBranch(ctx, gitProv, mergedPR); delErr != nil {
+			res.Message = fmt.Sprintf(
+				"merged pull request %d, but failed to delete its source branch: %s",
+				cfg.PRNumber,
+				delErr,
+			)
+		}
+	}
+
+	return res, nil
+}
+
+// deleteSourceBranch deletes the source branch of the provided (merged) pull
+// request. Failures are logged and returned to the caller.
+func (g *gitPRMerger) deleteSourceBranch(
+	ctx context.Context,
+	gitProv gitprovider.Interface,
+	pr *gitprovider.PullRequest,
+) error {
+	logger := logging.LoggerFromContext(ctx)
+	if pr.HeadBranch == "" {
+		err := fmt.Errorf(
+			"provider did not report a source branch for pull request %d",
+			pr.Number,
+		)
+		logger.Error(err, "error deleting source branch")
+		return err
+	}
+	logger = logger.WithValues("branch", pr.HeadBranch)
+	if err := gitProv.DeleteBranch(ctx, pr.HeadBranch); err != nil {
+		logger.Error(err, "error deleting source branch")
+		return err
+	}
+	logger.Debug("deleted source branch")
+	return nil
 }

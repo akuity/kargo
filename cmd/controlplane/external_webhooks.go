@@ -7,15 +7,18 @@ import (
 	"runtime"
 
 	"github.com/spf13/cobra"
+	"golang.org/x/sync/errgroup"
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	libCluster "sigs.k8s.io/controller-runtime/pkg/cluster"
+	"sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/indexer"
 	"github.com/akuity/kargo/pkg/logging"
 	"github.com/akuity/kargo/pkg/os"
 	"github.com/akuity/kargo/pkg/server/kubernetes"
+	"github.com/akuity/kargo/pkg/telemetry"
 	"github.com/akuity/kargo/pkg/types"
 	"github.com/akuity/kargo/pkg/webhook/external"
 	versionpkg "github.com/akuity/kargo/pkg/x/version"
@@ -28,6 +31,8 @@ type externalWebhooksServerOptions struct {
 
 	BindAddress string
 	Port        string
+
+	MetricsBindAddress string
 
 	Logger *logging.Logger
 }
@@ -71,12 +76,23 @@ func (o *externalWebhooksServerOptions) complete() {
 	o.BindAddress = os.GetEnv("BIND_ADDRESS", "0.0.0.0")
 	o.Port = os.GetEnv("PORT", "8080")
 
+	o.MetricsBindAddress = os.GetEnv("METRICS_BIND_ADDRESS", "0")
+
 	logLevel, logFormat := getLogVars()
 
 	o.Logger = logging.NewLoggerOrDie(logLevel, logFormat)
 }
 
 func (o *externalWebhooksServerOptions) run(ctx context.Context) error {
+	shutdownTelemetry, err := telemetry.SetupFromEnv(
+		logging.ContextWithLogger(ctx, o.Logger),
+		"external-webhooks-server",
+	)
+	if err != nil {
+		return err
+	}
+	defer shutdownTelemetry()
+
 	serverCfg := external.ServerConfigFromEnv()
 
 	restCfg, err := kubernetes.GetRestConfig(ctx, o.KubeConfig)
@@ -145,6 +161,15 @@ func (o *externalWebhooksServerOptions) run(ctx context.Context) error {
 		return fmt.Errorf("error starting cluster: %w", err)
 	}
 
+	metricsServer, err := server.NewServer(
+		server.Options{BindAddress: o.MetricsBindAddress},
+		restCfg,
+		cluster.GetHTTPClient(),
+	)
+	if err != nil {
+		return fmt.Errorf("error creating metrics server: %w", err)
+	}
+
 	srv := external.NewServer(serverCfg, cluster.GetClient(), cluster.GetAPIReader())
 	l, err := net.Listen("tcp", fmt.Sprintf("%s:%s", o.BindAddress, o.Port))
 	if err != nil {
@@ -152,8 +177,22 @@ func (o *externalWebhooksServerOptions) run(ctx context.Context) error {
 	}
 	defer l.Close()
 
-	if err = srv.Serve(ctx, l); err != nil {
-		return fmt.Errorf("error serving API: %w", err)
+	// Either server failing stops the other.
+	g, gCtx := errgroup.WithContext(ctx)
+	// nil when metrics are disabled.
+	if metricsServer != nil {
+		g.Go(func() error {
+			if err := metricsServer.Start(gCtx); err != nil {
+				return fmt.Errorf("error serving metrics: %w", err)
+			}
+			return nil
+		})
 	}
-	return nil
+	g.Go(func() error {
+		if err := srv.Serve(gCtx, l); err != nil {
+			return fmt.Errorf("error serving API: %w", err)
+		}
+		return nil
+	})
+	return g.Wait()
 }

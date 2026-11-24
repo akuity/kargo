@@ -14,7 +14,7 @@ import (
 	"github.com/akuity/kargo/pkg/credentials"
 	"github.com/akuity/kargo/pkg/gitprovider"
 	"github.com/akuity/kargo/pkg/promotion"
-	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
+	"github.com/akuity/kargo/pkg/x/promotion/stepconfig"
 )
 
 func Test_gitPRWaiter_convert(t *testing.T) {
@@ -33,6 +33,24 @@ func Test_gitPRWaiter_convert(t *testing.T) {
 			},
 			expectedProblems: []string{
 				"repoURL: String length must be greater than or equal to 1",
+			},
+		},
+		{
+			name: "repoURL is an SSH URL",
+			config: promotion.Config{
+				"repoURL": "ssh://git@github.com/example/repo.git",
+			},
+			expectedProblems: []string{
+				"repoURL: Does not match pattern '^https?://'",
+			},
+		},
+		{
+			name: "repoURL is an SCP-style URL",
+			config: promotion.Config{
+				"repoURL": "git@github.com:example/repo.git",
+			},
+			expectedProblems: []string{
+				"repoURL: Does not match pattern '^https?://'",
 			},
 		},
 		{
@@ -109,7 +127,7 @@ func Test_gitPRWaiter_run(t *testing.T) {
 	testCases := []struct {
 		name       string
 		provider   gitprovider.Interface
-		config     builtin.GitWaitForPRConfig
+		config     stepconfig.GitWaitForPRConfig
 		assertions func(*testing.T, promotion.StepResult, error)
 	}{
 		{
@@ -176,7 +194,7 @@ func Test_gitPRWaiter_run(t *testing.T) {
 					}, nil
 				},
 			},
-			config: builtin.GitWaitForPRConfig{PollInterval: "90s"},
+			config: stepconfig.GitWaitForPRConfig{PollInterval: "90s"},
 			assertions: func(t *testing.T, res promotion.StepResult, err error) {
 				require.NoError(t, err)
 				require.Equal(t, kargoapi.PromotionStepStatusRunning, res.Status)
@@ -271,7 +289,7 @@ func Test_gitPRWaiter_run(t *testing.T) {
 			)
 
 			cfg := testCase.config
-			cfg.Provider = ptr.To(builtin.Provider(testGitProviderName))
+			cfg.Provider = ptr.To(stepconfig.Provider(testGitProviderName))
 
 			res, err := runner.run(
 				t.Context(),

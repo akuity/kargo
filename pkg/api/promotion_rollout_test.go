@@ -1,0 +1,624 @@
+package api
+
+import (
+	"fmt"
+	"strings"
+	"testing"
+
+	"github.com/stretchr/testify/require"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/apimachinery/pkg/util/validation"
+
+	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+)
+
+func TestGeneratePromotionRolloutName(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name       string
+		stageName  string
+		freight    string
+		assertions func(*testing.T, string)
+	}{
+		{
+			name:      "empty Stage name",
+			stageName: "",
+			freight:   "fake-freight",
+			assertions: func(t *testing.T, name string) {
+				require.Empty(t, name)
+			},
+		},
+		{
+			name:      "empty Freight",
+			stageName: "fake-stage",
+			freight:   "",
+			assertions: func(t *testing.T, name string) {
+				require.Empty(t, name)
+			},
+		},
+		{
+			name:      "Stage name and short Freight hash",
+			stageName: "fake-stage",
+			freight:   "abcdef1234567890",
+			assertions: func(t *testing.T, name string) {
+				parts := strings.Split(name, ".")
+				require.Len(t, parts, 3)
+				require.Equal(t, "fake-stage", parts[0])
+				require.Equal(t, "abcdef1", parts[2])
+			},
+		},
+		{
+			name:      "over-long Stage name is truncated",
+			stageName: strings.Repeat("a", 300),
+			freight:   "abcdef1234567890",
+			assertions: func(t *testing.T, name string) {
+				require.LessOrEqual(t, len(name), 253)
+			},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+			testCase.assertions(t, GeneratePromotionRolloutName(testCase.stageName, testCase.freight))
+		})
+	}
+}
+
+func TestGenerateRolloutChildPromotionName(t *testing.T) {
+	t.Parallel()
+
+	const rolloutID = "0B9F4A3E-6c1d-4a8e-9f2b-3c4d5e6f7a8b"
+
+	// requireValidName requires that name is a valid Kubernetes resource name
+	// that ends with the rollout's id.
+	requireValidName := func(t *testing.T, name string) {
+		t.Helper()
+		require.LessOrEqual(t, len(name), 253)
+		require.Empty(t, validation.IsDNS1123Subdomain(name))
+		require.True(t, strings.HasSuffix(name, "."+strings.ToLower(rolloutID)))
+	}
+
+	testCases := []struct {
+		name       string
+		stageName  string
+		targetName string
+		rolloutID  string
+		assertions func(*testing.T, string)
+	}{
+		{
+			name:       "empty Stage name",
+			targetName: "us-east",
+			rolloutID:  rolloutID,
+			assertions: func(t *testing.T, name string) {
+				require.Empty(t, name)
+			},
+		},
+		{
+			name:      "empty Target name",
+			stageName: "prod",
+			rolloutID: rolloutID,
+			assertions: func(t *testing.T, name string) {
+				require.Empty(t, name)
+			},
+		},
+		{
+			name:       "empty rollout id",
+			stageName:  "prod",
+			targetName: "us-east",
+			assertions: func(t *testing.T, name string) {
+				require.Empty(t, name)
+			},
+		},
+		{
+			name:       "Stage, Target and rollout id, lowercased",
+			stageName:  "prod",
+			targetName: "us-east",
+			rolloutID:  rolloutID,
+			assertions: func(t *testing.T, name string) {
+				require.Equal(t, "prod.us-east."+strings.ToLower(rolloutID), name)
+			},
+		},
+		{
+			name:       "repeated calls collide",
+			stageName:  "prod",
+			targetName: "us-east",
+			rolloutID:  rolloutID,
+			assertions: func(t *testing.T, name string) {
+				require.Equal(
+					t,
+					GenerateRolloutChildPromotionName("prod", "us-east", rolloutID),
+					name,
+				)
+			},
+		},
+		{
+			name:       "another Target or rollout gives another name",
+			stageName:  "prod",
+			targetName: "us-east",
+			rolloutID:  rolloutID,
+			assertions: func(t *testing.T, name string) {
+				require.NotEqual(
+					t,
+					GenerateRolloutChildPromotionName("prod", "us-west", rolloutID),
+					name,
+				)
+				require.NotEqual(
+					t,
+					GenerateRolloutChildPromotionName(
+						"prod", "us-east", "1c8e5b4f-7d2e-4b9f-8a3c-4d5e6f7a8b9c",
+					),
+					name,
+				)
+			},
+		},
+		{
+			name:       "a name that just fits is not shortened",
+			stageName:  strings.Repeat("a", 100),
+			targetName: strings.Repeat("b", 253-len(rolloutID)-2-100),
+			rolloutID:  rolloutID,
+			assertions: func(t *testing.T, name string) {
+				require.Len(t, name, 253)
+				require.Equal(
+					t,
+					strings.Repeat("a", 100)+"."+
+						strings.Repeat("b", 253-len(rolloutID)-2-100)+"."+
+						strings.ToLower(rolloutID),
+					name,
+				)
+			},
+		},
+		{
+			name:       "an over-long name is shortened to a valid name with a hash",
+			stageName:  strings.Repeat("a", 200),
+			targetName: strings.Repeat("b", 200),
+			rolloutID:  rolloutID,
+			assertions: func(t *testing.T, name string) {
+				requireValidName(t, name)
+				// The kept part of the Stage name, then the hash, then the
+				// rollout id.
+				prefix := strings.TrimSuffix(name, "."+strings.ToLower(rolloutID))
+				hashStart := len(prefix) - rolloutChildHashLength
+				require.Equal(t, "-", prefix[hashStart-1:hashStart])
+				require.Regexp(t, "^[0-9a-f]{8}$", prefix[hashStart:])
+			},
+		},
+		{
+			name:       "an over-long name is shortened the same way every time",
+			stageName:  strings.Repeat("a", 200),
+			targetName: strings.Repeat("b", 200),
+			rolloutID:  rolloutID,
+			assertions: func(t *testing.T, name string) {
+				require.Equal(
+					t,
+					GenerateRolloutChildPromotionName(
+						strings.Repeat("a", 200),
+						strings.Repeat("b", 200),
+						rolloutID,
+					),
+					name,
+				)
+			},
+		},
+		{
+			// The expected name is written out in full, hash included, so
+			// that any change to how names are shortened -- which would
+			// rename the children of rollouts already in progress -- fails
+			// here.
+			name:       "an over-long name is shortened to exactly this name",
+			stageName:  strings.Repeat("a", 200),
+			targetName: strings.Repeat("b", 200),
+			rolloutID:  rolloutID,
+			assertions: func(t *testing.T, name string) {
+				require.Equal(
+					t,
+					strings.Repeat("a", 200)+".bbbbbb-c34b8615."+
+						"0b9f4a3e-6c1d-4a8e-9f2b-3c4d5e6f7a8b",
+					name,
+				)
+			},
+		},
+		{
+			// A Stage name this long leaves no room for any of the Target's
+			// name, so only the hash can tell the Targets apart.
+			name:       "distinct Targets of a Stage with a long name get distinct names",
+			stageName:  strings.Repeat("a", 216),
+			targetName: "us-east",
+			rolloutID:  rolloutID,
+			assertions: func(t *testing.T, name string) {
+				requireValidName(t, name)
+				other := GenerateRolloutChildPromotionName(
+					strings.Repeat("a", 216),
+					"us-west",
+					rolloutID,
+				)
+				requireValidName(t, other)
+				require.NotEqual(t, other, name)
+			},
+		},
+		{
+			name:       "long Target names that differ only past the cut get distinct names",
+			stageName:  "prod",
+			targetName: strings.Repeat("c", 240) + "-east",
+			rolloutID:  rolloutID,
+			assertions: func(t *testing.T, name string) {
+				requireValidName(t, name)
+				other := GenerateRolloutChildPromotionName(
+					"prod",
+					strings.Repeat("c", 240)+"-west",
+					rolloutID,
+				)
+				requireValidName(t, other)
+				require.NotEqual(t, other, name)
+			},
+		},
+		{
+			// The kept part is limit-9 characters long. A Stage name one
+			// shorter than that ends the kept part on the separator.
+			name: "a cut that lands on the separator drops it",
+			stageName: strings.Repeat(
+				"a",
+				253-1-len(rolloutID)-1-rolloutChildHashLength-1,
+			),
+			targetName: strings.Repeat("b", 10),
+			rolloutID:  rolloutID,
+			assertions: func(t *testing.T, name string) {
+				requireValidName(t, name)
+				require.NotContains(t, name, ".-")
+			},
+		},
+		{
+			// The Target name's hyphen falls at the very end of the kept part.
+			name:       "a cut that lands on a hyphen drops it",
+			stageName:  strings.Repeat("a", 100),
+			targetName: strings.Repeat("b", 105) + "-" + strings.Repeat("c", 50),
+			rolloutID:  rolloutID,
+			assertions: func(t *testing.T, name string) {
+				requireValidName(t, name)
+				require.NotContains(t, name, "--")
+			},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+			testCase.assertions(t, GenerateRolloutChildPromotionName(
+				testCase.stageName,
+				testCase.targetName,
+				testCase.rolloutID,
+			))
+		})
+	}
+}
+
+func TestNewPromotionRolloutForAllTargets(t *testing.T) {
+	t.Parallel()
+
+	const (
+		project = "fake-project"
+		stage   = "fake-stage"
+		freight = "abcdef1234567890"
+	)
+
+	testStage := &kargoapi.Stage{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: project,
+			Name:      stage,
+			UID:       "fake-uid",
+		},
+		Spec: kargoapi.StageSpec{
+			Shard: "my-shard",
+			Targets: &kargoapi.StageTargets{
+				Selectors: []metav1.LabelSelector{{
+					MatchLabels: map[string]string{"region": "us"},
+				}},
+			},
+		},
+	}
+
+	t.Run("records the Stage, the Freight and the Stage's Targets", func(t *testing.T) {
+		t.Parallel()
+
+		stageTargets := []kargoapi.Target{
+			{ObjectMeta: metav1.ObjectMeta{Name: "us-east"}},
+			{ObjectMeta: metav1.ObjectMeta{Name: "us-west"}},
+		}
+		rollout, err := NewPromotionRolloutForAllTargets(testStage, freight, stageTargets, nil)
+		require.NoError(t, err)
+
+		require.Equal(t, project, rollout.Namespace)
+		require.Equal(t, stage, rollout.Spec.Stage)
+		require.Equal(t, freight, rollout.Spec.Freight)
+		require.True(t, strings.HasPrefix(rollout.Name, stage+"."))
+		require.Equal(
+			t,
+			[]kargoapi.PromotionRolloutTarget{{Name: "us-east"}, {Name: "us-west"}},
+			rollout.Spec.Targets,
+		)
+	})
+
+	t.Run("records an empty list for a Stage with no Targets", func(t *testing.T) {
+		t.Parallel()
+
+		rollout, err := NewPromotionRolloutForAllTargets(testStage, freight, nil, nil)
+		require.NoError(t, err)
+		require.NotNil(t, rollout.Spec.Targets)
+		require.Empty(t, rollout.Spec.Targets)
+	})
+
+	t.Run("carries no owner references or labels", func(t *testing.T) {
+		t.Parallel()
+
+		// A PromotionRollout is not a Kubernetes resource: nothing garbage
+		// collects it and no controller filters it by label.
+		rollout, err := NewPromotionRolloutForAllTargets(testStage, freight, nil, nil)
+		require.NoError(t, err)
+		require.Empty(t, rollout.OwnerReferences)
+		require.Empty(t, rollout.Labels)
+	})
+
+	t.Run("resolves the Stage's update strategy against its Targets", func(t *testing.T) {
+		t.Parallel()
+
+		withStrategy := testStage.DeepCopy()
+		withStrategy.Spec.Targets.UpdateStrategy.MaxConcurrent = new(intstr.FromString("50%"))
+		withStrategy.Spec.Targets.UpdateStrategy.MaxFailures = new(intstr.FromInt32(2))
+		stageTargets := make([]kargoapi.Target, 10)
+		rollout, err := NewPromotionRolloutForAllTargets(withStrategy, freight, stageTargets, nil)
+		require.NoError(t, err)
+		require.Equal(
+			t,
+			kargoapi.PromotionRolloutUpdateStrategy{
+				MaxConcurrent: 5,
+				MaxFailures:   2,
+			},
+			rollout.Spec.UpdateStrategy,
+		)
+	})
+
+	t.Run("an invalid update strategy is an error", func(t *testing.T) {
+		t.Parallel()
+
+		withStrategy := testStage.DeepCopy()
+		withStrategy.Spec.Targets.UpdateStrategy.MaxConcurrent = new(intstr.FromString("half"))
+		_, err := NewPromotionRolloutForAllTargets(withStrategy, freight, make([]kargoapi.Target, 10), nil)
+		require.Error(t, err)
+	})
+
+	t.Run("a Stage without an update strategy gives the rollout none", func(t *testing.T) {
+		t.Parallel()
+		rollout, err := NewPromotionRolloutForAllTargets(testStage, freight, nil, nil)
+		require.NoError(t, err)
+		require.Zero(t, rollout.Spec.UpdateStrategy)
+	})
+
+	t.Run("an explicit update strategy overrides the calculation", func(t *testing.T) {
+		t.Parallel()
+
+		// The Stage would resolve to MaxConcurrent 5 (50% of 10), but the
+		// caller-supplied strategy is used verbatim instead.
+		withStrategy := testStage.DeepCopy()
+		withStrategy.Spec.Targets.UpdateStrategy.MaxConcurrent = new(intstr.FromString("50%"))
+		rollout, err := NewPromotionRolloutForAllTargets(
+			withStrategy,
+			freight,
+			make([]kargoapi.Target, 10),
+			&kargoapi.TargetUpdateStrategy{
+				MaxConcurrent: new(intstr.FromInt(10)),
+				MaxFailures:   new(intstr.FromInt(10)),
+			},
+		)
+		require.NoError(t, err)
+		require.Equal(
+			t,
+			kargoapi.PromotionRolloutUpdateStrategy{
+				MaxConcurrent: 10,
+				MaxFailures:   10,
+			},
+			rollout.Spec.UpdateStrategy,
+		)
+	})
+
+	t.Run("an explicit update strategy override supports percentages", func(t *testing.T) {
+		t.Parallel()
+
+		rollout, err := NewPromotionRolloutForAllTargets(
+			testStage,
+			freight,
+			make([]kargoapi.Target, 10),
+			&kargoapi.TargetUpdateStrategy{
+				MaxConcurrent: new(intstr.FromString("50%")),
+				MaxFailures:   new(intstr.FromString("20%")),
+			},
+		)
+		require.NoError(t, err)
+		require.Equal(
+			t,
+			kargoapi.PromotionRolloutUpdateStrategy{
+				MaxConcurrent: 5,
+				MaxFailures:   2,
+			},
+			rollout.Spec.UpdateStrategy,
+		)
+	})
+
+	t.Run("a nil Stage is an error", func(t *testing.T) {
+		t.Parallel()
+		_, err := NewPromotionRolloutForAllTargets(nil, freight, nil, nil)
+		require.Error(t, err)
+	})
+
+	t.Run("a Stage without a targets block is an error", func(t *testing.T) {
+		t.Parallel()
+
+		classic := testStage.DeepCopy()
+		classic.Spec.Targets = nil
+		_, err := NewPromotionRolloutForAllTargets(classic, freight, nil, nil)
+		require.Error(t, err)
+	})
+}
+
+func TestNewPromotionRolloutForSelectTargets(t *testing.T) {
+	t.Parallel()
+
+	const (
+		project = "fake-project"
+		stage   = "fake-stage"
+		freight = "abcdef1234567890"
+	)
+
+	testStage := &kargoapi.Stage{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: project,
+			Name:      stage,
+			UID:       "fake-uid",
+		},
+		Spec: kargoapi.StageSpec{
+			Shard: "my-shard",
+			Targets: &kargoapi.StageTargets{
+				Selectors: []metav1.LabelSelector{{
+					MatchLabels: map[string]string{"region": "us"},
+				}},
+			},
+		},
+	}
+
+	stageTargets := []kargoapi.Target{
+		{ObjectMeta: metav1.ObjectMeta{Name: "us-east"}},
+		{ObjectMeta: metav1.ObjectMeta{Name: "us-west"}},
+	}
+
+	t.Run("records only the selected Targets", func(t *testing.T) {
+		t.Parallel()
+
+		rollout, err := NewPromotionRolloutForSelectTargets(
+			testStage,
+			freight,
+			stageTargets,
+			[]string{"us-east"},
+			nil,
+		)
+		require.NoError(t, err)
+
+		require.Equal(t, project, rollout.Namespace)
+		require.Equal(t, stage, rollout.Spec.Stage)
+		require.Equal(t, freight, rollout.Spec.Freight)
+		require.True(t, strings.HasPrefix(rollout.Name, stage+"."))
+		require.Equal(
+			t,
+			[]kargoapi.PromotionRolloutTarget{{Name: "us-east"}},
+			rollout.Spec.Targets,
+		)
+	})
+
+	t.Run("a Target not selected by the Stage is an error", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := NewPromotionRolloutForSelectTargets(
+			testStage,
+			freight,
+			stageTargets,
+			[]string{"us-north"},
+			nil,
+		)
+		require.Error(t, err)
+		require.ErrorIs(t, err, ErrTargetNotSelected)
+	})
+
+	t.Run("resolves the update strategy against all Stage Targets", func(t *testing.T) {
+		t.Parallel()
+
+		// The strategy resolves against the 10 Stage Targets (50% -> 5), not
+		// the single selected Target.
+		withStrategy := testStage.DeepCopy()
+		withStrategy.Spec.Targets.UpdateStrategy.MaxConcurrent = new(intstr.FromString("50%"))
+		allTargets := make([]kargoapi.Target, 10)
+		for i := range allTargets {
+			allTargets[i].Name = fmt.Sprintf("us-%d", i)
+		}
+		rollout, err := NewPromotionRolloutForSelectTargets(
+			withStrategy,
+			freight,
+			allTargets,
+			[]string{"us-0"},
+			nil,
+		)
+		require.NoError(t, err)
+		require.Equal(
+			t,
+			kargoapi.PromotionRolloutUpdateStrategy{MaxConcurrent: 5},
+			rollout.Spec.UpdateStrategy,
+		)
+	})
+
+	t.Run("an explicit update strategy overrides the calculation", func(t *testing.T) {
+		t.Parallel()
+
+		withStrategy := testStage.DeepCopy()
+		withStrategy.Spec.Targets.UpdateStrategy.MaxConcurrent = new(intstr.FromString("50%"))
+		rollout, err := NewPromotionRolloutForSelectTargets(
+			withStrategy,
+			freight,
+			stageTargets,
+			[]string{"us-east"},
+			&kargoapi.TargetUpdateStrategy{
+				MaxConcurrent: new(intstr.FromInt(10)),
+				MaxFailures:   new(intstr.FromInt(10)),
+			},
+		)
+		require.NoError(t, err)
+		require.Equal(
+			t,
+			kargoapi.PromotionRolloutUpdateStrategy{
+				MaxConcurrent: 10,
+				MaxFailures:   10,
+			},
+			rollout.Spec.UpdateStrategy,
+		)
+	})
+
+	t.Run("an explicit update strategy override supports percentages based on stage targets", func(t *testing.T) {
+		t.Parallel()
+
+		longStageTargets := make([]kargoapi.Target, 10)
+		// We need a target to match
+		longStageTargets[0] = kargoapi.Target{
+			ObjectMeta: metav1.ObjectMeta{Name: "us-east"},
+		}
+		rollout, err := NewPromotionRolloutForSelectTargets(
+			testStage,
+			freight,
+			longStageTargets,
+			[]string{"us-east"},
+			&kargoapi.TargetUpdateStrategy{
+				MaxConcurrent: new(intstr.FromString("50%")),
+				MaxFailures:   new(intstr.FromString("20%")),
+			},
+		)
+		require.NoError(t, err)
+		require.Equal(
+			t,
+			kargoapi.PromotionRolloutUpdateStrategy{
+				MaxConcurrent: 5,
+				MaxFailures:   2,
+			},
+			rollout.Spec.UpdateStrategy,
+		)
+	})
+
+	t.Run("a Stage without a targets block is an error", func(t *testing.T) {
+		t.Parallel()
+
+		classic := testStage.DeepCopy()
+		classic.Spec.Targets = nil
+		_, err := NewPromotionRolloutForSelectTargets(
+			classic,
+			freight,
+			stageTargets,
+			[]string{"us-east"},
+			nil,
+		)
+		require.Error(t, err)
+	})
+}

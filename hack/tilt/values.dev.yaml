@@ -1,5 +1,3 @@
-global:
-  clusterSecretsNamespace: kargo-cluster-secrets
 api:
   logLevel: DEBUG
   host: localhost:30081
@@ -10,7 +8,7 @@ api:
     enabled: false
   adminAccount:
     # The password is 'admin'
-    passwordHash: "$2a$10$Zrhhie4vLz5ygtVSaif6o.qN36jgs6vjtMBdM6yrU1FOeiAAMMxOm"
+    passwordHash: "$pbkdf2-sha256$600000$W/uVT1drOdsgVaklZSfqdA$lDj60L4/b0lliAr87RBhMb1QzgIJ2uZ7dIcpr11QR24"
     tokenSigningKey: iwishtowashmyirishwristwatch
   rollouts:
     logs:
@@ -58,3 +56,29 @@ managementController:
   logLevel: DEBUG
 webhooksServer:
   logLevel: DEBUG
+database:
+  postgres:
+    password: kargo
+    # Log any lock wait longer than deadlock_timeout, naming the session that
+    # holds the lock. A slow query span alone cannot tell a lock wait from a
+    # slow query; this log line can.
+    extraArgs:
+    - log_lock_waits=on
+    - deadlock_timeout=1s
+nats:
+  # The NATS chart only sets metadata.namespace on its resources when this is
+  # set. Tilt applies resources lacking a namespace to the default namespace,
+  # which would leave NATS somewhere other than where Kargo expects it.
+  namespaceOverride: kargo
+  config:
+    cluster:
+      # A single server is enough for local development. Clustering is
+      # disabled rather than scaled down because a JetStream cluster needs at
+      # least two servers; a lone clustered server waits for peers forever.
+      enabled: false
+  container:
+    resources:
+      requests:
+        cpu: 500m
+        memory: 1Gi
+      limits: null

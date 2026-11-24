@@ -1512,6 +1512,164 @@
         ]
       }
     },
+    "/v1beta1/projects/{project}/promotion-requests": {
+      "get": {
+        "description": "List PromotionRequest resources from a project's namespace.\nReturns a PromotionRequestList resource.",
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "Core",
+          "Project-Level"
+        ],
+        "summary": "List PromotionRequests",
+        "operationId": "ListPromotionRequests",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "Project name",
+            "name": "project",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "description": "Stage filter",
+            "name": "stage",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "PromotionRequestList custom resource",
+            "schema": {
+              "$ref": "#/definitions/PromotionRequestList"
+            }
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      }
+    },
+    "/v1beta1/projects/{project}/promotion-requests/{promotion-request}": {
+      "get": {
+        "description": "Retrieve a PromotionRequest resource from a project's namespace.",
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "Core",
+          "Project-Level"
+        ],
+        "summary": "Retrieve a PromotionRequest",
+        "operationId": "GetPromotionRequest",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "Project name",
+            "name": "project",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "description": "PromotionRequest name",
+            "name": "promotion-request",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "PromotionRequest custom resource",
+            "schema": {
+              "$ref": "#/definitions/PromotionRequest"
+            }
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      }
+    },
+    "/v1beta1/projects/{project}/promotion-rollouts": {
+      "get": {
+        "description": "List a project's PromotionRollouts, one page at a time, as\na PromotionRolloutList resource. A Project or a Stage may\nhave had any number of rollouts, so a list is never more\nthan one page, newest first: the Project's, or a Stage's,\nor a Stage's of one piece of Freight. When a page is full,\nthe list's metadata.continue names where the next page\nstarts; pass it as continue to read on. With after, a\nStage's rollouts numbered above it are listed oldest first\ninstead. With latest, the list is instead each Stage's\nlatest rollouts -- the one it is promoting through, if any,\nand the newest that has finished, if any -- which is what a\nreader of a Stage's state wants without reading its history.",
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "Core",
+          "Project-Level"
+        ],
+        "summary": "List PromotionRollouts",
+        "operationId": "ListPromotionRollouts",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "Project name",
+            "name": "project",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "description": "Only PromotionRollouts of this Stage",
+            "name": "stage",
+            "in": "query"
+          },
+          {
+            "type": "string",
+            "description": "Only PromotionRollouts of this Freight; requires stage",
+            "name": "freight",
+            "in": "query"
+          },
+          {
+            "type": "boolean",
+            "description": "Each Stage's latest rollouts, or the named Stage's; takes only stage besides",
+            "name": "latest",
+            "in": "query"
+          },
+          {
+            "type": "integer",
+            "format": "int64",
+            "description": "Only the Stage's PromotionRollouts numbered above this, oldest first; requires stage",
+            "name": "after",
+            "in": "query"
+          },
+          {
+            "type": "string",
+            "description": "Previous page's metadata.continue; with stage, one of the Stage's; resend after",
+            "name": "continue",
+            "in": "query"
+          },
+          {
+            "type": "integer",
+            "description": "The page size, at most 500; 50 if omitted",
+            "name": "limit",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "PromotionRolloutList resource",
+            "schema": {
+              "$ref": "#/definitions/PromotionRolloutList"
+            }
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      }
+    },
     "/v1beta1/projects/{project}/promotion-tasks": {
       "get": {
         "description": "List PromotionTask resources from a project's namespace. Returns\na PromotionTaskList resource.",
@@ -2552,9 +2710,115 @@
         ]
       }
     },
+    "/v1beta1/projects/{project}/stages/{stage}/promotion-rollouts": {
+      "post": {
+        "description": "Create a PromotionRollout, which promotes the Freight named\nin the body to each of the Targets the Stage governs, or to\nthe ones the body names among them. PromotionRollouts are\nmanaged through this API rather than as Kubernetes\nresources. The Stage must select Targets: its selectors are\nresolved against the project's Targets as the rollout is\ncreated, narrowed to the Targets named if any are, and its\nupdate strategy, or the one the body gives in its place, is\nresolved against how many that leaves; both are recorded\nwith the rollout for good. A Target the Stage does not\ngovern is refused. So is a rollout to no Targets: while the\nStage governs none, the response is a 409, and the same\nrequest succeeds once its selectors match a Target.\nEverything else about the rollout is assigned by the server.\nThis is a promotion: it requires the promote verb on the\nStage. A server that does not create PromotionRollouts\nresponds 501.",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "Core",
+          "Project-Level"
+        ],
+        "summary": "Create a PromotionRollout",
+        "operationId": "CreatePromotionRollout",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "Project name",
+            "name": "project",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "description": "Stage name",
+            "name": "stage",
+            "in": "path",
+            "required": true
+          },
+          {
+            "description": "Create request",
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/CreatePromotionRolloutRequest"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "PromotionRollout resource",
+            "schema": {
+              "$ref": "#/definitions/PromotionRollout"
+            }
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      }
+    },
+    "/v1beta1/projects/{project}/stages/{stage}/promotion-rollouts/{number}": {
+      "get": {
+        "description": "Retrieve one of a Stage's PromotionRollouts by its number\namong them.",
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "Core",
+          "Project-Level"
+        ],
+        "summary": "Retrieve a PromotionRollout",
+        "operationId": "GetPromotionRollout",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "Project name",
+            "name": "project",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "description": "Stage name",
+            "name": "stage",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "integer",
+            "format": "int64",
+            "description": "PromotionRollout number",
+            "name": "number",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "PromotionRollout resource",
+            "schema": {
+              "$ref": "#/definitions/PromotionRollout"
+            }
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      }
+    },
     "/v1beta1/projects/{project}/stages/{stage}/promotions": {
       "post": {
-        "description": "Create a Promotion resource to transition a specified Stage into\nthe state represented by the specified Freight.\nA Stage that selects Targets yields a PromotionRequest, which fans\nthe Freight out to each of them, in place of a single Promotion.",
+        "description": "Create a Promotion resource to transition a specified Stage into\nthe state represented by the specified Freight.\nA Stage that selects Targets yields, in place of a single\nPromotion, something that fans the Freight out to each of\nthem: a PromotionRollout on a server that creates\nPromotionRollouts, and a PromotionRequest otherwise. Either\nway, the body's targets and updateStrategy narrow which\nTargets are promoted to and at what pace. A PromotionRollout\nis not created for a Stage that governs no Targets: the\nresponse is a 409 until its selectors match one.",
         "consumes": [
           "application/json"
         ],
@@ -2594,7 +2858,7 @@
         ],
         "responses": {
           "201": {
-            "description": "Promotion resource, or a PromotionRequest for a Stage that selects Targets",
+            "description": "Promotion; a PromotionRollout or PromotionRequest for a Stage with Targets",
             "schema": {
               "$ref": "#/definitions/Promotion"
             }
@@ -2609,7 +2873,7 @@
     },
     "/v1beta1/projects/{project}/stages/{stage}/promotions/downstream": {
       "post": {
-        "description": "Creates a Promotion resource for each of a Stage's immediately\ndownstream Stages. Downstream Stages that select Targets yield a\nPromotionRequest each, returned separately under \"promotionRequests\".",
+        "description": "Creates a Promotion resource for each of a Stage's immediately\ndownstream Stages, returned under \"promotions\". Downstream\nStages that select Targets each yield, in place of a\nPromotion, a PromotionRollout on a server that creates\nPromotionRollouts, returned under \"promotionRollouts\", or a\nPromotionRequest otherwise, returned under\n\"promotionRequests\"; each key is present only when it has\nentries. Each promotes to every Target its Stage governs, at\nthe Stage's pace. A Stage that could not be promoted to is\nreported under \"errors\", with a 207 status, and the rest\nare still promoted to. On a server that creates\nPromotionRollouts, that includes a Stage that governs no\nTargets.",
         "consumes": [
           "application/json"
         ],
@@ -2771,6 +3035,407 @@
         "responses": {
           "200": {
             "description": "Success"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      }
+    },
+    "/v1beta1/projects/{project}/target-statuses": {
+      "get": {
+        "description": "List where a project's Targets stand with the Stages that\ngovern them, one page at a time: one entry per Target and\ngoverning Stage, ordered by Target name and then Stage name.\nNothing records a Target's status. Each entry is derived, on\nrequest, from the Promotions and PromotionRollouts on record,\nand which Stages govern a Target from the Stages' selectors\nas they are now. A Target no Stage governs has no entry.\n\nEach entry has one state, the first of these that holds:\nPromoting -- the last Promotion to the Target is running.\nPending -- the last Promotion has yet to start, or a\nPromotionRollout that has not finished names the Target and\nhas not reached it yet.\nNotAttempted -- a PromotionRollout that names the Target\nended, without succeeding, before creating a Promotion to it,\nand there has been no Promotion to it since. A later rollout\nthat does not name the Target changes nothing.\nNeverPromoted -- there has never been a Promotion to the\nTarget.\nFailed -- the last Promotion failed, errored or was aborted.\nBehind -- the last Promotion succeeded, and the Freight it\nleft on the Target is not the Stage's current Freight.\nUpToDate -- the last Promotion succeeded and the Target is\nnot known to be behind.\n\nA state says how promotion went, not how the Target is\ndoing: Target health is not recorded, so nothing here\nreports it. Entries are read from the database's mirror of\nPromotions, so they trail the cluster by its sync.",
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "Core",
+          "Project-Level"
+        ],
+        "summary": "List Target statuses",
+        "operationId": "ListTargetStatuses",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "Project name",
+            "name": "project",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "description": "Only entries for this Stage",
+            "name": "stage",
+            "in": "query"
+          },
+          {
+            "type": "array",
+            "items": {
+              "enum": [
+                "Promoting",
+                "Pending",
+                "Failed",
+                "NotAttempted",
+                "NeverPromoted",
+                "Behind",
+                "UpToDate"
+              ],
+              "type": "string"
+            },
+            "collectionFormat": "csv",
+            "description": "Only entries in one of these states; repeat to give several",
+            "name": "state",
+            "in": "query"
+          },
+          {
+            "type": "string",
+            "description": "The previous page's continue, to read the page after it; resend stage and state",
+            "name": "continue",
+            "in": "query"
+          },
+          {
+            "type": "integer",
+            "description": "The page size, at most 500; 100 if omitted",
+            "name": "limit",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A page of Target statuses",
+            "schema": {
+              "$ref": "#/definitions/TargetStatusList"
+            }
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      }
+    },
+    "/v1beta1/projects/{project}/target-statuses/summary": {
+      "get": {
+        "description": "Count a project's Targets by where they stand with the\nStages that govern them: for each Stage, how many of the\nTargets it governs are in each state; and for the project,\nhow many Targets are in each state, a Target governed by\nseveral Stages counted once, under the worst state any of\nthem reports. The states and the entries counted are those\nthe Target status list serves, and are counted in the\ndatabase rather than read. Targets behind their Stage's\ncurrent Freight are counted as well, whatever their state.\nTarget health is not recorded, so nothing here reports it.",
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "Core",
+          "Project-Level"
+        ],
+        "summary": "Summarize Target statuses",
+        "operationId": "GetTargetStatusSummary",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "Project name",
+            "name": "project",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "description": "Only count the Targets this Stage governs",
+            "name": "stage",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Counts of Targets by state",
+            "schema": {
+              "$ref": "#/definitions/TargetStatusSummary"
+            }
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      }
+    },
+    "/v1beta1/projects/{project}/targets": {
+      "get": {
+        "description": "List a project's Targets, optionally narrowed to those a\nparticular Stage governs or those matching a label selector.\nReturns a TargetList resource.",
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "Core",
+          "Project-Level"
+        ],
+        "summary": "List Targets",
+        "operationId": "ListTargets",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "Project name",
+            "name": "project",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "description": "Only Targets governed by this Stage, i.e. selected by its targets.selectors",
+            "name": "stage",
+            "in": "query"
+          },
+          {
+            "type": "string",
+            "description": "Kubernetes label selector to filter Targets by, e.g. region=us,tier!=canary",
+            "name": "labelSelector",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "TargetList resource",
+            "schema": {
+              "$ref": "#/definitions/TargetList"
+            }
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      },
+      "post": {
+        "description": "Create a Target in a project. Targets are managed through\nthis API rather than as Kubernetes resources. The body's\nmetadata.name is required; its metadata.namespace, if given,\nmust be the project. Status and server-managed metadata are\nignored.",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "Core",
+          "Project-Level"
+        ],
+        "summary": "Create a Target",
+        "operationId": "CreateTarget",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "Project name",
+            "name": "project",
+            "in": "path",
+            "required": true
+          },
+          {
+            "description": "Target resource",
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/Target"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Target resource",
+            "schema": {
+              "$ref": "#/definitions/Target"
+            }
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      }
+    },
+    "/v1beta1/projects/{project}/targets/{target-name}": {
+      "get": {
+        "description": "Retrieve one of a project's Targets.",
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "Core",
+          "Project-Level"
+        ],
+        "summary": "Retrieve a Target",
+        "operationId": "GetTarget",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "Project name",
+            "name": "project",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "description": "Target name",
+            "name": "target-name",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Target resource",
+            "schema": {
+              "$ref": "#/definitions/Target"
+            }
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      },
+      "put": {
+        "description": "Replace a Target's labels and params. The body's metadata.name,\nif given, must match the name in the URL, and its spec.targetSet\nmust name the TargetSet that manages the Target, which cannot\nchange. A metadata.uid or metadata.resourceVersion in the body\nis a precondition: the update is refused if the Target no\nlonger matches it.",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "Core",
+          "Project-Level"
+        ],
+        "summary": "Update a Target",
+        "operationId": "UpdateTarget",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "Project name",
+            "name": "project",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "description": "Target name",
+            "name": "target-name",
+            "in": "path",
+            "required": true
+          },
+          {
+            "description": "Target resource",
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/Target"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Target resource",
+            "schema": {
+              "$ref": "#/definitions/Target"
+            }
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      },
+      "delete": {
+        "description": "Delete one of a project's Targets.",
+        "tags": [
+          "Core",
+          "Project-Level"
+        ],
+        "summary": "Delete a Target",
+        "operationId": "DeleteTarget",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "Project name",
+            "name": "project",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "description": "Target name",
+            "name": "target-name",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Deleted successfully"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      }
+    },
+    "/v1beta1/projects/{project}/targets/{target-name}/promotions": {
+      "get": {
+        "description": "List the Promotions to one of a project's Targets, newest\nfirst, one page at a time: those of every Stage, or of one.\nThey are read from the database's record of Promotions,\nwhich outlives the Promotions themselves, so the list\nreaches further back than the project's Promotions do. A\nTarget is recorded by name, so this is the history of the\nname: a Target that has had no Promotion, or that does not\nexist, has an empty one.",
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "Core",
+          "Project-Level"
+        ],
+        "summary": "List a Target's Promotions",
+        "operationId": "ListTargetPromotions",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "Project name",
+            "name": "project",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "description": "Target name",
+            "name": "target-name",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "description": "Only Promotions of this Stage",
+            "name": "stage",
+            "in": "query"
+          },
+          {
+            "type": "string",
+            "description": "The previous page's continue, to read the page after it; resend stage",
+            "name": "continue",
+            "in": "query"
+          },
+          {
+            "type": "integer",
+            "description": "The page size, at most 500; 100 if omitted",
+            "name": "limit",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A page of the Target's Promotions",
+            "schema": {
+              "$ref": "#/definitions/TargetPromotionList"
+            }
           }
         },
         "security": [
@@ -4862,6 +5527,30 @@
         }
       }
     },
+    "CreatePromotionRolloutRequest": {
+      "type": "object",
+      "properties": {
+        "freight": {
+          "description": "Freight is the name of the Freight to promote.",
+          "type": "string"
+        },
+        "targets": {
+          "description": "Targets names the Targets to promote to, each of which the Stage must\ngovern. Omitted, the rollout promotes to every Target the Stage\ngoverns. Naming a few is how a canary is run or a failed rollout is\nretried for only the Targets that failed.",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "updateStrategy": {
+          "description": "UpdateStrategy paces this rollout in place of the Stage's update\nstrategy. Omitted, the Stage's applies. Either way, a percentage is\nresolved against the Targets the rollout promotes to, and the numbers\nthat gives are recorded with the rollout for good.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/TargetUpdateStrategy"
+            }
+          ]
+        }
+      }
+    },
     "CreateRepoCredentialsRequest": {
       "type": "object",
       "properties": {
@@ -5190,6 +5879,21 @@
         "origin": {
           "description": "Origin is the canonical Freight origin key (e.g. \"Warehouse/foo\"). When\nset, the promotion webhook resolves it to the current auto-promotion\ncandidate. Exactly one of Freight, FreightAlias, or Origin must be set.",
           "type": "string"
+        },
+        "targets": {
+          "description": "Targets is a list of target names to promote to. If set to `nil` - selects all targets for the stage.\nIf non-nil, should be a subset of targets selected by the stage, empty list is an error.",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "updateStrategy": {
+          "description": "UpdateStrategy configures overrides for maxConcurrent and maxErrors for this request.\nPercentage values are calculated based on the total stage targets and not just ones selected for promotion\nIf nil - calculated from the stages updateStrategy based on the number of stage targets.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/TargetUpdateStrategy"
+            }
+          ]
         }
       }
     },
@@ -5201,9 +5905,6 @@
         },
         "oidcConfig": {
           "$ref": "#/definitions/OIDCConfig"
-        },
-        "skipAuth": {
-          "type": "boolean"
         }
       }
     },
@@ -5268,6 +5969,213 @@
           "additionalProperties": {
             "$ref": "#/definitions/ImageStageMap"
           }
+        }
+      }
+    },
+    "TargetFreight": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "description": "Name is the Freight's name.",
+          "type": "string"
+        },
+        "origin": {
+          "description": "Origin is where the Freight comes from.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/FreightOrigin"
+            }
+          ]
+        }
+      }
+    },
+    "TargetPromotion": {
+      "type": "object",
+      "properties": {
+        "createdAt": {
+          "description": "CreatedAt is when the Promotion was created.",
+          "type": "string"
+        },
+        "finishedAt": {
+          "description": "FinishedAt is when the Promotion finished. It is absent until it has.",
+          "type": "string"
+        },
+        "freight": {
+          "description": "Freight is the name of the Freight promoted.",
+          "type": "string"
+        },
+        "name": {
+          "description": "Name is the Promotion's name.",
+          "type": "string"
+        },
+        "phase": {
+          "description": "Phase is the Promotion's phase. One that has yet to be picked up is\nPending.",
+          "type": "string"
+        },
+        "rollout": {
+          "description": "Rollout is the number, among the Stage's, of the PromotionRollout that\ncreated the Promotion. It is absent for one created on its own.",
+          "type": "integer"
+        },
+        "stage": {
+          "description": "Stage is the name of the Stage that promoted.",
+          "type": "string"
+        }
+      }
+    },
+    "TargetPromotionList": {
+      "type": "object",
+      "properties": {
+        "continue": {
+          "description": "Continue is set when there may be more: pass it as continue to read\nthe next page.",
+          "type": "string"
+        },
+        "items": {
+          "description": "Items are the Promotions, newest first.",
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/TargetPromotion"
+          }
+        }
+      }
+    },
+    "TargetState": {
+      "type": "string",
+      "enum": [
+        "Promoting",
+        "Pending",
+        "Failed",
+        "NotAttempted",
+        "NeverPromoted",
+        "Behind",
+        "UpToDate"
+      ],
+      "x-enum-varnames": [
+        "StatePromoting",
+        "StatePending",
+        "StateFailed",
+        "StateNotAttempted",
+        "StateNeverPromoted",
+        "StateBehind",
+        "StateUpToDate"
+      ]
+    },
+    "TargetStatusEntry": {
+      "type": "object",
+      "properties": {
+        "behind": {
+          "description": "Behind is whether the Freight the Target is on is not the Stage's\ncurrent Freight. It cuts across State: a Target whose last Promotion\nfailed, or that a rollout never attempted, is usually behind as well.\nIt is false while either side is unknown, as for a Target nothing has\nbeen promoted to.",
+          "type": "boolean"
+        },
+        "freight": {
+          "description": "Freight is what the Target is on for the Stage, one piece per origin,\nordered by origin: what the newest Promotion to succeed left there. It\nis empty until one has succeeded.",
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/TargetFreight"
+          }
+        },
+        "inFlight": {
+          "description": "InFlight is whether a promotion to the Target is on its way or under\nway: a Promotion to it is pending or running, or a PromotionRollout\nthat has not finished names it and has not reached it yet.",
+          "type": "boolean"
+        },
+        "labels": {
+          "description": "Labels are the Target's labels.",
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "lastPromotion": {
+          "description": "LastPromotion is the Stage's newest Promotion to the Target, whatever\nits phase. It is absent until there has been one.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/TargetPromotion"
+            }
+          ]
+        },
+        "rollout": {
+          "description": "Rollout is the number, among the Stage's, of the PromotionRollout the\nState comes from when no Promotion says it: the one a Pending Target is\nwaiting for, or the one that did not attempt a NotAttempted Target. It\nis absent otherwise.",
+          "type": "integer"
+        },
+        "stage": {
+          "description": "Stage is the name of the Stage that governs the Target.",
+          "type": "string"
+        },
+        "state": {
+          "description": "State is the one word for where the Target stands with the Stage.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/TargetState"
+            }
+          ]
+        },
+        "target": {
+          "description": "Target is the Target's name.",
+          "type": "string"
+        }
+      }
+    },
+    "TargetStatusList": {
+      "type": "object",
+      "properties": {
+        "continue": {
+          "description": "Continue is set when there may be more: pass it as continue to read\nthe next page.",
+          "type": "string"
+        },
+        "items": {
+          "description": "Items are the entries, ordered by Target name and then Stage name.",
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/TargetStatusEntry"
+          }
+        }
+      }
+    },
+    "TargetStatusStageSummary": {
+      "type": "object",
+      "properties": {
+        "behind": {
+          "description": "Behind is how many of those Targets are behind the Stage, whatever\ntheir State.",
+          "type": "integer"
+        },
+        "stage": {
+          "description": "Stage is the Stage's name.",
+          "type": "string"
+        },
+        "states": {
+          "description": "States counts the Targets the Stage governs, by State. Every State is\npresent, and the counts add up to the number of Targets it governs.",
+          "type": "object",
+          "additionalProperties": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      }
+    },
+    "TargetStatusSummary": {
+      "type": "object",
+      "properties": {
+        "behind": {
+          "description": "Behind is how many of those Targets are behind any Stage that governs\nthem, whatever their State.",
+          "type": "integer"
+        },
+        "stages": {
+          "description": "Stages holds the same counts for each Stage that governs Targets,\nordered by Stage name.",
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/TargetStatusStageSummary"
+          }
+        },
+        "states": {
+          "description": "States counts the Targets some Stage governs, by State. Every State is\npresent. A Target governed by several Stages is counted once, under\nthe worst State any of them reports, in the order Promoting, Pending,\nFailed, NotAttempted, NeverPromoted, Behind, UpToDate. The counts add\nup to the number of governed Targets.",
+          "type": "object",
+          "additionalProperties": {
+            "type": "integer",
+            "format": "int64"
+          }
+        },
+        "targets": {
+          "description": "Targets is how many Targets the Project has, including any that no\nStage governs.",
+          "type": "integer"
         }
       }
     },
@@ -6315,6 +7223,10 @@
     "AnalysisRunReference": {
       "type": "object",
       "properties": {
+        "kind": {
+          "description": "Kind is a string representation of GroupVersionKind describing this run\nFor classic analysis run it is AnalysisRunKindRun or AnalysisRunKindLegacy (empty)",
+          "type": "string"
+        },
         "name": {
           "description": "Name is the name of the AnalysisRun.",
           "type": "string"
@@ -6698,7 +7610,7 @@
           "type": "string"
         },
         "if": {
-          "description": "If is an optional expression condition. When set, the link is only shown\nwhen the expression evaluates to true.\n\n+optional",
+          "description": "If is an optional expr-lang expression, offset by ${{ }}, that must\nevaluate to a boolean. When set, the link is shown only when it\nevaluates to true.\n\n+optional",
           "type": "string"
         },
         "title": {
@@ -6706,7 +7618,7 @@
           "type": "string"
         },
         "url": {
-          "description": "URL is an expression that resolves to the link's href.\n\n+kubebuilder:validation:MinLength=1",
+          "description": "URL is the link's href. It may contain expr-lang expressions offset by\n${{ }}, evaluated against the resource as freight or stage.\n\n+kubebuilder:validation:MinLength=1",
           "type": "string"
         }
       }
@@ -7291,7 +8203,7 @@
           ]
         },
         "repoURL": {
-          "description": "RepoURL is the repository URL of the GitSubscription.\n\nTODO(v1.13.0): Remove SSH/SCP-style URL support from this pattern.\n\n+kubebuilder:validation:MinLength=1\n+kubebuilder:validation:Pattern=`(?:^(ssh|https?)://(?:([\\w-]+)(:(.+))?@)?([\\w-]+(?:\\.[\\w-]+)*)(?::(\\d{1,5}))?(/.*)$)|(?:^([\\w-]+)@([\\w+]+(?:\\.[\\w-]+)*):(/?.*))`\n+akuity:test-kubebuilder-pattern=GitRepoURLPattern",
+          "description": "RepoURL is the repository URL of the GitSubscription.\n\n+kubebuilder:validation:MinLength=1\n+kubebuilder:validation:Pattern=`^https?://(?:([\\w-]+)(:(.+))?@)?([\\w-]+(?:\\.[\\w-]+)*)(?::(\\d{1,5}))?(/.*)$`\n+akuity:test-kubebuilder-pattern=GitRepoURLPattern",
           "type": "string"
         },
         "subscriptionName": {
@@ -7488,6 +8400,41 @@
         }
       }
     },
+    "InflatedPromotionTask": {
+      "type": "object",
+      "properties": {
+        "alias": {
+          "description": "Alias is the alias of the step that referenced the task. The aliases of\nthe steps inflated from the task are prefixed with it.",
+          "type": "string"
+        },
+        "description": {
+          "description": "Description is the description of the step that referenced the task.\n\n+kubebuilder:validation:Optional",
+          "type": "string"
+        },
+        "steps": {
+          "description": "Steps are the aliases of the Promotion's steps that were inflated from\nthe task, in order.",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "task": {
+          "description": "Task is the (Cluster)PromotionTask that was inflated.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/PromotionTaskReference"
+            }
+          ]
+        },
+        "vars": {
+          "description": "Vars are the variables the task was inflated with: the task's defaults\nand the variables set by the step that referenced the task.\n\n+kubebuilder:validation:Optional",
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/ExpressionVariable"
+          }
+        }
+      }
+    },
     "Project": {
       "type": "object",
       "properties": {
@@ -7622,6 +8569,14 @@
             }
           ]
         },
+        "targets": {
+          "description": "Targets contains a summary of the collective state of the Project's\nTargets. It is absent for a Project with no Targets.\n\n+optional",
+          "allOf": [
+            {
+              "$ref": "#/definitions/TargetStats"
+            }
+          ]
+        },
         "warehouses": {
           "description": "Warehouses contains a summary of the collective state of the Project's\nWarehouses.",
           "allOf": [
@@ -7713,7 +8668,7 @@
       "type": "object",
       "properties": {
         "autoPromotionEnabled": {
-          "description": "AutoPromotionEnabled indicates whether new Freight can automatically be\npromoted into the Stage referenced by the Stage field. Note: There are may\nbe other conditions also required for an auto-promotion to occur. This\nfield defaults to false, but is commonly set to true for Stages that\nsubscribe to Warehouses instead of other, upstream Stages. This allows\nusers to define Stages that are automatically updated as soon as new\nartifacts are detected.",
+          "description": "AutoPromotionEnabled indicates whether new Freight can automatically be\npromoted into the Stage referenced by the Stage field. Note: There may\nbe other conditions also required for an auto-promotion to occur. This\nfield defaults to false, but is commonly set to true for Stages that\nsubscribe to Warehouses instead of other, upstream Stages. This allows\nusers to define Stages that are automatically updated as soon as new\nartifacts are detected.",
           "type": "boolean"
         },
         "autoRollback": {
@@ -7790,12 +8745,545 @@
         }
       }
     },
+    "PromotionRequest": {
+      "type": "object",
+      "properties": {
+        "apiVersion": {
+          "description": "APIVersion defines the versioned schema of this representation of an object.\nServers should convert recognized schemas to the latest internal value, and\nmay reject unrecognized values.\nMore info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources\n+optional",
+          "type": "string"
+        },
+        "kind": {
+          "description": "Kind is a string value representing the REST resource this object represents.\nServers may infer this from the endpoint the client submits requests to.\nCannot be updated.\nIn CamelCase.\nMore info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds\n+optional",
+          "type": "string"
+        },
+        "metadata": {
+          "$ref": "#/definitions/V1ObjectMeta"
+        },
+        "spec": {
+          "description": "Spec describes the Stage, the Freight, and the Targets of the\nPromotionRequest.\n\n+kubebuilder:validation:Required",
+          "allOf": [
+            {
+              "$ref": "#/definitions/PromotionRequestSpec"
+            }
+          ]
+        },
+        "status": {
+          "description": "Status describes the per-Target progress and the aggregate state of the\nPromotionRequest's Promotions.\n\n+kubebuilder:validation:Optional",
+          "allOf": [
+            {
+              "$ref": "#/definitions/PromotionRequestStatus"
+            }
+          ]
+        }
+      },
+      "required": [
+        "spec"
+      ]
+    },
+    "PromotionRequestList": {
+      "type": "object",
+      "properties": {
+        "apiVersion": {
+          "description": "APIVersion defines the versioned schema of this representation of an object.\nServers should convert recognized schemas to the latest internal value, and\nmay reject unrecognized values.\nMore info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources\n+optional",
+          "type": "string"
+        },
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/PromotionRequest"
+          }
+        },
+        "kind": {
+          "description": "Kind is a string value representing the REST resource this object represents.\nServers may infer this from the endpoint the client submits requests to.\nCannot be updated.\nIn CamelCase.\nMore info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds\n+optional",
+          "type": "string"
+        },
+        "metadata": {
+          "$ref": "#/definitions/V1ListMeta"
+        }
+      }
+    },
+    "PromotionRequestPhase": {
+      "type": "string",
+      "enum": [
+        "Pending",
+        "Running",
+        "Succeeded",
+        "Failed",
+        "Errored",
+        "Aborted"
+      ],
+      "x-enum-varnames": [
+        "PromotionRequestPhasePending",
+        "PromotionRequestPhaseRunning",
+        "PromotionRequestPhaseSucceeded",
+        "PromotionRequestPhaseFailed",
+        "PromotionRequestPhaseErrored",
+        "PromotionRequestPhaseAborted"
+      ]
+    },
+    "PromotionRequestReference": {
+      "type": "object",
+      "properties": {
+        "finishedAt": {
+          "description": "FinishedAt is the time at which the PromotionRequest completed.",
+          "type": "string"
+        },
+        "freight": {
+          "description": "Freight identifies the Freight being promoted.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/FreightReference"
+            }
+          ]
+        },
+        "freightCollection": {
+          "description": "FreightCollection contains the details of the piece of Freight referenced\nby this Promotion as well as any additional Freight that is carried over\nfrom the target Stage's current state.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/FreightCollection"
+            }
+          ]
+        },
+        "message": {
+          "description": "Message is a human-readable description of the promotion status",
+          "type": "string"
+        },
+        "name": {
+          "description": "Name is the name of the PromotionRequest.",
+          "type": "string"
+        },
+        "phase": {
+          "description": "Phase is a high-level summary of the PromotionRequest's lifecycle.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/PromotionRequestPhase"
+            }
+          ]
+        }
+      }
+    },
+    "PromotionRequestSpec": {
+      "type": "object",
+      "properties": {
+        "freight": {
+          "description": "Freight specifies the piece of Freight promoted by the Stage.\nThe Freight MUST be in the same namespace as the PromotionRequest.\n\n+kubebuilder:validation:Required\n+kubebuilder:validation:MinLength=1\n+kubebuilder:validation:MaxLength=253\n+kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`\n+akuity:test-kubebuilder-pattern=KubernetesName\n+kubebuilder:validation:XValidation:rule=\"self == oldSelf\"",
+          "type": "string"
+        },
+        "stage": {
+          "description": "Stage specifies the name of the Stage that promotes the Freight.\nThe Stage MUST be in the same namespace as the PromotionRequest.\n\n+kubebuilder:validation:Required\n+kubebuilder:validation:MinLength=1\n+kubebuilder:validation:MaxLength=253\n+kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`\n+akuity:test-kubebuilder-pattern=KubernetesName\n+kubebuilder:validation:XValidation:rule=\"self == oldSelf\"",
+          "type": "string"
+        },
+        "targets": {
+          "description": "Targets names the Targets to which this PromotionRequest promotes Freight.\nEach Target MUST be in the same namespace as the PromotionRequest. The\nlist may be empty, which records that the governing Stage governed no\nTargets when the PromotionRequest was created -- distinct from the field\nbeing absent, which asks for it to be resolved.\n\nThis is a resolved list, not a selector: the Stage's target selectors are\nevaluated once, at creation, and the result recorded here. The membership\nof the PromotionRequest is therefore a snapshot of what the Stage governed\nat that moment, and its threshold and terminal state are computed against\nit rather than against a selector that could match differently later.\n\nThis is the only mutable field in the spec. The governing Stage owns it,\nand may add Targets to an in-flight PromotionRequest so that Targets\ndiscovered after creation can still receive the Freight. Target names MUST\nbe unique; this is enforced by the validating webhook rather than by the\nschema, since a list-map's per-item ownership tracking would roughly\ndouble the storage cost of every entry.\n\n+listType=atomic\n+kubebuilder:validation:Required",
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/PromotionRequestTarget"
+          }
+        },
+        "updateStrategy": {
+          "description": "UpdateStrategy configures the pace of updating the targets\n+optional\n+kubebuilder:validation:XValidation:rule=\"self == oldSelf\"",
+          "allOf": [
+            {
+              "$ref": "#/definitions/PromotionRequestUpdateStrategy"
+            }
+          ]
+        }
+      },
+      "required": [
+        "freight",
+        "stage",
+        "targets"
+      ]
+    },
+    "PromotionRequestStatus": {
+      "type": "object",
+      "properties": {
+        "conditions": {
+          "description": "Conditions contains the last observations of the PromotionRequest's current\nstate.\n\n+patchMergeKey=type\n+patchStrategy=merge\n+listType=map\n+listMapKey=type",
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/V1Condition"
+          }
+        },
+        "finishedAt": {
+          "description": "FinishedAt is the time at which the PromotionRequest completed.",
+          "type": "string"
+        },
+        "freight": {
+          "description": "Freight is the detail of the piece of freight that was referenced by this promotion.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/FreightReference"
+            }
+          ]
+        },
+        "freightCollection": {
+          "description": "FreightCollection contains the details of the piece of Freight referenced\nby this Promotion as well as any additional Freight that is carried over\nfrom the target Stage's current state.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/FreightCollection"
+            }
+          ]
+        },
+        "message": {
+          "description": "Message is a display message explaining the current Phase: what the\nPromotionRequest is waiting on, how far its fan-out has progressed, or\nwhy it did not succeed. i.e. If the Phase field has a value of Failed or\nErrored, this field can be expected to explain why.\n\n+kubebuilder:validation:Optional",
+          "type": "string"
+        },
+        "observedGeneration": {
+          "description": "ObservedGeneration is the generation of the spec last reconciled.\n\n+kubebuilder:validation:Optional",
+          "type": "integer"
+        },
+        "phase": {
+          "description": "Phase is a high-level summary of the PromotionRequest's lifecycle.\n\n+kubebuilder:validation:Optional",
+          "allOf": [
+            {
+              "$ref": "#/definitions/PromotionRequestPhase"
+            }
+          ]
+        },
+        "startedAt": {
+          "description": "StartedAt is the time at which the PromotionRequest started.\n\n+kubebuilder:validation:Optional",
+          "type": "string"
+        },
+        "summary": {
+          "description": "Summary aggregates the phases of this PromotionRequest's child Promotions.\n\n+kubebuilder:validation:Optional",
+          "allOf": [
+            {
+              "$ref": "#/definitions/PromotionRequestSummary"
+            }
+          ]
+        },
+        "targets": {
+          "description": "Targets records progress against spec.targets: one entry per Target, with\nthe child Promotion promoting to it and that Promotion's phase. Entries\nappear as the reconciler acts on each Target in spec.targets.\n\nThe list is atomic rather than a map keyed by name: the reconciler is its\nonly writer, so per-item ownership tracking in managedFields would only\ninflate the object -- roughly doubling the storage cost of each entry --\nwithout ever being used to merge.\n\n+kubebuilder:validation:Optional\n+listType=atomic",
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/PromotionRequestTargetStatus"
+          }
+        }
+      }
+    },
+    "PromotionRequestSummary": {
+      "type": "object",
+      "properties": {
+        "aborted": {
+          "description": "Aborted is the number of child Promotions in the Aborted phase.",
+          "type": "integer"
+        },
+        "errored": {
+          "description": "Errored is the number of child Promotions in the Errored phase.",
+          "type": "integer"
+        },
+        "failed": {
+          "description": "Failed is the number of child Promotions in the Failed phase.",
+          "type": "integer"
+        },
+        "pending": {
+          "description": "Pending is the number of child Promotions in the Pending phase.",
+          "type": "integer"
+        },
+        "running": {
+          "description": "Running is the number of child Promotions in the Running phase.",
+          "type": "integer"
+        },
+        "succeeded": {
+          "description": "Succeeded is the number of child Promotions in the Succeeded phase.",
+          "type": "integer"
+        }
+      }
+    },
+    "PromotionRequestTarget": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "description": "Name is the name of the Target.\n\n+kubebuilder:validation:Required\n+kubebuilder:validation:MinLength=1\n+kubebuilder:validation:MaxLength=253\n+kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`\n+akuity:test-kubebuilder-pattern=KubernetesName",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name"
+      ]
+    },
+    "PromotionRequestTargetStatus": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "description": "Name is the name of the Target.\n\n+kubebuilder:validation:Required\n+kubebuilder:validation:MinLength=1\n+kubebuilder:validation:MaxLength=253\n+kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`\n+akuity:test-kubebuilder-pattern=KubernetesName",
+          "type": "string"
+        },
+        "phase": {
+          "description": "Phase is the phase of that Promotion.\n\n+kubebuilder:validation:Optional",
+          "type": "string"
+        },
+        "promotion": {
+          "description": "Promotion is the name of the child Promotion currently promoting the\nFreight to this Target. Empty if none has been created yet.\n\n+kubebuilder:validation:Optional",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name"
+      ]
+    },
+    "PromotionRequestUpdateStrategy": {
+      "type": "object",
+      "properties": {
+        "maxConcurrent": {
+          "description": "MaxConcurrent specifies a number of targets which can be promoted to at the same time\nZero means there is no limit (default)",
+          "type": "integer",
+          "minimum": 0
+        },
+        "maxFailures": {
+          "description": "MaxFailures specifies a number of target promotions which can fail before PromotionRequest is considered failed.\nSpecifies a tolerable number, N failing promotions with maxFailures: N is a success, N+1 is a failure.\nDefaults to 0, meaning no failures tolerated.\n+kubebuilder:validation:Minimum=0",
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "PromotionRollout": {
+      "type": "object",
+      "properties": {
+        "metadata": {
+          "$ref": "#/definitions/V1ObjectMeta"
+        },
+        "number": {
+          "description": "Number is the rollout's position among its Stage's rollouts, counting\nfrom 1. It is assigned when the rollout is created and never changes.",
+          "type": "integer"
+        },
+        "spec": {
+          "description": "Spec describes the Stage, the Freight, and the Targets of the\nPromotionRollout.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/PromotionRolloutSpec"
+            }
+          ]
+        },
+        "status": {
+          "description": "Status describes the per-Target progress and the aggregate state of the\nPromotionRollout's Promotions.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/PromotionRolloutStatus"
+            }
+          ]
+        }
+      }
+    },
+    "PromotionRolloutList": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/PromotionRollout"
+          }
+        },
+        "metadata": {
+          "$ref": "#/definitions/V1ListMeta"
+        }
+      }
+    },
+    "PromotionRolloutPhase": {
+      "type": "string",
+      "enum": [
+        "Pending",
+        "Running",
+        "Succeeded",
+        "Failed",
+        "Errored",
+        "Aborted"
+      ],
+      "x-enum-varnames": [
+        "PromotionRolloutPhasePending",
+        "PromotionRolloutPhaseRunning",
+        "PromotionRolloutPhaseSucceeded",
+        "PromotionRolloutPhaseFailed",
+        "PromotionRolloutPhaseErrored",
+        "PromotionRolloutPhaseAborted"
+      ]
+    },
+    "PromotionRolloutReference": {
+      "type": "object",
+      "properties": {
+        "finishedAt": {
+          "description": "FinishedAt is the time at which the PromotionRollout completed. It is\nabsent for one that has not.",
+          "type": "string"
+        },
+        "message": {
+          "description": "Message is a human-readable description of how the PromotionRollout\nended. It is empty for one that has not.",
+          "type": "string"
+        },
+        "name": {
+          "description": "Name is the name of the PromotionRollout.",
+          "type": "string"
+        },
+        "number": {
+          "description": "Number is the PromotionRollout's position among its Stage's rollouts,\ncounting from 1.\n\n+kubebuilder:validation:Minimum=1",
+          "type": "integer"
+        },
+        "phase": {
+          "description": "Phase is a high-level summary of the PromotionRollout's lifecycle.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/PromotionRolloutPhase"
+            }
+          ]
+        }
+      }
+    },
+    "PromotionRolloutSpec": {
+      "type": "object",
+      "properties": {
+        "freight": {
+          "description": "Freight specifies the piece of Freight promoted by the Stage. The\nFreight is in the same Project as the PromotionRollout.",
+          "type": "string"
+        },
+        "stage": {
+          "description": "Stage specifies the name of the Stage that promotes the Freight. The\nStage is in the same Project as the PromotionRollout.",
+          "type": "string"
+        },
+        "targets": {
+          "description": "Targets names the Targets to which this PromotionRollout promotes\nFreight. Each Target is in the same Project as the PromotionRollout.\n\nThis is a resolved list, not a selector: the Stage's target selectors\nare evaluated once, when the rollout is created, and the result\nrecorded here. The list may be empty, which records that the governing\nStage governed no Targets at that moment.",
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/PromotionRolloutTarget"
+          }
+        },
+        "updateStrategy": {
+          "description": "UpdateStrategy configures the pace of updating the Targets.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/PromotionRolloutUpdateStrategy"
+            }
+          ]
+        }
+      }
+    },
+    "PromotionRolloutStatus": {
+      "type": "object",
+      "properties": {
+        "conditions": {
+          "description": "Conditions contains the last observations of the PromotionRollout's\ncurrent state.",
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/V1Condition"
+          }
+        },
+        "finishedAt": {
+          "description": "FinishedAt is the time at which the PromotionRollout completed.",
+          "type": "string"
+        },
+        "message": {
+          "description": "Message is a display message explaining the current Phase: what the\nPromotionRollout is waiting on, how far its fan-out has progressed, or\nwhy it did not succeed.",
+          "type": "string"
+        },
+        "phase": {
+          "description": "Phase is a high-level summary of the PromotionRollout's lifecycle.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/PromotionRolloutPhase"
+            }
+          ]
+        },
+        "startedAt": {
+          "description": "StartedAt is the time at which the PromotionRollout started.",
+          "type": "string"
+        },
+        "summary": {
+          "description": "Summary tallies the entries of Targets by phase.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/PromotionRolloutSummary"
+            }
+          ]
+        },
+        "targets": {
+          "description": "Targets records progress against spec.targets: one entry per Target\nthat has been promoted to, naming the latest Promotion promoting the\nFreight to it and that Promotion's phase. A Target promoted to more\nthan once within the rollout, for instance after a retry, reports its\nnewest Promotion.",
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/PromotionRolloutTargetStatus"
+          }
+        }
+      }
+    },
+    "PromotionRolloutSummary": {
+      "type": "object",
+      "properties": {
+        "aborted": {
+          "description": "Aborted is the number of Targets whose Promotion was Aborted.",
+          "type": "integer"
+        },
+        "errored": {
+          "description": "Errored is the number of Targets whose Promotion Errored.",
+          "type": "integer"
+        },
+        "failed": {
+          "description": "Failed is the number of Targets whose Promotion Failed.",
+          "type": "integer"
+        },
+        "pending": {
+          "description": "Pending is the number of Targets whose Promotion is Pending.",
+          "type": "integer"
+        },
+        "running": {
+          "description": "Running is the number of Targets whose Promotion is Running.",
+          "type": "integer"
+        },
+        "succeeded": {
+          "description": "Succeeded is the number of Targets whose Promotion Succeeded.",
+          "type": "integer"
+        }
+      }
+    },
+    "PromotionRolloutTarget": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "description": "Name is the name of the Target.",
+          "type": "string"
+        }
+      }
+    },
+    "PromotionRolloutTargetStatus": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "description": "Name is the name of the Target.",
+          "type": "string"
+        },
+        "phase": {
+          "description": "Phase is the phase of that Promotion.",
+          "type": "string"
+        },
+        "promotion": {
+          "description": "Promotion is the name of the newest Promotion promoting the Freight to\nthis Target.",
+          "type": "string"
+        }
+      }
+    },
+    "PromotionRolloutUpdateStrategy": {
+      "type": "object",
+      "properties": {
+        "maxConcurrent": {
+          "description": "MaxConcurrent specifies a number of Targets which can be promoted to at\nthe same time. Zero means there is no limit (default).\n\n+optional",
+          "type": "integer"
+        },
+        "maxFailures": {
+          "description": "MaxFailures specifies a number of Target promotions which can fail\nbefore the PromotionRollout is considered failed: N failing promotions\nwith maxFailures: N is a success, N+1 is a failure. Defaults to 0,\nmeaning no failures tolerated.\n\n+optional",
+          "type": "integer"
+        }
+      }
+    },
     "PromotionSpec": {
       "type": "object",
       "properties": {
         "freight": {
           "description": "Freight specifies the piece of Freight to be promoted into the Stage.\nExactly one of Freight or Origin must be set.\n\n+kubebuilder:validation:Optional\n+kubebuilder:validation:MinLength=1\n+kubebuilder:validation:MaxLength=253\n+kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`\n+akuity:test-kubebuilder-pattern=KubernetesName",
           "type": "string"
+        },
+        "inflatedTasks": {
+          "description": "InflatedTasks records each step of the Stage's PromotionTemplate that\nreferenced a (Cluster)PromotionTask and was inflated into Steps. It is\nset by Kargo when the Promotion is created and any value supplied by\nusers is discarded.\n\n+kubebuilder:validation:Optional",
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/InflatedPromotionTask"
+          }
         },
         "origin": {
           "description": "Origin, when set, identifies the FreightOrigin whose auto-promotion\ncandidate should be promoted. The mutating webhook resolves this to the\ncandidate Freight for that origin and fills Freight before the Promotion\nis persisted. Exactly one of Freight or Origin must be set.\n\n+kubebuilder:validation:Optional",
@@ -7804,6 +9292,10 @@
               "$ref": "#/definitions/FreightOrigin"
             }
           ]
+        },
+        "promotionRollout": {
+          "description": "PromotionRollout optionally holds the id of the PromotionRollout this\nPromotion was created by, as one part of that rollout's fan-out to\nTargets. The id is the UID the API serves the rollout with. A\nPromotionRollout is not a Kubernetes resource, so it cannot own the\nPromotion; this field is the link in place of an owner reference, and\nthe one the database's record of the Promotion is linked by.\n\nWhen empty (the default), the Promotion was not created by a\nPromotionRollout. When set, Target must be set too, and only the Kargo\ncontrol plane may set it.\n\n+kubebuilder:validation:Optional\n+kubebuilder:validation:Pattern=`^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$`\n+akuity:test-kubebuilder-pattern=UUID",
+          "type": "string"
         },
         "stage": {
           "description": "Stage specifies the name of the Stage to which this Promotion\napplies. The Stage referenced by this field MUST be in the same\nnamespace as the Promotion.\n\n+kubebuilder:validation:Required\n+kubebuilder:validation:MinLength=1\n+kubebuilder:validation:MaxLength=253\n+kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`\n+akuity:test-kubebuilder-pattern=KubernetesName",
@@ -7908,6 +9400,10 @@
         "continueOnError": {
           "description": "ContinueOnError is a boolean value that, if set to true, will cause the\nPromotion to continue executing the next step even if this step fails. It\nalso will not permit this failure to impact the overall status of the\nPromotion.",
           "type": "boolean"
+        },
+        "description": {
+          "description": "Description is a detail of the step's purpose.\n\n+kubebuilder:validation:Optional\n+kubebuilder:validation:MinLength=1\n+kubebuilder:validation:XValidation:message=\"description must be 256 characters or fewer\",rule=\"self.size() <= 256\"",
+          "type": "string"
         },
         "if": {
           "description": "If is an optional expression that, if present, must evaluate to a boolean\nvalue. If the expression evaluates to false, the step will be skipped.\nIf the expression does not evaluate to a boolean value, the step will be\nconsidered to have failed.",
@@ -8072,6 +9568,14 @@
     "PromotionWindow": {
       "type": "object",
       "properties": {
+        "description": {
+          "description": "Description is a human-readable description of the window.\nMay contain reason, author or any clarification for the window.\n\n+optional\n+kubebuilder:validation:MaxLength=1024",
+          "type": "string"
+        },
+        "disabled": {
+          "description": "Disabled controls whether configured windows should be skipped when calculating the stage window status.\nOptional. Default is `false`. Unless set to `true` the window will impact the stages it's configured for.\n\n+optional",
+          "type": "boolean"
+        },
         "dtend": {
           "description": "DTEnd is the window's end in the same format as DTStart. When combined with\nRRule, DTEnd - DTStart defines the duration of each occurrence. The value\nis parsed and validated by Kargo Enterprise.\n\n+optional",
           "type": "string"
@@ -8250,7 +9754,7 @@
           "type": "string"
         },
         "targets": {
-          "description": "Targets describes the Targets that this Stage governs and promotes Freight\nto. Its presence is what makes a Stage target-aware.\n\nWhen this field is nil (the default), the Stage operates in classic mode:\nit governs a single implicit \"stage-self\" Target that the controller\ncreates and maintains on the Stage's behalf. This preserves the behavior\nof Stages authored before Targets existed.\n\n+optional",
+          "description": "Targets describes the Targets that this Stage governs and promotes Freight\nto. Its presence is what makes a Stage target-aware.\n\nWhen this field is nil (the default), the Stage operates in classic mode:\nit governs no Targets and promotes Freight by way of Promotions alone.\nThis preserves the behavior of Stages authored before Targets existed.\n\n+optional",
           "allOf": [
             {
               "$ref": "#/definitions/StageTargets"
@@ -8320,6 +9824,22 @@
             }
           ]
         },
+        "currentPromotionRequest": {
+          "description": "CurrentPromotionRequest is a reference to the PromotionRequest currently\nfanning Freight out to this Stage's Targets. It is absent for a Stage that\ngoverns no Targets.\n\nFanning Freight out to Targets is a Kargo Enterprise-only feature. Kargo\nOSS maintains this field all the same, but the PromotionRequest it refers\nto never gets further than being marked Errored for that reason.\n\n+optional",
+          "allOf": [
+            {
+              "$ref": "#/definitions/PromotionRequestReference"
+            }
+          ]
+        },
+        "currentPromotionRollout": {
+          "description": "CurrentPromotionRollout is a reference to the PromotionRollout this Stage\nis promoting through. A PromotionRollout does not start until its Stage\nnames it here, and the Stage names the next one only once it has recorded\nthe one before it and is not still to verify the Freight it is on. The\nreference stays until the Stage has recorded how that PromotionRollout\nended. It is absent for a Stage that governs no Targets.\n\n+optional",
+          "allOf": [
+            {
+              "$ref": "#/definitions/PromotionRolloutReference"
+            }
+          ]
+        },
         "effectiveAutoPromotionHolds": {
           "description": "EffectiveAutoPromotionHolds is the set of auto-promotion holds in effect\nright now. It is recomputed every reconciliation from AutoPromotionHolds\nplus the newest in-flight Promotions, and unlike AutoPromotionHolds is not\ndurable. Clients should read this map to reflect current hold state.",
           "type": "object",
@@ -8358,6 +9878,22 @@
             }
           ]
         },
+        "lastPromotionRequest": {
+          "description": "LastPromotionRequest is a reference to the last PromotionRequest to reach a\nterminal phase. It is absent for a Stage that governs no Targets, and only\never moves forward, so it outlives the PromotionRequest it refers to.\n\n+optional",
+          "allOf": [
+            {
+              "$ref": "#/definitions/PromotionRequestReference"
+            }
+          ]
+        },
+        "lastPromotionRollout": {
+          "description": "LastPromotionRollout is a reference to the last PromotionRollout whose\noutcome this Stage has recorded. It is absent for a Stage that governs no\nTargets, and only ever moves forward: its number marks how far through\nits PromotionRollouts the Stage has read.\n\n+optional",
+          "allOf": [
+            {
+              "$ref": "#/definitions/PromotionRolloutReference"
+            }
+          ]
+        },
         "metadata": {
           "description": "Metadata is a map of arbitrary metadata associated with the Stage.\nThis is useful for storing additional information about the Stage\nthat can be shared across promotions, verifications, or other processes.",
           "type": "object",
@@ -8386,6 +9922,22 @@
           "items": {
             "$ref": "#/definitions/V1LabelSelector"
           }
+        },
+        "updateStrategy": {
+          "description": "UpdateStrategy configures the pace of promoting the targets\n+optional",
+          "allOf": [
+            {
+              "$ref": "#/definitions/TargetUpdateStrategy"
+            }
+          ]
+        },
+        "verification": {
+          "description": "Verification configures mode and pace of target promotion verifications\n+optional",
+          "allOf": [
+            {
+              "$ref": "#/definitions/TargetVerificaitonSpec"
+            }
+          ]
         }
       },
       "required": [
@@ -8422,6 +9974,143 @@
         "status": {
           "description": "Status is the high-level outcome of the step.",
           "type": "string"
+        }
+      }
+    },
+    "Target": {
+      "type": "object",
+      "properties": {
+        "metadata": {
+          "$ref": "#/definitions/V1ObjectMeta"
+        },
+        "spec": {
+          "description": "Spec describes the Target.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/TargetSpec"
+            }
+          ]
+        },
+        "status": {
+          "description": "Status describes the current status of the Target.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/TargetStatus"
+            }
+          ]
+        }
+      }
+    },
+    "TargetList": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Target"
+          }
+        },
+        "metadata": {
+          "$ref": "#/definitions/V1ListMeta"
+        }
+      }
+    },
+    "TargetSpec": {
+      "type": "object",
+      "properties": {
+        "params": {
+          "description": "Params is a map of arbitrary, target-specific values. Values may be any\nvalid JSON -- including nested objects and arrays -- so promotion steps\ncan reference deeply nested data. Promotion steps of Stages that govern\nthis Target may reference these values by key in their expressions (for\nexample, target.params.branch or target.params.cluster.region).\n\n+optional",
+          "type": "object",
+          "additionalProperties": {}
+        },
+        "targetSet": {
+          "description": "TargetSet names the TargetSet that manages this Target. Every Target is\ncreated by one, which owns its lifecycle, so this is required and does\nnot change for as long as the Target exists.",
+          "type": "string"
+        }
+      }
+    },
+    "TargetStageStatus": {
+      "type": "object",
+      "properties": {
+        "currentFreight": {
+          "description": "CurrentFreight is the FreightCollection that the Stage's most recent\nsuccessful Promotion to this Target rendered. Because a Stage may\nrequest Freight from several origins and a single Promotion changes\nonly one of them, this is a collection rather than a single Freight\nreference: it holds one entry per origin, exactly as the Stage's own\ncurrent collection does, so the Target's full desired state is known\neven for origins the latest Promotion did not touch.\n\nThe collection is copied from the Promotion's status rather than\nderived from this Target's previous state, so a Target that missed a\nround or was newly discovered converges to the Stage's desired state\non its next successful Promotion. Its ID is deterministic in its\ncontents, so a Target that received the same round as the Stage carries\nthe same ID as the Stage's current collection; comparing the two tells\nwhether the Target is up to date. Its verification history records\nverifications of this Freight on this Target specifically.\n\n+optional",
+          "allOf": [
+            {
+              "$ref": "#/definitions/FreightCollection"
+            }
+          ]
+        },
+        "health": {
+          "description": "Health is the Target's health with respect to this Stage's Freight, as\nlast assessed by executing HealthChecks. It is absent until the first\nassessment. Health is an ongoing observation rather than a Promotion\noutcome: it is reassessed periodically and whenever the systems the\nhealth checks observe change, so it may become Unhealthy long after the\nPromotion that produced CurrentFreight succeeded.\n\nA target-aware Stage does not assess health itself. Its own health is\nan aggregate of this field across every Target it governs: Healthy only\nwhen each is Healthy and on the Stage's current Freight, Unhealthy when\nany is not, Unknown while any has yet to be assessed.\n\n+optional",
+          "allOf": [
+            {
+              "$ref": "#/definitions/Health"
+            }
+          ]
+        },
+        "healthChecks": {
+          "description": "HealthChecks are the health check directives produced by the steps of\nthe Stage's most recent successful Promotion to this Target -- for\ninstance, which Argo CD Applications that Promotion updated and to what\nrevisions. They are the input from which Health is assessed, and they\nare recorded here because Health must be reassessed for as long as\nCurrentFreight remains on the Target, while the Promotion that produced\nthem is eventually garbage collected. A Stage keeps the same\ninformation for itself in its lastPromotion.\n\n+optional",
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/HealthCheckStep"
+          }
+        }
+      }
+    },
+    "TargetStats": {
+      "type": "object",
+      "properties": {
+        "count": {
+          "description": "Count contains the total number of Targets in the Project.",
+          "type": "integer"
+        },
+        "health": {
+          "description": "Health contains a summary of the collective health of a Project's\nTargets.\n\nUntil Target status records health, a Target is counted as healthy when\nat least one Stage has promoted to it and the latest promotion to it from\nevery Stage that did so succeeded. Once Target health is recorded, a\nTarget is counted as healthy when it is healthy with respect to every\nStage that governs it.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/HealthStats"
+            }
+          ]
+        }
+      }
+    },
+    "TargetStatus": {
+      "type": "object",
+      "properties": {
+        "stages": {
+          "description": "Stages records the Target's state with respect to each Stage that\ngoverns it, keyed by Stage name. A Target may be governed by several\nStages at once, each promoting its own Freight to it, so everything\nobserved about the Target is scoped to the Stage that observed it.\nThis mirrors how Freight status keys currentlyIn, verifiedIn, and\napprovedFor by Stage name.\n\nAn entry exists only once a Promotion from that Stage to this Target\nhas succeeded. A Stage that governs the Target but has never promoted\nto it has no entry.\n\n+optional",
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/definitions/TargetStageStatus"
+          }
+        }
+      }
+    },
+    "TargetUpdateStrategy": {
+      "type": "object",
+      "properties": {
+        "maxConcurrent": {
+          "description": "MaxConcurrent specifies a number of targets which can be promoted to at the same time\nValue can be an absolute number (e.g.: 5) or a percentage of targets selected by the stage (e.g.: 10%).\nAbsolute number is calculated from percentage by rounding up to a minimum of 1.\nPercentage value cannot be 0%. Number value cannot be 0.\nIf omitted or empty string, no limit is applied (default)."
+        },
+        "maxFailures": {
+          "description": "MaxFailures specifies a number of target promotions which can fail before PromotionRequest is considered failed.\nSpecifies a tolerable number, N failing promotions with maxFailures: N is a success, N+1 is a failure.\nValue can be an absolute number (e.g.: 5) or a percentage of targets selected by the stage (e.g.: 10%).\nAbsolute number is calculated from percentage by rounding up to a minimum of 1. Default value is 0."
+        }
+      }
+    },
+    "TargetVerificaitonSpec": {
+      "type": "object",
+      "properties": {
+        "runMode": {
+          "description": "VerificationRunMode controls whether verifications run per-target or per-stage\n+optional",
+          "type": "string"
+        },
+        "updateStrategy": {
+          "description": "UpdateStrategy configures the pace of verification runs\n+optional",
+          "allOf": [
+            {
+              "$ref": "#/definitions/TargetUpdateStrategy"
+            }
+          ]
         }
       }
     },
@@ -8481,6 +10170,10 @@
         },
         "phase": {
           "description": "Phase describes the current phase of the Verification process. Generally,\nthis will be a reflection of the underlying AnalysisRun's phase, however,\nthere are exceptions to this, such as in the case where an AnalysisRun\ncannot be launched successfully.",
+          "type": "string"
+        },
+        "promotionName": {
+          "description": "PromotionName is an optional name of promotion which triggered verification",
           "type": "string"
         },
         "startTime": {
@@ -9167,6 +10860,10 @@
         "signerName": {
           "description": "Select all ClusterTrustBundles that match this signer name.\nMutually-exclusive with name.  The contents of all selected\nClusterTrustBundles will be unified and deduplicated.\n+optional",
           "type": "string"
+        },
+        "user": {
+          "description": "user is Optional: The owner UID of the created file.\nIf specified, the item-level user field takes precedence over defaultUser.\n(Alpha) This field requires the AtomicWriteVolumeUserFields feature gate to be enabled.\n+featureGate=AtomicWriteVolumeUserFields\n+optional",
+          "type": "integer"
         }
       }
     },
@@ -9185,7 +10882,7 @@
       "type": "object",
       "properties": {
         "lastTransitionTime": {
-          "description": "lastTransitionTime is the last time the condition transitioned from one status to another.\nThis should be when the underlying condition changed.  If that is not known, then using the time when the API field changed is acceptable.\n+required\n+kubebuilder:validation:Required\n+kubebuilder:validation:Type=string\n+kubebuilder:validation:Format=date-time",
+          "description": "lastTransitionTime is the last time the condition transitioned from one status to another.\nThis should be when the underlying condition changed.  If that is not known, then using the time when the API field changed is acceptable.\n+required\n+kubebuilder:validation:Required\n+kubebuilder:validation:Type=string\n+kubebuilder:validation:Format=date-time\n+k8s:alpha(since: \"1.37\")=+k8s:customValidation",
           "type": "string"
         },
         "message": {
@@ -9193,19 +10890,19 @@
           "type": "string"
         },
         "observedGeneration": {
-          "description": "observedGeneration represents the .metadata.generation that the condition was set based upon.\nFor instance, if .metadata.generation is currently 12, but the .status.conditions[x].observedGeneration is 9, the condition is out of date\nwith respect to the current state of the instance.\n+optional\n+kubebuilder:validation:Minimum=0",
+          "description": "observedGeneration represents the .metadata.generation that the condition was set based upon.\nFor instance, if .metadata.generation is currently 12, but the .status.conditions[x].observedGeneration is 9, the condition is out of date\nwith respect to the current state of the instance.\n+optional\n+kubebuilder:validation:Minimum=0\n+k8s:alpha(since: \"1.37\")=+k8s:optional\n+k8s:alpha(since: \"1.37\")=+k8s:minimum=0",
           "type": "integer"
         },
         "reason": {
-          "description": "reason contains a programmatic identifier indicating the reason for the condition's last transition.\nProducers of specific condition types may define expected values and meanings for this field,\nand whether the values are considered a guaranteed API.\nThe value should be a CamelCase string.\nThis field may not be empty.\n+required\n+kubebuilder:validation:Required\n+kubebuilder:validation:MaxLength=1024\n+kubebuilder:validation:MinLength=1\n+kubebuilder:validation:Pattern=`^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$`",
+          "description": "reason contains a programmatic identifier indicating the reason for the condition's last transition.\nProducers of specific condition types may define expected values and meanings for this field,\nand whether the values are considered a guaranteed API.\nThe value should be a CamelCase string.\nThis field may not be empty.\n+required\n+kubebuilder:validation:Required\n+kubebuilder:validation:MaxLength=1024\n+kubebuilder:validation:MinLength=1\n+kubebuilder:validation:Pattern=`^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$`\n+k8s:alpha(since: \"1.37\")=+k8s:required\n+k8s:alpha(since: \"1.37\")=+k8s:maxBytes=1024",
           "type": "string"
         },
         "status": {
-          "description": "status of the condition, one of True, False, Unknown.\n+required\n+kubebuilder:validation:Required\n+kubebuilder:validation:Enum=True;False;Unknown",
+          "description": "status of the condition, one of True, False, Unknown.\n+required\n+kubebuilder:validation:Required\n+kubebuilder:validation:Enum=True;False;Unknown\n+k8s:alpha(since: \"1.37\")=+k8s:required",
           "type": "string"
         },
         "type": {
-          "description": "type of condition in CamelCase or in foo.example.com/CamelCase.\n---\nMany .condition.type values are consistent across resources like Available, but because arbitrary conditions can be\nuseful (see .node.status.conditions), the ability to deconflict is important.\nThe regex it matches is (dns1123SubdomainFmt/)?(qualifiedNameFmt)\n+required\n+kubebuilder:validation:Required\n+kubebuilder:validation:Pattern=`^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$`\n+kubebuilder:validation:MaxLength=316",
+          "description": "type of condition in CamelCase or in foo.example.com/CamelCase.\n---\nMany .condition.type values are consistent across resources like Available, but because arbitrary conditions can be\nuseful (see .node.status.conditions), the ability to deconflict is important.\nThe regex it matches is (dns1123SubdomainFmt/)?(qualifiedNameFmt)\n+required\n+kubebuilder:validation:Required\n+kubebuilder:validation:Pattern=`^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$`\n+kubebuilder:validation:MaxLength=316\n+k8s:alpha(since: \"1.37\")=+k8s:required",
           "type": "string"
         }
       },
@@ -9225,7 +10922,7 @@
           "type": "string"
         },
         "binaryData": {
-          "description": "BinaryData contains the binary data.\nEach key must consist of alphanumeric characters, '-', '_' or '.'.\nBinaryData can contain byte sequences that are not in the UTF-8 range.\nThe keys stored in BinaryData must not overlap with the ones in\nthe Data field, this is enforced during validation process.\nUsing this field will require 1.10+ apiserver and\nkubelet.\n+optional",
+          "description": "BinaryData contains the binary data.\nEach key must consist of alphanumeric characters, '-', '_' or '.'.\nBinaryData can contain byte sequences that are not in the UTF-8 range.\nThe keys stored in BinaryData must not overlap with the ones in\nthe Data field, this is enforced during validation process.\nUsing this field will require 1.10+ apiserver and\nkubelet.\nNote: BinaryData keys are not currently propagated to container env vars\nvia ConfigMapKeyRef or ConfigMapRef env sources; only Data keys are used.\n+optional",
           "type": "object",
           "additionalProperties": {
             "type": "string",
@@ -9274,7 +10971,7 @@
       "type": "object",
       "properties": {
         "key": {
-          "description": "The key to select.",
+          "description": "The key to select from the ConfigMap's Data field.\nKeys in the BinaryData field are not currently propagated to container env vars.",
           "type": "string"
         },
         "name": {
@@ -9340,6 +11037,10 @@
       "properties": {
         "defaultMode": {
           "description": "defaultMode is optional: mode bits used to set permissions on created files by default.\nMust be an octal value between 0000 and 0777 or a decimal value between 0 and 511.\nYAML accepts both octal and decimal values, JSON requires decimal values for mode bits.\nDefaults to 0644.\nDirectories within the path are not affected by this setting.\nThis might be in conflict with other options that affect the file\nmode, like fsGroup, and the result can be other mode bits set.\n+optional",
+          "type": "integer"
+        },
+        "defaultUser": {
+          "description": "defaultUser is Optional: The owner UID of the created files by default.\nThe defaultUser field is only used as a fallback when the item-level user field is unset.\n(Alpha) This field requires the AtomicWriteVolumeUserFields feature gate to be enabled.\n+featureGate=AtomicWriteVolumeUserFields\n+optional",
           "type": "integer"
         },
         "items": {
@@ -9624,6 +11325,10 @@
               "$ref": "#/definitions/V1ResourceFieldSelector"
             }
           ]
+        },
+        "user": {
+          "description": "user is Optional: The owner UID of the created file.\nIf specified, the item-level user field takes precedence over defaultUser.\n(Alpha) This field requires the AtomicWriteVolumeUserFields feature gate to be enabled.\n+featureGate=AtomicWriteVolumeUserFields\n+optional",
+          "type": "integer"
         }
       }
     },
@@ -9632,6 +11337,10 @@
       "properties": {
         "defaultMode": {
           "description": "Optional: mode bits to use on created files by default. Must be a\nOptional: mode bits used to set permissions on created files by default.\nMust be an octal value between 0000 and 0777 or a decimal value between 0 and 511.\nYAML accepts both octal and decimal values, JSON requires decimal values for mode bits.\nDefaults to 0644.\nDirectories within the path are not affected by this setting.\nThis might be in conflict with other options that affect the file\nmode, like fsGroup, and the result can be other mode bits set.\n+optional",
+          "type": "integer"
+        },
+        "defaultUser": {
+          "description": "defaultUser is Optional: The owner UID of the created files by default.\nThe defaultUser field is only used as a fallback when the item-level user field is unset.\n(Alpha) This field requires the AtomicWriteVolumeUserFields feature gate to be enabled.\n+featureGate=AtomicWriteVolumeUserFields\n+optional",
           "type": "integer"
         },
         "items": {
@@ -9649,6 +11358,10 @@
         "medium": {
           "description": "medium represents what type of storage medium should back this directory.\nThe default is \"\" which means to use the node's default medium.\nMust be an empty string (default) or Memory.\nMore info: https://kubernetes.io/docs/concepts/storage/volumes#emptydir\n+optional",
           "type": "string"
+        },
+        "mode": {
+          "description": "mode specifies the permission bits for the emptyDir directory, in numeric\nnotation (e.g., 0755, 01777). Must be a value between 0000 and 01777.\nIf not specified, defaults to 0777.\nThis might be in conflict with other options that affect the file\nmode, like fsGroup. If fsGroup is specified, the fsGroup permissions\nwill override the mode specified here.\nThis field has no effect on Windows.\nThis field is alpha and requires EmptyDirVolumeMode featuregate to be enabled.\n+featureGate=EmptyDirVolumeMode\n+optional",
+          "type": "integer"
         },
         "sizeLimit": {
           "description": "sizeLimit is the total amount of local storage required for this EmptyDir volume.\nThe size limit is also applicable for memory medium.\nThe maximum usage on memory medium EmptyDir would be the minimum value between\nthe SizeLimit specified here and the sum of memory limits of all containers in a pod.\nThe default is nil which means that the limit is undefined.\nMore info: https://kubernetes.io/docs/concepts/storage/volumes#emptydir\n+optional",
@@ -9933,6 +11646,19 @@
         }
       }
     },
+    "V1EvictionResponder": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "description": "name allows you to identify the responder responding to the Eviction.\n\nIt must be a valid domain-prefixed key (such as \"acme.io/foo\").\nDomain names *.k8s.io and *.kubernetes.io are reserved.\nThis field must be unique for each responder.\nThis field is required.\n+required\n+k8s:required\n+k8s:format=k8s-prefixed-label-key\n+k8s:customValidation",
+          "type": "string"
+        },
+        "priority": {
+          "description": "priority for this responder. Higher priorities are selected first by the evictionrequest-controller.\nIf there are responders with the same priority, the responder whose domain name comes first in the\nalphabetical higher domain order, will be picked. This means that the top domain labels are compared\nalphabetically first, followed by the lower domain labels. The key is compared last.\n\nThe responder that is the managing controller of the pod should set the value of\nthis field to 10000 to allow both for preemption or fallback registration by other\nresponders.\n\nThe minimum value is 0 and the maximum value is 100000.\nThe interval 0-999 is reserved for responders with *.k8s.io suffix.\nThis field is required.\n+required\n+k8s:required\n+k8s:minimum=0\n+k8s:maximum=100000\n+k8s:customValidation",
+          "type": "integer"
+        }
+      }
+    },
     "V1ExecAction": {
       "type": "object",
       "properties": {
@@ -10067,6 +11793,14 @@
     "V1GRPCAction": {
       "type": "object",
       "properties": {
+        "mode": {
+          "description": "mode specifies the connection mode for the gRPC health probe.\nSet to \"TLS\" to use TLS without certificate verification.\nSet to \"Plaintext\" to use a plaintext (insecure) connection explicitly.\nIf not specified, the probe uses a plaintext (insecure) connection.\n+featureGate=GRPCContainerProbeTLS\n+optional",
+          "allOf": [
+            {
+              "$ref": "#/definitions/V1GRPCProbeMode"
+            }
+          ]
+        },
         "port": {
           "description": "Port number of the gRPC service. Number must be in the range 1 to 65535.",
           "type": "integer"
@@ -10076,6 +11810,17 @@
           "type": "string"
         }
       }
+    },
+    "V1GRPCProbeMode": {
+      "type": "string",
+      "enum": [
+        "Plaintext",
+        "TLS"
+      ],
+      "x-enum-varnames": [
+        "GRPCProbeModePlaintext",
+        "GRPCProbeModeTLS"
+      ]
     },
     "V1GitRepoVolumeSource": {
       "type": "object",
@@ -10132,6 +11877,14 @@
         "port": {
           "description": "Name or number of the port to access on the container.\nNumber must be in the range 1 to 65535.\nName must be an IANA_SVC_NAME."
         },
+        "protocol": {
+          "description": "Protocol selects the wire protocol for the probe connection.\nNil defaults to HTTP/1.1.\n+optional\n+featureGate=H2CContainerProbe",
+          "allOf": [
+            {
+              "$ref": "#/definitions/V1HTTPProtocol"
+            }
+          ]
+        },
         "scheme": {
           "description": "Scheme to use for connecting to the host.\nDefaults to HTTP.\n+optional",
           "type": "string"
@@ -10150,6 +11903,17 @@
           "type": "string"
         }
       }
+    },
+    "V1HTTPProtocol": {
+      "type": "string",
+      "enum": [
+        "HTTP1",
+        "HTTP2"
+      ],
+      "x-enum-varnames": [
+        "HTTPProtocolHTTP1",
+        "HTTPProtocolHTTP2"
+      ]
     },
     "V1HostAlias": {
       "type": "object",
@@ -10249,6 +12013,42 @@
         }
       }
     },
+    "V1JobSchedulingConfiguration": {
+      "type": "object",
+      "properties": {
+        "disruptionMode": {
+          "description": "DisruptionMode defines the mode in which the Job's pods can be disrupted.\nOne of Single, All.\nThis field is immutable after creation: it may not be added or removed,\nand the selected mode may not be changed.\n\n+optional\n+k8s:optional\n+k8s:immutable",
+          "allOf": [
+            {
+              "$ref": "#/definitions/v1alpha3.WorkloadPodGroupDisruptionMode"
+            }
+          ]
+        },
+        "resourceClaims": {
+          "description": "ResourceClaims defines which ResourceClaims may be shared among Pods in\nthe Job. Pods consume the devices allocated to a PodGroup's claim by\ndefining a claim in its own Spec.ResourceClaims that matches the\nPodGroup's claim exactly. The claim must have the same name and refer to\nthe same ResourceClaim or ResourceClaimTemplate.\nAt most 4 claims may be set, matching the limit on the resulting PodGroup.\nThis list is immutable after creation: entries may neither be added,\nremoved, nor modified.\n\n+optional\n+patchMergeKey=name\n+patchStrategy=merge\n+listType=map\n+listMapKey=name\n+k8s:optional\n+k8s:listType=map\n+k8s:listMapKey=name\n+k8s:maxItems=4\n+k8s:immutable",
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/v1alpha3.WorkloadPodGroupResourceClaim"
+          }
+        },
+        "schedulingConstraints": {
+          "description": "SchedulingConstraints defines scheduling constraints (e.g. topology)\nfor the Job's pods.\nThis field is immutable after creation.\n\n+optional\n+k8s:optional\n+k8s:immutable",
+          "allOf": [
+            {
+              "$ref": "#/definitions/v1alpha3.WorkloadPodGroupSchedulingConstraints"
+            }
+          ]
+        },
+        "schedulingPolicy": {
+          "description": "SchedulingPolicy defines the scheduling policy for this Job.\nExactly one of Basic or Gang must be set.\nThis field is immutable after creation: the policy may not be added or\nremoved. The policy variant (basic/gang) is frozen by hand-written\nvalidation; only schedulingPolicy.gang.minCount may be changed.\n\n+optional\n+k8s:optional\n+k8s:update=NoSet\n+k8s:update=NoUnset",
+          "allOf": [
+            {
+              "$ref": "#/definitions/v1alpha3.WorkloadPodGroupSchedulingPolicy"
+            }
+          ]
+        }
+      }
+    },
     "V1JobSpec": {
       "type": "object",
       "properties": {
@@ -10285,7 +12085,7 @@
           "type": "boolean"
         },
         "maxFailedIndexes": {
-          "description": "Specifies the maximal number of failed indexes before marking the Job as\nfailed, when backoffLimitPerIndex is set. Once the number of failed\nindexes exceeds this number the entire Job is marked as Failed and its\nexecution is terminated. When left as null the job continues execution of\nall of its indexes and is marked with the `Complete` Job condition.\nIt can only be specified when backoffLimitPerIndex is set.\nIt can be null or up to completions. It is required and must be\nless than or equal to 10^4 when is completions greater than 10^5.\n+optional",
+          "description": "Specifies the maximal number of failed indexes before marking the Job as\nfailed, when backoffLimitPerIndex is set. Once the number of failed\nindexes exceeds this number the entire Job is marked as Failed and its\nexecution is terminated. When left as null the job continues execution of\nall of its indexes and is marked with the `Complete` Job condition.\nIt can only be specified when backoffLimitPerIndex is set.\nIt can be null or up to completions. It is required and must be\nless than or equal to 10^4 when is completions greater than 10^5.\n+optional\n+k8s:optional\n+k8s:alpha(since: \"1.37\")=+k8s:dependentRequired(\"backoffLimitPerIndex\")",
           "type": "integer"
         },
         "parallelism": {
@@ -10305,6 +12105,14 @@
           "allOf": [
             {
               "$ref": "#/definitions/V1PodReplacementPolicy"
+            }
+          ]
+        },
+        "scheduling": {
+          "description": "scheduling defines the Workload-aware Scheduling configuration for this Job.\nWhen set, it specifies the scheduling policy (basic or gang), topology\nconstraints, disruption mode, and shared resource claims.\nWhen omitted, the Job defaults to the basic scheduling policy, which behaves\nas standard pod-by-pod scheduling.\nThis field is alpha-level and requires the WorkloadWithJob feature gate.\nThis field is immutable, including whether it is set at all, only\npolicy.gang.minCount may be changed after creation.\n\n+featureGate=WorkloadWithJob\n+optional\n+k8s:ifDisabled(WorkloadWithJob)=+k8s:forbidden\n+k8s:optional\n+k8s:update=NoSet\n+k8s:update=NoUnset",
+          "allOf": [
+            {
+              "$ref": "#/definitions/V1JobSchedulingConfiguration"
             }
           ]
         },
@@ -10356,6 +12164,10 @@
         "path": {
           "description": "path is the relative path of the file to map the key to.\nMay not be an absolute path.\nMay not contain the path element '..'.\nMay not start with the string '..'.",
           "type": "string"
+        },
+        "user": {
+          "description": "user is Optional: The owner UID of the created file.\nIf specified, the item-level user field takes precedence over defaultUser.\n(Alpha) This field requires the AtomicWriteVolumeUserFields feature gate to be enabled.\n+featureGate=AtomicWriteVolumeUserFields\n+optional",
+          "type": "integer"
         }
       }
     },
@@ -10522,7 +12334,7 @@
           "type": "string"
         },
         "operation": {
-          "description": "Operation is the type of operation which lead to this ManagedFieldsEntry being created.\nThe only valid values for this field are 'Apply' and 'Update'.",
+          "description": "Operation is the type of operation which lead to this ManagedFieldsEntry being created.\nThe only valid values for this field are 'Apply' and 'Update'.\n+k8s:alpha(since: \"1.37\")=+k8s:required",
           "type": "string"
         },
         "subresource": {
@@ -10647,15 +12459,15 @@
           }
         },
         "creationTimestamp": {
-          "description": "CreationTimestamp is a timestamp representing the server time when this object was\ncreated. It is not guaranteed to be set in happens-before order across separate operations.\nClients may not set this value. It is represented in RFC3339 form and is in UTC.\n\nPopulated by the system.\nRead-only.\nNull for lists.\nMore info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata\n+optional",
+          "description": "CreationTimestamp is a timestamp representing the server time when this object was\ncreated. It is not guaranteed to be set in happens-before order across separate operations.\nClients may not set this value. It is represented in RFC3339 form and is in UTC.\n\nPopulated by the system.\nRead-only.\nNull for lists.\nMore info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata\n+optional\n+k8s:alpha(since: \"1.37\")=+k8s:immutable",
           "type": "string"
         },
         "deletionGracePeriodSeconds": {
-          "description": "Number of seconds allowed for this object to gracefully terminate before\nit will be removed from the system. Only set when deletionTimestamp is also set.\nMay only be shortened.\nRead-only.\n+optional",
+          "description": "Number of seconds allowed for this object to gracefully terminate before\nit will be removed from the system. Only set when deletionTimestamp is also set.\nMay only be shortened.\nRead-only.\n+optional\n+k8s:alpha(since: \"1.37\")=+k8s:optional\n+k8s:alpha(since: \"1.37\")=+k8s:immutable",
           "type": "integer"
         },
         "deletionTimestamp": {
-          "description": "DeletionTimestamp is RFC 3339 date and time at which this resource will be deleted. This\nfield is set by the server when a graceful deletion is requested by the user, and is not\ndirectly settable by a client. The resource is expected to be deleted (no longer visible\nfrom resource lists, and not reachable by name) after the time in this field, once the\nfinalizers list is empty. As long as the finalizers list contains items, deletion is blocked.\nOnce the deletionTimestamp is set, this value may not be unset or be set further into the\nfuture, although it may be shortened or the resource may be deleted prior to this time.\nFor example, a user may request that a pod is deleted in 30 seconds. The Kubelet will react\nby sending a graceful termination signal to the containers in the pod. After that 30 seconds,\nthe Kubelet will send a hard termination signal (SIGKILL) to the container and after cleanup,\nremove the pod from the API. In the presence of network partitions, this object may still\nexist after this timestamp, until an administrator or automated process can determine the\nresource is fully terminated.\nIf not set, graceful deletion of the object has not been requested.\n\nPopulated by the system when a graceful deletion is requested.\nRead-only.\nMore info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata\n+optional",
+          "description": "DeletionTimestamp is RFC 3339 date and time at which this resource will be deleted. This\nfield is set by the server when a graceful deletion is requested by the user, and is not\ndirectly settable by a client. The resource is expected to be deleted (no longer visible\nfrom resource lists, and not reachable by name) after the time in this field, once the\nfinalizers list is empty. As long as the finalizers list contains items, deletion is blocked.\nOnce the deletionTimestamp is set, this value may not be unset or be set further into the\nfuture, although it may be shortened or the resource may be deleted prior to this time.\nFor example, a user may request that a pod is deleted in 30 seconds. The Kubelet will react\nby sending a graceful termination signal to the containers in the pod. After that 30 seconds,\nthe Kubelet will send a hard termination signal (SIGKILL) to the container and after cleanup,\nremove the pod from the API. In the presence of network partitions, this object may still\nexist after this timestamp, until an administrator or automated process can determine the\nresource is fully terminated.\nIf not set, graceful deletion of the object has not been requested.\n\nPopulated by the system when a graceful deletion is requested.\nRead-only.\nMore info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata\n+optional\n+k8s:alpha(since: \"1.37\")=+k8s:optional\n+k8s:alpha(since: \"1.37\")=+k8s:immutable",
           "type": "string"
         },
         "finalizers": {
@@ -10670,7 +12482,7 @@
           "type": "string"
         },
         "generation": {
-          "description": "A sequence number representing a specific generation of the desired state.\nPopulated by the system. Read-only.\n+optional",
+          "description": "A sequence number representing a specific generation of the desired state.\nPopulated by the system. Read-only.\n+optional\n+k8s:alpha(since: \"1.37\")=+k8s:optional\n+k8s:alpha(since: \"1.37\")=+k8s:minimum=0",
           "type": "integer"
         },
         "labels": {
@@ -10681,7 +12493,7 @@
           }
         },
         "managedFields": {
-          "description": "ManagedFields maps workflow-id and version to the set of fields\nthat are managed by that workflow. This is mostly for internal\nhousekeeping, and users typically shouldn't need to set or\nunderstand this field. A workflow can be the user's name, a\ncontroller's name, or the name of a specific apply path like\n\"ci-cd\". The set of fields is always in the version that the\nworkflow used when modifying the object.\n\n+optional\n+listType=atomic",
+          "description": "ManagedFields maps workflow-id and version to the set of fields\nthat are managed by that workflow. This is mostly for internal\nhousekeeping, and users typically shouldn't need to set or\nunderstand this field. A workflow can be the user's name, a\ncontroller's name, or the name of a specific apply path like\n\"ci-cd\". The set of fields is always in the version that the\nworkflow used when modifying the object.\n\n+optional\n+listType=atomic\n+k8s:alpha(since: \"1.37\")=+k8s:optional",
           "type": "array",
           "items": {
             "$ref": "#/definitions/V1ManagedFieldsEntry"
@@ -10696,7 +12508,7 @@
           "type": "string"
         },
         "ownerReferences": {
-          "description": "List of objects depended by this object. If ALL objects in the list have\nbeen deleted, this object will be garbage collected. If this object is managed by a controller,\nthen an entry in this list will point to this controller, with the controller field set to true.\nThere cannot be more than one managing controller.\n+optional\n+patchMergeKey=uid\n+patchStrategy=merge\n+listType=map\n+listMapKey=uid",
+          "description": "List of objects depended by this object. If ALL objects in the list have\nbeen deleted, this object will be garbage collected. If this object is managed by a controller,\nthen an entry in this list will point to this controller, with the controller field set to true.\nThere cannot be more than one managing controller.\n+optional\n+patchMergeKey=uid\n+patchStrategy=merge\n+listType=map\n+listMapKey=uid\n+k8s:alpha(since:\"1.37\")=+k8s:optional",
           "type": "array",
           "items": {
             "$ref": "#/definitions/V1OwnerReference"
@@ -10711,7 +12523,7 @@
           "type": "string"
         },
         "uid": {
-          "description": "UID is the unique in time and space value for this object. It is typically generated by\nthe server on successful creation of a resource and is not allowed to change on PUT\noperations.\n\nPopulated by the system.\nRead-only.\nMore info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names#uids\n+optional",
+          "description": "UID is the unique in time and space value for this object. It is typically generated by\nthe server on successful creation of a resource and is not allowed to change on PUT\noperations.\n\nPopulated by the system.\nRead-only.\nMore info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names#uids\n+optional\n+k8s:alpha(since: \"1.37\")=+k8s:optional\n+k8s:alpha(since: \"1.37\")=+k8s:immutable",
           "type": "string"
         }
       }
@@ -10753,7 +12565,7 @@
       "type": "object",
       "properties": {
         "apiVersion": {
-          "description": "API version of the referent.",
+          "description": "API version of the referent.\n+k8s:alpha(since:\"1.37\")=+k8s:required",
           "type": "string"
         },
         "blockOwnerDeletion": {
@@ -10765,15 +12577,15 @@
           "type": "boolean"
         },
         "kind": {
-          "description": "Kind of the referent.\nMore info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds",
+          "description": "Kind of the referent.\nMore info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds\n+k8s:alpha(since:\"1.37\")=+k8s:required",
           "type": "string"
         },
         "name": {
-          "description": "Name of the referent.\nMore info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names#names",
+          "description": "Name of the referent.\nMore info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names#names\n+k8s:alpha(since:\"1.37\")=+k8s:required",
           "type": "string"
         },
         "uid": {
-          "description": "UID of the referent.\nMore info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names#uids",
+          "description": "UID of the referent.\nMore info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names#uids\n+k8s:alpha(since:\"1.37\")=+k8s:required",
           "type": "string"
         }
       }
@@ -10789,7 +12601,7 @@
           }
         },
         "dataSource": {
-          "description": "dataSource field can be used to specify either:\n* An existing VolumeSnapshot object (snapshot.storage.k8s.io/VolumeSnapshot)\n* An existing PVC (PersistentVolumeClaim)\nIf the provisioner or an external controller can support the specified data source,\nit will create a new volume based on the contents of the specified data source.\nWhen the AnyVolumeDataSource feature gate is enabled, dataSource contents will be copied to dataSourceRef,\nand dataSourceRef contents will be copied to dataSource when dataSourceRef.namespace is not specified.\nIf the namespace is specified, then dataSourceRef will not be copied to dataSource.\n+optional",
+          "description": "dataSource field can be used to specify either:\n* An existing VolumeSnapshot object (snapshot.storage.k8s.io/VolumeSnapshot)\n* An existing PVC (PersistentVolumeClaim)\nIf the provisioner or an external controller can support the specified data source,\nit will create a new volume based on the contents of the specified data source.\ndataSource contents will be copied to dataSourceRef, and dataSourceRef contents will be\ncopied to dataSource when dataSourceRef.namespace is not specified.\nIf the namespace is specified, then dataSourceRef will not be copied to dataSource.\n+optional",
           "allOf": [
             {
               "$ref": "#/definitions/V1TypedLocalObjectReference"
@@ -10797,7 +12609,7 @@
           ]
         },
         "dataSourceRef": {
-          "description": "dataSourceRef specifies the object from which to populate the volume with data, if a non-empty\nvolume is desired. This may be any object from a non-empty API group (non\ncore object) or a PersistentVolumeClaim object.\nWhen this field is specified, volume binding will only succeed if the type of\nthe specified object matches some installed volume populator or dynamic\nprovisioner.\nThis field will replace the functionality of the dataSource field and as such\nif both fields are non-empty, they must have the same value. For backwards\ncompatibility, when namespace isn't specified in dataSourceRef,\nboth fields (dataSource and dataSourceRef) will be set to the same\nvalue automatically if one of them is empty and the other is non-empty.\nWhen namespace is specified in dataSourceRef,\ndataSource isn't set to the same value and must be empty.\nThere are three important differences between dataSource and dataSourceRef:\n* While dataSource only allows two specific types of objects, dataSourceRef\n  allows any non-core object, as well as PersistentVolumeClaim objects.\n* While dataSource ignores disallowed values (dropping them), dataSourceRef\n  preserves all values, and generates an error if a disallowed value is\n  specified.\n* While dataSource only allows local objects, dataSourceRef allows objects\n  in any namespaces.\n(Beta) Using this field requires the AnyVolumeDataSource feature gate to be enabled.\n(Alpha) Using the namespace field of dataSourceRef requires the CrossNamespaceVolumeDataSource feature gate to be enabled.\n+optional",
+          "description": "dataSourceRef specifies the object from which to populate the volume with data, if a non-empty\nvolume is desired. This may be any object from a non-empty API group (non\ncore object) or a PersistentVolumeClaim object.\nWhen this field is specified, volume binding will only succeed if the type of\nthe specified object matches some installed volume populator or dynamic\nprovisioner.\nThis field will replace the functionality of the dataSource field and as such\nif both fields are non-empty, they must have the same value. For backwards\ncompatibility, when namespace isn't specified in dataSourceRef,\nboth fields (dataSource and dataSourceRef) will be set to the same\nvalue automatically if one of them is empty and the other is non-empty.\nWhen namespace is specified in dataSourceRef,\ndataSource isn't set to the same value and must be empty.\nThere are three important differences between dataSource and dataSourceRef:\n* While dataSource only allows two specific types of objects, dataSourceRef\n  allows any non-core object, as well as PersistentVolumeClaim objects.\n* While dataSource ignores disallowed values (dropping them), dataSourceRef\n  preserves all values, and generates an error if a disallowed value is\n  specified.\n* While dataSource only allows local objects, dataSourceRef allows objects\n  in any namespaces.\n(Alpha) Using the namespace field of dataSourceRef requires the CrossNamespaceVolumeDataSource feature gate to be enabled.\n+optional",
           "allOf": [
             {
               "$ref": "#/definitions/V1TypedObjectReference"
@@ -10842,7 +12654,7 @@
       "type": "object",
       "properties": {
         "metadata": {
-          "description": "May contain labels and annotations that will be copied into the PVC\nwhen creating it. No other fields are allowed and will be rejected during\nvalidation.\n\n+optional",
+          "description": "May contain labels and annotations that will be copied into the PVC\nwhen creating it. No other fields are allowed and will be rejected during\nvalidation.\n\n+optional\n+k8s:opaqueType",
           "allOf": [
             {
               "$ref": "#/definitions/V1ObjectMeta"
@@ -10995,6 +12807,10 @@
         "signerName": {
           "description": "Kubelet's generated CSRs will be addressed to this signer.\n\n+required",
           "type": "string"
+        },
+        "user": {
+          "description": "user is Optional: The owner UID of the created file.\nIf specified, the item-level user field takes precedence over defaultUser.\n(Alpha) This field requires the AtomicWriteVolumeUserFields feature gate to be enabled.\n+featureGate=AtomicWriteVolumeUserFields\n+optional",
+          "type": "integer"
         },
         "userAnnotations": {
           "description": "userAnnotations allow pod authors to pass additional information to\nthe signer implementation.  Kubernetes does not restrict or validate this\nmetadata in any way.\n\nThese values are copied verbatim into the `spec.unverifiedUserAnnotations` field of\nthe PodCertificateRequest objects that Kubelet creates.\n\nEntries are subject to the same validation as object metadata annotations,\nwith the addition that all keys must be domain-prefixed. No restrictions\nare placed on values, except an overall size limitation on the entire field.\n\nSigners should document the keys and values they support. Signers should\ndeny requests that contain keys they do not recognize.",
@@ -11243,7 +13059,7 @@
           "type": "integer"
         },
         "seLinuxChangePolicy": {
-          "description": "seLinuxChangePolicy defines how the container's SELinux label is applied to all volumes used by the Pod.\nIt has no effect on nodes that do not support SELinux or to volumes does not support SELinux.\nValid values are \"MountOption\" and \"Recursive\".\n\n\"Recursive\" means relabeling of all files on all Pod volumes by the container runtime.\nThis may be slow for large volumes, but allows mixing privileged and unprivileged Pods sharing the same volume on the same node.\n\n\"MountOption\" mounts all eligible Pod volumes with `-o context` mount option.\nThis requires all Pods that share the same volume to use the same SELinux label.\nIt is not possible to share the same volume among privileged and unprivileged Pods.\nEligible volumes are in-tree FibreChannel and iSCSI volumes, and all CSI volumes\nwhose CSI driver announces SELinux support by setting spec.seLinuxMount: true in their\nCSIDriver instance. Other volumes are always re-labelled recursively.\n\"MountOption\" value is allowed only when SELinuxMount feature gate is enabled.\n\nIf not specified and SELinuxMount feature gate is enabled, \"MountOption\" is used.\nIf not specified and SELinuxMount feature gate is disabled, \"MountOption\" is used for ReadWriteOncePod volumes\nand \"Recursive\" for all other volumes.\n\nThis field affects only Pods that have SELinux label set, either in PodSecurityContext or in SecurityContext of all containers.\n\nAll Pods that use the same volume should use the same seLinuxChangePolicy, otherwise some pods can get stuck in ContainerCreating state.\nNote that this field cannot be set when spec.os.name is windows.\n+featureGate=SELinuxChangePolicy\n+optional",
+          "description": "seLinuxChangePolicy defines how the container's SELinux label is applied to all volumes used by the Pod.\nIt has no effect on nodes that do not support SELinux or to volumes does not support SELinux.\nValid values are \"MountOption\" and \"Recursive\".\n\n\"Recursive\" means relabeling of all files on all Pod volumes by the container runtime.\nThis may be slow for large volumes, but allows mixing privileged and unprivileged Pods sharing the same volume on the same node.\n\n\"MountOption\" mounts all eligible Pod volumes with `-o context` mount option.\nThis requires all Pods that share the same volume to use the same SELinux label.\nIt is not possible to share the same volume among privileged and unprivileged Pods.\nEligible volumes are in-tree FibreChannel and iSCSI volumes, and all CSI volumes\nwhose CSI driver announces SELinux support by setting spec.seLinuxMount: true in their\nCSIDriver instance. Other volumes are always re-labelled recursively.\n\nIf not specified, \"MountOption\" is used.\n\nThis field affects only Pods that have SELinux label set, either in PodSecurityContext or in SecurityContext of all containers.\n\nAll Pods that use the same volume should use the same seLinuxChangePolicy, otherwise some pods can get stuck in ContainerCreating state.\nNote that this field cannot be set when spec.os.name is windows.\n+featureGate=SELinuxChangePolicy\n+optional",
           "type": "string"
         },
         "seLinuxOptions": {
@@ -11339,6 +13155,13 @@
             "$ref": "#/definitions/V1EphemeralContainer"
           }
         },
+        "evictionResponders": {
+          "description": "evictionResponders reference responders that react to Evictions based on EvictionRequests.\nResponders should observe and communicate through the Eviction Resource API to help with\nthe graceful termination of a pod. The responders are selected sequentially, according to\ntheir specified priority.\n\nResponders should periodically report on an eviction progress by updating the\n.status.responders[].heartbeatTime field of the Eviction object. If this field is not updated\nwithin the heartbeat deadline defined by the Eviction API (currently 20 minutes), the eviction\nis passed over to the next responder with a lower priority. If there is no other responder,\nthe last default imperative-eviction.k8s.io/evictor responder with a priority of 100 will\nevict the pod using the imperative Eviction API (pods/<name>/eviction subresource).\n\nThe maximum length of the responders list is 10.\nResponders are not supported when the pod is part of a PodGroup (.spec.schedulingGroup is set).\nThis field can only be set on creation and is immutable afterwards.\n+featureGate=EvictionRequestAPI\n+optional\n+patchMergeKey=name\n+patchStrategy=merge\n+listType=map\n+listMapKey=name\n+k8s:optional\n+k8s:listType=map\n+k8s:listMapKey=name\n+k8s:maxItems=10\n+k8s:alpha(since: \"1.37\")=+k8s:dependentForbidden(\"schedulingGroup\")",
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/V1EvictionResponder"
+          }
+        },
         "hostAliases": {
           "description": "HostAliases is an optional list of hosts and IPs that will be injected into the pod's hosts\nfile if specified.\n+optional\n+patchMergeKey=ip\n+patchStrategy=merge\n+listType=map\n+listMapKey=ip",
           "type": "array",
@@ -11347,19 +13170,19 @@
           }
         },
         "hostIPC": {
-          "description": "Use the host's ipc namespace.\nOptional: Default to false.\n+k8s:conversion-gen=false\n+optional",
+          "description": "Use the host's ipc namespace.\nOptional: Default to false.\n+optional",
           "type": "boolean"
         },
         "hostNetwork": {
-          "description": "Host networking requested for this pod. Use the host's network namespace.\nWhen using HostNetwork you should specify ports so the scheduler is aware.\nWhen `hostNetwork` is true, specified `hostPort` fields in port definitions must match `containerPort`,\nand unspecified `hostPort` fields in port definitions are defaulted to match `containerPort`.\nDefault to false.\n+k8s:conversion-gen=false\n+optional",
+          "description": "Host networking requested for this pod. Use the host's network namespace.\nWhen using HostNetwork you should specify ports so the scheduler is aware.\nWhen `hostNetwork` is true, specified `hostPort` fields in port definitions must match `containerPort`,\nand unspecified `hostPort` fields in port definitions are defaulted to match `containerPort`.\nDefault to false.\n+optional",
           "type": "boolean"
         },
         "hostPID": {
-          "description": "Use the host's pid namespace.\nOptional: Default to false.\n+k8s:conversion-gen=false\n+optional",
+          "description": "Use the host's pid namespace.\nOptional: Default to false.\n+optional",
           "type": "boolean"
         },
         "hostUsers": {
-          "description": "Use the host's user namespace.\nOptional: Default to true.\nIf set to true or not present, the pod will be run in the host user namespace, useful\nfor when the pod needs a feature only available to the host user namespace, such as\nloading a kernel module with CAP_SYS_MODULE.\nWhen set to false, a new userns is created for the pod. Setting false is useful for\nmitigating container breakout vulnerabilities even allowing users to run their\ncontainers as root without actually having root privileges on the host.\n+k8s:conversion-gen=false\n+optional",
+          "description": "Use the host's user namespace.\nOptional: Default to true.\nIf set to true or not present, the pod will be run in the host user namespace, useful\nfor when the pod needs a feature only available to the host user namespace, such as\nloading a kernel module with CAP_SYS_MODULE.\nWhen set to false, a new userns is created for the pod. Setting false is useful for\nmitigating container breakout vulnerabilities even allowing users to run their\ncontainers as root without actually having root privileges on the host.\n+optional",
           "type": "boolean"
         },
         "hostname": {
@@ -11367,7 +13190,7 @@
           "type": "string"
         },
         "hostnameOverride": {
-          "description": "HostnameOverride specifies an explicit override for the pod's hostname as perceived by the pod.\nThis field only specifies the pod's hostname and does not affect its DNS records.\nWhen this field is set to a non-empty string:\n- It takes precedence over the values set in `hostname` and `subdomain`.\n- The Pod's hostname will be set to this value.\n- `setHostnameAsFQDN` must be nil or set to false.\n- `hostNetwork` must be set to false.\n\nThis field must be a valid DNS subdomain as defined in RFC 1123 and contain at most 64 characters.\nRequires the HostnameOverride feature gate to be enabled.\n\n+featureGate=HostnameOverride\n+optional",
+          "description": "HostnameOverride specifies an explicit override for the pod's hostname as perceived by the pod.\nThis field only specifies the pod's hostname and does not affect its DNS records.\nWhen this field is set to a non-empty string:\n- It takes precedence over the values set in `hostname` and `subdomain`.\n- The Pod's hostname will be set to this value.\n- `setHostnameAsFQDN` must be nil or set to false.\n- `hostNetwork` must be set to false.\n\nThis field must be a valid DNS subdomain as defined in RFC 1123 and contain at most 64 characters.\n\n+featureGate=HostnameOverride\n+optional",
           "type": "string"
         },
         "imagePullSecrets": {
@@ -11412,7 +13235,7 @@
           ]
         },
         "preemptionPolicy": {
-          "description": "PreemptionPolicy is the Policy for preempting pods with lower priority.\nOne of Never, PreemptLowerPriority.\nDefaults to PreemptLowerPriority if unset.\n+optional",
+          "description": "PreemptionPolicy is the Policy for preempting pods with lower priority.\nOne of Never, PreemptLowerPriority.\nWhen Priority Admission Controller is enabled, it prevents users from setting\nthis field. The admission controller populates this field from PriorityClassName.\nDefaults to PreemptLowerPriority if unset.\n+optional",
           "type": "string"
         },
         "priority": {
@@ -11481,7 +13304,7 @@
           ]
         },
         "serviceAccount": {
-          "description": "DeprecatedServiceAccount is a deprecated alias for ServiceAccountName.\nDeprecated: Use serviceAccountName instead.\n+k8s:conversion-gen=false\n+optional",
+          "description": "DeprecatedServiceAccount is a deprecated alias for ServiceAccountName.\nDeprecated: Use serviceAccountName instead.\n+optional",
           "type": "string"
         },
         "serviceAccountName": {
@@ -11493,7 +13316,7 @@
           "type": "boolean"
         },
         "shareProcessNamespace": {
-          "description": "Share a single process namespace between all of the containers in a pod.\nWhen this is set containers will be able to view and signal processes from other containers\nin the same pod, and the first process in each container will not be assigned PID 1.\nHostPID and ShareProcessNamespace cannot both be set.\nOptional: Default to false.\n+k8s:conversion-gen=false\n+optional",
+          "description": "Share a single process namespace between all of the containers in a pod.\nWhen this is set containers will be able to view and signal processes from other containers\nin the same pod, and the first process in each container will not be assigned PID 1.\nHostPID and ShareProcessNamespace cannot both be set.\nOptional: Default to false.\n+optional",
           "type": "boolean"
         },
         "subdomain": {
@@ -11505,7 +13328,7 @@
           "type": "integer"
         },
         "tolerations": {
-          "description": "If specified, the pod's tolerations.\n+optional\n+listType=atomic",
+          "description": "If specified, the pod's tolerations.\n+optional\n+listType=atomic\n+k8s:alpha(since: \"1.37\")=+k8s:optional",
           "type": "array",
           "items": {
             "$ref": "#/definitions/V1Toleration"
@@ -11531,7 +13354,7 @@
       "type": "object",
       "properties": {
         "metadata": {
-          "description": "Standard object's metadata.\nMore info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata\n+optional",
+          "description": "Standard object's metadata.\nMore info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata\n+optional\n+k8s:opaqueType",
           "allOf": [
             {
               "$ref": "#/definitions/V1ObjectMeta"
@@ -11552,35 +13375,35 @@
       "type": "object",
       "properties": {
         "apiGroups": {
-          "description": "APIGroups is the name of the APIGroup that contains the resources.  If multiple API groups are specified, any action requested against one of\nthe enumerated resources in any API group will be allowed. \"\" represents the core API group and \"*\" represents all API groups.\n+optional\n+listType=atomic",
+          "description": "apiGroups is the name of the APIGroup that contains the resources.  If multiple API groups are specified, any action requested against one of\nthe enumerated resources in any API group will be allowed. \"\" represents the core API group and \"*\" represents all API groups.\n+optional\n+listType=atomic",
           "type": "array",
           "items": {
             "type": "string"
           }
         },
         "nonResourceURLs": {
-          "description": "NonResourceURLs is a set of partial urls that a user should have access to.  *s are allowed, but only as the full, final step in the path\nSince non-resource URLs are not namespaced, this field is only applicable for ClusterRoles referenced from a ClusterRoleBinding.\nRules can either apply to API resources (such as \"pods\" or \"secrets\") or non-resource URL paths (such as \"/api\"),  but not both.\n+optional\n+listType=atomic",
+          "description": "nonResourceURLs is a set of partial urls that a user should have access to.  *s are allowed, but only as the full, final step in the path\nSince non-resource URLs are not namespaced, this field is only applicable for ClusterRoles referenced from a ClusterRoleBinding.\nRules can either apply to API resources (such as \"pods\" or \"secrets\") or non-resource URL paths (such as \"/api\"),  but not both.\n+optional\n+listType=atomic",
           "type": "array",
           "items": {
             "type": "string"
           }
         },
         "resourceNames": {
-          "description": "ResourceNames is an optional white list of names that the rule applies to.  An empty set means that everything is allowed.\n+optional\n+listType=atomic",
+          "description": "resourceNames is an optional white list of names that the rule applies to.  An empty set means that everything is allowed.\n+optional\n+listType=atomic",
           "type": "array",
           "items": {
             "type": "string"
           }
         },
         "resources": {
-          "description": "Resources is a list of resources this rule applies to. '*' represents all resources.\n+optional\n+listType=atomic",
+          "description": "resources is a list of resources this rule applies to. '*' represents all resources.\n+optional\n+listType=atomic",
           "type": "array",
           "items": {
             "type": "string"
           }
         },
         "verbs": {
-          "description": "Verbs is a list of Verbs that apply to ALL the ResourceKinds contained in this rule. '*' represents all verbs.\n+listType=atomic\n+required\n+k8s:alpha(since: \"1.36\")=+k8s:required",
+          "description": "verbs is a list of Verbs that apply to ALL the ResourceKinds contained in this rule. '*' represents all verbs.\n+listType=atomic\n+required\n+k8s:beta(since: \"1.37\")=+k8s:required",
           "type": "array",
           "items": {
             "type": "string"
@@ -11688,6 +13511,10 @@
       "properties": {
         "defaultMode": {
           "description": "defaultMode are the mode bits used to set permissions on created files by default.\nMust be an octal value between 0000 and 0777 or a decimal value between 0 and 511.\nYAML accepts both octal and decimal values, JSON requires decimal values for mode bits.\nDirectories within the path are not affected by this setting.\nThis might be in conflict with other options that affect the file\nmode, like fsGroup, and the result can be other mode bits set.\n+optional",
+          "type": "integer"
+        },
+        "defaultUser": {
+          "description": "defaultUser is Optional: The owner UID of the created files by default.\nThe defaultUser field is only used as a fallback when the item-level user field is unset.\n(Alpha) This field requires the AtomicWriteVolumeUserFields feature gate to be enabled.\n+featureGate=AtomicWriteVolumeUserFields\n+optional",
           "type": "integer"
         },
         "sources": {
@@ -11945,7 +13772,7 @@
           }
         },
         "type": {
-          "description": "Used to facilitate programmatic handling of secret data.\nMore info: https://kubernetes.io/docs/concepts/configuration/secret/#secret-types\n+optional",
+          "description": "Used to facilitate programmatic handling of secret data.\nMore info: https://kubernetes.io/docs/concepts/configuration/secret/#secret-types\n+optional\n+k8s:optional\n+k8s:alpha(since: \"1.37\")=+k8s:immutable",
           "type": "string"
         }
       }
@@ -12033,6 +13860,10 @@
       "properties": {
         "defaultMode": {
           "description": "defaultMode is Optional: mode bits used to set permissions on created files by default.\nMust be an octal value between 0000 and 0777 or a decimal value between 0 and 511.\nYAML accepts both octal and decimal values, JSON requires decimal values\nfor mode bits. Defaults to 0644.\nDirectories within the path are not affected by this setting.\nThis might be in conflict with other options that affect the file\nmode, like fsGroup, and the result can be other mode bits set.\n+optional",
+          "type": "integer"
+        },
+        "defaultUser": {
+          "description": "defaultUser is Optional: The owner UID of the created files by default.\nThe defaultUser field is only used as a fallback when the item-level user field is unset.\n(Alpha) This field requires the AtomicWriteVolumeUserFields feature gate to be enabled.\n+featureGate=AtomicWriteVolumeUserFields\n+optional",
           "type": "integer"
         },
         "items": {
@@ -12139,6 +13970,10 @@
         "path": {
           "description": "path is the path relative to the mount point of the file to project the\ntoken into.",
           "type": "string"
+        },
+        "user": {
+          "description": "user is Optional: The owner UID of the created file.\nIf specified, the item-level user field takes precedence over defaultUser.\n(Alpha) This field requires the AtomicWriteVolumeUserFields feature gate to be enabled.\n+featureGate=AtomicWriteVolumeUserFields\n+optional",
+          "type": "integer"
         }
       }
     },
@@ -12247,7 +14082,7 @@
           "type": "string"
         },
         "key": {
-          "description": "Key is the taint key that the toleration applies to. Empty means match all taint keys.\nIf the key is empty, operator must be Exists; this combination means to match all values and all keys.\n+optional",
+          "description": "Key is the taint key that the toleration applies to. Empty means match all taint keys.\nIf the key is empty, operator must be Exists; this combination means to match all values and all keys.\n+optional\n+k8s:alpha(since: \"1.37\")=+k8s:optional\n+k8s:alpha(since: \"1.37\")=+k8s:format=k8s-label-key",
           "type": "string"
         },
         "operator": {
@@ -12611,8 +14446,15 @@
     "V1VolumeMount": {
       "type": "object",
       "properties": {
+        "bindMountOptions": {
+          "description": "bindMountOptions is the list of additional bind mount options to apply when\nmounting this volume into the container. Allowed values are noexec,\nnodev, and nosuid. These are Linux mount options and have no effect on\nWindows nodes.\nThis field is not supported with image volumes.\nThis is an alpha field and requires enabling the VolumeBindMountOptions feature gate.\n+featureGate=VolumeBindMountOptions\n+optional\n+listType=set",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
         "mountPath": {
-          "description": "Path within the container at which the volume should be mounted.  Must\nnot contain ':'.",
+          "description": "Path within the container at which the volume should be mounted.",
           "type": "string"
         },
         "mountPropagation": {
@@ -12773,7 +14615,99 @@
           "type": "string"
         }
       }
-    }
+    },
+    "v1alpha3.TopologyConstraint": {
+      "type": "object",
+      "properties": {
+        "key": {
+          "description": "key specifies the key of the node label representing the topology domain.\nAll pods within the PodGroup must be colocated within the same domain instance.\nDifferent PodGroups can land on different domain instances even if they derive from the same PodGroupTemplate.\nExamples: \"topology.kubernetes.io/rack\"\n\n+required\n+k8s:required\n+k8s:format=k8s-label-key",
+          "type": "string"
+        }
+      }
+    },
+    "v1alpha3.WorkloadPodGroupAllDisruptionMode": {},
+    "v1alpha3.WorkloadPodGroupBasicSchedulingPolicy": {},
+    "v1alpha3.WorkloadPodGroupDisruptionMode": {
+      "type": "object",
+      "properties": {
+        "all": {
+          "description": "all specifies that all pods in the group must be disrupted together.\n\n+optional\n+k8s:optional\n+k8s:unionMember",
+          "allOf": [
+            {
+              "$ref": "#/definitions/v1alpha3.WorkloadPodGroupAllDisruptionMode"
+            }
+          ]
+        },
+        "single": {
+          "description": "single specifies that pods can be disrupted independently from each other.\n\n+optional\n+k8s:optional\n+k8s:unionMember",
+          "allOf": [
+            {
+              "$ref": "#/definitions/v1alpha3.WorkloadPodGroupSingleDisruptionMode"
+            }
+          ]
+        }
+      }
+    },
+    "v1alpha3.WorkloadPodGroupGangSchedulingPolicy": {
+      "type": "object",
+      "properties": {
+        "minCount": {
+          "description": "minCount is the minimum number of pods that must be scheduled\nat the same time for the scheduler to admit the entire group.\nThis field is optional. If it is not specified, the controller\nshould inject a context-specific sane default (e.g.,\nparallelism for a Job).\nIf set, it must be a positive integer.\n\n+optional\n+k8s:optional\n+k8s:minimum=1",
+          "type": "integer"
+        }
+      }
+    },
+    "v1alpha3.WorkloadPodGroupResourceClaim": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "description": "name uniquely identifies this resource claim inside the group.\nThis field is required. It must be a DNS_LABEL.\n\n+required\n+k8s:required\n+k8s:format=k8s-short-name",
+          "type": "string"
+        },
+        "resourceClaimName": {
+          "description": "resourceClaimName is the name of a ResourceClaim object in the same\nnamespace.\nThis field is optional. If it is not specified, no resource claim\nis used. If set, it must be a DNS subdomain.\n\n+optional\n+k8s:optional\n+k8s:unionMember\n+k8s:format=k8s-long-name",
+          "type": "string"
+        },
+        "resourceClaimTemplateName": {
+          "description": "resourceClaimTemplateName is the name of a ResourceClaimTemplate\nobject in the same namespace.\nThis field is optional. If it is not specified, no resource claim\ntemplate is used. If set, it must be a DNS subdomain.\n\n+optional\n+k8s:optional\n+k8s:unionMember\n+k8s:format=k8s-long-name",
+          "type": "string"
+        }
+      }
+    },
+    "v1alpha3.WorkloadPodGroupSchedulingConstraints": {
+      "type": "object",
+      "properties": {
+        "topology": {
+          "description": "topology specifies desired topological placements for all pods\nwithin the pod group.\nIf unset, no topology placement is requested.\n\n+optional\n+k8s:optional\n+k8s:maxItems=1\n+listType=atomic\n+k8s:listType=atomic",
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/v1alpha3.TopologyConstraint"
+          }
+        }
+      }
+    },
+    "v1alpha3.WorkloadPodGroupSchedulingPolicy": {
+      "type": "object",
+      "properties": {
+        "basic": {
+          "description": "basic specifies that standard, pod-by-pod Kubernetes scheduling\nbehavior should be used.\n\n+optional\n+k8s:optional\n+k8s:unionMember",
+          "allOf": [
+            {
+              "$ref": "#/definitions/v1alpha3.WorkloadPodGroupBasicSchedulingPolicy"
+            }
+          ]
+        },
+        "gang": {
+          "description": "gang specifies all-or-nothing scheduling semantics.\n\n+optional\n+k8s:optional\n+k8s:unionMember",
+          "allOf": [
+            {
+              "$ref": "#/definitions/v1alpha3.WorkloadPodGroupGangSchedulingPolicy"
+            }
+          ]
+        }
+      }
+    },
+    "v1alpha3.WorkloadPodGroupSingleDisruptionMode": {}
   },
   "securityDefinitions": {
     "BearerAuth": {

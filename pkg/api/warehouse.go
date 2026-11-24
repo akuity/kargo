@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"slices"
 	"strings"
-	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
@@ -54,13 +53,7 @@ func RefreshWarehouse(
 			Name:      namespacedName.Name,
 		},
 	}
-	if err := patchAnnotation(
-		ctx,
-		c,
-		warehouse,
-		kargoapi.AnnotationKeyRefresh,
-		time.Now().Format(time.RFC3339),
-	); err != nil {
+	if err := RefreshObject(ctx, c, warehouse); err != nil {
 		return nil, fmt.Errorf("refresh: %w", err)
 	}
 	return warehouse, nil
@@ -225,10 +218,10 @@ func ListFreightFromWarehouse(
 			}
 		}
 
-		// Track set of Stages that have passed the verification soak time
-		// for the Freight.
+		// Track set of VerifiedIn Stages in which the Freight has passed the
+		// verification soak time.
 		verifiedStages := sets.New[string]()
-		for stage := range f.Status.VerifiedIn {
+		for _, stage := range opts.VerifiedIn {
 			if f.HasSoakedIn(stage, opts.RequiredSoakTime) {
 				verifiedStages.Insert(stage)
 			}

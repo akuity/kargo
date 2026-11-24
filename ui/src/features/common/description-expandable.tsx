@@ -11,7 +11,7 @@ export function descriptionExpandable<T extends HasDescriptionAnnotation>(): Exp
       return !!getDescription(record);
     },
     expandedRowRender: (record: T) => (
-      <div className='font-light text-xs text-gray-500 flex items-center'>
+      <div className='font-light text-xs text-gray-500 dark:text-neutral-400 flex items-center'>
         <FontAwesomeIcon icon={faFileLines} className='mr-3' />
         {getDescription(record)}
       </div>

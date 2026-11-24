@@ -12,13 +12,14 @@ import (
 	"github.com/akuity/kargo/pkg/credentials"
 	"github.com/akuity/kargo/pkg/gitprovider"
 	"github.com/akuity/kargo/pkg/promotion"
-	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
+	"github.com/akuity/kargo/pkg/x/promotion/stepconfig"
 
-	_ "github.com/akuity/kargo/pkg/gitprovider/azure"           // Azure provider registration
-	_ "github.com/akuity/kargo/pkg/gitprovider/bitbucket/cloud" // Bitbucket Cloud provider registration
-	_ "github.com/akuity/kargo/pkg/gitprovider/gitea"           // Gitea provider registration
-	_ "github.com/akuity/kargo/pkg/gitprovider/github"          // GitHub provider registration
-	_ "github.com/akuity/kargo/pkg/gitprovider/gitlab"          // GitLab provider registration
+	_ "github.com/akuity/kargo/pkg/gitprovider/azure"                // Azure provider registration
+	_ "github.com/akuity/kargo/pkg/gitprovider/bitbucket/cloud"      // Bitbucket Cloud provider registration
+	_ "github.com/akuity/kargo/pkg/gitprovider/bitbucket/datacenter" // Bitbucket Data Center provider registration
+	_ "github.com/akuity/kargo/pkg/gitprovider/gitea"                // Gitea provider registration
+	_ "github.com/akuity/kargo/pkg/gitprovider/github"               // GitHub provider registration
+	_ "github.com/akuity/kargo/pkg/gitprovider/gitlab"               // GitLab provider registration
 )
 
 const stepKindGitWaitForPR = "git-wait-for-pr"
@@ -73,15 +74,15 @@ func (g *gitPRWaiter) Run(
 }
 
 // convert validates the configuration against a JSON schema and converts it
-// into a builtin.GitWaitForPRConfig struct.
-func (g *gitPRWaiter) convert(cfg promotion.Config) (builtin.GitWaitForPRConfig, error) {
-	return validateAndConvert[builtin.GitWaitForPRConfig](g.schemaLoader, cfg, stepKindGitWaitForPR)
+// into a stepconfig.GitWaitForPRConfig struct.
+func (g *gitPRWaiter) convert(cfg promotion.Config) (stepconfig.GitWaitForPRConfig, error) {
+	return validateAndConvert[stepconfig.GitWaitForPRConfig](g.schemaLoader, cfg, stepKindGitWaitForPR)
 }
 
 func (g *gitPRWaiter) run(
 	ctx context.Context,
 	stepCtx *promotion.StepContext,
-	cfg builtin.GitWaitForPRConfig,
+	cfg stepconfig.GitWaitForPRConfig,
 ) (promotion.StepResult, error) {
 	var repoCreds *git.RepoCredentials
 	creds, err := g.credsDB.Get(
@@ -96,9 +97,8 @@ func (g *gitPRWaiter) run(
 	}
 	if creds != nil {
 		repoCreds = &git.RepoCredentials{
-			Username:      creds.Username,
-			Password:      creds.Password,
-			SSHPrivateKey: creds.SSHPrivateKey,
+			Username: creds.Username,
+			Password: creds.Password,
 		}
 	}
 

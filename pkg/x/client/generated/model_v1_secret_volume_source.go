@@ -21,6 +21,8 @@ var _ MappedNullable = &V1SecretVolumeSource{}
 type V1SecretVolumeSource struct {
 	// defaultMode is Optional: mode bits used to set permissions on created files by default. Must be an octal value between 0000 and 0777 or a decimal value between 0 and 511. YAML accepts both octal and decimal values, JSON requires decimal values for mode bits. Defaults to 0644. Directories within the path are not affected by this setting. This might be in conflict with other options that affect the file mode, like fsGroup, and the result can be other mode bits set. +optional
 	DefaultMode *int32 `json:"defaultMode,omitempty"`
+	// defaultUser is Optional: The owner UID of the created files by default. The defaultUser field is only used as a fallback when the item-level user field is unset. (Alpha) This field requires the AtomicWriteVolumeUserFields feature gate to be enabled. +featureGate=AtomicWriteVolumeUserFields +optional
+	DefaultUser *int32 `json:"defaultUser,omitempty"`
 	// items If unspecified, each key-value pair in the Data field of the referenced Secret will be projected into the volume as a file whose name is the key and content is the value. If specified, the listed keys will be projected into the specified paths, and unlisted keys will not be present. If a key is specified which is not present in the Secret, the volume setup will error unless it is marked optional. Paths must be relative and may not contain the '..' path or start with '..'. +optional +listType=atomic
 	Items []V1KeyToPath `json:"items,omitempty"`
 	// optional field specify whether the Secret or its keys must be defined +optional
@@ -76,6 +78,38 @@ func (o *V1SecretVolumeSource) HasDefaultMode() bool {
 // SetDefaultMode gets a reference to the given int32 and assigns it to the DefaultMode field.
 func (o *V1SecretVolumeSource) SetDefaultMode(v int32) {
 	o.DefaultMode = &v
+}
+
+// GetDefaultUser returns the DefaultUser field value if set, zero value otherwise.
+func (o *V1SecretVolumeSource) GetDefaultUser() int32 {
+	if o == nil || IsNil(o.DefaultUser) {
+		var ret int32
+		return ret
+	}
+	return *o.DefaultUser
+}
+
+// GetDefaultUserOk returns a tuple with the DefaultUser field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *V1SecretVolumeSource) GetDefaultUserOk() (*int32, bool) {
+	if o == nil || IsNil(o.DefaultUser) {
+		return nil, false
+	}
+	return o.DefaultUser, true
+}
+
+// HasDefaultUser returns a boolean if a field has been set.
+func (o *V1SecretVolumeSource) HasDefaultUser() bool {
+	if o != nil && !IsNil(o.DefaultUser) {
+		return true
+	}
+
+	return false
+}
+
+// SetDefaultUser gets a reference to the given int32 and assigns it to the DefaultUser field.
+func (o *V1SecretVolumeSource) SetDefaultUser(v int32) {
+	o.DefaultUser = &v
 }
 
 // GetItems returns the Items field value if set, zero value otherwise.
@@ -186,6 +220,9 @@ func (o V1SecretVolumeSource) ToMap() (map[string]interface{}, error) {
 	toSerialize := map[string]interface{}{}
 	if !IsNil(o.DefaultMode) {
 		toSerialize["defaultMode"] = o.DefaultMode
+	}
+	if !IsNil(o.DefaultUser) {
+		toSerialize["defaultUser"] = o.DefaultUser
 	}
 	if !IsNil(o.Items) {
 		toSerialize["items"] = o.Items

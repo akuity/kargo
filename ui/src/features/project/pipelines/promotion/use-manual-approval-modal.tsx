@@ -26,7 +26,7 @@ export const useManualApprovalModal = () => {
           <Alert
             banner
             type='error'
-            message={
+            title={
               <>
                 The selected Freight does not meet criteria for Promotion to this Stage, such as
                 successful Promotion to and verification in upstream Stages. Manually approving the

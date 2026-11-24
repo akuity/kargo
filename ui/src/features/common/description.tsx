@@ -18,7 +18,12 @@ export function Description<T extends HasDescriptionAnnotation>({
   return (
     <Spin spinning={loading}>
       {description && (
-        <div className={classNames('text-sm text-gray-500 flex items-center', className)}>
+        <div
+          className={classNames(
+            'text-sm text-gray-500 dark:text-neutral-400 flex items-center',
+            className
+          )}
+        >
           <FontAwesomeIcon icon={faFileLines} className='mr-2' />
           {description}
         </div>

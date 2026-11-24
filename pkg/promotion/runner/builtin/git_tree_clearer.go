@@ -4,13 +4,12 @@ import (
 	"context"
 	"fmt"
 
-	securejoin "github.com/cyphar/filepath-securejoin"
 	"github.com/xeipuuv/gojsonschema"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/controller/git"
 	"github.com/akuity/kargo/pkg/promotion"
-	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
+	"github.com/akuity/kargo/pkg/x/promotion/stepconfig"
 )
 
 const stepKindGitClear = "git-clear"
@@ -51,22 +50,19 @@ func (g *gitTreeClearer) Run(
 }
 
 // convert validates gitTreeClearer configuration against a JSON schema and
-// converts it into a builtin.GitClearConfig struct.
-func (g *gitTreeClearer) convert(cfg promotion.Config) (builtin.GitClearConfig, error) {
-	return validateAndConvert[builtin.GitClearConfig](g.schemaLoader, cfg, stepKindGitClear)
+// converts it into a stepconfig.GitClearConfig struct.
+func (g *gitTreeClearer) convert(cfg promotion.Config) (stepconfig.GitClearConfig, error) {
+	return validateAndConvert[stepconfig.GitClearConfig](g.schemaLoader, cfg, stepKindGitClear)
 }
 
 func (g *gitTreeClearer) run(
 	ctx context.Context,
 	stepCtx *promotion.StepContext,
-	cfg builtin.GitClearConfig,
+	cfg stepconfig.GitClearConfig,
 ) (promotion.StepResult, error) {
-	p, err := securejoin.SecureJoin(stepCtx.WorkDir, cfg.Path)
+	p, err := promotion.ExternalPath(stepCtx, cfg.Path)
 	if err != nil {
-		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, fmt.Errorf(
-			"error joining path %s with work dir %s: %w",
-			cfg.Path, stepCtx.WorkDir, err,
-		)
+		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, err
 	}
 	workTree, err := git.LoadWorkTree(ctx, p, nil)
 	if err != nil {

@@ -5,11 +5,11 @@
  * REST API for Kargo
  * OpenAPI spec version: v1alpha1
  */
+import type { RolloutsAnalysisTemplateRef } from './rolloutsAnalysisTemplateRef';
 import type { RolloutsArgument } from './rolloutsArgument';
 import type { RolloutsDryRun } from './rolloutsDryRun';
 import type { RolloutsMeasurementRetention } from './rolloutsMeasurementRetention';
 import type { RolloutsMetric } from './rolloutsMetric';
-import type { RolloutsAnalysisTemplateRef } from './rolloutsAnalysisTemplateRef';
 
 export interface RolloutsAnalysisTemplateSpec {
   args?: RolloutsArgument[];

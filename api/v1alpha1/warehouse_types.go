@@ -425,10 +425,8 @@ type DiscoveredArtifacts struct {
 type GitDiscoveryResult struct {
 	// RepoURL is the repository URL of the GitSubscription.
 	//
-	// TODO(v1.13.0): Remove SSH/SCP-style URL support from this pattern.
-	//
 	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:Pattern=`(?:^(ssh|https?)://(?:([\w-]+)(:(.+))?@)?([\w-]+(?:\.[\w-]+)*)(?::(\d{1,5}))?(/.*)$)|(?:^([\w-]+)@([\w+]+(?:\.[\w-]+)*):(/?.*))`
+	// +kubebuilder:validation:Pattern=`^https?://(?:([\w-]+)(:(.+))?@)?([\w-]+(?:\.[\w-]+)*)(?::(\d{1,5}))?(/.*)$`
 	// +akuity:test-kubebuilder-pattern=GitRepoURLPattern
 	RepoURL string `json:"repoURL"`
 	// Commits is a list of commits discovered by the Warehouse for the

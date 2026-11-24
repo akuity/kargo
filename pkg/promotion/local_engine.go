@@ -7,11 +7,18 @@ import (
 	"regexp"
 
 	gocache "github.com/patrickmn/go-cache"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/trace"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/credentials"
+	"github.com/akuity/kargo/pkg/telemetry"
 )
+
+// tracer is the instrumentation scope under which this package's spans are
+// recorded.
+var tracer = otel.Tracer("github.com/akuity/kargo/pkg/promotion")
 
 // ReservedStepAliasRegex is a regular expression that matches step aliases that
 // are reserved for internal use.
@@ -70,6 +77,21 @@ func (e *LocalEngine) Promote(
 	promoCtx Context,
 	steps []Step,
 ) (_ Result, err error) {
+	ctx, span := telemetry.StartSpan(
+		ctx,
+		tracer,
+		"Promote",
+		trace.WithAttributes(
+			telemetry.ProjectKey.String(promoCtx.Project),
+			telemetry.StageKey.String(promoCtx.Stage),
+			telemetry.PromotionKey.String(promoCtx.Promotion),
+		),
+	)
+	defer func() {
+		telemetry.RecordError(span, err)
+		span.End()
+	}()
+
 	if promoCtx.WorkDir == "" {
 		// If no working directory is provided, we create a temporary one.
 		if promoCtx.WorkDir, err = e.setupWorkDir(promoCtx.WorkDir); err != nil {

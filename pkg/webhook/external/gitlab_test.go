@@ -388,47 +388,6 @@ func TestGitLabHandler(t *testing.T) {
 			},
 		},
 		{
-			name:       "warehouse refreshed (push event, ssh)",
-			secretData: testSecretData,
-			client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
-				&kargoapi.Warehouse{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: testProjectName,
-						Name:      "fake-warehouse",
-					},
-					Spec: kargoapi.WarehouseSpec{
-						InternalSubscriptions: []kargoapi.RepoSubscription{{
-							Git: &kargoapi.GitSubscription{
-								RepoURL: "git@gitlab.com:example/repo",
-								Branch:  "main",
-							},
-						}},
-					},
-				},
-			).WithIndex(
-				&kargoapi.Warehouse{},
-				indexer.WarehousesBySubscribedURLsField,
-				indexer.WarehousesBySubscribedURLs,
-			).Build(),
-			req: func() *http.Request {
-				bodyBuf := bytes.NewBuffer([]byte(gitlabPushEventRequestBody))
-				req := httptest.NewRequest(
-					http.MethodPost,
-					testURL,
-					bodyBuf,
-				)
-				req.Header.Set(gitlabTokenHeader, testToken)
-				req.Header.Set(gitlabEventHeader, string(gl.EventTypePush))
-				return req
-			},
-			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
-				require.Equal(t, http.StatusOK, rr.Code)
-				require.JSONEq(
-					t, `{"msg":"refreshed 1 warehouse(s)"}`, rr.Body.String(),
-				)
-			},
-		},
-		{
 			name: "no ref match (tag event)",
 			// This event would prompt the Warehouse to refresh if not for the ref in
 			// the event being for a tag falling outside the subscription's semver
@@ -486,48 +445,6 @@ func TestGitLabHandler(t *testing.T) {
 						InternalSubscriptions: []kargoapi.RepoSubscription{{
 							Git: &kargoapi.GitSubscription{
 								RepoURL:                 "https://gitlab.com/example/repo",
-								CommitSelectionStrategy: kargoapi.CommitSelectionStrategySemVer,
-								SemverConstraint:        "^1.0.0",
-							},
-						}},
-					},
-				},
-			).WithIndex(
-				&kargoapi.Warehouse{},
-				indexer.WarehousesBySubscribedURLsField,
-				indexer.WarehousesBySubscribedURLs,
-			).Build(),
-			req: func() *http.Request {
-				bodyBuf := bytes.NewBuffer([]byte(gitlabTagPushEventRequestBody))
-				req := httptest.NewRequest(
-					http.MethodPost,
-					testURL,
-					bodyBuf,
-				)
-				req.Header.Set(gitlabTokenHeader, testToken)
-				req.Header.Set(gitlabEventHeader, string(gl.EventTypeTagPush))
-				return req
-			},
-			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
-				require.Equal(t, http.StatusOK, rr.Code)
-				require.JSONEq(
-					t, `{"msg":"refreshed 1 warehouse(s)"}`, rr.Body.String(),
-				)
-			},
-		},
-		{
-			name:       "warehouse refreshed (tag event, ssh)",
-			secretData: testSecretData,
-			client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
-				&kargoapi.Warehouse{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: testProjectName,
-						Name:      "fake-warehouse",
-					},
-					Spec: kargoapi.WarehouseSpec{
-						InternalSubscriptions: []kargoapi.RepoSubscription{{
-							Git: &kargoapi.GitSubscription{
-								RepoURL:                 "git@gitlab.com:example/repo",
 								CommitSelectionStrategy: kargoapi.CommitSelectionStrategySemVer,
 								SemverConstraint:        "^1.0.0",
 							},

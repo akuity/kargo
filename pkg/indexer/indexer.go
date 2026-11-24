@@ -32,8 +32,10 @@ const (
 	PromotionsByStageAndFreightField = "stageAndFreight"
 	PromotionsByStageField           = "stage"
 	PromotionsByTerminalField        = "terminal"
+	PromotionsByNonTerminalField     = "nonTerminal"
 
 	PromotionRequestsByStageAndFreightField = "stageAndFreight"
+	PromotionRequestsByStageField           = "stage"
 
 	RunningPromotionsByArgoCDApplicationsField = "applications"
 	RunningPromotionsByArgoCDSelectorsField    = "argoCDSelectors"
@@ -123,6 +125,16 @@ func PromotionsByTerminal(obj client.Object) []string {
 	return []string{strconv.FormatBool(promo.Status.Phase.IsTerminal())}
 }
 
+// PromotionsByNonTerminal returns a client.IndexerFunc that indexes Promotions by
+// whether or not that are in a non-terminal phase.
+func PromotionsByNonTerminal(obj client.Object) []string {
+	promo, ok := obj.(*kargoapi.Promotion)
+	if !ok {
+		return nil
+	}
+	return []string{strconv.FormatBool(!promo.Status.Phase.IsTerminal())}
+}
+
 // RunningPromotionsByArgoCDApplications returns a client.IndexerFunc that
 // indexes running Promotions by the Argo CD Applications they are associated
 // with.
@@ -208,7 +220,7 @@ func RunningPromotionsByArgoCDApplications(
 				Config: rawConfig,
 			}
 
-			evaluator := promotion.NewStepEvaluator(cl, nil)
+			evaluator := promotion.NewStepEvaluator(cl, nil, nil)
 
 			// As step-level variables are allowed to reference to output, we
 			// need to provide the state.
@@ -445,6 +457,16 @@ func PromotionRequestsByStageAndFreight(obj client.Object) []string {
 	}
 }
 
+// PromotionRequestsByStage is a client.IndexerFunc that indexes
+// PromotionRequests by the Stage on whose behalf they promote Freight.
+func PromotionRequestsByStage(obj client.Object) []string {
+	promotionRequest, ok := obj.(*kargoapi.PromotionRequest)
+	if !ok {
+		return nil
+	}
+	return []string{promotionRequest.Spec.Stage}
+}
+
 // StageAndFreightKey returns a key that uniquely identifies a Stage and
 // Freight.
 func StageAndFreightKey(stage, freight string) string {
@@ -585,37 +607,18 @@ func ServiceAccountsByOIDCClaims(obj client.Object) []string {
 		return nil
 	}
 
-	refinedClaimValues := []string{}
-	for annotationKey, annotationValue := range sa.GetAnnotations() {
-		switch {
-		case strings.HasPrefix(annotationKey, rbacapi.AnnotationKeyOIDCClaimNamePrefix):
-			rawClaimName := strings.TrimPrefix(annotationKey, rbacapi.AnnotationKeyOIDCClaimNamePrefix)
-			rawClaimValue := strings.TrimSpace(annotationValue)
-			if rawClaimValue == "" {
-				continue
-			}
-			for e := range strings.SplitSeq(rawClaimValue, ",") {
-				if claimValue := strings.TrimSpace(e); claimValue != "" {
-					refinedClaimValues = append(refinedClaimValues, FormatClaim(rawClaimName, claimValue))
-				}
-			}
-		case annotationKey == rbacapi.AnnotationKeyOIDCClaims:
-			claims := make(map[string][]string)
-			if err := json.Unmarshal([]byte(annotationValue), &claims); err != nil {
-				continue
-			}
-			for name, values := range claims {
-				for _, v := range values {
-					refinedClaimValues = append(refinedClaimValues,
-						FormatClaim(name, strings.TrimSpace(v)),
-					)
-				}
-			}
-		}
+	claims, err := rbacapi.OIDCClaimsFromAnnotationValues(sa.GetAnnotations())
+	if err != nil {
+		return nil
 	}
 
-	if len(refinedClaimValues) == 0 {
-		return nil
+	var refinedClaimValues []string
+	for name, values := range claims {
+		for _, v := range values {
+			if claimValue := strings.TrimSpace(v); claimValue != "" {
+				refinedClaimValues = append(refinedClaimValues, FormatClaim(name, claimValue))
+			}
+		}
 	}
 	return refinedClaimValues
 }

@@ -51,11 +51,32 @@ Enforcement of Argo CD
 was improved substantially in Argo CD v2.11.0. If you wish for the `argocd-update`
 step to honor sync windows, you must use Argo CD v2.11.0 or later.
 
-_Additionally, it is recommended that if a promotion process is expected to
+Additionally, it is recommended that if a promotion process is expected to
 sometimes encounter an active deny window, the `argocd-update` step should be
 configured with a timeout that is at least as long as the longest expected deny
 window. The step's default timeout of five minutes can be overridden using the
 [`retry.timeout`](../15-promotion-templates.md#step-retries) field.
+
+:::
+
+:::note
+
+Argo CD evaluates sync windows differently for manual and automated syncs, and
+the `argocd-update` step initiates the sync according to how the `Promotion` was
+triggered:
+
+- A `Promotion` created by a user is initiated as a **manual** sync, attributed
+  to that user. This includes a `Promotion` created by an automated process
+  acting under its own credentials, such as a CI job.
+
+- An auto-promotion, having no user behind it, is initiated as an **automated**
+  sync, attributed to `kargo-controller`.
+
+The distinction matters for deny windows configured with `manualSync: true`,
+which permit manual syncs even while the window is active. Under such a window,
+auto-promotions are blocked, but a user-initiated `Promotion` will sync through.
+To block promotions of every kind for the duration of a deny window, set
+`manualSync: false`.
 
 :::
 

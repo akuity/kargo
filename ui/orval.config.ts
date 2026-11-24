@@ -12,7 +12,7 @@ export default defineConfig({
       client: 'react-query',
       httpClient: 'fetch',
       clean: true,
-      prettier: true,
+      formatter: 'prettier',
       override: {
         // Same as orval's default header, minus the orval version, so that
         // upgrading orval doesn't touch every generated file.
@@ -23,13 +23,21 @@ export default defineConfig({
           ...(info.description ? [info.description] : []),
           ...(info.version ? [`OpenAPI spec version: ${info.version}`] : [])
         ],
+        // Array query params must be repeated keys, not comma-joined. See the
+        // serializer for why the spec cannot be relied on here.
+        paramsSerializer: {
+          path: './src/lib/api/params-serializer.ts',
+          name: 'serializeParams'
+        },
         mutator: {
           path: './src/lib/api/custom-fetch.ts',
           name: 'customFetch'
         },
         query: {
-          useQuery: true,
-          useMutation: true,
+          // useQuery/useMutation are deliberately unset. Since orval 8 an
+          // explicit value here applies to *every* operation, replacing the
+          // per-verb default (GET -> query, everything else -> mutation),
+          // which is exactly the behavior we want.
           signal: false
         }
       }

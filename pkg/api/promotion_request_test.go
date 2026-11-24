@@ -1,14 +1,15 @@
 package api
 
 import (
+	"context"
+	"fmt"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"k8s.io/apimachinery/pkg/util/intstr"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 )
@@ -143,7 +144,136 @@ func TestGenerateChildPromotionName(t *testing.T) {
 	}
 }
 
-func TestNewPromotionRequest(t *testing.T) {
+func TestComparePromotionRequestPhase(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name     string
+		a        kargoapi.PromotionRequestPhase
+		b        kargoapi.PromotionRequestPhase
+		expected int
+	}{
+		{
+			name:     "Running before Pending",
+			a:        kargoapi.PromotionRequestPhaseRunning,
+			b:        kargoapi.PromotionRequestPhasePending,
+			expected: -1,
+		},
+		{
+			name:     "Pending after Running",
+			a:        kargoapi.PromotionRequestPhasePending,
+			b:        kargoapi.PromotionRequestPhaseRunning,
+			expected: 1,
+		},
+		{
+			name:     "non-terminal before terminal",
+			a:        kargoapi.PromotionRequestPhasePending,
+			b:        kargoapi.PromotionRequestPhaseSucceeded,
+			expected: -1,
+		},
+		{
+			name:     "terminal after non-terminal",
+			a:        kargoapi.PromotionRequestPhaseSucceeded,
+			b:        kargoapi.PromotionRequestPhasePending,
+			expected: 1,
+		},
+		{
+			name: "a PromotionRequest without a phase yet is non-terminal",
+			a:    "",
+			b:    kargoapi.PromotionRequestPhaseErrored,
+			// The reconciler has yet to record a phase, so the request still has
+			// work ahead of it.
+			expected: -1,
+		},
+		{
+			name:     "terminal phases are equal to one another",
+			a:        kargoapi.PromotionRequestPhaseSucceeded,
+			b:        kargoapi.PromotionRequestPhaseFailed,
+			expected: 0,
+		},
+		{
+			name:     "identical phases",
+			a:        kargoapi.PromotionRequestPhaseRunning,
+			b:        kargoapi.PromotionRequestPhaseRunning,
+			expected: 0,
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+			require.Equal(
+				t,
+				testCase.expected,
+				ComparePromotionRequestPhase(testCase.a, testCase.b),
+			)
+		})
+	}
+}
+
+func TestComparePromotionRequestByPhaseAndCreationTime(t *testing.T) {
+	t.Parallel()
+
+	// Generated in this order, so the ULID in older precedes the ULID in newer.
+	older := GeneratePromotionRequestName("test-stage", "fake-freight")
+	newer := GeneratePromotionRequestName("test-stage", "fake-freight")
+
+	request := func(name string, phase kargoapi.PromotionRequestPhase) kargoapi.PromotionRequest {
+		return kargoapi.PromotionRequest{
+			ObjectMeta: metav1.ObjectMeta{Name: name},
+			Status:     kargoapi.PromotionRequestStatus{Phase: phase},
+		}
+	}
+
+	testCases := []struct {
+		name       string
+		a          kargoapi.PromotionRequest
+		b          kargoapi.PromotionRequest
+		assertions func(*testing.T, int)
+	}{
+		{
+			name: "phase is compared before name",
+			// The Running request is the newer of the two, so name order alone
+			// would put the other one first.
+			a: request(newer, kargoapi.PromotionRequestPhaseRunning),
+			b: request(older, kargoapi.PromotionRequestPhasePending),
+			assertions: func(t *testing.T, result int) {
+				require.Negative(t, result)
+			},
+		},
+		{
+			name: "older of two non-terminal requests comes first",
+			a:    request(older, kargoapi.PromotionRequestPhasePending),
+			b:    request(newer, kargoapi.PromotionRequestPhasePending),
+			assertions: func(t *testing.T, result int) {
+				require.Negative(t, result)
+			},
+		},
+		{
+			name: "newer of two terminal requests comes first",
+			a:    request(newer, kargoapi.PromotionRequestPhaseSucceeded),
+			b:    request(older, kargoapi.PromotionRequestPhaseFailed),
+			assertions: func(t *testing.T, result int) {
+				require.Negative(t, result)
+			},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+			testCase.assertions(
+				t,
+				ComparePromotionRequestByPhaseAndCreationTime(testCase.a, testCase.b),
+			)
+			// The comparator must be antisymmetric, or slices.SortFunc gives no
+			// guarantees about the order it produces.
+			forward := ComparePromotionRequestByPhaseAndCreationTime(testCase.a, testCase.b)
+			reverse := ComparePromotionRequestByPhaseAndCreationTime(testCase.b, testCase.a)
+			require.Equal(t, forward, -reverse)
+		})
+	}
+}
+
+func TestPromotionRequestBuilder(t *testing.T) {
 	t.Parallel()
 
 	const (
@@ -151,9 +281,6 @@ func TestNewPromotionRequest(t *testing.T) {
 		stage   = "fake-stage"
 		freight = "abcdef1234567890"
 	)
-
-	scheme := runtime.NewScheme()
-	require.NoError(t, kargoapi.AddToScheme(scheme))
 
 	testStage := &kargoapi.Stage{
 		ObjectMeta: metav1.ObjectMeta{
@@ -171,35 +298,40 @@ func TestNewPromotionRequest(t *testing.T) {
 		},
 	}
 
-	newTarget := func(name string, labels map[string]string) *kargoapi.Target {
-		return &kargoapi.Target{
+	// Targets must carry the Stage's selector label so that they survive
+	// FilterTargetsForStage, which projectTargetsFn results are run through.
+	newTarget := func(name string) kargoapi.Target {
+		return kargoapi.Target{
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace: project,
 				Name:      name,
-				Labels:    labels,
+				Labels:    map[string]string{"region": "us"},
 			},
 		}
 	}
+	usEast := newTarget("us-east")
+	usWest := newTarget("us-west")
+	usNorth := newTarget("us-north")
+	usSouth := newTarget("us-south")
+	usCenter := newTarget("us-center")
 
-	// Deep-copy: the builder takes ownership of the objects it is given, and
-	// these fixtures are shared across parallel subtests.
-	newClient := func(targets ...*kargoapi.Target) client.Client {
-		builder := fake.NewClientBuilder().WithScheme(scheme)
-		for _, target := range targets {
-			builder = builder.WithObjects(target.DeepCopy())
+	// projectTargetsFn builds a mock that returns the given Project Targets,
+	// standing in for the database lookup the real callers perform.
+	projectTargetsFn := func(targets ...kargoapi.Target) func(context.Context, string) ([]kargoapi.Target, error) {
+		return func(context.Context, string) ([]kargoapi.Target, error) {
+			return targets, nil
 		}
-		return builder.Build()
 	}
 
-	usEast := newTarget("us-east", map[string]string{"region": "us"})
-	usWest := newTarget("us-west", map[string]string{"region": "us"})
-	euWest := newTarget("eu-west", map[string]string{"region": "eu"})
-
-	t.Run("resolves selectors to Targets and records Stage and Freight", func(t *testing.T) {
+	t.Run("records the Stage, the Freight and the Targets it was given", func(t *testing.T) {
 		t.Parallel()
 
-		promoReq, err := NewPromotionRequest(
-			t.Context(), newClient(usWest, usEast, euWest), testStage, freight,
+		promoReq, err := NewPromotionRequestForAllTargets(
+			context.Background(),
+			testStage,
+			freight,
+			projectTargetsFn(usEast, usWest),
+			nil,
 		)
 		require.NoError(t, err)
 
@@ -207,8 +339,7 @@ func TestNewPromotionRequest(t *testing.T) {
 		require.Equal(t, stage, promoReq.Spec.Stage)
 		require.Equal(t, freight, promoReq.Spec.Freight)
 		require.True(t, strings.HasPrefix(promoReq.Name, stage+"."))
-		// Only Targets matching the selector, sorted by name so that repeated
-		// calls agree.
+		// In the order given: the caller has already filtered and sorted.
 		require.Equal(
 			t,
 			[]kargoapi.PromotionRequestTarget{
@@ -219,81 +350,155 @@ func TestNewPromotionRequest(t *testing.T) {
 		)
 	})
 
-	t.Run("the resolved list is a snapshot, not a live query", func(t *testing.T) {
+	t.Run("failure to get stage targets is an error", func(t *testing.T) {
 		t.Parallel()
 
-		c := newClient(usEast)
-		promoReq, err := NewPromotionRequest(t.Context(), c, testStage, freight)
-		require.NoError(t, err)
-		require.Len(t, promoReq.Spec.Targets, 1)
-
-		// A Target appearing after the PromotionRequest was built does not
-		// belong to it. It is picked up by a subsequent PromotionRequest, not
-		// by re-resolving this one.
-		require.NoError(t, c.Create(t.Context(), usWest.DeepCopy()))
-		require.Equal(
-			t,
-			[]kargoapi.PromotionRequestTarget{{Name: "us-east"}},
-			promoReq.Spec.Targets,
+		_, err := NewPromotionRequestForAllTargets(
+			context.Background(),
+			testStage,
+			freight,
+			func(context.Context, string) ([]kargoapi.Target, error) {
+				return nil, fmt.Errorf("something went wrong")
+			},
+			nil,
 		)
+		require.Error(t, err)
+
+		// A Stage without a targets block cannot have a PromotionRequest.
+		noTargets := testStage.DeepCopy()
+		noTargets.Spec.Targets = nil
+		_, err = NewPromotionRequestForAllTargets(
+			context.Background(),
+			noTargets,
+			freight,
+			projectTargetsFn(usEast),
+			nil,
+		)
+		require.Error(t, err)
 	})
 
-	t.Run("selectors describe a union of Targets", func(t *testing.T) {
+	t.Run("promotionTargets override sets the targets ", func(t *testing.T) {
 		t.Parallel()
 
-		union := testStage.DeepCopy()
-		union.Spec.Targets = &kargoapi.StageTargets{
-			Selectors: []metav1.LabelSelector{
-				{MatchLabels: map[string]string{"region": "us"}},
-				{MatchLabels: map[string]string{"region": "eu"}},
-			},
-		}
-		inUS := newTarget("us-east", map[string]string{"region": "us"})
-		inEU := newTarget("eu-west", map[string]string{"region": "eu"})
-
-		promoReq, err := NewPromotionRequest(
-			t.Context(), newClient(inUS, inEU), union, freight,
+		promoReq, err := NewPromotionRequestForSelectTargets(
+			context.Background(),
+			testStage,
+			freight,
+			projectTargetsFn(usEast, usWest),
+			nil,
+			[]kargoapi.PromotionRequestTarget{{Name: usEast.Name}},
 		)
 		require.NoError(t, err)
+
+		require.Equal(t, project, promoReq.Namespace)
+		require.Equal(t, stage, promoReq.Spec.Stage)
+		require.Equal(t, freight, promoReq.Spec.Freight)
+		require.True(t, strings.HasPrefix(promoReq.Name, stage+"."))
+		// In the order given: the caller has already filtered and sorted.
 		require.Equal(
 			t,
 			[]kargoapi.PromotionRequestTarget{
-				{Name: "eu-west"},
 				{Name: "us-east"},
 			},
 			promoReq.Spec.Targets,
 		)
 	})
 
-	t.Run("a Target matching two selectors appears once", func(t *testing.T) {
+	t.Run("promotionTargets outside of stage targets is an error", func(t *testing.T) {
 		t.Parallel()
 
-		multiSelector := testStage.DeepCopy()
-		multiSelector.Spec.Targets = &kargoapi.StageTargets{
-			Selectors: []metav1.LabelSelector{
-				{MatchLabels: map[string]string{"region": "us"}},
-				{MatchLabels: map[string]string{"tier": "prod"}},
-			},
-		}
-		both := newTarget("us-east", map[string]string{"region": "us", "tier": "prod"})
+		_, err := NewPromotionRequestForSelectTargets(
+			context.Background(),
+			testStage,
+			freight,
+			projectTargetsFn(usEast, usWest),
+			nil,
+			[]kargoapi.PromotionRequestTarget{{Name: "us-north"}},
+		)
+		require.Error(t, err)
+		require.ErrorIs(t, err, ErrTargetNotSelected)
+	})
 
-		promoReq, err := NewPromotionRequest(
-			t.Context(), newClient(both), multiSelector, freight,
+	t.Run("updateStrategy is calculated based on stageTargets", func(t *testing.T) {
+		t.Parallel()
+
+		updatedStage := testStage.DeepCopy()
+		// UpdateStrategy values calculated for stageTargets would be 5*40/100 = 2
+		updatedStage.Spec.Targets.UpdateStrategy = kargoapi.TargetUpdateStrategy{
+			MaxConcurrent: new(intstr.FromString("40%")),
+			MaxFailures:   new(intstr.FromString("40%")),
+		}
+		pr, err := NewPromotionRequestForSelectTargets(
+			context.Background(),
+			updatedStage,
+			freight,
+			projectTargetsFn(usEast, usWest, usNorth, usSouth, usCenter),
+			nil,
+			[]kargoapi.PromotionRequestTarget{{Name: "us-north"}},
 		)
+
 		require.NoError(t, err)
-		require.Equal(
-			t,
-			[]kargoapi.PromotionRequestTarget{{Name: "us-east"}},
-			promoReq.Spec.Targets,
+		require.Equal(t, int64(2), pr.Spec.UpdateStrategy.MaxConcurrent)
+		require.Equal(t, int64(2), pr.Spec.UpdateStrategy.MaxFailures)
+	})
+
+	t.Run("updateStrategy override overrides the calculation", func(t *testing.T) {
+		t.Parallel()
+
+		updatedStage := testStage.DeepCopy()
+		// UpdateStrategy values calculated for stageTargets would be 5*40/100 = 2
+		updatedStage.Spec.Targets.UpdateStrategy = kargoapi.TargetUpdateStrategy{
+			MaxConcurrent: new(intstr.FromString("40%")),
+			MaxFailures:   new(intstr.FromString("40%")),
+		}
+		pr, err := NewPromotionRequestForSelectTargets(
+			context.Background(),
+			updatedStage,
+			freight,
+			projectTargetsFn(usEast, usWest, usNorth, usSouth, usCenter),
+			&kargoapi.TargetUpdateStrategy{
+				MaxConcurrent: new(intstr.FromInt(10)),
+				MaxFailures:   new(intstr.FromInt(10)),
+			},
+			[]kargoapi.PromotionRequestTarget{{Name: "us-north"}},
 		)
+
+		require.NoError(t, err)
+		require.Equal(t, int64(10), pr.Spec.UpdateStrategy.MaxConcurrent)
+		require.Equal(t, int64(10), pr.Spec.UpdateStrategy.MaxFailures)
+	})
+
+	t.Run("updateStrategy override can set percentage of stage targets", func(t *testing.T) {
+		t.Parallel()
+
+		pr, err := NewPromotionRequestForSelectTargets(
+			context.Background(),
+			testStage,
+			freight,
+			projectTargetsFn(usEast, usWest, usNorth, usSouth, usCenter),
+			&kargoapi.TargetUpdateStrategy{
+				MaxConcurrent: new(intstr.FromString("40%")),
+				MaxFailures:   new(intstr.FromString("40%")),
+			},
+			[]kargoapi.PromotionRequestTarget{{Name: "us-north"}},
+		)
+
+		require.NoError(t, err)
+		require.Equal(t, int64(2), pr.Spec.UpdateStrategy.MaxConcurrent)
+		require.Equal(t, int64(2), pr.Spec.UpdateStrategy.MaxFailures)
 	})
 
 	t.Run("the Stage is the controlling owner", func(t *testing.T) {
 		t.Parallel()
 
-		promoReq, err := NewPromotionRequest(
-			t.Context(), newClient(usEast), testStage, freight,
+		promoReq, err := NewPromotionRequestForAllTargets(
+			context.Background(),
+			testStage,
+			freight,
+			projectTargetsFn(usEast),
+			nil,
 		)
+
 		require.NoError(t, err)
 
 		require.Len(t, promoReq.OwnerReferences, 1)
@@ -308,8 +513,12 @@ func TestNewPromotionRequest(t *testing.T) {
 	t.Run("identifying labels", func(t *testing.T) {
 		t.Parallel()
 
-		promoReq, err := NewPromotionRequest(
-			t.Context(), newClient(usEast), testStage, freight,
+		promoReq, err := NewPromotionRequestForAllTargets(
+			context.Background(),
+			testStage,
+			freight,
+			projectTargetsFn(usEast),
+			nil,
 		)
 		require.NoError(t, err)
 		require.Equal(t, stage, promoReq.Labels[kargoapi.LabelKeyStage])
@@ -323,41 +532,15 @@ func TestNewPromotionRequest(t *testing.T) {
 
 		unsharded := testStage.DeepCopy()
 		unsharded.Spec.Shard = ""
-		promoReq, err := NewPromotionRequest(
-			t.Context(), newClient(usEast), unsharded, freight,
+		promoReq, err := NewPromotionRequestForAllTargets(
+			context.Background(),
+			unsharded,
+			freight,
+			projectTargetsFn(usEast),
+			nil,
 		)
 		require.NoError(t, err)
 		require.NotContains(t, promoReq.Labels, kargoapi.LabelKeyShard)
-	})
-
-	t.Run("selectors matching nothing yield an empty list, not nil", func(t *testing.T) {
-		t.Parallel()
-
-		// spec.targets is required and has no omitempty, so a nil slice would
-		// serialize as null and be rejected by the API server. An empty list
-		// records that the Stage governed no Targets at this moment.
-		promoReq, err := NewPromotionRequest(
-			t.Context(), newClient(euWest), testStage, freight,
-		)
-		require.NoError(t, err)
-		require.NotNil(t, promoReq.Spec.Targets)
-		require.Empty(t, promoReq.Spec.Targets)
-	})
-
-	t.Run("invalid selector", func(t *testing.T) {
-		t.Parallel()
-
-		bad := testStage.DeepCopy()
-		bad.Spec.Targets = &kargoapi.StageTargets{
-			Selectors: []metav1.LabelSelector{{
-				MatchExpressions: []metav1.LabelSelectorRequirement{{
-					Key:      "region",
-					Operator: "NotAnOperator",
-				}},
-			}},
-		}
-		_, err := NewPromotionRequest(t.Context(), newClient(), bad, freight)
-		require.ErrorContains(t, err, "error resolving Targets governed by Stage")
 	})
 }
 
@@ -380,14 +563,24 @@ func TestGenerateChildPromotionNameOrdering(t *testing.T) {
 	t.Run("same Target: lex order is creation order", func(t *testing.T) {
 		t.Parallel()
 
-		// ulid.Make draws from a process-wide monotonic entropy source, so ULIDs
-		// minted within one millisecond still increase. Enough names to be sure
-		// of landing several in the same millisecond.
-		const n = 50
+		// Concurrent callers must not reorder names minted within one
+		// millisecond. Enough names to span several milliseconds.
+		ctx, cancel := context.WithCancel(t.Context())
+		var wg sync.WaitGroup
+		for range 4 {
+			wg.Go(func() {
+				for ctx.Err() == nil {
+					_ = GenerateChildPromotionName(stage, "us-west", freight)
+				}
+			})
+		}
+		const n = 10000
 		names := make([]string, n)
 		for i := range names {
 			names[i] = GenerateChildPromotionName(stage, "us-east", freight)
 		}
+		cancel()
+		wg.Wait()
 		for i := 1; i < n; i++ {
 			require.Less(
 				t, names[i-1], names[i],
@@ -405,4 +598,92 @@ func TestGenerateChildPromotionNameOrdering(t *testing.T) {
 		east := GenerateChildPromotionName(stage, "us-east", freight)
 		require.Less(t, east, west)
 	})
+}
+
+func TestCalculateUpdateStrategy(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name             string
+		stageStrategy    kargoapi.TargetUpdateStrategy
+		targetCount      int
+		expectedStrategy *kargoapi.PromotionRequestUpdateStrategy
+	}{
+		{
+			name:             "empty strategy maps to 0-s",
+			targetCount:      100,
+			stageStrategy:    kargoapi.TargetUpdateStrategy{},
+			expectedStrategy: &kargoapi.PromotionRequestUpdateStrategy{},
+		},
+		{
+			name:        "number values map as is",
+			targetCount: 100,
+			stageStrategy: kargoapi.TargetUpdateStrategy{
+				MaxConcurrent: new(intstr.FromInt(10)),
+				MaxFailures:   new(intstr.FromInt(10)),
+			},
+			expectedStrategy: &kargoapi.PromotionRequestUpdateStrategy{
+				MaxConcurrent: 10,
+				MaxFailures:   10,
+			},
+		},
+		{
+			name:        "percentage values resolve in actual values",
+			targetCount: 1000,
+			stageStrategy: kargoapi.TargetUpdateStrategy{
+				MaxConcurrent: new(intstr.FromString("16%")),
+				MaxFailures:   new(intstr.FromString("8%")),
+			},
+			expectedStrategy: &kargoapi.PromotionRequestUpdateStrategy{
+				MaxConcurrent: 160,
+				MaxFailures:   80,
+			},
+		},
+		{
+			name:        "percentage values rounded up",
+			targetCount: 1111,
+			stageStrategy: kargoapi.TargetUpdateStrategy{
+				MaxConcurrent: new(intstr.FromString("16%")),
+				MaxFailures:   new(intstr.FromString("8%")),
+			},
+			expectedStrategy: &kargoapi.PromotionRequestUpdateStrategy{
+				MaxConcurrent: 178,
+				MaxFailures:   89,
+			},
+		},
+		{
+			name:        "low percent value resolves into 1",
+			targetCount: 5,
+			stageStrategy: kargoapi.TargetUpdateStrategy{
+				MaxConcurrent: new(intstr.FromString("5%")),
+				MaxFailures:   new(intstr.FromString("5%")),
+			},
+			expectedStrategy: &kargoapi.PromotionRequestUpdateStrategy{
+				MaxConcurrent: 1,
+				MaxFailures:   1,
+			},
+		},
+
+		{
+			name:        "over 100% is not an error",
+			targetCount: 100,
+			stageStrategy: kargoapi.TargetUpdateStrategy{
+				MaxConcurrent: new(intstr.FromString("105%")),
+			},
+			expectedStrategy: &kargoapi.PromotionRequestUpdateStrategy{
+				MaxConcurrent: 105,
+				MaxFailures:   0,
+			},
+		},
+	}
+
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+			resultStrategy, err := CalculateUpdateStrategy(testCase.stageStrategy, testCase.targetCount)
+			require.NoError(t, err)
+
+			require.Equal(t, testCase.expectedStrategy, resultStrategy)
+		})
+	}
 }

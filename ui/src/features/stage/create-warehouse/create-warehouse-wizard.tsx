@@ -93,15 +93,15 @@ export const CreateWarehouseWizard = (props: CreateWarehouseWizardProps) => {
 
         <SubscriptionWizard
           subscriptions={subscriptions}
-          onChange={(subscriptions) =>
+          onChange={(subscriptions) => {
             setFormState({
               ...formState,
               spec: {
                 ...(formState?.spec || {}),
                 subscriptions
               }
-            })
-          }
+            });
+          }}
         />
       </div>
     </RjsfConfigContext.Provider>

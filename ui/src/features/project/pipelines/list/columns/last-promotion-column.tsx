@@ -1,10 +1,10 @@
 import { ColumnType } from 'antd/es/table';
 import { formatDistance } from 'date-fns';
-import { generatePath, Link } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 
-import { paths } from '@ui/config/paths';
 import {
   getLastPromotionDate,
+  getLastPromotionRef,
   isStageControlFlow
 } from '@ui/features/project/pipelines/nodes/stage-meta-utils';
 import { Stage } from '@ui/gen/api/v2/models';
@@ -23,18 +23,10 @@ export const lastPromotionColumn = (): ColumnType<Stage> => ({
       return '-';
     }
 
-    const date = lastPromotion;
+    const label = formatDistance(lastPromotion, new Date(), { addSuffix: true });
+    const path = getLastPromotionRef(stage)?.path;
 
-    return (
-      <Link
-        to={generatePath(paths.promotion, {
-          name: stage?.metadata?.namespace,
-          promotionId: stage?.status?.lastPromotion?.name
-        })}
-      >
-        {formatDistance(date, new Date(), { addSuffix: true })}
-      </Link>
-    );
+    return path ? <Link to={path}>{label}</Link> : label;
   },
   sorter: (stage1, stage2) => {
     if (isStageControlFlow(stage1)) {

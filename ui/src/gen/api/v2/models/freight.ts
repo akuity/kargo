@@ -7,54 +7,66 @@
  */
 import type { ArtifactReference } from './artifactReference';
 import type { Chart } from './chart';
+import type { FreightOrigin } from './freightOrigin';
+import type { FreightStatus } from './freightStatus';
 import type { GitCommit } from './gitCommit';
 import type { Image } from './image';
 import type { V1ObjectMeta } from './v1ObjectMeta';
-import type { FreightOrigin } from './freightOrigin';
-import type { FreightStatus } from './freightStatus';
 
 export interface Freight {
-  /** Alias is a human-friendly alias for a piece of Freight. This is an optional
-field. A defaulting webhook will sync this field with the value of the
-kargo.akuity.io/alias label. When the alias label is not present or differs
-from the value of this field, the defaulting webhook will set the label to
-the value of this field. If the alias label is present and this field is
-empty, the defaulting webhook will set the value of this field to the value
-of the alias label. If this field is empty and the alias label is not
-present, the defaulting webhook will choose an available alias and assign
-it to both the field and label. */
+  /**
+   * Alias is a human-friendly alias for a piece of Freight. This is an optional
+   * field. A defaulting webhook will sync this field with the value of the
+   * kargo.akuity.io/alias label. When the alias label is not present or differs
+   * from the value of this field, the defaulting webhook will set the label to
+   * the value of this field. If the alias label is present and this field is
+   * empty, the defaulting webhook will set the value of this field to the value
+   * of the alias label. If this field is empty and the alias label is not
+   * present, the defaulting webhook will choose an available alias and assign
+   * it to both the field and label.
+   */
   alias?: string;
-  /** APIVersion defines the versioned schema of this representation of an object.
-Servers should convert recognized schemas to the latest internal value, and
-may reject unrecognized values.
-More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
-+optional */
+  /**
+   * APIVersion defines the versioned schema of this representation of an object.
+   * Servers should convert recognized schemas to the latest internal value, and
+   * may reject unrecognized values.
+   * More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+   * +optional
+   */
   apiVersion?: string;
-  /** Artifacts describes specific versions of artifacts other
-than Git repository commits, container images, and Helm charts. */
+  /**
+   * Artifacts describes specific versions of artifacts other
+   * than Git repository commits, container images, and Helm charts.
+   */
   artifacts?: ArtifactReference[];
   /** Charts describes specific versions of specific Helm charts. */
   charts?: Chart[];
   /** Commits describes specific Git repository commits. */
   commits?: GitCommit[];
-  /** DiscoveredAt is the time at which this Freight was discovered/created.
-A defaulting webhook initializes this to the creation time of the Freight.
-
-+optional */
+  /**
+   * DiscoveredAt is the time at which this Freight was discovered/created.
+   * A defaulting webhook initializes this to the creation time of the Freight.
+   *
+   * +optional
+   */
   discoveredAt?: string;
   /** Images describes specific versions of specific container images. */
   images?: Image[];
-  /** Kind is a string value representing the REST resource this object represents.
-Servers may infer this from the endpoint the client submits requests to.
-Cannot be updated.
-In CamelCase.
-More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
-+optional */
+  /**
+   * Kind is a string value representing the REST resource this object represents.
+   * Servers may infer this from the endpoint the client submits requests to.
+   * Cannot be updated.
+   * In CamelCase.
+   * More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+   * +optional
+   */
   kind?: string;
   metadata?: V1ObjectMeta;
-  /** Origin describes a kind of Freight in terms of its origin.
-
-+kubebuilder:validation:Required */
+  /**
+   * Origin describes a kind of Freight in terms of its origin.
+   *
+   * +kubebuilder:validation:Required
+   */
   origin: FreightOrigin;
   /** Status describes the current status of this Freight. */
   status?: FreightStatus;

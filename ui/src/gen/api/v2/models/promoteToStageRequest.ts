@@ -5,12 +5,26 @@
  * REST API for Kargo
  * OpenAPI spec version: v1alpha1
  */
+import type { TargetUpdateStrategy } from './targetUpdateStrategy';
 
 export interface PromoteToStageRequest {
   freight?: string;
   freightAlias?: string;
-  /** Origin is the canonical Freight origin key (e.g. "Warehouse/foo"). When
-set, the promotion webhook resolves it to the current auto-promotion
-candidate. Exactly one of Freight, FreightAlias, or Origin must be set. */
+  /**
+   * Origin is the canonical Freight origin key (e.g. "Warehouse/foo"). When
+   * set, the promotion webhook resolves it to the current auto-promotion
+   * candidate. Exactly one of Freight, FreightAlias, or Origin must be set.
+   */
   origin?: string;
+  /**
+   * Targets is a list of target names to promote to. If set to `nil` - selects all targets for the stage.
+   * If non-nil, should be a subset of targets selected by the stage, empty list is an error.
+   */
+  targets?: string[];
+  /**
+   * UpdateStrategy configures overrides for maxConcurrent and maxErrors for this request.
+   * Percentage values are calculated based on the total stage targets and not just ones selected for promotion
+   * If nil - calculated from the stages updateStrategy based on the number of stage targets.
+   */
+  updateStrategy?: TargetUpdateStrategy;
 }

@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -18,6 +19,7 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -29,6 +31,7 @@ import (
 	"github.com/akuity/kargo/pkg/server/config"
 	"github.com/akuity/kargo/pkg/server/kubernetes"
 	"github.com/akuity/kargo/pkg/server/rbac"
+	"github.com/akuity/kargo/pkg/server/user"
 )
 
 const (
@@ -48,24 +51,63 @@ type restTestCase struct {
 	// case-specific server initialization.
 	serverSetup func(*testing.T, *server)
 	// ctxSetup optionally transforms the request context before the request
-	// is served. Use this to inject context-bound values like user.Info.
+	// is served. Use this to inject context-bound values like a user.Identity.
 	ctxSetup   func(context.Context) context.Context
 	assertions func(*testing.T, *httptest.ResponseRecorder, client.Client)
 }
 
-// testRESTMapper builds a RESTMapper from a scheme so fake clients can resolve a
-// resource type's API group the way the production discovery-backed mapper does.
-// It mirrors a real cluster by omitting rbac.kargo.akuity.io types, which are
-// virtual API objects rather than resources the cluster actually serves.
+// clusterScopedTestKinds mirrors the +kubebuilder:resource:scope=Cluster
+// markers in api/v1alpha1, plus ClusterAnalysisTemplate (cluster-scoped in
+// its own upstream Argo Rollouts CRD). meta.NewDefaultRESTMapper can't infer
+// scope from a scheme, so getting this wrong would make every kind look
+// namespaced to fake clients and mask scope-dependent bugs in tests.
+var clusterScopedTestKinds = map[string]bool{
+	"Project":                 true,
+	"ClusterConfig":           true,
+	"ClusterPromotionTask":    true,
+	"ClusterAnalysisTemplate": true,
+}
+
+// testRESTMapper builds a RESTMapper from a scheme so fake clients can resolve
+// a resource type's API group and scope the way the production
+// discovery-backed mapper does. It mirrors a real cluster by omitting
+// rbac.kargo.akuity.io types, which are virtual API objects rather than
+// resources the cluster actually serves.
 func testRESTMapper(s *runtime.Scheme) meta.RESTMapper {
 	m := meta.NewDefaultRESTMapper(nil)
 	for gvk := range s.AllKnownTypes() {
 		if strings.HasSuffix(gvk.Kind, "List") || gvk.Group == rbacapi.GroupVersion.Group {
 			continue
 		}
-		m.Add(gvk, meta.RESTScopeNamespace)
+		scope := meta.RESTScopeNamespace
+		if clusterScopedTestKinds[gvk.Kind] {
+			scope = meta.RESTScopeRoot
+		}
+		m.Add(gvk, scope)
 	}
 	return m
+}
+
+// newTestScheme builds the scheme used by the REST test harness, and by
+// tests that build their own kubernetes.Client (e.g. to control
+// authorization the harness's SkipAuthorization: true bypasses).
+func newTestScheme(t *testing.T) *runtime.Scheme {
+	t.Helper()
+	testScheme := runtime.NewScheme()
+
+	// k8s APIs
+	require.NoError(t, corev1.AddToScheme(testScheme))
+	require.NoError(t, coordinationv1.AddToScheme(testScheme))
+	require.NoError(t, rbacv1.AddToScheme(testScheme))
+
+	// Kargo APIs
+	require.NoError(t, kargoapi.AddToScheme(testScheme))
+	require.NoError(t, rbacapi.AddToScheme(testScheme))
+
+	// Third-party APIs
+	require.NoError(t, rollouts.AddToScheme(testScheme))
+
+	return testScheme
 }
 
 func testRESTEndpoint(
@@ -75,25 +117,7 @@ func testRESTEndpoint(
 	url string,
 	testCases []restTestCase,
 ) {
-	testScheme := runtime.NewScheme()
-
-	// k8s APIs
-	err := corev1.AddToScheme(testScheme)
-	require.NoError(t, err)
-	err = coordinationv1.AddToScheme(testScheme)
-	require.NoError(t, err)
-	err = rbacv1.AddToScheme(testScheme)
-	require.NoError(t, err)
-
-	// Kargo APIs
-	err = kargoapi.AddToScheme(testScheme)
-	require.NoError(t, err)
-	err = rbacapi.AddToScheme(testScheme)
-	require.NoError(t, err)
-
-	// Third-party APIs
-	err = rollouts.AddToScheme(testScheme)
-	require.NoError(t, err)
+	testScheme := newTestScheme(t)
 
 	gin.DefaultWriter = io.Discard
 	gin.DefaultErrorWriter = io.Discard
@@ -109,7 +133,6 @@ func testRESTEndpoint(
 			if testCase.serverConfig != nil {
 				s.cfg = *testCase.serverConfig
 			}
-
 			if testCase.clientBuilder == nil {
 				testCase.clientBuilder = fake.NewClientBuilder()
 			}
@@ -117,6 +140,7 @@ func testRESTEndpoint(
 				WithScheme(testScheme).
 				WithRESTMapper(testRESTMapper(testScheme)).
 				Build()
+			var err error
 			s.client, err = kubernetes.NewClient(
 				t.Context(),
 				&rest.Config{},
@@ -142,6 +166,7 @@ func testRESTEndpoint(
 			// Mirror the Fn wiring NewServer performs; serverSetup may override.
 			s.createPromotionFn = s.client.Create
 			s.getStageFn = api.GetStage
+			s.patchFreightStatusFn = s.patchFreightStatus
 
 			if testCase.serverSetup != nil {
 				testCase.serverSetup(t, s)
@@ -159,8 +184,7 @@ func testRESTEndpoint(
 			for key, value := range testCase.headers {
 				req.Header.Set(key, value)
 			}
-			router := s.setupRESTRouter(t.Context())
-
+			router := setupRESTTestRouter(t, s, req)
 			router.ServeHTTP(w, req)
 
 			testCase.assertions(t, w, internalClient)
@@ -192,25 +216,7 @@ func testRESTWatchEndpoint(
 	url string,
 	testCases []restWatchTestCase,
 ) {
-	testScheme := runtime.NewScheme()
-
-	// k8s APIs
-	err := corev1.AddToScheme(testScheme)
-	require.NoError(t, err)
-	err = coordinationv1.AddToScheme(testScheme)
-	require.NoError(t, err)
-	err = rbacv1.AddToScheme(testScheme)
-	require.NoError(t, err)
-
-	// Kargo APIs
-	err = kargoapi.AddToScheme(testScheme)
-	require.NoError(t, err)
-	err = rbacapi.AddToScheme(testScheme)
-	require.NoError(t, err)
-
-	// Third-party APIs
-	err = rollouts.AddToScheme(testScheme)
-	require.NoError(t, err)
+	testScheme := newTestScheme(t)
 
 	gin.DefaultWriter = io.Discard
 	gin.DefaultErrorWriter = io.Discard
@@ -228,7 +234,6 @@ func testRESTWatchEndpoint(
 			if testCase.serverConfig != nil {
 				s.cfg = *testCase.serverConfig
 			}
-
 			if testCase.clientBuilder == nil {
 				testCase.clientBuilder = fake.NewClientBuilder()
 			}
@@ -236,6 +241,10 @@ func testRESTWatchEndpoint(
 				WithScheme(testScheme).
 				WithRESTMapper(testRESTMapper(testScheme)).
 				Build()
+			watching := &watchStartedClient{
+				WithWatch: internalClient,
+				started:   make(chan struct{}),
+			}
 			var err error
 			s.client, err = kubernetes.NewClient(
 				t.Context(),
@@ -248,7 +257,7 @@ func testRESTWatchEndpoint(
 						*runtime.Scheme,
 						string,
 					) (client.WithWatch, error) {
-						return internalClient, nil
+						return watching, nil
 					},
 				},
 			)
@@ -270,26 +279,81 @@ func testRESTWatchEndpoint(
 				req.Header.Set(key, value)
 			}
 
-			// Create a context with timeout to prevent hanging on watch endpoints
-			ctx, cancel := context.WithTimeout(t.Context(), 100*time.Millisecond)
+			// A watch handler streams until its request is canceled. Operations
+			// run only once the handler has started its watch, so that the watch
+			// sees them however long routing took, and the request is then given
+			// a fixed window to stream the events. A handler that fails before
+			// watching returns on its own; the fallback stops one that neither
+			// watches nor returns.
+			ctx, cancel := context.WithCancel(t.Context())
 			defer cancel()
 			req = req.WithContext(ctx)
-
-			// If operations are provided, run them asynchronously after a small delay
-			// to allow the watch to be established first
-			if testCase.operations != nil {
-				go func() {
-					time.Sleep(10 * time.Millisecond)
+			go func() {
+				defer cancel()
+				select {
+				case <-watching.started:
+				case <-time.After(watchStartTimeout):
+					return
+				case <-ctx.Done():
+					return
+				}
+				if testCase.operations != nil {
 					testCase.operations(ctx, internalClient)
-				}()
-			}
+				}
+				select {
+				case <-time.After(watchStreamWindow):
+				case <-ctx.Done():
+				}
+			}()
 
-			router := s.setupRESTRouter(t.Context())
+			router := setupRESTTestRouter(t, s, req)
 			router.ServeHTTP(w, req)
 
 			testCase.assertions(t, w, internalClient)
 		})
 	}
+}
+
+func setupRESTTestRouter(t *testing.T, s *server, req *http.Request) *gin.Engine {
+	t.Helper()
+	if _, exempt := exemptPaths[req.URL.Path]; !exempt && req.Header.Get(authHeaderKey) == "" {
+		req.Header.Set(authHeaderKey, "Bearer "+testJWT(t))
+	}
+	id, ok := user.IdentityFromContext(req.Context())
+	if !ok {
+		id = user.OIDCUser{Claims: map[string]any{"sub": "test-user"}}
+	}
+	router, err := s.setupRESTRouter(t.Context(), WithAuthenticator(fakeAuthenticator{id: id, ok: true}))
+	require.NoError(t, err)
+	return router
+}
+
+const (
+	// watchStartTimeout bounds how long a watch test waits for the handler
+	// to start watching before it cancels the request.
+	watchStartTimeout = 5 * time.Second
+	// watchStreamWindow is how long a watch test lets the handler stream
+	// after its operations have run.
+	watchStreamWindow = 100 * time.Millisecond
+)
+
+// watchStartedClient closes started once the handler under test has
+// registered its first watch, so that a test's operations are never made
+// before the watch can observe them.
+type watchStartedClient struct {
+	client.WithWatch
+	once    sync.Once
+	started chan struct{}
+}
+
+func (c *watchStartedClient) Watch(
+	ctx context.Context,
+	list client.ObjectList,
+	opts ...client.ListOption,
+) (watch.Interface, error) {
+	w, err := c.WithWatch.Watch(ctx, list, opts...)
+	c.once.Do(func() { close(c.started) })
+	return w, err
 }
 
 // mustJSONBody marshals the given value to JSON and returns it as an io.Reader.

@@ -19,14 +19,14 @@
         "freightLinks": {
           "description": "FreightLinks defines deep links shown when viewing any Freight resource\nacross all projects in the cluster. Project-level FreightLinks defined\nin ProjectConfig are shown in addition to these.",
           "items": {
-            "description": "DeepLink defines a configurable external link that is rendered in the UI\nwhen viewing a Freight or Stage resource. The URL is an expression evaluated\nagainst the resource. The optional If field is an expression condition;\nwhen set, the link is only shown when the expression evaluates to true.",
+            "description": "DeepLink defines a configurable external link that is rendered in the UI\nwhen viewing a Freight or Stage resource. The URL may contain expr-lang\nexpressions offset by ${{ }}, evaluated against the resource. The optional\nIf field is a ${{ }} expression that must evaluate to a boolean; when set,\nthe link is only shown when it evaluates to true.",
             "properties": {
               "description": {
                 "description": "Description is an optional human-readable summary shown alongside the\nlink.",
                 "type": "string"
               },
               "if": {
-                "description": "If is an optional expression condition. When set, the link is only shown\nwhen the expression evaluates to true.",
+                "description": "If is an optional expr-lang expression, offset by ${{ }}, that must\nevaluate to a boolean. When set, the link is shown only when it\nevaluates to true.",
                 "type": "string"
               },
               "title": {
@@ -35,7 +35,7 @@
                 "type": "string"
               },
               "url": {
-                "description": "URL is an expression that resolves to the link's href.",
+                "description": "URL is the link's href. It may contain expr-lang expressions offset by\n${{ }}, evaluated against the resource as freight or stage.",
                 "minLength": 1,
                 "type": "string"
               }
@@ -86,6 +86,15 @@
           "items": {
             "description": "PromotionWindow describes a recurring or one-shot time window that gates\npromotions for the Stages it matches. Windows may appear on both\nProjectConfig and ClusterConfig; a Stage's effective schedule is the union of\nall matching windows from both. A schedule is open at a given time when no\nmatching Deny window is active and, if any Allow windows match the Stage, at\nleast one of them is active. Windows gate all promotions uniformly (auto,\nmanual, and rollback).\n\nKargo Enterprise only: This type is ignored in Kargo OSS. The schedule is\nevaluated and enforced only by Kargo Enterprise; OSS carries the API for\ncompatibility, as it does for other Enterprise-only fields.",
             "properties": {
+              "description": {
+                "description": "Description is a human-readable description of the window.\nMay contain reason, author or any clarification for the window.",
+                "maxLength": 1024,
+                "type": "string"
+              },
+              "disabled": {
+                "description": "Disabled controls whether configured windows should be skipped when calculating the stage window status.\nOptional. Default is `false`. Unless set to `true` the window will impact the stages it's configured for.",
+                "type": "boolean"
+              },
               "dtend": {
                 "description": "DTEnd is the window's end in the same format as DTStart. When combined with\nRRule, DTEnd - DTStart defines the duration of each occurrence. The value\nis parsed and validated by Kargo Enterprise.",
                 "type": "string"
@@ -227,14 +236,14 @@
         "stageLinks": {
           "description": "StageLinks defines deep links shown when viewing any Stage resource\nacross all projects in the cluster. Project-level StageLinks defined in\nProjectConfig are shown in addition to these.",
           "items": {
-            "description": "DeepLink defines a configurable external link that is rendered in the UI\nwhen viewing a Freight or Stage resource. The URL is an expression evaluated\nagainst the resource. The optional If field is an expression condition;\nwhen set, the link is only shown when the expression evaluates to true.",
+            "description": "DeepLink defines a configurable external link that is rendered in the UI\nwhen viewing a Freight or Stage resource. The URL may contain expr-lang\nexpressions offset by ${{ }}, evaluated against the resource. The optional\nIf field is a ${{ }} expression that must evaluate to a boolean; when set,\nthe link is only shown when it evaluates to true.",
             "properties": {
               "description": {
                 "description": "Description is an optional human-readable summary shown alongside the\nlink.",
                 "type": "string"
               },
               "if": {
-                "description": "If is an optional expression condition. When set, the link is only shown\nwhen the expression evaluates to true.",
+                "description": "If is an optional expr-lang expression, offset by ${{ }}, that must\nevaluate to a boolean. When set, the link is shown only when it\nevaluates to true.",
                 "type": "string"
               },
               "title": {
@@ -243,7 +252,7 @@
                 "type": "string"
               },
               "url": {
-                "description": "URL is an expression that resolves to the link's href.",
+                "description": "URL is the link's href. It may contain expr-lang expressions offset by\n${{ }}, evaluated against the resource as freight or stage.",
                 "minLength": 1,
                 "type": "string"
               }

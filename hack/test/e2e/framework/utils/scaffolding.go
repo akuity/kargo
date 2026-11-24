@@ -1,4 +1,3 @@
-//nolint:goimports
 package utils
 
 import (
@@ -6,9 +5,10 @@ import (
 	"os"
 	"testing"
 
-	"funcsloader"
 	"sigs.k8s.io/e2e-framework/pkg/env"
 	"sigs.k8s.io/e2e-framework/pkg/envconf"
+
+	"github.com/akuity/kargo/hack/test/e2e/framework/funcsloader"
 )
 
 var (

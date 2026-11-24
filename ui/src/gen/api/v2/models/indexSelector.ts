@@ -8,8 +8,10 @@
 import type { IndexSelectorRequirement } from './indexSelectorRequirement';
 
 export interface IndexSelector {
-  /** MatchIndices is a list of index selector requirements.
-
-+kubebuilder:validation:MinItems=1 */
+  /**
+   * MatchIndices is a list of index selector requirements.
+   *
+   * +kubebuilder:validation:MinItems=1
+   */
   matchIndices?: IndexSelectorRequirement[];
 }

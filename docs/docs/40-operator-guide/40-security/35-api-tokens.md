@@ -89,13 +89,47 @@ API tokens can be used with many Kargo or Kubernetes clients. This includes
 tools like `kubectl` as well as any programming language client library for
 Kubernetes or Kargo.
 
+To use a token with the `kargo` CLI, set the `KARGO_API_ADDRESS` and
+`KARGO_API_TOKEN` environment variables:
+
+```shell
+export KARGO_API_ADDRESS=https://kargo.example.com
+export KARGO_API_TOKEN=<token>
+```
+
 :::note
 
-While the `kargo` CLI does not directly support specifying a token via command
-line flags, you can configure it to use a token by editing
-`~/.config/kargo/config`.
+The CLI uses these environment variables only when both `KARGO_API_ADDRESS` and
+`KARGO_API_TOKEN` are set. Otherwise, it ignores them and uses the
+configuration saved by `kargo login`.
 
 :::
+
+To skip TLS certificate verification, also set
+`KARGO_INSECURE_SKIP_TLS_VERIFY` to `true`. A setting saved by
+`kargo login --insecure-skip-tls-verify` does not apply while the CLI is using
+these environment variables.
+
+:::warning
+
+Skipping TLS certificate verification is a security risk and should only be
+done in development environments.
+
+:::
+
+## Auditing Tokens
+
+Anything done with a token is attributed to the role it belongs to. Promotions
+created with a token, and the Events Kargo emits about them, name the actor as
+`kubernetes:system:serviceaccount:<kargo-namespace>:<role>`, and the API server's
+request log names the same actor on every request the token makes.
+
+To find out who minted a token, look at its `kargo.akuity.io/create-actor`
+annotation:
+
+```shell
+kargo get token --system kargo-admin-token-1 -o yaml
+```
 
 ## Deleting Tokens
 

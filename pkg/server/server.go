@@ -24,14 +24,19 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/api"
 	rollouts "github.com/akuity/kargo/pkg/api/stubs/rollouts"
+	"github.com/akuity/kargo/pkg/database"
+	"github.com/akuity/kargo/pkg/database/promotionrolloutstore"
+	"github.com/akuity/kargo/pkg/database/targetstatusstore"
+	"github.com/akuity/kargo/pkg/database/targetstore"
 	"github.com/akuity/kargo/pkg/event"
 	httputil "github.com/akuity/kargo/pkg/http"
 	"github.com/akuity/kargo/pkg/logging"
 	"github.com/akuity/kargo/pkg/server/config"
 	"github.com/akuity/kargo/pkg/server/dex"
 	"github.com/akuity/kargo/pkg/server/kubernetes"
+	"github.com/akuity/kargo/pkg/server/promotionrollouts"
 	"github.com/akuity/kargo/pkg/server/rbac"
-	"github.com/akuity/kargo/pkg/server/validation"
+	"github.com/akuity/kargo/pkg/server/targets"
 )
 
 //go:embed all:ui
@@ -42,20 +47,13 @@ type server struct {
 	client  kubernetes.Client
 	rolesDB rbac.RolesDatabase
 	sender  event.Sender
+	// db reaches the database, which holds the resources that live there
+	// rather than in Kubernetes, such as Targets. Each resource's store is
+	// built from it. It is nil when the server runs without a database, in
+	// which case the endpoints for those resources respond 501.
+	db *database.Queries
 
 	// The following behaviors are overridable for testing purposes:
-
-	// Common validations:
-	validateProjectExistsFn func(
-		ctx context.Context,
-		project string,
-	) error
-
-	externalValidateProjectFn func(
-		ctx context.Context,
-		client client.Client,
-		project string,
-	) error
 
 	// Common lookups:
 	getStageFn func(
@@ -117,6 +115,7 @@ type server struct {
 	// Freight approval:
 	patchFreightStatusFn func(
 		ctx context.Context,
+		cl client.Client,
 		freight *kargoapi.Freight,
 		newStatus kargoapi.FreightStatus,
 	) error
@@ -140,6 +139,17 @@ type server struct {
 		types.NamespacedName,
 	) (*rolloutsapi.AnalysisRun, error)
 
+	// listTargetsFn lists a Project's Targets from the database. It is nil
+	// when the server runs without one.
+	listTargetsFn func(context.Context, string) ([]kargoapi.Target, error)
+
+	// rolloutCreator creates the PromotionRollouts the promote endpoints
+	// yield for a target-aware Stage when this server creates rollouts; see
+	// config.ServerConfig.PromotionRolloutsEnabled. It is nil when the server
+	// does not, or runs without a database. The PromotionRollout endpoints
+	// share it.
+	rolloutCreator promotionrollouts.Creator
+
 	// Special authorizations:
 	authorizeFn func(
 		ctx context.Context,
@@ -154,21 +164,23 @@ type Server interface {
 	Serve(ctx context.Context, l net.Listener) error
 }
 
+// NewServer returns a Server. The db may be nil, in which case the resources
+// that live in the database are unavailable; see the server's db field.
 func NewServer(
 	cfg config.ServerConfig,
 	kubeClient kubernetes.Client,
 	rolesDB rbac.RolesDatabase,
 	sender event.Sender,
+	db *database.Queries,
 ) Server {
 	s := &server{
 		cfg:     cfg,
 		client:  kubeClient,
 		rolesDB: rolesDB,
 		sender:  sender,
+		db:      db,
 	}
 
-	s.validateProjectExistsFn = s.validateProjectExists
-	s.externalValidateProjectFn = validation.ValidateProject
 	s.getStageFn = api.GetStage
 	s.getFreightByNameOrAliasFn = api.GetFreightByNameOrAlias
 	s.isFreightAvailableFn = s.isFreightAvailable
@@ -181,6 +193,18 @@ func NewServer(
 	s.patchFreightAliasFn = s.patchFreightAlias
 	s.patchFreightStatusFn = s.patchFreightStatus
 	s.authorizeFn = kubeClient.Authorize
+	if store := s.targetStore(); store != nil {
+		s.listTargetsFn = func(ctx context.Context, project string) ([]kargoapi.Target, error) {
+			return targets.ListFromStore(ctx, store, project)
+		}
+		if cfg.PromotionRolloutsEnabled {
+			s.rolloutCreator = promotionrollouts.NewCreator(
+				s.rolloutStore(),
+				store,
+				cfg.PromotionRolloutCheck,
+			)
+		}
+	}
 	s.getAnalysisTemplateFn = rollouts.GetAnalysisTemplate
 	s.getClusterAnalysisTemplateFn = rollouts.GetClusterAnalysisTemplate
 	s.getAnalysisRunFn = rollouts.GetAnalysisRun
@@ -199,7 +223,10 @@ func (s *server) Serve(ctx context.Context, l net.Listener) error {
 	}
 
 	// Add Gin REST router
-	ginRouter := s.setupRESTRouter(ctx)
+	ginRouter, err := s.setupRESTRouter(ctx)
+	if err != nil {
+		return fmt.Errorf("error setting up REST router: %w", err)
+	}
 	mux.Handle("/v1beta1/", ginRouter)
 
 	var dashboardFS fs.FS
@@ -311,6 +338,12 @@ func wrapWithBasePath(inner http.Handler, basePath string) http.Handler {
 		if r.URL.Path == basePath {
 			u := *r.URL
 			u.Path = basePath + "/"
+			// u.RequestURI() renders only path and query, never scheme or
+			// host, so this redirect always stays same-origin no matter what
+			// a user's request contained. Path is hardcoded to basePath+"/"
+			// above; the query string is carried through only so params
+			// (e.g. "?tab=x") survive the redirect.
+			// #nosec G710
 			http.Redirect(w, r, u.RequestURI(), http.StatusMovedPermanently)
 			return
 		}
@@ -419,4 +452,31 @@ func renderIndexHTML(uiFS fs.FS, name, basePath string) ([]byte, time.Time) {
 	// stamped at process start so ServeContent's If-Modified-Since logic is
 	// well-defined.
 	return rendered, time.Now()
+}
+
+// targetStore returns the store for Targets, or nil when the server runs
+// without a database.
+func (s *server) targetStore() targetstore.Store {
+	if s.db == nil {
+		return nil
+	}
+	return targetstore.New(s.db)
+}
+
+// rolloutStore returns the store for PromotionRollouts, or nil when the
+// server runs without a database.
+func (s *server) rolloutStore() promotionrolloutstore.Store {
+	if s.db == nil {
+		return nil
+	}
+	return promotionrolloutstore.New(s.db)
+}
+
+// targetStatusStore returns the store that reads what is on record about
+// promotion to Targets, or nil when the server runs without a database.
+func (s *server) targetStatusStore() targetstatusstore.Store {
+	if s.db == nil {
+		return nil
+	}
+	return targetstatusstore.New(s.db)
 }

@@ -3,12 +3,16 @@ package kubernetes
 import (
 	"context"
 	"errors"
+	"net/http"
+	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 	authnv1 "k8s.io/api/authentication/v1"
 	authv1 "k8s.io/api/authorization/v1"
 	corev1 "k8s.io/api/core/v1"
+	flowcontrolv1 "k8s.io/api/flowcontrol/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -445,31 +449,28 @@ func TestGetAuthorizedClient(t *testing.T) {
 		name string
 		// internalClient, when nil, defaults to testInternalClient.
 		internalClient libClient.WithWatch
-		userInfo       *user.Info
+		identity       user.Identity
 		assert         func(*testing.T, libClient.Client, error)
 	}{
 		{
-			name: "no context-bound user.Info",
+			name: "no context-bound identity",
 			assert: func(t *testing.T, _ libClient.Client, err error) {
 				require.Error(t, err)
 				require.Equal(t, "not allowed", err.Error())
 			},
 		},
 		{
-			name: "admin user",
-			userInfo: &user.Info{
-				IsAdmin: true,
-			},
+			name:     "admin user",
+			identity: user.Admin{},
 			assert: func(t *testing.T, client libClient.Client, err error) {
 				require.NoError(t, err)
 				require.Same(t, testInternalClient, client)
 			},
 		},
 		{
-			name: "sso user",
-			userInfo: &user.Info{
-				Claims: map[string]any{"sub": "test-user"},
-			},
+			// Mapped to no ServiceAccount: there is no subject to review.
+			name:     "sso user without ServiceAccounts",
+			identity: user.OIDCUser{Claims: map[string]any{"sub": "test-user"}},
 			assert: func(t *testing.T, _ libClient.Client, err error) {
 				require.True(t, apierrors.IsForbidden(err))
 			},
@@ -479,7 +480,7 @@ func TestGetAuthorizedClient(t *testing.T) {
 			// authorizes.
 			name:           "Kubernetes-verified user, permitted",
 			internalClient: reviewingClient(t, true),
-			userInfo:       &user.Info{KubernetesUserInfo: &testKubernetesUser},
+			identity:       user.KubernetesUser{UserInfo: testKubernetesUser},
 			assert: func(t *testing.T, client libClient.Client, err error) {
 				require.NoError(t, err)
 				require.NotNil(t, client)
@@ -488,33 +489,23 @@ func TestGetAuthorizedClient(t *testing.T) {
 		{
 			name:           "Kubernetes-verified user, not permitted",
 			internalClient: reviewingClient(t, false),
-			userInfo:       &user.Info{KubernetesUserInfo: &testKubernetesUser},
+			identity:       user.KubernetesUser{UserInfo: testKubernetesUser},
 			assert: func(t *testing.T, _ libClient.Client, err error) {
 				require.True(t, apierrors.IsForbidden(err))
-			},
-		},
-		{
-			// Neither an admin, nor mapped to any ServiceAccount, nor bearing an
-			// identity from Kubernetes. There is no subject to authorize.
-			name:     "user with no identity at all",
-			userInfo: &user.Info{},
-			assert: func(t *testing.T, _ libClient.Client, err error) {
-				require.Error(t, err)
-				require.Equal(t, "not allowed", err.Error())
 			},
 		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			ctx := t.Context()
-			if testCase.userInfo != nil {
-				ctx = user.ContextWithInfo(ctx, *testCase.userInfo)
+			if testCase.identity != nil {
+				ctx = user.ContextWithIdentity(ctx, testCase.identity)
 			}
 			internalClient := testCase.internalClient
 			if internalClient == nil {
 				internalClient = testInternalClient
 			}
-			client, err := getAuthorizedClient(nil)(
+			client, err := getAuthorizedClient()(
 				ctx,
 				internalClient,
 				"", // Verb doesn't matter for these tests
@@ -523,6 +514,121 @@ func TestGetAuthorizedClient(t *testing.T) {
 				libClient.ObjectKey{}, // Object key doesn't matter for these tests
 			)
 			testCase.assert(t, client, err)
+		})
+	}
+}
+
+func TestConfigureQPSBurst(t *testing.T) {
+
+	const exemptUID = "exempt-uid"
+	testCases := []struct {
+		name          string
+		pathPrefix    string // a server URL with a path, as behind a proxy
+		matched       string // the matched priority level's UID; "" when APF is disabled
+		status        int
+		body          string
+		hangs         bool
+		down          bool
+		expectedQPS   float32
+		expectedBurst int
+	}{
+		{
+			name:          "PriorityAndFairness limits the client",
+			matched:       "workload-low-uid",
+			status:        http.StatusOK,
+			body:          `{"metadata":{"name":"exempt","uid":"exempt-uid"}}`,
+			expectedQPS:   -1,
+			expectedBurst: -1,
+		},
+		{
+			name:          "PriorityAndFairness limits the client, server URL with a path",
+			pathPrefix:    "/proxy",
+			matched:       "workload-low-uid",
+			status:        http.StatusOK,
+			body:          `{"metadata":{"name":"exempt","uid":"exempt-uid"}}`,
+			expectedQPS:   -1,
+			expectedBurst: -1,
+		},
+		{
+			name:          "client is exempt",
+			matched:       exemptUID,
+			status:        http.StatusOK,
+			body:          `{"metadata":{"name":"exempt","uid":"exempt-uid"}}`,
+			expectedQPS:   50,
+			expectedBurst: 300,
+		},
+		{
+			name:          "client may not read the exempt priority level",
+			matched:       "workload-low-uid",
+			status:        http.StatusForbidden,
+			expectedQPS:   50,
+			expectedBurst: 300,
+		},
+		{
+			name:          "unexpected status",
+			matched:       "workload-low-uid",
+			status:        http.StatusInternalServerError,
+			expectedQPS:   50,
+			expectedBurst: 300,
+		},
+		{
+			name:          "no UID in the response",
+			matched:       "workload-low-uid",
+			status:        http.StatusOK,
+			body:          `{"metadata":{"name":"exempt"}}`,
+			expectedQPS:   50,
+			expectedBurst: 300,
+		},
+		{
+			name:          "PriorityAndFairness disabled",
+			status:        http.StatusOK,
+			body:          `{"metadata":{"name":"exempt","uid":"exempt-uid"}}`,
+			expectedQPS:   50,
+			expectedBurst: 300,
+		},
+		{
+			name:          "API server hangs",
+			hangs:         true,
+			expectedQPS:   50,
+			expectedBurst: 300,
+		},
+		{
+			name:          "API server unreachable",
+			down:          true,
+			expectedQPS:   50,
+			expectedBurst: 300,
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			release := make(chan struct{})
+			srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if testCase.hangs {
+					<-release
+					return
+				}
+				if r.Method != http.MethodGet || r.URL.Path != testCase.pathPrefix+exemptPriorityLevelPath {
+					w.WriteHeader(http.StatusNotFound)
+					return
+				}
+				if testCase.matched != "" {
+					w.Header().Set(flowcontrolv1.ResponseHeaderMatchedPriorityLevelConfigurationUID, testCase.matched)
+				}
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(testCase.status)
+				_, _ = w.Write([]byte(testCase.body))
+			}))
+			defer srv.Close()
+			defer close(release) // before Close, which waits for the hanging handler
+			if testCase.down {
+				srv.Close()
+			}
+			cfg := &rest.Config{Host: srv.URL + testCase.pathPrefix}
+			ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
+			defer cancel()
+			ConfigureQPSBurst(ctx, cfg, 50, 300)
+			require.Equal(t, testCase.expectedQPS, cfg.QPS)
+			require.Equal(t, testCase.expectedBurst, cfg.Burst)
 		})
 	}
 }

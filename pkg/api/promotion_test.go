@@ -262,6 +262,191 @@ func TestAbortPromotion(t *testing.T) {
 	})
 }
 
+func TestStageAwaitsPromotion(t *testing.T) {
+	requestChild := func(name, target, request string) *kargoapi.Promotion {
+		controller := true
+		return &kargoapi.Promotion{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: name,
+				OwnerReferences: []metav1.OwnerReference{{
+					APIVersion: kargoapi.GroupVersion.String(),
+					Kind:       "PromotionRequest",
+					Name:       request,
+					Controller: &controller,
+				}},
+			},
+			Spec: kargoapi.PromotionSpec{Stage: "test-stage", Target: target},
+		}
+	}
+
+	testCases := []struct {
+		name     string
+		status   kargoapi.StageStatus
+		promo    *kargoapi.Promotion
+		expected bool
+	}{
+		{
+			name: "no current Promotion",
+			promo: &kargoapi.Promotion{
+				ObjectMeta: metav1.ObjectMeta{Name: "test-promotion"},
+			},
+		},
+		{
+			name: "another Promotion is current",
+			status: kargoapi.StageStatus{
+				CurrentPromotion: &kargoapi.PromotionReference{Name: "other-promotion"},
+			},
+			promo: &kargoapi.Promotion{
+				ObjectMeta: metav1.ObjectMeta{Name: "test-promotion"},
+			},
+		},
+		{
+			name: "the Promotion is current",
+			status: kargoapi.StageStatus{
+				CurrentPromotion: &kargoapi.PromotionReference{Name: "test-promotion"},
+			},
+			promo: &kargoapi.Promotion{
+				ObjectMeta: metav1.ObjectMeta{Name: "test-promotion"},
+			},
+			expected: true,
+		},
+		{
+			name: "a Target Promotion is not admitted by the Stage's own slot",
+			status: kargoapi.StageStatus{
+				CurrentPromotion: &kargoapi.PromotionReference{Name: "test-promotion"},
+			},
+			promo: requestChild("test-promotion", "blue", "test-request"),
+		},
+		{
+			name:  "a Target Promotion is not admitted without a current PromotionRequest",
+			promo: requestChild("test-promotion", "blue", "test-request"),
+		},
+		{
+			name: "a Target Promotion of a queued PromotionRequest is not admitted",
+			status: kargoapi.StageStatus{
+				CurrentPromotionRequest: &kargoapi.PromotionRequestReference{
+					Name: "current-request",
+				},
+			},
+			promo: requestChild("test-promotion", "blue", "queued-request"),
+		},
+		{
+			name: "a Target Promotion without a PromotionRequest owner is not admitted",
+			status: kargoapi.StageStatus{
+				CurrentPromotionRequest: &kargoapi.PromotionRequestReference{
+					Name: "current-request",
+				},
+			},
+			promo: &kargoapi.Promotion{
+				ObjectMeta: metav1.ObjectMeta{Name: "test-promotion"},
+				Spec:       kargoapi.PromotionSpec{Stage: "test-stage", Target: "blue"},
+			},
+		},
+		{
+			name: "a Target Promotion of the current PromotionRequest is admitted",
+			status: kargoapi.StageStatus{
+				CurrentPromotionRequest: &kargoapi.PromotionRequestReference{
+					Name: "current-request",
+				},
+			},
+			promo:    requestChild("test-promotion", "blue", "current-request"),
+			expected: true,
+		},
+		{
+			name: "a PromotionRollout's child is admitted without the Stage's say",
+			promo: &kargoapi.Promotion{
+				ObjectMeta: metav1.ObjectMeta{Name: "test-promotion"},
+				Spec: kargoapi.PromotionSpec{
+					Stage:            "test-stage",
+					Target:           "blue",
+					PromotionRollout: "0b9f4a3e-6c1d-4a8e-9f2b-3c4d5e6f7a8b",
+				},
+			},
+			expected: true,
+		},
+		{
+			name: "a PromotionRollout's child is admitted while another Promotion is current",
+			status: kargoapi.StageStatus{
+				CurrentPromotion: &kargoapi.PromotionReference{Name: "other-promotion"},
+				CurrentPromotionRequest: &kargoapi.PromotionRequestReference{
+					Name: "current-request",
+				},
+			},
+			promo: &kargoapi.Promotion{
+				ObjectMeta: metav1.ObjectMeta{Name: "test-promotion"},
+				Spec: kargoapi.PromotionSpec{
+					Stage:            "test-stage",
+					Target:           "blue",
+					PromotionRollout: "0b9f4a3e-6c1d-4a8e-9f2b-3c4d5e6f7a8b",
+				},
+			},
+			expected: true,
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+			stage := &kargoapi.Stage{Status: testCase.status}
+			require.Equal(
+				t,
+				testCase.expected,
+				StageAwaitsPromotion(stage, testCase.promo),
+			)
+		})
+	}
+}
+
+func TestPromotionRequestOwner(t *testing.T) {
+	controller := true
+	testCases := []struct {
+		name     string
+		owner    *metav1.OwnerReference
+		expected string
+	}{
+		{
+			name: "no owner",
+		},
+		{
+			name: "owner of another kind",
+			owner: &metav1.OwnerReference{
+				APIVersion: kargoapi.GroupVersion.String(),
+				Kind:       "Stage",
+				Name:       "test-stage",
+				Controller: &controller,
+			},
+		},
+		{
+			name: "owner of another group",
+			owner: &metav1.OwnerReference{
+				APIVersion: "apps/v1",
+				Kind:       "PromotionRequest",
+				Name:       "test-request",
+				Controller: &controller,
+			},
+		},
+		{
+			name: "PromotionRequest owner",
+			owner: &metav1.OwnerReference{
+				APIVersion: kargoapi.GroupVersion.String(),
+				Kind:       "PromotionRequest",
+				Name:       "test-request",
+				Controller: &controller,
+			},
+			expected: "test-request",
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+			promo := &kargoapi.Promotion{}
+			if testCase.owner != nil {
+				promo.OwnerReferences = []metav1.OwnerReference{*testCase.owner}
+			}
+			require.Equal(t, testCase.expected, PromotionRequestOwner(promo))
+		})
+	}
+}
+
 func Test_ComparePromotionByPhaseAndCreationTime(t *testing.T) {
 	now := time.Date(2024, time.April, 10, 0, 0, 0, 0, time.UTC)
 	ulidEarlier := ulid.MustNew(ulid.Timestamp(now.Add(-time.Hour)), nil)
@@ -531,7 +716,12 @@ func TestInflateSteps(t *testing.T) {
 		name       string
 		promo      kargoapi.Promotion
 		objects    []client.Object
-		assertions func(*testing.T, []kargoapi.PromotionStep, error)
+		assertions func(
+			*testing.T,
+			[]kargoapi.PromotionStep,
+			[]kargoapi.InflatedPromotionTask,
+			error,
+		)
 	}{
 		{
 			name: "task not found returns error",
@@ -550,7 +740,12 @@ func TestInflateSteps(t *testing.T) {
 					},
 				},
 			},
-			assertions: func(t *testing.T, _ []kargoapi.PromotionStep, err error) {
+			assertions: func(
+				t *testing.T,
+				_ []kargoapi.PromotionStep,
+				_ []kargoapi.InflatedPromotionTask,
+				err error,
+			) {
 				require.ErrorContains(t, err, "not found")
 			},
 		},
@@ -570,11 +765,44 @@ func TestInflateSteps(t *testing.T) {
 					},
 				},
 			},
-			assertions: func(t *testing.T, steps []kargoapi.PromotionStep, err error) {
+			assertions: func(
+				t *testing.T,
+				steps []kargoapi.PromotionStep,
+				inflatedTasks []kargoapi.InflatedPromotionTask,
+				err error,
+			) {
 				require.NoError(t, err)
 				require.Len(t, steps, 1)
 				require.Equal(t, "direct-step", steps[0].As)
 				require.Equal(t, "fake-step", steps[0].Uses)
+				require.Nil(t, inflatedTasks)
+			},
+		},
+		{
+			name: "supplied inflated tasks are discarded",
+			promo: kargoapi.Promotion{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-promotion",
+					Namespace: "test-project",
+				},
+				Spec: kargoapi.PromotionSpec{
+					Steps: []kargoapi.PromotionStep{{Uses: "fake-step"}},
+					InflatedTasks: []kargoapi.InflatedPromotionTask{{
+						Alias: "task-1",
+						Task:  kargoapi.PromotionTaskReference{Name: "fake-task"},
+						Steps: []string{"step-1"},
+					}},
+				},
+			},
+			assertions: func(
+				t *testing.T,
+				steps []kargoapi.PromotionStep,
+				inflatedTasks []kargoapi.InflatedPromotionTask,
+				err error,
+			) {
+				require.NoError(t, err)
+				require.Len(t, steps, 1)
+				require.Nil(t, inflatedTasks)
 			},
 		},
 		{
@@ -621,7 +849,12 @@ func TestInflateSteps(t *testing.T) {
 					},
 				},
 			},
-			assertions: func(t *testing.T, steps []kargoapi.PromotionStep, err error) {
+			assertions: func(
+				t *testing.T,
+				steps []kargoapi.PromotionStep,
+				inflatedTasks []kargoapi.InflatedPromotionTask,
+				err error,
+			) {
 				require.NoError(t, err)
 				require.Len(t, steps, 2)
 				require.Equal(t, "direct-step", steps[0].As)
@@ -631,6 +864,21 @@ func TestInflateSteps(t *testing.T) {
 				require.ElementsMatch(t, []kargoapi.ExpressionVariable{
 					{Name: "input1", Value: "value1"},
 				}, steps[1].Vars)
+				require.Equal(
+					t,
+					[]kargoapi.InflatedPromotionTask{{
+						Alias: "task-step",
+						Task: kargoapi.PromotionTaskReference{
+							Name: "test-task",
+							Kind: "PromotionTask",
+						},
+						Vars: []kargoapi.ExpressionVariable{
+							{Name: "input1", Value: "value1"},
+						},
+						Steps: []string{"task-step::sub-step"},
+					}},
+					inflatedTasks,
+				)
 			},
 		},
 		{
@@ -699,7 +947,12 @@ func TestInflateSteps(t *testing.T) {
 					},
 				},
 			},
-			assertions: func(t *testing.T, steps []kargoapi.PromotionStep, err error) {
+			assertions: func(
+				t *testing.T,
+				steps []kargoapi.PromotionStep,
+				inflatedTasks []kargoapi.InflatedPromotionTask,
+				err error,
+			) {
 				require.NoError(t, err)
 				require.Len(t, steps, 2)
 				require.Equal(t, "task1::step1", steps[0].As)
@@ -712,6 +965,27 @@ func TestInflateSteps(t *testing.T) {
 				require.ElementsMatch(t, []kargoapi.ExpressionVariable{
 					{Name: "input2", Value: "value2"},
 				}, steps[1].Vars)
+				require.Len(t, inflatedTasks, 2)
+				require.Equal(t, "task1", inflatedTasks[0].Alias)
+				require.Equal(
+					t,
+					kargoapi.PromotionTaskReference{
+						Name: "test-task-1",
+						Kind: "PromotionTask",
+					},
+					inflatedTasks[0].Task,
+				)
+				require.Equal(t, []string{"task1::step1"}, inflatedTasks[0].Steps)
+				require.Equal(t, "task2", inflatedTasks[1].Alias)
+				require.Equal(
+					t,
+					kargoapi.PromotionTaskReference{
+						Name: "test-task-2",
+						Kind: "ClusterPromotionTask",
+					},
+					inflatedTasks[1].Task,
+				)
+				require.Equal(t, []string{"task2::step2"}, inflatedTasks[1].Steps)
 			},
 		},
 	}
@@ -725,7 +999,7 @@ func TestInflateSteps(t *testing.T) {
 
 			p := tt.promo.DeepCopy()
 			err := InflateSteps(t.Context(), c, p)
-			tt.assertions(t, p.Spec.Steps, err)
+			tt.assertions(t, p.Spec.Steps, p.Spec.InflatedTasks, err)
 		})
 	}
 }
@@ -741,7 +1015,12 @@ func Test_inflateTaskSteps(t *testing.T) {
 		promoVars  []kargoapi.ExpressionVariable
 		taskStep   kargoapi.PromotionStep
 		objects    []client.Object
-		assertions func(*testing.T, []kargoapi.PromotionStep, error)
+		assertions func(
+			*testing.T,
+			[]kargoapi.PromotionStep,
+			kargoapi.InflatedPromotionTask,
+			error,
+		)
 	}{
 		{
 			name:      "task not found",
@@ -752,7 +1031,12 @@ func Test_inflateTaskSteps(t *testing.T) {
 					Name: "missing-task",
 				},
 			},
-			assertions: func(t *testing.T, steps []kargoapi.PromotionStep, err error) {
+			assertions: func(
+				t *testing.T,
+				steps []kargoapi.PromotionStep,
+				_ kargoapi.InflatedPromotionTask,
+				err error,
+			) {
 				require.True(t, apierrors.IsNotFound(err))
 				require.Nil(t, steps)
 			},
@@ -779,7 +1063,12 @@ func Test_inflateTaskSteps(t *testing.T) {
 					},
 				},
 			},
-			assertions: func(t *testing.T, steps []kargoapi.PromotionStep, err error) {
+			assertions: func(
+				t *testing.T,
+				steps []kargoapi.PromotionStep,
+				_ kargoapi.InflatedPromotionTask,
+				err error,
+			) {
 				require.ErrorContains(t, err, "missing value for variable")
 				require.Nil(t, steps)
 			},
@@ -795,6 +1084,7 @@ func Test_inflateTaskSteps(t *testing.T) {
 				Task: &kargoapi.PromotionTaskReference{
 					Name: "test-task",
 				},
+				Description: "Render and commit",
 				Vars: []kargoapi.ExpressionVariable{
 					{Name: "input1", Value: "value1"},
 					{Name: "input2", Value: "value2"},
@@ -828,7 +1118,12 @@ func Test_inflateTaskSteps(t *testing.T) {
 					},
 				},
 			},
-			assertions: func(t *testing.T, steps []kargoapi.PromotionStep, err error) {
+			assertions: func(
+				t *testing.T,
+				steps []kargoapi.PromotionStep,
+				inflatedTask kargoapi.InflatedPromotionTask,
+				err error,
+			) {
 				require.NoError(t, err)
 				require.Len(t, steps, 2)
 				require.Equal(t, "task-1::step1", steps[0].As)
@@ -846,6 +1141,25 @@ func Test_inflateTaskSteps(t *testing.T) {
 					{Name: "input2", Value: "value2"},
 					{Name: "input4", Value: "value4"},
 				}, steps[1].Vars)
+				require.Empty(t, steps[0].Description)
+				require.Equal(
+					t,
+					kargoapi.InflatedPromotionTask{
+						Alias: "task-1",
+						Task: kargoapi.PromotionTaskReference{
+							Name: "test-task",
+							Kind: "PromotionTask",
+						},
+						Description: "Render and commit",
+						Vars: []kargoapi.ExpressionVariable{
+							{Name: "input2", Value: "default2"},
+							{Name: "input1", Value: "value1"},
+							{Name: "input2", Value: "value2"},
+						},
+						Steps: []string{"task-1::step1", "task-1::step2"},
+					},
+					inflatedTask,
+				)
 			},
 		},
 		{
@@ -881,7 +1195,12 @@ func Test_inflateTaskSteps(t *testing.T) {
 					},
 				},
 			},
-			assertions: func(t *testing.T, steps []kargoapi.PromotionStep, err error) {
+			assertions: func(
+				t *testing.T,
+				steps []kargoapi.PromotionStep,
+				_ kargoapi.InflatedPromotionTask,
+				err error,
+			) {
 				require.NoError(t, err)
 				require.Len(t, steps, 2)
 				require.Equal(t, "custom-alias::step-1", steps[0].As)
@@ -919,10 +1238,30 @@ func Test_inflateTaskSteps(t *testing.T) {
 					},
 				},
 			},
-			assertions: func(t *testing.T, steps []kargoapi.PromotionStep, err error) {
+			assertions: func(
+				t *testing.T,
+				steps []kargoapi.PromotionStep,
+				inflatedTask kargoapi.InflatedPromotionTask,
+				err error,
+			) {
 				require.NoError(t, err)
 				require.Len(t, steps, 1)
 				require.Equal(t, "task-0::custom-alias", steps[0].As)
+				require.Equal(
+					t,
+					kargoapi.InflatedPromotionTask{
+						Alias: "task-0",
+						Task: kargoapi.PromotionTaskReference{
+							Name: "test-cluster-task",
+							Kind: "ClusterPromotionTask",
+						},
+						Vars: []kargoapi.ExpressionVariable{
+							{Name: "input1", Value: "value1"},
+						},
+						Steps: []string{"task-0::custom-alias"},
+					},
+					inflatedTask,
+				)
 			},
 		},
 	}
@@ -933,10 +1272,10 @@ func Test_inflateTaskSteps(t *testing.T) {
 				WithScheme(s).
 				WithObjects(tt.objects...).
 				Build()
-			steps, err := inflateTaskSteps(
+			steps, inflatedTask, err := inflateTaskSteps(
 				t.Context(), c, tt.project, tt.taskAlias, tt.promoVars, tt.taskStep,
 			)
-			tt.assertions(t, steps, err)
+			tt.assertions(t, steps, inflatedTask, err)
 		})
 	}
 }

@@ -75,6 +75,10 @@ const (
 	mergeNotAllowedMsg = "not allowed"
 )
 
+// refNotFoundMsg is the message GitHub includes in the 422 returned when
+// deleting a ref that does not exist. Full message: "Reference does not exist"
+const refNotFoundMsg = "Reference does not exist"
+
 var registration = gitprovider.Registration{
 	Predicate: func(repoURL string) bool {
 		u, err := url.Parse(repoURL)
@@ -137,6 +141,13 @@ type githubClient interface {
 		number int,
 		labels []string,
 	) ([]*github.Label, *github.Response, error)
+
+	DeleteRef(
+		ctx context.Context,
+		owner string,
+		repo string,
+		ref string,
+	) (*github.Response, error)
 }
 
 // provider is a GitHub implementation of gitprovider.Interface.
@@ -225,6 +236,15 @@ func (g githubClientWrapper) AddLabelsToIssue(
 	labels []string,
 ) ([]*github.Label, *github.Response, error) {
 	return g.client.Issues.AddLabelsToIssue(ctx, owner, repo, number, labels)
+}
+
+func (g githubClientWrapper) DeleteRef(
+	ctx context.Context,
+	owner string,
+	repo string,
+	ref string,
+) (*github.Response, error) {
+	return g.client.Git.DeleteRef(ctx, owner, repo, ref)
 }
 
 // CreatePullRequest implements gitprovider.Interface.
@@ -320,7 +340,7 @@ func (p *provider) ListPullRequests(
 			return nil, err
 		}
 		for _, ghPR := range ghPRs {
-			if opts.HeadCommit == "" || ptr.Deref(ghPR.Head.SHA, "") == opts.HeadCommit {
+			if opts.HeadCommit == "" || ghPR.GetHead().GetSHA() == opts.HeadCommit {
 				prs = append(prs, convertGithubPR(*ghPR))
 			}
 		}
@@ -484,6 +504,27 @@ func isTransientMerge405(msg string, policyBlocked bool) bool {
 	}
 }
 
+// DeleteBranch implements gitprovider.Interface.
+func (p *provider) DeleteBranch(ctx context.Context, branch string) error {
+	_, err := p.client.DeleteRef(ctx, p.owner, p.repo, "heads/"+branch)
+	if err == nil {
+		return nil
+	}
+	// A branch that is already gone is not an error. GitHub reports this as a
+	// 422 whose message names the missing reference; treat a 404 the same way.
+	var ghErr *github.ErrorResponse
+	if errors.As(err, &ghErr) && ghErr.Response != nil {
+		switch {
+		case ghErr.Response.StatusCode == http.StatusNotFound:
+			return nil
+		case ghErr.Response.StatusCode == http.StatusUnprocessableEntity &&
+			strings.Contains(ghErr.Message, refNotFoundMsg):
+			return nil
+		}
+	}
+	return fmt.Errorf("error deleting branch %q: %w", branch, err)
+}
+
 // GetCommitURL implements gitprovider.Interface.
 func (p *provider) GetCommitURL(
 	repoURL string,
@@ -504,7 +545,8 @@ func convertGithubPR(ghPR github.PullRequest) gitprovider.PullRequest {
 		Merged:         ghPR.MergedAt != nil,
 		MergeCommitSHA: ptr.Deref(ghPR.MergeCommitSHA, ""),
 		Object:         ghPR,
-		HeadSHA:        ptr.Deref(ghPR.Head.SHA, ""),
+		HeadSHA:        ghPR.GetHead().GetSHA(),
+		HeadBranch:     ghPR.GetHead().GetRef(),
 	}
 	if ghPR.CreatedAt != nil {
 		pr.CreatedAt = &ghPR.CreatedAt.Time

@@ -25,16 +25,23 @@ import type {
   ApproveFreightParams,
   ClusterPromotionTask,
   ClusterPromotionTaskList,
-  CreateConfigMapRequestBody,
+  CreateConfigMapRequest,
+  CreatePromotionRolloutRequest,
   Freight,
   GetFreightLinksResponse,
   GetStageLinksResponse,
+  GetTargetStatusSummaryParams,
   ListImages200,
   ListProjectsParams,
   ListProjectsResponse,
+  ListPromotionRequestsParams,
+  ListPromotionRolloutsParams,
   ListPromotionsParams,
   ListStagesParams,
-  PatchConfigMapRequestBody,
+  ListTargetPromotionsParams,
+  ListTargetStatusesParams,
+  ListTargetsParams,
+  PatchConfigMapRequest,
   PatchFreightAliasParams,
   PkgServerQueryFreightsResponse,
   Project,
@@ -43,30 +50,48 @@ import type {
   PromoteToStageRequest,
   Promotion,
   PromotionList,
+  PromotionRequest,
+  PromotionRequestList,
+  PromotionRollout,
+  PromotionRolloutList,
   PromotionTask,
   PromotionTaskList,
   QueryFreightsRestParams,
   Stage,
   StageList,
-  UpdateConfigMapRequestBody,
+  Target,
+  TargetList,
+  TargetPromotionList,
+  TargetStatusList,
+  TargetStatusSummary,
+  UpdateConfigMapRequest,
   V1ConfigMap,
   V1ConfigMapList,
   Warehouse,
   WarehouseList
-} from '.././models';
+} from '../models';
 
 import { customFetch } from '../../../../lib/api/custom-fetch';
 import type { ErrorType } from '../../../../lib/api/custom-fetch';
+import { serializeParams } from '../../../../lib/api/params-serializer';
 
 type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
 
-/**
- * List all Projects resources. Supports server-side filtering by
-name substring, by UID, and by namespaces mapped to the
-authenticated user's ServiceAccounts, plus offset-based
-pagination.
- * @summary List projects
- */
+const withQueryKey = <T extends object, K>(query: T, queryKey: K): T & { queryKey: K } => {
+  const result = { queryKey } as T & { queryKey: K };
+  for (const key of Object.keys(query)) {
+    // The explicit queryKey always wins, matching the previous
+    // `{ ...query, queryKey }` spread where it was set last.
+    if (key === 'queryKey') continue;
+    Object.defineProperty(result, key, {
+      enumerable: true,
+      configurable: true,
+      get: () => (query as Record<string, unknown>)[key]
+    });
+  }
+  return result;
+};
+
 export type listProjectsResponse200 = {
   data: ListProjectsResponse;
   status: 200;
@@ -78,33 +103,23 @@ export type listProjectsResponseSuccess = listProjectsResponse200 & {
 export type listProjectsResponse = listProjectsResponseSuccess;
 
 export const getListProjectsUrl = (params?: ListProjectsParams) => {
-  const normalizedParams = new URLSearchParams();
-
-  Object.entries(params || {}).forEach(([key, value]) => {
-    const explodeParameters = ['uid'];
-
-    if (Array.isArray(value) && explodeParameters.includes(key)) {
-      value.forEach((v) => {
-        normalizedParams.append(key, v === null ? 'null' : v.toString());
-      });
-      return;
-    }
-
-    if (value !== undefined) {
-      normalizedParams.append(key, value === null ? 'null' : value.toString());
-    }
-  });
-
-  const stringifiedParams = normalizedParams.toString();
+  const stringifiedParams = serializeParams(params);
 
   return stringifiedParams.length > 0
     ? `/v1beta1/projects?${stringifiedParams}`
     : `/v1beta1/projects`;
 };
 
+/**
+ * List all Projects resources. Supports server-side filtering by
+ * name substring, by UID, and by namespaces mapped to the
+ * authenticated user's ServiceAccounts, plus offset-based
+ * pagination.
+ * @summary List projects
+ */
 export const listProjects = async (
   params?: ListProjectsParams,
-  options?: RequestInit
+  options?: Parameters<typeof customFetch>[1]
 ): Promise<listProjectsResponse> => {
   return customFetch<listProjectsResponse>(getListProjectsUrl(params), {
     ...options,
@@ -213,15 +228,9 @@ export function useListProjects<
     queryKey: DataTag<QueryKey, TData, TError>;
   };
 
-  query.queryKey = queryOptions.queryKey;
-
-  return query;
+  return withQueryKey(query, queryOptions.queryKey);
 }
 
-/**
- * Retrieve a Project resource.
- * @summary Retrieve a Project resource
- */
 export type getProjectResponse200 = {
   data: Project;
   status: 200;
@@ -236,9 +245,13 @@ export const getGetProjectUrl = (project: string) => {
   return `/v1beta1/projects/${project}`;
 };
 
+/**
+ * Retrieve a Project resource.
+ * @summary Retrieve a Project resource
+ */
 export const getProject = async (
   project: string,
-  options?: RequestInit
+  options?: Parameters<typeof customFetch>[1]
 ): Promise<getProjectResponse> => {
   return customFetch<getProjectResponse>(getGetProjectUrl(project), {
     ...options,
@@ -246,7 +259,7 @@ export const getProject = async (
   });
 };
 
-export const getGetProjectQueryKey = (project?: string) => {
+export const getGetProjectQueryKey = (project: string) => {
   return [`/v1beta1/projects/${project}`] as const;
 };
 
@@ -267,11 +280,14 @@ export const getGetProjectQueryOptions = <
   const queryFn: QueryFunction<Awaited<ReturnType<typeof getProject>>> = () =>
     getProject(project, requestOptions);
 
-  return { queryKey, queryFn, enabled: !!project, ...queryOptions } as UseQueryOptions<
-    Awaited<ReturnType<typeof getProject>>,
-    TError,
-    TData
-  > & { queryKey: DataTag<QueryKey, TData, TError> };
+  return {
+    queryKey,
+    queryFn,
+    enabled: project !== null && project !== undefined,
+    ...queryOptions
+  } as UseQueryOptions<Awaited<ReturnType<typeof getProject>>, TError, TData> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
 };
 
 export type GetProjectQueryResult = NonNullable<Awaited<ReturnType<typeof getProject>>>;
@@ -347,15 +363,9 @@ export function useGetProject<
     queryKey: DataTag<QueryKey, TData, TError>;
   };
 
-  query.queryKey = queryOptions.queryKey;
-
-  return query;
+  return withQueryKey(query, queryOptions.queryKey);
 }
 
-/**
- * Delete a Project resource and its associated namespace.
- * @summary Delete a Project
- */
 export type deleteProjectResponse204 = {
   data: void;
   status: 204;
@@ -370,15 +380,21 @@ export const getDeleteProjectUrl = (project: string) => {
   return `/v1beta1/projects/${project}`;
 };
 
+/**
+ * Delete a Project resource and its associated namespace.
+ * @summary Delete a Project
+ */
 export const deleteProject = async (
   project: string,
-  options?: RequestInit
+  options?: Parameters<typeof customFetch>[1]
 ): Promise<deleteProjectResponse> => {
   return customFetch<deleteProjectResponse>(getDeleteProjectUrl(project), {
     ...options,
     method: 'DELETE'
   });
 };
+
+export const getDeleteProjectMutationKey = () => ['deleteProject'] as const;
 
 export const getDeleteProjectMutationOptions = <
   TError = ErrorType<unknown>,
@@ -387,17 +403,17 @@ export const getDeleteProjectMutationOptions = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof deleteProject>>,
     TError,
-    { project: string },
+    DeleteProjectMutationVariables,
     TContext
   >;
   request?: SecondParameter<typeof customFetch>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof deleteProject>>,
   TError,
-  { project: string },
+  DeleteProjectMutationVariables,
   TContext
 > => {
-  const mutationKey = ['deleteProject'];
+  const mutationKey = getDeleteProjectMutationKey();
   const { mutation: mutationOptions, request: requestOptions } = options
     ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
       ? options
@@ -406,7 +422,7 @@ export const getDeleteProjectMutationOptions = <
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof deleteProject>>,
-    { project: string }
+    DeleteProjectMutationVariables
   > = (props) => {
     const { project } = props ?? {};
 
@@ -419,6 +435,7 @@ export const getDeleteProjectMutationOptions = <
 export type DeleteProjectMutationResult = NonNullable<Awaited<ReturnType<typeof deleteProject>>>;
 
 export type DeleteProjectMutationError = ErrorType<unknown>;
+export type DeleteProjectMutationVariables = { project: string };
 
 /**
  * @summary Delete a Project
@@ -428,7 +445,7 @@ export const useDeleteProject = <TError = ErrorType<unknown>, TContext = unknown
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof deleteProject>>,
       TError,
-      { project: string },
+      DeleteProjectMutationVariables,
       TContext
     >;
     request?: SecondParameter<typeof customFetch>;
@@ -437,18 +454,11 @@ export const useDeleteProject = <TError = ErrorType<unknown>, TContext = unknown
 ): UseMutationResult<
   Awaited<ReturnType<typeof deleteProject>>,
   TError,
-  { project: string },
+  DeleteProjectMutationVariables,
   TContext
 > => {
-  const mutationOptions = getDeleteProjectMutationOptions(options);
-
-  return useMutation(mutationOptions, queryClient);
+  return useMutation(getDeleteProjectMutationOptions(options), queryClient);
 };
-/**
- * Retrieve the single ProjectConfig resource from a project's
-namespace.
- * @summary Retrieve ProjectConfig
- */
 export type getProjectConfigResponse200 = {
   data: ProjectConfig;
   status: 200;
@@ -463,9 +473,14 @@ export const getGetProjectConfigUrl = (project: string) => {
   return `/v1beta1/projects/${project}/config`;
 };
 
+/**
+ * Retrieve the single ProjectConfig resource from a project's
+ * namespace.
+ * @summary Retrieve ProjectConfig
+ */
 export const getProjectConfig = async (
   project: string,
-  options?: RequestInit
+  options?: Parameters<typeof customFetch>[1]
 ): Promise<getProjectConfigResponse> => {
   return customFetch<getProjectConfigResponse>(getGetProjectConfigUrl(project), {
     ...options,
@@ -473,7 +488,7 @@ export const getProjectConfig = async (
   });
 };
 
-export const getGetProjectConfigQueryKey = (project?: string) => {
+export const getGetProjectConfigQueryKey = (project: string) => {
   return [`/v1beta1/projects/${project}/config`] as const;
 };
 
@@ -494,11 +509,14 @@ export const getGetProjectConfigQueryOptions = <
   const queryFn: QueryFunction<Awaited<ReturnType<typeof getProjectConfig>>> = () =>
     getProjectConfig(project, requestOptions);
 
-  return { queryKey, queryFn, enabled: !!project, ...queryOptions } as UseQueryOptions<
-    Awaited<ReturnType<typeof getProjectConfig>>,
-    TError,
-    TData
-  > & { queryKey: DataTag<QueryKey, TData, TError> };
+  return {
+    queryKey,
+    queryFn,
+    enabled: project !== null && project !== undefined,
+    ...queryOptions
+  } as UseQueryOptions<Awaited<ReturnType<typeof getProjectConfig>>, TError, TData> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
 };
 
 export type GetProjectConfigQueryResult = NonNullable<Awaited<ReturnType<typeof getProjectConfig>>>;
@@ -574,16 +592,9 @@ export function useGetProjectConfig<
     queryKey: DataTag<QueryKey, TData, TError>;
   };
 
-  query.queryKey = queryOptions.queryKey;
-
-  return query;
+  return withQueryKey(query, queryOptions.queryKey);
 }
 
-/**
- * Delete the single ProjectConfig resource from a project's
-namespace.
- * @summary Delete a ProjectConfig resource
- */
 export type deleteProjectConfigResponse204 = {
   data: void;
   status: 204;
@@ -598,15 +609,22 @@ export const getDeleteProjectConfigUrl = (project: string) => {
   return `/v1beta1/projects/${project}/config`;
 };
 
+/**
+ * Delete the single ProjectConfig resource from a project's
+ * namespace.
+ * @summary Delete a ProjectConfig resource
+ */
 export const deleteProjectConfig = async (
   project: string,
-  options?: RequestInit
+  options?: Parameters<typeof customFetch>[1]
 ): Promise<deleteProjectConfigResponse> => {
   return customFetch<deleteProjectConfigResponse>(getDeleteProjectConfigUrl(project), {
     ...options,
     method: 'DELETE'
   });
 };
+
+export const getDeleteProjectConfigMutationKey = () => ['deleteProjectConfig'] as const;
 
 export const getDeleteProjectConfigMutationOptions = <
   TError = ErrorType<unknown>,
@@ -615,17 +633,17 @@ export const getDeleteProjectConfigMutationOptions = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof deleteProjectConfig>>,
     TError,
-    { project: string },
+    DeleteProjectConfigMutationVariables,
     TContext
   >;
   request?: SecondParameter<typeof customFetch>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof deleteProjectConfig>>,
   TError,
-  { project: string },
+  DeleteProjectConfigMutationVariables,
   TContext
 > => {
-  const mutationKey = ['deleteProjectConfig'];
+  const mutationKey = getDeleteProjectConfigMutationKey();
   const { mutation: mutationOptions, request: requestOptions } = options
     ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
       ? options
@@ -634,7 +652,7 @@ export const getDeleteProjectConfigMutationOptions = <
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof deleteProjectConfig>>,
-    { project: string }
+    DeleteProjectConfigMutationVariables
   > = (props) => {
     const { project } = props ?? {};
 
@@ -649,6 +667,7 @@ export type DeleteProjectConfigMutationResult = NonNullable<
 >;
 
 export type DeleteProjectConfigMutationError = ErrorType<unknown>;
+export type DeleteProjectConfigMutationVariables = { project: string };
 
 /**
  * @summary Delete a ProjectConfig resource
@@ -658,7 +677,7 @@ export const useDeleteProjectConfig = <TError = ErrorType<unknown>, TContext = u
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof deleteProjectConfig>>,
       TError,
-      { project: string },
+      DeleteProjectConfigMutationVariables,
       TContext
     >;
     request?: SecondParameter<typeof customFetch>;
@@ -667,19 +686,11 @@ export const useDeleteProjectConfig = <TError = ErrorType<unknown>, TContext = u
 ): UseMutationResult<
   Awaited<ReturnType<typeof deleteProjectConfig>>,
   TError,
-  { project: string },
+  DeleteProjectConfigMutationVariables,
   TContext
 > => {
-  const mutationOptions = getDeleteProjectConfigMutationOptions(options);
-
-  return useMutation(mutationOptions, queryClient);
+  return useMutation(getDeleteProjectConfigMutationOptions(options), queryClient);
 };
-/**
- * Refresh the single ProjectConfig resource in a project's
-namespace. Refreshing enqueues the resource for reconciliation
-by its corresponding controller.
- * @summary Refresh ProjectConfig
- */
 export type refreshProjectConfigResponse200 = {
   data: void;
   status: 200;
@@ -694,15 +705,23 @@ export const getRefreshProjectConfigUrl = (project: string) => {
   return `/v1beta1/projects/${project}/config/refresh`;
 };
 
+/**
+ * Refresh the single ProjectConfig resource in a project's
+ * namespace. Refreshing enqueues the resource for reconciliation
+ * by its corresponding controller.
+ * @summary Refresh ProjectConfig
+ */
 export const refreshProjectConfig = async (
   project: string,
-  options?: RequestInit
+  options?: Parameters<typeof customFetch>[1]
 ): Promise<refreshProjectConfigResponse> => {
   return customFetch<refreshProjectConfigResponse>(getRefreshProjectConfigUrl(project), {
     ...options,
     method: 'POST'
   });
 };
+
+export const getRefreshProjectConfigMutationKey = () => ['refreshProjectConfig'] as const;
 
 export const getRefreshProjectConfigMutationOptions = <
   TError = ErrorType<unknown>,
@@ -711,17 +730,17 @@ export const getRefreshProjectConfigMutationOptions = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof refreshProjectConfig>>,
     TError,
-    { project: string },
+    RefreshProjectConfigMutationVariables,
     TContext
   >;
   request?: SecondParameter<typeof customFetch>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof refreshProjectConfig>>,
   TError,
-  { project: string },
+  RefreshProjectConfigMutationVariables,
   TContext
 > => {
-  const mutationKey = ['refreshProjectConfig'];
+  const mutationKey = getRefreshProjectConfigMutationKey();
   const { mutation: mutationOptions, request: requestOptions } = options
     ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
       ? options
@@ -730,7 +749,7 @@ export const getRefreshProjectConfigMutationOptions = <
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof refreshProjectConfig>>,
-    { project: string }
+    RefreshProjectConfigMutationVariables
   > = (props) => {
     const { project } = props ?? {};
 
@@ -745,6 +764,7 @@ export type RefreshProjectConfigMutationResult = NonNullable<
 >;
 
 export type RefreshProjectConfigMutationError = ErrorType<unknown>;
+export type RefreshProjectConfigMutationVariables = { project: string };
 
 /**
  * @summary Refresh ProjectConfig
@@ -754,7 +774,7 @@ export const useRefreshProjectConfig = <TError = ErrorType<unknown>, TContext = 
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof refreshProjectConfig>>,
       TError,
-      { project: string },
+      RefreshProjectConfigMutationVariables,
       TContext
     >;
     request?: SecondParameter<typeof customFetch>;
@@ -763,18 +783,11 @@ export const useRefreshProjectConfig = <TError = ErrorType<unknown>, TContext = 
 ): UseMutationResult<
   Awaited<ReturnType<typeof refreshProjectConfig>>,
   TError,
-  { project: string },
+  RefreshProjectConfigMutationVariables,
   TContext
 > => {
-  const mutationOptions = getRefreshProjectConfigMutationOptions(options);
-
-  return useMutation(mutationOptions, queryClient);
+  return useMutation(getRefreshProjectConfigMutationOptions(options), queryClient);
 };
-/**
- * List ConfigMap resources from a project's namespace. Returns a
-Kubernetes ConfigMapList resource.
- * @summary List project-level ConfigMaps
- */
 export type listProjectConfigMapsResponse200 = {
   data: V1ConfigMapList;
   status: 200;
@@ -789,9 +802,14 @@ export const getListProjectConfigMapsUrl = (project: string) => {
   return `/v1beta1/projects/${project}/configmaps`;
 };
 
+/**
+ * List ConfigMap resources from a project's namespace. Returns a
+ * Kubernetes ConfigMapList resource.
+ * @summary List project-level ConfigMaps
+ */
 export const listProjectConfigMaps = async (
   project: string,
-  options?: RequestInit
+  options?: Parameters<typeof customFetch>[1]
 ): Promise<listProjectConfigMapsResponse> => {
   return customFetch<listProjectConfigMapsResponse>(getListProjectConfigMapsUrl(project), {
     ...options,
@@ -799,7 +817,7 @@ export const listProjectConfigMaps = async (
   });
 };
 
-export const getListProjectConfigMapsQueryKey = (project?: string) => {
+export const getListProjectConfigMapsQueryKey = (project: string) => {
   return [`/v1beta1/projects/${project}/configmaps`] as const;
 };
 
@@ -822,11 +840,14 @@ export const getListProjectConfigMapsQueryOptions = <
   const queryFn: QueryFunction<Awaited<ReturnType<typeof listProjectConfigMaps>>> = () =>
     listProjectConfigMaps(project, requestOptions);
 
-  return { queryKey, queryFn, enabled: !!project, ...queryOptions } as UseQueryOptions<
-    Awaited<ReturnType<typeof listProjectConfigMaps>>,
-    TError,
-    TData
-  > & { queryKey: DataTag<QueryKey, TData, TError> };
+  return {
+    queryKey,
+    queryFn,
+    enabled: project !== null && project !== undefined,
+    ...queryOptions
+  } as UseQueryOptions<Awaited<ReturnType<typeof listProjectConfigMaps>>, TError, TData> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
 };
 
 export type ListProjectConfigMapsQueryResult = NonNullable<
@@ -912,16 +933,9 @@ export function useListProjectConfigMaps<
     queryKey: DataTag<QueryKey, TData, TError>;
   };
 
-  query.queryKey = queryOptions.queryKey;
-
-  return query;
+  return withQueryKey(query, queryOptions.queryKey);
 }
 
-/**
- * Create a ConfigMap in a project's namespace. Returns the created
-Kubernetes ConfigMap resource.
- * @summary Create a project-level ConfigMap
- */
 export type createProjectConfigMapResponse201 = {
   data: V1ConfigMap;
   status: 201;
@@ -936,18 +950,33 @@ export const getCreateProjectConfigMapUrl = (project: string) => {
   return `/v1beta1/projects/${project}/configmaps`;
 };
 
+/**
+ * Create a ConfigMap in a project's namespace. Returns the created
+ * Kubernetes ConfigMap resource.
+ * @summary Create a project-level ConfigMap
+ */
 export const createProjectConfigMap = async (
   project: string,
-  createConfigMapRequestBody: CreateConfigMapRequestBody,
-  options?: RequestInit
+  createConfigMapRequest: CreateConfigMapRequest,
+  options?: Parameters<typeof customFetch>[1]
 ): Promise<createProjectConfigMapResponse> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit['headers']>
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Array.isArray(h)) return Object.fromEntries(h);
+    return h;
+  };
   return customFetch<createProjectConfigMapResponse>(getCreateProjectConfigMapUrl(project), {
     ...options,
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(createConfigMapRequestBody)
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(createConfigMapRequest)
   });
 };
+
+export const getCreateProjectConfigMapMutationKey = () => ['createProjectConfigMap'] as const;
 
 export const getCreateProjectConfigMapMutationOptions = <
   TError = ErrorType<unknown>,
@@ -956,17 +985,17 @@ export const getCreateProjectConfigMapMutationOptions = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof createProjectConfigMap>>,
     TError,
-    { project: string; data: CreateConfigMapRequestBody },
+    CreateProjectConfigMapMutationVariables,
     TContext
   >;
   request?: SecondParameter<typeof customFetch>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof createProjectConfigMap>>,
   TError,
-  { project: string; data: CreateConfigMapRequestBody },
+  CreateProjectConfigMapMutationVariables,
   TContext
 > => {
-  const mutationKey = ['createProjectConfigMap'];
+  const mutationKey = getCreateProjectConfigMapMutationKey();
   const { mutation: mutationOptions, request: requestOptions } = options
     ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
       ? options
@@ -975,7 +1004,7 @@ export const getCreateProjectConfigMapMutationOptions = <
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof createProjectConfigMap>>,
-    { project: string; data: CreateConfigMapRequestBody }
+    CreateProjectConfigMapMutationVariables
   > = (props) => {
     const { project, data } = props ?? {};
 
@@ -988,8 +1017,12 @@ export const getCreateProjectConfigMapMutationOptions = <
 export type CreateProjectConfigMapMutationResult = NonNullable<
   Awaited<ReturnType<typeof createProjectConfigMap>>
 >;
-export type CreateProjectConfigMapMutationBody = CreateConfigMapRequestBody;
+export type CreateProjectConfigMapMutationBody = CreateConfigMapRequest;
 export type CreateProjectConfigMapMutationError = ErrorType<unknown>;
+export type CreateProjectConfigMapMutationVariables = {
+  project: string;
+  data: CreateConfigMapRequest;
+};
 
 /**
  * @summary Create a project-level ConfigMap
@@ -999,7 +1032,7 @@ export const useCreateProjectConfigMap = <TError = ErrorType<unknown>, TContext 
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof createProjectConfigMap>>,
       TError,
-      { project: string; data: CreateConfigMapRequestBody },
+      CreateProjectConfigMapMutationVariables,
       TContext
     >;
     request?: SecondParameter<typeof customFetch>;
@@ -1008,17 +1041,11 @@ export const useCreateProjectConfigMap = <TError = ErrorType<unknown>, TContext 
 ): UseMutationResult<
   Awaited<ReturnType<typeof createProjectConfigMap>>,
   TError,
-  { project: string; data: CreateConfigMapRequestBody },
+  CreateProjectConfigMapMutationVariables,
   TContext
 > => {
-  const mutationOptions = getCreateProjectConfigMapMutationOptions(options);
-
-  return useMutation(mutationOptions, queryClient);
+  return useMutation(getCreateProjectConfigMapMutationOptions(options), queryClient);
 };
-/**
- * Retrieve a ConfigMap by name from a project's namespace.
- * @summary Retrieve a project-level ConfigMap
- */
 export type getProjectConfigMapResponse200 = {
   data: V1ConfigMap;
   status: 200;
@@ -1033,10 +1060,14 @@ export const getGetProjectConfigMapUrl = (project: string, configmap: string) =>
   return `/v1beta1/projects/${project}/configmaps/${configmap}`;
 };
 
+/**
+ * Retrieve a ConfigMap by name from a project's namespace.
+ * @summary Retrieve a project-level ConfigMap
+ */
 export const getProjectConfigMap = async (
   project: string,
   configmap: string,
-  options?: RequestInit
+  options?: Parameters<typeof customFetch>[1]
 ): Promise<getProjectConfigMapResponse> => {
   return customFetch<getProjectConfigMapResponse>(getGetProjectConfigMapUrl(project, configmap), {
     ...options,
@@ -1044,7 +1075,7 @@ export const getProjectConfigMap = async (
   });
 };
 
-export const getGetProjectConfigMapQueryKey = (project?: string, configmap?: string) => {
+export const getGetProjectConfigMapQueryKey = (project: string, configmap: string) => {
   return [`/v1beta1/projects/${project}/configmaps/${configmap}`] as const;
 };
 
@@ -1071,7 +1102,8 @@ export const getGetProjectConfigMapQueryOptions = <
   return {
     queryKey,
     queryFn,
-    enabled: !!(project && configmap),
+    enabled:
+      project !== null && project !== undefined && configmap !== null && configmap !== undefined,
     ...queryOptions
   } as UseQueryOptions<Awaited<ReturnType<typeof getProjectConfigMap>>, TError, TData> & {
     queryKey: DataTag<QueryKey, TData, TError>;
@@ -1165,16 +1197,9 @@ export function useGetProjectConfigMap<
     queryKey: DataTag<QueryKey, TData, TError>;
   };
 
-  query.queryKey = queryOptions.queryKey;
-
-  return query;
+  return withQueryKey(query, queryOptions.queryKey);
 }
 
-/**
- * Replace a ConfigMap in a project's namespace. All existing data
-is replaced. Returns the updated Kubernetes ConfigMap resource.
- * @summary Replace a project-level ConfigMap
- */
 export type updateProjectConfigMapResponse200 = {
   data: V1ConfigMap;
   status: 200;
@@ -1189,22 +1214,37 @@ export const getUpdateProjectConfigMapUrl = (project: string, configmap: string)
   return `/v1beta1/projects/${project}/configmaps/${configmap}`;
 };
 
+/**
+ * Replace a ConfigMap in a project's namespace. All existing data
+ * is replaced. Returns the updated Kubernetes ConfigMap resource.
+ * @summary Replace a project-level ConfigMap
+ */
 export const updateProjectConfigMap = async (
   project: string,
   configmap: string,
-  updateConfigMapRequestBody: UpdateConfigMapRequestBody,
-  options?: RequestInit
+  updateConfigMapRequest: UpdateConfigMapRequest,
+  options?: Parameters<typeof customFetch>[1]
 ): Promise<updateProjectConfigMapResponse> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit['headers']>
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Array.isArray(h)) return Object.fromEntries(h);
+    return h;
+  };
   return customFetch<updateProjectConfigMapResponse>(
     getUpdateProjectConfigMapUrl(project, configmap),
     {
       ...options,
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json', ...options?.headers },
-      body: JSON.stringify(updateConfigMapRequestBody)
+      headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+      body: JSON.stringify(updateConfigMapRequest)
     }
   );
 };
+
+export const getUpdateProjectConfigMapMutationKey = () => ['updateProjectConfigMap'] as const;
 
 export const getUpdateProjectConfigMapMutationOptions = <
   TError = ErrorType<unknown>,
@@ -1213,17 +1253,17 @@ export const getUpdateProjectConfigMapMutationOptions = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof updateProjectConfigMap>>,
     TError,
-    { project: string; configmap: string; data: UpdateConfigMapRequestBody },
+    UpdateProjectConfigMapMutationVariables,
     TContext
   >;
   request?: SecondParameter<typeof customFetch>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof updateProjectConfigMap>>,
   TError,
-  { project: string; configmap: string; data: UpdateConfigMapRequestBody },
+  UpdateProjectConfigMapMutationVariables,
   TContext
 > => {
-  const mutationKey = ['updateProjectConfigMap'];
+  const mutationKey = getUpdateProjectConfigMapMutationKey();
   const { mutation: mutationOptions, request: requestOptions } = options
     ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
       ? options
@@ -1232,7 +1272,7 @@ export const getUpdateProjectConfigMapMutationOptions = <
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof updateProjectConfigMap>>,
-    { project: string; configmap: string; data: UpdateConfigMapRequestBody }
+    UpdateProjectConfigMapMutationVariables
   > = (props) => {
     const { project, configmap, data } = props ?? {};
 
@@ -1245,8 +1285,13 @@ export const getUpdateProjectConfigMapMutationOptions = <
 export type UpdateProjectConfigMapMutationResult = NonNullable<
   Awaited<ReturnType<typeof updateProjectConfigMap>>
 >;
-export type UpdateProjectConfigMapMutationBody = UpdateConfigMapRequestBody;
+export type UpdateProjectConfigMapMutationBody = UpdateConfigMapRequest;
 export type UpdateProjectConfigMapMutationError = ErrorType<unknown>;
+export type UpdateProjectConfigMapMutationVariables = {
+  project: string;
+  configmap: string;
+  data: UpdateConfigMapRequest;
+};
 
 /**
  * @summary Replace a project-level ConfigMap
@@ -1256,7 +1301,7 @@ export const useUpdateProjectConfigMap = <TError = ErrorType<unknown>, TContext 
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof updateProjectConfigMap>>,
       TError,
-      { project: string; configmap: string; data: UpdateConfigMapRequestBody },
+      UpdateProjectConfigMapMutationVariables,
       TContext
     >;
     request?: SecondParameter<typeof customFetch>;
@@ -1265,17 +1310,11 @@ export const useUpdateProjectConfigMap = <TError = ErrorType<unknown>, TContext 
 ): UseMutationResult<
   Awaited<ReturnType<typeof updateProjectConfigMap>>,
   TError,
-  { project: string; configmap: string; data: UpdateConfigMapRequestBody },
+  UpdateProjectConfigMapMutationVariables,
   TContext
 > => {
-  const mutationOptions = getUpdateProjectConfigMapMutationOptions(options);
-
-  return useMutation(mutationOptions, queryClient);
+  return useMutation(getUpdateProjectConfigMapMutationOptions(options), queryClient);
 };
-/**
- * Delete a ConfigMap from a project's namespace.
- * @summary Delete a project-level ConfigMap
- */
 export type deleteProjectConfigMapResponse204 = {
   data: void;
   status: 204;
@@ -1290,10 +1329,14 @@ export const getDeleteProjectConfigMapUrl = (project: string, configmap: string)
   return `/v1beta1/projects/${project}/configmaps/${configmap}`;
 };
 
+/**
+ * Delete a ConfigMap from a project's namespace.
+ * @summary Delete a project-level ConfigMap
+ */
 export const deleteProjectConfigMap = async (
   project: string,
   configmap: string,
-  options?: RequestInit
+  options?: Parameters<typeof customFetch>[1]
 ): Promise<deleteProjectConfigMapResponse> => {
   return customFetch<deleteProjectConfigMapResponse>(
     getDeleteProjectConfigMapUrl(project, configmap),
@@ -1304,6 +1347,8 @@ export const deleteProjectConfigMap = async (
   );
 };
 
+export const getDeleteProjectConfigMapMutationKey = () => ['deleteProjectConfigMap'] as const;
+
 export const getDeleteProjectConfigMapMutationOptions = <
   TError = ErrorType<unknown>,
   TContext = unknown
@@ -1311,17 +1356,17 @@ export const getDeleteProjectConfigMapMutationOptions = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof deleteProjectConfigMap>>,
     TError,
-    { project: string; configmap: string },
+    DeleteProjectConfigMapMutationVariables,
     TContext
   >;
   request?: SecondParameter<typeof customFetch>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof deleteProjectConfigMap>>,
   TError,
-  { project: string; configmap: string },
+  DeleteProjectConfigMapMutationVariables,
   TContext
 > => {
-  const mutationKey = ['deleteProjectConfigMap'];
+  const mutationKey = getDeleteProjectConfigMapMutationKey();
   const { mutation: mutationOptions, request: requestOptions } = options
     ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
       ? options
@@ -1330,7 +1375,7 @@ export const getDeleteProjectConfigMapMutationOptions = <
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof deleteProjectConfigMap>>,
-    { project: string; configmap: string }
+    DeleteProjectConfigMapMutationVariables
   > = (props) => {
     const { project, configmap } = props ?? {};
 
@@ -1345,6 +1390,7 @@ export type DeleteProjectConfigMapMutationResult = NonNullable<
 >;
 
 export type DeleteProjectConfigMapMutationError = ErrorType<unknown>;
+export type DeleteProjectConfigMapMutationVariables = { project: string; configmap: string };
 
 /**
  * @summary Delete a project-level ConfigMap
@@ -1354,7 +1400,7 @@ export const useDeleteProjectConfigMap = <TError = ErrorType<unknown>, TContext 
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof deleteProjectConfigMap>>,
       TError,
-      { project: string; configmap: string },
+      DeleteProjectConfigMapMutationVariables,
       TContext
     >;
     request?: SecondParameter<typeof customFetch>;
@@ -1363,19 +1409,11 @@ export const useDeleteProjectConfigMap = <TError = ErrorType<unknown>, TContext 
 ): UseMutationResult<
   Awaited<ReturnType<typeof deleteProjectConfigMap>>,
   TError,
-  { project: string; configmap: string },
+  DeleteProjectConfigMapMutationVariables,
   TContext
 > => {
-  const mutationOptions = getDeleteProjectConfigMapMutationOptions(options);
-
-  return useMutation(mutationOptions, queryClient);
+  return useMutation(getDeleteProjectConfigMapMutationOptions(options), queryClient);
 };
-/**
- * Patch a ConfigMap in a project's namespace. Merges provided data
-with existing data. Use removeKeys to delete specific keys.
-Returns the updated Kubernetes ConfigMap resource.
- * @summary Patch a project-level ConfigMap
- */
 export type patchProjectConfigMapResponse200 = {
   data: V1ConfigMap;
   status: 200;
@@ -1390,22 +1428,38 @@ export const getPatchProjectConfigMapUrl = (project: string, configmap: string) 
   return `/v1beta1/projects/${project}/configmaps/${configmap}`;
 };
 
+/**
+ * Patch a ConfigMap in a project's namespace. Merges provided data
+ * with existing data. Use removeKeys to delete specific keys.
+ * Returns the updated Kubernetes ConfigMap resource.
+ * @summary Patch a project-level ConfigMap
+ */
 export const patchProjectConfigMap = async (
   project: string,
   configmap: string,
-  patchConfigMapRequestBody: PatchConfigMapRequestBody,
-  options?: RequestInit
+  patchConfigMapRequest: PatchConfigMapRequest,
+  options?: Parameters<typeof customFetch>[1]
 ): Promise<patchProjectConfigMapResponse> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit['headers']>
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Array.isArray(h)) return Object.fromEntries(h);
+    return h;
+  };
   return customFetch<patchProjectConfigMapResponse>(
     getPatchProjectConfigMapUrl(project, configmap),
     {
       ...options,
       method: 'PATCH',
-      headers: { 'Content-Type': 'application/json', ...options?.headers },
-      body: JSON.stringify(patchConfigMapRequestBody)
+      headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+      body: JSON.stringify(patchConfigMapRequest)
     }
   );
 };
+
+export const getPatchProjectConfigMapMutationKey = () => ['patchProjectConfigMap'] as const;
 
 export const getPatchProjectConfigMapMutationOptions = <
   TError = ErrorType<unknown>,
@@ -1414,17 +1468,17 @@ export const getPatchProjectConfigMapMutationOptions = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof patchProjectConfigMap>>,
     TError,
-    { project: string; configmap: string; data: PatchConfigMapRequestBody },
+    PatchProjectConfigMapMutationVariables,
     TContext
   >;
   request?: SecondParameter<typeof customFetch>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof patchProjectConfigMap>>,
   TError,
-  { project: string; configmap: string; data: PatchConfigMapRequestBody },
+  PatchProjectConfigMapMutationVariables,
   TContext
 > => {
-  const mutationKey = ['patchProjectConfigMap'];
+  const mutationKey = getPatchProjectConfigMapMutationKey();
   const { mutation: mutationOptions, request: requestOptions } = options
     ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
       ? options
@@ -1433,7 +1487,7 @@ export const getPatchProjectConfigMapMutationOptions = <
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof patchProjectConfigMap>>,
-    { project: string; configmap: string; data: PatchConfigMapRequestBody }
+    PatchProjectConfigMapMutationVariables
   > = (props) => {
     const { project, configmap, data } = props ?? {};
 
@@ -1446,8 +1500,13 @@ export const getPatchProjectConfigMapMutationOptions = <
 export type PatchProjectConfigMapMutationResult = NonNullable<
   Awaited<ReturnType<typeof patchProjectConfigMap>>
 >;
-export type PatchProjectConfigMapMutationBody = PatchConfigMapRequestBody;
+export type PatchProjectConfigMapMutationBody = PatchConfigMapRequest;
 export type PatchProjectConfigMapMutationError = ErrorType<unknown>;
+export type PatchProjectConfigMapMutationVariables = {
+  project: string;
+  configmap: string;
+  data: PatchConfigMapRequest;
+};
 
 /**
  * @summary Patch a project-level ConfigMap
@@ -1457,7 +1516,7 @@ export const usePatchProjectConfigMap = <TError = ErrorType<unknown>, TContext =
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof patchProjectConfigMap>>,
       TError,
-      { project: string; configmap: string; data: PatchConfigMapRequestBody },
+      PatchProjectConfigMapMutationVariables,
       TContext
     >;
     request?: SecondParameter<typeof customFetch>;
@@ -1466,17 +1525,11 @@ export const usePatchProjectConfigMap = <TError = ErrorType<unknown>, TContext =
 ): UseMutationResult<
   Awaited<ReturnType<typeof patchProjectConfigMap>>,
   TError,
-  { project: string; configmap: string; data: PatchConfigMapRequestBody },
+  PatchProjectConfigMapMutationVariables,
   TContext
 > => {
-  const mutationOptions = getPatchProjectConfigMapMutationOptions(options);
-
-  return useMutation(mutationOptions, queryClient);
+  return useMutation(getPatchProjectConfigMapMutationOptions(options), queryClient);
 };
-/**
- * Query and filter Freight resources from a project's namespace.
- * @summary Query Freight
- */
 export type queryFreightsRestResponse200 = {
   data: PkgServerQueryFreightsResponse;
   status: 200;
@@ -1488,34 +1541,21 @@ export type queryFreightsRestResponseSuccess = queryFreightsRestResponse200 & {
 export type queryFreightsRestResponse = queryFreightsRestResponseSuccess;
 
 export const getQueryFreightsRestUrl = (project: string, params?: QueryFreightsRestParams) => {
-  const normalizedParams = new URLSearchParams();
-
-  Object.entries(params || {}).forEach(([key, value]) => {
-    const explodeParameters = ['origins'];
-
-    if (Array.isArray(value) && explodeParameters.includes(key)) {
-      value.forEach((v) => {
-        normalizedParams.append(key, v === null ? 'null' : v.toString());
-      });
-      return;
-    }
-
-    if (value !== undefined) {
-      normalizedParams.append(key, value === null ? 'null' : value.toString());
-    }
-  });
-
-  const stringifiedParams = normalizedParams.toString();
+  const stringifiedParams = serializeParams(params);
 
   return stringifiedParams.length > 0
     ? `/v1beta1/projects/${project}/freight?${stringifiedParams}`
     : `/v1beta1/projects/${project}/freight`;
 };
 
+/**
+ * Query and filter Freight resources from a project's namespace.
+ * @summary Query Freight
+ */
 export const queryFreightsRest = async (
   project: string,
   params?: QueryFreightsRestParams,
-  options?: RequestInit
+  options?: Parameters<typeof customFetch>[1]
 ): Promise<queryFreightsRestResponse> => {
   return customFetch<queryFreightsRestResponse>(getQueryFreightsRestUrl(project, params), {
     ...options,
@@ -1523,10 +1563,7 @@ export const queryFreightsRest = async (
   });
 };
 
-export const getQueryFreightsRestQueryKey = (
-  project?: string,
-  params?: QueryFreightsRestParams
-) => {
+export const getQueryFreightsRestQueryKey = (project: string, params?: QueryFreightsRestParams) => {
   return [`/v1beta1/projects/${project}/freight`, ...(params ? [params] : [])] as const;
 };
 
@@ -1548,11 +1585,14 @@ export const getQueryFreightsRestQueryOptions = <
   const queryFn: QueryFunction<Awaited<ReturnType<typeof queryFreightsRest>>> = () =>
     queryFreightsRest(project, params, requestOptions);
 
-  return { queryKey, queryFn, enabled: !!project, ...queryOptions } as UseQueryOptions<
-    Awaited<ReturnType<typeof queryFreightsRest>>,
-    TError,
-    TData
-  > & { queryKey: DataTag<QueryKey, TData, TError> };
+  return {
+    queryKey,
+    queryFn,
+    enabled: project !== null && project !== undefined,
+    ...queryOptions
+  } as UseQueryOptions<Awaited<ReturnType<typeof queryFreightsRest>>, TError, TData> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
 };
 
 export type QueryFreightsRestQueryResult = NonNullable<
@@ -1634,16 +1674,9 @@ export function useQueryFreightsRest<
     queryKey: DataTag<QueryKey, TData, TError>;
   };
 
-  query.queryKey = queryOptions.queryKey;
-
-  return query;
+  return withQueryKey(query, queryOptions.queryKey);
 }
 
-/**
- * Retrieve a Freight resource from a project's namespace by name
-or alias.
- * @summary Retrieve a Freight resource
- */
 export type getFreightResponse200 = {
   data: Freight;
   status: 200;
@@ -1658,10 +1691,15 @@ export const getGetFreightUrl = (project: string, freightNameOrAlias: string) =>
   return `/v1beta1/projects/${project}/freight/${freightNameOrAlias}`;
 };
 
+/**
+ * Retrieve a Freight resource from a project's namespace by name
+ * or alias.
+ * @summary Retrieve a Freight resource
+ */
 export const getFreight = async (
   project: string,
   freightNameOrAlias: string,
-  options?: RequestInit
+  options?: Parameters<typeof customFetch>[1]
 ): Promise<getFreightResponse> => {
   return customFetch<getFreightResponse>(getGetFreightUrl(project, freightNameOrAlias), {
     ...options,
@@ -1669,7 +1707,7 @@ export const getFreight = async (
   });
 };
 
-export const getGetFreightQueryKey = (project?: string, freightNameOrAlias?: string) => {
+export const getGetFreightQueryKey = (project: string, freightNameOrAlias: string) => {
   return [`/v1beta1/projects/${project}/freight/${freightNameOrAlias}`] as const;
 };
 
@@ -1694,7 +1732,11 @@ export const getGetFreightQueryOptions = <
   return {
     queryKey,
     queryFn,
-    enabled: !!(project && freightNameOrAlias),
+    enabled:
+      project !== null &&
+      project !== undefined &&
+      freightNameOrAlias !== null &&
+      freightNameOrAlias !== undefined,
     ...queryOptions
   } as UseQueryOptions<Awaited<ReturnType<typeof getFreight>>, TError, TData> & {
     queryKey: DataTag<QueryKey, TData, TError>;
@@ -1778,16 +1820,9 @@ export function useGetFreight<
     queryKey: DataTag<QueryKey, TData, TError>;
   };
 
-  query.queryKey = queryOptions.queryKey;
-
-  return query;
+  return withQueryKey(query, queryOptions.queryKey);
 }
 
-/**
- * Delete a Freight resource from a project's namespace by name or
-alias.
- * @summary Delete a Freight resource
- */
 export type deleteFreightResponse204 = {
   data: void;
   status: 204;
@@ -1802,16 +1837,23 @@ export const getDeleteFreightUrl = (project: string, freightNameOrAlias: string)
   return `/v1beta1/projects/${project}/freight/${freightNameOrAlias}`;
 };
 
+/**
+ * Delete a Freight resource from a project's namespace by name or
+ * alias.
+ * @summary Delete a Freight resource
+ */
 export const deleteFreight = async (
   project: string,
   freightNameOrAlias: string,
-  options?: RequestInit
+  options?: Parameters<typeof customFetch>[1]
 ): Promise<deleteFreightResponse> => {
   return customFetch<deleteFreightResponse>(getDeleteFreightUrl(project, freightNameOrAlias), {
     ...options,
     method: 'DELETE'
   });
 };
+
+export const getDeleteFreightMutationKey = () => ['deleteFreight'] as const;
 
 export const getDeleteFreightMutationOptions = <
   TError = ErrorType<unknown>,
@@ -1820,17 +1862,17 @@ export const getDeleteFreightMutationOptions = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof deleteFreight>>,
     TError,
-    { project: string; freightNameOrAlias: string },
+    DeleteFreightMutationVariables,
     TContext
   >;
   request?: SecondParameter<typeof customFetch>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof deleteFreight>>,
   TError,
-  { project: string; freightNameOrAlias: string },
+  DeleteFreightMutationVariables,
   TContext
 > => {
-  const mutationKey = ['deleteFreight'];
+  const mutationKey = getDeleteFreightMutationKey();
   const { mutation: mutationOptions, request: requestOptions } = options
     ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
       ? options
@@ -1839,7 +1881,7 @@ export const getDeleteFreightMutationOptions = <
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof deleteFreight>>,
-    { project: string; freightNameOrAlias: string }
+    DeleteFreightMutationVariables
   > = (props) => {
     const { project, freightNameOrAlias } = props ?? {};
 
@@ -1852,6 +1894,7 @@ export const getDeleteFreightMutationOptions = <
 export type DeleteFreightMutationResult = NonNullable<Awaited<ReturnType<typeof deleteFreight>>>;
 
 export type DeleteFreightMutationError = ErrorType<unknown>;
+export type DeleteFreightMutationVariables = { project: string; freightNameOrAlias: string };
 
 /**
  * @summary Delete a Freight resource
@@ -1861,7 +1904,7 @@ export const useDeleteFreight = <TError = ErrorType<unknown>, TContext = unknown
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof deleteFreight>>,
       TError,
-      { project: string; freightNameOrAlias: string },
+      DeleteFreightMutationVariables,
       TContext
     >;
     request?: SecondParameter<typeof customFetch>;
@@ -1870,17 +1913,11 @@ export const useDeleteFreight = <TError = ErrorType<unknown>, TContext = unknown
 ): UseMutationResult<
   Awaited<ReturnType<typeof deleteFreight>>,
   TError,
-  { project: string; freightNameOrAlias: string },
+  DeleteFreightMutationVariables,
   TContext
 > => {
-  const mutationOptions = getDeleteFreightMutationOptions(options);
-
-  return useMutation(mutationOptions, queryClient);
+  return useMutation(getDeleteFreightMutationOptions(options), queryClient);
 };
-/**
- * Patch a Freight resource's human-friendly alias.
- * @summary Patch a Freight resource's alias
- */
 export type patchFreightAliasResponse200 = {
   data: void;
   status: 200;
@@ -1896,26 +1933,22 @@ export const getPatchFreightAliasUrl = (
   freightNameOrAlias: string,
   params: PatchFreightAliasParams
 ) => {
-  const normalizedParams = new URLSearchParams();
-
-  Object.entries(params || {}).forEach(([key, value]) => {
-    if (value !== undefined) {
-      normalizedParams.append(key, value === null ? 'null' : value.toString());
-    }
-  });
-
-  const stringifiedParams = normalizedParams.toString();
+  const stringifiedParams = serializeParams(params);
 
   return stringifiedParams.length > 0
     ? `/v1beta1/projects/${project}/freight/${freightNameOrAlias}/alias?${stringifiedParams}`
     : `/v1beta1/projects/${project}/freight/${freightNameOrAlias}/alias`;
 };
 
+/**
+ * Patch a Freight resource's human-friendly alias.
+ * @summary Patch a Freight resource's alias
+ */
 export const patchFreightAlias = async (
   project: string,
   freightNameOrAlias: string,
   params: PatchFreightAliasParams,
-  options?: RequestInit
+  options?: Parameters<typeof customFetch>[1]
 ): Promise<patchFreightAliasResponse> => {
   return customFetch<patchFreightAliasResponse>(
     getPatchFreightAliasUrl(project, freightNameOrAlias, params),
@@ -1926,6 +1959,8 @@ export const patchFreightAlias = async (
   );
 };
 
+export const getPatchFreightAliasMutationKey = () => ['patchFreightAlias'] as const;
+
 export const getPatchFreightAliasMutationOptions = <
   TError = ErrorType<unknown>,
   TContext = unknown
@@ -1933,17 +1968,17 @@ export const getPatchFreightAliasMutationOptions = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof patchFreightAlias>>,
     TError,
-    { project: string; freightNameOrAlias: string; params: PatchFreightAliasParams },
+    PatchFreightAliasMutationVariables,
     TContext
   >;
   request?: SecondParameter<typeof customFetch>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof patchFreightAlias>>,
   TError,
-  { project: string; freightNameOrAlias: string; params: PatchFreightAliasParams },
+  PatchFreightAliasMutationVariables,
   TContext
 > => {
-  const mutationKey = ['patchFreightAlias'];
+  const mutationKey = getPatchFreightAliasMutationKey();
   const { mutation: mutationOptions, request: requestOptions } = options
     ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
       ? options
@@ -1952,7 +1987,7 @@ export const getPatchFreightAliasMutationOptions = <
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof patchFreightAlias>>,
-    { project: string; freightNameOrAlias: string; params: PatchFreightAliasParams }
+    PatchFreightAliasMutationVariables
   > = (props) => {
     const { project, freightNameOrAlias, params } = props ?? {};
 
@@ -1967,6 +2002,11 @@ export type PatchFreightAliasMutationResult = NonNullable<
 >;
 
 export type PatchFreightAliasMutationError = ErrorType<unknown>;
+export type PatchFreightAliasMutationVariables = {
+  project: string;
+  freightNameOrAlias: string;
+  params: PatchFreightAliasParams;
+};
 
 /**
  * @summary Patch a Freight resource's alias
@@ -1976,7 +2016,7 @@ export const usePatchFreightAlias = <TError = ErrorType<unknown>, TContext = unk
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof patchFreightAlias>>,
       TError,
-      { project: string; freightNameOrAlias: string; params: PatchFreightAliasParams },
+      PatchFreightAliasMutationVariables,
       TContext
     >;
     request?: SecondParameter<typeof customFetch>;
@@ -1985,17 +2025,11 @@ export const usePatchFreightAlias = <TError = ErrorType<unknown>, TContext = unk
 ): UseMutationResult<
   Awaited<ReturnType<typeof patchFreightAlias>>,
   TError,
-  { project: string; freightNameOrAlias: string; params: PatchFreightAliasParams },
+  PatchFreightAliasMutationVariables,
   TContext
 > => {
-  const mutationOptions = getPatchFreightAliasMutationOptions(options);
-
-  return useMutation(mutationOptions, queryClient);
+  return useMutation(getPatchFreightAliasMutationOptions(options), queryClient);
 };
-/**
- * Approve Freight for promotion to a Stage.
- * @summary Approve Freight for promotion to a Stage
- */
 export type approveFreightResponse200 = {
   data: void;
   status: 200;
@@ -2011,26 +2045,22 @@ export const getApproveFreightUrl = (
   freightNameOrAlias: string,
   params: ApproveFreightParams
 ) => {
-  const normalizedParams = new URLSearchParams();
-
-  Object.entries(params || {}).forEach(([key, value]) => {
-    if (value !== undefined) {
-      normalizedParams.append(key, value === null ? 'null' : value.toString());
-    }
-  });
-
-  const stringifiedParams = normalizedParams.toString();
+  const stringifiedParams = serializeParams(params);
 
   return stringifiedParams.length > 0
     ? `/v1beta1/projects/${project}/freight/${freightNameOrAlias}/approve?${stringifiedParams}`
     : `/v1beta1/projects/${project}/freight/${freightNameOrAlias}/approve`;
 };
 
+/**
+ * Approve Freight for promotion to a Stage.
+ * @summary Approve Freight for promotion to a Stage
+ */
 export const approveFreight = async (
   project: string,
   freightNameOrAlias: string,
   params: ApproveFreightParams,
-  options?: RequestInit
+  options?: Parameters<typeof customFetch>[1]
 ): Promise<approveFreightResponse> => {
   return customFetch<approveFreightResponse>(
     getApproveFreightUrl(project, freightNameOrAlias, params),
@@ -2041,6 +2071,8 @@ export const approveFreight = async (
   );
 };
 
+export const getApproveFreightMutationKey = () => ['approveFreight'] as const;
+
 export const getApproveFreightMutationOptions = <
   TError = ErrorType<unknown>,
   TContext = unknown
@@ -2048,17 +2080,17 @@ export const getApproveFreightMutationOptions = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof approveFreight>>,
     TError,
-    { project: string; freightNameOrAlias: string; params: ApproveFreightParams },
+    ApproveFreightMutationVariables,
     TContext
   >;
   request?: SecondParameter<typeof customFetch>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof approveFreight>>,
   TError,
-  { project: string; freightNameOrAlias: string; params: ApproveFreightParams },
+  ApproveFreightMutationVariables,
   TContext
 > => {
-  const mutationKey = ['approveFreight'];
+  const mutationKey = getApproveFreightMutationKey();
   const { mutation: mutationOptions, request: requestOptions } = options
     ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
       ? options
@@ -2067,7 +2099,7 @@ export const getApproveFreightMutationOptions = <
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof approveFreight>>,
-    { project: string; freightNameOrAlias: string; params: ApproveFreightParams }
+    ApproveFreightMutationVariables
   > = (props) => {
     const { project, freightNameOrAlias, params } = props ?? {};
 
@@ -2080,6 +2112,11 @@ export const getApproveFreightMutationOptions = <
 export type ApproveFreightMutationResult = NonNullable<Awaited<ReturnType<typeof approveFreight>>>;
 
 export type ApproveFreightMutationError = ErrorType<unknown>;
+export type ApproveFreightMutationVariables = {
+  project: string;
+  freightNameOrAlias: string;
+  params: ApproveFreightParams;
+};
 
 /**
  * @summary Approve Freight for promotion to a Stage
@@ -2089,7 +2126,7 @@ export const useApproveFreight = <TError = ErrorType<unknown>, TContext = unknow
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof approveFreight>>,
       TError,
-      { project: string; freightNameOrAlias: string; params: ApproveFreightParams },
+      ApproveFreightMutationVariables,
       TContext
     >;
     request?: SecondParameter<typeof customFetch>;
@@ -2098,19 +2135,11 @@ export const useApproveFreight = <TError = ErrorType<unknown>, TContext = unknow
 ): UseMutationResult<
   Awaited<ReturnType<typeof approveFreight>>,
   TError,
-  { project: string; freightNameOrAlias: string; params: ApproveFreightParams },
+  ApproveFreightMutationVariables,
   TContext
 > => {
-  const mutationOptions = getApproveFreightMutationOptions(options);
-
-  return useMutation(mutationOptions, queryClient);
+  return useMutation(getApproveFreightMutationOptions(options), queryClient);
 };
-/**
- * Retrieve evaluated deep links for a Freight resource, combining
-cluster-level links from ClusterConfig and project-level links
-from ProjectConfig.
- * @summary Retrieve deep links for a Freight resource
- */
 export type getFreightLinksResponse200 = {
   data: GetFreightLinksResponse;
   status: 200;
@@ -2125,10 +2154,16 @@ export const getGetFreightLinksUrl = (project: string, freightNameOrAlias: strin
   return `/v1beta1/projects/${project}/freight/${freightNameOrAlias}/links`;
 };
 
+/**
+ * Retrieve evaluated deep links for a Freight resource, combining
+ * cluster-level links from ClusterConfig and project-level links
+ * from ProjectConfig.
+ * @summary Retrieve deep links for a Freight resource
+ */
 export const getFreightLinks = async (
   project: string,
   freightNameOrAlias: string,
-  options?: RequestInit
+  options?: Parameters<typeof customFetch>[1]
 ): Promise<getFreightLinksResponse> => {
   return customFetch<getFreightLinksResponse>(getGetFreightLinksUrl(project, freightNameOrAlias), {
     ...options,
@@ -2136,7 +2171,7 @@ export const getFreightLinks = async (
   });
 };
 
-export const getGetFreightLinksQueryKey = (project?: string, freightNameOrAlias?: string) => {
+export const getGetFreightLinksQueryKey = (project: string, freightNameOrAlias: string) => {
   return [`/v1beta1/projects/${project}/freight/${freightNameOrAlias}/links`] as const;
 };
 
@@ -2162,7 +2197,11 @@ export const getGetFreightLinksQueryOptions = <
   return {
     queryKey,
     queryFn,
-    enabled: !!(project && freightNameOrAlias),
+    enabled:
+      project !== null &&
+      project !== undefined &&
+      freightNameOrAlias !== null &&
+      freightNameOrAlias !== undefined,
     ...queryOptions
   } as UseQueryOptions<Awaited<ReturnType<typeof getFreightLinks>>, TError, TData> & {
     queryKey: DataTag<QueryKey, TData, TError>;
@@ -2246,16 +2285,9 @@ export function useGetFreightLinks<
     queryKey: DataTag<QueryKey, TData, TError>;
   };
 
-  query.queryKey = queryOptions.queryKey;
-
-  return query;
+  return withQueryKey(query, queryOptions.queryKey);
 }
 
-/**
- * List container images referenced by Freight resources in a
-project's namespace.
- * @summary List container images
- */
 export type listImagesResponse200 = {
   data: ListImages200;
   status: 200;
@@ -2270,9 +2302,14 @@ export const getListImagesUrl = (project: string) => {
   return `/v1beta1/projects/${project}/images`;
 };
 
+/**
+ * List container images referenced by Freight resources in a
+ * project's namespace.
+ * @summary List container images
+ */
 export const listImages = async (
   project: string,
-  options?: RequestInit
+  options?: Parameters<typeof customFetch>[1]
 ): Promise<listImagesResponse> => {
   return customFetch<listImagesResponse>(getListImagesUrl(project), {
     ...options,
@@ -2280,7 +2317,7 @@ export const listImages = async (
   });
 };
 
-export const getListImagesQueryKey = (project?: string) => {
+export const getListImagesQueryKey = (project: string) => {
   return [`/v1beta1/projects/${project}/images`] as const;
 };
 
@@ -2301,11 +2338,14 @@ export const getListImagesQueryOptions = <
   const queryFn: QueryFunction<Awaited<ReturnType<typeof listImages>>> = () =>
     listImages(project, requestOptions);
 
-  return { queryKey, queryFn, enabled: !!project, ...queryOptions } as UseQueryOptions<
-    Awaited<ReturnType<typeof listImages>>,
-    TError,
-    TData
-  > & { queryKey: DataTag<QueryKey, TData, TError> };
+  return {
+    queryKey,
+    queryFn,
+    enabled: project !== null && project !== undefined,
+    ...queryOptions
+  } as UseQueryOptions<Awaited<ReturnType<typeof listImages>>, TError, TData> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
 };
 
 export type ListImagesQueryResult = NonNullable<Awaited<ReturnType<typeof listImages>>>;
@@ -2381,16 +2421,508 @@ export function useListImages<
     queryKey: DataTag<QueryKey, TData, TError>;
   };
 
-  query.queryKey = queryOptions.queryKey;
-
-  return query;
+  return withQueryKey(query, queryOptions.queryKey);
 }
 
+export type listPromotionRequestsResponse200 = {
+  data: PromotionRequestList;
+  status: 200;
+};
+
+export type listPromotionRequestsResponseSuccess = listPromotionRequestsResponse200 & {
+  headers: Headers;
+};
+export type listPromotionRequestsResponse = listPromotionRequestsResponseSuccess;
+
+export const getListPromotionRequestsUrl = (
+  project: string,
+  params?: ListPromotionRequestsParams
+) => {
+  const stringifiedParams = serializeParams(params);
+
+  return stringifiedParams.length > 0
+    ? `/v1beta1/projects/${project}/promotion-requests?${stringifiedParams}`
+    : `/v1beta1/projects/${project}/promotion-requests`;
+};
+
 /**
- * List PromotionTask resources from a project's namespace. Returns
-a PromotionTaskList resource.
- * @summary List PromotionTasks
+ * List PromotionRequest resources from a project's namespace.
+ * Returns a PromotionRequestList resource.
+ * @summary List PromotionRequests
  */
+export const listPromotionRequests = async (
+  project: string,
+  params?: ListPromotionRequestsParams,
+  options?: Parameters<typeof customFetch>[1]
+): Promise<listPromotionRequestsResponse> => {
+  return customFetch<listPromotionRequestsResponse>(getListPromotionRequestsUrl(project, params), {
+    ...options,
+    method: 'GET'
+  });
+};
+
+export const getListPromotionRequestsQueryKey = (
+  project: string,
+  params?: ListPromotionRequestsParams
+) => {
+  return [`/v1beta1/projects/${project}/promotion-requests`, ...(params ? [params] : [])] as const;
+};
+
+export const getListPromotionRequestsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listPromotionRequests>>,
+  TError = ErrorType<unknown>
+>(
+  project: string,
+  params?: ListPromotionRequestsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listPromotionRequests>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  }
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListPromotionRequestsQueryKey(project, params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listPromotionRequests>>> = () =>
+    listPromotionRequests(project, params, requestOptions);
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: project !== null && project !== undefined,
+    ...queryOptions
+  } as UseQueryOptions<Awaited<ReturnType<typeof listPromotionRequests>>, TError, TData> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+};
+
+export type ListPromotionRequestsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listPromotionRequests>>
+>;
+export type ListPromotionRequestsQueryError = ErrorType<unknown>;
+
+export function useListPromotionRequests<
+  TData = Awaited<ReturnType<typeof listPromotionRequests>>,
+  TError = ErrorType<unknown>
+>(
+  project: string,
+  params: undefined | ListPromotionRequestsParams,
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listPromotionRequests>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listPromotionRequests>>,
+          TError,
+          Awaited<ReturnType<typeof listPromotionRequests>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListPromotionRequests<
+  TData = Awaited<ReturnType<typeof listPromotionRequests>>,
+  TError = ErrorType<unknown>
+>(
+  project: string,
+  params?: ListPromotionRequestsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listPromotionRequests>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listPromotionRequests>>,
+          TError,
+          Awaited<ReturnType<typeof listPromotionRequests>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListPromotionRequests<
+  TData = Awaited<ReturnType<typeof listPromotionRequests>>,
+  TError = ErrorType<unknown>
+>(
+  project: string,
+  params?: ListPromotionRequestsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listPromotionRequests>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary List PromotionRequests
+ */
+
+export function useListPromotionRequests<
+  TData = Awaited<ReturnType<typeof listPromotionRequests>>,
+  TError = ErrorType<unknown>
+>(
+  project: string,
+  params?: ListPromotionRequestsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listPromotionRequests>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getListPromotionRequestsQueryOptions(project, params, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export type getPromotionRequestResponse200 = {
+  data: PromotionRequest;
+  status: 200;
+};
+
+export type getPromotionRequestResponseSuccess = getPromotionRequestResponse200 & {
+  headers: Headers;
+};
+export type getPromotionRequestResponse = getPromotionRequestResponseSuccess;
+
+export const getGetPromotionRequestUrl = (project: string, promotionRequest: string) => {
+  return `/v1beta1/projects/${project}/promotion-requests/${promotionRequest}`;
+};
+
+/**
+ * Retrieve a PromotionRequest resource from a project's namespace.
+ * @summary Retrieve a PromotionRequest
+ */
+export const getPromotionRequest = async (
+  project: string,
+  promotionRequest: string,
+  options?: Parameters<typeof customFetch>[1]
+): Promise<getPromotionRequestResponse> => {
+  return customFetch<getPromotionRequestResponse>(
+    getGetPromotionRequestUrl(project, promotionRequest),
+    {
+      ...options,
+      method: 'GET'
+    }
+  );
+};
+
+export const getGetPromotionRequestQueryKey = (project: string, promotionRequest: string) => {
+  return [`/v1beta1/projects/${project}/promotion-requests/${promotionRequest}`] as const;
+};
+
+export const getGetPromotionRequestQueryOptions = <
+  TData = Awaited<ReturnType<typeof getPromotionRequest>>,
+  TError = ErrorType<unknown>
+>(
+  project: string,
+  promotionRequest: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getPromotionRequest>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  }
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetPromotionRequestQueryKey(project, promotionRequest);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getPromotionRequest>>> = () =>
+    getPromotionRequest(project, promotionRequest, requestOptions);
+
+  return {
+    queryKey,
+    queryFn,
+    enabled:
+      project !== null &&
+      project !== undefined &&
+      promotionRequest !== null &&
+      promotionRequest !== undefined,
+    ...queryOptions
+  } as UseQueryOptions<Awaited<ReturnType<typeof getPromotionRequest>>, TError, TData> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+};
+
+export type GetPromotionRequestQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getPromotionRequest>>
+>;
+export type GetPromotionRequestQueryError = ErrorType<unknown>;
+
+export function useGetPromotionRequest<
+  TData = Awaited<ReturnType<typeof getPromotionRequest>>,
+  TError = ErrorType<unknown>
+>(
+  project: string,
+  promotionRequest: string,
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getPromotionRequest>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getPromotionRequest>>,
+          TError,
+          Awaited<ReturnType<typeof getPromotionRequest>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetPromotionRequest<
+  TData = Awaited<ReturnType<typeof getPromotionRequest>>,
+  TError = ErrorType<unknown>
+>(
+  project: string,
+  promotionRequest: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getPromotionRequest>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getPromotionRequest>>,
+          TError,
+          Awaited<ReturnType<typeof getPromotionRequest>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetPromotionRequest<
+  TData = Awaited<ReturnType<typeof getPromotionRequest>>,
+  TError = ErrorType<unknown>
+>(
+  project: string,
+  promotionRequest: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getPromotionRequest>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Retrieve a PromotionRequest
+ */
+
+export function useGetPromotionRequest<
+  TData = Awaited<ReturnType<typeof getPromotionRequest>>,
+  TError = ErrorType<unknown>
+>(
+  project: string,
+  promotionRequest: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getPromotionRequest>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getGetPromotionRequestQueryOptions(project, promotionRequest, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export type listPromotionRolloutsResponse200 = {
+  data: PromotionRolloutList;
+  status: 200;
+};
+
+export type listPromotionRolloutsResponseSuccess = listPromotionRolloutsResponse200 & {
+  headers: Headers;
+};
+export type listPromotionRolloutsResponse = listPromotionRolloutsResponseSuccess;
+
+export const getListPromotionRolloutsUrl = (
+  project: string,
+  params?: ListPromotionRolloutsParams
+) => {
+  const stringifiedParams = serializeParams(params);
+
+  return stringifiedParams.length > 0
+    ? `/v1beta1/projects/${project}/promotion-rollouts?${stringifiedParams}`
+    : `/v1beta1/projects/${project}/promotion-rollouts`;
+};
+
+/**
+ * List a project's PromotionRollouts, one page at a time, as
+ * a PromotionRolloutList resource. A Project or a Stage may
+ * have had any number of rollouts, so a list is never more
+ * than one page, newest first: the Project's, or a Stage's,
+ * or a Stage's of one piece of Freight. When a page is full,
+ * the list's metadata.continue names where the next page
+ * starts; pass it as continue to read on. With after, a
+ * Stage's rollouts numbered above it are listed oldest first
+ * instead. With latest, the list is instead each Stage's
+ * latest rollouts -- the one it is promoting through, if any,
+ * and the newest that has finished, if any -- which is what a
+ * reader of a Stage's state wants without reading its history.
+ * @summary List PromotionRollouts
+ */
+export const listPromotionRollouts = async (
+  project: string,
+  params?: ListPromotionRolloutsParams,
+  options?: Parameters<typeof customFetch>[1]
+): Promise<listPromotionRolloutsResponse> => {
+  return customFetch<listPromotionRolloutsResponse>(getListPromotionRolloutsUrl(project, params), {
+    ...options,
+    method: 'GET'
+  });
+};
+
+export const getListPromotionRolloutsQueryKey = (
+  project: string,
+  params?: ListPromotionRolloutsParams
+) => {
+  return [`/v1beta1/projects/${project}/promotion-rollouts`, ...(params ? [params] : [])] as const;
+};
+
+export const getListPromotionRolloutsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listPromotionRollouts>>,
+  TError = ErrorType<unknown>
+>(
+  project: string,
+  params?: ListPromotionRolloutsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listPromotionRollouts>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  }
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListPromotionRolloutsQueryKey(project, params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listPromotionRollouts>>> = () =>
+    listPromotionRollouts(project, params, requestOptions);
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: project !== null && project !== undefined,
+    ...queryOptions
+  } as UseQueryOptions<Awaited<ReturnType<typeof listPromotionRollouts>>, TError, TData> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+};
+
+export type ListPromotionRolloutsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listPromotionRollouts>>
+>;
+export type ListPromotionRolloutsQueryError = ErrorType<unknown>;
+
+export function useListPromotionRollouts<
+  TData = Awaited<ReturnType<typeof listPromotionRollouts>>,
+  TError = ErrorType<unknown>
+>(
+  project: string,
+  params: undefined | ListPromotionRolloutsParams,
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listPromotionRollouts>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listPromotionRollouts>>,
+          TError,
+          Awaited<ReturnType<typeof listPromotionRollouts>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListPromotionRollouts<
+  TData = Awaited<ReturnType<typeof listPromotionRollouts>>,
+  TError = ErrorType<unknown>
+>(
+  project: string,
+  params?: ListPromotionRolloutsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listPromotionRollouts>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listPromotionRollouts>>,
+          TError,
+          Awaited<ReturnType<typeof listPromotionRollouts>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListPromotionRollouts<
+  TData = Awaited<ReturnType<typeof listPromotionRollouts>>,
+  TError = ErrorType<unknown>
+>(
+  project: string,
+  params?: ListPromotionRolloutsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listPromotionRollouts>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary List PromotionRollouts
+ */
+
+export function useListPromotionRollouts<
+  TData = Awaited<ReturnType<typeof listPromotionRollouts>>,
+  TError = ErrorType<unknown>
+>(
+  project: string,
+  params?: ListPromotionRolloutsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listPromotionRollouts>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getListPromotionRolloutsQueryOptions(project, params, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
 export type listPromotionTasksResponse200 = {
   data: PromotionTaskList;
   status: 200;
@@ -2405,9 +2937,14 @@ export const getListPromotionTasksUrl = (project: string) => {
   return `/v1beta1/projects/${project}/promotion-tasks`;
 };
 
+/**
+ * List PromotionTask resources from a project's namespace. Returns
+ * a PromotionTaskList resource.
+ * @summary List PromotionTasks
+ */
 export const listPromotionTasks = async (
   project: string,
-  options?: RequestInit
+  options?: Parameters<typeof customFetch>[1]
 ): Promise<listPromotionTasksResponse> => {
   return customFetch<listPromotionTasksResponse>(getListPromotionTasksUrl(project), {
     ...options,
@@ -2415,7 +2952,7 @@ export const listPromotionTasks = async (
   });
 };
 
-export const getListPromotionTasksQueryKey = (project?: string) => {
+export const getListPromotionTasksQueryKey = (project: string) => {
   return [`/v1beta1/projects/${project}/promotion-tasks`] as const;
 };
 
@@ -2436,11 +2973,14 @@ export const getListPromotionTasksQueryOptions = <
   const queryFn: QueryFunction<Awaited<ReturnType<typeof listPromotionTasks>>> = () =>
     listPromotionTasks(project, requestOptions);
 
-  return { queryKey, queryFn, enabled: !!project, ...queryOptions } as UseQueryOptions<
-    Awaited<ReturnType<typeof listPromotionTasks>>,
-    TError,
-    TData
-  > & { queryKey: DataTag<QueryKey, TData, TError> };
+  return {
+    queryKey,
+    queryFn,
+    enabled: project !== null && project !== undefined,
+    ...queryOptions
+  } as UseQueryOptions<Awaited<ReturnType<typeof listPromotionTasks>>, TError, TData> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
 };
 
 export type ListPromotionTasksQueryResult = NonNullable<
@@ -2520,15 +3060,9 @@ export function useListPromotionTasks<
     queryKey: DataTag<QueryKey, TData, TError>;
   };
 
-  query.queryKey = queryOptions.queryKey;
-
-  return query;
+  return withQueryKey(query, queryOptions.queryKey);
 }
 
-/**
- * Retrieve a PromotionTask resource from a project's namespace.
- * @summary Retrieve a PromotionTask
- */
 export type getPromotionTaskResponse200 = {
   data: PromotionTask;
   status: 200;
@@ -2543,10 +3077,14 @@ export const getGetPromotionTaskUrl = (project: string, promotionTask: string) =
   return `/v1beta1/projects/${project}/promotion-tasks/${promotionTask}`;
 };
 
+/**
+ * Retrieve a PromotionTask resource from a project's namespace.
+ * @summary Retrieve a PromotionTask
+ */
 export const getPromotionTask = async (
   project: string,
   promotionTask: string,
-  options?: RequestInit
+  options?: Parameters<typeof customFetch>[1]
 ): Promise<getPromotionTaskResponse> => {
   return customFetch<getPromotionTaskResponse>(getGetPromotionTaskUrl(project, promotionTask), {
     ...options,
@@ -2554,7 +3092,7 @@ export const getPromotionTask = async (
   });
 };
 
-export const getGetPromotionTaskQueryKey = (project?: string, promotionTask?: string) => {
+export const getGetPromotionTaskQueryKey = (project: string, promotionTask: string) => {
   return [`/v1beta1/projects/${project}/promotion-tasks/${promotionTask}`] as const;
 };
 
@@ -2579,7 +3117,11 @@ export const getGetPromotionTaskQueryOptions = <
   return {
     queryKey,
     queryFn,
-    enabled: !!(project && promotionTask),
+    enabled:
+      project !== null &&
+      project !== undefined &&
+      promotionTask !== null &&
+      promotionTask !== undefined,
     ...queryOptions
   } as UseQueryOptions<Awaited<ReturnType<typeof getPromotionTask>>, TError, TData> & {
     queryKey: DataTag<QueryKey, TData, TError>;
@@ -2663,16 +3205,9 @@ export function useGetPromotionTask<
     queryKey: DataTag<QueryKey, TData, TError>;
   };
 
-  query.queryKey = queryOptions.queryKey;
-
-  return query;
+  return withQueryKey(query, queryOptions.queryKey);
 }
 
-/**
- * List Promotion resources from a project's namespace. Returns a
-PromotionList resource.
- * @summary List Promotions
- */
 export type listPromotionsResponse200 = {
   data: PromotionList;
   status: 200;
@@ -2684,25 +3219,22 @@ export type listPromotionsResponseSuccess = listPromotionsResponse200 & {
 export type listPromotionsResponse = listPromotionsResponseSuccess;
 
 export const getListPromotionsUrl = (project: string, params?: ListPromotionsParams) => {
-  const normalizedParams = new URLSearchParams();
-
-  Object.entries(params || {}).forEach(([key, value]) => {
-    if (value !== undefined) {
-      normalizedParams.append(key, value === null ? 'null' : value.toString());
-    }
-  });
-
-  const stringifiedParams = normalizedParams.toString();
+  const stringifiedParams = serializeParams(params);
 
   return stringifiedParams.length > 0
     ? `/v1beta1/projects/${project}/promotions?${stringifiedParams}`
     : `/v1beta1/projects/${project}/promotions`;
 };
 
+/**
+ * List Promotion resources from a project's namespace. Returns a
+ * PromotionList resource.
+ * @summary List Promotions
+ */
 export const listPromotions = async (
   project: string,
   params?: ListPromotionsParams,
-  options?: RequestInit
+  options?: Parameters<typeof customFetch>[1]
 ): Promise<listPromotionsResponse> => {
   return customFetch<listPromotionsResponse>(getListPromotionsUrl(project, params), {
     ...options,
@@ -2710,7 +3242,7 @@ export const listPromotions = async (
   });
 };
 
-export const getListPromotionsQueryKey = (project?: string, params?: ListPromotionsParams) => {
+export const getListPromotionsQueryKey = (project: string, params?: ListPromotionsParams) => {
   return [`/v1beta1/projects/${project}/promotions`, ...(params ? [params] : [])] as const;
 };
 
@@ -2732,11 +3264,14 @@ export const getListPromotionsQueryOptions = <
   const queryFn: QueryFunction<Awaited<ReturnType<typeof listPromotions>>> = () =>
     listPromotions(project, params, requestOptions);
 
-  return { queryKey, queryFn, enabled: !!project, ...queryOptions } as UseQueryOptions<
-    Awaited<ReturnType<typeof listPromotions>>,
-    TError,
-    TData
-  > & { queryKey: DataTag<QueryKey, TData, TError> };
+  return {
+    queryKey,
+    queryFn,
+    enabled: project !== null && project !== undefined,
+    ...queryOptions
+  } as UseQueryOptions<Awaited<ReturnType<typeof listPromotions>>, TError, TData> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
 };
 
 export type ListPromotionsQueryResult = NonNullable<Awaited<ReturnType<typeof listPromotions>>>;
@@ -2816,15 +3351,9 @@ export function useListPromotions<
     queryKey: DataTag<QueryKey, TData, TError>;
   };
 
-  query.queryKey = queryOptions.queryKey;
-
-  return query;
+  return withQueryKey(query, queryOptions.queryKey);
 }
 
-/**
- * Retrieve a Promotion resource from a project's namespace.
- * @summary Retrieve a Promotion
- */
 export type getPromotionResponse200 = {
   data: Promotion;
   status: 200;
@@ -2839,10 +3368,14 @@ export const getGetPromotionUrl = (project: string, promotion: string) => {
   return `/v1beta1/projects/${project}/promotions/${promotion}`;
 };
 
+/**
+ * Retrieve a Promotion resource from a project's namespace.
+ * @summary Retrieve a Promotion
+ */
 export const getPromotion = async (
   project: string,
   promotion: string,
-  options?: RequestInit
+  options?: Parameters<typeof customFetch>[1]
 ): Promise<getPromotionResponse> => {
   return customFetch<getPromotionResponse>(getGetPromotionUrl(project, promotion), {
     ...options,
@@ -2850,7 +3383,7 @@ export const getPromotion = async (
   });
 };
 
-export const getGetPromotionQueryKey = (project?: string, promotion?: string) => {
+export const getGetPromotionQueryKey = (project: string, promotion: string) => {
   return [`/v1beta1/projects/${project}/promotions/${promotion}`] as const;
 };
 
@@ -2875,7 +3408,8 @@ export const getGetPromotionQueryOptions = <
   return {
     queryKey,
     queryFn,
-    enabled: !!(project && promotion),
+    enabled:
+      project !== null && project !== undefined && promotion !== null && promotion !== undefined,
     ...queryOptions
   } as UseQueryOptions<Awaited<ReturnType<typeof getPromotion>>, TError, TData> & {
     queryKey: DataTag<QueryKey, TData, TError>;
@@ -2959,15 +3493,9 @@ export function useGetPromotion<
     queryKey: DataTag<QueryKey, TData, TError>;
   };
 
-  query.queryKey = queryOptions.queryKey;
-
-  return query;
+  return withQueryKey(query, queryOptions.queryKey);
 }
 
-/**
- * Abort a running Promotion.
- * @summary Abort a Promotion
- */
 export type abortPromotionResponse200 = {
   data: void;
   status: 200;
@@ -2982,16 +3510,22 @@ export const getAbortPromotionUrl = (project: string, promotion: string) => {
   return `/v1beta1/projects/${project}/promotions/${promotion}/abort`;
 };
 
+/**
+ * Abort a running Promotion.
+ * @summary Abort a Promotion
+ */
 export const abortPromotion = async (
   project: string,
   promotion: string,
-  options?: RequestInit
+  options?: Parameters<typeof customFetch>[1]
 ): Promise<abortPromotionResponse> => {
   return customFetch<abortPromotionResponse>(getAbortPromotionUrl(project, promotion), {
     ...options,
     method: 'POST'
   });
 };
+
+export const getAbortPromotionMutationKey = () => ['abortPromotion'] as const;
 
 export const getAbortPromotionMutationOptions = <
   TError = ErrorType<unknown>,
@@ -3000,17 +3534,17 @@ export const getAbortPromotionMutationOptions = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof abortPromotion>>,
     TError,
-    { project: string; promotion: string },
+    AbortPromotionMutationVariables,
     TContext
   >;
   request?: SecondParameter<typeof customFetch>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof abortPromotion>>,
   TError,
-  { project: string; promotion: string },
+  AbortPromotionMutationVariables,
   TContext
 > => {
-  const mutationKey = ['abortPromotion'];
+  const mutationKey = getAbortPromotionMutationKey();
   const { mutation: mutationOptions, request: requestOptions } = options
     ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
       ? options
@@ -3019,7 +3553,7 @@ export const getAbortPromotionMutationOptions = <
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof abortPromotion>>,
-    { project: string; promotion: string }
+    AbortPromotionMutationVariables
   > = (props) => {
     const { project, promotion } = props ?? {};
 
@@ -3032,6 +3566,7 @@ export const getAbortPromotionMutationOptions = <
 export type AbortPromotionMutationResult = NonNullable<Awaited<ReturnType<typeof abortPromotion>>>;
 
 export type AbortPromotionMutationError = ErrorType<unknown>;
+export type AbortPromotionMutationVariables = { project: string; promotion: string };
 
 /**
  * @summary Abort a Promotion
@@ -3041,7 +3576,7 @@ export const useAbortPromotion = <TError = ErrorType<unknown>, TContext = unknow
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof abortPromotion>>,
       TError,
-      { project: string; promotion: string },
+      AbortPromotionMutationVariables,
       TContext
     >;
     request?: SecondParameter<typeof customFetch>;
@@ -3050,19 +3585,11 @@ export const useAbortPromotion = <TError = ErrorType<unknown>, TContext = unknow
 ): UseMutationResult<
   Awaited<ReturnType<typeof abortPromotion>>,
   TError,
-  { project: string; promotion: string },
+  AbortPromotionMutationVariables,
   TContext
 > => {
-  const mutationOptions = getAbortPromotionMutationOptions(options);
-
-  return useMutation(mutationOptions, queryClient);
+  return useMutation(getAbortPromotionMutationOptions(options), queryClient);
 };
-/**
- * Refresh a Promotion resource in a project's namespace.
-Refreshing enqueues the resource for reconciliation by its
-corresponding controller.
- * @summary Refresh a Promotion
- */
 export type refreshPromotionResponse200 = {
   data: void;
   status: 200;
@@ -3077,16 +3604,24 @@ export const getRefreshPromotionUrl = (project: string, promotion: string) => {
   return `/v1beta1/projects/${project}/promotions/${promotion}/refresh`;
 };
 
+/**
+ * Refresh a Promotion resource in a project's namespace.
+ * Refreshing enqueues the resource for reconciliation by its
+ * corresponding controller.
+ * @summary Refresh a Promotion
+ */
 export const refreshPromotion = async (
   project: string,
   promotion: string,
-  options?: RequestInit
+  options?: Parameters<typeof customFetch>[1]
 ): Promise<refreshPromotionResponse> => {
   return customFetch<refreshPromotionResponse>(getRefreshPromotionUrl(project, promotion), {
     ...options,
     method: 'POST'
   });
 };
+
+export const getRefreshPromotionMutationKey = () => ['refreshPromotion'] as const;
 
 export const getRefreshPromotionMutationOptions = <
   TError = ErrorType<unknown>,
@@ -3095,17 +3630,17 @@ export const getRefreshPromotionMutationOptions = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof refreshPromotion>>,
     TError,
-    { project: string; promotion: string },
+    RefreshPromotionMutationVariables,
     TContext
   >;
   request?: SecondParameter<typeof customFetch>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof refreshPromotion>>,
   TError,
-  { project: string; promotion: string },
+  RefreshPromotionMutationVariables,
   TContext
 > => {
-  const mutationKey = ['refreshPromotion'];
+  const mutationKey = getRefreshPromotionMutationKey();
   const { mutation: mutationOptions, request: requestOptions } = options
     ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
       ? options
@@ -3114,7 +3649,7 @@ export const getRefreshPromotionMutationOptions = <
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof refreshPromotion>>,
-    { project: string; promotion: string }
+    RefreshPromotionMutationVariables
   > = (props) => {
     const { project, promotion } = props ?? {};
 
@@ -3129,6 +3664,7 @@ export type RefreshPromotionMutationResult = NonNullable<
 >;
 
 export type RefreshPromotionMutationError = ErrorType<unknown>;
+export type RefreshPromotionMutationVariables = { project: string; promotion: string };
 
 /**
  * @summary Refresh a Promotion
@@ -3138,7 +3674,7 @@ export const useRefreshPromotion = <TError = ErrorType<unknown>, TContext = unkn
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof refreshPromotion>>,
       TError,
-      { project: string; promotion: string },
+      RefreshPromotionMutationVariables,
       TContext
     >;
     request?: SecondParameter<typeof customFetch>;
@@ -3147,18 +3683,11 @@ export const useRefreshPromotion = <TError = ErrorType<unknown>, TContext = unkn
 ): UseMutationResult<
   Awaited<ReturnType<typeof refreshPromotion>>,
   TError,
-  { project: string; promotion: string },
+  RefreshPromotionMutationVariables,
   TContext
 > => {
-  const mutationOptions = getRefreshPromotionMutationOptions(options);
-
-  return useMutation(mutationOptions, queryClient);
+  return useMutation(getRefreshPromotionMutationOptions(options), queryClient);
 };
-/**
- * List Stage resources from a project's namespace. Returns a
-StageList resource.
- * @summary List Stages
- */
 export type listStagesResponse200 = {
   data: StageList;
   status: 200;
@@ -3170,34 +3699,22 @@ export type listStagesResponseSuccess = listStagesResponse200 & {
 export type listStagesResponse = listStagesResponseSuccess;
 
 export const getListStagesUrl = (project: string, params?: ListStagesParams) => {
-  const normalizedParams = new URLSearchParams();
-
-  Object.entries(params || {}).forEach(([key, value]) => {
-    const explodeParameters = ['freightOrigins'];
-
-    if (Array.isArray(value) && explodeParameters.includes(key)) {
-      value.forEach((v) => {
-        normalizedParams.append(key, v === null ? 'null' : v.toString());
-      });
-      return;
-    }
-
-    if (value !== undefined) {
-      normalizedParams.append(key, value === null ? 'null' : value.toString());
-    }
-  });
-
-  const stringifiedParams = normalizedParams.toString();
+  const stringifiedParams = serializeParams(params);
 
   return stringifiedParams.length > 0
     ? `/v1beta1/projects/${project}/stages?${stringifiedParams}`
     : `/v1beta1/projects/${project}/stages`;
 };
 
+/**
+ * List Stage resources from a project's namespace. Returns a
+ * StageList resource.
+ * @summary List Stages
+ */
 export const listStages = async (
   project: string,
   params?: ListStagesParams,
-  options?: RequestInit
+  options?: Parameters<typeof customFetch>[1]
 ): Promise<listStagesResponse> => {
   return customFetch<listStagesResponse>(getListStagesUrl(project, params), {
     ...options,
@@ -3205,7 +3722,7 @@ export const listStages = async (
   });
 };
 
-export const getListStagesQueryKey = (project?: string, params?: ListStagesParams) => {
+export const getListStagesQueryKey = (project: string, params?: ListStagesParams) => {
   return [`/v1beta1/projects/${project}/stages`, ...(params ? [params] : [])] as const;
 };
 
@@ -3227,11 +3744,14 @@ export const getListStagesQueryOptions = <
   const queryFn: QueryFunction<Awaited<ReturnType<typeof listStages>>> = () =>
     listStages(project, params, requestOptions);
 
-  return { queryKey, queryFn, enabled: !!project, ...queryOptions } as UseQueryOptions<
-    Awaited<ReturnType<typeof listStages>>,
-    TError,
-    TData
-  > & { queryKey: DataTag<QueryKey, TData, TError> };
+  return {
+    queryKey,
+    queryFn,
+    enabled: project !== null && project !== undefined,
+    ...queryOptions
+  } as UseQueryOptions<Awaited<ReturnType<typeof listStages>>, TError, TData> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
 };
 
 export type ListStagesQueryResult = NonNullable<Awaited<ReturnType<typeof listStages>>>;
@@ -3311,15 +3831,9 @@ export function useListStages<
     queryKey: DataTag<QueryKey, TData, TError>;
   };
 
-  query.queryKey = queryOptions.queryKey;
-
-  return query;
+  return withQueryKey(query, queryOptions.queryKey);
 }
 
-/**
- * Retrieve a Stage resource from a project's namespace.
- * @summary Retrieve a Stage
- */
 export type getStageResponse200 = {
   data: Stage;
   status: 200;
@@ -3334,10 +3848,14 @@ export const getGetStageUrl = (project: string, stage: string) => {
   return `/v1beta1/projects/${project}/stages/${stage}`;
 };
 
+/**
+ * Retrieve a Stage resource from a project's namespace.
+ * @summary Retrieve a Stage
+ */
 export const getStage = async (
   project: string,
   stage: string,
-  options?: RequestInit
+  options?: Parameters<typeof customFetch>[1]
 ): Promise<getStageResponse> => {
   return customFetch<getStageResponse>(getGetStageUrl(project, stage), {
     ...options,
@@ -3345,7 +3863,7 @@ export const getStage = async (
   });
 };
 
-export const getGetStageQueryKey = (project?: string, stage?: string) => {
+export const getGetStageQueryKey = (project: string, stage: string) => {
   return [`/v1beta1/projects/${project}/stages/${stage}`] as const;
 };
 
@@ -3367,11 +3885,14 @@ export const getGetStageQueryOptions = <
   const queryFn: QueryFunction<Awaited<ReturnType<typeof getStage>>> = () =>
     getStage(project, stage, requestOptions);
 
-  return { queryKey, queryFn, enabled: !!(project && stage), ...queryOptions } as UseQueryOptions<
-    Awaited<ReturnType<typeof getStage>>,
-    TError,
-    TData
-  > & { queryKey: DataTag<QueryKey, TData, TError> };
+  return {
+    queryKey,
+    queryFn,
+    enabled: project !== null && project !== undefined && stage !== null && stage !== undefined,
+    ...queryOptions
+  } as UseQueryOptions<Awaited<ReturnType<typeof getStage>>, TError, TData> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
 };
 
 export type GetStageQueryResult = NonNullable<Awaited<ReturnType<typeof getStage>>>;
@@ -3451,15 +3972,9 @@ export function useGetStage<
     queryKey: DataTag<QueryKey, TData, TError>;
   };
 
-  query.queryKey = queryOptions.queryKey;
-
-  return query;
+  return withQueryKey(query, queryOptions.queryKey);
 }
 
-/**
- * Delete a Stage resource from a project's namespace.
- * @summary Delete a Stage
- */
 export type deleteStageResponse204 = {
   data: void;
   status: 204;
@@ -3474,16 +3989,22 @@ export const getDeleteStageUrl = (project: string, stage: string) => {
   return `/v1beta1/projects/${project}/stages/${stage}`;
 };
 
+/**
+ * Delete a Stage resource from a project's namespace.
+ * @summary Delete a Stage
+ */
 export const deleteStage = async (
   project: string,
   stage: string,
-  options?: RequestInit
+  options?: Parameters<typeof customFetch>[1]
 ): Promise<deleteStageResponse> => {
   return customFetch<deleteStageResponse>(getDeleteStageUrl(project, stage), {
     ...options,
     method: 'DELETE'
   });
 };
+
+export const getDeleteStageMutationKey = () => ['deleteStage'] as const;
 
 export const getDeleteStageMutationOptions = <
   TError = ErrorType<unknown>,
@@ -3492,17 +4013,17 @@ export const getDeleteStageMutationOptions = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof deleteStage>>,
     TError,
-    { project: string; stage: string },
+    DeleteStageMutationVariables,
     TContext
   >;
   request?: SecondParameter<typeof customFetch>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof deleteStage>>,
   TError,
-  { project: string; stage: string },
+  DeleteStageMutationVariables,
   TContext
 > => {
-  const mutationKey = ['deleteStage'];
+  const mutationKey = getDeleteStageMutationKey();
   const { mutation: mutationOptions, request: requestOptions } = options
     ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
       ? options
@@ -3511,7 +4032,7 @@ export const getDeleteStageMutationOptions = <
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof deleteStage>>,
-    { project: string; stage: string }
+    DeleteStageMutationVariables
   > = (props) => {
     const { project, stage } = props ?? {};
 
@@ -3524,6 +4045,7 @@ export const getDeleteStageMutationOptions = <
 export type DeleteStageMutationResult = NonNullable<Awaited<ReturnType<typeof deleteStage>>>;
 
 export type DeleteStageMutationError = ErrorType<unknown>;
+export type DeleteStageMutationVariables = { project: string; stage: string };
 
 /**
  * @summary Delete a Stage
@@ -3533,7 +4055,7 @@ export const useDeleteStage = <TError = ErrorType<unknown>, TContext = unknown>(
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof deleteStage>>,
       TError,
-      { project: string; stage: string },
+      DeleteStageMutationVariables,
       TContext
     >;
     request?: SecondParameter<typeof customFetch>;
@@ -3542,19 +4064,11 @@ export const useDeleteStage = <TError = ErrorType<unknown>, TContext = unknown>(
 ): UseMutationResult<
   Awaited<ReturnType<typeof deleteStage>>,
   TError,
-  { project: string; stage: string },
+  DeleteStageMutationVariables,
   TContext
 > => {
-  const mutationOptions = getDeleteStageMutationOptions(options);
-
-  return useMutation(mutationOptions, queryClient);
+  return useMutation(getDeleteStageMutationOptions(options), queryClient);
 };
-/**
- * Retrieve evaluated deep links for a Stage resource, combining
-cluster-level links from ClusterConfig and project-level links
-from ProjectConfig.
- * @summary Retrieve deep links for a Stage resource
- */
 export type getStageLinksResponse200 = {
   data: GetStageLinksResponse;
   status: 200;
@@ -3569,10 +4083,16 @@ export const getGetStageLinksUrl = (project: string, stage: string) => {
   return `/v1beta1/projects/${project}/stages/${stage}/links`;
 };
 
+/**
+ * Retrieve evaluated deep links for a Stage resource, combining
+ * cluster-level links from ClusterConfig and project-level links
+ * from ProjectConfig.
+ * @summary Retrieve deep links for a Stage resource
+ */
 export const getStageLinks = async (
   project: string,
   stage: string,
-  options?: RequestInit
+  options?: Parameters<typeof customFetch>[1]
 ): Promise<getStageLinksResponse> => {
   return customFetch<getStageLinksResponse>(getGetStageLinksUrl(project, stage), {
     ...options,
@@ -3580,7 +4100,7 @@ export const getStageLinks = async (
   });
 };
 
-export const getGetStageLinksQueryKey = (project?: string, stage?: string) => {
+export const getGetStageLinksQueryKey = (project: string, stage: string) => {
   return [`/v1beta1/projects/${project}/stages/${stage}/links`] as const;
 };
 
@@ -3602,11 +4122,14 @@ export const getGetStageLinksQueryOptions = <
   const queryFn: QueryFunction<Awaited<ReturnType<typeof getStageLinks>>> = () =>
     getStageLinks(project, stage, requestOptions);
 
-  return { queryKey, queryFn, enabled: !!(project && stage), ...queryOptions } as UseQueryOptions<
-    Awaited<ReturnType<typeof getStageLinks>>,
-    TError,
-    TData
-  > & { queryKey: DataTag<QueryKey, TData, TError> };
+  return {
+    queryKey,
+    queryFn,
+    enabled: project !== null && project !== undefined && stage !== null && stage !== undefined,
+    ...queryOptions
+  } as UseQueryOptions<Awaited<ReturnType<typeof getStageLinks>>, TError, TData> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
 };
 
 export type GetStageLinksQueryResult = NonNullable<Awaited<ReturnType<typeof getStageLinks>>>;
@@ -3686,18 +4209,305 @@ export function useGetStageLinks<
     queryKey: DataTag<QueryKey, TData, TError>;
   };
 
-  query.queryKey = queryOptions.queryKey;
-
-  return query;
+  return withQueryKey(query, queryOptions.queryKey);
 }
 
+export type createPromotionRolloutResponse201 = {
+  data: PromotionRollout;
+  status: 201;
+};
+
+export type createPromotionRolloutResponseSuccess = createPromotionRolloutResponse201 & {
+  headers: Headers;
+};
+export type createPromotionRolloutResponse = createPromotionRolloutResponseSuccess;
+
+export const getCreatePromotionRolloutUrl = (project: string, stage: string) => {
+  return `/v1beta1/projects/${project}/stages/${stage}/promotion-rollouts`;
+};
+
 /**
- * Create a Promotion resource to transition a specified Stage into
-the state represented by the specified Freight.
-A Stage that selects Targets yields a PromotionRequest, which fans
-the Freight out to each of them, in place of a single Promotion.
- * @summary Promote to Stage
+ * Create a PromotionRollout, which promotes the Freight named
+ * in the body to each of the Targets the Stage governs, or to
+ * the ones the body names among them. PromotionRollouts are
+ * managed through this API rather than as Kubernetes
+ * resources. The Stage must select Targets: its selectors are
+ * resolved against the project's Targets as the rollout is
+ * created, narrowed to the Targets named if any are, and its
+ * update strategy, or the one the body gives in its place, is
+ * resolved against how many that leaves; both are recorded
+ * with the rollout for good. A Target the Stage does not
+ * govern is refused. So is a rollout to no Targets: while the
+ * Stage governs none, the response is a 409, and the same
+ * request succeeds once its selectors match a Target.
+ * Everything else about the rollout is assigned by the server.
+ * This is a promotion: it requires the promote verb on the
+ * Stage. A server that does not create PromotionRollouts
+ * responds 501.
+ * @summary Create a PromotionRollout
  */
+export const createPromotionRollout = async (
+  project: string,
+  stage: string,
+  createPromotionRolloutRequest: CreatePromotionRolloutRequest,
+  options?: Parameters<typeof customFetch>[1]
+): Promise<createPromotionRolloutResponse> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit['headers']>
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Array.isArray(h)) return Object.fromEntries(h);
+    return h;
+  };
+  return customFetch<createPromotionRolloutResponse>(getCreatePromotionRolloutUrl(project, stage), {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(createPromotionRolloutRequest)
+  });
+};
+
+export const getCreatePromotionRolloutMutationKey = () => ['createPromotionRollout'] as const;
+
+export const getCreatePromotionRolloutMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createPromotionRollout>>,
+    TError,
+    CreatePromotionRolloutMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createPromotionRollout>>,
+  TError,
+  CreatePromotionRolloutMutationVariables,
+  TContext
+> => {
+  const mutationKey = getCreatePromotionRolloutMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createPromotionRollout>>,
+    CreatePromotionRolloutMutationVariables
+  > = (props) => {
+    const { project, stage, data } = props ?? {};
+
+    return createPromotionRollout(project, stage, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreatePromotionRolloutMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createPromotionRollout>>
+>;
+export type CreatePromotionRolloutMutationBody = CreatePromotionRolloutRequest;
+export type CreatePromotionRolloutMutationError = ErrorType<unknown>;
+export type CreatePromotionRolloutMutationVariables = {
+  project: string;
+  stage: string;
+  data: CreatePromotionRolloutRequest;
+};
+
+/**
+ * @summary Create a PromotionRollout
+ */
+export const useCreatePromotionRollout = <TError = ErrorType<unknown>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof createPromotionRollout>>,
+      TError,
+      CreatePromotionRolloutMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient
+): UseMutationResult<
+  Awaited<ReturnType<typeof createPromotionRollout>>,
+  TError,
+  CreatePromotionRolloutMutationVariables,
+  TContext
+> => {
+  return useMutation(getCreatePromotionRolloutMutationOptions(options), queryClient);
+};
+export type getPromotionRolloutResponse200 = {
+  data: PromotionRollout;
+  status: 200;
+};
+
+export type getPromotionRolloutResponseSuccess = getPromotionRolloutResponse200 & {
+  headers: Headers;
+};
+export type getPromotionRolloutResponse = getPromotionRolloutResponseSuccess;
+
+export const getGetPromotionRolloutUrl = (project: string, stage: string, number: number) => {
+  return `/v1beta1/projects/${project}/stages/${stage}/promotion-rollouts/${number}`;
+};
+
+/**
+ * Retrieve one of a Stage's PromotionRollouts by its number
+ * among them.
+ * @summary Retrieve a PromotionRollout
+ */
+export const getPromotionRollout = async (
+  project: string,
+  stage: string,
+  number: number,
+  options?: Parameters<typeof customFetch>[1]
+): Promise<getPromotionRolloutResponse> => {
+  return customFetch<getPromotionRolloutResponse>(
+    getGetPromotionRolloutUrl(project, stage, number),
+    {
+      ...options,
+      method: 'GET'
+    }
+  );
+};
+
+export const getGetPromotionRolloutQueryKey = (project: string, stage: string, number: number) => {
+  return [`/v1beta1/projects/${project}/stages/${stage}/promotion-rollouts/${number}`] as const;
+};
+
+export const getGetPromotionRolloutQueryOptions = <
+  TData = Awaited<ReturnType<typeof getPromotionRollout>>,
+  TError = ErrorType<unknown>
+>(
+  project: string,
+  stage: string,
+  number: number,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getPromotionRollout>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  }
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetPromotionRolloutQueryKey(project, stage, number);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getPromotionRollout>>> = () =>
+    getPromotionRollout(project, stage, number, requestOptions);
+
+  return {
+    queryKey,
+    queryFn,
+    enabled:
+      project !== null &&
+      project !== undefined &&
+      stage !== null &&
+      stage !== undefined &&
+      number !== null &&
+      number !== undefined,
+    ...queryOptions
+  } as UseQueryOptions<Awaited<ReturnType<typeof getPromotionRollout>>, TError, TData> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+};
+
+export type GetPromotionRolloutQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getPromotionRollout>>
+>;
+export type GetPromotionRolloutQueryError = ErrorType<unknown>;
+
+export function useGetPromotionRollout<
+  TData = Awaited<ReturnType<typeof getPromotionRollout>>,
+  TError = ErrorType<unknown>
+>(
+  project: string,
+  stage: string,
+  number: number,
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getPromotionRollout>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getPromotionRollout>>,
+          TError,
+          Awaited<ReturnType<typeof getPromotionRollout>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetPromotionRollout<
+  TData = Awaited<ReturnType<typeof getPromotionRollout>>,
+  TError = ErrorType<unknown>
+>(
+  project: string,
+  stage: string,
+  number: number,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getPromotionRollout>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getPromotionRollout>>,
+          TError,
+          Awaited<ReturnType<typeof getPromotionRollout>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetPromotionRollout<
+  TData = Awaited<ReturnType<typeof getPromotionRollout>>,
+  TError = ErrorType<unknown>
+>(
+  project: string,
+  stage: string,
+  number: number,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getPromotionRollout>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Retrieve a PromotionRollout
+ */
+
+export function useGetPromotionRollout<
+  TData = Awaited<ReturnType<typeof getPromotionRollout>>,
+  TError = ErrorType<unknown>
+>(
+  project: string,
+  stage: string,
+  number: number,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getPromotionRollout>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getGetPromotionRolloutQueryOptions(project, stage, number, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
 export type promoteToStageResponse201 = {
   data: Promotion;
   status: 201;
@@ -3712,19 +4522,42 @@ export const getPromoteToStageUrl = (project: string, stage: string) => {
   return `/v1beta1/projects/${project}/stages/${stage}/promotions`;
 };
 
+/**
+ * Create a Promotion resource to transition a specified Stage into
+ * the state represented by the specified Freight.
+ * A Stage that selects Targets yields, in place of a single
+ * Promotion, something that fans the Freight out to each of
+ * them: a PromotionRollout on a server that creates
+ * PromotionRollouts, and a PromotionRequest otherwise. Either
+ * way, the body's targets and updateStrategy narrow which
+ * Targets are promoted to and at what pace. A PromotionRollout
+ * is not created for a Stage that governs no Targets: the
+ * response is a 409 until its selectors match one.
+ * @summary Promote to Stage
+ */
 export const promoteToStage = async (
   project: string,
   stage: string,
   promoteToStageRequest: PromoteToStageRequest,
-  options?: RequestInit
+  options?: Parameters<typeof customFetch>[1]
 ): Promise<promoteToStageResponse> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit['headers']>
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Array.isArray(h)) return Object.fromEntries(h);
+    return h;
+  };
   return customFetch<promoteToStageResponse>(getPromoteToStageUrl(project, stage), {
     ...options,
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
     body: JSON.stringify(promoteToStageRequest)
   });
 };
+
+export const getPromoteToStageMutationKey = () => ['promoteToStage'] as const;
 
 export const getPromoteToStageMutationOptions = <
   TError = ErrorType<unknown>,
@@ -3733,17 +4566,17 @@ export const getPromoteToStageMutationOptions = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof promoteToStage>>,
     TError,
-    { project: string; stage: string; data: PromoteToStageRequest },
+    PromoteToStageMutationVariables,
     TContext
   >;
   request?: SecondParameter<typeof customFetch>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof promoteToStage>>,
   TError,
-  { project: string; stage: string; data: PromoteToStageRequest },
+  PromoteToStageMutationVariables,
   TContext
 > => {
-  const mutationKey = ['promoteToStage'];
+  const mutationKey = getPromoteToStageMutationKey();
   const { mutation: mutationOptions, request: requestOptions } = options
     ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
       ? options
@@ -3752,7 +4585,7 @@ export const getPromoteToStageMutationOptions = <
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof promoteToStage>>,
-    { project: string; stage: string; data: PromoteToStageRequest }
+    PromoteToStageMutationVariables
   > = (props) => {
     const { project, stage, data } = props ?? {};
 
@@ -3765,6 +4598,11 @@ export const getPromoteToStageMutationOptions = <
 export type PromoteToStageMutationResult = NonNullable<Awaited<ReturnType<typeof promoteToStage>>>;
 export type PromoteToStageMutationBody = PromoteToStageRequest;
 export type PromoteToStageMutationError = ErrorType<unknown>;
+export type PromoteToStageMutationVariables = {
+  project: string;
+  stage: string;
+  data: PromoteToStageRequest;
+};
 
 /**
  * @summary Promote to Stage
@@ -3774,7 +4612,7 @@ export const usePromoteToStage = <TError = ErrorType<unknown>, TContext = unknow
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof promoteToStage>>,
       TError,
-      { project: string; stage: string; data: PromoteToStageRequest },
+      PromoteToStageMutationVariables,
       TContext
     >;
     request?: SecondParameter<typeof customFetch>;
@@ -3783,19 +4621,11 @@ export const usePromoteToStage = <TError = ErrorType<unknown>, TContext = unknow
 ): UseMutationResult<
   Awaited<ReturnType<typeof promoteToStage>>,
   TError,
-  { project: string; stage: string; data: PromoteToStageRequest },
+  PromoteToStageMutationVariables,
   TContext
 > => {
-  const mutationOptions = getPromoteToStageMutationOptions(options);
-
-  return useMutation(mutationOptions, queryClient);
+  return useMutation(getPromoteToStageMutationOptions(options), queryClient);
 };
-/**
- * Creates a Promotion resource for each of a Stage's immediately
-downstream Stages. Downstream Stages that select Targets yield a
-PromotionRequest each, returned separately under "promotionRequests".
- * @summary Promote downstream
- */
 export type promoteDownstreamResponse201 = {
   data: unknown;
   status: 201;
@@ -3810,19 +4640,45 @@ export const getPromoteDownstreamUrl = (project: string, stage: string) => {
   return `/v1beta1/projects/${project}/stages/${stage}/promotions/downstream`;
 };
 
+/**
+ * Creates a Promotion resource for each of a Stage's immediately
+ * downstream Stages, returned under "promotions". Downstream
+ * Stages that select Targets each yield, in place of a
+ * Promotion, a PromotionRollout on a server that creates
+ * PromotionRollouts, returned under "promotionRollouts", or a
+ * PromotionRequest otherwise, returned under
+ * "promotionRequests"; each key is present only when it has
+ * entries. Each promotes to every Target its Stage governs, at
+ * the Stage's pace. A Stage that could not be promoted to is
+ * reported under "errors", with a 207 status, and the rest
+ * are still promoted to. On a server that creates
+ * PromotionRollouts, that includes a Stage that governs no
+ * Targets.
+ * @summary Promote downstream
+ */
 export const promoteDownstream = async (
   project: string,
   stage: string,
   promoteDownstreamRequest: PromoteDownstreamRequest,
-  options?: RequestInit
+  options?: Parameters<typeof customFetch>[1]
 ): Promise<promoteDownstreamResponse> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit['headers']>
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Array.isArray(h)) return Object.fromEntries(h);
+    return h;
+  };
   return customFetch<promoteDownstreamResponse>(getPromoteDownstreamUrl(project, stage), {
     ...options,
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
     body: JSON.stringify(promoteDownstreamRequest)
   });
 };
+
+export const getPromoteDownstreamMutationKey = () => ['promoteDownstream'] as const;
 
 export const getPromoteDownstreamMutationOptions = <
   TError = ErrorType<unknown>,
@@ -3831,17 +4687,17 @@ export const getPromoteDownstreamMutationOptions = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof promoteDownstream>>,
     TError,
-    { project: string; stage: string; data: PromoteDownstreamRequest },
+    PromoteDownstreamMutationVariables,
     TContext
   >;
   request?: SecondParameter<typeof customFetch>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof promoteDownstream>>,
   TError,
-  { project: string; stage: string; data: PromoteDownstreamRequest },
+  PromoteDownstreamMutationVariables,
   TContext
 > => {
-  const mutationKey = ['promoteDownstream'];
+  const mutationKey = getPromoteDownstreamMutationKey();
   const { mutation: mutationOptions, request: requestOptions } = options
     ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
       ? options
@@ -3850,7 +4706,7 @@ export const getPromoteDownstreamMutationOptions = <
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof promoteDownstream>>,
-    { project: string; stage: string; data: PromoteDownstreamRequest }
+    PromoteDownstreamMutationVariables
   > = (props) => {
     const { project, stage, data } = props ?? {};
 
@@ -3865,6 +4721,11 @@ export type PromoteDownstreamMutationResult = NonNullable<
 >;
 export type PromoteDownstreamMutationBody = PromoteDownstreamRequest;
 export type PromoteDownstreamMutationError = ErrorType<unknown>;
+export type PromoteDownstreamMutationVariables = {
+  project: string;
+  stage: string;
+  data: PromoteDownstreamRequest;
+};
 
 /**
  * @summary Promote downstream
@@ -3874,7 +4735,7 @@ export const usePromoteDownstream = <TError = ErrorType<unknown>, TContext = unk
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof promoteDownstream>>,
       TError,
-      { project: string; stage: string; data: PromoteDownstreamRequest },
+      PromoteDownstreamMutationVariables,
       TContext
     >;
     request?: SecondParameter<typeof customFetch>;
@@ -3883,19 +4744,11 @@ export const usePromoteDownstream = <TError = ErrorType<unknown>, TContext = unk
 ): UseMutationResult<
   Awaited<ReturnType<typeof promoteDownstream>>,
   TError,
-  { project: string; stage: string; data: PromoteDownstreamRequest },
+  PromoteDownstreamMutationVariables,
   TContext
 > => {
-  const mutationOptions = getPromoteDownstreamMutationOptions(options);
-
-  return useMutation(mutationOptions, queryClient);
+  return useMutation(getPromoteDownstreamMutationOptions(options), queryClient);
 };
-/**
- * Refresh a Stage resource in a project's namespace. Refreshing
-enqueues the resource for reconciliation by its corresponding
-controller.
- * @summary Refresh a Stage
- */
 export type refreshStageResponse200 = {
   data: void;
   status: 200;
@@ -3910,16 +4763,24 @@ export const getRefreshStageUrl = (project: string, stage: string) => {
   return `/v1beta1/projects/${project}/stages/${stage}/refresh`;
 };
 
+/**
+ * Refresh a Stage resource in a project's namespace. Refreshing
+ * enqueues the resource for reconciliation by its corresponding
+ * controller.
+ * @summary Refresh a Stage
+ */
 export const refreshStage = async (
   project: string,
   stage: string,
-  options?: RequestInit
+  options?: Parameters<typeof customFetch>[1]
 ): Promise<refreshStageResponse> => {
   return customFetch<refreshStageResponse>(getRefreshStageUrl(project, stage), {
     ...options,
     method: 'POST'
   });
 };
+
+export const getRefreshStageMutationKey = () => ['refreshStage'] as const;
 
 export const getRefreshStageMutationOptions = <
   TError = ErrorType<unknown>,
@@ -3928,17 +4789,17 @@ export const getRefreshStageMutationOptions = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof refreshStage>>,
     TError,
-    { project: string; stage: string },
+    RefreshStageMutationVariables,
     TContext
   >;
   request?: SecondParameter<typeof customFetch>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof refreshStage>>,
   TError,
-  { project: string; stage: string },
+  RefreshStageMutationVariables,
   TContext
 > => {
-  const mutationKey = ['refreshStage'];
+  const mutationKey = getRefreshStageMutationKey();
   const { mutation: mutationOptions, request: requestOptions } = options
     ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
       ? options
@@ -3947,7 +4808,7 @@ export const getRefreshStageMutationOptions = <
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof refreshStage>>,
-    { project: string; stage: string }
+    RefreshStageMutationVariables
   > = (props) => {
     const { project, stage } = props ?? {};
 
@@ -3960,6 +4821,7 @@ export const getRefreshStageMutationOptions = <
 export type RefreshStageMutationResult = NonNullable<Awaited<ReturnType<typeof refreshStage>>>;
 
 export type RefreshStageMutationError = ErrorType<unknown>;
+export type RefreshStageMutationVariables = { project: string; stage: string };
 
 /**
  * @summary Refresh a Stage
@@ -3969,7 +4831,7 @@ export const useRefreshStage = <TError = ErrorType<unknown>, TContext = unknown>
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof refreshStage>>,
       TError,
-      { project: string; stage: string },
+      RefreshStageMutationVariables,
       TContext
     >;
     request?: SecondParameter<typeof customFetch>;
@@ -3978,18 +4840,1156 @@ export const useRefreshStage = <TError = ErrorType<unknown>, TContext = unknown>
 ): UseMutationResult<
   Awaited<ReturnType<typeof refreshStage>>,
   TError,
-  { project: string; stage: string },
+  RefreshStageMutationVariables,
   TContext
 > => {
-  const mutationOptions = getRefreshStageMutationOptions(options);
-
-  return useMutation(mutationOptions, queryClient);
+  return useMutation(getRefreshStageMutationOptions(options), queryClient);
 };
+export type listTargetStatusesResponse200 = {
+  data: TargetStatusList;
+  status: 200;
+};
+
+export type listTargetStatusesResponseSuccess = listTargetStatusesResponse200 & {
+  headers: Headers;
+};
+export type listTargetStatusesResponse = listTargetStatusesResponseSuccess;
+
+export const getListTargetStatusesUrl = (project: string, params?: ListTargetStatusesParams) => {
+  const stringifiedParams = serializeParams(params);
+
+  return stringifiedParams.length > 0
+    ? `/v1beta1/projects/${project}/target-statuses?${stringifiedParams}`
+    : `/v1beta1/projects/${project}/target-statuses`;
+};
+
 /**
- * List Warehouse resources from a project's namespace. Returns a
-WarehouseList resource.
- * @summary List Warehouses
+ * List where a project's Targets stand with the Stages that
+ * govern them, one page at a time: one entry per Target and
+ * governing Stage, ordered by Target name and then Stage name.
+ * Nothing records a Target's status. Each entry is derived, on
+ * request, from the Promotions and PromotionRollouts on record,
+ * and which Stages govern a Target from the Stages' selectors
+ * as they are now. A Target no Stage governs has no entry.
+ *
+ * Each entry has one state, the first of these that holds:
+ * Promoting -- the last Promotion to the Target is running.
+ * Pending -- the last Promotion has yet to start, or a
+ * PromotionRollout that has not finished names the Target and
+ * has not reached it yet.
+ * NotAttempted -- a PromotionRollout that names the Target
+ * ended, without succeeding, before creating a Promotion to it,
+ * and there has been no Promotion to it since. A later rollout
+ * that does not name the Target changes nothing.
+ * NeverPromoted -- there has never been a Promotion to the
+ * Target.
+ * Failed -- the last Promotion failed, errored or was aborted.
+ * Behind -- the last Promotion succeeded, and the Freight it
+ * left on the Target is not the Stage's current Freight.
+ * UpToDate -- the last Promotion succeeded and the Target is
+ * not known to be behind.
+ *
+ * A state says how promotion went, not how the Target is
+ * doing: Target health is not recorded, so nothing here
+ * reports it. Entries are read from the database's mirror of
+ * Promotions, so they trail the cluster by its sync.
+ * @summary List Target statuses
  */
+export const listTargetStatuses = async (
+  project: string,
+  params?: ListTargetStatusesParams,
+  options?: Parameters<typeof customFetch>[1]
+): Promise<listTargetStatusesResponse> => {
+  return customFetch<listTargetStatusesResponse>(getListTargetStatusesUrl(project, params), {
+    ...options,
+    method: 'GET'
+  });
+};
+
+export const getListTargetStatusesQueryKey = (
+  project: string,
+  params?: ListTargetStatusesParams
+) => {
+  return [`/v1beta1/projects/${project}/target-statuses`, ...(params ? [params] : [])] as const;
+};
+
+export const getListTargetStatusesQueryOptions = <
+  TData = Awaited<ReturnType<typeof listTargetStatuses>>,
+  TError = ErrorType<unknown>
+>(
+  project: string,
+  params?: ListTargetStatusesParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listTargetStatuses>>, TError, TData>>;
+    request?: SecondParameter<typeof customFetch>;
+  }
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListTargetStatusesQueryKey(project, params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listTargetStatuses>>> = () =>
+    listTargetStatuses(project, params, requestOptions);
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: project !== null && project !== undefined,
+    ...queryOptions
+  } as UseQueryOptions<Awaited<ReturnType<typeof listTargetStatuses>>, TError, TData> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+};
+
+export type ListTargetStatusesQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listTargetStatuses>>
+>;
+export type ListTargetStatusesQueryError = ErrorType<unknown>;
+
+export function useListTargetStatuses<
+  TData = Awaited<ReturnType<typeof listTargetStatuses>>,
+  TError = ErrorType<unknown>
+>(
+  project: string,
+  params: undefined | ListTargetStatusesParams,
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof listTargetStatuses>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listTargetStatuses>>,
+          TError,
+          Awaited<ReturnType<typeof listTargetStatuses>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListTargetStatuses<
+  TData = Awaited<ReturnType<typeof listTargetStatuses>>,
+  TError = ErrorType<unknown>
+>(
+  project: string,
+  params?: ListTargetStatusesParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listTargetStatuses>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listTargetStatuses>>,
+          TError,
+          Awaited<ReturnType<typeof listTargetStatuses>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListTargetStatuses<
+  TData = Awaited<ReturnType<typeof listTargetStatuses>>,
+  TError = ErrorType<unknown>
+>(
+  project: string,
+  params?: ListTargetStatusesParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listTargetStatuses>>, TError, TData>>;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary List Target statuses
+ */
+
+export function useListTargetStatuses<
+  TData = Awaited<ReturnType<typeof listTargetStatuses>>,
+  TError = ErrorType<unknown>
+>(
+  project: string,
+  params?: ListTargetStatusesParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listTargetStatuses>>, TError, TData>>;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getListTargetStatusesQueryOptions(project, params, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export type getTargetStatusSummaryResponse200 = {
+  data: TargetStatusSummary;
+  status: 200;
+};
+
+export type getTargetStatusSummaryResponseSuccess = getTargetStatusSummaryResponse200 & {
+  headers: Headers;
+};
+export type getTargetStatusSummaryResponse = getTargetStatusSummaryResponseSuccess;
+
+export const getGetTargetStatusSummaryUrl = (
+  project: string,
+  params?: GetTargetStatusSummaryParams
+) => {
+  const stringifiedParams = serializeParams(params);
+
+  return stringifiedParams.length > 0
+    ? `/v1beta1/projects/${project}/target-statuses/summary?${stringifiedParams}`
+    : `/v1beta1/projects/${project}/target-statuses/summary`;
+};
+
+/**
+ * Count a project's Targets by where they stand with the
+ * Stages that govern them: for each Stage, how many of the
+ * Targets it governs are in each state; and for the project,
+ * how many Targets are in each state, a Target governed by
+ * several Stages counted once, under the worst state any of
+ * them reports. The states and the entries counted are those
+ * the Target status list serves, and are counted in the
+ * database rather than read. Targets behind their Stage's
+ * current Freight are counted as well, whatever their state.
+ * Target health is not recorded, so nothing here reports it.
+ * @summary Summarize Target statuses
+ */
+export const getTargetStatusSummary = async (
+  project: string,
+  params?: GetTargetStatusSummaryParams,
+  options?: Parameters<typeof customFetch>[1]
+): Promise<getTargetStatusSummaryResponse> => {
+  return customFetch<getTargetStatusSummaryResponse>(
+    getGetTargetStatusSummaryUrl(project, params),
+    {
+      ...options,
+      method: 'GET'
+    }
+  );
+};
+
+export const getGetTargetStatusSummaryQueryKey = (
+  project: string,
+  params?: GetTargetStatusSummaryParams
+) => {
+  return [
+    `/v1beta1/projects/${project}/target-statuses/summary`,
+    ...(params ? [params] : [])
+  ] as const;
+};
+
+export const getGetTargetStatusSummaryQueryOptions = <
+  TData = Awaited<ReturnType<typeof getTargetStatusSummary>>,
+  TError = ErrorType<unknown>
+>(
+  project: string,
+  params?: GetTargetStatusSummaryParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getTargetStatusSummary>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  }
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetTargetStatusSummaryQueryKey(project, params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getTargetStatusSummary>>> = () =>
+    getTargetStatusSummary(project, params, requestOptions);
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: project !== null && project !== undefined,
+    ...queryOptions
+  } as UseQueryOptions<Awaited<ReturnType<typeof getTargetStatusSummary>>, TError, TData> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+};
+
+export type GetTargetStatusSummaryQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getTargetStatusSummary>>
+>;
+export type GetTargetStatusSummaryQueryError = ErrorType<unknown>;
+
+export function useGetTargetStatusSummary<
+  TData = Awaited<ReturnType<typeof getTargetStatusSummary>>,
+  TError = ErrorType<unknown>
+>(
+  project: string,
+  params: undefined | GetTargetStatusSummaryParams,
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getTargetStatusSummary>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getTargetStatusSummary>>,
+          TError,
+          Awaited<ReturnType<typeof getTargetStatusSummary>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetTargetStatusSummary<
+  TData = Awaited<ReturnType<typeof getTargetStatusSummary>>,
+  TError = ErrorType<unknown>
+>(
+  project: string,
+  params?: GetTargetStatusSummaryParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getTargetStatusSummary>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getTargetStatusSummary>>,
+          TError,
+          Awaited<ReturnType<typeof getTargetStatusSummary>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetTargetStatusSummary<
+  TData = Awaited<ReturnType<typeof getTargetStatusSummary>>,
+  TError = ErrorType<unknown>
+>(
+  project: string,
+  params?: GetTargetStatusSummaryParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getTargetStatusSummary>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Summarize Target statuses
+ */
+
+export function useGetTargetStatusSummary<
+  TData = Awaited<ReturnType<typeof getTargetStatusSummary>>,
+  TError = ErrorType<unknown>
+>(
+  project: string,
+  params?: GetTargetStatusSummaryParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getTargetStatusSummary>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getGetTargetStatusSummaryQueryOptions(project, params, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export type listTargetsResponse200 = {
+  data: TargetList;
+  status: 200;
+};
+
+export type listTargetsResponseSuccess = listTargetsResponse200 & {
+  headers: Headers;
+};
+export type listTargetsResponse = listTargetsResponseSuccess;
+
+export const getListTargetsUrl = (project: string, params?: ListTargetsParams) => {
+  const stringifiedParams = serializeParams(params);
+
+  return stringifiedParams.length > 0
+    ? `/v1beta1/projects/${project}/targets?${stringifiedParams}`
+    : `/v1beta1/projects/${project}/targets`;
+};
+
+/**
+ * List a project's Targets, optionally narrowed to those a
+ * particular Stage governs or those matching a label selector.
+ * Returns a TargetList resource.
+ * @summary List Targets
+ */
+export const listTargets = async (
+  project: string,
+  params?: ListTargetsParams,
+  options?: Parameters<typeof customFetch>[1]
+): Promise<listTargetsResponse> => {
+  return customFetch<listTargetsResponse>(getListTargetsUrl(project, params), {
+    ...options,
+    method: 'GET'
+  });
+};
+
+export const getListTargetsQueryKey = (project: string, params?: ListTargetsParams) => {
+  return [`/v1beta1/projects/${project}/targets`, ...(params ? [params] : [])] as const;
+};
+
+export const getListTargetsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listTargets>>,
+  TError = ErrorType<unknown>
+>(
+  project: string,
+  params?: ListTargetsParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listTargets>>, TError, TData>>;
+    request?: SecondParameter<typeof customFetch>;
+  }
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListTargetsQueryKey(project, params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listTargets>>> = () =>
+    listTargets(project, params, requestOptions);
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: project !== null && project !== undefined,
+    ...queryOptions
+  } as UseQueryOptions<Awaited<ReturnType<typeof listTargets>>, TError, TData> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+};
+
+export type ListTargetsQueryResult = NonNullable<Awaited<ReturnType<typeof listTargets>>>;
+export type ListTargetsQueryError = ErrorType<unknown>;
+
+export function useListTargets<
+  TData = Awaited<ReturnType<typeof listTargets>>,
+  TError = ErrorType<unknown>
+>(
+  project: string,
+  params: undefined | ListTargetsParams,
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof listTargets>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listTargets>>,
+          TError,
+          Awaited<ReturnType<typeof listTargets>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListTargets<
+  TData = Awaited<ReturnType<typeof listTargets>>,
+  TError = ErrorType<unknown>
+>(
+  project: string,
+  params?: ListTargetsParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listTargets>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listTargets>>,
+          TError,
+          Awaited<ReturnType<typeof listTargets>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListTargets<
+  TData = Awaited<ReturnType<typeof listTargets>>,
+  TError = ErrorType<unknown>
+>(
+  project: string,
+  params?: ListTargetsParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listTargets>>, TError, TData>>;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary List Targets
+ */
+
+export function useListTargets<
+  TData = Awaited<ReturnType<typeof listTargets>>,
+  TError = ErrorType<unknown>
+>(
+  project: string,
+  params?: ListTargetsParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listTargets>>, TError, TData>>;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getListTargetsQueryOptions(project, params, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export type createTargetResponse201 = {
+  data: Target;
+  status: 201;
+};
+
+export type createTargetResponseSuccess = createTargetResponse201 & {
+  headers: Headers;
+};
+export type createTargetResponse = createTargetResponseSuccess;
+
+export const getCreateTargetUrl = (project: string) => {
+  return `/v1beta1/projects/${project}/targets`;
+};
+
+/**
+ * Create a Target in a project. Targets are managed through
+ * this API rather than as Kubernetes resources. The body's
+ * metadata.name is required; its metadata.namespace, if given,
+ * must be the project. Status and server-managed metadata are
+ * ignored.
+ * @summary Create a Target
+ */
+export const createTarget = async (
+  project: string,
+  target: Target,
+  options?: Parameters<typeof customFetch>[1]
+): Promise<createTargetResponse> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit['headers']>
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Array.isArray(h)) return Object.fromEntries(h);
+    return h;
+  };
+  return customFetch<createTargetResponse>(getCreateTargetUrl(project), {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(target)
+  });
+};
+
+export const getCreateTargetMutationKey = () => ['createTarget'] as const;
+
+export const getCreateTargetMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createTarget>>,
+    TError,
+    CreateTargetMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createTarget>>,
+  TError,
+  CreateTargetMutationVariables,
+  TContext
+> => {
+  const mutationKey = getCreateTargetMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createTarget>>,
+    CreateTargetMutationVariables
+  > = (props) => {
+    const { project, data } = props ?? {};
+
+    return createTarget(project, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateTargetMutationResult = NonNullable<Awaited<ReturnType<typeof createTarget>>>;
+export type CreateTargetMutationBody = Target;
+export type CreateTargetMutationError = ErrorType<unknown>;
+export type CreateTargetMutationVariables = { project: string; data: Target };
+
+/**
+ * @summary Create a Target
+ */
+export const useCreateTarget = <TError = ErrorType<unknown>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof createTarget>>,
+      TError,
+      CreateTargetMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient
+): UseMutationResult<
+  Awaited<ReturnType<typeof createTarget>>,
+  TError,
+  CreateTargetMutationVariables,
+  TContext
+> => {
+  return useMutation(getCreateTargetMutationOptions(options), queryClient);
+};
+export type getTargetResponse200 = {
+  data: Target;
+  status: 200;
+};
+
+export type getTargetResponseSuccess = getTargetResponse200 & {
+  headers: Headers;
+};
+export type getTargetResponse = getTargetResponseSuccess;
+
+export const getGetTargetUrl = (project: string, targetName: string) => {
+  return `/v1beta1/projects/${project}/targets/${targetName}`;
+};
+
+/**
+ * Retrieve one of a project's Targets.
+ * @summary Retrieve a Target
+ */
+export const getTarget = async (
+  project: string,
+  targetName: string,
+  options?: Parameters<typeof customFetch>[1]
+): Promise<getTargetResponse> => {
+  return customFetch<getTargetResponse>(getGetTargetUrl(project, targetName), {
+    ...options,
+    method: 'GET'
+  });
+};
+
+export const getGetTargetQueryKey = (project: string, targetName: string) => {
+  return [`/v1beta1/projects/${project}/targets/${targetName}`] as const;
+};
+
+export const getGetTargetQueryOptions = <
+  TData = Awaited<ReturnType<typeof getTarget>>,
+  TError = ErrorType<unknown>
+>(
+  project: string,
+  targetName: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getTarget>>, TError, TData>>;
+    request?: SecondParameter<typeof customFetch>;
+  }
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetTargetQueryKey(project, targetName);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getTarget>>> = () =>
+    getTarget(project, targetName, requestOptions);
+
+  return {
+    queryKey,
+    queryFn,
+    enabled:
+      project !== null && project !== undefined && targetName !== null && targetName !== undefined,
+    ...queryOptions
+  } as UseQueryOptions<Awaited<ReturnType<typeof getTarget>>, TError, TData> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+};
+
+export type GetTargetQueryResult = NonNullable<Awaited<ReturnType<typeof getTarget>>>;
+export type GetTargetQueryError = ErrorType<unknown>;
+
+export function useGetTarget<
+  TData = Awaited<ReturnType<typeof getTarget>>,
+  TError = ErrorType<unknown>
+>(
+  project: string,
+  targetName: string,
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof getTarget>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getTarget>>,
+          TError,
+          Awaited<ReturnType<typeof getTarget>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetTarget<
+  TData = Awaited<ReturnType<typeof getTarget>>,
+  TError = ErrorType<unknown>
+>(
+  project: string,
+  targetName: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getTarget>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getTarget>>,
+          TError,
+          Awaited<ReturnType<typeof getTarget>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetTarget<
+  TData = Awaited<ReturnType<typeof getTarget>>,
+  TError = ErrorType<unknown>
+>(
+  project: string,
+  targetName: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getTarget>>, TError, TData>>;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Retrieve a Target
+ */
+
+export function useGetTarget<
+  TData = Awaited<ReturnType<typeof getTarget>>,
+  TError = ErrorType<unknown>
+>(
+  project: string,
+  targetName: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getTarget>>, TError, TData>>;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getGetTargetQueryOptions(project, targetName, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export type updateTargetResponse200 = {
+  data: Target;
+  status: 200;
+};
+
+export type updateTargetResponseSuccess = updateTargetResponse200 & {
+  headers: Headers;
+};
+export type updateTargetResponse = updateTargetResponseSuccess;
+
+export const getUpdateTargetUrl = (project: string, targetName: string) => {
+  return `/v1beta1/projects/${project}/targets/${targetName}`;
+};
+
+/**
+ * Replace a Target's labels and params. The body's metadata.name,
+ * if given, must match the name in the URL, and its spec.targetSet
+ * must name the TargetSet that manages the Target, which cannot
+ * change. A metadata.uid or metadata.resourceVersion in the body
+ * is a precondition: the update is refused if the Target no
+ * longer matches it.
+ * @summary Update a Target
+ */
+export const updateTarget = async (
+  project: string,
+  targetName: string,
+  target: Target,
+  options?: Parameters<typeof customFetch>[1]
+): Promise<updateTargetResponse> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit['headers']>
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Array.isArray(h)) return Object.fromEntries(h);
+    return h;
+  };
+  return customFetch<updateTargetResponse>(getUpdateTargetUrl(project, targetName), {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(target)
+  });
+};
+
+export const getUpdateTargetMutationKey = () => ['updateTarget'] as const;
+
+export const getUpdateTargetMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateTarget>>,
+    TError,
+    UpdateTargetMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateTarget>>,
+  TError,
+  UpdateTargetMutationVariables,
+  TContext
+> => {
+  const mutationKey = getUpdateTargetMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateTarget>>,
+    UpdateTargetMutationVariables
+  > = (props) => {
+    const { project, targetName, data } = props ?? {};
+
+    return updateTarget(project, targetName, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateTargetMutationResult = NonNullable<Awaited<ReturnType<typeof updateTarget>>>;
+export type UpdateTargetMutationBody = Target;
+export type UpdateTargetMutationError = ErrorType<unknown>;
+export type UpdateTargetMutationVariables = { project: string; targetName: string; data: Target };
+
+/**
+ * @summary Update a Target
+ */
+export const useUpdateTarget = <TError = ErrorType<unknown>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof updateTarget>>,
+      TError,
+      UpdateTargetMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient
+): UseMutationResult<
+  Awaited<ReturnType<typeof updateTarget>>,
+  TError,
+  UpdateTargetMutationVariables,
+  TContext
+> => {
+  return useMutation(getUpdateTargetMutationOptions(options), queryClient);
+};
+export type deleteTargetResponse204 = {
+  data: void;
+  status: 204;
+};
+
+export type deleteTargetResponseSuccess = deleteTargetResponse204 & {
+  headers: Headers;
+};
+export type deleteTargetResponse = deleteTargetResponseSuccess;
+
+export const getDeleteTargetUrl = (project: string, targetName: string) => {
+  return `/v1beta1/projects/${project}/targets/${targetName}`;
+};
+
+/**
+ * Delete one of a project's Targets.
+ * @summary Delete a Target
+ */
+export const deleteTarget = async (
+  project: string,
+  targetName: string,
+  options?: Parameters<typeof customFetch>[1]
+): Promise<deleteTargetResponse> => {
+  return customFetch<deleteTargetResponse>(getDeleteTargetUrl(project, targetName), {
+    ...options,
+    method: 'DELETE'
+  });
+};
+
+export const getDeleteTargetMutationKey = () => ['deleteTarget'] as const;
+
+export const getDeleteTargetMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteTarget>>,
+    TError,
+    DeleteTargetMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof deleteTarget>>,
+  TError,
+  DeleteTargetMutationVariables,
+  TContext
+> => {
+  const mutationKey = getDeleteTargetMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof deleteTarget>>,
+    DeleteTargetMutationVariables
+  > = (props) => {
+    const { project, targetName } = props ?? {};
+
+    return deleteTarget(project, targetName, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DeleteTargetMutationResult = NonNullable<Awaited<ReturnType<typeof deleteTarget>>>;
+
+export type DeleteTargetMutationError = ErrorType<unknown>;
+export type DeleteTargetMutationVariables = { project: string; targetName: string };
+
+/**
+ * @summary Delete a Target
+ */
+export const useDeleteTarget = <TError = ErrorType<unknown>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof deleteTarget>>,
+      TError,
+      DeleteTargetMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient
+): UseMutationResult<
+  Awaited<ReturnType<typeof deleteTarget>>,
+  TError,
+  DeleteTargetMutationVariables,
+  TContext
+> => {
+  return useMutation(getDeleteTargetMutationOptions(options), queryClient);
+};
+export type listTargetPromotionsResponse200 = {
+  data: TargetPromotionList;
+  status: 200;
+};
+
+export type listTargetPromotionsResponseSuccess = listTargetPromotionsResponse200 & {
+  headers: Headers;
+};
+export type listTargetPromotionsResponse = listTargetPromotionsResponseSuccess;
+
+export const getListTargetPromotionsUrl = (
+  project: string,
+  targetName: string,
+  params?: ListTargetPromotionsParams
+) => {
+  const stringifiedParams = serializeParams(params);
+
+  return stringifiedParams.length > 0
+    ? `/v1beta1/projects/${project}/targets/${targetName}/promotions?${stringifiedParams}`
+    : `/v1beta1/projects/${project}/targets/${targetName}/promotions`;
+};
+
+/**
+ * List the Promotions to one of a project's Targets, newest
+ * first, one page at a time: those of every Stage, or of one.
+ * They are read from the database's record of Promotions,
+ * which outlives the Promotions themselves, so the list
+ * reaches further back than the project's Promotions do. A
+ * Target is recorded by name, so this is the history of the
+ * name: a Target that has had no Promotion, or that does not
+ * exist, has an empty one.
+ * @summary List a Target's Promotions
+ */
+export const listTargetPromotions = async (
+  project: string,
+  targetName: string,
+  params?: ListTargetPromotionsParams,
+  options?: Parameters<typeof customFetch>[1]
+): Promise<listTargetPromotionsResponse> => {
+  return customFetch<listTargetPromotionsResponse>(
+    getListTargetPromotionsUrl(project, targetName, params),
+    {
+      ...options,
+      method: 'GET'
+    }
+  );
+};
+
+export const getListTargetPromotionsQueryKey = (
+  project: string,
+  targetName: string,
+  params?: ListTargetPromotionsParams
+) => {
+  return [
+    `/v1beta1/projects/${project}/targets/${targetName}/promotions`,
+    ...(params ? [params] : [])
+  ] as const;
+};
+
+export const getListTargetPromotionsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listTargetPromotions>>,
+  TError = ErrorType<unknown>
+>(
+  project: string,
+  targetName: string,
+  params?: ListTargetPromotionsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listTargetPromotions>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  }
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getListTargetPromotionsQueryKey(project, targetName, params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listTargetPromotions>>> = () =>
+    listTargetPromotions(project, targetName, params, requestOptions);
+
+  return {
+    queryKey,
+    queryFn,
+    enabled:
+      project !== null && project !== undefined && targetName !== null && targetName !== undefined,
+    ...queryOptions
+  } as UseQueryOptions<Awaited<ReturnType<typeof listTargetPromotions>>, TError, TData> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+};
+
+export type ListTargetPromotionsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listTargetPromotions>>
+>;
+export type ListTargetPromotionsQueryError = ErrorType<unknown>;
+
+export function useListTargetPromotions<
+  TData = Awaited<ReturnType<typeof listTargetPromotions>>,
+  TError = ErrorType<unknown>
+>(
+  project: string,
+  targetName: string,
+  params: undefined | ListTargetPromotionsParams,
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listTargetPromotions>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listTargetPromotions>>,
+          TError,
+          Awaited<ReturnType<typeof listTargetPromotions>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListTargetPromotions<
+  TData = Awaited<ReturnType<typeof listTargetPromotions>>,
+  TError = ErrorType<unknown>
+>(
+  project: string,
+  targetName: string,
+  params?: ListTargetPromotionsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listTargetPromotions>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listTargetPromotions>>,
+          TError,
+          Awaited<ReturnType<typeof listTargetPromotions>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListTargetPromotions<
+  TData = Awaited<ReturnType<typeof listTargetPromotions>>,
+  TError = ErrorType<unknown>
+>(
+  project: string,
+  targetName: string,
+  params?: ListTargetPromotionsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listTargetPromotions>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary List a Target's Promotions
+ */
+
+export function useListTargetPromotions<
+  TData = Awaited<ReturnType<typeof listTargetPromotions>>,
+  TError = ErrorType<unknown>
+>(
+  project: string,
+  targetName: string,
+  params?: ListTargetPromotionsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listTargetPromotions>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getListTargetPromotionsQueryOptions(project, targetName, params, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
 export type listWarehousesResponse200 = {
   data: WarehouseList;
   status: 200;
@@ -4004,9 +6004,14 @@ export const getListWarehousesUrl = (project: string) => {
   return `/v1beta1/projects/${project}/warehouses`;
 };
 
+/**
+ * List Warehouse resources from a project's namespace. Returns a
+ * WarehouseList resource.
+ * @summary List Warehouses
+ */
 export const listWarehouses = async (
   project: string,
-  options?: RequestInit
+  options?: Parameters<typeof customFetch>[1]
 ): Promise<listWarehousesResponse> => {
   return customFetch<listWarehousesResponse>(getListWarehousesUrl(project), {
     ...options,
@@ -4014,7 +6019,7 @@ export const listWarehouses = async (
   });
 };
 
-export const getListWarehousesQueryKey = (project?: string) => {
+export const getListWarehousesQueryKey = (project: string) => {
   return [`/v1beta1/projects/${project}/warehouses`] as const;
 };
 
@@ -4035,11 +6040,14 @@ export const getListWarehousesQueryOptions = <
   const queryFn: QueryFunction<Awaited<ReturnType<typeof listWarehouses>>> = () =>
     listWarehouses(project, requestOptions);
 
-  return { queryKey, queryFn, enabled: !!project, ...queryOptions } as UseQueryOptions<
-    Awaited<ReturnType<typeof listWarehouses>>,
-    TError,
-    TData
-  > & { queryKey: DataTag<QueryKey, TData, TError> };
+  return {
+    queryKey,
+    queryFn,
+    enabled: project !== null && project !== undefined,
+    ...queryOptions
+  } as UseQueryOptions<Awaited<ReturnType<typeof listWarehouses>>, TError, TData> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
 };
 
 export type ListWarehousesQueryResult = NonNullable<Awaited<ReturnType<typeof listWarehouses>>>;
@@ -4115,15 +6123,9 @@ export function useListWarehouses<
     queryKey: DataTag<QueryKey, TData, TError>;
   };
 
-  query.queryKey = queryOptions.queryKey;
-
-  return query;
+  return withQueryKey(query, queryOptions.queryKey);
 }
 
-/**
- * Retrieve a Warehouse resource from a project's namespace.
- * @summary Retrieve a Warehouse
- */
 export type getWarehouseResponse200 = {
   data: Warehouse;
   status: 200;
@@ -4138,10 +6140,14 @@ export const getGetWarehouseUrl = (project: string, warehouse: string) => {
   return `/v1beta1/projects/${project}/warehouses/${warehouse}`;
 };
 
+/**
+ * Retrieve a Warehouse resource from a project's namespace.
+ * @summary Retrieve a Warehouse
+ */
 export const getWarehouse = async (
   project: string,
   warehouse: string,
-  options?: RequestInit
+  options?: Parameters<typeof customFetch>[1]
 ): Promise<getWarehouseResponse> => {
   return customFetch<getWarehouseResponse>(getGetWarehouseUrl(project, warehouse), {
     ...options,
@@ -4149,7 +6155,7 @@ export const getWarehouse = async (
   });
 };
 
-export const getGetWarehouseQueryKey = (project?: string, warehouse?: string) => {
+export const getGetWarehouseQueryKey = (project: string, warehouse: string) => {
   return [`/v1beta1/projects/${project}/warehouses/${warehouse}`] as const;
 };
 
@@ -4174,7 +6180,8 @@ export const getGetWarehouseQueryOptions = <
   return {
     queryKey,
     queryFn,
-    enabled: !!(project && warehouse),
+    enabled:
+      project !== null && project !== undefined && warehouse !== null && warehouse !== undefined,
     ...queryOptions
   } as UseQueryOptions<Awaited<ReturnType<typeof getWarehouse>>, TError, TData> & {
     queryKey: DataTag<QueryKey, TData, TError>;
@@ -4258,15 +6265,9 @@ export function useGetWarehouse<
     queryKey: DataTag<QueryKey, TData, TError>;
   };
 
-  query.queryKey = queryOptions.queryKey;
-
-  return query;
+  return withQueryKey(query, queryOptions.queryKey);
 }
 
-/**
- * Delete a Warehouse resource from a project's namespace.
- * @summary Delete a Warehouse
- */
 export type deleteWarehouseResponse204 = {
   data: void;
   status: 204;
@@ -4281,16 +6282,22 @@ export const getDeleteWarehouseUrl = (project: string, warehouse: string) => {
   return `/v1beta1/projects/${project}/warehouses/${warehouse}`;
 };
 
+/**
+ * Delete a Warehouse resource from a project's namespace.
+ * @summary Delete a Warehouse
+ */
 export const deleteWarehouse = async (
   project: string,
   warehouse: string,
-  options?: RequestInit
+  options?: Parameters<typeof customFetch>[1]
 ): Promise<deleteWarehouseResponse> => {
   return customFetch<deleteWarehouseResponse>(getDeleteWarehouseUrl(project, warehouse), {
     ...options,
     method: 'DELETE'
   });
 };
+
+export const getDeleteWarehouseMutationKey = () => ['deleteWarehouse'] as const;
 
 export const getDeleteWarehouseMutationOptions = <
   TError = ErrorType<unknown>,
@@ -4299,17 +6306,17 @@ export const getDeleteWarehouseMutationOptions = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof deleteWarehouse>>,
     TError,
-    { project: string; warehouse: string },
+    DeleteWarehouseMutationVariables,
     TContext
   >;
   request?: SecondParameter<typeof customFetch>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof deleteWarehouse>>,
   TError,
-  { project: string; warehouse: string },
+  DeleteWarehouseMutationVariables,
   TContext
 > => {
-  const mutationKey = ['deleteWarehouse'];
+  const mutationKey = getDeleteWarehouseMutationKey();
   const { mutation: mutationOptions, request: requestOptions } = options
     ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
       ? options
@@ -4318,7 +6325,7 @@ export const getDeleteWarehouseMutationOptions = <
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof deleteWarehouse>>,
-    { project: string; warehouse: string }
+    DeleteWarehouseMutationVariables
   > = (props) => {
     const { project, warehouse } = props ?? {};
 
@@ -4333,6 +6340,7 @@ export type DeleteWarehouseMutationResult = NonNullable<
 >;
 
 export type DeleteWarehouseMutationError = ErrorType<unknown>;
+export type DeleteWarehouseMutationVariables = { project: string; warehouse: string };
 
 /**
  * @summary Delete a Warehouse
@@ -4342,7 +6350,7 @@ export const useDeleteWarehouse = <TError = ErrorType<unknown>, TContext = unkno
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof deleteWarehouse>>,
       TError,
-      { project: string; warehouse: string },
+      DeleteWarehouseMutationVariables,
       TContext
     >;
     request?: SecondParameter<typeof customFetch>;
@@ -4351,19 +6359,11 @@ export const useDeleteWarehouse = <TError = ErrorType<unknown>, TContext = unkno
 ): UseMutationResult<
   Awaited<ReturnType<typeof deleteWarehouse>>,
   TError,
-  { project: string; warehouse: string },
+  DeleteWarehouseMutationVariables,
   TContext
 > => {
-  const mutationOptions = getDeleteWarehouseMutationOptions(options);
-
-  return useMutation(mutationOptions, queryClient);
+  return useMutation(getDeleteWarehouseMutationOptions(options), queryClient);
 };
-/**
- * Refresh a Warehouse resource in a project's namespace.
-Refreshing enqueues the resource for reconciliation by its
-corresponding controller.
- * @summary Refresh a Warehouse
- */
 export type refreshWarehouseResponse200 = {
   data: void;
   status: 200;
@@ -4378,16 +6378,24 @@ export const getRefreshWarehouseUrl = (project: string, warehouse: string) => {
   return `/v1beta1/projects/${project}/warehouses/${warehouse}/refresh`;
 };
 
+/**
+ * Refresh a Warehouse resource in a project's namespace.
+ * Refreshing enqueues the resource for reconciliation by its
+ * corresponding controller.
+ * @summary Refresh a Warehouse
+ */
 export const refreshWarehouse = async (
   project: string,
   warehouse: string,
-  options?: RequestInit
+  options?: Parameters<typeof customFetch>[1]
 ): Promise<refreshWarehouseResponse> => {
   return customFetch<refreshWarehouseResponse>(getRefreshWarehouseUrl(project, warehouse), {
     ...options,
     method: 'POST'
   });
 };
+
+export const getRefreshWarehouseMutationKey = () => ['refreshWarehouse'] as const;
 
 export const getRefreshWarehouseMutationOptions = <
   TError = ErrorType<unknown>,
@@ -4396,17 +6404,17 @@ export const getRefreshWarehouseMutationOptions = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof refreshWarehouse>>,
     TError,
-    { project: string; warehouse: string },
+    RefreshWarehouseMutationVariables,
     TContext
   >;
   request?: SecondParameter<typeof customFetch>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof refreshWarehouse>>,
   TError,
-  { project: string; warehouse: string },
+  RefreshWarehouseMutationVariables,
   TContext
 > => {
-  const mutationKey = ['refreshWarehouse'];
+  const mutationKey = getRefreshWarehouseMutationKey();
   const { mutation: mutationOptions, request: requestOptions } = options
     ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
       ? options
@@ -4415,7 +6423,7 @@ export const getRefreshWarehouseMutationOptions = <
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof refreshWarehouse>>,
-    { project: string; warehouse: string }
+    RefreshWarehouseMutationVariables
   > = (props) => {
     const { project, warehouse } = props ?? {};
 
@@ -4430,6 +6438,7 @@ export type RefreshWarehouseMutationResult = NonNullable<
 >;
 
 export type RefreshWarehouseMutationError = ErrorType<unknown>;
+export type RefreshWarehouseMutationVariables = { project: string; warehouse: string };
 
 /**
  * @summary Refresh a Warehouse
@@ -4439,7 +6448,7 @@ export const useRefreshWarehouse = <TError = ErrorType<unknown>, TContext = unkn
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof refreshWarehouse>>,
       TError,
-      { project: string; warehouse: string },
+      RefreshWarehouseMutationVariables,
       TContext
     >;
     request?: SecondParameter<typeof customFetch>;
@@ -4448,18 +6457,11 @@ export const useRefreshWarehouse = <TError = ErrorType<unknown>, TContext = unkn
 ): UseMutationResult<
   Awaited<ReturnType<typeof refreshWarehouse>>,
   TError,
-  { project: string; warehouse: string },
+  RefreshWarehouseMutationVariables,
   TContext
 > => {
-  const mutationOptions = getRefreshWarehouseMutationOptions(options);
-
-  return useMutation(mutationOptions, queryClient);
+  return useMutation(getRefreshWarehouseMutationOptions(options), queryClient);
 };
-/**
- * List ClusterPromotionTask resources. Returns a
-ClusterPromotionTaskList resource.
- * @summary List ClusterPromotionTasks
- */
 export type listClusterPromotionTasksResponse200 = {
   data: ClusterPromotionTaskList;
   status: 200;
@@ -4474,8 +6476,13 @@ export const getListClusterPromotionTasksUrl = () => {
   return `/v1beta1/shared/cluster-promotion-tasks`;
 };
 
+/**
+ * List ClusterPromotionTask resources. Returns a
+ * ClusterPromotionTaskList resource.
+ * @summary List ClusterPromotionTasks
+ */
 export const listClusterPromotionTasks = async (
-  options?: RequestInit
+  options?: Parameters<typeof customFetch>[1]
 ): Promise<listClusterPromotionTasksResponse> => {
   return customFetch<listClusterPromotionTasksResponse>(getListClusterPromotionTasksUrl(), {
     ...options,
@@ -4589,15 +6596,9 @@ export function useListClusterPromotionTasks<
     queryKey: DataTag<QueryKey, TData, TError>;
   };
 
-  query.queryKey = queryOptions.queryKey;
-
-  return query;
+  return withQueryKey(query, queryOptions.queryKey);
 }
 
-/**
- * Retrieve a ClusterPromotionTask by name.
- * @summary Retrieve a ClusterPromotionTask
- */
 export type getClusterPromotionTaskResponse200 = {
   data: ClusterPromotionTask;
   status: 200;
@@ -4612,9 +6613,13 @@ export const getGetClusterPromotionTaskUrl = (clusterPromotionTask: string) => {
   return `/v1beta1/shared/cluster-promotion-tasks/${clusterPromotionTask}`;
 };
 
+/**
+ * Retrieve a ClusterPromotionTask by name.
+ * @summary Retrieve a ClusterPromotionTask
+ */
 export const getClusterPromotionTask = async (
   clusterPromotionTask: string,
-  options?: RequestInit
+  options?: Parameters<typeof customFetch>[1]
 ): Promise<getClusterPromotionTaskResponse> => {
   return customFetch<getClusterPromotionTaskResponse>(
     getGetClusterPromotionTaskUrl(clusterPromotionTask),
@@ -4625,7 +6630,7 @@ export const getClusterPromotionTask = async (
   );
 };
 
-export const getGetClusterPromotionTaskQueryKey = (clusterPromotionTask?: string) => {
+export const getGetClusterPromotionTaskQueryKey = (clusterPromotionTask: string) => {
   return [`/v1beta1/shared/cluster-promotion-tasks/${clusterPromotionTask}`] as const;
 };
 
@@ -4649,11 +6654,14 @@ export const getGetClusterPromotionTaskQueryOptions = <
   const queryFn: QueryFunction<Awaited<ReturnType<typeof getClusterPromotionTask>>> = () =>
     getClusterPromotionTask(clusterPromotionTask, requestOptions);
 
-  return { queryKey, queryFn, enabled: !!clusterPromotionTask, ...queryOptions } as UseQueryOptions<
-    Awaited<ReturnType<typeof getClusterPromotionTask>>,
-    TError,
-    TData
-  > & { queryKey: DataTag<QueryKey, TData, TError> };
+  return {
+    queryKey,
+    queryFn,
+    enabled: clusterPromotionTask !== null && clusterPromotionTask !== undefined,
+    ...queryOptions
+  } as UseQueryOptions<Awaited<ReturnType<typeof getClusterPromotionTask>>, TError, TData> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
 };
 
 export type GetClusterPromotionTaskQueryResult = NonNullable<
@@ -4739,16 +6747,9 @@ export function useGetClusterPromotionTask<
     queryKey: DataTag<QueryKey, TData, TError>;
   };
 
-  query.queryKey = queryOptions.queryKey;
-
-  return query;
+  return withQueryKey(query, queryOptions.queryKey);
 }
 
-/**
- * List shared ConfigMap resources referenceable by all projects.
-Returns a Kubernetes ConfigMapList resource.
- * @summary List shared ConfigMaps
- */
 export type listSharedConfigMapsResponse200 = {
   data: V1ConfigMapList;
   status: 200;
@@ -4763,8 +6764,13 @@ export const getListSharedConfigMapsUrl = () => {
   return `/v1beta1/shared/configmaps`;
 };
 
+/**
+ * List shared ConfigMap resources referenceable by all projects.
+ * Returns a Kubernetes ConfigMapList resource.
+ * @summary List shared ConfigMaps
+ */
 export const listSharedConfigMaps = async (
-  options?: RequestInit
+  options?: Parameters<typeof customFetch>[1]
 ): Promise<listSharedConfigMapsResponse> => {
   return customFetch<listSharedConfigMapsResponse>(getListSharedConfigMapsUrl(), {
     ...options,
@@ -4876,16 +6882,9 @@ export function useListSharedConfigMaps<
     queryKey: DataTag<QueryKey, TData, TError>;
   };
 
-  query.queryKey = queryOptions.queryKey;
-
-  return query;
+  return withQueryKey(query, queryOptions.queryKey);
 }
 
-/**
- * Create a shared ConfigMap referenceable by all projects. Returns
-the created Kubernetes ConfigMap resource.
- * @summary Create a shared ConfigMap
- */
 export type createSharedConfigMapResponse201 = {
   data: V1ConfigMap;
   status: 201;
@@ -4900,17 +6899,32 @@ export const getCreateSharedConfigMapUrl = () => {
   return `/v1beta1/shared/configmaps`;
 };
 
+/**
+ * Create a shared ConfigMap referenceable by all projects. Returns
+ * the created Kubernetes ConfigMap resource.
+ * @summary Create a shared ConfigMap
+ */
 export const createSharedConfigMap = async (
-  createConfigMapRequestBody: CreateConfigMapRequestBody,
-  options?: RequestInit
+  createConfigMapRequest: CreateConfigMapRequest,
+  options?: Parameters<typeof customFetch>[1]
 ): Promise<createSharedConfigMapResponse> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit['headers']>
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Array.isArray(h)) return Object.fromEntries(h);
+    return h;
+  };
   return customFetch<createSharedConfigMapResponse>(getCreateSharedConfigMapUrl(), {
     ...options,
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(createConfigMapRequestBody)
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(createConfigMapRequest)
   });
 };
+
+export const getCreateSharedConfigMapMutationKey = () => ['createSharedConfigMap'] as const;
 
 export const getCreateSharedConfigMapMutationOptions = <
   TError = ErrorType<unknown>,
@@ -4919,17 +6933,17 @@ export const getCreateSharedConfigMapMutationOptions = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof createSharedConfigMap>>,
     TError,
-    { data: CreateConfigMapRequestBody },
+    CreateSharedConfigMapMutationVariables,
     TContext
   >;
   request?: SecondParameter<typeof customFetch>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof createSharedConfigMap>>,
   TError,
-  { data: CreateConfigMapRequestBody },
+  CreateSharedConfigMapMutationVariables,
   TContext
 > => {
-  const mutationKey = ['createSharedConfigMap'];
+  const mutationKey = getCreateSharedConfigMapMutationKey();
   const { mutation: mutationOptions, request: requestOptions } = options
     ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
       ? options
@@ -4938,7 +6952,7 @@ export const getCreateSharedConfigMapMutationOptions = <
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof createSharedConfigMap>>,
-    { data: CreateConfigMapRequestBody }
+    CreateSharedConfigMapMutationVariables
   > = (props) => {
     const { data } = props ?? {};
 
@@ -4951,8 +6965,9 @@ export const getCreateSharedConfigMapMutationOptions = <
 export type CreateSharedConfigMapMutationResult = NonNullable<
   Awaited<ReturnType<typeof createSharedConfigMap>>
 >;
-export type CreateSharedConfigMapMutationBody = CreateConfigMapRequestBody;
+export type CreateSharedConfigMapMutationBody = CreateConfigMapRequest;
 export type CreateSharedConfigMapMutationError = ErrorType<unknown>;
+export type CreateSharedConfigMapMutationVariables = { data: CreateConfigMapRequest };
 
 /**
  * @summary Create a shared ConfigMap
@@ -4962,7 +6977,7 @@ export const useCreateSharedConfigMap = <TError = ErrorType<unknown>, TContext =
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof createSharedConfigMap>>,
       TError,
-      { data: CreateConfigMapRequestBody },
+      CreateSharedConfigMapMutationVariables,
       TContext
     >;
     request?: SecondParameter<typeof customFetch>;
@@ -4971,17 +6986,11 @@ export const useCreateSharedConfigMap = <TError = ErrorType<unknown>, TContext =
 ): UseMutationResult<
   Awaited<ReturnType<typeof createSharedConfigMap>>,
   TError,
-  { data: CreateConfigMapRequestBody },
+  CreateSharedConfigMapMutationVariables,
   TContext
 > => {
-  const mutationOptions = getCreateSharedConfigMapMutationOptions(options);
-
-  return useMutation(mutationOptions, queryClient);
+  return useMutation(getCreateSharedConfigMapMutationOptions(options), queryClient);
 };
-/**
- * Retrieve a shared ConfigMap by name.
- * @summary Retrieve a shared ConfigMap
- */
 export type getSharedConfigMapResponse200 = {
   data: V1ConfigMap;
   status: 200;
@@ -4996,9 +7005,13 @@ export const getGetSharedConfigMapUrl = (configmap: string) => {
   return `/v1beta1/shared/configmaps/${configmap}`;
 };
 
+/**
+ * Retrieve a shared ConfigMap by name.
+ * @summary Retrieve a shared ConfigMap
+ */
 export const getSharedConfigMap = async (
   configmap: string,
-  options?: RequestInit
+  options?: Parameters<typeof customFetch>[1]
 ): Promise<getSharedConfigMapResponse> => {
   return customFetch<getSharedConfigMapResponse>(getGetSharedConfigMapUrl(configmap), {
     ...options,
@@ -5006,7 +7019,7 @@ export const getSharedConfigMap = async (
   });
 };
 
-export const getGetSharedConfigMapQueryKey = (configmap?: string) => {
+export const getGetSharedConfigMapQueryKey = (configmap: string) => {
   return [`/v1beta1/shared/configmaps/${configmap}`] as const;
 };
 
@@ -5027,11 +7040,14 @@ export const getGetSharedConfigMapQueryOptions = <
   const queryFn: QueryFunction<Awaited<ReturnType<typeof getSharedConfigMap>>> = () =>
     getSharedConfigMap(configmap, requestOptions);
 
-  return { queryKey, queryFn, enabled: !!configmap, ...queryOptions } as UseQueryOptions<
-    Awaited<ReturnType<typeof getSharedConfigMap>>,
-    TError,
-    TData
-  > & { queryKey: DataTag<QueryKey, TData, TError> };
+  return {
+    queryKey,
+    queryFn,
+    enabled: configmap !== null && configmap !== undefined,
+    ...queryOptions
+  } as UseQueryOptions<Awaited<ReturnType<typeof getSharedConfigMap>>, TError, TData> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
 };
 
 export type GetSharedConfigMapQueryResult = NonNullable<
@@ -5111,16 +7127,9 @@ export function useGetSharedConfigMap<
     queryKey: DataTag<QueryKey, TData, TError>;
   };
 
-  query.queryKey = queryOptions.queryKey;
-
-  return query;
+  return withQueryKey(query, queryOptions.queryKey);
 }
 
-/**
- * Replace a shared ConfigMap. All existing data is replaced.
-Returns the updated Kubernetes ConfigMap resource.
- * @summary Replace a shared ConfigMap
- */
 export type updateSharedConfigMapResponse200 = {
   data: V1ConfigMap;
   status: 200;
@@ -5135,18 +7144,33 @@ export const getUpdateSharedConfigMapUrl = (configmap: string) => {
   return `/v1beta1/shared/configmaps/${configmap}`;
 };
 
+/**
+ * Replace a shared ConfigMap. All existing data is replaced.
+ * Returns the updated Kubernetes ConfigMap resource.
+ * @summary Replace a shared ConfigMap
+ */
 export const updateSharedConfigMap = async (
   configmap: string,
-  updateConfigMapRequestBody: UpdateConfigMapRequestBody,
-  options?: RequestInit
+  updateConfigMapRequest: UpdateConfigMapRequest,
+  options?: Parameters<typeof customFetch>[1]
 ): Promise<updateSharedConfigMapResponse> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit['headers']>
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Array.isArray(h)) return Object.fromEntries(h);
+    return h;
+  };
   return customFetch<updateSharedConfigMapResponse>(getUpdateSharedConfigMapUrl(configmap), {
     ...options,
     method: 'PUT',
-    headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(updateConfigMapRequestBody)
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(updateConfigMapRequest)
   });
 };
+
+export const getUpdateSharedConfigMapMutationKey = () => ['updateSharedConfigMap'] as const;
 
 export const getUpdateSharedConfigMapMutationOptions = <
   TError = ErrorType<unknown>,
@@ -5155,17 +7179,17 @@ export const getUpdateSharedConfigMapMutationOptions = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof updateSharedConfigMap>>,
     TError,
-    { configmap: string; data: UpdateConfigMapRequestBody },
+    UpdateSharedConfigMapMutationVariables,
     TContext
   >;
   request?: SecondParameter<typeof customFetch>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof updateSharedConfigMap>>,
   TError,
-  { configmap: string; data: UpdateConfigMapRequestBody },
+  UpdateSharedConfigMapMutationVariables,
   TContext
 > => {
-  const mutationKey = ['updateSharedConfigMap'];
+  const mutationKey = getUpdateSharedConfigMapMutationKey();
   const { mutation: mutationOptions, request: requestOptions } = options
     ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
       ? options
@@ -5174,7 +7198,7 @@ export const getUpdateSharedConfigMapMutationOptions = <
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof updateSharedConfigMap>>,
-    { configmap: string; data: UpdateConfigMapRequestBody }
+    UpdateSharedConfigMapMutationVariables
   > = (props) => {
     const { configmap, data } = props ?? {};
 
@@ -5187,8 +7211,12 @@ export const getUpdateSharedConfigMapMutationOptions = <
 export type UpdateSharedConfigMapMutationResult = NonNullable<
   Awaited<ReturnType<typeof updateSharedConfigMap>>
 >;
-export type UpdateSharedConfigMapMutationBody = UpdateConfigMapRequestBody;
+export type UpdateSharedConfigMapMutationBody = UpdateConfigMapRequest;
 export type UpdateSharedConfigMapMutationError = ErrorType<unknown>;
+export type UpdateSharedConfigMapMutationVariables = {
+  configmap: string;
+  data: UpdateConfigMapRequest;
+};
 
 /**
  * @summary Replace a shared ConfigMap
@@ -5198,7 +7226,7 @@ export const useUpdateSharedConfigMap = <TError = ErrorType<unknown>, TContext =
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof updateSharedConfigMap>>,
       TError,
-      { configmap: string; data: UpdateConfigMapRequestBody },
+      UpdateSharedConfigMapMutationVariables,
       TContext
     >;
     request?: SecondParameter<typeof customFetch>;
@@ -5207,17 +7235,11 @@ export const useUpdateSharedConfigMap = <TError = ErrorType<unknown>, TContext =
 ): UseMutationResult<
   Awaited<ReturnType<typeof updateSharedConfigMap>>,
   TError,
-  { configmap: string; data: UpdateConfigMapRequestBody },
+  UpdateSharedConfigMapMutationVariables,
   TContext
 > => {
-  const mutationOptions = getUpdateSharedConfigMapMutationOptions(options);
-
-  return useMutation(mutationOptions, queryClient);
+  return useMutation(getUpdateSharedConfigMapMutationOptions(options), queryClient);
 };
-/**
- * Delete a shared ConfigMap.
- * @summary Delete a shared ConfigMap
- */
 export type deleteSharedConfigMapResponse204 = {
   data: void;
   status: 204;
@@ -5232,15 +7254,21 @@ export const getDeleteSharedConfigMapUrl = (configmap: string) => {
   return `/v1beta1/shared/configmaps/${configmap}`;
 };
 
+/**
+ * Delete a shared ConfigMap.
+ * @summary Delete a shared ConfigMap
+ */
 export const deleteSharedConfigMap = async (
   configmap: string,
-  options?: RequestInit
+  options?: Parameters<typeof customFetch>[1]
 ): Promise<deleteSharedConfigMapResponse> => {
   return customFetch<deleteSharedConfigMapResponse>(getDeleteSharedConfigMapUrl(configmap), {
     ...options,
     method: 'DELETE'
   });
 };
+
+export const getDeleteSharedConfigMapMutationKey = () => ['deleteSharedConfigMap'] as const;
 
 export const getDeleteSharedConfigMapMutationOptions = <
   TError = ErrorType<unknown>,
@@ -5249,17 +7277,17 @@ export const getDeleteSharedConfigMapMutationOptions = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof deleteSharedConfigMap>>,
     TError,
-    { configmap: string },
+    DeleteSharedConfigMapMutationVariables,
     TContext
   >;
   request?: SecondParameter<typeof customFetch>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof deleteSharedConfigMap>>,
   TError,
-  { configmap: string },
+  DeleteSharedConfigMapMutationVariables,
   TContext
 > => {
-  const mutationKey = ['deleteSharedConfigMap'];
+  const mutationKey = getDeleteSharedConfigMapMutationKey();
   const { mutation: mutationOptions, request: requestOptions } = options
     ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
       ? options
@@ -5268,7 +7296,7 @@ export const getDeleteSharedConfigMapMutationOptions = <
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof deleteSharedConfigMap>>,
-    { configmap: string }
+    DeleteSharedConfigMapMutationVariables
   > = (props) => {
     const { configmap } = props ?? {};
 
@@ -5283,6 +7311,7 @@ export type DeleteSharedConfigMapMutationResult = NonNullable<
 >;
 
 export type DeleteSharedConfigMapMutationError = ErrorType<unknown>;
+export type DeleteSharedConfigMapMutationVariables = { configmap: string };
 
 /**
  * @summary Delete a shared ConfigMap
@@ -5292,7 +7321,7 @@ export const useDeleteSharedConfigMap = <TError = ErrorType<unknown>, TContext =
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof deleteSharedConfigMap>>,
       TError,
-      { configmap: string },
+      DeleteSharedConfigMapMutationVariables,
       TContext
     >;
     request?: SecondParameter<typeof customFetch>;
@@ -5301,19 +7330,11 @@ export const useDeleteSharedConfigMap = <TError = ErrorType<unknown>, TContext =
 ): UseMutationResult<
   Awaited<ReturnType<typeof deleteSharedConfigMap>>,
   TError,
-  { configmap: string },
+  DeleteSharedConfigMapMutationVariables,
   TContext
 > => {
-  const mutationOptions = getDeleteSharedConfigMapMutationOptions(options);
-
-  return useMutation(mutationOptions, queryClient);
+  return useMutation(getDeleteSharedConfigMapMutationOptions(options), queryClient);
 };
-/**
- * Patch a shared ConfigMap. Merges provided data
-with existing data. Use removeKeys to delete specific keys.
-Returns the updated Kubernetes ConfigMap resource.
- * @summary Patch a shared ConfigMap
- */
 export type patchSharedConfigMapResponse200 = {
   data: V1ConfigMap;
   status: 200;
@@ -5328,18 +7349,34 @@ export const getPatchSharedConfigMapUrl = (configmap: string) => {
   return `/v1beta1/shared/configmaps/${configmap}`;
 };
 
+/**
+ * Patch a shared ConfigMap. Merges provided data
+ * with existing data. Use removeKeys to delete specific keys.
+ * Returns the updated Kubernetes ConfigMap resource.
+ * @summary Patch a shared ConfigMap
+ */
 export const patchSharedConfigMap = async (
   configmap: string,
-  patchConfigMapRequestBody: PatchConfigMapRequestBody,
-  options?: RequestInit
+  patchConfigMapRequest: PatchConfigMapRequest,
+  options?: Parameters<typeof customFetch>[1]
 ): Promise<patchSharedConfigMapResponse> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit['headers']>
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Array.isArray(h)) return Object.fromEntries(h);
+    return h;
+  };
   return customFetch<patchSharedConfigMapResponse>(getPatchSharedConfigMapUrl(configmap), {
     ...options,
     method: 'PATCH',
-    headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(patchConfigMapRequestBody)
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(patchConfigMapRequest)
   });
 };
+
+export const getPatchSharedConfigMapMutationKey = () => ['patchSharedConfigMap'] as const;
 
 export const getPatchSharedConfigMapMutationOptions = <
   TError = ErrorType<unknown>,
@@ -5348,17 +7385,17 @@ export const getPatchSharedConfigMapMutationOptions = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof patchSharedConfigMap>>,
     TError,
-    { configmap: string; data: PatchConfigMapRequestBody },
+    PatchSharedConfigMapMutationVariables,
     TContext
   >;
   request?: SecondParameter<typeof customFetch>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof patchSharedConfigMap>>,
   TError,
-  { configmap: string; data: PatchConfigMapRequestBody },
+  PatchSharedConfigMapMutationVariables,
   TContext
 > => {
-  const mutationKey = ['patchSharedConfigMap'];
+  const mutationKey = getPatchSharedConfigMapMutationKey();
   const { mutation: mutationOptions, request: requestOptions } = options
     ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
       ? options
@@ -5367,7 +7404,7 @@ export const getPatchSharedConfigMapMutationOptions = <
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof patchSharedConfigMap>>,
-    { configmap: string; data: PatchConfigMapRequestBody }
+    PatchSharedConfigMapMutationVariables
   > = (props) => {
     const { configmap, data } = props ?? {};
 
@@ -5380,8 +7417,12 @@ export const getPatchSharedConfigMapMutationOptions = <
 export type PatchSharedConfigMapMutationResult = NonNullable<
   Awaited<ReturnType<typeof patchSharedConfigMap>>
 >;
-export type PatchSharedConfigMapMutationBody = PatchConfigMapRequestBody;
+export type PatchSharedConfigMapMutationBody = PatchConfigMapRequest;
 export type PatchSharedConfigMapMutationError = ErrorType<unknown>;
+export type PatchSharedConfigMapMutationVariables = {
+  configmap: string;
+  data: PatchConfigMapRequest;
+};
 
 /**
  * @summary Patch a shared ConfigMap
@@ -5391,7 +7432,7 @@ export const usePatchSharedConfigMap = <TError = ErrorType<unknown>, TContext = 
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof patchSharedConfigMap>>,
       TError,
-      { configmap: string; data: PatchConfigMapRequestBody },
+      PatchSharedConfigMapMutationVariables,
       TContext
     >;
     request?: SecondParameter<typeof customFetch>;
@@ -5400,18 +7441,11 @@ export const usePatchSharedConfigMap = <TError = ErrorType<unknown>, TContext = 
 ): UseMutationResult<
   Awaited<ReturnType<typeof patchSharedConfigMap>>,
   TError,
-  { configmap: string; data: PatchConfigMapRequestBody },
+  PatchSharedConfigMapMutationVariables,
   TContext
 > => {
-  const mutationOptions = getPatchSharedConfigMapMutationOptions(options);
-
-  return useMutation(mutationOptions, queryClient);
+  return useMutation(getPatchSharedConfigMapMutationOptions(options), queryClient);
 };
-/**
- * List system-level ConfigMap resources. Returns a Kubernetes
-ConfigMapList resource.
- * @summary List system-level ConfigMaps
- */
 export type listSystemConfigMapsResponse200 = {
   data: V1ConfigMapList;
   status: 200;
@@ -5426,8 +7460,13 @@ export const getListSystemConfigMapsUrl = () => {
   return `/v1beta1/system/configmaps`;
 };
 
+/**
+ * List system-level ConfigMap resources. Returns a Kubernetes
+ * ConfigMapList resource.
+ * @summary List system-level ConfigMaps
+ */
 export const listSystemConfigMaps = async (
-  options?: RequestInit
+  options?: Parameters<typeof customFetch>[1]
 ): Promise<listSystemConfigMapsResponse> => {
   return customFetch<listSystemConfigMapsResponse>(getListSystemConfigMapsUrl(), {
     ...options,
@@ -5539,16 +7578,9 @@ export function useListSystemConfigMaps<
     queryKey: DataTag<QueryKey, TData, TError>;
   };
 
-  query.queryKey = queryOptions.queryKey;
-
-  return query;
+  return withQueryKey(query, queryOptions.queryKey);
 }
 
-/**
- * Create a system-level ConfigMap. Returns the created Kubernetes
-ConfigMap resource.
- * @summary Create a system-level ConfigMap
- */
 export type createSystemConfigMapResponse201 = {
   data: V1ConfigMap;
   status: 201;
@@ -5563,17 +7595,32 @@ export const getCreateSystemConfigMapUrl = () => {
   return `/v1beta1/system/configmaps`;
 };
 
+/**
+ * Create a system-level ConfigMap. Returns the created Kubernetes
+ * ConfigMap resource.
+ * @summary Create a system-level ConfigMap
+ */
 export const createSystemConfigMap = async (
-  createConfigMapRequestBody: CreateConfigMapRequestBody,
-  options?: RequestInit
+  createConfigMapRequest: CreateConfigMapRequest,
+  options?: Parameters<typeof customFetch>[1]
 ): Promise<createSystemConfigMapResponse> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit['headers']>
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Array.isArray(h)) return Object.fromEntries(h);
+    return h;
+  };
   return customFetch<createSystemConfigMapResponse>(getCreateSystemConfigMapUrl(), {
     ...options,
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(createConfigMapRequestBody)
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(createConfigMapRequest)
   });
 };
+
+export const getCreateSystemConfigMapMutationKey = () => ['createSystemConfigMap'] as const;
 
 export const getCreateSystemConfigMapMutationOptions = <
   TError = ErrorType<unknown>,
@@ -5582,17 +7629,17 @@ export const getCreateSystemConfigMapMutationOptions = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof createSystemConfigMap>>,
     TError,
-    { data: CreateConfigMapRequestBody },
+    CreateSystemConfigMapMutationVariables,
     TContext
   >;
   request?: SecondParameter<typeof customFetch>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof createSystemConfigMap>>,
   TError,
-  { data: CreateConfigMapRequestBody },
+  CreateSystemConfigMapMutationVariables,
   TContext
 > => {
-  const mutationKey = ['createSystemConfigMap'];
+  const mutationKey = getCreateSystemConfigMapMutationKey();
   const { mutation: mutationOptions, request: requestOptions } = options
     ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
       ? options
@@ -5601,7 +7648,7 @@ export const getCreateSystemConfigMapMutationOptions = <
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof createSystemConfigMap>>,
-    { data: CreateConfigMapRequestBody }
+    CreateSystemConfigMapMutationVariables
   > = (props) => {
     const { data } = props ?? {};
 
@@ -5614,8 +7661,9 @@ export const getCreateSystemConfigMapMutationOptions = <
 export type CreateSystemConfigMapMutationResult = NonNullable<
   Awaited<ReturnType<typeof createSystemConfigMap>>
 >;
-export type CreateSystemConfigMapMutationBody = CreateConfigMapRequestBody;
+export type CreateSystemConfigMapMutationBody = CreateConfigMapRequest;
 export type CreateSystemConfigMapMutationError = ErrorType<unknown>;
+export type CreateSystemConfigMapMutationVariables = { data: CreateConfigMapRequest };
 
 /**
  * @summary Create a system-level ConfigMap
@@ -5625,7 +7673,7 @@ export const useCreateSystemConfigMap = <TError = ErrorType<unknown>, TContext =
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof createSystemConfigMap>>,
       TError,
-      { data: CreateConfigMapRequestBody },
+      CreateSystemConfigMapMutationVariables,
       TContext
     >;
     request?: SecondParameter<typeof customFetch>;
@@ -5634,17 +7682,11 @@ export const useCreateSystemConfigMap = <TError = ErrorType<unknown>, TContext =
 ): UseMutationResult<
   Awaited<ReturnType<typeof createSystemConfigMap>>,
   TError,
-  { data: CreateConfigMapRequestBody },
+  CreateSystemConfigMapMutationVariables,
   TContext
 > => {
-  const mutationOptions = getCreateSystemConfigMapMutationOptions(options);
-
-  return useMutation(mutationOptions, queryClient);
+  return useMutation(getCreateSystemConfigMapMutationOptions(options), queryClient);
 };
-/**
- * Retrieve a system-level ConfigMap by name.
- * @summary Retrieve a system-level ConfigMap
- */
 export type getSystemConfigMapResponse200 = {
   data: V1ConfigMap;
   status: 200;
@@ -5659,9 +7701,13 @@ export const getGetSystemConfigMapUrl = (configmap: string) => {
   return `/v1beta1/system/configmaps/${configmap}`;
 };
 
+/**
+ * Retrieve a system-level ConfigMap by name.
+ * @summary Retrieve a system-level ConfigMap
+ */
 export const getSystemConfigMap = async (
   configmap: string,
-  options?: RequestInit
+  options?: Parameters<typeof customFetch>[1]
 ): Promise<getSystemConfigMapResponse> => {
   return customFetch<getSystemConfigMapResponse>(getGetSystemConfigMapUrl(configmap), {
     ...options,
@@ -5669,7 +7715,7 @@ export const getSystemConfigMap = async (
   });
 };
 
-export const getGetSystemConfigMapQueryKey = (configmap?: string) => {
+export const getGetSystemConfigMapQueryKey = (configmap: string) => {
   return [`/v1beta1/system/configmaps/${configmap}`] as const;
 };
 
@@ -5690,11 +7736,14 @@ export const getGetSystemConfigMapQueryOptions = <
   const queryFn: QueryFunction<Awaited<ReturnType<typeof getSystemConfigMap>>> = () =>
     getSystemConfigMap(configmap, requestOptions);
 
-  return { queryKey, queryFn, enabled: !!configmap, ...queryOptions } as UseQueryOptions<
-    Awaited<ReturnType<typeof getSystemConfigMap>>,
-    TError,
-    TData
-  > & { queryKey: DataTag<QueryKey, TData, TError> };
+  return {
+    queryKey,
+    queryFn,
+    enabled: configmap !== null && configmap !== undefined,
+    ...queryOptions
+  } as UseQueryOptions<Awaited<ReturnType<typeof getSystemConfigMap>>, TError, TData> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
 };
 
 export type GetSystemConfigMapQueryResult = NonNullable<
@@ -5774,16 +7823,9 @@ export function useGetSystemConfigMap<
     queryKey: DataTag<QueryKey, TData, TError>;
   };
 
-  query.queryKey = queryOptions.queryKey;
-
-  return query;
+  return withQueryKey(query, queryOptions.queryKey);
 }
 
-/**
- * Replace a system-level ConfigMap. All existing data is replaced.
-Returns the updated Kubernetes ConfigMap resource.
- * @summary Replace a system-level ConfigMap
- */
 export type updateSystemConfigMapResponse200 = {
   data: V1ConfigMap;
   status: 200;
@@ -5798,18 +7840,33 @@ export const getUpdateSystemConfigMapUrl = (configmap: string) => {
   return `/v1beta1/system/configmaps/${configmap}`;
 };
 
+/**
+ * Replace a system-level ConfigMap. All existing data is replaced.
+ * Returns the updated Kubernetes ConfigMap resource.
+ * @summary Replace a system-level ConfigMap
+ */
 export const updateSystemConfigMap = async (
   configmap: string,
-  updateConfigMapRequestBody: UpdateConfigMapRequestBody,
-  options?: RequestInit
+  updateConfigMapRequest: UpdateConfigMapRequest,
+  options?: Parameters<typeof customFetch>[1]
 ): Promise<updateSystemConfigMapResponse> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit['headers']>
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Array.isArray(h)) return Object.fromEntries(h);
+    return h;
+  };
   return customFetch<updateSystemConfigMapResponse>(getUpdateSystemConfigMapUrl(configmap), {
     ...options,
     method: 'PUT',
-    headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(updateConfigMapRequestBody)
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(updateConfigMapRequest)
   });
 };
+
+export const getUpdateSystemConfigMapMutationKey = () => ['updateSystemConfigMap'] as const;
 
 export const getUpdateSystemConfigMapMutationOptions = <
   TError = ErrorType<unknown>,
@@ -5818,17 +7875,17 @@ export const getUpdateSystemConfigMapMutationOptions = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof updateSystemConfigMap>>,
     TError,
-    { configmap: string; data: UpdateConfigMapRequestBody },
+    UpdateSystemConfigMapMutationVariables,
     TContext
   >;
   request?: SecondParameter<typeof customFetch>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof updateSystemConfigMap>>,
   TError,
-  { configmap: string; data: UpdateConfigMapRequestBody },
+  UpdateSystemConfigMapMutationVariables,
   TContext
 > => {
-  const mutationKey = ['updateSystemConfigMap'];
+  const mutationKey = getUpdateSystemConfigMapMutationKey();
   const { mutation: mutationOptions, request: requestOptions } = options
     ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
       ? options
@@ -5837,7 +7894,7 @@ export const getUpdateSystemConfigMapMutationOptions = <
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof updateSystemConfigMap>>,
-    { configmap: string; data: UpdateConfigMapRequestBody }
+    UpdateSystemConfigMapMutationVariables
   > = (props) => {
     const { configmap, data } = props ?? {};
 
@@ -5850,8 +7907,12 @@ export const getUpdateSystemConfigMapMutationOptions = <
 export type UpdateSystemConfigMapMutationResult = NonNullable<
   Awaited<ReturnType<typeof updateSystemConfigMap>>
 >;
-export type UpdateSystemConfigMapMutationBody = UpdateConfigMapRequestBody;
+export type UpdateSystemConfigMapMutationBody = UpdateConfigMapRequest;
 export type UpdateSystemConfigMapMutationError = ErrorType<unknown>;
+export type UpdateSystemConfigMapMutationVariables = {
+  configmap: string;
+  data: UpdateConfigMapRequest;
+};
 
 /**
  * @summary Replace a system-level ConfigMap
@@ -5861,7 +7922,7 @@ export const useUpdateSystemConfigMap = <TError = ErrorType<unknown>, TContext =
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof updateSystemConfigMap>>,
       TError,
-      { configmap: string; data: UpdateConfigMapRequestBody },
+      UpdateSystemConfigMapMutationVariables,
       TContext
     >;
     request?: SecondParameter<typeof customFetch>;
@@ -5870,17 +7931,11 @@ export const useUpdateSystemConfigMap = <TError = ErrorType<unknown>, TContext =
 ): UseMutationResult<
   Awaited<ReturnType<typeof updateSystemConfigMap>>,
   TError,
-  { configmap: string; data: UpdateConfigMapRequestBody },
+  UpdateSystemConfigMapMutationVariables,
   TContext
 > => {
-  const mutationOptions = getUpdateSystemConfigMapMutationOptions(options);
-
-  return useMutation(mutationOptions, queryClient);
+  return useMutation(getUpdateSystemConfigMapMutationOptions(options), queryClient);
 };
-/**
- * Delete a system-level ConfigMap.
- * @summary Delete a system-level ConfigMap
- */
 export type deleteSystemConfigMapResponse204 = {
   data: void;
   status: 204;
@@ -5895,15 +7950,21 @@ export const getDeleteSystemConfigMapUrl = (configmap: string) => {
   return `/v1beta1/system/configmaps/${configmap}`;
 };
 
+/**
+ * Delete a system-level ConfigMap.
+ * @summary Delete a system-level ConfigMap
+ */
 export const deleteSystemConfigMap = async (
   configmap: string,
-  options?: RequestInit
+  options?: Parameters<typeof customFetch>[1]
 ): Promise<deleteSystemConfigMapResponse> => {
   return customFetch<deleteSystemConfigMapResponse>(getDeleteSystemConfigMapUrl(configmap), {
     ...options,
     method: 'DELETE'
   });
 };
+
+export const getDeleteSystemConfigMapMutationKey = () => ['deleteSystemConfigMap'] as const;
 
 export const getDeleteSystemConfigMapMutationOptions = <
   TError = ErrorType<unknown>,
@@ -5912,17 +7973,17 @@ export const getDeleteSystemConfigMapMutationOptions = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof deleteSystemConfigMap>>,
     TError,
-    { configmap: string },
+    DeleteSystemConfigMapMutationVariables,
     TContext
   >;
   request?: SecondParameter<typeof customFetch>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof deleteSystemConfigMap>>,
   TError,
-  { configmap: string },
+  DeleteSystemConfigMapMutationVariables,
   TContext
 > => {
-  const mutationKey = ['deleteSystemConfigMap'];
+  const mutationKey = getDeleteSystemConfigMapMutationKey();
   const { mutation: mutationOptions, request: requestOptions } = options
     ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
       ? options
@@ -5931,7 +7992,7 @@ export const getDeleteSystemConfigMapMutationOptions = <
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof deleteSystemConfigMap>>,
-    { configmap: string }
+    DeleteSystemConfigMapMutationVariables
   > = (props) => {
     const { configmap } = props ?? {};
 
@@ -5946,6 +8007,7 @@ export type DeleteSystemConfigMapMutationResult = NonNullable<
 >;
 
 export type DeleteSystemConfigMapMutationError = ErrorType<unknown>;
+export type DeleteSystemConfigMapMutationVariables = { configmap: string };
 
 /**
  * @summary Delete a system-level ConfigMap
@@ -5955,7 +8017,7 @@ export const useDeleteSystemConfigMap = <TError = ErrorType<unknown>, TContext =
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof deleteSystemConfigMap>>,
       TError,
-      { configmap: string },
+      DeleteSystemConfigMapMutationVariables,
       TContext
     >;
     request?: SecondParameter<typeof customFetch>;
@@ -5964,19 +8026,11 @@ export const useDeleteSystemConfigMap = <TError = ErrorType<unknown>, TContext =
 ): UseMutationResult<
   Awaited<ReturnType<typeof deleteSystemConfigMap>>,
   TError,
-  { configmap: string },
+  DeleteSystemConfigMapMutationVariables,
   TContext
 > => {
-  const mutationOptions = getDeleteSystemConfigMapMutationOptions(options);
-
-  return useMutation(mutationOptions, queryClient);
+  return useMutation(getDeleteSystemConfigMapMutationOptions(options), queryClient);
 };
-/**
- * Patch a system-level ConfigMap. Merges provided data
-with existing data. Use removeKeys to delete specific keys.
-Returns the updated Kubernetes ConfigMap resource.
- * @summary Patch a system-level ConfigMap
- */
 export type patchSystemConfigMapResponse200 = {
   data: V1ConfigMap;
   status: 200;
@@ -5991,18 +8045,34 @@ export const getPatchSystemConfigMapUrl = (configmap: string) => {
   return `/v1beta1/system/configmaps/${configmap}`;
 };
 
+/**
+ * Patch a system-level ConfigMap. Merges provided data
+ * with existing data. Use removeKeys to delete specific keys.
+ * Returns the updated Kubernetes ConfigMap resource.
+ * @summary Patch a system-level ConfigMap
+ */
 export const patchSystemConfigMap = async (
   configmap: string,
-  patchConfigMapRequestBody: PatchConfigMapRequestBody,
-  options?: RequestInit
+  patchConfigMapRequest: PatchConfigMapRequest,
+  options?: Parameters<typeof customFetch>[1]
 ): Promise<patchSystemConfigMapResponse> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit['headers']>
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Array.isArray(h)) return Object.fromEntries(h);
+    return h;
+  };
   return customFetch<patchSystemConfigMapResponse>(getPatchSystemConfigMapUrl(configmap), {
     ...options,
     method: 'PATCH',
-    headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(patchConfigMapRequestBody)
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(patchConfigMapRequest)
   });
 };
+
+export const getPatchSystemConfigMapMutationKey = () => ['patchSystemConfigMap'] as const;
 
 export const getPatchSystemConfigMapMutationOptions = <
   TError = ErrorType<unknown>,
@@ -6011,17 +8081,17 @@ export const getPatchSystemConfigMapMutationOptions = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof patchSystemConfigMap>>,
     TError,
-    { configmap: string; data: PatchConfigMapRequestBody },
+    PatchSystemConfigMapMutationVariables,
     TContext
   >;
   request?: SecondParameter<typeof customFetch>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof patchSystemConfigMap>>,
   TError,
-  { configmap: string; data: PatchConfigMapRequestBody },
+  PatchSystemConfigMapMutationVariables,
   TContext
 > => {
-  const mutationKey = ['patchSystemConfigMap'];
+  const mutationKey = getPatchSystemConfigMapMutationKey();
   const { mutation: mutationOptions, request: requestOptions } = options
     ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
       ? options
@@ -6030,7 +8100,7 @@ export const getPatchSystemConfigMapMutationOptions = <
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof patchSystemConfigMap>>,
-    { configmap: string; data: PatchConfigMapRequestBody }
+    PatchSystemConfigMapMutationVariables
   > = (props) => {
     const { configmap, data } = props ?? {};
 
@@ -6043,8 +8113,12 @@ export const getPatchSystemConfigMapMutationOptions = <
 export type PatchSystemConfigMapMutationResult = NonNullable<
   Awaited<ReturnType<typeof patchSystemConfigMap>>
 >;
-export type PatchSystemConfigMapMutationBody = PatchConfigMapRequestBody;
+export type PatchSystemConfigMapMutationBody = PatchConfigMapRequest;
 export type PatchSystemConfigMapMutationError = ErrorType<unknown>;
+export type PatchSystemConfigMapMutationVariables = {
+  configmap: string;
+  data: PatchConfigMapRequest;
+};
 
 /**
  * @summary Patch a system-level ConfigMap
@@ -6054,7 +8128,7 @@ export const usePatchSystemConfigMap = <TError = ErrorType<unknown>, TContext = 
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof patchSystemConfigMap>>,
       TError,
-      { configmap: string; data: PatchConfigMapRequestBody },
+      PatchSystemConfigMapMutationVariables,
       TContext
     >;
     request?: SecondParameter<typeof customFetch>;
@@ -6063,10 +8137,8 @@ export const usePatchSystemConfigMap = <TError = ErrorType<unknown>, TContext = 
 ): UseMutationResult<
   Awaited<ReturnType<typeof patchSystemConfigMap>>,
   TError,
-  { configmap: string; data: PatchConfigMapRequestBody },
+  PatchSystemConfigMapMutationVariables,
   TContext
 > => {
-  const mutationOptions = getPatchSystemConfigMapMutationOptions(options);
-
-  return useMutation(mutationOptions, queryClient);
+  return useMutation(getPatchSystemConfigMapMutationOptions(options), queryClient);
 };

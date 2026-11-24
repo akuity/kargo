@@ -1,0 +1,612 @@
+package nats
+
+import (
+	"context"
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	"crypto/rand"
+	"crypto/x509"
+	"crypto/x509/pkix"
+	"encoding/pem"
+	"errors"
+	"math/big"
+	"net"
+	"os"
+	"path/filepath"
+	"sync/atomic"
+	"testing"
+	"time"
+
+	natstest "github.com/nats-io/nats-server/v2/test"
+	"github.com/nats-io/nats.go"
+	"github.com/nats-io/nkeys"
+	"github.com/stretchr/testify/require"
+
+	"github.com/akuity/kargo/pkg/logging"
+)
+
+func TestConfigFromEnv(t *testing.T) {
+	t.Setenv("NATS_SERVER_URL", "nats://nats.example.com:4222")
+	t.Setenv("NATS_SEED_KEY_FILE", "/etc/kargo/nats/seed.nk")
+	t.Setenv("NATS_CREDS_FILE", "/etc/kargo/nats/user.creds")
+	t.Setenv("NATS_TOKEN", "fake-token")
+	t.Setenv("NATS_USERNAME", "fake-user")
+	t.Setenv("NATS_PASSWORD", "fake-password")
+	t.Setenv("NATS_USERNAME_FILE", "/etc/kargo/nats/username")
+	t.Setenv("NATS_PASSWORD_FILE", "/etc/kargo/nats/password")
+	t.Setenv("NATS_TLS_CA_FILE", "/etc/kargo/nats/ca.crt")
+	t.Setenv("NATS_TLS_CERT_FILE", "/etc/kargo/nats/tls.crt")
+	t.Setenv("NATS_TLS_KEY_FILE", "/etc/kargo/nats/tls.key")
+	t.Setenv("NATS_CLIENT_NAME", "fake-client")
+	t.Setenv("NATS_CONNECT_TIMEOUT", "5s")
+	require.Equal(
+		t,
+		Config{
+			ServerURL:      "nats://nats.example.com:4222",
+			SeedKeyFile:    "/etc/kargo/nats/seed.nk",
+			CredsFile:      "/etc/kargo/nats/user.creds",
+			Token:          "fake-token",
+			Username:       "fake-user",
+			Password:       "fake-password",
+			UsernameFile:   "/etc/kargo/nats/username",
+			PasswordFile:   "/etc/kargo/nats/password",
+			TLSCAFile:      "/etc/kargo/nats/ca.crt",
+			TLSCertFile:    "/etc/kargo/nats/tls.crt",
+			TLSKeyFile:     "/etc/kargo/nats/tls.key",
+			ClientName:     "fake-client",
+			ConnectTimeout: 5 * time.Second,
+		},
+		ConfigFromEnv(),
+	)
+}
+
+func TestConfigConnect(t *testing.T) {
+	srv := natstest.RunRandClientPortServer()
+	t.Cleanup(srv.Shutdown)
+
+	testCases := []struct {
+		name   string
+		cfg    Config
+		opts   []nats.Option
+		assert func(*testing.T, *nats.Conn, error)
+	}{
+		{
+			name: "server URL not specified",
+			assert: func(t *testing.T, _ *nats.Conn, err error) {
+				require.ErrorContains(t, err, "NATS_SERVER_URL is required")
+			},
+		},
+		{
+			name: "invalid authentication configuration",
+			cfg: Config{
+				ServerURL: srv.ClientURL(),
+				Username:  "fake-user",
+			},
+			assert: func(t *testing.T, _ *nats.Conn, err error) {
+				require.ErrorContains(
+					t, err,
+					"NATS_USERNAME and NATS_PASSWORD must be specified together",
+				)
+			},
+		},
+		{
+			name: "server unreachable",
+			cfg: Config{
+				// Nothing listens on port 1
+				ServerURL:      "nats://127.0.0.1:1",
+				ConnectTimeout: 100 * time.Millisecond,
+			},
+			assert: func(t *testing.T, _ *nats.Conn, err error) {
+				require.ErrorContains(t, err, "error connecting to NATS server")
+			},
+		},
+		{
+			name: "success",
+			cfg: Config{
+				ServerURL:  srv.ClientURL(),
+				ClientName: "fake-client",
+			},
+			assert: func(t *testing.T, conn *nats.Conn, err error) {
+				require.NoError(t, err)
+				require.True(t, conn.IsConnected())
+				require.Equal(t, "fake-client", conn.Opts.Name)
+				// Reconnect attempts must never be exhausted, not even by
+				// repeated auth errors
+				require.Equal(t, -1, conn.Opts.MaxReconnect)
+				require.True(t, conn.Opts.IgnoreAuthErrorAbort)
+				// Default connect timeout applies when none is specified
+				require.Equal(t, 2*time.Second, conn.Opts.Timeout)
+			},
+		},
+		{
+			name: "caller-supplied options take precedence",
+			cfg: Config{
+				ServerURL:  srv.ClientURL(),
+				ClientName: "fake-client",
+			},
+			opts: []nats.Option{nats.Name("overridden")},
+			assert: func(t *testing.T, conn *nats.Conn, err error) {
+				require.NoError(t, err)
+				require.Equal(t, "overridden", conn.Opts.Name)
+			},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+			conn, err := testCase.cfg.Connect(context.Background(), testCase.opts...)
+			if conn != nil {
+				t.Cleanup(conn.Close)
+			}
+			testCase.assert(t, conn, err)
+		})
+	}
+}
+
+func TestConfigConnectSurvivesRepeatedAuthErrors(t *testing.T) {
+	t.Parallel()
+
+	const (
+		username    = "fake-user"
+		password    = "fake-password"
+		newPassword = "fake-new-password"
+	)
+
+	srvOpts := natstest.DefaultTestOptions
+	srvOpts.Port = -1
+	srvOpts.Username = username
+	srvOpts.Password = password
+	srv := natstest.RunServer(&srvOpts)
+	t.Cleanup(srv.Shutdown)
+
+	var authErrs atomic.Int32
+	conn, err := Config{
+		ServerURL: srv.ClientURL(),
+		Username:  username,
+		Password:  password,
+	}.Connect(
+		context.Background(),
+		nats.ReconnectWait(10*time.Millisecond),
+		nats.ErrorHandler(func(_ *nats.Conn, _ *nats.Subscription, err error) {
+			if errors.Is(err, nats.ErrAuthorization) {
+				authErrs.Add(1)
+			}
+		}),
+	)
+	require.NoError(t, err)
+	t.Cleanup(conn.Close)
+
+	// Rotating the server's credentials disconnects the client, and every
+	// reconnect attempt is then rejected because the client still presents the
+	// old credentials. The library would close the connection after the second
+	// rejection.
+	//
+	// The server retains the options it is given, so each reload gets its own
+	// copy.
+	srvAddr, ok := srv.Addr().(*net.TCPAddr)
+	require.True(t, ok)
+	reloadWithPassword := func(pw string) {
+		opts := srvOpts
+		opts.Port = srvAddr.Port
+		opts.Password = pw
+		require.NoError(t, srv.ReloadOptions(&opts))
+	}
+	reloadWithPassword(newPassword)
+	require.Eventually(
+		t,
+		func() bool { return authErrs.Load() > 2 },
+		5*time.Second,
+		10*time.Millisecond,
+	)
+	require.False(t, conn.IsClosed())
+
+	// Once the client's credentials are accepted again, it reconnects.
+	reloadWithPassword(password)
+	require.Eventually(
+		t,
+		conn.IsConnected,
+		5*time.Second,
+		10*time.Millisecond,
+	)
+}
+
+func TestConfigConnectRereadsUsernameAndPasswordFiles(t *testing.T) {
+	t.Parallel()
+
+	const (
+		username    = "fake-user"
+		password    = "fake-password"
+		newPassword = "fake-new-password"
+	)
+
+	dir := t.TempDir()
+	usernameFile := filepath.Join(dir, "username")
+	passwordFile := filepath.Join(dir, "password")
+	writeAtomically(t, usernameFile, username)
+	writeAtomically(t, passwordFile, password)
+
+	srvOpts := natstest.DefaultTestOptions
+	srvOpts.Port = -1
+	srvOpts.Username = username
+	srvOpts.Password = password
+	srv := natstest.RunServer(&srvOpts)
+	t.Cleanup(srv.Shutdown)
+
+	var authErrs atomic.Int32
+	conn, err := Config{
+		ServerURL:    srv.ClientURL(),
+		UsernameFile: usernameFile,
+		PasswordFile: passwordFile,
+	}.Connect(
+		context.Background(),
+		nats.ReconnectWait(10*time.Millisecond),
+		nats.ErrorHandler(func(_ *nats.Conn, _ *nats.Subscription, err error) {
+			if errors.Is(err, nats.ErrAuthorization) {
+				authErrs.Add(1)
+			}
+		}),
+	)
+	require.NoError(t, err)
+	t.Cleanup(conn.Close)
+
+	// Rotate the password on the server first. This disconnects the client,
+	// and its reconnect attempts are refused while the file still holds the
+	// old password, as happens until the kubelet refreshes a mounted Secret.
+	srvAddr, ok := srv.Addr().(*net.TCPAddr)
+	require.True(t, ok)
+	reloadOpts := srvOpts
+	reloadOpts.Port = srvAddr.Port
+	reloadOpts.Password = newPassword
+	require.NoError(t, srv.ReloadOptions(&reloadOpts))
+	require.Eventually(
+		t,
+		func() bool { return authErrs.Load() > 2 },
+		5*time.Second,
+		10*time.Millisecond,
+	)
+	require.False(t, conn.IsClosed())
+
+	// Once the file catches up, the next attempt presents the new password
+	// and the server, which accepts nothing else, lets the client back in.
+	writeAtomically(t, passwordFile, newPassword)
+	require.Eventually(
+		t,
+		conn.IsConnected,
+		5*time.Second,
+		10*time.Millisecond,
+	)
+}
+
+// writeAtomically replaces the content of the file at the given path in a
+// single rename, as the kubelet does when it refreshes a mounted Secret, so
+// that a concurrent reader never sees the file partially written.
+func writeAtomically(t *testing.T, path string, content string) {
+	t.Helper()
+	tmp := path + ".tmp"
+	require.NoError(t, os.WriteFile(tmp, []byte(content), 0o600))
+	require.NoError(t, os.Rename(tmp, path))
+}
+
+func TestConfigAuthOptions(t *testing.T) {
+	dir := t.TempDir()
+
+	userKey, err := nkeys.CreateUser()
+	require.NoError(t, err)
+	userPubKey, err := userKey.PublicKey()
+	require.NoError(t, err)
+	userSeed, err := userKey.Seed()
+	require.NoError(t, err)
+	seedFile := filepath.Join(dir, "seed.nk")
+	require.NoError(t, os.WriteFile(seedFile, userSeed, 0o600))
+
+	// The library does not read this until it connects, so its content is
+	// irrelevant here.
+	credsFile := filepath.Join(dir, "user.creds")
+	require.NoError(t, os.WriteFile(credsFile, nil, 0o600))
+
+	usernameFile := filepath.Join(dir, "username")
+	require.NoError(t, os.WriteFile(usernameFile, []byte("fake-user\n"), 0o600))
+	passwordFile := filepath.Join(dir, "password")
+	require.NoError(t, os.WriteFile(passwordFile, []byte("fake-password"), 0o600))
+
+	// A self-signed certificate serves as both a CA and a client certificate.
+	certFile, keyFile := writeSelfSignedCert(t, dir)
+
+	testCases := []struct {
+		name   string
+		cfg    Config
+		assert func(*testing.T, nats.Options, error)
+	}{
+		{
+			name: "no authentication",
+			assert: func(t *testing.T, opts nats.Options, err error) {
+				require.NoError(t, err)
+				require.Equal(t, nats.GetDefaultOptions(), opts)
+			},
+		},
+		{
+			name: "multiple authentication methods specified",
+			cfg: Config{
+				SeedKeyFile: seedFile,
+				CredsFile:   credsFile,
+				Token:       "fake-token",
+				Username:    "fake-user",
+				Password:    "fake-password",
+			},
+			assert: func(t *testing.T, _ nats.Options, err error) {
+				require.ErrorContains(t, err, "at most one of")
+			},
+		},
+		{
+			name: "username and password both directly and from files",
+			cfg: Config{
+				Username:     "fake-user",
+				Password:     "fake-password",
+				UsernameFile: usernameFile,
+				PasswordFile: passwordFile,
+			},
+			assert: func(t *testing.T, _ nats.Options, err error) {
+				require.ErrorContains(t, err, "at most one of")
+			},
+		},
+		{
+			name: "username specified without password",
+			cfg:  Config{Username: "fake-user"},
+			assert: func(t *testing.T, _ nats.Options, err error) {
+				require.ErrorContains(
+					t, err,
+					"NATS_USERNAME and NATS_PASSWORD must be specified together",
+				)
+			},
+		},
+		{
+			name: "password specified without username",
+			cfg:  Config{Password: "fake-password"},
+			assert: func(t *testing.T, _ nats.Options, err error) {
+				require.ErrorContains(
+					t, err,
+					"NATS_USERNAME and NATS_PASSWORD must be specified together",
+				)
+			},
+		},
+		{
+			name: "username file specified without password file",
+			cfg:  Config{UsernameFile: usernameFile},
+			assert: func(t *testing.T, _ nats.Options, err error) {
+				require.ErrorContains(
+					t, err,
+					"NATS_USERNAME_FILE and NATS_PASSWORD_FILE must be specified together",
+				)
+			},
+		},
+		{
+			name: "password file specified without username file",
+			cfg:  Config{PasswordFile: passwordFile},
+			assert: func(t *testing.T, _ nats.Options, err error) {
+				require.ErrorContains(
+					t, err,
+					"NATS_USERNAME_FILE and NATS_PASSWORD_FILE must be specified together",
+				)
+			},
+		},
+		{
+			name: "client certificate specified without key",
+			cfg:  Config{TLSCertFile: certFile},
+			assert: func(t *testing.T, _ nats.Options, err error) {
+				require.ErrorContains(
+					t, err,
+					"NATS_TLS_CERT_FILE and NATS_TLS_KEY_FILE must be specified together",
+				)
+			},
+		},
+		{
+			name: "seed key file does not exist",
+			cfg:  Config{SeedKeyFile: filepath.Join(dir, "missing.nk")},
+			assert: func(t *testing.T, _ nats.Options, err error) {
+				require.ErrorContains(t, err, "error loading NATS nkey seed")
+			},
+		},
+		{
+			name: "nkey",
+			cfg:  Config{SeedKeyFile: seedFile},
+			assert: func(t *testing.T, opts nats.Options, err error) {
+				require.NoError(t, err)
+				require.Equal(t, userPubKey, opts.Nkey)
+			},
+		},
+		{
+			name: "creds file does not exist",
+			cfg:  Config{CredsFile: filepath.Join(dir, "missing.creds")},
+			assert: func(t *testing.T, _ nats.Options, err error) {
+				require.ErrorContains(t, err, "error loading NATS credentials")
+			},
+		},
+		{
+			name: "creds file",
+			cfg:  Config{CredsFile: credsFile},
+			assert: func(t *testing.T, opts nats.Options, err error) {
+				require.NoError(t, err)
+				require.NotNil(t, opts.UserJWT)
+				require.NotNil(t, opts.SignatureCB)
+			},
+		},
+		{
+			name: "token",
+			cfg:  Config{Token: "fake-token"},
+			assert: func(t *testing.T, opts nats.Options, err error) {
+				require.NoError(t, err)
+				require.Equal(t, "fake-token", opts.Token)
+			},
+		},
+		{
+			name: "username and password",
+			cfg: Config{
+				Username: "fake-user",
+				Password: "fake-password",
+			},
+			assert: func(t *testing.T, opts nats.Options, err error) {
+				require.NoError(t, err)
+				require.Equal(t, "fake-user", opts.User)
+				require.Equal(t, "fake-password", opts.Password)
+			},
+		},
+		{
+			name: "username file does not exist",
+			cfg: Config{
+				UsernameFile: filepath.Join(dir, "missing-username"),
+				PasswordFile: passwordFile,
+			},
+			assert: func(t *testing.T, _ nats.Options, err error) {
+				require.ErrorContains(
+					t, err, "error loading NATS username and password",
+				)
+			},
+		},
+		{
+			name: "password file does not exist",
+			cfg: Config{
+				UsernameFile: usernameFile,
+				PasswordFile: filepath.Join(dir, "missing-password"),
+			},
+			assert: func(t *testing.T, _ nats.Options, err error) {
+				require.ErrorContains(
+					t, err, "error loading NATS username and password",
+				)
+			},
+		},
+		{
+			name: "username and password files",
+			cfg: Config{
+				UsernameFile: usernameFile,
+				PasswordFile: passwordFile,
+			},
+			assert: func(t *testing.T, opts nats.Options, err error) {
+				require.NoError(t, err)
+				// Nothing is fixed at configuration time...
+				require.Empty(t, opts.User)
+				require.Empty(t, opts.Password)
+				// ...the files are read when the library asks, and the
+				// trailing newline is not part of the username.
+				require.NotNil(t, opts.UserInfo)
+				user, pass := opts.UserInfo()
+				require.Equal(t, "fake-user", user)
+				require.Equal(t, "fake-password", pass)
+			},
+		},
+		{
+			name: "TLS combined with other credentials",
+			cfg: Config{
+				CredsFile:   credsFile,
+				TLSCAFile:   certFile,
+				TLSCertFile: certFile,
+				TLSKeyFile:  keyFile,
+			},
+			assert: func(t *testing.T, opts nats.Options, err error) {
+				require.NoError(t, err)
+				require.NotNil(t, opts.UserJWT)
+				require.True(t, opts.Secure)
+				require.NotNil(t, opts.RootCAsCB)
+				require.NotNil(t, opts.TLSCertCB)
+			},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+			opts := nats.GetDefaultOptions()
+			natsOpts, err := testCase.cfg.authOptions(
+				logging.NewDiscardLoggerOrDie(),
+			)
+			for _, opt := range natsOpts {
+				require.NoError(t, opt(&opts))
+			}
+			testCase.assert(t, opts, err)
+		})
+	}
+}
+
+func TestUserInfoFromFiles(t *testing.T) {
+	dir := t.TempDir()
+	usernameFile := filepath.Join(dir, "username")
+	require.NoError(t, os.WriteFile(usernameFile, []byte("fake-user\r\n"), 0o600))
+	passwordFile := filepath.Join(dir, "password")
+	require.NoError(t, os.WriteFile(passwordFile, []byte("fake-password\n"), 0o600))
+	missingFile := filepath.Join(dir, "missing")
+
+	testCases := []struct {
+		name         string
+		usernameFile string
+		passwordFile string
+		wantUser     string
+		wantPass     string
+	}{
+		{
+			name:         "trailing newlines are removed",
+			usernameFile: usernameFile,
+			passwordFile: passwordFile,
+			wantUser:     "fake-user",
+			wantPass:     "fake-password",
+		},
+		{
+			name:         "unreadable username file presents nothing",
+			usernameFile: missingFile,
+			passwordFile: passwordFile,
+		},
+		{
+			name:         "unreadable password file presents nothing",
+			usernameFile: usernameFile,
+			passwordFile: missingFile,
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			user, pass := userInfoFromFiles(
+				logging.NewDiscardLoggerOrDie(),
+				testCase.usernameFile,
+				testCase.passwordFile,
+			)()
+			require.Equal(t, testCase.wantUser, user)
+			require.Equal(t, testCase.wantPass, pass)
+		})
+	}
+}
+
+// writeSelfSignedCert writes a PEM-encoded self-signed certificate and its
+// private key to the given directory and returns their paths.
+func writeSelfSignedCert(t *testing.T, dir string) (string, string) {
+	t.Helper()
+	key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	require.NoError(t, err)
+	template := &x509.Certificate{
+		SerialNumber:          big.NewInt(1),
+		Subject:               pkix.Name{CommonName: "fake"},
+		NotBefore:             time.Now().Add(-time.Hour),
+		NotAfter:              time.Now().Add(time.Hour),
+		IsCA:                  true,
+		BasicConstraintsValid: true,
+	}
+	certDER, err := x509.CreateCertificate(
+		rand.Reader,
+		template,
+		template,
+		&key.PublicKey,
+		key,
+	)
+	require.NoError(t, err)
+	keyDER, err := x509.MarshalECPrivateKey(key)
+	require.NoError(t, err)
+
+	certFile := filepath.Join(dir, "tls.crt")
+	require.NoError(t, os.WriteFile(
+		certFile,
+		pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: certDER}),
+		0o600,
+	))
+	keyFile := filepath.Join(dir, "tls.key")
+	require.NoError(t, os.WriteFile(
+		keyFile,
+		pem.EncodeToMemory(&pem.Block{Type: "EC PRIVATE KEY", Bytes: keyDER}),
+		0o600,
+	))
+	return certFile, keyFile
+}

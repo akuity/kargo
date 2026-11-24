@@ -2,7 +2,7 @@
 
 import { describe, expect, test } from 'vitest';
 
-import { objectToYAML, promotionCompareFn } from './promotion';
+import { getPromotionStartedAt, objectToYAML, promotionCompareFn } from './promotion';
 
 test('promotionCompareFn', () => {
   expect(
@@ -134,5 +134,41 @@ describe('objectToYAML', () => {
 
   test('preserves scalar values', () => {
     expect(objectToYAML({ commit: 'abc123', count: 3 })).toBe('commit: abc123\ncount: 3\n');
+  });
+});
+
+describe('getPromotionStartedAt', () => {
+  test('returns undefined when no step has started', () => {
+    expect(getPromotionStartedAt(undefined)).toBeUndefined();
+    expect(getPromotionStartedAt({ status: { stepExecutionMetadata: [] } })).toBeUndefined();
+    expect(
+      getPromotionStartedAt({ status: { stepExecutionMetadata: [{ status: 'Skipped' }] } })
+    ).toBeUndefined();
+  });
+
+  test('returns the first step start time', () => {
+    expect(
+      getPromotionStartedAt({
+        status: {
+          stepExecutionMetadata: [
+            { status: 'Succeeded', startedAt: '2000-01-01T01:01:01Z' },
+            { status: 'Running', startedAt: '2000-01-01T01:01:02Z' }
+          ]
+        }
+      })
+    ).toBe('2000-01-01T01:01:01Z');
+  });
+
+  test('skips steps that never started', () => {
+    expect(
+      getPromotionStartedAt({
+        status: {
+          stepExecutionMetadata: [
+            { status: 'Skipped' },
+            { status: 'Running', startedAt: '2000-01-01T01:01:02Z' }
+          ]
+        }
+      })
+    ).toBe('2000-01-01T01:01:02Z');
   });
 });

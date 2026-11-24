@@ -128,8 +128,9 @@ func TestPromotionRequestSpec_Immutability(t *testing.T) {
 	require.Equal(
 		t,
 		map[string]bool{
-			"Stage":   true,
-			"Freight": true,
+			"Stage":          true,
+			"Freight":        true,
+			"UpdateStrategy": true,
 			// The one mutable field. The governing Stage owns it and may add
 			// Targets to a PromotionRequest that is still in flight.
 			"Targets": false,

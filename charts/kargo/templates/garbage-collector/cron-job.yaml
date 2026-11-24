@@ -6,17 +6,18 @@ metadata:
   name: kargo-garbage-collector
   namespace: {{ .Release.Namespace }}
   labels:
-    {{- include "kargo.labels" . | nindent 4 }}
+    {{- include "kargo.componentLabels" (dict "root" . "labels" .Values.garbageCollector.labels) | nindent 4 }}
     {{- include "kargo.garbageCollector.labels" . | nindent 4 }}
-  {{- with (mergeOverwrite (deepCopy .Values.global.labels) .Values.garbageCollector.labels) }}
-    {{- range $key, $value := . }}
-    {{ $key }}: {{ $value | quote }}
-    {{- end }}
-  {{- end }}
   {{- include "kargo.annotations" (dict "root" . "annotations" .Values.garbageCollector.annotations) | nindent 2 }}
 spec:
   schedule: {{ quote .Values.garbageCollector.schedule }}
+  {{- with .Values.garbageCollector.timeZone }}
+  timeZone: {{ quote . }}
+  {{- end }}
   concurrencyPolicy: Forbid
+  {{- with .Values.garbageCollector.startingDeadlineSeconds }}
+  startingDeadlineSeconds: {{ . }}
+  {{- end }}
   {{- if .Values.garbageCollector.suspend }}
   suspend: true
   {{- end }}
@@ -30,6 +31,10 @@ spec:
       annotations:
         configmap/checksum: {{ pick ( include (print $.Template.BasePath "/garbage-collector/configmap.yaml") . | fromYaml ) "data" | toYaml | sha256sum }}
     spec:
+      {{- with .Values.garbageCollector.activeDeadlineSeconds }}
+      activeDeadlineSeconds: {{ . }}
+      {{- end }}
+      backoffLimit: {{ .Values.garbageCollector.backoffLimit }}
       {{- with .Values.garbageCollector.ttlSecondsAfterFinished }}
       ttlSecondsAfterFinished: {{ . }}
       {{- end }}
@@ -52,6 +57,7 @@ spec:
           {{- end }}
         spec:
           serviceAccountName: kargo-garbage-collector
+          automountServiceAccountToken: {{ .Values.garbageCollector.automountServiceAccountToken }}
           {{- with .Values.garbageCollector.affinity | default .Values.global.affinity }}
           affinity:
             {{- toYaml . | nindent 12 }}

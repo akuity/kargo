@@ -9,7 +9,6 @@ import (
 	"sync"
 	"time"
 
-	securejoin "github.com/cyphar/filepath-securejoin"
 	"github.com/google/go-github/v76/github"
 	"github.com/kelseyhightower/envconfig"
 	"github.com/xeipuuv/gojsonschema"
@@ -24,7 +23,7 @@ import (
 	githubprov "github.com/akuity/kargo/pkg/gitprovider/github"
 	"github.com/akuity/kargo/pkg/logging"
 	"github.com/akuity/kargo/pkg/promotion"
-	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
+	"github.com/akuity/kargo/pkg/x/promotion/stepconfig"
 )
 
 const (
@@ -105,7 +104,7 @@ type githubPushServiceAdapter struct {
 // githubPusherConfig holds controller-level configuration for the
 // github-push step, populated from environment variables.
 type githubPusherConfig struct {
-	PushIntegrationPolicy  git.PushIntegrationPolicy `envconfig:"GIT_PUSH_INTEGRATION_POLICY" default:"AlwaysRebase"`
+	PushIntegrationPolicy  git.PushIntegrationPolicy `envconfig:"GIT_PUSH_INTEGRATION_POLICY" default:"RebaseOrMerge"`
 	MaxRevisions           int                       `envconfig:"GITHUB_PUSH_MAX_REVISIONS" default:"10"`
 	VerifyUntrustedCommits bool                      `envconfig:"GITHUB_PUSH_VERIFY_UNTRUSTED_COMMITS" default:"false"`
 }
@@ -157,8 +156,8 @@ func (g *githubPusher) Run(
 
 func (g *githubPusher) convert(
 	cfg promotion.Config,
-) (builtin.GitHubPushConfig, error) {
-	return validateAndConvert[builtin.GitHubPushConfig](
+) (stepconfig.GitHubPushConfig, error) {
+	return validateAndConvert[stepconfig.GitHubPushConfig](
 		g.schemaLoader, cfg, stepKindGitHubPush,
 	)
 }
@@ -166,19 +165,16 @@ func (g *githubPusher) convert(
 func (g *githubPusher) run(
 	ctx context.Context,
 	stepCtx *promotion.StepContext,
-	cfg builtin.GitHubPushConfig,
+	cfg stepconfig.GitHubPushConfig,
 ) (promotion.StepResult, error) {
 	logger := logging.LoggerFromContext(ctx)
 
 	// This is kind of hacky, but we needed to load the working tree to get the
 	// URL of the repository. With that in hand, we can look for applicable
 	// credentials and, if found, reload the work tree with the credentials.
-	path, err := securejoin.SecureJoin(stepCtx.WorkDir, cfg.Path)
+	path, err := promotion.ExternalPath(stepCtx, cfg.Path)
 	if err != nil {
-		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, fmt.Errorf(
-			"error joining path %s with work dir %s: %w",
-			cfg.Path, stepCtx.WorkDir, err,
-		)
+		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, err
 	}
 	loadOpts := &git.LoadWorkTreeOptions{}
 	workTree, err := git.LoadWorkTree(ctx, path, loadOpts)
@@ -205,24 +201,13 @@ func (g *githubPusher) run(
 			)}
 	case creds.Password != "":
 		loadOpts.Credentials = &git.RepoCredentials{
-			Username:      creds.Username,
-			Password:      creds.Password,
-			SSHPrivateKey: creds.SSHPrivateKey,
+			Username: creds.Username,
+			Password: creds.Password,
 		}
 		token = creds.Password
-	case creds.SSHPrivateKey != "":
-		return promotion.StepResult{Status: kargoapi.PromotionStepStatusFailed},
-			&promotion.TerminalError{Err: fmt.Errorf(
-				"found SSH key for %s; this can be used for basic Git operations only "+
-					"and cannot be used for GitHub API authentication; note that "+
-					"authentication of any kind using SSH keys is deprecated; use a "+
-					"personal access token or GitHub App instead",
-				workTree.URL(),
-			)}
 	default:
 		// This probably never happens in practice. If we get to here, creds were
-		// found, but contained no token, and didn't even contain an SSH key worth
-		// commenting on.
+		// found, but contained no token.
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusFailed},
 			&promotion.TerminalError{Err: fmt.Errorf(
 				"credentials for %s are missing a password/token", workTree.URL(),
@@ -416,8 +401,9 @@ func (g *githubPusher) push(
 ) error {
 	logger := logging.LoggerFromContext(ctx)
 
-	g.acquireBranchLock(workTree.URL(), opts.targetBranch)
-	defer g.releaseBranchLock(workTree.URL(), opts.targetBranch)
+	branchMu := g.getBranchMu(workTree.URL(), opts.targetBranch)
+	branchMu.Lock()
+	defer branchMu.Unlock()
 
 	// The local branch may be behind the remote branch it tracks or may have
 	// diverged from it. Start by integrating any remote changes we don't have
@@ -809,19 +795,16 @@ func (g *githubPusher) isRetryableError(err error) bool {
 	return errors.As(err, &re)
 }
 
-func (g *githubPusher) acquireBranchLock(repoURL, branch string) {
+// getBranchMu returns the mutex for the given repo + branch, creating it if
+// necessary. masterMu guards the map itself.
+func (g *githubPusher) getBranchMu(repoURL, branch string) *sync.Mutex {
 	key := fmt.Sprintf("%s:%s", repoURL, branch)
-	if _, exists := g.branchMus[key]; !exists {
-		g.masterMu.Lock()
-		if _, exists = g.branchMus[key]; !exists {
-			g.branchMus[key] = &sync.Mutex{}
-		}
-		g.masterMu.Unlock()
+	g.masterMu.Lock()
+	defer g.masterMu.Unlock()
+	mu, exists := g.branchMus[key]
+	if !exists {
+		mu = &sync.Mutex{}
+		g.branchMus[key] = mu
 	}
-	g.branchMus[key].Lock()
-}
-
-func (g *githubPusher) releaseBranchLock(repoURL, branch string) {
-	key := fmt.Sprintf("%s:%s", repoURL, branch)
-	g.branchMus[key].Unlock()
+	return mu
 }

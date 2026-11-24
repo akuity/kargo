@@ -3,9 +3,6 @@ sidebar_label: tf-plan
 description: Executes an OpenTofu plan operation to preview infrastructure changes.
 ---
 
-<span class="tag professional"></span>
-<span class="tag beta"></span>
-
 # `tf-plan`
 
 :::info

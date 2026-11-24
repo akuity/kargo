@@ -5,8 +5,10 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -133,6 +135,91 @@ func TestSetupUser(t *testing.T) {
 	}
 }
 
+func TestSetupDirs(t *testing.T) {
+	t.Parallel()
+
+	baseDir, err := filepath.EvalSymlinks(t.TempDir())
+	require.NoError(t, err)
+	b := &baseRepo{}
+	require.NoError(t, b.setupDirs(t.Context(), baseDir))
+	require.Equal(t, baseDir, filepath.Dir(b.homeDir))
+	require.Equal(t, filepath.Join(b.homeDir, "repo"), b.dir)
+	assertGitConfig(t, b.homeDir, "init.defaultBranch", "main")
+	assertGitConfig(t, b.homeDir, "maintenance.auto", "false")
+}
+
+func TestDisableAutoMaintenance(t *testing.T) {
+	t.Parallel()
+
+	homeDir := t.TempDir()
+	b := &baseRepo{homeDir: t.TempDir()}
+	require.NoError(t, b.disableAutoMaintenance(t.Context(), homeDir))
+	assertGitConfig(t, homeDir, "maintenance.auto", "false")
+	assertNoGitConfig(t, b.homeDir)
+}
+
+func TestValidateRepoURL(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name    string
+		repoURL string
+		assert  func(*testing.T, error)
+	}{
+		{
+			name:    "unparseable URL",
+			repoURL: "https://user:secret@bad host/example/repo.git",
+			assert: func(t *testing.T, err error) {
+				require.ErrorContains(t, err, "only HTTP(S) URLs are supported")
+				require.NotContains(t, err.Error(), "secret")
+			},
+		},
+		{
+			name:    "SSH URL",
+			repoURL: "ssh://git:secret@github.com/example/repo.git",
+			assert: func(t *testing.T, err error) {
+				require.ErrorContains(t, err, "only HTTP(S) URLs are supported")
+				require.ErrorContains(t, err, "ssh://git:xxxxx@github.com")
+				require.NotContains(t, err.Error(), "secret")
+			},
+		},
+		{
+			name:    "SCP-style URL",
+			repoURL: "git@github.com:example/repo.git",
+			assert: func(t *testing.T, err error) {
+				require.ErrorContains(t, err, "only HTTP(S) URLs are supported")
+			},
+		},
+		{
+			name:    "local path",
+			repoURL: "/tmp/repo",
+			assert: func(t *testing.T, err error) {
+				require.ErrorContains(t, err, "only HTTP(S) URLs are supported")
+			},
+		},
+		{
+			name:    "HTTP URL",
+			repoURL: "http://localhost:8080/example/repo.git",
+			assert: func(t *testing.T, err error) {
+				require.NoError(t, err)
+			},
+		},
+		{
+			name:    "HTTPS URL",
+			repoURL: "HTTPS://github.com/example/repo.git",
+			assert: func(t *testing.T, err error) {
+				require.NoError(t, err)
+			},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+			testCase.assert(t, validateRepoURL(testCase.repoURL))
+		})
+	}
+}
+
 func TestBuildGitCommandStallDetection(t *testing.T) {
 	t.Parallel()
 
@@ -218,17 +305,161 @@ func TestBuildCommandCancellation(t *testing.T) {
 	require.Less(t, elapsed, 10*time.Second)
 }
 
+func TestSetupAuth(t *testing.T) {
+	const (
+		testURLWithCreds    = "https://bob:secret@example.com/repo.git"
+		testURLWithoutCreds = "https://example.com/repo.git"
+	)
+	testCreds := &RepoCredentials{
+		Username: "user",
+		Password: "pass",
+	}
+	testCases := []struct {
+		name   string
+		url    string
+		creds  *RepoCredentials
+		assert func(*testing.T, string, error)
+	}{
+		{
+			name: "no credentials",
+			url:  testURLWithCreds,
+			assert: func(t *testing.T, url string, err error) {
+				require.NoError(t, err)
+				require.Equal(t, testURLWithCreds, url)
+			},
+		},
+		{
+			name:  "no password",
+			url:   testURLWithCreds,
+			creds: &RepoCredentials{Username: "user"},
+			assert: func(t *testing.T, url string, err error) {
+				require.NoError(t, err)
+				require.Equal(t, testURLWithCreds, url)
+			},
+		},
+		{
+			name:  "no credentials in URL",
+			url:   testURLWithoutCreds,
+			creds: testCreds,
+			assert: func(t *testing.T, url string, err error) {
+				require.NoError(t, err)
+				require.Equal(t, testURLWithoutCreds, url)
+			},
+		},
+		{
+			name:  "username in URL",
+			url:   "https://bob@example.com/repo.git",
+			creds: testCreds,
+			assert: func(t *testing.T, url string, err error) {
+				require.NoError(t, err)
+				require.Equal(t, testURLWithoutCreds, url)
+			},
+		},
+		{
+			name:  "username and password in URL",
+			url:   testURLWithCreds,
+			creds: testCreds,
+			assert: func(t *testing.T, url string, err error) {
+				require.NoError(t, err)
+				require.Equal(t, testURLWithoutCreds, url)
+			},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+			b := &baseRepo{
+				url:   testCase.url,
+				creds: testCase.creds,
+			}
+			err := b.setupAuth()
+			testCase.assert(t, b.url, err)
+		})
+	}
+}
+
+func TestGitHTTPAuthNeverSendsEmptyPassword(t *testing.T) {
+	t.Parallel()
+
+	const (
+		testUsername = "test-user"
+		testPassword = "test-pass"
+	)
+
+	// Build the real GIT_ASKPASS program rather than a stand-in for it.
+	helperPath := filepath.Join(t.TempDir(), "credential-helper")
+	out, err := exec.Command(
+		"go", "build",
+		"-o", helperPath,
+		"github.com/akuity/kargo/cmd/credential-helper",
+	).CombinedOutput()
+	require.NoError(t, err, string(out))
+
+	// A server that records the credentials on each request ("" for none) and
+	// demands Basic auth until it gets the right ones.
+	var (
+		mu       sync.Mutex
+		received []string
+	)
+	testServer := httptest.NewServer(
+		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			var creds string
+			if username, password, ok := r.BasicAuth(); ok {
+				creds = username + ":" + password
+			}
+			mu.Lock()
+			received = append(received, creds)
+			mu.Unlock()
+			if creds != testUsername+":"+testPassword {
+				w.Header().Set("WWW-Authenticate", `Basic realm="test"`)
+				w.WriteHeader(http.StatusUnauthorized)
+				return
+			}
+			w.WriteHeader(http.StatusNotFound)
+		}),
+	)
+	t.Cleanup(testServer.Close)
+
+	b := &baseRepo{
+		url: testServer.URL + "/repo.git",
+		creds: &RepoCredentials{
+			Username: testUsername,
+			Password: testPassword,
+		},
+		dir:     t.TempDir(),
+		homeDir: t.TempDir(),
+	}
+	require.NoError(t, b.setupAuth())
+
+	cmd := b.buildGitCommand(t.Context(), "ls-remote", b.url)
+	cmd.Env = append(
+		cmd.Env,
+		// When a key repeats in Env, the last value wins
+		"GIT_ASKPASS="+helperPath,
+		// Keep a credential helper in the system git config from answering
+		"GIT_CONFIG_NOSYSTEM=1",
+	)
+	// The server answers the authenticated request with a 404, so git fails.
+	// Only the requests it made matter.
+	_, _ = libExec.Exec(cmd)
+
+	mu.Lock()
+	defer mu.Unlock()
+	require.NotContains(t, received, testUsername+":")
+	require.NotEmpty(t, received)
+	require.Equal(t, testUsername+":"+testPassword, received[len(received)-1])
+}
+
 // assertGitConfig verifies that a git config key has the expected value in
 // the .gitconfig within the given home directory.
 func assertGitConfig(t *testing.T, homeDir, key, expected string) {
 	t.Helper()
 	configPath := filepath.Join(homeDir, ".gitconfig")
-	content, err := os.ReadFile(configPath)
-	require.NoError(t, err, "expected .gitconfig in %s", homeDir)
-	require.Contains(t,
-		string(content), expected,
-		"expected %s = %s in %s", key, expected, configPath,
+	out, err := libExec.Exec(
+		exec.Command("git", "config", "--file", configPath, "--get", key),
 	)
+	require.NoError(t, err, "expected %s in %s", key, configPath)
+	require.Equal(t, expected, strings.TrimSpace(string(out)), key)
 }
 
 // assertNoGitConfig verifies that no .gitconfig exists in the given directory.

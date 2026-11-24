@@ -11,16 +11,14 @@ import (
 	"sync"
 	"time"
 
-	securejoin "github.com/cyphar/filepath-securejoin"
 	"github.com/hashicorp/go-cleanhttp"
 	"github.com/xeipuuv/gojsonschema"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	"github.com/akuity/kargo/pkg/io/fs"
 	"github.com/akuity/kargo/pkg/logging"
 	kargonet "github.com/akuity/kargo/pkg/net"
 	"github.com/akuity/kargo/pkg/promotion"
-	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
+	"github.com/akuity/kargo/pkg/x/promotion/stepconfig"
 )
 
 const (
@@ -78,23 +76,23 @@ func (d *httpDownloader) Run(
 }
 
 // convert validates httpDownloader configuration against a JSON schema and
-// converts it into a builtin.HTTPDownloadConfig struct.
-func (d *httpDownloader) convert(cfg promotion.Config) (builtin.HTTPDownloadConfig, error) {
-	return validateAndConvert[builtin.HTTPDownloadConfig](d.schemaLoader, cfg, stepKindHTTPDownload)
+// converts it into a stepconfig.HTTPDownloadConfig struct.
+func (d *httpDownloader) convert(cfg promotion.Config) (stepconfig.HTTPDownloadConfig, error) {
+	return validateAndConvert[stepconfig.HTTPDownloadConfig](d.schemaLoader, cfg, stepKindHTTPDownload)
 }
 
 // run executes the httpDownloader step with the provided configuration.
 func (d *httpDownloader) run(
 	ctx context.Context,
 	stepCtx *promotion.StepContext,
-	cfg builtin.HTTPDownloadConfig,
+	cfg stepconfig.HTTPDownloadConfig,
 ) (promotion.StepResult, error) {
-	absOutPath, err := d.prepareOutputPath(stepCtx.WorkDir, cfg.OutPath, cfg.AllowOverwrite)
+	outPath, err := d.prepareOutputPath(stepCtx.Root, cfg.OutPath, cfg.AllowOverwrite)
 	if err != nil {
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, err
 	}
 
-	resp, err := d.performHTTPRequest(cfg)
+	resp, err := d.performHTTPRequest(ctx, cfg)
 	if err != nil {
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, err
 	}
@@ -104,7 +102,7 @@ func (d *httpDownloader) run(
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusFailed}, err
 	}
 
-	if err = d.downloadToFile(ctx, resp, absOutPath); err != nil {
+	if err = d.downloadToFile(ctx, resp, stepCtx.Root, outPath); err != nil {
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, err
 	}
 
@@ -112,28 +110,28 @@ func (d *httpDownloader) run(
 }
 
 // prepareOutputPath validates and prepares the output path for the download.
-func (d *httpDownloader) prepareOutputPath(workDir, outPath string, allowOverwrite bool) (string, error) {
-	absOutPath, err := securejoin.SecureJoin(workDir, outPath)
+// It returns the path relative to root.
+func (d *httpDownloader) prepareOutputPath(root *os.Root, outPath string, allowOverwrite bool) (string, error) {
+	relOutPath, err := promotion.WorkspacePath(outPath)
 	if err != nil {
-		return "", fmt.Errorf("failed to join path %q: %w", outPath, err)
-	}
-
-	if err = d.checkFileOverwrite(absOutPath, outPath, allowOverwrite); err != nil {
 		return "", err
 	}
 
-	destDir := filepath.Dir(absOutPath)
-	if err = os.MkdirAll(destDir, 0o700); err != nil {
+	if err = d.checkFileOverwrite(root, relOutPath, outPath, allowOverwrite); err != nil {
+		return "", err
+	}
+
+	if err = root.MkdirAll(filepath.Dir(relOutPath), 0o700); err != nil {
 		return "", fmt.Errorf("failed to create destination directory: %w", err)
 	}
 
-	return absOutPath, nil
+	return relOutPath, nil
 }
 
 // checkFileOverwrite validates file overwrite conditions.
-func (d *httpDownloader) checkFileOverwrite(absOutPath, outPath string, allowOverwrite bool) error {
+func (d *httpDownloader) checkFileOverwrite(root *os.Root, relOutPath, outPath string, allowOverwrite bool) error {
 	if !allowOverwrite {
-		if _, err := os.Stat(absOutPath); err == nil || !os.IsNotExist(err) {
+		if _, err := root.Stat(relOutPath); err == nil || !os.IsNotExist(err) {
 			if err != nil {
 				return fmt.Errorf("error checking destination file: %w", err)
 			}
@@ -146,8 +144,11 @@ func (d *httpDownloader) checkFileOverwrite(absOutPath, outPath string, allowOve
 }
 
 // performHTTPRequest executes the HTTP request and returns the response.
-func (d *httpDownloader) performHTTPRequest(cfg builtin.HTTPDownloadConfig) (*http.Response, error) {
-	req, err := d.buildRequest(cfg)
+func (d *httpDownloader) performHTTPRequest(
+	ctx context.Context,
+	cfg stepconfig.HTTPDownloadConfig,
+) (*http.Response, error) {
+	req, err := d.buildRequest(ctx, cfg)
 	if err != nil {
 		return nil, &promotion.TerminalError{Err: fmt.Errorf("error building HTTP request: %w", err)}
 	}
@@ -168,8 +169,11 @@ func (d *httpDownloader) performHTTPRequest(cfg builtin.HTTPDownloadConfig) (*ht
 }
 
 // buildRequest constructs the HTTP request with headers and query parameters.
-func (d *httpDownloader) buildRequest(cfg builtin.HTTPDownloadConfig) (*http.Request, error) {
-	req, err := http.NewRequest(http.MethodGet, cfg.URL, nil)
+func (d *httpDownloader) buildRequest(
+	ctx context.Context,
+	cfg stepconfig.HTTPDownloadConfig,
+) (*http.Request, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, cfg.URL, nil)
 	if err != nil {
 		return nil, fmt.Errorf("error creating HTTP request: %w", err)
 	}
@@ -192,8 +196,9 @@ func (d *httpDownloader) buildRequest(cfg builtin.HTTPDownloadConfig) (*http.Req
 }
 
 // buildHTTPClient creates an HTTP client with the specified configuration.
-func (d *httpDownloader) buildHTTPClient(cfg builtin.HTTPDownloadConfig) (*http.Client, error) {
-	httpTransport := kargonet.SafeTransport(cleanhttp.DefaultTransport())
+func (d *httpDownloader) buildHTTPClient(cfg stepconfig.HTTPDownloadConfig) (*http.Client, error) {
+	httpTransport := cleanhttp.DefaultTransport()
+	kargonet.HardenTransport(httpTransport, nil)
 	if cfg.InsecureSkipTLSVerify {
 		httpTransport.TLSClientConfig = &tls.Config{
 			InsecureSkipVerify: true, // nolint: gosec
@@ -230,18 +235,24 @@ func (d *httpDownloader) validateResponse(resp *http.Response) error {
 	return nil
 }
 
-// downloadToFile downloads the response content to the specified file.
-func (d *httpDownloader) downloadToFile(ctx context.Context, resp *http.Response, path string) error {
+// downloadToFile downloads the response content to the file at path, which is
+// relative to root.
+func (d *httpDownloader) downloadToFile(
+	ctx context.Context,
+	resp *http.Response,
+	root *os.Root,
+	path string,
+) error {
 	logger := logging.LoggerFromContext(ctx)
 
-	tempFile, tempPath, err := d.createTempFile(path)
+	tempFile, tempPath, err := createTempFile(root, filepath.Dir(path), filepath.Base(path)+".tmp")
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to create temporary file: %w", err)
 	}
 
 	defer func() {
 		_ = tempFile.Close()
-		_ = os.Remove(tempPath)
+		_ = root.Remove(tempPath)
 	}()
 
 	logger.Debug("starting HTTP download to temporary file", "url", resp.Request.URL.String())
@@ -255,33 +266,11 @@ func (d *httpDownloader) downloadToFile(ctx context.Context, resp *http.Response
 		return fmt.Errorf("failed to close temporary file: %w", err)
 	}
 
-	if err = fs.SimpleAtomicMove(tempPath, path); err != nil {
+	if err = replace(root, tempPath, path); err != nil {
 		return fmt.Errorf("failed to move file to final destination: %w", err)
 	}
 
 	return nil
-}
-
-// createTempFile creates a temporary file in the same directory as the target.
-func (d *httpDownloader) createTempFile(absOutPath string) (*os.File, string, error) {
-	destDir := filepath.Dir(absOutPath)
-	baseFile := filepath.Base(absOutPath)
-
-	tempFile, err := os.CreateTemp(destDir, baseFile+".tmp")
-	if err != nil {
-		return nil, "", fmt.Errorf("failed to create temporary file: %w", err)
-	}
-
-	if err = tempFile.Chmod(0o600); err != nil {
-		_ = tempFile.Close()
-		// #nosec G703 -- Contextually, if this was constructed from a
-		// user-specified, relative path, the absolute path was constructed using
-		// securejoin.SecureJoin().
-		_ = os.Remove(tempFile.Name())
-		return nil, "", fmt.Errorf("failed to set permissions on temporary file: %w", err)
-	}
-
-	return tempFile, tempFile.Name(), nil
 }
 
 // copyResponseToFile copies response content to the file with size limits and

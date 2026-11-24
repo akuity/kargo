@@ -6,9 +6,12 @@ import { Table } from 'antd';
 import classNames from 'classnames';
 import { useMemo } from 'react';
 
+import { SubscriptionName } from '@ui/features/common/subscription-name';
 import { ArtifactMetadata } from '@ui/features/freight/artifact-metadata';
 import { flattenFreightOrigin } from '@ui/features/freight/flatten-freight-origin-utils';
 import { Freight } from '@ui/gen/api/v2/models';
+
+import { repoLabel } from '../promotion/freight-comparison-utils';
 
 type FreightTableProps = {
   freight: Freight;
@@ -55,11 +58,17 @@ export const FreightTable = (props: FreightTableProps) => {
               width: '30%',
               render: (_, record) => {
                 if (record.type === 'other') {
-                  return record.subscriptionName || '-';
+                  return '-';
                 }
 
-                return record.repoURL;
+                return <span className='break-all'>{repoLabel(record)}</span>;
               }
+            },
+            {
+              title: 'Subscription Name',
+              width: '15%',
+              render: (_, record) =>
+                record.subscriptionName ? <SubscriptionName name={record.subscriptionName} /> : '-'
             },
             {
               title: 'Version',

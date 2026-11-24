@@ -14,6 +14,7 @@ const parseUrl = (value: string): URL | undefined => {
   }
 };
 
+const gitProtocols = ['http:', 'https:'];
 const helmProtocols = ['http:', 'https:', 'oci:'];
 
 // The repo URL shape a credential type demands, or undefined when the URL is
@@ -30,8 +31,12 @@ export const repoUrlError = (
     return undefined;
   }
   switch (type) {
-    case 'git':
-      return parseUrl(repoUrl) ? undefined : 'Repo URL must be a valid git URL.';
+    case 'git': {
+      const url = parseUrl(repoUrl);
+      return url && gitProtocols.includes(url.protocol)
+        ? undefined
+        : 'Repo URL must be a valid HTTP(S) git URL.';
+    }
     case 'helm': {
       const url = parseUrl(repoUrl);
       return url && helmProtocols.includes(url.protocol)

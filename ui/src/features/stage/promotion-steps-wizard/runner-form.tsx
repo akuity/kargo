@@ -7,6 +7,7 @@ import { ErrorBoundary } from '@ui/features/common/layout/error-boundary';
 
 import styles from './runner-form.module.less';
 import { RunnerWithConfiguration } from './types';
+import { runnerFormData } from './utils';
 
 export type RunnerFormType = {
   runner: RunnerWithConfiguration;
@@ -23,7 +24,7 @@ export const RunnerForm = (props: RunnerFormType) => {
     <ErrorBoundary
       errorRender={
         <Alert
-          message={
+          title={
             <>
               It looks like there was an error with JSON schema for runner{' '}
               <b>{props.runner.identifier}</b>
@@ -40,7 +41,7 @@ export const RunnerForm = (props: RunnerFormType) => {
           onChange={(d) => {
             props.onSubmit(d.formData);
           }}
-          formData={props.runner.state}
+          formData={runnerFormData(props.runner)}
           uiSchema={{
             'ui:submitButtonOptions': {
               norender: true

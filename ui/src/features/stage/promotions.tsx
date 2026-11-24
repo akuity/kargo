@@ -7,6 +7,7 @@ import React, { useState } from 'react';
 import { Link, generatePath, useParams } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
+import { LoadingState } from '@ui/features/common/loading-state';
 import { PromotionStatusIcon } from '@ui/features/common/promotion-status/promotion-status-icon';
 import {
   getPromotionStatusPhase,
@@ -15,21 +16,106 @@ import {
 } from '@ui/features/common/promotion-status/utils';
 import { getAlias, getShortFreightLabel } from '@ui/features/common/utils';
 import { getPromotionActor } from '@ui/features/project/pipelines/promotion/get-promotion-actor';
+import { PromotionWindowAlert } from '@ui/features/project/pipelines/promotion/promotion-window-alert';
 import { useWatchPromotions } from '@ui/features/project/pipelines/promotion/use-watch-promotions';
 import { useListPromotions, usePromoteToStage } from '@ui/gen/api/v2/core/core';
-import { ArgoCDShard, Promotion } from '@ui/gen/api/v2/models';
+import { ArgoCDShard, Promotion, Stage } from '@ui/gen/api/v2/models';
 import uiPlugins from '@ui/plugins';
 import { UiPluginHoles } from '@ui/plugins/atoms/ui-plugin-hole/ui-plugin-holes';
 import { parseDate } from '@ui/utils/dates';
 
+import { isStageTargetAware } from '../project/pipelines/nodes/stage-meta-utils';
 import { Promotion as PromotionComponent } from '../project/pipelines/promotion/promotion';
 
+import { PromotionRequestDetails } from './promotion-request/promotion-request-details';
+import { PromotionRequests } from './promotion-requests';
+import { PromotionRolloutDetails } from './promotion-rollout/promotion-rollout-details';
+import { PromotionRollouts } from './promotion-rollouts';
 import { useGetFreightMap } from './tabs/freight-history/use-get-freight-map';
+import { useStageLatestRollouts } from './use-promotion-rollouts';
 import { hasAbortRequest, promotionCompareFn } from './utils/promotion';
+import { stageUsesRollouts } from './utils/promotion-rollout';
 
 const rollbackAnnotationKey = 'kargo.akuity.io/rollback';
 
-export const Promotions = ({ argocdShard }: { argocdShard?: ArgoCDShard }) => {
+/**
+ * Promotions is the Stage drawer's Promotions tab, which shows a different
+ * thing depending on how the Stage promotes.
+ *
+ * A classic Stage promotes to itself, with one Promotion per round, so its tab
+ * lists Promotions. A target-aware Stage promotes to the Targets it governs by
+ * way of a round that fans out into one Promotion per Target, so its tab lists
+ * the rounds and leaves the children to be read inside one. Listing both at
+ * this level would bury a fleet's rounds under hundreds of Promotions that say
+ * nothing on their own.
+ *
+ * A round is a PromotionRollout for a Stage that fans out through rollouts and
+ * a PromotionRequest for any other; see stageUsesRollouts.
+ */
+export const Promotions = ({ stage, argocdShard }: { stage: Stage; argocdShard?: ArgoCDShard }) =>
+  isStageTargetAware(stage) ? (
+    <TargetAwarePromotions stage={stage} />
+  ) : (
+    <ClassicPromotions stage={stage} argocdShard={argocdShard} />
+  );
+
+const TargetAwarePromotions = ({ stage }: { stage: Stage }) => {
+  const {
+    name: projectName,
+    stageName,
+    promotionRequestName,
+    promotionRolloutNumber
+  } = useParams();
+
+  const { latest, isLoading } = useStageLatestRollouts(projectName || '', stage);
+
+  // One round, opened from the list, replaces the list in place rather than
+  // opening a second drawer over the Stage's: a round is a thing the Stage
+  // did, and reading it should not mean leaving the Stage.
+  if (promotionRolloutNumber) {
+    return (
+      <PromotionRolloutDetails
+        // As for a request below: a retry lands on another rollout, which
+        // should not open with the filters of the one left behind.
+        key={promotionRolloutNumber}
+        project={projectName || ''}
+        stageName={stageName || ''}
+        number={Number(promotionRolloutNumber)}
+      />
+    );
+  }
+
+  if (promotionRequestName) {
+    return (
+      <PromotionRequestDetails
+        // Retrying moves from one round straight to another, which would
+        // otherwise keep the chips and search of the round left behind and
+        // open the new one already filtered.
+        key={promotionRequestName}
+        project={projectName || ''}
+        stageName={stageName || ''}
+        promotionRequestName={promotionRequestName}
+      />
+    );
+  }
+
+  return (
+    <>
+      <PromotionWindowAlert stage={stage} className='mb-4' />
+      {stageUsesRollouts(stage, latest) ? (
+        <PromotionRollouts project={projectName || ''} stage={stage} />
+      ) : isLoading ? (
+        // Whether the Stage has a rollout is not known yet, and its requests
+        // are not worth showing for the moment it takes to find out.
+        <LoadingState />
+      ) : (
+        <PromotionRequests projectName={projectName || ''} stageName={stageName || ''} />
+      )}
+    </>
+  );
+};
+
+const ClassicPromotions = ({ stage, argocdShard }: { stage: Stage; argocdShard?: ArgoCDShard }) => {
   const { token } = theme.useToken();
 
   const { name: projectName, stageName } = useParams();
@@ -180,6 +266,8 @@ export const Promotions = ({ argocdShard }: { argocdShard?: ArgoCDShard }) => {
 
   return (
     <>
+      <PromotionWindowAlert stage={stage} className='mb-4' />
+
       <Table
         columns={columns}
         dataSource={promotions}

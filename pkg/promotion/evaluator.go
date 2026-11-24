@@ -12,6 +12,7 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/api"
+	"github.com/akuity/kargo/pkg/credentials"
 	"github.com/akuity/kargo/pkg/expressions"
 	exprfn "github.com/akuity/kargo/pkg/expressions/function"
 )
@@ -25,19 +26,27 @@ import (
 // expressions within the same step access the same data, such as Secrets or
 // ConfigMaps.
 type StepEvaluator struct {
-	client client.Client
-	cache  *gocache.Cache
+	client  client.Client
+	credsDB credentials.Database
+	cache   *gocache.Cache
 }
 
 // NewStepEvaluator creates a new StepEvaluator instance with the provided
-// Kubernetes client and cache. The cache is optional, and can be used to
-// store Kubernetes objects that are frequently accessed by the expression
-// evaluation logic, such as Secrets and ConfigMaps, to avoid unnecessary API
-// calls and improve performance.
-func NewStepEvaluator(cl client.Client, cache *gocache.Cache) *StepEvaluator {
+// Kubernetes client, credentials database, and cache. The credentials database
+// is optional and, when provided, backs the repoCredentials() expression
+// function; when nil, that function returns an error if invoked. The cache is
+// optional, and can be used to store data that is frequently accessed by the
+// expression evaluation logic, such as Secrets and ConfigMaps, to avoid
+// unnecessary API calls and improve performance.
+func NewStepEvaluator(
+	cl client.Client,
+	credsDB credentials.Database,
+	cache *gocache.Cache,
+) *StepEvaluator {
 	return &StepEvaluator{
-		client: cl,
-		cache:  cache,
+		client:  cl,
+		credsDB: credsDB,
+		cache:   cache,
 	}
 }
 
@@ -132,6 +141,7 @@ func BuildCtxMap(stepCtx StepContext) map[string]any {
 	// as it did before Targets existed.
 	if stepCtx.Target != nil {
 		env["target"] = map[string]any{
+			"name":   stepCtx.Target.Name,
 			"params": stepCtx.Target.Params,
 			"labels": stepCtx.Target.Labels,
 		}
@@ -187,7 +197,7 @@ func (p *StepEvaluator) Vars(ctx context.Context, promoCtx Context, step Step) (
 	// evaluation. These functions provide access to data operations, freight
 	// operations, and utility functions.
 	exprOpts := slices.Concat(
-		exprfn.DataOperations(ctx, p.client, p.cache, promoCtx.Project),
+		exprfn.DataOperations(ctx, p.client, p.credsDB, p.cache, promoCtx.Project),
 		exprfn.FreightOperations(
 			ctx, p.client, promoCtx.Project, promoCtx.FreightRequests, promoCtx.Freight.References(),
 		),
@@ -261,7 +271,7 @@ func (p *StepEvaluator) ShouldSkip(ctx context.Context, promoCtx Context, step S
 		step.If,
 		env,
 		slices.Concat(
-			exprfn.DataOperations(ctx, p.client, p.cache, promoCtx.Project),
+			exprfn.DataOperations(ctx, p.client, p.credsDB, p.cache, promoCtx.Project),
 			exprfn.FreightOperations(
 				ctx,
 				p.client,
@@ -323,7 +333,7 @@ func (p *StepEvaluator) Config(ctx context.Context, promoCtx Context, step Step)
 				promoCtx.FreightRequests,
 				promoCtx.Freight.References(),
 			),
-			exprfn.DataOperations(ctx, p.client, p.cache, promoCtx.Project),
+			exprfn.DataOperations(ctx, p.client, p.credsDB, p.cache, promoCtx.Project),
 			exprfn.StatusOperations(step.Alias, promoCtx.StepExecutionMetadata),
 			exprfn.UtilityOperations(),
 		)...,

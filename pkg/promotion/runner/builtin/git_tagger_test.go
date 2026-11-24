@@ -13,7 +13,7 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/controller/git"
 	"github.com/akuity/kargo/pkg/promotion"
-	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
+	"github.com/akuity/kargo/pkg/x/promotion/stepconfig"
 )
 
 func Test_gitTagger_convert(t *testing.T) {
@@ -174,8 +174,8 @@ func Test_gitTagger_run(t *testing.T) {
 	// Test creating a tag
 	res, err := runner.run(
 		t.Context(),
-		&promotion.StepContext{WorkDir: workDir},
-		builtin.GitTagConfig{
+		newTestStepContext(t, workDir),
+		stepconfig.GitTagConfig{
 			Path: "master",
 			Tag:  "v1.0.0",
 		},
@@ -203,8 +203,8 @@ func Test_gitTagger_run(t *testing.T) {
 	// Re-tagging without force should fail because the tag already exists.
 	res, err = runner.run(
 		t.Context(),
-		&promotion.StepContext{WorkDir: workDir},
-		builtin.GitTagConfig{
+		newTestStepContext(t, workDir),
+		stepconfig.GitTagConfig{
 			Path: "master",
 			Tag:  "v1.0.0",
 		},
@@ -215,8 +215,8 @@ func Test_gitTagger_run(t *testing.T) {
 	// Re-tagging with force should succeed and move the tag to the new commit.
 	res, err = runner.run(
 		t.Context(),
-		&promotion.StepContext{WorkDir: workDir},
-		builtin.GitTagConfig{
+		newTestStepContext(t, workDir),
+		stepconfig.GitTagConfig{
 			Path:  "master",
 			Tag:   "v1.0.0",
 			Force: true,
@@ -230,4 +230,15 @@ func Test_gitTagger_run(t *testing.T) {
 	actualCommit, ok = res.Output[stateKeyCommit]
 	require.True(t, ok)
 	require.Equal(t, expectedCommit, actualCommit)
+}
+
+func Test_gitTagTagger_run_escapingSymlink(t *testing.T) {
+	workDir, _ := escapingWorkspace(t)
+	res, err := (&gitTagTagger{}).run(
+		t.Context(),
+		newTestStepContext(t, workDir),
+		stepconfig.GitTagConfig{Path: "out/repo", Tag: "v1.0.0"},
+	)
+	require.ErrorContains(t, err, "path escapes from parent")
+	require.Equal(t, kargoapi.PromotionStepStatusErrored, res.Status)
 }

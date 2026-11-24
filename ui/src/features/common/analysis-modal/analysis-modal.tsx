@@ -107,7 +107,7 @@ export const AnalysisModal = ({
           <Tabs
             className={cx('tabs')}
             items={tabItems}
-            tabPosition='left'
+            tabPlacement='start'
             size='small'
             tabBarGutter={12}
           />

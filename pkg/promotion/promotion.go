@@ -2,8 +2,11 @@ package promotion
 
 import (
 	"context"
+	"encoding/json"
+	"errors"
 	"fmt"
 	"maps"
+	"os"
 	"slices"
 	"time"
 
@@ -25,6 +28,10 @@ import (
 // did before Targets existed. Only Promotions that promote to a specific Target
 // (a capability layered on top of Kargo) populate this field.
 type TargetContext struct {
+	// Name is the resolved Target's name. Exposed to expressions as target.name,
+	// so that a single promotion process can single out a destination without
+	// first mirroring its name into a label or param.
+	Name string
 	// Params are the resolved Target's spec.params, decoded to plain values
 	// suitable for use in expressions. Exposed to expressions as target.params.
 	Params map[string]any
@@ -33,13 +40,115 @@ type TargetContext struct {
 	Labels map[string]string
 }
 
+// NewTargetContext builds a TargetContext from the provided Target, decoding
+// its spec.params from JSON into the plain values that expressions operate on.
+// It returns nil if the Target is nil, which callers use to represent a
+// Promotion that promotes to its Stage itself rather than to a Target.
+func NewTargetContext(target *kargoapi.Target) (*TargetContext, error) {
+	if target == nil {
+		return nil, nil
+	}
+	targetCtx := &TargetContext{
+		Name:   target.Name,
+		Labels: maps.Clone(target.Labels),
+	}
+	if len(target.Spec.Params) > 0 {
+		targetCtx.Params = make(map[string]any, len(target.Spec.Params))
+		for key, raw := range target.Spec.Params {
+			var value any
+			if err := json.Unmarshal(raw.Raw, &value); err != nil {
+				return nil, fmt.Errorf(
+					"error decoding param %q of Target %q: %w",
+					key, target.Name, err,
+				)
+			}
+			targetCtx.Params[key] = value
+		}
+	}
+	return targetCtx, nil
+}
+
+// TargetGetter looks up a Target by Project and name. It returns nil, nil
+// when there is no such Target.
+type TargetGetter interface {
+	GetTarget(ctx context.Context, project, name string) (*kargoapi.Target, error)
+}
+
+var (
+	// ErrTargetNotFound is returned by ResolveTargetContext when the Promotion
+	// names a Target that does not exist. The Target is not coming back, so
+	// retrying cannot change the outcome.
+	ErrTargetNotFound = errors.New("target not found")
+	// ErrTargetsUnavailable is returned by ResolveTargetContext when the
+	// Promotion names a Target but there is no way to read Targets at all,
+	// for instance because the controller has no API server to read them
+	// from. That is how the controller is configured, so retrying cannot
+	// change the outcome either. Whether any other error is worth a retry is
+	// for the TargetGetter's caller to decide; the getter's own errors say
+	// what went wrong.
+	ErrTargetsUnavailable = errors.New("targets unavailable")
+)
+
+// ResolveTargetContext loads the Target named by the Promotion's spec.target
+// and builds the TargetContext that exposes it to the Promotion's steps. It
+// returns nil for a Promotion that names no Target -- one that promotes to its
+// Stage itself -- and ErrTargetNotFound for one whose Target cannot be found:
+// the steps were written against that Target, and running them with every
+// target.* reference silently evaluating to nothing would be worse than
+// failing. A nil TargetGetter means Targets are unavailable altogether, for
+// instance because the controller has no API server to read them from, which
+// is an error for a Promotion that names one.
+//
+// Every engine that runs a Promotion's steps -- in-process or otherwise --
+// should build its Context through this function, so that a Promotion sees the
+// same Target however it is run.
+func ResolveTargetContext(
+	ctx context.Context,
+	targets TargetGetter,
+	promo *kargoapi.Promotion,
+) (*TargetContext, error) {
+	if promo.Spec.Target == "" {
+		return nil, nil
+	}
+	if targets == nil {
+		// nolint:staticcheck
+		return nil, fmt.Errorf(
+			"Promotion %q promotes to Target %q, but Targets are unavailable "+
+				"because the controller has no API server to read them from: %w",
+			promo.Name, promo.Spec.Target, ErrTargetsUnavailable,
+		)
+	}
+	target, err := targets.GetTarget(ctx, promo.Namespace, promo.Spec.Target)
+	if err != nil {
+		return nil, fmt.Errorf(
+			"error finding Target %q in Project %q: %w",
+			promo.Spec.Target, promo.Namespace, err,
+		)
+	}
+	if target == nil {
+		// nolint:staticcheck
+		return nil, fmt.Errorf(
+			"Target %q in Project %q: %w",
+			promo.Spec.Target, promo.Namespace, ErrTargetNotFound,
+		)
+	}
+	targetCtx, err := NewTargetContext(target)
+	if err != nil {
+		return nil, fmt.Errorf(
+			"error building context for Target %q in Project %q: %w",
+			promo.Spec.Target, promo.Namespace, err,
+		)
+	}
+	return targetCtx, nil
+}
+
 // DeepCopy returns a deep copy of the TargetContext, or nil if the receiver is
 // nil.
 func (t *TargetContext) DeepCopy() *TargetContext {
 	if t == nil {
 		return nil
 	}
-	newT := &TargetContext{}
+	newT := &TargetContext{Name: t.Name}
 	if t.Params != nil {
 		// Params originate from the Target's spec.params (JSON), so a JSON deep
 		// copy is both sufficient and appropriate.
@@ -181,6 +290,15 @@ func WithActor(actor string) ContextOption {
 func WithTargetFreightAlias(alias string) ContextOption {
 	return func(c *Context) {
 		c.TargetFreightAlias = alias
+	}
+}
+
+// WithTarget sets the Target of the Context. A nil TargetContext leaves the
+// Context target-less, as it is for Promotions that promote to their Stage
+// itself.
+func WithTarget(target *TargetContext) ContextOption {
+	return func(c *Context) {
+		c.Target = target
 	}
 }
 
@@ -431,6 +549,10 @@ type StepContext struct {
 	UIBaseURL string
 	// WorkDir is the root directory for the execution of a step.
 	WorkDir string
+	// Root is WorkDir opened as an os.Root by the StepExecutor. All file access
+	// by a step goes through it, so a path that resolves outside WorkDir,
+	// symlinks included, is refused.
+	Root *os.Root `json:"-"`
 	// SharedState is the state shared between steps.
 	SharedState State
 	// Alias is the alias of the step that is currently being executed.

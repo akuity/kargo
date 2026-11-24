@@ -68,7 +68,12 @@ func (d *digestSelector) Select(
 
 	logger.Trace("selecting image")
 
-	img, err := d.repoClient.getImageByTag(ctx, d.mutableTag, d.platformConstraint)
+	img, err := d.repoClient.getImageByTag(
+		ctx,
+		d.mutableTag,
+		d.platformConstraint,
+		d.filterExpression,
+	)
 	if err != nil {
 		var te *transport.Error
 		if errors.As(err, &te) && te.StatusCode == http.StatusNotFound {
@@ -80,7 +85,7 @@ func (d *digestSelector) Select(
 	}
 
 	if img == nil {
-		logger.Trace("image with tag did not match platform constraints")
+		logger.Trace("image with tag did not match platform constraints or filter expression")
 		return nil, nil
 	}
 

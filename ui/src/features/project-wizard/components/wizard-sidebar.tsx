@@ -17,9 +17,11 @@ export const WizardSidebar = ({ current, state, onJump }: WizardSidebarProps) =>
   const progress = Math.round((stepIndex(current) / (STEP_META.length - 1)) * 100);
 
   return (
-    <aside className='w-60 2xl:w-72 shrink-0 bg-white p-5 overflow-y-auto'>
-      <h2 className='text-base font-semibold text-gray-900 m-0'>Create project</h2>
-      <div className='text-xs text-gray-500 mt-1'>
+    <aside className='w-60 2xl:w-72 shrink-0 bg-white dark:bg-neutral-900 p-5 overflow-y-auto'>
+      <h2 className='text-base font-semibold text-gray-900 dark:text-neutral-100 m-0'>
+        Create project
+      </h2>
+      <div className='text-xs text-gray-500 dark:text-neutral-400 mt-1'>
         Set up Kargo resources for a new delivery pipeline.
       </div>
       <div
@@ -51,7 +53,7 @@ export const WizardSidebar = ({ current, state, onJump }: WizardSidebarProps) =>
               role='button'
               className={classNames('flex items-start gap-3 rounded-md px-2 py-2.5 select-none', {
                 'opacity-55 cursor-not-allowed': locked,
-                'cursor-pointer hover:bg-gray-50': !locked && !isCurrent
+                'cursor-pointer hover:bg-gray-50 dark:hover:bg-neutral-800': !locked && !isCurrent
               })}
               style={isCurrent ? { backgroundColor: token.colorFillTertiary } : undefined}
               onClick={() => !locked && onJump(s.id)}
@@ -82,7 +84,9 @@ export const WizardSidebar = ({ current, state, onJump }: WizardSidebarProps) =>
                 <div
                   className={classNames(
                     'text-[13px] leading-5',
-                    isCurrent ? 'font-semibold text-gray-900' : 'text-gray-700'
+                    isCurrent
+                      ? 'font-semibold text-gray-900 dark:text-neutral-100'
+                      : 'text-gray-700 dark:text-neutral-200'
                   )}
                 >
                   {s.title}

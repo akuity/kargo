@@ -13,6 +13,7 @@ metrics server:
 - The controller
 - The management controller
 - The (internal) webhooks server
+- The external webhooks server
 
 By default, each component's metrics server is disabled. The Kargo Helm chart
 can enable it, expose the metrics through a `Service`, and -- for users of the
@@ -34,7 +35,7 @@ Setting a component's `metrics.enabled` flag to `true` does three things:
 1. Declares a metrics container port on the component's pods.
 1. Creates a metrics `Service` that targets that port.
 
-For example, to expose metrics for all three supported components:
+For example, to expose metrics for all four supported components:
 
 ```yaml
 controller:
@@ -44,6 +45,9 @@ managementController:
   metrics:
     enabled: true
 webhooksServer:
+  metrics:
+    enabled: true
+externalWebhooksServer:
   metrics:
     enabled: true
 ```
@@ -68,6 +72,316 @@ service meshes that infer a port's protocol from its name treat it as HTTP. If
 you rename the port for a meshed cluster, keep the `http-` prefix.
 
 :::
+
+## Kargo Metrics
+
+Alongside the Go runtime and controller-runtime metrics that every component
+reports, the controller exports its own metrics, all prefixed with `kargo_` and
+labeled by `project`:
+
+| Metric | Type | Description |
+|--------|------|-------------|
+| `kargo_promotions_completed_total` | Counter | Number of Promotions that reached a terminal phase, by the phase they finished in. |
+| `kargo_promotions_non_terminal` | Gauge | Number of Promotions currently in a non-terminal phase (`Pending` or `Running`), sampled at scrape time. |
+| `kargo_promotion_duration_seconds` | Histogram | Time each Promotion spent running, from the moment it started until it reached a terminal phase. |
+| `kargo_promotion_step_duration_seconds` | Histogram | Time each individual promotion step spent running, from the moment it started until it reached a terminal status. |
+| `kargo_stages_by_ready_reason` | Gauge | Number of Stages in each readiness state, by Project, sampled at scrape time. Control flow Stages are omitted. |
+| `kargo_promotion_pending_duration_seconds` | Histogram | Time each Promotion waited, from its creation until it started running. |
+| `kargo_promotions_by_phase` | Gauge | Number of non-terminal Promotions (Pending, Running or Unknown), by the `phase` label, sampled at scrape time. |
+| `kargo_promotion_oldest_pending_timestamp_seconds` | Gauge | Creation time of the oldest Promotion that has not started running, sampled at scrape time. |
+| `kargo_freight_verification_lead_time_seconds` | Histogram | Time from a Freight's creation until it was verified in a Stage, observed once per Stage. Control flow Stages are omitted. |
+| `kargo_warehouse_discovery_duration_seconds` | Histogram | Time each successful artifact discovery took, across all of a Warehouse's subscriptions. |
+| `kargo_warehouse_discovery_interval_seconds` | Histogram | Time between a Warehouse's previous successful discovery and its latest one. |
+| `kargo_warehouse_oldest_discovery_timestamp_seconds` | Gauge | Time of the least recent successful discovery among a Project's Warehouses, sampled at scrape time. |
+| `kargo_warehouse_discovery_failures_total` | Counter | Number of failed artifact discoveries, by the `subscriptionType` (`git`, `image`, `chart` or `other`) of the subscription that failed. |
+| `kargo_warehouse_freight_created_total` | Counter | Number of Freight created by Warehouses. |
+
+The lifecycle metrics -- `kargo_promotion_pending_duration_seconds`,
+`kargo_promotions_by_phase`, `kargo_promotion_oldest_pending_timestamp_seconds`,
+`kargo_freight_verification_lead_time_seconds` and the `kargo_warehouse_*`
+metrics -- can be turned off with `METRICS_DISABLE=lifecycle`, for example
+through `global.env`.
+
+:::note
+
+The `project` label is the name of the Kargo `Project` (namespace) the
+`Promotion` belongs to. Each controller only reports on the Promotions it is
+responsible for, so queries spanning a sharded topology should aggregate across
+controllers. Your scrape config should include a desired shard name to attach as
+a label to the metrics, so that you can filter by shard in queries.
+
+The two gauges are sampled from the controller's cache at scrape time and
+report only the Projects that currently have something to report. A Project
+with no non-terminal Promotions produces no `kargo_promotions_non_terminal`
+series at all, rather than a zero, so use `or vector(0)` in queries that need a
+value when a Project is idle.
+
+:::
+
+### Completed Promotions
+
+`kargo_promotions_completed_total` counts Promotions as they reach a terminal
+phase. Alongside `project`, it carries a `phase` label naming the phase the
+`Promotion` finished in, so a single metric describes both how many Promotions
+are finishing and how they are turning out:
+
+```
+kargo_promotions_completed_total{project="guestbook",phase="Succeeded"}  10
+kargo_promotions_completed_total{project="guestbook",phase="Errored"}     2
+kargo_promotions_completed_total{project="guestbook",phase="Failed"}      3
+kargo_promotions_completed_total{project="guestbook",phase="Aborted"}     1
+kargo_promotions_completed_total{project="wordpress",phase="Succeeded"}   3
+```
+
+The label matches the one on `kargo_promotion_duration_seconds`, so the two
+metrics can be queried and graphed side by side. Only phases actually observed
+produce a series, so use `or vector(0)` in queries that need a value for a
+phase a Project has never reached.
+
+:::note
+
+The counts here are slightly higher than the observation counts of
+`kargo_promotion_duration_seconds`, which excludes Promotions that reached a
+terminal phase without ever having started (one aborted while still `Pending`,
+for instance). Those still count as completed.
+
+:::
+
+### Promotion Duration
+
+`kargo_promotion_duration_seconds` measures only the time a `Promotion` spent
+actually running: the interval between its `startedAt` and `finishedAt`
+timestamps. Time spent `Pending`, waiting for its `Stage` to acknowledge it, is
+excluded, as are Promotions that reached a terminal phase without ever having
+started.
+
+In addition to `project`, it carries a `phase` label that has the phase
+with which the promotion finished for more granular queries.
+
+Because promotion durations span a very wide range, this histogram also emits a
+[native histogram](https://prometheus.io/docs/specs/native_histograms/).
+Scraping the native histogram rather than the static buckets gives a much more
+accurate view of the distribution, if your Prometheus server supports it.
+
+### Promotion Step Duration
+
+`kargo_promotion_step_duration_seconds` breaks the same interval down by
+individual step. A step's clock starts the first time it runs and stops when it
+reaches a terminal status, so a step that waits across several reconciliations
+-- one waiting on a pull request to merge, for instance -- reports its whole
+lifetime, not just the attempt that finished it. Steps that were skipped, and
+steps still waiting, are not recorded.
+
+In addition to `project`, it carries a `stepKind` label with the step's kind
+(`git-clone`, `argocd-update`, and so on) and a `terminalStatus` label with the
+status the step ended in:
+
+| `terminalStatus` | Meaning |
+|------------------|---------|
+| `Succeeded` | The step completed successfully. |
+| `Failed` | The step failed for non-technical reasons. This is terminal -- the step is not retried. |
+| `Errored` | The step failed for technical reasons. Kargo retries the step until its error threshold is met, so the observed duration covers every attempt. |
+
+Skipped steps are not recorded, whether they were skipped by their `if`
+condition or determined on their own that they had nothing to do.
+
+Because step durations span a very wide range, this histogram also emits a
+[native histogram](https://prometheus.io/docs/specs/native_histograms/).
+Scraping the native histogram rather than the static buckets gives a much more
+accurate view of the distribution, if your Prometheus server supports it.
+
+### Promotion Lifecycle
+
+A Promotion's life splits into time spent waiting and time spent running:
+
+| Interval | Metric |
+|----------|--------|
+| Created to started | `kargo_promotion_pending_duration_seconds` |
+| Started to finished | `kargo_promotion_duration_seconds` |
+
+A Promotion waits while its Stage runs the Promotions ahead of it.
+`kargo_promotion_pending_duration_seconds` only observes Promotions once they
+start, so a queue that is not moving shows in
+`kargo_promotion_oldest_pending_timestamp_seconds` instead:
+
+```
+time() - min(kargo_promotion_oldest_pending_timestamp_seconds)
+```
+
+`kargo_promotions_by_phase` counts non-terminal Promotions, with a `phase`
+label of `Pending`, `Running`, or `Unknown` for a Promotion the controller has
+not reconciled yet. Terminal Promotions are left out: how many the controller
+holds depends on garbage collection, and `kargo_promotions_completed_total`
+already reports how Promotions finish. Like `kargo_promotions_non_terminal`, it
+reads only non-terminal Promotions at scrape time, so its cost does not grow with
+the number of Promotions retained.
+
+### Freight Verification Lead Time
+
+`kargo_freight_verification_lead_time_seconds` measures from a Freight's
+creation to the end of its successful verification in a Stage, once for each
+Stage it is verified in. It covers waiting for and running every Promotion and
+verification on the way, so it grows with a Stage's distance from the
+Warehouse.
+
+Control flow Stages are omitted: they pass Freight through as soon as an
+upstream Stage verifies it, without a verification of their own.
+
+### Warehouse Discovery
+
+| Metric | Answers |
+|--------|---------|
+| `kargo_warehouse_discovery_duration_seconds` | How long discovery takes. Failed discoveries are not observed. |
+| `kargo_warehouse_discovery_interval_seconds` | How often Warehouses are rediscovered: close to `spec.interval` when the controller keeps up, longer when it does not. |
+| `kargo_warehouse_oldest_discovery_timestamp_seconds` | Whether any Warehouse has stopped being rediscovered. Use `time() - kargo_warehouse_oldest_discovery_timestamp_seconds`. |
+| `kargo_warehouse_discovery_failures_total` | How often discovery fails, and against which kind of repository. A discovery stops at its first failed subscription, so each failed discovery counts once. |
+| `kargo_warehouse_freight_created_total` | How much Freight Warehouses produce. |
+
+The failure ratio per Project, with native or classic histograms, including
+Projects where every discovery fails:
+
+```
+sum by (project) (rate(kargo_warehouse_discovery_failures_total[5m]))
+/
+(
+  sum by (project) (rate(kargo_warehouse_discovery_failures_total[5m]))
+  + (
+    sum by (project) (histogram_count(rate(kargo_warehouse_discovery_duration_seconds[5m])))
+    or sum by (project) (rate(kargo_warehouse_discovery_duration_seconds_count[5m]))
+    or 0 * sum by (project) (rate(kargo_warehouse_discovery_failures_total[5m]))
+  )
+)
+```
+
+### Stages by Ready Reason
+
+Unlike a `Promotion`, a `Stage` has no single phase. Its state is expressed
+through Kubernetes conditions, and the controller already collapses those into
+a single `Ready` condition whose `reason` names the most important thing
+currently true of the Stage. `kargo_stages_by_ready_reason` counts Stages by
+that reason, so every Stage lands in exactly one series and the series sum to
+the number of Stages in the Project (excluding control flow Stages, see below).
+
+Alongside `project`, it carries a `reason` label:
+
+```
+kargo_stages_by_ready_reason{project="guestbook",reason="Verified"}         10
+kargo_stages_by_ready_reason{project="guestbook",reason="ActivePromotion"}   3
+kargo_stages_by_ready_reason{project="guestbook",reason="Unhealthy"}         1
+```
+
+This table summarizes the reasons that Stages report, and what they mean:
+
+| Reason | Meaning |
+|--------|---------|
+| `ReconcileError` | The controller hit an error reconciling the Stage and will retry. |
+| `ActivePromotion`, `ListPromotionsFailed` | A Promotion is in progress, or the controller could not determine whether one is. |
+| `LastPromotionFailed`, `LastPromotionErrored`, `LastPromotionAborted` | No Promotion is running, but the last one did not succeed. |
+| `Unhealthy`, `Progressing`, `NoFreight`, `WaitingForHealthCheck`, `LastPromotion*` | The Stage is not healthy, or its health cannot yet be assessed. |
+| `PendingVerification`, `VerificationPending`, `VerificationRunning`, `VerificationFailed`, `VerificationError`, `VerificationAborted`, `VerificationInconclusive` | The Stage is healthy, but its Freight is not verified. |
+| `Verified` | The Stage is ready. |
+| `Unknown` | The controller has not reconciled the Stage yet, so it has no `Ready` condition. |
+
+Control flow Stages are omitted. Their `Ready` condition is set directly and
+never accounts for health or verification, so the reason they report conveys no
+useful information. A Project containing only control flow Stages reports no
+series at all.
+
+:::note
+
+A Stage is only `Verified` once it is healthy **and** its Freight has passed
+verification. Stages with no `spec.verification` are not stuck: the controller
+records a synthetic successful verification for them, so they reach `Verified`
+like any other Stage.
+
+Conversely, not-`Verified` is a broad bucket. It covers genuinely broken Stages
+alongside entirely normal ones: a Stage that is mid-promotion, or one that
+has never been promoted at all. Your alerts should trigger on specific reasons
+rather than on "everything that is not `Verified`".
+
+:::
+
+:::info
+
+This gauge is sampled from the controller's cache at scrape time, and a
+per-Project breakdown has to walk every Stage to produce it, so its cost scales
+with the number of Stages in the cluster.
+
+Only the states actually observed are reported. A reason that hasn't been
+reported by any Stage in the project produces no series at all rather than a
+zero, so use `or vector(0)` in queries that need a value when a state is empty.
+
+:::
+
+## External Webhooks Server Metrics
+
+The external webhooks server reports:
+
+| Metric | Type | Labels | Description |
+|--------|------|--------|-------------|
+| `kargo_external_webhook_requests_total` | Counter | `project`, `receiverType`, `code` | Inbound webhook requests, by response status code. |
+| `kargo_external_webhook_warehouses_skipped_total` | Counter | `project` | Warehouses a webhook did not refresh because one of their subscriptions could not be evaluated, for example an invalid `expressionFilter`. `project` is the Warehouse's. |
+
+In `kargo_external_webhook_requests_total`, `project` is the receiver's, and
+empty for receivers defined in the `ClusterConfig`. `receiverType` is the
+receiver's type (`github`, `gitlab`, ...), or `unknown` when the request matched
+no usable receiver, for example an unknown path (`404`) or a receiver whose
+`Secret` is missing (`500`).
+
+Not every non-`2xx` code is a failure. Receivers respond with `400` or `501` to
+events they do not handle, so a sender configured to send more events than
+Kargo uses produces them for each such event. `401` means a request failed
+authentication, for example on a signature mismatch, and `5xx` means a request
+could not be handled, for example when a Warehouse could not be refreshed. The
+counter counts requests, not events: some senders retry failed deliveries, for
+example Bitbucket Cloud resends a `5xx` response up to twice. Watch failures
+with, for example:
+
+```
+sum by (project, receiverType, code) (
+  rate(kargo_external_webhook_requests_total{code=~"401|5.."}[5m])
+)
+```
+
+A skipped Warehouse does not fail the request, which still responds with `200`
+when every other Warehouse is refreshed, so watch
+`kargo_external_webhook_warehouses_skipped_total` separately.
+
+## Kubernetes API Client Metrics
+
+Each component that serves metrics also reports the
+[client-go](https://github.com/kubernetes/client-go) REST client metrics for
+its requests to the Kubernetes API server. controller-runtime registers only
+`rest_client_requests_total` by default; Kargo enables the rest:
+
+| Metric | Type | Labels | Description |
+|--------|------|--------|-------------|
+| `rest_client_requests_total` | Counter | `code`, `method`, `host` | Requests, by HTTP status code. |
+| `rest_client_request_duration_seconds` | Histogram | `verb`, `host` | Request latency. |
+| `rest_client_rate_limiter_duration_seconds` | Histogram | `verb`, `host` | Time spent waiting on the client-side rate limiter (`KUBE_API_QPS` / `KUBE_API_BURST`). |
+| `rest_client_request_retries_total` | Counter | `code`, `verb`, `host` | Retried requests. |
+| `rest_client_request_size_bytes` | Histogram | `verb`, `host` | Request body size. |
+| `rest_client_response_size_bytes` | Histogram | `verb`, `host` | Response body size. |
+| `rest_client_dns_resolution_duration_seconds` | Histogram | `host` | DNS resolution latency for the host the client connects to (the API server, or a proxy). Absent when that host is an IP address, as with the in-cluster API server. |
+
+Every request records a rate limiter wait, even when it is zero, so the
+metric's count grows with traffic alone. Watch the mean wait instead, for
+example per scrape job:
+
+```
+sum by (job) (rate(rest_client_rate_limiter_duration_seconds_sum[5m]))
+  / sum by (job) (rate(rest_client_rate_limiter_duration_seconds_count[5m]))
+```
+
+A mean that stays above a few milliseconds means the component is throttled by
+its own `KUBE_API_QPS` / `KUBE_API_BURST` limits. API server throttling is
+separate and shows up as `429` responses in `rest_client_requests_total`.
+
+To turn these metrics off, set `METRICS_DISABLE=rest-client` on the component,
+for example through `global.env`; `METRICS_DISABLE=all` turns off every metric
+family Kargo registers. `rest_client_requests_total` and controller-runtime's
+other metrics, which it registers itself, remain. To turn off a component's
+metrics entirely, set `METRICS_BIND_ADDRESS=0`.
 
 ## Scraping With the Prometheus Operator
 

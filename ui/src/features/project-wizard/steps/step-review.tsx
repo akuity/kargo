@@ -33,13 +33,13 @@ export const StepReview = ({ state, status, items }: StepReviewProps) => {
         <Alert
           type='error'
           showIcon
-          message='Creation failed'
+          title='Creation failed'
           description='One resource could not be created and the rest were halted. Fix the issue (or edit an earlier step) and use Retry — already-created resources are skipped.'
         />
       )}
       <Card title={`Resources (${resources.length})`}>
         {resources.length === 0 ? (
-          <div className='text-sm text-gray-400'>
+          <div className='text-sm text-gray-400 dark:text-neutral-500'>
             Nothing to create yet — give your project a name in the first step.
           </div>
         ) : (
@@ -60,7 +60,7 @@ export const StepReview = ({ state, status, items }: StepReviewProps) => {
                     style={{ backgroundColor: token.colorSuccess }}
                   />
                 )}
-                <span className='font-mono text-gray-700'>
+                <span className='font-mono text-gray-700 dark:text-neutral-200'>
                   {r.kind}/{r.name}
                 </span>
                 {progress?.message && (

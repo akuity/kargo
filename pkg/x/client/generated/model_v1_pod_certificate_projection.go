@@ -31,6 +31,8 @@ type V1PodCertificateProjection struct {
 	MaxExpirationSeconds *int32 `json:"maxExpirationSeconds,omitempty"`
 	// Kubelet's generated CSRs will be addressed to this signer.  +required
 	SignerName *string `json:"signerName,omitempty"`
+	// user is Optional: The owner UID of the created file. If specified, the item-level user field takes precedence over defaultUser. (Alpha) This field requires the AtomicWriteVolumeUserFields feature gate to be enabled. +featureGate=AtomicWriteVolumeUserFields +optional
+	User *int32 `json:"user,omitempty"`
 	// userAnnotations allow pod authors to pass additional information to the signer implementation.  Kubernetes does not restrict or validate this metadata in any way.  These values are copied verbatim into the `spec.unverifiedUserAnnotations` field of the PodCertificateRequest objects that Kubelet creates.  Entries are subject to the same validation as object metadata annotations, with the addition that all keys must be domain-prefixed. No restrictions are placed on values, except an overall size limitation on the entire field.  Signers should document the keys and values they support. Signers should deny requests that contain keys they do not recognize.
 	UserAnnotations *map[string]string `json:"userAnnotations,omitempty"`
 }
@@ -244,6 +246,38 @@ func (o *V1PodCertificateProjection) SetSignerName(v string) {
 	o.SignerName = &v
 }
 
+// GetUser returns the User field value if set, zero value otherwise.
+func (o *V1PodCertificateProjection) GetUser() int32 {
+	if o == nil || IsNil(o.User) {
+		var ret int32
+		return ret
+	}
+	return *o.User
+}
+
+// GetUserOk returns a tuple with the User field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *V1PodCertificateProjection) GetUserOk() (*int32, bool) {
+	if o == nil || IsNil(o.User) {
+		return nil, false
+	}
+	return o.User, true
+}
+
+// HasUser returns a boolean if a field has been set.
+func (o *V1PodCertificateProjection) HasUser() bool {
+	if o != nil && !IsNil(o.User) {
+		return true
+	}
+
+	return false
+}
+
+// SetUser gets a reference to the given int32 and assigns it to the User field.
+func (o *V1PodCertificateProjection) SetUser(v int32) {
+	o.User = &v
+}
+
 // GetUserAnnotations returns the UserAnnotations field value if set, zero value otherwise.
 func (o *V1PodCertificateProjection) GetUserAnnotations() map[string]string {
 	if o == nil || IsNil(o.UserAnnotations) {
@@ -303,6 +337,9 @@ func (o V1PodCertificateProjection) ToMap() (map[string]interface{}, error) {
 	}
 	if !IsNil(o.SignerName) {
 		toSerialize["signerName"] = o.SignerName
+	}
+	if !IsNil(o.User) {
+		toSerialize["user"] = o.User
 	}
 	if !IsNil(o.UserAnnotations) {
 		toSerialize["userAnnotations"] = o.UserAnnotations

@@ -5,19 +5,33 @@
  * REST API for Kargo
  * OpenAPI spec version: v1alpha1
  */
+import type { TargetUpdateStrategy } from './targetUpdateStrategy';
+import type { TargetVerificaitonSpec } from './targetVerificaitonSpec';
 import type { V1LabelSelector } from './v1LabelSelector';
 
 export interface StageTargets {
-  /** Selectors select the Targets that the Stage governs, matching Targets by
-their labels within the Stage's own Project. A Target is selected when it
-matches any selector in the list, so several selectors describe a union.
-A Target matching more than one of them is still governed once.
-
-An empty selector selects every Target in the Project. An empty list
-selects none: the Stage still governs Targets, it just governs none at the
-moment.
-
-+listType=atomic
-+kubebuilder:validation:Required */
+  /**
+   * Selectors select the Targets that the Stage governs, matching Targets by
+   * their labels within the Stage's own Project. A Target is selected when it
+   * matches any selector in the list, so several selectors describe a union.
+   * A Target matching more than one of them is still governed once.
+   *
+   * An empty selector selects every Target in the Project. An empty list
+   * selects none: the Stage still governs Targets, it just governs none at the
+   * moment.
+   *
+   * +listType=atomic
+   * +kubebuilder:validation:Required
+   */
   selectors: V1LabelSelector[];
+  /**
+   * UpdateStrategy configures the pace of promoting the targets
+   * +optional
+   */
+  updateStrategy?: TargetUpdateStrategy;
+  /**
+   * Verification configures mode and pace of target promotion verifications
+   * +optional
+   */
+  verification?: TargetVerificaitonSpec;
 }

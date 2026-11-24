@@ -6,13 +6,15 @@ import (
 	"testing"
 	"time"
 
+	"github.com/prometheus/client_golang/prometheus"
+	dto "github.com/prometheus/client_model/go"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/pkg/promotion/metrics"
 )
 
 func TestLocalOrchestrator_ExecuteSteps(t *testing.T) {
@@ -352,7 +354,7 @@ func TestLocalOrchestrator_ExecuteSteps(t *testing.T) {
 			promoCtx: Context{
 				StepExecutionMetadata: kargoapi.StepExecutionMetadataList{{
 					// Start time is set to an hour ago
-					StartedAt: ptr.To(metav1.NewTime(time.Now().Add(-time.Hour))),
+					StartedAt: new(metav1.NewTime(time.Now().Add(-time.Hour))),
 				}},
 			},
 			steps: []Step{
@@ -378,6 +380,7 @@ func TestLocalOrchestrator_ExecuteSteps(t *testing.T) {
 				assert.NotNil(t, result.StepExecutionMetadata[0].StartedAt)
 				assert.NotNil(t, result.StepExecutionMetadata[0].FinishedAt)
 				assert.Equal(t, uint32(1), result.StepExecutionMetadata[0].ErrorCount)
+				assert.Contains(t, result.StepExecutionMetadata[0].Message, "something went wrong")
 			},
 		},
 		{
@@ -385,7 +388,7 @@ func TestLocalOrchestrator_ExecuteSteps(t *testing.T) {
 			promoCtx: Context{
 				StepExecutionMetadata: kargoapi.StepExecutionMetadataList{{
 					// Start time is set to an hour ago
-					StartedAt: ptr.To(metav1.NewTime(time.Now().Add(-time.Hour))),
+					StartedAt: new(metav1.NewTime(time.Now().Add(-time.Hour))),
 				}},
 			},
 			steps: []Step{
@@ -533,11 +536,137 @@ func TestLocalOrchestrator_ExecuteSteps(t *testing.T) {
 			},
 		},
 		{
+			// Regression test for https://github.com/akuity/kargo/issues/7894
+			name: "int output is usable by subsequent steps",
+			registrations: []StepRunnerRegistration{{
+				Name: "int-output-step",
+				Value: func(_ StepRunnerCapabilities) StepRunner {
+					return &MockStepRunner{
+						RunResult: StepResult{
+							Status: kargoapi.PromotionStepStatusSucceeded,
+							Output: map[string]any{"count": 2},
+						},
+					}
+				},
+			}},
+			steps: []Step{
+				{Kind: "int-output-step", Alias: "step1"},
+				{Kind: "success-step", Alias: "step2"},
+			},
+			assertions: func(t *testing.T, result Result, err error) {
+				require.NoError(t, err)
+				assert.Equal(t, kargoapi.PromotionPhaseSucceeded, result.Status)
+				assert.Empty(t, result.Message)
+				// Numbers are stored as float64, the same type they have
+				// after the state is reloaded from the Promotion's status.
+				assert.Equal(t, State{
+					"step1": map[string]any{"count": float64(2)},
+					"step2": map[string]any{"key": "value"},
+				}, result.State)
+			},
+		},
+		{
+			name: "non-JSON composite output is usable by subsequent steps",
+			registrations: []StepRunnerRegistration{{
+				Name: "composite-output-step",
+				Value: func(_ StepRunnerCapabilities) StepRunner {
+					return &MockStepRunner{
+						RunResult: StepResult{
+							Status: kargoapi.PromotionStepStatusSucceeded,
+							Output: map[string]any{
+								"labels": map[string]string{"env": "prod"},
+								"tags":   []string{"a", "b"},
+							},
+						},
+					}
+				},
+			}},
+			steps: []Step{
+				{Kind: "composite-output-step", Alias: "step1"},
+				{Kind: "success-step", Alias: "step2"},
+			},
+			assertions: func(t *testing.T, result Result, err error) {
+				require.NoError(t, err)
+				assert.Equal(t, kargoapi.PromotionPhaseSucceeded, result.Status)
+				assert.Empty(t, result.Message)
+				assert.Equal(t, State{
+					"step1": map[string]any{
+						"labels": map[string]any{"env": "prod"},
+						"tags":   []any{"a", "b"},
+					},
+					"step2": map[string]any{"key": "value"},
+				}, result.State)
+			},
+		},
+		{
+			name: "int output propagated to task namespace is usable by subsequent task steps",
+			registrations: []StepRunnerRegistration{{
+				Name: "task-level-int-output-step",
+				Value: func(_ StepRunnerCapabilities) StepRunner {
+					return &MockStepRunner{
+						RunResult: StepResult{
+							Status: kargoapi.PromotionStepStatusSucceeded,
+							Output: map[string]any{"count": 2},
+						},
+					}
+				},
+				Metadata: StepRunnerMetadata{
+					RequiredCapabilities: []StepRunnerCapability{
+						StepCapabilityTaskOutputPropagation,
+					},
+				},
+			}},
+			steps: []Step{
+				{Kind: "task-level-int-output-step", Alias: "task-1::step1"},
+				{Kind: "success-step", Alias: "task-1::step2"},
+			},
+			assertions: func(t *testing.T, result Result, err error) {
+				require.NoError(t, err)
+				assert.Equal(t, kargoapi.PromotionPhaseSucceeded, result.Status)
+				assert.Empty(t, result.Message)
+				assert.Equal(t, State{
+					"task-1::step1": map[string]any{"count": float64(2)},
+					"task-1":        map[string]any{"count": float64(2)},
+					"task-1::step2": map[string]any{"key": "value"},
+				}, result.State)
+			},
+		},
+		{
+			name: "output that cannot be marshaled to JSON errors the step",
+			registrations: []StepRunnerRegistration{{
+				Name: "unmarshalable-output-step",
+				Value: func(_ StepRunnerCapabilities) StepRunner {
+					return &MockStepRunner{
+						RunResult: StepResult{
+							Status: kargoapi.PromotionStepStatusSucceeded,
+							Output: map[string]any{"fn": func() {}},
+						},
+					}
+				},
+			}},
+			steps: []Step{{Kind: "unmarshalable-output-step", Alias: "step1"}},
+			assertions: func(t *testing.T, result Result, err error) {
+				require.NoError(t, err)
+				assert.Equal(t, kargoapi.PromotionPhaseErrored, result.Status)
+
+				require.Len(t, result.StepExecutionMetadata, 1)
+				stepExecMeta := result.StepExecutionMetadata[0]
+				assert.Equal(t, kargoapi.PromotionStepStatusErrored, stepExecMeta.Status)
+				assert.Contains(t, stepExecMeta.Message, "output")
+				assert.NotNil(t, stepExecMeta.StartedAt)
+				assert.NotNil(t, stepExecMeta.FinishedAt)
+
+				// The bad output must not reach the state, or the whole state
+				// would fail to serialize when the Promotion is saved.
+				assert.NotContains(t, result.State, "step1")
+			},
+		},
+		{
 			name: "previously failed step does not skip on retry",
 			promoCtx: Context{
 				StepExecutionMetadata: kargoapi.StepExecutionMetadataList{{
 					Alias:     "step1",
-					StartedAt: ptr.To(metav1.NewTime(time.Now().Add(-time.Minute))),
+					StartedAt: new(metav1.NewTime(time.Now().Add(-time.Minute))),
 					Status:    kargoapi.PromotionStepStatusFailed,
 					Message:   "previous failure",
 				}},
@@ -724,6 +853,108 @@ func TestLocalOrchestrator_ExecuteSteps(t *testing.T) {
 
 			result, err := orchestrator.ExecuteSteps(ctx, tt.promoCtx, tt.steps)
 			tt.assertions(t, result, err)
+		})
+	}
+}
+
+func TestLocalOrchestrator_recordStepDuration(t *testing.T) {
+	started := metav1.Time{Time: time.Now().Add(-45 * time.Second)}
+	finished := metav1.Time{Time: time.Now()}
+
+	// noneObserved is the expectation for a step that is not observed at all.
+	noneObserved := map[string]uint64{"Succeeded": 0, "Failed": 0, "Errored": 0, "Skipped": 0}
+
+	tests := []struct {
+		name string
+		meta *StepMetadata
+		// expected maps a terminalStatus label value to the number of
+		// observations expected under it.
+		expected map[string]uint64
+	}{
+		{
+			name: "succeeded step",
+			meta: &StepMetadata{
+				Status:     kargoapi.PromotionStepStatusSucceeded,
+				StartedAt:  &started,
+				FinishedAt: &finished,
+			},
+			expected: map[string]uint64{"Succeeded": 1, "Failed": 0, "Errored": 0, "Skipped": 0},
+		},
+		{
+			// A terminal, non-technical failure. Distinct from Errored.
+			name: "failed step",
+			meta: &StepMetadata{
+				Status:     kargoapi.PromotionStepStatusFailed,
+				StartedAt:  &started,
+				FinishedAt: &finished,
+			},
+			expected: map[string]uint64{"Succeeded": 0, "Failed": 1, "Errored": 0, "Skipped": 0},
+		},
+		{
+			// A technical failure, retried until the step's error threshold.
+			name: "errored step",
+			meta: &StepMetadata{
+				Status:     kargoapi.PromotionStepStatusErrored,
+				StartedAt:  &started,
+				FinishedAt: &finished,
+			},
+			expected: map[string]uint64{"Succeeded": 0, "Failed": 0, "Errored": 1, "Skipped": 0},
+		},
+		{
+			// Even a step that ran before self-determining it should be skipped
+			// is not observed; its duration says nothing about the work it
+			// represents.
+			name: "skipped step is not observed",
+			meta: &StepMetadata{
+				Status:     kargoapi.PromotionStepStatusSkipped,
+				StartedAt:  &started,
+				FinishedAt: &finished,
+			},
+			expected: noneObserved,
+		},
+		{
+			name: "step still running is not observed",
+			meta: &StepMetadata{
+				Status:    kargoapi.PromotionStepStatusRunning,
+				StartedAt: &started,
+			},
+			expected: noneObserved,
+		},
+		{
+			name: "step that never started is not observed",
+			meta: &StepMetadata{
+				Status:     kargoapi.PromotionStepStatusSucceeded,
+				FinishedAt: &finished,
+			},
+			expected: noneObserved,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// StepMetrics is a process-wide singleton, so each case swaps in a
+			// standalone histogram to observe against.
+			duration := prometheus.NewHistogramVec(
+				prometheus.HistogramOpts{Name: "test_step_duration_seconds"},
+				[]string{"project", "stepKind", "terminalStatus"},
+			)
+			o := &LocalOrchestrator{metrics: &metrics.StepMetrics{Duration: duration}}
+
+			o.recordStepDuration("fake-project", Step{Kind: "fake-kind"}, tt.meta)
+
+			for status, expected := range tt.expected {
+				observer, ok := duration.
+					WithLabelValues("fake-project", "fake-kind", status).(prometheus.Metric)
+				require.True(t, ok)
+
+				var m dto.Metric
+				require.NoError(t, observer.Write(&m))
+				require.Equal(
+					t, expected, m.GetHistogram().GetSampleCount(), "terminalStatus=%s", status,
+				)
+				if expected > 0 {
+					require.InDelta(t, 45.0, m.GetHistogram().GetSampleSum(), 1.0)
+				}
+			}
 		})
 	}
 }

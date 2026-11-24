@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"github.com/kelseyhightower/envconfig"
+	"go.opentelemetry.io/otel"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -16,6 +17,7 @@ import (
 	"github.com/akuity/kargo/pkg/controller"
 	"github.com/akuity/kargo/pkg/kubeclient"
 	"github.com/akuity/kargo/pkg/logging"
+	"github.com/akuity/kargo/pkg/telemetry"
 )
 
 const (
@@ -98,10 +100,26 @@ type reconciler struct {
 	client client.Client
 }
 
+// tracer is the instrumentation scope under which this package's spans are
+// recorded.
+var tracer = otel.Tracer("github.com/akuity/kargo/pkg/controller/promotionrequests")
+
 func (r *reconciler) Reconcile(
 	ctx context.Context,
 	req ctrl.Request,
-) (ctrl.Result, error) {
+) (_ ctrl.Result, err error) {
+	ctx = telemetry.ContextWithAttributes(
+		ctx,
+		telemetry.ProjectKey.String(req.Namespace),
+		telemetry.PromotionRequestKey.String(req.Name),
+	)
+	ctx, span := telemetry.StartSpan(ctx, tracer, "Reconcile PromotionRequest")
+	defer func() {
+		telemetry.RecordError(span, err)
+		span.End()
+	}()
+	ctx = telemetry.ContextWithLogValues(ctx)
+
 	promotionRequest := &kargoapi.PromotionRequest{}
 	if err := r.client.Get(ctx, req.NamespacedName, promotionRequest); err != nil {
 		return ctrl.Result{}, client.IgnoreNotFound(err)
@@ -110,6 +128,7 @@ func (r *reconciler) Reconcile(
 	if err := kubeclient.PatchStatus(ctx, r.client, promotionRequest, func(status *kargoapi.PromotionRequestStatus) {
 		status.ObservedGeneration = promotionRequest.Generation
 		status.Phase = kargoapi.PromotionRequestPhaseErrored
+		status.Message = enterpriseOnlyMessage
 		if status.FinishedAt == nil {
 			now := metav1.Now()
 			status.FinishedAt = &now

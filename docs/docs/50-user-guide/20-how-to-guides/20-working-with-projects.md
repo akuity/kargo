@@ -53,9 +53,11 @@ A `ProjectConfig` resource defines project-level configuration for an associated
 `Project`. This includes
 [promotion policies](#promotion-policies)
 that describe which `Stage`s are eligible for automatic promotion of newly
-available `Freight`, as well as
+available `Freight`,
 [auto-rollback](#auto-rollback) configuration for automatically reverting a
-`Stage` to a previously verified `Freight` when verification fails.
+`Stage` to a previously verified `Freight` when verification fails, and
+[promotion windows](#promotion-windows) that gate _when_ promotions may be
+created.
 
 The `ProjectConfig` resource must have the same name as its associated `Project`
 and be created in the `Namespace` of the `Project`. This separation of
@@ -70,7 +72,8 @@ A `ProjectConfig` resource can contain multiple promotion policies. Each policy
 is defined by a `stageSelector` and an `autoPromotionEnabled` flag. The
 `stageSelector` specifies which `Stage`s the policy applies to, and the
 `autoPromotionEnabled` flag indicates whether automatic promotion is enabled for
-those `Stage`s.
+those `Stage`s. In Kargo Enterprise, a policy can also include an `autoRollback`
+field to configure [automatic rollback](#auto-rollback).
 
 :::info[Not what you were looking for?]
 
@@ -226,10 +229,57 @@ In the example above, the promotion policy applies to all `Stage`s with the
 `example.org/allow-auto-promotion: "true"` label and names matching the
 `glob:prod-*` pattern.
 
+#### Policy Evaluation Order
+
+Promotion policies are evaluated in the order they're listed, and only the
+first policy whose `stageSelector` matches a `Stage` is applied. Any later
+policies that also match are ignored. This applies to all policy settings,
+including `autoPromotionEnabled` and `autoRollback`.
+
+When a `Stage` could match more than one policy, list the most specific
+selectors first. For example, to control auto-promotion and auto-rollback
+with separate labels:
+
+```yaml
+---
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Project
+metadata:
+  name: example
+---
+apiVersion: kargo.akuity.io/v1alpha1
+kind: ProjectConfig
+metadata:
+  name: example
+  namespace: example
+spec:
+  promotionPolicies:
+  - stageSelector:
+      matchLabels:
+        example.org/auto-promote: "true"
+        example.org/auto-rollback: "true"
+    autoPromotionEnabled: true
+    autoRollback: {}
+  - stageSelector:
+      matchLabels:
+        example.org/auto-promote: "true"
+    autoPromotionEnabled: true
+  - stageSelector:
+      matchLabels:
+        example.org/auto-rollback: "true"
+    autoRollback: {}
+```
+
+:::note
+
+`autoRollback` is a Kargo Enterprise feature and is ignored in Kargo OSS.
+
+:::
+
 #### Auto-Rollback
 
-<span class="tag professional"></span>
-<span class="tag beta"></span>
+<Enterprise />
+<Beta />
 
 When verification fails on a `Stage`, Kargo can automatically promote that
 `Stage` back to its most recently verified `Freight` — its *stable Freight* —
@@ -416,10 +466,104 @@ whichever comes first.
   `Freight`, there is nothing to roll back to and no rollback `Promotion` is
   created.
 
+### Promotion Windows
+
+<Enterprise />
+<Beta />
+
+A `ProjectConfig` can define `promotionWindows` that gate _when_ `Promotion`s
+may be created for the Project's `Stage`s. A window is either an **allow**
+window (promotions are permitted only while it is active) or a **deny** window,
+i.e. a _freeze_ (promotions are forbidden while it is active). Windows can be
+one-shot or recurring, and can target specific `Stage`s with a `stageSelector`
+using the same exact names, patterns, and label selectors described in
+[Advanced Promotion Policies with Selectors](#advanced-promotion-policies-with-selectors).
+
+```yaml
+apiVersion: kargo.akuity.io/v1alpha1
+kind: ProjectConfig
+metadata:
+  name: my-project
+  namespace: my-project
+spec:
+  promotionWindows:
+  - name: prod-business-hours
+    kind: Allow
+    stageSelector:
+      name: prod
+    rrule: FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR
+    dtstart: "TZID=America/New_York:20260105T090000"
+    dtend: "TZID=America/New_York:20260105T170000"
+```
+
+Windows can also be configured cluster-wide on
+[`ClusterConfig`](../../40-operator-guide/35-cluster-configuration.md#promotion-windows);
+a `Stage`'s effective schedule is the union of all matching windows from both.
+For the full field reference, scheduling syntax, allow/deny precedence, and the
+`Stage` status Kargo publishes for a freeze, see the
+[Promotion Windows](./45-promotion-windows.md) guide.
+
+### Deep Links
+
+A `ProjectConfig` can define links that the UI shows when viewing a `Freight`
+or `Stage` in the `Project`, such as a link to release notes or to a
+monitoring dashboard. `freightLinks` are shown on `Freight` and `stageLinks`
+on `Stage`s.
+
+Each link has the following fields:
+
+| Name | Required | Description |
+|------|----------|-------------|
+| `title` | Y | The label displayed for the link. |
+| `url` | Y | The link's URL. It may contain [expressions](../60-reference-docs/40-expressions.md) offset by `${{ }}`, evaluated against the resource being viewed as `freight` or `stage`. Fields use the same names as in the resource's YAML, for example `${{ stage.metadata.name }}`. A URL with no expressions is used as is. |
+| `description` | N | A short description displayed alongside the link. |
+| `if` | N | An expression offset by `${{ }}` and evaluated against the same resource. It must evaluate to `true` or `false`. The link is shown only when it evaluates to `true`. |
+
+Expressions in deep links can use the
+[expr-lang](https://expr-lang.org/docs/language-definition) built-ins and the
+`quote()`, `unsafeQuote()`, `asYAML()` and `asJSON()` functions. Variables
+such as `ctx` and `vars`, and the Kargo-specific functions described in the
+[expressions reference](../60-reference-docs/40-expressions.md), such as
+`secret()`, `sharedSecret()` and `warehouse()`, are **not** available.
+
+:::note
+
+Fields that are not set on the resource are `nil`, and a `nil` value appears
+in a URL as the text `null`. Reach optional fields with `?.` and give them a
+default with `??`, for example `${{ stage.metadata.labels?.team ?? "" }}`.
+
+A link whose `url` or `if` fails to evaluate is not shown.
+
+:::
+
+```yaml
+apiVersion: kargo.akuity.io/v1alpha1
+kind: ProjectConfig
+metadata:
+  name: kargo-demo
+  namespace: kargo-demo
+spec:
+  freightLinks:
+  - title: Release notes
+    url: https://github.com/example/app/releases/tag/${{ freight.images[0].tag }}
+    if: ${{ len(freight.images ?? []) > 0 }}
+  stageLinks:
+  - title: Dashboard
+    description: Grafana dashboard for this environment
+    url: https://grafana.example.com/d/app?var-env=${{ stage.metadata.name }}
+  - title: Production runbook
+    url: https://wiki.example.com/runbooks/app
+    if: ${{ stage.metadata.name == "prod" }}
+```
+
+Links can also be defined for every `Project` on
+[`ClusterConfig`](../../40-operator-guide/35-cluster-configuration.md#deep-links).
+Those are shown first, followed by the `Project`'s own links.
+
 ### Message Channels
 
-<span class="tag professional"></span>
-<span class="tag beta"></span>
+<Enterprise />
+<Beta />
 
 Projects can define message channels to facilitate notifications and message sending as part of
 their workflows. Message channels can be configured for various platforms, such as Slack, SMTP, or

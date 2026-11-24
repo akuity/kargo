@@ -1,2 +1,8 @@
 ignore:
 - "hack/**"
+# Generated from swagger.json; has no tests of its own and is exercised only
+# through the fidelity checks that compare it to the spec.
+- "pkg/x/client/generated/**"
+# CI uploads Go coverage only. The UI is tested with vitest, whose coverage is
+# not collected, so counting its lines as uncovered misreports every UI change.
+- "ui/**"

@@ -27,7 +27,7 @@ type V1ManagedFieldsEntry struct {
 	FieldsV1 any `json:"fieldsV1,omitempty"`
 	// Manager is an identifier of the workflow managing these fields.
 	Manager *string `json:"manager,omitempty"`
-	// Operation is the type of operation which lead to this ManagedFieldsEntry being created. The only valid values for this field are 'Apply' and 'Update'.
+	// Operation is the type of operation which lead to this ManagedFieldsEntry being created. The only valid values for this field are 'Apply' and 'Update'. +k8s:alpha(since: \"1.37\")=+k8s:required
 	Operation *string `json:"operation,omitempty"`
 	// Subresource is the name of the subresource used to update that object, or empty string if the object was updated through the main resource. The value of this field is used to distinguish between managers, even if they share the same name. For example, a status update will be distinct from a regular update using the same manager name. Note that the APIVersion field is not related to the Subresource field and it always corresponds to the version of the main resource.
 	Subresource *string `json:"subresource,omitempty"`

@@ -8,13 +8,17 @@
 import type { HeartbeatStatus } from './heartbeatStatus';
 
 export interface Heartbeat {
-  /** Controller is the name of the controller as reported in the Lease's
-kargoapi.LabelKeyController label. This may be empty if the controller that
-produced the heartbeat was unnamed. */
+  /**
+   * Controller is the name of the controller as reported in the Lease's
+   * kargoapi.LabelKeyController label. This may be empty if the controller that
+   * produced the heartbeat was unnamed.
+   */
   controller?: string;
   /** Status is point-in-time liveness synthesized from a heartbeat record. */
   status?: HeartbeatStatus;
-  /** Timestamp is the timestamp of the heartbeat. nil when the underlying record
-carried no parseable timestamp. */
+  /**
+   * Timestamp is the timestamp of the heartbeat. nil when the underlying record
+   * carried no parseable timestamp.
+   */
   timestamp?: string;
 }

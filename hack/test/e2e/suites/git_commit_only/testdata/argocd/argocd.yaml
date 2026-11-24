@@ -1,0 +1,37 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: kargo-git-commit-only
+  namespace: argocd
+spec:
+  generators:
+  - list:
+      elements:
+      - stage: test
+      - stage: uat
+      - stage: prod
+  template:
+    metadata:
+      name: kargo-git-commit-only-{{stage}}
+      annotations:
+        kargo.akuity.io/authorized-stage: kargo-git-commit-only:{{stage}}
+    spec:
+      project: default
+      source:
+        # repoURL is substituted at runtime from the test env.
+        repoURL: https://github.com/<github-username>/kargo-demo-gitops.git
+        # Kargo pushes each stage's manifests to this branch.
+        targetRevision: placeholder
+        path: stages/{{stage}}
+        kustomize:
+          images:
+          - public.ecr.aws/nginx/nginx=public.ecr.aws/nginx/nginx:1.24.0
+      destination:
+        server: https://kubernetes.default.svc
+        namespace: kargo-git-commit-only-{{stage}}
+      syncPolicy:
+        syncOptions:
+        - CreateNamespace=true
+  ignoreApplicationDifferences:
+  - jqPathExpressions:
+    - .spec.source.targetRevision

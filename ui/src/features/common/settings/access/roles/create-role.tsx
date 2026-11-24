@@ -132,7 +132,7 @@ export const CreateRole = ({ editing, onSuccess, project, hide }: Props) => {
   const [rules, setRules] = useState<V1PolicyRule[]>(editing?.rules || []);
 
   return (
-    <Drawer open={true} onClose={hide} width='80%' title={`${editing ? 'Edit' : 'Create'} Role`}>
+    <Drawer open={true} onClose={hide} size='80%' title={`${editing ? 'Edit' : 'Create'} Role`}>
       <div className='mb-6'>
         <FieldContainer
           label='Name'

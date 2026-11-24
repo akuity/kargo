@@ -247,8 +247,9 @@ func Test_commentHandler_handleCreated(t *testing.T) {
 				Action: github.Ptr("created"),
 				Issue:  issue,
 				Comment: &github.IssueComment{
-					Body:              github.Ptr(testCase.body),
-					User:              &github.User{Login: github.Ptr(authorLogin)},
+					Body: github.Ptr(testCase.body),
+					User: &github.User{Login: github.Ptr(authorLogin)},
+					// nolint:staticcheck // deprecated only for the Events API, not webhooks; see comment_handler.go
 					AuthorAssociation: github.Ptr(testCase.authorAssoc),
 				},
 				Repo: &github.Repository{

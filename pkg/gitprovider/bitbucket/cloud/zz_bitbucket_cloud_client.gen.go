@@ -3731,6 +3731,9 @@ type ClientInterface interface {
 	PostRepositoriesWorkspaceRepoSlugPullrequestsPullRequestIdMergeWithBody(ctx context.Context, workspace string, repoSlug string, pullRequestId int, params *PostRepositoriesWorkspaceRepoSlugPullrequestsPullRequestIdMergeParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	PostRepositoriesWorkspaceRepoSlugPullrequestsPullRequestIdMerge(ctx context.Context, workspace string, repoSlug string, pullRequestId int, params *PostRepositoriesWorkspaceRepoSlugPullrequestsPullRequestIdMergeParams, body PostRepositoriesWorkspaceRepoSlugPullrequestsPullRequestIdMergeJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// DeleteRepositoriesWorkspaceRepoSlugRefsBranchesName request
+	DeleteRepositoriesWorkspaceRepoSlugRefsBranchesName(ctx context.Context, workspace string, repoSlug string, name string, reqEditors ...RequestEditorFn) (*http.Response, error)
 }
 
 func (c *Client) GetRepositoriesWorkspaceRepoSlugCommitCommit(ctx context.Context, workspace string, repoSlug string, commit string, reqEditors ...RequestEditorFn) (*http.Response, error) {
@@ -3807,6 +3810,18 @@ func (c *Client) PostRepositoriesWorkspaceRepoSlugPullrequestsPullRequestIdMerge
 
 func (c *Client) PostRepositoriesWorkspaceRepoSlugPullrequestsPullRequestIdMerge(ctx context.Context, workspace string, repoSlug string, pullRequestId int, params *PostRepositoriesWorkspaceRepoSlugPullrequestsPullRequestIdMergeParams, body PostRepositoriesWorkspaceRepoSlugPullrequestsPullRequestIdMergeJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewPostRepositoriesWorkspaceRepoSlugPullrequestsPullRequestIdMergeRequest(c.Server, workspace, repoSlug, pullRequestId, params, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) DeleteRepositoriesWorkspaceRepoSlugRefsBranchesName(ctx context.Context, workspace string, repoSlug string, name string, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewDeleteRepositoriesWorkspaceRepoSlugRefsBranchesNameRequest(c.Server, workspace, repoSlug, name)
 	if err != nil {
 		return nil, err
 	}
@@ -4113,6 +4128,54 @@ func NewPostRepositoriesWorkspaceRepoSlugPullrequestsPullRequestIdMergeRequestWi
 	return req, nil
 }
 
+// NewDeleteRepositoriesWorkspaceRepoSlugRefsBranchesNameRequest generates requests for DeleteRepositoriesWorkspaceRepoSlugRefsBranchesName
+func NewDeleteRepositoriesWorkspaceRepoSlugRefsBranchesNameRequest(server string, workspace string, repoSlug string, name string) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "workspace", workspace, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	var pathParam1 string
+
+	pathParam1, err = runtime.StyleParamWithOptions("simple", false, "repo_slug", repoSlug, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	var pathParam2 string
+
+	pathParam2, err = runtime.StyleParamWithOptions("simple", false, "name", name, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/repositories/%s/%s/refs/branches/%s", pathParam0, pathParam1, pathParam2)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("DELETE", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
 func (c *Client) applyEditors(ctx context.Context, req *http.Request, additionalEditors []RequestEditorFn) error {
 	for _, r := range c.RequestEditors {
 		if err := r(ctx, req); err != nil {
@@ -4174,6 +4237,9 @@ type ClientWithResponsesInterface interface {
 	PostRepositoriesWorkspaceRepoSlugPullrequestsPullRequestIdMergeWithBodyWithResponse(ctx context.Context, workspace string, repoSlug string, pullRequestId int, params *PostRepositoriesWorkspaceRepoSlugPullrequestsPullRequestIdMergeParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PostRepositoriesWorkspaceRepoSlugPullrequestsPullRequestIdMergeResponse, error)
 
 	PostRepositoriesWorkspaceRepoSlugPullrequestsPullRequestIdMergeWithResponse(ctx context.Context, workspace string, repoSlug string, pullRequestId int, params *PostRepositoriesWorkspaceRepoSlugPullrequestsPullRequestIdMergeParams, body PostRepositoriesWorkspaceRepoSlugPullrequestsPullRequestIdMergeJSONRequestBody, reqEditors ...RequestEditorFn) (*PostRepositoriesWorkspaceRepoSlugPullrequestsPullRequestIdMergeResponse, error)
+
+	// DeleteRepositoriesWorkspaceRepoSlugRefsBranchesNameWithResponse request
+	DeleteRepositoriesWorkspaceRepoSlugRefsBranchesNameWithResponse(ctx context.Context, workspace string, repoSlug string, name string, reqEditors ...RequestEditorFn) (*DeleteRepositoriesWorkspaceRepoSlugRefsBranchesNameResponse, error)
 }
 
 type GetRepositoriesWorkspaceRepoSlugCommitCommitResponse struct {
@@ -4292,6 +4358,30 @@ func (r PostRepositoriesWorkspaceRepoSlugPullrequestsPullRequestIdMergeResponse)
 	return 0
 }
 
+type DeleteRepositoriesWorkspaceRepoSlugRefsBranchesNameResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON400      *Error
+	JSON403      *Error
+	JSON404      *Error
+}
+
+// Status returns HTTPResponse.Status
+func (r DeleteRepositoriesWorkspaceRepoSlugRefsBranchesNameResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r DeleteRepositoriesWorkspaceRepoSlugRefsBranchesNameResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
 // GetRepositoriesWorkspaceRepoSlugCommitCommitWithResponse request returning *GetRepositoriesWorkspaceRepoSlugCommitCommitResponse
 func (c *ClientWithResponses) GetRepositoriesWorkspaceRepoSlugCommitCommitWithResponse(ctx context.Context, workspace string, repoSlug string, commit string, reqEditors ...RequestEditorFn) (*GetRepositoriesWorkspaceRepoSlugCommitCommitResponse, error) {
 	rsp, err := c.GetRepositoriesWorkspaceRepoSlugCommitCommit(ctx, workspace, repoSlug, commit, reqEditors...)
@@ -4351,6 +4441,15 @@ func (c *ClientWithResponses) PostRepositoriesWorkspaceRepoSlugPullrequestsPullR
 		return nil, err
 	}
 	return ParsePostRepositoriesWorkspaceRepoSlugPullrequestsPullRequestIdMergeResponse(rsp)
+}
+
+// DeleteRepositoriesWorkspaceRepoSlugRefsBranchesNameWithResponse request returning *DeleteRepositoriesWorkspaceRepoSlugRefsBranchesNameResponse
+func (c *ClientWithResponses) DeleteRepositoriesWorkspaceRepoSlugRefsBranchesNameWithResponse(ctx context.Context, workspace string, repoSlug string, name string, reqEditors ...RequestEditorFn) (*DeleteRepositoriesWorkspaceRepoSlugRefsBranchesNameResponse, error) {
+	rsp, err := c.DeleteRepositoriesWorkspaceRepoSlugRefsBranchesName(ctx, workspace, repoSlug, name, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseDeleteRepositoriesWorkspaceRepoSlugRefsBranchesNameResponse(rsp)
 }
 
 // ParseGetRepositoriesWorkspaceRepoSlugCommitCommitResponse parses an HTTP response from a GetRepositoriesWorkspaceRepoSlugCommitCommitWithResponse call
@@ -4519,6 +4618,46 @@ func ParsePostRepositoriesWorkspaceRepoSlugPullrequestsPullRequestIdMergeRespons
 			return nil, err
 		}
 		response.JSON555 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseDeleteRepositoriesWorkspaceRepoSlugRefsBranchesNameResponse parses an HTTP response from a DeleteRepositoriesWorkspaceRepoSlugRefsBranchesNameWithResponse call
+func ParseDeleteRepositoriesWorkspaceRepoSlugRefsBranchesNameResponse(rsp *http.Response) (*DeleteRepositoriesWorkspaceRepoSlugRefsBranchesNameResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &DeleteRepositoriesWorkspaceRepoSlugRefsBranchesNameResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest Error
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Error
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest Error
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
 
 	}
 

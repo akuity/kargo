@@ -97,7 +97,7 @@ export const CreateStageWizard = ({
             />
           ) : (
             <Flex
-              className='w-full h-full rounded-md bg-gray-50 text-gray-400 font-medium text-center'
+              className='w-full h-full rounded-md bg-gray-50 dark:bg-neutral-800 text-gray-400 dark:text-neutral-500 font-medium text-center'
               align='center'
               justify='center'
             >

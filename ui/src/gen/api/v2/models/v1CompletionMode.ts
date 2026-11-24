@@ -8,7 +8,6 @@
 
 export type V1CompletionMode = (typeof V1CompletionMode)[keyof typeof V1CompletionMode];
 
-// eslint-disable-next-line @typescript-eslint/no-redeclare
 export const V1CompletionMode = {
   NonIndexedCompletion: 'NonIndexed',
   IndexedCompletion: 'Indexed'

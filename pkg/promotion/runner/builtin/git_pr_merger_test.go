@@ -14,7 +14,7 @@ import (
 	"github.com/akuity/kargo/pkg/credentials"
 	"github.com/akuity/kargo/pkg/gitprovider"
 	"github.com/akuity/kargo/pkg/promotion"
-	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
+	"github.com/akuity/kargo/pkg/x/promotion/stepconfig"
 )
 
 func Test_gitPRMerger_convert(t *testing.T) {
@@ -33,6 +33,24 @@ func Test_gitPRMerger_convert(t *testing.T) {
 			},
 			expectedProblems: []string{
 				"repoURL: String length must be greater than or equal to 1",
+			},
+		},
+		{
+			name: "repoURL is an SSH URL",
+			config: promotion.Config{
+				"repoURL": "ssh://git@github.com/example/repo.git",
+			},
+			expectedProblems: []string{
+				"repoURL: Does not match pattern '^https?://'",
+			},
+		},
+		{
+			name: "repoURL is an SCP-style URL",
+			config: promotion.Config{
+				"repoURL": "git@github.com:example/repo.git",
+			},
+			expectedProblems: []string{
+				"repoURL: Does not match pattern '^https?://'",
 			},
 		},
 		{
@@ -87,6 +105,25 @@ func Test_gitPRMerger_convert(t *testing.T) {
 			},
 		},
 		{
+			name: "valid with deleteSourceBranch",
+			config: promotion.Config{
+				"repoURL":            "https://github.com/example/repo.git",
+				"prNumber":           42,
+				"deleteSourceBranch": true,
+			},
+		},
+		{
+			name: "deleteSourceBranch is not a boolean",
+			config: promotion.Config{
+				"repoURL":            "https://github.com/example/repo.git",
+				"prNumber":           42,
+				"deleteSourceBranch": "yes",
+			},
+			expectedProblems: []string{
+				"deleteSourceBranch: Invalid type. Expected: boolean, given: string",
+			},
+		},
+		{
 			name: "valid with merge method",
 			config: promotion.Config{
 				"provider":    "github",
@@ -130,7 +167,7 @@ func Test_gitPRMerger_run(t *testing.T) {
 	testCases := []struct {
 		name       string
 		provider   gitprovider.Interface
-		config     builtin.GitMergePRConfig
+		config     stepconfig.GitMergePRConfig
 		assertions func(*testing.T, promotion.StepResult, error)
 	}{
 		{
@@ -144,7 +181,7 @@ func Test_gitPRMerger_run(t *testing.T) {
 					return nil, false, errors.New("authentication failed")
 				},
 			},
-			config: builtin.GitMergePRConfig{
+			config: stepconfig.GitMergePRConfig{
 				PRNumber: 42,
 			},
 			assertions: func(t *testing.T, res promotion.StepResult, err error) {
@@ -165,7 +202,7 @@ func Test_gitPRMerger_run(t *testing.T) {
 					return nil, false, nil
 				},
 			},
-			config: builtin.GitMergePRConfig{
+			config: stepconfig.GitMergePRConfig{
 				PRNumber: 42,
 				Wait:     true,
 			},
@@ -189,7 +226,7 @@ func Test_gitPRMerger_run(t *testing.T) {
 					return nil, false, nil
 				},
 			},
-			config: builtin.GitMergePRConfig{
+			config: stepconfig.GitMergePRConfig{
 				PRNumber:     42,
 				Wait:         true,
 				PollInterval: "45s",
@@ -212,7 +249,7 @@ func Test_gitPRMerger_run(t *testing.T) {
 					return nil, false, nil
 				},
 			},
-			config: builtin.GitMergePRConfig{
+			config: stepconfig.GitMergePRConfig{
 				PRNumber: 42,
 				Wait:     false,
 			},
@@ -236,7 +273,7 @@ func Test_gitPRMerger_run(t *testing.T) {
 					}, true, nil
 				},
 			},
-			config: builtin.GitMergePRConfig{
+			config: stepconfig.GitMergePRConfig{
 				PRNumber: 123,
 			},
 			assertions: func(t *testing.T, res promotion.StepResult, err error) {
@@ -258,7 +295,7 @@ func Test_gitPRMerger_run(t *testing.T) {
 					}, true, nil
 				},
 			},
-			config: builtin.GitMergePRConfig{
+			config: stepconfig.GitMergePRConfig{
 				PRNumber: 42,
 			},
 			assertions: func(t *testing.T, res promotion.StepResult, err error) {
@@ -280,7 +317,7 @@ func Test_gitPRMerger_run(t *testing.T) {
 					}, true, nil
 				},
 			},
-			config: builtin.GitMergePRConfig{
+			config: stepconfig.GitMergePRConfig{
 				PRNumber: 42,
 			},
 			assertions: func(t *testing.T, res promotion.StepResult, err error) {
@@ -303,7 +340,7 @@ func Test_gitPRMerger_run(t *testing.T) {
 					}, true, nil
 				},
 			},
-			config: builtin.GitMergePRConfig{
+			config: stepconfig.GitMergePRConfig{
 				PRNumber:    42,
 				MergeMethod: "squash",
 			},
@@ -311,6 +348,124 @@ func Test_gitPRMerger_run(t *testing.T) {
 				require.NoError(t, err)
 				require.Equal(t, kargoapi.PromotionStepStatusSucceeded, res.Status)
 				require.Equal(t, "squash123", res.Output[stateKeyCommit])
+			},
+		},
+		{
+			name: "source branch not deleted when not requested",
+			provider: &gitprovider.Fake{
+				MergePullRequestFn: func(
+					context.Context,
+					int64,
+					*gitprovider.MergePullRequestOpts,
+				) (*gitprovider.PullRequest, bool, error) {
+					return &gitprovider.PullRequest{
+						MergeCommitSHA: "abc123",
+						HeadBranch:     "kargo/promotion/test",
+					}, true, nil
+				},
+				DeleteBranchFn: func(context.Context, string) error {
+					require.Fail(t, "DeleteBranch should not have been called")
+					return nil
+				},
+			},
+			config: stepconfig.GitMergePRConfig{
+				PRNumber: 42,
+			},
+			assertions: func(t *testing.T, res promotion.StepResult, err error) {
+				require.NoError(t, err)
+				require.Equal(t, kargoapi.PromotionStepStatusSucceeded, res.Status)
+				require.Empty(t, res.Message)
+			},
+		},
+		{
+			name: "successful merge and source branch deletion",
+			provider: &gitprovider.Fake{
+				MergePullRequestFn: func(
+					context.Context,
+					int64,
+					*gitprovider.MergePullRequestOpts,
+				) (*gitprovider.PullRequest, bool, error) {
+					return &gitprovider.PullRequest{
+						MergeCommitSHA: "abc123",
+						HeadBranch:     "kargo/promotion/test",
+					}, true, nil
+				},
+				DeleteBranchFn: func(_ context.Context, branch string) error {
+					require.Equal(t, "kargo/promotion/test", branch)
+					return nil
+				},
+			},
+			config: stepconfig.GitMergePRConfig{
+				PRNumber:           42,
+				DeleteSourceBranch: true,
+			},
+			assertions: func(t *testing.T, res promotion.StepResult, err error) {
+				require.NoError(t, err)
+				require.Equal(t, kargoapi.PromotionStepStatusSucceeded, res.Status)
+				require.Equal(t, "abc123", res.Output[stateKeyCommit])
+				require.Empty(t, res.Message)
+			},
+		},
+		{
+			name: "source branch deletion fails",
+			provider: &gitprovider.Fake{
+				MergePullRequestFn: func(
+					context.Context,
+					int64,
+					*gitprovider.MergePullRequestOpts,
+				) (*gitprovider.PullRequest, bool, error) {
+					return &gitprovider.PullRequest{
+						MergeCommitSHA: "abc123",
+						HeadBranch:     "kargo/promotion/test",
+					}, true, nil
+				},
+				DeleteBranchFn: func(context.Context, string) error {
+					return errors.New("something went wrong")
+				},
+			},
+			config: stepconfig.GitMergePRConfig{
+				PRNumber:           42,
+				DeleteSourceBranch: true,
+			},
+			assertions: func(t *testing.T, res promotion.StepResult, err error) {
+				// The merge succeeded, so the step succeeds and its output is
+				// available to subsequent steps. The deletion failure is reported via
+				// the message.
+				require.NoError(t, err)
+				require.Equal(t, kargoapi.PromotionStepStatusSucceeded, res.Status)
+				require.Equal(t, "abc123", res.Output[stateKeyCommit])
+				require.Contains(t, res.Message, "merged pull request 42")
+				require.Contains(t, res.Message, "failed to delete its source branch")
+				require.Contains(t, res.Message, "something went wrong")
+			},
+		},
+		{
+			name: "source branch unknown",
+			provider: &gitprovider.Fake{
+				MergePullRequestFn: func(
+					context.Context,
+					int64,
+					*gitprovider.MergePullRequestOpts,
+				) (*gitprovider.PullRequest, bool, error) {
+					return &gitprovider.PullRequest{
+						Number:         42,
+						MergeCommitSHA: "abc123",
+					}, true, nil
+				},
+				DeleteBranchFn: func(context.Context, string) error {
+					require.Fail(t, "DeleteBranch should not have been called")
+					return nil
+				},
+			},
+			config: stepconfig.GitMergePRConfig{
+				PRNumber:           42,
+				DeleteSourceBranch: true,
+			},
+			assertions: func(t *testing.T, res promotion.StepResult, err error) {
+				require.NoError(t, err)
+				require.Equal(t, kargoapi.PromotionStepStatusSucceeded, res.Status)
+				require.Equal(t, "abc123", res.Output[stateKeyCommit])
+				require.Contains(t, res.Message, "did not report a source branch")
 			},
 		},
 	}
@@ -340,7 +495,7 @@ func Test_gitPRMerger_run(t *testing.T) {
 			)
 
 			cfg := testCase.config
-			cfg.Provider = ptr.To(builtin.Provider(testGitProviderName))
+			cfg.Provider = ptr.To(stepconfig.Provider(testGitProviderName))
 			cfg.RepoURL = "https://github.com/example/repo.git"
 
 			res, err := runner.run(

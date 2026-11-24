@@ -7,8 +7,10 @@ import (
 	"fmt"
 	"maps"
 	"net/http"
+	"slices"
 	"time"
 
+	"github.com/expr-lang/expr/vm"
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
@@ -66,6 +68,7 @@ type repositoryClient struct {
 		ctx context.Context,
 		tag string,
 		platform *platformConstraint,
+		filter *vm.Program,
 	) (*image, error)
 
 	getImageByDigestFn func(ctx context.Context, digest string) (*image, error)
@@ -157,11 +160,13 @@ func (r *repositoryClient) getTags(ctx context.Context) ([]string, error) {
 	return tags, nil
 }
 
-// getImageByTag retrieves an Image by tag.
+// getImageByTag retrieves an Image by tag. It returns nil if the image does not
+// match the platform constraint or filter expression.
 func (r *repositoryClient) getImageByTag(
 	ctx context.Context,
 	tag string,
 	pc *platformConstraint,
+	filter *vm.Program,
 ) (*image, error) {
 	logger := logging.LoggerFromContext(ctx).WithValues("tag", tag)
 	logger.Trace("retrieving image")
@@ -214,16 +219,24 @@ func (r *repositoryClient) getImageByTag(
 		}
 	}
 
-	if pc == nil {
-		return img, nil
+	if pc != nil && !slices.ContainsFunc(
+		img.Platforms,
+		func(p platform) bool { return pc.matches(p.OS, p.Arch, p.Variant) },
+	) {
+		return nil, nil
 	}
-	for _, p := range img.Platforms {
-		if pc.matches(p.OS, p.Arch, p.Variant) {
-			return img, nil
+
+	if img != nil && filter != nil {
+		matched, err := matchesFilterExpression(filter, *img, pc)
+		if err != nil {
+			return nil, fmt.Errorf("error evaluating filter expression for tag %q: %w", tag, err)
+		}
+		if !matched {
+			return nil, nil
 		}
 	}
 
-	return nil, nil
+	return img, nil
 }
 
 // getImageByDigest retrieves an Image for a given digest.

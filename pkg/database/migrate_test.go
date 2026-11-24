@@ -1,0 +1,387 @@
+package database
+
+import (
+	"context"
+	"encoding/binary"
+	"errors"
+	"fmt"
+	"io"
+	"net"
+	"testing"
+	"testing/fstest"
+	"time"
+
+	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/pressly/goose/v3/lock"
+	"github.com/stretchr/testify/require"
+)
+
+// unreachablePool returns a pool that has not connected and never will. The
+// Migrator's offline behavior can be exercised without a database.
+func unreachablePool(t *testing.T) *pgxpool.Pool {
+	t.Helper()
+	cfg, err := pgxpool.ParseConfig(
+		"postgres://kargo:kargo@127.0.0.1:1/kargo?sslmode=disable",
+	)
+	require.NoError(t, err)
+	pool, err := pgxpool.NewWithConfig(context.Background(), cfg)
+	require.NoError(t, err)
+	t.Cleanup(pool.Close)
+	return pool
+}
+
+func TestNewMigrator(t *testing.T) {
+	t.Parallel()
+	testCases := []struct {
+		name       string
+		migrations fstest.MapFS
+		assert     func(*testing.T, Migrator, error)
+	}{
+		{
+			name: "malformed migration is rejected up front",
+			migrations: fstest.MapFS{
+				"not-a-migration.sql": {Data: []byte("SELECT 1;")},
+			},
+			assert: func(t *testing.T, _ Migrator, err error) {
+				require.ErrorContains(t, err, "error initializing migrations")
+			},
+		},
+		{
+			// Goose treats an empty set as a configuration error, which is what
+			// we want: a binary that embeds no migrations should not be able to
+			// declare a database current.
+			name:       "no migrations is an error",
+			migrations: fstest.MapFS{},
+			assert: func(t *testing.T, _ Migrator, err error) {
+				require.ErrorContains(t, err, "error initializing migrations")
+			},
+		},
+		{
+			name: "target is the highest embedded version",
+			migrations: fstest.MapFS{
+				"00001_first.sql":  {Data: []byte("-- +goose Up\nSELECT 1;\n")},
+				"00003_third.sql":  {Data: []byte("-- +goose Up\nSELECT 3;\n")},
+				"00002_second.sql": {Data: []byte("-- +goose Up\nSELECT 2;\n")},
+			},
+			assert: func(t *testing.T, m Migrator, err error) {
+				require.NoError(t, err)
+				impl, ok := m.(*migrator)
+				require.True(t, ok)
+				require.Equal(t, int64(3), impl.target())
+			},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+			m, err := NewMigrator(
+				context.Background(),
+				unreachablePool(t),
+				testCase.migrations,
+				time.Minute,
+			)
+			testCase.assert(t, m, err)
+		})
+	}
+}
+
+func TestNewMigrator_lockTimeout(t *testing.T) {
+	t.Parallel()
+	migrations := fstest.MapFS{
+		"00001_first.sql": {Data: []byte("-- +goose Up\nSELECT 1;\n")},
+	}
+	_, err := NewMigrator(context.Background(), unreachablePool(t), migrations, time.Second)
+	require.ErrorContains(t, err, "lock timeout must be at least")
+}
+
+func TestMigrationLockID(t *testing.T) {
+	t.Parallel()
+	// The same schema must always map to the same key, or replicas of one
+	// instance would stop serializing with one another.
+	require.Equal(t, migrationLockID("public"), migrationLockID("public"))
+	// Distinct schemas must map to distinct keys, or instances sharing a
+	// database would serialize with one another.
+	require.NotEqual(t, migrationLockID("public"), migrationLockID("tenant_a"))
+	require.NotEqual(t, migrationLockID("tenant_a"), migrationLockID("tenant_b"))
+	// The key must not be goose's default, which any other goose-based
+	// service in the same database would contend for.
+	require.NotEqual(t, lock.DefaultLockID, migrationLockID("public"))
+}
+
+func TestSchemaLocker_SessionUnlock_notHeld(t *testing.T) {
+	t.Parallel()
+	l := &schemaLocker{lockAttempts: 1}
+	err := l.SessionUnlock(context.Background(), nil)
+	require.ErrorContains(t, err, "not held")
+}
+
+// refusingServer is a connection string for a port nothing listens on.
+const refusingServer = "postgres://kargo:kargo@127.0.0.1:1/kargo?sslmode=disable"
+
+// rejectingServer listens on a loopback port and answers every connection's
+// startup message with a PostgreSQL ErrorResponse carrying the given SQLSTATE
+// and message, as a real server does for a bad password or while it is still
+// starting. It returns a connection string for itself.
+func rejectingServer(t *testing.T, sqlState string, message string) string {
+	t.Helper()
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = listener.Close() })
+
+	// ErrorResponse: 'E', int32 length (self included), then (type byte,
+	// C string) fields ending with a zero byte.
+	var fields []byte
+	for _, f := range []struct {
+		typ byte
+		val string
+	}{
+		{'S', "FATAL"}, {'V', "FATAL"}, {'C', sqlState}, {'M', message},
+	} {
+		fields = append(fields, f.typ)
+		fields = append(fields, f.val...)
+		fields = append(fields, 0)
+	}
+	fields = append(fields, 0)
+	response := append([]byte{'E'}, binary.BigEndian.AppendUint32(nil, uint32(len(fields)+4))...)
+	response = append(response, fields...)
+
+	go func() {
+		for {
+			conn, err := listener.Accept()
+			if err != nil {
+				return
+			}
+			go func() {
+				defer conn.Close()
+				// Consume the startup message: int32 length, then the body.
+				var length [4]byte
+				if _, err := io.ReadFull(conn, length[:]); err != nil {
+					return
+				}
+				body := make([]byte, binary.BigEndian.Uint32(length[:])-4)
+				if _, err := io.ReadFull(conn, body); err != nil {
+					return
+				}
+				_, _ = conn.Write(response)
+			}()
+		}
+	}()
+	return fmt.Sprintf(
+		"postgres://kargo:kargo@%s/kargo?sslmode=disable",
+		listener.Addr().String(),
+	)
+}
+
+func TestConnectWithRetry(t *testing.T) {
+	t.Parallel()
+	testCases := []struct {
+		name       string
+		ctx        func() (context.Context, context.CancelFunc)
+		connString func(*testing.T) string
+		timeout    time.Duration
+		assert     func(*testing.T, error)
+	}{
+		{
+			name:       "malformed connection string fails immediately",
+			connString: func(*testing.T) string { return "postgres://kargo:kargo@[::1/kargo" },
+			timeout:    time.Hour,
+			assert: func(t *testing.T, err error) {
+				require.ErrorContains(t, err, "error parsing database connection string")
+			},
+		},
+		{
+			name: "rejected credentials fail immediately",
+			connString: func(t *testing.T) string {
+				return rejectingServer(t, "28P01", "password authentication failed")
+			},
+			timeout: time.Hour,
+			assert: func(t *testing.T, err error) {
+				require.ErrorContains(t, err, "password authentication failed")
+				require.NotContains(t, err.Error(), "did not become reachable")
+			},
+		},
+		{
+			name: "a server that is still starting is retried until the timeout",
+			connString: func(t *testing.T) string {
+				return rejectingServer(t, sqlStateCannotConnectNow, "the database system is starting up")
+			},
+			timeout: 0,
+			assert: func(t *testing.T, err error) {
+				require.ErrorContains(t, err, "database did not become reachable within 0s")
+				require.ErrorContains(t, err, "the database system is starting up")
+			},
+		},
+		{
+			name:       "an unreachable server is retried until the timeout",
+			connString: func(*testing.T) string { return refusingServer },
+			timeout:    0,
+			assert: func(t *testing.T, err error) {
+				require.ErrorContains(t, err, "database did not become reachable within 0s")
+			},
+		},
+		{
+			name: "stops when the context is canceled",
+			ctx: func() (context.Context, context.CancelFunc) {
+				return context.WithTimeout(context.Background(), 500*time.Millisecond)
+			},
+			connString: func(*testing.T) string { return refusingServer },
+			timeout:    time.Hour,
+			assert: func(t *testing.T, err error) {
+				require.ErrorIs(t, err, context.DeadlineExceeded)
+			},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+			ctx, cancel := context.WithCancel(context.Background())
+			if testCase.ctx != nil {
+				ctx, cancel = testCase.ctx()
+			}
+			defer cancel()
+			pool, err := ConnectWithRetry(
+				ctx,
+				testCase.connString(t),
+				"kargo-test",
+				testCase.timeout,
+			)
+			testCase.assert(t, err)
+			require.Nil(t, pool)
+		})
+	}
+}
+
+// fakeMigrator answers Check from a scripted sequence of errors, repeating
+// the last one once the sequence is exhausted, and counts the calls.
+type fakeMigrator struct {
+	checks []error
+	calls  int
+}
+
+func (*fakeMigrator) Up(context.Context) ([]int64, error) { return nil, nil }
+
+func (*fakeMigrator) Version(context.Context) (int64, int64, error) { return 0, 0, nil }
+
+func (f *fakeMigrator) Check(context.Context) error {
+	f.calls++
+	if f.calls <= len(f.checks) {
+		return f.checks[f.calls-1]
+	}
+	return f.checks[len(f.checks)-1]
+}
+
+func TestWaitForSchema(t *testing.T) {
+	t.Parallel()
+	behind := fmt.Errorf("%w: database is at version 1 but this binary expects 2", ErrSchemaOutOfDate)
+	testCases := []struct {
+		name     string
+		ctx      func() (context.Context, context.CancelFunc)
+		migrator *fakeMigrator
+		timeout  time.Duration
+		assert   func(*testing.T, *fakeMigrator, error)
+	}{
+		{
+			name:     "a current schema passes at once",
+			migrator: &fakeMigrator{checks: []error{nil}},
+			timeout:  time.Hour,
+			assert: func(t *testing.T, m *fakeMigrator, err error) {
+				require.NoError(t, err)
+				require.Equal(t, 1, m.calls)
+			},
+		},
+		{
+			name:     "a schema that catches up is waited for",
+			migrator: &fakeMigrator{checks: []error{behind, behind, nil}},
+			timeout:  time.Hour,
+			assert: func(t *testing.T, m *fakeMigrator, err error) {
+				require.NoError(t, err)
+				require.Equal(t, 3, m.calls)
+			},
+		},
+		{
+			name:     "a schema still behind at the timeout is an error",
+			migrator: &fakeMigrator{checks: []error{behind}},
+			timeout:  0,
+			assert: func(t *testing.T, m *fakeMigrator, err error) {
+				require.ErrorIs(t, err, ErrSchemaOutOfDate)
+				require.ErrorContains(t, err, "did not reach the expected version within 0s")
+				require.ErrorContains(t, err, "expects 2")
+				require.Equal(t, 1, m.calls)
+			},
+		},
+		{
+			name:     "a failure to read the version is not retried",
+			migrator: &fakeMigrator{checks: []error{errors.New("connection reset")}},
+			timeout:  time.Hour,
+			assert: func(t *testing.T, m *fakeMigrator, err error) {
+				require.EqualError(t, err, "connection reset")
+				require.Equal(t, 1, m.calls)
+			},
+		},
+		{
+			name: "stops when the context is canceled",
+			ctx: func() (context.Context, context.CancelFunc) {
+				return context.WithTimeout(context.Background(), 500*time.Millisecond)
+			},
+			migrator: &fakeMigrator{checks: []error{behind}},
+			timeout:  time.Hour,
+			assert: func(t *testing.T, _ *fakeMigrator, err error) {
+				require.ErrorIs(t, err, context.DeadlineExceeded)
+			},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+			ctx, cancel := context.WithCancel(context.Background())
+			if testCase.ctx != nil {
+				ctx, cancel = testCase.ctx()
+			}
+			defer cancel()
+			err := WaitForSchema(ctx, testCase.migrator, testCase.timeout)
+			testCase.assert(t, testCase.migrator, err)
+		})
+	}
+}
+
+func TestIsTransientConnectError(t *testing.T) {
+	t.Parallel()
+	testCases := []struct {
+		name string
+		err  error
+		want bool
+	}{
+		{
+			name: "network error",
+			err:  &net.OpError{Op: "dial", Err: errors.New("connection refused")},
+			want: true,
+		},
+		{
+			name: "server still starting",
+			err:  fmt.Errorf("wrapped: %w", &pgconn.PgError{Code: sqlStateCannotConnectNow}),
+			want: true,
+		},
+		{
+			name: "too many connections",
+			err:  &pgconn.PgError{Code: sqlStateTooManyConnections},
+			want: true,
+		},
+		{
+			name: "invalid password",
+			err:  fmt.Errorf("wrapped: %w", &pgconn.PgError{Code: "28P01"}),
+			want: false,
+		},
+		{
+			name: "unknown database",
+			err:  &pgconn.PgError{Code: "3D000"},
+			want: false,
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+			require.Equal(t, testCase.want, isTransientConnectError(testCase.err))
+		})
+	}
+}

@@ -8,18 +8,20 @@
 import type { V1LocalObjectReference } from './v1LocalObjectReference';
 
 export interface GitLabWebhookReceiverConfig {
-  /** SecretRef contains a reference to a Secret. For Project-scoped webhook
-receivers, the referenced Secret must be in the same namespace as the
-ProjectConfig.
-
-For cluster-scoped webhook receivers, the referenced Secret must be in the
-designated "system resources" namespace.
-
-The secret is expected to contain a `secret-token` key containing the
-shared secret specified when registering the webhook in GitLab. For more
-information about this token, please refer to the GitLab documentation:
-  https://docs.gitlab.com/user/project/integrations/webhooks/
-
-+kubebuilder:validation:Required */
+  /**
+   * SecretRef contains a reference to a Secret. For Project-scoped webhook
+   * receivers, the referenced Secret must be in the same namespace as the
+   * ProjectConfig.
+   *
+   * For cluster-scoped webhook receivers, the referenced Secret must be in the
+   * designated "system resources" namespace.
+   *
+   * The secret is expected to contain a `secret-token` key containing the
+   * shared secret specified when registering the webhook in GitLab. For more
+   * information about this token, please refer to the GitLab documentation:
+   *   https://docs.gitlab.com/user/project/integrations/webhooks/
+   *
+   * +kubebuilder:validation:Required
+   */
   secretRef: V1LocalObjectReference;
 }

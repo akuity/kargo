@@ -2,7 +2,9 @@ package promotion
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"maps"
 	"slices"
 
 	gocache "github.com/patrickmn/go-cache"
@@ -12,6 +14,7 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/credentials"
 	"github.com/akuity/kargo/pkg/health"
+	"github.com/akuity/kargo/pkg/promotion/metrics"
 )
 
 // LocalOrchestrator is an implementation of the Orchestrator interface that
@@ -21,7 +24,9 @@ type LocalOrchestrator struct {
 	executor  StepExecutor
 	registry  StepRunnerRegistry
 	client    client.Client
+	credsDB   credentials.Database
 	cacheFunc ExprDataCacheFn
+	metrics   *metrics.StepMetrics
 }
 
 // NewLocalOrchestrator creates a new LocalOrchestrator instance with the
@@ -43,7 +48,9 @@ func NewLocalOrchestrator(
 		),
 		registry:  registry,
 		client:    kargoClient,
+		credsDB:   credsDB,
 		cacheFunc: cacheFunc,
+		metrics:   metrics.NewStepMetrics(),
 	}
 }
 
@@ -82,6 +89,7 @@ func (o *LocalOrchestrator) ExecuteSteps(
 					"step %q was canceled due to context cancellation: %s",
 					step.Alias, ctx.Err(),
 				).Finished()
+				o.recordStepDuration(promoCtx.Project, step, meta)
 			}
 			return Result{
 				Status:                kargoapi.PromotionPhaseErrored,
@@ -95,7 +103,7 @@ func (o *LocalOrchestrator) ExecuteSteps(
 			// Continue execution if the context is still active.
 		}
 
-		processor := NewStepEvaluator(o.client, o.newCache())
+		processor := NewStepEvaluator(o.client, o.credsDB, o.newCache())
 
 		// Only evaluate the "if" conditio when the step has not yet started.
 		// If the step has already started (on a previous reconciliation), we
@@ -162,13 +170,20 @@ func (o *LocalOrchestrator) ExecuteSteps(
 		})
 
 		// Propagate the step output to the state.
-		o.propagateStepOutput(promoCtx, step, reg.Metadata, result)
+		if outputErr := o.propagateStepOutput(promoCtx, step, reg.Metadata, result); outputErr != nil {
+			meta.WithStatus(kargoapi.PromotionStepStatusErrored).WithMessagef(
+				"step %q returned invalid output: %s", step.Alias, outputErr,
+			).Finished()
+			o.recordStepDuration(promoCtx.Project, step, meta)
+			continue
+		}
 
 		// Confirm the step has a valid status.
 		if !result.Status.Valid() {
 			meta.WithStatus(kargoapi.PromotionStepStatusErrored).WithMessagef(
 				"step %q returned an invalid status: %s", step.Alias, result.Status,
 			).Finished()
+			o.recordStepDuration(promoCtx.Project, step, meta)
 			continue
 		}
 
@@ -187,6 +202,9 @@ func (o *LocalOrchestrator) ExecuteSteps(
 				RetryAfter:            result.RetryAfter,
 			}, err
 		}
+
+		// The step reached a terminal status on this attempt.
+		o.recordStepDuration(promoCtx.Project, step, meta)
 
 		// If the step succeeded, we can add any health checks to the list.
 		if meta.Status == kargoapi.PromotionStepStatusSucceeded {
@@ -209,14 +227,44 @@ func (o *LocalOrchestrator) ExecuteSteps(
 	}, nil
 }
 
+// recordStepDuration observes how long a step spent running, from the moment it
+// first started until it reached a terminal status, labeled by the Project it
+// belongs to, its kind, and the status it ended in. Because a step's StartedAt
+// survives across reconciliations, this covers the step's whole lifetime, not
+// just the attempt that happened to finish it.
+//
+// A step with no start or no finish has no running time to report and is not
+// observed; neither are skipped steps, whose duration says nothing about the
+// work the step represents.
+func (o *LocalOrchestrator) recordStepDuration(
+	project string,
+	step Step,
+	meta *StepMetadata,
+) {
+	if meta == nil || meta.StartedAt == nil || meta.FinishedAt == nil ||
+		meta.Status == kargoapi.PromotionStepStatusSkipped {
+		return
+	}
+	o.metrics.Duration.WithLabelValues(
+		project,
+		step.Kind,
+		string(meta.Status),
+	).Observe(meta.FinishedAt.Sub(meta.StartedAt.Time).Seconds())
+}
+
 func (o *LocalOrchestrator) propagateStepOutput(
 	promoCtx Context,
 	step Step,
 	stepMeta StepRunnerMetadata,
 	result StepResult,
-) {
+) error {
+	output, err := normalizeStepOutput(result.Output)
+	if err != nil {
+		return err
+	}
+
 	// Update the state with the output of the step.
-	promoCtx.State[step.Alias] = result.Output
+	promoCtx.State[step.Alias] = output
 
 	// If the step instructs that the output should be propagated to the
 	// task namespace, do so.
@@ -225,11 +273,35 @@ func (o *LocalOrchestrator) propagateStepOutput(
 			if promoCtx.State[aliasNamespace] == nil {
 				promoCtx.State[aliasNamespace] = make(map[string]any)
 			}
-			for k, v := range result.Output {
-				promoCtx.State[aliasNamespace].(map[string]any)[k] = v // nolint: forcetypeassert
-			}
+			// nolint: forcetypeassert
+			maps.Copy(promoCtx.State[aliasNamespace].(map[string]any), output)
 		}
 	}
+	return nil
+}
+
+// normalizeStepOutput converts a step's output to the types produced by
+// decoding JSON (e.g. any number becomes a float64, a map[string]string
+// becomes a map[string]any) by round-tripping it through JSON.
+//
+// Step runners may return arbitrary Go types, but the shared State is deep
+// copied with runtime.DeepCopyJSON, which panics on non-JSON types, and is
+// persisted to and reloaded from the Promotion's status as JSON. Normalizing
+// here keeps the State safe to copy and gives subsequent steps the same
+// types whether or not the State was reloaded in between.
+func normalizeStepOutput(output map[string]any) (map[string]any, error) {
+	if output == nil {
+		return nil, nil
+	}
+	b, err := json.Marshal(output)
+	if err != nil {
+		return nil, fmt.Errorf("error marshaling step output to JSON: %w", err)
+	}
+	var normalized map[string]any
+	if err = json.Unmarshal(b, &normalized); err != nil {
+		return nil, fmt.Errorf("error unmarshaling step output from JSON: %w", err)
+	}
+	return normalized, nil
 }
 
 func (o *LocalOrchestrator) reconcileResultWithMetadata(
@@ -324,7 +396,7 @@ func (o *LocalOrchestrator) determineStepCompletion(
 	if timeout > 0 && metav1.Now().Sub(meta.StartedAt.Time) > timeout {
 		// Timeout has elapsed.
 		meta.WithStatus(kargoapi.PromotionStepStatusErrored).WithMessagef(
-			"step %q timed out after %s", step.Alias, timeout.String(),
+			"step %q timed out after %s: %s", step.Alias, timeout.String(), meta.Message,
 		).Finished()
 		// Continue, because despite this failure, some steps' "if" conditions may
 		// still allow them to run.

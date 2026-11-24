@@ -210,9 +210,11 @@ what shipped.
   2. Why (brief rationale -- often found in the PR body)
   3. What to do about it (migration path or link to docs)
   4. When deprecated features will be removed
-- Link to relevant documentation sections using `https://docs.kargo.io/...`
-  URLs. Find the right doc path by searching `docs/docs/` for the relevant
-  content.
+- Link to relevant documentation sections with **relative paths** to the
+  source files (e.g. `../40-operator-guide/45-monitoring.md#section`), never
+  `https://docs.kargo.io/...` URLs. Old release notes are archived alongside
+  their docs, so relative links keep working while absolute ones rot. Find the
+  right file by searching `docs/docs/` for the relevant content.
 - For features, lead with the user benefit, not the implementation detail.
   Keep descriptions concise -- a sentence or two plus a docs link.
 - Use `@username` for contributor mentions.

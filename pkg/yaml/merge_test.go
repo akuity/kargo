@@ -1,57 +1,37 @@
 package yaml
 
 import (
-	"fmt"
-	"os"
-	"path"
-	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 )
 
-func TestMergeFiles(t *testing.T) {
+func TestMerge(t *testing.T) {
 	testCases := []struct {
 		name       string
-		fsFiles    map[string]string
-		inputPaths []string
-		outputPath string
-		assertions func(t *testing.T, outputPath string, err error)
+		docs       []string
+		assertions func(t *testing.T, out []byte, err error)
 	}{
 		{
-			name: "output path is empty",
-			assertions: func(t *testing.T, _ string, err error) {
-				require.ErrorContains(t, err, "output path must not be empty")
-			},
-		},
-		{
-			name:       "no input files",
-			outputPath: "merged.yaml",
-			assertions: func(t *testing.T, outputPath string, err error) {
+			name: "no documents",
+			assertions: func(t *testing.T, out []byte, err error) {
 				require.NoError(t, err)
-				fileBytes, err := os.ReadFile(outputPath)
+				require.Empty(t, out)
+			},
+		},
+		{
+			name: "only empty documents",
+			docs: []string{"", "\n"},
+			assertions: func(t *testing.T, out []byte, err error) {
 				require.NoError(t, err)
-				fmt.Println(string(fileBytes))
-				require.Empty(t, fileBytes)
+				require.Empty(t, out)
 			},
 		},
 		{
-			name:       "input file does not exist",
-			inputPaths: []string{"non-existent.yaml"},
-			outputPath: "merged.yaml",
-			assertions: func(t *testing.T, _ string, err error) {
-				require.ErrorContains(t, err, "error reading input file")
-			},
-		},
-		{
-			name: "input file does not contain valid YAML",
-			fsFiles: map[string]string{
-				"invalid.yaml": ":",
-			},
-			inputPaths: []string{"invalid.yaml"},
-			outputPath: "merged.yaml",
-			assertions: func(t *testing.T, _ string, err error) {
-				require.ErrorContains(t, err, "error reading input file")
+			name: "document is not valid YAML",
+			docs: []string{":"},
+			assertions: func(t *testing.T, _ []byte, err error) {
+				require.ErrorContains(t, err, "error parsing document 0")
 			},
 		},
 		{
@@ -59,9 +39,9 @@ func TestMergeFiles(t *testing.T) {
 			// Note: This is not an exhaustive test of all merge behavior. We presume
 			// kyaml to be well-tested. We DO, however, make a point of verifying that
 			// list merge behavior is consistent with Helm (full replacement).
-			fsFiles: map[string]string{
-				"empty.yaml": "", // Implementation should tolerate this
-				"base.yaml": `
+			docs: []string{
+				"", // Implementation should tolerate this
+				`
 character:
   name: Vader
   ability: Force
@@ -69,7 +49,7 @@ character:
   saberColor: red
 vehicles:
 - Star Destroyer`,
-				"overlay.yaml": `
+				`
 character:
   name: Luke # Alters character.name from the base
   # ability: Force  # Should be inherited from the base without alteration
@@ -80,15 +60,7 @@ character:
 vehicles: # Completely replaces vehicles list from the base
 - Millennium Falcon`,
 			},
-			inputPaths: []string{
-				"empty.yaml",
-				"base.yaml",
-				"overlay.yaml",
-			},
-			outputPath: "merged.yaml",
-			assertions: func(t *testing.T, outputPath string, err error) {
-				require.NoError(t, err)
-				fileBytes, err := os.ReadFile(outputPath)
+			assertions: func(t *testing.T, out []byte, err error) {
 				require.NoError(t, err)
 				require.YAMLEq(
 					t,
@@ -102,30 +74,19 @@ character:
   - Leia
 vehicles:
 - Millennium Falcon`,
-					string(fileBytes),
+					string(out),
 				)
 			},
 		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			workDir := t.TempDir()
-			for filePath, content := range testCase.fsFiles {
-				err := os.WriteFile(
-					path.Join(workDir, filePath),
-					[]byte(content),
-					0o600,
-				)
-				require.NoError(t, err)
+			docs := make([][]byte, len(testCase.docs))
+			for i, doc := range testCase.docs {
+				docs[i] = []byte(doc)
 			}
-			for i, filePath := range testCase.inputPaths {
-				testCase.inputPaths[i] = filepath.Join(workDir, filePath)
-			}
-			if testCase.outputPath != "" {
-				testCase.outputPath = filepath.Join(workDir, testCase.outputPath)
-			}
-			err := MergeFiles(testCase.inputPaths, testCase.outputPath)
-			testCase.assertions(t, testCase.outputPath, err)
+			out, err := Merge(docs)
+			testCase.assertions(t, out, err)
 		})
 	}
 }

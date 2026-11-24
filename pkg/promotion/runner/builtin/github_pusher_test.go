@@ -21,8 +21,13 @@ import (
 	"github.com/akuity/kargo/pkg/controller/git"
 	"github.com/akuity/kargo/pkg/credentials"
 	"github.com/akuity/kargo/pkg/promotion"
-	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
+	"github.com/akuity/kargo/pkg/x/promotion/stepconfig"
 )
+
+func Test_githubPusherConfigFromEnv(t *testing.T) {
+	cfg := githubPusherConfigFromEnv()
+	require.Equal(t, git.PushIntegrationPolicyRebaseOrMerge, cfg.PushIntegrationPolicy)
+}
 
 func Test_githubPusher_convert(t *testing.T) {
 	testCases := []validationTestCase{
@@ -152,18 +157,18 @@ func Test_githubPusher_run(t *testing.T) {
 		workTree.AddAllAndCommit(t.Context(), "initial commit", nil),
 	)
 
-	stepCtx := &promotion.StepContext{WorkDir: workDir}
+	stepCtx := newTestStepContext(t, workDir)
 
 	testCases := []struct {
 		name   string
 		runner *githubPusher
-		cfg    builtin.GitHubPushConfig
+		cfg    stepconfig.GitHubPushConfig
 		assert func(*testing.T, promotion.StepResult, error)
 	}{
 		{
 			name:   "error loading work tree",
 			runner: &githubPusher{cfg: githubPusherConfig{}},
-			cfg: builtin.GitHubPushConfig{
+			cfg: stepconfig.GitHubPushConfig{
 				Path: "nonexistent", // Invalid path forces a failure
 			},
 			assert: func(t *testing.T, res promotion.StepResult, err error) {
@@ -186,7 +191,7 @@ func Test_githubPusher_run(t *testing.T) {
 					},
 				},
 			},
-			cfg: builtin.GitHubPushConfig{Path: "main"},
+			cfg: stepconfig.GitHubPushConfig{Path: "main"},
 			assert: func(t *testing.T, res promotion.StepResult, err error) {
 				require.ErrorContains(t, err, "error getting credentials")
 				require.Equal(t, kargoapi.PromotionStepStatusErrored, res.Status)
@@ -207,7 +212,7 @@ func Test_githubPusher_run(t *testing.T) {
 					},
 				},
 			},
-			cfg: builtin.GitHubPushConfig{Path: "main"},
+			cfg: stepconfig.GitHubPushConfig{Path: "main"},
 			assert: func(t *testing.T, res promotion.StepResult, err error) {
 				require.ErrorContains(t, err, "no credentials found")
 				require.True(t, promotion.IsTerminal(err))
@@ -215,29 +220,7 @@ func Test_githubPusher_run(t *testing.T) {
 			},
 		},
 		{
-			name: "SSH key only",
-			runner: &githubPusher{
-				cfg: githubPusherConfig{},
-				credsDB: &credentials.FakeDB{
-					GetFn: func(
-						context.Context,
-						string,
-						credentials.Type,
-						string,
-					) (*credentials.Credentials, error) {
-						return &credentials.Credentials{SSHPrivateKey: "fake-ssh-key"}, nil
-					},
-				},
-			},
-			cfg: builtin.GitHubPushConfig{Path: "main"},
-			assert: func(t *testing.T, res promotion.StepResult, err error) {
-				require.ErrorContains(t, err, "found SSH key")
-				require.True(t, promotion.IsTerminal(err))
-				require.Equal(t, kargoapi.PromotionStepStatusFailed, res.Status)
-			},
-		},
-		{
-			name: "credentials with neither token nor SSH key",
+			name: "credentials without a token",
 			runner: &githubPusher{
 				cfg: githubPusherConfig{},
 				credsDB: &credentials.FakeDB{
@@ -251,7 +234,7 @@ func Test_githubPusher_run(t *testing.T) {
 					},
 				},
 			},
-			cfg: builtin.GitHubPushConfig{Path: "main"},
+			cfg: stepconfig.GitHubPushConfig{Path: "main"},
 			assert: func(t *testing.T, res promotion.StepResult, err error) {
 				require.ErrorContains(t, err, "missing a password/token")
 				require.True(t, promotion.IsTerminal(err))
@@ -273,7 +256,7 @@ func Test_githubPusher_run(t *testing.T) {
 					},
 				},
 			},
-			cfg: builtin.GitHubPushConfig{Path: "main"},
+			cfg: stepconfig.GitHubPushConfig{Path: "main"},
 			assert: func(t *testing.T, res promotion.StepResult, err error) {
 				// The test repo URL is not GitHub-shaped, so parsing
 				// owner/repo fails. This proves we got past credential
@@ -1552,4 +1535,34 @@ func (m *mockGitHubPushClient) DeleteRef(
 	ref string,
 ) (*github.Response, error) {
 	return m.deleteRefFn(ctx, owner, repo, ref)
+}
+
+func Test_githubPusher_run_escapingSymlink(t *testing.T) {
+	workDir, _ := escapingWorkspace(t)
+	res, err := (&githubPusher{}).run(
+		t.Context(),
+		newTestStepContext(t, workDir),
+		stepconfig.GitHubPushConfig{Path: "out/repo"},
+	)
+	require.ErrorContains(t, err, "path escapes from parent")
+	require.Equal(t, kargoapi.PromotionStepStatusErrored, res.Status)
+}
+
+func Test_githubPusher_getBranchMu(t *testing.T) {
+	pusher := &githubPusher{branchMus: map[string]*sync.Mutex{}}
+
+	// Concurrent lookups of new and existing keys must not race on the map
+	// (run with -race).
+	var wg sync.WaitGroup
+	for i := range 50 {
+		wg.Go(func() {
+			mu := pusher.getBranchMu("repo", fmt.Sprintf("branch-%d", i%10))
+			mu.Lock()
+			defer mu.Unlock()
+		})
+	}
+	wg.Wait()
+
+	require.Len(t, pusher.branchMus, 10)
+	require.Same(t, pusher.getBranchMu("repo", "branch-0"), pusher.getBranchMu("repo", "branch-0"))
 }
