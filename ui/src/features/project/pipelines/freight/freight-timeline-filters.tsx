@@ -3,13 +3,17 @@ import { faAnchor, IconDefinition } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Checkbox, Select, SelectProps } from 'antd';
 import classNames from 'classnames';
-import { useMemo } from 'react';
+import { useContext, useMemo } from 'react';
 
+import { ColorContext } from '@ui/context/colors';
 import { FreightTimelineControllerContextType } from '@ui/features/project/pipelines/context/freight-timeline-controller-context';
 import { Freight } from '@ui/gen/api/v2/models';
 
+import { WarehouseIcon } from '../warehouse-icon';
+
 import { humanComprehendableArtifact } from './artifact-parts-utils';
 import { timerangeOrderedOptions, timerangeToLabel } from './filter-timerange-utils';
+import { getFocusableWarehouses } from './freight-warehouse-group-utils';
 import { catalogueFreights } from './source-catalogue-utils';
 
 type FreightTimelineFiltersProps = {
@@ -17,9 +21,19 @@ type FreightTimelineFiltersProps = {
   preferredFilter: FreightTimelineControllerContextType['preferredFilter'];
   onPreferredFilterChange(next: FreightTimelineControllerContextType['preferredFilter']): void;
   freights: Freight[];
+  // names of the project's Warehouses, to narrow the freight timeline to one
+  warehouses: string[];
 };
 
 export const FreightTimelineFilters = (props: FreightTimelineFiltersProps) => {
+  const { warehouseColorMap } = useContext(ColorContext);
+
+  const focusableWarehouses = getFocusableWarehouses(
+    props.warehouses,
+    props.preferredFilter?.warehouses || []
+  );
+  const focusedWarehouse = props.preferredFilter?.freightTimelineWarehouse;
+
   const sourcesDropdownOptions: SelectProps['options'] = useMemo(() => {
     const freightSourcesCatalogue = catalogueFreights(props.freights);
 
@@ -82,6 +96,35 @@ export const FreightTimelineFilters = (props: FreightTimelineFiltersProps) => {
           maxTagCount={1}
           onChange={(timerange) =>
             props.onPreferredFilterChange({ ...props.preferredFilter, timerange: timerange })
+          }
+        />
+      </div>
+
+      <div className='text-xs flex items-center gap-3 mt-2'>
+        <label>Warehouse: </label>
+        <Select
+          allowClear
+          className='min-w-[200px] ml-auto'
+          size='small'
+          placeholder='All'
+          // with one Warehouse, every piece of freight is already its own;
+          // still clearable while set, e.g. to a Warehouse since deleted
+          disabled={focusableWarehouses.length < 2 && !focusedWarehouse}
+          value={focusedWarehouse || undefined}
+          options={focusableWarehouses.map((warehouse) => ({
+            value: warehouse,
+            label: (
+              <span className='flex items-center gap-1.5'>
+                <WarehouseIcon color={warehouseColorMap?.[warehouse]} />
+                {warehouse}
+              </span>
+            )
+          }))}
+          onChange={(warehouse) =>
+            props.onPreferredFilterChange({
+              ...props.preferredFilter,
+              freightTimelineWarehouse: warehouse || ''
+            })
           }
         />
       </div>

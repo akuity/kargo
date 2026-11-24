@@ -8,12 +8,7 @@
   transition: border-color 0.2s ease;
 }
 
-// The ink the tile's icon is mixed toward: darker than the Warehouse's color
-// on a light card, lighter on a dark one, so that every color in the palette
-// clears 4.5:1 against its own tile.
 .warehouseNode {
-  --warehouse-tile-ink: black;
-
   // AntD sizes small buttons from a single class, so these rules are scoped
   // to the card to outrank it rather than tie with it
   .action {
@@ -24,10 +19,6 @@
     font-size: 11px;
     color: var(--kargo-color-text-secondary);
   }
-}
-
-:root[data-theme='dark'] .warehouseNode {
-  --warehouse-tile-ink: white;
 }
 
 // The states take the border, which is the one part of the card the identity
@@ -78,25 +69,6 @@ a.title:focus-visible {
 // itself.
 .warehouseNode:not(.failed) .header {
   border-bottom: 1px solid var(--kargo-color-border-secondary);
-}
-
-.tile {
-  display: flex;
-  flex: none;
-  align-items: center;
-  justify-content: center;
-  width: 26px;
-  height: 26px;
-  border-radius: 7px;
-  font-size: 12px;
-  color: color-mix(in srgb, var(--warehouse-accent) 55%, var(--warehouse-tile-ink));
-  background: color-mix(in srgb, var(--warehouse-accent) 18%, transparent);
-}
-
-// A project with one Warehouse colors none of them, so the tile is grey.
-.tileNeutral {
-  color: var(--kargo-color-text-secondary);
-  background: var(--kargo-color-fill-secondary);
 }
 
 .name {

@@ -16,6 +16,9 @@ export type FreightTimelineControllerContextType = {
     timerange: timerangeTypes;
     warehouses: string[];
     hideUnusedFreights: boolean;
+    // the one Warehouse whose freight the freight timeline shows; '' for every
+    // Warehouse. Unlike `warehouses`, it leaves the graph alone.
+    freightTimelineWarehouse: string;
     stackedNodesParents: string[];
     hideSubscriptions: Record<string, boolean>;
     images: boolean;

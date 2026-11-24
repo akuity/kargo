@@ -14,11 +14,15 @@ import { FreightTimelineFilters } from './freight-timeline-filters';
 type Props = {
   className?: string;
   freights: Freight[];
+  // names of the project's Warehouses
+  warehouses: string[];
 };
 
 // These narrow the freight timeline only, not the graph beside it.
 const label = 'Freight timeline filters';
 
+// The Warehouse the freight timeline is narrowed to does not count: the
+// timeline already says so, with the Warehouse's name and an arrow back.
 const isFilterActive = (
   preferredFilter: FreightTimelineControllerContextType['preferredFilter']
 ): boolean =>
@@ -45,6 +49,7 @@ export const FreightTimelineFilterButton = (props: Props) => {
           preferredFilter={ctx.preferredFilter}
           onPreferredFilterChange={ctx.setPreferredFilter}
           freights={props.freights}
+          warehouses={props.warehouses}
         />
       }
     >

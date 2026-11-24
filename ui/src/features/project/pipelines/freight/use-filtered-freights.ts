@@ -6,6 +6,7 @@ import { FreightTimelineControllerContextType } from '@ui/features/project/pipel
 import { Freight } from '@ui/gen/api/v2/models';
 
 import { timerangeToDate } from './filter-timerange-utils';
+import { filterToWarehouse, getFocusedWarehouse } from './freight-warehouse-group-utils';
 import { getFreightDiscoveredAt } from './get-freight-discovered-at';
 import { filterFreightBySource, filterFreightByTimerange } from './source-catalogue-utils';
 
@@ -41,6 +42,11 @@ export const useFilteredFreights = (
     if (preferredFilter.warehouses?.length > 0) {
       filtered = filtered.filter((f) => preferredFilter.warehouses.includes(f.origin?.name || ''));
     }
+
+    filtered = filterToWarehouse(
+      filtered,
+      getFocusedWarehouse(preferredFilter.freightTimelineWarehouse, isPromotionMode)
+    );
 
     if (preferredFilter.hideUnusedFreights) {
       const collapsed: FilteredFreight[] = [];
@@ -79,6 +85,7 @@ export const useFilteredFreights = (
     preferredFilter.timerange,
     preferredFilter.warehouses,
     preferredFilter.hideUnusedFreights,
+    preferredFilter.freightTimelineWarehouse,
     dictionaryContext?.freightInStages,
     isPromotionMode,
     actionContext
