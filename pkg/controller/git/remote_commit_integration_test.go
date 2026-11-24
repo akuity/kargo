@@ -692,6 +692,95 @@ func Test_workTree_IntegrateRemoteChanges_MergeAroundShallowBoundary(t *testing.
 	}
 }
 
+func Test_workTree_IntegrateRemoteChanges_ShallowOutsideTarget(t *testing.T) {
+	// main:    initial -- a -- r
+	// feature: a -- f -- m, where m merges a -- g
+	// archive: initial -- o1 -- o2 -- o3 -- o4 -- o5 -- o6
+	//
+	// At depth 5, main and feature are complete, and only archive's history is
+	// cut short.
+	repoURL, clientOpts, author := setupRemoteWithAuthor(t)
+	run := func(args ...string) {
+		_, err := libExec.Exec(author.buildGitCommand(t.Context(), args...))
+		require.NoError(t, err)
+	}
+	commitFile(t, author, "a")
+	require.NoError(t, author.CreateChildBranch(t.Context(), "side"))
+	commitFile(t, author, "g")
+	require.NoError(t, author.Checkout(t.Context(), "main"))
+	require.NoError(t, author.CreateChildBranch(t.Context(), "feature"))
+	commitFile(t, author, "f")
+	run("merge", "--no-edit", "--no-ff", "side")
+	require.NoError(t, author.Push(t.Context(), nil))
+	require.NoError(t, author.Checkout(t.Context(), "main"))
+	run("checkout", "-b", "archive", "HEAD~1")
+	for _, name := range []string{"o1", "o2", "o3", "o4", "o5", "o6"} {
+		commitFile(t, author, name)
+	}
+	require.NoError(t, author.Push(t.Context(), nil))
+	require.NoError(t, author.Checkout(t.Context(), "main"))
+	commitFile(t, author, "r")
+	require.NoError(t, author.Push(t.Context(), nil))
+
+	testCases := []struct {
+		name   string
+		policy PushIntegrationPolicy
+	}{
+		{
+			name:   "AlwaysRebase rebases",
+			policy: PushIntegrationPolicyAlwaysRebase,
+		},
+		{
+			name:   "RebaseOrFail rebases",
+			policy: PushIntegrationPolicyRebaseOrFail,
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			wt := cloneBareWorkTree(
+				t,
+				repoURL,
+				clientOpts,
+				&BareCloneOptions{
+					Depth: 5,
+					Refs: []string{
+						"refs/heads/feature",
+						"refs/heads/main",
+						"refs/heads/archive",
+					},
+				},
+				"feature",
+			)
+			commitFile(t, wt, "local")
+			shallow, err := wt.shallowCommits(t.Context())
+			require.NoError(t, err)
+			require.Equal(
+				t,
+				map[string]struct{}{
+					revParse(t, wt.baseRepo, "refs/heads/archive~4"): {},
+				},
+				shallow,
+			)
+
+			err = wt.IntegrateRemoteChanges(t.Context(), &IntegrationOptions{
+				TargetBranch:      "main",
+				IntegrationPolicy: testCase.policy,
+			})
+			require.NoError(t, err)
+			_, err = libExec.Exec(wt.buildGitCommand(
+				t.Context(),
+				"merge-base", "--is-ancestor", "refs/remotes/origin/main", "HEAD",
+			))
+			require.NoError(t, err)
+			require.Empty(t, gitOutput(
+				t, wt.baseRepo,
+				"rev-list", "--merges", "HEAD", "^refs/remotes/origin/main", "--",
+			))
+			require.Equal(t, "local", subject(t, wt.baseRepo, "HEAD"))
+		})
+	}
+}
+
 func Test_workTree_merge(t *testing.T) {
 	testServer, testRepoURL, testRepoCreds := setupRemoteRepo(
 		t,

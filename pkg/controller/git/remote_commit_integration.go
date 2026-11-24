@@ -548,27 +548,29 @@ func (w *workTree) commitsToReplay(
 	return strings.Split(output, "\n"), nil
 }
 
-// mayReplaySharedCommits returns true if the repository is shallow and a rebase
-// of the current branch onto the specified already-fetched remote ref would
-// replay a merge commit. Through one side of such a merge, HEAD can reach a
-// commit that remoteRef reaches only through a shallow boundary, which hides
-// the commit from it. Git then believes remoteRef lacks the commit, and a
+// mayReplaySharedCommits returns true if a rebase of the current branch onto
+// the specified already-fetched remote ref would replay a merge commit while
+// remoteRef reaches a shallow boundary. Through one side of such a merge, HEAD
+// can reach a commit that remoteRef reaches only through that boundary, which
+// hides the commit from it. Git then believes remoteRef lacks the commit, and a
 // rebase would replay it even though remoteRef has it. Without a merge to
 // replay, this cannot happen, provided no shallow boundary lies within
-// HEAD...remoteRef.
+// HEAD...remoteRef. Nor can it happen if remoteRef reaches no shallow boundary,
+// since its history is then complete.
 //
-// In a shallow repository, equivalent to:
+// In a shallow repository, true if both of these print something:
 //
 //	git rev-list --merges -n 1 HEAD ^<remoteRef> [^<fork point>] --
+//	git rev-list <remoteRef> -- | grep -Fxf $(git rev-parse --git-path shallow)
 func (w *workTree) mayReplaySharedCommits(
 	ctx context.Context,
 	remoteRef string,
 ) (bool, error) {
-	shallow, err := w.isShallow(ctx)
+	shallow, err := w.shallowCommits(ctx)
 	if err != nil {
 		return false, err
 	}
-	if !shallow {
+	if len(shallow) == 0 {
 		return false, nil
 	}
 	revs, err := w.replayRange(ctx, remoteRef)
@@ -585,7 +587,14 @@ func (w *workTree) mayReplaySharedCommits(
 			"error listing merge commits to replay: %w", err,
 		)
 	}
-	return strings.TrimSpace(string(res)) != "", nil
+	if strings.TrimSpace(string(res)) == "" {
+		return false, nil
+	}
+	reachable, err := w.reachableCommits(ctx, remoteRef)
+	if err != nil {
+		return false, err
+	}
+	return setsOverlap(reachable, shallow), nil
 }
 
 // replayRange returns the revisions selecting the commits that a rebase of the
@@ -678,6 +687,31 @@ func (w *workTree) symmetricDiff(
 	if err != nil {
 		return nil, fmt.Errorf(
 			"error listing symmetric difference HEAD...%s: %w", remoteRef, err,
+		)
+	}
+	commits := make(map[string]struct{})
+	for line := range strings.SplitSeq(string(res), "\n") {
+		if sha := strings.TrimSpace(line); sha != "" {
+			commits[sha] = struct{}{}
+		}
+	}
+	return commits, nil
+}
+
+// reachableCommits returns the set of commit SHAs reachable from the specified
+// ref.
+//
+// Equivalent to:
+//
+//	git rev-list <ref> --
+func (w *workTree) reachableCommits(
+	ctx context.Context,
+	ref string,
+) (map[string]struct{}, error) {
+	res, err := libExec.Exec(w.buildGitCommand(ctx, "rev-list", ref, "--"))
+	if err != nil {
+		return nil, fmt.Errorf(
+			"error listing commits reachable from %q: %w", ref, err,
 		)
 	}
 	commits := make(map[string]struct{})
