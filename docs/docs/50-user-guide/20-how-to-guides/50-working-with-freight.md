@@ -92,10 +92,9 @@ over its alias.
 
 :::
 
-By default, the freight timeline shows the `Warehouse` name for each freight.
-You can also enable alias display in the freight timeline filter: click the _funnel icon_ in the freight timeline, then check the box next to <Hlt>Alias</Hlt> to show alias names on the freight timeline:
-
-![Freight Alias Name](./img/freight-alias-name.png)
+The freight timeline shows the name of the `Warehouse` that produced each piece
+of freight, along with its alias. To show or hide aliases, click the _gear icon_
+in the pipeline toolbar, then turn the <Hlt>Alias</Hlt> switch on or off.
 
 :::note
 

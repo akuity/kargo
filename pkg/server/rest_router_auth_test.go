@@ -118,16 +118,10 @@ func TestSetupRESTRouter_authentication(t *testing.T) {
 			wantBody:          `"name":"demo"`,
 		},
 		{
-			name:       "local mode without token",
-			cfg:        config.ServerConfig{LocalMode: true},
-			wantStatus: http.StatusUnauthorized,
-			wantBody:   "no token provided",
-		},
-		{
 			name:       "public config without token",
 			path:       "/v1beta1/system/public-server-config",
 			wantStatus: http.StatusOK,
-			wantBody:   `"skipAuth":false`,
+			wantBody:   `"adminAccountEnabled":false`,
 		},
 		{
 			name:       "disabled admin login is public",

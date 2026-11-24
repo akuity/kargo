@@ -2,11 +2,12 @@ package api
 
 import (
 	"context"
+	"crypto/rand"
 	"errors"
 	"fmt"
 	"slices"
 	"strings"
-	"time"
+	"sync"
 
 	"github.com/oklog/ulid/v2"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -15,6 +16,14 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/server/user"
+)
+
+// promotionULIDMu serializes the clock read with promotionULIDEntropy.
+// ulid.Make does not, so concurrent callers can reorder names minted within
+// one millisecond.
+var (
+	promotionULIDMu      sync.Mutex
+	promotionULIDEntropy = ulid.Monotonic(rand.Reader, 0)
 )
 
 // PromotionAliasSeparator is the separator used in the alias of an inflated
@@ -120,7 +129,11 @@ func generatePromotionStyleName(prefix, freight string) string {
 		)
 	}
 
-	parts := []string{prefix, ulid.Make().String(), shortHash}
+	promotionULIDMu.Lock()
+	id := ulid.MustNew(ulid.Now(), promotionULIDEntropy)
+	promotionULIDMu.Unlock()
+
+	parts := []string{prefix, id.String(), shortHash}
 	return strings.ToLower(strings.Join(parts, promotionNameSeparator))
 }
 
@@ -162,7 +175,7 @@ func RefreshPromotion(
 			Name:      namespacedName.Name,
 		},
 	}
-	if err := patchAnnotation(ctx, c, promo, kargoapi.AnnotationKeyRefresh, time.Now().Format(time.RFC3339)); err != nil {
+	if err := RefreshObject(ctx, c, promo); err != nil {
 		return nil, fmt.Errorf("refresh: %w", err)
 	}
 	return promo, nil

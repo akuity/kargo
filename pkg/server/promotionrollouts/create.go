@@ -25,8 +25,10 @@ import (
 // @Description update strategy, or the one the body gives in its place, is
 // @Description resolved against how many that leaves; both are recorded
 // @Description with the rollout for good. A Target the Stage does not
-// @Description govern is refused. Everything else about the rollout is
-// @Description assigned by the server.
+// @Description govern is refused. So is a rollout to no Targets: while the
+// @Description Stage governs none, the response is a 409, and the same
+// @Description request succeeds once its selectors match a Target.
+// @Description Everything else about the rollout is assigned by the server.
 // @Description This is a promotion: it requires the promote verb on the
 // @Description Stage. A server that does not create PromotionRollouts
 // @Description responds 501.

@@ -78,7 +78,7 @@ func (n *newestBuildSelector) Select(
 		return nil, fmt.Errorf("error retrieving images for all matched tags: %w", err)
 	}
 	if len(images) == 0 {
-		// This shouldn't happen
+		logger.Trace("no images matched criteria")
 		return nil, nil
 	}
 
@@ -139,7 +139,7 @@ func (n *newestBuildSelector) getImagesByTags(
 		go func(tag string) {
 			defer wg.Done()
 			defer metaSem.Release(1)
-			image, err := n.repoClient.getImageByTag(ctx, tag, n.platformConstraint)
+			image, err := n.repoClient.getImageByTag(ctx, tag, n.platformConstraint, n.filterExpression)
 			if err != nil {
 				// Report the error right away or not at all. errCh is a buffered
 				// channel with room for one error, so if we can't send the error
@@ -152,7 +152,7 @@ func (n *newestBuildSelector) getImagesByTags(
 				return
 			}
 			if image == nil {
-				// This shouldn't happen
+				// Didn't match the platform constraint or filter expression
 				return
 			}
 			// imageCh is buffered and sized appropriately, so this will never block.

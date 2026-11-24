@@ -14,7 +14,7 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/argocd"
 	"github.com/akuity/kargo/pkg/expressions"
-	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
+	"github.com/akuity/kargo/pkg/x/promotion/stepconfig"
 )
 
 // Promotion is a struct that contains common fields for promotion-related events.
@@ -270,7 +270,7 @@ func newPromotion(
 		if step.Uses != "argocd-update" || step.Config == nil {
 			continue
 		}
-		var cfg builtin.ArgoCDUpdateConfig
+		var cfg stepconfig.ArgoCDUpdateConfig
 		if step.Config == nil {
 			continue
 		}

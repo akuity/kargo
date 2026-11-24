@@ -19,7 +19,7 @@ import (
 	"github.com/akuity/kargo/pkg/credentials"
 	"github.com/akuity/kargo/pkg/gitprovider"
 	"github.com/akuity/kargo/pkg/promotion"
-	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
+	"github.com/akuity/kargo/pkg/x/promotion/stepconfig"
 )
 
 func Test_gitPusherConfigFromEnv(t *testing.T) {
@@ -280,10 +280,10 @@ func Test_gitPusher_run(t *testing.T) {
 				WorkDir:   workDir,
 				Root:      newTestRoot(t, workDir),
 			},
-			builtin.GitPushConfig{
+			stepconfig.GitPushConfig{
 				Path:                 "master",
 				GenerateTargetBranch: true,
-				Provider:             ptr.To(builtin.Provider(fakeGitProviderName)),
+				Provider:             ptr.To(stepconfig.Provider(fakeGitProviderName)),
 			},
 		)
 		require.NoError(t, err)
@@ -309,7 +309,7 @@ func Test_gitPusher_run(t *testing.T) {
 				WorkDir:   workDir,
 				Root:      newTestRoot(t, workDir),
 			},
-			builtin.GitPushConfig{
+			stepconfig.GitPushConfig{
 				Path: "master",
 				Tag:  "v1.0.0",
 			},
@@ -332,7 +332,7 @@ func Test_gitPushPusher_run_escapingSymlink(t *testing.T) {
 	res, err := (&gitPushPusher{}).run(
 		t.Context(),
 		newTestStepContext(t, workDir),
-		builtin.GitPushConfig{Path: "out/repo"},
+		stepconfig.GitPushConfig{Path: "out/repo"},
 	)
 	require.ErrorContains(t, err, "path escapes from parent")
 	require.Equal(t, kargoapi.PromotionStepStatusErrored, res.Status)

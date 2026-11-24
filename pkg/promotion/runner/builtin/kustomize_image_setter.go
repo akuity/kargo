@@ -20,7 +20,7 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/controller/freight"
 	"github.com/akuity/kargo/pkg/promotion"
-	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
+	"github.com/akuity/kargo/pkg/x/promotion/stepconfig"
 	intyaml "github.com/akuity/kargo/pkg/yaml"
 )
 
@@ -77,15 +77,15 @@ func (k *kustomizeImageSetter) Run(
 }
 
 // convert validates kustomizeImageSetter configuration against a JSON schema
-// and converts it into a builtin.KustomizeSetImageConfig struct.
-func (k *kustomizeImageSetter) convert(cfg promotion.Config) (builtin.KustomizeSetImageConfig, error) {
-	return validateAndConvert[builtin.KustomizeSetImageConfig](k.schemaLoader, cfg, stepKindKustomizeSetImage)
+// and converts it into a stepconfig.KustomizeSetImageConfig struct.
+func (k *kustomizeImageSetter) convert(cfg promotion.Config) (stepconfig.KustomizeSetImageConfig, error) {
+	return validateAndConvert[stepconfig.KustomizeSetImageConfig](k.schemaLoader, cfg, stepKindKustomizeSetImage)
 }
 
 func (k *kustomizeImageSetter) run(
 	ctx context.Context,
 	stepCtx *promotion.StepContext,
-	cfg builtin.KustomizeSetImageConfig,
+	cfg stepconfig.KustomizeSetImageConfig,
 ) (promotion.StepResult, error) {
 	// Find the Kustomization file.
 	kusPath, err := findKustomization(stepCtx.Root, cfg.Path)
@@ -122,7 +122,7 @@ func (k *kustomizeImageSetter) run(
 }
 
 func (k *kustomizeImageSetter) buildTargetImagesFromConfig(
-	images []builtin.Image,
+	images []stepconfig.Image,
 ) map[string]kustypes.Image {
 	targetImages := make(map[string]kustypes.Image, len(images))
 	for _, img := range images {

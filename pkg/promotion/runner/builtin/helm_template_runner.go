@@ -28,7 +28,7 @@ import (
 	"github.com/akuity/kargo/pkg/credentials"
 	"github.com/akuity/kargo/pkg/helm"
 	"github.com/akuity/kargo/pkg/promotion"
-	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
+	"github.com/akuity/kargo/pkg/x/promotion/stepconfig"
 )
 
 const stepKindHelmTemplate = "helm-template"
@@ -48,24 +48,24 @@ func init() {
 }
 
 // outLayoutIsFlat returns true if the output layout is "flat".
-func outLayoutIsFlat(cfg builtin.HelmTemplateConfig) bool {
-	return cfg.OutLayout != nil && *cfg.OutLayout == builtin.Flat
+func outLayoutIsFlat(cfg stepconfig.HelmTemplateConfig) bool {
+	return cfg.OutLayout != nil && *cfg.OutLayout == stepconfig.Flat
 }
 
 // outLayoutIsHelm returns true if the output layout is "helm" or not specified
 // (default).
-func outLayoutIsHelm(cfg builtin.HelmTemplateConfig) bool {
+func outLayoutIsHelm(cfg stepconfig.HelmTemplateConfig) bool {
 	if cfg.OutLayout == nil {
 		return true
 	}
-	return cfg.OutLayout != nil && *cfg.OutLayout == builtin.Helm
+	return cfg.OutLayout != nil && *cfg.OutLayout == stepconfig.Helm
 }
 
 // outPathIsFile returns true if the output path contains a YAML extension.
 // When true, all rendered manifests will be written to a single file.
 // Otherwise, the output path is considered to target a directory where the
 // rendered manifests will be written according to the specified outLayout.
-func outPathIsFile(cfg builtin.HelmTemplateConfig) bool {
+func outPathIsFile(cfg stepconfig.HelmTemplateConfig) bool {
 	ext := filepath.Ext(cfg.OutPath)
 	return ext == ".yaml" || ext == ".yml"
 }
@@ -100,14 +100,14 @@ func (h *helmTemplateRunner) Run(
 	return h.run(ctx, stepCtx, cfg)
 }
 
-func (h *helmTemplateRunner) convert(cfg promotion.Config) (builtin.HelmTemplateConfig, error) {
-	return validateAndConvert[builtin.HelmTemplateConfig](h.schemaLoader, cfg, stepKindHelmTemplate)
+func (h *helmTemplateRunner) convert(cfg promotion.Config) (stepconfig.HelmTemplateConfig, error) {
+	return validateAndConvert[stepconfig.HelmTemplateConfig](h.schemaLoader, cfg, stepKindHelmTemplate)
 }
 
 func (h *helmTemplateRunner) run(
 	ctx context.Context,
 	stepCtx *promotion.StepContext,
-	cfg builtin.HelmTemplateConfig,
+	cfg stepconfig.HelmTemplateConfig,
 ) (promotion.StepResult, error) {
 	// Helm and its dependency manager read and write the chart by path and
 	// follow symlinks while doing so, so nothing beneath it may lead outside
@@ -205,7 +205,7 @@ func (h *helmTemplateRunner) buildDependencies(
 // into last as overrides
 func (h *helmTemplateRunner) composeValues(
 	stepCtx *promotion.StepContext,
-	cfg builtin.HelmTemplateConfig,
+	cfg stepconfig.HelmTemplateConfig,
 ) (map[string]any, error) {
 	valueOpts := &values.Options{}
 	for _, p := range cfg.ValuesFiles {
@@ -249,7 +249,7 @@ func (h *helmTemplateRunner) composeValues(
 // configuration. It sets the action to dry-run mode and client-only mode,
 // meaning that it will not install the chart, but only render the manifest.
 func (h *helmTemplateRunner) newInstallAction(
-	cfg builtin.HelmTemplateConfig,
+	cfg stepconfig.HelmTemplateConfig,
 	project, absOutPath string,
 ) (*action.Install, error) {
 	client := action.NewInstall(&action.Configuration{})
@@ -296,7 +296,7 @@ func (h *helmTemplateRunner) checkDependencies(chartRequested *chart.Chart) erro
 // root, based on the configured layout.
 func (h *helmTemplateRunner) writeOutput(
 	root *os.Root,
-	cfg builtin.HelmTemplateConfig,
+	cfg stepconfig.HelmTemplateConfig,
 	rls *release.Release,
 	outPath string,
 ) error {

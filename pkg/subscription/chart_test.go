@@ -39,7 +39,7 @@ func Test_chartSubscriber_ApplySubscriptionDefaults(t *testing.T) {
 	})
 }
 
-func Test_helmRepoURLRegex(t *testing.T) {
+func Test_chartSchema_repoURL(t *testing.T) {
 	cases := map[string]bool{
 		"":                                 false,
 		"ftp://charts.example":             false,
@@ -57,7 +57,7 @@ func Test_helmRepoURLRegex(t *testing.T) {
 	}
 	for input, expected := range cases {
 		t.Run(input, func(t *testing.T) {
-			require.Equal(t, expected, helmRepoURLRegex.MatchString(input))
+			require.Equal(t, expected, schemaAccepts(t, "chart", "repoURL", input))
 		})
 	}
 }
@@ -69,130 +69,25 @@ func Test_chartSubscriber_ValidateSubscription(t *testing.T) {
 		assertions func(*testing.T, field.ErrorList)
 	}{
 		{
-			name: "RepoURL empty",
-			sub: kargoapi.ChartSubscription{
-				RepoURL: "",
-			},
-			assertions: func(t *testing.T, errs field.ErrorList) {
-				require.NotNil(t, errs)
-				require.True(t, len(errs) > 0)
-				require.Equal(t, "chart.repoURL", errs[0].Field)
-				require.Equal(t, field.ErrorTypeInvalid, errs[0].Type)
-			},
-		},
-		{
-			name: "RepoURL invalid format",
-			sub: kargoapi.ChartSubscription{
-				RepoURL: "bogus-url",
-			},
-			assertions: func(t *testing.T, errs field.ErrorList) {
-				require.NotNil(t, errs)
-				require.True(t, len(errs) > 0)
-				require.Equal(t, "chart.repoURL", errs[0].Field)
-				require.Equal(t, field.ErrorTypeInvalid, errs[0].Type)
-			},
-		},
-		{
 			name: "invalid semverConstraint",
 			sub: kargoapi.ChartSubscription{
-				RepoURL:          "https://charts.example.com",
-				Name:             "mychart",
+				RepoURL:          "oci://ghcr.io/example/chart",
 				SemverConstraint: "bogus",
 			},
 			assertions: func(t *testing.T, errs field.ErrorList) {
-				require.NotNil(t, errs)
-				require.True(t, len(errs) > 0)
+				require.Len(t, errs, 1)
 				require.Equal(t, "chart.semverConstraint", errs[0].Field)
 				require.Equal(t, field.ErrorTypeInvalid, errs[0].Type)
 			},
 		},
 		{
-			name: "oci repoURL with name",
-			sub: kargoapi.ChartSubscription{
-				RepoURL: "oci://ghcr.io/example/chart",
-				Name:    "should-not-be-here",
-			},
-			assertions: func(t *testing.T, errs field.ErrorList) {
-				require.NotNil(t, errs)
-				require.True(t, len(errs) > 0)
-				require.Equal(t, "chart.name", errs[0].Field)
-				require.Equal(t, field.ErrorTypeInvalid, errs[0].Type)
-				require.Contains(t, errs[0].Detail, "oci://")
-			},
-		},
-		{
-			name: "https repoURL without name",
-			sub: kargoapi.ChartSubscription{
-				RepoURL: "https://charts.example.com",
-			},
-			assertions: func(t *testing.T, errs field.ErrorList) {
-				require.NotNil(t, errs)
-				require.True(t, len(errs) > 0)
-				require.Equal(t, "chart.name", errs[0].Field)
-				require.Equal(t, field.ErrorTypeInvalid, errs[0].Type)
-				require.Contains(t, errs[0].Detail, "https://")
-			},
-		},
-		{
-			name: "http repoURL without name",
-			sub: kargoapi.ChartSubscription{
-				RepoURL: "http://charts.example.com",
-			},
-			assertions: func(t *testing.T, errs field.ErrorList) {
-				require.NotNil(t, errs)
-				require.True(t, len(errs) > 0)
-				require.Equal(t, "chart.name", errs[0].Field)
-				require.Equal(t, field.ErrorTypeInvalid, errs[0].Type)
-				require.Contains(t, errs[0].Detail, "http://")
-			},
-		},
-		{
-			name: "DiscoveryLimit too small",
-			sub: kargoapi.ChartSubscription{
-				RepoURL:        "oci://ghcr.io/example/chart",
-				DiscoveryLimit: 0,
-			},
-			assertions: func(t *testing.T, errs field.ErrorList) {
-				require.NotNil(t, errs)
-				require.True(t, len(errs) > 0)
-				require.Equal(t, "chart.discoveryLimit", errs[0].Field)
-				require.Equal(t, field.ErrorTypeInvalid, errs[0].Type)
-			},
-		},
-		{
-			name: "DiscoveryLimit too large",
-			sub: kargoapi.ChartSubscription{
-				RepoURL:        "oci://ghcr.io/example/chart",
-				DiscoveryLimit: 101,
-			},
-			assertions: func(t *testing.T, errs field.ErrorList) {
-				require.NotNil(t, errs)
-				require.True(t, len(errs) > 0)
-				require.Equal(t, "chart.discoveryLimit", errs[0].Field)
-				require.Equal(t, field.ErrorTypeInvalid, errs[0].Type)
-			},
-		},
-		{
-			name: "valid oci chart",
+			name: "valid",
 			sub: kargoapi.ChartSubscription{
 				RepoURL:          "oci://ghcr.io/example/chart",
 				SemverConstraint: "^1.0.0",
-				DiscoveryLimit:   20,
 			},
 			assertions: func(t *testing.T, errs field.ErrorList) {
-				require.Nil(t, errs)
-			},
-		},
-		{
-			name: "valid https chart",
-			sub: kargoapi.ChartSubscription{
-				RepoURL:          "https://charts.example.com",
-				Name:             "mychart",
-				SemverConstraint: "^1.0.0",
-				DiscoveryLimit:   20,
-			},
-			assertions: func(t *testing.T, errs field.ErrorList) {
-				require.Nil(t, errs)
+				require.Empty(t, errs)
 			},
 		},
 	}

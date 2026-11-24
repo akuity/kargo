@@ -10,7 +10,7 @@ import (
 	cloudevents "github.com/cloudevents/sdk-go/v2/event"
 	"github.com/kelseyhightower/envconfig"
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/trace"
+	"go.opentelemetry.io/otel/attribute"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -218,6 +218,10 @@ func SetupReconcilerWithManager(
 				&argocd.Application{},
 				&UpdatedArgoCDAppHandler[*argocd.Application]{
 					kargoClient: kargoMgr.GetClient(),
+					shardPredicate: controller.ResponsibleFor[kargoapi.Promotion]{
+						IsDefaultController: cfg.IsDefaultController,
+						ShardName:           cfg.ShardName,
+					},
 				},
 				predicate.Or(
 					ArgoCDAppOperationCompleted[*argocd.Application]{
@@ -288,16 +292,18 @@ var tracer = otel.Tracer("github.com/akuity/kargo/pkg/controller/promotions")
 func (r *reconciler) Reconcile(
 	ctx context.Context,
 	req ctrl.Request,
-) (ctrl.Result, error) {
-	ctx, span := tracer.Start(
+) (_ ctrl.Result, err error) {
+	ctx = telemetry.ContextWithAttributes(
 		ctx,
-		"Reconcile Promotion",
-		trace.WithAttributes(
-			telemetry.ProjectKey.String(req.Namespace),
-			telemetry.PromotionKey.String(req.Name),
-		),
+		telemetry.ProjectKey.String(req.Namespace),
+		telemetry.PromotionKey.String(req.Name),
 	)
-	defer span.End()
+	ctx, span := telemetry.StartSpan(ctx, tracer, "Reconcile Promotion")
+	defer func() {
+		telemetry.RecordError(span, err)
+		span.End()
+	}()
+	ctx = telemetry.ContextWithLogValues(ctx)
 
 	logger := logging.LoggerFromContext(ctx).WithValues(
 		"namespace", req.Namespace,
@@ -311,6 +317,15 @@ func (r *reconciler) Reconcile(
 	cachedPromo, err := api.GetPromotion(ctx, r.kargoClient, req.NamespacedName)
 	if err != nil {
 		return ctrl.Result{}, err
+	}
+	if cachedPromo != nil && telemetry.Enabled() {
+		// Spans under this one carry the Promotion's Stage and Freight.
+		attrs := []attribute.KeyValue{
+			telemetry.StageKey.String(cachedPromo.Spec.Stage),
+			telemetry.FreightKey.String(cachedPromo.Spec.Freight),
+		}
+		span.SetAttributes(attrs...)
+		ctx = telemetry.ContextWithAttributes(ctx, attrs...)
 	}
 	if cachedPromo == nil || cachedPromo.Status.Phase.IsTerminal() {
 		// Ignore if not found or already finished. cachedPromo might be nil if
@@ -363,6 +378,12 @@ func (r *reconciler) Reconcile(
 		"stage", promo.Spec.Stage,
 		"freight", promo.Spec.Freight,
 	)
+	if freight != nil && telemetry.Enabled() {
+		// The Freight's name is already on the span.
+		attrs := telemetry.FreightDetailAttributes(freight)
+		span.SetAttributes(attrs...)
+		ctx = telemetry.ContextWithAttributes(ctx, attrs...)
+	}
 
 	// Terminate the Promotion if requested by the user.
 	if req, ok := api.AbortPromotionAnnotationValue(

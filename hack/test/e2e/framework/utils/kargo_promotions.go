@@ -3,15 +3,17 @@ package utils
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"strings"
 	"testing"
 	"time"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	"github.com/akuity/kargo/pkg/client/watch"
 	"github.com/akuity/kargo/pkg/x/client/generated"
+	"github.com/akuity/kargo/pkg/x/client/watch"
 )
 
 // PromoteAndWaitForPhase starts a promotion of freightName to stage and waits
@@ -189,9 +191,13 @@ func watchPromotionForPhase(
 		select {
 		case event := <-watchChan:
 			if event.Object != nil {
-				current := event.Object.Status.Phase
+				promo, err := fromModel[kargoapi.Promotion](event.Object)
+				if err != nil {
+					return nil, err
+				}
+				current := promo.Status.Phase
 				if current == phase || current.IsTerminal() {
-					return event.Object, nil
+					return promo, nil
 				}
 			}
 		case err := <-errorChan:
@@ -225,13 +231,17 @@ func WaitForPullRequestID(
 		select {
 		case event := <-watchChan:
 			if event.Object != nil {
-				if id, ok := pullRequestIDFromState(event.Object, stepAlias); ok {
+				promo, err := fromModel[kargoapi.Promotion](event.Object)
+				if err != nil {
+					t.Fatalf("error reading promotion %q: %v", name, err)
+				}
+				if id, ok := pullRequestIDFromState(promo, stepAlias); ok {
 					return id
 				}
-				if event.Object.Status.Phase.IsTerminal() {
+				if promo.Status.Phase.IsTerminal() {
 					t.Fatalf(
 						"promotion %q reached terminal phase %q before recording a pull request id. Full status: %v",
-						name, event.Object.Status.Phase, event.Object.Status)
+						name, promo.Status.Phase, promo.Status)
 				}
 			}
 		case err := <-errorChan:
@@ -302,8 +312,15 @@ func WaitForLatestFreight(ctx context.Context, project, origin string, timeout t
 	for {
 		select {
 		case event := <-watchChan:
-			if event.Object != nil && event.Object.Status.LastFreightID != "" {
-				return event.Object.Status.LastFreightID, nil
+			if event.Object == nil {
+				continue
+			}
+			warehouse, err := fromModel[kargoapi.Warehouse](event.Object)
+			if err != nil {
+				return "", err
+			}
+			if warehouse.Status.LastFreightID != "" {
+				return warehouse.Status.LastFreightID, nil
 			}
 		case err := <-errorChan:
 			return "", err
@@ -325,8 +342,15 @@ func WaitForFreight(
 	for {
 		select {
 		case event := <-watchChan:
-			if filter(event.Object) {
-				return event.Object, nil
+			if event.Object == nil {
+				continue
+			}
+			freight, err := fromModel[kargoapi.Freight](event.Object)
+			if err != nil {
+				return nil, err
+			}
+			if filter(freight) {
+				return freight, nil
 			}
 		case err := <-errorChan:
 			return nil, err
@@ -382,13 +406,17 @@ func WaitForStageVerified(
 			if event.Object == nil {
 				continue
 			}
-			info := currentStageVerification(event.Object)
+			stageObj, err := fromModel[kargoapi.Stage](event.Object)
+			if err != nil {
+				t.Fatalf("error reading stage %q: %v", stage, err)
+			}
+			info := currentStageVerification(stageObj)
 			if info == nil {
 				continue
 			}
 			switch info.Phase {
 			case kargoapi.VerificationPhaseSuccessful:
-				return event.Object
+				return stageObj
 			case kargoapi.VerificationPhaseFailed,
 				kargoapi.VerificationPhaseError,
 				kargoapi.VerificationPhaseAborted,
@@ -428,4 +456,18 @@ func GetFreight(ctx context.Context, project, freightID string) (*generated.Frei
 		return nil, err
 	}
 	return freightOK, nil
+}
+
+// fromModel converts a generated client model into the Kargo API type T by way
+// of its JSON representation.
+func fromModel[T any](model any) (*T, error) {
+	data, err := json.Marshal(model)
+	if err != nil {
+		return nil, fmt.Errorf("error marshaling %T: %w", model, err)
+	}
+	obj := new(T)
+	if err = json.Unmarshal(data, obj); err != nil {
+		return nil, fmt.Errorf("error unmarshaling into %T: %w", obj, err)
+	}
+	return obj, nil
 }

@@ -16,7 +16,7 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/credentials"
 	"github.com/akuity/kargo/pkg/promotion"
-	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
+	"github.com/akuity/kargo/pkg/x/promotion/stepconfig"
 )
 
 func Test_helmTemplateRunner_convert(t *testing.T) {
@@ -302,7 +302,7 @@ func Test_helmTemplateRunner_run(t *testing.T) {
 	tests := []struct {
 		name       string
 		files      map[string]string
-		cfg        builtin.HelmTemplateConfig
+		cfg        stepconfig.HelmTemplateConfig
 		assertions func(*testing.T, string, promotion.StepResult, error)
 	}{
 		{
@@ -322,7 +322,7 @@ data:
   value: {{ .Values.key }}
 `,
 			},
-			cfg: builtin.HelmTemplateConfig{
+			cfg: stepconfig.HelmTemplateConfig{
 				Path:        "charts/test-chart",
 				ValuesFiles: []string{"values.yaml"},
 				OutPath:     "output.yaml",
@@ -374,11 +374,11 @@ data:
   secret: dGVzdA==
 `,
 			},
-			cfg: builtin.HelmTemplateConfig{
+			cfg: stepconfig.HelmTemplateConfig{
 				Path:        "charts/test-chart",
 				ValuesFiles: []string{"values.yaml"},
 				OutPath:     "output",
-				OutLayout:   ptr.To(builtin.Flat),
+				OutLayout:   ptr.To(stepconfig.Flat),
 				ReleaseName: "test-release",
 				Namespace:   "test-namespace",
 			},
@@ -430,7 +430,7 @@ data:
   value2: {{ .Values.key2 }}
 `,
 			},
-			cfg: builtin.HelmTemplateConfig{
+			cfg: stepconfig.HelmTemplateConfig{
 				Path:        "charts/test-chart",
 				ValuesFiles: []string{"values1.yaml", "values2.yaml"},
 				OutPath:     "output.yaml",
@@ -476,10 +476,10 @@ data:
   value2: {{ .Values.key2 }}
 `,
 			},
-			cfg: builtin.HelmTemplateConfig{
+			cfg: stepconfig.HelmTemplateConfig{
 				Path:        "charts/test-chart",
 				ValuesFiles: []string{"values.yaml"},
-				SetValues:   []builtin.SetValues{{Key: "key2", Value: "value2"}},
+				SetValues:   []stepconfig.SetValues{{Key: "key2", Value: "value2"}},
 				OutPath:     "output.yaml",
 				ReleaseName: "test-release",
 				Namespace:   "test-namespace",
@@ -522,9 +522,9 @@ data:
   normalValue: {{ .Values.normalKey }}
 `,
 			},
-			cfg: builtin.HelmTemplateConfig{
+			cfg: stepconfig.HelmTemplateConfig{
 				Path: "charts/test-chart",
-				SetValues: []builtin.SetValues{
+				SetValues: []stepconfig.SetValues{
 					{Key: "literalKey", Value: "foo,bar,baz", Literal: true},
 					{Key: "normalKey", Value: "normal-string", Literal: false},
 				},
@@ -562,7 +562,7 @@ data:
   value: {{ .Values.key }}
 `,
 			},
-			cfg: builtin.HelmTemplateConfig{
+			cfg: stepconfig.HelmTemplateConfig{
 				Path:        "charts/test-chart",
 				ValuesFiles: []string{"values.yaml"},
 				OutPath:     "output/",
@@ -607,7 +607,7 @@ data:
   value: {{ .Values.key }}
 `,
 			},
-			cfg: builtin.HelmTemplateConfig{
+			cfg: stepconfig.HelmTemplateConfig{
 				Path:           "charts/test-chart",
 				ValuesFiles:    []string{"values.yaml"},
 				OutPath:        "output/",
@@ -638,7 +638,7 @@ data:
 		},
 		{
 			name: "missing values file",
-			cfg: builtin.HelmTemplateConfig{
+			cfg: stepconfig.HelmTemplateConfig{
 				ValuesFiles: []string{"non-existent.yaml"},
 			},
 			assertions: func(t *testing.T, workDir string, result promotion.StepResult, err error) {
@@ -650,7 +650,7 @@ data:
 		},
 		{
 			name: "invalid chart",
-			cfg: builtin.HelmTemplateConfig{
+			cfg: stepconfig.HelmTemplateConfig{
 				Path: "./",
 			},
 			assertions: func(t *testing.T, workDir string, result promotion.StepResult, err error) {
@@ -667,7 +667,7 @@ data:
 name: test-chart
 version: 0.1.0`,
 			},
-			cfg: builtin.HelmTemplateConfig{
+			cfg: stepconfig.HelmTemplateConfig{
 				Path:        "charts/test-chart",
 				KubeVersion: "invalid",
 			},
@@ -693,7 +693,7 @@ data:
   value: {{ .Values.nonexistent | quote }}}
 `,
 			},
-			cfg: builtin.HelmTemplateConfig{
+			cfg: stepconfig.HelmTemplateConfig{
 				Path:    "charts/test-chart",
 				OutPath: "output.yaml",
 			},
@@ -718,7 +718,7 @@ metadata:
   name: {{ .Release.Name }}-configmap
 `,
 			},
-			cfg: builtin.HelmTemplateConfig{
+			cfg: stepconfig.HelmTemplateConfig{
 				Path:    "./chart/",
 				OutPath: "output.yaml",
 			},
@@ -757,16 +757,16 @@ func Test_helmTemplateRunner_composeValues(t *testing.T) {
 	tests := []struct {
 		name           string
 		workDir        string
-		cfg            builtin.HelmTemplateConfig
+		cfg            stepconfig.HelmTemplateConfig
 		valuesContents map[string]string
 		assertions     func(*testing.T, map[string]any, error)
 	}{
 		{
 			name:    "successful composition",
 			workDir: t.TempDir(),
-			cfg: builtin.HelmTemplateConfig{
+			cfg: stepconfig.HelmTemplateConfig{
 				ValuesFiles: []string{"values1.yaml", "values2.yaml"},
-				SetValues:   []builtin.SetValues{{Key: "key3", Value: "value3"}},
+				SetValues:   []stepconfig.SetValues{{Key: "key3", Value: "value3"}},
 			},
 			valuesContents: map[string]string{
 				"values1.yaml": "key1: value1",
@@ -784,9 +784,9 @@ func Test_helmTemplateRunner_composeValues(t *testing.T) {
 		{
 			name:    "successful composition with no files",
 			workDir: t.TempDir(),
-			cfg: builtin.HelmTemplateConfig{
+			cfg: stepconfig.HelmTemplateConfig{
 				ValuesFiles: []string{},
-				SetValues:   []builtin.SetValues{{Key: "key3", Value: "value3"}},
+				SetValues:   []stepconfig.SetValues{{Key: "key3", Value: "value3"}},
 			},
 			valuesContents: map[string]string{},
 			assertions: func(t *testing.T, result map[string]any, err error) {
@@ -799,9 +799,9 @@ func Test_helmTemplateRunner_composeValues(t *testing.T) {
 		{
 			name:    "successful composition with no set values",
 			workDir: t.TempDir(),
-			cfg: builtin.HelmTemplateConfig{
+			cfg: stepconfig.HelmTemplateConfig{
 				ValuesFiles: []string{"values1.yaml", "values2.yaml"},
-				SetValues:   []builtin.SetValues{},
+				SetValues:   []stepconfig.SetValues{},
 			},
 			valuesContents: map[string]string{
 				"values1.yaml": "key1: value1",
@@ -817,9 +817,9 @@ func Test_helmTemplateRunner_composeValues(t *testing.T) {
 		{
 			name:    "file not found",
 			workDir: t.TempDir(),
-			cfg: builtin.HelmTemplateConfig{
+			cfg: stepconfig.HelmTemplateConfig{
 				ValuesFiles: []string{"non_existent.yaml"},
-				SetValues:   []builtin.SetValues{},
+				SetValues:   []stepconfig.SetValues{},
 			},
 			assertions: func(t *testing.T, result map[string]any, err error) {
 				assert.Error(t, err)
@@ -829,10 +829,10 @@ func Test_helmTemplateRunner_composeValues(t *testing.T) {
 		{
 			name:    "ignore missing value files - file missing",
 			workDir: t.TempDir(),
-			cfg: builtin.HelmTemplateConfig{
+			cfg: stepconfig.HelmTemplateConfig{
 				ValuesFiles:             []string{"non_existent.yaml"},
 				IgnoreMissingValueFiles: true,
-				SetValues:               []builtin.SetValues{{Key: "key1", Value: "value1"}},
+				SetValues:               []stepconfig.SetValues{{Key: "key1", Value: "value1"}},
 			},
 			assertions: func(t *testing.T, result map[string]any, err error) {
 				assert.NoError(t, err)
@@ -844,7 +844,7 @@ func Test_helmTemplateRunner_composeValues(t *testing.T) {
 		{
 			name:    "ignore missing value files - file exists",
 			workDir: t.TempDir(),
-			cfg: builtin.HelmTemplateConfig{
+			cfg: stepconfig.HelmTemplateConfig{
 				ValuesFiles:             []string{"values.yaml"},
 				IgnoreMissingValueFiles: true,
 			},
@@ -861,7 +861,7 @@ func Test_helmTemplateRunner_composeValues(t *testing.T) {
 		{
 			name:    "ignore missing value files - mixed existing and missing",
 			workDir: t.TempDir(),
-			cfg: builtin.HelmTemplateConfig{
+			cfg: stepconfig.HelmTemplateConfig{
 				ValuesFiles:             []string{"values.yaml", "missing.yaml"},
 				IgnoreMissingValueFiles: true,
 			},
@@ -878,9 +878,9 @@ func Test_helmTemplateRunner_composeValues(t *testing.T) {
 		{
 			name:    "composition with literal values",
 			workDir: t.TempDir(),
-			cfg: builtin.HelmTemplateConfig{
+			cfg: stepconfig.HelmTemplateConfig{
 				ValuesFiles: []string{},
-				SetValues: []builtin.SetValues{
+				SetValues: []stepconfig.SetValues{
 					{Key: "normalKey", Value: "normalValue", Literal: false},
 					{Key: "literalKey", Value: "foo,bar,baz", Literal: true},
 				},
@@ -896,9 +896,9 @@ func Test_helmTemplateRunner_composeValues(t *testing.T) {
 		{
 			name:    "composition with only literal values",
 			workDir: t.TempDir(),
-			cfg: builtin.HelmTemplateConfig{
+			cfg: stepconfig.HelmTemplateConfig{
 				ValuesFiles: []string{},
-				SetValues: []builtin.SetValues{
+				SetValues: []stepconfig.SetValues{
 					{Key: "key1", Value: "foo,bar,baz", Literal: true},
 					{Key: "key2", Value: "baz,bar,foo", Literal: true},
 				},
@@ -930,14 +930,14 @@ func Test_helmTemplateRunner_composeValues(t *testing.T) {
 func Test_helmTemplateRunner_newInstallAction(t *testing.T) {
 	tests := []struct {
 		name       string
-		cfg        builtin.HelmTemplateConfig
+		cfg        stepconfig.HelmTemplateConfig
 		project    string
 		absOutPath string
 		assertions func(*testing.T, *action.Install, error)
 	}{
 		{
 			name: "default values",
-			cfg:  builtin.HelmTemplateConfig{},
+			cfg:  stepconfig.HelmTemplateConfig{},
 			assertions: func(t *testing.T, client *action.Install, err error) {
 				require.NoError(t, err)
 				assert.True(t, client.DryRun)
@@ -955,7 +955,7 @@ func Test_helmTemplateRunner_newInstallAction(t *testing.T) {
 		},
 		{
 			name: "custom values",
-			cfg: builtin.HelmTemplateConfig{
+			cfg: stepconfig.HelmTemplateConfig{
 				ReleaseName:    "custom-release",
 				UseReleaseName: true,
 				Namespace:      "custom-namespace",
@@ -978,9 +978,9 @@ func Test_helmTemplateRunner_newInstallAction(t *testing.T) {
 		},
 		{
 			name: "output directory with helm layout",
-			cfg: builtin.HelmTemplateConfig{
+			cfg: stepconfig.HelmTemplateConfig{
 				OutPath:   "output/",
-				OutLayout: ptr.To(builtin.Helm),
+				OutLayout: ptr.To(stepconfig.Helm),
 			},
 			absOutPath: "/tmp/output",
 			assertions: func(t *testing.T, client *action.Install, err error) {
@@ -990,9 +990,9 @@ func Test_helmTemplateRunner_newInstallAction(t *testing.T) {
 		},
 		{
 			name: "output directory with flat layout",
-			cfg: builtin.HelmTemplateConfig{
+			cfg: stepconfig.HelmTemplateConfig{
 				OutPath:   "output/",
-				OutLayout: ptr.To(builtin.Flat),
+				OutLayout: ptr.To(stepconfig.Flat),
 			},
 			absOutPath: "/tmp/output",
 			assertions: func(t *testing.T, client *action.Install, err error) {
@@ -1002,7 +1002,7 @@ func Test_helmTemplateRunner_newInstallAction(t *testing.T) {
 		},
 		{
 			name: "output file (YAML)",
-			cfg: builtin.HelmTemplateConfig{
+			cfg: stepconfig.HelmTemplateConfig{
 				OutPath: "output.yaml",
 			},
 			absOutPath: "/tmp/output.yaml",
@@ -1013,7 +1013,7 @@ func Test_helmTemplateRunner_newInstallAction(t *testing.T) {
 		},
 		{
 			name: "output file (YML)",
-			cfg: builtin.HelmTemplateConfig{
+			cfg: stepconfig.HelmTemplateConfig{
 				OutPath: "output.yml",
 			},
 			absOutPath: "/tmp/output.yml",
@@ -1024,7 +1024,7 @@ func Test_helmTemplateRunner_newInstallAction(t *testing.T) {
 		},
 		{
 			name:    "project used as default namespace",
-			cfg:     builtin.HelmTemplateConfig{},
+			cfg:     stepconfig.HelmTemplateConfig{},
 			project: "test-project",
 			assertions: func(t *testing.T, client *action.Install, err error) {
 				require.NoError(t, err)
@@ -1033,7 +1033,7 @@ func Test_helmTemplateRunner_newInstallAction(t *testing.T) {
 		},
 		{
 			name: "KubeVersion parsing error",
-			cfg: builtin.HelmTemplateConfig{
+			cfg: stepconfig.HelmTemplateConfig{
 				KubeVersion: "invalid",
 			},
 			assertions: func(t *testing.T, client *action.Install, err error) {
@@ -1097,14 +1097,14 @@ func Test_helmTemplateRunner_checkDependencies(t *testing.T) {
 func Test_helmTemplateRunner_writeOutput(t *testing.T) {
 	tests := []struct {
 		name       string
-		cfg        builtin.HelmTemplateConfig
+		cfg        stepconfig.HelmTemplateConfig
 		rls        *release.Release
 		setup      func(*testing.T) (outPath string)
 		assertions func(*testing.T, string, error)
 	}{
 		{
 			name: "successful write to file",
-			cfg: builtin.HelmTemplateConfig{
+			cfg: stepconfig.HelmTemplateConfig{
 				OutPath: "output.yaml",
 			},
 			rls: &release.Release{
@@ -1123,7 +1123,7 @@ func Test_helmTemplateRunner_writeOutput(t *testing.T) {
 		},
 		{
 			name: "write to non-existent directory",
-			cfg: builtin.HelmTemplateConfig{
+			cfg: stepconfig.HelmTemplateConfig{
 				OutPath: "subdir/output.yaml",
 			},
 			rls: &release.Release{
@@ -1142,7 +1142,7 @@ func Test_helmTemplateRunner_writeOutput(t *testing.T) {
 		},
 		{
 			name: "write hooks to separate files",
-			cfg: builtin.HelmTemplateConfig{
+			cfg: stepconfig.HelmTemplateConfig{
 				OutPath: "output",
 			},
 			rls: &release.Release{
@@ -1169,9 +1169,9 @@ func Test_helmTemplateRunner_writeOutput(t *testing.T) {
 		},
 		{
 			name: "write manifest and hooks to flat layout",
-			cfg: builtin.HelmTemplateConfig{
+			cfg: stepconfig.HelmTemplateConfig{
 				OutPath:   "output",
-				OutLayout: ptr.To(builtin.Flat),
+				OutLayout: ptr.To(stepconfig.Flat),
 			},
 			rls: &release.Release{
 				Manifest: `---
@@ -1238,9 +1238,9 @@ spec:
 		},
 		{
 			name: "flat layout rejects manifest metadata that would escape output dir",
-			cfg: builtin.HelmTemplateConfig{
+			cfg: stepconfig.HelmTemplateConfig{
 				OutPath:   "output",
-				OutLayout: ptr.To(builtin.Flat),
+				OutLayout: ptr.To(stepconfig.Flat),
 			},
 			rls: &release.Release{
 				Manifest: `---
@@ -1266,7 +1266,7 @@ data:
 		},
 		{
 			name: "skip test hooks",
-			cfg: builtin.HelmTemplateConfig{
+			cfg: stepconfig.HelmTemplateConfig{
 				OutPath:   "output",
 				SkipTests: true,
 			},
@@ -1292,7 +1292,7 @@ data:
 		},
 		{
 			name: "write hooks to single file",
-			cfg: builtin.HelmTemplateConfig{
+			cfg: stepconfig.HelmTemplateConfig{
 				OutPath: "output.yaml",
 			},
 			rls: &release.Release{
@@ -1321,7 +1321,7 @@ hook2: content
 		},
 		{
 			name: "disable hooks",
-			cfg: builtin.HelmTemplateConfig{
+			cfg: stepconfig.HelmTemplateConfig{
 				OutPath:      "output",
 				DisableHooks: true,
 			},
@@ -1342,7 +1342,7 @@ hook2: content
 		},
 		{
 			name: "append to existing hook file",
-			cfg: builtin.HelmTemplateConfig{
+			cfg: stepconfig.HelmTemplateConfig{
 				OutPath: "output",
 			},
 			rls: &release.Release{
@@ -1373,7 +1373,7 @@ hook2: content
 		},
 		{
 			name: "UseReleaseName with helm layout",
-			cfg: builtin.HelmTemplateConfig{
+			cfg: stepconfig.HelmTemplateConfig{
 				OutPath:        "output",
 				ReleaseName:    "my-release",
 				UseReleaseName: true,
@@ -1556,25 +1556,25 @@ metadata:
 func Test_outLayoutIsFlat(t *testing.T) {
 	tests := []struct {
 		name     string
-		cfg      builtin.HelmTemplateConfig
+		cfg      stepconfig.HelmTemplateConfig
 		expected bool
 	}{
 		{
 			name:     "nil layout (default)",
-			cfg:      builtin.HelmTemplateConfig{},
+			cfg:      stepconfig.HelmTemplateConfig{},
 			expected: false,
 		},
 		{
 			name: "flat layout",
-			cfg: builtin.HelmTemplateConfig{
-				OutLayout: ptr.To(builtin.Flat),
+			cfg: stepconfig.HelmTemplateConfig{
+				OutLayout: ptr.To(stepconfig.Flat),
 			},
 			expected: true,
 		},
 		{
 			name: "helm layout",
-			cfg: builtin.HelmTemplateConfig{
-				OutLayout: ptr.To(builtin.Helm),
+			cfg: stepconfig.HelmTemplateConfig{
+				OutLayout: ptr.To(stepconfig.Helm),
 			},
 			expected: false,
 		},
@@ -1591,25 +1591,25 @@ func Test_outLayoutIsFlat(t *testing.T) {
 func Test_outLayoutIsHelm(t *testing.T) {
 	tests := []struct {
 		name     string
-		cfg      builtin.HelmTemplateConfig
+		cfg      stepconfig.HelmTemplateConfig
 		expected bool
 	}{
 		{
 			name:     "nil layout (default)",
-			cfg:      builtin.HelmTemplateConfig{},
+			cfg:      stepconfig.HelmTemplateConfig{},
 			expected: true,
 		},
 		{
 			name: "flat layout",
-			cfg: builtin.HelmTemplateConfig{
-				OutLayout: ptr.To(builtin.Flat),
+			cfg: stepconfig.HelmTemplateConfig{
+				OutLayout: ptr.To(stepconfig.Flat),
 			},
 			expected: false,
 		},
 		{
 			name: "helm layout",
-			cfg: builtin.HelmTemplateConfig{
-				OutLayout: ptr.To(builtin.Helm),
+			cfg: stepconfig.HelmTemplateConfig{
+				OutLayout: ptr.To(stepconfig.Helm),
 			},
 			expected: true,
 		},
@@ -1626,40 +1626,40 @@ func Test_outLayoutIsHelm(t *testing.T) {
 func Test_outPathIsFile(t *testing.T) {
 	tests := []struct {
 		name     string
-		cfg      builtin.HelmTemplateConfig
+		cfg      stepconfig.HelmTemplateConfig
 		expected bool
 	}{
 		{
 			name: "YAML file",
-			cfg: builtin.HelmTemplateConfig{
+			cfg: stepconfig.HelmTemplateConfig{
 				OutPath: "output.yaml",
 			},
 			expected: true,
 		},
 		{
 			name: "YML file",
-			cfg: builtin.HelmTemplateConfig{
+			cfg: stepconfig.HelmTemplateConfig{
 				OutPath: "output.yml",
 			},
 			expected: true,
 		},
 		{
 			name: "directory",
-			cfg: builtin.HelmTemplateConfig{
+			cfg: stepconfig.HelmTemplateConfig{
 				OutPath: "output/",
 			},
 			expected: false,
 		},
 		{
 			name: "directory without slash",
-			cfg: builtin.HelmTemplateConfig{
+			cfg: stepconfig.HelmTemplateConfig{
 				OutPath: "output",
 			},
 			expected: false,
 		},
 		{
 			name: "other file extension",
-			cfg: builtin.HelmTemplateConfig{
+			cfg: stepconfig.HelmTemplateConfig{
 				OutPath: "output.txt",
 			},
 			expected: false,
@@ -1802,7 +1802,7 @@ stringData:
   token: top-secret
 `
 	runner := &helmTemplateRunner{credsDB: &credentials.FakeDB{}}
-	render := func(t *testing.T, workDir string, cfg builtin.HelmTemplateConfig) (promotion.StepResult, error) {
+	render := func(t *testing.T, workDir string, cfg stepconfig.HelmTemplateConfig) (promotion.StepResult, error) {
 		t.Helper()
 		if cfg.Path == "" {
 			cfg.Path = "chart"
@@ -1823,8 +1823,8 @@ stringData:
 			filepath.Join("..", "..", "shared.yaml"),
 			filepath.Join(workDir, "chart", "templates", "shared.yaml"),
 		))
-		result, err := render(t, workDir, builtin.HelmTemplateConfig{
-			SetValues: []builtin.SetValues{{Key: "key", Value: "v"}},
+		result, err := render(t, workDir, stepconfig.HelmTemplateConfig{
+			SetValues: []stepconfig.SetValues{{Key: "key", Value: "v"}},
 		})
 		require.NoError(t, err)
 		require.Equal(t, kargoapi.PromotionStepStatusSucceeded, result.Status)
@@ -1841,8 +1841,8 @@ stringData:
 			filepath.Join(outside, "secret.yaml"),
 			filepath.Join(workDir, "chart", "templates", "secret.yaml"),
 		))
-		result, err := render(t, workDir, builtin.HelmTemplateConfig{
-			SetValues: []builtin.SetValues{{Key: "key", Value: "v"}},
+		result, err := render(t, workDir, stepconfig.HelmTemplateConfig{
+			SetValues: []stepconfig.SetValues{{Key: "key", Value: "v"}},
 		})
 		require.ErrorContains(t, err, "path escapes from parent")
 		require.Equal(t, kargoapi.PromotionStepStatusErrored, result.Status)
@@ -1858,8 +1858,8 @@ stringData:
 			filepath.Join(outside, "extra"),
 			filepath.Join(workDir, "chart", "templates", "extra"),
 		))
-		_, err := render(t, workDir, builtin.HelmTemplateConfig{
-			SetValues: []builtin.SetValues{{Key: "key", Value: "v"}},
+		_, err := render(t, workDir, stepconfig.HelmTemplateConfig{
+			SetValues: []stepconfig.SetValues{{Key: "key", Value: "v"}},
 		})
 		require.ErrorContains(t, err, "path escapes from parent")
 	})
@@ -1869,7 +1869,7 @@ stringData:
 		pkg, err := os.ReadFile(filepath.Join("..", "..", "..", "helm", "testdata", "charts", "examplechart-0.1.0.tgz"))
 		require.NoError(t, err)
 		require.NoError(t, os.WriteFile(filepath.Join(workDir, "examplechart-0.1.0.tgz"), pkg, 0o600))
-		result, err := render(t, workDir, builtin.HelmTemplateConfig{Path: "examplechart-0.1.0.tgz"})
+		result, err := render(t, workDir, stepconfig.HelmTemplateConfig{Path: "examplechart-0.1.0.tgz"})
 		require.NoError(t, err)
 		require.Equal(t, kargoapi.PromotionStepStatusSucceeded, result.Status)
 		require.FileExists(t, filepath.Join(workDir, "output.yaml"))
@@ -1884,8 +1884,8 @@ stringData:
 		require.NoError(t, os.WriteFile(
 			filepath.Join(workDir, "chart", ".helmignore"), []byte("templates/ignored.yaml\n"), 0o600,
 		))
-		_, err := render(t, workDir, builtin.HelmTemplateConfig{
-			SetValues: []builtin.SetValues{{Key: "key", Value: "v"}},
+		_, err := render(t, workDir, stepconfig.HelmTemplateConfig{
+			SetValues: []stepconfig.SetValues{{Key: "key", Value: "v"}},
 		})
 		require.NoError(t, err)
 		out, err := os.ReadFile(filepath.Join(workDir, "output.yaml"))
@@ -1897,16 +1897,16 @@ stringData:
 		workDir, outside := escapingWorkspace(t)
 		writeTestChart(t, filepath.Join(workDir, "chart"))
 		require.NoError(t, os.WriteFile(filepath.Join(outside, "values.yaml"), []byte("key: v\n"), 0o600))
-		_, err := render(t, workDir, builtin.HelmTemplateConfig{ValuesFiles: []string{"out/values.yaml"}})
+		_, err := render(t, workDir, stepconfig.HelmTemplateConfig{ValuesFiles: []string{"out/values.yaml"}})
 		require.ErrorContains(t, err, "path escapes from parent")
 	})
 
 	t.Run("output file through an escaping symlink fails", func(t *testing.T) {
 		workDir, outside := escapingWorkspace(t)
 		writeTestChart(t, filepath.Join(workDir, "chart"))
-		_, err := render(t, workDir, builtin.HelmTemplateConfig{
+		_, err := render(t, workDir, stepconfig.HelmTemplateConfig{
 			OutPath:   "out/output.yaml",
-			SetValues: []builtin.SetValues{{Key: "key", Value: "v"}},
+			SetValues: []stepconfig.SetValues{{Key: "key", Value: "v"}},
 		})
 		require.ErrorContains(t, err, "path escapes from parent")
 		require.NoFileExists(t, filepath.Join(outside, "output.yaml"))
@@ -1917,9 +1917,9 @@ stringData:
 		writeTestChart(t, filepath.Join(workDir, "chart"))
 		require.NoError(t, os.MkdirAll(filepath.Join(workDir, "rendered", "test-chart"), 0o755))
 		require.NoError(t, os.Symlink(outside, filepath.Join(workDir, "rendered", "test-chart", "templates")))
-		_, err := render(t, workDir, builtin.HelmTemplateConfig{
+		_, err := render(t, workDir, stepconfig.HelmTemplateConfig{
 			OutPath:   "rendered",
-			SetValues: []builtin.SetValues{{Key: "key", Value: "v"}},
+			SetValues: []stepconfig.SetValues{{Key: "key", Value: "v"}},
 		})
 		require.ErrorContains(t, err, "path escapes from parent")
 		require.NoFileExists(t, filepath.Join(outside, "configmap.yaml"))
@@ -1929,9 +1929,9 @@ stringData:
 		workDir, outside := escapingWorkspace(t)
 		writeTestChart(t, filepath.Join(workDir, "chart"))
 		require.NoError(t, os.Symlink(outside, filepath.Join(workDir, "chart", "charts")))
-		_, err := render(t, workDir, builtin.HelmTemplateConfig{
+		_, err := render(t, workDir, stepconfig.HelmTemplateConfig{
 			BuildDependencies: true,
-			SetValues:         []builtin.SetValues{{Key: "key", Value: "v"}},
+			SetValues:         []stepconfig.SetValues{{Key: "key", Value: "v"}},
 		})
 		require.ErrorContains(t, err, "path escapes from parent")
 	})

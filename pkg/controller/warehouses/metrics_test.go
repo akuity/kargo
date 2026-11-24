@@ -2,10 +2,12 @@ package warehouses
 
 import (
 	"context"
+	"errors"
 	"testing"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/testutil"
 	dto "github.com/prometheus/client_model/go"
 	"github.com/stretchr/testify/require"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -15,6 +17,8 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/controller/metrics"
+	"github.com/akuity/kargo/pkg/credentials"
+	"github.com/akuity/kargo/pkg/subscription"
 )
 
 func TestSyncWarehouse_metrics(t *testing.T) {
@@ -141,6 +145,91 @@ func TestSyncWarehouse_metrics(t *testing.T) {
 			_, err := r.syncWarehouse(t.Context(), warehouse)
 			require.NoError(t, err)
 			testCase.assert(t, m)
+		})
+	}
+}
+
+func TestDiscoverArtifacts_failureMetrics(t *testing.T) {
+	t.Parallel()
+
+	registry := func(res any, err error) subscription.SubscriberRegistry {
+		return subscription.MustNewSubscriberRegistry(subscription.SubscriberRegistration{
+			Predicate: func(_ context.Context, sub kargoapi.RepoSubscription) (bool, error) {
+				return sub.Subscription == nil, nil
+			},
+			Value: func(context.Context, credentials.Database) (subscription.Subscriber, error) {
+				return &subscription.MockSubscriber{
+					DiscoverArtifactsFn: func(context.Context, string, kargoapi.RepoSubscription, any) (any, error) {
+						return res, err
+					},
+				}, nil
+			},
+		})
+	}
+
+	testCases := []struct {
+		name     string
+		registry subscription.SubscriberRegistry
+		subs     []kargoapi.RepoSubscription
+		expected map[string]float64
+	}{
+		{
+			name:     "success",
+			registry: registry(kargoapi.GitDiscoveryResult{}, nil),
+			subs:     []kargoapi.RepoSubscription{{Git: &kargoapi.GitSubscription{}}},
+			expected: map[string]float64{},
+		},
+		{
+			name:     "subscriber error",
+			registry: registry(nil, errors.New("something went wrong")),
+			subs: []kargoapi.RepoSubscription{
+				{Image: &kargoapi.ImageSubscription{}},
+				{Git: &kargoapi.GitSubscription{}},
+			},
+			expected: map[string]float64{"image": 1},
+		},
+		{
+			name:     "unrecognized result type",
+			registry: registry("bogus", nil),
+			subs:     []kargoapi.RepoSubscription{{Chart: &kargoapi.ChartSubscription{}}},
+			expected: map[string]float64{"chart": 1},
+		},
+		{
+			name:     "no subscriber",
+			registry: registry(kargoapi.GitDiscoveryResult{}, nil),
+			subs: []kargoapi.RepoSubscription{
+				{Git: &kargoapi.GitSubscription{}},
+				{Subscription: &kargoapi.Subscription{SubscriptionType: "fake"}},
+			},
+			expected: map[string]float64{"other": 1},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+			// WarehouseMetrics is a process-wide singleton; use a standalone collector.
+			failures := prometheus.NewCounterVec(
+				prometheus.CounterOpts{Name: "test_discovery_failures_total"},
+				[]string{"project", "subscriptionType"},
+			)
+			r := &reconciler{
+				subscriberRegistry: testCase.registry,
+				whMetrics:          &metrics.WarehouseMetrics{DiscoveryFailures: failures},
+			}
+			_, err := r.discoverArtifacts(t.Context(), "fake-project", testCase.subs, nil)
+			if len(testCase.expected) == 0 {
+				require.NoError(t, err)
+			} else {
+				require.Error(t, err)
+			}
+			require.Equal(t, len(testCase.expected), testutil.CollectAndCount(failures))
+			for subType, value := range testCase.expected {
+				require.Equal(
+					t,
+					value,
+					testutil.ToFloat64(failures.WithLabelValues("fake-project", subType)),
+				)
+			}
 		})
 	}
 }

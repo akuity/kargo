@@ -16,7 +16,7 @@ import (
 	argocd "github.com/akuity/kargo/pkg/controller/argocd/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/logging"
 	"github.com/akuity/kargo/pkg/promotion"
-	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
+	"github.com/akuity/kargo/pkg/x/promotion/stepconfig"
 )
 
 const (
@@ -29,7 +29,7 @@ const (
 
 // defaultWaitFor is the default set of conditions to wait for, matching the
 // behavior of `argocd app wait` when no flags are specified.
-var defaultWaitFor = []builtin.WaitFor{builtin.Health, builtin.Sync, builtin.Operation}
+var defaultWaitFor = []stepconfig.WaitFor{stepconfig.Health, stepconfig.Sync, stepconfig.Operation}
 
 // healthErrorConditions are the ApplicationConditionType conditions that
 // indicate an Argo CD Application has a configuration error.
@@ -66,13 +66,13 @@ type argocdWaiter struct {
 		argocdClient client.Client,
 		name string,
 		namespace string,
-		selector *builtin.ArgoCDAppSelector,
+		selector *stepconfig.ArgoCDAppSelector,
 	) ([]*argocd.Application, error)
 
 	checkAppReadinessFn func(
 		ctx context.Context,
 		app *argocd.Application,
-		waitFor []builtin.WaitFor,
+		waitFor []stepconfig.WaitFor,
 		prevHealthStatus string,
 	) (ready bool, healthStatus string, err error)
 }
@@ -102,15 +102,15 @@ func (w *argocdWaiter) Run(
 }
 
 // convert validates argocdWaiter configuration against a JSON schema and
-// converts it into a builtin.ArgoCDWaitConfig struct.
-func (w *argocdWaiter) convert(cfg promotion.Config) (builtin.ArgoCDWaitConfig, error) {
-	return validateAndConvert[builtin.ArgoCDWaitConfig](w.schemaLoader, cfg, stepKindArgoCDWait)
+// converts it into a stepconfig.ArgoCDWaitConfig struct.
+func (w *argocdWaiter) convert(cfg promotion.Config) (stepconfig.ArgoCDWaitConfig, error) {
+	return validateAndConvert[stepconfig.ArgoCDWaitConfig](w.schemaLoader, cfg, stepKindArgoCDWait)
 }
 
 func (w *argocdWaiter) run(
 	ctx context.Context,
 	stepCtx *promotion.StepContext,
-	stepCfg builtin.ArgoCDWaitConfig,
+	stepCfg stepconfig.ArgoCDWaitConfig,
 ) (promotion.StepResult, error) {
 	if w.argocdClient == nil {
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
@@ -229,7 +229,7 @@ func waitStepOutput(
 func (w *argocdWaiter) checkAppReadiness(
 	ctx context.Context,
 	app *argocd.Application,
-	waitFor []builtin.WaitFor,
+	waitFor []stepconfig.WaitFor,
 	prevHealthStatus string,
 ) (ready bool, healthStatus string, err error) {
 	logger := logging.LoggerFromContext(ctx).WithValues(
@@ -390,7 +390,7 @@ func getArgoCDApplications(
 	argocdClient client.Client,
 	name string,
 	namespace string,
-	selector *builtin.ArgoCDAppSelector,
+	selector *stepconfig.ArgoCDAppSelector,
 ) ([]*argocd.Application, error) {
 	if namespace == "" {
 		namespace = libargocd.Namespace()

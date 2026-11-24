@@ -2011,8 +2011,10 @@ paths:
         update strategy, or the one the body gives in its place, is
         resolved against how many that leaves; both are recorded
         with the rollout for good. A Target the Stage does not
-        govern is refused. Everything else about the rollout is
-        assigned by the server.
+        govern is refused. So is a rollout to no Targets: while the
+        Stage governs none, the response is a 409, and the same
+        request succeeds once its selectors match a Target.
+        Everything else about the rollout is assigned by the server.
         This is a promotion: it requires the promote verb on the
         Stage. A server that does not create PromotionRollouts
         responds 501.
@@ -2098,7 +2100,9 @@ paths:
         them: a PromotionRollout on a server that creates
         PromotionRollouts, and a PromotionRequest otherwise. Either
         way, the body's targets and updateStrategy narrow which
-        Targets are promoted to and at what pace.
+        Targets are promoted to and at what pace. A PromotionRollout
+        is not created for a Stage that governs no Targets: the
+        response is a 409 until its selectors match one.
       operationId: PromoteToStage
       parameters:
       - description: Project name
@@ -2146,7 +2150,10 @@ paths:
         "promotionRequests"; each key is present only when it has
         entries. Each promotes to every Target its Stage governs, at
         the Stage's pace. A Stage that could not be promoted to is
-        reported under "errors", with a 207 status.
+        reported under "errors", with a 207 status, and the rest
+        are still promoted to. On a server that creates
+        PromotionRollouts, that includes a Stage that governs no
+        Targets.
       operationId: PromoteDownstream
       parameters:
       - description: Project name
@@ -4392,14 +4399,11 @@ components:
           scopes:
           - scopes
           - scopes
-        skipAuth: true
       properties:
         adminAccountEnabled:
           type: boolean
         oidcConfig:
           $ref: "#/components/schemas/OIDCConfig"
-        skipAuth:
-          type: boolean
       type: object
     ResolvedLink:
       example:
@@ -11246,6 +11250,11 @@ components:
       type: object
     AnalysisRunReference:
       properties:
+        kind:
+          description: |-
+            Kind is a string representation of GroupVersionKind describing this run
+            For classic analysis run it is AnalysisRunKindRun or AnalysisRunKindLegacy (empty)
+          type: string
         name:
           description: Name is the name of the AnalysisRun.
           type: string
@@ -11976,8 +11985,9 @@ components:
           type: string
         if:
           description: |-
-            If is an optional expression condition. When set, the link is only shown
-            when the expression evaluates to true.
+            If is an optional expr-lang expression, offset by ${{ }}, that must
+            evaluate to a boolean. When set, the link is shown only when it
+            evaluates to true.
 
             +optional
           type: string
@@ -11989,7 +11999,8 @@ components:
           type: string
         url:
           description: |-
-            URL is an expression that resolves to the link's href.
+            URL is the link's href. It may contain expr-lang expressions offset by
+            ${{ }}, evaluated against the resource as freight or stage.
 
             +kubebuilder:validation:MinLength=1
           type: string
@@ -14400,6 +14411,34 @@ components:
       - PromotionRolloutPhaseFailed
       - PromotionRolloutPhaseErrored
       - PromotionRolloutPhaseAborted
+    PromotionRolloutReference:
+      properties:
+        finishedAt:
+          description: |-
+            FinishedAt is the time at which the PromotionRollout completed. It is
+            absent for one that has not.
+          type: string
+        message:
+          description: |-
+            Message is a human-readable description of how the PromotionRollout
+            ended. It is empty for one that has not.
+          type: string
+        name:
+          description: Name is the name of the PromotionRollout.
+          type: string
+        number:
+          description: |-
+            Number is the PromotionRollout's position among its Stage's rollouts,
+            counting from 1.
+
+            +kubebuilder:validation:Minimum=1
+          type: integer
+        phase:
+          allOf:
+          - $ref: "#/components/schemas/PromotionRolloutPhase"
+          description: Phase is a high-level summary of the PromotionRollout's lifecycle.
+          type: object
+      type: object
     PromotionRolloutSpec:
       properties:
         freight:
@@ -15621,6 +15660,19 @@ components:
 
             +optional
           type: object
+        currentPromotionRollout:
+          allOf:
+          - $ref: "#/components/schemas/PromotionRolloutReference"
+          description: |-
+            CurrentPromotionRollout is a reference to the PromotionRollout this Stage
+            is promoting through. A PromotionRollout does not start until its Stage
+            names it here, and the Stage names the next one only once it has recorded
+            the one before it and is not still to verify the Freight it is on. The
+            reference stays until the Stage has recorded how that PromotionRollout
+            ended. It is absent for a Stage that governs no Targets.
+
+            +optional
+          type: object
         effectiveAutoPromotionHolds:
           additionalProperties:
             $ref: "#/components/schemas/AutoPromotionHold"
@@ -15679,6 +15731,17 @@ components:
 
             +optional
           type: object
+        lastPromotionRollout:
+          allOf:
+          - $ref: "#/components/schemas/PromotionRolloutReference"
+          description: |-
+            LastPromotionRollout is a reference to the last PromotionRollout whose
+            outcome this Stage has recorded. It is absent for a Stage that governs no
+            Targets, and only ever moves forward: its number marks how far through
+            its PromotionRollouts the Stage has read.
+
+            +optional
+          type: object
         metadata:
           additionalProperties:
             type: object
@@ -15727,7 +15790,14 @@ components:
           allOf:
           - $ref: "#/components/schemas/TargetUpdateStrategy"
           description: |-
-            UpdateStrategy configures the pace of updating the targets
+            UpdateStrategy configures the pace of promoting the targets
+            +optional
+          type: object
+        verification:
+          allOf:
+          - $ref: "#/components/schemas/TargetVerificaitonSpec"
+          description: |-
+            Verification configures mode and pace of target promotion verifications
             +optional
           type: object
       required:
@@ -16081,6 +16151,21 @@ components:
             Absolute number is calculated from percentage by rounding up to a minimum of 1. Default value is 0.
           type: object
       type: object
+    TargetVerificaitonSpec:
+      properties:
+        runMode:
+          description: |-
+            VerificationRunMode controls whether verifications run per-target or per-stage
+            +optional
+          type: string
+        updateStrategy:
+          allOf:
+          - $ref: "#/components/schemas/TargetUpdateStrategy"
+          description: |-
+            UpdateStrategy configures the pace of verification runs
+            +optional
+          type: object
+      type: object
     Verification:
       properties:
         analysisRunMetadata:
@@ -16135,6 +16220,10 @@ components:
             this will be a reflection of the underlying AnalysisRun's phase, however,
             there are exceptions to this, such as in the case where an AnalysisRun
             cannot be launched successfully.
+          type: string
+        promotionName:
+          description: PromotionName is an optional name of promotion which triggered
+            verification
           type: string
         startTime:
           description: StartTime is the time at which the Verification process was

@@ -82,7 +82,7 @@ const DeepLinksCard = ({
             content={
               <Flex vertical gap={6} className='max-w-xs text-xs'>
                 <Typography.Text>
-                  Shown in {shownAt}. Each URL is a Go template evaluated against the {resource}{' '}
+                  Shown in {shownAt}. Expressions in each URL are evaluated against the {resource}{' '}
                   being viewed, so one definition covers {allResources} at once.
                 </Typography.Text>
                 <Typography.Text>

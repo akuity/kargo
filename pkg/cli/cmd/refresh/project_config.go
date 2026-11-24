@@ -12,8 +12,8 @@ import (
 	"github.com/akuity/kargo/pkg/cli/config"
 	"github.com/akuity/kargo/pkg/cli/option"
 	"github.com/akuity/kargo/pkg/cli/templates"
-	"github.com/akuity/kargo/pkg/client/watch"
 	"github.com/akuity/kargo/pkg/server"
+	"github.com/akuity/kargo/pkg/x/client/watch"
 )
 
 func newRefreshProjectConfigCommand(cfg config.CLIConfig) *cobra.Command {
@@ -75,14 +75,14 @@ func waitForProjectConfig(
 			if event.Object == nil {
 				return errors.New("unexpected response")
 			}
-			token, ok := api.RefreshAnnotationValue(event.Object.GetAnnotations())
+			token, ok := api.RefreshAnnotationValue(event.Object.Metadata.GetAnnotations())
 			if !ok {
 				return fmt.Errorf(
 					"ProjectConfig %q has no %q annotation",
-					event.Object.Name, kargoapi.AnnotationKeyRefresh,
+					event.Object.Metadata.GetName(), kargoapi.AnnotationKeyRefresh,
 				)
 			}
-			if event.Object.Status.LastHandledRefresh == token {
+			if event.Object.Status.GetLastHandledRefresh() == token {
 				return nil
 			}
 		case err := <-errCh:

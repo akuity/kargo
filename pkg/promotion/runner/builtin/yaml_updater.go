@@ -10,7 +10,7 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/promotion"
-	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
+	"github.com/akuity/kargo/pkg/x/promotion/stepconfig"
 	"github.com/akuity/kargo/pkg/yaml"
 )
 
@@ -52,15 +52,15 @@ func (y *yamlUpdater) Run(
 }
 
 // convert validates yamlUpdater configuration against a JSON schema and
-// converts it into a builtin.YAMLUpdateConfig struct.
-func (y *yamlUpdater) convert(cfg promotion.Config) (builtin.YAMLUpdateConfig, error) {
-	return validateAndConvert[builtin.YAMLUpdateConfig](y.schemaLoader, cfg, stepKindYAMLUpdate)
+// converts it into a stepconfig.YAMLUpdateConfig struct.
+func (y *yamlUpdater) convert(cfg promotion.Config) (stepconfig.YAMLUpdateConfig, error) {
+	return validateAndConvert[stepconfig.YAMLUpdateConfig](y.schemaLoader, cfg, stepKindYAMLUpdate)
 }
 
 func (y *yamlUpdater) run(
 	_ context.Context,
 	stepCtx *promotion.StepContext,
-	cfg builtin.YAMLUpdateConfig,
+	cfg stepconfig.YAMLUpdateConfig,
 ) (promotion.StepResult, error) {
 	updates := make([]yaml.Update, len(cfg.Updates))
 	for i, update := range cfg.Updates {
@@ -105,7 +105,7 @@ func (y *yamlUpdater) updateFile(root *os.Root, path string, updates []yaml.Upda
 	return nil
 }
 
-func (y *yamlUpdater) generateCommitMessage(path string, updates []builtin.YAMLUpdate) string {
+func (y *yamlUpdater) generateCommitMessage(path string, updates []stepconfig.YAMLUpdate) string {
 	if len(updates) == 0 {
 		return ""
 	}

@@ -319,6 +319,34 @@ func Test_server_promoteToStage(t *testing.T) {
 				},
 			},
 			{
+				// The Creator's refusal of a Stage that governs no Targets
+				// reaches the caller with the status it carries.
+				name: "rollouts enabled: a Stage governing no Targets is a conflict",
+				clientBuilder: fake.NewClientBuilder().WithObjects(
+					testProject,
+					testTargetAwareStage,
+					testFreight,
+				),
+				serverConfig: rolloutsEnabled,
+				serverSetup: promoteWithRollouts(&fakeRolloutCreator{
+					errs: map[string]error{testStage.Name: errNoTargets},
+				}),
+				body: mustJSONBody(promoteToStageRequest{
+					Freight: testFreight.Name,
+				}),
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, c client.Client) {
+					require.Equal(t, http.StatusConflict, w.Code)
+					require.Contains(t, w.Body.String(), "governs no Targets right now")
+					// Nothing was created in the rollout's place.
+					promos := &kargoapi.PromotionList{}
+					require.NoError(t, c.List(t.Context(), promos, client.InNamespace(testProject.Name)))
+					require.Empty(t, promos.Items)
+					reqs := &kargoapi.PromotionRequestList{}
+					require.NoError(t, c.List(t.Context(), reqs, client.InNamespace(testProject.Name)))
+					require.Empty(t, reqs.Items)
+				},
+			},
+			{
 				name: "rollouts enabled: a Stage that does not select Targets still yields a Promotion",
 				clientBuilder: fake.NewClientBuilder().WithObjects(
 					testProject,

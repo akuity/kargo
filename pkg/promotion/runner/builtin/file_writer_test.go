@@ -10,7 +10,7 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/promotion"
-	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
+	"github.com/akuity/kargo/pkg/x/promotion/stepconfig"
 )
 
 func Test_fileWriter_convert(t *testing.T) {
@@ -118,12 +118,12 @@ func Test_fileWriter_run(t *testing.T) {
 		name       string
 		files      map[string]string
 		dirs       []string
-		cfg        builtin.FileWriteConfig
+		cfg        stepconfig.FileWriteConfig
 		assertions func(*testing.T, string, promotion.StepResult, error)
 	}{
 		{
 			name: "writes new file",
-			cfg: builtin.FileWriteConfig{
+			cfg: stepconfig.FileWriteConfig{
 				Path:     "out/config.yaml",
 				Contents: "key: value\n",
 			},
@@ -138,7 +138,7 @@ func Test_fileWriter_run(t *testing.T) {
 		},
 		{
 			name: "writes contents exactly as provided",
-			cfg: builtin.FileWriteConfig{
+			cfg: stepconfig.FileWriteConfig{
 				Path:     "out/config.yaml",
 				Contents: "key: value",
 			},
@@ -153,7 +153,7 @@ func Test_fileWriter_run(t *testing.T) {
 		},
 		{
 			name: "writes empty file",
-			cfg: builtin.FileWriteConfig{
+			cfg: stepconfig.FileWriteConfig{
 				Path:     "empty.txt",
 				Contents: "",
 			},
@@ -168,7 +168,7 @@ func Test_fileWriter_run(t *testing.T) {
 		},
 		{
 			name: "writes file with custom permissions",
-			cfg: builtin.FileWriteConfig{
+			cfg: stepconfig.FileWriteConfig{
 				Path:        "public.txt",
 				Contents:    "test content",
 				Permissions: "0644",
@@ -187,7 +187,7 @@ func Test_fileWriter_run(t *testing.T) {
 			files: map[string]string{
 				"public.txt": "existing content",
 			},
-			cfg: builtin.FileWriteConfig{
+			cfg: stepconfig.FileWriteConfig{
 				Path:        "public.txt",
 				Contents:    "new content",
 				Overwrite:   true,
@@ -204,7 +204,7 @@ func Test_fileWriter_run(t *testing.T) {
 		},
 		{
 			name: "rejects executable permissions",
-			cfg: builtin.FileWriteConfig{
+			cfg: stepconfig.FileWriteConfig{
 				Path:        "script.sh",
 				Contents:    "echo test",
 				Permissions: "0755",
@@ -216,7 +216,7 @@ func Test_fileWriter_run(t *testing.T) {
 		},
 		{
 			name: "rejects special mode bits",
-			cfg: builtin.FileWriteConfig{
+			cfg: stepconfig.FileWriteConfig{
 				Path:        "public.txt",
 				Contents:    "test content",
 				Permissions: "1777",
@@ -228,7 +228,7 @@ func Test_fileWriter_run(t *testing.T) {
 		},
 		{
 			name: "rejects world-writable permissions",
-			cfg: builtin.FileWriteConfig{
+			cfg: stepconfig.FileWriteConfig{
 				Path:        "public.txt",
 				Contents:    "test content",
 				Permissions: "0666",
@@ -243,7 +243,7 @@ func Test_fileWriter_run(t *testing.T) {
 			files: map[string]string{
 				"config.yaml": "existing: true\n",
 			},
-			cfg: builtin.FileWriteConfig{
+			cfg: stepconfig.FileWriteConfig{
 				Path:     "config.yaml",
 				Contents: "existing: false\n",
 			},
@@ -261,7 +261,7 @@ func Test_fileWriter_run(t *testing.T) {
 			files: map[string]string{
 				"config.yaml": "existing: true\n",
 			},
-			cfg: builtin.FileWriteConfig{
+			cfg: stepconfig.FileWriteConfig{
 				Path:      "config.yaml",
 				Contents:  "existing: false\n",
 				Overwrite: true,
@@ -277,7 +277,7 @@ func Test_fileWriter_run(t *testing.T) {
 		},
 		{
 			name: "fails when path escapes work dir",
-			cfg: builtin.FileWriteConfig{
+			cfg: stepconfig.FileWriteConfig{
 				Path:     "../escape.txt",
 				Contents: "test content",
 			},
@@ -288,7 +288,7 @@ func Test_fileWriter_run(t *testing.T) {
 		},
 		{
 			name: "fails when path targets .git directory",
-			cfg: builtin.FileWriteConfig{
+			cfg: stepconfig.FileWriteConfig{
 				Path:     ".git/config",
 				Contents: "malicious content",
 			},
@@ -300,7 +300,7 @@ func Test_fileWriter_run(t *testing.T) {
 		{
 			name: "fails when destination is directory",
 			dirs: []string{"config.yaml"},
-			cfg: builtin.FileWriteConfig{
+			cfg: stepconfig.FileWriteConfig{
 				Path:      "config.yaml",
 				Contents:  "test content",
 				Overwrite: true,
@@ -341,7 +341,7 @@ func Test_fileWriter_run_escapingSymlink(t *testing.T) {
 	result, err := (&fileWriter{}).run(
 		t.Context(),
 		newTestStepContext(t, workDir),
-		builtin.FileWriteConfig{Path: "out/new.txt", Contents: "x"},
+		stepconfig.FileWriteConfig{Path: "out/new.txt", Contents: "x"},
 	)
 	require.ErrorContains(t, err, "outside the working directory")
 	require.Equal(t, kargoapi.PromotionStepStatusFailed, result.Status)
@@ -358,7 +358,7 @@ func Test_fileWriter_run_symlinkInsideWorkspace(t *testing.T) {
 	result, err := (&fileWriter{}).run(
 		t.Context(),
 		newTestStepContext(t, workDir),
-		builtin.FileWriteConfig{Path: "link/new.txt", Contents: "x"},
+		stepconfig.FileWriteConfig{Path: "link/new.txt", Contents: "x"},
 	)
 	require.NoError(t, err)
 	require.Equal(t, kargoapi.PromotionStepStatusSucceeded, result.Status)
@@ -371,7 +371,7 @@ func Test_fileWriter_run_gitDirectoryThroughSymlink(t *testing.T) {
 	stepCtx := newTestStepContext(t, t.TempDir())
 	require.NoError(t, stepCtx.Root.Mkdir(".git", 0o700))
 	require.NoError(t, stepCtx.Root.Symlink(".git", "alias"))
-	_, err := (&fileWriter{}).run(t.Context(), stepCtx, builtin.FileWriteConfig{
+	_, err := (&fileWriter{}).run(t.Context(), stepCtx, stepconfig.FileWriteConfig{
 		Path: "alias/config", Contents: "[core]\nsshCommand = arbitrary-command\n",
 	})
 	require.ErrorContains(t, err, "writing to the .git directory is forbidden")

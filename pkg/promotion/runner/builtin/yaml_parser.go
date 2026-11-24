@@ -11,7 +11,7 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/promotion"
-	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
+	"github.com/akuity/kargo/pkg/x/promotion/stepconfig"
 )
 
 const stepKindYAMLParse = "yaml-parse"
@@ -51,15 +51,15 @@ func (yp *yamlParser) Run(
 }
 
 // convert validates yamlParser configuration against a YAML schema and
-// converts it into a builtin.YAMLParseConfig struct.
-func (yp *yamlParser) convert(cfg promotion.Config) (builtin.YAMLParseConfig, error) {
-	return validateAndConvert[builtin.YAMLParseConfig](yp.schemaLoader, cfg, stepKindYAMLParse)
+// converts it into a stepconfig.YAMLParseConfig struct.
+func (yp *yamlParser) convert(cfg promotion.Config) (stepconfig.YAMLParseConfig, error) {
+	return validateAndConvert[stepconfig.YAMLParseConfig](yp.schemaLoader, cfg, stepKindYAMLParse)
 }
 
 func (yp *yamlParser) run(
 	_ context.Context,
 	stepCtx *promotion.StepContext,
-	cfg builtin.YAMLParseConfig,
+	cfg stepconfig.YAMLParseConfig,
 ) (promotion.StepResult, error) {
 	failure := promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}
 
@@ -112,10 +112,10 @@ func (yp *yamlParser) readAndParseYAML(
 
 // extractValues returns select data extracted from the provided data by
 // evaluating it against expressions contained within the provided
-// []builtin.YAMLParse.
+// []stepconfig.YAMLParse.
 func (yp *yamlParser) extractValues(
 	data any,
-	outputs []builtin.YAMLParse,
+	outputs []stepconfig.YAMLParse,
 ) (map[string]any, error) {
 	results := make(map[string]any, len(outputs))
 	for _, output := range outputs {

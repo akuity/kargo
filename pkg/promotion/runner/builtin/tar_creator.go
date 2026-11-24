@@ -19,7 +19,7 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/promotion"
-	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
+	"github.com/akuity/kargo/pkg/x/promotion/stepconfig"
 )
 
 const (
@@ -69,15 +69,15 @@ func (t *tarCreator) Run(
 }
 
 // convert validates the configuration against a JSON schema and converts it
-// into a builtin.TarConfig struct.
-func (t *tarCreator) convert(cfg promotion.Config) (builtin.TarConfig, error) {
-	return validateAndConvert[builtin.TarConfig](t.schemaLoader, cfg, stepKindTar)
+// into a stepconfig.TarConfig struct.
+func (t *tarCreator) convert(cfg promotion.Config) (stepconfig.TarConfig, error) {
+	return validateAndConvert[stepconfig.TarConfig](t.schemaLoader, cfg, stepKindTar)
 }
 
 func (t *tarCreator) run(
 	_ context.Context,
 	stepCtx *promotion.StepContext,
-	cfg builtin.TarConfig,
+	cfg stepconfig.TarConfig,
 ) (promotion.StepResult, error) {
 	fileMode, err := parseTarMode(cfg.FileMode)
 	if err != nil {

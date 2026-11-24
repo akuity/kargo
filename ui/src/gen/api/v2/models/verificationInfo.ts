@@ -34,6 +34,8 @@ export interface VerificationInfo {
    * cannot be launched successfully.
    */
   phase?: string;
+  /** PromotionName is an optional name of promotion which triggered verification */
+  promotionName?: string;
   /** StartTime is the time at which the Verification process was started. */
   startTime?: string;
 }

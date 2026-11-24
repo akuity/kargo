@@ -3,11 +3,11 @@ export const warehouseSizer = {
 };
 
 export const repoSubscriptionSizer = {
-  size: () => ({ width: 250, height: 100 })
+  size: () => ({ width: 250, height: 60 })
 };
 
 export const stageSizer = {
-  size: () => ({ width: 270, height: 170 })
+  size: () => ({ width: 300, height: 215 })
 };
 
 export const stackSizer = {

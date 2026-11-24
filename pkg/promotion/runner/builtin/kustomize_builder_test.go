@@ -16,7 +16,7 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/io/fs"
 	"github.com/akuity/kargo/pkg/promotion"
-	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
+	"github.com/akuity/kargo/pkg/x/promotion/stepconfig"
 )
 
 func Test_kustomizeBuilder_convert(t *testing.T) {
@@ -211,7 +211,7 @@ func Test_kustomizeBuilder_run(t *testing.T) {
 	tests := []struct {
 		name       string
 		setupFiles func(*testing.T, string)
-		config     builtin.KustomizeBuildConfig
+		config     stepconfig.KustomizeBuildConfig
 		assertions func(*testing.T, string, promotion.StepResult, error)
 	}{
 		{
@@ -230,7 +230,7 @@ metadata:
   name: test-deployment
 `), 0o600))
 			},
-			config: builtin.KustomizeBuildConfig{
+			config: stepconfig.KustomizeBuildConfig{
 				Path:    ".",
 				OutPath: "output.yaml",
 			},
@@ -281,7 +281,7 @@ valuesFile: values.yaml
 				require.NoError(t, os.WriteFile(filepath.Join(dir, "values.yaml"), []byte(`---
 replicaCount: 3`), 0o600))
 			},
-			config: builtin.KustomizeBuildConfig{
+			config: stepconfig.KustomizeBuildConfig{
 				Path:    ".",
 				OutPath: "output.yaml",
 			},
@@ -317,7 +317,7 @@ metadata:
   name: test-deployment
 `), 0o600))
 			},
-			config: builtin.KustomizeBuildConfig{
+			config: stepconfig.KustomizeBuildConfig{
 				Path:    ".",
 				OutPath: "output/",
 			},
@@ -347,10 +347,10 @@ metadata:
   name: test-deployment
 `), 0o600))
 			},
-			config: builtin.KustomizeBuildConfig{
+			config: stepconfig.KustomizeBuildConfig{
 				Path:         ".",
 				OutPath:      "output/",
-				OutputFormat: ptr.To(builtin.Kargo),
+				OutputFormat: ptr.To(stepconfig.Kargo),
 			},
 			assertions: func(t *testing.T, dir string, result promotion.StepResult, err error) {
 				require.NoError(t, err)
@@ -379,10 +379,10 @@ metadata:
   name: test-deployment
 `), 0o600))
 			},
-			config: builtin.KustomizeBuildConfig{
+			config: stepconfig.KustomizeBuildConfig{
 				Path:         ".",
 				OutPath:      "output/",
-				OutputFormat: ptr.To(builtin.Kustomize),
+				OutputFormat: ptr.To(stepconfig.Kustomize),
 			},
 			assertions: func(t *testing.T, dir string, result promotion.StepResult, err error) {
 				require.NoError(t, err)
@@ -412,7 +412,7 @@ metadata:
 `), 0o600))
 				require.NoError(t, os.MkdirAll(filepath.Join(dir, "owned"), 0o700))
 			},
-			config: builtin.KustomizeBuildConfig{
+			config: stepconfig.KustomizeBuildConfig{
 				Path:    ".",
 				OutPath: "output/",
 			},
@@ -429,7 +429,7 @@ metadata:
 		{
 			name:       "kustomization file not found",
 			setupFiles: func(*testing.T, string) {},
-			config: builtin.KustomizeBuildConfig{
+			config: stepconfig.KustomizeBuildConfig{
 				Path:    "invalid/",
 				OutPath: "output.yaml",
 			},
@@ -445,7 +445,7 @@ metadata:
 			setupFiles: func(t *testing.T, dir string) {
 				require.NoError(t, os.WriteFile(filepath.Join(dir, "kustomization.yaml"), []byte(`invalid`), 0o600))
 			},
-			config: builtin.KustomizeBuildConfig{
+			config: stepconfig.KustomizeBuildConfig{
 				Path:    ".",
 				OutPath: "output.yaml",
 			},
@@ -488,7 +488,7 @@ metadata:
 `), 0o600))
 	result, err := (&kustomizeBuilder{}).run(
 		newTestStepContext(t, workDir),
-		builtin.KustomizeBuildConfig{Path: ".", OutPath: "out/output.yaml"},
+		stepconfig.KustomizeBuildConfig{Path: ".", OutPath: "out/output.yaml"},
 	)
 	require.ErrorContains(t, err, "path escapes from parent")
 	require.Equal(t, kargoapi.PromotionStepStatusErrored, result.Status)
@@ -513,7 +513,7 @@ metadata:
 		t.Helper()
 		_, err := (&kustomizeBuilder{}).run(
 			newTestStepContext(t, workDir),
-			builtin.KustomizeBuildConfig{Path: ".", OutPath: "output.yaml"},
+			stepconfig.KustomizeBuildConfig{Path: ".", OutPath: "output.yaml"},
 		)
 		return err
 	}
@@ -598,7 +598,7 @@ func Test_kustomizeBuilder_run_helmInflationReview(t *testing.T) {
 	}
 	build := func(t *testing.T, stepCtx *promotion.StepContext) error {
 		t.Helper()
-		_, err := (&kustomizeBuilder{}).run(stepCtx, builtin.KustomizeBuildConfig{Path: ".", OutPath: "result.yaml"})
+		_, err := (&kustomizeBuilder{}).run(stepCtx, stepconfig.KustomizeBuildConfig{Path: ".", OutPath: "result.yaml"})
 		if err == nil {
 			content, readErr := stepCtx.Root.ReadFile("result.yaml")
 			require.NoError(t, readErr)

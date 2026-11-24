@@ -1,9 +1,10 @@
 import { Tooltip } from 'antd';
 
 import {
-  getCurrentPromotionRef,
+  StagePromotionRef,
   getLastPromotionRef
 } from '@ui/features/project/pipelines/nodes/stage-meta-utils';
+import { useCurrentPromotionRef } from '@ui/features/stage/use-promotion-rollouts';
 import { Health, Stage } from '@ui/gen/api/v2/models';
 
 import { StagePopover } from '../project/list/project-item/stage-popover';
@@ -11,6 +12,13 @@ import { ColorMap } from '../stage/utils';
 
 import { HealthStatusIcon } from './health-status/health-status-icon';
 import { PromotionStatusIcon } from './promotion-status/promotion-status-icon';
+
+// What the last promotion's icon calls the thing it reports on.
+const subjects: Record<StagePromotionRef['kind'], string> = {
+  Promotion: 'Promotion',
+  PromotionRequest: 'Promotion Request',
+  PromotionRollout: 'Promotion Rollout'
+};
 
 export const StageTag = ({
   stage,
@@ -25,7 +33,7 @@ export const StageTag = ({
   // Target's standing under the Stage rather than the Stage as a whole.
   health?: Health;
 }) => {
-  const currentPromotion = getCurrentPromotionRef(stage);
+  const currentPromotion = useCurrentPromotionRef(stage);
   const lastPromotion = getLastPromotionRef(stage);
 
   return (
@@ -48,9 +56,7 @@ export const StageTag = ({
             <PromotionStatusIcon
               placement='top'
               status={{ phase: lastPromotion.phase, message: lastPromotion.message }}
-              subject={
-                lastPromotion.kind === 'PromotionRequest' ? 'Promotion Request' : 'Promotion'
-              }
+              subject={subjects[lastPromotion.kind]}
               color='white'
               size='1x'
             />

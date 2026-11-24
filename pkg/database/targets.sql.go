@@ -20,8 +20,7 @@ WITH latest AS (
         (
             SELECT promotion_rollouts.id, promotion_rollouts.status_phase
             FROM promotion_rollouts
-            WHERE promotion_rollouts.project_name = stages.project_name
-                AND promotion_rollouts.stage_name = stages.name
+            WHERE promotion_rollouts.stage_id = stages.id
                 AND promotion_rollouts.status_phase IN ('Pending', 'Running')
             ORDER BY promotion_rollouts.status_phase = 'Running' DESC, promotion_rollouts.number
             LIMIT 1
@@ -30,8 +29,7 @@ WITH latest AS (
         (
             SELECT promotion_rollouts.id, promotion_rollouts.status_phase
             FROM promotion_rollouts
-            WHERE promotion_rollouts.project_name = stages.project_name
-                AND promotion_rollouts.stage_name = stages.name
+            WHERE promotion_rollouts.stage_id = stages.id
                 AND promotion_rollouts.status_phase NOT IN ('Pending', 'Running')
             ORDER BY promotion_rollouts.number DESC
             LIMIT 1

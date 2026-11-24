@@ -9,7 +9,7 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/controller/git"
 	"github.com/akuity/kargo/pkg/promotion"
-	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
+	"github.com/akuity/kargo/pkg/x/promotion/stepconfig"
 )
 
 const stepKindGitTag = "git-tag"
@@ -50,15 +50,15 @@ func (g *gitTagTagger) Run(
 }
 
 // convert validates the configuration against a JSON schema and converts it
-// into a builtin.GitTagConfig struct.
-func (g *gitTagTagger) convert(cfg promotion.Config) (builtin.GitTagConfig, error) {
-	return validateAndConvert[builtin.GitTagConfig](g.schemaLoader, cfg, stepKindGitTag)
+// into a stepconfig.GitTagConfig struct.
+func (g *gitTagTagger) convert(cfg promotion.Config) (stepconfig.GitTagConfig, error) {
+	return validateAndConvert[stepconfig.GitTagConfig](g.schemaLoader, cfg, stepKindGitTag)
 }
 
 func (g *gitTagTagger) run(
 	ctx context.Context,
 	stepCtx *promotion.StepContext,
-	cfg builtin.GitTagConfig,
+	cfg stepconfig.GitTagConfig,
 ) (promotion.StepResult, error) {
 	path, err := promotion.ExternalPath(stepCtx, cfg.Path)
 	if err != nil {

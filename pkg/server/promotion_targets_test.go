@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 	"sync"
 	"testing"
@@ -23,6 +24,17 @@ type rolloutCreation struct {
 	targets        []string
 	updateStrategy *kargoapi.TargetUpdateStrategy
 }
+
+// errNoTargets is the refusal a promotionrollouts.Creator answers with for a
+// Stage that governs no Targets: a conflict, since the same promotion
+// succeeds once the Stage governs one.
+var errNoTargets = libhttp.Error(
+	fmt.Errorf(
+		"%w right now, so there is nothing to promote to",
+		promotionrollouts.ErrNoTargets,
+	),
+	http.StatusConflict,
+)
 
 // fakeRolloutCreator is a promotionrollouts.Creator that records what it is
 // asked to create and answers with a rollout of the Stage's name, or with

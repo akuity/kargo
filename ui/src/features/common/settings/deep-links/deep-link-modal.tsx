@@ -47,8 +47,7 @@ export const DeepLinkModal = ({
   link,
   onSubmit
 }: DeepLinkModalProps) => {
-  const { resource, templateRoot, expressionRoot, urlExamples, conditionExamples } =
-    deepLinkKinds[kind];
+  const { resource, expressionRoot, urlExamples, conditionExamples } = deepLinkKinds[kind];
 
   const form = useForm<DeepLinkFormValues>({
     defaultValues: formValuesFromDeepLink(link),
@@ -95,10 +94,10 @@ export const DeepLinkModal = ({
         name='url'
         label='URL'
         required
-        description={`A Go template evaluated against ${templateRoot}. Sprig functions are available.`}
+        description={`Expressions in \${{ }} are evaluated against ${expressionRoot}.`}
         tooltip={
           <ExpressionHelp
-            syntax={`Anything on the ${resource} is reachable from ${templateRoot}. Fields that are not set are absent rather than empty, so reach optional ones with get. Indexing a missing field drops the whole link.`}
+            syntax={`Anything on the ${resource} is reachable from ${expressionRoot}. Fields that are not set are nil and would show up as null, so default optional ones with ?? "". Indexing a missing field drops the whole link.`}
             examples={urlExamples}
           />
         }
@@ -108,7 +107,7 @@ export const DeepLinkModal = ({
           <Input.TextArea
             {...field}
             autoSize={{ minRows: 1, maxRows: 4 }}
-            placeholder={`https://example.com/${kind}/{{ ${templateRoot}.metadata.name }}`}
+            placeholder={`https://example.com/${kind}/\${{ ${expressionRoot}.metadata.name }}`}
           />
         )}
       </FieldContainer>
@@ -126,10 +125,10 @@ export const DeepLinkModal = ({
         control={form.control}
         name='if'
         label='Condition'
-        description={`Optional. An expression over ${expressionRoot}. The link is hidden unless it evaluates to true.`}
+        description={`Optional. A \${{ }} expression over ${expressionRoot}. The link is hidden unless it evaluates to true.`}
         tooltip={
           <ExpressionHelp
-            syntax={`An expression returning true or false, with no {{ }} around it. The ${resource} is bound to ${expressionRoot}. Reach optional fields with ?. Indexing or len() on a missing one drops the link.`}
+            syntax={`An expression in \${{ }} returning true or false. The ${resource} is bound to ${expressionRoot}. Reach optional fields with ?. and default them with ??. Indexing a missing one drops the link.`}
             examples={conditionExamples}
           />
         }

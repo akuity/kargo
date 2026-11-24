@@ -482,6 +482,8 @@ type testCase struct {
 	// createDisabled mounts the handler on a server that does not create
 	// rollouts.
 	createDisabled bool
+	// check, if set, is what the server asks before it creates a rollout.
+	check func(context.Context, *kargoapi.Stage) error
 	// identity, if set, is bound to the request's context, as the API
 	// server's authentication middleware binds the caller's.
 	identity   user.Identity
@@ -508,13 +510,14 @@ func newRouter(
 	authorize func(context.Context, can.Access) error,
 	kube client.Client,
 	createEnabled bool,
+	check func(context.Context, *kargoapi.Stage) error,
 ) *gin.Engine {
 	router := gin.New()
 	router.Use(middleware.HandleErrors(), middleware.Recover())
 	// A server that does not create rollouts has no Creator.
 	var creator Creator
 	if createEnabled {
-		creator = NewCreator(store, targets)
+		creator = NewCreator(store, targets, check)
 	}
 	New(store, creator, authorize, kube).Register(router.Group("/v1beta1/projects/:project"))
 	return router
@@ -562,7 +565,7 @@ func runTestCases(t *testing.T, cases []testCase) {
 				req = req.WithContext(user.ContextWithIdentity(req.Context(), tc.identity))
 			}
 			w := httptest.NewRecorder()
-			newRouter(store, tc.targets, authorize, kube, !tc.createDisabled).ServeHTTP(w, req)
+			newRouter(store, tc.targets, authorize, kube, !tc.createDisabled, tc.check).ServeHTTP(w, req)
 			tc.assertions(t, w)
 		})
 	}
@@ -610,7 +613,7 @@ func TestNew(t *testing.T) {
 	require.Nil(t, h.store)
 	require.Nil(t, h.creator)
 	store := &fakeStore{}
-	h = New(store, NewCreator(store, fakeTargets{}), nil, nil)
+	h = New(store, NewCreator(store, fakeTargets{}, nil), nil, nil)
 	require.NotNil(t, h.store)
 	require.NotNil(t, h.creator)
 }
@@ -652,7 +655,7 @@ func TestRequireAccess(t *testing.T) {
 	t.Run("no authorizer fails closed", func(t *testing.T) {
 		t.Parallel()
 		w := httptest.NewRecorder()
-		newRouter(&fakeStore{}, fakeTargets{}, nil, nil, true).ServeHTTP(
+		newRouter(&fakeStore{}, fakeTargets{}, nil, nil, true, nil).ServeHTTP(
 			w, httptest.NewRequest(http.MethodGet, projectURL(""), nil),
 		)
 		require.Equal(t, http.StatusInternalServerError, w.Code)

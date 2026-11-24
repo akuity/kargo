@@ -24,7 +24,7 @@ import (
 // DATABASE_URL, applies the repository's migrations to it, and returns a pool
 // scoped to that schema together with a migrator for it. The schema is
 // dropped when the test ends. The test is skipped if DATABASE_URL is unset.
-func IsolatedDatabase(t *testing.T) (*pgxpool.Pool, *goose.Provider) {
+func IsolatedDatabase(t testing.TB) (*pgxpool.Pool, *goose.Provider) {
 	t.Helper()
 	dsn := os.Getenv("DATABASE_URL")
 	if dsn == "" {
@@ -62,7 +62,7 @@ func IsolatedDatabase(t *testing.T) (*pgxpool.Pool, *goose.Provider) {
 // newMigrator runs the embedded migrations against dsn in-process.
 // Shelling out to `go tool goose` would compile the tool on first use, which
 // on a cold CI runner takes longer than a test should wait.
-func newMigrator(t *testing.T, dsn string) *goose.Provider {
+func newMigrator(t testing.TB, dsn string) *goose.Provider {
 	t.Helper()
 	cfg, err := pgx.ParseConfig(dsn)
 	require.NoError(t, err)

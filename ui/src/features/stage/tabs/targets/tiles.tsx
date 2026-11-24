@@ -2,12 +2,11 @@ import { faArrowRight } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Flex, Typography, theme } from 'antd';
 import { ReactNode, useMemo } from 'react';
-import { Link, generatePath } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 
-import { paths } from '@ui/config/paths';
 import { TargetRow } from '@ui/features/project/targets/model/target-rows';
 import { surfaceClassName } from '@ui/features/project/targets/shared/surface';
-import { PromotionRequest } from '@ui/gen/api/v2/models';
+import { Round, isRolloutRound, roundPath } from '@ui/features/stage/utils/promotion-rollout';
 
 import { MarkBar, MarkDot } from './mark-visuals';
 import { Marking, tally } from './marks';
@@ -55,7 +54,7 @@ export const TargetTiles = ({
   stageName: string;
   rows: TargetRow[];
   // The Stage's latest round, when it has had one.
-  round?: PromotionRequest;
+  round?: Round;
   // The Freight vocabulary, shared with the grid's Freight colouring so a
   // piece of Freight is the same colour in both.
   freightMarks: Marking;
@@ -69,7 +68,7 @@ export const TargetTiles = ({
   const never = useMemo(() => neverPromoted(rows), [rows]);
 
   const roundFreight = round?.spec?.freight;
-  const roundName = round?.metadata?.name;
+  const roundLink = roundPath(project, stageName, round);
   // A round that never reached a Target -- blocked, or still being admitted --
   // has nothing to report per Target. The drawer explains why above the tabs.
   const reached = promoted.inRound > 0;
@@ -115,17 +114,11 @@ export const TargetTiles = ({
           {/* The round has a page of its own, which opens on the Promotions
               tab with this round expanded: every child Promotion, and where
               the failures fell. */}
-          {roundName && (
+          {roundLink && (
             <>
               {' · '}
-              <Link
-                to={generatePath(paths.promotionRequest, {
-                  name: project,
-                  stageName,
-                  promotionRequestName: roundName
-                })}
-              >
-                view request
+              <Link to={roundLink}>
+                view {isRolloutRound(round) ? 'rollout' : 'request'}
                 <FontAwesomeIcon icon={faArrowRight} className='ml-1' />
               </Link>
             </>

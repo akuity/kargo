@@ -343,8 +343,8 @@ metadata:
 spec:
   stageLinks:
   - title: Logs
-    url: https://logs.example.com/search?project={{ .stage.metadata.namespace }}&stage={{ .stage.metadata.name }}
+    url: https://logs.example.com/search?project=${{ stage.metadata.namespace }}&stage=${{ stage.metadata.name }}
 ```
 
-For the available fields and template syntax, see
+For the available fields and expression syntax, see
 [Deep Links](../50-user-guide/20-how-to-guides/20-working-with-projects.md#deep-links).

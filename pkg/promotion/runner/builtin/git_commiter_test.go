@@ -13,7 +13,7 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/controller/git"
 	"github.com/akuity/kargo/pkg/promotion"
-	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
+	"github.com/akuity/kargo/pkg/x/promotion/stepconfig"
 )
 
 func Test_gitCommitter_convert(t *testing.T) {
@@ -131,7 +131,7 @@ func Test_gitCommitter_run(t *testing.T) {
 	res, err := runner.run(
 		t.Context(),
 		stepCtx,
-		builtin.GitCommitConfig{
+		stepconfig.GitCommitConfig{
 			Path:    "master",
 			Message: "Initial commit",
 		},
@@ -152,7 +152,7 @@ func Test_gitCommitter_run(t *testing.T) {
 	res, err = runner.run(
 		t.Context(),
 		stepCtx,
-		builtin.GitCommitConfig{
+		stepconfig.GitCommitConfig{
 			Path:    "master",
 			Message: "No-Op commit",
 		},
@@ -172,7 +172,7 @@ func Test_gitCommitter_run_escapingSymlink(t *testing.T) {
 	res, err := (&gitCommitter{}).run(
 		t.Context(),
 		newTestStepContext(t, workDir),
-		builtin.GitCommitConfig{Path: "out/repo", Message: "msg"},
+		stepconfig.GitCommitConfig{Path: "out/repo", Message: "msg"},
 	)
 	require.ErrorContains(t, err, "path escapes from parent")
 	require.Equal(t, kargoapi.PromotionStepStatusErrored, res.Status)

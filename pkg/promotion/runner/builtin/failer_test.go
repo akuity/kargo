@@ -7,7 +7,7 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/promotion"
-	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
+	"github.com/akuity/kargo/pkg/x/promotion/stepconfig"
 )
 
 func Test_failer_convert(t *testing.T) {
@@ -34,17 +34,17 @@ func Test_failer_convert(t *testing.T) {
 func Test_failer_run(t *testing.T) {
 	tests := []struct {
 		name          string
-		cfg           builtin.FailConfig
+		cfg           stepconfig.FailConfig
 		expectedError string
 	}{
 		{
 			"without message",
-			builtin.FailConfig{},
+			stepconfig.FailConfig{},
 			"failed",
 		},
 		{
 			"with message",
-			builtin.FailConfig{Message: "test message"},
+			stepconfig.FailConfig{Message: "test message"},
 			"failed: test message",
 		},
 	}

@@ -13,11 +13,12 @@ import (
 	"testing"
 	"time"
 
+	"github.com/expr-lang/expr/vm"
 	"github.com/stretchr/testify/require"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/promotion"
-	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
+	"github.com/akuity/kargo/pkg/x/promotion/stepconfig"
 )
 
 func Test_httpRequester_convert(t *testing.T) {
@@ -257,16 +258,16 @@ func Test_httpRequester_convert(t *testing.T) {
 func Test_httpRequester_run(t *testing.T) {
 	testCases := []struct {
 		name       string
-		cfg        builtin.HTTPConfig
+		cfg        stepconfig.HTTPConfig
 		handler    http.HandlerFunc
 		assertions func(*testing.T, promotion.StepResult, error)
 	}{
 		{
 			name:    "success and not failed; no body",
 			handler: func(_ http.ResponseWriter, _ *http.Request) {},
-			cfg: builtin.HTTPConfig{
+			cfg: stepconfig.HTTPConfig{
 				SuccessExpression: "true",
-				Outputs: []builtin.HTTPOutput{
+				Outputs: []stepconfig.HTTPOutput{
 					{
 						Name:           "status",
 						FromExpression: "response.status",
@@ -298,9 +299,9 @@ func Test_httpRequester_run(t *testing.T) {
 				_, err := w.Write([]byte(`<html>hello</html>`))
 				require.NoError(t, err)
 			},
-			cfg: builtin.HTTPConfig{
+			cfg: stepconfig.HTTPConfig{
 				SuccessExpression: "true",
-				Outputs: []builtin.HTTPOutput{
+				Outputs: []stepconfig.HTTPOutput{
 					{
 						Name:           "status",
 						FromExpression: "response.status",
@@ -320,9 +321,9 @@ func Test_httpRequester_run(t *testing.T) {
 				_, err := w.Write([]byte(`{"theMeaningOfLife": 42}`))
 				require.NoError(t, err)
 			},
-			cfg: builtin.HTTPConfig{
+			cfg: stepconfig.HTTPConfig{
 				SuccessExpression: "true",
-				Outputs: []builtin.HTTPOutput{
+				Outputs: []stepconfig.HTTPOutput{
 					{
 						Name:           "status",
 						FromExpression: "response.status",
@@ -353,9 +354,9 @@ func Test_httpRequester_run(t *testing.T) {
 				_, err := w.Write([]byte(`[{"theMeaningOfLife": 42}]`))
 				require.NoError(t, err)
 			},
-			cfg: builtin.HTTPConfig{
+			cfg: stepconfig.HTTPConfig{
 				SuccessExpression: "true",
-				Outputs: []builtin.HTTPOutput{
+				Outputs: []stepconfig.HTTPOutput{
 					{
 						Name:           "status",
 						FromExpression: "response.status",
@@ -384,7 +385,7 @@ func Test_httpRequester_run(t *testing.T) {
 			handler: func(w http.ResponseWriter, _ *http.Request) {
 				w.WriteHeader(http.StatusNotFound)
 			},
-			cfg: builtin.HTTPConfig{
+			cfg: stepconfig.HTTPConfig{
 				FailureExpression: "response.status == 404",
 			},
 			assertions: func(t *testing.T, res promotion.StepResult, err error) {
@@ -401,7 +402,7 @@ func Test_httpRequester_run(t *testing.T) {
 				_, err := w.Write([]byte(`{"error": "resource not found"}`))
 				require.NoError(t, err)
 			},
-			cfg: builtin.HTTPConfig{
+			cfg: stepconfig.HTTPConfig{
 				FailureExpression: "response.status == 404",
 				ErrorExpression:   "response.body.error",
 			},
@@ -423,7 +424,7 @@ func Test_httpRequester_run(t *testing.T) {
 				_, err := w.Write([]byte(`{"errorMessage": "something went wrong"}`))
 				require.NoError(t, err)
 			},
-			cfg: builtin.HTTPConfig{
+			cfg: stepconfig.HTTPConfig{
 				FailureExpression: "response.status == 404",
 				ErrorExpression:   "response.body?.error ?? response.body?.errorMessage",
 			},
@@ -445,7 +446,7 @@ func Test_httpRequester_run(t *testing.T) {
 				_, err := w.Write([]byte(`{}`))
 				require.NoError(t, err)
 			},
-			cfg: builtin.HTTPConfig{
+			cfg: stepconfig.HTTPConfig{
 				FailureExpression: "response.status == 404",
 				ErrorExpression:   "response.body?.error ?? response.body?.errorMessage",
 			},
@@ -459,7 +460,7 @@ func Test_httpRequester_run(t *testing.T) {
 		{
 			name:    "failed with errorExpression compile error",
 			handler: func(_ http.ResponseWriter, _ *http.Request) {},
-			cfg: builtin.HTTPConfig{
+			cfg: stepconfig.HTTPConfig{
 				FailureExpression: "true",
 				ErrorExpression:   "(1 + 2",
 			},
@@ -479,7 +480,7 @@ func Test_httpRequester_run(t *testing.T) {
 				_, err := w.Write([]byte(`{"error": 42}`))
 				require.NoError(t, err)
 			},
-			cfg: builtin.HTTPConfig{
+			cfg: stepconfig.HTTPConfig{
 				FailureExpression: "response.status == 404",
 				ErrorExpression:   "response.body.error",
 			},
@@ -494,7 +495,7 @@ func Test_httpRequester_run(t *testing.T) {
 		{
 			name:    "failed with errorExpression eval error",
 			handler: func(_ http.ResponseWriter, _ *http.Request) {},
-			cfg: builtin.HTTPConfig{
+			cfg: stepconfig.HTTPConfig{
 				FailureExpression: "true",
 				ErrorExpression:   "invalid()",
 			},
@@ -508,7 +509,7 @@ func Test_httpRequester_run(t *testing.T) {
 		{
 			name:    "success AND failed", // Treated like a failure
 			handler: func(_ http.ResponseWriter, _ *http.Request) {},
-			cfg: builtin.HTTPConfig{
+			cfg: stepconfig.HTTPConfig{
 				SuccessExpression: "response.status == 200",
 				FailureExpression: "response.status == 200",
 			},
@@ -519,11 +520,105 @@ func Test_httpRequester_run(t *testing.T) {
 			},
 		},
 		{
+			name: "failed while success expression cannot be evaluated",
+			handler: func(w http.ResponseWriter, _ *http.Request) {
+				w.Header().Set(contentTypeHeader, contentTypeJSON)
+				w.WriteHeader(http.StatusNotFound)
+				_, err := w.Write([]byte(`{"message": "not found"}`))
+				require.NoError(t, err)
+			},
+			cfg: stepconfig.HTTPConfig{
+				SuccessExpression: "response.body.items[0].state == 'done'",
+				FailureExpression: "response.status >= 400",
+				ErrorExpression:   "response.body.message",
+			},
+			// Failure takes precedence, so the success expression, which expects
+			// a differently shaped body, should not be evaluated at all.
+			assertions: func(t *testing.T, res promotion.StepResult, err error) {
+				require.ErrorContains(
+					t,
+					err,
+					`HTTP (404) response met failure criteria: "not found"`,
+				)
+				require.True(t, promotion.IsTerminal(err))
+				require.Equal(t, kargoapi.PromotionStepStatusFailed, res.Status)
+			},
+		},
+		{
+			name: "not failed while success expression cannot be evaluated",
+			handler: func(w http.ResponseWriter, _ *http.Request) {
+				w.Header().Set(contentTypeHeader, contentTypeJSON)
+				_, err := w.Write([]byte(`{}`))
+				require.NoError(t, err)
+			},
+			cfg: stepconfig.HTTPConfig{
+				SuccessExpression: "response.body.items[0].state == 'done'",
+				FailureExpression: "response.status >= 400",
+			},
+			assertions: func(t *testing.T, res promotion.StepResult, err error) {
+				require.ErrorContains(t, err, "error evaluating success expression")
+				require.False(t, promotion.IsTerminal(err))
+				require.Equal(t, kargoapi.PromotionStepStatusErrored, res.Status)
+			},
+		},
+		{
+			name: "success expression does not compile",
+			handler: func(_ http.ResponseWriter, _ *http.Request) {
+				t.Error("request sent despite a misconfigured expression")
+			},
+			cfg: stepconfig.HTTPConfig{
+				SuccessExpression: "(1 + 2",
+				FailureExpression: "true",
+			},
+			// A success expression that does not compile is a misconfiguration,
+			// reported before the request is sent, so even when the failure
+			// criteria would be met.
+			assertions: func(t *testing.T, res promotion.StepResult, err error) {
+				require.ErrorContains(t, err, `error compiling success expression "(1 + 2"`)
+				require.True(t, promotion.IsTerminal(err))
+				require.Equal(t, kargoapi.PromotionStepStatusErrored, res.Status)
+			},
+		},
+		{
+			name: "failure expression does not compile",
+			handler: func(_ http.ResponseWriter, _ *http.Request) {
+				t.Error("request sent despite a misconfigured expression")
+			},
+			cfg: stepconfig.HTTPConfig{
+				SuccessExpression: "true",
+				FailureExpression: "(1 + 2",
+			},
+			assertions: func(t *testing.T, res promotion.StepResult, err error) {
+				require.ErrorContains(t, err, `error compiling failure expression "(1 + 2"`)
+				require.True(t, promotion.IsTerminal(err))
+				require.Equal(t, kargoapi.PromotionStepStatusErrored, res.Status)
+			},
+		},
+		{
+			name: "succeeded while failure expression cannot be evaluated",
+			handler: func(w http.ResponseWriter, _ *http.Request) {
+				w.Header().Set(contentTypeHeader, contentTypeJSON)
+				_, err := w.Write([]byte(`{}`))
+				require.NoError(t, err)
+			},
+			cfg: stepconfig.HTTPConfig{
+				SuccessExpression: "response.status == 200",
+				FailureExpression: "response.body.items[0].state == 'failed'",
+			},
+			// Whether the failure criteria are met is unknown, so the step must
+			// not succeed.
+			assertions: func(t *testing.T, res promotion.StepResult, err error) {
+				require.ErrorContains(t, err, "error evaluating failure expression")
+				require.False(t, promotion.IsTerminal(err))
+				require.Equal(t, kargoapi.PromotionStepStatusErrored, res.Status)
+			},
+		},
+		{
 			name: "neither success nor failed",
 			handler: func(w http.ResponseWriter, _ *http.Request) {
 				w.WriteHeader(http.StatusBadGateway)
 			},
-			cfg: builtin.HTTPConfig{
+			cfg: stepconfig.HTTPConfig{
 				SuccessExpression: "response.status == 200",
 				FailureExpression: "response.status == 404",
 			},
@@ -540,7 +635,7 @@ func Test_httpRequester_run(t *testing.T) {
 			handler: func(w http.ResponseWriter, _ *http.Request) {
 				w.WriteHeader(http.StatusBadGateway)
 			},
-			cfg: builtin.HTTPConfig{
+			cfg: stepconfig.HTTPConfig{
 				SuccessExpression: "response.status == 200",
 				FailureExpression: "response.status == 404",
 				PollInterval:      "15s",
@@ -557,7 +652,7 @@ func Test_httpRequester_run(t *testing.T) {
 			handler: func(w http.ResponseWriter, _ *http.Request) {
 				w.WriteHeader(http.StatusOK)
 			},
-			cfg: builtin.HTTPConfig{
+			cfg: stepconfig.HTTPConfig{
 				// No success or failure expressions
 			},
 			assertions: func(t *testing.T, res promotion.StepResult, err error) {
@@ -570,7 +665,7 @@ func Test_httpRequester_run(t *testing.T) {
 			handler: func(w http.ResponseWriter, _ *http.Request) {
 				w.WriteHeader(http.StatusNotFound)
 			},
-			cfg: builtin.HTTPConfig{
+			cfg: stepconfig.HTTPConfig{
 				// No success or failure expressions
 			},
 			assertions: func(t *testing.T, res promotion.StepResult, err error) {
@@ -585,9 +680,9 @@ func Test_httpRequester_run(t *testing.T) {
 				_, err := w.Write([]byte(`1`))
 				require.NoError(t, err)
 			},
-			cfg: builtin.HTTPConfig{
+			cfg: stepconfig.HTTPConfig{
 				SuccessExpression: `response.body == "1"`,
-				Outputs: []builtin.HTTPOutput{
+				Outputs: []stepconfig.HTTPOutput{
 					{
 						Name:           "numeric_response",
 						FromExpression: "response.body",
@@ -613,9 +708,9 @@ func Test_httpRequester_run(t *testing.T) {
 				_, err := w.Write([]byte(`one`))
 				require.NoError(t, err)
 			},
-			cfg: builtin.HTTPConfig{
+			cfg: stepconfig.HTTPConfig{
 				SuccessExpression: `response.body == "one"`,
-				Outputs: []builtin.HTTPOutput{
+				Outputs: []stepconfig.HTTPOutput{
 					{
 						Name:           "word_response",
 						FromExpression: "response.body",
@@ -641,9 +736,9 @@ func Test_httpRequester_run(t *testing.T) {
 				_, err := w.Write([]byte("status: ok\ncount: 42\n"))
 				require.NoError(t, err)
 			},
-			cfg: builtin.HTTPConfig{
+			cfg: stepconfig.HTTPConfig{
 				SuccessExpression: `response.body.status == "ok"`,
-				Outputs: []builtin.HTTPOutput{
+				Outputs: []stepconfig.HTTPOutput{
 					{
 						Name:           "yaml_status",
 						FromExpression: "response.body.status",
@@ -675,10 +770,10 @@ func Test_httpRequester_run(t *testing.T) {
 				_, err := w.Write([]byte("key: value\n"))
 				require.NoError(t, err)
 			},
-			cfg: builtin.HTTPConfig{
+			cfg: stepconfig.HTTPConfig{
 				ResponseContentType: "application/yaml",
 				SuccessExpression:   `response.body.key == "value"`,
-				Outputs: []builtin.HTTPOutput{
+				Outputs: []stepconfig.HTTPOutput{
 					{
 						Name:           "yaml_key",
 						FromExpression: "response.body.key",
@@ -704,10 +799,10 @@ func Test_httpRequester_run(t *testing.T) {
 				_, err := w.Write([]byte(`{"foo": "bar"}`))
 				require.NoError(t, err)
 			},
-			cfg: builtin.HTTPConfig{
+			cfg: stepconfig.HTTPConfig{
 				ResponseContentType: "text/plain",
 				SuccessExpression:   `response.body == "{\"foo\": \"bar\"}"`,
-				Outputs: []builtin.HTTPOutput{
+				Outputs: []stepconfig.HTTPOutput{
 					{
 						Name:           "raw_body",
 						FromExpression: "response.body",
@@ -734,7 +829,7 @@ func Test_httpRequester_run(t *testing.T) {
 				_, err := w.Write([]byte(`{"error": "should not appear"}`))
 				require.NoError(t, err)
 			},
-			cfg: builtin.HTTPConfig{
+			cfg: stepconfig.HTTPConfig{
 				SuccessExpression: "response.status == 200",
 				FailureExpression: "response.status == 404",
 				ErrorExpression:   "response.body.error",
@@ -762,20 +857,20 @@ func Test_httpRequester_run(t *testing.T) {
 func Test_httpRequester_buildRequest(t *testing.T) {
 	testCases := []struct {
 		name       string
-		setup      func(*testing.T) (*promotion.StepContext, builtin.HTTPConfig)
+		setup      func(*testing.T) (*promotion.StepContext, stepconfig.HTTPConfig)
 		assertions func(*testing.T, context.Context, *http.Request, error)
 	}{
 		{
 			name: "request options",
-			setup: func(_ *testing.T) (*promotion.StepContext, builtin.HTTPConfig) {
-				return nil, builtin.HTTPConfig{
+			setup: func(_ *testing.T) (*promotion.StepContext, stepconfig.HTTPConfig) {
+				return nil, stepconfig.HTTPConfig{
 					Method: "GET",
 					URL:    "http://example.com",
-					Headers: []builtin.HTTPConfigHeader{{
+					Headers: []stepconfig.HTTPConfigHeader{{
 						Name:  "Content-Type",
 						Value: "application/json",
 					}},
-					QueryParams: []builtin.HTTPConfigQueryParam{{
+					QueryParams: []stepconfig.HTTPConfigQueryParam{{
 						Name:  "param",
 						Value: "some value", // We want to be sure this gets url-encoded
 					}},
@@ -791,14 +886,14 @@ func Test_httpRequester_buildRequest(t *testing.T) {
 		},
 		{
 			name: "body from file",
-			setup: func(t *testing.T) (*promotion.StepContext, builtin.HTTPConfig) {
+			setup: func(t *testing.T) (*promotion.StepContext, stepconfig.HTTPConfig) {
 				workDir := t.TempDir()
 				require.NoError(t, os.WriteFile(
 					filepath.Join(workDir, "payload.json"),
 					[]byte{0x00, 0xff, 0x01, 0x7f},
 					0600,
 				))
-				return newTestStepContext(t, workDir), builtin.HTTPConfig{
+				return newTestStepContext(t, workDir), stepconfig.HTTPConfig{
 					Method:       "POST",
 					URL:          "http://example.com",
 					BodyFromFile: "payload.json",
@@ -813,14 +908,14 @@ func Test_httpRequester_buildRequest(t *testing.T) {
 		},
 		{
 			name: "body from file rejects oversize",
-			setup: func(t *testing.T) (*promotion.StepContext, builtin.HTTPConfig) {
+			setup: func(t *testing.T) (*promotion.StepContext, stepconfig.HTTPConfig) {
 				workDir := t.TempDir()
 				require.NoError(t, os.WriteFile(
 					filepath.Join(workDir, "payload.bin"),
 					bytes.Repeat([]byte{0x01}, maxResponseBytes+1),
 					0600,
 				))
-				return newTestStepContext(t, workDir), builtin.HTTPConfig{
+				return newTestStepContext(t, workDir), stepconfig.HTTPConfig{
 					Method:       "POST",
 					URL:          "http://example.com",
 					BodyFromFile: "payload.bin",
@@ -832,7 +927,7 @@ func Test_httpRequester_buildRequest(t *testing.T) {
 		},
 		{
 			name: "body from file stays inside work directory",
-			setup: func(t *testing.T) (*promotion.StepContext, builtin.HTTPConfig) {
+			setup: func(t *testing.T) (*promotion.StepContext, stepconfig.HTTPConfig) {
 				parentDir := t.TempDir()
 				workDir := filepath.Join(parentDir, "work")
 				require.NoError(t, os.Mkdir(workDir, 0700))
@@ -841,7 +936,7 @@ func Test_httpRequester_buildRequest(t *testing.T) {
 					[]byte("outside work directory"),
 					0600,
 				))
-				return newTestStepContext(t, workDir), builtin.HTTPConfig{
+				return newTestStepContext(t, workDir), stepconfig.HTTPConfig{
 					URL:          "http://example.com",
 					BodyFromFile: "../payload.json",
 				}
@@ -865,7 +960,7 @@ func Test_httpRequester_buildRequest(t *testing.T) {
 func Test_httpRequester_getClient(t *testing.T) {
 	testCases := []struct {
 		name       string
-		cfg        builtin.HTTPConfig
+		cfg        stepconfig.HTTPConfig
 		assertions func(*testing.T, *http.Client, error)
 	}{
 		{
@@ -880,7 +975,7 @@ func Test_httpRequester_getClient(t *testing.T) {
 		},
 		{
 			name: "with insecureSkipTLSVerify",
-			cfg: builtin.HTTPConfig{
+			cfg: stepconfig.HTTPConfig{
 				InsecureSkipTLSVerify: true,
 			},
 			assertions: func(t *testing.T, client *http.Client, err error) {
@@ -894,7 +989,7 @@ func Test_httpRequester_getClient(t *testing.T) {
 		},
 		{
 			name: "with invalid timeout",
-			cfg: builtin.HTTPConfig{
+			cfg: stepconfig.HTTPConfig{
 				Timeout: "invalid",
 			},
 			assertions: func(t *testing.T, _ *http.Client, err error) {
@@ -1336,120 +1431,85 @@ func Test_httpRequester_buildExprEnv(t *testing.T) {
 	}
 }
 
-func Test_httpRequester_evaluateSuccessCriteria(t *testing.T) {
+func Test_httpRequester_compileCriteria(t *testing.T) {
 	testCases := []struct {
 		name       string
-		cfg        builtin.HTTPConfig
-		assertions func(t *testing.T, result *bool, err error)
+		expression string
+		assertions func(t *testing.T, program *vm.Program, err error)
 	}{
 		{
-			name: "no success expression",
-			cfg:  builtin.HTTPConfig{},
-			assertions: func(t *testing.T, result *bool, err error) {
+			name: "no expression",
+			assertions: func(t *testing.T, program *vm.Program, err error) {
 				require.NoError(t, err)
-				require.Nil(t, result)
+				require.Nil(t, program)
 			},
 		},
 		{
-			name: "error compiling success expression",
-			cfg:  builtin.HTTPConfig{SuccessExpression: "(1 + 2"},
-			assertions: func(t *testing.T, result *bool, err error) {
-				require.ErrorContains(t, err, "error compiling success expression")
+			name:       "expression does not compile",
+			expression: "(1 + 2",
+			assertions: func(t *testing.T, program *vm.Program, err error) {
+				require.ErrorContains(t, err, `error compiling success expression "(1 + 2"`)
 				require.True(t, promotion.IsTerminal(err))
-				require.Nil(t, result)
+				require.Nil(t, program)
 			},
 		},
 		{
-			name: "error evaluating success expression",
-			cfg:  builtin.HTTPConfig{SuccessExpression: "invalid()"},
-			assertions: func(t *testing.T, result *bool, err error) {
-				require.ErrorContains(t, err, "error evaluating success expression")
-				require.False(t, promotion.IsTerminal(err))
-				require.Nil(t, result)
-			},
-		},
-		{
-			name: "success expression evaluates to non-boolean",
-			cfg:  builtin.HTTPConfig{SuccessExpression: `"foo"`},
-			assertions: func(t *testing.T, result *bool, err error) {
-				require.ErrorContains(t, err, "success expression")
-				require.ErrorContains(t, err, "did not evaluate to a boolean")
-				require.False(t, promotion.IsTerminal(err))
-				require.Nil(t, result)
-			},
-		},
-		{
-			name: "success expression evaluates to true",
-			cfg:  builtin.HTTPConfig{SuccessExpression: "true"},
-			assertions: func(t *testing.T, result *bool, err error) {
+			name:       "expression compiles",
+			expression: "response.status == 200",
+			assertions: func(t *testing.T, program *vm.Program, err error) {
 				require.NoError(t, err)
-				require.NotNil(t, result)
-				require.True(t, *result)
-			},
-		},
-		{
-			name: "success expression evaluates to false",
-			cfg:  builtin.HTTPConfig{SuccessExpression: "false"},
-			assertions: func(t *testing.T, result *bool, err error) {
-				require.NoError(t, err)
-				require.NotNil(t, result)
-				require.False(t, *result)
+				require.NotNil(t, program)
+				require.Equal(t, "response.status == 200", program.Source().String())
 			},
 		},
 	}
 	h := &httpRequester{}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			result, err := h.evaluateSuccessCriteria(testCase.cfg, nil)
-			testCase.assertions(t, result, err)
+			program, err := h.compileCriteria("success", testCase.expression)
+			testCase.assertions(t, program, err)
 		})
 	}
 }
 
-func Test_httpRequester_evaluateFailureCriteria(t *testing.T) {
+func Test_httpRequester_evaluateCriteria(t *testing.T) {
 	testCases := []struct {
 		name       string
-		cfg        builtin.HTTPConfig
+		expression string
 		assertions func(t *testing.T, result *bool, err error)
 	}{
 		{
-			name: "no failure expression",
-			cfg:  builtin.HTTPConfig{},
+			name: "no expression",
 			assertions: func(t *testing.T, result *bool, err error) {
 				require.NoError(t, err)
 				require.Nil(t, result)
 			},
 		},
 		{
-			name: "error compiling failure expression",
-			cfg:  builtin.HTTPConfig{FailureExpression: "(1 + 2"},
+			name:       "error evaluating expression",
+			expression: "invalid()",
 			assertions: func(t *testing.T, result *bool, err error) {
-				require.ErrorContains(t, err, "error compiling failure expression")
-				require.True(t, promotion.IsTerminal(err))
-				require.Nil(t, result)
-			},
-		},
-		{
-			name: "error evaluating failure expression",
-			cfg:  builtin.HTTPConfig{FailureExpression: "invalid()"},
-			assertions: func(t *testing.T, result *bool, err error) {
-				require.ErrorContains(t, err, "error evaluating failure expression")
+				require.ErrorContains(t, err, `error evaluating success expression "invalid()"`)
 				require.False(t, promotion.IsTerminal(err))
 				require.Nil(t, result)
 			},
 		},
 		{
-			name: "failure expression evaluates to non-boolean",
-			cfg:  builtin.HTTPConfig{FailureExpression: `"foo"`},
+			name:       "expression evaluates to non-boolean",
+			expression: `"foo"`,
 			assertions: func(t *testing.T, result *bool, err error) {
-				require.ErrorContains(t, err, "did not evaluate to a boolean")
+				require.ErrorContains(
+					t,
+					err,
+					`success expression "\"foo\"" did not evaluate to a boolean`,
+				)
 				require.False(t, promotion.IsTerminal(err))
 				require.Nil(t, result)
 			},
 		},
 		{
-			name: "failure expression evaluates to true",
-			cfg:  builtin.HTTPConfig{FailureExpression: "true"},
+			name:       "expression evaluates to true",
+			expression: "true",
 			assertions: func(t *testing.T, result *bool, err error) {
 				require.NoError(t, err)
 				require.NotNil(t, result)
@@ -1457,8 +1517,8 @@ func Test_httpRequester_evaluateFailureCriteria(t *testing.T) {
 			},
 		},
 		{
-			name: "failure expression evaluates to false",
-			cfg:  builtin.HTTPConfig{FailureExpression: "false"},
+			name:       "expression evaluates to false",
+			expression: "false",
 			assertions: func(t *testing.T, result *bool, err error) {
 				require.NoError(t, err)
 				require.NotNil(t, result)
@@ -1469,7 +1529,9 @@ func Test_httpRequester_evaluateFailureCriteria(t *testing.T) {
 	h := &httpRequester{}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			result, err := h.evaluateFailureCriteria(testCase.cfg, nil)
+			program, err := h.compileCriteria("success", testCase.expression)
+			require.NoError(t, err)
+			result, err := h.evaluateCriteria("success", program, nil)
 			testCase.assertions(t, result, err)
 		})
 	}
@@ -1478,7 +1540,7 @@ func Test_httpRequester_evaluateFailureCriteria(t *testing.T) {
 func Test_httpRequester_buildOutputs(t *testing.T) {
 	testCases := []struct {
 		name        string
-		outputExprs []builtin.HTTPOutput
+		outputExprs []stepconfig.HTTPOutput
 		assertions  func(t *testing.T, outputs map[string]any, err error)
 	}{
 		{
@@ -1490,7 +1552,7 @@ func Test_httpRequester_buildOutputs(t *testing.T) {
 		},
 		{
 			name: "error compiling output expression",
-			outputExprs: []builtin.HTTPOutput{{
+			outputExprs: []stepconfig.HTTPOutput{{
 				Name:           "fake-output",
 				FromExpression: "(1 + 2",
 			}},
@@ -1501,7 +1563,7 @@ func Test_httpRequester_buildOutputs(t *testing.T) {
 		},
 		{
 			name: "error evaluating output expression",
-			outputExprs: []builtin.HTTPOutput{{
+			outputExprs: []stepconfig.HTTPOutput{{
 				Name:           "fake-output",
 				FromExpression: "invalid()",
 			}},
@@ -1512,7 +1574,7 @@ func Test_httpRequester_buildOutputs(t *testing.T) {
 		},
 		{
 			name: "success",
-			outputExprs: []builtin.HTTPOutput{
+			outputExprs: []stepconfig.HTTPOutput{
 				{
 					Name:           "string-output",
 					FromExpression: `"foo"`,
@@ -1668,12 +1730,12 @@ func Test_httpRequester_proxy(t *testing.T) {
 
 	testCases := []struct {
 		name       string
-		cfg        builtin.HTTPConfig
+		cfg        stepconfig.HTTPConfig
 		assertions func(t *testing.T, res promotion.StepResult, err error)
 	}{
 		{
 			name: "proxy URL with invalid format returns error",
-			cfg: builtin.HTTPConfig{
+			cfg: stepconfig.HTTPConfig{
 				URL:   backend.URL,
 				Proxy: "http://[invalid-url",
 			},
@@ -1683,11 +1745,11 @@ func Test_httpRequester_proxy(t *testing.T) {
 		},
 		{
 			name: "proxy is used when configured",
-			cfg: builtin.HTTPConfig{
+			cfg: stepconfig.HTTPConfig{
 				URL:               backend.URL,
 				Proxy:             proxy.URL,
 				SuccessExpression: "response.status == 200",
-				Outputs: []builtin.HTTPOutput{{
+				Outputs: []stepconfig.HTTPOutput{{
 					Name:           "reachedBackend",
 					FromExpression: "response.body.reachedBackend",
 				}},
@@ -1715,7 +1777,7 @@ func Test_httpRequester_buildRequest_escapingSymlink(t *testing.T) {
 	_, err := (&httpRequester{}).buildRequest(
 		t.Context(),
 		newTestStepContext(t, workDir),
-		builtin.HTTPConfig{
+		stepconfig.HTTPConfig{
 			URL:          "http://example.com",
 			BodyFromFile: "out/payload.json",
 		},

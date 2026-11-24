@@ -18,7 +18,7 @@ import (
 	"github.com/akuity/kargo/pkg/gitprovider"
 	"github.com/akuity/kargo/pkg/logging"
 	"github.com/akuity/kargo/pkg/promotion"
-	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
+	"github.com/akuity/kargo/pkg/x/promotion/stepconfig"
 )
 
 const (
@@ -109,14 +109,14 @@ func (g *gitPushPusher) Run(
 }
 
 // validate validates gitPusher configuration against a JSON schema.
-func (g *gitPushPusher) convert(cfg promotion.Config) (builtin.GitPushConfig, error) {
-	return validateAndConvert[builtin.GitPushConfig](g.schemaLoader, cfg, stepKindGitPush)
+func (g *gitPushPusher) convert(cfg promotion.Config) (stepconfig.GitPushConfig, error) {
+	return validateAndConvert[stepconfig.GitPushConfig](g.schemaLoader, cfg, stepKindGitPush)
 }
 
 func (g *gitPushPusher) run(
 	ctx context.Context,
 	stepCtx *promotion.StepContext,
-	cfg builtin.GitPushConfig,
+	cfg stepconfig.GitPushConfig,
 ) (promotion.StepResult, error) {
 	logger := logging.LoggerFromContext(ctx)
 

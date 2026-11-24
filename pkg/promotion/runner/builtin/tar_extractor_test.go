@@ -15,7 +15,7 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/promotion"
-	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
+	"github.com/akuity/kargo/pkg/x/promotion/stepconfig"
 )
 
 func Test_untarConfig_convert(t *testing.T) {
@@ -172,7 +172,7 @@ func Test_tarExtractor_run(t *testing.T) {
 	tests := []struct {
 		name       string
 		setupFiles func(*testing.T) string
-		cfg        builtin.UntarConfig
+		cfg        stepconfig.UntarConfig
 		assertions func(*testing.T, string, promotion.StepResult, error)
 	}{
 		{
@@ -202,7 +202,7 @@ func Test_tarExtractor_run(t *testing.T) {
 
 				return tmpDir
 			},
-			cfg: builtin.UntarConfig{
+			cfg: stepconfig.UntarConfig{
 				InPath:  "archive.tar",
 				OutPath: "extracted/",
 			},
@@ -254,7 +254,7 @@ func Test_tarExtractor_run(t *testing.T) {
 
 				return tmpDir
 			},
-			cfg: builtin.UntarConfig{
+			cfg: stepconfig.UntarConfig{
 				InPath:  "archive.tar",
 				OutPath: filepath.Join("nested", "extracted"),
 			},
@@ -311,7 +311,7 @@ func Test_tarExtractor_run(t *testing.T) {
 
 				return tmpDir
 			},
-			cfg: builtin.UntarConfig{
+			cfg: stepconfig.UntarConfig{
 				InPath:  "archive.tar",
 				OutPath: "extracted/",
 			},
@@ -338,7 +338,7 @@ func Test_tarExtractor_run(t *testing.T) {
 			setupFiles: func(t *testing.T) string {
 				return t.TempDir()
 			},
-			cfg: builtin.UntarConfig{
+			cfg: stepconfig.UntarConfig{
 				InPath:  "nonexistent.tar",
 				OutPath: "extracted/",
 			},
@@ -388,7 +388,7 @@ func Test_tarExtractor_run(t *testing.T) {
 
 				return tmpDir
 			},
-			cfg: builtin.UntarConfig{
+			cfg: stepconfig.UntarConfig{
 				InPath:  "oversized.tar",
 				OutPath: "extracted/",
 			},
@@ -433,7 +433,7 @@ func Test_tarExtractor_extractToDir(t *testing.T) {
 	tests := []struct {
 		name       string
 		setupFiles func(*testing.T) (string, string) // returns workDir, tarPath
-		cfg        builtin.UntarConfig
+		cfg        stepconfig.UntarConfig
 		assertions func(*testing.T, string, string, promotion.StepResult, error) // workDir, extractDir, result, err
 	}{
 		{
@@ -482,7 +482,7 @@ func Test_tarExtractor_extractToDir(t *testing.T) {
 
 				return tmpDir, tarPath
 			},
-			cfg: builtin.UntarConfig{
+			cfg: stepconfig.UntarConfig{
 				InPath:  "archive.tar",
 				OutPath: "extracted/",
 			},
@@ -537,7 +537,7 @@ func Test_tarExtractor_extractToDir(t *testing.T) {
 
 				return tmpDir, tarPath
 			},
-			cfg: builtin.UntarConfig{
+			cfg: stepconfig.UntarConfig{
 				InPath:  "archive.tar.gz",
 				OutPath: "extracted/",
 			},
@@ -578,7 +578,7 @@ func Test_tarExtractor_extractToDir(t *testing.T) {
 
 				return tmpDir, tarPath
 			},
-			cfg: builtin.UntarConfig{
+			cfg: stepconfig.UntarConfig{
 				InPath:          "archive.tar",
 				OutPath:         "extracted/",
 				StripComponents: ptr.To(int64(2)),
@@ -633,7 +633,7 @@ func Test_tarExtractor_extractToDir(t *testing.T) {
 
 				return tmpDir, tarPath
 			},
-			cfg: builtin.UntarConfig{
+			cfg: stepconfig.UntarConfig{
 				InPath:  "archive.tar",
 				OutPath: "extracted/",
 				Ignore:  "ignore.txt",
@@ -690,7 +690,7 @@ func Test_tarExtractor_extractToDir(t *testing.T) {
 
 				return tmpDir, tarPath
 			},
-			cfg: builtin.UntarConfig{
+			cfg: stepconfig.UntarConfig{
 				InPath:  "archive.tar",
 				OutPath: "extracted/",
 			},
@@ -724,7 +724,7 @@ func Test_tarExtractor_extractToDir(t *testing.T) {
 				require.NoError(t, os.WriteFile(badPath, []byte("not a tar file"), 0o600))
 				return tmpDir, badPath
 			},
-			cfg: builtin.UntarConfig{
+			cfg: stepconfig.UntarConfig{
 				InPath:  "notatar.txt",
 				OutPath: "extracted/",
 			},
@@ -770,7 +770,7 @@ func Test_tarExtractor_extractToDir(t *testing.T) {
 
 				return tmpDir, tarPath
 			},
-			cfg: builtin.UntarConfig{
+			cfg: stepconfig.UntarConfig{
 				InPath:  "unsafe.tar",
 				OutPath: "extracted/",
 			},
@@ -842,7 +842,7 @@ func Test_tarExtractor_extractToDir(t *testing.T) {
 
 				return tmpDir, tarPath
 			},
-			cfg: builtin.UntarConfig{
+			cfg: stepconfig.UntarConfig{
 				InPath:  "unsafe_symlinks.tar",
 				OutPath: "extracted/",
 			},
@@ -901,7 +901,7 @@ func Test_tarExtractor_extractToDir(t *testing.T) {
 
 				return tmpDir, tarPath
 			},
-			cfg: builtin.UntarConfig{
+			cfg: stepconfig.UntarConfig{
 				InPath:  "oversized.tar",
 				OutPath: "extracted/",
 			},
@@ -942,7 +942,7 @@ func Test_tarExtractor_extractToDir(t *testing.T) {
 
 				return tmpDir, tarPath
 			},
-			cfg: builtin.UntarConfig{
+			cfg: stepconfig.UntarConfig{
 				InPath:  "oversized.tar",
 				OutPath: "extracted/",
 			},
@@ -979,7 +979,7 @@ func Test_tarExtractor_extractToDir(t *testing.T) {
 
 				return tmpDir, tarPath
 			},
-			cfg: builtin.UntarConfig{
+			cfg: stepconfig.UntarConfig{
 				InPath:  "permissions.tar",
 				OutPath: "extracted/",
 			},
@@ -1114,7 +1114,7 @@ func Test_tarExtractor_run_symlinkEscape(t *testing.T) {
 			result, err := (&tarExtractor{}).run(
 				t.Context(),
 				newTestStepContext(t, workDir),
-				builtin.UntarConfig{InPath: "evil.tar", OutPath: "out"},
+				stepconfig.UntarConfig{InPath: "evil.tar", OutPath: "out"},
 			)
 			require.NoError(t, err)
 			require.Equal(t, kargoapi.PromotionStepStatusSucceeded, result.Status)
@@ -1176,7 +1176,7 @@ func Test_tarExtractor_run_escapingSymlink(t *testing.T) {
 		result, err := (&tarExtractor{}).run(
 			t.Context(),
 			newTestStepContext(t, workDir),
-			builtin.UntarConfig{InPath: "out/archive.tar", OutPath: "extracted"},
+			stepconfig.UntarConfig{InPath: "out/archive.tar", OutPath: "extracted"},
 		)
 		require.ErrorContains(t, err, "path escapes from parent")
 		require.Equal(t, kargoapi.PromotionStepStatusErrored, result.Status)
@@ -1188,7 +1188,7 @@ func Test_tarExtractor_run_escapingSymlink(t *testing.T) {
 		result, err := (&tarExtractor{}).run(
 			t.Context(),
 			newTestStepContext(t, workDir),
-			builtin.UntarConfig{InPath: "archive.tar", OutPath: "out/extracted"},
+			stepconfig.UntarConfig{InPath: "archive.tar", OutPath: "out/extracted"},
 		)
 		require.ErrorContains(t, err, "path escapes from parent")
 		require.Equal(t, kargoapi.PromotionStepStatusErrored, result.Status)
@@ -1205,7 +1205,7 @@ func Test_tarExtractor_run_symlinkedOutPath(t *testing.T) {
 	result, err := (&tarExtractor{}).run(
 		t.Context(),
 		newTestStepContext(t, workDir),
-		builtin.UntarConfig{InPath: "archive.tar", OutPath: "out"},
+		stepconfig.UntarConfig{InPath: "archive.tar", OutPath: "out"},
 	)
 	require.NoError(t, err)
 	require.Equal(t, kargoapi.PromotionStepStatusSucceeded, result.Status)

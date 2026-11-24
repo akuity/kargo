@@ -12,7 +12,7 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/promotion"
-	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
+	"github.com/akuity/kargo/pkg/x/promotion/stepconfig"
 )
 
 func Test_filerCopier_convert(t *testing.T) {
@@ -122,7 +122,7 @@ func Test_fileCopier_run(t *testing.T) {
 	tests := []struct {
 		name       string
 		setupFiles func(*testing.T) string
-		cfg        builtin.CopyConfig
+		cfg        stepconfig.CopyConfig
 		assertions func(*testing.T, string, promotion.StepResult, error)
 	}{
 		{
@@ -135,7 +135,7 @@ func Test_fileCopier_run(t *testing.T) {
 
 				return tmpDir
 			},
-			cfg: builtin.CopyConfig{
+			cfg: stepconfig.CopyConfig{
 				InPath:  "input.txt",
 				OutPath: "output.txt",
 			},
@@ -167,7 +167,7 @@ func Test_fileCopier_run(t *testing.T) {
 
 				return tmpDir
 			},
-			cfg: builtin.CopyConfig{
+			cfg: stepconfig.CopyConfig{
 				InPath:  "input/",
 				OutPath: "output/",
 			},
@@ -205,7 +205,7 @@ func Test_fileCopier_run(t *testing.T) {
 
 				return tmpDir
 			},
-			cfg: builtin.CopyConfig{
+			cfg: stepconfig.CopyConfig{
 				InPath:  "input/",
 				OutPath: "output/",
 			},
@@ -243,7 +243,7 @@ func Test_fileCopier_run(t *testing.T) {
 
 				return tmpDir
 			},
-			cfg: builtin.CopyConfig{
+			cfg: stepconfig.CopyConfig{
 				InPath:  "input/",
 				OutPath: "output/",
 			},
@@ -279,7 +279,7 @@ func Test_fileCopier_run(t *testing.T) {
 
 				return tmpDir
 			},
-			cfg: builtin.CopyConfig{
+			cfg: stepconfig.CopyConfig{
 				InPath:  "input/",
 				OutPath: "output/",
 			},
@@ -315,7 +315,7 @@ func Test_fileCopier_run(t *testing.T) {
 
 				return tmpDir
 			},
-			cfg: builtin.CopyConfig{
+			cfg: stepconfig.CopyConfig{
 				InPath:  "input/",
 				OutPath: "output/",
 				Ignore:  "!.git/",
@@ -342,7 +342,7 @@ func Test_fileCopier_run(t *testing.T) {
 			setupFiles: func(t *testing.T) string {
 				return t.TempDir()
 			},
-			cfg: builtin.CopyConfig{
+			cfg: stepconfig.CopyConfig{
 				InPath: "input.txt",
 			},
 			assertions: func(t *testing.T, _ string, result promotion.StepResult, err error) {
@@ -478,7 +478,7 @@ func Test_fileCopier_run_escapingSymlink(t *testing.T) {
 		result, err := (&fileCopier{}).run(
 			t.Context(),
 			newTestStepContext(t, workDir),
-			builtin.CopyConfig{InPath: "input", OutPath: "out/copied"},
+			stepconfig.CopyConfig{InPath: "input", OutPath: "out/copied"},
 		)
 		require.ErrorContains(t, err, "path escapes from parent")
 		require.Equal(t, kargoapi.PromotionStepStatusErrored, result.Status)
@@ -492,7 +492,7 @@ func Test_fileCopier_run_escapingSymlink(t *testing.T) {
 		_, err := (&fileCopier{}).run(
 			t.Context(),
 			newTestStepContext(t, workDir),
-			builtin.CopyConfig{InPath: "a.txt", OutPath: "out/a.txt"},
+			stepconfig.CopyConfig{InPath: "a.txt", OutPath: "out/a.txt"},
 		)
 		require.ErrorContains(t, err, "path escapes from parent")
 		require.NoFileExists(t, filepath.Join(outside, "a.txt"))
@@ -503,7 +503,7 @@ func Test_fileCopier_run_escapingSymlink(t *testing.T) {
 		_, err := (&fileCopier{}).run(
 			t.Context(),
 			newTestStepContext(t, workDir),
-			builtin.CopyConfig{InPath: "out/secret.txt", OutPath: "copied.txt"},
+			stepconfig.CopyConfig{InPath: "out/secret.txt", OutPath: "copied.txt"},
 		)
 		require.ErrorContains(t, err, "resolves outside the working directory")
 		require.NoFileExists(t, filepath.Join(workDir, "copied.txt"))
@@ -518,7 +518,7 @@ func Test_fileCopier_run_symlinkedInPath(t *testing.T) {
 	result, err := (&fileCopier{}).run(
 		t.Context(),
 		newTestStepContext(t, workDir),
-		builtin.CopyConfig{InPath: "link", OutPath: "copied"},
+		stepconfig.CopyConfig{InPath: "link", OutPath: "copied"},
 	)
 	require.NoError(t, err)
 	require.Equal(t, kargoapi.PromotionStepStatusSucceeded, result.Status)
@@ -537,7 +537,7 @@ func Test_fileCopier_run_escapingSymlinkBeneathOutPath(t *testing.T) {
 	_, err := (&fileCopier{}).run(
 		t.Context(),
 		newTestStepContext(t, workDir),
-		builtin.CopyConfig{InPath: "input", OutPath: "copied"},
+		stepconfig.CopyConfig{InPath: "input", OutPath: "copied"},
 	)
 	require.ErrorContains(t, err, "path escapes from parent")
 	b, err := os.ReadFile(filepath.Join(outside, "a.txt"))
@@ -556,7 +556,7 @@ func Test_fileCopier_run_danglingLinkDoesNotHideEscapingLink(t *testing.T) {
 	// not-found error would never see the escaping link.
 	require.NoError(t, stepCtx.Root.Symlink("missing", "dst/a-dangling"))
 	require.NoError(t, stepCtx.Root.Symlink("../../outside/victim", "dst/z-target"))
-	_, err := (&fileCopier{}).run(t.Context(), stepCtx, builtin.CopyConfig{InPath: "src", OutPath: "dst"})
+	_, err := (&fileCopier{}).run(t.Context(), stepCtx, stepconfig.CopyConfig{InPath: "src", OutPath: "dst"})
 	require.Error(t, err)
 	content, err := os.ReadFile(filepath.Join(outside, "victim"))
 	require.NoError(t, err)

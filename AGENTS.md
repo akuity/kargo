@@ -12,7 +12,7 @@ domain is needed.
 
 | Path | Description |
 |------|-------------|
-| `api/v1alpha1/` | CRD types (Warehouse, Freight, Stage, Promotion, Project, etc.). Separate Go module |
+| `api/v1alpha1/` | CRD types (Warehouse, Freight, Stage, Promotion, Project, etc.) |
 | `cmd/controlplane/` | Back end entry point -- single binary with subcommands: `api`, `controller`, `management-controller`, `kubernetes-webhooks`, `external-webhooks`, `garbage-collector` |
 | `cmd/cli/` | CLI entry point |
 | `pkg/server/` | API server handlers, exposing Kargo's REST API (used by both the CLI and UI). |

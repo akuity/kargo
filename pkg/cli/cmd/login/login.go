@@ -23,32 +23,28 @@ import (
 	"github.com/pkg/browser"
 	"github.com/spf13/cobra"
 	"golang.org/x/oauth2"
-	"sigs.k8s.io/controller-runtime/pkg/client/config"
 
 	"github.com/akuity/kargo/pkg/cli/client"
 	libConfig "github.com/akuity/kargo/pkg/cli/config"
 	"github.com/akuity/kargo/pkg/cli/option"
 	"github.com/akuity/kargo/pkg/cli/templates"
-	"github.com/akuity/kargo/pkg/kubeclient"
 )
 
 const (
 	defaultRandStringCharSet = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
-	authMethodAdmin      = "admin"
-	authMethodKubeconfig = "kubeconfig"
-	authMethodSSO        = "sso"
+	authMethodAdmin = "admin"
+	authMethodSSO   = "sso"
 )
 
 //go:embed assets
 var assets embed.FS
 
 type loginOptions struct {
-	Config        libConfig.CLIConfig
-	InsecureTLS   bool
-	UseAdmin      bool
-	UseKubeconfig bool
-	UseSSO        bool
+	Config      libConfig.CLIConfig
+	InsecureTLS bool
+	UseAdmin    bool
+	UseSSO      bool
 	// #nosec G117 -- This struct binds to CLI flags and is not transmitted
 	// anywhere directly.
 	Password      string
@@ -64,7 +60,7 @@ func NewCommand(
 	}
 
 	cmd := &cobra.Command{
-		Use:   "login [SERVER_ADDRESS] (--admin | --kubeconfig | --sso)",
+		Use:   "login [SERVER_ADDRESS] (--admin | --sso)",
 		Args:  option.MaximumNArgs(1),
 		Short: "Log in to a Kargo API server",
 		Example: templates.Example(`
@@ -77,17 +73,18 @@ kargo login
 # Log in using the admin user
 kargo login https://kargo.example.com --admin
 
-# Log in using the local kubeconfig
-kargo login https://kargo.example.com --kubeconfig
-
-# Log in using the local kubeconfig and ignore cert warnings
-kargo login https://kargo.example.com --kubeconfig --insecure-skip-tls-verify
+# Log in using SSO and ignore cert warnings
+kargo login https://kargo.example.com --sso --insecure-skip-tls-verify
 `),
 		PreRunE: func(cmd *cobra.Command, args []string) error {
 			// A login method must be specified unless we're falling back on a stored
-			// one, which only happens when no server address is specified.
-			if len(args) == 1 || cmdOpts.Config.AuthMethod == "" {
-				cmd.MarkFlagsOneRequired("admin", "kubeconfig", "sso")
+			// one, which only happens when no server address is specified and the
+			// stored method is one this command recognizes.
+			if len(args) == 1 || !slices.Contains(
+				[]string{authMethodAdmin, authMethodSSO},
+				cmdOpts.Config.AuthMethod,
+			) {
+				cmd.MarkFlagsOneRequired("admin", "sso")
 			}
 			return nil
 		},
@@ -113,20 +110,17 @@ func (o *loginOptions) addFlags(cmd *cobra.Command) {
 	option.InsecureTLS(cmd.PersistentFlags(), &o.InsecureTLS)
 
 	cmd.Flags().BoolVar(&o.UseAdmin, "admin", false,
-		"Log in as the Kargo admin user. If set, --kubeconfig and --sso must not be set.")
-	cmd.Flags().BoolVar(&o.UseKubeconfig, "kubeconfig", false,
-		"Log in using a token obtained from the local Kubernetes configuration's current context. "+
-			"If set, --admin and --sso must not be set.")
+		"Log in as the Kargo admin user. If set, --sso must not be set.")
 	cmd.Flags().StringVar(&o.Password, "password", "",
 		"Specify the password for non-interactive admin user login. Only used when --admin is specified.")
 	cmd.Flags().BoolVar(&o.UseSSO, "sso", false,
 		"Log in using OpenID Connect and the server's configured identity provider. "+
-			"If set, --admin and --kubeconfig must not be set.")
+			"If set, --admin must not be set.")
 	cmd.Flags().IntVar(&o.CallbackPort, "port", 0,
 		"Port to use for the callback URL; 0 selects any available, unprivileged port. "+
 			"Only used when --sso is specified.")
 
-	cmd.MarkFlagsMutuallyExclusive("admin", "kubeconfig", "sso")
+	cmd.MarkFlagsMutuallyExclusive("admin", "sso")
 }
 
 // complete sets the options from the command arguments.
@@ -139,12 +133,10 @@ func (o *loginOptions) complete(args []string) {
 	// inherit other login options from the configuration.
 	if o.ServerAddress == "" && o.Config.APIAddress != "" {
 		o.ServerAddress = o.Config.APIAddress
-		if !o.UseAdmin && !o.UseKubeconfig && !o.UseSSO && o.Config.AuthMethod != "" {
+		if !o.UseAdmin && !o.UseSSO && o.Config.AuthMethod != "" {
 			switch o.Config.AuthMethod {
 			case authMethodAdmin:
 				o.UseAdmin = true
-			case authMethodKubeconfig:
-				o.UseKubeconfig = true
 			case authMethodSSO:
 				o.UseSSO = true
 			}
@@ -186,11 +178,6 @@ func (o *loginOptions) run(ctx context.Context) error {
 			}
 		}
 		if bearerToken, err = adminLogin(ctx, o.ServerAddress, o.Password, o.InsecureTLS); err != nil {
-			return err
-		}
-	case o.UseKubeconfig:
-		authMethod = authMethodKubeconfig
-		if bearerToken, err = kubeconfigLogin(ctx); err != nil {
 			return err
 		}
 	case o.UseSSO:
@@ -276,20 +263,6 @@ func adminLogin(
 	}
 
 	return loginRes.GetIdToken(), nil
-}
-
-// kubeconfigLogin gleans a bearer token from the local kubeconfig's current
-// context.
-func kubeconfigLogin(ctx context.Context) (string, error) {
-	restCfg, err := config.GetConfig()
-	if err != nil {
-		return "", fmt.Errorf("error loading kubeconfig: %w", err)
-	}
-	bearerToken, err := kubeclient.GetCredential(ctx, restCfg)
-	if err != nil {
-		return "", fmt.Errorf("error retrieving bearer token from kubeconfig: %w", err)
-	}
-	return bearerToken, nil
 }
 
 // ssoLogin performs a login using OpenID Connect. It first retrieves

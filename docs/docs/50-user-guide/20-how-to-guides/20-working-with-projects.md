@@ -467,18 +467,24 @@ Each link has the following fields:
 | Name | Required | Description |
 |------|----------|-------------|
 | `title` | Y | The label displayed for the link. |
-| `url` | Y | The link's URL. This is a Go [template](https://pkg.go.dev/text/template), with [Sprig](https://masterminds.github.io/sprig/) functions available, that is rendered against the resource being viewed as `.freight` or `.stage`. Fields use the same names as in the resource's YAML, for example `.stage.metadata.name`. |
+| `url` | Y | The link's URL. It may contain [expressions](../60-reference-docs/40-expressions.md) offset by `${{ }}`, evaluated against the resource being viewed as `freight` or `stage`. Fields use the same names as in the resource's YAML, for example `${{ stage.metadata.name }}`. A URL with no expressions is used as is. |
 | `description` | N | A short description displayed alongside the link. |
-| `if` | N | An [expr-lang](https://expr-lang.org/) condition evaluated against the same resource as `freight` or `stage`. The link is shown only when it evaluates to `true`. |
+| `if` | N | An expression offset by `${{ }}` and evaluated against the same resource. It must evaluate to `true` or `false`. The link is shown only when it evaluates to `true`. |
+
+Expressions in deep links can use the
+[expr-lang](https://expr-lang.org/docs/language-definition) built-ins and the
+`quote()`, `unsafeQuote()`, `asYAML()` and `asJSON()` functions. Variables
+such as `ctx` and `vars`, and the Kargo-specific functions described in the
+[expressions reference](../60-reference-docs/40-expressions.md), such as
+`secret()`, `sharedSecret()` and `warehouse()`, are **not** available.
 
 :::note
 
-Unlike most expressions in Kargo, these are not wrapped in `${{ }}`. `url` uses
-Go template syntax (`{{ .stage.metadata.name }}`), and `if` is a bare
-expression (`stage.metadata.name == "prod"`).
+Fields that are not set on the resource are `nil`, and a `nil` value appears
+in a URL as the text `null`. Reach optional fields with `?.` and give them a
+default with `??`, for example `${{ stage.metadata.labels?.team ?? "" }}`.
 
-This syntax is likely to change in Kargo v2.0 to match the rest of Kargo. See
-[#7774](https://github.com/akuity/kargo/issues/7774).
+A link whose `url` or `if` fails to evaluate is not shown.
 
 :::
 
@@ -491,14 +497,15 @@ metadata:
 spec:
   freightLinks:
   - title: Release notes
-    url: https://github.com/example/app/releases/tag/{{ (index .freight.images 0).tag }}
+    url: https://github.com/example/app/releases/tag/${{ freight.images[0].tag }}
+    if: ${{ len(freight.images ?? []) > 0 }}
   stageLinks:
   - title: Dashboard
     description: Grafana dashboard for this environment
-    url: https://grafana.example.com/d/app?var-env={{ .stage.metadata.name }}
+    url: https://grafana.example.com/d/app?var-env=${{ stage.metadata.name }}
   - title: Production runbook
     url: https://wiki.example.com/runbooks/app
-    if: stage.metadata.name == "prod"
+    if: ${{ stage.metadata.name == "prod" }}
 ```
 
 Links can also be defined for every `Project` on

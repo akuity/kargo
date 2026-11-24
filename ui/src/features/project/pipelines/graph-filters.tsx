@@ -1,14 +1,13 @@
-import { faCircleNodes, faList, faObjectGroup, faSearch } from '@fortawesome/free-solid-svg-icons';
+import { faCircleNodes, faList, faSearch } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { Button, Card, Input, Segmented, Select, Space } from 'antd';
-import { useMemo } from 'react';
+import { Card, Input, Segmented, Select, Space } from 'antd';
 
 import { WarehouseExpanded } from '@ui/extend/types';
 import { Freight, Stage } from '@ui/gen/api/v2/models';
 
 import { useFreightTimelineControllerContext } from './context/freight-timeline-controller-context';
+import { DisplaySettingsButton } from './display-settings-button';
 import { FreightTimelineFilterButton } from './freight/freight-timeline-filter-button';
-import { groupNodes } from './group-nodes';
 
 type GraphFiltersProps = {
   warehouses: WarehouseExpanded[];
@@ -21,11 +20,6 @@ type GraphFiltersProps = {
 
 export const GraphFilters = (props: GraphFiltersProps) => {
   const filterContext = useFreightTimelineControllerContext();
-
-  const stackedNodesParents = useMemo(
-    () => groupNodes(props.stages, props.warehouses).filter(Boolean),
-    [props.stages, props.warehouses]
-  );
 
   return (
     <Card size='small' className={props.className} styles={{ body: { padding: 8 } }}>
@@ -62,20 +56,6 @@ export const GraphFilters = (props: GraphFiltersProps) => {
           onChange={(e) => filterContext?.setStageSearch(e.target.value)}
         />
 
-        <FreightTimelineFilterButton freights={props.freights} />
-
-        <Button
-          title='Group stages'
-          icon={<FontAwesomeIcon icon={faObjectGroup} />}
-          onClick={() => {
-            filterContext?.setPreferredFilter({
-              ...filterContext?.preferredFilter,
-              stackedNodesParents
-            });
-          }}
-          disabled={stackedNodesParents.length < 1 || props.pipelineView !== 'graph'}
-        />
-
         <Segmented
           value={props.pipelineView}
           options={[
@@ -83,6 +63,14 @@ export const GraphFilters = (props: GraphFiltersProps) => {
             { value: 'list', icon: <FontAwesomeIcon icon={faList} /> }
           ]}
           onChange={props.setPipelineView}
+        />
+
+        <FreightTimelineFilterButton freights={props.freights} />
+
+        <DisplaySettingsButton
+          stages={props.stages}
+          warehouses={props.warehouses}
+          pipelineView={props.pipelineView}
         />
       </Space>
     </Card>

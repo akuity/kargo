@@ -6,13 +6,13 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/selection"
 
-	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
+	"github.com/akuity/kargo/pkg/x/promotion/stepconfig"
 )
 
 // BuildArgoCDAppLabelSelector converts an ArgoCDAppSelector into a Kubernetes
 // labels.Selector.
 func BuildArgoCDAppLabelSelector(
-	selector *builtin.ArgoCDAppSelector,
+	selector *stepconfig.ArgoCDAppSelector,
 ) (labels.Selector, error) {
 	if len(selector.MatchLabels) == 0 && len(selector.MatchExpressions) == 0 {
 		return nil, fmt.Errorf("selector must have at least one match criterion")
@@ -31,13 +31,13 @@ func BuildArgoCDAppLabelSelector(
 	for _, expr := range selector.MatchExpressions {
 		var op selection.Operator
 		switch expr.Operator {
-		case builtin.In:
+		case stepconfig.In:
 			op = selection.In
-		case builtin.NotIn:
+		case stepconfig.NotIn:
 			op = selection.NotIn
-		case builtin.Exists:
+		case stepconfig.Exists:
 			op = selection.Exists
-		case builtin.DoesNotExist:
+		case stepconfig.DoesNotExist:
 			op = selection.DoesNotExist
 		default:
 			return nil, fmt.Errorf("invalid operator: %s", expr.Operator)

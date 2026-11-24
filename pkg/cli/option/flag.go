@@ -10,9 +10,6 @@ const (
 	// AbortFlag is the flag name for the abort flag.
 	AbortFlag = "abort"
 
-	// AddressFlag is the flag name for the address flag.
-	AddressFlag = "address"
-
 	// AliasFlag is the flag name for the alias flag.
 	AliasFlag = "alias"
 	// AliasShortFlag is the short flag name for the alias flag.
@@ -62,9 +59,6 @@ const (
 
 	// InteractivePasswordFlag is the flag name for the interactive-password flag.
 	InteractivePasswordFlag = "interactive-password"
-
-	// KargoNamespaceFlag is the flag name for the kargo-namespace flag.
-	KargoNamespaceFlag = "kargo-namespace"
 
 	// MetricFlag is the flag name for the metric flag.
 	MetricFlag = "metric"
@@ -140,11 +134,6 @@ const (
 // Abort adds the AbortFlag to the provided flag set.
 func Abort(fs *pflag.FlagSet, abort *bool, defaultAbort bool, usage string) {
 	fs.BoolVar(abort, AbortFlag, defaultAbort, usage)
-}
-
-// Address adds the AddressFlag to the provided flag set.
-func Address(fs *pflag.FlagSet, address *string, defaultAddress, usage string) {
-	fs.StringVar(address, AddressFlag, defaultAddress, usage)
 }
 
 // Alias adds the AliasFlag to the provided flag set.
@@ -226,11 +215,6 @@ func InsecureTLS(fs *pflag.FlagSet, insecure *bool) {
 // InteractivePassword adds the InteractivePasswordFlag to the provided flag set.
 func InteractivePassword(fs *pflag.FlagSet, changePasswordInteractively *bool, usage string) {
 	fs.BoolVar(changePasswordInteractively, InteractivePasswordFlag, false, usage)
-}
-
-// KargoNamespace adds the KargoNamespaceFlag to the provided flag set.
-func KargoNamespace(fs *pflag.FlagSet, kargoNamespace *string, defaultKargoNamespace, usage string) {
-	fs.StringVar(kargoNamespace, KargoNamespaceFlag, defaultKargoNamespace, usage)
 }
 
 // Metric adds the MetricFlag to the provided flag set.

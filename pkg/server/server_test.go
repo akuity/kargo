@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -13,6 +14,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
+	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/database"
 	fakeevent "github.com/akuity/kargo/pkg/event/fake"
 	"github.com/akuity/kargo/pkg/server/config"
@@ -90,6 +92,8 @@ func TestNewServer_rolloutCreator(t *testing.T) {
 	)
 	require.NoError(t, err)
 
+	errHeldBack := errors.New("held back")
+
 	testCases := []struct {
 		name string
 		cfg  config.ServerConfig
@@ -111,6 +115,17 @@ func TestNewServer_rolloutCreator(t *testing.T) {
 			db:    database.New(nil),
 			wired: true,
 		},
+		{
+			name: "a server that checks before it creates rollouts",
+			cfg: config.ServerConfig{
+				PromotionRolloutsEnabled: true,
+				PromotionRolloutCheck: func(context.Context, *kargoapi.Stage) error {
+					return errHeldBack
+				},
+			},
+			db:    database.New(nil),
+			wired: true,
+		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
@@ -118,6 +133,18 @@ func TestNewServer_rolloutCreator(t *testing.T) {
 			require.True(t, ok)
 			require.Equal(t, testCase.db != nil, s.listTargetsFn != nil)
 			require.Equal(t, testCase.wired, s.rolloutCreator != nil)
+			if testCase.cfg.PromotionRolloutCheck != nil {
+				// The Creator asks the configured check before it reads or
+				// writes anything, so the check's refusal is what comes back.
+				_, err = s.rolloutCreator.Create(
+					t.Context(),
+					&kargoapi.Stage{},
+					&kargoapi.Freight{},
+					nil,
+					nil,
+				)
+				require.Equal(t, errHeldBack, err)
+			}
 		})
 	}
 }

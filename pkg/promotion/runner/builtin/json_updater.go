@@ -11,7 +11,7 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/promotion"
-	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
+	"github.com/akuity/kargo/pkg/x/promotion/stepconfig"
 )
 
 const stepKindJSONUpdate = "json-update"
@@ -52,16 +52,16 @@ func (j *jsonUpdater) Run(
 }
 
 // convert validates jsonUpdater configuration against a JSON schema and
-// converts it into a builtin.JSONUpdateConfig struct.
+// converts it into a stepconfig.JSONUpdateConfig struct.
 func (j *jsonUpdater) convert(cfg promotion.Config,
-) (builtin.JSONUpdateConfig, error) {
-	return validateAndConvert[builtin.JSONUpdateConfig](j.schemaLoader, cfg, stepKindJSONUpdate)
+) (stepconfig.JSONUpdateConfig, error) {
+	return validateAndConvert[stepconfig.JSONUpdateConfig](j.schemaLoader, cfg, stepKindJSONUpdate)
 }
 
 func (j *jsonUpdater) run(
 	_ context.Context,
 	stepCtx *promotion.StepContext,
-	cfg builtin.JSONUpdateConfig,
+	cfg stepconfig.JSONUpdateConfig,
 ) (promotion.StepResult, error) {
 	result := promotion.StepResult{Status: kargoapi.PromotionStepStatusSucceeded}
 
@@ -80,7 +80,7 @@ func (j *jsonUpdater) run(
 	return result, nil
 }
 
-func (j *jsonUpdater) updateFile(root *os.Root, path string, updates []builtin.JSONUpdate) error {
+func (j *jsonUpdater) updateFile(root *os.Root, path string, updates []stepconfig.JSONUpdate) error {
 	relPath, err := promotion.WorkspacePath(path)
 	if err != nil {
 		return err
@@ -121,7 +121,7 @@ func isValidScalar(value any) bool {
 	}
 }
 
-func (j *jsonUpdater) generateCommitMessage(path string, updates []builtin.JSONUpdate) string {
+func (j *jsonUpdater) generateCommitMessage(path string, updates []stepconfig.JSONUpdate) string {
 	if len(updates) == 0 {
 		return ""
 	}

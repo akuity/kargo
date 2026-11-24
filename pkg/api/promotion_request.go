@@ -214,9 +214,9 @@ func ensureUpdateStrategy(
 	if updateStrategy == nil {
 		// Calculate effective update strategy for promotion request
 		// This computes MaxConcurrentPercent and MaxFailuresPercent into MaxConcurrent and MaxFailures
-		return calculateUpdateStrategy(stage.Spec.Targets.UpdateStrategy, len(stageTargets))
+		return CalculateUpdateStrategy(stage.Spec.Targets.UpdateStrategy, len(stageTargets))
 	}
-	return calculateUpdateStrategy(*updateStrategy, len(stageTargets))
+	return CalculateUpdateStrategy(*updateStrategy, len(stageTargets))
 }
 
 func getStageTargets(
@@ -272,10 +272,10 @@ func newPromotionRequest(
 	}
 }
 
-// calculateUpdateStrategy calculates effective updateStrategy for a PromotionRequest
+// CalculateUpdateStrategy calculates effective updateStrategy for a PromotionRequest
 // based on the stage updateStrategy and the number of targets selected.
 // For updateStrategy used in PromotionRequest, the percentage values are not set.
-func calculateUpdateStrategy(
+func CalculateUpdateStrategy(
 	stageStrategy kargoapi.TargetUpdateStrategy,
 	targetCount int,
 ) (*kargoapi.PromotionRequestUpdateStrategy, error) {

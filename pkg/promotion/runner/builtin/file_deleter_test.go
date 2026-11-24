@@ -11,7 +11,7 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/promotion"
-	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
+	"github.com/akuity/kargo/pkg/x/promotion/stepconfig"
 )
 
 func Test_fileDeleter_convert(t *testing.T) {
@@ -154,7 +154,7 @@ func Test_fileDeleter_run(t *testing.T) {
 	tests := []struct {
 		name       string
 		setupFiles func(*testing.T) string
-		cfg        builtin.DeleteConfig
+		cfg        stepconfig.DeleteConfig
 		assertions func(*testing.T, string, promotion.StepResult, error)
 	}{
 		{
@@ -167,7 +167,7 @@ func Test_fileDeleter_run(t *testing.T) {
 
 				return tmpDir
 			},
-			cfg: builtin.DeleteConfig{
+			cfg: stepconfig.DeleteConfig{
 				Path: "input.txt",
 			},
 			assertions: func(t *testing.T, _ string, result promotion.StepResult, err error) {
@@ -186,7 +186,7 @@ func Test_fileDeleter_run(t *testing.T) {
 				require.NoError(t, os.Mkdir(dirPath, 0o700))
 				return tmpDir
 			},
-			cfg: builtin.DeleteConfig{
+			cfg: stepconfig.DeleteConfig{
 				Path: "dirToDelete",
 			},
 			assertions: func(t *testing.T, workDir string, result promotion.StepResult, err error) {
@@ -202,7 +202,7 @@ func Test_fileDeleter_run(t *testing.T) {
 			setupFiles: func(t *testing.T) string {
 				return t.TempDir()
 			},
-			cfg: builtin.DeleteConfig{
+			cfg: stepconfig.DeleteConfig{
 				Path:   "nonExistentFile.txt",
 				Strict: true,
 			},
@@ -216,7 +216,7 @@ func Test_fileDeleter_run(t *testing.T) {
 			setupFiles: func(t *testing.T) string {
 				return t.TempDir()
 			},
-			cfg: builtin.DeleteConfig{
+			cfg: stepconfig.DeleteConfig{
 				Path:   "nonExistentFile.txt",
 				Strict: false,
 			},
@@ -241,7 +241,7 @@ func Test_fileDeleter_run(t *testing.T) {
 
 				return tmpDir
 			},
-			cfg: builtin.DeleteConfig{
+			cfg: stepconfig.DeleteConfig{
 				Path: "input/symlink.txt",
 			},
 			assertions: func(t *testing.T, workDir string, result promotion.StepResult, err error) {
@@ -272,7 +272,7 @@ func Test_fileDeleter_run(t *testing.T) {
 
 				return tmpDir
 			},
-			cfg: builtin.DeleteConfig{
+			cfg: stepconfig.DeleteConfig{
 				Path: "foo/",
 			},
 			assertions: func(t *testing.T, workDir string, result promotion.StepResult, err error) {
@@ -299,7 +299,7 @@ func Test_fileDeleter_run(t *testing.T) {
 					filepath.Join(tmpDir, "c.md"), []byte("c"), 0o600))
 				return tmpDir
 			},
-			cfg: builtin.DeleteConfig{
+			cfg: stepconfig.DeleteConfig{
 				Paths: []string{"a.txt", "b.txt"},
 			},
 			assertions: func(t *testing.T, workDir string, result promotion.StepResult, err error) {
@@ -324,7 +324,7 @@ func Test_fileDeleter_run(t *testing.T) {
 					filepath.Join(tmpDir, "dir", "file.txt"), []byte("x"), 0o600))
 				return tmpDir
 			},
-			cfg: builtin.DeleteConfig{
+			cfg: stepconfig.DeleteConfig{
 				Paths:  []string{"dir", "dir/file.txt"},
 				Strict: true,
 			},
@@ -343,7 +343,7 @@ func Test_fileDeleter_run(t *testing.T) {
 					filepath.Join(tmpDir, "a.txt"), []byte("a"), 0o600))
 				return tmpDir
 			},
-			cfg: builtin.DeleteConfig{
+			cfg: stepconfig.DeleteConfig{
 				Paths:  []string{"a.txt", "missing.txt"},
 				Strict: false,
 			},
@@ -362,7 +362,7 @@ func Test_fileDeleter_run(t *testing.T) {
 					filepath.Join(tmpDir, "a.txt"), []byte("a"), 0o600))
 				return tmpDir
 			},
-			cfg: builtin.DeleteConfig{
+			cfg: stepconfig.DeleteConfig{
 				Paths:  []string{"a.txt", "missing.txt"},
 				Strict: true,
 			},
@@ -385,7 +385,7 @@ func Test_fileDeleter_run(t *testing.T) {
 					filepath.Join(tmpDir, "a2.txt"), []byte("glob"), 0o600))
 				return tmpDir
 			},
-			cfg: builtin.DeleteConfig{
+			cfg: stepconfig.DeleteConfig{
 				Path: "a[1].txt",
 			},
 			assertions: func(t *testing.T, workDir string, result promotion.StepResult, err error) {
@@ -410,7 +410,7 @@ func Test_fileDeleter_run(t *testing.T) {
 					filepath.Join(tmpDir, "c.md"), []byte("c"), 0o600))
 				return tmpDir
 			},
-			cfg: builtin.DeleteConfig{
+			cfg: stepconfig.DeleteConfig{
 				Path:          "*.txt",
 				PathsAreGlobs: true,
 			},
@@ -441,7 +441,7 @@ func Test_fileDeleter_run(t *testing.T) {
 					filepath.Join(tmpDir, "sub", "deep", "keep.md"), []byte("k"), 0o600))
 				return tmpDir
 			},
-			cfg: builtin.DeleteConfig{
+			cfg: stepconfig.DeleteConfig{
 				Path:          "**/*.tmp",
 				PathsAreGlobs: true,
 			},
@@ -472,7 +472,7 @@ func Test_fileDeleter_run(t *testing.T) {
 					filepath.Join(tmpDir, "out", "keep.md"), []byte("k"), 0o600))
 				return tmpDir
 			},
-			cfg: builtin.DeleteConfig{
+			cfg: stepconfig.DeleteConfig{
 				Paths:         []string{"./out/**/*.tmp", "./out/build/"},
 				PathsAreGlobs: true,
 				Strict:        true,
@@ -499,7 +499,7 @@ func Test_fileDeleter_run(t *testing.T) {
 					filepath.Join(tmpDir, "build", "out", "artifact"), []byte("x"), 0o600))
 				return tmpDir
 			},
-			cfg: builtin.DeleteConfig{
+			cfg: stepconfig.DeleteConfig{
 				Path:          "buil*",
 				PathsAreGlobs: true,
 			},
@@ -523,7 +523,7 @@ func Test_fileDeleter_run(t *testing.T) {
 
 				return tmpDir
 			},
-			cfg: builtin.DeleteConfig{
+			cfg: stepconfig.DeleteConfig{
 				Path:          "link.*",
 				PathsAreGlobs: true,
 			},
@@ -550,7 +550,7 @@ func Test_fileDeleter_run(t *testing.T) {
 					filepath.Join(tmpDir, "c.md"), []byte("c"), 0o600))
 				return tmpDir
 			},
-			cfg: builtin.DeleteConfig{
+			cfg: stepconfig.DeleteConfig{
 				Paths:         []string{"*.log", "*.tmp"},
 				PathsAreGlobs: true,
 			},
@@ -574,7 +574,7 @@ func Test_fileDeleter_run(t *testing.T) {
 					filepath.Join(tmpDir, "a.md"), []byte("a"), 0o600))
 				return tmpDir
 			},
-			cfg: builtin.DeleteConfig{
+			cfg: stepconfig.DeleteConfig{
 				Path:          "*.txt",
 				PathsAreGlobs: true,
 				Strict:        false,
@@ -592,7 +592,7 @@ func Test_fileDeleter_run(t *testing.T) {
 			setupFiles: func(t *testing.T) string {
 				return t.TempDir()
 			},
-			cfg: builtin.DeleteConfig{
+			cfg: stepconfig.DeleteConfig{
 				Path:          "*.txt",
 				PathsAreGlobs: true,
 				Strict:        true,
@@ -612,7 +612,7 @@ func Test_fileDeleter_run(t *testing.T) {
 					filepath.Join(tmpDir, "a.log"), []byte("a"), 0o600))
 				return tmpDir
 			},
-			cfg: builtin.DeleteConfig{
+			cfg: stepconfig.DeleteConfig{
 				Paths:         []string{"*.log", "*.txt"},
 				PathsAreGlobs: true,
 				Strict:        true,
@@ -630,7 +630,7 @@ func Test_fileDeleter_run(t *testing.T) {
 			setupFiles: func(t *testing.T) string {
 				return t.TempDir()
 			},
-			cfg: builtin.DeleteConfig{
+			cfg: stepconfig.DeleteConfig{
 				Path:          "[",
 				PathsAreGlobs: true,
 			},
@@ -646,7 +646,7 @@ func Test_fileDeleter_run(t *testing.T) {
 			setupFiles: func(t *testing.T) string {
 				return t.TempDir()
 			},
-			cfg: builtin.DeleteConfig{
+			cfg: stepconfig.DeleteConfig{
 				Path:   "no_such_dir/child.txt",
 				Strict: false,
 			},
@@ -660,7 +660,7 @@ func Test_fileDeleter_run(t *testing.T) {
 			setupFiles: func(t *testing.T) string {
 				return t.TempDir()
 			},
-			cfg: builtin.DeleteConfig{
+			cfg: stepconfig.DeleteConfig{
 				Path:   "no_such_dir/child.txt",
 				Strict: true,
 			},
@@ -680,7 +680,7 @@ func Test_fileDeleter_run(t *testing.T) {
 				t.Cleanup(func() { _ = os.Remove(escapePath) })
 				return tmpDir
 			},
-			cfg: builtin.DeleteConfig{
+			cfg: stepconfig.DeleteConfig{
 				Path: "../escape-target",
 			},
 			assertions: func(t *testing.T, workDir string, result promotion.StepResult, err error) {
@@ -703,7 +703,7 @@ func Test_fileDeleter_run(t *testing.T) {
 				require.NoError(t, os.Symlink(extDir, filepath.Join(tmpDir, "link")))
 				return tmpDir
 			},
-			cfg: builtin.DeleteConfig{
+			cfg: stepconfig.DeleteConfig{
 				Path: "link/secret.txt",
 			},
 			assertions: func(t *testing.T, workDir string, result promotion.StepResult, err error) {
@@ -728,7 +728,7 @@ func Test_fileDeleter_run(t *testing.T) {
 				t.Cleanup(func() { _ = os.Remove(escapePath) })
 				return tmpDir
 			},
-			cfg: builtin.DeleteConfig{
+			cfg: stepconfig.DeleteConfig{
 				Path:          "../*",
 				PathsAreGlobs: true,
 				Strict:        true,
@@ -754,7 +754,7 @@ func Test_fileDeleter_run(t *testing.T) {
 				require.NoError(t, os.Symlink(extDir, filepath.Join(tmpDir, "link")))
 				return tmpDir
 			},
-			cfg: builtin.DeleteConfig{
+			cfg: stepconfig.DeleteConfig{
 				Path:          "link/*",
 				PathsAreGlobs: true,
 			},
@@ -797,7 +797,7 @@ func Test_fileDeleter_run_globWalksPastEscapingSymlink(t *testing.T) {
 	result, err := (&fileDeleter{}).run(
 		t.Context(),
 		newTestStepContext(t, workDir),
-		builtin.DeleteConfig{Path: "src/**/*.md", PathsAreGlobs: true},
+		stepconfig.DeleteConfig{Path: "src/**/*.md", PathsAreGlobs: true},
 	)
 	require.NoError(t, err)
 	require.Equal(t, kargoapi.PromotionStepStatusSucceeded, result.Status)
@@ -813,7 +813,7 @@ func Test_fileDeleter_run_globModeLiteralEscapingSymlink(t *testing.T) {
 	result, err := (&fileDeleter{}).run(
 		t.Context(),
 		newTestStepContext(t, workDir),
-		builtin.DeleteConfig{Path: "src/docs/zone", PathsAreGlobs: true, Strict: true},
+		stepconfig.DeleteConfig{Path: "src/docs/zone", PathsAreGlobs: true, Strict: true},
 	)
 	require.NoError(t, err)
 	require.Equal(t, kargoapi.PromotionStepStatusSucceeded, result.Status)

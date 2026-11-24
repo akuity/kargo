@@ -197,7 +197,11 @@ func NewServer(
 			return targets.ListFromStore(ctx, store, project)
 		}
 		if cfg.PromotionRolloutsEnabled {
-			s.rolloutCreator = promotionrollouts.NewCreator(s.rolloutStore(), store)
+			s.rolloutCreator = promotionrollouts.NewCreator(
+				s.rolloutStore(),
+				store,
+				cfg.PromotionRolloutCheck,
+			)
 		}
 	}
 	s.getAnalysisTemplateFn = rollouts.GetAnalysisTemplate

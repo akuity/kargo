@@ -16,7 +16,7 @@ const ArgocdHostKey ContextKey = "argocd_host"
 const ArgocdPasswordKey ContextKey = "argocd_password"
 const ArgocdUsernameKey ContextKey = "argocd_username"
 
-func LoadArgocdConfig(ctx context.Context, cfg *envconf.Config) (context.Context, error) {
+func LoadArgocdConfig(ctx context.Context, _ *envconf.Config) (context.Context, error) {
 	if argocdConfigFileVal := ctx.Value(ArgoCDConfigFile); argocdConfigFileVal != nil {
 		// Config file already set, noop
 		return ctx, nil
@@ -24,7 +24,13 @@ func LoadArgocdConfig(ctx context.Context, cfg *envconf.Config) (context.Context
 
 	// TODO: other ways to discover/setup argocd config (such as using tempdir)
 	if argocdEnvConfig, err := GetEnv(ctx, []string{"argocd_cli", "config_file"}); err == nil {
-		fileName := argocdEnvConfig.(string)
+		fileName, ok := argocdEnvConfig.(string)
+		if !ok {
+			return ctx, fmt.Errorf(
+				"argocd_cli.config_file must be a string, got %T",
+				argocdEnvConfig,
+			)
+		}
 		if strings.HasPrefix(fileName, "~") {
 			fileName = strings.Replace(fileName, "~", os.Getenv("HOME"), 1)
 		}
@@ -36,8 +42,7 @@ func LoadArgocdConfig(ctx context.Context, cfg *envconf.Config) (context.Context
 	return ctx, nil
 }
 
-
-func ArgocdLogin(ctx context.Context, cfg *envconf.Config) (context.Context, error) {
+func ArgocdLogin(ctx context.Context, _ *envconf.Config) (context.Context, error) {
 	_, err := GetEnv(ctx, []string{"argocd_cli", "argocd_login"})
 	if err != nil {
 		fmt.Printf("Argocd login disabled, skipping \n")
@@ -50,13 +55,21 @@ func ArgocdLogin(ctx context.Context, cfg *envconf.Config) (context.Context, err
 		return ctx, nil
 	}
 
-	argocdPassword, err := GetValueOrEnv(ctx, ArgocdPasswordKey, []string{"argocd_cli", "argocd_login", "argocd_password"})
+	argocdPassword, err := GetValueOrEnv(
+		ctx,
+		ArgocdPasswordKey,
+		[]string{"argocd_cli", "argocd_login", "argocd_password"},
+	)
 	if err != nil {
 		fmt.Printf("%v is not set, skipping argocd login \n", ArgocdPasswordKey)
 		return ctx, nil
 	}
 
-	argocdUsername, err := GetValueOrEnv(ctx, ArgocdUsernameKey, []string{"argocd_cli", "argocd_login", "argocd_username"})
+	argocdUsername, err := GetValueOrEnv(
+		ctx,
+		ArgocdUsernameKey,
+		[]string{"argocd_cli", "argocd_login", "argocd_username"},
+	)
 	if err != nil {
 		fmt.Printf("%v is not set, skipping argocd login \n", ArgocdUsernameKey)
 		return ctx, nil
@@ -70,7 +83,7 @@ func ArgocdLogin(ctx context.Context, cfg *envconf.Config) (context.Context, err
 
 	fmt.Printf("Argocd login \n")
 
-	cmd := fmt.Sprintf("argocd login --insecure %s --username %s --password %s --config %s", 
+	cmd := fmt.Sprintf("argocd login --insecure %s --username %s --password %s --config %s",
 		argocdHost, argocdUsername, argocdPassword, argocdConfigFile)
 	p := utils.RunCommandContext(ctx, cmd)
 	if p.Err() != nil {
