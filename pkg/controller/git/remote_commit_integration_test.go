@@ -660,6 +660,12 @@ func Test_workTree_IntegrateRemoteChanges_MergeAroundShallowBoundary(t *testing.
 					"rev-list", "--merges", "HEAD", "^refs/remotes/origin/main", "--",
 				))
 				requireUndoKept(t, wt)
+				// The rebase must keep the commits it replays
+				require.Equal(t, "local", subject(t, wt.baseRepo, "HEAD"))
+				for _, name := range []string{"c1", "c2", "c3", "c4", "y", "local"} {
+					_, err = os.Stat(filepath.Join(wt.Dir(), name+".txt"))
+					require.NoError(t, err)
+				}
 			},
 		},
 	}
