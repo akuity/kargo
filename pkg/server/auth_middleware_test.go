@@ -807,6 +807,8 @@ func TestAuthMiddlewareHandler(t *testing.T) {
 			// a client actually receives.
 			srv := &server{}
 			router.Use(srv.handleError)
+			// NewAuthMiddleware would ordinarily wire this up.
+			tc.authMiddleware.authenticateFn = tc.authMiddleware.authenticate
 			router.Use(tc.authMiddleware.Handler)
 			router.GET("/v1beta1/*path", func(c *gin.Context) {
 				_, hasUser := user.InfoFromContext(c.Request.Context())
