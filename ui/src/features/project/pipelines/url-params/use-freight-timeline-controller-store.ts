@@ -18,6 +18,7 @@ export const useFreightTimelineControllerStore = (project: string) => {
       warehouses: [],
       hideUnusedFreights: false,
       stackedNodesParents: [],
+      expandedStageGroups: [],
       hideSubscriptions: {},
       images: false,
       view: 'graph',
@@ -87,6 +88,13 @@ export const useFreightTimelineControllerStore = (project: string) => {
       filters.stackedNodesParents = [];
     }
 
+    const expandedStageGroupsParam = searchParams.getAll('expandedStageGroups');
+    if (expandedStageGroupsParam && expandedStageGroupsParam.length > 0) {
+      filters.expandedStageGroups = expandedStageGroupsParam;
+    } else {
+      filters.expandedStageGroups = [];
+    }
+
     const imagesParam = searchParams.get('images');
     if (imagesParam && imagesParam !== '') {
       filters.images = imagesParam === 'true';
@@ -144,6 +152,13 @@ export const useFreightTimelineControllerStore = (project: string) => {
         if (nextPartial.stackedNodesParents && nextPartial.stackedNodesParents.length > 0) {
           for (const stackedNodesParent of nextPartial.stackedNodesParents) {
             currentSearchParams.append('stackedNodesParents', stackedNodesParent);
+          }
+        }
+
+        currentSearchParams.delete('expandedStageGroups');
+        if (nextPartial.expandedStageGroups && nextPartial.expandedStageGroups.length > 0) {
+          for (const group of nextPartial.expandedStageGroups) {
+            currentSearchParams.append('expandedStageGroups', group);
           }
         }
 

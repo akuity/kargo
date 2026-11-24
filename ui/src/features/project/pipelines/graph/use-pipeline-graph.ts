@@ -6,9 +6,12 @@ import { ColorContext } from '@ui/context/colors';
 import { WarehouseExpanded } from '@ui/extend/types';
 import { Stage } from '@ui/gen/api/v2/models';
 
+import { groupStages } from '../stage-groups';
+
 import { edgeIndexer } from './edge-indexer';
+import { groupStageNodes } from './group-stage-nodes';
 import { layoutGraph } from './layout-graph';
-import { stackedIndexer, warehouseIndexer } from './node-indexer';
+import { stackedIndexer, stageGroupIndexer, warehouseIndexer } from './node-indexer';
 import { repoSubscriptionSizer, stackSizer, stageSizer, warehouseSizer } from './node-sizer';
 import { stackNodes } from './stack-nodes';
 
@@ -23,6 +26,7 @@ const subscriptionGap = 100;
 
 export const reactFlowNodeConstants = {
   STACKED_NODE: 'stacked-node',
+  STAGE_GROUP_NODE: 'stage-group-node',
   CUSTOM_WAREHOUSE_NODE: 'custom-warehouse-node',
   CUSTOM_REPO_SUBSCRIPTION_NODE: 'custom-repo-subscription-node',
   CUSTOM_STAGE_NODE: 'custom-stage-node'
@@ -37,7 +41,9 @@ export const useReactFlowPipelineGraph = (
   stack?: {
     afterNodes?: string[];
   },
-  hideSubscriptions?: Record<string, boolean>
+  hideSubscriptions?: Record<string, boolean>,
+  // stage groups (label kargo.akuity.io/stage-group) the user has expanded; all others are collapsed
+  expandedStageGroups: string[] = []
 ) => {
   const { warehouseColorMap } = useContext(ColorContext);
 
@@ -72,6 +78,8 @@ export const useReactFlowPipelineGraph = (
         warehouseColorMap,
         hideSubscriptions
       );
+
+      graph = groupStageNodes(graph, groupStages(stages, expandedStageGroups), maxStageHeight);
 
       graph = stackNodes(stack?.afterNodes || [], graph, stageByName, maxStageHeight);
 
@@ -108,6 +116,19 @@ export const useReactFlowPipelineGraph = (
               id: dagreNode?.id,
               parentNodeId: dagreNode?.parentNodeId
             }
+          });
+          continue;
+        }
+
+        if (stageGroupIndexer.is(node)) {
+          reactFlowNodes.push({
+            id: node,
+            type: reactFlowNodeConstants.STAGE_GROUP_NODE,
+            position: {
+              x: dagreNode?.x - dagreNode?.width / 2,
+              y: dagreNode?.y - stackSizer.size().height / 2
+            },
+            data: { name: dagreNode?.group?.name, stages: dagreNode?.group?.stages }
           });
           continue;
         }
@@ -207,7 +228,14 @@ export const useReactFlowPipelineGraph = (
     const delay = Math.max(0, 3000 - elapsed);
     const id = setTimeout(compute, delay);
     return () => clearTimeout(id);
-  }, [stack?.afterNodes, pipeline, redraw, warehouseColorMap, hideSubscriptions]);
+  }, [
+    stack?.afterNodes,
+    pipeline,
+    redraw,
+    warehouseColorMap,
+    hideSubscriptions,
+    expandedStageGroups.join('\n')
+  ]);
 
   return result;
 };

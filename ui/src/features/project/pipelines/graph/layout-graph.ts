@@ -12,6 +12,7 @@ export type GraphMeta = {
   warehouse?: WarehouseExpanded;
   subscription?: RepoSubscription;
   stage?: Stage;
+  group?: { name: string; stages: Stage[] };
   subscriptionParent?: Warehouse;
   value?: number;
   id?: string;

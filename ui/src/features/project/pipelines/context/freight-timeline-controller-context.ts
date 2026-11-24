@@ -17,6 +17,8 @@ export type FreightTimelineControllerContextType = {
     warehouses: string[];
     hideUnusedFreights: boolean;
     stackedNodesParents: string[];
+    // stage groups the user expanded; every other group is collapsed
+    expandedStageGroups: string[];
     hideSubscriptions: Record<string, boolean>;
     images: boolean;
     view: 'graph' | 'list';
