@@ -183,6 +183,110 @@ func Test_kustomizeValidatorFS_ReadFile(t *testing.T) {
 				require.Contains(t, string(content), "ref=main")
 			},
 		},
+		{
+			name:     "chart name that helm would parse as a flag",
+			fileName: "kustomization.yaml",
+			content:  "helmCharts:\n- name: --post-renderer=sh\n",
+			assert: func(t *testing.T, content []byte, err, recordedErr error) {
+				require.ErrorContains(t, err, "must not start with '-'")
+				require.Nil(t, content)
+				require.Equal(t, err, recordedErr)
+			},
+		},
+		{
+			name:     "release name that helm would parse as a flag",
+			fileName: "kustomization.yaml",
+			content:  "helmCharts:\n- name: foo\n  releaseName: --post-renderer=sh\n",
+			assert: func(t *testing.T, content []byte, err, recordedErr error) {
+				require.ErrorContains(t, err, "must not start with '-'")
+				require.Nil(t, content)
+				require.Equal(t, err, recordedErr)
+			},
+		},
+		{
+			name:     "release name starting with '-' after leading whitespace",
+			fileName: "kustomization.yaml",
+			content:  "helmCharts:\n- name: foo\n  releaseName: \" \\t--post-renderer=sh\"\n",
+			assert: func(t *testing.T, content []byte, err, recordedErr error) {
+				require.ErrorContains(t, err, "must not start with '-'")
+				require.Nil(t, content)
+				require.Equal(t, err, recordedErr)
+			},
+		},
+		{
+			name:     "chart name starting with '-' after leading whitespace",
+			fileName: "kustomization.yaml",
+			content:  "helmCharts:\n- name: \" --post-renderer=sh\"\n",
+			assert: func(t *testing.T, content []byte, err, recordedErr error) {
+				require.ErrorContains(t, err, "must not start with '-'")
+				require.Nil(t, content)
+				require.Equal(t, err, recordedErr)
+			},
+		},
+		{
+			name:     "release name that helm would parse as a flag in the legacy field",
+			fileName: "Kustomization",
+			content:  "helmChartInflationGenerator:\n- chartName: foo\n  releaseName: --post-renderer=sh\n",
+			assert: func(t *testing.T, content []byte, err, recordedErr error) {
+				require.ErrorContains(t, err, "must not start with '-'")
+				require.Nil(t, content)
+				require.Equal(t, err, recordedErr)
+			},
+		},
+		{
+			name:     "release name that helm would parse as a flag in a generator configuration",
+			fileName: "helm.yaml",
+			content: "apiVersion: builtin\nkind: HelmChartInflationGenerator\n" +
+				"name: foo\nreleaseName: --post-renderer=sh\n",
+			assert: func(t *testing.T, content []byte, err, recordedErr error) {
+				require.ErrorContains(t, err, "must not start with '-'")
+				require.Nil(t, content)
+				require.Equal(t, err, recordedErr)
+			},
+		},
+		{
+			name:     "release name that helm would parse as a flag in a later document of a generator file",
+			fileName: "gen.yaml",
+			content: "apiVersion: builtin\nkind: ConfigMapGenerator\nliterals:\n- key=value\n---\n" +
+				"apiVersion: builtin\nkind: HelmChartInflationGenerator\nname: foo\nreleaseName: --post-renderer=sh\n",
+			assert: func(t *testing.T, content []byte, err, recordedErr error) {
+				require.ErrorContains(t, err, "must not start with '-'")
+				require.Nil(t, content)
+				require.Equal(t, err, recordedErr)
+			},
+		},
+		{
+			name:     "safe helm chart is passed through",
+			fileName: "kustomization.yaml",
+			content:  "helmCharts:\n- name: foo\n  releaseName: my-release\n",
+			assert: func(t *testing.T, content []byte, err, recordedErr error) {
+				require.NoError(t, err)
+				require.NoError(t, recordedErr)
+				require.NotNil(t, content)
+			},
+		},
+		{
+			// The whole value reaches helm as a single argument, which helm
+			// does not parse as a flag because it does not start with '-'.
+			name:     "release name with an embedded flag-like value is passed through",
+			fileName: "kustomization.yaml",
+			content:  "helmCharts:\n- name: foo\n  releaseName: my-release --post-renderer=sh\n",
+			assert: func(t *testing.T, content []byte, err, recordedErr error) {
+				require.NoError(t, err)
+				require.NoError(t, recordedErr)
+				require.NotNil(t, content)
+			},
+		},
+		{
+			name:     "generator configuration of another kind is not inspected",
+			fileName: "gen.yaml",
+			content:  "apiVersion: builtin\nkind: ConfigMapGenerator\nname: --post-renderer=sh\n",
+			assert: func(t *testing.T, content []byte, err, recordedErr error) {
+				require.NoError(t, err)
+				require.NoError(t, recordedErr)
+				require.NotNil(t, content)
+			},
+		},
 	}
 	for _, field := range []string{
 		"resources",
