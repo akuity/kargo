@@ -23,8 +23,9 @@ import (
 	rolloutsapi "github.com/akuity/kargo/api/stubs/rollouts/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/api"
-	"github.com/akuity/kargo/pkg/api/freightapi"
 	rollouts "github.com/akuity/kargo/pkg/api/stubs/rollouts"
+	"github.com/akuity/kargo/pkg/client/dataplane/freightclient"
+	"github.com/akuity/kargo/pkg/client/storage/dataplane"
 	"github.com/akuity/kargo/pkg/database"
 	"github.com/akuity/kargo/pkg/database/promotionrolloutstore"
 	"github.com/akuity/kargo/pkg/database/targetstatusstore"
@@ -60,6 +61,9 @@ type server struct {
 	// in which case nothing is published.
 	events *nats.Publisher
 
+	dataplaneStorageClient dataplane.StorageClient
+	freightClient          freightclient.FreightClient
+
 	// The following behaviors are overridable for testing purposes:
 
 	// Common lookups:
@@ -68,14 +72,6 @@ type server struct {
 		client.Client,
 		types.NamespacedName,
 	) (*kargoapi.Stage, error)
-	getFreightByNameOrAliasFn func(
-		ctx context.Context,
-		c client.Client,
-		project string,
-		name string,
-		alias string,
-	) (*kargoapi.Freight, error)
-	isFreightAvailableFn func(*kargoapi.Stage, *kargoapi.Freight) bool
 
 	// Common Promotions:
 	createPromotionFn func(
@@ -90,28 +86,6 @@ type server struct {
 		*kargoapi.Stage,
 		kargoapi.FreightOrigin,
 	) ([]kargoapi.Stage, error)
-
-	// QueryFreight API:
-	listFreightFn func(
-		context.Context,
-		client.ObjectList,
-		...client.ListOption,
-	) error
-
-	// Freight aliasing:
-	patchFreightAliasFn func(
-		ctx context.Context,
-		freight *kargoapi.Freight,
-		alias string,
-	) error
-
-	// Freight approval:
-	patchFreightStatusFn func(
-		ctx context.Context,
-		cl client.Client,
-		freight *kargoapi.Freight,
-		newStatus kargoapi.FreightStatus,
-	) error
 
 	// Rollouts integration:
 	getAnalysisTemplateFn func(
@@ -178,14 +152,12 @@ func NewServer(
 		events:  events,
 	}
 
+	s.dataplaneStorageClient = dataplane.NewStorageClient(kubeClient, sender, db)
+	s.freightClient = &s.dataplaneStorageClient
+
 	s.getStageFn = api.GetStage
-	s.getFreightByNameOrAliasFn = freightapi.GetFreightByNameOrAlias
-	s.isFreightAvailableFn = s.isFreightAvailable
 	s.createPromotionFn = kubeClient.Create
 	s.findDownstreamStagesFn = s.findDownstreamStages
-	s.listFreightFn = kubeClient.List
-	s.patchFreightAliasFn = s.patchFreightAlias
-	s.patchFreightStatusFn = s.patchFreightStatus
 	s.authorizeFn = kubeClient.Authorize
 	if store := s.targetStore(); store != nil {
 		s.listTargetsFn = func(ctx context.Context, project string) ([]kargoapi.Target, error) {

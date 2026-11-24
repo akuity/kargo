@@ -15,7 +15,6 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/api"
-	"github.com/akuity/kargo/pkg/api/freightapi"
 	libhttp "github.com/akuity/kargo/pkg/http"
 	"github.com/akuity/kargo/pkg/logging"
 )
@@ -175,6 +174,7 @@ func getRepoAndTag(s *kargoapi.Freight) (string, string, *semver.Version) {
 // @Success 200 {object} queryFreightsResponse
 // @Router /v1beta1/projects/{project}/freight [get]
 func (s *server) queryFreight(c *gin.Context) {
+	// FIXME: this endpoint need some backing APIs
 	ctx := c.Request.Context()
 	project := c.Param("project")
 
@@ -217,9 +217,8 @@ func (s *server) queryFreight(c *gin.Context) {
 			_ = c.Error(err)
 			return
 		}
-		// TODO: this needs to move to a DB lister
 		freight, err = api.ListFreightAvailableToStage(
-			ctx, &freightapi.K8sFreightLister{Client: s.client}, stage)
+			ctx, s.freightClient, stage)
 		if err != nil {
 			_ = c.Error(fmt.Errorf("get available freight for stage: %w", err))
 			return

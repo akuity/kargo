@@ -17,7 +17,7 @@ import (
 
 	rolloutsapi "github.com/akuity/kargo/api/stubs/rollouts/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	"github.com/akuity/kargo/pkg/client/apiserver/freightclient"
+	"github.com/akuity/kargo/pkg/client/dataplane/freightclient"
 	"github.com/akuity/kargo/pkg/credentials"
 	exprfn "github.com/akuity/kargo/pkg/expressions/function"
 	"github.com/akuity/kargo/pkg/kubernetes"

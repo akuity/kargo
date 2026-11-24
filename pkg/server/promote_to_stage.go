@@ -21,13 +21,6 @@ import (
 	"github.com/akuity/kargo/pkg/server/user"
 )
 
-func (s *server) isFreightAvailable(
-	stage *kargoapi.Stage,
-	freight *kargoapi.Freight,
-) bool {
-	return stage.IsFreightAvailable(freight)
-}
-
 func (s *server) recordPromotionCreatedEvent(
 	ctx context.Context,
 	p *kargoapi.Promotion,
@@ -188,25 +181,10 @@ func (s *server) promoteToStage(c *gin.Context) {
 		return
 	}
 
-	var freight *kargoapi.Freight
-	if req.Freight != "" {
-		freight = &kargoapi.Freight{}
-		if err = s.client.Get(ctx, client.ObjectKey{Namespace: project, Name: req.Freight}, freight); err != nil {
-			if apierrors.IsNotFound(err) {
-				_ = c.Error(libhttp.ErrorStr(
-					fmt.Sprintf("Freight %q not found in project %q", req.Freight, project),
-					http.StatusNotFound,
-				))
-				return
-			}
-			_ = c.Error(err)
-			return
-		}
-	} else {
-		if freight, err = s.getFreightByAlias(ctx, project, req.FreightAlias); err != nil {
-			_ = c.Error(err)
-			return
-		}
+	freight, err := s.getFreightForPromotion(ctx, project, req.Freight, req.FreightAlias)
+	if err != nil {
+		_ = c.Error(err)
+		return
 	}
 
 	if !stage.IsFreightAvailable(freight) {
@@ -266,6 +244,31 @@ func (s *server) promoteToStage(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusCreated, newPromo)
+}
+
+func (s *server) getFreightForPromotion(
+	ctx context.Context, project string, freightName string, alias string,
+) (*kargoapi.Freight, error) {
+	var freight *kargoapi.Freight
+	var err error
+	if freightName != "" {
+		freight, err = s.freightClient.GetFreight(ctx, project, freightName)
+		if err != nil {
+			if apierrors.IsNotFound(err) {
+				return nil, libhttp.ErrorStr(
+					fmt.Sprintf("Freight %q not found in project %q", freightName, project),
+					http.StatusNotFound,
+				)
+			}
+			return nil, err
+		}
+	} else {
+		// FIXME: We don't expect alias to overlap with name, but strict GetFreightByAlias could be useful
+		if freight, err = s.freightClient.GetFreightByNameOrAlias(ctx, project, alias); err != nil {
+			return nil, err
+		}
+	}
+	return freight, nil
 }
 
 func (s *server) createPromotion(

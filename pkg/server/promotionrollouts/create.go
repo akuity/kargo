@@ -9,7 +9,6 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/api"
-	"github.com/akuity/kargo/pkg/api/freightapi"
 	libhttp "github.com/akuity/kargo/pkg/http"
 	"github.com/akuity/kargo/pkg/server/auth/can"
 )
@@ -87,10 +86,10 @@ func (h *Handler) create(c *gin.Context) {
 		return
 	}
 
-	freight, err := freightapi.GetFreight(
+	freight, err := h.freightClient.GetFreight(
 		ctx,
-		h.kube,
-		types.NamespacedName{Namespace: project, Name: req.Freight},
+		project,
+		req.Freight,
 	)
 	if err != nil {
 		_ = c.Error(err)

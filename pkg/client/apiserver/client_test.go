@@ -30,7 +30,7 @@ import (
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	"github.com/akuity/kargo/pkg/api/freightapi"
+	"github.com/akuity/kargo/pkg/client/dataplane/freightclient"
 )
 
 // The client is what the controllers consume it as.
@@ -1023,7 +1023,7 @@ func TestClientListFreight(t *testing.T) {
 			t.Context(),
 			"demo",
 			origin,
-			&freightapi.ListFreightFromOriginOptions{},
+			&freightclient.ListFreightFromOriginOptions{},
 		)
 		require.NoError(t, err)
 		require.Empty(t, gotQuery)
@@ -1033,7 +1033,7 @@ func TestClientListFreight(t *testing.T) {
 			t.Context(),
 			"demo",
 			origin,
-			&freightapi.ListFreightFromOriginOptions{
+			&freightclient.ListFreightFromOriginOptions{
 				ApprovedFor:          "downstream",
 				VerifiedIn:           []string{"up-a", "up-b"},
 				CurrentlyIn:          "up-a",
@@ -1142,14 +1142,15 @@ func TestClientPatchFreightMetadata(t *testing.T) {
 			t.Context(),
 			"demo",
 			"fr-1",
-			map[string]any{"key": map[string]any{"nested": []int{1, 2}}},
+			map[string]apiextensionsv1.JSON{"key": {Raw: []byte(`{"nested": [1, 2]}`)}},
 		)
 		require.NoError(t, err)
 		require.Equal(t, "fr-1", gotFreight)
 		require.JSONEq(t, `{"metadata":{"key":{"nested":[1,2]}}}`, gotBody)
 	})
 	t.Run("surfaces the server's error", func(t *testing.T) {
-		err := c.PatchFreightMetadata(t.Context(), "demo", "missing", map[string]any{"key": "value"})
+		err := c.PatchFreightMetadata(
+			t.Context(), "demo", "missing", map[string]apiextensionsv1.JSON{"key": {Raw: []byte(`"value"`)}})
 		require.Error(t, err)
 		require.ErrorContains(t, err, "freight not found")
 	})

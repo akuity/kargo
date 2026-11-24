@@ -16,8 +16,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	"github.com/akuity/kargo/pkg/api/freightapi"
-	"github.com/akuity/kargo/pkg/client/apiserver/freightclient/testutil"
+	freightclient "github.com/akuity/kargo/pkg/client/dataplane/freightclient"
+	"github.com/akuity/kargo/pkg/client/dataplane/freightclient/testutil"
 )
 
 func TestGetStage(t *testing.T) {
@@ -467,7 +467,7 @@ func (f *fakeFreightWarehouseLister) ListFreightFromOrigin(
 	_ context.Context,
 	_ string,
 	origin kargoapi.FreightOrigin,
-	_ *freightapi.ListFreightFromOriginOptions,
+	_ *freightclient.ListFreightFromOriginOptions,
 ) ([]kargoapi.Freight, error) {
 	if f.err != nil {
 		return nil, f.err
@@ -990,7 +990,7 @@ func TestListFreightAvailableToStageViaClient(t *testing.T) {
 				_ context.Context,
 				_ string,
 				origin kargoapi.FreightOrigin,
-				opts *freightapi.ListFreightFromOriginOptions,
+				opts *freightclient.ListFreightFromOriginOptions,
 			) ([]kargoapi.Freight, error) {
 				listFreightFromOriginCalls = append(listFreightFromOriginCalls,
 					listFreightFromOriginCall{project, origin, opts})
@@ -1058,7 +1058,7 @@ func TestListFreightAvailableToStageViaClient(t *testing.T) {
 				_ context.Context,
 				project string,
 				origin kargoapi.FreightOrigin,
-				opts *freightapi.ListFreightFromOriginOptions,
+				opts *freightclient.ListFreightFromOriginOptions,
 			) ([]kargoapi.Freight, error) {
 				listFreightFromOriginCalls = append(listFreightFromOriginCalls,
 					listFreightFromOriginCall{project, origin, opts})
@@ -1078,7 +1078,7 @@ func TestListFreightAvailableToStageViaClient(t *testing.T) {
 				context.Context,
 				string,
 				kargoapi.FreightOrigin,
-				*freightapi.ListFreightFromOriginOptions,
+				*freightclient.ListFreightFromOriginOptions,
 			) ([]kargoapi.Freight, error) {
 				return nil, errors.New("boom")
 			},
@@ -1091,5 +1091,5 @@ func TestListFreightAvailableToStageViaClient(t *testing.T) {
 type listFreightFromOriginCall struct {
 	project string
 	origin  kargoapi.FreightOrigin
-	opts    *freightapi.ListFreightFromOriginOptions
+	opts    *freightclient.ListFreightFromOriginOptions
 }

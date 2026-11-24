@@ -10,7 +10,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	"github.com/akuity/kargo/pkg/api/freightapi"
+	"github.com/akuity/kargo/pkg/client/dataplane/freightclient"
 	libhttp "github.com/akuity/kargo/pkg/http"
 )
 
@@ -56,7 +56,7 @@ func (s *server) listFreightFromOrigin(c *gin.Context) {
 		Name: originName,
 	}
 
-	freight, err := freightapi.ListFreightFromOrigin(ctx, s.client, project, origin, opts)
+	freight, err := s.freightClient.ListFreightFromOrigin(ctx, project, origin, opts)
 	if err != nil {
 		if strings.Contains(err.Error(), "unsupported AvailabilityStrategy") {
 			err = libhttp.Error(err, http.StatusBadRequest)
@@ -69,8 +69,8 @@ func (s *server) listFreightFromOrigin(c *gin.Context) {
 
 // originFreightOptionsFromQuery builds ListFreightFromOriginOptions from the
 // request's query parameters, returning nil options when none are set.
-func originFreightOptionsFromQuery(c *gin.Context) (*freightapi.ListFreightFromOriginOptions, error) {
-	opts := &freightapi.ListFreightFromOriginOptions{
+func originFreightOptionsFromQuery(c *gin.Context) (*freightclient.ListFreightFromOriginOptions, error) {
+	opts := &freightclient.ListFreightFromOriginOptions{
 		ApprovedFor:          c.Query("approvedFor"),
 		VerifiedIn:           c.QueryArray("verifiedIn"),
 		CurrentlyIn:          c.Query("currentlyIn"),

@@ -21,8 +21,8 @@ import (
 
 	rollouts "github.com/akuity/kargo/api/stubs/rollouts/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	"github.com/akuity/kargo/pkg/api/freightapi"
-	"github.com/akuity/kargo/pkg/client/apiserver/freightclient/testutil"
+	"github.com/akuity/kargo/pkg/client/dataplane/freightclient"
+	"github.com/akuity/kargo/pkg/client/dataplane/freightclient/testutil"
 	"github.com/akuity/kargo/pkg/conditions"
 	"github.com/akuity/kargo/pkg/controller"
 	kargoEvent "github.com/akuity/kargo/pkg/event"
@@ -343,7 +343,7 @@ func TestControlFlowStageReconciler_Reconcile(t *testing.T) {
 					context.Context,
 					string,
 					kargoapi.FreightOrigin,
-					*freightapi.ListFreightFromOriginOptions,
+					*freightclient.ListFreightFromOriginOptions,
 				) ([]kargoapi.Freight, error) {
 					return nil, tt.listErr
 				},
@@ -719,7 +719,7 @@ func TestControlFlowStageReconciler_reconcile(t *testing.T) {
 					_ context.Context,
 					_ string,
 					origin kargoapi.FreightOrigin,
-					_ *freightapi.ListFreightFromOriginOptions,
+					_ *freightclient.ListFreightFromOriginOptions,
 				) ([]kargoapi.Freight, error) {
 					var out []kargoapi.Freight
 					for _, f := range tt.available {

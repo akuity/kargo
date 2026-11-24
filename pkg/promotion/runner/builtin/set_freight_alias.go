@@ -7,7 +7,7 @@ import (
 	"github.com/xeipuuv/gojsonschema"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	"github.com/akuity/kargo/pkg/client/apiserver/freightclient"
+	"github.com/akuity/kargo/pkg/client/dataplane/freightclient"
 	"github.com/akuity/kargo/pkg/promotion"
 	"github.com/akuity/kargo/pkg/x/promotion/stepconfig"
 )

@@ -304,7 +304,6 @@ func Test_server_approveFreight_noFreightsStatusPatchRequired(t *testing.T) {
 						testStageName,
 					)
 					s.authorizeFn = s.client.Authorize
-					s.patchFreightStatusFn = s.patchFreightStatus
 				},
 				ctxSetup: func(ctx context.Context) context.Context {
 					return user.ContextWithIdentity(ctx, promoterUser)

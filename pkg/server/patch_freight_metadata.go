@@ -1,7 +1,6 @@
 package server
 
 import (
-	"fmt"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -53,24 +52,10 @@ func (s *server) patchFreightMetadata(c *gin.Context) {
 		return
 	}
 
-	freight, err := s.getFreightByName(ctx, project, freightName)
+	err := s.freightClient.PatchFreightMetadata(ctx, project, freightName, req.Metadata)
+
 	if err != nil {
 		_ = c.Error(err)
-		return
-	}
-
-	newStatus := *freight.Status.DeepCopy()
-	if newStatus.Metadata == nil {
-		newStatus.Metadata = make(map[string]apiextensionsv1.JSON, len(req.Metadata))
-	}
-	for k, v := range req.Metadata {
-		newStatus.Metadata[k] = v
-	}
-
-	// The authorizing client runs a SubjectAccessReview for patch on
-	// freights/status, which is the authorization decision for this write.
-	if err := s.patchFreightStatusFn(ctx, s.client, freight, newStatus); err != nil {
-		_ = c.Error(fmt.Errorf("patch freight status: %w", err))
 		return
 	}
 

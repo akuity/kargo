@@ -15,7 +15,7 @@ import (
 	rbacapi "github.com/akuity/kargo/api/rbac/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	libargocd "github.com/akuity/kargo/pkg/argocd"
-	"github.com/akuity/kargo/pkg/client/apiserver/freightclient"
+	"github.com/akuity/kargo/pkg/client/dataplane/freightclient"
 	"github.com/akuity/kargo/pkg/expressions"
 	"github.com/akuity/kargo/pkg/logging"
 	"github.com/akuity/kargo/pkg/promotion"

@@ -20,13 +20,8 @@ func (s *server) deleteFreight(c *gin.Context) {
 	project := c.Param("project")
 	nameOrAlias := c.Param("freight-name-or-alias")
 
-	freight, err := s.getFreightByNameOrAlias(c.Request.Context(), project, nameOrAlias)
+	err := s.freightClient.DeleteFreight(c.Request.Context(), project, nameOrAlias)
 	if err != nil {
-		_ = c.Error(err)
-		return
-	}
-
-	if err := s.client.Delete(c.Request.Context(), freight); err != nil {
 		_ = c.Error(err)
 		return
 	}

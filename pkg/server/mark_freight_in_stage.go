@@ -2,21 +2,13 @@
 package server
 
 import (
-	"context"
-	"fmt"
 	"net/http"
 	"time"
 
 	"github.com/gin-gonic/gin"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	"github.com/akuity/kargo/pkg/api/freightapi"
-	"github.com/akuity/kargo/pkg/event"
-	"github.com/akuity/kargo/pkg/logging"
 	"github.com/akuity/kargo/pkg/server/request"
-	"github.com/akuity/kargo/pkg/server/user"
 )
 
 // markFreightsCurrentlyInStageRequest is the request body for recording that
@@ -42,7 +34,6 @@ type markFreightsCurrentlyInStageRequest struct {
 // @Router /v1beta1/projects/{project}/internal/stage-freight/{stage}/current [post]
 func (s *server) markFreightsCurrentlyInStage(c *gin.Context) {
 	ctx := c.Request.Context()
-	logger := logging.LoggerFromContext(ctx)
 
 	project := c.Param("project")
 	stageName := c.Param("stage")
@@ -52,62 +43,10 @@ func (s *server) markFreightsCurrentlyInStage(c *gin.Context) {
 		return
 	}
 
-	freights := []*kargoapi.Freight{}
-	freightNames := map[string]struct{}{}
-	for _, freightName := range req.FreightNames {
-		freightNames[freightName] = struct{}{}
-		freight, err := s.getFreightByName(ctx, project, freightName)
-		if err != nil {
-			if apierrors.IsNotFound(err) {
-				logger.Error(err, "freight is current but not found")
-				continue
-			}
-			_ = c.Error(err)
-			return
-		}
-		freights = append(freights, freight)
-	}
-
-	// Unmark other Freight before marking the new one.
-	// Only one freight should be Current per origin at a time.
-	// Caller ensures that FreightNames are one per origin.
-	current, err := freightapi.ListFreightByCurrentStage(ctx, s.client, project, stageName)
+	err := s.freightClient.MarkFreightsCurrentlyInStage(ctx, project, stageName, req.FreightNames)
 	if err != nil {
 		_ = c.Error(err)
 		return
-	}
-	for i := range current {
-		other := &current[i]
-		if _, ok := freightNames[other.Name]; ok {
-			// Freight will be set as current, skipping clean
-			continue
-		}
-		newStatus := *other.Status.DeepCopy()
-		newStatus.RemoveCurrentStage(stageName)
-		// The authorizing client runs a SubjectAccessReview for patch on
-		// freights/status, which is the authorization decision for this write.
-		if err = s.patchFreightStatusFn(ctx, s.client, other, newStatus); err != nil {
-			_ = c.Error(fmt.Errorf("patch status of freight %q: %w", other.Name, err))
-			return
-		}
-	}
-
-	for _, freight := range freights {
-		// Evaluated before the patch so the event is emitted only on the first
-		// transition, not on every re-mark.
-		newlyCurrentlyIn := !freight.IsCurrentlyIn(stageName)
-
-		newStatus := *freight.Status.DeepCopy()
-		newStatus.AddCurrentStage(stageName, time.Now())
-		if err = s.patchFreightStatusFn(ctx, s.client, freight, newStatus); err != nil {
-			_ = c.Error(fmt.Errorf("patch status of freight %q: %w", freight.Name, err))
-			return
-		}
-
-		if newlyCurrentlyIn {
-			// Include verifiedIn information in the CurrentlyIn event
-			s.emitFreightCurrentlyInStage(ctx, freight, stageName, freight.IsVerifiedIn(stageName))
-		}
 	}
 
 	c.Status(http.StatusOK)
@@ -136,7 +75,6 @@ type markFreightsVerifiedInStageRequest struct {
 // @Router /v1beta1/projects/{project}/internal/stage-freight/{stage}/verified [post]
 func (s *server) markFreightsVerifiedInStage(c *gin.Context) {
 	ctx := c.Request.Context()
-	logger := logging.LoggerFromContext(ctx)
 
 	project := c.Param("project")
 	stageName := c.Param("stage")
@@ -146,99 +84,18 @@ func (s *server) markFreightsVerifiedInStage(c *gin.Context) {
 		return
 	}
 
-	for _, freightName := range req.FreightNames {
+	verifiedAtTime := time.Now()
+	if req.VerifiedAt != nil {
+		verifiedAtTime = req.VerifiedAt.Time
+	}
 
-		freight, err := s.getFreightByName(ctx, project, freightName)
-		if err != nil {
-			if apierrors.IsNotFound(err) {
-				logger.Error(err, "freight is verified but not found")
-				continue
-			}
-			_ = c.Error(err)
-			return
-		}
-
-		// Evaluated before the patch so the event is emitted only on the first
-		// transition, not on every re-mark.
-		newlyVerified := !freight.IsVerifiedIn(stageName)
-
-		verifiedAt := time.Now()
-		if req.VerifiedAt != nil {
-			verifiedAt = req.VerifiedAt.Time
-		}
-		newStatus := *freight.Status.DeepCopy()
-		newStatus.AddVerifiedStage(stageName, verifiedAt)
-
-		// The authorizing client runs a SubjectAccessReview for patch on
-		// freights/status, which is the authorization decision for this write.
-		if err = s.patchFreightStatusFn(ctx, s.client, freight, newStatus); err != nil {
-			_ = c.Error(fmt.Errorf("patch freight status: %w", err))
-			return
-		}
-
-		if newlyVerified {
-			s.emitFreightVerifiedInStage(ctx, freight, stageName)
-		}
+	err := s.freightClient.MarkFreightsVerifiedInStage(ctx, project, stageName, req.FreightNames, verifiedAtTime)
+	if err != nil {
+		_ = c.Error(err)
+		return
 	}
 
 	c.Status(http.StatusOK)
-}
-
-// emitFreightVerifiedInStage sends a FreightVerifiedInStage event for the
-// Freight. It is a no-op when no event sender is configured.
-func (s *server) emitFreightVerifiedInStage(
-	ctx context.Context,
-	freight *kargoapi.Freight,
-	stageName string,
-) {
-	if s.sender == nil {
-		return
-	}
-
-	var actor string
-	msg := fmt.Sprintf("Freight verified in Stage %q", stageName)
-	if u, ok := user.IdentityFromContext(ctx); ok {
-		actor = u.Actor()
-		msg += fmt.Sprintf(" by %q", actor)
-	}
-
-	evt, err := event.NewFreightVerifiedInStage(msg, actor, stageName, freight)
-	if err == nil {
-		err = s.sender.Send(ctx, evt)
-	}
-	if err != nil {
-		logging.LoggerFromContext(ctx).Error(err,
-			"error sending Freight verified in Stage event")
-	}
-}
-
-// emitFreightCurrentlyInStage sends a FreightCurrentlyInStage event for the
-// Freight. It is a no-op when no event sender is configured.
-func (s *server) emitFreightCurrentlyInStage(
-	ctx context.Context,
-	freight *kargoapi.Freight,
-	stageName string,
-	verifiedInStage bool,
-) {
-	if s.sender == nil {
-		return
-	}
-
-	var actor string
-	msg := fmt.Sprintf("Freight currently in Stage %q", stageName)
-	if u, ok := user.IdentityFromContext(ctx); ok {
-		actor = u.Actor()
-		msg += fmt.Sprintf(" by %q", actor)
-	}
-
-	evt, err := event.NewFreightCurrentlyInStage(msg, actor, stageName, verifiedInStage, freight)
-	if err == nil {
-		err = s.sender.Send(ctx, evt)
-	}
-	if err != nil {
-		logging.LoggerFromContext(ctx).Error(err,
-			"error sending Freight currently in Stage event")
-	}
 }
 
 // @id ClearStageFreights
@@ -258,24 +115,10 @@ func (s *server) clearStageFreights(c *gin.Context) {
 	project := c.Param("project")
 	stageName := c.Param("stage")
 
-	freights, err := freightapi.ListFreightReferencingStage(ctx, s.client, project, stageName)
+	err := s.freightClient.ClearStageFreights(ctx, project, stageName)
 	if err != nil {
 		_ = c.Error(err)
 		return
-	}
-
-	for _, freight := range freights {
-		newStatus := *freight.Status.DeepCopy()
-		delete(newStatus.CurrentlyIn, stageName)
-		delete(newStatus.VerifiedIn, stageName)
-		delete(newStatus.ApprovedFor, stageName)
-
-		// The authorizing client runs a SubjectAccessReview for patch on
-		// freights/status, which is the authorization decision for this write.
-		if err = s.patchFreightStatusFn(ctx, s.client, &freight, newStatus); err != nil {
-			_ = c.Error(fmt.Errorf("patch freight status: %w", err))
-			return
-		}
 	}
 
 	c.Status(http.StatusOK)

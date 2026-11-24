@@ -15,7 +15,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	"github.com/akuity/kargo/pkg/client/apiserver/freightclient/testutil"
+	"github.com/akuity/kargo/pkg/client/dataplane/freightclient/testutil"
 	"github.com/akuity/kargo/pkg/promotion"
 	"github.com/akuity/kargo/pkg/x/promotion/stepconfig"
 )
@@ -165,7 +165,7 @@ func Test_metadataSetter_run(t *testing.T) {
 	type freightMetadataPatch struct {
 		project     string
 		nameOrAlias string
-		metadata    map[string]any
+		metadata    map[string]apiextensionsv1.JSON
 	}
 
 	tests := []struct {
@@ -357,12 +357,24 @@ func Test_metadataSetter_run(t *testing.T) {
 			) {
 				require.NoError(t, err)
 				require.Equal(t, res.Status, kargoapi.PromotionStepStatusSucceeded)
+
+				jsonMetadata := map[string]apiextensionsv1.JSON{}
+				for k, v := range testValueUpdates {
+					dataBytes, err := json.Marshal(v)
+					if err != nil {
+						t.Error(err)
+					}
+					jsonMetadata[k] = apiextensionsv1.JSON{
+						Raw: dataBytes,
+					}
+				}
+
 				require.Equal(
 					t,
 					[]freightMetadataPatch{{
 						project:     testProject,
 						nameOrAlias: testObjName,
-						metadata:    testValueUpdates,
+						metadata:    jsonMetadata,
 					}},
 					patches,
 				)
@@ -380,7 +392,7 @@ func Test_metadataSetter_run(t *testing.T) {
 						_ context.Context,
 						project string,
 						nameOrAlias string,
-						metadata map[string]any,
+						metadata map[string]apiextensionsv1.JSON,
 					) error {
 						patches = append(patches, freightMetadataPatch{
 							project:     project,

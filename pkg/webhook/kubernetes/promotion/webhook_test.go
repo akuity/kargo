@@ -26,8 +26,8 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/api"
-	"github.com/akuity/kargo/pkg/api/freightapi"
-	"github.com/akuity/kargo/pkg/client/apiserver/freightclient/testutil"
+	"github.com/akuity/kargo/pkg/client/dataplane/freightclient"
+	"github.com/akuity/kargo/pkg/client/dataplane/freightclient/testutil"
 	"github.com/akuity/kargo/pkg/event"
 	fakeevent "github.com/akuity/kargo/pkg/event/fake"
 	libWebhook "github.com/akuity/kargo/pkg/webhook/kubernetes"
@@ -336,7 +336,7 @@ func Test_webhook_Default(t *testing.T) {
 				},
 				listFreightAvailableToStageFn: func(
 					_ context.Context,
-					_ freightapi.FreightLister,
+					_ freightclient.FreightLister,
 					_ *kargoapi.Stage,
 				) ([]kargoapi.Freight, error) {
 					return []kargoapi.Freight{{
@@ -408,7 +408,7 @@ func Test_webhook_Default(t *testing.T) {
 				},
 				listFreightAvailableToStageFn: func(
 					_ context.Context,
-					_ freightapi.FreightLister,
+					_ freightclient.FreightLister,
 					_ *kargoapi.Stage,
 				) ([]kargoapi.Freight, error) {
 					return []kargoapi.Freight{{
@@ -504,7 +504,7 @@ func Test_webhook_Default(t *testing.T) {
 				},
 				listFreightAvailableToStageFn: func(
 					_ context.Context,
-					_ freightapi.FreightLister,
+					_ freightclient.FreightLister,
 					_ *kargoapi.Stage,
 				) ([]kargoapi.Freight, error) {
 					return nil, nil
@@ -564,7 +564,7 @@ func Test_webhook_Default(t *testing.T) {
 				},
 				listFreightAvailableToStageFn: func(
 					_ context.Context,
-					_ freightapi.FreightLister,
+					_ freightclient.FreightLister,
 					_ *kargoapi.Stage,
 				) ([]kargoapi.Freight, error) {
 					return nil, errors.New("something went wrong")
@@ -1176,7 +1176,7 @@ func Test_webhook_Default(t *testing.T) {
 				},
 				listFreightAvailableToStageFn: func(
 					_ context.Context,
-					_ freightapi.FreightLister,
+					_ freightclient.FreightLister,
 					_ *kargoapi.Stage,
 				) ([]kargoapi.Freight, error) {
 					return []kargoapi.Freight{
@@ -1316,7 +1316,7 @@ func Test_webhook_Default(t *testing.T) {
 				},
 				listFreightAvailableToStageFn: func(
 					_ context.Context,
-					_ freightapi.FreightLister,
+					_ freightclient.FreightLister,
 					_ *kargoapi.Stage,
 				) ([]kargoapi.Freight, error) {
 					return []kargoapi.Freight{
@@ -1514,7 +1514,7 @@ func Test_webhook_Default(t *testing.T) {
 				},
 				listFreightAvailableToStageFn: func(
 					_ context.Context,
-					_ freightapi.FreightLister,
+					_ freightclient.FreightLister,
 					_ *kargoapi.Stage,
 				) ([]kargoapi.Freight, error) {
 					return []kargoapi.Freight{
@@ -1601,7 +1601,7 @@ func Test_webhook_Default(t *testing.T) {
 				},
 				listFreightAvailableToStageFn: func(
 					_ context.Context,
-					_ freightapi.FreightLister,
+					_ freightclient.FreightLister,
 					_ *kargoapi.Stage,
 				) ([]kargoapi.Freight, error) {
 					return nil, nil

@@ -28,9 +28,9 @@ func (s *server) getFreight(c *gin.Context) {
 	var err error
 	ctx := c.Request.Context()
 	if c.Query("nameOnly") == trueStr {
-		freight, err = s.getFreightByName(ctx, project, nameOrAlias)
+		freight, err = s.freightClient.GetFreight(ctx, project, nameOrAlias)
 	} else {
-		freight, err = s.getFreightByNameOrAlias(ctx, project, nameOrAlias)
+		freight, err = s.freightClient.GetFreightByNameOrAlias(ctx, project, nameOrAlias)
 	}
 	if err != nil {
 		_ = c.Error(err)
@@ -42,6 +42,5 @@ func (s *server) getFreight(c *gin.Context) {
 
 // This keeps the kargoapi import above in scope for the @Success annotation
 // on getFreight, which documents the response type without constructing one
-// directly (the actual response is produced by the shared
-// getFreightByNameOrAlias helper).
+// directly
 var _ kargoapi.Freight

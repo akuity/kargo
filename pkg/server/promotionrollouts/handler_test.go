@@ -24,6 +24,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/pkg/client/storage/dataplane"
 	"github.com/akuity/kargo/pkg/database"
 	"github.com/akuity/kargo/pkg/database/promotionrolloutstore"
 	"github.com/akuity/kargo/pkg/server/auth/can"
@@ -562,7 +563,8 @@ func newRouter(
 	if createEnabled {
 		creator = NewCreator(store, targets, check)
 	}
-	New(store, creator, authorize, kube).Register(router.Group("/v1beta1/projects/:project"))
+	freightClient := dataplane.NewStorageClient(kube, nil, nil)
+	New(store, creator, authorize, kube, &freightClient).Register(router.Group("/v1beta1/projects/:project"))
 	return router
 }
 
@@ -652,11 +654,11 @@ func TestNew(t *testing.T) {
 	t.Parallel()
 	// A nil store leaves the handler without one, which RequireFeature turns
 	// into 501 for every request.
-	h := New(nil, nil, nil, nil)
+	h := New(nil, nil, nil, nil, nil)
 	require.Nil(t, h.store)
 	require.Nil(t, h.creator)
 	store := &fakeStore{}
-	h = New(store, NewCreator(store, fakeTargets{}, nil), nil, nil)
+	h = New(store, NewCreator(store, fakeTargets{}, nil), nil, nil, nil)
 	require.NotNil(t, h.store)
 	require.NotNil(t, h.creator)
 }

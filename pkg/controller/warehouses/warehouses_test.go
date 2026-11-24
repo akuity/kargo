@@ -18,7 +18,7 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/api"
-	"github.com/akuity/kargo/pkg/client/apiserver/freightclient/testutil"
+	"github.com/akuity/kargo/pkg/client/dataplane/freightclient/testutil"
 	"github.com/akuity/kargo/pkg/conditions"
 	"github.com/akuity/kargo/pkg/controller"
 	"github.com/akuity/kargo/pkg/credentials"

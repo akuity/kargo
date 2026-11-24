@@ -282,6 +282,7 @@ func (s *server) setupRESTRouter(
 				s.rolloutCreator,
 				s.authorize,
 				s.client,
+				s.freightClient,
 			).Register(project)
 
 			// Warehouses
@@ -291,13 +292,24 @@ func (s *server) setupRESTRouter(
 			project.DELETE("/warehouses/:warehouse", s.deleteWarehouse)
 
 			// Freight
-			project.POST("/freight", s.createFreight)
-			project.GET("/freight", s.queryFreight)
-			project.GET("/freight/:freight-name-or-alias", s.getFreight)
-			project.GET("/freight/:freight-name-or-alias/links", s.getFreightLinks)
-			project.POST("/freight/:freight-name-or-alias/approve", s.approveFreight)
-			project.PATCH("/freight/:freight-name-or-alias/alias", s.patchFreightAliasHandler)
-			project.DELETE("/freight/:freight-name-or-alias", s.deleteFreight)
+			project.POST("/freight", s.createFreight)                                          // done
+			project.GET("/freight", s.queryFreight)                                            // TODO
+			project.GET("/freight/:freight-name-or-alias", s.getFreight)                       // done
+			project.GET("/freight/:freight-name-or-alias/links", s.getFreightLinks)            // TODO
+			project.POST("/freight/:freight-name-or-alias/approve", s.approveFreight)          // done
+			project.PATCH("/freight/:freight-name-or-alias/alias", s.patchFreightAliasHandler) // done
+			project.DELETE("/freight/:freight-name-or-alias", s.deleteFreight)                 // done
+
+			// -----------------------------------------------------------------
+			// Freight internal APIs
+			// -----------------------------------------------------------------
+
+			project.PATCH("/internal/freight/:freight/metadata", s.patchFreightMetadata)               // done
+			project.GET("/internal/origin/:origin-kind/:origin-name/freight", s.listFreightFromOrigin) // done
+
+			project.POST("/internal/stage-freight/:stage/current", s.markFreightsCurrentlyInStage) // done
+			project.POST("/internal/stage-freight/:stage/verified", s.markFreightsVerifiedInStage) // done
+			project.DELETE("/internal/stage-freight/:stage", s.clearStageFreights)                 // done
 
 			// Promotions
 			project.GET("/promotions", s.listPromotions)
@@ -379,17 +391,6 @@ func (s *server) setupRESTRouter(
 			project.GET("/api-tokens", s.listProjectAPITokens)
 			project.GET("/api-tokens/:apitoken", s.getProjectAPIToken)
 			project.DELETE("/api-tokens/:apitoken", s.deleteProjectAPIToken)
-
-			// -----------------------------------------------------------------
-			// Freight internal APIs
-			// -----------------------------------------------------------------
-
-			project.PATCH("/internal/freight/:freight/metadata", s.patchFreightMetadata)
-			project.GET("/internal/origin/:origin-kind/:origin-name/freight", s.listFreightFromOrigin)
-
-			project.POST("/internal/stage-freight/:stage/current", s.markFreightsCurrentlyInStage)
-			project.POST("/internal/stage-freight/:stage/verified", s.markFreightsVerifiedInStage)
-			project.DELETE("/internal/stage-freight/:stage", s.clearStageFreights)
 		}
 	}
 

@@ -9,12 +9,27 @@ import (
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	"github.com/akuity/kargo/pkg/api/freightapi"
-	"github.com/akuity/kargo/pkg/client/apiserver/freightclient"
+	"github.com/akuity/kargo/pkg/client/dataplane/freightclient"
 	kargogen "github.com/akuity/kargo/pkg/x/client/generated"
 )
 
 var _ freightclient.FreightClient = (*Client)(nil)
+
+func (c *Client) ApproveFreight(
+	ctx context.Context,
+	project, stageName, nameOrAlias string,
+) error {
+	resp, err := c.api.CoreAPI.ApproveFreight(ctx, project, nameOrAlias).
+		Stage(stageName).
+		Execute()
+	if resp != nil {
+		_ = resp.Body.Close()
+	}
+	if err != nil {
+		return err
+	}
+	return nil
+}
 
 // GetFreight returns, through the API server, the Freight with the given name,
 // or nil if there is no such Freight. Freight is matched explicitly by name.
@@ -23,8 +38,25 @@ func (c *Client) GetFreight(
 	project string,
 	name string,
 ) (*kargoapi.Freight, error) {
+	return c.getFreightReq(ctx, project, name, true)
+}
+
+func (c *Client) GetFreightByNameOrAlias(
+	ctx context.Context,
+	project string,
+	name string,
+) (*kargoapi.Freight, error) {
+	return c.getFreightReq(ctx, project, name, false)
+}
+
+func (c *Client) getFreightReq(
+	ctx context.Context,
+	project string,
+	name string,
+	nameOnly bool,
+) (*kargoapi.Freight, error) {
 	model, resp, err := c.api.CoreAPI.GetFreight(ctx, project, name).
-		NameOnly(true).
+		NameOnly(nameOnly).
 		Execute()
 	if resp != nil {
 		_ = resp.Body.Close()
@@ -140,9 +172,14 @@ func (c *Client) PatchFreightMetadata(
 	ctx context.Context,
 	project string,
 	freightName string,
-	metadata map[string]any,
+	metadata map[string]apiextensionsv1.JSON,
 ) error {
-	body := kargogen.PatchFreightMetadataRequest{Metadata: metadata}
+	md := map[string]any{}
+	if err := convert(metadata, &md); err != nil {
+		return fmt.Errorf("error encoding Freight metadata for Project %q: %w", project, err)
+	}
+	body := kargogen.PatchFreightMetadataRequest{}
+	body.Metadata = md
 	resp, err := c.api.CoreAPI.PatchFreightMetadata(ctx, project, freightName).
 		Body(body).
 		Execute()
@@ -164,7 +201,7 @@ func (c *Client) ListFreightFromOrigin(
 	ctx context.Context,
 	project string,
 	origin kargoapi.FreightOrigin,
-	opts *freightapi.ListFreightFromOriginOptions,
+	opts *freightclient.ListFreightFromOriginOptions,
 ) ([]kargoapi.Freight, error) {
 	req := c.api.CoreAPI.ListFreightFromOrigin(ctx, project, string(origin.Kind), origin.Name)
 	if opts != nil {

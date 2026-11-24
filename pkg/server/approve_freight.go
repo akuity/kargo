@@ -1,50 +1,14 @@
 package server
 
 import (
-	"context"
 	"errors"
-	"fmt"
 	"net/http"
-	"time"
 
 	"github.com/gin-gonic/gin"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	"github.com/akuity/kargo/pkg/event"
 	libhttp "github.com/akuity/kargo/pkg/http"
-	"github.com/akuity/kargo/pkg/kubeclient"
-	"github.com/akuity/kargo/pkg/logging"
 	"github.com/akuity/kargo/pkg/server/auth/can"
-	"github.com/akuity/kargo/pkg/server/user"
 )
-
-// patchFreightStatus patches Freight status using the given client. The
-// caller chooses the client, and so is responsible for its own authorization
-// decision -- this function enforces none.
-func (s *server) patchFreightStatus(
-	ctx context.Context,
-	cl client.Client,
-	freight *kargoapi.Freight,
-	newStatus kargoapi.FreightStatus,
-) error {
-	if err := kubeclient.PatchStatus(
-		ctx,
-		cl,
-		freight,
-		func(status *kargoapi.FreightStatus) {
-			*status = newStatus
-		},
-	); err != nil {
-		return fmt.Errorf(
-			"error patching Freight %q status in namespace %q: %w",
-			freight.Name,
-			freight.Namespace,
-			err,
-		)
-	}
-	return nil
-}
 
 // @id ApproveFreight
 // @Summary Approve Freight for promotion to a Stage
@@ -72,78 +36,14 @@ func (s *server) approveFreight(c *gin.Context) {
 		return
 	}
 
-	freight, err := s.getFreightByNameOrAlias(ctx, project, freightNameOrAlias)
-	if err != nil {
-		_ = c.Error(err)
-		return
-	}
-
-	stage := &kargoapi.Stage{}
-	if err := s.client.Get(
-		ctx,
-		client.ObjectKey{Name: stageName, Namespace: project},
-		stage,
-	); err != nil {
-		_ = c.Error(err)
-		return
-	}
-
 	if err := s.authorize(ctx, can.Promote().Stage(project, stageName)); err != nil {
 		_ = c.Error(err)
 		return
 	}
 
-	// Approval bypasses verification and soak requirements, but not origin
-	// membership: an approval for a Stage that doesn't request Freight from the
-	// Freight's origin could never be acted upon and is certainly a mistake.
-	if !stage.RequestsFreightFromOrigin(freight.Origin) {
-		_ = c.Error(libhttp.ErrorStr(
-			fmt.Sprintf(
-				"Stage %q does not request Freight from origin %q",
-				stageName, freight.Origin.String(),
-			),
-			http.StatusBadRequest,
-		))
+	if err := s.freightClient.ApproveFreight(ctx, project, stageName, freightNameOrAlias); err != nil {
+		_ = c.Error(err)
 		return
-	}
-
-	if freight.IsApprovedFor(stageName) {
-		c.Status(http.StatusOK)
-		return
-	}
-
-	newStatus := *freight.Status.DeepCopy()
-	if newStatus.ApprovedFor == nil {
-		newStatus.ApprovedFor = make(map[string]kargoapi.ApprovedStage)
-	}
-	newStatus.AddApprovedStage(stageName, time.Now())
-
-	// The promote check above is the authorization decision for this write,
-	// so it's written with the internal client: the caller need not also hold
-	// Kubernetes RBAC permission to patch freights/status themselves.
-	if err := s.patchFreightStatusFn(
-		ctx, s.client.InternalClient(), freight, newStatus,
-	); err != nil {
-		_ = c.Error(fmt.Errorf("patch freight status: %w", err))
-		return
-	}
-
-	var actor string
-	eventMsg := fmt.Sprintf("Freight approved for Stage %q", stageName)
-	if u, ok := user.IdentityFromContext(ctx); ok {
-		actor = u.Actor()
-		eventMsg += fmt.Sprintf(" by %q", actor)
-	}
-
-	if s.sender != nil {
-		evt, err := event.NewFreightApproved(eventMsg, actor, stageName, freight)
-		if err == nil {
-			err = s.sender.Send(ctx, evt)
-		}
-		if err != nil {
-			logging.LoggerFromContext(ctx).Error(err,
-				"error sending Freight approved event")
-		}
 	}
 
 	c.Status(http.StatusOK)

@@ -2,14 +2,16 @@ package builtin
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 
 	"github.com/xeipuuv/gojsonschema"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	"github.com/akuity/kargo/pkg/client/apiserver/freightclient"
+	"github.com/akuity/kargo/pkg/client/dataplane/freightclient"
 	"github.com/akuity/kargo/pkg/kubeclient"
 	"github.com/akuity/kargo/pkg/promotion"
 	"github.com/akuity/kargo/pkg/x/promotion/stepconfig"
@@ -116,7 +118,7 @@ func (s *metadataSetter) run(
 		case "Freight":
 			// The API server resolves the Freight by name or alias and upserts the
 			// values into its status metadata.
-			if err := s.freightClient.PatchFreightMetadata(
+			if err := s.patchFreightMetadata(
 				ctx,
 				stepCtx.Project,
 				update.Name,
@@ -142,6 +144,30 @@ func (s *metadataSetter) run(
 	return promotion.StepResult{
 		Status: kargoapi.PromotionStepStatusSucceeded,
 	}, nil
+}
+
+func (s *metadataSetter) patchFreightMetadata(
+	ctx context.Context,
+	project, name string,
+	metadata map[string]any,
+) error {
+	jsonMetadata := map[string]apiextensionsv1.JSON{}
+	for k, v := range metadata {
+		dataBytes, err := json.Marshal(v)
+		if err != nil {
+			return err
+		}
+		jsonMetadata[k] = apiextensionsv1.JSON{
+			Raw: dataBytes,
+		}
+	}
+
+	return s.freightClient.PatchFreightMetadata(
+		ctx,
+		project,
+		name,
+		jsonMetadata,
+	)
 }
 
 type metadataUpsertable interface {

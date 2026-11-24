@@ -1,8 +1,6 @@
 package server
 
 import (
-	"context"
-	"errors"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -20,17 +18,6 @@ import (
 	eventfake "github.com/akuity/kargo/pkg/event/fake"
 	"github.com/akuity/kargo/pkg/server/config"
 )
-
-// failingPatchFreightStatus stands in for server.patchFreightStatusFn to
-// simulate the API server failing to write Freight status.
-func failingPatchFreightStatus(
-	context.Context,
-	client.Client,
-	*kargoapi.Freight,
-	kargoapi.FreightStatus,
-) error {
-	return errors.New("something went wrong")
-}
 
 func Test_server_markFreightsCurrentlyInStage(t *testing.T) {
 	const stageName = "fake-stage"
@@ -270,19 +257,6 @@ func Test_server_markFreightsCurrentlyInStage(t *testing.T) {
 					require.True(t, got.Status.CurrentlyIn[stageName].Since.Equal(&since))
 				},
 			},
-			{
-				name: "error patching Freight status",
-				body: body(newFreight.Name),
-				clientBuilder: freightWithIndexes(t).
-					WithObjects(testProject, newFreight).
-					WithStatusSubresource(newFreight),
-				serverSetup: func(_ *testing.T, s *server) {
-					s.patchFreightStatusFn = failingPatchFreightStatus
-				},
-				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
-					require.Equal(t, http.StatusInternalServerError, w.Code)
-				},
-			},
 		},
 	)
 }
@@ -384,18 +358,6 @@ func Test_server_clearStageFreights(t *testing.T) {
 					requireNoStage(t, getFreight(t, c, all))
 
 					require.Equal(t, unrelated.Status, getFreight(t, c, unrelated).Status)
-				},
-			},
-			{
-				name: "error patching Freight status",
-				clientBuilder: freightWithIndexes(t).
-					WithObjects(testProject, all).
-					WithStatusSubresource(all),
-				serverSetup: func(_ *testing.T, s *server) {
-					s.patchFreightStatusFn = failingPatchFreightStatus
-				},
-				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
-					require.Equal(t, http.StatusInternalServerError, w.Code)
 				},
 			},
 		},
@@ -540,19 +502,6 @@ func Test_server_markFreightsVerifiedInStage(t *testing.T) {
 					got := getFreight(t, c, testFreightAlreadyVerified)
 					require.True(t, got.Status.VerifiedIn[stageName].VerifiedAt.Equal(&earlier))
 					require.Empty(t, reverifiedSender.Sent())
-				},
-			},
-			{
-				name: "error patching Freight status",
-				body: body(&verifiedAt, testFreight.Name),
-				clientBuilder: fake.NewClientBuilder().
-					WithObjects(testProject, testFreight).
-					WithStatusSubresource(testFreight),
-				serverSetup: func(_ *testing.T, s *server) {
-					s.patchFreightStatusFn = failingPatchFreightStatus
-				},
-				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
-					require.Equal(t, http.StatusInternalServerError, w.Code)
 				},
 			},
 		},

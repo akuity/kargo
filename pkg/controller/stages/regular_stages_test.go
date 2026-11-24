@@ -25,8 +25,8 @@ import (
 	rolloutsapi "github.com/akuity/kargo/api/stubs/rollouts/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/api"
-	"github.com/akuity/kargo/pkg/api/freightapi"
-	"github.com/akuity/kargo/pkg/client/apiserver/freightclient/testutil"
+	"github.com/akuity/kargo/pkg/client/dataplane/freightclient"
+	"github.com/akuity/kargo/pkg/client/dataplane/freightclient/testutil"
 	"github.com/akuity/kargo/pkg/conditions"
 	kargoEvent "github.com/akuity/kargo/pkg/event"
 	fakeevent "github.com/akuity/kargo/pkg/event/fake"
@@ -518,7 +518,7 @@ func TestRegularStageReconciler_Reconcile(t *testing.T) {
 					_ context.Context,
 					_ string,
 					origin kargoapi.FreightOrigin,
-					_ *freightapi.ListFreightFromOriginOptions,
+					_ *freightclient.ListFreightFromOriginOptions,
 				) ([]kargoapi.Freight, error) {
 					var out []kargoapi.Freight
 					for _, f := range freight {
@@ -757,7 +757,7 @@ func TestRegularStagesReconciler_reconcile(t *testing.T) {
 					_ context.Context,
 					_ string,
 					origin kargoapi.FreightOrigin,
-					_ *freightapi.ListFreightFromOriginOptions,
+					_ *freightclient.ListFreightFromOriginOptions,
 				) ([]kargoapi.Freight, error) {
 					var out []kargoapi.Freight
 					for _, f := range freight {
@@ -915,7 +915,7 @@ func TestRegularStageReconciler_Reconcile_concurrentStatusMetadata(t *testing.T)
 			context.Context,
 			string,
 			kargoapi.FreightOrigin,
-			*freightapi.ListFreightFromOriginOptions,
+			*freightclient.ListFreightFromOriginOptions,
 		) ([]kargoapi.Freight, error) {
 			return nil, nil
 		},
@@ -6490,7 +6490,7 @@ func TestRegularStageReconciler_autoPromoteFreight(t *testing.T) {
 					_ context.Context,
 					_ string,
 					origin kargoapi.FreightOrigin,
-					_ *freightapi.ListFreightFromOriginOptions,
+					_ *freightclient.ListFreightFromOriginOptions,
 				) ([]kargoapi.Freight, error) {
 					var out []kargoapi.Freight
 					for _, f := range available {

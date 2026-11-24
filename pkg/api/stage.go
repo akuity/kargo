@@ -13,7 +13,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	"github.com/akuity/kargo/pkg/api/freightapi"
+	"github.com/akuity/kargo/pkg/client/dataplane/freightclient"
 	"github.com/akuity/kargo/pkg/server/user"
 )
 
@@ -137,16 +137,16 @@ func AuthorizedStages(value string) ([]types.NamespacedName, error) {
 //  3. Any Freight that is approved for the Stage
 func ListFreightAvailableToStage(
 	ctx context.Context,
-	lister freightapi.FreightLister,
+	lister freightclient.FreightLister,
 	s *kargoapi.Stage,
 ) ([]kargoapi.Freight, error) {
 	var availableFreight []kargoapi.Freight
 
 	for _, req := range s.Spec.RequestedFreight {
 		// Get applicable Freight from the Warehouse of origin, by name.
-		var listOpts *freightapi.ListFreightFromOriginOptions
+		var listOpts *freightclient.ListFreightFromOriginOptions
 		if !req.Sources.Direct {
-			listOpts = &freightapi.ListFreightFromOriginOptions{
+			listOpts = &freightclient.ListFreightFromOriginOptions{
 				ApprovedFor:          s.Name,
 				VerifiedIn:           req.Sources.Stages,
 				AvailabilityStrategy: req.Sources.AvailabilityStrategy,
