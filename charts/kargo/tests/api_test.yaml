@@ -451,9 +451,9 @@ tests:
           path: automountServiceAccountToken
           value: true
 
-  - it: disables token automounting on the ServiceAccount when api.serviceAccount.automountServiceAccountToken is false
+  - it: disables token automounting on the ServiceAccount when api.automountServiceAccountToken is false
     set:
-      api.serviceAccount.automountServiceAccountToken: false
+      api.automountServiceAccountToken: false
     asserts:
       - equal:
           path: automountServiceAccountToken

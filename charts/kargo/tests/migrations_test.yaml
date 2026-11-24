@@ -286,18 +286,18 @@ tests:
           path: automountServiceAccountToken
           value: false
 
-  - it: enables token automounting on the ServiceAccount when database.migrations.serviceAccount.automountServiceAccountToken is true
+  - it: enables token automounting on the ServiceAccount when database.migrations.automountServiceAccountToken is true
     template: templates/migrations/service-account.yaml
     set:
-      database.migrations.serviceAccount.automountServiceAccountToken: true
+      database.migrations.automountServiceAccountToken: true
     asserts:
       - equal:
           path: automountServiceAccountToken
           value: true
 
-  - it: does not mount a token when database.migrations.serviceAccount.automountServiceAccountToken is missing, as with --reuse-values from an older release
+  - it: does not mount a token when database.migrations.automountServiceAccountToken is missing, as with --reuse-values from an older release
     set:
-      database.migrations.serviceAccount.automountServiceAccountToken: null
+      database.migrations.automountServiceAccountToken: null
     asserts:
       - equal:
           path: automountServiceAccountToken

@@ -212,9 +212,9 @@ tests:
           path: automountServiceAccountToken
           value: true
 
-  - it: disables token automounting on the ServiceAccount when externalWebhooksServer.serviceAccount.automountServiceAccountToken is false
+  - it: disables token automounting on the ServiceAccount when externalWebhooksServer.automountServiceAccountToken is false
     set:
-      externalWebhooksServer.serviceAccount.automountServiceAccountToken: false
+      externalWebhooksServer.automountServiceAccountToken: false
     asserts:
       - equal:
           path: automountServiceAccountToken

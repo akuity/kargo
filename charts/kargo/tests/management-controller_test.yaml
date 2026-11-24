@@ -271,9 +271,9 @@ tests:
           path: automountServiceAccountToken
           value: true
 
-  - it: disables token automounting on the ServiceAccount when managementController.serviceAccount.automountServiceAccountToken is false
+  - it: disables token automounting on the ServiceAccount when managementController.automountServiceAccountToken is false
     set:
-      managementController.serviceAccount.automountServiceAccountToken: false
+      managementController.automountServiceAccountToken: false
     asserts:
       - equal:
           path: automountServiceAccountToken

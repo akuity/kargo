@@ -134,21 +134,21 @@ tests:
           path: automountServiceAccountToken
           value: false
 
-  - it: enables token automounting on the ServiceAccount when api.oidc.dex.serviceAccount.automountServiceAccountToken is true
+  - it: enables token automounting on the ServiceAccount when api.oidc.dex.automountServiceAccountToken is true
     set:
       api.oidc.enabled: true
       api.oidc.dex.enabled: true
-      api.oidc.dex.serviceAccount.automountServiceAccountToken: true
+      api.oidc.dex.automountServiceAccountToken: true
     asserts:
       - equal:
           path: automountServiceAccountToken
           value: true
 
-  - it: does not mount a token when api.oidc.dex.serviceAccount.automountServiceAccountToken is missing, as with --reuse-values from an older release
+  - it: does not mount a token when api.oidc.dex.automountServiceAccountToken is missing, as with --reuse-values from an older release
     set:
       api.oidc.enabled: true
       api.oidc.dex.enabled: true
-      api.oidc.dex.serviceAccount.automountServiceAccountToken: null
+      api.oidc.dex.automountServiceAccountToken: null
     asserts:
       - equal:
           path: automountServiceAccountToken

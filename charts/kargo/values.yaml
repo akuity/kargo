@@ -473,13 +473,11 @@ api:
       #     redirectURI: <http(s)>://<api.host>/dex/callback
       #     tenant: <tenant ID>
 
-      ## @param api.oidc.dex.automountServiceAccountToken Whether to mount a Kubernetes API token in Dex server pods. Dex keeps its state in memory and reads its configuration from a mounted Secret, so it does not need one.
+      ## @param api.oidc.dex.automountServiceAccountToken Whether to mount a Kubernetes API token in Dex server pods. Applies to both the pods and their ServiceAccount. Dex keeps its state in memory and reads its configuration from a mounted Secret, so it does not need one.
       automountServiceAccountToken: false
 
       ## ServiceAccount specific settings
       serviceAccount:
-        ## @param api.oidc.dex.serviceAccount.automountServiceAccountToken Whether the Dex server ServiceAccount mounts its token into pods by default. The pod-level `api.oidc.dex.automountServiceAccountToken` takes precedence.
-        automountServiceAccountToken: false
         ## @param api.oidc.dex.serviceAccount.labels Additional labels to add to the Dex server ServiceAccount.
         labels: {}
         ## @param api.oidc.dex.serviceAccount.annotations Additional annotations to add to the Dex server ServiceAccount.
@@ -605,13 +603,11 @@ api:
   ## @param api.podAnnotations Optional annotations to add to pods. Merges with `global.podAnnotations`, allowing you to override or add to the global annotations.
   podAnnotations: {}
 
-  ## @param api.automountServiceAccountToken Whether to mount a Kubernetes API token in API server pods. The API server uses it to reach the Kubernetes API unless a kubeconfig Secret is configured. Set this to false only if those kubeconfigs authenticate without the mounted token (a kubeconfig can still reference the ServiceAccount token path).
+  ## @param api.automountServiceAccountToken Whether to mount a Kubernetes API token in API server pods. Applies to both the pods and their ServiceAccount. The API server uses it to reach the Kubernetes API unless a kubeconfig Secret is configured. Set this to false only if those kubeconfigs authenticate without the mounted token (a kubeconfig can still reference the ServiceAccount token path).
   automountServiceAccountToken: true
 
   ## ServiceAccount specific settings
   serviceAccount:
-    ## @param api.serviceAccount.automountServiceAccountToken Whether the API server ServiceAccount mounts its token into pods by default. The pod-level `api.automountServiceAccountToken` takes precedence.
-    automountServiceAccountToken: true
     ## @param api.serviceAccount.labels Additional labels to add to the API server ServiceAccount.
     labels: {}
     ## @param api.serviceAccount.annotations Additional annotations to add to the API server ServiceAccount.
@@ -859,13 +855,11 @@ controller:
   ## @param controller.podAnnotations Optional annotations to add to pods. Merges with `global.podAnnotations`, allowing you to override or add to the global annotations.
   podAnnotations: {}
 
-  ## @param controller.automountServiceAccountToken Whether to mount a Kubernetes API token in controller pods. The controller uses it to reach the Kubernetes API, and Argo CD, unless kubeconfig Secrets are configured for both. Set this to false only if those kubeconfigs authenticate without the mounted token (a kubeconfig can still reference the ServiceAccount token path).
+  ## @param controller.automountServiceAccountToken Whether to mount a Kubernetes API token in controller pods. Applies to both the pods and their ServiceAccount. The controller uses it to reach the Kubernetes API, and Argo CD, unless kubeconfig Secrets are configured for both. Set this to false only if those kubeconfigs authenticate without the mounted token (a kubeconfig can still reference the ServiceAccount token path).
   automountServiceAccountToken: true
 
   ## All settings relating to the service account for the controller
   serviceAccount:
-    ## @param controller.serviceAccount.automountServiceAccountToken Whether the controller ServiceAccount mounts its token into pods by default. The pod-level `controller.automountServiceAccountToken` takes precedence.
-    automountServiceAccountToken: true
     ## @param controller.serviceAccount.iamRole Specifies the ARN of an AWS IAM role to be used by the controller in an IRSA-enabled EKS cluster.
     iamRole: ""
     ## @param controller.serviceAccount.labels Additional labels to add to the controller ServiceAccount.
@@ -1026,13 +1020,11 @@ garbageCollector:
   ## @param garbageCollector.podAnnotations Optional annotations to add to pods. Merges with `global.podAnnotations`, allowing you to override or add to the global annotations.
   podAnnotations: {}
 
-  ## @param garbageCollector.automountServiceAccountToken Whether to mount a Kubernetes API token in garbage collector pods. The garbage collector uses it to reach the Kubernetes API unless a kubeconfig Secret is configured. Set this to false only if those kubeconfigs authenticate without the mounted token (a kubeconfig can still reference the ServiceAccount token path).
+  ## @param garbageCollector.automountServiceAccountToken Whether to mount a Kubernetes API token in garbage collector pods. Applies to both the pods and their ServiceAccount. The garbage collector uses it to reach the Kubernetes API unless a kubeconfig Secret is configured. Set this to false only if those kubeconfigs authenticate without the mounted token (a kubeconfig can still reference the ServiceAccount token path).
   automountServiceAccountToken: true
 
   ## ServiceAccount specific settings
   serviceAccount:
-    ## @param garbageCollector.serviceAccount.automountServiceAccountToken Whether the garbage collector ServiceAccount mounts its token into pods by default. The pod-level `garbageCollector.automountServiceAccountToken` takes precedence.
-    automountServiceAccountToken: true
     ## @param garbageCollector.serviceAccount.labels Additional labels to add to the managementController ServiceAccount.
     labels: {}
     ## @param garbageCollector.serviceAccount.annotations Additional annotations to add to the managementController ServiceAccount.
@@ -1121,13 +1113,11 @@ externalWebhooksServer:
   ## @param externalWebhooksServer.podAnnotations Optional annotations to add to the external webhook server pods. Merges with `global.podAnnotations`, allowing you to override or add to the global annotations.
   podAnnotations: {}
 
-  ## @param externalWebhooksServer.automountServiceAccountToken Whether to mount a Kubernetes API token in external webhooks server pods. The external webhooks server uses it to reach the Kubernetes API unless a kubeconfig Secret is configured. Set this to false only if those kubeconfigs authenticate without the mounted token (a kubeconfig can still reference the ServiceAccount token path).
+  ## @param externalWebhooksServer.automountServiceAccountToken Whether to mount a Kubernetes API token in external webhooks server pods. Applies to both the pods and their ServiceAccount. The external webhooks server uses it to reach the Kubernetes API unless a kubeconfig Secret is configured. Set this to false only if those kubeconfigs authenticate without the mounted token (a kubeconfig can still reference the ServiceAccount token path).
   automountServiceAccountToken: true
 
   ## ServiceAccount specific settings
   serviceAccount:
-    ## @param externalWebhooksServer.serviceAccount.automountServiceAccountToken Whether the external webhooks server ServiceAccount mounts its token into pods by default. The pod-level `externalWebhooksServer.automountServiceAccountToken` takes precedence.
-    automountServiceAccountToken: true
     ## @param externalWebhooksServer.serviceAccount.labels Additional labels to add to the externalWebHooksServer ServiceAccount.
     labels: {}
     ## @param externalWebhooksServer.serviceAccount.annotations Additional annotations to add to the externalWebHooksServer ServiceAccount.
@@ -1334,13 +1324,11 @@ managementController:
   ## @param managementController.podAnnotations Optional annotations to add to pods. Merges with `global.podAnnotations`, allowing you to override or add to the global annotations.
   podAnnotations: {}
 
-  ## @param managementController.automountServiceAccountToken Whether to mount a Kubernetes API token in management controller pods. The management controller uses it to reach the Kubernetes API unless a kubeconfig Secret is configured. Set this to false only if those kubeconfigs authenticate without the mounted token (a kubeconfig can still reference the ServiceAccount token path).
+  ## @param managementController.automountServiceAccountToken Whether to mount a Kubernetes API token in management controller pods. Applies to both the pods and their ServiceAccount. The management controller uses it to reach the Kubernetes API unless a kubeconfig Secret is configured. Set this to false only if those kubeconfigs authenticate without the mounted token (a kubeconfig can still reference the ServiceAccount token path).
   automountServiceAccountToken: true
 
   ## ServiceAccount specific settings
   serviceAccount:
-    ## @param managementController.serviceAccount.automountServiceAccountToken Whether the management controller ServiceAccount mounts its token into pods by default. The pod-level `managementController.automountServiceAccountToken` takes precedence.
-    automountServiceAccountToken: true
     ## @param managementController.serviceAccount.labels Additional labels to add to the managementController ServiceAccount.
     labels: {}
     ## @param managementController.serviceAccount.annotations Additional annotations to add to the managementController ServiceAccount.
@@ -1461,13 +1449,11 @@ webhooksServer:
   ## @param webhooksServer.podAnnotations Optional annotations to add to the webhook server pods. Merges with `global.podAnnotations`, allowing you to override or add to the global annotations.
   podAnnotations: {}
 
-  ## @param webhooksServer.automountServiceAccountToken Whether to mount a Kubernetes API token in webhooks server pods. The webhooks server uses it to reach the Kubernetes API unless a kubeconfig Secret is configured. Set this to false only if those kubeconfigs authenticate without the mounted token (a kubeconfig can still reference the ServiceAccount token path).
+  ## @param webhooksServer.automountServiceAccountToken Whether to mount a Kubernetes API token in webhooks server pods. Applies to both the pods and their ServiceAccount. The webhooks server uses it to reach the Kubernetes API unless a kubeconfig Secret is configured. Set this to false only if those kubeconfigs authenticate without the mounted token (a kubeconfig can still reference the ServiceAccount token path).
   automountServiceAccountToken: true
 
   ## ServiceAccount specific settings
   serviceAccount:
-    ## @param webhooksServer.serviceAccount.automountServiceAccountToken Whether the webhooks server ServiceAccount mounts its token into pods by default. The pod-level `webhooksServer.automountServiceAccountToken` takes precedence.
-    automountServiceAccountToken: true
     ## @param webhooksServer.serviceAccount.labels Additional labels to add to the webhooks server ServiceAccount.
     labels: {}
     ## @param webhooksServer.serviceAccount.annotations Additional annotations to add to the webhooks server ServiceAccount.
@@ -1612,12 +1598,10 @@ database:
     ## @param database.migrations.podAnnotations Optional annotations to add to the migration Job's pod. Merges with `global.podAnnotations`, allowing you to override or add to the global annotations.
     podAnnotations: {}
 
-    ## @param database.migrations.automountServiceAccountToken Whether to mount a Kubernetes API token in the migration Job's pod. The Job only talks to the database, so it does not need one.
+    ## @param database.migrations.automountServiceAccountToken Whether to mount a Kubernetes API token in the migration Job's pod. Applies to both the pod and its ServiceAccount. The Job only talks to the database, so it does not need one.
     automountServiceAccountToken: false
 
     serviceAccount:
-      ## @param database.migrations.serviceAccount.automountServiceAccountToken Whether the migration Job's ServiceAccount mounts its token into pods by default. The pod-level `database.migrations.automountServiceAccountToken` takes precedence.
-      automountServiceAccountToken: false
       ## @param database.migrations.serviceAccount.labels Additional labels to add to the migration Job's ServiceAccount.
       labels: {}
       ## @param database.migrations.serviceAccount.annotations Additional annotations to add to the migration Job's ServiceAccount.
@@ -1698,12 +1682,10 @@ database:
     ## @param database.postgres.podAnnotations Optional annotations to add to the bundled PostgreSQL pod. Merges with `global.podAnnotations`, allowing you to override or add to the global annotations.
     podAnnotations: {}
 
-    ## @param database.postgres.automountServiceAccountToken Whether to mount a Kubernetes API token in the bundled PostgreSQL pod. PostgreSQL does not call the Kubernetes API, so it does not need one.
+    ## @param database.postgres.automountServiceAccountToken Whether to mount a Kubernetes API token in the bundled PostgreSQL pod. Applies to both the pod and its ServiceAccount. PostgreSQL does not call the Kubernetes API, so it does not need one.
     automountServiceAccountToken: false
 
     serviceAccount:
-      ## @param database.postgres.serviceAccount.automountServiceAccountToken Whether the bundled PostgreSQL ServiceAccount mounts its token into pods by default. The pod-level `database.postgres.automountServiceAccountToken` takes precedence.
-      automountServiceAccountToken: false
       ## @param database.postgres.serviceAccount.labels Additional labels to add to the bundled PostgreSQL ServiceAccount.
       labels: {}
       ## @param database.postgres.serviceAccount.annotations Additional annotations to add to the bundled PostgreSQL ServiceAccount.

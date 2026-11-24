@@ -133,9 +133,9 @@ tests:
           path: automountServiceAccountToken
           value: true
 
-  - it: disables token automounting on the ServiceAccount when garbageCollector.serviceAccount.automountServiceAccountToken is false
+  - it: disables token automounting on the ServiceAccount when garbageCollector.automountServiceAccountToken is false
     set:
-      garbageCollector.serviceAccount.automountServiceAccountToken: false
+      garbageCollector.automountServiceAccountToken: false
     asserts:
       - equal:
           path: automountServiceAccountToken
