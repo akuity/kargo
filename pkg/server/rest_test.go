@@ -167,7 +167,7 @@ func testRESTEndpoint(
 			for key, value := range testCase.headers {
 				req.Header.Set(key, value)
 			}
-			router := s.setupRESTRouter(t.Context())
+			router := setupRESTTestRouter(t, s)
 
 			router.ServeHTTP(w, req)
 
@@ -271,12 +271,34 @@ func testRESTWatchEndpoint(
 				}()
 			}
 
-			router := s.setupRESTRouter(context.Background())
+			router := setupRESTTestRouter(t, s)
 			router.ServeHTTP(w, req)
 
 			testCase.assertions(t, w, internalClient)
 		})
 	}
+}
+
+// setupRESTTestRouter returns the server's REST router. Unless the server's
+// configuration enables the admin account or OIDC, the router's authentication
+// middleware passes every request through with its context unchanged, so a
+// handler test can bind whatever user info it needs to the request context
+// without presenting a token.
+func setupRESTTestRouter(t *testing.T, s *server) *gin.Engine {
+	t.Helper()
+	var authOpts []authMiddlewareOpt
+	if s.cfg.AdminConfig == nil && s.cfg.OIDCConfig == nil {
+		authOpts = append(authOpts, func(a *authMiddleware) {
+			a.authenticateFn = func(
+				ctx context.Context,
+				_ string,
+				_ string,
+			) (context.Context, error) {
+				return ctx, nil
+			}
+		})
+	}
+	return s.setupRESTRouter(t.Context(), authOpts...)
 }
 
 // mustJSONBody marshals the given value to JSON and returns it as an io.Reader.

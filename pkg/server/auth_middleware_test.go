@@ -676,6 +676,8 @@ func TestAuthMiddlewareHandler(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			router := gin.New()
+			// newAuthMiddleware would ordinarily wire this up.
+			tc.authMiddleware.authenticateFn = tc.authMiddleware.authenticate
 			router.Use(tc.authMiddleware.Handler)
 			router.GET("/v1beta1/*path", func(c *gin.Context) {
 				_, hasUser := user.InfoFromContext(c.Request.Context())
