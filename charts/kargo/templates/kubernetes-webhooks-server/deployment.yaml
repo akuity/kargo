@@ -41,6 +41,7 @@ spec:
       {{- end }}
     spec:
       serviceAccountName: kargo-webhooks-server
+      automountServiceAccountToken: {{ .Values.webhooksServer.automountServiceAccountToken }}
       {{- with .Values.webhooksServer.affinity | default .Values.global.affinity }}
       affinity:
         {{- toYaml . | nindent 8 }}

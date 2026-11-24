@@ -39,6 +39,7 @@ spec:
       {{- end }}
     spec:
       serviceAccountName: kargo-postgres
+      automountServiceAccountToken: {{ .Values.database.postgres.automountServiceAccountToken | default false }}
       {{- with .Values.database.postgres.affinity | default .Values.global.affinity }}
       affinity:
         {{- toYaml . | nindent 8 }}

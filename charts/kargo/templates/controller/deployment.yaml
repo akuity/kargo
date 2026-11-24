@@ -41,6 +41,7 @@ spec:
       {{- end }}
     spec:
       serviceAccountName: {{ include "kargo.controller.fullname" . }}
+      automountServiceAccountToken: {{ .Values.controller.automountServiceAccountToken }}
       {{- with .Values.controller.affinity | default .Values.global.affinity }}
       affinity:
         {{- toYaml . | nindent 8 }}
