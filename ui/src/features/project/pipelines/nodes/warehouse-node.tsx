@@ -1,9 +1,9 @@
-import { faMinus, faPlus, faRefresh, faWarehouse } from '@fortawesome/free-solid-svg-icons';
+import { faMinus, faPlus, faRefresh } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Button, Card } from 'antd';
 import classNames from 'classnames';
 import { formatDistance } from 'date-fns';
-import { CSSProperties, useContext, useMemo } from 'react';
+import { useContext, useMemo } from 'react';
 import { generatePath, Link } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
@@ -13,6 +13,7 @@ import { useFreightTimelineControllerContext } from '@ui/features/project/pipeli
 import { useRefreshWarehouse } from '@ui/gen/api/v2/core/core';
 
 import { useGraphContext } from '../context/graph-context';
+import { WarehouseIcon } from '../warehouse-icon';
 
 import styles from './node-size-source-of-truth.module.less';
 import warehouseStyles from './warehouse-node.module.less';
@@ -95,13 +96,7 @@ export const WarehouseNode = (props: { warehouse: WarehouseExpanded }) => {
       <div className={warehouseStyles.header}>
         {/* everything up to the refresh button opens the Warehouse */}
         <Link to={detailsPath} className={warehouseStyles.title}>
-          <span
-            className={classNames(warehouseStyles.tile, !color && warehouseStyles.tileNeutral)}
-            style={color ? ({ '--warehouse-accent': color } as CSSProperties) : undefined}
-            aria-hidden
-          >
-            <FontAwesomeIcon icon={faWarehouse} />
-          </span>
+          <WarehouseIcon color={color} size='large' />
 
           <span className={warehouseStyles.name} title={warehouseName}>
             {warehouseName}

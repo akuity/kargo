@@ -92,9 +92,15 @@ over its alias.
 
 :::
 
-The freight timeline shows the name of the `Warehouse` that produced each piece
-of freight, along with its alias. To show or hide aliases, click the _gear icon_
-in the pipeline toolbar, then turn the <Hlt>Alias</Hlt> switch on or off.
+The freight timeline labels each piece of freight with its alias. When the
+project has more than one `Warehouse`, it groups consecutive freight from the
+same `Warehouse` under that `Warehouse`'s name. Click a `Warehouse`'s name to see
+only the freight it produced, and the arrow beside the name to go back to
+freight from every `Warehouse`. The same choice is under <Hlt>Warehouse</Hlt>
+behind the _funnel icon_ in the pipeline toolbar.
+
+To show or hide aliases, click the _gear icon_ in the pipeline toolbar, then
+turn the <Hlt>Alias</Hlt> switch on or off.
 
 :::note
 

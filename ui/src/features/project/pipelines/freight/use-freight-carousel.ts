@@ -25,11 +25,13 @@ export type FreightCarousel = {
  * Drives the freight strip's horizontal pagination: computes per-card width
  * from the viewport, tracks scroll offset, and lazily reveals more items as
  * the user pages right. Resets visible count and offset whenever the filter
- * inputs that affect the displayed set change.
+ * inputs that affect the displayed set change, or promoting starts or ends.
  */
 export const useFreightCarousel = (
   itemCount: number,
-  preferredFilter: PreferredFilter
+  preferredFilter: PreferredFilter,
+  // promoting changes which freight is listed, as a filter does
+  isPromotionMode: boolean
 ): FreightCarousel => {
   const viewportRef = useRef<HTMLDivElement>(null);
   const stripRef = useRef<HTMLDivElement>(null);
@@ -77,7 +79,9 @@ export const useFreightCarousel = (
     preferredFilter.sources,
     preferredFilter.timerange,
     preferredFilter.warehouses,
-    preferredFilter.hideUnusedFreights
+    preferredFilter.hideUnusedFreights,
+    preferredFilter.freightTimelineWarehouse,
+    isPromotionMode
   ]);
 
   const loadMore = useCallback(() => {
