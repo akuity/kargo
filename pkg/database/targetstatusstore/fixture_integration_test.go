@@ -5,6 +5,7 @@ package targetstatusstore
 import (
 	"context"
 	"fmt"
+	"strings"
 	"testing"
 	"time"
 
@@ -122,6 +123,15 @@ func (f *fixture) phase(r rollout, phase string) {
 		},
 	)
 	require.NoError(f.t, err)
+}
+
+// promotionID returns the ID promotion gave the Promotion it named name.
+func (f *fixture) promotionID(name string) string {
+	f.t.Helper()
+	var seq int
+	_, err := fmt.Sscanf(name[strings.LastIndex(name, "-")+1:], "%d", &seq)
+	require.NoError(f.t, err)
+	return fmt.Sprintf("%s-%06d", f.project, seq)
 }
 
 // promotion records a Promotion of the Stage to the named Target, in the

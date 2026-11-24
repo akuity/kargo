@@ -210,6 +210,7 @@ SELECT
     1::bigint AS total,
     page.behind::int::bigint AS behind,
     (page.state IN ('Promoting', 'Pending'))::boolean AS in_flight,
+    COALESCE(last.id, '')::text AS last_id,
     COALESCE(last.name, '')::text AS last_name,
     COALESCE(NULLIF(last.phase, ''), 'Pending')::text AS last_phase,
     COALESCE(last.freight_name, '')::text AS last_freight_name,
@@ -241,7 +242,7 @@ UNION ALL
 SELECT
     entries.stage_id, '00000000-0000-0000-0000-000000000000', 0, entries.state,
     count(*), count(*) FILTER (WHERE entries.behind),
-    FALSE, '', '', '', NULL, NULL, 0, '{}', '{}', '{}', 0
+    FALSE, '', '', '', '', NULL, NULL, 0, '{}', '{}', '{}', 0
 FROM entries
 WHERE $6::boolean
 GROUP BY entries.stage_id, entries.state
@@ -249,7 +250,7 @@ UNION ALL
 SELECT
     '', '00000000-0000-0000-0000-000000000000', 0, ($9::text[])[by_target.rank],
     count(*), count(*) FILTER (WHERE by_target.behind),
-    FALSE, '', '', '', NULL, NULL, 0, '{}', '{}', '{}', 0
+    FALSE, '', '', '', '', NULL, NULL, 0, '{}', '{}', '{}', 0
 FROM by_target
 GROUP BY by_target.rank
 ORDER BY position, stage_id, state
@@ -275,6 +276,7 @@ type ListTargetStatusesRow struct {
 	Total             int64
 	Behind            int64
 	InFlight          bool
+	LastID            string
 	LastName          string
 	LastPhase         string
 	LastFreightName   string
@@ -290,7 +292,9 @@ type ListTargetStatusesRow struct {
 // The status of each of the given pairs of a Target and a Stage that governs
 // it, and the tallies of those statuses. One statement serves both, because
 // both read the same entries: a pair's state is derived by one expression,
-// here, so a count and the rows it counts cannot disagree.
+// here, so the counts and the rows apply the same rules. They agree for the
+// same scope read from the same snapshot; two calls are two statements, and
+// the mirror may change between them.
 //
 // The pairs are three arrays of equal length, zipped as in UpsertPromotion,
 // in the order the entries are returned in. A Stage is given by its id,
@@ -379,6 +383,7 @@ func (q *Queries) ListTargetStatuses(ctx context.Context, arg ListTargetStatuses
 			&i.Total,
 			&i.Behind,
 			&i.InFlight,
+			&i.LastID,
 			&i.LastName,
 			&i.LastPhase,
 			&i.LastFreightName,

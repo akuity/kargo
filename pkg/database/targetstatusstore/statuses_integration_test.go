@@ -104,6 +104,7 @@ func TestStateIntegration(t *testing.T) {
 				require.True(t, entry.InFlight)
 				require.False(t, entry.Behind)
 				require.NotNil(t, entry.Last)
+				require.Equal(t, f.promotionID(name), entry.Last.ID)
 				require.Equal(t, name, entry.Last.Name)
 				require.Equal(t, "Running", entry.Last.Phase)
 				require.Equal(t, "v2", entry.Last.Freight)
@@ -528,8 +529,8 @@ func TestListIntegration(t *testing.T) {
 						ctx, Scope{Pairs: pairs[from:], StageFreight: stageFreight}, nil, 3,
 					)
 					require.NoError(t, err)
-					require.LessOrEqual(t, len(entries), 3)
-					require.Equal(t, pairs[from].TargetID, entries[0].TargetID)
+					expected := pairs[from:min(from+3, len(pairs))]
+					requirePairs(t, expected, entries)
 					read = append(read, states(entries)...)
 				}
 				require.Equal(t, all, read)
@@ -563,12 +564,15 @@ func TestListIntegration(t *testing.T) {
 				require.NoError(t, err)
 				require.Equal(t, []State{StateUpToDate, StateNeverPromoted, StateNeverPromoted}, states(entries))
 				// The page ended at the fifth pair; the next starts after it.
-				require.Equal(t, pairs[4].TargetID, entries[2].TargetID)
+				// The fourth and fifth pairs share a Target, so the Stage is
+				// what tells them apart.
+				requirePairs(t, []Pair{pairs[0], pairs[3], pairs[4]}, entries)
 				entries, err = f.store.List(
 					ctx, Scope{Pairs: pairs[5:], StageFreight: stageFreight}, filter, 3,
 				)
 				require.NoError(t, err)
 				require.Equal(t, []State{StateUpToDate}, states(entries))
+				requirePairs(t, []Pair{pairs[9]}, entries)
 			},
 		},
 	}
@@ -687,8 +691,15 @@ func TestSummarizeIntegration(t *testing.T) {
 				}
 				summary, err := f.store.Summarize(ctx, Scope{Pairs: canaryPairs, StageFreight: stageFreight})
 				require.NoError(t, err)
-				require.Len(t, summary.Stages, 1)
-				require.Equal(t, summary.Stages[canary], summary.Targets)
+				// Three Targets, each governed by canary alone here, so the
+				// Project's counts are the Stage's.
+				expected := counts(1, map[State]int64{
+					StateFailed:        1,
+					StateNeverPromoted: 1,
+					StateUpToDate:      1,
+				})
+				require.Equal(t, map[string]Counts{canary: expected}, summary.Stages)
+				require.Equal(t, expected, summary.Targets)
 			},
 		},
 	}
@@ -725,4 +736,15 @@ func TestTargetsIntegration(t *testing.T) {
 	rows, err = f.store.Targets(ctx, "no-such-project")
 	require.NoError(t, err)
 	require.Empty(t, rows)
+}
+
+// requirePairs requires the entries to be those of the pairs, one for one
+// and in order: each with its own Target and its own Stage.
+func requirePairs(t *testing.T, pairs []Pair, entries []Entry) {
+	t.Helper()
+	require.Len(t, entries, len(pairs))
+	for i, pair := range pairs {
+		require.Equal(t, pair.TargetID, entries[i].TargetID, i)
+		require.Equal(t, pair.StageID, entries[i].StageID, i)
+	}
 }

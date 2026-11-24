@@ -227,6 +227,7 @@ func entry(row database.ListTargetStatusesRow) Entry {
 	}
 	if row.LastCreatedAt != nil {
 		e.Last = &Promotion{
+			ID:         row.LastID,
 			Name:       row.LastName,
 			Freight:    row.LastFreightName,
 			Phase:      row.LastPhase,

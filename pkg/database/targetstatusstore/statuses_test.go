@@ -61,6 +61,26 @@ func TestParams(t *testing.T) {
 				require.Equal(t, []string{"B,a,b"}, args.StageFreight)
 			},
 		},
+		{
+			name: "each Stage keeps its own Freight, whatever order the map gives",
+			scope: Scope{StageFreight: map[string][]string{
+				"prod": {"p2", "p1"},
+				"dev":  {"d1"},
+				"qa":   {"q1", "q3", "q2"},
+			}},
+			assert: func(t *testing.T, args database.ListTargetStatusesParams) {
+				require.Len(t, args.StageFreight, len(args.FreightStageIds))
+				zipped := map[string]string{}
+				for i, stage := range args.FreightStageIds {
+					zipped[stage] = args.StageFreight[i]
+				}
+				require.Equal(
+					t,
+					map[string]string{"prod": "p1,p2", "dev": "d1", "qa": "q1,q2,q3"},
+					zipped,
+				)
+			},
+		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
@@ -112,6 +132,7 @@ func TestEntry(t *testing.T) {
 				StageID:           "prod",
 				State:             "NotAttempted",
 				Behind:            1,
+				LastID:            "fleet-000042",
 				LastName:          "prod.abc",
 				LastPhase:         "Succeeded",
 				LastFreightName:   "v1",
@@ -132,6 +153,7 @@ func TestEntry(t *testing.T) {
 						State:    StateNotAttempted,
 						Behind:   true,
 						Last: &Promotion{
+							ID:         "fleet-000042",
 							Name:       "prod.abc",
 							Freight:    "v1",
 							Phase:      "Succeeded",
