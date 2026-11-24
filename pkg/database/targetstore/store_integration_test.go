@@ -402,6 +402,44 @@ func TestStoreIntegration(t *testing.T) {
 			},
 		},
 		{
+			name: "count reads a recreated Stage's own rollouts only",
+			run: func(t *testing.T) {
+				const project = "recreated"
+				ids := createTargets(t, project, "t1")
+				createStage(t, project, "s", true)
+				r1 := createRollout(t, project, "s", "s.01", "Succeeded", ids, "t1")
+				createPromotion(t, project, "r01", "s", r1, "t1", "Succeeded")
+				counts, err := store.Count(ctx, project)
+				require.NoError(t, err)
+				require.Equal(t, database.CountTargetsRow{Total: 1, Healthy: 1}, counts)
+
+				// The new Stage's row replaces the old one, whose rollouts go
+				// with it, so the new Stage has not promoted to t1.
+				require.NoError(t, queries.DeleteReplacedStage(ctx, database.DeleteReplacedStageParams{
+					ProjectName: project,
+					Name:        "s",
+					ID:          "new-uid",
+				}))
+				require.NoError(t, queries.UpsertStage(ctx, database.UpsertStageParams{
+					ID:              "new-uid",
+					ProjectName:     project,
+					Name:            "s",
+					TargetSelectors: []byte(`[{}]`),
+					CreatedAt:       time.Now(),
+				}))
+				counts, err = store.Count(ctx, project)
+				require.NoError(t, err)
+				require.Equal(t, database.CountTargetsRow{Total: 1}, counts)
+
+				createRollout(t, project, "s", "s.01", "Failed", ids, "t1")
+				r2 := createRollout(t, project, "s", "s.02", "Succeeded", ids, "t1")
+				createPromotion(t, project, "r02", "s", r2, "t1", "Succeeded")
+				counts, err = store.Count(ctx, project)
+				require.NoError(t, err)
+				require.Equal(t, database.CountTargetsRow{Total: 1, Healthy: 1}, counts)
+			},
+		},
+		{
 			name: "get reports a missing Target",
 			run: func(t *testing.T) {
 				_, err := store.Get(ctx, "demo", "absent")

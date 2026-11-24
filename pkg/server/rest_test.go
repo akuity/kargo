@@ -31,6 +31,7 @@ import (
 	"github.com/akuity/kargo/pkg/server/config"
 	"github.com/akuity/kargo/pkg/server/kubernetes"
 	"github.com/akuity/kargo/pkg/server/rbac"
+	"github.com/akuity/kargo/pkg/server/user"
 )
 
 const (
@@ -132,7 +133,6 @@ func testRESTEndpoint(
 			if testCase.serverConfig != nil {
 				s.cfg = *testCase.serverConfig
 			}
-
 			if testCase.clientBuilder == nil {
 				testCase.clientBuilder = fake.NewClientBuilder()
 			}
@@ -184,9 +184,7 @@ func testRESTEndpoint(
 			for key, value := range testCase.headers {
 				req.Header.Set(key, value)
 			}
-			router, err := s.setupRESTRouter(t.Context())
-			require.NoError(t, err)
-
+			router := setupRESTTestRouter(t, s, req)
 			router.ServeHTTP(w, req)
 
 			testCase.assertions(t, w, internalClient)
@@ -236,7 +234,6 @@ func testRESTWatchEndpoint(
 			if testCase.serverConfig != nil {
 				s.cfg = *testCase.serverConfig
 			}
-
 			if testCase.clientBuilder == nil {
 				testCase.clientBuilder = fake.NewClientBuilder()
 			}
@@ -309,13 +306,26 @@ func testRESTWatchEndpoint(
 				}
 			}()
 
-			router, err := s.setupRESTRouter(t.Context())
-			require.NoError(t, err)
+			router := setupRESTTestRouter(t, s, req)
 			router.ServeHTTP(w, req)
 
 			testCase.assertions(t, w, internalClient)
 		})
 	}
+}
+
+func setupRESTTestRouter(t *testing.T, s *server, req *http.Request) *gin.Engine {
+	t.Helper()
+	if _, exempt := exemptPaths[req.URL.Path]; !exempt && req.Header.Get(authHeaderKey) == "" {
+		req.Header.Set(authHeaderKey, "Bearer "+testJWT(t))
+	}
+	id, ok := user.IdentityFromContext(req.Context())
+	if !ok {
+		id = user.OIDCUser{Claims: map[string]any{"sub": "test-user"}}
+	}
+	router, err := s.setupRESTRouter(t.Context(), WithAuthenticator(fakeAuthenticator{id: id, ok: true}))
+	require.NoError(t, err)
+	return router
 }
 
 const (

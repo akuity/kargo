@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -376,9 +377,31 @@ func Test_httpDownloader_run(t *testing.T) {
 	}
 }
 
+func Test_httpDownloader_run_contextCancellation(t *testing.T) {
+	var requested atomic.Bool
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		requested.Store(true)
+		_, _ = w.Write([]byte("content"))
+	}))
+	t.Cleanup(srv.Close)
+
+	ctx, cancel := context.WithCancel(t.Context())
+	cancel()
+
+	d := &httpDownloader{}
+	res, err := d.run(ctx, newTestStepContext(t, t.TempDir()), stepconfig.HTTPDownloadConfig{
+		URL:     srv.URL,
+		OutPath: "file.txt",
+	})
+
+	require.ErrorContains(t, err, "context canceled")
+	require.Equal(t, kargoapi.PromotionStepStatusErrored, res.Status)
+	require.False(t, requested.Load(), "server should not be contacted with an already-canceled context")
+}
+
 func Test_httpDownloader_buildRequest(t *testing.T) {
 	d := &httpDownloader{}
-	req, err := d.buildRequest(stepconfig.HTTPDownloadConfig{
+	req, err := d.buildRequest(t.Context(), stepconfig.HTTPDownloadConfig{
 		URL: "http://example.com/file.txt",
 		Headers: []stepconfig.HTTPDownloadConfigHeader{{
 			Name:  "Authorization",
