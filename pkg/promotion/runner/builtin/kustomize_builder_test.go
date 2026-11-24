@@ -475,3 +475,90 @@ metadata:
 		})
 	}
 }
+
+func Test_kustomizeBuilder_run_helmFlagInjection(t *testing.T) {
+	// setup writes a local chart and a post-renderer script that leaves a
+	// marker file behind if helm ever runs it, and returns the script's path
+	// and the marker's path.
+	setup := func(t *testing.T, workDir string, files map[string]string) (string, string) {
+		t.Helper()
+		for _, chartDir := range []string{"charts/demo", "base/charts/demo"} {
+			files[chartDir+"/Chart.yaml"] = "apiVersion: v2\nname: demo\nversion: 0.1.0\n"
+			files[chartDir+"/values.yaml"] = "{}\n"
+			files[chartDir+"/templates/cm.yaml"] = "apiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: demo\n"
+		}
+		for name, content := range files {
+			path := filepath.Join(workDir, name)
+			require.NoError(t, os.MkdirAll(filepath.Dir(path), 0o755))
+			require.NoError(t, os.WriteFile(path, []byte(content), 0o600))
+		}
+		marker := filepath.Join(workDir, "pwned")
+		script := filepath.Join(workDir, "post-renderer.sh")
+		require.NoError(t, os.WriteFile(
+			script,
+			[]byte("#!/bin/sh\ntouch '"+marker+"'\ncat\n"),
+			0o700,
+		))
+		return script, marker
+	}
+	build := func(t *testing.T, workDir string) error {
+		t.Helper()
+		_, err := (&kustomizeBuilder{}).run(
+			&promotion.StepContext{WorkDir: workDir},
+			builtin.KustomizeBuildConfig{Path: ".", OutPath: "output.yaml"},
+		)
+		return err
+	}
+
+	t.Run("release name that helm would parse as a flag", func(t *testing.T) {
+		workDir := t.TempDir()
+		files := map[string]string{}
+		script, marker := setup(t, workDir, files)
+		require.NoError(t, os.WriteFile(
+			filepath.Join(workDir, "kustomization.yaml"),
+			[]byte("helmCharts:\n- name: demo\n  releaseName: --post-renderer="+script+"\n"),
+			0o600,
+		))
+		err := build(t, workDir)
+		require.NoFileExists(t, marker)
+		require.ErrorContains(t, err, "must not start with '-'")
+	})
+	t.Run("release name that helm would parse as a flag in a nested kustomization", func(t *testing.T) {
+		workDir := t.TempDir()
+		files := map[string]string{"kustomization.yaml": "resources:\n- base\n"}
+		script, marker := setup(t, workDir, files)
+		require.NoError(t, os.WriteFile(
+			filepath.Join(workDir, "base", "kustomization.yaml"),
+			[]byte("helmCharts:\n- name: demo\n  releaseName: --post-renderer="+script+"\n"),
+			0o600,
+		))
+		err := build(t, workDir)
+		require.NoFileExists(t, marker)
+		require.ErrorContains(t, err, "must not start with '-'")
+	})
+	t.Run("release name that helm would parse as a flag in a generator configuration", func(t *testing.T) {
+		workDir := t.TempDir()
+		files := map[string]string{"kustomization.yaml": "generators:\n- helm.yaml\n"}
+		script, marker := setup(t, workDir, files)
+		require.NoError(t, os.WriteFile(
+			filepath.Join(workDir, "helm.yaml"),
+			[]byte("apiVersion: builtin\nkind: HelmChartInflationGenerator\nmetadata:\n  name: demo\n"+
+				"name: demo\nreleaseName: --post-renderer="+script+"\n"),
+			0o600,
+		))
+		err := build(t, workDir)
+		require.NoFileExists(t, marker)
+		require.ErrorContains(t, err, "must not start with '-'")
+	})
+	t.Run("safe release name builds", func(t *testing.T) {
+		workDir := t.TempDir()
+		_, marker := setup(t, workDir, map[string]string{})
+		require.NoError(t, os.WriteFile(
+			filepath.Join(workDir, "kustomization.yaml"),
+			[]byte("helmCharts:\n- name: demo\n  releaseName: demo\n"),
+			0o600,
+		))
+		require.NoError(t, build(t, workDir))
+		require.NoFileExists(t, marker)
+	})
+}
