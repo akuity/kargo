@@ -67,6 +67,11 @@ type authMiddleware struct {
 	// endpoint.
 	exemptPaths map[string]struct{}
 
+	authenticateFn func(
+		ctx context.Context,
+		path string,
+		rawToken string,
+	) (context.Context, error)
 	parseUnverifiedJWTFn func(
 		rawToken string,
 		claims jwt.Claims,
@@ -122,6 +127,7 @@ func NewAuthMiddleware(
 	if cfg.OIDCConfig != nil {
 		a.oidcTokenVerifyFn = newMultiClientVerifier(ctx, cfg)
 	}
+	a.authenticateFn = a.authenticate
 	a.parseUnverifiedJWTFn = jwt.NewParser(jwt.WithoutClaimsValidation()).ParseUnverified
 	a.verifyKargoIssuedTokenFn = a.verifyKargoIssuedToken
 	a.verifyIDPIssuedTokenFn = a.verifyIDPIssuedToken
@@ -148,7 +154,7 @@ func (a *authMiddleware) Handler(c *gin.Context) {
 	rawToken := strings.TrimPrefix(c.GetHeader(authHeaderKey), "Bearer ")
 
 	// Authenticate and get user info
-	newCtx, err := a.authenticate(ctx, path, rawToken)
+	newCtx, err := a.authenticateFn(ctx, path, rawToken)
 	if err != nil {
 		logger.Debug("authentication failed", "error", err.Error())
 		// Leave the status code and response body to the error-handling
