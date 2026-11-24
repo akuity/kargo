@@ -72,7 +72,7 @@ A `ProjectConfig` resource can contain multiple promotion policies. Each policy
 is defined by a `stageSelector` and an `autoPromotionEnabled` flag. The
 `stageSelector` specifies which `Stage`s the policy applies to, and the
 `autoPromotionEnabled` flag indicates whether automatic promotion is enabled for
-those `Stage`s. In Kargo Enterprise, a policy can also include an `autoRollback` 
+those `Stage`s. In Kargo Enterprise, a policy can also include an `autoRollback`
 field to configure [automatic rollback](#auto-rollback).
 
 :::info[Not what you were looking for?]
@@ -269,6 +269,7 @@ spec:
         example.org/auto-rollback: "true"
     autoRollback: {}
 ```
+
 :::note
 
 `autoRollback` is a Kargo Enterprise feature and is ignored in Kargo OSS.
