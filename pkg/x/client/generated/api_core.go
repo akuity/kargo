@@ -5255,6 +5255,164 @@ func (a *CoreAPIService) ListSystemConfigMapsExecute(r ApiListSystemConfigMapsRe
 	return localVarReturnValue, localVarHTTPResponse, nil
 }
 
+type ApiListTargetPromotionsRequest struct {
+	ctx context.Context
+	ApiService *CoreAPIService
+	project string
+	targetName string
+	stage *string
+	continue_ *string
+	limit *int32
+}
+
+// Only Promotions of this Stage
+func (r ApiListTargetPromotionsRequest) Stage(stage string) ApiListTargetPromotionsRequest {
+	r.stage = &stage
+	return r
+}
+
+// The previous page&#39;s continue, to read the page after it; resend stage
+func (r ApiListTargetPromotionsRequest) Continue_(continue_ string) ApiListTargetPromotionsRequest {
+	r.continue_ = &continue_
+	return r
+}
+
+// The page size, at most 500; 100 if omitted
+func (r ApiListTargetPromotionsRequest) Limit(limit int32) ApiListTargetPromotionsRequest {
+	r.limit = &limit
+	return r
+}
+
+func (r ApiListTargetPromotionsRequest) Execute() (*TargetPromotionList, *http.Response, error) {
+	return r.ApiService.ListTargetPromotionsExecute(r)
+}
+
+/*
+ListTargetPromotions List a Target's Promotions
+
+List the Promotions to one of a project's Targets, newest
+first, one page at a time: those of every Stage, or of one.
+They are read from the database's record of Promotions,
+which outlives the Promotions themselves, so the list
+reaches further back than the project's Promotions do. A
+Target is recorded by name, so this is the history of the
+name: a Target that has had no Promotion, or that does not
+exist, has an empty one.
+
+ @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+ @param project Project name
+ @param targetName Target name
+ @return ApiListTargetPromotionsRequest
+*/
+func (a *CoreAPIService) ListTargetPromotions(ctx context.Context, project string, targetName string) ApiListTargetPromotionsRequest {
+	return ApiListTargetPromotionsRequest{
+		ApiService: a,
+		ctx: ctx,
+		project: project,
+		targetName: targetName,
+	}
+}
+
+// Execute executes the request
+//  @return TargetPromotionList
+func (a *CoreAPIService) ListTargetPromotionsExecute(r ApiListTargetPromotionsRequest) (*TargetPromotionList, *http.Response, error) {
+	var (
+		localVarHTTPMethod   = http.MethodGet
+		localVarPostBody     interface{}
+		formFiles            []formFile
+		localVarReturnValue  *TargetPromotionList
+	)
+
+	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "CoreAPIService.ListTargetPromotions")
+	if err != nil {
+		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
+	}
+
+	localVarPath := localBasePath + "/v1beta1/projects/{project}/targets/{target-name}/promotions"
+	localVarPath = strings.Replace(localVarPath, "{"+"project"+"}", url.PathEscape(parameterValueToString(r.project, "project")), -1)
+	localVarPath = strings.Replace(localVarPath, "{"+"target-name"+"}", url.PathEscape(parameterValueToString(r.targetName, "targetName")), -1)
+
+	localVarHeaderParams := make(map[string]string)
+	localVarQueryParams := url.Values{}
+	localVarFormParams := url.Values{}
+
+	if r.stage != nil {
+		parameterAddToHeaderOrQuery(localVarQueryParams, "stage", r.stage, "", "")
+	}
+	if r.continue_ != nil {
+		parameterAddToHeaderOrQuery(localVarQueryParams, "continue", r.continue_, "", "")
+	}
+	if r.limit != nil {
+		parameterAddToHeaderOrQuery(localVarQueryParams, "limit", r.limit, "", "")
+	}
+	// to determine the Content-Type header
+	localVarHTTPContentTypes := []string{}
+
+	// set Content-Type header
+	localVarHTTPContentType := selectHeaderContentType(localVarHTTPContentTypes)
+	if localVarHTTPContentType != "" {
+		localVarHeaderParams["Content-Type"] = localVarHTTPContentType
+	}
+
+	// to determine the Accept header
+	localVarHTTPHeaderAccepts := []string{"application/json"}
+
+	// set Accept header
+	localVarHTTPHeaderAccept := selectHeaderAccept(localVarHTTPHeaderAccepts)
+	if localVarHTTPHeaderAccept != "" {
+		localVarHeaderParams["Accept"] = localVarHTTPHeaderAccept
+	}
+	if r.ctx != nil {
+		// API Key Authentication
+		if auth, ok := r.ctx.Value(ContextAPIKeys).(map[string]APIKey); ok {
+			if apiKey, ok := auth["BearerAuth"]; ok {
+				var key string
+				if apiKey.Prefix != "" {
+					key = apiKey.Prefix + " " + apiKey.Key
+				} else {
+					key = apiKey.Key
+				}
+				localVarHeaderParams["Authorization"] = key
+			}
+		}
+	}
+	req, err := a.client.prepareRequest(r.ctx, localVarPath, localVarHTTPMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, formFiles)
+	if err != nil {
+		return localVarReturnValue, nil, err
+	}
+
+	localVarHTTPResponse, err := a.client.callAPI(req)
+	if err != nil || localVarHTTPResponse == nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	localVarBody, err := io.ReadAll(localVarHTTPResponse.Body)
+	localVarHTTPResponse.Body.Close()
+	localVarHTTPResponse.Body = io.NopCloser(bytes.NewBuffer(localVarBody))
+	if err != nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	if localVarHTTPResponse.StatusCode >= 300 {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: localVarHTTPResponse.Status,
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	err = a.client.decode(&localVarReturnValue, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+	if err != nil {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: err.Error(),
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	return localVarReturnValue, localVarHTTPResponse, nil
+}
+
 type ApiListTargetsRequest struct {
 	ctx context.Context
 	ApiService *CoreAPIService

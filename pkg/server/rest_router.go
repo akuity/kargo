@@ -9,6 +9,7 @@ import (
 	"github.com/akuity/kargo/pkg/server/middleware"
 	"github.com/akuity/kargo/pkg/server/promotionrollouts"
 	"github.com/akuity/kargo/pkg/server/targets"
+	"github.com/akuity/kargo/pkg/server/targetstatuses"
 )
 
 // nolint: lll
@@ -255,6 +256,11 @@ func (s *server) setupRESTRouter(ctx context.Context) (*gin.Engine, error) {
 			// Targets live in the database; their handlers authorize each
 			// request themselves, since no Kubernetes client does it for them.
 			targets.New(s.targetStore(), s.authorize, s.client).Register(project)
+
+			// Target Promotions
+			// What has been promoted to a Target, read from the database;
+			// these handlers authorize themselves too.
+			targetstatuses.New(s.targetStatusStore(), s.authorize).Register(project)
 
 			// PromotionRollouts
 			// PromotionRollouts live in the database too; see above.

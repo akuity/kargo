@@ -35,6 +35,7 @@ type Store interface {
 	Targets(context.Context, string) ([]database.ListTargetLabelsRow, error)
 	List(context.Context, Scope, []State, int32) ([]Entry, error)
 	Summarize(context.Context, Scope) (Summary, error)
+	ListPromotions(context.Context, string, string, PromotionListOptions) ([]Promotion, error)
 }
 
 type store struct {
